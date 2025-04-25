@@ -258,6 +258,18 @@ export const MatchSchema = {
     }
 } as const;
 
+export const ElevationCostsSchema = {
+    description: `Different elevation cost profiles for street routing.
+Using a elevation cost profile will prefer routes with a smaller incline and smaller difference in elevation, even if the routed way is longer.
+
+- \`NONE\`: Ignore elevation data for routing. This is the default behavior
+- \`LOW\`: Add a low penalty for inclines. This will favor longer paths, if the elevation increase and incline are smaller.
+- \`HIGH\`: Add a high penalty for inclines. This will favor even longer paths, if the elevation increase and incline are smaller.
+`,
+    type: 'string',
+    enum: ['NONE', 'LOW', 'HIGH']
+} as const;
+
 export const PedestrianProfileSchema = {
     description: 'Different accessibility profiles for pedestrians.',
     type: 'string',

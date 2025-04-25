@@ -225,6 +225,17 @@ export type Match = {
 };
 
 /**
+ * Different elevation cost profiles for street routing.
+ * Using a elevation cost profile will prefer routes with a smaller incline and smaller difference in elevation, even if the routed way is longer.
+ *
+ * - `NONE`: Ignore elevation data for routing. This is the default behavior
+ * - `LOW`: Add a low penalty for inclines. This will favor longer paths, if the elevation increase and incline are smaller.
+ * - `HIGH`: Add a high penalty for inclines. This will favor even longer paths, if the elevation increase and incline are smaller.
+ *
+ */
+export type ElevationCosts = 'NONE' | 'LOW' | 'HIGH';
+
+/**
  * Different accessibility profiles for pedestrians.
  */
 export type PedestrianProfile = 'FOOT' | 'WHEELCHAIR';
@@ -915,6 +926,26 @@ export type PlanData = {
          */
         directRentalProviders?: Array<(string)>;
         /**
+         * Optional. Default is `NONE`.
+         *
+         * Set an elevation cost profile, to penalize routes with incline.
+         * - `NONE`: No additional costs for elevations. This is the default behavior
+         * - `LOW`: Add a low cost for increase in elevation and incline along the way. This will prefer routes with less ascent, if small detours are required.
+         * - `HIGH`: Add a high cost for increase in elevation and incline along the way. This will prefer routes with less ascent, if larger detours are required.
+         *
+         * As using an elevation costs profile will increase the travel duration,
+         * routing through steep terrain may exceed the maximal allowed duration,
+         * causing a location to appear unreachable.
+         * Increasing the maximum travel time for these segments may resolve this issue.
+         *
+         * The profile is used for direct routing, on the first mile, and last mile.
+         *
+         * Elevation cost profiles are currently used by following street modes:
+         * - `BIKE`
+         *
+         */
+        elevationCosts?: ElevationCosts;
+        /**
          * Optional. Experimental. Default is `1.0`.
          * Factor with which the duration of the fastest direct connection is multiplied.
          * Values > 1.0 allow connections that are slower than the fastest direct connection to be found.
@@ -1255,6 +1286,24 @@ export type OneToManyData = {
          */
         arriveBy: boolean;
         /**
+         * Optional. Default is `NONE`.
+         *
+         * Set an elevation cost profile, to penalize routes with incline.
+         * - `NONE`: No additional costs for elevations. This is the default behavior
+         * - `LOW`: Add a low cost for increase in elevation and incline along the way. This will prefer routes with less ascent, if small detours are required.
+         * - `HIGH`: Add a high cost for increase in elevation and incline along the way. This will prefer routes with less ascent, if larger detours are required.
+         *
+         * As using an elevation costs profile will increase the travel duration,
+         * routing through steep terrain may exceed the maximal allowed duration,
+         * causing a location to appear unreachable.
+         * Increasing the maximum travel time for these segments may resolve this issue.
+         *
+         * Elevation cost profiles are currently used by following street modes:
+         * - `BIKE`
+         *
+         */
+        elevationCosts?: ElevationCosts;
+        /**
          * geo locations as latitude;longitude,latitude;longitude,...
          */
         many: Array<(string)>;
@@ -1297,6 +1346,26 @@ export type OneToAllData = {
          *
          */
         arriveBy?: boolean;
+        /**
+         * Optional. Default is `NONE`.
+         *
+         * Set an elevation cost profile, to penalize routes with incline.
+         * - `NONE`: No additional costs for elevations. This is the default behavior
+         * - `LOW`: Add a low cost for increase in elevation and incline along the way. This will prefer routes with less ascent, if small detours are required.
+         * - `HIGH`: Add a high cost for increase in elevation and incline along the way. This will prefer routes with less ascent, if larger detours are required.
+         *
+         * As using an elevation costs profile will increase the travel duration,
+         * routing through steep terrain may exceed the maximal allowed duration,
+         * causing a location to appear unreachable.
+         * Increasing the maximum travel time for these segments may resolve this issue.
+         *
+         * The profile is used for routing on both the first and last mile.
+         *
+         * Elevation cost profiles are currently used by following street modes:
+         * - `BIKE`
+         *
+         */
+        elevationCosts?: ElevationCosts;
         /**
          * Optional. Default is 25 meters.
          *
