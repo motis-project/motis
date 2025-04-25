@@ -609,6 +609,7 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
 
               //  Print statistics.
               for (auto const [i, ex, s] : utl::zip(idx, exceptions, stats)) {
+                // TODO visit different statics in variant
                 auto const& [ep, src, tag, metrics] = endpoints[i];
                 try {
                   if (ex) {
