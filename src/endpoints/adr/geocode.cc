@@ -41,7 +41,7 @@ api::geocode_response geocode::operator()(
 
   auto& ctx = get_guess_context(t_, cache_);
 
-  auto lang_indices = std::basic_string<a::language_idx_t>{{a::kDefaultLang}};
+  auto lang_indices = basic_string<a::language_idx_t>{{a::kDefaultLang}};
   if (params.language_.has_value()) {
     auto const l_idx = t_.resolve_language(*params.language_);
     if (l_idx != a::language_idx_t::invalid()) {

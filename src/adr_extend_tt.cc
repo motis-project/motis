@@ -29,7 +29,7 @@ void adr_extend_tt(nigiri::timetable const& tt,
   auto const timer = utl::scoped_timer{"guesser candidates"};
 
   auto area_set_lookup = [&]() {
-    auto x = hash_map<std::basic_string<a::area_idx_t>, a::area_set_idx_t>{};
+    auto x = hash_map<basic_string<a::area_idx_t>, a::area_set_idx_t>{};
     for (auto const [i, area_set] : utl::enumerate(t.area_sets_)) {
       x.emplace(area_set.view(), a::area_set_idx_t{i});
     }
@@ -126,7 +126,7 @@ void adr_extend_tt(nigiri::timetable const& tt,
   }
 
   // Add to typeahead.
-  auto areas = std::basic_string<a::area_idx_t>{};
+  auto areas = basic_string<a::area_idx_t>{};
   auto no_areas_idx = adr::area_set_idx_t{t.area_sets_.size()};
   if (area_db == nullptr) {
     t.area_sets_.emplace_back(areas);

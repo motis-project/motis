@@ -39,7 +39,7 @@ api::geocode_response suggestions_to_response(
     osr::ways const* w,
     osr::platforms const* pl,
     platform_matches_t const* matches,
-    std::basic_string<a::language_idx_t> const& lang_indices,
+    basic_string<a::language_idx_t> const& lang_indices,
     std::vector<adr::token> const& token_pos,
     std::vector<adr::suggestion> const& suggestions) {
   return utl::to_vec(suggestions, [&](a::suggestion const& s) {
