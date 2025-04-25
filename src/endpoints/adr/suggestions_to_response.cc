@@ -97,7 +97,7 @@ api::geocode_response suggestions_to_response(
     };
 
     auto api_areas = std::vector<api::Area>{};
-    for (auto const& [i, a] : utl::enumerate(areas)) {
+    for (auto const [i, a] : utl::enumerate(areas)) {
       auto const admin_lvl = t.area_admin_level_[a];
       if (admin_lvl == a::kPostalCodeAdminLevel) {
         continue;
