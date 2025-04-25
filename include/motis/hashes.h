@@ -14,7 +14,7 @@ constexpr auto const osr_version = []() {
   return meta_entry_t{"osr_bin_ver", 12U};
 };
 constexpr auto const adr_version = []() {
-  return meta_entry_t{"adr_bin_ver", 4U};
+  return meta_entry_t{"adr_bin_ver", 5U};
 };
 constexpr auto const n_version = []() {
   return meta_entry_t{"nigiri_bin_ver", 9U};
