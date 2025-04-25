@@ -52,7 +52,7 @@
 			class="font-bold"
 			variant="outline"
 			onclick={() => {
-				onClickStop(stopId, stopName, queryTime, !arriveBy);
+				onClickStop(stopName, stopId, queryTime, !arriveBy);
 			}}
 		>
 			{#if arriveBy}

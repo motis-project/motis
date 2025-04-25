@@ -291,24 +291,24 @@
 	<LevelSelect {bounds} {zoom} bind:level />
 
 	<div class="maplibregl-control-container">
-		<div class="maplibregl-ctrl-top-left">
+		<div class="maplibregl-ctrl-top-left w-full">
 			<Control
 				class={isSmallScreen && (page.state.selectedItinerary || page.state.selectedStop)
 					? 'hide'
 					: ''}
 			>
-				<Tabs.Root value="timetable" class="w-[520px] overflow-y-auto">
-					<Tabs.List class="grid w-full grid-cols-2">
+				<Tabs.Root value="timetable" class="w-full md:w-[520px] overflow-y-auto">
+					<Tabs.List class="grid grid-cols-2">
 						<Tabs.Trigger value="timetable">{t.timetable}</Tabs.Trigger>
 						<Tabs.Trigger value="departures">{t.departures}</Tabs.Trigger>
 					</Tabs.List>
 					<Tabs.Content value="departures">
-						<Card class="w-[520px] overflow-y-auto overflow-x-hidden bg-background rounded-lg">
+						<Card class="overflow-y-auto overflow-x-hidden bg-background rounded-lg">
 							<DeparturesMask bind:time />
 						</Card>
 					</Tabs.Content>
 					<Tabs.Content value="timetable">
-						<Card class="w-[520px] overflow-y-auto overflow-x-hidden bg-background rounded-lg">
+						<Card class="overflow-y-auto overflow-x-hidden bg-background rounded-lg">
 							<SearchMask
 								geocodingBiasPlace={center}
 								bind:from
