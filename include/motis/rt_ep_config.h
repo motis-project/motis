@@ -8,7 +8,7 @@
 
 namespace motis {
 
-struct rt_entry {
+struct rt_ep_config {
 
   struct gtfsrt {
     std::string_view url_;
@@ -24,7 +24,7 @@ struct rt_entry {
 
   std::variant<gtfsrt, vdvaus> operator()() const;
 
-  bool operator==(rt_entry const&) const = default;
+  bool operator==(rt_ep_config const&) const = default;
   cista::hash_t hash() const noexcept {
     return cista::build_hash(protocol_, url_, headers_, client_name_,
                              server_name_, hysteresis_);

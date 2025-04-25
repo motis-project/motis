@@ -143,50 +143,50 @@ struct rt_metric_families {
                 .Help("Number of failed updates of the VDV AUS feed")
                 .Register(registry)},
         vdvaus_unsupported_additional_runs_{
-            prometheus::BuildCounter()
+            prometheus::BuildGauge()
                 .Name("nigiri_vdvrt_unsupported_additional_runs_total")
                 .Help("Number of unsupported additional runs in the VDV AUS "
                       "feed")
                 .Register(registry)},
         vdvaus_cancelled_runs_{
-            prometheus::BuildCounter()
+            prometheus::BuildGauge()
                 .Name("nigiri_vdvrt_cancelled_runs_total")
                 .Help("Number of cancelled runs in the VDV AUS feed")
                 .Register(registry)},
         vdvaus_total_stops_{
-            prometheus::BuildCounter()
+            prometheus::BuildGauge()
                 .Name("nigiri_vdvrt_total_stops_total")
                 .Help("Total number of stops in the VDV AUS feed")
                 .Register(registry)},
         vdvaus_resolved_stops_{
-            prometheus::BuildCounter()
+            prometheus::BuildGauge()
                 .Name("nigiri_vdvrt_resolved_stops_total")
                 .Help("Number of stops that could be resolved to locations in "
                       "the timetable")
                 .Register(registry)},
         vdvaus_unknown_stops_{
-            prometheus::BuildCounter()
+            prometheus::BuildGauge()
                 .Name("nigiri_vdvrt_unknown_stops_total")
                 .Help("Number of stops that could not resolved to a location "
                       "in the timetable")
                 .Register(registry)},
         vdvaus_unsupported_additional_stops_{
-            prometheus::BuildCounter()
+            prometheus::BuildGauge()
                 .Name("nigiri_vdvrt_unsupported_additional_runs_total")
                 .Help("Number of additional stops in the VDV AUS feed")
                 .Register(registry)},
-        vdvaus_total_runs_{prometheus::BuildCounter()
+        vdvaus_total_runs_{prometheus::BuildGauge()
                                .Name("nigiri_vdvrt_total_runs_total")
                                .Help("Total number of runs in the VDV AUS feed")
                                .Register(registry)},
         vdvaus_no_transport_found_at_stop_{
-            prometheus::BuildCounter()
+            prometheus::BuildGauge()
                 .Name("nigiri_vdvrt_no_transport_found_at_stop_total")
                 .Help("Number of times that no transport could be found at the "
                       "stop specified in the VDV AUS feed")
                 .Register(registry)},
         vdvaus_search_on_incomplete_{
-            prometheus::BuildCounter()
+            prometheus::BuildGauge()
                 .Name("nigiri_vdvrt_search_on_incomplete_total")
                 .Help("Number of times an incomplete run of the VDV AUS feed "
                       "had to be matched to a transport; this should not "
@@ -194,20 +194,20 @@ struct rt_metric_families {
                       "version of each run initially")
                 .Register(registry)},
         vdvaus_found_runs_{
-            prometheus::BuildCounter()
+            prometheus::BuildGauge()
                 .Name("nigiri_vdvrt_found_runs_total")
                 .Help("number of runs of the VDV AUS feed for which a "
                       "corresponding run could be found in the timetable")
                 .Register(registry)},
         vdvaus_multiple_matches_{
-            prometheus::BuildCounter()
+            prometheus::BuildGauge()
                 .Name("nigiri_vdvrt_mutiple_matches_total")
                 .Help("number of times a run of the VDV AUS feed could not be "
                       "matched to a transport in the timetable since there "
                       "were multiple transports with the same score")
                 .Register(registry)},
         vdvaus_matched_runs_{
-            prometheus::BuildCounter()
+            prometheus::BuildGauge()
                 .Name("nigiri_vdvrt_matched_runs_total")
                 .Help(
                     "Number of runs of the VDV AUS feed that could be matched "
@@ -215,26 +215,26 @@ struct rt_metric_families {
                     "up by established mapping")
                 .Register(registry)},
         vdvaus_unmatchable_runs_{
-            prometheus::BuildCounter()
+            prometheus::BuildGauge()
                 .Name("nigiri_vdvrt_unmatchable_runs_total")
                 .Help("Number of complete runs of the VDV AUS feed that could "
                       "not be matched to a transport in the timetable")
                 .Register(registry)},
         vdvaus_runs_without_stops_{
-            prometheus::BuildCounter()
+            prometheus::BuildGauge()
                 .Name("nigiri_vdvrt_runs_without_stops_total")
                 .Help("Number of times a run without any stops was encountered "
                       "in the VDV AUS feed")
                 .Register(registry)},
         vdvaus_skipped_vdv_stops_{
-            prometheus::BuildCounter()
+            prometheus::BuildGauge()
                 .Name("nigiri_vdvrt_skipped_vdv_stops_total")
                 .Help("Number of stops in the VDV AUS feed that had to be "
                       "skipped while updating a run since they had no "
                       "counterpart in the run of the timetable")
                 .Register(registry)},
         vdvaus_excess_vdv_stops_{
-            prometheus::BuildCounter()
+            prometheus::BuildGauge()
                 .Name("nigiri_vdvrt_excess_vdv_stops_total")
                 .Help(
                     "Number of additional stops at the end of runs in VDV AUS "
@@ -242,13 +242,13 @@ struct rt_metric_families {
                     "timetable that was updated")
                 .Register(registry)},
         vdvaus_updated_events_{
-            prometheus::BuildCounter()
+            prometheus::BuildGauge()
                 .Name("nigiri_vdvrt_updated_events_total")
                 .Help("Number of arrival/departure times "
                       "that were updated by the VDV AUS feed")
                 .Register(registry)},
         vdvaus_propagated_delays_{
-            prometheus::BuildCounter()
+            prometheus::BuildGauge()
                 .Name("nigiri_vdvrt_propagated_delays_total")
                 .Help("Number of delay propagations by the VDV AUS feed")
                 .Register(registry)},
@@ -285,24 +285,24 @@ struct rt_metric_families {
   prometheus::Family<prometheus::Counter>& vdvaus_updates_successful_;
   prometheus::Family<prometheus::Counter>& vdvaus_updates_error_;
 
-  prometheus::Family<prometheus::Counter>& vdvaus_unsupported_additional_runs_;
-  prometheus::Family<prometheus::Counter>& vdvaus_cancelled_runs_;
-  prometheus::Family<prometheus::Counter>& vdvaus_total_stops_;
-  prometheus::Family<prometheus::Counter>& vdvaus_resolved_stops_;
-  prometheus::Family<prometheus::Counter>& vdvaus_unknown_stops_;
-  prometheus::Family<prometheus::Counter>& vdvaus_unsupported_additional_stops_;
-  prometheus::Family<prometheus::Counter>& vdvaus_total_runs_;
-  prometheus::Family<prometheus::Counter>& vdvaus_no_transport_found_at_stop_;
-  prometheus::Family<prometheus::Counter>& vdvaus_search_on_incomplete_;
-  prometheus::Family<prometheus::Counter>& vdvaus_found_runs_;
-  prometheus::Family<prometheus::Counter>& vdvaus_multiple_matches_;
-  prometheus::Family<prometheus::Counter>& vdvaus_matched_runs_;
-  prometheus::Family<prometheus::Counter>& vdvaus_unmatchable_runs_;
-  prometheus::Family<prometheus::Counter>& vdvaus_runs_without_stops_;
-  prometheus::Family<prometheus::Counter>& vdvaus_skipped_vdv_stops_;
-  prometheus::Family<prometheus::Counter>& vdvaus_excess_vdv_stops_;
-  prometheus::Family<prometheus::Counter>& vdvaus_updated_events_;
-  prometheus::Family<prometheus::Counter>& vdvaus_propagated_delays_;
+  prometheus::Family<prometheus::Gauge>& vdvaus_unsupported_additional_runs_;
+  prometheus::Family<prometheus::Gauge>& vdvaus_cancelled_runs_;
+  prometheus::Family<prometheus::Gauge>& vdvaus_total_stops_;
+  prometheus::Family<prometheus::Gauge>& vdvaus_resolved_stops_;
+  prometheus::Family<prometheus::Gauge>& vdvaus_unknown_stops_;
+  prometheus::Family<prometheus::Gauge>& vdvaus_unsupported_additional_stops_;
+  prometheus::Family<prometheus::Gauge>& vdvaus_total_runs_;
+  prometheus::Family<prometheus::Gauge>& vdvaus_no_transport_found_at_stop_;
+  prometheus::Family<prometheus::Gauge>& vdvaus_search_on_incomplete_;
+  prometheus::Family<prometheus::Gauge>& vdvaus_found_runs_;
+  prometheus::Family<prometheus::Gauge>& vdvaus_multiple_matches_;
+  prometheus::Family<prometheus::Gauge>& vdvaus_matched_runs_;
+  prometheus::Family<prometheus::Gauge>& vdvaus_unmatchable_runs_;
+  prometheus::Family<prometheus::Gauge>& vdvaus_runs_without_stops_;
+  prometheus::Family<prometheus::Gauge>& vdvaus_skipped_vdv_stops_;
+  prometheus::Family<prometheus::Gauge>& vdvaus_excess_vdv_stops_;
+  prometheus::Family<prometheus::Gauge>& vdvaus_updated_events_;
+  prometheus::Family<prometheus::Gauge>& vdvaus_propagated_delays_;
 
   prometheus::Family<prometheus::Gauge>& vdvaus_feed_timestamp_;
   prometheus::Family<prometheus::Gauge>& vdvaus_last_update_timestamp_;
@@ -424,24 +424,24 @@ struct vdvaus_metrics {
   prometheus::Counter& updates_successful_;
   prometheus::Counter& updates_error_;
 
-  prometheus::Counter& unsupported_additional_runs_;
-  prometheus::Counter& cancelled_runs_;
-  prometheus::Counter& total_stops_;
-  prometheus::Counter& resolved_stops_;
-  prometheus::Counter& unknown_stops_;
-  prometheus::Counter& unsupported_additional_stops_;
-  prometheus::Counter& total_runs_;
-  prometheus::Counter& no_transport_found_at_stop_;
-  prometheus::Counter& search_on_incomplete_;
-  prometheus::Counter& found_runs_;
-  prometheus::Counter& multiple_matches_;
-  prometheus::Counter& matched_runs_;
-  prometheus::Counter& unmatchable_runs_;
-  prometheus::Counter& runs_without_stops_;
-  prometheus::Counter& skipped_vdv_stops_;
-  prometheus::Counter& excess_vdv_stops_;
-  prometheus::Counter& updated_events_;
-  prometheus::Counter& propagated_delays_;
+  prometheus::Gauge& unsupported_additional_runs_;
+  prometheus::Gauge& cancelled_runs_;
+  prometheus::Gauge& total_stops_;
+  prometheus::Gauge& resolved_stops_;
+  prometheus::Gauge& unknown_stops_;
+  prometheus::Gauge& unsupported_additional_stops_;
+  prometheus::Gauge& total_runs_;
+  prometheus::Gauge& no_transport_found_at_stop_;
+  prometheus::Gauge& search_on_incomplete_;
+  prometheus::Gauge& found_runs_;
+  prometheus::Gauge& multiple_matches_;
+  prometheus::Gauge& matched_runs_;
+  prometheus::Gauge& unmatchable_runs_;
+  prometheus::Gauge& runs_without_stops_;
+  prometheus::Gauge& skipped_vdv_stops_;
+  prometheus::Gauge& excess_vdv_stops_;
+  prometheus::Gauge& updated_events_;
+  prometheus::Gauge& propagated_delays_;
 
   prometheus::Gauge& feed_timestamp_;
   prometheus::Gauge& last_update_timestamp_;
@@ -460,16 +460,16 @@ asio::awaitable<ptr<elevators>> update_elevators(config const& c,
 }
 
 struct gtfsrt_endpoint {
-  rt_entry::gtfsrt ep_;
+  rt_ep_config::gtfsrt ep_;
   n::source_idx_t src_;
   std::string tag_;
   gtfsrt_metrics metrics_;
 };
 
 struct vdvaus_endpoint {
-  rt_entry::vdvaus ep_;
+  vdvaus::connection& con_;
   n::source_idx_t src_;
-  std::string tag_;
+  std::string_view tag_;
   vdvaus_metrics metrics_;
 };
 
@@ -483,18 +483,28 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
         auto ec = boost::system::error_code{};
 
         auto const endpoints = [&]() {
-          auto endpoints = std::vector<gtfsrt_endpoint>{};
-          auto const metic_families = rt_metric_families{*d.metrics_};
+          auto endpoints =
+              std::vector<std::variant<gtfsrt_endpoint, vdvaus_endpoint>>{};
+          auto const metric_families = rt_metric_families{*d.metrics_};
           for (auto const& [tag, dataset] : c.timetable_->datasets_) {
             if (dataset.rt_.has_value()) {
               auto const src = d.tags_->get_src(tag);
               for (auto const& ep : *dataset.rt_) {
-                std::visit(utl::overloaded{[&](rt_entry::gtfsrt&& gtfs_rt_ep) {
-                             endpoints.push_back(
-                                 {gtfs_rt_ep, src, tag,
-                                  gtfsrt_metrics{tag, metic_families}});
-                           }},
-                           ep());
+                std::visit(
+                    utl::overloaded{[&](rt_ep_config::gtfsrt&& gtfsrt_ep) {
+                      endpoints.push_back(gtfsrt_endpoint{
+                          gtfsrt_ep, src, tag,
+                          gtfsrt_metrics{tag, metric_families}});
+                    }},
+                    ep());
+              }
+            }
+            if (d.vdvaus_) {
+              for (auto& con : *d.vdvaus_) {
+                endpoints.push_back(
+                    vdvaus_endpoint{con, con.upd_.get_src(),
+                                    d.tags_->get_tag(con.upd_.get_src()),
+                                    vdvaus_metrics{tag, metric_families}});
               }
             }
           }
@@ -521,28 +531,72 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
                 std::chrono::seconds{c.timetable_->http_timeout_};
 
             if (!endpoints.empty()) {
-              auto awaitables =
-                  utl::to_vec(endpoints, [&](gtfsrt_endpoint const& x) {
-                    x.metrics_.updates_requested_.Increment();
+              auto awaitables = utl::to_vec(
+                  endpoints,
+                  [&](std::variant<gtfsrt_endpoint, vdvaus_endpoint> const& x) {
+                    std::visit(
+                        utl::overloaded{
+                            [](gtfsrt_endpoint const& gtfsrt_ep) {
+                              gtfsrt_ep.metrics_.updates_requested_.Increment();
+                            },
+                            [](vdvaus_endpoint const& vdvaus_ep) {
+                              vdvaus_ep.metrics_.updates_requested_.Increment();
+                            }},
+                        x);
                     return boost::asio::co_spawn(
                         executor,
-                        [&]() -> awaitable<n::rt::statistics> {
-                          try {
-                            auto const res = co_await http_GET(
-                                boost::urls::url{x.ep_.url_},
-                                x.ep_.headers_ != nullptr ? *x.ep_.headers_
-                                                          : headers_t{},
-                                timeout);
-                            co_return n::rt::gtfsrt_update_buf(
-                                *d.tt_, *rtt, x.src_, x.tag_,
-                                get_http_body(res), msg);
-                          } catch (std::exception const& e) {
-                            n::log(n::log_lvl::error, "motis.rt",
-                                   "RT FETCH ERROR: tag={}, error={}", x.tag_,
-                                   e.what());
-                            co_return n::rt::statistics{.parser_error_ = true,
-                                                        .no_header_ = true};
-                          }
+                        [&]() -> awaitable<std::variant<
+                                  n::rt::statistics, n::rt::vdv::statistics>> {
+                          return std::visit(
+                              utl::overloaded{
+                                  [&](gtfsrt_endpoint const& gtfsrt_ep)
+                                      -> awaitable<std::variant<
+                                          n::rt::statistics,
+                                          n::rt::vdv::statistics>> {
+                                    try {
+                                      auto const res = co_await http_GET(
+                                          boost::urls::url{gtfsrt_ep.ep_.url_},
+                                          gtfsrt_ep.ep_.headers_ != nullptr
+                                              ? *gtfsrt_ep.ep_.headers_
+                                              : headers_t{},
+                                          timeout);
+                                      co_return n::rt::gtfsrt_update_buf(
+                                          *d.tt_, *rtt, gtfsrt_ep.src_,
+                                          gtfsrt_ep.tag_, get_http_body(res),
+                                          msg);
+                                    } catch (std::exception const& e) {
+                                      n::log(n::log_lvl::error, "motis.rt",
+                                             "GTFS-RT FETCH ERROR: tag={}, "
+                                             "error={}",
+                                             gtfsrt_ep.tag_, e.what());
+                                      co_return n::rt::statistics{
+                                          .parser_error_ = true,
+                                          .no_header_ = true};
+                                    }
+                                  },
+                                  [&](vdvaus_endpoint const& vdvaus_ep)
+                                      -> awaitable<std::variant<
+                                          n::rt::statistics,
+                                          n::rt::vdv::statistics>> {
+                                    try {
+                                      auto const res = co_await http_POST(
+                                          boost::urls::url{
+                                              vdvaus_ep.con_.fetch_data_addr_},
+                                          vdvaus::kHeaders,
+                                          vdvaus_ep.con_.make_fetch_req(),
+                                          timeout);
+                                      vdvaus_ep.con_.upd_.update(
+                                          *rtt,
+                                          vdvaus::parse(get_http_body(res)));
+                                    } catch (std::exception const& e) {
+                                      n::log(n::log_lvl::error, "motis.rt",
+                                             "VDV AUS FETCH ERROR: tag={}, "
+                                             "error={}",
+                                             vdvaus_ep.tag_, e.what());
+                                    }
+                                    co_return vdvaus_ep.con_.upd_.get_stats();
+                                  }},
+                              x);
                         },
                         asio::deferred);
                   });

@@ -1,12 +1,14 @@
-#include "motis/rt_entry.h"
+#include "motis/rt_ep_config.h"
 
 namespace motis {
 
-std::variant<rt_entry::gtfsrt, rt_entry::vdvaus> rt_entry::operator()() const {
-  if (!protocol_ || protocol_ == rt_entry::protocol::gtfsrt) {
-    return rt_entry::gtfsrt{url_, headers_ ? &(*headers_) : nullptr};
+std::variant<rt_ep_config::gtfsrt, rt_ep_config::vdvaus>
+rt_ep_config::operator()() const {
+  if (!protocol_ || protocol_ == rt_ep_config::protocol::gtfsrt) {
+    return rt_ep_config::gtfsrt{url_, headers_ ? &(*headers_) : nullptr};
   } else {
-    return rt_entry::vdvaus{url_, *server_name_, *client_name_, *hysteresis_};
+    return rt_ep_config::vdvaus{url_, *server_name_, *client_name_,
+                                *hysteresis_};
   }
 }
 

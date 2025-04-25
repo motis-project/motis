@@ -12,12 +12,14 @@ auto const kHeaders = std::map<std::string, std::string>{
     {"Content-Type", "text/xml"}, {"Accept", "text/xml"}};
 
 struct connection {
-  connection(rt_entry::vdvaus, nigiri::timetable const&, nigiri::source_idx_t);
+  connection(rt_ep_config::vdvaus,
+             nigiri::timetable const&,
+             nigiri::source_idx_t);
   connection(connection&&) noexcept;
 
   std::string make_fetch_req();
 
-  rt_entry::vdvaus cfg_;
+  rt_ep_config::vdvaus cfg_;
   std::string client_status_path_;
   std::string data_ready_path_;
   std::string server_status_addr_;
