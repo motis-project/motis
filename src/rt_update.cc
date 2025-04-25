@@ -125,6 +125,137 @@ struct rt_metric_families {
             prometheus::BuildGauge()
                 .Name("nigiri_gtfsrt_last_update_timestamp_seconds")
                 .Help("Last update timestamp of the GTFS-RT feed")
+                .Register(registry)},
+        vdvrt_updates_requested_{prometheus::BuildCounter()
+                                     .Name("nigiri_vdvrt_updates_requested_"
+                                           "total")
+                                     .Help("Number of update attempts of the "
+                                           "VDV RT feed")
+                                     .Register(registry)},
+        vdvrt_updates_successful_{
+            prometheus::BuildCounter()
+                .Name("nigiri_vdvrt_updates_successful_total")
+                .Help("Number of successful updates of the VDV RT feed")
+                .Register(registry)},
+        vdvrt_updates_error_{
+            prometheus::BuildCounter()
+                .Name("nigiri_vdvrt_updates_error_total")
+                .Help("Number of failed updates of the VDV RT feed")
+                .Register(registry)},
+        vdvrt_unsupported_additional_runs_{
+            prometheus::BuildCounter()
+                .Name("nigiri_vdvrt_unsupported_additional_runs_total")
+                .Help("Number of unsupported additional runs in the VDV RT "
+                      "feed")
+                .Register(registry)},
+        vdvrt_cancelled_runs_{
+            prometheus::BuildCounter()
+                .Name("nigiri_vdvrt_cancelled_runs_total")
+                .Help("Number of cancelled runs in the VDV RT feed")
+                .Register(registry)},
+        vdvrt_total_stops_{prometheus::BuildCounter()
+                               .Name("nigiri_vdvrt_total_stops_total")
+                               .Help("Total number of stops in the VDV RT feed")
+                               .Register(registry)},
+        vdvrt_resolved_stops_{
+            prometheus::BuildCounter()
+                .Name("nigiri_vdvrt_resolved_stops_total")
+                .Help("Number of stops that could be resolved to locations in "
+                      "the timetable")
+                .Register(registry)},
+        vdvrt_unknown_stops_{
+            prometheus::BuildCounter()
+                .Name("nigiri_vdvrt_unknown_stops_total")
+                .Help("Number of stops that could not resolved to a location "
+                      "in the timetable")
+                .Register(registry)},
+        vdvrt_unsupported_additional_stops_{
+            prometheus::BuildCounter()
+                .Name("nigiri_vdvrt_unsupported_additional_runs_total")
+                .Help("Number of additional stops in the VDV RT feed")
+                .Register(registry)},
+        vdvrt_total_runs_{prometheus::BuildCounter()
+                              .Name("nigiri_vdvrt_total_runs_total")
+                              .Help("Total number of runs in the VDV RT feed")
+                              .Register(registry)},
+        vdvrt_no_transport_found_at_stop_{
+            prometheus::BuildCounter()
+                .Name("nigiri_vdvrt_no_transport_found_at_stop_total")
+                .Help("Number of times that no transport could be found at the "
+                      "stop specified in the VDV RT feed")
+                .Register(registry)},
+        vdvrt_search_on_incomplete_{
+            prometheus::BuildCounter()
+                .Name("nigiri_vdvrt_search_on_incomplete_total")
+                .Help("Number of times an incomplete run of the VDV RT feed "
+                      "had to be matched to a transport; this should not "
+                      "happen since the feed must always transfer a complete "
+                      "version of each run initially")
+                .Register(registry)},
+        vdvrt_found_runs_{
+            prometheus::BuildCounter()
+                .Name("nigiri_vdvrt_found_runs_total")
+                .Help("number of runs of the VDV RT feed for which a "
+                      "corresponding run could be found in the timetable")
+                .Register(registry)},
+        vdvrt_multiple_matches_{
+            prometheus::BuildCounter()
+                .Name("nigiri_vdvrt_mutiple_matches_total")
+                .Help("number of times a run of the VDV RT feed could not be "
+                      "matched to a transport in the timetable since there "
+                      "were multiple transports with the same score")
+                .Register(registry)},
+        vdvrt_matched_runs_{
+            prometheus::BuildCounter()
+                .Name("nigiri_vdvrt_matched_runs_total")
+                .Help("Number of runs of the VDV RT feed that could be matched "
+                      "to transports in the timetable, i.e., found or looked "
+                      "up by established mapping")
+                .Register(registry)},
+        vdvrt_unmatchable_runs_{
+            prometheus::BuildCounter()
+                .Name("nigiri_vdvrt_unmatchable_runs_total")
+                .Help("Number of complete runs of the VDV RT feed that could "
+                      "not be matched to a transport in the timetable")
+                .Register(registry)},
+        vdvrt_runs_without_stops_{
+            prometheus::BuildCounter()
+                .Name("nigiri_vdvrt_runs_without_stops_total")
+                .Help("Number of times a run without any stops was encountered "
+                      "in the VDV RT feed")
+                .Register(registry)},
+        vdvrt_skipped_vdv_stops_{
+            prometheus::BuildCounter()
+                .Name("nigiri_vdvrt_skipped_vdv_stops_total")
+                .Help("Number of stops in the VDV RT feed that had to be "
+                      "skipped while updating a run since they had no "
+                      "counterpart in the run of the timetable")
+                .Register(registry)},
+        vdvrt_excess_vdv_stops_{
+            prometheus::BuildCounter()
+                .Name("nigiri_vdvrt_excess_vdv_stops_total")
+                .Help("Number of additional stops at the end of runs in VDV RT "
+                      "feed that had no corresponding stop in the run of the "
+                      "timetable that was updated")
+                .Register(registry)},
+        vdvrt_updated_events_{prometheus::BuildCounter()
+                                  .Name("nigiri_vdvrt_updated_events_total")
+                                  .Help("Number of arrival/departure times "
+                                        "that were updated by the VDV RT feed")
+                                  .Register(registry)},
+        vdvrt_propagated_delays_{
+            prometheus::BuildCounter()
+                .Name("nigiri_vdvrt_propagated_delays_total")
+                .Help("Number of delay propagations by the VDV RT feed")
+                .Register(registry)},
+        vdvrt_feed_timestamp_{prometheus::BuildGauge()
+                                  .Name("nigiri_vdvrt_feed_timestamp_seconds")
+                                  .Help("Timestamp of the VDV RT feed")
+                                  .Register(registry)},
+        vdvrt_last_update_timestamp_{
+            prometheus::BuildGauge()
+                .Name("nigiri_vdvrt_last_update_timestamp_seconds")
+                .Help("Last update timestamp of the VDV RT feed")
                 .Register(registry)} {}
 
   prometheus::Family<prometheus::Counter>& gtfsrt_updates_requested_;
@@ -145,6 +276,32 @@ struct rt_metric_families {
       gtfsrt_unsupported_schedule_relationship_;
   prometheus::Family<prometheus::Gauge>& gtfsrt_feed_timestamp_;
   prometheus::Family<prometheus::Gauge>& gtfsrt_last_update_timestamp_;
+
+  prometheus::Family<prometheus::Counter>& vdvrt_updates_requested_;
+  prometheus::Family<prometheus::Counter>& vdvrt_updates_successful_;
+  prometheus::Family<prometheus::Counter>& vdvrt_updates_error_;
+
+  prometheus::Family<prometheus::Counter>& vdvrt_unsupported_additional_runs_;
+  prometheus::Family<prometheus::Counter>& vdvrt_cancelled_runs_;
+  prometheus::Family<prometheus::Counter>& vdvrt_total_stops_;
+  prometheus::Family<prometheus::Counter>& vdvrt_resolved_stops_;
+  prometheus::Family<prometheus::Counter>& vdvrt_unknown_stops_;
+  prometheus::Family<prometheus::Counter>& vdvrt_unsupported_additional_stops_;
+  prometheus::Family<prometheus::Counter>& vdvrt_total_runs_;
+  prometheus::Family<prometheus::Counter>& vdvrt_no_transport_found_at_stop_;
+  prometheus::Family<prometheus::Counter>& vdvrt_search_on_incomplete_;
+  prometheus::Family<prometheus::Counter>& vdvrt_found_runs_;
+  prometheus::Family<prometheus::Counter>& vdvrt_multiple_matches_;
+  prometheus::Family<prometheus::Counter>& vdvrt_matched_runs_;
+  prometheus::Family<prometheus::Counter>& vdvrt_unmatchable_runs_;
+  prometheus::Family<prometheus::Counter>& vdvrt_runs_without_stops_;
+  prometheus::Family<prometheus::Counter>& vdvrt_skipped_vdv_stops_;
+  prometheus::Family<prometheus::Counter>& vdvrt_excess_vdv_stops_;
+  prometheus::Family<prometheus::Counter>& vdvrt_updated_events_;
+  prometheus::Family<prometheus::Counter>& vdvrt_propagated_delays_;
+
+  prometheus::Family<prometheus::Gauge>& vdvrt_feed_timestamp_;
+  prometheus::Family<prometheus::Gauge>& vdvrt_last_update_timestamp_;
 };
 
 struct gtfsrt_metrics {
