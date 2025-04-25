@@ -11,7 +11,6 @@
 		type Match,
 		plan,
 		type PlanResponse,
-		trip,
 		type Mode,
 		type PlanData
 	} from '$lib/openapi';
@@ -21,7 +20,13 @@
 	import ItineraryGeoJson from '$lib/ItineraryGeoJSON.svelte';
 	import maplibregl from 'maplibre-gl';
 	import { browser } from '$app/environment';
-	import { cn } from '$lib/utils';
+	import {
+		closeItinerary,
+		cn,
+		onClickStop,
+		onClickTrip,
+		pushStateWithQueryString
+	} from '$lib/utils';
 	import Debug from '$lib/Debug.svelte';
 	import Marker from '$lib/map/Marker.svelte';
 	import Popup from '$lib/map/Popup.svelte';
@@ -33,9 +38,11 @@
 	import RailViz from '$lib/RailViz.svelte';
 	import MapIcon from 'lucide-svelte/icons/map';
 	import { t } from '$lib/i18n/translation';
-	import { pushState, replaceState } from '$app/navigation';
+	import { pushState } from '$app/navigation';
 	import { page } from '$app/state';
 	import { updateStartDest } from '$lib/updateStartDest';
+	import * as Tabs from '$lib/components/ui/tabs';
+	import DeparturesMask from '$lib/DeparturesMask.svelte';
 
 	const urlParams = browser ? new URLSearchParams(window.location.search) : undefined;
 	const hasDebug = urlParams && urlParams.has('debug');
@@ -96,9 +103,9 @@
 
 	let fromParam: Match | undefined = undefined;
 	let toParam: Match | undefined = undefined;
-	if (browser && urlParams && urlParams.has('from') && urlParams.has('to')) {
-		fromParam = JSON.parse(urlParams.get('from') ?? '') ?? {};
-		toParam = JSON.parse(urlParams.get('to') ?? '') ?? {};
+	if (browser && urlParams) {
+		fromParam = urlParams.has('from') ? (JSON.parse(urlParams.get('from') ?? '') ?? {}) : undefined;
+		toParam = urlParams.has('to') ? (JSON.parse(urlParams.get('to') ?? '') ?? {}) : undefined;
 	}
 
 	let fromMatch = {
@@ -232,60 +239,6 @@
 		flyToSelectedItinerary();
 	});
 
-	const preserveFromUrl = (
-		// eslint-disable-next-line
-		queryParams: Record<string, any>,
-		field: string
-	) => {
-		if (urlParams?.has(field)) {
-			queryParams[field] = urlParams.get(field);
-		}
-	};
-
-	const pushStateWithQueryString = (
-		// eslint-disable-next-line
-		queryParams: Record<string, any>,
-		// eslint-disable-next-line
-		newState: App.PageState,
-		replace: boolean = false
-	) => {
-		preserveFromUrl(queryParams, 'debug');
-		preserveFromUrl(queryParams, 'dark');
-		preserveFromUrl(queryParams, 'motis');
-		const params = new URLSearchParams(queryParams);
-		const updateState = replace ? replaceState : pushState;
-		updateState('?' + params.toString(), newState);
-	};
-
-	const onClickStop = (
-		name: string,
-		stopId: string,
-		time: Date,
-		arriveBy: boolean = false,
-		replace: boolean = false
-	) => {
-		pushStateWithQueryString(
-			{ stopArriveBy: arriveBy, stopId, time: time.toISOString() },
-			{
-				stopArriveBy: arriveBy,
-				selectedStop: { name, stopId, time },
-				selectedItinerary: page.state.selectedItinerary,
-				tripId: page.state.tripId
-			},
-			replace
-		);
-	};
-
-	const onClickTrip = async (tripId: string, replace: boolean = false) => {
-		const { data: itinerary, error } = await trip({ query: { tripId } });
-		if (error) {
-			console.log(error);
-			alert(String((error as Record<string, unknown>).error ?? error));
-			return;
-		}
-		pushStateWithQueryString({ tripId }, { selectedItinerary: itinerary, tripId: tripId }, replace);
-	};
-
 	type CloseFn = () => void;
 </script>
 
@@ -338,28 +291,41 @@
 	<LevelSelect {bounds} {zoom} bind:level />
 
 	<div class="maplibregl-control-container">
-		<div class="maplibregl-ctrl-top-left">
+		<div class="maplibregl-ctrl-top-left w-full">
 			<Control
 				class={isSmallScreen && (page.state.selectedItinerary || page.state.selectedStop)
 					? 'hide'
 					: ''}
 			>
-				<Card class="w-[520px] overflow-y-auto overflow-x-hidden bg-background rounded-lg">
-					<SearchMask
-						geocodingBiasPlace={center}
-						bind:from
-						bind:to
-						bind:time
-						bind:timeType
-						bind:wheelchair
-						bind:bikeRental
-						bind:bikeCarriage
-						bind:selectedModes={selectedTransitModes}
-					/>
-				</Card>
+				<Tabs.Root value="connections" class="w-full md:w-[520px] overflow-y-auto">
+					<Tabs.List class="grid grid-cols-2">
+						<Tabs.Trigger value="connections">{t.connections}</Tabs.Trigger>
+						<Tabs.Trigger value="departures">{t.departures}</Tabs.Trigger>
+					</Tabs.List>
+					<Tabs.Content value="connections">
+						<Card class="overflow-y-auto overflow-x-hidden bg-background rounded-lg">
+							<SearchMask
+								geocodingBiasPlace={center}
+								bind:from
+								bind:to
+								bind:time
+								bind:timeType
+								bind:wheelchair
+								bind:bikeRental
+								bind:bikeCarriage
+								bind:selectedModes={selectedTransitModes}
+							/>
+						</Card>
+					</Tabs.Content>
+					<Tabs.Content value="departures">
+						<Card class="overflow-y-auto overflow-x-hidden bg-background rounded-lg">
+							<DeparturesMask bind:time />
+						</Card>
+					</Tabs.Content>
+				</Tabs.Root>
 			</Control>
 
-			{#if routingResponses.length !== 0}
+			{#if routingResponses.length !== 0 && !page.state.showDepartures}
 				<Control class="min-h-0 md:mb-2 {page.state.selectedItinerary ? 'hide' : ''}">
 					<Card
 						class="w-[520px] h-full md:max-h-[70vh] overflow-y-auto overflow-x-hidden bg-background rounded-lg"
@@ -375,7 +341,7 @@
 				</Control>
 			{/if}
 
-			{#if page.state.selectedItinerary && !page.state.selectedStop}
+			{#if page.state.selectedItinerary && !page.state.showDepartures}
 				<Control class="min-h-0 mb-12 md:mb-2">
 					<Card class="w-[520px] h-full bg-background rounded-lg flex flex-col">
 						<div class="w-full flex justify-between items-center shadow-md pl-1 mb-1">
@@ -383,7 +349,7 @@
 							<Button
 								variant="ghost"
 								onclick={() => {
-									pushStateWithQueryString({}, {});
+									closeItinerary();
 								}}
 							>
 								<X />
@@ -393,11 +359,7 @@
 							class={'p-2 md:p-4 overflow-y-auto overflow-x-hidden min-h-0 ' +
 								(showMap ? 'max-h-[40vh] md:max-h-[70vh]' : '')}
 						>
-							<ConnectionDetail
-								itinerary={page.state.selectedItinerary}
-								{onClickStop}
-								{onClickTrip}
-							/>
+							<ConnectionDetail itinerary={page.state.selectedItinerary} />
 						</div>
 					</Card>
 				</Control>
@@ -406,7 +368,7 @@
 				{/if}
 			{/if}
 
-			{#if page.state.selectedStop}
+			{#if page.state.selectedStop && page.state.showDepartures}
 				<Control class="min-h-0 md:mb-2">
 					<Card class="w-[520px] h-full bg-background rounded-lg flex flex-col">
 						<div class="w-full flex justify-between items-center shadow-md pl-1 mb-1">
@@ -434,17 +396,10 @@
 						<div class="p-2 md:p-4 overflow-y-auto overflow-x-hidden min-h-0 md:max-h-[70vh]">
 							<StopTimes
 								stopId={page.state.selectedStop.stopId}
+								stopName={page.state.selectedStop.name}
 								time={page.state.selectedStop.time}
 								bind:stopNameFromResponse
 								arriveBy={page.state.stopArriveBy}
-								setArriveBy={(arriveBy) =>
-									onClickStop(
-										page.state.selectedStop!.name,
-										page.state.selectedStop!.stopId,
-										page.state.selectedStop!.time,
-										arriveBy
-									)}
-								{onClickTrip}
 							/>
 						</div>
 					</Card>
@@ -465,7 +420,7 @@
 	</div>
 
 	{#if showMap}
-		<RailViz {map} {bounds} {zoom} {onClickTrip} />
+		<RailViz {map} {bounds} {zoom} />
 
 		<Popup trigger="contextmenu" children={contextMenu} />
 

@@ -20,6 +20,7 @@ const translations: Translations = {
 	departure: 'Abfahrt',
 	duration: 'Dauer',
 	arrivals: 'Ankünfte',
+	connections: 'Verbindungen',
 	departures: 'Abfahrten',
 	later: 'später',
 	earlier: 'früher',

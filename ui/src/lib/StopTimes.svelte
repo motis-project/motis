@@ -9,21 +9,20 @@
 	import { Button } from '$lib/components/ui/button';
 	import { t } from '$lib/i18n/translation';
 	import type { RequestResult } from '@hey-api/client-fetch';
+	import { onClickStop, onClickTrip } from '$lib/utils';
 
 	let {
 		stopId,
+		stopName,
 		time: queryTime,
 		stopNameFromResponse = $bindable(),
-		arriveBy,
-		setArriveBy,
-		onClickTrip
+		arriveBy
 	}: {
 		stopId: string;
+		stopName: string;
 		time: Date;
 		arriveBy?: boolean;
 		stopNameFromResponse: string;
-		setArriveBy: (arriveBy: boolean) => void;
-		onClickTrip: (tripId: string) => void;
 	} = $props();
 
 	let query = $derived({ stopId, time: queryTime.toISOString(), arriveBy, n: 10 });
@@ -53,7 +52,7 @@
 			class="font-bold"
 			variant="outline"
 			onclick={() => {
-				setArriveBy(!arriveBy);
+				onClickStop(stopName, stopId, queryTime, !arriveBy);
 			}}
 		>
 			{#if arriveBy}
