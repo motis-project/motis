@@ -191,14 +191,15 @@ bool config::has_elevators() const {
       elevators_);
 }
 
-std::optional<std::reference_wrapper<config::street_routing const>>
-config::get_street_routing() const {
-  if (std::holds_alternative<std::optional<street_routing>>(street_routing_) &&
-      std::get<std::optional<street_routing>>(street_routing_).has_value()) {
-    return *std::get<std::optional<street_routing>>(street_routing_);
-  } else {
-    return {};
-  }
+std::optional<config::street_routing> config::get_street_routing() const {
+  return std::visit(
+      utl::overloaded{
+          [](std::optional<config::street_routing> const& x) { return x; },
+          [](bool const street_routing) {
+            return street_routing ? std::optional{config::street_routing{}}
+                                  : std::nullopt;
+          }},
+      street_routing_);
 }
 
 bool config::use_street_routing() const {
