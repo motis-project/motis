@@ -10,19 +10,19 @@ namespace motis {
 
 struct rt_entry {
 
-  struct gtfs_rt {
+  struct gtfsrt {
     std::string_view url_;
     headers_t const* headers_;
   };
 
-  struct vdv_rt {
+  struct vdvaus {
     std::string_view url_;
     std::string const& server_name_;
     std::string const& client_name_;
     unsigned hysteresis_;
   };
 
-  std::variant<gtfs_rt, vdv_rt> operator()() const;
+  std::variant<gtfsrt, vdvaus> operator()() const;
 
   bool operator==(rt_entry const&) const = default;
   cista::hash_t hash() const noexcept {
@@ -30,15 +30,15 @@ struct rt_entry {
                              server_name_, hysteresis_);
   }
 
-  enum struct protocol { gtfs_rt, vdv_rt };
+  enum struct protocol { gtfsrt, vdvaus };
   std::optional<protocol> protocol_;
 
   std::string url_;
 
-  // GTFS RT
+  // GTFS-RT
   std::optional<headers_t> headers_{};
 
-  // VDV RT
+  // VDV AUS
   std::optional<std::string> server_name_;
   std::optional<std::string> client_name_;
   std::optional<unsigned> hysteresis_;

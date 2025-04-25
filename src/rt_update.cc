@@ -26,8 +26,8 @@
 #include "motis/http_req.h"
 #include "motis/railviz.h"
 #include "motis/tag_lookup.h"
-#include "motis/vdv_rt/connection.h"
-#include "motis/vdv_rt/xml.h"
+#include "motis/vdvaus/connection.h"
+#include "motis/vdvaus/xml.h"
 
 namespace n = nigiri;
 namespace asio = boost::asio;
@@ -126,136 +126,140 @@ struct rt_metric_families {
                 .Name("nigiri_gtfsrt_last_update_timestamp_seconds")
                 .Help("Last update timestamp of the GTFS-RT feed")
                 .Register(registry)},
-        vdvrt_updates_requested_{prometheus::BuildCounter()
-                                     .Name("nigiri_vdvrt_updates_requested_"
-                                           "total")
-                                     .Help("Number of update attempts of the "
-                                           "VDV RT feed")
-                                     .Register(registry)},
-        vdvrt_updates_successful_{
+        vdvaus_updates_requested_{prometheus::BuildCounter()
+                                      .Name("nigiri_vdvrt_updates_requested_"
+                                            "total")
+                                      .Help("Number of update attempts of the "
+                                            "VDV AUS feed")
+                                      .Register(registry)},
+        vdvaus_updates_successful_{
             prometheus::BuildCounter()
                 .Name("nigiri_vdvrt_updates_successful_total")
-                .Help("Number of successful updates of the VDV RT feed")
+                .Help("Number of successful updates of the VDV AUS feed")
                 .Register(registry)},
-        vdvrt_updates_error_{
+        vdvaus_updates_error_{
             prometheus::BuildCounter()
                 .Name("nigiri_vdvrt_updates_error_total")
-                .Help("Number of failed updates of the VDV RT feed")
+                .Help("Number of failed updates of the VDV AUS feed")
                 .Register(registry)},
-        vdvrt_unsupported_additional_runs_{
+        vdvaus_unsupported_additional_runs_{
             prometheus::BuildCounter()
                 .Name("nigiri_vdvrt_unsupported_additional_runs_total")
-                .Help("Number of unsupported additional runs in the VDV RT "
+                .Help("Number of unsupported additional runs in the VDV AUS "
                       "feed")
                 .Register(registry)},
-        vdvrt_cancelled_runs_{
+        vdvaus_cancelled_runs_{
             prometheus::BuildCounter()
                 .Name("nigiri_vdvrt_cancelled_runs_total")
-                .Help("Number of cancelled runs in the VDV RT feed")
+                .Help("Number of cancelled runs in the VDV AUS feed")
                 .Register(registry)},
-        vdvrt_total_stops_{prometheus::BuildCounter()
-                               .Name("nigiri_vdvrt_total_stops_total")
-                               .Help("Total number of stops in the VDV RT feed")
-                               .Register(registry)},
-        vdvrt_resolved_stops_{
+        vdvaus_total_stops_{
+            prometheus::BuildCounter()
+                .Name("nigiri_vdvrt_total_stops_total")
+                .Help("Total number of stops in the VDV AUS feed")
+                .Register(registry)},
+        vdvaus_resolved_stops_{
             prometheus::BuildCounter()
                 .Name("nigiri_vdvrt_resolved_stops_total")
                 .Help("Number of stops that could be resolved to locations in "
                       "the timetable")
                 .Register(registry)},
-        vdvrt_unknown_stops_{
+        vdvaus_unknown_stops_{
             prometheus::BuildCounter()
                 .Name("nigiri_vdvrt_unknown_stops_total")
                 .Help("Number of stops that could not resolved to a location "
                       "in the timetable")
                 .Register(registry)},
-        vdvrt_unsupported_additional_stops_{
+        vdvaus_unsupported_additional_stops_{
             prometheus::BuildCounter()
                 .Name("nigiri_vdvrt_unsupported_additional_runs_total")
-                .Help("Number of additional stops in the VDV RT feed")
+                .Help("Number of additional stops in the VDV AUS feed")
                 .Register(registry)},
-        vdvrt_total_runs_{prometheus::BuildCounter()
-                              .Name("nigiri_vdvrt_total_runs_total")
-                              .Help("Total number of runs in the VDV RT feed")
-                              .Register(registry)},
-        vdvrt_no_transport_found_at_stop_{
+        vdvaus_total_runs_{prometheus::BuildCounter()
+                               .Name("nigiri_vdvrt_total_runs_total")
+                               .Help("Total number of runs in the VDV AUS feed")
+                               .Register(registry)},
+        vdvaus_no_transport_found_at_stop_{
             prometheus::BuildCounter()
                 .Name("nigiri_vdvrt_no_transport_found_at_stop_total")
                 .Help("Number of times that no transport could be found at the "
-                      "stop specified in the VDV RT feed")
+                      "stop specified in the VDV AUS feed")
                 .Register(registry)},
-        vdvrt_search_on_incomplete_{
+        vdvaus_search_on_incomplete_{
             prometheus::BuildCounter()
                 .Name("nigiri_vdvrt_search_on_incomplete_total")
-                .Help("Number of times an incomplete run of the VDV RT feed "
+                .Help("Number of times an incomplete run of the VDV AUS feed "
                       "had to be matched to a transport; this should not "
                       "happen since the feed must always transfer a complete "
                       "version of each run initially")
                 .Register(registry)},
-        vdvrt_found_runs_{
+        vdvaus_found_runs_{
             prometheus::BuildCounter()
                 .Name("nigiri_vdvrt_found_runs_total")
-                .Help("number of runs of the VDV RT feed for which a "
+                .Help("number of runs of the VDV AUS feed for which a "
                       "corresponding run could be found in the timetable")
                 .Register(registry)},
-        vdvrt_multiple_matches_{
+        vdvaus_multiple_matches_{
             prometheus::BuildCounter()
                 .Name("nigiri_vdvrt_mutiple_matches_total")
-                .Help("number of times a run of the VDV RT feed could not be "
+                .Help("number of times a run of the VDV AUS feed could not be "
                       "matched to a transport in the timetable since there "
                       "were multiple transports with the same score")
                 .Register(registry)},
-        vdvrt_matched_runs_{
+        vdvaus_matched_runs_{
             prometheus::BuildCounter()
                 .Name("nigiri_vdvrt_matched_runs_total")
-                .Help("Number of runs of the VDV RT feed that could be matched "
-                      "to transports in the timetable, i.e., found or looked "
-                      "up by established mapping")
+                .Help(
+                    "Number of runs of the VDV AUS feed that could be matched "
+                    "to transports in the timetable, i.e., found or looked "
+                    "up by established mapping")
                 .Register(registry)},
-        vdvrt_unmatchable_runs_{
+        vdvaus_unmatchable_runs_{
             prometheus::BuildCounter()
                 .Name("nigiri_vdvrt_unmatchable_runs_total")
-                .Help("Number of complete runs of the VDV RT feed that could "
+                .Help("Number of complete runs of the VDV AUS feed that could "
                       "not be matched to a transport in the timetable")
                 .Register(registry)},
-        vdvrt_runs_without_stops_{
+        vdvaus_runs_without_stops_{
             prometheus::BuildCounter()
                 .Name("nigiri_vdvrt_runs_without_stops_total")
                 .Help("Number of times a run without any stops was encountered "
-                      "in the VDV RT feed")
+                      "in the VDV AUS feed")
                 .Register(registry)},
-        vdvrt_skipped_vdv_stops_{
+        vdvaus_skipped_vdv_stops_{
             prometheus::BuildCounter()
                 .Name("nigiri_vdvrt_skipped_vdv_stops_total")
-                .Help("Number of stops in the VDV RT feed that had to be "
+                .Help("Number of stops in the VDV AUS feed that had to be "
                       "skipped while updating a run since they had no "
                       "counterpart in the run of the timetable")
                 .Register(registry)},
-        vdvrt_excess_vdv_stops_{
+        vdvaus_excess_vdv_stops_{
             prometheus::BuildCounter()
                 .Name("nigiri_vdvrt_excess_vdv_stops_total")
-                .Help("Number of additional stops at the end of runs in VDV RT "
-                      "feed that had no corresponding stop in the run of the "
-                      "timetable that was updated")
+                .Help(
+                    "Number of additional stops at the end of runs in VDV AUS "
+                    "feed that had no corresponding stop in the run of the "
+                    "timetable that was updated")
                 .Register(registry)},
-        vdvrt_updated_events_{prometheus::BuildCounter()
-                                  .Name("nigiri_vdvrt_updated_events_total")
-                                  .Help("Number of arrival/departure times "
-                                        "that were updated by the VDV RT feed")
-                                  .Register(registry)},
-        vdvrt_propagated_delays_{
+        vdvaus_updated_events_{
+            prometheus::BuildCounter()
+                .Name("nigiri_vdvrt_updated_events_total")
+                .Help("Number of arrival/departure times "
+                      "that were updated by the VDV AUS feed")
+                .Register(registry)},
+        vdvaus_propagated_delays_{
             prometheus::BuildCounter()
                 .Name("nigiri_vdvrt_propagated_delays_total")
-                .Help("Number of delay propagations by the VDV RT feed")
+                .Help("Number of delay propagations by the VDV AUS feed")
                 .Register(registry)},
-        vdvrt_feed_timestamp_{prometheus::BuildGauge()
-                                  .Name("nigiri_vdvrt_feed_timestamp_seconds")
-                                  .Help("Timestamp of the VDV RT feed")
-                                  .Register(registry)},
-        vdvrt_last_update_timestamp_{
+        vdvaus_feed_timestamp_{prometheus::BuildGauge()
+                                   .Name("nigiri_vdvrt_feed_timestamp_seconds")
+                                   .Help("Timestamp of the VDV AUS feed")
+                                   .Register(registry)},
+        vdvaus_last_update_timestamp_{
             prometheus::BuildGauge()
                 .Name("nigiri_vdvrt_last_update_timestamp_seconds")
-                .Help("Last update timestamp of the VDV RT feed")
+                .Help("Last update timestamp of the VDV AUS feed")
                 .Register(registry)} {}
 
   prometheus::Family<prometheus::Counter>& gtfsrt_updates_requested_;
@@ -277,31 +281,31 @@ struct rt_metric_families {
   prometheus::Family<prometheus::Gauge>& gtfsrt_feed_timestamp_;
   prometheus::Family<prometheus::Gauge>& gtfsrt_last_update_timestamp_;
 
-  prometheus::Family<prometheus::Counter>& vdvrt_updates_requested_;
-  prometheus::Family<prometheus::Counter>& vdvrt_updates_successful_;
-  prometheus::Family<prometheus::Counter>& vdvrt_updates_error_;
+  prometheus::Family<prometheus::Counter>& vdvaus_updates_requested_;
+  prometheus::Family<prometheus::Counter>& vdvaus_updates_successful_;
+  prometheus::Family<prometheus::Counter>& vdvaus_updates_error_;
 
-  prometheus::Family<prometheus::Counter>& vdvrt_unsupported_additional_runs_;
-  prometheus::Family<prometheus::Counter>& vdvrt_cancelled_runs_;
-  prometheus::Family<prometheus::Counter>& vdvrt_total_stops_;
-  prometheus::Family<prometheus::Counter>& vdvrt_resolved_stops_;
-  prometheus::Family<prometheus::Counter>& vdvrt_unknown_stops_;
-  prometheus::Family<prometheus::Counter>& vdvrt_unsupported_additional_stops_;
-  prometheus::Family<prometheus::Counter>& vdvrt_total_runs_;
-  prometheus::Family<prometheus::Counter>& vdvrt_no_transport_found_at_stop_;
-  prometheus::Family<prometheus::Counter>& vdvrt_search_on_incomplete_;
-  prometheus::Family<prometheus::Counter>& vdvrt_found_runs_;
-  prometheus::Family<prometheus::Counter>& vdvrt_multiple_matches_;
-  prometheus::Family<prometheus::Counter>& vdvrt_matched_runs_;
-  prometheus::Family<prometheus::Counter>& vdvrt_unmatchable_runs_;
-  prometheus::Family<prometheus::Counter>& vdvrt_runs_without_stops_;
-  prometheus::Family<prometheus::Counter>& vdvrt_skipped_vdv_stops_;
-  prometheus::Family<prometheus::Counter>& vdvrt_excess_vdv_stops_;
-  prometheus::Family<prometheus::Counter>& vdvrt_updated_events_;
-  prometheus::Family<prometheus::Counter>& vdvrt_propagated_delays_;
+  prometheus::Family<prometheus::Counter>& vdvaus_unsupported_additional_runs_;
+  prometheus::Family<prometheus::Counter>& vdvaus_cancelled_runs_;
+  prometheus::Family<prometheus::Counter>& vdvaus_total_stops_;
+  prometheus::Family<prometheus::Counter>& vdvaus_resolved_stops_;
+  prometheus::Family<prometheus::Counter>& vdvaus_unknown_stops_;
+  prometheus::Family<prometheus::Counter>& vdvaus_unsupported_additional_stops_;
+  prometheus::Family<prometheus::Counter>& vdvaus_total_runs_;
+  prometheus::Family<prometheus::Counter>& vdvaus_no_transport_found_at_stop_;
+  prometheus::Family<prometheus::Counter>& vdvaus_search_on_incomplete_;
+  prometheus::Family<prometheus::Counter>& vdvaus_found_runs_;
+  prometheus::Family<prometheus::Counter>& vdvaus_multiple_matches_;
+  prometheus::Family<prometheus::Counter>& vdvaus_matched_runs_;
+  prometheus::Family<prometheus::Counter>& vdvaus_unmatchable_runs_;
+  prometheus::Family<prometheus::Counter>& vdvaus_runs_without_stops_;
+  prometheus::Family<prometheus::Counter>& vdvaus_skipped_vdv_stops_;
+  prometheus::Family<prometheus::Counter>& vdvaus_excess_vdv_stops_;
+  prometheus::Family<prometheus::Counter>& vdvaus_updated_events_;
+  prometheus::Family<prometheus::Counter>& vdvaus_propagated_delays_;
 
-  prometheus::Family<prometheus::Gauge>& vdvrt_feed_timestamp_;
-  prometheus::Family<prometheus::Gauge>& vdvrt_last_update_timestamp_;
+  prometheus::Family<prometheus::Gauge>& vdvaus_feed_timestamp_;
+  prometheus::Family<prometheus::Gauge>& vdvaus_last_update_timestamp_;
 };
 
 struct gtfsrt_metrics {
@@ -363,36 +367,36 @@ struct gtfsrt_metrics {
   prometheus::Gauge& last_update_timestamp_;
 };
 
-struct vdvrt_metrics {
-  explicit vdvrt_metrics(std::string const& tag, rt_metric_families const& m)
-      : updates_requested_{m.vdvrt_updates_requested_.Add({{"tag", tag}})},
-        updates_successful_{m.vdvrt_updates_successful_.Add({{"tag", tag}})},
-        updates_error_{m.vdvrt_updates_error_.Add({{"tag", tag}})},
+struct vdvaus_metrics {
+  explicit vdvaus_metrics(std::string const& tag, rt_metric_families const& m)
+      : updates_requested_{m.vdvaus_updates_requested_.Add({{"tag", tag}})},
+        updates_successful_{m.vdvaus_updates_successful_.Add({{"tag", tag}})},
+        updates_error_{m.vdvaus_updates_error_.Add({{"tag", tag}})},
         unsupported_additional_runs_{
-            m.vdvrt_unsupported_additional_runs_.Add({{"tag", tag}})},
-        cancelled_runs_{m.vdvrt_cancelled_runs_.Add({{"tag", tag}})},
-        total_stops_{m.vdvrt_total_stops_.Add({{"tag", tag}})},
-        resolved_stops_{m.vdvrt_resolved_stops_.Add({{"tag", tag}})},
-        unknown_stops_{m.vdvrt_unknown_stops_.Add({{"tag", tag}})},
+            m.vdvaus_unsupported_additional_runs_.Add({{"tag", tag}})},
+        cancelled_runs_{m.vdvaus_cancelled_runs_.Add({{"tag", tag}})},
+        total_stops_{m.vdvaus_total_stops_.Add({{"tag", tag}})},
+        resolved_stops_{m.vdvaus_resolved_stops_.Add({{"tag", tag}})},
+        unknown_stops_{m.vdvaus_unknown_stops_.Add({{"tag", tag}})},
         unsupported_additional_stops_{
-            m.vdvrt_unsupported_additional_stops_.Add({{"tag", tag}})},
-        total_runs_{m.vdvrt_total_runs_.Add({{"tag", tag}})},
+            m.vdvaus_unsupported_additional_stops_.Add({{"tag", tag}})},
+        total_runs_{m.vdvaus_total_runs_.Add({{"tag", tag}})},
         no_transport_found_at_stop_{
-            m.vdvrt_no_transport_found_at_stop_.Add({{"tag", tag}})},
+            m.vdvaus_no_transport_found_at_stop_.Add({{"tag", tag}})},
         search_on_incomplete_{
-            m.vdvrt_search_on_incomplete_.Add({{"tag", tag}})},
-        found_runs_{m.vdvrt_found_runs_.Add({{"tag", tag}})},
-        multiple_matches_{m.vdvrt_multiple_matches_.Add({{"tag", tag}})},
-        matched_runs_{m.vdvrt_matched_runs_.Add({{"tag", tag}})},
-        unmatchable_runs_{m.vdvrt_unmatchable_runs_.Add({{"tag", tag}})},
-        runs_without_stops_{m.vdvrt_runs_without_stops_.Add({{"tag", tag}})},
-        skipped_vdv_stops_{m.vdvrt_skipped_vdv_stops_.Add({{"tag", tag}})},
-        excess_vdv_stops_{m.vdvrt_excess_vdv_stops_.Add({{"tag", tag}})},
-        updated_events_{m.vdvrt_updated_events_.Add({{"tag", tag}})},
-        propagated_delays_{m.vdvrt_propagated_delays_.Add({{"tag", tag}})},
-        feed_timestamp_{m.vdvrt_feed_timestamp_.Add({{"tag", tag}})},
+            m.vdvaus_search_on_incomplete_.Add({{"tag", tag}})},
+        found_runs_{m.vdvaus_found_runs_.Add({{"tag", tag}})},
+        multiple_matches_{m.vdvaus_multiple_matches_.Add({{"tag", tag}})},
+        matched_runs_{m.vdvaus_matched_runs_.Add({{"tag", tag}})},
+        unmatchable_runs_{m.vdvaus_unmatchable_runs_.Add({{"tag", tag}})},
+        runs_without_stops_{m.vdvaus_runs_without_stops_.Add({{"tag", tag}})},
+        skipped_vdv_stops_{m.vdvaus_skipped_vdv_stops_.Add({{"tag", tag}})},
+        excess_vdv_stops_{m.vdvaus_excess_vdv_stops_.Add({{"tag", tag}})},
+        updated_events_{m.vdvaus_updated_events_.Add({{"tag", tag}})},
+        propagated_delays_{m.vdvaus_propagated_delays_.Add({{"tag", tag}})},
+        feed_timestamp_{m.vdvaus_feed_timestamp_.Add({{"tag", tag}})},
         last_update_timestamp_{
-            m.vdvrt_last_update_timestamp_.Add({{"tag", tag}})} {}
+            m.vdvaus_last_update_timestamp_.Add({{"tag", tag}})} {}
 
   void update(n::rt::vdv::statistics const& stats) const {
     unsupported_additional_runs_.Increment(stats.unsupported_additional_runs_);
@@ -455,18 +459,18 @@ asio::awaitable<ptr<elevators>> update_elevators(config const& c,
   co_return update_elevators(c, d, get_http_body(res), new_rtt);
 }
 
-struct gtfs_rt_endpoint {
-  rt_entry::gtfs_rt ep_;
+struct gtfsrt_endpoint {
+  rt_entry::gtfsrt ep_;
   n::source_idx_t src_;
   std::string tag_;
   gtfsrt_metrics metrics_;
 };
 
-struct vdv_rt_endpoint {
-  rt_entry::vdv_rt ep_;
+struct vdvaus_endpoint {
+  rt_entry::vdvaus ep_;
   n::source_idx_t src_;
   std::string tag_;
-  vdvrt_metrics metrics_;
+  vdvaus_metrics metrics_;
 };
 
 void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
@@ -479,13 +483,13 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
         auto ec = boost::system::error_code{};
 
         auto const endpoints = [&]() {
-          auto endpoints = std::vector<gtfs_rt_endpoint>{};
+          auto endpoints = std::vector<gtfsrt_endpoint>{};
           auto const metic_families = rt_metric_families{*d.metrics_};
           for (auto const& [tag, dataset] : c.timetable_->datasets_) {
             if (dataset.rt_.has_value()) {
               auto const src = d.tags_->get_src(tag);
               for (auto const& ep : *dataset.rt_) {
-                std::visit(utl::overloaded{[&](rt_entry::gtfs_rt&& gtfs_rt_ep) {
+                std::visit(utl::overloaded{[&](rt_entry::gtfsrt&& gtfs_rt_ep) {
                              endpoints.push_back(
                                  {gtfs_rt_ep, src, tag,
                                   gtfsrt_metrics{tag, metic_families}});
@@ -518,7 +522,7 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
 
             if (!endpoints.empty()) {
               auto awaitables =
-                  utl::to_vec(endpoints, [&](gtfs_rt_endpoint const& x) {
+                  utl::to_vec(endpoints, [&](gtfsrt_endpoint const& x) {
                     x.metrics_.updates_requested_.Increment();
                     return boost::asio::co_spawn(
                         executor,

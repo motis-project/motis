@@ -110,8 +110,8 @@ struct config {
     std::optional<std::string> default_timezone_{};
     std::map<std::string, dataset> datasets_{};
     std::optional<std::filesystem::path> assistance_times_{};
-    unsigned vdv_rt_subscription_renewal_{3600U};
-    unsigned vdv_rt_subscription_duration_{25 * 3600U};
+    unsigned vdvaus_subscription_renewal_{3600U};
+    unsigned vdvaus_subscription_duration_{25 * 3600U};
   };
   std::optional<timetable> timetable_{};
 

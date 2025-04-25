@@ -5,10 +5,10 @@
 
 #include "motis/fwd.h"
 
-namespace motis::vdv_rt {
+namespace motis::vdvaus {
 
 void subscription(boost::asio::io_context&, config const&, data&);
 
 void shutdown(boost::asio::io_context&, config const&, data&);
 
-}  // namespace motis::vdv_rt
+}  // namespace motis::vdvaus

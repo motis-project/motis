@@ -1,10 +1,10 @@
-#include "motis/vdv_rt/connection.h"
+#include "motis/vdvaus/connection.h"
 
-#include "motis/vdv_rt/xml.h"
+#include "motis/vdvaus/xml.h"
 
-namespace motis::vdv_rt {
+namespace motis::vdvaus {
 
-connection::connection(rt_entry::vdv_rt cfg,
+connection::connection(rt_entry::vdvaus cfg,
                        nigiri::timetable const& tt,
                        nigiri::source_idx_t const src)
     : cfg_{cfg},
@@ -39,4 +39,4 @@ std::string connection::make_fetch_req() {
   return xml_to_str(doc);
 }
 
-}  // namespace motis::vdv_rt
+}  // namespace motis::vdvaus

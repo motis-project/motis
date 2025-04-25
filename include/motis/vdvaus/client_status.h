@@ -6,12 +6,12 @@
 
 #include "motis/fwd.h"
 
-namespace motis::vdv_rt {
+namespace motis::vdvaus {
 
 struct client_status {
   std::string operator()(std::string_view) const;
 
-  connection const& vdv_rt_;
+  connection const& vdvaus_;
 };
 
-}  // namespace motis::vdv_rt
+}  // namespace motis::vdvaus

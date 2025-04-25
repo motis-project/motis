@@ -58,8 +58,8 @@ struct provider_routing_data;
 struct products_routing_data;
 }  // namespace gbfs
 
-namespace vdv_rt {
+namespace vdvaus {
 struct connection;
-}  // namespace vdv_rt
+}  // namespace vdvaus
 
 }  // namespace motis

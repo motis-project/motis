@@ -1,8 +1,8 @@
-#include "motis/vdv_rt/xml.h"
+#include "motis/vdvaus/xml.h"
 
-#include "motis/vdv_rt/time.h"
+#include "motis/vdvaus/time.h"
 
-namespace motis::vdv_rt {
+namespace motis::vdvaus {
 
 pugi::xml_document make_xml_doc() {
   auto doc = pugi::xml_document{};
@@ -24,4 +24,4 @@ pugi::xml_document parse(std::string const& s) {
   return doc;
 }
 
-}  // namespace motis::vdv_rt
+}  // namespace motis::vdvaus

@@ -127,14 +127,14 @@ void config::verify() const {
                             e.what());
           }
           if (!rt_entry.protocol_ ||
-              rt_entry.protocol_ == rt_entry::protocol::gtfs_rt) {
+              rt_entry.protocol_ == rt_entry::protocol::gtfsrt) {
             utl::verify(!rt_entry.client_name_.has_value(),
                         "GTFS RT invalid field: client_name");
             utl::verify(!rt_entry.server_name_.has_value(),
                         "GTFS RT invalid field: server_name");
             utl::verify(!rt_entry.hysteresis_.has_value(),
                         "GTFS RT invalid field: hysteresis");
-          } else if (rt_entry.protocol_ == rt_entry::protocol::vdv_rt) {
+          } else if (rt_entry.protocol_ == rt_entry::protocol::vdvaus) {
             utl::verify(!rt_entry.headers_.has_value(),
                         "VDV RT invalid field: headers");
             utl::verify(rt_entry.client_name_.has_value(),

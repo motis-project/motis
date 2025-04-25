@@ -37,7 +37,7 @@
 #include "motis/tag_lookup.h"
 #include "motis/tiles_data.h"
 #include "motis/tt_location_rtree.h"
-#include "motis/vdv_rt/connection.h"
+#include "motis/vdvaus/connection.h"
 
 namespace fs = std::filesystem;
 namespace n = nigiri;
@@ -267,12 +267,12 @@ void data::load_tiles() {
 }
 
 void data::load_rt(std::string_view tag, config::timetable::dataset const& d) {
-  vdv_rt_ = std::make_unique<std::vector<vdv_rt::connection>>();
+  vdvaus_ = std::make_unique<std::vector<vdvaus::connection>>();
   for (auto const& rt : *d.rt_) {
     auto const rt_actual = rt();
-    std::visit(utl::overloaded{[](rt_entry::gtfs_rt const&) {},
-                               [&](rt_entry::vdv_rt const& vdv_cfg) {
-                                 vdv_rt_->emplace_back(vdv_cfg, *tt_,
+    std::visit(utl::overloaded{[](rt_entry::gtfsrt const&) {},
+                               [&](rt_entry::vdvaus const& vdv_cfg) {
+                                 vdvaus_->emplace_back(vdv_cfg, *tt_,
                                                        tags_->get_src(tag));
                                }},
                rt_actual);
