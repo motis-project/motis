@@ -18,7 +18,7 @@ const translations: Translations = {
 	to: 'To',
 	arrival: 'Arrival',
 	departure: 'Departure',
-	timetable: 'Timetable',
+	connections: 'Connections',
 	duration: 'Duration',
 	arrivals: 'Arrivals',
 	later: 'later',

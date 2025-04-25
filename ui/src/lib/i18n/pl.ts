@@ -23,7 +23,7 @@ const translations: Translations = {
 	later: 'później',
 	earlier: 'wcześniej',
 	departures: 'Odjazdy',
-	timetable: 'Rozkład jazdy',
+	connections: 'Połączenia',
 	switchToArrivals: 'Przełącz na przyjazdy',
 	switchToDepartures: 'Przełącz na odjazdy',
 	track: 'Tor',

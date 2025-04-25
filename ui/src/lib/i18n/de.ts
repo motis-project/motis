@@ -20,7 +20,7 @@ const translations: Translations = {
 	departure: 'Abfahrt',
 	duration: 'Dauer',
 	arrivals: 'Ankünfte',
-	timetable: 'Fahrplan',
+	connections: 'Verbindungen',
 	departures: 'Abfahrten',
 	later: 'später',
 	earlier: 'früher',

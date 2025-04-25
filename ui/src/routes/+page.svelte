@@ -297,17 +297,12 @@
 					? 'hide'
 					: ''}
 			>
-				<Tabs.Root value="timetable" class="w-full md:w-[520px] overflow-y-auto">
+				<Tabs.Root value="connections" class="w-full md:w-[520px] overflow-y-auto">
 					<Tabs.List class="grid grid-cols-2">
-						<Tabs.Trigger value="timetable">{t.timetable}</Tabs.Trigger>
+						<Tabs.Trigger value="connections">{t.connections}</Tabs.Trigger>
 						<Tabs.Trigger value="departures">{t.departures}</Tabs.Trigger>
 					</Tabs.List>
-					<Tabs.Content value="departures">
-						<Card class="overflow-y-auto overflow-x-hidden bg-background rounded-lg">
-							<DeparturesMask bind:time />
-						</Card>
-					</Tabs.Content>
-					<Tabs.Content value="timetable">
+					<Tabs.Content value="connections">
 						<Card class="overflow-y-auto overflow-x-hidden bg-background rounded-lg">
 							<SearchMask
 								geocodingBiasPlace={center}
@@ -320,6 +315,11 @@
 								bind:bikeCarriage
 								bind:selectedModes={selectedTransitModes}
 							/>
+						</Card>
+					</Tabs.Content>
+					<Tabs.Content value="departures">
+						<Card class="overflow-y-auto overflow-x-hidden bg-background rounded-lg">
+							<DeparturesMask bind:time />
 						</Card>
 					</Tabs.Content>
 				</Tabs.Root>
