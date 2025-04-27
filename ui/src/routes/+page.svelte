@@ -291,13 +291,13 @@
 	<LevelSelect {bounds} {zoom} bind:level />
 
 	<div class="maplibregl-control-container">
-		<div class="maplibregl-ctrl-top-left w-full">
+		<div class="maplibregl-ctrl-top-left">
 			<Control
 				class={isSmallScreen && (page.state.selectedItinerary || page.state.selectedStop)
 					? 'hide'
 					: ''}
 			>
-				<Tabs.Root value="connections" class="w-full md:w-[520px] overflow-y-auto">
+				<Tabs.Root value="connections" class="max-w-full w-[520px] overflow-y-auto">
 					<Tabs.List class="grid grid-cols-2">
 						<Tabs.Trigger value="connections">{t.connections}</Tabs.Trigger>
 						<Tabs.Trigger value="departures">{t.departures}</Tabs.Trigger>
@@ -385,7 +385,7 @@
 								variant="ghost"
 								onclick={() => {
 									pushStateWithQueryString(
-										{ tripId: page.state.tripId },
+										{ ...(page.state.tripId && { tripId: page.state.tripId }) },
 										{ selectedItinerary: page.state.selectedItinerary }
 									);
 								}}
