@@ -12,6 +12,7 @@ namespace osr {
 struct ways;
 struct platforms;
 struct lookup;
+struct elevation_storage;
 
 }  // namespace osr
 

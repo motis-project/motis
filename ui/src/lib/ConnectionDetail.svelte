@@ -9,15 +9,12 @@
 	import Route from '$lib/Route.svelte';
 	import { getModeName } from '$lib/getModeName';
 	import { t } from '$lib/i18n/translation';
+	import { onClickStop, onClickTrip } from '$lib/utils';
 
 	const {
-		itinerary,
-		onClickStop,
-		onClickTrip
+		itinerary
 	}: {
 		itinerary: Itinerary;
-		onClickStop: (name: string, stopId: string, time: Date) => void;
-		onClickTrip: (tripId: string) => void;
 	} = $props();
 
 	const lastLeg = $derived(itinerary.legs.findLast((l) => l.duration !== 0));
@@ -179,6 +176,13 @@
 						{/if}
 						{#if pred.distance}
 							({Math.round(pred.distance)} m)
+						{/if}
+						{#if l.alerts}
+							{#each l.alerts as alert}
+								<div class="text-destructive text-sm font-bold">
+									{alert.headerText}
+								</div>
+							{/each}
 						{/if}
 						{#if prevTransitLeg?.fareTransferIndex != undefined && itinerary.fareTransfers && itinerary.fareTransfers[prevTransitLeg.fareTransferIndex].transferProduct}
 							{@const transferProduct =

@@ -18,6 +18,7 @@ const translations: Translations = {
 	to: 'To',
 	arrival: 'Arrival',
 	departure: 'Departure',
+	connections: 'Connections',
 	duration: 'Duration',
 	arrivals: 'Arrivals',
 	later: 'later',

@@ -66,6 +66,7 @@ struct routing {
       std::optional<std::vector<api::RentalPropulsionTypeEnum>> const&,
       std::optional<std::vector<std::string>> const& rental_providers,
       api::PedestrianProfileEnum,
+      api::ElevationCostsEnum,
       std::chrono::seconds max,
       double max_matching_distance,
       gbfs::gbfs_routing_data&) const;
@@ -77,6 +78,7 @@ struct routing {
                  osr::direction,
                  std::vector<api::ModeEnum> const&,
                  api::PedestrianProfileEnum,
+                 api::ElevationCostsEnum,
                  double max_matching_distance,
                  std::chrono::seconds max) const;
 
@@ -91,6 +93,7 @@ struct routing {
       std::optional<std::vector<std::string>> const& rental_providers,
       nigiri::unixtime_t start_time,
       api::PedestrianProfileEnum,
+      api::ElevationCostsEnum,
       std::chrono::seconds max,
       double max_matching_distance,
       double fastest_direct_factor) const;
@@ -99,6 +102,7 @@ struct routing {
   osr::ways const* w_;
   osr::lookup const* l_;
   osr::platforms const* pl_;
+  osr::elevation_storage const* elevations_;
   nigiri::timetable const* tt_;
   tag_lookup const* tags_;
   point_rtree<nigiri::location_idx_t> const* loc_tree_;

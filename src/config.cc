@@ -7,6 +7,7 @@
 #include "fmt/std.h"
 
 #include "utl/erase.h"
+#include "utl/overloaded.h"
 #include "utl/read_file.h"
 #include "utl/verify.h"
 
@@ -96,19 +97,21 @@ config config::read(std::string const& s) {
 }
 
 void config::verify() const {
+  auto const street_routing = use_street_routing();
+
   utl::verify(!tiles_ || osm_, "feature TILES requires OpenStreetMap data");
-  utl::verify(!street_routing_ || osm_,
+  utl::verify(!street_routing || osm_,
               "feature STREET_ROUTING requires OpenStreetMap data");
   utl::verify(!timetable_ || !timetable_->datasets_.empty(),
               "feature TIMETABLE requires timetable data");
   utl::verify(
-      !osr_footpath_ || (street_routing_ && timetable_),
+      !osr_footpath_ || (street_routing && timetable_),
       "feature OSR_FOOTPATH requires features STREET_ROUTING and TIMETABLE");
-  utl::verify(!has_elevators() || (street_routing_ && timetable_),
+  utl::verify(!has_elevators() || (street_routing && timetable_),
               "feature ELEVATORS requires STREET_ROUTING and TIMETABLE");
-  utl::verify(!has_gbfs_feeds() || street_routing_,
+  utl::verify(!has_gbfs_feeds() || street_routing,
               "feature GBFS requires feature STREET_ROUTING");
-  utl::verify(!has_odm() || (street_routing_ && timetable_),
+  utl::verify(!has_odm() || (street_routing && timetable_),
               "feature ODM requires feature STREET_ROUTING");
   utl::verify(!has_elevators() || osr_footpath_,
               "feature ELEVATORS requires feature OSR_FOOTPATHS");
@@ -186,6 +189,26 @@ bool config::has_elevators() const {
             return x;
           }},
       elevators_);
+}
+
+std::optional<config::street_routing> config::get_street_routing() const {
+  return std::visit(
+      utl::overloaded{
+          [](std::optional<config::street_routing> const& x) { return x; },
+          [](bool const street_routing) {
+            return street_routing ? std::optional{config::street_routing{}}
+                                  : std::nullopt;
+          }},
+      street_routing_);
+}
+
+bool config::use_street_routing() const {
+  return std::visit(
+      utl::overloaded{
+          [](std::optional<street_routing> const& o) { return o.has_value(); },
+          [](bool const b) { return b; },
+      },
+      street_routing_);
 }
 
 }  // namespace motis

@@ -13,13 +13,16 @@
 #include "nigiri/routing/journey.h"
 #include "nigiri/rt/frun.h"
 #include "nigiri/rt/gtfsrt_resolve_run.h"
+#include "nigiri/rt/service_alert.h"
 #include "nigiri/special_stations.h"
 #include "nigiri/types.h"
 
 #include "motis-api/motis-api.h"
 #include "motis/constants.h"
 #include "motis/gbfs/mode.h"
+#include "motis/gbfs/osr_profile.h"
 #include "motis/gbfs/routing_data.h"
+#include "motis/mode_to_profile.h"
 #include "motis/odm/odm.h"
 #include "motis/place.h"
 #include "motis/street_routing.h"
@@ -42,7 +45,8 @@ api::ModeEnum to_mode(osr::search_profile const m) {
     case osr::search_profile::kBikeElevationLow:
     case osr::search_profile::kBikeElevationHigh: [[fallthrough]];
     case osr::search_profile::kBike: return api::ModeEnum::BIKE;
-    case osr::search_profile::kBikeSharing: return api::ModeEnum::RENTAL;
+    case osr::search_profile::kBikeSharing: [[fallthrough]];
+    case osr::search_profile::kCarSharing: return api::ModeEnum::RENTAL;
   }
   std::unreachable();
 }
@@ -83,26 +87,29 @@ std::optional<fare_indices> get_fare_indices(
   return std::nullopt;
 }
 
-api::Itinerary journey_to_response(osr::ways const* w,
-                                   osr::lookup const* l,
-                                   osr::platforms const* pl,
-                                   n::timetable const& tt,
-                                   tag_lookup const& tags,
-                                   elevators const* e,
-                                   n::rt_timetable const* rtt,
-                                   platform_matches_t const* matches,
-                                   n::shapes_storage const* shapes,
-                                   gbfs::gbfs_routing_data& gbfs_rd,
-                                   bool const wheelchair,
-                                   n::routing::journey const& j,
-                                   place_t const& start,
-                                   place_t const& dest,
-                                   street_routing_cache_t& cache,
-                                   osr::bitvec<osr::node_idx_t>& blocked_mem,
-                                   bool const detailed_transfers,
-                                   bool const with_fares,
-                                   double const timetable_max_matching_distance,
-                                   double const max_matching_distance) {
+api::Itinerary journey_to_response(
+    osr::ways const* w,
+    osr::lookup const* l,
+    osr::platforms const* pl,
+    n::timetable const& tt,
+    tag_lookup const& tags,
+    elevators const* e,
+    n::rt_timetable const* rtt,
+    platform_matches_t const* matches,
+    osr::elevation_storage const* elevations,
+    n::shapes_storage const* shapes,
+    gbfs::gbfs_routing_data& gbfs_rd,
+    api::PedestrianProfileEnum const pedestrian_profile,
+    api::ElevationCostsEnum const elevation_costs,
+    n::routing::journey const& j,
+    place_t const& start,
+    place_t const& dest,
+    street_routing_cache_t& cache,
+    osr::bitvec<osr::node_idx_t>& blocked_mem,
+    bool const detailed_transfers,
+    bool const with_fares,
+    double const timetable_max_matching_distance,
+    double const max_matching_distance) {
   utl::verify(!j.legs_.empty(), "journey without legs");
 
   auto const fares =
@@ -165,6 +172,75 @@ api::Itinerary journey_to_response(osr::ways const* w,
     }
     std::unreachable();
   };
+  auto const to_time_range =
+      [&](n::interval<n::unixtime_t> const x) -> api::TimeRange {
+    return {x.from_, x.to_};
+  };
+  auto const to_cause = [](n::alert_cause const x) {
+    return api::AlertCauseEnum{static_cast<int>(x)};
+  };
+  auto const to_effect = [](n::alert_effect const x) {
+    return api::AlertEffectEnum{static_cast<int>(x)};
+  };
+  auto const convert_to_str = [](std::string_view s) {
+    return std::optional{std::string{s}};
+  };
+  auto const to_alert = [&](n::alert_idx_t const x) -> api::Alert {
+    auto const& a = rtt->alerts_;
+    auto const get_translation = [&](auto&& x) {
+      return x.empty()
+                 ? std::nullopt
+                 : a.strings_.try_get(x.front().text_).and_then(convert_to_str);
+    };
+    return {
+        .communicationPeriod_ =
+            a.communication_period_[x].empty()
+                ? std::nullopt
+                : std::optional<std::vector<api::TimeRange>>{utl::to_vec(
+                      a.communication_period_[x], to_time_range)},
+        .impactPeriod_ =
+            a.impact_period_[x].empty()
+                ? std::nullopt
+                : std::optional<std::vector<api::TimeRange>>{utl::to_vec(
+                      a.impact_period_[x], to_time_range)},
+        .cause_ = to_cause(a.cause_[x]),
+        .causeDetail_ = get_translation(a.cause_detail_[x]),
+        .effect_ = to_effect(a.effect_[x]),
+        .effectDetail_ = get_translation(a.effect_detail_[x]),
+        .url_ = get_translation(a.url_[x]),
+        .headerText_ = get_translation(a.header_text_[x]).value_or(""),
+        .descriptionText_ =
+            get_translation(a.description_text_[x]).value_or(""),
+        .ttsHeaderText_ = get_translation(a.tts_header_text_[x]),
+        .ttsDescriptionText_ = get_translation(a.tts_description_text_[x]),
+        .imageUrl_ = a.image_[x].empty()
+                         ? std::nullopt
+                         : a.strings_.try_get(a.image_[x].front().url_)
+                               .and_then(convert_to_str),
+        .imageMediaType_ =
+            a.image_[x].empty()
+                ? std::nullopt
+                : a.strings_.try_get(a.image_[x].front().media_type_)
+                      .and_then(convert_to_str),
+        .imageAlternativeText_ = get_translation(a.image_alternative_text_[x])};
+  };
+  auto const get_alerts = [&](n::trip_idx_t const x,
+                              n::rt_transport_idx_t const rt_t)
+      -> std::optional<std::vector<api::Alert>> {
+    if (rtt == nullptr) {
+      return std::nullopt;
+    }
+
+    auto alerts = std::vector<api::Alert>{};
+    for (auto const& t : tt.trip_ids_[x]) {
+      auto const src = tt.trip_id_src_[t];
+      rtt->alerts_.for_each_alert(
+          tt, src, x, rt_t, n::location_idx_t::invalid(),
+          [&](n::alert_idx_t const a) { alerts.emplace_back(to_alert(a)); });
+    }
+
+    return alerts.empty() ? std::nullopt : std::optional{std::move(alerts)};
+  };
 
   auto itinerary = api::Itinerary{
       .duration_ = to_seconds(j.arrival_time() - j.departure_time()),
@@ -221,7 +297,7 @@ api::Itinerary journey_to_response(osr::ways const* w,
     auto const to = to_place(&tt, &tags, w, pl, matches, tt_location{j_leg.to_},
                              start, dest);
 
-    auto const to_place = [&](auto&& s, bool run_cancelled) {
+    auto const to_place = [&](auto&& s, bool const run_cancelled) {
       auto p = ::motis::to_place(&tt, &tags, w, pl, matches, tt_location{s},
                                  start, dest);
       p.pickupType_ = !run_cancelled && s.in_allowed()
@@ -265,9 +341,10 @@ api::Itinerary journey_to_response(osr::ways const* w,
                   .headsign_ = std::string{enter_stop.direction()},
                   .routeColor_ = to_str(color.color_),
                   .routeTextColor_ = to_str(color.text_color_),
-                  .agencyName_ = {std::string{agency.long_name_}},
-                  .agencyUrl_ = {std::string{agency.url_}},
-                  .agencyId_ = {std::string{agency.short_name_}},
+                  .agencyName_ =
+                      std::string{tt.strings_.get(agency.long_name_)},
+                  .agencyUrl_ = std::string{tt.strings_.get(agency.url_)},
+                  .agencyId_ = std::string{tt.strings_.get(agency.short_name_)},
                   .tripId_ = tags.id(tt, enter_stop, n::event_type::kDep),
                   .routeShortName_ = {std::string{
                       enter_stop.trip_display_name()}},
@@ -277,7 +354,9 @@ api::Itinerary journey_to_response(osr::ways const* w,
                       [](auto&& x) { return std::optional{x.transfer_idx_}; }),
                   .effectiveFareLegIndex_ = fare_indices.and_then([](auto&& x) {
                     return std::optional{x.effective_fare_leg_idx_};
-                  })});
+                  }),
+                  .alerts_ = get_alerts(fr.trip_idx(), fr.rt_)});
+
               leg.from_.vertexType_ = api::VertexTypeEnum::TRANSIT;
               leg.from_.departure_ = leg.startTime_;
               leg.from_.scheduledDeparture_ = leg.scheduledStartTime_;
@@ -312,8 +391,11 @@ api::Itinerary journey_to_response(osr::ways const* w,
             [&](n::footpath) {
               append(
                   w && l
-                      ? route(*w, *l, gbfs_rd, e, from, to, api::ModeEnum::WALK,
-                              wheelchair, j_leg.dep_time_, j_leg.arr_time_,
+                      ? route(*w, *l, gbfs_rd, e, elevations, from, to,
+                              api::ModeEnum::WALK,
+                              to_profile(api::ModeEnum::WALK,
+                                         pedestrian_profile, elevation_costs),
+                              j_leg.dep_time_, j_leg.arr_time_,
                               timetable_max_matching_distance, {}, cache,
                               blocked_mem,
                               std::chrono::duration_cast<std::chrono::seconds>(
@@ -324,23 +406,27 @@ api::Itinerary journey_to_response(osr::ways const* w,
                                         j_leg.dep_time_, j_leg.arr_time_));
             },
             [&](n::routing::offset const x) {
-              append(route(
-                  *w, *l, gbfs_rd, e, from, to,
+              auto const profile =
                   x.transport_mode_id_ >= kGbfsTransportModeIdOffset
-                      ? api::ModeEnum::RENTAL
-                  : x.transport_mode_id_ == kOdmTransportModeId
-                      ? api::ModeEnum::ODM
-                      : to_mode(osr::search_profile{
-                            static_cast<std::uint8_t>(x.transport_mode_id_)}),
-                  wheelchair, j_leg.dep_time_, j_leg.arr_time_,
-                  max_matching_distance,
-                  x.transport_mode_id_ >= kGbfsTransportModeIdOffset
-                      ? gbfs_rd.get_products_ref(x.transport_mode_id_)
-                      : gbfs::gbfs_products_ref{},
-                  cache, blocked_mem,
-                  std::chrono::duration_cast<std::chrono::seconds>(
-                      j_leg.arr_time_ - j_leg.dep_time_) +
-                      std::chrono::minutes{5}));
+                      ? gbfs::get_osr_profile(gbfs_rd.get_products(
+                            gbfs_rd.get_products_ref(x.transport_mode_id_)))
+                      : osr::search_profile{
+                            static_cast<std::uint8_t>(x.transport_mode_id_)};
+              append(route(*w, *l, gbfs_rd, e, elevations, from, to,
+                           x.transport_mode_id_ >= kGbfsTransportModeIdOffset
+                               ? api::ModeEnum::RENTAL
+                           : x.transport_mode_id_ == kOdmTransportModeId
+                               ? api::ModeEnum::ODM
+                               : to_mode(profile),
+                           profile, j_leg.dep_time_, j_leg.arr_time_,
+                           max_matching_distance,
+                           x.transport_mode_id_ >= kGbfsTransportModeIdOffset
+                               ? gbfs_rd.get_products_ref(x.transport_mode_id_)
+                               : gbfs::gbfs_products_ref{},
+                           cache, blocked_mem,
+                           std::chrono::duration_cast<std::chrono::seconds>(
+                               j_leg.arr_time_ - j_leg.dep_time_) +
+                               std::chrono::minutes{5}));
             }},
         j_leg.uses_);
   }

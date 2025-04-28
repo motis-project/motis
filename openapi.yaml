@@ -180,6 +180,30 @@ paths:
             $ref: '#/components/schemas/PedestrianProfile'
             default: FOOT
 
+        - name: elevationCosts
+          in: query
+          required: false
+          description: |
+            Optional. Default is `NONE`.
+
+            Set an elevation cost profile, to penalize routes with incline.
+            - `NONE`: No additional costs for elevations. This is the default behavior
+            - `LOW`: Add a low cost for increase in elevation and incline along the way. This will prefer routes with less ascent, if small detours are required.
+            - `HIGH`: Add a high cost for increase in elevation and incline along the way. This will prefer routes with less ascent, if larger detours are required.
+
+            As using an elevation costs profile will increase the travel duration,
+            routing through steep terrain may exceed the maximal allowed duration,
+            causing a location to appear unreachable.
+            Increasing the maximum travel time for these segments may resolve this issue.
+
+            The profile is used for direct routing, on the first mile, and last mile.
+
+            Elevation cost profiles are currently used by following street modes:
+            - `BIKE`
+          schema:
+            $ref: '#/components/schemas/ElevationCosts'
+            default: NONE
+
         - name: useRoutedTransfers
           in: query
           required: false
@@ -675,6 +699,27 @@ paths:
           description: maximum matching distance in meters to match geo coordinates to the street network
           schema:
             type: number
+        - name: elevationCosts
+          in: query
+          required: false
+          description: |
+            Optional. Default is `NONE`.
+
+            Set an elevation cost profile, to penalize routes with incline.
+            - `NONE`: No additional costs for elevations. This is the default behavior
+            - `LOW`: Add a low cost for increase in elevation and incline along the way. This will prefer routes with less ascent, if small detours are required.
+            - `HIGH`: Add a high cost for increase in elevation and incline along the way. This will prefer routes with less ascent, if larger detours are required.
+
+            As using an elevation costs profile will increase the travel duration,
+            routing through steep terrain may exceed the maximal allowed duration,
+            causing a location to appear unreachable.
+            Increasing the maximum travel time for these segments may resolve this issue.
+
+            Elevation cost profiles are currently used by following street modes:
+            - `BIKE`
+          schema:
+            $ref: '#/components/schemas/ElevationCosts'
+            default: NONE
         - name: arriveBy
           in: query
           required: true
@@ -822,6 +867,31 @@ paths:
           schema:
             $ref: '#/components/schemas/PedestrianProfile'
             default: FOOT
+
+        - name: elevationCosts
+          in: query
+          required: false
+          description: |
+            Optional. Default is `NONE`.
+
+            Set an elevation cost profile, to penalize routes with incline.
+            - `NONE`: No additional costs for elevations. This is the default behavior
+            - `LOW`: Add a low cost for increase in elevation and incline along the way. This will prefer routes with less ascent, if small detours are required.
+            - `HIGH`: Add a high cost for increase in elevation and incline along the way. This will prefer routes with less ascent, if larger detours are required.
+
+            As using an elevation costs profile will increase the travel duration,
+            routing through steep terrain may exceed the maximal allowed duration,
+            causing a location to appear unreachable.
+            Increasing the maximum travel time for these segments may resolve this issue.
+
+            The profile is used for routing on both the first and last mile.
+
+            Elevation cost profiles are currently used by following street modes:
+            - `BIKE`
+          schema:
+            $ref: '#/components/schemas/ElevationCosts'
+            default: NONE
+
         - name: transitModes
           in: query
           required: false
@@ -1331,6 +1401,145 @@ paths:
 
 components:
   schemas:
+    AlertCause:
+      description: Cause of this alert.
+      type: string
+      enum:
+        - UNKNOWN_CAUSE
+        - OTHER_CAUSE
+        - TECHNICAL_PROBLEM
+        - STRIKE
+        - DEMONSTRATION
+        - ACCIDENT
+        - HOLIDAY
+        - WEATHER
+        - MAINTENANCE
+        - CONSTRUCTION
+        - POLICE_ACTIVITY
+        - MEDICAL_EMERGENCY
+
+    AlertEffect:
+      description: The effect of this problem on the affected entity.
+      type: string
+      enum:
+        - NO_SERVICE
+        - REDUCED_SERVICE
+        - SIGNIFICANT_DELAYS
+        - DETOUR
+        - ADDITIONAL_SERVICE
+        - MODIFIED_SERVICE
+        - OTHER_EFFECT
+        - UNKNOWN_EFFECT
+        - STOP_MOVED
+        - NO_EFFECT
+        - ACCESSIBILITY_ISSUE
+
+    AlertSeverityLevel:
+      description: The severity of the alert.
+      type: string
+      enum:
+        - UNKNOWN_SEVERITY
+        - INFO
+        - WARNING
+        - SEVERE
+
+    TimeRange:
+      description: |
+        A time interval.
+        The interval is considered active at time t if t is greater than or equal to the start time and less than the end time.
+      type: object
+      properties:
+        start:
+          description: |
+            If missing, the interval starts at minus infinity.
+            If a TimeRange is provided, either start or end must be provided - both fields cannot be empty.
+          type: string
+          format: date-time
+        end:
+          description: |
+            If missing, the interval ends at plus infinity.
+            If a TimeRange is provided, either start or end must be provided - both fields cannot be empty.
+          type: string
+          format: date-time
+
+    Alert:
+      description: An alert, indicating some sort of incident in the public transit network.
+      type: object
+      required:
+        - headerText
+        - descriptionText
+      properties:
+        communicationPeriod:
+          description: |
+            Time when the alert should be shown to the user.
+            If missing, the alert will be shown as long as it appears in the feed.
+            If multiple ranges are given, the alert will be shown during all of them.
+          type: array
+          items:
+            $ref: '#/components/schemas/TimeRange'
+        impactPeriod:
+          description: Time when the services are affected by the disruption mentioned in the alert.
+          type: array
+          items:
+            $ref: '#/components/schemas/TimeRange'
+        cause:
+          $ref: '#/components/schemas/AlertCause'
+        causeDetail:
+          type: string
+          description: |
+            Description of the cause of the alert that allows for agency-specific language;
+            more specific than the Cause.
+        effect:
+          $ref: '#/components/schemas/AlertEffect'
+        effectDetail:
+          type: string
+          description: |
+            Description of the effect of the alert that allows for agency-specific language;
+            more specific than the Effect.
+        url:
+          type: string
+          description: The URL which provides additional information about the alert.
+        headerText:
+          type: string
+          description: |
+            Header for the alert. This plain-text string will be highlighted, for example in boldface.
+        descriptionText:
+          type: string
+          description: |
+            Description for the alert.
+            This plain-text string will be formatted as the body of the alert (or shown on an explicit "expand" request by the user).
+            The information in the description should add to the information of the header.
+        ttsHeaderText:
+          type: string
+          description: |
+            Text containing the alert's header to be used for text-to-speech implementations.
+            This field is the text-to-speech version of header_text.
+            It should contain the same information as headerText but formatted such that it can read as text-to-speech
+            (for example, abbreviations removed, numbers spelled out, etc.)
+        ttsDescriptionText:
+          type: string
+          description: |
+            Text containing a description for the alert to be used for text-to-speech implementations.
+            This field is the text-to-speech version of description_text.
+            It should contain the same information as description_text but formatted such that it can be read as text-to-speech
+            (for example, abbreviations removed, numbers spelled out, etc.)
+        severityLevel:
+          description: Severity of the alert.
+          $ref: '#/components/schemas/AlertSeverityLevel'
+        imageUrl:
+          description: String containing an URL linking to an image.
+          type: string
+        imageMediaType:
+          description: |
+            IANA media type as to specify the type of image to be displayed. The type must start with "image/"
+          type: string
+        imageAlternativeText:
+          description: |
+            Text describing the appearance of the linked image in the image field
+            (e.g., in case the image can't be displayed or the user can't see the image for accessibility reasons).
+            See the HTML spec for alt image text.
+          type: string
+
     Duration:
       description: Object containing duration if a path was found or none if no path was found
       type: object
@@ -1437,6 +1646,20 @@ components:
         score:
           description: score according to the internal scoring system (the scoring algorithm might change in the future)
           type: number
+
+    ElevationCosts:
+      description: |
+        Different elevation cost profiles for street routing.
+        Using a elevation cost profile will prefer routes with a smaller incline and smaller difference in elevation, even if the routed way is longer.
+
+        - `NONE`: Ignore elevation data for routing. This is the default behavior
+        - `LOW`: Add a low penalty for inclines. This will favor longer paths, if the elevation increase and incline are smaller.
+        - `HIGH`: Add a high penalty for inclines. This will favor even longer paths, if the elevation increase and incline are smaller.
+      type: string
+      enum:
+        - NONE
+        - LOW
+        - HIGH
 
     PedestrianProfile:
       description: Different accessibility profiles for pedestrians.
@@ -1576,6 +1799,11 @@ components:
         cancelled:
           description: Whether this stop is cancelled due to the realtime situation.
           type: boolean
+        alerts:
+          description: Alerts for this stop.
+          type: array
+          items:
+            $ref: '#/components/schemas/Alert'
 
     ReachablePlace:
       description: Place reachable by One-to-All
@@ -2003,6 +2231,11 @@ components:
           description: |
             Index into the `Itinerary.fareTransfers[fareTransferIndex].effectiveFareLegProducts` array
             to identify which effective fare leg this itinerary leg belongs to
+        alerts:
+          description: Alerts for this stop.
+          type: array
+          items:
+            $ref: '#/components/schemas/Alert'
 
     RiderCategory:
       type: object

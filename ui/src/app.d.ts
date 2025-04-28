@@ -13,6 +13,7 @@ declare global {
 			selectedStop?: { name: string; stopId: string; time: Date };
 			stopArriveBy?: boolean;
 			tripId?: string;
+			showDepartures?: boolean;
 		}
 		// interface Platform {}
 	}

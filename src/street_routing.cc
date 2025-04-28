@@ -23,6 +23,7 @@ std::optional<osr::path> get_path(osr::ways const& w,
                                   osr::lookup const& l,
                                   elevators const* e,
                                   osr::sharing_data const* sharing,
+                                  osr::elevation_storage const* elevations,
                                   osr::location const& from,
                                   osr::location const& to,
                                   transport_mode_t const transport_mode,
@@ -45,7 +46,7 @@ std::optional<osr::path> get_path(osr::ways const& w,
                 w, l, profile, from, to, max, osr::direction::kForward,
                 max_matching_distance,
                 s ? &set_blocked(e_nodes, e_states, blocked_mem) : nullptr,
-                sharing);
+                sharing, elevations);
   if (it == end(cache)) {
     cache.emplace(std::pair{key, path});
   }
@@ -277,10 +278,11 @@ api::Itinerary route(osr::ways const& w,
                      osr::lookup const& l,
                      gbfs::gbfs_routing_data& gbfs_rd,
                      elevators const* e,
+                     osr::elevation_storage const* elevations,
                      api::Place const& from,
                      api::Place const& to,
                      api::ModeEnum const mode,
-                     bool const wheelchair,
+                     osr::search_profile const profile,
                      n::unixtime_t const start_time,
                      std::optional<n::unixtime_t> const end_time,
                      double const max_matching_distance,
@@ -293,12 +295,11 @@ api::Itinerary route(osr::ways const& w,
     return dummy_itinerary(from, to, mode, start_time, *end_time);
   }
 
-  auto const profile = to_profile(mode, wheelchair);
-  utl::verify(
-      profile != osr::search_profile::kBikeSharing || gbfs_rd.has_data(),
-      "sharing mobility not configured");
+  auto const rental_profile = osr::is_rental_profile(profile);
+  utl::verify(!rental_profile || gbfs_rd.has_data(),
+              "sharing mobility not configured");
 
-  auto const sharing_data = profile == osr::search_profile::kBikeSharing
+  auto const sharing_data = rental_profile
                                 ? std::optional{sharing(w, gbfs_rd, prod_ref)}
                                 : std::nullopt;
 
@@ -313,18 +314,18 @@ api::Itinerary route(osr::ways const& w,
   };
 
   auto const transport_mode =
-      profile == osr::search_profile::kBikeSharing
+      rental_profile
           ? static_cast<transport_mode_t>(gbfs_rd.get_transport_mode(prod_ref))
           : static_cast<transport_mode_t>(profile);
 
   auto const path = [&]() {
-    auto p = get_path(
-        w, l, e, sharing_data ? &sharing_data->sharing_data_ : nullptr,
-        get_location(from), get_location(to), transport_mode,
-        to_profile(mode, wheelchair), start_time, max_matching_distance,
-        static_cast<osr::cost_t>(max.count()), cache, blocked_mem);
+    auto p =
+        get_path(w, l, e, sharing_data ? &sharing_data->sharing_data_ : nullptr,
+                 elevations, get_location(from), get_location(to),
+                 transport_mode, profile, start_time, max_matching_distance,
+                 static_cast<osr::cost_t>(max.count()), cache, blocked_mem);
 
-    if (p.has_value() && profile == osr::search_profile::kBikeSharing) {
+    if (p.has_value() && rental_profile) {
       // Coordinates of additional nodes are not known to osr.
       // Therefore, segments to/from additional have empty polylines.
       for (auto& s : p->segments_) {
@@ -368,13 +369,13 @@ api::Itinerary route(osr::ways const& w,
       [&](auto&& lb, auto&& ub) {
         auto const range = std::span{lb, ub};
         auto const is_last_leg = ub == end(path->segments_);
-        auto const is_bike_leg = lb->mode_ == osr::mode::kBike;
         auto const from_node = range.front().from_;
         auto const from_additional_node = is_additional_node(w, from_node);
         auto const to_node = range.back().to_;
         auto const to_additional_node = is_additional_node(w, to_node);
         auto const is_rental =
-            (profile == osr::search_profile::kBikeSharing && is_bike_leg &&
+            (rental_profile &&
+             (lb->mode_ == osr::mode::kBike || lb->mode_ == osr::mode::kCar) &&
              (from_additional_node || to_additional_node));
 
         auto const to_pos = get_node_pos(to_node);
