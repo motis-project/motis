@@ -44,6 +44,7 @@ const translations: Translations = {
 	advancedSearchOptions: 'Options',
 	selectModes: 'Select transit modes',
 	defaultSelectedModes: 'All transit modes',
+	selectElevationCosts: 'Avoid uphill cycling on first and last mile.',
 	wheelchair: 'Accessible transfers',
 	bikeRental: 'Allow usage of sharing vehicles',
 	bikeCarriage: 'Bike carriage',
@@ -73,7 +74,10 @@ const translations: Translations = {
 	NIGHT_RAIL: 'Night Rail',
 	REGIONAL_FAST_RAIL: 'Regional Fast Rail',
 	REGIONAL_RAIL: 'Regional Rail',
-	OTHER: 'Other'
+	OTHER: 'Other',
+	elevationCostsNone: 'No detours',
+	elevationCostsLow: 'Small detours',
+	elevationCostsHigh: 'Large detours'
 };
 
 export default translations;

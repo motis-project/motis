@@ -44,6 +44,8 @@ const translations: Translations = {
 	advancedSearchOptions: 'Options',
 	selectModes: 'Sélectionner les modes de transport en commun',
 	defaultSelectedModes: 'Tous les transports en commun',
+	selectElevationCosts:
+		'Évitez les pistes cyclables en montée sur le premier et le dernier kilomètre.', // TODO Online translated
 	wheelchair: 'Correspondances accessibles',
 	bikeRental: 'Utiliser véhicules partagés',
 	bikeCarriage: 'Transport vélo',
@@ -73,7 +75,10 @@ const translations: Translations = {
 	NIGHT_RAIL: 'Train de nuit',
 	REGIONAL_FAST_RAIL: 'Train express régional',
 	REGIONAL_RAIL: 'Train régional',
-	OTHER: 'Autres'
+	OTHER: 'Autres',
+	elevationCostsNone: 'Pas de détours',
+	elevationCostsLow: 'Petits détours',
+	elevationCostsHigh: 'Grands détours'
 };
 
 export default translations;

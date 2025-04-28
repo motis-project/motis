@@ -10,6 +10,7 @@
 		initial,
 		type Match,
 		plan,
+		type ElevationCosts,
 		type PlanResponse,
 		type Mode,
 		type PlanData
@@ -135,6 +136,7 @@
 			(urlParams?.get('selectedTransitModes')?.split(',') as Mode[])) ||
 			[]
 	);
+	let elevationCosts = $state((urlParams?.get('elevationCosts') ?? 'NONE') as ElevationCosts);
 
 	const toPlaceString = (l: Location) => {
 		if (l.value.match?.type === 'STOP') {
@@ -165,6 +167,7 @@
 						directModes: modes,
 						requireBikeTransport: bikeCarriage,
 						transitModes: selectedTransitModes.length ? selectedTransitModes : undefined,
+						elevationCosts: elevationCosts,
 						useRoutedTransfers: true,
 						maxMatchingDistance: wheelchair ? 8 : 250
 					}
@@ -192,6 +195,7 @@
 						wheelchair: wheelchair,
 						bikeRental: bikeRental,
 						bikeCarriage: bikeCarriage,
+						elevationCosts: elevationCosts,
 						selectedTransitModes: selectedTransitModes.join(',')
 					},
 					{},
@@ -314,6 +318,7 @@
 								bind:bikeRental
 								bind:bikeCarriage
 								bind:selectedModes={selectedTransitModes}
+								bind:elevationCosts
 							/>
 						</Card>
 					</Tabs.Content>

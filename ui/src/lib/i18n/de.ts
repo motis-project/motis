@@ -45,6 +45,7 @@ const translations: Translations = {
 	advancedSearchOptions: 'Optionen',
 	selectModes: 'Öffentliche Verkehrsmittel auswählen',
 	defaultSelectedModes: 'Alle Verkehrsmittel',
+	selectElevationCosts: 'Vermeide bergauf führende Radstrecken auf der ersten und letzten Meile.',
 	wheelchair: 'Barrierefreie Umstiege',
 	bikeRental: 'Sharing-Fahrzeuge berücksichtigen',
 	bikeCarriage: 'Fahrradmitnahme',
@@ -74,7 +75,10 @@ const translations: Translations = {
 	NIGHT_RAIL: 'Nachtzug',
 	REGIONAL_FAST_RAIL: 'Regionalexpresszug',
 	REGIONAL_RAIL: 'Regionalzug',
-	OTHER: 'Andere'
+	OTHER: 'Andere',
+	elevationCostsNone: 'Keine Umwege',
+	elevationCostsLow: 'Kleine Umwege',
+	elevationCostsHigh: 'Große Umwege'
 };
 
 export default translations;

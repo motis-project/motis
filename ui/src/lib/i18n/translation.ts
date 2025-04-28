@@ -39,6 +39,7 @@ export type Translations = {
 	advancedSearchOptions: string;
 	selectModes: string;
 	defaultSelectedModes: string;
+	selectElevationCosts: string;
 	wheelchair: string;
 	bikeRental: string;
 	bikeCarriage: string;
@@ -69,6 +70,9 @@ export type Translations = {
 	REGIONAL_FAST_RAIL: string;
 	REGIONAL_RAIL: string;
 	OTHER: string;
+	elevationCostsNone: string;
+	elevationCostsLow: string;
+	elevationCostsHigh: string;
 };
 
 const translations: Map<string, Translations> = new Map(
