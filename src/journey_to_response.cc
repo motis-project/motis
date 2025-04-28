@@ -224,9 +224,9 @@ api::Itinerary journey_to_response(
                       .and_then(convert_to_str),
         .imageAlternativeText_ = get_translation(a.image_alternative_text_[x])};
   };
-  auto const get_alerts = [&](n::rt::frun const& fr)
-      -> std::optional<std::vector<api::Alert>> {
-    if (rtt == nullptr || !fr.is_scheduled()) { // TODO added
+  auto const get_alerts =
+      [&](n::rt::frun const& fr) -> std::optional<std::vector<api::Alert>> {
+    if (rtt == nullptr || !fr.is_scheduled()) {  // TODO added
       return std::nullopt;
     }
 

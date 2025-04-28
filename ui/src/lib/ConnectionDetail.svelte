@@ -177,13 +177,6 @@
 						{#if pred.distance}
 							({Math.round(pred.distance)} m)
 						{/if}
-						{#if l.alerts}
-							{#each l.alerts as alert}
-								<div class="text-destructive text-sm font-bold">
-									{alert.headerText}
-								</div>
-							{/each}
-						{/if}
 						{#if prevTransitLeg?.fareTransferIndex != undefined && itinerary.fareTransfers && itinerary.fareTransfers[prevTransitLeg.fareTransferIndex].transferProduct}
 							{@const transferProduct =
 								itinerary.fareTransfers[prevTransitLeg.fareTransferIndex].transferProduct!}
@@ -227,6 +220,13 @@
 						<CircleX class="stroke-destructive h-4 w-4" />
 						<span class="ml-1 font-bold">{t.tripCancelled}</span>
 					</div>
+				{/if}
+				{#if l.alerts}
+					{#each l.alerts as alert}
+						<div class="text-destructive text-sm font-bold">
+							{alert.headerText}
+						</div>
+					{/each}
 				{/if}
 				{#if l.intermediateStops?.length === 0}
 					<div class="py-8 pl-1 md:pl-4 flex items-center text-muted-foreground">
