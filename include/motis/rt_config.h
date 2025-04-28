@@ -8,7 +8,7 @@
 
 namespace motis {
 
-struct rt_ep_config {
+struct rt_config {
 
   struct gtfsrt {
     std::string_view url_;
@@ -24,14 +24,14 @@ struct rt_ep_config {
 
   std::variant<gtfsrt, vdvaus> operator()() const;
 
-  bool operator==(rt_ep_config const&) const = default;
+  bool operator==(rt_config const&) const = default;
   cista::hash_t hash() const noexcept {
     return cista::build_hash(protocol_, url_, headers_, client_name_,
                              server_name_, hysteresis_);
   }
 
   enum struct protocol { gtfsrt, vdvaus };
-  std::optional<protocol> protocol_;
+  protocol protocol_{protocol::gtfsrt};
 
   std::string url_;
 

@@ -126,24 +126,26 @@ void config::verify() const {
             throw utl::fail("{} is not a valid url: {}", rt_entry.url_,
                             e.what());
           }
-          if (!rt_entry.protocol_ ||
-              rt_entry.protocol_ == rt_ep_config::protocol::gtfsrt) {
-            utl::verify(!rt_entry.client_name_.has_value(),
-                        "GTFS RT invalid field: client_name");
-            utl::verify(!rt_entry.server_name_.has_value(),
-                        "GTFS RT invalid field: server_name");
-            utl::verify(!rt_entry.hysteresis_.has_value(),
-                        "GTFS RT invalid field: hysteresis");
-          } else if (rt_entry.protocol_ == rt_ep_config::protocol::vdvaus) {
-            utl::verify(!rt_entry.headers_.has_value(),
-                        "VDV RT invalid field: headers");
-            utl::verify(rt_entry.client_name_.has_value(),
-                        "VDV RT requires field: client_name");
-            utl::verify(rt_entry.server_name_.has_value(),
-                        "VDV RT requires field: server_name");
-            utl::verify(
-                timetable_->incremental_rt_update_,
-                "VDV RT requires setting: incremental_rt_update = true");
+          switch (rt_entry.protocol_) {
+            case rt_config::protocol::gtfsrt:
+              utl::verify(!rt_entry.client_name_.has_value(),
+                          "GTFS RT invalid field: client_name");
+              utl::verify(!rt_entry.server_name_.has_value(),
+                          "GTFS RT invalid field: server_name");
+              utl::verify(!rt_entry.hysteresis_.has_value(),
+                          "GTFS RT invalid field: hysteresis");
+              break;
+            case rt_config::protocol::vdvaus:
+              utl::verify(!rt_entry.headers_.has_value(),
+                          "VDV RT invalid field: headers");
+              utl::verify(rt_entry.client_name_.has_value(),
+                          "VDV RT requires field: client_name");
+              utl::verify(rt_entry.server_name_.has_value(),
+                          "VDV RT requires field: server_name");
+              utl::verify(
+                  timetable_->incremental_rt_update_,
+                  "VDV RT requires setting: incremental_rt_update = true");
+              break;
           }
         }
       }

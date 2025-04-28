@@ -18,7 +18,7 @@
 #include "utl/overloaded.h"
 #include "utl/verify.h"
 
-#include "motis/rt_ep_config.h"
+#include "motis/rt_config.h"
 #include "motis/types.h"
 
 namespace cista {
@@ -86,7 +86,7 @@ struct config {
       std::string path_;
       bool default_bikes_allowed_{false};
       std::optional<std::map<std::string, bool>> clasz_bikes_allowed_{};
-      std::optional<std::vector<rt_ep_config>> rt_{};
+      std::optional<std::vector<rt_config>> rt_{};
       std::optional<std::string> default_timezone_{};
     };
 

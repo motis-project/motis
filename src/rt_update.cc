@@ -460,7 +460,7 @@ asio::awaitable<ptr<elevators>> update_elevators(config const& c,
 }
 
 struct gtfsrt_endpoint {
-  rt_ep_config::gtfsrt ep_;
+  rt_config::gtfsrt ep_;
   n::source_idx_t src_;
   std::string tag_;
   gtfsrt_metrics metrics_;
@@ -490,13 +490,12 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
             if (dataset.rt_.has_value()) {
               auto const src = d.tags_->get_src(tag);
               for (auto const& ep : *dataset.rt_) {
-                std::visit(
-                    utl::overloaded{[&](rt_ep_config::gtfsrt&& gtfsrt_ep) {
-                      endpoints.emplace_back(gtfsrt_endpoint{
-                          gtfsrt_ep, src, tag,
-                          gtfsrt_metrics{tag, metric_families}});
-                    }},
-                    ep());
+                std::visit(utl::overloaded{[&](rt_config::gtfsrt&& gtfsrt_ep) {
+                             endpoints.emplace_back(gtfsrt_endpoint{
+                                 gtfsrt_ep, src, tag,
+                                 gtfsrt_metrics{tag, metric_families}});
+                           }},
+                           ep());
               }
             }
             if (d.vdvaus_) {
