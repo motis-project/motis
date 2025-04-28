@@ -290,14 +290,15 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
                   });
 
               // Wait for all updates to finish
-              auto [idx, exceptions, stats] =
+              auto [_, exceptions, stats] =
                   co_await asio::experimental::make_parallel_group(awaitables)
                       .async_wait(asio::experimental::wait_for_all(),
                                   asio::use_awaitable);
 
               //  Print statistics.
-              for (auto const [i, ex, s] : utl::zip(idx, exceptions, stats)) {
-                auto const& [ep, src, tag, metrics] = endpoints[i];
+              for (auto const [endpoint, ex, s] :
+                   utl::zip(endpoints, exceptions, stats)) {
+                auto const& [ep, src, tag, metrics] = endpoint;
                 try {
                   if (ex) {
                     std::rethrow_exception(ex);
