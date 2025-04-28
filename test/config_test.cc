@@ -62,16 +62,21 @@ timetable:
         LONG_DISTANCE: false
         REGIONAL_FAST: true
       rt:
-        - url: https://stc.traines.eu/mirror/german-delfi-gtfs-rt/latest.gtfs-rt.pbf
+        - protocol: gtfsrt
+          url: https://stc.traines.eu/mirror/german-delfi-gtfs-rt/latest.gtfs-rt.pbf
           headers:
             Authorization: test
     nl:
       path: nl.gtfs.zip
       default_bikes_allowed: false
       rt:
-        - url: https://gtfs.ovapi.nl/nl/trainUpdates.pb
-        - url: https://gtfs.ovapi.nl/nl/tripUpdates.pb
+        - protocol: gtfsrt
+          url: https://gtfs.ovapi.nl/nl/trainUpdates.pb
+        - protocol: gtfsrt
+          url: https://gtfs.ovapi.nl/nl/tripUpdates.pb
   assistance_times: assistance.csv
+  vdvaus_subscription_renewal: 3600
+  vdvaus_subscription_duration: 90000
 elevators: false
 street_routing: true
 osr_footpath: true
@@ -97,16 +102,21 @@ timetable:
         LONG_DISTANCE: false
         REGIONAL_FAST: true
       rt:
-        - url: https://stc.traines.eu/mirror/german-delfi-gtfs-rt/latest.gtfs-rt.pbf
+        - protocol: gtfsrt
+          url: https://stc.traines.eu/mirror/german-delfi-gtfs-rt/latest.gtfs-rt.pbf
           headers:
             Authorization: test
     nl:
       path: nl.gtfs.zip
       default_bikes_allowed: false
       rt:
-        - url: https://gtfs.ovapi.nl/nl/trainUpdates.pb
-        - url: https://gtfs.ovapi.nl/nl/tripUpdates.pb
+        - protocol: gtfsrt
+          url: https://gtfs.ovapi.nl/nl/trainUpdates.pb
+        - protocol: gtfsrt
+          url: https://gtfs.ovapi.nl/nl/tripUpdates.pb
   assistance_times: assistance.csv
+  vdvaus_subscription_renewal: 3600
+  vdvaus_subscription_duration: 90000
 elevators: false
 street_routing: true
 osr_footpath: true

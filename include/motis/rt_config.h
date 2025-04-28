@@ -39,9 +39,9 @@ struct rt_config {
   std::optional<headers_t> headers_{};
 
   // VDV AUS
-  std::optional<std::string> server_name_;
-  std::optional<std::string> client_name_;
-  std::optional<unsigned> hysteresis_;
+  std::optional<std::string> server_name_{};
+  std::optional<std::string> client_name_{};
+  std::optional<unsigned> hysteresis_{};
 };
 
 }  // namespace motis
