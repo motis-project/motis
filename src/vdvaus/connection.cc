@@ -4,7 +4,7 @@
 
 namespace motis::vdvaus {
 
-connection::connection(rt_entry::vdvaus cfg,
+connection::connection(rt_ep_config::vdvaus const cfg,
                        nigiri::timetable const& tt,
                        nigiri::source_idx_t const src)
     : cfg_{cfg},

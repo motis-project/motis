@@ -269,13 +269,12 @@ void data::load_tiles() {
 void data::load_rt(std::string_view tag, config::timetable::dataset const& d) {
   vdvaus_ = std::make_unique<std::vector<vdvaus::connection>>();
   for (auto const& rt : *d.rt_) {
-    auto const rt_actual = rt();
     std::visit(utl::overloaded{[](rt_ep_config::gtfsrt const&) {},
-                               [&](rt_ep_config::vdvaus const& vdv_cfg) {
+                               [&](rt_ep_config::vdvaus const vdv_cfg) {
                                  vdvaus_->emplace_back(vdv_cfg, *tt_,
                                                        tags_->get_src(tag));
                                }},
-               rt_actual);
+               rt());
   }
 }
 

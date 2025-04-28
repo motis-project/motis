@@ -492,7 +492,7 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
               for (auto const& ep : *dataset.rt_) {
                 std::visit(
                     utl::overloaded{[&](rt_ep_config::gtfsrt&& gtfsrt_ep) {
-                      endpoints.push_back(gtfsrt_endpoint{
+                      endpoints.emplace_back(gtfsrt_endpoint{
                           gtfsrt_ep, src, tag,
                           gtfsrt_metrics{tag, metric_families}});
                     }},
@@ -501,7 +501,7 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
             }
             if (d.vdvaus_) {
               for (auto& con : *d.vdvaus_) {
-                endpoints.push_back(
+                endpoints.emplace_back(
                     vdvaus_endpoint{con, con.upd_.get_src(),
                                     d.tags_->get_tag(con.upd_.get_src()),
                                     vdvaus_metrics{tag, metric_families}});
@@ -534,15 +534,6 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
               auto awaitables = utl::to_vec(
                   endpoints,
                   [&](std::variant<gtfsrt_endpoint, vdvaus_endpoint> const& x) {
-                    std::visit(
-                        utl::overloaded{
-                            [](gtfsrt_endpoint const& gtfsrt_ep) {
-                              gtfsrt_ep.metrics_.updates_requested_.Increment();
-                            },
-                            [](vdvaus_endpoint const& vdvaus_ep) {
-                              vdvaus_ep.metrics_.updates_requested_.Increment();
-                            }},
-                        x);
                     return boost::asio::co_spawn(
                         executor,
                         [&]() -> awaitable<std::variant<
@@ -553,6 +544,8 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
                                       -> awaitable<std::variant<
                                           n::rt::statistics,
                                           n::rt::vdv::statistics>> {
+                                    gtfsrt_ep.metrics_.updates_requested_
+                                        .Increment();
                                     try {
                                       auto const res = co_await http_GET(
                                           boost::urls::url{gtfsrt_ep.ep_.url_},
@@ -578,6 +571,8 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
                                       -> awaitable<std::variant<
                                           n::rt::statistics,
                                           n::rt::vdv::statistics>> {
+                                    vdvaus_ep.metrics_.updates_requested_
+                                        .Increment();
                                     try {
                                       auto const res = co_await http_POST(
                                           boost::urls::url{
@@ -609,26 +604,58 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
 
               //  Print statistics.
               for (auto const [i, ex, s] : utl::zip(idx, exceptions, stats)) {
-                // TODO visit different statistics in variant
-                auto const& [ep, src, tag, metrics] = endpoints[i];
-                try {
-                  if (ex) {
-                    std::rethrow_exception(ex);
-                  }
+                std::visit(
+                    utl::overloaded{
+                        [&](gtfsrt_endpoint const& gtfsrt_ep) {
+                          auto const& [ep, src, tag, metrics] = gtfsrt_ep;
+                          try {
+                            if (ex) {
+                              std::rethrow_exception(ex);
+                            }
 
-                  metrics.updates_successful_.Increment();
-                  metrics.last_update_timestamp_.SetToCurrentTime();
-                  metrics.update(s);
+                            metrics.updates_successful_.Increment();
+                            metrics.last_update_timestamp_.SetToCurrentTime();
+                            metrics.update(std::get<n::rt::statistics>(s));
 
-                  n::log(n::log_lvl::info, "motis.rt",
-                         "rt update stats for tag={}, url={}: {}", tag, ep.url_,
-                         fmt::streamed(s));
-                } catch (std::exception const& e) {
-                  metrics.updates_error_.Increment();
-                  n::log(n::log_lvl::error, "motis.rt",
-                         "rt update failed: tag={}, url={}, error={}", tag,
-                         ep.url_, e.what());
-                }
+                            n::log(
+                                n::log_lvl::info, "motis.rt",
+                                "GTFS-RT update stats for tag={}, url={}: {}",
+                                tag, ep.url_,
+                                fmt::streamed(std::get<n::rt::statistics>(s)));
+                          } catch (std::exception const& e) {
+                            metrics.updates_error_.Increment();
+                            n::log(n::log_lvl::error, "motis.rt",
+                                   "GTFS-RT update failed: tag={}, url={}, "
+                                   "error={}",
+                                   tag, ep.url_, e.what());
+                          }
+                        },
+                        [&](vdvaus_endpoint const& vdvaus_ep) {
+                          auto const& [ep, src, tag, metrics] = vdvaus_ep;
+                          try {
+                            if (ex) {
+                              std::rethrow_exception(ex);
+                            }
+
+                            metrics.updates_successful_.Increment();
+                            metrics.last_update_timestamp_.SetToCurrentTime();
+                            metrics.update(std::get<n::rt::vdv::statistics>(s));
+
+                            n::log(
+                                n::log_lvl::info, "motis.rt",
+                                "VDV AUS update stats for tag={}, url={}: {}",
+                                tag, ep.cfg_.url_,
+                                fmt::streamed(
+                                    std::get<n::rt::vdv::statistics>(s)));
+                          } catch (std::exception const& e) {
+                            metrics.updates_error_.Increment();
+                            n::log(n::log_lvl::error, "motis.rt",
+                                   "VDV AUS update failed: tag={}, url={}, "
+                                   "error={}",
+                                   tag, ep.cfg_.url_, e.what());
+                          }
+                        }},
+                    endpoints[i]);
               }
             }
 
