@@ -164,8 +164,7 @@ struct config {
     std::optional<std::filesystem::path> elevation_data_dir_;
   };
 
-  std::optional<std::reference_wrapper<street_routing const>>
-  get_street_routing() const;
+  std::optional<street_routing> get_street_routing() const;
 
   std::variant<bool, std::optional<street_routing>> street_routing_{false};
 

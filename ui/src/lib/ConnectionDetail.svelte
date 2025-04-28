@@ -9,15 +9,12 @@
 	import Route from '$lib/Route.svelte';
 	import { getModeName } from '$lib/getModeName';
 	import { t } from '$lib/i18n/translation';
+	import { onClickStop, onClickTrip } from '$lib/utils';
 
 	const {
-		itinerary,
-		onClickStop,
-		onClickTrip
+		itinerary
 	}: {
 		itinerary: Itinerary;
-		onClickStop: (name: string, stopId: string, time: Date) => void;
-		onClickTrip: (tripId: string) => void;
 	} = $props();
 
 	const lastLeg = $derived(itinerary.legs.findLast((l) => l.duration !== 0));

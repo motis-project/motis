@@ -212,7 +212,9 @@ void data::load_osr() {
   w_ = std::make_unique<osr::ways>(osr_path, cista::mmap::protection::READ);
   l_ = std::make_unique<osr::lookup>(*w_, osr_path,
                                      cista::mmap::protection::READ);
-  elevations_ = osr::elevation_storage::try_open(osr_path);
+  if (config_.get_street_routing()->elevation_data_dir_.has_value()) {
+    elevations_ = osr::elevation_storage::try_open(osr_path);
+  }
   elevator_nodes_ =
       std::make_unique<hash_set<osr::node_idx_t>>(get_elevator_nodes(*w_));
   pl_ =
