@@ -66,6 +66,7 @@ boost::asio::awaitable<void> unsubscribe(boost::asio::io_context& ioc,
           return boost::asio::co_spawn(
               executor,
               [&c, &con]() -> boost::asio::awaitable<void> {
+                con.upd_.reset_vdv_run_ids_();
                 try {
                   auto const res = co_await http_POST(
                       boost::urls::url{con.subscription_addr_}, kHeaders,
