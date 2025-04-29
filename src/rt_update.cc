@@ -458,7 +458,7 @@ asio::awaitable<ptr<elevators>> update_elevators(config const& c,
 }
 
 struct gtfsrt_endpoint {
-  rt_config::gtfsrt ep_;
+  rt_config::gtfsrt cfg_;
   n::source_idx_t src_;
   std::string tag_;
   gtfsrt_metrics metrics_;
@@ -545,9 +545,9 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
                                         .Increment();
                                     try {
                                       auto const res = co_await http_GET(
-                                          boost::urls::url{gtfsrt_ep.ep_.url_},
-                                          gtfsrt_ep.ep_.headers_ != nullptr
-                                              ? *gtfsrt_ep.ep_.headers_
+                                          boost::urls::url{gtfsrt_ep.cfg_.url_},
+                                          gtfsrt_ep.cfg_.headers_ != nullptr
+                                              ? *gtfsrt_ep.cfg_.headers_
                                               : headers_t{},
                                           timeout);
                                       ret = n::rt::gtfsrt_update_buf(
@@ -599,59 +599,64 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
                                   asio::use_awaitable);
 
               //  Print statistics.
-              for (auto const [i, ex, s] : utl::zip(idx, exceptions, stats)) {
+              for (auto const [ep, ex, s] :
+                   utl::zip(endpoints, exceptions, stats)) {
                 std::visit(
                     utl::overloaded{
                         [&](gtfsrt_endpoint const& gtfsrt_ep) {
-                          auto const& [ep, src, tag, metrics] = gtfsrt_ep;
                           try {
                             if (ex) {
                               std::rethrow_exception(ex);
                             }
 
-                            metrics.updates_successful_.Increment();
-                            metrics.last_update_timestamp_.SetToCurrentTime();
-                            metrics.update(std::get<n::rt::statistics>(s));
+                            gtfsrt_ep.metrics_.updates_successful_.Increment();
+                            gtfsrt_ep.metrics_.last_update_timestamp_
+                                .SetToCurrentTime();
+                            gtfsrt_ep.metrics_.update(
+                                std::get<n::rt::statistics>(s));
 
                             n::log(
                                 n::log_lvl::info, "motis.rt",
                                 "GTFS-RT update stats for tag={}, url={}: {}",
-                                tag, ep.url_,
+                                gtfsrt_ep.tag_, gtfsrt_ep.cfg_.url_,
                                 fmt::streamed(std::get<n::rt::statistics>(s)));
                           } catch (std::exception const& e) {
-                            metrics.updates_error_.Increment();
+                            gtfsrt_ep.metrics_.updates_error_.Increment();
                             n::log(n::log_lvl::error, "motis.rt",
                                    "GTFS-RT update failed: tag={}, url={}, "
                                    "error={}",
-                                   tag, ep.url_, e.what());
+                                   gtfsrt_ep.tag_, gtfsrt_ep.cfg_.url_,
+                                   e.what());
                           }
                         },
                         [&](vdvaus_endpoint const& vdvaus_ep) {
-                          auto const& [ep, src, tag, metrics] = vdvaus_ep;
                           try {
                             if (ex) {
                               std::rethrow_exception(ex);
                             }
 
-                            metrics.updates_successful_.Increment();
-                            metrics.last_update_timestamp_.SetToCurrentTime();
-                            metrics.update(std::get<n::rt::vdv::statistics>(s));
+                            vdvaus_ep.metrics_.updates_successful_.Increment();
+                            vdvaus_ep.metrics_.last_update_timestamp_
+                                .SetToCurrentTime();
+                            vdvaus_ep.metrics_.update(
+                                std::get<n::rt::vdv::statistics>(s));
 
                             n::log(
                                 n::log_lvl::info, "motis.rt",
                                 "VDV AUS update stats for tag={}, url={}:\n{}",
-                                tag, ep.cfg_.url_,
+                                vdvaus_ep.tag_, vdvaus_ep.con_.cfg_.url_,
                                 fmt::streamed(
                                     std::get<n::rt::vdv::statistics>(s)));
                           } catch (std::exception const& e) {
-                            metrics.updates_error_.Increment();
+                            vdvaus_ep.metrics_.updates_error_.Increment();
                             n::log(n::log_lvl::error, "motis.rt",
                                    "VDV AUS update failed: tag={}, url={}, "
                                    "error={}",
-                                   tag, ep.cfg_.url_, e.what());
+                                   vdvaus_ep.tag_, vdvaus_ep.con_.cfg_.url_,
+                                   e.what());
                           }
                         }},
-                    endpoints[i]);
+                    ep);
               }
             }
 
