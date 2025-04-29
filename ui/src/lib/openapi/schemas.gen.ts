@@ -576,7 +576,7 @@ export const TripSegmentSchema = {
             type: 'boolean'
         },
         polyline: {
-            description: 'Google polyline encoded coordinate sequence (with precision 6) where the trip travels on this segment.',
+            description: 'Google polyline encoded coordinate sequence (with precision 5) where the trip travels on this segment.',
             type: 'string'
         }
     }
@@ -589,11 +589,17 @@ export const DirectionSchema = {
 
 export const EncodedPolylineSchema = {
     type: 'object',
-    required: ['points', 'length'],
+    required: ['points', 'precision', 'length'],
     properties: {
         points: {
-            description: 'The encoded points of the polyline using the Google polyline encoding with precision 6.',
+            description: 'The encoded points of the polyline using the Google polyline encoding.',
             type: 'string'
+        },
+        precision: {
+            description: `The precision of the returned polyline (7 for /v1, 6 for /v2)
+Be aware that with precision 7, coordinates with |longitude| > 107.37 are undefined/will overflow.
+`,
+            type: 'integer'
         },
         length: {
             description: 'The number of points in the string',

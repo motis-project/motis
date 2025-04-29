@@ -47,6 +47,7 @@ api::Itinerary journey_to_response(osr::ways const*,
                                    bool detailed_transfers,
                                    bool with_fares,
                                    double timetable_max_matching_distance,
-                                   double max_matching_distance);
+                                   double max_matching_distance,
+                                   int polyline_precision);
 
 }  // namespace motis

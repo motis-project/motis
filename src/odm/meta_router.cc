@@ -88,7 +88,8 @@ meta_router::meta_router(ep::routing const& r,
                          nigiri::duration_t const fastest_direct,
                          bool const odm_pre_transit,
                          bool const odm_post_transit,
-                         bool const odm_direct)
+                         bool const odm_direct,
+                         int const api_version)
     : r_{r},
       query_{query},
       pre_transit_modes_{pre_transit_modes},
@@ -104,6 +105,7 @@ meta_router::meta_router(ep::routing const& r,
       odm_pre_transit_{odm_pre_transit},
       odm_post_transit_{odm_post_transit},
       odm_direct_{odm_direct},
+      api_version_{api_version},
       tt_{r_.tt_},
       rt_{r.rt_},
       rtt_{rt_->rtt_.get()},
@@ -143,7 +145,8 @@ n::duration_t init_direct(std::vector<direct_ride>& direct_rides,
                           api::Place const& from_p,
                           api::Place const& to_p,
                           n::interval<n::unixtime_t> const intvl,
-                          api::plan_params const& query) {
+                          api::plan_params const& query,
+                          int api_version) {
   direct_rides.clear();
 
   auto const from_pos = geo::latlng{from_p.lat_, from_p.lon_};
@@ -158,7 +161,7 @@ n::duration_t init_direct(std::vector<direct_ride>& direct_rides,
       e, gbfs, from_p, to_p, {api::ModeEnum::CAR}, std::nullopt, std::nullopt,
       std::nullopt, intvl.from_, query.pedestrianProfile_,
       query.elevationCosts_, kODMMaxDuration, query.maxMatchingDistance_,
-      kODMDirectFactor);
+      kODMDirectFactor, api_version);
 
   if (query.arriveBy_) {
     for (auto arr =
@@ -234,8 +237,9 @@ void meta_router::init_prima(n::interval<n::unixtime_t> const& search_intvl,
 
   auto direct_duration = std::optional<std::chrono::seconds>{};
   if (odm_direct_ && r_.w_ && r_.l_) {
-    direct_duration = init_direct(p->direct_rides_, r_, e_, gbfs_rd_,
-                                  from_place_, to_place_, search_intvl, query_);
+    direct_duration =
+        init_direct(p->direct_rides_, r_, e_, gbfs_rd_, from_place_, to_place_,
+                    search_intvl, query_, api_version_);
   }
 
   auto const max_offset_duration =
@@ -674,7 +678,7 @@ api::plan_response meta_router::run() {
                     start_, dest_, cache, *ep::blocked,
                     query_.detailedTransfers_, query_.withFares_,
                     r_.config_.timetable_->max_matching_distance_,
-                    query_.maxMatchingDistance_);
+                    query_.maxMatchingDistance_, api_version_);
               }),
           .previousPageCursor_ =
               fmt::format("EARLIER|{}", to_seconds(pt_result.interval_.from_)),

@@ -318,7 +318,8 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
     api::ElevationCostsEnum const elevation_costs,
     std::chrono::seconds max,
     double const max_matching_distance,
-    double const fastest_direct_factor) const {
+    double const fastest_direct_factor,
+    int const api_version) const {
   if (!w_ || !l_) {
     return {};
   }
@@ -331,10 +332,10 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
     if (m == api::ModeEnum::CAR || m == api::ModeEnum::BIKE ||
         m == api::ModeEnum::CAR_PARKING ||
         (!omit_walk && m == api::ModeEnum::WALK)) {
-      auto itinerary =
-          route(*w_, *l_, gbfs_rd, e, elevations_, from, to, m,
-                to_profile(m, pedestrian_profile, elevation_costs), start_time,
-                std::nullopt, max_matching_distance, {}, cache, *blocked, max);
+      auto itinerary = route(*w_, *l_, gbfs_rd, e, elevations_, from, to, m,
+                             to_profile(m, pedestrian_profile, elevation_costs),
+                             start_time, std::nullopt, max_matching_distance,
+                             {}, cache, *blocked, api_version, max);
       if (itinerary.legs_.empty()) {
         continue;
       }
@@ -369,7 +370,7 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
               route(*w_, *l_, gbfs_rd, e, elevations_, from, to, m, profile,
                     start_time, std::nullopt, max_matching_distance,
                     gbfs::gbfs_products_ref{provider->idx_, prod.idx_}, cache,
-                    *blocked, max);
+                    *blocked, api_version, max);
           if (itinerary.legs_.empty()) {
             continue;
           }
@@ -473,6 +474,8 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
   }
 
   auto const query = api::plan_params{url.params()};
+  auto const api_version = url.encoded_path().contains("/v2/") ? 2 : 1;
+
   auto const deduplicate = [](auto m) {
     utl::erase_duplicates(m);
     return m;
@@ -521,7 +524,8 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                          query.directRentalProviders_, *t,
                          query.pedestrianProfile_, query.elevationCosts_,
                          std::chrono::seconds{query.maxDirectTime_},
-                         query.maxMatchingDistance_, query.fastestDirectFactor_)
+                         query.maxMatchingDistance_, query.fastestDirectFactor_,
+                         api_version)
           : std::pair{std::vector<api::Itinerary>{}, kInfinityDuration};
   UTL_STOP_TIMING(direct);
 
@@ -554,7 +558,8 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                               fastest_direct,
                               with_odm_pre_transit,
                               with_odm_post_transit,
-                              with_odm_direct}
+                              with_odm_direct,
+                              api_version}
           .run();
     }
 
@@ -677,7 +682,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                         return std::optional{x.max_matching_distance_};
                       })
                       .value_or(kMaxMatchingDistance),
-                  query.maxMatchingDistance_);
+                  query.maxMatchingDistance_, api_version);
             }),
         .previousPageCursor_ =
             fmt::format("EARLIER|{}", to_seconds(r.interval_.from_)),

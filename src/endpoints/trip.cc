@@ -23,6 +23,8 @@ api::Itinerary trip::operator()(boost::urls::url_view const& url) const {
   auto const rtt = rt->rtt_.get();
 
   auto query = api::trip_params{url.params()};
+  auto const api_version = url.encoded_path().contains("/v2/") ? 2 : 1;
+
   auto const [r, _] = tags_.get_trip(tt_, query.tripId_);
   utl::verify(r.valid(), "trip not found: tripId={}, tt={}", query.tripId_,
               tt_.external_interval());
@@ -55,7 +57,8 @@ api::Itinerary trip::operator()(boost::urls::url_view const& url) const {
       tt_location{from_l.get_location_idx(),
                   from_l.get_scheduled_location_idx()},
       tt_location{to_l.get_location_idx()}, cache, blocked, false, false,
-      config_.timetable_.value().max_matching_distance_, kMaxMatchingDistance);
+      config_.timetable_.value().max_matching_distance_, kMaxMatchingDistance,
+      api_version);
 }
 
 }  // namespace motis::ep
