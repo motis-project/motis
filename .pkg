@@ -1,7 +1,7 @@
 [nigiri]
   url=git@github.com:motis-project/nigiri.git
   branch=master
-  commit=8a51f617373ad9cfbe1a78430ffac9d364ac1972
+  commit=95c6e28e53b551b6bc484344e55ac12c36772591
 [cista]
   url=git@github.com:felixguendling/cista.git
   branch=master
@@ -66,3 +66,7 @@
   url=git@github.com:motis-project/opentelemetry-cpp.git
   branch=main
   commit=638d55a1d559cc783fd3ef005d5f48e1cbbb5ea3
+[pugixml]
+  url=git@github.com:motis-project/pugixml.git
+  branch=master
+  commit=60175e80e2f5e97e027ac78f7e14c5acc009ce50

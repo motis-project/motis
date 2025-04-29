@@ -119,11 +119,33 @@ void config::verify() const {
   if (timetable_) {
     for (auto const& [_, d] : timetable_->datasets_) {
       if (d.rt_.has_value()) {
-        for (auto const& url : *d.rt_) {
+        for (auto const& rt_entry : *d.rt_) {
           try {
-            boost::urls::url{url.url_};
+            boost::urls::url{rt_entry.url_};
           } catch (std::exception const& e) {
-            throw utl::fail("{} is not a valid url: {}", url.url_, e.what());
+            throw utl::fail("{} is not a valid url: {}", rt_entry.url_,
+                            e.what());
+          }
+          switch (rt_entry.protocol_) {
+            case rt_config::protocol::gtfsrt:
+              utl::verify(!rt_entry.client_name_.has_value(),
+                          "GTFS RT invalid field: client_name");
+              utl::verify(!rt_entry.server_name_.has_value(),
+                          "GTFS RT invalid field: server_name");
+              utl::verify(!rt_entry.hysteresis_.has_value(),
+                          "GTFS RT invalid field: hysteresis");
+              break;
+            case rt_config::protocol::vdvaus:
+              utl::verify(!rt_entry.headers_.has_value(),
+                          "VDV RT invalid field: headers");
+              utl::verify(rt_entry.client_name_.has_value(),
+                          "VDV RT requires field: client_name");
+              utl::verify(rt_entry.server_name_.has_value(),
+                          "VDV RT requires field: server_name");
+              utl::verify(
+                  timetable_->incremental_rt_update_,
+                  "VDV RT requires setting: incremental_rt_update = true");
+              break;
           }
         }
       }

@@ -8,6 +8,7 @@
 
 #include "date/date.h"
 
+#include "nigiri/rt/vdv/vdv_update.h"
 #include "nigiri/types.h"
 
 #include "osr/types.h"
@@ -59,6 +60,7 @@ struct data {
   void load_matches();
   void load_reverse_geocoder();
   void load_tiles();
+  void load_rt(std::string_view, config::timetable::dataset const&);
 
   void init_rtt(date::sys_days = std::chrono::time_point_cast<date::days>(
                     std::chrono::system_clock::now()));
@@ -67,7 +69,7 @@ struct data {
     // !!! Remember to add all new members !!!
     return std::tie(config_, t_, r_, tc_, w_, pl_, l_, elevations_, tt_, tags_,
                     location_rtree_, elevator_nodes_, shapes_, railviz_static_,
-                    matches_, rt_, gbfs_, odm_bounds_, metrics_);
+                    matches_, rt_, gbfs_, odm_bounds_, metrics_, vdvaus_);
   }
 
   std::filesystem::path path_;
@@ -92,6 +94,7 @@ struct data {
   std::shared_ptr<gbfs::gbfs_data> gbfs_{};
   ptr<odm::bounds> odm_bounds_;
   ptr<prometheus::Registry> metrics_{std::make_unique<prometheus::Registry>()};
+  ptr<std::vector<vdvaus::connection>> vdvaus_;
 };
 
 }  // namespace motis

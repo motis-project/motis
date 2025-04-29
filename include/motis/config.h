@@ -12,11 +12,32 @@
 
 #include "cista/hashing.h"
 
+#include "rfl/TaggedUnion.hpp"
+#include "rfl/visit.hpp"
+
+#include "utl/overloaded.h"
 #include "utl/verify.h"
 
-namespace motis {
+#include "motis/rt_config.h"
+#include "motis/types.h"
 
-using headers_t = std::map<std::string, std::string>;
+namespace cista {
+
+template <rfl::internal::StringLiteral _discriminator, class... Ts>
+struct hashing<rfl::TaggedUnion<_discriminator, Ts...>> {
+  constexpr hash_t operator()(rfl::TaggedUnion<_discriminator, Ts...> const& el,
+                              hash_t const seed = BASE_HASH) {
+    hash_t h = hash_combine(seed, el.variant().index());
+    rfl::visit(
+        [&](auto&& arg) { h = hashing<std::decay_t<decltype(arg)>>{}(arg, h); },
+        el);
+    return h;
+  }
+};
+
+}  // namespace cista
+
+namespace motis {
 
 struct config {
   friend std::ostream& operator<<(std::ostream&, config const&);
@@ -60,21 +81,12 @@ struct config {
 
   struct timetable {
     struct dataset {
-      struct rt {
-        bool operator==(rt const&) const = default;
-        cista::hash_t hash() const noexcept {
-          return cista::build_hash(url_, headers_);
-        }
-        std::string url_;
-        std::optional<headers_t> headers_{};
-      };
-
       bool operator==(dataset const&) const = default;
 
       std::string path_;
       bool default_bikes_allowed_{false};
       std::optional<std::map<std::string, bool>> clasz_bikes_allowed_{};
-      std::optional<std::vector<rt>> rt_{};
+      std::optional<std::vector<rt_config>> rt_{};
       std::optional<std::string> default_timezone_{};
     };
 
@@ -98,6 +110,8 @@ struct config {
     std::optional<std::string> default_timezone_{};
     std::map<std::string, dataset> datasets_{};
     std::optional<std::filesystem::path> assistance_times_{};
+    unsigned vdvaus_subscription_renewal_{3600U};
+    unsigned vdvaus_subscription_duration_{25 * 3600U};
   };
   std::optional<timetable> timetable_{};
 

@@ -20,8 +20,11 @@
 
 #include "nigiri/rt/create_rt_timetable.h"
 #include "nigiri/rt/rt_timetable.h"
+#include "nigiri/rt/vdv/vdv_update.h"
 #include "nigiri/shapes_storage.h"
 #include "nigiri/timetable.h"
+
+#include "rfl/visit.hpp"
 
 #include "motis/config.h"
 #include "motis/constants.h"
@@ -34,6 +37,7 @@
 #include "motis/tag_lookup.h"
 #include "motis/tiles_data.h"
 #include "motis/tt_location_rtree.h"
+#include "motis/vdvaus/connection.h"
 
 namespace fs = std::filesystem;
 namespace n = nigiri;
@@ -115,6 +119,11 @@ data::data(std::filesystem::path p, config const& c)
       if (c.timetable_->railviz_) {
         load_railviz();
       }
+      for (auto const& [tag, d] : c.timetable_->datasets_) {
+        if (d.rt_) {
+          load_rt(tag, d);
+        }
+      }
     }
   });
 
@@ -169,7 +178,6 @@ data::data(std::filesystem::path p, config const& c)
   };
 
   geocoder.wait();
-  tt.wait();
   street_routing.wait();
   matches.wait();
   elevators.wait();
@@ -258,6 +266,18 @@ void data::load_tiles() {
   auto const db_size = config_.tiles_.value().db_size_;
   tiles_ = std::make_unique<tiles_data>(
       (path_ / "tiles" / "tiles.mdb").generic_string(), db_size);
+}
+
+void data::load_rt(std::string_view tag, config::timetable::dataset const& d) {
+  vdvaus_ = std::make_unique<std::vector<vdvaus::connection>>();
+  for (auto const& rt : *d.rt_) {
+    std::visit(utl::overloaded{[](rt_config::gtfsrt const&) {},
+                               [&](rt_config::vdvaus const vdv_cfg) {
+                                 vdvaus_->emplace_back(vdv_cfg, *tt_,
+                                                       tags_->get_src(tag));
+                               }},
+               rt());
+  }
 }
 
 }  // namespace motis

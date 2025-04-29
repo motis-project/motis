@@ -1,4 +1,5 @@
 #include "boost/asio/io_context.hpp"
+#include <boost/thread/future.hpp>
 
 #include "fmt/format.h"
 
@@ -37,6 +38,10 @@
 #include "motis/rt_update.h"
 #include "motis/scheduler/runner.h"
 #include "motis/scheduler/scheduler_algo.h"
+#include "motis/vdvaus/client_status.h"
+#include "motis/vdvaus/connection.h"
+#include "motis/vdvaus/data_ready.h"
+#include "motis/vdvaus/subscription.h"
 
 namespace fs = std::filesystem;
 namespace asio = boost::asio;
@@ -98,6 +103,13 @@ int server(data d, config const& c, std::string_view const motis_version) {
     qr.route("GET", "/tiles/", ep::tiles{*d.tiles_});
   }
 
+  if (d.vdvaus_ != nullptr) {
+    for (auto const& con : *d.vdvaus_) {
+      qr.route("POST", con.client_status_path_, vdvaus::client_status{con});
+      qr.route("POST", con.data_ready_path_, vdvaus::data_ready{});
+    }
+  }
+
   qr.route("GET", "/metrics", ep::metrics{*d.metrics_});
   qr.serve_files(server_config.web_folder_);
   qr.enable_cors();
@@ -111,6 +123,17 @@ int server(data d, config const& c, std::string_view const motis_version) {
   if (ec) {
     std::cerr << "error: " << ec << "\n";
     return 1;
+  }
+
+  auto vdvaus_subscription_thread = std::unique_ptr<std::thread>{};
+  auto vdvaus_subscription_ioc = std::unique_ptr<asio::io_context>{};
+  if (d.vdvaus_ != nullptr && !d.vdvaus_->empty()) {
+    vdvaus_subscription_ioc = std::make_unique<asio::io_context>();
+    vdvaus_subscription_thread = std::make_unique<std::thread>([&]() {
+      utl::set_current_thread_name("motis vdvaus subscription");
+      vdvaus::subscription(*vdvaus_subscription_ioc, c, d);
+      vdvaus_subscription_ioc->run();
+    });
   }
 
   auto rt_update_thread = std::unique_ptr<std::thread>{};
@@ -153,6 +176,18 @@ int server(data d, config const& c, std::string_view const motis_version) {
     if (gbfs_update_ioc != nullptr) {
       gbfs_update_ioc->stop();
     }
+
+    if (vdvaus_subscription_ioc != nullptr) {
+      vdvaus_subscription_ioc->stop();
+      auto vdvaus_unsubscribe_ioc = std::make_unique<asio::io_context>();
+      auto vdvaus_unsubscribe_thread = std::thread{[&]() {
+        utl::set_current_thread_name("vdvaus unsubscribe");
+        vdvaus::shutdown(*vdvaus_unsubscribe_ioc, c, d);
+        vdvaus_unsubscribe_ioc->run();
+      }};
+      vdvaus_unsubscribe_thread.join();
+      vdvaus_unsubscribe_ioc->stop();
+    }
   });
 
   utl::log_info("motis.server",
@@ -162,6 +197,9 @@ int server(data d, config const& c, std::string_view const motis_version) {
 
   for (auto& t : threads) {
     t.join();
+  }
+  if (vdvaus_subscription_thread != nullptr) {
+    vdvaus_subscription_thread->join();
   }
   if (rt_update_thread != nullptr) {
     rt_update_thread->join();
