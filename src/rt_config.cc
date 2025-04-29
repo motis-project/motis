@@ -11,6 +11,7 @@ std::variant<rt_config::gtfsrt, rt_config::vdvaus> rt_config::operator()()
       return rt_config::vdvaus{url_, *server_name_, *client_name_,
                                *hysteresis_};
   }
+  std::unreachable();
 }
 
 }  // namespace motis
