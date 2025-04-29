@@ -11,8 +11,6 @@
 #include "prometheus/family.h"
 #include "prometheus/gauge.h"
 
-#include "rfl/visit.hpp"
-
 #include "utl/timer.h"
 
 #include "nigiri/rt/create_rt_timetable.h"
@@ -595,7 +593,7 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
                   });
 
               // Wait for all updates to finish
-              auto [idx, exceptions, stats] =
+              auto [_, exceptions, stats] =
                   co_await asio::experimental::make_parallel_group(awaitables)
                       .async_wait(asio::experimental::wait_for_all(),
                                   asio::use_awaitable);
