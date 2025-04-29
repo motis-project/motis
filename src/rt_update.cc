@@ -537,12 +537,12 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
                         executor,
                         [&]() -> awaitable<std::variant<
                                   n::rt::statistics, n::rt::vdv::statistics>> {
-                          return std::visit(
+                          auto ret = std::variant<n::rt::statistics,
+                                                  n::rt::vdv::statistics>{};
+                          co_await std::visit(
                               utl::overloaded{
                                   [&](gtfsrt_endpoint const& gtfsrt_ep)
-                                      -> awaitable<std::variant<
-                                          n::rt::statistics,
-                                          n::rt::vdv::statistics>> {
+                                      -> awaitable<void> {
                                     gtfsrt_ep.metrics_.updates_requested_
                                         .Increment();
                                     try {
@@ -552,7 +552,7 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
                                               ? *gtfsrt_ep.ep_.headers_
                                               : headers_t{},
                                           timeout);
-                                      co_return n::rt::gtfsrt_update_buf(
+                                      ret = n::rt::gtfsrt_update_buf(
                                           *d.tt_, *rtt, gtfsrt_ep.src_,
                                           gtfsrt_ep.tag_, get_http_body(res),
                                           msg);
@@ -561,15 +561,13 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
                                              "GTFS-RT FETCH ERROR: tag={}, "
                                              "error={}",
                                              gtfsrt_ep.tag_, e.what());
-                                      co_return n::rt::statistics{
+                                      ret = n::rt::statistics{
                                           .parser_error_ = true,
                                           .no_header_ = true};
                                     }
                                   },
                                   [&](vdvaus_endpoint const& vdvaus_ep)
-                                      -> awaitable<std::variant<
-                                          n::rt::statistics,
-                                          n::rt::vdv::statistics>> {
+                                      -> awaitable<void> {
                                     vdvaus_ep.metrics_.updates_requested_
                                         .Increment();
                                     try {
@@ -588,9 +586,10 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
                                              "error={}",
                                              vdvaus_ep.tag_, e.what());
                                     }
-                                    co_return vdvaus_ep.con_.upd_.get_stats();
+                                    ret = vdvaus_ep.con_.upd_.get_stats();
                                   }},
                               x);
+                          co_return ret;
                         },
                         asio::deferred);
                   });
@@ -642,7 +641,7 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
 
                             n::log(
                                 n::log_lvl::info, "motis.rt",
-                                "VDV AUS update stats for tag={}, url={}: {}",
+                                "VDV AUS update stats for tag={}, url={}:\n{}",
                                 tag, ep.cfg_.url_,
                                 fmt::streamed(
                                     std::get<n::rt::vdv::statistics>(s)));
