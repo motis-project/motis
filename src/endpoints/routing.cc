@@ -467,8 +467,9 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
   auto const rtt = rt->rtt_.get();
   auto const e = rt_->e_.get();
   auto gbfs_rd = gbfs::gbfs_routing_data{w_, l_, gbfs_};
-  if (blocked.get() == nullptr && w_ != nullptr) {
-    blocked.reset(new osr::bitvec<osr::node_idx_t>{w_->n_nodes()});
+  if (blocked.get() == nullptr) {
+    blocked.reset(
+        new osr::bitvec<osr::node_idx_t>{w_ != nullptr ? w_->n_nodes() : 0});
   }
 
   auto const query = api::plan_params{url.params()};
