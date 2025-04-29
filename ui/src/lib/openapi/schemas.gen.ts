@@ -576,7 +576,7 @@ export const TripSegmentSchema = {
             type: 'boolean'
         },
         polyline: {
-            description: 'Google polyline encoded coordinate sequence (with precision 7) where the trip travels on this segment.',
+            description: 'Google polyline encoded coordinate sequence (with precision 6) where the trip travels on this segment.',
             type: 'string'
         }
     }
@@ -592,7 +592,7 @@ export const EncodedPolylineSchema = {
     required: ['points', 'length'],
     properties: {
         points: {
-            description: 'The encoded points of the polyline using the Google polyline encoding with precision 7.',
+            description: 'The encoded points of the polyline using the Google polyline encoding with precision 6.',
             type: 'string'
         },
         length: {

@@ -368,7 +368,7 @@ api::Itinerary journey_to_response(
               fr.for_each_shape_point(
                   shapes, t.stop_range_,
                   [&](geo::latlng const& pos) { polyline.emplace_back(pos); });
-              leg.legGeometry_.points_ = geo::encode_polyline<7>(polyline);
+              leg.legGeometry_.points_ = geo::encode_polyline<6>(polyline);
               leg.legGeometry_.length_ =
                   static_cast<std::int64_t>(polyline.size());
 
