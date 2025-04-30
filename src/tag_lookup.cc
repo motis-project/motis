@@ -2,6 +2,7 @@
 
 #include "motis/tag_lookup.h"
 
+#include "fmt/chrono.h"
 #include "fmt/core.h"
 
 #include "cista/io.h"
@@ -88,8 +89,9 @@ std::string tag_lookup::id(nigiri::timetable const& tt,
     auto const t = std::chrono::system_clock::to_time_t(time);
     auto const utc = *std::gmtime(&t);
     auto const tag = get_tag(id.src_);
+    auto const id_id = id.id_;
     return fmt::format("{:%Y%m%d}_{:02}:{:02}_{}_{}", time, utc.tm_hour,
-                       utc.tm_min, tag, id.id_);
+                       utc.tm_min, tag, id_id);
   }
 }
 
