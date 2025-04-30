@@ -731,7 +731,7 @@ export const RentalSchema = {
 
 export const LegSchema = {
     type: 'object',
-    required: ['mode', 'startTime', 'endTime', 'scheduledStartTime', 'scheduledEndTime', 'realTime', 'duration', 'from', 'to', 'legGeometry'],
+    required: ['mode', 'startTime', 'endTime', 'scheduledStartTime', 'scheduledEndTime', 'realTime', 'scheduled', 'duration', 'from', 'to', 'legGeometry'],
     properties: {
         mode: {
             '$ref': '#/components/schemas/Mode',
@@ -781,6 +781,12 @@ If leg is footpath:
         },
         realTime: {
             description: 'Whether there is real-time data about this leg',
+            type: 'boolean'
+        },
+        scheduled: {
+            description: `Whether this leg was originally scheduled to run or is an additional service.
+Scheduled times will equal realtime times in this case.
+`,
             type: 'boolean'
         },
         distance: {

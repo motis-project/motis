@@ -54,6 +54,7 @@ const translations: Translations = {
 	inOutDisallowed: 'Impossible de monter/descendre',
 	inDisallowed: 'Impossible de monter',
 	outDisallowed: 'Impossible de descendre',
+	unscheduledTrip: 'Voyage supplémentaire',
 	WALK: 'À pied',
 	BIKE: 'Vélo',
 	RENTAL: 'Loué',
