@@ -17,7 +17,8 @@
 		itinerary: Itinerary;
 	} = $props();
 
-	const lastLeg = $derived(itinerary.legs.findLast((l) => l.duration !== 0));
+	const isRelevantLeg = (l: Leg) => l.duration !== 0 || l.routeShortName;
+	const lastLeg = $derived(itinerary.legs.findLast(isRelevantLeg));
 </script>
 
 {#snippet stopTimes(
@@ -165,7 +166,7 @@
 		{#if l.routeShortName}
 			<div class="w-full flex justify-between items-center space-x-1">
 				<Route {onClickTrip} {l} />
-				{#if pred && (pred.from.track || pred.duration !== 0) && (i != 1 || pred.routeShortName)}
+				{#if pred && (pred.from.track || isRelevantLeg(pred)) && (i != 1 || pred.routeShortName)}
 					<div class="border-t h-0 grow shrink"></div>
 					<div class="text-sm text-muted-foreground leading-none px-2 text-center">
 						{#if pred.from.track}
@@ -271,7 +272,7 @@
 					</details>
 				{/if}
 
-				{#if !isLast && !(isLastPred && next!.duration === 0)}
+				{#if !isLast && !(isLastPred && !isRelevantLeg(next!))}
 					<div class="grid gap-y-6 grid-cols-[max-content_max-content_auto] items-center pb-3">
 						{@render stopTimes(
 							l.endTime!,
@@ -285,12 +286,12 @@
 					</div>
 				{/if}
 
-				{#if isLast || (isLastPred && next!.duration === 0)}
+				{#if isLast || (isLastPred && !isRelevantLeg(next!))}
 					<!-- fill visual gap -->
 					<div class="pb-2"></div>
 				{/if}
 			</div>
-		{:else if !(isLast && l.duration === 0) && ((i == 0 && l.duration !== 0) || !next || !next.routeShortName || l.mode != 'WALK' || (pred && (pred.mode == 'BIKE' || pred.mode == 'RENTAL')))}
+		{:else if !(isLast && !isRelevantLeg(l)) && ((i == 0 && isRelevantLeg(l)) || !next || !next.routeShortName || l.mode != 'WALK' || (pred && (pred.mode == 'BIKE' || pred.mode == 'RENTAL')))}
 			<Route {onClickTrip} {l} />
 			<div class="pt-4 pl-6 border-l-4 left-4 relative" style={routeBorderColor(l)}>
 				<div class="grid gap-y-6 grid-cols-[max-content_max-content_auto] items-center">

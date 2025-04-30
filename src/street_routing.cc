@@ -63,7 +63,8 @@ std::vector<api::StepInstruction> get_step_instructions(
     osr::ways const& w,
     osr::location const& from,
     osr::location const& to,
-    std::span<osr::path::segment const> segments) {
+    std::span<osr::path::segment const> segments,
+    unsigned const api_version) {
   auto steps = std::vector<api::StepInstruction>{};
   auto pred_lvl = from.lvl_.to_float();
   for (auto const& s : segments) {
@@ -95,7 +96,8 @@ std::vector<api::StepInstruction> get_step_instructions(
                        ? std::nullopt
                        : std::optional{static_cast<std::int64_t>(
                              to_idx(w.way_osm_idx_[s.way_]))},
-        .polyline_ = to_polyline<7>(s.polyline_),
+        .polyline_ = api_version == 1 ? to_polyline<7>(s.polyline_)
+                                      : to_polyline<6>(s.polyline_),
         .streetName_ = way_name == osr::string_idx_t::invalid()
                            ? ""
                            : std::string{w.strings_[way_name].view()},
@@ -289,6 +291,7 @@ api::Itinerary route(osr::ways const& w,
                      gbfs::gbfs_products_ref const prod_ref,
                      street_routing_cache_t& cache,
                      osr::bitvec<osr::node_idx_t>& blocked_mem,
+                     unsigned const api_version,
                      std::chrono::seconds const max,
                      bool const dummy) {
   if (dummy) {
@@ -414,9 +417,10 @@ api::Itinerary route(osr::ways const& w,
             .startTime_ = pred_end_time,
             .endTime_ = is_last_leg && end_time ? *end_time : t,
             .distance_ = dist,
-            .legGeometry_ = to_polyline<7>(concat),
-            .steps_ = get_step_instructions(w, get_location(from),
-                                            get_location(to), range),
+            .legGeometry_ = api_version == 1 ? to_polyline<7>(concat)
+                                             : to_polyline<6>(concat),
+            .steps_ = get_step_instructions(
+                w, get_location(from), get_location(to), range, api_version),
             .rental_ = is_rental ? std::optional{sharing_data->get_rental(
                                        from_node, to_node)}
                                  : std::nullopt});
