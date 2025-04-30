@@ -338,6 +338,7 @@ api::Itinerary journey_to_response(
                   .scheduledEndTime_ =
                       exit_stop.scheduled_time(n::event_type::kArr),
                   .realTime_ = fr.is_rt(),
+                  .scheduled_ = fr.is_scheduled(),
                   .headsign_ = std::string{enter_stop.direction()},
                   .routeColor_ = to_str(color.color_),
                   .routeTextColor_ = to_str(color.text_color_),

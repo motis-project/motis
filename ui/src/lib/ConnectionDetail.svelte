@@ -221,6 +221,11 @@
 						<span class="ml-1 font-bold">{t.tripCancelled}</span>
 					</div>
 				{/if}
+				{#if !l.scheduled}
+					<div class="mt-2 flex items-center text-green-600 leading-none">
+						<span class="ml-1">{t.unscheduledTrip}</span>
+					</div>
+				{/if}
 				{#if l.alerts}
 					{#each l.alerts as alert}
 						<div class="text-destructive text-sm font-bold">

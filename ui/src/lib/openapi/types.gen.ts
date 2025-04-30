@@ -642,6 +642,12 @@ export type Leg = {
      */
     realTime: boolean;
     /**
+     * Whether this leg was originally scheduled to run or is an additional service.
+     * Scheduled times will equal realtime times in this case.
+     *
+     */
+    scheduled: boolean;
+    /**
      * For non-transit legs the distance traveled while traversing this leg in meters.
      */
     distance?: number;
