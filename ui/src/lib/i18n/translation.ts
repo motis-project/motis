@@ -70,9 +70,11 @@ export type Translations = {
 	REGIONAL_FAST_RAIL: string;
 	REGIONAL_RAIL: string;
 	OTHER: string;
-	elevationCostsNone: string;
-	elevationCostsLow: string;
-	elevationCostsHigh: string;
+	elevationCosts: {
+		NONE: string;
+		LOW: string;
+		HIGH: string;
+	};
 };
 
 const translations: Map<string, Translations> = new Map(
