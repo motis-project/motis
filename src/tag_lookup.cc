@@ -84,14 +84,14 @@ std::string tag_lookup::id(nigiri::timetable const& tt,
                        start_minutes.count(), get_tag(src), id);
   } else {
     auto const id = s.fr_->id();
-    auto const time = std::chrono::time_point_cast<std::chrono::minutes>(
+    auto const time = std::chrono::system_clock::to_time_t(
         (*s.fr_)[0].time(n::event_type::kDep));
-    auto const t = std::chrono::system_clock::to_time_t(time);
-    auto const utc = *std::gmtime(&t);
-    auto const tag = get_tag(id.src_);
+    auto const utc = *std::gmtime(&time);
+    auto const id_tag = get_tag(id.src_);
     auto const id_id = id.id_;
-    return fmt::format("{:%Y%m%d}_{:02}:{:02}_{}_{}", time, utc.tm_hour,
-                       utc.tm_min, tag, id_id);
+    return fmt::format("{:04}{:02}{:02}_{:02}:{:02}_{}_{}", utc.tm_year + 1900,
+                       utc.tm_mon + 1, utc.tm_mday, utc.tm_hour, utc.tm_min,
+                       id_tag, id_id);
   }
 }
 
