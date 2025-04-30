@@ -48,6 +48,6 @@ api::Itinerary journey_to_response(osr::ways const*,
                                    bool with_fares,
                                    double timetable_max_matching_distance,
                                    double max_matching_distance,
-                                   unsigned int api_version);
+                                   unsigned api_version);
 
 }  // namespace motis

@@ -319,7 +319,7 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
     std::chrono::seconds max,
     double const max_matching_distance,
     double const fastest_direct_factor,
-    unsigned int const api_version) const {
+    unsigned const api_version) const {
   if (!w_ || !l_) {
     return {};
   }

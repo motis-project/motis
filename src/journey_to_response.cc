@@ -111,7 +111,7 @@ api::Itinerary journey_to_response(
     bool const with_fares,
     double const timetable_max_matching_distance,
     double const max_matching_distance,
-    unsigned int const api_version) {
+    unsigned const api_version) {
   utl::verify(!j.legs_.empty(), "journey without legs");
 
   auto const fares =

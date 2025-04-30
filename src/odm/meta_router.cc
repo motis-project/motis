@@ -89,7 +89,7 @@ meta_router::meta_router(ep::routing const& r,
                          bool const odm_pre_transit,
                          bool const odm_post_transit,
                          bool const odm_direct,
-                         unsigned int const api_version)
+                         unsigned const api_version)
     : r_{r},
       query_{query},
       pre_transit_modes_{pre_transit_modes},
@@ -146,7 +146,7 @@ n::duration_t init_direct(std::vector<direct_ride>& direct_rides,
                           api::Place const& to_p,
                           n::interval<n::unixtime_t> const intvl,
                           api::plan_params const& query,
-                          unsigned int api_version) {
+                          unsigned api_version) {
   direct_rides.clear();
 
   auto const from_pos = geo::latlng{from_p.lat_, from_p.lon_};
