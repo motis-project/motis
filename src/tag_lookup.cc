@@ -1,3 +1,5 @@
+#include <ctime>
+
 #include "motis/tag_lookup.h"
 
 #include "fmt/core.h"
@@ -83,9 +85,11 @@ std::string tag_lookup::id(nigiri::timetable const& tt,
     auto const id = s.fr_->id();
     auto const time = std::chrono::time_point_cast<std::chrono::minutes>(
         (*s.fr_)[0].time(n::event_type::kDep));
+    auto const t = std::chrono::system_clock::to_time_t(time);
+    auto const utc = *std::gmtime(&t);
     auto const tag = get_tag(id.src_);
-    return fmt::format("{:%Y%m%d}_{:%H}:{:%M}_{}_{}", time, time, time, tag,
-                       id.id_);
+    return fmt::format("{:%Y%m%d}_{:02}:{:02}_{}_{}", time, utc.tm_hour,
+                       utc.tm_min, tag, id.id_);
   }
 }
 
