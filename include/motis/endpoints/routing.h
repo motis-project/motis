@@ -97,7 +97,7 @@ struct routing {
       std::chrono::seconds max,
       double max_matching_distance,
       double fastest_direct_factor,
-      int api_version) const;
+      unsigned int api_version) const;
 
   config const& config_;
   osr::ways const* w_;

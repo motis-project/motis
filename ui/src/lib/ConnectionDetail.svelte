@@ -272,7 +272,7 @@
 					</details>
 				{/if}
 
-				{#if !isLast && !(isLastPred && !next!.to.stopId)}
+				{#if !isLast && !(isLastPred && !isRelevantLeg(next!))}
 					<div class="grid gap-y-6 grid-cols-[max-content_max-content_auto] items-center pb-3">
 						{@render stopTimes(
 							l.endTime!,

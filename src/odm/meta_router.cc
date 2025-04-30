@@ -89,7 +89,7 @@ meta_router::meta_router(ep::routing const& r,
                          bool const odm_pre_transit,
                          bool const odm_post_transit,
                          bool const odm_direct,
-                         int const api_version)
+                         unsigned int const api_version)
     : r_{r},
       query_{query},
       pre_transit_modes_{pre_transit_modes},
@@ -146,7 +146,7 @@ n::duration_t init_direct(std::vector<direct_ride>& direct_rides,
                           api::Place const& to_p,
                           n::interval<n::unixtime_t> const intvl,
                           api::plan_params const& query,
-                          int api_version) {
+                          unsigned int api_version) {
   direct_rides.clear();
 
   auto const from_pos = geo::latlng{from_p.lat_, from_p.lon_};
@@ -675,7 +675,7 @@ api::plan_response meta_router::run() {
                     r_.w_, r_.l_, r_.pl_, *tt_, *r_.tags_, e_, rtt_,
                     r_.matches_, r_.elevations_, r_.shapes_, gbfs_rd_,
                     query_.pedestrianProfile_, query_.elevationCosts_, j,
-                    start_, dest_, cache, *ep::blocked,
+                    start_, dest_, cache, ep::blocked.get(),
                     query_.detailedTransfers_, query_.withFares_,
                     r_.config_.timetable_->max_matching_distance_,
                     query_.maxMatchingDistance_, api_version_);

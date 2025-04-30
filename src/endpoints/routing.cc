@@ -319,7 +319,7 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
     std::chrono::seconds max,
     double const max_matching_distance,
     double const fastest_direct_factor,
-    int const api_version) const {
+    unsigned int const api_version) const {
   if (!w_ || !l_) {
     return {};
   }
@@ -468,13 +468,12 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
   auto const rtt = rt->rtt_.get();
   auto const e = rt_->e_.get();
   auto gbfs_rd = gbfs::gbfs_routing_data{w_, l_, gbfs_};
-  if (blocked.get() == nullptr) {
-    blocked.reset(
-        new osr::bitvec<osr::node_idx_t>{w_ != nullptr ? w_->n_nodes() : 0});
+  if (blocked.get() == nullptr && w_ != nullptr) {
+    blocked.reset(new osr::bitvec<osr::node_idx_t>{w_->n_nodes()});
   }
 
   auto const query = api::plan_params{url.params()};
-  auto const api_version = url.encoded_path().contains("/v2/") ? 2 : 1;
+  auto const api_version = url.encoded_path().contains("/v1/") ? 1U : 2U;
 
   auto const deduplicate = [](auto m) {
     utl::erase_duplicates(m);
@@ -675,7 +674,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
               return journey_to_response(
                   w_, l_, pl_, *tt_, *tags_, e, rtt, matches_, elevations_,
                   shapes_, gbfs_rd, query.pedestrianProfile_,
-                  query.elevationCosts_, j, start, dest, cache, *blocked,
+                  query.elevationCosts_, j, start, dest, cache, blocked.get(),
                   query.detailedTransfers_, query.withFares_,
                   config_.timetable_
                       .and_then([](config::timetable const& x) {

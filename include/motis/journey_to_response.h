@@ -43,11 +43,11 @@ api::Itinerary journey_to_response(osr::ways const*,
                                    place_t const& start,
                                    place_t const& dest,
                                    street_routing_cache_t&,
-                                   osr::bitvec<osr::node_idx_t>& blocked_mem,
+                                   osr::bitvec<osr::node_idx_t>* blocked_mem,
                                    bool detailed_transfers,
                                    bool with_fares,
                                    double timetable_max_matching_distance,
                                    double max_matching_distance,
-                                   int polyline_precision);
+                                   unsigned int api_version);
 
 }  // namespace motis

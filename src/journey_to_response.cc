@@ -106,12 +106,12 @@ api::Itinerary journey_to_response(
     place_t const& start,
     place_t const& dest,
     street_routing_cache_t& cache,
-    osr::bitvec<osr::node_idx_t>& blocked_mem,
+    osr::bitvec<osr::node_idx_t>* blocked_mem,
     bool const detailed_transfers,
     bool const with_fares,
     double const timetable_max_matching_distance,
     double const max_matching_distance,
-    int const api_version) {
+    unsigned int const api_version) {
   utl::verify(!j.legs_.empty(), "journey without legs");
 
   auto const fares =
@@ -397,7 +397,7 @@ api::Itinerary journey_to_response(
                                          pedestrian_profile, elevation_costs),
                               j_leg.dep_time_, j_leg.arr_time_,
                               timetable_max_matching_distance, {}, cache,
-                              blocked_mem, api_version,
+                              *blocked_mem, api_version,
                               std::chrono::duration_cast<std::chrono::seconds>(
                                   j_leg.arr_time_ - j_leg.dep_time_) +
                                   std::chrono::minutes{10},
@@ -423,7 +423,7 @@ api::Itinerary journey_to_response(
                            x.transport_mode_id_ >= kGbfsTransportModeIdOffset
                                ? gbfs_rd.get_products_ref(x.transport_mode_id_)
                                : gbfs::gbfs_products_ref{},
-                           cache, blocked_mem, api_version,
+                           cache, *blocked_mem, api_version,
                            std::chrono::duration_cast<std::chrono::seconds>(
                                j_leg.arr_time_ - j_leg.dep_time_) +
                                std::chrono::minutes{5}));

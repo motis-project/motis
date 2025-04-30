@@ -44,7 +44,7 @@ struct meta_router {
               bool odm_pre_transit,
               bool odm_post_transit,
               bool odm_direct,
-              int api_version);
+              unsigned int api_version);
 
   api::plan_response run();
 
@@ -86,7 +86,7 @@ private:
   bool odm_pre_transit_;
   bool odm_post_transit_;
   bool odm_direct_;
-  int api_version_;
+  unsigned int api_version_;
 
   nigiri::timetable const* tt_;
   std::shared_ptr<rt> const rt_;

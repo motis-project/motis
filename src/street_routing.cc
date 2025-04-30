@@ -64,7 +64,7 @@ std::vector<api::StepInstruction> get_step_instructions(
     osr::location const& from,
     osr::location const& to,
     std::span<osr::path::segment const> segments,
-    int const api_version) {
+    unsigned int const api_version) {
   auto steps = std::vector<api::StepInstruction>{};
   auto pred_lvl = from.lvl_.to_float();
   for (auto const& s : segments) {
@@ -291,7 +291,7 @@ api::Itinerary route(osr::ways const& w,
                      gbfs::gbfs_products_ref const prod_ref,
                      street_routing_cache_t& cache,
                      osr::bitvec<osr::node_idx_t>& blocked_mem,
-                     int const api_version,
+                     unsigned int const api_version,
                      std::chrono::seconds const max,
                      bool const dummy) {
   if (dummy) {
