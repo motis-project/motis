@@ -2036,6 +2036,8 @@ components:
         - exit
         - stayOn
         - area
+        - elevationUp
+        - elevationDown
       properties:
         relativeDirection:
           $ref: '#/components/schemas/Direction'
@@ -2072,6 +2074,12 @@ components:
             This step is on an open area, such as a plaza or train platform,
             and thus the directions should say something like "cross"
           type: boolean
+        elevationUp:
+          type: integer
+          description: The maximum numbers of meters routed uphill
+        elevationDown:
+          type: integer
+          description: The maximum numbers of meters routed downhill
 
     RentalFormFactor:
       type: string
@@ -2385,6 +2393,8 @@ components:
         - startTime
         - endTime
         - transfers
+        - elevationUp
+        - elevationDown
         - legs
       properties:
         duration:
@@ -2401,6 +2411,12 @@ components:
         transfers:
           type: integer
           description: The number of transfers this trip has.
+        elevationUp:
+          type: integer
+          description: The maximum numbers of meters routed uphill
+        elevationDown:
+          type: integer
+          description: The maximum numbers of meters routed downhill
         legs:
           description: Journey legs
           type: array
