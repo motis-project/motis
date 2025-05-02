@@ -119,52 +119,46 @@
 			<Switch bind:checked={bikeCarriage} label={t.bikeCarriage} id="bikeCarriage" />
 		</div>
 
-		<div class="grid grid-cols-3 items-center space-x-2">
-			<div class="flex flex-col">
-				<div class="flex justify-center">First mile modes</div>
-				<Select.Root type="multiple" bind:value={firstMileModes}>
-					<Select.Trigger aria-label="Select modes for first mile">
-						{firstMileModesLabel}
-					</Select.Trigger>
-					<Select.Content sideOffset={10}>
-						{#each streetModes as mode, i (i + mode.value)}
-							<Select.Item value={mode.value} label={mode.label}>
-								{mode.label}
-							</Select.Item>
-						{/each}
-					</Select.Content>
-				</Select.Root>
-			</div>
-			<div class="flex flex-col">
-				<div class="flex justify-center">Last mile modes</div>
-				<Select.Root type="multiple" bind:value={lastMileModes}>
-					<Select.Trigger aria-label="Select modes for last mile">
-						{lastMileModesLabel}
-					</Select.Trigger>
-					<Select.Content sideOffset={10}>
-						{#each streetModes as mode, i (i + mode.value)}
-							<Select.Item value={mode.value} label={mode.label}>
-								{mode.label}
-							</Select.Item>
-						{/each}
-					</Select.Content>
-				</Select.Root>
-			</div>
-			<div class="flex flex-col">
-				<div class="flex justify-center">Direct modes</div>
-				<Select.Root type="multiple" bind:value={directModes}>
-					<Select.Trigger aria-label="Select direct modes">
-						{directModesLabel}
-					</Select.Trigger>
-					<Select.Content sideOffset={10}>
-						{#each streetModes as mode, i (i + mode.value)}
-							<Select.Item value={mode.value} label={mode.label}>
-								{mode.label}
-							</Select.Item>
-						{/each}
-					</Select.Content>
-				</Select.Root>
-			</div>
+		<div class="grid grid-cols-2 items-center space-x-2 space-y-2">
+			<div class="text-sm">First mile modes</div>
+			<Select.Root type="multiple" bind:value={firstMileModes}>
+				<Select.Trigger aria-label="Select modes for first mile">
+					{firstMileModesLabel}
+				</Select.Trigger>
+				<Select.Content sideOffset={10}>
+					{#each streetModes as mode, i (i + mode.value)}
+						<Select.Item value={mode.value} label={mode.label}>
+							{mode.label}
+						</Select.Item>
+					{/each}
+				</Select.Content>
+			</Select.Root>
+			<div class="text-sm">Last mile modes</div>
+			<Select.Root type="multiple" bind:value={lastMileModes}>
+				<Select.Trigger aria-label="Select modes for last mile">
+					{lastMileModesLabel}
+				</Select.Trigger>
+				<Select.Content sideOffset={10}>
+					{#each streetModes as mode, i (i + mode.value)}
+						<Select.Item value={mode.value} label={mode.label}>
+							{mode.label}
+						</Select.Item>
+					{/each}
+				</Select.Content>
+			</Select.Root>
+			<div class="text-sm">Direct modes</div>
+			<Select.Root type="multiple" bind:value={directModes}>
+				<Select.Trigger aria-label="Select direct modes">
+					{directModesLabel}
+				</Select.Trigger>
+				<Select.Content sideOffset={10}>
+					{#each streetModes as mode, i (i + mode.value)}
+						<Select.Item value={mode.value} label={mode.label}>
+							{mode.label}
+						</Select.Item>
+					{/each}
+				</Select.Content>
+			</Select.Root>
 		</div>
 		<!--
 		<RadioGroup.Root value="option-one">
