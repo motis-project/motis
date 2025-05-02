@@ -39,6 +39,7 @@
 		'FERRY',
 		'OTHER'
 	];
+	const possibleStreetModes = ['WALK', 'BIKE', 'CAR'];
 	const possibleElevationCosts = [
 		{ value: 'NONE' as ElevationCosts, label: t.elevationCosts.NONE },
 		{ value: 'LOW' as ElevationCosts, label: t.elevationCosts.LOW },
@@ -46,6 +47,7 @@
 	];
 	// eslint-disable-next-line  @typescript-eslint/no-explicit-any
 	const modes = possibleModes.map((m) => ({ value: m, label: (t as any)[m] }));
+	const streetModes = possibleStreetModes.map((m) => ({ value: m, label: (t as any)[m] }));
 
 	const selectedModeLabel = $derived(
 		selectedModes.length != possibleModes.length
@@ -54,6 +56,27 @@
 					.map((m) => m.label)
 					.join(', ')
 			: t.defaultSelectedModes
+	);
+	let firstMileModes = $state(['WALK']);
+	let lastMileModes = $state(['WALK']);
+	let directModes = $state(['WALK']);
+	const firstMileModesLabel = $derived(
+		streetModes
+			.filter((m) => firstMileModes.includes(m.value))
+			.map((m) => m.label)
+			.join(', ')
+	);
+	const lastMileModesLabel = $derived(
+		streetModes
+			.filter((m) => lastMileModes.includes(m.value))
+			.map((m) => m.label)
+			.join(', ')
+	);
+	const directModesLabel = $derived(
+		streetModes
+			.filter((m) => directModes.includes(m.value))
+			.map((m) => m.label)
+			.join(', ')
 	);
 
 	let expanded = $state<boolean>(false);
@@ -90,6 +113,53 @@
 			<Switch bind:checked={bikeCarriage} label={t.bikeCarriage} id="bikeCarriage" />
 		</div>
 
+		<div class="grid grid-cols-3 items-center space-x-2">
+			<div class="flex flex-col">
+				<div class="flex justify-center">First mile modes</div>
+				<Select.Root type="multiple" bind:value={firstMileModes}>
+					<Select.Trigger aria-label="Select modes for first mile">
+						{firstMileModesLabel}
+					</Select.Trigger>
+					<Select.Content sideOffset={10}>
+						{#each streetModes as mode, i (i + mode.value)}
+							<Select.Item value={mode.value} label={mode.label}>
+								{mode.label}
+							</Select.Item>
+						{/each}
+					</Select.Content>
+				</Select.Root>
+			</div>
+			<div class="flex flex-col">
+				<div class="flex justify-center">Last mile modes</div>
+				<Select.Root type="multiple" bind:value={lastMileModes}>
+					<Select.Trigger aria-label="Select modes for last mile">
+						{lastMileModesLabel}
+					</Select.Trigger>
+					<Select.Content sideOffset={10}>
+						{#each streetModes as mode, i (i + mode.value)}
+							<Select.Item value={mode.value} label={mode.label}>
+								{mode.label}
+							</Select.Item>
+						{/each}
+					</Select.Content>
+				</Select.Root>
+			</div>
+			<div class="flex flex-col">
+				<div class="flex justify-center">Direct modes</div>
+				<Select.Root type="multiple" bind:value={directModes}>
+					<Select.Trigger aria-label="Select direct modes">
+						{directModesLabel}
+					</Select.Trigger>
+					<Select.Content sideOffset={10}>
+						{#each streetModes as mode, i (i + mode.value)}
+							<Select.Item value={mode.value} label={mode.label}>
+								{mode.label}
+							</Select.Item>
+						{/each}
+					</Select.Content>
+				</Select.Root>
+			</div>
+		</div>
 		<RadioGroup.Root value="option-one">
 			<div class="flex items-center space-x-2">
 				<RadioGroup.Item value="option-one" id="option-one" />

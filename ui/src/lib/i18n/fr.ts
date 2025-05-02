@@ -44,8 +44,7 @@ const translations: Translations = {
 	advancedSearchOptions: 'Options',
 	selectModes: 'Sélectionner les modes de transport en commun',
 	defaultSelectedModes: 'Tous les transports en commun',
-	selectElevationCosts:
-		'Évitez les pentes abruptes.', // TODO Online translated
+	selectElevationCosts: 'Évitez les pentes abruptes.', // TODO Online translated
 	wheelchair: 'Correspondances accessibles',
 	bikeRental: 'Utiliser véhicules partagés',
 	bikeCarriage: 'Transport vélo',
