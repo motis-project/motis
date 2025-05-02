@@ -80,6 +80,12 @@
 	);
 
 	let expanded = $state<boolean>(false);
+	let showElevationCosts = $derived(
+		bikeCarriage ||
+			firstMileModes.includes('BIKE') ||
+			lastMileModes.includes('BIKE') ||
+			directModes.includes('BIKE')
+	);
 </script>
 
 <Button variant="ghost" onclick={() => (expanded = !expanded)}>
@@ -160,6 +166,7 @@
 				</Select.Root>
 			</div>
 		</div>
+		<!--
 		<RadioGroup.Root value="option-one">
 			<div class="flex items-center space-x-2">
 				<RadioGroup.Item value="option-one" id="option-one" />
@@ -189,6 +196,26 @@
 				</div>
 			</div>
 		</RadioGroup.Root>
+		-->
+		{#if showElevationCosts}
+			<div class="grid grid-cols-2 items-center">
+				<div class="text-sm">
+					{t.selectElevationCosts}
+				</div>
+				<Select.Root type="single" bind:value={elevationCosts}>
+					<Select.Trigger aria-label={t.selectElevationCosts}>
+						{t.elevationCosts[elevationCosts]}
+					</Select.Trigger>
+					<Select.Content sideOffset={10}>
+						{#each possibleElevationCosts as costs, i (i + costs.value)}
+							<Select.Item value={costs.value} label={costs.label}>
+								{costs.label}
+							</Select.Item>
+						{/each}
+					</Select.Content>
+				</Select.Root>
+			</div>
+		{/if}
 
 		<div class="text-muted-foreground leading-tight">{t.unreliableOptions}</div>
 	</div>
