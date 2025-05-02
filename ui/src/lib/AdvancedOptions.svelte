@@ -80,7 +80,7 @@
 	);
 
 	let expanded = $state<boolean>(false);
-	let showElevationCosts = $derived(
+	let allowElevationCosts = $derived(
 		bikeCarriage ||
 			firstMileModes.includes('BIKE') ||
 			lastMileModes.includes('BIKE') ||
@@ -197,25 +197,23 @@
 			</div>
 		</RadioGroup.Root>
 		-->
-		{#if showElevationCosts}
-			<div class="grid grid-cols-2 items-center">
-				<div class="text-sm">
-					{t.selectElevationCosts}
-				</div>
-				<Select.Root type="single" bind:value={elevationCosts}>
-					<Select.Trigger aria-label={t.selectElevationCosts}>
-						{t.elevationCosts[elevationCosts]}
-					</Select.Trigger>
-					<Select.Content sideOffset={10}>
-						{#each possibleElevationCosts as costs, i (i + costs.value)}
-							<Select.Item value={costs.value} label={costs.label}>
-								{costs.label}
-							</Select.Item>
-						{/each}
-					</Select.Content>
-				</Select.Root>
+		<div class="grid grid-cols-2 items-center">
+			<div class="text-sm">
+				{t.selectElevationCosts}
 			</div>
-		{/if}
+			<Select.Root disabled={!allowElevationCosts} type="single" bind:value={elevationCosts}>
+				<Select.Trigger aria-label={t.selectElevationCosts}>
+					{t.elevationCosts[elevationCosts]}
+				</Select.Trigger>
+				<Select.Content sideOffset={10}>
+					{#each possibleElevationCosts as costs, i (i + costs.value)}
+						<Select.Item value={costs.value} label={costs.label}>
+							{costs.label}
+						</Select.Item>
+					{/each}
+				</Select.Content>
+			</Select.Root>
+		</div>
 
 		<div class="text-muted-foreground leading-tight">{t.unreliableOptions}</div>
 	</div>
