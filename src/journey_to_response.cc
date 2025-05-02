@@ -411,6 +411,8 @@ api::Itinerary journey_to_response(
                   x.transport_mode_id_ >= kGbfsTransportModeIdOffset
                       ? gbfs::get_osr_profile(gbfs_rd.get_products(
                             gbfs_rd.get_products_ref(x.transport_mode_id_)))
+                  : x.transport_mode_id_ == kOdmTransportModeId
+                      ? osr::search_profile::kCar
                       : osr::search_profile{
                             static_cast<std::uint8_t>(x.transport_mode_id_)};
               append(route(*w, *l, gbfs_rd, e, elevations, from, to,
