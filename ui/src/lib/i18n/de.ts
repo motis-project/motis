@@ -45,7 +45,7 @@ const translations: Translations = {
 	advancedSearchOptions: 'Optionen',
 	selectModes: 'Öffentliche Verkehrsmittel auswählen',
 	defaultSelectedModes: 'Alle Verkehrsmittel',
-	selectElevationCosts: 'Steigungen vermeiden.',
+	selectElevationCosts: 'Steile Steigungen vermeiden.',
 	wheelchair: 'Barrierefreie Umstiege',
 	bikeRental: 'Sharing-Fahrzeuge berücksichtigen',
 	bikeCarriage: 'Fahrradmitnahme',
