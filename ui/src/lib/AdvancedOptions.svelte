@@ -110,29 +110,31 @@
 			<Switch bind:checked={bikeCarriage} label={t.bikeCarriage} id="bikeCarriage" />
 		</div>
 
-		<div class="grid grid-cols-2 items-center space-x-2 space-y-2">
+		<div class="flex flex-row w-full items-center space-x-2">
 			{#each segments as segment}
-				<div class="text-sm">{(t.routingSegments as any)[segment]}</div>
-				<Select.Root
-					type="single"
-					bind:value={
-						(): StreetMode => getStreetMode(segment),
-						(v: StreetMode) => streetModeMap.set(segment, v)
-					}
-				>
-					<Select.Trigger aria-label="Select modes for first mile">
-						{(t as any)[getStreetMode(segment)]}
-					</Select.Trigger>
-					<Select.Content sideOffset={10}>
-						{#each streetModes as mode, i (i + mode)}
-							{#if streetModeFilter(segment, mode)}
-								<Select.Item value={mode} label={(t as any)[mode]}>
-									{(t as any)[mode]}
-								</Select.Item>
-							{/if}
-						{/each}
-					</Select.Content>
-				</Select.Root>
+				<div class="flex flex-col w-full">
+					<div class="flex justify-center">{(t.routingSegments as any)[segment]}</div>
+					<Select.Root
+						type="single"
+						bind:value={
+							(): StreetMode => getStreetMode(segment),
+							(v: StreetMode) => streetModeMap.set(segment, v)
+						}
+					>
+						<Select.Trigger aria-label="Select modes for first mile">
+							{(t as any)[getStreetMode(segment)]}
+						</Select.Trigger>
+						<Select.Content sideOffset={10}>
+							{#each streetModes as mode, i (i + mode)}
+								{#if streetModeFilter(segment, mode)}
+									<Select.Item value={mode} label={(t as any)[mode]}>
+										{(t as any)[mode]}
+									</Select.Item>
+								{/if}
+							{/each}
+						</Select.Content>
+					</Select.Root>
+				</div>
 			{/each}
 		</div>
 		<div class="grid grid-cols-2 items-center">
