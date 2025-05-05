@@ -246,9 +246,11 @@ void meta_router::init_prima(n::interval<n::unixtime_t> const& search_intvl,
   }
 
   auto const max_offset_duration =
-      direct_duration ? std::min(*direct_duration - kODMOffsetMinImprovement,
-                                 kODMMaxDuration)
-                      : kODMMaxDuration;
+      direct_duration
+          ? std::min(std::max(*direct_duration, kODMOffsetMinImprovement) -
+                         kODMOffsetMinImprovement,
+                     kODMMaxDuration)
+          : kODMMaxDuration;
 
   if (odm_pre_transit_ && holds_alternative<osr::location>(from_)) {
     init_pt(p->from_rides_, r_, std::get<osr::location>(from_),
