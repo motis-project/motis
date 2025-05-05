@@ -9,6 +9,7 @@
 	import { Switch } from './components/ui/switch';
 	import type { ElevationCosts } from './openapi';
 	import { Label } from './components/ui/label';
+	import { SvelteMap } from 'svelte/reactivity';
 
 	let {
 		selectedModes = $bindable(),
@@ -39,7 +40,22 @@
 		'FERRY',
 		'OTHER'
 	];
-	const possibleStreetModes = ['WALK', 'BIKE', 'CAR'];
+	const segments = ['firstMile', 'lastMile', 'direct'];
+	type Segment = (typeof segments)[number];
+	const streetModes = ['WALK', 'BIKE', 'CAR'];
+	type StreetMode = (typeof streetModes)[number];
+
+	let streetModeMap = new SvelteMap<Segment, StreetMode>([]);
+	const getStreetMode = (segment: Segment) => streetModeMap.get(segment) ?? 'WALK';
+	const streetModeFilter = (seg: Segment, mode: StreetMode) => {
+		switch (seg) {
+			case 'lastMile':
+				return mode != 'CAR';
+			default:
+				return true;
+		}
+	};
+
 	const possibleElevationCosts = [
 		{ value: 'NONE' as ElevationCosts, label: t.elevationCosts.NONE },
 		{ value: 'LOW' as ElevationCosts, label: t.elevationCosts.LOW },
@@ -47,7 +63,6 @@
 	];
 	// eslint-disable-next-line  @typescript-eslint/no-explicit-any
 	const modes = possibleModes.map((m) => ({ value: m, label: (t as any)[m] }));
-	const streetModes = possibleStreetModes.map((m) => ({ value: m, label: (t as any)[m] }));
 
 	const selectedModeLabel = $derived(
 		selectedModes.length != possibleModes.length
@@ -57,34 +72,10 @@
 					.join(', ')
 			: t.defaultSelectedModes
 	);
-	let firstMileModes = $state(['WALK']);
-	let lastMileModes = $state(['WALK']);
-	let directModes = $state(['WALK']);
-	const firstMileModesLabel = $derived(
-		streetModes
-			.filter((m) => firstMileModes.includes(m.value))
-			.map((m) => m.label)
-			.join(', ')
-	);
-	const lastMileModesLabel = $derived(
-		streetModes
-			.filter((m) => lastMileModes.includes(m.value))
-			.map((m) => m.label)
-			.join(', ')
-	);
-	const directModesLabel = $derived(
-		streetModes
-			.filter((m) => directModes.includes(m.value))
-			.map((m) => m.label)
-			.join(', ')
-	);
 
 	let expanded = $state<boolean>(false);
 	let allowElevationCosts = $derived(
-		bikeCarriage ||
-			firstMileModes.includes('BIKE') ||
-			lastMileModes.includes('BIKE') ||
-			directModes.includes('BIKE')
+		bikeCarriage || streetModeMap.values().some((v) => v == 'BIKE')
 	);
 </script>
 
@@ -120,77 +111,30 @@
 		</div>
 
 		<div class="grid grid-cols-2 items-center space-x-2 space-y-2">
-			<div class="text-sm">First mile modes</div>
-			<Select.Root type="multiple" bind:value={firstMileModes}>
-				<Select.Trigger aria-label="Select modes for first mile">
-					{firstMileModesLabel}
-				</Select.Trigger>
-				<Select.Content sideOffset={10}>
-					{#each streetModes as mode, i (i + mode.value)}
-						<Select.Item value={mode.value} label={mode.label}>
-							{mode.label}
-						</Select.Item>
-					{/each}
-				</Select.Content>
-			</Select.Root>
-			<div class="text-sm">Last mile modes</div>
-			<Select.Root type="multiple" bind:value={lastMileModes}>
-				<Select.Trigger aria-label="Select modes for last mile">
-					{lastMileModesLabel}
-				</Select.Trigger>
-				<Select.Content sideOffset={10}>
-					{#each streetModes as mode, i (i + mode.value)}
-						<Select.Item value={mode.value} label={mode.label}>
-							{mode.label}
-						</Select.Item>
-					{/each}
-				</Select.Content>
-			</Select.Root>
-			<div class="text-sm">Direct modes</div>
-			<Select.Root type="multiple" bind:value={directModes}>
-				<Select.Trigger aria-label="Select direct modes">
-					{directModesLabel}
-				</Select.Trigger>
-				<Select.Content sideOffset={10}>
-					{#each streetModes as mode, i (i + mode.value)}
-						<Select.Item value={mode.value} label={mode.label}>
-							{mode.label}
-						</Select.Item>
-					{/each}
-				</Select.Content>
-			</Select.Root>
-		</div>
-		<!--
-		<RadioGroup.Root value="option-one">
-			<div class="flex items-center space-x-2">
-				<RadioGroup.Item value="option-one" id="option-one" />
-				<Label for="option-one">Option One</Label>
-			</div>
-			<div class="flex flex-col space-y-2">
-				<div class="flex items-center space-x-2">
-					<RadioGroup.Item value="option-two" id="option-two" />
-					<Label for="option-two">Option Two</Label>
-				</div>
-				<div class="grid grid-cols-2 items-center">
-					<div class="text-sm">
-						{t.selectElevationCosts}
-					</div>
-					<Select.Root type="single" bind:value={elevationCosts}>
-						<Select.Trigger aria-label={t.selectElevationCosts}>
-							{t.elevationCosts[elevationCosts]}
-						</Select.Trigger>
-						<Select.Content sideOffset={10}>
-							{#each possibleElevationCosts as costs, i (i + costs.value)}
-								<Select.Item value={costs.value} label={costs.label}>
-									{costs.label}
+			{#each segments as segment}
+				<div class="text-sm">{segment}</div>
+				<Select.Root
+					type="single"
+					bind:value={
+						(): StreetMode => getStreetMode(segment),
+						(v: StreetMode) => streetModeMap.set(segment, v)
+					}
+				>
+					<Select.Trigger aria-label="Select modes for first mile">
+						{(t as any)[getStreetMode(segment)]}
+					</Select.Trigger>
+					<Select.Content sideOffset={10}>
+						{#each streetModes as mode, i (i + mode)}
+							{#if streetModeFilter(segment, mode)}
+								<Select.Item value={mode} label={(t as any)[mode]}>
+									{(t as any)[mode]}
 								</Select.Item>
-							{/each}
-						</Select.Content>
-					</Select.Root>
-				</div>
-			</div>
-		</RadioGroup.Root>
-		-->
+							{/if}
+						{/each}
+					</Select.Content>
+				</Select.Root>
+			{/each}
+		</div>
 		<div class="grid grid-cols-2 items-center">
 			<div class="text-sm">
 				{t.selectElevationCosts}
