@@ -7,14 +7,14 @@ info:
   license:
     name: MIT
     url: https://opensource.org/license/mit
-  version: v1
+  version: v2
 externalDocs:
   description: Find out more about MOTIS
   url: https://github.com/motis-project/motis
 servers:
   - url: https://api.transitous.org
 paths:
-  /api/v1/plan:
+  /api/v2/plan:
     get:
       tags:
         - routing
@@ -1082,7 +1082,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/Match'
 
-  /api/v1/trip:
+  /api/v2/trip:
     get:
       tags:
         - timetable
@@ -1200,10 +1200,9 @@ paths:
             This will enable you to search for stop times in the next or previous time-window.
           schema:
             type: string
-
       responses:
         200:
-          description: A list of guesses to resolve the text to a location
+          description: A list of departures/arrivals
           content:
             application/json:
               schema:
@@ -1962,7 +1961,7 @@ components:
           description: Whether there is real-time data about this leg
           type: boolean
         polyline:
-          description: Google polyline encoded coordinate sequence (with precision 7) where the trip travels on this segment.
+          description: Google polyline encoded coordinate sequence (with precision 5) where the trip travels on this segment.
           type: string
 
     Direction:
@@ -1987,11 +1986,17 @@ components:
       type: object
       required:
         - points
+        - precision
         - length
       properties:
         points:
-          description: The encoded points of the polyline using the Google polyline encoding with precision 7.
+          description: The encoded points of the polyline using the Google polyline encoding.
           type: string
+        precision:
+          description: |
+            The precision of the returned polyline (7 for /v1, 6 for /v2)
+            Be aware that with precision 7, coordinates with |longitude| > 107.37 are undefined/will overflow.
+          type: integer
         length:
           description: The number of points in the string
           type: integer
@@ -2125,6 +2130,7 @@ components:
         - scheduledStartTime
         - scheduledEndTime
         - realTime
+        - scheduled
         - duration
         - from
         - to
@@ -2170,6 +2176,11 @@ components:
           description: scheduled leg arrival time
         realTime:
           description: Whether there is real-time data about this leg
+          type: boolean
+        scheduled:
+          description: |
+            Whether this leg was originally scheduled to run or is an additional service.
+            Scheduled times will equal realtime times in this case.
           type: boolean
         distance:
           description: For non-transit legs the distance traveled while traversing this leg in meters.

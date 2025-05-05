@@ -55,6 +55,7 @@ const translations: Translations = {
 	inOutDisallowed: 'Entry/exit not possible',
 	inDisallowed: 'Entry not possible',
 	outDisallowed: 'Exit not possible',
+	unscheduledTrip: 'Additional service',
 	WALK: 'Walking',
 	BIKE: 'Bike',
 	RENTAL: 'Sharing',

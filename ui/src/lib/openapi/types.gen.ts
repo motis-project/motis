@@ -485,7 +485,7 @@ export type TripSegment = {
      */
     realTime: boolean;
     /**
-     * Google polyline encoded coordinate sequence (with precision 7) where the trip travels on this segment.
+     * Google polyline encoded coordinate sequence (with precision 5) where the trip travels on this segment.
      */
     polyline: string;
 };
@@ -494,9 +494,15 @@ export type Direction = 'DEPART' | 'HARD_LEFT' | 'LEFT' | 'SLIGHTLY_LEFT' | 'CON
 
 export type EncodedPolyline = {
     /**
-     * The encoded points of the polyline using the Google polyline encoding with precision 7.
+     * The encoded points of the polyline using the Google polyline encoding.
      */
     points: string;
+    /**
+     * The precision of the returned polyline (7 for /v1, 6 for /v2)
+     * Be aware that with precision 7, coordinates with |longitude| > 107.37 are undefined/will overflow.
+     *
+     */
+    precision: number;
     /**
      * The number of points in the string
      */
@@ -641,6 +647,12 @@ export type Leg = {
      * Whether there is real-time data about this leg
      */
     realTime: boolean;
+    /**
+     * Whether this leg was originally scheduled to run or is an additional service.
+     * Scheduled times will equal realtime times in this case.
+     *
+     */
+    scheduled: boolean;
     /**
      * For non-transit legs the distance traveled while traversing this leg in meters.
      */

@@ -25,6 +25,7 @@
 #include "motis/mode_to_profile.h"
 #include "motis/odm/odm.h"
 #include "motis/place.h"
+#include "motis/polyline.h"
 #include "motis/street_routing.h"
 #include "motis/tag_lookup.h"
 #include "motis/timetable/clasz_to_mode.h"
@@ -105,15 +106,16 @@ api::Itinerary journey_to_response(
     place_t const& start,
     place_t const& dest,
     street_routing_cache_t& cache,
-    osr::bitvec<osr::node_idx_t>& blocked_mem,
+    osr::bitvec<osr::node_idx_t>* blocked_mem,
     bool const detailed_transfers,
     bool const with_fares,
     double const timetable_max_matching_distance,
-    double const max_matching_distance) {
+    double const max_matching_distance,
+    unsigned const api_version) {
   utl::verify(!j.legs_.empty(), "journey without legs");
 
   auto const fares =
-      with_fares ? std::optional{n::get_fares(tt, j)} : std::nullopt;
+      with_fares ? std::optional{n::get_fares(tt, rtt, j)} : std::nullopt;
   auto const to_fare_media_type =
       [](n::fares::fare_media::fare_media_type const t) {
         using fare_media_type = n::fares::fare_media::fare_media_type;
@@ -224,18 +226,18 @@ api::Itinerary journey_to_response(
                       .and_then(convert_to_str),
         .imageAlternativeText_ = get_translation(a.image_alternative_text_[x])};
   };
-  auto const get_alerts = [&](n::trip_idx_t const x,
-                              n::rt_transport_idx_t const rt_t)
-      -> std::optional<std::vector<api::Alert>> {
-    if (rtt == nullptr) {
+  auto const get_alerts =
+      [&](n::rt::frun const& fr) -> std::optional<std::vector<api::Alert>> {
+    if (rtt == nullptr || !fr.is_scheduled()) {  // TODO added
       return std::nullopt;
     }
 
+    auto const x = fr.trip_idx();
     auto alerts = std::vector<api::Alert>{};
     for (auto const& t : tt.trip_ids_[x]) {
       auto const src = tt.trip_id_src_[t];
       rtt->alerts_.for_each_alert(
-          tt, src, x, rt_t, n::location_idx_t::invalid(),
+          tt, src, x, fr.rt_, n::location_idx_t::invalid(),
           [&](n::alert_idx_t const a) { alerts.emplace_back(to_alert(a)); });
     }
 
@@ -338,6 +340,7 @@ api::Itinerary journey_to_response(
                   .scheduledEndTime_ =
                       exit_stop.scheduled_time(n::event_type::kArr),
                   .realTime_ = fr.is_rt(),
+                  .scheduled_ = fr.is_scheduled(),
                   .headsign_ = std::string{enter_stop.direction()},
                   .routeColor_ = to_str(color.color_),
                   .routeTextColor_ = to_str(color.text_color_),
@@ -355,7 +358,7 @@ api::Itinerary journey_to_response(
                   .effectiveFareLegIndex_ = fare_indices.and_then([](auto&& x) {
                     return std::optional{x.effective_fare_leg_idx_};
                   }),
-                  .alerts_ = get_alerts(fr.trip_idx(), fr.rt_)});
+                  .alerts_ = get_alerts(fr)});
 
               leg.from_.vertexType_ = api::VertexTypeEnum::TRANSIT;
               leg.from_.departure_ = leg.startTime_;
@@ -363,14 +366,12 @@ api::Itinerary journey_to_response(
               leg.to_.vertexType_ = api::VertexTypeEnum::TRANSIT;
               leg.to_.arrival_ = leg.endTime_;
               leg.to_.scheduledArrival_ = leg.scheduledEndTime_;
-
               auto polyline = geo::polyline{};
               fr.for_each_shape_point(
                   shapes, t.stop_range_,
                   [&](geo::latlng const& pos) { polyline.emplace_back(pos); });
-              leg.legGeometry_.points_ = geo::encode_polyline<7>(polyline);
-              leg.legGeometry_.length_ =
-                  static_cast<std::int64_t>(polyline.size());
+              leg.legGeometry_ = api_version == 1 ? to_polyline<7>(polyline)
+                                                  : to_polyline<6>(polyline);
 
               auto const first =
                   static_cast<n::stop_idx_t>(t.stop_range_.from_ + 1U);
@@ -397,7 +398,7 @@ api::Itinerary journey_to_response(
                                          pedestrian_profile, elevation_costs),
                               j_leg.dep_time_, j_leg.arr_time_,
                               timetable_max_matching_distance, {}, cache,
-                              blocked_mem,
+                              *blocked_mem, api_version,
                               std::chrono::duration_cast<std::chrono::seconds>(
                                   j_leg.arr_time_ - j_leg.dep_time_) +
                                   std::chrono::minutes{10},
@@ -410,6 +411,8 @@ api::Itinerary journey_to_response(
                   x.transport_mode_id_ >= kGbfsTransportModeIdOffset
                       ? gbfs::get_osr_profile(gbfs_rd.get_products(
                             gbfs_rd.get_products_ref(x.transport_mode_id_)))
+                  : x.transport_mode_id_ == kOdmTransportModeId
+                      ? osr::search_profile::kCar
                       : osr::search_profile{
                             static_cast<std::uint8_t>(x.transport_mode_id_)};
               append(route(*w, *l, gbfs_rd, e, elevations, from, to,
@@ -423,7 +426,7 @@ api::Itinerary journey_to_response(
                            x.transport_mode_id_ >= kGbfsTransportModeIdOffset
                                ? gbfs_rd.get_products_ref(x.transport_mode_id_)
                                : gbfs::gbfs_products_ref{},
-                           cache, blocked_mem,
+                           cache, *blocked_mem, api_version,
                            std::chrono::duration_cast<std::chrono::seconds>(
                                j_leg.arr_time_ - j_leg.dep_time_) +
                                std::chrono::minutes{5}));

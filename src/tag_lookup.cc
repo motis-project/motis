@@ -1,5 +1,8 @@
+#include <ctime>
+
 #include "motis/tag_lookup.h"
 
+#include "fmt/chrono.h"
 #include "fmt/core.h"
 
 #include "cista/io.h"
@@ -80,13 +83,22 @@ std::string tag_lookup::id(nigiri::timetable const& tt,
     return fmt::format("{:%Y%m%d}_{:02}:{:02}_{}_{}", day, start_hours.count(),
                        start_minutes.count(), get_tag(src), id);
   } else {
-    // TODO support added trips
-    return "";
+    auto const id = s.fr_->id();
+    auto const time = std::chrono::system_clock::to_time_t(
+        (*s.fr_)[0].time(n::event_type::kDep));
+    auto const utc = *std::gmtime(&time);
+    auto const id_tag = get_tag(id.src_);
+    auto const id_id = id.id_;
+    return fmt::format("{:04}{:02}{:02}_{:02}:{:02}_{}_{}", utc.tm_year + 1900,
+                       utc.tm_mon + 1, utc.tm_mday, utc.tm_hour, utc.tm_min,
+                       id_tag, id_id);
   }
 }
 
 std::pair<nigiri::rt::run, nigiri::trip_idx_t> tag_lookup::get_trip(
-    nigiri::timetable const& tt, std::string_view id) const {
+    nigiri::timetable const& tt,
+    nigiri::rt_timetable const* rtt,
+    std::string_view id) const {
   auto const [date, start_time, tag, trip_id] =
       utl::split<'_', utl::cstr, utl::cstr, utl::cstr, utl::cstr>(id);
   for (auto const rev : {date, start_time, tag, trip_id}) {
@@ -99,7 +111,7 @@ std::pair<nigiri::rt::run, nigiri::trip_idx_t> tag_lookup::get_trip(
       trip_id.str,
       static_cast<std::size_t>(id.data() + id.size() - trip_id.str)});
 
-  return n::rt::gtfsrt_resolve_run({}, tt, nullptr, get_src(tag.view()), td);
+  return n::rt::gtfsrt_resolve_run({}, tt, rtt, get_src(tag.view()), td);
 }
 
 nigiri::location_idx_t tag_lookup::get_location(nigiri::timetable const& tt,

@@ -576,7 +576,7 @@ export const TripSegmentSchema = {
             type: 'boolean'
         },
         polyline: {
-            description: 'Google polyline encoded coordinate sequence (with precision 7) where the trip travels on this segment.',
+            description: 'Google polyline encoded coordinate sequence (with precision 5) where the trip travels on this segment.',
             type: 'string'
         }
     }
@@ -589,11 +589,17 @@ export const DirectionSchema = {
 
 export const EncodedPolylineSchema = {
     type: 'object',
-    required: ['points', 'length'],
+    required: ['points', 'precision', 'length'],
     properties: {
         points: {
-            description: 'The encoded points of the polyline using the Google polyline encoding with precision 7.',
+            description: 'The encoded points of the polyline using the Google polyline encoding.',
             type: 'string'
+        },
+        precision: {
+            description: `The precision of the returned polyline (7 for /v1, 6 for /v2)
+Be aware that with precision 7, coordinates with |longitude| > 107.37 are undefined/will overflow.
+`,
+            type: 'integer'
         },
         length: {
             description: 'The number of points in the string',
@@ -725,7 +731,7 @@ export const RentalSchema = {
 
 export const LegSchema = {
     type: 'object',
-    required: ['mode', 'startTime', 'endTime', 'scheduledStartTime', 'scheduledEndTime', 'realTime', 'duration', 'from', 'to', 'legGeometry'],
+    required: ['mode', 'startTime', 'endTime', 'scheduledStartTime', 'scheduledEndTime', 'realTime', 'scheduled', 'duration', 'from', 'to', 'legGeometry'],
     properties: {
         mode: {
             '$ref': '#/components/schemas/Mode',
@@ -775,6 +781,12 @@ If leg is footpath:
         },
         realTime: {
             description: 'Whether there is real-time data about this leg',
+            type: 'boolean'
+        },
+        scheduled: {
+            description: `Whether this leg was originally scheduled to run or is an additional service.
+Scheduled times will equal realtime times in this case.
+`,
             type: 'boolean'
         },
         distance: {

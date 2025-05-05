@@ -50,6 +50,7 @@ export type Translations = {
 	inOutDisallowed: string;
 	inDisallowed: string;
 	outDisallowed: string;
+	unscheduledTrip: string;
 	WALK: string;
 	BIKE: string;
 	RENTAL: string;
