@@ -76,6 +76,11 @@ const translations: Translations = {
 	REGIONAL_FAST_RAIL: 'Train express régional',
 	REGIONAL_RAIL: 'Train régional',
 	OTHER: 'Autres',
+	routingSegments: {
+		firstMile: 'Premier kilomètre',
+		lastMile: 'Dernier kilomètre',
+		direct: 'Connexion directe'
+	},
 	elevationCosts: {
 		NONE: 'Pas de détours',
 		LOW: 'Petits détours',

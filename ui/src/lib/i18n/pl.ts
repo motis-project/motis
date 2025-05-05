@@ -76,6 +76,11 @@ const translations: Translations = {
 	REGIONAL_FAST_RAIL: 'Regional Fast Rail',
 	REGIONAL_RAIL: 'Regional Rail',
 	OTHER: 'Other',
+	routingSegments: {
+		firstMile: 'First mile',
+		lastMile: 'Last mile',
+		direct: 'Direct connection'
+	},
 	elevationCosts: {
 		NONE: 'No detours',
 		LOW: 'Small detours',

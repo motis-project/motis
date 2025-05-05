@@ -112,7 +112,7 @@
 
 		<div class="grid grid-cols-2 items-center space-x-2 space-y-2">
 			{#each segments as segment}
-				<div class="text-sm">{segment}</div>
+				<div class="text-sm">{(t.routingSegments as any)[segment]}</div>
 				<Select.Root
 					type="single"
 					bind:value={

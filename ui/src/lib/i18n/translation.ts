@@ -71,6 +71,11 @@ export type Translations = {
 	REGIONAL_FAST_RAIL: string;
 	REGIONAL_RAIL: string;
 	OTHER: string;
+	routingSegments: {
+		firstMile: string;
+		lastMile: string;
+		direct: string;
+	};
 	elevationCosts: {
 		NONE: string;
 		LOW: string;
