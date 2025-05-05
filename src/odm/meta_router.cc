@@ -18,6 +18,7 @@
 
 #include "utl/erase_duplicates.h"
 
+#include "nigiri/logging.h"
 #include "nigiri/routing/journey.h"
 #include "nigiri/routing/limits.h"
 #include "nigiri/routing/query.h"
@@ -69,9 +70,9 @@ using td_offsets_t =
     n::hash_map<n::location_idx_t, std::vector<n::routing::td_offset>>;
 
 void print_time(auto const& start, std::string_view name) {
-  fmt::println("{} {}", name,
-               std::chrono::duration_cast<std::chrono::milliseconds>(
-                   std::chrono::steady_clock::now() - start));
+  n::log(n::log_lvl::debug, "motis.odm", "{} {}", name,
+         std::chrono::duration_cast<std::chrono::milliseconds>(
+             std::chrono::steady_clock::now() - start));
 }
 
 meta_router::meta_router(ep::routing const& r,
@@ -153,7 +154,8 @@ n::duration_t init_direct(std::vector<direct_ride>& direct_rides,
   auto const to_pos = geo::latlng{to_p.lat_, to_p.lon_};
   if (r.odm_bounds_ != nullptr && (!r.odm_bounds_->contains(from_pos) ||
                                    !r.odm_bounds_->contains(to_pos))) {
-    fmt::println("No direct connection, from: {}, to: {}", from_pos, to_pos);
+    n::log(n::log_lvl::debug, "motis.odm",
+           "No direct connection, from: {}, to: {}", from_pos, to_pos);
     return ep::kInfinityDuration;
   }
 
@@ -193,7 +195,7 @@ void init_pt(std::vector<n::routing::start>& rides,
              n::routing::location_match_mode location_match_mode,
              std::chrono::seconds const max) {
   if (r.odm_bounds_ != nullptr && !r.odm_bounds_->contains(l.pos_)) {
-    fmt::println("no PT connection: {}", l.pos_);
+    n::log(n::log_lvl::debug, "motis.odm", "no PT connection: {}", l.pos_);
     return;
   }
 
@@ -207,7 +209,8 @@ void init_pt(std::vector<n::routing::start>& rides,
         (r.odm_bounds_ != nullptr &&
          !r.odm_bounds_->contains(r.tt_->locations_.coordinates_[o.target_]));
     if (out_of_bounds) {
-      fmt::println("Bounds filtered: {}", n::location{*r.tt_, o.target_});
+      n::log(n::log_lvl::debug, "motis.odm", "Bounds filtered: {}",
+             n::location{*r.tt_, o.target_});
     }
     return out_of_bounds;
   });
@@ -243,9 +246,11 @@ void meta_router::init_prima(n::interval<n::unixtime_t> const& search_intvl,
   }
 
   auto const max_offset_duration =
-      direct_duration ? std::min(*direct_duration - kODMOffsetMinImprovement,
-                                 kODMMaxDuration)
-                      : kODMMaxDuration;
+      direct_duration
+          ? std::min(std::max(*direct_duration, kODMOffsetMinImprovement) -
+                         kODMOffsetMinImprovement,
+                     kODMMaxDuration)
+          : kODMMaxDuration;
 
   if (odm_pre_transit_ && holds_alternative<osr::location>(from_)) {
     init_pt(p->from_rides_, r_, std::get<osr::location>(from_),
@@ -427,8 +432,8 @@ void collect_odm_journeys(
       }
     }
   }
-  fmt::println("[routing] collected {} ODM-PT journeys",
-               p->odm_journeys_.size());
+  n::log(n::log_lvl::debug, "motis.odm",
+         "[routing] collected {} ODM-PT journeys", p->odm_journeys_.size());
 }
 
 void extract_rides() {
@@ -479,7 +484,8 @@ void meta_router::add_direct() const {
         .dest_ = to_l,
         .transfers_ = 0U});
   }
-  fmt::println("[whitelisting] added {} direct rides", p->direct_rides_.size());
+  n::log(n::log_lvl::debug, "motis.odm", "[whitelisting] added {} direct rides",
+         p->direct_rides_.size());
 }
 
 api::plan_response meta_router::run() {
@@ -527,7 +533,8 @@ api::plan_response meta_router::run() {
   auto ioc = boost::asio::io_context{};
   auto const bl_start = std::chrono::steady_clock::now();
   try {
-    fmt::println("[blacklisting] request for {} events", p->n_events());
+    n::log(n::log_lvl::debug, "motis.odm",
+           "[blacklisting] request for {} events", p->n_events());
     boost::asio::co_spawn(
         ioc,
         [&]() -> boost::asio::awaitable<void> {
@@ -539,13 +546,14 @@ api::plan_response meta_router::run() {
         boost::asio::detached);
     ioc.run();
   } catch (std::exception const& e) {
-    fmt::println("[blacklisting] networking failed: {}", e.what());
+    n::log(n::log_lvl::debug, "motis.odm",
+           "[blacklisting] networking failed: {}", e.what());
     blacklist_response = std::nullopt;
   }
   auto const blacklisted =
       blacklist_response && p->blacklist_update(*blacklist_response);
-  fmt::println("[blacklisting] ODM events after blacklisting: {}",
-               p->n_events());
+  n::log(n::log_lvl::debug, "motis.odm",
+         "[blacklisting] ODM events after blacklisting: {}", p->n_events());
   print_time(bl_start, "[blacklisting]");
 
   // prepare queries
@@ -615,7 +623,8 @@ api::plan_response meta_router::run() {
                odm_time(a.legs_.front()) == odm_time(b.legs_.front()) &&
                odm_time(a.legs_.back()) == odm_time(b.legs_.back());
       });
-  fmt::println("[routing] interval searched: {}", pt_result.interval_);
+  n::log(n::log_lvl::debug, "motis.odm", "[routing] interval searched: {}",
+         pt_result.interval_);
   print_time(routing_start, "[routing]");
 
   // whitelisting
@@ -625,7 +634,8 @@ api::plan_response meta_router::run() {
   if (blacklisted) {
     extract_rides();
     try {
-      fmt::println("[whitelisting] request for {} events", p->n_events());
+      n::log(n::log_lvl::debug, "motis.odm",
+             "[whitelisting] request for {} events", p->n_events());
       boost::asio::co_spawn(
           ioc2,
           [&]() -> boost::asio::awaitable<void> {
@@ -637,7 +647,8 @@ api::plan_response meta_router::run() {
           boost::asio::detached);
       ioc2.run();
     } catch (std::exception const& e) {
-      fmt::println("[whitelisting] networking failed: {}", e.what());
+      n::log(n::log_lvl::debug, "motis.odm",
+             "[whitelisting] networking failed: {}", e.what());
       whitelist_response = std::nullopt;
     }
   }
@@ -651,12 +662,14 @@ api::plan_response meta_router::run() {
     add_direct();
   } else {
     p->odm_journeys_.clear();
-    fmt::println("[whitelisting] failed, discarding ODM journeys");
+    n::log(n::log_lvl::debug, "motis.odm",
+           "[whitelisting] failed, discarding ODM journeys");
   }
   print_time(wl_start, "[whitelisting]");
 
-  fmt::println("[mixing] {} PT journeys and {} ODM journeys",
-               pt_result.journeys_.size(), p->odm_journeys_.size());
+  n::log(n::log_lvl::debug, "motis.odm",
+         "[mixing] {} PT journeys and {} ODM journeys",
+         pt_result.journeys_.size(), p->odm_journeys_.size());
   kMixer.mix(pt_result.journeys_, p->odm_journeys_);
   print_time(mixing_start, "[mixing]");
 
