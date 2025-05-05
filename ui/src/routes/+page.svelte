@@ -44,6 +44,7 @@
 	import { updateStartDest } from '$lib/updateStartDest';
 	import * as Tabs from '$lib/components/ui/tabs';
 	import DeparturesMask from '$lib/DeparturesMask.svelte';
+	import { SvelteMap } from 'svelte/reactivity';
 
 	const urlParams = browser ? new URLSearchParams(window.location.search) : undefined;
 	const hasDebug = urlParams && urlParams.has('debug');
@@ -137,6 +138,7 @@
 			[]
 	);
 	let elevationCosts = $state((urlParams?.get('elevationCosts') ?? 'NONE') as ElevationCosts);
+	let streetModes = $state(new SvelteMap<string, string>([]));
 
 	const toPlaceString = (l: Location) => {
 		if (l.value.match?.type === 'STOP') {
@@ -319,6 +321,7 @@
 								bind:bikeCarriage
 								bind:selectedModes={selectedTransitModes}
 								bind:elevationCosts
+								bind:streetModes
 							/>
 						</Card>
 					</Tabs.Content>

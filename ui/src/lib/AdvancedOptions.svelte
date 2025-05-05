@@ -5,10 +5,8 @@
 	import BusFront from 'lucide-svelte/icons/bus-front';
 	import ChevronUp from 'lucide-svelte/icons/chevron-up';
 	import ChevronDown from 'lucide-svelte/icons/chevron-down';
-	import * as RadioGroup from '$lib/components/ui/radio-group';
 	import { Switch } from './components/ui/switch';
 	import type { ElevationCosts } from './openapi';
-	import { Label } from './components/ui/label';
 	import { SvelteMap } from 'svelte/reactivity';
 
 	let {
@@ -16,13 +14,15 @@
 		elevationCosts = $bindable(),
 		wheelchair = $bindable(),
 		bikeRental = $bindable(),
-		bikeCarriage = $bindable()
+		bikeCarriage = $bindable(),
+		streetModes = $bindable()
 	}: {
 		selectedModes: string[];
 		elevationCosts: ElevationCosts;
 		wheelchair: boolean;
 		bikeRental: boolean;
 		bikeCarriage: boolean;
+		streetModes: SvelteMap<string, string>;
 	} = $props();
 
 	const possibleModes = [
@@ -42,11 +42,10 @@
 	];
 	const segments = ['firstMile', 'lastMile', 'direct'];
 	type Segment = (typeof segments)[number];
-	const streetModes = ['WALK', 'BIKE', 'CAR'];
-	type StreetMode = (typeof streetModes)[number];
+	const possibleStreetModes = ['WALK', 'BIKE', 'CAR'];
+	type StreetMode = (typeof possibleStreetModes)[number];
 
-	let streetModeMap = new SvelteMap<Segment, StreetMode>([]);
-	const getStreetMode = (segment: Segment) => streetModeMap.get(segment) ?? 'WALK';
+	const getStreetMode = (segment: Segment) => streetModes.get(segment) ?? 'WALK';
 	const streetModeFilter = (seg: Segment, mode: StreetMode) => {
 		switch (seg) {
 			case 'lastMile':
@@ -75,7 +74,7 @@
 
 	let expanded = $state<boolean>(false);
 	let allowElevationCosts = $derived(
-		bikeCarriage || streetModeMap.values().some((v) => v == 'BIKE')
+		bikeCarriage || streetModes.values().some((v) => v == 'BIKE')
 	);
 </script>
 
@@ -118,14 +117,14 @@
 						type="single"
 						bind:value={
 							(): StreetMode => getStreetMode(segment),
-							(v: StreetMode) => streetModeMap.set(segment, v)
+							(v: StreetMode) => streetModes.set(segment, v)
 						}
 					>
 						<Select.Trigger aria-label="Select modes for first mile">
 							{(t as any)[getStreetMode(segment)]}
 						</Select.Trigger>
 						<Select.Content sideOffset={10}>
-							{#each streetModes as mode, i (i + mode)}
+							{#each possibleStreetModes as mode, i (i + mode)}
 								{#if streetModeFilter(segment, mode)}
 									<Select.Item value={mode} label={(t as any)[mode]}>
 										{(t as any)[mode]}

@@ -11,6 +11,7 @@
 	import AdvancedOptions from './AdvancedOptions.svelte';
 	import maplibregl from 'maplibre-gl';
 	import type { ElevationCosts } from './openapi';
+	import type { SvelteMap } from 'svelte/reactivity';
 
 	let {
 		geocodingBiasPlace,
@@ -22,7 +23,8 @@
 		bikeRental = $bindable(),
 		bikeCarriage = $bindable(),
 		selectedModes = $bindable(),
-		elevationCosts = $bindable()
+		elevationCosts = $bindable(),
+		streetModes = $bindable()
 	}: {
 		geocodingBiasPlace?: maplibregl.LngLatLike;
 		from: Location;
@@ -34,6 +36,7 @@
 		bikeCarriage: boolean;
 		selectedModes: string[];
 		elevationCosts: ElevationCosts;
+		streetModes: SvelteMap<string, string>;
 	} = $props();
 
 	let fromItems = $state<Array<Location>>([]);
@@ -120,6 +123,7 @@
 			bind:bikeCarriage
 			bind:selectedModes
 			bind:elevationCosts
+			bind:streetModes
 		/>
 	</div>
 </div>
