@@ -144,7 +144,8 @@ data import(config const& c, fs::path const& data_path, bool const write) {
 
     for (auto const& [_, d] : t.datasets_) {
       h = cista::build_hash(h, c.osr_footpath_, hash_file(d.path_),
-                            d.default_bikes_allowed_, d.clasz_bikes_allowed_,
+                            d.default_bikes_allowed_, d.default_cars_allowed_,
+                            d.clasz_bikes_allowed_, d.clasz_cars_allowed_,
                             d.default_timezone_);
     }
 
@@ -248,11 +249,13 @@ data import(config const& c, fs::path const& data_path, bool const write) {
       [&]() { return true; },
       [&]() {
         auto const to_clasz_bool_array =
-            [&](config::timetable::dataset const& d) {
+            [&](bool const default_allowed,
+                std::optional<std::map<std::string, bool>> const&
+                    clasz_allowed) {
               auto a = std::array<bool, n::kNumClasses>{};
-              a.fill(d.default_bikes_allowed_);
-              if (d.clasz_bikes_allowed_.has_value()) {
-                for (auto const& [clasz, allowed] : *d.clasz_bikes_allowed_) {
+              a.fill(default_allowed);
+              if (clasz_allowed.has_value()) {
+                for (auto const& [clasz, allowed] : *clasz_allowed) {
                   a[static_cast<unsigned>(n::to_clasz(clasz))] = allowed;
                 }
               }
@@ -281,20 +284,25 @@ data import(config const& c, fs::path const& data_path, bool const write) {
 
         d.tags_ = cista::wrapped{cista::raw::make_unique<tag_lookup>()};
         d.tt_ = cista::wrapped{cista::raw::make_unique<n::timetable>(nl::load(
-            utl::to_vec(
-                t.datasets_,
-                [&, src = n::source_idx_t{}](auto&& x) mutable
-                -> std::pair<std::string, nl::loader_config> {
-                  auto const& [tag, dc] = x;
-                  d.tags_->add(src++, tag);
-                  return {dc.path_,
-                          {
-                              .link_stop_distance_ = t.link_stop_distance_,
-                              .default_tz_ = dc.default_timezone_.value_or(
-                                  dc.default_timezone_.value_or("")),
-                              .bikes_allowed_default_ = to_clasz_bool_array(dc),
-                          }};
-                }),
+            utl::to_vec(t.datasets_,
+                        [&, src = n::source_idx_t{}](auto&& x) mutable
+                        -> std::pair<std::string, nl::loader_config> {
+                          auto const& [tag, dc] = x;
+                          d.tags_->add(src++, tag);
+                          return {
+                              dc.path_,
+                              {
+                                  .link_stop_distance_ = t.link_stop_distance_,
+                                  .default_tz_ = dc.default_timezone_.value_or(
+                                      dc.default_timezone_.value_or("")),
+                                  .bikes_allowed_default_ = to_clasz_bool_array(
+                                      dc.default_bikes_allowed_,
+                                      dc.clasz_bikes_allowed_),
+                                  .cars_allowed_default_ = to_clasz_bool_array(
+                                      dc.default_cars_allowed_,
+                                      dc.clasz_cars_allowed_),
+                              }};
+                        }),
             {.adjust_footpaths_ = t.adjust_footpaths_,
              .merge_dupes_intra_src_ = t.merge_dupes_intra_src_,
              .merge_dupes_inter_src_ = t.merge_dupes_inter_src_,

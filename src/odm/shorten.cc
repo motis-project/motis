@@ -40,7 +40,9 @@ void shorten(std::vector<nr::journey>& odm_journeys,
           !stop.in_allowed(query.pedestrianProfile_ ==
                            api::PedestrianProfileEnum::WHEELCHAIR) ||
           (query.requireBikeTransport_ &&
-           !stop.bikes_allowed(n::event_type::kDep))) {
+           !stop.bikes_allowed(n::event_type::kDep)) ||
+          (query.requireCarTransport_ &&
+           !stop.cars_allowed(n::event_type::kDep))) {
         continue;
       }
       for (auto& ride : from_rides) {
@@ -105,7 +107,9 @@ void shorten(std::vector<nr::journey>& odm_journeys,
           !stop.out_allowed(query.pedestrianProfile_ ==
                             api::PedestrianProfileEnum::WHEELCHAIR) ||
           (query.requireBikeTransport_ &&
-           !stop.bikes_allowed(n::event_type::kArr))) {
+           !stop.bikes_allowed(n::event_type::kArr)) ||
+          (query.requireCarTransport_ &&
+           !stop.cars_allowed(n::event_type::kArr))) {
         continue;
       }
       for (auto& ride : to_rides) {

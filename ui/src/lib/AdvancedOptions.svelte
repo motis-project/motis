@@ -15,12 +15,14 @@
 		selectedModes = $bindable(),
 		wheelchair = $bindable(),
 		bikeRental = $bindable(),
-		bikeCarriage = $bindable()
+		bikeCarriage = $bindable(),
+		carCarriage = $bindable()
 	}: {
 		selectedModes: string[];
 		wheelchair: boolean;
 		bikeRental: boolean;
 		bikeCarriage: boolean;
+		carCarriage: boolean;
 	} = $props();
 
 	const possibleModes = [
@@ -115,6 +117,7 @@
 		<Switch bind:checked={wheelchair} label={t.wheelchair} id="wheelchair" />
 		<Switch bind:checked={bikeRental} label={t.bikeRental} id="bikeRental" />
 		<Switch bind:checked={bikeCarriage} label={t.bikeCarriage} id="bikeCarriage" />
+		<Switch bind:checked={carCarriage} label={t.carCarriage} id="carCarriage" />
 		<div class="text-muted-foreground leading-tight">{t.unreliableOptions}</div>
 	</div>
 {/if}
