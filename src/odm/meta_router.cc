@@ -361,6 +361,7 @@ n::routing::query meta_router::get_base_query(
               : 0U),
       .allowed_claszes_ = to_clasz_mask(query_.transitModes_),
       .require_bike_transport_ = query_.requireBikeTransport_,
+      .require_car_transport_ = query_.requireCarTransport_,
       .transfer_time_settings_ =
           n::routing::transfer_time_settings{
               .default_ = (query_.minTransferTime_ == 0 &&

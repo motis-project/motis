@@ -619,6 +619,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                 : 0U),
         .allowed_claszes_ = to_clasz_mask(query.transitModes_),
         .require_bike_transport_ = query.requireBikeTransport_,
+        .require_car_transport_ = query.requireCarTransport_,
         .transfer_time_settings_ =
             n::routing::transfer_time_settings{
                 .default_ = (query.minTransferTime_ == 0 &&

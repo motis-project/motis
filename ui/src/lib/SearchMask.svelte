@@ -20,6 +20,7 @@
 		wheelchair = $bindable(),
 		bikeRental = $bindable(),
 		bikeCarriage = $bindable(),
+		carCarriage = $bindable(),
 		selectedModes = $bindable()
 	}: {
 		geocodingBiasPlace?: maplibregl.LngLatLike;
@@ -30,6 +31,7 @@
 		wheelchair: boolean;
 		bikeRental: boolean;
 		bikeCarriage: boolean;
+		carCarriage: boolean;
 		selectedModes: string[];
 	} = $props();
 
@@ -111,6 +113,12 @@
 				<span>{t.arrival}</span>
 			</Label>
 		</RadioGroup.Root>
-		<AdvancedOptions bind:wheelchair bind:bikeRental bind:bikeCarriage bind:selectedModes />
+		<AdvancedOptions
+			bind:wheelchair
+			bind:bikeRental
+			bind:bikeCarriage
+			bind:carCarriage
+			bind:selectedModes
+		/>
 	</div>
 </div>

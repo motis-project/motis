@@ -42,6 +42,7 @@ export type Translations = {
 	wheelchair: string;
 	bikeRental: string;
 	bikeCarriage: string;
+	carCarriage: string;
 	unreliableOptions: string;
 	timetableSources: string;
 	tripCancelled: string;

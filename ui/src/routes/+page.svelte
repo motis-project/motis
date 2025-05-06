@@ -130,6 +130,7 @@
 	let wheelchair = $state(urlParams?.get('wheelchair') == 'true');
 	let bikeRental = $state(urlParams?.get('bikeRental') == 'true');
 	let bikeCarriage = $state(urlParams?.get('bikeCarriage') == 'true');
+	let carCarriage = $state(urlParams?.get('carCarriage') == 'true');
 	let selectedTransitModes = $state<Mode[]>(
 		(urlParams?.get('selectedTransitModes') &&
 			(urlParams?.get('selectedTransitModes')?.split(',') as Mode[])) ||
@@ -146,9 +147,10 @@
 		}
 	};
 	let modes = $derived([
-		'WALK',
+		...(!bikeCarriage && !carCarriage ? ['WALK'] : []),
 		...(bikeRental ? ['RENTAL'] : []),
-		...(bikeCarriage ? ['BIKE'] : [])
+		...(bikeCarriage ? ['BIKE'] : []),
+		...(carCarriage ? ['CAR'] : [])
 	] as Mode[]);
 	let baseQuery = $derived(
 		from.value.match && to.value.match
@@ -164,6 +166,7 @@
 						postTransitModes: modes,
 						directModes: modes,
 						requireBikeTransport: bikeCarriage,
+						requireCarTransport: carCarriage,
 						transitModes: selectedTransitModes.length ? selectedTransitModes : undefined,
 						useRoutedTransfers: true,
 						maxMatchingDistance: wheelchair ? 8 : 250
@@ -192,6 +195,7 @@
 						wheelchair: wheelchair,
 						bikeRental: bikeRental,
 						bikeCarriage: bikeCarriage,
+						carCarriage: carCarriage,
 						selectedTransitModes: selectedTransitModes.join(',')
 					},
 					{},
@@ -313,6 +317,7 @@
 								bind:wheelchair
 								bind:bikeRental
 								bind:bikeCarriage
+								bind:carCarriage
 								bind:selectedModes={selectedTransitModes}
 							/>
 						</Card>

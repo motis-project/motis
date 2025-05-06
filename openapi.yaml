@@ -525,6 +525,17 @@ paths:
             
             If set to `true`, all used transit trips are required to allow bike carriage.
 
+        - name: requireCarTransport
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+          description: |
+            Optional. Default is `false`.
+            
+            If set to `true`, all used transit trips are required to allow car carriage.
+
         - name: maxPreTransitTime
           in: query
           required: false
@@ -951,6 +962,17 @@ paths:
             Optional. Default is `false`.
 
             If set to `true`, all used transit trips are required to allow bike carriage.
+
+        - name: requireCarTransport
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+          description: |
+            Optional. Default is `false`.
+
+            If set to `true`, all used transit trips are required to allow car carriage.
 
         - name: maxPreTransitTime
           in: query
