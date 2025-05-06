@@ -6,8 +6,7 @@
 	import ChevronUp from 'lucide-svelte/icons/chevron-up';
 	import ChevronDown from 'lucide-svelte/icons/chevron-down';
 	import { Switch } from './components/ui/switch';
-	import type { ElevationCosts } from './openapi';
-	import { SvelteMap } from 'svelte/reactivity';
+	import type { ElevationCosts, Mode } from './openapi';
 
 	let {
 		selectedModes = $bindable(),
@@ -15,14 +14,18 @@
 		wheelchair = $bindable(),
 		bikeRental = $bindable(),
 		bikeCarriage = $bindable(),
-		streetModes = $bindable()
+		firstMileMode = $bindable(),
+		lastMileMode = $bindable(),
+		noTransitModes = $bindable()
 	}: {
 		selectedModes: string[];
 		elevationCosts: ElevationCosts;
 		wheelchair: boolean;
 		bikeRental: boolean;
 		bikeCarriage: boolean;
-		streetModes: SvelteMap<string, string>;
+		firstMileMode: Mode;
+		lastMileMode: Mode;
+		noTransitModes: Mode[];
 	} = $props();
 
 	const possibleModes = [
@@ -40,20 +43,6 @@
 		'FERRY',
 		'OTHER'
 	];
-	const segments = ['firstMile', 'lastMile', 'direct'];
-	type Segment = (typeof segments)[number];
-	const possibleStreetModes = ['WALK', 'BIKE', 'CAR'];
-	type StreetMode = (typeof possibleStreetModes)[number];
-
-	const getStreetMode = (segment: Segment) => streetModes.get(segment) ?? 'WALK';
-	const streetModeFilter = (seg: Segment, mode: StreetMode) => {
-		switch (seg) {
-			case 'lastMile':
-				return mode != 'CAR';
-			default:
-				return true;
-		}
-	};
 
 	const possibleElevationCosts = [
 		{ value: 'NONE' as ElevationCosts, label: t.elevationCosts.NONE },
@@ -71,10 +60,16 @@
 					.join(', ')
 			: t.defaultSelectedModes
 	);
+	const selectedFirstMileModeLabel = $derived((t as any)[firstMileMode]);
+	const selectedLastMileModeLabel = $derived((t as any)[lastMileMode]);
+	const selectedDirectModeLabel = $derived(noTransitModes.map((m) => (t as any)[m]).join(', '));
 
 	let expanded = $state<boolean>(false);
 	let allowElevationCosts = $derived(
-		bikeCarriage || streetModes.values().some((v) => v == 'BIKE')
+		bikeCarriage ||
+			firstMileMode == 'BIKE' ||
+			lastMileMode == 'BIKE' ||
+			noTransitModes.includes('BIKE')
 	);
 </script>
 
@@ -109,32 +104,55 @@
 			<Switch bind:checked={bikeCarriage} label={t.bikeCarriage} id="bikeCarriage" />
 		</div>
 
-		<div class="flex flex-row w-full items-center space-x-2">
-			{#each segments as segment}
-				<div class="flex flex-col w-full">
-					<div class="flex justify-center">{(t.routingSegments as any)[segment]}</div>
-					<Select.Root
-						type="single"
-						bind:value={
-							(): StreetMode => getStreetMode(segment),
-							(v: StreetMode) => streetModes.set(segment, v)
-						}
-					>
-						<Select.Trigger aria-label="Select modes for first mile">
-							{(t as any)[getStreetMode(segment)]}
-						</Select.Trigger>
-						<Select.Content sideOffset={10}>
-							{#each possibleStreetModes as mode, i (i + mode)}
-								{#if streetModeFilter(segment, mode)}
-									<Select.Item value={mode} label={(t as any)[mode]}>
-										{(t as any)[mode]}
-									</Select.Item>
-								{/if}
-							{/each}
-						</Select.Content>
-					</Select.Root>
-				</div>
-			{/each}
+		<div class="grid grid-cols-2 items-center space-y-2">
+			<!-- First mile -->
+			<div class="text-sm">
+				{t.routingSegments.firstMile}
+			</div>
+			<Select.Root type="single" bind:value={firstMileMode}>
+				<Select.Trigger aria-label="Select modes for first mile">
+					{selectedFirstMileModeLabel}
+				</Select.Trigger>
+				<Select.Content sideOffset={10}>
+					{#each ['WALK', 'BIKE', 'CAR'] as mode, i (i + mode)}
+						<Select.Item value={mode} label={(t as any)[mode]}>
+							{(t as any)[mode]}
+						</Select.Item>
+					{/each}
+				</Select.Content>
+			</Select.Root>
+			<!-- Last mile -->
+			<div class="text-sm">
+				{t.routingSegments.lastMile}
+			</div>
+			<Select.Root type="single" bind:value={lastMileMode}>
+				<Select.Trigger aria-label="Select modes for first mile">
+					{selectedLastMileModeLabel}
+				</Select.Trigger>
+				<Select.Content sideOffset={10}>
+					{#each ['WALK', 'BIKE'] as mode, i (i + mode)}
+						<Select.Item value={mode} label={(t as any)[mode]}>
+							{(t as any)[mode]}
+						</Select.Item>
+					{/each}
+				</Select.Content>
+			</Select.Root>
+			<!-- No transit -->
+			<div class="text-sm">
+				{t.routingSegments.direct}
+			</div>
+			<Select.Root type="multiple" bind:value={noTransitModes}>
+				<Select.Trigger aria-label="Select modes for no transits">
+					{selectedDirectModeLabel}
+				</Select.Trigger>
+				<Select.Content sideOffset={10}>
+					{#each ['WALK', 'BIKE', 'CAR'] as mode, i (i + mode)}
+						<Select.Item value={mode} label={(t as any)[mode]}>
+							{(t as any)[mode]}
+						</Select.Item>
+					{/each}
+				</Select.Content>
+			</Select.Root>
 		</div>
 		<div class="grid grid-cols-2 items-center">
 			<div class="text-sm">

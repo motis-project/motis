@@ -13,7 +13,8 @@
 		type ElevationCosts,
 		type PlanResponse,
 		type Mode,
-		type PlanData
+		type PlanData,
+		ModeSchema
 	} from '$lib/openapi';
 	import ItineraryList from '$lib/ItineraryList.svelte';
 	import ConnectionDetail from '$lib/ConnectionDetail.svelte';
@@ -138,7 +139,22 @@
 			[]
 	);
 	let elevationCosts = $state((urlParams?.get('elevationCosts') ?? 'NONE') as ElevationCosts);
-	let streetModes = $state(new SvelteMap<string, string>([]));
+	let firstMileMode: Mode = $state('WALK');
+	let lastMileMode: Mode = $state('WALK');
+	let noTransitModes: Mode[] = $state([]);
+	ModeSchema.enum.forEach(mode => {
+		if (mode == urlParams?.get('firstMileMode')) {
+			firstMileMode = mode;
+		}
+		if (mode == urlParams?.get('lastMileMode')) {
+			lastMileMode = mode;
+		}
+		(urlParams?.get('noTransitModes')?.split(',') ??[]).forEach(m => {
+			if (mode == m) {
+				noTransitModes.push(mode);
+			}
+		});
+	});
 
 	const toPlaceString = (l: Location) => {
 		if (l.value.match?.type === 'STOP') {
@@ -149,11 +165,14 @@
 			return `${lngLatToStr(l.value.match!)},0`;
 		}
 	};
-	let modes = $derived([
-		'WALK',
+	let additionalModes = $derived([
 		...(bikeRental ? ['RENTAL'] : []),
 		...(bikeCarriage ? ['BIKE'] : [])
 	] as Mode[]);
+	let preTransitModes = $derived([firstMileMode, ...additionalModes]);
+	let postTransitModes = $derived([lastMileMode, ...additionalModes]);
+	let directModes = $derived([...noTransitModes, ...additionalModes, ...(noTransitModes.length == 0 && additionalModes.length == 0 ? ['WALK'] : [])]);
+
 	let baseQuery = $derived(
 		from.value.match && to.value.match
 			? ({
@@ -164,9 +183,9 @@
 						arriveBy: timeType === 'arrival',
 						timetableView: true,
 						pedestrianProfile: wheelchair ? 'WHEELCHAIR' : 'FOOT',
-						preTransitModes: modes,
-						postTransitModes: modes,
-						directModes: modes,
+						preTransitModes: preTransitModes,
+						postTransitModes: postTransitModes,
+						directModes: directModes,
 						requireBikeTransport: bikeCarriage,
 						transitModes: selectedTransitModes.length ? selectedTransitModes : undefined,
 						elevationCosts: elevationCosts,
@@ -197,6 +216,9 @@
 						wheelchair: wheelchair,
 						bikeRental: bikeRental,
 						bikeCarriage: bikeCarriage,
+						firstMileMode: firstMileMode,
+						lastMileMode: lastMileMode,
+						noTransitModes: noTransitModes.join(','),
 						elevationCosts: elevationCosts,
 						selectedTransitModes: selectedTransitModes.join(',')
 					},
@@ -320,8 +342,10 @@
 								bind:bikeRental
 								bind:bikeCarriage
 								bind:selectedModes={selectedTransitModes}
+								bind:firstMileMode
+								bind:lastMileMode
+								bind:noTransitModes
 								bind:elevationCosts
-								bind:streetModes
 							/>
 						</Card>
 					</Tabs.Content>
