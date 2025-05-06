@@ -142,14 +142,14 @@
 	let firstMileMode: Mode = $state('WALK');
 	let lastMileMode: Mode = $state('WALK');
 	let noTransitModes: Mode[] = $state([]);
-	ModeSchema.enum.forEach(mode => {
+	ModeSchema.enum.forEach((mode) => {
 		if (mode == urlParams?.get('firstMileMode')) {
 			firstMileMode = mode;
 		}
 		if (mode == urlParams?.get('lastMileMode')) {
 			lastMileMode = mode;
 		}
-		(urlParams?.get('noTransitModes')?.split(',') ??[]).forEach(m => {
+		(urlParams?.get('noTransitModes')?.split(',') ?? []).forEach((m) => {
 			if (mode == m) {
 				noTransitModes.push(mode);
 			}
@@ -171,7 +171,11 @@
 	] as Mode[]);
 	let preTransitModes = $derived([firstMileMode, ...additionalModes]);
 	let postTransitModes = $derived([lastMileMode, ...additionalModes]);
-	let directModes = $derived([...noTransitModes, ...additionalModes, ...(noTransitModes.length == 0 && additionalModes.length == 0 ? ['WALK'] : [])]);
+	let directModes = $derived([
+		...noTransitModes,
+		...additionalModes,
+		...(noTransitModes.length == 0 && additionalModes.length == 0 ? ['WALK'] : [])
+	]);
 
 	let baseQuery = $derived(
 		from.value.match && to.value.match
