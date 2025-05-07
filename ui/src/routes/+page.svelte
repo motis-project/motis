@@ -138,23 +138,10 @@
 			(urlParams?.get('selectedTransitModes')?.split(',') as Mode[])) ||
 			[]
 	);
+	let firstMileMode: Mode = $state((urlParams?.get('firstMileMode') ?? 'WALK') as Mode);
+	let lastMileMode: Mode = $state((urlParams?.get('lastMileMode') ?? 'WALK') as Mode);
+	let directModes: Mode[] = $state((urlParams?.get('directModes')?.split(',') ?? []) as Mode[]);
 	let elevationCosts = $state((urlParams?.get('elevationCosts') ?? 'NONE') as ElevationCosts);
-	let firstMileMode: Mode = $state('WALK');
-	let lastMileMode: Mode = $state('WALK');
-	let directModes: Mode[] = $state([]);
-	ModeSchema.enum.forEach((mode) => {
-		if (mode == urlParams?.get('firstMileMode')) {
-			firstMileMode = mode;
-		}
-		if (mode == urlParams?.get('lastMileMode')) {
-			lastMileMode = mode;
-		}
-		(urlParams?.get('noTransitModes')?.split(',') ?? []).forEach((m) => {
-			if (mode == m) {
-				directModes.push(mode);
-			}
-		});
-	});
 
 	const toPlaceString = (l: Location) => {
 		if (l.value.match?.type === 'STOP') {
