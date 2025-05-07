@@ -30,6 +30,8 @@
 		noTransitModes: Mode[];
 	} = $props();
 
+	type TranslationKey = keyof typeof t;
+
 	const possibleModes = [
 		'AIRPLANE',
 		'HIGHSPEED_RAIL',
@@ -51,8 +53,7 @@
 		{ value: 'LOW' as ElevationCosts, label: t.elevationCosts.LOW },
 		{ value: 'HIGH' as ElevationCosts, label: t.elevationCosts.HIGH }
 	];
-	// eslint-disable-next-line  @typescript-eslint/no-explicit-any
-	const modes = possibleModes.map((m) => ({ value: m, label: (t as any)[m] }));
+	const modes = possibleModes.map((m) => ({ value: m, label: t[m as TranslationKey] as string }));
 
 	const selectedModeLabel = $derived(
 		selectedModes.length != possibleModes.length
@@ -62,9 +63,11 @@
 					.join(', ')
 			: t.defaultSelectedModes
 	);
-	const selectedFirstMileModeLabel = $derived((t as any)[firstMileMode]);
-	const selectedLastMileModeLabel = $derived((t as any)[lastMileMode]);
-	const selectedDirectModeLabel = $derived(noTransitModes.map((m) => (t as any)[m]).join(', '));
+	const selectedFirstMileModeLabel = $derived(t[firstMileMode as TranslationKey]);
+	const selectedLastMileModeLabel = $derived(t[lastMileMode as TranslationKey]);
+	const selectedDirectModeLabel = $derived(
+		noTransitModes.map((m) => t[m as TranslationKey]).join(', ')
+	);
 
 	let expanded = $state<boolean>(false);
 	let allowElevationCosts = $derived(
@@ -118,8 +121,8 @@
 				</Select.Trigger>
 				<Select.Content sideOffset={10}>
 					{#each ['WALK', 'BIKE', 'CAR'] as mode, i (i + mode)}
-						<Select.Item value={mode} label={(t as any)[mode]}>
-							{(t as any)[mode]}
+						<Select.Item value={mode} label={t[mode as TranslationKey] as string}>
+							{t[mode as TranslationKey]}
 						</Select.Item>
 					{/each}
 				</Select.Content>
@@ -134,8 +137,8 @@
 				</Select.Trigger>
 				<Select.Content sideOffset={10}>
 					{#each ['WALK', 'BIKE'] as mode, i (i + mode)}
-						<Select.Item value={mode} label={(t as any)[mode]}>
-							{(t as any)[mode]}
+						<Select.Item value={mode} label={t[mode as TranslationKey] as string}>
+							{t[mode as TranslationKey]}
 						</Select.Item>
 					{/each}
 				</Select.Content>
@@ -150,8 +153,8 @@
 				</Select.Trigger>
 				<Select.Content sideOffset={10}>
 					{#each ['WALK', 'BIKE', 'CAR'] as mode, i (i + mode)}
-						<Select.Item value={mode} label={(t as any)[mode]}>
-							{(t as any)[mode]}
+						<Select.Item value={mode} label={t[mode as TranslationKey] as string}>
+							{t[mode as TranslationKey]}
 						</Select.Item>
 					{/each}
 				</Select.Content>
