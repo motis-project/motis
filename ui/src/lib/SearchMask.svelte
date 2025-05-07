@@ -25,7 +25,7 @@
 		selectedModes = $bindable(),
 		firstMileMode = $bindable(),
 		lastMileMode = $bindable(),
-		noTransitModes = $bindable(),
+		directModes = $bindable(),
 		elevationCosts = $bindable()
 	}: {
 		geocodingBiasPlace?: maplibregl.LngLatLike;
@@ -40,7 +40,7 @@
 		selectedModes: string[];
 		firstMileMode: Mode;
 		lastMileMode: Mode;
-		noTransitModes: Mode[];
+		directModes: Mode[];
 		elevationCosts: ElevationCosts;
 	} = $props();
 
@@ -130,7 +130,7 @@
 			bind:selectedModes
 			bind:firstMileMode
 			bind:lastMileMode
-			bind:noTransitModes
+			bind:directModes
 			bind:elevationCosts
 		/>
 	</div>

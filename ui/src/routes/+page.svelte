@@ -141,7 +141,7 @@
 	let elevationCosts = $state((urlParams?.get('elevationCosts') ?? 'NONE') as ElevationCosts);
 	let firstMileMode: Mode = $state('WALK');
 	let lastMileMode: Mode = $state('WALK');
-	let noTransitModes: Mode[] = $state([]);
+	let directModes: Mode[] = $state([]);
 	ModeSchema.enum.forEach((mode) => {
 		if (mode == urlParams?.get('firstMileMode')) {
 			firstMileMode = mode;
@@ -151,7 +151,7 @@
 		}
 		(urlParams?.get('noTransitModes')?.split(',') ?? []).forEach((m) => {
 			if (mode == m) {
-				noTransitModes.push(mode);
+				directModes.push(mode);
 			}
 		});
 	});
@@ -172,10 +172,10 @@
 	] as Mode[]);
 	let preTransitModes = $derived([firstMileMode, ...additionalModes]);
 	let postTransitModes = $derived([lastMileMode, ...additionalModes]);
-	let directModes = $derived([
-		...noTransitModes,
+	let requestDirectModes = $derived([
+		...directModes,
 		...additionalModes,
-		...(noTransitModes.length == 0 && additionalModes.length == 0 ? ['WALK'] : [])
+		...(directModes.length == 0 && additionalModes.length == 0 ? ['WALK'] : [])
 	]);
 
 	let baseQuery = $derived(
@@ -190,7 +190,7 @@
 						pedestrianProfile: wheelchair ? 'WHEELCHAIR' : 'FOOT',
 						preTransitModes: preTransitModes,
 						postTransitModes: postTransitModes,
-						directModes: directModes,
+						directModes: requestDirectModes,
 						requireBikeTransport: bikeCarriage,
 						requireCarTransport: carCarriage,
 						transitModes: selectedTransitModes.length ? selectedTransitModes : undefined,
@@ -225,7 +225,7 @@
 						carCarriage: carCarriage,
 						firstMileMode: firstMileMode,
 						lastMileMode: lastMileMode,
-						noTransitModes: noTransitModes.join(','),
+						noTransitModes: directModes.join(','),
 						elevationCosts: elevationCosts,
 						selectedTransitModes: selectedTransitModes.join(',')
 					},
@@ -352,7 +352,7 @@
 								bind:selectedModes={selectedTransitModes}
 								bind:firstMileMode
 								bind:lastMileMode
-								bind:noTransitModes
+								bind:directModes
 								bind:elevationCosts
 							/>
 						</Card>

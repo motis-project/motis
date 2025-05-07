@@ -17,7 +17,7 @@
 		carCarriage = $bindable(),
 		firstMileMode = $bindable(),
 		lastMileMode = $bindable(),
-		noTransitModes = $bindable()
+		directModes = $bindable()
 	}: {
 		selectedModes: string[];
 		elevationCosts: ElevationCosts;
@@ -27,7 +27,7 @@
 		carCarriage: boolean;
 		firstMileMode: Mode;
 		lastMileMode: Mode;
-		noTransitModes: Mode[];
+		directModes: Mode[];
 	} = $props();
 
 	type TranslationKey = keyof typeof t;
@@ -65,8 +65,8 @@
 	);
 	const selectedFirstMileModeLabel = $derived(t[firstMileMode as TranslationKey]);
 	const selectedLastMileModeLabel = $derived(t[lastMileMode as TranslationKey]);
-	const selectedDirectModeLabel = $derived(
-		noTransitModes.map((m) => t[m as TranslationKey]).join(', ')
+	const selectedDirectModesLabel = $derived(
+		directModes.map((m) => t[m as TranslationKey]).join(', ')
 	);
 
 	let expanded = $state<boolean>(false);
@@ -74,7 +74,7 @@
 		bikeCarriage ||
 			firstMileMode == 'BIKE' ||
 			lastMileMode == 'BIKE' ||
-			noTransitModes.includes('BIKE')
+			directModes.includes('BIKE')
 	);
 </script>
 
@@ -116,7 +116,7 @@
 				{t.routingSegments.firstMile}
 			</div>
 			<Select.Root type="single" bind:value={firstMileMode}>
-				<Select.Trigger aria-label="Select modes for first mile">
+				<Select.Trigger aria-label={t.routingSegments.firstMile}>
 					{selectedFirstMileModeLabel}
 				</Select.Trigger>
 				<Select.Content sideOffset={10}>
@@ -132,7 +132,7 @@
 				{t.routingSegments.lastMile}
 			</div>
 			<Select.Root type="single" bind:value={lastMileMode}>
-				<Select.Trigger aria-label="Select modes for first mile">
+				<Select.Trigger aria-label={t.routingSegments.lastMile}>
 					{selectedLastMileModeLabel}
 				</Select.Trigger>
 				<Select.Content sideOffset={10}>
@@ -143,13 +143,13 @@
 					{/each}
 				</Select.Content>
 			</Select.Root>
-			<!-- No transit -->
+			<!-- Direct -->
 			<div class="text-sm">
 				{t.routingSegments.direct}
 			</div>
-			<Select.Root type="multiple" bind:value={noTransitModes}>
-				<Select.Trigger aria-label="Select modes for no transits">
-					{selectedDirectModeLabel}
+			<Select.Root type="multiple" bind:value={directModes}>
+				<Select.Trigger aria-label={t.routingSegments.direct}>
+					{selectedDirectModesLabel}
 				</Select.Trigger>
 				<Select.Content sideOffset={10}>
 					{#each ['WALK', 'BIKE', 'CAR'] as mode, i (i + mode)}
