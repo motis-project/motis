@@ -133,6 +133,7 @@
 	let wheelchair = $state(urlParams?.get('wheelchair') == 'true');
 	let bikeRental = $state(urlParams?.get('bikeRental') == 'true');
 	let bikeCarriage = $state(urlParams?.get('bikeCarriage') == 'true');
+	let carCarriage = $state(urlParams?.get('carCarriage') == 'true');
 	let selectedTransitModes = $state<Mode[]>(
 		(urlParams?.get('selectedTransitModes') &&
 			(urlParams?.get('selectedTransitModes')?.split(',') as Mode[])) ||
@@ -167,7 +168,8 @@
 	};
 	let additionalModes = $derived([
 		...(bikeRental ? ['RENTAL'] : []),
-		...(bikeCarriage ? ['BIKE'] : [])
+		...(bikeCarriage ? ['BIKE'] : []),
+		...(carCarriage ? ['CAR'] : [])
 	] as Mode[]);
 	let preTransitModes = $derived([firstMileMode, ...additionalModes]);
 	let postTransitModes = $derived([lastMileMode, ...additionalModes]);
@@ -191,6 +193,7 @@
 						postTransitModes: postTransitModes,
 						directModes: directModes,
 						requireBikeTransport: bikeCarriage,
+						requireCarTransport: carCarriage,
 						transitModes: selectedTransitModes.length ? selectedTransitModes : undefined,
 						elevationCosts: elevationCosts,
 						useRoutedTransfers: true,
@@ -220,6 +223,7 @@
 						wheelchair: wheelchair,
 						bikeRental: bikeRental,
 						bikeCarriage: bikeCarriage,
+						carCarriage: carCarriage,
 						firstMileMode: firstMileMode,
 						lastMileMode: lastMileMode,
 						noTransitModes: noTransitModes.join(','),
@@ -345,6 +349,7 @@
 								bind:wheelchair
 								bind:bikeRental
 								bind:bikeCarriage
+								bind:carCarriage
 								bind:selectedModes={selectedTransitModes}
 								bind:firstMileMode
 								bind:lastMileMode

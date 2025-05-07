@@ -14,6 +14,7 @@
 		wheelchair = $bindable(),
 		bikeRental = $bindable(),
 		bikeCarriage = $bindable(),
+		carCarriage = $bindable(),
 		firstMileMode = $bindable(),
 		lastMileMode = $bindable(),
 		noTransitModes = $bindable()
@@ -23,6 +24,7 @@
 		wheelchair: boolean;
 		bikeRental: boolean;
 		bikeCarriage: boolean;
+		carCarriage: boolean;
 		firstMileMode: Mode;
 		lastMileMode: Mode;
 		noTransitModes: Mode[];
@@ -102,6 +104,7 @@
 			<Switch bind:checked={wheelchair} label={t.wheelchair} id="wheelchair" />
 			<Switch bind:checked={bikeRental} label={t.bikeRental} id="bikeRental" />
 			<Switch bind:checked={bikeCarriage} label={t.bikeCarriage} id="bikeCarriage" />
+			<Switch bind:checked={carCarriage} label={t.carCarriage} id="carCarriage" />
 		</div>
 
 		<div class="grid grid-cols-2 items-center space-y-2">

@@ -49,6 +49,7 @@ const translations: Translations = {
 	wheelchair: 'Barrierefreie Umstiege',
 	bikeRental: 'Sharing-Fahrzeuge berücksichtigen',
 	bikeCarriage: 'Fahrradmitnahme',
+	carCarriage: 'Automitnahme',
 	unreliableOptions: 'Je nach Datenverfügbarkeit können diese Optionen unzuverlässig sein.',
 	timetableSources: 'Fahrplandatenquellen',
 	tripCancelled: 'Fahrt entfällt',

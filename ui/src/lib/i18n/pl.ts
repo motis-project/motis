@@ -48,6 +48,7 @@ const translations: Translations = {
 	wheelchair: 'Barrier-free transfers',
 	bikeRental: 'Allow usage of sharing vehicles',
 	bikeCarriage: 'Bike carriage',
+	carCarriage: 'Car carriage',
 	unreliableOptions: 'Depending on data availability, these options may be unreliable.',
 	timetableSources: 'Timetable sources',
 	tripCancelled: 'Trip cancelled',

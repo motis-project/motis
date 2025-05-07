@@ -21,6 +21,7 @@
 		wheelchair = $bindable(),
 		bikeRental = $bindable(),
 		bikeCarriage = $bindable(),
+		carCarriage = $bindable(),
 		selectedModes = $bindable(),
 		firstMileMode = $bindable(),
 		lastMileMode = $bindable(),
@@ -35,6 +36,7 @@
 		wheelchair: boolean;
 		bikeRental: boolean;
 		bikeCarriage: boolean;
+		carCarriage: boolean;
 		selectedModes: string[];
 		firstMileMode: Mode;
 		lastMileMode: Mode;
@@ -124,6 +126,7 @@
 			bind:wheelchair
 			bind:bikeRental
 			bind:bikeCarriage
+			bind:carCarriage
 			bind:selectedModes
 			bind:firstMileMode
 			bind:lastMileMode
