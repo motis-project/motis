@@ -18,6 +18,7 @@
 
 #include "utl/erase_duplicates.h"
 
+#include "nigiri/logging.h"
 #include "nigiri/routing/journey.h"
 #include "nigiri/routing/limits.h"
 #include "nigiri/routing/query.h"
@@ -69,9 +70,9 @@ using td_offsets_t =
     n::hash_map<n::location_idx_t, std::vector<n::routing::td_offset>>;
 
 void print_time(auto const& start, std::string_view name) {
-  fmt::println("{} {}", name,
-               std::chrono::duration_cast<std::chrono::milliseconds>(
-                   std::chrono::steady_clock::now() - start));
+  n::log(n::log_lvl::debug, "motis.odm", "{} {}", name,
+         std::chrono::duration_cast<std::chrono::milliseconds>(
+             std::chrono::steady_clock::now() - start));
 }
 
 meta_router::meta_router(ep::routing const& r,
@@ -88,7 +89,8 @@ meta_router::meta_router(ep::routing const& r,
                          nigiri::duration_t const fastest_direct,
                          bool const odm_pre_transit,
                          bool const odm_post_transit,
-                         bool const odm_direct)
+                         bool const odm_direct,
+                         unsigned const api_version)
     : r_{r},
       query_{query},
       pre_transit_modes_{pre_transit_modes},
@@ -104,6 +106,7 @@ meta_router::meta_router(ep::routing const& r,
       odm_pre_transit_{odm_pre_transit},
       odm_post_transit_{odm_post_transit},
       odm_direct_{odm_direct},
+      api_version_{api_version},
       tt_{r_.tt_},
       rt_{r.rt_},
       rtt_{rt_->rtt_.get()},
@@ -123,8 +126,8 @@ meta_router::meta_router(ep::routing const& r,
                                   ? query_.postTransitRentalPropulsionTypes_
                                   : query_.preTransitRentalPropulsionTypes_},
       dest_propulsion_types_{query_.arriveBy_
-                                 ? query_.postTransitRentalPropulsionTypes_
-                                 : query_.preTransitRentalPropulsionTypes_},
+                                 ? query_.preTransitRentalPropulsionTypes_
+                                 : query_.postTransitRentalPropulsionTypes_},
       start_rental_providers_{query_.arriveBy_
                                   ? query_.postTransitRentalProviders_
                                   : query_.preTransitRentalProviders_},
@@ -143,30 +146,24 @@ n::duration_t init_direct(std::vector<direct_ride>& direct_rides,
                           api::Place const& from_p,
                           api::Place const& to_p,
                           n::interval<n::unixtime_t> const intvl,
-                          api::plan_params const& query) {
+                          api::plan_params const& query,
+                          unsigned api_version) {
   direct_rides.clear();
 
   auto const from_pos = geo::latlng{from_p.lat_, from_p.lon_};
   auto const to_pos = geo::latlng{to_p.lat_, to_p.lon_};
-  if (r.odm_bounds_ != nullptr) {
-    auto const from_in_bounds = r.odm_bounds_->contains(from_pos);
-    auto const to_in_bounds = r.odm_bounds_->contains(to_pos);
-    if (!from_in_bounds || !to_in_bounds) {
-      fmt::println(
-          "[init] No direct ODM connection, from: {}, to: {}: from_in_bounds = "
-          "{}, "
-          "to_in_bounds = {}",
-          from_pos, to_pos, from_in_bounds ? "true" : "false",
-          to_in_bounds ? "true" : "false");
-      return ep::kInfinityDuration;
-    }
+  if (r.odm_bounds_ != nullptr && (!r.odm_bounds_->contains(from_pos) ||
+                                   !r.odm_bounds_->contains(to_pos))) {
+    n::log(n::log_lvl::debug, "motis.odm",
+           "No direct connection, from: {}, to: {}", from_pos, to_pos);
+    return ep::kInfinityDuration;
   }
 
   auto [_, odm_direct_duration] = r.route_direct(
       e, gbfs, from_p, to_p, {api::ModeEnum::CAR}, std::nullopt, std::nullopt,
-      std::nullopt, intvl.from_,
-      query.pedestrianProfile_ == api::PedestrianProfileEnum::WHEELCHAIR,
-      kODMMaxDuration, query.maxMatchingDistance_, kODMDirectFactor);
+      std::nullopt, intvl.from_, query.pedestrianProfile_,
+      query.elevationCosts_, kODMMaxDuration, query.maxMatchingDistance_,
+      kODMDirectFactor, api_version);
 
   if (odm_direct_duration < kODMMaxDuration) {
     if (query.arriveBy_) {
@@ -209,25 +206,25 @@ void init_pt(std::vector<n::routing::start>& rides,
              n::routing::location_match_mode location_match_mode,
              std::chrono::seconds const max) {
   if (r.odm_bounds_ != nullptr && !r.odm_bounds_->contains(l.pos_)) {
-    fmt::println("[init] no ODM-PT connection at {}: terminal out of bounds",
-                 l.pos_);
+    n::log(n::log_lvl::debug, "motis.odm", "no ODM-PT connection at {}: terminal out of bounds", l.pos_);
     return;
   }
 
-  auto offsets = r.get_offsets(
-      l, dir, {api::ModeEnum::ODM}, std::nullopt, std::nullopt, std::nullopt,
-      query.pedestrianProfile_ == api::PedestrianProfileEnum::WHEELCHAIR, max,
-      query.maxMatchingDistance_, gbfs_rd);
+  auto offsets = r.get_offsets(l, dir, {api::ModeEnum::ODM}, std::nullopt,
+                               std::nullopt, std::nullopt,
+                               query.pedestrianProfile_, query.elevationCosts_,
+                               max, query.maxMatchingDistance_, gbfs_rd);
 
-  if (r.odm_bounds_ != nullptr) {
-    auto const n_out_of_bounds =
-        std::erase_if(offsets, [&](n::routing::offset const& o) {
-          return !r.odm_bounds_->contains(
-              r.tt_->locations_.coordinates_[o.target_]);
-        });
-    fmt::println("[init] removed {} out-of-bounds offsets for {}",
-                 n_out_of_bounds, l.pos_);
-  }
+  std::erase_if(offsets, [&](n::routing::offset const& o) {
+    auto const out_of_bounds =
+        (r.odm_bounds_ != nullptr &&
+         !r.odm_bounds_->contains(r.tt_->locations_.coordinates_[o.target_]));
+    if (out_of_bounds) {
+      n::log(n::log_lvl::debug, "motis.odm", "Bounds filtered: {}",
+             n::location{*r.tt_, o.target_});
+    }
+    return out_of_bounds;
+  });
 
   for (auto& o : offsets) {
     o.duration_ += kODMTransferBuffer;
@@ -254,16 +251,17 @@ void meta_router::init_prima(n::interval<n::unixtime_t> const& search_intvl,
 
   auto direct_duration = std::optional<std::chrono::seconds>{};
   if (odm_direct_ && r_.w_ && r_.l_) {
-    direct_duration = init_direct(p->direct_rides_, r_, e_, gbfs_rd_,
-                                  from_place_, to_place_, search_intvl, query_);
+    direct_duration =
+        init_direct(p->direct_rides_, r_, e_, gbfs_rd_, from_place_, to_place_,
+                    search_intvl, query_, api_version_);
   }
 
   auto const max_offset_duration =
-      direct_duration ? std::min(*direct_duration - kODMOffsetMinImprovement,
-                                 kODMMaxDuration)
-                      : kODMMaxDuration;
-
-  fmt::println("[init] max_offset_duration: {}", max_offset_duration);
+      direct_duration
+          ? std::min(std::max(*direct_duration, kODMOffsetMinImprovement) -
+                         kODMOffsetMinImprovement,
+                     kODMMaxDuration)
+          : kODMMaxDuration;
 
   if (odm_pre_transit_ && holds_alternative<osr::location>(from_)) {
     init_pt(p->from_rides_, r_, std::get<osr::location>(from_),
@@ -374,6 +372,7 @@ n::routing::query meta_router::get_base_query(
               : 0U),
       .allowed_claszes_ = to_clasz_mask(query_.transitModes_),
       .require_bike_transport_ = query_.requireBikeTransport_,
+      .require_car_transport_ = query_.requireCarTransport_,
       .transfer_time_settings_ =
           n::routing::transfer_time_settings{
               .default_ = (query_.minTransferTime_ == 0 &&
@@ -445,8 +444,8 @@ void collect_odm_journeys(
       }
     }
   }
-  fmt::println("[routing] collected {} ODM-PT journeys",
-               p->odm_journeys_.size());
+  n::log(n::log_lvl::debug, "motis.odm",
+         "[routing] collected {} ODM-PT journeys", p->odm_journeys_.size());
 }
 
 void extract_rides() {
@@ -497,7 +496,8 @@ void meta_router::add_direct() const {
         .dest_ = to_l,
         .transfers_ = 0U});
   }
-  fmt::println("[whitelisting] added {} direct rides", p->direct_rides_.size());
+  n::log(n::log_lvl::debug, "motis.odm", "[whitelisting] added {} direct rides",
+         p->direct_rides_.size());
 }
 
 api::plan_response meta_router::run() {
@@ -548,7 +548,8 @@ api::plan_response meta_router::run() {
   auto ioc = boost::asio::io_context{};
   auto const bl_start = std::chrono::steady_clock::now();
   try {
-    fmt::println("[blacklisting] request for {} events", p->n_events());
+    n::log(n::log_lvl::debug, "motis.odm",
+           "[blacklisting] request for {} events", p->n_events());
     boost::asio::co_spawn(
         ioc,
         [&]() -> boost::asio::awaitable<void> {
@@ -560,13 +561,14 @@ api::plan_response meta_router::run() {
         boost::asio::detached);
     ioc.run();
   } catch (std::exception const& e) {
-    fmt::println("[blacklisting] networking failed: {}", e.what());
+    n::log(n::log_lvl::debug, "motis.odm",
+           "[blacklisting] networking failed: {}", e.what());
     blacklist_response = std::nullopt;
   }
   auto const blacklisted =
       blacklist_response && p->blacklist_update(*blacklist_response);
-  fmt::println("[blacklisting] ODM events after blacklisting: {}",
-               p->n_events());
+  n::log(n::log_lvl::debug, "motis.odm",
+         "[blacklisting] ODM events after blacklisting: {}", p->n_events());
   print_time(
       bl_start,
       fmt::format("[blacklisting] (first_mile: {}, last_mile: {}, direct: {})",
@@ -582,77 +584,38 @@ api::plan_response meta_router::run() {
 
   auto const qf = query_factory{
       .base_query_ = get_base_query(context_intvl),
-      .start_walk_ = std::visit(
-          utl::overloaded{[&](tt_location const l) {
-                            return motis::ep::station_start(l.l_);
-                          },
-                          [&](osr::location const& pos) {
-                            auto const dir = query_.arriveBy_
-                                                 ? osr::direction::kBackward
-                                                 : osr::direction::kForward;
-                            return r_.get_offsets(
-                                pos, dir, start_modes_, start_form_factors_,
-                                start_propulsion_types_,
-                                start_rental_providers_,
-                                query_.pedestrianProfile_ ==
-                                    api::PedestrianProfileEnum::WHEELCHAIR,
-                                std::chrono::seconds{query_.maxPreTransitTime_},
-                                query_.maxMatchingDistance_, gbfs_rd_);
-                          }},
-          start_),
-      .dest_walk_ = std::visit(
-          utl::overloaded{
-              [&](tt_location const l) {
-                return motis::ep::station_start(l.l_);
-              },
-              [&](osr::location const& pos) {
-                auto const dir = query_.arriveBy_ ? osr::direction::kForward
-                                                  : osr::direction::kBackward;
-                return r_.get_offsets(
-                    pos, dir, dest_modes_, dest_form_factors_,
-                    dest_propulsion_types_, dest_rental_providers_,
-                    query_.pedestrianProfile_ ==
-                        api::PedestrianProfileEnum::WHEELCHAIR,
-                    std::chrono::seconds{query_.maxPostTransitTime_},
-                    query_.maxMatchingDistance_, gbfs_rd_);
-              }},
-          dest_),
+      .start_walk_ =
+          r_.get_offsets(start_,
+                         query_.arriveBy_ ? osr::direction::kBackward
+                                          : osr::direction::kForward,
+                         start_modes_, start_form_factors_,
+                         start_propulsion_types_, start_rental_providers_,
+                         query_.pedestrianProfile_, query_.elevationCosts_,
+                         std::chrono::seconds{query_.maxPreTransitTime_},
+                         query_.maxMatchingDistance_, gbfs_rd_),
+      .dest_walk_ =
+          r_.get_offsets(dest_,
+                         query_.arriveBy_ ? osr::direction::kForward
+                                          : osr::direction::kBackward,
+                         dest_modes_, dest_form_factors_,
+                         dest_propulsion_types_, dest_rental_providers_,
+                         query_.pedestrianProfile_, query_.elevationCosts_,
+                         std::chrono::seconds{query_.maxPostTransitTime_},
+                         query_.maxMatchingDistance_, gbfs_rd_),
       .td_start_walk_ =
-          e_ != nullptr
-              ? std::visit(
-                    utl::overloaded{
-                        [&](tt_location) { return td_offsets_t{}; },
-                        [&](osr::location const& pos) {
-                          auto const dir = query_.arriveBy_
-                                               ? osr::direction::kBackward
-                                               : osr::direction::kForward;
-                          return r_.get_td_offsets(
-                              *e_, pos, dir, start_modes_,
-                              query_.pedestrianProfile_ ==
-                                  api::PedestrianProfileEnum::WHEELCHAIR,
-                              query_.maxMatchingDistance_,
-                              std::chrono::seconds{query_.maxPreTransitTime_});
-                        }},
-                    start_)
-              : td_offsets_t{},
+          r_.get_td_offsets(e_, start_,
+                            query_.arriveBy_ ? osr::direction::kBackward
+                                             : osr::direction::kForward,
+                            start_modes_, query_.pedestrianProfile_,
+                            query_.elevationCosts_, query_.maxMatchingDistance_,
+                            std::chrono::seconds{query_.maxPreTransitTime_}),
       .td_dest_walk_ =
-          e_ != nullptr
-              ? std::visit(
-                    utl::overloaded{
-                        [&](tt_location) { return td_offsets_t{}; },
-                        [&](osr::location const& pos) {
-                          auto const dir = query_.arriveBy_
-                                               ? osr::direction::kForward
-                                               : osr::direction::kBackward;
-                          return r_.get_td_offsets(
-                              *e_, pos, dir, dest_modes_,
-                              query_.pedestrianProfile_ ==
-                                  api::PedestrianProfileEnum::WHEELCHAIR,
-                              query_.maxMatchingDistance_,
-                              std::chrono::seconds{query_.maxPostTransitTime_});
-                        }},
-                    dest_)
-              : td_offsets_t{},
+          r_.get_td_offsets(e_, dest_,
+                            query_.arriveBy_ ? osr::direction::kForward
+                                             : osr::direction::kBackward,
+                            dest_modes_, query_.pedestrianProfile_,
+                            query_.elevationCosts_, query_.maxMatchingDistance_,
+                            std::chrono::seconds{query_.maxPostTransitTime_}),
       .odm_start_short_ = query_.arriveBy_ ? get_td_offsets(to_rides_short)
                                            : get_td_offsets(from_rides_short),
       .odm_start_long_ = query_.arriveBy_ ? get_td_offsets(to_rides_long)
@@ -679,7 +642,8 @@ api::plan_response meta_router::run() {
                odm_time(a.legs_.front()) == odm_time(b.legs_.front()) &&
                odm_time(a.legs_.back()) == odm_time(b.legs_.back());
       });
-  fmt::println("[routing] interval searched: {}", pt_result.interval_);
+  n::log(n::log_lvl::debug, "motis.odm", "[routing] interval searched: {}",
+         pt_result.interval_);
   print_time(routing_start, "[routing]");
 
   // whitelisting
@@ -689,7 +653,8 @@ api::plan_response meta_router::run() {
   if (blacklisted) {
     extract_rides();
     try {
-      fmt::println("[whitelisting] request for {} events", p->n_events());
+      n::log(n::log_lvl::debug, "motis.odm",
+             "[whitelisting] request for {} events", p->n_events());
       boost::asio::co_spawn(
           ioc2,
           [&]() -> boost::asio::awaitable<void> {
@@ -701,7 +666,8 @@ api::plan_response meta_router::run() {
           boost::asio::detached);
       ioc2.run();
     } catch (std::exception const& e) {
-      fmt::println("[whitelisting] networking failed: {}", e.what());
+      n::log(n::log_lvl::debug, "motis.odm",
+             "[whitelisting] networking failed: {}", e.what());
       whitelist_response = std::nullopt;
     }
   }
@@ -715,7 +681,8 @@ api::plan_response meta_router::run() {
     add_direct();
   } else {
     p->odm_journeys_.clear();
-    fmt::println("[whitelisting] failed, discarding ODM journeys");
+    n::log(n::log_lvl::debug, "motis.odm",
+           "[whitelisting] failed, discarding ODM journeys");
   }
   print_time(
       wl_start,
@@ -723,8 +690,9 @@ api::plan_response meta_router::run() {
                   p->from_rides_.size(), p->to_rides_.size(),
                   p->direct_rides_.size()));
 
-  fmt::println("[mixing] {} PT journeys and {} ODM journeys",
-               pt_result.journeys_.size(), p->odm_journeys_.size());
+  n::log(n::log_lvl::debug, "motis.odm",
+         "[mixing] {} PT journeys and {} ODM journeys",
+         pt_result.journeys_.size(), p->odm_journeys_.size());
   kMixer.mix(pt_result.journeys_, p->odm_journeys_);
   print_time(mixing_start, "[mixing]");
 
@@ -741,13 +709,12 @@ api::plan_response meta_router::run() {
               [&, cache = street_routing_cache_t{}](auto&& j) mutable {
                 return journey_to_response(
                     r_.w_, r_.l_, r_.pl_, *tt_, *r_.tags_, e_, rtt_,
-                    r_.matches_, r_.shapes_, gbfs_rd_,
-                    query_.pedestrianProfile_ ==
-                        api::PedestrianProfileEnum::WHEELCHAIR,
-                    j, start_, dest_, cache, *ep::blocked,
+                    r_.matches_, r_.elevations_, r_.shapes_, gbfs_rd_,
+                    query_.pedestrianProfile_, query_.elevationCosts_, j,
+                    start_, dest_, cache, ep::blocked.get(),
                     query_.detailedTransfers_, query_.withFares_,
                     r_.config_.timetable_->max_matching_distance_,
-                    query_.maxMatchingDistance_);
+                    query_.maxMatchingDistance_, api_version_);
               }),
           .previousPageCursor_ =
               fmt::format("EARLIER|{}", to_seconds(pt_result.interval_.from_)),

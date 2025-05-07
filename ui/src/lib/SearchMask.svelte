@@ -9,8 +9,10 @@
 	import { posToLocation, type Location } from '$lib/Location';
 	import { t } from '$lib/i18n/translation';
 	import AdvancedOptions from './AdvancedOptions.svelte';
+	import maplibregl from 'maplibre-gl';
 
 	let {
+		geocodingBiasPlace,
 		from = $bindable(),
 		to = $bindable(),
 		time = $bindable(),
@@ -18,8 +20,10 @@
 		wheelchair = $bindable(),
 		bikeRental = $bindable(),
 		bikeCarriage = $bindable(),
+		carCarriage = $bindable(),
 		selectedModes = $bindable()
 	}: {
+		geocodingBiasPlace?: maplibregl.LngLatLike;
 		from: Location;
 		to: Location;
 		time: Date;
@@ -27,6 +31,7 @@
 		wheelchair: boolean;
 		bikeRental: boolean;
 		bikeCarriage: boolean;
+		carCarriage: boolean;
 		selectedModes: string[];
 	} = $props();
 
@@ -47,8 +52,20 @@
 </script>
 
 <div id="searchmask-container" class="flex flex-col space-y-4 p-4 relative">
-	<AddressTypeahead name="from" placeholder={t.from} bind:selected={from} bind:items={fromItems} />
-	<AddressTypeahead name="to" placeholder={t.to} bind:selected={to} bind:items={toItems} />
+	<AddressTypeahead
+		place={geocodingBiasPlace}
+		name="from"
+		placeholder={t.from}
+		bind:selected={from}
+		bind:items={fromItems}
+	/>
+	<AddressTypeahead
+		place={geocodingBiasPlace}
+		name="to"
+		placeholder={t.to}
+		bind:selected={to}
+		bind:items={toItems}
+	/>
 	<Button
 		variant="ghost"
 		class="absolute z-10 right-4 top-0"
@@ -96,6 +113,12 @@
 				<span>{t.arrival}</span>
 			</Label>
 		</RadioGroup.Root>
-		<AdvancedOptions bind:wheelchair bind:bikeRental bind:bikeCarriage bind:selectedModes />
+		<AdvancedOptions
+			bind:wheelchair
+			bind:bikeRental
+			bind:bikeCarriage
+			bind:carCarriage
+			bind:selectedModes
+		/>
 	</div>
 </div>

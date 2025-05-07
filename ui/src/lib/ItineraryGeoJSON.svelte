@@ -6,7 +6,7 @@
 	import polyline from 'polyline';
 	import { colord } from 'colord';
 
-	const PRECISION = 7;
+	const PRECISION = 6;
 
 	function isIndividualTransport(m: Mode): boolean {
 		return m == 'WALK' || m == 'BIKE' || m == 'CAR';

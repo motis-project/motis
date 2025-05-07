@@ -9,6 +9,7 @@
 #include "utl/zip.h"
 
 #include "nigiri/common/parse_time.h"
+#include "nigiri/logging.h"
 #include "nigiri/timetable.h"
 
 #include "motis/odm/odm.h"
@@ -169,7 +170,8 @@ bool prima::blacklist_update(std::string_view json) {
       with_errors |= update_pt_rides(from_rides_, prev_from_rides_,
                                      o.at("start").as_array());
     } else {
-      fmt::println(
+      n::log(
+          n::log_lvl::debug, "motis.odm",
           "[blacklisting] from_rides_.size() != n_pt_updates_from ({} != {})",
           from_rides_.size(), n_pt_updates_from);
       with_errors = true;
@@ -181,9 +183,9 @@ bool prima::blacklist_update(std::string_view json) {
       with_errors |=
           update_pt_rides(to_rides_, prev_to_rides_, o.at("target").as_array());
     } else {
-      fmt::println(
-          "[blacklisting] to_rides_.size() != n_pt_updates_to ({} != {})",
-          to_rides_.size(), n_pt_updates_to);
+      n::log(n::log_lvl::debug, "motis.odm",
+             "[blacklisting] to_rides_.size() != n_pt_updates_to ({} != {})",
+             to_rides_.size(), n_pt_updates_to);
       with_errors = true;
       to_rides_.clear();
     }
@@ -192,7 +194,8 @@ bool prima::blacklist_update(std::string_view json) {
       with_errors |= update_direct_rides(direct_rides_, prev_direct_rides_,
                                          o.at("direct").as_array());
     } else {
-      fmt::println(
+      n::log(
+          n::log_lvl::debug, "motis.odm",
           "[blacklisting] direct_rides_.size() != n_direct_updates ({} != {})",
           direct_rides_.size(), o.at("direct").as_array().size());
       with_errors = true;
@@ -200,12 +203,13 @@ bool prima::blacklist_update(std::string_view json) {
     }
 
   } catch (std::exception const&) {
-    fmt::println("[blacklisting] could not parse response: {}", json);
+    n::log(n::log_lvl::debug, "motis.odm",
+           "[blacklisting] could not parse response: {}", json);
     return false;
   }
   if (with_errors) {
-    fmt::println("[blacklisting] parsed response with invalid values: {}",
-                 json);
+    n::log(n::log_lvl::debug, "motis.odm",
+           "[blacklisting] parsed response with invalid values: {}", json);
   }
   return true;
 }
@@ -219,8 +223,9 @@ bool update_pt_rides(std::vector<nigiri::routing::start>& rides,
 
   auto const n_pt_udpates = n_pt_updates(update);
   if (prev_rides.size() != n_pt_udpates) {
-    fmt::println("[whitelisting] #rides != #updates ({} != {})",
-                 prev_rides.size(), n_pt_udpates);
+    n::log(n::log_lvl::debug, "motis.odm",
+           "[whitelisting] #rides != #updates ({} != {})", prev_rides.size(),
+           n_pt_udpates);
     return true;
   }
 
@@ -256,8 +261,9 @@ bool update_pt_rides(std::vector<nigiri::routing::start>& rides,
 bool update_direct_rides(std::vector<direct_ride>& rides,
                          json::array const& update) {
   if (rides.size() != update.size()) {
-    fmt::println("[whitelisting] #rides != #updates ({} != {})", rides.size(),
-                 update.size());
+    n::log(n::log_lvl::debug, "motis.odm",
+           "[whitelisting] #rides != #updates ({} != {})", rides.size(),
+           update.size());
     rides.clear();
     return true;
   }
@@ -284,11 +290,13 @@ bool prima::whitelist_update(std::string_view json) {
     with_errors |=
         update_direct_rides(direct_rides_, o.at("direct").as_array());
   } catch (std::exception const&) {
-    fmt::println("[whitelisting] could not parse response: {}", json);
+    n::log(n::log_lvl::debug, "motis.odm",
+           "[whitelisting] could not parse response: {}", json);
     return false;
   }
   if (with_errors) {
-    fmt::println("[whitelisting] parsed response with errors: {}", json);
+    n::log(n::log_lvl::debug, "motis.odm",
+           "[whitelisting] parsed response with errors: {}", json);
   }
   return true;
 }

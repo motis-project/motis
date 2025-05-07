@@ -13,6 +13,7 @@
 #include "adr/reverse.h"
 #include "adr/typeahead.h"
 
+#include "osr/elevation_storage.h"
 #include "osr/lookup.h"
 #include "osr/platforms.h"
 #include "osr/ways.h"
@@ -51,13 +52,16 @@ rt::~rt() = default;
 std::ostream& operator<<(std::ostream& out, data const& d) {
   return out << "\nt=" << d.t_.get() << "\nr=" << d.r_ << "\ntc=" << d.tc_
              << "\nw=" << d.w_ << "\npl=" << d.pl_ << "\nl=" << d.l_
-             << "\ntt=" << d.tt_.get() << "\nlocation_rtee=" << d.location_rtee_
+             << "\ntt=" << d.tt_.get()
+             << "\nlocation_rtee=" << d.location_rtree_
              << "\nelevator_nodes=" << d.elevator_nodes_
              << "\nmatches=" << d.matches_ << "\nrt=" << d.rt_ << "\n";
 }
 
 data::data(std::filesystem::path p)
-    : path_{std::move(p)}, config_{config::read(path_ / "config.yml")} {}
+    : path_{std::move(p)},
+      config_{config::read(path_ / "config.yml")},
+      metrics_{std::make_unique<prometheus::Registry>()} {}
 
 data::data(std::filesystem::path p, config const& c)
     : path_{std::move(p)}, config_{c} {
@@ -81,8 +85,8 @@ data::data(std::filesystem::path p, config const& c)
 
   verify_version(c.timetable_.has_value(), "tt", n_version());
   verify_version(c.geocoding_ || c.reverse_geocoding_, "adr", adr_version());
-  verify_version(c.street_routing_, "osr", osr_version());
-  verify_version(c.street_routing_ && c.timetable_, "matches",
+  verify_version(c.use_street_routing(), "osr", osr_version());
+  verify_version(c.use_street_routing() && c.timetable_, "matches",
                  matches_version());
   verify_version(c.tiles_.has_value(), "tiles", tiles_version());
   verify_version(c.osr_footpath_, "osr_footpath", osr_footpath_version());
@@ -115,32 +119,33 @@ data::data(std::filesystem::path p, config const& c)
   });
 
   auto street_routing = std::async(std::launch::async, [&]() {
-    if (c.street_routing_) {
+    if (c.use_street_routing()) {
       load_osr();
     }
   });
 
   auto matches = std::async(std::launch::async, [&]() {
-    if (c.street_routing_ && c.timetable_) {
+    if (c.use_street_routing() && c.timetable_) {
       load_matches();
     }
   });
 
   auto elevators = std::async(std::launch::async, [&]() {
-    if (c.elevators_) {
+    if (c.has_elevators()) {
       street_routing.wait();
       rt_->e_ = std::make_unique<motis::elevators>(
           *w_, *elevator_nodes_, vector_map<elevator_idx_t, elevator>{});
 
-      if (c.elevators_->init_) {
+      if (c.get_elevators()->init_) {
         tt.wait();
         auto new_rtt = std::make_unique<n::rt_timetable>(
             n::rt::create_rt_timetable(*tt_, rt_->rtt_->base_day_));
-        rt_->e_ = update_elevators(c, *this,
-                                   cista::mmap{c.elevators_->init_->c_str(),
-                                               cista::mmap::protection::READ}
-                                       .view(),
-                                   *new_rtt);
+        rt_->e_ =
+            update_elevators(c, *this,
+                             cista::mmap{c.get_elevators()->init_->c_str(),
+                                         cista::mmap::protection::READ}
+                                 .view(),
+                             *new_rtt);
         rt_->rtt_ = std::move(new_rtt);
       }
     }
@@ -199,6 +204,9 @@ void data::load_osr() {
   w_ = std::make_unique<osr::ways>(osr_path, cista::mmap::protection::READ);
   l_ = std::make_unique<osr::lookup>(*w_, osr_path,
                                      cista::mmap::protection::READ);
+  if (config_.get_street_routing()->elevation_data_dir_.has_value()) {
+    elevations_ = osr::elevation_storage::try_open(osr_path);
+  }
   elevator_nodes_ =
       std::make_unique<hash_set<osr::node_idx_t>>(get_elevator_nodes(*w_));
   pl_ =
@@ -209,8 +217,8 @@ void data::load_osr() {
 void data::load_tt(fs::path const& p) {
   tags_ = tag_lookup::read(path_ / "tags.bin");
   tt_ = n::timetable::read(path_ / p);
-  tt_->locations_.resolve_timezones();
-  location_rtee_ = std::make_unique<point_rtree<n::location_idx_t>>(
+  tt_->resolve();
+  location_rtree_ = std::make_unique<point_rtree<n::location_idx_t>>(
       create_location_rtree(*tt_));
   init_rtt();
 }

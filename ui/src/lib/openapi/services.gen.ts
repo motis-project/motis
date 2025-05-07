@@ -11,7 +11,7 @@ export const client = createClient(createConfig());
 export const plan = <ThrowOnError extends boolean = false>(options: Options<PlanData, ThrowOnError>) => {
     return (options?.client ?? client).get<PlanResponse, PlanError, ThrowOnError>({
         ...options,
-        url: '/api/v1/plan'
+        url: '/api/v2/plan'
     });
 };
 
@@ -65,7 +65,7 @@ export const geocode = <ThrowOnError extends boolean = false>(options: Options<G
 export const trip = <ThrowOnError extends boolean = false>(options: Options<TripData, ThrowOnError>) => {
     return (options?.client ?? client).get<TripResponse, TripError, ThrowOnError>({
         ...options,
-        url: '/api/v1/trip'
+        url: '/api/v2/trip'
     });
 };
 

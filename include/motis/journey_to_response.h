@@ -34,17 +34,20 @@ api::Itinerary journey_to_response(osr::ways const*,
                                    elevators const* e,
                                    nigiri::rt_timetable const*,
                                    platform_matches_t const* matches,
+                                   osr::elevation_storage const*,
                                    nigiri::shapes_storage const*,
                                    gbfs::gbfs_routing_data&,
-                                   bool const wheelchair,
+                                   api::PedestrianProfileEnum,
+                                   api::ElevationCostsEnum,
                                    nigiri::routing::journey const&,
                                    place_t const& start,
                                    place_t const& dest,
                                    street_routing_cache_t&,
-                                   osr::bitvec<osr::node_idx_t>& blocked_mem,
+                                   osr::bitvec<osr::node_idx_t>* blocked_mem,
                                    bool detailed_transfers,
                                    bool with_fares,
                                    double timetable_max_matching_distance,
-                                   double max_matching_distance);
+                                   double max_matching_distance,
+                                   unsigned api_version);
 
 }  // namespace motis
