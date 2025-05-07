@@ -104,7 +104,8 @@ bool mixer::cost_dominates(nr::journey const& a, nr::journey const& b) const {
   auto const ret = dist < max_distance_ && cost_a + alpha_term < cost_b;
   if (kMixerTracing) {
     fmt::println(
-        "{} cost-dominates {}, ratio: {}, dist: {}, {} + {} < {} --> {}",
+        "{} cost-dominates {}, ratio: {:.2f}, dist: {}, {:.2f} + {:.2f} < "
+        "{:.2f} --> {}",
         label(a), label(b), time_ratio, dist, cost_a, alpha_term, cost_b,
         ret ? "true" : "false");
   }
