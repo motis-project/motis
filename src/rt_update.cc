@@ -22,6 +22,7 @@
 #include "motis/data.h"
 #include "motis/elevators/update_elevators.h"
 #include "motis/http_req.h"
+#include "motis/metrics_registry.h"
 #include "motis/railviz.h"
 #include "motis/tag_lookup.h"
 
@@ -232,13 +233,14 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
 
         auto const endpoints = [&]() {
           auto endpoints = std::vector<gtfs_rt_endpoint>{};
-          auto const metic_families = rt_metric_families{*d.metrics_};
+          auto const metric_families =
+              rt_metric_families{d.metrics_->registry_};
           for (auto const& [tag, dataset] : c.timetable_->datasets_) {
             if (dataset.rt_.has_value()) {
               auto const src = d.tags_->get_src(tag);
               for (auto const& ep : *dataset.rt_) {
                 endpoints.push_back(
-                    {ep, src, tag, gtfsrt_metrics{tag, metic_families}});
+                    {ep, src, tag, gtfsrt_metrics{tag, metric_families}});
               }
             }
           }

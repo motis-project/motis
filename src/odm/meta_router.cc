@@ -35,6 +35,7 @@
 #include "motis/gbfs/routing_data.h"
 #include "motis/http_req.h"
 #include "motis/journey_to_response.h"
+#include "motis/metrics_registry.h"
 #include "motis/odm/bounds.h"
 #include "motis/odm/mixer.h"
 #include "motis/odm/odm.h"
@@ -672,6 +673,10 @@ api::plan_response meta_router::run() {
          "[mixing] {} PT journeys and {} ODM journeys",
          pt_result.journeys_.size(), p->odm_journeys_.size());
   kMixer.mix(pt_result.journeys_, p->odm_journeys_);
+
+  r_.metrics_->routing_odm_journeys_found_.Increment(static_cast<double>(
+      p->odm_journeys_.size() - pt_result.journeys_.size()));
+
   print_time(mixing_start, "[mixing]");
 
   // remove journeys added for mixing context
@@ -679,12 +684,23 @@ api::plan_response meta_router::run() {
     return !search_intvl.contains(j.start_time_);
   });
 
+  r_.metrics_->routing_journeys_found_.Increment(
+      static_cast<double>(p->odm_journeys_.size()));
+  r_.metrics_->routing_execution_duration_seconds_.Observe(
+      static_cast<double>(std::chrono::duration_cast<std::chrono::milliseconds>(
+                              std::chrono::steady_clock::now() - init_start)
+                              .count()) /
+      1000.0);
+
   return {.from_ = from_place_,
           .to_ = to_place_,
           .direct_ = std::move(direct_),
           .itineraries_ = utl::to_vec(
               p->odm_journeys_,
               [&, cache = street_routing_cache_t{}](auto&& j) mutable {
+                r_.metrics_->routing_journey_duration_seconds_.Observe(
+                    static_cast<double>(
+                        to_seconds(j.arrival_time() - j.departure_time())));
                 return journey_to_response(
                     r_.w_, r_.l_, r_.pl_, *tt_, *r_.tags_, e_, rtt_,
                     r_.matches_, r_.elevations_, r_.shapes_, gbfs_rd_,

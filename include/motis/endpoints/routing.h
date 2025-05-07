@@ -17,6 +17,7 @@
 #include "motis/elevators/elevators.h"
 #include "motis/fwd.h"
 #include "motis/match_platforms.h"
+#include "motis/metrics_registry.h"
 #include "motis/place.h"
 
 namespace motis::ep {
@@ -112,6 +113,7 @@ struct routing {
   nigiri::shapes_storage const* shapes_;
   std::shared_ptr<gbfs::gbfs_data> const& gbfs_;
   odm::bounds const* odm_bounds_;
+  metrics_registry* metrics_;
 };
 
 }  // namespace motis::ep

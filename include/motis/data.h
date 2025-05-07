@@ -2,8 +2,6 @@
 
 #include <memory>
 
-#include "prometheus/registry.h"
-
 #include "cista/memory_holder.h"
 
 #include "date/date.h"
@@ -17,6 +15,7 @@
 #include "motis/fwd.h"
 #include "motis/gbfs/data.h"
 #include "motis/match_platforms.h"
+#include "motis/metrics_registry.h"
 #include "motis/types.h"
 
 namespace motis {
@@ -91,7 +90,7 @@ struct data {
   std::shared_ptr<rt> rt_{std::make_shared<rt>()};
   std::shared_ptr<gbfs::gbfs_data> gbfs_{};
   ptr<odm::bounds> odm_bounds_;
-  ptr<prometheus::Registry> metrics_{std::make_unique<prometheus::Registry>()};
+  ptr<metrics_registry> metrics_{std::make_unique<metrics_registry>()};
 };
 
 }  // namespace motis

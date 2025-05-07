@@ -61,7 +61,7 @@ std::ostream& operator<<(std::ostream& out, data const& d) {
 data::data(std::filesystem::path p)
     : path_{std::move(p)},
       config_{config::read(path_ / "config.yml")},
-      metrics_{std::make_unique<prometheus::Registry>()} {}
+      metrics_{std::make_unique<metrics_registry>()} {}
 
 data::data(std::filesystem::path p, config const& c)
     : path_{std::move(p)}, config_{c} {
