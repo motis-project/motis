@@ -137,10 +137,12 @@
 			(urlParams?.get('selectedTransitModes')?.split(',') as Mode[])) ||
 			[]
 	);
-	let firstMileMode: Mode = $state((urlParams?.get('firstMileMode') ?? 'WALK') as Mode);
-	let lastMileMode: Mode = $state((urlParams?.get('lastMileMode') ?? 'WALK') as Mode);
-	let directModes: Mode[] = $state((urlParams?.get('directModes')?.split(',') ?? []) as Mode[]);
-	let elevationCosts = $state((urlParams?.get('elevationCosts') ?? 'NONE') as ElevationCosts);
+	let firstMileMode = $state<Mode>((urlParams?.get('firstMileMode') ?? 'WALK') as Mode);
+	let lastMileMode = $state<Mode>((urlParams?.get('lastMileMode') ?? 'WALK') as Mode);
+	let directModes = $state<Mode[]>((urlParams?.get('directModes')?.split(',') ?? []) as Mode[]);
+	let elevationCosts = $state<ElevationCosts>(
+		(urlParams?.get('elevationCosts') ?? 'NONE') as ElevationCosts
+	);
 
 	const toPlaceString = (l: Location) => {
 		if (l.value.match?.type === 'STOP') {
@@ -174,13 +176,13 @@
 						arriveBy: timeType === 'arrival',
 						timetableView: true,
 						pedestrianProfile: wheelchair ? 'WHEELCHAIR' : 'FOOT',
-						preTransitModes: preTransitModes,
-						postTransitModes: postTransitModes,
+						preTransitModes,
+						postTransitModes,
 						directModes: requestDirectModes,
 						requireBikeTransport: bikeCarriage,
 						requireCarTransport: carCarriage,
 						transitModes: selectedTransitModes.length ? selectedTransitModes : undefined,
-						elevationCosts: elevationCosts,
+						elevationCosts,
 						useRoutedTransfers: true,
 						maxMatchingDistance: wheelchair ? 8 : 250
 					}
@@ -203,16 +205,16 @@
 					{
 						from: JSON.stringify(from?.value?.match),
 						to: JSON.stringify(to?.value?.match),
-						time: time,
+						time,
 						arriveBy: timeType === 'arrival',
-						wheelchair: wheelchair,
-						bikeRental: bikeRental,
-						bikeCarriage: bikeCarriage,
-						carCarriage: carCarriage,
-						firstMileMode: firstMileMode,
-						lastMileMode: lastMileMode,
-						noTransitModes: directModes.join(','),
-						elevationCosts: elevationCosts,
+						wheelchair,
+						bikeRental,
+						bikeCarriage,
+						carCarriage,
+						firstMileMode,
+						lastMileMode,
+						directModes: directModes.join(','),
+						elevationCosts,
 						selectedTransitModes: selectedTransitModes.join(',')
 					},
 					{},
