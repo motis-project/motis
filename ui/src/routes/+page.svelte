@@ -13,8 +13,7 @@
 		type ElevationCosts,
 		type PlanResponse,
 		type Mode,
-		type PlanData,
-		ModeSchema
+		type PlanData
 	} from '$lib/openapi';
 	import ItineraryList from '$lib/ItineraryList.svelte';
 	import ConnectionDetail from '$lib/ConnectionDetail.svelte';
