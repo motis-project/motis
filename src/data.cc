@@ -65,7 +65,9 @@ data::data(std::filesystem::path p)
       metrics_{std::make_unique<metrics_registry>()} {}
 
 data::data(std::filesystem::path p, config const& c)
-    : path_{std::move(p)}, config_{c} {
+    : path_{std::move(p)},
+      config_{c},
+      metrics_{std::make_unique<metrics_registry>()} {
   auto const verify_version = [&](bool cond, char const* name, auto&& ver) {
     if (!cond) {
       return;
