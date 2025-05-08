@@ -981,8 +981,11 @@ An itinerary \`Leg\` references the index of the fare transfer and the index of 
         rule: {
             '$ref': '#/components/schemas/FareTransferRule'
         },
-        transferProduct: {
-            '$ref': '#/components/schemas/FareProduct'
+        transferProducts: {
+            type: 'array',
+            items: {
+                '$ref': '#/components/schemas/FareProduct'
+            }
         },
         effectiveFareLegProducts: {
             description: `Lists all valid fare products for the effective fare legs.
@@ -996,7 +999,10 @@ and the inner array as OR (you can choose which ticket to buy)
             items: {
                 type: 'array',
                 items: {
-                    '$ref': '#/components/schemas/FareProduct'
+                    type: 'array',
+                    items: {
+                        '$ref': '#/components/schemas/FareProduct'
+                    }
                 }
             }
         }

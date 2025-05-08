@@ -141,13 +141,12 @@
 					class:list-disc={productOptions.length > 1}
 					class:list-inside={productOptions.length > 1}
 				>
-					{#each productOptions as product}
-						<li>
-							{#if productOptions.length == 1}
-								{t.ticket}
-							{/if}
-							{@render productInfo(product)}
-						</li>
+					{#each productOptions as products}
+						{#each products as product}
+							<li>
+								{@render productInfo(product)}
+							</li>
+						{/each}
 					{/each}
 				</ul>
 			{/if}
@@ -178,14 +177,16 @@
 						{#if pred.distance}
 							({Math.round(pred.distance)} m)
 						{/if}
-						{#if prevTransitLeg?.fareTransferIndex != undefined && itinerary.fareTransfers && itinerary.fareTransfers[prevTransitLeg.fareTransferIndex].transferProduct}
-							{@const transferProduct =
-								itinerary.fareTransfers[prevTransitLeg.fareTransferIndex].transferProduct!}
+						{#if prevTransitLeg?.fareTransferIndex != undefined && itinerary.fareTransfers && itinerary.fareTransfers[prevTransitLeg.fareTransferIndex].transferProducts}
+							{@const transferProducts =
+								itinerary.fareTransfers[prevTransitLeg.fareTransferIndex].transferProducts!}
 							{#if prevTransitLeg.effectiveFareLegIndex === 0 && l.effectiveFareLegIndex === 1}
 								<br />
 								<span class="text-xs font-bold text-foreground">
 									Ticket: {pred.effectiveFareLegIndex}
-									{@render productInfo(transferProduct)}
+									{#each transferProducts as transferProduct}
+										{@render productInfo(transferProduct)}
+									{/each}
 								</span>
 							{/if}
 						{/if}
