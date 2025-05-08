@@ -671,7 +671,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
 
     metrics_->routing_journeys_found_.Increment(
         static_cast<double>(r.journeys_->size()));
-    metrics_->routing_execution_duration_seconds_.Observe(
+    metrics_->routing_execution_duration_seconds_total_.Observe(
         static_cast<double>(r.search_stats_.execute_time_.count()) / 1000.0);
 
     return {
