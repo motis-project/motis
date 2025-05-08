@@ -21,6 +21,7 @@
 
 #include "motis/constants.h"
 #include "motis/endpoints/routing.h"
+#include "motis/flex.h"
 #include "motis/gbfs/data.h"
 #include "motis/gbfs/mode.h"
 #include "motis/gbfs/osr_profile.h"
@@ -93,6 +94,10 @@ td_offsets_t get_td_offsets(routing const& r,
   auto ret = hash_map<n::location_idx_t, std::vector<n::routing::td_offset>>{};
   for (auto const m : modes) {
     if (m == api::ModeEnum::ODM) {
+      continue;
+    } else if (m == api::ModeEnum::FLEX) {
+      add_flex_td_offsets(r, pos, dir, pedestrian_profile,
+                          max_matching_distance, max);
       continue;
     }
 
