@@ -1,5 +1,5 @@
 <script lang="ts">
-	import maplibregl from 'maplibre-gl';
+	import maplibregl, { type LngLatLike } from 'maplibre-gl';
 	import { setContext, untrack, type Snippet } from 'svelte';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import { createShield } from './shield';
@@ -32,8 +32,36 @@
 	let ctx = $state<{ map: maplibregl.Map | undefined }>({ map: undefined });
 	setContext('map', ctx);
 
-	let currentZoom: number | undefined = undefined;
-	let currentCenter: maplibregl.LngLatLike | undefined = undefined;
+	let currentZoom = $state.snapshot(zoom);
+	let currentCenter = $state.snapshot(center);
+
+	const updateZoom = () => {
+		if (map && $state.snapshot(zoom) !== currentZoom) {
+			currentZoom = map.getZoom();
+			map.setZoom(zoom);
+		}
+	};
+
+	const updateCenter = () => {
+		if (
+			map &&
+			center.toString() !=
+				maplibregl.LngLat.convert(currentCenter as maplibregl.LngLatLike).toString()
+		) {
+			currentCenter = map.getCenter();
+			map.setCenter(center);
+		}
+	};
+
+	const updateStyle = () => {
+		if (style != currStyle) {
+			if (!ctx.map && el) {
+				createMap(el);
+			} else if (ctx.map) {
+				ctx.map.setStyle(style || null);
+			}
+		}
+	};
 
 	const createMap = (container: HTMLElement) => {
 		if (!style) {
@@ -71,25 +99,23 @@
 			);
 
 			tmp.on('load', () => {
-				tmp.setZoom(zoom);
-				tmp.setCenter(center);
-				currentZoom = zoom;
-				currentCenter = center;
-				bounds = tmp.getBounds();
-				currStyle = style;
 				map = tmp;
 				ctx.map = tmp;
-				currentZoom = zoom;
-			});
+				updateZoom();
+				updateCenter();
+				bounds = tmp.getBounds();
+				currStyle = style;
 
-			tmp.on('moveend', () =>
-				untrack(async () => {
+				tmp.on('moveend', () => {
 					zoom = tmp.getZoom();
 					currentZoom = zoom;
-					bounds = tmp.getBounds();
+
 					center = tmp.getCenter();
-				})
-			);
+					currentCenter = center;
+
+					bounds = tmp.getBounds();
+				});
+			});
 		} catch (e) {
 			console.log(e);
 		}
@@ -102,29 +128,9 @@
 		};
 	};
 
-	$effect(() => {
-		if (style != currStyle) {
-			if (!ctx.map && el) {
-				createMap(el);
-			} else if (ctx.map) {
-				ctx.map.setStyle(style || null);
-			}
-		}
-	});
-
-	$effect(() => {
-		if (map && $state.snapshot(zoom) !== currentZoom) {
-			map.setZoom(zoom);
-			currentZoom = zoom;
-		}
-	});
-
-	$effect(() => {
-		if (map && center != currentCenter) {
-			map.setCenter(center);
-			currentCenter = center;
-		}
-	});
+	$effect(updateStyle);
+	$effect(updateZoom);
+	$effect(updateCenter);
 </script>
 
 <div use:createMap bind:this={el} class={className}>
