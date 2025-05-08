@@ -1,6 +1,6 @@
 <script lang="ts">
-	import maplibregl, { type LngLatLike } from 'maplibre-gl';
-	import { setContext, untrack, type Snippet } from 'svelte';
+	import maplibregl from 'maplibre-gl';
+	import { setContext, type Snippet } from 'svelte';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import { createShield } from './shield';
 
