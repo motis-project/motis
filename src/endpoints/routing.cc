@@ -5,6 +5,7 @@
 #include "boost/thread/tss.hpp"
 
 #include "prometheus/counter.h"
+#include "prometheus/histogram.h"
 
 #include "utl/erase_duplicates.h"
 #include "utl/helpers/algorithm.h"
@@ -29,6 +30,7 @@
 #include "motis/gbfs/routing_data.h"
 #include "motis/journey_to_response.h"
 #include "motis/max_distance.h"
+#include "motis/metrics_registry.h"
 #include "motis/mode_to_profile.h"
 #include "motis/odm/meta_router.h"
 #include "motis/parse_location.h"

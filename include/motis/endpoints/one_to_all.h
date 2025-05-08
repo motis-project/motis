@@ -5,7 +5,6 @@
 #include "motis-api/motis-api.h"
 #include "motis/data.h"
 #include "motis/fwd.h"
-#include "motis/metrics_registry.h"
 
 namespace motis::ep {
 

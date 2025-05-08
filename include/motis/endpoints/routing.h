@@ -17,7 +17,6 @@
 #include "motis/elevators/elevators.h"
 #include "motis/fwd.h"
 #include "motis/match_platforms.h"
-#include "motis/metrics_registry.h"
 #include "motis/place.h"
 
 namespace motis::ep {

@@ -28,6 +28,7 @@
 #include "motis/elevators/update_elevators.h"
 #include "motis/hashes.h"
 #include "motis/match_platforms.h"
+#include "motis/metrics_registry.h"
 #include "motis/odm/bounds.h"
 #include "motis/point_rtree.h"
 #include "motis/railviz.h"
