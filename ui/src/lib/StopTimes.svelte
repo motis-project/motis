@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { stoptimes, type StoptimesError, type StoptimesResponse } from '$lib/openapi';
+	import { stoptimes, type StoptimesError, type StoptimesResponse } from '$lib/api/openapi';
 	import LoaderCircle from 'lucide-svelte/icons/loader-circle';
 	import ArrowRight from 'lucide-svelte/icons/arrow-right';
 	import CircleX from 'lucide-svelte/icons/circle-x';

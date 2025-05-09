@@ -3,7 +3,7 @@
 	import { RadioGroup, Item } from '$lib/components/ui/radio-group/index';
 	import { lngLatToStr } from '$lib/lngLatToStr';
 	import Control from '$lib/map/Control.svelte';
-	import { levels } from '$lib/openapi';
+	import { levels } from '$lib/api/openapi';
 	import type { LngLatBoundsLike } from 'maplibre-gl';
 	import maplibregl from 'maplibre-gl';
 

@@ -3,7 +3,7 @@ import { twMerge } from 'tailwind-merge';
 import { browser } from '$app/environment';
 import { pushState, replaceState } from '$app/navigation';
 import { page } from '$app/state';
-import { trip } from '$lib/openapi';
+import { trip } from '$lib/api/openapi';
 
 export function cn(...inputs: ClassValue[]) {
 	return twMerge(clsx(inputs));
