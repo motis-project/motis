@@ -2361,8 +2361,10 @@ components:
       properties:
         rule:
           $ref: '#/components/schemas/FareTransferRule'
-        transferProduct:
-          $ref: '#/components/schemas/FareProduct'
+        transferProducts:
+          type: array
+          items:
+            $ref: '#/components/schemas/FareProduct'
         effectiveFareLegProducts:
           description: |
             Lists all valid fare products for the effective fare legs.
@@ -2376,7 +2378,9 @@ components:
           items:
             type: array
             items:
-              $ref: '#/components/schemas/FareProduct'
+              type: array
+              items:
+                $ref: '#/components/schemas/FareProduct'
 
     Itinerary:
       type: object

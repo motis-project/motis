@@ -783,7 +783,7 @@ export type FareTransferRule = 'A_AB' | 'A_AB_B' | 'AB';
  */
 export type FareTransfer = {
     rule?: FareTransferRule;
-    transferProduct?: FareProduct;
+    transferProducts?: Array<FareProduct>;
     /**
      * Lists all valid fare products for the effective fare legs.
      * This is an `array<array<FareProduct>>` where the inner array
@@ -793,7 +793,7 @@ export type FareTransfer = {
      * and the inner array as OR (you can choose which ticket to buy)
      *
      */
-    effectiveFareLegProducts: Array<Array<FareProduct>>;
+    effectiveFareLegProducts: Array<Array<Array<FareProduct>>>;
 };
 
 export type Itinerary = {
