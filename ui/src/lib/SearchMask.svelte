@@ -37,7 +37,7 @@
 		bikeRental: boolean;
 		bikeCarriage: boolean;
 		carCarriage: boolean;
-		selectedModes: string[];
+		selectedModes: string[] | undefined;
 		firstMileMode: Mode;
 		lastMileMode: Mode;
 		directModes: Mode[];

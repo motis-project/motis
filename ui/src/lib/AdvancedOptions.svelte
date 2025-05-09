@@ -19,7 +19,7 @@
 		lastMileMode = $bindable(),
 		directModes = $bindable()
 	}: {
-		selectedModes: string[];
+		selectedModes: string[] | undefined;
 		elevationCosts: ElevationCosts;
 		wheelchair: boolean;
 		bikeRental: boolean;
@@ -47,6 +47,9 @@
 		'FERRY',
 		'OTHER'
 	];
+	if (selectedModes === undefined) {
+		selectedModes = [...possibleModes];
+	}
 
 	const possibleElevationCosts = [
 		{ value: 'NONE' as ElevationCosts, label: t.elevationCosts.NONE },
@@ -58,7 +61,7 @@
 	const selectedModeLabel = $derived(
 		selectedModes.length != possibleModes.length
 			? modes
-					.filter((m) => selectedModes.includes(m.value))
+					.filter((m) => selectedModes?.includes(m.value))
 					.map((m) => m.label)
 					.join(', ')
 			: t.defaultSelectedModes

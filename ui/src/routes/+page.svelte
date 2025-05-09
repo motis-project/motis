@@ -132,10 +132,10 @@
 	let bikeRental = $state(urlParams?.get('bikeRental') == 'true');
 	let bikeCarriage = $state(urlParams?.get('bikeCarriage') == 'true');
 	let carCarriage = $state(urlParams?.get('carCarriage') == 'true');
-	let selectedTransitModes = $state<Mode[]>(
-		(urlParams?.get('selectedTransitModes') &&
+	let selectedTransitModes = $state<Mode[] | undefined>(
+		(urlParams?.get('selectedTransitModes') != null &&
 			(urlParams?.get('selectedTransitModes')?.split(',') as Mode[])) ||
-			[]
+			undefined
 	);
 	let firstMileMode = $state<Mode>((urlParams?.get('firstMileMode') ?? 'WALK') as Mode);
 	let lastMileMode = $state<Mode>((urlParams?.get('lastMileMode') ?? 'WALK') as Mode);
@@ -181,7 +181,7 @@
 						directModes: requestDirectModes,
 						requireBikeTransport: bikeCarriage,
 						requireCarTransport: carCarriage,
-						transitModes: selectedTransitModes.length ? selectedTransitModes : undefined,
+						transitModes: selectedTransitModes?.length ? selectedTransitModes : undefined,
 						elevationCosts,
 						useRoutedTransfers: true,
 						maxMatchingDistance: wheelchair ? 8 : 250
@@ -215,7 +215,7 @@
 						lastMileMode,
 						directModes: directModes.join(','),
 						elevationCosts,
-						selectedTransitModes: selectedTransitModes.join(',')
+						selectedTransitModes: selectedTransitModes?.join(',') ?? ''
 					},
 					{},
 					true
