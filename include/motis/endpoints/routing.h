@@ -112,6 +112,7 @@ struct routing {
   nigiri::shapes_storage const* shapes_;
   std::shared_ptr<gbfs::gbfs_data> const& gbfs_;
   odm::bounds const* odm_bounds_;
+  metrics_registry* metrics_;
 };
 
 }  // namespace motis::ep
