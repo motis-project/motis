@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { trips, type Mode, type TripSegment } from '$lib/openapi';
+	import { trips, type Mode, type TripSegment } from '$lib/api/openapi';
 	import { MapboxOverlay } from '@deck.gl/mapbox';
 	import { IconLayer } from '@deck.gl/layers';
 	import { createTripIcon } from '$lib/map/createTripIcon';
