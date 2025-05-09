@@ -7,6 +7,7 @@
 #include "fmt/std.h"
 
 #include "utl/erase.h"
+#include "utl/overloaded.h"
 #include "utl/read_file.h"
 #include "utl/verify.h"
 
@@ -96,23 +97,23 @@ config config::read(std::string const& s) {
 }
 
 void config::verify() const {
+  auto const street_routing = use_street_routing();
+
   utl::verify(!tiles_ || osm_, "feature TILES requires OpenStreetMap data");
-  utl::verify(!street_routing_ || osm_,
+  utl::verify(!street_routing || osm_,
               "feature STREET_ROUTING requires OpenStreetMap data");
   utl::verify(!timetable_ || !timetable_->datasets_.empty(),
               "feature TIMETABLE requires timetable data");
   utl::verify(
-      !osr_footpath_ || (street_routing_ && timetable_),
+      !osr_footpath_ || (street_routing && timetable_),
       "feature OSR_FOOTPATH requires features STREET_ROUTING and TIMETABLE");
-  utl::verify(
-      !elevators_ || (street_routing_ && timetable_),
-      "feature ELEVATORS requires fasta.json and features STREET_ROUTING and "
-      "TIMETABLE");
-  utl::verify(!has_gbfs_feeds() || street_routing_,
+  utl::verify(!has_elevators() || (street_routing && timetable_),
+              "feature ELEVATORS requires STREET_ROUTING and TIMETABLE");
+  utl::verify(!has_gbfs_feeds() || street_routing,
               "feature GBFS requires feature STREET_ROUTING");
-  utl::verify(!has_odm() || (street_routing_ && timetable_),
+  utl::verify(!has_odm() || (street_routing && timetable_),
               "feature ODM requires feature STREET_ROUTING");
-  utl::verify(!elevators_ || osr_footpath_,
+  utl::verify(!has_elevators() || osr_footpath_,
               "feature ELEVATORS requires feature OSR_FOOTPATHS");
 
   if (timetable_) {
@@ -161,7 +162,7 @@ void config::verify_input_files_exist() const {
 
 bool config::requires_rt_timetable_updates() const {
   return timetable_.has_value() &&
-         ((elevators_.has_value() && elevators_->url_.has_value()) ||
+         ((has_elevators() && get_elevators()->url_.has_value()) ||
           utl::any_of(timetable_->datasets_, [](auto&& d) {
             return d.second.rt_.has_value() && !d.second.rt_->empty();
           }));
@@ -172,5 +173,42 @@ bool config::has_gbfs_feeds() const {
 }
 
 bool config::has_odm() const { return odm_.has_value(); }
+
+std::optional<config::elevators> const& config::get_elevators() const {
+  utl::verify(has_elevators(),
+              "config::get_elevators() requires config::has_elevators()");
+  return std::get<std::optional<elevators>>(elevators_);
+}
+
+bool config::has_elevators() const {
+  return std::visit(
+      utl::overloaded{
+          [](std::optional<elevators> const& x) { return x.has_value(); },
+          [](bool const x) {
+            utl::verify(!x, "elevators=true is not supported");
+            return x;
+          }},
+      elevators_);
+}
+
+std::optional<config::street_routing> config::get_street_routing() const {
+  return std::visit(
+      utl::overloaded{
+          [](std::optional<config::street_routing> const& x) { return x; },
+          [](bool const street_routing) {
+            return street_routing ? std::optional{config::street_routing{}}
+                                  : std::nullopt;
+          }},
+      street_routing_);
+}
+
+bool config::use_street_routing() const {
+  return std::visit(
+      utl::overloaded{
+          [](std::optional<street_routing> const& o) { return o.has_value(); },
+          [](bool const b) { return b; },
+      },
+      street_routing_);
+}
 
 }  // namespace motis

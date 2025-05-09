@@ -27,6 +27,7 @@ export type Translations = {
 	earlier: string;
 	arrivals: string;
 	departures: string;
+	connections: string;
 	switchToArrivals: string;
 	switchToDepartures: string;
 	arrivalOnTrack: string;
@@ -41,6 +42,7 @@ export type Translations = {
 	wheelchair: string;
 	bikeRental: string;
 	bikeCarriage: string;
+	carCarriage: string;
 	unreliableOptions: string;
 	timetableSources: string;
 	tripCancelled: string;
@@ -48,6 +50,7 @@ export type Translations = {
 	inOutDisallowed: string;
 	inDisallowed: string;
 	outDisallowed: string;
+	unscheduledTrip: string;
 	WALK: string;
 	BIKE: string;
 	RENTAL: string;

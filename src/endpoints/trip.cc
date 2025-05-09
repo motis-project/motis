@@ -23,7 +23,9 @@ api::Itinerary trip::operator()(boost::urls::url_view const& url) const {
   auto const rtt = rt->rtt_.get();
 
   auto query = api::trip_params{url.params()};
-  auto const [r, _] = tags_.get_trip(tt_, query.tripId_);
+  auto const api_version = url.encoded_path().contains("/v1/") ? 1U : 2U;
+
+  auto const [r, _] = tags_.get_trip(tt_, rtt, query.tripId_);
   utl::verify(r.valid(), "trip not found: tripId={}, tt={}", query.tripId_,
               tt_.external_interval());
 
@@ -39,7 +41,8 @@ api::Itinerary trip::operator()(boost::urls::url_view const& url) const {
   auto gbfs_rd = gbfs::gbfs_routing_data{};
 
   return journey_to_response(
-      w_, l_, pl_, tt_, tags_, nullptr, rtt, matches_, shapes_, gbfs_rd, false,
+      w_, l_, pl_, tt_, tags_, nullptr, rtt, matches_, nullptr, shapes_,
+      gbfs_rd, api::PedestrianProfileEnum::FOOT, api::ElevationCostsEnum::NONE,
       {.legs_ = {n::routing::journey::leg{
            n::direction::kForward, from_l.get_location_idx(),
            to_l.get_location_idx(), start_time, dest_time,
@@ -53,8 +56,9 @@ api::Itinerary trip::operator()(boost::urls::url_view const& url) const {
        .transfers_ = 0U},
       tt_location{from_l.get_location_idx(),
                   from_l.get_scheduled_location_idx()},
-      tt_location{to_l.get_location_idx()}, cache, blocked, false, false,
-      config_.timetable_.value().max_matching_distance_, kMaxMatchingDistance);
+      tt_location{to_l.get_location_idx()}, cache, &blocked, false, false,
+      config_.timetable_.value().max_matching_distance_, kMaxMatchingDistance,
+      api_version);
 }
 
 }  // namespace motis::ep

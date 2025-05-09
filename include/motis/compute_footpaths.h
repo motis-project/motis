@@ -2,7 +2,6 @@
 
 #include "cista/memory_holder.h"
 
-#include "osr/elevation_storage.h"
 #include "osr/types.h"
 
 #include "motis/fwd.h"

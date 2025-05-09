@@ -23,6 +23,7 @@ std::optional<osr::path> get_path(osr::ways const& w,
                                   osr::lookup const& l,
                                   elevators const* e,
                                   osr::sharing_data const* sharing,
+                                  osr::elevation_storage const* elevations,
                                   osr::location const& from,
                                   osr::location const& to,
                                   transport_mode_t const transport_mode,
@@ -45,7 +46,7 @@ std::optional<osr::path> get_path(osr::ways const& w,
                 w, l, profile, from, to, max, osr::direction::kForward,
                 max_matching_distance,
                 s ? &set_blocked(e_nodes, e_states, blocked_mem) : nullptr,
-                sharing);
+                sharing, elevations);
   if (it == end(cache)) {
     cache.emplace(std::pair{key, path});
   }
@@ -62,7 +63,8 @@ std::vector<api::StepInstruction> get_step_instructions(
     osr::ways const& w,
     osr::location const& from,
     osr::location const& to,
-    std::span<osr::path::segment const> segments) {
+    std::span<osr::path::segment const> segments,
+    unsigned const api_version) {
   auto steps = std::vector<api::StepInstruction>{};
   auto pred_lvl = from.lvl_.to_float();
   for (auto const& s : segments) {
@@ -94,7 +96,8 @@ std::vector<api::StepInstruction> get_step_instructions(
                        ? std::nullopt
                        : std::optional{static_cast<std::int64_t>(
                              to_idx(w.way_osm_idx_[s.way_]))},
-        .polyline_ = to_polyline<7>(s.polyline_),
+        .polyline_ = api_version == 1 ? to_polyline<7>(s.polyline_)
+                                      : to_polyline<6>(s.polyline_),
         .streetName_ = way_name == osr::string_idx_t::invalid()
                            ? ""
                            : std::string{w.strings_[way_name].view()},
@@ -277,28 +280,29 @@ api::Itinerary route(osr::ways const& w,
                      osr::lookup const& l,
                      gbfs::gbfs_routing_data& gbfs_rd,
                      elevators const* e,
+                     osr::elevation_storage const* elevations,
                      api::Place const& from,
                      api::Place const& to,
                      api::ModeEnum const mode,
-                     bool const wheelchair,
+                     osr::search_profile const profile,
                      n::unixtime_t const start_time,
                      std::optional<n::unixtime_t> const end_time,
                      double const max_matching_distance,
                      gbfs::gbfs_products_ref const prod_ref,
                      street_routing_cache_t& cache,
                      osr::bitvec<osr::node_idx_t>& blocked_mem,
+                     unsigned const api_version,
                      std::chrono::seconds const max,
                      bool const dummy) {
   if (dummy) {
     return dummy_itinerary(from, to, mode, start_time, *end_time);
   }
 
-  auto const profile = to_profile(mode, wheelchair);
-  utl::verify(
-      profile != osr::search_profile::kBikeSharing || gbfs_rd.has_data(),
-      "sharing mobility not configured");
+  auto const rental_profile = osr::is_rental_profile(profile);
+  utl::verify(!rental_profile || gbfs_rd.has_data(),
+              "sharing mobility not configured");
 
-  auto const sharing_data = profile == osr::search_profile::kBikeSharing
+  auto const sharing_data = rental_profile
                                 ? std::optional{sharing(w, gbfs_rd, prod_ref)}
                                 : std::nullopt;
 
@@ -312,15 +316,19 @@ api::Itinerary route(osr::ways const& w,
     }
   };
 
-  auto const path = [&]() {
-    auto p = get_path(
-        w, l, e, sharing_data ? &sharing_data->sharing_data_ : nullptr,
-        get_location(from), get_location(to),
-        static_cast<transport_mode_t>(gbfs_rd.get_transport_mode(prod_ref)),
-        to_profile(mode, wheelchair), start_time, max_matching_distance,
-        static_cast<osr::cost_t>(max.count()), cache, blocked_mem);
+  auto const transport_mode =
+      rental_profile
+          ? static_cast<transport_mode_t>(gbfs_rd.get_transport_mode(prod_ref))
+          : static_cast<transport_mode_t>(profile);
 
-    if (p.has_value() && profile == osr::search_profile::kBikeSharing) {
+  auto const path = [&]() {
+    auto p =
+        get_path(w, l, e, sharing_data ? &sharing_data->sharing_data_ : nullptr,
+                 elevations, get_location(from), get_location(to),
+                 transport_mode, profile, start_time, max_matching_distance,
+                 static_cast<osr::cost_t>(max.count()), cache, blocked_mem);
+
+    if (p.has_value() && rental_profile) {
       // Coordinates of additional nodes are not known to osr.
       // Therefore, segments to/from additional have empty polylines.
       for (auto& s : p->segments_) {
@@ -364,13 +372,13 @@ api::Itinerary route(osr::ways const& w,
       [&](auto&& lb, auto&& ub) {
         auto const range = std::span{lb, ub};
         auto const is_last_leg = ub == end(path->segments_);
-        auto const is_bike_leg = lb->mode_ == osr::mode::kBike;
         auto const from_node = range.front().from_;
         auto const from_additional_node = is_additional_node(w, from_node);
         auto const to_node = range.back().to_;
         auto const to_additional_node = is_additional_node(w, to_node);
         auto const is_rental =
-            (profile == osr::search_profile::kBikeSharing && is_bike_leg &&
+            (rental_profile &&
+             (lb->mode_ == osr::mode::kBike || lb->mode_ == osr::mode::kCar) &&
              (from_additional_node || to_additional_node));
 
         auto const to_pos = get_node_pos(to_node);
@@ -409,9 +417,10 @@ api::Itinerary route(osr::ways const& w,
             .startTime_ = pred_end_time,
             .endTime_ = is_last_leg && end_time ? *end_time : t,
             .distance_ = dist,
-            .legGeometry_ = to_polyline<7>(concat),
-            .steps_ = get_step_instructions(w, get_location(from),
-                                            get_location(to), range),
+            .legGeometry_ = api_version == 1 ? to_polyline<7>(concat)
+                                             : to_polyline<6>(concat),
+            .steps_ = get_step_instructions(
+                w, get_location(from), get_location(to), range, api_version),
             .rental_ = is_rental ? std::optional{sharing_data->get_rental(
                                        from_node, to_node)}
                                  : std::nullopt});

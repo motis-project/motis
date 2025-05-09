@@ -7,6 +7,8 @@
 	import { posToLocation, type Location } from './Location';
 	import { GEOCODER_PRECISION } from './Precision';
 	import { language } from './i18n/translation';
+	import maplibregl from 'maplibre-gl';
+	import { onClickStop } from '$lib/utils';
 
 	const COORD_LVL_REGEX = /^([+-]?\d+(\.\d+)?)\s*,\s*([+-]?\d+(\.\d+)?)\s*,\s*([+-]?\d+(\.\d+)?)$/;
 	const COORD_REGEX = /^([+-]?\d+(\.\d+)?)\s*,\s*([+-]?\d+(\.\d+)?)$/;
@@ -15,12 +17,16 @@
 		items = $bindable([]),
 		selected = $bindable(),
 		placeholder,
-		name
+		name,
+		place,
+		onlyStations = $bindable(false)
 	}: {
 		items?: Array<Location>;
 		selected: Location;
 		placeholder?: string;
 		name?: string;
+		place?: maplibregl.LngLatLike;
+		onlyStations?: boolean;
 	} = $props();
 
 	let inputValue = $state('');
@@ -37,7 +43,18 @@
 			if (area == match.name) {
 				area = match.areas[0]!.name;
 			}
-			return area;
+
+			const areas = new Set<number>();
+			match.areas.forEach((a, i) => {
+				if (a.matched || a.unique || a.default) {
+					areas.add(i);
+				}
+			});
+
+			const sorted = Array.from(areas);
+			sorted.sort((a, b) => b - a);
+
+			return sorted.map((a) => match.areas[a].name).join(', ');
 		}
 		return '';
 	};
@@ -65,8 +82,10 @@
 			return;
 		}
 
+		const pos = place ? maplibregl.LngLat.convert(place) : undefined;
+		const biasPlace = pos ? { place: `${pos.lat},${pos.lng}` } : {};
 		const { data: matches, error } = await geocode({
-			query: { text: inputValue, language }
+			query: { ...biasPlace, text: inputValue, language, type: onlyStations ? 'STOP' : undefined }
 		});
 		if (error) {
 			console.error('TYPEAHEAD ERROR: ', error);
@@ -98,8 +117,10 @@
 	};
 
 	$effect(() => {
-		value = JSON.stringify(selected.value);
-		inputValue = selected.label!;
+		if (selected) {
+			value = JSON.stringify(selected.value);
+			inputValue = selected.label!;
+		}
 	});
 
 	let ref = $state<HTMLElement | null>(null);
@@ -128,6 +149,10 @@
 		if (e) {
 			selected = deserialize(e);
 			inputValue = selected.label!;
+			if (onlyStations && selected.value.match) {
+				const match = selected.value.match;
+				onClickStop(match.name, match.id, new Date(), undefined, true);
+			}
 		}
 	}}
 >

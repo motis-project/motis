@@ -51,9 +51,9 @@ struct static_ev_iterator : public ev_iterator {
         day_{to_idx(tt_.day_idx_mam(start).first)},
         end_day_{dir == n::direction::kForward
                      ? to_idx(tt.day_idx(tt_.date_range_.to_))
-                     : -1},
+                     : to_idx(tt.day_idx(tt_.date_range_.from_) - 1U)},
         size_{tt_.route_transport_ranges_[r].size()},
-        i_{dir == n::direction::kForward ? 0 : size_ - 1},
+        i_{0},
         r_{r},
         stop_idx_{stop_idx},
         ev_type_{ev_type},
@@ -69,53 +69,37 @@ struct static_ev_iterator : public ev_iterator {
   static_ev_iterator& operator=(static_ev_iterator&&) = delete;
 
   void seek_next(std::optional<n::unixtime_t> const start = std::nullopt) {
-    if (dir_ == n::direction::kForward) {
-      while (!finished()) {
-        for (; i_ < size_; ++i_) {
-          if (start.has_value() && time() < *start) {
-            continue;
-          }
-          if (is_active()) {
-            return;
-          }
+    while (!finished()) {
+      for (; i_ < size_; ++i_) {
+        if (start.has_value() &&
+            (dir_ == n::direction::kForward ? time() < *start
+                                            : time() > *start)) {
+          continue;
         }
-        ++day_;
-        i_ = 0;
-      }
-    } else {
-      while (!finished()) {
-        for (; i_ > 0; --i_) {
-          if (start.has_value() && time() > *start) {
-            continue;
-          }
-          if (is_active()) {
-            return;
-          }
+        if (is_active()) {
+          return;
         }
-        --day_;
-        i_ = size_ - 1;
       }
+      dir_ == n::direction::kForward ? ++day_ : --day_;
+      i_ = 0;
     }
   }
 
   bool finished() const override { return day_ == end_day_; }
 
   n::unixtime_t time() const override {
-    return tt_.event_time(
-        n::transport{tt_.route_transport_ranges_[r_][i_], n::day_idx_t{day_}},
-        stop_idx_, ev_type_);
+    return tt_.event_time(t(), stop_idx_, ev_type_);
   }
 
   n::rt::run get() const override {
     assert(is_active());
     return n::rt::run{
-        .t_ = n::transport{tt_.route_transport_ranges_[r_][i_],
-                           n::day_idx_t{day_}},
+        .t_ = t(),
         .stop_range_ = {stop_idx_, static_cast<n::stop_idx_t>(stop_idx_ + 1U)}};
   }
 
   void increment() override {
-    dir_ == n::direction::kForward ? ++i_ : --i_;
+    ++i_;
     seek_next();
   }
 
@@ -133,9 +117,10 @@ private:
   }
 
   n::transport t() const {
-    auto const t = tt_.route_transport_ranges_[r_][i_];
+    auto const idx = dir_ == n::direction::kForward ? i_ : size_ - i_ - 1;
+    auto const t = tt_.route_transport_ranges_[r_][idx];
     auto const day_offset = tt_.event_mam(r_, t, stop_idx_, ev_type_).days();
-    return n::transport{tt_.route_transport_ranges_[r_][i_],
+    return n::transport{tt_.route_transport_ranges_[r_][idx],
                         n::day_idx_t{to_idx(day_) - day_offset}};
   }
 
@@ -362,9 +347,9 @@ api::stoptimes_response stop_times::operator()(
                 .mode_ = to_mode(s.get_clasz(ev_type)),
                 .realTime_ = r.is_rt(),
                 .headsign_ = std::string{s.direction(ev_type)},
-                .agencyId_ = agency.short_name_.str(),
-                .agencyName_ = agency.long_name_.str(),
-                .agencyUrl_ = agency.url_.str(),
+                .agencyId_ = std::string{tt_.strings_.get(agency.short_name_)},
+                .agencyName_ = std::string{tt_.strings_.get(agency.long_name_)},
+                .agencyUrl_ = std::string{tt_.strings_.get(agency.url_)},
                 .routeColor_ = to_str(s.get_route_color(ev_type).color_),
                 .routeTextColor_ =
                     to_str(s.get_route_color(ev_type).text_color_),

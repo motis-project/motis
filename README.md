@@ -90,6 +90,7 @@ wget https://opendata.avv.de/current_GTFS/AVV_GTFS_Masten_mit_SPNV.zip
 Invoke-WebRequest https://github.com/motis-project/motis/releases/latest/download/motis-windows.zip -OutFile motis-windows.zip
 Expand-Archive motis-windows.zip
 Invoke-WebRequest https://github.com/motis-project/test-data/archive/refs/heads/aachen.zip -OutFile aachen.zip
+Expand-Archive aachen.zip
 ./motis config aachen.osm.pbf AVV_GTFS_Masten_mit_SPNV.zip
 ./motis import
 ./motis server

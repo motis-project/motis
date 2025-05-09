@@ -2,6 +2,7 @@
 
 #include "utl/overloaded.h"
 
+#include "nigiri/logging.h"
 #include "nigiri/special_stations.h"
 
 #include "motis/odm/odm.h"
@@ -103,10 +104,11 @@ bool mixer::cost_dominates(nr::journey const& a, nr::journey const& b) const {
   auto const alpha_term = cost_alpha_ * time_ratio * dist;
   auto const ret = dist < max_distance_ && cost_a + alpha_term < cost_b;
   if (kMixerTracing) {
-    fmt::println(
-        "{} cost-dominates {}, ratio: {}, dist: {}, {} + {} < {} --> {}",
-        label(a), label(b), time_ratio, dist, cost_a, alpha_term, cost_b,
-        ret ? "true" : "false");
+    n::log(n::log_lvl::debug, "motis.odm",
+           "{} cost-dominates {}, ratio: {:.2f}, dist: {}, {:.2f} + {:.2f} < "
+           "{:.2f} --> {}",
+           label(a), label(b), time_ratio, dist, cost_a, alpha_term, cost_b,
+           ret ? "true" : "false");
   }
   return ret;
 }
@@ -154,8 +156,9 @@ void mixer::pareto_dominance(
     auto const odm_time_b = odm_time(b);
     auto const ret = a.dominates(b) && odm_time_a < odm_time_b;
     if (kMixerTracing) {
-      fmt::println("{} pareto-dominates {}, odm_time: {} < {} --> {}", label(a),
-                   label(b), odm_time_a, odm_time_b, ret ? "true" : "false");
+      n::log(n::log_lvl::debug, "motis.odm",
+             "{} pareto-dominates {}, odm_time: {} < {} --> {}", label(a),
+             label(b), odm_time_a, odm_time_b, ret ? "true" : "false");
     }
     return ret;
   };
@@ -181,8 +184,9 @@ void mixer::productivity_dominance(
     auto const prod_b = (cost_a + alpha_term) / odm_time_b;
     auto const ret = dist < max_distance_ && prod_a > prod_b;
     if (kMixerTracing) {
-      fmt::println("{} prod-dominates {}, dist: {}, {} > {} --> {}", label(a),
-                   label(b), dist, prod_a, prod_b, ret ? "true" : "false");
+      n::log(n::log_lvl::debug, "motis.odm",
+             "{} prod-dominates {}, dist: {}, {} > {} --> {}", label(a),
+             label(b), dist, prod_a, prod_b, ret ? "true" : "false");
     }
     return ret;
   };

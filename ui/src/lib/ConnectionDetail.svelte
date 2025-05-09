@@ -9,18 +9,16 @@
 	import Route from '$lib/Route.svelte';
 	import { getModeName } from '$lib/getModeName';
 	import { t } from '$lib/i18n/translation';
+	import { onClickStop, onClickTrip } from '$lib/utils';
 
 	const {
-		itinerary,
-		onClickStop,
-		onClickTrip
+		itinerary
 	}: {
 		itinerary: Itinerary;
-		onClickStop: (name: string, stopId: string, time: Date) => void;
-		onClickTrip: (tripId: string) => void;
 	} = $props();
 
-	const lastLeg = $derived(itinerary.legs.findLast((l) => l.duration !== 0));
+	const isRelevantLeg = (l: Leg) => l.duration !== 0 || l.routeShortName;
+	const lastLeg = $derived(itinerary.legs.findLast(isRelevantLeg));
 </script>
 
 {#snippet stopTimes(
@@ -168,7 +166,7 @@
 		{#if l.routeShortName}
 			<div class="w-full flex justify-between items-center space-x-1">
 				<Route {onClickTrip} {l} />
-				{#if pred && (pred.from.track || pred.duration !== 0) && (i != 1 || pred.routeShortName)}
+				{#if pred && (pred.from.track || isRelevantLeg(pred)) && (i != 1 || pred.routeShortName)}
 					<div class="border-t h-0 grow shrink"></div>
 					<div class="text-sm text-muted-foreground leading-none px-2 text-center">
 						{#if pred.from.track}
@@ -211,7 +209,7 @@
 						l.from.name,
 						l.from.stopId,
 						l.from.pickupType,
-						l.from.dropoffType
+						'NORMAL'
 					)}
 				</div>
 				<div class="mt-2 flex items-center text-muted-foreground leading-none">
@@ -223,6 +221,18 @@
 						<CircleX class="stroke-destructive h-4 w-4" />
 						<span class="ml-1 font-bold">{t.tripCancelled}</span>
 					</div>
+				{/if}
+				{#if !l.scheduled}
+					<div class="mt-2 flex items-center text-green-600 leading-none">
+						<span class="ml-1">{t.unscheduledTrip}</span>
+					</div>
+				{/if}
+				{#if l.alerts}
+					{#each l.alerts as alert}
+						<div class="text-destructive text-sm font-bold">
+							{alert.headerText}
+						</div>
+					{/each}
 				{/if}
 				{#if l.intermediateStops?.length === 0}
 					<div class="py-8 pl-1 md:pl-4 flex items-center text-muted-foreground">
@@ -267,7 +277,7 @@
 					</details>
 				{/if}
 
-				{#if !isLast && !(isLastPred && next!.duration === 0)}
+				{#if !isLast && !(isLastPred && !isRelevantLeg(next!))}
 					<div class="grid gap-y-6 grid-cols-[max-content_max-content_auto] items-center pb-3">
 						{@render stopTimes(
 							l.endTime!,
@@ -275,18 +285,18 @@
 							l.realTime!,
 							l.to.name,
 							l.to.stopId,
-							l.to.pickupType,
+							'NORMAL',
 							l.to.dropoffType
 						)}
 					</div>
 				{/if}
 
-				{#if isLast || (isLastPred && next!.duration === 0)}
+				{#if isLast || (isLastPred && !isRelevantLeg(next!))}
 					<!-- fill visual gap -->
 					<div class="pb-2"></div>
 				{/if}
 			</div>
-		{:else if !(isLast && l.duration === 0) && ((i == 0 && l.duration !== 0) || !next || !next.routeShortName || l.mode != 'WALK' || (pred && (pred.mode == 'BIKE' || pred.mode == 'RENTAL')))}
+		{:else if !(isLast && !isRelevantLeg(l)) && ((i == 0 && isRelevantLeg(l)) || !next || !next.routeShortName || l.mode != 'WALK' || (pred && (pred.mode == 'BIKE' || pred.mode == 'RENTAL')))}
 			<Route {onClickTrip} {l} />
 			<div class="pt-4 pl-6 border-l-4 left-4 relative" style={routeBorderColor(l)}>
 				<div class="grid gap-y-6 grid-cols-[max-content_max-content_auto] items-center">
@@ -297,7 +307,7 @@
 						l.from.name,
 						l.from.stopId,
 						l.from.pickupType,
-						l.from.dropoffType
+						'NORMAL'
 					)}
 				</div>
 				{@render streetLeg(l)}
@@ -309,7 +319,7 @@
 							l.realTime,
 							l.to.name,
 							l.to.stopId,
-							l.to.pickupType,
+							'NORMAL',
 							l.to.dropoffType
 						)}
 					</div>
@@ -331,7 +341,7 @@
 				lastLeg!.realTime,
 				lastLeg!.to.name,
 				lastLeg!.to.stopId,
-				lastLeg!.to.pickupType,
+				'NORMAL',
 				lastLeg!.to.dropoffType
 			)}
 		</div>
