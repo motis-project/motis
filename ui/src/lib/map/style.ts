@@ -576,16 +576,6 @@ export const getStyle = (theme: 'light' | 'dark', level: number): StyleSpecifica
 				}
 			},
 			{
-				id: 'rail_old',
-				type: 'line',
-				source: 'osm',
-				'source-layer': 'rail',
-				filter: ['==', 'rail', 'old'],
-				paint: {
-					'line-color': c.rail
-				}
-			},
-			{
 				id: 'rail_detail',
 				type: 'line',
 				source: 'osm',
