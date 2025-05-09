@@ -16,6 +16,8 @@
 #include "boost/fiber/future/packaged_task.hpp"
 #include "boost/thread/tss.hpp"
 
+#include "prometheus/histogram.h"
+
 #include "utl/erase_duplicates.h"
 
 #include "nigiri/logging.h"
@@ -35,6 +37,7 @@
 #include "motis/gbfs/routing_data.h"
 #include "motis/http_req.h"
 #include "motis/journey_to_response.h"
+#include "motis/metrics_registry.h"
 #include "motis/odm/bounds.h"
 #include "motis/odm/mixer.h"
 #include "motis/odm/odm.h"
@@ -69,10 +72,13 @@ static auto const kMixer = get_default_mixer();
 using td_offsets_t =
     n::hash_map<n::location_idx_t, std::vector<n::routing::td_offset>>;
 
-void print_time(auto const& start, std::string_view name) {
-  n::log(n::log_lvl::debug, "motis.odm", "{} {}", name,
-         std::chrono::duration_cast<std::chrono::milliseconds>(
-             std::chrono::steady_clock::now() - start));
+void print_time(auto const& start,
+                std::string_view name,
+                prometheus::Histogram& metric) {
+  auto const millis = std::chrono::duration_cast<std::chrono::milliseconds>(
+      std::chrono::steady_clock::now() - start);
+  n::log(n::log_lvl::debug, "motis.odm", "{} {}", name, millis);
+  metric.Observe(static_cast<double>(millis.count()) / 1000.0);
 }
 
 meta_router::meta_router(ep::routing const& r,
@@ -527,7 +533,8 @@ api::plan_response meta_router::run() {
                 search_intvl.to_};
 
   init_prima(context_intvl, odm_intvl);
-  print_time(init_start, "[init]");
+  print_time(init_start, "[init]",
+             r_.metrics_->routing_execution_duration_seconds_init_);
 
   // blacklisting
   auto blacklist_response = std::optional<std::string>{};
@@ -555,7 +562,10 @@ api::plan_response meta_router::run() {
       blacklist_response && p->blacklist_update(*blacklist_response);
   n::log(n::log_lvl::debug, "motis.odm",
          "[blacklisting] ODM events after blacklisting: {}", p->n_events());
-  print_time(bl_start, "[blacklisting]");
+  print_time(bl_start, "[blacklisting]",
+             r_.metrics_->routing_execution_duration_seconds_blacklisting_);
+  r_.metrics_->routing_odm_journeys_found_blacklist_.Observe(
+      static_cast<double>(p->n_events()));
 
   // prepare queries
   auto const prep_queries_start = std::chrono::steady_clock::now();
@@ -606,7 +616,8 @@ api::plan_response meta_router::run() {
                                           : get_td_offsets(to_rides_short),
       .odm_dest_long_ = query_.arriveBy_ ? get_td_offsets(from_rides_long)
                                          : get_td_offsets(to_rides_long)};
-  print_time(prep_queries_start, "[prepare queries]");
+  print_time(prep_queries_start, "[prepare queries]",
+             r_.metrics_->routing_execution_duration_seconds_preparing_);
 
   auto const routing_start = std::chrono::steady_clock::now();
   auto sub_queries = qf.make_queries(blacklisted);
@@ -626,7 +637,8 @@ api::plan_response meta_router::run() {
       });
   n::log(n::log_lvl::debug, "motis.odm", "[routing] interval searched: {}",
          pt_result.interval_);
-  print_time(routing_start, "[routing]");
+  print_time(routing_start, "[routing]",
+             r_.metrics_->routing_execution_duration_seconds_routing_);
 
   // whitelisting
   auto const wl_start = std::chrono::steady_clock::now();
@@ -666,18 +678,35 @@ api::plan_response meta_router::run() {
     n::log(n::log_lvl::debug, "motis.odm",
            "[whitelisting] failed, discarding ODM journeys");
   }
-  print_time(wl_start, "[whitelisting]");
-
+  print_time(wl_start, "[whitelisting]",
+             r_.metrics_->routing_execution_duration_seconds_whitelisting_);
+  r_.metrics_->routing_odm_journeys_found_whitelist_.Observe(
+      static_cast<double>(p->odm_journeys_.size()));
   n::log(n::log_lvl::debug, "motis.odm",
          "[mixing] {} PT journeys and {} ODM journeys",
          pt_result.journeys_.size(), p->odm_journeys_.size());
-  kMixer.mix(pt_result.journeys_, p->odm_journeys_);
-  print_time(mixing_start, "[mixing]");
+
+  kMixer.mix(pt_result.journeys_, p->odm_journeys_, r_.metrics_);
+
+  r_.metrics_->routing_odm_journeys_found_non_dominated_.Observe(
+      static_cast<double>(p->odm_journeys_.size() -
+                          pt_result.journeys_.size()));
+
+  print_time(mixing_start, "[mixing]",
+             r_.metrics_->routing_execution_duration_seconds_mixing_);
 
   // remove journeys added for mixing context
   std::erase_if(p->odm_journeys_, [&](auto const& j) {
     return !search_intvl.contains(j.start_time_);
   });
+
+  r_.metrics_->routing_journeys_found_.Increment(
+      static_cast<double>(p->odm_journeys_.size()));
+  r_.metrics_->routing_execution_duration_seconds_total_.Observe(
+      static_cast<double>(std::chrono::duration_cast<std::chrono::milliseconds>(
+                              std::chrono::steady_clock::now() - init_start)
+                              .count()) /
+      1000.0);
 
   return {.from_ = from_place_,
           .to_ = to_place_,
@@ -685,6 +714,9 @@ api::plan_response meta_router::run() {
           .itineraries_ = utl::to_vec(
               p->odm_journeys_,
               [&, cache = street_routing_cache_t{}](auto&& j) mutable {
+                r_.metrics_->routing_journey_duration_seconds_.Observe(
+                    static_cast<double>(
+                        to_seconds(j.arrival_time() - j.departure_time())));
                 return journey_to_response(
                     r_.w_, r_.l_, r_.pl_, *tt_, *r_.tags_, e_, rtt_,
                     r_.matches_, r_.elevations_, r_.shapes_, gbfs_rd_,
