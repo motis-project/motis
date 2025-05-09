@@ -638,6 +638,7 @@ struct gbfs_update {
             .id_ = combined_id,
             .url_ =
                 static_cast<std::string>(latest_version.at("url").as_string()),
+            .headers_ = af.headers_,
             .default_restrictions_ =
                 lookup_default_restrictions(af.id_, combined_id)});
       }
@@ -650,6 +651,7 @@ struct gbfs_update {
         feeds.emplace_back(provider_feed{
             .id_ = combined_id,
             .url_ = static_cast<std::string>(system.at("url").as_string()),
+            .headers_ = af.headers_,
             .default_restrictions_ =
                 lookup_default_restrictions(af.id_, combined_id)});
       }
