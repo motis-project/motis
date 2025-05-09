@@ -332,29 +332,38 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
   auto fastest_direct = kInfinityDuration;
   auto cache = street_routing_cache_t{};
   auto itineraries = std::vector<api::Itinerary>{};
+
+  auto const route_with_profile =
+      [&](api::ModeEnum const mode, osr::search_profile const profile,
+          gbfs::gbfs_products_ref const prod_ref = {}) {
+        auto itinerary =
+            route(*w_, *l_, gbfs_rd, e, elevations_, from, to, mode, profile,
+                  start_time, std::nullopt, max_matching_distance, prod_ref,
+                  cache, *blocked, api_version, max);
+        if (itinerary.legs_.empty()) {
+          return false;
+        }
+        auto const duration = std::chrono::duration_cast<n::duration_t>(
+            std::chrono::seconds{itinerary.duration_});
+        if (duration < fastest_direct) {
+          fastest_direct = duration;
+        }
+        itineraries.emplace_back(std::move(itinerary));
+        return true;
+      };
+
   for (auto const& m : modes) {
     if (m == api::ModeEnum::CAR || m == api::ModeEnum::BIKE ||
         m == api::ModeEnum::CAR_PARKING ||
         (!omit_walk && m == api::ModeEnum::WALK)) {
-      auto itinerary = route(*w_, *l_, gbfs_rd, e, elevations_, from, to, m,
-                             to_profile(m, pedestrian_profile, elevation_costs),
-                             start_time, std::nullopt, max_matching_distance,
-                             {}, cache, *blocked, api_version, max);
-      if (itinerary.legs_.empty()) {
-        continue;
-      }
-      auto const duration = std::chrono::duration_cast<n::duration_t>(
-          std::chrono::seconds{itinerary.duration_});
-      if (duration < fastest_direct) {
-        fastest_direct = duration;
-      }
-      itineraries.emplace_back(std::move(itinerary));
+      route_with_profile(m, to_profile(m, pedestrian_profile, elevation_costs));
     } else if (m == api::ModeEnum::RENTAL && gbfs_rd.has_data()) {
       // could be bike sharing or car sharing - car sharing has the higher max
       // distance, so we use this here to be safe
       auto const max_dist =
           get_max_distance(osr::search_profile::kCarSharing, max);
       auto providers = hash_set<gbfs_provider_idx_t>{};
+      auto routed = 0U;
       gbfs_rd.data_->provider_rtree_.in_radius(
           {from.lat_, from.lon_}, max_dist,
           [&](auto const pi) { providers.insert(pi); });
@@ -369,25 +378,22 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
           if (!gbfs::products_match(prod, form_factors, propulsion_types)) {
             continue;
           }
-          auto const profile = gbfs::get_osr_profile(prod);
-          auto itinerary =
-              route(*w_, *l_, gbfs_rd, e, elevations_, from, to, m, profile,
-                    start_time, std::nullopt, max_matching_distance,
-                    gbfs::gbfs_products_ref{provider->idx_, prod.idx_}, cache,
-                    *blocked, api_version, max);
-          if (itinerary.legs_.empty()) {
-            continue;
-          }
-          auto const duration = std::chrono::duration_cast<n::duration_t>(
-              std::chrono::seconds{itinerary.duration_});
-          if (duration < fastest_direct) {
-            fastest_direct = duration;
-          }
-          itineraries.emplace_back(std::move(itinerary));
+          route_with_profile(
+              m, gbfs::get_osr_profile(prod),
+              gbfs::gbfs_products_ref{provider->idx_, prod.idx_});
+          ++routed;
         }
+      }
+      // if we omitted the WALK routing but didn't have any rental providers in
+      // the area, we need to do WALK routing now
+      if (routed == 0U && utl::find(modes, api::ModeEnum::WALK) != end(modes)) {
+        route_with_profile(api::ModeEnum::WALK,
+                           to_profile(api::ModeEnum::WALK, pedestrian_profile,
+                                      elevation_costs));
       }
     }
   }
+  utl::erase_duplicates(itineraries);
   return {itineraries, fastest_direct != kInfinityDuration
                            ? std::chrono::round<n::duration_t>(
                                  fastest_direct * fastest_direct_factor)
