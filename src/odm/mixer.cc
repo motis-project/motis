@@ -99,7 +99,7 @@ bool mixer::cost_dominates(nr::journey const& a, nr::journey const& b) const {
       cost(b) + (is_pure_pt(a) && is_direct_odm(b) ? direct_taxi_penalty_ : 0);
   auto const time_ratio = static_cast<double>(a.travel_time().count()) /
                           static_cast<double>(b.travel_time().count());
-  auto const dist = distance(a, b);
+  auto const dist = std::max(distance(a, b), min_distance_);
   auto const alpha_term = cost_alpha_ * time_ratio * dist;
   auto const ret = dist < max_distance_ && cost_a + alpha_term < cost_b;
   if (kMixerTracing) {
@@ -175,7 +175,7 @@ void mixer::productivity_dominance(
     auto const cost_b = prod_cost(b);
     auto const odm_time_a = static_cast<double>(odm_time(a).count());
     auto const odm_time_b = static_cast<double>(odm_time(b).count());
-    auto const dist = distance(a, b);
+    auto const dist = std::max(distance(a, b), min_distance_);
     auto const alpha_term = prod_alpha_ * dist;
     auto const prod_a = cost_b / odm_time_a;
     auto const prod_b = (cost_a + alpha_term) / odm_time_b;
@@ -207,6 +207,7 @@ mixer get_default_mixer() {
   return mixer{.cost_alpha_ = 1.3,
                .prod_alpha_ = 0.4,
                .direct_taxi_penalty_ = 220,
+               .min_distance_ = 15,
                .max_distance_ = 90,
                .walk_cost_ = {{0, 1}, {15, 10}},
                .taxi_cost_ = {{0, 35}, {1, 12}},
