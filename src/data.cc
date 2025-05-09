@@ -28,6 +28,7 @@
 #include "motis/elevators/update_elevators.h"
 #include "motis/hashes.h"
 #include "motis/match_platforms.h"
+#include "motis/metrics_registry.h"
 #include "motis/odm/bounds.h"
 #include "motis/point_rtree.h"
 #include "motis/railviz.h"
@@ -61,10 +62,12 @@ std::ostream& operator<<(std::ostream& out, data const& d) {
 data::data(std::filesystem::path p)
     : path_{std::move(p)},
       config_{config::read(path_ / "config.yml")},
-      metrics_{std::make_unique<prometheus::Registry>()} {}
+      metrics_{std::make_unique<metrics_registry>()} {}
 
 data::data(std::filesystem::path p, config const& c)
-    : path_{std::move(p)}, config_{c} {
+    : path_{std::move(p)},
+      config_{c},
+      metrics_{std::make_unique<metrics_registry>()} {
   auto const verify_version = [&](bool cond, char const* name, auto&& ver) {
     if (!cond) {
       return;

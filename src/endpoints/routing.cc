@@ -4,6 +4,9 @@
 
 #include "boost/thread/tss.hpp"
 
+#include "prometheus/counter.h"
+#include "prometheus/histogram.h"
+
 #include "utl/erase_duplicates.h"
 #include "utl/helpers/algorithm.h"
 
@@ -27,6 +30,7 @@
 #include "motis/gbfs/routing_data.h"
 #include "motis/journey_to_response.h"
 #include "motis/max_distance.h"
+#include "motis/metrics_registry.h"
 #include "motis/mode_to_profile.h"
 #include "motis/odm/meta_router.h"
 #include "motis/parse_location.h"
@@ -464,6 +468,8 @@ std::vector<api::ModeEnum> deduplicate(std::vector<api::ModeEnum> m) {
 };
 
 api::plan_response routing::operator()(boost::urls::url_view const& url) const {
+  metrics_->routing_requests_.Increment();
+
   auto const rt = rt_;
   auto const rtt = rt->rtt_.get();
   auto const e = rt_->e_.get();
@@ -663,6 +669,11 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
             ? std::optional<std::chrono::seconds>{*query.timeout_}
             : std::nullopt);
 
+    metrics_->routing_journeys_found_.Increment(
+        static_cast<double>(r.journeys_->size()));
+    metrics_->routing_execution_duration_seconds_total_.Observe(
+        static_cast<double>(r.search_stats_.execute_time_.count()) / 1000.0);
+
     return {
         .debugOutput_ = join(std::move(query_stats), r.search_stats_.to_map(),
                              r.algo_stats_.to_map()),
@@ -672,6 +683,9 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
         .itineraries_ = utl::to_vec(
             *r.journeys_,
             [&, cache = street_routing_cache_t{}](auto&& j) mutable {
+              metrics_->routing_journey_duration_seconds_.Observe(
+                  static_cast<double>(
+                      to_seconds(j.arrival_time() - j.departure_time())));
               return journey_to_response(
                   w_, l_, pl_, *tt_, *tags_, e, rtt, matches_, elevations_,
                   shapes_, gbfs_rd, query.pedestrianProfile_,
