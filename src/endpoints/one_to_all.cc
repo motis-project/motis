@@ -77,9 +77,10 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
           one, one_dir, one_modes, std::nullopt, std::nullopt, std::nullopt,
           query.pedestrianProfile_, query.elevationCosts_, one_max_time,
           query.maxMatchingDistance_, gbfs_rd),
-      .td_start_ = r.get_td_offsets(
-          rt_->e_.get(), one, one_dir, one_modes, query.pedestrianProfile_,
-          query.elevationCosts_, query.maxMatchingDistance_, one_max_time),
+      .td_start_ =
+          r.get_td_offsets(rt_->e_.get(), one, one_dir, one_modes,
+                           query.pedestrianProfile_, query.elevationCosts_,
+                           query.maxMatchingDistance_, one_max_time, time),
       .max_transfers_ = static_cast<std::uint8_t>(
           query.maxTransfers_.value_or(n::routing::kMaxTransfers)),
       .max_travel_time_ = max_travel_time,

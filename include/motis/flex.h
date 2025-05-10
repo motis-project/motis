@@ -3,6 +3,8 @@
 #include "osr/location.h"
 #include "osr/types.h"
 
+#include "nigiri/routing/query.h"
+
 #include "motis-api/motis-api.h"
 #include "motis/fwd.h"
 
@@ -15,8 +17,9 @@ struct routing;
 void add_flex_td_offsets(ep::routing const&,
                          osr::location const&,
                          osr::direction,
-                         api::PedestrianProfileEnum,
                          double const max_matching_distance,
-                         std::chrono::seconds const max);
+                         std::chrono::seconds const max,
+                         nigiri::routing::start_time_t const&,
+                         nigiri::routing::td_offsets_t& ret);
 
 }  // namespace motis

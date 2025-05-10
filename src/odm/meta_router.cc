@@ -594,20 +594,20 @@ api::plan_response meta_router::run() {
                          query_.pedestrianProfile_, query_.elevationCosts_,
                          std::chrono::seconds{query_.maxPostTransitTime_},
                          query_.maxMatchingDistance_, gbfs_rd_),
-      .td_start_walk_ =
-          r_.get_td_offsets(e_, start_,
-                            query_.arriveBy_ ? osr::direction::kBackward
-                                             : osr::direction::kForward,
-                            start_modes_, query_.pedestrianProfile_,
-                            query_.elevationCosts_, query_.maxMatchingDistance_,
-                            std::chrono::seconds{query_.maxPreTransitTime_}),
-      .td_dest_walk_ =
-          r_.get_td_offsets(e_, dest_,
-                            query_.arriveBy_ ? osr::direction::kForward
-                                             : osr::direction::kBackward,
-                            dest_modes_, query_.pedestrianProfile_,
-                            query_.elevationCosts_, query_.maxMatchingDistance_,
-                            std::chrono::seconds{query_.maxPostTransitTime_}),
+      .td_start_walk_ = r_.get_td_offsets(
+          e_, start_,
+          query_.arriveBy_ ? osr::direction::kBackward
+                           : osr::direction::kForward,
+          start_modes_, query_.pedestrianProfile_, query_.elevationCosts_,
+          query_.maxMatchingDistance_,
+          std::chrono::seconds{query_.maxPreTransitTime_}, context_intvl),
+      .td_dest_walk_ = r_.get_td_offsets(
+          e_, dest_,
+          query_.arriveBy_ ? osr::direction::kForward
+                           : osr::direction::kBackward,
+          dest_modes_, query_.pedestrianProfile_, query_.elevationCosts_,
+          query_.maxMatchingDistance_,
+          std::chrono::seconds{query_.maxPostTransitTime_}, context_intvl),
       .odm_start_short_ = query_.arriveBy_ ? get_td_offsets(to_rides_short)
                                            : get_td_offsets(from_rides_short),
       .odm_start_long_ = query_.arriveBy_ ? get_td_offsets(to_rides_long)

@@ -46,9 +46,6 @@ using namespace std::chrono_literals;
 
 namespace motis::ep {
 
-using td_offsets_t =
-    n::hash_map<n::location_idx_t, std::vector<n::routing::td_offset>>;
-
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 boost::thread_specific_ptr<n::routing::search_state> search_state;
 
@@ -82,15 +79,17 @@ std::vector<n::routing::offset> station_start(n::location_idx_t const l) {
   return {{l, n::duration_t{0U}, 0U}};
 }
 
-td_offsets_t get_td_offsets(routing const& r,
-                            elevators const& e,
-                            osr::location const& pos,
-                            osr::direction const dir,
-                            std::vector<api::ModeEnum> const& modes,
-                            api::PedestrianProfileEnum const pedestrian_profile,
-                            api::ElevationCostsEnum const elevation_costs,
-                            double const max_matching_distance,
-                            std::chrono::seconds const max) {
+n::routing::td_offsets_t get_td_offsets(
+    routing const& r,
+    elevators const& e,
+    osr::location const& pos,
+    osr::direction const dir,
+    std::vector<api::ModeEnum> const& modes,
+    api::PedestrianProfileEnum const pedestrian_profile,
+    api::ElevationCostsEnum const elevation_costs,
+    double const max_matching_distance,
+    std::chrono::seconds const max,
+    nigiri::routing::start_time_t const& start_time) {
   if (!r.w_ || !r.l_ || !r.pl_ || !r.tt_ || !r.loc_tree_ || !r.matches_) {
     return {};
   }
@@ -100,8 +99,8 @@ td_offsets_t get_td_offsets(routing const& r,
     if (m == api::ModeEnum::ODM) {
       continue;
     } else if (m == api::ModeEnum::FLEX) {
-      add_flex_td_offsets(r, pos, dir, pedestrian_profile,
-                          max_matching_distance, max);
+      add_flex_td_offsets(r, pos, dir, max_matching_distance, max, start_time,
+                          ret);
       continue;
     }
 
@@ -133,7 +132,7 @@ td_offsets_t get_td_offsets(routing const& r,
   return ret;
 }
 
-td_offsets_t routing::get_td_offsets(
+n::routing::td_offsets_t routing::get_td_offsets(
     elevators const* e,
     place_t const& p,
     osr::direction const dir,
@@ -141,18 +140,20 @@ td_offsets_t routing::get_td_offsets(
     api::PedestrianProfileEnum const pedestrian_profile,
     api::ElevationCostsEnum const elevation_costs,
     double const max_matching_distance,
-    std::chrono::seconds const max) const {
+    std::chrono::seconds const max,
+    nigiri::routing::start_time_t const& start_time) const {
   return e != nullptr
              ? std::visit(
-                   utl::overloaded{[&](tt_location) { return td_offsets_t{}; },
-                                   [&](osr::location const& pos) {
-                                     return ::motis::ep::get_td_offsets(
-                                         *this, *e, pos, dir, modes,
-                                         pedestrian_profile, elevation_costs,
-                                         max_matching_distance, max);
-                                   }},
+                   utl::overloaded{
+                       [&](tt_location) { return n::routing::td_offsets_t{}; },
+                       [&](osr::location const& pos) {
+                         return ::motis::ep::get_td_offsets(
+                             *this, *e, pos, dir, modes, pedestrian_profile,
+                             elevation_costs, max_matching_distance, max,
+                             start_time);
+                       }},
                    p)
-             : td_offsets_t{};
+             : n::routing::td_offsets_t{};
 }
 
 std::vector<n::routing::offset> get_offsets(
@@ -608,14 +609,16 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                                            : osr::direction::kForward,
                            start_modes, query.pedestrianProfile_,
                            query.elevationCosts_, query.maxMatchingDistance_,
-                           std::chrono::seconds{query.maxPreTransitTime_}),
+                           std::chrono::seconds{query.maxPreTransitTime_},
+                           start_time.start_time_),
         .td_dest_ =
             get_td_offsets(e, dest,
                            query.arriveBy_ ? osr::direction::kForward
                                            : osr::direction::kBackward,
                            dest_modes, query.pedestrianProfile_,
                            query.elevationCosts_, query.maxMatchingDistance_,
-                           std::chrono::seconds{query.maxPostTransitTime_}),
+                           std::chrono::seconds{query.maxPostTransitTime_},
+                           start_time.start_time_),
         .max_transfers_ = static_cast<std::uint8_t>(
             query.maxTransfers_.has_value() ? *query.maxTransfers_
                                             : n::routing::kMaxTransfers),

@@ -80,7 +80,8 @@ struct routing {
                  api::PedestrianProfileEnum,
                  api::ElevationCostsEnum,
                  double max_matching_distance,
-                 std::chrono::seconds max) const;
+                 std::chrono::seconds max,
+                 nigiri::routing::start_time_t const&) const;
 
   std::pair<std::vector<api::Itinerary>, nigiri::duration_t> route_direct(
       elevators const*,
