@@ -69,7 +69,9 @@
 	const selectedFirstMileModeLabel = $derived(t[firstMileMode as TranslationKey]);
 	const selectedLastMileModeLabel = $derived(t[lastMileMode as TranslationKey]);
 	const selectedDirectModesLabel = $derived(
-		directModes.map((m) => t[m as TranslationKey]).join(', ')
+		directModes.length
+			? directModes.map((m) => t[m as TranslationKey]).join(', ')
+			: `${t.default} (${t.WALK})`
 	);
 
 	let expanded = $state<boolean>(false);

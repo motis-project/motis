@@ -49,6 +49,7 @@ const translations: Translations = {
 	bikeRental: 'Utiliser véhicules partagés',
 	bikeCarriage: 'Transport vélo',
 	carCarriage: 'Transport voiture',
+	default: 'Faire défaut',
 	unreliableOptions: 'Selon la disponibilité des données, ces options peuvent ne pas être fiables.',
 	timetableSources: 'Sources des horaires',
 	tripCancelled: 'Voyage annulé',

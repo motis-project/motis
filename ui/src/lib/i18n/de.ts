@@ -50,6 +50,7 @@ const translations: Translations = {
 	bikeRental: 'Sharing-Fahrzeuge berücksichtigen',
 	bikeCarriage: 'Fahrradmitnahme',
 	carCarriage: 'Automitnahme',
+	default: 'Vorgabe',
 	unreliableOptions: 'Je nach Datenverfügbarkeit können diese Optionen unzuverlässig sein.',
 	timetableSources: 'Fahrplandatenquellen',
 	tripCancelled: 'Fahrt entfällt',
