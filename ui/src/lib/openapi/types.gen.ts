@@ -1148,6 +1148,13 @@ export type PlanData = {
          */
         requireBikeTransport?: boolean;
         /**
+         * Optional. Default is `false`.
+         *
+         * If set to `true`, all used transit trips are required to allow car carriage.
+         *
+         */
+        requireCarTransport?: boolean;
+        /**
          * Optional. Default is 2 hours which is `7200`.
          *
          * The length of the search-window in seconds. Default value two hours.
@@ -1466,6 +1473,13 @@ export type OneToAllData = {
          *
          */
         requireBikeTransport?: boolean;
+        /**
+         * Optional. Default is `false`.
+         *
+         * If set to `true`, all used transit trips are required to allow car carriage.
+         *
+         */
+        requireCarTransport?: boolean;
         /**
          * Optional. Defaults to the current time.
          *

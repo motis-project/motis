@@ -1,6 +1,7 @@
 #include "motis/odm/odm.h"
 
 #include "nigiri/for_each_meta.h"
+#include "nigiri/logging.h"
 #include "nigiri/rt/frun.h"
 #include "nigiri/rt/rt_timetable.h"
 #include "nigiri/timetable.h"
@@ -39,7 +40,9 @@ void shorten(std::vector<nr::journey>& odm_journeys,
           !stop.in_allowed(query.pedestrianProfile_ ==
                            api::PedestrianProfileEnum::WHEELCHAIR) ||
           (query.requireBikeTransport_ &&
-           !stop.bikes_allowed(n::event_type::kDep))) {
+           !stop.bikes_allowed(n::event_type::kDep)) ||
+          (query.requireCarTransport_ &&
+           !stop.cars_allowed(n::event_type::kDep))) {
         continue;
       }
       for (auto& ride : from_rides) {
@@ -73,7 +76,8 @@ void shorten(std::vector<nr::journey>& odm_journeys,
       auto const new_stop = tt.locations_.get(odm_leg.to_).name_;
       auto const new_pt_time = pt_leg.arr_time_ - pt_leg.dep_time_;
 
-      fmt::println(
+      n::log(
+          n::log_lvl::debug, "motis.odm",
           "Shortened ODM first leg: [ODM: {}, stop: {}, PT: {}] --> [ODM: {}, "
           "stop: {}, PT: {}] (ODM: -{}, PT: +{})",
           old_odm_time, old_stop, old_pt_time, new_odm_time, new_stop,
@@ -103,7 +107,9 @@ void shorten(std::vector<nr::journey>& odm_journeys,
           !stop.out_allowed(query.pedestrianProfile_ ==
                             api::PedestrianProfileEnum::WHEELCHAIR) ||
           (query.requireBikeTransport_ &&
-           !stop.bikes_allowed(n::event_type::kArr))) {
+           !stop.bikes_allowed(n::event_type::kArr)) ||
+          (query.requireCarTransport_ &&
+           !stop.cars_allowed(n::event_type::kArr))) {
         continue;
       }
       for (auto& ride : to_rides) {
@@ -137,7 +143,8 @@ void shorten(std::vector<nr::journey>& odm_journeys,
       auto const new_stop = tt.locations_.get(odm_leg.from_).name_;
       auto const new_pt_time = pt_leg.arr_time_ - pt_leg.dep_time_;
 
-      fmt::println(
+      n::log(
+          n::log_lvl::debug, "motis.odm",
           "Shortened ODM last leg: [ODM: {}, stop: {}, PT: {}] --> [ODM: {}, "
           "stop: {}, PT: {}] (ODM: -{}, PT: +{})",
           old_odm_time, old_stop, old_pt_time, new_odm_time, new_stop,
@@ -148,7 +155,7 @@ void shorten(std::vector<nr::journey>& odm_journeys,
 
   for (auto& j : odm_journeys) {
     if (j.legs_.empty()) {
-      fmt::println("shorten: journey without legs");
+      n::log(n::log_lvl::debug, "motis.odm", "shorten: journey without legs");
       continue;
     }
     shorten_first_leg(j);

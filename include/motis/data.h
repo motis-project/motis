@@ -2,8 +2,6 @@
 
 #include <memory>
 
-#include "prometheus/registry.h"
-
 #include "cista/memory_holder.h"
 
 #include "date/date.h"
@@ -91,7 +89,7 @@ struct data {
   std::shared_ptr<rt> rt_{std::make_shared<rt>()};
   std::shared_ptr<gbfs::gbfs_data> gbfs_{};
   ptr<odm::bounds> odm_bounds_;
-  ptr<prometheus::Registry> metrics_{std::make_unique<prometheus::Registry>()};
+  ptr<metrics_registry> metrics_;
 };
 
 }  // namespace motis

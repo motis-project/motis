@@ -65,9 +65,9 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
   auto const one_dir =
       query.arriveBy_ ? osr::direction::kBackward : osr::direction::kForward;
 
-  auto const r =
-      routing{config_,   w_,       l_,  pl_,     elevations_, &tt_,   &tags_,
-              loc_tree_, matches_, rt_, nullptr, gbfs_,       nullptr};
+  auto const r = routing{config_, w_,     l_,        pl_,      elevations_,
+                         &tt_,    &tags_, loc_tree_, matches_, rt_,
+                         nullptr, gbfs_,  nullptr,   metrics_};
   auto gbfs_rd = gbfs::gbfs_routing_data{w_, l_, gbfs_};
 
   auto const q = n::routing::query{
@@ -92,6 +92,7 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
               : 0U),
       .allowed_claszes_ = to_clasz_mask(query.transitModes_),
       .require_bike_transport_ = query.requireBikeTransport_,
+      .require_car_transport_ = query.requireCarTransport_,
       .transfer_time_settings_ =
           n::routing::transfer_time_settings{
               .default_ = (query.minTransferTime_ == 0 &&
