@@ -133,9 +133,7 @@
 	let bikeCarriage = $state(urlParams?.get('bikeCarriage') == 'true');
 	let carCarriage = $state(urlParams?.get('carCarriage') == 'true');
 	let selectedTransitModes = $state<Mode[] | undefined>(
-		(urlParams?.get('selectedTransitModes') != null &&
-			(urlParams?.get('selectedTransitModes')?.split(',') as Mode[])) ||
-			undefined
+		(urlParams?.get('selectedTransitModes')?.split(',') as Mode[]) ?? undefined
 	);
 	let firstMileMode = $state<Mode>((urlParams?.get('firstMileMode') ?? 'WALK') as Mode);
 	let lastMileMode = $state<Mode>((urlParams?.get('lastMileMode') ?? 'WALK') as Mode);
