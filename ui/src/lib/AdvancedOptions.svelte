@@ -66,11 +66,25 @@
 					.join(', ')
 			: t.defaultSelectedModes
 	);
-	const selectedFirstMileModeLabel = $derived(t[firstMileMode as TranslationKey]);
-	const selectedLastMileModeLabel = $derived(t[lastMileMode as TranslationKey]);
+	const selectedFirstMileModeLabel = $derived(
+		t[firstMileMode as TranslationKey] +
+			(bikeCarriage && firstMileMode != 'BIKE' ? `, ${t.bikeCarriage} (${t.BIKE})` : '') +
+			(carCarriage && firstMileMode != 'CAR' ? `, ${t.carCarriage} (${t.CAR})` : '')
+	);
+	const selectedLastMileModeLabel = $derived(
+		t[lastMileMode as TranslationKey] +
+			(bikeCarriage && lastMileMode != 'BIKE' ? `, ${t.bikeCarriage} (${t.BIKE})` : '') +
+			(carCarriage && lastMileMode != 'CAR' ? `, ${t.carCarriage} (${t.CAR})` : '')
+	);
 	const selectedDirectModesLabel = $derived(
-		directModes.length
-			? directModes.map((m) => t[m as TranslationKey]).join(', ')
+		directModes.length || bikeCarriage || carCarriage
+			? [
+					...directModes.map((m) => t[m as TranslationKey]),
+					...(bikeCarriage && !directModes.includes('BIKE')
+						? [`${t.bikeCarriage} (${t.BIKE})`]
+						: []),
+					...(carCarriage && !directModes.includes('CAR') ? [`${t.carCarriage} (${t.CAR})`] : [])
+				].join(', ')
 			: `${t.default} (${t.WALK})`
 	);
 
