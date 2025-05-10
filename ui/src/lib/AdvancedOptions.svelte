@@ -129,13 +129,16 @@
 			<Switch bind:checked={carCarriage} label={t.carCarriage} id="carCarriage" />
 		</div>
 
-		<div class="grid grid-cols-2 items-center space-y-2">
+		<div class="grid grid-cols-[1fr_2fr] items-center space-y-2">
 			<!-- First mile -->
 			<div class="text-sm">
 				{t.routingSegments.firstMile}
 			</div>
 			<Select.Root type="single" bind:value={firstMileMode}>
-				<Select.Trigger aria-label={t.routingSegments.firstMile}>
+				<Select.Trigger
+					class="flex items-center w-full overflow-hidden"
+					aria-label={t.routingSegments.firstMile}
+				>
 					{selectedFirstMileModeLabel}
 				</Select.Trigger>
 				<Select.Content sideOffset={10}>
@@ -151,7 +154,10 @@
 				{t.routingSegments.lastMile}
 			</div>
 			<Select.Root type="single" bind:value={lastMileMode}>
-				<Select.Trigger aria-label={t.routingSegments.lastMile}>
+				<Select.Trigger
+					class="flex items-center w-full overflow-hidden"
+					aria-label={t.routingSegments.lastMile}
+				>
 					{selectedLastMileModeLabel}
 				</Select.Trigger>
 				<Select.Content sideOffset={10}>
@@ -167,7 +173,10 @@
 				{t.routingSegments.direct}
 			</div>
 			<Select.Root type="multiple" bind:value={directModes}>
-				<Select.Trigger aria-label={t.routingSegments.direct}>
+				<Select.Trigger
+					class="flex items-center w-full overflow-hidden"
+					aria-label={t.routingSegments.direct}
+				>
 					{selectedDirectModesLabel}
 				</Select.Trigger>
 				<Select.Content sideOffset={10}>
