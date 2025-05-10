@@ -215,7 +215,7 @@ struct osr_mapping {
         }
 
         for (auto const& m : matches) {
-          auto const handle_node = [&](osr::node_candidate const node) {
+          auto const handle_node = [&](osr::node_candidate const& node) {
             if (node.valid() &&
                 node.dist_to_node_ <= kMaxGbfsMatchingDistance) {
               auto const edge_to_an = osr::additional_edge{
