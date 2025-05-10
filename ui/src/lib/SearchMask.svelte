@@ -10,6 +10,7 @@
 	import { t } from '$lib/i18n/translation';
 	import AdvancedOptions from './AdvancedOptions.svelte';
 	import maplibregl from 'maplibre-gl';
+	import type { ElevationCosts, Mode } from './openapi';
 
 	let {
 		geocodingBiasPlace,
@@ -21,7 +22,11 @@
 		bikeRental = $bindable(),
 		bikeCarriage = $bindable(),
 		carCarriage = $bindable(),
-		selectedModes = $bindable()
+		selectedModes = $bindable(),
+		firstMileMode = $bindable(),
+		lastMileMode = $bindable(),
+		directModes = $bindable(),
+		elevationCosts = $bindable()
 	}: {
 		geocodingBiasPlace?: maplibregl.LngLatLike;
 		from: Location;
@@ -32,7 +37,11 @@
 		bikeRental: boolean;
 		bikeCarriage: boolean;
 		carCarriage: boolean;
-		selectedModes: string[];
+		selectedModes: string[] | undefined;
+		firstMileMode: Mode;
+		lastMileMode: Mode;
+		directModes: Mode[];
+		elevationCosts: ElevationCosts;
 	} = $props();
 
 	let fromItems = $state<Array<Location>>([]);
@@ -119,6 +128,10 @@
 			bind:bikeCarriage
 			bind:carCarriage
 			bind:selectedModes
+			bind:firstMileMode
+			bind:lastMileMode
+			bind:directModes
+			bind:elevationCosts
 		/>
 	</div>
 </div>
