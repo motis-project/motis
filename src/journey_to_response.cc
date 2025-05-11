@@ -408,7 +408,9 @@ api::Itinerary journey_to_response(
             },
             [&](n::routing::offset const x) {
               auto const profile =
-                  x.transport_mode_id_ >= kGbfsTransportModeIdOffset
+                  x.transport_mode_id_ >= kFlexModeIdOffset
+                      ? osr::search_profile::kCarSharing
+                  : x.transport_mode_id_ >= kGbfsTransportModeIdOffset
                       ? gbfs::get_osr_profile(gbfs_rd.get_products(
                             gbfs_rd.get_products_ref(x.transport_mode_id_)))
                   : x.transport_mode_id_ == kOdmTransportModeId
