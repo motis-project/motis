@@ -256,10 +256,8 @@ std::vector<n::routing::offset> get_offsets(
   }
 
   for (auto const m : modes) {
-    if (m == api::ModeEnum::RENTAL) {
-      continue;  // handled above
-    }
-    if (m == api::ModeEnum::WALK && ignore_walk) {
+    if (m == api::ModeEnum::RENTAL || m == api::ModeEnum::FLEX ||
+        (m == api::ModeEnum::WALK && ignore_walk)) {
       continue;
     }
     handle_mode(m);
