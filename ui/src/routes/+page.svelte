@@ -288,7 +288,7 @@
 >
 	{#if hasDebug}
 		<Control position="top-right">
-			<Debug {bounds} {level} />
+			<Debug {bounds} {level} {zoom} />
 		</Control>
 	{/if}
 
