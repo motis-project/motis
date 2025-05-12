@@ -47,8 +47,23 @@
 		'FERRY',
 		'OTHER'
 	];
+	const setModes = (checked: boolean, mode: Mode) => {
+		if (checked) {
+			firstMileMode = mode;
+			lastMileMode = mode;
+			if (!directModes.includes(mode)) {
+				directModes.push(mode);
+			}
+		}
+	};
 	if (selectedModes === undefined) {
 		selectedModes = [...possibleModes];
+	}
+	if (bikeCarriage) {
+		setModes(true, 'BIKE');
+	}
+	if (carCarriage) {
+		setModes(true, 'CAR');
 	}
 
 	const possibleElevationCosts = [
@@ -71,15 +86,6 @@
 	const selectedDirectModesLabel = $derived(
 		directModes.map((m) => t[m as TranslationKey]).join(', ')
 	);
-	const setModes = (checked: boolean, mode: Mode) => {
-		if (checked) {
-			firstMileMode = mode;
-			lastMileMode = mode;
-			if (!directModes.includes(mode)) {
-				directModes.push(mode);
-			}
-		}
-	};
 
 	let expanded = $state<boolean>(false);
 	let allowElevationCosts = $derived(
