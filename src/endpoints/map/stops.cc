@@ -20,7 +20,13 @@ api::stops_response stops::operator()(boost::urls::url_view const& url) const {
   auto res = api::stops_response{};
   auto n_items = 0U;
   loc_rtree_.find({min->pos_, max->pos_}, [&](n::location_idx_t const l) {
-    utl::verify(n_items < 2048U, "too many items");
+    auto const kMaxResults =
+        config_.timetable_
+            .and_then([](config::timetable const& x) {
+              return std::optional{x.onetoall_max_travel_minutes_};
+            })
+            .value_or(2048U);
+    utl::verify(n_items < kMaxResults, "too many items");
     res.emplace_back(to_place(&tt_, &tags_, w_, pl_, matches_, tt_location{l}));
   });
   return res;

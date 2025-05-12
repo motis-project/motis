@@ -544,6 +544,14 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
     utl::verify(tt_ != nullptr && tags_ != nullptr,
                 "mode=TRANSIT requires timetable to be loaded");
 
+    auto const kMaxResults = config_.timetable_
+                                 .and_then([](config::timetable const& x) {
+                                   return std::optional{x.plan_max_results_};
+                                 })
+                                 .value_or(256U);
+    utl::verify(query.numItineraries_ <= kMaxResults,
+                "maximum number of minimum itineraries is {}", kMaxResults);
+
     auto const with_odm_pre_transit =
         utl::find(pre_transit_modes, api::ModeEnum::ODM) !=
         end(pre_transit_modes);

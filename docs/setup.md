@@ -60,6 +60,11 @@ timetable:                          # if not set, no timetable will be loaded
   http_timeout: 30                  # maximum time in seconds the real-time feed download may take
   incremental_rt_update: false      # false = real-time updates are applied to a clean slate, true = no data will be dropped
   max_footpath_length: 15           # maximum footpath length when transitively connecting stops or for routing footpaths if `osr_footpath` is set to true
+  max_matching_distance: 25.0       # maximum distance from geolocation to next OSM node that will be found
+  stoptimes_max_results: 256        # maximum number of stoptimes results that can be requested
+  plan_max_results: 256             # maximum number of plan results that can be requested
+  onetoall_max_results: 65535       # maximum number of one-to-all results that can be requested
+  onetoall_max_travel_minutes: 90   # maximum travel duration for one-to-all query that can be requested
   datasets:                         # map of tag -> dataset
     ch:                             # the tag will be used as prefix for stop IDs and trip IDs with `_` as divider, so `_` cannot be part of the dataset tag
       path: ch_opentransportdataswiss.gtfs.zip
