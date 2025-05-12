@@ -66,27 +66,20 @@
 					.join(', ')
 			: t.defaultSelectedModes
 	);
-	const selectedFirstMileModeLabel = $derived(
-		t[firstMileMode as TranslationKey] +
-			(bikeCarriage && firstMileMode != 'BIKE' ? `, ${t.bikeCarriage} (${t.BIKE})` : '') +
-			(carCarriage && firstMileMode != 'CAR' ? `, ${t.carCarriage} (${t.CAR})` : '')
-	);
-	const selectedLastMileModeLabel = $derived(
-		t[lastMileMode as TranslationKey] +
-			(bikeCarriage && lastMileMode != 'BIKE' ? `, ${t.bikeCarriage} (${t.BIKE})` : '') +
-			(carCarriage && lastMileMode != 'CAR' ? `, ${t.carCarriage} (${t.CAR})` : '')
-	);
+	const selectedFirstMileModeLabel = $derived(t[firstMileMode as TranslationKey]);
+	const selectedLastMileModeLabel = $derived(t[lastMileMode as TranslationKey]);
 	const selectedDirectModesLabel = $derived(
-		directModes.length || bikeCarriage || carCarriage
-			? [
-					...directModes.map((m) => t[m as TranslationKey]),
-					...(bikeCarriage && !directModes.includes('BIKE')
-						? [`${t.bikeCarriage} (${t.BIKE})`]
-						: []),
-					...(carCarriage && !directModes.includes('CAR') ? [`${t.carCarriage} (${t.CAR})`] : [])
-				].join(', ')
-			: `${t.default} (${t.WALK})`
+		directModes.map((m) => t[m as TranslationKey]).join(', ')
 	);
+	const setModes = (checked: boolean, mode: Mode) => {
+		if (checked) {
+			firstMileMode = mode;
+			lastMileMode = mode;
+			if (!directModes.includes(mode)) {
+				directModes.push(mode);
+			}
+		}
+	};
 
 	let expanded = $state<boolean>(false);
 	let allowElevationCosts = $derived(
@@ -125,8 +118,22 @@
 		<div class="space-y-2">
 			<Switch bind:checked={wheelchair} label={t.wheelchair} id="wheelchair" />
 			<Switch bind:checked={bikeRental} label={t.bikeRental} id="bikeRental" />
-			<Switch bind:checked={bikeCarriage} label={t.bikeCarriage} id="bikeCarriage" />
-			<Switch bind:checked={carCarriage} label={t.carCarriage} id="carCarriage" />
+			<Switch
+				bind:checked={bikeCarriage}
+				label={t.bikeCarriage}
+				onCheckedChange={(checked: boolean) => {
+					setModes(checked, 'BIKE');
+				}}
+				id="bikeCarriage"
+			/>
+			<Switch
+				bind:checked={carCarriage}
+				label={t.carCarriage}
+				onCheckedChange={(checked: boolean) => {
+					setModes(checked, 'CAR');
+				}}
+				id="carCarriage"
+			/>
 		</div>
 
 		<div class="grid grid-cols-[1fr_2fr] items-center space-y-2">
