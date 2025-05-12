@@ -138,7 +138,10 @@
 	let firstMileMode = $state<Mode>((urlParams?.get('firstMileMode') ?? 'WALK') as Mode);
 	let lastMileMode = $state<Mode>((urlParams?.get('lastMileMode') ?? 'WALK') as Mode);
 	let directModes = $state<Mode[]>(
-		(urlParams?.get('directModes')?.split(',') ?? ['WALK']) as Mode[]
+		(urlParams
+			?.get('directModes')
+			?.split(',')
+			.filter((m) => m.length) ?? ['WALK']) as Mode[]
 	);
 	let elevationCosts = $state<ElevationCosts>(
 		(urlParams?.get('elevationCosts') ?? 'NONE') as ElevationCosts
