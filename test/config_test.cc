@@ -54,12 +54,6 @@ timetable:
   extend_missing_footpaths: false
   max_footpath_length: 15
   max_matching_distance: 25
-  stoptimes_max_results: 256
-  plan_max_results: 256
-  stops_max_results: 2048
-  onetoall_max_results: 65535
-  onetoall_max_travel_minutes: 90
-  routing_max_timeout_seconds: 90
   datasets:
     de:
       path: delfi.gtfs.zip
@@ -118,6 +112,13 @@ timetable:
   assistance_times: assistance.csv
 elevators: false
 street_routing: true
+limits:
+  stoptimes_max_results: 256
+  plan_max_results: 256
+  stops_max_results: 2048
+  onetoall_max_results: 65535
+  onetoall_max_travel_minutes: 90
+  routing_max_timeout_seconds: 90
 osr_footpath: true
 geocoding: true
 )"s));

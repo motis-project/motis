@@ -97,12 +97,6 @@ struct config {
     bool extend_missing_footpaths_{false};
     std::uint16_t max_footpath_length_{15};
     double max_matching_distance_{25.0};
-    unsigned stoptimes_max_results_{256U};
-    unsigned plan_max_results_{256U};
-    unsigned stops_max_results_{2048U};
-    unsigned onetoall_max_results_{65535U};
-    unsigned onetoall_max_travel_minutes_{90U};
-    unsigned routing_max_timeout_seconds_{90U};
     std::optional<std::string> default_timezone_{};
     std::map<std::string, dataset> datasets_{};
     std::optional<std::filesystem::path> assistance_times_{};
@@ -161,6 +155,17 @@ struct config {
   std::optional<street_routing> get_street_routing() const;
 
   std::variant<bool, std::optional<street_routing>> street_routing_{false};
+
+  struct limits {
+    bool operator==(limits const&) const = default;
+    unsigned stoptimes_max_results_{256U};
+    unsigned plan_max_results_{256U};
+    unsigned stops_max_results_{2048U};
+    unsigned onetoall_max_results_{65535U};
+    unsigned onetoall_max_travel_minutes_{90U};
+    unsigned routing_max_timeout_seconds_{90U};
+  };
+  std::optional<limits> limits_{};
 
   bool osr_footpath_{false};
   bool geocoding_{false};
