@@ -220,7 +220,7 @@ std::vector<n::routing::offset> get_offsets(
           auto const paths = osr::route(
               *r.w_, *r.l_, gbfs::get_osr_profile(prod), pos,
               near_stop_locations, static_cast<osr::cost_t>(max.count()), dir,
-              kMaxMatchingDistance, nullptr, &sharing, elevations);
+              max_matching_distance, nullptr, &sharing, elevations);
           ignore_walk = true;
           for (auto const [p, l] : utl::zip(paths, near_stops)) {
             if (p.has_value()) {
@@ -544,6 +544,15 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
     utl::verify(tt_ != nullptr && tags_ != nullptr,
                 "mode=TRANSIT requires timetable to be loaded");
 
+    auto const max_results = config_.limits_.value().plan_max_results_;
+    utl::verify(query.numItineraries_ <= max_results,
+                "maximum number of minimum itineraries is {}", max_results);
+    auto const max_timeout = std::chrono::seconds{
+        config_.limits_.value().routing_max_timeout_seconds_};
+    utl::verify(!query.timeout_.has_value() ||
+                    std::chrono::seconds{*query.timeout_} <= max_timeout,
+                "maximum allowed timeout is {}", max_timeout);
+
     auto const with_odm_pre_transit =
         utl::find(pre_transit_modes, api::ModeEnum::ODM) !=
         end(pre_transit_modes);
@@ -671,9 +680,8 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
     auto const r = n::routing::raptor_search(
         *tt_, rtt, *search_state, *raptor_state, std::move(q),
         query.arriveBy_ ? n::direction::kBackward : n::direction::kForward,
-        query.timeout_.has_value()
-            ? std::optional<std::chrono::seconds>{*query.timeout_}
-            : std::nullopt);
+        query.timeout_.has_value() ? std::chrono::seconds{*query.timeout_}
+                                   : max_timeout);
 
     metrics_->routing_journeys_found_.Increment(
         static_cast<double>(r.journeys_->size()));
@@ -697,11 +705,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                   shapes_, gbfs_rd, query.pedestrianProfile_,
                   query.elevationCosts_, j, start, dest, cache, blocked.get(),
                   query.detailedTransfers_, query.withFares_,
-                  config_.timetable_
-                      .and_then([](config::timetable const& x) {
-                        return std::optional{x.max_matching_distance_};
-                      })
-                      .value_or(kMaxMatchingDistance),
+                  config_.timetable_.value().max_matching_distance_,
                   query.maxMatchingDistance_, api_version);
             }),
         .previousPageCursor_ =

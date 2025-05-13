@@ -20,14 +20,13 @@ namespace motis::ep {
 
 namespace n = nigiri;
 
-constexpr auto const kMaxResults = 65535U;
-constexpr auto const kMaxTravelMinutes = 90U;
-
 api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
+  auto const max_travel_minutes =
+      config_.limits_.value().onetoall_max_travel_minutes_;
   auto const query = api::oneToAll_params{url.params()};
-  utl::verify(query.maxTravelTime_ <= kMaxTravelMinutes,
+  utl::verify(query.maxTravelTime_ <= max_travel_minutes,
               "maxTravelTime too large: {} > {}", query.maxTravelTime_,
-              kMaxTravelMinutes);
+              max_travel_minutes);
   if (query.maxTransfers_.has_value()) {
     utl::verify(query.maxTransfers_ >= 0U, "maxTransfers < 0: {}",
                 *query.maxTransfers_);
@@ -114,8 +113,10 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
       reachable.set(i);
     }
   }
-  utl::verify(reachable.count() <= kMaxResults, "too many results: {} > {}",
-              reachable.count(), kMaxResults);
+
+  auto const max_results = config_.limits_.value().onetoall_max_results_;
+  utl::verify(reachable.count() <= max_results, "too many results: {} > {}",
+              reachable.count(), max_results);
 
   auto all = std::vector<api::ReachablePlace>{};
   all.reserve(reachable.count());

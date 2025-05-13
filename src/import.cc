@@ -285,11 +285,12 @@ data import(config const& c, fs::path const& data_path, bool const write) {
         d.tags_ = cista::wrapped{cista::raw::make_unique<tag_lookup>()};
         d.tt_ = cista::wrapped{cista::raw::make_unique<n::timetable>(nl::load(
             utl::to_vec(t.datasets_,
-                        [&, src = n::source_idx_t{}](auto&& x) mutable
-                        -> std::pair<std::string, nl::loader_config> {
+                        [&, src = n::source_idx_t{}](
+                            auto&& x) mutable -> nl::timetable_source {
                           auto const& [tag, dc] = x;
                           d.tags_->add(src++, tag);
                           return {
+                              tag,
                               dc.path_,
                               {
                                   .link_stop_distance_ = t.link_stop_distance_,
