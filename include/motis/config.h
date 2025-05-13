@@ -102,6 +102,7 @@ struct config {
     unsigned stops_max_results_{2048U};
     unsigned onetoall_max_results_{65535U};
     unsigned onetoall_max_travel_minutes_{90U};
+    unsigned routing_max_timeout_seconds_{90U};
     std::optional<std::string> default_timezone_{};
     std::map<std::string, dataset> datasets_{};
     std::optional<std::filesystem::path> assistance_times_{};

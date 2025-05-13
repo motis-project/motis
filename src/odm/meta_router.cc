@@ -396,13 +396,18 @@ std::vector<meta_router::routing_result> meta_router::search_interval(
             ep::raptor_state.reset(new n::routing::raptor_state{});
           }
 
+          auto const timeout = std::chrono::seconds{query_.timeout_.value_or(
+              r_.config_.timetable_
+                  .and_then([](config::timetable const& x) {
+                    return std::optional{x.routing_max_timeout_seconds_};
+                  })
+                  .value_or(90U))};
+
           return routing_result{raptor_search(
               *tt_, rtt_, *ep::search_state, *ep::raptor_state, std::move(q),
               query_.arriveBy_ ? n::direction::kBackward
                                : n::direction::kForward,
-              query_.timeout_.has_value()
-                  ? std::optional<std::chrono::seconds>{*query_.timeout_}
-                  : std::nullopt)};
+              timeout)};
         }};
   };
 

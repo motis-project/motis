@@ -265,13 +265,13 @@ api::stoptimes_response stop_times::operator()(
     boost::urls::url_view const& url) const {
   auto const query = api::stoptimes_params{url.params()};
 
-  auto const kMaxResults = config_.timetable_
+  auto const max_results = config_.timetable_
                                .and_then([](config::timetable const& x) {
                                  return std::optional{x.stoptimes_max_results_};
                                })
                                .value_or(256U);
-  utl::verify(query.n_ < kMaxResults, "n={} > {} not allowed", query.n_,
-              kMaxResults);
+  utl::verify(query.n_ < max_results, "n={} > {} not allowed", query.n_,
+              max_results);
 
   auto const x = tags_.get_location(tt_, query.stopId_);
   auto const p = tt_.locations_.parents_[x];

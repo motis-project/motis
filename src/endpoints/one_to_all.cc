@@ -21,16 +21,16 @@ namespace motis::ep {
 namespace n = nigiri;
 
 api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
-  auto const kMaxTravelMinutes =
+  auto const max_travel_minutes =
       config_.timetable_
           .and_then([](config::timetable const& x) {
             return std::optional{x.onetoall_max_travel_minutes_};
           })
           .value_or(90U);
   auto const query = api::oneToAll_params{url.params()};
-  utl::verify(query.maxTravelTime_ <= kMaxTravelMinutes,
+  utl::verify(query.maxTravelTime_ <= max_travel_minutes,
               "maxTravelTime too large: {} > {}", query.maxTravelTime_,
-              kMaxTravelMinutes);
+              max_travel_minutes);
   if (query.maxTransfers_.has_value()) {
     utl::verify(query.maxTransfers_ >= 0U, "maxTransfers < 0: {}",
                 *query.maxTransfers_);
@@ -118,13 +118,13 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
     }
   }
 
-  auto const kMaxResults = config_.timetable_
+  auto const max_results = config_.timetable_
                                .and_then([](config::timetable const& x) {
                                  return std::optional{x.onetoall_max_results_};
                                })
                                .value_or(65535U);
-  utl::verify(reachable.count() <= kMaxResults, "too many results: {} > {}",
-              reachable.count(), kMaxResults);
+  utl::verify(reachable.count() <= max_results, "too many results: {} > {}",
+              reachable.count(), max_results);
 
   auto all = std::vector<api::ReachablePlace>{};
   all.reserve(reachable.count());

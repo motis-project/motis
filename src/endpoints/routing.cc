@@ -544,13 +544,22 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
     utl::verify(tt_ != nullptr && tags_ != nullptr,
                 "mode=TRANSIT requires timetable to be loaded");
 
-    auto const kMaxResults = config_.timetable_
-                                 .and_then([](config::timetable const& x) {
-                                   return std::optional{x.plan_max_results_};
-                                 })
-                                 .value_or(256U);
-    utl::verify(query.numItineraries_ <= kMaxResults,
-                "maximum number of minimum itineraries is {}", kMaxResults);
+    auto const max_results = config_.timetable_
+                                .and_then([](config::timetable const& x) {
+                                  return std::optional{x.plan_max_results_};
+                                })
+                                .value_or(256U);
+    utl::verify(query.numItineraries_ <= max_results,
+                "maximum number of minimum itineraries is {}", max_results);
+    auto const max_timeout = std::chrono::seconds{
+        config_.timetable_
+            .and_then([](config::timetable const& x) {
+              return std::optional{x.routing_max_timeout_seconds_};
+            })
+            .value_or(90U)};
+    utl::verify(
+        !query.timeout_.has_value() || std::chrono::seconds{*query.timeout_} <= max_timeout,
+        "maximum allowed timeout is {}", max_timeout);
 
     auto const with_odm_pre_transit =
         utl::find(pre_transit_modes, api::ModeEnum::ODM) !=
@@ -680,8 +689,8 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
         *tt_, rtt, *search_state, *raptor_state, std::move(q),
         query.arriveBy_ ? n::direction::kBackward : n::direction::kForward,
         query.timeout_.has_value()
-            ? std::optional<std::chrono::seconds>{*query.timeout_}
-            : std::nullopt);
+            ? std::min(std::chrono::seconds{*query.timeout_}, max_timeout)
+            : max_timeout);
 
     metrics_->routing_journeys_found_.Increment(
         static_cast<double>(r.journeys_->size()));

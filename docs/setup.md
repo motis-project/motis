@@ -65,6 +65,7 @@ timetable:                          # if not set, no timetable will be loaded
   plan_max_results: 256             # maximum number of plan results that can be requested
   onetoall_max_results: 65535       # maximum number of one-to-all results that can be requested
   onetoall_max_travel_minutes: 90   # maximum travel duration for one-to-all query that can be requested
+  routing_max_timeout_seconds: 90   # maximum duration a routing query may take
   datasets:                         # map of tag -> dataset
     ch:                             # the tag will be used as prefix for stop IDs and trip IDs with `_` as divider, so `_` cannot be part of the dataset tag
       path: ch_opentransportdataswiss.gtfs.zip
