@@ -29,6 +29,7 @@ TEST(motis, config) {
                             R"(https://gtfs.ovapi.nl/nl/tripUpdates.pb)"}}}}}},
           .assistance_times_ = {"assistance.csv"}}},
       .street_routing_ = true,
+      .limits_ = config::limits{},
       .osr_footpath_ = true,
       .geocoding_ = true};
 
@@ -76,6 +77,13 @@ timetable:
   assistance_times: assistance.csv
 elevators: false
 street_routing: true
+limits:
+  stoptimes_max_results: 256
+  plan_max_results: 256
+  stops_max_results: 2048
+  onetoall_max_results: 65535
+  onetoall_max_travel_minutes: 90
+  routing_max_timeout_seconds: 90
 osr_footpath: true
 geocoding: true
 reverse_geocoding: false
@@ -112,13 +120,6 @@ timetable:
   assistance_times: assistance.csv
 elevators: false
 street_routing: true
-limits:
-  stoptimes_max_results: 256
-  plan_max_results: 256
-  stops_max_results: 2048
-  onetoall_max_results: 65535
-  onetoall_max_travel_minutes: 90
-  routing_max_timeout_seconds: 90
 osr_footpath: true
 geocoding: true
 )"s));
@@ -129,11 +130,11 @@ geocoding: true
   {
     // Setting height_data_dir
     {
-      auto const street_routing_config = config{
-          .osm_ = {"europe-latest.osm.pbf"},
-          .street_routing_ =
-              config::street_routing{.elevation_data_dir_ = "srtm/"},
-      };
+      auto const street_routing_config =
+          config{.osm_ = {"europe-latest.osm.pbf"},
+                 .street_routing_ =
+                     config::street_routing{.elevation_data_dir_ = "srtm/"},
+                 .limits_ = config::limits{}};
       EXPECT_EQ(street_routing_config, config::read(R"(
 street_routing:
   elevation_data_dir: srtm/
@@ -144,10 +145,10 @@ osm: europe-latest.osm.pbf
 
     // Using empty street_routing map
     {
-      auto const street_routing_config = config{
-          .osm_ = {"europe-latest.osm.pbf"},
-          .street_routing_ = config::street_routing{},
-      };
+      auto const street_routing_config =
+          config{.osm_ = {"europe-latest.osm.pbf"},
+                 .street_routing_ = config::street_routing{},
+                 .limits_ = config::limits{}};
       EXPECT_EQ(street_routing_config, config::read(R"(
 street_routing: {}
 osm: europe-latest.osm.pbf

@@ -547,9 +547,10 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
     auto const max_results = config_.limits_.value().plan_max_results_;
     utl::verify(query.numItineraries_ <= max_results,
                 "maximum number of minimum itineraries is {}", max_results);
-    auto const max_timeout =
-        config_.limits_.value().routing_max_timeout_seconds_;
-    utl::verify(!query.timeout_.has_value() || *query.timeout_ <= max_timeout,
+    auto const max_timeout = std::chrono::seconds{
+        config_.limits_.value().routing_max_timeout_seconds_};
+    utl::verify(!query.timeout_.has_value() ||
+                    std::chrono::seconds{*query.timeout_} <= max_timeout,
                 "maximum allowed timeout is {}", max_timeout);
 
     auto const with_odm_pre_transit =
@@ -679,7 +680,8 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
     auto const r = n::routing::raptor_search(
         *tt_, rtt, *search_state, *raptor_state, std::move(q),
         query.arriveBy_ ? n::direction::kBackward : n::direction::kForward,
-        std::chrono::seconds{query.timeout_.value_or(max_timeout)});
+        query.timeout_.has_value() ? std::chrono::seconds{*query.timeout_}
+                                   : max_timeout);
 
     metrics_->routing_journeys_found_.Increment(
         static_cast<double>(r.journeys_->size()));
