@@ -6,7 +6,7 @@
 	import ChevronUp from 'lucide-svelte/icons/chevron-up';
 	import ChevronDown from 'lucide-svelte/icons/chevron-down';
 	import { Switch } from './components/ui/switch';
-	import type { ElevationCosts, Mode } from './openapi';
+	import type { ElevationCosts, Mode } from '$lib/api/openapi';
 
 	let {
 		selectedModes = $bindable(),
