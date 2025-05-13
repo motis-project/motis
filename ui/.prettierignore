@@ -2,5 +2,5 @@
 pnpm-lock.yaml
 package-lock.json
 yarn.lock
-src/lib/openapi/**
+src/lib/api/openapi/**
 src/lib/components/**

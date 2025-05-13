@@ -1,5 +1,5 @@
 import maplibregl from 'maplibre-gl';
-import type { Match } from './openapi';
+import type { Match } from './api/openapi';
 
 export type Location = {
 	label?: string;

@@ -1,4 +1,4 @@
-import type { Leg } from './openapi';
+import type { Leg } from './api/openapi';
 
 import { t } from './i18n/translation';
 
