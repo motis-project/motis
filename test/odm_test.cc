@@ -236,7 +236,7 @@ TEST(odm, prima_update) {
                     date::sys_days{2017_y / January / 2}};
   register_special_stations(tt);
   auto const src = source_idx_t{0};
-  gtfs::load_timetable({}, src, "", tt_files(), tt);
+  gtfs::load_timetable({}, src, tt_files(), tt);
   finalize(tt);
 
   auto const get_loc_idx = [&](auto&& s) {
