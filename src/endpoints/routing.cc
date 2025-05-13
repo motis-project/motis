@@ -545,10 +545,10 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                 "mode=TRANSIT requires timetable to be loaded");
 
     auto const max_results = config_.timetable_
-                                .and_then([](config::timetable const& x) {
-                                  return std::optional{x.plan_max_results_};
-                                })
-                                .value_or(256U);
+                                 .and_then([](config::timetable const& x) {
+                                   return std::optional{x.plan_max_results_};
+                                 })
+                                 .value_or(256U);
     utl::verify(query.numItineraries_ <= max_results,
                 "maximum number of minimum itineraries is {}", max_results);
     auto const max_timeout = std::chrono::seconds{
@@ -557,9 +557,9 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
               return std::optional{x.routing_max_timeout_seconds_};
             })
             .value_or(90U)};
-    utl::verify(
-        !query.timeout_.has_value() || std::chrono::seconds{*query.timeout_} <= max_timeout,
-        "maximum allowed timeout is {}", max_timeout);
+    utl::verify(!query.timeout_.has_value() ||
+                    std::chrono::seconds{*query.timeout_} <= max_timeout,
+                "maximum allowed timeout is {}", max_timeout);
 
     auto const with_odm_pre_transit =
         utl::find(pre_transit_modes, api::ModeEnum::ODM) !=
