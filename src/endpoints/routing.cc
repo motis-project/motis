@@ -24,7 +24,7 @@
 
 #include "motis/constants.h"
 #include "motis/endpoints/routing.h"
-#include "motis/flex.h"
+#include "motis/flex/flex.h"
 #include "motis/gbfs/data.h"
 #include "motis/gbfs/mode.h"
 #include "motis/gbfs/osr_profile.h"
@@ -99,8 +99,8 @@ n::routing::td_offsets_t get_td_offsets(
     if (m == api::ModeEnum::ODM) {
       continue;
     } else if (m == api::ModeEnum::FLEX) {
-      add_flex_td_offsets(r, pos, dir, max_matching_distance, max, start_time,
-                          ret);
+      flex::add_flex_td_offsets(r, pos, dir, max_matching_distance, max,
+                                start_time, ret);
       continue;
     }
 
@@ -340,10 +340,10 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
   auto const route_with_profile =
       [&](api::ModeEnum const mode, osr::search_profile const profile,
           gbfs::gbfs_products_ref const prod_ref = {}) {
-        auto itinerary =
-            route(*w_, *l_, gbfs_rd, e, elevations_, from, to, mode, profile,
-                  start_time, std::nullopt, max_matching_distance, prod_ref,
-                  cache, *blocked, api_version, max);
+        auto itinerary = street_routing(
+            *w_, *l_, pl_, matches_, tt_, gbfs_rd, e, elevations_, from, to,
+            mode, profile, start_time, std::nullopt, max_matching_distance,
+            prod_ref, cache, *blocked, api_version, max);
         if (itinerary.legs_.empty()) {
           return false;
         }

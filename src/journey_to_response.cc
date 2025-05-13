@@ -390,21 +390,21 @@ api::Itinerary journey_to_response(
               }
             },
             [&](n::footpath) {
-              append(
-                  w && l
-                      ? route(*w, *l, gbfs_rd, e, elevations, from, to,
-                              api::ModeEnum::WALK,
-                              to_profile(api::ModeEnum::WALK,
-                                         pedestrian_profile, elevation_costs),
-                              j_leg.dep_time_, j_leg.arr_time_,
-                              timetable_max_matching_distance, {}, cache,
-                              *blocked_mem, api_version,
-                              std::chrono::duration_cast<std::chrono::seconds>(
-                                  j_leg.arr_time_ - j_leg.dep_time_) +
-                                  std::chrono::minutes{10},
-                              !detailed_transfers)
-                      : dummy_itinerary(from, to, api::ModeEnum::WALK,
-                                        j_leg.dep_time_, j_leg.arr_time_));
+              append(w && l
+                         ? street_routing(
+                               *w, *l, pl, matches, &tt, gbfs_rd, e, elevations,
+                               from, to, api::ModeEnum::WALK,
+                               to_profile(api::ModeEnum::WALK,
+                                          pedestrian_profile, elevation_costs),
+                               j_leg.dep_time_, j_leg.arr_time_,
+                               timetable_max_matching_distance, {}, cache,
+                               *blocked_mem, api_version,
+                               std::chrono::duration_cast<std::chrono::seconds>(
+                                   j_leg.arr_time_ - j_leg.dep_time_) +
+                                   std::chrono::minutes{10},
+                               !detailed_transfers)
+                         : dummy_itinerary(from, to, api::ModeEnum::WALK,
+                                           j_leg.dep_time_, j_leg.arr_time_));
             },
             [&](n::routing::offset const x) {
               auto const profile =
@@ -417,21 +417,24 @@ api::Itinerary journey_to_response(
                       ? osr::search_profile::kCar
                       : osr::search_profile{
                             static_cast<std::uint8_t>(x.transport_mode_id_)};
-              append(route(*w, *l, gbfs_rd, e, elevations, from, to,
-                           x.transport_mode_id_ >= kGbfsTransportModeIdOffset
-                               ? api::ModeEnum::RENTAL
-                           : x.transport_mode_id_ == kOdmTransportModeId
-                               ? api::ModeEnum::ODM
-                               : to_mode(profile),
-                           profile, j_leg.dep_time_, j_leg.arr_time_,
-                           max_matching_distance,
-                           x.transport_mode_id_ >= kGbfsTransportModeIdOffset
-                               ? gbfs_rd.get_products_ref(x.transport_mode_id_)
-                               : gbfs::gbfs_products_ref{},
-                           cache, *blocked_mem, api_version,
-                           std::chrono::duration_cast<std::chrono::seconds>(
-                               j_leg.arr_time_ - j_leg.dep_time_) +
-                               std::chrono::minutes{5}));
+              append(street_routing(
+                  *w, *l, pl, matches, &tt, gbfs_rd, e, elevations, from, to,
+                  x.transport_mode_id_ >= kFlexModeIdOffset
+                      ? api::ModeEnum::FLEX
+                  : x.transport_mode_id_ >= kGbfsTransportModeIdOffset
+                      ? api::ModeEnum::RENTAL
+                  : x.transport_mode_id_ == kOdmTransportModeId
+                      ? api::ModeEnum::ODM
+                      : to_mode(profile),
+                  profile, j_leg.dep_time_, j_leg.arr_time_,
+                  max_matching_distance,
+                  x.transport_mode_id_ >= kGbfsTransportModeIdOffset
+                      ? gbfs_rd.get_products_ref(x.transport_mode_id_)
+                      : gbfs::gbfs_products_ref{},
+                  cache, *blocked_mem, api_version,
+                  std::chrono::duration_cast<std::chrono::seconds>(
+                      j_leg.arr_time_ - j_leg.dep_time_) +
+                      std::chrono::minutes{5}));
             }},
         j_leg.uses_);
   }

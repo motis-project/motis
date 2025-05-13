@@ -290,11 +290,11 @@ struct products_routing_data {
 
   osr::sharing_data get_sharing_data(
       osr::node_idx_t::value_t const additional_node_offset) const {
-    return {.start_allowed_ = start_allowed_,
-            .end_allowed_ = end_allowed_,
-            .through_allowed_ = through_allowed_,
+    return {.start_allowed_ = &start_allowed_,
+            .end_allowed_ = &end_allowed_,
+            .through_allowed_ = &through_allowed_,
             .additional_node_offset_ = additional_node_offset,
-            .additional_edges_ = compressed_.additional_edges_};
+            .additional_edges_ = &compressed_.additional_edges_};
   }
 
   std::shared_ptr<provider_routing_data const> provider_routing_data_;
@@ -322,8 +322,7 @@ struct provider_routing_data
 struct provider_products {
   bool includes_vehicle_type(vehicle_type_idx_t const idx) const {
     return (idx == vehicle_type_idx_t::invalid() && vehicle_types_.empty()) ||
-           std::find(begin(vehicle_types_), end(vehicle_types_), idx) !=
-               end(vehicle_types_);
+           utl::find(vehicle_types_, idx) != end(vehicle_types_);
   }
 
   gbfs_products_idx_t idx_{gbfs_products_idx_t::invalid()};

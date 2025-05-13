@@ -1,18 +1,32 @@
 #pragma once
 
 #include "osr/location.h"
+#include "osr/routing/profile.h"
 #include "osr/types.h"
 
 #include "nigiri/routing/query.h"
 
 #include "motis-api/motis-api.h"
 #include "motis/fwd.h"
+#include "motis/match_platforms.h"
 
 namespace motis {
 
 namespace ep {
 struct routing;
 }
+
+namespace flex {
+
+osr::sharing_data prepare_sharing_data(
+    nigiri::timetable const&,
+    osr::ways const&,
+    osr::lookup const&,
+    osr::platforms const*,
+    platform_matches_t const*,
+    nigiri::flex_stop_t const& from_stop,
+    std::vector<nigiri::flex_stop_t> const& to_stops,
+    flex_routing_data&);
 
 void add_flex_td_offsets(ep::routing const&,
                          osr::location const&,
@@ -21,5 +35,7 @@ void add_flex_td_offsets(ep::routing const&,
                          std::chrono::seconds const max,
                          nigiri::routing::start_time_t const&,
                          nigiri::routing::td_offsets_t& ret);
+
+}  // namespace flex
 
 }  // namespace motis
