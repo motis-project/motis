@@ -12,14 +12,14 @@
 		TableRow
 	} from '$lib/components/ui/table';
 	import maplibregl from 'maplibre-gl';
-	import { footpaths } from '$lib/openapi';
+	import { footpaths } from '$lib/api/openapi';
 	import Control from '$lib/map/Control.svelte';
 	import * as Card from '$lib/components/ui/card';
 	import Marker from '$lib/map/Marker.svelte';
 	import { posToLocation, type Location as ApiLocation } from '$lib/Location';
 	import geojson from 'geojson';
 	import Popup from '$lib/map/Popup.svelte';
-	import { client } from '$lib/openapi';
+	import { client } from '$lib/api/openapi';
 	import X from 'lucide-svelte/icons/x';
 	import LoaderCircle from 'lucide-svelte/icons/loader-circle';
 	import DateInput from './DateInput.svelte';
