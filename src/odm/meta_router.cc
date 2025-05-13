@@ -397,7 +397,7 @@ std::vector<meta_router::routing_result> meta_router::search_interval(
           }
 
           auto const timeout = std::chrono::seconds{query_.timeout_.value_or(
-              r_.config_.timetable_->routing_max_timeout_seconds_)};
+              r_.config_.timetable_.value().routing_max_timeout_seconds_)};
 
           return routing_result{raptor_search(
               *tt_, rtt_, *ep::search_state, *ep::raptor_state, std::move(q),
@@ -724,7 +724,7 @@ api::plan_response meta_router::run() {
                     query_.pedestrianProfile_, query_.elevationCosts_, j,
                     start_, dest_, cache, ep::blocked.get(),
                     query_.detailedTransfers_, query_.withFares_,
-                    r_.config_.timetable_->max_matching_distance_,
+                    r_.config_.timetable_.value().max_matching_distance_,
                     query_.maxMatchingDistance_, api_version_);
               }),
           .previousPageCursor_ =

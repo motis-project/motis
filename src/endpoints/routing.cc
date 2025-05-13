@@ -544,11 +544,11 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
     utl::verify(tt_ != nullptr && tags_ != nullptr,
                 "mode=TRANSIT requires timetable to be loaded");
 
-    auto const max_results = config_.timetable_->plan_max_results_;
+    auto const max_results = config_.timetable_.value().plan_max_results_;
     utl::verify(query.numItineraries_ <= max_results,
                 "maximum number of minimum itineraries is {}", max_results);
-    auto const max_timeout =
-        std::chrono::seconds{config_.timetable_->routing_max_timeout_seconds_};
+    auto const max_timeout = std::chrono::seconds{
+        config_.timetable_.value().routing_max_timeout_seconds_};
     utl::verify(!query.timeout_.has_value() ||
                     std::chrono::seconds{*query.timeout_} <= max_timeout,
                 "maximum allowed timeout is {}", max_timeout);
@@ -705,7 +705,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                   shapes_, gbfs_rd, query.pedestrianProfile_,
                   query.elevationCosts_, j, start, dest, cache, blocked.get(),
                   query.detailedTransfers_, query.withFares_,
-                  config_.timetable_->max_matching_distance_,
+                  config_.timetable_.value().max_matching_distance_,
                   query.maxMatchingDistance_, api_version);
             }),
         .previousPageCursor_ =

@@ -48,7 +48,7 @@ json::value update_elevator::operator()(json::value const& query) const {
   auto new_rtt = n::rt::create_rt_timetable(tt_, rtt->base_day_);
   update_rtt_td_footpaths(
       w_, l_, pl_, tt_, loc_rtree_, new_e, matches_, tasks, rtt, new_rtt,
-      std::chrono::seconds{c_.timetable_->max_footpath_length_});
+      std::chrono::seconds{c_.timetable_.value().max_footpath_length_});
 
   rt_ = std::make_shared<rt>(
       std::make_unique<n::rt_timetable>(std::move(new_rtt)),

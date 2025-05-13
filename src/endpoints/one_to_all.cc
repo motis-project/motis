@@ -22,7 +22,7 @@ namespace n = nigiri;
 
 api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
   auto const max_travel_minutes =
-      config_.timetable_->onetoall_max_travel_minutes_;
+      config_.timetable_.value().onetoall_max_travel_minutes_;
   auto const query = api::oneToAll_params{url.params()};
   utl::verify(query.maxTravelTime_ <= max_travel_minutes,
               "maxTravelTime too large: {} > {}", query.maxTravelTime_,
@@ -114,7 +114,7 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
     }
   }
 
-  auto const max_results = config_.timetable_->onetoall_max_results_;
+  auto const max_results = config_.timetable_.value().onetoall_max_results_;
   utl::verify(reachable.count() <= max_results, "too many results: {} > {}",
               reachable.count(), max_results);
 
