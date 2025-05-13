@@ -314,6 +314,26 @@ api::Itinerary journey_to_response(
       return p;
     };
 
+    auto const get_headsign = [&](n::rt::frun const &fr, const n::rt::run_stop &enter_stop) {
+      if (!enter_stop.direction().empty()) {
+        return std::string{enter_stop.direction()};
+      }
+
+      auto first_trip_interval = nigiri::interval<nigiri::stop_idx_t>();
+      auto found = false;
+
+      fr.for_each_trip([&](auto const &, auto const &interval) {
+        if (found) {
+          return;
+        }
+        found = true;
+        first_trip_interval = interval;
+      });
+
+      auto const end = to_place(fr[first_trip_interval.to_ - 1], false);
+      return end.name_;
+    };
+
     std::visit(
         utl::overloaded{
             [&](n::routing::journey::run_enter_exit const& t) {
@@ -341,10 +361,7 @@ api::Itinerary journey_to_response(
                       exit_stop.scheduled_time(n::event_type::kArr),
                   .realTime_ = fr.is_rt(),
                   .scheduled_ = fr.is_scheduled(),
-                  .headsign_ =
-                      enter_stop.direction().empty()
-                          ? to_place(fr[t.stop_range_.to_ - 1], false).name_
-                          : std::string{enter_stop.direction()},
+                  .headsign_ = get_headsign(fr, enter_stop),
                   .routeColor_ = to_str(color.color_),
                   .routeTextColor_ = to_str(color.text_color_),
                   .agencyName_ =
