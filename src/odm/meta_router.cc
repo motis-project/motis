@@ -397,11 +397,7 @@ std::vector<meta_router::routing_result> meta_router::search_interval(
           }
 
           auto const timeout = std::chrono::seconds{query_.timeout_.value_or(
-              r_.config_.timetable_
-                  .and_then([](config::timetable const& x) {
-                    return std::optional{x.routing_max_timeout_seconds_};
-                  })
-                  .value_or(90U))};
+              r_.config_.timetable_->routing_max_timeout_seconds_)};
 
           return routing_result{raptor_search(
               *tt_, rtt_, *ep::search_state, *ep::raptor_state, std::move(q),

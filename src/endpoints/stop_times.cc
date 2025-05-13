@@ -265,11 +265,7 @@ api::stoptimes_response stop_times::operator()(
     boost::urls::url_view const& url) const {
   auto const query = api::stoptimes_params{url.params()};
 
-  auto const max_results = config_.timetable_
-                               .and_then([](config::timetable const& x) {
-                                 return std::optional{x.stoptimes_max_results_};
-                               })
-                               .value_or(256U);
+  auto const max_results = config_.timetable_->stoptimes_max_results_;
   utl::verify(query.n_ < max_results, "n={} > {} not allowed", query.n_,
               max_results);
 
