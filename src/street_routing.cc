@@ -23,18 +23,21 @@ default_output::default_output(osr::search_profile id)
     : profile_{static_cast<std::underlying_type_t<osr::search_profile>>(id)} {}
 
 default_output::default_output(nigiri::transport_mode_id_t const id)
-    : profile_{
-          id == kOdmTransportModeId
-              ? osr::search_profile::kCar
-              : osr::search_profile{
-                    static_cast<std::underlying_type_t<osr::search_profile>>(
-                        id)}} {
+    : profile_{id == kOdmTransportModeId
+                   ? osr::search_profile::kCar
+                   : osr::search_profile{static_cast<
+                         std::underlying_type_t<osr::search_profile>>(id)}},
+      id_{id} {
   utl::verify(id <= kOdmTransportModeId, "invalid mode id={}", id);
 }
 
 default_output::~default_output() = default;
 
 api::ModeEnum default_output::get_mode() const {
+  if (id_ == kOdmTransportModeId) {
+    return api::ModeEnum::ODM;
+  }
+
   switch (profile_) {
     case osr::search_profile::kFoot: [[fallthrough]];
     case osr::search_profile::kWheelchair: return api::ModeEnum::WALK;
@@ -168,13 +171,7 @@ api::Itinerary street_routing(osr::ways const& w,
                               street_routing_cache_t& cache,
                               osr::bitvec<osr::node_idx_t>& blocked_mem,
                               unsigned const api_version,
-                              std::chrono::seconds const max,
-                              bool const dummy) {
-  if (dummy) {
-    return dummy_itinerary(from_place, to_place, out.get_mode(), start_time,
-                           *end_time);
-  }
-
+                              std::chrono::seconds const max) {
   auto const from = get_location(from_place);
   auto const to = get_location(to_place);
   auto const s = e ? get_states_at(w, l, *e, start_time, from.pos_)
@@ -238,6 +235,7 @@ api::Itinerary street_routing(osr::ways const& w,
         }
 
         auto& leg = itinerary.legs_.emplace_back(api::Leg{
+            .mode_ = to_mode(lb->mode_),
             .from_ = pred_place,
             .to_ = is_last_leg ? to_place : out.get_place(to_node),
             .duration_ = std::chrono::duration_cast<std::chrono::seconds>(

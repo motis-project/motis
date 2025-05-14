@@ -389,7 +389,7 @@ api::Itinerary journey_to_response(osr::ways const* w,
               }
             },
             [&](n::footpath) {
-              append(w && l
+              append(w && l && detailed_transfers
                          ? street_routing(
                                *w, *l, e, elevations, from, to,
                                default_output{osr::search_profile::kFoot},
@@ -398,18 +398,16 @@ api::Itinerary journey_to_response(osr::ways const* w,
                                *blocked_mem, api_version,
                                std::chrono::duration_cast<std::chrono::seconds>(
                                    j_leg.arr_time_ - j_leg.dep_time_) +
-                                   std::chrono::minutes{10},
-                               !detailed_transfers)
+                                   std::chrono::minutes{10})
                          : dummy_itinerary(from, to, api::ModeEnum::WALK,
                                            j_leg.dep_time_, j_leg.arr_time_));
             },
             [&](n::routing::offset const x) {
               auto out = std::unique_ptr<output>{};
-              if (x.transport_mode_id_ >= kFlexModeIdOffset) {
+              if (flex::mode_id::is_flex(x.transport_mode_id_)) {
                 out = std::make_unique<flex::flex_output>(
                     *w, *l, pl, matches, tt,
-                    flex::mode_id{x.transport_mode_id_},
-                    osr::direction::kForward);
+                    flex::mode_id{x.transport_mode_id_});
               } else if (x.transport_mode_id_ >= kGbfsTransportModeIdOffset) {
                 out = std::make_unique<gbfs::gbfs_output>(
                     *w, gbfs_rd,

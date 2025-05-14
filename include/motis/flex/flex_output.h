@@ -12,8 +12,7 @@ struct flex_output : public output {
               osr::platforms const*,
               platform_matches_t const*,
               nigiri::timetable const&,
-              mode_id,
-              osr::direction);
+              mode_id);
   ~flex_output() override;
 
   api::ModeEnum get_mode() const override;
@@ -24,12 +23,13 @@ struct flex_output : public output {
   api::Place get_place(osr::node_idx_t) const override;
 
 private:
-  std::size_t get_additional_node_idx(osr::node_idx_t const n) const;
+  std::size_t get_additional_node_idx(osr::node_idx_t) const;
 
   osr::ways const& w_;
   nigiri::timetable const& tt_;
   flex::flex_routing_data flex_routing_data_;
   osr::sharing_data sharing_data_;
+  mode_id mode_id_;
 };
 
 }  // namespace motis::flex

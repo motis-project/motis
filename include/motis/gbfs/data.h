@@ -278,7 +278,6 @@ struct compressed_routing_data {
   std::vector<geo::latlng> additional_node_coordinates_;
   osr::hash_map<osr::node_idx_t, std::vector<osr::additional_edge>>
       additional_edges_{};
-
   compressed_bitvec start_allowed_{};
   compressed_bitvec end_allowed_{};
   compressed_bitvec through_allowed_{};
@@ -296,11 +295,11 @@ struct products_routing_data {
             .end_allowed_ = &end_allowed_,
             .through_allowed_ = &through_allowed_,
             .additional_node_offset_ = additional_node_offset,
-            .additional_node_coordinates_ = &additional_node_coordinates_,
+            .additional_node_coordinates_ =
+                &compressed_.additional_node_coordinates_,
             .additional_edges_ = &compressed_.additional_edges_};
   }
 
-  std::vector<geo::latlng> additional_node_coordinates_;
   std::shared_ptr<provider_routing_data const> provider_routing_data_;
   compressed_routing_data const& compressed_;
 

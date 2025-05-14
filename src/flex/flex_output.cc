@@ -15,18 +15,18 @@ flex_output::flex_output(osr::ways const& w,
                          osr::platforms const* pl,
                          platform_matches_t const* matches,
                          n::timetable const& tt,
-                         mode_id const id,
-                         osr::direction const dir)
+                         mode_id const id)
     : w_{w},
       tt_{tt},
       sharing_data_{flex::prepare_sharing_data(
-          tt, w, l, pl, matches, id, dir, flex_routing_data_)} {}
+          tt, w, l, pl, matches, id, id.get_dir(), flex_routing_data_)},
+      mode_id_(id) {}
 
 flex_output::~flex_output() = default;
 
 api::ModeEnum flex_output::get_mode() const { return api::ModeEnum::FLEX; }
 
-transport_mode_t flex_output::get_cache_key() const { return id; }
+transport_mode_t flex_output::get_cache_key() const { return mode_id_.to_id(); }
 
 osr::search_profile flex_output::get_profile() const {
   return osr::search_profile::kCarSharing;

@@ -43,7 +43,15 @@ osr::sharing_data const* gbfs_output::get_sharing_data() const {
 void gbfs_output::annotate_leg(osr::node_idx_t const from_node,
                                osr::node_idx_t const to_node,
                                api::Leg& leg) const {
-  leg.rental_ = rental_;
+  auto const from_additional_node = w_.is_additional_node(from_node);
+  auto const to_additional_node = w_.is_additional_node(to_node);
+  auto const is_rental =
+      (leg.mode_ == api::ModeEnum::BIKE || leg.mode_ == api::ModeEnum::CAR) &&
+      (from_additional_node || to_additional_node);
+  if (is_rental) {
+    leg.rental_ = rental_;
+    leg.mode_ = api::ModeEnum::RENTAL;
+  }
   auto& ret = *leg.rental_;
   if (w_.is_additional_node(from_node)) {
     auto const& an = prod_rd_->compressed_.additional_nodes_.at(

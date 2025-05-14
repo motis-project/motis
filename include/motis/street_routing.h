@@ -13,7 +13,7 @@
 
 namespace motis {
 
-using transport_mode_t = std::int32_t;
+using transport_mode_t = std::uint32_t;
 
 struct output {
   output() = default;
@@ -37,7 +37,7 @@ struct default_output final : public output {
   default_output(osr::search_profile);
   default_output(nigiri::transport_mode_id_t);
   ~default_output() override;
-  
+
   api::ModeEnum get_mode() const override;
   osr::search_profile get_profile() const override;
   transport_mode_t get_cache_key() const override;
@@ -46,6 +46,7 @@ struct default_output final : public output {
   api::Place get_place(osr::node_idx_t) const override;
 
   osr::search_profile profile_;
+  nigiri::transport_mode_id_t id_;
 };
 
 using street_routing_cache_key_t = std::
@@ -60,21 +61,20 @@ api::Itinerary dummy_itinerary(api::Place const& from,
                                nigiri::unixtime_t const start_time,
                                nigiri::unixtime_t const end_time);
 
-api::Itinerary street_routing(
-    osr::ways const&,
-    osr::lookup const&,
-    elevators const*,
-    osr::elevation_storage const*,
-    api::Place const& from,
-    api::Place const& to,
-    output const&,
-    nigiri::unixtime_t start_time,
-    std::optional<nigiri::unixtime_t> end_time,
-    double max_matching_distance,
-    street_routing_cache_t&,
-    osr::bitvec<osr::node_idx_t>& blocked_mem,
-    unsigned api_version,
-    std::chrono::seconds max = std::chrono::seconds{3600},
-    bool dummy = false);
+api::Itinerary street_routing(osr::ways const&,
+                              osr::lookup const&,
+                              elevators const*,
+                              osr::elevation_storage const*,
+                              api::Place const& from,
+                              api::Place const& to,
+                              output const&,
+                              nigiri::unixtime_t start_time,
+                              std::optional<nigiri::unixtime_t> end_time,
+                              double max_matching_distance,
+                              street_routing_cache_t&,
+                              osr::bitvec<osr::node_idx_t>& blocked_mem,
+                              unsigned api_version,
+                              std::chrono::seconds max = std::chrono::seconds{
+                                  3600});
 
 }  // namespace motis
