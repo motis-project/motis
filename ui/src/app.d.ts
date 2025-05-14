@@ -1,6 +1,6 @@
 // See https://kit.svelte.dev/docs/types#app
 
-import type { Itinerary } from '$lib/openapi';
+import type { Itinerary } from '$lib/api/openapi';
 
 // for information about these interfaces
 declare global {

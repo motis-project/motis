@@ -10,10 +10,11 @@
 		initial,
 		type Match,
 		plan,
+		type ElevationCosts,
 		type PlanResponse,
 		type Mode,
 		type PlanData
-	} from '$lib/openapi';
+	} from '$lib/api/openapi';
 	import ItineraryList from '$lib/ItineraryList.svelte';
 	import ConnectionDetail from '$lib/ConnectionDetail.svelte';
 	import { Button } from '$lib/components/ui/button';
@@ -32,7 +33,7 @@
 	import Popup from '$lib/map/Popup.svelte';
 	import LevelSelect from '$lib/LevelSelect.svelte';
 	import { lngLatToStr } from '$lib/lngLatToStr';
-	import { client } from '$lib/openapi';
+	import { client } from '$lib/api/openapi';
 	import StopTimes from '$lib/StopTimes.svelte';
 	import { onMount, tick } from 'svelte';
 	import RailViz from '$lib/RailViz.svelte';
@@ -131,10 +132,14 @@
 	let bikeRental = $state(urlParams?.get('bikeRental') == 'true');
 	let bikeCarriage = $state(urlParams?.get('bikeCarriage') == 'true');
 	let carCarriage = $state(urlParams?.get('carCarriage') == 'true');
-	let selectedTransitModes = $state<Mode[]>(
-		(urlParams?.get('selectedTransitModes') &&
-			(urlParams?.get('selectedTransitModes')?.split(',') as Mode[])) ||
-			[]
+	let selectedTransitModes = $state<Mode[] | undefined>(
+		(urlParams?.get('selectedTransitModes')?.split(',') as Mode[]) ?? undefined
+	);
+	let firstMileMode = $state<Mode>((urlParams?.get('firstMileMode') ?? 'WALK') as Mode);
+	let lastMileMode = $state<Mode>((urlParams?.get('lastMileMode') ?? 'WALK') as Mode);
+	let directModes = $state<Mode[]>((urlParams?.get('directModes')?.split(',') ?? []) as Mode[]);
+	let elevationCosts = $state<ElevationCosts>(
+		(urlParams?.get('elevationCosts') ?? 'NONE') as ElevationCosts
 	);
 
 	const toPlaceString = (l: Location) => {
@@ -146,12 +151,19 @@
 			return `${lngLatToStr(l.value.match!)},0`;
 		}
 	};
-	let modes = $derived([
-		...(!bikeCarriage && !carCarriage ? ['WALK'] : []),
+	let additionalModes = $derived([
 		...(bikeRental ? ['RENTAL'] : []),
 		...(bikeCarriage ? ['BIKE'] : []),
 		...(carCarriage ? ['CAR'] : [])
 	] as Mode[]);
+	let preTransitModes = $derived([firstMileMode, ...additionalModes]);
+	let postTransitModes = $derived([lastMileMode, ...additionalModes]);
+	let requestDirectModes = $derived([
+		...directModes,
+		...additionalModes,
+		...(directModes.length == 0 && additionalModes.length == 0 ? ['WALK'] : [])
+	]);
+
 	let baseQuery = $derived(
 		from.value.match && to.value.match
 			? ({
@@ -162,12 +174,13 @@
 						arriveBy: timeType === 'arrival',
 						timetableView: true,
 						pedestrianProfile: wheelchair ? 'WHEELCHAIR' : 'FOOT',
-						preTransitModes: modes,
-						postTransitModes: modes,
-						directModes: modes,
+						preTransitModes,
+						postTransitModes,
+						directModes: requestDirectModes,
 						requireBikeTransport: bikeCarriage,
 						requireCarTransport: carCarriage,
-						transitModes: selectedTransitModes.length ? selectedTransitModes : undefined,
+						transitModes: selectedTransitModes?.length ? selectedTransitModes : undefined,
+						elevationCosts,
 						useRoutedTransfers: true,
 						maxMatchingDistance: wheelchair ? 8 : 250
 					}
@@ -190,13 +203,17 @@
 					{
 						from: JSON.stringify(from?.value?.match),
 						to: JSON.stringify(to?.value?.match),
-						time: time,
+						time,
 						arriveBy: timeType === 'arrival',
-						wheelchair: wheelchair,
-						bikeRental: bikeRental,
-						bikeCarriage: bikeCarriage,
-						carCarriage: carCarriage,
-						selectedTransitModes: selectedTransitModes.join(',')
+						wheelchair,
+						bikeRental,
+						bikeCarriage,
+						carCarriage,
+						firstMileMode,
+						lastMileMode,
+						directModes: directModes.join(','),
+						elevationCosts,
+						selectedTransitModes: selectedTransitModes?.join(',') ?? ''
 					},
 					{},
 					true
@@ -319,6 +336,10 @@
 								bind:bikeCarriage
 								bind:carCarriage
 								bind:selectedModes={selectedTransitModes}
+								bind:firstMileMode
+								bind:lastMileMode
+								bind:directModes
+								bind:elevationCosts
 							/>
 						</Card>
 					</Tabs.Content>

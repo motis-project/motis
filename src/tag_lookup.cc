@@ -101,15 +101,21 @@ std::pair<nigiri::rt::run, nigiri::trip_idx_t> tag_lookup::get_trip(
     std::string_view id) const {
   auto const [date, start_time, tag, trip_id] =
       utl::split<'_', utl::cstr, utl::cstr, utl::cstr, utl::cstr>(id);
-  for (auto const rev : {date, start_time, tag, trip_id}) {
-    utl::verify(rev.valid(), "invalid tripId {}", id);
-  }
   auto td = transit_realtime::TripDescriptor{};
+
+  utl::verify(date.valid(), "invalid tripId date {}", id);
   td.set_start_date(date.view());
+
+  utl::verify(start_time.valid(), "invalid tripId start_time {}", id);
   td.set_start_time(start_time.view());
-  td.set_trip_id(std::string_view{
-      trip_id.str,
-      static_cast<std::size_t>(id.data() + id.size() - trip_id.str)});
+
+  utl::verify(tag.valid(), "invalid tripId tag {}", id);
+  // allow trip ids starting with underscore
+  auto const trip_id_len_plus_one =
+      static_cast<std::size_t>(id.data() + id.size() - tag.str) - tag.length();
+  utl::verify(trip_id_len_plus_one > 1, "invalid tripId id {}", id);
+  td.set_trip_id(
+      std::string_view{tag.str + tag.length() + 1, trip_id_len_plus_one - 1});
 
   return n::rt::gtfsrt_resolve_run({}, tt, rtt, get_src(tag.view()), td);
 }

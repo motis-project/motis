@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Layer from '$lib/map/Layer.svelte';
 	import GeoJSON from '$lib/map/GeoJSON.svelte';
-	import type { Itinerary, Mode } from '$lib/openapi';
+	import type { Itinerary, Mode } from '$lib/api/openapi';
 	import { getColor } from '$lib/modeStyle';
 	import polyline from 'polyline';
 	import { colord } from 'colord';

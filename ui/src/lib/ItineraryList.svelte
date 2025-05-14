@@ -11,7 +11,7 @@
 		type PlanData,
 		type PlanError,
 		type PlanResponse
-	} from '$lib/openapi';
+	} from '$lib/api/openapi';
 	import Time from '$lib/Time.svelte';
 	import LoaderCircle from 'lucide-svelte/icons/loader-circle';
 	import { t } from '$lib/i18n/translation';
