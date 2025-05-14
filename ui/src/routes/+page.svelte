@@ -14,7 +14,7 @@
 		type PlanResponse,
 		type Mode,
 		type PlanData
-	} from '$lib/openapi';
+	} from '$lib/api/openapi';
 	import ItineraryList from '$lib/ItineraryList.svelte';
 	import ConnectionDetail from '$lib/ConnectionDetail.svelte';
 	import { Button } from '$lib/components/ui/button';
@@ -33,7 +33,7 @@
 	import Popup from '$lib/map/Popup.svelte';
 	import LevelSelect from '$lib/LevelSelect.svelte';
 	import { lngLatToStr } from '$lib/lngLatToStr';
-	import { client } from '$lib/openapi';
+	import { client } from '$lib/api/openapi';
 	import StopTimes from '$lib/StopTimes.svelte';
 	import { onMount, tick } from 'svelte';
 	import RailViz from '$lib/RailViz.svelte';

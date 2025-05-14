@@ -10,7 +10,7 @@
 	import { t } from '$lib/i18n/translation';
 	import AdvancedOptions from './AdvancedOptions.svelte';
 	import maplibregl from 'maplibre-gl';
-	import type { ElevationCosts, Mode } from './openapi';
+	import type { ElevationCosts, Mode } from '$lib/api/openapi';
 
 	let {
 		geocodingBiasPlace,

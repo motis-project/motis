@@ -1,7 +1,12 @@
 <script lang="ts">
 	import ArrowRight from 'lucide-svelte/icons/arrow-right';
 	import CircleX from 'lucide-svelte/icons/circle-x';
-	import { type FareProduct, type Itinerary, type Leg, type PickupDropoffType } from '$lib/openapi';
+	import {
+		type FareProduct,
+		type Itinerary,
+		type Leg,
+		type PickupDropoffType
+	} from '$lib/api/openapi';
 	import Time from '$lib/Time.svelte';
 	import { routeBorderColor, routeColor } from '$lib/modeStyle';
 	import { formatDurationSec, formatDistanceMeters } from '$lib/formatDuration';
