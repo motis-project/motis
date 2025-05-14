@@ -484,8 +484,6 @@ TEST(motis, routing) {
         "&timetableView=false"
         "&directModes=WALK,RENTAL");
 
-    std::cout << json::serialize(json::value_from(plan_response)) << "\n";
-
     EXPECT_EQ(
         R"(date=2019-05-01, start=01:25, end=01:35, duration=00:10, transfers=0, legs=[
     (from=- [track=-, scheduled_track=-, level=0], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 01:25, mode="WALK", trip="-", end=2019-05-01 01:28),
@@ -495,340 +493,263 @@ TEST(motis, routing) {
         direct_to_str(plan_response));
   }
 
-  return;
-  /*
-    // Route with GBFS.
+  // Route with GBFS.
+  {
+    auto const plan_response = routing(
+        "?fromPlace=49.875308,8.6276673"
+        "&toPlace=50.11347,8.67664"
+        "&time=2019-05-01T01:25Z"
+        "&timetableView=false"
+        "&useRoutedTransfers=true"
+        "&preTransitModes=WALK,RENTAL");
+
+    std::cout << "@@\n" << itineraries_to_str(plan_response) << std::endl;
+    EXPECT_EQ(
+        R"(date=2019-05-01, start=01:25, end=02:14, duration=00:49, transfers=1, legs=[
+    (from=- [track=-, scheduled_track=-, level=0], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 01:25, mode="WALK", trip="-", end=2019-05-01 01:25),
+    (from=- [track=-, scheduled_track=-, level=0], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 01:25, mode="RENTAL", trip="-", end=2019-05-01 01:26),
+    (from=- [track=-, scheduled_track=-, level=0], to=test_DA_10 [track=10, scheduled_track=10, level=-1], start=2019-05-01 01:26, mode="WALK", trip="-", end=2019-05-01 01:33),
+    (from=test_DA_10 [track=10, scheduled_track=10, level=-1], to=test_FFM_12 [track=12, scheduled_track=10, level=0], start=2019-05-01 01:35, mode="HIGHSPEED_RAIL", trip="ICE", end=2019-05-01 01:55, alerts=["Hello"]),
+    (from=test_FFM_12 [track=12, scheduled_track=10, level=0], to=test_de:6412:10:6:1 [track=U4, scheduled_track=U4, level=-2], start=2019-05-01 01:55, mode="WALK", trip="-", end=2019-05-01 01:59),
+    (from=test_de:6412:10:6:1 [track=U4, scheduled_track=U4, level=-2], to=test_FFM_HAUPT_U [track=-, scheduled_track=-, level=-4], start=2019-05-01 02:05, mode="SUBWAY", trip="U4", end=2019-05-01 02:10),
+    (from=test_FFM_HAUPT_U [track=-, scheduled_track=-, level=-4], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 02:10, mode="WALK", trip="-", end=2019-05-01 02:14)
+])",
+        itineraries_to_str(plan_response));
+  }
+
+  // Routing with temporary blocked paths due to elevator being out of service
+  // Queries will use the wheelchair profile and have a long walking path before
+  // or after the elevator, to identify possible bugs
+  {
+    // Blocked near fromPlace, arriveBy=false, pass before blocked
     {
       auto const plan_response = routing(
-          "?fromPlace=49.875308,8.6276673"
-          "&toPlace=50.11347,8.67664"
-          "&time=2019-05-01T01:25Z"
+          "?fromPlace=50.1040763,8.6586978"
+          "&toPlace=50.1132737,8.6767235"
+          "&time=2019-05-01T01:15Z"
+          "&arriveBy=false"
+          "&preTransitModes=WALK"
           "&timetableView=false"
-          "&useRoutedTransfers=true"
-          "&preTransitModes=WALK,RENTAL");
-
-      std::cout << "@@\n" << itineraries_to_str(plan_response) << std::endl;
-      EXPECT_EQ(
-          R"(date=2019-05-01, start=01:25, end=02:14, duration=00:49,
-  transfers=1, legs=[ (from=- [track=-, scheduled_track=-, level=0], to=-
-  [track=-, scheduled_track=-, level=0], start=2019-05-01 01:25, mode="WALK",
-  trip="-", end=2019-05-01 01:25), (from=- [track=-, scheduled_track=-,
-  level=0], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 01:25,
-  mode="RENTAL", trip="-", end=2019-05-01 01:26), (from=- [track=-,
-  scheduled_track=-, level=0], to=test_DA_10 [track=10, scheduled_track=10,
-  level=-1], start=2019-05-01 01:26, mode="WALK", trip="-", end=2019-05-01
-  01:33), (from=test_DA_10 [track=10, scheduled_track=10, level=-1],
-  to=test_FFM_12 [track=12, scheduled_track=10, level=0], start=2019-05-01
-  01:35, mode="HIGHSPEED_RAIL", trip="ICE", end=2019-05-01 01:55,
-  alerts=["Hello"]), (from=test_FFM_12 [track=12, scheduled_track=10, level=0],
-  to=test_de:6412:10:6:1 [track=U4, scheduled_track=U4, level=-2],
-  start=2019-05-01 01:55, mode="WALK", trip="-", end=2019-05-01 01:59),
-      (from=test_de:6412:10:6:1 [track=U4, scheduled_track=U4, level=-2],
-  to=test_FFM_HAUPT_U [track=-, scheduled_track=-, level=-4], start=2019-05-01
-  02:05, mode="SUBWAY", trip="U4", end=2019-05-01 02:10), (from=test_FFM_HAUPT_U
-  [track=-, scheduled_track=-, level=-4], to=- [track=-, scheduled_track=-,
-  level=0], start=2019-05-01 02:10, mode="WALK", trip="-", end=2019-05-01 02:14)
-  ])",
-          itineraries_to_str(plan_response));
-    }
-
-    // Routing with temporary blocked paths due to elevator being out of service
-    // Queries will use the wheelchair profile and have a long walking path
-  before
-    // or after the elevator, to identify possible bugs
-    {
-      // Blocked near fromPlace, arriveBy=false, pass before blocked
-      {
-        auto const plan_response = routing(
-            "?fromPlace=50.1040763,8.6586978"
-            "&toPlace=50.1132737,8.6767235"
-            "&time=2019-05-01T01:15Z"
-            "&arriveBy=false"
-            "&preTransitModes=WALK"
-            "&timetableView=false"
-            "&pedestrianProfile=WHEELCHAIR"
-            "&maxMatchingDistance=8"  // Should match closely for wheelchair
-            "&useRoutedTransfers=true");
-
-        EXPECT_EQ(
-            R"(date=2019-05-01, start=01:16, end=02:28, duration=01:13,
-  transfers=0, legs=[ (from=- [track=-, scheduled_track=-, level=0],
-  to=test_FFM_101 [track=101, scheduled_track=101, level=-3], start=2019-05-01
-  01:16, mode="WALK", trip="-", end=2019-05-01 02:15), (from=test_FFM_101
-  [track=101, scheduled_track=101, level=-3], to=test_FFM_HAUPT_S [track=-,
-  scheduled_track=-, level=-3], start=2019-05-01 02:15, mode="METRO", trip="S3",
-  end=2019-05-01 02:20), (from=test_FFM_HAUPT_S [track=-, scheduled_track=-,
-  level=-3], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 02:20,
-  mode="WALK", trip="-", end=2019-05-01 02:28)
-  ])",
-            itineraries_to_str(plan_response));
-      }
-      // Blocked near fromPlace, arriveBy=false, temporary blocked / must wait
-      {
-        auto const plan_response = routing(
-            "?fromPlace=50.1040763,8.6586978"
-            "&toPlace=50.1132737,8.6767235"
-            "&time=2019-05-01T01:20Z"
-            "&arriveBy=false"
-            "&preTransitModes=WALK"
-            "&timetableView=false"
-            "&pedestrianProfile=WHEELCHAIR"
-            "&maxMatchingDistance=8"  // Should match closely for wheelchair
-            "&useRoutedTransfers=true");
-
-        EXPECT_EQ(
-            R"(date=2019-05-01, start=03:01, end=03:28, duration=02:08,
-  transfers=0, legs=[ (from=- [track=-, scheduled_track=-, level=0],
-  to=test_FFM_101 [track=101, scheduled_track=101, level=-3], start=2019-05-01
-  03:01, mode="WALK", trip="-", end=2019-05-01 03:15), (from=test_FFM_101
-  [track=101, scheduled_track=101, level=-3], to=test_FFM_HAUPT_S [track=-,
-  scheduled_track=-, level=-3], start=2019-05-01 03:15, mode="METRO", trip="S3",
-  end=2019-05-01 03:20), (from=test_FFM_HAUPT_S [track=-, scheduled_track=-,
-  level=-3], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 03:20,
-  mode="WALK", trip="-", end=2019-05-01 03:28)
-  ])",
-            itineraries_to_str(plan_response));
-      }
-      // Blocked near fromPlace, arriveBy=true, must pass before blocked
-      {
-        auto const plan_response = routing(
-            "?fromPlace=50.1040763,8.6586978"
-            "&toPlace=50.1132737,8.6767235"
-            "&time=2019-05-01T02:30Z"
-            "&arriveBy=true"
-            "&preTransitModes=WALK"
-            "&timetableView=false"
-            "&pedestrianProfile=WHEELCHAIR"
-            "&maxMatchingDistance=8"  // Should match closely for wheelchair
-            "&useRoutedTransfers=true");
-
-        EXPECT_EQ(
-            R"(date=2019-05-01, start=01:16, end=02:28, duration=01:14,
-  transfers=0, legs=[ (from=- [track=-, scheduled_track=-, level=0],
-  to=test_FFM_101 [track=101, scheduled_track=101, level=-3], start=2019-05-01
-  01:16, mode="WALK", trip="-", end=2019-05-01 01:30), (from=test_FFM_101
-  [track=101, scheduled_track=101, level=-3], to=test_FFM_HAUPT_S [track=-,
-  scheduled_track=-, level=-3], start=2019-05-01 02:15, mode="METRO", trip="S3",
-  end=2019-05-01 02:20), (from=test_FFM_HAUPT_S [track=-, scheduled_track=-,
-  level=-3], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 02:20,
-  mode="WALK", trip="-", end=2019-05-01 02:28)
-  ])",
-            itineraries_to_str(plan_response));
-      }
-      // Blocked near fromPlace, arriveBy=true, can pass after blocked
-      {
-        auto const plan_response = routing(
-            "?fromPlace=50.1040763,8.6586978"
-            "&toPlace=50.1132737,8.6767235"
-            "&time=2019-05-01T03:30Z"
-            "&arriveBy=true"
-            "&preTransitModes=WALK"
-            "&timetableView=false"
-            "&pedestrianProfile=WHEELCHAIR"
-            "&maxMatchingDistance=8"  // Should match closely for wheelchair
-            "&useRoutedTransfers=true");
-
-        EXPECT_EQ(
-            R"(date=2019-05-01, start=03:01, end=03:28, duration=00:29,
-  transfers=0, legs=[ (from=- [track=-, scheduled_track=-, level=0],
-  to=test_FFM_101 [track=101, scheduled_track=101, level=-3], start=2019-05-01
-  03:01, mode="WALK", trip="-", end=2019-05-01 03:15), (from=test_FFM_101
-  [track=101, scheduled_track=101, level=-3], to=test_FFM_HAUPT_S [track=-,
-  scheduled_track=-, level=-3], start=2019-05-01 03:15, mode="METRO", trip="S3",
-  end=2019-05-01 03:20), (from=test_FFM_HAUPT_S [track=-, scheduled_track=-,
-  level=-3], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 03:20,
-  mode="WALK", trip="-", end=2019-05-01 03:28)
-  ])",
-            itineraries_to_str(plan_response));
-      }
-
-      // Blocked near toPlace, arriveBy=true, must pass before blocked
-      {
-        auto const plan_response = routing(
-            "?fromPlace=49.87336,8.62926"
-            "&toPlace=50.106420,8.660708,-3"
-            "&time=2019-05-01T02:54Z"
-            "&arriveBy=true"
-            "&preTransitModes=WALK"
-            "&timetableView=false"
-            "&pedestrianProfile=WHEELCHAIR"
-            "&maxMatchingDistance=8"  // Should match closely for wheelchair
-            "&useRoutedTransfers=true");
-
-        EXPECT_EQ(
-            R"(date=2019-05-01, start=01:34, end=02:40, duration=01:20,
-  transfers=0, legs=[ (from=- [track=-, scheduled_track=-, level=0],
-  to=test_DA_10 [track=10, scheduled_track=10, level=-1], start=2019-05-01
-  01:34, mode="WALK", trip="-", end=2019-05-01 01:35), (from=test_DA_10
-  [track=10, scheduled_track=10, level=-1], to=test_FFM_12 [track=12,
-  scheduled_track=10, level=0], start=2019-05-01 01:35, mode="HIGHSPEED_RAIL",
-  trip="ICE", end=2019-05-01 01:55, alerts=["Hello"]), (from=test_FFM_12
-  [track=12, scheduled_track=10, level=0], to=- [track=-, scheduled_track=-,
-  level=-3], start=2019-05-01 01:55, mode="WALK", trip="-", end=2019-05-01
-  02:40)
-  ])",
-            itineraries_to_str(plan_response));
-      }
-      // Blocked near toPlace, arriveBy=true, can pass after blocked
-      {
-        auto const plan_response = routing(
-            "?fromPlace=49.87336,8.62926"
-            "&toPlace=50.106420,8.660708,-3"
-            "&time=2019-05-01T02:55Z"
-            "&arriveBy=true"
-            "&preTransitModes=WALK"
-            "&timetableView=false"
-            "&pedestrianProfile=WHEELCHAIR"
-            "&maxMatchingDistance=8"  // Should match closely for wheelchair
-            "&useRoutedTransfers=true");
-
-        EXPECT_EQ(
-            R"(date=2019-05-01, start=02:34, end=02:55, duration=00:21,
-  transfers=0, legs=[ (from=- [track=-, scheduled_track=-, level=0],
-  to=test_DA_10 [track=10, scheduled_track=10, level=-1], start=2019-05-01
-  02:34, mode="WALK", trip="-", end=2019-05-01 02:35), (from=test_DA_10
-  [track=10, scheduled_track=10, level=-1], to=test_FFM_10 [track=10,
-  scheduled_track=10, level=0], start=2019-05-01 02:35, mode="HIGHSPEED_RAIL",
-  trip="ICE", end=2019-05-01 02:45), (from=test_FFM_10 [track=10,
-  scheduled_track=10, level=0], to=- [track=-, scheduled_track=-, level=-3],
-  start=2019-05-01 02:45, mode="WALK", trip="-", end=2019-05-01 02:55)
-  ])",
-            itineraries_to_str(plan_response));
-      }
-      // Blocked near toPlace, arriveBy=false, temporary blocked / must wait
-      {
-        auto const plan_response = routing(
-            "?fromPlace=49.87336,8.62926"
-            "&toPlace=50.106420,8.660708,-3"
-            "&time=2019-05-01T01:30Z"
-            "&arriveBy=false"
-            "&preTransitModes=WALK"
-            "&timetableView=false"
-            "&pedestrianProfile=WHEELCHAIR"
-            "&maxMatchingDistance=8"  // Should match 'toPlace' closely
-            "&useRoutedTransfers=true");
-
-        EXPECT_EQ(
-            R"(date=2019-05-01, start=01:34, end=02:40, duration=01:10,
-  transfers=0, legs=[ (from=- [track=-, scheduled_track=-, level=0],
-  to=test_DA_10 [track=10, scheduled_track=10, level=-1], start=2019-05-01
-  01:34, mode="WALK", trip="-", end=2019-05-01 01:35), (from=test_DA_10
-  [track=10, scheduled_track=10, level=-1], to=test_FFM_12 [track=12,
-  scheduled_track=10, level=0], start=2019-05-01 01:35, mode="HIGHSPEED_RAIL",
-  trip="ICE", end=2019-05-01 02:30, alerts=["Hello"]), (from=test_FFM_12
-  [track=12, scheduled_track=10, level=0], to=- [track=-, scheduled_track=-,
-  level=-3], start=2019-05-01 02:30, mode="WALK", trip="-", end=2019-05-01
-  02:40)
-  ])",
-            itineraries_to_str(plan_response));
-      }
-      // Blocked near toPlace, arriveBy=false, can pass after blocked
-      {
-        auto const plan_response = routing(
-            "?fromPlace=49.87336,8.62926"
-            "&toPlace=50.106420,8.660708,-3"
-            "&time=2019-05-01T01:40Z"
-            "&arriveBy=false"
-            "&preTransitModes=WALK"
-            "&timetableView=false"
-            "&pedestrianProfile=WHEELCHAIR"
-            "&maxMatchingDistance=8"  // Should match closely for wheelchair
-            "&useRoutedTransfers=true");
-
-        EXPECT_EQ(
-            R"(date=2019-05-01, start=02:34, end=02:55, duration=01:15,
-  transfers=0, legs=[ (from=- [track=-, scheduled_track=-, level=0],
-  to=test_DA_10 [track=10, scheduled_track=10, level=-1], start=2019-05-01
-  02:34, mode="WALK", trip="-", end=2019-05-01 02:35), (from=test_DA_10
-  [track=10, scheduled_track=10, level=-1], to=test_FFM_10 [track=10,
-  scheduled_track=10, level=0], start=2019-05-01 02:35, mode="HIGHSPEED_RAIL",
-  trip="ICE", end=2019-05-01 02:45), (from=test_FFM_10 [track=10,
-  scheduled_track=10, level=0], to=- [track=-, scheduled_track=-, level=-3],
-  start=2019-05-01 02:45, mode="WALK", trip="-", end=2019-05-01 02:55)
-  ])",
-            itineraries_to_str(plan_response));
-      }
-
-      // Direct routing, arriveBy=false, pass before blocked
-      {
-        auto const plan_response = routing(
-            "?fromPlace=50.10411515,8.658776549999999"
-            "&toPlace=50.106420,8.660708,-3"
-            "&time=2019-05-01T01:15Z"
-            "&arriveBy=false"
-            "&preTransitModes=WALK"
-            "&timetableView=false"
-            "&pedestrianProfile=WHEELCHAIR"
-            "&maxMatchingDistance=8"  // Should match places closely
-            "&useRoutedTransfers=true");
-
-        EXPECT_EQ(
-            R"(date=2019-05-01, start=01:15, end=01:33, duration=00:18,
-  transfers=0, legs=[ (from=- [track=-, scheduled_track=-, level=0], to=-
-  [track=-, scheduled_track=-, level=-3], start=2019-05-01 01:15, mode="WALK",
-  trip="-", end=2019-05-01 01:33)
-  ])",
-            direct_to_str(plan_response));
-      }
-    }
-
-    // Route with wheelchair.
-    {
-      auto const plan_response = routing(
-          "?fromPlace=49.87263,8.63127"
-          "&toPlace=50.11347,8.67664"
-          "&time=2019-05-01T01:25Z"
           "&pedestrianProfile=WHEELCHAIR"
-          "&useRoutedTransfers=true"
-          "&timetableView=false");
+          "&maxMatchingDistance=8"  // Should match closely for wheelchair
+          "&useRoutedTransfers=true");
 
       EXPECT_EQ(
-          R"(date=2019-05-01, start=01:29, end=02:28, duration=01:03,
-  transfers=1, legs=[ (from=- [track=-, scheduled_track=-, level=0],
-  to=test_DA_10 [track=10, scheduled_track=10, level=-1], start=2019-05-01
-  01:29, mode="WALK", trip="-", end=2019-05-01 01:35), (from=test_DA_10
-  [track=10, scheduled_track=10, level=-1], to=test_FFM_12 [track=12,
-  scheduled_track=10, level=0], start=2019-05-01 01:35, mode="HIGHSPEED_RAIL",
-  trip="ICE", end=2019-05-01 01:55, alerts=["Hello"]), (from=test_FFM_12
-  [track=12, scheduled_track=10, level=0], to=test_FFM_101 [track=101,
-  scheduled_track=101, level=-3], start=2019-05-01 01:55, mode="WALK", trip="-",
-  end=2019-05-01 02:01), (from=test_FFM_101 [track=101, scheduled_track=101,
-  level=-3], to=test_FFM_HAUPT_S [track=-, scheduled_track=-, level=-3],
-  start=2019-05-01 02:15, mode="METRO", trip="S3", end=2019-05-01 02:20),
-      (from=test_FFM_HAUPT_S [track=-, scheduled_track=-, level=-3], to=-
-  [track=-, scheduled_track=-, level=0], start=2019-05-01 02:20, mode="WALK",
-  trip="-", end=2019-05-01 02:28)
-  ])",
+          R"(date=2019-05-01, start=01:16, end=02:28, duration=01:13, transfers=0, legs=[
+    (from=- [track=-, scheduled_track=-, level=0], to=test_FFM_101 [track=101, scheduled_track=101, level=-3], start=2019-05-01 01:16, mode="WALK", trip="-", end=2019-05-01 02:15),
+    (from=test_FFM_101 [track=101, scheduled_track=101, level=-3], to=test_FFM_HAUPT_S [track=-, scheduled_track=-, level=-3], start=2019-05-01 02:15, mode="METRO", trip="S3", end=2019-05-01 02:20),
+    (from=test_FFM_HAUPT_S [track=-, scheduled_track=-, level=-3], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 02:20, mode="WALK", trip="-", end=2019-05-01 02:28)
+])",
           itineraries_to_str(plan_response));
     }
-
-    // Route without wheelchair.
+    // Blocked near fromPlace, arriveBy=false, temporary blocked / must wait
     {
       auto const plan_response = routing(
-          "?fromPlace=49.87263,8.63127"
-          "&toPlace=50.11347,8.67664"
-          "&time=2019-05-01T01:25Z"
-          "&useRoutedTransfers=true"
-          "&timetableView=false");
+          "?fromPlace=50.1040763,8.6586978"
+          "&toPlace=50.1132737,8.6767235"
+          "&time=2019-05-01T01:20Z"
+          "&arriveBy=false"
+          "&preTransitModes=WALK"
+          "&timetableView=false"
+          "&pedestrianProfile=WHEELCHAIR"
+          "&maxMatchingDistance=8"  // Should match closely for wheelchair
+          "&useRoutedTransfers=true");
 
       EXPECT_EQ(
-          R"(date=2019-05-01, start=01:25, end=02:14, duration=00:49,
-  transfers=1, legs=[ (from=- [track=-, scheduled_track=-, level=0],
-  to=test_DA_10 [track=10, scheduled_track=10, level=-1], start=2019-05-01
-  01:25, mode="WALK", trip="-", end=2019-05-01 01:28), (from=test_DA_10
-  [track=10, scheduled_track=10, level=-1], to=test_FFM_12 [track=12,
-  scheduled_track=10, level=0], start=2019-05-01 01:35, mode="HIGHSPEED_RAIL",
-  trip="ICE", end=2019-05-01 01:55, alerts=["Hello"]), (from=test_FFM_12
-  [track=12, scheduled_track=10, level=0], to=test_de:6412:10:6:1 [track=U4,
-  scheduled_track=U4, level=-2], start=2019-05-01 01:55, mode="WALK", trip="-",
-  end=2019-05-01 01:59), (from=test_de:6412:10:6:1 [track=U4,
-  scheduled_track=U4, level=-2], to=test_FFM_HAUPT_U [track=-,
-  scheduled_track=-, level=-4], start=2019-05-01 02:05, mode="SUBWAY",
-  trip="U4", end=2019-05-01 02:10), (from=test_FFM_HAUPT_U [track=-,
-  scheduled_track=-, level=-4], to=- [track=-, scheduled_track=-, level=0],
-  start=2019-05-01 02:10, mode="WALK", trip="-", end=2019-05-01 02:14)
-  ])",
+          R"(date=2019-05-01, start=03:01, end=03:28, duration=02:08, transfers=0, legs=[
+    (from=- [track=-, scheduled_track=-, level=0], to=test_FFM_101 [track=101, scheduled_track=101, level=-3], start=2019-05-01 03:01, mode="WALK", trip="-", end=2019-05-01 03:15),
+    (from=test_FFM_101 [track=101, scheduled_track=101, level=-3], to=test_FFM_HAUPT_S [track=-, scheduled_track=-, level=-3], start=2019-05-01 03:15, mode="METRO", trip="S3", end=2019-05-01 03:20),
+    (from=test_FFM_HAUPT_S [track=-, scheduled_track=-, level=-3], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 03:20, mode="WALK", trip="-", end=2019-05-01 03:28)
+])",
           itineraries_to_str(plan_response));
     }
-    */
+    // Blocked near fromPlace, arriveBy=true, must pass before blocked
+    {
+      auto const plan_response = routing(
+          "?fromPlace=50.1040763,8.6586978"
+          "&toPlace=50.1132737,8.6767235"
+          "&time=2019-05-01T02:30Z"
+          "&arriveBy=true"
+          "&preTransitModes=WALK"
+          "&timetableView=false"
+          "&pedestrianProfile=WHEELCHAIR"
+          "&maxMatchingDistance=8"  // Should match closely for wheelchair
+          "&useRoutedTransfers=true");
+
+      EXPECT_EQ(
+          R"(date=2019-05-01, start=01:16, end=02:28, duration=01:14, transfers=0, legs=[
+    (from=- [track=-, scheduled_track=-, level=0], to=test_FFM_101 [track=101, scheduled_track=101, level=-3], start=2019-05-01 01:16, mode="WALK", trip="-", end=2019-05-01 01:30),
+    (from=test_FFM_101 [track=101, scheduled_track=101, level=-3], to=test_FFM_HAUPT_S [track=-, scheduled_track=-, level=-3], start=2019-05-01 02:15, mode="METRO", trip="S3", end=2019-05-01 02:20),
+    (from=test_FFM_HAUPT_S [track=-, scheduled_track=-, level=-3], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 02:20, mode="WALK", trip="-", end=2019-05-01 02:28)
+])",
+          itineraries_to_str(plan_response));
+    }
+    // Blocked near fromPlace, arriveBy=true, can pass after blocked
+    {
+      auto const plan_response = routing(
+          "?fromPlace=50.1040763,8.6586978"
+          "&toPlace=50.1132737,8.6767235"
+          "&time=2019-05-01T03:30Z"
+          "&arriveBy=true"
+          "&preTransitModes=WALK"
+          "&timetableView=false"
+          "&pedestrianProfile=WHEELCHAIR"
+          "&maxMatchingDistance=8"  // Should match closely for wheelchair
+          "&useRoutedTransfers=true");
+
+      EXPECT_EQ(
+          R"(date=2019-05-01, start=03:01, end=03:28, duration=00:29, transfers=0, legs=[
+    (from=- [track=-, scheduled_track=-, level=0], to=test_FFM_101 [track=101, scheduled_track=101, level=-3], start=2019-05-01 03:01, mode="WALK", trip="-", end=2019-05-01 03:15),
+    (from=test_FFM_101 [track=101, scheduled_track=101, level=-3], to=test_FFM_HAUPT_S [track=-, scheduled_track=-, level=-3], start=2019-05-01 03:15, mode="METRO", trip="S3", end=2019-05-01 03:20),
+    (from=test_FFM_HAUPT_S [track=-, scheduled_track=-, level=-3], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 03:20, mode="WALK", trip="-", end=2019-05-01 03:28)
+])",
+          itineraries_to_str(plan_response));
+    }
+
+    // Blocked near toPlace, arriveBy=true, must pass before blocked
+    {
+      auto const plan_response = routing(
+          "?fromPlace=49.87336,8.62926"
+          "&toPlace=50.106420,8.660708,-3"
+          "&time=2019-05-01T02:54Z"
+          "&arriveBy=true"
+          "&preTransitModes=WALK"
+          "&timetableView=false"
+          "&pedestrianProfile=WHEELCHAIR"
+          "&maxMatchingDistance=8"  // Should match closely for wheelchair
+          "&useRoutedTransfers=true");
+
+      EXPECT_EQ(
+          R"(date=2019-05-01, start=01:34, end=02:40, duration=01:20, transfers=0, legs=[
+    (from=- [track=-, scheduled_track=-, level=0], to=test_DA_10 [track=10, scheduled_track=10, level=-1], start=2019-05-01 01:34, mode="WALK", trip="-", end=2019-05-01 01:35),
+    (from=test_DA_10 [track=10, scheduled_track=10, level=-1], to=test_FFM_12 [track=12, scheduled_track=10, level=0], start=2019-05-01 01:35, mode="HIGHSPEED_RAIL", trip="ICE", end=2019-05-01 01:55, alerts=["Hello"]),
+    (from=test_FFM_12 [track=12, scheduled_track=10, level=0], to=- [track=-, scheduled_track=-, level=-3], start=2019-05-01 01:55, mode="WALK", trip="-", end=2019-05-01 02:40)
+])",
+          itineraries_to_str(plan_response));
+    }
+    // Blocked near toPlace, arriveBy=true, can pass after blocked
+    {
+      auto const plan_response = routing(
+          "?fromPlace=49.87336,8.62926"
+          "&toPlace=50.106420,8.660708,-3"
+          "&time=2019-05-01T02:55Z"
+          "&arriveBy=true"
+          "&preTransitModes=WALK"
+          "&timetableView=false"
+          "&pedestrianProfile=WHEELCHAIR"
+          "&maxMatchingDistance=8"  // Should match closely for wheelchair
+          "&useRoutedTransfers=true");
+
+      EXPECT_EQ(
+          R"(date=2019-05-01, start=02:34, end=02:55, duration=00:21, transfers=0, legs=[
+    (from=- [track=-, scheduled_track=-, level=0], to=test_DA_10 [track=10, scheduled_track=10, level=-1], start=2019-05-01 02:34, mode="WALK", trip="-", end=2019-05-01 02:35),
+    (from=test_DA_10 [track=10, scheduled_track=10, level=-1], to=test_FFM_10 [track=10, scheduled_track=10, level=0], start=2019-05-01 02:35, mode="HIGHSPEED_RAIL", trip="ICE", end=2019-05-01 02:45),
+    (from=test_FFM_10 [track=10, scheduled_track=10, level=0], to=- [track=-, scheduled_track=-, level=-3], start=2019-05-01 02:45, mode="WALK", trip="-", end=2019-05-01 02:55)
+])",
+          itineraries_to_str(plan_response));
+    }
+    // Blocked near toPlace, arriveBy=false, temporary blocked / must wait
+    {
+      auto const plan_response = routing(
+          "?fromPlace=49.87336,8.62926"
+          "&toPlace=50.106420,8.660708,-3"
+          "&time=2019-05-01T01:30Z"
+          "&arriveBy=false"
+          "&preTransitModes=WALK"
+          "&timetableView=false"
+          "&pedestrianProfile=WHEELCHAIR"
+          "&maxMatchingDistance=8"  // Should match 'toPlace' closely
+          "&useRoutedTransfers=true");
+
+      EXPECT_EQ(
+          R"(date=2019-05-01, start=01:34, end=02:40, duration=01:10, transfers=0, legs=[
+    (from=- [track=-, scheduled_track=-, level=0], to=test_DA_10 [track=10, scheduled_track=10, level=-1], start=2019-05-01 01:34, mode="WALK", trip="-", end=2019-05-01 01:35),
+    (from=test_DA_10 [track=10, scheduled_track=10, level=-1], to=test_FFM_12 [track=12, scheduled_track=10, level=0], start=2019-05-01 01:35, mode="HIGHSPEED_RAIL", trip="ICE", end=2019-05-01 02:30, alerts=["Hello"]),
+    (from=test_FFM_12 [track=12, scheduled_track=10, level=0], to=- [track=-, scheduled_track=-, level=-3], start=2019-05-01 02:30, mode="WALK", trip="-", end=2019-05-01 02:40)
+])",
+          itineraries_to_str(plan_response));
+    }
+    // Blocked near toPlace, arriveBy=false, can pass after blocked
+    {
+      auto const plan_response = routing(
+          "?fromPlace=49.87336,8.62926"
+          "&toPlace=50.106420,8.660708,-3"
+          "&time=2019-05-01T01:40Z"
+          "&arriveBy=false"
+          "&preTransitModes=WALK"
+          "&timetableView=false"
+          "&pedestrianProfile=WHEELCHAIR"
+          "&maxMatchingDistance=8"  // Should match closely for wheelchair
+          "&useRoutedTransfers=true");
+
+      EXPECT_EQ(
+          R"(date=2019-05-01, start=02:34, end=02:55, duration=01:15, transfers=0, legs=[
+    (from=- [track=-, scheduled_track=-, level=0], to=test_DA_10 [track=10, scheduled_track=10, level=-1], start=2019-05-01 02:34, mode="WALK", trip="-", end=2019-05-01 02:35),
+    (from=test_DA_10 [track=10, scheduled_track=10, level=-1], to=test_FFM_10 [track=10, scheduled_track=10, level=0], start=2019-05-01 02:35, mode="HIGHSPEED_RAIL", trip="ICE", end=2019-05-01 02:45),
+    (from=test_FFM_10 [track=10, scheduled_track=10, level=0], to=- [track=-, scheduled_track=-, level=-3], start=2019-05-01 02:45, mode="WALK", trip="-", end=2019-05-01 02:55)
+])",
+          itineraries_to_str(plan_response));
+    }
+
+    // Direct routing, arriveBy=false, pass before blocked
+    {
+      auto const plan_response = routing(
+          "?fromPlace=50.10411515,8.658776549999999"
+          "&toPlace=50.106420,8.660708,-3"
+          "&time=2019-05-01T01:15Z"
+          "&arriveBy=false"
+          "&preTransitModes=WALK"
+          "&timetableView=false"
+          "&pedestrianProfile=WHEELCHAIR"
+          "&maxMatchingDistance=8"  // Should match places closely
+          "&useRoutedTransfers=true");
+
+      EXPECT_EQ(
+          R"(date=2019-05-01, start=01:15, end=01:33, duration=00:18, transfers=0, legs=[
+    (from=- [track=-, scheduled_track=-, level=0], to=- [track=-, scheduled_track=-, level=-3], start=2019-05-01 01:15, mode="WALK", trip="-", end=2019-05-01 01:33)
+])",
+          direct_to_str(plan_response));
+    }
+  }
+
+  // Route with wheelchair.
+  {
+    auto const plan_response = routing(
+        "?fromPlace=49.87263,8.63127"
+        "&toPlace=50.11347,8.67664"
+        "&time=2019-05-01T01:25Z"
+        "&pedestrianProfile=WHEELCHAIR"
+        "&useRoutedTransfers=true"
+        "&timetableView=false");
+
+    EXPECT_EQ(
+        R"(date=2019-05-01, start=01:29, end=02:28, duration=01:03, transfers=1, legs=[
+    (from=- [track=-, scheduled_track=-, level=0], to=test_DA_10 [track=10, scheduled_track=10, level=-1], start=2019-05-01 01:29, mode="WALK", trip="-", end=2019-05-01 01:35),
+    (from=test_DA_10 [track=10, scheduled_track=10, level=-1], to=test_FFM_12 [track=12, scheduled_track=10, level=0], start=2019-05-01 01:35, mode="HIGHSPEED_RAIL", trip="ICE", end=2019-05-01 01:55, alerts=["Hello"]),
+    (from=test_FFM_12 [track=12, scheduled_track=10, level=0], to=test_FFM_101 [track=101, scheduled_track=101, level=-3], start=2019-05-01 01:55, mode="WALK", trip="-", end=2019-05-01 02:01),
+    (from=test_FFM_101 [track=101, scheduled_track=101, level=-3], to=test_FFM_HAUPT_S [track=-, scheduled_track=-, level=-3], start=2019-05-01 02:15, mode="METRO", trip="S3", end=2019-05-01 02:20),
+    (from=test_FFM_HAUPT_S [track=-, scheduled_track=-, level=-3], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 02:20, mode="WALK", trip="-", end=2019-05-01 02:28)
+])",
+        itineraries_to_str(plan_response));
+  }
+
+  // Route without wheelchair.
+  {
+    auto const plan_response = routing(
+        "?fromPlace=49.87263,8.63127"
+        "&toPlace=50.11347,8.67664"
+        "&time=2019-05-01T01:25Z"
+        "&useRoutedTransfers=true"
+        "&timetableView=false");
+
+    EXPECT_EQ(
+        R"(date=2019-05-01, start=01:25, end=02:14, duration=00:49, transfers=1, legs=[
+    (from=- [track=-, scheduled_track=-, level=0], to=test_DA_10 [track=10, scheduled_track=10, level=-1], start=2019-05-01 01:25, mode="WALK", trip="-", end=2019-05-01 01:28),
+    (from=test_DA_10 [track=10, scheduled_track=10, level=-1], to=test_FFM_12 [track=12, scheduled_track=10, level=0], start=2019-05-01 01:35, mode="HIGHSPEED_RAIL", trip="ICE", end=2019-05-01 01:55, alerts=["Hello"]),
+    (from=test_FFM_12 [track=12, scheduled_track=10, level=0], to=test_de:6412:10:6:1 [track=U4, scheduled_track=U4, level=-2], start=2019-05-01 01:55, mode="WALK", trip="-", end=2019-05-01 01:59),
+    (from=test_de:6412:10:6:1 [track=U4, scheduled_track=U4, level=-2], to=test_FFM_HAUPT_U [track=-, scheduled_track=-, level=-4], start=2019-05-01 02:05, mode="SUBWAY", trip="U4", end=2019-05-01 02:10),
+    (from=test_FFM_HAUPT_U [track=-, scheduled_track=-, level=-4], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 02:10, mode="WALK", trip="-", end=2019-05-01 02:14)
+])",
+        itineraries_to_str(plan_response));
+  }
 }
