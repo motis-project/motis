@@ -13,7 +13,7 @@
 
 namespace motis {
 
-using transport_mode_t = std::uint32_t;
+using transport_mode_t = std::int32_t;
 
 struct output {
   output() = default;
@@ -23,29 +23,30 @@ struct output {
   output& operator=(output const&) = default;
   output& operator=(output&&) = default;
 
-  virtual transport_mode_t get_cache_key(osr::search_profile) const = 0;
-  virtual api::VertexTypeEnum get_vertex_type() const = 0;
-  virtual std::string get_node_name(osr::node_idx_t const n) const = 0;
+  virtual api::ModeEnum get_mode() const = 0;
+  virtual osr::search_profile get_profile() const = 0;
+  virtual transport_mode_t get_cache_key() const = 0;
   virtual osr::sharing_data const* get_sharing_data() const = 0;
-  virtual geo::latlng get_node_pos(osr::node_idx_t) const = 0;
   virtual void annotate_leg(osr::node_idx_t from_node,
                             osr::node_idx_t to_node,
                             api::Leg&) const = 0;
-  virtual void annotate_place(api::Place&) const = 0;
+  virtual api::Place get_place(osr::node_idx_t) const = 0;
 };
 
 struct default_output final : public output {
+  default_output(osr::search_profile);
+  default_output(nigiri::transport_mode_id_t);
   ~default_output() override;
-  transport_mode_t get_cache_key(osr::search_profile) const override;
-  api::VertexTypeEnum get_vertex_type() const override;
-  std::string get_node_name(osr::node_idx_t) const override;
+  
+  api::ModeEnum get_mode() const override;
+  osr::search_profile get_profile() const override;
+  transport_mode_t get_cache_key() const override;
   osr::sharing_data const* get_sharing_data() const override;
-  geo::latlng get_node_pos(osr::node_idx_t) const override;
   void annotate_leg(osr::node_idx_t, osr::node_idx_t, api::Leg&) const override;
-  void annotate_place(api::Place&) const override;
-};
+  api::Place get_place(osr::node_idx_t) const override;
 
-extern default_output g_default_output;
+  osr::search_profile profile_;
+};
 
 using street_routing_cache_key_t = std::
     tuple<osr::location, osr::location, transport_mode_t, nigiri::unixtime_t>;
@@ -62,14 +63,11 @@ api::Itinerary dummy_itinerary(api::Place const& from,
 api::Itinerary street_routing(
     osr::ways const&,
     osr::lookup const&,
-    osr::platforms const*,
-    platform_matches_t const*,
-    nigiri::timetable const*,
     elevators const*,
     osr::elevation_storage const*,
     api::Place const& from,
     api::Place const& to,
-    api::ModeEnum,
+    output const&,
     nigiri::unixtime_t start_time,
     std::optional<nigiri::unixtime_t> end_time,
     double max_matching_distance,

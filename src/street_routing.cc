@@ -12,66 +12,59 @@
 #include "motis/mode_to_profile.h"
 #include "motis/place.h"
 #include "motis/polyline.h"
+#include "motis/transport_mode_ids.h"
 #include "motis/update_rtt_td_footpaths.h"
 
 namespace n = nigiri;
 
 namespace motis {
 
+default_output::default_output(osr::search_profile id)
+    : profile_{static_cast<std::underlying_type_t<osr::search_profile>>(id)} {}
+
+default_output::default_output(nigiri::transport_mode_id_t const id)
+    : profile_{
+          id == kOdmTransportModeId
+              ? osr::search_profile::kCar
+              : osr::search_profile{
+                    static_cast<std::underlying_type_t<osr::search_profile>>(
+                        id)}} {
+  utl::verify(id <= kOdmTransportModeId, "invalid mode id={}", id);
+}
+
 default_output::~default_output() = default;
 
-transport_mode_t default_output::get_cache_key(
-    osr::search_profile const profile) const {
-  return static_cast<transport_mode_t>(profile);
+api::ModeEnum default_output::get_mode() const {
+  switch (profile_) {
+    case osr::search_profile::kFoot: [[fallthrough]];
+    case osr::search_profile::kWheelchair: return api::ModeEnum::WALK;
+    case osr::search_profile::kBike:
+    case osr::search_profile::kBikeElevationLow: [[fallthrough]];
+    case osr::search_profile::kBikeElevationHigh: return api::ModeEnum::BIKE;
+    case osr::search_profile::kCar: return api::ModeEnum::CAR;
+    case osr::search_profile::kCarParking: [[fallthrough]];
+    case osr::search_profile::kCarParkingWheelchair:
+      return api::ModeEnum::CAR_PARKING;
+    case osr::search_profile::kBikeSharing: [[fallthrough]];
+    case osr::search_profile::kCarSharing: return api::ModeEnum::RENTAL;
+  }
 }
 
-api::VertexTypeEnum default_output::get_vertex_type() const {
-  return api::VertexTypeEnum::NORMAL;
-}
+osr::search_profile default_output::get_profile() const { return profile_; }
 
-std::string default_output::get_node_name(osr::node_idx_t) const { return ""; }
+api::Place default_output::get_place(osr::node_idx_t) const { return {}; }
+
+transport_mode_t default_output::get_cache_key() const {
+  return static_cast<transport_mode_t>(profile_);
+}
 
 osr::sharing_data const* default_output::get_sharing_data() const {
   return nullptr;
 }
 
-geo::latlng default_output::get_node_pos(osr::node_idx_t) const {
-  return geo::latlng{};
-}
-
 void default_output::annotate_leg(osr::node_idx_t,
                                   osr::node_idx_t,
                                   api::Leg&) const {}
-
-default_output g_default_output = {};
-
-std::optional<osr::path> get_path(osr::ways const& w,
-                                  osr::lookup const& l,
-                                  elevators const* e,
-                                  osr::sharing_data const* sharing,
-                                  osr::elevation_storage const* elevations,
-                                  osr::location const& from,
-                                  osr::location const& to,
-                                  transport_mode_t const transport_mode,
-                                  osr::search_profile const profile,
-                                  nigiri::unixtime_t const start_time,
-                                  double const max_matching_distance,
-                                  osr::cost_t const max,
-                                  street_routing_cache_t& cache,
-                                  osr::bitvec<osr::node_idx_t>& blocked_mem) {
-  auto const s = e ? get_states_at(w, l, *e, start_time, from.pos_)
-                   : std::optional{std::pair<nodes_t, states_t>{}};
-  auto const cache_key =
-      street_routing_cache_key_t{from, to, transport_mode, start_time};
-  return utl::get_or_create(cache, cache_key, [&]() {
-    auto const& [e_nodes, e_states] = *s;
-    return osr::route(
-        w, l, profile, from, to, max, osr::direction::kForward,
-        max_matching_distance,
-        s ? &set_blocked(e_nodes, e_states, blocked_mem) : nullptr, sharing,
-        elevations);
-  });
-}
 
 std::vector<api::StepInstruction> get_step_instructions(
     osr::ways const& w,
@@ -164,13 +157,11 @@ api::Itinerary dummy_itinerary(api::Place const& from,
 
 api::Itinerary street_routing(osr::ways const& w,
                               osr::lookup const& l,
-                              output& out,
                               elevators const* e,
                               osr::elevation_storage const* elevations,
-                              api::Place const& from,
-                              api::Place const& to,
-                              api::ModeEnum const mode,
-                              osr::search_profile const profile,
+                              api::Place const& from_place,
+                              api::Place const& to_place,
+                              output const& out,
                               n::unixtime_t const start_time,
                               std::optional<n::unixtime_t> const end_time,
                               double const max_matching_distance,
@@ -180,24 +171,35 @@ api::Itinerary street_routing(osr::ways const& w,
                               std::chrono::seconds const max,
                               bool const dummy) {
   if (dummy) {
-    return dummy_itinerary(from, to, mode, start_time, *end_time);
+    return dummy_itinerary(from_place, to_place, out.get_mode(), start_time,
+                           *end_time);
   }
 
-  auto const rental_profile = osr::is_rental_profile(profile);
-  auto const path =
-      get_path(w, l, e, out.get_sharing_data(), elevations, get_location(from),
-               get_location(to), out.get_cache_key(profile), profile,
-               start_time, max_matching_distance,
-               static_cast<osr::cost_t>(max.count()), cache, blocked_mem);
+  auto const from = get_location(from_place);
+  auto const to = get_location(to_place);
+  auto const s = e ? get_states_at(w, l, *e, start_time, from.pos_)
+                   : std::optional{std::pair<nodes_t, states_t>{}};
+  auto const cache_key =
+      street_routing_cache_key_t{from, to, out.get_cache_key(), start_time};
+  auto const path = utl::get_or_create(cache, cache_key, [&]() {
+    auto const& [e_nodes, e_states] = *s;
+    return osr::route(
+        w, l, out.get_profile(), from, to,
+        static_cast<osr::cost_t>(max.count()), osr::direction::kForward,
+        max_matching_distance,
+        s ? &set_blocked(e_nodes, e_states, blocked_mem) : nullptr,
+        out.get_sharing_data(), elevations);
+  });
 
   if (!path.has_value()) {
     if (!end_time.has_value()) {
       return {};
     }
     std::cout << "ROUTING\n  FROM:  " << from << "     \n    TO:  " << to
-              << "\n  -> CREATING DUMMY LEG (mode=" << mode
-              << ", profile=" << osr::to_str(profile) << ")\n";
-    return dummy_itinerary(from, to, mode, start_time, *end_time);
+              << "\n  -> CREATING DUMMY LEG (mode=" << out.get_mode()
+              << ", profile=" << to_str(out.get_profile()) << ")\n";
+    return dummy_itinerary(from_place, to_place, out.get_mode(), start_time,
+                           *end_time);
   }
 
   auto itinerary = api::Itinerary{
@@ -211,7 +213,7 @@ api::Itinerary street_routing(osr::ways const& w,
       .transfers_ = 0};
 
   auto t = std::chrono::time_point_cast<std::chrono::seconds>(start_time);
-  auto& pred_place = from;
+  auto pred_place = from_place;
   auto pred_end_time = t;
   utl::equal_ranges_linear(
       path->segments_,
@@ -225,10 +227,6 @@ api::Itinerary street_routing(osr::ways const& w,
         auto const from_node = range.front().from_;
         auto const to_node = range.back().to_;
 
-        auto const to_pos = get_node_pos(to_node);
-        auto const next_place = out.annotate_place(
-            api::Place{.lat_ = to_pos.lat_, .lon_ = to_pos.lng_});
-
         auto concat = geo::polyline{};
         auto dist = 0.0;
         for (auto const& p : range) {
@@ -240,9 +238,8 @@ api::Itinerary street_routing(osr::ways const& w,
         }
 
         auto& leg = itinerary.legs_.emplace_back(api::Leg{
-            .mode_ = mode,
             .from_ = pred_place,
-            .to_ = next_place,
+            .to_ = is_last_leg ? to_place : out.get_place(to_node),
             .duration_ = std::chrono::duration_cast<std::chrono::seconds>(
                              t - pred_end_time)
                              .count(),
@@ -251,8 +248,7 @@ api::Itinerary street_routing(osr::ways const& w,
             .distance_ = dist,
             .legGeometry_ = api_version == 1 ? to_polyline<7>(concat)
                                              : to_polyline<6>(concat),
-            .steps_ = get_step_instructions(
-                w, get_location(from), get_location(to), range, api_version)});
+            .steps_ = get_step_instructions(w, from, to, range, api_version)});
 
         out.annotate_leg(from_node, to_node, leg);
 

@@ -19,6 +19,8 @@
 
 #include "motis-api/motis-api.h"
 #include "motis/constants.h"
+#include "motis/flex/flex_output.h"
+#include "motis/gbfs/gbfs_output.h"
 #include "motis/gbfs/mode.h"
 #include "motis/gbfs/osr_profile.h"
 #include "motis/gbfs/routing_data.h"
@@ -88,30 +90,27 @@ std::optional<fare_indices> get_fare_indices(
   return std::nullopt;
 }
 
-api::Itinerary journey_to_response(
-    osr::ways const* w,
-    osr::lookup const* l,
-    osr::platforms const* pl,
-    n::timetable const& tt,
-    tag_lookup const& tags,
-    elevators const* e,
-    n::rt_timetable const* rtt,
-    platform_matches_t const* matches,
-    osr::elevation_storage const* elevations,
-    n::shapes_storage const* shapes,
-    gbfs::gbfs_routing_data& gbfs_rd,
-    api::PedestrianProfileEnum const pedestrian_profile,
-    api::ElevationCostsEnum const elevation_costs,
-    n::routing::journey const& j,
-    place_t const& start,
-    place_t const& dest,
-    street_routing_cache_t& cache,
-    osr::bitvec<osr::node_idx_t>* blocked_mem,
-    bool const detailed_transfers,
-    bool const with_fares,
-    double const timetable_max_matching_distance,
-    double const max_matching_distance,
-    unsigned const api_version) {
+api::Itinerary journey_to_response(osr::ways const* w,
+                                   osr::lookup const* l,
+                                   osr::platforms const* pl,
+                                   n::timetable const& tt,
+                                   tag_lookup const& tags,
+                                   elevators const* e,
+                                   n::rt_timetable const* rtt,
+                                   platform_matches_t const* matches,
+                                   osr::elevation_storage const* elevations,
+                                   n::shapes_storage const* shapes,
+                                   gbfs::gbfs_routing_data& gbfs_rd,
+                                   n::routing::journey const& j,
+                                   place_t const& start,
+                                   place_t const& dest,
+                                   street_routing_cache_t& cache,
+                                   osr::bitvec<osr::node_idx_t>* blocked_mem,
+                                   bool const detailed_transfers,
+                                   bool const with_fares,
+                                   double const timetable_max_matching_distance,
+                                   double const max_matching_distance,
+                                   unsigned const api_version) {
   utl::verify(!j.legs_.empty(), "journey without legs");
 
   auto const fares =
@@ -392,12 +391,10 @@ api::Itinerary journey_to_response(
             [&](n::footpath) {
               append(w && l
                          ? street_routing(
-                               *w, *l, pl, matches, &tt, gbfs_rd, e, elevations,
-                               from, to, api::ModeEnum::WALK,
-                               to_profile(api::ModeEnum::WALK,
-                                          pedestrian_profile, elevation_costs),
+                               *w, *l, e, elevations, from, to,
+                               default_output{osr::search_profile::kFoot},
                                j_leg.dep_time_, j_leg.arr_time_,
-                               timetable_max_matching_distance, {}, cache,
+                               timetable_max_matching_distance, cache,
                                *blocked_mem, api_version,
                                std::chrono::duration_cast<std::chrono::seconds>(
                                    j_leg.arr_time_ - j_leg.dep_time_) +
@@ -407,31 +404,24 @@ api::Itinerary journey_to_response(
                                            j_leg.dep_time_, j_leg.arr_time_));
             },
             [&](n::routing::offset const x) {
-              auto const profile =
-                  x.transport_mode_id_ >= kFlexModeIdOffset
-                      ? osr::search_profile::kCar
-                  : x.transport_mode_id_ >= kGbfsTransportModeIdOffset
-                      ? gbfs::get_osr_profile(gbfs_rd.get_products(
-                            gbfs_rd.get_products_ref(x.transport_mode_id_)))
-                  : x.transport_mode_id_ == kOdmTransportModeId
-                      ? osr::search_profile::kCar
-                      : osr::search_profile{
-                            static_cast<std::uint8_t>(x.transport_mode_id_)};
+              auto out = std::unique_ptr<output>{};
+              if (x.transport_mode_id_ >= kFlexModeIdOffset) {
+                out = std::make_unique<flex::flex_output>(
+                    *w, *l, pl, matches, tt,
+                    flex::mode_id{x.transport_mode_id_},
+                    osr::direction::kForward);
+              } else if (x.transport_mode_id_ >= kGbfsTransportModeIdOffset) {
+                out = std::make_unique<gbfs::gbfs_output>(
+                    *w, gbfs_rd,
+                    gbfs_rd.get_products_ref(x.transport_mode_id_));
+              } else {
+                out = std::make_unique<default_output>(x.transport_mode_id_);
+              }
+
               append(street_routing(
-                  *w, *l, pl, matches, &tt, gbfs_rd, e, elevations, from, to,
-                  x.transport_mode_id_ >= kFlexModeIdOffset
-                      ? api::ModeEnum::FLEX
-                  : x.transport_mode_id_ >= kGbfsTransportModeIdOffset
-                      ? api::ModeEnum::RENTAL
-                  : x.transport_mode_id_ == kOdmTransportModeId
-                      ? api::ModeEnum::ODM
-                      : to_mode(profile),
-                  profile, j_leg.dep_time_, j_leg.arr_time_,
-                  max_matching_distance,
-                  x.transport_mode_id_ >= kGbfsTransportModeIdOffset
-                      ? gbfs_rd.get_products_ref(x.transport_mode_id_)
-                      : gbfs::gbfs_products_ref{},
-                  cache, *blocked_mem, api_version,
+                  *w, *l, e, elevations, from, to, *out, j_leg.dep_time_,
+                  j_leg.arr_time_, max_matching_distance, cache, *blocked_mem,
+                  api_version,
                   std::chrono::duration_cast<std::chrono::seconds>(
                       j_leg.arr_time_ - j_leg.dep_time_) +
                       std::chrono::minutes{5}));

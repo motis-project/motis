@@ -10,21 +10,24 @@ struct gbfs_output final : public output {
               gbfs::gbfs_products_ref);
   ~gbfs_output() override;
 
-  transport_mode_t get_cache_key(osr::search_profile) const override;
+  api::ModeEnum get_mode() const override;
+
+  osr::search_profile get_profile() const override;
+
+  transport_mode_t get_cache_key() const override;
 
   osr::sharing_data const* get_sharing_data() const override;
 
-  api::VertexTypeEnum get_vertex_type() const override;
+  void annotate_leg(osr::node_idx_t const from_node,
+                    osr::node_idx_t const to_node,
+                    api::Leg&) const override;
 
-  void annotate(osr::node_idx_t const from_node,
-                osr::node_idx_t const to_node,
-                api::Leg& leg) const override;
-
-  geo::latlng get_node_pos(osr::node_idx_t const n) const override;
-
-  std::string get_node_name(osr::node_idx_t const n) const override;
+  api::Place get_place(osr::node_idx_t) const override;
 
   std::size_t get_additional_node_idx(osr::node_idx_t const n) const;
+
+private:
+  std::string get_node_name(osr::node_idx_t) const;
 
   osr::ways const& w_;
   gbfs::gbfs_routing_data& gbfs_rd_;

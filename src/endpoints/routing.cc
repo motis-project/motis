@@ -26,6 +26,7 @@
 #include "motis/endpoints/routing.h"
 #include "motis/flex/flex.h"
 #include "motis/gbfs/data.h"
+#include "motis/gbfs/gbfs_output.h"
 #include "motis/gbfs/mode.h"
 #include "motis/gbfs/osr_profile.h"
 #include "motis/gbfs/routing_data.h"
@@ -337,30 +338,28 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
   auto cache = street_routing_cache_t{};
   auto itineraries = std::vector<api::Itinerary>{};
 
-  auto const route_with_profile =
-      [&](api::ModeEnum const mode, osr::search_profile const profile,
-          gbfs::gbfs_products_ref const prod_ref = {}) {
-        auto itinerary = street_routing(
-            *w_, *l_, pl_, matches_, tt_, gbfs_rd, e, elevations_, from, to,
-            mode, profile, start_time, std::nullopt, max_matching_distance,
-            prod_ref, cache, *blocked, api_version, max);
-        if (itinerary.legs_.empty()) {
-          return false;
-        }
-        auto const duration = std::chrono::duration_cast<n::duration_t>(
-            std::chrono::seconds{itinerary.duration_});
-        if (duration < fastest_direct) {
-          fastest_direct = duration;
-        }
-        itineraries.emplace_back(std::move(itinerary));
-        return true;
-      };
+  auto const route_with_profile = [&](output const& out) {
+    auto itinerary = street_routing(
+        *w_, *l_, e, elevations_, from, to, out, start_time, std::nullopt,
+        max_matching_distance, cache, *blocked, api_version, max);
+    if (itinerary.legs_.empty()) {
+      return false;
+    }
+    auto const duration = std::chrono::duration_cast<n::duration_t>(
+        std::chrono::seconds{itinerary.duration_});
+    if (duration < fastest_direct) {
+      fastest_direct = duration;
+    }
+    itineraries.emplace_back(std::move(itinerary));
+    return true;
+  };
 
   for (auto const& m : modes) {
     if (m == api::ModeEnum::CAR || m == api::ModeEnum::BIKE ||
         m == api::ModeEnum::CAR_PARKING ||
         (!omit_walk && m == api::ModeEnum::WALK)) {
-      route_with_profile(m, to_profile(m, pedestrian_profile, elevation_costs));
+      route_with_profile(
+          default_output{to_profile(m, pedestrian_profile, elevation_costs)});
     } else if (m == api::ModeEnum::RENTAL && gbfs_rd.has_data()) {
       // could be bike sharing or car sharing - car sharing has the higher max
       // distance, so we use this here to be safe
@@ -382,18 +381,17 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
           if (!gbfs::products_match(prod, form_factors, propulsion_types)) {
             continue;
           }
-          route_with_profile(
-              m, gbfs::get_osr_profile(prod),
-              gbfs::gbfs_products_ref{provider->idx_, prod.idx_});
+          route_with_profile(gbfs::gbfs_output{
+              *w_, gbfs_rd,
+              gbfs::gbfs_products_ref{provider->idx_, prod.idx_}});
           ++routed;
         }
       }
-      // if we omitted the WALK routing but didn't have any rental providers in
-      // the area, we need to do WALK routing now
+      // if we omitted the WALK routing but didn't have any rental providers
+      // in the area, we need to do WALK routing now
       if (routed == 0U && utl::find(modes, api::ModeEnum::WALK) != end(modes)) {
-        route_with_profile(api::ModeEnum::WALK,
-                           to_profile(api::ModeEnum::WALK, pedestrian_profile,
-                                      elevation_costs));
+        route_with_profile(default_output{to_profile(
+            api::ModeEnum::WALK, pedestrian_profile, elevation_costs)});
       }
     }
   }
@@ -700,8 +698,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                       to_seconds(j.arrival_time() - j.departure_time())));
               return journey_to_response(
                   w_, l_, pl_, *tt_, *tags_, e, rtt, matches_, elevations_,
-                  shapes_, gbfs_rd, query.pedestrianProfile_,
-                  query.elevationCosts_, j, start, dest, cache, blocked.get(),
+                  shapes_, gbfs_rd, j, start, dest, cache, blocked.get(),
                   query.detailedTransfers_, query.withFares_,
                   config_.timetable_
                       .and_then([](config::timetable const& x) {

@@ -1,13 +1,10 @@
 #include "motis/gbfs/gbfs_output.h"
 
 #include "motis/gbfs/mode.h"
+#include "motis/gbfs/osr_profile.h"
 #include "motis/gbfs/routing_data.h"
 
 namespace motis::gbfs {
-
-bool is_additional_node(osr::ways const& w, osr::node_idx_t const n) {
-  return n != osr::node_idx_t::invalid() && n >= w.n_nodes();
-}
 
 gbfs_output::~gbfs_output() = default;
 
@@ -19,12 +16,7 @@ gbfs_output::gbfs_output(osr::ways const& w,
       provider_{*gbfs_rd_.data_->providers_.at(prod_ref.provider_)},
       products_{provider_.products_.at(prod_ref.products_)},
       prod_rd_{gbfs_rd_.get_products_routing_data(prod_ref)},
-      sharing_data_{
-          .start_allowed_ = &prod_rd_->start_allowed_,
-          .end_allowed_ = &prod_rd_->end_allowed_,
-          .through_allowed_ = &prod_rd_->through_allowed_,
-          .additional_node_offset_ = w_.n_nodes(),
-          .additional_edges_ = &prod_rd_->compressed_.additional_edges_},
+      sharing_data_{prod_rd_->get_sharing_data(w_.n_nodes())},
       rental_{
           .systemId_ = provider_.sys_info_.id_,
           .systemName_ = provider_.sys_info_.name_,
@@ -34,24 +26,26 @@ gbfs_output::gbfs_output(osr::ways const& w,
           .returnConstraint_ =
               to_api_return_constraint(products_.return_constraint_)} {}
 
-transport_mode_t gbfs_output::get_cache_key(osr::search_profile) const {
+api::ModeEnum gbfs_output::get_mode() const { return api::ModeEnum::RENTAL; }
+
+transport_mode_t gbfs_output::get_cache_key() const {
   return gbfs_rd_.get_transport_mode({provider_.idx_, products_.idx_});
+}
+
+osr::search_profile gbfs_output::get_profile() const {
+  return get_osr_profile(products_);
 }
 
 osr::sharing_data const* gbfs_output::get_sharing_data() const {
   return &sharing_data_;
 }
 
-api::VertexTypeEnum gbfs_output::get_vertex_type() const {
-  return api::VertexTypeEnum::BIKESHARE;
-}
-
-void gbfs_output::annotate(osr::node_idx_t const from_node,
-                           osr::node_idx_t const to_node,
-                           api::Leg& leg) const {
+void gbfs_output::annotate_leg(osr::node_idx_t const from_node,
+                               osr::node_idx_t const to_node,
+                               api::Leg& leg) const {
   leg.rental_ = rental_;
   auto& ret = *leg.rental_;
-  if (is_additional_node(w_, from_node)) {
+  if (w_.is_additional_node(from_node)) {
     auto const& an = prod_rd_->compressed_.additional_nodes_.at(
         get_additional_node_idx(from_node));
     std::visit(
@@ -76,7 +70,7 @@ void gbfs_output::annotate(osr::node_idx_t const from_node,
             }},
         an.data_);
   }
-  if (is_additional_node(w_, to_node)) {
+  if (w_.is_additional_node(to_node)) {
     auto const& an = prod_rd_->compressed_.additional_nodes_.at(
         get_additional_node_idx(to_node));
     std::visit(
@@ -99,37 +93,35 @@ void gbfs_output::annotate(osr::node_idx_t const from_node,
   }
 }
 
-geo::latlng gbfs_output::get_node_pos(osr::node_idx_t const n) const {
-  return std::visit(
-      utl::overloaded{[&](additional_node::station const& s) {
-                        return provider_.stations_.at(s.id_).info_.pos_;
-                      },
-                      [&](additional_node::vehicle const& vehicle) {
-                        return provider_.vehicle_status_.at(vehicle.idx_).pos_;
-                      }},
-      prod_rd_->compressed_.additional_nodes_.at(get_additional_node_idx(n))
-          .data_);
+api::Place gbfs_output::get_place(osr::node_idx_t const n) const {
+  if (w_.is_additional_node(n)) {
+    auto const pos = get_sharing_data()->get_additional_node_coordinates(n);
+    return api::Place{.name_ = get_node_name(n),
+                      .lat_ = pos.lat_,
+                      .lon_ = pos.lng_,
+                      .vertexType_ = api::VertexTypeEnum::BIKESHARE};
+  } else {
+    auto const pos = w_.get_node_pos(n).as_latlng();
+    return api::Place{.lat_ = pos.lat_,
+                      .lon_ = pos.lng_,
+                      .vertexType_ = api::VertexTypeEnum::NORMAL};
+  }
 }
 
 std::string gbfs_output::get_node_name(osr::node_idx_t const n) const {
-  if (!is_additional_node(w_, n)) {
-    return provider_.sys_info_.name_;
-  }
   auto const& an =
       prod_rd_->compressed_.additional_nodes_.at(get_additional_node_idx(n));
   return std::visit(
       utl::overloaded{[&](additional_node::station const& s) {
-                        auto const& st = provider_.stations_.at(s.id_);
-                        return st.info_.name_;
+                        return provider_.stations_.at(s.id_).info_.name_;
                       },
                       [&](additional_node::vehicle const& v) {
                         auto const& vs = provider_.vehicle_status_.at(v.idx_);
-                        if (auto const st =
-                                provider_.stations_.find(vs.station_id_);
-                            st != end(provider_.stations_)) {
-                          return st->second.info_.name_;
-                        }
-                        return provider_.sys_info_.name_;
+                        auto const it =
+                            provider_.stations_.find(vs.station_id_);
+                        return it == end(provider_.stations_)
+                                   ? provider_.sys_info_.name_
+                                   : it->second.info_.name_;
                       }},
       an.data_);
 }

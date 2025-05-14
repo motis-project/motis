@@ -35,15 +35,24 @@ void for_each_area_node(n::timetable const& tt,
   });
 }
 
-osr::sharing_data prepare_sharing_data(
-    n::timetable const& tt,
-    osr::ways const& w,
-    osr::lookup const& lookup,
-    osr::platforms const* pl,
-    platform_matches_t const* pl_matches,
-    n::flex_stop_t const& from_stop,
-    std::vector<n::flex_stop_t> const& to_stops,
-    flex_routing_data& frd) {
+osr::sharing_data prepare_sharing_data(n::timetable const& tt,
+                                       osr::ways const& w,
+                                       osr::lookup const& lookup,
+                                       osr::platforms const* pl,
+                                       platform_matches_t const* pl_matches,
+                                       mode_id const id,
+                                       osr::direction const dir,
+                                       flex_routing_data& frd) {
+  auto const stop_seq = tt.flex_transport_stop_seq_[id.get_flex_transport()];
+  auto const from_stop = stop_seq.at(id.get_stop());
+  auto to_stops = std::vector<n::flex_stop_t>{};
+  for (auto i = static_cast<int>(id.get_stop());
+       dir == osr::direction::kForward ? i < static_cast<int>(stop_seq.size())
+                                       : i >= 0;
+       dir == osr::direction::kForward ? ++i : --i) {
+    to_stops.emplace_back(stop_seq.at(static_cast<n::stop_idx_t>(i)));
+  }
+
   // Count additional nodes and allocate bit vectors.
   auto n_nodes = w.n_nodes();
   from_stop.apply(utl::overloaded{[&](n::location_group_idx_t const from_lg) {
@@ -55,6 +64,7 @@ osr::sharing_data prepare_sharing_data(
     }});
   }
   frd.additional_node_offset_ = w.n_nodes();
+  frd.additional_node_coordinates_.clear();
   frd.additional_edges_.clear();
   frd.start_allowed_.resize(n_nodes);
   frd.end_allowed_.resize(n_nodes);
@@ -68,6 +78,8 @@ osr::sharing_data prepare_sharing_data(
   auto next_add_node_idx = osr::node_idx_t{w.n_nodes()};
   auto const add_tt_location = [&](n::location_idx_t const l) {
     frd.additional_nodes_.emplace_back(l);
+    frd.additional_node_coordinates_.emplace_back(
+        tt.locations_.coordinates_[l]);
 
     auto const pos = get_location(&tt, &w, pl, pl_matches, tt_location{l});
     auto const l_additional_node_idx = next_add_node_idx++;

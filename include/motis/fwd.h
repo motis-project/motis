@@ -53,6 +53,7 @@ struct bounds;
 
 namespace gbfs {
 struct gbfs_data;
+struct gbfs_routing_data;
 }  // namespace gbfs
 
 namespace flex {
