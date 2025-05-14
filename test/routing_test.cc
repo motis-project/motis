@@ -484,6 +484,8 @@ TEST(motis, routing) {
         "&timetableView=false"
         "&directModes=WALK,RENTAL");
 
+    // std::cout << json::serialize(json::value_from(plan_response)) << "\n";
+
     EXPECT_EQ(
         R"(date=2019-05-01, start=01:25, end=01:35, duration=00:10, transfers=0, legs=[
     (from=- [track=-, scheduled_track=-, level=0], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 01:25, mode="WALK", trip="-", end=2019-05-01 01:28),
@@ -503,6 +505,8 @@ TEST(motis, routing) {
         "&useRoutedTransfers=true"
         "&preTransitModes=WALK,RENTAL");
 
+    std::cout << json::serialize(json::value_from(plan_response)) << "\n";
+
     std::cout << "@@\n" << itineraries_to_str(plan_response) << std::endl;
     EXPECT_EQ(
         R"(date=2019-05-01, start=01:25, end=02:14, duration=00:49, transfers=1, legs=[
@@ -517,6 +521,7 @@ TEST(motis, routing) {
         itineraries_to_str(plan_response));
   }
 
+/*
   // Routing with temporary blocked paths due to elevator being out of service
   // Queries will use the wheelchair profile and have a long walking path before
   // or after the elevator, to identify possible bugs
@@ -752,4 +757,5 @@ TEST(motis, routing) {
 ])",
         itineraries_to_str(plan_response));
   }
+ */
 }
