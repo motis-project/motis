@@ -20,7 +20,7 @@ json::value to_geometry(n::timetable const& tt, n::flex_area_idx_t const a) {
     return utl::transform_to<json::array>(
         r, [](geo::latlng const& x) { return osr::to_array(x); });
   };
-  
+
   auto const get_rings = [&](unsigned const i) {
     auto rings = json::array{};
     rings.emplace_back(ring_to_json(tt.flex_area_outers_[a][i]));
