@@ -25,11 +25,11 @@
 #include "motis/constants.h"
 #include "motis/endpoints/routing.h"
 #include "motis/flex/flex.h"
+#include "motis/flex/flex_output.h"
 #include "motis/gbfs/data.h"
 #include "motis/gbfs/gbfs_output.h"
 #include "motis/gbfs/mode.h"
 #include "motis/gbfs/osr_profile.h"
-#include "motis/gbfs/routing_data.h"
 #include "motis/journey_to_response.h"
 #include "motis/max_distance.h"
 #include "motis/metrics_registry.h"
@@ -100,8 +100,9 @@ n::routing::td_offsets_t get_td_offsets(
     if (m == api::ModeEnum::ODM) {
       continue;
     } else if (m == api::ModeEnum::FLEX) {
-      flex::add_flex_td_offsets(r, pos, dir, max_matching_distance, max,
-                                start_time, ret);
+      CISTA_UNUSED_PARAM(start_time)
+      //      flex::add_flex_td_offsets(r, pos, dir, max_matching_distance, max,
+      //                                start_time, ret);
       continue;
     }
 
@@ -355,9 +356,17 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
   };
 
   for (auto const& m : modes) {
-    if (m == api::ModeEnum::CAR || m == api::ModeEnum::BIKE ||
-        m == api::ModeEnum::CAR_PARKING ||
-        (!omit_walk && m == api::ModeEnum::WALK)) {
+    if (m == api::ModeEnum::FLEX) {
+      utl::verify(tt_ != nullptr, "FLEX requires timetable");
+      flex::for_each_flex_transport(
+          *tt_, *loc_tree_, start_time, get_location(from).pos_,
+          osr::direction::kForward, max, [&](flex::mode_id const id) {
+            route_with_profile(
+                flex::flex_output{*w_, *l_, pl_, matches_, *tt_, id});
+          });
+    } else if (m == api::ModeEnum::CAR || m == api::ModeEnum::BIKE ||
+               m == api::ModeEnum::CAR_PARKING ||
+               (!omit_walk && m == api::ModeEnum::WALK)) {
       route_with_profile(
           default_output{to_profile(m, pedestrian_profile, elevation_costs)});
     } else if (m == api::ModeEnum::RENTAL && gbfs_rd.has_data()) {

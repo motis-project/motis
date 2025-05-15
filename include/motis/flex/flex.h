@@ -1,23 +1,18 @@
 #pragma once
 
+#include <functional>
+
 #include "osr/location.h"
 #include "osr/routing/profile.h"
 #include "osr/types.h"
 
 #include "nigiri/routing/query.h"
 
-#include "motis-api/motis-api.h"
 #include "motis/flex/mode_id.h"
 #include "motis/fwd.h"
 #include "motis/match_platforms.h"
 
-namespace motis {
-
-namespace ep {
-struct routing;
-}
-
-namespace flex {
+namespace motis::flex {
 
 osr::sharing_data prepare_sharing_data(nigiri::timetable const&,
                                        osr::ways const&,
@@ -28,14 +23,12 @@ osr::sharing_data prepare_sharing_data(nigiri::timetable const&,
                                        osr::direction,
                                        flex_routing_data&);
 
-void add_flex_td_offsets(ep::routing const&,
-                         osr::location const&,
-                         osr::direction,
-                         double const max_matching_distance,
-                         std::chrono::seconds const max,
-                         nigiri::routing::start_time_t const&,
-                         nigiri::routing::td_offsets_t& ret);
+void for_each_flex_transport(nigiri::timetable const&,
+                             point_rtree<nigiri::location_idx_t> const&,
+                             nigiri::routing::start_time_t,
+                             geo::latlng const&,
+                             osr::direction,
+                             std::chrono::seconds,
+                             std::function<void(mode_id)> const&);
 
-}  // namespace flex
-
-}  // namespace motis
+}  // namespace motis::flex
