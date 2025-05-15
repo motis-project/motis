@@ -194,11 +194,7 @@
 				</Select.Trigger>
 				<Select.Content sideOffset={10}>
 					{#each ['WALK', 'BIKE', 'CAR'] as mode, i (i + mode)}
-						<Select.Item
-							value={mode}
-							label={t[mode as TranslationKey] as string}
-							disabled={directModes.length == 1 && directModes[0] == mode}
-						>
+						<Select.Item value={mode} label={t[mode as TranslationKey] as string}>
 							{t[mode as TranslationKey]}
 						</Select.Item>
 					{/each}
