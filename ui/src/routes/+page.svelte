@@ -12,6 +12,7 @@
 		plan,
 		type ElevationCosts,
 		type PlanResponse,
+		type Itinerary,
 		type Mode,
 		type PlanData
 	} from '$lib/api/openapi';
@@ -51,6 +52,7 @@
 	const isSmallScreen = browser && window.innerWidth < 768;
 	let dataAttributionLink: string | undefined = $state(undefined);
 	let showMap = $state(!isSmallScreen);
+	let last_selected_itinerary: Itinerary | undefined = undefined;
 
 	let theme: 'light' | 'dark' =
 		(hasDark ? 'dark' : undefined) ??
@@ -236,6 +238,9 @@
 	}
 
 	const flyToSelectedItinerary = () => {
+		if (last_selected_itinerary === page.state.selectedItinerary) {
+			return;
+		}
 		if (page.state.selectedItinerary && map) {
 			const start = maplibregl.LngLat.convert(page.state.selectedItinerary.legs[0].from);
 			const box = new maplibregl.LngLatBounds(start, start);
@@ -254,6 +259,7 @@
 			};
 			map.flyTo({ ...map.cameraForBounds(box, { padding }) });
 		}
+		last_selected_itinerary = page.state.selectedItinerary;
 	};
 
 	$effect(() => {
