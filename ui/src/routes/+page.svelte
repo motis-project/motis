@@ -133,11 +133,19 @@
 	let bikeCarriage = $state(urlParams?.get('bikeCarriage') == 'true');
 	let carCarriage = $state(urlParams?.get('carCarriage') == 'true');
 	let selectedTransitModes = $state<Mode[] | undefined>(
-		(urlParams?.get('selectedTransitModes')?.split(',') as Mode[]) ?? undefined
+		(urlParams
+			?.get('selectedTransitModes')
+			?.split(',')
+			.filter((m) => m.length) as Mode[]) ?? undefined
 	);
 	let firstMileMode = $state<Mode>((urlParams?.get('firstMileMode') ?? 'WALK') as Mode);
 	let lastMileMode = $state<Mode>((urlParams?.get('lastMileMode') ?? 'WALK') as Mode);
-	let directModes = $state<Mode[]>((urlParams?.get('directModes')?.split(',') ?? []) as Mode[]);
+	let directModes = $state<Mode[]>(
+		(urlParams
+			?.get('directModes')
+			?.split(',')
+			.filter((m) => m.length) ?? ['WALK']) as Mode[]
+	);
 	let elevationCosts = $state<ElevationCosts>(
 		(urlParams?.get('elevationCosts') ?? 'NONE') as ElevationCosts
 	);
@@ -151,18 +159,10 @@
 			return `${lngLatToStr(l.value.match!)},0`;
 		}
 	};
-	let additionalModes = $derived([
-		...(bikeRental ? ['RENTAL'] : []),
-		...(bikeCarriage ? ['BIKE'] : []),
-		...(carCarriage ? ['CAR'] : [])
-	] as Mode[]);
+	let additionalModes = $derived([...(bikeRental ? ['RENTAL'] : [])] as Mode[]);
 	let preTransitModes = $derived([firstMileMode, ...additionalModes]);
 	let postTransitModes = $derived([lastMileMode, ...additionalModes]);
-	let requestDirectModes = $derived([
-		...directModes,
-		...additionalModes,
-		...(directModes.length == 0 && additionalModes.length == 0 ? ['WALK'] : [])
-	]);
+	let requestDirectModes = $derived([...directModes, ...additionalModes]);
 
 	let baseQuery = $derived(
 		from.value.match && to.value.match
@@ -179,7 +179,7 @@
 						directModes: requestDirectModes,
 						requireBikeTransport: bikeCarriage,
 						requireCarTransport: carCarriage,
-						transitModes: selectedTransitModes?.length ? selectedTransitModes : undefined,
+						transitModes: selectedTransitModes,
 						elevationCosts,
 						useRoutedTransfers: true,
 						maxMatchingDistance: wheelchair ? 8 : 250
