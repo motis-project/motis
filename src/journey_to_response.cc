@@ -21,8 +21,6 @@
 #include "motis/constants.h"
 #include "motis/flex/flex_output.h"
 #include "motis/gbfs/gbfs_output.h"
-#include "motis/gbfs/mode.h"
-#include "motis/gbfs/osr_profile.h"
 #include "motis/gbfs/routing_data.h"
 #include "motis/mode_to_profile.h"
 #include "motis/odm/odm.h"
