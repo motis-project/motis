@@ -18,9 +18,10 @@ api::stops_response stops::operator()(boost::urls::url_view const& url) const {
   utl::verify(min.has_value(), "min not a coordinate: {}", query.min_);
   utl::verify(max.has_value(), "max not a coordinate: {}", query.max_);
   auto res = api::stops_response{};
-  auto n_items = 0U;
+
+  auto const max_results = config_.limits_.value().stops_max_results_;
   loc_rtree_.find({min->pos_, max->pos_}, [&](n::location_idx_t const l) {
-    utl::verify(n_items < 2048U, "too many items");
+    utl::verify(res.size() < max_results, "too many items");
     res.emplace_back(to_place(&tt_, &tags_, w_, pl_, matches_, tt_location{l}));
   });
   return res;

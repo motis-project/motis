@@ -156,6 +156,17 @@ struct config {
 
   std::variant<bool, std::optional<street_routing>> street_routing_{false};
 
+  struct limits {
+    bool operator==(limits const&) const = default;
+    unsigned stoptimes_max_results_{256U};
+    unsigned plan_max_results_{256U};
+    unsigned stops_max_results_{2048U};
+    unsigned onetoall_max_results_{65535U};
+    unsigned onetoall_max_travel_minutes_{90U};
+    unsigned routing_max_timeout_seconds_{90U};
+  };
+  std::optional<limits> limits_{};
+
   bool osr_footpath_{false};
   bool geocoding_{false};
   bool reverse_geocoding_{false};

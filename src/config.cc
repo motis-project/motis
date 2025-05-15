@@ -92,6 +92,9 @@ config config::read(std::filesystem::path const& p) {
 config config::read(std::string const& s) {
   auto c =
       rfl::yaml::read<config, drop_trailing, rfl::DefaultIfMissing>(s).value();
+  if (!c.limits_.has_value()) {
+    c.limits_.emplace(limits{});
+  }
   c.verify();
   return c;
 }

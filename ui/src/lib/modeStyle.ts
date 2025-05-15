@@ -1,4 +1,4 @@
-import type { Mode, Rental } from './openapi';
+import type { Mode, Rental } from './api/openapi';
 
 export type Colorable = {
 	routeColor?: string;

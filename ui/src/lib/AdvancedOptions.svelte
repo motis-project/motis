@@ -6,7 +6,7 @@
 	import ChevronUp from 'lucide-svelte/icons/chevron-up';
 	import ChevronDown from 'lucide-svelte/icons/chevron-down';
 	import { Switch } from './components/ui/switch';
-	import type { ElevationCosts, Mode } from './openapi';
+	import type { ElevationCosts, Mode } from '$lib/api/openapi';
 
 	let {
 		selectedModes = $bindable(),
@@ -47,8 +47,25 @@
 		'FERRY',
 		'OTHER'
 	];
+	function setModes(mode: Mode) {
+		return function (checked: boolean) {
+			if (checked) {
+				firstMileMode = mode;
+				lastMileMode = mode;
+				if (!directModes.includes(mode)) {
+					directModes.push(mode);
+				}
+			}
+		};
+	}
 	if (selectedModes === undefined) {
 		selectedModes = [...possibleModes];
+	}
+	if (bikeCarriage) {
+		setModes('BIKE')(true);
+	}
+	if (carCarriage) {
+		setModes('CAR')(true);
 	}
 
 	const possibleElevationCosts = [
@@ -66,26 +83,10 @@
 					.join(', ')
 			: t.defaultSelectedModes
 	);
-	const selectedFirstMileModeLabel = $derived(
-		t[firstMileMode as TranslationKey] +
-			(bikeCarriage && firstMileMode != 'BIKE' ? `, ${t.bikeCarriage} (${t.BIKE})` : '') +
-			(carCarriage && firstMileMode != 'CAR' ? `, ${t.carCarriage} (${t.CAR})` : '')
-	);
-	const selectedLastMileModeLabel = $derived(
-		t[lastMileMode as TranslationKey] +
-			(bikeCarriage && lastMileMode != 'BIKE' ? `, ${t.bikeCarriage} (${t.BIKE})` : '') +
-			(carCarriage && lastMileMode != 'CAR' ? `, ${t.carCarriage} (${t.CAR})` : '')
-	);
+	const selectedFirstMileModeLabel = $derived(t[firstMileMode as TranslationKey]);
+	const selectedLastMileModeLabel = $derived(t[lastMileMode as TranslationKey]);
 	const selectedDirectModesLabel = $derived(
-		directModes.length || bikeCarriage || carCarriage
-			? [
-					...directModes.map((m) => t[m as TranslationKey]),
-					...(bikeCarriage && !directModes.includes('BIKE')
-						? [`${t.bikeCarriage} (${t.BIKE})`]
-						: []),
-					...(carCarriage && !directModes.includes('CAR') ? [`${t.carCarriage} (${t.CAR})`] : [])
-				].join(', ')
-			: `${t.default} (${t.WALK})`
+		directModes.map((m) => t[m as TranslationKey]).join(', ')
 	);
 
 	let expanded = $state<boolean>(false);
@@ -125,8 +126,18 @@
 		<div class="space-y-2">
 			<Switch bind:checked={wheelchair} label={t.wheelchair} id="wheelchair" />
 			<Switch bind:checked={bikeRental} label={t.bikeRental} id="bikeRental" />
-			<Switch bind:checked={bikeCarriage} label={t.bikeCarriage} id="bikeCarriage" />
-			<Switch bind:checked={carCarriage} label={t.carCarriage} id="carCarriage" />
+			<Switch
+				bind:checked={bikeCarriage}
+				label={t.bikeCarriage}
+				onCheckedChange={setModes('BIKE')}
+				id="bikeCarriage"
+			/>
+			<Switch
+				bind:checked={carCarriage}
+				label={t.carCarriage}
+				onCheckedChange={setModes('CAR')}
+				id="carCarriage"
+			/>
 		</div>
 
 		<div class="grid grid-cols-[1fr_2fr] items-center space-y-2">

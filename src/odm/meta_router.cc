@@ -396,13 +396,14 @@ std::vector<meta_router::routing_result> meta_router::search_interval(
             ep::raptor_state.reset(new n::routing::raptor_state{});
           }
 
+          auto const timeout = std::chrono::seconds{query_.timeout_.value_or(
+              r_.config_.limits_.value().routing_max_timeout_seconds_)};
+
           return routing_result{raptor_search(
               *tt_, rtt_, *ep::search_state, *ep::raptor_state, std::move(q),
               query_.arriveBy_ ? n::direction::kBackward
                                : n::direction::kForward,
-              query_.timeout_.has_value()
-                  ? std::optional<std::chrono::seconds>{*query_.timeout_}
-                  : std::nullopt)};
+              timeout)};
         }};
   };
 
@@ -722,7 +723,7 @@ api::plan_response meta_router::run() {
                     r_.matches_, r_.elevations_, r_.shapes_, gbfs_rd_, j,
                     start_, dest_, cache, ep::blocked.get(),
                     query_.detailedTransfers_, query_.withFares_,
-                    r_.config_.timetable_->max_matching_distance_,
+                    r_.config_.timetable_.value().max_matching_distance_,
                     query_.maxMatchingDistance_, api_version_);
               }),
           .previousPageCursor_ =
