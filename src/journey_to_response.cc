@@ -259,6 +259,8 @@ api::Itinerary journey_to_response(
                        odm::is_odm_leg(leg);
               }) -
               1),
+      .elevationUp_ = 0,
+      .elevationDown_ = 0,
       .fareTransfers_ =
           fares.and_then([&](std::vector<n::fare_transfer> const& transfers) {
             return std::optional{utl::to_vec(
@@ -390,21 +392,25 @@ api::Itinerary journey_to_response(
               }
             },
             [&](n::footpath) {
-              append(
-                  w && l
-                      ? route(*w, *l, gbfs_rd, e, elevations, from, to,
-                              api::ModeEnum::WALK,
-                              to_profile(api::ModeEnum::WALK,
-                                         pedestrian_profile, elevation_costs),
-                              j_leg.dep_time_, j_leg.arr_time_,
-                              timetable_max_matching_distance, {}, cache,
-                              *blocked_mem, api_version,
-                              std::chrono::duration_cast<std::chrono::seconds>(
-                                  j_leg.arr_time_ - j_leg.dep_time_) +
-                                  std::chrono::minutes{10},
-                              !detailed_transfers)
-                      : dummy_itinerary(from, to, api::ModeEnum::WALK,
-                                        j_leg.dep_time_, j_leg.arr_time_));
+              if (w && l) {
+                auto r = route(*w, *l, gbfs_rd, e, elevations, from, to,
+                               api::ModeEnum::WALK,
+                               to_profile(api::ModeEnum::WALK,
+                                          pedestrian_profile, elevation_costs),
+                               j_leg.dep_time_, j_leg.arr_time_,
+                               timetable_max_matching_distance, {}, cache,
+                               *blocked_mem, api_version,
+                               std::chrono::duration_cast<std::chrono::seconds>(
+                                   j_leg.arr_time_ - j_leg.dep_time_) +
+                                   std::chrono::minutes{10},
+                               !detailed_transfers);
+                itinerary.elevationUp_ += r.elevationUp_;
+                itinerary.elevationDown_ += r.elevationDown_;
+                append(std::move(r));
+              } else {
+                append(dummy_itinerary(from, to, api::ModeEnum::WALK,
+                                       j_leg.dep_time_, j_leg.arr_time_));
+              }
             },
             [&](n::routing::offset const x) {
               auto const profile =
@@ -415,21 +421,25 @@ api::Itinerary journey_to_response(
                       ? osr::search_profile::kCar
                       : osr::search_profile{
                             static_cast<std::uint8_t>(x.transport_mode_id_)};
-              append(route(*w, *l, gbfs_rd, e, elevations, from, to,
-                           x.transport_mode_id_ >= kGbfsTransportModeIdOffset
-                               ? api::ModeEnum::RENTAL
-                           : x.transport_mode_id_ == kOdmTransportModeId
-                               ? api::ModeEnum::ODM
-                               : to_mode(profile),
-                           profile, j_leg.dep_time_, j_leg.arr_time_,
-                           max_matching_distance,
-                           x.transport_mode_id_ >= kGbfsTransportModeIdOffset
-                               ? gbfs_rd.get_products_ref(x.transport_mode_id_)
-                               : gbfs::gbfs_products_ref{},
-                           cache, *blocked_mem, api_version,
-                           std::chrono::duration_cast<std::chrono::seconds>(
-                               j_leg.arr_time_ - j_leg.dep_time_) +
-                               std::chrono::minutes{5}));
+              auto r =
+                  route(*w, *l, gbfs_rd, e, elevations, from, to,
+                        x.transport_mode_id_ >= kGbfsTransportModeIdOffset
+                            ? api::ModeEnum::RENTAL
+                        : x.transport_mode_id_ == kOdmTransportModeId
+                            ? api::ModeEnum::ODM
+                            : to_mode(profile),
+                        profile, j_leg.dep_time_, j_leg.arr_time_,
+                        max_matching_distance,
+                        x.transport_mode_id_ >= kGbfsTransportModeIdOffset
+                            ? gbfs_rd.get_products_ref(x.transport_mode_id_)
+                            : gbfs::gbfs_products_ref{},
+                        cache, *blocked_mem, api_version,
+                        std::chrono::duration_cast<std::chrono::seconds>(
+                            j_leg.arr_time_ - j_leg.dep_time_) +
+                            std::chrono::minutes{5});
+              itinerary.elevationUp_ += r.elevationUp_;
+              itinerary.elevationDown_ += r.elevationDown_;
+              append(std::move(r));
             }},
         j_leg.uses_);
   }
