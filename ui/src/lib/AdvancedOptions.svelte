@@ -47,23 +47,25 @@
 		'FERRY',
 		'OTHER'
 	];
-	const setModes = (checked: boolean, mode: Mode) => {
-		if (checked) {
-			firstMileMode = mode;
-			lastMileMode = mode;
-			if (!directModes.includes(mode)) {
-				directModes.push(mode);
+	function setModes(mode: Mode) {
+		return function (checked: boolean) {
+			if (checked) {
+				firstMileMode = mode;
+				lastMileMode = mode;
+				if (!directModes.includes(mode)) {
+					directModes.push(mode);
+				}
 			}
-		}
-	};
+		};
+	}
 	if (selectedModes === undefined) {
 		selectedModes = [...possibleModes];
 	}
 	if (bikeCarriage) {
-		setModes(true, 'BIKE');
+		setModes('BIKE')(true);
 	}
 	if (carCarriage) {
-		setModes(true, 'CAR');
+		setModes('CAR')(true);
 	}
 
 	const possibleElevationCosts = [
@@ -127,17 +129,13 @@
 			<Switch
 				bind:checked={bikeCarriage}
 				label={t.bikeCarriage}
-				onCheckedChange={(checked: boolean) => {
-					setModes(checked, 'BIKE');
-				}}
+				onCheckedChange={setModes('BIKE')}
 				id="bikeCarriage"
 			/>
 			<Switch
 				bind:checked={carCarriage}
 				label={t.carCarriage}
-				onCheckedChange={(checked: boolean) => {
-					setModes(checked, 'CAR');
-				}}
+				onCheckedChange={setModes('CAR')}
 				id="carCarriage"
 			/>
 		</div>
