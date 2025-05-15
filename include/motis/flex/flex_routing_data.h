@@ -13,12 +13,12 @@ namespace motis::flex {
 
 struct flex_routing_data {
   osr::sharing_data to_sharing_data() {
-    return {.start_allowed_ = &start_allowed_,
-            .end_allowed_ = &end_allowed_,
-            .through_allowed_ = &through_allowed_,
+    return {.start_allowed_ = start_allowed_,
+            .end_allowed_ = end_allowed_,
+            .through_allowed_ = through_allowed_,
             .additional_node_offset_ = additional_node_offset_,
-            .additional_node_coordinates_ = &additional_node_coordinates_,
-            .additional_edges_ = &additional_edges_};
+            .additional_node_coordinates_ = additional_node_coordinates_,
+            .additional_edges_ = additional_edges_};
   }
 
   osr::bitvec<osr::node_idx_t> start_allowed_;
