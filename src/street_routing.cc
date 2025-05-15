@@ -51,6 +51,8 @@ api::ModeEnum default_output::get_mode() const {
     case osr::search_profile::kBikeSharing: [[fallthrough]];
     case osr::search_profile::kCarSharing: return api::ModeEnum::RENTAL;
   }
+
+  return api::ModeEnum::OTHER;
 }
 
 osr::search_profile default_output::get_profile() const { return profile_; }
