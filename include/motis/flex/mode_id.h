@@ -1,7 +1,5 @@
 #pragma once
 
-#include "utl/verify.h"
-
 #include "osr/types.h"
 
 #include "nigiri/types.h"
