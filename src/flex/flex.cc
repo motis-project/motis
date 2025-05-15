@@ -198,7 +198,7 @@ void for_each_flex_transport(n::timetable const& tt,
     return std::nullopt;
   };
 
-  // Collect area transports
+  // Collect area transports.
   auto const add_area_flex_transports = [&](n::flex_area_idx_t const a) {
     for (auto const t : tt.flex_area_transports_[a]) {
       if (!is_active(t)) {
@@ -219,7 +219,7 @@ void for_each_flex_transport(n::timetable const& tt,
                                return true;
                              });
 
-  // Collect location group transports
+  // Collect location group transports.
   auto location_groups = hash_set<n::location_group_idx_t>{};
   loc_rtree.in_radius(pos, get_max_distance(osr::search_profile::kFoot, max),
                       [&](n::location_idx_t const l) {
