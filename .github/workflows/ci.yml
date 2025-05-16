@@ -156,14 +156,15 @@ jobs:
           asset_content_type: application/zip
 
   macos:
-    runs-on: macos-latest
+    runs-on: ${{ matrix.config.tests }}
     strategy:
       fail-fast: false
       matrix:
         config:
           - preset: macos-x86_64
-            tests: On
+            image: macos-15-large # macOS 15
           - preset: macos-arm64
+            image: macos-15 # macOS 15 Arm64
     env:
       BUILDCACHE_COMPRESS: true
       BUILDCACHE_DIRECT_MODE: true
@@ -214,7 +215,6 @@ jobs:
 
       # ==== TESTS ====
       - name: Run Tests
-        if: matrix.config.tests == 'On'
         run: build/motis-test
 
       # ==== SAVE CACHE ====
