@@ -156,7 +156,7 @@ jobs:
           asset_content_type: application/zip
 
   macos:
-    runs-on: ${{ matrix.config.tests }}
+    runs-on: ${{ matrix.config.image }}
     strategy:
       fail-fast: false
       matrix:
