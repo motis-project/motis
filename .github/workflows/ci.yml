@@ -156,15 +156,7 @@ jobs:
           asset_content_type: application/zip
 
   macos:
-    runs-on: ${{ matrix.config.image }}
-    strategy:
-      fail-fast: false
-      matrix:
-        config:
-          - preset: macos-x86_64
-            image: macos-13
-          - preset: macos-arm64
-            image: macos-15
+    runs-on: macos-15
     env:
       BUILDCACHE_COMPRESS: true
       BUILDCACHE_DIRECT_MODE: true
