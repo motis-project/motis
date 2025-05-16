@@ -162,9 +162,9 @@ jobs:
       matrix:
         config:
           - preset: macos-x86_64
-            image: macos-15-large # macOS 15
+            image: macos-13
           - preset: macos-arm64
-            image: macos-15 # macOS 15 Arm64
+            image: macos-15
     env:
       BUILDCACHE_COMPRESS: true
       BUILDCACHE_DIRECT_MODE: true
