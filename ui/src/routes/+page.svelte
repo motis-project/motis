@@ -45,6 +45,7 @@
 	import { updateStartDest } from '$lib/updateStartDest';
 	import * as Tabs from '$lib/components/ui/tabs';
 	import DeparturesMask from '$lib/DeparturesMask.svelte';
+	import Isochrones from '$lib/map/Isochrones.svelte';
 
 	const urlParams = browser ? new URLSearchParams(window.location.search) : undefined;
 	const hasDebug = urlParams && urlParams.has('debug');
@@ -266,6 +267,23 @@
 		flyToSelectedItinerary();
 	});
 
+	let isochronesData = [
+		{"lat": 50.767584, "lng": 6.091125, "duration": 15},  // Aachen
+		{"lat": 50.73195, "lng": 7.09665, "duration": 5},  // Bonn
+		{"lat": 51.517902, "lng": 7.459191, "duration": 10},  // Dortmund
+		{"lat": 51.43059, "lng": 6.77599, "duration": 30},  // Duisburg
+		{"lat": 51.22005, "lng": 6.79384, "duration": 35},  // Düsseldorf
+		{"lat": 50.94293, "lng": 6.95928, "duration": 15},  // Köln
+		{"lat": 51.25441, "lng": 7.15013, "duration": 25},  // Wuppertal
+		//{"center": "50.767584, 6.091125", "duration": 15},  // Aachen
+		//{"center": "50.73195, 7.09665", "duration": 5},  // Bonn
+		//{"center": "51.517902, 7.459191", "duration": 10},  // Dortmund
+		//{"center": "51.43059, 6.77599", "duration": 30},  // Duisburg
+		//{"center": "51.22005, 6.79384", "duration": 35},  // Düsseldorf
+		//{"center": "50.94293, 6.95928", "duration": 15},  // Köln
+		//{"center": "51.25441, 7.15013", "duration": 25},  // Wuppertal
+	];
+
 	type CloseFn = () => void;
 </script>
 
@@ -453,6 +471,8 @@
 
 	{#if showMap}
 		<RailViz {map} {bounds} {zoom} />
+		<!-- <Isochrones class="absolute"/> -->
+		<Isochrones class="absolute flex border-2 border-indigo-600 max-height max-width z-50" {bounds} {isochronesData} />
 
 		<Popup trigger="contextmenu" children={contextMenu} />
 

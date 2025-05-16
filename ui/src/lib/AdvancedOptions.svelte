@@ -7,6 +7,7 @@
 	import ChevronDown from 'lucide-svelte/icons/chevron-down';
 	import { Switch } from './components/ui/switch';
 	import type { ElevationCosts, Mode } from '$lib/api/openapi';
+	import Isochrones from './map/Isochrones.svelte';
 
 	let {
 		selectedModes = $bindable(),
@@ -218,5 +219,6 @@
 		</div>
 
 		<div class="text-muted-foreground leading-tight">{t.unreliableOptions}</div>
+		<!-- <Isochrones /> -->
 	</div>
 {/if}
