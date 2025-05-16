@@ -1,9 +1,11 @@
 #include "motis/flex/flex_output.h"
 
+#include "nigiri/flex.h"
 #include "nigiri/timetable.h"
 
 #include "motis/flex/flex.h"
 #include "motis/flex/flex_routing_data.h"
+#include "motis/place.h"
 #include "motis/street_routing.h"
 
 namespace n = nigiri;
@@ -14,10 +16,14 @@ flex_output::flex_output(osr::ways const& w,
                          osr::lookup const& l,
                          osr::platforms const* pl,
                          platform_matches_t const* matches,
+                         tag_lookup const& tags,
                          n::timetable const& tt,
                          mode_id const id)
     : w_{w},
+      pl_{pl},
+      matches_{matches},
       tt_{tt},
+      tags_{tags},
       sharing_data_{flex::prepare_sharing_data(
           tt, w, l, pl, matches, id, id.get_dir(), flex_routing_data_)},
       mode_id_(id) {}
@@ -36,9 +42,94 @@ osr::sharing_data const* flex_output::get_sharing_data() const {
   return &sharing_data_;
 }
 
-void flex_output::annotate_leg(osr::node_idx_t,
-                               osr::node_idx_t,
-                               api::Leg&) const {}
+void flex_output::annotate_leg(osr::node_idx_t const from,
+                               osr::node_idx_t const to,
+                               api::Leg& leg) const {
+  if (from == osr::node_idx_t::invalid() || to == osr::node_idx_t::invalid()) {
+    return;
+  }
+
+  auto const is_in_flex_stop = [&](n::flex_stop_t const& s,
+                                   osr::node_idx_t const n) {
+    return s.apply(utl::overloaded{
+        [&](n::flex_area_idx_t const a) {
+          return !w_.is_additional_node(n) && n != osr::node_idx_t::invalid() &&
+                 n::is_within(tt_, a, w_.get_node_pos(n));
+        },
+        [&](n::location_group_idx_t const lg) {
+          if (!w_.is_additional_node(n)) {
+            return false;
+          }
+          auto const locations = tt_.location_group_locations_.at(lg);
+          auto const l = flex_routing_data_.additional_nodes_.at(
+              get_additional_node_idx(n));
+          return utl::find(locations, l) != end(locations);
+        }});
+  };
+
+  auto const get_flex_stop_name = [&](n::flex_stop_t const& s) {
+    return s.apply(utl::overloaded{[&](n::flex_area_idx_t const a) {
+                                     return tt_.flex_area_name_[a].view();
+                                   },
+                                   [&](n::location_group_idx_t const lg) {
+                                     return tt_.strings_.get(
+                                         tt_.location_group_name_[lg]);
+                                   }});
+  };
+  auto const get_flex_id = [&](n::flex_stop_t const& s) {
+    return s.apply(
+        utl::overloaded{[&](n::flex_area_idx_t const a) {
+                          return tt_.strings_.get(tt_.flex_area_id_[a]);
+                        },
+                        [&](n::location_group_idx_t const lg) {
+                          return tt_.strings_.get(tt_.location_group_id_[lg]);
+                        }});
+  };
+
+  auto const t = mode_id_.get_flex_transport();
+  auto const stop_seq = tt_.flex_transport_stop_seq_[t];
+  auto from_stop = std::optional<n::stop_idx_t>{};
+  auto to_stop = std::optional<n::stop_idx_t>{};
+  for (auto i = 0U; i != stop_seq.size(); ++i) {
+    auto const stop_idx = static_cast<n::stop_idx_t>(
+        mode_id_.get_dir() == osr::direction::kForward
+            ? i
+            : stop_seq.size() - i - 1U);
+    auto const stop = stop_seq[stop_idx];
+    if (!from_stop.has_value() && is_in_flex_stop(stop, from)) {
+      from_stop = stop_idx;
+    } else if (!to_stop.has_value() && is_in_flex_stop(stop, to)) {
+      to_stop = stop_idx;
+      break;
+    }
+  }
+
+  if (!from_stop.has_value()) {
+    n::log(n::log_lvl::error, "flex", "flex: from  [node={}] not found", from);
+    return;
+  }
+
+  if (!to_stop.has_value()) {
+    n::log(n::log_lvl::error, "flex", "flex: to [node={}] not found", to);
+    return;
+  }
+
+  auto const write_node_info = [&](api::Place& p, osr::node_idx_t const n) {
+    if (w_.is_additional_node(n)) {
+      auto const l =
+          flex_routing_data_.additional_nodes_.at(get_additional_node_idx(n));
+      p = to_place(&tt_, &tags_, &w_, pl_, matches_, tt_location{l});
+    }
+  };
+  write_node_info(leg.from_, from);
+  write_node_info(leg.to_, to);
+
+  leg.mode_ = api::ModeEnum::FLEX;
+  leg.from_.flex_ = get_flex_stop_name(stop_seq[*from_stop]);
+  leg.from_.flexId_ = get_flex_id(stop_seq[*from_stop]);
+  leg.to_.flex_ = get_flex_stop_name(stop_seq[*to_stop]);
+  leg.to_.flexId_ = get_flex_id(stop_seq[*to_stop]);
+}
 
 api::Place flex_output::get_place(osr::node_idx_t const n) const {
   if (w_.is_additional_node(n)) {

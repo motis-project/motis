@@ -404,7 +404,7 @@ api::Itinerary journey_to_response(osr::ways const* w,
               auto out = std::unique_ptr<output>{};
               if (flex::mode_id::is_flex(x.transport_mode_id_)) {
                 out = std::make_unique<flex::flex_output>(
-                    *w, *l, pl, matches, tt,
+                    *w, *l, pl, matches, tags, tt,
                     flex::mode_id{x.transport_mode_id_});
               } else if (x.transport_mode_id_ >= kGbfsTransportModeIdOffset) {
                 out = std::make_unique<gbfs::gbfs_output>(

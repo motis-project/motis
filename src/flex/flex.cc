@@ -88,7 +88,6 @@ osr::sharing_data prepare_sharing_data(n::timetable const& tt,
         lookup.match<osr::foot<false>>(pos, false, osr::direction::kForward,
                                        kMaxGbfsMatchingDistance, nullptr);
 
-    auto& add_node_out = frd.additional_edges_[l_additional_node_idx];
     for (auto const& m : matches) {
       auto const handle_node = [&](osr::node_candidate const& node) {
         if (!node.valid() || node.dist_to_node_ > kMaxGbfsMatchingDistance) {
@@ -103,6 +102,7 @@ osr::sharing_data prepare_sharing_data(n::timetable const& tt,
           node_edges.emplace_back(edge_to_an);
         }
 
+        auto& add_node_out = frd.additional_edges_[l_additional_node_idx];
         auto const edge_from_an = osr::additional_edge{
             node.node_, static_cast<osr::distance_t>(node.dist_to_node_)};
         if (utl::find(add_node_out, edge_from_an) == end(add_node_out)) {

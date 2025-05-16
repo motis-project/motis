@@ -11,6 +11,7 @@ struct flex_output : public output {
               osr::lookup const&,
               osr::platforms const*,
               platform_matches_t const*,
+              tag_lookup const&,
               nigiri::timetable const&,
               mode_id);
   ~flex_output() override;
@@ -26,7 +27,10 @@ private:
   std::size_t get_additional_node_idx(osr::node_idx_t) const;
 
   osr::ways const& w_;
+  osr::platforms const* pl_;
+  platform_matches_t const* matches_;
   nigiri::timetable const& tt_;
+  tag_lookup const& tags_;
   flex::flex_routing_data flex_routing_data_;
   osr::sharing_data sharing_data_;
   mode_id mode_id_;

@@ -357,12 +357,12 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
 
   for (auto const& m : modes) {
     if (m == api::ModeEnum::FLEX) {
-      utl::verify(tt_ != nullptr, "FLEX requires timetable");
+      utl::verify(tt_ && tags_, "FLEX requires timetable");
       flex::for_each_flex_transport(
           *tt_, *loc_tree_, start_time, get_location(from).pos_,
           osr::direction::kForward, max, [&](flex::mode_id const id) {
             route_with_profile(
-                flex::flex_output{*w_, *l_, pl_, matches_, *tt_, id});
+                flex::flex_output{*w_, *l_, pl_, matches_, *tags_, *tt_, id});
           });
     } else if (m == api::ModeEnum::CAR || m == api::ModeEnum::BIKE ||
                m == api::ModeEnum::CAR_PARKING ||

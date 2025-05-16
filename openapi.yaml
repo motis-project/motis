@@ -1828,6 +1828,20 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Alert'
+        flex:
+          description: for `FLEX` transports, the flex location area or location group name
+          type: string
+        flexId:
+          description: for `FLEX` transports, the flex location area ID or location group ID
+          type: string
+        startPickupDropOffWindow:
+          description: Time that on-demand service becomes available
+          type: string
+          format: date-time
+        endPickupDropOffWindow:
+          description: Time that on-demand service ends
+          type: string
+          format: date-time
 
     ReachablePlace:
       description: Place reachable by One-to-All
