@@ -21,6 +21,10 @@ struct flex_routing_data {
             .additional_edges_ = additional_edges_};
   }
 
+  nigiri::location_idx_t get_additional_node(osr::node_idx_t const n) const {
+    return additional_nodes_[to_idx(n - additional_node_offset_)];
+  }
+
   osr::bitvec<osr::node_idx_t> start_allowed_;
   osr::bitvec<osr::node_idx_t> through_allowed_;
   osr::bitvec<osr::node_idx_t> end_allowed_;

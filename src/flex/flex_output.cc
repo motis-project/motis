@@ -49,24 +49,6 @@ void flex_output::annotate_leg(osr::node_idx_t const from,
     return;
   }
 
-  auto const is_in_flex_stop = [&](n::flex_stop_t const& s,
-                                   osr::node_idx_t const n) {
-    return s.apply(utl::overloaded{
-        [&](n::flex_area_idx_t const a) {
-          return !w_.is_additional_node(n) && n != osr::node_idx_t::invalid() &&
-                 n::is_within(tt_, a, w_.get_node_pos(n));
-        },
-        [&](n::location_group_idx_t const lg) {
-          if (!w_.is_additional_node(n)) {
-            return false;
-          }
-          auto const locations = tt_.location_group_locations_.at(lg);
-          auto const l = flex_routing_data_.additional_nodes_.at(
-              get_additional_node_idx(n));
-          return utl::find(locations, l) != end(locations);
-        }});
-  };
-
   auto const get_flex_stop_name = [&](n::flex_stop_t const& s) {
     return s.apply(utl::overloaded{[&](n::flex_area_idx_t const a) {
                                      return tt_.flex_area_name_[a].view();
@@ -96,9 +78,11 @@ void flex_output::annotate_leg(osr::node_idx_t const from,
             ? i
             : stop_seq.size() - i - 1U);
     auto const stop = stop_seq[stop_idx];
-    if (!from_stop.has_value() && is_in_flex_stop(stop, from)) {
+    if (!from_stop.has_value() &&
+        is_in_flex_stop(tt_, w_, flex_routing_data_, stop, from)) {
       from_stop = stop_idx;
-    } else if (!to_stop.has_value() && is_in_flex_stop(stop, to)) {
+    } else if (!to_stop.has_value() &&
+               is_in_flex_stop(tt_, w_, flex_routing_data_, stop, to)) {
       to_stop = stop_idx;
       break;
     }
@@ -116,8 +100,7 @@ void flex_output::annotate_leg(osr::node_idx_t const from,
 
   auto const write_node_info = [&](api::Place& p, osr::node_idx_t const n) {
     if (w_.is_additional_node(n)) {
-      auto const l =
-          flex_routing_data_.additional_nodes_.at(get_additional_node_idx(n));
+      auto const l = flex_routing_data_.get_additional_node(n);
       p = to_place(&tt_, &tags_, &w_, pl_, matches_, tt_location{l});
     }
   };
@@ -133,8 +116,7 @@ void flex_output::annotate_leg(osr::node_idx_t const from,
 
 api::Place flex_output::get_place(osr::node_idx_t const n) const {
   if (w_.is_additional_node(n)) {
-    auto const l =
-        flex_routing_data_.additional_nodes_.at(get_additional_node_idx(n));
+    auto const l = flex_routing_data_.get_additional_node(n);
     auto const c = tt_.locations_.coordinates_.at(l);
     return api::Place{.name_ = std::string{tt_.locations_.names_.at(l).view()},
                       .lat_ = c.lat_,
@@ -146,11 +128,6 @@ api::Place flex_output::get_place(osr::node_idx_t const n) const {
                       .lon_ = pos.lng_,
                       .vertexType_ = api::VertexTypeEnum::NORMAL};
   }
-}
-
-std::size_t flex_output::get_additional_node_idx(
-    osr::node_idx_t const n) const {
-  return to_idx(n) - sharing_data_.additional_node_offset_;
 }
 
 }  // namespace motis::flex

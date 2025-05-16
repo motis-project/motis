@@ -23,6 +23,12 @@ osr::sharing_data prepare_sharing_data(nigiri::timetable const&,
                                        osr::direction,
                                        flex_routing_data&);
 
+bool is_in_flex_stop(nigiri::timetable const&,
+                     osr::ways const&,
+                     flex_routing_data const&,
+                     nigiri::flex_stop_t const&,
+                     osr::node_idx_t);
+
 void for_each_flex_transport(nigiri::timetable const&,
                              point_rtree<nigiri::location_idx_t> const&,
                              nigiri::routing::start_time_t,

@@ -148,14 +148,8 @@ osr::sharing_data prepare_sharing_data(n::timetable const& tt,
   return frd.to_sharing_data();
 }
 
-void for_each_flex_transport(n::timetable const& tt,
-                             point_rtree<n::location_idx_t> const& loc_rtree,
-                             n::routing::start_time_t const start_time,
-                             geo::latlng const& pos,
-                             osr::direction const dir,
-                             std::chrono::seconds const max,
-                             std::function<void(mode_id)> const& fn) {
-  // Traffic days helpers.
+n::interval<n::day_idx_t> get_relevant_days(
+    n::timetable const& tt, n::routing::start_time_t const start_time) {
   auto const to_sys_days = [](n::unixtime_t const t) {
     return std::chrono::time_point_cast<date::sys_days::duration>(t);
   };
@@ -169,12 +163,20 @@ void for_each_flex_transport(n::timetable const& tt,
                                            to_sys_days(x.to_) + date::days{3}};
                       }},
       start_time);
-  auto const day_idx_iv = n::interval{tt.day_idx(iv.from_), tt.day_idx(iv.to_)};
-  auto const get_traffic_days = [&](n::flex_transport_idx_t const t) {
-    return tt.bitfields_[tt.flex_transport_traffic_days_[t]];
-  };
+  return n::interval{tt.day_idx(iv.from_), tt.day_idx(iv.to_)};
+}
+
+void for_each_flex_transport(n::timetable const& tt,
+                             point_rtree<n::location_idx_t> const& loc_rtree,
+                             n::routing::start_time_t const start_time,
+                             geo::latlng const& pos,
+                             osr::direction const dir,
+                             std::chrono::seconds const max,
+                             std::function<void(mode_id)> const& fn) {
+  // Traffic days helpers.
+  auto const day_idx_iv = get_relevant_days(tt, start_time);
   auto const is_active = [&](n::flex_transport_idx_t const t) {
-    auto const& bitfield = get_traffic_days(t);
+    auto const& bitfield = tt.bitfields_[tt.flex_transport_traffic_days_[t]];
     return utl::any_of(day_idx_iv, [&](n::day_idx_t const i) {
       return bitfield.test(to_idx(i));
     });
@@ -240,6 +242,103 @@ void for_each_flex_transport(n::timetable const& tt,
       }
     }
   }
+}
+
+bool is_in_flex_stop(n::timetable const& tt,
+                     osr::ways const& w,
+                     flex_routing_data const& frd,
+                     n::flex_stop_t const& s,
+                     osr::node_idx_t const n) {
+  return s.apply(utl::overloaded{
+      [&](n::flex_area_idx_t const a) {
+        return !w.is_additional_node(n) && n != osr::node_idx_t::invalid() &&
+               n::is_within(tt, a, w.get_node_pos(n));
+      },
+      [&](n::location_group_idx_t const lg) {
+        if (!w.is_additional_node(n)) {
+          return false;
+        }
+        auto const locations = tt.location_group_locations_.at(lg);
+        auto const l = frd.get_additional_node(n);
+        return utl::find(locations, l) != end(locations);
+      }});
+}
+
+void add_flex_td_offsets(osr::ways const& w,
+                         osr::lookup const& lookup,
+                         osr::platforms const* pl,
+                         platform_matches_t const* matches,
+                         n::timetable const& tt,
+                         point_rtree<n::location_idx_t> const& loc_rtree,
+                         n::routing::start_time_t const start_time,
+                         osr::location const& pos,
+                         osr::direction const dir,
+                         std::chrono::seconds const max,
+                         double const max_matching_distance,
+                         flex_routing_data& frd,
+                         n::routing::td_offsets_t& ret) {
+  auto const max_dist = get_max_distance(osr::search_profile::kCarSharing, max);
+  auto const near_stops = loc_rtree.in_radius(pos.pos_, max_dist);
+  auto const near_stop_locations =
+      utl::to_vec(near_stops, [&](n::location_idx_t const l) {
+        return get_location(&tt, &w, pl, matches, tt_location{l});
+      });
+
+  for_each_flex_transport(
+      tt, loc_rtree, start_time, pos.pos_, dir, max, [&](mode_id const id) {
+        auto const t = id.get_flex_transport();
+        auto const from_stop_idx = id.get_stop();
+        auto const sharing_data =
+            prepare_sharing_data(tt, w, lookup, pl, matches, id, dir, frd);
+        auto const paths = osr::route(
+            w, lookup, osr::search_profile::kCarSharing, pos,
+            near_stop_locations, static_cast<osr::cost_t>(max.count()), dir,
+            max_matching_distance, nullptr, &sharing_data, nullptr);
+        auto const day_idx_iv = get_relevant_days(tt, start_time);
+        for (auto const day_idx : day_idx_iv) {
+          if (!tt.bitfields_[tt.flex_transport_traffic_days_[t]].test(
+                  to_idx(day_idx))) {
+            continue;
+          }
+
+          auto const day =
+              tt.internal_interval().from_ + to_idx(day_idx) * date::days{1U};
+          auto const from_stop_time_window =
+              tt.flex_transport_stop_time_windows_[t][from_stop_idx];
+          auto const abs_from_stop_iv =
+              n::interval{day + from_stop_time_window.from_,
+                          day + from_stop_time_window.to_};
+          for (auto const [p, s, l] :
+               utl::zip(paths, near_stop_locations, near_stops)) {
+            if (p.has_value() && p->track_node_ != osr::node_idx_t::invalid()) {
+              auto const rel_to_stop_idx = 0U;
+              auto const to_stop_idx = static_cast<n::stop_idx_t>(
+                  dir == osr::direction::kForward
+                      ? from_stop_idx + rel_to_stop_idx
+                      : from_stop_idx - rel_to_stop_idx);
+              auto const duration = n::duration_t{p->cost_ / 60};
+              auto const to_stop_time_window =
+                  tt.flex_transport_stop_time_windows_[t][to_stop_idx];
+              auto const abs_to_stop_iv =
+                  n::interval{day + to_stop_time_window.from_,
+                              day + to_stop_time_window.to_};
+
+              auto const iv_at_to_stop = (dir == osr::direction::kForward
+                                              ? abs_from_stop_iv >> duration
+                                              : abs_from_stop_iv << duration)
+                                             .intersect(abs_to_stop_iv);
+              auto const iv_at_from_stop = dir == osr::direction::kForward
+                                               ? iv_at_to_stop << duration
+                                               : iv_at_to_stop >> duration;
+
+              auto& offsets = ret[l];
+              offsets.emplace_back(iv_at_from_stop.from_, duration, id.to_id());
+              offsets.emplace_back(iv_at_from_stop.to_, n::kInfeasible,
+                                   id.to_id());
+            }
+          }
+        }
+      });
 }
 
 }  // namespace motis::flex

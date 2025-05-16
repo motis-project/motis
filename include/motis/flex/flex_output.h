@@ -23,9 +23,9 @@ struct flex_output : public output {
   void annotate_leg(osr::node_idx_t, osr::node_idx_t, api::Leg&) const override;
   api::Place get_place(osr::node_idx_t) const override;
 
-private:
   std::size_t get_additional_node_idx(osr::node_idx_t) const;
 
+private:
   osr::ways const& w_;
   osr::platforms const* pl_;
   platform_matches_t const* matches_;
