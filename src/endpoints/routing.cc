@@ -101,8 +101,10 @@ n::routing::td_offsets_t get_td_offsets(
       continue;
     } else if (m == api::ModeEnum::FLEX) {
       CISTA_UNUSED_PARAM(start_time)
-      //      flex::add_flex_td_offsets(r, pos, dir, max_matching_distance, max,
-      //                                start_time, ret);
+      auto frd = flex::flex_routing_data{};
+      flex::add_flex_td_offsets(*r.w_, *r.l_, r.pl_, r.matches_, *r.tt_,
+                                *r.loc_tree_, start_time, pos, dir, max,
+                                max_matching_distance, frd, ret);
       continue;
     }
 

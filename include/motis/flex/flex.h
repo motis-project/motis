@@ -37,4 +37,18 @@ void for_each_flex_transport(nigiri::timetable const&,
                              std::chrono::seconds,
                              std::function<void(mode_id)> const&);
 
+void add_flex_td_offsets(osr::ways const&,
+                         osr::lookup const&,
+                         osr::platforms const*,
+                         platform_matches_t const*,
+                         nigiri::timetable const&,
+                         point_rtree<nigiri::location_idx_t> const&,
+                         nigiri::routing::start_time_t,
+                         osr::location const&,
+                         osr::direction,
+                         std::chrono::seconds max,
+                         double const max_matching_distance,
+                         flex_routing_data&,
+                         nigiri::routing::td_offsets_t&);
+
 }  // namespace motis::flex
