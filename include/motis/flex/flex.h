@@ -1,7 +1,5 @@
 #pragma once
 
-#include <functional>
-
 #include "osr/location.h"
 #include "osr/routing/profile.h"
 #include "osr/types.h"
@@ -13,6 +11,10 @@
 #include "motis/match_platforms.h"
 
 namespace motis::flex {
+
+using flex_routings_t =
+    hash_map<std::pair<nigiri::flex_stop_seq_idx_t, nigiri::stop_idx_t>,
+             std::vector<mode_id>>;
 
 osr::sharing_data prepare_sharing_data(nigiri::timetable const&,
                                        osr::ways const&,
@@ -29,13 +31,12 @@ bool is_in_flex_stop(nigiri::timetable const&,
                      nigiri::flex_stop_t const&,
                      osr::node_idx_t);
 
-void for_each_flex_transport(nigiri::timetable const&,
-                             point_rtree<nigiri::location_idx_t> const&,
-                             nigiri::routing::start_time_t,
-                             geo::latlng const&,
-                             osr::direction,
-                             std::chrono::seconds,
-                             std::function<void(mode_id)> const&);
+flex_routings_t get_flex_routings(nigiri::timetable const&,
+                                  point_rtree<nigiri::location_idx_t> const&,
+                                  nigiri::routing::start_time_t,
+                                  geo::latlng const&,
+                                  osr::direction,
+                                  std::chrono::seconds max);
 
 void add_flex_td_offsets(osr::ways const&,
                          osr::lookup const&,

@@ -69,7 +69,7 @@ void flex_output::annotate_leg(osr::node_idx_t const from,
   };
 
   auto const t = mode_id_.get_flex_transport();
-  auto const stop_seq = tt_.flex_transport_stop_seq_[t];
+  auto const stop_seq = tt_.flex_stop_seq_[tt_.flex_transport_stop_seq_[t]];
   auto from_stop = std::optional<n::stop_idx_t>{};
   auto to_stop = std::optional<n::stop_idx_t>{};
   for (auto i = 0U; i != stop_seq.size(); ++i) {
