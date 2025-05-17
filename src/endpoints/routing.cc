@@ -82,7 +82,7 @@ std::vector<n::routing::offset> station_start(n::location_idx_t const l) {
 
 n::routing::td_offsets_t get_td_offsets(
     routing const& r,
-    elevators const& e,
+    elevators const* e,
     osr::location const& pos,
     osr::direction const dir,
     std::vector<api::ModeEnum> const& modes,
@@ -100,7 +100,7 @@ n::routing::td_offsets_t get_td_offsets(
     if (m == api::ModeEnum::ODM) {
       continue;
     } else if (m == api::ModeEnum::FLEX) {
-      CISTA_UNUSED_PARAM(start_time)
+      std::cout << "FLEX\n";
       auto frd = flex::flex_routing_data{};
       flex::add_flex_td_offsets(*r.w_, *r.l_, r.pl_, r.matches_, *r.tt_,
                                 *r.loc_tree_, start_time, pos, dir, max,
@@ -110,12 +110,12 @@ n::routing::td_offsets_t get_td_offsets(
 
     auto const profile = to_profile(m, pedestrian_profile, elevation_costs);
 
-    if (profile != osr::search_profile::kWheelchair) {
+    if (e == nullptr || profile != osr::search_profile::kWheelchair) {
       continue;  // handled by get_offsets
     }
 
     utl::equal_ranges_linear(
-        get_td_footpaths(*r.w_, *r.l_, *r.pl_, *r.tt_, *r.loc_tree_, e,
+        get_td_footpaths(*r.w_, *r.l_, *r.pl_, *r.tt_, *r.loc_tree_, *e,
                          *r.matches_, n::location_idx_t::invalid(), pos, dir,
                          profile, max, max_matching_distance, *blocked),
         [](n::td_footpath const& a, n::td_footpath const& b) {
@@ -146,18 +146,15 @@ n::routing::td_offsets_t routing::get_td_offsets(
     double const max_matching_distance,
     std::chrono::seconds const max,
     nigiri::routing::start_time_t const& start_time) const {
-  return e != nullptr
-             ? std::visit(
-                   utl::overloaded{
-                       [&](tt_location) { return n::routing::td_offsets_t{}; },
-                       [&](osr::location const& pos) {
-                         return ::motis::ep::get_td_offsets(
-                             *this, *e, pos, dir, modes, pedestrian_profile,
-                             elevation_costs, max_matching_distance, max,
-                             start_time);
-                       }},
-                   p)
-             : n::routing::td_offsets_t{};
+  return std::visit(
+      utl::overloaded{[&](tt_location) { return n::routing::td_offsets_t{}; },
+                      [&](osr::location const& pos) {
+                        return ::motis::ep::get_td_offsets(
+                            *this, e, pos, dir, modes, pedestrian_profile,
+                            elevation_costs, max_matching_distance, max,
+                            start_time);
+                      }},
+      p);
 }
 
 std::vector<n::routing::offset> get_offsets(

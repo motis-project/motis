@@ -310,7 +310,7 @@ void add_flex_td_offsets(osr::ways const& w,
                           day + from_stop_time_window.to_};
           for (auto const [p, s, l] :
                utl::zip(paths, near_stop_locations, near_stops)) {
-            if (p.has_value() && p->track_node_ != osr::node_idx_t::invalid()) {
+            if (p.has_value()) {
               auto const rel_to_stop_idx = 0U;
               auto const to_stop_idx = static_cast<n::stop_idx_t>(
                   dir == osr::direction::kForward
