@@ -100,7 +100,6 @@ n::routing::td_offsets_t get_td_offsets(
     if (m == api::ModeEnum::ODM) {
       continue;
     } else if (m == api::ModeEnum::FLEX) {
-      std::cout << "FLEX\n";
       auto frd = flex::flex_routing_data{};
       flex::add_flex_td_offsets(*r.w_, *r.l_, r.pl_, r.matches_, *r.tt_,
                                 *r.loc_tree_, start_time, pos, dir, max,
