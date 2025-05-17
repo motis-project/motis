@@ -263,6 +263,7 @@ struct compressed_bitvec {
 
 struct routing_data {
   std::vector<additional_node> additional_nodes_{};
+  std::vector<geo::latlng> additional_node_coordinates_;
   osr::hash_map<osr::node_idx_t, std::vector<osr::additional_edge>>
       additional_edges_{};
 
@@ -274,9 +275,9 @@ struct routing_data {
 
 struct compressed_routing_data {
   std::vector<additional_node> additional_nodes_{};
+  std::vector<geo::latlng> additional_node_coordinates_;
   osr::hash_map<osr::node_idx_t, std::vector<osr::additional_edge>>
       additional_edges_{};
-
   compressed_bitvec start_allowed_{};
   compressed_bitvec end_allowed_{};
   compressed_bitvec through_allowed_{};
@@ -294,6 +295,8 @@ struct products_routing_data {
             .end_allowed_ = end_allowed_,
             .through_allowed_ = through_allowed_,
             .additional_node_offset_ = additional_node_offset,
+            .additional_node_coordinates_ =
+                compressed_.additional_node_coordinates_,
             .additional_edges_ = compressed_.additional_edges_};
   }
 
@@ -322,8 +325,7 @@ struct provider_routing_data
 struct provider_products {
   bool includes_vehicle_type(vehicle_type_idx_t const idx) const {
     return (idx == vehicle_type_idx_t::invalid() && vehicle_types_.empty()) ||
-           std::find(begin(vehicle_types_), end(vehicle_types_), idx) !=
-               end(vehicle_types_);
+           utl::find(vehicle_types_, idx) != end(vehicle_types_);
   }
 
   gbfs_products_idx_t idx_{gbfs_products_idx_t::invalid()};
