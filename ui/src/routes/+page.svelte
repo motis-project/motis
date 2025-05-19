@@ -471,8 +471,7 @@
 
 	{#if showMap}
 		<RailViz {map} {bounds} {zoom} />
-		<!-- <Isochrones class="absolute"/> -->
-		<Isochrones class="absolute flex border-2 border-indigo-600 max-height max-width z-50" {bounds} {isochronesData} />
+		<Isochrones class="absolute flex border-2 border-indigo-600 h-dvh max-w-full z-50" {bounds} {isochronesData} />
 
 		<Popup trigger="contextmenu" children={contextMenu} />
 
