@@ -108,6 +108,7 @@ struct routing {
   nigiri::timetable const* tt_;
   tag_lookup const* tags_;
   point_rtree<nigiri::location_idx_t> const* loc_tree_;
+  flex::flex_areas const* fa_;
   platform_matches_t const* matches_;
   std::shared_ptr<rt> const& rt_;
   nigiri::shapes_storage const* shapes_;

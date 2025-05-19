@@ -250,12 +250,12 @@ api::Itinerary street_routing(osr::ways const& w,
                                              : to_polyline<6>(concat),
             .steps_ = get_step_instructions(w, from, to, range, api_version)});
 
-        out.annotate_leg(from_node, to_node, leg);
-
         leg.from_.departure_ = leg.from_.scheduledDeparture_ =
             leg.scheduledStartTime_ = leg.startTime_;
         leg.to_.arrival_ = leg.to_.scheduledArrival_ = leg.scheduledEndTime_ =
             leg.endTime_;
+
+        out.annotate_leg(from_node, to_node, leg);
 
         pred_place = leg.to_;
         pred_end_time = t;

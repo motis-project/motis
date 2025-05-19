@@ -361,11 +361,11 @@ export type Place = {
     /**
      * Time that on-demand service becomes available
      */
-    startPickupDropOffWindow?: string;
+    flexStartPickupDropOffWindow?: string;
     /**
      * Time that on-demand service ends
      */
-    endPickupDropOffWindow?: string;
+    flexEndPickupDropOffWindow?: string;
 };
 
 /**

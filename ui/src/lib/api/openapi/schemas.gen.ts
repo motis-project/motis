@@ -409,12 +409,12 @@ Can be missing if neither real-time updates nor the schedule timetable contains 
             description: 'for `FLEX` transports, the flex location area ID or location group ID',
             type: 'string'
         },
-        startPickupDropOffWindow: {
+        flexStartPickupDropOffWindow: {
             description: 'Time that on-demand service becomes available',
             type: 'string',
             format: 'date-time'
         },
-        endPickupDropOffWindow: {
+        flexEndPickupDropOffWindow: {
             description: 'Time that on-demand service ends',
             type: 'string',
             format: 'date-time'

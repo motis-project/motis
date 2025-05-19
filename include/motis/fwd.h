@@ -58,6 +58,7 @@ struct gbfs_routing_data;
 
 namespace flex {
 struct flex_routing_data;
-}
+struct flex_areas;
+}  // namespace flex
 
 }  // namespace motis

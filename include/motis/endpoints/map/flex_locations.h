@@ -10,7 +10,7 @@
 
 namespace motis::ep {
 
-struct flex {
+struct flex_locations {
   boost::json::value operator()(boost::urls::url_view const&) const;
 
   tag_lookup const& tags_;

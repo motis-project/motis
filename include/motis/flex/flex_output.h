@@ -13,6 +13,7 @@ struct flex_output : public output {
               platform_matches_t const*,
               tag_lookup const&,
               nigiri::timetable const&,
+              flex_areas const&,
               mode_id);
   ~flex_output() override;
 
@@ -31,6 +32,7 @@ private:
   platform_matches_t const* matches_;
   nigiri::timetable const& tt_;
   tag_lookup const& tags_;
+  flex_areas const& fa_;
   flex::flex_routing_data flex_routing_data_;
   osr::sharing_data sharing_data_;
   mode_id mode_id_;

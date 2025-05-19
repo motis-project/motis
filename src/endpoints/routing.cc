@@ -100,8 +100,9 @@ n::routing::td_offsets_t get_td_offsets(
     if (m == api::ModeEnum::ODM) {
       continue;
     } else if (m == api::ModeEnum::FLEX) {
+      utl::verify(r.fa_, "FLEX areas not loaded");
       auto frd = flex::flex_routing_data{};
-      flex::add_flex_td_offsets(*r.w_, *r.l_, r.pl_, r.matches_, *r.tt_,
+      flex::add_flex_td_offsets(*r.w_, *r.l_, r.pl_, r.matches_, *r.tt_, *r.fa_,
                                 *r.loc_tree_, start_time, pos, dir, max,
                                 max_matching_distance, frd, ret);
       continue;
@@ -355,13 +356,13 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
 
   for (auto const& m : modes) {
     if (m == api::ModeEnum::FLEX) {
-      utl::verify(tt_ && tags_, "FLEX requires timetable");
+      utl::verify(tt_ && tags_ && fa_, "FLEX requires timetable");
       auto const routings = flex::get_flex_routings(
           *tt_, *loc_tree_, start_time, get_location(from).pos_,
           osr::direction::kForward, max);
       for (auto const& [_, ids] : routings) {
         route_with_profile(flex::flex_output{*w_, *l_, pl_, matches_, *tags_,
-                                             *tt_, ids.front()});
+                                             *tt_, *fa_, ids.front()});
       }
     } else if (m == api::ModeEnum::CAR || m == api::ModeEnum::BIKE ||
                m == api::ModeEnum::CAR_PARKING ||
@@ -713,7 +714,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                   static_cast<double>(
                       to_seconds(j.arrival_time() - j.departure_time())));
               return journey_to_response(
-                  w_, l_, pl_, *tt_, *tags_, e, rtt, matches_, elevations_,
+                  w_, l_, pl_, *tt_, *tags_, fa_, e, rtt, matches_, elevations_,
                   shapes_, gbfs_rd, j, start, dest, cache, blocked.get(),
                   query.detailedTransfers_, query.withFares_,
                   config_.timetable_.value().max_matching_distance_,

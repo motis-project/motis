@@ -4,6 +4,7 @@
 #include "nigiri/timetable.h"
 
 #include "motis/flex/flex.h"
+#include "motis/flex/flex_areas.h"
 #include "motis/flex/flex_routing_data.h"
 #include "motis/place.h"
 #include "motis/street_routing.h"
@@ -18,14 +19,16 @@ flex_output::flex_output(osr::ways const& w,
                          platform_matches_t const* matches,
                          tag_lookup const& tags,
                          n::timetable const& tt,
+                         flex_areas const& fa,
                          mode_id const id)
     : w_{w},
       pl_{pl},
       matches_{matches},
       tt_{tt},
       tags_{tags},
+      fa_{fa},
       sharing_data_{flex::prepare_sharing_data(
-          tt, w, l, pl, matches, id, id.get_dir(), flex_routing_data_)},
+          tt, w, l, pl, fa, matches, id, id.get_dir(), flex_routing_data_)},
       mode_id_(id) {}
 
 flex_output::~flex_output() = default;
@@ -79,10 +82,10 @@ void flex_output::annotate_leg(osr::node_idx_t const from,
             : stop_seq.size() - i - 1U);
     auto const stop = stop_seq[stop_idx];
     if (!from_stop.has_value() &&
-        is_in_flex_stop(tt_, w_, flex_routing_data_, stop, from)) {
+        is_in_flex_stop(tt_, w_, fa_, flex_routing_data_, stop, from)) {
       from_stop = stop_idx;
     } else if (!to_stop.has_value() &&
-               is_in_flex_stop(tt_, w_, flex_routing_data_, stop, to)) {
+               is_in_flex_stop(tt_, w_, fa_, flex_routing_data_, stop, to)) {
       to_stop = stop_idx;
       break;
     }
@@ -112,6 +115,22 @@ void flex_output::annotate_leg(osr::node_idx_t const from,
   leg.from_.flexId_ = get_flex_id(stop_seq[*from_stop]);
   leg.to_.flex_ = get_flex_stop_name(stop_seq[*to_stop]);
   leg.to_.flexId_ = get_flex_id(stop_seq[*to_stop]);
+
+  auto const time_windows = tt_.flex_transport_stop_time_windows_[t];
+
+  leg.from_.flexStartPickupDropOffWindow_ =
+      std::chrono::time_point_cast<std::chrono::days>(leg.startTime_.time_) +
+      time_windows[*from_stop].from_;
+  leg.from_.flexEndPickupDropOffWindow_ =
+      std::chrono::time_point_cast<std::chrono::days>(leg.startTime_.time_) +
+      time_windows[*from_stop].to_;
+
+  leg.to_.flexStartPickupDropOffWindow_ =
+      std::chrono::time_point_cast<std::chrono::days>(leg.endTime_.time_) +
+      time_windows[*to_stop].from_;
+  leg.to_.flexEndPickupDropOffWindow_ =
+      std::chrono::time_point_cast<std::chrono::days>(leg.endTime_.time_) +
+      time_windows[*to_stop].to_;
 }
 
 api::Place flex_output::get_place(osr::node_idx_t const n) const {

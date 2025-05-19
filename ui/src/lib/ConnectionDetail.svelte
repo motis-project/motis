@@ -1,12 +1,7 @@
 <script lang="ts">
 	import ArrowRight from 'lucide-svelte/icons/arrow-right';
 	import CircleX from 'lucide-svelte/icons/circle-x';
-	import {
-		type FareProduct,
-		type Itinerary,
-		type Leg,
-		type PickupDropoffType
-	} from '$lib/api/openapi';
+	import { type FareProduct, type Itinerary, type Leg, type Place } from '$lib/api/openapi';
 	import Time from '$lib/Time.svelte';
 	import { routeBorderColor, routeColor } from '$lib/modeStyle';
 	import { formatDurationSec, formatDistanceMeters } from '$lib/formatDuration';
@@ -15,6 +10,7 @@
 	import { getModeName } from '$lib/getModeName';
 	import { t } from '$lib/i18n/translation';
 	import { onClickStop, onClickTrip } from '$lib/utils';
+	import { formatTime } from './toDateTime';
 
 	const {
 		itinerary
@@ -26,15 +22,7 @@
 	const lastLeg = $derived(itinerary.legs.findLast(isRelevantLeg));
 </script>
 
-{#snippet stopTimes(
-	timestamp: string,
-	scheduledTimestamp: string,
-	isRealtime: boolean,
-	name: string,
-	stopId?: string,
-	pickupType?: PickupDropoffType,
-	dropoffType?: PickupDropoffType
-)}
+{#snippet stopTimes(timestamp: string, scheduledTimestamp: string, isRealtime: boolean, p: Place)}
 	<Time
 		variant="schedule"
 		class="font-semibold w-16"
@@ -51,30 +39,30 @@
 		{scheduledTimestamp}
 	/>
 	<span>
-		{#if stopId}
+		{#if p.stopId}
 			<Button
 				class="text-[length:inherit] leading-none justify-normal text-wrap text-left"
 				variant="link"
 				onclick={() => {
-					onClickStop(name, stopId, new Date(timestamp));
+					onClickStop(p.name, p.stopId!, new Date(timestamp));
 				}}
 			>
-				{name}
+				{p.name}
 			</Button>
-			{#if pickupType == 'NOT_ALLOWED' || dropoffType == 'NOT_ALLOWED'}
+			{#if p.pickupType == 'NOT_ALLOWED' || p.dropoffType == 'NOT_ALLOWED'}
 				<div class="ml-4 flex items-center text-destructive text-sm">
 					<CircleX class="stroke-destructive h-4 w-4" />
 					<span class="ml-1 leading-none">
-						{pickupType == 'NOT_ALLOWED' && dropoffType == 'NOT_ALLOWED'
+						{p.pickupType == 'NOT_ALLOWED' && p.dropoffType == 'NOT_ALLOWED'
 							? t.inOutDisallowed
-							: pickupType == 'NOT_ALLOWED'
+							: p.pickupType == 'NOT_ALLOWED'
 								? t.inDisallowed
 								: t.outDisallowed}
 					</span>
 				</div>
 			{/if}
 		{:else}
-			<span>{name}</span>
+			<span>{p.name || p.flex}</span>
 		{/if}
 	</span>
 {/snippet}
@@ -207,15 +195,7 @@
 
 			<div class="pt-4 pl-6 border-l-4 left-4 relative" style={routeBorderColor(l)}>
 				<div class="grid gap-y-6 grid-cols-[max-content_max-content_auto] items-center">
-					{@render stopTimes(
-						l.startTime,
-						l.scheduledStartTime,
-						l.realTime,
-						l.from.name,
-						l.from.stopId,
-						l.from.pickupType,
-						'NORMAL'
-					)}
+					{@render stopTimes(l.startTime, l.scheduledStartTime, l.realTime, l.from)}
 				</div>
 				<div class="mt-2 flex items-center text-muted-foreground leading-none">
 					<ArrowRight class="stroke-muted-foreground h-4 w-4" />
@@ -268,15 +248,7 @@
 						</summary>
 						<div class="mb-1 grid gap-y-4 grid-cols-[max-content_max-content_auto] items-center">
 							{#each l.intermediateStops! as s}
-								{@render stopTimes(
-									s.arrival!,
-									s.scheduledArrival!,
-									l.realTime,
-									s.name!,
-									s.stopId,
-									s.pickupType,
-									s.dropoffType
-								)}
+								{@render stopTimes(s.arrival!, s.scheduledArrival!, l.realTime, s)}
 							{/each}
 						</div>
 					</details>
@@ -284,15 +256,7 @@
 
 				{#if !isLast && !(isLastPred && !isRelevantLeg(next!))}
 					<div class="grid gap-y-6 grid-cols-[max-content_max-content_auto] items-center pb-3">
-						{@render stopTimes(
-							l.endTime!,
-							l.scheduledEndTime!,
-							l.realTime!,
-							l.to.name,
-							l.to.stopId,
-							'NORMAL',
-							l.to.dropoffType
-						)}
+						{@render stopTimes(l.endTime!, l.scheduledEndTime!, l.realTime!, l.to)}
 					</div>
 				{/if}
 
@@ -305,28 +269,20 @@
 			<Route {onClickTrip} {l} />
 			<div class="pt-4 pl-6 border-l-4 left-4 relative" style={routeBorderColor(l)}>
 				<div class="grid gap-y-6 grid-cols-[max-content_max-content_auto] items-center">
-					{@render stopTimes(
-						l.startTime,
-						l.scheduledStartTime,
-						l.realTime,
-						l.from.name,
-						l.from.stopId,
-						l.from.pickupType,
-						'NORMAL'
-					)}
+					{@render stopTimes(l.startTime, l.scheduledStartTime, l.realTime, l.from)}
 				</div>
+				{#if l.mode == 'FLEX'}
+					<div class="mt-2 flex items-center leading-none">
+						<span class="ml-1 text-sm">
+							{formatTime(new Date(l.from.flexStartPickupDropOffWindow!))} -
+							{formatTime(new Date(l.from.flexEndPickupDropOffWindow!))}
+						</span>
+					</div>
+				{/if}
 				{@render streetLeg(l)}
 				{#if !isLast}
 					<div class="grid gap-y-6 grid-cols-[max-content_max-content_auto] items-center pb-4">
-						{@render stopTimes(
-							l.endTime,
-							l.scheduledEndTime,
-							l.realTime,
-							l.to.name,
-							l.to.stopId,
-							'NORMAL',
-							l.to.dropoffType
-						)}
+						{@render stopTimes(l.endTime, l.scheduledEndTime, l.realTime, l.to)}
 					</div>
 				{/if}
 			</div>
@@ -344,10 +300,7 @@
 				lastLeg!.endTime,
 				lastLeg!.scheduledEndTime,
 				lastLeg!.realTime,
-				lastLeg!.to.name,
-				lastLeg!.to.stopId,
-				'NORMAL',
-				lastLeg!.to.dropoffType
+				lastLeg!.to
 			)}
 		</div>
 	</div>

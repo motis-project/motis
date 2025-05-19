@@ -2,8 +2,6 @@
 
 #include <ranges>
 
-#include "nigiri/flex.h"
-
 #include "utl/concat.h"
 
 #include "osr/lookup.h"
@@ -13,6 +11,7 @@
 #include "motis/constants.h"
 #include "motis/data.h"
 #include "motis/endpoints/routing.h"
+#include "motis/flex/flex_areas.h"
 #include "motis/flex/flex_routing_data.h"
 #include "motis/max_distance.h"
 
@@ -20,25 +19,11 @@ namespace n = nigiri;
 
 namespace motis::flex {
 
-template <typename Fn>
-void for_each_area_node(n::timetable const& tt,
-                        osr::ways const& w,
-                        osr::lookup const& l,
-                        n::flex_area_idx_t const a,
-                        Fn&& fn) {
-  l.find(tt.flex_area_bbox_[a], [&](osr::way_idx_t const way) {
-    for (auto const& x : w.r_->way_nodes_[way]) {
-      if (n::is_within(tt, a, w.get_node_pos(x))) {
-        fn(x);
-      }
-    }
-  });
-}
-
 osr::sharing_data prepare_sharing_data(n::timetable const& tt,
                                        osr::ways const& w,
                                        osr::lookup const& lookup,
                                        osr::platforms const* pl,
+                                       flex_areas const& fa,
                                        platform_matches_t const* pl_matches,
                                        mode_id const id,
                                        osr::direction const dir,
@@ -119,6 +104,7 @@ osr::sharing_data prepare_sharing_data(n::timetable const& tt,
   };
 
   // Set start allowed in start area / location group.
+  auto tmp = osr::bitvec<osr::node_idx_t>{};
   from_stop.apply(utl::overloaded{
       [&](n::location_group_idx_t const from_lg) {
         for (auto const& l : tt.location_group_locations_[from_lg]) {
@@ -126,9 +112,7 @@ osr::sharing_data prepare_sharing_data(n::timetable const& tt,
         }
       },
       [&](n::flex_area_idx_t const from_area) {
-        for_each_area_node(
-            tt, w, lookup, from_area,
-            [&](osr::node_idx_t const n) { frd.start_allowed_.set(n, true); });
+        fa.add_area(from_area, frd.start_allowed_, tmp);
       }});
 
   // Set end allowed in follow-up areas / location groups.
@@ -140,9 +124,7 @@ osr::sharing_data prepare_sharing_data(n::timetable const& tt,
           }
         },
         [&](n::flex_area_idx_t const to_area) {
-          for_each_area_node(
-              tt, w, lookup, to_area,
-              [&](osr::node_idx_t const n) { frd.end_allowed_.set(n, true); });
+          fa.add_area(to_area, frd.end_allowed_, tmp);
         }});
   }
 
@@ -254,13 +236,14 @@ flex_routings_t get_flex_routings(
 
 bool is_in_flex_stop(n::timetable const& tt,
                      osr::ways const& w,
+                     flex_areas const& fa,
                      flex_routing_data const& frd,
                      n::flex_stop_t const& s,
                      osr::node_idx_t const n) {
   return s.apply(utl::overloaded{
       [&](n::flex_area_idx_t const a) {
         return !w.is_additional_node(n) && n != osr::node_idx_t::invalid() &&
-               n::is_within(tt, a, w.get_node_pos(n));
+               fa.is_in_area(a, w.get_node_pos(n));
       },
       [&](n::location_group_idx_t const lg) {
         if (!w.is_additional_node(n)) {
@@ -277,6 +260,7 @@ void add_flex_td_offsets(osr::ways const& w,
                          osr::platforms const* pl,
                          platform_matches_t const* matches,
                          n::timetable const& tt,
+                         flex_areas const& fa,
                          point_rtree<n::location_idx_t> const& loc_rtree,
                          n::routing::start_time_t const start_time,
                          osr::location const& pos,
@@ -296,7 +280,7 @@ void add_flex_td_offsets(osr::ways const& w,
       get_flex_routings(tt, loc_rtree, start_time, pos.pos_, dir, max);
   for (auto const& [stop_seq, transports] : routings) {
     auto const sharing_data = prepare_sharing_data(
-        tt, w, lookup, pl, matches, transports.front(), dir, frd);
+        tt, w, lookup, pl, fa, matches, transports.front(), dir, frd);
     auto const paths =
         osr::route(w, lookup, osr::search_profile::kCarSharing, pos,
                    near_stop_locations, static_cast<osr::cost_t>(max.count()),

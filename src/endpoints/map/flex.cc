@@ -1,4 +1,4 @@
-#include "motis/endpoints/map/flex.h"
+#include "motis/endpoints/map/flex_locations.h"
 
 #include "utl/to_vec.h"
 
@@ -41,7 +41,8 @@ json::value to_geometry(n::timetable const& tt, n::flex_area_idx_t const a) {
   }
 }
 
-boost::json::value flex::operator()(boost::urls::url_view const& url) const {
+boost::json::value flex_locations::operator()(
+    boost::urls::url_view const& url) const {
   auto const query = api::stops_params{url.params()};
   auto const min = parse_location(query.min_);
   auto const max = parse_location(query.max_);
