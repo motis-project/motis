@@ -103,7 +103,9 @@ std::vector<api::StepInstruction> get_step_instructions(
                            : std::string{w.strings_[way_name].view()},
         .exit_ = {},  // TODO
         .stayOn_ = false,  // TODO
-        .area_ = false  // TODO
+        .area_ = false,  // TODO
+        .elevationUp_ = to_idx(s.elevation_.up_),
+        .elevationDown_ = to_idx(s.elevation_.down_),
     });
   }
 
@@ -362,7 +364,9 @@ api::Itinerary route(osr::ways const& w,
       .startTime_ = start_time,
       .endTime_ =
           end_time ? *end_time : start_time + std::chrono::seconds{path->cost_},
-      .transfers_ = 0};
+      .transfers_ = 0,
+      .elevationUp_ = to_idx(path->elevation_.up_),
+      .elevationDown_ = to_idx(path->elevation_.down_)};
 
   auto t = std::chrono::time_point_cast<std::chrono::seconds>(start_time);
   auto pred_place = from;
