@@ -33,6 +33,8 @@ flex_output::flex_output(osr::ways const& w,
 
 flex_output::~flex_output() = default;
 
+bool flex_output::is_time_dependent() const { return false; }
+
 api::ModeEnum flex_output::get_mode() const { return api::ModeEnum::FLEX; }
 
 transport_mode_t flex_output::get_cache_key() const { return mode_id_.to_id(); }

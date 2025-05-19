@@ -28,6 +28,8 @@ gbfs_output::gbfs_output(osr::ways const& w,
 
 api::ModeEnum gbfs_output::get_mode() const { return api::ModeEnum::RENTAL; }
 
+bool gbfs_output::is_time_dependent() const { return false; }
+
 transport_mode_t gbfs_output::get_cache_key() const {
   return gbfs_rd_.get_transport_mode({provider_.idx_, products_.idx_});
 }

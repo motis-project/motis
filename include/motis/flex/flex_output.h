@@ -19,6 +19,7 @@ struct flex_output : public output {
 
   api::ModeEnum get_mode() const override;
   osr::search_profile get_profile() const override;
+  bool is_time_dependent() const override;
   transport_mode_t get_cache_key() const override;
   osr::sharing_data const* get_sharing_data() const override;
   void annotate_leg(osr::node_idx_t, osr::node_idx_t, api::Leg&) const override;

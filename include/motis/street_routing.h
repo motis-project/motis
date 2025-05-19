@@ -25,6 +25,7 @@ struct output {
 
   virtual api::ModeEnum get_mode() const = 0;
   virtual osr::search_profile get_profile() const = 0;
+  virtual bool is_time_dependent() const = 0;
   virtual transport_mode_t get_cache_key() const = 0;
   virtual osr::sharing_data const* get_sharing_data() const = 0;
   virtual void annotate_leg(osr::node_idx_t from_node,
@@ -38,6 +39,7 @@ struct default_output final : public output {
   default_output(nigiri::transport_mode_id_t);
   ~default_output() override;
 
+  bool is_time_dependent() const override;
   api::ModeEnum get_mode() const override;
   osr::search_profile get_profile() const override;
   transport_mode_t get_cache_key() const override;

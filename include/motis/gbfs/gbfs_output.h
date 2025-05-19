@@ -14,6 +14,7 @@ struct gbfs_output final : public output {
 
   osr::search_profile get_profile() const override;
 
+  bool is_time_dependent() const override;
   transport_mode_t get_cache_key() const override;
 
   osr::sharing_data const* get_sharing_data() const override;

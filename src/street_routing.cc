@@ -59,6 +59,11 @@ osr::search_profile default_output::get_profile() const { return profile_; }
 
 api::Place default_output::get_place(osr::node_idx_t) const { return {}; }
 
+bool default_output::is_time_dependent() const {
+  return profile_ == osr::search_profile::kWheelchair ||
+         profile_ == osr::search_profile::kCarParkingWheelchair;
+}
+
 transport_mode_t default_output::get_cache_key() const {
   return static_cast<transport_mode_t>(profile_);
 }
@@ -178,10 +183,14 @@ api::Itinerary street_routing(osr::ways const& w,
   auto const to = get_location(to_place);
   auto const s = e ? get_states_at(w, l, *e, start_time, from.pos_)
                    : std::optional{std::pair<nodes_t, states_t>{}};
-  auto const cache_key =
-      street_routing_cache_key_t{from, to, out.get_cache_key(), start_time};
+  auto const cache_key = street_routing_cache_key_t{
+      from, to, out.get_cache_key(),
+      out.is_time_dependent() ? start_time : n::unixtime_t{n::i32_minutes{0}}};
   auto const path = utl::get_or_create(cache, cache_key, [&]() {
     auto const& [e_nodes, e_states] = *s;
+    std::cout << "ROUTING " << out.get_mode() << " " << from_place << " >> "
+              << to_place << " [" << get<2>(cache_key) << "] at " << start_time
+              << "\n";
     return osr::route(
         w, l, out.get_profile(), from, to,
         static_cast<osr::cost_t>(max.count()), osr::direction::kForward,
