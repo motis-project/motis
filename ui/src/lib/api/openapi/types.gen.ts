@@ -245,9 +245,9 @@ export type PedestrianProfile = 'FOOT' | 'WHEELCHAIR';
  *
  * - `WALK`
  * - `BIKE`
- * - `RENTAL` Experimental. Expect unannounced breaking changes (without version bumps).
+ * - `RENTAL` Experimental. Expect unannounced breaking changes (without version bumps) for all parameters and returned structs.
  * - `CAR`
- * - `CAR_PARKING`
+ * - `CAR_PARKING` Experimental. Expect unannounced breaking changes (without version bumps) for all parameters and returned structs.
  * - `ODM` on-demand taxis from the Prima+ÖV Project
  * - `FLEX` flexible transports
  *
