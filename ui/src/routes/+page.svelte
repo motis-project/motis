@@ -46,6 +46,7 @@
 	import * as Tabs from '$lib/components/ui/tabs';
 	import DeparturesMask from '$lib/DeparturesMask.svelte';
 	import Isochrones from '$lib/map/Isochrones.svelte';
+	import IsochronesTurf from '$lib/map/IsochronesTurf.svelte';
 
 	const urlParams = browser ? new URLSearchParams(window.location.search) : undefined;
 	const hasDebug = urlParams && urlParams.has('debug');
@@ -471,7 +472,8 @@
 
 	{#if showMap}
 		<RailViz {map} {bounds} {zoom} />
-		<Isochrones class="absolute flex border-2 border-indigo-600 h-dvh max-w-full z-50" {bounds} {isochronesData} />
+		<!-- <Isochrones class="absolute flex border-2 border-indigo-600 h-dvh max-w-full z-50" {bounds} {isochronesData} /> -->
+		<IsochronesTurf {map} {bounds} {isochronesData} />
 
 		<Popup trigger="contextmenu" children={contextMenu} />
 

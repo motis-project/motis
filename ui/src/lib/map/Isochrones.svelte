@@ -1,6 +1,5 @@
 <script lang="ts">
 	import maplibregl, { type LngLatBoundsLike } from "maplibre-gl";
-	import { BorderWidth } from "svelte-radix";
 
 	let {
 		bounds,
