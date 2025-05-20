@@ -28,11 +28,11 @@
 
 	const box = $derived(maplibregl.LngLatBounds.convert(bounds ? bounds : [[0, 0], [0, 0]]));
 
-    function radius(pos: Pos) {
+    function reachable_kilemeters(pos: Pos) {
         return pos.duration * factor;
     }
     function is_visible(data: Pos) {
-        const r = radius(data);
+        const r = reachable_kilemeters(data);
         return box._sw.lat <= data.lat + r && data.lat - r <= box._ne.lat
 			&& box._sw.lng <= data.lng + r && data.lng - r <= box._ne.lat;
     }
@@ -41,7 +41,7 @@
 		isochronesData
 			.filter(is_visible)
             .map((data) => {
-                const r = radius(data);
+                const r = reachable_kilemeters(data);
                 return circle(
                     [data.lng, data.lat],
                     r,
