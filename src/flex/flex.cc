@@ -326,7 +326,7 @@ void add_flex_td_offsets(osr::ways const& w,
 
             auto& offsets = ret[l];
             offsets.emplace_back(iv_at_from_stop.from_, duration, id.to_id());
-            offsets.emplace_back(iv_at_from_stop.to_, n::kInfeasible,
+            offsets.emplace_back(iv_at_from_stop.to_, n::footpath::kMaxDuration,
                                  id.to_id());
           }
         }
