@@ -40,7 +40,7 @@ std::int32_t distance(nr::journey const& a, nr::journey const& b) {
 
   return overtakes(a, b) || overtakes(b, a)
              ? 0
-             : std::min(
+             : std::max(
                    std::chrono::abs(a.departure_time() - b.departure_time()),
                    std::chrono::abs(a.arrival_time() - b.arrival_time()))
                    .count();
@@ -103,7 +103,7 @@ bool mixer::cost_dominates(nr::journey const& a, nr::journey const& b) const {
                           static_cast<double>(b.travel_time().count());
   auto const dist = std::max(distance(a, b), min_distance_);
   auto const alpha_term =
-      cost_alpha_ * time_ratio * std::pow(dist, exp_distance_);
+      cost_alpha_ * std::min(time_ratio, 3.0) * std::pow(dist, exp_distance_);
   auto const ret = dist < max_distance_ && cost_a + alpha_term < cost_b;
   if (kMixerTracing) {
     n::log(n::log_lvl::debug, "motis.odm",
@@ -228,7 +228,7 @@ mixer get_default_mixer() {
                .direct_taxi_penalty_ = 220,
                .min_distance_ = 15,
                .max_distance_ = 90,
-               .exp_distance_ = 1.037,
+               .exp_distance_ = 1.045,
                .walk_cost_ = {{0, 1}, {15, 10}},
                .taxi_cost_ = {{0, 35}, {1, 12}},
                .transfer_cost_ = {{0, 10}}};
