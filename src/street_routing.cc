@@ -19,8 +19,9 @@ namespace n = nigiri;
 
 namespace motis {
 
-default_output::default_output(osr::search_profile id)
-    : profile_{static_cast<std::underlying_type_t<osr::search_profile>>(id)} {}
+default_output::default_output(osr::search_profile const profile)
+    : profile_{profile},
+      id_{static_cast<std::underlying_type_t<osr::search_profile>>(profile)} {}
 
 default_output::default_output(nigiri::transport_mode_id_t const id)
     : profile_{id == kOdmTransportModeId
