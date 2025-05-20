@@ -24,10 +24,12 @@
 
 #include "motis/constants.h"
 #include "motis/endpoints/routing.h"
+#include "motis/flex/flex.h"
+#include "motis/flex/flex_output.h"
 #include "motis/gbfs/data.h"
+#include "motis/gbfs/gbfs_output.h"
 #include "motis/gbfs/mode.h"
 #include "motis/gbfs/osr_profile.h"
-#include "motis/gbfs/routing_data.h"
 #include "motis/journey_to_response.h"
 #include "motis/max_distance.h"
 #include "motis/metrics_registry.h"
@@ -44,9 +46,6 @@ namespace n = nigiri;
 using namespace std::chrono_literals;
 
 namespace motis::ep {
-
-using td_offsets_t =
-    n::hash_map<n::location_idx_t, std::vector<n::routing::td_offset>>;
 
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 boost::thread_specific_ptr<n::routing::search_state> search_state;
@@ -81,15 +80,17 @@ std::vector<n::routing::offset> station_start(n::location_idx_t const l) {
   return {{l, n::duration_t{0U}, 0U}};
 }
 
-td_offsets_t get_td_offsets(routing const& r,
-                            elevators const& e,
-                            osr::location const& pos,
-                            osr::direction const dir,
-                            std::vector<api::ModeEnum> const& modes,
-                            api::PedestrianProfileEnum const pedestrian_profile,
-                            api::ElevationCostsEnum const elevation_costs,
-                            double const max_matching_distance,
-                            std::chrono::seconds const max) {
+n::routing::td_offsets_t get_td_offsets(
+    routing const& r,
+    elevators const* e,
+    osr::location const& pos,
+    osr::direction const dir,
+    std::vector<api::ModeEnum> const& modes,
+    api::PedestrianProfileEnum const pedestrian_profile,
+    api::ElevationCostsEnum const elevation_costs,
+    double const max_matching_distance,
+    std::chrono::seconds const max,
+    nigiri::routing::start_time_t const& start_time) {
   if (!r.w_ || !r.l_ || !r.pl_ || !r.tt_ || !r.loc_tree_ || !r.matches_) {
     return {};
   }
@@ -98,16 +99,23 @@ td_offsets_t get_td_offsets(routing const& r,
   for (auto const m : modes) {
     if (m == api::ModeEnum::ODM) {
       continue;
+    } else if (m == api::ModeEnum::FLEX) {
+      utl::verify(r.fa_, "FLEX areas not loaded");
+      auto frd = flex::flex_routing_data{};
+      flex::add_flex_td_offsets(*r.w_, *r.l_, r.pl_, r.matches_, *r.tt_, *r.fa_,
+                                *r.loc_tree_, start_time, pos, dir, max,
+                                max_matching_distance, frd, ret);
+      continue;
     }
 
     auto const profile = to_profile(m, pedestrian_profile, elevation_costs);
 
-    if (profile != osr::search_profile::kWheelchair) {
+    if (e == nullptr || profile != osr::search_profile::kWheelchair) {
       continue;  // handled by get_offsets
     }
 
     utl::equal_ranges_linear(
-        get_td_footpaths(*r.w_, *r.l_, *r.pl_, *r.tt_, *r.loc_tree_, e,
+        get_td_footpaths(*r.w_, *r.l_, *r.pl_, *r.tt_, *r.loc_tree_, *e,
                          *r.matches_, n::location_idx_t::invalid(), pos, dir,
                          profile, max, max_matching_distance, *blocked),
         [](n::td_footpath const& a, n::td_footpath const& b) {
@@ -128,7 +136,7 @@ td_offsets_t get_td_offsets(routing const& r,
   return ret;
 }
 
-td_offsets_t routing::get_td_offsets(
+n::routing::td_offsets_t routing::get_td_offsets(
     elevators const* e,
     place_t const& p,
     osr::direction const dir,
@@ -136,18 +144,17 @@ td_offsets_t routing::get_td_offsets(
     api::PedestrianProfileEnum const pedestrian_profile,
     api::ElevationCostsEnum const elevation_costs,
     double const max_matching_distance,
-    std::chrono::seconds const max) const {
-  return e != nullptr
-             ? std::visit(
-                   utl::overloaded{[&](tt_location) { return td_offsets_t{}; },
-                                   [&](osr::location const& pos) {
-                                     return ::motis::ep::get_td_offsets(
-                                         *this, *e, pos, dir, modes,
-                                         pedestrian_profile, elevation_costs,
-                                         max_matching_distance, max);
-                                   }},
-                   p)
-             : td_offsets_t{};
+    std::chrono::seconds const max,
+    nigiri::routing::start_time_t const& start_time) const {
+  return std::visit(
+      utl::overloaded{[&](tt_location) { return n::routing::td_offsets_t{}; },
+                      [&](osr::location const& pos) {
+                        return ::motis::ep::get_td_offsets(
+                            *this, e, pos, dir, modes, pedestrian_profile,
+                            elevation_costs, max_matching_distance, max,
+                            start_time);
+                      }},
+      p);
 }
 
 std::vector<n::routing::offset> get_offsets(
@@ -250,10 +257,8 @@ std::vector<n::routing::offset> get_offsets(
   }
 
   for (auto const m : modes) {
-    if (m == api::ModeEnum::RENTAL) {
-      continue;  // handled above
-    }
-    if (m == api::ModeEnum::WALK && ignore_walk) {
+    if (m == api::ModeEnum::RENTAL || m == api::ModeEnum::FLEX ||
+        (m == api::ModeEnum::WALK && ignore_walk)) {
       continue;
     }
     handle_mode(m);
@@ -333,30 +338,37 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
   auto cache = street_routing_cache_t{};
   auto itineraries = std::vector<api::Itinerary>{};
 
-  auto const route_with_profile =
-      [&](api::ModeEnum const mode, osr::search_profile const profile,
-          gbfs::gbfs_products_ref const prod_ref = {}) {
-        auto itinerary =
-            route(*w_, *l_, gbfs_rd, e, elevations_, from, to, mode, profile,
-                  start_time, std::nullopt, max_matching_distance, prod_ref,
-                  cache, *blocked, api_version, max);
-        if (itinerary.legs_.empty()) {
-          return false;
-        }
-        auto const duration = std::chrono::duration_cast<n::duration_t>(
-            std::chrono::seconds{itinerary.duration_});
-        if (duration < fastest_direct) {
-          fastest_direct = duration;
-        }
-        itineraries.emplace_back(std::move(itinerary));
-        return true;
-      };
+  auto const route_with_profile = [&](output const& out) {
+    auto itinerary = street_routing(
+        *w_, *l_, e, elevations_, from, to, out, start_time, std::nullopt,
+        max_matching_distance, cache, *blocked, api_version, max);
+    if (itinerary.legs_.empty()) {
+      return false;
+    }
+    auto const duration = std::chrono::duration_cast<n::duration_t>(
+        std::chrono::seconds{itinerary.duration_});
+    if (duration < fastest_direct) {
+      fastest_direct = duration;
+    }
+    itineraries.emplace_back(std::move(itinerary));
+    return true;
+  };
 
   for (auto const& m : modes) {
-    if (m == api::ModeEnum::CAR || m == api::ModeEnum::BIKE ||
-        m == api::ModeEnum::CAR_PARKING ||
-        (!omit_walk && m == api::ModeEnum::WALK)) {
-      route_with_profile(m, to_profile(m, pedestrian_profile, elevation_costs));
+    if (m == api::ModeEnum::FLEX) {
+      utl::verify(tt_ && tags_ && fa_, "FLEX requires timetable");
+      auto const routings = flex::get_flex_routings(
+          *tt_, *loc_tree_, start_time, get_location(from).pos_,
+          osr::direction::kForward, max);
+      for (auto const& [_, ids] : routings) {
+        route_with_profile(flex::flex_output{*w_, *l_, pl_, matches_, *tags_,
+                                             *tt_, *fa_, ids.front()});
+      }
+    } else if (m == api::ModeEnum::CAR || m == api::ModeEnum::BIKE ||
+               m == api::ModeEnum::CAR_PARKING ||
+               (!omit_walk && m == api::ModeEnum::WALK)) {
+      route_with_profile(
+          default_output{to_profile(m, pedestrian_profile, elevation_costs)});
     } else if (m == api::ModeEnum::RENTAL && gbfs_rd.has_data()) {
       // could be bike sharing or car sharing - car sharing has the higher max
       // distance, so we use this here to be safe
@@ -378,18 +390,17 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
           if (!gbfs::products_match(prod, form_factors, propulsion_types)) {
             continue;
           }
-          route_with_profile(
-              m, gbfs::get_osr_profile(prod),
-              gbfs::gbfs_products_ref{provider->idx_, prod.idx_});
+          route_with_profile(gbfs::gbfs_output{
+              *w_, gbfs_rd,
+              gbfs::gbfs_products_ref{provider->idx_, prod.idx_}});
           ++routed;
         }
       }
-      // if we omitted the WALK routing but didn't have any rental providers in
-      // the area, we need to do WALK routing now
+      // if we omitted the WALK routing but didn't have any rental providers
+      // in the area, we need to do WALK routing now
       if (routed == 0U && utl::find(modes, api::ModeEnum::WALK) != end(modes)) {
-        route_with_profile(api::ModeEnum::WALK,
-                           to_profile(api::ModeEnum::WALK, pedestrian_profile,
-                                      elevation_costs));
+        route_with_profile(default_output{to_profile(
+            api::ModeEnum::WALK, pedestrian_profile, elevation_costs)});
       }
     }
   }
@@ -612,14 +623,16 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                                            : osr::direction::kForward,
                            start_modes, query.pedestrianProfile_,
                            query.elevationCosts_, query.maxMatchingDistance_,
-                           std::chrono::seconds{query.maxPreTransitTime_}),
+                           std::chrono::seconds{query.maxPreTransitTime_},
+                           start_time.start_time_),
         .td_dest_ =
             get_td_offsets(e, dest,
                            query.arriveBy_ ? osr::direction::kForward
                                            : osr::direction::kBackward,
                            dest_modes, query.pedestrianProfile_,
                            query.elevationCosts_, query.maxMatchingDistance_,
-                           std::chrono::seconds{query.maxPostTransitTime_}),
+                           std::chrono::seconds{query.maxPostTransitTime_},
+                           start_time.start_time_),
         .max_transfers_ = static_cast<std::uint8_t>(
             query.maxTransfers_.has_value() ? *query.maxTransfers_
                                             : n::routing::kMaxTransfers),
@@ -701,9 +714,8 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                   static_cast<double>(
                       to_seconds(j.arrival_time() - j.departure_time())));
               return journey_to_response(
-                  w_, l_, pl_, *tt_, *tags_, e, rtt, matches_, elevations_,
-                  shapes_, gbfs_rd, query.pedestrianProfile_,
-                  query.elevationCosts_, j, start, dest, cache, blocked.get(),
+                  w_, l_, pl_, *tt_, *tags_, fa_, e, rtt, matches_, elevations_,
+                  shapes_, gbfs_rd, j, start, dest, cache, blocked.get(),
                   query.detailedTransfers_, query.withFares_,
                   config_.timetable_.value().max_matching_distance_,
                   query.maxMatchingDistance_, api_version);

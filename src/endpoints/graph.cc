@@ -1,7 +1,7 @@
 #include "motis/endpoints/graph.h"
 
 #include "osr/geojson.h"
-#include "osr/routing/profiles/car_parking.h"
+#include "osr/routing/profiles/car_sharing.h"
 #include "osr/routing/route.h"
 
 namespace json = boost::json;
@@ -58,7 +58,7 @@ json::value graph::operator()(json::value const& query) const {
     }
   });
 
-  gj.finish(&osr::get_dijkstra<osr::car_parking<false>>());
+  gj.finish(&osr::get_dijkstra<osr::car_sharing<osr::track_node_tracking>>());
 
   return gj.json();
 }
