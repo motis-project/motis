@@ -20,6 +20,7 @@
 #include "motis/endpoints/graph.h"
 #include "motis/endpoints/initial.h"
 #include "motis/endpoints/levels.h"
+#include "motis/endpoints/map/flex_locations.h"
 #include "motis/endpoints/map/stops.h"
 #include "motis/endpoints/map/trips.h"
 #include "motis/endpoints/matches.h"
@@ -77,6 +78,7 @@ int server(data d, config const& c, std::string_view const motis_version) {
   POST<ep::platforms>(qr, "/api/platforms", d);
   POST<ep::graph>(qr, "/api/graph", d);
   GET<ep::footpaths>(qr, "/api/debug/footpaths", d);
+  GET<ep::flex_locations>(qr, "/api/debug/flex", d);
   GET<ep::levels>(qr, "/api/v1/map/levels", d);
   GET<ep::initial>(qr, "/api/v1/map/initial", d);
   GET<ep::reverse_geocode>(qr, "/api/v1/reverse-geocode", d);

@@ -245,10 +245,11 @@ export type PedestrianProfile = 'FOOT' | 'WHEELCHAIR';
  *
  * - `WALK`
  * - `BIKE`
- * - `RENTAL` Experimental. Expect unannounced breaking changes (without version bumps).
+ * - `RENTAL` Experimental. Expect unannounced breaking changes (without version bumps) for all parameters and returned structs.
  * - `CAR`
- * - `CAR_PARKING`
- * - `ODM`
+ * - `CAR_PARKING` Experimental. Expect unannounced breaking changes (without version bumps) for all parameters and returned structs.
+ * - `ODM` on-demand taxis from the Prima+ÖV Project
+ * - `FLEX` flexible transports
  *
  * # Transit modes
  *
@@ -268,7 +269,7 @@ export type PedestrianProfile = 'FOOT' | 'WHEELCHAIR';
  * - `REGIONAL_RAIL`: regional train
  *
  */
-export type Mode = 'WALK' | 'BIKE' | 'RENTAL' | 'CAR' | 'CAR_PARKING' | 'ODM' | 'TRANSIT' | 'TRAM' | 'SUBWAY' | 'FERRY' | 'AIRPLANE' | 'METRO' | 'BUS' | 'COACH' | 'RAIL' | 'HIGHSPEED_RAIL' | 'LONG_DISTANCE' | 'NIGHT_RAIL' | 'REGIONAL_FAST_RAIL' | 'REGIONAL_RAIL' | 'OTHER';
+export type Mode = 'WALK' | 'BIKE' | 'RENTAL' | 'CAR' | 'CAR_PARKING' | 'ODM' | 'FLEX' | 'TRANSIT' | 'TRAM' | 'SUBWAY' | 'FERRY' | 'AIRPLANE' | 'METRO' | 'BUS' | 'COACH' | 'RAIL' | 'HIGHSPEED_RAIL' | 'LONG_DISTANCE' | 'NIGHT_RAIL' | 'REGIONAL_FAST_RAIL' | 'REGIONAL_RAIL' | 'OTHER';
 
 /**
  * - `NORMAL` - latitude / longitude coordinate or address
@@ -349,6 +350,22 @@ export type Place = {
      * Alerts for this stop.
      */
     alerts?: Array<Alert>;
+    /**
+     * for `FLEX` transports, the flex location area or location group name
+     */
+    flex?: string;
+    /**
+     * for `FLEX` transports, the flex location area ID or location group ID
+     */
+    flexId?: string;
+    /**
+     * Time that on-demand service becomes available
+     */
+    flexStartPickupDropOffWindow?: string;
+    /**
+     * Time that on-demand service ends
+     */
+    flexEndPickupDropOffWindow?: string;
 };
 
 /**
