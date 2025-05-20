@@ -32,7 +32,8 @@ osr::sharing_data prepare_sharing_data(n::timetable const& tt,
       tt.flex_stop_seq_[tt.flex_transport_stop_seq_[id.get_flex_transport()]];
   auto const from_stop = stop_seq.at(id.get_stop());
   auto to_stops = std::vector<n::flex_stop_t>{};
-  for (auto i = static_cast<int>(id.get_stop());
+  for (auto i = static_cast<int>(id.get_stop()) +
+                (dir == osr::direction::kForward ? 1 : -1);
        dir == osr::direction::kForward ? i < static_cast<int>(stop_seq.size())
                                        : i >= 0;
        dir == osr::direction::kForward ? ++i : --i) {

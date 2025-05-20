@@ -13,6 +13,25 @@ namespace n = nigiri;
 
 namespace motis::flex {
 
+std::string_view get_flex_stop_name(n::timetable const& tt,
+                                    n::flex_stop_t const& s) {
+  return s.apply(utl::overloaded{
+      [&](n::flex_area_idx_t const a) { return tt.flex_area_name_[a].view(); },
+      [&](n::location_group_idx_t const lg) {
+        return tt.strings_.get(tt.location_group_name_[lg]);
+      }});
+}
+
+std::string_view get_flex_id(n::timetable const& tt, n::flex_stop_t const& s) {
+  return s.apply(utl::overloaded{[&](n::flex_area_idx_t const a) {
+                                   return tt.strings_.get(tt.flex_area_id_[a]);
+                                 },
+                                 [&](n::location_group_idx_t const lg) {
+                                   return tt.strings_.get(
+                                       tt.location_group_id_[lg]);
+                                 }});
+}
+
 flex_output::flex_output(osr::ways const& w,
                          osr::lookup const& l,
                          osr::platforms const* pl,
@@ -54,25 +73,6 @@ void flex_output::annotate_leg(osr::node_idx_t const from,
     return;
   }
 
-  auto const get_flex_stop_name = [&](n::flex_stop_t const& s) {
-    return s.apply(utl::overloaded{[&](n::flex_area_idx_t const a) {
-                                     return tt_.flex_area_name_[a].view();
-                                   },
-                                   [&](n::location_group_idx_t const lg) {
-                                     return tt_.strings_.get(
-                                         tt_.location_group_name_[lg]);
-                                   }});
-  };
-  auto const get_flex_id = [&](n::flex_stop_t const& s) {
-    return s.apply(
-        utl::overloaded{[&](n::flex_area_idx_t const a) {
-                          return tt_.strings_.get(tt_.flex_area_id_[a]);
-                        },
-                        [&](n::location_group_idx_t const lg) {
-                          return tt_.strings_.get(tt_.location_group_id_[lg]);
-                        }});
-  };
-
   auto const t = mode_id_.get_flex_transport();
   auto const stop_seq = tt_.flex_stop_seq_[tt_.flex_transport_stop_seq_[t]];
   auto from_stop = std::optional<n::stop_idx_t>{};
@@ -113,10 +113,10 @@ void flex_output::annotate_leg(osr::node_idx_t const from,
   write_node_info(leg.to_, to);
 
   leg.mode_ = api::ModeEnum::FLEX;
-  leg.from_.flex_ = get_flex_stop_name(stop_seq[*from_stop]);
-  leg.from_.flexId_ = get_flex_id(stop_seq[*from_stop]);
-  leg.to_.flex_ = get_flex_stop_name(stop_seq[*to_stop]);
-  leg.to_.flexId_ = get_flex_id(stop_seq[*to_stop]);
+  leg.from_.flex_ = get_flex_stop_name(tt_, stop_seq[*from_stop]);
+  leg.from_.flexId_ = get_flex_id(tt_, stop_seq[*from_stop]);
+  leg.to_.flex_ = get_flex_stop_name(tt_, stop_seq[*to_stop]);
+  leg.to_.flexId_ = get_flex_id(tt_, stop_seq[*to_stop]);
 
   auto const time_windows = tt_.flex_transport_stop_time_windows_[t];
 
