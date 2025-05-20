@@ -14,7 +14,7 @@
 	let {
         map,
 		bounds = $bindable(),
-		isochronesData,
+		isochronesData = $bindable(),
 	} : {
         map: Map | undefined;
 		bounds: LngLatBoundsLike | undefined;
@@ -46,7 +46,7 @@
                     [data.lng, data.lat],
                     r,
                     {units: "kilometers", properties: {
-                        center: data.name ?? 'unknown',
+                        "name": data.name ?? 'unknown',
                     }}
                 );
             })

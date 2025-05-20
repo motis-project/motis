@@ -45,8 +45,17 @@
 	import { updateStartDest } from '$lib/updateStartDest';
 	import * as Tabs from '$lib/components/ui/tabs';
 	import DeparturesMask from '$lib/DeparturesMask.svelte';
+	import IsochronesMask from '$lib/IsochronesMask.svelte';
 	import Isochrones from '$lib/map/Isochrones.svelte';
 	import IsochronesTurf from '$lib/map/IsochronesTurf.svelte';
+	// import IsochronesPos from '$lib/map/IsochronesTurf.svelte';
+
+    interface IsochronesPos {
+        lat: number;
+        lng: number;
+        duration: number;
+        name?: string;
+    };
 
 	const urlParams = browser ? new URLSearchParams(window.location.search) : undefined;
 	const hasDebug = urlParams && urlParams.has('debug');
@@ -153,6 +162,16 @@
 	let elevationCosts = $state<ElevationCosts>(
 		(urlParams?.get('elevationCosts') ?? 'NONE') as ElevationCosts
 	);
+	// let isochronesData = $state<IsochronesPos[]>([
+	let isochronesData = $state<IsochronesPos[]>([
+		{"lat": 50.767584, "lng": 6.091125, "duration": 15},  // Aachen
+		{"lat": 50.73195, "lng": 7.09665, "duration": 5},  // Bonn
+		{"lat": 51.517902, "lng": 7.459191, "duration": 10},  // Dortmund
+		{"lat": 51.43059, "lng": 6.77599, "duration": 30},  // Duisburg
+		{"lat": 51.22005, "lng": 6.79384, "duration": 35},  // Düsseldorf
+		{"lat": 50.94293, "lng": 6.95928, "duration": 15},  // Köln
+		{"lat": 51.25441, "lng": 7.15013, "duration": 25},  // Wuppertal
+	]);
 
 	const toPlaceString = (l: Location) => {
 		if (l.value.match?.type === 'STOP') {
@@ -268,23 +287,6 @@
 		flyToSelectedItinerary();
 	});
 
-	let isochronesData = [
-		{"lat": 50.767584, "lng": 6.091125, "duration": 15},  // Aachen
-		{"lat": 50.73195, "lng": 7.09665, "duration": 5},  // Bonn
-		{"lat": 51.517902, "lng": 7.459191, "duration": 10},  // Dortmund
-		{"lat": 51.43059, "lng": 6.77599, "duration": 30},  // Duisburg
-		{"lat": 51.22005, "lng": 6.79384, "duration": 35},  // Düsseldorf
-		{"lat": 50.94293, "lng": 6.95928, "duration": 15},  // Köln
-		{"lat": 51.25441, "lng": 7.15013, "duration": 25},  // Wuppertal
-		//{"center": "50.767584, 6.091125", "duration": 15},  // Aachen
-		//{"center": "50.73195, 7.09665", "duration": 5},  // Bonn
-		//{"center": "51.517902, 7.459191", "duration": 10},  // Dortmund
-		//{"center": "51.43059, 6.77599", "duration": 30},  // Duisburg
-		//{"center": "51.22005, 6.79384", "duration": 35},  // Düsseldorf
-		//{"center": "50.94293, 6.95928", "duration": 15},  // Köln
-		//{"center": "51.25441, 7.15013", "duration": 25},  // Wuppertal
-	];
-
 	type CloseFn = () => void;
 </script>
 
@@ -344,9 +346,10 @@
 					: ''}
 			>
 				<Tabs.Root value="connections" class="max-w-full w-[520px] overflow-y-auto">
-					<Tabs.List class="grid grid-cols-2">
+					<Tabs.List class="grid grid-cols-3">
 						<Tabs.Trigger value="connections">{t.connections}</Tabs.Trigger>
 						<Tabs.Trigger value="departures">{t.departures}</Tabs.Trigger>
+						<Tabs.Trigger value="isochrones">Isochrones</Tabs.Trigger>
 					</Tabs.List>
 					<Tabs.Content value="connections">
 						<Card class="overflow-y-auto overflow-x-hidden bg-background rounded-lg">
@@ -371,6 +374,15 @@
 					<Tabs.Content value="departures">
 						<Card class="overflow-y-auto overflow-x-hidden bg-background rounded-lg">
 							<DeparturesMask bind:time />
+						</Card>
+					</Tabs.Content>
+					<Tabs.Content value="isochrones">
+						<Card class="overflow-y-auto overflow-x-hidden bg-background rounded-lg">
+							<IsochronesMask
+								geocodingBiasPlace={center}
+								bind:isochronesData
+								bind:time
+							/>
 						</Card>
 					</Tabs.Content>
 				</Tabs.Root>
@@ -472,8 +484,8 @@
 
 	{#if showMap}
 		<RailViz {map} {bounds} {zoom} />
-		<!-- <Isochrones class="absolute flex border-2 border-indigo-600 h-dvh max-w-full z-50" {bounds} {isochronesData} /> -->
-		<IsochronesTurf {map} {bounds} {isochronesData} />
+		<Isochrones class="absolute flex border-2 border-indigo-600 h-dvh max-w-full z-50" {bounds} {isochronesData} />
+		<!-- <IsochronesTurf {map} {bounds} {isochronesData} /> -->
 
 		<Popup trigger="contextmenu" children={contextMenu} />
 
