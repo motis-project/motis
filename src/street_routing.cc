@@ -42,7 +42,7 @@ api::ModeEnum default_output::get_mode() const {
   switch (profile_) {
     case osr::search_profile::kFoot: [[fallthrough]];
     case osr::search_profile::kWheelchair: return api::ModeEnum::WALK;
-    case osr::search_profile::kBike:
+    case osr::search_profile::kBike: [[fallthrough]];
     case osr::search_profile::kBikeElevationLow: [[fallthrough]];
     case osr::search_profile::kBikeElevationHigh: return api::ModeEnum::BIKE;
     case osr::search_profile::kCar: return api::ModeEnum::CAR;
@@ -247,7 +247,8 @@ api::Itinerary street_routing(osr::ways const& w,
         }
 
         auto& leg = itinerary.legs_.emplace_back(api::Leg{
-            .mode_ = to_mode(lb->mode_),
+            .mode_ = out.get_mode() == api::ModeEnum::ODM ? api::ModeEnum::ODM
+                                                          : to_mode(lb->mode_),
             .from_ = pred_place,
             .to_ = is_last_leg ? to_place : out.get_place(to_node),
             .duration_ = std::chrono::duration_cast<std::chrono::seconds>(
