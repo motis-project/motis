@@ -32,7 +32,8 @@ osr::sharing_data prepare_sharing_data(n::timetable const& tt,
       tt.flex_stop_seq_[tt.flex_transport_stop_seq_[id.get_flex_transport()]];
   auto const from_stop = stop_seq.at(id.get_stop());
   auto to_stops = std::vector<n::flex_stop_t>{};
-  for (auto i = static_cast<int>(id.get_stop());
+  for (auto i = static_cast<int>(id.get_stop()) +
+                (dir == osr::direction::kForward ? 1 : -1);
        dir == osr::direction::kForward ? i < static_cast<int>(stop_seq.size())
                                        : i >= 0;
        dir == osr::direction::kForward ? ++i : --i) {
@@ -325,6 +326,10 @@ void add_flex_td_offsets(osr::ways const& w,
                                              : iv_at_to_stop >> duration;
 
             auto& offsets = ret[l];
+            if (offsets.empty()) {
+              offsets.emplace_back(n::unixtime_t{n::i32_minutes{0U}},
+                                   n::footpath::kMaxDuration, id.to_id());
+            }
             offsets.emplace_back(iv_at_from_stop.from_, duration, id.to_id());
             offsets.emplace_back(iv_at_from_stop.to_, n::footpath::kMaxDuration,
                                  id.to_id());

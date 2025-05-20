@@ -6,6 +6,12 @@
 
 namespace motis::flex {
 
+std::string_view get_flex_stop_name(nigiri::timetable const&,
+                                    nigiri::flex_stop_t const&);
+
+std::string_view get_flex_id(nigiri::timetable const&,
+                             nigiri::flex_stop_t const&);
+
 struct flex_output : public output {
   flex_output(osr::ways const&,
               osr::lookup const&,
