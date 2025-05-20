@@ -1,8 +1,9 @@
 <script lang="ts">
-	import maplibregl, { GeoJSONSource, Map, type LngLatBoundsLike } from "maplibre-gl";
+	import maplibregl, { GeoJSONSource, Map, type LngLatBoundsLike, type TextureFilter } from "maplibre-gl";
     import { circle } from "@turf/circle";
     import { featureCollection } from "@turf/helpers";
     import { union } from "@turf/union";
+	import combine from "@turf/combine";
 
     interface Pos {
         lat: number;
@@ -37,20 +38,28 @@
 			&& box._sw.lng <= data.lng + r && data.lng - r <= box._ne.lat;
     }
 
-	const circles = $derived(
-		isochronesData
-			.filter(is_visible)
+	const circles = $derived.by(() => {
+		// const visible = isochronesData.filter(is_visible);
+		const visible = isochronesData;
+        const max_steps = Math.floor(10_000 / (visible.length + 1));
+        const steps = Math.max(Math.min(max_steps, 64), 3);
+        console.log(`STEPS: ${max_steps}  //  ${steps}`);
+        return visible
             .map((data) => {
                 const r = reachable_kilemeters(data);
                 return circle(
                     [data.lng, data.lat],
                     r,
-                    {units: "kilometers", properties: {
-                        "name": data.name ?? 'unknown',
-                    }}
+                    {
+                        steps: steps,
+                        units: "kilometers",
+                        properties: {
+                            "name": data.name ?? 'unknown',
+                        }
+                    }
                 );
             })
-    );
+    });
 
     $effect(() => {
         if (!map) {
@@ -70,9 +79,11 @@
             });
             loaded = true;
         }
-        const coll = union(featureCollection([...circles]));
+        const coll = combine(featureCollection([...circles]));
+        // const coll = union(featureCollection([...circles]));
         if (coll) {
-            (map.getSource(name) as GeoJSONSource).setData(coll.geometry);
+            // (map.getSource(name) as GeoJSONSource).setData(coll.geometry);
+            (map.getSource(name) as GeoJSONSource).setData(coll);
         }
     })
 </script>
