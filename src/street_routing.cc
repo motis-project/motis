@@ -189,9 +189,6 @@ api::Itinerary street_routing(osr::ways const& w,
       out.is_time_dependent() ? start_time : n::unixtime_t{n::i32_minutes{0}}};
   auto const path = utl::get_or_create(cache, cache_key, [&]() {
     auto const& [e_nodes, e_states] = *s;
-    std::cout << "ROUTING " << out.get_mode() << " " << from_place << " >> "
-              << to_place << " [" << get<2>(cache_key) << "] at " << start_time
-              << "\n";
     return osr::route(
         w, l, out.get_profile(), from, to,
         static_cast<osr::cost_t>(max.count()), osr::direction::kForward,
