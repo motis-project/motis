@@ -140,7 +140,7 @@ int server(data d, config const& c, std::string_view const motis_version) {
     });
   }
 
-  auto threads = std::vector<std::thread>{server_config.n_threads_};
+  auto threads = std::vector<std::thread>{c.n_threads()};
   for (auto [i, t] : utl::enumerate(threads)) {
     t = std::thread{r.run_fn()};
     utl::set_thread_name(t, fmt::format("motis worker {}", i));
