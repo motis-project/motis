@@ -338,6 +338,13 @@ void add_flex_td_offsets(osr::ways const& w,
       }
     }
   }
+
+  for (auto& [_, offsets] : ret) {
+    utl::sort(offsets, [](n::routing::td_offset const& a,
+                          n::routing::td_offset const& b) {
+      return a.valid_from_ < b.valid_from_;
+    });
+  }
 }
 
 }  // namespace motis::flex
