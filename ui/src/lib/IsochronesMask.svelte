@@ -65,7 +65,7 @@
 							return {
 								lat: p.place?.lat,
 								lng: p.place?.lon,
-								duration: p.duration,
+								duration: maxTravelTime - (p.duration ?? 0),
 								name: p.place?.name,
 							} as IsochronesPos
 						})
