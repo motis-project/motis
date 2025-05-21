@@ -40,7 +40,7 @@ struct config {
     std::string host_{"0.0.0.0"};
     std::string port_{"8080"};
     std::string web_folder_{"ui"};
-    unsigned n_threads_{std::thread::hardware_concurrency()};
+    unsigned n_threads_{0U};
     std::optional<std::string> data_attribution_link_{};
   };
   std::optional<server> server_{};
@@ -142,6 +142,8 @@ struct config {
     unsigned http_timeout_{10};
     std::optional<headers_t> headers_{};
   };
+
+  std::size_t n_threads() const;
 
   std::optional<elevators> const& get_elevators() const;
 

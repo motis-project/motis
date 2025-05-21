@@ -64,7 +64,7 @@ int server(data d, config const& c, std::string_view const motis_version) {
 
   auto ioc = asio::io_context{};
   auto s = net::web_server{ioc};
-  auto r = runner{server_config.n_threads_, 1024U};
+  auto r = runner{c.n_threads(), 1024U};
   auto qr = net::query_router{net::fiber_exec{ioc, r.ch_}};
   qr.add_header("Server", fmt::format("MOTIS {}", motis_version));
   if (server_config.data_attribution_link_) {
