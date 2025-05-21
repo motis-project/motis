@@ -238,6 +238,8 @@ void data::load_tt(fs::path const& p) {
 }
 
 void data::load_flex_areas() {
+  utl::verify(tt_ && w_ && l_, "flex areas requires tt={}, w={}, l={}",
+              tt_ != nullptr, w_ != nullptr, l_ != nullptr);
   flex_areas_ = std::make_unique<flex::flex_areas>(*tt_, *w_, *l_);
 }
 

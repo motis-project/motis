@@ -8,7 +8,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import Route from '$lib/Route.svelte';
 	import { getModeName } from '$lib/getModeName';
-	import { t } from '$lib/i18n/translation';
+	import { language, t } from '$lib/i18n/translation';
 	import { onClickStop, onClickTrip } from '$lib/utils';
 	import { formatTime } from './toDateTime';
 
@@ -89,8 +89,9 @@
 
 {#snippet productInfo(product: FareProduct)}
 	{product.name}
-	({product.amount}
-	{product.currency})
+	{new Intl.NumberFormat(language, { style: 'currency', currency: product.currency }).format(
+		product.amount
+	)}
 	{#if product.riderCategory}
 		for
 		{#if product.riderCategory.eligibilityUrl}
