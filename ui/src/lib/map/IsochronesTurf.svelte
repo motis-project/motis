@@ -66,6 +66,7 @@
         return u;
     }
 
+// See https://stackoverflow.com/a/75982694
     function fasterUnion(allGeometries: NonNullable<MyType>[]) {
   const mid = Math.floor(allGeometries.length / 2);
   let group1 = allGeometries.slice(0, mid);
@@ -106,6 +107,22 @@ function unionGroup(group: NonNullable<MyType>[]): NonNullable<MyType>[] {
     }
   }
   return newGroup;
+}
+
+// Implementation based on https://stackoverflow.com/a/75982694
+// Create union for smaller polygons
+// Using a pipe like approach will place larger polygons at the end
+function fastUnion2(d: NonNullable<MyType>[]): MyType {
+    if (d.length == 0) {
+        return null;
+    }
+    while (d.length > 1) {
+        const a = d.shift();
+        const b = d.shift();
+        const u = union(featureCollection([a!, b!]));
+        d.push(u ?? a!);
+    }
+    return d[0];
 }
 
 	const circles = $derived.by(() => {
@@ -149,7 +166,8 @@ function unionGroup(group: NonNullable<MyType>[]): NonNullable<MyType>[] {
             });
             loaded = true;
         }
-        const coll = fasterUnion(circles);
+        // const coll = fasterUnion(circles);
+        const coll = fastUnion2(circles);
         // const coll = my_union(circles);
         // const coll = combine(featureCollection([...circles]));
         // const coll = union(featureCollection([...circles]));
