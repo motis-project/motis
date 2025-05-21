@@ -5,6 +5,7 @@
 #include "nigiri/types.h"
 
 #include "motis-api/motis-api.h"
+#include "motis/fwd.h"
 
 namespace motis::odm {
 
@@ -17,7 +18,8 @@ std::int32_t tally(std::int32_t, std::vector<cost_threshold> const&);
 
 struct mixer {
   void mix(nigiri::pareto_set<nigiri::routing::journey> const& pt_journeys,
-           std::vector<nigiri::routing::journey>& odm_journeys) const;
+           std::vector<nigiri::routing::journey>& odm_journeys,
+           metrics_registry* metrics) const;
   std::int32_t transfer_cost(nigiri::routing::journey const&) const;
   double cost(nigiri::routing::journey const& j) const;
   bool cost_dominates(nigiri::routing::journey const&,
@@ -33,7 +35,9 @@ struct mixer {
   double cost_alpha_;
   double prod_alpha_;
   double direct_taxi_penalty_;
+  std::int32_t min_distance_;
   std::int32_t max_distance_;
+  double exp_distance_;
   std::vector<cost_threshold> walk_cost_;
   std::vector<cost_threshold> taxi_cost_;
   std::vector<cost_threshold> transfer_cost_;

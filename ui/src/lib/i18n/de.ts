@@ -45,10 +45,12 @@ const translations: Translations = {
 	advancedSearchOptions: 'Optionen',
 	selectModes: 'Öffentliche Verkehrsmittel auswählen',
 	defaultSelectedModes: 'Alle Verkehrsmittel',
+	selectElevationCosts: 'Steile Steigungen vermeiden.',
 	wheelchair: 'Barrierefreie Umstiege',
 	bikeRental: 'Sharing-Fahrzeuge berücksichtigen',
 	bikeCarriage: 'Fahrradmitnahme',
 	carCarriage: 'Automitnahme',
+	default: 'Vorgabe',
 	unreliableOptions: 'Je nach Datenverfügbarkeit können diese Optionen unzuverlässig sein.',
 	timetableSources: 'Fahrplandatenquellen',
 	tripCancelled: 'Fahrt entfällt',
@@ -57,6 +59,7 @@ const translations: Translations = {
 	inDisallowed: 'Einstieg nicht möglich',
 	outDisallowed: 'Ausstieg nicht möglich',
 	unscheduledTrip: 'Zusätzliche Fahrt',
+	FLEX: 'Bedarfsverkehr',
 	WALK: 'Zu Fuß',
 	BIKE: 'Fahrrad',
 	RENTAL: 'Sharing',
@@ -76,7 +79,17 @@ const translations: Translations = {
 	NIGHT_RAIL: 'Nachtzug',
 	REGIONAL_FAST_RAIL: 'Regionalexpresszug',
 	REGIONAL_RAIL: 'Regionalzug',
-	OTHER: 'Andere'
+	OTHER: 'Andere',
+	routingSegments: {
+		firstMile: 'Erste Meile',
+		lastMile: 'Letzte Meile',
+		direct: 'Direktverbindung'
+	},
+	elevationCosts: {
+		NONE: 'Keine Umwege',
+		LOW: 'Kleine Umwege',
+		HIGH: 'Große Umwege'
+	}
 };
 
 export default translations;

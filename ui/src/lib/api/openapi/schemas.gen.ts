@@ -281,10 +281,11 @@ export const ModeSchema = {
 
   - \`WALK\`
   - \`BIKE\`
-  - \`RENTAL\` Experimental. Expect unannounced breaking changes (without version bumps).
+  - \`RENTAL\` Experimental. Expect unannounced breaking changes (without version bumps) for all parameters and returned structs.
   - \`CAR\`
-  - \`CAR_PARKING\`
-  - \`ODM\`
+  - \`CAR_PARKING\` Experimental. Expect unannounced breaking changes (without version bumps) for all parameters and returned structs.
+  - \`ODM\` on-demand taxis from the Prima+ÖV Project
+  - \`FLEX\` flexible transports
 
 # Transit modes
 
@@ -304,7 +305,7 @@ export const ModeSchema = {
   - \`REGIONAL_RAIL\`: regional train
 `,
     type: 'string',
-    enum: ['WALK', 'BIKE', 'RENTAL', 'CAR', 'CAR_PARKING', 'ODM', 'TRANSIT', 'TRAM', 'SUBWAY', 'FERRY', 'AIRPLANE', 'METRO', 'BUS', 'COACH', 'RAIL', 'HIGHSPEED_RAIL', 'LONG_DISTANCE', 'NIGHT_RAIL', 'REGIONAL_FAST_RAIL', 'REGIONAL_RAIL', 'OTHER']
+    enum: ['WALK', 'BIKE', 'RENTAL', 'CAR', 'CAR_PARKING', 'ODM', 'FLEX', 'TRANSIT', 'TRAM', 'SUBWAY', 'FERRY', 'AIRPLANE', 'METRO', 'BUS', 'COACH', 'RAIL', 'HIGHSPEED_RAIL', 'LONG_DISTANCE', 'NIGHT_RAIL', 'REGIONAL_FAST_RAIL', 'REGIONAL_RAIL', 'OTHER']
 } as const;
 
 export const VertexTypeSchema = {
@@ -399,6 +400,24 @@ Can be missing if neither real-time updates nor the schedule timetable contains 
             items: {
                 '$ref': '#/components/schemas/Alert'
             }
+        },
+        flex: {
+            description: 'for `FLEX` transports, the flex location area or location group name',
+            type: 'string'
+        },
+        flexId: {
+            description: 'for `FLEX` transports, the flex location area ID or location group ID',
+            type: 'string'
+        },
+        flexStartPickupDropOffWindow: {
+            description: 'Time that on-demand service becomes available',
+            type: 'string',
+            format: 'date-time'
+        },
+        flexEndPickupDropOffWindow: {
+            description: 'Time that on-demand service ends',
+            type: 'string',
+            format: 'date-time'
         }
     }
 } as const;

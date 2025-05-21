@@ -44,10 +44,12 @@ const translations: Translations = {
 	advancedSearchOptions: 'Options',
 	selectModes: 'Select transit modes',
 	defaultSelectedModes: 'All transit modes',
+	selectElevationCosts: 'Avoid steep incline.',
 	wheelchair: 'Barrier-free transfers',
 	bikeRental: 'Allow usage of sharing vehicles',
 	bikeCarriage: 'Bike carriage',
 	carCarriage: 'Car carriage',
+	default: 'Default',
 	unreliableOptions: 'Depending on data availability, these options may be unreliable.',
 	timetableSources: 'Timetable sources',
 	tripCancelled: 'Trip cancelled',
@@ -56,6 +58,7 @@ const translations: Translations = {
 	inDisallowed: 'Entry not possible',
 	outDisallowed: 'Exit not possible',
 	unscheduledTrip: 'Additional service',
+	FLEX: 'Transport na żądanie',
 	WALK: 'Walking',
 	BIKE: 'Bike',
 	RENTAL: 'Sharing',
@@ -75,7 +78,17 @@ const translations: Translations = {
 	NIGHT_RAIL: 'Night Rail',
 	REGIONAL_FAST_RAIL: 'Regional Fast Rail',
 	REGIONAL_RAIL: 'Regional Rail',
-	OTHER: 'Other'
+	OTHER: 'Other',
+	routingSegments: {
+		firstMile: 'First mile',
+		lastMile: 'Last mile',
+		direct: 'Direct connection'
+	},
+	elevationCosts: {
+		NONE: 'No detours',
+		LOW: 'Small detours',
+		HIGH: 'Large detours'
+	}
 };
 
 export default translations;

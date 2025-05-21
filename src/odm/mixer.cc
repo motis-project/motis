@@ -5,6 +5,7 @@
 #include "nigiri/logging.h"
 #include "nigiri/special_stations.h"
 
+#include "motis/metrics_registry.h"
 #include "motis/odm/odm.h"
 #include "motis/transport_mode_ids.h"
 
@@ -39,7 +40,7 @@ std::int32_t distance(nr::journey const& a, nr::journey const& b) {
 
   return overtakes(a, b) || overtakes(b, a)
              ? 0
-             : std::min(
+             : std::max(
                    std::chrono::abs(a.departure_time() - b.departure_time()),
                    std::chrono::abs(a.arrival_time() - b.arrival_time()))
                    .count();
@@ -100,12 +101,14 @@ bool mixer::cost_dominates(nr::journey const& a, nr::journey const& b) const {
       cost(b) + (is_pure_pt(a) && is_direct_odm(b) ? direct_taxi_penalty_ : 0);
   auto const time_ratio = static_cast<double>(a.travel_time().count()) /
                           static_cast<double>(b.travel_time().count());
-  auto const dist = distance(a, b);
-  auto const alpha_term = cost_alpha_ * time_ratio * dist;
+  auto const dist = std::max(distance(a, b), min_distance_);
+  auto const alpha_term =
+      cost_alpha_ * std::min(time_ratio, 3.0) * std::pow(dist, exp_distance_);
   auto const ret = dist < max_distance_ && cost_a + alpha_term < cost_b;
   if (kMixerTracing) {
     n::log(n::log_lvl::debug, "motis.odm",
-           "{} cost-dominates {}, ratio: {}, dist: {}, {} + {} < {} --> {}",
+           "{} cost-dominates {}, ratio: {:.2f}, dist: {}, {:.2f} + {:.2f} < "
+           "{:.2f} --> {}",
            label(a), label(b), time_ratio, dist, cost_a, alpha_term, cost_b,
            ret ? "true" : "false");
   }
@@ -177,8 +180,8 @@ void mixer::productivity_dominance(
     auto const cost_b = prod_cost(b);
     auto const odm_time_a = static_cast<double>(odm_time(a).count());
     auto const odm_time_b = static_cast<double>(odm_time(b).count());
-    auto const dist = distance(a, b);
-    auto const alpha_term = prod_alpha_ * dist;
+    auto const dist = std::max(distance(a, b), min_distance_);
+    auto const alpha_term = prod_alpha_ * std::pow(dist, exp_distance_);
     auto const prod_a = cost_b / odm_time_a;
     auto const prod_b = (cost_a + alpha_term) / odm_time_b;
     auto const ret = dist < max_distance_ && prod_a > prod_b;
@@ -194,10 +197,23 @@ void mixer::productivity_dominance(
 }
 
 void mixer::mix(n::pareto_set<nr::journey> const& pt_journeys,
-                std::vector<nr::journey>& odm_journeys) const {
+                std::vector<nr::journey>& odm_journeys,
+                metrics_registry* metrics) const {
   pareto_dominance(odm_journeys);
+  auto const pareto_n = odm_journeys.size();
   cost_dominance(pt_journeys, odm_journeys);
+  auto const cost_n = odm_journeys.size();
   productivity_dominance(odm_journeys);
+
+  if (metrics != nullptr) {
+    metrics->routing_odm_journeys_found_non_dominated_pareto_.Observe(
+        static_cast<double>(pareto_n));
+    metrics->routing_odm_journeys_found_non_dominated_cost_.Observe(
+        static_cast<double>(cost_n));
+    metrics->routing_odm_journeys_found_non_dominated_prod_.Observe(
+        static_cast<double>(odm_journeys.size()));
+  }
+
   for (auto const& j : pt_journeys) {
     odm_journeys.emplace_back(j);
   }
@@ -210,7 +226,9 @@ mixer get_default_mixer() {
   return mixer{.cost_alpha_ = 1.3,
                .prod_alpha_ = 0.4,
                .direct_taxi_penalty_ = 220,
+               .min_distance_ = 15,
                .max_distance_ = 90,
+               .exp_distance_ = 1.045,
                .walk_cost_ = {{0, 1}, {15, 10}},
                .taxi_cost_ = {{0, 35}, {1, 12}},
                .transfer_cost_ = {{0, 10}}};

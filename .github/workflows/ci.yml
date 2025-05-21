@@ -161,9 +161,8 @@ jobs:
       fail-fast: false
       matrix:
         config:
-          - preset: macos-x86_64
-            tests: On
           - preset: macos-arm64
+            tests: On
     env:
       BUILDCACHE_COMPRESS: true
       BUILDCACHE_DIRECT_MODE: true
@@ -174,6 +173,10 @@ jobs:
       ASAN_OPTIONS: alloc_dealloc_mismatch=0
     steps:
       - uses: actions/checkout@v4
+
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: 16.2
 
       - name: Install ninja
         run: brew install ninja
@@ -344,6 +347,7 @@ jobs:
           asset_content_type: application/x-
 
   docker:
+    if: github.repository_owner == 'motis-project'
     runs-on: ubuntu-latest
     needs: linux
     steps:

@@ -20,6 +20,7 @@
 #include "motis/endpoints/graph.h"
 #include "motis/endpoints/initial.h"
 #include "motis/endpoints/levels.h"
+#include "motis/endpoints/map/flex_locations.h"
 #include "motis/endpoints/map/stops.h"
 #include "motis/endpoints/map/trips.h"
 #include "motis/endpoints/matches.h"
@@ -34,6 +35,7 @@
 #include "motis/endpoints/trip.h"
 #include "motis/endpoints/update_elevator.h"
 #include "motis/gbfs/update.h"
+#include "motis/metrics_registry.h"
 #include "motis/rt_update.h"
 #include "motis/scheduler/runner.h"
 #include "motis/scheduler/scheduler_algo.h"
@@ -76,6 +78,7 @@ int server(data d, config const& c, std::string_view const motis_version) {
   POST<ep::platforms>(qr, "/api/platforms", d);
   POST<ep::graph>(qr, "/api/graph", d);
   GET<ep::footpaths>(qr, "/api/debug/footpaths", d);
+  GET<ep::flex_locations>(qr, "/api/debug/flex", d);
   GET<ep::levels>(qr, "/api/v1/map/levels", d);
   GET<ep::initial>(qr, "/api/v1/map/initial", d);
   GET<ep::reverse_geocode>(qr, "/api/v1/reverse-geocode", d);
@@ -100,7 +103,7 @@ int server(data d, config const& c, std::string_view const motis_version) {
     qr.route("GET", "/tiles/", ep::tiles{*d.tiles_});
   }
 
-  qr.route("GET", "/metrics", ep::metrics{*d.metrics_});
+  qr.route("GET", "/metrics", ep::metrics{d.metrics_->registry_});
   qr.serve_files(server_config.web_folder_);
   qr.enable_cors();
   s.set_timeout(std::chrono::minutes{5});

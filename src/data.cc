@@ -26,8 +26,10 @@
 #include "motis/config.h"
 #include "motis/constants.h"
 #include "motis/elevators/update_elevators.h"
+#include "motis/flex/flex_areas.h"
 #include "motis/hashes.h"
 #include "motis/match_platforms.h"
+#include "motis/metrics_registry.h"
 #include "motis/odm/bounds.h"
 #include "motis/point_rtree.h"
 #include "motis/railviz.h"
@@ -61,10 +63,12 @@ std::ostream& operator<<(std::ostream& out, data const& d) {
 data::data(std::filesystem::path p)
     : path_{std::move(p)},
       config_{config::read(path_ / "config.yml")},
-      metrics_{std::make_unique<prometheus::Registry>()} {}
+      metrics_{std::make_unique<metrics_registry>()} {}
 
 data::data(std::filesystem::path p, config const& c)
-    : path_{std::move(p)}, config_{c} {
+    : path_{std::move(p)},
+      config_{c},
+      metrics_{std::make_unique<metrics_registry>()} {
   auto const verify_version = [&](bool cond, char const* name, auto&& ver) {
     if (!cond) {
       return;
@@ -124,6 +128,15 @@ data::data(std::filesystem::path p, config const& c)
     }
   });
 
+  auto fa = std::async(std::launch::async, [&]() {
+    if (c.timetable_ && c.use_street_routing()) {
+      street_routing.wait();
+      tt.wait();
+
+      load_flex_areas();
+    }
+  });
+
   auto matches = std::async(std::launch::async, [&]() {
     if (c.use_street_routing() && c.timetable_) {
       load_matches();
@@ -133,6 +146,7 @@ data::data(std::filesystem::path p, config const& c)
   auto elevators = std::async(std::launch::async, [&]() {
     if (c.has_elevators()) {
       street_routing.wait();
+
       rt_->e_ = std::make_unique<motis::elevators>(
           *w_, *elevator_nodes_, vector_map<elevator_idx_t, elevator>{});
 
@@ -221,6 +235,10 @@ void data::load_tt(fs::path const& p) {
   location_rtree_ = std::make_unique<point_rtree<n::location_idx_t>>(
       create_location_rtree(*tt_));
   init_rtt();
+}
+
+void data::load_flex_areas() {
+  flex_areas_ = std::make_unique<flex::flex_areas>(*tt_, *w_, *l_);
 }
 
 void data::init_rtt(date::sys_days const d) {

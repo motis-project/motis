@@ -1,4 +1,4 @@
-import type { Itinerary, PlanResponse } from '$lib/openapi';
+import type { Itinerary, PlanResponse } from '$lib/api/openapi';
 import type { Location } from '$lib/Location';
 
 export const updateStartDest = (from: Location, to: Location) => {
