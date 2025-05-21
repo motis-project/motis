@@ -175,6 +175,7 @@
 						toPlace: toPlaceString(to),
 						arriveBy: timeType === 'arrival',
 						timetableView: true,
+						withFares: true,
 						pedestrianProfile: wheelchair ? 'WHEELCHAIR' : 'FOOT',
 						preTransitModes,
 						postTransitModes,

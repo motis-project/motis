@@ -145,21 +145,25 @@ api::Itinerary journey_to_response(osr::ways const* w,
                                      return std::optional{std::string{s}};
                                    })};
   };
-  auto const to_product =
+  auto const to_products =
       [&](n::fares const& f,
-          n::fare_product_idx_t const x) -> api::FareProduct {
-    auto const& p = f.fare_products_[x];
-    return {.name_ = std::string{tt.strings_.get(p.name_)},
-            .amount_ = p.amount_,
-            .currency_ = std::string{tt.strings_.get(p.currency_code_)},
-            .riderCategory_ =
-                p.rider_category_ == n::rider_category_idx_t::invalid()
-                    ? std::nullopt
-                    : std::optional{to_rider_category(
-                          f.rider_categories_[p.rider_category_])},
-            .media_ = p.media_ == n::fare_media_idx_t::invalid()
-                          ? std::nullopt
-                          : std::optional{to_media(f.fare_media_[p.media_])}};
+          n::fare_product_idx_t const x) -> std::vector<api::FareProduct> {
+    return utl::to_vec(
+        f.fare_products_[x],
+        [&](n::fares::fare_product const& p) -> api::FareProduct {
+          return {
+              .name_ = std::string{tt.strings_.get(p.name_)},
+              .amount_ = p.amount_,
+              .currency_ = std::string{tt.strings_.get(p.currency_code_)},
+              .riderCategory_ =
+                  p.rider_category_ == n::rider_category_idx_t::invalid()
+                      ? std::nullopt
+                      : std::optional{to_rider_category(
+                            f.rider_categories_[p.rider_category_])},
+              .media_ = p.media_ == n::fare_media_idx_t::invalid()
+                            ? std::nullopt
+                            : std::optional{to_media(f.fare_media_[p.media_])}};
+        });
   };
   auto const to_rule = [](n::fares::fare_transfer_rule const& x) {
     switch (x.fare_transfer_type_) {
@@ -264,18 +268,18 @@ api::Itinerary journey_to_response(osr::ways const* w,
                   return {.rule_ = t.rule_.and_then([&](auto&& r) {
                             return std::optional{to_rule(r)};
                           }),
-                          .transferProduct_ = t.rule_.and_then([&](auto&& r) {
+                          .transferProducts_ = t.rule_.and_then([&](auto&& r) {
                             return t.legs_.empty()
                                        ? std::nullopt
-                                       : std::optional{to_product(
+                                       : std::optional{to_products(
                                              tt.fares_[t.legs_.front().src_],
                                              r.fare_product_)};
                           }),
                           .effectiveFareLegProducts_ =
                               utl::to_vec(t.legs_, [&](auto&& l) {
                                 return utl::to_vec(l.rule_, [&](auto&& r) {
-                                  return to_product(tt.fares_[l.src_],
-                                                    r.fare_product_);
+                                  return to_products(tt.fares_[l.src_],
+                                                     r.fare_product_);
                                 });
                               })};
                 })};

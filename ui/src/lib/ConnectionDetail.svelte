@@ -8,7 +8,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import Route from '$lib/Route.svelte';
 	import { getModeName } from '$lib/getModeName';
-	import { t } from '$lib/i18n/translation';
+	import { language, t } from '$lib/i18n/translation';
 	import { onClickStop, onClickTrip } from '$lib/utils';
 	import { formatTime } from './toDateTime';
 
@@ -89,8 +89,9 @@
 
 {#snippet productInfo(product: FareProduct)}
 	{product.name}
-	({product.amount}
-	{product.currency})
+	{new Intl.NumberFormat(language, { style: 'currency', currency: product.currency }).format(
+		product.amount
+	)}
 	{#if product.riderCategory}
 		for
 		{#if product.riderCategory.eligibilityUrl}
@@ -134,13 +135,12 @@
 					class:list-disc={productOptions.length > 1}
 					class:list-inside={productOptions.length > 1}
 				>
-					{#each productOptions as product}
-						<li>
-							{#if productOptions.length == 1}
-								{t.ticket}
-							{/if}
-							{@render productInfo(product)}
-						</li>
+					{#each productOptions as products}
+						{#each products as product}
+							<li>
+								{@render productInfo(product)}
+							</li>
+						{/each}
 					{/each}
 				</ul>
 			{/if}
@@ -171,14 +171,16 @@
 						{#if pred.distance}
 							({Math.round(pred.distance)} m)
 						{/if}
-						{#if prevTransitLeg?.fareTransferIndex != undefined && itinerary.fareTransfers && itinerary.fareTransfers[prevTransitLeg.fareTransferIndex].transferProduct}
-							{@const transferProduct =
-								itinerary.fareTransfers[prevTransitLeg.fareTransferIndex].transferProduct!}
+						{#if prevTransitLeg?.fareTransferIndex != undefined && itinerary.fareTransfers && itinerary.fareTransfers[prevTransitLeg.fareTransferIndex].transferProducts}
+							{@const transferProducts =
+								itinerary.fareTransfers[prevTransitLeg.fareTransferIndex].transferProducts!}
 							{#if prevTransitLeg.effectiveFareLegIndex === 0 && l.effectiveFareLegIndex === 1}
 								<br />
 								<span class="text-xs font-bold text-foreground">
 									Ticket: {pred.effectiveFareLegIndex}
-									{@render productInfo(transferProduct)}
+									{#each transferProducts as transferProduct}
+										{@render productInfo(transferProduct)}
+									{/each}
 								</span>
 							{/if}
 						{/if}
