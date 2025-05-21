@@ -1,5 +1,6 @@
 #include "motis/endpoints/routing.h"
 
+#include <cmath>
 #include <algorithm>
 
 #include "boost/thread/tss.hpp"
@@ -231,7 +232,9 @@ std::vector<n::routing::offset> get_offsets(
           ignore_walk = true;
           for (auto const [p, l] : utl::zip(paths, near_stops)) {
             if (p.has_value()) {
-              offsets.emplace_back(l, n::duration_t{p->cost_ / 60},
+              offsets.emplace_back(l,
+                                   n::duration_t{static_cast<unsigned>(
+                                       std::ceil(p->cost_ / 60.0))},
                                    gbfs_rd.get_transport_mode(prod_ref));
             }
           }
@@ -245,8 +248,10 @@ std::vector<n::routing::offset> get_offsets(
                      max_matching_distance, nullptr, nullptr, elevations);
       for (auto const [p, l] : utl::zip(paths, near_stops)) {
         if (p.has_value()) {
-          offsets.emplace_back(l, n::duration_t{p->cost_ / 60},
-                               static_cast<n::transport_mode_id_t>(profile));
+          offsets.emplace_back(
+              l,
+              n::duration_t{static_cast<unsigned>(std::ceil(p->cost_ / 60.0))},
+              static_cast<n::transport_mode_id_t>(profile));
         }
       }
     }
