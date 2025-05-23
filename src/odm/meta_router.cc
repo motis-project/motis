@@ -745,6 +745,7 @@ api::plan_response meta_router::run() {
                     r_.w_, r_.l_, r_.pl_, *tt_, *r_.tags_, r_.fa_, e_, rtt_,
                     r_.matches_, r_.elevations_, r_.shapes_, gbfs_rd_, j,
                     start_, dest_, cache, ep::blocked.get(),
+                    query_.pedestrianProfile_, query_.elevationCosts_,
                     query_.detailedTransfers_, query_.withFares_,
                     r_.config_.timetable_.value().max_matching_distance_,
                     query_.maxMatchingDistance_, api_version_);

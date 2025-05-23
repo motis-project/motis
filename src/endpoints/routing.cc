@@ -721,6 +721,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
               return journey_to_response(
                   w_, l_, pl_, *tt_, *tags_, fa_, e, rtt, matches_, elevations_,
                   shapes_, gbfs_rd, j, start, dest, cache, blocked.get(),
+                  query.pedestrianProfile_, query.elevationCosts_,
                   query.detailedTransfers_, query.withFares_,
                   config_.timetable_.value().max_matching_distance_,
                   query.maxMatchingDistance_, api_version);
