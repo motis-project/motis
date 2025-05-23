@@ -89,7 +89,8 @@ std::optional<fare_indices> get_fare_indices(
 }
 
 std::optional<std::vector<api::Alert>> get_alerts(
-    n::rt::frun const& fr, std::optional<n::rt::run_stop> const& s) {
+    n::rt::frun const& fr,
+    std::optional<std::pair<n::rt::run_stop, n::event_type>> const& s) {
   if (fr.rtt_ == nullptr || !fr.is_scheduled()) {  // TODO added
     return std::nullopt;
   }
@@ -150,12 +151,15 @@ std::optional<std::vector<api::Alert>> get_alerts(
         .imageAlternativeText_ = get_translation(a.image_alternative_text_[x])};
   };
 
-  auto const x = s.and_then([](n::rt::run_stop const& rs) {
-                    return std::optional{rs.get_trip_idx()};
-                  }).value_or(fr.trip_idx());
-  auto const l = s.and_then([](n::rt::run_stop const& rs) {
-                    return std::optional{rs.get_location_idx()};
-                  }).value_or(n::location_idx_t::invalid());
+  auto const x =
+      s.and_then([](std::pair<n::rt::run_stop, n::event_type> const& rs_ev) {
+         auto const& [rs, ev_type] = rs_ev;
+         return std::optional{rs.get_trip_idx(ev_type)};
+       }).value_or(fr.trip_idx());
+  auto const l =
+      s.and_then([](std::pair<n::rt::run_stop, n::event_type> const& rs) {
+         return std::optional{rs.first.get_location_idx()};
+       }).value_or(n::location_idx_t::invalid());
   auto alerts = std::vector<api::Alert>{};
   for (auto const& t : tt.trip_ids_[x]) {
     auto const src = tt.trip_id_src_[t];
@@ -312,7 +316,8 @@ api::Itinerary journey_to_response(osr::ways const* w,
                              start, dest);
 
     auto const to_place = [&](n::rt::run_stop const& s,
-                              bool const run_cancelled) {
+                              bool const run_cancelled,
+                              n::event_type const ev_type) {
       auto p = ::motis::to_place(&tt, &tags, w, pl, matches, tt_location{s},
                                  start, dest);
       p.pickupType_ = !run_cancelled && s.in_allowed()
@@ -324,7 +329,7 @@ api::Itinerary journey_to_response(osr::ways const* w,
       p.cancelled_ = run_cancelled || (!s.in_allowed() && !s.out_allowed() &&
                                        (s.get_scheduled_stop().in_allowed() ||
                                         s.get_scheduled_stop().out_allowed()));
-      p.alerts_ = get_alerts(*s.fr_, s);
+      p.alerts_ = get_alerts(*s.fr_, std::pair{s, ev_type});
       return p;
     };
 
@@ -342,8 +347,8 @@ api::Itinerary journey_to_response(osr::ways const* w,
 
               auto& leg = itinerary.legs_.emplace_back(api::Leg{
                   .mode_ = to_mode(enter_stop.get_clasz()),
-                  .from_ = to_place(enter_stop, cancelled),
-                  .to_ = to_place(exit_stop, cancelled),
+                  .from_ = to_place(enter_stop, cancelled, n::event_type::kDep),
+                  .to_ = to_place(exit_stop, cancelled, n::event_type::kArr),
                   .duration_ = std::chrono::duration_cast<std::chrono::seconds>(
                                    j_leg.arr_time_ - j_leg.dep_time_)
                                    .count(),
@@ -395,7 +400,7 @@ api::Itinerary journey_to_response(osr::ways const* w,
               for (auto i = first; i < last; ++i) {
                 auto const stop = fr[i];
                 auto& p = leg.intermediateStops_->emplace_back(
-                    to_place(stop, cancelled));
+                    to_place(stop, cancelled, n::event_type::kDep));
                 p.departure_ = stop.time(n::event_type::kDep);
                 p.scheduledDeparture_ =
                     stop.scheduled_time(n::event_type::kDep);

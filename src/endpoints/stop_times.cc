@@ -326,7 +326,10 @@ api::stoptimes_response stop_times::operator()(
             auto place = to_place(&tt_, &tags_, w_, pl_, matches_,
                                   tt_location{s.get_location_idx(),
                                               s.get_scheduled_location_idx()});
-            place.alerts_ = get_alerts(fr, s);
+            place.alerts_ =
+                get_alerts(fr, std::pair{s, fr.stop_range_.from_ != 0U
+                                                ? n::event_type::kArr
+                                                : n::event_type::kDep});
             if (fr.stop_range_.from_ != 0U) {
               place.arrival_ = {s.time(n::event_type::kArr)};
               place.scheduledArrival_ = {s.scheduled_time(n::event_type::kArr)};
