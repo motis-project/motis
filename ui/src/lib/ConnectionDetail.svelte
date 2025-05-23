@@ -18,11 +18,17 @@
 		itinerary: Itinerary;
 	} = $props();
 
-	const isRelevantLeg = (l: Leg) => l.duration !== 0 || l.routeShortName;
+	const isRelevantLeg = (l: Leg) => l.duration !== 0 || (l.routeShortName && l.mode != 'WALK');
 	const lastLeg = $derived(itinerary.legs.findLast(isRelevantLeg));
 </script>
 
-{#snippet stopTimes(timestamp: string, scheduledTimestamp: string, isRealtime: boolean, p: Place)}
+{#snippet stopTimes(
+	timestamp: string,
+	scheduledTimestamp: string,
+	isRealtime: boolean,
+	p: Place,
+	isStartOrEnd: number
+)}
 	<Time
 		variant="schedule"
 		class="font-semibold w-16"
@@ -49,17 +55,26 @@
 			>
 				{p.name}
 			</Button>
-			{#if p.pickupType == 'NOT_ALLOWED' || p.dropoffType == 'NOT_ALLOWED'}
+			{@const pickupNotAllowedOrEnd = p.pickupType == 'NOT_ALLOWED' && isStartOrEnd != -1}
+			{@const dropoffNotAllowedOrStart = p.dropoffType == 'NOT_ALLOWED' && isStartOrEnd != 1}
+			{#if pickupNotAllowedOrEnd || dropoffNotAllowedOrStart}
 				<div class="ml-4 flex items-center text-destructive text-sm">
 					<CircleX class="stroke-destructive h-4 w-4" />
 					<span class="ml-1 leading-none">
-						{p.pickupType == 'NOT_ALLOWED' && p.dropoffType == 'NOT_ALLOWED'
+						{pickupNotAllowedOrEnd && dropoffNotAllowedOrStart
 							? t.inOutDisallowed
-							: p.pickupType == 'NOT_ALLOWED'
+							: pickupNotAllowedOrEnd
 								? t.inDisallowed
 								: t.outDisallowed}
 					</span>
 				</div>
+			{/if}
+			{#if isStartOrEnd && p.alerts}
+				{#each p.alerts as alert}
+					<div class="ml-4 text-destructive text-sm">
+						{alert.headerText}
+					</div>
+				{/each}
 			{/if}
 		{:else}
 			<span>{p.name || p.flex}</span>
@@ -197,7 +212,7 @@
 
 			<div class="pt-4 pl-6 border-l-4 left-4 relative" style={routeBorderColor(l)}>
 				<div class="grid gap-y-6 grid-cols-[max-content_max-content_auto] items-center">
-					{@render stopTimes(l.startTime, l.scheduledStartTime, l.realTime, l.from)}
+					{@render stopTimes(l.startTime, l.scheduledStartTime, l.realTime, l.from, 1)}
 				</div>
 				<div class="mt-2 flex items-center text-muted-foreground leading-none">
 					<ArrowRight class="stroke-muted-foreground h-4 w-4" />
@@ -250,7 +265,7 @@
 						</summary>
 						<div class="mb-1 grid gap-y-4 grid-cols-[max-content_max-content_auto] items-center">
 							{#each l.intermediateStops! as s}
-								{@render stopTimes(s.arrival!, s.scheduledArrival!, l.realTime, s)}
+								{@render stopTimes(s.arrival!, s.scheduledArrival!, l.realTime, s, 0)}
 							{/each}
 						</div>
 					</details>
@@ -258,7 +273,7 @@
 
 				{#if !isLast && !(isLastPred && !isRelevantLeg(next!))}
 					<div class="grid gap-y-6 grid-cols-[max-content_max-content_auto] items-center pb-3">
-						{@render stopTimes(l.endTime!, l.scheduledEndTime!, l.realTime!, l.to)}
+						{@render stopTimes(l.endTime!, l.scheduledEndTime!, l.realTime!, l.to, -1)}
 					</div>
 				{/if}
 
@@ -271,7 +286,7 @@
 			<Route {onClickTrip} {l} />
 			<div class="pt-4 pl-6 border-l-4 left-4 relative" style={routeBorderColor(l)}>
 				<div class="grid gap-y-6 grid-cols-[max-content_max-content_auto] items-center">
-					{@render stopTimes(l.startTime, l.scheduledStartTime, l.realTime, l.from)}
+					{@render stopTimes(l.startTime, l.scheduledStartTime, l.realTime, l.from, 1)}
 				</div>
 				{#if l.mode == 'FLEX'}
 					<div class="mt-2 flex items-center leading-none">
@@ -284,7 +299,7 @@
 				{@render streetLeg(l)}
 				{#if !isLast}
 					<div class="grid gap-y-6 grid-cols-[max-content_max-content_auto] items-center pb-4">
-						{@render stopTimes(l.endTime, l.scheduledEndTime, l.realTime, l.to)}
+						{@render stopTimes(l.endTime, l.scheduledEndTime, l.realTime, l.to, -1)}
 					</div>
 				{/if}
 			</div>
@@ -302,7 +317,8 @@
 				lastLeg!.endTime,
 				lastLeg!.scheduledEndTime,
 				lastLeg!.realTime,
-				lastLeg!.to
+				lastLeg!.to,
+				-1
 			)}
 		</div>
 	</div>

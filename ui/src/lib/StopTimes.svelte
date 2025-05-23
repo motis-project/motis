@@ -3,6 +3,7 @@
 	import LoaderCircle from 'lucide-svelte/icons/loader-circle';
 	import ArrowRight from 'lucide-svelte/icons/arrow-right';
 	import CircleX from 'lucide-svelte/icons/circle-x';
+	import Info from 'lucide-svelte/icons/info';
 	import ErrorMessage from '$lib/ErrorMessage.svelte';
 	import Time from '$lib/Time.svelte';
 	import Route from '$lib/Route.svelte';
@@ -112,6 +113,14 @@
 							<CircleX class="stroke-destructive h-4 w-4" />
 							<span class="ml-1 leading-none">
 								{stopTime.cancelled ? t.stopCancelled : arriveBy ? t.outDisallowed : t.inDisallowed}
+							</span>
+						</div>
+					{/if}
+					{#if stopTime.place.alerts}
+						<div class="flex items-center text-destructive text-sm">
+							<Info class="stroke-destructive h-4 w-4" />
+							<span class="ml-1 leading-none">
+								{t.alertsAvailable}
 							</span>
 						</div>
 					{/if}
