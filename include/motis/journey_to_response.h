@@ -26,6 +26,10 @@ double get_level(osr::ways const*,
                  platform_matches_t const*,
                  nigiri::location_idx_t);
 
+std::optional<std::vector<api::Alert>> get_alerts(
+    nigiri::rt::frun const&,
+    std::optional<std::pair<nigiri::rt::run_stop, nigiri::event_type>> const&);
+
 api::Itinerary journey_to_response(osr::ways const*,
                                    osr::lookup const*,
                                    osr::platforms const*,

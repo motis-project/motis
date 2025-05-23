@@ -88,6 +88,89 @@ std::optional<fare_indices> get_fare_indices(
   return std::nullopt;
 }
 
+std::optional<std::vector<api::Alert>> get_alerts(
+    n::rt::frun const& fr,
+    std::optional<std::pair<n::rt::run_stop, n::event_type>> const& s) {
+  if (fr.rtt_ == nullptr || !fr.is_scheduled()) {  // TODO added
+    return std::nullopt;
+  }
+
+  auto const& tt = *fr.tt_;
+  auto const* rtt = fr.rtt_;
+
+  auto const to_time_range =
+      [&](n::interval<n::unixtime_t> const x) -> api::TimeRange {
+    return {x.from_, x.to_};
+  };
+  auto const to_cause = [](n::alert_cause const x) {
+    return api::AlertCauseEnum{static_cast<int>(x)};
+  };
+  auto const to_effect = [](n::alert_effect const x) {
+    return api::AlertEffectEnum{static_cast<int>(x)};
+  };
+  auto const convert_to_str = [](std::string_view s) {
+    return std::optional{std::string{s}};
+  };
+  auto const to_alert = [&](n::alert_idx_t const x) -> api::Alert {
+    auto const& a = rtt->alerts_;
+    auto const get_translation = [&](auto&& x) {
+      return x.empty()
+                 ? std::nullopt
+                 : a.strings_.try_get(x.front().text_).and_then(convert_to_str);
+    };
+    return {
+        .communicationPeriod_ =
+            a.communication_period_[x].empty()
+                ? std::nullopt
+                : std::optional<std::vector<api::TimeRange>>{utl::to_vec(
+                      a.communication_period_[x], to_time_range)},
+        .impactPeriod_ =
+            a.impact_period_[x].empty()
+                ? std::nullopt
+                : std::optional<std::vector<api::TimeRange>>{utl::to_vec(
+                      a.impact_period_[x], to_time_range)},
+        .cause_ = to_cause(a.cause_[x]),
+        .causeDetail_ = get_translation(a.cause_detail_[x]),
+        .effect_ = to_effect(a.effect_[x]),
+        .effectDetail_ = get_translation(a.effect_detail_[x]),
+        .url_ = get_translation(a.url_[x]),
+        .headerText_ = get_translation(a.header_text_[x]).value_or(""),
+        .descriptionText_ =
+            get_translation(a.description_text_[x]).value_or(""),
+        .ttsHeaderText_ = get_translation(a.tts_header_text_[x]),
+        .ttsDescriptionText_ = get_translation(a.tts_description_text_[x]),
+        .imageUrl_ = a.image_[x].empty()
+                         ? std::nullopt
+                         : a.strings_.try_get(a.image_[x].front().url_)
+                               .and_then(convert_to_str),
+        .imageMediaType_ =
+            a.image_[x].empty()
+                ? std::nullopt
+                : a.strings_.try_get(a.image_[x].front().media_type_)
+                      .and_then(convert_to_str),
+        .imageAlternativeText_ = get_translation(a.image_alternative_text_[x])};
+  };
+
+  auto const x =
+      s.and_then([](std::pair<n::rt::run_stop, n::event_type> const& rs_ev) {
+         auto const& [rs, ev_type] = rs_ev;
+         return std::optional{rs.get_trip_idx(ev_type)};
+       }).value_or(fr.trip_idx());
+  auto const l =
+      s.and_then([](std::pair<n::rt::run_stop, n::event_type> const& rs) {
+         return std::optional{rs.first.get_location_idx()};
+       }).value_or(n::location_idx_t::invalid());
+  auto alerts = std::vector<api::Alert>{};
+  for (auto const& t : tt.trip_ids_[x]) {
+    auto const src = tt.trip_id_src_[t];
+    rtt->alerts_.for_each_alert(
+        tt, src, x, fr.rt_, l,
+        [&](n::alert_idx_t const a) { alerts.emplace_back(to_alert(a)); });
+  }
+
+  return alerts.empty() ? std::nullopt : std::optional{std::move(alerts)};
+}
+
 api::Itinerary journey_to_response(osr::ways const* w,
                                    osr::lookup const* l,
                                    osr::platforms const* pl,
@@ -176,75 +259,6 @@ api::Itinerary journey_to_response(osr::ways const* w,
     }
     std::unreachable();
   };
-  auto const to_time_range =
-      [&](n::interval<n::unixtime_t> const x) -> api::TimeRange {
-    return {x.from_, x.to_};
-  };
-  auto const to_cause = [](n::alert_cause const x) {
-    return api::AlertCauseEnum{static_cast<int>(x)};
-  };
-  auto const to_effect = [](n::alert_effect const x) {
-    return api::AlertEffectEnum{static_cast<int>(x)};
-  };
-  auto const convert_to_str = [](std::string_view s) {
-    return std::optional{std::string{s}};
-  };
-  auto const to_alert = [&](n::alert_idx_t const x) -> api::Alert {
-    auto const& a = rtt->alerts_;
-    auto const get_translation = [&](auto&& x) {
-      return x.empty()
-                 ? std::nullopt
-                 : a.strings_.try_get(x.front().text_).and_then(convert_to_str);
-    };
-    return {
-        .communicationPeriod_ =
-            a.communication_period_[x].empty()
-                ? std::nullopt
-                : std::optional<std::vector<api::TimeRange>>{utl::to_vec(
-                      a.communication_period_[x], to_time_range)},
-        .impactPeriod_ =
-            a.impact_period_[x].empty()
-                ? std::nullopt
-                : std::optional<std::vector<api::TimeRange>>{utl::to_vec(
-                      a.impact_period_[x], to_time_range)},
-        .cause_ = to_cause(a.cause_[x]),
-        .causeDetail_ = get_translation(a.cause_detail_[x]),
-        .effect_ = to_effect(a.effect_[x]),
-        .effectDetail_ = get_translation(a.effect_detail_[x]),
-        .url_ = get_translation(a.url_[x]),
-        .headerText_ = get_translation(a.header_text_[x]).value_or(""),
-        .descriptionText_ =
-            get_translation(a.description_text_[x]).value_or(""),
-        .ttsHeaderText_ = get_translation(a.tts_header_text_[x]),
-        .ttsDescriptionText_ = get_translation(a.tts_description_text_[x]),
-        .imageUrl_ = a.image_[x].empty()
-                         ? std::nullopt
-                         : a.strings_.try_get(a.image_[x].front().url_)
-                               .and_then(convert_to_str),
-        .imageMediaType_ =
-            a.image_[x].empty()
-                ? std::nullopt
-                : a.strings_.try_get(a.image_[x].front().media_type_)
-                      .and_then(convert_to_str),
-        .imageAlternativeText_ = get_translation(a.image_alternative_text_[x])};
-  };
-  auto const get_alerts =
-      [&](n::rt::frun const& fr) -> std::optional<std::vector<api::Alert>> {
-    if (rtt == nullptr || !fr.is_scheduled()) {  // TODO added
-      return std::nullopt;
-    }
-
-    auto const x = fr.trip_idx();
-    auto alerts = std::vector<api::Alert>{};
-    for (auto const& t : tt.trip_ids_[x]) {
-      auto const src = tt.trip_id_src_[t];
-      rtt->alerts_.for_each_alert(
-          tt, src, x, fr.rt_, n::location_idx_t::invalid(),
-          [&](n::alert_idx_t const a) { alerts.emplace_back(to_alert(a)); });
-    }
-
-    return alerts.empty() ? std::nullopt : std::optional{std::move(alerts)};
-  };
 
   auto itinerary = api::Itinerary{
       .duration_ = to_seconds(j.arrival_time() - j.departure_time()),
@@ -301,7 +315,9 @@ api::Itinerary journey_to_response(osr::ways const* w,
     auto const to = to_place(&tt, &tags, w, pl, matches, tt_location{j_leg.to_},
                              start, dest);
 
-    auto const to_place = [&](auto&& s, bool const run_cancelled) {
+    auto const to_place = [&](n::rt::run_stop const& s,
+                              bool const run_cancelled,
+                              n::event_type const ev_type) {
       auto p = ::motis::to_place(&tt, &tags, w, pl, matches, tt_location{s},
                                  start, dest);
       p.pickupType_ = !run_cancelled && s.in_allowed()
@@ -313,6 +329,7 @@ api::Itinerary journey_to_response(osr::ways const* w,
       p.cancelled_ = run_cancelled || (!s.in_allowed() && !s.out_allowed() &&
                                        (s.get_scheduled_stop().in_allowed() ||
                                         s.get_scheduled_stop().out_allowed()));
+      p.alerts_ = get_alerts(*s.fr_, std::pair{s, ev_type});
       return p;
     };
 
@@ -330,8 +347,8 @@ api::Itinerary journey_to_response(osr::ways const* w,
 
               auto& leg = itinerary.legs_.emplace_back(api::Leg{
                   .mode_ = to_mode(enter_stop.get_clasz()),
-                  .from_ = to_place(enter_stop, cancelled),
-                  .to_ = to_place(exit_stop, cancelled),
+                  .from_ = to_place(enter_stop, cancelled, n::event_type::kDep),
+                  .to_ = to_place(exit_stop, cancelled, n::event_type::kArr),
                   .duration_ = std::chrono::duration_cast<std::chrono::seconds>(
                                    j_leg.arr_time_ - j_leg.dep_time_)
                                    .count(),
@@ -360,7 +377,7 @@ api::Itinerary journey_to_response(osr::ways const* w,
                   .effectiveFareLegIndex_ = fare_indices.and_then([](auto&& x) {
                     return std::optional{x.effective_fare_leg_idx_};
                   }),
-                  .alerts_ = get_alerts(fr)});
+                  .alerts_ = get_alerts(fr, std::nullopt)});
 
               leg.from_.vertexType_ = api::VertexTypeEnum::TRANSIT;
               leg.from_.departure_ = leg.startTime_;
@@ -383,7 +400,7 @@ api::Itinerary journey_to_response(osr::ways const* w,
               for (auto i = first; i < last; ++i) {
                 auto const stop = fr[i];
                 auto& p = leg.intermediateStops_->emplace_back(
-                    to_place(stop, cancelled));
+                    to_place(stop, cancelled, n::event_type::kDep));
                 p.departure_ = stop.time(n::event_type::kDep);
                 p.scheduledDeparture_ =
                     stop.scheduled_time(n::event_type::kDep);
