@@ -1,13 +1,15 @@
 <script lang="ts">
 	import circle from "@turf/circle";
-	import { validateBBox } from "@turf/helpers";
-	import maplibregl, { CanvasSource, type LngLatBoundsLike, Map } from "maplibre-gl";
+	import { bbox } from "@turf/bbox";
+	import maplibregl, { CanvasSource, type Feature, type LngLatBoundsLike, Map, type TextureFilter } from "maplibre-gl";
 
     interface Pos {
         lat: number;
         lng: number;
         duration: number;
     };
+
+	type boxCoordsType = [[number, number], [number, number], [number, number], [number, number]];
 
 	let {
         map = $bindable(),
@@ -24,7 +26,7 @@
 
 	const factor = 0.06;  // 3.6 kilometers per hour
 	const box2 = $derived(maplibregl.LngLatBounds.convert(bounds ? bounds : [[0, 0], [1, 1]]));
-	const box_coords: [[number, number], [number, number], [number, number], [number, number]] = $derived(
+	const box_coords: boxCoordsType = $derived(
 		[
 			[box2._sw.lng, box2._ne.lat],
 			[box2._ne.lng, box2._ne.lat],
@@ -35,10 +37,6 @@
     function reachable_kilemeters(pos: Pos) {
         return pos.duration * factor;
     }
-    // function is_visible(data: Pos) {
-    //     return box2._sw.lat <= data.lat && data.lat <= box2._ne.lat
-	// 		&& box2._sw.lng <= data.lng && data.lng <= box2._ne.lat;
-    // }
 	function transform(pos: number[], dimensions: number[]) {
 		const x = Math.round(((pos[0] - box2._sw.lng) / (box2._ne.lng - box2._sw.lng)) * dimensions[0]);
 		const y = Math.round(((box2._ne.lat - pos[1]) / (box2._ne.lat - box2._sw.lat)) * dimensions[1]);
@@ -48,7 +46,7 @@
 		isochronesData
             .map((data) => {
                 const r = reachable_kilemeters(data);
-                const c = circle(
+                let c = circle(
                     [data.lng, data.lat],
                     r,
                     {
@@ -56,9 +54,19 @@
                         units: "kilometers",
                     }
                 );
+				c.bbox = bbox(c);
 				return c;
             })
     );
+	type CircleType = typeof circles2[0];
+	function is_visible(circle: CircleType) {
+		if (!circle.bbox) {
+			return false;
+		}
+		const b = circle.bbox;  // [minX, minY, maxX, maxY]
+        return box2._sw.lat <= b[3] && b[1] <= box2._ne.lat
+			&& box2._sw.lng <= b[2] && b[0] <= box2._ne.lat;
+	}
 
 	$effect(() => {
 		if(!map) {
@@ -99,26 +107,40 @@
 		ctx.fillStyle = "yellow";
 		ctx.clearRect(0, 0, dimensions[0], dimensions[1]);
 
-		circles2.forEach(c => {
-			ctx.save();  // Store canvas state
+		circles2
+			.filter(is_visible)
+			.forEach(c => {
+				ctx.save();  // Store canvas state
 
-			// Clip circle
-			ctx.beginPath();
-			const coords = c.geometry.coordinates[0];
-			const start = transform(coords[0], dimensions);
-			ctx.moveTo(start[0], start[1]);
-			for (let i = 0; i < coords.length; ++i) {
-				const pos = transform(coords[i], dimensions);
-				ctx.lineTo(pos[0], pos[1]);
-			}
-			ctx.clip();
+				const b = c.bbox!;  // Existence checked in filter()
+				const min = transform([b[0], b[1]], dimensions);
+				const max = transform([b[2], b[3]], dimensions);
+				const diff_x = max[0] - min[0];
+				const diff_y = max[1] - min[1];
 
-			// Fill map, clipped to circle
-			ctx.fillRect(0, 0, dimensions[0], dimensions[1]);
+				if ( diff_x <2 && diff_y <2 ) {
+					// Draw small rect
+					ctx.fillRect(min[0], min[1], diff_x + 1, diff_y + 1);
+				} else {
+					// Clip circle
+					ctx.beginPath();
+					const coords = c.geometry.coordinates[0];
+					const start = transform(coords[0], dimensions);
+					ctx.moveTo(start[0], start[1]);
+					for (let i = 0; i < coords.length; ++i) {
+						const pos = transform(coords[i], dimensions);
+						ctx.lineTo(pos[0], pos[1]);
+					}
+					ctx.clip();
 
-			// Restore previous state on top
-			ctx.restore();
-		});
+					// Fill map, clipped to circle
+					ctx.fillRect(0, 0, dimensions[0], dimensions[1]);
+				}
+
+				// Restore previous state on top
+				ctx.restore();
+			})
+		;
 	});
 </script>
 
