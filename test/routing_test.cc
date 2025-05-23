@@ -216,35 +216,42 @@ void print_short(std::ostream& out, api::Itinerary const& j) {
       out << "    ";
     }
     first = false;
+
+    auto const print_alerts = [&](auto&& x) {
+      if (x.alerts_) {
+        auto first_alert = true;
+        out << ", alerts=[";
+        for (auto const& a : *x.alerts_) {
+          if (!first_alert) {
+            out << ", ";
+          }
+          first_alert = false;
+          out << "\"" << a.headerText_ << "\"";
+        }
+        out << "]";
+      }
+    };
+
+    auto const print_stop = [&](api::Place const& p) {
+      out << p.stopId_.value_or("-") << " [track=" << p.track_.value_or("-")
+          << ", scheduled_track=" << p.scheduledTrack_.value_or("-")
+          << ", level=" << p.level_;
+      print_alerts(p);
+      out << "]";
+    };
+
     out << "(";
-    out << "from=" << leg.from_.stopId_.value_or("-")
-        << " [track=" << leg.from_.track_.value_or("-")
-        << ", scheduled_track=" << leg.from_.scheduledTrack_.value_or("-")
-        << ", level=" << leg.from_.level_ << "]"
-        << ", to=" << leg.to_.stopId_.value_or("-")
-        << " [track=" << leg.to_.track_.value_or("-")
-        << ", scheduled_track=" << leg.to_.scheduledTrack_.value_or("-")
-        << ", level=" << leg.to_.level_ << "], ";
-    out << "start=";
+    out << "from=";
+    print_stop(leg.from_);
+    out << ", to=";
+    print_stop(leg.to_);
+    out << ", start=";
     format_time(leg.startTime_);
-    out << ", mode=";
-    out << json::serialize(json::value_from(leg.mode_));
-    out << ", trip=\"" << leg.routeShortName_.value_or("-") << "\"";
+    out << ", mode=\"" << leg.mode_ << "\", trip=\""
+        << leg.routeShortName_.value_or("-") << "\"";
     out << ", end=";
     format_time(leg.endTime_);
-
-    if (leg.alerts_) {
-      auto first_alert = true;
-      out << ", alerts=[";
-      for (auto const& a : *leg.alerts_) {
-        if (!first_alert) {
-          out << ", ";
-        }
-        first_alert = false;
-        out << "\"" << a.headerText_ << "\"";
-      }
-      out << "]";
-    }
+    print_alerts(leg);
 
     out << ")";
   }
@@ -279,6 +286,7 @@ struct alert {
     std::optional<std::int32_t> route_type_{};
     std::optional<std::uint32_t> direction_id_{};
     std::optional<trip_descriptor> trip_{};
+    std::optional<std::string> stop_id_{};
   };
   std::string header_;
   std::string description_;
@@ -388,6 +396,9 @@ transit_realtime::FeedMessage to_feed_msg(
                 if (entity.route_type_) {
                   ie->set_route_type(*entity.route_type_);
                 }
+                if (entity.stop_id_) {
+                  ie->set_stop_id(*entity.stop_id_);
+                }
                 if (entity.trip_) {
                   set_trip(ie->mutable_trip(), *entity.trip_);
                 }
@@ -452,25 +463,37 @@ TEST(motis, routing) {
     ioc.run();
   }
 
-  auto const stats = n::rt::gtfsrt_update_msg(
-      *d.tt_, *d.rt_->rtt_, n::source_idx_t{0}, "test",
-      to_feed_msg(
-          {trip_update{.trip_ = {.trip_id_ = "ICE",
-                                 .start_time_ = {"03:35:00"},
-                                 .date_ = {"20190501"}},
-                       .stop_updates_ = {{.stop_id_ = "FFM_12",
-                                          .seq_ = std::optional{1U},
-                                          .ev_type_ = n::event_type::kArr,
-                                          .delay_minutes_ = 10,
-                                          .stop_assignment_ = "FFM_12"}}},
-           alert{.header_ = "Hello",
-                 .description_ = "World",
-                 .entities_ = {{.trip_ = {{.trip_id_ = "ICE",
-                                           .start_time_ = {"03:35:00"},
-                                           .date_ = {"20190501"}}}}}}},
-          date::sys_days{2019_y / May / 1} + 9h));
+  auto const stats =
+      n::rt::gtfsrt_update_msg(
+          *d.tt_, *d.rt_->rtt_, n::source_idx_t{0}, "test",
+          to_feed_msg({trip_update{
+                           .trip_ = {.trip_id_ = "ICE",
+                                     .start_time_ = {"03:35:00"},
+                                     .date_ = {"20190501"}},
+                           .stop_updates_ = {{.stop_id_ = "FFM_12",
+                                              .seq_ = std::optional{1U},
+                                              .ev_type_ = n::event_type::kArr,
+                                              .delay_minutes_ = 10,
+                                              .stop_assignment_ = "FFM_12"}}},
+                       alert{
+                           .header_ = "Yeah",
+                           .description_ = "Yeah!!",
+                           .entities_ = {{.trip_ =
+                                              {
+                                                  {.trip_id_ = "ICE",
+                                                   .start_time_ = {"03:35:00"},
+                                                   .date_ = {"20190501"}},
+                                              },
+                                          .stop_id_ = "DA"}}},
+                       alert{.header_ = "Hello",
+                             .description_ = "World",
+                             .entities_ =
+                                 {{.trip_ = {{.trip_id_ = "ICE",
+                                              .start_time_ = {"03:35:00"},
+                                              .date_ = {"20190501"}}}}}}},
+                      date::sys_days{2019_y / May / 1} + 9h));
   EXPECT_EQ(1U, stats.total_entities_success_);
-  EXPECT_EQ(1U, stats.alert_total_resolve_success_);
+  EXPECT_EQ(2U, stats.alert_total_resolve_success_);
 
   auto const routing = utl::init_from<ep::routing>(d).value();
   EXPECT_EQ(d.rt_->rtt_.get(), routing.rt_->rtt_.get());
@@ -509,7 +532,7 @@ TEST(motis, routing) {
     (from=- [track=-, scheduled_track=-, level=0], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 01:25, mode="WALK", trip="-", end=2019-05-01 01:25),
     (from=- [track=-, scheduled_track=-, level=0], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 01:25, mode="RENTAL", trip="-", end=2019-05-01 01:26),
     (from=- [track=-, scheduled_track=-, level=0], to=test_DA_10 [track=10, scheduled_track=10, level=-1], start=2019-05-01 01:26, mode="WALK", trip="-", end=2019-05-01 01:34),
-    (from=test_DA_10 [track=10, scheduled_track=10, level=-1], to=test_FFM_12 [track=12, scheduled_track=10, level=0], start=2019-05-01 01:35, mode="HIGHSPEED_RAIL", trip="ICE", end=2019-05-01 01:55, alerts=["Hello"]),
+    (from=test_DA_10 [track=10, scheduled_track=10, level=-1, alerts=["Yeah"]], to=test_FFM_12 [track=12, scheduled_track=10, level=0], start=2019-05-01 01:35, mode="HIGHSPEED_RAIL", trip="ICE", end=2019-05-01 01:55, alerts=["Hello"]),
     (from=test_FFM_12 [track=12, scheduled_track=10, level=0], to=test_de:6412:10:6:1 [track=U4, scheduled_track=U4, level=-2], start=2019-05-01 01:55, mode="WALK", trip="-", end=2019-05-01 01:59),
     (from=test_de:6412:10:6:1 [track=U4, scheduled_track=U4, level=-2], to=test_FFM_HAUPT_U [track=-, scheduled_track=-, level=-4], start=2019-05-01 02:05, mode="SUBWAY", trip="U4", end=2019-05-01 02:10),
     (from=test_FFM_HAUPT_U [track=-, scheduled_track=-, level=-4], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 02:10, mode="WALK", trip="-", end=2019-05-01 02:15)
@@ -622,7 +645,7 @@ TEST(motis, routing) {
       EXPECT_EQ(
           R"(date=2019-05-01, start=01:34, end=02:40, duration=01:20, transfers=0, legs=[
     (from=- [track=-, scheduled_track=-, level=0], to=test_DA_10 [track=10, scheduled_track=10, level=-1], start=2019-05-01 01:34, mode="WALK", trip="-", end=2019-05-01 01:35),
-    (from=test_DA_10 [track=10, scheduled_track=10, level=-1], to=test_FFM_12 [track=12, scheduled_track=10, level=0], start=2019-05-01 01:35, mode="HIGHSPEED_RAIL", trip="ICE", end=2019-05-01 01:55, alerts=["Hello"]),
+    (from=test_DA_10 [track=10, scheduled_track=10, level=-1, alerts=["Yeah"]], to=test_FFM_12 [track=12, scheduled_track=10, level=0], start=2019-05-01 01:35, mode="HIGHSPEED_RAIL", trip="ICE", end=2019-05-01 01:55, alerts=["Hello"]),
     (from=test_FFM_12 [track=12, scheduled_track=10, level=0], to=- [track=-, scheduled_track=-, level=-3], start=2019-05-01 01:55, mode="WALK", trip="-", end=2019-05-01 02:40)
 ])",
           itineraries_to_str(plan_response));
@@ -664,7 +687,7 @@ TEST(motis, routing) {
       EXPECT_EQ(
           R"(date=2019-05-01, start=01:34, end=02:40, duration=01:10, transfers=0, legs=[
     (from=- [track=-, scheduled_track=-, level=0], to=test_DA_10 [track=10, scheduled_track=10, level=-1], start=2019-05-01 01:34, mode="WALK", trip="-", end=2019-05-01 01:35),
-    (from=test_DA_10 [track=10, scheduled_track=10, level=-1], to=test_FFM_12 [track=12, scheduled_track=10, level=0], start=2019-05-01 01:35, mode="HIGHSPEED_RAIL", trip="ICE", end=2019-05-01 02:30, alerts=["Hello"]),
+    (from=test_DA_10 [track=10, scheduled_track=10, level=-1, alerts=["Yeah"]], to=test_FFM_12 [track=12, scheduled_track=10, level=0], start=2019-05-01 01:35, mode="HIGHSPEED_RAIL", trip="ICE", end=2019-05-01 02:30, alerts=["Hello"]),
     (from=test_FFM_12 [track=12, scheduled_track=10, level=0], to=- [track=-, scheduled_track=-, level=-3], start=2019-05-01 02:30, mode="WALK", trip="-", end=2019-05-01 02:40)
 ])",
           itineraries_to_str(plan_response));
@@ -725,7 +748,7 @@ TEST(motis, routing) {
     EXPECT_EQ(
         R"(date=2019-05-01, start=01:29, end=02:28, duration=01:03, transfers=1, legs=[
     (from=- [track=-, scheduled_track=-, level=0], to=test_DA_10 [track=10, scheduled_track=10, level=-1], start=2019-05-01 01:29, mode="WALK", trip="-", end=2019-05-01 01:35),
-    (from=test_DA_10 [track=10, scheduled_track=10, level=-1], to=test_FFM_12 [track=12, scheduled_track=10, level=0], start=2019-05-01 01:35, mode="HIGHSPEED_RAIL", trip="ICE", end=2019-05-01 01:55, alerts=["Hello"]),
+    (from=test_DA_10 [track=10, scheduled_track=10, level=-1, alerts=["Yeah"]], to=test_FFM_12 [track=12, scheduled_track=10, level=0], start=2019-05-01 01:35, mode="HIGHSPEED_RAIL", trip="ICE", end=2019-05-01 01:55, alerts=["Hello"]),
     (from=test_FFM_12 [track=12, scheduled_track=10, level=0], to=test_FFM_101 [track=101, scheduled_track=101, level=-3], start=2019-05-01 01:55, mode="WALK", trip="-", end=2019-05-01 02:01),
     (from=test_FFM_101 [track=101, scheduled_track=101, level=-3], to=test_FFM_HAUPT_S [track=-, scheduled_track=-, level=-3], start=2019-05-01 02:15, mode="METRO", trip="S3", end=2019-05-01 02:20),
     (from=test_FFM_HAUPT_S [track=-, scheduled_track=-, level=-3], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 02:20, mode="WALK", trip="-", end=2019-05-01 02:28)
@@ -745,7 +768,7 @@ TEST(motis, routing) {
     EXPECT_EQ(
         R"(date=2019-05-01, start=01:25, end=02:15, duration=00:50, transfers=1, legs=[
     (from=- [track=-, scheduled_track=-, level=0], to=test_DA_10 [track=10, scheduled_track=10, level=-1], start=2019-05-01 01:25, mode="WALK", trip="-", end=2019-05-01 01:29),
-    (from=test_DA_10 [track=10, scheduled_track=10, level=-1], to=test_FFM_12 [track=12, scheduled_track=10, level=0], start=2019-05-01 01:35, mode="HIGHSPEED_RAIL", trip="ICE", end=2019-05-01 01:55, alerts=["Hello"]),
+    (from=test_DA_10 [track=10, scheduled_track=10, level=-1, alerts=["Yeah"]], to=test_FFM_12 [track=12, scheduled_track=10, level=0], start=2019-05-01 01:35, mode="HIGHSPEED_RAIL", trip="ICE", end=2019-05-01 01:55, alerts=["Hello"]),
     (from=test_FFM_12 [track=12, scheduled_track=10, level=0], to=test_de:6412:10:6:1 [track=U4, scheduled_track=U4, level=-2], start=2019-05-01 01:55, mode="WALK", trip="-", end=2019-05-01 01:59),
     (from=test_de:6412:10:6:1 [track=U4, scheduled_track=U4, level=-2], to=test_FFM_HAUPT_U [track=-, scheduled_track=-, level=-4], start=2019-05-01 02:05, mode="SUBWAY", trip="U4", end=2019-05-01 02:10),
     (from=test_FFM_HAUPT_U [track=-, scheduled_track=-, level=-4], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 02:10, mode="WALK", trip="-", end=2019-05-01 02:15)
