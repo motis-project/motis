@@ -410,17 +410,9 @@ transit_realtime::FeedMessage to_feed_msg(
   return msg;
 }
 
-std::string itineraries_to_str(api::plan_response const& plan_response) {
+std::string to_str(std::vector<api::Itinerary> const& x) {
   auto ss = std::stringstream{};
-  for (auto const& j : plan_response.itineraries_) {
-    print_short(ss, j);
-  }
-  return ss.str();
-}
-
-std::string direct_to_str(api::plan_response const& plan_response) {
-  auto ss = std::stringstream{};
-  for (auto const& j : plan_response.direct_) {
+  for (auto const& j : x) {
     print_short(ss, j);
   }
   return ss.str();
@@ -500,7 +492,7 @@ TEST(motis, routing) {
 
   // Route direct with GBFS.
   {
-    auto const plan_response = routing(
+    auto const res = routing(
         "?fromPlace=49.87526849014631,8.62771903392948"
         "&toPlace=49.87253873915287,8.629724234688751"
         "&time=2019-05-01T01:25Z"
@@ -513,12 +505,12 @@ TEST(motis, routing) {
     (from=- [track=-, scheduled_track=-, level=0], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 01:28, mode="RENTAL", trip="-", end=2019-05-01 01:29),
     (from=- [track=-, scheduled_track=-, level=0], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 01:29, mode="WALK", trip="-", end=2019-05-01 01:35)
 ])",
-        direct_to_str(plan_response));
+        to_str(res.direct_));
   }
 
   // Route with GBFS.
   {
-    auto const plan_response = routing(
+    auto const res = routing(
         "?fromPlace=49.875308,8.6276673"
         "&toPlace=50.11347,8.67664"
         "&time=2019-05-01T01:25Z"
@@ -526,7 +518,6 @@ TEST(motis, routing) {
         "&useRoutedTransfers=true"
         "&preTransitModes=WALK,RENTAL");
 
-    std::cout << "@@\n" << itineraries_to_str(plan_response) << std::endl;
     EXPECT_EQ(
         R"(date=2019-05-01, start=01:25, end=02:15, duration=00:50, transfers=1, legs=[
     (from=- [track=-, scheduled_track=-, level=0], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 01:25, mode="WALK", trip="-", end=2019-05-01 01:25),
@@ -537,7 +528,7 @@ TEST(motis, routing) {
     (from=test_de:6412:10:6:1 [track=U4, scheduled_track=U4, level=-2], to=test_FFM_HAUPT_U [track=-, scheduled_track=-, level=-4], start=2019-05-01 02:05, mode="SUBWAY", trip="U4", end=2019-05-01 02:10),
     (from=test_FFM_HAUPT_U [track=-, scheduled_track=-, level=-4], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 02:10, mode="WALK", trip="-", end=2019-05-01 02:15)
 ])",
-        itineraries_to_str(plan_response));
+        to_str(res.itineraries_));
   }
 
   // Routing with temporary blocked paths due to elevator being out of service
@@ -546,7 +537,7 @@ TEST(motis, routing) {
   {
     // Blocked near fromPlace, arriveBy=false, pass before blocked
     {
-      auto const plan_response = routing(
+      auto const res = routing(
           "?fromPlace=50.1040763,8.6586978"
           "&toPlace=50.1132737,8.6767235"
           "&time=2019-05-01T01:15Z"
@@ -563,11 +554,12 @@ TEST(motis, routing) {
     (from=test_FFM_101 [track=101, scheduled_track=101, level=-3], to=test_FFM_HAUPT_S [track=-, scheduled_track=-, level=-3], start=2019-05-01 02:15, mode="METRO", trip="S3", end=2019-05-01 02:20),
     (from=test_FFM_HAUPT_S [track=-, scheduled_track=-, level=-3], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 02:20, mode="WALK", trip="-", end=2019-05-01 02:28)
 ])",
-          itineraries_to_str(plan_response));
+          to_str(res.itineraries_));
     }
+
     // Blocked near fromPlace, arriveBy=false, temporary blocked / must wait
     {
-      auto const plan_response = routing(
+      auto const res = routing(
           "?fromPlace=50.1040763,8.6586978"
           "&toPlace=50.1132737,8.6767235"
           "&time=2019-05-01T01:20Z"
@@ -584,11 +576,12 @@ TEST(motis, routing) {
     (from=test_FFM_101 [track=101, scheduled_track=101, level=-3], to=test_FFM_HAUPT_S [track=-, scheduled_track=-, level=-3], start=2019-05-01 03:15, mode="METRO", trip="S3", end=2019-05-01 03:20),
     (from=test_FFM_HAUPT_S [track=-, scheduled_track=-, level=-3], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 03:20, mode="WALK", trip="-", end=2019-05-01 03:28)
 ])",
-          itineraries_to_str(plan_response));
+          to_str(res.itineraries_));
     }
+
     // Blocked near fromPlace, arriveBy=true, must pass before blocked
     {
-      auto const plan_response = routing(
+      auto const res = routing(
           "?fromPlace=50.1040763,8.6586978"
           "&toPlace=50.1132737,8.6767235"
           "&time=2019-05-01T02:30Z"
@@ -605,11 +598,12 @@ TEST(motis, routing) {
     (from=test_FFM_101 [track=101, scheduled_track=101, level=-3], to=test_FFM_HAUPT_S [track=-, scheduled_track=-, level=-3], start=2019-05-01 02:15, mode="METRO", trip="S3", end=2019-05-01 02:20),
     (from=test_FFM_HAUPT_S [track=-, scheduled_track=-, level=-3], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 02:20, mode="WALK", trip="-", end=2019-05-01 02:28)
 ])",
-          itineraries_to_str(plan_response));
+          to_str(res.itineraries_));
     }
+
     // Blocked near fromPlace, arriveBy=true, can pass after blocked
     {
-      auto const plan_response = routing(
+      auto const res = routing(
           "?fromPlace=50.1040763,8.6586978"
           "&toPlace=50.1132737,8.6767235"
           "&time=2019-05-01T03:30Z"
@@ -626,12 +620,12 @@ TEST(motis, routing) {
     (from=test_FFM_101 [track=101, scheduled_track=101, level=-3], to=test_FFM_HAUPT_S [track=-, scheduled_track=-, level=-3], start=2019-05-01 03:15, mode="METRO", trip="S3", end=2019-05-01 03:20),
     (from=test_FFM_HAUPT_S [track=-, scheduled_track=-, level=-3], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 03:20, mode="WALK", trip="-", end=2019-05-01 03:28)
 ])",
-          itineraries_to_str(plan_response));
+          to_str(res.itineraries_));
     }
 
     // Blocked near toPlace, arriveBy=true, must pass before blocked
     {
-      auto const plan_response = routing(
+      auto const res = routing(
           "?fromPlace=49.87336,8.62926"
           "&toPlace=50.106420,8.660708,-3"
           "&time=2019-05-01T02:54Z"
@@ -648,11 +642,12 @@ TEST(motis, routing) {
     (from=test_DA_10 [track=10, scheduled_track=10, level=-1, alerts=["Yeah"]], to=test_FFM_12 [track=12, scheduled_track=10, level=0], start=2019-05-01 01:35, mode="HIGHSPEED_RAIL", trip="ICE", end=2019-05-01 01:55, alerts=["Hello"]),
     (from=test_FFM_12 [track=12, scheduled_track=10, level=0], to=- [track=-, scheduled_track=-, level=-3], start=2019-05-01 01:55, mode="WALK", trip="-", end=2019-05-01 02:40)
 ])",
-          itineraries_to_str(plan_response));
+          to_str(res.itineraries_));
     }
+
     // Blocked near toPlace, arriveBy=true, can pass after blocked
     {
-      auto const plan_response = routing(
+      auto const res = routing(
           "?fromPlace=49.87336,8.62926"
           "&toPlace=50.106420,8.660708,-3"
           "&time=2019-05-01T02:55Z"
@@ -669,11 +664,12 @@ TEST(motis, routing) {
     (from=test_DA_10 [track=10, scheduled_track=10, level=-1], to=test_FFM_10 [track=10, scheduled_track=10, level=0], start=2019-05-01 02:35, mode="HIGHSPEED_RAIL", trip="ICE", end=2019-05-01 02:45),
     (from=test_FFM_10 [track=10, scheduled_track=10, level=0], to=- [track=-, scheduled_track=-, level=-3], start=2019-05-01 02:45, mode="WALK", trip="-", end=2019-05-01 02:55)
 ])",
-          itineraries_to_str(plan_response));
+          to_str(res.itineraries_));
     }
+
     // Blocked near toPlace, arriveBy=false, temporary blocked / must wait
     {
-      auto const plan_response = routing(
+      auto const res = routing(
           "?fromPlace=49.87336,8.62926"
           "&toPlace=50.106420,8.660708,-3"
           "&time=2019-05-01T01:30Z"
@@ -690,11 +686,12 @@ TEST(motis, routing) {
     (from=test_DA_10 [track=10, scheduled_track=10, level=-1, alerts=["Yeah"]], to=test_FFM_12 [track=12, scheduled_track=10, level=0], start=2019-05-01 01:35, mode="HIGHSPEED_RAIL", trip="ICE", end=2019-05-01 02:30, alerts=["Hello"]),
     (from=test_FFM_12 [track=12, scheduled_track=10, level=0], to=- [track=-, scheduled_track=-, level=-3], start=2019-05-01 02:30, mode="WALK", trip="-", end=2019-05-01 02:40)
 ])",
-          itineraries_to_str(plan_response));
+          to_str(res.itineraries_));
     }
+
     // Blocked near toPlace, arriveBy=false, can pass after blocked
     {
-      auto const plan_response = routing(
+      auto const res = routing(
           "?fromPlace=49.87336,8.62926"
           "&toPlace=50.106420,8.660708,-3"
           "&time=2019-05-01T01:40Z"
@@ -711,12 +708,12 @@ TEST(motis, routing) {
     (from=test_DA_10 [track=10, scheduled_track=10, level=-1], to=test_FFM_10 [track=10, scheduled_track=10, level=0], start=2019-05-01 02:35, mode="HIGHSPEED_RAIL", trip="ICE", end=2019-05-01 02:45),
     (from=test_FFM_10 [track=10, scheduled_track=10, level=0], to=- [track=-, scheduled_track=-, level=-3], start=2019-05-01 02:45, mode="WALK", trip="-", end=2019-05-01 02:55)
 ])",
-          itineraries_to_str(plan_response));
+          to_str(res.itineraries_));
     }
 
     // Direct routing, arriveBy=false, pass before blocked
     {
-      auto const plan_response = routing(
+      auto const res = routing(
           "?fromPlace=50.10411515,8.658776549999999"
           "&toPlace=50.106420,8.660708,-3"
           "&time=2019-05-01T01:15Z"
@@ -731,13 +728,13 @@ TEST(motis, routing) {
           R"(date=2019-05-01, start=01:15, end=01:33, duration=00:18, transfers=0, legs=[
     (from=- [track=-, scheduled_track=-, level=0], to=- [track=-, scheduled_track=-, level=-3], start=2019-05-01 01:15, mode="WALK", trip="-", end=2019-05-01 01:33)
 ])",
-          direct_to_str(plan_response));
+          to_str(res.direct_));
     }
   }
 
   // Route with wheelchair.
   {
-    auto const plan_response = routing(
+    auto const res = routing(
         "?fromPlace=49.87263,8.63127"
         "&toPlace=50.11347,8.67664"
         "&time=2019-05-01T01:25Z"
@@ -753,12 +750,12 @@ TEST(motis, routing) {
     (from=test_FFM_101 [track=101, scheduled_track=101, level=-3], to=test_FFM_HAUPT_S [track=-, scheduled_track=-, level=-3], start=2019-05-01 02:15, mode="METRO", trip="S3", end=2019-05-01 02:20),
     (from=test_FFM_HAUPT_S [track=-, scheduled_track=-, level=-3], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 02:20, mode="WALK", trip="-", end=2019-05-01 02:28)
 ])",
-        itineraries_to_str(plan_response));
+        to_str(res.itineraries_));
   }
 
   // Route without wheelchair.
   {
-    auto const plan_response = routing(
+    auto const res = routing(
         "?fromPlace=49.87263,8.63127"
         "&toPlace=50.11347,8.67664"
         "&time=2019-05-01T01:25Z"
@@ -773,6 +770,6 @@ TEST(motis, routing) {
     (from=test_de:6412:10:6:1 [track=U4, scheduled_track=U4, level=-2], to=test_FFM_HAUPT_U [track=-, scheduled_track=-, level=-4], start=2019-05-01 02:05, mode="SUBWAY", trip="U4", end=2019-05-01 02:10),
     (from=test_FFM_HAUPT_U [track=-, scheduled_track=-, level=-4], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 02:10, mode="WALK", trip="-", end=2019-05-01 02:15)
 ])",
-        itineraries_to_str(plan_response));
+        to_str(res.itineraries_));
   }
 }
