@@ -290,10 +290,11 @@ struct products_routing_data {
                         compressed_routing_data const& compressed);
 
   osr::sharing_data get_sharing_data(
-      osr::node_idx_t::value_t const additional_node_offset) const {
-    return {.start_allowed_ = start_allowed_,
-            .end_allowed_ = end_allowed_,
-            .through_allowed_ = through_allowed_,
+      osr::node_idx_t::value_t const additional_node_offset,
+      bool ignore_return_constraints) const {
+    return {.start_allowed_ = &start_allowed_,
+            .end_allowed_ = ignore_return_constraints ? nullptr : &end_allowed_,
+            .through_allowed_ = &through_allowed_,
             .additional_node_offset_ = additional_node_offset,
             .additional_node_coordinates_ =
                 compressed_.additional_node_coordinates_,
@@ -365,6 +366,7 @@ struct gbfs_provider {
   std::vector<vehicle_status> vehicle_status_;
   geofencing_zones geofencing_zones_{};
   geofencing_restrictions default_restrictions_{};
+  std::optional<return_constraint> default_return_constraint_{};
 
   vector_map<gbfs_products_idx_t, provider_products> products_;
   bool has_vehicles_to_rent_{};
@@ -380,6 +382,7 @@ struct provider_feed {
   headers_t headers_{};
   std::optional<std::filesystem::path> dir_{};
   geofencing_restrictions default_restrictions_{};
+  std::optional<return_constraint> default_return_constraint_{};
 };
 
 struct aggregated_feed {

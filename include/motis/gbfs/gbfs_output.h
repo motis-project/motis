@@ -7,7 +7,8 @@ namespace motis::gbfs {
 struct gbfs_output final : public output {
   gbfs_output(osr::ways const&,
               gbfs::gbfs_routing_data&,
-              gbfs::gbfs_products_ref);
+              gbfs::gbfs_products_ref,
+              bool ignore_rental_return_constraints);
   ~gbfs_output() override;
 
   api::ModeEnum get_mode() const override;

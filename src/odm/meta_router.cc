@@ -139,7 +139,13 @@ meta_router::meta_router(ep::routing const& r,
                                   : query_.preTransitRentalProviders_},
       dest_rental_providers_{query_.arriveBy_
                                  ? query_.preTransitRentalProviders_
-                                 : query_.postTransitRentalProviders_} {
+                                 : query_.postTransitRentalProviders_},
+      start_ignore_rental_return_constraints_{
+          query.arriveBy_ ? query_.ignorePreTransitRentalReturnConstraints_
+                          : query_.ignorePostTransitRentalReturnConstraints_},
+      dest_ignore_rental_return_constraints_{
+          query.arriveBy_ ? query_.ignorePostTransitRentalReturnConstraints_
+                          : query_.ignorePreTransitRentalReturnConstraints_} {
   if (ep::blocked.get() == nullptr && r.w_ != nullptr) {
     ep::blocked.reset(new osr::bitvec<osr::node_idx_t>{r.w_->n_nodes()});
   }
@@ -167,7 +173,7 @@ n::duration_t init_direct(std::vector<direct_ride>& direct_rides,
 
   auto [_, odm_direct_duration] = r.route_direct(
       e, gbfs, from_p, to_p, {api::ModeEnum::CAR}, std::nullopt, std::nullopt,
-      std::nullopt, intvl.from_, query.pedestrianProfile_,
+      std::nullopt, false, intvl.from_, query.pedestrianProfile_,
       query.elevationCosts_, kODMMaxDuration, query.maxMatchingDistance_,
       kODMDirectFactor, api_version);
 
@@ -218,7 +224,7 @@ void init_pt(std::vector<n::routing::start>& rides,
   }
 
   auto offsets = r.get_offsets(l, dir, {api::ModeEnum::ODM}, std::nullopt,
-                               std::nullopt, std::nullopt,
+                               std::nullopt, std::nullopt, false,
                                query.pedestrianProfile_, query.elevationCosts_,
                                max, query.maxMatchingDistance_, gbfs_rd);
 
@@ -596,24 +602,24 @@ api::plan_response meta_router::run() {
 
   auto const qf = query_factory{
       .base_query_ = get_base_query(context_intvl),
-      .start_walk_ =
-          r_.get_offsets(start_,
-                         query_.arriveBy_ ? osr::direction::kBackward
-                                          : osr::direction::kForward,
-                         start_modes_, start_form_factors_,
-                         start_propulsion_types_, start_rental_providers_,
-                         query_.pedestrianProfile_, query_.elevationCosts_,
-                         std::chrono::seconds{query_.maxPreTransitTime_},
-                         query_.maxMatchingDistance_, gbfs_rd_),
-      .dest_walk_ =
-          r_.get_offsets(dest_,
-                         query_.arriveBy_ ? osr::direction::kForward
-                                          : osr::direction::kBackward,
-                         dest_modes_, dest_form_factors_,
-                         dest_propulsion_types_, dest_rental_providers_,
-                         query_.pedestrianProfile_, query_.elevationCosts_,
-                         std::chrono::seconds{query_.maxPostTransitTime_},
-                         query_.maxMatchingDistance_, gbfs_rd_),
+      .start_walk_ = r_.get_offsets(
+          start_,
+          query_.arriveBy_ ? osr::direction::kBackward
+                           : osr::direction::kForward,
+          start_modes_, start_form_factors_, start_propulsion_types_,
+          start_rental_providers_, start_ignore_rental_return_constraints_,
+          query_.pedestrianProfile_, query_.elevationCosts_,
+          std::chrono::seconds{query_.maxPreTransitTime_},
+          query_.maxMatchingDistance_, gbfs_rd_),
+      .dest_walk_ = r_.get_offsets(
+          dest_,
+          query_.arriveBy_ ? osr::direction::kForward
+                           : osr::direction::kBackward,
+          dest_modes_, dest_form_factors_, dest_propulsion_types_,
+          dest_rental_providers_, dest_ignore_rental_return_constraints_,
+          query_.pedestrianProfile_, query_.elevationCosts_,
+          std::chrono::seconds{query_.maxPostTransitTime_},
+          query_.maxMatchingDistance_, gbfs_rd_),
       .td_start_walk_ = r_.get_td_offsets(
           e_, start_,
           query_.arriveBy_ ? osr::direction::kBackward
@@ -748,7 +754,9 @@ api::plan_response meta_router::run() {
                     query_.pedestrianProfile_, query_.elevationCosts_,
                     query_.detailedTransfers_, query_.withFares_,
                     r_.config_.timetable_.value().max_matching_distance_,
-                    query_.maxMatchingDistance_, api_version_);
+                    query_.maxMatchingDistance_, api_version_,
+                    query_.ignorePreTransitRentalReturnConstraints_,
+                    query_.ignorePostTransitRentalReturnConstraints_);
               }),
           .previousPageCursor_ =
               fmt::format("EARLIER|{}", to_seconds(pt_result.interval_.from_)),

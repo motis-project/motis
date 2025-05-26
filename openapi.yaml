@@ -443,6 +443,48 @@ paths:
             items:
               type: string
 
+        - name: ignoreDirectRentalReturnConstraints
+          in: query
+          required: false
+          description: |
+            Experimental. Expect unannounced breaking changes (without version bumps).
+            
+            Optional. Default is `false`.
+            
+            If set to `true`, the routing will ignore rental return constraints for direct connections,
+            allowing the rental vehicle to be parked anywhere.
+          schema:
+            type: boolean
+            default: false
+
+        - name: ignorePreTransitRentalReturnConstraints
+          in: query
+          required: false
+          description: |
+            Experimental. Expect unannounced breaking changes (without version bumps).
+            
+            Optional. Default is `false`.
+            
+            If set to `true`, the routing will ignore rental return constraints for the part from the `from` coordinate to the first transit stop,
+            allowing the rental vehicle to be parked anywhere.
+          schema:
+            type: boolean
+            default: false
+
+        - name: ignorePostTransitRentalReturnConstraints
+          in: query
+          required: false
+          description: |
+            Experimental. Expect unannounced breaking changes (without version bumps).
+            
+            Optional. Default is `false`.
+            
+            If set to `true`, the routing will ignore rental return constraints for the part from the last transit stop to the `to` coordinate,
+            allowing the rental vehicle to be parked anywhere.
+          schema:
+            type: boolean
+            default: false
+
         - name: numItineraries
           in: query
           required: false

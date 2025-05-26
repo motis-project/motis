@@ -59,7 +59,7 @@ api::Itinerary trip::operator()(boost::urls::url_view const& url) const {
       tt_location{to_l.get_location_idx()}, cache, &blocked,
       api::PedestrianProfileEnum::FOOT, api::ElevationCostsEnum::NONE, false,
       false, config_.timetable_.value().max_matching_distance_,
-      kMaxMatchingDistance, api_version);
+      kMaxMatchingDistance, api_version, false, false);
 }
 
 }  // namespace motis::ep

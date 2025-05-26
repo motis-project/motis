@@ -1,1 +1,1 @@
-export const LEVEL_MIN_ZOOM = 17
+export const LEVEL_MIN_ZOOM = 17;
