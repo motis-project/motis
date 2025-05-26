@@ -216,13 +216,14 @@
 			clearTimeout(searchDebounceTimer);
 			searchDebounceTimer = setTimeout(() => {
 				const base = plan(baseQuery).then(updateStartDest(from, to));
+				const q = baseQuery.query;
 				baseResponse = base;
 				routingResponses = [base];
 				pushStateWithQueryString(
 					{
-						...baseQuery.query,
-						fromName: from.label,
-						toName: to.label
+						...q,
+						...(q.fromPlace == from.label ? {} : { fromName: from.label }),
+						...(q.toPlace == to.label ? {} : { toName: to.label })
 					},
 					{},
 					true
