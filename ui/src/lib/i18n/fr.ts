@@ -42,13 +42,13 @@ const translations: Translations = {
 	roundtripStationReturnConstraint: 'Le véhicule doit être retourné à la station de départ.',
 	noItinerariesFound: 'Aucun itinéraire trouvé.',
 	advancedSearchOptions: 'Options',
-	selectModes: 'Sélectionner les modes de transport en commun',
+	selectTransitModes: 'Sélectionner les modes de transport en commun',
 	defaultSelectedModes: 'Tous les transports en commun',
 	selectElevationCosts: 'Évitez les pentes abruptes.', // TODO Online translated
 	wheelchair: 'Correspondances accessibles',
 	bikeRental: 'Utiliser véhicules partagés',
-	bikeCarriage: 'Transport vélo',
-	carCarriage: 'Transport voiture',
+	requireBikeTransport: 'Transport vélo',
+	requireCarTransport: 'Transport voiture',
 	default: 'Faire défaut',
 	timetableSources: 'Sources des horaires',
 	tripCancelled: 'Voyage annulé',
@@ -91,7 +91,14 @@ const translations: Translations = {
 		NONE: 'Pas de détours',
 		LOW: 'Petits détours',
 		HIGH: 'Grands détours'
-	}
+	},
+	RENTAL_BICYCLE: 'Vélo partagé',
+	RENTAL_CARGO_BICYCLE: 'Vélo cargo partagé',
+	RENTAL_CAR: 'Voiture partagée',
+	RENTAL_MOPED: 'Mobylette partagée',
+	RENTAL_SCOOTER_STANDING: 'Trottinette debout partagée',
+	RENTAL_SCOOTER_SEATED: 'Trottinette assise partagée',
+	RENTAL_OTHER: 'Autre véhicule partagé'
 };
 
 export default translations;
