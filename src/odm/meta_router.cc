@@ -755,7 +755,8 @@ api::plan_response meta_router::run() {
                     query_.detailedTransfers_, query_.withFares_,
                     r_.config_.timetable_.value().max_matching_distance_,
                     query_.maxMatchingDistance_, api_version_,
-                    query_.ignorePreTransitRentalReturnConstraints_, query_.ignorePostTransitRentalReturnConstraints_);
+                    query_.ignorePreTransitRentalReturnConstraints_,
+                    query_.ignorePostTransitRentalReturnConstraints_);
               }),
           .previousPageCursor_ =
               fmt::format("EARLIER|{}", to_seconds(pt_result.interval_.from_)),
