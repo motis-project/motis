@@ -55,6 +55,7 @@
 		type PrePostDirectMode
 	} from '$lib/Modes';
 	import { defaultQuery, omitDefaults } from '$lib/defaults';
+	import { LEVEL_MIN_ZOOM } from '$lib/constants';
 
 	const urlParams = browser ? new URLSearchParams(window.location.search) : undefined;
 	const getUrlArray = (key: string, defaultValue?: string[]): string[] => {
@@ -318,7 +319,7 @@
 	<Button
 		variant="outline"
 		onclick={() => {
-			from = posToLocation(e.lngLat, level);
+			from = posToLocation(e.lngLat, zoom > LEVEL_MIN_ZOOM ? level : undefined);
 			fromMarker?.setLngLat(from.value.match!);
 			close();
 		}}
@@ -328,7 +329,7 @@
 	<Button
 		variant="outline"
 		onclick={() => {
-			to = posToLocation(e.lngLat, level);
+			to = posToLocation(e.lngLat, zoom > LEVEL_MIN_ZOOM ? level : undefined);
 			toMarker?.setLngLat(to.value.match!);
 			close();
 		}}

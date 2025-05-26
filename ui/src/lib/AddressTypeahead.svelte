@@ -77,7 +77,7 @@
 
 		const coordinate = inputValue.match(COORD_REGEX);
 		if (coordinate) {
-			selected = posToLocation([Number(coordinate[3]), Number(coordinate[1])], 0);
+			selected = posToLocation([Number(coordinate[3]), Number(coordinate[1])]);
 			items = [];
 			return;
 		}
