@@ -705,7 +705,8 @@ struct gbfs_update {
       return geofencing_restrictions{
           .ride_start_allowed_ = r.ride_start_allowed_,
           .ride_end_allowed_ = r.ride_end_allowed_,
-          .ride_through_allowed_ = r.ride_through_allowed_};
+          .ride_through_allowed_ = r.ride_through_allowed_,
+          .station_parking_ = r.station_parking_};
     };
 
     if (auto const it = c_.default_restrictions_.find(id);

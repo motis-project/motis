@@ -71,12 +71,13 @@ struct osr_mapping {
 
       if (prod.return_constraint_ == return_constraint::kAnyStation &&
           (prod.known_return_constraint_ ||
-           provider_.geofencing_zones_.zones_.empty())) {
+           provider_.geofencing_zones_.zones_.empty()) &&
+          !default_restrictions.station_parking_.has_value()) {
         default_restrictions.station_parking_ = true;
       }
 
       if (default_restrictions.ride_end_allowed_ &&
-          !default_restrictions.station_parking_) {
+          !default_restrictions.station_parking_.value_or(false)) {
         rd.end_allowed_.one_out();
       }
       if (default_restrictions.ride_through_allowed_) {
