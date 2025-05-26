@@ -512,8 +512,14 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
   auto const direct_modes = deduplicate(query.directModes_);
   auto const from = get_place(tt_, tags_, query.fromPlace_);
   auto const to = get_place(tt_, tags_, query.toPlace_);
-  auto const from_p = to_place(tt_, tags_, w_, pl_, matches_, from);
-  auto const to_p = to_place(tt_, tags_, w_, pl_, matches_, to);
+  auto from_p = to_place(tt_, tags_, w_, pl_, matches_, from);
+  auto to_p = to_place(tt_, tags_, w_, pl_, matches_, to);
+  if (from_p.vertexType_ == api::VertexTypeEnum::NORMAL) {
+    from_p.name_ = "START";
+  }
+  if (to_p.vertexType_ == api::VertexTypeEnum::NORMAL) {
+    to_p.name_ = "END";
+  }
 
   auto const& start = query.arriveBy_ ? to : from;
   auto const& dest = query.arriveBy_ ? from : to;
