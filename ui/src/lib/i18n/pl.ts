@@ -42,13 +42,13 @@ const translations: Translations = {
 	roundtripStationReturnConstraint: 'Pojazd musi zostać zwrócony do stacji początkowej.',
 	noItinerariesFound: 'No itineraries found.',
 	advancedSearchOptions: 'Options',
-	selectModes: 'Select transit modes',
+	selectTransitModes: 'Select transit modes',
 	defaultSelectedModes: 'All transit modes',
 	selectElevationCosts: 'Avoid steep incline.',
 	wheelchair: 'Barrier-free transfers',
 	bikeRental: 'Allow usage of sharing vehicles',
-	bikeCarriage: 'Bike carriage',
-	carCarriage: 'Car carriage',
+	requireBikeTransport: 'Bike carriage',
+	requireCarTransport: 'Car carriage',
 	default: 'Default',
 	timetableSources: 'Timetable sources',
 	tripCancelled: 'Trip cancelled',
@@ -91,7 +91,14 @@ const translations: Translations = {
 		NONE: 'No detours',
 		LOW: 'Small detours',
 		HIGH: 'Large detours'
-	}
+	},
+	RENTAL_BICYCLE: 'Rower współdzielony',
+	RENTAL_CARGO_BICYCLE: 'Rower cargo współdzielony',
+	RENTAL_CAR: 'Samochód współdzielony',
+	RENTAL_MOPED: 'Skuter współdzielony',
+	RENTAL_SCOOTER_STANDING: 'Hulajnoga stojąca współdzielona',
+	RENTAL_SCOOTER_SEATED: 'Hulajnoga z siedziskiem współdzielona',
+	RENTAL_OTHER: 'Inny pojazd współdzielony'
 };
 
 export default translations;

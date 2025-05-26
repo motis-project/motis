@@ -24,10 +24,12 @@ std::optional<osr::location> parse_location(std::string_view s,
   auto last = end(s);
 
   auto pos = geo::latlng{};
-  auto level = 0.0F;
+  auto level = osr::kNoLevel;
   auto const lat = [&](double& x) { pos.lat_ = x; };
   auto const lng = [&](double& x) { pos.lng_ = x; };
-  auto const lvl = [&](double& x) { level = static_cast<float>(x); };
+  auto const lvl = [&](double& x) {
+    level = osr::level_t{static_cast<float>(x)};
+  };
 
   auto const has_matched =
       phrase_parse(first, last,
@@ -39,7 +41,7 @@ std::optional<osr::location> parse_location(std::string_view s,
     return std::nullopt;
   }
 
-  return osr::location{pos, osr::level_t{level}};
+  return osr::location{pos, level};
 }
 
 date::sys_days parse_iso_date(std::string_view s) {
