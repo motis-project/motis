@@ -43,13 +43,13 @@ const translations: Translations = {
 		'Das Fahrzeug muss wieder an der Abfahrtsstation abgestellt werden.',
 	noItinerariesFound: 'Keine Verbindungen gefunden.',
 	advancedSearchOptions: 'Optionen',
-	selectModes: 'Öffentliche Verkehrsmittel auswählen',
+	selectTransitModes: 'Öffentliche Verkehrsmittel auswählen',
 	defaultSelectedModes: 'Alle Verkehrsmittel',
 	selectElevationCosts: 'Steile Steigungen vermeiden.',
 	wheelchair: 'Barrierefreie Umstiege',
 	bikeRental: 'Sharing-Fahrzeuge berücksichtigen',
-	bikeCarriage: 'Fahrradmitnahme',
-	carCarriage: 'Automitnahme',
+	requireBikeTransport: 'Fahrradmitnahme',
+	requireCarTransport: 'Automitnahme',
 	default: 'Vorgabe',
 	timetableSources: 'Fahrplandatenquellen',
 	tripCancelled: 'Fahrt entfällt',
@@ -92,7 +92,14 @@ const translations: Translations = {
 		NONE: 'Keine Umwege',
 		LOW: 'Kleine Umwege',
 		HIGH: 'Große Umwege'
-	}
+	},
+	RENTAL_BICYCLE: 'Bikesharing',
+	RENTAL_CARGO_BICYCLE: 'Lastenrad Sharing',
+	RENTAL_CAR: 'Car Sharing',
+	RENTAL_MOPED: 'Moped Sharing',
+	RENTAL_SCOOTER_STANDING: 'Scooter Sharing',
+	RENTAL_SCOOTER_SEATED: 'Sitzroller Sharing',
+	RENTAL_OTHER: 'Anderes sharing Fahrzeug'
 };
 
 export default translations;

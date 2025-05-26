@@ -10,21 +10,21 @@
 	import { t } from '$lib/i18n/translation';
 	import AdvancedOptions from './AdvancedOptions.svelte';
 	import maplibregl from 'maplibre-gl';
-	import type { ElevationCosts, Mode } from '$lib/api/openapi';
+	import type { ElevationCosts, PedestrianProfile } from '$lib/api/openapi';
+	import type { PrePostDirectMode, TransitMode } from './Modes';
 
 	let {
 		geocodingBiasPlace,
 		from = $bindable(),
 		to = $bindable(),
 		time = $bindable(),
-		timeType = $bindable(),
-		wheelchair = $bindable(),
-		bikeRental = $bindable(),
-		bikeCarriage = $bindable(),
-		carCarriage = $bindable(),
-		selectedModes = $bindable(),
-		firstMileMode = $bindable(),
-		lastMileMode = $bindable(),
+		arriveBy = $bindable(),
+		pedestrianProfile = $bindable(),
+		requireCarTransport = $bindable(),
+		requireBikeTransport = $bindable(),
+		transitModes = $bindable(),
+		preTransitModes = $bindable(),
+		postTransitModes = $bindable(),
 		directModes = $bindable(),
 		elevationCosts = $bindable(),
 		maxPreTransitTime = $bindable(),
@@ -35,15 +35,14 @@
 		from: Location;
 		to: Location;
 		time: Date;
-		timeType: string;
-		wheelchair: boolean;
-		bikeRental: boolean;
-		bikeCarriage: boolean;
-		carCarriage: boolean;
-		selectedModes: string[] | undefined;
-		firstMileMode: Mode;
-		lastMileMode: Mode;
-		directModes: Mode[];
+		arriveBy: boolean;
+		pedestrianProfile: PedestrianProfile;
+		requireCarTransport: boolean;
+		requireBikeTransport: boolean;
+		transitModes: TransitMode[];
+		preTransitModes: PrePostDirectMode[];
+		postTransitModes: PrePostDirectMode[];
+		directModes: PrePostDirectMode[];
 		elevationCosts: ElevationCosts;
 		maxPreTransitTime: string;
 		maxPostTransitTime: string;
@@ -64,6 +63,22 @@
 	const applyPosition = (position: { coords: { latitude: number; longitude: number } }) => {
 		from = posToLocation({ lat: position.coords.latitude, lon: position.coords.longitude }, 0);
 	};
+
+	let timeType = $state(arriveBy ? 'arrival' : 'departure');
+	$effect(() => {
+		arriveBy = timeType === 'arrival';
+	});
+	$effect(() => {
+		timeType = arriveBy ? 'arrival' : 'departure';
+	});
+
+	let wheelchair = $state(pedestrianProfile === 'WHEELCHAIR');
+	$effect(() => {
+		wheelchair = pedestrianProfile === 'WHEELCHAIR';
+	});
+	$effect(() => {
+		pedestrianProfile = wheelchair ? 'WHEELCHAIR' : 'FOOT';
+	});
 </script>
 
 <div id="searchmask-container" class="flex flex-col space-y-4 p-4 relative">
@@ -130,17 +145,16 @@
 		</RadioGroup.Root>
 		<AdvancedOptions
 			bind:wheelchair
-			bind:bikeRental
-			bind:bikeCarriage
-			bind:carCarriage
-			bind:selectedModes
-			bind:firstMileMode
-			bind:lastMileMode
+			bind:requireCarTransport
+			bind:requireBikeTransport
+			bind:transitModes
+			bind:preTransitModes
+			bind:postTransitModes
 			bind:directModes
-			bind:elevationCosts
 			bind:maxPreTransitTime
 			bind:maxPostTransitTime
 			bind:maxDirectTime
+			bind:elevationCosts
 		/>
 	</div>
 </div>

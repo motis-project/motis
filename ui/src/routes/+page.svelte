@@ -14,7 +14,9 @@
 		type PlanResponse,
 		type Itinerary,
 		type Mode,
-		type PlanData
+		type PlanData,
+		type RentalFormFactor,
+		type PedestrianProfile
 	} from '$lib/api/openapi';
 	import ItineraryList from '$lib/ItineraryList.svelte';
 	import ConnectionDetail from '$lib/ConnectionDetail.svelte';
@@ -45,8 +47,29 @@
 	import { updateStartDest } from '$lib/updateStartDest';
 	import * as Tabs from '$lib/components/ui/tabs';
 	import DeparturesMask from '$lib/DeparturesMask.svelte';
+	import {
+		getFormFactors,
+		getPrePostDirectModes,
+		possibleTransitModes,
+		prePostModesToModes,
+		type PrePostDirectMode
+	} from '$lib/Modes';
+	import { defaultQuery, omitDefaults } from '$lib/defaults';
 
 	const urlParams = browser ? new URLSearchParams(window.location.search) : undefined;
+	const getUrlArray = (key: string, defaultValue?: string[]): string[] => {
+		if (urlParams) {
+			const value = urlParams.get(key);
+			if (value) {
+				return value.split(',').filter((m) => m.length);
+			}
+		}
+		if (defaultValue) {
+			return defaultValue;
+		}
+		return [];
+	};
+
 	const hasDebug = urlParams && urlParams.has('debug');
 	const hasDark = urlParams && urlParams.has('dark');
 	const isSmallScreen = browser && window.innerWidth < 768;
@@ -129,24 +152,34 @@
 		value: toParam ? toMatch : {}
 	});
 	let time = $state<Date>(new Date(urlParams?.get('time') || Date.now()));
-	let timeType = $state<string>(urlParams?.get('arriveBy') == 'true' ? 'arrival' : 'departure');
-	let wheelchair = $state(urlParams?.get('wheelchair') == 'true');
-	let bikeRental = $state(urlParams?.get('bikeRental') == 'true');
-	let bikeCarriage = $state(urlParams?.get('bikeCarriage') == 'true');
-	let carCarriage = $state(urlParams?.get('carCarriage') == 'true');
-	let selectedTransitModes = $state<Mode[] | undefined>(
-		(urlParams
-			?.get('selectedTransitModes')
-			?.split(',')
-			.filter((m) => m.length) as Mode[]) ?? undefined
+	let arriveBy = $state<boolean>(urlParams?.get('arriveBy') == 'true');
+	let pedestrianProfile = $state<PedestrianProfile>(
+		(urlParams?.has('pedestrianProfile')
+			? urlParams.get('pedestrianProfile')
+			: defaultQuery.pedestrianProfile) as PedestrianProfile
 	);
-	let firstMileMode = $state<Mode>((urlParams?.get('firstMileMode') ?? 'WALK') as Mode);
-	let lastMileMode = $state<Mode>((urlParams?.get('lastMileMode') ?? 'WALK') as Mode);
-	let directModes = $state<Mode[]>(
-		(urlParams
-			?.get('directModes')
-			?.split(',')
-			.filter((m) => m.length) ?? ['WALK']) as Mode[]
+	let requireBikeTransport = $state(urlParams?.get('requireBikeTransport') == 'true');
+	let requireCarTransport = $state(urlParams?.get('requireCarTransport') == 'true');
+	let transitModes = $state<Mode[]>(
+		getUrlArray('transitModes', defaultQuery.transitModes) as Mode[]
+	);
+	let preTransitModes = $state<PrePostDirectMode[]>(
+		getPrePostDirectModes(
+			getUrlArray('preTransitModes', defaultQuery.preTransitModes) as Mode[],
+			getUrlArray('preTransitRentalFormFactors') as RentalFormFactor[]
+		)
+	);
+	let postTransitModes = $state<PrePostDirectMode[]>(
+		getPrePostDirectModes(
+			getUrlArray('postTransitModes', defaultQuery.postTransitModes) as Mode[],
+			getUrlArray('postTransitRentalFormFactors') as RentalFormFactor[]
+		)
+	);
+	let directModes = $state<PrePostDirectMode[]>(
+		getPrePostDirectModes(
+			getUrlArray('directModes', defaultQuery.directModes) as Mode[],
+			getUrlArray('directRentalFormFactors') as RentalFormFactor[]
+		)
 	);
 	let elevationCosts = $state<ElevationCosts>(
 		(urlParams?.get('elevationCosts') ?? 'NONE') as ElevationCosts
@@ -161,38 +194,38 @@
 		} else if (l.value.match?.level) {
 			return `${lngLatToStr(l.value.match!)},${l.value.match.level}`;
 		} else {
-			return `${lngLatToStr(l.value.match!)},0`;
+			return `${lngLatToStr(l.value.match!)}`;
 		}
 	};
-	let additionalModes = $derived([...(bikeRental ? ['RENTAL'] : [])] as Mode[]);
-	let preTransitModes = $derived([firstMileMode, ...additionalModes]);
-	let postTransitModes = $derived([lastMileMode, ...additionalModes]);
-	let requestDirectModes = $derived([...directModes, ...additionalModes]);
 
 	let baseQuery = $derived(
 		from.value.match && to.value.match
 			? ({
-					query: {
+					query: omitDefaults({
 						time: time.toISOString(),
 						fromPlace: toPlaceString(from),
 						toPlace: toPlaceString(to),
-						arriveBy: timeType === 'arrival',
+						arriveBy,
 						timetableView: true,
 						withFares: true,
-						pedestrianProfile: wheelchair ? 'WHEELCHAIR' : 'FOOT',
-						preTransitModes,
-						postTransitModes,
-						directModes: requestDirectModes,
-						requireBikeTransport: bikeCarriage,
-						requireCarTransport: carCarriage,
-						transitModes: selectedTransitModes,
+						pedestrianProfile,
+						transitModes:
+							transitModes.length == possibleTransitModes.length ? 'TRANSIT' : transitModes,
+						preTransitModes: prePostModesToModes(preTransitModes),
+						postTransitModes: prePostModesToModes(postTransitModes),
+						directModes: prePostModesToModes(directModes),
+						preTransitRentalFormFactors: getFormFactors(preTransitModes),
+						postTransitRentalFormFactors: getFormFactors(postTransitModes),
+						directRentalFormFactors: getFormFactors(directModes),
+						requireBikeTransport,
+						requireCarTransport,
 						elevationCosts,
 						useRoutedTransfers: true,
-						maxMatchingDistance: wheelchair ? 8 : 250,
+						maxMatchingDistance: pedestrianProfile == 'WHEELCHAIR' ? 8 : 250,
 						maxPreTransitTime: parseInt(maxPreTransitTime),
 						maxPostTransitTime: parseInt(maxPostTransitTime),
 						maxDirectTime: parseInt(maxDirectTime)
-					}
+					} as PlanData['query'])
 				} as PlanData)
 			: undefined
 	);
@@ -213,16 +246,21 @@
 						from: JSON.stringify(from?.value?.match),
 						to: JSON.stringify(to?.value?.match),
 						time,
-						arriveBy: timeType === 'arrival',
-						wheelchair,
-						bikeRental,
-						bikeCarriage,
-						carCarriage,
-						firstMileMode,
-						lastMileMode,
-						directModes: directModes.join(','),
+						arriveBy,
+						pedestrianProfile,
+						requireBikeTransport,
+						requireCarTransport,
+						transitModes: transitModes.join(','),
+						preTransitModes: prePostModesToModes(preTransitModes).join(','),
+						postTransitModes: prePostModesToModes(postTransitModes).join(','),
+						directModes: prePostModesToModes(directModes).join(','),
+						preTransitRentalFormFactors: getFormFactors(preTransitModes).join(','),
+						postTransitRentalFormFactors: getFormFactors(postTransitModes).join(','),
+						directRentalFormFactors: getFormFactors(directModes).join(','),
 						elevationCosts,
-						selectedTransitModes: selectedTransitModes?.join(',') ?? ''
+						maxPreTransitTime,
+						maxPostTransitTime,
+						maxDirectTime
 					},
 					{},
 					true
@@ -343,14 +381,13 @@
 								bind:from
 								bind:to
 								bind:time
-								bind:timeType
-								bind:wheelchair
-								bind:bikeRental
-								bind:bikeCarriage
-								bind:carCarriage
-								bind:selectedModes={selectedTransitModes}
-								bind:firstMileMode
-								bind:lastMileMode
+								bind:arriveBy
+								bind:pedestrianProfile
+								bind:requireCarTransport
+								bind:requireBikeTransport
+								bind:transitModes
+								bind:preTransitModes
+								bind:postTransitModes
 								bind:directModes
 								bind:elevationCosts
 								bind:maxPreTransitTime
