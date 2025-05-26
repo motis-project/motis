@@ -254,6 +254,8 @@ paths:
             Note: Transit connections that are slower than the fastest direct connection will not show up.
             This is being used as a cut-off during transit routing to speed up the search.
             To prevent this, it's possible to send two separate requests (one with only `transitModes` and one with only `directModes`).
+
+            Note : the output `direct` array will stay empty if the input param `maxDirectTime` makes any direct trip impossible.
             
             Only non-transit modes such as `WALK`, `BIKE`, `CAR`, `BIKE_SHARING`, etc. can be used.
           schema:
