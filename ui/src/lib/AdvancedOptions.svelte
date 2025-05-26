@@ -16,6 +16,7 @@
 	} from './Modes';
 
 	let {
+		useRoutedTransfers = $bindable(),
 		wheelchair = $bindable(),
 		requireBikeTransport = $bindable(),
 		requireCarTransport = $bindable(),
@@ -28,6 +29,7 @@
 		maxDirectTime = $bindable(),
 		elevationCosts = $bindable()
 	}: {
+		useRoutedTransfers: boolean;
 		wheelchair: boolean;
 		requireBikeTransport: boolean;
 		requireCarTransport: boolean;
@@ -160,7 +162,17 @@
 		</Select.Root>
 
 		<div class="space-y-2">
-			<Switch bind:checked={wheelchair} label={t.wheelchair} id="wheelchair" />
+			<Switch
+				bind:checked={useRoutedTransfers}
+				label={t.useRoutedTransfers}
+				id="useRoutedTransfers"
+			/>
+			<Switch
+				bind:checked={wheelchair}
+				label={t.wheelchair}
+				id="wheelchair"
+				onCheckedChange={() => (useRoutedTransfers = true)}
+			/>
 			<Switch
 				bind:checked={requireBikeTransport}
 				label={t.requireBikeTransport}

@@ -20,6 +20,7 @@
 		time = $bindable(),
 		arriveBy = $bindable(),
 		pedestrianProfile = $bindable(),
+		useRoutedTransfers = $bindable(),
 		requireCarTransport = $bindable(),
 		requireBikeTransport = $bindable(),
 		transitModes = $bindable(),
@@ -37,6 +38,7 @@
 		time: Date;
 		arriveBy: boolean;
 		pedestrianProfile: PedestrianProfile;
+		useRoutedTransfers: boolean;
 		requireCarTransport: boolean;
 		requireBikeTransport: boolean;
 		transitModes: TransitMode[];
@@ -144,6 +146,7 @@
 			</Label>
 		</RadioGroup.Root>
 		<AdvancedOptions
+			bind:useRoutedTransfers
 			bind:wheelchair
 			bind:requireCarTransport
 			bind:requireBikeTransport

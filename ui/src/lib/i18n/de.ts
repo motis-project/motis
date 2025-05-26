@@ -46,6 +46,7 @@ const translations: Translations = {
 	selectTransitModes: 'Öffentliche Verkehrsmittel auswählen',
 	defaultSelectedModes: 'Alle Verkehrsmittel',
 	selectElevationCosts: 'Steile Steigungen vermeiden.',
+	useRoutedTransfers: 'Geroutete Umstiege verwenden',
 	wheelchair: 'Barrierefreie Umstiege',
 	bikeRental: 'Sharing-Fahrzeuge berücksichtigen',
 	requireBikeTransport: 'Fahrradmitnahme',

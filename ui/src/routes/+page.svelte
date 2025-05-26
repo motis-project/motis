@@ -124,6 +124,9 @@
 	let to = $state<Location>(parseLocation(urlParams?.get('toPlace'), urlParams?.get('toName')));
 	let time = $state<Date>(new Date(urlParams?.get('time') || Date.now()));
 	let arriveBy = $state<boolean>(urlParams?.get('arriveBy') == 'true');
+	let useRoutedTransfers = $state(
+		urlParams?.get('useRoutedTransfers') == 'true' || defaultQuery.useRoutedTransfers
+	);
 	let pedestrianProfile = $state<PedestrianProfile>(
 		(urlParams?.has('pedestrianProfile')
 			? urlParams.get('pedestrianProfile')
@@ -187,7 +190,9 @@
 						withFares: true,
 						pedestrianProfile,
 						transitModes:
-							transitModes.length == possibleTransitModes.length ? ['TRANSIT'] : transitModes,
+							transitModes.length == possibleTransitModes.length
+								? defaultQuery.transitModes
+								: transitModes,
 						preTransitModes: prePostModesToModes(preTransitModes),
 						postTransitModes: prePostModesToModes(postTransitModes),
 						directModes: prePostModesToModes(directModes),
@@ -197,7 +202,7 @@
 						requireBikeTransport,
 						requireCarTransport,
 						elevationCosts,
-						useRoutedTransfers: true,
+						useRoutedTransfers,
 						maxMatchingDistance: pedestrianProfile == 'WHEELCHAIR' ? 8 : 250,
 						maxPreTransitTime: parseInt(maxPreTransitTime),
 						maxPostTransitTime: parseInt(maxPostTransitTime),
@@ -343,6 +348,7 @@
 								bind:to
 								bind:time
 								bind:arriveBy
+								bind:useRoutedTransfers
 								bind:pedestrianProfile
 								bind:requireCarTransport
 								bind:requireBikeTransport

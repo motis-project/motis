@@ -21,7 +21,7 @@ export const defaultQuery = {
 	requireBikeTransport: false,
 	requireCarTransport: false,
 	elevationCosts: 'NONE',
-	useRoutedTransfers: true,
+	useRoutedTransfers: false,
 	maxMatchingDistance: 250,
 	maxPreTransitTime: 900,
 	maxPostTransitTime: 900,

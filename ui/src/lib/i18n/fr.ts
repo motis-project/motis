@@ -46,6 +46,7 @@ const translations: Translations = {
 	defaultSelectedModes: 'Tous les transports en commun',
 	selectElevationCosts: 'Évitez les pentes abruptes.', // TODO Online translated
 	wheelchair: 'Correspondances accessibles',
+	useRoutedTransfers: 'Utiliser les correspondances routées',
 	bikeRental: 'Utiliser véhicules partagés',
 	requireBikeTransport: 'Transport vélo',
 	requireCarTransport: 'Transport voiture',

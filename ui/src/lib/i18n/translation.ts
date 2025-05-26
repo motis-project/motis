@@ -41,6 +41,7 @@ export type Translations = {
 	defaultSelectedModes: string;
 	selectElevationCosts: string;
 	wheelchair: string;
+	useRoutedTransfers: string;
 	bikeRental: string;
 	requireBikeTransport: string;
 	requireCarTransport: string;
