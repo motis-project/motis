@@ -1,6 +1,9 @@
 import type { PlanData } from './api/openapi';
 
 export const defaultQuery = {
+	time: undefined,
+	fromPlace: undefined,
+	toPlace: undefined,
 	arriveBy: false,
 	timetableView: true,
 	withFares: false,
@@ -33,11 +36,15 @@ export const defaultQuery = {
 
 export const omitDefaults = (query: PlanData['query']): PlanData['query'] => {
 	const queryCopy: PlanData['query'] = { ...query };
-	Object.keys(defaultQuery).forEach((key) => {
-		const value = queryCopy[key as keyof PlanData['query']];
-		const defaultValue = defaultQuery[key as keyof typeof defaultQuery];
-		if (JSON.stringify(value) === JSON.stringify(defaultValue)) {
-			delete queryCopy[key as keyof PlanData['query']];
+	Object.keys(queryCopy).forEach((key) => {
+		if (key in defaultQuery) {
+			const value = queryCopy[key as keyof PlanData['query']];
+			const defaultValue = defaultQuery[key as keyof typeof defaultQuery];
+			if (JSON.stringify(value) === JSON.stringify(defaultValue)) {
+				delete queryCopy[key as keyof PlanData['query']];
+			}
+		} else {
+			console.warn(`Unknown query parameter: ${key}`);
 		}
 	});
 	return queryCopy;

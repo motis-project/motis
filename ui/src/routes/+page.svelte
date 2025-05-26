@@ -4,11 +4,10 @@
 	import Map from '$lib/map/Map.svelte';
 	import Control from '$lib/map/Control.svelte';
 	import SearchMask from '$lib/SearchMask.svelte';
-	import { posToLocation, type Location } from '$lib/Location';
+	import { parseLocation, posToLocation, type Location } from '$lib/Location';
 	import { Card } from '$lib/components/ui/card';
 	import {
 		initial,
-		type Match,
 		plan,
 		type ElevationCosts,
 		type PlanResponse,
@@ -27,6 +26,7 @@
 	import {
 		closeItinerary,
 		cn,
+		getUrlArray,
 		onClickStop,
 		onClickTrip,
 		pushStateWithQueryString
@@ -58,18 +58,6 @@
 	import { LEVEL_MIN_ZOOM } from '$lib/constants';
 
 	const urlParams = browser ? new URLSearchParams(window.location.search) : undefined;
-	const getUrlArray = (key: string, defaultValue?: string[]): string[] => {
-		if (urlParams) {
-			const value = urlParams.get(key);
-			if (value) {
-				return value.split(',').filter((m) => m.length);
-			}
-		}
-		if (defaultValue) {
-			return defaultValue;
-		}
-		return [];
-	};
 
 	const hasDebug = urlParams && urlParams.has('debug');
 	const hasDark = urlParams && urlParams.has('dark');
@@ -128,30 +116,12 @@
 		}
 	};
 
-	let fromParam: Match | undefined = undefined;
-	let toParam: Match | undefined = undefined;
-	if (browser && urlParams) {
-		fromParam = urlParams.has('from') ? (JSON.parse(urlParams.get('from') ?? '') ?? {}) : undefined;
-		toParam = urlParams.has('to') ? (JSON.parse(urlParams.get('to') ?? '') ?? {}) : undefined;
-	}
-
-	let fromMatch = {
-		match: fromParam
-	};
-	let toMatch = {
-		match: toParam
-	};
-
 	let fromMarker = $state<maplibregl.Marker>();
 	let toMarker = $state<maplibregl.Marker>();
-	let from = $state<Location>({
-		label: fromParam ? fromParam['name'] : '',
-		value: fromParam ? fromMatch : {}
-	});
-	let to = $state<Location>({
-		label: toParam ? toParam['name'] : '',
-		value: toParam ? toMatch : {}
-	});
+	let from = $state<Location>(
+		parseLocation(urlParams?.get('fromPlace'), urlParams?.get('fromName'))
+	);
+	let to = $state<Location>(parseLocation(urlParams?.get('toPlace'), urlParams?.get('toName')));
 	let time = $state<Date>(new Date(urlParams?.get('time') || Date.now()));
 	let arriveBy = $state<boolean>(urlParams?.get('arriveBy') == 'true');
 	let pedestrianProfile = $state<PedestrianProfile>(
@@ -190,17 +160,17 @@
 	let maxDirectTime = $state<string>(urlParams?.get('maxDirectTime') ?? '1800');
 
 	const toPlaceString = (l: Location) => {
-		if (l.value.match?.type === 'STOP') {
-			return l.value.match.id;
-		} else if (l.value.match?.level) {
-			return `${lngLatToStr(l.value.match!)},${l.value.match.level}`;
+		if (l.match?.type === 'STOP') {
+			return l.match.id;
+		} else if (l.match?.level) {
+			return `${lngLatToStr(l.match!)},${l.match.level}`;
 		} else {
-			return `${lngLatToStr(l.value.match!)}`;
+			return `${lngLatToStr(l.match!)}`;
 		}
 	};
 
 	let baseQuery = $derived(
-		from.value.match && to.value.match
+		from.match && to.match
 			? ({
 					query: omitDefaults({
 						time: time.toISOString(),
@@ -211,7 +181,7 @@
 						withFares: true,
 						pedestrianProfile,
 						transitModes:
-							transitModes.length == possibleTransitModes.length ? 'TRANSIT' : transitModes,
+							transitModes.length == possibleTransitModes.length ? ['TRANSIT'] : transitModes,
 						preTransitModes: prePostModesToModes(preTransitModes),
 						postTransitModes: prePostModesToModes(postTransitModes),
 						directModes: prePostModesToModes(directModes),
@@ -244,24 +214,9 @@
 				routingResponses = [base];
 				pushStateWithQueryString(
 					{
-						from: JSON.stringify(from?.value?.match),
-						to: JSON.stringify(to?.value?.match),
-						time,
-						arriveBy,
-						pedestrianProfile,
-						requireBikeTransport,
-						requireCarTransport,
-						transitModes: transitModes.join(','),
-						preTransitModes: prePostModesToModes(preTransitModes).join(','),
-						postTransitModes: prePostModesToModes(postTransitModes).join(','),
-						directModes: prePostModesToModes(directModes).join(','),
-						preTransitRentalFormFactors: getFormFactors(preTransitModes).join(','),
-						postTransitRentalFormFactors: getFormFactors(postTransitModes).join(','),
-						directRentalFormFactors: getFormFactors(directModes).join(','),
-						elevationCosts,
-						maxPreTransitTime,
-						maxPostTransitTime,
-						maxDirectTime
+						...baseQuery.query,
+						fromName: from.label,
+						toName: to.label
 					},
 					{},
 					true
@@ -308,9 +263,7 @@
 		last_selected_itinerary = page.state.selectedItinerary;
 	};
 
-	$effect(() => {
-		flyToSelectedItinerary();
-	});
+	$effect(flyToSelectedItinerary);
 
 	type CloseFn = () => void;
 </script>
@@ -320,7 +273,7 @@
 		variant="outline"
 		onclick={() => {
 			from = posToLocation(e.lngLat, zoom > LEVEL_MIN_ZOOM ? level : undefined);
-			fromMarker?.setLngLat(from.value.match!);
+			fromMarker?.setLngLat(from.match!);
 			close();
 		}}
 	>
@@ -330,7 +283,7 @@
 		variant="outline"
 		onclick={() => {
 			to = posToLocation(e.lngLat, zoom > LEVEL_MIN_ZOOM ? level : undefined);
-			toMarker?.setLngLat(to.value.match!);
+			toMarker?.setLngLat(to.match!);
 			close();
 		}}
 	>

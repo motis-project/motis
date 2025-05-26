@@ -75,9 +75,9 @@
 
 	const toLocation = (l: ApiLocation): Location => {
 		return {
-			lat: l.value.match!.lat,
-			lng: l.value.match!.lon,
-			level: l.value.match!.level ?? 0
+			lat: l.match!.lat,
+			lng: l.match!.lon,
+			level: l.match!.level ?? 0
 		};
 	};
 
@@ -161,10 +161,10 @@
 	let start = $state.raw<ApiLocation>();
 	let destination = $state.raw<ApiLocation>();
 	let route = $derived(
-		start?.value.match?.lat &&
-			start?.value.match.lon &&
-			destination?.value.match?.lat &&
-			destination?.value.match.lon &&
+		start?.match?.lat &&
+			start?.match.lon &&
+			destination?.match?.lat &&
+			destination?.match.lon &&
 			profile
 			? getRoute({
 					start: toLocation(start),

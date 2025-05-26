@@ -4,14 +4,10 @@
 	import Bus from 'lucide-svelte/icons/bus-front';
 	import House from 'lucide-svelte/icons/map-pin-house';
 	import Place from 'lucide-svelte/icons/map-pin';
-	import { posToLocation, type Location } from './Location';
-	import { GEOCODER_PRECISION } from './Precision';
+	import { parseCoordinatesToLocation, type Location } from './Location';
 	import { language } from './i18n/translation';
 	import maplibregl from 'maplibre-gl';
 	import { onClickStop } from '$lib/utils';
-
-	const COORD_LVL_REGEX = /^([+-]?\d+(\.\d+)?)\s*,\s*([+-]?\d+(\.\d+)?)\s*,\s*([+-]?\d+(\.\d+)?)$/;
-	const COORD_REGEX = /^([+-]?\d+(\.\d+)?)\s*,\s*([+-]?\d+(\.\d+)?)$/;
 
 	let {
 		items = $bindable([]),
@@ -30,7 +26,7 @@
 	} = $props();
 
 	let inputValue = $state('');
-	let value = $state('');
+	let match = $state('');
 
 	const getDisplayArea = (match: Match | undefined) => {
 		if (match) {
@@ -65,19 +61,9 @@
 	};
 
 	const updateGuesses = async () => {
-		const coordinateWithLevel = inputValue.match(COORD_LVL_REGEX);
-		if (coordinateWithLevel) {
-			selected = posToLocation(
-				[Number(coordinateWithLevel[3]), Number(coordinateWithLevel[1])],
-				Number(coordinateWithLevel[5])
-			);
-			items = [];
-			return;
-		}
-
-		const coordinate = inputValue.match(COORD_REGEX);
-		if (coordinate) {
-			selected = posToLocation([Number(coordinate[3]), Number(coordinate[1])]);
+		const coord = parseCoordinatesToLocation(inputValue);
+		if (coord) {
+			selected = coord;
 			items = [];
 			return;
 		}
@@ -94,12 +80,12 @@
 		items = matches!.map((match: Match): Location => {
 			return {
 				label: getLabel(match),
-				value: { match, precision: GEOCODER_PRECISION }
+				match
 			};
 		});
 		const shown = new Set<string>();
 		items = items.filter((x) => {
-			const entry = x.value.match?.type + x.label!;
+			const entry = x.match?.type + x.label!;
 			if (shown.has(entry)) {
 				return false;
 			}
@@ -111,14 +97,14 @@
 	const deserialize = (s: string): Location => {
 		const x = JSON.parse(s);
 		return {
-			value: x,
-			label: getLabel(x.match)
+			match: x,
+			label: getLabel(x)
 		};
 	};
 
 	$effect(() => {
 		if (selected) {
-			value = JSON.stringify(selected.value);
+			match = JSON.stringify(selected.match);
 			inputValue = selected.label!;
 		}
 	});
@@ -144,13 +130,13 @@
 <Combobox.Root
 	type="single"
 	allowDeselect={false}
-	{value}
+	value={match}
 	onValueChange={(e: string) => {
 		if (e) {
 			selected = deserialize(e);
 			inputValue = selected.label!;
-			if (onlyStations && selected.value.match) {
-				const match = selected.value.match;
+			if (onlyStations && selected.match) {
+				const match = selected.match;
 				onClickStop(match.name, match.id, new Date(), undefined, true);
 			}
 		}
@@ -172,24 +158,24 @@
 				align="start"
 				class="absolute top-2 w-[var(--bits-combobox-anchor-width)] z-10 overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md outline-none"
 			>
-				{#each items as item (item.value)}
+				{#each items as item (item.match)}
 					<Combobox.Item
 						class="flex w-full cursor-default select-none items-center rounded-sm py-4 pl-4 pr-2 text-sm outline-none data-[disabled]:pointer-events-none data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground data-[disabled]:opacity-50"
-						value={JSON.stringify(item.value)}
+						value={JSON.stringify(item.match)}
 						label={item.label}
 					>
-						{#if item.value.match?.type == 'STOP'}
+						{#if item.match?.type == 'STOP'}
 							<Bus />
-						{:else if item.value.match?.type == 'ADDRESS'}
+						{:else if item.match?.type == 'ADDRESS'}
 							<House />
-						{:else if item.value.match?.type == 'PLACE'}
+						{:else if item.match?.type == 'PLACE'}
 							<Place />
 						{/if}
 						<span class="ml-4 font-semibold text-nowrap text-ellipsis overflow-hidden">
-							{item.value.match?.name}
+							{item.match?.name}
 						</span>
 						<span class="ml-2 text-muted-foreground text-nowrap text-ellipsis overflow-hidden">
-							{getDisplayArea(item.value.match)}
+							{getDisplayArea(item.match)}
 						</span>
 					</Combobox.Item>
 				{/each}
