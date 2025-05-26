@@ -155,9 +155,15 @@
 	let elevationCosts = $state<ElevationCosts>(
 		(urlParams?.get('elevationCosts') ?? 'NONE') as ElevationCosts
 	);
-	let maxPreTransitTime = $state<string>(urlParams?.get('maxPreTransitTime') ?? '900');
-	let maxPostTransitTime = $state<string>(urlParams?.get('maxPostTransitTime') ?? '900');
-	let maxDirectTime = $state<string>(urlParams?.get('maxDirectTime') ?? '1800');
+	let maxPreTransitTime = $state<string>(
+		urlParams?.get('maxPreTransitTime') ?? defaultQuery.maxPreTransitTime.toString()
+	);
+	let maxPostTransitTime = $state<string>(
+		urlParams?.get('maxPostTransitTime') ?? defaultQuery.maxPostTransitTime.toString()
+	);
+	let maxDirectTime = $state<string>(
+		urlParams?.get('maxDirectTime') ?? defaultQuery.maxDirectTime.toString()
+	);
 
 	const toPlaceString = (l: Location) => {
 		if (l.match?.type === 'STOP') {
