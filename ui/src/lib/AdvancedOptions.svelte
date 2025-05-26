@@ -166,12 +166,21 @@
 				bind:checked={useRoutedTransfers}
 				label={t.useRoutedTransfers}
 				id="useRoutedTransfers"
+				onCheckedChange={() => {
+					if (wheelchair && !useRoutedTransfers) {
+						wheelchair = false;
+					}
+				}}
 			/>
 			<Switch
 				bind:checked={wheelchair}
 				label={t.wheelchair}
 				id="wheelchair"
-				onCheckedChange={() => (useRoutedTransfers = true)}
+				onCheckedChange={() => {
+					if (wheelchair && !useRoutedTransfers) {
+						useRoutedTransfers = true;
+					}
+				}}
 			/>
 			<Switch
 				bind:checked={requireBikeTransport}
