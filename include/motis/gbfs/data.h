@@ -365,6 +365,7 @@ struct gbfs_provider {
   std::vector<vehicle_status> vehicle_status_;
   geofencing_zones geofencing_zones_{};
   geofencing_restrictions default_restrictions_{};
+  std::optional<return_constraint> default_return_constraint_{};
 
   vector_map<gbfs_products_idx_t, provider_products> products_;
   bool has_vehicles_to_rent_{};
@@ -380,6 +381,7 @@ struct provider_feed {
   headers_t headers_{};
   std::optional<std::filesystem::path> dir_{};
   geofencing_restrictions default_restrictions_{};
+  std::optional<return_constraint> default_return_constraint_{};
 };
 
 struct aggregated_feed {

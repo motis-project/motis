@@ -236,13 +236,14 @@ struct gbfs_update {
 
       auto saf =
           d_->standalone_feeds_
-              ->emplace_back(std::make_unique<provider_feed>(
-                  provider_feed{.id_ = id,
-                                .url_ = url,
-                                .headers_ = headers,
-                                .dir_ = dir,
-                                .default_restrictions_ =
-                                    lookup_default_restrictions("", id)}))
+              ->emplace_back(std::make_unique<provider_feed>(provider_feed{
+                  .id_ = id,
+                  .url_ = url,
+                  .headers_ = headers,
+                  .dir_ = dir,
+                  .default_restrictions_ = lookup_default_restrictions("", id),
+                  .default_return_constraint_ =
+                      lookup_default_return_constraint("", id)}))
               .get();
 
       co_return co_await update_provider_feed(*saf, std::move(discovery));
@@ -280,6 +281,7 @@ struct gbfs_update {
       provider.id_ = pf.id_;
       provider.idx_ = idx;
       provider.default_restrictions_ = pf.default_restrictions_;
+      provider.default_return_constraint_ = pf.default_return_constraint_;
     };
 
     if (auto it = d_->provider_by_id_.find(pf.id_);
@@ -640,7 +642,9 @@ struct gbfs_update {
                 static_cast<std::string>(latest_version.at("url").as_string()),
             .headers_ = af.headers_,
             .default_restrictions_ =
-                lookup_default_restrictions(af.id_, combined_id)});
+                lookup_default_restrictions(af.id_, combined_id),
+            .default_return_constraint_ =
+                lookup_default_return_constraint(af.id_, combined_id)});
       }
     } else if (root.contains("systems")) {
       // Lamassu 2.3 format
@@ -653,7 +657,9 @@ struct gbfs_update {
             .url_ = static_cast<std::string>(system.at("url").as_string()),
             .headers_ = af.headers_,
             .default_restrictions_ =
-                lookup_default_restrictions(af.id_, combined_id)});
+                lookup_default_restrictions(af.id_, combined_id),
+            .default_return_constraint_ =
+                lookup_default_return_constraint(af.id_, combined_id)});
       }
     }
 
@@ -709,6 +715,24 @@ struct gbfs_update {
           .station_parking_ = r.station_parking_};
     };
 
+    if (auto const it = c_.default_restrictions_.find(id);
+        it != end(c_.default_restrictions_)) {
+      return convert(it->second);
+    } else if (auto const prefix_it = c_.default_restrictions_.find(prefix);
+               prefix_it != end(c_.default_restrictions_)) {
+      return convert(prefix_it->second);
+    } else {
+      return {};
+    }
+  }
+
+  std::optional<return_constraint> lookup_default_return_constraint(
+      std::string const& prefix, std::string const& id) {
+    auto const convert = [&](config::gbfs::restrictions const& r) {
+      return r.return_constraint_.has_value()
+                 ? parse_return_constraint(r.return_constraint_.value())
+                 : std::nullopt;
+    };
     if (auto const it = c_.default_restrictions_.find(id);
         it != end(c_.default_restrictions_)) {
       return convert(it->second);

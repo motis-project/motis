@@ -112,6 +112,7 @@ struct config {
       bool ride_end_allowed_{true};
       bool ride_through_allowed_{true};
       std::optional<bool> station_parking_{};
+      std::optional<std::string> return_constraint_{};
     };
 
     struct feed {

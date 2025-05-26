@@ -156,9 +156,10 @@ std::optional<vehicle_type_idx_t> get_vehicle_type(
         .idx_ = idx,
         .form_factor_ = ff,
         .propulsion_type_ = pt,
-        .return_constraint_ = start_type == vehicle_start_type::kStation
-                                  ? return_constraint::kAnyStation
-                                  : return_constraint::kFreeFloating,
+        .return_constraint_ = provider.default_return_constraint_.value_or(
+            start_type == vehicle_start_type::kStation
+                ? return_constraint::kAnyStation
+                : return_constraint::kFreeFloating),
         .known_return_constraint_ = false});
     provider.vehicle_types_map_[{vehicle_type_id, start_type}] = idx;
     return idx;
@@ -354,17 +355,21 @@ propulsion_type parse_propulsion_type(std::string_view const s) {
 }
 
 std::optional<return_constraint> parse_return_constraint(
+    std::string_view const s) {
+  switch (cista::hash(s)) {
+    case cista::hash("any_station"): return return_constraint::kAnyStation;
+    case cista::hash("roundtrip_station"):
+      return return_constraint::kRoundtripStation;
+    case cista::hash("free_floating"):
+    case cista::hash("hybrid"): return return_constraint::kFreeFloating;
+    default: return {};
+  }
+}
+
+std::optional<return_constraint> parse_return_constraint(
     json::object const& vt) {
   if (vt.contains("return_constraint")) {
-    switch (cista::hash(static_cast<std::string_view>(
-        vt.at("return_constraint").as_string()))) {
-      case cista::hash("any_station"): return return_constraint::kAnyStation;
-      case cista::hash("roundtrip_station"):
-        return return_constraint::kRoundtripStation;
-      case cista::hash("free_floating"):
-      case cista::hash("hybrid"):
-      default: return return_constraint::kFreeFloating;
-    }
+    return parse_return_constraint(vt.at("return_constraint").as_string());
   }
   return {};
 }
