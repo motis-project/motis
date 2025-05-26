@@ -61,6 +61,7 @@
 	const hasDebug = urlParams && urlParams.has('debug');
 	const hasDark = urlParams && urlParams.has('dark');
 	const isSmallScreen = browser && window.innerWidth < 768;
+	let activeTab = $state("connections");
 	let dataAttributionLink: string | undefined = $state(undefined);
 	let showMap = $state(!isSmallScreen);
 	let last_selected_itinerary: Itinerary | undefined = undefined;
@@ -162,7 +163,11 @@
 	let elevationCosts = $state<ElevationCosts>(
 		(urlParams?.get('elevationCosts') ?? 'NONE') as ElevationCosts
 	);
-	// let isochronesData = $state<IsochronesPos[]>([
+	// Parameters for isochrones
+	let maxTravelTime = $state(urlParams?.get('maxTravelTime') ?? '45');
+
+	let isochronesData = $state<IsochronesPos[]>([]);
+	/*
 	let isochronesData = $state<IsochronesPos[]>([
 		{"lat": 50.767584, "lng": 6.091125, "duration": 15},  // Aachen
 		{"lat": 50.73195, "lng": 7.09665, "duration": 5},  // Bonn
@@ -172,6 +177,7 @@
 		{"lat": 50.94293, "lng": 6.95928, "duration": 15},  // Köln
 		{"lat": 51.25441, "lng": 7.15013, "duration": 25},  // Wuppertal
 	]);
+	*/
 
 	const toPlaceString = (l: Location) => {
 		if (l.value.match?.type === 'STOP') {
@@ -345,7 +351,7 @@
 					? 'hide'
 					: ''}
 			>
-				<Tabs.Root value="connections" class="max-w-full w-[520px] overflow-y-auto">
+				<Tabs.Root bind:value={activeTab} class="max-w-full w-[520px] overflow-y-auto">
 					<Tabs.List class="grid grid-cols-3">
 						<Tabs.Trigger value="connections">{t.connections}</Tabs.Trigger>
 						<Tabs.Trigger value="departures">{t.departures}</Tabs.Trigger>
@@ -379,6 +385,7 @@
 					<Tabs.Content value="isochrones">
 						<Card class="overflow-y-auto overflow-x-hidden bg-background rounded-lg">
 							<IsochronesMask
+								bind:one={from}
 								geocodingBiasPlace={center}
 								bind:isochronesData
 								bind:time
@@ -486,7 +493,7 @@
 		<RailViz {map} {bounds} {zoom} />
 		<!-- <Isochrones class="absolute flex border-2 border-indigo-600 h-dvh max-w-full z-50" {bounds} {isochronesData} /> -->
 		<!-- <IsochronesTurf {map} {bounds} {isochronesData} /> -->
-		<Isochrones {map} {bounds} {isochronesData} />
+		<Isochrones {map} {bounds} {isochronesData} active={activeTab == "isochrones"}/>
 
 		<Popup trigger="contextmenu" children={contextMenu} />
 

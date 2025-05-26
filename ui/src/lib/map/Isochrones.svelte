@@ -14,11 +14,13 @@
 	let {
         map = $bindable(),
 		bounds,
-		isochronesData
+		isochronesData,
+		active = $bindable()
 	} : {
         map: Map | undefined;
 		bounds: LngLatBoundsLike | undefined;
 		isochronesData: Pos[];
+		active: boolean;
 	} = $props();
 
 	const name = 'isochrones-data';
@@ -43,6 +45,7 @@
 		return [x, y];
 	}
 	const circles2 = $derived(
+		active ?
 		isochronesData
             .map((data) => {
                 const r = reachable_kilemeters(data);
@@ -57,6 +60,7 @@
 				c.bbox = bbox(c);
 				return c;
             })
+		: []
     );
 	type CircleType = typeof circles2[0];
 	function is_visible(circle: CircleType) {

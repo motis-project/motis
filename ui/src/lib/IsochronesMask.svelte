@@ -25,10 +25,14 @@
 	};
 
 	let {
+		one = $bindable(),
+		// maxTravelTime = $bindable(),
 		geocodingBiasPlace,
 		isochronesData = $bindable(),
 		time = $bindable()
 	}: {
+		one: Location;
+		// maxTravelTime: string;
 		geocodingBiasPlace?: maplibregl.LngLatLike;
 		isochronesData: IsochronesPos[];
 		time: Date;
@@ -42,24 +46,24 @@
 		.map(i => i.toString())
 		.map(v => ( {value: v, label: v + " min"} ))
 	;
-	let from = $state<Location>() as Location;
-	let fromItems = $state<Array<Location>>([]);
-	let travelTime = $state("45");
-	const maxTravelTime = $derived(parseInt(travelTime));
+	// let from = $state<Location>() as Location;
+	// let fromItems = $state<Array<Location>>([]);
+	let maxTravelTime = $state("45");
+	const selectedMaxTravelTime = $derived(parseInt(maxTravelTime));
 
 	let queryTimeout: number;
 
 	let isochronesQuery = $derived(
-		from?.value?.match
+		one?.value?.match
 			? ({query: {
-				one: toPlaceString(from),
-				maxTravelTime: maxTravelTime
+				one: toPlaceString(one),
+				maxTravelTime: selectedMaxTravelTime
 			}}) as OneToAllData
 			: undefined
 	);
 	$effect(() => {
 		if (isochronesQuery) {
-			console.log("NEW QUERY", maxTravelTime);
+			console.log("NEW QUERY", selectedMaxTravelTime);
 			clearTimeout(queryTimeout);
 			queryTimeout = setTimeout(() => {
 				oneToAll(isochronesQuery)
@@ -73,7 +77,7 @@
 							return {
 								lat: p.place?.lat,
 								lng: p.place?.lon,
-								duration: maxTravelTime - (p.duration ?? 0),
+								duration: selectedMaxTravelTime - (p.duration ?? 0),
 								name: p.place?.name,
 							} as IsochronesPos
 						})
@@ -105,10 +109,9 @@
 <div id="searchmask-container" class="flex flex-col space-y-4 p-4 relative">
 	<AddressTypeahead
 		place={geocodingBiasPlace}
-		name="from"
+		name="one"
 		placeholder={t.from}
-		bind:selected={from}
-		bind:items={fromItems}
+		bind:selected={one}
 	/>
 
 
@@ -116,9 +119,9 @@
 		<div class="text-sm">
 			Max travel time
 		</div>
-		<Select.Root type="single" bind:value={travelTime} items={possibleTravelTimes}>
+		<Select.Root type="single" bind:value={maxTravelTime} items={possibleTravelTimes}>
 			<Select.Trigger class="flex items-center w-full overflow-hidden" aria-label="max travel time">
-				<div class="w-full text-right pr-4">{travelTime} min</div>
+				<div class="w-full text-right pr-4">{maxTravelTime} min</div>
 			</Select.Trigger>
 			<Select.Content align="end">
 				{#each possibleTravelTimes as option, i ( i + option.value )}
@@ -130,9 +133,9 @@
 		</Select.Root>
 
 		<div class="text-sm">
-			Max travel time ({maxTravelTime})
+			Max travel time ({selectedMaxTravelTime})
 		</div>
-		<Slider.Root type="single" min={1} max={90} step={1} value={maxTravelTime} onValueChange={(v) => (travelTime = v.toString())} class="relative flex w-full touch-none select-none items-center">
+		<Slider.Root type="single" min={1} max={90} step={1} value={selectedMaxTravelTime} onValueChange={(v) => (maxTravelTime = v.toString())} class="relative flex w-full touch-none select-none items-center">
 			{#snippet  children()}
 				<span class="bg-dark-10 relative h-2 w-full grow cursor-pointer overflow-hidden rounded-full">
 					<Slider.Range class="bg-foreground absolute h-full" />
