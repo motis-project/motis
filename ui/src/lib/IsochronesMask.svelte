@@ -2,6 +2,7 @@
 	import AddressTypeahead from '$lib/AddressTypeahead.svelte';
 	import { type Location } from '$lib/Location';
 	import { t } from '$lib/i18n/translation';
+	import * as Select from '$lib/components/ui/select';
 	import { Slider } from 'bits-ui';
 	import { untrack } from 'svelte';
 	import { oneToAll, plan, type OneToAllData, type OneToAllResponse, type ReachablePlace } from './api/openapi';
@@ -35,9 +36,16 @@
 
 	const timeout = 60;
 
+	const maxOption = 60;
+	const optionSteps = 5;
+	const possibleTravelTimes = [1, ...Array(Math.round(maxOption / optionSteps)).keys().map(i => (i + 1) * optionSteps)]
+		.map(i => i.toString())
+		.map(v => ( {value: v, label: v + " min"} ))
+	;
 	let from = $state<Location>() as Location;
 	let fromItems = $state<Array<Location>>([]);
-	let maxTravelTime = $state(45);
+	let travelTime = $state("45");
+	const maxTravelTime = $derived(parseInt(travelTime));
 
 	let queryTimeout: number;
 
@@ -51,7 +59,7 @@
 	);
 	$effect(() => {
 		if (isochronesQuery) {
-			console.log("NEW QUERY");
+			console.log("NEW QUERY", maxTravelTime);
 			clearTimeout(queryTimeout);
 			queryTimeout = setTimeout(() => {
 				oneToAll(isochronesQuery)
@@ -103,11 +111,28 @@
 		bind:items={fromItems}
 	/>
 
+
 	<div class="grid grid-cols-2 items-center">
+		<div class="text-sm">
+			Max travel time
+		</div>
+		<Select.Root type="single" bind:value={travelTime} items={possibleTravelTimes}>
+			<Select.Trigger class="flex items-center w-full overflow-hidden" aria-label="max travel time">
+				<div class="w-full text-right pr-4">{travelTime} min</div>
+			</Select.Trigger>
+			<Select.Content align="end">
+				{#each possibleTravelTimes as option, i ( i + option.value )}
+					<Select.Item value={option.value} label={option.label}>
+						<div class="w-full text-right pr-2">{option.label}</div>
+					</Select.Item>
+				{/each}
+			</Select.Content>
+		</Select.Root>
+
 		<div class="text-sm">
 			Max travel time ({maxTravelTime})
 		</div>
-		<Slider.Root type="single" min={1} max={90} step={1} bind:value={maxTravelTime} class="relative flex w-full touch-none select-none items-center">
+		<Slider.Root type="single" min={1} max={90} step={1} value={maxTravelTime} onValueChange={(v) => (travelTime = v.toString())} class="relative flex w-full touch-none select-none items-center">
 			{#snippet  children()}
 				<span class="bg-dark-10 relative h-2 w-full grow cursor-pointer overflow-hidden rounded-full">
 					<Slider.Range class="bg-foreground absolute h-full" />
