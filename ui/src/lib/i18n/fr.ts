@@ -50,7 +50,6 @@ const translations: Translations = {
 	bikeCarriage: 'Transport vélo',
 	carCarriage: 'Transport voiture',
 	default: 'Faire défaut',
-	unreliableOptions: 'Selon la disponibilité des données, ces options peuvent ne pas être fiables.',
 	timetableSources: 'Sources des horaires',
 	tripCancelled: 'Voyage annulé',
 	stopCancelled: 'Arrêt supprimé',
@@ -83,7 +82,10 @@ const translations: Translations = {
 	routingSegments: {
 		firstMile: 'Premier kilomètre',
 		lastMile: 'Dernier kilomètre',
-		direct: 'Connexion directe'
+		direct: 'Connexion directe',
+		maxPreTransitTime: 'Durée max. avant transit',
+		maxPostTransitTime: 'Durée max. après transit',
+		maxDirectTime: 'Durée max. directe'
 	},
 	elevationCosts: {
 		NONE: 'Pas de détours',

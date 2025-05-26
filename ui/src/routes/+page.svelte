@@ -151,6 +151,9 @@
 	let elevationCosts = $state<ElevationCosts>(
 		(urlParams?.get('elevationCosts') ?? 'NONE') as ElevationCosts
 	);
+	let maxPreTransitTime = $state<string>(urlParams?.get('maxPreTransitTime') ?? '900');
+	let maxPostTransitTime = $state<string>(urlParams?.get('maxPostTransitTime') ?? '900');
+	let maxDirectTime = $state<string>(urlParams?.get('maxDirectTime') ?? '1800');
 
 	const toPlaceString = (l: Location) => {
 		if (l.value.match?.type === 'STOP') {
@@ -185,7 +188,10 @@
 						transitModes: selectedTransitModes,
 						elevationCosts,
 						useRoutedTransfers: true,
-						maxMatchingDistance: wheelchair ? 8 : 250
+						maxMatchingDistance: wheelchair ? 8 : 250,
+						maxPreTransitTime: parseInt(maxPreTransitTime),
+						maxPostTransitTime: parseInt(maxPostTransitTime),
+						maxDirectTime: parseInt(maxDirectTime)
 					}
 				} as PlanData)
 			: undefined
@@ -347,6 +353,9 @@
 								bind:lastMileMode
 								bind:directModes
 								bind:elevationCosts
+								bind:maxPreTransitTime
+								bind:maxPostTransitTime
+								bind:maxDirectTime
 							/>
 						</Card>
 					</Tabs.Content>

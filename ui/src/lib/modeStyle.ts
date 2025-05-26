@@ -21,9 +21,8 @@ export const getModeStyle = (l: LegLike): [string, string, string] => {
 	switch (l.mode) {
 		case 'WALK':
 			return ['walk', 'hsl(var(--foreground) / 1)', 'hsl(var(--background) / 1)'];
-
 		case 'BIKE':
-			return ['bike', '#075985', 'white'];
+			return ['bike', 'hsl(var(--foreground) / 1)', 'hsl(var(--background) / 1)'];
 
 		case 'RENTAL':
 			switch (l.rental?.formFactor) {

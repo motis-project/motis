@@ -7,6 +7,7 @@
 	import ChevronDown from 'lucide-svelte/icons/chevron-down';
 	import { Switch } from './components/ui/switch';
 	import type { ElevationCosts, Mode } from '$lib/api/openapi';
+	import { formatDurationSec } from './formatDuration';
 
 	let {
 		selectedModes = $bindable(),
@@ -17,7 +18,10 @@
 		carCarriage = $bindable(),
 		firstMileMode = $bindable(),
 		lastMileMode = $bindable(),
-		directModes = $bindable()
+		directModes = $bindable(),
+		maxPreTransitTime = $bindable(),
+		maxPostTransitTime = $bindable(),
+		maxDirectTime = $bindable()
 	}: {
 		selectedModes: string[] | undefined;
 		elevationCosts: ElevationCosts;
@@ -28,10 +32,32 @@
 		firstMileMode: Mode;
 		lastMileMode: Mode;
 		directModes: Mode[];
+		maxPreTransitTime: string;
+		maxPostTransitTime: string;
+		maxDirectTime: string;
 	} = $props();
 
 	type TranslationKey = keyof typeof t;
 
+	const possibleDirectDurations = [
+		5 * 60,
+		10 * 60,
+		15 * 60,
+		20 * 60,
+		25 * 60,
+		30 * 60,
+		35 * 60,
+		40 * 60,
+		45 * 60,
+		50 * 60,
+		60 * 60,
+		90 * 60,
+		120 * 60,
+		180 * 60,
+		240 * 60,
+		300 * 60
+	];
+	const possiblePrePostDurations = [5 * 60, 10 * 60, 15 * 60, 20 * 60, 25 * 60, 30 * 60, 60 * 60];
 	const possibleModes = [
 		'AIRPLANE',
 		'HIGHSPEED_RAIL',
@@ -140,7 +166,7 @@
 			/>
 		</div>
 
-		<div class="grid grid-cols-[1fr_2fr] items-center space-y-2">
+		<div class="grid grid-cols-[1fr_2fr_1fr] items-center gap-2">
 			<!-- First mile -->
 			<div class="text-sm">
 				{t.routingSegments.firstMile}
@@ -160,6 +186,22 @@
 					{/each}
 				</Select.Content>
 			</Select.Root>
+			<Select.Root type="single" bind:value={maxPreTransitTime}>
+				<Select.Trigger
+					class="flex items-center w-full overflow-hidden"
+					aria-label={t.routingSegments.maxPreTransitTime}
+				>
+					{formatDurationSec(parseInt(maxPreTransitTime))}
+				</Select.Trigger>
+				<Select.Content sideOffset={10}>
+					{#each possiblePrePostDurations as duration}
+						<Select.Item value={`${duration}`} label={formatDurationSec(duration)}>
+							{formatDurationSec(duration)}
+						</Select.Item>
+					{/each}
+				</Select.Content>
+			</Select.Root>
+
 			<!-- Last mile -->
 			<div class="text-sm">
 				{t.routingSegments.lastMile}
@@ -179,6 +221,22 @@
 					{/each}
 				</Select.Content>
 			</Select.Root>
+			<Select.Root type="single" bind:value={maxPostTransitTime}>
+				<Select.Trigger
+					class="flex items-center w-full overflow-hidden"
+					aria-label={t.routingSegments.maxPostTransitTime}
+				>
+					{formatDurationSec(parseInt(maxPostTransitTime))}
+				</Select.Trigger>
+				<Select.Content sideOffset={10}>
+					{#each possiblePrePostDurations as duration}
+						<Select.Item value={`${duration}`} label={formatDurationSec(duration)}>
+							{formatDurationSec(duration)}
+						</Select.Item>
+					{/each}
+				</Select.Content>
+			</Select.Root>
+
 			<!-- Direct -->
 			<div class="text-sm">
 				{t.routingSegments.direct}
@@ -198,7 +256,24 @@
 					{/each}
 				</Select.Content>
 			</Select.Root>
+			<Select.Root type="single" bind:value={maxDirectTime}>
+				<Select.Trigger
+					class="flex items-center w-full overflow-hidden"
+					aria-label={t.routingSegments.maxDirectTime}
+				>
+					{formatDurationSec(parseInt(maxDirectTime))}
+				</Select.Trigger>
+				<Select.Content sideOffset={10}>
+					{#each possibleDirectDurations as duration}
+						<Select.Item value={`${duration}`} label={formatDurationSec(duration)}>
+							{formatDurationSec(duration)}
+						</Select.Item>
+					{/each}
+				</Select.Content>
+			</Select.Root>
 		</div>
+
+		<!-- Elevation Costs -->
 		<div class="grid grid-cols-2 items-center">
 			<div class="text-sm">
 				{t.selectElevationCosts}
@@ -216,7 +291,5 @@
 				</Select.Content>
 			</Select.Root>
 		</div>
-
-		<div class="text-muted-foreground leading-tight">{t.unreliableOptions}</div>
 	</div>
 {/if}

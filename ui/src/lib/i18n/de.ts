@@ -51,7 +51,6 @@ const translations: Translations = {
 	bikeCarriage: 'Fahrradmitnahme',
 	carCarriage: 'Automitnahme',
 	default: 'Vorgabe',
-	unreliableOptions: 'Je nach Datenverfügbarkeit können diese Optionen unzuverlässig sein.',
 	timetableSources: 'Fahrplandatenquellen',
 	tripCancelled: 'Fahrt entfällt',
 	stopCancelled: 'Halt entfällt',
@@ -84,7 +83,10 @@ const translations: Translations = {
 	routingSegments: {
 		firstMile: 'Erste Meile',
 		lastMile: 'Letzte Meile',
-		direct: 'Direktverbindung'
+		direct: 'Direktverbindung',
+		maxPreTransitTime: 'Max. Vorlaufzeit',
+		maxPostTransitTime: 'Max. Nachlaufzeit',
+		maxDirectTime: 'Max. Direktzeit'
 	},
 	elevationCosts: {
 		NONE: 'Keine Umwege',

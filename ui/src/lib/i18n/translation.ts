@@ -45,7 +45,6 @@ export type Translations = {
 	bikeCarriage: string;
 	carCarriage: string;
 	default: string;
-	unreliableOptions: string;
 	timetableSources: string;
 	tripCancelled: string;
 	stopCancelled: string;
@@ -79,6 +78,9 @@ export type Translations = {
 		firstMile: string;
 		lastMile: string;
 		direct: string;
+		maxPreTransitTime: string;
+		maxPostTransitTime: string;
+		maxDirectTime: string;
 	};
 	elevationCosts: {
 		NONE: string;

@@ -26,7 +26,10 @@
 		firstMileMode = $bindable(),
 		lastMileMode = $bindable(),
 		directModes = $bindable(),
-		elevationCosts = $bindable()
+		elevationCosts = $bindable(),
+		maxPreTransitTime = $bindable(),
+		maxPostTransitTime = $bindable(),
+		maxDirectTime = $bindable()
 	}: {
 		geocodingBiasPlace?: maplibregl.LngLatLike;
 		from: Location;
@@ -42,6 +45,9 @@
 		lastMileMode: Mode;
 		directModes: Mode[];
 		elevationCosts: ElevationCosts;
+		maxPreTransitTime: string;
+		maxPostTransitTime: string;
+		maxDirectTime: string;
 	} = $props();
 
 	let fromItems = $state<Array<Location>>([]);
@@ -132,6 +138,9 @@
 			bind:lastMileMode
 			bind:directModes
 			bind:elevationCosts
+			bind:maxPreTransitTime
+			bind:maxPostTransitTime
+			bind:maxDirectTime
 		/>
 	</div>
 </div>
