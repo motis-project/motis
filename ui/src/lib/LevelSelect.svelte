@@ -6,6 +6,7 @@
 	import { levels } from '$lib/api/openapi';
 	import type { LngLatBoundsLike } from 'maplibre-gl';
 	import maplibregl from 'maplibre-gl';
+	import { LEVEL_MIN_ZOOM } from './constants';
 
 	let {
 		bounds,
@@ -25,7 +26,7 @@
 	});
 
 	$effect(() => {
-		if (bounds && zoom && zoom > 17) {
+		if (bounds && zoom && zoom > LEVEL_MIN_ZOOM) {
 			const b = maplibregl.LngLatBounds.convert(bounds);
 			const min = lngLatToStr(b.getNorthWest());
 			const max = lngLatToStr(b.getSouthEast());
