@@ -290,10 +290,11 @@ struct products_routing_data {
                         compressed_routing_data const& compressed);
 
   osr::sharing_data get_sharing_data(
-      osr::node_idx_t::value_t const additional_node_offset) const {
-    return {.start_allowed_ = start_allowed_,
-            .end_allowed_ = end_allowed_,
-            .through_allowed_ = through_allowed_,
+      osr::node_idx_t::value_t const additional_node_offset,
+      bool ignore_return_constraints) const {
+    return {.start_allowed_ = &start_allowed_,
+            .end_allowed_ = ignore_return_constraints ? nullptr : &end_allowed_,
+            .through_allowed_ = &through_allowed_,
             .additional_node_offset_ = additional_node_offset,
             .additional_node_coordinates_ =
                 compressed_.additional_node_coordinates_,

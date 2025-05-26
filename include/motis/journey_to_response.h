@@ -53,6 +53,8 @@ api::Itinerary journey_to_response(osr::ways const*,
                                    bool with_fares,
                                    double timetable_max_matching_distance,
                                    double max_matching_distance,
-                                   unsigned api_version);
+                                   unsigned api_version,
+                                   bool ignore_start_rental_return_constraints,
+                                   bool ignore_dest_rental_return_constraints);
 
 }  // namespace motis

@@ -195,7 +195,9 @@ api::Itinerary journey_to_response(
     bool const with_fares,
     double const timetable_max_matching_distance,
     double const max_matching_distance,
-    unsigned const api_version) {
+    unsigned const api_version,
+    bool const ignore_start_rental_return_constraints,
+    bool const ignore_dest_rental_return_constraints) {
   utl::verify(!j.legs_.empty(), "journey without legs");
 
   auto const fares =
@@ -434,9 +436,11 @@ api::Itinerary journey_to_response(
                     *w, *l, pl, matches, tags, tt, *fl,
                     flex::mode_id{x.transport_mode_id_});
               } else if (x.transport_mode_id_ >= kGbfsTransportModeIdOffset) {
+                auto const is_pre_transit = pred == nullptr;
                 out = std::make_unique<gbfs::gbfs_output>(
-                    *w, gbfs_rd,
-                    gbfs_rd.get_products_ref(x.transport_mode_id_));
+                    *w, gbfs_rd, gbfs_rd.get_products_ref(x.transport_mode_id_),
+                    is_pre_transit ? ignore_start_rental_return_constraints
+                                   : ignore_dest_rental_return_constraints);
               } else {
                 out = std::make_unique<default_output>(x.transport_mode_id_);
               }

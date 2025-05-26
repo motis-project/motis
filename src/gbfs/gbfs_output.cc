@@ -10,13 +10,15 @@ gbfs_output::~gbfs_output() = default;
 
 gbfs_output::gbfs_output(osr::ways const& w,
                          gbfs_routing_data& gbfs_rd,
-                         gbfs_products_ref const prod_ref)
+                         gbfs_products_ref const prod_ref,
+                         bool const ignore_rental_return_constraints)
     : w_{w},
       gbfs_rd_{gbfs_rd},
       provider_{*gbfs_rd_.data_->providers_.at(prod_ref.provider_)},
       products_{provider_.products_.at(prod_ref.products_)},
       prod_rd_{gbfs_rd_.get_products_routing_data(prod_ref)},
-      sharing_data_{prod_rd_->get_sharing_data(w_.n_nodes())},
+      sharing_data_{prod_rd_->get_sharing_data(
+          w_.n_nodes(), ignore_rental_return_constraints)},
       rental_{
           .systemId_ = provider_.sys_info_.id_,
           .systemName_ = provider_.sys_info_.name_,

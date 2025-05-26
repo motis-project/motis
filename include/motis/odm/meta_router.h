@@ -108,6 +108,8 @@ private:
       dest_propulsion_types_;
   std::optional<std::vector<std::string>> const& start_rental_providers_;
   std::optional<std::vector<std::string>> const& dest_rental_providers_;
+  bool start_ignore_rental_return_constraints_{};
+  bool dest_ignore_rental_return_constraints_{};
 };
 
 }  // namespace motis::odm
