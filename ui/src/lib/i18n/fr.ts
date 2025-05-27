@@ -99,7 +99,8 @@ const translations: Translations = {
 	RENTAL_MOPED: 'Mobylette partagée',
 	RENTAL_SCOOTER_STANDING: 'Trottinette debout partagée',
 	RENTAL_SCOOTER_SEATED: 'Trottinette assise partagée',
-	RENTAL_OTHER: 'Autre véhicule partagé'
+	RENTAL_OTHER: 'Autre véhicule partagé',
+	incline: 'Pente'
 };
 
 export default translations;

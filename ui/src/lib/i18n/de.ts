@@ -100,7 +100,8 @@ const translations: Translations = {
 	RENTAL_MOPED: 'Moped Sharing',
 	RENTAL_SCOOTER_STANDING: 'Scooter Sharing',
 	RENTAL_SCOOTER_SEATED: 'Sitzroller Sharing',
-	RENTAL_OTHER: 'Anderes sharing Fahrzeug'
+	RENTAL_OTHER: 'Anderes sharing Fahrzeug',
+	incline: 'Steigung'
 };
 
 export default translations;

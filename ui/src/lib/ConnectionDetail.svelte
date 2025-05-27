@@ -1,7 +1,9 @@
 <script lang="ts">
 	import ArrowRight from 'lucide-svelte/icons/arrow-right';
+	import ArrowUp from 'lucide-svelte/icons/arrow-up';
+	import ArrowDown from 'lucide-svelte/icons/arrow-down';
 	import CircleX from 'lucide-svelte/icons/circle-x';
-	import { type FareProduct, type Itinerary, type Leg, type Place } from '$lib/api/openapi';
+	import type { FareProduct, Itinerary, Leg, Place, StepInstruction } from '$lib/api/openapi';
 	import Time from '$lib/Time.svelte';
 	import { routeBorderColor, routeColor } from '$lib/modeStyle';
 	import { formatDurationSec, formatDistanceMeters } from '$lib/formatDuration';
@@ -83,6 +85,9 @@
 {/snippet}
 
 {#snippet streetLeg(l: Leg)}
+	{@const stepsWithElevation = l.steps?.filter(
+		(s: StepInstruction) => s.elevationUp || s.elevationDown
+	)}
 	<div class="py-12 pl-8 flex flex-col gap-y-4 text-muted-foreground">
 		<span class="ml-6">
 			{formatDurationSec(l.duration)}
@@ -98,6 +103,19 @@
 			<span class="ml-6">
 				{t.roundtripStationReturnConstraint}
 			</span>
+		{/if}
+		{#if stepsWithElevation && stepsWithElevation.length > 0}
+			<div class="ml-6 flex items-center gap-2 text-xs">
+				{t.incline}
+				<div class="flex items-center">
+					<ArrowUp class="size-4" />
+					{stepsWithElevation.reduce((acc: number, s: StepInstruction) => acc + s.elevationUp!, 0)}
+				</div>
+				<div class="flex items-center">
+					<ArrowDown class="size-4" />
+					{stepsWithElevation.reduce((acc: number, s: StepInstruction) => acc + s.elevationUp!, 0)}
+				</div>
+			</div>
 		{/if}
 	</div>
 {/snippet}

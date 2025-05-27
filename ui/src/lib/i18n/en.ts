@@ -99,7 +99,8 @@ const translations: Translations = {
 		NONE: 'No detours',
 		LOW: 'Small detours',
 		HIGH: 'Large detours'
-	}
+	},
+	incline: 'Incline'
 };
 
 export default translations;

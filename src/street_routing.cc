@@ -79,6 +79,7 @@ void default_output::annotate_leg(osr::node_idx_t,
 
 std::vector<api::StepInstruction> get_step_instructions(
     osr::ways const& w,
+    osr::elevation_storage const* elevations,
     osr::location const& from,
     osr::location const& to,
     std::span<osr::path::segment const> segments,
@@ -121,8 +122,10 @@ std::vector<api::StepInstruction> get_step_instructions(
                            : std::string{w.strings_[way_name].view()},
         .exit_ = {},  // TODO
         .stayOn_ = false,  // TODO
-        .area_ = false  // TODO
-    });
+        .area_ = false,  // TODO
+        .elevationUp_ = elevations ? to_idx(s.elevation_.up_) : std::nullopt,
+        .elevationDown_ =
+            elevations ? to_idx(s.elevation_.down_) : std::nullopt});
   }
 
   if (!segments.empty()) {
@@ -256,7 +259,8 @@ api::Itinerary street_routing(osr::ways const& w,
             .distance_ = dist,
             .legGeometry_ = api_version == 1 ? to_polyline<7>(concat)
                                              : to_polyline<6>(concat),
-            .steps_ = get_step_instructions(w, from, to, range, api_version)});
+            .steps_ = get_step_instructions(w, elevations, from, to, range,
+                                            api_version)});
 
         leg.from_.departure_ = leg.from_.scheduledDeparture_ =
             leg.scheduledStartTime_ = leg.startTime_;

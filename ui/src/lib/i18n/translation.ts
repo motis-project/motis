@@ -95,6 +95,7 @@ export type Translations = {
 	RENTAL_SCOOTER_STANDING: string;
 	RENTAL_SCOOTER_SEATED: string;
 	RENTAL_OTHER: string;
+	incline: string;
 };
 
 const translations: Map<string, Translations> = new Map(

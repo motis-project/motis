@@ -568,6 +568,14 @@ export type StepInstruction = {
      *
      */
     area: boolean;
+    /**
+     * incline in meters across this path segment
+     */
+    elevationUp?: number;
+    /**
+     * decline in meters across this path segment
+     */
+    elevationDown?: number;
 };
 
 export type RentalFormFactor = 'BICYCLE' | 'CARGO_BICYCLE' | 'CAR' | 'MOPED' | 'SCOOTER_STANDING' | 'SCOOTER_SEATED' | 'OTHER';
@@ -918,6 +926,8 @@ export type PlanData = {
          * This is being used as a cut-off during transit routing to speed up the search.
          * To prevent this, it's possible to send two separate requests (one with only `transitModes` and one with only `directModes`).
          *
+         * Note: the output `direct` array will stay empty if the input param `maxDirectTime` makes any direct trip impossible.
+         *
          * Only non-transit modes such as `WALK`, `BIKE`, `CAR`, `BIKE_SHARING`, etc. can be used.
          *
          */
@@ -992,6 +1002,36 @@ export type PlanData = {
          *
          */
         fromPlace: string;
+        /**
+         * Experimental. Expect unannounced breaking changes (without version bumps).
+         *
+         * Optional. Default is `false`.
+         *
+         * If set to `true`, the routing will ignore rental return constraints for direct connections,
+         * allowing the rental vehicle to be parked anywhere.
+         *
+         */
+        ignoreDirectRentalReturnConstraints?: boolean;
+        /**
+         * Experimental. Expect unannounced breaking changes (without version bumps).
+         *
+         * Optional. Default is `false`.
+         *
+         * If set to `true`, the routing will ignore rental return constraints for the part from the last transit stop to the `to` coordinate,
+         * allowing the rental vehicle to be parked anywhere.
+         *
+         */
+        ignorePostTransitRentalReturnConstraints?: boolean;
+        /**
+         * Experimental. Expect unannounced breaking changes (without version bumps).
+         *
+         * Optional. Default is `false`.
+         *
+         * If set to `true`, the routing will ignore rental return constraints for the part from the `from` coordinate to the first transit stop,
+         * allowing the rental vehicle to be parked anywhere.
+         *
+         */
+        ignorePreTransitRentalReturnConstraints?: boolean;
         /**
          * Optional. Experimental. Number of luggage pieces; base unit: airline cabin luggage (e.g. for ODM or price calculation)
          *
