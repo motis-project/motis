@@ -77,7 +77,7 @@
 				{/each}
 			{/if}
 		{:else}
-			<span>{p.name || p.flex}</span>
+			<span class="px-4 py-2">{p.name || p.flex}</span>
 		{/if}
 	</span>
 {/snippet}
@@ -230,11 +230,13 @@
 					</div>
 				{/if}
 				{#if l.alerts}
-					{#each l.alerts as alert}
-						<div class="text-destructive text-sm font-bold">
-							{alert.headerText}
-						</div>
-					{/each}
+					<ul class="mt-2">
+						{#each l.alerts as alert}
+							<li class="text-destructive text-sm font-bold">
+								{alert.headerText}
+							</li>
+						{/each}
+					</ul>
 				{/if}
 				{#if l.intermediateStops?.length === 0}
 					<div class="py-8 pl-1 md:pl-4 flex items-center text-muted-foreground">
