@@ -10,10 +10,11 @@
     };
 
 	type boxCoordsType = [[number, number], [number, number], [number, number], [number, number]];
+	type CircleType = ReturnType<typeof circle>;
 
 	let {
         map = $bindable(),
-		bounds,
+		bounds = $bindable(),
 		isochronesData,
 		active = $bindable()
 	} : {
@@ -26,8 +27,10 @@
 	const name = 'isochrones-data';
     let loaded = false;
 
+	let lastData: Pos[] | undefined = undefined;
+
 	const factor = 0.06;  // 3.6 kilometers per hour
-	const box2 = $derived(maplibregl.LngLatBounds.convert(bounds ? bounds : [[0, 0], [1, 1]]));
+	const box2 = $derived(maplibregl.LngLatBounds.convert(bounds ?? [[0, 0], [1, 1]]));
 	const box_coords: boxCoordsType = $derived(
 		[
 			[box2._sw.lng, box2._ne.lat],
@@ -36,7 +39,7 @@
 			[box2._sw.lng, box2._sw.lat],
 		]
 	);
-    function reachable_kilemeters(pos: Pos) {
+    function reachable_kilometers(pos: Pos) {
         return pos.duration * factor;
     }
 	function transform(pos: number[], dimensions: number[]) {
@@ -44,11 +47,16 @@
 		const y = Math.round(((box2._ne.lat - pos[1]) / (box2._ne.lat - box2._sw.lat)) * dimensions[1]);
 		return [x, y];
 	}
-	const circles2 = $derived(
-		active ?
-		isochronesData
+
+
+	let circles3 = $state<CircleType[] | undefined>(undefined);
+	$effect(() => {
+		if (!active || (lastData == isochronesData)){
+			return;
+		}
+		circles3 = isochronesData
             .map((data) => {
-                const r = reachable_kilemeters(data);
+                const r = reachable_kilometers(data);
                 let c = circle(
                     [data.lng, data.lat],
                     r,
@@ -59,10 +67,10 @@
                 );
 				c.bbox = bbox(c);
 				return c;
-            })
-		: []
-    );
-	type CircleType = typeof circles2[0];
+            });
+		lastData = isochronesData;
+    });
+
 	function is_visible(circle: CircleType) {
 		if (!circle.bbox) {
 			return false;
@@ -73,7 +81,7 @@
 	}
 
 	$effect(() => {
-		if(!map) {
+		if(!map || !circles3) {
 			return;
 		}
         if (!loaded) {
@@ -82,7 +90,7 @@
 				{
 					type: "canvas",
 					canvas: "isochronesCanvas",
-					"coordinates": box_coords,
+					coordinates: box_coords,
 				}
 			);
             map.addLayer({
@@ -111,7 +119,7 @@
 		ctx.fillStyle = "yellow";
 		ctx.clearRect(0, 0, dimensions[0], dimensions[1]);
 
-		circles2
+		circles3
 			.filter(is_visible)
 			.forEach(c => {
 				ctx.save();  // Store canvas state
