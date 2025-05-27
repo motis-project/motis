@@ -676,6 +676,14 @@ This step is on an open area, such as a plaza or train platform,
 and thus the directions should say something like "cross"
 `,
             type: 'boolean'
+        },
+        elevationUp: {
+            type: 'integer',
+            description: 'incline in meters across this path segment'
+        },
+        elevationDown: {
+            type: 'integer',
+            description: 'decline in meters across this path segment'
         }
     }
 } as const;

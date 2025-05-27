@@ -99,7 +99,8 @@ const translations: Translations = {
 	RENTAL_MOPED: 'Skuter współdzielony',
 	RENTAL_SCOOTER_STANDING: 'Hulajnoga stojąca współdzielona',
 	RENTAL_SCOOTER_SEATED: 'Hulajnoga z siedziskiem współdzielona',
-	RENTAL_OTHER: 'Inny pojazd współdzielony'
+	RENTAL_OTHER: 'Inny pojazd współdzielony',
+	incline: 'Nachylenie'
 };
 
 export default translations;
