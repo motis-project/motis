@@ -27,9 +27,12 @@
 	} = $props();
 
 	let query = $derived({ stopId, time: queryTime.toISOString(), arriveBy, n: 10 });
-	let responses = $derived.by(() => {
-		return [throwOnError(stoptimes({ query }))];
+	/* eslint-disable svelte/prefer-writable-derived */
+	let responses = $state<Array<Promise<StoptimesResponse>>>([]);
+	$effect(() => {
+		responses = [throwOnError(stoptimes({ query }))];
 	});
+	/* eslint-enable svelte/prefer-writable-derived */
 
 	const throwOnError = (promise: RequestResult<StoptimesResponse, StoptimesError, false>) =>
 		promise.then((response) => {
