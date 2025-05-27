@@ -61,7 +61,8 @@
 		120 * 60,
 		180 * 60,
 		240 * 60,
-		300 * 60
+		300 * 60,
+		360 * 60
 	];
 	const possiblePrePostDurations = [5 * 60, 10 * 60, 15 * 60, 20 * 60, 25 * 60, 30 * 60, 60 * 60];
 	function setModes(mode: PrePostDirectMode) {
