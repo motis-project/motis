@@ -113,7 +113,10 @@
 				</div>
 				<div class="flex items-center">
 					<ArrowDown class="size-4" />
-					{stepsWithElevation.reduce((acc: number, s: StepInstruction) => acc + s.elevationUp!, 0)}
+					{stepsWithElevation.reduce(
+						(acc: number, s: StepInstruction) => acc + s.elevationDown!,
+						0
+					)}
 				</div>
 			</div>
 		{/if}

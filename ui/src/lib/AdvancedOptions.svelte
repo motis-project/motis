@@ -8,6 +8,7 @@
 	import { Switch } from './components/ui/switch';
 	import type { ElevationCosts } from '$lib/api/openapi';
 	import { formatDurationSec } from './formatDuration';
+	import { cn } from './utils';
 	import {
 		possibleTransitModes,
 		prePostDirectModes,
@@ -27,7 +28,10 @@
 		maxPreTransitTime = $bindable(),
 		maxPostTransitTime = $bindable(),
 		maxDirectTime = $bindable(),
-		elevationCosts = $bindable()
+		elevationCosts = $bindable(),
+		ignorePreTransitRentalReturnConstraints = $bindable(),
+		ignorePostTransitRentalReturnConstraints = $bindable(),
+		ignoreDirectRentalReturnConstraints = $bindable()
 	}: {
 		useRoutedTransfers: boolean;
 		wheelchair: boolean;
@@ -41,6 +45,9 @@
 		maxPostTransitTime: string;
 		maxDirectTime: string;
 		elevationCosts: ElevationCosts;
+		ignorePreTransitRentalReturnConstraints: boolean;
+		ignorePostTransitRentalReturnConstraints: boolean;
+		ignoreDirectRentalReturnConstraints: boolean;
 	} = $props();
 
 	type TranslationKey = keyof typeof t;
@@ -132,6 +139,12 @@
 			postTransitModes.includes('BIKE') ||
 			directModes.includes('BIKE')
 	);
+
+	const containsRental = (modes: PrePostDirectMode[]) =>
+		modes.some((mode) => mode.startsWith('RENTAL_'));
+	const preTransitRental = $derived(containsRental(preTransitModes));
+	const postTransitRental = $derived(containsRental(postTransitModes));
+	const directRental = $derived(containsRental(directModes));
 </script>
 
 <Button variant="ghost" onclick={() => (expanded = !expanded)}>
@@ -232,6 +245,13 @@
 					{/each}
 				</Select.Content>
 			</Select.Root>
+			<div class={cn('col-span-2 col-start-2', preTransitRental || 'hidden')}>
+				<Switch
+					bind:checked={ignorePreTransitRentalReturnConstraints}
+					label={t.ignoreRentalReturnConstraints}
+					id="ignorePreTransitRentalReturnConstraints"
+				/>
+			</div>
 
 			<!-- Last mile -->
 			<div class="text-sm">
@@ -267,6 +287,13 @@
 					{/each}
 				</Select.Content>
 			</Select.Root>
+			<div class={cn('col-span-2 col-start-2', postTransitRental || 'hidden')}>
+				<Switch
+					bind:checked={ignorePostTransitRentalReturnConstraints}
+					label={t.ignoreRentalReturnConstraints}
+					id="ignorePostTransitRentalReturnConstraints"
+				/>
+			</div>
 
 			<!-- Direct -->
 			<div class="text-sm">
@@ -302,6 +329,13 @@
 					{/each}
 				</Select.Content>
 			</Select.Root>
+			<div class={cn('col-span-2 col-start-2', directRental || 'hidden')}>
+				<Switch
+					bind:checked={ignoreDirectRentalReturnConstraints}
+					label={t.ignoreRentalReturnConstraints}
+					id="ignoreDirectRentalReturnConstraints"
+				/>
+			</div>
 		</div>
 
 		<!-- Elevation Costs -->
