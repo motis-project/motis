@@ -38,19 +38,19 @@ jobs:
 
       - name: Install Dependencies
         working-directory: ui
-        run: npm install -f
+        run: pnpm install
 
       - name: Code Lint
         working-directory: ui
-        run: npm run lint
+        run: pnpm run lint
 
       - name: Svelte Check
         working-directory: ui
-        run: npm run check
+        run: pnpm run check
 
       - name: Build
         working-directory: ui
-        run: npm run build
+        run: pnpm run build
 
   formatting:
     runs-on: ubuntu-latest
