@@ -24,6 +24,7 @@
 		"@sveltejs/kit": "^2.21.1",
 		"@sveltejs/vite-plugin-svelte": "^4.0.4",
 		"@types/eslint": "^9.6.1",
+		"@types/geojson": "^7946.0.16",
 		"@types/mapbox__polyline": "^1.0.5",
 		"@typescript-eslint/eslint-plugin": "^8.32.1",
 		"@typescript-eslint/parser": "^8.32.1",

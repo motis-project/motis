@@ -69,6 +69,9 @@ importers:
       '@types/eslint':
         specifier: ^9.6.1
         version: 9.6.1
+      '@types/geojson':
+        specifier: ^7946.0.16
+        version: 7946.0.16
       '@types/mapbox__polyline':
         specifier: ^1.0.5
         version: 1.0.5
