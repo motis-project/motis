@@ -109,14 +109,14 @@
 				{t.incline}
 				<div class="flex items-center">
 					<ArrowUp class="size-4" />
-					{stepsWithElevation.reduce((acc: number, s: StepInstruction) => acc + s.elevationUp!, 0)}
+					{stepsWithElevation.reduce((acc: number, s: StepInstruction) => acc + s.elevationUp!, 0)} m
 				</div>
 				<div class="flex items-center">
 					<ArrowDown class="size-4" />
 					{stepsWithElevation.reduce(
 						(acc: number, s: StepInstruction) => acc + s.elevationDown!,
 						0
-					)}
+					)} m
 				</div>
 			</div>
 		{/if}
