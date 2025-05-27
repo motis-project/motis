@@ -247,8 +247,11 @@
 			</Select.Root>
 			<div class={cn('col-span-2 col-start-2', preTransitRental || 'hidden')}>
 				<Switch
-					bind:checked={ignorePreTransitRentalReturnConstraints}
-					label={t.ignoreRentalReturnConstraints}
+					bind:checked={
+						() => !ignorePreTransitRentalReturnConstraints,
+						(v) => (ignorePreTransitRentalReturnConstraints = !v)
+					}
+					label={t.considerRentalReturnConstraints}
 					id="ignorePreTransitRentalReturnConstraints"
 				/>
 			</div>
@@ -289,8 +292,11 @@
 			</Select.Root>
 			<div class={cn('col-span-2 col-start-2', postTransitRental || 'hidden')}>
 				<Switch
-					bind:checked={ignorePostTransitRentalReturnConstraints}
-					label={t.ignoreRentalReturnConstraints}
+					bind:checked={
+						() => !ignorePostTransitRentalReturnConstraints,
+						(v) => (ignorePostTransitRentalReturnConstraints = !v)
+					}
+					label={t.considerRentalReturnConstraints}
 					id="ignorePostTransitRentalReturnConstraints"
 				/>
 			</div>
@@ -331,8 +337,11 @@
 			</Select.Root>
 			<div class={cn('col-span-2 col-start-2', directRental || 'hidden')}>
 				<Switch
-					bind:checked={ignoreDirectRentalReturnConstraints}
-					label={t.ignoreRentalReturnConstraints}
+					bind:checked={
+						() => !ignoreDirectRentalReturnConstraints,
+						(v) => (ignoreDirectRentalReturnConstraints = !v)
+					}
+					label={t.considerRentalReturnConstraints}
 					id="ignoreDirectRentalReturnConstraints"
 				/>
 			</div>
