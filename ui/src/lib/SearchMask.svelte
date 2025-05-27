@@ -71,22 +71,6 @@
 	const applyPosition = (position: { coords: { latitude: number; longitude: number } }) => {
 		from = posToLocation({ lat: position.coords.latitude, lon: position.coords.longitude }, 0);
 	};
-
-	let timeType = $state(arriveBy ? 'arrival' : 'departure');
-	$effect(() => {
-		arriveBy = timeType === 'arrival';
-	});
-	$effect(() => {
-		timeType = arriveBy ? 'arrival' : 'departure';
-	});
-
-	let wheelchair = $state(pedestrianProfile === 'WHEELCHAIR');
-	$effect(() => {
-		wheelchair = pedestrianProfile === 'WHEELCHAIR';
-	});
-	$effect(() => {
-		pedestrianProfile = wheelchair ? 'WHEELCHAIR' : 'FOOT';
-	});
 </script>
 
 <div id="searchmask-container" class="flex flex-col space-y-4 p-4 relative">
@@ -130,7 +114,10 @@
 	</Button>
 	<div class="flex flex-row gap-2 flex-wrap">
 		<DateInput bind:value={time} />
-		<RadioGroup.Root class="flex" bind:value={timeType}>
+		<RadioGroup.Root
+			class="flex"
+			bind:value={() => (arriveBy ? 'arrival' : 'departure'), (v) => (arriveBy = v === 'arrival')}
+		>
 			<Label
 				for="departure"
 				class="flex items-center rounded-md border-2 border-muted bg-popover p-1 px-2 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-blue-600 hover:cursor-pointer"
@@ -153,7 +140,10 @@
 		</RadioGroup.Root>
 		<AdvancedOptions
 			bind:useRoutedTransfers
-			bind:wheelchair
+			bind:wheelchair={
+				() => pedestrianProfile === 'WHEELCHAIR',
+				(v) => (pedestrianProfile = v ? 'WHEELCHAIR' : 'FOOT')
+			}
 			bind:requireCarTransport
 			bind:requireBikeTransport
 			bind:transitModes
