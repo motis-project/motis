@@ -51,6 +51,7 @@ const translations: Translations = {
 	bikeRental: 'Sharing-Fahrzeuge berücksichtigen',
 	requireBikeTransport: 'Fahrradmitnahme',
 	requireCarTransport: 'Automitnahme',
+	considerRentalReturnConstraints: 'Leihfahrzeuge innerhalb der Reise zurückgeben',
 	default: 'Vorgabe',
 	timetableSources: 'Fahrplandatenquellen',
 	tripCancelled: 'Fahrt entfällt',

@@ -37,7 +37,7 @@ export const preserveFromUrl = (
 export const pushStateWithQueryString = (
 	// eslint-disable-next-line
 	queryParams: Record<string, any>,
-	// eslint-disable-next-line
+
 	newState: App.PageState,
 	replace: boolean = false
 ) => {

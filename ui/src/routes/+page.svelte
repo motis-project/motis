@@ -167,6 +167,15 @@
 	let maxDirectTime = $state<string>(
 		urlParams?.get('maxDirectTime') ?? defaultQuery.maxDirectTime.toString()
 	);
+	let ignorePreTransitRentalReturnConstraints = $state(
+		urlParams?.get('ignorePreTransitRentalReturnConstraints') == 'true'
+	);
+	let ignorePostTransitRentalReturnConstraints = $state(
+		urlParams?.get('ignorePostTransitRentalReturnConstraints') == 'true'
+	);
+	let ignoreDirectRentalReturnConstraints = $state(
+		urlParams?.get('ignoreDirectRentalReturnConstraints') == 'true'
+	);
 
 	const toPlaceString = (l: Location) => {
 		if (l.match?.type === 'STOP') {
@@ -206,7 +215,10 @@
 						maxMatchingDistance: pedestrianProfile == 'WHEELCHAIR' ? 8 : 250,
 						maxPreTransitTime: parseInt(maxPreTransitTime),
 						maxPostTransitTime: parseInt(maxPostTransitTime),
-						maxDirectTime: parseInt(maxDirectTime)
+						maxDirectTime: parseInt(maxDirectTime),
+						ignorePreTransitRentalReturnConstraints,
+						ignorePostTransitRentalReturnConstraints,
+						ignoreDirectRentalReturnConstraints
 					} as PlanData['query'])
 				} as PlanData)
 			: undefined
@@ -360,6 +372,9 @@
 								bind:maxPreTransitTime
 								bind:maxPostTransitTime
 								bind:maxDirectTime
+								bind:ignorePreTransitRentalReturnConstraints
+								bind:ignorePostTransitRentalReturnConstraints
+								bind:ignoreDirectRentalReturnConstraints
 							/>
 						</Card>
 					</Tabs.Content>

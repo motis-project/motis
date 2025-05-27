@@ -45,6 +45,7 @@ export type Translations = {
 	bikeRental: string;
 	requireBikeTransport: string;
 	requireCarTransport: string;
+	considerRentalReturnConstraints: string;
 	default: string;
 	timetableSources: string;
 	tripCancelled: string;

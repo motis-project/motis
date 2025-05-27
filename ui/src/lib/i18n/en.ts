@@ -50,6 +50,7 @@ const translations: Translations = {
 	bikeRental: 'Allow usage of sharing vehicles',
 	requireBikeTransport: 'Bike carriage',
 	requireCarTransport: 'Car carriage',
+	considerRentalReturnConstraints: 'Return rental vehicles within journey',
 	default: 'Default',
 	timetableSources: 'Timetable sources',
 	tripCancelled: 'Trip cancelled',
