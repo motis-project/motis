@@ -72,7 +72,7 @@
 				</div>
 			{/if}
 			{#if isStartOrEnd && p.alerts}
-				{#each p.alerts as alert}
+				{#each p.alerts as alert, i (i)}
 					<div class="ml-4 text-destructive text-sm">
 						{alert.headerText}
 					</div>
@@ -171,8 +171,8 @@
 					class:list-disc={productOptions.length > 1}
 					class:list-inside={productOptions.length > 1}
 				>
-					{#each productOptions as products}
-						{#each products as product}
+					{#each productOptions as products, i (i)}
+						{#each products as product (product.name)}
 							<li>
 								{@render productInfo(product)}
 							</li>
@@ -185,7 +185,7 @@
 {/snippet}
 
 <div class="text-lg">
-	{#each itinerary.legs as l, i}
+	{#each itinerary.legs as l, i (i)}
 		{@const isLast = i == itinerary.legs.length - 1}
 		{@const isLastPred = i == itinerary.legs.length - 2}
 		{@const pred = i == 0 ? undefined : itinerary.legs[i - 1]}
@@ -214,7 +214,7 @@
 								<br />
 								<span class="text-xs font-bold text-foreground">
 									Ticket: {pred.effectiveFareLegIndex}
-									{#each transferProducts as transferProduct}
+									{#each transferProducts as transferProduct (transferProduct.name)}
 										{@render productInfo(transferProduct)}
 									{/each}
 								</span>
@@ -252,7 +252,7 @@
 				{/if}
 				{#if l.alerts}
 					<ul class="mt-2">
-						{#each l.alerts as alert}
+						{#each l.alerts as alert, i (i)}
 							<li class="text-destructive text-sm font-bold">
 								{alert.headerText}
 							</li>
@@ -287,7 +287,7 @@
 							</span>
 						</summary>
 						<div class="mb-1 grid gap-y-4 grid-cols-[max-content_max-content_auto] items-center">
-							{#each l.intermediateStops! as s}
+							{#each l.intermediateStops! as s, i (i)}
 								{@render stopTimes(s.arrival!, s.scheduledArrival!, l.realTime, s, 0)}
 							{/each}
 						</div>

@@ -27,9 +27,8 @@
 	} = $props();
 
 	let query = $derived({ stopId, time: queryTime.toISOString(), arriveBy, n: 10 });
-	let responses = $state<Array<Promise<StoptimesResponse>>>([]);
-	$effect(() => {
-		responses = [throwOnError(stoptimes({ query }))];
+	let responses = $derived.by(() => {
+		return [throwOnError(stoptimes({ query }))];
 	});
 
 	const throwOnError = (promise: RequestResult<StoptimesResponse, StoptimesError, false>) =>
@@ -42,7 +41,6 @@
 				(response.data?.stopTimes.length && response.data?.stopTimes[0].place?.name) || '';
 			return response.data!;
 		});
-	stop;
 </script>
 
 <div
@@ -63,7 +61,7 @@
 			{/if}
 		</Button>
 	</div>
-	{#each responses as r, rI}
+	{#each responses as r, rI (rI)}
 		{#await r}
 			<div class="col-span-full w-full flex items-center justify-center">
 				<LoaderCircle class="animate-spin w-12 h-12 m-20" />
@@ -88,7 +86,7 @@
 				</div>
 			{/if}
 
-			{#each r.stopTimes as stopTime}
+			{#each r.stopTimes as stopTime, i (i)}
 				{@const timestamp = arriveBy ? stopTime.place.arrival! : stopTime.place.departure!}
 				{@const scheduledTimestamp = arriveBy
 					? stopTime.place.scheduledArrival!

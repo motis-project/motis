@@ -193,7 +193,7 @@
 {#snippet propertiesTable(_1: maplibregl.MapMouseEvent, _2: () => void, features: any)}
 	<Table>
 		<TableBody>
-			{#each Object.entries(features[0].properties) as [key, value]}
+			{#each Object.entries(features[0].properties) as [key, value], i (i)}
 				<TableRow>
 					<TableCell>{key}</TableCell>
 					<TableCell>
@@ -249,7 +249,7 @@
 					</TableHeader>
 					<TableBody>
 						{#if elevator.outOfService}
-							{#each elevator.outOfService as _, i}
+							{#each elevator.outOfService as _, i (i)}
 								<TableRow>
 									<TableCell>
 										<DateInput bind:value={elevator.outOfService[i][0]} />
@@ -346,7 +346,7 @@
 								</TableRow>
 							</TableHeader>
 							<TableBody>
-								{#each f.footpaths as x}
+								{#each f.footpaths as x, i (i)}
 									<TableRow>
 										<TableCell>
 											{x.to.name} <br />

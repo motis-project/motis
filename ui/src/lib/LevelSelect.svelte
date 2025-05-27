@@ -48,7 +48,7 @@
 {#if availableLevels.length > 1}
 	<Control position="bottom-right">
 		<RadioGroup class="flex flex-col items-end space-y-1" bind:value>
-			{#each availableLevels as l}
+			{#each availableLevels as l (l)}
 				<Label
 					for={`level-${l}`}
 					class="inline-flex items-center justify-center font-bold rounded-md border-2 border-muted bg-popover h-9 w-9 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-blue-600 hover:cursor-pointer"

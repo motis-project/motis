@@ -238,7 +238,7 @@
 					{formatDurationSec(parseInt(maxPreTransitTime))}
 				</Select.Trigger>
 				<Select.Content sideOffset={10}>
-					{#each possiblePrePostDurations as duration}
+					{#each possiblePrePostDurations as duration (duration)}
 						<Select.Item value={`${duration}`} label={formatDurationSec(duration)}>
 							{formatDurationSec(duration)}
 						</Select.Item>
@@ -283,7 +283,7 @@
 					{formatDurationSec(parseInt(maxPostTransitTime))}
 				</Select.Trigger>
 				<Select.Content sideOffset={10}>
-					{#each possiblePrePostDurations as duration}
+					{#each possiblePrePostDurations as duration (duration)}
 						<Select.Item value={`${duration}`} label={formatDurationSec(duration)}>
 							{formatDurationSec(duration)}
 						</Select.Item>
@@ -328,7 +328,7 @@
 					{formatDurationSec(parseInt(maxDirectTime))}
 				</Select.Trigger>
 				<Select.Content sideOffset={10}>
-					{#each possibleDirectDurations as duration}
+					{#each possibleDirectDurations as duration (duration)}
 						<Select.Item value={`${duration}`} label={formatDurationSec(duration)}>
 							{formatDurationSec(duration)}
 						</Select.Item>
