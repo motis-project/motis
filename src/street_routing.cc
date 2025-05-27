@@ -123,9 +123,10 @@ std::vector<api::StepInstruction> get_step_instructions(
         .exit_ = {},  // TODO
         .stayOn_ = false,  // TODO
         .area_ = false,  // TODO
-        .elevationUp_ = elevations ? to_idx(s.elevation_.up_) : std::nullopt,
-        .elevationDown_ =
-            elevations ? to_idx(s.elevation_.down_) : std::nullopt});
+        .elevationUp_ =
+            elevations ? std::optional{to_idx(s.elevation_.up_)} : std::nullopt,
+        .elevationDown_ = elevations ? std::optional{to_idx(s.elevation_.down_)}
+                                     : std::nullopt});
   }
 
   if (!segments.empty()) {

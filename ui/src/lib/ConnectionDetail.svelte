@@ -257,7 +257,7 @@
 					</ul>
 				{/if}
 				{#if l.intermediateStops?.length === 0}
-					<div class="py-8 pl-1 md:pl-4 flex items-center text-muted-foreground">
+					<div class="pt-16 pb-8 pl-1 md:pl-4 flex items-center text-muted-foreground">
 						{t.tripIntermediateStops(0)}
 					</div>
 					{@render ticketInfo(prevTransitLeg, l)}
