@@ -104,6 +104,11 @@
             loaded = true;
         }
 
+		map.setLayoutProperty(name, 'visibility', active ? 'visible' : 'none');
+		if (!active) {
+			return;
+		}
+
 		const dimensions = map._containerDimensions();
 		console.log('Dimensions: ', dimensions);
 		const source = (map.getSource(name) as CanvasSource);
@@ -112,6 +117,7 @@
 		const canvas = source.canvas;
 		canvas.width = dimensions[0];
 		canvas.height = dimensions[1];
+
 		const ctx = canvas.getContext("2d");
 		if (!ctx) {
 			return;

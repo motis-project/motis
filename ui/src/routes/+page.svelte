@@ -222,7 +222,7 @@
 	let routingResponses = $state<Array<Promise<PlanResponse>>>([]);
 	let stopNameFromResponse = $state<string>('');
 	$effect(() => {
-		if (baseQuery) {
+		if (baseQuery && activeTab == "connections") {
 			clearTimeout(searchDebounceTimer);
 			searchDebounceTimer = setTimeout(() => {
 				const base = plan(baseQuery).then(updateStartDest(from, to));
@@ -385,7 +385,8 @@
 					<Tabs.Content value="isochrones">
 						<Card class="overflow-y-auto overflow-x-hidden bg-background rounded-lg">
 							<IsochronesMask
-								bind:one={from}
+								{from}
+								{to}
 								geocodingBiasPlace={center}
 								bind:isochronesData
 								bind:time

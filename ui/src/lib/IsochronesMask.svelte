@@ -25,13 +25,15 @@
 	};
 
 	let {
-		one = $bindable(),
+		from,
+		to,
 		// maxTravelTime = $bindable(),
 		geocodingBiasPlace,
 		isochronesData = $bindable(),
 		time = $bindable()
 	}: {
-		one: Location;
+		from: Location;
+		to: Location;
 		// maxTravelTime: string;
 		geocodingBiasPlace?: maplibregl.LngLatLike;
 		isochronesData: IsochronesPos[];
@@ -48,9 +50,12 @@
 	;
 	// let from = $state<Location>() as Location;
 	// let fromItems = $state<Array<Location>>([]);
+	let one = $state<Location>(from);
 	let maxTravelTime = $state("45");
 	const selectedMaxTravelTime = $derived(parseInt(maxTravelTime));
 
+	let lastFrom: Location = from;
+	let lastTo: Location = to;
 	let queryTimeout: number;
 
 	let isochronesQuery = $derived(
@@ -94,6 +99,18 @@
 			}, timeout);
 		}
 	});
+
+	$effect(() => {
+		if (lastFrom != from) {
+			one = from;
+			lastFrom = from;
+		}
+		if (lastTo != to) {
+			one = to;
+			lastTo = to;
+		}
+	});
+
 	// $effect(() => {
 	// 	console.log('NEW LOCATION');
 	// 	const lat = Math.random() + 50.5;
