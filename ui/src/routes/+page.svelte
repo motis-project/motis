@@ -197,6 +197,7 @@
 						arriveBy,
 						timetableView: true,
 						withFares: true,
+						slowDirect: true,
 						pedestrianProfile,
 						transitModes:
 							transitModes.length == possibleTransitModes.length

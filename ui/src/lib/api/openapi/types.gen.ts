@@ -1222,6 +1222,10 @@ export type PlanData = {
          */
         searchWindow?: number;
         /**
+         * Optional. Experimental. Adds overtaken direct connections.
+         */
+        slowDirect?: boolean;
+        /**
          * Optional. Defaults to the current time.
          *
          * Departure time ($arriveBy=false) / arrival date ($arriveBy=true),

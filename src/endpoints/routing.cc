@@ -692,7 +692,8 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
             get_via_stops(*tt_, *tags_, query.via_, query.viaMinimumStay_),
         .fastest_direct_ = fastest_direct == kInfinityDuration
                                ? std::nullopt
-                               : std::optional{fastest_direct}};
+                               : std::optional{fastest_direct},
+        .slow_direct_ = query.slowDirect_};
     remove_slower_than_fastest_direct(q);
     UTL_STOP_TIMING(query_preparation);
 
