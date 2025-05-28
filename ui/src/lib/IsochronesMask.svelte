@@ -3,10 +3,13 @@
 	import { type Location } from '$lib/Location';
 	import { t } from '$lib/i18n/translation';
 	import * as Select from '$lib/components/ui/select';
+	import { Label } from '$lib/components/ui/label';
+	import * as RadioGroup from '$lib/components/ui/radio-group';
 	import { Slider } from 'bits-ui';
 	import { untrack } from 'svelte';
 	import { oneToAll, plan, type OneToAllData, type OneToAllResponse, type ReachablePlace } from './api/openapi';
 	import { lngLatToStr } from './lngLatToStr';
+	import DateInput from './DateInput.svelte';
 
     interface IsochronesPos {
         lat: number;
@@ -30,7 +33,8 @@
 		// maxTravelTime = $bindable(),
 		geocodingBiasPlace,
 		isochronesData = $bindable(),
-		time = $bindable()
+		time = $bindable(),
+		timeType = $bindable()
 	}: {
 		from: Location;
 		to: Location;
@@ -38,6 +42,7 @@
 		geocodingBiasPlace?: maplibregl.LngLatLike;
 		isochronesData: IsochronesPos[];
 		time: Date;
+		timeType: string;
 	} = $props();
 
 	const timeout = 60;
@@ -62,7 +67,13 @@
 		one?.value?.match
 			? ({query: {
 				one: toPlaceString(one),
-				maxTravelTime: selectedMaxTravelTime
+				maxTravelTime: selectedMaxTravelTime,
+				time: time.toISOString(),
+				arriveBy: timeType == 'arrival',
+				// preTransitModes: timeType == 'arrival' ? undefined : 'BIKE',
+				// postTransitModes: timeType == 'arrival' ? 'WALK' : undefined,
+				// maxPreTransitTime: timeType == 'arrival' ? undefined : 15,
+				// maxPostTransitTime: timeType == 'arrival' ? 15 : undefined,
 			}}) as OneToAllData
 			: undefined
 	);
@@ -130,6 +141,31 @@
 		placeholder={t.from}
 		bind:selected={one}
 	/>
+	<div class="flex flex-row gap-2 flex-wrap">
+		<DateInput bind:value={time} />
+		<RadioGroup.Root class="flex" bind:value={timeType}>
+			<Label
+				for="departure"
+				class="flex items-center rounded-md border-2 border-muted bg-popover p-1 px-2 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-blue-600 hover:cursor-pointer"
+			>
+				<RadioGroup.Item
+					value="departure"
+					id="departure"
+					class="sr-only"
+					aria-label={t.departure}
+				/>
+				<span>{t.departure}</span>
+			</Label>
+			<Label
+				for="arrival"
+				class="flex items-center rounded-md border-2 border-muted bg-popover p-1 px-2 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-blue-600 hover:cursor-pointer"
+			>
+				<RadioGroup.Item value="arrival" id="arrival" class="sr-only" aria-label={t.arrival} />
+				<span>{t.arrival}</span>
+			</Label>
+		</RadioGroup.Root>
+	</div>
+		<!-- bind:items={fromItems} -->
 
 
 	<div class="grid grid-cols-2 items-center">

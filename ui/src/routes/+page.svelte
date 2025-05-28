@@ -390,6 +390,7 @@
 								geocodingBiasPlace={center}
 								bind:isochronesData
 								bind:time
+								bind:timeType
 							/>
 						</Card>
 					</Tabs.Content>
