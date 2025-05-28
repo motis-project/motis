@@ -1,10 +1,14 @@
 <script lang="ts">
 	import AddressTypeahead from '$lib/AddressTypeahead.svelte';
-	import { type Location } from '$lib/Location';
+	import Button from '$lib/components/ui/button/button.svelte';
+	import { posToLocation, type Location } from '$lib/Location';
 	import { t } from '$lib/i18n/translation';
 	import * as Select from '$lib/components/ui/select';
 	import { Label } from '$lib/components/ui/label';
 	import * as RadioGroup from '$lib/components/ui/radio-group';
+	import ChevronUp from 'lucide-svelte/icons/chevron-up';
+	import ChevronDown from 'lucide-svelte/icons/chevron-down';
+	import LocateFixed from 'lucide-svelte/icons/locate-fixed';
 	import { Slider } from 'bits-ui';
 	import { untrack } from 'svelte';
 	import { oneToAll, plan, type OneToAllData, type OneToAllResponse, type ReachablePlace } from './api/openapi';
@@ -59,6 +63,7 @@
 		.map(i => i.toString())
 		.map(v => ( {value: v, label: v + " min"} ))
 	;
+	let expanded = $state<boolean>(false);
 	// let from = $state<Location>() as Location;
 	// let fromItems = $state<Array<Location>>([]);
 	let one = $state<Location>(from);
@@ -142,6 +147,18 @@
 	// 	untrack(() => isochronesData.push({lat: lat, lng: lng, duration: dur, name: name}));
 	// 	console.log("PUSHED");
 	// });
+
+	const getLocation = () => {
+		if (navigator && navigator.geolocation) {
+			navigator.geolocation.getCurrentPosition(applyPosition, (e) => console.log(e), {
+				enableHighAccuracy: true
+			});
+		}
+	};
+
+	const applyPosition = (position: { coords: { latitude: number; longitude: number } }) => {
+		one = posToLocation({ lat: position.coords.latitude, lon: position.coords.longitude }, 0);
+	};
 </script>
 
 <div id="searchmask-container" class="flex flex-col space-y-4 p-4 relative">
@@ -151,6 +168,14 @@
 		placeholder={t.from}
 		bind:selected={one}
 	/>
+	<Button
+		variant="ghost"
+		class="absolute z-10 right-4 top-0"
+		size="icon"
+		onclick={() => getLocation()}
+	>
+		<LocateFixed class="w-5 h-5" />
+	</Button>
 	<div class="flex flex-row gap-2 flex-wrap">
 		<DateInput bind:value={time} />
 		<RadioGroup.Root class="flex" bind:value={timeType}>
@@ -174,10 +199,20 @@
 				<span>{t.arrival}</span>
 			</Label>
 		</RadioGroup.Root>
+		<Button variant="ghost" onclick={() => (expanded = !expanded)}>
+			{t.advancedSearchOptions}
+			{#if expanded}
+				<ChevronUp class="size-[18px]" />
+			{:else}
+				<ChevronDown class="size-[18px]" />
+			{/if}
+		</Button>
 	</div>
+</div>
 
 
-	<div class="grid grid-cols-2 items-center space-y-2">
+{#if expanded}
+	<div class="w-lg m-4 grid grid-cols-2 items-center space-y-2">
 		<!-- Max travel time -->
 		<div class="text-sm">
 			<!-- TODO -->
@@ -258,4 +293,4 @@
 			{/snippet}
 		</Slider.Root>
 	</div>
-</div>
+{/if}
