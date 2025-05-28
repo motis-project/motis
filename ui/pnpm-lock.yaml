@@ -9,13 +9,13 @@ importers:
   .:
     dependencies:
       '@deck.gl/core':
-        specifier: '=9.0.40'
+        specifier: ~9.0.40
         version: 9.0.40
       '@deck.gl/layers':
-        specifier: '=9.0.40'
+        specifier: ~9.0.40
         version: 9.0.40(@deck.gl/core@9.0.40)(@loaders.gl/core@4.3.3)(@luma.gl/core@9.0.28)(@luma.gl/engine@9.0.28(@luma.gl/core@9.0.28))
       '@deck.gl/mapbox':
-        specifier: '=9.0.40'
+        specifier: ~9.0.40
         version: 9.0.40(@deck.gl/core@9.0.40)(@luma.gl/core@9.0.28)
       '@hey-api/client-fetch':
         specifier: ^0.4.4
