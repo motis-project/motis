@@ -16,12 +16,16 @@
         map = $bindable(),
 		bounds = $bindable(),
 		isochronesData,
-		active = $bindable()
+		active = $bindable(),
+		color = $bindable(),
+		opacity = $bindable()
 	} : {
         map: Map | undefined;
 		bounds: LngLatBoundsLike | undefined;
 		isochronesData: Pos[];
 		active: boolean;
+		color: string;
+		opacity: number;
 	} = $props();
 
 	const name = 'isochrones-data';
@@ -98,7 +102,7 @@
                 type: "raster",
                 source: name,
                 paint: {
-					"raster-opacity": 0.25,
+					"raster-opacity": opacity / 1000,
                 }
             });
             loaded = true;
@@ -108,6 +112,7 @@
 		if (!active) {
 			return;
 		}
+		map.setPaintProperty(name, "raster-opacity", opacity / 1000);
 
 		const dimensions = map._containerDimensions();
 		console.log('Dimensions: ', dimensions);
@@ -122,7 +127,7 @@
 		if (!ctx) {
 			return;
 		}
-		ctx.fillStyle = "yellow";
+		ctx.fillStyle = color;
 		ctx.clearRect(0, 0, dimensions[0], dimensions[1]);
 
 		circles3

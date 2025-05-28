@@ -80,6 +80,8 @@
 	let zoom = $state(15);
 	let bounds = $state<maplibregl.LngLatBoundsLike>();
 	let map = $state<maplibregl.Map>();
+	let isochronesColor = $state<string>("#ffff00");
+	let isochronesOpacity = $state<number>(250);
 
 	onMount(async () => {
 		initial().then((d) => {
@@ -391,6 +393,8 @@
 								bind:isochronesData
 								bind:time
 								bind:timeType
+								bind:color={isochronesColor}
+								bind:opacity={isochronesOpacity}
 							/>
 						</Card>
 					</Tabs.Content>
@@ -493,9 +497,25 @@
 
 	{#if showMap}
 		<RailViz {map} {bounds} {zoom} />
+		<!--
+			- Select => SVG, Combine, Union
+				- Farbe
+				- Opacity
+			- arriveBy
+			- Input-Feld (maxTravelTime)
+			- Transit-Modes
+			- Translation
+		-->
 		<!-- <Isochrones class="absolute flex border-2 border-indigo-600 h-dvh max-w-full z-50" {bounds} {isochronesData} /> -->
 		<!-- <IsochronesTurf {map} {bounds} {isochronesData} /> -->
-		<Isochrones {map} {bounds} {isochronesData} active={activeTab == "isochrones"}/>
+		<Isochrones
+				{map}
+				{bounds}
+				{isochronesData}
+				active={activeTab == "isochrones"}
+				bind:color={isochronesColor}
+				bind:opacity={isochronesOpacity}
+			/>
 
 		<Popup trigger="contextmenu" children={contextMenu} />
 

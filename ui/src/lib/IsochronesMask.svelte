@@ -34,7 +34,9 @@
 		geocodingBiasPlace,
 		isochronesData = $bindable(),
 		time = $bindable(),
-		timeType = $bindable()
+		timeType = $bindable(),
+		color = $bindable(),
+		opacity = $bindable()
 	}: {
 		from: Location;
 		to: Location;
@@ -43,6 +45,8 @@
 		isochronesData: IsochronesPos[];
 		time: Date;
 		timeType: string;
+		color: string;
+		opacity: number;
 	} = $props();
 
 	type TranslationKey = keyof typeof t;
@@ -171,7 +175,6 @@
 			</Label>
 		</RadioGroup.Root>
 	</div>
-		<!-- bind:items={fromItems} -->
 
 
 	<div class="grid grid-cols-2 items-center space-y-2">
@@ -192,24 +195,6 @@
 				{/each}
 			</Select.Content>
 		</Select.Root>
-
-		<!-- TODO Delete -->
-		<div class="text-sm">
-			Max travel time ({selectedMaxTravelTime})
-		</div>
-		<Slider.Root type="single" min={1} max={90} step={1} value={selectedMaxTravelTime} onValueChange={(v) => (maxTravelTime = v.toString())} class="relative flex w-full touch-none select-none items-center">
-			{#snippet  children()}
-				<span class="bg-dark-10 relative h-2 w-full grow cursor-pointer overflow-hidden rounded-full">
-					<Slider.Range class="bg-foreground absolute h-full" />
-				</span>
-				<Slider.Thumb
-					index={0}
-					class="border-border-input bg-background hover:border-dark-40 focus-visible:ring-foreground dark:bg-foreground dark:shadow-card focus-visible:outline-hidden block size-[25px] cursor-pointer rounded-full border shadow-sm transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50"
-					/>
-			{/snippet}
-		</Slider.Root>
-	<!-- </div>
-	<div class="grid grid-cols-[1fr_2fr] items-center space-y-2"> -->
 
 		<!-- First mile -->
 		<div class="text-sm">
@@ -252,5 +237,25 @@
 				{/each}
 			</Select.Content>
 		</Select.Root>
+
+		<!-- Styling -->
+		<div class="grid grid-cols-2 items-stretch">
+			<div class="text-sm">
+				<!-- TODO -->
+				Style
+			</div>
+			<input class="flex right-0 align-right" type="color" bind:value={color} />
+		</div>
+		<Slider.Root type="single" min={0} max={1000} bind:value={opacity} class="relative flex w-full touch-none select-none items-center">
+			{#snippet  children()}
+				<span class="bg-dark-10 relative h-2 w-full grow cursor-pointer overflow-hidden rounded-full">
+					<Slider.Range class="bg-foreground absolute h-full" />
+				</span>
+				<Slider.Thumb
+					index={0}
+					class="border-border-input bg-background hover:border-dark-40 focus-visible:ring-foreground dark:bg-foreground dark:shadow-card focus-visible:outline-hidden block size-[25px] cursor-pointer rounded-full border shadow-sm transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50"
+					/>
+			{/snippet}
+		</Slider.Root>
 	</div>
 </div>
