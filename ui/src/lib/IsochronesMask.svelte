@@ -45,6 +45,8 @@
 		timeType: string;
 	} = $props();
 
+	type TranslationKey = keyof typeof t;
+
 	const timeout = 60;
 
 	const maxOption = 60;
@@ -57,7 +59,11 @@
 	// let fromItems = $state<Array<Location>>([]);
 	let one = $state<Location>(from);
 	let maxTravelTime = $state("45");
+	let oneMileMode = $state("WALK");
+	let maxOneTime = $state("15");
+
 	const selectedMaxTravelTime = $derived(parseInt(maxTravelTime));
+	const selectedMaxOneTimeSeconds = $derived(parseInt(maxOneTime) * 60);
 
 	let lastFrom: Location = from;
 	let lastTo: Location = to;
@@ -70,10 +76,10 @@
 				maxTravelTime: selectedMaxTravelTime,
 				time: time.toISOString(),
 				arriveBy: timeType == 'arrival',
-				// preTransitModes: timeType == 'arrival' ? undefined : 'BIKE',
-				// postTransitModes: timeType == 'arrival' ? 'WALK' : undefined,
-				// maxPreTransitTime: timeType == 'arrival' ? undefined : 15,
-				// maxPostTransitTime: timeType == 'arrival' ? 15 : undefined,
+				preTransitModes: timeType == 'arrival' ? undefined : oneMileMode,
+				postTransitModes: timeType == 'arrival' ? oneMileMode : undefined,
+				maxPreTransitTime: timeType == 'arrival' ? undefined : selectedMaxOneTimeSeconds,
+				maxPostTransitTime: timeType == 'arrival' ? selectedMaxOneTimeSeconds : undefined,
 			}}) as OneToAllData
 			: undefined
 	);
@@ -168,8 +174,10 @@
 		<!-- bind:items={fromItems} -->
 
 
-	<div class="grid grid-cols-2 items-center">
+	<div class="grid grid-cols-2 items-center space-y-2">
+		<!-- Max travel time -->
 		<div class="text-sm">
+			<!-- TODO -->
 			Max travel time
 		</div>
 		<Select.Root type="single" bind:value={maxTravelTime} items={possibleTravelTimes}>
@@ -185,6 +193,7 @@
 			</Select.Content>
 		</Select.Root>
 
+		<!-- TODO Delete -->
 		<div class="text-sm">
 			Max travel time ({selectedMaxTravelTime})
 		</div>
@@ -199,5 +208,49 @@
 					/>
 			{/snippet}
 		</Slider.Root>
+	<!-- </div>
+	<div class="grid grid-cols-[1fr_2fr] items-center space-y-2"> -->
+
+		<!-- First mile -->
+		<div class="text-sm">
+			{#if timeType == 'arrival' }
+				{t.routingSegments.lastMile}
+			{:else}
+				{t.routingSegments.firstMile}
+			{/if}
+		</div>
+		<Select.Root type="single" bind:value={oneMileMode}>
+			<Select.Trigger
+				class="flex items-center w-full overflow-hidden"
+				aria-label={timeType == 'arrival' ? t.routingSegments.lastMile : t.routingSegments.firstMile}
+			>
+				{t[oneMileMode as TranslationKey]}
+			</Select.Trigger>
+			<Select.Content sideOffset={10}>
+				{#each ['WALK', 'BIKE', 'CAR'] as mode, i (i + mode)}
+					<Select.Item value={mode} label={t[mode as TranslationKey] as string}>
+						{t[mode as TranslationKey]}
+					</Select.Item>
+				{/each}
+			</Select.Content>
+		</Select.Root>
+
+		<!-- Max duration near one location -->
+		<div class="text-sm">
+			<!-- TODO -->
+			Max travel time near one location
+		</div>
+		<Select.Root type="single" bind:value={maxOneTime} items={possibleTravelTimes}>
+			<Select.Trigger class="flex items-center w-full overflow-hidden" aria-label="max travel time">
+				<div class="w-full text-right pr-4">{maxOneTime} min</div>
+			</Select.Trigger>
+			<Select.Content align="end">
+				{#each possibleTravelTimes as option, i ( i + option.value )}
+					<Select.Item value={option.value} label={option.label}>
+						<div class="w-full text-right pr-2">{option.label}</div>
+					</Select.Item>
+				{/each}
+			</Select.Content>
+		</Select.Root>
 	</div>
 </div>
