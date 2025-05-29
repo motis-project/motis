@@ -1856,6 +1856,9 @@ components:
             The current track/platform information, updated with real-time updates if available. 
             Can be missing if neither real-time updates nor the schedule timetable contains track information.
           type: string
+        description:
+          description: description of the location that provides useful, quality information
+          type: string
         vertexType:
           $ref: '#/components/schemas/VertexType'
         pickupType:
