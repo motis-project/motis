@@ -34,7 +34,8 @@ export const defaultQuery = {
 	transferTimeFactor: 1,
 	numItineraries: 5,
 	passengers: 1,
-	luggage: 0
+	luggage: 0,
+	slowDirect: false
 };
 
 export const omitDefaults = (query: PlanData['query']): PlanData['query'] => {

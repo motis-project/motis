@@ -176,6 +176,7 @@
 	let ignoreDirectRentalReturnConstraints = $state(
 		urlParams?.get('ignoreDirectRentalReturnConstraints') == 'true'
 	);
+	let slowDirect = $state(urlParams?.get('slowDirect') == 'true');
 
 	const toPlaceString = (l: Location) => {
 		if (l.match?.type === 'STOP') {
@@ -197,7 +198,7 @@
 						arriveBy,
 						timetableView: true,
 						withFares: true,
-						slowDirect: true,
+						slowDirect,
 						pedestrianProfile,
 						transitModes:
 							transitModes.length == possibleTransitModes.length
