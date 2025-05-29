@@ -650,6 +650,14 @@ paths:
             type: integer
             minimum: 1
 
+        - name: slowDirect
+          in: query
+          required: false
+          description: Optional. Experimental. Adds overtaken direct connections.
+          schema:
+            type: boolean
+            default: false
+
         - name: withFares
           in: query
           required: false
