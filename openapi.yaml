@@ -1265,6 +1265,17 @@ paths:
             If set, all stops at parent stations and their child stops in the specified radius
             are returned.
 
+        - name: exactRadius
+          in: query
+          schema:
+            type: boolean
+          required: false
+          description: |
+            Optional. Default is `false`.
+            
+            If set to `true`, only stations that are phyiscally in the radius are considered.
+            If set to `false`, additionally to the stations in the radius, equivalences and children are considered.
+
         - name: pageCursor
           in: query
           required: false

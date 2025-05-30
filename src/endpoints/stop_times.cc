@@ -299,7 +299,13 @@ api::stoptimes_response stop_times::operator()(
   if (query.radius_) {
     loc_rtree_.in_radius(tt_.locations_.coordinates_[x],
                          static_cast<double>(*query.radius_),
-                         [&](n::location_idx_t const y) { add(y); });
+                         [&](n::location_idx_t const y) {
+                           if (query.exactRadius_ == true) {
+                             locations.emplace_back(y);
+                           } else {
+                             add(y);
+                           }
+                         });
   } else {
     add(x);
   }
