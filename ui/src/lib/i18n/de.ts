@@ -66,7 +66,7 @@ const translations: Translations = {
 	BIKE: 'Fahrrad',
 	RENTAL: 'Sharing',
 	CAR: 'Auto',
-	CAR_PARKING: 'Car parking',
+	CAR_PARKING: 'P+R Park & Ride',
 	TRANSIT: 'ÖPV',
 	TRAM: 'Tram',
 	SUBWAY: 'U-Bahn',
@@ -90,11 +90,7 @@ const translations: Translations = {
 		maxPostTransitTime: 'Max. Nachlaufzeit',
 		maxDirectTime: 'Max. Direktzeit'
 	},
-	elevationCosts: {
-		NONE: 'Keine Umwege',
-		LOW: 'Kleine Umwege',
-		HIGH: 'Große Umwege'
-	},
+	elevationCosts: { NONE: 'Keine Umwege', LOW: 'Kleine Umwege', HIGH: 'Große Umwege' },
 	RENTAL_BICYCLE: 'Bikesharing',
 	RENTAL_CARGO_BICYCLE: 'Lastenrad Sharing',
 	RENTAL_CAR: 'Car Sharing',

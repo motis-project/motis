@@ -5,6 +5,7 @@ export const prePostDirectModes = [
 	'BIKE',
 	'CAR',
 	'FLEX',
+	'CAR_PARKING',
 	'RENTAL_BICYCLE',
 	'RENTAL_CARGO_BICYCLE',
 	'RENTAL_CAR',
