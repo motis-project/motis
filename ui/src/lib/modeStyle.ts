@@ -21,9 +21,8 @@ export const getModeStyle = (l: LegLike): [string, string, string] => {
 	switch (l.mode) {
 		case 'WALK':
 			return ['walk', 'hsl(var(--foreground) / 1)', 'hsl(var(--background) / 1)'];
-
 		case 'BIKE':
-			return ['bike', '#075985', 'white'];
+			return ['bike', 'hsl(var(--foreground) / 1)', 'hsl(var(--background) / 1)'];
 
 		case 'RENTAL':
 			switch (l.rental?.formFactor) {
@@ -32,7 +31,7 @@ export const getModeStyle = (l: LegLike): [string, string, string] => {
 				case 'CARGO_BICYCLE':
 					return ['cargo_bike', '#075985', 'white'];
 				case 'CAR':
-					return ['car', '#333333', 'white'];
+					return ['car', '#4c4947', 'white'];
 				case 'MOPED':
 					return ['moped', '#075985', 'white'];
 				case 'SCOOTER_SEATED':
@@ -45,8 +44,9 @@ export const getModeStyle = (l: LegLike): [string, string, string] => {
 
 		case 'CAR':
 		case 'CAR_PARKING':
-			return ['car', '#333333', 'white'];
+			return ['car', '#4c4947', 'white'];
 
+		case 'FLEX':
 		case 'ODM':
 			return ['taxi', '#fdb813', 'white'];
 

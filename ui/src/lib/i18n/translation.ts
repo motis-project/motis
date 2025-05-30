@@ -37,15 +37,16 @@ export type Translations = {
 	roundtripStationReturnConstraint: string;
 	noItinerariesFound: string;
 	advancedSearchOptions: string;
-	selectModes: string;
+	selectTransitModes: string;
 	defaultSelectedModes: string;
 	selectElevationCosts: string;
 	wheelchair: string;
+	useRoutedTransfers: string;
 	bikeRental: string;
-	bikeCarriage: string;
-	carCarriage: string;
+	requireBikeTransport: string;
+	requireCarTransport: string;
+	considerRentalReturnConstraints: string;
 	default: string;
-	unreliableOptions: string;
 	timetableSources: string;
 	tripCancelled: string;
 	stopCancelled: string;
@@ -53,6 +54,8 @@ export type Translations = {
 	inDisallowed: string;
 	outDisallowed: string;
 	unscheduledTrip: string;
+	alertsAvailable: string;
+	FLEX: string;
 	WALK: string;
 	BIKE: string;
 	RENTAL: string;
@@ -77,12 +80,23 @@ export type Translations = {
 		firstMile: string;
 		lastMile: string;
 		direct: string;
+		maxPreTransitTime: string;
+		maxPostTransitTime: string;
+		maxDirectTime: string;
 	};
 	elevationCosts: {
 		NONE: string;
 		LOW: string;
 		HIGH: string;
 	};
+	RENTAL_BICYCLE: string;
+	RENTAL_CARGO_BICYCLE: string;
+	RENTAL_CAR: string;
+	RENTAL_MOPED: string;
+	RENTAL_SCOOTER_STANDING: string;
+	RENTAL_SCOOTER_SEATED: string;
+	RENTAL_OTHER: string;
+	incline: string;
 };
 
 const translations: Map<string, Translations> = new Map(

@@ -177,6 +177,14 @@ bool config::has_gbfs_feeds() const {
 
 bool config::has_odm() const { return odm_.has_value(); }
 
+std::size_t config::n_threads() const {
+  return server_
+      .and_then([](config::server const& s) {
+        return s.n_threads_ == 0U ? std::nullopt : std::optional{s.n_threads_};
+      })
+      .value_or(std::thread::hardware_concurrency());
+}
+
 std::optional<config::elevators> const& config::get_elevators() const {
   utl::verify(has_elevators(),
               "config::get_elevators() requires config::has_elevators()");

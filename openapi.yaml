@@ -254,6 +254,8 @@ paths:
             Note: Transit connections that are slower than the fastest direct connection will not show up.
             This is being used as a cut-off during transit routing to speed up the search.
             To prevent this, it's possible to send two separate requests (one with only `transitModes` and one with only `directModes`).
+
+            Note: the output `direct` array will stay empty if the input param `maxDirectTime` makes any direct trip impossible.
             
             Only non-transit modes such as `WALK`, `BIKE`, `CAR`, `BIKE_SHARING`, etc. can be used.
           schema:
@@ -441,6 +443,48 @@ paths:
             items:
               type: string
 
+        - name: ignoreDirectRentalReturnConstraints
+          in: query
+          required: false
+          description: |
+            Experimental. Expect unannounced breaking changes (without version bumps).
+            
+            Optional. Default is `false`.
+            
+            If set to `true`, the routing will ignore rental return constraints for direct connections,
+            allowing the rental vehicle to be parked anywhere.
+          schema:
+            type: boolean
+            default: false
+
+        - name: ignorePreTransitRentalReturnConstraints
+          in: query
+          required: false
+          description: |
+            Experimental. Expect unannounced breaking changes (without version bumps).
+            
+            Optional. Default is `false`.
+            
+            If set to `true`, the routing will ignore rental return constraints for the part from the `from` coordinate to the first transit stop,
+            allowing the rental vehicle to be parked anywhere.
+          schema:
+            type: boolean
+            default: false
+
+        - name: ignorePostTransitRentalReturnConstraints
+          in: query
+          required: false
+          description: |
+            Experimental. Expect unannounced breaking changes (without version bumps).
+            
+            Optional. Default is `false`.
+            
+            If set to `true`, the routing will ignore rental return constraints for the part from the last transit stop to the `to` coordinate,
+            allowing the rental vehicle to be parked anywhere.
+          schema:
+            type: boolean
+            default: false
+
         - name: numItineraries
           in: query
           required: false
@@ -605,6 +649,14 @@ paths:
           schema:
             type: integer
             minimum: 1
+
+        - name: slowDirect
+          in: query
+          required: false
+          description: Optional. Experimental. Adds overtaken direct connections.
+          schema:
+            type: boolean
+            default: false
 
         - name: withFares
           in: query
@@ -1696,10 +1748,11 @@ components:
         
           - `WALK`
           - `BIKE`
-          - `RENTAL` Experimental. Expect unannounced breaking changes (without version bumps).
+          - `RENTAL` Experimental. Expect unannounced breaking changes (without version bumps) for all parameters and returned structs.
           - `CAR`
-          - `CAR_PARKING`
-          - `ODM`
+          - `CAR_PARKING` Experimental. Expect unannounced breaking changes (without version bumps) for all parameters and returned structs.
+          - `ODM` on-demand taxis from the Prima+ÖV Project
+          - `FLEX` flexible transports
 
         # Transit modes
 
@@ -1726,6 +1779,7 @@ components:
         - CAR
         - CAR_PARKING
         - ODM
+        - FLEX
         # === Transit ===
         - TRANSIT
         - TRAM
@@ -1826,6 +1880,20 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Alert'
+        flex:
+          description: for `FLEX` transports, the flex location area or location group name
+          type: string
+        flexId:
+          description: for `FLEX` transports, the flex location area ID or location group ID
+          type: string
+        flexStartPickupDropOffWindow:
+          description: Time that on-demand service becomes available
+          type: string
+          format: date-time
+        flexEndPickupDropOffWindow:
+          description: Time that on-demand service ends
+          type: string
+          format: date-time
 
     ReachablePlace:
       description: Place reachable by One-to-All
@@ -2072,6 +2140,12 @@ components:
             This step is on an open area, such as a plaza or train platform,
             and thus the directions should say something like "cross"
           type: boolean
+        elevationUp:
+          type: integer
+          description: incline in meters across this path segment
+        elevationDown:
+          type: integer
+          description: decline in meters across this path segment
 
     RentalFormFactor:
       type: string
@@ -2361,8 +2435,10 @@ components:
       properties:
         rule:
           $ref: '#/components/schemas/FareTransferRule'
-        transferProduct:
-          $ref: '#/components/schemas/FareProduct'
+        transferProducts:
+          type: array
+          items:
+            $ref: '#/components/schemas/FareProduct'
         effectiveFareLegProducts:
           description: |
             Lists all valid fare products for the effective fare legs.
@@ -2376,7 +2452,9 @@ components:
           items:
             type: array
             items:
-              $ref: '#/components/schemas/FareProduct'
+              type: array
+              items:
+                $ref: '#/components/schemas/FareProduct'
 
     Itinerary:
       type: object

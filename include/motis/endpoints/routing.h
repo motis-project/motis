@@ -65,6 +65,7 @@ struct routing {
       std::optional<std::vector<api::RentalFormFactorEnum>> const&,
       std::optional<std::vector<api::RentalPropulsionTypeEnum>> const&,
       std::optional<std::vector<std::string>> const& rental_providers,
+      bool ignore_rental_return_constraints,
       api::PedestrianProfileEnum,
       api::ElevationCostsEnum,
       std::chrono::seconds max,
@@ -80,7 +81,8 @@ struct routing {
                  api::PedestrianProfileEnum,
                  api::ElevationCostsEnum,
                  double max_matching_distance,
-                 std::chrono::seconds max) const;
+                 std::chrono::seconds max,
+                 nigiri::routing::start_time_t const&) const;
 
   std::pair<std::vector<api::Itinerary>, nigiri::duration_t> route_direct(
       elevators const*,
@@ -91,6 +93,7 @@ struct routing {
       std::optional<std::vector<api::RentalFormFactorEnum>> const&,
       std::optional<std::vector<api::RentalPropulsionTypeEnum>> const&,
       std::optional<std::vector<std::string>> const& rental_providers,
+      bool ignore_rental_return_constraints,
       nigiri::unixtime_t start_time,
       api::PedestrianProfileEnum,
       api::ElevationCostsEnum,
@@ -107,6 +110,7 @@ struct routing {
   nigiri::timetable const* tt_;
   tag_lookup const* tags_;
   point_rtree<nigiri::location_idx_t> const* loc_tree_;
+  flex::flex_areas const* fa_;
   platform_matches_t const* matches_;
   std::shared_ptr<rt> const& rt_;
   nigiri::shapes_storage const* shapes_;

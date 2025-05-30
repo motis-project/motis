@@ -10,38 +10,51 @@
 	import { t } from '$lib/i18n/translation';
 	import AdvancedOptions from './AdvancedOptions.svelte';
 	import maplibregl from 'maplibre-gl';
-	import type { ElevationCosts, Mode } from '$lib/api/openapi';
+	import type { ElevationCosts, PedestrianProfile } from '$lib/api/openapi';
+	import type { PrePostDirectMode, TransitMode } from './Modes';
 
 	let {
 		geocodingBiasPlace,
 		from = $bindable(),
 		to = $bindable(),
 		time = $bindable(),
-		timeType = $bindable(),
-		wheelchair = $bindable(),
-		bikeRental = $bindable(),
-		bikeCarriage = $bindable(),
-		carCarriage = $bindable(),
-		selectedModes = $bindable(),
-		firstMileMode = $bindable(),
-		lastMileMode = $bindable(),
+		arriveBy = $bindable(),
+		pedestrianProfile = $bindable(),
+		useRoutedTransfers = $bindable(),
+		requireCarTransport = $bindable(),
+		requireBikeTransport = $bindable(),
+		transitModes = $bindable(),
+		preTransitModes = $bindable(),
+		postTransitModes = $bindable(),
 		directModes = $bindable(),
-		elevationCosts = $bindable()
+		elevationCosts = $bindable(),
+		maxPreTransitTime = $bindable(),
+		maxPostTransitTime = $bindable(),
+		maxDirectTime = $bindable(),
+		ignorePreTransitRentalReturnConstraints = $bindable(),
+		ignorePostTransitRentalReturnConstraints = $bindable(),
+		ignoreDirectRentalReturnConstraints = $bindable()
 	}: {
 		geocodingBiasPlace?: maplibregl.LngLatLike;
 		from: Location;
 		to: Location;
 		time: Date;
-		timeType: string;
-		wheelchair: boolean;
-		bikeRental: boolean;
-		bikeCarriage: boolean;
-		carCarriage: boolean;
-		selectedModes: string[] | undefined;
-		firstMileMode: Mode;
-		lastMileMode: Mode;
-		directModes: Mode[];
+		arriveBy: boolean;
+		pedestrianProfile: PedestrianProfile;
+		useRoutedTransfers: boolean;
+		requireCarTransport: boolean;
+		requireBikeTransport: boolean;
+		transitModes: TransitMode[];
+		preTransitModes: PrePostDirectMode[];
+		postTransitModes: PrePostDirectMode[];
+		directModes: PrePostDirectMode[];
 		elevationCosts: ElevationCosts;
+		maxPreTransitTime: string;
+		maxPostTransitTime: string;
+		maxDirectTime: string;
+		ignorePreTransitRentalReturnConstraints: boolean;
+		ignorePostTransitRentalReturnConstraints: boolean;
+		ignoreDirectRentalReturnConstraints: boolean;
 	} = $props();
 
 	let fromItems = $state<Array<Location>>([]);
@@ -101,7 +114,10 @@
 	</Button>
 	<div class="flex flex-row gap-2 flex-wrap">
 		<DateInput bind:value={time} />
-		<RadioGroup.Root class="flex" bind:value={timeType}>
+		<RadioGroup.Root
+			class="flex"
+			bind:value={() => (arriveBy ? 'arrival' : 'departure'), (v) => (arriveBy = v === 'arrival')}
+		>
 			<Label
 				for="departure"
 				class="flex items-center rounded-md border-2 border-muted bg-popover p-1 px-2 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-blue-600 hover:cursor-pointer"
@@ -123,15 +139,24 @@
 			</Label>
 		</RadioGroup.Root>
 		<AdvancedOptions
-			bind:wheelchair
-			bind:bikeRental
-			bind:bikeCarriage
-			bind:carCarriage
-			bind:selectedModes
-			bind:firstMileMode
-			bind:lastMileMode
+			bind:useRoutedTransfers
+			bind:wheelchair={
+				() => pedestrianProfile === 'WHEELCHAIR',
+				(v) => (pedestrianProfile = v ? 'WHEELCHAIR' : 'FOOT')
+			}
+			bind:requireCarTransport
+			bind:requireBikeTransport
+			bind:transitModes
+			bind:preTransitModes
+			bind:postTransitModes
 			bind:directModes
+			bind:maxPreTransitTime
+			bind:maxPostTransitTime
+			bind:maxDirectTime
 			bind:elevationCosts
+			bind:ignorePreTransitRentalReturnConstraints
+			bind:ignorePostTransitRentalReturnConstraints
+			bind:ignoreDirectRentalReturnConstraints
 		/>
 	</div>
 </div>

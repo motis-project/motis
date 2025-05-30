@@ -3,7 +3,7 @@
 	import GeoJSON from '$lib/map/GeoJSON.svelte';
 	import type { Itinerary, Mode } from '$lib/api/openapi';
 	import { getColor } from '$lib/modeStyle';
-	import polyline from 'polyline';
+	import polyline from '@mapbox/polyline';
 	import { colord } from 'colord';
 
 	const PRECISION = 6;

@@ -4,17 +4,18 @@
 	import Map from '$lib/map/Map.svelte';
 	import Control from '$lib/map/Control.svelte';
 	import SearchMask from '$lib/SearchMask.svelte';
-	import { posToLocation, type Location } from '$lib/Location';
+	import { parseLocation, posToLocation, type Location } from '$lib/Location';
 	import { Card } from '$lib/components/ui/card';
 	import {
 		initial,
-		type Match,
 		plan,
 		type ElevationCosts,
 		type PlanResponse,
 		type Itinerary,
 		type Mode,
-		type PlanData
+		type PlanData,
+		type RentalFormFactor,
+		type PedestrianProfile
 	} from '$lib/api/openapi';
 	import ItineraryList from '$lib/ItineraryList.svelte';
 	import ConnectionDetail from '$lib/ConnectionDetail.svelte';
@@ -25,6 +26,7 @@
 	import {
 		closeItinerary,
 		cn,
+		getUrlArray,
 		onClickStop,
 		onClickTrip,
 		pushStateWithQueryString
@@ -48,7 +50,15 @@
 	import IsochronesMask from '$lib/IsochronesMask.svelte';
 	import Isochrones from '$lib/map/Isochrones.svelte';
 	import IsochronesTurf from '$lib/map/IsochronesTurf.svelte';
-	// import IsochronesPos from '$lib/map/IsochronesTurf.svelte';
+	import {
+		getFormFactors,
+		getPrePostDirectModes,
+		possibleTransitModes,
+		prePostModesToModes,
+		type PrePostDirectMode
+	} from '$lib/Modes';
+	import { defaultQuery, omitDefaults } from '$lib/defaults';
+	import { LEVEL_MIN_ZOOM } from '$lib/constants';
 
     interface IsochronesPos {
         lat: number;
@@ -58,6 +68,7 @@
     };
 
 	const urlParams = browser ? new URLSearchParams(window.location.search) : undefined;
+
 	const hasDebug = urlParams && urlParams.has('debug');
 	const hasDark = urlParams && urlParams.has('dark');
 	const isSmallScreen = browser && window.innerWidth < 768;
@@ -118,53 +129,67 @@
 		}
 	};
 
-	let fromParam: Match | undefined = undefined;
-	let toParam: Match | undefined = undefined;
-	if (browser && urlParams) {
-		fromParam = urlParams.has('from') ? (JSON.parse(urlParams.get('from') ?? '') ?? {}) : undefined;
-		toParam = urlParams.has('to') ? (JSON.parse(urlParams.get('to') ?? '') ?? {}) : undefined;
-	}
-
-	let fromMatch = {
-		match: fromParam
-	};
-	let toMatch = {
-		match: toParam
-	};
-
 	let fromMarker = $state<maplibregl.Marker>();
 	let toMarker = $state<maplibregl.Marker>();
-	let from = $state<Location>({
-		label: fromParam ? fromParam['name'] : '',
-		value: fromParam ? fromMatch : {}
-	});
-	let to = $state<Location>({
-		label: toParam ? toParam['name'] : '',
-		value: toParam ? toMatch : {}
-	});
-	let time = $state<Date>(new Date(urlParams?.get('time') || Date.now()));
-	let timeType = $state<string>(urlParams?.get('arriveBy') == 'true' ? 'arrival' : 'departure');
-	let wheelchair = $state(urlParams?.get('wheelchair') == 'true');
-	let bikeRental = $state(urlParams?.get('bikeRental') == 'true');
-	let bikeCarriage = $state(urlParams?.get('bikeCarriage') == 'true');
-	let carCarriage = $state(urlParams?.get('carCarriage') == 'true');
-	let selectedTransitModes = $state<Mode[] | undefined>(
-		(urlParams
-			?.get('selectedTransitModes')
-			?.split(',')
-			.filter((m) => m.length) as Mode[]) ?? undefined
+	let from = $state<Location>(
+		parseLocation(urlParams?.get('fromPlace'), urlParams?.get('fromName'))
 	);
-	let firstMileMode = $state<Mode>((urlParams?.get('firstMileMode') ?? 'WALK') as Mode);
-	let lastMileMode = $state<Mode>((urlParams?.get('lastMileMode') ?? 'WALK') as Mode);
-	let directModes = $state<Mode[]>(
-		(urlParams
-			?.get('directModes')
-			?.split(',')
-			.filter((m) => m.length) ?? ['WALK']) as Mode[]
+	let to = $state<Location>(parseLocation(urlParams?.get('toPlace'), urlParams?.get('toName')));
+	let time = $state<Date>(new Date(urlParams?.get('time') || Date.now()));
+	let arriveBy = $state<boolean>(urlParams?.get('arriveBy') == 'true');
+	let useRoutedTransfers = $state(
+		urlParams?.get('useRoutedTransfers') == 'true' || defaultQuery.useRoutedTransfers
+	);
+	let pedestrianProfile = $state<PedestrianProfile>(
+		(urlParams?.has('pedestrianProfile')
+			? urlParams.get('pedestrianProfile')
+			: defaultQuery.pedestrianProfile) as PedestrianProfile
+	);
+	let requireBikeTransport = $state(urlParams?.get('requireBikeTransport') == 'true');
+	let requireCarTransport = $state(urlParams?.get('requireCarTransport') == 'true');
+	let transitModes = $state<Mode[]>(
+		getUrlArray('transitModes', defaultQuery.transitModes) as Mode[]
+	);
+	let preTransitModes = $state<PrePostDirectMode[]>(
+		getPrePostDirectModes(
+			getUrlArray('preTransitModes', defaultQuery.preTransitModes) as Mode[],
+			getUrlArray('preTransitRentalFormFactors') as RentalFormFactor[]
+		)
+	);
+	let postTransitModes = $state<PrePostDirectMode[]>(
+		getPrePostDirectModes(
+			getUrlArray('postTransitModes', defaultQuery.postTransitModes) as Mode[],
+			getUrlArray('postTransitRentalFormFactors') as RentalFormFactor[]
+		)
+	);
+	let directModes = $state<PrePostDirectMode[]>(
+		getPrePostDirectModes(
+			getUrlArray('directModes', defaultQuery.directModes) as Mode[],
+			getUrlArray('directRentalFormFactors') as RentalFormFactor[]
+		)
 	);
 	let elevationCosts = $state<ElevationCosts>(
 		(urlParams?.get('elevationCosts') ?? 'NONE') as ElevationCosts
 	);
+	let maxPreTransitTime = $state<string>(
+		urlParams?.get('maxPreTransitTime') ?? defaultQuery.maxPreTransitTime.toString()
+	);
+	let maxPostTransitTime = $state<string>(
+		urlParams?.get('maxPostTransitTime') ?? defaultQuery.maxPostTransitTime.toString()
+	);
+	let maxDirectTime = $state<string>(
+		urlParams?.get('maxDirectTime') ?? defaultQuery.maxDirectTime.toString()
+	);
+	let ignorePreTransitRentalReturnConstraints = $state(
+		urlParams?.get('ignorePreTransitRentalReturnConstraints') == 'true'
+	);
+	let ignorePostTransitRentalReturnConstraints = $state(
+		urlParams?.get('ignorePostTransitRentalReturnConstraints') == 'true'
+	);
+	let ignoreDirectRentalReturnConstraints = $state(
+		urlParams?.get('ignoreDirectRentalReturnConstraints') == 'true'
+	);
+	let slowDirect = $state(urlParams?.get('slowDirect') == 'true');
 	// Parameters for isochrones
 	let maxTravelTime = $state(urlParams?.get('maxTravelTime') ?? '45');
 
@@ -182,39 +207,49 @@
 	*/
 
 	const toPlaceString = (l: Location) => {
-		if (l.value.match?.type === 'STOP') {
-			return l.value.match.id;
-		} else if (l.value.match?.level) {
-			return `${lngLatToStr(l.value.match!)},${l.value.match.level}`;
+		if (l.match?.type === 'STOP') {
+			return l.match.id;
+		} else if (l.match?.level) {
+			return `${lngLatToStr(l.match!)},${l.match.level}`;
 		} else {
-			return `${lngLatToStr(l.value.match!)},0`;
+			return `${lngLatToStr(l.match!)}`;
 		}
 	};
-	let additionalModes = $derived([...(bikeRental ? ['RENTAL'] : [])] as Mode[]);
-	let preTransitModes = $derived([firstMileMode, ...additionalModes]);
-	let postTransitModes = $derived([lastMileMode, ...additionalModes]);
-	let requestDirectModes = $derived([...directModes, ...additionalModes]);
 
 	let baseQuery = $derived(
-		from.value.match && to.value.match
+		from.match && to.match
 			? ({
-					query: {
+					query: omitDefaults({
 						time: time.toISOString(),
 						fromPlace: toPlaceString(from),
 						toPlace: toPlaceString(to),
-						arriveBy: timeType === 'arrival',
+						arriveBy,
 						timetableView: true,
-						pedestrianProfile: wheelchair ? 'WHEELCHAIR' : 'FOOT',
-						preTransitModes,
-						postTransitModes,
-						directModes: requestDirectModes,
-						requireBikeTransport: bikeCarriage,
-						requireCarTransport: carCarriage,
-						transitModes: selectedTransitModes,
+						withFares: true,
+						slowDirect,
+						pedestrianProfile,
+						transitModes:
+							transitModes.length == possibleTransitModes.length
+								? defaultQuery.transitModes
+								: transitModes,
+						preTransitModes: prePostModesToModes(preTransitModes),
+						postTransitModes: prePostModesToModes(postTransitModes),
+						directModes: prePostModesToModes(directModes),
+						preTransitRentalFormFactors: getFormFactors(preTransitModes),
+						postTransitRentalFormFactors: getFormFactors(postTransitModes),
+						directRentalFormFactors: getFormFactors(directModes),
+						requireBikeTransport,
+						requireCarTransport,
 						elevationCosts,
-						useRoutedTransfers: true,
-						maxMatchingDistance: wheelchair ? 8 : 250
-					}
+						useRoutedTransfers,
+						maxMatchingDistance: pedestrianProfile == 'WHEELCHAIR' ? 8 : 250,
+						maxPreTransitTime: parseInt(maxPreTransitTime),
+						maxPostTransitTime: parseInt(maxPostTransitTime),
+						maxDirectTime: parseInt(maxDirectTime),
+						ignorePreTransitRentalReturnConstraints,
+						ignorePostTransitRentalReturnConstraints,
+						ignoreDirectRentalReturnConstraints
+					} as PlanData['query'])
 				} as PlanData)
 			: undefined
 	);
@@ -228,23 +263,14 @@
 			clearTimeout(searchDebounceTimer);
 			searchDebounceTimer = setTimeout(() => {
 				const base = plan(baseQuery).then(updateStartDest(from, to));
+				const q = baseQuery.query;
 				baseResponse = base;
 				routingResponses = [base];
 				pushStateWithQueryString(
 					{
-						from: JSON.stringify(from?.value?.match),
-						to: JSON.stringify(to?.value?.match),
-						time,
-						arriveBy: timeType === 'arrival',
-						wheelchair,
-						bikeRental,
-						bikeCarriage,
-						carCarriage,
-						firstMileMode,
-						lastMileMode,
-						directModes: directModes.join(','),
-						elevationCosts,
-						selectedTransitModes: selectedTransitModes?.join(',') ?? ''
+						...q,
+						...(q.fromPlace == from.label ? {} : { fromName: from.label }),
+						...(q.toPlace == to.label ? {} : { toName: to.label })
 					},
 					{},
 					true
@@ -291,9 +317,7 @@
 		last_selected_itinerary = page.state.selectedItinerary;
 	};
 
-	$effect(() => {
-		flyToSelectedItinerary();
-	});
+	$effect(flyToSelectedItinerary);
 
 	type CloseFn = () => void;
 </script>
@@ -302,8 +326,8 @@
 	<Button
 		variant="outline"
 		onclick={() => {
-			from = posToLocation(e.lngLat, level);
-			fromMarker?.setLngLat(from.value.match!);
+			from = posToLocation(e.lngLat, zoom > LEVEL_MIN_ZOOM ? level : undefined);
+			fromMarker?.setLngLat(from.match!);
 			close();
 		}}
 	>
@@ -312,8 +336,8 @@
 	<Button
 		variant="outline"
 		onclick={() => {
-			to = posToLocation(e.lngLat, level);
-			toMarker?.setLngLat(to.value.match!);
+			to = posToLocation(e.lngLat, zoom > LEVEL_MIN_ZOOM ? level : undefined);
+			toMarker?.setLngLat(to.match!);
 			close();
 		}}
 	>
@@ -340,7 +364,7 @@
 >
 	{#if hasDebug}
 		<Control position="top-right">
-			<Debug {bounds} {level} />
+			<Debug {bounds} {level} {zoom} />
 		</Control>
 	{/if}
 
@@ -366,16 +390,22 @@
 								bind:from
 								bind:to
 								bind:time
-								bind:timeType
-								bind:wheelchair
-								bind:bikeRental
-								bind:bikeCarriage
-								bind:carCarriage
-								bind:selectedModes={selectedTransitModes}
-								bind:firstMileMode
-								bind:lastMileMode
+								bind:arriveBy
+								bind:useRoutedTransfers
+								bind:pedestrianProfile
+								bind:requireCarTransport
+								bind:requireBikeTransport
+								bind:transitModes
+								bind:preTransitModes
+								bind:postTransitModes
 								bind:directModes
 								bind:elevationCosts
+								bind:maxPreTransitTime
+								bind:maxPostTransitTime
+								bind:maxDirectTime
+								bind:ignorePreTransitRentalReturnConstraints
+								bind:ignorePostTransitRentalReturnConstraints
+								bind:ignoreDirectRentalReturnConstraints
 							/>
 						</Card>
 					</Tabs.Content>
@@ -392,7 +422,7 @@
 								geocodingBiasPlace={center}
 								bind:isochronesData
 								bind:time
-								bind:timeType
+								bind:arriveBy
 								bind:color={isochronesColor}
 								bind:opacity={isochronesOpacity}
 							/>

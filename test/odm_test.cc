@@ -74,7 +74,7 @@ TEST(odm, pt_taxi_no_direct) {
 
   auto odm_journeys = std::vector<n::routing::journey>{
       pt_taxi,
-      direct_taxi(n::unixtime_t{10h + 00min}, n::unixtime_t{10h + 10min}),
+      direct_taxi(n::unixtime_t{10h + 10min}, n::unixtime_t{10h + 20min}),
       direct_taxi(n::unixtime_t{10h + 17min}, n::unixtime_t{10h + 27min}),
       direct_taxi(n::unixtime_t{10h + 43min}, n::unixtime_t{10h + 53min}),
       direct_taxi(n::unixtime_t{10h + 50min}, n::unixtime_t{11h + 00min}),

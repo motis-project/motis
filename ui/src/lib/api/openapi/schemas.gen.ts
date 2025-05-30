@@ -281,10 +281,11 @@ export const ModeSchema = {
 
   - \`WALK\`
   - \`BIKE\`
-  - \`RENTAL\` Experimental. Expect unannounced breaking changes (without version bumps).
+  - \`RENTAL\` Experimental. Expect unannounced breaking changes (without version bumps) for all parameters and returned structs.
   - \`CAR\`
-  - \`CAR_PARKING\`
-  - \`ODM\`
+  - \`CAR_PARKING\` Experimental. Expect unannounced breaking changes (without version bumps) for all parameters and returned structs.
+  - \`ODM\` on-demand taxis from the Prima+ÖV Project
+  - \`FLEX\` flexible transports
 
 # Transit modes
 
@@ -304,7 +305,7 @@ export const ModeSchema = {
   - \`REGIONAL_RAIL\`: regional train
 `,
     type: 'string',
-    enum: ['WALK', 'BIKE', 'RENTAL', 'CAR', 'CAR_PARKING', 'ODM', 'TRANSIT', 'TRAM', 'SUBWAY', 'FERRY', 'AIRPLANE', 'METRO', 'BUS', 'COACH', 'RAIL', 'HIGHSPEED_RAIL', 'LONG_DISTANCE', 'NIGHT_RAIL', 'REGIONAL_FAST_RAIL', 'REGIONAL_RAIL', 'OTHER']
+    enum: ['WALK', 'BIKE', 'RENTAL', 'CAR', 'CAR_PARKING', 'ODM', 'FLEX', 'TRANSIT', 'TRAM', 'SUBWAY', 'FERRY', 'AIRPLANE', 'METRO', 'BUS', 'COACH', 'RAIL', 'HIGHSPEED_RAIL', 'LONG_DISTANCE', 'NIGHT_RAIL', 'REGIONAL_FAST_RAIL', 'REGIONAL_RAIL', 'OTHER']
 } as const;
 
 export const VertexTypeSchema = {
@@ -399,6 +400,24 @@ Can be missing if neither real-time updates nor the schedule timetable contains 
             items: {
                 '$ref': '#/components/schemas/Alert'
             }
+        },
+        flex: {
+            description: 'for `FLEX` transports, the flex location area or location group name',
+            type: 'string'
+        },
+        flexId: {
+            description: 'for `FLEX` transports, the flex location area ID or location group ID',
+            type: 'string'
+        },
+        flexStartPickupDropOffWindow: {
+            description: 'Time that on-demand service becomes available',
+            type: 'string',
+            format: 'date-time'
+        },
+        flexEndPickupDropOffWindow: {
+            description: 'Time that on-demand service ends',
+            type: 'string',
+            format: 'date-time'
         }
     }
 } as const;
@@ -657,6 +676,14 @@ This step is on an open area, such as a plaza or train platform,
 and thus the directions should say something like "cross"
 `,
             type: 'boolean'
+        },
+        elevationUp: {
+            type: 'integer',
+            description: 'incline in meters across this path segment'
+        },
+        elevationDown: {
+            type: 'integer',
+            description: 'decline in meters across this path segment'
         }
     }
 } as const;
@@ -981,8 +1008,11 @@ An itinerary \`Leg\` references the index of the fare transfer and the index of 
         rule: {
             '$ref': '#/components/schemas/FareTransferRule'
         },
-        transferProduct: {
-            '$ref': '#/components/schemas/FareProduct'
+        transferProducts: {
+            type: 'array',
+            items: {
+                '$ref': '#/components/schemas/FareProduct'
+            }
         },
         effectiveFareLegProducts: {
             description: `Lists all valid fare products for the effective fare legs.
@@ -996,7 +1026,10 @@ and the inner array as OR (you can choose which ticket to buy)
             items: {
                 type: 'array',
                 items: {
-                    '$ref': '#/components/schemas/FareProduct'
+                    type: 'array',
+                    items: {
+                        '$ref': '#/components/schemas/FareProduct'
+                    }
                 }
             }
         }

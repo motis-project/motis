@@ -20,6 +20,7 @@
 #include "motis/endpoints/graph.h"
 #include "motis/endpoints/initial.h"
 #include "motis/endpoints/levels.h"
+#include "motis/endpoints/map/flex_locations.h"
 #include "motis/endpoints/map/stops.h"
 #include "motis/endpoints/map/trips.h"
 #include "motis/endpoints/matches.h"
@@ -63,7 +64,7 @@ int server(data d, config const& c, std::string_view const motis_version) {
 
   auto ioc = asio::io_context{};
   auto s = net::web_server{ioc};
-  auto r = runner{server_config.n_threads_, 1024U};
+  auto r = runner{c.n_threads(), 1024U};
   auto qr = net::query_router{net::fiber_exec{ioc, r.ch_}};
   qr.add_header("Server", fmt::format("MOTIS {}", motis_version));
   if (server_config.data_attribution_link_) {
@@ -77,6 +78,7 @@ int server(data d, config const& c, std::string_view const motis_version) {
   POST<ep::platforms>(qr, "/api/platforms", d);
   POST<ep::graph>(qr, "/api/graph", d);
   GET<ep::footpaths>(qr, "/api/debug/footpaths", d);
+  GET<ep::flex_locations>(qr, "/api/debug/flex", d);
   GET<ep::levels>(qr, "/api/v1/map/levels", d);
   GET<ep::initial>(qr, "/api/v1/map/initial", d);
   GET<ep::reverse_geocode>(qr, "/api/v1/reverse-geocode", d);
@@ -138,7 +140,7 @@ int server(data d, config const& c, std::string_view const motis_version) {
     });
   }
 
-  auto threads = std::vector<std::thread>{server_config.n_threads_};
+  auto threads = std::vector<std::thread>{c.n_threads()};
   for (auto [i, t] : utl::enumerate(threads)) {
     t = std::thread{r.run_fn()};
     utl::set_thread_name(t, fmt::format("motis worker {}", i));

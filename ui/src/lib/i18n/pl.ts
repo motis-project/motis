@@ -42,15 +42,16 @@ const translations: Translations = {
 	roundtripStationReturnConstraint: 'Pojazd musi zostać zwrócony do stacji początkowej.',
 	noItinerariesFound: 'No itineraries found.',
 	advancedSearchOptions: 'Options',
-	selectModes: 'Select transit modes',
+	selectTransitModes: 'Select transit modes',
 	defaultSelectedModes: 'All transit modes',
 	selectElevationCosts: 'Avoid steep incline.',
 	wheelchair: 'Barrier-free transfers',
+	useRoutedTransfers: 'Use routed transfers',
 	bikeRental: 'Allow usage of sharing vehicles',
-	bikeCarriage: 'Bike carriage',
-	carCarriage: 'Car carriage',
+	requireBikeTransport: 'Bike carriage',
+	requireCarTransport: 'Car carriage',
+	considerRentalReturnConstraints: 'Return rental vehicles within journey',
 	default: 'Default',
-	unreliableOptions: 'Depending on data availability, these options may be unreliable.',
 	timetableSources: 'Timetable sources',
 	tripCancelled: 'Trip cancelled',
 	stopCancelled: 'Stop cancelled',
@@ -58,6 +59,8 @@ const translations: Translations = {
 	inDisallowed: 'Entry not possible',
 	outDisallowed: 'Exit not possible',
 	unscheduledTrip: 'Additional service',
+	alertsAvailable: 'Service alerts present',
+	FLEX: 'Transport na żądanie',
 	WALK: 'Walking',
 	BIKE: 'Bike',
 	RENTAL: 'Sharing',
@@ -81,13 +84,24 @@ const translations: Translations = {
 	routingSegments: {
 		firstMile: 'First mile',
 		lastMile: 'Last mile',
-		direct: 'Direct connection'
+		direct: 'Direct connection',
+		maxPreTransitTime: 'Maks. czas przed tranzytem',
+		maxPostTransitTime: 'Maks. czas po tranzycie',
+		maxDirectTime: 'Maks. czas bezpośredni'
 	},
 	elevationCosts: {
 		NONE: 'No detours',
 		LOW: 'Small detours',
 		HIGH: 'Large detours'
-	}
+	},
+	RENTAL_BICYCLE: 'Rower współdzielony',
+	RENTAL_CARGO_BICYCLE: 'Rower cargo współdzielony',
+	RENTAL_CAR: 'Samochód współdzielony',
+	RENTAL_MOPED: 'Skuter współdzielony',
+	RENTAL_SCOOTER_STANDING: 'Hulajnoga stojąca współdzielona',
+	RENTAL_SCOOTER_SEATED: 'Hulajnoga z siedziskiem współdzielona',
+	RENTAL_OTHER: 'Inny pojazd współdzielony',
+	incline: 'Nachylenie'
 };
 
 export default translations;

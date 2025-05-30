@@ -11,6 +11,19 @@ export function cn(...inputs: ClassValue[]) {
 
 const urlParams = browser ? new URLSearchParams(window.location.search) : undefined;
 
+export const getUrlArray = (key: string, defaultValue?: string[]): string[] => {
+	if (urlParams) {
+		const value = urlParams.get(key);
+		if (value) {
+			return value.split(',').filter((m) => m.length);
+		}
+	}
+	if (defaultValue) {
+		return defaultValue;
+	}
+	return [];
+};
+
 export const preserveFromUrl = (
 	// eslint-disable-next-line
 	queryParams: Record<string, any>,
@@ -24,7 +37,7 @@ export const preserveFromUrl = (
 export const pushStateWithQueryString = (
 	// eslint-disable-next-line
 	queryParams: Record<string, any>,
-	// eslint-disable-next-line
+
 	newState: App.PageState,
 	replace: boolean = false
 ) => {

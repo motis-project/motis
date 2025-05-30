@@ -442,6 +442,14 @@ data import(config const& c, fs::path const& data_path, bool const write) {
            [&]() { d.load_matches(); },
            {tt_hash, osm_hash, osr_version(), n_version(), matches_version()}};
 
+  auto flex_areas =
+      task{"flex_areas",
+           [&]() { return c.timetable_ && c.use_street_routing(); },
+           [&]() { return d.tt_ && d.w_; },
+           [&]() { d.load_flex_areas(); },
+           [&]() { d.load_flex_areas(); },
+           {tt_hash, osm_hash, osr_version(), n_version(), matches_version()}};
+
   auto tiles = task{
       "tiles",
       [&]() { return c.tiles_.has_value(); },
@@ -492,8 +500,8 @@ data import(config const& c, fs::path const& data_path, bool const write) {
       [&]() { d.load_tiles(); },
       {tiles_version(), osm_hash, tiles_hash}};
 
-  auto tasks =
-      std::vector<task>{tiles, osr, adr, tt, adr_extend, osr_footpath, matches};
+  auto tasks = std::vector<task>{tiles,      osr,          adr,     tt,
+                                 adr_extend, osr_footpath, matches, flex_areas};
   utl::erase_if(tasks, [&](auto&& t) {
     if (!t.should_run_()) {
       return true;

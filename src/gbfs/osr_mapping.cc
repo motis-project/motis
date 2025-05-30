@@ -69,14 +69,16 @@ struct osr_mapping {
         break;
       }
 
-      if (prod.return_constraint_ == return_constraint::kAnyStation &&
+      if ((prod.return_constraint_ == return_constraint::kAnyStation ||
+           prod.return_constraint_ == return_constraint::kRoundtripStation) &&
           (prod.known_return_constraint_ ||
-           provider_.geofencing_zones_.zones_.empty())) {
+           provider_.geofencing_zones_.zones_.empty()) &&
+          !default_restrictions.station_parking_.has_value()) {
         default_restrictions.station_parking_ = true;
       }
 
       if (default_restrictions.ride_end_allowed_ &&
-          !default_restrictions.station_parking_) {
+          !default_restrictions.station_parking_.value_or(false)) {
         rd.end_allowed_.one_out();
       }
       if (default_restrictions.ride_through_allowed_) {
@@ -190,7 +192,9 @@ struct osr_mapping {
         }
 
         auto const additional_node_id = next_node_id++;
-        rd.additional_nodes_.emplace_back(
+        rd.additional_node_coordinates_.push_back(
+            provider_.stations_.at(id).info_.pos_);
+        rd.additional_nodes_.push_back(
             additional_node{additional_node::station{id}});
         if (is_renting) {
           rd.start_allowed_.set(additional_node_id, true);
@@ -215,7 +219,7 @@ struct osr_mapping {
         }
 
         for (auto const& m : matches) {
-          auto const handle_node = [&](osr::node_candidate const node) {
+          auto const handle_node = [&](osr::node_candidate const& node) {
             if (node.valid() &&
                 node.dist_to_node_ <= kMaxGbfsMatchingDistance) {
               auto const edge_to_an = osr::additional_edge{
@@ -267,7 +271,9 @@ struct osr_mapping {
         }
 
         auto const additional_node_id = next_node_id++;
-        rd.additional_nodes_.emplace_back(
+        rd.additional_node_coordinates_.push_back(
+            provider_.vehicle_status_.at(vehicle_idx).pos_);
+        rd.additional_nodes_.push_back(
             additional_node{additional_node::vehicle{vehicle_idx}});
         rd.start_allowed_.set(additional_node_id, true);
 
@@ -277,14 +283,14 @@ struct osr_mapping {
               static_cast<osr::distance_t>(nc.dist_to_node_)};
           auto& node_edges = rd.additional_edges_[nc.node_];
           if (utl::find(node_edges, edge_to_an) == end(node_edges)) {
-            node_edges.emplace_back(edge_to_an);
+            node_edges.push_back(edge_to_an);
           }
 
           auto const edge_from_an = osr::additional_edge{
               nc.node_, static_cast<osr::distance_t>(nc.dist_to_node_)};
           auto& an_edges = rd.additional_edges_[additional_node_id];
           if (utl::find(an_edges, edge_from_an) == end(an_edges)) {
-            an_edges.emplace_back(edge_from_an);
+            an_edges.push_back(edge_from_an);
           }
         };
 
@@ -318,9 +324,11 @@ void map_data(osr::ways const& w,
   mapping.map_stations();
   mapping.map_vehicles();
 
-  prd.products_ = utl::to_vec(mapping.products_data_, [&](auto& rd) {
+  prd.products_ = utl::to_vec(mapping.products_data_, [&](routing_data& rd) {
     return compressed_routing_data{
         .additional_nodes_ = std::move(rd.additional_nodes_),
+        .additional_node_coordinates_ =
+            std::move(rd.additional_node_coordinates_),
         .additional_edges_ = std::move(rd.additional_edges_),
         .start_allowed_ = compress_bitvec(rd.start_allowed_),
         .end_allowed_ = compress_bitvec(rd.end_allowed_),

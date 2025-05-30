@@ -22,12 +22,12 @@
         name?: string;
     };
 	const toPlaceString = (l: Location) => {
-		if (l.value.match?.type === 'STOP') {
-			return l.value.match.id;
-		} else if (l.value.match?.level) {
-			return `${lngLatToStr(l.value.match!)},${l.value.match.level}`;
+		if (l.match?.type === 'STOP') {
+			return l.match.id;
+		} else if (l.match?.level) {
+			return `${lngLatToStr(l.match!)},${l.match.level}`;
 		} else {
-			return `${lngLatToStr(l.value.match!)},0`;
+			return `${lngLatToStr(l.match!)},0`;
 		}
 	};
 
@@ -38,7 +38,7 @@
 		geocodingBiasPlace,
 		isochronesData = $bindable(),
 		time = $bindable(),
-		timeType = $bindable(),
+		arriveBy = $bindable(),
 		color = $bindable(),
 		opacity = $bindable()
 	}: {
@@ -48,7 +48,7 @@
 		geocodingBiasPlace?: maplibregl.LngLatLike;
 		isochronesData: IsochronesPos[];
 		time: Date;
-		timeType: string;
+		arriveBy: boolean;
 		color: string;
 		opacity: number;
 	} = $props();
@@ -79,16 +79,16 @@
 	let queryTimeout: number;
 
 	let isochronesQuery = $derived(
-		one?.value?.match
+		one?.match
 			? ({query: {
 				one: toPlaceString(one),
 				maxTravelTime: selectedMaxTravelTime,
 				time: time.toISOString(),
-				arriveBy: timeType == 'arrival',
-				preTransitModes: timeType == 'arrival' ? undefined : oneMileMode,
-				postTransitModes: timeType == 'arrival' ? oneMileMode : undefined,
-				maxPreTransitTime: timeType == 'arrival' ? undefined : selectedMaxOneTimeSeconds,
-				maxPostTransitTime: timeType == 'arrival' ? selectedMaxOneTimeSeconds : undefined,
+				arriveBy,
+				preTransitModes: arriveBy ? undefined : oneMileMode,
+				postTransitModes: arriveBy ? oneMileMode : undefined,
+				maxPreTransitTime: arriveBy ? undefined : selectedMaxOneTimeSeconds,
+				maxPostTransitTime: arriveBy ? selectedMaxOneTimeSeconds : undefined,
 			}}) as OneToAllData
 			: undefined
 	);
@@ -178,7 +178,10 @@
 	</Button>
 	<div class="flex flex-row gap-2 flex-wrap">
 		<DateInput bind:value={time} />
-		<RadioGroup.Root class="flex" bind:value={timeType}>
+		<RadioGroup.Root
+			class="flex"
+			bind:value={() => (arriveBy ? 'arrival' : 'departure'), (v) => (arriveBy = v === 'arrival')}
+		>
 			<Label
 				for="departure"
 				class="flex items-center rounded-md border-2 border-muted bg-popover p-1 px-2 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-blue-600 hover:cursor-pointer"
@@ -233,7 +236,7 @@
 
 		<!-- First mile -->
 		<div class="text-sm">
-			{#if timeType == 'arrival' }
+			{#if arriveBy }
 				{t.routingSegments.lastMile}
 			{:else}
 				{t.routingSegments.firstMile}
@@ -242,7 +245,7 @@
 		<Select.Root type="single" bind:value={oneMileMode}>
 			<Select.Trigger
 				class="flex items-center w-full overflow-hidden"
-				aria-label={timeType == 'arrival' ? t.routingSegments.lastMile : t.routingSegments.firstMile}
+				aria-label={arriveBy ? t.routingSegments.lastMile : t.routingSegments.firstMile}
 			>
 				{t[oneMileMode as TranslationKey]}
 			</Select.Trigger>

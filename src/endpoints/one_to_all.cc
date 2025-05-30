@@ -64,9 +64,9 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
   auto const one_dir =
       query.arriveBy_ ? osr::direction::kBackward : osr::direction::kForward;
 
-  auto const r = routing{config_, w_,     l_,        pl_,      elevations_,
-                         &tt_,    &tags_, loc_tree_, matches_, rt_,
-                         nullptr, gbfs_,  nullptr,   metrics_};
+  auto const r = routing{config_, w_,      l_,        pl_,     elevations_,
+                         &tt_,    &tags_,  loc_tree_, fa_,     matches_,
+                         rt_,     nullptr, gbfs_,     nullptr, metrics_};
   auto gbfs_rd = gbfs::gbfs_routing_data{w_, l_, gbfs_};
 
   auto const q = n::routing::query{
@@ -74,11 +74,12 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
       .start_match_mode_ = get_match_mode(one),
       .start_ = r.get_offsets(
           one, one_dir, one_modes, std::nullopt, std::nullopt, std::nullopt,
-          query.pedestrianProfile_, query.elevationCosts_, one_max_time,
+          false, query.pedestrianProfile_, query.elevationCosts_, one_max_time,
           query.maxMatchingDistance_, gbfs_rd),
-      .td_start_ = r.get_td_offsets(
-          rt_->e_.get(), one, one_dir, one_modes, query.pedestrianProfile_,
-          query.elevationCosts_, query.maxMatchingDistance_, one_max_time),
+      .td_start_ =
+          r.get_td_offsets(rt_->e_.get(), one, one_dir, one_modes,
+                           query.pedestrianProfile_, query.elevationCosts_,
+                           query.maxMatchingDistance_, one_max_time, time),
       .max_transfers_ = static_cast<std::uint8_t>(
           query.maxTransfers_.value_or(n::routing::kMaxTransfers)),
       .max_travel_time_ = max_travel_time,
