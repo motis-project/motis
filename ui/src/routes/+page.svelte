@@ -226,6 +226,7 @@
 						timetableView: true,
 						withFares: true,
 						slowDirect,
+						fastestDirectFactor: 1.5,
 						pedestrianProfile,
 						transitModes:
 							transitModes.length == possibleTransitModes.length
