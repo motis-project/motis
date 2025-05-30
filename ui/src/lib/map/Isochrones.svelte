@@ -166,10 +166,3 @@
 		;
 	});
 </script>
-
-<svg class="opacity-25 pointer-events-none {user_class}" viewBox="{box}" preserveAspectRatio="none">
-	{#each circles2 as circle}
-		<polygon points="{circle}" style="fill:green" />
-		<!-- <circle cx="{circle.cx}" cy="{circle.cy}" r="{circle.r}" fill="green" /> -->
-	{/each}
-</svg>

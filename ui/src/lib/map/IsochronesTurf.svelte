@@ -4,7 +4,7 @@
     import { featureCollection, multiPolygon, polygon } from "@turf/helpers";
     import { union } from "@turf/union";
 	import combine from "@turf/combine";
-	import intersect from "@turf/intersect";
+	// import intersect from "@turf/intersect";
 	import difference from "@turf/difference";
 	import { assert } from "vitest";
 	import flatten from "@turf/flatten";

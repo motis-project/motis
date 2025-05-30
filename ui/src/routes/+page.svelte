@@ -49,7 +49,6 @@
 	import DeparturesMask from '$lib/DeparturesMask.svelte';
 	import IsochronesMask from '$lib/IsochronesMask.svelte';
 	import Isochrones from '$lib/map/Isochrones.svelte';
-	import IsochronesTurf from '$lib/map/IsochronesTurf.svelte';
 	import {
 		getFormFactors,
 		getPrePostDirectModes,
