@@ -1,19 +1,10 @@
 import type { Mode, Rental } from './api/openapi';
 
-export type Colorable = {
-	routeColor?: string;
-	routeTextColor?: string;
-	mode: Mode;
-};
+export type Colorable = { routeColor?: string; routeTextColor?: string; mode: Mode };
 
-export type TripInfo = {
-	tripId?: string;
-	routeShortName?: string;
-};
+export type TripInfo = { tripId?: string; routeShortName?: string };
 
-export type RentalInfo = {
-	rental?: Rental;
-};
+export type RentalInfo = { rental?: Rental };
 
 export type LegLike = Colorable & TripInfo & RentalInfo;
 
@@ -84,6 +75,13 @@ export const getModeStyle = (l: LegLike): [string, string, string] => {
 		case 'REGIONAL_RAIL':
 		case 'RAIL':
 			return ['train', '#f44336', 'white'];
+
+		case 'FUNICULAR':
+			return ['funicular', '#795548', 'white'];
+
+		case 'CABLE_CAR':
+		case 'AREAL_LIFT':
+			return ['aerial_lift', '#795548', 'white'];
 	}
 
 	return ['train', '#000000', 'white'];
