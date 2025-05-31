@@ -47,6 +47,7 @@
 #include "motis/adr_extend_tt.h"
 #include "motis/clog_redirect.h"
 #include "motis/compute_footpaths.h"
+#include "motis/constants.h"
 #include "motis/data.h"
 #include "motis/hashes.h"
 #include "motis/tag_lookup.h"
@@ -56,6 +57,8 @@ namespace fs = std::filesystem;
 namespace n = nigiri;
 namespace nl = nigiri::loader;
 using namespace std::string_literals;
+using std::chrono_literals::operator""min;
+using std::chrono_literals::operator""h;
 
 namespace motis {
 
@@ -405,27 +408,45 @@ data import(config const& c, fs::path const& data_path, bool const write) {
                             c.timetable_->max_matching_distance_,
                             c.timetable_->max_footpath_length_);
   }
-  auto osr_footpath =
-      task{"osr_footpath",
-           [&]() { return c.osr_footpath_ && c.timetable_; },
-           [&]() { return d.tt_ && d.tags_ && d.w_ && d.l_ && d.pl_; },
-           [&]() {
-             auto const elevator_footpath_map = compute_footpaths(
-                 *d.w_, *d.l_, *d.pl_, *d.tt_, d.elevations_.get(),
-                 c.timetable_->use_osm_stop_coordinates_,
-                 c.timetable_->extend_missing_footpaths_,
-                 std::chrono::seconds{c.timetable_->max_footpath_length_ * 60U},
-                 c.timetable_->max_matching_distance_);
+  auto osr_footpath = task{
+      "osr_footpath",
+      [&]() { return c.osr_footpath_ && c.timetable_; },
+      [&]() { return d.tt_ && d.tags_ && d.w_ && d.l_ && d.pl_; },
+      [&]() {
+        auto const profiles = std::vector<routed_transfers_settings>{
+            {.profile_ = osr::search_profile::kFoot,
+             .profile_idx_ = n::kFootProfile,
+             .max_matching_distance_ = c.timetable_->max_matching_distance_,
+             .extend_missing_ = c.timetable_->extend_missing_footpaths_,
+             .max_duration_ = c.timetable_->max_footpath_length_ * 1min},
+            {.profile_ = osr::search_profile::kWheelchair,
+             .profile_idx_ = n::kWheelchairProfile,
+             .max_matching_distance_ = 8.0,
+             .max_duration_ = c.timetable_->max_footpath_length_ * 1min},
+            {.profile_ = osr::search_profile::kCar,
+             .profile_idx_ = n::kWheelchairProfile,
+             .max_matching_distance_ = 250.0,
+             .max_duration_ = 8h,
+             .is_candidate_ = [&](n::location_idx_t const l) {
+               return utl::any_of(
+                   d.tt_->location_routes_[l], [&](n::route_idx_t const r) {
+                     return d.tt_->route_cars_allowed_[to_idx(r) * 2U] ||
+                            d.tt_->route_cars_allowed_[to_idx(r) * 2U + 1U];
+                   });
+             }}};
+        auto const elevator_footpath_map = compute_footpaths(
+            *d.w_, *d.l_, *d.pl_, *d.tt_, d.elevations_.get(),
+            c.timetable_->use_osm_stop_coordinates_, profiles);
 
-             if (write) {
-               cista::write(data_path / "elevator_footpath_map.bin",
-                            elevator_footpath_map);
-               d.tt_->write(data_path / "tt_ext.bin");
-             }
-           },
-           [&]() { d.load_tt("tt_ext.bin"); },
-           {tt_hash, osm_hash, osr_footpath_settings_hash, osr_version(),
-            osr_footpath_version(), n_version()}};
+        if (write) {
+          cista::write(data_path / "elevator_footpath_map.bin",
+                       elevator_footpath_map);
+          d.tt_->write(data_path / "tt_ext.bin");
+        }
+      },
+      [&]() { d.load_tt("tt_ext.bin"); },
+      {tt_hash, osm_hash, osr_footpath_settings_hash, osr_version(),
+       osr_footpath_version(), n_version()}};
 
   auto matches =
       task{"matches",
