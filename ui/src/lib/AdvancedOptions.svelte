@@ -71,7 +71,17 @@
 		300 * 60,
 		360 * 60
 	];
-	const possiblePrePostDurations = [5 * 60, 10 * 60, 15 * 60, 20 * 60, 25 * 60, 30 * 60, 60 * 60];
+	const possiblePrePostDurations = [
+		5 * 60,
+		10 * 60,
+		15 * 60,
+		20 * 60,
+		25 * 60,
+		30 * 60,
+		40 * 60,
+		50 * 60,
+		60 * 60
+	];
 	function setModes(mode: PrePostDirectMode) {
 		return function (checked: boolean) {
 			if (checked) {
@@ -180,8 +190,8 @@
 				bind:checked={useRoutedTransfers}
 				label={t.useRoutedTransfers}
 				id="useRoutedTransfers"
-				onCheckedChange={() => {
-					if (wheelchair && !useRoutedTransfers) {
+				onCheckedChange={(checked) => {
+					if (wheelchair && !checked) {
 						wheelchair = false;
 					}
 				}}
@@ -190,8 +200,8 @@
 				bind:checked={wheelchair}
 				label={t.wheelchair}
 				id="wheelchair"
-				onCheckedChange={() => {
-					if (wheelchair && !useRoutedTransfers) {
+				onCheckedChange={(checked) => {
+					if (checked && !useRoutedTransfers) {
 						useRoutedTransfers = true;
 					}
 				}}
@@ -205,8 +215,13 @@
 			<Switch
 				bind:checked={requireCarTransport}
 				label={t.requireCarTransport}
-				onCheckedChange={setModes('CAR')}
 				id="requireCarTransport"
+				onCheckedChange={(checked) => {
+					if (checked && !useRoutedTransfers) {
+						useRoutedTransfers = true;
+					}
+					setModes('CAR')(checked);
+				}}
 			/>
 		</div>
 

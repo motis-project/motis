@@ -1078,8 +1078,8 @@ export const ItinerarySchema = {
     }
 } as const;
 
-export const FootpathSchema = {
-    description: 'footpath from one location to another',
+export const TransferSchema = {
+    description: 'transfer from one location to another',
     type: 'object',
     required: ['to'],
     properties: {
@@ -1088,38 +1088,44 @@ export const FootpathSchema = {
         },
         default: {
             type: 'number',
-            description: `optional; missing if the GTFS did not contain a footpath
-footpath duration in minutes according to GTFS (+heuristics)
+            description: `optional; missing if the GTFS did not contain a transfer
+transfer duration in minutes according to GTFS (+heuristics)
 `
         },
         foot: {
             type: 'number',
             description: `optional; missing if no path was found (timetable / osr)
-footpath duration in minutes for the foot profile
+transfer duration in minutes for the foot profile
 `
         },
         footRouted: {
             type: 'number',
             description: `optional; missing if no path was found with foot routing
-footpath duration in minutes for the foot profile
+transfer duration in minutes for the foot profile
 `
         },
         wheelchair: {
             type: 'number',
             description: `optional; missing if no path was found with the wheelchair profile 
-footpath duration in minutes for the wheelchair profile
+transfer duration in minutes for the wheelchair profile
 `
         },
         wheelchairRouted: {
             type: 'number',
             description: `optional; missing if no path was found with the wheelchair profile
-footpath duration in minutes for the wheelchair profile
+transfer duration in minutes for the wheelchair profile
 `
         },
         wheelchairUsesElevator: {
             type: 'boolean',
             description: `optional; missing if no path was found with the wheelchair profile
 true if the wheelchair path uses an elevator
+`
+        },
+        car: {
+            type: 'number',
+            description: `optional; missing if no path was found with car routing
+transfer duration in minutes for the car profile
 `
         }
     }

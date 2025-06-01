@@ -189,6 +189,7 @@ api::Itinerary journey_to_response(
     place_t const& dest,
     street_routing_cache_t& cache,
     osr::bitvec<osr::node_idx_t>* blocked_mem,
+    bool const car_transfers,
     api::PedestrianProfileEnum const pedestrian_profile,
     api::ElevationCostsEnum const elevation_costs,
     bool const detailed_transfers,
@@ -414,20 +415,23 @@ api::Itinerary journey_to_response(
               }
             },
             [&](n::footpath) {
-              append(w && l && detailed_transfers
-                         ? street_routing(
-                               *w, *l, e, elevations, from, to,
-                               default_output{to_profile(api::ModeEnum::WALK,
-                                                         pedestrian_profile,
-                                                         elevation_costs)},
-                               j_leg.dep_time_, j_leg.arr_time_,
-                               timetable_max_matching_distance, cache,
-                               *blocked_mem, api_version,
-                               std::chrono::duration_cast<std::chrono::seconds>(
-                                   j_leg.arr_time_ - j_leg.dep_time_) +
-                                   std::chrono::minutes{10})
-                         : dummy_itinerary(from, to, api::ModeEnum::WALK,
-                                           j_leg.dep_time_, j_leg.arr_time_));
+              append(
+                  w && l && detailed_transfers
+                      ? street_routing(
+                            *w, *l, e, elevations, from, to,
+                            default_output{car_transfers
+                                               ? osr::search_profile::kCar
+                                               : to_profile(api::ModeEnum::WALK,
+                                                            pedestrian_profile,
+                                                            elevation_costs)},
+                            j_leg.dep_time_, j_leg.arr_time_,
+                            timetable_max_matching_distance, cache,
+                            *blocked_mem, api_version,
+                            std::chrono::duration_cast<std::chrono::seconds>(
+                                j_leg.arr_time_ - j_leg.dep_time_) +
+                                std::chrono::minutes{10})
+                      : dummy_itinerary(from, to, api::ModeEnum::WALK,
+                                        j_leg.dep_time_, j_leg.arr_time_));
             },
             [&](n::routing::offset const x) {
               auto out = std::unique_ptr<output>{};
