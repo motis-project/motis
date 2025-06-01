@@ -51,6 +51,9 @@ export const possibleTransitModes = [
 	'TRAM',
 	'BUS',
 	'FERRY',
+	'CABLE_CAR',
+	'FUNICULAR',
+	'AREAL_LIFT',
 	'OTHER'
 ];
 export type TransitMode = (typeof possibleTransitModes)[number];

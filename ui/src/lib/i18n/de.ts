@@ -98,7 +98,10 @@ const translations: Translations = {
 	RENTAL_SCOOTER_STANDING: 'Scooter Sharing',
 	RENTAL_SCOOTER_SEATED: 'Sitzroller Sharing',
 	RENTAL_OTHER: 'Anderes sharing Fahrzeug',
-	incline: 'Steigung'
+	incline: 'Steigung',
+	CABLE_CAR: 'Seilbahn',
+	FUNICULAR: 'Standseilbahn',
+	AREAL_LIFT: 'Luftseilbahn'
 };
 
 export default translations;
