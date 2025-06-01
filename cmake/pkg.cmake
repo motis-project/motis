@@ -31,7 +31,7 @@ if (NOT DEFINED PROJECT_IS_TOP_LEVEL OR PROJECT_IS_TOP_LEVEL)
     endif ()
 
     if (DEFINED ENV{GITHUB_ACTIONS})
-        message(STATUS "${pkg-bin} -l -h -f")
+        message(STATUS "${pkg-bin} -l -h -f --drop-wip")
         execute_process(
                 COMMAND ${pkg-bin} -l -h -f
                 WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
