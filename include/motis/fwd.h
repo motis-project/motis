@@ -9,6 +9,7 @@ struct cache;
 
 namespace osr {
 
+struct location;
 struct sharing_data;
 struct ways;
 struct platforms;

@@ -28,6 +28,7 @@ std::vector<nigiri::td_footpath> get_td_footpaths(
     osr::lookup const&,
     osr::platforms const&,
     nigiri::timetable const&,
+    nigiri::rt_timetable const*,
     point_rtree<nigiri::location_idx_t> const&,
     elevators const&,
     platform_matches_t const&,

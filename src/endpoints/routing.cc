@@ -25,12 +25,14 @@
 
 #include "motis/constants.h"
 #include "motis/endpoints/routing.h"
+
 #include "motis/flex/flex.h"
 #include "motis/flex/flex_output.h"
 #include "motis/gbfs/data.h"
 #include "motis/gbfs/gbfs_output.h"
 #include "motis/gbfs/mode.h"
 #include "motis/gbfs/osr_profile.h"
+#include "motis/get_stops_with_traffic.h"
 #include "motis/journey_to_response.h"
 #include "motis/max_distance.h"
 #include "motis/metrics_registry.h"
@@ -83,6 +85,7 @@ std::vector<n::routing::offset> station_start(n::location_idx_t const l) {
 
 n::routing::td_offsets_t get_td_offsets(
     routing const& r,
+    n::rt_timetable const* rtt,
     elevators const* e,
     osr::location const& pos,
     osr::direction const dir,
@@ -116,7 +119,7 @@ n::routing::td_offsets_t get_td_offsets(
     }
 
     utl::equal_ranges_linear(
-        get_td_footpaths(*r.w_, *r.l_, *r.pl_, *r.tt_, *r.loc_tree_, *e,
+        get_td_footpaths(*r.w_, *r.l_, *r.pl_, *r.tt_, rtt, *r.loc_tree_, *e,
                          *r.matches_, n::location_idx_t::invalid(), pos, dir,
                          profile, max, max_matching_distance, *blocked),
         [](n::td_footpath const& a, n::td_footpath const& b) {
@@ -138,6 +141,7 @@ n::routing::td_offsets_t get_td_offsets(
 }
 
 n::routing::td_offsets_t routing::get_td_offsets(
+    n::rt_timetable const* rtt,
     elevators const* e,
     place_t const& p,
     osr::direction const dir,
@@ -151,7 +155,7 @@ n::routing::td_offsets_t routing::get_td_offsets(
       utl::overloaded{[&](tt_location) { return n::routing::td_offsets_t{}; },
                       [&](osr::location const& pos) {
                         return ::motis::ep::get_td_offsets(
-                            *this, e, pos, dir, modes, pedestrian_profile,
+                            *this, rtt, e, pos, dir, modes, pedestrian_profile,
                             elevation_costs, max_matching_distance, max,
                             start_time);
                       }},
@@ -160,6 +164,7 @@ n::routing::td_offsets_t routing::get_td_offsets(
 
 std::vector<n::routing::offset> get_offsets(
     routing const& r,
+    n::rt_timetable const* rtt,
     osr::location const& pos,
     osr::direction const dir,
     osr::elevation_storage const* elevations,
@@ -188,8 +193,8 @@ std::vector<n::routing::offset> get_offsets(
     }
 
     auto const max_dist = get_max_distance(profile, max);
-
-    auto const near_stops = r.loc_tree_->in_radius(pos.pos_, max_dist);
+    auto const near_stops =
+        get_stops_with_traffic(*r.tt_, rtt, *r.loc_tree_, pos, max_dist);
     auto const near_stop_locations =
         utl::to_vec(near_stops, [&](n::location_idx_t const l) {
           return osr::location{r.tt_->locations_.coordinates_[l],
@@ -276,6 +281,7 @@ std::vector<n::routing::offset> get_offsets(
 }
 
 std::vector<n::routing::offset> routing::get_offsets(
+    n::rt_timetable const* rtt,
     place_t const& p,
     osr::direction const dir,
     std::vector<api::ModeEnum> const& modes,
@@ -293,8 +299,8 @@ std::vector<n::routing::offset> routing::get_offsets(
       utl::overloaded{[&](tt_location const l) { return station_start(l.l_); },
                       [&](osr::location const& pos) {
                         return ::motis::ep::get_offsets(
-                            *this, pos, dir, elevations_, modes, form_factors,
-                            propulsion_types, rental_providers,
+                            *this, rtt, pos, dir, elevations_, modes,
+                            form_factors, propulsion_types, rental_providers,
                             ignore_rental_return_constraints,
                             pedestrian_profile, elevation_costs, max,
                             max_matching_distance, gbfs_rd);
@@ -625,7 +631,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
         .dest_match_mode_ = get_match_mode(dest),
         .use_start_footpaths_ = !is_intermodal(start),
         .start_ =
-            get_offsets(start,
+            get_offsets(rtt, start,
                         query.arriveBy_ ? osr::direction::kBackward
                                         : osr::direction::kForward,
                         start_modes, start_form_factors, start_propulsion_types,
@@ -634,7 +640,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                         std::chrono::seconds{query.maxPreTransitTime_},
                         query.maxMatchingDistance_, gbfs_rd),
         .destination_ =
-            get_offsets(dest,
+            get_offsets(rtt, dest,
                         query.arriveBy_ ? osr::direction::kForward
                                         : osr::direction::kBackward,
                         dest_modes, dest_form_factors, dest_propulsion_types,
@@ -643,7 +649,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                         std::chrono::seconds{query.maxPostTransitTime_},
                         query.maxMatchingDistance_, gbfs_rd),
         .td_start_ =
-            get_td_offsets(e, start,
+            get_td_offsets(rtt, e, start,
                            query.arriveBy_ ? osr::direction::kBackward
                                            : osr::direction::kForward,
                            start_modes, query.pedestrianProfile_,
@@ -651,7 +657,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                            std::chrono::seconds{query.maxPreTransitTime_},
                            start_time.start_time_),
         .td_dest_ =
-            get_td_offsets(e, dest,
+            get_td_offsets(rtt, e, dest,
                            query.arriveBy_ ? osr::direction::kForward
                                            : osr::direction::kBackward,
                            dest_modes, query.pedestrianProfile_,
