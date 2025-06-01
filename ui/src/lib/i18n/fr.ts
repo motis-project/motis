@@ -104,7 +104,8 @@ const translations: Translations = {
 	incline: 'Pente',
 	CABLE_CAR: 'Téléphérique',
 	FUNICULAR: 'Funiculaire',
-	AREAL_LIFT: 'Remontée mécanique'
+	AREAL_LIFT: 'Remontée mécanique',
+	toll: 'Attention ! Route à péage.'
 };
 
 export default translations;

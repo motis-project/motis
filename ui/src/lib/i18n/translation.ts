@@ -100,6 +100,7 @@ export type Translations = {
 	CABLE_CAR: string;
 	FUNICULAR: string;
 	AREAL_LIFT: string;
+	toll: string;
 };
 
 const translations: Map<string, Translations> = new Map(

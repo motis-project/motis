@@ -572,6 +572,10 @@ export type StepInstruction = {
      */
     area: boolean;
     /**
+     * Indicates that a fee must be paid by general traffic to use a road, road bridge or road tunnel.
+     */
+    toll: boolean;
+    /**
      * incline in meters across this path segment
      */
     elevationUp?: number;

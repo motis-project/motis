@@ -104,7 +104,8 @@ const translations: Translations = {
 		LOW: 'Small detours',
 		HIGH: 'Large detours'
 	},
-	incline: 'Incline'
+	incline: 'Incline',
+	toll: 'Warning! A fee must be paid to use this route.'
 };
 
 export default translations;

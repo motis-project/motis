@@ -2122,6 +2122,7 @@ components:
         - exit
         - stayOn
         - area
+        - toll
       properties:
         relativeDirection:
           $ref: '#/components/schemas/Direction'
@@ -2157,6 +2158,9 @@ components:
             Not implemented!
             This step is on an open area, such as a plaza or train platform,
             and thus the directions should say something like "cross"
+          type: boolean
+        toll:
+          description: Indicates that a fee must be paid by general traffic to use a road, road bridge or road tunnel.
           type: boolean
         elevationUp:
           type: integer

@@ -123,6 +123,7 @@ std::vector<api::StepInstruction> get_step_instructions(
         .exit_ = {},  // TODO
         .stayOn_ = false,  // TODO
         .area_ = false,  // TODO
+        .toll_ = props.has_toll(),
         .elevationUp_ =
             elevations ? std::optional{to_idx(s.elevation_.up_)} : std::nullopt,
         .elevationDown_ = elevations ? std::optional{to_idx(s.elevation_.down_)}

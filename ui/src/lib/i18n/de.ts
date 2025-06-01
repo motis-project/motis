@@ -101,7 +101,8 @@ const translations: Translations = {
 	incline: 'Steigung',
 	CABLE_CAR: 'Seilbahn',
 	FUNICULAR: 'Standseilbahn',
-	AREAL_LIFT: 'Luftseilbahn'
+	AREAL_LIFT: 'Luftseilbahn',
+	toll: 'Achtung! Mautpflichtige Straße.'
 };
 
 export default translations;

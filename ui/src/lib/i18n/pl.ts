@@ -104,7 +104,8 @@ const translations: Translations = {
 	incline: 'Nachylenie',
 	CABLE_CAR: 'Kolej linowa',
 	FUNICULAR: 'Kolej linowo-terenowa',
-	AREAL_LIFT: 'Wyciąg powietrzny'
+	AREAL_LIFT: 'Wyciąg powietrzny',
+	toll: 'Uwaga! Za przejazd tą trasą pobierana jest opłata.'
 };
 
 export default translations;

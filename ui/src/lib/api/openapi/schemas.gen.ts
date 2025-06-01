@@ -633,7 +633,7 @@ Be aware that with precision 7, coordinates with |longitude| > 107.37 are undefi
 
 export const StepInstructionSchema = {
     type: 'object',
-    required: ['fromLevel', 'toLevel', 'polyline', 'relativeDirection', 'distance', 'streetName', 'exit', 'stayOn', 'area'],
+    required: ['fromLevel', 'toLevel', 'polyline', 'relativeDirection', 'distance', 'streetName', 'exit', 'stayOn', 'area', 'toll'],
     properties: {
         relativeDirection: {
             '$ref': '#/components/schemas/Direction'
@@ -678,6 +678,10 @@ Indicates whether or not a street changes direction at an intersection.
 This step is on an open area, such as a plaza or train platform,
 and thus the directions should say something like "cross"
 `,
+            type: 'boolean'
+        },
+        toll: {
+            description: 'Indicates that a fee must be paid by general traffic to use a road, road bridge or road tunnel.',
             type: 'boolean'
         },
         elevationUp: {
