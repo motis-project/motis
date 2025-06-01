@@ -16,7 +16,7 @@ using elevator_footpath_map_t = hash_map<
 
 struct routed_transfers_settings {
   osr::search_profile profile_;
-  std::size_t profile_idx_;
+  nigiri::profile_idx_t profile_idx_;
   double max_matching_distance_;
   bool extend_missing_{false};
   std::chrono::seconds max_duration_;

@@ -852,37 +852,37 @@ export type Itinerary = {
 };
 
 /**
- * footpath from one location to another
+ * transfer from one location to another
  */
-export type Footpath = {
+export type Transfer = {
     to: Place;
     /**
-     * optional; missing if the GTFS did not contain a footpath
-     * footpath duration in minutes according to GTFS (+heuristics)
+     * optional; missing if the GTFS did not contain a transfer
+     * transfer duration in minutes according to GTFS (+heuristics)
      *
      */
     default?: number;
     /**
      * optional; missing if no path was found (timetable / osr)
-     * footpath duration in minutes for the foot profile
+     * transfer duration in minutes for the foot profile
      *
      */
     foot?: number;
     /**
      * optional; missing if no path was found with foot routing
-     * footpath duration in minutes for the foot profile
+     * transfer duration in minutes for the foot profile
      *
      */
     footRouted?: number;
     /**
      * optional; missing if no path was found with the wheelchair profile
-     * footpath duration in minutes for the wheelchair profile
+     * transfer duration in minutes for the wheelchair profile
      *
      */
     wheelchair?: number;
     /**
      * optional; missing if no path was found with the wheelchair profile
-     * footpath duration in minutes for the wheelchair profile
+     * transfer duration in minutes for the wheelchair profile
      *
      */
     wheelchairRouted?: number;
@@ -892,6 +892,12 @@ export type Footpath = {
      *
      */
     wheelchairUsesElevator?: boolean;
+    /**
+     * optional; missing if no path was found with car routing
+     * transfer duration in minutes for the car profile
+     *
+     */
+    car?: number;
 };
 
 export type PlanData = {
@@ -1818,7 +1824,7 @@ export type LevelsResponse = (Array<(number)>);
 
 export type LevelsError = unknown;
 
-export type FootpathsData = {
+export type TransfersData = {
     query: {
         /**
          * location id
@@ -1827,12 +1833,24 @@ export type FootpathsData = {
     };
 };
 
-export type FootpathsResponse = ({
+export type TransfersResponse = ({
     place: Place;
     /**
-     * all outgoing footpaths of this location
+     * true if the server has foot transfers computed
      */
-    footpaths: Array<Footpath>;
+    hasFootTransfers: boolean;
+    /**
+     * true if the server has wheelchair transfers computed
+     */
+    hasWheelchairTransfers?: boolean;
+    /**
+     * true if the server has car transfers computed
+     */
+    hasCarTransfers: boolean;
+    /**
+     * all outgoing transfers of this location
+     */
+    transfers: Array<Transfer>;
 });
 
-export type FootpathsError = unknown;
+export type TransfersError = unknown;

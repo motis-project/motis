@@ -424,15 +424,13 @@ data import(config const& c, fs::path const& data_path, bool const write) {
              .max_matching_distance_ = 8.0,
              .max_duration_ = c.timetable_->max_footpath_length_ * 1min},
             {.profile_ = osr::search_profile::kCar,
-             .profile_idx_ = n::kWheelchairProfile,
+             .profile_idx_ = n::kCarProfile,
              .max_matching_distance_ = 250.0,
              .max_duration_ = 8h,
              .is_candidate_ = [&](n::location_idx_t const l) {
-               return utl::any_of(
-                   d.tt_->location_routes_[l], [&](n::route_idx_t const r) {
-                     return d.tt_->route_cars_allowed_[to_idx(r) * 2U] ||
-                            d.tt_->route_cars_allowed_[to_idx(r) * 2U + 1U];
-                   });
+               return utl::any_of(d.tt_->location_routes_[l], [&](auto r) {
+                 return d.tt_->has_car_transport(r);
+               });
              }}};
         auto const elevator_footpath_map = compute_footpaths(
             *d.w_, *d.l_, *d.pl_, *d.tt_, d.elevations_.get(),

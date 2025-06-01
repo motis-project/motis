@@ -1,5 +1,7 @@
 #include "motis/compute_footpaths.h"
 
+#include "nigiri/loader/build_lb_graph.h"
+
 #include "cista/mmap.h"
 #include "cista/serialization.h"
 
@@ -209,6 +211,9 @@ elevator_footpath_map_t compute_footpaths(
     for (auto const& x : transfers_in) {
       tt.locations_.footpaths_in_[mode.profile_idx_].emplace_back(x);
     }
+
+    n::loader::build_lb_graph<n::direction::kForward>(tt, mode.profile_idx_);
+    n::loader::build_lb_graph<n::direction::kBackward>(tt, mode.profile_idx_);
 
     n_done += tt.n_locations();
   }

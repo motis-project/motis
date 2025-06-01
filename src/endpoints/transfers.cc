@@ -1,4 +1,4 @@
-#include "motis/endpoints/footpaths.h"
+#include "motis/endpoints/transfers.h"
 
 #include "osr/geojson.h"
 #include "osr/routing/route.h"
@@ -19,9 +19,9 @@ namespace n = nigiri;
 
 namespace motis::ep {
 
-api::footpaths_response footpaths::operator()(
+api::transfers_response transfers::operator()(
     boost::urls::url_view const& url) const {
-  auto const q = motis::api::footpaths_params{url.params()};
+  auto const q = motis::api::transfers_params{url.params()};
   auto const rt = rt_;
   auto const e = rt->e_.get();
   auto const l = tags_.get_location(tt_, q.id_);
@@ -29,20 +29,25 @@ api::footpaths_response footpaths::operator()(
   auto const neighbors =
       loc_rtree_.in_radius(tt_.locations_.coordinates_[l], kMaxDistance);
 
-  auto footpaths = hash_map<n::location_idx_t, api::Footpath>{};
+  auto footpaths = hash_map<n::location_idx_t, api::Transfer>{};
 
   for (auto const fp : tt_.locations_.footpaths_out_[0].at(l)) {
     footpaths[fp.target()].default_ = fp.duration().count();
   }
-
-  if (!tt_.locations_.footpaths_out_[1].empty()) {
-    for (auto const fp : tt_.locations_.footpaths_out_[1].at(l)) {
+  if (!tt_.locations_.footpaths_out_[n::kFootProfile].empty()) {
+    for (auto const fp : tt_.locations_.footpaths_out_[n::kFootProfile].at(l)) {
       footpaths[fp.target()].foot_ = fp.duration().count();
     }
   }
-  if (!tt_.locations_.footpaths_out_[2].empty()) {
-    for (auto const fp : tt_.locations_.footpaths_out_[2].at(l)) {
+  if (!tt_.locations_.footpaths_out_[n::kWheelchairProfile].empty()) {
+    for (auto const fp :
+         tt_.locations_.footpaths_out_[n::kWheelchairProfile].at(l)) {
       footpaths[fp.target()].wheelchair_ = fp.duration().count();
+    }
+  }
+  if (!tt_.locations_.footpaths_out_[n::kCarProfile].empty()) {
+    for (auto const fp : tt_.locations_.footpaths_out_[n::kCarProfile].at(l)) {
+      footpaths[fp.target()].car_ = fp.duration().count();
     }
   }
 
@@ -87,7 +92,13 @@ api::footpaths_response footpaths::operator()(
   };
 
   return {.place_ = to_place(tt_.locations_.get(l)),
-          .footpaths_ = utl::to_vec(footpaths, [&](auto&& e) {
+          .hasFootTransfers_ =
+              !tt_.locations_.footpaths_out_[n::kFootProfile].empty(),
+          .hasWheelchairTransfers_ =
+              !tt_.locations_.footpaths_out_[n::kWheelchairProfile].empty(),
+          .hasCarTransfers_ =
+              !tt_.locations_.footpaths_out_[n::kCarProfile].empty(),
+          .transfers_ = utl::to_vec(footpaths, [&](auto&& e) {
             e.second.to_ = to_place(tt_.locations_.get(e.first));
             return e.second;
           })};

@@ -671,10 +671,11 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
         .extend_interval_later_ = start_time.extend_interval_later_,
         .prf_idx_ = static_cast<n::profile_idx_t>(
             query.useRoutedTransfers_
-                ? (query.pedestrianProfile_ ==
-                           api::PedestrianProfileEnum::WHEELCHAIR
-                       ? 2U
-                       : 1U)
+                ? query.requireCarTransport_ ? n::kCarProfile
+                  : query.pedestrianProfile_ ==
+                          api::PedestrianProfileEnum::WHEELCHAIR
+                      ? n::kWheelchairProfile
+                      : n::kFootProfile
                 : 0U),
         .allowed_claszes_ = to_clasz_mask(query.transitModes_),
         .require_bike_transport_ = query.requireBikeTransport_,
@@ -693,6 +694,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
         .fastest_direct_ = fastest_direct == kInfinityDuration
                                ? std::nullopt
                                : std::optional{fastest_direct},
+        .fasted_direct_factor_ = query.fastestDirectFactor_,
         .slow_direct_ = query.slowDirect_};
     remove_slower_than_fastest_direct(q);
     UTL_STOP_TIMING(query_preparation);
@@ -742,6 +744,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
               return journey_to_response(
                   w_, l_, pl_, *tt_, *tags_, fa_, e, rtt, matches_, elevations_,
                   shapes_, gbfs_rd, j, start, dest, cache, blocked.get(),
+                  query.requireCarTransport_ && query.useRoutedTransfers_,
                   query.pedestrianProfile_, query.elevationCosts_,
                   query.detailedTransfers_, query.withFares_,
                   config_.timetable_.value().max_matching_distance_,
