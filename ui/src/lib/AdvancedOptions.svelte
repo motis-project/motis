@@ -101,10 +101,6 @@
 		value,
 		label: t[value as TranslationKey] as string
 	}));
-	const availablePrePostDirectModes = prePostDirectModes.map((value) => ({
-		value,
-		label: t[value as TranslationKey] as string
-	}));
 
 	const selectTransitModesLabel = $derived(
 		transitModes.length == possibleTransitModes.length || transitModes.includes('TRANSIT')
@@ -113,24 +109,6 @@
 					.filter((m) => transitModes?.includes(m.value))
 					.map((m) => m.label)
 					.join(', ')
-	);
-	const selectedPreTransitModesLabel = $derived(
-		availablePrePostDirectModes
-			.filter((m) => preTransitModes?.includes(m.value))
-			.map((m) => m.label)
-			.join(', ')
-	);
-	const selectedPostTransitModesLabel = $derived(
-		availablePrePostDirectModes
-			.filter((m) => postTransitModes?.includes(m.value))
-			.map((m) => m.label)
-			.join(', ')
-	);
-	const selectedDirectModesLabel = $derived(
-		availablePrePostDirectModes
-			.filter((m) => directModes?.includes(m.value))
-			.map((m) => m.label)
-			.join(', ')
 	);
 
 	let expanded = $state<boolean>(false);
@@ -141,11 +119,6 @@
 			directModes.includes('BIKE')
 	);
 
-	const containsRental = (modes: PrePostDirectMode[]) =>
-		modes.some((mode) => mode.startsWith('RENTAL_'));
-	const preTransitRental = $derived(containsRental(preTransitModes));
-	const postTransitRental = $derived(containsRental(postTransitModes));
-	const directRental = $derived(containsRental(directModes));
 </script>
 
 <Button variant="ghost" onclick={() => (expanded = !expanded)}>
