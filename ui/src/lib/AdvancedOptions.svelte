@@ -15,7 +15,7 @@
 		type PrePostDirectMode,
 		type TransitMode
 	} from './Modes';
-	import StreetModes from './components/ui/street_modes.svelte';
+	import StreetModes from './components/ui/StreetModes.svelte';
 
 	let {
 		useRoutedTransfers = $bindable(),
