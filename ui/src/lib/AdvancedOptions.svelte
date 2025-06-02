@@ -209,9 +209,7 @@
 				onCheckedChange={setModes('CAR')}
 				id="requireCarTransport"
 			/>
-		</div>
 
-		<div class="grid grid-cols-[1fr_2fr_1fr] items-center gap-2">
 			<!-- First mile -->
 			<StreetModes
 				label={t.routingSegments.firstMile}

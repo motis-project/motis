@@ -62,7 +62,7 @@
 	interface IsochronesPos {
 		lat: number;
 		lng: number;
-		duration: number;
+		seconds: number;
 		name?: string;
 	}
 

@@ -20,11 +20,14 @@
 	} from './api/openapi';
 	import { lngLatToStr } from './lngLatToStr';
 	import DateInput from './DateInput.svelte';
+	import StreetModes from './components/ui/street_modes.svelte';
+	import { prePostDirectModes, type PrePostDirectMode } from './Modes';
+	import { formatDurationSec } from './formatDuration';
 
 	interface IsochronesPos {
 		lat: number;
 		lng: number;
-		duration: number;
+		seconds: number;
 		name?: string;
 	}
 	const toPlaceString = (l: Location) => {
@@ -36,6 +39,7 @@
 			return `${lngLatToStr(l.match!)},0`;
 		}
 	};
+	const minutesToSeconds = (minutes: number[]) => { return minutes.map((m) => m * 60); }
 
 	let {
 		from,
@@ -59,30 +63,20 @@
 		opacity: number;
 	} = $props();
 
-	type TranslationKey = keyof typeof t;
-
 	const timeout = 60;
 
-	const maxOption = 60;
-	const optionSteps = 5;
-	const possibleTravelTimes = [
-		1,
-		...Array(Math.round(maxOption / optionSteps))
-			.keys()
-			.map((i) => (i + 1) * optionSteps)
-	]
-		.map((i) => i.toString())
-		.map((v) => ({ value: v, label: v + ' min' }));
+	const possibleTravelTimes = minutesToSeconds([1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 75, 80, 90, 120, 150, 180, 210, 240])
+		.map((s) => ({ value: s.toString(), label: formatDurationSec(s) }));
+	;
+	const possiblePrePostDurations = minutesToSeconds([1, 5, 10, 15, 20, 25, 30, 45, 60]);
 	let expanded = $state<boolean>(false);
-	// let from = $state<Location>() as Location;
-	// let fromItems = $state<Array<Location>>([]);
-	let one = $state<Location>(from);
-	let maxTravelTime = $state('45');
-	let oneMileMode = $state('WALK');
-	let maxOneTime = $state('15');
 
-	const selectedMaxTravelTime = $derived(parseInt(maxTravelTime));
-	const selectedMaxOneTimeSeconds = $derived(parseInt(maxOneTime) * 60);
+	let one = $state<Location>(from);
+	let maxTravelTime = $state(45 * 60);
+	let oneMileMode = $state<PrePostDirectMode[]>(['WALK']);
+	let maxOneTime = $state(15 * 60);
+
+	const ignoreOneTransitRentalReturnConstraints = false;
 
 	let lastFrom: Location = from;
 	let lastTo: Location = to;
@@ -93,13 +87,13 @@
 			? ({
 					query: {
 						one: toPlaceString(one),
-						maxTravelTime: selectedMaxTravelTime,
+						maxTravelTime: Math.ceil(maxTravelTime / 60),
 						time: time.toISOString(),
 						arriveBy,
 						preTransitModes: arriveBy ? undefined : oneMileMode,
 						postTransitModes: arriveBy ? oneMileMode : undefined,
-						maxPreTransitTime: arriveBy ? undefined : selectedMaxOneTimeSeconds,
-						maxPostTransitTime: arriveBy ? selectedMaxOneTimeSeconds : undefined
+						maxPreTransitTime: arriveBy ? undefined : maxOneTime,
+						maxPostTransitTime: arriveBy ? maxOneTime : undefined
 					}
 				} as OneToAllData)
 			: undefined
@@ -117,7 +111,7 @@
 							return {
 								lat: p.place?.lat,
 								lng: p.place?.lon,
-								duration: selectedMaxTravelTime - (p.duration ?? 0),
+								seconds: maxTravelTime - 60 * (p.duration ?? 0),
 								name: p.place?.name
 							} as IsochronesPos;
 						});
@@ -140,17 +134,6 @@
 			lastTo = to;
 		}
 	});
-
-	// $effect(() => {
-	// 	console.log('NEW LOCATION');
-	// 	const lat = Math.random() + 50.5;
-	// 	const lng = Math.random() + 6.8;
-	// 	const dur = Math.random() * 15 + 5;
-	// 	const name = `Test: ${maxTravelTime}`;
-	// 	console.log("TO PUSH");
-	// 	untrack(() => isochronesData.push({lat: lat, lng: lng, duration: dur, name: name}));
-	// 	console.log("PUSHED");
-	// });
 
 	const getLocation = () => {
 		if (navigator && navigator.geolocation) {
@@ -218,93 +201,75 @@
 </div>
 
 {#if expanded}
-	<div class="w-lg m-4 grid grid-cols-2 items-center space-y-2">
-		<!-- Max travel time -->
-		<div class="text-sm">
-			<!-- TODO -->
-			Max travel time
+	<div class="w-lg m-4 space-y-2">
+		<div class="grid grid-cols-2 items-center gap-2">
+			<!-- Max travel time -->
+			<div class="text-sm">
+				<!-- TODO -->
+				Max travel time
+			</div>
+			<Select.Root type="single" bind:value={() => maxTravelTime.toString(), (v) => maxTravelTime = parseInt(v)} items={possibleTravelTimes}>
+				<Select.Trigger class="flex items-center w-full overflow-hidden" aria-label="max travel time">
+					<div class="w-full text-right pr-4">{formatDurationSec(maxTravelTime)}</div>
+				</Select.Trigger>
+				<Select.Content align="end">
+					{#each possibleTravelTimes as option, i (i + option.value)}
+						<Select.Item value={option.value} label={option.label}>
+							<div class="w-full text-right pr-2">{option.label}</div>
+						</Select.Item>
+					{/each}
+				</Select.Content>
+			</Select.Root>
 		</div>
-		<Select.Root type="single" bind:value={maxTravelTime} items={possibleTravelTimes}>
-			<Select.Trigger class="flex items-center w-full overflow-hidden" aria-label="max travel time">
-				<div class="w-full text-right pr-4">{maxTravelTime} min</div>
-			</Select.Trigger>
-			<Select.Content align="end">
-				{#each possibleTravelTimes as option, i (i + option.value)}
-					<Select.Item value={option.value} label={option.label}>
-						<div class="w-full text-right pr-2">{option.label}</div>
-					</Select.Item>
-				{/each}
-			</Select.Content>
-		</Select.Root>
 
-		<!-- First mile -->
-		<div class="text-sm">
-			{#if arriveBy}
-				{t.routingSegments.lastMile}
-			{:else}
-				{t.routingSegments.firstMile}
-			{/if}
-		</div>
-		<Select.Root type="single" bind:value={oneMileMode}>
-			<Select.Trigger
-				class="flex items-center w-full overflow-hidden"
-				aria-label={arriveBy ? t.routingSegments.lastMile : t.routingSegments.firstMile}
-			>
-				{t[oneMileMode as TranslationKey]}
-			</Select.Trigger>
-			<Select.Content sideOffset={10}>
-				{#each ['WALK', 'BIKE', 'CAR'] as mode, i (i + mode)}
-					<Select.Item value={mode} label={t[mode as TranslationKey] as string}>
-						{t[mode as TranslationKey]}
-					</Select.Item>
-				{/each}
-			</Select.Content>
-		</Select.Root>
+		{#if !arriveBy}
+			<!-- First mile -->
+			<StreetModes
+				label={t.routingSegments.firstMile}
+				bind:modes={oneMileMode}
+				bind:maxTransitTime={maxOneTime}
+				possibleModes={prePostDirectModes}
+				possibleMaxTransitTime={possiblePrePostDurations}
+				ignoreRentalReturnConstraints={ignoreOneTransitRentalReturnConstraints}
+			></StreetModes>
+		{:else}
+			<!-- Last mile -->
+			<StreetModes
+				label={t.routingSegments.lastMile}
+				bind:modes={oneMileMode}
+				bind:maxTransitTime={maxOneTime}
+				possibleModes={prePostDirectModes}
+				possibleMaxTransitTime={possiblePrePostDurations}
+				ignoreRentalReturnConstraints={ignoreOneTransitRentalReturnConstraints}
+			></StreetModes>
+		{/if}
 
-		<!-- Max duration near one location -->
-		<div class="text-sm">
-			<!-- TODO -->
-			Max travel time near one location
-		</div>
-		<Select.Root type="single" bind:value={maxOneTime} items={possibleTravelTimes}>
-			<Select.Trigger class="flex items-center w-full overflow-hidden" aria-label="max travel time">
-				<div class="w-full text-right pr-4">{maxOneTime} min</div>
-			</Select.Trigger>
-			<Select.Content align="end">
-				{#each possibleTravelTimes as option, i (i + option.value)}
-					<Select.Item value={option.value} label={option.label}>
-						<div class="w-full text-right pr-2">{option.label}</div>
-					</Select.Item>
-				{/each}
-			</Select.Content>
-		</Select.Root>
-
-		<!-- Styling -->
-		<div class="grid grid-cols-2 items-stretch">
+		<div class="grid grid-cols-[1fr_2fr_1fr] items-center gap-2">
+			<!-- Styling -->
 			<div class="text-sm">
 				<!-- TODO -->
 				Style
 			</div>
+			<Slider.Root
+				type="single"
+				min={0}
+				max={1000}
+				bind:value={opacity}
+				class="relative flex w-full touch-none select-none items-center"
+			>
+				{#snippet children()}
+					<span
+						class="bg-dark-10 relative h-2 w-full grow cursor-pointer overflow-hidden rounded-full"
+					>
+						<Slider.Range class="bg-foreground absolute h-full" />
+					</span>
+					<Slider.Thumb
+						index={0}
+						class="border-border-input bg-background hover:border-dark-40 focus-visible:ring-foreground dark:bg-foreground dark:shadow-card focus-visible:outline-hidden block size-[25px] cursor-pointer rounded-full border shadow-sm transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50"
+					/>
+				{/snippet}
+			</Slider.Root>
 			<input class="flex right-0 align-right" type="color" bind:value={color} />
 		</div>
-		<Slider.Root
-			type="single"
-			min={0}
-			max={1000}
-			bind:value={opacity}
-			class="relative flex w-full touch-none select-none items-center"
-		>
-			{#snippet children()}
-				<span
-					class="bg-dark-10 relative h-2 w-full grow cursor-pointer overflow-hidden rounded-full"
-				>
-					<Slider.Range class="bg-foreground absolute h-full" />
-				</span>
-				<Slider.Thumb
-					index={0}
-					class="border-border-input bg-background hover:border-dark-40 focus-visible:ring-foreground dark:bg-foreground dark:shadow-card focus-visible:outline-hidden block size-[25px] cursor-pointer rounded-full border shadow-sm transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50"
-				/>
-			{/snippet}
-		</Slider.Root>
 	</div>
 {/if}

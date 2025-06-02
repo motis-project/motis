@@ -12,7 +12,7 @@
 	interface Pos {
 		lat: number;
 		lng: number;
-		duration: number;
+		seconds: number;
 	}
 
 	type boxCoordsType = [[number, number], [number, number], [number, number], [number, number]];
@@ -39,7 +39,7 @@
 
 	let lastData: Pos[] | undefined = undefined;
 
-	const factor = 0.06; // 3.6 kilometers per hour
+	const kilometersPerSecond = 0.001; // 3.6 kilometers per hour
 	const box2 = $derived(
 		maplibregl.LngLatBounds.convert(
 			bounds ?? [
@@ -55,7 +55,7 @@
 		[box2._sw.lng, box2._sw.lat]
 	]);
 	function reachable_kilometers(pos: Pos) {
-		return pos.duration * factor;
+		return pos.seconds * kilometersPerSecond;
 	}
 	function transform(pos: number[], dimensions: number[]) {
 		const x = Math.round(((pos[0] - box2._sw.lng) / (box2._ne.lng - box2._sw.lng)) * dimensions[0]);

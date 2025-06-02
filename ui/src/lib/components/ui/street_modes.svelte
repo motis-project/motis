@@ -46,46 +46,48 @@
 </script>
 
 
-<div class="text-sm">
-	{label}
-</div>
-<Select.Root type="multiple" bind:value={modes}>
-	<Select.Trigger
-		class="flex items-center w-full overflow-hidden"
-		aria-label={label}
-	>
-		{selectedModesLabel}
-	</Select.Trigger>
-	<Select.Content sideOffset={10}>
-		{#each possibleModes as mode, i (i + mode)}
-			<Select.Item value={mode} label={t[mode as TranslationKey] as string}>
-				{t[mode as TranslationKey]}
-			</Select.Item>
-		{/each}
-	</Select.Content>
-</Select.Root>
-<Select.Root type="single" bind:value={() => maxTransitTime.toString(), (v) => maxTransitTime = parseInt(v)}>
-	<Select.Trigger
-		class="flex items-center w-full overflow-hidden"
-		aria-label={t.routingSegments.maxPreTransitTime}
-	>
-		{formatDurationSec(maxTransitTime)}
-	</Select.Trigger>
-	<Select.Content sideOffset={10}>
-		{#each possibleMaxTransitTime as duration (duration)}
-			<Select.Item value={`${duration}`} label={formatDurationSec(duration)}>
-				{formatDurationSec(duration)}
-			</Select.Item>
-		{/each}
-	</Select.Content>
-</Select.Root>
-<div class={cn('col-span-2 col-start-2', showRental || 'hidden')}>
-	<Switch
-		bind:checked={
-			() => !ignoreRentalReturnConstraints,
-			(v) => (ignoreRentalReturnConstraints = !v)
-		}
-		label={t.considerRentalReturnConstraints}
-		id="ignorePreTransitRentalReturnConstraints"
-	/>
+<div class="grid grid-cols-[1fr_2fr_1fr] items-center gap-2">
+	<div class="text-sm">
+		{label}
+	</div>
+	<Select.Root type="multiple" bind:value={modes}>
+		<Select.Trigger
+			class="flex items-center w-full overflow-hidden"
+			aria-label={label}
+		>
+			{selectedModesLabel}
+		</Select.Trigger>
+		<Select.Content sideOffset={10}>
+			{#each possibleModes as mode, i (i + mode)}
+				<Select.Item value={mode} label={t[mode as TranslationKey] as string}>
+					{t[mode as TranslationKey]}
+				</Select.Item>
+			{/each}
+		</Select.Content>
+	</Select.Root>
+	<Select.Root type="single" bind:value={() => maxTransitTime.toString(), (v) => maxTransitTime = parseInt(v)}>
+		<Select.Trigger
+			class="flex items-center w-full overflow-hidden"
+			aria-label={t.routingSegments.maxPreTransitTime}
+		>
+			{formatDurationSec(maxTransitTime)}
+		</Select.Trigger>
+		<Select.Content sideOffset={10}>
+			{#each possibleMaxTransitTime as duration (duration)}
+				<Select.Item value={`${duration}`} label={formatDurationSec(duration)}>
+					{formatDurationSec(duration)}
+				</Select.Item>
+			{/each}
+		</Select.Content>
+	</Select.Root>
+	<div class={cn('col-span-2 col-start-2', showRental || 'hidden')}>
+		<Switch
+			bind:checked={
+				() => !ignoreRentalReturnConstraints,
+				(v) => (ignoreRentalReturnConstraints = !v)
+			}
+			label={t.considerRentalReturnConstraints}
+			id="ignorePreTransitRentalReturnConstraints"
+		/>
+	</div>
 </div>
