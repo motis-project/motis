@@ -61,6 +61,15 @@
 		opacity: number;
 	} = $props();
 
+	const maxSupportedTransfers = 15;
+	let maxTransfers = $state(maxSupportedTransfers);
+	const possibleMaxTransfers = [...Array(maxSupportedTransfers).keys()
+		.map((i) => i + 1)
+		.map((i) => ({
+			value: i.toString(),
+			label: i.toString(),
+		}))
+	];
 	const timeout = 60;
 
 	const possibleTravelTimes = minutesToSeconds([1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 75, 80, 90, 120, 150, 180, 210, 240])
@@ -90,6 +99,7 @@
 						one: toPlaceString(one),
 						maxTravelTime: Math.ceil(maxTravelTime / 60),
 						time: time.toISOString(),
+						maxTransfers,
 						arriveBy,
 						preTransitModes: arriveBy ? undefined : prePostModesToModes(preTransitModes),
 						postTransitModes: arriveBy ? prePostModesToModes(postTransitModes) : undefined,
@@ -205,7 +215,24 @@
 
 {#if expanded}
 	<div class="w-lg m-4 space-y-2">
-		<div class="grid grid-cols-2 items-center gap-2">
+		<div class="grid grid-cols-4 items-center gap-2">
+			<!-- Max transfers -->
+			<div class="text-sm">
+				<!-- TODO -->
+				Max transfers
+			</div>
+			<Select.Root type="single" bind:value={() => maxTransfers.toString(), (v) => maxTransfers = parseInt(v)} items={possibleTravelTimes}>
+				<Select.Trigger class="flex items-center w-full overflow-hidden" aria-label="max travel time">
+					<div class="w-full text-right pr-4">{maxTransfers}</div>
+				</Select.Trigger>
+				<Select.Content align="end">
+					{#each possibleMaxTransfers as option, i (i + option.value)}
+						<Select.Item value={option.value} label={option.label}>
+							<div class="w-full text-right pr-2">{option.label}</div>
+						</Select.Item>
+					{/each}
+				</Select.Content>
+			</Select.Root>
 			<!-- Max travel time -->
 			<div class="text-sm">
 				<!-- TODO -->
