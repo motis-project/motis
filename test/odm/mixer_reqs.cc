@@ -85,27 +85,23 @@ std::vector<nigiri::routing::journey> read(std::string_view csv) {
 
           auto const first_mile_duration =
               nigiri::duration_t{*cj.first_mile_duration_};
-          if (first_mile_duration > nigiri::duration_t{0}) {
-            j.legs_.emplace_back(
-                nigiri::direction::kForward, nigiri::location_idx_t::invalid(),
-                nigiri::location_idx_t::invalid(), j.start_time_,
-                j.start_time_ + first_mile_duration,
-                nigiri::routing::offset{
-                    nigiri::location_idx_t::invalid(), first_mile_duration,
-                    read_transport_mode(cj.first_mile_mode_->view())});
-          }
+          j.legs_.emplace_back(
+              nigiri::direction::kForward, nigiri::location_idx_t::invalid(),
+              nigiri::location_idx_t::invalid(), j.start_time_,
+              j.start_time_ + first_mile_duration,
+              nigiri::routing::offset{
+                  nigiri::location_idx_t::invalid(), first_mile_duration,
+                  read_transport_mode(cj.first_mile_mode_->view())});
 
           auto const last_mile_duration =
               nigiri::duration_t{*cj.last_mile_duration_};
-          if (last_mile_duration > nigiri::duration_t{0}) {
-            j.legs_.emplace_back(
-                nigiri::direction::kForward, nigiri::location_idx_t::invalid(),
-                nigiri::location_idx_t::invalid(),
-                j.dest_time_ - last_mile_duration, j.dest_time_,
-                nigiri::routing::offset{
-                    nigiri::location_idx_t::invalid(), last_mile_duration,
-                    read_transport_mode(cj.last_mile_mode_->view())});
-          }
+          j.legs_.emplace_back(
+              nigiri::direction::kForward, nigiri::location_idx_t::invalid(),
+              nigiri::location_idx_t::invalid(),
+              j.dest_time_ - last_mile_duration, j.dest_time_,
+              nigiri::routing::offset{
+                  nigiri::location_idx_t::invalid(), last_mile_duration,
+                  read_transport_mode(cj.last_mile_mode_->view())});
 
           journeys.push_back(std::move(j));
 
@@ -122,16 +118,26 @@ std::string write(std::vector<nigiri::routing::journey> const& jv) {
   ss << "departure_time, arrival_time, transfers, first_mile_mode, "
         "first_mile_duration, last_mile_mode, last_mile_duration\n";
 
-  auto const write_journey =
-      [&](nigiri::routing::journey const& j) {
-        auto const write_time = [&](nigiri::unixtime_t t) {
+  auto const write_journey = [&](nigiri::routing::journey const& j) {
+    auto const write_time = [&](nigiri::unixtime_t t) {
+      auto const [hours, minutes] = std::div(t.time_since_epoch().count(), 60);
+      ss << hours << ":" << minutes;
+    };
 
-        };
+    auto const write_mode = [&](nigiri::transport_mode_id_t const mode) {
+      ss << (mode == kOdmTransportModeId ? "taxi" : "walk");
+    };
 
-        auto const write_duration
-      }
+    write_time(j.start_time_);
+    ss << ", ";
+    write_time(j.dest_time_);
+    ss << ", " << j.transfers_ << ", ";
+    write_mode(std::get<nigiri::routing::offset>(j.legs_.front().uses_)
+                   .transport_mode_id_);
+    ss << ", ";
+  };
 
-      return ss.str();
+  return ss.str();
 }
 
 }  // namespace motis::odm
