@@ -42,15 +42,16 @@ const translations: Translations = {
 	roundtripStationReturnConstraint: 'Le véhicule doit être retourné à la station de départ.',
 	noItinerariesFound: 'Aucun itinéraire trouvé.',
 	advancedSearchOptions: 'Options',
-	selectModes: 'Sélectionner les modes de transport en commun',
+	selectTransitModes: 'Sélectionner les modes de transport en commun',
 	defaultSelectedModes: 'Tous les transports en commun',
 	selectElevationCosts: 'Évitez les pentes abruptes.', // TODO Online translated
 	wheelchair: 'Correspondances accessibles',
+	useRoutedTransfers: 'Utiliser les correspondances routées',
 	bikeRental: 'Utiliser véhicules partagés',
-	bikeCarriage: 'Transport vélo',
-	carCarriage: 'Transport voiture',
+	requireBikeTransport: 'Transport vélo',
+	requireCarTransport: 'Transport voiture',
+	considerRentalReturnConstraints: 'Retourner les véhicules partagés pendant le voyage',
 	default: 'Faire défaut',
-	unreliableOptions: 'Selon la disponibilité des données, ces options peuvent ne pas être fiables.',
 	timetableSources: 'Sources des horaires',
 	tripCancelled: 'Voyage annulé',
 	stopCancelled: 'Arrêt supprimé',
@@ -58,6 +59,8 @@ const translations: Translations = {
 	inDisallowed: 'Impossible de monter',
 	outDisallowed: 'Impossible de descendre',
 	unscheduledTrip: 'Voyage supplémentaire',
+	alertsAvailable: 'Annonces disponibles',
+	FLEX: 'Transport à la demande',
 	WALK: 'À pied',
 	BIKE: 'Vélo',
 	RENTAL: 'Loué',
@@ -81,13 +84,28 @@ const translations: Translations = {
 	routingSegments: {
 		firstMile: 'Premier kilomètre',
 		lastMile: 'Dernier kilomètre',
-		direct: 'Connexion directe'
+		direct: 'Connexion directe',
+		maxPreTransitTime: 'Durée max. avant transit',
+		maxPostTransitTime: 'Durée max. après transit',
+		maxDirectTime: 'Durée max. directe'
 	},
 	elevationCosts: {
 		NONE: 'Pas de détours',
 		LOW: 'Petits détours',
 		HIGH: 'Grands détours'
-	}
+	},
+	RENTAL_BICYCLE: 'Vélo partagé',
+	RENTAL_CARGO_BICYCLE: 'Vélo cargo partagé',
+	RENTAL_CAR: 'Voiture partagée',
+	RENTAL_MOPED: 'Mobylette partagée',
+	RENTAL_SCOOTER_STANDING: 'Trottinette debout partagée',
+	RENTAL_SCOOTER_SEATED: 'Trottinette assise partagée',
+	RENTAL_OTHER: 'Autre véhicule partagé',
+	incline: 'Pente',
+	CABLE_CAR: 'Téléphérique',
+	FUNICULAR: 'Funiculaire',
+	AREAL_LIFT: 'Remontée mécanique',
+	toll: 'Attention ! Route à péage.'
 };
 
 export default translations;

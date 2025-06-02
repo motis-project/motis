@@ -19,8 +19,8 @@
 
 #include "motis-api/motis-api.h"
 #include "motis/constants.h"
-#include "motis/gbfs/mode.h"
-#include "motis/gbfs/osr_profile.h"
+#include "motis/flex/flex_output.h"
+#include "motis/gbfs/gbfs_output.h"
 #include "motis/gbfs/routing_data.h"
 #include "motis/mode_to_profile.h"
 #include "motis/odm/odm.h"
@@ -88,92 +88,16 @@ std::optional<fare_indices> get_fare_indices(
   return std::nullopt;
 }
 
-api::Itinerary journey_to_response(
-    osr::ways const* w,
-    osr::lookup const* l,
-    osr::platforms const* pl,
-    n::timetable const& tt,
-    tag_lookup const& tags,
-    elevators const* e,
-    n::rt_timetable const* rtt,
-    platform_matches_t const* matches,
-    osr::elevation_storage const* elevations,
-    n::shapes_storage const* shapes,
-    gbfs::gbfs_routing_data& gbfs_rd,
-    api::PedestrianProfileEnum const pedestrian_profile,
-    api::ElevationCostsEnum const elevation_costs,
-    n::routing::journey const& j,
-    place_t const& start,
-    place_t const& dest,
-    street_routing_cache_t& cache,
-    osr::bitvec<osr::node_idx_t>* blocked_mem,
-    bool const detailed_transfers,
-    bool const with_fares,
-    double const timetable_max_matching_distance,
-    double const max_matching_distance,
-    unsigned const api_version) {
-  utl::verify(!j.legs_.empty(), "journey without legs");
+std::optional<std::vector<api::Alert>> get_alerts(
+    n::rt::frun const& fr,
+    std::optional<std::pair<n::rt::run_stop, n::event_type>> const& s) {
+  if (fr.rtt_ == nullptr || !fr.is_scheduled()) {  // TODO added
+    return std::nullopt;
+  }
 
-  auto const fares =
-      with_fares ? std::optional{n::get_fares(tt, rtt, j)} : std::nullopt;
-  auto const to_fare_media_type =
-      [](n::fares::fare_media::fare_media_type const t) {
-        using fare_media_type = n::fares::fare_media::fare_media_type;
-        switch (t) {
-          case fare_media_type::kNone: return api::FareMediaTypeEnum::NONE;
-          case fare_media_type::kPaper:
-            return api::FareMediaTypeEnum::PAPER_TICKET;
-          case fare_media_type::kCard:
-            return api::FareMediaTypeEnum::TRANSIT_CARD;
-          case fare_media_type::kContactless:
-            return api::FareMediaTypeEnum::CONTACTLESS_EMV;
-          case fare_media_type::kApp: return api::FareMediaTypeEnum::MOBILE_APP;
-        }
-        std::unreachable();
-      };
-  auto const to_media = [&](n::fares::fare_media const& m) -> api::FareMedia {
-    return {.fareMediaName_ =
-                m.name_ == n::string_idx_t::invalid()
-                    ? std::nullopt
-                    : std::optional{std::string{tt.strings_.get(m.name_)}},
-            .fareMediaType_ = to_fare_media_type(m.type_)};
-  };
-  auto const to_rider_category =
-      [&](n::fares::rider_category const& r) -> api::RiderCategory {
-    return {.riderCategoryName_ = std::string{tt.strings_.get(r.name_)},
-            .isDefaultFareCategory_ = r.is_default_fare_category_,
-            .eligibilityUrl_ = tt.strings_.try_get(r.eligibility_url_)
-                                   .and_then([](std::string_view s) {
-                                     return std::optional{std::string{s}};
-                                   })};
-  };
-  auto const to_product =
-      [&](n::fares const& f,
-          n::fare_product_idx_t const x) -> api::FareProduct {
-    auto const& p = f.fare_products_[x];
-    return {.name_ = std::string{tt.strings_.get(p.name_)},
-            .amount_ = p.amount_,
-            .currency_ = std::string{tt.strings_.get(p.currency_code_)},
-            .riderCategory_ =
-                p.rider_category_ == n::rider_category_idx_t::invalid()
-                    ? std::nullopt
-                    : std::optional{to_rider_category(
-                          f.rider_categories_[p.rider_category_])},
-            .media_ = p.media_ == n::fare_media_idx_t::invalid()
-                          ? std::nullopt
-                          : std::optional{to_media(f.fare_media_[p.media_])}};
-  };
-  auto const to_rule = [](n::fares::fare_transfer_rule const& x) {
-    switch (x.fare_transfer_type_) {
-      case nigiri::fares::fare_transfer_rule::fare_transfer_type::kAB:
-        return api::FareTransferRuleEnum::AB;
-      case nigiri::fares::fare_transfer_rule::fare_transfer_type::kAPlusAB:
-        return api::FareTransferRuleEnum::A_AB;
-      case nigiri::fares::fare_transfer_rule::fare_transfer_type::kAPlusABPlusB:
-        return api::FareTransferRuleEnum::A_AB_B;
-    }
-    std::unreachable();
-  };
+  auto const& tt = *fr.tt_;
+  auto const* rtt = fr.rtt_;
+
   auto const to_time_range =
       [&](n::interval<n::unixtime_t> const x) -> api::TimeRange {
     return {x.from_, x.to_};
@@ -226,22 +150,120 @@ api::Itinerary journey_to_response(
                       .and_then(convert_to_str),
         .imageAlternativeText_ = get_translation(a.image_alternative_text_[x])};
   };
-  auto const get_alerts =
-      [&](n::rt::frun const& fr) -> std::optional<std::vector<api::Alert>> {
-    if (rtt == nullptr || !fr.is_scheduled()) {  // TODO added
-      return std::nullopt;
-    }
 
-    auto const x = fr.trip_idx();
-    auto alerts = std::vector<api::Alert>{};
-    for (auto const& t : tt.trip_ids_[x]) {
-      auto const src = tt.trip_id_src_[t];
-      rtt->alerts_.for_each_alert(
-          tt, src, x, fr.rt_, n::location_idx_t::invalid(),
-          [&](n::alert_idx_t const a) { alerts.emplace_back(to_alert(a)); });
-    }
+  auto const x =
+      s.and_then([](std::pair<n::rt::run_stop, n::event_type> const& rs_ev) {
+         auto const& [rs, ev_type] = rs_ev;
+         return std::optional{rs.get_trip_idx(ev_type)};
+       }).value_or(fr.trip_idx());
+  auto const l =
+      s.and_then([](std::pair<n::rt::run_stop, n::event_type> const& rs) {
+         return std::optional{rs.first.get_location_idx()};
+       }).value_or(n::location_idx_t::invalid());
+  auto alerts = std::vector<api::Alert>{};
+  for (auto const& t : tt.trip_ids_[x]) {
+    auto const src = tt.trip_id_src_[t];
+    rtt->alerts_.for_each_alert(
+        tt, src, x, fr.rt_, l,
+        [&](n::alert_idx_t const a) { alerts.emplace_back(to_alert(a)); });
+  }
 
-    return alerts.empty() ? std::nullopt : std::optional{std::move(alerts)};
+  return alerts.empty() ? std::nullopt : std::optional{std::move(alerts)};
+}
+
+api::Itinerary journey_to_response(
+    osr::ways const* w,
+    osr::lookup const* l,
+    osr::platforms const* pl,
+    n::timetable const& tt,
+    tag_lookup const& tags,
+    flex::flex_areas const* fl,
+    elevators const* e,
+    n::rt_timetable const* rtt,
+    platform_matches_t const* matches,
+    osr::elevation_storage const* elevations,
+    n::shapes_storage const* shapes,
+    gbfs::gbfs_routing_data& gbfs_rd,
+    n::routing::journey const& j,
+    place_t const& start,
+    place_t const& dest,
+    street_routing_cache_t& cache,
+    osr::bitvec<osr::node_idx_t>* blocked_mem,
+    bool const car_transfers,
+    api::PedestrianProfileEnum const pedestrian_profile,
+    api::ElevationCostsEnum const elevation_costs,
+    bool const detailed_transfers,
+    bool const with_fares,
+    double const timetable_max_matching_distance,
+    double const max_matching_distance,
+    unsigned const api_version,
+    bool const ignore_start_rental_return_constraints,
+    bool const ignore_dest_rental_return_constraints) {
+  utl::verify(!j.legs_.empty(), "journey without legs");
+
+  auto const fares =
+      with_fares ? std::optional{n::get_fares(tt, rtt, j)} : std::nullopt;
+  auto const to_fare_media_type =
+      [](n::fares::fare_media::fare_media_type const t) {
+        using fare_media_type = n::fares::fare_media::fare_media_type;
+        switch (t) {
+          case fare_media_type::kNone: return api::FareMediaTypeEnum::NONE;
+          case fare_media_type::kPaper:
+            return api::FareMediaTypeEnum::PAPER_TICKET;
+          case fare_media_type::kCard:
+            return api::FareMediaTypeEnum::TRANSIT_CARD;
+          case fare_media_type::kContactless:
+            return api::FareMediaTypeEnum::CONTACTLESS_EMV;
+          case fare_media_type::kApp: return api::FareMediaTypeEnum::MOBILE_APP;
+        }
+        std::unreachable();
+      };
+  auto const to_media = [&](n::fares::fare_media const& m) -> api::FareMedia {
+    return {.fareMediaName_ =
+                m.name_ == n::string_idx_t::invalid()
+                    ? std::nullopt
+                    : std::optional{std::string{tt.strings_.get(m.name_)}},
+            .fareMediaType_ = to_fare_media_type(m.type_)};
+  };
+  auto const to_rider_category =
+      [&](n::fares::rider_category const& r) -> api::RiderCategory {
+    return {.riderCategoryName_ = std::string{tt.strings_.get(r.name_)},
+            .isDefaultFareCategory_ = r.is_default_fare_category_,
+            .eligibilityUrl_ = tt.strings_.try_get(r.eligibility_url_)
+                                   .and_then([](std::string_view s) {
+                                     return std::optional{std::string{s}};
+                                   })};
+  };
+  auto const to_products =
+      [&](n::fares const& f,
+          n::fare_product_idx_t const x) -> std::vector<api::FareProduct> {
+    return utl::to_vec(
+        f.fare_products_[x],
+        [&](n::fares::fare_product const& p) -> api::FareProduct {
+          return {
+              .name_ = std::string{tt.strings_.get(p.name_)},
+              .amount_ = p.amount_,
+              .currency_ = std::string{tt.strings_.get(p.currency_code_)},
+              .riderCategory_ =
+                  p.rider_category_ == n::rider_category_idx_t::invalid()
+                      ? std::nullopt
+                      : std::optional{to_rider_category(
+                            f.rider_categories_[p.rider_category_])},
+              .media_ = p.media_ == n::fare_media_idx_t::invalid()
+                            ? std::nullopt
+                            : std::optional{to_media(f.fare_media_[p.media_])}};
+        });
+  };
+  auto const to_rule = [](n::fares::fare_transfer_rule const& x) {
+    switch (x.fare_transfer_type_) {
+      case nigiri::fares::fare_transfer_rule::fare_transfer_type::kAB:
+        return api::FareTransferRuleEnum::AB;
+      case nigiri::fares::fare_transfer_rule::fare_transfer_type::kAPlusAB:
+        return api::FareTransferRuleEnum::A_AB;
+      case nigiri::fares::fare_transfer_rule::fare_transfer_type::kAPlusABPlusB:
+        return api::FareTransferRuleEnum::A_AB_B;
+    }
+    std::unreachable();
   };
 
   auto itinerary = api::Itinerary{
@@ -266,18 +288,18 @@ api::Itinerary journey_to_response(
                   return {.rule_ = t.rule_.and_then([&](auto&& r) {
                             return std::optional{to_rule(r)};
                           }),
-                          .transferProduct_ = t.rule_.and_then([&](auto&& r) {
+                          .transferProducts_ = t.rule_.and_then([&](auto&& r) {
                             return t.legs_.empty()
                                        ? std::nullopt
-                                       : std::optional{to_product(
+                                       : std::optional{to_products(
                                              tt.fares_[t.legs_.front().src_],
                                              r.fare_product_)};
                           }),
                           .effectiveFareLegProducts_ =
                               utl::to_vec(t.legs_, [&](auto&& l) {
                                 return utl::to_vec(l.rule_, [&](auto&& r) {
-                                  return to_product(tt.fares_[l.src_],
-                                                    r.fare_product_);
+                                  return to_products(tt.fares_[l.src_],
+                                                     r.fare_product_);
                                 });
                               })};
                 })};
@@ -299,7 +321,9 @@ api::Itinerary journey_to_response(
     auto const to = to_place(&tt, &tags, w, pl, matches, tt_location{j_leg.to_},
                              start, dest);
 
-    auto const to_place = [&](auto&& s, bool const run_cancelled) {
+    auto const to_place = [&](n::rt::run_stop const& s,
+                              bool const run_cancelled,
+                              n::event_type const ev_type) {
       auto p = ::motis::to_place(&tt, &tags, w, pl, matches, tt_location{s},
                                  start, dest);
       p.pickupType_ = !run_cancelled && s.in_allowed()
@@ -311,6 +335,7 @@ api::Itinerary journey_to_response(
       p.cancelled_ = run_cancelled || (!s.in_allowed() && !s.out_allowed() &&
                                        (s.get_scheduled_stop().in_allowed() ||
                                         s.get_scheduled_stop().out_allowed()));
+      p.alerts_ = get_alerts(*s.fr_, std::pair{s, ev_type});
       return p;
     };
 
@@ -328,8 +353,8 @@ api::Itinerary journey_to_response(
 
               auto& leg = itinerary.legs_.emplace_back(api::Leg{
                   .mode_ = to_mode(enter_stop.get_clasz()),
-                  .from_ = to_place(enter_stop, cancelled),
-                  .to_ = to_place(exit_stop, cancelled),
+                  .from_ = to_place(enter_stop, cancelled, n::event_type::kDep),
+                  .to_ = to_place(exit_stop, cancelled, n::event_type::kArr),
                   .duration_ = std::chrono::duration_cast<std::chrono::seconds>(
                                    j_leg.arr_time_ - j_leg.dep_time_)
                                    .count(),
@@ -358,7 +383,7 @@ api::Itinerary journey_to_response(
                   .effectiveFareLegIndex_ = fare_indices.and_then([](auto&& x) {
                     return std::optional{x.effective_fare_leg_idx_};
                   }),
-                  .alerts_ = get_alerts(fr)});
+                  .alerts_ = get_alerts(fr, std::nullopt)});
 
               leg.from_.vertexType_ = api::VertexTypeEnum::TRANSIT;
               leg.from_.departure_ = leg.startTime_;
@@ -381,7 +406,7 @@ api::Itinerary journey_to_response(
               for (auto i = first; i < last; ++i) {
                 auto const stop = fr[i];
                 auto& p = leg.intermediateStops_->emplace_back(
-                    to_place(stop, cancelled));
+                    to_place(stop, cancelled, n::event_type::kDep));
                 p.departure_ = stop.time(n::event_type::kDep);
                 p.scheduledDeparture_ =
                     stop.scheduled_time(n::event_type::kDep);
@@ -391,45 +416,46 @@ api::Itinerary journey_to_response(
             },
             [&](n::footpath) {
               append(
-                  w && l
-                      ? route(*w, *l, gbfs_rd, e, elevations, from, to,
-                              api::ModeEnum::WALK,
-                              to_profile(api::ModeEnum::WALK,
-                                         pedestrian_profile, elevation_costs),
-                              j_leg.dep_time_, j_leg.arr_time_,
-                              timetable_max_matching_distance, {}, cache,
-                              *blocked_mem, api_version,
-                              std::chrono::duration_cast<std::chrono::seconds>(
-                                  j_leg.arr_time_ - j_leg.dep_time_) +
-                                  std::chrono::minutes{10},
-                              !detailed_transfers)
+                  w && l && detailed_transfers
+                      ? street_routing(
+                            *w, *l, e, elevations, from, to,
+                            default_output{car_transfers
+                                               ? osr::search_profile::kCar
+                                               : to_profile(api::ModeEnum::WALK,
+                                                            pedestrian_profile,
+                                                            elevation_costs)},
+                            j_leg.dep_time_, j_leg.arr_time_,
+                            timetable_max_matching_distance, cache,
+                            *blocked_mem, api_version,
+                            std::chrono::duration_cast<std::chrono::seconds>(
+                                j_leg.arr_time_ - j_leg.dep_time_) +
+                                std::chrono::minutes{10})
                       : dummy_itinerary(from, to, api::ModeEnum::WALK,
                                         j_leg.dep_time_, j_leg.arr_time_));
             },
             [&](n::routing::offset const x) {
-              auto const profile =
-                  x.transport_mode_id_ >= kGbfsTransportModeIdOffset
-                      ? gbfs::get_osr_profile(gbfs_rd.get_products(
-                            gbfs_rd.get_products_ref(x.transport_mode_id_)))
-                  : x.transport_mode_id_ == kOdmTransportModeId
-                      ? osr::search_profile::kCar
-                      : osr::search_profile{
-                            static_cast<std::uint8_t>(x.transport_mode_id_)};
-              append(route(*w, *l, gbfs_rd, e, elevations, from, to,
-                           x.transport_mode_id_ >= kGbfsTransportModeIdOffset
-                               ? api::ModeEnum::RENTAL
-                           : x.transport_mode_id_ == kOdmTransportModeId
-                               ? api::ModeEnum::ODM
-                               : to_mode(profile),
-                           profile, j_leg.dep_time_, j_leg.arr_time_,
-                           max_matching_distance,
-                           x.transport_mode_id_ >= kGbfsTransportModeIdOffset
-                               ? gbfs_rd.get_products_ref(x.transport_mode_id_)
-                               : gbfs::gbfs_products_ref{},
-                           cache, *blocked_mem, api_version,
-                           std::chrono::duration_cast<std::chrono::seconds>(
-                               j_leg.arr_time_ - j_leg.dep_time_) +
-                               std::chrono::minutes{5}));
+              auto out = std::unique_ptr<output>{};
+              if (flex::mode_id::is_flex(x.transport_mode_id_)) {
+                out = std::make_unique<flex::flex_output>(
+                    *w, *l, pl, matches, tags, tt, *fl,
+                    flex::mode_id{x.transport_mode_id_});
+              } else if (x.transport_mode_id_ >= kGbfsTransportModeIdOffset) {
+                auto const is_pre_transit = pred == nullptr;
+                out = std::make_unique<gbfs::gbfs_output>(
+                    *w, gbfs_rd, gbfs_rd.get_products_ref(x.transport_mode_id_),
+                    is_pre_transit ? ignore_start_rental_return_constraints
+                                   : ignore_dest_rental_return_constraints);
+              } else {
+                out = std::make_unique<default_output>(x.transport_mode_id_);
+              }
+
+              append(street_routing(
+                  *w, *l, e, elevations, from, to, *out, j_leg.dep_time_,
+                  j_leg.arr_time_, max_matching_distance, cache, *blocked_mem,
+                  api_version,
+                  std::chrono::duration_cast<std::chrono::seconds>(
+                      j_leg.arr_time_ - j_leg.dep_time_) +
+                      std::chrono::minutes{5}));
             }},
         j_leg.uses_);
   }

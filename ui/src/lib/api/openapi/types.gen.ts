@@ -245,10 +245,11 @@ export type PedestrianProfile = 'FOOT' | 'WHEELCHAIR';
  *
  * - `WALK`
  * - `BIKE`
- * - `RENTAL` Experimental. Expect unannounced breaking changes (without version bumps).
+ * - `RENTAL` Experimental. Expect unannounced breaking changes (without version bumps) for all parameters and returned structs.
  * - `CAR`
- * - `CAR_PARKING`
- * - `ODM`
+ * - `CAR_PARKING` Experimental. Expect unannounced breaking changes (without version bumps) for all parameters and returned structs.
+ * - `ODM` on-demand taxis from the Prima+ÖV Project
+ * - `FLEX` flexible transports
  *
  * # Transit modes
  *
@@ -266,9 +267,12 @@ export type PedestrianProfile = 'FOOT' | 'WHEELCHAIR';
  * - `NIGHT_RAIL`: long distance night trains
  * - `REGIONAL_FAST_RAIL`: regional express routes that skip low traffic stops to be faster
  * - `REGIONAL_RAIL`: regional train
+ * - `CABLE_CAR`: Cable tram. Used for street-level rail cars where the cable runs beneath the vehicle (e.g., cable car in San Francisco).
+ * - `FUNICULAR`: Funicular. Any rail system designed for steep inclines.
+ * - `AREAL_LIFT`: Aerial lift, suspended cable car (e.g., gondola lift, aerial tramway). Cable transport where cabins, cars, gondolas or open chairs are suspended by means of one or more cables.
  *
  */
-export type Mode = 'WALK' | 'BIKE' | 'RENTAL' | 'CAR' | 'CAR_PARKING' | 'ODM' | 'TRANSIT' | 'TRAM' | 'SUBWAY' | 'FERRY' | 'AIRPLANE' | 'METRO' | 'BUS' | 'COACH' | 'RAIL' | 'HIGHSPEED_RAIL' | 'LONG_DISTANCE' | 'NIGHT_RAIL' | 'REGIONAL_FAST_RAIL' | 'REGIONAL_RAIL' | 'OTHER';
+export type Mode = 'WALK' | 'BIKE' | 'RENTAL' | 'CAR' | 'CAR_PARKING' | 'ODM' | 'FLEX' | 'TRANSIT' | 'TRAM' | 'SUBWAY' | 'FERRY' | 'AIRPLANE' | 'METRO' | 'BUS' | 'COACH' | 'RAIL' | 'HIGHSPEED_RAIL' | 'LONG_DISTANCE' | 'NIGHT_RAIL' | 'REGIONAL_FAST_RAIL' | 'REGIONAL_RAIL' | 'CABLE_CAR' | 'FUNICULAR' | 'AREAL_LIFT' | 'OTHER';
 
 /**
  * - `NORMAL` - latitude / longitude coordinate or address
@@ -349,6 +353,22 @@ export type Place = {
      * Alerts for this stop.
      */
     alerts?: Array<Alert>;
+    /**
+     * for `FLEX` transports, the flex location area or location group name
+     */
+    flex?: string;
+    /**
+     * for `FLEX` transports, the flex location area ID or location group ID
+     */
+    flexId?: string;
+    /**
+     * Time that on-demand service becomes available
+     */
+    flexStartPickupDropOffWindow?: string;
+    /**
+     * Time that on-demand service ends
+     */
+    flexEndPickupDropOffWindow?: string;
 };
 
 /**
@@ -551,6 +571,18 @@ export type StepInstruction = {
      *
      */
     area: boolean;
+    /**
+     * Indicates that a fee must be paid by general traffic to use a road, road bridge or road tunnel.
+     */
+    toll: boolean;
+    /**
+     * incline in meters across this path segment
+     */
+    elevationUp?: number;
+    /**
+     * decline in meters across this path segment
+     */
+    elevationDown?: number;
 };
 
 export type RentalFormFactor = 'BICYCLE' | 'CARGO_BICYCLE' | 'CAR' | 'MOPED' | 'SCOOTER_STANDING' | 'SCOOTER_SEATED' | 'OTHER';
@@ -783,7 +815,7 @@ export type FareTransferRule = 'A_AB' | 'A_AB_B' | 'AB';
  */
 export type FareTransfer = {
     rule?: FareTransferRule;
-    transferProduct?: FareProduct;
+    transferProducts?: Array<FareProduct>;
     /**
      * Lists all valid fare products for the effective fare legs.
      * This is an `array<array<FareProduct>>` where the inner array
@@ -793,7 +825,7 @@ export type FareTransfer = {
      * and the inner array as OR (you can choose which ticket to buy)
      *
      */
-    effectiveFareLegProducts: Array<Array<FareProduct>>;
+    effectiveFareLegProducts: Array<Array<Array<FareProduct>>>;
 };
 
 export type Itinerary = {
@@ -824,37 +856,37 @@ export type Itinerary = {
 };
 
 /**
- * footpath from one location to another
+ * transfer from one location to another
  */
-export type Footpath = {
+export type Transfer = {
     to: Place;
     /**
-     * optional; missing if the GTFS did not contain a footpath
-     * footpath duration in minutes according to GTFS (+heuristics)
+     * optional; missing if the GTFS did not contain a transfer
+     * transfer duration in minutes according to GTFS (+heuristics)
      *
      */
     default?: number;
     /**
      * optional; missing if no path was found (timetable / osr)
-     * footpath duration in minutes for the foot profile
+     * transfer duration in minutes for the foot profile
      *
      */
     foot?: number;
     /**
      * optional; missing if no path was found with foot routing
-     * footpath duration in minutes for the foot profile
+     * transfer duration in minutes for the foot profile
      *
      */
     footRouted?: number;
     /**
      * optional; missing if no path was found with the wheelchair profile
-     * footpath duration in minutes for the wheelchair profile
+     * transfer duration in minutes for the wheelchair profile
      *
      */
     wheelchair?: number;
     /**
      * optional; missing if no path was found with the wheelchair profile
-     * footpath duration in minutes for the wheelchair profile
+     * transfer duration in minutes for the wheelchair profile
      *
      */
     wheelchairRouted?: number;
@@ -864,6 +896,12 @@ export type Footpath = {
      *
      */
     wheelchairUsesElevator?: boolean;
+    /**
+     * optional; missing if no path was found with car routing
+     * transfer duration in minutes for the car profile
+     *
+     */
+    car?: number;
 };
 
 export type PlanData = {
@@ -900,6 +938,8 @@ export type PlanData = {
          * Note: Transit connections that are slower than the fastest direct connection will not show up.
          * This is being used as a cut-off during transit routing to speed up the search.
          * To prevent this, it's possible to send two separate requests (one with only `transitModes` and one with only `directModes`).
+         *
+         * Note: the output `direct` array will stay empty if the input param `maxDirectTime` makes any direct trip impossible.
          *
          * Only non-transit modes such as `WALK`, `BIKE`, `CAR`, `BIKE_SHARING`, etc. can be used.
          *
@@ -975,6 +1015,36 @@ export type PlanData = {
          *
          */
         fromPlace: string;
+        /**
+         * Experimental. Expect unannounced breaking changes (without version bumps).
+         *
+         * Optional. Default is `false`.
+         *
+         * If set to `true`, the routing will ignore rental return constraints for direct connections,
+         * allowing the rental vehicle to be parked anywhere.
+         *
+         */
+        ignoreDirectRentalReturnConstraints?: boolean;
+        /**
+         * Experimental. Expect unannounced breaking changes (without version bumps).
+         *
+         * Optional. Default is `false`.
+         *
+         * If set to `true`, the routing will ignore rental return constraints for the part from the last transit stop to the `to` coordinate,
+         * allowing the rental vehicle to be parked anywhere.
+         *
+         */
+        ignorePostTransitRentalReturnConstraints?: boolean;
+        /**
+         * Experimental. Expect unannounced breaking changes (without version bumps).
+         *
+         * Optional. Default is `false`.
+         *
+         * If set to `true`, the routing will ignore rental return constraints for the part from the `from` coordinate to the first transit stop,
+         * allowing the rental vehicle to be parked anywhere.
+         *
+         */
+        ignorePreTransitRentalReturnConstraints?: boolean;
         /**
          * Optional. Experimental. Number of luggage pieces; base unit: airline cabin luggage (e.g. for ODM or price calculation)
          *
@@ -1164,6 +1234,10 @@ export type PlanData = {
          *
          */
         searchWindow?: number;
+        /**
+         * Optional. Experimental. Adds overtaken direct connections.
+         */
+        slowDirect?: boolean;
         /**
          * Optional. Defaults to the current time.
          *
@@ -1754,7 +1828,7 @@ export type LevelsResponse = (Array<(number)>);
 
 export type LevelsError = unknown;
 
-export type FootpathsData = {
+export type TransfersData = {
     query: {
         /**
          * location id
@@ -1763,12 +1837,24 @@ export type FootpathsData = {
     };
 };
 
-export type FootpathsResponse = ({
+export type TransfersResponse = ({
     place: Place;
     /**
-     * all outgoing footpaths of this location
+     * true if the server has foot transfers computed
      */
-    footpaths: Array<Footpath>;
+    hasFootTransfers: boolean;
+    /**
+     * true if the server has wheelchair transfers computed
+     */
+    hasWheelchairTransfers?: boolean;
+    /**
+     * true if the server has car transfers computed
+     */
+    hasCarTransfers: boolean;
+    /**
+     * all outgoing transfers of this location
+     */
+    transfers: Array<Transfer>;
 });
 
-export type FootpathsError = unknown;
+export type TransfersError = unknown;

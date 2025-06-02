@@ -77,7 +77,7 @@ ptr<elevators> update_elevators(config const& c,
   update_rtt_td_footpaths(
       *d.w_, *d.l_, *d.pl_, *d.tt_, *d.location_rtree_, *new_e, *d.matches_,
       tasks, d.rt_->rtt_.get(), new_rtt,
-      std::chrono::seconds{c.timetable_.value().max_footpath_length_});
+      std::chrono::seconds{c.timetable_.value().max_footpath_length_ * 60});
 
   return new_e;
 }

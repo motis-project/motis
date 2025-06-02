@@ -1,19 +1,10 @@
 import type { Mode, Rental } from './api/openapi';
 
-export type Colorable = {
-	routeColor?: string;
-	routeTextColor?: string;
-	mode: Mode;
-};
+export type Colorable = { routeColor?: string; routeTextColor?: string; mode: Mode };
 
-export type TripInfo = {
-	tripId?: string;
-	routeShortName?: string;
-};
+export type TripInfo = { tripId?: string; routeShortName?: string };
 
-export type RentalInfo = {
-	rental?: Rental;
-};
+export type RentalInfo = { rental?: Rental };
 
 export type LegLike = Colorable & TripInfo & RentalInfo;
 
@@ -21,9 +12,8 @@ export const getModeStyle = (l: LegLike): [string, string, string] => {
 	switch (l.mode) {
 		case 'WALK':
 			return ['walk', 'hsl(var(--foreground) / 1)', 'hsl(var(--background) / 1)'];
-
 		case 'BIKE':
-			return ['bike', '#075985', 'white'];
+			return ['bike', 'hsl(var(--foreground) / 1)', 'hsl(var(--background) / 1)'];
 
 		case 'RENTAL':
 			switch (l.rental?.formFactor) {
@@ -32,7 +22,7 @@ export const getModeStyle = (l: LegLike): [string, string, string] => {
 				case 'CARGO_BICYCLE':
 					return ['cargo_bike', '#075985', 'white'];
 				case 'CAR':
-					return ['car', '#333333', 'white'];
+					return ['car', '#4c4947', 'white'];
 				case 'MOPED':
 					return ['moped', '#075985', 'white'];
 				case 'SCOOTER_SEATED':
@@ -45,8 +35,9 @@ export const getModeStyle = (l: LegLike): [string, string, string] => {
 
 		case 'CAR':
 		case 'CAR_PARKING':
-			return ['car', '#333333', 'white'];
+			return ['car', '#4c4947', 'white'];
 
+		case 'FLEX':
 		case 'ODM':
 			return ['taxi', '#fdb813', 'white'];
 
@@ -84,6 +75,13 @@ export const getModeStyle = (l: LegLike): [string, string, string] => {
 		case 'REGIONAL_RAIL':
 		case 'RAIL':
 			return ['train', '#f44336', 'white'];
+
+		case 'FUNICULAR':
+			return ['funicular', '#795548', 'white'];
+
+		case 'CABLE_CAR':
+		case 'AREAL_LIFT':
+			return ['aerial_lift', '#795548', 'white'];
 	}
 
 	return ['train', '#000000', 'white'];

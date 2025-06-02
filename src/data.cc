@@ -26,6 +26,7 @@
 #include "motis/config.h"
 #include "motis/constants.h"
 #include "motis/elevators/update_elevators.h"
+#include "motis/flex/flex_areas.h"
 #include "motis/hashes.h"
 #include "motis/match_platforms.h"
 #include "motis/metrics_registry.h"
@@ -127,6 +128,15 @@ data::data(std::filesystem::path p, config const& c)
     }
   });
 
+  auto fa = std::async(std::launch::async, [&]() {
+    if (c.timetable_ && c.use_street_routing()) {
+      street_routing.wait();
+      tt.wait();
+
+      load_flex_areas();
+    }
+  });
+
   auto matches = std::async(std::launch::async, [&]() {
     if (c.use_street_routing() && c.timetable_) {
       load_matches();
@@ -136,6 +146,7 @@ data::data(std::filesystem::path p, config const& c)
   auto elevators = std::async(std::launch::async, [&]() {
     if (c.has_elevators()) {
       street_routing.wait();
+
       rt_->e_ = std::make_unique<motis::elevators>(
           *w_, *elevator_nodes_, vector_map<elevator_idx_t, elevator>{});
 
@@ -224,6 +235,12 @@ void data::load_tt(fs::path const& p) {
   location_rtree_ = std::make_unique<point_rtree<n::location_idx_t>>(
       create_location_rtree(*tt_));
   init_rtt();
+}
+
+void data::load_flex_areas() {
+  utl::verify(tt_ && w_ && l_, "flex areas requires tt={}, w={}, l={}",
+              tt_ != nullptr, w_ != nullptr, l_ != nullptr);
+  flex_areas_ = std::make_unique<flex::flex_areas>(*tt_, *w_, *l_);
 }
 
 void data::init_rtt(date::sys_days const d) {

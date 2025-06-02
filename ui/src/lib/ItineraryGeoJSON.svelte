@@ -3,7 +3,7 @@
 	import GeoJSON from '$lib/map/GeoJSON.svelte';
 	import type { Itinerary, Mode } from '$lib/api/openapi';
 	import { getColor } from '$lib/modeStyle';
-	import polyline from 'polyline';
+	import polyline from '@mapbox/polyline';
 	import { colord } from 'colord';
 
 	const PRECISION = 6;
@@ -12,12 +12,23 @@
 		return m == 'WALK' || m == 'BIKE' || m == 'CAR';
 	}
 
+	function getIndividualModeColor(m: Mode): string {
+		switch (m) {
+			case 'CAR':
+				return '#bf75ff';
+			default:
+				return '#42a5f5';
+		}
+	}
+
 	function itineraryToGeoJSON(i: Itinerary): GeoJSON.GeoJSON {
 		return {
 			type: 'FeatureCollection',
 			features: i.legs.flatMap((l) => {
 				if (l.steps) {
-					const color = isIndividualTransport(l.mode) ? '#42a5f5' : `${getColor(l)[0]}`;
+					const color = isIndividualTransport(l.mode)
+						? getIndividualModeColor(l.mode)
+						: `${getColor(l)[0]}`;
 					const outlineColor = colord(color).darken(0.2).toHex();
 					return l.steps.map((p) => {
 						return {

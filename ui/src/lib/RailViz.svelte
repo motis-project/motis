@@ -6,7 +6,7 @@
 	import { getColor } from '$lib/modeStyle';
 	import getDistance from '@turf/rhumb-distance';
 	import getBearing from '@turf/rhumb-bearing';
-	import polyline from 'polyline';
+	import polyline from '@mapbox/polyline';
 	import { formatTime } from '$lib/toDateTime';
 	import { lngLatToStr } from '$lib/lngLatToStr';
 	import maplibregl from 'maplibre-gl';

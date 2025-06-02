@@ -193,7 +193,7 @@ endif()
 
 # --- UI ---
 add_custom_target(motis-web-ui
-        COMMAND npm i -f && npm run build
+        COMMAND pnpm install && pnpm build
         WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/ui"
         VERBATIM
 )

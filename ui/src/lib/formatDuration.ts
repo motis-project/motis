@@ -1,6 +1,10 @@
 export const formatDurationSec = (t: number): string => {
-	const hours = Math.floor(t / 3600);
-	const minutes = Math.ceil((t - hours * 3600) / 60);
+	let hours = Math.floor(t / 3600);
+	let minutes = Math.ceil((t - hours * 3600) / 60);
+	if (minutes === 60) {
+		hours += 1;
+		minutes = 0;
+	}
 	const str = [
 		hours !== 0 ? hours + ' h' : '',
 		minutes !== 0 || hours === 0 ? minutes + ' min' : ''

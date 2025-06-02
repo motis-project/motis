@@ -33,6 +33,8 @@
 		// @ts-expect-error target exists, value exists
 		const dateTimeLocalValue = e.target!.value!;
 		const fakeUtcTime = new Date(`${dateTimeLocalValue}Z`);
-		value = new Date(fakeUtcTime.getTime() + fakeUtcTime.getTimezoneOffset() * 60000);
+		if (!isNaN(fakeUtcTime.getTime())) {
+			value = new Date(fakeUtcTime.getTime() + fakeUtcTime.getTimezoneOffset() * 60000);
+		}
 	}}
 />

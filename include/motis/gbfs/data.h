@@ -263,6 +263,7 @@ struct compressed_bitvec {
 
 struct routing_data {
   std::vector<additional_node> additional_nodes_{};
+  std::vector<geo::latlng> additional_node_coordinates_;
   osr::hash_map<osr::node_idx_t, std::vector<osr::additional_edge>>
       additional_edges_{};
 
@@ -274,9 +275,9 @@ struct routing_data {
 
 struct compressed_routing_data {
   std::vector<additional_node> additional_nodes_{};
+  std::vector<geo::latlng> additional_node_coordinates_;
   osr::hash_map<osr::node_idx_t, std::vector<osr::additional_edge>>
       additional_edges_{};
-
   compressed_bitvec start_allowed_{};
   compressed_bitvec end_allowed_{};
   compressed_bitvec through_allowed_{};
@@ -289,11 +290,14 @@ struct products_routing_data {
                         compressed_routing_data const& compressed);
 
   osr::sharing_data get_sharing_data(
-      osr::node_idx_t::value_t const additional_node_offset) const {
-    return {.start_allowed_ = start_allowed_,
-            .end_allowed_ = end_allowed_,
-            .through_allowed_ = through_allowed_,
+      osr::node_idx_t::value_t const additional_node_offset,
+      bool ignore_return_constraints) const {
+    return {.start_allowed_ = &start_allowed_,
+            .end_allowed_ = ignore_return_constraints ? nullptr : &end_allowed_,
+            .through_allowed_ = &through_allowed_,
             .additional_node_offset_ = additional_node_offset,
+            .additional_node_coordinates_ =
+                compressed_.additional_node_coordinates_,
             .additional_edges_ = compressed_.additional_edges_};
   }
 
@@ -322,8 +326,7 @@ struct provider_routing_data
 struct provider_products {
   bool includes_vehicle_type(vehicle_type_idx_t const idx) const {
     return (idx == vehicle_type_idx_t::invalid() && vehicle_types_.empty()) ||
-           std::find(begin(vehicle_types_), end(vehicle_types_), idx) !=
-               end(vehicle_types_);
+           utl::find(vehicle_types_, idx) != end(vehicle_types_);
   }
 
   gbfs_products_idx_t idx_{gbfs_products_idx_t::invalid()};
@@ -363,6 +366,7 @@ struct gbfs_provider {
   std::vector<vehicle_status> vehicle_status_;
   geofencing_zones geofencing_zones_{};
   geofencing_restrictions default_restrictions_{};
+  std::optional<return_constraint> default_return_constraint_{};
 
   vector_map<gbfs_products_idx_t, provider_products> products_;
   bool has_vehicles_to_rent_{};
@@ -378,6 +382,7 @@ struct provider_feed {
   headers_t headers_{};
   std::optional<std::filesystem::path> dir_{};
   geofencing_restrictions default_restrictions_{};
+  std::optional<return_constraint> default_return_constraint_{};
 };
 
 struct aggregated_feed {

@@ -43,15 +43,16 @@ const translations: Translations = {
 		'Das Fahrzeug muss wieder an der Abfahrtsstation abgestellt werden.',
 	noItinerariesFound: 'Keine Verbindungen gefunden.',
 	advancedSearchOptions: 'Optionen',
-	selectModes: 'Öffentliche Verkehrsmittel auswählen',
+	selectTransitModes: 'Öffentliche Verkehrsmittel auswählen',
 	defaultSelectedModes: 'Alle Verkehrsmittel',
 	selectElevationCosts: 'Steile Steigungen vermeiden.',
+	useRoutedTransfers: 'Geroutete Umstiege verwenden',
 	wheelchair: 'Barrierefreie Umstiege',
 	bikeRental: 'Sharing-Fahrzeuge berücksichtigen',
-	bikeCarriage: 'Fahrradmitnahme',
-	carCarriage: 'Automitnahme',
+	requireBikeTransport: 'Fahrradmitnahme',
+	requireCarTransport: 'Automitnahme',
+	considerRentalReturnConstraints: 'Leihfahrzeuge innerhalb der Reise zurückgeben',
 	default: 'Vorgabe',
-	unreliableOptions: 'Je nach Datenverfügbarkeit können diese Optionen unzuverlässig sein.',
 	timetableSources: 'Fahrplandatenquellen',
 	tripCancelled: 'Fahrt entfällt',
 	stopCancelled: 'Halt entfällt',
@@ -59,11 +60,13 @@ const translations: Translations = {
 	inDisallowed: 'Einstieg nicht möglich',
 	outDisallowed: 'Ausstieg nicht möglich',
 	unscheduledTrip: 'Zusätzliche Fahrt',
+	alertsAvailable: 'Meldungen liegen vor',
+	FLEX: 'Bedarfsverkehr',
 	WALK: 'Zu Fuß',
 	BIKE: 'Fahrrad',
 	RENTAL: 'Sharing',
 	CAR: 'Auto',
-	CAR_PARKING: 'Car parking',
+	CAR_PARKING: 'P+R Park & Ride',
 	TRANSIT: 'ÖPV',
 	TRAM: 'Tram',
 	SUBWAY: 'U-Bahn',
@@ -82,13 +85,24 @@ const translations: Translations = {
 	routingSegments: {
 		firstMile: 'Erste Meile',
 		lastMile: 'Letzte Meile',
-		direct: 'Direktverbindung'
+		direct: 'Direktverbindung',
+		maxPreTransitTime: 'Max. Vorlaufzeit',
+		maxPostTransitTime: 'Max. Nachlaufzeit',
+		maxDirectTime: 'Max. Direktzeit'
 	},
-	elevationCosts: {
-		NONE: 'Keine Umwege',
-		LOW: 'Kleine Umwege',
-		HIGH: 'Große Umwege'
-	}
+	elevationCosts: { NONE: 'Keine Umwege', LOW: 'Kleine Umwege', HIGH: 'Große Umwege' },
+	RENTAL_BICYCLE: 'Bikesharing',
+	RENTAL_CARGO_BICYCLE: 'Lastenrad Sharing',
+	RENTAL_CAR: 'Car Sharing',
+	RENTAL_MOPED: 'Moped Sharing',
+	RENTAL_SCOOTER_STANDING: 'Scooter Sharing',
+	RENTAL_SCOOTER_SEATED: 'Sitzroller Sharing',
+	RENTAL_OTHER: 'Anderes sharing Fahrzeug',
+	incline: 'Steigung',
+	CABLE_CAR: 'Seilbahn',
+	FUNICULAR: 'Standseilbahn',
+	AREAL_LIFT: 'Luftseilbahn',
+	toll: 'Achtung! Mautpflichtige Straße.'
 };
 
 export default translations;

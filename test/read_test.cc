@@ -17,7 +17,7 @@ TEST(motis, parse_location_with_level) {
 TEST(motis, parse_location_no_level) {
   auto const parsed = parse_location("-23.1,45.2");
   ASSERT_TRUE(parsed.has_value());
-  EXPECT_EQ((osr::location{{-23.1, 45.2}, osr::level_t{0.F}}), *parsed);
+  EXPECT_EQ((osr::location{{-23.1, 45.2}, osr::kNoLevel}), *parsed);
 }
 
 TEST(motis, parse_cursor_earlier) {

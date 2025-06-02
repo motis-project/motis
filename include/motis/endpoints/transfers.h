@@ -14,8 +14,8 @@
 
 namespace motis::ep {
 
-struct footpaths {
-  api::footpaths_response operator()(boost::urls::url_view const&) const;
+struct transfers {
+  api::transfers_response operator()(boost::urls::url_view const&) const;
 
   config const& c_;
   tag_lookup const& tags_;

@@ -24,7 +24,9 @@
 	} = $props();
 
 	function click(e: MapMouseEvent & { features?: MapGeoJSONFeature[] }) {
-		onclick && onclick(e);
+		if (onclick) {
+			onclick(e);
+		}
 	}
 
 	let layer = $state<{ id: null | string }>({ id });

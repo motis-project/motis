@@ -281,10 +281,11 @@ export const ModeSchema = {
 
   - \`WALK\`
   - \`BIKE\`
-  - \`RENTAL\` Experimental. Expect unannounced breaking changes (without version bumps).
+  - \`RENTAL\` Experimental. Expect unannounced breaking changes (without version bumps) for all parameters and returned structs.
   - \`CAR\`
-  - \`CAR_PARKING\`
-  - \`ODM\`
+  - \`CAR_PARKING\` Experimental. Expect unannounced breaking changes (without version bumps) for all parameters and returned structs.
+  - \`ODM\` on-demand taxis from the Prima+ÖV Project
+  - \`FLEX\` flexible transports
 
 # Transit modes
 
@@ -296,15 +297,18 @@ export const ModeSchema = {
   - \`BUS\`: short distance buses (does not include \`COACH\`)
   - \`COACH\`: long distance buses (does not include \`BUS\`)
   - \`RAIL\`: translates to \`HIGHSPEED_RAIL,LONG_DISTANCE_RAIL,NIGHT_RAIL,REGIONAL_RAIL,REGIONAL_FAST_RAIL\`
-  - \`METRO\`: metro trains
+  - \`METRO\`: metro trains 
   - \`HIGHSPEED_RAIL\`: long distance high speed trains (e.g. TGV)
   - \`LONG_DISTANCE\`: long distance inter city trains
   - \`NIGHT_RAIL\`: long distance night trains
   - \`REGIONAL_FAST_RAIL\`: regional express routes that skip low traffic stops to be faster
   - \`REGIONAL_RAIL\`: regional train
+  - \`CABLE_CAR\`: Cable tram. Used for street-level rail cars where the cable runs beneath the vehicle (e.g., cable car in San Francisco).
+  - \`FUNICULAR\`: Funicular. Any rail system designed for steep inclines.
+  - \`AREAL_LIFT\`: Aerial lift, suspended cable car (e.g., gondola lift, aerial tramway). Cable transport where cabins, cars, gondolas or open chairs are suspended by means of one or more cables.
 `,
     type: 'string',
-    enum: ['WALK', 'BIKE', 'RENTAL', 'CAR', 'CAR_PARKING', 'ODM', 'TRANSIT', 'TRAM', 'SUBWAY', 'FERRY', 'AIRPLANE', 'METRO', 'BUS', 'COACH', 'RAIL', 'HIGHSPEED_RAIL', 'LONG_DISTANCE', 'NIGHT_RAIL', 'REGIONAL_FAST_RAIL', 'REGIONAL_RAIL', 'OTHER']
+    enum: ['WALK', 'BIKE', 'RENTAL', 'CAR', 'CAR_PARKING', 'ODM', 'FLEX', 'TRANSIT', 'TRAM', 'SUBWAY', 'FERRY', 'AIRPLANE', 'METRO', 'BUS', 'COACH', 'RAIL', 'HIGHSPEED_RAIL', 'LONG_DISTANCE', 'NIGHT_RAIL', 'REGIONAL_FAST_RAIL', 'REGIONAL_RAIL', 'CABLE_CAR', 'FUNICULAR', 'AREAL_LIFT', 'OTHER']
 } as const;
 
 export const VertexTypeSchema = {
@@ -399,6 +403,24 @@ Can be missing if neither real-time updates nor the schedule timetable contains 
             items: {
                 '$ref': '#/components/schemas/Alert'
             }
+        },
+        flex: {
+            description: 'for `FLEX` transports, the flex location area or location group name',
+            type: 'string'
+        },
+        flexId: {
+            description: 'for `FLEX` transports, the flex location area ID or location group ID',
+            type: 'string'
+        },
+        flexStartPickupDropOffWindow: {
+            description: 'Time that on-demand service becomes available',
+            type: 'string',
+            format: 'date-time'
+        },
+        flexEndPickupDropOffWindow: {
+            description: 'Time that on-demand service ends',
+            type: 'string',
+            format: 'date-time'
         }
     }
 } as const;
@@ -611,7 +633,7 @@ Be aware that with precision 7, coordinates with |longitude| > 107.37 are undefi
 
 export const StepInstructionSchema = {
     type: 'object',
-    required: ['fromLevel', 'toLevel', 'polyline', 'relativeDirection', 'distance', 'streetName', 'exit', 'stayOn', 'area'],
+    required: ['fromLevel', 'toLevel', 'polyline', 'relativeDirection', 'distance', 'streetName', 'exit', 'stayOn', 'area', 'toll'],
     properties: {
         relativeDirection: {
             '$ref': '#/components/schemas/Direction'
@@ -657,6 +679,18 @@ This step is on an open area, such as a plaza or train platform,
 and thus the directions should say something like "cross"
 `,
             type: 'boolean'
+        },
+        toll: {
+            description: 'Indicates that a fee must be paid by general traffic to use a road, road bridge or road tunnel.',
+            type: 'boolean'
+        },
+        elevationUp: {
+            type: 'integer',
+            description: 'incline in meters across this path segment'
+        },
+        elevationDown: {
+            type: 'integer',
+            description: 'decline in meters across this path segment'
         }
     }
 } as const;
@@ -981,8 +1015,11 @@ An itinerary \`Leg\` references the index of the fare transfer and the index of 
         rule: {
             '$ref': '#/components/schemas/FareTransferRule'
         },
-        transferProduct: {
-            '$ref': '#/components/schemas/FareProduct'
+        transferProducts: {
+            type: 'array',
+            items: {
+                '$ref': '#/components/schemas/FareProduct'
+            }
         },
         effectiveFareLegProducts: {
             description: `Lists all valid fare products for the effective fare legs.
@@ -996,7 +1033,10 @@ and the inner array as OR (you can choose which ticket to buy)
             items: {
                 type: 'array',
                 items: {
-                    '$ref': '#/components/schemas/FareProduct'
+                    type: 'array',
+                    items: {
+                        '$ref': '#/components/schemas/FareProduct'
+                    }
                 }
             }
         }
@@ -1042,8 +1082,8 @@ export const ItinerarySchema = {
     }
 } as const;
 
-export const FootpathSchema = {
-    description: 'footpath from one location to another',
+export const TransferSchema = {
+    description: 'transfer from one location to another',
     type: 'object',
     required: ['to'],
     properties: {
@@ -1052,38 +1092,44 @@ export const FootpathSchema = {
         },
         default: {
             type: 'number',
-            description: `optional; missing if the GTFS did not contain a footpath
-footpath duration in minutes according to GTFS (+heuristics)
+            description: `optional; missing if the GTFS did not contain a transfer
+transfer duration in minutes according to GTFS (+heuristics)
 `
         },
         foot: {
             type: 'number',
             description: `optional; missing if no path was found (timetable / osr)
-footpath duration in minutes for the foot profile
+transfer duration in minutes for the foot profile
 `
         },
         footRouted: {
             type: 'number',
             description: `optional; missing if no path was found with foot routing
-footpath duration in minutes for the foot profile
+transfer duration in minutes for the foot profile
 `
         },
         wheelchair: {
             type: 'number',
             description: `optional; missing if no path was found with the wheelchair profile 
-footpath duration in minutes for the wheelchair profile
+transfer duration in minutes for the wheelchair profile
 `
         },
         wheelchairRouted: {
             type: 'number',
             description: `optional; missing if no path was found with the wheelchair profile
-footpath duration in minutes for the wheelchair profile
+transfer duration in minutes for the wheelchair profile
 `
         },
         wheelchairUsesElevator: {
             type: 'boolean',
             description: `optional; missing if no path was found with the wheelchair profile
 true if the wheelchair path uses an elevator
+`
+        },
+        car: {
+            type: 'number',
+            description: `optional; missing if no path was found with car routing
+transfer duration in minutes for the car profile
 `
         }
     }
