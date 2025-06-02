@@ -21,7 +21,7 @@
 	import { lngLatToStr } from './lngLatToStr';
 	import DateInput from './DateInput.svelte';
 	import StreetModes from './components/ui/StreetModes.svelte';
-	import { prePostDirectModes, type PrePostDirectMode } from './Modes';
+	import { prePostDirectModes, prePostModesToModes, type PrePostDirectMode } from './Modes';
 	import { formatDurationSec } from './formatDuration';
 
 	interface IsochronesPos {
@@ -91,8 +91,8 @@
 						maxTravelTime: Math.ceil(maxTravelTime / 60),
 						time: time.toISOString(),
 						arriveBy,
-						preTransitModes: arriveBy ? undefined : preTransitModes,
-						postTransitModes: arriveBy ? postTransitModes : undefined,
+						preTransitModes: arriveBy ? undefined : prePostModesToModes(preTransitModes),
+						postTransitModes: arriveBy ? prePostModesToModes(postTransitModes) : undefined,
 						maxPreTransitTime: arriveBy ? undefined : maxPreTransitTime,
 						maxPostTransitTime: arriveBy ? maxPostTransitTime : undefined
 					}
