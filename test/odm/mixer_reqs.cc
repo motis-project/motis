@@ -21,7 +21,9 @@ struct csv_journey {
       last_mile_duration_;
 };
 
-nigiri::transport_mode_id_t read_transport_mode(utl::cstr const& m) {
+nigiri::unixtime_t read_time_of_day(std::string_view t) {}
+
+nigiri::transport_mode_id_t read_transport_mode(std::string_view m) {
   if (m == "taxi") {
     return kOdmTransportModeId;
   } else {
@@ -50,7 +52,7 @@ std::vector<nigiri::routing::journey> read(std::string_view csv) {
                 j.start_time_ + first_mile_duration,
                 nigiri::routing::offset{
                     nigiri::location_idx_t::invalid(), first_mile_duration,
-                    read_transport_mode(*cj.first_mile_mode_)});
+                    read_transport_mode(cj.first_mile_mode_->view())});
           }
 
           auto const last_mile_duration =
@@ -62,7 +64,7 @@ std::vector<nigiri::routing::journey> read(std::string_view csv) {
                 j.dest_time_ - last_mile_duration, j.dest_time_,
                 nigiri::routing::offset{
                     nigiri::location_idx_t::invalid(), last_mile_duration,
-                    read_transport_mode(*cj.last_mile_mode_)});
+                    read_transport_mode(cj.last_mile_mode_->view())});
           }
 
           journeys.push_back(std::move(j));
@@ -76,10 +78,20 @@ std::vector<nigiri::routing::journey> read(std::string_view csv) {
 }
 
 std::string write(std::vector<nigiri::routing::journey> const& jv) {
-
   auto ss = std::stringstream{};
+  ss << "departure_time, arrival_time, transfers, first_mile_mode, "
+        "first_mile_duration, last_mile_mode, last_mile_duration\n";
 
-  return ss.str();
+  auto const write_journey =
+      [&](nigiri::routing::journey const& j) {
+        auto const write_time = [&](nigiri::unixtime_t t) {
+
+        };
+
+        auto const write_duration
+      }
+
+      return ss.str();
 }
 
 }  // namespace motis::odm
