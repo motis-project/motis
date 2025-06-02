@@ -42,8 +42,7 @@
 	const minutesToSeconds = (minutes: number[]) => { return minutes.map((m) => m * 60); }
 
 	let {
-		from,
-		to,
+		one = $bindable(),
 		// maxTravelTime = $bindable(),
 		geocodingBiasPlace,
 		isochronesData = $bindable(),
@@ -52,8 +51,7 @@
 		color = $bindable(),
 		opacity = $bindable()
 	}: {
-		from: Location;
-		to: Location;
+		one: Location;
 		// maxTravelTime: string;
 		geocodingBiasPlace?: maplibregl.LngLatLike;
 		isochronesData: IsochronesPos[];
@@ -71,15 +69,13 @@
 	const possiblePrePostDurations = minutesToSeconds([1, 5, 10, 15, 20, 25, 30, 45, 60]);
 	let expanded = $state<boolean>(false);
 
-	let one = $state<Location>(from);
 	let maxTravelTime = $state(45 * 60);
 	let oneMileMode = $state<PrePostDirectMode[]>(['WALK']);
 	let maxOneTime = $state(15 * 60);
+	let oneItems = $state<Array<Location>>([]);
 
 	const ignoreOneTransitRentalReturnConstraints = false;
 
-	let lastFrom: Location = from;
-	let lastTo: Location = to;
 	let queryTimeout: number;
 
 	let isochronesQuery = $derived(
@@ -124,17 +120,6 @@
 		}
 	});
 
-	$effect(() => {
-		if (lastFrom != from) {
-			one = from;
-			lastFrom = from;
-		}
-		if (lastTo != to) {
-			one = to;
-			lastTo = to;
-		}
-	});
-
 	const getLocation = () => {
 		if (navigator && navigator.geolocation) {
 			navigator.geolocation.getCurrentPosition(applyPosition, (e) => console.log(e), {
@@ -154,6 +139,7 @@
 		name="one"
 		placeholder={t.from}
 		bind:selected={one}
+		bind:items={oneItems}
 	/>
 	<Button
 		variant="ghost"

@@ -135,10 +135,12 @@
 
 	let fromMarker = $state<maplibregl.Marker>();
 	let toMarker = $state<maplibregl.Marker>();
+	let oneMarker = $state<maplibregl.Marker>();
 	let from = $state<Location>(
 		parseLocation(urlParams?.get('fromPlace'), urlParams?.get('fromName'))
 	);
 	let to = $state<Location>(parseLocation(urlParams?.get('toPlace'), urlParams?.get('toName')));
+	let one = $state<Location>(parseLocation(urlParams?.get('onePlace'), urlParams?.get('oneName')));
 	let time = $state<Date>(new Date(urlParams?.get('time') || Date.now()));
 	let arriveBy = $state<boolean>(urlParams?.get('arriveBy') == 'true');
 	let useRoutedTransfers = $state(
@@ -198,17 +200,6 @@
 	let maxTravelTime = $state(urlParams?.get('maxTravelTime') ?? '45');
 
 	let isochronesData = $state<IsochronesPos[]>([]);
-	/*
-	let isochronesData = $state<IsochronesPos[]>([
-		{"lat": 50.767584, "lng": 6.091125, "duration": 15},  // Aachen
-		{"lat": 50.73195, "lng": 7.09665, "duration": 5},  // Bonn
-		{"lat": 51.517902, "lng": 7.459191, "duration": 10},  // Dortmund
-		{"lat": 51.43059, "lng": 6.77599, "duration": 30},  // Duisburg
-		{"lat": 51.22005, "lng": 6.79384, "duration": 35},  // Düsseldorf
-		{"lat": 50.94293, "lng": 6.95928, "duration": 15},  // Köln
-		{"lat": 51.25441, "lng": 7.15013, "duration": 25},  // Wuppertal
-	]);
-	*/
 
 	const toPlaceString = (l: Location) => {
 		if (l.match?.type === 'STOP') {
@@ -328,26 +319,39 @@
 </script>
 
 {#snippet contextMenu(e: maplibregl.MapMouseEvent, close: CloseFn)}
-	<Button
-		variant="outline"
-		onclick={() => {
-			from = posToLocation(e.lngLat, zoom > LEVEL_MIN_ZOOM ? level : undefined);
-			fromMarker?.setLngLat(from.match!);
-			close();
-		}}
-	>
-		From
-	</Button>
-	<Button
-		variant="outline"
-		onclick={() => {
-			to = posToLocation(e.lngLat, zoom > LEVEL_MIN_ZOOM ? level : undefined);
-			toMarker?.setLngLat(to.match!);
-			close();
-		}}
-	>
-		To
-	</Button>
+	{#if activeTab == 'connections'}
+		<Button
+			variant="outline"
+			onclick={() => {
+				from = posToLocation(e.lngLat, zoom > LEVEL_MIN_ZOOM ? level : undefined);
+				fromMarker?.setLngLat(from.match!);
+				close();
+			}}
+		>
+			From
+		</Button>
+		<Button
+			variant="outline"
+			onclick={() => {
+				to = posToLocation(e.lngLat, zoom > LEVEL_MIN_ZOOM ? level : undefined);
+				toMarker?.setLngLat(to.match!);
+				close();
+			}}
+		>
+			To
+		</Button>
+	{:else if activeTab == 'isochrones'}
+		<Button
+			variant="outline"
+			onclick={() => {
+				one = posToLocation(e.lngLat, zoom > LEVEL_MIN_ZOOM ? level : undefined);
+				oneMarker?.setLngLat(one.match!);
+				close();
+			}}
+		>
+			Select
+		</Button>
+	{/if}
 {/snippet}
 
 <Map
@@ -422,8 +426,7 @@
 					<Tabs.Content value="isochrones">
 						<Card class="overflow-y-auto overflow-x-hidden bg-background rounded-lg">
 							<IsochronesMask
-								{from}
-								{to}
+								bind:one
 								geocodingBiasPlace={center}
 								bind:isochronesData
 								bind:time
@@ -554,7 +557,7 @@
 
 		<Popup trigger="contextmenu" children={contextMenu} />
 
-		{#if from}
+		{#if from && activeTab == 'connections'}
 			<Marker
 				color="green"
 				draggable={true}
@@ -564,8 +567,18 @@
 			/>
 		{/if}
 
-		{#if to}
+		{#if to && activeTab == 'connections'}
 			<Marker color="red" draggable={true} {level} bind:location={to} bind:marker={toMarker} />
+		{/if}
+
+		{#if one && activeTab == 'isochrones'}
+			<Marker
+				color="yellow"
+				draggable={true}
+				{level}
+				bind:location={one}
+				bind:marker={oneMarker}
+			/>
 		{/if}
 	{:else}
 		<div class="maplibregl-control-container">
