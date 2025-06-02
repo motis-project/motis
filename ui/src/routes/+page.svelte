@@ -128,6 +128,11 @@
 		}
 	};
 
+	function parseIntOr(s: string, d: number) {
+		const v = parseInt(s);
+		return isNaN(v) ? d : v;
+	}
+
 	let fromMarker = $state<maplibregl.Marker>();
 	let toMarker = $state<maplibregl.Marker>();
 	let from = $state<Location>(
@@ -170,8 +175,9 @@
 	let elevationCosts = $state<ElevationCosts>(
 		(urlParams?.get('elevationCosts') ?? 'NONE') as ElevationCosts
 	);
-	let maxPreTransitTime = $state<string>(
-		urlParams?.get('maxPreTransitTime') ?? defaultQuery.maxPreTransitTime.toString()
+	let maxPreTransitTime = $state<number>(
+		parseIntOr(urlParams?.get('maxPreTransitTime') ?? '', defaultQuery.maxPreTransitTime)
+		// urlParams?.get('maxPreTransitTime') ?? defaultQuery.maxPreTransitTime.toString()
 	);
 	let maxPostTransitTime = $state<string>(
 		urlParams?.get('maxPostTransitTime') ?? defaultQuery.maxPostTransitTime.toString()
@@ -243,7 +249,7 @@
 						elevationCosts,
 						useRoutedTransfers,
 						maxMatchingDistance: pedestrianProfile == 'WHEELCHAIR' ? 8 : 250,
-						maxPreTransitTime: parseInt(maxPreTransitTime),
+						maxPreTransitTime: maxPreTransitTime,
 						maxPostTransitTime: parseInt(maxPostTransitTime),
 						maxDirectTime: parseInt(maxDirectTime),
 						ignorePreTransitRentalReturnConstraints,

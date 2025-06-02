@@ -49,7 +49,7 @@
 		postTransitModes: PrePostDirectMode[];
 		directModes: PrePostDirectMode[];
 		elevationCosts: ElevationCosts;
-		maxPreTransitTime: string;
+		maxPreTransitTime: number;
 		maxPostTransitTime: string;
 		maxDirectTime: string;
 		ignorePreTransitRentalReturnConstraints: boolean;

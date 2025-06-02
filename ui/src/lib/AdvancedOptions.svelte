@@ -15,7 +15,7 @@
 		type PrePostDirectMode,
 		type TransitMode
 	} from './Modes';
-	import Isochrones from './map/Isochrones.svelte';
+	import StreetModes from './components/ui/street_modes.svelte';
 
 	let {
 		useRoutedTransfers = $bindable(),
@@ -42,7 +42,7 @@
 		preTransitModes: PrePostDirectMode[];
 		postTransitModes: PrePostDirectMode[];
 		directModes: PrePostDirectMode[];
-		maxPreTransitTime: string;
+		maxPreTransitTime: number;
 		maxPostTransitTime: string;
 		maxDirectTime: string;
 		elevationCosts: ElevationCosts;
@@ -213,6 +213,16 @@
 
 		<div class="grid grid-cols-[1fr_2fr_1fr] items-center gap-2">
 			<!-- First mile -->
+			<StreetModes
+				label={t.routingSegments.firstMile}
+				bind:modes={preTransitModes}
+				bind:maxTransitTime={maxPreTransitTime}
+				possibleModes={prePostDirectModes}
+				possibleMaxTransitTime={possiblePrePostDurations}
+				ignoreRentalReturnConstraints={ignorePreTransitRentalReturnConstraints}
+			></StreetModes>
+				<!-- bind:maxTransitMinutes={() => parseInt(maxPreTransitTime) / 60, (v) => { maxPreTransitTime = (v * 60).toString()}} -->
+			<!--
 			<div class="text-sm">
 				{t.routingSegments.firstMile}
 			</div>
@@ -256,6 +266,7 @@
 					id="ignorePreTransitRentalReturnConstraints"
 				/>
 			</div>
+			-->
 
 			<!-- Last mile -->
 			<div class="text-sm">
