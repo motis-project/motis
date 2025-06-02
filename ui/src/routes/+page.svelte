@@ -59,19 +59,19 @@
 	import { defaultQuery, omitDefaults } from '$lib/defaults';
 	import { LEVEL_MIN_ZOOM } from '$lib/constants';
 
-    interface IsochronesPos {
-        lat: number;
-        lng: number;
-        duration: number;
-        name?: string;
-    };
+	interface IsochronesPos {
+		lat: number;
+		lng: number;
+		duration: number;
+		name?: string;
+	}
 
 	const urlParams = browser ? new URLSearchParams(window.location.search) : undefined;
 
 	const hasDebug = urlParams && urlParams.has('debug');
 	const hasDark = urlParams && urlParams.has('dark');
 	const isSmallScreen = browser && window.innerWidth < 768;
-	let activeTab = $state("connections");
+	let activeTab = $state('connections');
 	let dataAttributionLink: string | undefined = $state(undefined);
 	let showMap = $state(!isSmallScreen);
 	let last_selected_itinerary: Itinerary | undefined = undefined;
@@ -90,7 +90,7 @@
 	let zoom = $state(15);
 	let bounds = $state<maplibregl.LngLatBoundsLike>();
 	let map = $state<maplibregl.Map>();
-	let isochronesColor = $state<string>("#ffff00");
+	let isochronesColor = $state<string>('#ffff00');
 	let isochronesOpacity = $state<number>(250);
 
 	onMount(async () => {
@@ -264,7 +264,7 @@
 	let routingResponses = $state<Array<Promise<PlanResponse>>>([]);
 	let stopNameFromResponse = $state<string>('');
 	$effect(() => {
-		if (baseQuery && activeTab == "connections") {
+		if (baseQuery && activeTab == 'connections') {
 			clearTimeout(searchDebounceTimer);
 			searchDebounceTimer = setTimeout(() => {
 				const base = plan(baseQuery).then(updateStartDest(from, to));
@@ -544,13 +544,13 @@
 		<!-- <Isochrones class="absolute flex border-2 border-indigo-600 h-dvh max-w-full z-50" {bounds} {isochronesData} /> -->
 		<!-- <IsochronesTurf {map} {bounds} {isochronesData} /> -->
 		<Isochrones
-				{map}
-				{bounds}
-				{isochronesData}
-				active={activeTab == "isochrones"}
-				bind:color={isochronesColor}
-				bind:opacity={isochronesOpacity}
-			/>
+			{map}
+			{bounds}
+			{isochronesData}
+			active={activeTab == 'isochrones'}
+			bind:color={isochronesColor}
+			bind:opacity={isochronesOpacity}
+		/>
 
 		<Popup trigger="contextmenu" children={contextMenu} />
 
