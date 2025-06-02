@@ -1,5 +1,7 @@
 #include "./mixer_reqs.h"
 
+#include <charconv>
+
 #include "utl/parser/csv_range.h"
 
 #include "nigiri/common/parse_time.h"
@@ -21,7 +23,33 @@ struct csv_journey {
       last_mile_duration_;
 };
 
-nigiri::unixtime_t read_time_of_day(std::string_view t) {}
+template <typename T>
+std::optional<T> read_number(const char* first, const char* last) {
+  T n;
+  auto [ptr, ec] = std::from_chars(first, last, n);
+  if (ec == std::errc::invalid_argument ||
+      ec == std::errc::result_out_of_range) {
+    return std::nullopt;
+  }
+  return n;
+}
+
+std::optional<nigiri::unixtime_t> read_hours_minutes(std::string_view t) {
+  auto const colon_idx = t.find(':');
+  if (colon_idx == std::string_view::npos) {
+    return std::nullopt;
+  }
+
+  auto hours = read_number<unsigned>(t.data(), t.data() + colon_idx);
+  auto minutes =
+      read_number<unsigned>(t.data() + colon_idx + 1, t.data() + t.size());
+  if (!hours || !minutes) {
+    return std::nullopt;
+  }
+
+  return nigiri::unixtime_t{std::chrono::hours{*hours} +
+                            std::chrono::minutes{*minutes}};
+}
 
 nigiri::transport_mode_id_t read_transport_mode(std::string_view m) {
   if (m == "taxi") {
@@ -36,12 +64,24 @@ std::vector<nigiri::routing::journey> read(std::string_view csv) {
   utl::line_range{utl::make_buf_reader(csv)} | utl::csv<csv_journey>{} |
       utl::for_each([&](csv_journey const& cj) {
         try {
-          auto j = nigiri::routing::journey{
-              .start_time_ =
-                  nigiri::parse_time(cj.departure_time_->view(), "%H:%M"),
-              .dest_time_ =
-                  nigiri::parse_time(cj.arrival_time_->view(), "%H:%M"),
-              .transfers_ = *cj.transfers_};
+          auto const departure_time =
+              read_hours_minutes(cj.departure_time_->view());
+          if (!departure_time) {
+            std::println("Invalid departure time: {}",
+                         cj.departure_time_->view());
+            return;
+          }
+
+          auto const arrival_time =
+              read_hours_minutes(cj.arrival_time_->view());
+          if (!arrival_time) {
+            std::println("Invalid arrival time: {}", cj.arrival_time_->view());
+            return;
+          }
+
+          auto j = nigiri::routing::journey{.start_time_ = *departure_time,
+                                            .dest_time_ = *arrival_time,
+                                            .transfers_ = *cj.transfers_};
 
           auto const first_mile_duration =
               nigiri::duration_t{*cj.first_mile_duration_};
