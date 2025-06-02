@@ -20,7 +20,7 @@
 	} from './api/openapi';
 	import { lngLatToStr } from './lngLatToStr';
 	import DateInput from './DateInput.svelte';
-	import StreetModes from './components/ui/StreetModes.svelte';
+	import StreetModes from '$lib/StreetModes.svelte';
 	import TransitModeSelect from '$lib/TransitModeSelect.svelte';
 	import { prePostDirectModes, prePostModesToModes, type PrePostDirectMode, type TransitMode } from './Modes';
 	import { formatDurationSec } from './formatDuration';

@@ -12,7 +12,7 @@
 		type PrePostDirectMode,
 		type TransitMode
 	} from './Modes';
-	import StreetModes from './components/ui/StreetModes.svelte';
+	import StreetModes from '$lib/StreetModes.svelte';
 	import TransitModeSelect from '$lib/TransitModeSelect.svelte';
 
 	let {
