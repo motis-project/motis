@@ -12,6 +12,9 @@
 		type PrePostDirectMode,
 		type TransitMode
 	} from './Modes';
+	import { formatDurationSec } from './formatDuration';
+	import NumberSelect from '$lib/NumberSelect.svelte';
+	import { type NumberSelectOption } from '$lib/NumberSelect.svelte';
 	import StreetModes from '$lib/StreetModes.svelte';
 	import TransitModeSelect from '$lib/TransitModeSelect.svelte';
 
@@ -21,11 +24,17 @@
 		requireBikeTransport = $bindable(),
 		requireCarTransport = $bindable(),
 		transitModes = $bindable(),
+		showTransitRestrictions = $bindable(false),
+		maxTransfers = $bindable(0),
+		maxTravelTime = $bindable(0),
+		possibleMaxTransfers = [],
+		possibleMaxTravelTimes = [],
 		preTransitModes = $bindable(),
 		postTransitModes = $bindable(),
 		directModes = $bindable(),
 		maxPreTransitTime = $bindable(),
 		maxPostTransitTime = $bindable(),
+		showDirectRestrictions = $bindable(true),
 		maxDirectTime = $bindable(),
 		elevationCosts = $bindable(),
 		ignorePreTransitRentalReturnConstraints = $bindable(),
@@ -37,11 +46,17 @@
 		requireBikeTransport: boolean;
 		requireCarTransport: boolean;
 		transitModes: TransitMode[];
+		showTransitRestrictions?: boolean;
+		maxTransfers?: number;
+		maxTravelTime?: number;
+		possibleMaxTransfers?: NumberSelectOption[];
+		possibleMaxTravelTimes?: NumberSelectOption[];
 		preTransitModes: PrePostDirectMode[];
 		postTransitModes: PrePostDirectMode[];
 		directModes: PrePostDirectMode[];
 		maxPreTransitTime: number;
 		maxPostTransitTime: number;
+		showDirectRestrictions?: boolean;
 		maxDirectTime: number;
 		elevationCosts: ElevationCosts;
 		ignorePreTransitRentalReturnConstraints: boolean;
@@ -150,6 +165,23 @@
 				id="requireCarTransport"
 			/>
 
+			{#if showTransitRestrictions}
+			<div class="grid grid-cols-4 items-center gap-2">
+				<!-- Max transfers -->
+				<div class="text-sm">
+					<!-- TODO -->
+					Max transfers
+				</div>
+				<NumberSelect bind:value={maxTransfers} possibleValues={possibleMaxTransfers} />
+				<!-- Max travel time -->
+				<div class="text-sm">
+					<!-- TODO -->
+					Max travel time
+				</div>
+				<NumberSelect bind:value={maxTravelTime} possibleValues={possibleMaxTravelTimes} labelFormatter={formatDurationSec} />
+			</div>
+			{/if}
+
 			<!-- First mile -->
 			<StreetModes
 				label={t.routingSegments.firstMile}
@@ -171,14 +203,16 @@
 			></StreetModes>
 
 			<!-- Direct -->
-			<StreetModes
-				label={t.routingSegments.direct}
-				bind:modes={directModes}
-				bind:maxTransitTime={maxDirectTime}
-				possibleModes={prePostDirectModes}
-				possibleMaxTransitTime={possibleDirectDurations}
-				ignoreRentalReturnConstraints={ignoreDirectRentalReturnConstraints}
-			></StreetModes>
+			{#if showDirectRestrictions}
+				<StreetModes
+					label={t.routingSegments.direct}
+					bind:modes={directModes}
+					bind:maxTransitTime={maxDirectTime}
+					possibleModes={prePostDirectModes}
+					possibleMaxTransitTime={possibleDirectDurations}
+					ignoreRentalReturnConstraints={ignoreDirectRentalReturnConstraints}
+				></StreetModes>
+			{/if}
 		</div>
 
 		<!-- Elevation Costs -->

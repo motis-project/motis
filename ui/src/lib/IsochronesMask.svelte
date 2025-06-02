@@ -24,6 +24,7 @@
 	import TransitModeSelect from '$lib/TransitModeSelect.svelte';
 	import { prePostDirectModes, prePostModesToModes, type PrePostDirectMode, type TransitMode } from './Modes';
 	import { formatDurationSec } from './formatDuration';
+	import AdvancedOptions from './AdvancedOptions.svelte';
 
 	interface IsochronesPos {
 		lat: number;
@@ -75,7 +76,7 @@
 	];
 	const timeout = 60;
 
-	const possibleTravelTimes = minutesToSeconds([1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 75, 80, 90, 120, 150, 180, 210, 240])
+	const possibleMaxTravelTimes = minutesToSeconds([1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 75, 80, 90, 120, 150, 180, 210, 240])
 		.map((s) => ({ value: s.toString(), label: formatDurationSec(s) }));
 	;
 	const possiblePrePostDurations = minutesToSeconds([1, 5, 10, 15, 20, 25, 30, 45, 60]);
@@ -206,105 +207,28 @@
 				<span>{t.arrival}</span>
 			</Label>
 		</RadioGroup.Root>
-		<Button variant="ghost" onclick={() => (expanded = !expanded)}>
-			{t.advancedSearchOptions}
-			{#if expanded}
-				<ChevronUp class="size-[18px]" />
-			{:else}
-				<ChevronDown class="size-[18px]" />
-			{/if}
-		</Button>
+		<AdvancedOptions
+			useRoutedTransfers={false}
+			wheelchair={false}
+			requireCarTransport={false}
+			requireBikeTransport={false}
+			bind:transitModes
+			showTransitRestrictions={true}
+			bind:maxTransfers
+			bind:maxTravelTime
+			{possibleMaxTransfers}
+			{possibleMaxTravelTimes}
+			bind:preTransitModes
+			bind:postTransitModes
+			directModes={[]}
+			bind:maxPreTransitTime
+			bind:maxPostTransitTime
+			showDirectRestrictions={false}
+			maxDirectTime={0}
+			elevationCosts={'NONE'}
+			ignorePreTransitRentalReturnConstraints
+			ignorePostTransitRentalReturnConstraints
+			ignoreDirectRentalReturnConstraints={false}
+		/>
 	</div>
 </div>
-
-{#if expanded}
-	<div class="w-lg m-4 space-y-2">
-		<TransitModeSelect bind:transitModes />
-
-		<div class="grid grid-cols-4 items-center gap-2">
-			<!-- Max transfers -->
-			<div class="text-sm">
-				<!-- TODO -->
-				Max transfers
-			</div>
-			<Select.Root type="single" bind:value={() => maxTransfers.toString(), (v) => maxTransfers = parseInt(v)} items={possibleTravelTimes}>
-				<Select.Trigger class="flex items-center w-full overflow-hidden" aria-label="max travel time">
-					<div class="w-full text-right pr-4">{maxTransfers}</div>
-				</Select.Trigger>
-				<Select.Content align="end">
-					{#each possibleMaxTransfers as option, i (i + option.value)}
-						<Select.Item value={option.value} label={option.label}>
-							<div class="w-full text-right pr-2">{option.label}</div>
-						</Select.Item>
-					{/each}
-				</Select.Content>
-			</Select.Root>
-			<!-- Max travel time -->
-			<div class="text-sm">
-				<!-- TODO -->
-				Max travel time
-			</div>
-			<Select.Root type="single" bind:value={() => maxTravelTime.toString(), (v) => maxTravelTime = parseInt(v)} items={possibleTravelTimes}>
-				<Select.Trigger class="flex items-center w-full overflow-hidden" aria-label="max travel time">
-					<div class="w-full text-right pr-4">{formatDurationSec(maxTravelTime)}</div>
-				</Select.Trigger>
-				<Select.Content align="end">
-					{#each possibleTravelTimes as option, i (i + option.value)}
-						<Select.Item value={option.value} label={option.label}>
-							<div class="w-full text-right pr-2">{option.label}</div>
-						</Select.Item>
-					{/each}
-				</Select.Content>
-			</Select.Root>
-		</div>
-
-		<!-- First mile -->
-		<StreetModes
-			label={t.routingSegments.firstMile}
-			bind:modes={preTransitModes}
-			bind:maxTransitTime={maxPreTransitTime}
-			possibleModes={prePostDirectModes}
-			possibleMaxTransitTime={possiblePrePostDurations}
-			ignoreRentalReturnConstraints={ignorePreTransitRentalReturnConstraints}
-			disabled={arriveBy}
-		/>
-		<!-- Last mile -->
-		<StreetModes
-			label={t.routingSegments.lastMile}
-			bind:modes={postTransitModes}
-			bind:maxTransitTime={maxPostTransitTime}
-			possibleModes={prePostDirectModes}
-			possibleMaxTransitTime={possiblePrePostDurations}
-			ignoreRentalReturnConstraints={ignorePostTransitRentalReturnConstraints}
-			disabled={!arriveBy}
-		/>
-
-		<div class="grid grid-cols-[1fr_2fr_1fr] items-center gap-2">
-			<!-- Styling -->
-			<div class="text-sm">
-				<!-- TODO -->
-				Style
-			</div>
-			<Slider.Root
-				type="single"
-				min={0}
-				max={1000}
-				bind:value={opacity}
-				class="relative flex w-full touch-none select-none items-center"
-			>
-				{#snippet children()}
-					<span
-						class="bg-dark-10 relative h-2 w-full grow cursor-pointer overflow-hidden rounded-full"
-					>
-						<Slider.Range class="bg-foreground absolute h-full" />
-					</span>
-					<Slider.Thumb
-						index={0}
-						class="border-border-input bg-background hover:border-dark-40 focus-visible:ring-foreground dark:bg-foreground dark:shadow-card focus-visible:outline-hidden block size-[25px] cursor-pointer rounded-full border shadow-sm transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50"
-					/>
-				{/snippet}
-			</Slider.Root>
-			<input class="flex right-0 align-right" type="color" bind:value={color} />
-		</div>
-	</div>
-{/if}
