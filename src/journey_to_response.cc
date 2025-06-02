@@ -425,8 +425,9 @@ api::Itinerary journey_to_response(
                                                             pedestrian_profile,
                                                             elevation_costs)},
                             j_leg.dep_time_, j_leg.arr_time_,
-                            timetable_max_matching_distance, cache,
-                            *blocked_mem, api_version,
+                            car_transfers ? 250.0
+                                          : timetable_max_matching_distance,
+                            cache, *blocked_mem, api_version,
                             std::chrono::duration_cast<std::chrono::seconds>(
                                 j_leg.arr_time_ - j_leg.dep_time_) +
                                 std::chrono::minutes{10})

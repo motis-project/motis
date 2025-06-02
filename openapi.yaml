@@ -2122,7 +2122,6 @@ components:
         - exit
         - stayOn
         - area
-        - toll
       properties:
         relativeDirection:
           $ref: '#/components/schemas/Direction'
@@ -2162,6 +2161,11 @@ components:
         toll:
           description: Indicates that a fee must be paid by general traffic to use a road, road bridge or road tunnel.
           type: boolean
+        accessRestriction:
+          description: |
+            Experimental. Indicates whether access to this part of the route is restricted.
+            See: https://wiki.openstreetmap.org/wiki/Conditional_restrictions
+          type: string
         elevationUp:
           type: integer
           description: incline in meters across this path segment

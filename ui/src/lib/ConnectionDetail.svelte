@@ -88,6 +88,7 @@
 		(s: StepInstruction) => s.elevationUp || s.elevationDown
 	)}
 	{@const stepsWithToll = l.steps?.filter((s: StepInstruction) => s.toll)}
+	{@const stepsWithAccessRestriction = l.steps?.filter((s: StepInstruction) => s.accessRestriction)}
 
 	<div class="py-12 pl-8 flex flex-col gap-y-4 text-muted-foreground">
 		<span class="ml-6">
@@ -125,6 +126,16 @@
 			<div class="ml-6 flex items-center gap-2 text-sm text-orange-500">
 				<DollarSign class="size-4" />
 				{t.toll}
+			</div>
+		{/if}
+		{#if stepsWithAccessRestriction && stepsWithAccessRestriction.length > 0}
+			<div class="ml-6 flex items-center gap-2 text-sm text-orange-500">
+				<CircleX class="size-4" />
+				{t.accessRestriction}
+				({stepsWithAccessRestriction
+					.map((s) => s.accessRestriction)
+					.filter((value, index, array) => array.indexOf(value) === index)
+					.join(', ')})
 			</div>
 		{/if}
 	</div>

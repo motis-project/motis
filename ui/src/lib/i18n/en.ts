@@ -105,7 +105,8 @@ const translations: Translations = {
 		HIGH: 'Large detours'
 	},
 	incline: 'Incline',
-	toll: 'Warning! A fee must be paid to use this route.'
+	toll: 'Warning! A fee must be paid to use this route.',
+	accessRestriction: 'No access'
 };
 
 export default translations;

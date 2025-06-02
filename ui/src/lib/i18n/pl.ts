@@ -105,7 +105,8 @@ const translations: Translations = {
 	CABLE_CAR: 'Kolej linowa',
 	FUNICULAR: 'Kolej linowo-terenowa',
 	AREAL_LIFT: 'Wyciąg powietrzny',
-	toll: 'Uwaga! Za przejazd tą trasą pobierana jest opłata.'
+	toll: 'Uwaga! Za przejazd tą trasą pobierana jest opłata.',
+	accessRestriction: 'Ograniczony dostęp'
 };
 
 export default translations;

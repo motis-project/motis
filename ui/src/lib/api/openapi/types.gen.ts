@@ -574,7 +574,13 @@ export type StepInstruction = {
     /**
      * Indicates that a fee must be paid by general traffic to use a road, road bridge or road tunnel.
      */
-    toll: boolean;
+    toll?: boolean;
+    /**
+     * Experimental. Indicates whether access to this part of the route is restricted.
+     * See: https://wiki.openstreetmap.org/wiki/Conditional_restrictions
+     *
+     */
+    accessRestriction?: string;
     /**
      * incline in meters across this path segment
      */

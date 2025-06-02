@@ -633,7 +633,7 @@ Be aware that with precision 7, coordinates with |longitude| > 107.37 are undefi
 
 export const StepInstructionSchema = {
     type: 'object',
-    required: ['fromLevel', 'toLevel', 'polyline', 'relativeDirection', 'distance', 'streetName', 'exit', 'stayOn', 'area', 'toll'],
+    required: ['fromLevel', 'toLevel', 'polyline', 'relativeDirection', 'distance', 'streetName', 'exit', 'stayOn', 'area'],
     properties: {
         relativeDirection: {
             '$ref': '#/components/schemas/Direction'
@@ -683,6 +683,12 @@ and thus the directions should say something like "cross"
         toll: {
             description: 'Indicates that a fee must be paid by general traffic to use a road, road bridge or road tunnel.',
             type: 'boolean'
+        },
+        accessRestriction: {
+            description: `Experimental. Indicates whether access to this part of the route is restricted.
+See: https://wiki.openstreetmap.org/wiki/Conditional_restrictions
+`,
+            type: 'string'
         },
         elevationUp: {
             type: 'integer',

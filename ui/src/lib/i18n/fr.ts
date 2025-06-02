@@ -105,7 +105,8 @@ const translations: Translations = {
 	CABLE_CAR: 'Téléphérique',
 	FUNICULAR: 'Funiculaire',
 	AREAL_LIFT: 'Remontée mécanique',
-	toll: 'Attention ! Route à péage.'
+	toll: 'Attention ! Route à péage.',
+	accessRestriction: 'Accès restreint'
 };
 
 export default translations;

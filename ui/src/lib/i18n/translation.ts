@@ -101,6 +101,7 @@ export type Translations = {
 	FUNICULAR: string;
 	AREAL_LIFT: string;
 	toll: string;
+	accessRestriction: string;
 };
 
 const translations: Map<string, Translations> = new Map(
