@@ -177,13 +177,12 @@
 	);
 	let maxPreTransitTime = $state<number>(
 		parseIntOr(urlParams?.get('maxPreTransitTime') ?? '', defaultQuery.maxPreTransitTime)
-		// urlParams?.get('maxPreTransitTime') ?? defaultQuery.maxPreTransitTime.toString()
 	);
-	let maxPostTransitTime = $state<string>(
-		urlParams?.get('maxPostTransitTime') ?? defaultQuery.maxPostTransitTime.toString()
+	let maxPostTransitTime = $state<number>(
+		parseIntOr(urlParams?.get('maxPostTransitTime') ?? '', defaultQuery.maxPostTransitTime)
 	);
-	let maxDirectTime = $state<string>(
-		urlParams?.get('maxDirectTime') ?? defaultQuery.maxDirectTime.toString()
+	let maxDirectTime = $state<number>(
+		parseIntOr(urlParams?.get('maxDirectTime') ?? '', defaultQuery.maxDirectTime)
 	);
 	let ignorePreTransitRentalReturnConstraints = $state(
 		urlParams?.get('ignorePreTransitRentalReturnConstraints') == 'true'
@@ -249,9 +248,9 @@
 						elevationCosts,
 						useRoutedTransfers,
 						maxMatchingDistance: pedestrianProfile == 'WHEELCHAIR' ? 8 : 250,
-						maxPreTransitTime: maxPreTransitTime,
-						maxPostTransitTime: parseInt(maxPostTransitTime),
-						maxDirectTime: parseInt(maxDirectTime),
+						maxPreTransitTime,
+						maxPostTransitTime,
+						maxDirectTime,
 						ignorePreTransitRentalReturnConstraints,
 						ignorePostTransitRentalReturnConstraints,
 						ignoreDirectRentalReturnConstraints

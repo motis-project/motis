@@ -43,9 +43,6 @@
 			.join(', ')
 	);
 
-	let selectedMaxTransitTime = $state(maxTransitTime.toString());
-	$effect(() => {maxTransitTime = parseInt(selectedMaxTransitTime)});
-
 </script>
 
 
@@ -67,10 +64,7 @@
 		{/each}
 	</Select.Content>
 </Select.Root>
-<!-- <Select.Root type="single" bind:value={() => maxTransitTime.toString(), (v) => parseInt(v)}> -->
-<!-- <Select.Root type="single" bind:value={() => formatDurationSec(maxTransitTime), (v) => maxTransitTime = parseInt(v)}> -->
-<Select.Root type="single" bind:value={selectedMaxTransitTime}>
-<!-- <Select.Root type="single" bind:value={maxTransitTime}> -->
+<Select.Root type="single" bind:value={() => maxTransitTime.toString(), (v) => maxTransitTime = parseInt(v)}>
 	<Select.Trigger
 		class="flex items-center w-full overflow-hidden"
 		aria-label={t.routingSegments.maxPreTransitTime}
@@ -79,7 +73,6 @@
 	</Select.Trigger>
 	<Select.Content sideOffset={10}>
 		{#each possibleMaxTransitTime as duration (duration)}
-			<!-- <Select.Item value={duration} label={formatDurationSec(duration)}> -->
 			<Select.Item value={`${duration}`} label={formatDurationSec(duration)}>
 				{formatDurationSec(duration)}
 			</Select.Item>

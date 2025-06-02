@@ -43,8 +43,8 @@
 		postTransitModes: PrePostDirectMode[];
 		directModes: PrePostDirectMode[];
 		maxPreTransitTime: number;
-		maxPostTransitTime: string;
-		maxDirectTime: string;
+		maxPostTransitTime: number;
+		maxDirectTime: number;
 		elevationCosts: ElevationCosts;
 		ignorePreTransitRentalReturnConstraints: boolean;
 		ignorePostTransitRentalReturnConstraints: boolean;
@@ -221,142 +221,26 @@
 				possibleMaxTransitTime={possiblePrePostDurations}
 				ignoreRentalReturnConstraints={ignorePreTransitRentalReturnConstraints}
 			></StreetModes>
-				<!-- bind:maxTransitMinutes={() => parseInt(maxPreTransitTime) / 60, (v) => { maxPreTransitTime = (v * 60).toString()}} -->
-			<!--
-			<div class="text-sm">
-				{t.routingSegments.firstMile}
-			</div>
-			<Select.Root type="multiple" bind:value={preTransitModes}>
-				<Select.Trigger
-					class="flex items-center w-full overflow-hidden"
-					aria-label={t.routingSegments.firstMile}
-				>
-					{selectedPreTransitModesLabel}
-				</Select.Trigger>
-				<Select.Content sideOffset={10}>
-					{#each prePostDirectModes as mode, i (i + mode)}
-						<Select.Item value={mode} label={t[mode as TranslationKey] as string}>
-							{t[mode as TranslationKey]}
-						</Select.Item>
-					{/each}
-				</Select.Content>
-			</Select.Root>
-			<Select.Root type="single" bind:value={maxPreTransitTime}>
-				<Select.Trigger
-					class="flex items-center w-full overflow-hidden"
-					aria-label={t.routingSegments.maxPreTransitTime}
-				>
-					{formatDurationSec(parseInt(maxPreTransitTime))}
-				</Select.Trigger>
-				<Select.Content sideOffset={10}>
-					{#each possiblePrePostDurations as duration (duration)}
-						<Select.Item value={`${duration}`} label={formatDurationSec(duration)}>
-							{formatDurationSec(duration)}
-						</Select.Item>
-					{/each}
-				</Select.Content>
-			</Select.Root>
-			<div class={cn('col-span-2 col-start-2', preTransitRental || 'hidden')}>
-				<Switch
-					bind:checked={
-						() => !ignorePreTransitRentalReturnConstraints,
-						(v) => (ignorePreTransitRentalReturnConstraints = !v)
-					}
-					label={t.considerRentalReturnConstraints}
-					id="ignorePreTransitRentalReturnConstraints"
-				/>
-			</div>
-			-->
 
 			<!-- Last mile -->
-			<div class="text-sm">
-				{t.routingSegments.lastMile}
-			</div>
-			<Select.Root type="multiple" bind:value={postTransitModes}>
-				<Select.Trigger
-					class="flex items-center w-full overflow-hidden"
-					aria-label={t.routingSegments.lastMile}
-				>
-					{selectedPostTransitModesLabel}
-				</Select.Trigger>
-				<Select.Content sideOffset={10}>
-					{#each prePostDirectModes as mode, i (i + mode)}
-						<Select.Item value={mode} label={t[mode as TranslationKey] as string}>
-							{t[mode as TranslationKey]}
-						</Select.Item>
-					{/each}
-				</Select.Content>
-			</Select.Root>
-			<Select.Root type="single" bind:value={maxPostTransitTime}>
-				<Select.Trigger
-					class="flex items-center w-full overflow-hidden"
-					aria-label={t.routingSegments.maxPostTransitTime}
-				>
-					{formatDurationSec(parseInt(maxPostTransitTime))}
-				</Select.Trigger>
-				<Select.Content sideOffset={10}>
-					{#each possiblePrePostDurations as duration (duration)}
-						<Select.Item value={`${duration}`} label={formatDurationSec(duration)}>
-							{formatDurationSec(duration)}
-						</Select.Item>
-					{/each}
-				</Select.Content>
-			</Select.Root>
-			<div class={cn('col-span-2 col-start-2', postTransitRental || 'hidden')}>
-				<Switch
-					bind:checked={
-						() => !ignorePostTransitRentalReturnConstraints,
-						(v) => (ignorePostTransitRentalReturnConstraints = !v)
-					}
-					label={t.considerRentalReturnConstraints}
-					id="ignorePostTransitRentalReturnConstraints"
-				/>
-			</div>
+			<StreetModes
+				label={t.routingSegments.lastMile}
+				bind:modes={postTransitModes}
+				bind:maxTransitTime={maxPostTransitTime}
+				possibleModes={prePostDirectModes}
+				possibleMaxTransitTime={possiblePrePostDurations}
+				ignoreRentalReturnConstraints={ignorePostTransitRentalReturnConstraints}
+			></StreetModes>
 
 			<!-- Direct -->
-			<div class="text-sm">
-				{t.routingSegments.direct}
-			</div>
-			<Select.Root type="multiple" bind:value={directModes}>
-				<Select.Trigger
-					class="flex items-center w-full overflow-hidden"
-					aria-label={t.routingSegments.direct}
-				>
-					{selectedDirectModesLabel}
-				</Select.Trigger>
-				<Select.Content sideOffset={10}>
-					{#each prePostDirectModes as mode, i (i + mode)}
-						<Select.Item value={mode} label={t[mode as TranslationKey] as string}>
-							{t[mode as TranslationKey]}
-						</Select.Item>
-					{/each}
-				</Select.Content>
-			</Select.Root>
-			<Select.Root type="single" bind:value={maxDirectTime}>
-				<Select.Trigger
-					class="flex items-center w-full overflow-hidden"
-					aria-label={t.routingSegments.maxDirectTime}
-				>
-					{formatDurationSec(parseInt(maxDirectTime))}
-				</Select.Trigger>
-				<Select.Content sideOffset={10}>
-					{#each possibleDirectDurations as duration (duration)}
-						<Select.Item value={`${duration}`} label={formatDurationSec(duration)}>
-							{formatDurationSec(duration)}
-						</Select.Item>
-					{/each}
-				</Select.Content>
-			</Select.Root>
-			<div class={cn('col-span-2 col-start-2', directRental || 'hidden')}>
-				<Switch
-					bind:checked={
-						() => !ignoreDirectRentalReturnConstraints,
-						(v) => (ignoreDirectRentalReturnConstraints = !v)
-					}
-					label={t.considerRentalReturnConstraints}
-					id="ignoreDirectRentalReturnConstraints"
-				/>
-			</div>
+			<StreetModes
+				label={t.routingSegments.direct}
+				bind:modes={directModes}
+				bind:maxTransitTime={maxDirectTime}
+				possibleModes={prePostDirectModes}
+				possibleMaxTransitTime={possibleDirectDurations}
+				ignoreRentalReturnConstraints={ignoreDirectRentalReturnConstraints}
+			></StreetModes>
 		</div>
 
 		<!-- Elevation Costs -->
