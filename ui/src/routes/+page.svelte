@@ -536,17 +536,6 @@
 
 	{#if showMap}
 		<RailViz {map} {bounds} {zoom} />
-		<!--
-			- Select => SVG, Combine, Union
-				- Farbe
-				- Opacity
-			- arriveBy
-			- Input-Feld (maxTravelTime)
-			- Transit-Modes
-			- Translation
-		-->
-		<!-- <Isochrones class="absolute flex border-2 border-indigo-600 h-dvh max-w-full z-50" {bounds} {isochronesData} /> -->
-		<!-- <IsochronesTurf {map} {bounds} {isochronesData} /> -->
 		<Isochrones
 			{map}
 			{bounds}
