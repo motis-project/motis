@@ -430,6 +430,7 @@
 								geocodingBiasPlace={center}
 								bind:isochronesData
 								bind:time
+								bind:transitModes
 								bind:arriveBy
 								bind:color={isochronesColor}
 								bind:opacity={isochronesOpacity}

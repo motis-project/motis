@@ -21,7 +21,8 @@
 	import { lngLatToStr } from './lngLatToStr';
 	import DateInput from './DateInput.svelte';
 	import StreetModes from './components/ui/StreetModes.svelte';
-	import { prePostDirectModes, prePostModesToModes, type PrePostDirectMode } from './Modes';
+	import TransitModeSelect from '$lib/TransitModeSelect.svelte';
+	import { prePostDirectModes, prePostModesToModes, type PrePostDirectMode, type TransitMode } from './Modes';
 	import { formatDurationSec } from './formatDuration';
 
 	interface IsochronesPos {
@@ -47,6 +48,7 @@
 		geocodingBiasPlace,
 		isochronesData = $bindable(),
 		time = $bindable(),
+		transitModes = $bindable(),
 		arriveBy = $bindable(),
 		color = $bindable(),
 		opacity = $bindable()
@@ -56,6 +58,7 @@
 		geocodingBiasPlace?: maplibregl.LngLatLike;
 		isochronesData: IsochronesPos[];
 		time: Date;
+		transitModes: TransitMode[];
 		arriveBy: boolean;
 		color: string;
 		opacity: number;
@@ -99,6 +102,7 @@
 						one: toPlaceString(one),
 						maxTravelTime: Math.ceil(maxTravelTime / 60),
 						time: time.toISOString(),
+						transitModes,
 						maxTransfers,
 						arriveBy,
 						preTransitModes: arriveBy ? undefined : prePostModesToModes(preTransitModes),
@@ -215,6 +219,8 @@
 
 {#if expanded}
 	<div class="w-lg m-4 space-y-2">
+		<TransitModeSelect bind:transitModes />
+
 		<div class="grid grid-cols-4 items-center gap-2">
 			<!-- Max transfers -->
 			<div class="text-sm">

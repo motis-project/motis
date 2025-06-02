@@ -2,13 +2,10 @@
 	import Button from '$lib/components/ui/button/button.svelte';
 	import { t } from '$lib/i18n/translation';
 	import * as Select from '$lib/components/ui/select';
-	import BusFront from 'lucide-svelte/icons/bus-front';
 	import ChevronUp from 'lucide-svelte/icons/chevron-up';
 	import ChevronDown from 'lucide-svelte/icons/chevron-down';
 	import { Switch } from './components/ui/switch';
 	import type { ElevationCosts } from '$lib/api/openapi';
-	import { formatDurationSec } from './formatDuration';
-	import { cn } from './utils';
 	import {
 		possibleTransitModes,
 		prePostDirectModes,
@@ -16,6 +13,7 @@
 		type TransitMode
 	} from './Modes';
 	import StreetModes from './components/ui/StreetModes.svelte';
+	import TransitModeSelect from '$lib/TransitModeSelect.svelte';
 
 	let {
 		useRoutedTransfers = $bindable(),
@@ -50,8 +48,6 @@
 		ignorePostTransitRentalReturnConstraints: boolean;
 		ignoreDirectRentalReturnConstraints: boolean;
 	} = $props();
-
-	type TranslationKey = keyof typeof t;
 
 	const possibleDirectDurations = [
 		5 * 60,
@@ -97,20 +93,6 @@
 		{ value: 'LOW' as ElevationCosts, label: t.elevationCosts.LOW },
 		{ value: 'HIGH' as ElevationCosts, label: t.elevationCosts.HIGH }
 	];
-	const availableTransitModes = possibleTransitModes.map((value) => ({
-		value,
-		label: t[value as TranslationKey] as string
-	}));
-
-	const selectTransitModesLabel = $derived(
-		transitModes.length == possibleTransitModes.length || transitModes.includes('TRANSIT')
-			? t.defaultSelectedModes
-			: availableTransitModes
-					.filter((m) => transitModes?.includes(m.value))
-					.map((m) => m.label)
-					.join(', ')
-	);
-
 	let expanded = $state<boolean>(false);
 	let allowElevationCosts = $derived(
 		requireBikeTransport ||
@@ -132,22 +114,7 @@
 
 {#if expanded}
 	<div class="w-full space-y-4">
-		<Select.Root type="multiple" bind:value={transitModes}>
-			<Select.Trigger
-				class="flex items-center w-full overflow-hidden"
-				aria-label={t.selectTransitModes}
-			>
-				<BusFront class="mr-[9px] size-6 text-muted-foreground shrink-0" />
-				{selectTransitModesLabel}
-			</Select.Trigger>
-			<Select.Content sideOffset={10}>
-				{#each availableTransitModes as mode, i (i + mode.value)}
-					<Select.Item value={mode.value} label={mode.label}>
-						{mode.label}
-					</Select.Item>
-				{/each}
-			</Select.Content>
-		</Select.Root>
+		<TransitModeSelect bind:transitModes />
 
 		<div class="space-y-2">
 			<Switch
