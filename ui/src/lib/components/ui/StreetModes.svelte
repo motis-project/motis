@@ -14,7 +14,8 @@
 		maxTransitTime = $bindable(),
 		possibleModes,
 		possibleMaxTransitTime,
-		ignoreRentalReturnConstraints = $bindable()
+		ignoreRentalReturnConstraints = $bindable(),
+		disabled = false
 	}: {
 		label: string;
 		modes: PrePostDirectMode[];
@@ -22,6 +23,7 @@
 		possibleModes: readonly PrePostDirectMode[];
 		possibleMaxTransitTime: number[];
 		ignoreRentalReturnConstraints: boolean;
+		disabled?: boolean;
 	} = $props();
 
 	type TranslationKey = keyof typeof t;
@@ -50,7 +52,7 @@
 	<div class="text-sm">
 		{label}
 	</div>
-	<Select.Root type="multiple" bind:value={modes}>
+	<Select.Root type="multiple" bind:value={modes} {disabled}>
 		<Select.Trigger
 			class="flex items-center w-full overflow-hidden"
 			aria-label={label}
@@ -65,7 +67,7 @@
 			{/each}
 		</Select.Content>
 	</Select.Root>
-	<Select.Root type="single" bind:value={() => maxTransitTime.toString(), (v) => maxTransitTime = parseInt(v)}>
+	<Select.Root type="single" bind:value={() => maxTransitTime.toString(), (v) => maxTransitTime = parseInt(v)} {disabled}>
 		<Select.Trigger
 			class="flex items-center w-full overflow-hidden"
 			aria-label={t.routingSegments.maxPreTransitTime}
@@ -80,7 +82,7 @@
 			{/each}
 		</Select.Content>
 	</Select.Root>
-	<div class={cn('col-span-2 col-start-2', showRental || 'hidden')}>
+	<div class={cn('col-span-2 col-start-2', (!disabled && showRental) || 'hidden')}>
 		<Switch
 			bind:checked={
 				() => !ignoreRentalReturnConstraints,

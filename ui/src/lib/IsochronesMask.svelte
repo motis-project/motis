@@ -70,11 +70,16 @@
 	let expanded = $state<boolean>(false);
 
 	let maxTravelTime = $state(45 * 60);
-	let oneMileMode = $state<PrePostDirectMode[]>(['WALK']);
-	let maxOneTime = $state(15 * 60);
+	let preTransitModes = $state<PrePostDirectMode[]>(['WALK']);
+	let postTransitModes = $state<PrePostDirectMode[]>(['WALK']);
+	let maxPreTransitTime = $state(15 * 60);
+	let maxPostTransitTime = $state(15 * 60);
 	let oneItems = $state<Array<Location>>([]);
 
-	const ignoreOneTransitRentalReturnConstraints = false;
+	const ignorePreTransitRentalReturnConstraints = false;
+	const ignorePostTransitRentalReturnConstraints = false;
+
+	let lastSearchDir = arriveBy ? 'arrival' : 'departure';
 
 	let queryTimeout: number;
 
@@ -86,10 +91,10 @@
 						maxTravelTime: Math.ceil(maxTravelTime / 60),
 						time: time.toISOString(),
 						arriveBy,
-						preTransitModes: arriveBy ? undefined : oneMileMode,
-						postTransitModes: arriveBy ? oneMileMode : undefined,
-						maxPreTransitTime: arriveBy ? undefined : maxOneTime,
-						maxPostTransitTime: arriveBy ? maxOneTime : undefined
+						preTransitModes: arriveBy ? undefined : preTransitModes,
+						postTransitModes: arriveBy ? postTransitModes : undefined,
+						maxPreTransitTime: arriveBy ? undefined : maxPreTransitTime,
+						maxPostTransitTime: arriveBy ? maxPostTransitTime : undefined
 					}
 				} as OneToAllData)
 			: undefined
@@ -127,13 +132,24 @@
 			});
 		}
 	};
+	const swapPrePostData = (searchDir: string) => {
+		if (searchDir != lastSearchDir) {
+			const tmpModes = preTransitModes;
+			preTransitModes = postTransitModes;
+			postTransitModes = tmpModes;
+			const tmpTime = maxPreTransitTime;
+			maxPreTransitTime = maxPostTransitTime;
+			maxPostTransitTime = tmpTime;
+			lastSearchDir = searchDir;
+		}
+	}
 
 	const applyPosition = (position: { coords: { latitude: number; longitude: number } }) => {
 		one = posToLocation({ lat: position.coords.latitude, lon: position.coords.longitude }, 0);
 	};
 </script>
 
-<div id="searchmask-container" class="flex flex-col space-y-4 p-4 relative">
+<div id="isochrones-searchmask-container" class="flex flex-col space-y-4 p-4 relative">
 	<AddressTypeahead
 		place={geocodingBiasPlace}
 		name="one"
@@ -154,24 +170,25 @@
 		<RadioGroup.Root
 			class="flex"
 			bind:value={() => (arriveBy ? 'arrival' : 'departure'), (v) => (arriveBy = v === 'arrival')}
+			onValueChange={swapPrePostData}
 		>
 			<Label
-				for="departure"
+				for="isochrones-departure"
 				class="flex items-center rounded-md border-2 border-muted bg-popover p-1 px-2 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-blue-600 hover:cursor-pointer"
 			>
 				<RadioGroup.Item
 					value="departure"
-					id="departure"
+					id="isochrones-departure"
 					class="sr-only"
 					aria-label={t.departure}
 				/>
 				<span>{t.departure}</span>
 			</Label>
 			<Label
-				for="arrival"
+				for="isochrones-arrival"
 				class="flex items-center rounded-md border-2 border-muted bg-popover p-1 px-2 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-blue-600 hover:cursor-pointer"
 			>
-				<RadioGroup.Item value="arrival" id="arrival" class="sr-only" aria-label={t.arrival} />
+				<RadioGroup.Item value="arrival" id="isochrones-arrival" class="sr-only" aria-label={t.arrival} />
 				<span>{t.arrival}</span>
 			</Label>
 		</RadioGroup.Root>
@@ -208,27 +225,26 @@
 			</Select.Root>
 		</div>
 
-		{#if !arriveBy}
-			<!-- First mile -->
-			<StreetModes
-				label={t.routingSegments.firstMile}
-				bind:modes={oneMileMode}
-				bind:maxTransitTime={maxOneTime}
-				possibleModes={prePostDirectModes}
-				possibleMaxTransitTime={possiblePrePostDurations}
-				ignoreRentalReturnConstraints={ignoreOneTransitRentalReturnConstraints}
-			></StreetModes>
-		{:else}
-			<!-- Last mile -->
-			<StreetModes
-				label={t.routingSegments.lastMile}
-				bind:modes={oneMileMode}
-				bind:maxTransitTime={maxOneTime}
-				possibleModes={prePostDirectModes}
-				possibleMaxTransitTime={possiblePrePostDurations}
-				ignoreRentalReturnConstraints={ignoreOneTransitRentalReturnConstraints}
-			></StreetModes>
-		{/if}
+		<!-- First mile -->
+		<StreetModes
+			label={t.routingSegments.firstMile}
+			bind:modes={preTransitModes}
+			bind:maxTransitTime={maxPreTransitTime}
+			possibleModes={prePostDirectModes}
+			possibleMaxTransitTime={possiblePrePostDurations}
+			ignoreRentalReturnConstraints={ignorePreTransitRentalReturnConstraints}
+			disabled={arriveBy}
+		/>
+		<!-- Last mile -->
+		<StreetModes
+			label={t.routingSegments.lastMile}
+			bind:modes={postTransitModes}
+			bind:maxTransitTime={maxPostTransitTime}
+			possibleModes={prePostDirectModes}
+			possibleMaxTransitTime={possiblePrePostDurations}
+			ignoreRentalReturnConstraints={ignorePostTransitRentalReturnConstraints}
+			disabled={!arriveBy}
+		/>
 
 		<div class="grid grid-cols-[1fr_2fr_1fr] items-center gap-2">
 			<!-- Styling -->
