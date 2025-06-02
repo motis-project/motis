@@ -64,11 +64,11 @@ double mixer::cost(nr::journey const& j) const {
             [&](nr::offset const& o) {
               if (o.transport_mode_id_ == kOdmTransportModeId) {
                 return tally(o.duration().count(), taxi_cost_);
-              } else if (o.transport_mode_id_ == kWalk) {
+              } else if (o.transport_mode_id_ == kWalkTransportModeId) {
                 return tally(o.duration().count(), walk_cost_);
               }
               utl::verify(o.transport_mode_id_ == kOdmTransportModeId ||
-                              o.transport_mode_id_ == kWalk,
+                              o.transport_mode_id_ == kWalkTransportModeId,
                           "unknown transport mode");
               return std::int32_t{0};
             }},

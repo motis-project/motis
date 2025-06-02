@@ -4,10 +4,10 @@
 
 #include "motis/odm/mixer.h"
 
-namespace motis {
+namespace motis::odm {
 
 std::vector<nigiri::routing::journey> read(std::string_view csv);
 
 std::string write(std::vector<nigiri::routing::journey> const&);
 
-}  // namespace motis
+}  // namespace motis::odm

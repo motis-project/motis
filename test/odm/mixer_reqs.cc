@@ -4,7 +4,10 @@
 
 #include "nigiri/common/parse_time.h"
 
-namespace motis {
+#include "motis/odm/odm.h"
+#include "motis/transport_mode_ids.h"
+
+namespace motis::odm {
 
 struct csv_journey {
   utl::csv_col<utl::cstr, UTL_NAME("departure_time")> departure_time_;
@@ -17,6 +20,14 @@ struct csv_journey {
   utl::csv_col<nigiri::duration_t::rep, UTL_NAME("last_mile_duration")>
       last_mile_duration_;
 };
+
+nigiri::transport_mode_id_t read_transport_mode(utl::cstr const& m) {
+  if (m == "taxi") {
+    return kOdmTransportModeId;
+  } else {
+    return kWalkTransportModeId;
+  }
+}
 
 std::vector<nigiri::routing::journey> read(std::string_view csv) {
   auto journeys = std::vector<nigiri::routing::journey>{};
@@ -32,20 +43,29 @@ std::vector<nigiri::routing::journey> read(std::string_view csv) {
 
           auto const first_mile_duration =
               nigiri::duration_t{*cj.first_mile_duration_};
-          auto const last_mile_duration =
-              nigiri::duration_t{*cj.last_mile_duration_};
-
-          if (*cj.first_mile_mode_ == "walk") {
+          if (first_mile_duration > nigiri::duration_t{0}) {
             j.legs_.emplace_back(
                 nigiri::direction::kForward, nigiri::location_idx_t::invalid(),
                 nigiri::location_idx_t::invalid(), j.start_time_,
                 j.start_time_ + first_mile_duration,
                 nigiri::routing::offset{
-                    nigiri::location_idx_t::invalid(),
-                    first_mile_duration,
-                })
-          } else if (*cj.first_mile_mode_ == "taxi") {
+                    nigiri::location_idx_t::invalid(), first_mile_duration,
+                    read_transport_mode(*cj.first_mile_mode_)});
           }
+
+          auto const last_mile_duration =
+              nigiri::duration_t{*cj.last_mile_duration_};
+          if (last_mile_duration > nigiri::duration_t{0}) {
+            j.legs_.emplace_back(
+                nigiri::direction::kForward, nigiri::location_idx_t::invalid(),
+                nigiri::location_idx_t::invalid(),
+                j.dest_time_ - last_mile_duration, j.dest_time_,
+                nigiri::routing::offset{
+                    nigiri::location_idx_t::invalid(), last_mile_duration,
+                    read_transport_mode(*cj.last_mile_mode_)});
+          }
+
+          journeys.push_back(std::move(j));
 
         } catch (std::exception const& e) {
           std::println("could not parse csv_journey: {}", e.what());
@@ -62,4 +82,4 @@ std::string write(std::vector<nigiri::routing::journey> const& jv) {
   return ss.str();
 }
 
-}  // namespace motis
+}  // namespace motis::odm
