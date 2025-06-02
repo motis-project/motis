@@ -165,3 +165,5 @@
 		});
 	});
 </script>
+
+<canvas id="isochronesCanvas">Canvas not supported</canvas>
