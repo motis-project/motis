@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { Snippet } from 'svelte';
 	import Button from '$lib/components/ui/button/button.svelte';
 	import { t } from '$lib/i18n/translation';
 	import * as Select from '$lib/components/ui/select';
@@ -6,18 +7,17 @@
 	import ChevronDown from 'lucide-svelte/icons/chevron-down';
 	import { Switch } from './components/ui/switch';
 	import type { ElevationCosts } from '$lib/api/openapi';
+	import { formatDurationSec } from './formatDuration';
 	import {
 		possibleTransitModes,
 		prePostDirectModes,
 		type PrePostDirectMode,
 		type TransitMode
 	} from './Modes';
-	import { formatDurationSec } from './formatDuration';
 	import NumberSelect from '$lib/NumberSelect.svelte';
-	import { type NumberSelectOption } from '$lib/NumberSelect.svelte';
 	import StreetModes from '$lib/StreetModes.svelte';
 	import TransitModeSelect from '$lib/TransitModeSelect.svelte';
-	import type { Snippet } from 'svelte';
+	import { type NumberSelectOption } from '$lib/NumberSelect.svelte';
 
 	let {
 		useRoutedTransfers = $bindable(),

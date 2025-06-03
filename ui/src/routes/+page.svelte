@@ -47,9 +47,9 @@
 	import { updateStartDest } from '$lib/updateStartDest';
 	import * as Tabs from '$lib/components/ui/tabs';
 	import DeparturesMask from '$lib/DeparturesMask.svelte';
-	import IsochronesMask from '$lib/IsochronesMask.svelte';
 	import Isochrones from '$lib/map/Isochrones.svelte';
 	import { type IsochronesPos } from '$lib/map/Isochrones.svelte';
+	import IsochronesMask from '$lib/IsochronesMask.svelte';
 	import {
 		getFormFactors,
 		getPrePostDirectModes,
