@@ -3,10 +3,8 @@
 	import { bbox } from '@turf/bbox';
 	import maplibregl, {
 		CanvasSource,
-		type Feature,
 		type LngLatBoundsLike,
 		Map,
-		type TextureFilter
 	} from 'maplibre-gl';
 
 	interface Pos {

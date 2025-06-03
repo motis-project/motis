@@ -166,7 +166,7 @@
 	<AddressTypeahead
 		place={geocodingBiasPlace}
 		name="one"
-		placeholder={t.from}
+		placeholder={t.position}
 		bind:selected={one}
 		bind:items={oneItems}
 	/>

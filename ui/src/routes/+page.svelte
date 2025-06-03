@@ -349,7 +349,7 @@
 				close();
 			}}
 		>
-			Select
+			{t.position}
 		</Button>
 	{/if}
 {/snippet}

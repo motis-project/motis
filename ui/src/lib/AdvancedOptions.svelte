@@ -166,16 +166,12 @@
 
 			{#if maxTransfers && maxTravelTime}
 			<div class="grid grid-cols-4 items-center gap-2">
-				<!-- Max transfers -->
 				<div class="text-sm">
-					<!-- TODO -->
-					Max transfers
+					{t.routingSegments.maxTransfers}
 				</div>
 				<NumberSelect bind:value={maxTransfers} possibleValues={possibleMaxTransfers} />
-				<!-- Max travel time -->
 				<div class="text-sm">
-					<!-- TODO -->
-					Max travel time
+					{t.routingSegments.maxTravelTime}
 				</div>
 				<NumberSelect bind:value={maxTravelTime} possibleValues={possibleMaxTravelTimes} labelFormatter={formatDurationSec} />
 			</div>

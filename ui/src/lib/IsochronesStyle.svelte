@@ -14,7 +14,7 @@
 
 <div class="grid grid-cols-[1fr_2fr_1fr] items-center gap-2">
 	<div class="text-sm">
-		Style
+		{t.isochronesStyling}
 	</div>
 	<Slider.Root
 		type="single"
