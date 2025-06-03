@@ -8,6 +8,6 @@ namespace motis::odm {
 
 std::vector<nigiri::routing::journey> read(std::string_view csv);
 
-std::string write(std::vector<nigiri::routing::journey> const&);
+std::string to_csv(std::vector<nigiri::routing::journey> const&);
 
 }  // namespace motis::odm
