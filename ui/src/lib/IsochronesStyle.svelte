@@ -9,7 +9,6 @@
 		value: number;
 		color: string;
 	} = $props();
-
 </script>
 
 <div class="grid grid-cols-[1fr_2fr_1fr] items-center gap-2">
@@ -24,9 +23,7 @@
 		class="relative flex w-full touch-none select-none items-center"
 	>
 		{#snippet children()}
-			<span
-				class="bg-dark-10 relative h-2 w-full grow cursor-pointer overflow-hidden rounded-full"
-			>
+			<span class="bg-dark-10 relative h-2 w-full grow cursor-pointer overflow-hidden rounded-full">
 				<Slider.Range class="bg-foreground absolute h-full" />
 			</span>
 			<Slider.Thumb

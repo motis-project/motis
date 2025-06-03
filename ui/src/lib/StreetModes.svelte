@@ -4,9 +4,7 @@
 	import * as Select from '$lib/components/ui/select';
 	import { Switch } from '$lib/components/ui/switch';
 	import { formatDurationSec } from '$lib/formatDuration';
-	import {
-		type PrePostDirectMode,
-	} from '$lib/Modes';
+	import { type PrePostDirectMode } from '$lib/Modes';
 
 	let {
 		label,
@@ -44,19 +42,14 @@
 			.map((m) => m.label)
 			.join(', ')
 	);
-
 </script>
-
 
 <div class="grid grid-cols-[1fr_2fr_1fr] items-center gap-2">
 	<div class="text-sm">
 		{label}
 	</div>
 	<Select.Root type="multiple" bind:value={modes} {disabled}>
-		<Select.Trigger
-			class="flex items-center w-full overflow-hidden"
-			aria-label={label}
-		>
+		<Select.Trigger class="flex items-center w-full overflow-hidden" aria-label={label}>
 			{selectedModesLabel}
 		</Select.Trigger>
 		<Select.Content sideOffset={10}>
@@ -67,7 +60,11 @@
 			{/each}
 		</Select.Content>
 	</Select.Root>
-	<Select.Root type="single" bind:value={() => maxTransitTime.toString(), (v) => maxTransitTime = parseInt(v)} {disabled}>
+	<Select.Root
+		type="single"
+		bind:value={() => maxTransitTime.toString(), (v) => (maxTransitTime = parseInt(v))}
+		{disabled}
+	>
 		<Select.Trigger
 			class="flex items-center w-full overflow-hidden"
 			aria-label={t.routingSegments.maxPreTransitTime}
@@ -85,8 +82,7 @@
 	<div class={cn('col-span-2 col-start-2', (!disabled && showRental) || 'hidden')}>
 		<Switch
 			bind:checked={
-				() => !ignoreRentalReturnConstraints,
-				(v) => (ignoreRentalReturnConstraints = !v)
+				() => !ignoreRentalReturnConstraints, (v) => (ignoreRentalReturnConstraints = !v)
 			}
 			label={t.considerRentalReturnConstraints}
 			id="ignorePreTransitRentalReturnConstraints"

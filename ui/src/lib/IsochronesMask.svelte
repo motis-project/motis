@@ -32,7 +32,9 @@
 			return `${lngLatToStr(l.match!)},0`;
 		}
 	};
-	const minutesToSeconds = (minutes: number[]) => { return minutes.map((m) => m * 60); }
+	const minutesToSeconds = (minutes: number[]) => {
+		return minutes.map((m) => m * 60);
+	};
 
 	let {
 		one = $bindable(),
@@ -80,18 +82,20 @@
 
 	const maxSupportedTransfers = 15;
 	let maxTransfers = $state(maxSupportedTransfers);
-	const possibleMaxTransfers = [...Array(maxSupportedTransfers).keys()
-		.map((i) => i + 1)
-		.map((i) => ({
-			value: i.toString(),
-			label: i.toString(),
-		}))
+	const possibleMaxTransfers = [
+		...Array(maxSupportedTransfers)
+			.keys()
+			.map((i) => i + 1)
+			.map((i) => ({
+				value: i.toString(),
+				label: i.toString()
+			}))
 	];
 	const timeout = 60;
 
-	const possibleMaxTravelTimes = minutesToSeconds([1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 75, 80, 90, 120, 150, 180, 210, 240])
-		.map((s) => ({ value: s.toString(), label: formatDurationSec(s) }));
-	;
+	const possibleMaxTravelTimes = minutesToSeconds([
+		1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 75, 80, 90, 120, 150, 180, 210, 240
+	]).map((s) => ({ value: s.toString(), label: formatDurationSec(s) }));
 	const possiblePrePostDurations = minutesToSeconds([1, 5, 10, 15, 20, 25, 30, 45, 60]);
 	let expanded = $state<boolean>(false);
 
@@ -171,7 +175,7 @@
 			maxPostTransitTime = tmpTime;
 			lastSearchDir = searchDir;
 		}
-	}
+	};
 
 	const applyPosition = (position: { coords: { latitude: number; longitude: number } }) => {
 		one = posToLocation({ lat: position.coords.latitude, lon: position.coords.longitude }, 0);
@@ -221,7 +225,12 @@
 				for="isochrones-arrival"
 				class="flex items-center rounded-md border-2 border-muted bg-popover p-1 px-2 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-blue-600 hover:cursor-pointer"
 			>
-				<RadioGroup.Item value="arrival" id="isochrones-arrival" class="sr-only" aria-label={t.arrival} />
+				<RadioGroup.Item
+					value="arrival"
+					id="isochrones-arrival"
+					class="sr-only"
+					aria-label={t.arrival}
+				/>
 				<span>{t.arrival}</span>
 			</Label>
 		</RadioGroup.Root>

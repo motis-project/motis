@@ -1,11 +1,7 @@
 <script lang="ts">
 	import circle from '@turf/circle';
 	import { bbox } from '@turf/bbox';
-	import maplibregl, {
-		CanvasSource,
-		type LngLatBoundsLike,
-		Map,
-	} from 'maplibre-gl';
+	import maplibregl, { CanvasSource, type LngLatBoundsLike, Map } from 'maplibre-gl';
 	import type { PrePostDirectMode, TransitMode } from '$lib/Modes';
 
 	export interface IsochronesPos {
@@ -48,10 +44,10 @@
 
 	const kilometersPerSecond = $derived(
 		streetModes.includes('BIKE')
-			? 0.0038  // 3.8 meters per second
+			? 0.0038 // 3.8 meters per second
 			: wheelchair
-				? 0.0008  // 0.8 meters per second
-				: 0.0012  // 1.2 meters per second
+				? 0.0008 // 0.8 meters per second
+				: 0.0012 // 1.2 meters per second
 	);
 	const box2 = $derived(
 		maplibregl.LngLatBounds.convert(
@@ -78,7 +74,10 @@
 
 	let circles3 = $state<CircleType[] | undefined>(undefined);
 	$effect(() => {
-		if (!active || (lastData == isochronesData && lastAllTime == maxAllTime && lastSpeed == kilometersPerSecond)) {
+		if (
+			!active ||
+			(lastData == isochronesData && lastAllTime == maxAllTime && lastSpeed == kilometersPerSecond)
+		) {
 			return;
 		}
 		circles3 = isochronesData.map((data) => {

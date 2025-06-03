@@ -124,7 +124,6 @@
 			postTransitModes.includes('BIKE') ||
 			directModes?.includes('BIKE')
 	);
-
 </script>
 
 <Button variant="ghost" onclick={() => (expanded = !expanded)}>
@@ -179,17 +178,21 @@
 				}}
 			/>
 
-			{#if maxTransfers && maxTravelTime}
-			<div class="grid grid-cols-4 items-center gap-2">
-				<div class="text-sm">
-					{t.routingSegments.maxTransfers}
+			{#if maxTransfers !== undefined && maxTravelTime !== undefined}
+				<div class="grid grid-cols-4 items-center gap-2">
+					<div class="text-sm">
+						{t.routingSegments.maxTransfers}
+					</div>
+					<NumberSelect bind:value={maxTransfers} possibleValues={possibleMaxTransfers} />
+					<div class="text-sm">
+						{t.routingSegments.maxTravelTime}
+					</div>
+					<NumberSelect
+						bind:value={maxTravelTime}
+						possibleValues={possibleMaxTravelTimes}
+						labelFormatter={formatDurationSec}
+					/>
 				</div>
-				<NumberSelect bind:value={maxTransfers} possibleValues={possibleMaxTransfers} />
-				<div class="text-sm">
-					{t.routingSegments.maxTravelTime}
-				</div>
-				<NumberSelect bind:value={maxTravelTime} possibleValues={possibleMaxTravelTimes} labelFormatter={formatDurationSec} />
-			</div>
 			{/if}
 
 			<!-- First mile -->
@@ -213,7 +216,7 @@
 			></StreetModes>
 
 			<!-- Direct -->
-			{#if directModes && maxDirectTime && ignoreDirectRentalReturnConstraints}
+			{#if directModes !== undefined && maxDirectTime !== undefined && ignoreDirectRentalReturnConstraints !== undefined}
 				<StreetModes
 					label={t.routingSegments.direct}
 					bind:modes={directModes}

@@ -571,13 +571,7 @@
 		{/if}
 
 		{#if one && activeTab == 'isochrones'}
-			<Marker
-				color="yellow"
-				draggable={true}
-				{level}
-				bind:location={one}
-				bind:marker={oneMarker}
-			/>
+			<Marker color="yellow" draggable={true} {level} bind:location={one} bind:marker={oneMarker} />
 		{/if}
 	{:else}
 		<div class="maplibregl-control-container">

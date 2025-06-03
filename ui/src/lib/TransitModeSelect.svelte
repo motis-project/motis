@@ -6,7 +6,7 @@
 
 	let {
 		transitModes = $bindable()
-	} : {
+	}: {
 		transitModes: TransitMode[];
 	} = $props();
 
@@ -16,7 +16,6 @@
 		value,
 		label: t[value as TranslationKey] as string
 	}));
-
 
 	const selectTransitModesLabel = $derived(
 		transitModes.length == possibleTransitModes.length || transitModes.includes('TRANSIT')
