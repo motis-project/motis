@@ -17,6 +17,7 @@
 	import { type NumberSelectOption } from '$lib/NumberSelect.svelte';
 	import StreetModes from '$lib/StreetModes.svelte';
 	import TransitModeSelect from '$lib/TransitModeSelect.svelte';
+	import type { Snippet } from 'svelte';
 
 	let {
 		useRoutedTransfers = $bindable(),
@@ -37,7 +38,8 @@
 		elevationCosts = $bindable(),
 		ignorePreTransitRentalReturnConstraints = $bindable(),
 		ignorePostTransitRentalReturnConstraints = $bindable(),
-		ignoreDirectRentalReturnConstraints = $bindable()
+		ignoreDirectRentalReturnConstraints = $bindable(),
+		additionalComponents
 	}: {
 		useRoutedTransfers: boolean;
 		wheelchair: boolean;
@@ -58,6 +60,7 @@
 		ignorePreTransitRentalReturnConstraints: boolean;
 		ignorePostTransitRentalReturnConstraints: boolean;
 		ignoreDirectRentalReturnConstraints: boolean;
+		additionalComponents?: Snippet;
 	} = $props();
 
 	const possibleDirectDurations = [
@@ -229,5 +232,9 @@
 				</Select.Content>
 			</Select.Root>
 		</div>
+
+		{#if additionalComponents}
+			{@render additionalComponents()}
+		{/if}
 	</div>
 {/if}

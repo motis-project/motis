@@ -3,28 +3,22 @@
 	import Button from '$lib/components/ui/button/button.svelte';
 	import { posToLocation, type Location } from '$lib/Location';
 	import { t } from '$lib/i18n/translation';
-	import * as Select from '$lib/components/ui/select';
 	import { Label } from '$lib/components/ui/label';
 	import * as RadioGroup from '$lib/components/ui/radio-group';
-	import ChevronUp from 'lucide-svelte/icons/chevron-up';
-	import ChevronDown from 'lucide-svelte/icons/chevron-down';
 	import LocateFixed from 'lucide-svelte/icons/locate-fixed';
-	import { Slider } from 'bits-ui';
 	import { untrack } from 'svelte';
 	import {
 		oneToAll,
-		plan,
 		type OneToAllData,
 		type OneToAllResponse,
 		type ReachablePlace
 	} from './api/openapi';
 	import { lngLatToStr } from './lngLatToStr';
 	import DateInput from './DateInput.svelte';
-	import StreetModes from '$lib/StreetModes.svelte';
-	import TransitModeSelect from '$lib/TransitModeSelect.svelte';
-	import { prePostDirectModes, prePostModesToModes, type PrePostDirectMode, type TransitMode } from './Modes';
+	import { prePostModesToModes, type PrePostDirectMode, type TransitMode } from './Modes';
 	import { formatDurationSec } from './formatDuration';
 	import AdvancedOptions from './AdvancedOptions.svelte';
+	import IsochronesStyle from './IsochronesStyle.svelte';
 
 	interface IsochronesPos {
 		lat: number;
@@ -164,6 +158,10 @@
 	};
 </script>
 
+{#snippet additionalComponents()}
+	<IsochronesStyle bind:value={opacity} bind:color />
+{/snippet}
+
 <div id="isochrones-searchmask-container" class="flex flex-col space-y-4 p-4 relative">
 	<AddressTypeahead
 		place={geocodingBiasPlace}
@@ -227,6 +225,7 @@
 			ignorePreTransitRentalReturnConstraints
 			ignorePostTransitRentalReturnConstraints
 			ignoreDirectRentalReturnConstraints={false}
+			{additionalComponents}
 		/>
 	</div>
 </div>
