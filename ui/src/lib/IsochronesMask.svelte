@@ -9,8 +9,10 @@
 	import { untrack } from 'svelte';
 	import {
 		oneToAll,
+		type ElevationCosts,
 		type OneToAllData,
 		type OneToAllResponse,
+		type PedestrianProfile,
 		type ReachablePlace
 	} from './api/openapi';
 	import { lngLatToStr } from './lngLatToStr';
@@ -43,8 +45,15 @@
 		geocodingBiasPlace,
 		isochronesData = $bindable(),
 		time = $bindable(),
+		useRoutedTransfers = $bindable(),
+		pedestrianProfile = $bindable(),
+		requireBikeTransport = $bindable(),
+		requireCarTransport = $bindable(),
 		transitModes = $bindable(),
 		arriveBy = $bindable(),
+		elevationCosts = $bindable(),
+		ignorePreTransitRentalReturnConstraints = $bindable(),
+		ignorePostTransitRentalReturnConstraints = $bindable(),
 		color = $bindable(),
 		opacity = $bindable()
 	}: {
@@ -53,8 +62,15 @@
 		geocodingBiasPlace?: maplibregl.LngLatLike;
 		isochronesData: IsochronesPos[];
 		time: Date;
+		useRoutedTransfers: boolean;
+		pedestrianProfile: PedestrianProfile;
+		requireBikeTransport: boolean;
+		requireCarTransport: boolean;
 		transitModes: TransitMode[];
 		arriveBy: boolean;
+		elevationCosts: ElevationCosts;
+		ignorePreTransitRentalReturnConstraints: boolean;
+		ignorePostTransitRentalReturnConstraints: boolean;
 		color: string;
 		opacity: number;
 	} = $props();
@@ -83,9 +99,6 @@
 	let maxPostTransitTime = $state(15 * 60);
 	let oneItems = $state<Array<Location>>([]);
 
-	const ignorePreTransitRentalReturnConstraints = false;
-	const ignorePostTransitRentalReturnConstraints = false;
-
 	let lastSearchDir = arriveBy ? 'arrival' : 'departure';
 
 	let queryTimeout: number;
@@ -100,10 +113,18 @@
 						transitModes,
 						maxTransfers,
 						arriveBy,
+						useRoutedTransfers,
+						wheelchair: pedestrianProfile === 'WHEELCHAIR',
+						requireBikeTransport,
+						requireCarTransport,
 						preTransitModes: arriveBy ? undefined : prePostModesToModes(preTransitModes),
 						postTransitModes: arriveBy ? prePostModesToModes(postTransitModes) : undefined,
 						maxPreTransitTime: arriveBy ? undefined : maxPreTransitTime,
-						maxPostTransitTime: arriveBy ? maxPostTransitTime : undefined
+						maxPostTransitTime: arriveBy ? maxPostTransitTime : undefined,
+						elevationCosts,
+						maxMatchingDistance: pedestrianProfile == 'WHEELCHAIR' ? 8 : 250,
+						ignorePreTransitRentalReturnConstraints,
+						ignorePostTransitRentalReturnConstraints
 					}
 				} as OneToAllData)
 			: undefined
@@ -206,10 +227,13 @@
 			</Label>
 		</RadioGroup.Root>
 		<AdvancedOptions
-			useRoutedTransfers={false}
-			wheelchair={false}
-			requireCarTransport={false}
-			requireBikeTransport={false}
+			bind:useRoutedTransfers
+			bind:wheelchair={
+				() => pedestrianProfile === 'WHEELCHAIR',
+				(v) => (pedestrianProfile = v ? 'WHEELCHAIR' : 'FOOT')
+			}
+			bind:requireCarTransport
+			bind:requireBikeTransport
 			bind:transitModes
 			bind:maxTransfers
 			bind:maxTravelTime
@@ -221,10 +245,10 @@
 			bind:maxPreTransitTime
 			bind:maxPostTransitTime
 			maxDirectTime={undefined}
-			elevationCosts={'NONE'}
-			ignorePreTransitRentalReturnConstraints
-			ignorePostTransitRentalReturnConstraints
-			ignoreDirectRentalReturnConstraints={false}
+			bind:elevationCosts
+			bind:ignorePreTransitRentalReturnConstraints
+			bind:ignorePostTransitRentalReturnConstraints
+			ignoreDirectRentalReturnConstraints={undefined}
 			{additionalComponents}
 		/>
 	</div>

@@ -430,8 +430,15 @@
 								geocodingBiasPlace={center}
 								bind:isochronesData
 								bind:time
+								bind:useRoutedTransfers
+								bind:pedestrianProfile
+								bind:requireCarTransport
+								bind:requireBikeTransport
 								bind:transitModes
 								bind:arriveBy
+								bind:elevationCosts
+								bind:ignorePreTransitRentalReturnConstraints
+								bind:ignorePostTransitRentalReturnConstraints
 								bind:color={isochronesColor}
 								bind:opacity={isochronesOpacity}
 							/>

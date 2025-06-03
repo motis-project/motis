@@ -59,7 +59,7 @@
 		elevationCosts: ElevationCosts;
 		ignorePreTransitRentalReturnConstraints: boolean;
 		ignorePostTransitRentalReturnConstraints: boolean;
-		ignoreDirectRentalReturnConstraints: boolean;
+		ignoreDirectRentalReturnConstraints: boolean | undefined;
 		additionalComponents?: Snippet;
 	} = $props();
 
@@ -198,7 +198,7 @@
 			></StreetModes>
 
 			<!-- Direct -->
-			{#if directModes && maxDirectTime}
+			{#if directModes && maxDirectTime && ignoreDirectRentalReturnConstraints}
 				<StreetModes
 					label={t.routingSegments.direct}
 					bind:modes={directModes}
