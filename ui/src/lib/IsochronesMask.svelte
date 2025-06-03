@@ -213,18 +213,16 @@
 			requireCarTransport={false}
 			requireBikeTransport={false}
 			bind:transitModes
-			showTransitRestrictions={true}
 			bind:maxTransfers
 			bind:maxTravelTime
 			{possibleMaxTransfers}
 			{possibleMaxTravelTimes}
 			bind:preTransitModes
 			bind:postTransitModes
-			directModes={[]}
+			directModes={undefined}
 			bind:maxPreTransitTime
 			bind:maxPostTransitTime
-			showDirectRestrictions={false}
-			maxDirectTime={0}
+			maxDirectTime={undefined}
 			elevationCosts={'NONE'}
 			ignorePreTransitRentalReturnConstraints
 			ignorePostTransitRentalReturnConstraints

@@ -145,6 +145,8 @@
 				(v) => (pedestrianProfile = v ? 'WHEELCHAIR' : 'FOOT')
 			}
 			bind:requireCarTransport
+			maxTransfers={undefined}
+			maxTravelTime={undefined}
 			bind:requireBikeTransport
 			bind:transitModes
 			bind:preTransitModes

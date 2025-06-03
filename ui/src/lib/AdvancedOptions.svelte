@@ -24,18 +24,16 @@
 		requireBikeTransport = $bindable(),
 		requireCarTransport = $bindable(),
 		transitModes = $bindable(),
-		showTransitRestrictions = $bindable(false),
-		maxTransfers = $bindable(0),
-		maxTravelTime = $bindable(0),
+		maxTransfers = $bindable(undefined),
+		maxTravelTime = $bindable(undefined),
 		possibleMaxTransfers = [],
 		possibleMaxTravelTimes = [],
 		preTransitModes = $bindable(),
 		postTransitModes = $bindable(),
-		directModes = $bindable(),
+		directModes = $bindable(undefined),
 		maxPreTransitTime = $bindable(),
 		maxPostTransitTime = $bindable(),
-		showDirectRestrictions = $bindable(true),
-		maxDirectTime = $bindable(),
+		maxDirectTime = $bindable(undefined),
 		elevationCosts = $bindable(),
 		ignorePreTransitRentalReturnConstraints = $bindable(),
 		ignorePostTransitRentalReturnConstraints = $bindable(),
@@ -46,18 +44,16 @@
 		requireBikeTransport: boolean;
 		requireCarTransport: boolean;
 		transitModes: TransitMode[];
-		showTransitRestrictions?: boolean;
-		maxTransfers?: number;
-		maxTravelTime?: number;
+		maxTransfers: number | undefined;
+		maxTravelTime: number | undefined;
 		possibleMaxTransfers?: NumberSelectOption[];
 		possibleMaxTravelTimes?: NumberSelectOption[];
 		preTransitModes: PrePostDirectMode[];
 		postTransitModes: PrePostDirectMode[];
-		directModes: PrePostDirectMode[];
+		directModes: PrePostDirectMode[] | undefined;
 		maxPreTransitTime: number;
 		maxPostTransitTime: number;
-		showDirectRestrictions?: boolean;
-		maxDirectTime: number;
+		maxDirectTime: number | undefined;
 		elevationCosts: ElevationCosts;
 		ignorePreTransitRentalReturnConstraints: boolean;
 		ignorePostTransitRentalReturnConstraints: boolean;
@@ -113,7 +109,7 @@
 		requireBikeTransport ||
 			preTransitModes.includes('BIKE') ||
 			postTransitModes.includes('BIKE') ||
-			directModes.includes('BIKE')
+			directModes?.includes('BIKE')
 	);
 
 </script>
@@ -165,7 +161,7 @@
 				id="requireCarTransport"
 			/>
 
-			{#if showTransitRestrictions}
+			{#if maxTransfers && maxTravelTime}
 			<div class="grid grid-cols-4 items-center gap-2">
 				<!-- Max transfers -->
 				<div class="text-sm">
@@ -203,7 +199,7 @@
 			></StreetModes>
 
 			<!-- Direct -->
-			{#if showDirectRestrictions}
+			{#if directModes && maxDirectTime}
 				<StreetModes
 					label={t.routingSegments.direct}
 					bind:modes={directModes}
