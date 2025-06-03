@@ -59,6 +59,7 @@ struct routing {
   api::plan_response operator()(boost::urls::url_view const&) const;
 
   std::vector<nigiri::routing::offset> get_offsets(
+      nigiri::rt_timetable const*,
       place_t const&,
       osr::direction,
       std::vector<api::ModeEnum> const&,
@@ -74,7 +75,8 @@ struct routing {
 
   nigiri::hash_map<nigiri::location_idx_t,
                    std::vector<nigiri::routing::td_offset>>
-  get_td_offsets(elevators const*,
+  get_td_offsets(nigiri::rt_timetable const* rtt,
+                 elevators const*,
                  place_t const&,
                  osr::direction,
                  std::vector<api::ModeEnum> const&,

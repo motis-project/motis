@@ -12,7 +12,7 @@
 		TableRow
 	} from '$lib/components/ui/table';
 	import maplibregl from 'maplibre-gl';
-	import { footpaths } from '$lib/api/openapi';
+	import { transfers } from '$lib/api/openapi';
 	import Control from '$lib/map/Control.svelte';
 	import * as Card from '$lib/components/ui/card';
 	import Marker from '$lib/map/Marker.svelte';
@@ -124,7 +124,7 @@
 	let debug = $state(false);
 	let id = $state<string>();
 	let fps = $derived(
-		id && bounds && debug ? footpaths<false>({ query: { id } }).then((x) => x.data) : undefined
+		id && bounds && debug ? transfers<false>({ query: { id } }).then((x) => x.data) : undefined
 	);
 	let matches = $derived(
 		bounds && debug && zoom > 15 ? getMatches(maplibregl.LngLatBounds.convert(bounds)) : undefined
@@ -323,6 +323,9 @@
 							<h2 class="ml-2 text-base font-semibold">
 								{f.place.name}
 								{f.place.track}
+								<span class="text-xs text-muted-foreground font-mono">
+									{f.place.stopId}
+								</span>
 								<span class="text-sm text-muted-foreground">Level: {f.place.level}</span>
 							</h2>
 							<Button
@@ -339,14 +342,21 @@
 								<TableRow>
 									<TableHead class="text-center">Station</TableHead>
 									<TableHead class="text-center">Default</TableHead>
-									<TableHead class="text-center">Foot</TableHead>
-									<TableHead class="text-center">Foot Routed</TableHead>
-									<TableHead class="text-center">Wheelchair</TableHead>
-									<TableHead class="text-center">Wheelchair Routed</TableHead>
+									{#if f.hasFootTransfers}
+										<TableHead class="text-center">Foot</TableHead>
+										<TableHead class="text-center">Foot Routed</TableHead>
+									{/if}
+									{#if f.hasWheelchairTransfers}
+										<TableHead class="text-center">Wheelchair</TableHead>
+										<TableHead class="text-center">Wheelchair Routed</TableHead>
+									{/if}
+									{#if f.hasCarTransfers}
+										<TableHead class="text-center">Car</TableHead>
+									{/if}
 								</TableRow>
 							</TableHeader>
 							<TableBody>
-								{#each f.footpaths as x, i (i)}
+								{#each f.transfers as x, i (i)}
 									<TableRow>
 										<TableCell>
 											{x.to.name} <br />
@@ -368,64 +378,84 @@
 												</Button>
 											{/if}
 										</TableCell>
-										<TableCell>
-											{#if x.foot !== undefined}
-												<Button
-													variant="outline"
-													onclick={() => {
-														start = posToLocation(f.place, f.place.level);
-														destination = posToLocation(x.to, x.to.level);
-														profile = 'foot';
-													}}
-												>
-													{x.foot}
-												</Button>
-											{/if}
-										</TableCell>
-										<TableCell>
-											{#if x.footRouted !== undefined}
-												<Button
-													variant="outline"
-													onclick={() => {
-														start = posToLocation(f.place, f.place.level);
-														destination = posToLocation(x.to, x.to.level);
-														profile = 'foot';
-													}}
-												>
-													{x.footRouted}
-												</Button>
-											{/if}
-										</TableCell>
-										<TableCell>
-											{#if x.wheelchair !== undefined}
-												<Button
-													class={x.wheelchairUsesElevator ? 'text-red-500' : 'text-green-500'}
-													variant="outline"
-													onclick={() => {
-														start = posToLocation(f.place, f.place.level);
-														destination = posToLocation(x.to, x.to.level);
-														profile = 'wheelchair';
-													}}
-												>
-													{x.wheelchair}
-												</Button>
-											{/if}
-										</TableCell>
-										<TableCell>
-											{#if x.wheelchairRouted !== undefined}
-												<Button
-													class={x.wheelchairUsesElevator ? 'text-red-500' : 'text-green-500'}
-													variant="outline"
-													onclick={() => {
-														start = posToLocation(f.place, f.place.level);
-														destination = posToLocation(x.to, x.to.level);
-														profile = 'wheelchair';
-													}}
-												>
-													{x.wheelchairRouted}
-												</Button>
-											{/if}
-										</TableCell>
+										{#if f.hasFootTransfers}
+											<TableCell>
+												{#if x.foot !== undefined}
+													<Button
+														variant="outline"
+														onclick={() => {
+															start = posToLocation(f.place, f.place.level);
+															destination = posToLocation(x.to, x.to.level);
+															profile = 'foot';
+														}}
+													>
+														{x.foot}
+													</Button>
+												{/if}
+											</TableCell>
+											<TableCell>
+												{#if x.footRouted !== undefined}
+													<Button
+														variant="outline"
+														onclick={() => {
+															start = posToLocation(f.place, f.place.level);
+															destination = posToLocation(x.to, x.to.level);
+															profile = 'foot';
+														}}
+													>
+														{x.footRouted}
+													</Button>
+												{/if}
+											</TableCell>
+										{/if}
+										{#if f.hasWheelchairTransfers}
+											<TableCell>
+												{#if x.wheelchair !== undefined}
+													<Button
+														class={x.wheelchairUsesElevator ? 'text-red-500' : 'text-green-500'}
+														variant="outline"
+														onclick={() => {
+															start = posToLocation(f.place, f.place.level);
+															destination = posToLocation(x.to, x.to.level);
+															profile = 'wheelchair';
+														}}
+													>
+														{x.wheelchair}
+													</Button>
+												{/if}
+											</TableCell>
+											<TableCell>
+												{#if x.wheelchairRouted !== undefined}
+													<Button
+														class={x.wheelchairUsesElevator ? 'text-red-500' : 'text-green-500'}
+														variant="outline"
+														onclick={() => {
+															start = posToLocation(f.place, f.place.level);
+															destination = posToLocation(x.to, x.to.level);
+															profile = 'wheelchair';
+														}}
+													>
+														{x.wheelchairRouted}
+													</Button>
+												{/if}
+											</TableCell>
+										{/if}
+										{#if f.hasCarTransfers}
+											<TableCell>
+												{#if x.car !== undefined}
+													<Button
+														variant="outline"
+														onclick={() => {
+															start = posToLocation(f.place, f.place.level);
+															destination = posToLocation(x.to, x.to.level);
+															profile = 'car';
+														}}
+													>
+														{x.car}
+													</Button>
+												{/if}
+											</TableCell>
+										{/if}
 									</TableRow>
 								{/each}
 							</TableBody>

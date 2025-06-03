@@ -123,6 +123,9 @@ std::vector<api::StepInstruction> get_step_instructions(
         .exit_ = {},  // TODO
         .stayOn_ = false,  // TODO
         .area_ = false,  // TODO
+        .toll_ = props.has_toll(),
+        .accessRestriction_ = w.get_access_restriction(s.way_).and_then(
+            [](std::string_view s) { return std::optional{std::string{s}}; }),
         .elevationUp_ =
             elevations ? std::optional{to_idx(s.elevation_.up_)} : std::nullopt,
         .elevationDown_ = elevations ? std::optional{to_idx(s.elevation_.down_)}

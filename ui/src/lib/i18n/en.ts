@@ -88,6 +88,9 @@ const translations: Translations = {
 	RENTAL_SCOOTER_STANDING: 'Shared standing scooter',
 	RENTAL_SCOOTER_SEATED: 'Shared seated scooter',
 	RENTAL_OTHER: 'Other shared vehicle',
+	CABLE_CAR: 'Cable car',
+	FUNICULAR: 'Funicular',
+	AREAL_LIFT: 'Aerial lift',
 	routingSegments: {
 		firstMile: 'First mile',
 		lastMile: 'Last mile',
@@ -101,7 +104,9 @@ const translations: Translations = {
 		LOW: 'Small detours',
 		HIGH: 'Large detours'
 	},
-	incline: 'Incline'
+	incline: 'Incline',
+	toll: 'Warning! A fee must be paid to use this route.',
+	accessRestriction: 'No access'
 };
 
 export default translations;

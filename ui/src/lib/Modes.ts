@@ -5,6 +5,7 @@ export const prePostDirectModes = [
 	'BIKE',
 	'CAR',
 	'FLEX',
+	'CAR_PARKING',
 	'RENTAL_BICYCLE',
 	'RENTAL_CARGO_BICYCLE',
 	'RENTAL_CAR',
@@ -50,6 +51,9 @@ export const possibleTransitModes = [
 	'TRAM',
 	'BUS',
 	'FERRY',
+	'CABLE_CAR',
+	'FUNICULAR',
+	'AREAL_LIFT',
 	'OTHER'
 ];
 export type TransitMode = (typeof possibleTransitModes)[number];

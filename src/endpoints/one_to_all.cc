@@ -38,7 +38,6 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
   auto const unreachable = query.arriveBy_
                                ? n::kInvalidDelta<n::direction::kBackward>
                                : n::kInvalidDelta<n::direction::kForward>;
-  auto const rtt = rt_->rtt_.get();
 
   auto const make_place = [&](place_t const& p, n::unixtime_t const t,
                               n::event_type const ev) {
@@ -73,11 +72,11 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
       .start_time_ = time,
       .start_match_mode_ = get_match_mode(one),
       .start_ = r.get_offsets(
-          one, one_dir, one_modes, std::nullopt, std::nullopt, std::nullopt,
-          false, query.pedestrianProfile_, query.elevationCosts_, one_max_time,
-          query.maxMatchingDistance_, gbfs_rd),
+          nullptr, one, one_dir, one_modes, std::nullopt, std::nullopt,
+          std::nullopt, false, query.pedestrianProfile_, query.elevationCosts_,
+          one_max_time, query.maxMatchingDistance_, gbfs_rd),
       .td_start_ =
-          r.get_td_offsets(rt_->e_.get(), one, one_dir, one_modes,
+          r.get_td_offsets(nullptr, nullptr, one, one_dir, one_modes,
                            query.pedestrianProfile_, query.elevationCosts_,
                            query.maxMatchingDistance_, one_max_time, time),
       .max_transfers_ = static_cast<std::uint8_t>(
@@ -105,8 +104,8 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
 
   auto const state =
       query.arriveBy_
-          ? n::routing::one_to_all<n::direction::kBackward>(tt_, rtt, q)
-          : n::routing::one_to_all<n::direction::kForward>(tt_, rtt, q);
+          ? n::routing::one_to_all<n::direction::kBackward>(tt_, nullptr, q)
+          : n::routing::one_to_all<n::direction::kForward>(tt_, nullptr, q);
 
   auto reachable = nigiri::bitvec{tt_.n_locations()};
   for (auto i = 0U; i != tt_.n_locations(); ++i) {

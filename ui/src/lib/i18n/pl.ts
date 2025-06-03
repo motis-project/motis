@@ -101,7 +101,12 @@ const translations: Translations = {
 	RENTAL_SCOOTER_STANDING: 'Hulajnoga stojąca współdzielona',
 	RENTAL_SCOOTER_SEATED: 'Hulajnoga z siedziskiem współdzielona',
 	RENTAL_OTHER: 'Inny pojazd współdzielony',
-	incline: 'Nachylenie'
+	incline: 'Nachylenie',
+	CABLE_CAR: 'Kolej linowa',
+	FUNICULAR: 'Kolej linowo-terenowa',
+	AREAL_LIFT: 'Wyciąg powietrzny',
+	toll: 'Uwaga! Za przejazd tą trasą pobierana jest opłata.',
+	accessRestriction: 'Ograniczony dostęp'
 };
 
 export default translations;
