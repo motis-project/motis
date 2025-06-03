@@ -307,7 +307,11 @@ api::stoptimes_response stop_times::operator()(
                            }
                          });
   } else {
-    add(x);
+    if (query.exactRadius_ == true) {
+      locations.emplace_back(x);
+    } else {
+      add(x);
+    }
   }
   utl::erase_duplicates(locations);
 
