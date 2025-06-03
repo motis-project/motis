@@ -83,6 +83,9 @@ int min_zoom_level(n::clasz const clasz, float const distance) {
         return 10;
       }
 
+    case n::clasz::kCableCar:
+    case n::clasz::kFunicular:
+    case n::clasz::kAreaLift:
     case n::clasz::kOther: return 11;
 
     default: throw utl::fail("unknown n::clasz {}", static_cast<int>(clasz));

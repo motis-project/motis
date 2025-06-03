@@ -105,7 +105,12 @@ const translations: Translations = {
 	RENTAL_SCOOTER_STANDING: 'Trottinette debout partagée',
 	RENTAL_SCOOTER_SEATED: 'Trottinette assise partagée',
 	RENTAL_OTHER: 'Autre véhicule partagé',
-	incline: 'Pente'
+	incline: 'Pente',
+	CABLE_CAR: 'Téléphérique',
+	FUNICULAR: 'Funiculaire',
+	AREAL_LIFT: 'Remontée mécanique',
+	toll: 'Attention ! Route à péage.',
+	accessRestriction: 'Accès restreint'
 };
 
 export default translations;

@@ -101,6 +101,11 @@ export type Translations = {
 	RENTAL_SCOOTER_SEATED: string;
 	RENTAL_OTHER: string;
 	incline: string;
+	CABLE_CAR: string;
+	FUNICULAR: string;
+	AREAL_LIFT: string;
+	toll: string;
+	accessRestriction: string;
 };
 
 const translations: Map<string, Translations> = new Map(

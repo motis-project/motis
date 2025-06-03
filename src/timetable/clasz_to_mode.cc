@@ -18,6 +18,9 @@ api::ModeEnum to_mode(n::clasz const c) {
     case n::clasz::kTram: return api::ModeEnum::TRAM;
     case n::clasz::kBus: return api::ModeEnum::BUS;
     case n::clasz::kShip: return api::ModeEnum::FERRY;
+    case n::clasz::kCableCar: return api::ModeEnum::CABLE_CAR;
+    case n::clasz::kFunicular: return api::ModeEnum::FUNICULAR;
+    case n::clasz::kAreaLift: return api::ModeEnum::AREAL_LIFT;
     case n::clasz::kOther: return api::ModeEnum::OTHER;
     case n::clasz::kNumClasses:;
   }

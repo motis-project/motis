@@ -2,6 +2,7 @@
 	import ArrowRight from 'lucide-svelte/icons/arrow-right';
 	import ArrowUp from 'lucide-svelte/icons/arrow-up';
 	import ArrowDown from 'lucide-svelte/icons/arrow-down';
+	import DollarSign from 'lucide-svelte/icons/dollar-sign';
 	import CircleX from 'lucide-svelte/icons/circle-x';
 	import type { FareProduct, Itinerary, Leg, Place, StepInstruction } from '$lib/api/openapi';
 	import Time from '$lib/Time.svelte';
@@ -51,9 +52,7 @@
 			<Button
 				class="text-[length:inherit] leading-none justify-normal text-wrap text-left"
 				variant="link"
-				onclick={() => {
-					onClickStop(p.name, p.stopId!, new Date(timestamp));
-				}}
+				onclick={() => onClickStop(p.name, p.stopId!, new Date(timestamp))}
 			>
 				{p.name}
 			</Button>
@@ -88,6 +87,9 @@
 	{@const stepsWithElevation = l.steps?.filter(
 		(s: StepInstruction) => s.elevationUp || s.elevationDown
 	)}
+	{@const stepsWithToll = l.steps?.filter((s: StepInstruction) => s.toll)}
+	{@const stepsWithAccessRestriction = l.steps?.filter((s: StepInstruction) => s.accessRestriction)}
+
 	<div class="py-12 pl-8 flex flex-col gap-y-4 text-muted-foreground">
 		<span class="ml-6">
 			{formatDurationSec(l.duration)}
@@ -118,6 +120,22 @@
 						0
 					)} m
 				</div>
+			</div>
+		{/if}
+		{#if stepsWithToll && stepsWithToll.length > 0}
+			<div class="ml-6 flex items-center gap-2 text-sm text-orange-500">
+				<DollarSign class="size-4" />
+				{t.toll}
+			</div>
+		{/if}
+		{#if stepsWithAccessRestriction && stepsWithAccessRestriction.length > 0}
+			<div class="ml-6 flex items-center gap-2 text-sm text-orange-500">
+				<CircleX class="size-4" />
+				{t.accessRestriction}
+				({stepsWithAccessRestriction
+					.map((s) => s.accessRestriction)
+					.filter((value, index, array) => array.indexOf(value) === index)
+					.join(', ')})
 			</div>
 		{/if}
 	</div>

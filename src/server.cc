@@ -16,7 +16,6 @@
 #include "motis/endpoints/adr/geocode.h"
 #include "motis/endpoints/adr/reverse_geocode.h"
 #include "motis/endpoints/elevators.h"
-#include "motis/endpoints/footpaths.h"
 #include "motis/endpoints/graph.h"
 #include "motis/endpoints/initial.h"
 #include "motis/endpoints/levels.h"
@@ -32,6 +31,7 @@
 #include "motis/endpoints/routing.h"
 #include "motis/endpoints/stop_times.h"
 #include "motis/endpoints/tiles.h"
+#include "motis/endpoints/transfers.h"
 #include "motis/endpoints/trip.h"
 #include "motis/endpoints/update_elevator.h"
 #include "motis/gbfs/update.h"
@@ -77,7 +77,7 @@ int server(data d, config const& c, std::string_view const motis_version) {
   POST<ep::osr_routing>(qr, "/api/route", d);
   POST<ep::platforms>(qr, "/api/platforms", d);
   POST<ep::graph>(qr, "/api/graph", d);
-  GET<ep::footpaths>(qr, "/api/debug/footpaths", d);
+  GET<ep::transfers>(qr, "/api/debug/transfers", d);
   GET<ep::flex_locations>(qr, "/api/debug/flex", d);
   GET<ep::levels>(qr, "/api/v1/map/levels", d);
   GET<ep::initial>(qr, "/api/v1/map/initial", d);

@@ -267,9 +267,12 @@ export type PedestrianProfile = 'FOOT' | 'WHEELCHAIR';
  * - `NIGHT_RAIL`: long distance night trains
  * - `REGIONAL_FAST_RAIL`: regional express routes that skip low traffic stops to be faster
  * - `REGIONAL_RAIL`: regional train
+ * - `CABLE_CAR`: Cable tram. Used for street-level rail cars where the cable runs beneath the vehicle (e.g., cable car in San Francisco).
+ * - `FUNICULAR`: Funicular. Any rail system designed for steep inclines.
+ * - `AREAL_LIFT`: Aerial lift, suspended cable car (e.g., gondola lift, aerial tramway). Cable transport where cabins, cars, gondolas or open chairs are suspended by means of one or more cables.
  *
  */
-export type Mode = 'WALK' | 'BIKE' | 'RENTAL' | 'CAR' | 'CAR_PARKING' | 'ODM' | 'FLEX' | 'TRANSIT' | 'TRAM' | 'SUBWAY' | 'FERRY' | 'AIRPLANE' | 'METRO' | 'BUS' | 'COACH' | 'RAIL' | 'HIGHSPEED_RAIL' | 'LONG_DISTANCE' | 'NIGHT_RAIL' | 'REGIONAL_FAST_RAIL' | 'REGIONAL_RAIL' | 'OTHER';
+export type Mode = 'WALK' | 'BIKE' | 'RENTAL' | 'CAR' | 'CAR_PARKING' | 'ODM' | 'FLEX' | 'TRANSIT' | 'TRAM' | 'SUBWAY' | 'FERRY' | 'AIRPLANE' | 'METRO' | 'BUS' | 'COACH' | 'RAIL' | 'HIGHSPEED_RAIL' | 'LONG_DISTANCE' | 'NIGHT_RAIL' | 'REGIONAL_FAST_RAIL' | 'REGIONAL_RAIL' | 'CABLE_CAR' | 'FUNICULAR' | 'AREAL_LIFT' | 'OTHER';
 
 /**
  * - `NORMAL` - latitude / longitude coordinate or address
@@ -569,6 +572,16 @@ export type StepInstruction = {
      */
     area: boolean;
     /**
+     * Indicates that a fee must be paid by general traffic to use a road, road bridge or road tunnel.
+     */
+    toll?: boolean;
+    /**
+     * Experimental. Indicates whether access to this part of the route is restricted.
+     * See: https://wiki.openstreetmap.org/wiki/Conditional_restrictions
+     *
+     */
+    accessRestriction?: string;
+    /**
      * incline in meters across this path segment
      */
     elevationUp?: number;
@@ -849,37 +862,37 @@ export type Itinerary = {
 };
 
 /**
- * footpath from one location to another
+ * transfer from one location to another
  */
-export type Footpath = {
+export type Transfer = {
     to: Place;
     /**
-     * optional; missing if the GTFS did not contain a footpath
-     * footpath duration in minutes according to GTFS (+heuristics)
+     * optional; missing if the GTFS did not contain a transfer
+     * transfer duration in minutes according to GTFS (+heuristics)
      *
      */
     default?: number;
     /**
      * optional; missing if no path was found (timetable / osr)
-     * footpath duration in minutes for the foot profile
+     * transfer duration in minutes for the foot profile
      *
      */
     foot?: number;
     /**
      * optional; missing if no path was found with foot routing
-     * footpath duration in minutes for the foot profile
+     * transfer duration in minutes for the foot profile
      *
      */
     footRouted?: number;
     /**
      * optional; missing if no path was found with the wheelchair profile
-     * footpath duration in minutes for the wheelchair profile
+     * transfer duration in minutes for the wheelchair profile
      *
      */
     wheelchair?: number;
     /**
      * optional; missing if no path was found with the wheelchair profile
-     * footpath duration in minutes for the wheelchair profile
+     * transfer duration in minutes for the wheelchair profile
      *
      */
     wheelchairRouted?: number;
@@ -889,6 +902,12 @@ export type Footpath = {
      *
      */
     wheelchairUsesElevator?: boolean;
+    /**
+     * optional; missing if no path was found with car routing
+     * transfer duration in minutes for the car profile
+     *
+     */
+    car?: number;
 };
 
 export type PlanData = {
@@ -1815,7 +1834,7 @@ export type LevelsResponse = (Array<(number)>);
 
 export type LevelsError = unknown;
 
-export type FootpathsData = {
+export type TransfersData = {
     query: {
         /**
          * location id
@@ -1824,12 +1843,24 @@ export type FootpathsData = {
     };
 };
 
-export type FootpathsResponse = ({
+export type TransfersResponse = ({
     place: Place;
     /**
-     * all outgoing footpaths of this location
+     * true if the server has foot transfers computed
      */
-    footpaths: Array<Footpath>;
+    hasFootTransfers: boolean;
+    /**
+     * true if the server has wheelchair transfers computed
+     */
+    hasWheelchairTransfers?: boolean;
+    /**
+     * true if the server has car transfers computed
+     */
+    hasCarTransfers: boolean;
+    /**
+     * all outgoing transfers of this location
+     */
+    transfers: Array<Transfer>;
 });
 
-export type FootpathsError = unknown;
+export type TransfersError = unknown;

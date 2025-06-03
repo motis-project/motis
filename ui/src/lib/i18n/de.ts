@@ -68,7 +68,7 @@ const translations: Translations = {
 	BIKE: 'Fahrrad',
 	RENTAL: 'Sharing',
 	CAR: 'Auto',
-	CAR_PARKING: 'Car parking',
+	CAR_PARKING: 'P+R Park & Ride',
 	TRANSIT: 'ÖPV',
 	TRAM: 'Tram',
 	SUBWAY: 'U-Bahn',
@@ -94,11 +94,7 @@ const translations: Translations = {
 		maxPostTransitTime: 'Max. Nachlaufzeit',
 		maxDirectTime: 'Max. Direktzeit'
 	},
-	elevationCosts: {
-		NONE: 'Keine Umwege',
-		LOW: 'Kleine Umwege',
-		HIGH: 'Große Umwege'
-	},
+	elevationCosts: { NONE: 'Keine Umwege', LOW: 'Kleine Umwege', HIGH: 'Große Umwege' },
 	RENTAL_BICYCLE: 'Bikesharing',
 	RENTAL_CARGO_BICYCLE: 'Lastenrad Sharing',
 	RENTAL_CAR: 'Car Sharing',
@@ -106,7 +102,12 @@ const translations: Translations = {
 	RENTAL_SCOOTER_STANDING: 'Scooter Sharing',
 	RENTAL_SCOOTER_SEATED: 'Sitzroller Sharing',
 	RENTAL_OTHER: 'Anderes sharing Fahrzeug',
-	incline: 'Steigung'
+	incline: 'Steigung',
+	CABLE_CAR: 'Seilbahn',
+	FUNICULAR: 'Standseilbahn',
+	AREAL_LIFT: 'Luftseilbahn',
+	toll: 'Achtung! Mautpflichtige Straße.',
+	accessRestriction: 'Kein Zugang'
 };
 
 export default translations;

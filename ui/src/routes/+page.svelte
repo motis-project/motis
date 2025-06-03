@@ -64,6 +64,7 @@
 
 	const hasDebug = urlParams && urlParams.has('debug');
 	const hasDark = urlParams && urlParams.has('dark');
+	const hasLight = urlParams && urlParams.has('light');
 	const isSmallScreen = browser && window.innerWidth < 768;
 	let activeTab = $state('connections');
 	let dataAttributionLink: string | undefined = $state(undefined);
@@ -71,7 +72,7 @@
 	let last_selected_itinerary: Itinerary | undefined = undefined;
 
 	let theme: 'light' | 'dark' =
-		(hasDark ? 'dark' : undefined) ??
+		(hasDark ? 'dark' : hasLight ? 'light' : undefined) ??
 		(browser && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
 			? 'dark'
 			: 'light');

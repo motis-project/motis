@@ -223,7 +223,7 @@ void init_pt(std::vector<n::routing::start>& rides,
     return;
   }
 
-  auto offsets = r.get_offsets(l, dir, {api::ModeEnum::ODM}, std::nullopt,
+  auto offsets = r.get_offsets(rtt, l, dir, {api::ModeEnum::ODM}, std::nullopt,
                                std::nullopt, std::nullopt, false,
                                query.pedestrianProfile_, query.elevationCosts_,
                                max, query.maxMatchingDistance_, gbfs_rd);
@@ -603,7 +603,7 @@ api::plan_response meta_router::run() {
   auto const qf = query_factory{
       .base_query_ = get_base_query(context_intvl),
       .start_walk_ = r_.get_offsets(
-          start_,
+          rtt_, start_,
           query_.arriveBy_ ? osr::direction::kBackward
                            : osr::direction::kForward,
           start_modes_, start_form_factors_, start_propulsion_types_,
@@ -612,7 +612,7 @@ api::plan_response meta_router::run() {
           std::chrono::seconds{query_.maxPreTransitTime_},
           query_.maxMatchingDistance_, gbfs_rd_),
       .dest_walk_ = r_.get_offsets(
-          dest_,
+          rtt_, dest_,
           query_.arriveBy_ ? osr::direction::kForward
                            : osr::direction::kBackward,
           dest_modes_, dest_form_factors_, dest_propulsion_types_,
@@ -621,14 +621,14 @@ api::plan_response meta_router::run() {
           std::chrono::seconds{query_.maxPostTransitTime_},
           query_.maxMatchingDistance_, gbfs_rd_),
       .td_start_walk_ = r_.get_td_offsets(
-          e_, start_,
+          rtt_, e_, start_,
           query_.arriveBy_ ? osr::direction::kBackward
                            : osr::direction::kForward,
           start_modes_, query_.pedestrianProfile_, query_.elevationCosts_,
           query_.maxMatchingDistance_,
           std::chrono::seconds{query_.maxPreTransitTime_}, context_intvl),
       .td_dest_walk_ = r_.get_td_offsets(
-          e_, dest_,
+          rtt_, e_, dest_,
           query_.arriveBy_ ? osr::direction::kForward
                            : osr::direction::kBackward,
           dest_modes_, query_.pedestrianProfile_, query_.elevationCosts_,
@@ -751,6 +751,7 @@ api::plan_response meta_router::run() {
                     r_.w_, r_.l_, r_.pl_, *tt_, *r_.tags_, r_.fa_, e_, rtt_,
                     r_.matches_, r_.elevations_, r_.shapes_, gbfs_rd_, j,
                     start_, dest_, cache, ep::blocked.get(),
+                    query_.requireCarTransport_ && query_.useRoutedTransfers_,
                     query_.pedestrianProfile_, query_.elevationCosts_,
                     query_.detailedTransfers_, query_.withFares_,
                     r_.config_.timetable_.value().max_matching_distance_,

@@ -297,15 +297,18 @@ export const ModeSchema = {
   - \`BUS\`: short distance buses (does not include \`COACH\`)
   - \`COACH\`: long distance buses (does not include \`BUS\`)
   - \`RAIL\`: translates to \`HIGHSPEED_RAIL,LONG_DISTANCE_RAIL,NIGHT_RAIL,REGIONAL_RAIL,REGIONAL_FAST_RAIL\`
-  - \`METRO\`: metro trains
+  - \`METRO\`: metro trains 
   - \`HIGHSPEED_RAIL\`: long distance high speed trains (e.g. TGV)
   - \`LONG_DISTANCE\`: long distance inter city trains
   - \`NIGHT_RAIL\`: long distance night trains
   - \`REGIONAL_FAST_RAIL\`: regional express routes that skip low traffic stops to be faster
   - \`REGIONAL_RAIL\`: regional train
+  - \`CABLE_CAR\`: Cable tram. Used for street-level rail cars where the cable runs beneath the vehicle (e.g., cable car in San Francisco).
+  - \`FUNICULAR\`: Funicular. Any rail system designed for steep inclines.
+  - \`AREAL_LIFT\`: Aerial lift, suspended cable car (e.g., gondola lift, aerial tramway). Cable transport where cabins, cars, gondolas or open chairs are suspended by means of one or more cables.
 `,
     type: 'string',
-    enum: ['WALK', 'BIKE', 'RENTAL', 'CAR', 'CAR_PARKING', 'ODM', 'FLEX', 'TRANSIT', 'TRAM', 'SUBWAY', 'FERRY', 'AIRPLANE', 'METRO', 'BUS', 'COACH', 'RAIL', 'HIGHSPEED_RAIL', 'LONG_DISTANCE', 'NIGHT_RAIL', 'REGIONAL_FAST_RAIL', 'REGIONAL_RAIL', 'OTHER']
+    enum: ['WALK', 'BIKE', 'RENTAL', 'CAR', 'CAR_PARKING', 'ODM', 'FLEX', 'TRANSIT', 'TRAM', 'SUBWAY', 'FERRY', 'AIRPLANE', 'METRO', 'BUS', 'COACH', 'RAIL', 'HIGHSPEED_RAIL', 'LONG_DISTANCE', 'NIGHT_RAIL', 'REGIONAL_FAST_RAIL', 'REGIONAL_RAIL', 'CABLE_CAR', 'FUNICULAR', 'AREAL_LIFT', 'OTHER']
 } as const;
 
 export const VertexTypeSchema = {
@@ -676,6 +679,16 @@ This step is on an open area, such as a plaza or train platform,
 and thus the directions should say something like "cross"
 `,
             type: 'boolean'
+        },
+        toll: {
+            description: 'Indicates that a fee must be paid by general traffic to use a road, road bridge or road tunnel.',
+            type: 'boolean'
+        },
+        accessRestriction: {
+            description: `Experimental. Indicates whether access to this part of the route is restricted.
+See: https://wiki.openstreetmap.org/wiki/Conditional_restrictions
+`,
+            type: 'string'
         },
         elevationUp: {
             type: 'integer',
@@ -1075,8 +1088,8 @@ export const ItinerarySchema = {
     }
 } as const;
 
-export const FootpathSchema = {
-    description: 'footpath from one location to another',
+export const TransferSchema = {
+    description: 'transfer from one location to another',
     type: 'object',
     required: ['to'],
     properties: {
@@ -1085,38 +1098,44 @@ export const FootpathSchema = {
         },
         default: {
             type: 'number',
-            description: `optional; missing if the GTFS did not contain a footpath
-footpath duration in minutes according to GTFS (+heuristics)
+            description: `optional; missing if the GTFS did not contain a transfer
+transfer duration in minutes according to GTFS (+heuristics)
 `
         },
         foot: {
             type: 'number',
             description: `optional; missing if no path was found (timetable / osr)
-footpath duration in minutes for the foot profile
+transfer duration in minutes for the foot profile
 `
         },
         footRouted: {
             type: 'number',
             description: `optional; missing if no path was found with foot routing
-footpath duration in minutes for the foot profile
+transfer duration in minutes for the foot profile
 `
         },
         wheelchair: {
             type: 'number',
             description: `optional; missing if no path was found with the wheelchair profile 
-footpath duration in minutes for the wheelchair profile
+transfer duration in minutes for the wheelchair profile
 `
         },
         wheelchairRouted: {
             type: 'number',
             description: `optional; missing if no path was found with the wheelchair profile
-footpath duration in minutes for the wheelchair profile
+transfer duration in minutes for the wheelchair profile
 `
         },
         wheelchairUsesElevator: {
             type: 'boolean',
             description: `optional; missing if no path was found with the wheelchair profile
 true if the wheelchair path uses an elevator
+`
+        },
+        car: {
+            type: 'number',
+            description: `optional; missing if no path was found with car routing
+transfer duration in minutes for the car profile
 `
         }
     }

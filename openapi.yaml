@@ -1441,12 +1441,12 @@ paths:
                 items:
                   type: number
 
-  /api/debug/footpaths:
+  /api/debug/transfers:
     get:
       tags:
         - debug
-      summary: Prints all footpaths of a timetable location (track, bus stop, etc.)
-      operationId: footpaths
+      summary: Prints all transfers of a timetable location (track, bus stop, etc.)
+      operationId: transfers
       parameters:
         - name: id
           in: query
@@ -1456,22 +1456,34 @@ paths:
             type: string
       responses:
         '200':
-          description: list of outgoing footpaths of this location
+          description: list of outgoing transfers of this location
           content:
             application/json:
               schema:
                 type: object
                 required:
                   - place
-                  - footpaths
+                  - hasFootTransfers
+                  - hasWheechairTransfers
+                  - hasCarTransfers
+                  - transfers
                 properties:
                   place:
                     $ref: '#/components/schemas/Place'
-                  footpaths:
-                    description: all outgoing footpaths of this location
+                  hasFootTransfers:
+                    type: boolean
+                    description: true if the server has foot transfers computed
+                  hasWheelchairTransfers:
+                    type: boolean
+                    description: true if the server has wheelchair transfers computed
+                  hasCarTransfers:
+                    type: boolean
+                    description: true if the server has car transfers computed
+                  transfers:
+                    description: all outgoing transfers of this location
                     type: array
                     items:
-                      $ref: '#/components/schemas/Footpath'
+                      $ref: '#/components/schemas/Transfer'
 
 components:
   schemas:
@@ -1764,12 +1776,15 @@ components:
           - `BUS`: short distance buses (does not include `COACH`)
           - `COACH`: long distance buses (does not include `BUS`)
           - `RAIL`: translates to `HIGHSPEED_RAIL,LONG_DISTANCE_RAIL,NIGHT_RAIL,REGIONAL_RAIL,REGIONAL_FAST_RAIL`
-          - `METRO`: metro trains
+          - `METRO`: metro trains 
           - `HIGHSPEED_RAIL`: long distance high speed trains (e.g. TGV)
           - `LONG_DISTANCE`: long distance inter city trains
           - `NIGHT_RAIL`: long distance night trains
           - `REGIONAL_FAST_RAIL`: regional express routes that skip low traffic stops to be faster
           - `REGIONAL_RAIL`: regional train
+          - `CABLE_CAR`: Cable tram. Used for street-level rail cars where the cable runs beneath the vehicle (e.g., cable car in San Francisco).
+          - `FUNICULAR`: Funicular. Any rail system designed for steep inclines.
+          - `AREAL_LIFT`: Aerial lift, suspended cable car (e.g., gondola lift, aerial tramway). Cable transport where cabins, cars, gondolas or open chairs are suspended by means of one or more cables.
       type: string
       enum:
         # === Street ===
@@ -1795,6 +1810,9 @@ components:
         - NIGHT_RAIL
         - REGIONAL_FAST_RAIL
         - REGIONAL_RAIL
+        - CABLE_CAR
+        - FUNICULAR
+        - AREAL_LIFT
         - OTHER
 
     VertexType:
@@ -2140,6 +2158,14 @@ components:
             This step is on an open area, such as a plaza or train platform,
             and thus the directions should say something like "cross"
           type: boolean
+        toll:
+          description: Indicates that a fee must be paid by general traffic to use a road, road bridge or road tunnel.
+          type: boolean
+        accessRestriction:
+          description: |
+            Experimental. Indicates whether access to this part of the route is restricted.
+            See: https://wiki.openstreetmap.org/wiki/Conditional_restrictions
+          type: string
         elevationUp:
           type: integer
           description: incline in meters across this path segment
@@ -2490,8 +2516,8 @@ components:
           items:
             $ref: '#/components/schemas/FareTransfer'
 
-    Footpath:
-      description: footpath from one location to another
+    Transfer:
+      description: transfer from one location to another
       type: object
       required:
         - to
@@ -2501,30 +2527,35 @@ components:
         default:
           type: number
           description: |
-            optional; missing if the GTFS did not contain a footpath
-            footpath duration in minutes according to GTFS (+heuristics)
+            optional; missing if the GTFS did not contain a transfer
+            transfer duration in minutes according to GTFS (+heuristics)
         foot:
           type: number
           description: |
             optional; missing if no path was found (timetable / osr)
-            footpath duration in minutes for the foot profile
+            transfer duration in minutes for the foot profile
         footRouted:
           type: number
           description: |
             optional; missing if no path was found with foot routing
-            footpath duration in minutes for the foot profile
+            transfer duration in minutes for the foot profile
         wheelchair:
           type: number
           description: |
             optional; missing if no path was found with the wheelchair profile 
-            footpath duration in minutes for the wheelchair profile
+            transfer duration in minutes for the wheelchair profile
         wheelchairRouted:
           type: number
           description: |
             optional; missing if no path was found with the wheelchair profile
-            footpath duration in minutes for the wheelchair profile
+            transfer duration in minutes for the wheelchair profile
         wheelchairUsesElevator:
           type: boolean
           description: |
             optional; missing if no path was found with the wheelchair profile
             true if the wheelchair path uses an elevator
+        car:
+          type: number
+          description: |
+            optional; missing if no path was found with car routing
+            transfer duration in minutes for the car profile
