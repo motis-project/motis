@@ -1,12 +1,12 @@
 <script lang="ts">
-	import AddressTypeahead from '$lib/AddressTypeahead.svelte';
-	import Button from '$lib/components/ui/button/button.svelte';
-	import { posToLocation, type Location } from '$lib/Location';
 	import { t } from '$lib/i18n/translation';
-	import { Label } from '$lib/components/ui/label';
-	import * as RadioGroup from '$lib/components/ui/radio-group';
-	import LocateFixed from 'lucide-svelte/icons/locate-fixed';
 	import { untrack } from 'svelte';
+	import { Slider } from 'bits-ui';
+	import LocateFixed from 'lucide-svelte/icons/locate-fixed';
+	import maplibregl from 'maplibre-gl';
+	import * as RadioGroup from '$lib/components/ui/radio-group';
+	import Button from '$lib/components/ui/button/button.svelte';
+	import { Label } from '$lib/components/ui/label';
 	import {
 		oneToAll,
 		type ElevationCosts,
@@ -14,13 +14,14 @@
 		type OneToAllResponse,
 		type PedestrianProfile,
 		type ReachablePlace
-	} from './api/openapi';
-	import { lngLatToStr } from '$lib/lngLatToStr';
-	import DateInput from '$lib/DateInput.svelte';
-	import { prePostModesToModes, type PrePostDirectMode, type TransitMode } from './Modes';
-	import { formatDurationSec } from '$lib/formatDuration';
+	} from '$lib/api/openapi';
+	import AddressTypeahead from '$lib/AddressTypeahead.svelte';
 	import AdvancedOptions from '$lib/AdvancedOptions.svelte';
-	import IsochronesStyle from '$lib/IsochronesStyle.svelte';
+	import DateInput from '$lib/DateInput.svelte';
+	import { posToLocation, type Location } from '$lib/Location';
+	import { formatDurationSec } from '$lib/formatDuration';
+	import { lngLatToStr } from '$lib/lngLatToStr';
+	import { prePostModesToModes, type PrePostDirectMode, type TransitMode } from '$lib/Modes';
 	import { type IsochronesPos } from '$lib/map/Isochrones.svelte';
 
 	const toPlaceString = (l: Location) => {
@@ -38,7 +39,7 @@
 
 	let {
 		one = $bindable(),
-		// maxTravelTime = $bindable(),
+		maxTravelTime = $bindable(),
 		geocodingBiasPlace,
 		isochronesData = $bindable(),
 		time = $bindable(),
@@ -59,7 +60,7 @@
 		opacity = $bindable()
 	}: {
 		one: Location;
-		// maxTravelTime: string;
+		maxTravelTime: number;
 		geocodingBiasPlace?: maplibregl.LngLatLike;
 		isochronesData: IsochronesPos[];
 		time: Date;
@@ -96,10 +97,7 @@
 	const possibleMaxTravelTimes = minutesToSeconds([
 		1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 75, 80, 90, 120, 150, 180, 210, 240
 	]).map((s) => ({ value: s.toString(), label: formatDurationSec(s) }));
-	const possiblePrePostDurations = minutesToSeconds([1, 5, 10, 15, 20, 25, 30, 45, 60]);
-	let expanded = $state<boolean>(false);
 
-	let maxTravelTime = $state(45 * 60);
 	let oneItems = $state<Array<Location>>([]);
 
 	let lastSearchDir = arriveBy ? 'arrival' : 'departure';
@@ -183,7 +181,27 @@
 </script>
 
 {#snippet additionalComponents()}
-	<IsochronesStyle bind:value={opacity} bind:color />
+	<div class="grid grid-cols-[1fr_2fr_1fr] items-center gap-2">
+		<div class="text-sm">
+			{t.isochronesStyling}
+		</div>
+		<Slider.Root
+			type="single"
+			min={0}
+			max={1000}
+			bind:value={opacity}
+			class="relative flex w-full touch-none select-none items-center"
+		>
+			<span class="bg-dark-10 relative h-2 w-full grow cursor-pointer overflow-hidden rounded-full">
+				<Slider.Range class="bg-foreground absolute h-full" />
+			</span>
+			<Slider.Thumb
+				index={0}
+				class="border-border-input bg-background hover:border-dark-40 focus-visible:ring-foreground dark:bg-foreground dark:shadow-card focus-visible:outline-hidden block size-[25px] cursor-pointer rounded-full border shadow-sm transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50"
+			/>
+		</Slider.Root>
+		<input class="flex right-0 align-right" type="color" bind:value={color} />
+	</div>
 {/snippet}
 
 <div id="isochrones-searchmask-container" class="flex flex-col space-y-4 p-4 relative">

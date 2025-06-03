@@ -1,8 +1,8 @@
 <script lang="ts">
+	import bbox from '@turf/bbox';
 	import circle from '@turf/circle';
-	import { bbox } from '@turf/bbox';
 	import maplibregl, { CanvasSource, type LngLatBoundsLike, Map } from 'maplibre-gl';
-	import type { PrePostDirectMode, TransitMode } from '$lib/Modes';
+	import type { PrePostDirectMode } from '$lib/Modes';
 
 	export interface IsochronesPos {
 		lat: number;
@@ -49,7 +49,7 @@
 				? 0.0008 // 0.8 meters per second
 				: 0.0012 // 1.2 meters per second
 	);
-	const box2 = $derived(
+	const boundingBox = $derived(
 		maplibregl.LngLatBounds.convert(
 			bounds ?? [
 				[0, 0],
@@ -58,21 +58,25 @@
 		)
 	);
 	const boxCoords: boxCoordsType = $derived([
-		[box2._sw.lng, box2._ne.lat],
-		[box2._ne.lng, box2._ne.lat],
-		[box2._ne.lng, box2._sw.lat],
-		[box2._sw.lng, box2._sw.lat]
+		[boundingBox._sw.lng, boundingBox._ne.lat],
+		[boundingBox._ne.lng, boundingBox._ne.lat],
+		[boundingBox._ne.lng, boundingBox._sw.lat],
+		[boundingBox._sw.lng, boundingBox._sw.lat]
 	]);
 	function reachableKilometers(pos: IsochronesPos) {
 		return Math.min(pos.seconds, maxAllTime) * kilometersPerSecond;
 	}
 	function transform(pos: number[], dimensions: number[]) {
-		const x = Math.round(((pos[0] - box2._sw.lng) / (box2._ne.lng - box2._sw.lng)) * dimensions[0]);
-		const y = Math.round(((box2._ne.lat - pos[1]) / (box2._ne.lat - box2._sw.lat)) * dimensions[1]);
+		const x = Math.round(
+			((pos[0] - boundingBox._sw.lng) / (boundingBox._ne.lng - boundingBox._sw.lng)) * dimensions[0]
+		);
+		const y = Math.round(
+			((boundingBox._ne.lat - pos[1]) / (boundingBox._ne.lat - boundingBox._sw.lat)) * dimensions[1]
+		);
 		return [x, y];
 	}
 
-	let circles3 = $state<CircleType[] | undefined>(undefined);
+	let circles = $state<CircleType[] | undefined>(undefined);
 	$effect(() => {
 		if (
 			!active ||
@@ -80,7 +84,7 @@
 		) {
 			return;
 		}
-		circles3 = isochronesData.map((data) => {
+		circles = isochronesData.map((data) => {
 			const r = reachableKilometers(data);
 			let c = circle([data.lng, data.lat], r, {
 				// steps: 64,
@@ -100,12 +104,15 @@
 		}
 		const b = circle.bbox; // [minX, minY, maxX, maxY]
 		return (
-			box2._sw.lat <= b[3] && b[1] <= box2._ne.lat && box2._sw.lng <= b[2] && b[0] <= box2._ne.lat
+			boundingBox._sw.lat <= b[3] &&
+			b[1] <= boundingBox._ne.lat &&
+			boundingBox._sw.lng <= b[2] &&
+			b[0] <= boundingBox._ne.lat
 		);
 	}
 
 	$effect(() => {
-		if (!map || !circles3) {
+		if (!map || !circles) {
 			return;
 		}
 		if (!loaded) {
@@ -146,7 +153,7 @@
 		ctx.fillStyle = color;
 		ctx.clearRect(0, 0, dimensions[0], dimensions[1]);
 
-		circles3.filter(is_visible).forEach((c) => {
+		circles.filter(is_visible).forEach((c) => {
 			ctx.save(); // Store canvas state
 
 			const b = c.bbox!; // Existence checked in filter()

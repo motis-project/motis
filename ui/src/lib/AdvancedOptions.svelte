@@ -83,6 +83,7 @@
 		360 * 60
 	];
 	const possiblePrePostDurations = [
+		1 * 60,
 		5 * 60,
 		10 * 60,
 		15 * 60,

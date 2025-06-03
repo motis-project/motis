@@ -172,6 +172,7 @@
 	let elevationCosts = $state<ElevationCosts>(
 		(urlParams?.get('elevationCosts') ?? 'NONE') as ElevationCosts
 	);
+	let maxTravelTime = $state<number>(parseIntOr(urlParams?.get('maxTravelTime') ?? '', 45 * 60));
 	let maxPreTransitTime = $state<number>(
 		parseIntOr(urlParams?.get('maxPreTransitTime') ?? '', defaultQuery.maxPreTransitTime)
 	);
@@ -191,8 +192,6 @@
 		urlParams?.get('ignoreDirectRentalReturnConstraints') == 'true'
 	);
 	let slowDirect = $state(urlParams?.get('slowDirect') == 'true');
-	// Parameters for isochrones
-	let maxTravelTime = $state(urlParams?.get('maxTravelTime') ?? '45');
 
 	let isochronesData = $state<IsochronesPos[]>([]);
 
@@ -422,6 +421,7 @@
 						<Card class="overflow-y-auto overflow-x-hidden bg-background rounded-lg">
 							<IsochronesMask
 								bind:one
+								{maxTravelTime}
 								geocodingBiasPlace={center}
 								bind:isochronesData
 								bind:time

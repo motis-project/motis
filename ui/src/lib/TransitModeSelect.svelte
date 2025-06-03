@@ -1,8 +1,8 @@
 <script lang="ts">
-	import * as Select from '$lib/components/ui/select';
-	import BusFront from 'lucide-svelte/icons/bus-front';
-	import { possibleTransitModes, type TransitMode } from './Modes';
 	import { t } from '$lib/i18n/translation';
+	import BusFront from 'lucide-svelte/icons/bus-front';
+	import * as Select from '$lib/components/ui/select';
+	import { possibleTransitModes, type TransitMode } from '$lib/Modes';
 
 	let {
 		transitModes = $bindable()
