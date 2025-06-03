@@ -222,6 +222,19 @@ void mixer::mix(n::pareto_set<nr::journey> const& pt_journeys,
   });
 }
 
+std::vector<nigiri::routing::journey> get_mixer_input(
+    nigiri::pareto_set<nigiri::routing::journey> const& pt_journeys,
+    std::vector<nigiri::routing::journey> const& odm_journeys) {
+  auto input = odm_journeys;
+  for (auto const& j : pt_journeys) {
+    input.emplace_back(j);
+  }
+  utl::sort(input, [](auto const& a, auto const& b) {
+    return a.departure_time() < b.departure_time();
+  });
+  return input;
+}
+
 mixer get_default_mixer() {
   return mixer{.cost_alpha_ = 1.3,
                .prod_alpha_ = 0.4,

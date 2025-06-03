@@ -1,6 +1,6 @@
 #include "gtest/gtest.h"
 
-#include "./mixer_reqs.h"
+#include "motis/odm/mixer_reqs.h"
 
 using namespace std::string_view_literals;
 using namespace motis::odm;

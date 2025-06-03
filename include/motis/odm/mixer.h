@@ -43,6 +43,10 @@ struct mixer {
   std::vector<cost_threshold> transfer_cost_;
 };
 
+std::vector<nigiri::routing::journey> get_mixer_input(
+    nigiri::pareto_set<nigiri::routing::journey> const& pt_journeys,
+    std::vector<nigiri::routing::journey>& odm_journeys);
+
 mixer get_default_mixer();
 
 }  // namespace motis::odm
