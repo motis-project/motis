@@ -26,6 +26,8 @@ export const defaultQuery = {
 	elevationCosts: 'NONE',
 	useRoutedTransfers: false,
 	maxMatchingDistance: 25,
+	maxTransfers: 15,
+	maxTravelTime: 45 * 60,
 	maxPreTransitTime: 900,
 	maxPostTransitTime: 900,
 	maxDirectTime: 1800,

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import X from 'lucide-svelte/icons/x';
 	import { getStyle } from '$lib/map/style';
 	import Map from '$lib/map/Map.svelte';
@@ -8,14 +9,18 @@
 	import { Card } from '$lib/components/ui/card';
 	import {
 		initial,
+		oneToAll,
 		plan,
 		type ElevationCosts,
+		type OneToAllData,
+		type OneToAllResponse,
 		type PlanResponse,
 		type Itinerary,
 		type Mode,
+		type PedestrianProfile,
 		type PlanData,
-		type RentalFormFactor,
-		type PedestrianProfile
+		type ReachablePlace,
+		type RentalFormFactor
 	} from '$lib/api/openapi';
 	import ItineraryList from '$lib/ItineraryList.svelte';
 	import ConnectionDetail from '$lib/ConnectionDetail.svelte';
@@ -123,9 +128,13 @@
 		}
 	};
 
-	function parseIntOr(s: string, d: number) {
-		const v = parseInt(s);
-		return isNaN(v) ? d : v;
+	function parseIntOr(s: string | null | undefined, d: number) {
+		if (s) {
+			const v = parseInt(s);
+			return isNaN(v) ? d : v;
+		} else {
+			return d;
+		}
 	}
 
 	let fromMarker = $state<maplibregl.Marker>();
@@ -172,15 +181,20 @@
 	let elevationCosts = $state<ElevationCosts>(
 		(urlParams?.get('elevationCosts') ?? 'NONE') as ElevationCosts
 	);
-	let maxTravelTime = $state<number>(parseIntOr(urlParams?.get('maxTravelTime') ?? '', 45 * 60));
+	let maxTransfers = $state<number>(
+		parseIntOr(urlParams?.get('maxTransfers'), defaultQuery.maxTransfers)
+	);
+	let maxTravelTime = $state<number>(
+		parseIntOr(urlParams?.get('maxTravelTime'), defaultQuery.maxTravelTime)
+	);
 	let maxPreTransitTime = $state<number>(
-		parseIntOr(urlParams?.get('maxPreTransitTime') ?? '', defaultQuery.maxPreTransitTime)
+		parseIntOr(urlParams?.get('maxPreTransitTime'), defaultQuery.maxPreTransitTime)
 	);
 	let maxPostTransitTime = $state<number>(
-		parseIntOr(urlParams?.get('maxPostTransitTime') ?? '', defaultQuery.maxPostTransitTime)
+		parseIntOr(urlParams?.get('maxPostTransitTime'), defaultQuery.maxPostTransitTime)
 	);
 	let maxDirectTime = $state<number>(
-		parseIntOr(urlParams?.get('maxDirectTime') ?? '', defaultQuery.maxDirectTime)
+		parseIntOr(urlParams?.get('maxDirectTime'), defaultQuery.maxDirectTime)
 	);
 	let ignorePreTransitRentalReturnConstraints = $state(
 		urlParams?.get('ignorePreTransitRentalReturnConstraints') == 'true'
@@ -243,6 +257,32 @@
 				} as PlanData)
 			: undefined
 	);
+	let isochronesQuery = $derived(
+		one?.match
+			? ({
+					query: {
+						one: toPlaceString(one),
+						maxTravelTime: Math.ceil(maxTravelTime / 60),
+						time: time.toISOString(),
+						transitModes,
+						maxTransfers,
+						arriveBy,
+						useRoutedTransfers,
+						wheelchair: pedestrianProfile === 'WHEELCHAIR',
+						requireBikeTransport,
+						requireCarTransport,
+						preTransitModes: arriveBy ? undefined : prePostModesToModes(preTransitModes),
+						postTransitModes: arriveBy ? prePostModesToModes(postTransitModes) : undefined,
+						maxPreTransitTime: arriveBy ? undefined : maxPreTransitTime,
+						maxPostTransitTime: arriveBy ? maxPostTransitTime : undefined,
+						elevationCosts,
+						maxMatchingDistance: pedestrianProfile == 'WHEELCHAIR' ? 8 : 250,
+						ignorePreTransitRentalReturnConstraints,
+						ignorePostTransitRentalReturnConstraints
+					}
+				} as OneToAllData)
+			: undefined
+	);
 
 	let searchDebounceTimer: number;
 	let baseResponse = $state<Promise<PlanResponse>>();
@@ -266,6 +306,32 @@
 					true
 				);
 			}, 400);
+		}
+	});
+	let isochronesQueryTimeout: number;
+	$effect(() => {
+		if (isochronesQuery && activeTab == 'isochrones') {
+			clearTimeout(isochronesQueryTimeout);
+			isochronesQueryTimeout = setTimeout(() => {
+				oneToAll(isochronesQuery).then(
+					(r: { data: OneToAllResponse | undefined; error: unknown }) => {
+						if (r.error) {
+							throw new Error(String(r.error));
+						}
+						const all = r.data!.all!.map((p: ReachablePlace) => {
+							return {
+								lat: p.place?.lat,
+								lng: p.place?.lon,
+								seconds: maxTravelTime - 60 * (p.duration ?? 0),
+								name: p.place?.name
+							} as IsochronesPos;
+						});
+						untrack(() => {
+							isochronesData = [...all];
+						});
+					}
+				);
+			}, 60);
 		}
 	});
 
@@ -421,15 +487,15 @@
 						<Card class="overflow-y-auto overflow-x-hidden bg-background rounded-lg">
 							<IsochronesMask
 								bind:one
-								{maxTravelTime}
+								bind:maxTravelTime
 								geocodingBiasPlace={center}
-								bind:isochronesData
 								bind:time
 								bind:useRoutedTransfers
 								bind:pedestrianProfile
 								bind:requireCarTransport
 								bind:requireBikeTransport
 								bind:transitModes
+								bind:maxTransfers
 								bind:preTransitModes
 								bind:postTransitModes
 								bind:maxPreTransitTime

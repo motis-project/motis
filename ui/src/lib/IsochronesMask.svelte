@@ -1,38 +1,19 @@
 <script lang="ts">
 	import { t } from '$lib/i18n/translation';
-	import { untrack } from 'svelte';
 	import { Slider } from 'bits-ui';
 	import LocateFixed from 'lucide-svelte/icons/locate-fixed';
 	import maplibregl from 'maplibre-gl';
 	import * as RadioGroup from '$lib/components/ui/radio-group';
 	import Button from '$lib/components/ui/button/button.svelte';
 	import { Label } from '$lib/components/ui/label';
-	import {
-		oneToAll,
-		type ElevationCosts,
-		type OneToAllData,
-		type OneToAllResponse,
-		type PedestrianProfile,
-		type ReachablePlace
-	} from '$lib/api/openapi';
+	import { type ElevationCosts, type PedestrianProfile } from '$lib/api/openapi';
 	import AddressTypeahead from '$lib/AddressTypeahead.svelte';
 	import AdvancedOptions from '$lib/AdvancedOptions.svelte';
 	import DateInput from '$lib/DateInput.svelte';
 	import { posToLocation, type Location } from '$lib/Location';
 	import { formatDurationSec } from '$lib/formatDuration';
-	import { lngLatToStr } from '$lib/lngLatToStr';
-	import { prePostModesToModes, type PrePostDirectMode, type TransitMode } from '$lib/Modes';
-	import { type IsochronesPos } from '$lib/map/Isochrones.svelte';
+	import type { PrePostDirectMode, TransitMode } from '$lib/Modes';
 
-	const toPlaceString = (l: Location) => {
-		if (l.match?.type === 'STOP') {
-			return l.match.id;
-		} else if (l.match?.level) {
-			return `${lngLatToStr(l.match!)},${l.match.level}`;
-		} else {
-			return `${lngLatToStr(l.match!)},0`;
-		}
-	};
 	const minutesToSeconds = (minutes: number[]) => {
 		return minutes.map((m) => m * 60);
 	};
@@ -41,13 +22,13 @@
 		one = $bindable(),
 		maxTravelTime = $bindable(),
 		geocodingBiasPlace,
-		isochronesData = $bindable(),
 		time = $bindable(),
 		useRoutedTransfers = $bindable(),
 		pedestrianProfile = $bindable(),
 		requireBikeTransport = $bindable(),
 		requireCarTransport = $bindable(),
 		transitModes = $bindable(),
+		maxTransfers = $bindable(),
 		preTransitModes = $bindable(),
 		postTransitModes = $bindable(),
 		maxPreTransitTime = $bindable(),
@@ -62,13 +43,13 @@
 		one: Location;
 		maxTravelTime: number;
 		geocodingBiasPlace?: maplibregl.LngLatLike;
-		isochronesData: IsochronesPos[];
 		time: Date;
 		useRoutedTransfers: boolean;
 		pedestrianProfile: PedestrianProfile;
 		requireBikeTransport: boolean;
 		requireCarTransport: boolean;
 		transitModes: TransitMode[];
+		maxTransfers: number;
 		preTransitModes: PrePostDirectMode[];
 		postTransitModes: PrePostDirectMode[];
 		maxPreTransitTime: number;
@@ -82,7 +63,7 @@
 	} = $props();
 
 	const maxSupportedTransfers = 15;
-	let maxTransfers = $state(maxSupportedTransfers);
+	maxTransfers = Math.min(Math.max(1, maxTransfers), maxSupportedTransfers);
 	const possibleMaxTransfers = [
 		...Array(maxSupportedTransfers)
 			.keys()
@@ -92,7 +73,6 @@
 				label: i.toString()
 			}))
 	];
-	const timeout = 60;
 
 	const possibleMaxTravelTimes = minutesToSeconds([
 		1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 75, 80, 90, 120, 150, 180, 210, 240
@@ -101,60 +81,6 @@
 	let oneItems = $state<Array<Location>>([]);
 
 	let lastSearchDir = arriveBy ? 'arrival' : 'departure';
-
-	let queryTimeout: number;
-
-	let isochronesQuery = $derived(
-		one?.match
-			? ({
-					query: {
-						one: toPlaceString(one),
-						maxTravelTime: Math.ceil(maxTravelTime / 60),
-						time: time.toISOString(),
-						transitModes,
-						maxTransfers,
-						arriveBy,
-						useRoutedTransfers,
-						wheelchair: pedestrianProfile === 'WHEELCHAIR',
-						requireBikeTransport,
-						requireCarTransport,
-						preTransitModes: arriveBy ? undefined : prePostModesToModes(preTransitModes),
-						postTransitModes: arriveBy ? prePostModesToModes(postTransitModes) : undefined,
-						maxPreTransitTime: arriveBy ? undefined : maxPreTransitTime,
-						maxPostTransitTime: arriveBy ? maxPostTransitTime : undefined,
-						elevationCosts,
-						maxMatchingDistance: pedestrianProfile == 'WHEELCHAIR' ? 8 : 250,
-						ignorePreTransitRentalReturnConstraints,
-						ignorePostTransitRentalReturnConstraints
-					}
-				} as OneToAllData)
-			: undefined
-	);
-	$effect(() => {
-		if (isochronesQuery) {
-			clearTimeout(queryTimeout);
-			queryTimeout = setTimeout(() => {
-				oneToAll(isochronesQuery).then(
-					(r: { data: OneToAllResponse | undefined; error: unknown }) => {
-						if (r.error) {
-							throw new Error(String(r.error));
-						}
-						const all = r.data!.all!.map((p: ReachablePlace) => {
-							return {
-								lat: p.place?.lat,
-								lng: p.place?.lon,
-								seconds: maxTravelTime - 60 * (p.duration ?? 0),
-								name: p.place?.name
-							} as IsochronesPos;
-						});
-						untrack(() => {
-							isochronesData = [...all];
-						});
-					}
-				);
-			}, timeout);
-		}
-	});
 
 	const getLocation = () => {
 		if (navigator && navigator.geolocation) {
