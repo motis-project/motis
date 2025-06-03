@@ -6,8 +6,9 @@
 		type LngLatBoundsLike,
 		Map,
 	} from 'maplibre-gl';
+	import type { PrePostDirectMode, TransitMode } from '$lib/Modes';
 
-	interface Pos {
+	export interface IsochronesPos {
 		lat: number;
 		lng: number;
 		seconds: number;
@@ -20,13 +21,19 @@
 		map = $bindable(),
 		bounds = $bindable(),
 		isochronesData,
+		streetModes = $bindable(),
+		wheelchair = $bindable(),
+		maxAllTime = $bindable(),
 		active = $bindable(),
 		color = $bindable(),
 		opacity = $bindable()
 	}: {
 		map: Map | undefined;
 		bounds: LngLatBoundsLike | undefined;
-		isochronesData: Pos[];
+		isochronesData: IsochronesPos[];
+		streetModes: PrePostDirectMode[];
+		wheelchair: boolean;
+		maxAllTime: number;
 		active: boolean;
 		color: string;
 		opacity: number;
@@ -35,9 +42,17 @@
 	const name = 'isochrones-data';
 	let loaded = false;
 
-	let lastData: Pos[] | undefined = undefined;
+	let lastData: IsochronesPos[] | undefined = undefined;
+	let lastAllTime: number = maxAllTime;
+	let lastSpeed: number | undefined = undefined;
 
-	const kilometersPerSecond = 0.001; // 3.6 kilometers per hour
+	const kilometersPerSecond = $derived(
+		streetModes.includes('BIKE')
+			? 0.0038  // 3.8 meters per second
+			: wheelchair
+				? 0.0008  // 0.8 meters per second
+				: 0.0012  // 1.2 meters per second
+	);
 	const box2 = $derived(
 		maplibregl.LngLatBounds.convert(
 			bounds ?? [
@@ -46,14 +61,14 @@
 			]
 		)
 	);
-	const box_coords: boxCoordsType = $derived([
+	const boxCoords: boxCoordsType = $derived([
 		[box2._sw.lng, box2._ne.lat],
 		[box2._ne.lng, box2._ne.lat],
 		[box2._ne.lng, box2._sw.lat],
 		[box2._sw.lng, box2._sw.lat]
 	]);
-	function reachable_kilometers(pos: Pos) {
-		return pos.seconds * kilometersPerSecond;
+	function reachableKilometers(pos: IsochronesPos) {
+		return Math.min(pos.seconds, maxAllTime) * kilometersPerSecond;
 	}
 	function transform(pos: number[], dimensions: number[]) {
 		const x = Math.round(((pos[0] - box2._sw.lng) / (box2._ne.lng - box2._sw.lng)) * dimensions[0]);
@@ -63,11 +78,11 @@
 
 	let circles3 = $state<CircleType[] | undefined>(undefined);
 	$effect(() => {
-		if (!active || lastData == isochronesData) {
+		if (!active || (lastData == isochronesData && lastAllTime == maxAllTime && lastSpeed == kilometersPerSecond)) {
 			return;
 		}
 		circles3 = isochronesData.map((data) => {
-			const r = reachable_kilometers(data);
+			const r = reachableKilometers(data);
 			let c = circle([data.lng, data.lat], r, {
 				// steps: 64,
 				units: 'kilometers'
@@ -76,6 +91,8 @@
 			return c;
 		});
 		lastData = isochronesData;
+		lastAllTime = maxAllTime;
+		lastSpeed = kilometersPerSecond;
 	});
 
 	function is_visible(circle: CircleType) {
@@ -96,7 +113,7 @@
 			map.addSource(name, {
 				type: 'canvas',
 				canvas: 'isochronesCanvas',
-				coordinates: box_coords
+				coordinates: boxCoords
 			});
 			map.addLayer({
 				id: name,
@@ -117,7 +134,7 @@
 
 		const dimensions = map._containerDimensions();
 		const source = map.getSource(name) as CanvasSource;
-		source.setCoordinates(box_coords);
+		source.setCoordinates(boxCoords);
 
 		const canvas = source.canvas;
 		canvas.width = dimensions[0];

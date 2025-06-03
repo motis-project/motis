@@ -15,19 +15,14 @@
 		type PedestrianProfile,
 		type ReachablePlace
 	} from './api/openapi';
-	import { lngLatToStr } from './lngLatToStr';
-	import DateInput from './DateInput.svelte';
+	import { lngLatToStr } from '$lib/lngLatToStr';
+	import DateInput from '$lib/DateInput.svelte';
 	import { prePostModesToModes, type PrePostDirectMode, type TransitMode } from './Modes';
-	import { formatDurationSec } from './formatDuration';
-	import AdvancedOptions from './AdvancedOptions.svelte';
-	import IsochronesStyle from './IsochronesStyle.svelte';
+	import { formatDurationSec } from '$lib/formatDuration';
+	import AdvancedOptions from '$lib/AdvancedOptions.svelte';
+	import IsochronesStyle from '$lib/IsochronesStyle.svelte';
+	import { type IsochronesPos } from '$lib/map/Isochrones.svelte';
 
-	interface IsochronesPos {
-		lat: number;
-		lng: number;
-		seconds: number;
-		name?: string;
-	}
 	const toPlaceString = (l: Location) => {
 		if (l.match?.type === 'STOP') {
 			return l.match.id;
@@ -50,6 +45,10 @@
 		requireBikeTransport = $bindable(),
 		requireCarTransport = $bindable(),
 		transitModes = $bindable(),
+		preTransitModes = $bindable(),
+		postTransitModes = $bindable(),
+		maxPreTransitTime = $bindable(),
+		maxPostTransitTime = $bindable(),
 		arriveBy = $bindable(),
 		elevationCosts = $bindable(),
 		ignorePreTransitRentalReturnConstraints = $bindable(),
@@ -67,6 +66,10 @@
 		requireBikeTransport: boolean;
 		requireCarTransport: boolean;
 		transitModes: TransitMode[];
+		preTransitModes: PrePostDirectMode[];
+		postTransitModes: PrePostDirectMode[];
+		maxPreTransitTime: number;
+		maxPostTransitTime: number;
 		arriveBy: boolean;
 		elevationCosts: ElevationCosts;
 		ignorePreTransitRentalReturnConstraints: boolean;
@@ -93,10 +96,6 @@
 	let expanded = $state<boolean>(false);
 
 	let maxTravelTime = $state(45 * 60);
-	let preTransitModes = $state<PrePostDirectMode[]>(['WALK']);
-	let postTransitModes = $state<PrePostDirectMode[]>(['WALK']);
-	let maxPreTransitTime = $state(15 * 60);
-	let maxPostTransitTime = $state(15 * 60);
 	let oneItems = $state<Array<Location>>([]);
 
 	let lastSearchDir = arriveBy ? 'arrival' : 'departure';

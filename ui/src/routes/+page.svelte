@@ -49,6 +49,7 @@
 	import DeparturesMask from '$lib/DeparturesMask.svelte';
 	import IsochronesMask from '$lib/IsochronesMask.svelte';
 	import Isochrones from '$lib/map/Isochrones.svelte';
+	import { type IsochronesPos } from '$lib/map/Isochrones.svelte';
 	import {
 		getFormFactors,
 		getPrePostDirectModes,
@@ -58,13 +59,6 @@
 	} from '$lib/Modes';
 	import { defaultQuery, omitDefaults } from '$lib/defaults';
 	import { LEVEL_MIN_ZOOM } from '$lib/constants';
-
-	interface IsochronesPos {
-		lat: number;
-		lng: number;
-		seconds: number;
-		name?: string;
-	}
 
 	const urlParams = browser ? new URLSearchParams(window.location.search) : undefined;
 
@@ -435,6 +429,10 @@
 								bind:requireCarTransport
 								bind:requireBikeTransport
 								bind:transitModes
+								bind:preTransitModes
+								bind:postTransitModes
+								bind:maxPreTransitTime
+								bind:maxPostTransitTime
 								bind:arriveBy
 								bind:elevationCosts
 								bind:ignorePreTransitRentalReturnConstraints
@@ -547,6 +545,9 @@
 			{map}
 			{bounds}
 			{isochronesData}
+			streetModes={arriveBy ? preTransitModes : postTransitModes}
+			wheelchair={pedestrianProfile === 'WHEELCHAIR'}
+			maxAllTime={arriveBy ? maxPreTransitTime : maxPostTransitTime}
 			active={activeTab == 'isochrones'}
 			bind:color={isochronesColor}
 			bind:opacity={isochronesOpacity}
