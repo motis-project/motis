@@ -8,7 +8,7 @@
 #include "nigiri/routing/pareto_set.h"
 #include "nigiri/special_stations.h"
 
-#include "motis/odm/mixer.h"
+#include "motis/odm/mixer/mixer.h"
 #include "motis/odm/odm.h"
 #include "motis/odm/prima.h"
 #include "motis/transport_mode_ids.h"

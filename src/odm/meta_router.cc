@@ -39,8 +39,8 @@
 #include "motis/journey_to_response.h"
 #include "motis/metrics_registry.h"
 #include "motis/odm/bounds.h"
-#include "motis/odm/mixer.h"
-#include "motis/odm/mixer_reqs.h"
+#include "motis/odm/mixer/journeys.h"
+#include "motis/odm/mixer/mixer.h"
 #include "motis/odm/odm.h"
 #include "motis/odm/prima.h"
 #include "motis/odm/shorten.h"
@@ -69,7 +69,7 @@ constexpr auto const kWhitelistPath = "/api/whitelist";
 static auto const kReqHeaders = std::map<std::string, std::string>{
     {"Content-Type", "application/json"}, {"Accept", "application/json"}};
 static auto const kMixer = get_default_mixer();
-constexpr auto const kPrintMixerIO = false;
+constexpr auto const kPrintMixerIO = true;
 
 using td_offsets_t =
     n::hash_map<n::location_idx_t, std::vector<n::routing::td_offset>>;
@@ -503,14 +503,7 @@ void meta_router::add_direct() const {
       to_);
 
   for (auto const& d : p->direct_rides_) {
-    p->odm_journeys_.push_back(n::routing::journey{
-        .legs_ = {{n::direction::kForward, from_l, to_l, d.dep_, d.arr_,
-                   n::routing::offset{to_l, std::chrono::abs(d.arr_ - d.dep_),
-                                      kOdmTransportModeId}}},
-        .start_time_ = d.dep_,
-        .dest_time_ = d.arr_,
-        .dest_ = to_l,
-        .transfers_ = 0U});
+    p->odm_journeys_.push_back(make_odm_direct(from_l, to_l, d.dep_, d.arr_));
   }
   n::log(n::log_lvl::debug, "motis.odm", "[whitelisting] added {} direct rides",
          p->direct_rides_.size());

@@ -45,7 +45,7 @@ struct mixer {
 
 std::vector<nigiri::routing::journey> get_mixer_input(
     nigiri::pareto_set<nigiri::routing::journey> const& pt_journeys,
-    std::vector<nigiri::routing::journey>& odm_journeys);
+    std::vector<nigiri::routing::journey> const& odm_journeys);
 
 mixer get_default_mixer();
 

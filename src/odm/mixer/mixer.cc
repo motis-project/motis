@@ -1,4 +1,4 @@
-#include "motis/odm/mixer.h"
+#include "motis/odm/mixer/mixer.h"
 
 #include "utl/overloaded.h"
 
@@ -222,9 +222,9 @@ void mixer::mix(n::pareto_set<nr::journey> const& pt_journeys,
   });
 }
 
-std::vector<nigiri::routing::journey> get_mixer_input(
-    nigiri::pareto_set<nigiri::routing::journey> const& pt_journeys,
-    std::vector<nigiri::routing::journey> const& odm_journeys) {
+std::vector<nr::journey> get_mixer_input(
+    n::pareto_set<nr::journey> const& pt_journeys,
+    std::vector<nr::journey> const& odm_journeys) {
   auto input = odm_journeys;
   for (auto const& j : pt_journeys) {
     input.emplace_back(j);
