@@ -16,7 +16,7 @@ const translations: Translations = {
 	moped: 'Skuter',
 	from: 'Z',
 	to: 'Do',
-	position: 'position',
+	position: 'Position',
 	arrival: 'Przyjazd',
 	departure: 'Odjazd',
 	duration: 'Czas trwania',

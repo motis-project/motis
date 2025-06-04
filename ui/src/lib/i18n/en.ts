@@ -16,7 +16,7 @@ const translations: Translations = {
 	moped: 'Moped',
 	from: 'From',
 	to: 'To',
-	position: 'position',
+	position: 'Position',
 	arrival: 'Arrival',
 	departure: 'Departure',
 	connections: 'Connections',
