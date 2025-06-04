@@ -71,7 +71,7 @@
 	const hasDark = urlParams && urlParams.has('dark');
 	const hasLight = urlParams && urlParams.has('light');
 	const isSmallScreen = browser && window.innerWidth < 768;
-	let activeTab = $state('connections');
+	let activeTab = $state<'connections' | 'departures' | 'isochrones'>('connections');
 	let dataAttributionLink: string | undefined = $state(undefined);
 	let showMap = $state(!isSmallScreen);
 	let last_selected_itinerary: Itinerary | undefined = undefined;
@@ -90,8 +90,6 @@
 	let zoom = $state(15);
 	let bounds = $state<maplibregl.LngLatBoundsLike>();
 	let map = $state<maplibregl.Map>();
-	let isochronesColor = $state<string>('#ffff00');
-	let isochronesOpacity = $state<number>(250);
 
 	onMount(async () => {
 		initial().then((d) => {
@@ -144,7 +142,7 @@
 		parseLocation(urlParams?.get('fromPlace'), urlParams?.get('fromName'))
 	);
 	let to = $state<Location>(parseLocation(urlParams?.get('toPlace'), urlParams?.get('toName')));
-	let one = $state<Location>(parseLocation(urlParams?.get('onePlace'), urlParams?.get('oneName')));
+	let one = $state<Location>(parseLocation(urlParams?.get('one'), urlParams?.get('oneName')));
 	let time = $state<Date>(new Date(urlParams?.get('time') || Date.now()));
 	let arriveBy = $state<boolean>(urlParams?.get('arriveBy') == 'true');
 	let useRoutedTransfers = $state(
@@ -206,6 +204,12 @@
 		urlParams?.get('ignoreDirectRentalReturnConstraints') == 'true'
 	);
 	let slowDirect = $state(urlParams?.get('slowDirect') == 'true');
+	let isochronesColor = $state<string>(
+		urlParams?.get('isochronesColor') ?? defaultQuery.isochronesColor
+	);
+	let isochronesOpacity = $state<number>(
+		parseIntOr(urlParams?.get('isochronesOpacity'), defaultQuery.isochronesOpacity)
+	);
 
 	let isochronesData = $state<IsochronesPos[]>([]);
 
@@ -271,10 +275,10 @@
 						wheelchair: pedestrianProfile === 'WHEELCHAIR',
 						requireBikeTransport,
 						requireCarTransport,
-						preTransitModes: arriveBy ? undefined : prePostModesToModes(preTransitModes),
-						postTransitModes: arriveBy ? prePostModesToModes(postTransitModes) : undefined,
-						maxPreTransitTime: arriveBy ? undefined : maxPreTransitTime,
-						maxPostTransitTime: arriveBy ? maxPostTransitTime : undefined,
+						preTransitModes: prePostModesToModes(preTransitModes),
+						postTransitModes: prePostModesToModes(postTransitModes),
+						maxPreTransitTime: maxPreTransitTime,
+						maxPostTransitTime: maxPostTransitTime,
 						elevationCosts,
 						maxMatchingDistance: pedestrianProfile == 'WHEELCHAIR' ? 8 : 250,
 						ignorePreTransitRentalReturnConstraints,
@@ -330,6 +334,18 @@
 							isochronesData = [...all];
 						});
 					}
+				);
+				const q = isochronesQuery.query;
+				pushStateWithQueryString(
+					{
+						...q,
+						...(q.one == one.label ? {} : { oneName: one.label }),
+						maxTravelTime: q.maxTravelTime * 60,
+						isochronesColor,
+						isochronesOpacity
+					},
+					{},
+					true
 				);
 			}, 60);
 		}
