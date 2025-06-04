@@ -114,6 +114,14 @@ api::Place to_place(n::timetable const* tt,
                                    : std::nullopt;
               };
 
+              // check if description is available, if not, return nullopt
+              auto const get_description = [&](n::location_idx_t const x) {
+                return tt->locations_.descriptions_.at(x).empty()
+                           ? std::nullopt
+                           : std::optional{std::string{
+                                 tt->locations_.descriptions_.at(x).view()}};
+              };
+
               auto const pos = tt->locations_.coordinates_[l];
               auto const p =
                   is_track(tt_l.l_) ? tt->locations_.parents_.at(l) : l;
@@ -124,6 +132,7 @@ api::Place to_place(n::timetable const* tt,
                       .level_ = get_level(w, pl, matches, l),
                       .scheduledTrack_ = get_track(tt_l.scheduled_),
                       .track_ = get_track(tt_l.l_),
+                      .description_ = get_description(tt_l.scheduled_),
                       .vertexType_ = api::VertexTypeEnum::TRANSIT};
             }
           }},
