@@ -272,7 +272,7 @@
 						maxTransfers,
 						arriveBy,
 						useRoutedTransfers,
-						wheelchair: pedestrianProfile === 'WHEELCHAIR',
+						pedestrianProfile,
 						requireBikeTransport,
 						requireCarTransport,
 						preTransitModes: prePostModesToModes(preTransitModes),
