@@ -632,8 +632,8 @@
 			wheelchair={pedestrianProfile === 'WHEELCHAIR'}
 			maxAllTime={arriveBy ? maxPreTransitTime : maxPostTransitTime}
 			active={activeTab == 'isochrones'}
-			bind:color={isochronesColor}
-			bind:opacity={isochronesOpacity}
+			color={isochronesColor}
+			opacity={isochronesOpacity}
 		/>
 
 		<Popup trigger="contextmenu" children={contextMenu} />

@@ -10,19 +10,19 @@
 		seconds: number;
 	}
 
-	type boxCoordsType = [[number, number], [number, number], [number, number], [number, number]];
+	type BoxCoordsType = [[number, number], [number, number], [number, number], [number, number]];
 	type CircleType = ReturnType<typeof circle>;
 
 	let {
-		map = $bindable(),
-		bounds = $bindable(),
+		map,
+		bounds,
 		isochronesData,
-		streetModes = $bindable(),
-		wheelchair = $bindable(),
-		maxAllTime = $bindable(),
-		active = $bindable(),
-		color = $bindable(),
-		opacity = $bindable()
+		streetModes,
+		wheelchair,
+		maxAllTime,
+		active,
+		color,
+		opacity
 	}: {
 		map: Map | undefined;
 		bounds: LngLatBoundsLike | undefined;
@@ -57,7 +57,7 @@
 			]
 		)
 	);
-	const boxCoords: boxCoordsType = $derived([
+	const boxCoords: BoxCoordsType = $derived([
 		[boundingBox._sw.lng, boundingBox._ne.lat],
 		[boundingBox._ne.lng, boundingBox._ne.lat],
 		[boundingBox._ne.lng, boundingBox._sw.lat],
