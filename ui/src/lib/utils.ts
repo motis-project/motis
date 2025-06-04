@@ -14,7 +14,7 @@ const urlParams = browser ? new URLSearchParams(window.location.search) : undefi
 export const getUrlArray = (key: string, defaultValue?: string[]): string[] => {
 	if (urlParams) {
 		const value = urlParams.get(key);
-		if (value) {
+		if (value != null) {
 			return value.split(',').filter((m) => m.length);
 		}
 	}

@@ -48,7 +48,7 @@
 	</div>
 	<Select.Root type="multiple" bind:value={modes}>
 		<Select.Trigger class="flex items-center w-full overflow-hidden" aria-label={label}>
-			{selectedModesLabel}
+			<span>{selectedModesLabel}</span>
 		</Select.Trigger>
 		<Select.Content sideOffset={10}>
 			{#each possibleModes as mode, i (i + mode)}
