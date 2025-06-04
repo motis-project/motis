@@ -1,4 +1,4 @@
-#include "motis/odm/mixer.h"
+#include "motis/odm/mixer/mixer.h"
 
 #include "utl/overloaded.h"
 
@@ -64,11 +64,11 @@ double mixer::cost(nr::journey const& j) const {
             [&](nr::offset const& o) {
               if (o.transport_mode_id_ == kOdmTransportModeId) {
                 return tally(o.duration().count(), taxi_cost_);
-              } else if (o.transport_mode_id_ == kWalk) {
+              } else if (o.transport_mode_id_ == kWalkTransportModeId) {
                 return tally(o.duration().count(), walk_cost_);
               }
               utl::verify(o.transport_mode_id_ == kOdmTransportModeId ||
-                              o.transport_mode_id_ == kWalk,
+                              o.transport_mode_id_ == kWalkTransportModeId,
                           "unknown transport mode");
               return std::int32_t{0};
             }},
@@ -220,6 +220,19 @@ void mixer::mix(n::pareto_set<nr::journey> const& pt_journeys,
   utl::sort(odm_journeys, [](auto const& a, auto const& b) {
     return a.departure_time() < b.departure_time();
   });
+}
+
+std::vector<nr::journey> get_mixer_input(
+    n::pareto_set<nr::journey> const& pt_journeys,
+    std::vector<nr::journey> const& odm_journeys) {
+  auto input = odm_journeys;
+  for (auto const& j : pt_journeys) {
+    input.emplace_back(j);
+  }
+  utl::sort(input, [](auto const& a, auto const& b) {
+    return a.departure_time() < b.departure_time();
+  });
+  return input;
 }
 
 mixer get_default_mixer() {
