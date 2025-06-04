@@ -72,7 +72,7 @@ std::vector<nigiri::routing::journey> read(std::string_view csv) {
           auto const departure_time =
               read_hours_minutes(cj.departure_time_->trim().view());
           if (!departure_time) {
-            std::println("Invalid departure time: {}",
+            fmt::println("Invalid departure time: {}",
                          cj.departure_time_->view());
             return;
           }
@@ -80,7 +80,7 @@ std::vector<nigiri::routing::journey> read(std::string_view csv) {
           auto const arrival_time =
               read_hours_minutes(cj.arrival_time_->trim().view());
           if (!arrival_time) {
-            std::println("Invalid arrival time: {}", cj.arrival_time_->view());
+            fmt::println("Invalid arrival time: {}", cj.arrival_time_->view());
             return;
           }
 
@@ -93,7 +93,7 @@ std::vector<nigiri::routing::journey> read(std::string_view csv) {
           auto const first_mile_mode =
               read_transport_mode(cj.first_mile_mode_->trim().view());
           if (!first_mile_mode) {
-            std::println("Invalid first-mile transport mode: {}",
+            fmt::println("Invalid first-mile transport mode: {}",
                          cj.first_mile_mode_->view());
             return;
           }
@@ -109,7 +109,7 @@ std::vector<nigiri::routing::journey> read(std::string_view csv) {
           auto const last_mile_mode =
               read_transport_mode(cj.last_mile_mode_->trim().view());
           if (!last_mile_mode) {
-            std::println("Invalid last-mile transport mode: {}",
+            fmt::println("Invalid last-mile transport mode: {}",
                          cj.last_mile_mode_->view());
             return;
           }
@@ -123,7 +123,7 @@ std::vector<nigiri::routing::journey> read(std::string_view csv) {
           journeys.push_back(std::move(j));
 
         } catch (std::exception const& e) {
-          std::println("could not parse csv_journey: {}", e.what());
+          fmt::println("could not parse csv_journey: {}", e.what());
         }
       });
 
