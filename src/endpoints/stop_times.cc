@@ -286,6 +286,10 @@ api::stoptimes_response stop_times::operator()(
 
   auto locations = std::vector{l};
   auto const add = [&](n::location_idx_t const l) {
+    if (query.exactRadius_) {
+      locations.emplace_back(l);
+      return;
+    }
     auto const l_name = tt_.locations_.names_[l].view();
     utl::concat(locations, tt_.locations_.children_[l]);
     for (auto const eq : tt_.locations_.equivalences_[l]) {
@@ -299,19 +303,9 @@ api::stoptimes_response stop_times::operator()(
   if (query.radius_) {
     loc_rtree_.in_radius(tt_.locations_.coordinates_[x],
                          static_cast<double>(*query.radius_),
-                         [&](n::location_idx_t const y) {
-                           if (query.exactRadius_ == true) {
-                             locations.emplace_back(y);
-                           } else {
-                             add(y);
-                           }
-                         });
+                         [&](n::location_idx_t const y) { add(y); });
   } else {
-    if (query.exactRadius_ == true) {
-      locations.emplace_back(x);
-    } else {
-      add(x);
-    }
+    add(x);
   }
   utl::erase_duplicates(locations);
 
