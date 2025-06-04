@@ -64,16 +64,12 @@
 
 	const maxSupportedTransfers = 15;
 	maxTransfers = Math.min(Math.max(1, maxTransfers), maxSupportedTransfers);
-	const possibleMaxTransfers = [
-		...Array(maxSupportedTransfers)
-			.keys()
-			.map((i) => i + 1)
-			.map((i) => ({
-				value: i.toString(),
-				label: i.toString()
-			}))
-	];
-
+	const possibleMaxTransfers = [...Array(maxSupportedTransfers).keys()]
+		.map((i) => i + 1)
+		.map((i) => ({
+			value: i.toString(),
+			label: i.toString()
+		}));
 	const possibleMaxTravelTimes = minutesToSeconds([
 		1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 75, 80, 90, 120, 150, 180, 210, 240
 	]).map((s) => ({ value: s.toString(), label: formatDurationSec(s) }));
