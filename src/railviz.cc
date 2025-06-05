@@ -34,7 +34,7 @@
 
 namespace n = nigiri;
 
-constexpr auto const kLimit = 4096U;
+constexpr auto const kLimit = 12'000U;
 
 using static_rtree = cista::raw::rtree<n::route_idx_t>;
 using rt_rtree = cista::raw::rtree<n::rt_transport_idx_t>;
@@ -83,6 +83,9 @@ int min_zoom_level(n::clasz const clasz, float const distance) {
         return 10;
       }
 
+    case n::clasz::kCableCar:
+    case n::clasz::kFunicular:
+    case n::clasz::kAreaLift:
     case n::clasz::kOther: return 11;
 
     default: throw utl::fail("unknown n::clasz {}", static_cast<int>(clasz));
@@ -370,7 +373,7 @@ api::trips_response get_trains(tag_lookup const& tags,
                             [&](auto&& p) { enc.push(p); });
 
     return {.trips_ = {api::TripInfo{
-                .tripId_ = tags.id(tt, from),
+                .tripId_ = tags.id(tt, from, n::event_type::kDep),
                 .routeShortName_ =
                     std::string{from.trip_display_name(n::event_type::kDep)}}},
             .routeColor_ =

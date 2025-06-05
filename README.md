@@ -1,9 +1,5 @@
 <p align="center"><img src="logo.svg" width="196" height="196"></p>
 
-> [!NOTE]
-> This is the MOTIS 2 beta version.
-> You can find the `0.x.y` legacy branch [here](https://github.com/motis-project/motis/tree/legacy).
-
 > [!TIP]
 > :sparkles: Join the international MOTIS community at [**motis:matrix.org**](https://matrix.to/#/#motis:matrix.org)
 
@@ -19,15 +15,15 @@ to provide optimized routing solutions.
 MOTIS currently supports the following input formats:
 
 - (One) **OpenStreetMap `osm.pbf`** file for the street network, addresses, indoor-routing, etc. 
-- (Multiple) **GTFS** feeds for static timetables
-- (Multiple) **GTFS-RT** feeds for real-time updates (delays, cancellations, track changes)
+- (Multiple) **GTFS** (including GTFS Flex and GTFS Fares v2) feeds for static timetables
+- (Multiple) **GTFS-RT** feeds for real-time updates (delays, cancellations, track changes, service alerts)
 - (Multiple) **GBFS** feeds for sharing mobility
 
-*Planned*: GTFS-Flex, NeTEx and SIRI
+*Working on (funded by [NLnet](https://nlnet.nl/project/MOTIS/))*: NeTEx and SIRI
 
 MOTIS provides an easy-to-use **REST API** (JSON via HTTP) with
 an [**OpenAPI specification**](https://redocly.github.io/redoc/?url=https://raw.githubusercontent.com/motis-project/motis/refs/heads/master/openapi.yaml) ([source](openapi.yaml))
-that allows you to generate clients for your favorite programming language.
+that allows you to generate clients for your favorite programming language. You may also directly use the pre-generated [JS client](https://www.npmjs.com/package/@motis-project/motis-client). Some more available client libraries are listed [over at Transitous](https://transitous.org/api/).
 
 
 # Features
@@ -60,7 +56,9 @@ Features can be turned on and off as needed.
 - Download one or more GTFS datasets and place them in the folder 
 
 ```bash
-./motis my.osm.pbf my.gtfs.zip
+./motis config my.osm.pbf gtfs.zip  # generates a minimal config.yml
+./motis import                      # preprocesses data
+./motis server                      # starts a HTTP server on port 8080 
 ```
 
 This will preprocess the input files and create a `data` folder.
@@ -81,7 +79,9 @@ wget https://github.com/motis-project/motis/releases/latest/download/motis-${TAR
 tar xf motis-${TARGET}.tar.bz2
 wget https://github.com/motis-project/test-data/raw/aachen/aachen.osm.pbf
 wget https://opendata.avv.de/current_GTFS/AVV_GTFS_Masten_mit_SPNV.zip
-./motis aachen.osm.pbf AVV_GTFS_Masten_mit_SPNV.zip
+./motis config aachen.osm.pbf AVV_GTFS_Masten_mit_SPNV.zip
+./motis import
+./motis server
 ```
 
 **Windows**
@@ -90,13 +90,27 @@ wget https://opendata.avv.de/current_GTFS/AVV_GTFS_Masten_mit_SPNV.zip
 Invoke-WebRequest https://github.com/motis-project/motis/releases/latest/download/motis-windows.zip -OutFile motis-windows.zip
 Expand-Archive motis-windows.zip
 Invoke-WebRequest https://github.com/motis-project/test-data/archive/refs/heads/aachen.zip -OutFile aachen.zip
-./motis aachen.osm.pbf AVV_GTFS_Masten_mit_SPNV.zip
+Expand-Archive aachen.zip
+./motis config aachen.osm.pbf AVV_GTFS_Masten_mit_SPNV.zip
+./motis import
+./motis server
 ```
 
 # Documentation
 
-- Developer Setup
-  - [for Linux](docs/linux-dev-setup.md)
-  - [for Windows](docs/windows-dev-setup.md)
-  - [for macOS](docs/macos-dev-setup.md)
+## Developer Setup
+
+Build MOTIS from source:
+- [for Linux](docs/linux-dev-setup.md)
+- [for Windows](docs/windows-dev-setup.md)
+- [for macOS](docs/macos-dev-setup.md)
+
+Set up a server using your build:
+- [for Linux](docs/dev-setup-server.md)
+
+MOTIS uses [pkg](https://github.com/motis-project/pkg) for dependency management.
+See its [README](https://github.com/motis-project/pkg/blob/master/README.md) for how to work with it.
+
+## Configuration
+
 - [Advanced Setups](docs/setup.md)

@@ -1,3 +1,4 @@
+#include <optional>
 #include <string_view>
 #include <vector>
 
@@ -5,6 +6,7 @@
 
 #include "cista/hash.h"
 
+#include "utl/helpers/algorithm.h"
 #include "utl/raii.h"
 #include "utl/to_vec.h"
 
@@ -142,6 +144,44 @@ rental_uris parse_rental_uris(json::object const& parent) {
   return uris;
 }
 
+std::optional<vehicle_type_idx_t> get_vehicle_type(
+    gbfs_provider& provider,
+    std::string const& vehicle_type_id,
+    vehicle_start_type const start_type) {
+  auto const add_vehicle_type = [&](vehicle_form_factor const ff,
+                                    propulsion_type const pt) {
+    auto const idx = vehicle_type_idx_t{provider.vehicle_types_.size()};
+    provider.vehicle_types_.emplace_back(vehicle_type{
+        .id_ = vehicle_type_id,
+        .idx_ = idx,
+        .form_factor_ = ff,
+        .propulsion_type_ = pt,
+        .return_constraint_ = provider.default_return_constraint_.value_or(
+            start_type == vehicle_start_type::kStation
+                ? return_constraint::kAnyStation
+                : return_constraint::kFreeFloating),
+        .known_return_constraint_ = false});
+    provider.vehicle_types_map_[{vehicle_type_id, start_type}] = idx;
+    return idx;
+  };
+
+  if (auto const it =
+          provider.vehicle_types_map_.find({vehicle_type_id, start_type});
+      it != end(provider.vehicle_types_map_)) {
+    return it->second;
+  } else if (auto const temp_it =
+                 provider.temp_vehicle_types_.find(vehicle_type_id);
+             temp_it != end(provider.temp_vehicle_types_)) {
+    return add_vehicle_type(temp_it->second.form_factor_,
+                            temp_it->second.propulsion_type_);
+  } else if (vehicle_type_id.empty()) {
+    // providers that don't use vehicle types
+    return add_vehicle_type(vehicle_form_factor::kBicycle,
+                            propulsion_type::kHuman);
+  }
+  return {};
+}
+
 void load_system_information(gbfs_provider& provider, json::value const& root) {
   auto const version = get_version(root);
   auto const& data = root.at("data").as_object();
@@ -171,10 +211,7 @@ void load_station_information(gbfs_provider& provider,
     auto const& station_obj = s.as_object();
     auto const station_id =
         static_cast<std::string>(station_obj.at("station_id").as_string());
-    auto const name =
-        version == gbfs_version::k2
-            ? static_cast<std::string>(station_obj.at("name").as_string())
-            : get_localized_string(version, station_obj.at("name"));
+    auto const name = get_localized_string(version, station_obj.at("name"));
     auto const lat = station_obj.at("lat").as_double();
     auto const lon = station_obj.at("lon").as_double();
 
@@ -193,8 +230,8 @@ void load_station_information(gbfs_provider& provider,
                           .name_ = name,
                           .pos_ = geo::latlng{lat, lon},
                           .rental_uris_ = parse_rental_uris(station_obj),
-                          .station_area_ =
-                              std::unique_ptr<tg_geom, tg_geom_deleter>(area)}};
+                          .station_area_ = std::shared_ptr<tg_geom>(
+                              area, tg_geom_deleter{})}};
   }
 }
 
@@ -205,43 +242,80 @@ void load_station_status(gbfs_provider& provider, json::value const& root) {
     auto const& station_obj = s.as_object();
     auto const station_id =
         static_cast<std::string>(station_obj.at("station_id").as_string());
-    auto const num_vehicles_available_key = version == gbfs_version::k2
-                                                ? "num_bikes_available"
-                                                : "num_vehicles_available";
 
     auto const station_it = provider.stations_.find(station_id);
     if (station_it == end(provider.stations_)) {
-      std::cerr << "[GBFS] (" << provider.id_ << "): station_id=\""
-                << station_id << "\" referenced in station_status not found\n";
       continue;
     }
 
     auto& station = station_it->second;
     station.status_ = station_status{
-        .num_vehicles_available_ =
-            station_obj.at(num_vehicles_available_key).to_number<unsigned>(),
+        .num_vehicles_available_ = 0U,
         .is_renting_ = get_bool(version, station_obj, "is_renting"),
         .is_returning_ = get_bool(version, station_obj, "is_returning")};
+
+    if (station_obj.contains("num_vehicles_available")) {
+      // GBFS 3.x (but some 2.x feeds use this as well)
+      station.status_.num_vehicles_available_ =
+          station_obj.at("num_vehicles_available").to_number<unsigned>();
+    } else if (station_obj.contains("num_bikes_available")) {
+      // GBFS 2.x
+      station.status_.num_vehicles_available_ =
+          station_obj.at("num_bikes_available").to_number<unsigned>();
+    }
+
     if (station_obj.contains("vehicle_types_available")) {
       auto const& vta = station_obj.at("vehicle_types_available").as_array();
       auto unrestricted_available = 0U;
       auto any_station_available = 0U;
+      auto roundtrip_available = 0U;
       for (auto const& vt : vta) {
         auto const vehicle_type_id =
             static_cast<std::string>(vt.at("vehicle_type_id").as_string());
         auto const count = vt.at("count").to_number<unsigned>();
-        station.status_.vehicle_types_available_[vehicle_type_id] = count;
-        if (auto const it = provider.vehicle_types_.find(vehicle_type_id);
-            it != end(provider.vehicle_types_)) {
-          switch (it->second.return_constraint_) {
-            case return_constraint::kNone: ++unrestricted_available; break;
+        if (auto const vt_idx = get_vehicle_type(provider, vehicle_type_id,
+                                                 vehicle_start_type::kStation);
+            vt_idx) {
+          station.status_.vehicle_types_available_[*vt_idx] = count;
+          switch (provider.vehicle_types_[*vt_idx].return_constraint_) {
+            case return_constraint::kFreeFloating:
+              ++unrestricted_available;
+              break;
             case return_constraint::kAnyStation: ++any_station_available; break;
-            case return_constraint::kRoundtripStation: break;
+            case return_constraint::kRoundtripStation:
+              ++roundtrip_available;
+              break;
           }
         }
       }
       station.status_.num_vehicles_available_ =
-          unrestricted_available + any_station_available;
+          unrestricted_available + any_station_available + roundtrip_available;
+    } else {
+      if (auto const vt_idx =
+              get_vehicle_type(provider, "", vehicle_start_type::kStation);
+          vt_idx) {
+        station.status_.vehicle_types_available_[*vt_idx] =
+            station.status_.num_vehicles_available_;
+      }
+    }
+
+    if (station_obj.contains("vehicle_docks_available")) {
+      for (auto const& vt :
+           station_obj.at("vehicle_docks_available").as_array()) {
+        auto& vto = vt.as_object();
+        if (vto.contains("vehicle_type_ids") && vto.contains("count")) {
+          for (auto const& vti : vto.at("vehicle_type_ids").as_array()) {
+            auto const vehicle_type_id =
+                static_cast<std::string>(vti.as_string());
+            if (auto const vt_idx = get_vehicle_type(
+                    provider, vehicle_type_id, vehicle_start_type::kStation);
+                vt_idx) {
+              station.status_.vehicle_docks_available_[*vt_idx] =
+                  vto.at("count").to_number<unsigned>();
+            }
+          }
+        }
+      }
     }
   }
 }
@@ -253,6 +327,7 @@ vehicle_form_factor parse_form_factor(std::string_view const s) {
       return vehicle_form_factor::kCargoBicycle;
     case cista::hash("car"): return vehicle_form_factor::kCar;
     case cista::hash("moped"): return vehicle_form_factor::kMoped;
+    case cista::hash("scooter"):  // < 3.0
     case cista::hash("scooter_standing"):
       return vehicle_form_factor::kScooterStanding;
     case cista::hash("scooter_seated"):
@@ -262,31 +337,74 @@ vehicle_form_factor parse_form_factor(std::string_view const s) {
   }
 }
 
-return_constraint parse_return_constraint(json::object const& vt) {
-  if (vt.contains("return_constraint")) {
-    switch (cista::hash(static_cast<std::string_view>(
-        vt.at("return_constraint").as_string()))) {
-      case cista::hash("any_station"): return return_constraint::kAnyStation;
-      case cista::hash("roundtrip_station"):
-        return return_constraint::kRoundtripStation;
-      case cista::hash("free_floating"):
-      case cista::hash("hybrid"):
-      default: return return_constraint::kNone;
-    }
+propulsion_type parse_propulsion_type(std::string_view const s) {
+  switch (cista::hash(s)) {
+    case cista::hash("human"): return propulsion_type::kHuman;
+    case cista::hash("electric_assist"):
+      return propulsion_type::kElectricAssist;
+    case cista::hash("electric"): return propulsion_type::kElectric;
+    case cista::hash("combustion"): return propulsion_type::kCombustion;
+    case cista::hash("combustion_diesel"):
+      return propulsion_type::kCombustionDiesel;
+    case cista::hash("hybrid"): return propulsion_type::kHybrid;
+    case cista::hash("plug_in_hybrid"): return propulsion_type::kPlugInHybrid;
+    case cista::hash("hydrogen_fuel_cell"):
+      return propulsion_type::kHydrogenFuelCell;
+    default: return propulsion_type::kHuman;
   }
-  return return_constraint::kNone;
+}
+
+std::optional<return_constraint> parse_return_constraint(
+    std::string_view const s) {
+  switch (cista::hash(s)) {
+    case cista::hash("any_station"): return return_constraint::kAnyStation;
+    case cista::hash("roundtrip_station"):
+      return return_constraint::kRoundtripStation;
+    case cista::hash("free_floating"):
+    case cista::hash("hybrid"): return return_constraint::kFreeFloating;
+    default: return {};
+  }
+}
+
+std::optional<return_constraint> parse_return_constraint(
+    json::object const& vt) {
+  if (vt.contains("return_constraint")) {
+    return parse_return_constraint(vt.at("return_constraint").as_string());
+  }
+  return {};
 }
 
 void load_vehicle_types(gbfs_provider& provider, json::value const& root) {
   provider.vehicle_types_.clear();
+  provider.vehicle_types_map_.clear();
+  provider.temp_vehicle_types_.clear();
   for (auto const& v : root.at("data").at("vehicle_types").as_array()) {
     auto const id =
         static_cast<std::string>(v.at("vehicle_type_id").as_string());
-    provider.vehicle_types_[id] = vehicle_type{
-        .id_ = id,
-        .form_factor_ = parse_form_factor(
-            static_cast<std::string_view>(v.at("form_factor").as_string())),
-        .return_constraint_ = parse_return_constraint(v.as_object())};
+    auto const rc = parse_return_constraint(v.as_object());
+    auto const form_factor = parse_form_factor(
+        static_cast<std::string_view>(v.at("form_factor").as_string()));
+    auto const propulsion_type = parse_propulsion_type(
+        static_cast<std::string_view>(v.at("propulsion_type").as_string()));
+    if (rc) {
+      auto const idx = vehicle_type_idx_t{provider.vehicle_types_.size()};
+      provider.vehicle_types_.emplace_back(
+          vehicle_type{.id_ = id,
+                       .idx_ = idx,
+                       .form_factor_ = form_factor,
+                       .propulsion_type_ = propulsion_type,
+                       .return_constraint_ = *rc,
+                       .known_return_constraint_ = true});
+      provider.vehicle_types_map_[{id, vehicle_start_type::kStation}] = idx;
+      provider.vehicle_types_map_[{id, vehicle_start_type::kFreeFloating}] =
+          idx;
+    } else {
+      provider.temp_vehicle_types_[id] = temp_vehicle_type{
+          .id_ = id,
+          .form_factor_ = form_factor,
+          .propulsion_type_ = propulsion_type,
+      };
+    }
   }
 }
 
@@ -301,9 +419,20 @@ void load_vehicle_status(gbfs_provider& provider, json::value const& root) {
   for (auto const& v : vehicles_arr) {
     auto const& vehicle_obj = v.as_object();
 
-    if (!vehicle_obj.contains("lat") || !vehicle_obj.contains("lon") ||
-        vehicle_obj.contains("station_id")) {
-      // we only care about free-floating vehicles here
+    auto pos = geo::latlng{};
+    if (vehicle_obj.contains("lat") && vehicle_obj.contains("lon")) {
+      pos = geo::latlng{vehicle_obj.at("lat").as_double(),
+                        vehicle_obj.at("lon").as_double()};
+    } else if (vehicle_obj.contains("station_id")) {
+      auto const station_id =
+          static_cast<std::string>(vehicle_obj.at("station_id").as_string());
+      if (auto const it = provider.stations_.find(station_id);
+          it != end(provider.stations_)) {
+        pos = it->second.info_.pos_;
+      } else {
+        continue;
+      }
+    } else {
       continue;
     }
 
@@ -312,39 +441,54 @@ void load_vehicle_status(gbfs_provider& provider, json::value const& root) {
             .as_string());
 
     auto const type_id = optional_str(vehicle_obj, "vehicle_type_id");
+    auto type_idx = vehicle_type_idx_t::invalid();
 
-    if (auto const it = provider.vehicle_types_.find(type_id);
-        it != end(provider.vehicle_types_) &&
-        it->second.return_constraint_ == return_constraint::kRoundtripStation) {
-      // roundtrip vehicles currently not supported
-      continue;
+    if (auto const vt_idx = get_vehicle_type(provider, type_id,
+                                             vehicle_start_type::kFreeFloating);
+        vt_idx) {
+      type_idx = *vt_idx;
     }
 
     provider.vehicle_status_.emplace_back(vehicle_status{
         .id_ = id,
-        .pos_ = geo::latlng{vehicle_obj.at("lat").as_double(),
-                            vehicle_obj.at("lon").as_double()},
+        .pos_ = pos,
         .is_reserved_ = get_bool(version, vehicle_obj, "is_reserved"),
         .is_disabled_ = get_bool(version, vehicle_obj, "is_disabled"),
-        .vehicle_type_id_ = type_id,
+        .vehicle_type_idx_ = type_idx,
         .station_id_ = optional_str(vehicle_obj, "station_id"),
         .home_station_id_ = optional_str(vehicle_obj, "home_station_id"),
         .rental_uris_ = parse_rental_uris(vehicle_obj)});
   }
+
+  utl::sort(provider.vehicle_status_);
 }
 
-rule parse_rule(gbfs_version const version, json::value const& r) {
+rule parse_rule(gbfs_provider& provider,
+                gbfs_version const version,
+                json::value const& r) {
   auto const vti_key =
       version == gbfs_version::k2 ? "vehicle_type_id" : "vehicle_type_ids";
   auto const& rule_obj = r.as_object();
+
+  auto vehicle_type_idxs = std::vector<vehicle_type_idx_t>{};
+  if (rule_obj.contains(vti_key)) {
+    for (auto const& vt : rule_obj.at(vti_key).as_array()) {
+      auto const vt_id = static_cast<std::string>(vt.as_string());
+      if (auto const it = provider.vehicle_types_map_.find(
+              {vt_id, vehicle_start_type::kStation});
+          it != end(provider.vehicle_types_map_)) {
+        vehicle_type_idxs.emplace_back(it->second);
+      }
+      if (auto const it = provider.vehicle_types_map_.find(
+              {vt_id, vehicle_start_type::kFreeFloating});
+          it != end(provider.vehicle_types_map_)) {
+        vehicle_type_idxs.emplace_back(it->second);
+      }
+    }
+  }
+
   return rule{
-      .vehicle_type_ids_ =
-          rule_obj.contains(vti_key)
-              ? utl::to_vec(rule_obj.at(vti_key).as_array(),
-                            [](auto const& vt) {
-                              return static_cast<std::string>(vt.as_string());
-                            })
-              : std::vector<std::string>{},
+      .vehicle_type_idxs_ = std::move(vehicle_type_idxs),
       .ride_start_allowed_ = version == gbfs_version::k2
                                  ? rule_obj.at("ride_allowed").as_bool()
                                  : rule_obj.at("ride_start_allowed").as_bool(),
@@ -368,9 +512,9 @@ void load_geofencing_zones(gbfs_provider& provider, json::value const& root) {
   auto zones =
       utl::to_vec(zones_obj.at("features").as_array(), [&](auto const& z) {
         auto const& props = z.at("properties").as_object();
-        auto rules =
-            utl::to_vec(props.at("rules").as_array(),
-                        [&](auto const& r) { return parse_rule(version, r); });
+        auto rules = utl::to_vec(
+            props.at("rules").as_array(),
+            [&](auto const& r) { return parse_rule(provider, version, r); });
 
         auto* geom = parse_multipolygon(z.at("geometry").as_object());
 
@@ -383,9 +527,11 @@ void load_geofencing_zones(gbfs_provider& provider, json::value const& root) {
 
   //  required in 3.0, but some feeds don't have it
   auto global_rules =
-      root.at("data").as_object().contains("global_rules")
-          ? utl::to_vec(root.at("data").at("global_rules").as_array(),
-                        [&](auto const& r) { return parse_rule(version, r); })
+      root.at("data").as_object().contains("global_rules") &&
+              root.at("data").at("global_rules").is_array()
+          ? utl::to_vec(
+                root.at("data").at("global_rules").as_array(),
+                [&](auto const& r) { return parse_rule(provider, version, r); })
           : std::vector<rule>{};
 
   provider.geofencing_zones_.version_ = version;

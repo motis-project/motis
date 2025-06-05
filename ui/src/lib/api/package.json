@@ -1,0 +1,36 @@
+{
+	"name": "@motis-project/motis-client",
+	"version": "2.0.0",
+	"description": "A JS client for the MOTIS API.",
+	"public": true,
+	"main": "dist/index.js",
+	"types": "dist/index.d.ts",
+	"files": [
+		"/dist"
+	],
+	"scripts": {
+		"generate": "npx @hey-api/openapi-ts -i ../../../../openapi.yaml -o ./openapi/ -c @hey-api/client-fetch",
+		"transpile": "tsup openapi/**/*.ts --format esm --dts -d=./dist",
+		"build": "npm run generate && npm run transpile"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/motis-project/motis.git"
+	},
+	"author": "motis-project",
+	"license": "MIT",
+	"bugs": {
+		"url": "https://github.com/motis-project/motis/issues"
+	},
+	"homepage": "https://github.com/motis-project/motis#readme",
+	"devDependencies": {
+		"@hey-api/openapi-ts": "^0.53.12",
+		"tslib": "^2.8.1",
+		"tsup": "^8.4.0",
+		"typescript": "^5.7.3"
+	},
+	"dependencies": {
+		"@hey-api/client-fetch": "^0.4.4"
+	},
+	"type": "module"
+}

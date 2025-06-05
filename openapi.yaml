@@ -7,17 +7,723 @@ info:
   license:
     name: MIT
     url: https://opensource.org/license/mit
-  version: v1
+  version: v2
 externalDocs:
   description: Find out more about MOTIS
   url: https://github.com/motis-project/motis
 servers:
-  - url: https://europe.motis-project.de
+  - url: https://api.transitous.org
 paths:
+  /api/v2/plan:
+    get:
+      tags:
+        - routing
+      summary: Computes optimal connections from one place to another.
+      operationId: plan
+      parameters:
+        - name: fromPlace
+          in: query
+          required: true
+          description: |
+            \`latitude,longitude[,level]\` tuple with
+            - latitude and longitude in degrees
+            - (optional) level: the OSM level (default: 0)
+
+            OR
+
+            stop id
+          schema:
+            type: string
+
+        - name: toPlace
+          in: query
+          required: true
+          description: |
+            \`latitude,longitude[,level]\` tuple with
+            - latitude and longitude in degrees
+            - (optional) level: the OSM level (default: 0)
+
+            OR
+
+            stop id
+          schema:
+            type: string
+
+        - name: via
+          in: query
+          required: false
+          description: |
+            List of via stops to visit (only stop IDs, no coordinates allowed for now).
+            Also see the optional parameter `viaMinimumStay` to set a set a minimum stay duration for each via stop.
+          schema:
+            type: array
+            maxItems: 2
+            items:
+              type: string
+          explode: false
+
+        - name: viaMinimumStay
+          in: query
+          required: false
+          description: |
+            Optional. If not set, the default is `0,0` - no stay required.
+            
+            For each `via` stop a minimum stay duration in minutes.
+            
+            The value `0` signals that it's allowed to stay in the same trip.
+            This enables via stays without counting a transfer and can lead 
+            to better connections with less transfers. Transfer connections can
+            still be found with `viaMinimumStay=0`.
+          schema:
+            default: [ 0, 0 ]
+            type: array
+            maxItems: 2
+            items:
+              type: integer
+          explode: false
+
+        - name: time
+          in: query
+          required: false
+          description: |
+            Optional. Defaults to the current time.
+            
+            Departure time ($arriveBy=false) / arrival date ($arriveBy=true),
+          schema:
+            type: string
+            format: date-time
+
+        - name: maxTransfers
+          in: query
+          required: false
+          description: |
+            The maximum number of allowed transfers.
+            If not provided, the routing uses the server-side default value
+            which is hardcoded and very high to cover all use cases.
+            
+            *Warning*: Use with care. Setting this too low can lead to
+            optimal (e.g. the fastest) journeys not being found.
+            If this value is too low to reach the destination at all,
+            it can lead to slow routing performance.
+          schema:
+            type: integer
+
+        - name: maxTravelTime
+          in: query
+          required: false
+          description: |
+            The maximum travel time in minutes.
+            If not provided, the routing to uses the value
+            hardcoded in the server which is usually quite high.
+            
+            *Warning*: Use with care. Setting this too low can lead to
+            optimal (e.g. the least transfers) journeys not being found.
+            If this value is too low to reach the destination at all,
+            it can lead to slow routing performance.
+          schema:
+            type: integer
+
+        - name: minTransferTime
+          in: query
+          required: false
+          description: |
+            Optional. Default is 0 minutes.
+            
+            Minimum transfer time for each transfer in minutes.
+          schema:
+            type: integer
+            default: 0
+
+        - name: additionalTransferTime
+          in: query
+          required: false
+          description: |
+            Optional. Default is 0 minutes.
+            
+            Additional transfer time reserved for each transfer in minutes.
+          schema:
+            type: integer
+            default: 0
+
+        - name: transferTimeFactor
+          in: query
+          required: false
+          description: |
+            Optional. Default is 1.0
+            
+            Factor to multiply minimum required transfer times with.
+            Values smaller than 1.0 are not supported.
+          schema:
+            type: number
+            default: 1.0
+
+        - name: maxMatchingDistance
+          in: query
+          required: false
+          description: |
+            Optional. Default is 25 meters.
+            
+            Maximum matching distance in meters to match geo coordinates to the street network.
+          schema:
+            type: number
+            default: 25
+
+        - name: pedestrianProfile
+          in: query
+          required: false
+          description: |
+            Optional. Default is `FOOT`.
+            
+            Accessibility profile to use for pedestrian routing in transfers
+            between transit connections, on the first mile, and last mile.
+          schema:
+            $ref: '#/components/schemas/PedestrianProfile'
+            default: FOOT
+
+        - name: elevationCosts
+          in: query
+          required: false
+          description: |
+            Optional. Default is `NONE`.
+
+            Set an elevation cost profile, to penalize routes with incline.
+            - `NONE`: No additional costs for elevations. This is the default behavior
+            - `LOW`: Add a low cost for increase in elevation and incline along the way. This will prefer routes with less ascent, if small detours are required.
+            - `HIGH`: Add a high cost for increase in elevation and incline along the way. This will prefer routes with less ascent, if larger detours are required.
+
+            As using an elevation costs profile will increase the travel duration,
+            routing through steep terrain may exceed the maximal allowed duration,
+            causing a location to appear unreachable.
+            Increasing the maximum travel time for these segments may resolve this issue.
+
+            The profile is used for direct routing, on the first mile, and last mile.
+
+            Elevation cost profiles are currently used by following street modes:
+            - `BIKE`
+          schema:
+            $ref: '#/components/schemas/ElevationCosts'
+            default: NONE
+
+        - name: useRoutedTransfers
+          in: query
+          required: false
+          description: |
+            Optional. Default is `false`.
+            
+            Whether to use transfers routed on OpenStreetMap data.
+          schema:
+            type: boolean
+            default: false
+
+        - name: detailedTransfers
+          in: query
+          required: true
+          description: |
+            - true: Compute transfer polylines and step instructions.
+            - false: Only return basic information (start time, end time, duration) for transfers.
+          schema:
+            type: boolean
+            default: true
+
+        - name: transitModes
+          in: query
+          required: false
+          description: |
+            Optional. Default is `TRANSIT` which allows all transit modes (no restriction).
+            Allowed modes for the transit part. If empty, no transit connections will be computed.
+            For example, this can be used to allow only `METRO,SUBWAY,TRAM`.
+          schema:
+            default:
+              - TRANSIT
+            type: array
+            items:
+              $ref: '#/components/schemas/Mode'
+          explode: false
+
+        - name: directModes
+          in: query
+          required: false
+          description: |
+            Optional. Default is `WALK` which will compute walking routes as direct connections.
+            
+            Modes used for direction connections from start to destination without using transit.
+            Results will be returned on the `direct` key.
+            
+            Note: Direct connections will only be returned on the first call. For paging calls, they can be omitted.
+            
+            Note: Transit connections that are slower than the fastest direct connection will not show up.
+            This is being used as a cut-off during transit routing to speed up the search.
+            To prevent this, it's possible to send two separate requests (one with only `transitModes` and one with only `directModes`).
+
+            Note: the output `direct` array will stay empty if the input param `maxDirectTime` makes any direct trip impossible.
+            
+            Only non-transit modes such as `WALK`, `BIKE`, `CAR`, `BIKE_SHARING`, etc. can be used.
+          schema:
+            default:
+              - WALK
+            type: array
+            items:
+              $ref: '#/components/schemas/Mode'
+          explode: false
+
+        - name: preTransitModes
+          in: query
+          required: false
+          description: |
+            Optional. Default is `WALK`. Only applies if the `from` place is a coordinate (not a transit stop). Does not apply to direct connections (see `directModes`).
+            
+            A list of modes that are allowed to be used from the `from` coordinate to the first transit stop. Example: `WALK,BIKE_SHARING`.
+          schema:
+            default:
+              - WALK
+            type: array
+            items:
+              $ref: '#/components/schemas/Mode'
+          explode: false
+
+        - name: postTransitModes
+          in: query
+          required: false
+          description: |
+            Optional. Default is `WALK`. Only applies if the `to` place is a coordinate (not a transit stop). Does not apply to direct connections (see `directModes`).
+            
+            A list of modes that are allowed to be used from the last transit stop to the `to` coordinate. Example: `WALK,BIKE_SHARING`.
+          schema:
+            default:
+              - WALK
+            type: array
+            items:
+              $ref: '#/components/schemas/Mode'
+          explode: false
+
+        - name: directRentalFormFactors
+          in: query
+          required: false
+          description: |
+            Experimental. Expect unannounced breaking changes (without version bumps).
+            
+            Optional. Only applies to direct connections.
+            
+            A list of vehicle type form factors that are allowed to be used for direct connections.
+            If empty (the default), all form factors are allowed.
+            Example: `BICYCLE,SCOOTER_STANDING`.
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/RentalFormFactor'
+          explode: false
+
+        - name: preTransitRentalFormFactors
+          in: query
+          required: false
+          description: |
+            Experimental. Expect unannounced breaking changes (without version bumps).
+            
+            Optional. Only applies if the `from` place is a coordinate (not a transit stop). Does not apply to direct connections (see `directRentalFormFactors`).
+            
+            A list of vehicle type form factors that are allowed to be used from the `from` coordinate to the first transit stop.
+            If empty (the default), all form factors are allowed.
+            Example: `BICYCLE,SCOOTER_STANDING`.
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/RentalFormFactor'
+          explode: false
+
+        - name: postTransitRentalFormFactors
+          in: query
+          required: false
+          description: |
+            Experimental. Expect unannounced breaking changes (without version bumps).
+            
+            Optional. Only applies if the `to` place is a coordinate (not a transit stop). Does not apply to direct connections (see `directRentalFormFactors`).
+
+            A list of vehicle type form factors that are allowed to be used from the last transit stop to the `to` coordinate.
+            If empty (the default), all form factors are allowed.
+            Example: `BICYCLE,SCOOTER_STANDING`.
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/RentalFormFactor'
+          explode: false
+
+        - name: directRentalPropulsionTypes
+          in: query
+          required: false
+          description: |
+            Experimental. Expect unannounced breaking changes (without version bumps).
+            
+            Optional. Only applies to direct connections.
+            
+            A list of vehicle type form factors that are allowed to be used for direct connections.
+            If empty (the default), all propulsion types are allowed.
+            Example: `HUMAN,ELECTRIC,ELECTRIC_ASSIST`.
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/RentalPropulsionType'
+          explode: false
+
+        - name: preTransitRentalPropulsionTypes
+          in: query
+          required: false
+          description: |
+            Experimental. Expect unannounced breaking changes (without version bumps).
+            
+            Optional. Only applies if the `from` place is a coordinate (not a transit stop). Does not apply to direct connections (see `directRentalPropulsionTypes`).
+            
+            A list of vehicle propulsion types that are allowed to be used from the `from` coordinate to the first transit stop.
+            If empty (the default), all propulsion types are allowed.
+            Example: `HUMAN,ELECTRIC,ELECTRIC_ASSIST`.
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/RentalPropulsionType'
+          explode: false
+
+        - name: postTransitRentalPropulsionTypes
+          in: query
+          required: false
+          description: |
+            Experimental. Expect unannounced breaking changes (without version bumps).
+            
+            Optional. Only applies if the `to` place is a coordinate (not a transit stop). Does not apply to direct connections (see `directRentalPropulsionTypes`).
+            
+            A list of vehicle propulsion types that are allowed to be used from the last transit stop to the `to` coordinate.
+            If empty (the default), all propulsion types are allowed.
+            Example: `HUMAN,ELECTRIC,ELECTRIC_ASSIST`.
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/RentalPropulsionType'
+          explode: false
+
+        - name: directRentalProviders
+          in: query
+          required: false
+          description: |
+            Experimental. Expect unannounced breaking changes (without version bumps).
+            
+            Optional. Only applies to direct connections.
+            
+            A list of rental providers that are allowed to be used for direct connections.
+            If empty (the default), all providers are allowed.
+          schema:
+            type: array
+            items:
+              type: string
+
+        - name: preTransitRentalProviders
+          in: query
+          required: false
+          description: |
+            Experimental. Expect unannounced breaking changes (without version bumps).
+            
+            Optional. Only applies if the `from` place is a coordinate (not a transit stop). Does not apply to direct connections (see `directRentalProviders`).
+            
+            A list of rental providers that are allowed to be used from the `from` coordinate to the first transit stop.
+            If empty (the default), all providers are allowed.
+          schema:
+            type: array
+            items:
+              type: string
+
+        - name: postTransitRentalProviders
+          in: query
+          required: false
+          description: |
+            Experimental. Expect unannounced breaking changes (without version bumps).
+            
+            Optional. Only applies if the `to` place is a coordinate (not a transit stop). Does not apply to direct connections (see `directRentalProviders`).
+            
+            A list of rental providers that are allowed to be used from the last transit stop to the `to` coordinate.
+            If empty (the default), all providers are allowed.
+          schema:
+            type: array
+            items:
+              type: string
+
+        - name: ignoreDirectRentalReturnConstraints
+          in: query
+          required: false
+          description: |
+            Experimental. Expect unannounced breaking changes (without version bumps).
+            
+            Optional. Default is `false`.
+            
+            If set to `true`, the routing will ignore rental return constraints for direct connections,
+            allowing the rental vehicle to be parked anywhere.
+          schema:
+            type: boolean
+            default: false
+
+        - name: ignorePreTransitRentalReturnConstraints
+          in: query
+          required: false
+          description: |
+            Experimental. Expect unannounced breaking changes (without version bumps).
+            
+            Optional. Default is `false`.
+            
+            If set to `true`, the routing will ignore rental return constraints for the part from the `from` coordinate to the first transit stop,
+            allowing the rental vehicle to be parked anywhere.
+          schema:
+            type: boolean
+            default: false
+
+        - name: ignorePostTransitRentalReturnConstraints
+          in: query
+          required: false
+          description: |
+            Experimental. Expect unannounced breaking changes (without version bumps).
+            
+            Optional. Default is `false`.
+            
+            If set to `true`, the routing will ignore rental return constraints for the part from the last transit stop to the `to` coordinate,
+            allowing the rental vehicle to be parked anywhere.
+          schema:
+            type: boolean
+            default: false
+
+        - name: numItineraries
+          in: query
+          required: false
+          description: |
+            The minimum number of itineraries to compute.
+            This is only relevant if `timetableView=true`.
+            The default value is 5.
+          schema:
+            type: integer
+            default: 5
+
+        - name: pageCursor
+          in: query
+          required: false
+          description: |
+            Use the cursor to go to the next "page" of itineraries.
+            Copy the cursor from the last response and keep the original request as is.
+            This will enable you to search for itineraries in the next or previous time-window.
+          schema:
+            type: string
+
+        - name: timetableView
+          in: query
+          required: false
+          description: |
+            Optional. Default is `true`.
+            
+            Search for the best trip options within a time window.
+            If true two itineraries are considered optimal
+            if one is better on arrival time (earliest wins)
+            and the other is better on departure time (latest wins).
+            In combination with arriveBy this parameter cover the following use cases:
+            
+            `timetable=false` = waiting for the first transit departure/arrival is considered travel time:
+              - `arriveBy=true`: event (e.g. a meeting) starts at 10:00 am,
+                compute the best journeys that arrive by that time (maximizes departure time)
+              - `arriveBy=false`: event (e.g. a meeting) ends at 11:00 am,
+                compute the best journeys that depart after that time
+            
+            `timetable=true` = optimize "later departure" + "earlier arrival" and give all options over a time window:
+              - `arriveBy=true`: the time window around `date` and `time` refers to the arrival time window
+              - `arriveBy=false`: the time window around `date` and `time` refers to the departure time window
+          schema:
+            type: boolean
+            default: true
+
+        - name: arriveBy
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+          description: |
+            Optional. Default is `false`.
+            
+              - `arriveBy=true`: the parameters `date` and `time` refer to the arrival time
+              - `arriveBy=false`: the parameters `date` and `time` refer to the departure time
+
+        - name: searchWindow
+          in: query
+          required: false
+          description: |
+            Optional. Default is 2 hours which is `7200`.
+            
+            The length of the search-window in seconds. Default value two hours.
+            
+              - `arriveBy=true`: number of seconds between the earliest departure time and latest departure time
+              - `arriveBy=false`: number of seconds between the earliest arrival time and the latest arrival time
+          schema:
+            type: integer
+            default: 7200
+            minimum: 0
+
+        - name: requireBikeTransport
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+          description: |
+            Optional. Default is `false`.
+            
+            If set to `true`, all used transit trips are required to allow bike carriage.
+
+        - name: requireCarTransport
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+          description: |
+            Optional. Default is `false`.
+            
+            If set to `true`, all used transit trips are required to allow car carriage.
+
+        - name: maxPreTransitTime
+          in: query
+          required: false
+          description: |
+            Optional. Default is 15min which is `900`.
+            Maximum time in seconds for the first street leg.
+          schema:
+            type: integer
+            default: 900
+            minimum: 0
+
+        - name: maxPostTransitTime
+          in: query
+          required: false
+          description: |
+            Optional. Default is 15min which is `900`.
+            Maximum time in seconds for the last street leg.
+          schema:
+            type: integer
+            default: 900
+            minimum: 0
+
+        - name: maxDirectTime
+          in: query
+          required: false
+          description: |
+            Optional. Default is 30min which is `1800`.
+            Maximum time in seconds for direct connections.
+          schema:
+            type: integer
+            default: 1800
+            minimum: 0
+
+        - name: fastestDirectFactor
+          in: query
+          required: false
+          description: |
+            Optional. Experimental. Default is `1.0`.
+            Factor with which the duration of the fastest direct connection is multiplied.
+            Values > 1.0 allow connections that are slower than the fastest direct connection to be found.
+          schema:
+            type: number
+            default: 1.0
+            minimum: 0
+
+        - name: timeout
+          in: query
+          required: false
+          description: Optional. Query timeout in seconds.
+          schema:
+            type: integer
+            minimum: 0
+
+        - name: passengers
+          in: query
+          required: false
+          description: Optional. Experimental. Number of passengers (e.g. for ODM or price calculation)
+          schema:
+            type: integer
+            minimum: 1
+
+        - name: luggage
+          in: query
+          required: false
+          description: |
+            Optional. Experimental. Number of luggage pieces; base unit: airline cabin luggage (e.g. for ODM or price calculation)
+          schema:
+            type: integer
+            minimum: 1
+
+        - name: slowDirect
+          in: query
+          required: false
+          description: Optional. Experimental. Adds overtaken direct connections.
+          schema:
+            type: boolean
+            default: false
+
+        - name: withFares
+          in: query
+          required: false
+          description: Optional. Experimental. If set to true, the response will contain fare information.
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: routing result
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - requestParameters
+                  - debugOutput
+                  - from
+                  - to
+                  - direct
+                  - itineraries
+                  - previousPageCursor
+                  - nextPageCursor
+                properties:
+                  requestParameters:
+                    description: "the routing query"
+                    type: object
+                    additionalProperties:
+                      type: string
+                  debugOutput:
+                    description: "debug statistics"
+                    type: object
+                    additionalProperties:
+                      type: integer
+                  from:
+                    $ref: '#/components/schemas/Place'
+                  to:
+                    $ref: '#/components/schemas/Place'
+                  direct:
+                    description: |
+                      Direct trips by `WALK`, `BIKE`, `CAR`, etc. without time-dependency.
+                      The starting time (`arriveBy=false`) / arrival time (`arriveBy=true`) is always the queried `time` parameter (set to \"now\" if not set).
+                      But all `direct` connections are meant to be independent of absolute times.
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Itinerary'
+                  itineraries:
+                    description: list of itineraries
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Itinerary'
+                  previousPageCursor:
+                    description: |
+                      Use the cursor to get the previous page of results. Insert the cursor into the request and post it to get the previous page.
+                      The previous page is a set of itineraries departing BEFORE the first itinerary in the result for a depart after search. When using the default sort order the previous set of itineraries is inserted before the current result.
+                    type: string
+                  nextPageCursor:
+                    description: |
+                      Use the cursor to get the next page of results. Insert the cursor into the request and post it to get the next page.
+                      The next page is a set of itineraries departing AFTER the last itinerary in this result.
+                    type: string
+
   /api/v1/one-to-many:
     get:
       tags:
-        - geocode
+        - routing
       summary: |
         Street routing from one to many places or many to one.
         The order in the response array corresponds to the order of coordinates of the \`many\` parameter in the query.
@@ -26,7 +732,7 @@ paths:
         - name: one
           in: query
           required: true
-          description: geo location as latitude,longitude
+          description: geo location as latitude;longitude
           schema:
             type: string
         - name: many
@@ -56,6 +762,27 @@ paths:
           description: maximum matching distance in meters to match geo coordinates to the street network
           schema:
             type: number
+        - name: elevationCosts
+          in: query
+          required: false
+          description: |
+            Optional. Default is `NONE`.
+
+            Set an elevation cost profile, to penalize routes with incline.
+            - `NONE`: No additional costs for elevations. This is the default behavior
+            - `LOW`: Add a low cost for increase in elevation and incline along the way. This will prefer routes with less ascent, if small detours are required.
+            - `HIGH`: Add a high cost for increase in elevation and incline along the way. This will prefer routes with less ascent, if larger detours are required.
+
+            As using an elevation costs profile will increase the travel duration,
+            routing through steep terrain may exceed the maximal allowed duration,
+            causing a location to appear unreachable.
+            Increasing the maximum travel time for these segments may resolve this issue.
+
+            Elevation cost profiles are currently used by following street modes:
+            - `BIKE`
+          schema:
+            $ref: '#/components/schemas/ElevationCosts'
+            default: NONE
         - name: arriveBy
           in: query
           required: true
@@ -76,6 +803,263 @@ paths:
                 items:
                   $ref: '#/components/schemas/Duration'
 
+  /api/experimental/one-to-all:
+    get:
+      tags:
+        - routing
+      summary: |
+        Computes all reachable locations from a given stop within a set duration.
+        Each result entry will contain the fastest travel duration and the number of connections used.
+      operationId: oneToAll
+      parameters:
+        - name: one
+          in: query
+          required: true
+          description: |
+            \`latitude,longitude[,level]\` tuple with
+            - latitude and longitude in degrees
+            - (optional) level: the OSM level (default: 0)
+
+            OR
+
+            stop id
+          schema:
+            type: string
+        - name: time
+          in: query
+          required: false
+          description: |
+            Optional. Defaults to the current time.
+
+            Departure time ($arriveBy=false) / arrival date ($arriveBy=true),
+          schema:
+            type: string
+            format: date-time
+        - name: maxTravelTime
+          in: query
+          required: true
+          description: maximum travel time in minutes
+          schema:
+            type: integer
+        - name: arriveBy
+          in: query
+          required: false
+          description: |
+            true = all to one,
+            false = one to all
+          schema:
+            type: boolean
+            default: false
+        - name: maxTransfers
+          in: query
+          required: false
+          description: |
+            The maximum number of allowed transfers.
+            If not provided, the routing uses the server-side default value
+            which is hardcoded and very high to cover all use cases.
+
+            *Warning*: Use with care. Setting this too low can lead to
+            optimal (e.g. the fastest) journeys not being found.
+            If this value is too low to reach the destination at all,
+            it can lead to slow routing performance.
+          schema:
+            type: integer
+        - name: minTransferTime
+          in: query
+          required: false
+          description: |
+            Optional. Default is 0 minutes.
+
+            Minimum transfer time for each transfer in minutes.
+          schema:
+            type: integer
+            default: 0
+
+        - name: additionalTransferTime
+          in: query
+          required: false
+          description: |
+            Optional. Default is 0 minutes.
+
+            Additional transfer time reserved for each transfer in minutes.
+          schema:
+            type: integer
+            default: 0
+
+        - name: transferTimeFactor
+          in: query
+          required: false
+          description: |
+            Optional. Default is 1.0
+
+            Factor to multiply minimum required transfer times with.
+            Values smaller than 1.0 are not supported.
+          schema:
+            type: number
+            default: 1.0
+
+        - name: maxMatchingDistance
+          in: query
+          required: false
+          description: |
+            Optional. Default is 25 meters.
+
+            Maximum matching distance in meters to match geo coordinates to the street network.
+          schema:
+            type: number
+            default: 25
+
+        - name: useRoutedTransfers
+          in: query
+          required: false
+          description: |
+            Optional. Default is `false`.
+
+            Whether to use transfers routed on OpenStreetMap data.
+          schema:
+            type: boolean
+            default: false
+        - name: pedestrianProfile
+          in: query
+          required: false
+          description: |
+            Optional. Default is `FOOT`.
+
+            Accessibility profile to use for pedestrian routing in transfers
+            between transit connections and the first and last mile respectively.
+          schema:
+            $ref: '#/components/schemas/PedestrianProfile'
+            default: FOOT
+
+        - name: elevationCosts
+          in: query
+          required: false
+          description: |
+            Optional. Default is `NONE`.
+
+            Set an elevation cost profile, to penalize routes with incline.
+            - `NONE`: No additional costs for elevations. This is the default behavior
+            - `LOW`: Add a low cost for increase in elevation and incline along the way. This will prefer routes with less ascent, if small detours are required.
+            - `HIGH`: Add a high cost for increase in elevation and incline along the way. This will prefer routes with less ascent, if larger detours are required.
+
+            As using an elevation costs profile will increase the travel duration,
+            routing through steep terrain may exceed the maximal allowed duration,
+            causing a location to appear unreachable.
+            Increasing the maximum travel time for these segments may resolve this issue.
+
+            The profile is used for routing on both the first and last mile.
+
+            Elevation cost profiles are currently used by following street modes:
+            - `BIKE`
+          schema:
+            $ref: '#/components/schemas/ElevationCosts'
+            default: NONE
+
+        - name: transitModes
+          in: query
+          required: false
+          description: |
+            Optional. Default is `TRANSIT` which allows all transit modes (no restriction).
+            Allowed modes for the transit part. If empty, no transit connections will be computed.
+            For example, this can be used to allow only `METRO,SUBWAY,TRAM`.
+          schema:
+            default:
+              - TRANSIT
+            type: array
+            items:
+              $ref: '#/components/schemas/Mode'
+          explode: false
+
+        - name: preTransitModes
+          in: query
+          required: false
+          description: |
+            Optional. Default is `WALK`. The behavior depends on whether `arriveBy` is set:
+              - `arriveBy=true`: Currently not used
+              - `arriveBy=false`: Only applies if the `one` place is a coordinate (not a transit stop).
+
+            A list of modes that are allowed to be used from the last transit stop to the `to` coordinate. Example: `WALK,BIKE_SHARING`.
+          schema:
+            default:
+              - WALK
+            type: array
+            items:
+              $ref: '#/components/schemas/Mode'
+          explode: false
+
+        - name: postTransitModes
+          in: query
+          required: false
+          description: |
+            Optional. Default is `WALK`. The behavior depends on whether `arriveBy` is set:
+              - `arriveBy=true`: Only applies if the `one` place is a coordinate (not a transit stop).
+              - `arriveBy=false`: Currently not used
+
+            A list of modes that are allowed to be used from the last transit stop to the `to` coordinate. Example: `WALK,BIKE_SHARING`.
+          schema:
+            default:
+              - WALK
+            type: array
+            items:
+              $ref: '#/components/schemas/Mode'
+          explode: false
+
+        - name: requireBikeTransport
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+          description: |
+            Optional. Default is `false`.
+
+            If set to `true`, all used transit trips are required to allow bike carriage.
+
+        - name: requireCarTransport
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+          description: |
+            Optional. Default is `false`.
+
+            If set to `true`, all used transit trips are required to allow car carriage.
+
+        - name: maxPreTransitTime
+          in: query
+          required: false
+          description: |
+            Optional. Default is 15min which is `900`.
+              - `arriveBy=true`: Currently not used
+              - `arriveBy=false`: Maximum time in seconds for the street leg at `one` location.
+          schema:
+            type: integer
+            default: 900
+            minimum: 0
+
+        - name: maxPostTransitTime
+          in: query
+          required: false
+          description: |
+            Optional. Default is 15min which is `900`.
+              - `arriveBy=true`: Maximum time in seconds for the street leg at `one` location.
+              - `arriveBy=false`: Currently not used
+          schema:
+            type: integer
+            default: 900
+            minimum: 0
+
+      responses:
+        200:
+          description: |
+            The starting position and a list of all reachable stops
+            If no paths are found, the reachable list is empty.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reachable'
+
   /api/v1/reverse-geocode:
     get:
       tags:
@@ -89,6 +1073,16 @@ paths:
           description: latitude, longitude in degrees
           schema:
             type: string
+        - name: type
+          in: query
+          required: false
+          description: |
+            Optional. Default is all types.
+            
+            Only return results of the given type.
+            For example, this can be used to allow only `ADDRESS` and `STOP` results.
+          schema:
+            $ref: '#/components/schemas/LocationType'
       responses:
         200:
           description: A list of guesses to resolve the coordinates to a location
@@ -122,6 +1116,36 @@ paths:
           schema:
             type: string
 
+        - name: type
+          in: query
+          required: false
+          description: |
+            Optional. Default is all types.
+            
+            Only return results of the given types.
+            For example, this can be used to allow only `ADDRESS` and `STOP` results.
+          schema:
+            $ref: '#/components/schemas/LocationType'
+
+        - name: place
+          in: query
+          required: false
+          description: |
+            Optional. Used for biasing results towards the coordinate.
+            
+            Format: latitude,longitude in degrees
+          schema:
+            type: string
+
+        - name: placeBias
+          in: query
+          required: false
+          description: |
+            Optional. Used for biasing results towards the coordinate. Higher number = higher bias.
+          schema:
+            type: number
+            default: 1
+
       responses:
         200:
           description: A list of guesses to resolve the text to a location
@@ -132,7 +1156,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/Match'
 
-  /api/v1/trip:
+  /api/v2/trip:
     get:
       tags:
         - timetable
@@ -250,10 +1274,9 @@ paths:
             This will enable you to search for stop times in the next or previous time-window.
           schema:
             type: string
-
       responses:
         200:
-          description: A list of guesses to resolve the text to a location
+          description: A list of departures/arrivals
           content:
             application/json:
               schema:
@@ -277,397 +1300,6 @@ paths:
                     description: |
                       Use the cursor to get the next page of results. Insert the cursor into the request and post it to get the next page.
                       The next page is a set of stop times AFTER the last stop time in this result.
-                    type: string
-
-  /api/v1/plan:
-    get:
-      tags:
-        - routing
-      summary: Computes optimal connections from one place to another.
-      operationId: plan
-      parameters:
-        - name: fromPlace
-          in: query
-          required: true
-          description: \`latitude,longitude,level\` tuple in degrees OR stop id
-          schema:
-            type: string
-
-        - name: toPlace
-          in: query
-          required: true
-          description: \`latitude,longitude,level\` tuple in degrees OR stop id
-          schema:
-            type: string
-
-        - name: via
-          in: query
-          required: false
-          description: |
-            List of via stops to visit (only stop IDs, no coordinates allowed for now).
-            Also see the optional parameter `viaMinimumStay` to set a set a minimum stay duration for each via stop.
-          schema:
-            type: array
-            maxItems: 2
-            items:
-              type: string
-          explode: false
-
-        - name: viaMinimumStay
-          in: query
-          required: false
-          description: |
-            Optional. If not set, the default is `0,0` - no stay required.
-            
-            For each `via` stop a minimum stay duration in minutes.
-            
-            The value `0` signals that it's allowed to stay in the same trip.
-            This enables via stays without counting a transfer and can lead 
-            to better connections with less transfers. Transfer connections can
-            still be found with `viaMinimumStay=0`.
-          schema:
-            default: [ 0, 0 ]
-            type: array
-            maxItems: 2
-            items:
-              type: integer
-          explode: false
-
-        - name: time
-          in: query
-          required: false
-          description: |
-            Optional. Defaults to the current time.
-            
-            Departure time ($arriveBy=false) / arrival date ($arriveBy=true),
-          schema:
-            type: string
-            format: date-time
-
-        - name: maxTransfers
-          in: query
-          required: false
-          description: |
-            The maximum number of allowed transfers.
-            If not provided, the routing uses the server-side default value
-            which is hardcoded and very high to cover all use cases.
-            
-            *Warning*: Use with care. Setting this too low can lead to
-            optimal (e.g. the fastest) journeys not being found.
-            If this value is too low to reach the destination at all,
-            it can lead to slow routing performance.
-          schema:
-            type: integer
-
-        - name: maxHours
-          in: query
-          required: false
-          description: |
-            The maximum travel time in hours.
-            If not provided, the routing to uses the value
-            hardcoded in the server which is usually quite high.
-            
-            *Warning*: Use with care. Setting this too low can lead to
-            optimal (e.g. the least transfers) journeys not being found.
-            If this value is too low to reach the destination at all,
-            it can lead to slow routing performance.
-            
-            TODO: pass parameter to nigiri
-          schema:
-            type: number
-
-        - name: minTransferTime
-          in: query
-          required: false
-          description: |
-            Optional. Default is 0 minutes.
-            
-            Minimum transfer time for each transfer in minutes.
-          schema:
-            type: integer
-            default: 0
-
-        - name: additionalTransferTime
-          in: query
-          required: false
-          description: |
-            Optional. Default is 0 minutes.
-            
-            Additional transfer time reserved for each transfer in minutes.
-          schema:
-            type: integer
-            default: 0
-
-        - name: transferTimeFactor
-          in: query
-          required: false
-          description: |
-            Optional. Default is 1.0
-            
-            Factor to multiply minimum required transfer times with.
-            Values smaller than 1.0 are not supported.
-          schema:
-            type: number
-            default: 1.0
-
-        - name: maxMatchingDistance
-          in: query
-          required: true
-          description: |
-            Optional. Default is 25 meters.
-            
-            Maximum matching distance in meters to match geo coordinates to the street network.
-          schema:
-            type: number
-            default: 25
-
-        - name: wheelchair
-          in: query
-          description: Whether the trip must be wheelchair accessible.
-          required: false
-          schema:
-            type: boolean
-            default: false
-
-        - name: transitModes
-          in: query
-          required: false
-          description: |
-            Optional. Default is `TRANSIT` which allows all transit modes (no restriction).
-            Allowed modes for the transit part. If empty, no transit connections will be computed.
-            For example, this can be used to allow only `METRO,SUBWAY,TRAM`.
-          schema:
-            default:
-              - TRANSIT
-            type: array
-            items:
-              $ref: '#/components/schemas/Mode'
-          explode: false
-
-        - name: directModes
-          in: query
-          required: false
-          description: |
-            Optional. Default is `WALK` which will compute walking routes as direct connections.
-            
-            Modes used for direction connections from start to destination without using transit.
-            Results will be returned on the `direct` key.
-            
-            Note: Direct connections will only be returned on the first call. For paging calls, they can be omitted.
-            
-            Note: Transit connections that are slower than the fastest direct connection will not show up.
-            This is being used as a cut-off during transit routing to speed up the search.
-            To prevent this, it's possible to send two separate requests (one with only `transitModes` and one with only `directModes`).
-            
-            Only non-transit modes such as `WALK`, `BIKE`, `CAR`, `BIKE_SHARING`, etc. can be used.
-          schema:
-            default:
-              - WALK
-            type: array
-            items:
-              $ref: '#/components/schemas/Mode'
-          explode: false
-
-        - name: preTransitModes
-          in: query
-          required: false
-          description: |
-            Optional. Default is `WALK`. Only applies if the `from` place is a coordinate (not a transit stop). Does not apply to direct connections (see `directModes`).
-            
-            A list of modes that are allowed to be used from the `from` coordinate to the first transit stop. Example: `WALK,BIKE_SHARING`.
-          schema:
-            default:
-              - WALK
-            type: array
-            items:
-              $ref: '#/components/schemas/Mode'
-          explode: false
-
-        - name: postTransitModes
-          in: query
-          required: false
-          description: |
-            Optional. Default is `WALK`. Only applies if the `to` place is a coordinate (not a transit stop). Does not apply to direct connections (see `directModes`).
-            
-            A list of modes that are allowed to be used from the last transit stop to the `to` coordinate. Example: `WALK,BIKE_SHARING`.
-          schema:
-            default:
-              - WALK
-            type: array
-            items:
-              $ref: '#/components/schemas/Mode'
-          explode: false
-
-        - name: numItineraries
-          in: query
-          required: false
-          description: |
-            The minimum number of itineraries to compute.
-            This is only relevant if `timetableView=true`.
-            The default value is 5.
-          schema:
-            type: integer
-            default: 5
-
-        - name: pageCursor
-          in: query
-          required: false
-          description: |
-            Use the cursor to go to the next "page" of itineraries.
-            Copy the cursor from the last response and keep the original request as is.
-            This will enable you to search for itineraries in the next or previous time-window.
-          schema:
-            type: string
-
-        - name: timetableView
-          in: query
-          required: false
-          description: |
-            Optional. Default is `true`.
-            
-            Search for the best trip options within a time window.
-            If true two itineraries are considered optimal
-            if one is better on arrival time (earliest wins)
-            and the other is better on departure time (latest wins).
-            In combination with arriveBy this parameter cover the following use cases:
-            
-            `timetable=false` = waiting for the first transit departure/arrival is considered travel time:
-              - `arriveBy=true`: event (e.g. a meeting) starts at 10:00 am,
-                compute the best journeys that arrive by that time (maximizes departure time)
-              - `arriveBy=false`: event (e.g. a meeting) ends at 11:00 am,
-                compute the best journeys that depart after that time
-            
-            `timetable=true` = optimize "later departure" + "earlier arrival" and give all options over a time window:
-              - `arriveBy=true`: the time window around `date` and `time` refers to the arrival time window
-              - `arriveBy=false`: the time window around `date` and `time` refers to the departure time window
-          schema:
-            type: boolean
-            default: true
-
-        - name: arriveBy
-          in: query
-          required: false
-          schema:
-            type: boolean
-            default: false
-          description: |
-            Optional. Default is `false`.
-            
-              - `arriveBy=true`: the parameters `date` and `time` refer to the arrival time
-              - `arriveBy=false`: the parameters `date` and `time` refer to the departure time
-
-        - name: searchWindow
-          in: query
-          required: false
-          description: |
-            Optional. Default is 2 hours which is `7200`.
-            
-            The length of the search-window in seconds. Default value two hours.
-            
-              - `arriveBy=true`: number of seconds between the earliest departure time and latest departure time
-              - `arriveBy=false`: number of seconds between the earliest arrival time and the latest arrival time
-          schema:
-            type: integer
-            default: 7200
-            minimum: 0
-
-        - name: requireBikeTransport
-          in: query
-          required: false
-          schema:
-            type: boolean
-            default: false
-          description: |
-            Optional. Default is `false`.
-            
-            If set to `true`, all used transit trips are required to allow bike carriage.
-
-        - name: maxPreTransitTime
-          in: query
-          required: false
-          description: |
-            Optional. Default is 15min which is `900`.
-            Maximum time in seconds for the first street leg.
-          schema:
-            type: integer
-            default: 900
-            minimum: 0
-
-        - name: maxPostTransitTime
-          in: query
-          required: false
-          description: |
-            Optional. Default is 15min which is `900`.
-            Maximum time in seconds for the last street leg.
-          schema:
-            type: integer
-            default: 900
-            minimum: 0
-
-        - name: maxDirectTime
-          in: query
-          required: false
-          description: |
-            Optional. Default is 30min which is `1800`.
-            Maximum time in seconds for direct connections.
-          schema:
-            type: integer
-            default: 1800
-            minimum: 0
-      responses:
-        '200':
-          description: routing result
-          content:
-            application/json:
-              schema:
-                type: object
-                required:
-                  - requestParameters
-                  - debugOutput
-                  - date
-                  - from
-                  - to
-                  - direct
-                  - itineraries
-                  - previousPageCursor
-                  - nextPageCursor
-                properties:
-                  requestParameters:
-                    description: "the routing query"
-                    type: object
-                    additionalProperties:
-                      type: string
-                  debugOutput:
-                    description: "debug statistics"
-                    type: object
-                    additionalProperties:
-                      type: integer
-                  from:
-                    $ref: '#/components/schemas/Place'
-                  to:
-                    $ref: '#/components/schemas/Place'
-                  direct:
-                    description: |
-                      Direct trips by `WALK`, `BIKE`, `CAR`, etc. without time-dependency.
-                      The starting time (`arriveBy=false`) / arrival time (`arriveBy=true`) is always the queried `time` parameter (set to \"now\" if not set).
-                      But all `direct` connections are meant to be independent of absolute times.
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/Itinerary'
-                  itineraries:
-                    description: list of itineraries
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/Itinerary'
-                  previousPageCursor:
-                    description: |
-                      Use the cursor to get the previous page of results. Insert the cursor into the request and post it to get the previous page.
-                      The previous page is a set of itineraries departing BEFORE the first itinerary in the result for a depart after search. When using the default sort order the previous set of itineraries is inserted before the current result.
-                    type: string
-                  nextPageCursor:
-                    description: |
-                      Use the cursor to get the next page of results. Insert the cursor into the request and post it to get the next page.
-                      The next page is a set of itineraries departing AFTER the last itinerary in this result.
                     type: string
 
   /api/v1/map/trips:
@@ -809,12 +1441,12 @@ paths:
                 items:
                   type: number
 
-  /api/debug/footpaths:
+  /api/debug/transfers:
     get:
       tags:
         - debug
-      summary: Prints all footpaths of a timetable location (track, bus stop, etc.)
-      operationId: footpaths
+      summary: Prints all transfers of a timetable location (track, bus stop, etc.)
+      operationId: transfers
       parameters:
         - name: id
           in: query
@@ -824,29 +1456,179 @@ paths:
             type: string
       responses:
         '200':
-          description: list of outgoing footpaths of this location
+          description: list of outgoing transfers of this location
           content:
             application/json:
               schema:
                 type: object
                 required:
                   - place
-                  - footpaths
+                  - hasFootTransfers
+                  - hasWheechairTransfers
+                  - hasCarTransfers
+                  - transfers
                 properties:
                   place:
                     $ref: '#/components/schemas/Place'
-                  footpaths:
-                    description: all outgoing footpaths of this location
+                  hasFootTransfers:
+                    type: boolean
+                    description: true if the server has foot transfers computed
+                  hasWheelchairTransfers:
+                    type: boolean
+                    description: true if the server has wheelchair transfers computed
+                  hasCarTransfers:
+                    type: boolean
+                    description: true if the server has car transfers computed
+                  transfers:
+                    description: all outgoing transfers of this location
                     type: array
                     items:
-                      $ref: '#/components/schemas/Footpath'
+                      $ref: '#/components/schemas/Transfer'
 
 components:
   schemas:
+    AlertCause:
+      description: Cause of this alert.
+      type: string
+      enum:
+        - UNKNOWN_CAUSE
+        - OTHER_CAUSE
+        - TECHNICAL_PROBLEM
+        - STRIKE
+        - DEMONSTRATION
+        - ACCIDENT
+        - HOLIDAY
+        - WEATHER
+        - MAINTENANCE
+        - CONSTRUCTION
+        - POLICE_ACTIVITY
+        - MEDICAL_EMERGENCY
+
+    AlertEffect:
+      description: The effect of this problem on the affected entity.
+      type: string
+      enum:
+        - NO_SERVICE
+        - REDUCED_SERVICE
+        - SIGNIFICANT_DELAYS
+        - DETOUR
+        - ADDITIONAL_SERVICE
+        - MODIFIED_SERVICE
+        - OTHER_EFFECT
+        - UNKNOWN_EFFECT
+        - STOP_MOVED
+        - NO_EFFECT
+        - ACCESSIBILITY_ISSUE
+
+    AlertSeverityLevel:
+      description: The severity of the alert.
+      type: string
+      enum:
+        - UNKNOWN_SEVERITY
+        - INFO
+        - WARNING
+        - SEVERE
+
+    TimeRange:
+      description: |
+        A time interval.
+        The interval is considered active at time t if t is greater than or equal to the start time and less than the end time.
+      type: object
+      properties:
+        start:
+          description: |
+            If missing, the interval starts at minus infinity.
+            If a TimeRange is provided, either start or end must be provided - both fields cannot be empty.
+          type: string
+          format: date-time
+        end:
+          description: |
+            If missing, the interval ends at plus infinity.
+            If a TimeRange is provided, either start or end must be provided - both fields cannot be empty.
+          type: string
+          format: date-time
+
+    Alert:
+      description: An alert, indicating some sort of incident in the public transit network.
+      type: object
+      required:
+        - headerText
+        - descriptionText
+      properties:
+        communicationPeriod:
+          description: |
+            Time when the alert should be shown to the user.
+            If missing, the alert will be shown as long as it appears in the feed.
+            If multiple ranges are given, the alert will be shown during all of them.
+          type: array
+          items:
+            $ref: '#/components/schemas/TimeRange'
+        impactPeriod:
+          description: Time when the services are affected by the disruption mentioned in the alert.
+          type: array
+          items:
+            $ref: '#/components/schemas/TimeRange'
+        cause:
+          $ref: '#/components/schemas/AlertCause'
+        causeDetail:
+          type: string
+          description: |
+            Description of the cause of the alert that allows for agency-specific language;
+            more specific than the Cause.
+        effect:
+          $ref: '#/components/schemas/AlertEffect'
+        effectDetail:
+          type: string
+          description: |
+            Description of the effect of the alert that allows for agency-specific language;
+            more specific than the Effect.
+        url:
+          type: string
+          description: The URL which provides additional information about the alert.
+        headerText:
+          type: string
+          description: |
+            Header for the alert. This plain-text string will be highlighted, for example in boldface.
+        descriptionText:
+          type: string
+          description: |
+            Description for the alert.
+            This plain-text string will be formatted as the body of the alert (or shown on an explicit "expand" request by the user).
+            The information in the description should add to the information of the header.
+        ttsHeaderText:
+          type: string
+          description: |
+            Text containing the alert's header to be used for text-to-speech implementations.
+            This field is the text-to-speech version of header_text.
+            It should contain the same information as headerText but formatted such that it can read as text-to-speech
+            (for example, abbreviations removed, numbers spelled out, etc.)
+        ttsDescriptionText:
+          type: string
+          description: |
+            Text containing a description for the alert to be used for text-to-speech implementations.
+            This field is the text-to-speech version of description_text.
+            It should contain the same information as description_text but formatted such that it can be read as text-to-speech
+            (for example, abbreviations removed, numbers spelled out, etc.)
+        severityLevel:
+          description: Severity of the alert.
+          $ref: '#/components/schemas/AlertSeverityLevel'
+        imageUrl:
+          description: String containing an URL linking to an image.
+          type: string
+        imageMediaType:
+          description: |
+            IANA media type as to specify the type of image to be displayed. The type must start with "image/"
+          type: string
+        imageAlternativeText:
+          description: |
+            Text describing the appearance of the linked image in the image field
+            (e.g., in case the image can't be displayed or the user can't see the image for accessibility reasons).
+            See the HTML spec for alt image text.
+          type: string
+
     Duration:
       description: Object containing duration if a path was found or none if no path was found
       type: object
-      required: [ ]
       properties:
         duration:
           type: number
@@ -871,6 +1653,11 @@ components:
         matched:
           type: boolean
           description: Whether this area was matched by the input text
+        unique:
+          type: boolean
+          description: |
+            Set for the first area after the `default` area that distinguishes areas
+            if the match is ambiguous regarding (`default` area + place name / street [+ house number]).
         default:
           type: boolean
           description: Whether this area should be displayed as default area (area with admin level closest 7)
@@ -882,6 +1669,14 @@ components:
       maxItems: 2
       items:
         type: number
+
+    LocationType:
+      description: location type
+      type: string
+      enum:
+        - ADDRESS
+        - PLACE
+        - STOP
 
     Match:
       description: GeoCoding match
@@ -897,12 +1692,7 @@ components:
         - score
       properties:
         type:
-          description: location type
-          type: string
-          enum:
-            - ADDRESS
-            - PLACE
-            - STOP
+          $ref: '#/components/schemas/LocationType'
         tokens:
           description: list of non-overlapping tokens that were matched
           type: array
@@ -943,15 +1733,38 @@ components:
           description: score according to the internal scoring system (the scoring algorithm might change in the future)
           type: number
 
+    ElevationCosts:
+      description: |
+        Different elevation cost profiles for street routing.
+        Using a elevation cost profile will prefer routes with a smaller incline and smaller difference in elevation, even if the routed way is longer.
+
+        - `NONE`: Ignore elevation data for routing. This is the default behavior
+        - `LOW`: Add a low penalty for inclines. This will favor longer paths, if the elevation increase and incline are smaller.
+        - `HIGH`: Add a high penalty for inclines. This will favor even longer paths, if the elevation increase and incline are smaller.
+      type: string
+      enum:
+        - NONE
+        - LOW
+        - HIGH
+
+    PedestrianProfile:
+      description: Different accessibility profiles for pedestrians.
+      type: string
+      enum:
+        - FOOT
+        - WHEELCHAIR
+
     Mode:
       description: |
         # Street modes
         
           - `WALK`
           - `BIKE`
-          - `BIKE_RENTAL`
+          - `RENTAL` Experimental. Expect unannounced breaking changes (without version bumps) for all parameters and returned structs.
           - `CAR`
-          - `CAR_PARKING`
+          - `CAR_PARKING` Experimental. Expect unannounced breaking changes (without version bumps) for all parameters and returned structs.
+          - `ODM` on-demand taxis from the Prima+ÖV Project
+          - `FLEX` flexible transports
 
         # Transit modes
 
@@ -963,20 +1776,25 @@ components:
           - `BUS`: short distance buses (does not include `COACH`)
           - `COACH`: long distance buses (does not include `BUS`)
           - `RAIL`: translates to `HIGHSPEED_RAIL,LONG_DISTANCE_RAIL,NIGHT_RAIL,REGIONAL_RAIL,REGIONAL_FAST_RAIL`
-          - `METRO`: metro trains
+          - `METRO`: metro trains 
           - `HIGHSPEED_RAIL`: long distance high speed trains (e.g. TGV)
           - `LONG_DISTANCE`: long distance inter city trains
           - `NIGHT_RAIL`: long distance night trains
           - `REGIONAL_FAST_RAIL`: regional express routes that skip low traffic stops to be faster
           - `REGIONAL_RAIL`: regional train
+          - `CABLE_CAR`: Cable tram. Used for street-level rail cars where the cable runs beneath the vehicle (e.g., cable car in San Francisco).
+          - `FUNICULAR`: Funicular. Any rail system designed for steep inclines.
+          - `AREAL_LIFT`: Aerial lift, suspended cable car (e.g., gondola lift, aerial tramway). Cable transport where cabins, cars, gondolas or open chairs are suspended by means of one or more cables.
       type: string
       enum:
         # === Street ===
         - WALK
         - BIKE
+        - RENTAL
         - CAR
-        - BIKE_RENTAL
         - CAR_PARKING
+        - ODM
+        - FLEX
         # === Transit ===
         - TRANSIT
         - TRAM
@@ -992,6 +1810,9 @@ components:
         - NIGHT_RAIL
         - REGIONAL_FAST_RAIL
         - REGIONAL_RAIL
+        - CABLE_CAR
+        - FUNICULAR
+        - AREAL_LIFT
         - OTHER
 
     VertexType:
@@ -1004,6 +1825,15 @@ components:
         - NORMAL
         - BIKESHARE
         - TRANSIT
+
+    PickupDropoffType:
+      type: string
+      description: |
+        - `NORMAL` - entry/exit is possible normally
+        - `NOT_ALLOWED` - entry/exit is not allowed
+      enum:
+        - NORMAL
+        - NOT_ALLOWED
 
     Place:
       type: object
@@ -1052,8 +1882,74 @@ components:
             The current track/platform information, updated with real-time updates if available. 
             Can be missing if neither real-time updates nor the schedule timetable contains track information.
           type: string
+        description:
+          description: description of the location that provides more detailed information
+          type: string
         vertexType:
           $ref: '#/components/schemas/VertexType'
+        pickupType:
+          description: Type of pickup. It could be disallowed due to schedule, skipped stops or cancellations.
+          $ref: '#/components/schemas/PickupDropoffType'
+        dropoffType:
+          description: Type of dropoff. It could be disallowed due to schedule, skipped stops or cancellations.
+          $ref: '#/components/schemas/PickupDropoffType'
+        cancelled:
+          description: Whether this stop is cancelled due to the realtime situation.
+          type: boolean
+        alerts:
+          description: Alerts for this stop.
+          type: array
+          items:
+            $ref: '#/components/schemas/Alert'
+        flex:
+          description: for `FLEX` transports, the flex location area or location group name
+          type: string
+        flexId:
+          description: for `FLEX` transports, the flex location area ID or location group ID
+          type: string
+        flexStartPickupDropOffWindow:
+          description: Time that on-demand service becomes available
+          type: string
+          format: date-time
+        flexEndPickupDropOffWindow:
+          description: Time that on-demand service ends
+          type: string
+          format: date-time
+
+    ReachablePlace:
+      description: Place reachable by One-to-All
+      type: object
+      properties:
+        place:
+          $ref: "#/components/schemas/Place"
+          description: Place reached by One-to-All
+        duration:
+          type: integer
+          description: Total travel duration
+        k:
+          type: integer
+          description: |
+            k is the smallest number, for which a journey with the shortest duration and at most k-1 transfers exist.
+            You can think of k as the number of connections used.
+
+            In more detail:
+
+            k=0: No connection, e.g. for the one location
+            k=1: Direct connection
+            k=2: Connection with 1 transfer
+
+    Reachable:
+      description: Object containing all reachable places by One-to-All search
+      type: object
+      properties:
+        one:
+          $ref: "#/components/schemas/Place"
+          description: One location used in One-to-All search
+        all:
+          description: List of locations reachable by One-to-All
+          type: array
+          items:
+            $ref: "#/components/schemas/ReachablePlace"
 
     StopTime:
       description: departure or arrival event at a stop
@@ -1068,6 +1964,8 @@ components:
         - agencyUrl
         - tripId
         - routeShortName
+        - pickupDropoffType
+        - cancelled
         - source
       properties:
         place:
@@ -1098,6 +1996,12 @@ components:
           type: string
         routeShortName:
           type: string
+        pickupDropoffType:
+          description: Type of pickup (for departures) or dropoff (for arrivals), may be disallowed either due to schedule, skipped stops or cancellations
+          $ref: '#/components/schemas/PickupDropoffType'
+        cancelled:
+          description: Whether the departure/arrival is cancelled due to the realtime situation.
+          type: boolean
         source:
           description: Filename and line number where this trip is from
           type: string
@@ -1168,7 +2072,7 @@ components:
           description: Whether there is real-time data about this leg
           type: boolean
         polyline:
-          description: Google polyline encoded coordinate sequence (with precision 7) where the trip travels on this segment.
+          description: Google polyline encoded coordinate sequence (with precision 5) where the trip travels on this segment.
           type: string
 
     Direction:
@@ -1193,14 +2097,21 @@ components:
       type: object
       required:
         - points
+        - precision
         - length
       properties:
         points:
-          description: The encoded points of the polyline using the Google polyline encoding with precision 7.
+          description: The encoded points of the polyline using the Google polyline encoding.
           type: string
+        precision:
+          description: |
+            The precision of the returned polyline (7 for /v1, 6 for /v2)
+            Be aware that with precision 7, coordinates with |longitude| > 107.37 are undefined/will overflow.
+          type: integer
         length:
           description: The number of points in the string
           type: integer
+          minimum: 0
 
     StepInstruction:
       type: object
@@ -1250,6 +2161,50 @@ components:
             This step is on an open area, such as a plaza or train platform,
             and thus the directions should say something like "cross"
           type: boolean
+        toll:
+          description: Indicates that a fee must be paid by general traffic to use a road, road bridge or road tunnel.
+          type: boolean
+        accessRestriction:
+          description: |
+            Experimental. Indicates whether access to this part of the route is restricted.
+            See: https://wiki.openstreetmap.org/wiki/Conditional_restrictions
+          type: string
+        elevationUp:
+          type: integer
+          description: incline in meters across this path segment
+        elevationDown:
+          type: integer
+          description: decline in meters across this path segment
+
+    RentalFormFactor:
+      type: string
+      enum:
+        - BICYCLE
+        - CARGO_BICYCLE
+        - CAR
+        - MOPED
+        - SCOOTER_STANDING
+        - SCOOTER_SEATED
+        - OTHER
+
+    RentalPropulsionType:
+      type: string
+      enum:
+        - HUMAN
+        - ELECTRIC_ASSIST
+        - ELECTRIC
+        - COMBUSTION
+        - COMBUSTION_DIESEL
+        - HYBRID
+        - PLUG_IN_HYBRID
+        - HYDROGEN_FUEL_CELL
+
+    RentalReturnConstraint:
+      type: string
+      enum:
+        - NONE
+        - ANY_STATION
+        - ROUNDTRIP_STATION
 
     Rental:
       description: Vehicle rental
@@ -1269,6 +2224,12 @@ components:
         stationName:
           type: string
           description: Name of the station
+        fromStationName:
+          type: string
+          description: Name of the station where the vehicle is picked up (empty for free floating vehicles)
+        toStationName:
+          type: string
+          description: Name of the station where the vehicle is returned (empty for free floating vehicles)
         rentalUriAndroid:
           type: string
           description: Rental URI for Android (deep link to the specific station or vehicle)
@@ -1278,6 +2239,12 @@ components:
         rentalUriWeb:
           type: string
           description: Rental URI for web (deep link to the specific station or vehicle)
+        formFactor:
+          $ref: '#/components/schemas/RentalFormFactor'
+        propulsionType:
+          $ref: '#/components/schemas/RentalPropulsionType'
+        returnConstraint:
+          $ref: '#/components/schemas/RentalReturnConstraint'
 
     Leg:
       type: object
@@ -1288,6 +2255,7 @@ components:
         - scheduledStartTime
         - scheduledEndTime
         - realTime
+        - scheduled
         - duration
         - from
         - to
@@ -1334,6 +2302,11 @@ components:
         realTime:
           description: Whether there is real-time data about this leg
           type: boolean
+        scheduled:
+          description: |
+            Whether this leg was originally scheduled to run or is an additional service.
+            Scheduled times will equal realtime times in this case.
+          type: boolean
         distance:
           description: For non-transit legs the distance traveled while traversing this leg in meters.
           type: number
@@ -1361,6 +2334,9 @@ components:
           type: string
         routeShortName:
           type: string
+        cancelled:
+          description: Whether this trip is cancelled
+          type: boolean
         source:
           description: Filename and line number where this trip is from
           type: string
@@ -1382,6 +2358,132 @@ components:
             $ref: '#/components/schemas/StepInstruction'
         rental:
           $ref: '#/components/schemas/Rental'
+        fareTransferIndex:
+          type: integer
+          description: |
+            Index into `Itinerary.fareTransfers` array
+            to identify which fare transfer this leg belongs to
+        effectiveFareLegIndex:
+          type: integer
+          description: |
+            Index into the `Itinerary.fareTransfers[fareTransferIndex].effectiveFareLegProducts` array
+            to identify which effective fare leg this itinerary leg belongs to
+        alerts:
+          description: Alerts for this stop.
+          type: array
+          items:
+            $ref: '#/components/schemas/Alert'
+
+    RiderCategory:
+      type: object
+      required:
+        - riderCategoryName
+        - isDefaultFareCategory
+      properties:
+        riderCategoryName:
+          description: Rider category name as displayed to the rider.
+          type: string
+        isDefaultFareCategory:
+          description: Specifies if this category should be considered the default (i.e. the main category displayed to riders).
+          type: boolean
+        eligibilityUrl:
+          description: URL to a web page providing detailed information about the rider category and/or its eligibility criteria.
+          type: string
+
+    FareMediaType:
+      type: string
+      enum: [ "NONE", "PAPER_TICKET", "TRANSIT_CARD", "CONTACTLESS_EMV", "MOBILE_APP" ]
+      enumDescriptions:
+        NONE: No fare media involved (e.g., cash payment)
+        PAPER_TICKET: Physical paper ticket
+        TRANSIT_CARD: Physical transit card with stored value
+        CONTACTLESS_EMV: cEMV (contactless payment)
+        MOBILE_APP: Mobile app with virtual transit cards/passes
+
+    FareMedia:
+      type: object
+      required:
+        - fareMediaType
+      properties:
+        fareMediaName:
+          description: Name of the fare media. Required for transit cards and mobile apps.
+          type: string
+        fareMediaType:
+          description: The type of fare media.
+          $ref: '#/components/schemas/FareMediaType'
+
+    FareProduct:
+      type: object
+      required:
+        - name
+        - amount
+        - currency
+      properties:
+        name:
+          description: The name of the fare product as displayed to riders.
+          type: string
+        amount:
+          description: The cost of the fare product. May be negative to represent transfer discounts. May be zero to represent a fare product that is free.
+          type: number
+        currency:
+          description: ISO 4217 currency code. The currency of the cost of the fare product.
+          type: string
+        riderCategory:
+          $ref: '#/components/schemas/RiderCategory'
+        media:
+          $ref: '#/components/schemas/FareMedia'
+
+    FareTransferRule:
+      type: string
+      enum:
+        - A_AB
+        - A_AB_B
+        - AB
+
+    FareTransfer:
+      type: object
+      description: |
+        The concept is derived from: https://gtfs.org/documentation/schedule/reference/#fare_transfer_rulestxt
+
+        Terminology:
+          - **Leg**: An itinerary leg as described by the `Leg` type of this API description.
+          - **Effective Fare Leg**: Itinerary legs can be joined together to form one *effective fare leg*.
+          - **Fare Transfer**: A fare transfer groups two or more effective fare legs.
+          - **A** is the first *effective fare leg* of potentially multiple consecutive legs contained in a fare transfer
+          - **B** is any *effective fare leg* following the first *effective fare leg* in this transfer
+          - **AB** are all changes between *effective fare legs* contained in this transfer
+
+        The fare transfer rule is used to derive the final set of products of the itinerary legs contained in this transfer:
+          - A_AB means that any product from the first effective fare leg combined with the product attached to the transfer itself (AB) which can be empty (= free). Note that all subsequent effective fare leg products need to be ignored in this case.
+          - A_AB_B mean that a product for each effective fare leg needs to be purchased in a addition to the product attached to the transfer itself (AB) which can be empty (= free)
+          - AB only the transfer product itself has to be purchased. Note that all fare products attached to the contained effective fare legs need to be ignored in this case.
+
+        An itinerary `Leg` references the index of the fare transfer and the index of the effective fare leg in this transfer it belongs to.
+      required:
+        - effectiveFareLegProducts
+      properties:
+        rule:
+          $ref: '#/components/schemas/FareTransferRule'
+        transferProducts:
+          type: array
+          items:
+            $ref: '#/components/schemas/FareProduct'
+        effectiveFareLegProducts:
+          description: |
+            Lists all valid fare products for the effective fare legs.
+            This is an `array<array<FareProduct>>` where the inner array
+            lists all possible fare products that would cover this effective fare leg.
+            Each "effective fare leg" can have multiple options for adult/child/weekly/monthly/day/one-way tickets etc.
+            You can see the outer array as AND (you need one ticket for each effective fare leg (`A_AB_B`), the first effective fare leg (`A_AB`) or no fare leg at all but only the transfer product (`AB`)
+            and the inner array as OR (you can choose which ticket to buy)
+
+          type: array
+          items:
+            type: array
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/FareProduct'
 
     Itinerary:
       type: object
@@ -1411,9 +2513,14 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Leg'
+        fareTransfers:
+          description: Fare information
+          type: array
+          items:
+            $ref: '#/components/schemas/FareTransfer'
 
-    Footpath:
-      description: footpath from one location to another
+    Transfer:
+      description: transfer from one location to another
       type: object
       required:
         - to
@@ -1423,20 +2530,35 @@ components:
         default:
           type: number
           description: |
-            optional; missing if the GTFS did not contain a footpath
-            footpath duration in minutes according to GTFS (+heuristics)
+            optional; missing if the GTFS did not contain a transfer
+            transfer duration in minutes according to GTFS (+heuristics)
         foot:
           type: number
           description: |
-            optional; missing if no path was found with the foot profile
-            footpath duration in minutes for the foot profile
+            optional; missing if no path was found (timetable / osr)
+            transfer duration in minutes for the foot profile
+        footRouted:
+          type: number
+          description: |
+            optional; missing if no path was found with foot routing
+            transfer duration in minutes for the foot profile
         wheelchair:
           type: number
           description: |
             optional; missing if no path was found with the wheelchair profile 
-            footpath duration in minutes for the wheelchair profile
+            transfer duration in minutes for the wheelchair profile
+        wheelchairRouted:
+          type: number
+          description: |
+            optional; missing if no path was found with the wheelchair profile
+            transfer duration in minutes for the wheelchair profile
         wheelchairUsesElevator:
           type: boolean
           description: |
             optional; missing if no path was found with the wheelchair profile
             true if the wheelchair path uses an elevator
+        car:
+          type: number
+          description: |
+            optional; missing if no path was found with car routing
+            transfer duration in minutes for the car profile

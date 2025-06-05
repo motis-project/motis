@@ -28,6 +28,7 @@ std::vector<nigiri::td_footpath> get_td_footpaths(
     osr::lookup const&,
     osr::platforms const&,
     nigiri::timetable const&,
+    nigiri::rt_timetable const*,
     point_rtree<nigiri::location_idx_t> const&,
     elevators const&,
     platform_matches_t const&,
@@ -36,6 +37,7 @@ std::vector<nigiri::td_footpath> get_td_footpaths(
     osr::direction,
     osr::search_profile,
     std::chrono::seconds max,
+    double max_matching_distance,
     osr::bitvec<osr::node_idx_t>& blocked_mem);
 
 std::optional<std::pair<nodes_t, states_t>> get_states_at(osr::ways const&,

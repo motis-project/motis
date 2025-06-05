@@ -51,9 +51,9 @@ struct static_ev_iterator : public ev_iterator {
         day_{to_idx(tt_.day_idx_mam(start).first)},
         end_day_{dir == n::direction::kForward
                      ? to_idx(tt.day_idx(tt_.date_range_.to_))
-                     : -1},
+                     : to_idx(tt.day_idx(tt_.date_range_.from_) - 1U)},
         size_{tt_.route_transport_ranges_[r].size()},
-        i_{dir == n::direction::kForward ? 0 : size_ - 1},
+        i_{0},
         r_{r},
         stop_idx_{stop_idx},
         ev_type_{ev_type},
@@ -69,69 +69,58 @@ struct static_ev_iterator : public ev_iterator {
   static_ev_iterator& operator=(static_ev_iterator&&) = delete;
 
   void seek_next(std::optional<n::unixtime_t> const start = std::nullopt) {
-    if (dir_ == n::direction::kForward) {
-      while (!finished()) {
-        for (; i_ < size_; ++i_) {
-          if (start.has_value() && time() < *start) {
-            continue;
-          }
-          if (is_active()) {
-            return;
-          }
+    while (!finished()) {
+      for (; i_ < size_; ++i_) {
+        if (start.has_value() &&
+            (dir_ == n::direction::kForward ? time() < *start
+                                            : time() > *start)) {
+          continue;
         }
-        ++day_;
-        i_ = 0;
-      }
-    } else {
-      while (!finished()) {
-        for (; i_ > 0; --i_) {
-          if (start.has_value() && time() > *start) {
-            continue;
-          }
-          if (is_active()) {
-            return;
-          }
+        if (is_active()) {
+          return;
         }
-        --day_;
-        i_ = size_ - 1;
       }
+      dir_ == n::direction::kForward ? ++day_ : --day_;
+      i_ = 0;
     }
   }
 
   bool finished() const override { return day_ == end_day_; }
 
   n::unixtime_t time() const override {
-    return tt_.event_time(
-        n::transport{tt_.route_transport_ranges_[r_][i_], n::day_idx_t{day_}},
-        stop_idx_, ev_type_);
+    return tt_.event_time(t(), stop_idx_, ev_type_);
   }
 
   n::rt::run get() const override {
     assert(is_active());
     return n::rt::run{
-        .t_ = n::transport{tt_.route_transport_ranges_[r_][i_],
-                           n::day_idx_t{day_}},
+        .t_ = t(),
         .stop_range_ = {stop_idx_, static_cast<n::stop_idx_t>(stop_idx_ + 1U)}};
   }
 
   void increment() override {
-    dir_ == n::direction::kForward ? ++i_ : --i_;
+    ++i_;
     seek_next();
   }
 
 private:
   bool is_active() const {
     auto const x = t();
-    return (rtt_ == nullptr
-                ? tt_.bitfields_[tt_.transport_traffic_days_[x.t_idx_]]
-                : rtt_->bitfields_[rtt_->transport_traffic_days_[x.t_idx_]])
-        .test(to_idx(x.day_));
+    auto const in_static =
+        tt_.bitfields_[tt_.transport_traffic_days_[x.t_idx_]].test(
+            to_idx(x.day_));
+    return rtt_ == nullptr
+               ? in_static
+               : in_static &&
+                     rtt_->resolve_rt(x) ==  // only when no RT/cancelled
+                         n::rt_transport_idx_t::invalid();
   }
 
   n::transport t() const {
-    auto const t = tt_.route_transport_ranges_[r_][i_];
+    auto const idx = dir_ == n::direction::kForward ? i_ : size_ - i_ - 1;
+    auto const t = tt_.route_transport_ranges_[r_][idx];
     auto const day_offset = tt_.event_mam(r_, t, stop_idx_, ev_type_).days();
-    return n::transport{tt_.route_transport_ranges_[r_][i_],
+    return n::transport{tt_.route_transport_ranges_[r_][idx],
                         n::day_idx_t{to_idx(day_) - day_offset}};
   }
 
@@ -213,10 +202,8 @@ std::vector<n::rt::run> get_events(
         for (auto const [stop_idx, s] : utl::enumerate(location_seq)) {
           if (n::stop{s}.location_idx() == x &&
               ((ev_type == n::event_type::kDep &&
-                stop_idx != location_seq.size() - 1U &&
-                n::stop{s}.in_allowed()) ||
-               (ev_type == n::event_type::kArr && stop_idx != 0U &&
-                n::stop{s}.out_allowed()))) {
+                stop_idx != location_seq.size() - 1U) ||
+               (ev_type == n::event_type::kArr && stop_idx != 0U))) {
             iterators.emplace_back(std::make_unique<rt_ev_iterator>(
                 *rtt, rt_t, static_cast<n::stop_idx_t>(stop_idx), time, ev_type,
                 dir, allowed_clasz));
@@ -277,7 +264,10 @@ std::vector<n::rt::run> get_events(
 api::stoptimes_response stop_times::operator()(
     boost::urls::url_view const& url) const {
   auto const query = api::stoptimes_params{url.params()};
-  utl::verify(query.n_ < 256, "n={} > 256 not allowed", query.n_);
+
+  auto const max_results = config_.limits_.value().stoptimes_max_results_;
+  utl::verify(query.n_ < max_results, "n={} > {} not allowed", query.n_,
+              max_results);
 
   auto const x = tags_.get_location(tt_, query.stopId_);
   auto const p = tt_.locations_.parents_[x];
@@ -336,6 +326,10 @@ api::stoptimes_response stop_times::operator()(
             auto place = to_place(&tt_, &tags_, w_, pl_, matches_,
                                   tt_location{s.get_location_idx(),
                                               s.get_scheduled_location_idx()});
+            place.alerts_ =
+                get_alerts(fr, std::pair{s, fr.stop_range_.from_ != 0U
+                                                ? n::event_type::kArr
+                                                : n::event_type::kDep});
             if (fr.stop_range_.from_ != 0U) {
               place.arrival_ = {s.time(n::event_type::kArr)};
               place.scheduledArrival_ = {s.scheduled_time(n::event_type::kArr)};
@@ -345,19 +339,33 @@ api::stoptimes_response stop_times::operator()(
               place.scheduledDeparture_ = {
                   s.scheduled_time(n::event_type::kDep)};
             }
+            auto const in_out_allowed =
+                !fr.is_cancelled() &&
+                (ev_type == n::event_type::kArr ? s.out_allowed()
+                                                : s.in_allowed());
+            auto const stop_cancelled =
+                fr.is_cancelled() ||
+                (ev_type == n::event_type::kArr
+                     ? !s.out_allowed() && s.get_scheduled_stop().out_allowed()
+                     : !s.in_allowed() && s.get_scheduled_stop().in_allowed());
+
             return {
                 .place_ = std::move(place),
                 .mode_ = to_mode(s.get_clasz(ev_type)),
                 .realTime_ = r.is_rt(),
                 .headsign_ = std::string{s.direction(ev_type)},
-                .agencyId_ = agency.short_name_.str(),
-                .agencyName_ = agency.long_name_.str(),
-                .agencyUrl_ = agency.url_.str(),
+                .agencyId_ = std::string{tt_.strings_.get(agency.short_name_)},
+                .agencyName_ = std::string{tt_.strings_.get(agency.long_name_)},
+                .agencyUrl_ = std::string{tt_.strings_.get(agency.url_)},
                 .routeColor_ = to_str(s.get_route_color(ev_type).color_),
                 .routeTextColor_ =
                     to_str(s.get_route_color(ev_type).text_color_),
-                .tripId_ = tags_.id(tt_, s),
+                .tripId_ = tags_.id(tt_, s, ev_type),
                 .routeShortName_ = std::string{s.trip_display_name(ev_type)},
+                .pickupDropoffType_ =
+                    in_out_allowed ? api::PickupDropoffTypeEnum::NORMAL
+                                   : api::PickupDropoffTypeEnum::NOT_ALLOWED,
+                .cancelled_ = stop_cancelled,
                 .source_ = fmt::format("{}", fmt::streamed(fr.dbg()))};
           }),
       .previousPageCursor_ =

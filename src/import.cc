@@ -47,6 +47,7 @@
 #include "motis/adr_extend_tt.h"
 #include "motis/clog_redirect.h"
 #include "motis/compute_footpaths.h"
+#include "motis/constants.h"
 #include "motis/data.h"
 #include "motis/hashes.h"
 #include "motis/tag_lookup.h"
@@ -56,6 +57,8 @@ namespace fs = std::filesystem;
 namespace n = nigiri;
 namespace nl = nigiri::loader;
 using namespace std::string_literals;
+using std::chrono_literals::operator""min;
+using std::chrono_literals::operator""h;
 
 namespace motis {
 
@@ -144,13 +147,14 @@ data import(config const& c, fs::path const& data_path, bool const write) {
 
     for (auto const& [_, d] : t.datasets_) {
       h = cista::build_hash(h, c.osr_footpath_, hash_file(d.path_),
-                            d.default_bikes_allowed_, d.clasz_bikes_allowed_,
-                            d.rt_, d.default_timezone_);
+                            d.default_bikes_allowed_, d.default_cars_allowed_,
+                            d.clasz_bikes_allowed_, d.clasz_cars_allowed_,
+                            d.default_timezone_);
     }
 
     h = cista::build_hash(
-        h, t.first_day_, t.num_days_, t.with_shapes_, t.ignore_errors_,
-        t.adjust_footpaths_, t.merge_dupes_intra_src_, t.merge_dupes_inter_src_,
+        h, t.first_day_, t.num_days_, t.with_shapes_, t.adjust_footpaths_,
+        t.merge_dupes_intra_src_, t.merge_dupes_inter_src_,
         t.link_stop_distance_, t.update_interval_, t.incremental_rt_update_,
         t.max_footpath_length_, t.default_timezone_, t.assistance_times_);
   }
@@ -158,6 +162,27 @@ data import(config const& c, fs::path const& data_path, bool const write) {
   auto osm_hash = std::pair{"osm"s, cista::BASE_HASH};
   if (c.osm_.has_value()) {
     osm_hash.second = hash_file(*c.osm_);
+  }
+
+  auto const elevation_dir =
+      c.get_street_routing()
+          .and_then([](config::street_routing const& sr) {
+            return sr.elevation_data_dir_;
+          })
+          .value_or(fs::path{});
+  auto elevation_dir_hash = std::pair{"elevation_dir"s, cista::BASE_HASH};
+  if (!elevation_dir.empty() && fs::exists(elevation_dir)) {
+    auto files = std::vector<std::string>{};
+    for (auto const& f : fs::recursive_directory_iterator(elevation_dir)) {
+      if (f.is_regular_file()) {
+        files.emplace_back(f.path().relative_path().string());
+      }
+    }
+    std::ranges::sort(files);
+    auto& h = elevation_dir_hash.second;
+    for (auto const& f : files) {
+      h = cista::build_hash(h, f);
+    }
   }
 
   auto tiles_hash = std::pair{"tiles_profile", cista::BASE_HASH};
@@ -172,14 +197,15 @@ data import(config const& c, fs::path const& data_path, bool const write) {
   auto d = data{data_path};
 
   auto osr = task{"osr",
-                  [&]() { return c.street_routing_; },
+                  [&]() { return c.use_street_routing(); },
                   [&]() { return true; },
                   [&]() {
-                    osr::extract(true, fs::path{*c.osm_}, data_path / "osr");
+                    osr::extract(true, fs::path{*c.osm_}, data_path / "osr",
+                                 elevation_dir);
                     d.load_osr();
                   },
                   [&]() { d.load_osr(); },
-                  {osm_hash, osr_version()}};
+                  {osm_hash, osr_version(), elevation_dir_hash}};
 
   auto adr =
       task{"adr",
@@ -226,11 +252,13 @@ data import(config const& c, fs::path const& data_path, bool const write) {
       [&]() { return true; },
       [&]() {
         auto const to_clasz_bool_array =
-            [&](config::timetable::dataset const& d) {
+            [&](bool const default_allowed,
+                std::optional<std::map<std::string, bool>> const&
+                    clasz_allowed) {
               auto a = std::array<bool, n::kNumClasses>{};
-              a.fill(d.default_bikes_allowed_);
-              if (d.clasz_bikes_allowed_.has_value()) {
-                for (auto const& [clasz, allowed] : *d.clasz_bikes_allowed_) {
+              a.fill(default_allowed);
+              if (clasz_allowed.has_value()) {
+                for (auto const& [clasz, allowed] : *clasz_allowed) {
                   a[static_cast<unsigned>(n::to_clasz(clasz))] = allowed;
                 }
               }
@@ -259,26 +287,32 @@ data import(config const& c, fs::path const& data_path, bool const write) {
 
         d.tags_ = cista::wrapped{cista::raw::make_unique<tag_lookup>()};
         d.tt_ = cista::wrapped{cista::raw::make_unique<n::timetable>(nl::load(
-            utl::to_vec(
-                t.datasets_,
-                [&, src = n::source_idx_t{}](auto&& x) mutable
-                -> std::pair<std::string, nl::loader_config> {
-                  auto const& [tag, dc] = x;
-                  d.tags_->add(src++, tag);
-                  return {dc.path_,
-                          {
-                              .link_stop_distance_ = t.link_stop_distance_,
-                              .default_tz_ = dc.default_timezone_.value_or(
-                                  dc.default_timezone_.value_or("")),
-                              .bikes_allowed_default_ = to_clasz_bool_array(dc),
-                          }};
-                }),
+            utl::to_vec(t.datasets_,
+                        [&, src = n::source_idx_t{}](
+                            auto&& x) mutable -> nl::timetable_source {
+                          auto const& [tag, dc] = x;
+                          d.tags_->add(src++, tag);
+                          return {
+                              tag,
+                              dc.path_,
+                              {
+                                  .link_stop_distance_ = t.link_stop_distance_,
+                                  .default_tz_ = dc.default_timezone_.value_or(
+                                      dc.default_timezone_.value_or("")),
+                                  .bikes_allowed_default_ = to_clasz_bool_array(
+                                      dc.default_bikes_allowed_,
+                                      dc.clasz_bikes_allowed_),
+                                  .cars_allowed_default_ = to_clasz_bool_array(
+                                      dc.default_cars_allowed_,
+                                      dc.clasz_cars_allowed_),
+                              }};
+                        }),
             {.adjust_footpaths_ = t.adjust_footpaths_,
              .merge_dupes_intra_src_ = t.merge_dupes_intra_src_,
              .merge_dupes_inter_src_ = t.merge_dupes_inter_src_,
              .max_footpath_length_ = t.max_footpath_length_},
-            interval, assistance.get(), d.shapes_.get(), t.ignore_errors_))};
-        d.location_rtee_ =
+            interval, assistance.get(), d.shapes_.get(), false))};
+        d.location_rtree_ =
             std::make_unique<point_rtree<nigiri::location_idx_t>>(
                 create_location_rtree(*d.tt_));
 
@@ -297,7 +331,7 @@ data import(config const& c, fs::path const& data_path, bool const write) {
         }
       },
       [&]() {
-        d.load_tt();
+        d.load_tt("tt.bin");
         if (c.timetable_->with_shapes_) {
           d.load_shapes();
         }
@@ -365,26 +399,56 @@ data import(config const& c, fs::path const& data_path, bool const write) {
        {"geocoding", c.geocoding_},
        {"reverse_geocoding", c.reverse_geocoding_}}};
 
+  auto osr_footpath_settings_hash =
+      meta_entry_t{"osr_footpath_settings", cista::BASE_HASH};
+  if (c.timetable_) {
+    auto& h = osr_footpath_settings_hash.second;
+    h = cista::hash_combine(h, c.timetable_->use_osm_stop_coordinates_,
+                            c.timetable_->extend_missing_footpaths_,
+                            c.timetable_->max_matching_distance_,
+                            c.timetable_->max_footpath_length_);
+  }
   auto osr_footpath = task{
       "osr_footpath",
-      [&]() { return c.osr_footpath_; },
-      [&]() { return d.tt_ && d.w_ && d.l_ && d.pl_; },
+      [&]() { return c.osr_footpath_ && c.timetable_; },
+      [&]() { return d.tt_ && d.tags_ && d.w_ && d.l_ && d.pl_; },
       [&]() {
-        auto const elevator_footpath_map =
-            compute_footpaths(*d.w_, *d.l_, *d.pl_, *d.tt_, true);
+        auto const profiles = std::vector<routed_transfers_settings>{
+            {.profile_ = osr::search_profile::kFoot,
+             .profile_idx_ = n::kFootProfile,
+             .max_matching_distance_ = c.timetable_->max_matching_distance_,
+             .extend_missing_ = c.timetable_->extend_missing_footpaths_,
+             .max_duration_ = c.timetable_->max_footpath_length_ * 1min},
+            {.profile_ = osr::search_profile::kWheelchair,
+             .profile_idx_ = n::kWheelchairProfile,
+             .max_matching_distance_ = 8.0,
+             .max_duration_ = c.timetable_->max_footpath_length_ * 1min},
+            {.profile_ = osr::search_profile::kCar,
+             .profile_idx_ = n::kCarProfile,
+             .max_matching_distance_ = 250.0,
+             .max_duration_ = 8h,
+             .is_candidate_ = [&](n::location_idx_t const l) {
+               return utl::any_of(d.tt_->location_routes_[l], [&](auto r) {
+                 return d.tt_->has_car_transport(r);
+               });
+             }}};
+        auto const elevator_footpath_map = compute_footpaths(
+            *d.w_, *d.l_, *d.pl_, *d.tt_, d.elevations_.get(),
+            c.timetable_->use_osm_stop_coordinates_, profiles);
 
         if (write) {
           cista::write(data_path / "elevator_footpath_map.bin",
                        elevator_footpath_map);
-          d.tt_->write(data_path / "tt.bin");
+          d.tt_->write(data_path / "tt_ext.bin");
         }
       },
-      [&]() {},
-      {tt_hash, osm_hash, osr_version(), osr_footpath_version(), n_version()}};
+      [&]() { d.load_tt("tt_ext.bin"); },
+      {tt_hash, osm_hash, osr_footpath_settings_hash, osr_version(),
+       osr_footpath_version(), n_version()}};
 
   auto matches =
       task{"matches",
-           [&]() { return c.timetable_ && c.street_routing_; },
+           [&]() { return c.timetable_ && c.use_street_routing(); },
            [&]() { return d.tt_ && d.w_ && d.pl_; },
            [&]() {
              d.matches_ = cista::wrapped<platform_matches_t>{
@@ -395,6 +459,14 @@ data import(config const& c, fs::path const& data_path, bool const write) {
              }
            },
            [&]() { d.load_matches(); },
+           {tt_hash, osm_hash, osr_version(), n_version(), matches_version()}};
+
+  auto flex_areas =
+      task{"flex_areas",
+           [&]() { return c.timetable_ && c.use_street_routing(); },
+           [&]() { return d.tt_ && d.w_; },
+           [&]() { d.load_flex_areas(); },
+           [&]() { d.load_flex_areas(); },
            {tt_hash, osm_hash, osr_version(), n_version(), matches_version()}};
 
   auto tiles = task{
@@ -447,8 +519,8 @@ data import(config const& c, fs::path const& data_path, bool const write) {
       [&]() { d.load_tiles(); },
       {tiles_version(), osm_hash, tiles_hash}};
 
-  auto tasks =
-      std::vector<task>{tiles, osr, adr, tt, adr_extend, osr_footpath, matches};
+  auto tasks = std::vector<task>{tiles,      osr,          adr,     tt,
+                                 adr_extend, osr_footpath, matches, flex_areas};
   utl::erase_if(tasks, [&](auto&& t) {
     if (!t.should_run_()) {
       return true;

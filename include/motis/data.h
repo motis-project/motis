@@ -50,13 +50,13 @@ struct data {
   friend std::ostream& operator<<(std::ostream&, data const&);
 
   void load_osr();
-  void load_tt();
+  void load_tt(std::filesystem::path const&);
+  void load_flex_areas();
   void load_shapes();
   void load_railviz();
   void load_geocoder();
   void load_matches();
   void load_reverse_geocoder();
-  void load_elevators();
   void load_tiles();
 
   void init_rtt(date::sys_days = std::chrono::time_point_cast<date::days>(
@@ -64,9 +64,9 @@ struct data {
 
   auto cista_members() {
     // !!! Remember to add all new members !!!
-    return std::tie(t_, r_, tc_, w_, pl_, l_, tt_, tags_, location_rtee_,
-                    elevator_nodes_, shapes_, railviz_static_, matches_, rt_,
-                    gbfs_);
+    return std::tie(config_, t_, r_, tc_, w_, pl_, l_, elevations_, tt_, tags_,
+                    location_rtree_, elevator_nodes_, shapes_, railviz_static_,
+                    matches_, rt_, gbfs_, odm_bounds_, flex_areas_, metrics_);
   }
 
   std::filesystem::path path_;
@@ -78,9 +78,10 @@ struct data {
   ptr<osr::ways> w_;
   ptr<osr::platforms> pl_;
   ptr<osr::lookup> l_;
+  ptr<osr::elevation_storage> elevations_;
   cista::wrapped<nigiri::timetable> tt_;
   cista::wrapped<tag_lookup> tags_;
-  ptr<point_rtree<nigiri::location_idx_t>> location_rtee_;
+  ptr<point_rtree<nigiri::location_idx_t>> location_rtree_;
   ptr<hash_set<osr::node_idx_t>> elevator_nodes_;
   ptr<nigiri::shapes_storage> shapes_;
   ptr<railviz_static_index> railviz_static_;
@@ -88,6 +89,9 @@ struct data {
   ptr<tiles_data> tiles_;
   std::shared_ptr<rt> rt_{std::make_shared<rt>()};
   std::shared_ptr<gbfs::gbfs_data> gbfs_{};
+  ptr<odm::bounds> odm_bounds_;
+  ptr<flex::flex_areas> flex_areas_;
+  ptr<metrics_registry> metrics_;
 };
 
 }  // namespace motis

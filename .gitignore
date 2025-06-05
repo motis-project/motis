@@ -15,6 +15,7 @@
 /adr.cista*
 /data
 /test/data
+dist/
 fasta.json
 config.yaml
 config.yml

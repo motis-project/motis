@@ -29,10 +29,13 @@ using hash_set = nigiri::hash_set<T>;
 template <typename K, typename V>
 using hash_map = nigiri::hash_map<K, V>;
 
+template <typename T>
+using basic_string = std::basic_string<T, cista::char_traits<T>>;
+
 using elevator_idx_t = cista::strong<std::uint32_t, struct elevator_idx_>;
 
 using gbfs_provider_idx_t =
-    cista::strong<std::size_t, struct gbfs_provider_idx_>;
+    cista::strong<std::uint16_t, struct gbfs_provider_idx_>;
 
 struct elevator {
   friend bool operator==(elevator const&, elevator const&) = default;

@@ -3,6 +3,7 @@
 #include "geo/polyline_format.h"
 
 #include "utl/concat.h"
+#include "utl/get_or_create.h"
 
 #include "osr/routing/route.h"
 #include "osr/routing/sharing_data.h"
@@ -11,55 +12,78 @@
 #include "motis/mode_to_profile.h"
 #include "motis/place.h"
 #include "motis/polyline.h"
+#include "motis/transport_mode_ids.h"
 #include "motis/update_rtt_td_footpaths.h"
 
 namespace n = nigiri;
 
 namespace motis {
 
-std::optional<osr::path> get_path(osr::ways const& w,
-                                  osr::lookup const& l,
-                                  elevators const* e,
-                                  osr::sharing_data const* sharing,
-                                  osr::location const& from,
-                                  osr::location const& to,
-                                  transport_mode_t const transport_mode,
-                                  osr::search_profile const profile,
-                                  nigiri::unixtime_t const start_time,
-                                  osr::cost_t const max,
-                                  street_routing_cache_t& cache,
-                                  osr::bitvec<osr::node_idx_t>& blocked_mem) {
-  auto const s = e ? get_states_at(w, l, *e, start_time, from.pos_)
-                   : std::optional{std::pair<nodes_t, states_t>{}};
-  auto const& [e_nodes, e_states] = *s;
-  auto const key =
-      street_routing_cache_key_t{from, to, transport_mode, start_time};
-  auto const it = cache.find(key);
-  auto const path =
-      it != end(cache)
-          ? it->second
-          : osr::route(
-                w, l, profile, from, to, max, osr::direction::kForward,
-                kMaxMatchingDistance,
-                s ? &set_blocked(e_nodes, e_states, blocked_mem) : nullptr,
-                sharing);
-  if (it == end(cache)) {
-    cache.emplace(std::pair{key, path});
-  }
-  if (!path.has_value()) {
-    if (it == end(cache)) {
-      std::cout << "no path found: " << from << " -> " << to
-                << ", profile=" << to_str(profile) << std::endl;
-    }
-  }
-  return path;
+default_output::default_output(osr::search_profile const profile)
+    : profile_{profile},
+      id_{static_cast<std::underlying_type_t<osr::search_profile>>(profile)} {}
+
+default_output::default_output(nigiri::transport_mode_id_t const id)
+    : profile_{id == kOdmTransportModeId
+                   ? osr::search_profile::kCar
+                   : osr::search_profile{static_cast<
+                         std::underlying_type_t<osr::search_profile>>(id)}},
+      id_{id} {
+  utl::verify(id <= kOdmTransportModeId, "invalid mode id={}", id);
 }
+
+default_output::~default_output() = default;
+
+api::ModeEnum default_output::get_mode() const {
+  if (id_ == kOdmTransportModeId) {
+    return api::ModeEnum::ODM;
+  }
+
+  switch (profile_) {
+    case osr::search_profile::kFoot: [[fallthrough]];
+    case osr::search_profile::kWheelchair: return api::ModeEnum::WALK;
+    case osr::search_profile::kBike: [[fallthrough]];
+    case osr::search_profile::kBikeElevationLow: [[fallthrough]];
+    case osr::search_profile::kBikeElevationHigh: return api::ModeEnum::BIKE;
+    case osr::search_profile::kCar: return api::ModeEnum::CAR;
+    case osr::search_profile::kCarParking: [[fallthrough]];
+    case osr::search_profile::kCarParkingWheelchair:
+      return api::ModeEnum::CAR_PARKING;
+    case osr::search_profile::kBikeSharing: [[fallthrough]];
+    case osr::search_profile::kCarSharing: return api::ModeEnum::RENTAL;
+  }
+
+  return api::ModeEnum::OTHER;
+}
+
+osr::search_profile default_output::get_profile() const { return profile_; }
+
+api::Place default_output::get_place(osr::node_idx_t) const { return {}; }
+
+bool default_output::is_time_dependent() const {
+  return profile_ == osr::search_profile::kWheelchair ||
+         profile_ == osr::search_profile::kCarParkingWheelchair;
+}
+
+transport_mode_t default_output::get_cache_key() const {
+  return static_cast<transport_mode_t>(profile_);
+}
+
+osr::sharing_data const* default_output::get_sharing_data() const {
+  return nullptr;
+}
+
+void default_output::annotate_leg(osr::node_idx_t,
+                                  osr::node_idx_t,
+                                  api::Leg&) const {}
 
 std::vector<api::StepInstruction> get_step_instructions(
     osr::ways const& w,
+    osr::elevation_storage const* elevations,
     osr::location const& from,
     osr::location const& to,
-    std::span<osr::path::segment const> segments) {
+    std::span<osr::path::segment const> segments,
+    unsigned const api_version) {
   auto steps = std::vector<api::StepInstruction>{};
   auto pred_lvl = from.lvl_.to_float();
   for (auto const& s : segments) {
@@ -91,14 +115,21 @@ std::vector<api::StepInstruction> get_step_instructions(
                        ? std::nullopt
                        : std::optional{static_cast<std::int64_t>(
                              to_idx(w.way_osm_idx_[s.way_]))},
-        .polyline_ = to_polyline<7>(s.polyline_),
+        .polyline_ = api_version == 1 ? to_polyline<7>(s.polyline_)
+                                      : to_polyline<6>(s.polyline_),
         .streetName_ = way_name == osr::string_idx_t::invalid()
                            ? ""
                            : std::string{w.strings_[way_name].view()},
         .exit_ = {},  // TODO
         .stayOn_ = false,  // TODO
-        .area_ = false  // TODO
-    });
+        .area_ = false,  // TODO
+        .toll_ = props.has_toll(),
+        .accessRestriction_ = w.get_access_restriction(s.way_).and_then(
+            [](std::string_view s) { return std::optional{std::string{s}}; }),
+        .elevationUp_ =
+            elevations ? std::optional{to_idx(s.elevation_.up_)} : std::nullopt,
+        .elevationDown_ = elevations ? std::optional{to_idx(s.elevation_.down_)}
+                                     : std::nullopt});
   }
 
   if (!segments.empty()) {
@@ -114,67 +145,6 @@ std::vector<api::StepInstruction> get_step_instructions(
 
   return steps;
 }
-
-struct sharing {
-  sharing(osr::ways const& w,
-          gbfs::gbfs_data const& gbfs,
-          gbfs_provider_idx_t const provider_idx)
-      : w_{w},
-        gbfs_{gbfs},
-        provider_{*gbfs_.providers_.at(provider_idx).get()} {}
-
-  api::Rental get_rental(osr::node_idx_t const n) const {
-    auto ret = rental_;
-    auto const& an = provider_.additional_nodes_.at(get_additional_node_idx(n));
-    std::visit(utl::overloaded{
-                   [&](gbfs::additional_node::station const& s) {
-                     auto const& st = provider_.stations_.at(s.id_);
-                     ret.stationName_ = st.info_.name_;
-                     ret.rentalUriAndroid_ = st.info_.rental_uris_.android_;
-                     ret.rentalUriIOS_ = st.info_.rental_uris_.ios_;
-                     ret.rentalUriWeb_ = st.info_.rental_uris_.web_;
-                   },
-                   [&](gbfs::additional_node::vehicle const& v) {
-                     auto const& vi = provider_.vehicle_status_.at(v.idx_);
-                     ret.rentalUriAndroid_ = vi.rental_uris_.android_;
-                     ret.rentalUriIOS_ = vi.rental_uris_.ios_;
-                     ret.rentalUriWeb_ = vi.rental_uris_.web_;
-                   }},
-               an.data_);
-    return ret;
-  }
-
-  geo::latlng get_node_pos(osr::node_idx_t const n) const {
-    return std::visit(
-        utl::overloaded{
-            [&](gbfs::additional_node::station const& s) {
-              return provider_.stations_.at(s.id_).info_.pos_;
-            },
-            [&](gbfs::additional_node::vehicle const& vehicle) {
-              return provider_.vehicle_status_.at(vehicle.idx_).pos_;
-            }},
-        provider_.additional_nodes_.at(get_additional_node_idx(n)).data_);
-  }
-
-  std::size_t get_additional_node_idx(osr::node_idx_t const n) const {
-    return to_idx(n) - sharing_data_.additional_node_offset_;
-  }
-
-  osr::ways const& w_;
-  gbfs::gbfs_data const& gbfs_;
-  gbfs::gbfs_provider const& provider_;
-  osr::sharing_data sharing_data_{
-      .start_allowed_ = provider_.start_allowed_,
-      .end_allowed_ = provider_.end_allowed_,
-      .through_allowed_ = provider_.through_allowed_,
-      .additional_node_offset_ = w_.n_nodes(),
-      .additional_edges_ = provider_.additional_edges_};
-  api::Rental rental_{
-      .systemId_ = provider_.sys_info_.id_,
-      .systemName_ = provider_.sys_info_.name_,
-      .url_ = provider_.sys_info_.url_,
-  };
-};
 
 api::Itinerary dummy_itinerary(api::Place const& from,
                                api::Place const& to,
@@ -195,78 +165,54 @@ api::Itinerary dummy_itinerary(api::Place const& from,
                                                                     start_time)
                        .count(),
       .startTime_ = start_time,
-      .endTime_ = end_time});
-  leg.from_.departure_ = leg.startTime_;
-  leg.to_.arrival_ = leg.endTime_;
+      .endTime_ = end_time,
+      .scheduledStartTime_ = start_time,
+      .scheduledEndTime_ = end_time});
+  leg.from_.departure_ = leg.from_.scheduledDeparture_ = leg.startTime_;
+  leg.to_.arrival_ = leg.to_.scheduledArrival_ = leg.endTime_;
   return itinerary;
 }
 
-api::Itinerary route(osr::ways const& w,
-                     osr::lookup const& l,
-                     gbfs::gbfs_data const* gbfs,
-                     elevators const* e,
-                     api::Place const& from,
-                     api::Place const& to,
-                     api::ModeEnum const mode,
-                     bool const wheelchair,
-                     n::unixtime_t const start_time,
-                     std::optional<n::unixtime_t> const end_time,
-                     gbfs_provider_idx_t const provider_idx,
-                     street_routing_cache_t& cache,
-                     osr::bitvec<osr::node_idx_t>& blocked_mem,
-                     std::chrono::seconds const max) {
-  auto const profile = to_profile(mode, wheelchair);
-  utl::verify(profile != osr::search_profile::kBikeSharing || gbfs != nullptr,
-              "sharing mobility not configured");
-
-  auto const is_additional_node = [&](osr::node_idx_t const n) {
-    return n >= w.n_nodes();
-  };
-
-  auto const sharing_data = profile == osr::search_profile::kBikeSharing
-                                ? std::optional{sharing(w, *gbfs, provider_idx)}
-                                : std::nullopt;
-
-  auto const get_node_pos = [&](osr::node_idx_t const n) -> geo::latlng {
-    if (n == osr::node_idx_t::invalid()) {
-      return {};
-    } else if (!is_additional_node(n)) {
-      return w.get_node_pos(n).as_latlng();
-    } else {
-      return sharing_data.value().get_node_pos(n);
-    }
-  };
-
-  auto const path = [&]() {
-    auto p =
-        get_path(w, l, e, sharing_data ? &sharing_data->sharing_data_ : nullptr,
-                 get_location(from), get_location(to),
-                 static_cast<transport_mode_t>(
-                     to_idx(provider_idx + kGbfsTransportModeIdOffset)),
-                 to_profile(mode, wheelchair), start_time,
-                 static_cast<osr::cost_t>(max.count()), cache, blocked_mem);
-
-    if (p.has_value() && profile == osr::search_profile::kBikeSharing) {
-      // Coordinates of additional nodes are not known to osr.
-      // Therefore, segments to/from additional have empty polylines.
-      for (auto& s : p->segments_) {
-        if (s.polyline_.empty()) {
-          s.polyline_ =
-              geo::polyline{get_node_pos(s.from_), get_node_pos(s.to_)};
-        }
-      }
-    }
-
-    return p;
-  }();
+api::Itinerary street_routing(osr::ways const& w,
+                              osr::lookup const& l,
+                              elevators const* e,
+                              osr::elevation_storage const* elevations,
+                              api::Place const& from_place,
+                              api::Place const& to_place,
+                              output const& out,
+                              n::unixtime_t const start_time,
+                              std::optional<n::unixtime_t> const end_time,
+                              double const max_matching_distance,
+                              street_routing_cache_t& cache,
+                              osr::bitvec<osr::node_idx_t>& blocked_mem,
+                              unsigned const api_version,
+                              std::chrono::seconds const max) {
+  auto const from = get_location(from_place);
+  auto const to = get_location(to_place);
+  auto const s = e ? get_states_at(w, l, *e, start_time, from.pos_)
+                   : std::optional{std::pair<nodes_t, states_t>{}};
+  auto const cache_key = street_routing_cache_key_t{
+      from, to, out.get_cache_key(),
+      out.is_time_dependent() ? start_time : n::unixtime_t{n::i32_minutes{0}}};
+  auto const path = utl::get_or_create(cache, cache_key, [&]() {
+    auto const& [e_nodes, e_states] = *s;
+    return osr::route(
+        w, l, out.get_profile(), from, to,
+        static_cast<osr::cost_t>(max.count()), osr::direction::kForward,
+        max_matching_distance,
+        s ? &set_blocked(e_nodes, e_states, blocked_mem) : nullptr,
+        out.get_sharing_data(), elevations);
+  });
 
   if (!path.has_value()) {
     if (!end_time.has_value()) {
       return {};
     }
     std::cout << "ROUTING\n  FROM:  " << from << "     \n    TO:  " << to
-              << "\n  -> CREATING DUMMY LEG\n";
-    return dummy_itinerary(from, to, mode, start_time, *end_time);
+              << "\n  -> CREATING DUMMY LEG (mode=" << out.get_mode()
+              << ", profile=" << to_str(out.get_profile()) << ")\n";
+    return dummy_itinerary(from_place, to_place, out.get_mode(), start_time,
+                           *end_time);
   }
 
   auto itinerary = api::Itinerary{
@@ -275,37 +221,24 @@ api::Itinerary route(osr::ways const& w,
                                   .count()
                             : path->cost_,
       .startTime_ = start_time,
-      .endTime_ = start_time + std::chrono::seconds{path->cost_},
+      .endTime_ =
+          end_time ? *end_time : start_time + std::chrono::seconds{path->cost_},
       .transfers_ = 0};
 
   auto t = std::chrono::time_point_cast<std::chrono::seconds>(start_time);
-  auto pred_place = from;
+  auto pred_place = from_place;
   auto pred_end_time = t;
   utl::equal_ranges_linear(
-      path->segments_, [](auto&& a, auto&& b) { return a.mode_ == b.mode_; },
-      [&](auto&& lb, auto&& ub) {
+      path->segments_,
+      [](osr::path::segment const& a, osr::path::segment const& b) {
+        return a.mode_ == b.mode_;
+      },
+      [&](std::vector<osr::path::segment>::const_iterator const& lb,
+          std::vector<osr::path::segment>::const_iterator const& ub) {
         auto const range = std::span{lb, ub};
         auto const is_last_leg = ub == end(path->segments_);
-        auto const is_bike_leg = lb->mode_ == osr::mode::kBike;
-        auto const is_rental =
-            (profile == osr::search_profile::kBikeSharing && is_bike_leg &&
-             is_additional_node(range.back().to_));
-
+        auto const from_node = range.front().from_;
         auto const to_node = range.back().to_;
-        auto const to_pos = get_node_pos(to_node);
-        auto const next_place =
-            is_last_leg ? to
-            // All modes except sharing mobility have only one leg.
-            // -> This is not the last leg = it has to be sharing mobility.
-            : profile == osr::search_profile::kBikeSharing
-                ? api::Place{.name_ =
-                                 sharing_data.value().provider_.sys_info_.name_,
-                             .lat_ = to_pos.lat_,
-                             .lon_ = to_pos.lng_,
-                             .vertexType_ = api::VertexTypeEnum::BIKESHARE}
-                : api::Place{.lat_ = to_pos.lat_,
-                             .lon_ = to_pos.lng_,
-                             .vertexType_ = api::VertexTypeEnum::NORMAL};
 
         auto concat = geo::polyline{};
         auto dist = 0.0;
@@ -318,33 +251,40 @@ api::Itinerary route(osr::ways const& w,
         }
 
         auto& leg = itinerary.legs_.emplace_back(api::Leg{
-            .mode_ = (lb->mode_ == osr::mode::kBike &&
-                      profile == osr::search_profile::kBikeSharing)
-                         ? api::ModeEnum::BIKE_RENTAL
-                         : to_mode(lb->mode_),
+            .mode_ = out.get_mode() == api::ModeEnum::ODM ? api::ModeEnum::ODM
+                                                          : to_mode(lb->mode_),
             .from_ = pred_place,
-            .to_ = next_place,
+            .to_ = is_last_leg ? to_place : out.get_place(to_node),
             .duration_ = std::chrono::duration_cast<std::chrono::seconds>(
                              t - pred_end_time)
                              .count(),
             .startTime_ = pred_end_time,
             .endTime_ = is_last_leg && end_time ? *end_time : t,
             .distance_ = dist,
-            .legGeometry_ = to_polyline<7>(concat),
-            .steps_ = get_step_instructions(w, get_location(from),
-                                            get_location(to), range),
-            .rental_ = is_rental ? std::optional{sharing_data->get_rental(
-                                       range.back().to_)}
-                                 : std::nullopt});
+            .legGeometry_ = api_version == 1 ? to_polyline<7>(concat)
+                                             : to_polyline<6>(concat),
+            .steps_ = get_step_instructions(w, elevations, from, to, range,
+                                            api_version)});
 
         leg.from_.departure_ = leg.from_.scheduledDeparture_ =
             leg.scheduledStartTime_ = leg.startTime_;
         leg.to_.arrival_ = leg.to_.scheduledArrival_ = leg.scheduledEndTime_ =
             leg.endTime_;
 
-        pred_place = next_place;
+        out.annotate_leg(from_node, to_node, leg);
+
+        pred_place = leg.to_;
         pred_end_time = t;
       });
+
+  if (end_time && !itinerary.legs_.empty()) {
+    auto& last = itinerary.legs_.back();
+    last.to_.arrival_ = last.to_.scheduledArrival_ = last.endTime_ =
+        last.scheduledEndTime_ = *end_time;
+    for (auto& leg : itinerary.legs_) {
+      leg.duration_ = (leg.endTime_.time_ - leg.startTime_.time_).count();
+    }
+  }
 
   return itinerary;
 }

@@ -26,7 +26,15 @@ struct point_rtree {
     }
   }
 
-  point_rtree(point_rtree const&) = delete;
+  point_rtree(point_rtree const& o) {
+    if (this != &o) {
+      if (rtree_ != nullptr) {
+        rtree_free(rtree_);
+      }
+      rtree_ = rtree_clone(o.rtree_);
+    }
+  }
+
   point_rtree(point_rtree&& o) {
     if (this != &o) {
       rtree_ = o.rtree_;
@@ -34,7 +42,16 @@ struct point_rtree {
     }
   }
 
-  point_rtree& operator=(point_rtree const&) = delete;
+  point_rtree& operator=(point_rtree const& o) {
+    if (this != &o) {
+      if (rtree_ != nullptr) {
+        rtree_free(rtree_);
+      }
+      rtree_ = rtree_clone(o.rtree_);
+    }
+    return *this;
+  }
+
   point_rtree& operator=(point_rtree&& o) {
     if (this != &o) {
       rtree_ = o.rtree_;
@@ -46,6 +63,13 @@ struct point_rtree {
   void add(geo::latlng const& pos, T const t) {
     auto const min_corner = std::array{pos.lng(), pos.lat()};
     rtree_insert(
+        rtree_, min_corner.data(), nullptr,
+        reinterpret_cast<void*>(static_cast<std::size_t>(cista::to_idx(t))));
+  }
+
+  void remove(geo::latlng const& pos, T const t) {
+    auto const min_corner = std::array{pos.lng(), pos.lat()};
+    rtree_delete(
         rtree_, min_corner.data(), nullptr,
         reinterpret_cast<void*>(static_cast<std::size_t>(cista::to_idx(t))));
   }

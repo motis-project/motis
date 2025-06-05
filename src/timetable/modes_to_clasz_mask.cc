@@ -36,7 +36,19 @@ n::routing::clasz_mask_t to_clasz_mask(std::vector<api::ModeEnum> const& mode) {
         allow(n::clasz::kRegionalFast);
         break;
       case api::ModeEnum::REGIONAL_RAIL: allow(n::clasz::kRegional); break;
-      default: continue;
+      case api::ModeEnum::METRO: allow(n::clasz::kMetro); break;
+      case api::ModeEnum::CABLE_CAR: allow(n::clasz::kCableCar); break;
+      case api::ModeEnum::FUNICULAR: allow(n::clasz::kFunicular); break;
+      case api::ModeEnum::AREAL_LIFT: allow(n::clasz::kAreaLift); break;
+      case api::ModeEnum::OTHER: allow(n::clasz::kOther); break;
+
+      case api::ModeEnum::WALK:
+      case api::ModeEnum::BIKE:
+      case api::ModeEnum::RENTAL:
+      case api::ModeEnum::CAR:
+      case api::ModeEnum::ODM:
+      case api::ModeEnum::FLEX: [[fallthrough]];
+      case api::ModeEnum::CAR_PARKING: break;
     }
   }
   return mask;

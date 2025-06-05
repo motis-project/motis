@@ -1,5 +1,8 @@
+#include <ctime>
+
 #include "motis/tag_lookup.h"
 
+#include "fmt/chrono.h"
 #include "fmt/core.h"
 
 #include "cista/io.h"
@@ -49,10 +52,11 @@ std::string tag_lookup::id(nigiri::timetable const& tt,
 }
 
 std::string tag_lookup::id(nigiri::timetable const& tt,
-                           n::rt::run_stop s) const {
+                           n::rt::run_stop s,
+                           n::event_type const ev_type) const {
   if (s.fr_->is_scheduled()) {
     // trip id
-    auto const t = s.get_trip_idx(n::event_type::kDep);
+    auto const t = s.get_trip_idx(ev_type);
     auto const id_idx = tt.trip_ids_[t].front();
     auto const id = tt.trip_id_strings_[id_idx].view();
     auto const src = tt.trip_id_src_[id_idx];
@@ -79,23 +83,41 @@ std::string tag_lookup::id(nigiri::timetable const& tt,
     return fmt::format("{:%Y%m%d}_{:02}:{:02}_{}_{}", day, start_hours.count(),
                        start_minutes.count(), get_tag(src), id);
   } else {
-    // TODO support added trips
-    return "";
+    auto const id = s.fr_->id();
+    auto const time = std::chrono::system_clock::to_time_t(
+        (*s.fr_)[0].time(n::event_type::kDep));
+    auto const utc = *std::gmtime(&time);
+    auto const id_tag = get_tag(id.src_);
+    auto const id_id = id.id_;
+    return fmt::format("{:04}{:02}{:02}_{:02}:{:02}_{}_{}", utc.tm_year + 1900,
+                       utc.tm_mon + 1, utc.tm_mday, utc.tm_hour, utc.tm_min,
+                       id_tag, id_id);
   }
 }
 
 std::pair<nigiri::rt::run, nigiri::trip_idx_t> tag_lookup::get_trip(
-    nigiri::timetable const& tt, std::string_view id) const {
+    nigiri::timetable const& tt,
+    nigiri::rt_timetable const* rtt,
+    std::string_view id) const {
   auto const [date, start_time, tag, trip_id] =
       utl::split<'_', utl::cstr, utl::cstr, utl::cstr, utl::cstr>(id);
   auto td = transit_realtime::TripDescriptor{};
-  td.set_start_date(date.view());
-  td.set_start_time(start_time.view());
-  td.set_trip_id(std::string_view{
-      trip_id.str,
-      static_cast<std::size_t>(id.data() + id.size() - trip_id.str)});
 
-  return n::rt::gtfsrt_resolve_run({}, tt, nullptr, get_src(tag.view()), td);
+  utl::verify(date.valid(), "invalid tripId date {}", id);
+  td.set_start_date(date.view());
+
+  utl::verify(start_time.valid(), "invalid tripId start_time {}", id);
+  td.set_start_time(start_time.view());
+
+  utl::verify(tag.valid(), "invalid tripId tag {}", id);
+  // allow trip ids starting with underscore
+  auto const trip_id_len_plus_one =
+      static_cast<std::size_t>(id.data() + id.size() - tag.str) - tag.length();
+  utl::verify(trip_id_len_plus_one > 1, "invalid tripId id {}", id);
+  td.set_trip_id(
+      std::string_view{tag.str + tag.length() + 1, trip_id_len_plus_one - 1});
+
+  return n::rt::gtfsrt_resolve_run({}, tt, rtt, get_src(tag.view()), td);
 }
 
 nigiri::location_idx_t tag_lookup::get_location(nigiri::timetable const& tt,

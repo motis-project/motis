@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 
-project(motis)
+project(motis LANGUAGES C CXX ASM)
 
 set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
 
@@ -81,9 +81,10 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
             -Wno-shadow-uncaptured-local
             -Wno-documentation-deprecated-sync
             -Wno-float-equal
+            -Wno-deprecated-declarations
             -Werror)
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
-    set(motis-compile-options -Wall -Wextra -Werror -Wno-unknown-pragmas)
+    set(motis-compile-options -Wall -Wextra -Werror -Wno-unknown-pragmas -Wno-deprecated-declarations)
 elseif (MSVC)
     set(motis-compile-options /WX /bigobj)
 else ()
@@ -113,14 +114,20 @@ target_link_libraries(motislib
     osr
     adr
     boost-json
+    Boost::fiber
     motis-api
     reflectcpp
     web-server
     tiles
     pbf_sdf_fonts_res
-    pbf_sdf_fonts_res-res
     ssl
     crypto
+    tg
+    lz4_static
+    web-server
+    prometheus-cpp::core
+    opentelemetry_trace
+    opentelemetry_exporter_otlp_http
 )
 
 
@@ -138,13 +145,6 @@ target_compile_options(motis PRIVATE ${motis-compile-options})
 set_source_files_properties(exe/main.cc PROPERTIES COMPILE_DEFINITIONS MOTIS_VERSION="${motis-git-tag}")
 target_link_libraries(motis
     motislib
-    web-server
-    adr
-    fmt::fmt
-    rtree
-    geo
-    cista
-    tg
     ianatzdb-res
     pbf_sdf_fonts_res-res
     tiles_server_res-res
@@ -193,7 +193,16 @@ endif()
 
 # --- UI ---
 add_custom_target(motis-web-ui
-        COMMAND npm i -f && npm run build
+        COMMAND pnpm install && pnpm build
         WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/ui"
         VERBATIM
 )
+
+foreach(t adr osr nigiri gtfsrt
+        geo tiles tiles-import-library
+        motis motis-api motislib)
+    target_compile_options(${t} PUBLIC ${MOTIS_TARGET_FLAGS})
+endforeach()
+if (MOTIS_MIMALLOC)
+    target_compile_options(mimalloc PUBLIC ${MOTIS_TARGET_FLAGS})
+endif()

@@ -1,51 +1,51 @@
 [nigiri]
   url=git@github.com:motis-project/nigiri.git
   branch=master
-  commit=23e619793c9b33a8df9280c031511c5f5adada34
+  commit=6f5922d2ea01282f30891ae931091a83eaafb13e
 [cista]
   url=git@github.com:felixguendling/cista.git
   branch=master
-  commit=950f96f4ded53a6b5753824b280550b722933e55
+  commit=9e961e3e617058eb62a9faef0d9ff15339e67316
 [osr]
   url=git@github.com:motis-project/osr.git
   branch=master
-  commit=f2ceb19b31c13258bd61053edfbaf03375431701
+  commit=96d358d381e9ed05864b96e3921dabc97680dae5
 [utl]
   url=git@github.com:motis-project/utl.git
   branch=master
-  commit=368fdcb8326ced5bb151b60c09a07c2e5f09bf55
+  commit=59527ca23586a2fe959dd0ac0e20d179f7ccd8a2
 [adr]
   url=git@github.com:triptix-tech/adr.git
   branch=master
-  commit=9bf19dd88d7805d6bea1cebf5b09a394605fa3f6
+  commit=05a38a94c3b3ec595da30a9038e92178c5d872dd
 [googletest]
   url=git@github.com:motis-project/googletest.git
   branch=master
-  commit=34a46558609e05865c197f0260ab36daa7cbbb6e
+  commit=7b64fca6ea0833628d6f86255a81424365f7cc0c
 [net]
   url=git@github.com:motis-project/net.git
   branch=master
-  commit=6a457f5eaa077078fcac4153c5a178657737eee8
+  commit=db7450708b7a2c37572d5c0f6a42a53b8f644e57
 [openapi-cpp]
   url=git@github.com:triptix-tech/openapi-cpp.git
   branch=master
-  commit=dac46d043f07a119d8b7d9ccb47e51049b259bfe
+  commit=efd83cf208b982ef6aff403caa5c245eabc4a057
 [unordered_dense]
   url=git@github.com:motis-project/unordered_dense.git
-  branch=master
-  commit=b33b037377ca966bbdd9cccc3417e46e88f83bfb
+  branch=main
+  commit=2c7230ae7f9c30849a5b089fb4a5d11896b45dcf
 [reflect-cpp]
   url=git@github.com:motis-project/reflect-cpp.git
   branch=main
-  commit=c54fe66de4650b60c23aadd4a06d9db4ffeda22f
+  commit=165b617ac54400bf34f261b07376437157f19a63
 [tiles]
   url=git@github.com:motis-project/tiles.git
   branch=master
-  commit=ab6c4b13544570f893c2d64434c613d8fd7d2ceb
+  commit=fb8187e7b1ff30f0fffa6e508575b6b1d6c33791
 [boost]
   url=git@github.com:motis-project/boost.git
   branch=boost-1.86.0
-  commit=930f38eb0365ceb7853273e03da4d9e7787abfb9
+  commit=4a9aca6cb8af75be6e58f28c09cc7e39f61e6173
 [tg]
   url=git@github.com:triptix-tech/tg.git
   branch=main
@@ -54,3 +54,15 @@
   url=git@github.com:motis-project/mimalloc.git
   branch=dev
   commit=e2f4fe647e8aff4603a7d5119b8639fd1a47c8a6
+[lz4]
+  url=git@github.com:motis-project/lz4.git
+  branch=dev
+  commit=ff69dbd1ad10852104257d5306874a07b76f0dbd
+[prometheus-cpp]
+  url=git@github.com:motis-project/prometheus-cpp.git
+  branch=master
+  commit=e420cd7cf3995a994220b40a36c987ac8e67c0bf
+[opentelemetry-cpp]
+  url=git@github.com:motis-project/opentelemetry-cpp.git
+  branch=main
+  commit=638d55a1d559cc783fd3ef005d5f48e1cbbb5ea3

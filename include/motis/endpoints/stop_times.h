@@ -15,6 +15,7 @@ namespace motis::ep {
 struct stop_times {
   api::stoptimes_response operator()(boost::urls::url_view const&) const;
 
+  config const& config_;
   osr::ways const* w_;
   osr::platforms const* pl_;
   platform_matches_t const* matches_;

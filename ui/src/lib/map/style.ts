@@ -62,7 +62,7 @@ const colors = {
 	dark: {
 		background: '#292929',
 
-		water: '#313539',
+		water: '#1f2830',
 		rail: '#808080',
 		pedestrian: '#292929',
 
@@ -79,10 +79,10 @@ const colors = {
 		landuseRetail: '#292929',
 		landuseConstruction: 'red',
 
-		landusePark: '#272525',
-		landuseNatureLight: '#272525',
-		landuseNatureHeavy: '#272525',
-		landuseCemetery: '#272525',
+		landusePark: '#18221f',
+		landuseNatureLight: '#1e2322',
+		landuseNatureHeavy: '#1a2020',
+		landuseCemetery: '#202423',
 		landuseBeach: '#4c4b3e',
 
 		indoorCorridor: '#494949',
@@ -128,7 +128,7 @@ export const getStyle = (theme: 'light' | 'dark', level: number): StyleSpecifica
 				type: 'vector',
 				tiles: ['/{z}/{x}/{y}.mvt'],
 				maxzoom: 20,
-				attribution: "&copy; <a href='http://www.openstreetmap.org/copyright'>OpenStreetMap</a>"
+				attribution: ''
 			}
 		},
 		glyphs: '/glyphs/{fontstack}/{range}.pbf',
@@ -573,16 +573,6 @@ export const getStyle = (theme: 'light' | 'dark', level: number): StyleSpecifica
 							['*', ['var', 'base'], 3]
 						]
 					]
-				}
-			},
-			{
-				id: 'rail_old',
-				type: 'line',
-				source: 'osm',
-				'source-layer': 'rail',
-				filter: ['==', 'rail', 'old'],
-				paint: {
-					'line-color': c.rail
 				}
 			},
 			{

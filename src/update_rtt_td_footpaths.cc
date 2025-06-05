@@ -8,6 +8,7 @@
 
 #include "motis/constants.h"
 #include "motis/get_loc.h"
+#include "motis/get_stops_with_traffic.h"
 #include "motis/max_distance.h"
 
 namespace n = nigiri;
@@ -78,6 +79,7 @@ std::vector<n::td_footpath> get_td_footpaths(
     osr::lookup const& l,
     osr::platforms const& pl,
     nigiri::timetable const& tt,
+    nigiri::rt_timetable const* rtt,
     point_rtree<n::location_idx_t> const& loc_rtree,
     elevators const& e,
     platform_matches_t const& matches,
@@ -86,6 +88,7 @@ std::vector<n::td_footpath> get_td_footpaths(
     osr::direction const dir,
     osr::search_profile const profile,
     std::chrono::seconds const max,
+    double const max_matching_distance,
     osr::bitvec<osr::node_idx_t>& blocked_mem) {
   blocked_mem.resize(w.n_nodes());
 
@@ -95,19 +98,14 @@ std::vector<n::td_footpath> get_td_footpaths(
   for (auto const& [t, states] : e_state_changes) {
     set_blocked(e_nodes, states, blocked_mem);
 
-    auto neighbors = std::vector<n::location_idx_t>{};
-    loc_rtree.in_radius(start.pos_, kMaxDistance,
-                        [&](n::location_idx_t const x) {
-                          if (x != start_l) {
-                            neighbors.emplace_back(x);
-                          }
-                        });
+    auto const neighbors = get_stops_with_traffic(
+        tt, rtt, loc_rtree, start, get_max_distance(profile, max), start_l);
     auto const results = osr::route(
         w, l, profile, start,
         utl::to_vec(neighbors,
                     [&](auto&& x) { return get_loc(tt, w, pl, matches, x); }),
-        static_cast<osr::cost_t>(max.count()), dir,
-        get_max_distance(profile, max), &blocked_mem);
+        static_cast<osr::cost_t>(max.count()), dir, max_matching_distance,
+        &blocked_mem);
 
     for (auto const [to, p] : utl::zip(neighbors, results)) {
       auto const duration = p.has_value() && (n::duration_t{p->cost_ / 60U} <
@@ -137,8 +135,6 @@ void update_rtt_td_footpaths(
     nigiri::rt_timetable const* old_rtt,
     nigiri::rt_timetable& rtt,
     std::chrono::seconds const max) {
-  fmt::println("  -> {} routing tasks tasks", tasks.size());
-
   auto in_mutex = std::mutex{}, out_mutex = std::mutex{};
   auto out = std::map<n::location_idx_t, std::vector<n::td_footpath>>{};
   auto in = std::map<n::location_idx_t, std::vector<n::td_footpath>>{};
@@ -146,10 +142,10 @@ void update_rtt_td_footpaths(
       tasks.size(),
       [&](osr::bitvec<osr::node_idx_t>& blocked, std::size_t const task_idx) {
         auto const [start, dir] = *(begin(tasks) + task_idx);
-        auto fps =
-            get_td_footpaths(w, l, pl, tt, loc_rtree, e, matches, start,
-                             get_loc(tt, w, pl, matches, start), dir,
-                             osr::search_profile::kWheelchair, max, blocked);
+        auto fps = get_td_footpaths(w, l, pl, tt, &rtt, loc_rtree, e, matches,
+                                    start, get_loc(tt, w, pl, matches, start),
+                                    dir, osr::search_profile::kWheelchair, max,
+                                    kMaxWheelchairMatchingDistance, blocked);
         {
           auto const lock = std::unique_lock{
               dir == osr::direction::kForward ? out_mutex : in_mutex};

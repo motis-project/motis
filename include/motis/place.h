@@ -16,6 +16,10 @@ struct tt_location {
       nigiri::location_idx_t l,
       nigiri::location_idx_t scheduled = nigiri::location_idx_t::invalid());
 
+  friend std::ostream& operator<<(std::ostream& out, tt_location const& l) {
+    return out << "{ l=" << l.l_ << ", scheduled=" << l.scheduled_ << " }";
+  }
+
   nigiri::location_idx_t l_;
   nigiri::location_idx_t scheduled_;
 };
@@ -35,10 +39,10 @@ api::Place to_place(osr::location, std::string_view name);
 
 api::Place to_place(nigiri::timetable const*,
                     tag_lookup const*,
-                    osr::ways const* w,
-                    osr::platforms const* pl,
-                    platform_matches_t const* matches,
-                    place_t l,
+                    osr::ways const*,
+                    osr::platforms const*,
+                    platform_matches_t const*,
+                    place_t,
                     place_t start = osr::location{},
                     place_t dest = osr::location{},
                     std::string_view name = "");
