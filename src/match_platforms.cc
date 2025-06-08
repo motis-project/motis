@@ -1,10 +1,13 @@
 #include "motis/match_platforms.h"
 
+#include <filesystem>
+
 #include "utl/helpers/algorithm.h"
 #include "utl/parallel_for.h"
 #include "utl/parser/arg_parser.h"
 
 #include "osr/geojson.h"
+#include "osr/lookup.h"
 
 #include "motis/location_routes.h"
 
@@ -230,6 +233,37 @@ osr::platform_idx_t get_match(n::timetable const& tt,
   }
 
   return best;
+}
+
+way_matches_storage::way_matches_storage(std::filesystem::path path,
+                                         cista::mmap::protection const mode)
+    : mode_{mode},
+      p_{[&]() {
+        std::filesystem::create_directories(path);
+        return std::move(path);
+      }()},
+      matches_{osr::mm_vec<osr::raw_way_candidate>{mm("way_matches.bin")},
+               osr::mm_vec<cista::base_t<n::location_idx_t>>{
+                   mm("way_matches_idx.bin")}} {}
+
+cista::mmap way_matches_storage::mm(char const* file) {
+  return cista::mmap{(p_ / file).generic_string().c_str(), mode_};
+}
+
+void way_matches_storage::preprocess_osr_matches(
+    nigiri::timetable const& tt,
+    osr::platforms const& pl,
+    osr::ways const& w,
+    osr::lookup const& l,
+    platform_matches_t const& platform_matches) {
+
+  for (auto i = n::location_idx_t{0U}; i != tt.n_locations(); ++i) {
+    auto const loc = n::location_idx_t{i};
+    auto const p = platform_matches[loc];
+    matches_.emplace_back(l.get_raw_match(
+        osr::location{tt.locations_.coordinates_[loc], pl.get_level(w, p)},
+        250));
+  }
 }
 
 }  // namespace motis

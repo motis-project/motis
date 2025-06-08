@@ -449,7 +449,7 @@ data import(config const& c, fs::path const& data_path, bool const write) {
   auto matches =
       task{"matches",
            [&]() { return c.timetable_ && c.use_street_routing(); },
-           [&]() { return d.tt_ && d.w_ && d.pl_; },
+           [&]() { return d.tt_ && d.w_ && d.pl_ && d.l_; },
            [&]() {
              d.matches_ = cista::wrapped<platform_matches_t>{
                  cista::raw::make_unique<platform_matches_t>(
@@ -457,8 +457,15 @@ data import(config const& c, fs::path const& data_path, bool const write) {
              if (write) {
                cista::write(data_path / "matches.bin", *d.matches_);
              }
+             d.way_matches_ = std::make_unique<way_matches_storage>(
+                 data_path, cista::mmap::protection::WRITE);
+             d.way_matches_->preprocess_osr_matches(*d.tt_, *d.pl_, *d.w_,
+                                                    *d.l_, *d.matches_);
            },
-           [&]() { d.load_matches(); },
+           [&]() {
+             d.load_matches();
+             d.load_way_matches();
+           },
            {tt_hash, osm_hash, osr_version(), n_version(), matches_version()}};
 
   auto flex_areas =

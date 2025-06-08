@@ -114,6 +114,7 @@ struct routing {
   point_rtree<nigiri::location_idx_t> const* loc_tree_;
   flex::flex_areas const* fa_;
   platform_matches_t const* matches_;
+  way_matches_storage const* way_matches_;
   std::shared_ptr<rt> const& rt_;
   nigiri::shapes_storage const* shapes_;
   std::shared_ptr<gbfs::gbfs_data> const& gbfs_;

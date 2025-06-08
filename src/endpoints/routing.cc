@@ -11,11 +11,13 @@
 #include "utl/erase_duplicates.h"
 #include "utl/helpers/algorithm.h"
 
+#include "osr/lookup.h"
 #include "osr/platforms.h"
 #include "osr/routing/profiles/foot.h"
 #include "osr/routing/route.h"
 #include "osr/routing/sharing_data.h"
 
+#include "nigiri/common/interval.h"
 #include "nigiri/routing/limits.h"
 #include "nigiri/routing/pareto_set.h"
 #include "nigiri/routing/query.h"
@@ -200,6 +202,16 @@ std::vector<n::routing::offset> get_offsets(
           return osr::location{r.tt_->locations_.coordinates_[l],
                                r.pl_->get_level(*r.w_, (*r.matches_)[l])};
         });
+    auto const near_stop_matches =
+        utl::to_vec(near_stops, [&](n::location_idx_t const l) {
+          return utl::to_vec(
+              (r.way_matches_->matches_)[l], [&](osr::raw_way_candidate wc) {
+                return r.l_->inflate_raw_way_candidate(
+                    wc,
+                    osr::location{r.tt_->locations_.coordinates_[l],
+                                  r.pl_->get_level(*r.w_, (*r.matches_)[l])});
+              });
+        });
 
     if (osr::is_rental_profile(profile)) {
       if (!gbfs_rd.has_data()) {
@@ -233,10 +245,14 @@ std::vector<n::routing::offset> get_offsets(
               gbfs_rd.get_products_routing_data(*provider, prod.idx_);
           auto const sharing = prod_rd->get_sharing_data(
               r.w_->n_nodes(), ignore_rental_return_constraints);
+
+          auto const osr_profile = gbfs::get_osr_profile(prod);
+          auto const pos_match = r.l_->match(
+              pos, false, dir, max_matching_distance, nullptr, profile);
           auto const paths = osr::route(
-              *r.w_, *r.l_, gbfs::get_osr_profile(prod), pos,
-              near_stop_locations, static_cast<osr::cost_t>(max.count()), dir,
-              max_matching_distance, nullptr, &sharing, elevations);
+              *r.w_, *r.l_, osr_profile, pos, near_stop_locations, pos_match,
+              near_stop_matches, static_cast<osr::cost_t>(max.count()), dir,
+              nullptr, &sharing, elevations);
           ignore_walk = true;
           for (auto const [p, l] : utl::zip(paths, near_stops)) {
             if (p.has_value()) {
@@ -250,10 +266,12 @@ std::vector<n::routing::offset> get_offsets(
       }
 
     } else {
+      auto const pos_match =
+          r.l_->match(pos, false, dir, max_matching_distance, nullptr, profile);
       auto const paths =
-          osr::route(*r.w_, *r.l_, profile, pos, near_stop_locations,
-                     static_cast<osr::cost_t>(max.count()), dir,
-                     max_matching_distance, nullptr, nullptr, elevations);
+          osr::route(*r.w_, *r.l_, profile, pos, near_stop_locations, pos_match,
+                     near_stop_matches, static_cast<osr::cost_t>(max.count()),
+                     dir, nullptr, nullptr, elevations);
       for (auto const [p, l] : utl::zip(paths, near_stops)) {
         if (p.has_value()) {
           offsets.emplace_back(

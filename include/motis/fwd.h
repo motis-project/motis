@@ -46,6 +46,7 @@ struct railviz_static_index;
 struct railviz_rt_index;
 struct elevators;
 struct metrics_registry;
+struct way_matches_storage;
 struct data;
 
 namespace odm {
