@@ -564,6 +564,9 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
       query.arriveBy_ ? query.ignorePreTransitRentalReturnConstraints_
                       : query.ignorePostTransitRentalReturnConstraints_;
 
+  utl::verify(query.searchWindow_ / 60 <
+                  config_.limits_.value().plan_max_search_window_minutes_,
+              "maximum searchWindow size exceeded");
   auto const [start_time, t] = get_start_time(query);
 
   UTL_START_TIMING(direct);
