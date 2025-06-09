@@ -11,7 +11,7 @@ using meta_entry_t = std::pair<std::string, std::uint64_t>;
 using meta_t = std::map<std::string, std::uint64_t>;
 
 constexpr auto const osr_version = []() {
-  return meta_entry_t{"osr_bin_ver", 21U};
+  return meta_entry_t{"osr_bin_ver", 22U};
 };
 constexpr auto const adr_version = []() {
   return meta_entry_t{"adr_bin_ver", 7U};
