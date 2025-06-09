@@ -700,7 +700,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
         .fastest_direct_ = fastest_direct == kInfinityDuration
                                ? std::nullopt
                                : std::optional{fastest_direct},
-        .fasted_direct_factor_ = query.fastestDirectFactor_,
+        .fastest_direct_factor_ = query.fastestDirectFactor_,
         .slow_direct_ = query.slowDirect_};
     remove_slower_than_fastest_direct(q);
     UTL_STOP_TIMING(query_preparation);
