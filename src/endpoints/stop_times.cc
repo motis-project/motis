@@ -286,6 +286,10 @@ api::stoptimes_response stop_times::operator()(
 
   auto locations = std::vector{l};
   auto const add = [&](n::location_idx_t const l) {
+    if (query.exactRadius_) {
+      locations.emplace_back(l);
+      return;
+    }
     auto const l_name = tt_.locations_.names_[l].view();
     utl::concat(locations, tt_.locations_.children_[l]);
     for (auto const eq : tt_.locations_.equivalences_[l]) {
