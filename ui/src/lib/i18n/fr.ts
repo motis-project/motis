@@ -84,7 +84,7 @@ const translations: Translations = {
 	REGIONAL_RAIL: 'Train régional',
 	OTHER: 'Autres',
 	routingSegments: {
-		maxTransfers: 'Transport max.',
+		maxChangeovers: 'Max. de correspondances',
 		maxTravelTime: 'Temps de trajet max.',
 		firstMile: 'Premier kilomètre',
 		lastMile: 'Dernier kilomètre',

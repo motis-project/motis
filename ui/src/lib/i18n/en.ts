@@ -94,7 +94,7 @@ const translations: Translations = {
 	FUNICULAR: 'Funicular',
 	AREAL_LIFT: 'Aerial lift',
 	routingSegments: {
-		maxTransfers: 'Max. Transfers',
+		maxChangeovers: 'Max. changeovers',
 		maxTravelTime: 'Max. travel time',
 		firstMile: 'First mile',
 		lastMile: 'Last mile',
