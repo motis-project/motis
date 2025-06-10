@@ -51,7 +51,7 @@ platform_matches_t get_matches(nigiri::timetable const&,
 
 std::optional<std::string_view> get_track(std::string_view);
 
-std::vector<osr::match_t> get_platform_way_matches(
+std::vector<osr::match_t> get_many_platform_way_matches(
     osr::lookup const&,
     way_matches_storage const*,
     osr::search_profile,

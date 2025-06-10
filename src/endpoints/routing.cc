@@ -206,9 +206,9 @@ std::vector<n::routing::offset> get_offsets(
                                r.pl_->get_level(*r.w_, (*r.matches_)[l])};
         });
     auto const near_stop_matches = [&](osr::search_profile p) {
-      return get_platform_way_matches(*r.l_, r.way_matches_, p, near_stops,
-                                      near_stop_locations, dir,
-                                      max_matching_distance);
+      return get_many_platform_way_matches(*r.l_, r.way_matches_, p, near_stops,
+                                           near_stop_locations, dir,
+                                           max_matching_distance);
     };
 
     if (osr::is_rental_profile(profile)) {

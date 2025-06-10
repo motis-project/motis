@@ -268,7 +268,7 @@ void way_matches_storage::preprocess_osr_matches(
   }
 }
 
-std::vector<osr::match_t> get_platform_way_matches(
+std::vector<osr::match_t> get_many_platform_way_matches(
     osr::lookup const& lookup,
     way_matches_storage const* way_matches,
     osr::search_profile const p,
