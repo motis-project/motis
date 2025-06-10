@@ -83,7 +83,8 @@ street_routing:                   # enable street routing (default = false; Usin
   elevation_data_dir: srtm/       # folder which contains elevation data, e.g. SRTMGL1 data tiles in HGT format
 limits:
   stoptimes_max_results: 256      # maximum number of stoptimes results that can be requested
-  plan_max_results: 256           # maximum number of plan results that can be requested
+  plan_max_results: 256           # maximum number of plan results that can be requested via numItineraries parameter
+  plan_max_search_window_minutes: 5760 # maximum (minutes) for searchWindow parameter (seconds), highest possible value: 21600 (15 days)
   onetoall_max_results: 65535     # maximum number of one-to-all results that can be requested
   onetoall_max_travel_minutes: 90 # maximum travel duration for one-to-all query that can be requested
   routing_max_timeout_seconds: 90 # maximum duration a routing query may take

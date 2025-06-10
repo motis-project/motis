@@ -235,7 +235,7 @@
 					class="flex items-center w-full overflow-hidden"
 					aria-label={t.routingSegments.firstMile}
 				>
-					{selectedPreTransitModesLabel}
+					<span>{selectedPreTransitModesLabel}</span>
 				</Select.Trigger>
 				<Select.Content sideOffset={10}>
 					{#each prePostDirectModes as mode, i (i + mode)}
@@ -280,7 +280,7 @@
 					class="flex items-center w-full overflow-hidden"
 					aria-label={t.routingSegments.lastMile}
 				>
-					{selectedPostTransitModesLabel}
+					<span>{selectedPostTransitModesLabel}</span>
 				</Select.Trigger>
 				<Select.Content sideOffset={10}>
 					{#each prePostDirectModes as mode, i (i + mode)}
@@ -325,7 +325,7 @@
 					class="flex items-center w-full overflow-hidden"
 					aria-label={t.routingSegments.direct}
 				>
-					{selectedDirectModesLabel}
+					<span>{selectedDirectModesLabel}</span>
 				</Select.Trigger>
 				<Select.Content sideOffset={10}>
 					{#each prePostDirectModes as mode, i (i + mode)}

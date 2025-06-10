@@ -585,6 +585,9 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
       query.arriveBy_ ? query.ignorePreTransitRentalReturnConstraints_
                       : query.ignorePostTransitRentalReturnConstraints_;
 
+  utl::verify(query.searchWindow_ / 60 <
+                  config_.limits_.value().plan_max_search_window_minutes_,
+              "maximum searchWindow size exceeded");
   auto const [start_time, t] = get_start_time(query);
 
   UTL_START_TIMING(direct);
@@ -721,7 +724,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
         .fastest_direct_ = fastest_direct == kInfinityDuration
                                ? std::nullopt
                                : std::optional{fastest_direct},
-        .fasted_direct_factor_ = query.fastestDirectFactor_,
+        .fastest_direct_factor_ = query.fastestDirectFactor_,
         .slow_direct_ = query.slowDirect_};
     remove_slower_than_fastest_direct(q);
     UTL_STOP_TIMING(query_preparation);
