@@ -276,9 +276,12 @@ void data::load_matches() {
 }
 
 void data::load_way_matches() {
-  way_matches_ = {};
-  way_matches_ = std::make_unique<way_matches_storage>(
-      way_matches_storage{path_, cista::mmap::protection::READ});
+  if (config_.timetable_.value().preprocess_max_matching_distance_ > 0.0) {
+    way_matches_ = {};
+    way_matches_ = std::make_unique<way_matches_storage>(way_matches_storage{
+        path_, cista::mmap::protection::READ,
+        config_.timetable_.value().preprocess_max_matching_distance_});
+  }
 }
 
 void data::load_tiles() {

@@ -55,6 +55,7 @@ timetable:
   extend_missing_footpaths: false
   max_footpath_length: 15
   max_matching_distance: 25
+  preprocess_max_matching_distance: 0
   datasets:
     de:
       path: delfi.gtfs.zip

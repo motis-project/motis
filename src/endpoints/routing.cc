@@ -29,6 +29,7 @@
 #include "motis/constants.h"
 #include "motis/endpoints/routing.h"
 
+#include "motis/config.h"
 #include "motis/flex/flex.h"
 #include "motis/flex/flex_output.h"
 #include "motis/gbfs/data.h"
@@ -37,6 +38,7 @@
 #include "motis/gbfs/osr_profile.h"
 #include "motis/get_stops_with_traffic.h"
 #include "motis/journey_to_response.h"
+#include "motis/match_platforms.h"
 #include "motis/max_distance.h"
 #include "motis/metrics_registry.h"
 #include "motis/mode_to_profile.h"
@@ -204,15 +206,9 @@ std::vector<n::routing::offset> get_offsets(
                                r.pl_->get_level(*r.w_, (*r.matches_)[l])};
         });
     auto const near_stop_matches = [&](osr::search_profile p) {
-      return utl::to_vec(
-          utl::zip(near_stops, near_stop_locations),
-          [&](std::tuple<n::location_idx_t, osr::location> const ll) {
-            auto const& [l, query] = ll;
-            auto const& raw_matches = (r.way_matches_->matches_)[l];
-            return r.l_->match(
-                query, true, dir, max_matching_distance, nullptr, p,
-                std::span{raw_matches.begin(), raw_matches.end()});
-          });
+      return get_platform_way_matches(*r.l_, r.way_matches_, p, near_stops,
+                                      near_stop_locations, dir,
+                                      max_matching_distance);
     };
 
     if (osr::is_rental_profile(profile)) {
