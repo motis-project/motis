@@ -258,12 +258,14 @@ void way_matches_storage::preprocess_osr_matches(
     osr::ways const& w,
     osr::lookup const& l,
     platform_matches_t const& platform_matches) {
-
+  auto const progress_tracker = utl::get_active_progress_tracker();
+  progress_tracker->in_high(tt.n_locations());
   for (auto i = n::location_idx_t{0U}; i != tt.n_locations(); ++i) {
     matches_.emplace_back(
         l.get_raw_match(osr::location{tt.locations_.coordinates_[i],
                                       pl.get_level(w, platform_matches[i])},
                         max_matching_distance_));
+    progress_tracker->increment();
   }
 }
 

@@ -452,7 +452,7 @@ data import(config const& c, fs::path const& data_path, bool const write) {
       [&]() { return d.tt_ && d.w_ && d.pl_ && d.l_; },
       [&]() {
         auto const progress_tracker = utl::get_active_progress_tracker();
-        progress_tracker->status("Prepare Platform Matches").out_bounds(0, 50);
+        progress_tracker->status("Prepare Platform Matches").out_bounds(0, 30);
 
         d.matches_ = cista::wrapped<platform_matches_t>{
             cista::raw::make_unique<platform_matches_t>(
@@ -462,7 +462,7 @@ data import(config const& c, fs::path const& data_path, bool const write) {
         }
         if (c.timetable_.value().preprocess_max_matching_distance_ > 0.0) {
           progress_tracker->status("Prepare Platform Way Matches")
-              .out_bounds(50, 100);
+              .out_bounds(30, 100);
           d.way_matches_ = std::make_unique<way_matches_storage>(
               data_path, cista::mmap::protection::WRITE,
               c.timetable_.value().preprocess_max_matching_distance_);
