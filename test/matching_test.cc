@@ -108,7 +108,7 @@ TEST(motis, get_way_candidates) {
             d.tt_->locations_.coordinates_[nigiri::location_idx_t{l}],
             d.pl_->get_level(*d.w_, (*d.matches_)[nigiri::location_idx_t{l}])};
       });
-  auto const with_preprocessing = motis::get_many_platform_way_matches(
+  auto const with_preprocessing = motis::get_reverse_platform_way_matches(
       *d.l_, &*d.way_matches_, osr::search_profile::kCar, location_idxs, locs,
       osr::direction::kForward, 250);
   auto const without_preprocessing = utl::to_vec(
@@ -123,6 +123,9 @@ TEST(motis, get_way_candidates) {
   for (auto const [with, without, l] :
        utl::zip(with_preprocessing, without_preprocessing, locs)) {
     ASSERT_EQ(with.size(), without.size());
+    for (auto [a, b] : utl::zip(with, without)) {
+      std::cout << a.dist_to_way_ << " dist " << b.dist_to_way_ << std::endl;
+    }
     auto sorted_with = with;
     auto sorted_without = without;
     auto const sort_by_way = [&](auto const& a, auto const& b) {

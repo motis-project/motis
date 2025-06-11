@@ -111,9 +111,9 @@ n::routing::td_offsets_t get_td_offsets(
     } else if (m == api::ModeEnum::FLEX) {
       utl::verify(r.fa_, "FLEX areas not loaded");
       auto frd = flex::flex_routing_data{};
-      flex::add_flex_td_offsets(*r.w_, *r.l_, r.pl_, r.matches_, *r.tt_, *r.fa_,
-                                *r.loc_tree_, start_time, pos, dir, max,
-                                max_matching_distance, frd, ret);
+      flex::add_flex_td_offsets(*r.w_, *r.l_, r.pl_, r.matches_, r.way_matches_,
+                                *r.tt_, *r.fa_, *r.loc_tree_, start_time, pos,
+                                dir, max, max_matching_distance, frd, ret);
       continue;
     }
 
@@ -205,10 +205,18 @@ std::vector<n::routing::offset> get_offsets(
           return osr::location{r.tt_->locations_.coordinates_[l],
                                r.pl_->get_level(*r.w_, (*r.matches_)[l])};
         });
-    auto const near_stop_matches = [&](osr::search_profile p) {
-      return get_many_platform_way_matches(*r.l_, r.way_matches_, p, near_stops,
-                                           near_stop_locations, dir,
-                                           max_matching_distance);
+
+    auto const route = [&](osr::search_profile const p,
+                           osr::sharing_data const* sharing) {
+      auto const pos_match =
+          r.l_->match(pos, false, dir, max_matching_distance, nullptr, p);
+      auto const near_stop_matches = get_reverse_platform_way_matches(
+          *r.l_, r.way_matches_, p, near_stops, near_stop_locations, dir,
+          max_matching_distance);
+      return osr::route(*r.w_, *r.l_, p, pos, near_stop_locations, pos_match,
+                        near_stop_matches,
+                        static_cast<osr::cost_t>(max.count()), dir, nullptr,
+                        sharing, elevations);
     };
 
     if (osr::is_rental_profile(profile)) {
@@ -244,14 +252,7 @@ std::vector<n::routing::offset> get_offsets(
           auto const sharing = prod_rd->get_sharing_data(
               r.w_->n_nodes(), ignore_rental_return_constraints);
 
-          auto const osr_profile = gbfs::get_osr_profile(prod);
-          auto const pos_match = r.l_->match(
-              pos, false, dir, max_matching_distance, nullptr, profile);
-          auto const paths =
-              osr::route(*r.w_, *r.l_, osr_profile, pos, near_stop_locations,
-                         pos_match, near_stop_matches(osr_profile),
-                         static_cast<osr::cost_t>(max.count()), dir, nullptr,
-                         &sharing, elevations);
+          auto const paths = route(gbfs::get_osr_profile(prod), &sharing);
           ignore_walk = true;
           for (auto const [p, l] : utl::zip(paths, near_stops)) {
             if (p.has_value()) {
@@ -265,12 +266,7 @@ std::vector<n::routing::offset> get_offsets(
       }
 
     } else {
-      auto const pos_match =
-          r.l_->match(pos, false, dir, max_matching_distance, nullptr, profile);
-      auto const paths = osr::route(
-          *r.w_, *r.l_, profile, pos, near_stop_locations, pos_match,
-          near_stop_matches(profile), static_cast<osr::cost_t>(max.count()),
-          dir, nullptr, nullptr, elevations);
+      auto const paths = route(profile, nullptr);
       for (auto const [p, l] : utl::zip(paths, near_stops)) {
         if (p.has_value()) {
           offsets.emplace_back(

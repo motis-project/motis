@@ -260,15 +260,14 @@ void way_matches_storage::preprocess_osr_matches(
     platform_matches_t const& platform_matches) {
 
   for (auto i = n::location_idx_t{0U}; i != tt.n_locations(); ++i) {
-    auto const loc = n::location_idx_t{i};
-    auto const p = platform_matches[loc];
-    matches_.emplace_back(l.get_raw_match(
-        osr::location{tt.locations_.coordinates_[loc], pl.get_level(w, p)},
-        max_matching_distance_));
+    matches_.emplace_back(
+        l.get_raw_match(osr::location{tt.locations_.coordinates_[i],
+                                      pl.get_level(w, platform_matches[i])},
+                        max_matching_distance_));
   }
 }
 
-std::vector<osr::match_t> get_many_platform_way_matches(
+std::vector<osr::match_t> get_reverse_platform_way_matches(
     osr::lookup const& lookup,
     way_matches_storage const* way_matches,
     osr::search_profile const p,
