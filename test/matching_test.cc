@@ -123,9 +123,6 @@ TEST(motis, get_way_candidates) {
   for (auto const [with, without, l] :
        utl::zip(with_preprocessing, without_preprocessing, locs)) {
     ASSERT_EQ(with.size(), without.size());
-    for (auto [a, b] : utl::zip(with, without)) {
-      std::cout << a.dist_to_way_ << " dist " << b.dist_to_way_ << std::endl;
-    }
     auto sorted_with = with;
     auto sorted_without = without;
     auto const sort_by_way = [&](auto const& a, auto const& b) {
