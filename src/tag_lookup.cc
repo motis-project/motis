@@ -19,6 +19,31 @@ namespace n = nigiri;
 
 namespace motis {
 
+trip_id split_trip_id(std::string_view id) {
+  auto const [date, start_time, tag, trip_id] =
+      utl::split<'_', utl::cstr, utl::cstr, utl::cstr, utl::cstr>(id);
+
+  auto ret = motis::trip_id{};
+
+  utl::verify(date.valid(), "invalid tripId date {}", id);
+  ret.start_date_ = date.view();
+
+  utl::verify(start_time.valid(), "invalid tripId start_time {}", id);
+  ret.start_time_ = start_time.view();
+
+  utl::verify(tag.valid(), "invalid tripId tag {}", id);
+  ret.tag_ = tag.view();
+
+  // allow trip ids starting with underscore
+  auto const trip_id_len_plus_one =
+      static_cast<std::size_t>(id.data() + id.size() - tag.str) - tag.length();
+  utl::verify(trip_id_len_plus_one > 1, "invalid tripId id {}", id);
+  ret.trip_id_ =
+      std::string_view{tag.str + tag.length() + 1, trip_id_len_plus_one - 1};
+
+  return ret;
+}
+
 std::pair<std::string_view, std::string_view> split_tag_id(std::string_view x) {
   auto const first_underscore_pos = x.find('_');
   return first_underscore_pos != std::string_view::npos
@@ -99,25 +124,12 @@ std::pair<nigiri::rt::run, nigiri::trip_idx_t> tag_lookup::get_trip(
     nigiri::timetable const& tt,
     nigiri::rt_timetable const* rtt,
     std::string_view id) const {
-  auto const [date, start_time, tag, trip_id] =
-      utl::split<'_', utl::cstr, utl::cstr, utl::cstr, utl::cstr>(id);
+  auto const split = split_trip_id(id);
   auto td = transit_realtime::TripDescriptor{};
-
-  utl::verify(date.valid(), "invalid tripId date {}", id);
-  td.set_start_date(date.view());
-
-  utl::verify(start_time.valid(), "invalid tripId start_time {}", id);
-  td.set_start_time(start_time.view());
-
-  utl::verify(tag.valid(), "invalid tripId tag {}", id);
-  // allow trip ids starting with underscore
-  auto const trip_id_len_plus_one =
-      static_cast<std::size_t>(id.data() + id.size() - tag.str) - tag.length();
-  utl::verify(trip_id_len_plus_one > 1, "invalid tripId id {}", id);
-  td.set_trip_id(
-      std::string_view{tag.str + tag.length() + 1, trip_id_len_plus_one - 1});
-
-  return n::rt::gtfsrt_resolve_run({}, tt, rtt, get_src(tag.view()), td);
+  td.set_start_date(split.start_date_);
+  td.set_start_time(split.start_time_);
+  td.set_trip_id(split.trip_id_);
+  return n::rt::gtfsrt_resolve_run({}, tt, rtt, get_src(split.tag_), td);
 }
 
 nigiri::location_idx_t tag_lookup::get_location(nigiri::timetable const& tt,

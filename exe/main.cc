@@ -27,6 +27,7 @@ namespace motis {
 int generate(int, char**);
 int batch(int, char**);
 int compare(int, char**);
+int extract(int, char**);
 }  // namespace motis
 
 using namespace motis;
@@ -45,7 +46,8 @@ int main(int ac, char** av) {
         "  compare    compare results from different batch runs\n"
         "  config     generate a config file from a list of input files\n"
         "  import     prepare input data, creates the data directory\n"
-        "  server     starts a web server serving the API\n",
+        "  server     starts a web server serving the API\n"
+        "  extract    trips from a Itinerary to GTFS timetable\n",
         motis_version);
     return 0;
   } else if (ac <= 1 || (ac >= 2 && av[1] == "--version"sv)) {
@@ -62,6 +64,7 @@ int main(int ac, char** av) {
   // Execute command.
   auto const cmd = std::string_view{av[0]};
   switch (cista::hash(cmd)) {
+    case cista::hash("extract"): return_value = extract(ac, av); break;
     case cista::hash("generate"): return_value = generate(ac, av); break;
     case cista::hash("batch"): return_value = batch(ac, av); break;
     case cista::hash("compare"): return_value = compare(ac, av); break;
