@@ -1475,7 +1475,7 @@ paths:
                 required:
                   - place
                   - hasFootTransfers
-                  - hasWheechairTransfers
+                  - hasWheelchairTransfers
                   - hasCarTransfers
                   - transfers
                 properties:

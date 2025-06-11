@@ -12,6 +12,7 @@
 #include "utl/verify.h"
 
 #include "nigiri/clasz.h"
+#include "nigiri/routing/limits.h"
 
 #include "rfl.hpp"
 #include "rfl/yaml.hpp"
@@ -118,6 +119,10 @@ void config::verify() const {
               "feature ODM requires feature STREET_ROUTING");
   utl::verify(!has_elevators() || osr_footpath_,
               "feature ELEVATORS requires feature OSR_FOOTPATHS");
+  utl::verify(limits_.value().plan_max_search_window_minutes_ <=
+                  nigiri::routing::kMaxSearchIntervalSize.count(),
+              "plan_max_search_window_minutes limit cannot be above {}",
+              nigiri::routing::kMaxSearchIntervalSize.count());
 
   if (timetable_) {
     for (auto const& [_, d] : timetable_->datasets_) {

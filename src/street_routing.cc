@@ -5,6 +5,7 @@
 #include "utl/concat.h"
 #include "utl/get_or_create.h"
 
+#include "osr/routing/algorithms.h"
 #include "osr/routing/route.h"
 #include "osr/routing/sharing_data.h"
 
@@ -201,7 +202,7 @@ api::Itinerary street_routing(osr::ways const& w,
         static_cast<osr::cost_t>(max.count()), osr::direction::kForward,
         max_matching_distance,
         s ? &set_blocked(e_nodes, e_states, blocked_mem) : nullptr,
-        out.get_sharing_data(), elevations);
+        out.get_sharing_data(), elevations, osr::routing_algorithm::kAStarBi);
   });
 
   if (!path.has_value()) {
