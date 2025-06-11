@@ -140,6 +140,7 @@ data::data(std::filesystem::path p, config const& c)
   auto matches = std::async(std::launch::async, [&]() {
     if (c.use_street_routing() && c.timetable_) {
       load_matches();
+      load_way_matches();
     }
   });
 
@@ -272,6 +273,15 @@ void data::load_reverse_geocoder() {
 
 void data::load_matches() {
   matches_ = cista::read<platform_matches_t>(path_ / "matches.bin");
+}
+
+void data::load_way_matches() {
+  if (config_.timetable_.value().preprocess_max_matching_distance_ > 0.0) {
+    way_matches_ = {};
+    way_matches_ = std::make_unique<way_matches_storage>(way_matches_storage{
+        path_, cista::mmap::protection::READ,
+        config_.timetable_.value().preprocess_max_matching_distance_});
+  }
 }
 
 void data::load_tiles() {

@@ -56,6 +56,7 @@ struct data {
   void load_railviz();
   void load_geocoder();
   void load_matches();
+  void load_way_matches();
   void load_reverse_geocoder();
   void load_tiles();
 
@@ -66,7 +67,8 @@ struct data {
     // !!! Remember to add all new members !!!
     return std::tie(config_, t_, r_, tc_, w_, pl_, l_, elevations_, tt_, tags_,
                     location_rtree_, elevator_nodes_, shapes_, railviz_static_,
-                    matches_, rt_, gbfs_, odm_bounds_, flex_areas_, metrics_);
+                    matches_, way_matches_, rt_, gbfs_, odm_bounds_,
+                    flex_areas_, metrics_);
   }
 
   std::filesystem::path path_;
@@ -85,7 +87,9 @@ struct data {
   ptr<hash_set<osr::node_idx_t>> elevator_nodes_;
   ptr<nigiri::shapes_storage> shapes_;
   ptr<railviz_static_index> railviz_static_;
-  cista::wrapped<platform_matches_t> matches_;
+  cista::wrapped<vector_map<nigiri::location_idx_t, osr::platform_idx_t>>
+      matches_;
+  ptr<way_matches_storage> way_matches_;
   ptr<tiles_data> tiles_;
   std::shared_ptr<rt> rt_{std::make_shared<rt>()};
   std::shared_ptr<gbfs::gbfs_data> gbfs_{};
