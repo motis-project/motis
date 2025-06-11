@@ -2,7 +2,6 @@
 
 #include <ranges>
 
-#include "motis/match_platforms.h"
 #include "utl/concat.h"
 
 #include "osr/lookup.h"
@@ -14,6 +13,7 @@
 #include "motis/endpoints/routing.h"
 #include "motis/flex/flex_areas.h"
 #include "motis/flex/flex_routing_data.h"
+#include "motis/match_platforms.h"
 #include "motis/max_distance.h"
 
 namespace n = nigiri;

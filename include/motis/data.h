@@ -87,8 +87,7 @@ struct data {
   ptr<hash_set<osr::node_idx_t>> elevator_nodes_;
   ptr<nigiri::shapes_storage> shapes_;
   ptr<railviz_static_index> railviz_static_;
-  cista::wrapped<vector_map<nigiri::location_idx_t, osr::platform_idx_t>>
-      matches_;
+  cista::wrapped<platform_matches_t> matches_;
   ptr<way_matches_storage> way_matches_;
   ptr<tiles_data> tiles_;
   std::shared_ptr<rt> rt_{std::make_shared<rt>()};
