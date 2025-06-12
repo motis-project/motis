@@ -26,6 +26,8 @@ export const defaultQuery = {
 	elevationCosts: 'NONE',
 	useRoutedTransfers: false,
 	maxMatchingDistance: 25,
+	maxTransfers: 15,
+	maxTravelTime: 45 * 60,
 	maxPreTransitTime: 900,
 	maxPostTransitTime: 900,
 	maxDirectTime: 1800,
@@ -35,7 +37,9 @@ export const defaultQuery = {
 	numItineraries: 5,
 	passengers: 1,
 	luggage: 0,
-	slowDirect: false
+	slowDirect: false,
+	isochronesColor: '#ffff00',
+	isochronesOpacity: 250
 };
 
 export const omitDefaults = (query: PlanData['query']): PlanData['query'] => {
