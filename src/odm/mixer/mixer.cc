@@ -196,6 +196,17 @@ void mixer::productivity_dominance(
   establish_dominance(odm_journeys, prod_dom);
 }
 
+void add_pt_sort(n::pareto_set<nr::journey> const& pt_journeys,
+                 std::vector<nr::journey>& odm_journeys) {
+  for (auto const& j : pt_journeys) {
+    odm_journeys.emplace_back(j);
+  }
+  utl::sort(odm_journeys, [](auto const& a, auto const& b) {
+    return std::tuple{a.departure_time(), a.arrival_time(), a.transfers_} <
+           std::tuple{b.departure_time(), b.arrival_time(), b.transfers_};
+  });
+}
+
 void mixer::mix(n::pareto_set<nr::journey> const& pt_journeys,
                 std::vector<nr::journey>& odm_journeys,
                 metrics_registry* metrics) const {
@@ -214,25 +225,15 @@ void mixer::mix(n::pareto_set<nr::journey> const& pt_journeys,
         static_cast<double>(odm_journeys.size()));
   }
 
-  for (auto const& j : pt_journeys) {
-    odm_journeys.emplace_back(j);
-  }
-  utl::sort(odm_journeys, [](auto const& a, auto const& b) {
-    return a.departure_time() < b.departure_time();
-  });
+  add_pt_sort(pt_journeys, odm_journeys);
 }
 
 std::vector<nr::journey> get_mixer_input(
     n::pareto_set<nr::journey> const& pt_journeys,
     std::vector<nr::journey> const& odm_journeys) {
-  auto input = odm_journeys;
-  for (auto const& j : pt_journeys) {
-    input.emplace_back(j);
-  }
-  utl::sort(input, [](auto const& a, auto const& b) {
-    return a.departure_time() < b.departure_time();
-  });
-  return input;
+  auto ret = odm_journeys;
+  add_pt_sort(pt_journeys, ret);
+  return ret;
 }
 
 mixer get_default_mixer() {
