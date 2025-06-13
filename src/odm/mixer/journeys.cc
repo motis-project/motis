@@ -36,23 +36,6 @@ std::optional<T> read_number(const char* first, const char* last) {
   return n;
 }
 
-std::optional<nigiri::unixtime_t> read_hours_minutes(std::string_view t) {
-  auto const colon_idx = t.find(':');
-  if (colon_idx == std::string_view::npos) {
-    return std::nullopt;
-  }
-
-  auto hours = read_number<unsigned>(t.data(), t.data() + colon_idx);
-  auto minutes =
-      read_number<unsigned>(t.data() + colon_idx + 1, t.data() + t.size());
-  if (!hours || !minutes) {
-    return std::nullopt;
-  }
-
-  return nigiri::unixtime_t{std::chrono::hours{*hours} +
-                            std::chrono::minutes{*minutes}};
-}
-
 std::optional<nigiri::transport_mode_id_t> read_transport_mode(
     std::string_view m) {
   if (m == "taxi") {
