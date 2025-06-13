@@ -69,7 +69,7 @@ constexpr auto const kWhitelistPath = "/api/whitelist";
 static auto const kReqHeaders = std::map<std::string, std::string>{
     {"Content-Type", "application/json"}, {"Accept", "application/json"}};
 static auto const kMixer = get_default_mixer();
-constexpr auto const kPrintMixerIO = true;
+constexpr auto const kPrintMixerIO = false;
 
 using td_offsets_t =
     n::hash_map<n::location_idx_t, std::vector<n::routing::td_offset>>;

@@ -14,8 +14,8 @@
 namespace motis::odm {
 
 struct csv_journey {
-  utl::csv_col<utl::cstr, UTL_NAME("departure_time")> departure_time_;
-  utl::csv_col<utl::cstr, UTL_NAME("arrival_time")> arrival_time_;
+  utl::csv_col<utl::cstr, UTL_NAME("departure")> departure_time_;
+  utl::csv_col<utl::cstr, UTL_NAME("arrival")> arrival_time_;
   utl::csv_col<std::uint8_t, UTL_NAME("transfers")> transfers_;
   utl::csv_col<utl::cstr, UTL_NAME("first_mile_mode")> first_mile_mode_;
   utl::csv_col<nigiri::duration_t::rep, UTL_NAME("first_mile_duration")>
@@ -93,20 +93,11 @@ std::vector<nigiri::routing::journey> from_csv(std::string_view const csv) {
   utl::line_range{utl::make_buf_reader(csv)} | utl::csv<csv_journey>() |
       utl::for_each([&](csv_journey const& cj) {
         try {
-          auto const departure_time =
-              read_hours_minutes(cj.departure_time_->trim().view());
-          if (!departure_time) {
-            fmt::println("Invalid departure time: {}",
-                         cj.departure_time_->view());
-            return;
-          }
+          auto const departure =
+              nigiri::parse_time(cj.departure_time_->trim().view(), "%F %R");
 
-          auto const arrival_time =
-              read_hours_minutes(cj.arrival_time_->trim().view());
-          if (!arrival_time) {
-            fmt::println("Invalid arrival time: {}", cj.arrival_time_->view());
-            return;
-          }
+          auto const arrival =
+              nigiri::parse_time(cj.arrival_time_->trim().view(), "%F %R");
 
           auto const first_mile_duration =
               nigiri::duration_t{*cj.first_mile_duration_};
@@ -128,9 +119,9 @@ std::vector<nigiri::routing::journey> from_csv(std::string_view const csv) {
             return;
           }
 
-          journeys.push_back(make_dummy(
-              *departure_time, *arrival_time, *cj.transfers_, *first_mile_mode,
-              first_mile_duration, *last_mile_mode, last_mile_duration));
+          journeys.push_back(make_dummy(departure, arrival, *cj.transfers_,
+                                        *first_mile_mode, first_mile_duration,
+                                        *last_mile_mode, last_mile_duration));
 
         } catch (std::exception const& e) {
           fmt::println("could not parse csv_journey: {}", e.what());
@@ -142,15 +133,10 @@ std::vector<nigiri::routing::journey> from_csv(std::string_view const csv) {
 
 std::string to_csv(std::vector<nigiri::routing::journey> const& jv) {
   auto ss = std::stringstream{};
-  ss << "departure_time, arrival_time, transfers, first_mile_mode, "
+  ss << "departure, arrival, transfers, first_mile_mode, "
         "first_mile_duration, last_mile_mode, last_mile_duration\n";
 
   for (auto const& j : jv) {
-    auto const time_str = [&](nigiri::unixtime_t t) {
-      auto const [hours, minutes] = std::div(t.time_since_epoch().count(), 60);
-      return fmt::format("{:0>2}:{:0>2}", hours, minutes);
-    };
-
     auto const mode_str = [&](nigiri::transport_mode_id_t const mode) {
       return mode == kOdmTransportModeId ? "taxi" : "walk";
     };
@@ -185,10 +171,9 @@ std::string to_csv(std::vector<nigiri::routing::journey> const& jv) {
                   .count()
             : nigiri::duration_t::rep{0};
 
-    ss << fmt::format("{}, {}, {}, {}, {:0>2}, {}, {:0>2}\n",
-                      time_str(j.start_time_), time_str(j.dest_time_),
-                      j.transfers_, first_mile_mode, first_mile_duration,
-                      last_mile_mode, last_mile_duration);
+    ss << fmt::format("{}, {}, {}, {}, {:0>2}, {}, {:0>2}\n", j.start_time_,
+                      j.dest_time_, j.transfers_, first_mile_mode,
+                      first_mile_duration, last_mile_mode, last_mile_duration);
   }
 
   return ss.str();
