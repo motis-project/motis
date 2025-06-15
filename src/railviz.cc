@@ -372,10 +372,23 @@ api::trips_response get_trains(tag_lookup const& tags,
                             {r.from_, static_cast<n::stop_idx_t>(r.to_ + 1U)},
                             [&](auto&& p) { enc.push(p); });
 
+    auto const trip_short_name = from.trip_short_name(n::event_type::kDep);
+    auto const route_short_name = from.route_short_name(n::event_type::kDep);
+
     return {.trips_ = {api::TripInfo{
                 .tripId_ = tags.id(tt, from, n::event_type::kDep),
                 .routeShortName_ =
-                    std::string{from.trip_display_name(n::event_type::kDep)}}},
+                    std::string{route_short_name.empty() ? trip_short_name
+                                                         : route_short_name},
+                .name_ = api::LegName{.trip_ = trip_short_name.empty()
+                                                   ? std::nullopt
+                                                   : std::optional{std::string{
+                                                         trip_short_name}},
+
+                                      .route_ = route_short_name.empty()
+                                                    ? std::nullopt
+                                                    : std::optional{std::string{
+                                                          route_short_name}}}}},
             .routeColor_ =
                 to_str(from.get_route_color(nigiri::event_type::kDep).color_),
             .mode_ = to_mode(from.get_clasz(n::event_type::kDep)),

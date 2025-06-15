@@ -385,6 +385,9 @@ api::stoptimes_response stop_times::operator()(
                      ? !s.out_allowed() && s.get_scheduled_stop().out_allowed()
                      : !s.in_allowed() && s.get_scheduled_stop().in_allowed());
 
+            auto const trip_short_name = s.trip_short_name(ev_type);
+            auto const route_short_name = s.route_short_name(ev_type);
+
             return {
                 .place_ = std::move(place),
                 .mode_ = to_mode(s.get_clasz(ev_type)),
@@ -397,7 +400,18 @@ api::stoptimes_response stop_times::operator()(
                 .routeTextColor_ =
                     to_str(s.get_route_color(ev_type).text_color_),
                 .tripId_ = tags_.id(tt_, s, ev_type),
-                .routeShortName_ = std::string{s.trip_display_name(ev_type)},
+                .routeShortName_ =
+                    std::string{route_short_name.empty() ? trip_short_name
+                                                         : route_short_name},
+                .name_ = api::LegName{.trip_ = trip_short_name.empty()
+                                                   ? std::nullopt
+                                                   : std::optional{std::string{
+                                                         trip_short_name}},
+
+                                      .route_ = route_short_name.empty()
+                                                    ? std::nullopt
+                                                    : std::optional{std::string{
+                                                          route_short_name}}},
                 .pickupDropoffType_ =
                     in_out_allowed ? api::PickupDropoffTypeEnum::NORMAL
                                    : api::PickupDropoffTypeEnum::NOT_ALLOWED,

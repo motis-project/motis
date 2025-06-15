@@ -2020,6 +2020,14 @@ components:
           items:
             $ref: "#/components/schemas/ReachablePlace"
 
+    LegName:
+      type: object
+      properties:
+        trip:
+          type: string
+        route:
+          type: string
+
     StopTime:
       description: departure or arrival event at a stop
       type: object
@@ -2033,6 +2041,7 @@ components:
         - agencyUrl
         - tripId
         - routeShortName
+        - name
         - pickupDropoffType
         - cancelled
         - tripCancelled
@@ -2066,6 +2075,8 @@ components:
           type: string
         routeShortName:
           type: string
+        name:
+          $ref: '#/components/schemas/LegName'
         pickupDropoffType:
           description: Type of pickup (for departures) or dropoff (for arrivals), may be disallowed either due to schedule, skipped stops or cancellations
           $ref: '#/components/schemas/PickupDropoffType'
@@ -2092,6 +2103,8 @@ components:
         routeShortName:
           description: trip display name
           type: string
+        name:
+           $ref: '#/components/schemas/LegName'
 
     TripSegment:
       description: trip segment between two stops to show a trip on a map
@@ -2333,6 +2346,7 @@ components:
         - from
         - to
         - legGeometry
+        - name
       properties:
         mode:
           $ref: '#/components/schemas/Mode'
@@ -2407,6 +2421,8 @@ components:
           type: string
         routeShortName:
           type: string
+        name:
+          $ref: '#/components/schemas/LegName'
         cancelled:
           description: Whether this trip is cancelled
           type: boolean
