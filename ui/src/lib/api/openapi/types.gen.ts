@@ -336,6 +336,10 @@ export type Place = {
      *
      */
     track?: string;
+    /**
+     * description of the location that provides more detailed information
+     */
+    description?: string;
     vertexType?: VertexType;
     /**
      * Type of pickup. It could be disallowed due to schedule, skipped stops or cancellations.
@@ -1693,6 +1697,14 @@ export type StoptimesData = {
          */
         direction?: 'EARLIER' | 'LATER';
         /**
+         * Optional. Default is `false`.
+         *
+         * If set to `true`, only stations that are phyiscally in the radius are considered.
+         * If set to `false`, additionally to the stations in the radius, equivalences with the same name and children are considered.
+         *
+         */
+        exactRadius?: boolean;
+        /**
          * Optional. Default is all transit modes.
          *
          * Only return arrivals/departures of the given modes.
@@ -1852,7 +1864,7 @@ export type TransfersResponse = ({
     /**
      * true if the server has wheelchair transfers computed
      */
-    hasWheelchairTransfers?: boolean;
+    hasWheelchairTransfers: boolean;
     /**
      * true if the server has car transfers computed
      */
