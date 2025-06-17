@@ -13,6 +13,7 @@
 #include "motis/endpoints/routing.h"
 #include "motis/flex/flex_areas.h"
 #include "motis/flex/flex_routing_data.h"
+#include "motis/match_platforms.h"
 #include "motis/max_distance.h"
 
 namespace n = nigiri;
@@ -260,6 +261,7 @@ void add_flex_td_offsets(osr::ways const& w,
                          osr::lookup const& lookup,
                          osr::platforms const* pl,
                          platform_matches_t const* matches,
+                         way_matches_storage const* way_matches,
                          n::timetable const& tt,
                          flex_areas const& fa,
                          point_rtree<n::location_idx_t> const& loc_rtree,
@@ -277,15 +279,23 @@ void add_flex_td_offsets(osr::ways const& w,
         return get_location(&tt, &w, pl, matches, tt_location{l});
       });
 
+  auto const pos_match =
+      lookup.match(pos, false, dir, max_matching_distance, nullptr,
+                   osr::search_profile::kCarSharing);
+  auto const near_stop_matches = get_reverse_platform_way_matches(
+      lookup, way_matches, osr::search_profile::kCarSharing, near_stops,
+      near_stop_locations, dir, max_matching_distance);
+
   auto const routings =
       get_flex_routings(tt, loc_rtree, start_time, pos.pos_, dir, max);
   for (auto const& [stop_seq, transports] : routings) {
     auto const sharing_data = prepare_sharing_data(
         tt, w, lookup, pl, fa, matches, transports.front(), dir, frd);
-    auto const paths =
-        osr::route(w, lookup, osr::search_profile::kCarSharing, pos,
-                   near_stop_locations, static_cast<osr::cost_t>(max.count()),
-                   dir, max_matching_distance, nullptr, &sharing_data, nullptr);
+
+    auto const paths = osr::route(
+        w, lookup, osr::search_profile::kCarSharing, pos, near_stop_locations,
+        pos_match, near_stop_matches, static_cast<osr::cost_t>(max.count()),
+        dir, nullptr, &sharing_data, nullptr);
     auto const day_idx_iv = get_relevant_days(tt, start_time);
     for (auto const id : transports) {
       auto const t = id.get_flex_transport();

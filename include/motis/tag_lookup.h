@@ -12,6 +12,15 @@
 
 namespace motis {
 
+struct trip_id {
+  std::string_view start_date_;
+  std::string_view start_time_;
+  std::string_view tag_;
+  std::string_view trip_id_;
+};
+
+trip_id split_trip_id(std::string_view);
+
 struct tag_lookup {
   void add(nigiri::source_idx_t, std::string_view str);
 

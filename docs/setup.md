@@ -60,7 +60,8 @@ timetable:                          # if not set, no timetable will be loaded
   http_timeout: 30                  # maximum time in seconds the real-time feed download may take
   incremental_rt_update: false      # false = real-time updates are applied to a clean slate, true = no data will be dropped
   max_footpath_length: 15           # maximum footpath length when transitively connecting stops or for routing footpaths if `osr_footpath` is set to true
-  max_matching_distance: 25.0       # maximum distance from geolocation to next OSM node that will be found
+  max_matching_distance: 25.0       # maximum distance from geolocation to next OSM ways that will be found
+  preprocess_max_matching_distance: 0.0 # max. distance for preprocessing matches from nigiri locations (stops) to OSM ways to speed up querying (set to 0 (default) to disable)
   datasets:                         # map of tag -> dataset
     ch:                             # the tag will be used as prefix for stop IDs and trip IDs with `_` as divider, so `_` cannot be part of the dataset tag
       path: ch_opentransportdataswiss.gtfs.zip

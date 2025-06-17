@@ -128,7 +128,7 @@ elevator_footpath_map_t compute_footpaths(
               });
 
           auto const results = osr::route(
-              w, mode.profile_, get_loc(tt, w, pl, matches, l),
+              w, lookup, mode.profile_, get_loc(tt, w, pl, matches, l),
               utl::transform_to(s.neighbors_, s.neighbors_loc_,
                                 [&](n::location_idx_t const x) {
                                   return get_loc(tt, w, pl, matches, x);
