@@ -1,7 +1,8 @@
 <script lang="ts">
 	import bbox from '@turf/bbox';
 	import circle from '@turf/circle';
-	import maplibregl, { CanvasSource, type LngLatBoundsLike, type Map } from 'maplibre-gl';
+	import maplibregl from 'maplibre-gl';
+	import type { CanvasSource, LngLatBoundsLike, Map } from 'maplibre-gl';
 	import type { PrePostDirectMode } from '$lib/Modes';
 
 	export interface IsochronesPos {
