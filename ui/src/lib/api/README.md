@@ -4,7 +4,7 @@ Pre-generated JS client for [MOTIS](https://github.com/motis-project/motis) base
 
 For example:
 
-```
+```js
 const response = await stoptimes({
     throwOnError: true,
     baseUrl: 'https://api.transitous.org',

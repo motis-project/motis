@@ -1086,7 +1086,12 @@ export type PlanData = {
          */
         maxPreTransitTime?: number;
         /**
-         * The maximum number of allowed transfers.
+         * The maximum number of allowed transfers (i.e. interchanges between transit legs,
+         * pre- and postTransit do not count as transfers).
+         * `maxTransfers=0` searches for direct transit connections without any transfers.
+         * If you want to search only for non-transit connections (`FOOT`, `CAR`, etc.),
+         * send an empty `transitModes` parameter instead.
+         *
          * If not provided, the routing uses the server-side default value
          * which is hardcoded and very high to cover all use cases.
          *
@@ -1094,6 +1099,9 @@ export type PlanData = {
          * optimal (e.g. the fastest) journeys not being found.
          * If this value is too low to reach the destination at all,
          * it can lead to slow routing performance.
+         *
+         * In plan endpoints before v3, the behavior is off by one,
+         * i.e. `maxTransfers=0` only returns non-transit connections.
          *
          */
         maxTransfers?: number;
@@ -1491,7 +1499,12 @@ export type OneToAllData = {
          */
         maxPreTransitTime?: number;
         /**
-         * The maximum number of allowed transfers.
+         * The maximum number of allowed transfers (i.e. interchanges between transit legs,
+         * pre- and postTransit do not count as transfers).
+         * `maxTransfers=0` searches for direct transit connections without any transfers.
+         * If you want to search only for non-transit connections (`FOOT`, `CAR`, etc.),
+         * send an empty `transitModes` parameter instead.
+         *
          * If not provided, the routing uses the server-side default value
          * which is hardcoded and very high to cover all use cases.
          *
@@ -1499,6 +1512,9 @@ export type OneToAllData = {
          * optimal (e.g. the fastest) journeys not being found.
          * If this value is too low to reach the destination at all,
          * it can lead to slow routing performance.
+         *
+         * In plan endpoints before v3, the behavior is off by one,
+         * i.e. `maxTransfers=0` only returns non-transit connections.
          *
          */
         maxTransfers?: number;
