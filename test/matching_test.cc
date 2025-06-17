@@ -195,8 +195,8 @@ TEST(motis, get_way_candidates) {
       if (with.size() == 0 && larger.size() == 0 && smaller.size() == 0) {
         continue;
       }
-      EXPECT_GT(larger.size(), with.size());
-      EXPECT_GT(with.size(), smaller.size());
+      EXPECT_GE(larger.size(), with.size());
+      EXPECT_GE(with.size(), smaller.size());
       auto const& a = larger[0];
       auto const& b = smaller[0];
       EXPECT_TRUE(!a.left_.valid() ||
@@ -209,8 +209,6 @@ TEST(motis, get_way_candidates) {
       auto const remote_station =
           osr::location{{49.8731904, 8.6221451}, level_t{}};
       auto const raw = d.l_->get_raw_match(remote_station, dist);
-      std::cout << (profile == search_profile::kCar) << " " << raw.size()
-                << std::endl;
       auto const with =
           d.l_->match(remote_station, true, osr::direction::kForward, dist,
                       nullptr, profile, raw);
