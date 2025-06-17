@@ -25,6 +25,7 @@ const translations: Translations = {
 	earlier: 'wcześniej',
 	departures: 'Odjazdy',
 	connections: 'Połączenia',
+	isochrones: 'Isochrones',
 	switchToArrivals: 'Przełącz na przyjazdy',
 	switchToDepartures: 'Przełącz na odjazdy',
 	track: 'Tor',

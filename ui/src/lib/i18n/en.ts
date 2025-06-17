@@ -25,6 +25,7 @@ const translations: Translations = {
 	later: 'later',
 	earlier: 'earlier',
 	departures: 'Departures',
+	isochrones: 'Isochrones',
 	switchToArrivals: 'Switch to arrivals',
 	switchToDepartures: 'Switch to departures',
 	track: 'Track',

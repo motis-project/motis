@@ -23,6 +23,7 @@ const translations: Translations = {
 	arrivals: 'Ankünfte',
 	connections: 'Verbindungen',
 	departures: 'Abfahrten',
+	isochrones: 'Isochronen',
 	later: 'später',
 	earlier: 'früher',
 	track: 'Gleis',

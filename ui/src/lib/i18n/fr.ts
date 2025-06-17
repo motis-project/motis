@@ -24,6 +24,7 @@ const translations: Translations = {
 	earlier: 'plus tôt',
 	departures: 'Départs',
 	connections: 'Itinéraires',
+	isochrones: 'Isochrones',
 	switchToArrivals: 'Afficher les arrivées',
 	switchToDepartures: 'Afficher les départs',
 	track: 'Voie',

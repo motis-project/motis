@@ -29,6 +29,7 @@ export type Translations = {
 	arrivals: string;
 	departures: string;
 	connections: string;
+	isochrones: string;
 	switchToArrivals: string;
 	switchToDepartures: string;
 	arrivalOnTrack: string;
