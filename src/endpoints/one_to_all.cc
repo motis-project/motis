@@ -6,6 +6,7 @@
 #include "utl/verify.h"
 
 #include "nigiri/common/delta_t.h"
+#include "nigiri/routing/limits.h"
 #include "nigiri/routing/one_to_all.h"
 #include "nigiri/routing/query.h"
 #include "nigiri/types.h"
@@ -13,6 +14,7 @@
 #include "motis-api/motis-api.h"
 #include "motis/endpoints/routing.h"
 #include "motis/gbfs/routing_data.h"
+#include "motis/metrics_registry.h"
 #include "motis/place.h"
 #include "motis/timetable/modes_to_clasz_mask.h"
 
@@ -21,6 +23,8 @@ namespace motis::ep {
 namespace n = nigiri;
 
 api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
+  metrics_->routing_requests_.Increment();
+
   auto const max_travel_minutes =
       config_.limits_.value().onetoall_max_travel_minutes_;
   auto const query = api::oneToAll_params{url.params()};

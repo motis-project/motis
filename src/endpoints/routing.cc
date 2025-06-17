@@ -526,7 +526,9 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
   }
 
   auto const query = api::plan_params{url.params()};
-  auto const api_version = url.encoded_path().contains("/v1/") ? 1U : 2U;
+  auto const api_version = url.encoded_path().contains("/v1/")   ? 1U
+                           : url.encoded_path().contains("/v2/") ? 2U
+                                                                 : 3U;
 
   auto const deduplicate = [](auto m) {
     utl::erase_duplicates(m);
@@ -580,6 +582,13 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
   utl::verify(query.searchWindow_ / 60 <
                   config_.limits_.value().plan_max_search_window_minutes_,
               "maximum searchWindow size exceeded");
+
+  auto const max_transfers =
+      query.maxTransfers_.has_value() &&
+              *query.maxTransfers_ <= n::routing::kMaxTransfers
+          ? (*query.maxTransfers_ - (api_version < 3 ? 1 : 0))
+          : n::routing::kMaxTransfers;
+
   auto const [start_time, t] = get_start_time(query);
 
   UTL_START_TIMING(direct);
@@ -597,7 +606,8 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
           : std::pair{std::vector<api::Itinerary>{}, kInfinityDuration};
   UTL_STOP_TIMING(direct);
 
-  if (!query.transitModes_.empty() && fastest_direct > 5min) {
+  if (!query.transitModes_.empty() && fastest_direct > 5min &&
+      max_transfers >= 0) {
     utl::verify(tt_ != nullptr && tags_ != nullptr,
                 "mode=TRANSIT requires timetable to be loaded");
 
@@ -680,9 +690,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                            query.elevationCosts_, query.maxMatchingDistance_,
                            std::chrono::seconds{query.maxPostTransitTime_},
                            start_time.start_time_),
-        .max_transfers_ = static_cast<std::uint8_t>(
-            query.maxTransfers_.has_value() ? *query.maxTransfers_
-                                            : n::routing::kMaxTransfers),
+        .max_transfers_ = static_cast<std::uint8_t>(max_transfers),
         .max_travel_time_ = query.maxTravelTime_
                                 .and_then([](std::int64_t const dur) {
                                   return std::optional{n::duration_t{dur}};

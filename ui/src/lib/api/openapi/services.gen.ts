@@ -11,7 +11,7 @@ export const client = createClient(createConfig());
 export const plan = <ThrowOnError extends boolean = false>(options: Options<PlanData, ThrowOnError>) => {
     return (options?.client ?? client).get<PlanResponse, PlanError, ThrowOnError>({
         ...options,
-        url: '/api/v2/plan'
+        url: '/api/v3/plan'
     });
 };
 
@@ -35,7 +35,7 @@ export const oneToMany = <ThrowOnError extends boolean = false>(options: Options
 export const oneToAll = <ThrowOnError extends boolean = false>(options: Options<OneToAllData, ThrowOnError>) => {
     return (options?.client ?? client).get<OneToAllResponse, OneToAllError, ThrowOnError>({
         ...options,
-        url: '/api/experimental/one-to-all'
+        url: '/api/v1/one-to-all'
     });
 };
 
