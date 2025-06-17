@@ -6,14 +6,14 @@ For example:
 
 ```js
 const response = await stoptimes({
-    throwOnError: true,
-    baseUrl: 'https://api.transitous.org',
-    userAgent: 'my-user-agent',
-    query: {
-        stopId: 'de-DELFI_de:06412:7010:1:3',
-        n: 10,
-        radius: 500
-    },
+	throwOnError: true,
+	baseUrl: 'https://api.transitous.org',
+	userAgent: 'my-user-agent',
+	query: {
+		stopId: 'de-DELFI_de:06412:7010:1:3',
+		n: 10,
+		radius: 500
+	}
 });
 console.log(response);
 ```
