@@ -382,6 +382,10 @@ Can be missing if neither real-time updates nor the schedule timetable contains 
 `,
             type: 'string'
         },
+        description: {
+            description: 'description of the location that provides more detailed information',
+            type: 'string'
+        },
         vertexType: {
             '$ref': '#/components/schemas/VertexType'
         },

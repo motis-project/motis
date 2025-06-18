@@ -336,6 +336,10 @@ export type Place = {
      *
      */
     track?: string;
+    /**
+     * description of the location that provides more detailed information
+     */
+    description?: string;
     vertexType?: VertexType;
     /**
      * Type of pickup. It could be disallowed due to schedule, skipped stops or cancellations.
@@ -1082,7 +1086,12 @@ export type PlanData = {
          */
         maxPreTransitTime?: number;
         /**
-         * The maximum number of allowed transfers.
+         * The maximum number of allowed transfers (i.e. interchanges between transit legs,
+         * pre- and postTransit do not count as transfers).
+         * `maxTransfers=0` searches for direct transit connections without any transfers.
+         * If you want to search only for non-transit connections (`FOOT`, `CAR`, etc.),
+         * send an empty `transitModes` parameter instead.
+         *
          * If not provided, the routing uses the server-side default value
          * which is hardcoded and very high to cover all use cases.
          *
@@ -1090,6 +1099,9 @@ export type PlanData = {
          * optimal (e.g. the fastest) journeys not being found.
          * If this value is too low to reach the destination at all,
          * it can lead to slow routing performance.
+         *
+         * In plan endpoints before v3, the behavior is off by one,
+         * i.e. `maxTransfers=0` only returns non-transit connections.
          *
          */
         maxTransfers?: number;
@@ -1487,7 +1499,12 @@ export type OneToAllData = {
          */
         maxPreTransitTime?: number;
         /**
-         * The maximum number of allowed transfers.
+         * The maximum number of allowed transfers (i.e. interchanges between transit legs,
+         * pre- and postTransit do not count as transfers).
+         * `maxTransfers=0` searches for direct transit connections without any transfers.
+         * If you want to search only for non-transit connections (`FOOT`, `CAR`, etc.),
+         * send an empty `transitModes` parameter instead.
+         *
          * If not provided, the routing uses the server-side default value
          * which is hardcoded and very high to cover all use cases.
          *
@@ -1495,6 +1512,9 @@ export type OneToAllData = {
          * optimal (e.g. the fastest) journeys not being found.
          * If this value is too low to reach the destination at all,
          * it can lead to slow routing performance.
+         *
+         * In plan endpoints before v3, the behavior is off by one,
+         * i.e. `maxTransfers=0` only returns non-transit connections.
          *
          */
         maxTransfers?: number;
@@ -1693,6 +1713,14 @@ export type StoptimesData = {
          */
         direction?: 'EARLIER' | 'LATER';
         /**
+         * Optional. Default is `false`.
+         *
+         * If set to `true`, only stations that are phyiscally in the radius are considered.
+         * If set to `false`, additionally to the stations in the radius, equivalences with the same name and children are considered.
+         *
+         */
+        exactRadius?: boolean;
+        /**
          * Optional. Default is all transit modes.
          *
          * Only return arrivals/departures of the given modes.
@@ -1852,7 +1880,7 @@ export type TransfersResponse = ({
     /**
      * true if the server has wheelchair transfers computed
      */
-    hasWheelchairTransfers?: boolean;
+    hasWheelchairTransfers: boolean;
     /**
      * true if the server has car transfers computed
      */

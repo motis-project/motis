@@ -476,8 +476,8 @@ data import(config const& c, fs::path const& data_path, bool const write) {
       },
       {tt_hash, osm_hash, osr_version(), n_version(), matches_version(),
        std::pair{"way_matches",
-                 cista::build_hash(
-                     c.timetable_.value().preprocess_max_matching_distance_)}}};
+                 cista::build_hash(c.timetable_.value_or(config::timetable{})
+                                       .preprocess_max_matching_distance_)}}};
 
   auto flex_areas =
       task{"flex_areas",
