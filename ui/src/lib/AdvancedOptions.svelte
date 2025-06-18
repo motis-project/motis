@@ -25,9 +25,9 @@
 		requireBikeTransport = $bindable(),
 		requireCarTransport = $bindable(),
 		transitModes = $bindable(),
-		maxChangeovers = $bindable(undefined),
+		maxTransfers = $bindable(undefined),
 		maxTravelTime = $bindable(undefined),
-		possibleMaxChangeovers = [],
+		possibleMaxTransfers = [],
 		possibleMaxTravelTimes = [],
 		preTransitModes = $bindable(),
 		postTransitModes = $bindable(),
@@ -46,9 +46,9 @@
 		requireBikeTransport: boolean;
 		requireCarTransport: boolean;
 		transitModes: TransitMode[];
-		maxChangeovers: number | undefined;
+		maxTransfers: number | undefined;
 		maxTravelTime: number | undefined;
-		possibleMaxChangeovers?: NumberSelectOption[];
+		possibleMaxTransfers?: NumberSelectOption[];
 		possibleMaxTravelTimes?: NumberSelectOption[];
 		preTransitModes: PrePostDirectMode[];
 		postTransitModes: PrePostDirectMode[];
@@ -179,12 +179,12 @@
 				}}
 			/>
 
-			{#if maxChangeovers !== undefined && maxTravelTime !== undefined}
+			{#if maxTransfers !== undefined && maxTravelTime !== undefined}
 				<div class="grid grid-cols-4 items-center gap-2">
 					<div class="text-sm">
-						{t.routingSegments.maxChangeovers}
+						{t.routingSegments.maxTransfers}
 					</div>
-					<NumberSelect bind:value={maxChangeovers} possibleValues={possibleMaxChangeovers} />
+					<NumberSelect bind:value={maxTransfers} possibleValues={possibleMaxTransfers} />
 					<div class="text-sm">
 						{t.routingSegments.maxTravelTime}
 					</div>

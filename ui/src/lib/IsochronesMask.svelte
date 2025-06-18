@@ -62,9 +62,9 @@
 		opacity: number;
 	} = $props();
 
-	const maxSupportedTransfers = 15;
-	maxTransfers = Math.min(Math.max(1, maxTransfers), maxSupportedTransfers);
-	const possibleMaxChangeovers = [...Array(maxSupportedTransfers).keys()].map((i) => ({
+	const maxSupportedTransfers = 14;
+	maxTransfers = Math.min(Math.max(0, maxTransfers), maxSupportedTransfers);
+	const possibleMaxTransfers = [...Array(maxSupportedTransfers + 1).keys()].map((i) => ({
 		value: i.toString(),
 		label: i.toString()
 	}));
@@ -181,9 +181,9 @@
 			bind:requireCarTransport
 			bind:requireBikeTransport
 			bind:transitModes
-			bind:maxChangeovers={() => maxTransfers - 1, (v) => (maxTransfers = v + 1)}
+			bind:maxTransfers
 			bind:maxTravelTime
-			{possibleMaxChangeovers}
+			{possibleMaxTransfers}
 			{possibleMaxTravelTimes}
 			bind:preTransitModes
 			bind:postTransitModes

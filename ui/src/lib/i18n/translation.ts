@@ -80,7 +80,7 @@ export type Translations = {
 	REGIONAL_RAIL: string;
 	OTHER: string;
 	routingSegments: {
-		maxChangeovers: string;
+		maxTransfers: string;
 		maxTravelTime: string;
 		firstMile: string;
 		lastMile: string;
