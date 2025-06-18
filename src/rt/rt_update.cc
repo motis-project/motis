@@ -47,6 +47,13 @@ struct gtfs_rt_endpoint {
   gtfsrt_metrics metrics_;
 };
 
+struct auser_endpoint {
+  config::timetable::dataset::rt ep_;
+  n::source_idx_t src_;
+  std::string tag_;
+  vdvaus_metrics metrics_;
+};
+
 void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
   boost::asio::co_spawn(
       ioc,
@@ -57,15 +64,24 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
         auto ec = boost::system::error_code{};
 
         auto const endpoints = [&]() {
-          auto endpoints = std::vector<gtfs_rt_endpoint>{};
+          auto endpoints =
+              std::vector<std::variant<gtfs_rt_endpoint, auser_endpoint>>{};
           auto const metric_families =
               rt_metric_families{d.metrics_->registry_};
           for (auto const& [tag, dataset] : c.timetable_->datasets_) {
             if (dataset.rt_.has_value()) {
               auto const src = d.tags_->get_src(tag);
               for (auto const& ep : *dataset.rt_) {
-                endpoints.push_back(
-                    {ep, src, tag, gtfsrt_metrics{tag, metric_families}});
+                switch (ep.protocol_) {
+                  case config::timetable::dataset::rt::protocol::gtfsrt:
+                    endpoints.push_back(gtfs_rt_endpoint{
+                        ep, src, tag, gtfsrt_metrics{tag, metric_families}});
+                    break;
+                  case config::timetable::dataset::rt::protocol::auser:
+                    endpoints.push_back(auser_endpoint{
+                        ep, src, tag, vdvaus_metrics{tag, metric_families}});
+                    break;
+                }
               }
             }
           }
@@ -92,26 +108,59 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
                 std::chrono::seconds{c.timetable_->http_timeout_};
 
             if (!endpoints.empty()) {
-              auto awaitables =
-                  utl::to_vec(endpoints, [&](gtfs_rt_endpoint const& x) {
-                    x.metrics_.updates_requested_.Increment();
+              auto awaitables = utl::to_vec(
+                  endpoints,
+                  [&](std::variant<gtfs_rt_endpoint, auser_endpoint> const& x) {
                     return boost::asio::co_spawn(
                         executor,
-                        [&]() -> awaitable<n::rt::statistics> {
-                          try {
-                            auto const res = co_await http_GET(
-                                boost::urls::url{x.ep_.url_},
-                                x.ep_.headers_.value_or(headers_t{}), timeout);
-                            co_return n::rt::gtfsrt_update_buf(
-                                *d.tt_, *rtt, x.src_, x.tag_,
-                                get_http_body(res), msg);
-                          } catch (std::exception const& e) {
-                            n::log(n::log_lvl::error, "motis.rt",
-                                   "RT FETCH ERROR: tag={}, error={}", x.tag_,
-                                   e.what());
-                            co_return n::rt::statistics{.parser_error_ = true,
-                                                        .no_header_ = true};
-                          }
+                        [&]() -> awaitable<std::variant<
+                                  n::rt::statistics, n::rt::vdv::statistics>> {
+                          auto ret = std::variant<n::rt::statistics,
+                                                  n::rt::vdv::statistics>{};
+                          co_await std::visit(
+                              utl::overloaded{
+                                  [&](gtfs_rt_endpoint const& g)
+                                      -> awaitable<void> {
+                                    g.metrics_.updates_requested_.Increment();
+                                    try {
+                                      auto const res = co_await http_GET(
+                                          boost::urls::url{g.ep_.url_},
+                                          g.ep_.headers_.value_or(headers_t{}),
+                                          timeout);
+                                      ret = n::rt::gtfsrt_update_buf(
+                                          *d.tt_, *rtt, g.src_, g.tag_,
+                                          get_http_body(res), msg);
+                                    } catch (std::exception const& e) {
+                                      n::log(n::log_lvl::error, "motis.rt",
+                                             "RT FETCH ERROR: tag={}, error={}",
+                                             g.tag_, e.what());
+                                      ret = n::rt::statistics{
+                                          .parser_error_ = true,
+                                          .no_header_ = true};
+                                    }
+                                  },
+                                  [&](auser_endpoint const& a)
+                                      -> awaitable<void> {
+                                    a.metrics_.updates_requested_.Increment();
+                                    try {
+                                      auto const res = co_await http_GET(
+                                          boost::urls::url{a.ep_.url_},
+                                          headers_t{}, timeout);
+                                      d.auser_updater_->at(a.ep_.url_)
+                                          .update(*rtt,
+                                                  vdvaus::parse(
+                                                      get_http_body(res)));
+                                    } catch (std::exception const& e) {
+                                      n::log(n::log_lvl::error, "motis.rt",
+                                             "VDV AUS FETCH ERROR: tag={}, "
+                                             "error={}",
+                                             a.tag_, e.what());
+                                    }
+                                    ret = d.auser_updater_->at(a.ep_.url_)
+                                              .get_stats();
+                                  }},
+                              x);
+                          co_return ret;
                         },
                         asio::deferred);
                   });
