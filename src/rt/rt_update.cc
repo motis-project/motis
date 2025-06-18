@@ -19,6 +19,7 @@
 #include "motis/elevators/update_elevators.h"
 #include "motis/http_req.h"
 #include "motis/railviz.h"
+#include "motis/rt/auser.h"
 #include "motis/rt/rt_metrics.h"
 #include "motis/tag_lookup.h"
 
@@ -142,22 +143,21 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
                                   [&](auser_endpoint const& a)
                                       -> awaitable<void> {
                                     a.metrics_.updates_requested_.Increment();
+                                    auto& auser = d.auser_->at(a.ep_.url_);
                                     try {
                                       auto const res = co_await http_GET(
-                                          boost::urls::url{a.ep_.url_},
+                                          boost::urls::url{
+                                              auser.fetch_url(a.ep_.url_)},
                                           headers_t{}, timeout);
-                                      d.auser_updater_->at(a.ep_.url_)
-                                          .update(*rtt,
-                                                  vdvaus::parse(
-                                                      get_http_body(res)));
+                                      ret = auser.consume_update(
+                                          get_http_body(res), *rtt);
                                     } catch (std::exception const& e) {
                                       n::log(n::log_lvl::error, "motis.rt",
                                              "VDV AUS FETCH ERROR: tag={}, "
                                              "error={}",
                                              a.tag_, e.what());
+                                      ret = auser.upd_.get_stats();
                                     }
-                                    ret = d.auser_updater_->at(a.ep_.url_)
-                                              .get_stats();
                                   }},
                               x);
                           co_return ret;
@@ -172,27 +172,61 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
                                   asio::use_awaitable);
 
               //  Print statistics.
-              for (auto const [endpoint, ex, s] :
+              for (auto const [ep, ex, s] :
                    utl::zip(endpoints, exceptions, stats)) {
-                auto const& [ep, src, tag, metrics] = endpoint;
-                try {
-                  if (ex) {
-                    std::rethrow_exception(ex);
-                  }
+                std::visit(
+                    utl::overloaded{
+                        [&](gtfs_rt_endpoint const& g) {
+                          try {
+                            if (ex) {
+                              std::rethrow_exception(ex);
+                            }
 
-                  metrics.updates_successful_.Increment();
-                  metrics.last_update_timestamp_.SetToCurrentTime();
-                  metrics.update(s);
+                            g.metrics_.updates_successful_.Increment();
+                            g.metrics_.last_update_timestamp_
+                                .SetToCurrentTime();
+                            g.metrics_.update(std::get<n::rt::statistics>(s));
 
-                  n::log(n::log_lvl::info, "motis.rt",
-                         "rt update stats for tag={}, url={}: {}", tag, ep.url_,
-                         fmt::streamed(s));
-                } catch (std::exception const& e) {
-                  metrics.updates_error_.Increment();
-                  n::log(n::log_lvl::error, "motis.rt",
-                         "rt update failed: tag={}, url={}, error={}", tag,
-                         ep.url_, e.what());
-                }
+                            n::log(
+                                n::log_lvl::info, "motis.rt",
+                                "GTFS-RT update stats for tag={}, url={}: {}",
+                                g.tag_, g.ep_.url_,
+                                fmt::streamed(std::get<n::rt::statistics>(s)));
+                          } catch (std::exception const& e) {
+                            g.metrics_.updates_error_.Increment();
+                            n::log(n::log_lvl::error, "motis.rt",
+                                   "GTFS-RT update failed: tag={}, url={}, "
+                                   "error={}",
+                                   g.tag_, g.ep_.url_, e.what());
+                          }
+                        },
+                        [&](auser_endpoint const& a) {
+                          try {
+                            if (ex) {
+                              std::rethrow_exception(ex);
+                            }
+
+                            a.metrics_.updates_successful_.Increment();
+                            a.metrics_.last_update_timestamp_
+                                .SetToCurrentTime();
+                            a.metrics_.update(
+                                std::get<n::rt::vdv::statistics>(s));
+
+                            n::log(
+                                n::log_lvl::info, "motis.rt",
+                                "VDV AUS update stats for tag={}, url={}:\n{}",
+                                a.tag_, a.ep_.url_,
+                                fmt::streamed(
+                                    std::get<n::rt::vdv::statistics>(s)));
+                          } catch (std::exception const& e) {
+                            a.metrics_.updates_error_.Increment();
+                            n::log(n::log_lvl::error, "motis.rt",
+                                   "VDV AUS update failed: tag={}, url={}, "
+                                   "error={}",
+                                   a.tag_, a.ep_.url_, e.what());
+                          }
+                        }},
+                    ep);
               }
             }
 

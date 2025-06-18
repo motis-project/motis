@@ -300,13 +300,12 @@ void data::load_tiles() {
 
 void data::load_auser_updater(std::string_view tag,
                               const config::timetable::dataset& d) {
-  if (!auser_updater_) {
-    auser_updater_ =
-        std::make_unique<std::map<std::string, nigiri::rt::vdv::updater>>();
+  if (!auser_) {
+    auser_ = std::make_unique<std::map<std::string, auser>>();
   }
   for (auto const& rt : *d.rt_) {
     if (rt.protocol_ == config::timetable::dataset::rt::protocol::auser) {
-      auser_updater_->try_emplace(rt.url_, *tt_, tags_->get_src(tag));
+      auser_->try_emplace(rt.url_, *tt_, tags_->get_src(tag));
     }
   }
 }

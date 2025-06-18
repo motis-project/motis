@@ -16,6 +16,7 @@
 #include "motis/fwd.h"
 #include "motis/gbfs/data.h"
 #include "motis/match_platforms.h"
+#include "motis/rt/auser.h"
 #include "motis/types.h"
 
 namespace motis {
@@ -70,7 +71,7 @@ struct data {
     return std::tie(config_, t_, r_, tc_, w_, pl_, l_, elevations_, tt_, tags_,
                     location_rtree_, elevator_nodes_, shapes_, railviz_static_,
                     matches_, way_matches_, rt_, gbfs_, odm_bounds_,
-                    flex_areas_, metrics_, auser_updater_);
+                    flex_areas_, metrics_, auser_);
   }
 
   std::filesystem::path path_;
@@ -98,7 +99,7 @@ struct data {
   ptr<odm::bounds> odm_bounds_;
   ptr<flex::flex_areas> flex_areas_;
   ptr<metrics_registry> metrics_;
-  ptr<std::map<std::string, nigiri::rt::vdv::updater>> auser_updater_;
+  ptr<std::map<std::string, auser>> auser_;
 };
 
 }  // namespace motis
