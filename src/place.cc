@@ -103,10 +103,10 @@ api::Place to_place(n::timetable const* tt,
               return to_place(std::get<osr::location>(dest), "END");
             } else {
               auto const get_track = [&](n::location_idx_t const x) {
-                return tt->locations_.platform_codes_.empty()
+                return tt->locations_.platform_codes_.at(x).empty()
                            ? std::nullopt
                            : std::optional{std::string{
-                                 tt->locations_.platform_codes_.at(x).view()}};
+                                 tt->locations_.platform_codes_[x].view()}};
               };
 
               // check if description is available, if not, return nullopt
@@ -114,7 +114,7 @@ api::Place to_place(n::timetable const* tt,
                 return tt->locations_.descriptions_.at(x).empty()
                            ? std::nullopt
                            : std::optional{std::string{
-                                 tt->locations_.descriptions_.at(x).view()}};
+                                 tt->locations_.descriptions_[x].view()}};
               };
 
               auto const pos = tt->locations_.coordinates_[l];
