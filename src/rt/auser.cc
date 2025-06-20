@@ -13,8 +13,6 @@ std::string auser::fetch_url(std::string_view base_url) {
 
 nigiri::rt::vdv::statistics auser::consume_update(
     std::string const& auser_update, nigiri::rt_timetable& rtt) {
-  fmt::println("[auser] consuming update {}", auser_update);
-
   auto vdvaus = pugi::xml_document{};
   vdvaus.load_string(auser_update.c_str());
   upd_.update(rtt, vdvaus);
