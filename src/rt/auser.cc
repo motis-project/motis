@@ -1,6 +1,5 @@
 #include "motis/rt/auser.h"
 
-#include "boost/json.hpp"
 #include "pugixml.hpp"
 
 namespace motis {
@@ -9,16 +8,23 @@ auser::auser(const nigiri::timetable& tt, nigiri::source_idx_t s)
     : upd_{tt, s} {}
 
 std::string auser::fetch_url(std::string_view base_url) {
-  return fmt::format("{}/api/v1/auser/fetch?since={}", base_url, last_update_);
+  return fmt::format("{}/auser/fetch?since={}", base_url, last_update_);
 }
 
-nigiri::rt::vdv::statistics auser::consume_update(std::string auser_update,
-                                                  nigiri::rt_timetable& rtt) {
-  auto j = boost::json::parse(auser_update).as_object();
-  last_update_ = j["id"].as_string();
+nigiri::rt::vdv::statistics auser::consume_update(
+    std::string const& auser_update, nigiri::rt_timetable& rtt) {
+  fmt::println("[auser] consuming update {}", auser_update);
+
   auto vdvaus = pugi::xml_document{};
-  vdvaus.load_string(j["update"].as_string().c_str());
+  vdvaus.load_string(auser_update.c_str());
   upd_.update(rtt, vdvaus);
+  last_update_ = vdvaus.select_node("//AUSNachricht")
+                     .node()
+                     .attribute("auser_id")
+                     .as_string();
+
+  fmt::println("[auser] latest update: {}", last_update_);
+
   return upd_.get_stats();
 }
 
