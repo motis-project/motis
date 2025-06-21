@@ -12,7 +12,7 @@ struct auser {
   nigiri::rt::vdv::statistics consume_update(std::string const&,
                                              nigiri::rt_timetable&);
 
-  std::string last_update_{"0"};
+  std::chrono::nanoseconds::rep update_state_{0};
   nigiri::rt::vdv::updater upd_;
 };
 

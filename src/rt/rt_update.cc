@@ -145,10 +145,12 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
                                     a.metrics_.updates_requested_.Increment();
                                     auto& auser = d.auser_->at(a.ep_.url_);
                                     try {
+                                      auto const fetch_url = boost::urls::url{
+                                          auser.fetch_url(a.ep_.url_)};
+                                      fmt::println("[auser] fetch url: {}",
+                                                   fetch_url.c_str());
                                       auto const res = co_await http_GET(
-                                          boost::urls::url{
-                                              auser.fetch_url(a.ep_.url_)},
-                                          headers_t{}, timeout);
+                                          fetch_url, headers_t{}, timeout);
                                       ret = auser.consume_update(
                                           get_http_body(res), *rtt);
                                     } catch (std::exception const& e) {
