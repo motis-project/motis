@@ -274,6 +274,9 @@ int extract(int ac, char** av) {
     auto const stop_times_path = fs::path{stop_times_str};
 
     stop_ids.clear();
+    route_ids.clear();
+    service_ids.clear();
+    agency_ids.clear();
 
     utl::verify(stop_times_path.filename() == "stop_times.txt",
                 "expected filename stop_times.txt, got \"{}\"",
