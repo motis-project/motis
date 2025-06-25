@@ -371,7 +371,7 @@ struct vdvaus_metrics {
         last_update_timestamp_{
             m.vdvaus_last_update_timestamp_.Add({{"tag", tag}})} {}
 
-  void update(nigiri::rt::vdv::statistics const& stats) const {
+  void update(nigiri::rt::vdv_aus::statistics const& stats) const {
     unsupported_additional_runs_.Increment(stats.unsupported_additional_runs_);
     cancelled_runs_.Increment(stats.cancelled_runs_);
     total_stops_.Increment(stats.total_stops_);
@@ -381,11 +381,8 @@ struct vdvaus_metrics {
         stats.unsupported_additional_stops_);
     total_runs_.Increment(stats.total_runs_);
     no_transport_found_at_stop_.Increment(stats.no_transport_found_at_stop_);
-    search_on_incomplete_.Increment(stats.search_on_incomplete_);
-    found_runs_.Increment(stats.found_runs_);
     multiple_matches_.Increment(stats.multiple_matches_);
     matched_runs_.Increment(stats.matched_runs_);
-    unmatchable_runs_.Increment(stats.unmatchable_runs_);
     runs_without_stops_.Increment(stats.runs_without_stops_);
     skipped_vdv_stops_.Increment(stats.skipped_vdv_stops_);
     excess_vdv_stops_.Increment(stats.excess_vdv_stops_);

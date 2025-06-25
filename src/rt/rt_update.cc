@@ -114,10 +114,11 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
                   [&](std::variant<gtfs_rt_endpoint, auser_endpoint> const& x) {
                     return boost::asio::co_spawn(
                         executor,
-                        [&]() -> awaitable<std::variant<
-                                  n::rt::statistics, n::rt::vdv::statistics>> {
+                        [&]() -> awaitable<
+                                  std::variant<n::rt::statistics,
+                                               n::rt::vdv_aus::statistics>> {
                           auto ret = std::variant<n::rt::statistics,
-                                                  n::rt::vdv::statistics>{};
+                                                  n::rt::vdv_aus::statistics>{};
                           co_await std::visit(
                               utl::overloaded{
                                   [&](gtfs_rt_endpoint const& g)
@@ -212,14 +213,14 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
                             a.metrics_.last_update_timestamp_
                                 .SetToCurrentTime();
                             a.metrics_.update(
-                                std::get<n::rt::vdv::statistics>(s));
+                                std::get<n::rt::vdv_aus::statistics>(s));
 
                             n::log(
                                 n::log_lvl::info, "motis.rt",
                                 "VDV AUS update stats for tag={}, url={}:\n{}",
                                 a.tag_, a.ep_.url_,
                                 fmt::streamed(
-                                    std::get<n::rt::vdv::statistics>(s)));
+                                    std::get<n::rt::vdv_aus::statistics>(s)));
                           } catch (std::exception const& e) {
                             a.metrics_.updates_error_.Increment();
                             n::log(n::log_lvl::error, "motis.rt",

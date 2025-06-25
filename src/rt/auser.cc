@@ -11,7 +11,7 @@ std::string auser::fetch_url(std::string_view base_url) {
   return fmt::format("{}/auser/fetch?since={}", base_url, update_state_);
 }
 
-nigiri::rt::vdv::statistics auser::consume_update(
+nigiri::rt::vdv_aus::statistics auser::consume_update(
     std::string const& auser_update, nigiri::rt_timetable& rtt) {
   auto vdvaus = pugi::xml_document{};
   vdvaus.load_string(auser_update.c_str());

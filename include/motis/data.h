@@ -6,7 +6,7 @@
 
 #include "date/date.h"
 
-#include "nigiri/rt/vdv/vdv_update.h"
+#include "nigiri/rt/vdv_aus.h"
 #include "nigiri/types.h"
 
 #include "osr/types.h"
