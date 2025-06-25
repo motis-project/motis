@@ -237,22 +237,22 @@
 				}}
 			/>
 		</div>
-		<div class="flex">
-			<Switch class="flex-grow"
+		<div class="flex gap-2">
+			<Switch
 				bind:checked={limitTransfers}
 				label={t.limitTransfersCount}
 				id="limitTransfers"
 			/>
-			<Button class="flex-none"
+			<Button
 				disabled={maxTransfersCount == 0 || !limitTransfers}
 				onclick={() => --maxTransfersCount}
 			>
 				-
 			</Button>
-			<div class="flex-none">
+			<div class="self-center">
 				{maxTransfersCount}
 			</div>
-			<Button class="flex-none"
+			<Button
 				disabled={!limitTransfers}
 				onclick={() => ++maxTransfersCount}
 			>
