@@ -18,6 +18,7 @@
 
 	let {
 		useRoutedTransfers = $bindable(),
+		maxTransfers = $bindable(),
 		wheelchair = $bindable(),
 		requireBikeTransport = $bindable(),
 		requireCarTransport = $bindable(),
@@ -34,6 +35,7 @@
 		ignoreDirectRentalReturnConstraints = $bindable()
 	}: {
 		useRoutedTransfers: boolean;
+		maxTransfers: number | null;
 		wheelchair: boolean;
 		requireBikeTransport: boolean;
 		requireCarTransport: boolean;
@@ -150,6 +152,17 @@
 			directModes.includes('BIKE')
 	);
 
+	let limitTransfers = $state<boolean>(false);
+	let maxTransfersCount = $state<number>(0);
+	$effect(() => {
+		if (limitTransfers) {
+			maxTransfers = maxTransfersCount;
+		}
+		else {
+			maxTransfers = null;
+		}
+	})
+
 	const containsRental = (modes: PrePostDirectMode[]) =>
 		modes.some((mode) => mode.startsWith('RENTAL_'));
 	const preTransitRental = $derived(containsRental(preTransitModes));
@@ -223,6 +236,28 @@
 					setModes('CAR')(checked);
 				}}
 			/>
+		</div>
+		<div class="flex">
+			<Switch class="flex-grow"
+				bind:checked={limitTransfers}
+				label={t.limitTransfersCount}
+				id="limitTransfers"
+			/>
+			<Button class="flex-none"
+				disabled={maxTransfersCount == 0 || !limitTransfers}
+				onclick={() => --maxTransfersCount}
+			>
+				-
+			</Button>
+			<div class="flex-none">
+				{maxTransfersCount}
+			</div>
+			<Button class="flex-none"
+				disabled={!limitTransfers}
+				onclick={() => ++maxTransfersCount}
+			>
+				+
+			</Button>
 		</div>
 
 		<div class="grid grid-cols-[1fr_2fr_1fr] items-center gap-2">

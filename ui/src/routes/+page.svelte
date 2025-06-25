@@ -128,6 +128,7 @@
 	let useRoutedTransfers = $state(
 		urlParams?.get('useRoutedTransfers') == 'true' || defaultQuery.useRoutedTransfers
 	);
+	let maxTransfers = $state<number | null>(null);
 	let pedestrianProfile = $state<PedestrianProfile>(
 		(urlParams?.has('pedestrianProfile')
 			? urlParams.get('pedestrianProfile')
@@ -216,6 +217,7 @@
 						requireCarTransport,
 						elevationCosts,
 						useRoutedTransfers,
+						maxTransfers: maxTransfers,
 						maxMatchingDistance: pedestrianProfile == 'WHEELCHAIR' ? 8 : 250,
 						maxPreTransitTime: parseInt(maxPreTransitTime),
 						maxPostTransitTime: parseInt(maxPostTransitTime),
@@ -365,6 +367,7 @@
 								bind:time
 								bind:arriveBy
 								bind:useRoutedTransfers
+								bind:maxTransfers
 								bind:pedestrianProfile
 								bind:requireCarTransport
 								bind:requireBikeTransport
