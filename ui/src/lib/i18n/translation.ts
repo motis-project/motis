@@ -20,6 +20,7 @@ export type Translations = {
 	moped: string;
 	from: string;
 	to: string;
+	position: string;
 	arrival: string;
 	departure: string;
 	duration: string;
@@ -28,6 +29,7 @@ export type Translations = {
 	arrivals: string;
 	departures: string;
 	connections: string;
+	isochrones: string;
 	switchToArrivals: string;
 	switchToDepartures: string;
 	arrivalOnTrack: string;
@@ -55,6 +57,7 @@ export type Translations = {
 	outDisallowed: string;
 	unscheduledTrip: string;
 	alertsAvailable: string;
+	isochronesStyling: string;
 	FLEX: string;
 	WALK: string;
 	BIKE: string;
@@ -77,6 +80,8 @@ export type Translations = {
 	REGIONAL_RAIL: string;
 	OTHER: string;
 	routingSegments: {
+		maxTransfers: string;
+		maxTravelTime: string;
 		firstMile: string;
 		lastMile: string;
 		direct: string;
