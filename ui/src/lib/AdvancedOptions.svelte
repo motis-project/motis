@@ -152,16 +152,15 @@
 			directModes.includes('BIKE')
 	);
 
-	let limitTransfers = $state<boolean>(false);
-	let maxTransfersCount = $state<number>(0);
+	let limitTransfers = $state<boolean>(maxTransfers != null);
+	let maxTransfersCount = $state<number>(maxTransfers ?? 0);
 	$effect(() => {
 		if (limitTransfers) {
 			maxTransfers = maxTransfersCount;
-		}
-		else {
+		} else {
 			maxTransfers = null;
 		}
-	})
+	});
 
 	const containsRental = (modes: PrePostDirectMode[]) =>
 		modes.some((mode) => mode.startsWith('RENTAL_'));
