@@ -237,12 +237,9 @@
 			/>
 		</div>
 		<div class="flex gap-2">
-			<Switch
-				bind:checked={limitTransfers}
-				label={t.limitTransfersCount}
-				id="limitTransfers"
-			/>
+			<Switch bind:checked={limitTransfers} label={t.limitTransfersCount} id="limitTransfers" />
 			<Button
+				class="self-center"
 				disabled={maxTransfersCount == 0 || !limitTransfers}
 				onclick={() => --maxTransfersCount}
 			>
@@ -251,10 +248,7 @@
 			<div class="self-center">
 				{maxTransfersCount}
 			</div>
-			<Button
-				disabled={!limitTransfers}
-				onclick={() => ++maxTransfersCount}
-			>
+			<Button class="self-center" disabled={!limitTransfers} onclick={() => ++maxTransfersCount}>
 				+
 			</Button>
 		</div>
