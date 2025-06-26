@@ -237,6 +237,9 @@ api::Itinerary journey_to_response(
   auto const to_products =
       [&](n::fares const& f,
           n::fare_product_idx_t const x) -> std::vector<api::FareProduct> {
+    if (x == n::fare_product_idx_t::invalid()) {
+      return {};
+    }
     return utl::to_vec(
         f.fare_products_[x],
         [&](n::fares::fare_product const& p) -> api::FareProduct {
