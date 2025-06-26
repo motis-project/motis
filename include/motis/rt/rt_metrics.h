@@ -100,115 +100,107 @@ struct rt_metric_families {
                 .Help("Last update timestamp of the GTFS-RT feed")
                 .Register(registry)},
         vdvaus_updates_requested_{prometheus::BuildCounter()
-                                      .Name("nigiri_vdvrt_updates_requested_"
+                                      .Name("nigiri_vdvaus_updates_requested_"
                                             "total")
                                       .Help("Number of update attempts of the "
                                             "VDV AUS feed")
                                       .Register(registry)},
         vdvaus_updates_successful_{
             prometheus::BuildCounter()
-                .Name("nigiri_vdvrt_updates_successful_total")
+                .Name("nigiri_vdvaus_updates_successful_total")
                 .Help("Number of successful updates of the VDV AUS feed")
                 .Register(registry)},
         vdvaus_updates_error_{
             prometheus::BuildCounter()
-                .Name("nigiri_vdvrt_updates_error_total")
+                .Name("nigiri_vdvaus_updates_error_total")
                 .Help("Number of failed updates of the VDV AUS feed")
                 .Register(registry)},
         vdvaus_unsupported_additional_runs_{
             prometheus::BuildGauge()
-                .Name("nigiri_vdvrt_unsupported_additional_runs_total")
+                .Name("nigiri_vdvaus_unsupported_additional_runs_total")
                 .Help("Number of unsupported additional runs in the VDV AUS "
                       "feed")
                 .Register(registry)},
-        vdvaus_cancelled_runs_{
-            prometheus::BuildGauge()
-                .Name("nigiri_vdvrt_cancelled_runs_total")
-                .Help("Number of cancelled runs in the VDV AUS feed")
-                .Register(registry)},
-        vdvaus_total_stops_{
-            prometheus::BuildGauge()
-                .Name("nigiri_vdvrt_total_stops_total")
-                .Help("Total number of stops in the VDV AUS feed")
-                .Register(registry)},
-        vdvaus_resolved_stops_{
-            prometheus::BuildGauge()
-                .Name("nigiri_vdvrt_resolved_stops_total")
-                .Help("Number of stops that could be resolved to locations in "
-                      "the timetable")
-                .Register(registry)},
-        vdvaus_unknown_stops_{
-            prometheus::BuildGauge()
-                .Name("nigiri_vdvrt_unknown_stops_total")
-                .Help("Number of stops that could not resolved to a location "
-                      "in the timetable")
-                .Register(registry)},
         vdvaus_unsupported_additional_stops_{
             prometheus::BuildGauge()
-                .Name("nigiri_vdvrt_unsupported_additional_runs_total")
+                .Name("nigiri_vdvaus_unsupported_additional_runs_total")
                 .Help("Number of additional stops in the VDV AUS feed")
                 .Register(registry)},
         vdvaus_total_runs_{prometheus::BuildGauge()
-                               .Name("nigiri_vdvrt_total_runs_total")
+                               .Name("nigiri_vdvaus_total_runs_total")
                                .Help("Total number of runs in the VDV AUS feed")
                                .Register(registry)},
-        vdvaus_no_transport_found_at_stop_{
+        vdvaus_complete_runs_{
             prometheus::BuildGauge()
-                .Name("nigiri_vdvrt_no_transport_found_at_stop_total")
-                .Help("Number of times that no transport could be found at the "
-                      "stop specified in the VDV AUS feed")
+                .Name("nigiri_vdvaus_complete_runs_total")
+                .Help("Total number of complete runs in the VDV AUS feed")
                 .Register(registry)},
-        vdvaus_search_on_incomplete_{
+        vdvaus_unique_runs_{
             prometheus::BuildGauge()
-                .Name("nigiri_vdvrt_search_on_incomplete_total")
-                .Help("Number of times an incomplete run of the VDV AUS feed "
-                      "had to be matched to a transport; this should not "
-                      "happen since the feed must always transfer a complete "
-                      "version of each run initially")
-                .Register(registry)},
-        vdvaus_found_runs_{
-            prometheus::BuildGauge()
-                .Name("nigiri_vdvrt_found_runs_total")
-                .Help("number of runs of the VDV AUS feed for which a "
-                      "corresponding run could be found in the timetable")
-                .Register(registry)},
-        vdvaus_multiple_matches_{
-            prometheus::BuildGauge()
-                .Name("nigiri_vdvrt_mutiple_matches_total")
-                .Help("number of times a run of the VDV AUS feed could not be "
-                      "matched to a transport in the timetable since there "
-                      "were multiple transports with the same score")
+                .Name("nigiri_vdvaus_unique_runs_total")
+                .Help("Total number of unique runs in the VDV AUS feed")
                 .Register(registry)},
         vdvaus_matched_runs_{
             prometheus::BuildGauge()
-                .Name("nigiri_vdvrt_matched_runs_total")
+                .Name("nigiri_vdvaus_matched_runs_total")
                 .Help(
                     "Number of runs of the VDV AUS feed that could be matched "
                     "to transports in the timetable, i.e., found or looked "
                     "up by established mapping")
                 .Register(registry)},
-        vdvaus_unmatchable_runs_{
+        vdvaus_multiple_matches_{
             prometheus::BuildGauge()
-                .Name("nigiri_vdvrt_unmatchable_runs_total")
-                .Help("Number of complete runs of the VDV AUS feed that could "
-                      "not be matched to a transport in the timetable")
+                .Name("nigiri_vdvaus_mutiple_matches_total")
+                .Help("number of times a run of the VDV AUS feed could not be "
+                      "matched to a transport in the timetable since there "
+                      "were multiple transports with the same score")
                 .Register(registry)},
+        vdvaus_incomplete_not_seen_before_{
+            prometheus::BuildGauge()
+                .Name("nigiri_vdvaus_incomplete_not_seen_before_total")
+                .Help(
+                    "number of times an incomplete run was encountered before "
+                    "seeing a complete version of it in the VDV AUS feed")
+                .Register(registry)},
+        vdvaus_cancelled_runs_{
+            prometheus::BuildGauge()
+                .Name("nigiri_vdvaus_cancelled_runs_total")
+                .Help("Number of cancelled runs in the VDV AUS feed")
+                .Register(registry)},
+        vdvaus_total_stops_{
+            prometheus::BuildGauge()
+                .Name("nigiri_vdvaus_total_stops_total")
+                .Help("Total number of stops in the VDV AUS feed")
+                .Register(registry)},
+        vdvaus_resolved_stops_{
+            prometheus::BuildGauge()
+                .Name("nigiri_vdvaus_resolved_stops_total")
+                .Help("Number of stops that could be resolved to locations in "
+                      "the timetable")
+                .Register(registry)},
+        vdvaus_no_transport_found_at_stop_{
+            prometheus::BuildGauge()
+                .Name("nigiri_vdvaus_no_transport_found_at_stop_total")
+                .Help("Number of times that no transport could be found at the "
+                      "stop specified in the VDV AUS feed")
+                .Register(registry)},
+
         vdvaus_runs_without_stops_{
             prometheus::BuildGauge()
-                .Name("nigiri_vdvrt_runs_without_stops_total")
+                .Name("nigiri_vdvaus_runs_without_stops_total")
                 .Help("Number of times a run without any stops was encountered "
                       "in the VDV AUS feed")
                 .Register(registry)},
         vdvaus_skipped_vdv_stops_{
             prometheus::BuildGauge()
-                .Name("nigiri_vdvrt_skipped_vdv_stops_total")
+                .Name("nigiri_vdvaus_skipped_vdv_stops_total")
                 .Help("Number of stops in the VDV AUS feed that had to be "
                       "skipped while updating a run since they had no "
                       "counterpart in the run of the timetable")
                 .Register(registry)},
         vdvaus_excess_vdv_stops_{
             prometheus::BuildGauge()
-                .Name("nigiri_vdvrt_excess_vdv_stops_total")
+                .Name("nigiri_vdvaus_excess_vdv_stops_total")
                 .Help(
                     "Number of additional stops at the end of runs in VDV AUS "
                     "feed that had no corresponding stop in the run of the "
@@ -216,22 +208,22 @@ struct rt_metric_families {
                 .Register(registry)},
         vdvaus_updated_events_{
             prometheus::BuildGauge()
-                .Name("nigiri_vdvrt_updated_events_total")
+                .Name("nigiri_vdvaus_updated_events_total")
                 .Help("Number of arrival/departure times "
                       "that were updated by the VDV AUS feed")
                 .Register(registry)},
         vdvaus_propagated_delays_{
             prometheus::BuildGauge()
-                .Name("nigiri_vdvrt_propagated_delays_total")
+                .Name("nigiri_vdvaus_propagated_delays_total")
                 .Help("Number of delay propagations by the VDV AUS feed")
                 .Register(registry)},
         vdvaus_feed_timestamp_{prometheus::BuildGauge()
-                                   .Name("nigiri_vdvrt_feed_timestamp_seconds")
+                                   .Name("nigiri_vdvaus_feed_timestamp_seconds")
                                    .Help("Timestamp of the VDV AUS feed")
                                    .Register(registry)},
         vdvaus_last_update_timestamp_{
             prometheus::BuildGauge()
-                .Name("nigiri_vdvrt_last_update_timestamp_seconds")
+                .Name("nigiri_vdvaus_last_update_timestamp_seconds")
                 .Help("Last update timestamp of the VDV AUS feed")
                 .Register(registry)} {}
 
@@ -264,19 +256,18 @@ struct rt_metric_families {
   prometheus::Family<prometheus::Gauge>& vdvaus_total_runs_;
   prometheus::Family<prometheus::Gauge>& vdvaus_complete_runs_;
   prometheus::Family<prometheus::Gauge>& vdvaus_unique_runs_;
+  prometheus::Family<prometheus::Gauge>& vdvaus_matched_runs_;
+  prometheus::Family<prometheus::Gauge>& vdvaus_multiple_matches_;
+  prometheus::Family<prometheus::Gauge>& vdvaus_incomplete_not_seen_before_;
+  prometheus::Family<prometheus::Gauge>& vdvaus_no_transport_found_at_stop_;
 
-  prometheus::Family<prometheus::Gauge>& vdvaus_cancelled_runs_;
   prometheus::Family<prometheus::Gauge>& vdvaus_total_stops_;
   prometheus::Family<prometheus::Gauge>& vdvaus_resolved_stops_;
-  prometheus::Family<prometheus::Gauge>& vdvaus_unknown_stops_;
 
-  prometheus::Family<prometheus::Gauge>& vdvaus_no_transport_found_at_stop_;
-  prometheus::Family<prometheus::Gauge>& vdvaus_search_on_incomplete_;
-  prometheus::Family<prometheus::Gauge>& vdvaus_found_runs_;
-  prometheus::Family<prometheus::Gauge>& vdvaus_multiple_matches_;
-  prometheus::Family<prometheus::Gauge>& vdvaus_matched_runs_;
-  prometheus::Family<prometheus::Gauge>& vdvaus_unmatchable_runs_;
   prometheus::Family<prometheus::Gauge>& vdvaus_runs_without_stops_;
+
+  prometheus::Family<prometheus::Gauge>& vdvaus_cancelled_runs_;
+
   prometheus::Family<prometheus::Gauge>& vdvaus_skipped_vdv_stops_;
   prometheus::Family<prometheus::Gauge>& vdvaus_excess_vdv_stops_;
   prometheus::Family<prometheus::Gauge>& vdvaus_updated_events_;
