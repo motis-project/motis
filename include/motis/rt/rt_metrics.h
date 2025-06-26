@@ -259,12 +259,17 @@ struct rt_metric_families {
   prometheus::Family<prometheus::Counter>& vdvaus_updates_error_;
 
   prometheus::Family<prometheus::Gauge>& vdvaus_unsupported_additional_runs_;
+  prometheus::Family<prometheus::Gauge>& vdvaus_unsupported_additional_stops_;
+
+  prometheus::Family<prometheus::Gauge>& vdvaus_total_runs_;
+  prometheus::Family<prometheus::Gauge>& vdvaus_complete_runs_;
+  prometheus::Family<prometheus::Gauge>& vdvaus_unique_runs_;
+
   prometheus::Family<prometheus::Gauge>& vdvaus_cancelled_runs_;
   prometheus::Family<prometheus::Gauge>& vdvaus_total_stops_;
   prometheus::Family<prometheus::Gauge>& vdvaus_resolved_stops_;
   prometheus::Family<prometheus::Gauge>& vdvaus_unknown_stops_;
-  prometheus::Family<prometheus::Gauge>& vdvaus_unsupported_additional_stops_;
-  prometheus::Family<prometheus::Gauge>& vdvaus_total_runs_;
+
   prometheus::Family<prometheus::Gauge>& vdvaus_no_transport_found_at_stop_;
   prometheus::Family<prometheus::Gauge>& vdvaus_search_on_incomplete_;
   prometheus::Family<prometheus::Gauge>& vdvaus_found_runs_;
@@ -347,13 +352,15 @@ struct vdvaus_metrics {
         updates_error_{m.vdvaus_updates_error_.Add({{"tag", tag}})},
         unsupported_additional_runs_{
             m.vdvaus_unsupported_additional_runs_.Add({{"tag", tag}})},
-        cancelled_runs_{m.vdvaus_cancelled_runs_.Add({{"tag", tag}})},
-        total_stops_{m.vdvaus_total_stops_.Add({{"tag", tag}})},
-        resolved_stops_{m.vdvaus_resolved_stops_.Add({{"tag", tag}})},
-        unknown_stops_{m.vdvaus_unknown_stops_.Add({{"tag", tag}})},
         unsupported_additional_stops_{
             m.vdvaus_unsupported_additional_stops_.Add({{"tag", tag}})},
         total_runs_{m.vdvaus_total_runs_.Add({{"tag", tag}})},
+        complete_runs_{m.vdvaus_} cancelled_runs_{
+            m.vdvaus_cancelled_runs_.Add({{"tag", tag}})},
+        total_stops_{m.vdvaus_total_stops_.Add({{"tag", tag}})},
+        resolved_stops_{m.vdvaus_resolved_stops_.Add({{"tag", tag}})},
+        unknown_stops_{m.vdvaus_unknown_stops_.Add({{"tag", tag}})},
+
         no_transport_found_at_stop_{
             m.vdvaus_no_transport_found_at_stop_.Add({{"tag", tag}})},
         search_on_incomplete_{
@@ -395,19 +402,23 @@ struct vdvaus_metrics {
   prometheus::Counter& updates_error_;
 
   prometheus::Gauge& unsupported_additional_runs_;
-  prometheus::Gauge& cancelled_runs_;
+  prometheus::Gauge& unsupported_additional_stops_;
+
+  prometheus::Gauge& total_runs_;
+  prometheus::Gauge& complete_runs_;
+  prometheus::Gauge& unique_runs_;
+  prometheus::Gauge& matched_runs_;
+  prometheus::Gauge& multiple_matches_;
+  prometheus::Gauge& incomplete_not_seen_before_;
+  prometheus::Gauge& no_transport_found_at_stop_;
+
   prometheus::Gauge& total_stops_;
   prometheus::Gauge& resolved_stops_;
-  prometheus::Gauge& unknown_stops_;
-  prometheus::Gauge& unsupported_additional_stops_;
-  prometheus::Gauge& total_runs_;
-  prometheus::Gauge& no_transport_found_at_stop_;
-  prometheus::Gauge& search_on_incomplete_;
-  prometheus::Gauge& found_runs_;
-  prometheus::Gauge& multiple_matches_;
-  prometheus::Gauge& matched_runs_;
-  prometheus::Gauge& unmatchable_runs_;
+
   prometheus::Gauge& runs_without_stops_;
+
+  prometheus::Gauge& cancelled_runs_;
+
   prometheus::Gauge& skipped_vdv_stops_;
   prometheus::Gauge& excess_vdv_stops_;
   prometheus::Gauge& updated_events_;
