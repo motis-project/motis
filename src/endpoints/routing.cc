@@ -397,8 +397,8 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
     } else if (m == api::ModeEnum::CAR || m == api::ModeEnum::BIKE ||
                m == api::ModeEnum::CAR_PARKING ||
                (!omit_walk && m == api::ModeEnum::WALK)) {
-      route_with_profile(
-          default_output{to_profile(m, pedestrian_profile, elevation_costs)});
+      route_with_profile(default_output{
+          *w_, to_profile(m, pedestrian_profile, elevation_costs)});
     } else if (m == api::ModeEnum::RENTAL && gbfs_rd.has_data()) {
       // could be bike sharing or car sharing - car sharing has the higher max
       // distance, so we use this here to be safe
@@ -429,8 +429,9 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
       // if we omitted the WALK routing but didn't have any rental providers
       // in the area, we need to do WALK routing now
       if (routed == 0U && utl::find(modes, api::ModeEnum::WALK) != end(modes)) {
-        route_with_profile(default_output{to_profile(
-            api::ModeEnum::WALK, pedestrian_profile, elevation_costs)});
+        route_with_profile(default_output{
+            *w_, to_profile(api::ModeEnum::WALK, pedestrian_profile,
+                            elevation_costs)});
       }
     }
   }

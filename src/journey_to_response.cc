@@ -418,24 +418,24 @@ api::Itinerary journey_to_response(
               }
             },
             [&](n::footpath) {
-              append(
-                  w && l && detailed_transfers
-                      ? street_routing(
-                            *w, *l, e, elevations, from, to,
-                            default_output{car_transfers
-                                               ? osr::search_profile::kCar
-                                               : to_profile(api::ModeEnum::WALK,
-                                                            pedestrian_profile,
-                                                            elevation_costs)},
-                            j_leg.dep_time_, j_leg.arr_time_,
-                            car_transfers ? 250.0
-                                          : timetable_max_matching_distance,
-                            cache, *blocked_mem, api_version,
-                            std::chrono::duration_cast<std::chrono::seconds>(
-                                j_leg.arr_time_ - j_leg.dep_time_) +
-                                std::chrono::minutes{10})
-                      : dummy_itinerary(from, to, api::ModeEnum::WALK,
-                                        j_leg.dep_time_, j_leg.arr_time_));
+              append(w && l && detailed_transfers
+                         ? street_routing(
+                               *w, *l, e, elevations, from, to,
+                               default_output{
+                                   *w, car_transfers
+                                           ? osr::search_profile::kCar
+                                           : to_profile(api::ModeEnum::WALK,
+                                                        pedestrian_profile,
+                                                        elevation_costs)},
+                               j_leg.dep_time_, j_leg.arr_time_,
+                               car_transfers ? 250.0
+                                             : timetable_max_matching_distance,
+                               cache, *blocked_mem, api_version,
+                               std::chrono::duration_cast<std::chrono::seconds>(
+                                   j_leg.arr_time_ - j_leg.dep_time_) +
+                                   std::chrono::minutes{10})
+                         : dummy_itinerary(from, to, api::ModeEnum::WALK,
+                                           j_leg.dep_time_, j_leg.arr_time_));
             },
             [&](n::routing::offset const x) {
               auto out = std::unique_ptr<output>{};
@@ -450,7 +450,8 @@ api::Itinerary journey_to_response(
                     is_pre_transit ? ignore_start_rental_return_constraints
                                    : ignore_dest_rental_return_constraints);
               } else {
-                out = std::make_unique<default_output>(x.transport_mode_id_);
+                out =
+                    std::make_unique<default_output>(*w, x.transport_mode_id_);
               }
 
               append(street_routing(
