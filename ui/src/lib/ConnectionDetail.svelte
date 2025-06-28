@@ -21,7 +21,7 @@
 		itinerary: Itinerary;
 	} = $props();
 
-	const isRelevantLeg = (l: Leg) => l.duration !== 0 || (l.routeShortName && l.mode != 'WALK');
+	const isRelevantLeg = (l: Leg) => l.duration !== 0 || l.routeShortName;
 	const lastLeg = $derived(itinerary.legs.findLast(isRelevantLeg));
 </script>
 
@@ -190,7 +190,7 @@
 					class:list-inside={productOptions.length > 1}
 				>
 					{#each productOptions as products, i (i)}
-						{#each products as product (product.name)}
+						{#each products as product, j (j)}
 							<li>
 								{@render productInfo(product)}
 							</li>
@@ -323,7 +323,7 @@
 					<div class="pb-2"></div>
 				{/if}
 			</div>
-		{:else if !(isLast && !isRelevantLeg(l)) && ((i == 0 && isRelevantLeg(l)) || !next || !next.routeShortName || l.mode != 'WALK' || (pred && (pred.mode == 'BIKE' || pred.mode == 'RENTAL')))}
+		{:else if !(isLast && !isRelevantLeg(l)) && ((i == 0 && isRelevantLeg(l)) || !next || !next.routeShortName || l.mode != 'WALK' || (pred && (pred.mode == 'BIKE' || (l.mode == 'WALK' && pred.mode == 'CAR') || pred.mode == 'RENTAL')))}
 			<Route {onClickTrip} {l} />
 			<div class="pt-4 pl-6 border-l-4 left-4 relative" style={routeBorderColor(l)}>
 				<div class="grid gap-y-6 grid-cols-[max-content_max-content_auto] items-center">
@@ -344,6 +344,8 @@
 					</div>
 				{/if}
 			</div>
+		{:else}
+			Skip {l.mode}
 		{/if}
 	{/each}
 	<div class="relative pl-6 left-4">
