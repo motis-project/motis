@@ -278,10 +278,11 @@ api::Itinerary journey_to_response(
               decltype(j.legs_)::iterator>::difference_type>(0),
           utl::count_if(
               j.legs_,
-              [](auto&& leg) {
-                return holds_alternative<n::routing::journey::run_enter_exit>(
-                           leg.uses_) ||
-                       odm::is_odm_leg(leg);
+              [](n::routing::journey::leg const& leg) {
+                return !leg.interline_with_prev_ &&
+                       (holds_alternative<n::routing::journey::run_enter_exit>(
+                            leg.uses_) ||
+                        odm::is_odm_leg(leg));
               }) -
               1),
       .fareTransfers_ =
@@ -345,7 +346,6 @@ api::Itinerary journey_to_response(
     std::visit(
         utl::overloaded{
             [&](n::routing::journey::run_enter_exit const& t) {
-              // TODO interlining
               auto const fr = n::rt::frun{tt, rtt, t.r_};
               auto const enter_stop = fr[t.stop_range_.from_];
               auto const exit_stop = fr[t.stop_range_.to_ - 1U];
@@ -369,6 +369,7 @@ api::Itinerary journey_to_response(
                       exit_stop.scheduled_time(n::event_type::kArr),
                   .realTime_ = fr.is_rt(),
                   .scheduled_ = fr.is_scheduled(),
+                  .interlineWithPreviousLeg_ = j_leg.interline_with_prev_,
                   .headsign_ = std::string{enter_stop.direction()},
                   .routeColor_ = to_str(color.color_),
                   .routeTextColor_ = to_str(color.text_color_),
