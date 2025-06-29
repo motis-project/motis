@@ -23,12 +23,10 @@ export const preprocessItinerary = (from: Location, to: Location) => {
 				pred.realTime ||= curr.realTime;
 				pred.intermediateStops!.push(...curr.intermediateStops!);
 				pred.legGeometry = {
-					points: polyline.encode(
-						[
-							...polyline.decode(pred.legGeometry.points),
-							...polyline.decode(curr.legGeometry.points)
-						]
-					),
+					points: polyline.encode([
+						...polyline.decode(pred.legGeometry.points),
+						...polyline.decode(curr.legGeometry.points)
+					]),
 					precision: pred.legGeometry.precision,
 					length: pred.legGeometry.length + curr.legGeometry.length
 				};
