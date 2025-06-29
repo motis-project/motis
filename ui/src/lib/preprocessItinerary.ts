@@ -15,7 +15,7 @@ export const preprocessItinerary = (from: Location, to: Location) => {
 			if (it.legs[i].interlineWithPreviousLeg) {
 				const pred = joinedLegs[joinedLegs.length - 1];
 				const curr = it.legs[i];
-				pred.intermediateStops!.push({ ...pred.to, switchTo: curr.routeShortName } as Place);
+				pred.intermediateStops!.push({ ...pred.to, switchTo: curr } as Place);
 				pred.to = curr.to;
 				pred.duration += curr.duration;
 				pred.endTime = curr.endTime;
