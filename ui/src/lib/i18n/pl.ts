@@ -47,6 +47,7 @@ const translations: Translations = {
 	selectElevationCosts: 'Avoid steep incline.',
 	wheelchair: 'Barrier-free transfers',
 	useRoutedTransfers: 'Use routed transfers',
+	limitTransfersCount: 'Limit number of transfers',
 	bikeRental: 'Allow usage of sharing vehicles',
 	requireBikeTransport: 'Bike carriage',
 	requireCarTransport: 'Car carriage',

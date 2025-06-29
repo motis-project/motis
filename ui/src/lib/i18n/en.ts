@@ -46,6 +46,7 @@ const translations: Translations = {
 	defaultSelectedModes: 'All transit modes',
 	selectElevationCosts: 'Avoid steep incline.',
 	useRoutedTransfers: 'Use routed transfers',
+	limitTransfersCount: 'Limit number of transfers',
 	wheelchair: 'Accessible transfers',
 	bikeRental: 'Allow usage of sharing vehicles',
 	requireBikeTransport: 'Bike carriage',
