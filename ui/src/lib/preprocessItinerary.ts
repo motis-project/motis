@@ -1,4 +1,4 @@
-import type { Itinerary, PlanResponse } from '$lib/api/openapi';
+import type { Itinerary, Place, PlanResponse } from '$lib/api/openapi';
 import type { Location } from '$lib/Location';
 import polyline from '@mapbox/polyline';
 
@@ -15,6 +15,7 @@ export const preprocessItinerary = (from: Location, to: Location) => {
 			if (it.legs[i].interlineWithPreviousLeg) {
 				const pred = joinedLegs[joinedLegs.length - 1];
 				const curr = it.legs[i];
+				pred.intermediateStops!.push({ ...pred.to, switchTo: curr.routeShortName } as Place);
 				pred.to = curr.to;
 				pred.duration += curr.duration;
 				pred.endTime = curr.endTime;

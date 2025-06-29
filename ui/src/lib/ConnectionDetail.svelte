@@ -58,6 +58,12 @@
 			</Button>
 			{@const pickupNotAllowedOrEnd = p.pickupType == 'NOT_ALLOWED' && isStartOrEnd != -1}
 			{@const dropoffNotAllowedOrStart = p.dropoffType == 'NOT_ALLOWED' && isStartOrEnd != 1}
+			{#if (p as Place & { switchTo?: string }).switchTo}
+				<div class="ml-4 flex items-center font-bold text-sm">
+					{t.continuesAs}
+					{(p as Place & { switchTo?: string }).switchTo}
+				</div>
+			{/if}
 			{#if pickupNotAllowedOrEnd || dropoffNotAllowedOrStart}
 				<div class="ml-4 flex items-center text-destructive text-sm">
 					<CircleX class="stroke-destructive h-4 w-4" />
