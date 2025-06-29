@@ -128,14 +128,10 @@
 	let useRoutedTransfers = $state(
 		urlParams?.get('useRoutedTransfers') == 'true' || defaultQuery.useRoutedTransfers
 	);
-	let maxTransfers = $state<number | null>(
-		(function () {
-			if (urlParams?.has('maxTransfers')) {
-				let maxTransfers = urlParams.get('maxTransfers')!;
-				return maxTransfers == 'null' ? null : parseInt(maxTransfers);
-			}
-			return defaultQuery.maxTransfers;
-		})()
+	let maxTransfers = $state<number | undefined>(
+		urlParams?.has('maxTransfers')
+			? parseInt(urlParams.get('maxTransfers')!)
+			: defaultQuery.maxTransfers
 	);
 	let pedestrianProfile = $state<PedestrianProfile>(
 		(urlParams?.has('pedestrianProfile')

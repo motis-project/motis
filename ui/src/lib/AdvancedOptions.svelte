@@ -35,7 +35,7 @@
 		ignoreDirectRentalReturnConstraints = $bindable()
 	}: {
 		useRoutedTransfers: boolean;
-		maxTransfers: number | null;
+		maxTransfers: number | undefined;
 		wheelchair: boolean;
 		requireBikeTransport: boolean;
 		requireCarTransport: boolean;
@@ -152,13 +152,13 @@
 			directModes.includes('BIKE')
 	);
 
-	let limitTransfers = $state<boolean>(maxTransfers != null);
+	let limitTransfers = $state<boolean>(maxTransfers != undefined);
 	let maxTransfersCount = $state<number>(maxTransfers ?? 0);
 	$effect(() => {
 		if (limitTransfers) {
 			maxTransfers = maxTransfersCount;
 		} else {
-			maxTransfers = null;
+			maxTransfers = undefined;
 		}
 	});
 

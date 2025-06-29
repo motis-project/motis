@@ -43,7 +43,7 @@
 		arriveBy: boolean;
 		pedestrianProfile: PedestrianProfile;
 		useRoutedTransfers: boolean;
-		maxTransfers: number | null;
+		maxTransfers: number | undefined;
 		requireCarTransport: boolean;
 		requireBikeTransport: boolean;
 		transitModes: TransitMode[];
