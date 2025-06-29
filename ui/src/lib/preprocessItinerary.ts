@@ -10,7 +10,8 @@ export const preprocessItinerary = (from: Location, to: Location) => {
 		if (it.legs[it.legs.length - 1].to.name === 'END') {
 			it.legs[it.legs.length - 1].to.name = to.label!;
 		}
-		let joinedLegs = [];
+
+		const joinedLegs = [];
 		for (let i = 0; i < it.legs.length; i++) {
 			if (it.legs[i].interlineWithPreviousLeg) {
 				const pred = joinedLegs[joinedLegs.length - 1];
