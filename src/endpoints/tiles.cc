@@ -29,6 +29,10 @@ net::reply tiles::operator()(net::route_request const& req, bool) const {
   }
 
   auto const tile = ::tiles::parse_tile_url(req.url_.path());
+  if (!tile.has_value()) {
+    return net::web_server::empty_res_t{boost::beast::http::status::not_found,
+                                        req.version()};
+  }
 
   auto pc = ::tiles::null_perf_counter{};
   auto const rendered_tile =

@@ -287,7 +287,7 @@ std::vector<osr::match_t> get_reverse_platform_way_matches(
         auto raw_matches =
             std::optional<std::span<osr::raw_way_candidate const>>{};
         if (use_raw_matches) {
-          auto const& m = (way_matches->matches_)[l];
+          auto const& m = way_matches->matches_[l];
           raw_matches = {m.begin(), m.end()};
         }
         return lookup.match(query, true, dir, max_matching_distance, nullptr, p,

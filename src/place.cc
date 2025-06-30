@@ -102,16 +102,11 @@ api::Place to_place(n::timetable const* tt,
             } else if (l == n::get_special_station(n::special_station::kEnd)) {
               return to_place(std::get<osr::location>(dest), "END");
             } else {
-              auto const is_track = [&](n::location_idx_t const x) {
-                auto const type = tt->locations_.types_.at(x);
-                return (type == n::location_type::kGeneratedTrack ||
-                        type == n::location_type::kTrack);
-              };
-
               auto const get_track = [&](n::location_idx_t const x) {
-                return is_track(x) ? std::optional{std::string{
-                                         tt->locations_.names_.at(x).view()}}
-                                   : std::nullopt;
+                return tt->locations_.platform_codes_.at(x).empty()
+                           ? std::nullopt
+                           : std::optional{std::string{
+                                 tt->locations_.platform_codes_[x].view()}};
               };
 
               // check if description is available, if not, return nullopt
@@ -119,12 +114,14 @@ api::Place to_place(n::timetable const* tt,
                 return tt->locations_.descriptions_.at(x).empty()
                            ? std::nullopt
                            : std::optional{std::string{
-                                 tt->locations_.descriptions_.at(x).view()}};
+                                 tt->locations_.descriptions_[x].view()}};
               };
 
               auto const pos = tt->locations_.coordinates_[l];
               auto const p =
-                  is_track(tt_l.l_) ? tt->locations_.parents_.at(l) : l;
+                  tt->locations_.parents_[l] == n::location_idx_t::invalid()
+                      ? l
+                      : tt->locations_.parents_[l];
               return {.name_ = std::string{tt->locations_.names_[p].view()},
                       .stopId_ = tags->id(*tt, l),
                       .lat_ = pos.lat_,

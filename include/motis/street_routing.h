@@ -35,8 +35,8 @@ struct output {
 };
 
 struct default_output final : public output {
-  default_output(osr::search_profile);
-  default_output(nigiri::transport_mode_id_t);
+  default_output(osr::ways const&, osr::search_profile);
+  default_output(osr::ways const&, nigiri::transport_mode_id_t);
   ~default_output() override;
 
   bool is_time_dependent() const override;
@@ -47,6 +47,7 @@ struct default_output final : public output {
   void annotate_leg(osr::node_idx_t, osr::node_idx_t, api::Leg&) const override;
   api::Place get_place(osr::node_idx_t) const override;
 
+  osr::ways const& w_;
   osr::search_profile profile_;
   nigiri::transport_mode_id_t id_;
 };
