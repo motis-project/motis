@@ -24,8 +24,6 @@ namespace http = beast::http;
 namespace asio = boost::asio;
 namespace ssl = asio::ssl;
 
-constexpr auto const kBodySizeLimit = 128U * 1024U * 1024U;  // 128 M
-
 template <typename Stream>
 asio::awaitable<http_response> req(
     Stream&&,
