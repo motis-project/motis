@@ -2,13 +2,16 @@
 
 #include "pugixml.hpp"
 
+#include "motis/http_req.h"
+
 namespace motis {
 
 auser::auser(const nigiri::timetable& tt, nigiri::source_idx_t s)
     : upd_{tt, s} {}
 
 std::string auser::fetch_url(std::string_view base_url) {
-  return fmt::format("{}/auser/fetch?since={}", base_url, update_state_);
+  return fmt::format("{}/auser/fetch?since={}&body_limit={}", base_url,
+                     update_state_, kBodySizeLimit);
 }
 
 nigiri::rt::vdv_aus::statistics auser::consume_update(
