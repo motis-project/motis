@@ -62,12 +62,6 @@
 		options: IsochronesOptions;
 	} = $props();
 
-	const maxSupportedTransfers = 14;
-	maxTransfers = Math.min(Math.max(0, maxTransfers), maxSupportedTransfers);
-	const possibleMaxTransfers = [...Array(maxSupportedTransfers + 1).keys()].map((i) => ({
-		value: i.toString(),
-		label: i.toString()
-	}));
 	const possibleMaxTravelTimes = minutesToSeconds([
 		1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 75, 80, 90, 120, 150, 180, 210, 240
 	]).map((s) => ({ value: s.toString(), label: formatDurationSec(s) }));
@@ -223,7 +217,6 @@
 			bind:transitModes
 			bind:maxTransfers
 			bind:maxTravelTime
-			{possibleMaxTransfers}
 			{possibleMaxTravelTimes}
 			bind:preTransitModes
 			bind:postTransitModes

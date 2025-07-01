@@ -7,6 +7,7 @@
 	import ChevronDown from 'lucide-svelte/icons/chevron-down';
 	import { Switch } from './components/ui/switch';
 	import type { ElevationCosts } from '$lib/api/openapi';
+	import { defaultQuery } from '$lib/defaults';
 	import { formatDurationSec } from './formatDuration';
 	import {
 		possibleTransitModes,
@@ -27,7 +28,6 @@
 		transitModes = $bindable(),
 		maxTransfers = $bindable(undefined),
 		maxTravelTime = $bindable(undefined),
-		possibleMaxTransfers = [],
 		possibleMaxTravelTimes = [],
 		preTransitModes = $bindable(),
 		postTransitModes = $bindable(),
@@ -48,7 +48,6 @@
 		transitModes: TransitMode[];
 		maxTransfers: number | undefined;
 		maxTravelTime: number | undefined;
-		possibleMaxTransfers?: NumberSelectOption[];
 		possibleMaxTravelTimes?: NumberSelectOption[];
 		preTransitModes: PrePostDirectMode[];
 		postTransitModes: PrePostDirectMode[];
@@ -62,6 +61,11 @@
 		ignoreDirectRentalReturnConstraints: boolean | undefined;
 		additionalComponents?: Snippet;
 	} = $props();
+
+	const possibleMaxTransfers = [...Array(defaultQuery.maxTransfers + 1).keys()].map((i) => ({
+		value: i.toString(),
+		label: i.toString()
+	}));
 
 	const possibleDirectDurations = [
 		5 * 60,
