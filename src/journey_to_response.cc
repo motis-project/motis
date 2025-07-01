@@ -194,6 +194,7 @@ api::Itinerary journey_to_response(
     api::ElevationCostsEnum const elevation_costs,
     bool const detailed_transfers,
     bool const with_fares,
+    bool const with_scheduled_skipped_stops,
     double const timetable_max_matching_distance,
     double const max_matching_distance,
     unsigned const api_version,
@@ -325,19 +326,8 @@ api::Itinerary journey_to_response(
                              start, dest);
 
     auto const to_place = [&](n::rt::run_stop const& s,
-                              bool const run_cancelled,
                               n::event_type const ev_type) {
-      auto p = ::motis::to_place(&tt, &tags, w, pl, matches, tt_location{s},
-                                 start, dest);
-      p.pickupType_ = !run_cancelled && s.in_allowed()
-                          ? api::PickupDropoffTypeEnum::NORMAL
-                          : api::PickupDropoffTypeEnum::NOT_ALLOWED;
-      p.dropoffType_ = !run_cancelled && s.out_allowed()
-                           ? api::PickupDropoffTypeEnum::NORMAL
-                           : api::PickupDropoffTypeEnum::NOT_ALLOWED;
-      p.cancelled_ = run_cancelled || (!s.in_allowed() && !s.out_allowed() &&
-                                       (s.get_scheduled_stop().in_allowed() ||
-                                        s.get_scheduled_stop().out_allowed()));
+      auto p = ::motis::to_place(&tt, &tags, w, pl, matches, s, start, dest);
       p.alerts_ = get_alerts(*s.fr_, std::pair{s, ev_type});
       return p;
     };
@@ -352,12 +342,11 @@ api::Itinerary journey_to_response(
               auto const color = enter_stop.get_route_color();
               auto const agency = enter_stop.get_provider();
               auto const fare_indices = get_fare_indices(fares, j_leg);
-              auto const cancelled = fr.is_cancelled();
 
               auto& leg = itinerary.legs_.emplace_back(api::Leg{
                   .mode_ = to_mode(enter_stop.get_clasz()),
-                  .from_ = to_place(enter_stop, cancelled, n::event_type::kDep),
-                  .to_ = to_place(exit_stop, cancelled, n::event_type::kArr),
+                  .from_ = to_place(enter_stop, n::event_type::kDep),
+                  .to_ = to_place(exit_stop, n::event_type::kArr),
                   .duration_ = std::chrono::duration_cast<std::chrono::seconds>(
                                    j_leg.arr_time_ - j_leg.dep_time_)
                                    .count(),
@@ -379,7 +368,7 @@ api::Itinerary journey_to_response(
                   .tripId_ = tags.id(tt, enter_stop, n::event_type::kDep),
                   .routeShortName_ = {std::string{
                       enter_stop.trip_display_name()}},
-                  .cancelled_ = cancelled,
+                  .cancelled_ = fr.is_cancelled(),
                   .source_ = fmt::to_string(fr.dbg()),
                   .fareTransferIndex_ = fare_indices.and_then(
                       [](auto&& x) { return std::optional{x.transfer_idx_}; }),
@@ -408,8 +397,14 @@ api::Itinerary journey_to_response(
               leg.intermediateStops_ = std::vector<api::Place>{};
               for (auto i = first; i < last; ++i) {
                 auto const stop = fr[i];
+                if (!with_scheduled_skipped_stops &&
+                    !stop.get_scheduled_stop().in_allowed() &&
+                    !stop.get_scheduled_stop().out_allowed() &&
+                    !stop.in_allowed() && !stop.out_allowed()) {
+                  continue;
+                }
                 auto& p = leg.intermediateStops_->emplace_back(
-                    to_place(stop, cancelled, n::event_type::kDep));
+                    to_place(stop, n::event_type::kDep));
                 p.departure_ = stop.time(n::event_type::kDep);
                 p.scheduledDeparture_ =
                     stop.scheduled_time(n::event_type::kDep);

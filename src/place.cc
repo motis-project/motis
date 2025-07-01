@@ -136,4 +136,26 @@ api::Place to_place(n::timetable const* tt,
       l);
 }
 
+api::Place to_place(n::timetable const* tt,
+                    tag_lookup const* tags,
+                    osr::ways const* w,
+                    osr::platforms const* pl,
+                    platform_matches_t const* matches,
+                    n::rt::run_stop const& s,
+                    place_t const start,
+                    place_t const dest) {
+  auto const run_cancelled = s.fr_->is_cancelled();
+  auto p = to_place(tt, tags, w, pl, matches, tt_location{s}, start, dest);
+  p.pickupType_ = !run_cancelled && s.in_allowed()
+                      ? api::PickupDropoffTypeEnum::NORMAL
+                      : api::PickupDropoffTypeEnum::NOT_ALLOWED;
+  p.dropoffType_ = !run_cancelled && s.out_allowed()
+                       ? api::PickupDropoffTypeEnum::NORMAL
+                       : api::PickupDropoffTypeEnum::NOT_ALLOWED;
+  p.cancelled_ = run_cancelled || (!s.in_allowed() && !s.out_allowed() &&
+                                   (s.get_scheduled_stop().in_allowed() ||
+                                    s.get_scheduled_stop().out_allowed()));
+  return p;
+}
+
 }  // namespace motis
