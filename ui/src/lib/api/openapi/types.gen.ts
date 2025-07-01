@@ -260,7 +260,7 @@ export type PedestrianProfile = 'FOOT' | 'WHEELCHAIR';
  * - `AIRPLANE`: airline flights
  * - `BUS`: short distance buses (does not include `COACH`)
  * - `COACH`: long distance buses (does not include `BUS`)
- * - `RAIL`: translates to `HIGHSPEED_RAIL,LONG_DISTANCE_RAIL,NIGHT_RAIL,REGIONAL_RAIL,REGIONAL_FAST_RAIL`
+ * - `RAIL`: translates to `HIGHSPEED_RAIL,LONG_DISTANCE,NIGHT_RAIL,REGIONAL_RAIL,REGIONAL_FAST_RAIL`
  * - `METRO`: metro trains
  * - `HIGHSPEED_RAIL`: long distance high speed trains (e.g. TGV)
  * - `LONG_DISTANCE`: long distance inter city trains
@@ -449,9 +449,13 @@ export type StopTime = {
      */
     pickupDropoffType: PickupDropoffType;
     /**
-     * Whether the departure/arrival is cancelled due to the realtime situation.
+     * Whether the departure/arrival is cancelled due to the realtime situation (either because the stop is skipped or because the entire trip is cancelled).
      */
     cancelled: boolean;
+    /**
+     * Whether the entire trip is cancelled due to the realtime situation.
+     */
+    tripCancelled: boolean;
     /**
      * Filename and line number where this trip is from
      */
@@ -1343,6 +1347,10 @@ export type PlanData = {
          * Optional. Experimental. If set to true, the response will contain fare information.
          */
         withFares?: boolean;
+        /**
+         * Optional. Include intermediate stops where passengers can not alight/board according to schedule.
+         */
+        withScheduledSkippedStops?: boolean;
     };
 };
 
@@ -1682,6 +1690,10 @@ export type TripData = {
          * trip identifier (e.g. from an itinerary leg or stop event)
          */
         tripId: string;
+        /**
+         * Optional. Include intermediate stops where passengers can not alight/board according to schedule.
+         */
+        withScheduledSkippedStops?: boolean;
     };
 };
 
@@ -1758,6 +1770,10 @@ export type StoptimesData = {
          *
          */
         time?: string;
+        /**
+         * Optional. Include stoptimes where passengers can not alight/board according to schedule.
+         */
+        withScheduledSkippedStops?: boolean;
     };
 };
 
@@ -1766,6 +1782,10 @@ export type StoptimesResponse = ({
      * list of stop times
      */
     stopTimes: Array<StopTime>;
+    /**
+     * metadata of the requested stop
+     */
+    place: Place;
     /**
      * Use the cursor to get the previous page of results. Insert the cursor into the request and post it to get the previous page.
      * The previous page is a set of stop times BEFORE the first stop time in the result.
