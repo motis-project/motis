@@ -1,7 +1,7 @@
 [nigiri]
   url=git@github.com:mority/nigiri.git
   branch=vdv-aus-multiple
-  commit=e974372aea5ad67849d999f9a25c9b925dbbc8f0
+  commit=3e00b33e804c61ae12eb4be13f669d2c148fcf16
 [cista]
   url=git@github.com:felixguendling/cista.git
   branch=master
