@@ -40,8 +40,7 @@
 				console.log(response.error);
 				throw new Error('HTTP ' + response.response?.status);
 			}
-			stopNameFromResponse =
-				(response.data?.stopTimes.length && response.data?.stopTimes[0].place?.name) || '';
+			stopNameFromResponse = response.data?.place?.name || '';
 			return response.data!;
 		});
 </script>
@@ -70,7 +69,7 @@
 				<LoaderCircle class="animate-spin w-12 h-12 m-20" />
 			</div>
 		{:then r}
-			{#if rI === 0}
+			{#if rI === 0 && r.previousPageCursor.length}
 				<div class="col-span-full w-full flex justify-between items-center space-x-4">
 					<div class="border-t w-full h-0"></div>
 					<button
@@ -127,8 +126,13 @@
 					{/if}
 				</span>
 			{/each}
+			{#if !r.stopTimes.length}
+				<div class="col-span-full w-full flex items-center justify-center">
+					<ErrorMessage e={t.noItinerariesFound} />
+				</div>
+			{/if}
 
-			{#if rI === responses.length - 1}
+			{#if rI === responses.length - 1 && r.nextPageCursor.length}
 				<div class="col-span-full w-full flex justify-between items-center space-x-4">
 					<div class="border-t w-full h-0"></div>
 					<button

@@ -754,6 +754,7 @@ api::plan_response meta_router::run() {
                     query_.requireCarTransport_ && query_.useRoutedTransfers_,
                     query_.pedestrianProfile_, query_.elevationCosts_,
                     query_.detailedTransfers_, query_.withFares_,
+                    query_.withScheduledSkippedStops_,
                     r_.config_.timetable_.value().max_matching_distance_,
                     query_.maxMatchingDistance_, api_version_,
                     query_.ignorePreTransitRentalReturnConstraints_,

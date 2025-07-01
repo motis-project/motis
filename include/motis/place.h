@@ -47,6 +47,15 @@ api::Place to_place(nigiri::timetable const*,
                     place_t dest = osr::location{},
                     std::string_view name = "");
 
+api::Place to_place(nigiri::timetable const*,
+                    tag_lookup const*,
+                    osr::ways const*,
+                    osr::platforms const*,
+                    platform_matches_t const*,
+                    nigiri::rt::run_stop const&,
+                    place_t start = osr::location{},
+                    place_t dest = osr::location{});
+
 osr::location get_location(api::Place const&);
 
 osr::location get_location(nigiri::timetable const*,
