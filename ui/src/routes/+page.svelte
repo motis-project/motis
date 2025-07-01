@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { untrack } from 'svelte';
 	import X from 'lucide-svelte/icons/x';
 	import { getStyle } from '$lib/map/style';
 	import Map from '$lib/map/Map.svelte';
@@ -352,9 +351,7 @@
 									name: p.place?.name
 								} as IsochronesPos;
 							});
-							untrack(() => {
-								isochronesData = [...all];
-							});
+							isochronesData = [...all];
 						}
 					);
 					updateQuery();
