@@ -7,6 +7,8 @@
 	import Button from '$lib/components/ui/button/button.svelte';
 	import { Label } from '$lib/components/ui/label';
 	import { type ElevationCosts, type PedestrianProfile } from '$lib/api/openapi';
+	import * as Select from '$lib/components/ui/select';
+	import type { DisplayLevel, IsochronesOptions } from '$lib/map/IsochronesShared';
 	import AddressTypeahead from '$lib/AddressTypeahead.svelte';
 	import AdvancedOptions from '$lib/AdvancedOptions.svelte';
 	import DateInput from '$lib/DateInput.svelte';
@@ -37,8 +39,7 @@
 		elevationCosts = $bindable(),
 		ignorePreTransitRentalReturnConstraints = $bindable(),
 		ignorePostTransitRentalReturnConstraints = $bindable(),
-		color = $bindable(),
-		opacity = $bindable()
+		options = $bindable()
 	}: {
 		one: Location;
 		maxTravelTime: number;
@@ -58,8 +59,7 @@
 		elevationCosts: ElevationCosts;
 		ignorePreTransitRentalReturnConstraints: boolean;
 		ignorePostTransitRentalReturnConstraints: boolean;
-		color: string;
-		opacity: number;
+		options: IsochronesOptions;
 	} = $props();
 
 	const maxSupportedTransfers = 14;
@@ -71,6 +71,15 @@
 	const possibleMaxTravelTimes = minutesToSeconds([
 		1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 75, 80, 90, 120, 150, 180, 210, 240
 	]).map((s) => ({ value: s.toString(), label: formatDurationSec(s) }));
+	const displayLevels = new Map<DisplayLevel, string>([
+		['OVERLAY_RECTS', t.isochrones.canvasRects],
+		['OVERLAY_CIRCLES', t.isochrones.canvasCircles],
+		['GEOMETRY_CIRCLES', t.isochrones.geojsonCircles]
+	]);
+	const possibleDisplayLevels = displayLevels
+		.entries()
+		.map(([id, label]) => ({ value: id, label: label }))
+		.toArray();
 
 	let oneItems = $state<Array<Location>>([]);
 
@@ -101,15 +110,47 @@
 </script>
 
 {#snippet additionalComponents()}
+	<div class="grid grid-cols-4 items-center gap-2">
+		<div>
+			{t.isochrones.displayLevel}
+		</div>
+		<Select.Root type="single" bind:value={options.preferredDisplayLevel}>
+			<Select.Trigger class="overflow-hidden" aria-label={t.isochrones.displayLevel}>
+				{displayLevels.get(options.preferredDisplayLevel)}
+			</Select.Trigger>
+			<Select.Content sideOffset={10}>
+				{#each possibleDisplayLevels as level, i (i + level.value)}
+					<Select.Item value={level.value} label={level.label}>
+						{level.label}
+					</Select.Item>
+				{/each}
+			</Select.Content>
+		</Select.Root>
+		<div>
+			{t.isochrones.maxComputeLevel}
+		</div>
+		<Select.Root type="single" bind:value={options.maxDisplayLevel}>
+			<Select.Trigger class="overflow-hidden" aria-label={t.isochrones.maxComputeLevel}>
+				{displayLevels.get(options.maxDisplayLevel)}
+			</Select.Trigger>
+			<Select.Content sideOffset={10}>
+				{#each possibleDisplayLevels as level, i (i + level.value)}
+					<Select.Item value={level.value} label={level.label}>
+						{level.label}
+					</Select.Item>
+				{/each}
+			</Select.Content>
+		</Select.Root>
+	</div>
 	<div class="grid grid-cols-[1fr_2fr_1fr] items-center gap-2">
 		<div class="text-sm">
-			{t.isochronesStyling}
+			{t.isochrones.styling}
 		</div>
 		<Slider.Root
 			type="single"
 			min={0}
 			max={1000}
-			bind:value={opacity}
+			bind:value={options.opacity}
 			class="relative flex w-full touch-none select-none items-center"
 		>
 			<span class="bg-dark-10 relative h-2 w-full grow cursor-pointer overflow-hidden rounded-full">
@@ -120,7 +161,7 @@
 				class="border-border-input bg-background hover:border-dark-40 focus-visible:ring-foreground dark:bg-foreground dark:shadow-card focus-visible:outline-hidden block size-[25px] cursor-pointer rounded-full border shadow-sm transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50"
 			/>
 		</Slider.Root>
-		<input class="flex right-0 align-right" type="color" bind:value={color} />
+		<input class="flex right-0 align-right" type="color" bind:value={options.color} />
 	</div>
 {/snippet}
 

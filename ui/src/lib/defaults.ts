@@ -38,6 +38,7 @@ export const defaultQuery = {
 	passengers: 1,
 	luggage: 0,
 	slowDirect: false,
+	isochronesDisplayLevel: 'GEOMETRY_CIRCLES',
 	isochronesColor: '#ffff00',
 	isochronesOpacity: 250
 };

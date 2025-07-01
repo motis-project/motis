@@ -1,18 +1,21 @@
 <script lang="ts">
-	import bbox from '@turf/bbox';
-	import circle from '@turf/circle';
 	import maplibregl from 'maplibre-gl';
-	import type { CanvasSource, LngLatBoundsLike, Map } from 'maplibre-gl';
+	import type { CanvasSource, GeoJSONSource, LngLatBoundsLike, Map } from 'maplibre-gl';
+	import type { GeoJSON } from 'geojson';
 	import type { PrePostDirectMode } from '$lib/Modes';
-
-	export interface IsochronesPos {
-		lat: number;
-		lng: number;
-		seconds: number;
-	}
+	import {
+		isCanvasLevel,
+		isLess,
+		minDisplayLevel,
+		type DisplayLevel,
+		type Geometry,
+		type IsochronesOptions,
+		type IsochronesPos
+	} from '$lib/map/IsochronesShared';
+	import type { WorkerMessage } from '$lib/map/IsochronesWorker';
+	import WebWorker from '$lib/map/IsochronesWorker.ts?worker';
 
 	type BoxCoordsType = [[number, number], [number, number], [number, number], [number, number]];
-	type CircleType = ReturnType<typeof circle>;
 
 	let {
 		map,
@@ -22,8 +25,7 @@
 		wheelchair,
 		maxAllTime,
 		active,
-		color,
-		opacity
+		options
 	}: {
 		map: Map | undefined;
 		bounds: LngLatBoundsLike | undefined;
@@ -32,18 +34,26 @@
 		wheelchair: boolean;
 		maxAllTime: number;
 		active: boolean;
-		color: string;
-		opacity: number;
+		options: IsochronesOptions;
 	} = $props();
 
-	const name = 'isochrones-data';
-	let loaded = false;
-
-	let lastData: IsochronesPos[] | undefined = undefined;
-	let lastAllTime: number = maxAllTime;
-	let lastSpeed: number | undefined = undefined;
+	const emptyGeometry: GeoJSON = { type: 'LineString', coordinates: [] };
+	// Must all exist
+	let objects = $state<
+		| {
+				worker: Worker;
+				canvasLayer: 'isochrones-canvas';
+				circlesLayer: 'isochrones-circles';
+				canvasSource: CanvasSource;
+				circlesSource: GeoJSONSource;
+		  }
+		| undefined
+	>(undefined);
+	let circlesGeometry = $state<Geometry | GeoJSON>(emptyGeometry);
+	let bestAvailableDisplayLevel = $state<DisplayLevel>('NONE');
 
 	const kilometersPerSecond = $derived(
+		// Should match the speed used for routing
 		streetModes.includes('BIKE')
 			? 0.0038 // 3.8 meters per second
 			: wheelchair
@@ -64,128 +74,197 @@
 		[boundingBox._ne.lng, boundingBox._sw.lat],
 		[boundingBox._sw.lng, boundingBox._sw.lat]
 	]);
-	function reachableKilometers(pos: IsochronesPos) {
-		return Math.min(pos.seconds, maxAllTime) * kilometersPerSecond;
-	}
-	function transform(pos: number[], dimensions: number[]) {
-		const x = Math.round(
-			((pos[0] - boundingBox._sw.lng) / (boundingBox._ne.lng - boundingBox._sw.lng)) * dimensions[0]
-		);
-		const y = Math.round(
-			((boundingBox._ne.lat - pos[1]) / (boundingBox._ne.lat - boundingBox._sw.lat)) * dimensions[1]
-		);
-		return [x, y];
-	}
 
-	let circles = $state<CircleType[] | undefined>(undefined);
+	let lastData: IsochronesPos[] = [];
+	let lastMaxAllTime: number = maxAllTime;
+	// svelte-ignore state_referenced_locally
+	let lastSpeed: number = kilometersPerSecond;
+	let dataIndex = 0;
+
+	// Setup objects
 	$effect(() => {
-		if (
-			!active ||
-			(lastData == isochronesData && lastAllTime == maxAllTime && lastSpeed == kilometersPerSecond)
-		) {
+		if (!map || !active || objects !== undefined) {
 			return;
 		}
-		circles = isochronesData.map((data) => {
-			const r = reachableKilometers(data);
-			let c = circle([data.lng, data.lat], r, {
-				// steps: 64,
-				units: 'kilometers'
-			});
-			c.bbox = bbox(c);
-			return c;
+
+		// Create sources, layers and canvases
+		const canvasLayer = 'isochrones-canvas';
+		const circlesLayer = 'isochrones-circles';
+
+		let canvas = document.createElement('canvas');
+		if (canvas === undefined) {
+			console.log('Canvas not supported');
+			return;
+		}
+		let offscreenCanvas = canvas.transferControlToOffscreen();
+
+		map.addSource(canvasLayer, {
+			type: 'canvas',
+			canvas,
+			coordinates: boxCoords
 		});
-		lastData = isochronesData;
-		lastAllTime = maxAllTime;
-		lastSpeed = kilometersPerSecond;
+		map.addLayer({
+			id: canvasLayer,
+			type: 'raster',
+			source: canvasLayer,
+			paint: {
+				'raster-opacity': options.opacity / 1000
+			}
+		});
+		const canvasSource = map.getSource(canvasLayer) as CanvasSource;
+
+		map.addSource(circlesLayer, {
+			type: 'geojson',
+			data: emptyGeometry
+		});
+		map.addLayer({
+			id: circlesLayer,
+			type: 'fill',
+			source: circlesLayer,
+			paint: {
+				'fill-color': options.color,
+				'fill-opacity': options.opacity / 1000
+			}
+		});
+		const circlesSource = map.getSource(circlesLayer) as GeoJSONSource;
+
+		// Setup worker
+		const worker = new WebWorker();
+
+		worker.onmessage = (event: { data: WorkerMessage }) => {
+			const method = event.data.method;
+			switch (method) {
+				case 'update-display-level':
+					{
+						const index = event.data.index;
+						if (index < dataIndex) {
+							console.log(`Got stale index from worker (Got ${index}, expected ${dataIndex})`);
+							return;
+						}
+						const level: DisplayLevel = event.data.level;
+						if (level == 'GEOMETRY_CIRCLES') {
+							circlesGeometry = event.data.geometry ?? emptyGeometry;
+						}
+						if (isLess(bestAvailableDisplayLevel, level)) {
+							bestAvailableDisplayLevel = level;
+						}
+					}
+					break;
+				default:
+					console.log(`Unknown method '${method}'`);
+			}
+		};
+
+		worker.postMessage(
+			{
+				method: 'set-canvas',
+				canvas: offscreenCanvas
+			},
+			[offscreenCanvas]
+		);
+
+		// Store references
+		objects = {
+			worker,
+			canvasLayer,
+			circlesLayer,
+			canvasSource,
+			circlesSource
+		};
 	});
 
-	function is_visible(circle: CircleType) {
-		if (!circle.bbox) {
-			return false;
+	$effect(() => {
+		if (!active || objects === undefined) {
+			return;
 		}
-		const b = circle.bbox; // [minX, minY, maxX, maxY]
-		return (
-			boundingBox._sw.lat <= b[3] &&
-			b[1] <= boundingBox._ne.lat &&
-			boundingBox._sw.lng <= b[2] &&
-			b[0] <= boundingBox._ne.lat
-		);
-	}
+
+		// isochronesData and lastData might both be empty, but have different references
+		if (
+			((lastData.length != 0 || isochronesData.length != 0) && lastData != isochronesData) ||
+			lastMaxAllTime != maxAllTime ||
+			lastSpeed != kilometersPerSecond
+		) {
+			objects.worker.postMessage({
+				method: 'update-data',
+				index: ++dataIndex,
+				data: $state.snapshot(isochronesData),
+				kilometersPerSecond: $state.snapshot(kilometersPerSecond),
+				maxSeconds: $state.snapshot(maxAllTime)
+			});
+
+			lastData = isochronesData;
+			lastMaxAllTime = maxAllTime;
+			lastSpeed = kilometersPerSecond;
+
+			circlesGeometry = emptyGeometry;
+			bestAvailableDisplayLevel = 'NONE';
+		}
+
+		objects.worker.postMessage({
+			method: 'set-max-display-level',
+			maxDisplayLevel: options.maxDisplayLevel
+		});
+	});
 
 	$effect(() => {
-		if (!map || !circles) {
+		if (!map || objects === undefined) {
 			return;
 		}
-		if (!loaded) {
-			map.addSource(name, {
-				type: 'canvas',
-				canvas: 'isochronesCanvas',
-				coordinates: boxCoords
+		map.setLayoutProperty(
+			objects.canvasLayer,
+			'visibility',
+			active && isCanvasLevel(currentDisplayLevel) ? 'visible' : 'none'
+		);
+		map.setLayoutProperty(
+			objects.circlesLayer,
+			'visibility',
+			active && currentDisplayLevel == 'GEOMETRY_CIRCLES' ? 'visible' : 'none'
+		);
+	});
+
+	$effect(() => {
+		if (!map || objects === undefined) {
+			return;
+		}
+		map.setPaintProperty(objects.canvasLayer, 'raster-opacity', options.opacity / 1000);
+		map.setPaintProperty(objects.circlesLayer, 'fill-opacity', options.opacity / 1000);
+	});
+
+	$effect(() => {
+		if (!map || objects === undefined) {
+			return;
+		}
+		map.setPaintProperty(objects.circlesLayer, 'fill-color', options.color);
+	});
+
+	$effect(() => {
+		if (!map || objects === undefined) {
+			return;
+		}
+		objects.circlesSource.setData(circlesGeometry);
+	});
+
+	let currentDisplayLevel = $derived.by<DisplayLevel>(() => {
+		if (!map || !active || objects === undefined) {
+			return 'NONE';
+		}
+
+		const nextLevel = minDisplayLevel(options.preferredDisplayLevel, bestAvailableDisplayLevel);
+
+		if (isCanvasLevel(nextLevel)) {
+			objects.canvasSource.setCoordinates(boxCoords);
+
+			const dimensions = map._containerDimensions();
+
+			objects.worker.postMessage({
+				method: 'render-canvas',
+				level: nextLevel,
+				boundingBox: $state.snapshot(boundingBox),
+				dimensions,
+				color: nextLevel == options.preferredDisplayLevel ? options.color : 'magenta'
 			});
-			map.addLayer({
-				id: name,
-				type: 'raster',
-				source: name,
-				paint: {
-					'raster-opacity': opacity / 1000
-				}
-			});
-			loaded = true;
 		}
 
-		map.setLayoutProperty(name, 'visibility', active ? 'visible' : 'none');
-		if (!active) {
-			return;
-		}
-		map.setPaintProperty(name, 'raster-opacity', opacity / 1000);
-
-		const dimensions = map._containerDimensions();
-		const source = map.getSource(name) as CanvasSource;
-		source.setCoordinates(boxCoords);
-
-		const canvas = source.canvas;
-		canvas.width = dimensions[0];
-		canvas.height = dimensions[1];
-
-		const ctx = canvas.getContext('2d');
-		if (!ctx) {
-			return;
-		}
-		ctx.fillStyle = color;
-		ctx.clearRect(0, 0, dimensions[0], dimensions[1]);
-
-		circles.filter(is_visible).forEach((c) => {
-			ctx.save(); // Store canvas state
-
-			const b = c.bbox!; // Existence checked in filter()
-			const min = transform([b[0], b[1]], dimensions);
-			const max = transform([b[2], b[3]], dimensions);
-			const diff_x = max[0] - min[0];
-			const diff_y = max[1] - min[1];
-
-			if (diff_x < 2 && diff_y < 2) {
-				// Draw small rect
-				ctx.fillRect(min[0], min[1], diff_x + 1, diff_y + 1);
-			} else {
-				// Clip circle
-				ctx.beginPath();
-				const coords = c.geometry.coordinates[0];
-				const start = transform(coords[0], dimensions);
-				ctx.moveTo(start[0], start[1]);
-				for (let i = 0; i < coords.length; ++i) {
-					const pos = transform(coords[i], dimensions);
-					ctx.lineTo(pos[0], pos[1]);
-				}
-				ctx.clip();
-
-				// Fill map, clipped to circle
-				ctx.fillRect(0, 0, dimensions[0], dimensions[1]);
-			}
-
-			// Restore previous state on top
-			ctx.restore();
-		});
+		return nextLevel;
 	});
 </script>
-
-<canvas id="isochronesCanvas">Canvas not supported</canvas>

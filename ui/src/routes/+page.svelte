@@ -53,7 +53,7 @@
 	import * as Tabs from '$lib/components/ui/tabs';
 	import DeparturesMask from '$lib/DeparturesMask.svelte';
 	import Isochrones from '$lib/map/Isochrones.svelte';
-	import { type IsochronesPos } from '$lib/map/Isochrones.svelte';
+	import type { DisplayLevel, IsochronesOptions, IsochronesPos } from '$lib/map/IsochronesShared';
 	import IsochronesMask from '$lib/IsochronesMask.svelte';
 	import {
 		getFormFactors,
@@ -74,7 +74,8 @@
 	let activeTab = $state<'connections' | 'departures' | 'isochrones'>('connections');
 	let dataAttributionLink: string | undefined = $state(undefined);
 	let showMap = $state(!isSmallScreen);
-	let last_selected_itinerary: Itinerary | undefined = undefined;
+	let lastSelectedItinerary: Itinerary | undefined = undefined;
+	let lastOneToAllQuery: OneToAllData | undefined = undefined;
 
 	let theme: 'light' | 'dark' =
 		(hasDark ? 'dark' : hasLight ? 'light' : undefined) ??
@@ -204,14 +205,17 @@
 		urlParams?.get('ignoreDirectRentalReturnConstraints') == 'true'
 	);
 	let slowDirect = $state(urlParams?.get('slowDirect') == 'true');
-	let isochronesColor = $state<string>(
-		urlParams?.get('isochronesColor') ?? defaultQuery.isochronesColor
-	);
-	let isochronesOpacity = $state<number>(
-		parseIntOr(urlParams?.get('isochronesOpacity'), defaultQuery.isochronesOpacity)
-	);
 
 	let isochronesData = $state<IsochronesPos[]>([]);
+	let isochronesOptions = $state<IsochronesOptions>({
+		preferredDisplayLevel:
+			(urlParams?.get('isochronesPreferredLevel') as DisplayLevel) ??
+			defaultQuery.isochronesDisplayLevel,
+		maxDisplayLevel:
+			(urlParams?.get('isochronesMaxLevel') as DisplayLevel) ?? defaultQuery.isochronesDisplayLevel,
+		color: urlParams?.get('isochronesColor') ?? defaultQuery.isochronesColor,
+		opacity: parseIntOr(urlParams?.get('isochronesOpacity'), defaultQuery.isochronesOpacity)
+	});
 
 	const toPlaceString = (l: Location) => {
 		if (l.match?.type === 'STOP') {
@@ -277,8 +281,8 @@
 						requireCarTransport,
 						preTransitModes: prePostModesToModes(preTransitModes),
 						postTransitModes: prePostModesToModes(postTransitModes),
-						maxPreTransitTime: maxPreTransitTime,
-						maxPostTransitTime: maxPostTransitTime,
+						maxPreTransitTime,
+						maxPostTransitTime,
 						elevationCosts,
 						maxMatchingDistance: pedestrianProfile == 'WHEELCHAIR' ? 8 : 250,
 						ignorePreTransitRentalReturnConstraints,
@@ -315,39 +319,49 @@
 	let isochronesQueryTimeout: number;
 	$effect(() => {
 		if (isochronesQuery && activeTab == 'isochrones') {
-			clearTimeout(isochronesQueryTimeout);
-			isochronesQueryTimeout = setTimeout(() => {
-				oneToAll(isochronesQuery).then(
-					(r: { data: OneToAllResponse | undefined; error: unknown }) => {
-						if (r.error) {
-							throw new Error(String(r.error));
-						}
-						const all = r.data!.all!.map((p: ReachablePlace) => {
-							return {
-								lat: p.place?.lat,
-								lng: p.place?.lon,
-								seconds: maxTravelTime - 60 * (p.duration ?? 0),
-								name: p.place?.name
-							} as IsochronesPos;
-						});
-						untrack(() => {
-							isochronesData = [...all];
-						});
-					}
-				);
+			const updateQuery = () => {
 				const q = isochronesQuery.query;
 				pushStateWithQueryString(
 					{
 						...q,
 						...(q.one == one.label ? {} : { oneName: one.label }),
 						maxTravelTime: q.maxTravelTime * 60,
-						isochronesColor,
-						isochronesOpacity
+						isochronesColor: isochronesOptions.color,
+						isochronesOpacity: isochronesOptions.opacity,
+						isochronesPreferredLevel: isochronesOptions.preferredDisplayLevel,
+						isochronesMaxLevel: isochronesOptions.maxDisplayLevel
 					},
 					{},
 					true
 				);
-			}, 60);
+			};
+			if (lastOneToAllQuery != isochronesQuery) {
+				lastOneToAllQuery = isochronesQuery;
+				clearTimeout(isochronesQueryTimeout);
+				isochronesQueryTimeout = setTimeout(() => {
+					oneToAll(isochronesQuery).then(
+						(r: { data: OneToAllResponse | undefined; error: unknown }) => {
+							if (r.error) {
+								throw new Error(String(r.error));
+							}
+							const all = r.data!.all!.map((p: ReachablePlace) => {
+								return {
+									lat: p.place?.lat,
+									lng: p.place?.lon,
+									seconds: maxTravelTime - 60 * (p.duration ?? 0),
+									name: p.place?.name
+								} as IsochronesPos;
+							});
+							untrack(() => {
+								isochronesData = [...all];
+							});
+						}
+					);
+					updateQuery();
+				}, 60);
+			} else {
+				updateQuery();
+			}
 		}
 	});
 
@@ -365,7 +379,7 @@
 	}
 
 	const flyToSelectedItinerary = () => {
-		if (last_selected_itinerary === page.state.selectedItinerary) {
+		if (lastSelectedItinerary === page.state.selectedItinerary) {
 			return;
 		}
 		if (page.state.selectedItinerary && map) {
@@ -386,7 +400,7 @@
 			};
 			map.flyTo({ ...map.cameraForBounds(box, { padding }) });
 		}
-		last_selected_itinerary = page.state.selectedItinerary;
+		lastSelectedItinerary = page.state.selectedItinerary;
 	};
 
 	$effect(flyToSelectedItinerary);
@@ -466,7 +480,7 @@
 					<Tabs.List class="grid grid-cols-3">
 						<Tabs.Trigger value="connections">{t.connections}</Tabs.Trigger>
 						<Tabs.Trigger value="departures">{t.departures}</Tabs.Trigger>
-						<Tabs.Trigger value="isochrones">{t.isochrones}</Tabs.Trigger>
+						<Tabs.Trigger value="isochrones">{t.isochrones.title}</Tabs.Trigger>
 					</Tabs.List>
 					<Tabs.Content value="connections">
 						<Card class="overflow-y-auto overflow-x-hidden bg-background rounded-lg">
@@ -520,8 +534,7 @@
 								bind:elevationCosts
 								bind:ignorePreTransitRentalReturnConstraints
 								bind:ignorePostTransitRentalReturnConstraints
-								bind:color={isochronesColor}
-								bind:opacity={isochronesOpacity}
+								bind:options={isochronesOptions}
 							/>
 						</Card>
 					</Tabs.Content>
@@ -623,7 +636,7 @@
 	</div>
 
 	{#if showMap}
-		<RailViz {map} {bounds} {zoom} />
+		<RailViz {map} {bounds} {zoom} active={activeTab != 'isochrones'} />
 		<Isochrones
 			{map}
 			{bounds}
@@ -632,8 +645,7 @@
 			wheelchair={pedestrianProfile === 'WHEELCHAIR'}
 			maxAllTime={arriveBy ? maxPreTransitTime : maxPostTransitTime}
 			active={activeTab == 'isochrones'}
-			color={isochronesColor}
-			opacity={isochronesOpacity}
+			options={isochronesOptions}
 		/>
 
 		<Popup trigger="contextmenu" children={contextMenu} />

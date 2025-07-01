@@ -24,7 +24,6 @@ const translations: Translations = {
 	earlier: 'plus tôt',
 	departures: 'Départs',
 	connections: 'Itinéraires',
-	isochrones: 'Isochrones',
 	switchToArrivals: 'Afficher les arrivées',
 	switchToDepartures: 'Afficher les départs',
 	track: 'Voie',
@@ -62,7 +61,6 @@ const translations: Translations = {
 	outDisallowed: 'Impossible de descendre',
 	unscheduledTrip: 'Voyage supplémentaire',
 	alertsAvailable: 'Annonces disponibles',
-	isochronesStyling: 'Style pour Isochrone',
 	FLEX: 'Transport à la demande',
 	WALK: 'À pied',
 	BIKE: 'Vélo',
@@ -98,6 +96,15 @@ const translations: Translations = {
 		NONE: 'Pas de détours',
 		LOW: 'Petits détours',
 		HIGH: 'Grands détours'
+	},
+	isochrones: {
+		title: 'Isochrones',
+		displayLevel: 'Couche de présentation',
+		maxComputeLevel: 'Niveau de calcul max.',
+		canvasRects: 'Rectes (Superposer)',
+		canvasCircles: 'Cercles (Superposer)',
+		geojsonCircles: 'Circles (Géométrie)',
+		styling: 'Style pour Isochrone'
 	},
 	RENTAL_BICYCLE: 'Vélo partagé',
 	RENTAL_CARGO_BICYCLE: 'Vélo cargo partagé',

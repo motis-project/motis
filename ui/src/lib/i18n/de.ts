@@ -23,7 +23,6 @@ const translations: Translations = {
 	arrivals: 'Ankünfte',
 	connections: 'Verbindungen',
 	departures: 'Abfahrten',
-	isochrones: 'Isochronen',
 	later: 'später',
 	earlier: 'früher',
 	track: 'Gleis',
@@ -63,7 +62,6 @@ const translations: Translations = {
 	outDisallowed: 'Ausstieg nicht möglich',
 	unscheduledTrip: 'Zusätzliche Fahrt',
 	alertsAvailable: 'Meldungen liegen vor',
-	isochronesStyling: 'Darstellung für Isochrone',
 	FLEX: 'Bedarfsverkehr',
 	WALK: 'Zu Fuß',
 	BIKE: 'Fahrrad',
@@ -96,6 +94,15 @@ const translations: Translations = {
 		maxDirectTime: 'Max. Direktzeit'
 	},
 	elevationCosts: { NONE: 'Keine Umwege', LOW: 'Kleine Umwege', HIGH: 'Große Umwege' },
+	isochrones: {
+		title: 'Isochronen',
+		displayLevel: 'Darstellungsebene',
+		maxComputeLevel: 'Max. Berechnungsebene',
+		canvasRects: 'Rechtecke (Overlay)',
+		canvasCircles: 'Kreise (Overlay)',
+		geojsonCircles: 'Kreise (Geometrie)',
+		styling: 'Darstellung der Isochronen'
+	},
 	RENTAL_BICYCLE: 'Bikesharing',
 	RENTAL_CARGO_BICYCLE: 'Lastenrad Sharing',
 	RENTAL_CAR: 'Car Sharing',

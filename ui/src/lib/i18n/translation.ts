@@ -29,7 +29,6 @@ export type Translations = {
 	arrivals: string;
 	departures: string;
 	connections: string;
-	isochrones: string;
 	switchToArrivals: string;
 	switchToDepartures: string;
 	arrivalOnTrack: string;
@@ -57,7 +56,6 @@ export type Translations = {
 	outDisallowed: string;
 	unscheduledTrip: string;
 	alertsAvailable: string;
-	isochronesStyling: string;
 	FLEX: string;
 	WALK: string;
 	BIKE: string;
@@ -93,6 +91,15 @@ export type Translations = {
 		NONE: string;
 		LOW: string;
 		HIGH: string;
+	};
+	isochrones: {
+		title: string;
+		displayLevel: string;
+		maxComputeLevel: string;
+		canvasRects: string;
+		canvasCircles: string;
+		geojsonCircles: string;
+		styling: string;
 	};
 	RENTAL_BICYCLE: string;
 	RENTAL_CARGO_BICYCLE: string;

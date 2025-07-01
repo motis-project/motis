@@ -25,7 +25,6 @@ const translations: Translations = {
 	earlier: 'wcześniej',
 	departures: 'Odjazdy',
 	connections: 'Połączenia',
-	isochrones: 'Isochrones',
 	switchToArrivals: 'Przełącz na przyjazdy',
 	switchToDepartures: 'Przełącz na odjazdy',
 	track: 'Tor',
@@ -62,7 +61,6 @@ const translations: Translations = {
 	outDisallowed: 'Exit not possible',
 	unscheduledTrip: 'Additional service',
 	alertsAvailable: 'Service alerts present',
-	isochronesStyling: 'Isochrones styling',
 	FLEX: 'Transport na żądanie',
 	WALK: 'Walking',
 	BIKE: 'Bike',
@@ -98,6 +96,15 @@ const translations: Translations = {
 		NONE: 'No detours',
 		LOW: 'Small detours',
 		HIGH: 'Large detours'
+	},
+	isochrones: {
+		title: 'Isochrones',
+		displayLevel: 'Display level',
+		maxComputeLevel: 'Max. computation level',
+		canvasRects: 'Rects (Overlay)',
+		canvasCircles: 'Circles (Overlay)',
+		geojsonCircles: 'Circles (Geometry)',
+		styling: 'Isochrones styling'
 	},
 	RENTAL_BICYCLE: 'Rower współdzielony',
 	RENTAL_CARGO_BICYCLE: 'Rower cargo współdzielony',

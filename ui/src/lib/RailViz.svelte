@@ -22,11 +22,13 @@
 	let {
 		map,
 		bounds,
-		zoom
+		zoom,
+		active
 	}: {
 		map: maplibregl.Map | undefined;
 		bounds: maplibregl.LngLatBoundsLike | undefined;
 		zoom: number;
+		active: boolean;
 	} = $props();
 
 	let colorMode = $state<'rt' | 'route'>('route');
@@ -240,6 +242,9 @@
 	let timer: number | undefined;
 	let overlay = $state.raw<MapboxOverlay>();
 	const updateRailviz = async () => {
+		if (!active) {
+			return;
+		}
 		await updateRailvizLayer();
 		clearTimeout(timer); // Ensure previous timer is cleared
 		timer = setTimeout(() => {
@@ -265,7 +270,7 @@
 				interleaved: true,
 				layers: [],
 				getTooltip: ({ object }) => {
-					if (!object) {
+					if (!object || !active) {
 						return null;
 					}
 					return {
@@ -290,11 +295,21 @@
 	});
 
 	$effect(() => {
-		if (overlay && bounds && zoom && colorMode) {
+		if (active && overlay && bounds && zoom && colorMode) {
 			untrack(() => {
 				console.log(`updateRailviz: effect ${overlay} ${bounds} ${zoom} ${colorMode}`);
 				updateRailviz();
 			});
+		}
+	});
+
+	$effect(() => {
+		if (map) {
+			// Evaluate before 'if', as state might not be tracked otherwise
+			const visibility = active ? 'visible' : 'none';
+			if (map?.getLayer('trips')) {
+				map.setLayoutProperty('trips', 'visibility', visibility);
+			}
 		}
 	});
 
