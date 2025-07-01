@@ -778,6 +778,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                   query.requireCarTransport_ && query.useRoutedTransfers_,
                   query.pedestrianProfile_, query.elevationCosts_,
                   query.detailedTransfers_, query.withFares_,
+                  query.withScheduledSkippedStops_,
                   config_.timetable_.value().max_matching_distance_,
                   query.maxMatchingDistance_, api_version,
                   query.ignorePreTransitRentalReturnConstraints_,
