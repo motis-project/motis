@@ -76,10 +76,9 @@
 		['OVERLAY_CIRCLES', t.isochrones.canvasCircles],
 		['GEOMETRY_CIRCLES', t.isochrones.geojsonCircles]
 	]);
-	const possibleDisplayLevels = displayLevels
-		.entries()
-		.map(([id, label]) => ({ value: id, label: label }))
-		.toArray();
+	const possibleDisplayLevels = [
+		...[...displayLevels.entries()].map(([id, label]) => ({ value: id, label: label }))
+	];
 
 	let oneItems = $state<Array<Location>>([]);
 
