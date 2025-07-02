@@ -58,8 +58,9 @@ api::Itinerary trip::operator()(boost::urls::url_view const& url) const {
                   from_l.get_scheduled_location_idx()},
       tt_location{to_l.get_location_idx()}, cache, &blocked, false,
       api::PedestrianProfileEnum::FOOT, api::ElevationCostsEnum::NONE, false,
-      false, config_.timetable_.value().max_matching_distance_,
-      kMaxMatchingDistance, api_version, false, false);
+      false, query.withScheduledSkippedStops_,
+      config_.timetable_.value().max_matching_distance_, kMaxMatchingDistance,
+      api_version, false, false);
 }
 
 }  // namespace motis::ep
