@@ -356,10 +356,11 @@ api::Itinerary journey_to_response(
                     .to_ = to_place(exit_stop, n::event_type::kArr),
                     .duration_ =
                         std::chrono::duration_cast<std::chrono::seconds>(
-                            j_leg.arr_time_ - j_leg.dep_time_)
+                            exit_stop.time(n::event_type::kArr) -
+                            enter_stop.time(n::event_type::kDep))
                             .count(),
-                    .startTime_ = j_leg.dep_time_,
-                    .endTime_ = j_leg.arr_time_,
+                    .startTime_ = enter_stop.time(n::event_type::kDep),
+                    .endTime_ = exit_stop.time(n::event_type::kArr),
                     .scheduledStartTime_ =
                         enter_stop.scheduled_time(n::event_type::kDep),
                     .scheduledEndTime_ =
