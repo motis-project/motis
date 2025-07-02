@@ -25,6 +25,7 @@ export const defaultQuery = {
 	requireCarTransport: false,
 	elevationCosts: 'NONE',
 	useRoutedTransfers: false,
+	joinInterlinedLegs: true,
 	maxMatchingDistance: 25,
 	maxPreTransitTime: 900,
 	maxPostTransitTime: 900,

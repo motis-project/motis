@@ -202,6 +202,7 @@
 						slowDirect,
 						fastestDirectFactor: 1.5,
 						pedestrianProfile,
+						joinInterlinedLegs: false,
 						transitModes:
 							transitModes.length == possibleTransitModes.length
 								? defaultQuery.transitModes

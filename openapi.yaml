@@ -233,6 +233,19 @@ paths:
             type: boolean
             default: true
 
+        - name: joinInterlinedLegs
+          in: query
+          description: |
+            Optional. Default is `true`.
+            
+            Controls if a journey section with stay-seated transfers is returned:
+            - `joinInterlinedLegs=false`: as several legs (full information about all trip numbers, headsigns, etc.).
+              Legs that do not require a transfer (stay-seated transfer) are marked with `interlineWithPreviousLeg=true`.
+            - `joinInterlinedLegs=true` (default behavior): as only one joined leg containing all stops
+          schema:
+            type: boolean
+            default: true
+
         - name: transitModes
           in: query
           required: false
@@ -673,7 +686,7 @@ paths:
           schema:
             type: boolean
             default: false
-        
+
         - name: withScheduledSkippedStops
           in: query
           required: false
