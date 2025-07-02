@@ -1,5 +1,6 @@
 #include "motis/endpoints/stop_times.h"
 
+#include <algorithm>
 #include <memory>
 
 #include "utl/concat.h"
@@ -20,7 +21,6 @@
 #include "motis/timetable/clasz_to_mode.h"
 #include "motis/timetable/modes_to_clasz_mask.h"
 #include "motis/timetable/time_conv.h"
-#include "utl/pipes/unique.h"
 
 namespace n = nigiri;
 
