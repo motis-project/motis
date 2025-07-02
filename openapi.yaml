@@ -677,7 +677,7 @@ paths:
           description: Optional. Experimental. Adds overtaken direct connections.
           schema:
             type: boolean
-            default: false
+            default: true
 
         - name: withFares
           in: query

@@ -177,7 +177,7 @@
 	let ignoreDirectRentalReturnConstraints = $state(
 		urlParams?.get('ignoreDirectRentalReturnConstraints') == 'true'
 	);
-	let slowDirect = $state(urlParams?.get('slowDirect') == 'true');
+	let slowDirect = $state(urlParams?.get('slowDirect') != 'false');
 
 	const toPlaceString = (l: Location) => {
 		if (l.match?.type === 'STOP') {
