@@ -55,27 +55,42 @@ void copy_stop_times(hash_set<std::string> const& trip_ids,
   fmt::println("  stop_times.txt: lines written: {}", n_lines);
 }
 
-void copy_stops(hash_set<std::string> const& stop_ids,
+void copy_stops(hash_set<std::string>& stop_ids,
                 std::string_view file_content,
                 std::ostream& out) {
   struct csv_stop {
     utl::csv_col<utl::cstr, UTL_NAME("stop_id")> stop_id_;
+    utl::csv_col<utl::cstr, UTL_NAME("parent_station")> parent_station_;
   };
 
-  auto n_lines = 0U;
-  auto reader = utl::make_buf_reader(file_content);
-  auto line = reader.read_line();
-  auto const header_permutation = utl::read_header<csv_stop>(line);
-  out << line.view() << "\n";
-  while ((line = reader.read_line())) {
-    auto const row = utl::read_row<csv_stop>(header_permutation, line);
-    if (stop_ids.contains(row.stop_id_->view())) {
-      out << line.view() << "\n";
-      ++n_lines;
+  {  // First pass: collect parents.
+    auto reader = utl::make_buf_reader(file_content);
+    auto line = reader.read_line();
+    auto const header_permutation = utl::read_header<csv_stop>(line);
+    while ((line = reader.read_line())) {
+      auto const row = utl::read_row<csv_stop>(header_permutation, line);
+      if (!row.parent_station_->empty() &&
+          stop_ids.contains(row.stop_id_->view())) {
+        stop_ids.emplace(row.parent_station_->view());
+      }
     }
   }
 
-  fmt::println("  stops.txt: lines written: {}", n_lines);
+  {  // Second pass: copy contents.
+    auto n_lines = 0U;
+    auto reader = utl::make_buf_reader(file_content);
+    auto line = reader.read_line();
+    auto const header_permutation = utl::read_header<csv_stop>(line);
+    out << line.view() << "\n";
+    while ((line = reader.read_line())) {
+      auto const row = utl::read_row<csv_stop>(header_permutation, line);
+      if (stop_ids.contains(row.stop_id_->view())) {
+        out << line.view() << "\n";
+        ++n_lines;
+      }
+    }
+    fmt::println("  stops.txt: lines written: {}", n_lines);
+  }
 }
 
 void copy_trips(hash_set<std::string> const& trip_ids,
@@ -274,6 +289,9 @@ int extract(int ac, char** av) {
     auto const stop_times_path = fs::path{stop_times_str};
 
     stop_ids.clear();
+    route_ids.clear();
+    service_ids.clear();
+    agency_ids.clear();
 
     utl::verify(stop_times_path.filename() == "stop_times.txt",
                 "expected filename stop_times.txt, got \"{}\"",

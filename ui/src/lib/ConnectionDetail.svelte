@@ -58,9 +58,18 @@
 			</Button>
 			{@const pickupNotAllowedOrEnd = p.pickupType == 'NOT_ALLOWED' && isStartOrEnd != -1}
 			{@const dropoffNotAllowedOrStart = p.dropoffType == 'NOT_ALLOWED' && isStartOrEnd != 1}
+			{#if (p as Place & { switchTo?: Leg }).switchTo}
+				{@const switchTo = (p as Place & { switchTo: Leg }).switchTo}
+				<div class="ml-4 flex items-center text-sm">
+					{t.continuesAs}
+					{switchTo.routeShortName!}
+					<ArrowRight class="mx-1 size-4" />
+					{switchTo.headsign}
+				</div>
+			{/if}
 			{#if pickupNotAllowedOrEnd || dropoffNotAllowedOrStart}
 				<div class="ml-4 flex items-center text-destructive text-sm">
-					<CircleX class="stroke-destructive h-4 w-4" />
+					<CircleX class="stroke-destructive size-4" />
 					<span class="ml-1 leading-none">
 						{pickupNotAllowedOrEnd && dropoffNotAllowedOrStart
 							? t.inOutDisallowed
@@ -254,12 +263,12 @@
 					{@render stopTimes(l.startTime, l.scheduledStartTime, l.realTime, l.from, 1)}
 				</div>
 				<div class="mt-2 flex items-center text-muted-foreground leading-none">
-					<ArrowRight class="stroke-muted-foreground h-4 w-4" />
+					<ArrowRight class="stroke-muted-foreground size-4" />
 					<span class="ml-1">{l.headsign}</span>
 				</div>
 				{#if l.cancelled}
 					<div class="mt-2 flex items-center text-destructive leading-none">
-						<CircleX class="stroke-destructive h-4 w-4" />
+						<CircleX class="stroke-destructive size-4" />
 						<span class="ml-1 font-bold">{t.tripCancelled}</span>
 					</div>
 				{/if}
@@ -284,10 +293,10 @@
 					{@render ticketInfo(prevTransitLeg, l)}
 				{:else}
 					{@render ticketInfo(prevTransitLeg, l)}
-					<details class="[&_svg]:open:-rotate-180 my-2">
+					<details class="[&_.collapsible]:open:-rotate-180 my-2">
 						<summary class="py-8 pl-1 md:pl-4 flex items-center text-muted-foreground">
 							<svg
-								class="rotate-0 transform transition-all duration-300"
+								class="collapsible rotate-0 transform transition-all duration-300"
 								fill="none"
 								height="20"
 								width="20"
@@ -344,8 +353,6 @@
 					</div>
 				{/if}
 			</div>
-		{:else}
-			Skip {l.mode}
 		{/if}
 	{/each}
 	<div class="relative pl-6 left-4">

@@ -106,7 +106,8 @@ const translations: Translations = {
 	},
 	incline: 'Incline',
 	toll: 'Warning! A fee must be paid to use this route.',
-	accessRestriction: 'No access'
+	accessRestriction: 'No access',
+	continuesAs: 'Continues as'
 };
 
 export default translations;
