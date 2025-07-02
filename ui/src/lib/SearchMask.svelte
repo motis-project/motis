@@ -21,6 +21,7 @@
 		arriveBy = $bindable(),
 		pedestrianProfile = $bindable(),
 		useRoutedTransfers = $bindable(),
+		maxTransfers = $bindable(),
 		requireCarTransport = $bindable(),
 		requireBikeTransport = $bindable(),
 		transitModes = $bindable(),
@@ -42,6 +43,7 @@
 		arriveBy: boolean;
 		pedestrianProfile: PedestrianProfile;
 		useRoutedTransfers: boolean;
+		maxTransfers: number | undefined;
 		requireCarTransport: boolean;
 		requireBikeTransport: boolean;
 		transitModes: TransitMode[];
@@ -140,6 +142,7 @@
 		</RadioGroup.Root>
 		<AdvancedOptions
 			bind:useRoutedTransfers
+			bind:maxTransfers
 			bind:wheelchair={
 				() => pedestrianProfile === 'WHEELCHAIR',
 				(v) => (pedestrianProfile = v ? 'WHEELCHAIR' : 'FOOT')
