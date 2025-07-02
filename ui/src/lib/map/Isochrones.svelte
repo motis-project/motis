@@ -9,7 +9,6 @@
 		isLess,
 		minDisplayLevel,
 		type DisplayLevel,
-		type Geometry,
 		type IsochronesOptions,
 		type IsochronesPos
 	} from '$lib/map/IsochronesShared';
