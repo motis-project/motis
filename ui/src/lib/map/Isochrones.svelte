@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import maplibregl from 'maplibre-gl';
 	import type { CanvasSource, GeoJSONSource, LngLatBoundsLike, Map } from 'maplibre-gl';
 	import type { GeoJSON } from 'geojson';
@@ -76,10 +77,14 @@
 	]);
 
 	let lastData: IsochronesPos[] = [];
-	let lastMaxAllTime: number = maxAllTime;
-	// svelte-ignore state_referenced_locally
-	let lastSpeed: number = kilometersPerSecond;
+	let lastMaxAllTime: number = 0;
+	let lastSpeed: number = 0;
 	let dataIndex = 0;
+
+	onMount(() => {
+		lastMaxAllTime = maxAllTime;
+		lastSpeed = kilometersPerSecond;
+	});
 
 	// Setup objects
 	$effect(() => {
