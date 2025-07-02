@@ -50,7 +50,6 @@
 		  }
 		| undefined
 	>(undefined);
-	let circlesGeometry = $state<Geometry | GeoJSON>(emptyGeometry);
 	let bestAvailableDisplayLevel = $state<DisplayLevel>('NONE');
 
 	const kilometersPerSecond = $derived(
@@ -147,8 +146,8 @@
 							return;
 						}
 						const level: DisplayLevel = event.data.level;
-						if (level == 'GEOMETRY_CIRCLES') {
-							circlesGeometry = event.data.geometry ?? emptyGeometry;
+						if (level == 'GEOMETRY_CIRCLES' && objects) {
+							objects.circlesSource.setData(event.data.geometry ?? emptyGeometry);
 						}
 						if (isLess(bestAvailableDisplayLevel, level)) {
 							bestAvailableDisplayLevel = level;
@@ -201,8 +200,8 @@
 			lastMaxAllTime = maxAllTime;
 			lastSpeed = kilometersPerSecond;
 
-			circlesGeometry = emptyGeometry;
 			bestAvailableDisplayLevel = 'NONE';
+			objects.circlesSource.setData(emptyGeometry);
 		}
 
 		objects.worker.postMessage({
@@ -240,13 +239,6 @@
 			return;
 		}
 		map.setPaintProperty(objects.circlesLayer, 'fill-color', options.color);
-	});
-
-	$effect(() => {
-		if (!map || objects === undefined) {
-			return;
-		}
-		objects.circlesSource.setData(circlesGeometry);
 	});
 
 	let currentDisplayLevel = $derived.by<DisplayLevel>(() => {
