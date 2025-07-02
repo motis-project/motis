@@ -341,7 +341,9 @@ api::stoptimes_response stop_times::operator()(
 
   auto const to_tuple = [&](n::rt::run const& x) {
     auto const fr_a = n::rt::frun{tt_, rtt, x};
-    return std::tuple{fr_a[0].time(ev_type), fr_a[0].get_trip_idx(ev_type)};
+    return std::tuple{fr_a[0].time(ev_type), fr_a.is_scheduled()
+                                                 ? fr_a[0].get_trip_idx(ev_type)
+                                                 : n::trip_idx_t::invalid()};
   };
   utl::sort(events, [&](n::rt::run const& a, n::rt::run const& b) {
     return to_tuple(a) < to_tuple(b);
