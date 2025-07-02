@@ -42,7 +42,7 @@
 	import { lngLatToStr } from '$lib/lngLatToStr';
 	import { client } from '$lib/api/openapi';
 	import StopTimes from '$lib/StopTimes.svelte';
-	import { onMount, tick } from 'svelte';
+	import { onMount, tick, untrack } from 'svelte';
 	import RailViz from '$lib/RailViz.svelte';
 	import MapIcon from 'lucide-svelte/icons/map';
 	import { t } from '$lib/i18n/translation';
@@ -318,22 +318,12 @@
 	let isochronesQueryTimeout: number;
 	$effect(() => {
 		if (isochronesQuery && activeTab == 'isochrones') {
-			const updateQuery = () => {
-				const q = isochronesQuery.query;
-				pushStateWithQueryString(
-					{
-						...q,
-						...(q.one == one.label ? {} : { oneName: one.label }),
-						maxTravelTime: q.maxTravelTime * 60,
-						isochronesColor: isochronesOptions.color,
-						isochronesOpacity: isochronesOptions.opacity,
-						isochronesPreferredLevel: isochronesOptions.preferredDisplayLevel,
-						isochronesMaxLevel: isochronesOptions.maxDisplayLevel
-					},
-					{},
-					true
-				);
-			};
+			const [isochronesColor, isochronesOpacity, isochronesPreferredLevel, isochronesMaxLevel] = [
+				isochronesOptions.color,
+				isochronesOptions.opacity,
+				isochronesOptions.preferredDisplayLevel,
+				isochronesOptions.maxDisplayLevel
+			];
 			if (lastOneToAllQuery != isochronesQuery) {
 				lastOneToAllQuery = isochronesQuery;
 				clearTimeout(isochronesQueryTimeout);
@@ -354,11 +344,24 @@
 							isochronesData = [...all];
 						}
 					);
-					updateQuery();
 				}, 60);
-			} else {
-				updateQuery();
 			}
+			untrack(() => {
+				const q = isochronesQuery.query;
+				pushStateWithQueryString(
+					{
+						...q,
+						...(q.one == one.label ? {} : { oneName: one.label }),
+						maxTravelTime: q.maxTravelTime * 60,
+						isochronesColor,
+						isochronesOpacity,
+						isochronesPreferredLevel,
+						isochronesMaxLevel
+					},
+					{},
+					true
+				);
+			});
 		}
 	});
 
