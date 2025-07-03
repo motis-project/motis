@@ -126,6 +126,18 @@ struct rt_metric_families {
                 .Name("nigiri_vdvaus_unsupported_additional_runs_total")
                 .Help("Number of additional stops in the VDV AUS feed")
                 .Register(registry)},
+        vdvaus_current_matches_total_{
+            prometheus::BuildGauge()
+                .Name("nigiri_vdvaus_current_matches_total")
+                .Help("Current number of unique run IDs for which matching "
+                      "was performed")
+                .Register(registry)},
+        vdvaus_current_matches_non_empty_{
+            prometheus::BuildGauge()
+                .Name("nigiri_vdvaus_current_matches_non_empty_total")
+                .Help("Current number of unique run IDs for which a matching "
+                      "was performed and a non-empty result was achieved")
+                .Register(registry)},
         vdvaus_total_runs_{prometheus::BuildGauge()
                                .Name("nigiri_vdvaus_total_runs_total")
                                .Help("Total number of runs in the VDV AUS feed")
@@ -251,6 +263,8 @@ struct rt_metric_families {
 
   prometheus::Family<prometheus::Gauge>& vdvaus_unsupported_additional_runs_;
   prometheus::Family<prometheus::Gauge>& vdvaus_unsupported_additional_stops_;
+  prometheus::Family<prometheus::Gauge>& vdvaus_current_matches_total_;
+  prometheus::Family<prometheus::Gauge>& vdvaus_current_matches_non_empty_;
   prometheus::Family<prometheus::Gauge>& vdvaus_total_runs_;
   prometheus::Family<prometheus::Gauge>& vdvaus_complete_runs_;
   prometheus::Family<prometheus::Gauge>& vdvaus_unique_runs_;
@@ -338,6 +352,10 @@ struct vdvaus_metrics {
             m.vdvaus_unsupported_additional_runs_.Add({{"tag", tag}})},
         unsupported_additional_stops_{
             m.vdvaus_unsupported_additional_stops_.Add({{"tag", tag}})},
+        current_matches_total_{
+            m.vdvaus_current_matches_total_.Add({{"tag", tag}})},
+        current_matches_non_empty_{
+            m.vdvaus_current_matches_non_empty_.Add({{"tag", tag}})},
         total_runs_{m.vdvaus_total_runs_.Add({{"tag", tag}})},
         complete_runs_{m.vdvaus_complete_runs_.Add({{"tag", tag}})},
         unique_runs_{m.vdvaus_unique_runs_.Add({{"tag", tag}})},
@@ -362,6 +380,9 @@ struct vdvaus_metrics {
   void update(nigiri::rt::vdv_aus::statistics const& stats) const {
     unsupported_additional_runs_.Set(stats.unsupported_additional_runs_);
     unsupported_additional_stops_.Set(stats.unsupported_additional_stops_);
+    current_matches_total_.Set(
+        static_cast<double>(stats.current_matches_total_));
+    current_matches_non_empty_.Set(stats.current_matches_non_empty_);
     total_runs_.Set(stats.total_runs_);
     complete_runs_.Set(stats.complete_runs_);
     unique_runs_.Set(stats.unique_runs_);
@@ -385,6 +406,8 @@ struct vdvaus_metrics {
 
   prometheus::Gauge& unsupported_additional_runs_;
   prometheus::Gauge& unsupported_additional_stops_;
+  prometheus::Gauge& current_matches_total_;
+  prometheus::Gauge& current_matches_non_empty_;
   prometheus::Gauge& total_runs_;
   prometheus::Gauge& complete_runs_;
   prometheus::Gauge& unique_runs_;
