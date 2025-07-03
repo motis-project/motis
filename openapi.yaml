@@ -233,6 +233,19 @@ paths:
             type: boolean
             default: true
 
+        - name: joinInterlinedLegs
+          in: query
+          description: |
+            Optional. Default is `true`.
+            
+            Controls if a journey section with stay-seated transfers is returned:
+            - `joinInterlinedLegs=false`: as several legs (full information about all trip numbers, headsigns, etc.).
+              Legs that do not require a transfer (stay-seated transfer) are marked with `interlineWithPreviousLeg=true`.
+            - `joinInterlinedLegs=true` (default behavior): as only one joined leg containing all stops
+          schema:
+            type: boolean
+            default: true
+
         - name: transitModes
           in: query
           required: false
@@ -664,12 +677,20 @@ paths:
           description: Optional. Experimental. Adds overtaken direct connections.
           schema:
             type: boolean
-            default: false
+            default: true
 
         - name: withFares
           in: query
           required: false
           description: Optional. Experimental. If set to true, the response will contain fare information.
+          schema:
+            type: boolean
+            default: false
+
+        - name: withScheduledSkippedStops
+          in: query
+          required: false
+          description: Optional. Include intermediate stops where passengers can not alight/board according to schedule.
           schema:
             type: boolean
             default: false
@@ -1185,6 +1206,13 @@ paths:
             type: string
           required: true
           description: trip identifier (e.g. from an itinerary leg or stop event)
+        - name: withScheduledSkippedStops
+          in: query
+          required: false
+          description: Optional. Include intermediate stops where passengers can not alight/board according to schedule.
+          schema:
+            type: boolean
+            default: false
       responses:
         200:
           description: the requested trip as itinerary
@@ -1301,6 +1329,14 @@ paths:
             This will enable you to search for stop times in the next or previous time-window.
           schema:
             type: string
+
+        - name: withScheduledSkippedStops
+          in: query
+          required: false
+          description: Optional. Include stoptimes where passengers can not alight/board according to schedule.
+          schema:
+            type: boolean
+            default: false
       responses:
         200:
           description: A list of departures/arrivals
@@ -1310,6 +1346,7 @@ paths:
                 type: object
                 required:
                   - stopTimes
+                  - place
                   - previousPageCursor
                   - nextPageCursor
                 properties:
@@ -1318,6 +1355,9 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/StopTime'
+                  place:
+                    description: metadata of the requested stop
+                    $ref: '#/components/schemas/Place'
                   previousPageCursor:
                     description: |
                       Use the cursor to get the previous page of results. Insert the cursor into the request and post it to get the previous page.
@@ -1802,7 +1842,7 @@ components:
           - `AIRPLANE`: airline flights
           - `BUS`: short distance buses (does not include `COACH`)
           - `COACH`: long distance buses (does not include `BUS`)
-          - `RAIL`: translates to `HIGHSPEED_RAIL,LONG_DISTANCE_RAIL,NIGHT_RAIL,REGIONAL_RAIL,REGIONAL_FAST_RAIL`
+          - `RAIL`: translates to `HIGHSPEED_RAIL,LONG_DISTANCE,NIGHT_RAIL,REGIONAL_RAIL,REGIONAL_FAST_RAIL`
           - `METRO`: metro trains 
           - `HIGHSPEED_RAIL`: long distance high speed trains (e.g. TGV)
           - `LONG_DISTANCE`: long distance inter city trains
@@ -1993,6 +2033,7 @@ components:
         - routeShortName
         - pickupDropoffType
         - cancelled
+        - tripCancelled
         - source
       properties:
         place:
@@ -2027,7 +2068,10 @@ components:
           description: Type of pickup (for departures) or dropoff (for arrivals), may be disallowed either due to schedule, skipped stops or cancellations
           $ref: '#/components/schemas/PickupDropoffType'
         cancelled:
-          description: Whether the departure/arrival is cancelled due to the realtime situation.
+          description: Whether the departure/arrival is cancelled due to the realtime situation (either because the stop is skipped or because the entire trip is cancelled).
+          type: boolean
+        tripCancelled:
+          description: Whether the entire trip is cancelled due to the realtime situation.
           type: boolean
         source:
           description: Filename and line number where this trip is from

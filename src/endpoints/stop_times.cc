@@ -1,5 +1,6 @@
 #include "motis/endpoints/stop_times.h"
 
+#include <algorithm>
 #include <memory>
 
 #include "utl/concat.h"
@@ -192,7 +193,8 @@ std::vector<n::rt::run> get_events(
     n::event_type const ev_type,
     n::direction const dir,
     std::size_t const count,
-    n::routing::clasz_mask_t const allowed_clasz) {
+    n::routing::clasz_mask_t const allowed_clasz,
+    bool const with_scheduled_skipped_stops) {
   auto iterators = std::vector<std::unique_ptr<ev_iterator>>{};
 
   if (rtt != nullptr) {
@@ -204,6 +206,24 @@ std::vector<n::rt::run> get_events(
               ((ev_type == n::event_type::kDep &&
                 stop_idx != location_seq.size() - 1U) ||
                (ev_type == n::event_type::kArr && stop_idx != 0U))) {
+            if (!with_scheduled_skipped_stops) {
+              auto const fr = n::rt::frun{
+                  tt, rtt,
+                  n::rt::run{
+                      .stop_range_ = {static_cast<n::stop_idx_t>(stop_idx),
+                                      static_cast<n::stop_idx_t>(stop_idx +
+                                                                 1U)},
+                      .rt_ = rt_t}};
+              auto const frs = fr[0];
+              if ((ev_type == n::event_type::kDep &&
+                   !frs.get_scheduled_stop().in_allowed() &&
+                   !frs.in_allowed()) ||
+                  (ev_type == n::event_type::kArr &&
+                   !frs.get_scheduled_stop().out_allowed() &&
+                   !frs.out_allowed())) {
+                continue;
+              }
+            }
             iterators.emplace_back(std::make_unique<rt_ev_iterator>(
                 *rtt, rt_t, static_cast<n::stop_idx_t>(stop_idx), time, ev_type,
                 dir, allowed_clasz));
@@ -223,8 +243,10 @@ std::vector<n::rt::run> get_events(
       for (auto const [stop_idx, s] : utl::enumerate(location_seq)) {
         if (n::stop{s}.location_idx() == x &&
             ((ev_type == n::event_type::kDep &&
-              stop_idx != location_seq.size() - 1U) ||
-             (ev_type == n::event_type::kArr && stop_idx != 0U)) &&
+              stop_idx != location_seq.size() - 1U &&
+              (with_scheduled_skipped_stops || n::stop{s}.in_allowed())) ||
+             (ev_type == n::event_type::kArr && stop_idx != 0U &&
+              (with_scheduled_skipped_stops || n::stop{s}.out_allowed()))) &&
             seen.emplace(r, static_cast<n::stop_idx_t>(stop_idx)).second) {
           iterators.emplace_back(std::make_unique<static_ev_iterator>(
               tt, rtt, r, static_cast<n::stop_idx_t>(stop_idx), time, ev_type,
@@ -314,12 +336,23 @@ api::stoptimes_response stop_times::operator()(
   auto const ev_type =
       query.arriveBy_ ? n::event_type::kArr : n::event_type::kDep;
   auto events = get_events(locations, tt_, rtt, time, ev_type, dir,
-                           static_cast<std::size_t>(query.n_), allowed_clasz);
+                           static_cast<std::size_t>(query.n_), allowed_clasz,
+                           query.withScheduledSkippedStops_);
+
+  auto const to_tuple = [&](n::rt::run const& x) {
+    auto const fr_a = n::rt::frun{tt_, rtt, x};
+    return std::tuple{fr_a[0].time(ev_type), fr_a.is_scheduled()
+                                                 ? fr_a[0].get_trip_idx(ev_type)
+                                                 : n::trip_idx_t::invalid()};
+  };
   utl::sort(events, [&](n::rt::run const& a, n::rt::run const& b) {
-    auto const fr_a = n::rt::frun{tt_, rtt, a};
-    auto const fr_b = n::rt::frun{tt_, rtt, b};
-    return fr_a[0].time(ev_type) < fr_b[0].time(ev_type);
+    return to_tuple(a) < to_tuple(b);
   });
+  events.erase(std::unique(begin(events), end(events),
+                           [&](n::rt::run const& a, n::rt::run const& b) {
+                             return to_tuple(a) == to_tuple(b);
+                           }),
+               end(events));
   return {
       .stopTimes_ = utl::to_vec(
           events,
@@ -327,9 +360,8 @@ api::stoptimes_response stop_times::operator()(
             auto const fr = n::rt::frun{tt_, rtt, r};
             auto const s = fr[0];
             auto const& agency = s.get_provider(ev_type);
-            auto place = to_place(&tt_, &tags_, w_, pl_, matches_,
-                                  tt_location{s.get_location_idx(),
-                                              s.get_scheduled_location_idx()});
+            auto const run_cancelled = fr.is_cancelled();
+            auto place = to_place(&tt_, &tags_, w_, pl_, matches_, s);
             place.alerts_ =
                 get_alerts(fr, std::pair{s, fr.stop_range_.from_ != 0U
                                                 ? n::event_type::kArr
@@ -344,11 +376,11 @@ api::stoptimes_response stop_times::operator()(
                   s.scheduled_time(n::event_type::kDep)};
             }
             auto const in_out_allowed =
-                !fr.is_cancelled() &&
+                !run_cancelled &&
                 (ev_type == n::event_type::kArr ? s.out_allowed()
                                                 : s.in_allowed());
             auto const stop_cancelled =
-                fr.is_cancelled() ||
+                run_cancelled ||
                 (ev_type == n::event_type::kArr
                      ? !s.out_allowed() && s.get_scheduled_stop().out_allowed()
                      : !s.in_allowed() && s.get_scheduled_stop().in_allowed());
@@ -370,8 +402,10 @@ api::stoptimes_response stop_times::operator()(
                     in_out_allowed ? api::PickupDropoffTypeEnum::NORMAL
                                    : api::PickupDropoffTypeEnum::NOT_ALLOWED,
                 .cancelled_ = stop_cancelled,
+                .tripCancelled_ = run_cancelled,
                 .source_ = fmt::format("{}", fmt::streamed(fr.dbg()))};
           }),
+      .place_ = to_place(&tt_, &tags_, w_, pl_, matches_, tt_location{x}),
       .previousPageCursor_ =
           events.empty()
               ? ""

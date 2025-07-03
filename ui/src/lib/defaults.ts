@@ -25,6 +25,7 @@ export const defaultQuery = {
 	requireCarTransport: false,
 	elevationCosts: 'NONE',
 	useRoutedTransfers: false,
+	joinInterlinedLegs: true,
 	maxMatchingDistance: 25,
 	maxPreTransitTime: 900,
 	maxPostTransitTime: 900,
@@ -35,7 +36,7 @@ export const defaultQuery = {
 	numItineraries: 5,
 	passengers: 1,
 	luggage: 0,
-	slowDirect: false
+	slowDirect: true
 };
 
 export const omitDefaults = (query: PlanData['query']): PlanData['query'] => {

@@ -102,6 +102,7 @@ export type Translations = {
 	AREAL_LIFT: string;
 	toll: string;
 	accessRestriction: string;
+	continuesAs: string;
 };
 
 const translations: Map<string, Translations> = new Map(

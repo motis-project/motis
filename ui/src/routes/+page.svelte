@@ -44,7 +44,7 @@
 	import { t } from '$lib/i18n/translation';
 	import { pushState } from '$app/navigation';
 	import { page } from '$app/state';
-	import { updateStartDest } from '$lib/updateStartDest';
+	import { preprocessItinerary } from '$lib/preprocessItinerary';
 	import * as Tabs from '$lib/components/ui/tabs';
 	import DeparturesMask from '$lib/DeparturesMask.svelte';
 	import {
@@ -177,7 +177,7 @@
 	let ignoreDirectRentalReturnConstraints = $state(
 		urlParams?.get('ignoreDirectRentalReturnConstraints') == 'true'
 	);
-	let slowDirect = $state(urlParams?.get('slowDirect') == 'true');
+	let slowDirect = $state(urlParams?.get('slowDirect') != 'false');
 
 	const toPlaceString = (l: Location) => {
 		if (l.match?.type === 'STOP') {
@@ -202,6 +202,7 @@
 						slowDirect,
 						fastestDirectFactor: 1.5,
 						pedestrianProfile,
+						joinInterlinedLegs: false,
 						transitModes:
 							transitModes.length == possibleTransitModes.length
 								? defaultQuery.transitModes
@@ -236,7 +237,7 @@
 		if (baseQuery) {
 			clearTimeout(searchDebounceTimer);
 			searchDebounceTimer = setTimeout(() => {
-				const base = plan(baseQuery).then(updateStartDest(from, to));
+				const base = plan(baseQuery).then(preprocessItinerary(from, to));
 				const q = baseQuery.query;
 				baseResponse = base;
 				routingResponses = [base];
@@ -400,7 +401,7 @@
 							{routingResponses}
 							{baseQuery}
 							selectItinerary={(selectedItinerary) => pushState('', { selectedItinerary })}
-							updateStartDest={updateStartDest(from, to)}
+							updateStartDest={preprocessItinerary(from, to)}
 						/>
 					</Card>
 				</Control>
