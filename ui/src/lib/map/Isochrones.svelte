@@ -25,7 +25,7 @@
 		wheelchair,
 		maxAllTime,
 		active,
-		options
+		options = $bindable()
 	}: {
 		map: Map | undefined;
 		bounds: LngLatBoundsLike | undefined;
@@ -177,7 +177,7 @@
 	});
 
 	$effect(() => {
-		if (!active || objects === undefined) {
+		if (!active || options.status == 'FAILED' || objects === undefined) {
 			return;
 		}
 
@@ -205,7 +205,7 @@
 
 		objects.worker.postMessage({
 			method: 'set-max-display-level',
-			maxDisplayLevel: options.maxDisplayLevel
+			displayLevel: options.displayLevel
 		});
 	});
 
@@ -245,7 +245,7 @@
 			return 'NONE';
 		}
 
-		const nextLevel = minDisplayLevel(options.preferredDisplayLevel, bestAvailableDisplayLevel);
+		const nextLevel = minDisplayLevel(options.displayLevel, bestAvailableDisplayLevel);
 
 		if (isCanvasLevel(nextLevel)) {
 			objects.canvasSource.setCoordinates(boxCoords);
@@ -257,10 +257,18 @@
 				level: nextLevel,
 				boundingBox: $state.snapshot(boundingBox),
 				dimensions,
-				color: nextLevel == options.preferredDisplayLevel ? options.color : 'magenta'
+				color: options.color
 			});
 		}
 
 		return nextLevel;
+	});
+	$effect(() => {
+		options.status =
+			isochronesData.length == 0
+				? 'EMPTY'
+				: currentDisplayLevel == 'NONE' || currentDisplayLevel == options.displayLevel
+					? 'DONE'
+					: 'WORKING';
 	});
 </script>

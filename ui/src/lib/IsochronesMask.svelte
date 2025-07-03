@@ -103,13 +103,10 @@
 </script>
 
 {#snippet additionalComponents()}
-	<div class="grid grid-cols-4 items-center gap-2">
-		<div>
-			{t.isochrones.displayLevel}
-		</div>
-		<Select.Root type="single" bind:value={options.preferredDisplayLevel}>
+	<div class="grid grid-cols-[2fr_2fr_1fr] items-center gap-2">
+		<Select.Root type="single" bind:value={options.displayLevel}>
 			<Select.Trigger class="overflow-hidden" aria-label={t.isochrones.displayLevel}>
-				{displayLevels.get(options.preferredDisplayLevel)}
+				{displayLevels.get(options.displayLevel)}
 			</Select.Trigger>
 			<Select.Content sideOffset={10}>
 				{#each possibleDisplayLevels as level, i (i + level.value)}
@@ -119,26 +116,6 @@
 				{/each}
 			</Select.Content>
 		</Select.Root>
-		<div>
-			{t.isochrones.maxComputeLevel}
-		</div>
-		<Select.Root type="single" bind:value={options.maxDisplayLevel}>
-			<Select.Trigger class="overflow-hidden" aria-label={t.isochrones.maxComputeLevel}>
-				{displayLevels.get(options.maxDisplayLevel)}
-			</Select.Trigger>
-			<Select.Content sideOffset={10}>
-				{#each possibleDisplayLevels as level, i (i + level.value)}
-					<Select.Item value={level.value} label={level.label}>
-						{level.label}
-					</Select.Item>
-				{/each}
-			</Select.Content>
-		</Select.Root>
-	</div>
-	<div class="grid grid-cols-[1fr_2fr_1fr] items-center gap-2">
-		<div class="text-sm">
-			{t.isochrones.styling}
-		</div>
 		<Slider.Root
 			type="single"
 			min={0}

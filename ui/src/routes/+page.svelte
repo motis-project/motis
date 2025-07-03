@@ -52,6 +52,7 @@
 	import * as Tabs from '$lib/components/ui/tabs';
 	import DeparturesMask from '$lib/DeparturesMask.svelte';
 	import Isochrones from '$lib/map/Isochrones.svelte';
+	import IsochronesInfo from '$lib/IsochronesInfo.svelte';
 	import type { DisplayLevel, IsochronesOptions, IsochronesPos } from '$lib/map/IsochronesShared';
 	import IsochronesMask from '$lib/IsochronesMask.svelte';
 	import {
@@ -207,13 +208,12 @@
 
 	let isochronesData = $state<IsochronesPos[]>([]);
 	let isochronesOptions = $state<IsochronesOptions>({
-		preferredDisplayLevel:
-			(urlParams?.get('isochronesPreferredLevel') as DisplayLevel) ??
+		displayLevel:
+			(urlParams?.get('isochronesDisplayLevel') as DisplayLevel) ??
 			defaultQuery.isochronesDisplayLevel,
-		maxDisplayLevel:
-			(urlParams?.get('isochronesMaxLevel') as DisplayLevel) ?? defaultQuery.isochronesDisplayLevel,
 		color: urlParams?.get('isochronesColor') ?? defaultQuery.isochronesColor,
-		opacity: parseIntOr(urlParams?.get('isochronesOpacity'), defaultQuery.isochronesOpacity)
+		opacity: parseIntOr(urlParams?.get('isochronesOpacity'), defaultQuery.isochronesOpacity),
+		status: 'DONE'
 	});
 
 	const toPlaceString = (l: Location) => {
@@ -318,18 +318,17 @@
 	let isochronesQueryTimeout: number;
 	$effect(() => {
 		if (isochronesQuery && activeTab == 'isochrones') {
-			const [isochronesColor, isochronesOpacity, isochronesPreferredLevel, isochronesMaxLevel] = [
+			const [isochronesColor, isochronesOpacity, isochronesDisplayLevel] = [
 				isochronesOptions.color,
 				isochronesOptions.opacity,
-				isochronesOptions.preferredDisplayLevel,
-				isochronesOptions.maxDisplayLevel
+				isochronesOptions.displayLevel
 			];
 			if (lastOneToAllQuery != isochronesQuery) {
 				lastOneToAllQuery = isochronesQuery;
 				clearTimeout(isochronesQueryTimeout);
 				isochronesQueryTimeout = setTimeout(() => {
-					oneToAll(isochronesQuery).then(
-						(r: { data: OneToAllResponse | undefined; error: unknown }) => {
+					oneToAll(isochronesQuery)
+						.then((r: { data: OneToAllResponse | undefined; error: unknown }) => {
 							if (r.error) {
 								throw new Error(String(r.error));
 							}
@@ -342,8 +341,9 @@
 								} as IsochronesPos;
 							});
 							isochronesData = [...all];
-						}
-					);
+							isochronesOptions.status = isochronesData.length == 0 ? 'EMPTY' : 'WORKING';
+						})
+						.catch(() => (isochronesOptions.status = 'FAILED'));
 				}, 60);
 			}
 			untrack(() => {
@@ -355,8 +355,7 @@
 						maxTravelTime: q.maxTravelTime * 60,
 						isochronesColor,
 						isochronesOpacity,
-						isochronesPreferredLevel,
-						isochronesMaxLevel
+						isochronesDisplayLevel
 					},
 					{},
 					true
@@ -621,6 +620,14 @@
 					</Card>
 				</Control>
 			{/if}
+
+			{#if activeTab == 'isochrones'}
+				<Control class="min-h-0 md:mb-2 {isochronesOptions.status == 'DONE' ? 'hide' : ''}">
+					<Card class="w-[520px] overflow-y-auto overflow-x-hidden bg-background rounded-lg">
+						<IsochronesInfo options={isochronesOptions} />
+					</Card>
+				</Control>
+			{/if}
 		</div>
 	</div>
 
@@ -645,7 +652,7 @@
 			wheelchair={pedestrianProfile === 'WHEELCHAIR'}
 			maxAllTime={arriveBy ? maxPreTransitTime : maxPostTransitTime}
 			active={activeTab == 'isochrones'}
-			options={isochronesOptions}
+			bind:options={isochronesOptions}
 		/>
 
 		<Popup trigger="contextmenu" children={contextMenu} />

@@ -41,7 +41,7 @@ self.onmessage = async function (event) {
 		});
 	} else if (method == 'set-max-display-level') {
 		if (shapeWorker !== undefined) {
-			const level: DisplayLevel = event.data.maxDisplayLevel;
+			const level: DisplayLevel = event.data.displayLevel;
 			shapeWorker.postMessage({ method: 'set-max-level', level: level });
 		}
 	} else if (method == 'render-canvas') {
