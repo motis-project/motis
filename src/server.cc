@@ -36,7 +36,7 @@
 #include "motis/endpoints/update_elevator.h"
 #include "motis/gbfs/update.h"
 #include "motis/metrics_registry.h"
-#include "motis/rt/rt_update.h"
+#include "motis/rt_update.h"
 #include "motis/scheduler/runner.h"
 #include "motis/scheduler/scheduler_algo.h"
 

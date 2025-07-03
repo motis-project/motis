@@ -1,4 +1,4 @@
-#include "motis/rt/rt_update.h"
+#include "motis/rt_update.h"
 
 #include "boost/asio/co_spawn.hpp"
 #include "boost/asio/detached.hpp"
