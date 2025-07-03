@@ -68,13 +68,16 @@ timetable:
         - url: https://stc.traines.eu/mirror/german-delfi-gtfs-rt/latest.gtfs-rt.pbf
           headers:
             Authorization: test
+          protocol: gtfsrt
     nl:
       path: nl.gtfs.zip
       default_bikes_allowed: false
       default_cars_allowed: false
       rt:
         - url: https://gtfs.ovapi.nl/nl/trainUpdates.pb
+          protocol: gtfsrt
         - url: https://gtfs.ovapi.nl/nl/tripUpdates.pb
+          protocol: gtfsrt
   assistance_times: assistance.csv
 elevators: false
 street_routing: true

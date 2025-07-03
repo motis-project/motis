@@ -67,6 +67,9 @@ struct config {
         }
         std::string url_;
         std::optional<headers_t> headers_{};
+
+        enum struct protocol { gtfsrt, auser };
+        protocol protocol_{protocol::gtfsrt};
       };
 
       bool operator==(dataset const&) const = default;
