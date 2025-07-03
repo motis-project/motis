@@ -117,7 +117,8 @@ const translations: Translations = {
 	FUNICULAR: 'Standseilbahn',
 	AREAL_LIFT: 'Luftseilbahn',
 	toll: 'Achtung! Mautpflichtige Straße.',
-	accessRestriction: 'Kein Zugang'
+	accessRestriction: 'Kein Zugang',
+	continuesAs: 'Weiter als'
 };
 
 export default translations;

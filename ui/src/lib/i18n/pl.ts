@@ -120,7 +120,8 @@ const translations: Translations = {
 	FUNICULAR: 'Kolej linowo-terenowa',
 	AREAL_LIFT: 'Wyciąg powietrzny',
 	toll: 'Uwaga! Za przejazd tą trasą pobierana jest opłata.',
-	accessRestriction: 'Ograniczony dostęp'
+	accessRestriction: 'Ograniczony dostęp',
+	continuesAs: 'Kontynuuje jako'
 };
 
 export default translations;

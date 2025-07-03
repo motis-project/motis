@@ -1,5 +1,6 @@
 #include "motis/endpoints/stop_times.h"
 
+#include <algorithm>
 #include <memory>
 
 #include "utl/concat.h"
@@ -337,11 +338,21 @@ api::stoptimes_response stop_times::operator()(
   auto events = get_events(locations, tt_, rtt, time, ev_type, dir,
                            static_cast<std::size_t>(query.n_), allowed_clasz,
                            query.withScheduledSkippedStops_);
+
+  auto const to_tuple = [&](n::rt::run const& x) {
+    auto const fr_a = n::rt::frun{tt_, rtt, x};
+    return std::tuple{fr_a[0].time(ev_type), fr_a.is_scheduled()
+                                                 ? fr_a[0].get_trip_idx(ev_type)
+                                                 : n::trip_idx_t::invalid()};
+  };
   utl::sort(events, [&](n::rt::run const& a, n::rt::run const& b) {
-    auto const fr_a = n::rt::frun{tt_, rtt, a};
-    auto const fr_b = n::rt::frun{tt_, rtt, b};
-    return fr_a[0].time(ev_type) < fr_b[0].time(ev_type);
+    return to_tuple(a) < to_tuple(b);
   });
+  events.erase(std::unique(begin(events), end(events),
+                           [&](n::rt::run const& a, n::rt::run const& b) {
+                             return to_tuple(a) == to_tuple(b);
+                           }),
+               end(events));
   return {
       .stopTimes_ = utl::to_vec(
           events,

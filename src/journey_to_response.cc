@@ -192,6 +192,7 @@ api::Itinerary journey_to_response(
     bool const car_transfers,
     api::PedestrianProfileEnum const pedestrian_profile,
     api::ElevationCostsEnum const elevation_costs,
+    bool const join_interlined_legs,
     bool const detailed_transfers,
     bool const with_fares,
     bool const with_scheduled_skipped_stops,
@@ -279,7 +280,7 @@ api::Itinerary journey_to_response(
               decltype(j.legs_)::iterator>::difference_type>(0),
           utl::count_if(
               j.legs_,
-              [](auto&& leg) {
+              [](n::routing::journey::leg const& leg) {
                 return holds_alternative<n::routing::journey::run_enter_exit>(
                            leg.uses_) ||
                        odm::is_odm_leg(leg);
@@ -335,81 +336,106 @@ api::Itinerary journey_to_response(
     std::visit(
         utl::overloaded{
             [&](n::routing::journey::run_enter_exit const& t) {
-              // TODO interlining
               auto const fr = n::rt::frun{tt, rtt, t.r_};
-              auto const enter_stop = fr[t.stop_range_.from_];
-              auto const exit_stop = fr[t.stop_range_.to_ - 1U];
-              auto const color = enter_stop.get_route_color();
-              auto const agency = enter_stop.get_provider();
-              auto const fare_indices = get_fare_indices(fares, j_leg);
+              auto is_first_part = true;
+              auto const write_run_leg =
+                  [&](auto, n::interval<n::stop_idx_t> const subrange) {
+                    auto const common_stops = subrange.intersect(t.stop_range_);
+                    if (common_stops.size() <= 1) {
+                      return;
+                    }
 
-              auto& leg = itinerary.legs_.emplace_back(api::Leg{
-                  .mode_ = to_mode(enter_stop.get_clasz()),
-                  .from_ = to_place(enter_stop, n::event_type::kDep),
-                  .to_ = to_place(exit_stop, n::event_type::kArr),
-                  .duration_ = std::chrono::duration_cast<std::chrono::seconds>(
-                                   j_leg.arr_time_ - j_leg.dep_time_)
-                                   .count(),
-                  .startTime_ = j_leg.dep_time_,
-                  .endTime_ = j_leg.arr_time_,
-                  .scheduledStartTime_ =
-                      enter_stop.scheduled_time(n::event_type::kDep),
-                  .scheduledEndTime_ =
-                      exit_stop.scheduled_time(n::event_type::kArr),
-                  .realTime_ = fr.is_rt(),
-                  .scheduled_ = fr.is_scheduled(),
-                  .headsign_ = std::string{enter_stop.direction()},
-                  .routeColor_ = to_str(color.color_),
-                  .routeTextColor_ = to_str(color.text_color_),
-                  .agencyName_ =
-                      std::string{tt.strings_.get(agency.long_name_)},
-                  .agencyUrl_ = std::string{tt.strings_.get(agency.url_)},
-                  .agencyId_ = std::string{tt.strings_.get(agency.short_name_)},
-                  .tripId_ = tags.id(tt, enter_stop, n::event_type::kDep),
-                  .routeShortName_ = {std::string{
-                      enter_stop.trip_display_name()}},
-                  .cancelled_ = fr.is_cancelled(),
-                  .source_ = fmt::to_string(fr.dbg()),
-                  .fareTransferIndex_ = fare_indices.and_then(
-                      [](auto&& x) { return std::optional{x.transfer_idx_}; }),
-                  .effectiveFareLegIndex_ = fare_indices.and_then([](auto&& x) {
-                    return std::optional{x.effective_fare_leg_idx_};
-                  }),
-                  .alerts_ = get_alerts(fr, std::nullopt)});
+                    auto const enter_stop = fr[common_stops.from_];
+                    auto const exit_stop = fr[common_stops.to_ - 1U];
+                    auto const color = enter_stop.get_route_color();
+                    auto const agency = enter_stop.get_provider();
+                    auto const fare_indices = get_fare_indices(fares, j_leg);
 
-              leg.from_.vertexType_ = api::VertexTypeEnum::TRANSIT;
-              leg.from_.departure_ = leg.startTime_;
-              leg.from_.scheduledDeparture_ = leg.scheduledStartTime_;
-              leg.to_.vertexType_ = api::VertexTypeEnum::TRANSIT;
-              leg.to_.arrival_ = leg.endTime_;
-              leg.to_.scheduledArrival_ = leg.scheduledEndTime_;
-              auto polyline = geo::polyline{};
-              fr.for_each_shape_point(
-                  shapes, t.stop_range_,
-                  [&](geo::latlng const& pos) { polyline.emplace_back(pos); });
-              leg.legGeometry_ = api_version == 1 ? to_polyline<7>(polyline)
-                                                  : to_polyline<6>(polyline);
+                    auto& leg = itinerary.legs_.emplace_back(api::Leg{
+                        .mode_ = to_mode(enter_stop.get_clasz()),
+                        .from_ = to_place(enter_stop, n::event_type::kDep),
+                        .to_ = to_place(exit_stop, n::event_type::kArr),
+                        .duration_ =
+                            std::chrono::duration_cast<std::chrono::seconds>(
+                                exit_stop.time(n::event_type::kArr) -
+                                enter_stop.time(n::event_type::kDep))
+                                .count(),
+                        .startTime_ = enter_stop.time(n::event_type::kDep),
+                        .endTime_ = exit_stop.time(n::event_type::kArr),
+                        .scheduledStartTime_ =
+                            enter_stop.scheduled_time(n::event_type::kDep),
+                        .scheduledEndTime_ =
+                            exit_stop.scheduled_time(n::event_type::kArr),
+                        .realTime_ = fr.is_rt(),
+                        .scheduled_ = fr.is_scheduled(),
+                        .interlineWithPreviousLeg_ = !is_first_part,
+                        .headsign_ = std::string{enter_stop.direction()},
+                        .routeColor_ = to_str(color.color_),
+                        .routeTextColor_ = to_str(color.text_color_),
+                        .agencyName_ =
+                            std::string{tt.strings_.get(agency.long_name_)},
+                        .agencyUrl_ = std::string{tt.strings_.get(agency.url_)},
+                        .agencyId_ =
+                            std::string{tt.strings_.get(agency.short_name_)},
+                        .tripId_ = tags.id(tt, enter_stop, n::event_type::kDep),
+                        .routeShortName_ = {std::string{
+                            enter_stop.trip_display_name()}},
+                        .cancelled_ = fr.is_cancelled(),
+                        .source_ = fmt::to_string(fr.dbg()),
+                        .fareTransferIndex_ =
+                            fare_indices.and_then([](auto&& x) {
+                              return std::optional{x.transfer_idx_};
+                            }),
+                        .effectiveFareLegIndex_ =
+                            fare_indices.and_then([](auto&& x) {
+                              return std::optional{x.effective_fare_leg_idx_};
+                            }),
+                        .alerts_ = get_alerts(fr, std::nullopt)});
 
-              auto const first =
-                  static_cast<n::stop_idx_t>(t.stop_range_.from_ + 1U);
-              auto const last =
-                  static_cast<n::stop_idx_t>(t.stop_range_.to_ - 1U);
-              leg.intermediateStops_ = std::vector<api::Place>{};
-              for (auto i = first; i < last; ++i) {
-                auto const stop = fr[i];
-                if (!with_scheduled_skipped_stops &&
-                    !stop.get_scheduled_stop().in_allowed() &&
-                    !stop.get_scheduled_stop().out_allowed() &&
-                    !stop.in_allowed() && !stop.out_allowed()) {
-                  continue;
-                }
-                auto& p = leg.intermediateStops_->emplace_back(
-                    to_place(stop, n::event_type::kDep));
-                p.departure_ = stop.time(n::event_type::kDep);
-                p.scheduledDeparture_ =
-                    stop.scheduled_time(n::event_type::kDep);
-                p.arrival_ = stop.time(n::event_type::kArr);
-                p.scheduledArrival_ = stop.scheduled_time(n::event_type::kArr);
+                    leg.from_.vertexType_ = api::VertexTypeEnum::TRANSIT;
+                    leg.from_.departure_ = leg.startTime_;
+                    leg.from_.scheduledDeparture_ = leg.scheduledStartTime_;
+                    leg.to_.vertexType_ = api::VertexTypeEnum::TRANSIT;
+                    leg.to_.arrival_ = leg.endTime_;
+                    leg.to_.scheduledArrival_ = leg.scheduledEndTime_;
+                    auto polyline = geo::polyline{};
+                    fr.for_each_shape_point(shapes, common_stops,
+                                            [&](geo::latlng const& pos) {
+                                              polyline.emplace_back(pos);
+                                            });
+                    leg.legGeometry_ = api_version == 1
+                                           ? to_polyline<7>(polyline)
+                                           : to_polyline<6>(polyline);
+
+                    auto const first =
+                        static_cast<n::stop_idx_t>(common_stops.from_ + 1U);
+                    auto const last =
+                        static_cast<n::stop_idx_t>(common_stops.to_ - 1U);
+                    leg.intermediateStops_ = std::vector<api::Place>{};
+                    for (auto i = first; i < last; ++i) {
+                      auto const stop = fr[i];
+                      if (!with_scheduled_skipped_stops &&
+                          !stop.get_scheduled_stop().in_allowed() &&
+                          !stop.get_scheduled_stop().out_allowed() &&
+                          !stop.in_allowed() && !stop.out_allowed()) {
+                        continue;
+                      }
+                      auto& p = leg.intermediateStops_->emplace_back(
+                          to_place(stop, n::event_type::kDep));
+                      p.departure_ = stop.time(n::event_type::kDep);
+                      p.scheduledDeparture_ =
+                          stop.scheduled_time(n::event_type::kDep);
+                      p.arrival_ = stop.time(n::event_type::kArr);
+                      p.scheduledArrival_ =
+                          stop.scheduled_time(n::event_type::kArr);
+                    }
+                    is_first_part = false;
+                  };
+
+              if (join_interlined_legs) {
+                write_run_leg(n::trip_idx_t{}, t.stop_range_);
+              } else {
+                fr.for_each_trip(write_run_leg);
               }
             },
             [&](n::footpath) {

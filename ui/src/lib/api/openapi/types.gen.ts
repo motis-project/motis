@@ -1060,6 +1060,16 @@ export type PlanData = {
          */
         ignorePreTransitRentalReturnConstraints?: boolean;
         /**
+         * Optional. Default is `true`.
+         *
+         * Controls if a journey section with stay-seated transfers is returned:
+         * - `joinInterlinedLegs=false`: as several legs (full information about all trip numbers, headsigns, etc.).
+         * Legs that do not require a transfer (stay-seated transfer) are marked with `interlineWithPreviousLeg=true`.
+         * - `joinInterlinedLegs=true` (default behavior): as only one joined leg containing all stops
+         *
+         */
+        joinInterlinedLegs?: boolean;
+        /**
          * Optional. Experimental. Number of luggage pieces; base unit: airline cabin luggage (e.g. for ODM or price calculation)
          *
          */

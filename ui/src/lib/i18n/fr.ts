@@ -120,7 +120,8 @@ const translations: Translations = {
 	FUNICULAR: 'Funiculaire',
 	AREAL_LIFT: 'Remontée mécanique',
 	toll: 'Attention ! Route à péage.',
-	accessRestriction: 'Accès restreint'
+	accessRestriction: 'Accès restreint',
+	continuesAs: 'Continue comme'
 };
 
 export default translations;
