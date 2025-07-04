@@ -161,7 +161,8 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
                                              "VDV AUS FETCH ERROR: tag={}, "
                                              "url={}, error={}",
                                              a.tag_, a.ep_.url_, e.what());
-                                      ret = auser.upd_.get_stats();
+                                      ret = nigiri::rt::vdv_aus::statistics{
+                                          .error_ = true};
                                     }
                                   }},
                               x);

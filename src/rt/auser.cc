@@ -26,7 +26,7 @@ n::rt::vdv_aus::statistics auser::consume_update(
     std::string const& auser_update, n::rt_timetable& rtt) {
   auto vdvaus = pugi::xml_document{};
   vdvaus.load_string(auser_update.c_str());
-  upd_.update(rtt, vdvaus);
+  auto stats = upd_.update(rtt, vdvaus);
 
   try {
     auto const prev_update = update_state_;
@@ -46,7 +46,7 @@ n::rt::vdv_aus::statistics auser::consume_update(
   } catch (...) {
   }
 
-  return upd_.get_stats();
+  return stats;
 }
 
 }  // namespace motis
