@@ -122,7 +122,9 @@ data::data(std::filesystem::path p, config const& c)
       for (auto const& [tag, d] : c.timetable_->datasets_) {
         if (d.rt_ && utl::any_of(*d.rt_, [](auto const& rt) {
               return rt.protocol_ ==
-                     config::timetable::dataset::rt::protocol::auser;
+                         config::timetable::dataset::rt::protocol::auser ||
+                     rt.protocol_ ==
+                         config::timetable::dataset::rt::protocol::siri;
             })) {
           load_auser_updater(tag, d);
         }
@@ -305,7 +307,11 @@ void data::load_auser_updater(std::string_view tag,
   }
   for (auto const& rt : *d.rt_) {
     if (rt.protocol_ == config::timetable::dataset::rt::protocol::auser) {
-      auser_->try_emplace(rt.url_, *tt_, tags_->get_src(tag));
+      auser_->try_emplace(rt.url_, *tt_, tags_->get_src(tag),
+                          n::rt::vdv_aus::updater::xml_format::kVdv);
+    } else if (rt.protocol_ == config::timetable::dataset::rt::protocol::siri) {
+      auser_->try_emplace(rt.url_, *tt_, tags_->get_src(tag),
+                          n::rt::vdv_aus::updater::xml_format::kSiri);
     }
   }
 }
