@@ -68,7 +68,7 @@ struct config {
         std::string url_;
         std::optional<headers_t> headers_{};
 
-        enum struct protocol { gtfsrt, auser };
+        enum struct protocol { gtfsrt, auser, siri };
         protocol protocol_{protocol::gtfsrt};
       };
 
