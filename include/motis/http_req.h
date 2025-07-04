@@ -11,7 +11,7 @@
 
 namespace motis {
 
-constexpr auto const kBodySizeLimit = 128U * 1024U * 1024U;  // 128 M
+constexpr auto const kBodySizeLimit = 512U * 1024U * 1024U;  // 512 M
 
 using http_response =
     boost::beast::http::response<boost::beast::http::dynamic_body>;

@@ -159,8 +159,8 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
                                     } catch (std::exception const& e) {
                                       n::log(n::log_lvl::error, "motis.rt",
                                              "VDV AUS FETCH ERROR: tag={}, "
-                                             "error={}",
-                                             a.tag_, e.what());
+                                             "url={}, error={}",
+                                             a.tag_, a.ep_.url_, e.what());
                                       ret = auser.upd_.get_stats();
                                     }
                                   }},
