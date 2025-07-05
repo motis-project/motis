@@ -146,13 +146,13 @@ data import(config const& c, fs::path const& data_path, bool const write) {
     auto const& t = *c.timetable_;
 
     for (auto const& [_, d] : t.datasets_) {
-      h = cista::build_hash(h, c.osr_footpath_, hash_file(d.path_),
-                            d.default_bikes_allowed_, d.default_cars_allowed_,
-                            d.clasz_bikes_allowed_, d.clasz_cars_allowed_,
-                            d.default_timezone_);
+      h = cista::build_seeded_hash(
+          h, c.osr_footpath_, hash_file(d.path_), d.default_bikes_allowed_,
+          d.default_cars_allowed_, d.clasz_bikes_allowed_,
+          d.clasz_cars_allowed_, d.default_timezone_);
     }
 
-    h = cista::build_hash(
+    h = cista::build_seeded_hash(
         h, t.first_day_, t.num_days_, t.with_shapes_, t.adjust_footpaths_,
         t.merge_dupes_intra_src_, t.merge_dupes_inter_src_,
         t.link_stop_distance_, t.update_interval_, t.incremental_rt_update_,
@@ -181,7 +181,7 @@ data import(config const& c, fs::path const& data_path, bool const write) {
     std::ranges::sort(files);
     auto& h = elevation_dir_hash.second;
     for (auto const& f : files) {
-      h = cista::build_hash(h, f);
+      h = cista::build_seeded_hash(h, f);
     }
   }
 
@@ -363,7 +363,9 @@ data import(config const& c, fs::path const& data_path, bool const write) {
           std::filesystem::create_directories(data_path / "adr", ec);
           cista::write(data_path / "adr" / "t_ext.bin", *d.t_);
         }
-        d.r_.reset();
+        if (d.r_) {
+          d.r_.reset();
+        }
         {
           auto r =
               adr::reverse{data_path / "adr", cista::mmap::protection::WRITE};
