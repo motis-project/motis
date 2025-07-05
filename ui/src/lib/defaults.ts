@@ -27,6 +27,8 @@ export const defaultQuery = {
 	useRoutedTransfers: false,
 	joinInterlinedLegs: true,
 	maxMatchingDistance: 25,
+	maxTransfers: 14,
+	maxTravelTime: 45 * 60,
 	maxPreTransitTime: 900,
 	maxPostTransitTime: 900,
 	maxDirectTime: 1800,
@@ -36,7 +38,10 @@ export const defaultQuery = {
 	numItineraries: 5,
 	passengers: 1,
 	luggage: 0,
-	slowDirect: true
+	slowDirect: true,
+	isochronesDisplayLevel: 'GEOMETRY_CIRCLES',
+	isochronesColor: '#ffff00',
+	isochronesOpacity: 250
 };
 
 export const omitDefaults = (query: PlanData['query']): PlanData['query'] => {
