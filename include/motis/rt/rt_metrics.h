@@ -162,7 +162,7 @@ struct rt_metric_families {
                 .Register(registry)},
         vdvaus_multiple_matches_{
             prometheus::BuildGauge()
-                .Name("nigiri_vdvaus_mutiple_matches_total")
+                .Name("nigiri_vdvaus_multiple_matches_total")
                 .Help("Number of times a run of the VDV AUS feed could not be "
                       "matched to a transport in the timetable since there "
                       "were multiple transports with the same score")

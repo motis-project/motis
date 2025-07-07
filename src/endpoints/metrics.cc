@@ -14,7 +14,6 @@
 #include "nigiri/types.h"
 
 #include "motis/data.h"
-
 #include "motis/tag_lookup.h"
 
 namespace n = nigiri;
@@ -50,26 +49,14 @@ void update_all_runs_metrics(nigiri::timetable const& tt,
             labels);
     sched.Set(0);
     real.Set(0);
-    metric_by_agency.emplace_back(
-        std::pair{std::reference_wrapper{sched}, std::reference_wrapper{real}});
+    metric_by_agency.emplace_back(std::ref(sched), std::ref(real));
   }
 
-  auto const get_provider_idx = [&](n::rt::frun const& fr) {
-    auto const provider_sections =
-        tt.transport_section_providers_.at(fr.t_.t_idx_);
-    return provider_sections
-        .at(provider_sections.size() == 1U
-                ? 0U
-                : fr[0].section_idx(
-                      nigiri::event_type::kDep))  // TODO take provider from
-                                                  // stop at current time?
-        .v_;
-  };
   if (rtt != nullptr) {
     for (auto rt_t = nigiri::rt_transport_idx_t{0};
          rt_t < rtt->n_rt_transports(); ++rt_t) {
       auto const fr = n::rt::frun::from_rt(tt, rtt, rt_t);
-      if (!fr.is_scheduled() || fr.stop_range_.size() <= 0) {
+      if (!fr.is_scheduled()) {
         continue;
       }
       auto const active = n::interval{
@@ -78,12 +65,15 @@ void update_all_runs_metrics(nigiri::timetable const& tt,
               n::event_type::kArr) +
               n::unixtime_t::duration{1}};
       if (active.overlaps(time_interval)) {
-        auto const provider_idx = get_provider_idx(fr);
-        metric_by_agency.at(provider_idx).first.get().Increment();
-        metric_by_agency.at(provider_idx).second.get().Increment();
+        auto const provider_idx = fr[0].get_provider_idx();
+        metric_by_agency.at(provider_idx.v_).first.get().Increment();
+        metric_by_agency.at(provider_idx.v_).second.get().Increment();
       }
     }
   }
+
+  auto const [start_day, _] = tt.day_idx_mam(time_interval.from_);
+  auto const [end_day, _1] = tt.day_idx_mam(time_interval.to_);
 
   for (auto r = nigiri::route_idx_t{0}; r < tt.n_routes(); ++r) {
     auto const is_active = [&](n::transport const t) -> bool {
@@ -96,24 +86,19 @@ void update_all_runs_metrics(nigiri::timetable const& tt,
     auto const seq = tt.route_location_seq_[r];
     auto const from = n::stop_idx_t{0U};
     auto const to = static_cast<n::stop_idx_t>(seq.size() - 1);
-    auto const [start_day, _] = tt.day_idx_mam(time_interval.from_);
-    auto const [end_day, _1] = tt.day_idx_mam(time_interval.to_);
 
-    auto const dep_times = tt.event_times_at_stop(r, from, n::event_type::kDep);
     for (auto const [i, t_idx] :
          utl::enumerate(tt.route_transport_ranges_[r])) {
-      auto const day_offset =
-          static_cast<n::day_idx_t::value_t>(dep_times[i].days());
       for (auto day = start_day; day <= end_day; ++day) {
-        auto const traffic_day = day - day_offset;
-        auto const t = n::transport{t_idx, traffic_day};
+        auto const t = n::transport{t_idx, day};
         if (is_active(t) &&
             time_interval.overlaps({tt.event_time(t, from, n::event_type::kDep),
                                     tt.event_time(t, to, n::event_type::kArr) +
                                         n::unixtime_t::duration{1}})) {
-          auto fr = n::rt::frun::from_t(tt, rtt, t);
-          auto const provider_idx = get_provider_idx(fr);
-          metric_by_agency.at(provider_idx).first.get().Increment();
+          auto fr = n::rt::frun::from_t(tt, nullptr, t);
+          metric_by_agency.at(fr[0].get_provider_idx().v_)
+              .first.get()
+              .Increment();
         }
       }
     }
