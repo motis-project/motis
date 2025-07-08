@@ -105,7 +105,8 @@ int server(data d, config const& c, std::string_view const motis_version) {
     qr.route("GET", "/tiles/", ep::tiles{*d.tiles_});
   }
 
-  qr.route("GET", "/metrics", ep::metrics{d.metrics_->registry_});
+  qr.route("GET", "/metrics",
+           ep::metrics{d.tt_.get(), d.tags_.get(), d.rt_, d.metrics_.get()});
   qr.serve_files(server_config.web_folder_);
   qr.enable_cors();
   s.set_timeout(std::chrono::minutes{5});

@@ -81,7 +81,17 @@ metrics_registry::metrics_registry(
                                                   time_boundaries)},
       routing_execution_duration_seconds_total_{
           routing_execution_duration_seconds_.Add({{"stage", "total"}},
-                                                  time_boundaries)} {}
+                                                  time_boundaries)},
+      current_trips_running_scheduled_count_{
+          prometheus::BuildGauge()
+              .Name("current_trips_running_scheduled_count")
+              .Help("The number of currently running trips")
+              .Register(registry_)},
+      current_trips_running_scheduled_with_realtime_count_{
+          prometheus::BuildGauge()
+              .Name("current_trips_running_scheduled_with_realtime_count")
+              .Help("The number of currently running trips that have RT data")
+              .Register(registry_)} {}
 
 metrics_registry::~metrics_registry() = default;
 
