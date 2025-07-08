@@ -127,12 +127,15 @@ void config::verify() const {
   if (timetable_) {
     for (auto const& [_, d] : timetable_->datasets_) {
       if (d.rt_.has_value()) {
-        for (auto const& url : *d.rt_) {
+        for (auto const& rt : *d.rt_) {
           try {
-            boost::urls::url{url.url_};
+            boost::urls::url{rt.url_};
           } catch (std::exception const& e) {
-            throw utl::fail("{} is not a valid url: {}", url.url_, e.what());
+            throw utl::fail("{} is not a valid url: {}", rt.url_, e.what());
           }
+          utl::verify(rt.protocol_ != timetable::dataset::rt::protocol::auser ||
+                          timetable_->incremental_rt_update_,
+                      "VDV AUS requires incremental RT update scheme");
         }
       }
     }

@@ -15,6 +15,8 @@ double get_max_distance(osr::search_profile const profile,
     case osr::search_profile::kBikeElevationHigh: [[fallthrough]];
     case osr::search_profile::kBike: return seconds * 4.0;
     case osr::search_profile::kCar:
+    case osr::search_profile::kCarDropOff:
+    case osr::search_profile::kCarDropOffWheelchair:
     case osr::search_profile::kCarSharing:
     case osr::search_profile::kCarParking: [[fallthrough]];
     case osr::search_profile::kCarParkingWheelchair: return seconds * 28.0;

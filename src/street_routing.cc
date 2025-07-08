@@ -54,6 +54,9 @@ api::ModeEnum default_output::get_mode() const {
     case osr::search_profile::kCarParking: [[fallthrough]];
     case osr::search_profile::kCarParkingWheelchair:
       return api::ModeEnum::CAR_PARKING;
+    case osr::search_profile::kCarDropOff: [[fallthrough]];
+    case osr::search_profile::kCarDropOffWheelchair:
+      return api::ModeEnum::CAR_DROPOFF;
     case osr::search_profile::kBikeSharing: [[fallthrough]];
     case osr::search_profile::kCarSharing: return api::ModeEnum::RENTAL;
   }
@@ -72,7 +75,8 @@ api::Place default_output::get_place(osr::node_idx_t const n) const {
 
 bool default_output::is_time_dependent() const {
   return profile_ == osr::search_profile::kWheelchair ||
-         profile_ == osr::search_profile::kCarParkingWheelchair;
+         profile_ == osr::search_profile::kCarParkingWheelchair ||
+         profile_ == osr::search_profile::kCarDropOffWheelchair;
 }
 
 transport_mode_t default_output::get_cache_key() const {

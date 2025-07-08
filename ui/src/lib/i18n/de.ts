@@ -67,6 +67,7 @@ const translations: Translations = {
 	BIKE: 'Fahrrad',
 	RENTAL: 'Sharing',
 	CAR: 'Auto',
+	CAR_DROPOFF: 'Absetzen (Auto)',
 	CAR_PARKING: 'P+R Park & Ride',
 	TRANSIT: 'ÖPV',
 	TRAM: 'Tram',

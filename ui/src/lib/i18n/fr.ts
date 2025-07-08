@@ -67,6 +67,7 @@ const translations: Translations = {
 	RENTAL: 'Loué',
 	CAR: 'Voiture',
 	CAR_PARKING: 'Garage voiture',
+	CAR_DROPOFF: 'Dépose (voiture)',
 	TRANSIT: 'Transports en commun',
 	TRAM: 'Tram',
 	SUBWAY: 'Métro',
