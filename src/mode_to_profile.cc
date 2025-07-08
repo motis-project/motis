@@ -35,6 +35,9 @@ osr::search_profile to_profile(
       return osr::search_profile::kBike;  // Fallback if invalid value is used
     case api::ModeEnum::ODM: [[fallthrough]];
     case api::ModeEnum::CAR: return osr::search_profile::kCar;
+    case api::ModeEnum::CAR_DROPOFF:
+      return wheelchair ? osr::search_profile::kCarDropOffWheelchair
+                        : osr::search_profile::kCarDropOff;
     case api::ModeEnum::CAR_PARKING:
       return wheelchair ? osr::search_profile::kCarParkingWheelchair
                         : osr::search_profile::kCarParking;

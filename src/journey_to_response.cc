@@ -40,6 +40,8 @@ api::ModeEnum to_mode(osr::search_profile const m) {
   switch (m) {
     case osr::search_profile::kCarParkingWheelchair: [[fallthrough]];
     case osr::search_profile::kCarParking: return api::ModeEnum::CAR_PARKING;
+    case osr::search_profile::kCarDropOffWheelchair: [[fallthrough]];
+    case osr::search_profile::kCarDropOff: return api::ModeEnum::CAR_DROPOFF;
     case osr::search_profile::kFoot: [[fallthrough]];
     case osr::search_profile::kWheelchair: return api::ModeEnum::WALK;
     case osr::search_profile::kCar: return api::ModeEnum::CAR;

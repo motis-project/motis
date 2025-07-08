@@ -60,6 +60,7 @@ export type Translations = {
 	BIKE: string;
 	RENTAL: string;
 	CAR: string;
+	CAR_DROPOFF: string;
 	CAR_PARKING: string;
 	TRANSIT: string;
 	TRAM: string;
