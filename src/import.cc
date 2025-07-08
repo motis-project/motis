@@ -363,9 +363,7 @@ data import(config const& c, fs::path const& data_path, bool const write) {
           std::filesystem::create_directories(data_path / "adr", ec);
           cista::write(data_path / "adr" / "t_ext.bin", *d.t_);
         }
-        if (d.r_) {
-          d.r_.reset();
-        }
+        d.r_.reset();
         {
           auto r =
               adr::reverse{data_path / "adr", cista::mmap::protection::WRITE};
@@ -381,12 +379,8 @@ data import(config const& c, fs::path const& data_path, bool const write) {
         }
       },
       [&]() {
-        if (d.t_) {
-          d.t_.reset();
-        }
-        if (d.r_) {
-          d.r_.reset();
-        }
+        d.t_.reset();
+        d.r_.reset();
         if (c.geocoding_) {
           d.load_geocoder();
         }

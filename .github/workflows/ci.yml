@@ -365,7 +365,7 @@ jobs:
           asset_content_type: application/x-
 
   docker:
-    if: github.repository_owner == 'motis-project'
+    if: ${{ github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name }}
     runs-on: ubuntu-latest
     needs: linux
     steps:
