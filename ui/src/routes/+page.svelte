@@ -541,7 +541,7 @@
 				</Tabs.Root>
 			</Control>
 
-			{#if routingResponses.length !== 0 && !page.state.showDepartures}
+			{#if activeTab != 'isochrones' && routingResponses.length !== 0 && !page.state.showDepartures}
 				<Control class="min-h-0 md:mb-2 {page.state.selectedItinerary ? 'hide' : ''}">
 					<Card
 						class="w-[520px] h-full md:max-h-[70vh] overflow-y-auto overflow-x-hidden bg-background rounded-lg"
@@ -557,7 +557,7 @@
 				</Control>
 			{/if}
 
-			{#if page.state.selectedItinerary && !page.state.showDepartures}
+			{#if activeTab != 'isochrones' && page.state.selectedItinerary && !page.state.showDepartures}
 				<Control class="min-h-0 mb-12 md:mb-2">
 					<Card class="w-[520px] h-full bg-background rounded-lg flex flex-col">
 						<div class="w-full flex justify-between items-center shadow-md pl-1 mb-1">
@@ -584,7 +584,7 @@
 				{/if}
 			{/if}
 
-			{#if page.state.selectedStop && page.state.showDepartures}
+			{#if activeTab != 'isochrones' && page.state.selectedStop && page.state.showDepartures}
 				<Control class="min-h-0 md:mb-2">
 					<Card class="w-[520px] h-full bg-background rounded-lg flex flex-col">
 						<div class="w-full flex justify-between items-center shadow-md pl-1 mb-1">
@@ -622,7 +622,7 @@
 				</Control>
 			{/if}
 
-			{#if activeTab == 'isochrones'}
+			{#if activeTab == 'isochrones' && one.match}
 				<Control class="min-h-0 md:mb-2 {isochronesOptions.status == 'DONE' ? 'hide' : ''}">
 					<Card class="w-[520px] overflow-y-auto overflow-x-hidden bg-background rounded-lg">
 						<IsochronesInfo options={isochronesOptions} />
