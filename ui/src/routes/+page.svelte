@@ -644,7 +644,10 @@
 	</div>
 
 	{#if showMap}
-		<RailViz {map} {bounds} {zoom} active={activeTab != 'isochrones'} />
+		{#if activeTab != 'isochrones'}
+			<RailViz {map} {bounds} {zoom} />
+		{/if}
+		<!-- Isochrones cannot be hidden the same way as RailViz -->
 		<Isochrones
 			{map}
 			{bounds}
