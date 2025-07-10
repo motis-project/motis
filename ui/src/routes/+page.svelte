@@ -327,6 +327,7 @@
 			if (lastOneToAllQuery != isochronesQuery) {
 				lastOneToAllQuery = isochronesQuery;
 				clearTimeout(isochronesQueryTimeout);
+				isochronesOptions.status = 'WORKING';
 				isochronesQueryTimeout = setTimeout(() => {
 					oneToAll(isochronesQuery)
 						.then((r: { data: OneToAllResponse | undefined; error: unknown }) => {
