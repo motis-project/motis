@@ -11,6 +11,7 @@ export interface IsochronesOptions {
 	color: string;
 	opacity: number;
 	status: StatusLevel;
+	error: string | undefined;
 }
 export interface IsochronesPos {
 	lat: number;

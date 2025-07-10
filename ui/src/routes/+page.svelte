@@ -213,7 +213,8 @@
 			defaultQuery.isochronesDisplayLevel,
 		color: urlParams?.get('isochronesColor') ?? defaultQuery.isochronesColor,
 		opacity: parseIntOr(urlParams?.get('isochronesOpacity'), defaultQuery.isochronesOpacity),
-		status: 'DONE'
+		status: 'DONE',
+		error: undefined
 	});
 
 	const toPlaceString = (l: Location) => {
@@ -328,11 +329,13 @@
 				lastOneToAllQuery = isochronesQuery;
 				clearTimeout(isochronesQueryTimeout);
 				isochronesOptions.status = 'WORKING';
+				isochronesOptions.error = undefined;
 				isochronesQueryTimeout = setTimeout(() => {
 					oneToAll(isochronesQuery)
 						.then((r: { data: OneToAllResponse | undefined; error: unknown }) => {
 							if (r.error) {
-								throw new Error(String(r.error));
+								const msg = (r.error as { error: string }).error;
+								throw new Error(String(msg));
 							}
 							const all = r.data!.all!.map((p: ReachablePlace) => {
 								return {
@@ -345,7 +348,10 @@
 							isochronesData = [...all];
 							isochronesOptions.status = isochronesData.length == 0 ? 'EMPTY' : 'WORKING';
 						})
-						.catch(() => (isochronesOptions.status = 'FAILED'));
+						.catch((e: Error) => {
+							isochronesOptions.status = 'FAILED';
+							isochronesOptions.error = e.message;
+						});
 				}, 60);
 			}
 			untrack(() => {
