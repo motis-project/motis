@@ -16,6 +16,7 @@ const translations: Translations = {
 	moped: 'Skuter',
 	from: 'Z',
 	to: 'Do',
+	position: 'Position',
 	arrival: 'Przyjazd',
 	departure: 'Odjazd',
 	duration: 'Czas trwania',
@@ -83,6 +84,8 @@ const translations: Translations = {
 	REGIONAL_RAIL: 'Regional Rail',
 	OTHER: 'Other',
 	routingSegments: {
+		maxTransfers: 'Max. transfers',
+		maxTravelTime: 'Max. travel time',
 		firstMile: 'First mile',
 		lastMile: 'Last mile',
 		direct: 'Direct connection',
@@ -94,6 +97,17 @@ const translations: Translations = {
 		NONE: 'No detours',
 		LOW: 'Small detours',
 		HIGH: 'Large detours'
+	},
+	isochrones: {
+		title: 'Isochrones',
+		displayLevel: 'Display level',
+		maxComputeLevel: 'Max. computation level',
+		canvasRects: 'Rects (Overlay)',
+		canvasCircles: 'Circles (Overlay)',
+		geojsonCircles: 'Circles (Geometry)',
+		styling: 'Isochrones styling',
+		noData: 'No data',
+		requestFailed: 'Request failed'
 	},
 	RENTAL_BICYCLE: 'Rower współdzielony',
 	RENTAL_CARGO_BICYCLE: 'Rower cargo współdzielony',

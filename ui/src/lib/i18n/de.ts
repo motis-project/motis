@@ -16,6 +16,7 @@ const translations: Translations = {
 	moped: 'Moped',
 	from: 'Von',
 	to: 'Nach',
+	position: 'Position',
 	arrival: 'Ankunft',
 	departure: 'Abfahrt',
 	duration: 'Dauer',
@@ -84,6 +85,8 @@ const translations: Translations = {
 	REGIONAL_RAIL: 'Regionalzug',
 	OTHER: 'Andere',
 	routingSegments: {
+		maxTransfers: 'Max. Umstiege',
+		maxTravelTime: 'Max. Reisezeit',
 		firstMile: 'Erste Meile',
 		lastMile: 'Letzte Meile',
 		direct: 'Direktverbindung',
@@ -92,6 +95,17 @@ const translations: Translations = {
 		maxDirectTime: 'Max. Direktzeit'
 	},
 	elevationCosts: { NONE: 'Keine Umwege', LOW: 'Kleine Umwege', HIGH: 'Große Umwege' },
+	isochrones: {
+		title: 'Isochronen',
+		displayLevel: 'Darstellungsebene',
+		maxComputeLevel: 'Max. Berechnungsebene',
+		canvasRects: 'Rechtecke (Overlay)',
+		canvasCircles: 'Kreise (Overlay)',
+		geojsonCircles: 'Kreise (Geometrie)',
+		styling: 'Darstellung der Isochronen',
+		noData: 'Keine Daten',
+		requestFailed: 'Anfrage fehlgeschlagen'
+	},
 	RENTAL_BICYCLE: 'Bikesharing',
 	RENTAL_CARGO_BICYCLE: 'Lastenrad Sharing',
 	RENTAL_CAR: 'Car Sharing',

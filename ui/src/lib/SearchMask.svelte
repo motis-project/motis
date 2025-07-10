@@ -1,17 +1,17 @@
 <script lang="ts">
+	import { t } from '$lib/i18n/translation';
 	import ArrowUpDown from 'lucide-svelte/icons/arrow-up-down';
 	import LocateFixed from 'lucide-svelte/icons/locate-fixed';
-	import AddressTypeahead from '$lib/AddressTypeahead.svelte';
+	import maplibregl from 'maplibre-gl';
+	import * as RadioGroup from '$lib/components/ui/radio-group';
 	import Button from '$lib/components/ui/button/button.svelte';
 	import { Label } from '$lib/components/ui/label';
-	import * as RadioGroup from '$lib/components/ui/radio-group';
+	import type { ElevationCosts, PedestrianProfile } from '$lib/api/openapi';
+	import AddressTypeahead from '$lib/AddressTypeahead.svelte';
+	import AdvancedOptions from '$lib/AdvancedOptions.svelte';
 	import DateInput from '$lib/DateInput.svelte';
 	import { posToLocation, type Location } from '$lib/Location';
-	import { t } from '$lib/i18n/translation';
-	import AdvancedOptions from './AdvancedOptions.svelte';
-	import maplibregl from 'maplibre-gl';
-	import type { ElevationCosts, PedestrianProfile } from '$lib/api/openapi';
-	import type { PrePostDirectMode, TransitMode } from './Modes';
+	import type { PrePostDirectMode, TransitMode } from '$lib/Modes';
 
 	let {
 		geocodingBiasPlace,
@@ -49,9 +49,9 @@
 		postTransitModes: PrePostDirectMode[];
 		directModes: PrePostDirectMode[];
 		elevationCosts: ElevationCosts;
-		maxPreTransitTime: string;
-		maxPostTransitTime: string;
-		maxDirectTime: string;
+		maxPreTransitTime: number;
+		maxPostTransitTime: number;
+		maxDirectTime: number;
 		ignorePreTransitRentalReturnConstraints: boolean;
 		ignorePostTransitRentalReturnConstraints: boolean;
 		ignoreDirectRentalReturnConstraints: boolean;
@@ -145,6 +145,8 @@
 				(v) => (pedestrianProfile = v ? 'WHEELCHAIR' : 'FOOT')
 			}
 			bind:requireCarTransport
+			maxTransfers={undefined}
+			maxTravelTime={undefined}
 			bind:requireBikeTransport
 			bind:transitModes
 			bind:preTransitModes

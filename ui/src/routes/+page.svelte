@@ -8,14 +8,18 @@
 	import { Card } from '$lib/components/ui/card';
 	import {
 		initial,
+		oneToAll,
 		plan,
 		type ElevationCosts,
+		type OneToAllData,
+		type OneToAllResponse,
 		type PlanResponse,
 		type Itinerary,
 		type Mode,
+		type PedestrianProfile,
 		type PlanData,
-		type RentalFormFactor,
-		type PedestrianProfile
+		type ReachablePlace,
+		type RentalFormFactor
 	} from '$lib/api/openapi';
 	import ItineraryList from '$lib/ItineraryList.svelte';
 	import ConnectionDetail from '$lib/ConnectionDetail.svelte';
@@ -38,7 +42,7 @@
 	import { lngLatToStr } from '$lib/lngLatToStr';
 	import { client } from '$lib/api/openapi';
 	import StopTimes from '$lib/StopTimes.svelte';
-	import { onMount, tick } from 'svelte';
+	import { onMount, tick, untrack } from 'svelte';
 	import RailViz from '$lib/RailViz.svelte';
 	import MapIcon from 'lucide-svelte/icons/map';
 	import { t } from '$lib/i18n/translation';
@@ -47,6 +51,10 @@
 	import { preprocessItinerary } from '$lib/preprocessItinerary';
 	import * as Tabs from '$lib/components/ui/tabs';
 	import DeparturesMask from '$lib/DeparturesMask.svelte';
+	import Isochrones from '$lib/map/Isochrones.svelte';
+	import IsochronesInfo from '$lib/IsochronesInfo.svelte';
+	import type { DisplayLevel, IsochronesOptions, IsochronesPos } from '$lib/map/IsochronesShared';
+	import IsochronesMask from '$lib/IsochronesMask.svelte';
 	import {
 		getFormFactors,
 		getPrePostDirectModes,
@@ -63,9 +71,11 @@
 	const hasDark = urlParams && urlParams.has('dark');
 	const hasLight = urlParams && urlParams.has('light');
 	const isSmallScreen = browser && window.innerWidth < 768;
+	let activeTab = $state<'connections' | 'departures' | 'isochrones'>('connections');
 	let dataAttributionLink: string | undefined = $state(undefined);
 	let showMap = $state(!isSmallScreen);
-	let last_selected_itinerary: Itinerary | undefined = undefined;
+	let lastSelectedItinerary: Itinerary | undefined = undefined;
+	let lastOneToAllQuery: OneToAllData | undefined = undefined;
 
 	let theme: 'light' | 'dark' =
 		(hasDark ? 'dark' : hasLight ? 'light' : undefined) ??
@@ -117,12 +127,23 @@
 		}
 	};
 
+	function parseIntOr(s: string | null | undefined, d: number) {
+		if (s) {
+			const v = parseInt(s);
+			return isNaN(v) ? d : v;
+		} else {
+			return d;
+		}
+	}
+
 	let fromMarker = $state<maplibregl.Marker>();
 	let toMarker = $state<maplibregl.Marker>();
+	let oneMarker = $state<maplibregl.Marker>();
 	let from = $state<Location>(
 		parseLocation(urlParams?.get('fromPlace'), urlParams?.get('fromName'))
 	);
 	let to = $state<Location>(parseLocation(urlParams?.get('toPlace'), urlParams?.get('toName')));
+	let one = $state<Location>(parseLocation(urlParams?.get('one'), urlParams?.get('oneName')));
 	let time = $state<Date>(new Date(urlParams?.get('time') || Date.now()));
 	let arriveBy = $state<boolean>(urlParams?.get('arriveBy') == 'true');
 	let useRoutedTransfers = $state(
@@ -159,14 +180,20 @@
 	let elevationCosts = $state<ElevationCosts>(
 		(urlParams?.get('elevationCosts') ?? 'NONE') as ElevationCosts
 	);
-	let maxPreTransitTime = $state<string>(
-		urlParams?.get('maxPreTransitTime') ?? defaultQuery.maxPreTransitTime.toString()
+	let maxTransfers = $state<number>(
+		parseIntOr(urlParams?.get('maxTransfers'), defaultQuery.maxTransfers)
 	);
-	let maxPostTransitTime = $state<string>(
-		urlParams?.get('maxPostTransitTime') ?? defaultQuery.maxPostTransitTime.toString()
+	let maxTravelTime = $state<number>(
+		parseIntOr(urlParams?.get('maxTravelTime'), defaultQuery.maxTravelTime)
 	);
-	let maxDirectTime = $state<string>(
-		urlParams?.get('maxDirectTime') ?? defaultQuery.maxDirectTime.toString()
+	let maxPreTransitTime = $state<number>(
+		parseIntOr(urlParams?.get('maxPreTransitTime'), defaultQuery.maxPreTransitTime)
+	);
+	let maxPostTransitTime = $state<number>(
+		parseIntOr(urlParams?.get('maxPostTransitTime'), defaultQuery.maxPostTransitTime)
+	);
+	let maxDirectTime = $state<number>(
+		parseIntOr(urlParams?.get('maxDirectTime'), defaultQuery.maxDirectTime)
 	);
 	let ignorePreTransitRentalReturnConstraints = $state(
 		urlParams?.get('ignorePreTransitRentalReturnConstraints') == 'true'
@@ -178,6 +205,17 @@
 		urlParams?.get('ignoreDirectRentalReturnConstraints') == 'true'
 	);
 	let slowDirect = $state(urlParams?.get('slowDirect') != 'false');
+
+	let isochronesData = $state<IsochronesPos[]>([]);
+	let isochronesOptions = $state<IsochronesOptions>({
+		displayLevel:
+			(urlParams?.get('isochronesDisplayLevel') as DisplayLevel) ??
+			defaultQuery.isochronesDisplayLevel,
+		color: urlParams?.get('isochronesColor') ?? defaultQuery.isochronesColor,
+		opacity: parseIntOr(urlParams?.get('isochronesOpacity'), defaultQuery.isochronesOpacity),
+		status: 'DONE',
+		error: undefined
+	});
 
 	const toPlaceString = (l: Location) => {
 		if (l.match?.type === 'STOP') {
@@ -218,14 +256,40 @@
 						elevationCosts,
 						useRoutedTransfers,
 						maxMatchingDistance: pedestrianProfile == 'WHEELCHAIR' ? 8 : 250,
-						maxPreTransitTime: parseInt(maxPreTransitTime),
-						maxPostTransitTime: parseInt(maxPostTransitTime),
-						maxDirectTime: parseInt(maxDirectTime),
+						maxPreTransitTime,
+						maxPostTransitTime,
+						maxDirectTime,
 						ignorePreTransitRentalReturnConstraints,
 						ignorePostTransitRentalReturnConstraints,
 						ignoreDirectRentalReturnConstraints
 					} as PlanData['query'])
 				} as PlanData)
+			: undefined
+	);
+	let isochronesQuery = $derived(
+		one?.match
+			? ({
+					query: {
+						one: toPlaceString(one),
+						maxTravelTime: Math.ceil(maxTravelTime / 60),
+						time: time.toISOString(),
+						transitModes,
+						maxTransfers,
+						arriveBy,
+						useRoutedTransfers,
+						pedestrianProfile,
+						requireBikeTransport,
+						requireCarTransport,
+						preTransitModes: prePostModesToModes(preTransitModes),
+						postTransitModes: prePostModesToModes(postTransitModes),
+						maxPreTransitTime,
+						maxPostTransitTime,
+						elevationCosts,
+						maxMatchingDistance: pedestrianProfile == 'WHEELCHAIR' ? 8 : 250,
+						ignorePreTransitRentalReturnConstraints,
+						ignorePostTransitRentalReturnConstraints
+					}
+				} as OneToAllData)
 			: undefined
 	);
 
@@ -234,7 +298,7 @@
 	let routingResponses = $state<Array<Promise<PlanResponse>>>([]);
 	let stopNameFromResponse = $state<string>('');
 	$effect(() => {
-		if (baseQuery) {
+		if (baseQuery && activeTab == 'connections') {
 			clearTimeout(searchDebounceTimer);
 			searchDebounceTimer = setTimeout(() => {
 				const base = plan(baseQuery).then(preprocessItinerary(from, to));
@@ -253,6 +317,60 @@
 			}, 400);
 		}
 	});
+	let isochronesQueryTimeout: number;
+	$effect(() => {
+		if (isochronesQuery && activeTab == 'isochrones') {
+			const [isochronesColor, isochronesOpacity, isochronesDisplayLevel] = [
+				isochronesOptions.color,
+				isochronesOptions.opacity,
+				isochronesOptions.displayLevel
+			];
+			if (lastOneToAllQuery != isochronesQuery) {
+				lastOneToAllQuery = isochronesQuery;
+				clearTimeout(isochronesQueryTimeout);
+				isochronesOptions.status = 'WORKING';
+				isochronesOptions.error = undefined;
+				isochronesQueryTimeout = setTimeout(() => {
+					oneToAll(isochronesQuery)
+						.then((r: { data: OneToAllResponse | undefined; error: unknown }) => {
+							if (r.error) {
+								const msg = (r.error as { error: string }).error;
+								throw new Error(String(msg));
+							}
+							const all = r.data!.all!.map((p: ReachablePlace) => {
+								return {
+									lat: p.place?.lat,
+									lng: p.place?.lon,
+									seconds: maxTravelTime - 60 * (p.duration ?? 0),
+									name: p.place?.name
+								} as IsochronesPos;
+							});
+							isochronesData = [...all];
+							isochronesOptions.status = isochronesData.length == 0 ? 'EMPTY' : 'WORKING';
+						})
+						.catch((e: Error) => {
+							isochronesOptions.status = 'FAILED';
+							isochronesOptions.error = e.message;
+						});
+				}, 60);
+			}
+			untrack(() => {
+				const q = isochronesQuery.query;
+				pushStateWithQueryString(
+					{
+						...q,
+						...(q.one == one.label ? {} : { oneName: one.label }),
+						maxTravelTime: q.maxTravelTime * 60,
+						isochronesColor,
+						isochronesOpacity,
+						isochronesDisplayLevel
+					},
+					{},
+					true
+				);
+			});
+		}
+	});
 
 	if (browser) {
 		addEventListener('paste', (event) => {
@@ -268,7 +386,7 @@
 	}
 
 	const flyToSelectedItinerary = () => {
-		if (last_selected_itinerary === page.state.selectedItinerary) {
+		if (lastSelectedItinerary === page.state.selectedItinerary) {
 			return;
 		}
 		if (page.state.selectedItinerary && map) {
@@ -289,7 +407,7 @@
 			};
 			map.flyTo({ ...map.cameraForBounds(box, { padding }) });
 		}
-		last_selected_itinerary = page.state.selectedItinerary;
+		lastSelectedItinerary = page.state.selectedItinerary;
 	};
 
 	$effect(flyToSelectedItinerary);
@@ -298,26 +416,39 @@
 </script>
 
 {#snippet contextMenu(e: maplibregl.MapMouseEvent, close: CloseFn)}
-	<Button
-		variant="outline"
-		onclick={() => {
-			from = posToLocation(e.lngLat, zoom > LEVEL_MIN_ZOOM ? level : undefined);
-			fromMarker?.setLngLat(from.match!);
-			close();
-		}}
-	>
-		From
-	</Button>
-	<Button
-		variant="outline"
-		onclick={() => {
-			to = posToLocation(e.lngLat, zoom > LEVEL_MIN_ZOOM ? level : undefined);
-			toMarker?.setLngLat(to.match!);
-			close();
-		}}
-	>
-		To
-	</Button>
+	{#if activeTab == 'connections'}
+		<Button
+			variant="outline"
+			onclick={() => {
+				from = posToLocation(e.lngLat, zoom > LEVEL_MIN_ZOOM ? level : undefined);
+				fromMarker?.setLngLat(from.match!);
+				close();
+			}}
+		>
+			From
+		</Button>
+		<Button
+			variant="outline"
+			onclick={() => {
+				to = posToLocation(e.lngLat, zoom > LEVEL_MIN_ZOOM ? level : undefined);
+				toMarker?.setLngLat(to.match!);
+				close();
+			}}
+		>
+			To
+		</Button>
+	{:else if activeTab == 'isochrones'}
+		<Button
+			variant="outline"
+			onclick={() => {
+				one = posToLocation(e.lngLat, zoom > LEVEL_MIN_ZOOM ? level : undefined);
+				oneMarker?.setLngLat(one.match!);
+				close();
+			}}
+		>
+			{t.position}
+		</Button>
+	{/if}
 {/snippet}
 
 <Map
@@ -352,10 +483,11 @@
 					? 'hide'
 					: ''}
 			>
-				<Tabs.Root value="connections" class="max-w-full w-[520px] overflow-y-auto">
-					<Tabs.List class="grid grid-cols-2">
+				<Tabs.Root bind:value={activeTab} class="max-w-full w-[520px] overflow-y-auto">
+					<Tabs.List class="grid grid-cols-3">
 						<Tabs.Trigger value="connections">{t.connections}</Tabs.Trigger>
 						<Tabs.Trigger value="departures">{t.departures}</Tabs.Trigger>
+						<Tabs.Trigger value="isochrones">{t.isochrones.title}</Tabs.Trigger>
 					</Tabs.List>
 					<Tabs.Content value="connections">
 						<Card class="overflow-y-auto overflow-x-hidden bg-background rounded-lg">
@@ -388,10 +520,35 @@
 							<DeparturesMask bind:time />
 						</Card>
 					</Tabs.Content>
+					<Tabs.Content value="isochrones">
+						<Card class="overflow-y-auto overflow-x-hidden bg-background rounded-lg">
+							<IsochronesMask
+								bind:one
+								bind:maxTravelTime
+								geocodingBiasPlace={center}
+								bind:time
+								bind:useRoutedTransfers
+								bind:pedestrianProfile
+								bind:requireCarTransport
+								bind:requireBikeTransport
+								bind:transitModes
+								bind:maxTransfers
+								bind:preTransitModes
+								bind:postTransitModes
+								bind:maxPreTransitTime
+								bind:maxPostTransitTime
+								bind:arriveBy
+								bind:elevationCosts
+								bind:ignorePreTransitRentalReturnConstraints
+								bind:ignorePostTransitRentalReturnConstraints
+								bind:options={isochronesOptions}
+							/>
+						</Card>
+					</Tabs.Content>
 				</Tabs.Root>
 			</Control>
 
-			{#if routingResponses.length !== 0 && !page.state.showDepartures}
+			{#if activeTab != 'isochrones' && routingResponses.length !== 0 && !page.state.showDepartures}
 				<Control class="min-h-0 md:mb-2 {page.state.selectedItinerary ? 'hide' : ''}">
 					<Card
 						class="w-[520px] h-full md:max-h-[70vh] overflow-y-auto overflow-x-hidden bg-background rounded-lg"
@@ -407,7 +564,7 @@
 				</Control>
 			{/if}
 
-			{#if page.state.selectedItinerary && !page.state.showDepartures}
+			{#if activeTab != 'isochrones' && page.state.selectedItinerary && !page.state.showDepartures}
 				<Control class="min-h-0 mb-12 md:mb-2">
 					<Card class="w-[520px] h-full bg-background rounded-lg flex flex-col">
 						<div class="w-full flex justify-between items-center shadow-md pl-1 mb-1">
@@ -434,7 +591,7 @@
 				{/if}
 			{/if}
 
-			{#if page.state.selectedStop && page.state.showDepartures}
+			{#if activeTab != 'isochrones' && page.state.selectedStop && page.state.showDepartures}
 				<Control class="min-h-0 md:mb-2">
 					<Card class="w-[520px] h-full bg-background rounded-lg flex flex-col">
 						<div class="w-full flex justify-between items-center shadow-md pl-1 mb-1">
@@ -471,6 +628,14 @@
 					</Card>
 				</Control>
 			{/if}
+
+			{#if activeTab == 'isochrones' && one.match}
+				<Control class="min-h-0 md:mb-2 {isochronesOptions.status == 'DONE' ? 'hide' : ''}">
+					<Card class="w-[520px] overflow-y-auto overflow-x-hidden bg-background rounded-lg">
+						<IsochronesInfo options={isochronesOptions} />
+					</Card>
+				</Control>
+			{/if}
 		</div>
 	</div>
 
@@ -486,11 +651,24 @@
 	</div>
 
 	{#if showMap}
-		<RailViz {map} {bounds} {zoom} />
+		{#if activeTab != 'isochrones'}
+			<RailViz {map} {bounds} {zoom} />
+		{/if}
+		<!-- Isochrones cannot be hidden the same way as RailViz -->
+		<Isochrones
+			{map}
+			{bounds}
+			{isochronesData}
+			streetModes={arriveBy ? preTransitModes : postTransitModes}
+			wheelchair={pedestrianProfile === 'WHEELCHAIR'}
+			maxAllTime={arriveBy ? maxPreTransitTime : maxPostTransitTime}
+			active={activeTab == 'isochrones'}
+			bind:options={isochronesOptions}
+		/>
 
 		<Popup trigger="contextmenu" children={contextMenu} />
 
-		{#if from}
+		{#if from && activeTab == 'connections'}
 			<Marker
 				color="green"
 				draggable={true}
@@ -500,8 +678,12 @@
 			/>
 		{/if}
 
-		{#if to}
+		{#if to && activeTab == 'connections'}
 			<Marker color="red" draggable={true} {level} bind:location={to} bind:marker={toMarker} />
+		{/if}
+
+		{#if one && activeTab == 'isochrones'}
+			<Marker color="yellow" draggable={true} {level} bind:location={one} bind:marker={oneMarker} />
 		{/if}
 	{:else}
 		<div class="maplibregl-control-container">

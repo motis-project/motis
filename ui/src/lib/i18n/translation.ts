@@ -20,6 +20,7 @@ export type Translations = {
 	moped: string;
 	from: string;
 	to: string;
+	position: string;
 	arrival: string;
 	departure: string;
 	duration: string;
@@ -78,6 +79,8 @@ export type Translations = {
 	REGIONAL_RAIL: string;
 	OTHER: string;
 	routingSegments: {
+		maxTransfers: string;
+		maxTravelTime: string;
 		firstMile: string;
 		lastMile: string;
 		direct: string;
@@ -89,6 +92,17 @@ export type Translations = {
 		NONE: string;
 		LOW: string;
 		HIGH: string;
+	};
+	isochrones: {
+		title: string;
+		displayLevel: string;
+		maxComputeLevel: string;
+		canvasRects: string;
+		canvasCircles: string;
+		geojsonCircles: string;
+		styling: string;
+		noData: string;
+		requestFailed: string;
 	};
 	RENTAL_BICYCLE: string;
 	RENTAL_CARGO_BICYCLE: string;
