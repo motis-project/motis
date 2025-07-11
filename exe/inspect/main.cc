@@ -5,7 +5,6 @@
 #include "fmt/base.h"
 
 #include "nigiri/shapes_storage.h"
-#include "nigiri/timetable.h"
 #include "nigiri/types.h"
 
 #include "motis/config.h"
@@ -19,6 +18,8 @@
 namespace fs = std::filesystem;
 
 using namespace motis;
+
+constexpr auto const kMotisVersion = std::string_view{MOTIS_VERSION};
 
 bool print_shape_offsets(data const& d,
                          std::string_view day,
@@ -74,17 +75,16 @@ bool print_shape_offsets(data const& d,
   return true;
 }
 
-int main(int ac, char** av) {
-  auto const motis_version = std::string_view{MOTIS_VERSION};
-  if (ac != 5) {
-    fmt::println("Usage: <tag> <trip-id> <day> <time>\nMOTIS {}",
-                 motis_version);
+bool handle_shape(int ac, char** av) {
+  if (ac != 4) {
+    fmt::println("Usage: shape <tag> <trip-id> <day> <time>\nMOTIS {}",
+                 kMotisVersion);
     return 1;
   }
-  auto const tag = std::string_view{av[1]};
-  auto const trip_id = std::string_view{av[2]};
-  auto const day = std::string_view{av[3]};
-  auto const time = std::string_view{av[4]};
+  auto const tag = std::string_view{av[0]};
+  auto const trip_id = std::string_view{av[1]};
+  auto const day = std::string_view{av[2]};
+  auto const time = std::string_view{av[3]};
 
   auto data_path = fs::path{"data"};
   auto const c = config::read(data_path / "config.yml");
@@ -93,4 +93,20 @@ int main(int ac, char** av) {
   auto const success = print_shape_offsets(d, day, time, tag, trip_id);
 
   return success ? 0 : 1;
+}
+
+int main(int ac, char** av) {
+  if (ac < 2) {
+    fmt::println("Usage: shape| [options...]\nMOTIS {}", kMotisVersion);
+    return 1;
+  }
+  auto const cmd = std::string_view{av[1]};
+  switch (cista::hash(cmd)) {
+    case cista::hash("-h"):
+    case cista::hash("--help"):
+      fmt::println("Usage: shapes| [options...]\nMOTIS {}", kMotisVersion);
+      return 0;
+    case cista::hash("shape"): return handle_shape(ac - 2, av + 2);
+    default: fmt::println("Invalid command '{}'", cmd);
+  }
 }
