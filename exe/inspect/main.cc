@@ -21,6 +21,17 @@ using namespace motis;
 
 constexpr auto const kMotisVersion = std::string_view{MOTIS_VERSION};
 
+void show_help() {
+    fmt::println(
+    "Usage: [command] [options...]\n"
+    "\n"
+    "Possible commands:\n"
+    "  shape       Show statistics for a shape\n"
+    "\n"
+    "MOTIS {}\n"
+    , kMotisVersion);
+}
+
 bool print_shape_offsets(data const& d,
                          std::string_view day,
                          std::string_view time,
@@ -97,14 +108,14 @@ bool handle_shape(int ac, char** av) {
 
 int main(int ac, char** av) {
   if (ac < 2) {
-    fmt::println("Usage: shape| [options...]\nMOTIS {}", kMotisVersion);
+    show_help();
     return 1;
   }
   auto const cmd = std::string_view{av[1]};
   switch (cista::hash(cmd)) {
     case cista::hash("-h"):
     case cista::hash("--help"):
-      fmt::println("Usage: shapes| [options...]\nMOTIS {}", kMotisVersion);
+      show_help();
       return 0;
     case cista::hash("shape"): return handle_shape(ac - 2, av + 2);
     default: fmt::println("Invalid command '{}'", cmd);
