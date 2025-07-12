@@ -30,14 +30,17 @@ const translations: Translations = {
 	track: 'Kolej',
 	arrivalOnTrack: 'Příjezd na kolej',
 	tripIntermediateStops: (n: number) => {
-		switch (n) {
-			case 0:
+			if (n==0) {
 				return 'Bez mezizastávek';
-			case 1:
+			}
+			if (n==1) {
 				return '1 mezizastávka';
-			default:
-				return `${n} mezizastávek`; // todo
-		}
+			}
+			if (n%10>1&&n%10<5&&n!=12&&n!=13&&n!=14) {
+				return `${n} mezizastávky`;
+			}
+			return `${n} mezizastávek`;
+		
 	},
 	sharingProvider: 'Poskytovatel dat',
 	roundtripStationReturnConstraint: 'Pojezd musí být vrácen k počáteční stanice',
