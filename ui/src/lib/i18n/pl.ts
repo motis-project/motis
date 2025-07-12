@@ -30,14 +30,17 @@ const translations: Translations = {
 	track: 'Tor',
 	arrivalOnTrack: 'Przyjazd na tor',
 	tripIntermediateStops: (n: number) => {
-		switch (n) {
-			case 0:
+			if (n==0) {
 				return 'Brak przystanków pośrednich';
-			case 1:
+			}
+			if (n==1) {
 				return '1 przystanek pośredni';
-			default:
-				return `${n} przystanków pośrednich`; // todo
-		}
+			}
+			if (n%10>1&&n%10<5&&n!=12&&n!=13&&n!=14) {
+				return `${n} przystanki pośrednie`;
+			}
+			return `${n} przystanków pośrednich`;
+		
 	},
 	sharingProvider: 'Dostawca danych',
 	roundtripStationReturnConstraint: 'Pojazd musi zostać zwrócony do stacji początkowej.',
@@ -96,15 +99,15 @@ const translations: Translations = {
 	elevationCosts: {
 		NONE: 'Bez odchyleń od trasy',
 		LOW: 'Małe odchylenia od trasy',
-		HIGH: 'Duże odchyleia od trasy'
+		HIGH: 'Duże odchylenia od trasy'
 	},
 	isochrones: {
 		title: 'Izochrony',
 		displayLevel: 'Poziom wyświetlania',
 		maxComputeLevel: 'Maks. poziom wyliczenia',
-		canvasRects: 'Rects (Overlay)',
-		canvasCircles: 'Circles (Overlay)',
-		geojsonCircles: 'Circles (Geometry)',
+		canvasRects: 'Kwadraty (warstwa)',
+		canvasCircles: 'Okręgi (warstwa)',
+		geojsonCircles: 'Okręgi (geometria)',
 		styling: 'Styl izochron',
 		noData: 'Brak danych',
 		requestFailed: 'Błąd zapytania'
