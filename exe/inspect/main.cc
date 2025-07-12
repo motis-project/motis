@@ -87,8 +87,18 @@ bool print_shape_offsets(data const& d,
 
 bool handle_shape(int ac, char** av) {
   if (ac != 4) {
-    fmt::println("Usage: shape <tag> <trip-id> <day> <time>\nMOTIS {}",
-                 kMotisVersion);
+    fmt::println(
+      "Usage: shape <tag> <trip-id> <day> <time>\n"
+      "\n"
+      "For each stop of the given trip-id, list the index in the shape, that\n"
+      "is matched with the this stop.\n"
+      "The first stop will alwavs be matched with the first point of the\n"
+      "shape, while the last stop will alwavs be matched with the last\n"
+      "shape point.\n"
+      "\n"
+      "MOTIS {}\n",
+      kMotisVersion
+    );
     return 1;
   }
   auto const tag = std::string_view{av[0]};
