@@ -5,6 +5,7 @@
 #include "fmt/base.h"
 
 #include "nigiri/shapes_storage.h"
+#include "nigiri/timetable.h"
 #include "nigiri/types.h"
 
 #include "motis/config.h"
@@ -22,14 +23,22 @@ using namespace motis;
 constexpr auto const kMotisVersion = std::string_view{MOTIS_VERSION};
 
 void show_help() {
-    fmt::println(
-    "Usage: [command] [options...]\n"
-    "\n"
-    "Possible commands:\n"
-    "  shape       Show statistics for a shape\n"
-    "\n"
-    "MOTIS {}\n"
-    , kMotisVersion);
+  fmt::println(
+      "Usage: [command] [options...]\n"
+      "\n"
+      "Possible commands:\n"
+      // Commands ordered lexicographically
+      "  shape       Show statistics for a shape\n"
+      "  stats       Show statistics about binary data\n"
+      "\n"
+      "MOTIS {}\n",
+      kMotisVersion);
+}
+
+data get_data() {
+  auto data_path = fs::path{"data"};
+  auto const c = config::read(data_path / "config.yml");
+  return data{data_path, c};
 }
 
 bool print_shape_offsets(data const& d,
@@ -97,13 +106,32 @@ bool handle_shape(int ac, char** av) {
   auto const day = std::string_view{av[2]};
   auto const time = std::string_view{av[3]};
 
-  auto data_path = fs::path{"data"};
-  auto const c = config::read(data_path / "config.yml");
-  auto const d = data{data_path, c};
+  auto const d = get_data();
 
   auto const success = print_shape_offsets(d, day, time, tag, trip_id);
 
   return success ? 0 : 1;
+}
+
+bool handle_stats([[maybe_unused]] int ac, [[maybe_unused]] char** av) {
+  auto const d = get_data();
+
+  if (d.tt_) {
+    auto const tt = *d.tt_;
+    fmt::println(
+        "Number of sources:    {}\n"
+        "Number of agencies:   {}\n"
+        "Number of routes:     {}\n"
+        "Number of trips:      {}\n"
+        "Number of locations:  {}\n"
+        "\n",
+        tt.n_sources(), tt.n_agencies(), tt.n_routes(), tt.n_trips(),
+        tt.n_locations());
+  } else {
+    fmt::println("No timetable data\n\n");
+  }
+
+  return true;
 }
 
 int main(int ac, char** av) {
@@ -114,10 +142,9 @@ int main(int ac, char** av) {
   auto const cmd = std::string_view{av[1]};
   switch (cista::hash(cmd)) {
     case cista::hash("-h"):
-    case cista::hash("--help"):
-      show_help();
-      return 0;
+    case cista::hash("--help"): show_help(); return 0;
     case cista::hash("shape"): return handle_shape(ac - 2, av + 2);
+    case cista::hash("stats"): return handle_stats(ac - 2, av + 2);
     default: fmt::println("Invalid command '{}'", cmd);
   }
 }
