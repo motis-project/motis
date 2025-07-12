@@ -30,17 +30,16 @@ const translations: Translations = {
 	track: 'Kolej',
 	arrivalOnTrack: 'Příjezd na kolej',
 	tripIntermediateStops: (n: number) => {
-			if (n==0) {
-				return 'Bez mezizastávek';
-			}
-			if (n==1) {
-				return '1 mezizastávka';
-			}
-			if (n%10>1&&n%10<5&&n!=12&&n!=13&&n!=14) {
-				return `${n} mezizastávky`;
-			}
-			return `${n} mezizastávek`;
-		
+		if (n == 0) {
+			return 'Bez mezizastávek';
+		}
+		if (n == 1) {
+			return '1 mezizastávka';
+		}
+		if (n % 10 > 1 && n % 10 < 5 && n != 12 && n != 13 && n != 14) {
+			return `${n} mezizastávky`;
+		}
+		return `${n} mezizastávek`;
 	},
 	sharingProvider: 'Poskytovatel dat',
 	roundtripStationReturnConstraint: 'Pojezd musí být vrácen k počáteční stanice',
