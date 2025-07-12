@@ -301,7 +301,7 @@ void data::load_tiles() {
 }
 
 void data::load_auser_updater(std::string_view tag,
-                              const config::timetable::dataset& d) {
+                              config::timetable::dataset const& d) {
   if (!auser_) {
     auser_ = std::make_unique<std::map<std::string, auser>>();
   }

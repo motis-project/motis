@@ -34,7 +34,7 @@ struct drop_trailing {
 public:
   template <typename StructType>
   static auto process(auto&& named_tuple) {
-    const auto handle_one = []<typename FieldType>(FieldType&& f) {
+    auto const handle_one = []<typename FieldType>(FieldType&& f) {
       if constexpr (FieldType::name() != "xml_content" &&
                     !rfl::internal::is_rename_v<typename FieldType::Type>) {
         return handle_one_field(std::move(f));
