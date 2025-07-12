@@ -30,17 +30,16 @@ const translations: Translations = {
 	track: 'Tor',
 	arrivalOnTrack: 'Przyjazd na tor',
 	tripIntermediateStops: (n: number) => {
-			if (n==0) {
-				return 'Brak przystanków pośrednich';
-			}
-			if (n==1) {
-				return '1 przystanek pośredni';
-			}
-			if (n%10>1&&n%10<5&&n!=12&&n!=13&&n!=14) {
-				return `${n} przystanki pośrednie`;
-			}
-			return `${n} przystanków pośrednich`;
-		
+		if (n == 0) {
+			return 'Brak przystanków pośrednich';
+		}
+		if (n == 1) {
+			return '1 przystanek pośredni';
+		}
+		if (n % 10 > 1 && n % 10 < 5 && n != 12 && n != 13 && n != 14) {
+			return `${n} przystanki pośrednie`;
+		}
+		return `${n} przystanków pośrednich`;
 	},
 	sharingProvider: 'Dostawca danych',
 	roundtripStationReturnConstraint: 'Pojazd musi zostać zwrócony do stacji początkowej.',
