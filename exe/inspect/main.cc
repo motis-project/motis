@@ -8,6 +8,8 @@
 #include "nigiri/timetable.h"
 #include "nigiri/types.h"
 
+#include "utl/verify.h"
+
 #include "motis/config.h"
 #include "motis/data.h"
 #include "motis/tag_lookup.h"
@@ -46,22 +48,10 @@ bool print_shape_offsets(data const& d,
                          std::string_view time,
                          std::string_view tag,
                          std::string_view trip_id) {
-  if (!d.tt_) {
-    fmt::println("Missing timetable");
-    return false;
-  }
-  if (!d.rt_ || !d.rt_->rtt_) {
-    fmt::println("Missing realtime data");
-    return false;
-  }
-  if (!d.tags_) {
-    fmt::println("Missing tags");
-    return false;
-  }
-  if (!d.shapes_) {
-    fmt::println("Missing shapes");
-    return false;
-  }
+  utl::verify(d.tt_, "Missing timetable");
+  utl::verify(d.rt_ && d.rt_->rtt_, "Missing realtime data");
+  utl::verify(d.tags_, "Missing tags");
+  utl::verify(!!d.shapes_, "Missing shapes");
   auto const& tt = *d.tt_;
   auto const& rtt = *d.rt_->rtt_;
   auto const& tags = *d.tags_;
