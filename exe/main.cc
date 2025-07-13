@@ -11,6 +11,7 @@
 #include "motis/config.h"
 #include "motis/data.h"
 #include "motis/import.h"
+#include "motis/inspect.h"
 #include "motis/server.h"
 
 #include "./flags.h"
@@ -140,6 +141,37 @@ int main(int ac, char** av) {
       } catch (std::exception const& e) {
         fmt::println("unable to import: {}", e.what());
         fmt::println("config:\n{}", fmt::streamed(c));
+        return_value = 1;
+        break;
+      }
+    }
+
+    case cista::hash("analyze-shapes"): {
+      try {
+        auto data_path = fs::path{"data"};
+
+        auto desc = po::options_description{"Analyze Shapes Options"};
+        add_data_path_opt(desc, data_path);
+
+        desc.add_options()("shape,s",
+                           po::value<std::vector<std::string> >()->composing(),
+                           "Add trip-id to analyze");
+        auto vm = parse_opt(ac, av, desc);
+        if (vm.count("help")) {
+          std::cout << desc << "\n";
+          return_value = 0;
+          break;
+        }
+
+        auto const c = config::read(data_path / "config.yml");
+        auto const d = data{data_path, c};
+        auto const ids = vm.count("shape") > 0
+                             ? vm["shape"].as<std::vector<std::string> >()
+                             : std::vector<std::string>{};
+
+        return analyze_shapes(d, ids) ? 0 : 1;
+      } catch (std::exception const& e) {
+        std::cerr << "unable to analyse shapes: " << e.what() << "\n";
         return_value = 1;
         break;
       }
