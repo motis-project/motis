@@ -164,6 +164,10 @@ net::reply gtfsrt::operator()(net::route_request const& req, bool) const {
   auto const rt = rt_;
   auto const rtt = rt->rtt_.get();
 
+  utl::verify(rtt->n_rt_transports() <
+                  config_.limits_.value().gtfsrt_expose_max_trip_updates_,
+              "number of trip updates above configured limit");
+
   auto fm = transit_realtime::FeedMessage();
   auto fh = fm.mutable_header();
   fh->set_gtfs_realtime_version("2.0");

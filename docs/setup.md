@@ -41,7 +41,6 @@ server:
   web_folder: ui                    # folder with static files to serve
   n_threads: 24                     # default (if not set): number of hardware threads
   data_attribution_link: https://creativecommons.org/licenses/by/4.0/ # link to data sources or license exposed in HTTP headers and UI
-  expose_gtfsrt: false              # expose loaded realtime data as an aggregated GTFS-RT feed
 osm: netherlands-latest.osm.pbf     # required by tiles, street routing, geocoding and reverse-geocoding
 tiles:                              # tiles won't be available if this key is missing
   profile: tiles-profiles/full.lua  # currently `background.lua` (less details) and `full.lua` (more details) are available
@@ -90,6 +89,7 @@ limits:
   onetoall_max_results: 65535     # maximum number of one-to-all results that can be requested
   onetoall_max_travel_minutes: 90 # maximum travel duration for one-to-all query that can be requested
   routing_max_timeout_seconds: 90 # maximum duration a routing query may take
+  gtfsrt_expose_max_trip_updates: 100 # how many trip updates are allowed to be exposed via the gtfsrt endpoint
 osr_footpath: true                # enable routing footpaths instead of using transfers from timetable datasets
 geocoding: true                   # enable geocoding for place/stop name autocompletion
 reverse_geocoding: false          # enable reverse geocoding for mapping a geo coordinate to nearby places/addresses
