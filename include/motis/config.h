@@ -173,6 +173,7 @@ struct config {
     unsigned onetoall_max_results_{65535U};
     unsigned onetoall_max_travel_minutes_{90U};
     unsigned routing_max_timeout_seconds_{90U};
+    unsigned gtfsrt_expose_max_trip_updates_{100U};
   };
   std::optional<limits> limits_{};
 
