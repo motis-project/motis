@@ -122,12 +122,16 @@ void add_cancelled_transports(n::timetable const& tt,
                               tag_lookup const& tags,
                               n::rt_timetable const& rtt,
                               transit_realtime::FeedMessage& fm) {
-  auto const start_time = std::chrono::time_point_cast<n::unixtime_t::duration>(
-      std::chrono::system_clock::now() -
-      std::chrono::duration_cast<n::duration_t>(std::chrono::days{4}));
-  auto const end_time = std::chrono::time_point_cast<n::unixtime_t::duration>(
-      start_time +
-      std::chrono::duration_cast<n::duration_t>(std::chrono::days{6}));
+  auto const start_time = std::max(
+      std::chrono::time_point_cast<n::unixtime_t::duration>(
+          std::chrono::system_clock::now() -
+          std::chrono::duration_cast<n::duration_t>(n::kTimetableOffset)),
+      tt.internal_interval().from_);
+  auto const end_time = std::min(
+      std::chrono::time_point_cast<n::unixtime_t::duration>(
+          start_time +
+          std::chrono::duration_cast<n::duration_t>(std::chrono::days{6})),
+      tt.internal_interval().to_);
   auto const [start_day, _] = tt.day_idx_mam(start_time);
   auto const [end_day, _1] = tt.day_idx_mam(end_time);
 
