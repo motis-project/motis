@@ -13,6 +13,11 @@ externalDocs:
   url: https://github.com/motis-project/motis
 servers:
   - url: https://api.transitous.org
+    description: Transitous production server
+  - url: https://staging.api.transitous.org
+    description: Transitous staging server
+  - url: http://localhost:8080
+    description: Local MOTIS server
 paths:
   /api/v3/plan:
     get:
