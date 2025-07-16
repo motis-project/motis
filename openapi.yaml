@@ -2483,12 +2483,12 @@ components:
     FareMediaType:
       type: string
       enum: [ "NONE", "PAPER_TICKET", "TRANSIT_CARD", "CONTACTLESS_EMV", "MOBILE_APP" ]
-      enumDescriptions:
-        NONE: No fare media involved (e.g., cash payment)
-        PAPER_TICKET: Physical paper ticket
-        TRANSIT_CARD: Physical transit card with stored value
-        CONTACTLESS_EMV: cEMV (contactless payment)
-        MOBILE_APP: Mobile app with virtual transit cards/passes
+      description: |
+        - `NONE`: No fare media involved (e.g., cash payment)
+        - `PAPER_TICKET`: Physical paper ticket
+        - `TRANSIT_CARD`: Physical transit card with stored value
+        - `CONTACTLESS_EMV`: cEMV (contactless payment)
+        - `MOBILE_APP`: Mobile app with virtual transit cards/passes
 
     FareMedia:
       type: object
