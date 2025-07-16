@@ -138,7 +138,7 @@ execute_process(
     OUTPUT_VARIABLE motis-git-tag
     OUTPUT_STRIP_TRAILING_WHITESPACE
 )
-file(GLOB motis-files exe/*.cc)
+file(GLOB_RECURSE motis-files exe/*.cc)
 add_executable(motis ${motis-files})
 target_compile_features(motis PUBLIC cxx_std_23)
 target_compile_options(motis PRIVATE ${motis-compile-options})
@@ -148,18 +148,6 @@ target_link_libraries(motis
     ianatzdb-res
     pbf_sdf_fonts_res-res
     tiles_server_res-res
-)
-# --- INSPECT ---
-file(GLOB data-inspect-files exe/inspect/*.cc)
-add_executable(data-inspect ${data-inspect-files})
-target_compile_features(data-inspect PUBLIC cxx_std_23)
-target_compile_options(data-inspect PRIVATE ${motis-compile-options})
-set_source_files_properties(exe/inspect/main.cc PROPERTIES COMPILE_DEFINITIONS MOTIS_VERSION="${motis-git-tag}")
-target_link_libraries(data-inspect
-    motislib
-#     ianatzdb-res
-#     pbf_sdf_fonts_res-res
-#     tiles_server_res-res
 )
 
 
