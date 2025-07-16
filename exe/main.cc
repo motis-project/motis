@@ -1,4 +1,5 @@
 #include "boost/program_options.hpp"
+#include "boost/url/decode_view.hpp"
 
 #include <filesystem>
 #include <iostream>
@@ -7,6 +8,7 @@
 #include "google/protobuf/stubs/common.h"
 
 #include "utl/progress_tracker.h"
+#include "utl/to_vec.h"
 
 #include "motis/config.h"
 #include "motis/data.h"
@@ -153,7 +155,7 @@ int main(int ac, char** av) {
         auto desc = po::options_description{"Analyze Shapes Options"};
         add_data_path_opt(desc, data_path);
 
-        desc.add_options()("shape,s",
+        desc.add_options()("trip-id,t",
                            po::value<std::vector<std::string> >()->composing(),
                            "Add trip-id to analyze");
         auto vm = parse_opt(ac, av, desc);
@@ -165,9 +167,15 @@ int main(int ac, char** av) {
 
         auto const c = config::read(data_path / "config.yml");
         auto const d = data{data_path, c};
-        auto const ids = vm.count("shape") > 0
-                             ? vm["shape"].as<std::vector<std::string> >()
-                             : std::vector<std::string>{};
+        auto const ids =
+            vm.count("trip-id") > 0
+                ? utl::to_vec(
+                      vm["trip-id"].as<std::vector<std::string> >(),
+                      [](auto const& trip_id) {
+                        auto const decoded = boost::urls::decode_view{trip_id};
+                        return std::string{decoded.begin(), decoded.end()};
+                      })
+                : std::vector<std::string>{};
 
         return analyze_shapes(d, ids) ? 0 : 1;
       } catch (std::exception const& e) {
