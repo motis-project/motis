@@ -1,8 +1,6 @@
-#include "motis/inspect.h"
+#include "motis/analyze_shapes.h"
 
 #include "fmt/base.h"
-
-#include "nigiri/shapes_storage.h"
 
 #include "motis/tag_lookup.h"
 

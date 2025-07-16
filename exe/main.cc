@@ -10,10 +10,10 @@
 #include "utl/progress_tracker.h"
 #include "utl/to_vec.h"
 
+#include "motis/analyze_shapes.h"
 #include "motis/config.h"
 #include "motis/data.h"
 #include "motis/import.h"
-#include "motis/inspect.h"
 #include "motis/server.h"
 
 #include "./flags.h"

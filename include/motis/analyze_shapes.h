@@ -1,4 +1,8 @@
-#include <string_view>
+#include <string>
+#include <vector>
+
+#include "nigiri/shapes_storage.h"
+#include "nigiri/types.h"
 
 #include "motis/data.h"
 
