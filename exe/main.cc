@@ -177,19 +177,19 @@ int main(int ac, char** av) {
           break;
         }
 
+        if (vm.count("trip-id") == 0) {
+          std::cerr << "missing trip-ids\n";
+          return 2;
+        }
         auto const c = config::read(data_path / "config.yml");
-        auto const d = data{data_path, c};
-        auto const ids =
-            vm.count("trip-id") > 0
-                ? utl::to_vec(
-                      vm["trip-id"].as<std::vector<std::string> >(),
-                      [](auto const& trip_id) {
-                        auto const decoded = boost::urls::decode_view{trip_id};
-                        return std::string{decoded.begin(), decoded.end()};
-                      })
-                : std::vector<std::string>{};
+        auto const ids = utl::to_vec(
+            vm["trip-id"].as<std::vector<std::string> >(),
+            [](auto const& trip_id) {
+              auto const decoded = boost::urls::decode_view{trip_id};
+              return std::string{decoded.begin(), decoded.end()};
+            });
 
-        return analyze_shapes(d, ids) ? 0 : 1;
+        return analyze_shapes(data{data_path, c}, ids) ? 0 : 1;
       } catch (std::exception const& e) {
         std::cerr << "unable to analyse shapes: " << e.what() << "\n";
         return_value = 1;
