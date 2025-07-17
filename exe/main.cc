@@ -50,7 +50,8 @@ int main(int ac, char** av) {
         "  config     generate a config file from a list of input files\n"
         "  import     prepare input data, creates the data directory\n"
         "  server     starts a web server serving the API\n"
-        "  extract    trips from a Itinerary to GTFS timetable\n",
+        "  extract    trips from a Itinerary to GTFS timetable\n"
+        "  analyze-shapes   print shape segmentation for trips\n",
         motis_version);
     return 0;
   } else if (ac <= 1 || (ac >= 2 && av[1] == "--version"sv)) {
@@ -155,9 +156,20 @@ int main(int ac, char** av) {
         auto desc = po::options_description{"Analyze Shapes Options"};
         add_data_path_opt(desc, data_path);
 
-        desc.add_options()("trip-id,t",
-                           po::value<std::vector<std::string> >()->composing(),
-                           "Add trip-id to analyze");
+        desc.add_options()(
+            "trip-id,t", po::value<std::vector<std::string> >()->composing(),
+            "Add trip-id to analyze.\n"
+            "If the trip-id is encoded, it will be decoded automatically.\n"
+            "This option can be used multiple times.\n"
+            "\n"
+            "Will search the shape corresponding to each trip-id. "
+            "If a shape is found, the index of the shape point, that is "
+            "matched with each stop, will be printed.\n"
+            "Notice that the first and last stop of a trip will always be "
+            "matched with the first and last shape point respectively.\n"
+            "If a shape contains less points than stops in the trip, this "
+            "segmentation is not possible.");
+        desc.add_options()("help,h", "Show this help");
         auto vm = parse_opt(ac, av, desc);
         if (vm.count("help")) {
           std::cout << desc << "\n";
