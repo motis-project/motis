@@ -89,6 +89,7 @@ limits:
   onetoall_max_results: 65535
   onetoall_max_travel_minutes: 90
   routing_max_timeout_seconds: 90
+  gtfsrt_expose_max_trip_updates: 100
 osr_footpath: true
 geocoding: true
 reverse_geocoding: false

@@ -24,11 +24,15 @@ void update_all_runs_metrics(nigiri::timetable const& tt,
                              nigiri::rt_timetable const* rtt,
                              tag_lookup const& tags,
                              metrics_registry& metrics) {
-  auto const start_time = std::chrono::time_point_cast<n::unixtime_t::duration>(
-      std::chrono::system_clock::now());
-  auto const end_time = std::chrono::time_point_cast<n::unixtime_t::duration>(
-      start_time +
-      std::chrono::duration_cast<n::duration_t>(std::chrono::minutes{3}));
+  auto const start_time =
+      std::max(std::chrono::time_point_cast<n::unixtime_t::duration>(
+                   std::chrono::system_clock::now()),
+               tt.external_interval().from_);
+  auto const end_time = std::min(
+      std::chrono::time_point_cast<n::unixtime_t::duration>(
+          start_time +
+          std::chrono::duration_cast<n::duration_t>(std::chrono::minutes{3})),
+      tt.external_interval().to_);
   auto const time_interval = n::interval{start_time, end_time};
 
   auto metric_by_agency =
@@ -86,10 +90,13 @@ void update_all_runs_metrics(nigiri::timetable const& tt,
     auto const seq = tt.route_location_seq_[r];
     auto const from = n::stop_idx_t{0U};
     auto const to = static_cast<n::stop_idx_t>(seq.size() - 1);
+    auto const arr_times = tt.event_times_at_stop(r, to, n::event_type::kArr);
 
     for (auto const [i, t_idx] :
          utl::enumerate(tt.route_transport_ranges_[r])) {
-      for (auto day = start_day; day <= end_day; ++day) {
+      auto const day_offset =
+          static_cast<n::day_idx_t::value_t>(arr_times[i].days());
+      for (auto day = start_day - day_offset; day <= end_day; ++day) {
         auto const t = n::transport{t_idx, day};
         if (is_active(t) &&
             time_interval.overlaps({tt.event_time(t, from, n::event_type::kDep),

@@ -13,6 +13,11 @@ externalDocs:
   url: https://github.com/motis-project/motis
 servers:
   - url: https://api.transitous.org
+    description: Transitous production server
+  - url: https://staging.api.transitous.org
+    description: Transitous staging server
+  - url: http://localhost:8080
+    description: Local MOTIS server
 paths:
   /api/v3/plan:
     get:
@@ -821,7 +826,7 @@ paths:
           schema:
             type: boolean
       responses:
-        200:
+        '200':
           description: |
             A list of durations.
             If no path was found, the object is empty.
@@ -1088,7 +1093,7 @@ paths:
             minimum: 0
 
       responses:
-        200:
+        '200':
           description: |
             The starting position and a list of all reachable stops
             If no paths are found, the reachable list is empty.
@@ -1121,7 +1126,7 @@ paths:
           schema:
             $ref: '#/components/schemas/LocationType'
       responses:
-        200:
+        '200':
           description: A list of guesses to resolve the coordinates to a location
           content:
             application/json:
@@ -1184,7 +1189,7 @@ paths:
             default: 1
 
       responses:
-        200:
+        '200':
           description: A list of guesses to resolve the text to a location
           content:
             application/json:
@@ -1213,8 +1218,20 @@ paths:
           schema:
             type: boolean
             default: false
+        - name: joinInterlinedLegs
+          in: query
+          description: |
+            Optional. Default is `true`.
+            
+            Controls if a trip with stay-seated transfers is returned:
+            - `joinInterlinedLegs=false`: as several legs (full information about all trip numbers, headsigns, etc.).
+              Legs that do not require a transfer (stay-seated transfer) are marked with `interlineWithPreviousLeg=true`.
+            - `joinInterlinedLegs=true` (default behavior): as only one joined leg containing all stops
+          schema:
+            type: boolean
+            default: true
       responses:
-        200:
+        '200':
           description: the requested trip as itinerary
           content:
             application/json:
@@ -1338,7 +1355,7 @@ paths:
             type: boolean
             default: false
       responses:
-        200:
+        '200':
           description: A list of departures/arrivals
           content:
             application/json:
@@ -2466,12 +2483,12 @@ components:
     FareMediaType:
       type: string
       enum: [ "NONE", "PAPER_TICKET", "TRANSIT_CARD", "CONTACTLESS_EMV", "MOBILE_APP" ]
-      enumDescriptions:
-        NONE: No fare media involved (e.g., cash payment)
-        PAPER_TICKET: Physical paper ticket
-        TRANSIT_CARD: Physical transit card with stored value
-        CONTACTLESS_EMV: cEMV (contactless payment)
-        MOBILE_APP: Mobile app with virtual transit cards/passes
+      description: |
+        - `NONE`: No fare media involved (e.g., cash payment)
+        - `PAPER_TICKET`: Physical paper ticket
+        - `TRANSIT_CARD`: Physical transit card with stored value
+        - `CONTACTLESS_EMV`: cEMV (contactless payment)
+        - `MOBILE_APP`: Mobile app with virtual transit cards/passes
 
     FareMedia:
       type: object

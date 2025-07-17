@@ -19,7 +19,7 @@ bounds::bounds(fs::path const& p) {
   geom_ = tg_parse_geojsonn(f.view().data(), f.size());
 
   if (tg_geom_error(geom_)) {
-    const char* err = tg_geom_error(geom_);
+    char const* err = tg_geom_error(geom_);
     fmt::println("Error parsing ODM Bounds GeoJSON: {}", err);
     tg_geom_free(geom_);
     throw utl::fail("unable to parse {}: {}", p, err);
