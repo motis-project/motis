@@ -255,6 +255,7 @@
 						requireCarTransport,
 						elevationCosts,
 						useRoutedTransfers,
+						maxTransfers: maxTransfers,
 						maxMatchingDistance: pedestrianProfile == 'WHEELCHAIR' ? 8 : 250,
 						maxPreTransitTime,
 						maxPostTransitTime,
@@ -498,6 +499,7 @@
 								bind:time
 								bind:arriveBy
 								bind:useRoutedTransfers
+								bind:maxTransfers
 								bind:pedestrianProfile
 								bind:requireCarTransport
 								bind:requireBikeTransport

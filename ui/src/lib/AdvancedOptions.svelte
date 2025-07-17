@@ -26,7 +26,7 @@
 		requireBikeTransport = $bindable(),
 		requireCarTransport = $bindable(),
 		transitModes = $bindable(),
-		maxTransfers = $bindable(undefined),
+		maxTransfers = $bindable(),
 		maxTravelTime = $bindable(undefined),
 		possibleMaxTravelTimes = [],
 		preTransitModes = $bindable(),
@@ -46,7 +46,7 @@
 		requireBikeTransport: boolean;
 		requireCarTransport: boolean;
 		transitModes: TransitMode[];
-		maxTransfers: number | undefined;
+		maxTransfers: number;
 		maxTravelTime: number | undefined;
 		possibleMaxTravelTimes?: NumberSelectOption[];
 		preTransitModes: PrePostDirectMode[];
@@ -183,12 +183,16 @@
 				}}
 			/>
 
-			{#if maxTransfers !== undefined && maxTravelTime !== undefined}
-				<div class="grid grid-cols-4 items-center gap-2">
-					<div class="text-sm">
-						{t.routingSegments.maxTransfers}
-					</div>
-					<NumberSelect bind:value={maxTransfers} possibleValues={possibleMaxTransfers} />
+			<div
+				class="grid {maxTravelTime === undefined
+					? 'grid-cols-2'
+					: 'grid-cols-4'} items-center gap-2"
+			>
+				<div class="text-sm">
+					{t.routingSegments.maxTransfers}
+				</div>
+				<NumberSelect bind:value={maxTransfers} possibleValues={possibleMaxTransfers} />
+				{#if maxTravelTime !== undefined}
 					<div class="text-sm">
 						{t.routingSegments.maxTravelTime}
 					</div>
@@ -197,8 +201,8 @@
 						possibleValues={possibleMaxTravelTimes}
 						labelFormatter={formatDurationSec}
 					/>
-				</div>
-			{/if}
+				{/if}
+			</div>
 
 			<!-- First mile -->
 			<StreetModes
