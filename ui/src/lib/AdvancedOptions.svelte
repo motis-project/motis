@@ -183,7 +183,11 @@
 				}}
 			/>
 
-			<div class="grid {maxTravelTime === undefined ? 'grid-cols-2' : 'grid-cols-4'} items-center gap-2">
+			<div
+				class="grid {maxTravelTime === undefined
+					? 'grid-cols-2'
+					: 'grid-cols-4'} items-center gap-2"
+			>
 				<div class="text-sm">
 					{t.routingSegments.maxTransfers}
 				</div>
