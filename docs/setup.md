@@ -24,6 +24,12 @@ gbfs:
   feeds:
     montreal:
       url: https://gbfs.velobixi.com/gbfs/gbfs.json
+    # Example feed for header usage
+    example-feed:
+      url: https://example.org/gbfs
+      headers:
+        authorization: MY_OTHER_API_KEY
+        other-header: other-value
 tiles:
   profile: tiles-profiles/full.lua
 street_routing:
@@ -80,6 +86,11 @@ gbfs:
   feeds:
     montreal:
       url: https://gbfs.velobixi.com/gbfs/gbfs.json
+    example-feed:
+      url: https://example.org/gbfs
+      headers:
+        authorization: MY_OTHER_API_KEY
+        other-header: other-value
 street_routing:                   # enable street routing (default = false; Using boolean values true/false is supported for backward compatibility)
   elevation_data_dir: srtm/       # folder which contains elevation data, e.g. SRTMGL1 data tiles in HGT format
 limits:
