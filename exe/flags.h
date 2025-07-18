@@ -1,10 +1,16 @@
 #pragma once
 
 #include <filesystem>
+#include <string>
+#include <vector>
 
 #include "boost/program_options.hpp"
 
 namespace motis {
+
+inline void add_help_opt(boost::program_options::options_description& desc) {
+  desc.add_options()("help,h", "print this help message");
+}
 
 inline void add_data_path_opt(boost::program_options::options_description& desc,
                               std::filesystem::path& p) {
@@ -24,6 +30,23 @@ inline void add_config_path_opt(
       "config,c", boost::program_options::value(&p)->default_value(p),
       "Configuration YAML file. Legacy INI files are still supported but this "
       "support will be dropped in the future.");
+}
+
+inline void add_trip_id_opt(boost::program_options::options_description& desc) {
+  desc.add_options()(
+      "trip-id,t",
+      boost::program_options::value<std::vector<std::string> >()->composing(),
+      "Add trip-id to analyze.\n"
+      "If the trip-id is encoded, it will be decoded automatically.\n"
+      "This option can be used multiple times.\n"
+      "\n"
+      "Will search the shape corresponding to each trip-id. "
+      "If a shape is found, the index of the shape point, that is "
+      "matched with each stop, will be printed.\n"
+      "Notice that the first and last stop of a trip will always be "
+      "matched with the first and last shape point respectively.\n"
+      "If a shape contains less points than stops in the trip, this "
+      "segmentation is not possible.");
 }
 
 inline boost::program_options::variables_map parse_opt(
