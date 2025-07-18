@@ -61,6 +61,7 @@ timetable:
       path: delfi.gtfs.zip
       default_bikes_allowed: false
       default_cars_allowed: false
+      extend_calendar: false
       clasz_bikes_allowed:
         LONG_DISTANCE: false
         REGIONAL_FAST: true
@@ -73,6 +74,7 @@ timetable:
       path: nl.gtfs.zip
       default_bikes_allowed: false
       default_cars_allowed: false
+      extend_calendar: false
       rt:
         - url: https://gtfs.ovapi.nl/nl/trainUpdates.pb
           protocol: gtfsrt
@@ -120,6 +122,7 @@ timetable:
       path: nl.gtfs.zip
       default_bikes_allowed: false
       default_cars_allowed: false
+      extend_calendar: false
       rt:
         - url: https://gtfs.ovapi.nl/nl/trainUpdates.pb
         - url: https://gtfs.ovapi.nl/nl/tripUpdates.pb
