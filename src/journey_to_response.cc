@@ -352,6 +352,10 @@ api::Itinerary journey_to_response(
                     auto const color = enter_stop.get_route_color();
                     auto const agency = enter_stop.get_provider();
                     auto const fare_indices = get_fare_indices(fares, j_leg);
+                    auto const trip_short_name =
+                        enter_stop.trip_short_name(n::event_type::kDep);
+                    auto const route_short_name =
+                        enter_stop.route_short_name(n::event_type::kDep);
 
                     auto& leg = itinerary.legs_.emplace_back(api::Leg{
                         .mode_ = to_mode(enter_stop.get_clasz()),
@@ -380,8 +384,20 @@ api::Itinerary journey_to_response(
                         .agencyId_ =
                             std::string{tt.strings_.get(agency.short_name_)},
                         .tripId_ = tags.id(tt, enter_stop, n::event_type::kDep),
-                        .routeShortName_ = {std::string{
-                            enter_stop.trip_display_name()}},
+                        .routeShortName_ = std::string{route_short_name.empty()
+                                                           ? trip_short_name
+                                                           : route_short_name},
+                        .name_ =
+                            api::LegName{
+                                .trip_ = trip_short_name.empty()
+                                             ? std::nullopt
+                                             : std::optional{std::string{
+                                                   trip_short_name}},
+
+                                .route_ = route_short_name.empty()
+                                              ? std::nullopt
+                                              : std::optional{std::string{
+                                                    route_short_name}}},
                         .cancelled_ = fr.is_cancelled(),
                         .source_ = fmt::to_string(fr.dbg()),
                         .fareTransferIndex_ =
