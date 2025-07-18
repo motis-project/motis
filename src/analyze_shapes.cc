@@ -39,8 +39,7 @@ bool analyze_shapes(data const& d, std::vector<std::string> const& trip_ids) {
   auto success = true;
   for (auto const& trip_id : trip_ids) {
     fmt::println("Searching trip-id '{}' ...", trip_id);
-    auto const [run, trip_idx] =
-        d.tags_->get_trip(*d.tt_, nullptr, trip_id);
+    auto const [run, trip_idx] = d.tags_->get_trip(*d.tt_, nullptr, trip_id);
     if (!run.valid()) {
       success = false;
       fmt::println("Did not find trip idx for trip-id '{}'", trip_id);
