@@ -77,6 +77,7 @@ struct config {
       std::string path_;
       bool default_bikes_allowed_{false};
       bool default_cars_allowed_{false};
+      bool extend_calendar_{false};
       std::optional<std::map<std::string, bool>> clasz_bikes_allowed_{};
       std::optional<std::map<std::string, bool>> clasz_cars_allowed_{};
       std::optional<std::vector<rt>> rt_{};

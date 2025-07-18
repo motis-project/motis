@@ -305,6 +305,7 @@ data import(config const& c, fs::path const& data_path, bool const write) {
                                   .cars_allowed_default_ = to_clasz_bool_array(
                                       dc.default_cars_allowed_,
                                       dc.clasz_cars_allowed_),
+                                  .extend_calendar_ = dc.extend_calendar_,
                               }};
                         }),
             {.adjust_footpaths_ = t.adjust_footpaths_,
