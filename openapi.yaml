@@ -1330,6 +1330,7 @@ paths:
           in: query
           schema:
             type: boolean
+            default: false
           required: false
           description: |
             Optional. Default is `false`.
