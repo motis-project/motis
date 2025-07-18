@@ -3,6 +3,7 @@
 #include "utl/verify.h"
 
 #include "fmt/base.h"
+#include "fmt/ranges.h"
 
 #include "nigiri/shapes_storage.h"
 #include "nigiri/types.h"
@@ -32,9 +33,9 @@ bool analyze_shape(nigiri::shapes_storage const& shapes,
 }
 
 bool analyze_shapes(data const& d, std::vector<std::string> const& trip_ids) {
-  utl::verify(d.tt_, "Missing timetable");
-  utl::verify(d.tags_, "Missing tags");
-  utl::verify(d.shapes_.get() != nullptr, "Missing shapes");
+  utl::verify(d.tt_ != nullptr, "Missing timetable");
+  utl::verify(d.tags_ != nullptr, "Missing tags");
+  utl::verify(d.shapes_ != nullptr, "Missing shapes");
 
   auto success = true;
   for (auto const& trip_id : trip_ids) {
