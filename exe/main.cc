@@ -167,7 +167,8 @@ int main(int ac, char** av) {
 
         if (vm.count("trip-id") == 0) {
           std::cerr << "missing trip-ids\n";
-          return 2;
+          return_value = 2;
+          break;
         }
         auto const c = config::read(data_path / "config.yml");
         auto const ids = utl::to_vec(
@@ -177,7 +178,8 @@ int main(int ac, char** av) {
               return std::string{decoded.begin(), decoded.end()};
             });
 
-        return analyze_shapes(data{data_path, c}, ids) ? 0 : 1;
+        return_value = analyze_shapes(data{data_path, c}, ids) ? 0 : 1;
+        break;
       } catch (std::exception const& e) {
         std::cerr << "unable to analyse shapes: " << e.what() << "\n";
         return_value = 1;
