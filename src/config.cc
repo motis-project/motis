@@ -125,7 +125,8 @@ void config::verify() const {
               nigiri::routing::kMaxSearchIntervalSize.count());
 
   if (timetable_) {
-    for (auto const& [_, d] : timetable_->datasets_) {
+    for (auto const& [id, d] : timetable_->datasets_) {
+      utl::verify(!id.contains("_"), "dataset identifier may not contain '_'");
       if (d.rt_.has_value()) {
         for (auto const& rt : *d.rt_) {
           try {
