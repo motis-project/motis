@@ -26,12 +26,13 @@ namespace protob = google::protobuf;
 
 namespace motis::ep {
 
-void add_trip_update(n::timetable const& tt,
-                     tag_lookup const& tags,
-                     nigiri::rt::frun const& fr,
-                     transit_realtime::FeedEntity* fe) {
+void add_trip_updates(n::timetable const& tt,
+                      tag_lookup const& tags,
+                      nigiri::rt::frun const& fr,
+                      transit_realtime::FeedMessage& fm) {
   fr.for_each_trip([&](n::trip_idx_t trip_idx,
                        n::interval<n::stop_idx_t> const subrange) {
+    auto fe = fm.add_entity();
     auto const trip_id = tags.id_fragments(
         tt, fr[subrange.from_ - fr.stop_range_.from_], n::event_type::kDep);
     fe->set_id(trip_id.trip_id_);
@@ -64,16 +65,24 @@ void add_trip_update(n::timetable const& tt,
             : n::loader::gtfs::stop_seq_number_range{
                   std::span<n::stop_idx_t>{},
                   static_cast<n::stop_idx_t>(fr.size())};
-    auto stop_idx = fr.is_scheduled() ? fr.stop_range_.from_
-                                      : static_cast<unsigned short>(0U);
+    auto stop_idx =
+        fr.is_scheduled() ? subrange.from_ : static_cast<unsigned short>(0U);
     auto seq_it = begin(seq_numbers);
 
+    auto last_delay = n::duration_t::max();
     for (; seq_it != end(seq_numbers); ++stop_idx, ++seq_it) {
       auto const s = fr[stop_idx - fr.stop_range_.from_];
 
-      auto stu = tu->add_stop_time_update();
-      stu->set_stop_id(tt.locations_.ids_[s.get_stop().location_idx()].view());
-      stu->set_stop_sequence(*seq_it);
+      transit_realtime::TripUpdate_StopTimeUpdate* stu = nullptr;
+      auto const set_stu = [&]() {
+        if (stu != nullptr) {
+          return;
+        }
+        stu = tu->add_stop_time_update();
+        stu->set_stop_id(
+            tt.locations_.ids_[s.get_stop().location_idx()].view());
+        stu->set_stop_sequence(*seq_it);
+      };
 
       auto const to_unix = [&](n::unixtime_t t) {
         return std::chrono::time_point_cast<std::chrono::seconds>(t)
@@ -86,22 +95,31 @@ void add_trip_update(n::timetable const& tt,
       };
 
       if (s.stop_idx_ != 0) {
-        auto ar = stu->mutable_arrival();
-        ar->set_time(to_unix(s.time(nigiri::event_type::kArr)));
-        ar->set_delay(to_delay_seconds(s.delay(nigiri::event_type::kArr)));
+        auto const arr_delay = s.delay(nigiri::event_type::kArr);
+        if (arr_delay != last_delay) {
+          set_stu();
+          auto ar = stu->mutable_arrival();
+          ar->set_time(to_unix(s.time(nigiri::event_type::kArr)));
+          ar->set_delay(to_delay_seconds(arr_delay));
+          last_delay = arr_delay;
+        }
       }
       if (s.stop_idx_ != fr.size() - 1) {
-        auto dep = stu->mutable_arrival();
-        dep->set_time(to_unix(s.time(nigiri::event_type::kDep)));
-        dep->set_delay(to_delay_seconds(s.delay(nigiri::event_type::kDep)));
+        auto const dep_delay = s.delay(nigiri::event_type::kDep);
+        if (dep_delay != last_delay) {
+          set_stu();
+          auto dep = stu->mutable_departure();
+          dep->set_time(to_unix(s.time(nigiri::event_type::kDep)));
+          dep->set_delay(to_delay_seconds(dep_delay));
+          last_delay = dep_delay;
+        }
       }
-      stu->set_schedule_relationship(
-          s.is_cancelled() && !s.get_scheduled_stop().is_cancelled()
-              ? transit_realtime::
-                    TripUpdate_StopTimeUpdate_ScheduleRelationship::
-                        TripUpdate_StopTimeUpdate_ScheduleRelationship_SKIPPED
-              : transit_realtime::TripUpdate_StopTimeUpdate_ScheduleRelationship::
-                    TripUpdate_StopTimeUpdate_ScheduleRelationship_SCHEDULED);
+      if (s.is_cancelled() && !s.get_scheduled_stop().is_cancelled()) {
+        set_stu();
+        stu->set_schedule_relationship(
+            transit_realtime::TripUpdate_StopTimeUpdate_ScheduleRelationship::
+                TripUpdate_StopTimeUpdate_ScheduleRelationship_SKIPPED);
+      }
     }
   });
 }
@@ -113,8 +131,7 @@ void add_rt_transports(n::timetable const& tt,
   for (auto rt_t = nigiri::rt_transport_idx_t{0}; rt_t < rtt.n_rt_transports();
        ++rt_t) {
     auto const fr = n::rt::frun::from_rt(tt, &rtt, rt_t);
-    auto fe = fm.add_entity();
-    add_trip_update(tt, tags, fr, fe);
+    add_trip_updates(tt, tags, fr, fm);
   }
 }
 
@@ -152,8 +169,7 @@ void add_cancelled_transports(n::timetable const& tt,
         if (fr.is_rt()) {
           continue;
         }
-        auto fe = fm.add_entity();
-        add_trip_update(tt, tags, fr, fe);
+        add_trip_updates(tt, tags, fr, fm);
       }
     }
   }
@@ -164,8 +180,9 @@ net::reply gtfsrt::operator()(net::route_request const& req, bool) const {
   auto const rt = rt_;
   auto const rtt = rt->rtt_.get();
 
-  utl::verify(rtt->n_rt_transports() <
-                  config_.limits_.value().gtfsrt_expose_max_trip_updates_,
+  utl::verify(config_.limits_.value().gtfsrt_expose_max_trip_updates_ != 0 &&
+                  rtt->n_rt_transports() <
+                      config_.limits_.value().gtfsrt_expose_max_trip_updates_,
               "number of trip updates above configured limit");
 
   auto fm = transit_realtime::FeedMessage();
@@ -183,7 +200,7 @@ net::reply gtfsrt::operator()(net::route_request const& req, bool) const {
 
   auto res = net::web_server::string_res_t{boost::beast::http::status::ok,
                                            req.version()};
-  res.insert(boost::beast::http::field::content_type, "application/protobuf");
+  res.insert(boost::beast::http::field::content_type, "application/x-protobuf");
   res.keep_alive(req.keep_alive());
   set_response_body(res, req, fm.SerializeAsString());
 
