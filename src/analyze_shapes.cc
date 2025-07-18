@@ -26,16 +26,13 @@ bool analyze_shape(nigiri::shapes_storage const& shapes,
   }
 
   fmt::println("Offsets for '{}':", trip_idx);
-  for (auto const& o : offsets) {
-    fmt::print("{}, ", o);
-  }
-  fmt::println("");
+  fmt::println("{}", offsets);
+
   return true;
 }
 
 bool analyze_shapes(data const& d, std::vector<std::string> const& trip_ids) {
   utl::verify(d.tt_, "Missing timetable");
-  utl::verify(d.rt_ && d.rt_->rtt_, "Missing realtime data");
   utl::verify(d.tags_, "Missing tags");
   utl::verify(!!d.shapes_, "Missing shapes");
 
@@ -43,7 +40,7 @@ bool analyze_shapes(data const& d, std::vector<std::string> const& trip_ids) {
   for (auto const& trip_id : trip_ids) {
     fmt::println("Searching trip-id '{}' ...", trip_id);
     auto const [run, trip_idx] =
-        d.tags_->get_trip(*d.tt_, &*d.rt_->rtt_, trip_id);
+        d.tags_->get_trip(*d.tt_, nullptr, trip_id);
     if (!run.valid()) {
       success = false;
       fmt::println("Did not find trip idx for trip-id '{}'", trip_id);
