@@ -353,6 +353,13 @@ api::Itinerary journey_to_response(
                     auto const agency = enter_stop.get_provider();
                     auto const fare_indices = get_fare_indices(fares, j_leg);
 
+                    auto const trip =
+                        enter_stop.get_trip_idx(n::event_type::kDep);
+                    auto const id_idx = tt.trip_ids_[trip].front();
+                    auto const src = tt.trip_id_src_[id_idx];
+                    auto const [service_day, _] =
+                        enter_stop.get_trip_start(n::event_type::kDep);
+
                     auto& leg = itinerary.legs_.emplace_back(api::Leg{
                         .mode_ = to_mode(enter_stop.get_clasz()),
                         .from_ = to_place(enter_stop, n::event_type::kDep),
@@ -392,7 +399,13 @@ api::Itinerary journey_to_response(
                             fare_indices.and_then([](auto&& x) {
                               return std::optional{x.effective_fare_leg_idx_};
                             }),
-                        .alerts_ = get_alerts(fr, std::nullopt)});
+                        .alerts_ = get_alerts(fr, std::nullopt),
+                        .loopedCalendarSince_ =
+                            (fr.is_scheduled() &&
+                             tt.src_end_date_[src] < service_day)
+                                ? std::optional{tt.src_end_date_[src]}
+                                : std::nullopt,
+                    });
 
                     leg.from_.vertexType_ = api::VertexTypeEnum::TRANSIT;
                     leg.from_.departure_ = leg.startTime_;
