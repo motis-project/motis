@@ -87,22 +87,8 @@ trip_id<std::string> tag_lookup::id_fragments(
     auto const id = tt.trip_id_strings_[id_idx].view();
     auto const src = tt.trip_id_src_[id_idx];
 
-    // go to first trip stop
-    while (s.stop_idx_ > 0 && s.get_trip_idx(n::event_type::kArr) == t) {
-      --s.stop_idx_;
-    }
-
-    // service date + start time
-    auto const [static_transport, utc_start_day] = s.fr_->t_;
-    auto const o = tt.transport_first_dep_offset_[static_transport];
-    auto const utc_dep =
-        tt.event_mam(static_transport, s.stop_idx_, n::event_type::kDep)
-            .as_duration();
-    auto const gtfs_static_dep = utc_dep + o;
-    auto const [day_offset, tz_offset_minutes] =
-        n::rt::split_rounded(gtfs_static_dep - utc_dep);
-    auto const day = (tt.internal_interval_days().from_ +
-                      std::chrono::days{to_idx(utc_start_day)} - day_offset);
+    // start date + start time
+    auto const [day, gtfs_static_dep] = s.get_trip_start(ev_type);
     auto const start_hours = gtfs_static_dep / 60;
     auto const start_minutes = gtfs_static_dep % 60;
 

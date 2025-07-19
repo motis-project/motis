@@ -2464,6 +2464,13 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Alert'
+        loopedCalendarSince:
+          description: |
+            If set, this attribute indicates that this trip has been expanded
+            beyond the feed end date (enabled by config flag `timetable.dataset.extend_calendar`)
+            by looping active weekdays, e.g. from calendar.txt in GTFS.
+          type: string
+          format: date-time
 
     RiderCategory:
       type: object

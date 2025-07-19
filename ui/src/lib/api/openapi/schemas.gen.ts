@@ -926,6 +926,14 @@ to identify which effective fare leg this itinerary leg belongs to
             items: {
                 '$ref': '#/components/schemas/Alert'
             }
+        },
+        loopedCalendarSince: {
+            description: `If set, this attribute indicates that this trip has been expanded
+beyond the feed end date (enabled by config flag \`timetable.dataset.extend_calendar\`)
+by looping active weekdays, e.g. from calendar.txt in GTFS.
+`,
+            type: 'string',
+            format: 'date-time'
         }
     }
 } as const;
@@ -952,13 +960,12 @@ export const RiderCategorySchema = {
 export const FareMediaTypeSchema = {
     type: 'string',
     enum: ['NONE', 'PAPER_TICKET', 'TRANSIT_CARD', 'CONTACTLESS_EMV', 'MOBILE_APP'],
-    enumDescriptions: {
-        NONE: 'No fare media involved (e.g., cash payment)',
-        PAPER_TICKET: 'Physical paper ticket',
-        TRANSIT_CARD: 'Physical transit card with stored value',
-        CONTACTLESS_EMV: 'cEMV (contactless payment)',
-        MOBILE_APP: 'Mobile app with virtual transit cards/passes'
-    }
+    description: `- \`NONE\`: No fare media involved (e.g., cash payment)
+- \`PAPER_TICKET\`: Physical paper ticket
+- \`TRANSIT_CARD\`: Physical transit card with stored value
+- \`CONTACTLESS_EMV\`: cEMV (contactless payment)
+- \`MOBILE_APP\`: Mobile app with virtual transit cards/passes
+`
 } as const;
 
 export const FareMediaSchema = {

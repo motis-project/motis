@@ -63,6 +63,7 @@ const translations: Translations = {
 	outDisallowed: 'Zabronione wyjście',
 	unscheduledTrip: 'Kurs dodatkowy',
 	alertsAvailable: 'Istnieją ogłoszenia',
+	dataExpiredSince: 'Uwaga: Dane nieaktualne, ostatnio ważne',
 	FLEX: 'Transport na żądanie',
 	WALK: 'Pieszo',
 	BIKE: 'Rower',

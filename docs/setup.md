@@ -82,6 +82,7 @@ timetable:                          # if not set, no timetable will be loaded
       rt:
         - url: https://gtfs.ovapi.nl/nl/trainUpdates.pb
         - url: https://gtfs.ovapi.nl/nl/tripUpdates.pb
+      extend_calendar: true         # expand the weekly service pattern beyond the end of `feed_info.txt::feed_end_date` if `feed_end_date` matches `calendar.txt::end_date`
 gbfs:
   feeds:
     montreal:

@@ -13,7 +13,7 @@
 	import { getModeName } from '$lib/getModeName';
 	import { language, t } from '$lib/i18n/translation';
 	import { onClickStop, onClickTrip } from '$lib/utils';
-	import { formatTime } from './toDateTime';
+	import { formatDate, formatTime } from './toDateTime';
 
 	const {
 		itinerary
@@ -262,10 +262,16 @@
 				<div class="grid gap-y-6 grid-cols-[max-content_max-content_auto] items-center">
 					{@render stopTimes(l.startTime, l.scheduledStartTime, l.realTime, l.from, 1)}
 				</div>
-				<div class="mt-2 flex items-center text-muted-foreground leading-none">
+				<div class="mt-2 mb-2 flex items-center text-muted-foreground leading-none">
 					<ArrowRight class="stroke-muted-foreground size-4" />
 					<span class="ml-1">{l.headsign}</span>
 				</div>
+				{#if l.loopedCalendarSince}
+					<div class="mt-2 flex items-center text-destructive leading-none">
+						{t.dataExpiredSince}
+						{formatDate(new Date(l.loopedCalendarSince))}
+					</div>
+				{/if}
 				{#if l.cancelled}
 					<div class="mt-2 flex items-center text-destructive leading-none">
 						<CircleX class="stroke-destructive size-4" />

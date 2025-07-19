@@ -62,6 +62,7 @@ const translations: Translations = {
 	outDisallowed: 'Ausstieg nicht möglich',
 	unscheduledTrip: 'Zusätzliche Fahrt',
 	alertsAvailable: 'Meldungen liegen vor',
+	dataExpiredSince: 'Achtung: Veraltete Daten, zuletzt gültig am',
 	FLEX: 'Bedarfsverkehr',
 	WALK: 'Zu Fuß',
 	BIKE: 'Fahrrad',
