@@ -1,4 +1,4 @@
-import { language } from "./i18n/translation";
+import { language } from './i18n/translation';
 
 const pad = (x: number) => ('0' + x).slice(-2);
 
