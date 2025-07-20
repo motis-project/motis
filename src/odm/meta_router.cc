@@ -758,7 +758,8 @@ api::plan_response meta_router::run() {
                     r_.config_.timetable_.value().max_matching_distance_,
                     query_.maxMatchingDistance_, api_version_,
                     query_.ignorePreTransitRentalReturnConstraints_,
-                    query_.ignorePostTransitRentalReturnConstraints_);
+                    query_.ignorePostTransitRentalReturnConstraints_,
+                    query_.language_);
               }),
           .previousPageCursor_ =
               fmt::format("EARLIER|{}", to_seconds(pt_result.interval_.from_)),

@@ -1086,6 +1086,12 @@ export type PlanData = {
          */
         joinInterlinedLegs?: boolean;
         /**
+         * language tags as used in OpenStreetMap / GTFS
+         * (usually BCP-47 / ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
+         *
+         */
+        language?: string;
+        /**
          * Optional. Experimental. Number of luggage pieces; base unit: airline cabin luggage (e.g. for ODM or price calculation)
          *
          */
@@ -1723,6 +1729,12 @@ export type TripData = {
          */
         joinInterlinedLegs?: boolean;
         /**
+         * language tags as used in OpenStreetMap / GTFS
+         * (usually BCP-47 / ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
+         *
+         */
+        language?: string;
+        /**
          * trip identifier (e.g. from an itinerary leg or stop event)
          */
         tripId: string;
@@ -1768,6 +1780,12 @@ export type StoptimesData = {
          *
          */
         exactRadius?: boolean;
+        /**
+         * language tags as used in OpenStreetMap / GTFS
+         * (usually BCP-47 / ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
+         *
+         */
+        language?: string;
         /**
          * Optional. Default is all transit modes.
          *

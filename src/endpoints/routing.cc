@@ -783,7 +783,8 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                   config_.timetable_.value().max_matching_distance_,
                   query.maxMatchingDistance_, api_version,
                   query.ignorePreTransitRentalReturnConstraints_,
-                  query.ignorePostTransitRentalReturnConstraints_);
+                  query.ignorePostTransitRentalReturnConstraints_,
+                  query.language_);
             }),
         .previousPageCursor_ =
             fmt::format("EARLIER|{}", to_seconds(r.interval_.from_)),

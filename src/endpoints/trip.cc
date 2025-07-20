@@ -60,7 +60,7 @@ api::Itinerary trip::operator()(boost::urls::url_view const& url) const {
       api::PedestrianProfileEnum::FOOT, api::ElevationCostsEnum::NONE,
       query.joinInterlinedLegs_, true, false, query.withScheduledSkippedStops_,
       config_.timetable_.value().max_matching_distance_, kMaxMatchingDistance,
-      api_version, false, false);
+      api_version, false, false, query.language_);
 }
 
 }  // namespace motis::ep

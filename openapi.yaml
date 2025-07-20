@@ -699,6 +699,15 @@ paths:
           schema:
             type: boolean
             default: false
+
+        - name: language
+          in: query
+          required: false
+          description: |
+            language tags as used in OpenStreetMap / GTFS
+            (usually BCP-47 / ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
+          schema:
+            type: string
       responses:
         '200':
           description: routing result
@@ -1230,6 +1239,14 @@ paths:
           schema:
             type: boolean
             default: true
+        - name: language
+          in: query
+          required: false
+          description: |
+            language tags as used in OpenStreetMap / GTFS
+            (usually BCP-47 / ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
+          schema:
+            type: string
       responses:
         '200':
           description: the requested trip as itinerary
@@ -1355,6 +1372,15 @@ paths:
           schema:
             type: boolean
             default: false
+
+        - name: language
+          in: query
+          required: false
+          description: |
+            language tags as used in OpenStreetMap / GTFS
+            (usually BCP-47 / ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
+          schema:
+            type: string
       responses:
         '200':
           description: A list of departures/arrivals

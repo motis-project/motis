@@ -28,7 +28,8 @@ double get_level(osr::ways const*,
 
 std::optional<std::vector<api::Alert>> get_alerts(
     nigiri::rt::frun const&,
-    std::optional<std::pair<nigiri::rt::run_stop, nigiri::event_type>> const&);
+    std::optional<std::pair<nigiri::rt::run_stop, nigiri::event_type>> const&,
+    std::optional<std::string> const& language);
 
 api::Itinerary journey_to_response(osr::ways const*,
                                    osr::lookup const*,
@@ -58,6 +59,7 @@ api::Itinerary journey_to_response(osr::ways const*,
                                    double max_matching_distance,
                                    unsigned api_version,
                                    bool ignore_start_rental_return_constraints,
-                                   bool ignore_dest_rental_return_constraints);
+                                   bool ignore_dest_rental_return_constraints,
+                                   std::optional<std::string> const& language);
 
 }  // namespace motis
