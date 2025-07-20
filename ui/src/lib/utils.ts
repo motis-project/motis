@@ -88,7 +88,9 @@ export const onClickStop = (
 };
 
 export const onClickTrip = async (tripId: string, replace: boolean = false) => {
-	const { data: itinerary, error } = await trip({ query: { tripId, joinInterlinedLegs: false, language } });
+	const { data: itinerary, error } = await trip({
+		query: { tripId, joinInterlinedLegs: false, language }
+	});
 	if (error) {
 		console.log(error);
 		alert(String((error as Record<string, unknown>).error?.toString() ?? error));
