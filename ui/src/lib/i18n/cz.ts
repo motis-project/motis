@@ -63,6 +63,7 @@ const translations: Translations = {
 	outDisallowed: 'Výstup není povolen',
 	unscheduledTrip: 'Doplňkový spoj',
 	alertsAvailable: 'Oznámení o provozu',
+	dataExpiredSince: 'Pozor: Zastaralá data, platná naposledy',
 	FLEX: 'Poptávková doprava',
 	WALK: 'Chůze',
 	BIKE: 'Kolo',

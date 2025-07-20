@@ -760,6 +760,13 @@ export type Leg = {
      * Alerts for this stop.
      */
     alerts?: Array<Alert>;
+    /**
+     * If set, this attribute indicates that this trip has been expanded
+     * beyond the feed end date (enabled by config flag `timetable.dataset.extend_calendar`)
+     * by looping active weekdays, e.g. from calendar.txt in GTFS.
+     *
+     */
+    loopedCalendarSince?: string;
 };
 
 export type RiderCategory = {
@@ -777,6 +784,14 @@ export type RiderCategory = {
     eligibilityUrl?: string;
 };
 
+/**
+ * - `NONE`: No fare media involved (e.g., cash payment)
+ * - `PAPER_TICKET`: Physical paper ticket
+ * - `TRANSIT_CARD`: Physical transit card with stored value
+ * - `CONTACTLESS_EMV`: cEMV (contactless payment)
+ * - `MOBILE_APP`: Mobile app with virtual transit cards/passes
+ *
+ */
 export type FareMediaType = 'NONE' | 'PAPER_TICKET' | 'TRANSIT_CARD' | 'CONTACTLESS_EMV' | 'MOBILE_APP';
 
 export type FareMedia = {

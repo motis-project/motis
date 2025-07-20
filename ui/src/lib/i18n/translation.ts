@@ -57,6 +57,7 @@ export type Translations = {
 	outDisallowed: string;
 	unscheduledTrip: string;
 	alertsAvailable: string;
+	dataExpiredSince: string;
 	FLEX: string;
 	WALK: string;
 	BIKE: string;
