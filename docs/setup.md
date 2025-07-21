@@ -142,7 +142,7 @@ This examples shows how to configure multiple GBFS feeds.
 A GBFS feed might describe a single system or area, `callabike` in this example, or a set of feeds, that are combined to a manifest, like `mobidata-bw` here. For readability, optional headers are not included.
 
 A GBFS feed can define geofencing zones and rules, that apply to areas within these zones.
-For restrictions on areas not included in these geofencing zones, a feed must contain global rules.
+For restrictions on areas not included in these geofencing zones, a feed may contain global rules.
 If these are missing, it's possible to define `default_restrictions`, that apply to either a single feed or a manifest.
 The following example shows possible configurations:
 
