@@ -135,3 +135,33 @@ timetable:
       rt:
         - url: https://stc.traines.eu/mirror/german-delfi-gtfs-rt/latest.gtfs-rt.pbf
 ```
+
+# GBFS Configuration and Default Restrictions
+
+This examples shows how to configure multiple GBFS feeds.  
+A GBFS feed might describe a single system or area, `callabike` in this example, or a set of feeds, that are combined to a manifest, like `mobidata-bw` here. For readability, optional headers are not included.
+
+As feeds might be missing global rules, it's possible to define `default_restrictions`, that apply to either a single feed or a manifest. The following example shows possible configurations:
+
+```
+gbfs:
+  feeds:
+    # GBFS feed:
+    #callabike:
+    #  url: https://api.mobidata-bw.de/sharing/gbfs/callabike/gbfs
+    # GBFS manifest / Lamassu feed:
+    mobidata-bw:
+      url: https://api.mobidata-bw.de/sharing/gbfs/v3/manifest.json
+  default_restrictions:
+    mobidata-bw:callabike: # "callabike" feed contained in the "mobidata-bw" manifest
+      # these restrictions apply outside of the defined geofencing zones if the feed doesn't contain global rules
+      ride_start_allowed: true
+      ride_end_allowed: true
+      ride_through_allowed: true
+      #station_parking: false
+      #return_constraint: roundtrip_station
+    #mobidata-bw: # default restrictions for all feeds contained in the "mobidata-bw" manifest
+    #callabike: # default restrictions for standalone GBFS feed "callabike" (when not using the mobidata-bw example)
+  update_interval: 300
+  http_timeout: 10
+```
