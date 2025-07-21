@@ -73,7 +73,7 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
               nullptr, gbfs_,     nullptr, metrics_};
   auto gbfs_rd = gbfs::gbfs_routing_data{w_, l_, gbfs_};
 
-  auto const q = n::routing::query{
+  auto q = n::routing::query{
       .start_time_ = time,
       .start_match_mode_ = get_match_mode(one),
       .start_ = r.get_offsets(
@@ -106,6 +106,10 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
               .additional_time_ = n::duration_t{query.additionalTransferTime_},
               .factor_ = static_cast<float>(query.transferTimeFactor_)},
   };
+
+  if (tt_.locations_.footpaths_out_.at(q.prf_idx_).empty()) {
+    q.prf_idx_ = 0U;
+  }
 
   auto const state =
       query.arriveBy_
