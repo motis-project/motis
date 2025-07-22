@@ -40,7 +40,7 @@ std::int32_t distance(nr::journey const& a, nr::journey const& b) {
 
   return overtakes(a, b) || overtakes(b, a)
              ? 0
-             : std::max(
+             : std::min(
                    std::chrono::abs(a.departure_time() - b.departure_time()),
                    std::chrono::abs(a.arrival_time() - b.arrival_time()))
                    .count();
@@ -241,7 +241,7 @@ mixer get_default_mixer() {
                .prod_alpha_ = 0.4,
                .direct_taxi_penalty_ = 220,
                .min_distance_ = 15,
-               .max_distance_ = 90,
+               .max_distance_ = 60,
                .exp_distance_ = 1.045,
                .walk_cost_ = {{0, 1}, {15, 10}},
                .taxi_cost_ = {{0, 35}, {1, 12}},
