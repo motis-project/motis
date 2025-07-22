@@ -17,6 +17,7 @@
 #include "motis/endpoints/adr/reverse_geocode.h"
 #include "motis/endpoints/elevators.h"
 #include "motis/endpoints/graph.h"
+#include "motis/endpoints/gtfsrt.h"
 #include "motis/endpoints/initial.h"
 #include "motis/endpoints/levels.h"
 #include "motis/endpoints/map/flex_locations.h"
@@ -85,12 +86,14 @@ int server(data d, config const& c, std::string_view const motis_version) {
   GET<ep::geocode>(qr, "/api/v1/geocode", d);
   GET<ep::routing>(qr, "/api/v1/plan", d);
   GET<ep::routing>(qr, "/api/v2/plan", d);
+  GET<ep::routing>(qr, "/api/v3/plan", d);
   GET<ep::stop_times>(qr, "/api/v1/stoptimes", d);
   GET<ep::trip>(qr, "/api/v1/trip", d);
   GET<ep::trip>(qr, "/api/v2/trip", d);
   GET<ep::trips>(qr, "/api/v1/map/trips", d);
   GET<ep::stops>(qr, "/api/v1/map/stops", d);
   GET<ep::one_to_all>(qr, "/api/experimental/one-to-all", d);
+  GET<ep::one_to_all>(qr, "/api/v1/one-to-all", d);
   GET<ep::one_to_many>(qr, "/api/v1/one-to-many", d);
 
   if (!c.requires_rt_timetable_updates()) {
@@ -103,7 +106,9 @@ int server(data d, config const& c, std::string_view const motis_version) {
     qr.route("GET", "/tiles/", ep::tiles{*d.tiles_});
   }
 
-  qr.route("GET", "/metrics", ep::metrics{d.metrics_->registry_});
+  qr.route("GET", "/metrics",
+           ep::metrics{d.tt_.get(), d.tags_.get(), d.rt_, d.metrics_.get()});
+  qr.route("GET", "/gtfsrt", ep::gtfsrt{c, d.tt_.get(), d.tags_.get(), d.rt_});
   qr.serve_files(server_config.web_folder_);
   qr.enable_cors();
   s.set_timeout(std::chrono::minutes{5});

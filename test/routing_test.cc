@@ -500,10 +500,10 @@ TEST(motis, routing) {
         "&directModes=WALK,RENTAL");
 
     EXPECT_EQ(
-        R"(date=2019-05-01, start=01:25, end=01:34, duration=00:09, transfers=0, legs=[
-    (from=- [track=-, scheduled_track=-, level=0], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 01:25, mode="WALK", trip="-", end=2019-05-01 01:28),
-    (from=- [track=-, scheduled_track=-, level=0], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 01:28, mode="RENTAL", trip="-", end=2019-05-01 01:28),
-    (from=- [track=-, scheduled_track=-, level=0], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 01:28, mode="WALK", trip="-", end=2019-05-01 01:34)
+        R"(date=2019-05-01, start=01:25, end=01:32, duration=00:07, transfers=0, legs=[
+    (from=- [track=-, scheduled_track=-, level=0], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 01:25, mode="WALK", trip="-", end=2019-05-01 01:26),
+    (from=- [track=-, scheduled_track=-, level=0], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 01:26, mode="RENTAL", trip="-", end=2019-05-01 01:27),
+    (from=- [track=-, scheduled_track=-, level=0], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 01:27, mode="WALK", trip="-", end=2019-05-01 01:32)
 ])",
         to_str(res.direct_));
   }
@@ -683,7 +683,7 @@ TEST(motis, routing) {
       EXPECT_EQ(
           R"(date=2019-05-01, start=01:34, end=02:40, duration=01:10, transfers=0, legs=[
     (from=- [track=-, scheduled_track=-, level=0], to=test_DA_10 [track=10, scheduled_track=10, level=-1], start=2019-05-01 01:34, mode="WALK", trip="-", end=2019-05-01 01:35),
-    (from=test_DA_10 [track=10, scheduled_track=10, level=-1, alerts=["Yeah"]], to=test_FFM_12 [track=12, scheduled_track=10, level=0], start=2019-05-01 01:35, mode="HIGHSPEED_RAIL", trip="ICE", end=2019-05-01 02:30, alerts=["Hello"]),
+    (from=test_DA_10 [track=10, scheduled_track=10, level=-1, alerts=["Yeah"]], to=test_FFM_12 [track=12, scheduled_track=10, level=0], start=2019-05-01 01:35, mode="HIGHSPEED_RAIL", trip="ICE", end=2019-05-01 01:55, alerts=["Hello"]),
     (from=test_FFM_12 [track=12, scheduled_track=10, level=0], to=- [track=-, scheduled_track=-, level=-3], start=2019-05-01 02:30, mode="WALK", trip="-", end=2019-05-01 02:40)
 ])",
           to_str(res.itineraries_));

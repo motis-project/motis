@@ -1,4 +1,5 @@
 #include "boost/program_options.hpp"
+#include "boost/url/decode_view.hpp"
 
 #include <filesystem>
 #include <iostream>
@@ -7,7 +8,9 @@
 #include "google/protobuf/stubs/common.h"
 
 #include "utl/progress_tracker.h"
+#include "utl/to_vec.h"
 
+#include "motis/analyze_shapes.h"
 #include "motis/config.h"
 #include "motis/data.h"
 #include "motis/import.h"
@@ -27,6 +30,7 @@ namespace motis {
 int generate(int, char**);
 int batch(int, char**);
 int compare(int, char**);
+int extract(int, char**);
 }  // namespace motis
 
 using namespace motis;
@@ -45,7 +49,9 @@ int main(int ac, char** av) {
         "  compare    compare results from different batch runs\n"
         "  config     generate a config file from a list of input files\n"
         "  import     prepare input data, creates the data directory\n"
-        "  server     starts a web server serving the API\n",
+        "  server     starts a web server serving the API\n"
+        "  extract    trips from a Itinerary to GTFS timetable\n"
+        "  analyze-shapes   print shape segmentation for trips\n",
         motis_version);
     return 0;
   } else if (ac <= 1 || (ac >= 2 && av[1] == "--version"sv)) {
@@ -62,6 +68,7 @@ int main(int ac, char** av) {
   // Execute command.
   auto const cmd = std::string_view{av[0]};
   switch (cista::hash(cmd)) {
+    case cista::hash("extract"): return_value = extract(ac, av); break;
     case cista::hash("generate"): return_value = generate(ac, av); break;
     case cista::hash("batch"): return_value = batch(ac, av); break;
     case cista::hash("compare"): return_value = compare(ac, av); break;
@@ -137,6 +144,44 @@ int main(int ac, char** av) {
       } catch (std::exception const& e) {
         fmt::println("unable to import: {}", e.what());
         fmt::println("config:\n{}", fmt::streamed(c));
+        return_value = 1;
+        break;
+      }
+    }
+
+    case cista::hash("analyze-shapes"): {
+      try {
+        auto data_path = fs::path{"data"};
+
+        auto desc = po::options_description{"Analyze Shapes Options"};
+        add_trip_id_opt(desc);
+        add_data_path_opt(desc, data_path);
+        add_help_opt(desc);
+
+        auto vm = parse_opt(ac, av, desc);
+        if (vm.count("help")) {
+          std::cout << desc << "\n";
+          return_value = 0;
+          break;
+        }
+
+        if (vm.count("trip-id") == 0) {
+          std::cerr << "missing trip-ids\n";
+          return_value = 2;
+          break;
+        }
+        auto const c = config::read(data_path / "config.yml");
+        auto const ids = utl::to_vec(
+            vm["trip-id"].as<std::vector<std::string> >(),
+            [](auto const& trip_id) {
+              auto const decoded = boost::urls::decode_view{trip_id};
+              return std::string{decoded.begin(), decoded.end()};
+            });
+
+        return_value = analyze_shapes(data{data_path, c}, ids) ? 0 : 1;
+        break;
+      } catch (std::exception const& e) {
+        std::cerr << "unable to analyse shapes: " << e.what() << "\n";
         return_value = 1;
         break;
       }

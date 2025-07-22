@@ -284,6 +284,7 @@ export const ModeSchema = {
   - \`RENTAL\` Experimental. Expect unannounced breaking changes (without version bumps) for all parameters and returned structs.
   - \`CAR\`
   - \`CAR_PARKING\` Experimental. Expect unannounced breaking changes (without version bumps) for all parameters and returned structs.
+  - \`CAR_DROPOFF\` Experimental. Expect unannounced breaking changes (without version bumps) for all perameters and returned structs.
   - \`ODM\` on-demand taxis from the Prima+ÖV Project
   - \`FLEX\` flexible transports
 
@@ -296,7 +297,7 @@ export const ModeSchema = {
   - \`AIRPLANE\`: airline flights
   - \`BUS\`: short distance buses (does not include \`COACH\`)
   - \`COACH\`: long distance buses (does not include \`BUS\`)
-  - \`RAIL\`: translates to \`HIGHSPEED_RAIL,LONG_DISTANCE_RAIL,NIGHT_RAIL,REGIONAL_RAIL,REGIONAL_FAST_RAIL\`
+  - \`RAIL\`: translates to \`HIGHSPEED_RAIL,LONG_DISTANCE,NIGHT_RAIL,REGIONAL_RAIL,REGIONAL_FAST_RAIL\`
   - \`METRO\`: metro trains 
   - \`HIGHSPEED_RAIL\`: long distance high speed trains (e.g. TGV)
   - \`LONG_DISTANCE\`: long distance inter city trains
@@ -308,7 +309,7 @@ export const ModeSchema = {
   - \`AREAL_LIFT\`: Aerial lift, suspended cable car (e.g., gondola lift, aerial tramway). Cable transport where cabins, cars, gondolas or open chairs are suspended by means of one or more cables.
 `,
     type: 'string',
-    enum: ['WALK', 'BIKE', 'RENTAL', 'CAR', 'CAR_PARKING', 'ODM', 'FLEX', 'TRANSIT', 'TRAM', 'SUBWAY', 'FERRY', 'AIRPLANE', 'METRO', 'BUS', 'COACH', 'RAIL', 'HIGHSPEED_RAIL', 'LONG_DISTANCE', 'NIGHT_RAIL', 'REGIONAL_FAST_RAIL', 'REGIONAL_RAIL', 'CABLE_CAR', 'FUNICULAR', 'AREAL_LIFT', 'OTHER']
+    enum: ['WALK', 'BIKE', 'RENTAL', 'CAR', 'CAR_PARKING', 'CAR_DROPOFF', 'ODM', 'FLEX', 'TRANSIT', 'TRAM', 'SUBWAY', 'FERRY', 'AIRPLANE', 'METRO', 'BUS', 'COACH', 'RAIL', 'HIGHSPEED_RAIL', 'LONG_DISTANCE', 'NIGHT_RAIL', 'REGIONAL_FAST_RAIL', 'REGIONAL_RAIL', 'CABLE_CAR', 'FUNICULAR', 'AREAL_LIFT', 'OTHER']
 } as const;
 
 export const VertexTypeSchema = {
@@ -380,6 +381,10 @@ export const PlaceSchema = {
             description: `The current track/platform information, updated with real-time updates if available. 
 Can be missing if neither real-time updates nor the schedule timetable contains track information.
 `,
+            type: 'string'
+        },
+        description: {
+            description: 'description of the location that provides more detailed information',
             type: 'string'
         },
         vertexType: {
@@ -473,7 +478,7 @@ export const ReachableSchema = {
 export const StopTimeSchema = {
     description: 'departure or arrival event at a stop',
     type: 'object',
-    required: ['place', 'mode', 'realTime', 'headsign', 'agencyId', 'agencyName', 'agencyUrl', 'tripId', 'routeShortName', 'pickupDropoffType', 'cancelled', 'source'],
+    required: ['place', 'mode', 'realTime', 'headsign', 'agencyId', 'agencyName', 'agencyUrl', 'tripId', 'routeShortName', 'pickupDropoffType', 'cancelled', 'tripCancelled', 'source'],
     properties: {
         place: {
             '$ref': '#/components/schemas/Place',
@@ -519,7 +524,11 @@ For non-transit legs, null
             '$ref': '#/components/schemas/PickupDropoffType'
         },
         cancelled: {
-            description: 'Whether the departure/arrival is cancelled due to the realtime situation.',
+            description: 'Whether the departure/arrival is cancelled due to the realtime situation (either because the stop is skipped or because the entire trip is cancelled).',
+            type: 'boolean'
+        },
+        tripCancelled: {
+            description: 'Whether the entire trip is cancelled due to the realtime situation.',
             type: 'boolean'
         },
         source: {
@@ -633,7 +642,7 @@ Be aware that with precision 7, coordinates with |longitude| > 107.37 are undefi
 
 export const StepInstructionSchema = {
     type: 'object',
-    required: ['fromLevel', 'toLevel', 'polyline', 'relativeDirection', 'distance', 'streetName', 'exit', 'stayOn', 'area', 'toll'],
+    required: ['fromLevel', 'toLevel', 'polyline', 'relativeDirection', 'distance', 'streetName', 'exit', 'stayOn', 'area'],
     properties: {
         relativeDirection: {
             '$ref': '#/components/schemas/Direction'
@@ -683,6 +692,12 @@ and thus the directions should say something like "cross"
         toll: {
             description: 'Indicates that a fee must be paid by general traffic to use a road, road bridge or road tunnel.',
             type: 'boolean'
+        },
+        accessRestriction: {
+            description: `Experimental. Indicates whether access to this part of the route is restricted.
+See: https://wiki.openstreetmap.org/wiki/Conditional_restrictions
+`,
+            type: 'string'
         },
         elevationUp: {
             type: 'integer',
@@ -911,6 +926,14 @@ to identify which effective fare leg this itinerary leg belongs to
             items: {
                 '$ref': '#/components/schemas/Alert'
             }
+        },
+        loopedCalendarSince: {
+            description: `If set, this attribute indicates that this trip has been expanded
+beyond the feed end date (enabled by config flag \`timetable.dataset.extend_calendar\`)
+by looping active weekdays, e.g. from calendar.txt in GTFS.
+`,
+            type: 'string',
+            format: 'date-time'
         }
     }
 } as const;
@@ -937,13 +960,12 @@ export const RiderCategorySchema = {
 export const FareMediaTypeSchema = {
     type: 'string',
     enum: ['NONE', 'PAPER_TICKET', 'TRANSIT_CARD', 'CONTACTLESS_EMV', 'MOBILE_APP'],
-    enumDescriptions: {
-        NONE: 'No fare media involved (e.g., cash payment)',
-        PAPER_TICKET: 'Physical paper ticket',
-        TRANSIT_CARD: 'Physical transit card with stored value',
-        CONTACTLESS_EMV: 'cEMV (contactless payment)',
-        MOBILE_APP: 'Mobile app with virtual transit cards/passes'
-    }
+    description: `- \`NONE\`: No fare media involved (e.g., cash payment)
+- \`PAPER_TICKET\`: Physical paper ticket
+- \`TRANSIT_CARD\`: Physical transit card with stored value
+- \`CONTACTLESS_EMV\`: cEMV (contactless payment)
+- \`MOBILE_APP\`: Mobile app with virtual transit cards/passes
+`
 } as const;
 
 export const FareMediaSchema = {

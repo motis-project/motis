@@ -15,6 +15,7 @@ const translations: Translations = {
 	moped: 'Mobylette',
 	from: 'De',
 	to: 'À',
+	position: 'Position',
 	arrival: 'Arrivée',
 	departure: 'Départ',
 	duration: 'Durée',
@@ -60,12 +61,14 @@ const translations: Translations = {
 	outDisallowed: 'Impossible de descendre',
 	unscheduledTrip: 'Voyage supplémentaire',
 	alertsAvailable: 'Annonces disponibles',
+	dataExpiredSince: 'Attention : Données expirées, valides jusqu’au',
 	FLEX: 'Transport à la demande',
 	WALK: 'À pied',
 	BIKE: 'Vélo',
 	RENTAL: 'Loué',
 	CAR: 'Voiture',
 	CAR_PARKING: 'Garage voiture',
+	CAR_DROPOFF: 'Dépose (voiture)',
 	TRANSIT: 'Transports en commun',
 	TRAM: 'Tram',
 	SUBWAY: 'Métro',
@@ -82,6 +85,8 @@ const translations: Translations = {
 	REGIONAL_RAIL: 'Train régional',
 	OTHER: 'Autres',
 	routingSegments: {
+		maxTransfers: 'Max. de correspondances',
+		maxTravelTime: 'Temps de trajet max.',
 		firstMile: 'Premier kilomètre',
 		lastMile: 'Dernier kilomètre',
 		direct: 'Connexion directe',
@@ -94,6 +99,17 @@ const translations: Translations = {
 		LOW: 'Petits détours',
 		HIGH: 'Grands détours'
 	},
+	isochrones: {
+		title: 'Isochrones',
+		displayLevel: 'Couche de présentation',
+		maxComputeLevel: 'Niveau de calcul max.',
+		canvasRects: 'Rectes (Superposer)',
+		canvasCircles: 'Cercles (Superposer)',
+		geojsonCircles: 'Circles (Géométrie)',
+		styling: 'Style pour Isochrone',
+		noData: 'Pas de données',
+		requestFailed: 'Échec de la demande'
+	},
 	RENTAL_BICYCLE: 'Vélo partagé',
 	RENTAL_CARGO_BICYCLE: 'Vélo cargo partagé',
 	RENTAL_CAR: 'Voiture partagée',
@@ -105,7 +121,9 @@ const translations: Translations = {
 	CABLE_CAR: 'Téléphérique',
 	FUNICULAR: 'Funiculaire',
 	AREAL_LIFT: 'Remontée mécanique',
-	toll: 'Attention ! Route à péage.'
+	toll: 'Attention ! Route à péage.',
+	accessRestriction: 'Accès restreint',
+	continuesAs: 'Continue comme'
 };
 
 export default translations;

@@ -19,6 +19,31 @@ namespace n = nigiri;
 
 namespace motis {
 
+trip_id<std::string_view> split_trip_id(std::string_view id) {
+  auto const [date, start_time, tag, trip_id] =
+      utl::split<'_', utl::cstr, utl::cstr, utl::cstr, utl::cstr>(id);
+
+  auto ret = motis::trip_id{};
+
+  utl::verify(date.valid(), "invalid tripId date {}", id);
+  ret.start_date_ = date.view();
+
+  utl::verify(start_time.valid(), "invalid tripId start_time {}", id);
+  ret.start_time_ = start_time.view();
+
+  utl::verify(tag.valid(), "invalid tripId tag {}", id);
+  ret.tag_ = tag.view();
+
+  // allow trip ids starting with underscore
+  auto const trip_id_len_plus_one =
+      static_cast<std::size_t>(id.data() + id.size() - tag.str) - tag.length();
+  utl::verify(trip_id_len_plus_one > 1, "invalid tripId id {}", id);
+  ret.trip_id_ =
+      std::string_view{tag.str + tag.length() + 1, trip_id_len_plus_one - 1};
+
+  return ret;
+}
+
 std::pair<std::string_view, std::string_view> split_tag_id(std::string_view x) {
   auto const first_underscore_pos = x.find('_');
   return first_underscore_pos != std::string_view::npos
@@ -51,9 +76,10 @@ std::string tag_lookup::id(nigiri::timetable const& tt,
              : fmt::format("{}_{}", get_tag(src), id);
 }
 
-std::string tag_lookup::id(nigiri::timetable const& tt,
-                           n::rt::run_stop s,
-                           n::event_type const ev_type) const {
+trip_id<std::string> tag_lookup::id_fragments(
+    nigiri::timetable const& tt,
+    n::rt::run_stop s,
+    n::event_type const ev_type) const {
   if (s.fr_->is_scheduled()) {
     // trip id
     auto const t = s.get_trip_idx(ev_type);
@@ -61,27 +87,15 @@ std::string tag_lookup::id(nigiri::timetable const& tt,
     auto const id = tt.trip_id_strings_[id_idx].view();
     auto const src = tt.trip_id_src_[id_idx];
 
-    // go to first trip stop
-    while (s.stop_idx_ > 0 && s.get_trip_idx(n::event_type::kArr) == t) {
-      --s.stop_idx_;
-    }
-
-    // service date + start time
-    auto const [static_transport, utc_start_day] = s.fr_->t_;
-    auto const o = tt.transport_first_dep_offset_[static_transport];
-    auto const utc_dep =
-        tt.event_mam(static_transport, s.stop_idx_, n::event_type::kDep)
-            .as_duration();
-    auto const gtfs_static_dep = utc_dep + o;
-    auto const [day_offset, tz_offset_minutes] =
-        n::rt::split_rounded(gtfs_static_dep - utc_dep);
-    auto const day = (tt.internal_interval_days().from_ +
-                      std::chrono::days{to_idx(utc_start_day)} - day_offset);
+    // start date + start time
+    auto const [day, gtfs_static_dep] = s.get_trip_start(ev_type);
     auto const start_hours = gtfs_static_dep / 60;
     auto const start_minutes = gtfs_static_dep % 60;
 
-    return fmt::format("{:%Y%m%d}_{:02}:{:02}_{}_{}", day, start_hours.count(),
-                       start_minutes.count(), get_tag(src), id);
+    return {
+        fmt::format("{:%Y%m%d}", day),
+        fmt::format("{:02}:{:02}", start_hours.count(), start_minutes.count()),
+        std::string{get_tag(src)}, std::string{id}};
   } else {
     auto const id = s.fr_->id();
     auto const time = std::chrono::system_clock::to_time_t(
@@ -89,35 +103,32 @@ std::string tag_lookup::id(nigiri::timetable const& tt,
     auto const utc = *std::gmtime(&time);
     auto const id_tag = get_tag(id.src_);
     auto const id_id = id.id_;
-    return fmt::format("{:04}{:02}{:02}_{:02}:{:02}_{}_{}", utc.tm_year + 1900,
-                       utc.tm_mon + 1, utc.tm_mday, utc.tm_hour, utc.tm_min,
-                       id_tag, id_id);
+    return {fmt::format("{:04}{:02}{:02}", utc.tm_year + 1900, utc.tm_mon + 1,
+                        utc.tm_mday),
+            fmt::format("{:02}:{:02}", utc.tm_hour, utc.tm_min),
+            std::string{id_tag}, std::string{id_id}};
   }
+}
+
+std::string tag_lookup::id(nigiri::timetable const& tt,
+                           n::rt::run_stop s,
+                           n::event_type const ev_type) const {
+  auto const t = id_fragments(tt, s, ev_type);
+  return fmt::format("{}_{}_{}_{}", std::move(t.start_date_),
+                     std::move(t.start_time_), std::move(t.tag_),
+                     std::move(t.trip_id_));
 }
 
 std::pair<nigiri::rt::run, nigiri::trip_idx_t> tag_lookup::get_trip(
     nigiri::timetable const& tt,
     nigiri::rt_timetable const* rtt,
     std::string_view id) const {
-  auto const [date, start_time, tag, trip_id] =
-      utl::split<'_', utl::cstr, utl::cstr, utl::cstr, utl::cstr>(id);
+  auto const split = split_trip_id(id);
   auto td = transit_realtime::TripDescriptor{};
-
-  utl::verify(date.valid(), "invalid tripId date {}", id);
-  td.set_start_date(date.view());
-
-  utl::verify(start_time.valid(), "invalid tripId start_time {}", id);
-  td.set_start_time(start_time.view());
-
-  utl::verify(tag.valid(), "invalid tripId tag {}", id);
-  // allow trip ids starting with underscore
-  auto const trip_id_len_plus_one =
-      static_cast<std::size_t>(id.data() + id.size() - tag.str) - tag.length();
-  utl::verify(trip_id_len_plus_one > 1, "invalid tripId id {}", id);
-  td.set_trip_id(
-      std::string_view{tag.str + tag.length() + 1, trip_id_len_plus_one - 1});
-
-  return n::rt::gtfsrt_resolve_run({}, tt, rtt, get_src(tag.view()), td);
+  td.set_start_date(split.start_date_);
+  td.set_start_time(split.start_time_);
+  td.set_trip_id(split.trip_id_);
+  return n::rt::gtfsrt_resolve_run({}, tt, rtt, get_src(split.tag_), td);
 }
 
 nigiri::location_idx_t tag_lookup::get_location(nigiri::timetable const& tt,

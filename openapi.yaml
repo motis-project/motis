@@ -13,8 +13,13 @@ externalDocs:
   url: https://github.com/motis-project/motis
 servers:
   - url: https://api.transitous.org
+    description: Transitous production server
+  - url: https://staging.api.transitous.org
+    description: Transitous staging server
+  - url: http://localhost:8080
+    description: Local MOTIS server
 paths:
-  /api/v2/plan:
+  /api/v3/plan:
     get:
       tags:
         - routing
@@ -97,7 +102,12 @@ paths:
           in: query
           required: false
           description: |
-            The maximum number of allowed transfers.
+            The maximum number of allowed transfers (i.e. interchanges between transit legs,
+            pre- and postTransit do not count as transfers).
+            `maxTransfers=0` searches for direct transit connections without any transfers.
+            If you want to search only for non-transit connections (`FOOT`, `CAR`, etc.),
+            send an empty `transitModes` parameter instead.
+
             If not provided, the routing uses the server-side default value
             which is hardcoded and very high to cover all use cases.
             
@@ -105,6 +115,9 @@ paths:
             optimal (e.g. the fastest) journeys not being found.
             If this value is too low to reach the destination at all,
             it can lead to slow routing performance.
+
+            In plan endpoints before v3, the behavior is off by one,
+            i.e. `maxTransfers=0` only returns non-transit connections.
           schema:
             type: integer
 
@@ -221,6 +234,19 @@ paths:
           description: |
             - true: Compute transfer polylines and step instructions.
             - false: Only return basic information (start time, end time, duration) for transfers.
+          schema:
+            type: boolean
+            default: true
+
+        - name: joinInterlinedLegs
+          in: query
+          description: |
+            Optional. Default is `true`.
+            
+            Controls if a journey section with stay-seated transfers is returned:
+            - `joinInterlinedLegs=false`: as several legs (full information about all trip numbers, headsigns, etc.).
+              Legs that do not require a transfer (stay-seated transfer) are marked with `interlineWithPreviousLeg=true`.
+            - `joinInterlinedLegs=true` (default behavior): as only one joined leg containing all stops
           schema:
             type: boolean
             default: true
@@ -656,7 +682,7 @@ paths:
           description: Optional. Experimental. Adds overtaken direct connections.
           schema:
             type: boolean
-            default: false
+            default: true
 
         - name: withFares
           in: query
@@ -665,6 +691,23 @@ paths:
           schema:
             type: boolean
             default: false
+
+        - name: withScheduledSkippedStops
+          in: query
+          required: false
+          description: Optional. Include intermediate stops where passengers can not alight/board according to schedule.
+          schema:
+            type: boolean
+            default: false
+
+        - name: language
+          in: query
+          required: false
+          description: |
+            language tags as used in OpenStreetMap / GTFS
+            (usually BCP-47 / ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
+          schema:
+            type: string
       responses:
         '200':
           description: routing result
@@ -792,7 +835,7 @@ paths:
           schema:
             type: boolean
       responses:
-        200:
+        '200':
           description: |
             A list of durations.
             If no path was found, the object is empty.
@@ -803,7 +846,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/Duration'
 
-  /api/experimental/one-to-all:
+  /api/v1/one-to-all:
     get:
       tags:
         - routing
@@ -854,14 +897,22 @@ paths:
           in: query
           required: false
           description: |
-            The maximum number of allowed transfers.
+            The maximum number of allowed transfers (i.e. interchanges between transit legs,
+            pre- and postTransit do not count as transfers).
+            `maxTransfers=0` searches for direct transit connections without any transfers.
+            If you want to search only for non-transit connections (`FOOT`, `CAR`, etc.),
+            send an empty `transitModes` parameter instead.
+
             If not provided, the routing uses the server-side default value
             which is hardcoded and very high to cover all use cases.
-
+            
             *Warning*: Use with care. Setting this too low can lead to
             optimal (e.g. the fastest) journeys not being found.
             If this value is too low to reach the destination at all,
             it can lead to slow routing performance.
+
+            In plan endpoints before v3, the behavior is off by one,
+            i.e. `maxTransfers=0` only returns non-transit connections.
           schema:
             type: integer
         - name: minTransferTime
@@ -1051,7 +1102,7 @@ paths:
             minimum: 0
 
       responses:
-        200:
+        '200':
           description: |
             The starting position and a list of all reachable stops
             If no paths are found, the reachable list is empty.
@@ -1084,7 +1135,7 @@ paths:
           schema:
             $ref: '#/components/schemas/LocationType'
       responses:
-        200:
+        '200':
           description: A list of guesses to resolve the coordinates to a location
           content:
             application/json:
@@ -1147,7 +1198,7 @@ paths:
             default: 1
 
       responses:
-        200:
+        '200':
           description: A list of guesses to resolve the text to a location
           content:
             application/json:
@@ -1169,8 +1220,35 @@ paths:
             type: string
           required: true
           description: trip identifier (e.g. from an itinerary leg or stop event)
+        - name: withScheduledSkippedStops
+          in: query
+          required: false
+          description: Optional. Include intermediate stops where passengers can not alight/board according to schedule.
+          schema:
+            type: boolean
+            default: false
+        - name: joinInterlinedLegs
+          in: query
+          description: |
+            Optional. Default is `true`.
+            
+            Controls if a trip with stay-seated transfers is returned:
+            - `joinInterlinedLegs=false`: as several legs (full information about all trip numbers, headsigns, etc.).
+              Legs that do not require a transfer (stay-seated transfer) are marked with `interlineWithPreviousLeg=true`.
+            - `joinInterlinedLegs=true` (default behavior): as only one joined leg containing all stops
+          schema:
+            type: boolean
+            default: true
+        - name: language
+          in: query
+          required: false
+          description: |
+            language tags as used in OpenStreetMap / GTFS
+            (usually BCP-47 / ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
+          schema:
+            type: string
       responses:
-        200:
+        '200':
           description: the requested trip as itinerary
           content:
             application/json:
@@ -1265,6 +1343,18 @@ paths:
             If set, all stops at parent stations and their child stops in the specified radius
             are returned.
 
+        - name: exactRadius
+          in: query
+          schema:
+            type: boolean
+            default: false
+          required: false
+          description: |
+            Optional. Default is `false`.
+            
+            If set to `true`, only stations that are phyiscally in the radius are considered.
+            If set to `false`, additionally to the stations in the radius, equivalences with the same name and children are considered.
+
         - name: pageCursor
           in: query
           required: false
@@ -1274,8 +1364,25 @@ paths:
             This will enable you to search for stop times in the next or previous time-window.
           schema:
             type: string
+
+        - name: withScheduledSkippedStops
+          in: query
+          required: false
+          description: Optional. Include stoptimes where passengers can not alight/board according to schedule.
+          schema:
+            type: boolean
+            default: false
+
+        - name: language
+          in: query
+          required: false
+          description: |
+            language tags as used in OpenStreetMap / GTFS
+            (usually BCP-47 / ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
+          schema:
+            type: string
       responses:
-        200:
+        '200':
           description: A list of departures/arrivals
           content:
             application/json:
@@ -1283,6 +1390,7 @@ paths:
                 type: object
                 required:
                   - stopTimes
+                  - place
                   - previousPageCursor
                   - nextPageCursor
                 properties:
@@ -1291,6 +1399,9 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/StopTime'
+                  place:
+                    description: metadata of the requested stop
+                    $ref: '#/components/schemas/Place'
                   previousPageCursor:
                     description: |
                       Use the cursor to get the previous page of results. Insert the cursor into the request and post it to get the previous page.
@@ -1464,7 +1575,7 @@ paths:
                 required:
                   - place
                   - hasFootTransfers
-                  - hasWheechairTransfers
+                  - hasWheelchairTransfers
                   - hasCarTransfers
                   - transfers
                 properties:
@@ -1763,19 +1874,20 @@ components:
           - `RENTAL` Experimental. Expect unannounced breaking changes (without version bumps) for all parameters and returned structs.
           - `CAR`
           - `CAR_PARKING` Experimental. Expect unannounced breaking changes (without version bumps) for all parameters and returned structs.
+          - `CAR_DROPOFF` Experimental. Expect unannounced breaking changes (without version bumps) for all perameters and returned structs.
           - `ODM` on-demand taxis from the Prima+ÖV Project
           - `FLEX` flexible transports
 
         # Transit modes
 
-          - `TRANSIT`: translates to `RAIL,SUBWAY,TRAM,BUS,FERRY,AIRPLANE,COACH`
+          - `TRANSIT`: translates to `RAIL,TRAM,BUS,FERRY,AIRPLANE,COACH,CABLE_CAR,FUNICULAR,AREAL_LIFT,OTHER`
           - `TRAM`: trams
           - `SUBWAY`: subway trains
           - `FERRY`: ferries
           - `AIRPLANE`: airline flights
           - `BUS`: short distance buses (does not include `COACH`)
           - `COACH`: long distance buses (does not include `BUS`)
-          - `RAIL`: translates to `HIGHSPEED_RAIL,LONG_DISTANCE_RAIL,NIGHT_RAIL,REGIONAL_RAIL,REGIONAL_FAST_RAIL`
+          - `RAIL`: translates to `HIGHSPEED_RAIL,LONG_DISTANCE,NIGHT_RAIL,REGIONAL_RAIL,REGIONAL_FAST_RAIL,METRO,SUBWAY`
           - `METRO`: metro trains 
           - `HIGHSPEED_RAIL`: long distance high speed trains (e.g. TGV)
           - `LONG_DISTANCE`: long distance inter city trains
@@ -1793,6 +1905,7 @@ components:
         - RENTAL
         - CAR
         - CAR_PARKING
+        - CAR_DROPOFF
         - ODM
         - FLEX
         # === Transit ===
@@ -1882,6 +1995,9 @@ components:
             The current track/platform information, updated with real-time updates if available. 
             Can be missing if neither real-time updates nor the schedule timetable contains track information.
           type: string
+        description:
+          description: description of the location that provides more detailed information
+          type: string
         vertexType:
           $ref: '#/components/schemas/VertexType'
         pickupType:
@@ -1963,6 +2079,7 @@ components:
         - routeShortName
         - pickupDropoffType
         - cancelled
+        - tripCancelled
         - source
       properties:
         place:
@@ -1997,7 +2114,10 @@ components:
           description: Type of pickup (for departures) or dropoff (for arrivals), may be disallowed either due to schedule, skipped stops or cancellations
           $ref: '#/components/schemas/PickupDropoffType'
         cancelled:
-          description: Whether the departure/arrival is cancelled due to the realtime situation.
+          description: Whether the departure/arrival is cancelled due to the realtime situation (either because the stop is skipped or because the entire trip is cancelled).
+          type: boolean
+        tripCancelled:
+          description: Whether the entire trip is cancelled due to the realtime situation.
           type: boolean
         source:
           description: Filename and line number where this trip is from
@@ -2122,7 +2242,6 @@ components:
         - exit
         - stayOn
         - area
-        - toll
       properties:
         relativeDirection:
           $ref: '#/components/schemas/Direction'
@@ -2162,6 +2281,11 @@ components:
         toll:
           description: Indicates that a fee must be paid by general traffic to use a road, road bridge or road tunnel.
           type: boolean
+        accessRestriction:
+          description: |
+            Experimental. Indicates whether access to this part of the route is restricted.
+            See: https://wiki.openstreetmap.org/wiki/Conditional_restrictions
+          type: string
         elevationUp:
           type: integer
           description: incline in meters across this path segment
@@ -2366,6 +2490,13 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Alert'
+        loopedCalendarSince:
+          description: |
+            If set, this attribute indicates that this trip has been expanded
+            beyond the feed end date (enabled by config flag `timetable.dataset.extend_calendar`)
+            by looping active weekdays, e.g. from calendar.txt in GTFS.
+          type: string
+          format: date-time
 
     RiderCategory:
       type: object
@@ -2386,12 +2517,12 @@ components:
     FareMediaType:
       type: string
       enum: [ "NONE", "PAPER_TICKET", "TRANSIT_CARD", "CONTACTLESS_EMV", "MOBILE_APP" ]
-      enumDescriptions:
-        NONE: No fare media involved (e.g., cash payment)
-        PAPER_TICKET: Physical paper ticket
-        TRANSIT_CARD: Physical transit card with stored value
-        CONTACTLESS_EMV: cEMV (contactless payment)
-        MOBILE_APP: Mobile app with virtual transit cards/passes
+      description: |
+        - `NONE`: No fare media involved (e.g., cash payment)
+        - `PAPER_TICKET`: Physical paper ticket
+        - `TRANSIT_CARD`: Physical transit card with stored value
+        - `CONTACTLESS_EMV`: cEMV (contactless payment)
+        - `MOBILE_APP`: Mobile app with virtual transit cards/passes
 
     FareMedia:
       type: object

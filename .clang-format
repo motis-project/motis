@@ -12,6 +12,7 @@ AlwaysBreakTemplateDeclarations: true
 SpacesBeforeTrailingComments: 2
 IncludeBlocks: Preserve
 BinPackParameters: false
+QualifierAlignment: Right
 IncludeCategories:
   - Regex: '^<.*\.h>'
     Priority: 1
@@ -53,6 +54,7 @@ AllowShortCaseLabelsOnASingleLine: true
 AlwaysBreakTemplateDeclarations: true
 SpacesBeforeTrailingComments: 2
 ColumnLimit: 80
+QualifierAlignment: Right
 IncludeCategories:
   - Regex: '^<.*\.h>'
     Priority: 1

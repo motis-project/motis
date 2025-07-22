@@ -24,6 +24,12 @@ gbfs:
   feeds:
     montreal:
       url: https://gbfs.velobixi.com/gbfs/gbfs.json
+    # Example feed for header usage
+    example-feed:
+      url: https://example.org/gbfs
+      headers:
+        authorization: MY_OTHER_API_KEY
+        other-header: other-value
 tiles:
   profile: tiles-profiles/full.lua
 street_routing:
@@ -60,7 +66,8 @@ timetable:                          # if not set, no timetable will be loaded
   http_timeout: 30                  # maximum time in seconds the real-time feed download may take
   incremental_rt_update: false      # false = real-time updates are applied to a clean slate, true = no data will be dropped
   max_footpath_length: 15           # maximum footpath length when transitively connecting stops or for routing footpaths if `osr_footpath` is set to true
-  max_matching_distance: 25.0       # maximum distance from geolocation to next OSM node that will be found
+  max_matching_distance: 25.0       # maximum distance from geolocation to next OSM ways that will be found
+  preprocess_max_matching_distance: 0.0 # max. distance for preprocessing matches from nigiri locations (stops) to OSM ways to speed up querying (set to 0 (default) to disable)
   datasets:                         # map of tag -> dataset
     ch:                             # the tag will be used as prefix for stop IDs and trip IDs with `_` as divider, so `_` cannot be part of the dataset tag
       path: ch_opentransportdataswiss.gtfs.zip
@@ -75,18 +82,26 @@ timetable:                          # if not set, no timetable will be loaded
       rt:
         - url: https://gtfs.ovapi.nl/nl/trainUpdates.pb
         - url: https://gtfs.ovapi.nl/nl/tripUpdates.pb
+      extend_calendar: true         # expand the weekly service pattern beyond the end of `feed_info.txt::feed_end_date` if `feed_end_date` matches `calendar.txt::end_date`
 gbfs:
   feeds:
     montreal:
       url: https://gbfs.velobixi.com/gbfs/gbfs.json
+    example-feed:
+      url: https://example.org/gbfs
+      headers:
+        authorization: MY_OTHER_API_KEY
+        other-header: other-value
 street_routing:                   # enable street routing (default = false; Using boolean values true/false is supported for backward compatibility)
   elevation_data_dir: srtm/       # folder which contains elevation data, e.g. SRTMGL1 data tiles in HGT format
 limits:
   stoptimes_max_results: 256      # maximum number of stoptimes results that can be requested
-  plan_max_results: 256           # maximum number of plan results that can be requested
+  plan_max_results: 256           # maximum number of plan results that can be requested via numItineraries parameter
+  plan_max_search_window_minutes: 5760 # maximum (minutes) for searchWindow parameter (seconds), highest possible value: 21600 (15 days)
   onetoall_max_results: 65535     # maximum number of one-to-all results that can be requested
   onetoall_max_travel_minutes: 90 # maximum travel duration for one-to-all query that can be requested
   routing_max_timeout_seconds: 90 # maximum duration a routing query may take
+  gtfsrt_expose_max_trip_updates: 100 # how many trip updates are allowed to be exposed via the gtfsrt endpoint
 osr_footpath: true                # enable routing footpaths instead of using transfers from timetable datasets
 geocoding: true                   # enable geocoding for place/stop name autocompletion
 reverse_geocoding: false          # enable reverse geocoding for mapping a geo coordinate to nearby places/addresses
@@ -119,4 +134,37 @@ timetable:
       path: 20250331_fahrplaene_gesamtdeutschland_gtfs.zip
       rt:
         - url: https://stc.traines.eu/mirror/german-delfi-gtfs-rt/latest.gtfs-rt.pbf
+```
+
+# GBFS Configuration and Default Restrictions
+
+This examples shows how to configure multiple GBFS feeds.  
+A GBFS feed might describe a single system or area, `callabike` in this example, or a set of feeds, that are combined to a manifest, like `mobidata-bw` here. For readability, optional headers are not included.
+
+A GBFS feed can define geofencing zones and rules, that apply to areas within these zones.
+For restrictions on areas not included in these geofencing zones, a feed may contain global rules.
+If these are missing, it's possible to define `default_restrictions`, that apply to either a single feed or a manifest.
+The following example shows possible configurations:
+
+```
+gbfs:
+  feeds:
+    # GBFS feed:
+    #callabike:
+    #  url: https://api.mobidata-bw.de/sharing/gbfs/callabike/gbfs
+    # GBFS manifest / Lamassu feed:
+    mobidata-bw:
+      url: https://api.mobidata-bw.de/sharing/gbfs/v3/manifest.json
+  default_restrictions:
+    mobidata-bw:callabike: # "callabike" feed contained in the "mobidata-bw" manifest
+      # these restrictions apply outside of the defined geofencing zones if the feed doesn't contain global rules
+      ride_start_allowed: true
+      ride_end_allowed: true
+      ride_through_allowed: true
+      #station_parking: false
+      #return_constraint: roundtrip_station
+    #mobidata-bw: # default restrictions for all feeds contained in the "mobidata-bw" manifest
+    #callabike: # default restrictions for standalone GBFS feed "callabike" (when not using the mobidata-bw example)
+  update_interval: 300
+  http_timeout: 10
 ```

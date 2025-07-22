@@ -67,6 +67,9 @@ struct config {
         }
         std::string url_;
         std::optional<headers_t> headers_{};
+
+        enum struct protocol { gtfsrt, auser, siri };
+        protocol protocol_{protocol::gtfsrt};
       };
 
       bool operator==(dataset const&) const = default;
@@ -74,6 +77,7 @@ struct config {
       std::string path_;
       bool default_bikes_allowed_{false};
       bool default_cars_allowed_{false};
+      bool extend_calendar_{false};
       std::optional<std::map<std::string, bool>> clasz_bikes_allowed_{};
       std::optional<std::map<std::string, bool>> clasz_cars_allowed_{};
       std::optional<std::vector<rt>> rt_{};
@@ -97,6 +101,7 @@ struct config {
     bool extend_missing_footpaths_{false};
     std::uint16_t max_footpath_length_{15};
     double max_matching_distance_{25.0};
+    double preprocess_max_matching_distance_{0.0};
     std::optional<std::string> default_timezone_{};
     std::map<std::string, dataset> datasets_{};
     std::optional<std::filesystem::path> assistance_times_{};
@@ -164,10 +169,12 @@ struct config {
     bool operator==(limits const&) const = default;
     unsigned stoptimes_max_results_{256U};
     unsigned plan_max_results_{256U};
+    unsigned plan_max_search_window_minutes_{5760U};
     unsigned stops_max_results_{2048U};
     unsigned onetoall_max_results_{65535U};
     unsigned onetoall_max_travel_minutes_{90U};
     unsigned routing_max_timeout_seconds_{90U};
+    unsigned gtfsrt_expose_max_trip_updates_{100U};
   };
   std::optional<limits> limits_{};
 

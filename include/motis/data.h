@@ -6,6 +6,7 @@
 
 #include "date/date.h"
 
+#include "nigiri/rt/vdv_aus.h"
 #include "nigiri/types.h"
 
 #include "osr/types.h"
@@ -15,6 +16,7 @@
 #include "motis/fwd.h"
 #include "motis/gbfs/data.h"
 #include "motis/match_platforms.h"
+#include "motis/rt/auser.h"
 #include "motis/types.h"
 
 namespace motis {
@@ -56,8 +58,10 @@ struct data {
   void load_railviz();
   void load_geocoder();
   void load_matches();
+  void load_way_matches();
   void load_reverse_geocoder();
   void load_tiles();
+  void load_auser_updater(std::string_view, config::timetable::dataset const&);
 
   void init_rtt(date::sys_days = std::chrono::time_point_cast<date::days>(
                     std::chrono::system_clock::now()));
@@ -66,7 +70,8 @@ struct data {
     // !!! Remember to add all new members !!!
     return std::tie(config_, t_, r_, tc_, w_, pl_, l_, elevations_, tt_, tags_,
                     location_rtree_, elevator_nodes_, shapes_, railviz_static_,
-                    matches_, rt_, gbfs_, odm_bounds_, flex_areas_, metrics_);
+                    matches_, way_matches_, rt_, gbfs_, odm_bounds_,
+                    flex_areas_, metrics_, auser_);
   }
 
   std::filesystem::path path_;
@@ -85,13 +90,16 @@ struct data {
   ptr<hash_set<osr::node_idx_t>> elevator_nodes_;
   ptr<nigiri::shapes_storage> shapes_;
   ptr<railviz_static_index> railviz_static_;
-  cista::wrapped<platform_matches_t> matches_;
+  cista::wrapped<vector_map<nigiri::location_idx_t, osr::platform_idx_t>>
+      matches_;
+  ptr<way_matches_storage> way_matches_;
   ptr<tiles_data> tiles_;
   std::shared_ptr<rt> rt_{std::make_shared<rt>()};
   std::shared_ptr<gbfs::gbfs_data> gbfs_{};
   ptr<odm::bounds> odm_bounds_;
   ptr<flex::flex_areas> flex_areas_;
   ptr<metrics_registry> metrics_;
+  ptr<std::map<std::string, auser>> auser_;
 };
 
 }  // namespace motis

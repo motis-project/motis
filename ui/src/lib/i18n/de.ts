@@ -16,6 +16,7 @@ const translations: Translations = {
 	moped: 'Moped',
 	from: 'Von',
 	to: 'Nach',
+	position: 'Position',
 	arrival: 'Ankunft',
 	departure: 'Abfahrt',
 	duration: 'Dauer',
@@ -61,11 +62,13 @@ const translations: Translations = {
 	outDisallowed: 'Ausstieg nicht möglich',
 	unscheduledTrip: 'Zusätzliche Fahrt',
 	alertsAvailable: 'Meldungen liegen vor',
+	dataExpiredSince: 'Achtung: Veraltete Daten, zuletzt gültig am',
 	FLEX: 'Bedarfsverkehr',
 	WALK: 'Zu Fuß',
 	BIKE: 'Fahrrad',
 	RENTAL: 'Sharing',
 	CAR: 'Auto',
+	CAR_DROPOFF: 'Absetzen (Auto)',
 	CAR_PARKING: 'P+R Park & Ride',
 	TRANSIT: 'ÖPV',
 	TRAM: 'Tram',
@@ -83,6 +86,8 @@ const translations: Translations = {
 	REGIONAL_RAIL: 'Regionalzug',
 	OTHER: 'Andere',
 	routingSegments: {
+		maxTransfers: 'Max. Umstiege',
+		maxTravelTime: 'Max. Reisezeit',
 		firstMile: 'Erste Meile',
 		lastMile: 'Letzte Meile',
 		direct: 'Direktverbindung',
@@ -91,6 +96,17 @@ const translations: Translations = {
 		maxDirectTime: 'Max. Direktzeit'
 	},
 	elevationCosts: { NONE: 'Keine Umwege', LOW: 'Kleine Umwege', HIGH: 'Große Umwege' },
+	isochrones: {
+		title: 'Isochronen',
+		displayLevel: 'Darstellungsebene',
+		maxComputeLevel: 'Max. Berechnungsebene',
+		canvasRects: 'Rechtecke (Overlay)',
+		canvasCircles: 'Kreise (Overlay)',
+		geojsonCircles: 'Kreise (Geometrie)',
+		styling: 'Darstellung der Isochronen',
+		noData: 'Keine Daten',
+		requestFailed: 'Anfrage fehlgeschlagen'
+	},
 	RENTAL_BICYCLE: 'Bikesharing',
 	RENTAL_CARGO_BICYCLE: 'Lastenrad Sharing',
 	RENTAL_CAR: 'Car Sharing',
@@ -102,7 +118,9 @@ const translations: Translations = {
 	CABLE_CAR: 'Seilbahn',
 	FUNICULAR: 'Standseilbahn',
 	AREAL_LIFT: 'Luftseilbahn',
-	toll: 'Achtung! Mautpflichtige Straße.'
+	toll: 'Achtung! Mautpflichtige Straße.',
+	accessRestriction: 'Kein Zugang',
+	continuesAs: 'Weiter als'
 };
 
 export default translations;

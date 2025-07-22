@@ -119,6 +119,16 @@ data::data(std::filesystem::path p, config const& c)
       if (c.timetable_->railviz_) {
         load_railviz();
       }
+      for (auto const& [tag, d] : c.timetable_->datasets_) {
+        if (d.rt_ && utl::any_of(*d.rt_, [](auto const& rt) {
+              return rt.protocol_ ==
+                         config::timetable::dataset::rt::protocol::auser ||
+                     rt.protocol_ ==
+                         config::timetable::dataset::rt::protocol::siri;
+            })) {
+          load_auser_updater(tag, d);
+        }
+      }
     }
   });
 
@@ -140,6 +150,7 @@ data::data(std::filesystem::path p, config const& c)
   auto matches = std::async(std::launch::async, [&]() {
     if (c.use_street_routing() && c.timetable_) {
       load_matches();
+      load_way_matches();
     }
   });
 
@@ -274,10 +285,35 @@ void data::load_matches() {
   matches_ = cista::read<platform_matches_t>(path_ / "matches.bin");
 }
 
+void data::load_way_matches() {
+  if (config_.timetable_.value().preprocess_max_matching_distance_ > 0.0) {
+    way_matches_ = {};
+    way_matches_ = std::make_unique<way_matches_storage>(way_matches_storage{
+        path_, cista::mmap::protection::READ,
+        config_.timetable_.value().preprocess_max_matching_distance_});
+  }
+}
+
 void data::load_tiles() {
   auto const db_size = config_.tiles_.value().db_size_;
   tiles_ = std::make_unique<tiles_data>(
       (path_ / "tiles" / "tiles.mdb").generic_string(), db_size);
+}
+
+void data::load_auser_updater(std::string_view tag,
+                              config::timetable::dataset const& d) {
+  if (!auser_) {
+    auser_ = std::make_unique<std::map<std::string, auser>>();
+  }
+  for (auto const& rt : *d.rt_) {
+    if (rt.protocol_ == config::timetable::dataset::rt::protocol::auser) {
+      auser_->try_emplace(rt.url_, *tt_, tags_->get_src(tag),
+                          n::rt::vdv_aus::updater::xml_format::kVdv);
+    } else if (rt.protocol_ == config::timetable::dataset::rt::protocol::siri) {
+      auser_->try_emplace(rt.url_, *tt_, tags_->get_src(tag),
+                          n::rt::vdv_aus::updater::xml_format::kSiri);
+    }
+  }
 }
 
 }  // namespace motis

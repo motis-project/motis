@@ -146,13 +146,13 @@ data import(config const& c, fs::path const& data_path, bool const write) {
     auto const& t = *c.timetable_;
 
     for (auto const& [_, d] : t.datasets_) {
-      h = cista::build_hash(h, c.osr_footpath_, hash_file(d.path_),
-                            d.default_bikes_allowed_, d.default_cars_allowed_,
-                            d.clasz_bikes_allowed_, d.clasz_cars_allowed_,
-                            d.default_timezone_);
+      h = cista::build_seeded_hash(
+          h, c.osr_footpath_, hash_file(d.path_), d.default_bikes_allowed_,
+          d.default_cars_allowed_, d.clasz_bikes_allowed_,
+          d.clasz_cars_allowed_, d.default_timezone_, d.extend_calendar_);
     }
 
-    h = cista::build_hash(
+    h = cista::build_seeded_hash(
         h, t.first_day_, t.num_days_, t.with_shapes_, t.adjust_footpaths_,
         t.merge_dupes_intra_src_, t.merge_dupes_inter_src_,
         t.link_stop_distance_, t.update_interval_, t.incremental_rt_update_,
@@ -181,7 +181,7 @@ data import(config const& c, fs::path const& data_path, bool const write) {
     std::ranges::sort(files);
     auto& h = elevation_dir_hash.second;
     for (auto const& f : files) {
-      h = cista::build_hash(h, f);
+      h = cista::build_seeded_hash(h, f);
     }
   }
 
@@ -305,6 +305,7 @@ data import(config const& c, fs::path const& data_path, bool const write) {
                                   .cars_allowed_default_ = to_clasz_bool_array(
                                       dc.default_cars_allowed_,
                                       dc.clasz_cars_allowed_),
+                                  .extend_calendar_ = dc.extend_calendar_,
                               }};
                         }),
             {.adjust_footpaths_ = t.adjust_footpaths_,
@@ -379,12 +380,8 @@ data import(config const& c, fs::path const& data_path, bool const write) {
         }
       },
       [&]() {
-        if (d.t_) {
-          d.t_.reset();
-        }
-        if (d.r_) {
-          d.r_.reset();
-        }
+        d.t_.reset();
+        d.r_.reset();
         if (c.geocoding_) {
           d.load_geocoder();
         }
@@ -446,20 +443,38 @@ data import(config const& c, fs::path const& data_path, bool const write) {
       {tt_hash, osm_hash, osr_footpath_settings_hash, osr_version(),
        osr_footpath_version(), n_version()}};
 
-  auto matches =
-      task{"matches",
-           [&]() { return c.timetable_ && c.use_street_routing(); },
-           [&]() { return d.tt_ && d.w_ && d.pl_; },
-           [&]() {
-             d.matches_ = cista::wrapped<platform_matches_t>{
-                 cista::raw::make_unique<platform_matches_t>(
-                     get_matches(*d.tt_, *d.pl_, *d.w_))};
-             if (write) {
-               cista::write(data_path / "matches.bin", *d.matches_);
-             }
-           },
-           [&]() { d.load_matches(); },
-           {tt_hash, osm_hash, osr_version(), n_version(), matches_version()}};
+  auto matches = task{
+      "matches",
+      [&]() { return c.timetable_ && c.use_street_routing(); },
+      [&]() { return d.tt_ && d.w_ && d.pl_ && d.l_; },
+      [&]() {
+        auto const progress_tracker = utl::get_active_progress_tracker();
+        progress_tracker->status("Prepare Platform Matches").out_bounds(0, 30);
+
+        d.matches_ = cista::wrapped<platform_matches_t>{
+            cista::raw::make_unique<platform_matches_t>(
+                get_matches(*d.tt_, *d.pl_, *d.w_))};
+        if (write) {
+          cista::write(data_path / "matches.bin", *d.matches_);
+        }
+        if (c.timetable_.value().preprocess_max_matching_distance_ > 0.0) {
+          progress_tracker->status("Prepare Platform Way Matches")
+              .out_bounds(30, 100);
+          d.way_matches_ = std::make_unique<way_matches_storage>(
+              data_path, cista::mmap::protection::WRITE,
+              c.timetable_.value().preprocess_max_matching_distance_);
+          d.way_matches_->preprocess_osr_matches(*d.tt_, *d.pl_, *d.w_, *d.l_,
+                                                 *d.matches_);
+        }
+      },
+      [&]() {
+        d.load_matches();
+        d.load_way_matches();
+      },
+      {tt_hash, osm_hash, osr_version(), n_version(), matches_version(),
+       std::pair{"way_matches",
+                 cista::build_hash(c.timetable_.value_or(config::timetable{})
+                                       .preprocess_max_matching_distance_)}}};
 
   auto flex_areas =
       task{"flex_areas",

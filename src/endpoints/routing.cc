@@ -11,11 +11,14 @@
 #include "utl/erase_duplicates.h"
 #include "utl/helpers/algorithm.h"
 
+#include "osr/lookup.h"
 #include "osr/platforms.h"
+#include "osr/routing/profile.h"
 #include "osr/routing/profiles/foot.h"
 #include "osr/routing/route.h"
 #include "osr/routing/sharing_data.h"
 
+#include "nigiri/common/interval.h"
 #include "nigiri/routing/limits.h"
 #include "nigiri/routing/pareto_set.h"
 #include "nigiri/routing/query.h"
@@ -26,6 +29,7 @@
 #include "motis/constants.h"
 #include "motis/endpoints/routing.h"
 
+#include "motis/config.h"
 #include "motis/flex/flex.h"
 #include "motis/flex/flex_output.h"
 #include "motis/gbfs/data.h"
@@ -34,6 +38,7 @@
 #include "motis/gbfs/osr_profile.h"
 #include "motis/get_stops_with_traffic.h"
 #include "motis/journey_to_response.h"
+#include "motis/match_platforms.h"
 #include "motis/max_distance.h"
 #include "motis/metrics_registry.h"
 #include "motis/mode_to_profile.h"
@@ -106,9 +111,9 @@ n::routing::td_offsets_t get_td_offsets(
     } else if (m == api::ModeEnum::FLEX) {
       utl::verify(r.fa_, "FLEX areas not loaded");
       auto frd = flex::flex_routing_data{};
-      flex::add_flex_td_offsets(*r.w_, *r.l_, r.pl_, r.matches_, *r.tt_, *r.fa_,
-                                *r.loc_tree_, start_time, pos, dir, max,
-                                max_matching_distance, frd, ret);
+      flex::add_flex_td_offsets(*r.w_, *r.l_, r.pl_, r.matches_, r.way_matches_,
+                                *r.tt_, *r.fa_, *r.loc_tree_, start_time, pos,
+                                dir, max, max_matching_distance, frd, ret);
       continue;
     }
 
@@ -201,6 +206,19 @@ std::vector<n::routing::offset> get_offsets(
                                r.pl_->get_level(*r.w_, (*r.matches_)[l])};
         });
 
+    auto const route = [&](osr::search_profile const p,
+                           osr::sharing_data const* sharing) {
+      auto const pos_match =
+          r.l_->match(pos, false, dir, max_matching_distance, nullptr, p);
+      auto const near_stop_matches = get_reverse_platform_way_matches(
+          *r.l_, r.way_matches_, p, near_stops, near_stop_locations, dir,
+          max_matching_distance);
+      return osr::route(*r.w_, *r.l_, p, pos, near_stop_locations, pos_match,
+                        near_stop_matches,
+                        static_cast<osr::cost_t>(max.count()), dir, nullptr,
+                        sharing, elevations);
+    };
+
     if (osr::is_rental_profile(profile)) {
       if (!gbfs_rd.has_data()) {
         return;
@@ -233,10 +251,8 @@ std::vector<n::routing::offset> get_offsets(
               gbfs_rd.get_products_routing_data(*provider, prod.idx_);
           auto const sharing = prod_rd->get_sharing_data(
               r.w_->n_nodes(), ignore_rental_return_constraints);
-          auto const paths = osr::route(
-              *r.w_, *r.l_, gbfs::get_osr_profile(prod), pos,
-              near_stop_locations, static_cast<osr::cost_t>(max.count()), dir,
-              max_matching_distance, nullptr, &sharing, elevations);
+
+          auto const paths = route(gbfs::get_osr_profile(prod), &sharing);
           ignore_walk = true;
           for (auto const [p, l] : utl::zip(paths, near_stops)) {
             if (p.has_value()) {
@@ -250,10 +266,7 @@ std::vector<n::routing::offset> get_offsets(
       }
 
     } else {
-      auto const paths =
-          osr::route(*r.w_, *r.l_, profile, pos, near_stop_locations,
-                     static_cast<osr::cost_t>(max.count()), dir,
-                     max_matching_distance, nullptr, nullptr, elevations);
+      auto const paths = route(profile, nullptr);
       for (auto const [p, l] : utl::zip(paths, near_stops)) {
         if (p.has_value()) {
           offsets.emplace_back(
@@ -383,9 +396,10 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
       }
     } else if (m == api::ModeEnum::CAR || m == api::ModeEnum::BIKE ||
                m == api::ModeEnum::CAR_PARKING ||
+               m == api::ModeEnum::CAR_DROPOFF ||
                (!omit_walk && m == api::ModeEnum::WALK)) {
-      route_with_profile(
-          default_output{to_profile(m, pedestrian_profile, elevation_costs)});
+      route_with_profile(default_output{
+          *w_, to_profile(m, pedestrian_profile, elevation_costs)});
     } else if (m == api::ModeEnum::RENTAL && gbfs_rd.has_data()) {
       // could be bike sharing or car sharing - car sharing has the higher max
       // distance, so we use this here to be safe
@@ -416,8 +430,9 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
       // if we omitted the WALK routing but didn't have any rental providers
       // in the area, we need to do WALK routing now
       if (routed == 0U && utl::find(modes, api::ModeEnum::WALK) != end(modes)) {
-        route_with_profile(default_output{to_profile(
-            api::ModeEnum::WALK, pedestrian_profile, elevation_costs)});
+        route_with_profile(default_output{
+            *w_, to_profile(api::ModeEnum::WALK, pedestrian_profile,
+                            elevation_costs)});
       }
     }
   }
@@ -513,7 +528,9 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
   }
 
   auto const query = api::plan_params{url.params()};
-  auto const api_version = url.encoded_path().contains("/v1/") ? 1U : 2U;
+  auto const api_version = url.encoded_path().contains("/v1/")   ? 1U
+                           : url.encoded_path().contains("/v2/") ? 2U
+                                                                 : 3U;
 
   auto const deduplicate = [](auto m) {
     utl::erase_duplicates(m);
@@ -564,6 +581,16 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
       query.arriveBy_ ? query.ignorePreTransitRentalReturnConstraints_
                       : query.ignorePostTransitRentalReturnConstraints_;
 
+  utl::verify(query.searchWindow_ / 60 <
+                  config_.limits_.value().plan_max_search_window_minutes_,
+              "maximum searchWindow size exceeded");
+
+  auto const max_transfers =
+      query.maxTransfers_.has_value() &&
+              *query.maxTransfers_ <= n::routing::kMaxTransfers
+          ? (*query.maxTransfers_ - (api_version < 3 ? 1 : 0))
+          : n::routing::kMaxTransfers;
+
   auto const [start_time, t] = get_start_time(query);
 
   UTL_START_TIMING(direct);
@@ -581,7 +608,8 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
           : std::pair{std::vector<api::Itinerary>{}, kInfinityDuration};
   UTL_STOP_TIMING(direct);
 
-  if (!query.transitModes_.empty() && fastest_direct > 5min) {
+  if (!query.transitModes_.empty() && fastest_direct > 5min &&
+      max_transfers >= 0) {
     utl::verify(tt_ != nullptr && tags_ != nullptr,
                 "mode=TRANSIT requires timetable to be loaded");
 
@@ -664,9 +692,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                            query.elevationCosts_, query.maxMatchingDistance_,
                            std::chrono::seconds{query.maxPostTransitTime_},
                            start_time.start_time_),
-        .max_transfers_ = static_cast<std::uint8_t>(
-            query.maxTransfers_.has_value() ? *query.maxTransfers_
-                                            : n::routing::kMaxTransfers),
+        .max_transfers_ = static_cast<std::uint8_t>(max_transfers),
         .max_travel_time_ = query.maxTravelTime_
                                 .and_then([](std::int64_t const dur) {
                                   return std::optional{n::duration_t{dur}};
@@ -700,7 +726,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
         .fastest_direct_ = fastest_direct == kInfinityDuration
                                ? std::nullopt
                                : std::optional{fastest_direct},
-        .fasted_direct_factor_ = query.fastestDirectFactor_,
+        .fastest_direct_factor_ = query.fastestDirectFactor_,
         .slow_direct_ = query.slowDirect_};
     remove_slower_than_fastest_direct(q);
     UTL_STOP_TIMING(query_preparation);
@@ -752,11 +778,13 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                   shapes_, gbfs_rd, j, start, dest, cache, blocked.get(),
                   query.requireCarTransport_ && query.useRoutedTransfers_,
                   query.pedestrianProfile_, query.elevationCosts_,
-                  query.detailedTransfers_, query.withFares_,
+                  query.joinInterlinedLegs_, query.detailedTransfers_,
+                  query.withFares_, query.withScheduledSkippedStops_,
                   config_.timetable_.value().max_matching_distance_,
                   query.maxMatchingDistance_, api_version,
                   query.ignorePreTransitRentalReturnConstraints_,
-                  query.ignorePostTransitRentalReturnConstraints_);
+                  query.ignorePostTransitRentalReturnConstraints_,
+                  query.language_);
             }),
         .previousPageCursor_ =
             fmt::format("EARLIER|{}", to_seconds(r.interval_.from_)),

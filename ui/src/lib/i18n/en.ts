@@ -16,6 +16,7 @@ const translations: Translations = {
 	moped: 'Moped',
 	from: 'From',
 	to: 'To',
+	position: 'Position',
 	arrival: 'Arrival',
 	departure: 'Departure',
 	connections: 'Connections',
@@ -60,12 +61,14 @@ const translations: Translations = {
 	outDisallowed: 'Exit not possible',
 	unscheduledTrip: 'Additional service',
 	alertsAvailable: 'Service alerts present',
+	dataExpiredSince: 'Warning: Expired data, last valid',
 	FLEX: 'On-Demand',
 	WALK: 'Walking',
 	BIKE: 'Bike',
 	RENTAL: 'Sharing',
 	CAR: 'Car',
 	CAR_PARKING: 'Car Parking',
+	CAR_DROPOFF: 'Drop-off (car)',
 	TRANSIT: 'Transit',
 	TRAM: 'Tram',
 	SUBWAY: 'Subway',
@@ -92,6 +95,8 @@ const translations: Translations = {
 	FUNICULAR: 'Funicular',
 	AREAL_LIFT: 'Aerial lift',
 	routingSegments: {
+		maxTransfers: 'Max. transfers',
+		maxTravelTime: 'Max. travel time',
 		firstMile: 'First mile',
 		lastMile: 'Last mile',
 		direct: 'Direct connection',
@@ -104,8 +109,21 @@ const translations: Translations = {
 		LOW: 'Small detours',
 		HIGH: 'Large detours'
 	},
+	isochrones: {
+		title: 'Isochrones',
+		displayLevel: 'Display level',
+		maxComputeLevel: 'Max. computation level',
+		canvasRects: 'Rects (Overlay)',
+		canvasCircles: 'Circles (Overlay)',
+		geojsonCircles: 'Circles (Geometry)',
+		styling: 'Isochrones styling',
+		noData: 'No data',
+		requestFailed: 'Request failed'
+	},
 	incline: 'Incline',
-	toll: 'Warning! A fee must be paid to use this route.'
+	toll: 'Warning! A fee must be paid to use this route.',
+	accessRestriction: 'No access',
+	continuesAs: 'Continues as'
 };
 
 export default translations;

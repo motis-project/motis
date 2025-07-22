@@ -102,21 +102,26 @@ api::Place to_place(n::timetable const* tt,
             } else if (l == n::get_special_station(n::special_station::kEnd)) {
               return to_place(std::get<osr::location>(dest), "END");
             } else {
-              auto const is_track = [&](n::location_idx_t const x) {
-                auto const type = tt->locations_.types_.at(x);
-                return (type == n::location_type::kGeneratedTrack ||
-                        type == n::location_type::kTrack);
+              auto const get_track = [&](n::location_idx_t const x) {
+                return tt->locations_.platform_codes_.at(x).empty()
+                           ? std::nullopt
+                           : std::optional{std::string{
+                                 tt->locations_.platform_codes_[x].view()}};
               };
 
-              auto const get_track = [&](n::location_idx_t const x) {
-                return is_track(x) ? std::optional{std::string{
-                                         tt->locations_.names_.at(x).view()}}
-                                   : std::nullopt;
+              // check if description is available, if not, return nullopt
+              auto const get_description = [&](n::location_idx_t const x) {
+                return tt->locations_.descriptions_.at(x).empty()
+                           ? std::nullopt
+                           : std::optional{std::string{
+                                 tt->locations_.descriptions_[x].view()}};
               };
 
               auto const pos = tt->locations_.coordinates_[l];
               auto const p =
-                  is_track(tt_l.l_) ? tt->locations_.parents_.at(l) : l;
+                  tt->locations_.parents_[l] == n::location_idx_t::invalid()
+                      ? l
+                      : tt->locations_.parents_[l];
               return {.name_ = std::string{tt->locations_.names_[p].view()},
                       .stopId_ = tags->id(*tt, l),
                       .lat_ = pos.lat_,
@@ -124,10 +129,33 @@ api::Place to_place(n::timetable const* tt,
                       .level_ = get_level(w, pl, matches, l),
                       .scheduledTrack_ = get_track(tt_l.scheduled_),
                       .track_ = get_track(tt_l.l_),
+                      .description_ = get_description(tt_l.scheduled_),
                       .vertexType_ = api::VertexTypeEnum::TRANSIT};
             }
           }},
       l);
+}
+
+api::Place to_place(n::timetable const* tt,
+                    tag_lookup const* tags,
+                    osr::ways const* w,
+                    osr::platforms const* pl,
+                    platform_matches_t const* matches,
+                    n::rt::run_stop const& s,
+                    place_t const start,
+                    place_t const dest) {
+  auto const run_cancelled = s.fr_->is_cancelled();
+  auto p = to_place(tt, tags, w, pl, matches, tt_location{s}, start, dest);
+  p.pickupType_ = !run_cancelled && s.in_allowed()
+                      ? api::PickupDropoffTypeEnum::NORMAL
+                      : api::PickupDropoffTypeEnum::NOT_ALLOWED;
+  p.dropoffType_ = !run_cancelled && s.out_allowed()
+                       ? api::PickupDropoffTypeEnum::NORMAL
+                       : api::PickupDropoffTypeEnum::NOT_ALLOWED;
+  p.cancelled_ = run_cancelled || (!s.in_allowed() && !s.out_allowed() &&
+                                   (s.get_scheduled_stop().in_allowed() ||
+                                    s.get_scheduled_stop().out_allowed()));
+  return p;
 }
 
 }  // namespace motis

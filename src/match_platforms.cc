@@ -1,10 +1,13 @@
 #include "motis/match_platforms.h"
 
+#include <filesystem>
+
 #include "utl/helpers/algorithm.h"
 #include "utl/parallel_for.h"
 #include "utl/parser/arg_parser.h"
 
 #include "osr/geojson.h"
+#include "osr/location.h"
 
 #include "motis/location_routes.h"
 
@@ -231,5 +234,65 @@ osr::platform_idx_t get_match(n::timetable const& tt,
 
   return best;
 }
+
+way_matches_storage::way_matches_storage(std::filesystem::path path,
+                                         cista::mmap::protection const mode,
+                                         double const max_matching_distance)
+    : mode_{mode},
+      p_{[&]() {
+        std::filesystem::create_directories(path);
+        return std::move(path);
+      }()},
+      matches_{osr::mm_vec<osr::raw_way_candidate>{mm("way_matches.bin")},
+               osr::mm_vec<cista::base_t<n::location_idx_t>>{
+                   mm("way_matches_idx.bin")}},
+      max_matching_distance_{max_matching_distance} {}
+
+cista::mmap way_matches_storage::mm(char const* file) {
+  return cista::mmap{(p_ / file).generic_string().c_str(), mode_};
+}
+
+void way_matches_storage::preprocess_osr_matches(
+    nigiri::timetable const& tt,
+    osr::platforms const& pl,
+    osr::ways const& w,
+    osr::lookup const& l,
+    platform_matches_t const& platform_matches) {
+  auto const progress_tracker = utl::get_active_progress_tracker();
+  progress_tracker->in_high(tt.n_locations());
+  for (auto i = n::location_idx_t{0U}; i != tt.n_locations(); ++i) {
+    matches_.emplace_back(
+        l.get_raw_match(osr::location{tt.locations_.coordinates_[i],
+                                      pl.get_level(w, platform_matches[i])},
+                        max_matching_distance_));
+    progress_tracker->increment();
+  }
+}
+
+std::vector<osr::match_t> get_reverse_platform_way_matches(
+    osr::lookup const& lookup,
+    way_matches_storage const* way_matches,
+    osr::search_profile const p,
+    std::span<nigiri::location_idx_t const> const locations,
+    std::span<osr::location const> const osr_locations,
+    osr::direction const dir,
+    double const max_matching_distance) {
+  auto const use_raw_matches =
+      way_matches && !way_matches->matches_.empty() &&
+      way_matches->max_matching_distance_ >= max_matching_distance;
+  return utl::to_vec(
+      utl::zip(locations, osr_locations),
+      [&](std::tuple<n::location_idx_t, osr::location> const ll) {
+        auto const& [l, query] = ll;
+        auto raw_matches =
+            std::optional<std::span<osr::raw_way_candidate const>>{};
+        if (use_raw_matches) {
+          auto const& m = way_matches->matches_[l];
+          raw_matches = {m.begin(), m.end()};
+        }
+        return lookup.match(query, true, dir, max_matching_distance, nullptr, p,
+                            raw_matches);
+      });
+};
 
 }  // namespace motis

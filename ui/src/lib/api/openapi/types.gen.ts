@@ -248,6 +248,7 @@ export type PedestrianProfile = 'FOOT' | 'WHEELCHAIR';
  * - `RENTAL` Experimental. Expect unannounced breaking changes (without version bumps) for all parameters and returned structs.
  * - `CAR`
  * - `CAR_PARKING` Experimental. Expect unannounced breaking changes (without version bumps) for all parameters and returned structs.
+ * - `CAR_DROPOFF` Experimental. Expect unannounced breaking changes (without version bumps) for all perameters and returned structs.
  * - `ODM` on-demand taxis from the Prima+ÖV Project
  * - `FLEX` flexible transports
  *
@@ -260,7 +261,7 @@ export type PedestrianProfile = 'FOOT' | 'WHEELCHAIR';
  * - `AIRPLANE`: airline flights
  * - `BUS`: short distance buses (does not include `COACH`)
  * - `COACH`: long distance buses (does not include `BUS`)
- * - `RAIL`: translates to `HIGHSPEED_RAIL,LONG_DISTANCE_RAIL,NIGHT_RAIL,REGIONAL_RAIL,REGIONAL_FAST_RAIL`
+ * - `RAIL`: translates to `HIGHSPEED_RAIL,LONG_DISTANCE,NIGHT_RAIL,REGIONAL_RAIL,REGIONAL_FAST_RAIL`
  * - `METRO`: metro trains
  * - `HIGHSPEED_RAIL`: long distance high speed trains (e.g. TGV)
  * - `LONG_DISTANCE`: long distance inter city trains
@@ -272,7 +273,7 @@ export type PedestrianProfile = 'FOOT' | 'WHEELCHAIR';
  * - `AREAL_LIFT`: Aerial lift, suspended cable car (e.g., gondola lift, aerial tramway). Cable transport where cabins, cars, gondolas or open chairs are suspended by means of one or more cables.
  *
  */
-export type Mode = 'WALK' | 'BIKE' | 'RENTAL' | 'CAR' | 'CAR_PARKING' | 'ODM' | 'FLEX' | 'TRANSIT' | 'TRAM' | 'SUBWAY' | 'FERRY' | 'AIRPLANE' | 'METRO' | 'BUS' | 'COACH' | 'RAIL' | 'HIGHSPEED_RAIL' | 'LONG_DISTANCE' | 'NIGHT_RAIL' | 'REGIONAL_FAST_RAIL' | 'REGIONAL_RAIL' | 'CABLE_CAR' | 'FUNICULAR' | 'AREAL_LIFT' | 'OTHER';
+export type Mode = 'WALK' | 'BIKE' | 'RENTAL' | 'CAR' | 'CAR_PARKING' | 'CAR_DROPOFF' | 'ODM' | 'FLEX' | 'TRANSIT' | 'TRAM' | 'SUBWAY' | 'FERRY' | 'AIRPLANE' | 'METRO' | 'BUS' | 'COACH' | 'RAIL' | 'HIGHSPEED_RAIL' | 'LONG_DISTANCE' | 'NIGHT_RAIL' | 'REGIONAL_FAST_RAIL' | 'REGIONAL_RAIL' | 'CABLE_CAR' | 'FUNICULAR' | 'AREAL_LIFT' | 'OTHER';
 
 /**
  * - `NORMAL` - latitude / longitude coordinate or address
@@ -336,6 +337,10 @@ export type Place = {
      *
      */
     track?: string;
+    /**
+     * description of the location that provides more detailed information
+     */
+    description?: string;
     vertexType?: VertexType;
     /**
      * Type of pickup. It could be disallowed due to schedule, skipped stops or cancellations.
@@ -445,9 +450,13 @@ export type StopTime = {
      */
     pickupDropoffType: PickupDropoffType;
     /**
-     * Whether the departure/arrival is cancelled due to the realtime situation.
+     * Whether the departure/arrival is cancelled due to the realtime situation (either because the stop is skipped or because the entire trip is cancelled).
      */
     cancelled: boolean;
+    /**
+     * Whether the entire trip is cancelled due to the realtime situation.
+     */
+    tripCancelled: boolean;
     /**
      * Filename and line number where this trip is from
      */
@@ -574,7 +583,13 @@ export type StepInstruction = {
     /**
      * Indicates that a fee must be paid by general traffic to use a road, road bridge or road tunnel.
      */
-    toll: boolean;
+    toll?: boolean;
+    /**
+     * Experimental. Indicates whether access to this part of the route is restricted.
+     * See: https://wiki.openstreetmap.org/wiki/Conditional_restrictions
+     *
+     */
+    accessRestriction?: string;
     /**
      * incline in meters across this path segment
      */
@@ -745,6 +760,13 @@ export type Leg = {
      * Alerts for this stop.
      */
     alerts?: Array<Alert>;
+    /**
+     * If set, this attribute indicates that this trip has been expanded
+     * beyond the feed end date (enabled by config flag `timetable.dataset.extend_calendar`)
+     * by looping active weekdays, e.g. from calendar.txt in GTFS.
+     *
+     */
+    loopedCalendarSince?: string;
 };
 
 export type RiderCategory = {
@@ -762,6 +784,14 @@ export type RiderCategory = {
     eligibilityUrl?: string;
 };
 
+/**
+ * - `NONE`: No fare media involved (e.g., cash payment)
+ * - `PAPER_TICKET`: Physical paper ticket
+ * - `TRANSIT_CARD`: Physical transit card with stored value
+ * - `CONTACTLESS_EMV`: cEMV (contactless payment)
+ * - `MOBILE_APP`: Mobile app with virtual transit cards/passes
+ *
+ */
 export type FareMediaType = 'NONE' | 'PAPER_TICKET' | 'TRANSIT_CARD' | 'CONTACTLESS_EMV' | 'MOBILE_APP';
 
 export type FareMedia = {
@@ -1046,6 +1076,22 @@ export type PlanData = {
          */
         ignorePreTransitRentalReturnConstraints?: boolean;
         /**
+         * Optional. Default is `true`.
+         *
+         * Controls if a journey section with stay-seated transfers is returned:
+         * - `joinInterlinedLegs=false`: as several legs (full information about all trip numbers, headsigns, etc.).
+         * Legs that do not require a transfer (stay-seated transfer) are marked with `interlineWithPreviousLeg=true`.
+         * - `joinInterlinedLegs=true` (default behavior): as only one joined leg containing all stops
+         *
+         */
+        joinInterlinedLegs?: boolean;
+        /**
+         * language tags as used in OpenStreetMap / GTFS
+         * (usually BCP-47 / ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
+         *
+         */
+        language?: string;
+        /**
          * Optional. Experimental. Number of luggage pieces; base unit: airline cabin luggage (e.g. for ODM or price calculation)
          *
          */
@@ -1076,7 +1122,12 @@ export type PlanData = {
          */
         maxPreTransitTime?: number;
         /**
-         * The maximum number of allowed transfers.
+         * The maximum number of allowed transfers (i.e. interchanges between transit legs,
+         * pre- and postTransit do not count as transfers).
+         * `maxTransfers=0` searches for direct transit connections without any transfers.
+         * If you want to search only for non-transit connections (`FOOT`, `CAR`, etc.),
+         * send an empty `transitModes` parameter instead.
+         *
          * If not provided, the routing uses the server-side default value
          * which is hardcoded and very high to cover all use cases.
          *
@@ -1084,6 +1135,9 @@ export type PlanData = {
          * optimal (e.g. the fastest) journeys not being found.
          * If this value is too low to reach the destination at all,
          * it can lead to slow routing performance.
+         *
+         * In plan endpoints before v3, the behavior is off by one,
+         * i.e. `maxTransfers=0` only returns non-transit connections.
          *
          */
         maxTransfers?: number;
@@ -1325,6 +1379,10 @@ export type PlanData = {
          * Optional. Experimental. If set to true, the response will contain fare information.
          */
         withFares?: boolean;
+        /**
+         * Optional. Include intermediate stops where passengers can not alight/board according to schedule.
+         */
+        withScheduledSkippedStops?: boolean;
     };
 };
 
@@ -1481,7 +1539,12 @@ export type OneToAllData = {
          */
         maxPreTransitTime?: number;
         /**
-         * The maximum number of allowed transfers.
+         * The maximum number of allowed transfers (i.e. interchanges between transit legs,
+         * pre- and postTransit do not count as transfers).
+         * `maxTransfers=0` searches for direct transit connections without any transfers.
+         * If you want to search only for non-transit connections (`FOOT`, `CAR`, etc.),
+         * send an empty `transitModes` parameter instead.
+         *
          * If not provided, the routing uses the server-side default value
          * which is hardcoded and very high to cover all use cases.
          *
@@ -1489,6 +1552,9 @@ export type OneToAllData = {
          * optimal (e.g. the fastest) journeys not being found.
          * If this value is too low to reach the destination at all,
          * it can lead to slow routing performance.
+         *
+         * In plan endpoints before v3, the behavior is off by one,
+         * i.e. `maxTransfers=0` only returns non-transit connections.
          *
          */
         maxTransfers?: number;
@@ -1653,9 +1719,29 @@ export type GeocodeError = unknown;
 export type TripData = {
     query: {
         /**
+         * Optional. Default is `true`.
+         *
+         * Controls if a trip with stay-seated transfers is returned:
+         * - `joinInterlinedLegs=false`: as several legs (full information about all trip numbers, headsigns, etc.).
+         * Legs that do not require a transfer (stay-seated transfer) are marked with `interlineWithPreviousLeg=true`.
+         * - `joinInterlinedLegs=true` (default behavior): as only one joined leg containing all stops
+         *
+         */
+        joinInterlinedLegs?: boolean;
+        /**
+         * language tags as used in OpenStreetMap / GTFS
+         * (usually BCP-47 / ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
+         *
+         */
+        language?: string;
+        /**
          * trip identifier (e.g. from an itinerary leg or stop event)
          */
         tripId: string;
+        /**
+         * Optional. Include intermediate stops where passengers can not alight/board according to schedule.
+         */
+        withScheduledSkippedStops?: boolean;
     };
 };
 
@@ -1686,6 +1772,20 @@ export type StoptimesData = {
          *
          */
         direction?: 'EARLIER' | 'LATER';
+        /**
+         * Optional. Default is `false`.
+         *
+         * If set to `true`, only stations that are phyiscally in the radius are considered.
+         * If set to `false`, additionally to the stations in the radius, equivalences with the same name and children are considered.
+         *
+         */
+        exactRadius?: boolean;
+        /**
+         * language tags as used in OpenStreetMap / GTFS
+         * (usually BCP-47 / ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
+         *
+         */
+        language?: string;
         /**
          * Optional. Default is all transit modes.
          *
@@ -1724,6 +1824,10 @@ export type StoptimesData = {
          *
          */
         time?: string;
+        /**
+         * Optional. Include stoptimes where passengers can not alight/board according to schedule.
+         */
+        withScheduledSkippedStops?: boolean;
     };
 };
 
@@ -1732,6 +1836,10 @@ export type StoptimesResponse = ({
      * list of stop times
      */
     stopTimes: Array<StopTime>;
+    /**
+     * metadata of the requested stop
+     */
+    place: Place;
     /**
      * Use the cursor to get the previous page of results. Insert the cursor into the request and post it to get the previous page.
      * The previous page is a set of stop times BEFORE the first stop time in the result.
@@ -1846,7 +1954,7 @@ export type TransfersResponse = ({
     /**
      * true if the server has wheelchair transfers computed
      */
-    hasWheelchairTransfers?: boolean;
+    hasWheelchairTransfers: boolean;
     /**
      * true if the server has car transfers computed
      */

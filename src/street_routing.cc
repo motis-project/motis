@@ -5,6 +5,7 @@
 #include "utl/concat.h"
 #include "utl/get_or_create.h"
 
+#include "osr/routing/algorithms.h"
 #include "osr/routing/route.h"
 #include "osr/routing/sharing_data.h"
 
@@ -19,12 +20,16 @@ namespace n = nigiri;
 
 namespace motis {
 
-default_output::default_output(osr::search_profile const profile)
-    : profile_{profile},
+default_output::default_output(osr::ways const& w,
+                               osr::search_profile const profile)
+    : w_{w},
+      profile_{profile},
       id_{static_cast<std::underlying_type_t<osr::search_profile>>(profile)} {}
 
-default_output::default_output(nigiri::transport_mode_id_t const id)
-    : profile_{id == kOdmTransportModeId
+default_output::default_output(osr::ways const& w,
+                               nigiri::transport_mode_id_t const id)
+    : w_{w},
+      profile_{id == kOdmTransportModeId
                    ? osr::search_profile::kCar
                    : osr::search_profile{static_cast<
                          std::underlying_type_t<osr::search_profile>>(id)}},
@@ -49,6 +54,9 @@ api::ModeEnum default_output::get_mode() const {
     case osr::search_profile::kCarParking: [[fallthrough]];
     case osr::search_profile::kCarParkingWheelchair:
       return api::ModeEnum::CAR_PARKING;
+    case osr::search_profile::kCarDropOff: [[fallthrough]];
+    case osr::search_profile::kCarDropOffWheelchair:
+      return api::ModeEnum::CAR_DROPOFF;
     case osr::search_profile::kBikeSharing: [[fallthrough]];
     case osr::search_profile::kCarSharing: return api::ModeEnum::RENTAL;
   }
@@ -58,11 +66,17 @@ api::ModeEnum default_output::get_mode() const {
 
 osr::search_profile default_output::get_profile() const { return profile_; }
 
-api::Place default_output::get_place(osr::node_idx_t) const { return {}; }
+api::Place default_output::get_place(osr::node_idx_t const n) const {
+  auto const pos = w_.get_node_pos(n).as_latlng();
+  return api::Place{.lat_ = pos.lat_,
+                    .lon_ = pos.lng_,
+                    .vertexType_ = api::VertexTypeEnum::NORMAL};
+}
 
 bool default_output::is_time_dependent() const {
   return profile_ == osr::search_profile::kWheelchair ||
-         profile_ == osr::search_profile::kCarParkingWheelchair;
+         profile_ == osr::search_profile::kCarParkingWheelchair ||
+         profile_ == osr::search_profile::kCarDropOffWheelchair;
 }
 
 transport_mode_t default_output::get_cache_key() const {
@@ -124,6 +138,8 @@ std::vector<api::StepInstruction> get_step_instructions(
         .stayOn_ = false,  // TODO
         .area_ = false,  // TODO
         .toll_ = props.has_toll(),
+        .accessRestriction_ = w.get_access_restriction(s.way_).and_then(
+            [](std::string_view s) { return std::optional{std::string{s}}; }),
         .elevationUp_ =
             elevations ? std::optional{to_idx(s.elevation_.up_)} : std::nullopt,
         .elevationDown_ = elevations ? std::optional{to_idx(s.elevation_.down_)}
@@ -199,7 +215,7 @@ api::Itinerary street_routing(osr::ways const& w,
         static_cast<osr::cost_t>(max.count()), osr::direction::kForward,
         max_matching_distance,
         s ? &set_blocked(e_nodes, e_states, blocked_mem) : nullptr,
-        out.get_sharing_data(), elevations);
+        out.get_sharing_data(), elevations, osr::routing_algorithm::kAStarBi);
   });
 
   if (!path.has_value()) {

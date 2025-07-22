@@ -489,18 +489,22 @@ void extract_rides() {
 }
 
 void meta_router::add_direct() const {
-  auto const from_l = std::visit(
+  auto from_l = std::visit(
       utl::overloaded{[](osr::location const&) {
                         return get_special_station(n::special_station::kStart);
                       },
                       [](tt_location const& tt_l) { return tt_l.l_; }},
       from_);
-  auto const to_l = std::visit(
+  auto to_l = std::visit(
       utl::overloaded{[](osr::location const&) {
                         return get_special_station(n::special_station::kEnd);
                       },
                       [](tt_location const& tt_l) { return tt_l.l_; }},
       to_);
+
+  if (query_.arriveBy_) {
+    std::swap(from_l, to_l);
+  }
 
   for (auto const& d : p->direct_rides_) {
     p->odm_journeys_.push_back(make_odm_direct(from_l, to_l, d.dep_, d.arr_));
@@ -756,11 +760,13 @@ api::plan_response meta_router::run() {
                     start_, dest_, cache, ep::blocked.get(),
                     query_.requireCarTransport_ && query_.useRoutedTransfers_,
                     query_.pedestrianProfile_, query_.elevationCosts_,
-                    query_.detailedTransfers_, query_.withFares_,
+                    query_.joinInterlinedLegs_, query_.detailedTransfers_,
+                    query_.withFares_, query_.withScheduledSkippedStops_,
                     r_.config_.timetable_.value().max_matching_distance_,
                     query_.maxMatchingDistance_, api_version_,
                     query_.ignorePreTransitRentalReturnConstraints_,
-                    query_.ignorePostTransitRentalReturnConstraints_);
+                    query_.ignorePostTransitRentalReturnConstraints_,
+                    query_.language_);
               }),
           .previousPageCursor_ =
               fmt::format("EARLIER|{}", to_seconds(pt_result.interval_.from_)),

@@ -13,7 +13,7 @@
 	import { getModeName } from '$lib/getModeName';
 	import { language, t } from '$lib/i18n/translation';
 	import { onClickStop, onClickTrip } from '$lib/utils';
-	import { formatTime } from './toDateTime';
+	import { formatDate, formatTime } from './toDateTime';
 
 	const {
 		itinerary
@@ -21,7 +21,7 @@
 		itinerary: Itinerary;
 	} = $props();
 
-	const isRelevantLeg = (l: Leg) => l.duration !== 0 || (l.routeShortName && l.mode != 'WALK');
+	const isRelevantLeg = (l: Leg) => l.duration !== 0 || l.routeShortName;
 	const lastLeg = $derived(itinerary.legs.findLast(isRelevantLeg));
 </script>
 
@@ -58,9 +58,18 @@
 			</Button>
 			{@const pickupNotAllowedOrEnd = p.pickupType == 'NOT_ALLOWED' && isStartOrEnd != -1}
 			{@const dropoffNotAllowedOrStart = p.dropoffType == 'NOT_ALLOWED' && isStartOrEnd != 1}
+			{#if (p as Place & { switchTo?: Leg }).switchTo}
+				{@const switchTo = (p as Place & { switchTo: Leg }).switchTo}
+				<div class="ml-4 flex items-center text-sm">
+					{t.continuesAs}
+					{switchTo.routeShortName!}
+					<ArrowRight class="mx-1 size-4" />
+					{switchTo.headsign}
+				</div>
+			{/if}
 			{#if pickupNotAllowedOrEnd || dropoffNotAllowedOrStart}
 				<div class="ml-4 flex items-center text-destructive text-sm">
-					<CircleX class="stroke-destructive h-4 w-4" />
+					<CircleX class="stroke-destructive size-4" />
 					<span class="ml-1 leading-none">
 						{pickupNotAllowedOrEnd && dropoffNotAllowedOrStart
 							? t.inOutDisallowed
@@ -88,6 +97,7 @@
 		(s: StepInstruction) => s.elevationUp || s.elevationDown
 	)}
 	{@const stepsWithToll = l.steps?.filter((s: StepInstruction) => s.toll)}
+	{@const stepsWithAccessRestriction = l.steps?.filter((s: StepInstruction) => s.accessRestriction)}
 
 	<div class="py-12 pl-8 flex flex-col gap-y-4 text-muted-foreground">
 		<span class="ml-6">
@@ -125,6 +135,16 @@
 			<div class="ml-6 flex items-center gap-2 text-sm text-orange-500">
 				<DollarSign class="size-4" />
 				{t.toll}
+			</div>
+		{/if}
+		{#if stepsWithAccessRestriction && stepsWithAccessRestriction.length > 0}
+			<div class="ml-6 flex items-center gap-2 text-sm text-orange-500">
+				<CircleX class="size-4" />
+				{t.accessRestriction}
+				({stepsWithAccessRestriction
+					.map((s) => s.accessRestriction)
+					.filter((value, index, array) => array.indexOf(value) === index)
+					.join(', ')})
 			</div>
 		{/if}
 	</div>
@@ -179,7 +199,7 @@
 					class:list-inside={productOptions.length > 1}
 				>
 					{#each productOptions as products, i (i)}
-						{#each products as product (product.name)}
+						{#each products as product, j (j)}
 							<li>
 								{@render productInfo(product)}
 							</li>
@@ -242,13 +262,19 @@
 				<div class="grid gap-y-6 grid-cols-[max-content_max-content_auto] items-center">
 					{@render stopTimes(l.startTime, l.scheduledStartTime, l.realTime, l.from, 1)}
 				</div>
-				<div class="mt-2 flex items-center text-muted-foreground leading-none">
-					<ArrowRight class="stroke-muted-foreground h-4 w-4" />
+				<div class="mt-2 mb-2 flex items-center text-muted-foreground leading-none">
+					<ArrowRight class="stroke-muted-foreground size-4" />
 					<span class="ml-1">{l.headsign}</span>
 				</div>
+				{#if l.loopedCalendarSince}
+					<div class="mt-2 flex items-center text-destructive leading-none">
+						{t.dataExpiredSince}
+						{formatDate(new Date(l.loopedCalendarSince))}
+					</div>
+				{/if}
 				{#if l.cancelled}
 					<div class="mt-2 flex items-center text-destructive leading-none">
-						<CircleX class="stroke-destructive h-4 w-4" />
+						<CircleX class="stroke-destructive size-4" />
 						<span class="ml-1 font-bold">{t.tripCancelled}</span>
 					</div>
 				{/if}
@@ -273,10 +299,10 @@
 					{@render ticketInfo(prevTransitLeg, l)}
 				{:else}
 					{@render ticketInfo(prevTransitLeg, l)}
-					<details class="[&_svg]:open:-rotate-180 my-2">
+					<details class="[&_.collapsible]:open:-rotate-180 my-2">
 						<summary class="py-8 pl-1 md:pl-4 flex items-center text-muted-foreground">
 							<svg
-								class="rotate-0 transform transition-all duration-300"
+								class="collapsible rotate-0 transform transition-all duration-300"
 								fill="none"
 								height="20"
 								width="20"
@@ -312,7 +338,7 @@
 					<div class="pb-2"></div>
 				{/if}
 			</div>
-		{:else if !(isLast && !isRelevantLeg(l)) && ((i == 0 && isRelevantLeg(l)) || !next || !next.routeShortName || l.mode != 'WALK' || (pred && (pred.mode == 'BIKE' || pred.mode == 'RENTAL')))}
+		{:else if !(isLast && !isRelevantLeg(l)) && ((i == 0 && isRelevantLeg(l)) || !next || !next.routeShortName || l.mode != 'WALK' || (pred && (pred.mode == 'BIKE' || (l.mode == 'WALK' && pred.mode == 'CAR') || pred.mode == 'RENTAL')))}
 			<Route {onClickTrip} {l} />
 			<div class="pt-4 pl-6 border-l-4 left-4 relative" style={routeBorderColor(l)}>
 				<div class="grid gap-y-6 grid-cols-[max-content_max-content_auto] items-center">
