@@ -487,18 +487,22 @@ void extract_rides() {
 }
 
 void meta_router::add_direct() const {
-  auto const from_l = std::visit(
+  auto from_l = std::visit(
       utl::overloaded{[](osr::location const&) {
                         return get_special_station(n::special_station::kStart);
                       },
                       [](tt_location const& tt_l) { return tt_l.l_; }},
       from_);
-  auto const to_l = std::visit(
+  auto to_l = std::visit(
       utl::overloaded{[](osr::location const&) {
                         return get_special_station(n::special_station::kEnd);
                       },
                       [](tt_location const& tt_l) { return tt_l.l_; }},
       to_);
+
+  if (query_.arriveBy_) {
+    std::swap(from_l, to_l);
+  }
 
   for (auto const& d : p->direct_rides_) {
     p->odm_journeys_.push_back(n::routing::journey{
