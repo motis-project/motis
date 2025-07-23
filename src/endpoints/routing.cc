@@ -329,7 +329,7 @@ std::pair<n::routing::query, std::optional<n::unixtime_t>> get_start_time(
     auto const t = std::chrono::time_point_cast<n::i32_minutes>(
         *query.time_.value_or(openapi::now()));
     auto const window = std::chrono::duration_cast<n::duration_t>(
-        std::chrono::seconds{query.searchWindow_});
+        std::chrono::seconds{query.searchWindow_ * (query.arriveBy_ ? -1 : 1)});
     return {{.start_time_ = query.timetableView_
                                 ? n::routing::start_time_t{n::interval{
                                       query.arriveBy_ ? t - window : t,
