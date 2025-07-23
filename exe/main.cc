@@ -18,6 +18,10 @@
 
 #include "./flags.h"
 
+#ifdef USE_MIMALLOC
+#include "mimalloc-new-delete.h"
+#endif
+
 #if !defined(MOTIS_VERSION)
 #define MOTIS_VERSION "unknown"
 #endif

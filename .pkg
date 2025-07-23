@@ -53,7 +53,7 @@
 [mimalloc]
   url=git@github.com:motis-project/mimalloc.git
   branch=dev
-  commit=e2f4fe647e8aff4603a7d5119b8639fd1a47c8a6
+  commit=189b0ac416b94848bc0a7702f7e97fe6ebd91829
 [lz4]
   url=git@github.com:motis-project/lz4.git
   branch=dev

@@ -172,6 +172,7 @@ set_property(
 # --- MIMALLOC ---
 if (MOTIS_MIMALLOC)
     target_link_libraries(motis ${motis-mimalloc-lib})
+    target_compile_definitions(motis PUBLIC USE_MIMALLOC=1)
     if(WIN32)
         add_custom_command(
                 TARGET motis POST_BUILD
@@ -183,11 +184,22 @@ if (MOTIS_MIMALLOC)
         add_custom_command(
                 TARGET motis POST_BUILD
                 COMMAND "${CMAKE_COMMAND}" -E copy
-                "${CMAKE_CURRENT_BINARY_DIR}/deps/mimalloc/mimalloc-redirect.dll"
+                "${CMAKE_SOURCE_DIR}/deps/mimalloc/bin/mimalloc-redirect.dll"
                 $<TARGET_FILE_DIR:motis>
                 COMMENT "Copy mimalloc-redirect.dll to output directory"
         )
+        add_custom_command(
+                TARGET motis POST_BUILD
+                COMMAND "${CMAKE_SOURCE_DIR}/deps/mimalloc/bin/minject.exe"
+                --force --inplace
+                $<$<CONFIG:Debug>:--postfix=debug>
+                $<TARGET_FILE:motis>
+                COMMENT "Ensure mimalloc.dll is loaded first"
+        )
     endif()
+    if (MSVC)
+        target_link_options(motis PUBLIC "/include:mi_version")
+    endif ()
 endif()
 
 
