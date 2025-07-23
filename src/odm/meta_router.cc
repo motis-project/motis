@@ -531,7 +531,7 @@ api::plan_response meta_router::run() {
                       }},
       start_time_.start_time_);
   auto const odm_intvl =
-      query_.arriveBy_
+      !start_time_.extend_interval_later_
           ? n::interval<n::unixtime_t>{start_intvl.to_ - kODMLookAhead,
                                        start_intvl.to_ +
                                            std::chrono::minutes{
@@ -540,13 +540,13 @@ api::plan_response meta_router::run() {
                 start_intvl.from_ - std::chrono::minutes{kMixer.max_distance_},
                 start_intvl.from_ + kODMLookAhead};
   auto const search_intvl =
-      query_.arriveBy_
+      !start_time_.extend_interval_later_
           ? n::interval<n::unixtime_t>{start_intvl.to_ - kSearchIntervalSize,
                                        start_intvl.to_}
           : n::interval<n::unixtime_t>{start_intvl.from_,
                                        start_intvl.from_ + kSearchIntervalSize};
   auto const context_intvl =
-      query_.arriveBy_
+      !start_time_.extend_interval_later_
           ? n::interval<n::unixtime_t>{search_intvl.from_,
                                        search_intvl.to_ +
                                            std::chrono::minutes{
@@ -742,33 +742,33 @@ api::plan_response meta_router::run() {
                               .count()) /
       1000.0);
 
-  return {.from_ = from_place_,
-          .to_ = to_place_,
-          .direct_ = std::move(direct_),
-          .itineraries_ = utl::to_vec(
-              p->odm_journeys_,
-              [&, cache = street_routing_cache_t{}](auto&& j) mutable {
-                r_.metrics_->routing_journey_duration_seconds_.Observe(
-                    static_cast<double>(
-                        to_seconds(j.arrival_time() - j.departure_time())));
-                return journey_to_response(
-                    r_.w_, r_.l_, r_.pl_, *tt_, *r_.tags_, r_.fa_, e_, rtt_,
-                    r_.matches_, r_.elevations_, r_.shapes_, gbfs_rd_, j,
-                    start_, dest_, cache, ep::blocked.get(),
-                    query_.requireCarTransport_ && query_.useRoutedTransfers_,
-                    query_.pedestrianProfile_, query_.elevationCosts_,
-                    query_.joinInterlinedLegs_, query_.detailedTransfers_,
-                    query_.withFares_, query_.withScheduledSkippedStops_,
-                    r_.config_.timetable_.value().max_matching_distance_,
-                    query_.maxMatchingDistance_, api_version_,
-                    query_.ignorePreTransitRentalReturnConstraints_,
-                    query_.ignorePostTransitRentalReturnConstraints_,
-                    query_.language_);
-              }),
-          .previousPageCursor_ =
-              fmt::format("EARLIER|{}", to_seconds(pt_result.interval_.from_)),
-          .nextPageCursor_ =
-              fmt::format("LATER|{}", to_seconds(pt_result.interval_.to_))};
+  return {
+      .from_ = from_place_,
+      .to_ = to_place_,
+      .direct_ = std::move(direct_),
+      .itineraries_ = utl::to_vec(
+          p->odm_journeys_,
+          [&, cache = street_routing_cache_t{}](auto&& j) mutable {
+            r_.metrics_->routing_journey_duration_seconds_.Observe(
+                static_cast<double>(
+                    to_seconds(j.arrival_time() - j.departure_time())));
+            return journey_to_response(
+                r_.w_, r_.l_, r_.pl_, *tt_, *r_.tags_, r_.fa_, e_, rtt_,
+                r_.matches_, r_.elevations_, r_.shapes_, gbfs_rd_, j, start_,
+                dest_, cache, ep::blocked.get(),
+                query_.requireCarTransport_ && query_.useRoutedTransfers_,
+                query_.pedestrianProfile_, query_.elevationCosts_,
+                query_.joinInterlinedLegs_, query_.detailedTransfers_,
+                query_.withFares_, query_.withScheduledSkippedStops_,
+                r_.config_.timetable_.value().max_matching_distance_,
+                query_.maxMatchingDistance_, api_version_,
+                query_.ignorePreTransitRentalReturnConstraints_,
+                query_.ignorePostTransitRentalReturnConstraints_,
+                query_.language_);
+          }),
+      .previousPageCursor_ =
+          fmt::format("EARLIER|{}", to_seconds(search_intvl.from_)),
+      .nextPageCursor_ = fmt::format("LATER|{}", to_seconds(search_intvl.to_))};
 }
 
 }  // namespace motis::odm
