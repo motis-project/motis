@@ -18,7 +18,7 @@
 
 #include "./flags.h"
 
-#ifdef USE_MIMALLOC
+#if defined(USE_MIMALLOC) && defined(_WIN32)
 #include "mimalloc-new-delete.h"
 #endif
 
