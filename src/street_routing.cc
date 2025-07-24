@@ -15,6 +15,7 @@
 #include "motis/polyline.h"
 #include "motis/transport_mode_ids.h"
 #include "motis/update_rtt_td_footpaths.h"
+#include "utl/verify.h"
 
 namespace n = nigiri;
 
@@ -194,20 +195,24 @@ api::Itinerary street_routing(osr::ways const& w,
                               api::Place const& from_place,
                               api::Place const& to_place,
                               output const& out,
-                              n::unixtime_t const start_time,
+                              std::optional<n::unixtime_t> const start_time,
                               std::optional<n::unixtime_t> const end_time,
                               double const max_matching_distance,
                               street_routing_cache_t& cache,
                               osr::bitvec<osr::node_idx_t>& blocked_mem,
                               unsigned const api_version,
                               std::chrono::seconds const max) {
+  utl::verify(start_time.has_value() || end_time.has_value(),
+              "either start_time or end_time must be set");
+  auto const bound_time =
+      start_time.or_else([&]() { return end_time; }).value();
   auto const from = get_location(from_place);
   auto const to = get_location(to_place);
-  auto const s = e ? get_states_at(w, l, *e, start_time, from.pos_)
+  auto const s = e ? get_states_at(w, l, *e, bound_time, from.pos_)
                    : std::optional{std::pair<nodes_t, states_t>{}};
   auto const cache_key = street_routing_cache_key_t{
       from, to, out.get_cache_key(),
-      out.is_time_dependent() ? start_time : n::unixtime_t{n::i32_minutes{0}}};
+      out.is_time_dependent() ? bound_time : n::unixtime_t{n::i32_minutes{0}}};
   auto const path = utl::get_or_create(cache, cache_key, [&]() {
     auto const& [e_nodes, e_states] = *s;
     return osr::route(
@@ -219,27 +224,31 @@ api::Itinerary street_routing(osr::ways const& w,
   });
 
   if (!path.has_value()) {
-    if (!end_time.has_value()) {
+    if (!start_time.has_value() || !end_time.has_value()) {
       return {};
     }
     std::cout << "ROUTING\n  FROM:  " << from << "     \n    TO:  " << to
               << "\n  -> CREATING DUMMY LEG (mode=" << out.get_mode()
               << ", profile=" << to_str(out.get_profile()) << ")\n";
-    return dummy_itinerary(from_place, to_place, out.get_mode(), start_time,
+    return dummy_itinerary(from_place, to_place, out.get_mode(), *start_time,
                            *end_time);
   }
 
+  auto const deduced_start_time =
+      start_time ? *start_time : *end_time - std::chrono::seconds{path->cost_};
   auto itinerary = api::Itinerary{
-      .duration_ = end_time ? std::chrono::duration_cast<std::chrono::seconds>(
-                                  *end_time - start_time)
-                                  .count()
-                            : path->cost_,
-      .startTime_ = start_time,
-      .endTime_ =
-          end_time ? *end_time : start_time + std::chrono::seconds{path->cost_},
+      .duration_ = start_time && end_time
+                       ? std::chrono::duration_cast<std::chrono::seconds>(
+                             *end_time - *start_time)
+                             .count()
+                       : path->cost_,
+      .startTime_ = deduced_start_time,
+      .endTime_ = end_time ? *end_time
+                           : *start_time + std::chrono::seconds{path->cost_},
       .transfers_ = 0};
 
-  auto t = std::chrono::time_point_cast<std::chrono::seconds>(start_time);
+  auto t =
+      std::chrono::time_point_cast<std::chrono::seconds>(deduced_start_time);
   auto pred_place = from_place;
   auto pred_end_time = t;
   utl::equal_ranges_linear(

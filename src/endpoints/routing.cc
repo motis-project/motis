@@ -352,7 +352,8 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
         propulsion_types,
     std::optional<std::vector<std::string>> const& rental_providers,
     bool const ignore_rental_return_constraints,
-    n::unixtime_t const start_time,
+    n::unixtime_t const time,
+    bool const arrive_by,
     api::PedestrianProfileEnum const pedestrian_profile,
     api::ElevationCostsEnum const elevation_costs,
     std::chrono::seconds max,
@@ -370,8 +371,10 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
 
   auto const route_with_profile = [&](output const& out) {
     auto itinerary = street_routing(
-        *w_, *l_, e, elevations_, from, to, out, start_time, std::nullopt,
-        max_matching_distance, cache, *blocked, api_version, max);
+        *w_, *l_, e, elevations_, from, to, out,
+        arrive_by ? std::nullopt : std::optional{time},
+        arrive_by ? std::optional{time} : std::nullopt, max_matching_distance,
+        cache, *blocked, api_version, max);
     if (itinerary.legs_.empty()) {
       return false;
     }
@@ -388,7 +391,7 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
     if (m == api::ModeEnum::FLEX) {
       utl::verify(tt_ && tags_ && fa_, "FLEX requires timetable");
       auto const routings = flex::get_flex_routings(
-          *tt_, *loc_tree_, start_time, get_location(from).pos_,
+          *tt_, *loc_tree_, time, get_location(from).pos_,
           osr::direction::kForward, max);
       for (auto const& [_, ids] : routings) {
         route_with_profile(flex::flex_output{*w_, *l_, pl_, matches_, *tags_,
@@ -601,7 +604,8 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                          query.directRentalPropulsionTypes_,
                          query.directRentalProviders_,
                          query.ignoreDirectRentalReturnConstraints_, *t,
-                         query.pedestrianProfile_, query.elevationCosts_,
+                         query.arriveBy_, query.pedestrianProfile_,
+                         query.elevationCosts_,
                          std::chrono::seconds{query.maxDirectTime_},
                          query.maxMatchingDistance_, query.fastestDirectFactor_,
                          api_version)
