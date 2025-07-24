@@ -96,7 +96,7 @@ void add_trip_updates(n::timetable const& tt,
 
       if (s.stop_idx_ != 0) {
         auto const arr_delay = s.delay(nigiri::event_type::kArr);
-        if (arr_delay != last_delay) {
+        if (arr_delay != last_delay || !fr.is_scheduled()) {
           set_stu();
           auto ar = stu->mutable_arrival();
           ar->set_time(to_unix(s.time(nigiri::event_type::kArr)));
@@ -106,7 +106,7 @@ void add_trip_updates(n::timetable const& tt,
       }
       if (s.stop_idx_ != fr.size() - 1) {
         auto const dep_delay = s.delay(nigiri::event_type::kDep);
-        if (dep_delay != last_delay) {
+        if (dep_delay != last_delay || !fr.is_scheduled()) {
           set_stu();
           auto dep = stu->mutable_departure();
           dep->set_time(to_unix(s.time(nigiri::event_type::kDep)));
