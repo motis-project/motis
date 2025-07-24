@@ -290,14 +290,14 @@ export const ModeSchema = {
 
 # Transit modes
 
-  - \`TRANSIT\`: translates to \`RAIL,SUBWAY,TRAM,BUS,FERRY,AIRPLANE,COACH\`
+  - \`TRANSIT\`: translates to \`RAIL,TRAM,BUS,FERRY,AIRPLANE,COACH,CABLE_CAR,FUNICULAR,AREAL_LIFT,OTHER\`
   - \`TRAM\`: trams
   - \`SUBWAY\`: subway trains
   - \`FERRY\`: ferries
   - \`AIRPLANE\`: airline flights
   - \`BUS\`: short distance buses (does not include \`COACH\`)
   - \`COACH\`: long distance buses (does not include \`BUS\`)
-  - \`RAIL\`: translates to \`HIGHSPEED_RAIL,LONG_DISTANCE,NIGHT_RAIL,REGIONAL_RAIL,REGIONAL_FAST_RAIL\`
+  - \`RAIL\`: translates to \`HIGHSPEED_RAIL,LONG_DISTANCE,NIGHT_RAIL,REGIONAL_RAIL,REGIONAL_FAST_RAIL,METRO,SUBWAY\`
   - \`METRO\`: metro trains 
   - \`HIGHSPEED_RAIL\`: long distance high speed trains (e.g. TGV)
   - \`LONG_DISTANCE\`: long distance inter city trains

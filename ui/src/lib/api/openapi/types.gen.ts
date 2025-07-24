@@ -254,14 +254,14 @@ export type PedestrianProfile = 'FOOT' | 'WHEELCHAIR';
  *
  * # Transit modes
  *
- * - `TRANSIT`: translates to `RAIL,SUBWAY,TRAM,BUS,FERRY,AIRPLANE,COACH`
+ * - `TRANSIT`: translates to `RAIL,TRAM,BUS,FERRY,AIRPLANE,COACH,CABLE_CAR,FUNICULAR,AREAL_LIFT,OTHER`
  * - `TRAM`: trams
  * - `SUBWAY`: subway trains
  * - `FERRY`: ferries
  * - `AIRPLANE`: airline flights
  * - `BUS`: short distance buses (does not include `COACH`)
  * - `COACH`: long distance buses (does not include `BUS`)
- * - `RAIL`: translates to `HIGHSPEED_RAIL,LONG_DISTANCE,NIGHT_RAIL,REGIONAL_RAIL,REGIONAL_FAST_RAIL`
+ * - `RAIL`: translates to `HIGHSPEED_RAIL,LONG_DISTANCE,NIGHT_RAIL,REGIONAL_RAIL,REGIONAL_FAST_RAIL,METRO,SUBWAY`
  * - `METRO`: metro trains
  * - `HIGHSPEED_RAIL`: long distance high speed trains (e.g. TGV)
  * - `LONG_DISTANCE`: long distance inter city trains
@@ -1029,11 +1029,19 @@ export type PlanData = {
         elevationCosts?: ElevationCosts;
         /**
          * Optional. Experimental. Default is `1.0`.
-         * Factor with which the duration of the fastest direct connection is multiplied.
-         * Values > 1.0 allow connections that are slower than the fastest direct connection to be found.
+         * Factor with which the duration of the fastest direct non-public-transit connection is multiplied.
+         * Values > 1.0 allow transit connections that are slower than the fastest direct non-public-transit connection to be found.
          *
          */
         fastestDirectFactor?: number;
+        /**
+         * Optional.
+         * Factor with which the duration of the fastest slowDirect connection is multiplied.
+         * Values > 1.0 allow connections that are slower than the fastest direct connection to be found.
+         * Values < 1.0 will return all slowDirect connections.
+         *
+         */
+        fastestSlowDirectFactor?: number;
         /**
          * \`latitude,longitude[,level]\` tuple with
          * - latitude and longitude in degrees
@@ -1289,7 +1297,7 @@ export type PlanData = {
          */
         searchWindow?: number;
         /**
-         * Optional. Experimental. Adds overtaken direct connections.
+         * Optional. Experimental. Adds overtaken direct public transit connections.
          */
         slowDirect?: boolean;
         /**

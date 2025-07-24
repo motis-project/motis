@@ -644,8 +644,8 @@ paths:
           required: false
           description: |
             Optional. Experimental. Default is `1.0`.
-            Factor with which the duration of the fastest direct connection is multiplied.
-            Values > 1.0 allow connections that are slower than the fastest direct connection to be found.
+            Factor with which the duration of the fastest direct non-public-transit connection is multiplied.
+            Values > 1.0 allow transit connections that are slower than the fastest direct non-public-transit connection to be found.
           schema:
             type: number
             default: 1.0
@@ -679,10 +679,23 @@ paths:
         - name: slowDirect
           in: query
           required: false
-          description: Optional. Experimental. Adds overtaken direct connections.
+          description: Optional. Experimental. Adds overtaken direct public transit connections.
           schema:
             type: boolean
             default: true
+
+        - name: fastestSlowDirectFactor
+          in: query
+          required: false
+          description: |
+            Optional. 
+            Factor with which the duration of the fastest slowDirect connection is multiplied.
+            Values > 1.0 allow connections that are slower than the fastest direct transit connection to be found.
+            Values < 1.0 will return all slowDirect connections.
+          schema:
+            type: number
+            default: 3.0
+            minimum: 0
 
         - name: withFares
           in: query
