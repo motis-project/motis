@@ -168,6 +168,7 @@ target_compile_options(motis-test PRIVATE ${motis-compile-options})
 set_property(
     TARGET motis tiles tiles-import-library
     APPEND PROPERTY COMPILE_DEFINITIONS TILES_GLOBAL_PROGRESS_TRACKER=1)
+file (CREATE_LINK ${CMAKE_SOURCE_DIR}/deps/tiles/profile ${CMAKE_BINARY_DIR}/tiles-profiles SYMBOLIC)
 
 # --- MIMALLOC ---
 if (MOTIS_MIMALLOC)
@@ -209,6 +210,7 @@ add_custom_target(motis-web-ui
         WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/ui"
         VERBATIM
 )
+file (CREATE_LINK ${CMAKE_SOURCE_DIR}/ui/build ${CMAKE_BINARY_DIR}/ui SYMBOLIC)
 
 foreach(t adr osr nigiri gtfsrt
         geo tiles tiles-import-library
