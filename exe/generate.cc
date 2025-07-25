@@ -79,6 +79,7 @@ int generate(int ac, char** av) {
   auto use_bike = false;
   auto use_car = false;
   auto use_odm = false;
+  auto p = api::plan_params{};
 
   auto const parse_date = [](std::string_view const s) {
     std::stringstream in;
@@ -130,7 +131,19 @@ int generate(int ac, char** av) {
        "street routing), supported: WALK, BIKE, CAR, ODM")  //
       ("max_dist", po::value(&max_dist)->default_value(max_dist),
        "maximum distance from a public transit stop in meters, only used for "
-       "intermodal queries");
+       "intermodal queries")  //
+      ("max_travel_time",
+       po::value<std::int64_t>()->notifier(
+           [&](auto const v) { p.maxTravelTime_ = v; }),
+       "sets maximum travel time of the queries")  //
+      ("max_matching_distance",
+       po::value(&p.maxMatchingDistance_)
+           ->default_value(p.maxMatchingDistance_),
+       "sets the maximum matching distance of the queries")  //
+      ("fastest_direct_factor",
+       po::value(&p.fastestDirectFactor_)
+           ->default_value(p.fastestDirectFactor_),
+       "sets fastest direct factor of the queries");
   add_data_path_opt(desc, data_path);
   auto vm = parse_opt(ac, av, desc);
 
@@ -176,6 +189,10 @@ int generate(int ac, char** av) {
     }
     std::cout << "\n";
 
+    p.directModes_ = *modes;
+    p.preTransitModes_ = *modes;
+    p.postTransitModes_ = *modes;
+
     for (auto i = osr::node_idx_t{0U}; i < d.w_->n_nodes(); ++i) {
       auto const& props = d.w_->r_->node_properties_[i];
       if ((props.is_walk_accessible() && use_walk) ||
@@ -217,7 +234,6 @@ int generate(int ac, char** av) {
   {
     auto out = std::ofstream{"queries.txt"};
     for (auto i = 0U; i != n; ++i) {
-      auto p = api::plan_params{};
       using namespace std::chrono_literals;
       p.fromPlace_ = random_place();
       p.toPlace_ = random_place();
@@ -226,11 +242,6 @@ int generate(int ac, char** av) {
                                 (*last_day - *first_day).count())) *
                     date::days{1U} +
                 rand_in(6U, 18U) * 1h;
-      if (modes) {
-        p.directModes_ = *modes;
-        p.preTransitModes_ = *modes;
-        p.postTransitModes_ = *modes;
-      }
       out << p.to_url("/api/v1/plan") << "\n";
     }
   }
