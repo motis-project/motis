@@ -218,7 +218,9 @@
 	});
 
 	const toPlaceString = (l: Location) => {
-		if (l.match?.level) {
+		if (l.match?.type === 'STOP') {
+			return l.match.id;
+		} else if (l.match?.level) {
 			return `${lngLatToStr(l.match!)},${l.match.level}`;
 		} else {
 			return `${lngLatToStr(l.match!)}`;
@@ -232,6 +234,7 @@
 						time: time.toISOString(),
 						fromPlace: toPlaceString(from),
 						toPlace: toPlaceString(to),
+						useStopCoordinates: true,
 						arriveBy,
 						timetableView: true,
 						withFares: true,

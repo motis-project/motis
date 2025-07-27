@@ -57,7 +57,8 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
   auto const time = std::chrono::time_point_cast<std::chrono::minutes>(
       *query.time_.value_or(openapi::now()));
   auto const max_travel_time = n::duration_t{query.maxTravelTime_};
-  auto const one = get_place(&tt_, &tags_, query.one_);
+  auto const one =
+      get_place(&tt_, &tags_, w_, pl_, matches_, query.one_, false);
   auto const one_modes = deduplicate(query.arriveBy_ ? query.postTransitModes_
                                                      : query.preTransitModes_);
   auto const one_max_time = std::min(
