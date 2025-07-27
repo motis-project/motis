@@ -218,9 +218,7 @@
 	});
 
 	const toPlaceString = (l: Location) => {
-		if (l.match?.type === 'STOP') {
-			return l.match.id;
-		} else if (l.match?.level) {
+		if (l.match?.level) {
 			return `${lngLatToStr(l.match!)},${l.match.level}`;
 		} else {
 			return `${lngLatToStr(l.match!)}`;
