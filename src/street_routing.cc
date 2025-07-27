@@ -183,6 +183,10 @@ api::Itinerary dummy_itinerary(api::Place const& from,
       .endTime_ = end_time,
       .scheduledStartTime_ = start_time,
       .scheduledEndTime_ = end_time});
+  leg.from_.pickupType_ = std::nullopt;
+  leg.from_.dropoffType_ = std::nullopt;
+  leg.to_.pickupType_ = std::nullopt;
+  leg.to_.dropoffType_ = std::nullopt;
   leg.from_.departure_ = leg.from_.scheduledDeparture_ = leg.startTime_;
   leg.to_.arrival_ = leg.to_.scheduledArrival_ = leg.endTime_;
   return itinerary;
@@ -293,6 +297,10 @@ api::Itinerary street_routing(osr::ways const& w,
             leg.scheduledStartTime_ = leg.startTime_;
         leg.to_.arrival_ = leg.to_.scheduledArrival_ = leg.scheduledEndTime_ =
             leg.endTime_;
+        leg.from_.pickupType_ = std::nullopt;
+        leg.from_.dropoffType_ = std::nullopt;
+        leg.to_.pickupType_ = std::nullopt;
+        leg.to_.dropoffType_ = std::nullopt;
 
         out.annotate_leg(from_node, to_node, leg);
 
