@@ -129,6 +129,10 @@ int generate(int ac, char** av) {
       ("modes,m", po::value<std::string>()->notifier(parse_modes),
        "comma-separated list of modes for first/last mile and direct (requires "
        "street routing), supported: WALK, BIKE, CAR, ODM")  //
+      ("all,a",
+       "requires OSM nodes to be accessible by all specified modes, otherwise "
+       "OSM nodes accessible by at least one mode are eligible, only used for "
+       "intermodal queries")  //
       ("max_dist", po::value(&max_dist)->default_value(max_dist),
        "maximum distance from a public transit stop in meters, only used for "
        "intermodal queries")  //
@@ -193,15 +197,40 @@ int generate(int ac, char** av) {
     p.preTransitModes_ = *modes;
     p.postTransitModes_ = *modes;
 
+    auto const mode_match = [&](auto const node) {
+      auto const can_walk = [&](auto const x) {
+        return utl::any_of(d.w_->r_->node_ways_[x], [&](auto const w) {
+          return d.w_->r_->way_properties_[w].is_foot_accessible();
+        });
+      };
+
+      auto const can_bike = [&](auto const x) {
+        return utl::any_of(d.w_->r_->node_ways_[x], [&](auto const w) {
+          return d.w_->r_->way_properties_[w].is_bike_accessible();
+        });
+      };
+
+      auto const can_car = [&](auto const x) {
+        return utl::any_of(d.w_->r_->node_ways_[x], [&](auto const w) {
+          return d.w_->r_->way_properties_[w].is_car_accessible();
+        });
+      };
+
+      return vm.count("all") ? ((!use_walk || can_walk(node)) &&
+                                (!use_bike || can_bike(node)) &&
+                                (!(use_car || use_odm) || can_car(node)))
+                             : ((use_walk && can_walk(node)) ||
+                                (use_bike && can_bike(node)) ||
+                                ((use_car || use_odm) && can_car(node)));
+    };
+
+    auto const in_bounds = [&](auto const& pos) {
+      return !use_odm_bounds || d.odm_bounds_->contains(pos);
+    };
+
     for (auto i = osr::node_idx_t{0U}; i < d.w_->n_nodes(); ++i) {
-      auto const& props = d.w_->r_->node_properties_[i];
-      if ((props.is_walk_accessible() && use_walk) ||
-          (props.is_bike_accessible() && use_bike) ||
-          (props.is_car_accessible() && (use_car || use_odm))) {
-        if (auto const& pos = d.w_->get_node_pos(i);
-            !use_odm_bounds || d.odm_bounds_->contains(pos)) {
-          node_rtree.add(pos, i);
-        }
+      if (mode_match(i) && in_bounds(d.w_->get_node_pos(i))) {
+        node_rtree.add(d.w_->get_node_pos(i), i);
       }
     }
   }
