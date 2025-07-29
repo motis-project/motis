@@ -105,9 +105,10 @@ void update_all_runs_metrics(nigiri::timetable const& tt,
                                     tt.event_time(t, to, n::event_type::kArr) +
                                         n::unixtime_t::duration{1}})) {
           auto fr = n::rt::frun::from_t(tt, nullptr, t);
-          metric_by_agency.at(fr[0].get_provider_idx().v_)
-              .first.get()
-              .Increment();
+          auto const provider_idx = fr[0].get_provider_idx();
+          if (provider_idx != n::provider_idx_t::invalid()) {
+            metric_by_agency.at(provider_idx.v_).first.get().Increment();
+          }
         }
       }
     }
