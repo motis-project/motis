@@ -106,7 +106,6 @@ struct http_client::connection
   }
 
   void close() {
-    request_channel_.close();
     if (ssl_stream_) {
       auto ec = beast::error_code{};
       beast::get_lowest_layer(*ssl_stream_)
