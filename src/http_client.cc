@@ -105,16 +105,19 @@ struct http_client::connection
                          ssl::context::single_dh_use);
   }
 
-  void close() const {
+  void close() {
+    request_channel_.close();
     if (ssl_stream_) {
       auto ec = beast::error_code{};
       beast::get_lowest_layer(*ssl_stream_)
           .socket()
           .shutdown(asio::ip::tcp::socket::shutdown_both, ec);
+      beast::get_lowest_layer(*ssl_stream_).socket().close(ec);
     } else if (stream_) {
       auto ec = beast::error_code{};
       beast::get_lowest_layer(*stream_).socket().shutdown(
           asio::ip::tcp::socket::shutdown_both, ec);
+      beast::get_lowest_layer(*stream_).socket().close(ec);
     }
   }
 
