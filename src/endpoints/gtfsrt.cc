@@ -51,7 +51,12 @@ void add_trip_updates(n::timetable const& tt,
             : transit_realtime::TripDescriptor_ScheduleRelationship::
                   TripDescriptor_ScheduleRelationship_SCHEDULED);
     if (!fr.is_scheduled()) {
-      // td->set_route_id(route_id); TODO
+      auto const route_id_idx = fr.rtt_->rt_transport_route_id_.at(fr.rt_);
+      if (route_id_idx != n::route_id_idx_t::invalid()) {
+        td->set_route_id(
+            tt.route_ids_[fr.rtt_->rt_transport_src_.at(fr.rt_)].ids_.get(
+                route_id_idx));
+      }
     }
     if (fr.is_cancelled()) {
       return;
