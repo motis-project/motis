@@ -264,7 +264,9 @@ struct gbfs_update {
       if (auto const it = prev_d_->provider_by_id_.find(pf.id_);
           it != end(prev_d_->provider_by_id_)) {
         prev_provider = prev_d_->providers_[it->second].get();
-        provider.file_infos_ = prev_provider->file_infos_;
+        if (prev_provider != nullptr) {
+          provider.file_infos_ = prev_provider->file_infos_;
+        }
       }
     }
     if (!provider.file_infos_) {
