@@ -82,10 +82,14 @@ n::location_idx_t random_stop(n::timetable const& tt,
 int generate(int ac, char** av) {
   auto data_path = fs::path{"data"};
   auto n = 100U;
+  auto use_reduced_transfers = true;
 
   auto desc = po::options_description{"Options"};
   desc.add_options()  //
       ("help", "Prints this help message")  //
+      ("use-reduced-transfers",
+       po::value(&use_reduced_transfers)->default_value(use_reduced_transfers),
+       "use reduced transfers")  //
       ("n,n", po::value(&n)->default_value(n), "number of queries");
   add_data_path_opt(desc, data_path);
   auto vm = parse_opt(ac, av, desc);
@@ -114,6 +118,7 @@ int generate(int ac, char** av) {
     for (auto i = 0U; i != n; ++i) {
       auto p = api::plan_params{};
       using namespace std::chrono_literals;
+      p.useReducedTransfers_ = use_reduced_transfers;
       p.fromPlace_ = d.tags_->id(*d.tt_, random_stop(*d.tt_, stops));
       p.toPlace_ = d.tags_->id(*d.tt_, random_stop(*d.tt_, stops));
       p.time_ = d.tt_->date_range_.from_ +

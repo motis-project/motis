@@ -713,6 +713,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                       ? n::kWheelchairProfile
                       : n::kFootProfile
                 : 0U),
+        .use_reduced_transfers_ = query.useReducedTransfers_,
         .allowed_claszes_ = to_clasz_mask(query.transitModes_),
         .require_bike_transport_ = query.requireBikeTransport_,
         .require_car_transport_ = query.requireCarTransport_,

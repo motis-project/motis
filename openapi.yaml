@@ -228,6 +228,24 @@ paths:
             type: boolean
             default: false
 
+        - name: useReducedTransfers
+          in: query
+          required: false
+          description: |
+            Optional. Default is `true`.
+            
+            All transfer sets (default transfers + profile based if the server has them enabled) exist in two forms:
+            
+            - full (`useReducedTransfers=false`): from every stop every reachable stop is connected via a transfer within the bounds configured in the configuration used during the import.
+            - reduced (`useReducedTransfers=true`): the full set of transfers reduced to only those transfers
+              that are required to reach the N (currently hardcoded to N=2) closest stops for each route.
+              This ensures that all routes can be reached, but in some cases, using the reduced transfer set
+              can lead to missing (not finding) optimal connections. This happens when walking to a stop of the same
+              route that's further away than the N closest stops leads you to catch a trip that already passed the two closest stops.
+          schema:
+            type: boolean
+            default: true
+
         - name: detailedTransfers
           in: query
           required: true
