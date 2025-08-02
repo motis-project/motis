@@ -66,13 +66,20 @@ boost::thread_specific_ptr<osr::bitvec<osr::node_idx_t>> blocked;
 
 place_t get_place(n::timetable const* tt,
                   tag_lookup const* tags,
-                  std::string_view input) {
+                  osr::ways const* w,
+                  osr::platforms const* pl,
+                  platform_matches_t const* matches,
+                  std::string_view input,
+                  bool const use_stop_coordinates) {
   if (auto const location = parse_location(input); location.has_value()) {
     return *location;
   }
   utl::verify(tt != nullptr && tags != nullptr,
               R"(could not parse location (no timetable loaded): "{}")", input);
-  return tt_location{tags->get_location(*tt, input)};
+  auto const l = tt_location{tags->get_location(*tt, input)};
+  return w && use_stop_coordinates
+             ? place_t{get_location(tt, w, pl, matches, l)}
+             : place_t{l};
 }
 
 bool is_intermodal(place_t const& p) {
@@ -542,8 +549,10 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
   auto const pre_transit_modes = deduplicate(query.preTransitModes_);
   auto const post_transit_modes = deduplicate(query.postTransitModes_);
   auto const direct_modes = deduplicate(query.directModes_);
-  auto const from = get_place(tt_, tags_, query.fromPlace_);
-  auto const to = get_place(tt_, tags_, query.toPlace_);
+  auto const from = get_place(tt_, tags_, w_, pl_, matches_, query.fromPlace_,
+                              query.useStopCoordinates_);
+  auto const to = get_place(tt_, tags_, w_, pl_, matches_, query.toPlace_,
+                            query.useStopCoordinates_);
   auto from_p = to_place(tt_, tags_, w_, pl_, matches_, from);
   auto to_p = to_place(tt_, tags_, w_, pl_, matches_, to);
   if (from_p.vertexType_ == api::VertexTypeEnum::NORMAL) {

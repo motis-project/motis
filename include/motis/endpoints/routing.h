@@ -37,7 +37,11 @@ using stats_map_t = std::map<std::string, std::uint64_t>;
 
 place_t get_place(nigiri::timetable const*,
                   tag_lookup const*,
-                  std::string_view user_input);
+                  osr::ways const*,
+                  osr::platforms const*,
+                  platform_matches_t const*,
+                  std::string_view input,
+                  bool use_stop_coordinates);
 
 bool is_intermodal(place_t const&);
 

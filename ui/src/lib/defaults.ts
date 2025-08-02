@@ -12,6 +12,7 @@ export const defaultQuery = {
 	preTransitModes: ['WALK'],
 	postTransitModes: ['WALK'],
 	directModes: ['WALK'],
+	useStopCoordinates: false,
 	preTransitRentalFormFactors: [],
 	postTransitRentalFormFactors: [],
 	directRentalFormFactors: [],
