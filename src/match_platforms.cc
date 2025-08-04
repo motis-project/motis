@@ -160,24 +160,30 @@ std::optional<geo::latlng> get_platform_center(osr::platforms const& pl,
   }
 
   auto const center = c.get_center();
+  auto const lng_dist = geo::approx_distance_lng_degrees(center);
+
   auto closest = geo::latlng{};
-  auto update_closest = [&, dist = std::numeric_limits<double>::max()](
-                            geo::latlng const& candidate) mutable {
-    auto const candidate_dist = geo::distance(candidate, center);
-    if (candidate_dist < dist) {
+  auto update_closest = [&, squared_dist = std::numeric_limits<double>::max()](
+                            geo::latlng const& candidate,
+                            double const candidate_squared_dist) mutable {
+    if (candidate_squared_dist < squared_dist) {
       closest = candidate;
-      dist = candidate_dist;
+      squared_dist = candidate_squared_dist;
     }
   };
   for (auto const p : pl.platform_ref_[x]) {
     std::visit(
         utl::overloaded{
             [&](osr::node_idx_t const node) {
-              update_closest(pl.get_node_pos(node).as_latlng());
+              auto const candidate = pl.get_node_pos(node).as_latlng();
+              update_closest(candidate, geo::approx_squared_distance(
+                                            candidate, center, lng_dist));
             },
             [&](osr::way_idx_t const way) {
               for (auto const [a, b] : utl::pairwise(w.way_polylines_[way])) {
-                update_closest(geo::closest_on_segment(center, a, b));
+                auto const [best, squared_dist] =
+                    geo::approx_closest_on_segment(center, a, b, lng_dist);
+                update_closest(best, squared_dist);
               }
             }},
         osr::to_ref(p));
