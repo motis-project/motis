@@ -407,18 +407,13 @@ std::vector<meta_router::routing_result> meta_router::search_interval(
   auto const make_task = [&](n::routing::query q) {
     return boost::fibers::packaged_task<routing_result()>{
         [&, q = std::move(q)]() mutable {
-          if (ep::search_state.get() == nullptr) {
-            ep::search_state.reset(new n::routing::search_state{});
-          }
-          if (ep::raptor_state.get() == nullptr) {
-            ep::raptor_state.reset(new n::routing::raptor_state{});
-          }
-
           auto const timeout = std::chrono::seconds{query_.timeout_.value_or(
               r_.config_.limits_.value().routing_max_timeout_seconds_)};
 
+          auto search_state = n::routing::search_state{};
+          auto raptor_state = n::routing::raptor_state{};
           return routing_result{raptor_search(
-              *tt_, rtt_, *ep::search_state, *ep::raptor_state, std::move(q),
+              *tt_, rtt_, search_state, raptor_state, std::move(q),
               query_.arriveBy_ ? n::direction::kBackward
                                : n::direction::kForward,
               timeout)};
