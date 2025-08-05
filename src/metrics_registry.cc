@@ -91,7 +91,11 @@ metrics_registry::metrics_registry(
           prometheus::BuildGauge()
               .Name("current_trips_running_scheduled_with_realtime_count")
               .Help("The number of currently running trips that have RT data")
-              .Register(registry_)} {}
+              .Register(registry_)},
+      timetable_metrics_{prometheus::BuildInfo()
+                             .Name("timetable_metrics")
+                             .Help("The metrics per loaded timetable feed")
+                             .Register(registry_)} {}
 
 metrics_registry::~metrics_registry() = default;
 

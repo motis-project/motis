@@ -4,6 +4,7 @@
 #include "prometheus/family.h"
 #include "prometheus/gauge.h"
 #include "prometheus/histogram.h"
+#include "prometheus/info.h"
 #include "prometheus/registry.h"
 
 namespace motis {
@@ -34,6 +35,7 @@ struct metrics_registry {
   prometheus::Family<prometheus::Gauge>& current_trips_running_scheduled_count_;
   prometheus::Family<prometheus::Gauge>&
       current_trips_running_scheduled_with_realtime_count_;
+  prometheus::Family<prometheus::Info>& timetable_metrics_;
 
 private:
   metrics_registry(prometheus::Histogram::BucketBoundaries event_boundaries,
