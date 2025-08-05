@@ -85,13 +85,20 @@ metrics_registry::metrics_registry(
       current_trips_running_scheduled_count_{
           prometheus::BuildGauge()
               .Name("current_trips_running_scheduled_count")
-              .Help("The number of currently running trips")
+              .Help("The number of currently running transports")
               .Register(registry_)},
       current_trips_running_scheduled_with_realtime_count_{
           prometheus::BuildGauge()
               .Name("current_trips_running_scheduled_with_realtime_count")
-              .Help("The number of currently running trips that have RT data")
-              .Register(registry_)} {}
+              .Help("The number of currently running transports that have RT "
+                    "data")
+              .Register(registry_)},
+      total_trips_with_realtime_count_{
+          prometheus::BuildGauge()
+              .Name("total_trips_with_realtime_count")
+              .Help("The total number of transports that have RT data")
+              .Register(registry_)
+              .Add({})} {}
 
 metrics_registry::~metrics_registry() = default;
 
