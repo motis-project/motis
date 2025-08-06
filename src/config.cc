@@ -34,7 +34,7 @@ struct drop_trailing {
 public:
   template <typename StructType>
   static auto process(auto&& named_tuple) {
-    const auto handle_one = []<typename FieldType>(FieldType&& f) {
+    auto const handle_one = []<typename FieldType>(FieldType&& f) {
       if constexpr (FieldType::name() != "xml_content" &&
                     !rfl::internal::is_rename_v<typename FieldType::Type>) {
         return handle_one_field(std::move(f));
@@ -125,7 +125,8 @@ void config::verify() const {
               nigiri::routing::kMaxSearchIntervalSize.count());
 
   if (timetable_) {
-    for (auto const& [_, d] : timetable_->datasets_) {
+    for (auto const& [id, d] : timetable_->datasets_) {
+      utl::verify(!id.contains("_"), "dataset identifier may not contain '_'");
       if (d.rt_.has_value()) {
         for (auto const& rt : *d.rt_) {
           try {

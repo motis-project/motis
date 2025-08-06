@@ -339,14 +339,14 @@ int extract(int ac, char** av) {
                   of);
     }
 
-    {
+    if (dir->exists("calendar.txt")) {
       fmt::println("writing {}/calendar.txt, searching for service_ids={}",
                    out / dataset_dir.filename(), service_ids);
       auto of = std::ofstream{out / dataset_dir.filename() / "calendar.txt"};
       copy_calendar(service_ids, dir->get_file("calendar.txt").data(), of);
     }
 
-    {
+    if (dir->exists("calendar_dates.txt")) {
       fmt::println(
           "writing {}/calendar_dates.txt, searching for service_ids={}",
           out / dataset_dir.filename(), service_ids);
@@ -356,14 +356,14 @@ int extract(int ac, char** av) {
                     of);
     }
 
-    {
+    if (dir->exists("agency.txt")) {
       fmt::println("writing {}/agency.txt, searching for agencies={}",
                    out / dataset_dir.filename(), agency_ids);
       auto of = std::ofstream{out / dataset_dir.filename() / "agency.txt"};
       copy_agencies(agency_ids, dir->get_file("agency.txt").data(), of);
     }
 
-    {
+    if (dir->exists("transfers.txt")) {
       fmt::println("writing {}/transfers.txt", out / dataset_dir.filename());
       auto of = std::ofstream{out / dataset_dir.filename() / "transfers.txt"};
       copy_transfers(stop_ids, dir->get_file("transfers.txt").data(), of);

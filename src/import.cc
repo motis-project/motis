@@ -149,7 +149,7 @@ data import(config const& c, fs::path const& data_path, bool const write) {
       h = cista::build_seeded_hash(
           h, c.osr_footpath_, hash_file(d.path_), d.default_bikes_allowed_,
           d.default_cars_allowed_, d.clasz_bikes_allowed_,
-          d.clasz_cars_allowed_, d.default_timezone_);
+          d.clasz_cars_allowed_, d.default_timezone_, d.extend_calendar_);
     }
 
     h = cista::build_seeded_hash(
@@ -298,13 +298,14 @@ data import(config const& c, fs::path const& data_path, bool const write) {
                               {
                                   .link_stop_distance_ = t.link_stop_distance_,
                                   .default_tz_ = dc.default_timezone_.value_or(
-                                      dc.default_timezone_.value_or("")),
+                                      t.default_timezone_.value_or("")),
                                   .bikes_allowed_default_ = to_clasz_bool_array(
                                       dc.default_bikes_allowed_,
                                       dc.clasz_bikes_allowed_),
                                   .cars_allowed_default_ = to_clasz_bool_array(
                                       dc.default_cars_allowed_,
                                       dc.clasz_cars_allowed_),
+                                  .extend_calendar_ = dc.extend_calendar_,
                               }};
                         }),
             {.adjust_footpaths_ = t.adjust_footpaths_,

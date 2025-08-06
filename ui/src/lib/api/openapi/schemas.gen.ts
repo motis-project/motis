@@ -284,19 +284,20 @@ export const ModeSchema = {
   - \`RENTAL\` Experimental. Expect unannounced breaking changes (without version bumps) for all parameters and returned structs.
   - \`CAR\`
   - \`CAR_PARKING\` Experimental. Expect unannounced breaking changes (without version bumps) for all parameters and returned structs.
+  - \`CAR_DROPOFF\` Experimental. Expect unannounced breaking changes (without version bumps) for all perameters and returned structs.
   - \`ODM\` on-demand taxis from the Prima+ÖV Project
   - \`FLEX\` flexible transports
 
 # Transit modes
 
-  - \`TRANSIT\`: translates to \`RAIL,SUBWAY,TRAM,BUS,FERRY,AIRPLANE,COACH\`
+  - \`TRANSIT\`: translates to \`RAIL,TRAM,BUS,FERRY,AIRPLANE,COACH,CABLE_CAR,FUNICULAR,AREAL_LIFT,OTHER\`
   - \`TRAM\`: trams
   - \`SUBWAY\`: subway trains
   - \`FERRY\`: ferries
   - \`AIRPLANE\`: airline flights
   - \`BUS\`: short distance buses (does not include \`COACH\`)
   - \`COACH\`: long distance buses (does not include \`BUS\`)
-  - \`RAIL\`: translates to \`HIGHSPEED_RAIL,LONG_DISTANCE,NIGHT_RAIL,REGIONAL_RAIL,REGIONAL_FAST_RAIL\`
+  - \`RAIL\`: translates to \`HIGHSPEED_RAIL,LONG_DISTANCE,NIGHT_RAIL,REGIONAL_RAIL,REGIONAL_FAST_RAIL,METRO,SUBWAY\`
   - \`METRO\`: metro trains 
   - \`HIGHSPEED_RAIL\`: long distance high speed trains (e.g. TGV)
   - \`LONG_DISTANCE\`: long distance inter city trains
@@ -308,7 +309,7 @@ export const ModeSchema = {
   - \`AREAL_LIFT\`: Aerial lift, suspended cable car (e.g., gondola lift, aerial tramway). Cable transport where cabins, cars, gondolas or open chairs are suspended by means of one or more cables.
 `,
     type: 'string',
-    enum: ['WALK', 'BIKE', 'RENTAL', 'CAR', 'CAR_PARKING', 'ODM', 'FLEX', 'TRANSIT', 'TRAM', 'SUBWAY', 'FERRY', 'AIRPLANE', 'METRO', 'BUS', 'COACH', 'RAIL', 'HIGHSPEED_RAIL', 'LONG_DISTANCE', 'NIGHT_RAIL', 'REGIONAL_FAST_RAIL', 'REGIONAL_RAIL', 'CABLE_CAR', 'FUNICULAR', 'AREAL_LIFT', 'OTHER']
+    enum: ['WALK', 'BIKE', 'RENTAL', 'CAR', 'CAR_PARKING', 'CAR_DROPOFF', 'ODM', 'FLEX', 'TRANSIT', 'TRAM', 'SUBWAY', 'FERRY', 'AIRPLANE', 'METRO', 'BUS', 'COACH', 'RAIL', 'HIGHSPEED_RAIL', 'LONG_DISTANCE', 'NIGHT_RAIL', 'REGIONAL_FAST_RAIL', 'REGIONAL_RAIL', 'CABLE_CAR', 'FUNICULAR', 'AREAL_LIFT', 'OTHER']
 } as const;
 
 export const VertexTypeSchema = {
@@ -925,6 +926,14 @@ to identify which effective fare leg this itinerary leg belongs to
             items: {
                 '$ref': '#/components/schemas/Alert'
             }
+        },
+        loopedCalendarSince: {
+            description: `If set, this attribute indicates that this trip has been expanded
+beyond the feed end date (enabled by config flag \`timetable.dataset.extend_calendar\`)
+by looping active weekdays, e.g. from calendar.txt in GTFS.
+`,
+            type: 'string',
+            format: 'date-time'
         }
     }
 } as const;
@@ -951,13 +960,12 @@ export const RiderCategorySchema = {
 export const FareMediaTypeSchema = {
     type: 'string',
     enum: ['NONE', 'PAPER_TICKET', 'TRANSIT_CARD', 'CONTACTLESS_EMV', 'MOBILE_APP'],
-    enumDescriptions: {
-        NONE: 'No fare media involved (e.g., cash payment)',
-        PAPER_TICKET: 'Physical paper ticket',
-        TRANSIT_CARD: 'Physical transit card with stored value',
-        CONTACTLESS_EMV: 'cEMV (contactless payment)',
-        MOBILE_APP: 'Mobile app with virtual transit cards/passes'
-    }
+    description: `- \`NONE\`: No fare media involved (e.g., cash payment)
+- \`PAPER_TICKET\`: Physical paper ticket
+- \`TRANSIT_CARD\`: Physical transit card with stored value
+- \`CONTACTLESS_EMV\`: cEMV (contactless payment)
+- \`MOBILE_APP\`: Mobile app with virtual transit cards/passes
+`
 } as const;
 
 export const FareMediaSchema = {

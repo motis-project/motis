@@ -195,6 +195,7 @@ data::data(std::filesystem::path p, config const& c)
 
   geocoder.wait();
   tt.wait();
+  fa.wait();
   street_routing.wait();
   matches.wait();
   elevators.wait();
@@ -301,7 +302,7 @@ void data::load_tiles() {
 }
 
 void data::load_auser_updater(std::string_view tag,
-                              const config::timetable::dataset& d) {
+                              config::timetable::dataset const& d) {
   if (!auser_) {
     auser_ = std::make_unique<std::map<std::string, auser>>();
   }

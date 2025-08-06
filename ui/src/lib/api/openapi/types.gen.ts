@@ -248,19 +248,20 @@ export type PedestrianProfile = 'FOOT' | 'WHEELCHAIR';
  * - `RENTAL` Experimental. Expect unannounced breaking changes (without version bumps) for all parameters and returned structs.
  * - `CAR`
  * - `CAR_PARKING` Experimental. Expect unannounced breaking changes (without version bumps) for all parameters and returned structs.
+ * - `CAR_DROPOFF` Experimental. Expect unannounced breaking changes (without version bumps) for all perameters and returned structs.
  * - `ODM` on-demand taxis from the Prima+ÖV Project
  * - `FLEX` flexible transports
  *
  * # Transit modes
  *
- * - `TRANSIT`: translates to `RAIL,SUBWAY,TRAM,BUS,FERRY,AIRPLANE,COACH`
+ * - `TRANSIT`: translates to `RAIL,TRAM,BUS,FERRY,AIRPLANE,COACH,CABLE_CAR,FUNICULAR,AREAL_LIFT,OTHER`
  * - `TRAM`: trams
  * - `SUBWAY`: subway trains
  * - `FERRY`: ferries
  * - `AIRPLANE`: airline flights
  * - `BUS`: short distance buses (does not include `COACH`)
  * - `COACH`: long distance buses (does not include `BUS`)
- * - `RAIL`: translates to `HIGHSPEED_RAIL,LONG_DISTANCE,NIGHT_RAIL,REGIONAL_RAIL,REGIONAL_FAST_RAIL`
+ * - `RAIL`: translates to `HIGHSPEED_RAIL,LONG_DISTANCE,NIGHT_RAIL,REGIONAL_RAIL,REGIONAL_FAST_RAIL,METRO,SUBWAY`
  * - `METRO`: metro trains
  * - `HIGHSPEED_RAIL`: long distance high speed trains (e.g. TGV)
  * - `LONG_DISTANCE`: long distance inter city trains
@@ -272,7 +273,7 @@ export type PedestrianProfile = 'FOOT' | 'WHEELCHAIR';
  * - `AREAL_LIFT`: Aerial lift, suspended cable car (e.g., gondola lift, aerial tramway). Cable transport where cabins, cars, gondolas or open chairs are suspended by means of one or more cables.
  *
  */
-export type Mode = 'WALK' | 'BIKE' | 'RENTAL' | 'CAR' | 'CAR_PARKING' | 'ODM' | 'FLEX' | 'TRANSIT' | 'TRAM' | 'SUBWAY' | 'FERRY' | 'AIRPLANE' | 'METRO' | 'BUS' | 'COACH' | 'RAIL' | 'HIGHSPEED_RAIL' | 'LONG_DISTANCE' | 'NIGHT_RAIL' | 'REGIONAL_FAST_RAIL' | 'REGIONAL_RAIL' | 'CABLE_CAR' | 'FUNICULAR' | 'AREAL_LIFT' | 'OTHER';
+export type Mode = 'WALK' | 'BIKE' | 'RENTAL' | 'CAR' | 'CAR_PARKING' | 'CAR_DROPOFF' | 'ODM' | 'FLEX' | 'TRANSIT' | 'TRAM' | 'SUBWAY' | 'FERRY' | 'AIRPLANE' | 'METRO' | 'BUS' | 'COACH' | 'RAIL' | 'HIGHSPEED_RAIL' | 'LONG_DISTANCE' | 'NIGHT_RAIL' | 'REGIONAL_FAST_RAIL' | 'REGIONAL_RAIL' | 'CABLE_CAR' | 'FUNICULAR' | 'AREAL_LIFT' | 'OTHER';
 
 /**
  * - `NORMAL` - latitude / longitude coordinate or address
@@ -759,6 +760,13 @@ export type Leg = {
      * Alerts for this stop.
      */
     alerts?: Array<Alert>;
+    /**
+     * If set, this attribute indicates that this trip has been expanded
+     * beyond the feed end date (enabled by config flag `timetable.dataset.extend_calendar`)
+     * by looping active weekdays, e.g. from calendar.txt in GTFS.
+     *
+     */
+    loopedCalendarSince?: string;
 };
 
 export type RiderCategory = {
@@ -776,6 +784,14 @@ export type RiderCategory = {
     eligibilityUrl?: string;
 };
 
+/**
+ * - `NONE`: No fare media involved (e.g., cash payment)
+ * - `PAPER_TICKET`: Physical paper ticket
+ * - `TRANSIT_CARD`: Physical transit card with stored value
+ * - `CONTACTLESS_EMV`: cEMV (contactless payment)
+ * - `MOBILE_APP`: Mobile app with virtual transit cards/passes
+ *
+ */
 export type FareMediaType = 'NONE' | 'PAPER_TICKET' | 'TRANSIT_CARD' | 'CONTACTLESS_EMV' | 'MOBILE_APP';
 
 export type FareMedia = {
@@ -1013,11 +1029,19 @@ export type PlanData = {
         elevationCosts?: ElevationCosts;
         /**
          * Optional. Experimental. Default is `1.0`.
-         * Factor with which the duration of the fastest direct connection is multiplied.
-         * Values > 1.0 allow connections that are slower than the fastest direct connection to be found.
+         * Factor with which the duration of the fastest direct non-public-transit connection is multiplied.
+         * Values > 1.0 allow transit connections that are slower than the fastest direct non-public-transit connection to be found.
          *
          */
         fastestDirectFactor?: number;
+        /**
+         * Optional.
+         * Factor with which the duration of the fastest slowDirect connection is multiplied.
+         * Values > 1.0 allow connections that are slower than the fastest direct connection to be found.
+         * Values < 1.0 will return all slowDirect connections.
+         *
+         */
+        fastestSlowDirectFactor?: number;
         /**
          * \`latitude,longitude[,level]\` tuple with
          * - latitude and longitude in degrees
@@ -1069,6 +1093,12 @@ export type PlanData = {
          *
          */
         joinInterlinedLegs?: boolean;
+        /**
+         * language tags as used in OpenStreetMap / GTFS
+         * (usually BCP-47 / ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
+         *
+         */
+        language?: string;
         /**
          * Optional. Experimental. Number of luggage pieces; base unit: airline cabin luggage (e.g. for ODM or price calculation)
          *
@@ -1267,7 +1297,7 @@ export type PlanData = {
          */
         searchWindow?: number;
         /**
-         * Optional. Experimental. Adds overtaken direct connections.
+         * Optional. Experimental. Adds overtaken direct public transit connections.
          */
         slowDirect?: boolean;
         /**
@@ -1697,6 +1727,22 @@ export type GeocodeError = unknown;
 export type TripData = {
     query: {
         /**
+         * Optional. Default is `true`.
+         *
+         * Controls if a trip with stay-seated transfers is returned:
+         * - `joinInterlinedLegs=false`: as several legs (full information about all trip numbers, headsigns, etc.).
+         * Legs that do not require a transfer (stay-seated transfer) are marked with `interlineWithPreviousLeg=true`.
+         * - `joinInterlinedLegs=true` (default behavior): as only one joined leg containing all stops
+         *
+         */
+        joinInterlinedLegs?: boolean;
+        /**
+         * language tags as used in OpenStreetMap / GTFS
+         * (usually BCP-47 / ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
+         *
+         */
+        language?: string;
+        /**
          * trip identifier (e.g. from an itinerary leg or stop event)
          */
         tripId: string;
@@ -1742,6 +1788,12 @@ export type StoptimesData = {
          *
          */
         exactRadius?: boolean;
+        /**
+         * language tags as used in OpenStreetMap / GTFS
+         * (usually BCP-47 / ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
+         *
+         */
+        language?: string;
         /**
          * Optional. Default is all transit modes.
          *

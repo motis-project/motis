@@ -109,10 +109,15 @@ int generate(int ac, char** av) {
 
   {
     auto out = std::ofstream{"queries.txt"};
+    auto const last_day = std::min(
+        14U, static_cast<unsigned>(d.tt_->date_range_.size().count()) - 1U);
     for (auto i = 0U; i != n; ++i) {
       auto p = api::plan_params{};
+      using namespace std::chrono_literals;
       p.fromPlace_ = d.tags_->id(*d.tt_, random_stop(*d.tt_, stops));
       p.toPlace_ = d.tags_->id(*d.tt_, random_stop(*d.tt_, stops));
+      p.time_ = d.tt_->date_range_.from_ +
+                rand_in(0U, last_day) * date::days{1} + rand_in(6U, 18U) * 1h;
       out << p.to_url("/api/v1/plan") << "\n";
     }
   }
@@ -124,10 +129,12 @@ int batch(int ac, char** av) {
   auto data_path = fs::path{"data"};
   auto queries_path = fs::path{"queries.txt"};
   auto responses_path = fs::path{"responses.txt"};
+  auto mt = true;
 
   auto desc = po::options_description{"Options"};
   desc.add_options()  //
       ("help", "Prints this help message")  //
+      ("multithreading,mt", po::value(&mt)->default_value(mt))  //
       ("queries,q", po::value(&queries_path)->default_value(queries_path),
        "queries file")  //
       ("responses,r", po::value(&responses_path)->default_value(responses_path),
@@ -159,20 +166,32 @@ int batch(int ac, char** av) {
   auto out = std::ofstream{responses_path};
   auto total = std::atomic_uint64_t{};
   auto const routing = utl::init_from<ep::routing>(d).value();
-  utl::parallel_for_run(queries.size(), [&](std::size_t const id) {
-    UTL_START_TIMING(total);
-    auto response = routing(queries.at(id).to_url("/api/v1/plan"));
-    UTL_STOP_TIMING(total);
+  auto const compute_response = [&](std::size_t const id) {
+    try {
+      UTL_START_TIMING(total);
+      auto response = routing(queries.at(id).to_url("/api/v1/plan"));
+      UTL_STOP_TIMING(total);
 
-    auto const timing = static_cast<std::uint64_t>(UTL_TIMING_MS(total));
-    response.debugOutput_.emplace("id", id);
-    response.debugOutput_.emplace("timing", timing);
-    {
-      auto const lock = std::scoped_lock{mtx};
-      out << json::serialize(json::value_from(response)) << "\n";
+      auto const timing = static_cast<std::uint64_t>(UTL_TIMING_MS(total));
+      response.debugOutput_.emplace("id", id);
+      response.debugOutput_.emplace("timing", timing);
+      {
+        auto const lock = std::scoped_lock{mtx};
+        out << json::serialize(json::value_from(response)) << "\n";
+      }
+      total += timing;
+    } catch (std::exception const& e) {
+      std::cerr << "ERROR IN QUERY " << id << ": " << e.what() << "\n";
     }
-    total += timing;
-  });
+  };
+
+  if (mt) {
+    utl::parallel_for_run(queries.size(), compute_response);
+  } else {
+    for (auto i = 0U; i != queries.size(); ++i) {
+      compute_response(i);
+    }
+  }
 
   std::cout << "AVG: "
             << (static_cast<double>(total) /
@@ -244,7 +263,7 @@ int compare(int ac, char** av) {
   };
   auto const print_params = [](api::Itinerary const& x) {
     std::cout << x.startTime_ << ", " << x.endTime_
-              << ", transfers=" << x.transfers_;
+              << ", transfers=" << std::setw(2) << std::left << x.transfers_;
   };
   auto const print_none = []() { std::cout << "\t\t\t\t\t\t"; };
   auto n_equal = 0U;
@@ -271,12 +290,12 @@ int compare(int ac, char** av) {
               [&](utl::op op, api::Itinerary const& j) {
                 if (op == utl::op::kAdd) {
                   print_none();
-                  std::cout << "\t\t\t";
+                  std::cout << "\t\t\t\t";
                   print_params(j);
                   std::cout << "\n";
                 } else {
                   print_params(j);
-                  std::cout << "\t\t\t";
+                  std::cout << "\t\t\t\t";
                   print_none();
                   std::cout << "\n";
                 }

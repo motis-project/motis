@@ -362,10 +362,11 @@ api::stoptimes_response stop_times::operator()(
             auto const& agency = s.get_provider(ev_type);
             auto const run_cancelled = fr.is_cancelled();
             auto place = to_place(&tt_, &tags_, w_, pl_, matches_, s);
-            place.alerts_ =
-                get_alerts(fr, std::pair{s, fr.stop_range_.from_ != 0U
-                                                ? n::event_type::kArr
-                                                : n::event_type::kDep});
+            place.alerts_ = get_alerts(
+                fr,
+                std::pair{s, fr.stop_range_.from_ != 0U ? n::event_type::kArr
+                                                        : n::event_type::kDep},
+                query.language_);
             if (fr.stop_range_.from_ != 0U) {
               place.arrival_ = {s.time(n::event_type::kArr)};
               place.scheduledArrival_ = {s.scheduled_time(n::event_type::kArr)};
@@ -393,9 +394,14 @@ api::stoptimes_response stop_times::operator()(
                 .mode_ = to_mode(s.get_clasz(ev_type)),
                 .realTime_ = r.is_rt(),
                 .headsign_ = std::string{s.direction(ev_type)},
-                .agencyId_ = std::string{tt_.strings_.get(agency.short_name_)},
-                .agencyName_ = std::string{tt_.strings_.get(agency.long_name_)},
-                .agencyUrl_ = std::string{tt_.strings_.get(agency.url_)},
+                .agencyId_ =
+                    std::string{
+                        tt_.strings_.try_get(agency.short_name_).value_or("?")},
+                .agencyName_ =
+                    std::string{
+                        tt_.strings_.try_get(agency.long_name_).value_or("?")},
+                .agencyUrl_ =
+                    std::string{tt_.strings_.try_get(agency.url_).value_or("")},
                 .routeColor_ = to_str(s.get_route_color(ev_type).color_),
                 .routeTextColor_ =
                     to_str(s.get_route_color(ev_type).text_color_),

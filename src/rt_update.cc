@@ -60,7 +60,6 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
       ioc,
       [&c, &d]() -> awaitable<void> {
         auto executor = co_await asio::this_coro::executor;
-        auto msg = transit_realtime::FeedMessage{};
         auto timer = asio::steady_timer{executor};
         auto ec = boost::system::error_code{};
 
@@ -133,8 +132,9 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
                                           timeout);
                                       ret = n::rt::gtfsrt_update_buf(
                                           *d.tt_, *rtt, g.src_, g.tag_,
-                                          get_http_body(res), msg);
+                                          get_http_body(res));
                                     } catch (std::exception const& e) {
+                                      g.metrics_.updates_error_.Increment();
                                       n::log(n::log_lvl::error, "motis.rt",
                                              "RT FETCH ERROR: tag={}, error={}",
                                              g.tag_, e.what());
@@ -157,6 +157,7 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
                                       ret = auser.consume_update(
                                           get_http_body(res), *rtt);
                                     } catch (std::exception const& e) {
+                                      a.metrics_.updates_error_.Increment();
                                       n::log(n::log_lvl::error, "motis.rt",
                                              "VDV AUS FETCH ERROR: tag={}, "
                                              "url={}, error={}",

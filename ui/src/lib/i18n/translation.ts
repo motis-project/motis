@@ -3,6 +3,7 @@ import en from './en';
 import de from './de';
 import fr from './fr';
 import pl from './pl';
+import cz from './cz';
 
 export type Translations = {
 	ticket: string;
@@ -56,6 +57,7 @@ export type Translations = {
 	outDisallowed: string;
 	unscheduledTrip: string;
 	alertsAvailable: string;
+	dataExpiredSince: string;
 	FLEX: string;
 	WALK: string;
 	BIKE: string;
@@ -125,7 +127,8 @@ const translations: Map<string, Translations> = new Map(
 		pl,
 		en,
 		de,
-		fr
+		fr,
+		cz
 	})
 );
 

@@ -1,4 +1,5 @@
 #include "boost/program_options.hpp"
+#include "boost/url/decode_view.hpp"
 
 #include <filesystem>
 #include <iostream>
@@ -7,13 +8,21 @@
 #include "google/protobuf/stubs/common.h"
 
 #include "utl/progress_tracker.h"
+#include "utl/to_vec.h"
 
+#include "nigiri/rt/util.h"
+
+#include "motis/analyze_shapes.h"
 #include "motis/config.h"
 #include "motis/data.h"
 #include "motis/import.h"
 #include "motis/server.h"
 
 #include "./flags.h"
+
+#if defined(USE_MIMALLOC) && defined(_WIN32)
+#include "mimalloc-new-delete.h"
+#endif
 
 #if !defined(MOTIS_VERSION)
 #define MOTIS_VERSION "unknown"
@@ -47,7 +56,10 @@ int main(int ac, char** av) {
         "  config     generate a config file from a list of input files\n"
         "  import     prepare input data, creates the data directory\n"
         "  server     starts a web server serving the API\n"
-        "  extract    trips from a Itinerary to GTFS timetable\n",
+        "  extract    trips from a Itinerary to GTFS timetable\n"
+        "  pb2json    convert GTFS-RT protobuf to JSON\n"
+        "  json2pb    convert JSON to GTFS-RT protobuf\n"
+        "  shapes     print shape segmentation for trips\n",
         motis_version);
     return 0;
   } else if (ac <= 1 || (ac >= 2 && av[1] == "--version"sv)) {
@@ -109,12 +121,12 @@ int main(int ac, char** av) {
         }
 
         auto const c = config::read(data_path / "config.yml");
-        return server(data{data_path, c}, c, motis_version);
+        return_value = server(data{data_path, c}, c, motis_version);
       } catch (std::exception const& e) {
         std::cerr << "unable to start server: " << e.what() << "\n";
         return_value = 1;
-        break;
       }
+      break;
 
     case cista::hash("import"): {
       auto c = config{};
@@ -136,13 +148,101 @@ int main(int ac, char** av) {
         auto const bars = utl::global_progress_bars{false};
         import(c, std::move(data_path));
         return_value = 0;
-        break;
       } catch (std::exception const& e) {
         fmt::println("unable to import: {}", e.what());
         fmt::println("config:\n{}", fmt::streamed(c));
         return_value = 1;
-        break;
       }
+      break;
+    }
+
+    case cista::hash("pb2json"): {
+      try {
+        auto p = fs::path{};
+
+        auto desc = po::options_description{"GTFS-RT Protobuf to JSON"};
+        desc.add_options()  //
+            ("path,p", boost::program_options::value(&p)->default_value(p),
+             "Path to Protobuf GTFS-RT file");
+        auto vm = parse_opt(ac, av, desc);
+        if (vm.count("help")) {
+          std::cout << desc << "\n";
+          return_value = 0;
+          break;
+        }
+
+        auto const protobuf = cista::mmap{p.generic_string().c_str(),
+                                          cista::mmap::protection::READ};
+        fmt::println("{}", nigiri::rt::protobuf_to_json(protobuf.view()));
+        return_value = 0;
+      } catch (std::exception const& e) {
+        fmt::println("error: ", e.what());
+        return_value = 1;
+      }
+      break;
+    }
+
+    case cista::hash("json2pb"): {
+      try {
+        auto p = fs::path{};
+
+        auto desc = po::options_description{"GTFS-RT JSON to Protobuf"};
+        desc.add_options()  //
+            ("path,p", boost::program_options::value(&p)->default_value(p),
+             "Path to GTFS-RT JSON file");
+        auto vm = parse_opt(ac, av, desc);
+        if (vm.count("help")) {
+          std::cout << desc << "\n";
+          return_value = 0;
+          break;
+        }
+
+        auto const protobuf = cista::mmap{p.generic_string().c_str(),
+                                          cista::mmap::protection::READ};
+        fmt::println("{}", nigiri::rt::json_to_protobuf(protobuf.view()));
+        return_value = 0;
+      } catch (std::exception const& e) {
+        fmt::println("error: ", e.what());
+        return_value = 1;
+      }
+      break;
+    }
+
+    case cista::hash("shapes"): {
+      try {
+        auto data_path = fs::path{"data"};
+
+        auto desc = po::options_description{"Analyze Shapes Options"};
+        add_trip_id_opt(desc);
+        add_data_path_opt(desc, data_path);
+        add_help_opt(desc);
+
+        auto vm = parse_opt(ac, av, desc);
+        if (vm.count("help")) {
+          std::cout << desc << "\n";
+          return_value = 0;
+          break;
+        }
+
+        if (vm.count("trip-id") == 0) {
+          std::cerr << "missing trip-ids\n";
+          return_value = 2;
+          break;
+        }
+        auto const c = config::read(data_path / "config.yml");
+        auto const ids = utl::to_vec(
+            vm["trip-id"].as<std::vector<std::string> >(),
+            [](auto const& trip_id) {
+              auto const decoded = boost::urls::decode_view{trip_id};
+              return std::string{decoded.begin(), decoded.end()};
+            });
+
+        return_value = analyze_shapes(data{data_path, c}, ids) ? 0 : 1;
+      } catch (std::exception const& e) {
+        std::cerr << "unable to analyse shapes: " << e.what() << "\n";
+        return_value = 1;
+      }
+      break;
     }
 
     default:

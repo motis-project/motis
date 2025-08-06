@@ -17,6 +17,7 @@
 #include "motis/endpoints/adr/reverse_geocode.h"
 #include "motis/endpoints/elevators.h"
 #include "motis/endpoints/graph.h"
+#include "motis/endpoints/gtfsrt.h"
 #include "motis/endpoints/initial.h"
 #include "motis/endpoints/levels.h"
 #include "motis/endpoints/map/flex_locations.h"
@@ -107,6 +108,7 @@ int server(data d, config const& c, std::string_view const motis_version) {
 
   qr.route("GET", "/metrics",
            ep::metrics{d.tt_.get(), d.tags_.get(), d.rt_, d.metrics_.get()});
+  qr.route("GET", "/gtfsrt", ep::gtfsrt{c, d.tt_.get(), d.tags_.get(), d.rt_});
   qr.serve_files(server_config.web_folder_);
   qr.enable_cors();
   s.set_timeout(std::chrono::minutes{5});
@@ -163,9 +165,11 @@ int server(data d, config const& c, std::string_view const motis_version) {
     }
   });
 
-  utl::log_info("motis.server",
-                "listening on {}:{}\nlocal link: http://localhost:{}",
-                server_config.host_, server_config.port_, server_config.port_);
+  utl::log_info(
+      "motis.server",
+      "n_threads={}, listening on {}:{}\nlocal link: http://localhost:{}",
+      c.n_threads(), server_config.host_, server_config.port_,
+      server_config.port_);
   net::run(ioc)();
 
   for (auto& t : threads) {

@@ -13,6 +13,11 @@ externalDocs:
   url: https://github.com/motis-project/motis
 servers:
   - url: https://api.transitous.org
+    description: Transitous production server
+  - url: https://staging.api.transitous.org
+    description: Transitous staging server
+  - url: http://localhost:8080
+    description: Local MOTIS server
 paths:
   /api/v3/plan:
     get:
@@ -639,8 +644,8 @@ paths:
           required: false
           description: |
             Optional. Experimental. Default is `1.0`.
-            Factor with which the duration of the fastest direct connection is multiplied.
-            Values > 1.0 allow connections that are slower than the fastest direct connection to be found.
+            Factor with which the duration of the fastest direct non-public-transit connection is multiplied.
+            Values > 1.0 allow transit connections that are slower than the fastest direct non-public-transit connection to be found.
           schema:
             type: number
             default: 1.0
@@ -674,10 +679,23 @@ paths:
         - name: slowDirect
           in: query
           required: false
-          description: Optional. Experimental. Adds overtaken direct connections.
+          description: Optional. Experimental. Adds overtaken direct public transit connections.
           schema:
             type: boolean
             default: true
+
+        - name: fastestSlowDirectFactor
+          in: query
+          required: false
+          description: |
+            Optional. 
+            Factor with which the duration of the fastest slowDirect connection is multiplied.
+            Values > 1.0 allow connections that are slower than the fastest direct transit connection to be found.
+            Values < 1.0 will return all slowDirect connections.
+          schema:
+            type: number
+            default: 3.0
+            minimum: 0
 
         - name: withFares
           in: query
@@ -694,6 +712,15 @@ paths:
           schema:
             type: boolean
             default: false
+
+        - name: language
+          in: query
+          required: false
+          description: |
+            language tags as used in OpenStreetMap / GTFS
+            (usually BCP-47 / ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
+          schema:
+            type: string
       responses:
         '200':
           description: routing result
@@ -821,7 +848,7 @@ paths:
           schema:
             type: boolean
       responses:
-        200:
+        '200':
           description: |
             A list of durations.
             If no path was found, the object is empty.
@@ -1088,7 +1115,7 @@ paths:
             minimum: 0
 
       responses:
-        200:
+        '200':
           description: |
             The starting position and a list of all reachable stops
             If no paths are found, the reachable list is empty.
@@ -1121,7 +1148,7 @@ paths:
           schema:
             $ref: '#/components/schemas/LocationType'
       responses:
-        200:
+        '200':
           description: A list of guesses to resolve the coordinates to a location
           content:
             application/json:
@@ -1184,7 +1211,7 @@ paths:
             default: 1
 
       responses:
-        200:
+        '200':
           description: A list of guesses to resolve the text to a location
           content:
             application/json:
@@ -1213,8 +1240,28 @@ paths:
           schema:
             type: boolean
             default: false
+        - name: joinInterlinedLegs
+          in: query
+          description: |
+            Optional. Default is `true`.
+            
+            Controls if a trip with stay-seated transfers is returned:
+            - `joinInterlinedLegs=false`: as several legs (full information about all trip numbers, headsigns, etc.).
+              Legs that do not require a transfer (stay-seated transfer) are marked with `interlineWithPreviousLeg=true`.
+            - `joinInterlinedLegs=true` (default behavior): as only one joined leg containing all stops
+          schema:
+            type: boolean
+            default: true
+        - name: language
+          in: query
+          required: false
+          description: |
+            language tags as used in OpenStreetMap / GTFS
+            (usually BCP-47 / ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
+          schema:
+            type: string
       responses:
-        200:
+        '200':
           description: the requested trip as itinerary
           content:
             application/json:
@@ -1313,6 +1360,7 @@ paths:
           in: query
           schema:
             type: boolean
+            default: false
           required: false
           description: |
             Optional. Default is `false`.
@@ -1337,8 +1385,17 @@ paths:
           schema:
             type: boolean
             default: false
+
+        - name: language
+          in: query
+          required: false
+          description: |
+            language tags as used in OpenStreetMap / GTFS
+            (usually BCP-47 / ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
+          schema:
+            type: string
       responses:
-        200:
+        '200':
           description: A list of departures/arrivals
           content:
             application/json:
@@ -1836,14 +1893,14 @@ components:
 
         # Transit modes
 
-          - `TRANSIT`: translates to `RAIL,SUBWAY,TRAM,BUS,FERRY,AIRPLANE,COACH`
+          - `TRANSIT`: translates to `RAIL,TRAM,BUS,FERRY,AIRPLANE,COACH,CABLE_CAR,FUNICULAR,AREAL_LIFT,OTHER`
           - `TRAM`: trams
           - `SUBWAY`: subway trains
           - `FERRY`: ferries
           - `AIRPLANE`: airline flights
           - `BUS`: short distance buses (does not include `COACH`)
           - `COACH`: long distance buses (does not include `BUS`)
-          - `RAIL`: translates to `HIGHSPEED_RAIL,LONG_DISTANCE,NIGHT_RAIL,REGIONAL_RAIL,REGIONAL_FAST_RAIL`
+          - `RAIL`: translates to `HIGHSPEED_RAIL,LONG_DISTANCE,NIGHT_RAIL,REGIONAL_RAIL,REGIONAL_FAST_RAIL,METRO,SUBWAY`
           - `METRO`: metro trains 
           - `HIGHSPEED_RAIL`: long distance high speed trains (e.g. TGV)
           - `LONG_DISTANCE`: long distance inter city trains
@@ -2462,6 +2519,13 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Alert'
+        loopedCalendarSince:
+          description: |
+            If set, this attribute indicates that this trip has been expanded
+            beyond the feed end date (enabled by config flag `timetable.dataset.extend_calendar`)
+            by looping active weekdays, e.g. from calendar.txt in GTFS.
+          type: string
+          format: date-time
 
     RiderCategory:
       type: object
@@ -2482,12 +2546,12 @@ components:
     FareMediaType:
       type: string
       enum: [ "NONE", "PAPER_TICKET", "TRANSIT_CARD", "CONTACTLESS_EMV", "MOBILE_APP" ]
-      enumDescriptions:
-        NONE: No fare media involved (e.g., cash payment)
-        PAPER_TICKET: Physical paper ticket
-        TRANSIT_CARD: Physical transit card with stored value
-        CONTACTLESS_EMV: cEMV (contactless payment)
-        MOBILE_APP: Mobile app with virtual transit cards/passes
+      description: |
+        - `NONE`: No fare media involved (e.g., cash payment)
+        - `PAPER_TICKET`: Physical paper ticket
+        - `TRANSIT_CARD`: Physical transit card with stored value
+        - `CONTACTLESS_EMV`: cEMV (contactless payment)
+        - `MOBILE_APP`: Mobile app with virtual transit cards/passes
 
     FareMedia:
       type: object

@@ -4,6 +4,8 @@ import { browser } from '$app/environment';
 import { pushState, replaceState } from '$app/navigation';
 import { page } from '$app/state';
 import { trip } from '$lib/api/openapi';
+import { joinInterlinedLegs } from './preprocessItinerary';
+import { language } from './i18n/translation';
 
 export function cn(...inputs: ClassValue[]) {
 	return twMerge(clsx(inputs));
@@ -86,12 +88,15 @@ export const onClickStop = (
 };
 
 export const onClickTrip = async (tripId: string, replace: boolean = false) => {
-	const { data: itinerary, error } = await trip({ query: { tripId } });
+	const { data: itinerary, error } = await trip({
+		query: { tripId, joinInterlinedLegs: false, language }
+	});
 	if (error) {
 		console.log(error);
 		alert(String((error as Record<string, unknown>).error?.toString() ?? error));
 		return;
 	}
+	joinInterlinedLegs(itinerary!);
 	pushStateWithQueryString(
 		{ tripId },
 		{

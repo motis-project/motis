@@ -61,6 +61,7 @@ const translations: Translations = {
 	outDisallowed: 'Exit not possible',
 	unscheduledTrip: 'Additional service',
 	alertsAvailable: 'Service alerts present',
+	dataExpiredSince: 'Warning: Expired data, last valid',
 	FLEX: 'On-Demand',
 	WALK: 'Walking',
 	BIKE: 'Bike',

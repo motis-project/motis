@@ -116,7 +116,7 @@ bool mixer::cost_dominates(nr::journey const& a, nr::journey const& b) const {
 }
 
 void mixer::cost_dominance(
-    const nigiri::pareto_set<nigiri::routing::journey>& pt_journeys,
+    nigiri::pareto_set<nigiri::routing::journey> const& pt_journeys,
     std::vector<nigiri::routing::journey>& odm_journeys) const {
   auto const is_dominated = [&](nr::journey const& odm_journey) {
     auto const dominates = [&](nr::journey const& pt_journey) -> bool {

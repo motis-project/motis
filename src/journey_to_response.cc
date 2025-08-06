@@ -92,7 +92,8 @@ std::optional<fare_indices> get_fare_indices(
 
 std::optional<std::vector<api::Alert>> get_alerts(
     n::rt::frun const& fr,
-    std::optional<std::pair<n::rt::run_stop, n::event_type>> const& s) {
+    std::optional<std::pair<n::rt::run_stop, n::event_type>> const& s,
+    std::optional<std::string> const& language) {
   if (fr.rtt_ == nullptr || !fr.is_scheduled()) {  // TODO added
     return std::nullopt;
   }
@@ -115,10 +116,24 @@ std::optional<std::vector<api::Alert>> get_alerts(
   };
   auto const to_alert = [&](n::alert_idx_t const x) -> api::Alert {
     auto const& a = rtt->alerts_;
-    auto const get_translation = [&](auto&& x) {
-      return x.empty()
-                 ? std::nullopt
-                 : a.strings_.try_get(x.front().text_).and_then(convert_to_str);
+    auto const get_translation =
+        [&](auto const& translations) -> std::optional<std::string> {
+      if (translations.empty()) {
+        return std::nullopt;
+      } else if (!language.has_value()) {
+        return a.strings_.try_get(translations.front().text_)
+            .and_then(convert_to_str);
+      } else {
+        auto const it =
+            utl::find_if(translations, [&](n::translation const translation) {
+              auto const lang = a.strings_.try_get(translation.language_);
+              return lang.has_value() && lang->starts_with(*language);
+            });
+        return a.strings_
+            .try_get(it == end(translations) ? translations.front().text_
+                                             : it->text_)
+            .and_then(convert_to_str);
+      }
     };
     return {
         .communicationPeriod_ =
@@ -202,7 +217,8 @@ api::Itinerary journey_to_response(
     double const max_matching_distance,
     unsigned const api_version,
     bool const ignore_start_rental_return_constraints,
-    bool const ignore_dest_rental_return_constraints) {
+    bool const ignore_dest_rental_return_constraints,
+    std::optional<std::string> const& language) {
   utl::verify(!j.legs_.empty(), "journey without legs");
 
   auto const fares =
@@ -331,7 +347,7 @@ api::Itinerary journey_to_response(
     auto const to_place = [&](n::rt::run_stop const& s,
                               n::event_type const ev_type) {
       auto p = ::motis::to_place(&tt, &tags, w, pl, matches, s, start, dest);
-      p.alerts_ = get_alerts(*s.fr_, std::pair{s, ev_type});
+      p.alerts_ = get_alerts(*s.fr_, std::pair{s, ev_type}, language);
       return p;
     };
 
@@ -357,6 +373,18 @@ api::Itinerary journey_to_response(
                     auto const route_short_name =
                         enter_stop.route_short_name(n::event_type::kDep);
 
+                    auto const src = [&]() {
+                      if (!fr.is_scheduled()) {
+                        return n::source_idx_t::invalid();
+                      }
+                      auto const trip =
+                          enter_stop.get_trip_idx(n::event_type::kDep);
+                      auto const id_idx = tt.trip_ids_[trip].front();
+                      return tt.trip_id_src_[id_idx];
+                    }();
+                    auto const [service_day, _] =
+                        enter_stop.get_trip_start(n::event_type::kDep);
+
                     auto& leg = itinerary.legs_.emplace_back(api::Leg{
                         .mode_ = to_mode(enter_stop.get_clasz()),
                         .from_ = to_place(enter_stop, n::event_type::kDep),
@@ -379,10 +407,14 @@ api::Itinerary journey_to_response(
                         .routeColor_ = to_str(color.color_),
                         .routeTextColor_ = to_str(color.text_color_),
                         .agencyName_ =
-                            std::string{tt.strings_.get(agency.long_name_)},
-                        .agencyUrl_ = std::string{tt.strings_.get(agency.url_)},
+                            std::string{tt.strings_.try_get(agency.long_name_)
+                                            .value_or("?")},
+                        .agencyUrl_ =
+                            std::string{
+                                tt.strings_.try_get(agency.url_).value_or("")},
                         .agencyId_ =
-                            std::string{tt.strings_.get(agency.short_name_)},
+                            std::string{tt.strings_.try_get(agency.short_name_)
+                                            .value_or("?")},
                         .tripId_ = tags.id(tt, enter_stop, n::event_type::kDep),
                         .routeShortName_ = std::string{route_short_name.empty()
                                                            ? trip_short_name
@@ -408,7 +440,14 @@ api::Itinerary journey_to_response(
                             fare_indices.and_then([](auto&& x) {
                               return std::optional{x.effective_fare_leg_idx_};
                             }),
-                        .alerts_ = get_alerts(fr, std::nullopt)});
+                        .alerts_ = get_alerts(fr, std::nullopt, language),
+                        .loopedCalendarSince_ =
+                            (fr.is_scheduled() &&
+                             src != n::source_idx_t::invalid() &&
+                             tt.src_end_date_[src] < service_day)
+                                ? std::optional{tt.src_end_date_[src]}
+                                : std::nullopt,
+                    });
 
                     leg.from_.vertexType_ = api::VertexTypeEnum::TRANSIT;
                     leg.from_.departure_ = leg.startTime_;

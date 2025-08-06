@@ -77,6 +77,7 @@ struct config {
       std::string path_;
       bool default_bikes_allowed_{false};
       bool default_cars_allowed_{false};
+      bool extend_calendar_{false};
       std::optional<std::map<std::string, bool>> clasz_bikes_allowed_{};
       std::optional<std::map<std::string, bool>> clasz_cars_allowed_{};
       std::optional<std::vector<rt>> rt_{};
@@ -173,6 +174,7 @@ struct config {
     unsigned onetoall_max_results_{65535U};
     unsigned onetoall_max_travel_minutes_{90U};
     unsigned routing_max_timeout_seconds_{90U};
+    unsigned gtfsrt_expose_max_trip_updates_{100U};
   };
   std::optional<limits> limits_{};
 

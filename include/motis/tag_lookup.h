@@ -12,14 +12,15 @@
 
 namespace motis {
 
+template <typename T = std::string_view>
 struct trip_id {
-  std::string_view start_date_;
-  std::string_view start_time_;
-  std::string_view tag_;
-  std::string_view trip_id_;
+  T start_date_;
+  T start_time_;
+  T tag_;
+  T trip_id_;
 };
 
-trip_id split_trip_id(std::string_view);
+trip_id<std::string_view> split_trip_id(std::string_view);
 
 struct tag_lookup {
   void add(nigiri::source_idx_t, std::string_view str);
@@ -30,6 +31,11 @@ struct tag_lookup {
   std::string id(nigiri::timetable const&,
                  nigiri::rt::run_stop,
                  nigiri::event_type) const;
+
+  trip_id<std::string> id_fragments(nigiri::timetable const&,
+                                    nigiri::rt::run_stop,
+                                    nigiri::event_type const) const;
+
   nigiri::location_idx_t get_location(nigiri::timetable const&,
                                       std::string_view) const;
   std::pair<nigiri::rt::run, nigiri::trip_idx_t> get_trip(

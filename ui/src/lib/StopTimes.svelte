@@ -8,7 +8,7 @@
 	import Time from '$lib/Time.svelte';
 	import Route from '$lib/Route.svelte';
 	import { Button } from '$lib/components/ui/button';
-	import { t } from '$lib/i18n/translation';
+	import { language, t } from '$lib/i18n/translation';
 	import type { RequestResult } from '@hey-api/client-fetch';
 	import { onClickStop, onClickTrip } from '$lib/utils';
 
@@ -26,7 +26,7 @@
 		stopNameFromResponse: string;
 	} = $props();
 
-	let query = $derived({ stopId, time: queryTime.toISOString(), arriveBy, n: 10 });
+	let query = $derived({ stopId, time: queryTime.toISOString(), arriveBy, n: 10, language });
 	/* eslint-disable svelte/prefer-writable-derived */
 	let responses = $state<Array<Promise<StoptimesResponse>>>([]);
 	$effect(() => {
