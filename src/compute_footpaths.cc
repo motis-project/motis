@@ -54,7 +54,7 @@ elevator_footpath_map_t compute_footpaths(
   }();
 
   auto const pt = utl::get_active_progress_tracker();
-  pt->in_high(tt.n_locations() * settings.size());
+  pt->in_high(2U * tt.n_locations() * settings.size());
 
   auto elevator_in_paths_mutex = std::mutex{};
   auto elevator_in_paths = elevator_footpath_map_t{};
@@ -97,6 +97,8 @@ elevator_footpath_map_t compute_footpaths(
                       to_str(mode.profile_))};
 
       utl::parallel_for_run(tt.n_locations(), [&](std::size_t const x) {
+        pt->update_monotonic(n_done + x);
+
         auto const l =
             n::location_idx_t{static_cast<n::location_idx_t::value_t>(x)};
         if (!is_candidate(l)) {
@@ -106,6 +108,8 @@ elevator_footpath_map_t compute_footpaths(
             get_loc(tt, w, pl, matches, l), false, osr::direction::kForward,
             mode.max_matching_distance_, nullptr, mode.profile_);
       });
+
+      n_done += tt.n_locations();
     }
 
     utl::parallel_for_run_threadlocal<state>(

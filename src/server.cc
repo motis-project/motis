@@ -165,9 +165,11 @@ int server(data d, config const& c, std::string_view const motis_version) {
     }
   });
 
-  utl::log_info("motis.server",
-                "listening on {}:{}\nlocal link: http://localhost:{}",
-                server_config.host_, server_config.port_, server_config.port_);
+  utl::log_info(
+      "motis.server",
+      "n_threads={}, listening on {}:{}\nlocal link: http://localhost:{}",
+      c.n_threads(), server_config.host_, server_config.port_,
+      server_config.port_);
   net::run(ioc)();
 
   for (auto& t : threads) {

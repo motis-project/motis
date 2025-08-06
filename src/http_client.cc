@@ -86,11 +86,13 @@ struct http_client::connection
     : public std::enable_shared_from_this<connection> {
   template <typename Executor>
   connection(Executor const& executor,
+             hash_map<connection_key, std::shared_ptr<connection>>& connections,
              connection_key key,
              std::chrono::seconds const timeout,
              proxy_settings const& proxy,
              std::size_t const max_in_flight = 1)
       : key_{std::move(key)},
+        connections_{connections},
         unlimited_pipelining_{max_in_flight == kUnlimitedHttpPipelining},
         request_channel_{executor},
         requests_in_flight_{std::make_unique<
@@ -105,16 +107,18 @@ struct http_client::connection
                          ssl::context::single_dh_use);
   }
 
-  void close() const {
+  void close() {
     if (ssl_stream_) {
       auto ec = beast::error_code{};
       beast::get_lowest_layer(*ssl_stream_)
           .socket()
           .shutdown(asio::ip::tcp::socket::shutdown_both, ec);
+      beast::get_lowest_layer(*ssl_stream_).socket().close(ec);
     } else if (stream_) {
       auto ec = beast::error_code{};
       beast::get_lowest_layer(*stream_).socket().shutdown(
           asio::ip::tcp::socket::shutdown_both, ec);
+      beast::get_lowest_layer(*stream_).socket().close(ec);
     }
   }
 
@@ -292,11 +296,13 @@ struct http_client::connection
         }
       }
     } while (!pending_requests_.empty());
+    connections_.erase(key_);
   }
 
   bool ssl() const { return proxy_ ? proxy_.ssl_ : key_.ssl_; }
 
   connection_key key_{};
+  hash_map<connection_key, std::shared_ptr<connection>>& connections_;
   bool unlimited_pipelining_{false};
 
   std::unique_ptr<beast::tcp_stream> stream_;
@@ -340,8 +346,8 @@ asio::awaitable<http_response> http_client::get(
 
   auto executor = co_await asio::this_coro::executor;
   if (auto const it = connections_.find(key); it == connections_.end()) {
-    auto conn =
-        std::make_shared<connection>(executor, key, timeout_, proxy_, 1);
+    auto conn = std::make_shared<connection>(executor, connections_, key,
+                                             timeout_, proxy_, 1);
     connections_[key] = conn;
     asio::co_spawn(executor, conn->run(), asio::detached);
   }

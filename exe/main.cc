@@ -20,6 +20,10 @@
 
 #include "./flags.h"
 
+#if defined(USE_MIMALLOC) && defined(_WIN32)
+#include "mimalloc-new-delete.h"
+#endif
+
 #if !defined(MOTIS_VERSION)
 #define MOTIS_VERSION "unknown"
 #endif

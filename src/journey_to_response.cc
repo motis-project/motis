@@ -403,10 +403,14 @@ api::Itinerary journey_to_response(
                         .routeColor_ = to_str(color.color_),
                         .routeTextColor_ = to_str(color.text_color_),
                         .agencyName_ =
-                            std::string{tt.strings_.get(agency.long_name_)},
-                        .agencyUrl_ = std::string{tt.strings_.get(agency.url_)},
+                            std::string{tt.strings_.try_get(agency.long_name_)
+                                            .value_or("?")},
+                        .agencyUrl_ =
+                            std::string{
+                                tt.strings_.try_get(agency.url_).value_or("")},
                         .agencyId_ =
-                            std::string{tt.strings_.get(agency.short_name_)},
+                            std::string{tt.strings_.try_get(agency.short_name_)
+                                            .value_or("?")},
                         .tripId_ = tags.id(tt, enter_stop, n::event_type::kDep),
                         .routeShortName_ = {std::string{
                             enter_stop.trip_display_name()}},

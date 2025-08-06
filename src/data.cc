@@ -195,6 +195,7 @@ data::data(std::filesystem::path p, config const& c)
 
   geocoder.wait();
   tt.wait();
+  fa.wait();
   street_routing.wait();
   matches.wait();
   elevators.wait();
