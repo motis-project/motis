@@ -25,12 +25,6 @@ constexpr auto const kInfinityDuration =
     nigiri::duration_t{std::numeric_limits<nigiri::duration_t::rep>::max()};
 
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-extern boost::thread_specific_ptr<nigiri::routing::search_state> search_state;
-
-// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-extern boost::thread_specific_ptr<nigiri::routing::raptor_state> raptor_state;
-
-// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 extern boost::thread_specific_ptr<osr::bitvec<osr::node_idx_t>> blocked;
 
 using stats_map_t = std::map<std::string, std::uint64_t>;
