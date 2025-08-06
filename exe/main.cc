@@ -1,12 +1,14 @@
 #include "boost/program_options.hpp"
 #include "boost/url/decode_view.hpp"
 
+#include <cctype>
 #include <filesystem>
 #include <iostream>
 #include <string_view>
 
 #include "google/protobuf/stubs/common.h"
 
+#include "utl/logging.h"
 #include "utl/progress_tracker.h"
 #include "utl/to_vec.h"
 
@@ -106,14 +108,32 @@ int main(int ac, char** av) {
     case cista::hash("server"):
       try {
         auto data_path = fs::path{"data"};
+        auto ll = std::string{"DEBUG"};
 
         auto desc = po::options_description{"Server Options"};
         add_data_path_opt(desc, data_path);
+        add_log_level_opt(desc, ll);
+        add_help_opt(desc);
         auto vm = parse_opt(ac, av, desc);
         if (vm.count("help")) {
           std::cout << desc << "\n";
           return_value = 0;
           break;
+        }
+        if (vm.count("log-level")) {
+          std::transform(ll.begin(), ll.end(), ll.begin(),
+                         [](unsigned char const c) { return std::toupper(c); });
+          if (ll == "ERROR"sv) {
+            utl::log_verbosity = utl::log_level::error;
+          } else if (ll == "INFO"sv) {
+            utl::log_verbosity = utl::log_level::info;
+          } else if (ll == "DEBUG"sv) {
+            utl::log_verbosity = utl::log_level::debug;
+          } else {
+            std::cerr << fmt::format("Unsupported log level '{}'\n", ll);
+            return_value = 1;
+            break;
+          }
         }
 
         auto const c = config::read(data_path / "config.yml");
