@@ -1,18 +1,14 @@
 #include "boost/program_options.hpp"
 #include "boost/url/decode_view.hpp"
 
-#include <cctype>
 #include <filesystem>
 #include <iostream>
 #include <string_view>
 
 #include "google/protobuf/stubs/common.h"
 
-#include "utl/logging.h"
 #include "utl/progress_tracker.h"
 #include "utl/to_vec.h"
-
-#include "nigiri/logging.h"
 
 #include "motis/analyze_shapes.h"
 #include "motis/config.h"
@@ -21,6 +17,7 @@
 #include "motis/server.h"
 
 #include "./flags.h"
+#include "./logging.h"
 
 #if defined(USE_MIMALLOC) && defined(_WIN32)
 #include "mimalloc-new-delete.h"
@@ -123,18 +120,7 @@ int main(int ac, char** av) {
           break;
         }
         if (vm.count("log-level")) {
-          std::transform(ll.begin(), ll.end(), ll.begin(),
-                         [](unsigned char const c) { return std::toupper(c); });
-          if (ll == "ERROR"sv) {
-            utl::log_verbosity = utl::log_level::error;
-            nigiri::s_verbosity = nigiri::log_lvl::error;
-          } else if (ll == "INFO"sv) {
-            utl::log_verbosity = utl::log_level::info;
-            nigiri::s_verbosity = nigiri::log_lvl::info;
-          } else if (ll == "DEBUG"sv) {
-            utl::log_verbosity = utl::log_level::debug;
-            nigiri::s_verbosity = nigiri::log_lvl::debug;
-          } else {
+          if (!set_log_level(ll)) {
             fmt::println(std::cerr, "Unsupported log level '{}'\n", ll);
             return_value = 1;
             break;
