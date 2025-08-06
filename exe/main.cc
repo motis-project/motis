@@ -12,6 +12,8 @@
 #include "utl/progress_tracker.h"
 #include "utl/to_vec.h"
 
+#include "nigiri/logging.h"
+
 #include "motis/analyze_shapes.h"
 #include "motis/config.h"
 #include "motis/data.h"
@@ -125,12 +127,15 @@ int main(int ac, char** av) {
                          [](unsigned char const c) { return std::toupper(c); });
           if (ll == "ERROR"sv) {
             utl::log_verbosity = utl::log_level::error;
+            nigiri::s_verbosity = nigiri::log_lvl::error;
           } else if (ll == "INFO"sv) {
             utl::log_verbosity = utl::log_level::info;
+            nigiri::s_verbosity = nigiri::log_lvl::info;
           } else if (ll == "DEBUG"sv) {
             utl::log_verbosity = utl::log_level::debug;
+            nigiri::s_verbosity = nigiri::log_lvl::debug;
           } else {
-            std::cerr << fmt::format("Unsupported log level '{}'\n", ll);
+            fmt::println(std::cerr, "Unsupported log level '{}'\n", ll);
             return_value = 1;
             break;
           }
