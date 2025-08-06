@@ -56,12 +56,6 @@ using namespace std::chrono_literals;
 namespace motis::ep {
 
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-boost::thread_specific_ptr<n::routing::search_state> search_state;
-
-// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-boost::thread_specific_ptr<n::routing::raptor_state> raptor_state;
-
-// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 boost::thread_specific_ptr<osr::bitvec<osr::node_idx_t>> blocked;
 
 place_t get_place(n::timetable const* tt,
@@ -740,12 +734,8 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
       q.prf_idx_ = 0U;
     }
 
-    if (search_state.get() == nullptr) {
-      search_state.reset(new n::routing::search_state{});
-    }
-    if (raptor_state.get() == nullptr) {
-      raptor_state.reset(new n::routing::raptor_state{});
-    }
+    auto search_state = n::routing::search_state{};
+    auto raptor_state = n::routing::raptor_state{};
 
     auto const query_stats =
         stats_map_t{{"direct", UTL_TIMING_MS(direct)},
@@ -756,7 +746,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                     {"n_td_dest_offsets", q.td_dest_.size()}};
 
     auto const r = n::routing::raptor_search(
-        *tt_, rtt, *search_state, *raptor_state, std::move(q),
+        *tt_, rtt, search_state, raptor_state, std::move(q),
         query.arriveBy_ ? n::direction::kBackward : n::direction::kForward,
         query.timeout_.has_value() ? std::chrono::seconds{*query.timeout_}
                                    : max_timeout);
