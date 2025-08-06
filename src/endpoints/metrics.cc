@@ -116,21 +116,22 @@ void update_all_runs_metrics(nigiri::timetable const& tt,
     }
   }
 
-  if (metrics.timetable_metrics_.Collect().empty()) {
+  if (metrics.timetable_first_day_unixtime_.Collect().empty()) {
     auto const m = get_metrics(tt);
-    auto const from = std::chrono::time_point_cast<date::sys_days::duration>(
-        tt.internal_interval().from_);
+    auto const from = std::chrono::duration_cast<std::chrono::seconds>(
+        tt.internal_interval().from_.time_since_epoch());
     for (auto src = n::source_idx_t{0U}; src != tt.n_sources(); ++src) {
       auto const& fm = m.feeds_[src];
-      auto const labels = prometheus::Labels{
-          {"src", fmt::format("{}", src)},
-          {"tag", std::string{tags.get_tag(src)}},
-          {"first_day", fmt::format("{:%F}", from + date::days{fm.first_})},
-          {"last_day", fmt::format("{:%F}", from + date::days{fm.last_})},
-          {"no_locations", fmt::format("{}", fm.locations_)},
-          {"no_trips", fmt::format("{}", fm.trips_)},
-          {"transports_x_days", fmt::format("{}", fm.transport_days_)}};
-      metrics.timetable_metrics_.Add(labels);
+      auto const labels =
+          prometheus::Labels{{"tag", std::string{tags.get_tag(src)}}};
+      metrics.timetable_first_day_unixtime_.Add(
+          labels, static_cast<double>((from + date::days{fm.first_}).count()));
+      metrics.timetable_last_day_unixtime_.Add(
+          labels, static_cast<double>((from + date::days{fm.last_}).count()));
+      metrics.timetable_locations_count_.Add(labels, fm.locations_);
+      metrics.timetable_trips_count_.Add(labels, fm.trips_);
+      metrics.timetable_transports_x_days_count_.Add(
+          labels, static_cast<double>(fm.transport_days_));
     }
   }
 }

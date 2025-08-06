@@ -92,10 +92,30 @@ metrics_registry::metrics_registry(
               .Name("current_trips_running_scheduled_with_realtime_count")
               .Help("The number of currently running trips that have RT data")
               .Register(registry_)},
-      timetable_metrics_{prometheus::BuildInfo()
-                             .Name("timetable_metrics")
-                             .Help("The metrics per loaded timetable feed")
-                             .Register(registry_)} {}
+      timetable_first_day_unixtime_{
+          prometheus::BuildGauge()
+              .Name("timetable_first_day_unixtime")
+              .Help("Day of the first transport in unixtime")
+              .Register(registry_)},
+      timetable_last_day_unixtime_{
+          prometheus::BuildGauge()
+              .Name("timetable_last_day_unixtime")
+              .Help("Day of the last transport in unixtime")
+              .Register(registry_)},
+      timetable_locations_count_{
+          prometheus::BuildGauge()
+              .Name("timetable_locations_count")
+              .Help("The number of locations in the timetable")
+              .Register(registry_)},
+      timetable_trips_count_{prometheus::BuildGauge()
+                                 .Name("timetable_trips_count")
+                                 .Help("The number of trips in the timetable")
+                                 .Register(registry_)},
+      timetable_transports_x_days_count_{
+          prometheus::BuildGauge()
+              .Name("timetable_transports_x_days_count")
+              .Help("The number of transports x service days in the timetable")
+              .Register(registry_)} {}
 
 metrics_registry::~metrics_registry() = default;
 
