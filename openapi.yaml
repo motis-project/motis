@@ -2079,6 +2079,9 @@ components:
 
     LegName:
       type: object
+      required:
+        - trip
+        - route
       properties:
         trip:
           type: string
@@ -2153,6 +2156,7 @@ components:
       required:
         - tripId
         - routeShortName
+        - name
       properties:
         tripId:
           description: trip ID (dataset trip id prefixed with the dataset tag)
@@ -2161,7 +2165,7 @@ components:
           description: trip display name
           type: string
         name:
-           $ref: '#/components/schemas/LegName'
+          $ref: '#/components/schemas/LegName'
 
     TripSegment:
       description: trip segment between two stops to show a trip on a map
