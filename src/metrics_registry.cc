@@ -99,28 +99,28 @@ metrics_registry::metrics_registry(
               .Help("The total number of transports that have RT data")
               .Register(registry_)
               .Add({})},
-      timetable_first_day_unixtime_{
+      timetable_first_day_timestamp_{
           prometheus::BuildGauge()
-              .Name("timetable_first_day_unixtime")
+              .Name("nigiri_timetable_first_day_timestamp_seconds")
               .Help("Day of the first transport in unixtime")
               .Register(registry_)},
-      timetable_last_day_unixtime_{
+      timetable_last_day_timestamp_{
           prometheus::BuildGauge()
-              .Name("timetable_last_day_unixtime")
+              .Name("nigiri_timetable_last_day_timestamp_seconds")
               .Help("Day of the last transport in unixtime")
               .Register(registry_)},
       timetable_locations_count_{
           prometheus::BuildGauge()
-              .Name("timetable_locations_count")
+              .Name("nigiri_timetable_locations_count")
               .Help("The number of locations in the timetable")
               .Register(registry_)},
       timetable_trips_count_{prometheus::BuildGauge()
-                                 .Name("timetable_trips_count")
+                                 .Name("nigiri_timetable_trips_count")
                                  .Help("The number of trips in the timetable")
                                  .Register(registry_)},
       timetable_transports_x_days_count_{
           prometheus::BuildGauge()
-              .Name("timetable_transports_x_days_count")
+              .Name("nigiri_timetable_transports_x_days_count")
               .Help("The number of transports x service days in the timetable")
               .Register(registry_)} {}
 
