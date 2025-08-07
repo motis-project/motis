@@ -1,5 +1,6 @@
 #include "motis/endpoints/metrics.h"
 
+#include <chrono>
 #include <functional>
 #include <iostream>
 
@@ -11,6 +12,7 @@
 #include "nigiri/rt/frun.h"
 #include "nigiri/rt/rt_timetable.h"
 #include "nigiri/timetable.h"
+#include "nigiri/timetable_metrics.h"
 #include "nigiri/types.h"
 
 #include "motis/data.h"
@@ -111,6 +113,28 @@ void update_all_runs_metrics(nigiri::timetable const& tt,
           }
         }
       }
+    }
+  }
+
+  if (metrics.timetable_first_day_timestamp_.Collect().empty()) {
+    auto const m = get_metrics(tt);
+    constexpr auto const kEndOfDay =
+        std::chrono::days{1} - std::chrono::seconds{1};
+    auto const from = std::chrono::duration_cast<std::chrono::seconds>(
+        tt.internal_interval().from_.time_since_epoch());
+    for (auto src = n::source_idx_t{0U}; src != tt.n_sources(); ++src) {
+      auto const& fm = m.feeds_[src];
+      auto const labels =
+          prometheus::Labels{{"tag", std::string{tags.get_tag(src)}}};
+      metrics.timetable_first_day_timestamp_.Add(
+          labels, static_cast<double>((from + date::days{fm.first_}).count()));
+      metrics.timetable_last_day_timestamp_.Add(
+          labels, static_cast<double>(
+                      (from + date::days{fm.last_} + kEndOfDay).count()));
+      metrics.timetable_locations_count_.Add(labels, fm.locations_);
+      metrics.timetable_trips_count_.Add(labels, fm.trips_);
+      metrics.timetable_transports_x_days_count_.Add(
+          labels, static_cast<double>(fm.transport_days_));
     }
   }
 }

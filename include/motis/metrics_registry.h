@@ -35,6 +35,11 @@ struct metrics_registry {
   prometheus::Family<prometheus::Gauge>&
       current_trips_running_scheduled_with_realtime_count_;
   prometheus::Gauge& total_trips_with_realtime_count_;
+  prometheus::Family<prometheus::Gauge>& timetable_first_day_timestamp_;
+  prometheus::Family<prometheus::Gauge>& timetable_last_day_timestamp_;
+  prometheus::Family<prometheus::Gauge>& timetable_locations_count_;
+  prometheus::Family<prometheus::Gauge>& timetable_trips_count_;
+  prometheus::Family<prometheus::Gauge>& timetable_transports_x_days_count_;
 
 private:
   metrics_registry(prometheus::Histogram::BucketBoundaries event_boundaries,
