@@ -1,14 +1,20 @@
 #include "boost/program_options.hpp"
 #include "boost/url/decode_view.hpp"
 
+#include <cctype>
+#include <algorithm>
 #include <filesystem>
 #include <iostream>
+#include <string>
 #include <string_view>
 
 #include "google/protobuf/stubs/common.h"
 
+#include "utl/logging.h"
 #include "utl/progress_tracker.h"
 #include "utl/to_vec.h"
+
+#include "nigiri/logging.h"
 
 #include "motis/analyze_shapes.h"
 #include "motis/config.h"
@@ -17,7 +23,6 @@
 #include "motis/server.h"
 
 #include "./flags.h"
-#include "./logging.h"
 
 #if defined(USE_MIMALLOC) && defined(_WIN32)
 #include "mimalloc-new-delete.h"
@@ -107,11 +112,11 @@ int main(int ac, char** av) {
     case cista::hash("server"):
       try {
         auto data_path = fs::path{"data"};
-        auto ll = std::string{"DEBUG"};
+        auto log_lvl = std::string{"DEBUG"};
 
         auto desc = po::options_description{"Server Options"};
         add_data_path_opt(desc, data_path);
-        add_log_level_opt(desc, ll);
+        add_log_level_opt(desc, log_lvl);
         add_help_opt(desc);
         auto vm = parse_opt(ac, av, desc);
         if (vm.count("help")) {
@@ -120,8 +125,19 @@ int main(int ac, char** av) {
           break;
         }
         if (vm.count("log-level")) {
-          if (!set_log_level(ll)) {
-            fmt::println(std::cerr, "Unsupported log level '{}'\n", ll);
+          std::transform(log_lvl.begin(), log_lvl.end(), log_lvl.begin(),
+                         [](unsigned char const c) { return std::toupper(c); });
+          if (log_lvl == "ERROR"sv) {
+            utl::log_verbosity = utl::log_level::error;
+            nigiri::s_verbosity = nigiri::log_lvl::error;
+          } else if (log_lvl == "INFO"sv) {
+            utl::log_verbosity = utl::log_level::info;
+            nigiri::s_verbosity = nigiri::log_lvl::info;
+          } else if (log_lvl == "DEBUG"sv) {
+            utl::log_verbosity = utl::log_level::debug;
+            nigiri::s_verbosity = nigiri::log_lvl::debug;
+          } else {
+            fmt::println(std::cerr, "Unsupported log level '{}'\n", log_lvl);
             return_value = 1;
             break;
           }
