@@ -141,6 +141,8 @@ net::reply metrics::operator()(net::route_request const& req, bool) const {
               "no metrics initialized");
   auto const rt = rt_;
   update_all_runs_metrics(*tt_, rt->rtt_.get(), *tags_, *metrics_);
+  metrics_->total_trips_with_realtime_count_.Set(
+      static_cast<double>(rt->rtt_->rt_transport_src_.size()));
   auto res = net::web_server::string_res_t{boost::beast::http::status::ok,
                                            req.version()};
   res.insert(boost::beast::http::field::content_type,

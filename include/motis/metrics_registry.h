@@ -34,6 +34,7 @@ struct metrics_registry {
   prometheus::Family<prometheus::Gauge>& current_trips_running_scheduled_count_;
   prometheus::Family<prometheus::Gauge>&
       current_trips_running_scheduled_with_realtime_count_;
+  prometheus::Gauge& total_trips_with_realtime_count_;
   prometheus::Family<prometheus::Gauge>& timetable_first_day_unixtime_;
   prometheus::Family<prometheus::Gauge>& timetable_last_day_unixtime_;
   prometheus::Family<prometheus::Gauge>& timetable_locations_count_;
