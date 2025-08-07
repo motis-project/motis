@@ -12,6 +12,7 @@
 #include "boost/asio/co_spawn.hpp"
 #include "boost/asio/detached.hpp"
 #include "boost/asio/io_context.hpp"
+#include "boost/fiber/algo/round_robin.hpp"
 #include "boost/fiber/future.hpp"
 #include "boost/fiber/future/packaged_task.hpp"
 #include "boost/thread/tss.hpp"
@@ -427,12 +428,17 @@ std::vector<meta_router::routing_result> meta_router::search_interval(
 
   auto futures = utl::to_vec(tasks, [](auto& t) { return t.get_future(); });
 
+  std::vector<std::thread> threads;
   for (auto& task : tasks) {
-    boost::fibers::fiber(std::move(task)).detach();
+    threads.emplace_back([task = std::move(task)]() mutable {
+      boost::fibers::use_scheduling_algorithm<
+          boost::fibers::algo::round_robin>();
+      boost::fibers::fiber(std::move(task)).join();
+    });
   }
 
-  for (auto const& f : futures) {
-    f.wait();
+  for (auto& t : threads) {
+    t.join();
   }
 
   auto results = std::vector<meta_router::routing_result>{};
@@ -646,6 +652,8 @@ api::plan_response meta_router::run() {
 
   auto const routing_start = std::chrono::steady_clock::now();
   auto sub_queries = qf.make_queries(blacklisted);
+  n::log(n::log_lvl::debug, "motis.odm",
+         "[prepare queries] {} queries prepared", sub_queries.size());
   auto const results = search_interval(sub_queries);
   auto const& pt_result = results.front();
   collect_odm_journeys(results);
