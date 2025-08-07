@@ -374,8 +374,9 @@ api::trips_response get_trains(tag_lookup const& tags,
 
     return {.trips_ = {api::TripInfo{
                 .tripId_ = tags.id(tt, from, n::event_type::kDep),
-                .routeShortName_ =
-                    std::string{from.trip_display_name(n::event_type::kDep)}}},
+                .routeShortName_ = std::string{from.display_name()},
+                .name_ = {.trip_ = std::string{from.trip_short_name()},
+                          .route_ = std::string{from.route_short_name()}}}},
             .routeColor_ =
                 to_str(from.get_route_color(nigiri::event_type::kDep).color_),
             .mode_ = to_mode(from.get_clasz(n::event_type::kDep)),

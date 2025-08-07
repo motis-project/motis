@@ -403,7 +403,9 @@ api::stoptimes_response stop_times::operator()(
                 .routeTextColor_ =
                     to_str(s.get_route_color(ev_type).text_color_),
                 .tripId_ = tags_.id(tt_, s, ev_type),
-                .routeShortName_ = std::string{s.trip_display_name(ev_type)},
+                .routeShortName_ = std::string{s.display_name(ev_type)},
+                .name_ = {.trip_ = std::string{s.trip_short_name(ev_type)},
+                          .route_ = std::string{s.route_short_name(ev_type)}},
                 .pickupDropoffType_ =
                     in_out_allowed ? api::PickupDropoffTypeEnum::NORMAL
                                    : api::PickupDropoffTypeEnum::NOT_ALLOWED,
