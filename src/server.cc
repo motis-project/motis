@@ -47,7 +47,6 @@ namespace fs = std::filesystem;
 namespace asio = boost::asio;
 
 namespace motis {
-
 template <typename T, typename From>
 void GET(auto&& r, std::string target, From& from) {
   if (auto const x = utl::init_from<T>(from); x.has_value()) {
@@ -165,7 +164,7 @@ int server(data d, config const& c, std::string_view const motis_version) {
       c.n_threads(), server_config.host_, server_config.port_,
       server_config.port_);
 
-  sched.runner_.run(static_cast<unsigned>(c.n_threads()), true);
+  sched.runner_.run(c.n_threads());
   if (rt_update_thread != nullptr) {
     rt_update_thread->join();
   }
@@ -175,5 +174,4 @@ int server(data d, config const& c, std::string_view const motis_version) {
 
   return 0;
 }
-
 }  // namespace motis
