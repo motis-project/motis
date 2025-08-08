@@ -116,7 +116,6 @@ target_link_libraries(motislib
     adr
     ctx
     boost-json
-    Boost::fiber
     motis-api
     reflectcpp
     web-server
