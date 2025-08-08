@@ -13,7 +13,7 @@
 [utl]
   url=git@github.com:motis-project/utl.git
   branch=master
-  commit=ed796cfa447020d1a47222bc6d93c51761d8dcd5
+  commit=21adb73e2f5a4b66104a60419d91e72e42be183e
 [adr]
   url=git@github.com:triptix-tech/adr.git
   branch=master
