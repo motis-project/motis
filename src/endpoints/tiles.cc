@@ -15,9 +15,10 @@
 namespace motis::ep {
 
 net::reply tiles::operator()(net::route_request const& req, bool) const {
-  if (req.url_.path().starts_with("/tiles/glyphs")) {
+  auto const url = boost::url_view{req.target()};
+  if (url.path().starts_with("/tiles/glyphs")) {
     std::string decoded;
-    net::url_decode(req.url_.path(), decoded);
+    net::url_decode(url.path(), decoded);
     auto const mem = pbf_sdf_fonts_res::get_resource(decoded.substr(14));
 
     auto res = net::web_server::string_res_t{boost::beast::http::status::ok,
@@ -28,7 +29,7 @@ net::reply tiles::operator()(net::route_request const& req, bool) const {
     return res;
   }
 
-  auto const tile = ::tiles::parse_tile_url(req.url_.path());
+  auto const tile = ::tiles::parse_tile_url(url.path());
   if (!tile.has_value()) {
     return net::web_server::empty_res_t{boost::beast::http::status::not_found,
                                         req.version()};

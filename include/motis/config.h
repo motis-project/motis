@@ -150,7 +150,7 @@ struct config {
     std::optional<headers_t> headers_{};
   };
 
-  std::size_t n_threads() const;
+  unsigned n_threads() const;
 
   std::optional<elevators> const& get_elevators() const;
 
