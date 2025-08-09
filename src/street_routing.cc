@@ -219,12 +219,34 @@ api::Itinerary street_routing(osr::ways const& w,
       out.is_time_dependent() ? bound_time : n::unixtime_t{n::i32_minutes{0}}};
   auto const path = utl::get_or_create(cache, cache_key, [&]() {
     auto const& [e_nodes, e_states] = *s;
-    return osr::route(
+    auto p = osr::route(
         w, l, out.get_profile(), from, to,
         static_cast<osr::cost_t>(max.count()), osr::direction::kForward,
         max_matching_distance,
         s ? &set_blocked(e_nodes, e_states, blocked_mem) : nullptr,
         out.get_sharing_data(), elevations, osr::routing_algorithm::kAStarBi);
+
+    if (!p.has_value()) {
+      osr::location from_surface = from;
+      from_surface.lvl_ = osr::level_t{0.0f};
+
+      osr::location to_surface = to;
+      to_surface.lvl_ = osr::level_t{0.0f};
+
+      p = osr::route(
+          w, l, out.get_profile(), from_surface, to_surface,
+          static_cast<osr::cost_t>(max.count()), osr::direction::kForward,
+          max_matching_distance,
+          s ? &set_blocked(e_nodes, e_states, blocked_mem) : nullptr,
+          out.get_sharing_data(), elevations, osr::routing_algorithm::kAStarBi);
+
+      if (p.has_value()) {
+        constexpr auto const kLevelChangePenaltySeconds = 120;
+        p->cost_ += kLevelChangePenaltySeconds;
+      }
+    }
+
+    return p;
   });
 
   if (!path.has_value()) {
