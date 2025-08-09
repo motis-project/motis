@@ -245,6 +245,7 @@
 						time: time.toISOString(),
 						fromPlace: toPlaceString(from),
 						toPlace: toPlaceString(to),
+						useStopCoordinates: true,
 						arriveBy,
 						timetableView,
 						searchWindow,
