@@ -67,18 +67,22 @@ int batch(int ac, char** av) {
   auto total = std::atomic_uint64_t{};
   auto const routing = utl::init_from<ep::routing>(d).value();
   auto const compute_response = [&](std::size_t const id) {
-    UTL_START_TIMING(total);
-    auto response = routing(queries.at(id).to_url("/api/v1/plan"));
-    UTL_STOP_TIMING(total);
+    try {
+      UTL_START_TIMING(total);
+      auto response = routing(queries.at(id).to_url("/api/v1/plan"));
+      UTL_STOP_TIMING(total);
 
-    auto const timing = static_cast<std::uint64_t>(UTL_TIMING_MS(total));
-    response.debugOutput_.emplace("id", id);
-    response.debugOutput_.emplace("timing", timing);
-    {
-      auto const lock = std::scoped_lock{mtx};
-      out << json::serialize(json::value_from(response)) << "\n";
+      auto const timing = static_cast<std::uint64_t>(UTL_TIMING_MS(total));
+      response.debugOutput_.emplace("id", id);
+      response.debugOutput_.emplace("timing", timing);
+      {
+        auto const lock = std::scoped_lock{mtx};
+        out << json::serialize(json::value_from(response)) << "\n";
+      }
+      total += timing;
+    } catch (std::exception const& e) {
+      std::cerr << "ERROR IN QUERY " << id << ": " << e.what() << "\n";
     }
-    total += timing;
   };
 
   if (mt) {

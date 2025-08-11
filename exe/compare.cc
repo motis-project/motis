@@ -92,7 +92,7 @@ int compare(int ac, char** av) {
   };
   auto const print_params = [](api::Itinerary const& x) {
     std::cout << x.startTime_ << ", " << x.endTime_
-              << ", transfers=" << x.transfers_;
+              << ", transfers=" << std::setw(2) << std::left << x.transfers_;
   };
   auto const print_none = []() { std::cout << "\t\t\t\t\t\t"; };
   auto n_equal = 0U;
@@ -119,12 +119,12 @@ int compare(int ac, char** av) {
               [&](utl::op op, api::Itinerary const& j) {
                 if (op == utl::op::kAdd) {
                   print_none();
-                  std::cout << "\t\t\t";
+                  std::cout << "\t\t\t\t";
                   print_params(j);
                   std::cout << "\n";
                 } else {
                   print_params(j);
-                  std::cout << "\t\t\t";
+                  std::cout << "\t\t\t\t";
                   print_none();
                   std::cout << "\n";
                 }
