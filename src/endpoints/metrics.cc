@@ -1,5 +1,6 @@
 #include "motis/endpoints/metrics.h"
 
+#include <chrono>
 #include <functional>
 #include <iostream>
 
@@ -11,6 +12,7 @@
 #include "nigiri/rt/frun.h"
 #include "nigiri/rt/rt_timetable.h"
 #include "nigiri/timetable.h"
+#include "nigiri/timetable_metrics.h"
 #include "nigiri/types.h"
 
 #include "motis/data.h"
@@ -70,8 +72,10 @@ void update_all_runs_metrics(nigiri::timetable const& tt,
               n::unixtime_t::duration{1}};
       if (active.overlaps(time_interval)) {
         auto const provider_idx = fr[0].get_provider_idx();
-        metric_by_agency.at(provider_idx.v_).first.get().Increment();
-        metric_by_agency.at(provider_idx.v_).second.get().Increment();
+        if (provider_idx != n::provider_idx_t::invalid()) {
+          metric_by_agency.at(provider_idx.v_).first.get().Increment();
+          metric_by_agency.at(provider_idx.v_).second.get().Increment();
+        }
       }
     }
   }
@@ -103,11 +107,34 @@ void update_all_runs_metrics(nigiri::timetable const& tt,
                                     tt.event_time(t, to, n::event_type::kArr) +
                                         n::unixtime_t::duration{1}})) {
           auto fr = n::rt::frun::from_t(tt, nullptr, t);
-          metric_by_agency.at(fr[0].get_provider_idx().v_)
-              .first.get()
-              .Increment();
+          auto const provider_idx = fr[0].get_provider_idx();
+          if (provider_idx != n::provider_idx_t::invalid()) {
+            metric_by_agency.at(provider_idx.v_).first.get().Increment();
+          }
         }
       }
+    }
+  }
+
+  if (metrics.timetable_first_day_timestamp_.Collect().empty()) {
+    auto const m = get_metrics(tt);
+    constexpr auto const kEndOfDay =
+        std::chrono::days{1} - std::chrono::seconds{1};
+    auto const from = std::chrono::duration_cast<std::chrono::seconds>(
+        tt.internal_interval().from_.time_since_epoch());
+    for (auto src = n::source_idx_t{0U}; src != tt.n_sources(); ++src) {
+      auto const& fm = m.feeds_[src];
+      auto const labels =
+          prometheus::Labels{{"tag", std::string{tags.get_tag(src)}}};
+      metrics.timetable_first_day_timestamp_.Add(
+          labels, static_cast<double>((from + date::days{fm.first_}).count()));
+      metrics.timetable_last_day_timestamp_.Add(
+          labels, static_cast<double>(
+                      (from + date::days{fm.last_} + kEndOfDay).count()));
+      metrics.timetable_locations_count_.Add(labels, fm.locations_);
+      metrics.timetable_trips_count_.Add(labels, fm.trips_);
+      metrics.timetable_transports_x_days_count_.Add(
+          labels, static_cast<double>(fm.transport_days_));
     }
   }
 }
@@ -117,6 +144,8 @@ net::reply metrics::operator()(net::route_request const& req, bool) const {
               "no metrics initialized");
   auto const rt = rt_;
   update_all_runs_metrics(*tt_, rt->rtt_.get(), *tags_, *metrics_);
+  metrics_->total_trips_with_realtime_count_.Set(
+      static_cast<double>(rt->rtt_->rt_transport_src_.size()));
   auto res = net::web_server::string_res_t{boost::beast::http::status::ok,
                                            req.version()};
   res.insert(boost::beast::http::field::content_type,

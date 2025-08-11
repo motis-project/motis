@@ -186,7 +186,7 @@ bool config::has_gbfs_feeds() const {
 
 bool config::has_odm() const { return odm_.has_value(); }
 
-std::size_t config::n_threads() const {
+unsigned config::n_threads() const {
   return server_
       .and_then([](config::server const& s) {
         return s.n_threads_ == 0U ? std::nullopt : std::optional{s.n_threads_};

@@ -28,6 +28,8 @@ struct journey;
 
 namespace motis::odm {
 
+struct prima;
+
 struct meta_router {
   meta_router(ep::routing const&,
               api::plan_params const&,
@@ -45,11 +47,13 @@ struct meta_router {
               bool odm_post_transit,
               bool odm_direct,
               unsigned api_version);
+  ~meta_router();
 
   api::plan_response run();
 
   struct routing_result {
-    explicit routing_result(
+    routing_result() = default;
+    routing_result(
         nigiri::routing::routing_result<nigiri::routing::raptor_stats> rr)
         : journeys_{*rr.journeys_},
           interval_{rr.interval_},
@@ -110,6 +114,8 @@ private:
   std::optional<std::vector<std::string>> const& dest_rental_providers_;
   bool start_ignore_rental_return_constraints_{};
   bool dest_ignore_rental_return_constraints_{};
+
+  std::unique_ptr<prima> p_;
 };
 
 }  // namespace motis::odm

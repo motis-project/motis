@@ -134,6 +134,7 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
                                           *d.tt_, *rtt, g.src_, g.tag_,
                                           get_http_body(res));
                                     } catch (std::exception const& e) {
+                                      g.metrics_.updates_error_.Increment();
                                       n::log(n::log_lvl::error, "motis.rt",
                                              "RT FETCH ERROR: tag={}, error={}",
                                              g.tag_, e.what());
@@ -156,6 +157,7 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
                                       ret = auser.consume_update(
                                           get_http_body(res), *rtt);
                                     } catch (std::exception const& e) {
+                                      a.metrics_.updates_error_.Increment();
                                       n::log(n::log_lvl::error, "motis.rt",
                                              "VDV AUS FETCH ERROR: tag={}, "
                                              "url={}, error={}",

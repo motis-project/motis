@@ -33,6 +33,7 @@
 #include "nigiri/rt/rt_timetable.h"
 #include "nigiri/shapes_storage.h"
 #include "nigiri/timetable.h"
+#include "nigiri/timetable_metrics.h"
 
 #include "osr/extract/extract.h"
 #include "osr/lookup.h"
@@ -298,7 +299,7 @@ data import(config const& c, fs::path const& data_path, bool const write) {
                               {
                                   .link_stop_distance_ = t.link_stop_distance_,
                                   .default_tz_ = dc.default_timezone_.value_or(
-                                      dc.default_timezone_.value_or("")),
+                                      t.default_timezone_.value_or("")),
                                   .bikes_allowed_default_ = to_clasz_bool_array(
                                       dc.default_bikes_allowed_,
                                       dc.clasz_bikes_allowed_),
@@ -320,6 +321,8 @@ data import(config const& c, fs::path const& data_path, bool const write) {
         if (write) {
           d.tt_->write(data_path / "tt.bin");
           d.tags_->write(data_path / "tags.bin");
+          std::ofstream(data_path / "timetable_metrics.json")
+              << to_str(n::get_metrics(*d.tt_), *d.tt_);
         }
 
         d.init_rtt();

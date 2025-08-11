@@ -49,6 +49,15 @@ inline void add_trip_id_opt(boost::program_options::options_description& desc) {
       "segmentation is not possible.");
 }
 
+inline void add_log_level_opt(boost::program_options::options_description& desc,
+                              std::string& log_lvl) {
+  desc.add_options()(
+      "log-level",
+      boost::program_options::value(&log_lvl)->default_value(log_lvl),
+      "Set the log level.\n"
+      "Supported log levels: ERROR, INFO, DEBUG");
+}
+
 inline boost::program_options::variables_map parse_opt(
     int ac, char** av, boost::program_options::options_description& desc) {
   namespace po = boost::program_options;

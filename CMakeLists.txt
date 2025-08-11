@@ -82,6 +82,7 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
             -Wno-documentation-deprecated-sync
             -Wno-float-equal
             -Wno-deprecated-declarations
+            -Wno-reserved-identifier
             -Werror)
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
     set(motis-compile-options -Wall -Wextra -Werror -Wno-unknown-pragmas -Wno-deprecated-declarations)
@@ -113,8 +114,8 @@ target_link_libraries(motislib
     nigiri
     osr
     adr
+    ctx
     boost-json
-    Boost::fiber
     motis-api
     reflectcpp
     web-server
@@ -168,10 +169,12 @@ target_compile_options(motis-test PRIVATE ${motis-compile-options})
 set_property(
     TARGET motis tiles tiles-import-library
     APPEND PROPERTY COMPILE_DEFINITIONS TILES_GLOBAL_PROGRESS_TRACKER=1)
+file (CREATE_LINK ${CMAKE_SOURCE_DIR}/deps/tiles/profile ${CMAKE_BINARY_DIR}/tiles-profiles SYMBOLIC)
 
 # --- MIMALLOC ---
 if (MOTIS_MIMALLOC)
     target_link_libraries(motis ${motis-mimalloc-lib})
+    target_compile_definitions(motis PUBLIC USE_MIMALLOC=1)
     if(WIN32)
         add_custom_command(
                 TARGET motis POST_BUILD
@@ -183,11 +186,22 @@ if (MOTIS_MIMALLOC)
         add_custom_command(
                 TARGET motis POST_BUILD
                 COMMAND "${CMAKE_COMMAND}" -E copy
-                "${CMAKE_CURRENT_BINARY_DIR}/deps/mimalloc/mimalloc-redirect.dll"
+                "${CMAKE_SOURCE_DIR}/deps/mimalloc/bin/mimalloc-redirect.dll"
                 $<TARGET_FILE_DIR:motis>
                 COMMENT "Copy mimalloc-redirect.dll to output directory"
         )
+        add_custom_command(
+                TARGET motis POST_BUILD
+                COMMAND "${CMAKE_SOURCE_DIR}/deps/mimalloc/bin/minject.exe"
+                --force --inplace
+                $<$<CONFIG:Debug>:--postfix=debug>
+                $<TARGET_FILE:motis>
+                COMMENT "Ensure mimalloc.dll is loaded first"
+        )
     endif()
+    if (MSVC)
+        target_link_options(motis PUBLIC "/include:mi_version")
+    endif ()
 endif()
 
 
@@ -197,6 +211,7 @@ add_custom_target(motis-web-ui
         WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/ui"
         VERBATIM
 )
+file (CREATE_LINK ${CMAKE_SOURCE_DIR}/ui/build ${CMAKE_BINARY_DIR}/ui SYMBOLIC)
 
 foreach(t adr osr nigiri gtfsrt
         geo tiles tiles-import-library
