@@ -73,6 +73,7 @@ int generate(int ac, char** av) {
   auto n = 100U;
   auto first_day = std::optional<date::sys_days>{};
   auto last_day = std::optional<date::sys_days>{};
+  auto time_of_day = std::optional<std::uint32_t>{};
   auto modes = std::optional<std::vector<api::ModeEnum>>{};
   auto max_dist = 800.0;  // m
   auto use_walk = false;
@@ -118,6 +119,10 @@ int generate(int ac, char** av) {
     }
   };
 
+  auto const parse_time_of_day = [&](std::uint32_t const h) {
+    time_of_day = h % 24U;
+  };
+
   auto desc = po::options_description{"Options"};
   desc.add_options()  //
       ("help", "Prints this help message")  //
@@ -126,8 +131,12 @@ int generate(int ac, char** av) {
        "first day of query generation, format: YYYY-MM-DD")  //
       ("last_day", po::value<std::string>()->notifier(parse_last_day),
        "last day of query generation, format: YYYY-MM-DD")  //
+      ("time_of_day", po::value<std::uint32_t>()->notifier(parse_time_of_day),
+       "fixes the time of day of all queries to the given number of hours "
+       "after midnight, i.e., 0 - 23")  //
       ("modes,m", po::value<std::string>()->notifier(parse_modes),
-       "comma-separated list of modes for first/last mile and direct (requires "
+       "comma-separated list of modes for first/last mile and "
+       "direct (requires "
        "street routing), supported: WALK, BIKE, CAR, ODM")  //
       ("all,a",
        "requires OSM nodes to be accessible by all specified modes, otherwise "
@@ -270,7 +279,7 @@ int generate(int ac, char** av) {
                 rand_in(0U, static_cast<std::uint32_t>(
                                 (*last_day - *first_day).count())) *
                     date::days{1U} +
-                rand_in(6U, 18U) * 1h;
+                (time_of_day ? *time_of_day : rand_in(6U, 18U)) * 1h;
       out << p.to_url("/api/v1/plan") << "\n";
     }
   }
