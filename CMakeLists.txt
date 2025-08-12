@@ -82,6 +82,7 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
             -Wno-documentation-deprecated-sync
             -Wno-float-equal
             -Wno-deprecated-declarations
+            -Wno-reserved-identifier
             -Werror)
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
     set(motis-compile-options -Wall -Wextra -Werror -Wno-unknown-pragmas -Wno-deprecated-declarations)
@@ -113,8 +114,8 @@ target_link_libraries(motislib
     nigiri
     osr
     adr
+    ctx
     boost-json
-    Boost::fiber
     motis-api
     reflectcpp
     web-server

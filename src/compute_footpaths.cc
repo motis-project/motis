@@ -177,14 +177,14 @@ elevator_footpath_map_t compute_footpaths(
                     [](n::footpath, n::footpath) { assert(false); },
                     [&](utl::op const op, n::footpath const x) {
                       if (op == utl::op::kDel) {
-                        auto const duration =
-                            n::duration_t{static_cast<int>(std::ceil(
-                                (geo::distance(
-                                     tt.locations_.coordinates_[l],
-                                     tt.locations_.coordinates_[x.target()]) /
-                                 0.7) /
-                                60.0))};
-                        s.missing_.emplace_back(x.target(), duration);
+                        auto const dist = geo::distance(
+                            tt.locations_.coordinates_[l],
+                            tt.locations_.coordinates_[x.target()]);
+                        if (mode.extend_missing_ < 100.0) {
+                          auto const duration = n::duration_t{
+                              static_cast<int>(std::ceil((dist / 0.7) / 60.0))};
+                          s.missing_.emplace_back(x.target(), duration);
+                        }
                       }
                     }});
 
