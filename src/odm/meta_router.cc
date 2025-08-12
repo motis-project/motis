@@ -176,30 +176,38 @@ n::duration_t init_direct(std::vector<direct_ride>& direct_rides,
       query.elevationCosts_, kODMMaxDuration, query.maxMatchingDistance_,
       kODMDirectFactor, api_version);
 
-auto const step =
-    std::chrono::duration_cast<n::unixtime_t::duration>(kODMDirectPeriod);
-if (odm_direct_duration < kODMMaxDuration) {
-  if (query.arriveBy_) {
-    auto const base_time = intvl.to_ - odm_direct_duration;
-    auto const midnight = std::chrono::floor<std::chrono::days>(base_time);
-    auto const mins_since_midnight = std::chrono::duration_cast<std::chrono::minutes>(base_time - midnight);
-    auto const floored_5_min = (mins_since_midnight.count() / 5) * 5;
-    auto const start_time = midnight + std::chrono::minutes(floored_5_min);
-    for (auto arr = start_time; intvl.contains(arr); arr -= step) {
-      direct_rides.push_back({.dep_ = arr - odm_direct_duration, .arr_ = arr});
+  auto const step =
+      std::chrono::duration_cast<n::unixtime_t::duration>(kODMDirectPeriod);
+  if (odm_direct_duration < kODMMaxDuration) {
+    if (query.arriveBy_) {
+      auto const base_time = intvl.to_ - odm_direct_duration;
+      auto const midnight = std::chrono::floor<std::chrono::days>(base_time);
+      auto const mins_since_midnight =
+          std::chrono::duration_cast<std::chrono::minutes>(base_time -
+                                                           midnight);
+      auto const floored_5_min = (mins_since_midnight.count() / 5) * 5;
+      auto const start_time = midnight + std::chrono::minutes(floored_5_min);
+      for (auto arr = start_time; intvl.contains(arr); arr -= step) {
+        direct_rides.push_back(
+            {.dep_ = arr - odm_direct_duration, .arr_ = arr});
+      }
+    } else {
+      auto const base_start = intvl.from_;
+      auto const midnight_start =
+          std::chrono::floor<std::chrono::days>(base_start);
+      auto const mins_since_midnight_start =
+          std::chrono::duration_cast<std::chrono::minutes>(base_start -
+                                                           midnight_start);
+      auto const ceiled_5_min_start =
+          ((mins_since_midnight_start.count() + 4) / 5) * 5;
+      auto const start_time_for_depart =
+          midnight_start + std::chrono::minutes(ceiled_5_min_start);
+      for (auto dep = start_time_for_depart; intvl.contains(dep); dep += step) {
+        direct_rides.push_back(
+            {.dep_ = dep, .arr_ = dep + odm_direct_duration});
+      }
     }
   } else {
-    auto const base_start = intvl.from_;
-    auto const midnight_start = std::chrono::floor<std::chrono::days>(base_start);
-    auto const mins_since_midnight_start = std::chrono::duration_cast<std::chrono::minutes>(base_start - midnight_start);
-    auto const ceiled_5_min_start = ((mins_since_midnight_start.count() + 4) / 5) * 5;
-    auto const start_time_for_depart = midnight_start + std::chrono::minutes(ceiled_5_min_start);
-    for (auto dep = start_time_for_depart; intvl.contains(dep); dep += step) {
-      direct_rides.push_back({.dep_ = dep, .arr_ = dep + odm_direct_duration});
-    }
-  }
-}
- else {
     fmt::println(
         "[init] No direct ODM connection, from: {}, to: {}: "
         "odm_direct_duration >= "
