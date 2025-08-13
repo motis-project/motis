@@ -158,10 +158,15 @@ void config::verify_input_files_exist() const {
               tiles_.value_or(tiles{}).coastline_.value_or(""));
 
   if (timetable_) {
-    for (auto const& [_, d] : timetable_->datasets_) {
+    for (auto const& [tag, d] : timetable_->datasets_) {
       utl::verify(d.path_.starts_with("\n#") || fs::is_directory(d.path_) ||
                       fs::is_regular_file(d.path_),
-                  "timetable dataset does not exist: {}", d.path_);
+                  "timetable dataset {} does not exist: {}", tag, d.path_);
+
+      utl::verify(
+          !d.user_script_.has_value() || fs::is_regular_file(*d.user_script_),
+          "user script for {} not found at path: \"{}\"", tag,
+          d.user_script_.value_or(""));
 
       if (d.clasz_bikes_allowed_.has_value()) {
         for (auto const& c : *d.clasz_bikes_allowed_) {

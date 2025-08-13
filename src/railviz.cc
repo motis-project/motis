@@ -319,7 +319,8 @@ api::trips_response get_trains(tag_lookup const& tags,
                                platform_matches_t const* matches,
                                railviz_static_index::impl const& static_index,
                                railviz_rt_index::impl const& rt_index,
-                               api::trips_params const& query) {
+                               api::trips_params const& query,
+                               unsigned const api_version) {
   // Parse query.
   auto const zoom_level = static_cast<int>(query.zoom_);
   auto const min = parse_location(query.min_);
@@ -374,8 +375,12 @@ api::trips_response get_trains(tag_lookup const& tags,
 
     return {.trips_ = {api::TripInfo{
                 .tripId_ = tags.id(tt, from, n::event_type::kDep),
-                .routeShortName_ =
-                    std::string{from.trip_display_name(n::event_type::kDep)}}},
+                .routeShortName_ = api_version < 4 ? std::optional{std::string{
+                                                         from.display_name()}}
+                                                   : std::nullopt,
+                .displayName_ = api_version >= 4 ? std::optional{std::string{
+                                                       from.display_name()}}
+                                                 : std::nullopt}},
             .routeColor_ =
                 to_str(from.get_route_color(nigiri::event_type::kDep).color_),
             .mode_ = to_mode(from.get_clasz(n::event_type::kDep)),

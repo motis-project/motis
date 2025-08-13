@@ -43,8 +43,8 @@ void update_all_runs_metrics(nigiri::timetable const& tt,
   metric_by_agency.reserve(tt.n_agencies());
   for (auto i = nigiri::provider_idx_t{0}; i < tt.n_agencies(); ++i) {
     auto const& p = tt.providers_[i];
-    auto const agency_name = tt.strings_.get(p.long_name_);
-    auto const agency_id = tt.strings_.get(p.short_name_);
+    auto const agency_name = tt.strings_.get(p.name_);
+    auto const agency_id = tt.strings_.get(p.id_);
     auto const labels =
         prometheus::Labels{{"tag", std::string{tags.get_tag(p.src_)}},
                            {"agency_name", std::string{agency_name}},
