@@ -286,6 +286,7 @@ std::vector<n::rt::run> get_events(
 api::stoptimes_response stop_times::operator()(
     boost::urls::url_view const& url) const {
   auto const query = api::stoptimes_params{url.params()};
+  auto const api_version = url.encoded_path().contains("/v1/") ? 1U : 2U;
 
   auto const max_results = config_.limits_.value().stoptimes_max_results_;
   utl::verify(query.n_ < max_results, "n={} > {} not allowed", query.n_,
@@ -392,18 +393,26 @@ api::stoptimes_response stop_times::operator()(
                 .realTime_ = r.is_rt(),
                 .headsign_ = std::string{s.direction(ev_type)},
                 .agencyId_ =
-                    std::string{
-                        tt_.strings_.try_get(agency.short_name_).value_or("?")},
+                    std::string{tt_.strings_.try_get(agency.id_).value_or("?")},
                 .agencyName_ =
                     std::string{
-                        tt_.strings_.try_get(agency.long_name_).value_or("?")},
+                        tt_.strings_.try_get(agency.name_).value_or("?")},
                 .agencyUrl_ =
                     std::string{tt_.strings_.try_get(agency.url_).value_or("")},
                 .routeColor_ = to_str(s.get_route_color(ev_type).color_),
                 .routeTextColor_ =
                     to_str(s.get_route_color(ev_type).text_color_),
                 .tripId_ = tags_.id(tt_, s, ev_type),
-                .routeShortName_ = std::string{s.trip_display_name(ev_type)},
+                .routeType_ =
+                    s.route_type().and_then([](n::route_type_t const x) {
+                      return std::optional{to_idx(x)};
+                    }),
+                .routeShortName_ =
+                    std::string{api_version == 1U
+                                    ? s.display_name(ev_type)
+                                    : s.route_short_name(ev_type)},
+                .routeLongName_ = std::string{s.route_long_name(ev_type)},
+                .tripShortName_ = std::string{s.trip_short_name(ev_type)},
                 .pickupDropoffType_ =
                     in_out_allowed ? api::PickupDropoffTypeEnum::NORMAL
                                    : api::PickupDropoffTypeEnum::NOT_ALLOWED,

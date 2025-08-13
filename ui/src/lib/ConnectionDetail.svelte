@@ -21,7 +21,7 @@
 		itinerary: Itinerary;
 	} = $props();
 
-	const isRelevantLeg = (l: Leg) => l.duration !== 0 || l.routeShortName;
+	const isRelevantLeg = (l: Leg) => l.duration !== 0 || l.displayName;
 	const lastLeg = $derived(itinerary.legs.findLast(isRelevantLeg));
 </script>
 
@@ -62,7 +62,7 @@
 				{@const switchTo = (p as Place & { switchTo: Leg }).switchTo}
 				<div class="ml-4 flex items-center text-sm">
 					{t.continuesAs}
-					{switchTo.routeShortName!}
+					{switchTo.displayName!}
 					<ArrowRight class="mx-1 size-4" />
 					{switchTo.headsign}
 				</div>
@@ -219,10 +219,10 @@
 		{@const next = isLast ? undefined : itinerary.legs[i + 1]}
 		{@const prevTransitLeg = itinerary.legs.slice(0, i).find((l) => l.tripId)}
 
-		{#if l.routeShortName}
+		{#if l.displayName}
 			<div class="w-full flex justify-between items-center space-x-1">
 				<Route {onClickTrip} {l} />
-				{#if pred && (pred.from.track || isRelevantLeg(pred)) && (i != 1 || pred.routeShortName)}
+				{#if pred && (pred.from.track || isRelevantLeg(pred)) && (i != 1 || pred.displayName)}
 					<div class="border-t h-0 grow shrink"></div>
 					<div class="text-sm text-muted-foreground leading-none px-2 text-center">
 						{#if pred.from.track}
@@ -338,7 +338,7 @@
 					<div class="pb-2"></div>
 				{/if}
 			</div>
-		{:else if !(isLast && !isRelevantLeg(l)) && ((i == 0 && isRelevantLeg(l)) || !next || !next.routeShortName || l.mode != 'WALK' || (pred && (pred.mode == 'BIKE' || (l.mode == 'WALK' && pred.mode == 'CAR') || pred.mode == 'RENTAL')))}
+		{:else if !(isLast && !isRelevantLeg(l)) && ((i == 0 && isRelevantLeg(l)) || !next || !next.displayName || l.mode != 'WALK' || (pred && (pred.mode == 'BIKE' || (l.mode == 'WALK' && pred.mode == 'CAR') || pred.mode == 'RENTAL')))}
 			<Route {onClickTrip} {l} />
 			<div class="pt-4 pl-6 border-l-4 left-4 relative" style={routeBorderColor(l)}>
 				<div class="grid gap-y-6 grid-cols-[max-content_max-content_auto] items-center">

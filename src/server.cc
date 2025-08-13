@@ -87,10 +87,14 @@ int server(data d, config const& c, std::string_view const motis_version) {
   GET<ep::routing>(qr, "/api/v1/plan", d);
   GET<ep::routing>(qr, "/api/v2/plan", d);
   GET<ep::routing>(qr, "/api/v3/plan", d);
+  GET<ep::routing>(qr, "/api/v4/plan", d);
   GET<ep::stop_times>(qr, "/api/v1/stoptimes", d);
+  GET<ep::stop_times>(qr, "/api/v4/stoptimes", d);
   GET<ep::trip>(qr, "/api/v1/trip", d);
   GET<ep::trip>(qr, "/api/v2/trip", d);
+  GET<ep::trip>(qr, "/api/v4/trip", d);
   GET<ep::trips>(qr, "/api/v1/map/trips", d);
+  GET<ep::trips>(qr, "/api/v4/map/trips", d);
   GET<ep::stops>(qr, "/api/v1/map/stops", d);
   GET<ep::one_to_all>(qr, "/api/experimental/one-to-all", d);
   GET<ep::one_to_all>(qr, "/api/v1/one-to-all", d);
