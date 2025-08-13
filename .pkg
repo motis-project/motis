@@ -37,7 +37,7 @@
 [reflect-cpp]
   url=git@github.com:motis-project/reflect-cpp.git
   branch=main
-  commit=165b617ac54400bf34f261b07376437157f19a63
+  commit=47bdab34ec04617813f8288375d22fcc7cdf81ce
 [tiles]
   url=git@github.com:motis-project/tiles.git
   branch=master

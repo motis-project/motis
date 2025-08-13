@@ -21,13 +21,11 @@ namespace fs = std::filesystem;
 
 namespace motis {
 
-template <rfl::internal::StringLiteral Name, size_t I = 0, char... Chars>
+template <rfl::internal::StringLiteral Name>
 consteval auto drop_last() {
-  if constexpr (I == Name.arr_.size() - 2) {
-    return rfl::internal::StringLiteral<sizeof...(Chars) + 1>(Chars...);
-  } else {
-    return drop_last<Name, I + 1, Chars..., Name.arr_[I]>();
-  }
+  return []<size_t... Is>(std::index_sequence<Is...>) {
+    return rfl::internal::StringLiteral<Name.arr_.size() - 1>(Name.arr_[Is]...);
+  }(std::make_index_sequence<Name.arr_.size() - 2>{});
 }
 
 struct drop_trailing {
@@ -163,10 +161,9 @@ void config::verify_input_files_exist() const {
                       fs::is_regular_file(d.path_),
                   "timetable dataset {} does not exist: {}", tag, d.path_);
 
-      utl::verify(
-          !d.user_script_.has_value() || fs::is_regular_file(*d.user_script_),
-          "user script for {} not found at path: \"{}\"", tag,
-          d.user_script_.value_or(""));
+      utl::verify(!d.script_.has_value() || fs::is_regular_file(*d.script_),
+                  "user script for {} not found at path: \"{}\"", tag,
+                  d.script_.value_or(""));
 
       if (d.clasz_bikes_allowed_.has_value()) {
         for (auto const& c : *d.clasz_bikes_allowed_) {

@@ -151,8 +151,8 @@ data import(config const& c, fs::path const& data_path, bool const write) {
           h, c.osr_footpath_, hash_file(d.path_), d.default_bikes_allowed_,
           d.default_cars_allowed_, d.clasz_bikes_allowed_,
           d.clasz_cars_allowed_, d.default_timezone_, d.extend_calendar_);
-      if (d.user_script_.has_value()) {
-        h = cista::build_seeded_hash(h, hash_file(*d.user_script_));
+      if (d.script_.has_value()) {
+        h = cista::build_seeded_hash(h, hash_file(*d.script_));
       }
     }
 
@@ -310,7 +310,7 @@ data import(config const& c, fs::path const& data_path, bool const write) {
                            dc.default_cars_allowed_, dc.clasz_cars_allowed_),
                        .extend_calendar_ = dc.extend_calendar_,
                        .user_script_ =
-                           dc.user_script_
+                           dc.script_
                                .and_then([](std::string const& path) {
                                  return std::optional{std::string{
                                      cista::mmap{path.c_str(),
