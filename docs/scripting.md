@@ -1,8 +1,26 @@
 # User Scripts
 
-MOTIS can post-process GTFS static timetable data using lua scripts. The main purpose is to fix data in case the MOTIS user is not the owner of the data nd the data owner cannot or does not want to fix the data. In some cases, the scripts can be used to homogenize data across different datasets. Currently, post-processing is available for the following entities:
+MOTIS can post-process GTFS static timetable data using [Lua](https://www.lua.org/) scripts. The main purpose is to fix data in case the MOTIS user is not the owner of the data nd the data owner cannot or does not want to fix the data. In some cases, the scripts can be used to homogenize data across different datasets. Currently, post-processing is available for the following entities:
 
 If no script is defined or a processing function is not given for a type, the default behaviour will be applied.
+
+
+## Configuration
+
+Scripts are an optional key for each dataset in the timetable. An empty string or not setting the property indicates no processing. Any non-empty string will be interpreted as file path to a `.lua` file. The file has to exist.
+
+Example configuration with script property set:
+
+```
+timetable:
+  datasets:
+    nl:
+      path: nl_ovapi.gtfs.zip
+      rt:
+        - url: https://gtfs.ovapi.nl/nl/trainUpdates.pb
+        - url: https://gtfs.ovapi.nl/nl/tripUpdates.pb
+      script: my-script.lua
+```
 
 ## Types
 
