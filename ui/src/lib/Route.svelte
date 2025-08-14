@@ -19,7 +19,7 @@
 	class={cn(
 		'flex items-center text-nowrap rounded-full pl-2 pr-1 h-8 font-bold',
 		className,
-		l.routeShortName ? 'pr-3' : undefined
+		l.displayName ? 'pr-3' : undefined
 	)}
 	style={routeColor(l)}
 	onclick={() => {
@@ -34,6 +34,6 @@
 		<use xlink:href={`#${modeIcon}`}></use>
 	</svg>
 	<div class="text-center">
-		{l.routeShortName}
+		{l.displayName}
 	</div>
 </button>

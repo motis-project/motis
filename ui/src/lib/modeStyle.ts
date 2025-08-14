@@ -2,7 +2,7 @@ import type { Mode, Rental } from './api/openapi';
 
 export type Colorable = { routeColor?: string; routeTextColor?: string; mode: Mode };
 
-export type TripInfo = { tripId?: string; routeShortName?: string };
+export type TripInfo = { tripId?: string; displayName?: string };
 
 export type RentalInfo = { rental?: Rental };
 

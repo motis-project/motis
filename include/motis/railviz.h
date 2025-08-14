@@ -33,6 +33,7 @@ api::trips_response get_trains(tag_lookup const&,
                                platform_matches_t const* matches,
                                railviz_static_index::impl const&,
                                railviz_rt_index::impl const&,
-                               api::trips_params const&);
+                               api::trips_params const&,
+                               unsigned api_version);
 
 }  // namespace motis

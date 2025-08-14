@@ -51,8 +51,8 @@
 		<svg class="relative mr-1 w-4 h-4 rounded-full">
 			<use xlink:href={`#${getModeStyle(l)[0]}`}></use>
 		</svg>
-		{#if l.routeShortName}
-			{l.routeShortName}
+		{#if l.displayName}
+			{l.displayName}
 		{:else}
 			{formatDurationSec(l.duration)}
 		{/if}
@@ -152,7 +152,7 @@
 									</div>
 									<Separator class="my-2" />
 									<div class="mt-4 flex flex-wrap gap-x-3 gap-y-3">
-										{#each it.legs.filter((l, i) => (i == 0 && l.duration > 1) || (i == it.legs.length - 1 && l.duration > 1) || l.routeShortName || l.mode != 'WALK') as l, i (i)}
+										{#each it.legs.filter((l, i) => (i == 0 && l.duration > 1) || (i == it.legs.length - 1 && l.duration > 1) || l.displayName || l.mode != 'WALK') as l, i (i)}
 											{@render legSummary(l)}
 										{/each}
 									</div>

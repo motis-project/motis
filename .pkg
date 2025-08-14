@@ -1,7 +1,7 @@
 [nigiri]
   url=git@github.com:motis-project/nigiri.git
   branch=master
-  commit=c1c639aee3ba83af56474f938a120895aad0eefa
+  commit=97223a23c492bf4ec20f9d6e80f7c572f5980f47
 [cista]
   url=git@github.com:felixguendling/cista.git
   branch=master
@@ -37,7 +37,7 @@
 [reflect-cpp]
   url=git@github.com:motis-project/reflect-cpp.git
   branch=main
-  commit=165b617ac54400bf34f261b07376437157f19a63
+  commit=c19fb3257ce2b25a1c9a22ffc65bea99ad7f0b88
 [tiles]
   url=git@github.com:motis-project/tiles.git
   branch=master
