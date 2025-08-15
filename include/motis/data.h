@@ -11,6 +11,7 @@
 
 #include "osr/types.h"
 
+#include "motis/adr_extend_tt.h"
 #include "motis/compute_footpaths.h"
 #include "motis/config.h"
 #include "motis/fwd.h"
@@ -68,16 +69,19 @@ struct data {
 
   auto cista_members() {
     // !!! Remember to add all new members !!!
-    return std::tie(config_, t_, r_, tc_, w_, pl_, l_, elevations_, tt_, tags_,
-                    location_rtree_, elevator_nodes_, shapes_, railviz_static_,
-                    matches_, way_matches_, rt_, gbfs_, odm_bounds_,
-                    flex_areas_, metrics_, auser_);
+    return std::tie(config_, t_, location_extra_place_, tz_, r_, tc_, w_, pl_,
+                    l_, elevations_, tt_, tags_, location_rtree_,
+                    elevator_nodes_, shapes_, railviz_static_, matches_,
+                    way_matches_, rt_, gbfs_, odm_bounds_, flex_areas_,
+                    metrics_, auser_);
   }
 
   std::filesystem::path path_;
   config config_;
 
   cista::wrapped<adr::typeahead> t_;
+  cista::wrapped<location_place_map_t> location_extra_place_;
+  ptr<vector_map<adr_extra_place_idx_t, date::time_zone const*>> tz_;
   ptr<adr::reverse> r_;
   ptr<adr::cache> tc_;
   ptr<osr::ways> w_;
