@@ -217,6 +217,22 @@ paths:
             $ref: '#/components/schemas/ElevationCosts'
             default: NONE
 
+        - name: useStopCoordinates
+          in: query
+          required: false
+          description: |
+            Optional. Default is `false`.
+            
+            - If set to `true`, the stop ID will first be resolved to coordinates before routing.
+              This means that preTransit and postTransit routing settings will be applied and the search will route to nearby stops with the specified profiles.
+            - If set to `false`, the stop ID will be used as is. This means there will be no map (OSM) based routing and no preTransit and postTransit settings will apply.
+              This mode works even if the server has no OSM data loaded.
+            
+            If the server has no OSM data loaded, or `street_routing` disabled, this option has no effect and `useStopCoordinates=false` will be used in any case.
+          schema:
+            type: boolean
+            default: false
+
         - name: useRoutedTransfers
           in: query
           required: false

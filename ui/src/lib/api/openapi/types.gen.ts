@@ -1377,6 +1377,18 @@ export type PlanData = {
          */
         useRoutedTransfers?: boolean;
         /**
+         * Optional. Default is `false`.
+         *
+         * - If set to `true`, the stop ID will first be resolved to coordinates before routing.
+         * This means that preTransit and postTransit routing settings will be applied and the search will route to nearby stops with the specified profiles.
+         * - If set to `false`, the stop ID will be used as is. This means there will be no map (OSM) based routing and no preTransit and postTransit settings will apply.
+         * This mode works even if the server has no OSM data loaded.
+         *
+         * If the server has no OSM data loaded, or `street_routing` disabled, this option has no effect and `useStopCoordinates=false` will be used in any case.
+         *
+         */
+        useStopCoordinates?: boolean;
+        /**
          * List of via stops to visit (only stop IDs, no coordinates allowed for now).
          * Also see the optional parameter `viaMinimumStay` to set a set a minimum stay duration for each via stop.
          *
