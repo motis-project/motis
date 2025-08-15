@@ -17,6 +17,7 @@
 #include "nigiri/special_stations.h"
 #include "nigiri/types.h"
 
+#include "adr/typeahead.h"
 #include "motis-api/motis-api.h"
 #include "motis/constants.h"
 #include "motis/flex/flex_output.h"
@@ -188,6 +189,17 @@ std::optional<std::vector<api::Alert>> get_alerts(
   return alerts.empty() ? std::nullopt : std::optional{std::move(alerts)};
 }
 
+std::optional<date::time_zone const*> get_tz(
+    n::timetable const& tt,
+    location_place_map_t const* lp,
+    vector_map<adr_extra_place_idx_t, date::time_zone const*> const* tz,
+    n::location_idx_t const l) {
+  auto const p = tt.locations_.parents_[l];
+  auto const x = p == n::location_idx_t::invalid() ? l : p;
+  auto const l_tz = (!lp || !tz) ? nullptr : tz->at(lp->at(x));
+  return l_tz == nullptr ? std::nullopt : std::optional{l_tz};
+}
+
 api::Itinerary journey_to_response(
     osr::ways const* w,
     osr::lookup const* l,
@@ -201,6 +213,8 @@ api::Itinerary journey_to_response(
     osr::elevation_storage const* elevations,
     n::shapes_storage const* shapes,
     gbfs::gbfs_routing_data& gbfs_rd,
+    location_place_map_t const* lp,
+    vector_map<adr_extra_place_idx_t, date::time_zone const*> const* tz,
     n::routing::journey const& j,
     place_t const& start,
     place_t const& dest,
@@ -348,6 +362,10 @@ api::Itinerary journey_to_response(
                               n::event_type const ev_type) {
       auto p = ::motis::to_place(&tt, &tags, w, pl, matches, s, start, dest);
       p.alerts_ = get_alerts(*s.fr_, std::pair{s, ev_type}, language);
+      p.tz_ = get_tz(tt, lp, tz, s.get_location_idx())
+                  .and_then([](date::time_zone const* tz) {
+                    return std::optional{tz->name()};
+                  });
       return p;
     };
 

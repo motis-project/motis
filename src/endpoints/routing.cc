@@ -770,7 +770,8 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                       to_seconds(j.arrival_time() - j.departure_time())));
               return journey_to_response(
                   w_, l_, pl_, *tt_, *tags_, fa_, e, rtt, matches_, elevations_,
-                  shapes_, gbfs_rd, j, start, dest, cache, blocked.get(),
+                  shapes_, gbfs_rd, lp_, tz_, j, start, dest, cache,
+                  blocked.get(),
                   query.requireCarTransport_ && query.useRoutedTransfers_,
                   query.pedestrianProfile_, query.elevationCosts_,
                   query.joinInterlinedLegs_, query.detailedTransfers_,

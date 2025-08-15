@@ -19,11 +19,10 @@ namespace motis {
 constexpr auto const kClaszMax =
     static_cast<std::underlying_type_t<n::clasz>>(n::kNumClasses);
 
-void adr_extend_tt(nigiri::timetable const& tt,
-                   a::area_database const* area_db,
-                   a::typeahead& t) {
+vector_map<n::location_idx_t, adr_extra_place_idx_t> adr_extend_tt(
+    nigiri::timetable const& tt, a::area_database const* area_db, a::typeahead& t) {
   if (tt.n_locations() == 0) {
-    return;
+    return {};
   }
 
   auto const timer = utl::scoped_timer{"guesser candidates"};
@@ -39,15 +38,15 @@ void adr_extend_tt(nigiri::timetable const& tt,
   // Map each location + its equivalents with the same name to one place_idx
   // mapping: location_idx -> place_idx
   // reverse: place_idx -> location_idx
-  auto place_location = vector_map<a::place_idx_t, n::location_idx_t>{};
-  auto location_place = vector_map<n::location_idx_t, a::place_idx_t>{};
+  auto place_location = vector_map<adr_extra_place_idx_t, n::location_idx_t>{};
+  auto location_place = vector_map<n::location_idx_t, adr_extra_place_idx_t>{};
   {
-    location_place.resize(tt.n_locations(), a::place_idx_t::invalid());
+    location_place.resize(tt.n_locations(), adr_extra_place_idx_t::invalid());
     place_location.resize(tt.n_locations(), n::location_idx_t::invalid());
 
-    auto i = a::place_idx_t{0U};
+    auto i = adr_extra_place_idx_t{0U};
     for (auto l = n::location_idx_t{0U}; l != tt.n_locations(); ++l) {
-      if (location_place[l] == a::place_idx_t::invalid() &&
+      if (location_place[l] == adr_extra_place_idx_t::invalid() &&
           tt.locations_.parents_[l] == n::location_idx_t::invalid()) {
         location_place[l] = i;
         place_location[i] = l;
@@ -68,7 +67,7 @@ void adr_extend_tt(nigiri::timetable const& tt,
 
   // For each station without parent:
   // Compute importance = transport count weighted by clasz.
-  auto importance = vector_map<a::place_idx_t, float>{};
+  auto importance = vector_map<adr_extra_place_idx_t, float>{};
   importance.resize(place_location.size());
   {
     auto const event_counts = utl::scoped_timer{"guesser event_counts"};
@@ -166,6 +165,8 @@ void adr_extend_tt(nigiri::timetable const& tt,
   }
 
   t.build_ngram_index();
+
+  return location_place;
 }
 
 }  // namespace motis
