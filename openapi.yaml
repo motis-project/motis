@@ -1848,6 +1848,9 @@ components:
         zip:
           description: zip code
           type: string
+        tz:
+          description: timezone name (e.g. "Europe/Berlin")
+          type: string
         areas:
           description: list of areas
           type: array
@@ -1984,6 +1987,9 @@ components:
         level:
           description: level according to OpenStreetMap
           type: number
+        tz:
+          description: timezone name (e.g. "Europe/Berlin")
+          type: string
         arrival:
           description: arrival time
           type: string

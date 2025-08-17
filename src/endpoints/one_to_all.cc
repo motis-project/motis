@@ -45,7 +45,7 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
 
   auto const make_place = [&](place_t const& p, n::unixtime_t const t,
                               n::event_type const ev) {
-    auto place = to_place(&tt_, &tags_, w_, pl_, matches_, p);
+    auto place = to_place(&tt_, &tags_, w_, pl_, matches_, lp_, tz_, p);
     if (ev == n::event_type::kArr) {
       place.arrival_ = t;
     } else {
@@ -70,7 +70,7 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
   auto const r =
       routing{config_, w_,        l_,      pl_,      elevations_,  &tt_,
               &tags_,  loc_tree_, fa_,     matches_, way_matches_, rt_,
-              nullptr, gbfs_,     nullptr, metrics_};
+              nullptr, gbfs_,     nullptr, nullptr,  nullptr,      metrics_};
   auto gbfs_rd = gbfs::gbfs_routing_data{w_, l_, gbfs_};
 
   auto q = n::routing::query{

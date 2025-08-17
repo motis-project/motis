@@ -36,6 +36,7 @@
 #include "motis/tag_lookup.h"
 #include "motis/tiles_data.h"
 #include "motis/tt_location_rtree.h"
+#include "utl/get_or_create.h"
 
 namespace fs = std::filesystem;
 namespace n = nigiri;
@@ -275,6 +276,35 @@ void data::load_geocoder() {
   t_ = adr::read(path_ / "adr" /
                  (config_.timetable_.has_value() ? "t_ext.bin" : "t.bin"));
   tc_ = std::make_unique<adr::cache>(t_->strings_.size(), 100U);
+
+  if (config_.timetable_.has_value()) {
+    location_extra_place_ = cista::read<location_place_map_t>(
+        path_ / "adr" / "location_extra_place.bin");
+    tz_ = std::make_unique<
+        vector_map<adr_extra_place_idx_t, date::time_zone const*>>();
+    auto cache = hash_map<std::string, date::time_zone const*>{};
+    for (auto const [type, areas] :
+         utl::zip(t_->place_type_, t_->place_areas_)) {
+      if (type != adr::place_type::kExtra) {
+        continue;
+      }
+
+      auto const tz = t_->get_tz(areas);
+      if (tz == adr::timezone_idx_t::invalid()) {
+        tz_->push_back(nullptr);
+      } else {
+        auto const tz_name = t_->timezone_names_[tz].view();
+        tz_->push_back(
+            utl::get_or_create(cache, tz_name, [&]() -> date::time_zone const* {
+              try {
+                return date::locate_zone(tz_name);
+              } catch (...) {
+                return nullptr;
+              }
+            }));
+      }
+    }
+  }
 }
 
 void data::load_reverse_geocoder() {

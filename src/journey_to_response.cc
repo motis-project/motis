@@ -17,6 +17,7 @@
 #include "nigiri/special_stations.h"
 #include "nigiri/types.h"
 
+#include "adr/typeahead.h"
 #include "motis-api/motis-api.h"
 #include "motis/constants.h"
 #include "motis/flex/flex_output.h"
@@ -201,6 +202,8 @@ api::Itinerary journey_to_response(
     osr::elevation_storage const* elevations,
     n::shapes_storage const* shapes,
     gbfs::gbfs_routing_data& gbfs_rd,
+    location_place_map_t const* lp,
+    tz_map_t const* tz,
     n::routing::journey const& j,
     place_t const& start,
     place_t const& dest,
@@ -338,15 +341,16 @@ api::Itinerary journey_to_response(
     auto const pred =
         itinerary.legs_.empty() ? nullptr : &itinerary.legs_.back();
     auto const from = pred == nullptr
-                          ? to_place(&tt, &tags, w, pl, matches,
+                          ? to_place(&tt, &tags, w, pl, matches, lp, tz,
                                      tt_location{j_leg.from_}, start, dest)
                           : pred->to_;
-    auto const to = to_place(&tt, &tags, w, pl, matches, tt_location{j_leg.to_},
-                             start, dest);
+    auto const to = to_place(&tt, &tags, w, pl, matches, lp, tz,
+                             tt_location{j_leg.to_}, start, dest);
 
     auto const to_place = [&](n::rt::run_stop const& s,
                               n::event_type const ev_type) {
-      auto p = ::motis::to_place(&tt, &tags, w, pl, matches, s, start, dest);
+      auto p =
+          ::motis::to_place(&tt, &tags, w, pl, matches, lp, tz, s, start, dest);
       p.alerts_ = get_alerts(*s.fr_, std::pair{s, ev_type}, language);
       return p;
     };
