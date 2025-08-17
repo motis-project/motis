@@ -36,6 +36,7 @@
 		variant="schedule"
 		class="font-semibold w-16"
 		queriedTime={timestamp}
+		timeZone={p.tz}
 		{isRealtime}
 		{timestamp}
 		{scheduledTimestamp}
@@ -43,6 +44,7 @@
 	<Time
 		variant="realtime"
 		class="font-semibold w-16"
+		timeZone={p.tz}
 		{isRealtime}
 		{timestamp}
 		{scheduledTimestamp}
@@ -269,7 +271,7 @@
 				{#if l.loopedCalendarSince}
 					<div class="mt-2 flex items-center text-destructive leading-none">
 						{t.dataExpiredSince}
-						{formatDate(new Date(l.loopedCalendarSince))}
+						{formatDate(new Date(l.loopedCalendarSince), l.from.tz)}
 					</div>
 				{/if}
 				{#if l.cancelled}
@@ -347,8 +349,8 @@
 				{#if l.mode == 'FLEX'}
 					<div class="mt-2 flex items-center leading-none">
 						<span class="ml-1 text-sm">
-							{formatTime(new Date(l.from.flexStartPickupDropOffWindow!))} -
-							{formatTime(new Date(l.from.flexEndPickupDropOffWindow!))}
+							{formatTime(new Date(l.from.flexStartPickupDropOffWindow!), l.from.tz)} -
+							{formatTime(new Date(l.from.flexEndPickupDropOffWindow!), l.from.tz)}
 						</span>
 					</div>
 				{/if}

@@ -244,6 +244,10 @@ export const MatchSchema = {
             description: 'zip code',
             type: 'string'
         },
+        tz: {
+            description: 'timezone',
+            type: 'string'
+        },
         areas: {
             description: 'list of areas',
             type: 'array',
@@ -352,6 +356,10 @@ export const PlaceSchema = {
         level: {
             description: 'level according to OpenStreetMap',
             type: 'number'
+        },
+        tz: {
+            description: 'timezone name (e.g. "Europe/Berlin")',
+            type: 'string'
         },
         arrival: {
             description: 'arrival time',

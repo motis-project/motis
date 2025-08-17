@@ -106,7 +106,7 @@ void flex_output::annotate_leg(osr::node_idx_t const from,
   auto const write_node_info = [&](api::Place& p, osr::node_idx_t const n) {
     if (w_.is_additional_node(n)) {
       auto const l = flex_routing_data_.get_additional_node(n);
-      p = to_place(&tt_, &tags_, &w_, pl_, matches_, tt_location{l});
+      p = to_place(&tt_, &tags_, &w_, pl_, matches_, lp_, tz_, tt_location{l});
     }
   };
   write_node_info(leg.from_, from);

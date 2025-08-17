@@ -215,6 +215,10 @@ export type Match = {
      */
     zip?: string;
     /**
+     * timezone
+     */
+    tz?: string;
+    /**
      * list of areas
      */
     areas: Array<Area>;
@@ -311,6 +315,10 @@ export type Place = {
      * level according to OpenStreetMap
      */
     level: number;
+    /**
+     * timezone name (e.g. "Europe/Berlin")
+     */
+    tz?: string;
     /**
      * arrival time
      */

@@ -124,6 +124,7 @@
 												scheduledTimestamp={it.legs[0].scheduledStartTime}
 												variant="realtime-show-always"
 												queriedTime={baseQuery?.query.time}
+												timeZone={it.legs[0].from.tz}
 											/>
 										</div>
 										<Separator orientation="vertical" />
@@ -135,6 +136,7 @@
 												scheduledTimestamp={it.legs[it.legs.length - 1].scheduledEndTime}
 												variant="realtime-show-always"
 												queriedTime={it.startTime}
+												timeZone={it.legs[it.legs.length - 1].to.tz}
 											/>
 										</div>
 										<Separator orientation="vertical" />

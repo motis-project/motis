@@ -538,8 +538,8 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
   auto const direct_modes = deduplicate(query.directModes_);
   auto const from = get_place(tt_, tags_, query.fromPlace_);
   auto const to = get_place(tt_, tags_, query.toPlace_);
-  auto from_p = to_place(tt_, tags_, w_, pl_, matches_, from);
-  auto to_p = to_place(tt_, tags_, w_, pl_, matches_, to);
+  auto from_p = to_place(tt_, tags_, w_, pl_, matches_, lp_, tz_, from);
+  auto to_p = to_place(tt_, tags_, w_, pl_, matches_, lp_, tz_, to);
   if (from_p.vertexType_ == api::VertexTypeEnum::NORMAL) {
     from_p.name_ = "START";
   }
@@ -788,8 +788,8 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
     };
   }
 
-  return {.from_ = to_place(tt_, tags_, w_, pl_, matches_, from),
-          .to_ = to_place(tt_, tags_, w_, pl_, matches_, to),
+  return {.from_ = to_place(tt_, tags_, w_, pl_, matches_, lp_, tz_, from),
+          .to_ = to_place(tt_, tags_, w_, pl_, matches_, lp_, tz_, to),
           .direct_ = std::move(direct),
           .itineraries_ = {}};
 }

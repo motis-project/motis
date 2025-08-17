@@ -19,6 +19,8 @@ struct stop_times {
   osr::ways const* w_;
   osr::platforms const* pl_;
   platform_matches_t const* matches_;
+  location_place_map_t const* lp_;
+  tz_map const* tz_;
   point_rtree<nigiri::location_idx_t> const& loc_rtree_;
   nigiri::timetable const& tt_;
   tag_lookup const& tags_;

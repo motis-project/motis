@@ -1,5 +1,7 @@
 #pragma once
 
+#include "date/tz.h"
+
 #include "nigiri/types.h"
 
 #include "motis/fwd.h"
@@ -13,6 +15,13 @@ using adr_extra_place_idx_t =
 
 using location_place_map_t =
     vector_map<nigiri::location_idx_t, adr_extra_place_idx_t>;
+
+using tz_map = vector_map<adr_extra_place_idx_t, date::time_zone const*>;
+
+date::time_zone const* get_tz(nigiri::timetable const&,
+                              location_place_map_t const*,
+                              tz_map const*,
+                              nigiri::location_idx_t);
 
 location_place_map_t adr_extend_tt(nigiri::timetable const&,
                                    adr::area_database const*,
