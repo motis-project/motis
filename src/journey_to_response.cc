@@ -203,7 +203,7 @@ api::Itinerary journey_to_response(
     n::shapes_storage const* shapes,
     gbfs::gbfs_routing_data& gbfs_rd,
     location_place_map_t const* lp,
-    tz_map const* tz,
+    tz_map_t const* tz,
     n::routing::journey const& j,
     place_t const& start,
     place_t const& dest,

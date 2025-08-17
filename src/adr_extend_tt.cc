@@ -21,7 +21,7 @@ constexpr auto const kClaszMax =
 
 date::time_zone const* get_tz(n::timetable const& tt,
                               location_place_map_t const* lp,
-                              tz_map const* tz,
+                              tz_map_t const* tz,
                               n::location_idx_t const l) {
   auto const p = tt.locations_.parents_[l];
   auto const x = p == n::location_idx_t::invalid() ? l : p;

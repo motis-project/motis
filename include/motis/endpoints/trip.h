@@ -20,7 +20,7 @@ struct trip {
   nigiri::timetable const& tt_;
   nigiri::shapes_storage const* shapes_;
   location_place_map_t const* lp_;
-  vector_map<adr_extra_place_idx_t, date::time_zone const*> const* tz_;
+  tz_map_t const* tz_;
   tag_lookup const& tags_;
   point_rtree<nigiri::location_idx_t> const& loc_tree_;
   std::shared_ptr<rt> const& rt_;

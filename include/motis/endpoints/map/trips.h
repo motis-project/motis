@@ -13,7 +13,7 @@ struct trips {
   osr::platforms const* pl_;
   platform_matches_t const* matches_;
   location_place_map_t const* lp_;
-  tz_map const* tz_;
+  tz_map_t const* tz_;
   tag_lookup const& tags_;
   nigiri::timetable const& tt_;
   std::shared_ptr<rt> const& rt_;
