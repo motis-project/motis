@@ -5,5 +5,10 @@ export const formatTime = (d: Date, timeZone: string | undefined): string => {
 };
 
 export const formatDate = (d: Date, timeZone: string | undefined): string => {
-	return d.toLocaleDateString(language, { day: 'numeric', month: 'numeric', year: 'numeric', timeZone });
+	return d.toLocaleDateString(language, {
+		day: 'numeric',
+		month: 'numeric',
+		year: 'numeric',
+		timeZone
+	});
 };
