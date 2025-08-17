@@ -283,15 +283,14 @@ void data::load_geocoder() {
     tz_ = std::make_unique<
         vector_map<adr_extra_place_idx_t, date::time_zone const*>>();
     auto cache = hash_map<std::string, date::time_zone const*>{};
-    for (auto const [type, areas, name] :
-         utl::zip(t_->place_type_, t_->place_areas_, t_->place_names_)) {
+    for (auto const [type, areas] :
+         utl::zip(t_->place_type_, t_->place_areas_)) {
       if (type != adr::place_type::kExtra) {
         continue;
       }
 
       auto const tz = t_->get_tz(areas);
       if (tz == adr::timezone_idx_t::invalid()) {
-        fmt::println("NO TZ FOUND FOR: {}", t_->strings_[name.front()].view());
         tz_->push_back(nullptr);
       } else {
         auto const tz_name = t_->timezone_names_[tz].view();
