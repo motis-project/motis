@@ -60,6 +60,7 @@ struct config {
 
   struct timetable {
     struct transfer_profile {
+      bool operator==(transfer_profile const&) const = default;
       std::string profile_;
       double max_matching_distance_meters_;
       unsigned max_duration_seconds_;
