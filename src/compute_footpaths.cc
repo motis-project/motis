@@ -25,6 +25,19 @@ namespace n = nigiri;
 
 namespace motis {
 
+n::profile_idx_t get_profile_idx(osr::search_profile const p) {
+  switch (p) {
+    case osr::search_profile::kFoot: return n::kFootProfile;
+    case osr::search_profile::kWheelchair: return n::kWheelchairProfile;
+    case osr::search_profile::kCar: return n::kCarProfile;
+    case osr::search_profile::kBike:
+    case osr::search_profile::kBikeFast:
+    case osr::search_profile::kBikeElevationHigh: [[fallthrough]];
+    case osr::search_profile::kBikeElevationLow: return n::kBikeProfile;
+    default: throw utl::fail("{} not supported for transfers", to_str(p));
+  }
+}
+
 elevator_footpath_map_t compute_footpaths(
     osr::ways const& w,
     osr::lookup const& lookup,
@@ -88,7 +101,20 @@ elevator_footpath_map_t compute_footpaths(
     }
 
     auto const is_candidate = [&](n::location_idx_t const l) {
-      return !mode.is_candidate_ || mode.is_candidate_(l);
+      switch (mode.profile_) {
+        case osr::search_profile::kBike:
+        case osr::search_profile::kBikeFast:
+        case osr::search_profile::kBikeElevationHigh: [[fallthrough]];
+        case osr::search_profile::kBikeElevationLow:
+          return utl::any_of(tt.location_routes_[l],
+                             [&](auto r) { return tt.has_bike_transport(r); });
+
+        case osr::search_profile::kCar:
+          return utl::any_of(tt.location_routes_[l],
+                             [&](auto r) { return tt.has_car_transport(r); });
+
+        default: return true;
+      }
     };
 
     {
@@ -199,6 +225,7 @@ elevator_footpath_map_t compute_footpaths(
           pt->update_monotonic(n_done + i);
         });
 
+    auto const prf_idx = get_profile_idx(mode.profile_);
     auto transfers_in =
         n::vector_map<n::location_idx_t, std::vector<n::footpath>>{};
     transfers_in.resize(tt.n_locations());
@@ -210,14 +237,14 @@ elevator_footpath_map_t compute_footpaths(
       }
     }
     for (auto const& x : transfers) {
-      tt.locations_.footpaths_out_[mode.profile_idx_].emplace_back(x);
+      tt.locations_.footpaths_out_[prf_idx].emplace_back(x);
     }
     for (auto const& x : transfers_in) {
-      tt.locations_.footpaths_in_[mode.profile_idx_].emplace_back(x);
+      tt.locations_.footpaths_in_[prf_idx].emplace_back(x);
     }
 
-    n::loader::build_lb_graph<n::direction::kForward>(tt, mode.profile_idx_);
-    n::loader::build_lb_graph<n::direction::kBackward>(tt, mode.profile_idx_);
+    n::loader::build_lb_graph<n::direction::kForward>(tt, prf_idx);
+    n::loader::build_lb_graph<n::direction::kBackward>(tt, prf_idx);
 
     n_done += tt.n_locations();
   }

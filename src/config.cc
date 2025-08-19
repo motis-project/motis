@@ -17,6 +17,8 @@
 #include "rfl.hpp"
 #include "rfl/yaml.hpp"
 
+#include "motis/compute_footpaths.h"
+
 namespace fs = std::filesystem;
 
 namespace motis {
@@ -123,6 +125,11 @@ void config::verify() const {
               nigiri::routing::kMaxSearchIntervalSize.count());
 
   if (timetable_) {
+    if (timetable_->transfer_profiles_.has_value()) {
+      for (auto const& p : *timetable_->transfer_profiles_) {
+        get_profile_idx(osr::to_profile(p.profile_));
+      }
+    }
     for (auto const& [id, d] : timetable_->datasets_) {
       utl::verify(!id.contains("_"), "dataset identifier may not contain '_'");
       if (d.rt_.has_value()) {

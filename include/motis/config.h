@@ -59,6 +59,13 @@ struct config {
   std::optional<tiles> tiles_{};
 
   struct timetable {
+    struct transfer_profile {
+      std::string profile_;
+      double max_matching_distance_meters_;
+      unsigned max_duration_seconds_;
+      bool extend_missing_;
+    };
+
     struct dataset {
       struct rt {
         bool operator==(rt const&) const = default;
@@ -105,6 +112,7 @@ struct config {
     double preprocess_max_matching_distance_{0.0};
     std::optional<std::string> default_timezone_{};
     std::map<std::string, dataset> datasets_{};
+    std::optional<std::vector<transfer_profile>> transfer_profiles_{};
     std::optional<std::filesystem::path> assistance_times_{};
   };
   std::optional<timetable> timetable_{};
