@@ -125,11 +125,7 @@ void config::verify() const {
               nigiri::routing::kMaxSearchIntervalSize.count());
 
   if (timetable_) {
-    if (timetable_->transfer_profiles_.has_value()) {
-      for (auto const& p : *timetable_->transfer_profiles_) {
-        get_profile_idx(osr::to_profile(p.profile_));
-      }
-    }
+    timetable_->get_profiles();
     for (auto const& [id, d] : timetable_->datasets_) {
       utl::verify(!id.contains("_"), "dataset identifier may not contain '_'");
       if (d.rt_.has_value()) {
@@ -179,6 +175,27 @@ void config::verify_input_files_exist() const {
       }
     }
   }
+}
+
+transfer_routing_profiles_t config::timetable::get_profiles() const {
+  if (!transfer_profiles_.has_value()) {
+    return {};
+  }
+
+  auto map = transfer_routing_profiles_t{};
+  for (auto const& p : *transfer_profiles_) {
+    auto const profile = osr::to_profile(p.profile_);
+    auto const prf_idx = get_profile_idx(profile);
+    utl_verify(!map[prf_idx].has_value(),
+               "adding transfer profile {}: index {} already taken by {}",
+               p.profile_, prf_idx, osr::to_str(map[prf_idx]->profile_));
+    map[prf_idx] = transfer_routing_options{
+        .profile_ = profile,
+        .max_matching_distance_ = p.max_matching_distance_meters_,
+        .extend_missing_ = p.extend_missing_,
+        .max_duration_ = p.max_duration_seconds_ * std::chrono::seconds{1}};
+  }
+  return map;
 }
 
 bool config::requires_rt_timetable_updates() const {

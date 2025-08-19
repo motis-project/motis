@@ -14,6 +14,8 @@
 
 #include "utl/verify.h"
 
+#include "motis/compute_footpaths.h"
+
 namespace motis {
 
 using headers_t = std::map<std::string, std::string>;
@@ -94,6 +96,8 @@ struct config {
     };
 
     bool operator==(timetable const&) const = default;
+
+    transfer_routing_profiles_t get_profiles() const;
 
     std::string first_day_{"TODAY"};
     std::uint16_t num_days_{365U};

@@ -17,7 +17,8 @@ api::ModeEnum to_mode(osr::mode const m) {
 osr::search_profile to_profile(
     api::ModeEnum const m,
     api::PedestrianProfileEnum const pedestrian_profile,
-    api::ElevationCostsEnum const elevation_costs) {
+    api::ElevationCostsEnum const elevation_costs,
+    bool const fastest_bike) {
   auto const wheelchair =
       pedestrian_profile == api::PedestrianProfileEnum::WHEELCHAIR;
   switch (m) {
@@ -25,6 +26,9 @@ osr::search_profile to_profile(
       return wheelchair ? osr::search_profile::kWheelchair
                         : osr::search_profile::kFoot;
     case api::ModeEnum::BIKE:
+      if (fastest_bike) {
+        return osr::search_profile::kBikeFast;
+      }
       switch (elevation_costs) {
         case api::ElevationCostsEnum::NONE: return osr::search_profile::kBike;
         case api::ElevationCostsEnum::LOW:

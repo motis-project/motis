@@ -63,6 +63,7 @@ struct routing {
       bool ignore_rental_return_constraints,
       api::PedestrianProfileEnum,
       api::ElevationCostsEnum,
+      bool fastest_bike,
       std::chrono::seconds max,
       double max_matching_distance,
       gbfs::gbfs_routing_data&) const;
@@ -94,6 +95,7 @@ struct routing {
       bool arrive_by,
       api::PedestrianProfileEnum,
       api::ElevationCostsEnum,
+      bool fastest_bike,
       std::chrono::seconds max,
       double max_matching_distance,
       double fastest_direct_factor,

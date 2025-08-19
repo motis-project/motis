@@ -217,6 +217,14 @@ paths:
             $ref: '#/components/schemas/ElevationCosts'
             default: NONE
 
+        - name: fastestBike
+          in: query
+          required: false
+          description: Experimental. Optional. Default is `false`. Will probably be replaced by more fine-grained control (e.g. speed).
+          schema:
+            type: boolean
+            default: false
+
         - name: useRoutedTransfers
           in: query
           required: false

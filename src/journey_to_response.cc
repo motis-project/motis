@@ -210,9 +210,8 @@ api::Itinerary journey_to_response(
     place_t const& dest,
     street_routing_cache_t& cache,
     osr::bitvec<osr::node_idx_t>* blocked_mem,
-    bool const car_transfers,
-    api::PedestrianProfileEnum const pedestrian_profile,
-    api::ElevationCostsEnum const elevation_costs,
+    n::profile_idx_t const prf_idx,
+    transfer_routing_profiles_t const& transfer_profiles,
     bool const join_interlined_legs,
     bool const detailed_transfers,
     bool const with_fares,
@@ -224,6 +223,8 @@ api::Itinerary journey_to_response(
     bool const ignore_dest_rental_return_constraints,
     std::optional<std::string> const& language) {
   utl::verify(!j.legs_.empty(), "journey without legs");
+  utl::verify(prf_idx == 0U || transfer_profiles[prf_idx].has_value(),
+              "transfer profile not found");
 
   auto const fares =
       with_fares ? std::optional{n::get_fares(tt, rtt, j)} : std::nullopt;
@@ -494,24 +495,24 @@ api::Itinerary journey_to_response(
               }
             },
             [&](n::footpath) {
-              append(w && l && detailed_transfers
-                         ? street_routing(
-                               *w, *l, e, elevations, from, to,
-                               default_output{
-                                   *w, car_transfers
-                                           ? osr::search_profile::kCar
-                                           : to_profile(api::ModeEnum::WALK,
-                                                        pedestrian_profile,
-                                                        elevation_costs)},
-                               j_leg.dep_time_, j_leg.arr_time_,
-                               car_transfers ? 250.0
-                                             : timetable_max_matching_distance,
-                               cache, *blocked_mem, api_version,
-                               std::chrono::duration_cast<std::chrono::seconds>(
-                                   j_leg.arr_time_ - j_leg.dep_time_) +
-                                   std::chrono::minutes{10})
-                         : dummy_itinerary(from, to, api::ModeEnum::WALK,
-                                           j_leg.dep_time_, j_leg.arr_time_));
+              append(
+                  w && l && detailed_transfers
+                      ? street_routing(
+                            *w, *l, e, elevations, from, to,
+                            default_output{
+                                *w, prf_idx == 0U
+                                        ? osr::search_profile::kFoot
+                                        : transfer_profiles[prf_idx]->profile_},
+                            j_leg.dep_time_, j_leg.arr_time_,
+                            prf_idx == 0U ? timetable_max_matching_distance
+                                          : transfer_profiles[prf_idx]
+                                                ->max_matching_distance_,
+                            cache, *blocked_mem, api_version,
+                            std::chrono::duration_cast<std::chrono::seconds>(
+                                j_leg.arr_time_ - j_leg.dep_time_) +
+                                std::chrono::minutes{10})
+                      : dummy_itinerary(from, to, api::ModeEnum::WALK,
+                                        j_leg.dep_time_, j_leg.arr_time_));
             },
             [&](n::routing::offset const x) {
               auto out = std::unique_ptr<output>{};

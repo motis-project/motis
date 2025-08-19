@@ -440,19 +440,10 @@ data import(config const& c, fs::path const& data_path, bool const write) {
                      c.timetable_->max_footpath_length_ * 60U,
                  .extend_missing_ = false},
             });
-        auto const elevator_footpath_map = compute_footpaths(
-            *d.w_, *d.l_, *d.pl_, *d.tt_, d.elevations_.get(),
-            c.timetable_->use_osm_stop_coordinates_,
-            utl::to_vec(profiles,
-                        [](config::timetable::transfer_profile const& p)
-                            -> routed_transfers_settings {
-                          return {.profile_ = osr::to_profile(p.profile_),
-                                  .max_matching_distance_ =
-                                      p.max_matching_distance_meters_,
-                                  .extend_missing_ = p.extend_missing_,
-                                  .max_duration_ = p.max_duration_seconds_ *
-                                                   std::chrono::seconds{1}};
-                        }));
+        auto const elevator_footpath_map =
+            compute_footpaths(*d.w_, *d.l_, *d.pl_, *d.tt_, d.elevations_.get(),
+                              c.timetable_->use_osm_stop_coordinates_,
+                              c.timetable_->get_profiles());
 
         if (write) {
           cista::write(data_path / "elevator_footpath_map.bin",

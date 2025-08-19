@@ -173,8 +173,8 @@ n::duration_t init_direct(std::vector<direct_ride>& direct_rides,
   auto [_, odm_direct_duration] = r.route_direct(
       e, gbfs, from_p, to_p, {api::ModeEnum::CAR}, std::nullopt, std::nullopt,
       std::nullopt, false, intvl.from_, false, query.pedestrianProfile_,
-      query.elevationCosts_, kODMMaxDuration, query.maxMatchingDistance_,
-      kODMDirectFactor, api_version);
+      query.elevationCosts_, query.fastestBike_, kODMMaxDuration,
+      query.maxMatchingDistance_, kODMDirectFactor, api_version);
 
   auto const step =
       std::chrono::duration_cast<n::unixtime_t::duration>(kODMDirectPeriod);
@@ -237,20 +237,14 @@ void init_pt(std::vector<n::routing::start>& rides,
     return;
   }
 
-  auto offsets = r.get_offsets(rtt, l, dir, {api::ModeEnum::ODM}, std::nullopt,
-                               std::nullopt, std::nullopt, false,
-                               query.pedestrianProfile_, query.elevationCosts_,
-                               max, query.maxMatchingDistance_, gbfs_rd);
+  auto offsets = r.get_offsets(
+      rtt, l, dir, {api::ModeEnum::ODM}, std::nullopt, std::nullopt,
+      std::nullopt, false, query.pedestrianProfile_, query.elevationCosts_,
+      query.fastestBike_, max, query.maxMatchingDistance_, gbfs_rd);
 
   std::erase_if(offsets, [&](n::routing::offset const& o) {
-    auto const out_of_bounds =
-        (r.odm_bounds_ != nullptr &&
-         !r.odm_bounds_->contains(r.tt_->locations_.coordinates_[o.target_]));
-    /*if (out_of_bounds) {
-      n::log(n::log_lvl::debug, "motis.odm", "Bounds filtered: {}",
-             n::location{*r.tt_, o.target_});
-    }*/
-    return out_of_bounds;
+    return r.odm_bounds_ != nullptr &&
+           !r.odm_bounds_->contains(r.tt_->locations_.coordinates_[o.target_]);
   });
 
   for (auto& o : offsets) {
@@ -598,7 +592,7 @@ api::plan_response meta_router::run() {
           start_modes_, start_form_factors_, start_propulsion_types_,
           start_rental_providers_, start_ignore_rental_return_constraints_,
           query_.pedestrianProfile_, query_.elevationCosts_,
-          std::chrono::seconds{query_.maxPreTransitTime_},
+          query_.fastestBike_, std::chrono::seconds{query_.maxPreTransitTime_},
           query_.maxMatchingDistance_, gbfs_rd_),
       .dest_walk_ = r_.get_offsets(
           rtt_, dest_,
@@ -607,7 +601,7 @@ api::plan_response meta_router::run() {
           dest_modes_, dest_form_factors_, dest_propulsion_types_,
           dest_rental_providers_, dest_ignore_rental_return_constraints_,
           query_.pedestrianProfile_, query_.elevationCosts_,
-          std::chrono::seconds{query_.maxPostTransitTime_},
+          query_.fastestBike_, std::chrono::seconds{query_.maxPostTransitTime_},
           query_.maxMatchingDistance_, gbfs_rd_),
       .td_start_walk_ = r_.get_td_offsets(
           rtt_, e_, start_,
@@ -747,8 +741,7 @@ api::plan_response meta_router::run() {
                 r_.w_, r_.l_, r_.pl_, *tt_, *r_.tags_, r_.fa_, e_, rtt_,
                 r_.matches_, r_.elevations_, r_.shapes_, gbfs_rd_, r_.lp_,
                 r_.tz_, j, start_, dest_, cache, ep::blocked.get(),
-                query_.requireCarTransport_ && query_.useRoutedTransfers_,
-                query_.pedestrianProfile_, query_.elevationCosts_,
+                qf.base_query_.prf_idx_, r_.config_.timetable_->get_profiles(),
                 query_.joinInterlinedLegs_, query_.detailedTransfers_,
                 query_.withFares_, query_.withScheduledSkippedStops_,
                 r_.config_.timetable_.value().max_matching_distance_,

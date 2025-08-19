@@ -45,7 +45,7 @@ elevator_footpath_map_t compute_footpaths(
     nigiri::timetable& tt,
     osr::elevation_storage const* elevations,
     bool const update_coordinates,
-    std::vector<routed_transfers_settings> const& settings) {
+    transfer_routing_profiles_t const& settings) {
   fmt::println(std::clog, "creating matches");
   auto const matches = get_matches(tt, pl, w);
 
@@ -93,7 +93,14 @@ elevator_footpath_map_t compute_footpaths(
   auto candidates = vector_map<n::location_idx_t, osr::match_t>{};
   auto transfers = n::vector_map<n::location_idx_t, std::vector<n::footpath>>(
       tt.n_locations());
-  for (auto const& mode : settings) {
+  for (auto const [i, profile] : utl::enumerate(settings)) {
+    if (!profile.has_value()) {
+      continue;
+    }
+
+    auto const prf_idx = static_cast<n::profile_idx_t>(i);
+    auto const& mode = *profile;
+
     candidates.clear();
     candidates.resize(tt.n_locations());
     for (auto& fps : transfers) {
@@ -139,10 +146,10 @@ elevator_footpath_map_t compute_footpaths(
     }
 
     utl::parallel_for_run_threadlocal<state>(
-        tt.n_locations(), [&](state& s, auto const i) {
+        tt.n_locations(), [&](state& s, auto const idx) {
           cista::for_each_field(s, [](auto& f) { f.clear(); });
 
-          auto const l = n::location_idx_t{i};
+          auto const l = n::location_idx_t{idx};
           if (!is_candidate(l)) {
             pt->update_monotonic(n_done + i);
             return;
@@ -225,12 +232,11 @@ elevator_footpath_map_t compute_footpaths(
           pt->update_monotonic(n_done + i);
         });
 
-    auto const prf_idx = get_profile_idx(mode.profile_);
     auto transfers_in =
         n::vector_map<n::location_idx_t, std::vector<n::footpath>>{};
     transfers_in.resize(tt.n_locations());
-    for (auto const [i, out] : utl::enumerate(transfers)) {
-      auto const l = n::location_idx_t{i};
+    for (auto const [j, out] : utl::enumerate(transfers)) {
+      auto const l = n::location_idx_t{j};
       for (auto const fp : out) {
         assert(fp.target() < tt.n_locations());
         transfers_in[fp.target()].push_back(n::footpath{l, fp.duration()});
