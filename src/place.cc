@@ -85,6 +85,8 @@ api::Place to_place(n::timetable const* tt,
                     osr::ways const* w,
                     osr::platforms const* pl,
                     platform_matches_t const* matches,
+                    location_place_map_t const* lp,
+                    tz_map_t const* tz,
                     place_t const l,
                     place_t const start,
                     place_t const dest,
@@ -122,11 +124,15 @@ api::Place to_place(n::timetable const* tt,
                   tt->locations_.parents_[l] == n::location_idx_t::invalid()
                       ? l
                       : tt->locations_.parents_[l];
+              auto const timezone = get_tz(*tt, lp, tz, p);
               return {.name_ = std::string{tt->locations_.names_[p].view()},
                       .stopId_ = tags->id(*tt, l),
                       .lat_ = pos.lat_,
                       .lon_ = pos.lng_,
                       .level_ = get_level(w, pl, matches, l),
+                      .tz_ = timezone == nullptr
+                                 ? std::nullopt
+                                 : std::optional{timezone->name()},
                       .scheduledTrack_ = get_track(tt_l.scheduled_),
                       .track_ = get_track(tt_l.l_),
                       .description_ = get_description(tt_l.scheduled_),
@@ -141,11 +147,14 @@ api::Place to_place(n::timetable const* tt,
                     osr::ways const* w,
                     osr::platforms const* pl,
                     platform_matches_t const* matches,
+                    location_place_map_t const* lp,
+                    tz_map_t const* tz,
                     n::rt::run_stop const& s,
                     place_t const start,
                     place_t const dest) {
   auto const run_cancelled = s.fr_->is_cancelled();
-  auto p = to_place(tt, tags, w, pl, matches, tt_location{s}, start, dest);
+  auto p =
+      to_place(tt, tags, w, pl, matches, lp, tz, tt_location{s}, start, dest);
   p.pickupType_ = !run_cancelled && s.in_allowed()
                       ? api::PickupDropoffTypeEnum::NORMAL
                       : api::PickupDropoffTypeEnum::NOT_ALLOWED;

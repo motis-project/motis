@@ -745,8 +745,8 @@ api::plan_response meta_router::run() {
             }
             return journey_to_response(
                 r_.w_, r_.l_, r_.pl_, *tt_, *r_.tags_, r_.fa_, e_, rtt_,
-                r_.matches_, r_.elevations_, r_.shapes_, gbfs_rd_, j, start_,
-                dest_, cache, ep::blocked.get(),
+                r_.matches_, r_.elevations_, r_.shapes_, gbfs_rd_, r_.lp_,
+                r_.tz_, j, start_, dest_, cache, ep::blocked.get(),
                 query_.requireCarTransport_ && query_.useRoutedTransfers_,
                 query_.pedestrianProfile_, query_.elevationCosts_,
                 query_.joinInterlinedLegs_, query_.detailedTransfers_,

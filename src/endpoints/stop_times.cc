@@ -362,7 +362,7 @@ api::stoptimes_response stop_times::operator()(
             auto const s = fr[0];
             auto const& agency = s.get_provider(ev_type);
             auto const run_cancelled = fr.is_cancelled();
-            auto place = to_place(&tt_, &tags_, w_, pl_, matches_, s);
+            auto place = to_place(&tt_, &tags_, w_, pl_, matches_, lp_, tz_, s);
             place.alerts_ = get_alerts(
                 fr,
                 std::pair{s, fr.stop_range_.from_ != 0U ? n::event_type::kArr
@@ -420,7 +420,8 @@ api::stoptimes_response stop_times::operator()(
                 .tripCancelled_ = run_cancelled,
                 .source_ = fmt::format("{}", fmt::streamed(fr.dbg()))};
           }),
-      .place_ = to_place(&tt_, &tags_, w_, pl_, matches_, tt_location{x}),
+      .place_ =
+          to_place(&tt_, &tags_, w_, pl_, matches_, lp_, tz_, tt_location{x}),
       .previousPageCursor_ =
           events.empty()
               ? ""

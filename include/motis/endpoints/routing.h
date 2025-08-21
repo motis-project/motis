@@ -113,6 +113,8 @@ struct routing {
   std::shared_ptr<rt> const& rt_;
   nigiri::shapes_storage const* shapes_;
   std::shared_ptr<gbfs::gbfs_data> const& gbfs_;
+  location_place_map_t const* lp_;
+  tz_map_t const* tz_;
   odm::bounds const* odm_bounds_;
   metrics_registry* metrics_;
 };

@@ -1,18 +1,11 @@
-#include "boost/format/format_fwd.hpp"
+#include <fstream>
+#include <iostream>
+#include <mutex>
 
 #include "conf/configuration.h"
 
-#include <fstream>
-#include <iostream>
-#include <random>
-#include <ranges>
-
-#include "boost/json/serialize.hpp"
 #include "boost/url/url.hpp"
 
-#include "fmt/std.h"
-
-#include "nigiri/routing/query.h"
 #include "nigiri/timetable.h"
 
 #include "motis-api/motis-api.h"
@@ -28,7 +21,6 @@
 namespace n = nigiri;
 namespace fs = std::filesystem;
 namespace po = boost::program_options;
-namespace json = boost::json;
 
 namespace motis {
 
