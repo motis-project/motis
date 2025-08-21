@@ -1,10 +1,10 @@
-#include "conf/configuration.h"
-
 #include <fstream>
 #include <iostream>
 #include <ranges>
 #include <string>
 #include <vector>
+
+#include "conf/configuration.h"
 
 #include "boost/json/parse.hpp"
 #include "boost/json/value_to.hpp"
