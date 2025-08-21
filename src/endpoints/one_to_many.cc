@@ -35,7 +35,7 @@ api::oneToMany_response one_to_many::operator()(
   auto const paths = osr::route(
       w_, l_,
       to_profile(query.mode_, api::PedestrianProfileEnum::FOOT,
-                 query.elevationCosts_),
+                 query.elevationCosts_, true),
       *one, many, query.max_,
       query.arriveBy_ ? osr::direction::kBackward : osr::direction::kForward,
       query.maxMatchingDistance_, nullptr, nullptr, elevations_);

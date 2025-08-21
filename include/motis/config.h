@@ -14,6 +14,8 @@
 
 #include "utl/verify.h"
 
+#include "motis/compute_footpaths.h"
+
 namespace motis {
 
 using headers_t = std::map<std::string, std::string>;
@@ -59,6 +61,14 @@ struct config {
   std::optional<tiles> tiles_{};
 
   struct timetable {
+    struct transfer_profile {
+      bool operator==(transfer_profile const&) const = default;
+      std::string profile_;
+      double max_matching_distance_meters_;
+      unsigned max_duration_seconds_;
+      bool extend_missing_;
+    };
+
     struct dataset {
       struct rt {
         bool operator==(rt const&) const = default;
@@ -87,6 +97,8 @@ struct config {
 
     bool operator==(timetable const&) const = default;
 
+    transfer_routing_profiles_t get_profiles() const;
+
     std::string first_day_{"TODAY"};
     std::uint16_t num_days_{365U};
     bool railviz_{true};
@@ -105,6 +117,7 @@ struct config {
     double preprocess_max_matching_distance_{0.0};
     std::optional<std::string> default_timezone_{};
     std::map<std::string, dataset> datasets_{};
+    std::optional<std::vector<transfer_profile>> transfer_profiles_{};
     std::optional<std::filesystem::path> assistance_times_{};
   };
   std::optional<timetable> timetable_{};

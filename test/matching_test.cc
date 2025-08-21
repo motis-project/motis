@@ -15,6 +15,7 @@
 #include "motis/config.h"
 #include "motis/import.h"
 #include "motis/match_platforms.h"
+#include "osr/routing/with_profile.h"
 
 using namespace std::string_view_literals;
 using namespace osr;
@@ -117,23 +118,9 @@ TEST(motis, get_way_candidates) {
 
   auto const get_path = [&](search_profile const p, way_candidate const& a,
                             node_candidate const& anc, location const& l) {
-    switch (p) {
-      case search_profile::kFoot:
-        return d.l_->get_node_candidate_path<foot<false>>(a, anc, true, l);
-      case search_profile::kWheelchair:
-        return d.l_->get_node_candidate_path<foot<true>>(a, anc, true, l);
-      case search_profile::kCar:
-        return d.l_->get_node_candidate_path<car>(a, anc, true, l);
-      case search_profile::kBike:
-        return d.l_->get_node_candidate_path<bike<kElevationNoCost>>(a, anc,
-                                                                     true, l);
-      case search_profile::kCarSharing:
-        return d.l_->get_node_candidate_path<car_sharing<noop_tracking>>(
-            a, anc, true, l);
-      case search_profile::kBikeSharing:
-        return d.l_->get_node_candidate_path<bike_sharing>(a, anc, true, l);
-      default: return std::vector<geo::latlng>{};
-    }
+    return osr::with_profile(p, [&]<typename Profile>(Profile&&) {
+      return d.l_->get_node_candidate_path<Profile>(a, anc, true, l);
+    });
   };
 
   for (auto profile :

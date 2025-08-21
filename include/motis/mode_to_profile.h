@@ -10,6 +10,7 @@ namespace motis {
 api::ModeEnum to_mode(osr::mode);
 osr::search_profile to_profile(api::ModeEnum,
                                api::PedestrianProfileEnum,
-                               api::ElevationCostsEnum);
+                               api::ElevationCostsEnum,
+                               bool fastest_bike);
 
 }  // namespace motis

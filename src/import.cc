@@ -426,28 +426,24 @@ data import(config const& c, fs::path const& data_path, bool const write) {
       [&]() { return c.osr_footpath_ && c.timetable_; },
       [&]() { return d.tt_ && d.tags_ && d.w_ && d.l_ && d.pl_; },
       [&]() {
-        auto const profiles = std::vector<routed_transfers_settings>{
-            {.profile_ = osr::search_profile::kFoot,
-             .profile_idx_ = n::kFootProfile,
-             .max_matching_distance_ = c.timetable_->max_matching_distance_,
-             .extend_missing_ = c.timetable_->extend_missing_footpaths_,
-             .max_duration_ = c.timetable_->max_footpath_length_ * 1min},
-            {.profile_ = osr::search_profile::kWheelchair,
-             .profile_idx_ = n::kWheelchairProfile,
-             .max_matching_distance_ = 8.0,
-             .max_duration_ = c.timetable_->max_footpath_length_ * 1min},
-            {.profile_ = osr::search_profile::kCar,
-             .profile_idx_ = n::kCarProfile,
-             .max_matching_distance_ = 250.0,
-             .max_duration_ = 8h,
-             .is_candidate_ = [&](n::location_idx_t const l) {
-               return utl::any_of(d.tt_->location_routes_[l], [&](auto r) {
-                 return d.tt_->has_car_transport(r);
-               });
-             }}};
-        auto const elevator_footpath_map = compute_footpaths(
-            *d.w_, *d.l_, *d.pl_, *d.tt_, d.elevations_.get(),
-            c.timetable_->use_osm_stop_coordinates_, profiles);
+        auto const profiles = c.timetable_->transfer_profiles_.value_or(
+            std::vector<config::timetable::transfer_profile>{
+                {.profile_ = "foot",
+                 .max_matching_distance_meters_ =
+                     c.timetable_->max_matching_distance_,
+                 .max_duration_seconds_ =
+                     c.timetable_->max_footpath_length_ * 60U,
+                 .extend_missing_ = c.timetable_->extend_missing_footpaths_},
+                {.profile_ = "wheelchair",
+                 .max_matching_distance_meters_ = 8.0,
+                 .max_duration_seconds_ =
+                     c.timetable_->max_footpath_length_ * 60U,
+                 .extend_missing_ = false},
+            });
+        auto const elevator_footpath_map =
+            compute_footpaths(*d.w_, *d.l_, *d.pl_, *d.tt_, d.elevations_.get(),
+                              c.timetable_->use_osm_stop_coordinates_,
+                              c.timetable_->get_profiles());
 
         if (write) {
           cista::write(data_path / "elevator_footpath_map.bin",
