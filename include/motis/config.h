@@ -100,6 +100,7 @@ struct config {
     bool incremental_rt_update_{false};
     bool use_osm_stop_coordinates_{false};
     bool extend_missing_footpaths_{false};
+    bool prefer_gtfs_entrances_{false};
     std::uint16_t max_footpath_length_{15};
     double max_matching_distance_{25.0};
     double preprocess_max_matching_distance_{0.0};

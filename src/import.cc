@@ -418,6 +418,7 @@ data import(config const& c, fs::path const& data_path, bool const write) {
     auto& h = osr_footpath_settings_hash.second;
     h = cista::hash_combine(h, c.timetable_->use_osm_stop_coordinates_,
                             c.timetable_->extend_missing_footpaths_,
+                            c.timetable_->prefer_gtfs_entrances_,
                             c.timetable_->max_matching_distance_,
                             c.timetable_->max_footpath_length_);
   }
