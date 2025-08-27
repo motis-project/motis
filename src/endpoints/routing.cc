@@ -56,12 +56,6 @@ using namespace std::chrono_literals;
 namespace motis::ep {
 
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-boost::thread_specific_ptr<n::routing::search_state> search_state;
-
-// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-boost::thread_specific_ptr<n::routing::raptor_state> raptor_state;
-
-// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 boost::thread_specific_ptr<osr::bitvec<osr::node_idx_t>> blocked;
 
 place_t get_place(n::timetable const* tt,
@@ -352,7 +346,8 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
         propulsion_types,
     std::optional<std::vector<std::string>> const& rental_providers,
     bool const ignore_rental_return_constraints,
-    n::unixtime_t const start_time,
+    n::unixtime_t const time,
+    bool const arrive_by,
     api::PedestrianProfileEnum const pedestrian_profile,
     api::ElevationCostsEnum const elevation_costs,
     std::chrono::seconds max,
@@ -370,8 +365,10 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
 
   auto const route_with_profile = [&](output const& out) {
     auto itinerary = street_routing(
-        *w_, *l_, e, elevations_, from, to, out, start_time, std::nullopt,
-        max_matching_distance, cache, *blocked, api_version, max);
+        *w_, *l_, e, elevations_, from, to, out,
+        arrive_by ? std::nullopt : std::optional{time},
+        arrive_by ? std::optional{time} : std::nullopt, max_matching_distance,
+        cache, *blocked, api_version, max);
     if (itinerary.legs_.empty()) {
       return false;
     }
@@ -388,7 +385,7 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
     if (m == api::ModeEnum::FLEX) {
       utl::verify(tt_ && tags_ && fa_, "FLEX requires timetable");
       auto const routings = flex::get_flex_routings(
-          *tt_, *loc_tree_, start_time, get_location(from).pos_,
+          *tt_, *loc_tree_, time, get_location(from).pos_,
           osr::direction::kForward, max);
       for (auto const& [_, ids] : routings) {
         route_with_profile(flex::flex_output{*w_, *l_, pl_, matches_, *tags_,
@@ -541,8 +538,8 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
   auto const direct_modes = deduplicate(query.directModes_);
   auto const from = get_place(tt_, tags_, query.fromPlace_);
   auto const to = get_place(tt_, tags_, query.toPlace_);
-  auto from_p = to_place(tt_, tags_, w_, pl_, matches_, from);
-  auto to_p = to_place(tt_, tags_, w_, pl_, matches_, to);
+  auto from_p = to_place(tt_, tags_, w_, pl_, matches_, lp_, tz_, from);
+  auto to_p = to_place(tt_, tags_, w_, pl_, matches_, lp_, tz_, to);
   if (from_p.vertexType_ == api::VertexTypeEnum::NORMAL) {
     from_p.name_ = "START";
   }
@@ -601,7 +598,8 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                          query.directRentalPropulsionTypes_,
                          query.directRentalProviders_,
                          query.ignoreDirectRentalReturnConstraints_, *t,
-                         query.pedestrianProfile_, query.elevationCosts_,
+                         query.arriveBy_, query.pedestrianProfile_,
+                         query.elevationCosts_,
                          std::chrono::seconds{query.maxDirectTime_},
                          query.maxMatchingDistance_, query.fastestDirectFactor_,
                          api_version)
@@ -727,7 +725,8 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                                ? std::nullopt
                                : std::optional{fastest_direct},
         .fastest_direct_factor_ = query.fastestDirectFactor_,
-        .slow_direct_ = query.slowDirect_};
+        .slow_direct_ = query.slowDirect_,
+        .fastest_slow_direct_factor_ = query.fastestSlowDirectFactor_};
     remove_slower_than_fastest_direct(q);
     UTL_STOP_TIMING(query_preparation);
 
@@ -735,12 +734,8 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
       q.prf_idx_ = 0U;
     }
 
-    if (search_state.get() == nullptr) {
-      search_state.reset(new n::routing::search_state{});
-    }
-    if (raptor_state.get() == nullptr) {
-      raptor_state.reset(new n::routing::raptor_state{});
-    }
+    auto search_state = n::routing::search_state{};
+    auto raptor_state = n::routing::raptor_state{};
 
     auto const query_stats =
         stats_map_t{{"direct", UTL_TIMING_MS(direct)},
@@ -751,7 +746,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                     {"n_td_dest_offsets", q.td_dest_.size()}};
 
     auto const r = n::routing::raptor_search(
-        *tt_, rtt, *search_state, *raptor_state, std::move(q),
+        *tt_, rtt, search_state, raptor_state, std::move(q),
         query.arriveBy_ ? n::direction::kBackward : n::direction::kForward,
         query.timeout_.has_value() ? std::chrono::seconds{*query.timeout_}
                                    : max_timeout);
@@ -775,7 +770,8 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                       to_seconds(j.arrival_time() - j.departure_time())));
               return journey_to_response(
                   w_, l_, pl_, *tt_, *tags_, fa_, e, rtt, matches_, elevations_,
-                  shapes_, gbfs_rd, j, start, dest, cache, blocked.get(),
+                  shapes_, gbfs_rd, lp_, tz_, j, start, dest, cache,
+                  blocked.get(),
                   query.requireCarTransport_ && query.useRoutedTransfers_,
                   query.pedestrianProfile_, query.elevationCosts_,
                   query.joinInterlinedLegs_, query.detailedTransfers_,
@@ -792,8 +788,8 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
     };
   }
 
-  return {.from_ = to_place(tt_, tags_, w_, pl_, matches_, from),
-          .to_ = to_place(tt_, tags_, w_, pl_, matches_, to),
+  return {.from_ = to_place(tt_, tags_, w_, pl_, matches_, lp_, tz_, from),
+          .to_ = to_place(tt_, tags_, w_, pl_, matches_, lp_, tz_, to),
           .direct_ = std::move(direct),
           .itineraries_ = {}};
 }

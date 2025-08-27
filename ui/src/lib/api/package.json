@@ -1,6 +1,6 @@
 {
 	"name": "@motis-project/motis-client",
-	"version": "2.0.98",
+	"version": "2.1.2",
 	"description": "A JS client for the MOTIS API.",
 	"public": true,
 	"main": "dist/index.js",

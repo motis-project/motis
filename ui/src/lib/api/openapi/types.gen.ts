@@ -215,6 +215,10 @@ export type Match = {
      */
     zip?: string;
     /**
+     * timezone
+     */
+    tz?: string;
+    /**
      * list of areas
      */
     areas: Array<Area>;
@@ -254,14 +258,14 @@ export type PedestrianProfile = 'FOOT' | 'WHEELCHAIR';
  *
  * # Transit modes
  *
- * - `TRANSIT`: translates to `RAIL,SUBWAY,TRAM,BUS,FERRY,AIRPLANE,COACH`
+ * - `TRANSIT`: translates to `RAIL,TRAM,BUS,FERRY,AIRPLANE,COACH,CABLE_CAR,FUNICULAR,AREAL_LIFT,OTHER`
  * - `TRAM`: trams
  * - `SUBWAY`: subway trains
  * - `FERRY`: ferries
  * - `AIRPLANE`: airline flights
  * - `BUS`: short distance buses (does not include `COACH`)
  * - `COACH`: long distance buses (does not include `BUS`)
- * - `RAIL`: translates to `HIGHSPEED_RAIL,LONG_DISTANCE,NIGHT_RAIL,REGIONAL_RAIL,REGIONAL_FAST_RAIL`
+ * - `RAIL`: translates to `HIGHSPEED_RAIL,LONG_DISTANCE,NIGHT_RAIL,REGIONAL_RAIL,REGIONAL_FAST_RAIL,METRO,SUBWAY`
  * - `METRO`: metro trains
  * - `HIGHSPEED_RAIL`: long distance high speed trains (e.g. TGV)
  * - `LONG_DISTANCE`: long distance inter city trains
@@ -311,6 +315,10 @@ export type Place = {
      * level according to OpenStreetMap
      */
     level: number;
+    /**
+     * timezone name (e.g. "Europe/Berlin")
+     */
+    tz?: string;
     /**
      * arrival time
      */
@@ -444,7 +452,11 @@ export type StopTime = {
     routeColor?: string;
     routeTextColor?: string;
     tripId: string;
+    routeType?: number;
     routeShortName: string;
+    routeLongName: string;
+    tripShortName: string;
+    displayName: string;
     /**
      * Type of pickup (for departures) or dropoff (for arrivals), may be disallowed either due to schedule, skipped stops or cancellations
      */
@@ -472,9 +484,13 @@ export type TripInfo = {
      */
     tripId: string;
     /**
-     * trip display name
+     * trip display name (api version < 4)
      */
-    routeShortName: string;
+    routeShortName?: string;
+    /**
+     * trip display name (api version >= 4)
+     */
+    displayName?: string;
 };
 
 /**
@@ -716,12 +732,15 @@ export type Leg = {
     headsign?: string;
     routeColor?: string;
     routeTextColor?: string;
-    routeType?: string;
+    routeType?: number;
     agencyName?: string;
     agencyUrl?: string;
     agencyId?: string;
     tripId?: string;
     routeShortName?: string;
+    routeLongName?: string;
+    tripShortName?: string;
+    displayName?: string;
     /**
      * Whether this trip is cancelled
      */
@@ -1029,11 +1048,19 @@ export type PlanData = {
         elevationCosts?: ElevationCosts;
         /**
          * Optional. Experimental. Default is `1.0`.
-         * Factor with which the duration of the fastest direct connection is multiplied.
-         * Values > 1.0 allow connections that are slower than the fastest direct connection to be found.
+         * Factor with which the duration of the fastest direct non-public-transit connection is multiplied.
+         * Values > 1.0 allow transit connections that are slower than the fastest direct non-public-transit connection to be found.
          *
          */
         fastestDirectFactor?: number;
+        /**
+         * Optional.
+         * Factor with which the duration of the fastest slowDirect connection is multiplied.
+         * Values > 1.0 allow connections that are slower than the fastest direct transit connection to be found.
+         * Values < 1.0 will return all slowDirect connections.
+         *
+         */
+        fastestSlowDirectFactor?: number;
         /**
          * \`latitude,longitude[,level]\` tuple with
          * - latitude and longitude in degrees
@@ -1289,7 +1316,7 @@ export type PlanData = {
          */
         searchWindow?: number;
         /**
-         * Optional. Experimental. Adds overtaken direct connections.
+         * Optional. Experimental. Adds overtaken direct public transit connections.
          */
         slowDirect?: boolean;
         /**

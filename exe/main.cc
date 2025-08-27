@@ -1,14 +1,21 @@
 #include "boost/program_options.hpp"
 #include "boost/url/decode_view.hpp"
 
+#include <cctype>
+#include <algorithm>
 #include <filesystem>
 #include <iostream>
+#include <string>
 #include <string_view>
 
 #include "google/protobuf/stubs/common.h"
 
+#include "utl/logging.h"
 #include "utl/progress_tracker.h"
 #include "utl/to_vec.h"
+
+#include "nigiri/logging.h"
+#include "nigiri/rt/util.h"
 
 #include "motis/analyze_shapes.h"
 #include "motis/config.h"
@@ -17,6 +24,10 @@
 #include "motis/server.h"
 
 #include "./flags.h"
+
+#if defined(USE_MIMALLOC) && defined(_WIN32)
+#include "mimalloc-new-delete.h"
+#endif
 
 #if !defined(MOTIS_VERSION)
 #define MOTIS_VERSION "unknown"
@@ -51,7 +62,9 @@ int main(int ac, char** av) {
         "  import     prepare input data, creates the data directory\n"
         "  server     starts a web server serving the API\n"
         "  extract    trips from a Itinerary to GTFS timetable\n"
-        "  analyze-shapes   print shape segmentation for trips\n",
+        "  pb2json    convert GTFS-RT protobuf to JSON\n"
+        "  json2pb    convert JSON to GTFS-RT protobuf\n"
+        "  shapes     print shape segmentation for trips\n",
         motis_version);
     return 0;
   } else if (ac <= 1 || (ac >= 2 && av[1] == "--version"sv)) {
@@ -102,23 +115,44 @@ int main(int ac, char** av) {
     case cista::hash("server"):
       try {
         auto data_path = fs::path{"data"};
+        auto log_lvl = std::string{"DEBUG"};
 
         auto desc = po::options_description{"Server Options"};
         add_data_path_opt(desc, data_path);
+        add_log_level_opt(desc, log_lvl);
+        add_help_opt(desc);
         auto vm = parse_opt(ac, av, desc);
         if (vm.count("help")) {
           std::cout << desc << "\n";
           return_value = 0;
           break;
         }
+        if (vm.count("log-level")) {
+          std::transform(log_lvl.begin(), log_lvl.end(), log_lvl.begin(),
+                         [](unsigned char const c) { return std::toupper(c); });
+          if (log_lvl == "ERROR"sv) {
+            utl::log_verbosity = utl::log_level::error;
+            nigiri::s_verbosity = nigiri::log_lvl::error;
+          } else if (log_lvl == "INFO"sv) {
+            utl::log_verbosity = utl::log_level::info;
+            nigiri::s_verbosity = nigiri::log_lvl::info;
+          } else if (log_lvl == "DEBUG"sv) {
+            utl::log_verbosity = utl::log_level::debug;
+            nigiri::s_verbosity = nigiri::log_lvl::debug;
+          } else {
+            fmt::println(std::cerr, "Unsupported log level '{}'\n", log_lvl);
+            return_value = 1;
+            break;
+          }
+        }
 
         auto const c = config::read(data_path / "config.yml");
-        return server(data{data_path, c}, c, motis_version);
+        return_value = server(data{data_path, c}, c, motis_version);
       } catch (std::exception const& e) {
         std::cerr << "unable to start server: " << e.what() << "\n";
         return_value = 1;
-        break;
       }
+      break;
 
     case cista::hash("import"): {
       auto c = config{};
@@ -140,16 +174,67 @@ int main(int ac, char** av) {
         auto const bars = utl::global_progress_bars{false};
         import(c, std::move(data_path));
         return_value = 0;
-        break;
       } catch (std::exception const& e) {
         fmt::println("unable to import: {}", e.what());
         fmt::println("config:\n{}", fmt::streamed(c));
         return_value = 1;
-        break;
       }
+      break;
     }
 
-    case cista::hash("analyze-shapes"): {
+    case cista::hash("pb2json"): {
+      try {
+        auto p = fs::path{};
+
+        auto desc = po::options_description{"GTFS-RT Protobuf to JSON"};
+        desc.add_options()  //
+            ("path,p", boost::program_options::value(&p)->default_value(p),
+             "Path to Protobuf GTFS-RT file");
+        auto vm = parse_opt(ac, av, desc);
+        if (vm.count("help")) {
+          std::cout << desc << "\n";
+          return_value = 0;
+          break;
+        }
+
+        auto const protobuf = cista::mmap{p.generic_string().c_str(),
+                                          cista::mmap::protection::READ};
+        fmt::println("{}", nigiri::rt::protobuf_to_json(protobuf.view()));
+        return_value = 0;
+      } catch (std::exception const& e) {
+        fmt::println("error: ", e.what());
+        return_value = 1;
+      }
+      break;
+    }
+
+    case cista::hash("json2pb"): {
+      try {
+        auto p = fs::path{};
+
+        auto desc = po::options_description{"GTFS-RT JSON to Protobuf"};
+        desc.add_options()  //
+            ("path,p", boost::program_options::value(&p)->default_value(p),
+             "Path to GTFS-RT JSON file");
+        auto vm = parse_opt(ac, av, desc);
+        if (vm.count("help")) {
+          std::cout << desc << "\n";
+          return_value = 0;
+          break;
+        }
+
+        auto const protobuf = cista::mmap{p.generic_string().c_str(),
+                                          cista::mmap::protection::READ};
+        fmt::println("{}", nigiri::rt::json_to_protobuf(protobuf.view()));
+        return_value = 0;
+      } catch (std::exception const& e) {
+        fmt::println("error: ", e.what());
+        return_value = 1;
+      }
+      break;
+    }
+
+    case cista::hash("shapes"): {
       try {
         auto data_path = fs::path{"data"};
 
@@ -179,12 +264,11 @@ int main(int ac, char** av) {
             });
 
         return_value = analyze_shapes(data{data_path, c}, ids) ? 0 : 1;
-        break;
       } catch (std::exception const& e) {
         std::cerr << "unable to analyse shapes: " << e.what() << "\n";
         return_value = 1;
-        break;
       }
+      break;
     }
 
     default:

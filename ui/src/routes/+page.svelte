@@ -145,6 +145,17 @@
 	let to = $state<Location>(parseLocation(urlParams?.get('toPlace'), urlParams?.get('toName')));
 	let one = $state<Location>(parseLocation(urlParams?.get('one'), urlParams?.get('oneName')));
 	let time = $state<Date>(new Date(urlParams?.get('time') || Date.now()));
+	let timetableView = $state(urlParams?.get('timetableView') != 'false');
+	let searchWindow = $state(
+		urlParams?.get('searchWindow')
+			? parseInt(urlParams.get('searchWindow')!)
+			: defaultQuery.searchWindow
+	);
+	let numItineraries = $state(
+		urlParams?.get('numItineraries')
+			? parseIntOr(urlParams.get('numItineraries'), defaultQuery.numItineraries)
+			: defaultQuery.numItineraries
+	);
 	let arriveBy = $state<boolean>(urlParams?.get('arriveBy') == 'true');
 	let useRoutedTransfers = $state(
 		urlParams?.get('useRoutedTransfers') == 'true' || defaultQuery.useRoutedTransfers
@@ -235,7 +246,9 @@
 						fromPlace: toPlaceString(from),
 						toPlace: toPlaceString(to),
 						arriveBy,
-						timetableView: true,
+						timetableView,
+						searchWindow,
+						numItineraries,
 						withFares: true,
 						slowDirect,
 						fastestDirectFactor: 1.5,

@@ -25,12 +25,6 @@ constexpr auto const kInfinityDuration =
     nigiri::duration_t{std::numeric_limits<nigiri::duration_t::rep>::max()};
 
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-extern boost::thread_specific_ptr<nigiri::routing::search_state> search_state;
-
-// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-extern boost::thread_specific_ptr<nigiri::routing::raptor_state> raptor_state;
-
-// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 extern boost::thread_specific_ptr<osr::bitvec<osr::node_idx_t>> blocked;
 
 using stats_map_t = std::map<std::string, std::uint64_t>;
@@ -96,7 +90,8 @@ struct routing {
       std::optional<std::vector<api::RentalPropulsionTypeEnum>> const&,
       std::optional<std::vector<std::string>> const& rental_providers,
       bool ignore_rental_return_constraints,
-      nigiri::unixtime_t start_time,
+      nigiri::unixtime_t time,
+      bool arrive_by,
       api::PedestrianProfileEnum,
       api::ElevationCostsEnum,
       std::chrono::seconds max,
@@ -118,6 +113,8 @@ struct routing {
   std::shared_ptr<rt> const& rt_;
   nigiri::shapes_storage const* shapes_;
   std::shared_ptr<gbfs::gbfs_data> const& gbfs_;
+  location_place_map_t const* lp_;
+  tz_map_t const* tz_;
   odm::bounds const* odm_bounds_;
   metrics_registry* metrics_;
 };

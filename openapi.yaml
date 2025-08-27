@@ -7,7 +7,7 @@ info:
   license:
     name: MIT
     url: https://opensource.org/license/mit
-  version: v2
+  version: v4
 externalDocs:
   description: Find out more about MOTIS
   url: https://github.com/motis-project/motis
@@ -19,7 +19,7 @@ servers:
   - url: http://localhost:8080
     description: Local MOTIS server
 paths:
-  /api/v3/plan:
+  /api/v4/plan:
     get:
       tags:
         - routing
@@ -644,8 +644,8 @@ paths:
           required: false
           description: |
             Optional. Experimental. Default is `1.0`.
-            Factor with which the duration of the fastest direct connection is multiplied.
-            Values > 1.0 allow connections that are slower than the fastest direct connection to be found.
+            Factor with which the duration of the fastest direct non-public-transit connection is multiplied.
+            Values > 1.0 allow transit connections that are slower than the fastest direct non-public-transit connection to be found.
           schema:
             type: number
             default: 1.0
@@ -679,10 +679,23 @@ paths:
         - name: slowDirect
           in: query
           required: false
-          description: Optional. Experimental. Adds overtaken direct connections.
+          description: Optional. Experimental. Adds overtaken direct public transit connections.
           schema:
             type: boolean
             default: true
+
+        - name: fastestSlowDirectFactor
+          in: query
+          required: false
+          description: |
+            Optional. 
+            Factor with which the duration of the fastest slowDirect connection is multiplied.
+            Values > 1.0 allow connections that are slower than the fastest direct transit connection to be found.
+            Values < 1.0 will return all slowDirect connections.
+          schema:
+            type: number
+            default: 3.0
+            minimum: 0
 
         - name: withFares
           in: query
@@ -1207,7 +1220,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/Match'
 
-  /api/v2/trip:
+  /api/v4/trip:
     get:
       tags:
         - timetable
@@ -1255,7 +1268,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Itinerary'
 
-  /api/v1/stoptimes:
+  /api/v4/stoptimes:
     get:
       tags:
         - timetable
@@ -1413,7 +1426,7 @@ paths:
                       The next page is a set of stop times AFTER the last stop time in this result.
                     type: string
 
-  /api/v1/map/trips:
+  /api/v4/map/trips:
     get:
       tags:
         - map
@@ -1835,6 +1848,9 @@ components:
         zip:
           description: zip code
           type: string
+        tz:
+          description: timezone name (e.g. "Europe/Berlin")
+          type: string
         areas:
           description: list of areas
           type: array
@@ -1971,6 +1987,9 @@ components:
         level:
           description: level according to OpenStreetMap
           type: number
+        tz:
+          description: timezone name (e.g. "Europe/Berlin")
+          type: string
         arrival:
           description: arrival time
           type: string
@@ -2077,6 +2096,9 @@ components:
         - agencyUrl
         - tripId
         - routeShortName
+        - routeLongName
+        - tripShortName
+        - displayName
         - pickupDropoffType
         - cancelled
         - tripCancelled
@@ -2108,7 +2130,15 @@ components:
           type: string
         tripId:
           type: string
+        routeType:
+          type: integer
         routeShortName:
+          type: string
+        routeLongName:
+          type: string
+        tripShortName:
+          type: string
+        displayName:
           type: string
         pickupDropoffType:
           description: Type of pickup (for departures) or dropoff (for arrivals), may be disallowed either due to schedule, skipped stops or cancellations
@@ -2128,13 +2158,15 @@ components:
       type: object
       required:
         - tripId
-        - routeShortName
       properties:
         tripId:
           description: trip ID (dataset trip id prefixed with the dataset tag)
           type: string
         routeShortName:
-          description: trip display name
+          description: trip display name (api version < 4)
+          type: string
+        displayName:
+          description: trip display name (api version >= 4)
           type: string
 
     TripSegment:
@@ -2440,7 +2472,7 @@ components:
         routeTextColor:
           type: string
         routeType:
-          type: string
+          type: integer
         agencyName:
           type: string
         agencyUrl:
@@ -2450,6 +2482,12 @@ components:
         tripId:
           type: string
         routeShortName:
+          type: string
+        routeLongName:
+          type: string
+        tripShortName:
+          type: string
+        displayName:
           type: string
         cancelled:
           description: Whether this trip is cancelled

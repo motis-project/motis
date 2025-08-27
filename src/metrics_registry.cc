@@ -85,12 +85,43 @@ metrics_registry::metrics_registry(
       current_trips_running_scheduled_count_{
           prometheus::BuildGauge()
               .Name("current_trips_running_scheduled_count")
-              .Help("The number of currently running trips")
+              .Help("The number of currently running transports")
               .Register(registry_)},
       current_trips_running_scheduled_with_realtime_count_{
           prometheus::BuildGauge()
               .Name("current_trips_running_scheduled_with_realtime_count")
-              .Help("The number of currently running trips that have RT data")
+              .Help("The number of currently running transports that have RT "
+                    "data")
+              .Register(registry_)},
+      total_trips_with_realtime_count_{
+          prometheus::BuildGauge()
+              .Name("total_trips_with_realtime_count")
+              .Help("The total number of transports that have RT data")
+              .Register(registry_)
+              .Add({})},
+      timetable_first_day_timestamp_{
+          prometheus::BuildGauge()
+              .Name("nigiri_timetable_first_day_timestamp_seconds")
+              .Help("Day of the first transport in unixtime")
+              .Register(registry_)},
+      timetable_last_day_timestamp_{
+          prometheus::BuildGauge()
+              .Name("nigiri_timetable_last_day_timestamp_seconds")
+              .Help("Day of the last transport in unixtime")
+              .Register(registry_)},
+      timetable_locations_count_{
+          prometheus::BuildGauge()
+              .Name("nigiri_timetable_locations_count")
+              .Help("The number of locations in the timetable")
+              .Register(registry_)},
+      timetable_trips_count_{prometheus::BuildGauge()
+                                 .Name("nigiri_timetable_trips_count")
+                                 .Help("The number of trips in the timetable")
+                                 .Register(registry_)},
+      timetable_transports_x_days_count_{
+          prometheus::BuildGauge()
+              .Name("nigiri_timetable_transports_x_days_count")
+              .Help("The number of transports x service days in the timetable")
               .Register(registry_)} {}
 
 metrics_registry::~metrics_registry() = default;

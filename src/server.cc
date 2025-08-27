@@ -12,7 +12,11 @@
 #include "utl/logging.h"
 #include "utl/set_thread_name.h"
 
+#include "ctx/ctx.h"
+
 #include "motis/config.h"
+#include "motis/ctx_data.h"
+#include "motis/ctx_exec.h"
 #include "motis/endpoints/adr/geocode.h"
 #include "motis/endpoints/adr/reverse_geocode.h"
 #include "motis/endpoints/elevators.h"
@@ -38,14 +42,11 @@
 #include "motis/gbfs/update.h"
 #include "motis/metrics_registry.h"
 #include "motis/rt_update.h"
-#include "motis/scheduler/runner.h"
-#include "motis/scheduler/scheduler_algo.h"
 
 namespace fs = std::filesystem;
 namespace asio = boost::asio;
 
 namespace motis {
-
 template <typename T, typename From>
 void GET(auto&& r, std::string target, From& from) {
   if (auto const x = utl::init_from<T>(from); x.has_value()) {
@@ -63,10 +64,9 @@ void POST(auto&& r, std::string target, From& from) {
 int server(data d, config const& c, std::string_view const motis_version) {
   auto const server_config = c.server_.value_or(config::server{});
 
-  auto ioc = asio::io_context{};
-  auto s = net::web_server{ioc};
-  auto r = runner{c.n_threads(), 1024U};
-  auto qr = net::query_router{net::fiber_exec{ioc, r.ch_}};
+  auto sched = ctx::scheduler<ctx_data>{};
+  auto qr = net::query_router{ctx_exec{sched.runner_.ios(), sched}};
+  auto s = net::web_server{sched.runner_.ios()};
   qr.add_header("Server", fmt::format("MOTIS {}", motis_version));
   if (server_config.data_attribution_link_) {
     qr.add_header("Link", fmt::format("<{}>; rel=\"license\"",
@@ -87,10 +87,14 @@ int server(data d, config const& c, std::string_view const motis_version) {
   GET<ep::routing>(qr, "/api/v1/plan", d);
   GET<ep::routing>(qr, "/api/v2/plan", d);
   GET<ep::routing>(qr, "/api/v3/plan", d);
+  GET<ep::routing>(qr, "/api/v4/plan", d);
   GET<ep::stop_times>(qr, "/api/v1/stoptimes", d);
+  GET<ep::stop_times>(qr, "/api/v4/stoptimes", d);
   GET<ep::trip>(qr, "/api/v1/trip", d);
   GET<ep::trip>(qr, "/api/v2/trip", d);
+  GET<ep::trip>(qr, "/api/v4/trip", d);
   GET<ep::trips>(qr, "/api/v1/map/trips", d);
+  GET<ep::trips>(qr, "/api/v4/map/trips", d);
   GET<ep::stops>(qr, "/api/v1/map/stops", d);
   GET<ep::one_to_all>(qr, "/api/experimental/one-to-all", d);
   GET<ep::one_to_all>(qr, "/api/v1/one-to-all", d);
@@ -145,17 +149,10 @@ int server(data d, config const& c, std::string_view const motis_version) {
     });
   }
 
-  auto threads = std::vector<std::thread>{c.n_threads()};
-  for (auto [i, t] : utl::enumerate(threads)) {
-    t = std::thread{r.run_fn()};
-    utl::set_thread_name(t, fmt::format("motis worker {}", i));
-  }
-
-  auto const stop = net::stop_handler(ioc, [&]() {
+  auto const stop = net::stop_handler(sched.runner_.ios(), [&]() {
     utl::log_info("motis.server", "shutdown");
-    r.ch_.close();
     s.stop();
-    ioc.stop();
+    sched.runner_.stop();
 
     if (rt_update_ioc != nullptr) {
       rt_update_ioc->stop();
@@ -165,14 +162,13 @@ int server(data d, config const& c, std::string_view const motis_version) {
     }
   });
 
-  utl::log_info("motis.server",
-                "listening on {}:{}\nlocal link: http://localhost:{}",
-                server_config.host_, server_config.port_, server_config.port_);
-  net::run(ioc)();
+  utl::log_info(
+      "motis.server",
+      "n_threads={}, listening on {}:{}\nlocal link: http://localhost:{}",
+      c.n_threads(), server_config.host_, server_config.port_,
+      server_config.port_);
 
-  for (auto& t : threads) {
-    t.join();
-  }
+  sched.runner_.run(c.n_threads());
   if (rt_update_thread != nullptr) {
     rt_update_thread->join();
   }
@@ -182,5 +178,4 @@ int server(data d, config const& c, std::string_view const motis_version) {
 
   return 0;
 }
-
 }  // namespace motis

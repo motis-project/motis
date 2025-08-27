@@ -9,7 +9,8 @@
 		scheduledTimestamp,
 		isRealtime,
 		variant,
-		queriedTime
+		queriedTime,
+		timeZone
 	}: {
 		class?: string;
 		timestamp: string;
@@ -17,6 +18,7 @@
 		isRealtime: boolean;
 		variant: 'schedule' | 'realtime' | 'realtime-show-always';
 		queriedTime?: string | undefined;
+		timeZone: string | undefined;
 	} = $props();
 
 	const t = $derived(new Date(timestamp));
@@ -30,22 +32,22 @@
 			return '';
 		}
 		if (queriedTime === undefined) {
-			return time.toLocaleDateString(language);
+			return time.toLocaleDateString(language, { timeZone });
 		}
 		const base = new Date(queriedTime);
 		return base.toLocaleDateString() === time.toLocaleDateString()
 			? ''
-			: `(${time.toLocaleString(language, { weekday: 'short' })})`;
+			: `(${time.toLocaleString(language, { weekday: 'short', timeZone })})`;
 	}
 </script>
 
 <div class={cn('text-nowrap', className)}>
 	{#if variant == 'schedule'}
-		{formatTime(scheduled)}
+		{formatTime(scheduled, timeZone)}
 		{weekday(scheduled)}
 	{:else if variant === 'realtime-show-always' || (variant === 'realtime' && isRealtime)}
 		<span class:text-destructive={highDelay} class:text-green-600={lowDelay}>
-			{formatTime(t)}
+			{formatTime(t, timeZone)}
 		</span>
 		{weekday(t)}
 	{/if}

@@ -51,7 +51,12 @@ void add_trip_updates(n::timetable const& tt,
             : transit_realtime::TripDescriptor_ScheduleRelationship::
                   TripDescriptor_ScheduleRelationship_SCHEDULED);
     if (!fr.is_scheduled()) {
-      // td->set_route_id(route_id); TODO
+      auto const route_id_idx = fr.rtt_->rt_transport_route_id_.at(fr.rt_);
+      if (route_id_idx != n::route_id_idx_t::invalid()) {
+        td->set_route_id(
+            tt.route_ids_[fr.rtt_->rt_transport_src_.at(fr.rt_)].ids_.get(
+                route_id_idx));
+      }
     }
     if (fr.is_cancelled()) {
       return;
@@ -96,7 +101,7 @@ void add_trip_updates(n::timetable const& tt,
 
       if (s.stop_idx_ != 0) {
         auto const arr_delay = s.delay(nigiri::event_type::kArr);
-        if (arr_delay != last_delay) {
+        if (arr_delay != last_delay || !fr.is_scheduled()) {
           set_stu();
           auto ar = stu->mutable_arrival();
           ar->set_time(to_unix(s.time(nigiri::event_type::kArr)));
@@ -106,7 +111,7 @@ void add_trip_updates(n::timetable const& tt,
       }
       if (s.stop_idx_ != fr.size() - 1) {
         auto const dep_delay = s.delay(nigiri::event_type::kDep);
-        if (dep_delay != last_delay) {
+        if (dep_delay != last_delay || !fr.is_scheduled()) {
           set_stu();
           auto dep = stu->mutable_departure();
           dep->set_time(to_unix(s.time(nigiri::event_type::kDep)));

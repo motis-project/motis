@@ -75,6 +75,7 @@ struct config {
       bool operator==(dataset const&) const = default;
 
       std::string path_;
+      std::optional<std::string> script_{};
       bool default_bikes_allowed_{false};
       bool default_cars_allowed_{false};
       bool extend_calendar_{false};
@@ -150,7 +151,7 @@ struct config {
     std::optional<headers_t> headers_{};
   };
 
-  std::size_t n_threads() const;
+  unsigned n_threads() const;
 
   std::optional<elevators> const& get_elevators() const;
 

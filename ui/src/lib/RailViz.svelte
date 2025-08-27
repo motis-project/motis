@@ -269,9 +269,9 @@
 						return null;
 					}
 					return {
-						html: `${object.trips[0].routeShortName}<br>
-                  ${formatTime(new Date(object.departure))} ${object.from.name}<br>
-                  ${formatTime(new Date(object.arrival))} ${object.to.name}`
+						html: `${object.trips[0].displayName}<br>
+                  ${formatTime(new Date(object.departure), object.from.tz)} ${object.from.name}<br>
+                  ${formatTime(new Date(object.arrival), object.to.tz)} ${object.to.name}`
 					};
 				},
 				onClick: ({ object }) => {
