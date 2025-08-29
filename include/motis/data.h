@@ -89,6 +89,7 @@ struct data {
   ptr<osr::lookup> l_;
   ptr<osr::elevation_storage> elevations_;
   cista::wrapped<nigiri::timetable> tt_;
+  cista::wrapped<nigiri::routing::tb::tb_data> tbd_;
   cista::wrapped<tag_lookup> tags_;
   ptr<point_rtree<nigiri::location_idx_t>> location_rtree_;
   ptr<hash_set<osr::node_idx_t>> elevator_nodes_;

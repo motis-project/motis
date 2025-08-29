@@ -18,6 +18,7 @@
 #include "osr/platforms.h"
 #include "osr/ways.h"
 
+#include "nigiri/routing/tb/tb_data.h"
 #include "nigiri/rt/create_rt_timetable.h"
 #include "nigiri/rt/rt_timetable.h"
 #include "nigiri/shapes_storage.h"
@@ -119,6 +120,9 @@ data::data(std::filesystem::path p, config const& c)
       }
       if (c.timetable_->railviz_) {
         load_railviz();
+      }
+      if (c.timetable_->tb_) {
+        tbd_ = cista::read<n::routing::tb::tb_data>(path_ / "tbd.bin");
       }
       for (auto const& [tag, d] : c.timetable_->datasets_) {
         if (d.rt_ && utl::any_of(*d.rt_, [](auto const& rt) {
