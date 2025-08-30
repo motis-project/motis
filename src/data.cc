@@ -122,7 +122,7 @@ data::data(std::filesystem::path p, config const& c)
         load_railviz();
       }
       if (c.timetable_->tb_) {
-        tbd_ = cista::read<n::routing::tb::tb_data>(path_ / "tbd.bin");
+        load_tbd();
       }
       for (auto const& [tag, d] : c.timetable_->datasets_) {
         if (d.rt_ && utl::any_of(*d.rt_, [](auto const& rt) {
@@ -274,6 +274,10 @@ void data::load_shapes() {
 void data::load_railviz() {
   railviz_static_ = std::make_unique<railviz_static_index>(*tt_, shapes_.get());
   rt_->railviz_rt_ = std::make_unique<railviz_rt_index>(*tt_, *rt_->rtt_);
+}
+
+void data::load_tbd() {
+  tbd_ = cista::read<n::routing::tb::tb_data>(path_ / "tbd.bin");
 }
 
 void data::load_geocoder() {

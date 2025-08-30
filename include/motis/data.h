@@ -57,6 +57,7 @@ struct data {
   void load_flex_areas();
   void load_shapes();
   void load_railviz();
+  void load_tbd();
   void load_geocoder();
   void load_matches();
   void load_way_matches();
@@ -70,7 +71,7 @@ struct data {
   auto cista_members() {
     // !!! Remember to add all new members !!!
     return std::tie(config_, t_, location_extra_place_, tz_, r_, tc_, w_, pl_,
-                    l_, elevations_, tt_, tags_, location_rtree_,
+                    l_, elevations_, tt_, tbd_, tags_, location_rtree_,
                     elevator_nodes_, shapes_, railviz_static_, matches_,
                     way_matches_, rt_, gbfs_, odm_bounds_, flex_areas_,
                     metrics_, auser_);
