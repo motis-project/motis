@@ -105,6 +105,7 @@ struct routing {
   osr::platforms const* pl_;
   osr::elevation_storage const* elevations_;
   nigiri::timetable const* tt_;
+  nigiri::routing::tb::tb_data const* tbd_;
   tag_lookup const* tags_;
   point_rtree<nigiri::location_idx_t> const* loc_tree_;
   flex::flex_areas const* fa_;

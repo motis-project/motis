@@ -29,6 +29,7 @@
 #include "nigiri/loader/loader_interface.h"
 #include "nigiri/clasz.h"
 #include "nigiri/common/parse_date.h"
+#include "nigiri/routing/tb/preprocess.h"
 #include "nigiri/rt/create_rt_timetable.h"
 #include "nigiri/rt/rt_timetable.h"
 #include "nigiri/shapes_storage.h"
@@ -355,6 +356,19 @@ data import(config const& c, fs::path const& data_path, bool const write) {
       },
       {tt_hash, n_version()}};
 
+  auto tbd =
+      task{"tbd",
+           [&]() { return c.timetable_.has_value() && c.timetable_->tb_; },
+           [&]() { return d.tt_.get() != nullptr; },
+           [&]() {
+             cista::write(
+                 data_path / "tbd.bin",
+                 n::routing::tb::preprocess(
+                     *d.tt_, 0U, n::routing::tb::parallelization::kParallel));
+           },
+           [&]() { d.load_tbd(); },
+           {tt_hash}};
+
   auto adr_extend =
       task{"adr_extend",
            [&]() {
@@ -550,8 +564,8 @@ data import(config const& c, fs::path const& data_path, bool const write) {
       [&]() { d.load_tiles(); },
       {tiles_version(), osm_hash, tiles_hash}};
 
-  auto tasks = std::vector<task>{tiles,      osr,          adr,     tt,
-                                 adr_extend, osr_footpath, matches, flex_areas};
+  auto tasks = std::vector<task>{
+      tiles, osr, adr, tt, tbd, adr_extend, osr_footpath, matches, flex_areas};
   utl::erase_if(tasks, [&](auto&& t) {
     if (!t.should_run_()) {
       return true;
