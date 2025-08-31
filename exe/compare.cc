@@ -7,6 +7,8 @@
 #include "conf/configuration.h"
 
 #include "boost/json/parse.hpp"
+#include "boost/json/serialize.hpp"
+#include "boost/json/value_from.hpp"
 #include "boost/json/value_to.hpp"
 
 #include "fmt/std.h"
@@ -32,6 +34,7 @@ namespace motis {
 int compare(int ac, char** av) {
   auto queries_path = fs::path{"queries.txt"};
   auto responses_paths = std::vector<std::string>{};
+  auto fails_path = fs::path{"fail"};
   auto desc = po::options_description{"Options"};
   desc.add_options()  //
       ("help", "Prints this help message")  //
@@ -47,6 +50,11 @@ int compare(int ac, char** av) {
   if (vm.count("help")) {
     std::cout << desc << "\n";
     return 0;
+  }
+
+  auto const write_fails = fs::is_directory(fails_path);
+  if (!write_fails) {
+    fmt::println("{} is not a directory, not writing fails", fails_path);
   }
 
   auto const open_file = [](fs::path const& p) {
@@ -83,7 +91,7 @@ int compare(int ac, char** av) {
     });
   };
   auto const is_finished = [](info const& x) {
-    return x.params_.has_value() &&
+    return x.params_.has_value() && !x.responses_.empty() &&
            utl::all_of(x.responses_, [](auto&& r) { return r.has_value(); });
   };
   auto const params = [](api::Itinerary const& x) {
@@ -97,6 +105,7 @@ int compare(int ac, char** av) {
   auto n_equal = 0U;
   auto const print_differences = [&](info const& x) {
     auto const& ref = x.responses_[0].value().itineraries_;
+    auto mismatch = false;
     for (auto i = 1U; i < x.responses_.size(); ++i) {
       auto const uut = x.responses_[i].value().itineraries_;
       if (std::ranges::equal(ref | std::views::transform(params),
@@ -105,6 +114,7 @@ int compare(int ac, char** av) {
         continue;
       }
 
+      mismatch = true;
       std::cout << "QUERY=" << x.id_ << "\n";
       utl::sorted_diff(
           ref, uut,
@@ -135,6 +145,16 @@ int compare(int ac, char** av) {
                 std::cout << "\n";
               }});
       std::cout << "\n\n";
+    }
+
+    if (mismatch && write_fails) {
+      std::ofstream{fails_path / fmt::format("{}_q.txt", x.id_)}
+          << x.params_->to_url("/v1/plan");
+      for (auto i = 0U; i < x.responses_.size(); ++i) {
+        std::ofstream{fails_path / fmt::format("{}_{}.json", x.id_, i)}
+            << boost::json::serialize(
+                   boost::json::value_from(x.responses_[i].value()));
+      }
     }
   };
   auto n_consumed = 0U;
