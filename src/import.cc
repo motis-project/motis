@@ -365,7 +365,7 @@ data import(config const& c, fs::path const& data_path, bool const write) {
                      n::routing::tb::preprocess(*d.tt_, n::kDefaultProfile));
       },
       [&]() { d.load_tbd(); },
-      {tt_hash}};
+      {tt_hash, n_version(), tbd_version()}};
 
   auto adr_extend =
       task{"adr_extend",
