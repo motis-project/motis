@@ -356,18 +356,16 @@ data import(config const& c, fs::path const& data_path, bool const write) {
       },
       {tt_hash, n_version()}};
 
-  auto tbd =
-      task{"tbd",
-           [&]() { return c.timetable_.has_value() && c.timetable_->tb_; },
-           [&]() { return d.tt_.get() != nullptr; },
-           [&]() {
-             cista::write(
-                 data_path / "tbd.bin",
-                 n::routing::tb::preprocess(
-                     *d.tt_, 0U, n::routing::tb::parallelization::kParallel));
-           },
-           [&]() { d.load_tbd(); },
-           {tt_hash}};
+  auto tbd = task{
+      "tbd",
+      [&]() { return c.timetable_.has_value() && c.timetable_->tb_; },
+      [&]() { return d.tt_.get() != nullptr; },
+      [&]() {
+        cista::write(data_path / "tbd.bin",
+                     n::routing::tb::preprocess(*d.tt_, n::kDefaultProfile));
+      },
+      [&]() { d.load_tbd(); },
+      {tt_hash}};
 
   auto adr_extend =
       task{"adr_extend",
