@@ -292,8 +292,7 @@ api::stoptimes_response stop_times::operator()(
               max_results);
 
   auto const x = tags_.get_location(tt_, query.stopId_);
-  auto const p = tt_.locations_.parents_[x];
-  auto const l = p == n::location_idx_t::invalid() ? x : p;
+  auto const l = tt_.locations_.get_root_idx(x);
   auto const allowed_clasz = to_clasz_mask(query.mode_);
   auto const [dir, time] = parse_cursor(query.pageCursor_.value_or(fmt::format(
       "{}|{}",
@@ -314,10 +313,16 @@ api::stoptimes_response stop_times::operator()(
     }
     auto const l_name = tt_.locations_.names_[l].view();
     utl::concat(locations, tt_.locations_.children_[l]);
+    for (auto const& c : tt_.locations_.children_[l]) {
+      utl::concat(locations, tt_.locations_.children_[c]);
+    }
     for (auto const eq : tt_.locations_.equivalences_[l]) {
       if (tt_.locations_.names_[eq].view() == l_name) {
         locations.emplace_back(eq);
         utl::concat(locations, tt_.locations_.children_[eq]);
+        for (auto const& c : tt_.locations_.children_[eq]) {
+          utl::concat(locations, tt_.locations_.children_[c]);
+        }
       }
     }
   };
