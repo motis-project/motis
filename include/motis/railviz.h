@@ -28,11 +28,14 @@ api::trips_response get_trains(tag_lookup const&,
                                nigiri::timetable const&,
                                nigiri::rt_timetable const*,
                                nigiri::shapes_storage const*,
-                               osr::ways const* w,
-                               osr::platforms const* pl,
-                               platform_matches_t const* matches,
+                               osr::ways const*,
+                               osr::platforms const*,
+                               platform_matches_t const*,
+                               location_place_map_t const*,
+                               tz_map_t const*,
                                railviz_static_index::impl const&,
                                railviz_rt_index::impl const&,
-                               api::trips_params const&);
+                               api::trips_params const&,
+                               unsigned api_version);
 
 }  // namespace motis

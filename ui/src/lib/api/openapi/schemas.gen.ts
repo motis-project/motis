@@ -244,6 +244,10 @@ export const MatchSchema = {
             description: 'zip code',
             type: 'string'
         },
+        tz: {
+            description: 'timezone',
+            type: 'string'
+        },
         areas: {
             description: 'list of areas',
             type: 'array',
@@ -352,6 +356,10 @@ export const PlaceSchema = {
         level: {
             description: 'level according to OpenStreetMap',
             type: 'number'
+        },
+        tz: {
+            description: 'timezone name (e.g. "Europe/Berlin")',
+            type: 'string'
         },
         arrival: {
             description: 'arrival time',
@@ -478,7 +486,7 @@ export const ReachableSchema = {
 export const StopTimeSchema = {
     description: 'departure or arrival event at a stop',
     type: 'object',
-    required: ['place', 'mode', 'realTime', 'headsign', 'agencyId', 'agencyName', 'agencyUrl', 'tripId', 'routeShortName', 'pickupDropoffType', 'cancelled', 'tripCancelled', 'source'],
+    required: ['place', 'mode', 'realTime', 'headsign', 'agencyId', 'agencyName', 'agencyUrl', 'tripId', 'routeShortName', 'routeLongName', 'tripShortName', 'displayName', 'pickupDropoffType', 'cancelled', 'tripCancelled', 'source'],
     properties: {
         place: {
             '$ref': '#/components/schemas/Place',
@@ -516,7 +524,19 @@ For non-transit legs, null
         tripId: {
             type: 'string'
         },
+        routeType: {
+            type: 'integer'
+        },
         routeShortName: {
+            type: 'string'
+        },
+        routeLongName: {
+            type: 'string'
+        },
+        tripShortName: {
+            type: 'string'
+        },
+        displayName: {
             type: 'string'
         },
         pickupDropoffType: {
@@ -541,14 +561,18 @@ For non-transit legs, null
 export const TripInfoSchema = {
     description: 'trip id and name',
     type: 'object',
-    required: ['tripId', 'routeShortName'],
+    required: ['tripId'],
     properties: {
         tripId: {
             description: 'trip ID (dataset trip id prefixed with the dataset tag)',
             type: 'string'
         },
         routeShortName: {
-            description: 'trip display name',
+            description: 'trip display name (api version < 4)',
+            type: 'string'
+        },
+        displayName: {
+            description: 'trip display name (api version >= 4)',
             type: 'string'
         }
     }
@@ -859,7 +883,7 @@ For non-transit legs, null
             type: 'string'
         },
         routeType: {
-            type: 'string'
+            type: 'integer'
         },
         agencyName: {
             type: 'string'
@@ -874,6 +898,15 @@ For non-transit legs, null
             type: 'string'
         },
         routeShortName: {
+            type: 'string'
+        },
+        routeLongName: {
+            type: 'string'
+        },
+        tripShortName: {
+            type: 'string'
+        },
+        displayName: {
             type: 'string'
         },
         cancelled: {

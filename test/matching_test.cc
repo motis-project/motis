@@ -125,8 +125,8 @@ TEST(motis, get_way_candidates) {
       case search_profile::kCar:
         return d.l_->get_node_candidate_path<car>(a, anc, true, l);
       case search_profile::kBike:
-        return d.l_->get_node_candidate_path<bike<kElevationNoCost>>(a, anc,
-                                                                     true, l);
+        return d.l_->get_node_candidate_path<
+            bike<osr::bike_costing::kSafe, kElevationNoCost>>(a, anc, true, l);
       case search_profile::kCarSharing:
         return d.l_->get_node_candidate_path<car_sharing<noop_tracking>>(
             a, anc, true, l);

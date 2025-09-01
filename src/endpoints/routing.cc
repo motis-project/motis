@@ -538,8 +538,8 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
   auto const direct_modes = deduplicate(query.directModes_);
   auto const from = get_place(tt_, tags_, query.fromPlace_);
   auto const to = get_place(tt_, tags_, query.toPlace_);
-  auto from_p = to_place(tt_, tags_, w_, pl_, matches_, from);
-  auto to_p = to_place(tt_, tags_, w_, pl_, matches_, to);
+  auto from_p = to_place(tt_, tags_, w_, pl_, matches_, lp_, tz_, from);
+  auto to_p = to_place(tt_, tags_, w_, pl_, matches_, lp_, tz_, to);
   if (from_p.vertexType_ == api::VertexTypeEnum::NORMAL) {
     from_p.name_ = "START";
   }
@@ -770,7 +770,8 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                       to_seconds(j.arrival_time() - j.departure_time())));
               return journey_to_response(
                   w_, l_, pl_, *tt_, *tags_, fa_, e, rtt, matches_, elevations_,
-                  shapes_, gbfs_rd, j, start, dest, cache, blocked.get(),
+                  shapes_, gbfs_rd, lp_, tz_, j, start, dest, cache,
+                  blocked.get(),
                   query.requireCarTransport_ && query.useRoutedTransfers_,
                   query.pedestrianProfile_, query.elevationCosts_,
                   query.joinInterlinedLegs_, query.detailedTransfers_,
@@ -787,8 +788,8 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
     };
   }
 
-  return {.from_ = to_place(tt_, tags_, w_, pl_, matches_, from),
-          .to_ = to_place(tt_, tags_, w_, pl_, matches_, to),
+  return {.from_ = to_place(tt_, tags_, w_, pl_, matches_, lp_, tz_, from),
+          .to_ = to_place(tt_, tags_, w_, pl_, matches_, lp_, tz_, to),
           .direct_ = std::move(direct),
           .itineraries_ = {}};
 }

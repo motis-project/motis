@@ -97,7 +97,8 @@ api::geocode_response suggestions_to_response(
     auto api_areas = std::vector<api::Area>{};
     for (auto const [i, a] : utl::enumerate(areas)) {
       auto const admin_lvl = t.area_admin_level_[a];
-      if (admin_lvl == a::kPostalCodeAdminLevel) {
+      if (admin_lvl == a::kPostalCodeAdminLevel ||
+          admin_lvl == a::kTimezoneAdminLevel) {
         continue;
       }
 
@@ -132,6 +133,10 @@ api::geocode_response suggestions_to_response(
               t.strings_[t.area_names_[areas[zip_area_idx]][a::kDefaultLangIdx]]
                   .view()};
         }),
+        .tz_ =
+            s.tz_ == a::timezone_idx_t::invalid()
+                ? std::nullopt
+                : std::optional{std::string{t.timezone_names_[s.tz_].view()}},
         .areas_ = std::move(api_areas),
         .score_ = s.score_};
   });

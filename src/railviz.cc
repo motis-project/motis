@@ -279,18 +279,19 @@ void add_static_transports(n::timetable const& tt,
          tt.locations_.coordinates_[n::stop{seq[segment + 1]}.location_idx()]});
   };
   for (auto const [from, to] : utl::pairwise(stop_indices)) {
+    // TODO dwell times
     auto const box = get_box(from);
     if (!box.overlaps(area)) {
       continue;
     }
 
-    auto const dep_times = tt.event_times_at_stop(r, from, n::event_type::kDep);
+    auto const arr_times = tt.event_times_at_stop(r, to, n::event_type::kArr);
     for (auto const [i, t_idx] :
          utl::enumerate(tt.route_transport_ranges_[r])) {
       auto const day_offset =
-          static_cast<n::day_idx_t::value_t>(dep_times[i].days());
-      for (auto day = start_day; day <= end_day; ++day) {
-        auto const traffic_day = day - day_offset;
+          static_cast<n::day_idx_t::value_t>(arr_times[i].days());
+      for (auto traffic_day = start_day - day_offset; traffic_day <= end_day;
+           ++traffic_day) {
         auto const t = n::transport{t_idx, traffic_day};
         if (time_interval.overlaps({tt.event_time(t, from, n::event_type::kDep),
                                     tt.event_time(t, to, n::event_type::kArr) +
@@ -317,9 +318,12 @@ api::trips_response get_trains(tag_lookup const& tags,
                                osr::ways const* w,
                                osr::platforms const* pl,
                                platform_matches_t const* matches,
+                               location_place_map_t const* lp,
+                               tz_map_t const* tz,
                                railviz_static_index::impl const& static_index,
                                railviz_rt_index::impl const& rt_index,
-                               api::trips_params const& query) {
+                               api::trips_params const& query,
+                               unsigned const api_version) {
   // Parse query.
   auto const zoom_level = static_cast<int>(query.zoom_);
   auto const min = parse_location(query.min_);
@@ -372,26 +376,32 @@ api::trips_response get_trains(tag_lookup const& tags,
                             {r.from_, static_cast<n::stop_idx_t>(r.to_ + 1U)},
                             [&](auto&& p) { enc.push(p); });
 
-    return {.trips_ = {api::TripInfo{
-                .tripId_ = tags.id(tt, from, n::event_type::kDep),
-                .routeShortName_ =
-                    std::string{from.trip_display_name(n::event_type::kDep)}}},
-            .routeColor_ =
-                to_str(from.get_route_color(nigiri::event_type::kDep).color_),
-            .mode_ = to_mode(from.get_clasz(n::event_type::kDep)),
-            .distance_ =
-                fr.is_rt()
-                    ? rt_index.rt_distances_[fr.rt_]
-                    : static_index
-                          .static_distances_[tt.transport_route_[fr.t_.t_idx_]],
-            .from_ = to_place(&tt, &tags, w, pl, matches, tt_location{from}),
-            .to_ = to_place(&tt, &tags, w, pl, matches, tt_location{to}),
-            .departure_ = from.time(n::event_type::kDep),
-            .arrival_ = to.time(n::event_type::kArr),
-            .scheduledDeparture_ = from.scheduled_time(n::event_type::kDep),
-            .scheduledArrival_ = to.scheduled_time(n::event_type::kArr),
-            .realTime_ = fr.is_rt(),
-            .polyline_ = std::move(enc.buf_)};
+    return {
+        .trips_ = {api::TripInfo{
+            .tripId_ = tags.id(tt, from, n::event_type::kDep),
+            .routeShortName_ = api_version < 4 ? std::optional{std::string{
+                                                     from.display_name()}}
+                                               : std::nullopt,
+            .displayName_ = api_version >= 4 ? std::optional{std::string{
+                                                   from.display_name()}}
+                                             : std::nullopt}},
+        .routeColor_ =
+            to_str(from.get_route_color(nigiri::event_type::kDep).color_),
+        .mode_ = to_mode(from.get_clasz(n::event_type::kDep)),
+        .distance_ =
+            fr.is_rt()
+                ? rt_index.rt_distances_[fr.rt_]
+                : static_index
+                      .static_distances_[tt.transport_route_[fr.t_.t_idx_]],
+        .from_ =
+            to_place(&tt, &tags, w, pl, matches, lp, tz, tt_location{from}),
+        .to_ = to_place(&tt, &tags, w, pl, matches, lp, tz, tt_location{to}),
+        .departure_ = from.time(n::event_type::kDep),
+        .arrival_ = to.time(n::event_type::kArr),
+        .scheduledDeparture_ = from.scheduled_time(n::event_type::kDep),
+        .scheduledArrival_ = to.scheduled_time(n::event_type::kArr),
+        .realTime_ = fr.is_rt(),
+        .polyline_ = std::move(enc.buf_)};
   });
 }
 

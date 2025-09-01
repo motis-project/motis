@@ -23,7 +23,9 @@ api::Itinerary trip::operator()(boost::urls::url_view const& url) const {
   auto const rtt = rt->rtt_.get();
 
   auto query = api::trip_params{url.params()};
-  auto const api_version = url.encoded_path().contains("/v1/") ? 1U : 2U;
+  auto const api_version = url.encoded_path().contains("/v1/")   ? 1U
+                           : url.encoded_path().contains("/v2/") ? 2U
+                                                                 : 4U;
 
   auto const [r, _] = tags_.get_trip(tt_, rtt, query.tripId_);
   utl::verify(r.valid(), "trip not found: tripId={}, tt={}", query.tripId_,
@@ -42,7 +44,7 @@ api::Itinerary trip::operator()(boost::urls::url_view const& url) const {
 
   return journey_to_response(
       w_, l_, pl_, tt_, tags_, nullptr, nullptr, rtt, matches_, nullptr,
-      shapes_, gbfs_rd,
+      shapes_, gbfs_rd, lp_, tz_,
       {.legs_ = {n::routing::journey::leg{
            n::direction::kForward, from_l.get_location_idx(),
            to_l.get_location_idx(), start_time, dest_time,

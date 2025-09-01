@@ -11,7 +11,7 @@ export const client = createClient(createConfig());
 export const plan = <ThrowOnError extends boolean = false>(options: Options<PlanData, ThrowOnError>) => {
     return (options?.client ?? client).get<PlanResponse, PlanError, ThrowOnError>({
         ...options,
-        url: '/api/v3/plan'
+        url: '/api/v4/plan'
     });
 };
 
@@ -65,7 +65,7 @@ export const geocode = <ThrowOnError extends boolean = false>(options: Options<G
 export const trip = <ThrowOnError extends boolean = false>(options: Options<TripData, ThrowOnError>) => {
     return (options?.client ?? client).get<TripResponse, TripError, ThrowOnError>({
         ...options,
-        url: '/api/v2/trip'
+        url: '/api/v4/trip'
     });
 };
 
@@ -75,7 +75,7 @@ export const trip = <ThrowOnError extends boolean = false>(options: Options<Trip
 export const stoptimes = <ThrowOnError extends boolean = false>(options: Options<StoptimesData, ThrowOnError>) => {
     return (options?.client ?? client).get<StoptimesResponse, StoptimesError, ThrowOnError>({
         ...options,
-        url: '/api/v1/stoptimes'
+        url: '/api/v4/stoptimes'
     });
 };
 
@@ -89,7 +89,7 @@ export const stoptimes = <ThrowOnError extends boolean = false>(options: Options
 export const trips = <ThrowOnError extends boolean = false>(options: Options<TripsData, ThrowOnError>) => {
     return (options?.client ?? client).get<TripsResponse, TripsError, ThrowOnError>({
         ...options,
-        url: '/api/v1/map/trips'
+        url: '/api/v4/map/trips'
     });
 };
 

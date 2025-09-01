@@ -96,12 +96,19 @@
 				<Route class="w-fit max-w-32 text-ellipsis overflow-hidden" l={stopTime} {onClickTrip} />
 				<Time
 					variant="schedule"
+					timeZone={stopTime.place.tz}
 					isRealtime={stopTime.realTime}
 					{timestamp}
 					{scheduledTimestamp}
 					queriedTime={queryTime.toISOString()}
 				/>
-				<Time variant="realtime" isRealtime={stopTime.realTime} {timestamp} {scheduledTimestamp} />
+				<Time
+					variant="realtime"
+					timeZone={stopTime.place.tz}
+					isRealtime={stopTime.realTime}
+					{timestamp}
+					{scheduledTimestamp}
+				/>
 				<span>
 					<div class="flex items-center text-muted-foreground min-w-0">
 						<div><ArrowRight class="stroke-muted-foreground h-4 w-4" /></div>

@@ -54,8 +54,8 @@ timetable:
   use_osm_stop_coordinates: false
   extend_missing_footpaths: false
   max_footpath_length: 15
-  max_matching_distance: 25
-  preprocess_max_matching_distance: 0
+  max_matching_distance: 25.000000
+  preprocess_max_matching_distance: 0.000000
   datasets:
     de:
       path: delfi.gtfs.zip
