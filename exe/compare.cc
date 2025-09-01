@@ -69,7 +69,7 @@ int compare(int ac, char** av) {
   };
 
   auto const read_line = [](std::ifstream& f) -> std::optional<std::string> {
-    if (f.peek() == EOF || f.eof()) {
+    if (f.eof() || f.peek() == EOF) {
       return std::nullopt;
     }
     std::string line;

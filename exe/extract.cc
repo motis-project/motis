@@ -30,6 +30,7 @@ namespace n = nigiri;
 namespace motis {
 
 void copy_stop_times(hash_set<std::string> const& trip_ids,
+                     hash_set<std::string> const& filter_stop_ids,
                      std::string_view file_content,
                      hash_set<std::string>& stop_ids,
                      std::ostream& out) {
@@ -45,7 +46,9 @@ void copy_stop_times(hash_set<std::string> const& trip_ids,
   out << line.view() << "\n";
   while ((line = reader.read_line())) {
     auto const row = utl::read_row<csv_stop_time>(header_permutation, line);
-    if (trip_ids.contains(row.trip_id_->view())) {
+    if (trip_ids.contains(row.trip_id_->view()) &&
+        (filter_stop_ids.empty() ||
+         filter_stop_ids.contains(row.stop_id_->view()))) {
       stop_ids.insert(row.stop_id_->view());
       out << line.view() << "\n";
       ++n_lines;
@@ -223,10 +226,12 @@ void copy_transfers(hash_set<std::string> const& stop_ids,
 int extract(int ac, char** av) {
   auto in = std::vector<fs::path>{"response.json"};
   auto out = fs::path{"gtfs"};
-
+  auto reduce = false;
   auto desc = po::options_description{"Options"};
   desc.add_options()  //
       ("help", "Prints this help message")  //
+      ("reduce", po::value(&reduce)->default_value(reduce),
+       "Only extract first and last stop of legs for stop times")  //
       ("in,i", po::value(&in)->multitoken(),
        "PlanResponse JSON input files")  //
       ("out,o", po::value(&out), "output directory");
@@ -236,6 +241,18 @@ int extract(int ac, char** av) {
     std::cout << desc << "\n";
     return 0;
   }
+
+  auto important_stops = hash_set<std::string>{};
+  auto const add_important_stop = [&](api::Place const& p) {
+    if (!reduce || p.vertexType_ != api::VertexTypeEnum::TRANSIT) {
+      return;
+    }
+    auto const tag_end = p.stopId_.value().find('_');
+    utl::verify(tag_end != std::string::npos, "no tag found for stop id {}",
+                p.stopId_.value());
+    fmt::println("important stop {}", p.stopId_.value().substr(tag_end + 1U));
+    important_stops.insert(p.stopId_.value().substr(tag_end + 1U));
+  };
 
   auto todos = hash_map<std::string, hash_set<std::string>>{};
   auto source = std::string{};
@@ -252,6 +269,9 @@ int extract(int ac, char** av) {
 
     for (auto const& i : res.itineraries_) {
       for (auto const& l : i.legs_) {
+        add_important_stop(l.from_);
+        add_important_stop(l.to_);
+
         if (!l.source_.has_value() || !l.tripId_.has_value()) {
           continue;
         }
@@ -313,8 +333,8 @@ int extract(int ac, char** av) {
       fmt::println("writing {}/stop_times.txt, searching for trips={}",
                    out / dataset_dir.filename(), trip_ids);
       auto of = std::ofstream{out / dataset_dir.filename() / "stop_times.txt"};
-      copy_stop_times(trip_ids, dir->get_file("stop_times.txt").data(),
-                      stop_ids, of);
+      copy_stop_times(trip_ids, important_stops,
+                      dir->get_file("stop_times.txt").data(), stop_ids, of);
     }
 
     {

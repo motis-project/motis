@@ -682,7 +682,7 @@ paths:
           description: Optional. Experimental. Adds overtaken direct public transit connections.
           schema:
             type: boolean
-            default: true
+            default: false
 
         - name: fastestSlowDirectFactor
           in: query
