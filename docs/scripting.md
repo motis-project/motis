@@ -56,7 +56,7 @@ processing via `function process_agency(agency)`
 
 ### Routes (as defined in GTFS `routes.txt`)
 
-processing via `function process_location(location)`
+processing via `function process_route(location)`
 
   - `get_id`
   - `get_short_name`
