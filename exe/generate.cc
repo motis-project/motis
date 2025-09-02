@@ -247,6 +247,8 @@ int generate(int ac, char** av) {
         node_rtree.add(d.w_->get_node_pos(i), i);
       }
     }
+  } else {
+    fmt::println("station-to-station");
   }
 
   auto stops = std::vector<n::location_idx_t>{};
@@ -257,6 +259,16 @@ int generate(int ac, char** av) {
       continue;
     }
     stops.emplace_back(l);
+  }
+
+  auto ss = std::optional<n::routing::search_state>{};
+  auto rs = std::optional<n::routing::raptor_state>{};
+  if (lb_rank) {
+    ss = n::routing::search_state{};
+    rs = n::routing::raptor_state{};
+    fmt::println("from and to pairings by lower bounds rank");
+  } else {
+    fmt::println("from and to uniformly at random");
   }
 
   auto const get_place =
@@ -271,49 +283,22 @@ int generate(int ac, char** av) {
       return std::nullopt;
     }
 
-    auto pos = d.w_->get_node_pos(rand_in(nodes));
+    auto const pos = d.w_->get_node_pos(rand_in(nodes));
     return fmt::format("{},{}", pos.lat(), pos.lng());
   };
 
-  auto const random_place = [&]() {
-    auto stop_place = std::pair<n::location_idx_t, std::string>{};
-    auto do {
-      auto const l = random_stop(*d.tt_, stops);
-      auto const place = get_place(l);
-    }
-    while (!place.has_value())
-      ;
-    return *place;
-  };
+  auto const random_from_to = [&](auto const r) {
+    auto from_place = std::optional<std::string>{};
+    auto to_place = std::optional<std::string>{};
 
-  auto const random_time = [&]() {
-    using namespace std::chrono_literals;
-    return *first_day +
-           rand_in(0U, static_cast<std::uint32_t>(
-                           (*last_day - *first_day).count())) *
-               date::days{1U} +
-           (time_of_day ? *time_of_day : rand_in(6U, 18U)) * 1h;
-  };
+    for (auto x = 0U; x != 1000U; ++x) {
+      auto const from_stop = random_stop(*d.tt_, stops);
+      from_place = get_place(from_stop);
+      if (!from_place) {
+        continue;
+      }
 
-  auto ss = std::optional<n::routing::search_state>{};
-  auto rs = std::optional<n::routing::raptor_state>{};
-  if (lb_rank) {
-    ss = n::routing::search_state{};
-    rs = n::routing::raptor_state{};
-  }
-
-  {
-    auto out = std::ofstream{"queries.txt"};
-    auto coords = std::ofstream{"coords.txt"};
-    coords << "from_lat, from_lon, to_lat, to_lon\n";
-    auto const progress_tracker =
-        utl::activate_progress_tracker(fmt::format("generating {} queries", n));
-    progress_tracker->in_high(n);
-    auto const silencer = utl::global_progress_bars{false};
-    for (auto [i, r] = std::tuple{0U, kMinRank}; i != n;
-         ++i, r = r * 2U < stops.size() ? r * 2U : kMinRank) {
       if (lb_rank) {
-        auto const from_stop = random_stop(*d.tt_, stops);
         auto const s = n::routing::search<
             n::direction::kBackward,
             n::routing::raptor<n::direction::kBackward, false, 0,
@@ -326,15 +311,39 @@ int generate(int ac, char** av) {
           return ss->travel_time_lower_bound_[to_idx(a)] <
                  ss->travel_time_lower_bound_[to_idx(b)];
         });
-        p.fromPlace_ = get_place(from_stop);
-        p.toPlace_ = get_place(stops[r]);
-        coords << p.fromPlace_ << ", " << p.toPlace_ << "\n";
+        to_place = get_place(stops[r]);
       } else {
-        p.fromPlace_ = random_place();
-        p.toPlace_ = random_place();
+        to_place = get_place(random_stop(*d.tt_, stops));
       }
+      if (to_place) {
+        break;
+      }
+    }
 
-      p.time_ = random_time();
+    p.fromPlace_ = *from_place;
+    p.toPlace_ = *to_place;
+  };
+
+  auto const random_time = [&]() {
+    using namespace std::chrono_literals;
+    p.time_ =
+        *first_day +
+        rand_in(0U,
+                static_cast<std::uint32_t>((*last_day - *first_day).count())) *
+            date::days{1U} +
+        (time_of_day ? *time_of_day : rand_in(6U, 18U)) * 1h;
+  };
+
+  {
+    auto out = std::ofstream{"queries.txt"};
+    auto const progress_tracker =
+        utl::activate_progress_tracker(fmt::format("generating {} queries", n));
+    progress_tracker->in_high(n);
+    auto const silencer = utl::global_progress_bars{false};
+    for (auto [i, r] = std::tuple{0U, kMinRank}; i != n;
+         ++i, r = r * 2U < stops.size() ? r * 2U : kMinRank) {
+      random_from_to(r);
+      random_time();
       out << p.to_url("/api/v1/plan") << "\n";
       progress_tracker->increment();
     }
