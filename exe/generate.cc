@@ -6,7 +6,12 @@
 
 #include "boost/url/url.hpp"
 
+#include "nigiri/common/interval.h"
+#include "nigiri/routing/raptor/debug.h"
+#include "nigiri/routing/search.h"
 #include "nigiri/timetable.h"
+
+#include "utl/progress_tracker.h"
 
 #include "motis-api/motis-api.h"
 #include "motis/config.h"
@@ -23,6 +28,8 @@ namespace fs = std::filesystem;
 namespace po = boost::program_options;
 
 namespace motis {
+
+constexpr auto const kMinRank = 16UL;
 
 static std::atomic_uint32_t seed{0U};
 
@@ -72,7 +79,7 @@ int generate(int ac, char** av) {
   auto use_bike = false;
   auto use_car = false;
   auto use_odm = false;
-  auto lb_rank = false;
+  auto lb_rank = true;
   auto p = api::plan_params{};
 
   auto const parse_date = [](std::string_view const s) {
@@ -151,9 +158,10 @@ int generate(int ac, char** av) {
            ->default_value(p.fastestDirectFactor_),
        "sets fastest direct factor of the queries")  //
       ("lb_rank", po::value(&lb_rank)->default_value(lb_rank),
-       "emit query files for different lower bounds (lb) ranks, the query file "
-       "for lb rank n contains queries to stops that are the  2^n-th stop when "
-       "sorting all stops by their lb value from the start");
+       "emit queries uniformly distributed over the lower bounds (lb) ranks, "
+       "lb rank n:  2^n-th stop when sorting all stops by their lb value from "
+       "the start (min. rank: 4, max. rank: derived from number of eligible "
+       "stops)");
   add_data_path_opt(desc, data_path);
   auto vm = parse_opt(ac, av, desc);
 
@@ -251,59 +259,68 @@ int generate(int ac, char** av) {
     stops.emplace_back(l);
   }
 
-  auto const random_place = [&]() {
+  auto const get_place = [&](n::location_idx_t const l) {
     if (!modes) {
-      return d.tags_->id(*d.tt_, random_stop(*d.tt_, stops));
+      return d.tags_->id(*d.tt_, l);
     }
 
     auto nodes = std::vector<osr::node_idx_t>{};
     do {
-      nodes = node_rtree.in_radius(
-          d.tt_->locations_.coordinates_[random_stop(*d.tt_, stops)], max_dist);
+      nodes = node_rtree.in_radius(d.tt_->locations_.coordinates_[l], max_dist);
     } while (nodes.empty());
 
     auto pos = d.w_->get_node_pos(rand_in(nodes));
     return fmt::format("{},{}", pos.lat(), pos.lng());
   };
 
-  auto ranks = std::vector<size_t>{4};
-  auto const min_rank = 4U;
-  auto const max_rank =
-      sizeof(stops.size()) * 8U -
-      static_cast<unsigned long>(std::countl_zero(stops.size())) - 1U;
-
-  auto const get_out = [&]() {
-    auto out = std::vector<std::ofstream>{};
-    if (!lb_rank ||) {
-      out.emplace_back("queries.txt");
-      return out;
-    }
-
-    ranks = {min_rank, min_rank + (max_rank - min_rank) / 3,
-             min_rank + 2U * ((max_rank - min_rank) / 3), max_rank};
-    for (auto const r : ranks) {
-      out.emplace_back(fmt::format("queries_lb_rank_{}.txt", r));
-    }
-
-    return out;
+  auto const random_time = [&]() {
+    using namespace std::chrono_literals;
+    return *first_day +
+           rand_in(0U, static_cast<std::uint32_t>(
+                           (*last_day - *first_day).count())) *
+               date::days{1U} +
+           (time_of_day ? *time_of_day : rand_in(6U, 18U)) * 1h;
   };
 
-  {
-    auto out = get_out();
-    for (auto i = 0U; i != n; ++i) {
-      using namespace std::chrono_literals;
-      p.fromPlace_ = random_place();
-      p.time_ = *first_day +
-                rand_in(0U, static_cast<std::uint32_t>(
-                                (*last_day - *first_day).count())) *
-                    date::days{1U} +
-                (time_of_day ? *time_of_day : rand_in(6U, 18U)) * 1h;
+  auto ss = std::optional<n::routing::search_state>{};
+  auto rs = std::optional<n::routing::raptor_state>{};
+  if (lb_rank) {
+    ss = n::routing::search_state{};
+    rs = n::routing::raptor_state{};
+  }
 
-      if (!lb_rank) {
-        p.toPlace_ = random_place();
-        out[0] << p.to_url("/api/v1/plan") << "\n";
-        continue;
+  {
+    auto out = std::ofstream{"queries.txt"};
+    auto const progress_tracker =
+        utl::activate_progress_tracker(fmt::format("generating {} queries", n));
+    progress_tracker->in_high(n);
+    auto const silencer = utl::global_progress_bars{false};
+    for (auto [i, r] = std::tuple{0U, kMinRank}; i != n;
+         ++i, r = r * 2U < stops.size() ? r * 2U : kMinRank) {
+      if (lb_rank) {
+        auto const from_stop = random_stop(*d.tt_, stops);
+        auto const s = n::routing::search<
+            n::direction::kBackward,
+            n::routing::raptor<n::direction::kBackward, false, 0,
+                               n::routing::search_mode::kOneToAll>>{
+            *d.tt_, nullptr, *ss, *rs,
+            nigiri::routing::query{
+                .start_time_ = d.tt_->date_range_.from_,
+                .destination_ = {{from_stop, n::duration_t{0U}, 0}}}};
+        utl::sort(stops, [&](auto const& a, auto const& b) {
+          return ss->travel_time_lower_bound_[to_idx(a)] <
+                 ss->travel_time_lower_bound_[to_idx(b)];
+        });
+        p.fromPlace_ = get_place(from_stop);
+        p.toPlace_ = get_place(stops[r]);
+      } else {
+        p.fromPlace_ = get_place(random_stop(*d.tt_, stops));
+        p.toPlace_ = get_place(random_stop(*d.tt_, stops));
       }
+
+      p.time_ = random_time();
+      out << p.to_url("/api/v1/plan") << "\n";
+      progress_tracker->increment();
     }
   }
 
