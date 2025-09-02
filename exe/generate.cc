@@ -72,6 +72,7 @@ int generate(int ac, char** av) {
   auto use_bike = false;
   auto use_car = false;
   auto use_odm = false;
+  auto lb_rank = false;
   auto p = api::plan_params{};
 
   auto const parse_date = [](std::string_view const s) {
@@ -148,7 +149,11 @@ int generate(int ac, char** av) {
       ("fastest_direct_factor",
        po::value(&p.fastestDirectFactor_)
            ->default_value(p.fastestDirectFactor_),
-       "sets fastest direct factor of the queries");
+       "sets fastest direct factor of the queries")  //
+      ("lb_rank", po::value(&lb_rank)->default_value(lb_rank),
+       "emit query files for different lower bounds (lb) ranks, the query file "
+       "for lb rank n contains queries to stops that are the  2^n-th stop when "
+       "sorting all stops by their lb value from the start");
   add_data_path_opt(desc, data_path);
   auto vm = parse_opt(ac, av, desc);
 
@@ -261,18 +266,44 @@ int generate(int ac, char** av) {
     return fmt::format("{},{}", pos.lat(), pos.lng());
   };
 
+  auto ranks = std::vector<size_t>{4};
+  auto const min_rank = 4U;
+  auto const max_rank =
+      sizeof(stops.size()) * 8U -
+      static_cast<unsigned long>(std::countl_zero(stops.size())) - 1U;
+
+  auto const get_out = [&]() {
+    auto out = std::vector<std::ofstream>{};
+    if (!lb_rank ||) {
+      out.emplace_back("queries.txt");
+      return out;
+    }
+
+    ranks = {min_rank, min_rank + (max_rank - min_rank) / 3,
+             min_rank + 2U * ((max_rank - min_rank) / 3), max_rank};
+    for (auto const r : ranks) {
+      out.emplace_back(fmt::format("queries_lb_rank_{}.txt", r));
+    }
+
+    return out;
+  };
+
   {
-    auto out = std::ofstream{"queries.txt"};
+    auto out = get_out();
     for (auto i = 0U; i != n; ++i) {
       using namespace std::chrono_literals;
       p.fromPlace_ = random_place();
-      p.toPlace_ = random_place();
       p.time_ = *first_day +
                 rand_in(0U, static_cast<std::uint32_t>(
                                 (*last_day - *first_day).count())) *
                     date::days{1U} +
                 (time_of_day ? *time_of_day : rand_in(6U, 18U)) * 1h;
-      out << p.to_url("/api/v1/plan") << "\n";
+
+      if (!lb_rank) {
+        p.toPlace_ = random_place();
+        out[0] << p.to_url("/api/v1/plan") << "\n";
+        continue;
+      }
     }
   }
 
