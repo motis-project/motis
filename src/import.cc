@@ -498,7 +498,8 @@ data import(config const& c, fs::path const& data_path, bool const write) {
            [&]() { return d.tt_ && d.w_; },
            [&]() { d.load_flex_areas(); },
            [&]() { d.load_flex_areas(); },
-           {tt_hash, osm_hash, osr_version(), n_version(), matches_version()}};
+           {tt_hash, osm_hash, elevation_dir_hash, osr_version(), n_version(),
+            matches_version()}};
 
   auto tiles = task{
       "tiles",
