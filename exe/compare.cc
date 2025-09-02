@@ -14,6 +14,7 @@
 #include "fmt/std.h"
 
 #include "utl/enumerate.h"
+#include "utl/file_utils.h"
 #include "utl/get_or_create.h"
 #include "utl/helpers/algorithm.h"
 #include "utl/overloaded.h"
@@ -56,26 +57,6 @@ int compare(int ac, char** av) {
   if (!write_fails) {
     fmt::println("{} is not a directory, not writing fails", fails_path);
   }
-
-  auto const open_file = [](fs::path const& p) {
-    auto f = std::ifstream{};
-    f.exceptions(std::ios_base::failbit | std::ios_base::badbit);
-    try {
-      f.open(p);
-    } catch (std::exception const& e) {
-      throw utl::fail("could not open file \"{}\": {}", p, e.what());
-    }
-    return f;
-  };
-
-  auto const read_line = [](std::ifstream& f) -> std::optional<std::string> {
-    if (f.eof() || f.peek() == EOF) {
-      return std::nullopt;
-    }
-    std::string line;
-    std::getline(f, line);
-    return line;
-  };
 
   struct info {
     unsigned id_;
@@ -167,16 +148,16 @@ int compare(int ac, char** av) {
     ++n_consumed;
   };
 
-  auto query_file = open_file(queries_path);
+  auto query_file = utl::open_file(queries_path);
   auto responses_files =
-      utl::to_vec(responses_paths, [&](auto&& p) { return open_file(p); });
+      utl::to_vec(responses_paths, [&](auto&& p) { return utl::open_file(p); });
 
   auto query_id = 0U;
   auto done = false;
   while (!done) {
     done = true;
 
-    if (auto const q = read_line(query_file); q.has_value()) {
+    if (auto const q = utl::read_line(query_file); q.has_value()) {
       auto& info = get(query_id++);
       info.params_ = api::plan_params{boost::urls::url{*q}.params()};
       consume_if_finished(info);
@@ -184,7 +165,7 @@ int compare(int ac, char** av) {
     }
 
     for (auto const [i, res_file] : utl::enumerate(responses_files)) {
-      if (auto const r = read_line(res_file); r.has_value()) {
+      if (auto const r = utl::read_line(res_file); r.has_value()) {
         auto res =
             boost::json::value_to<api::plan_response>(boost::json::parse(*r));
         utl::sort(res.itineraries_,

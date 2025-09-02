@@ -721,6 +721,17 @@ paths:
             (usually BCP-47 / ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
           schema:
             type: string
+
+        - name: algorithm
+          in: query
+          required: false
+          description: algorithm to use
+          schema:
+            type: string
+            enum:
+              - RAPTOR
+              - TB
+            default: RAPTOR
       responses:
         '200':
           description: routing result

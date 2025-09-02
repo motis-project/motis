@@ -748,8 +748,9 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
 
     auto search_state = n::routing::search_state{};
     auto r = n::routing::routing_result{};
-    if (tbd_ == nullptr || (rtt != nullptr && rtt->n_rt_transports() != 0U) ||
-        query.arriveBy_ || q.prf_idx_ != tbd_->prf_idx_ ||
+    if (query.algorithm_ == api::algorithmEnum::RAPTOR || tbd_ == nullptr ||
+        (rtt != nullptr && rtt->n_rt_transports() != 0U) || query.arriveBy_ ||
+        q.prf_idx_ != tbd_->prf_idx_ ||
         q.allowed_claszes_ != n::routing::all_clasz_allowed() ||
         !q.td_start_.empty() || !q.td_dest_.empty() ||
         !q.transfer_time_settings_.default_ || !q.via_stops_.empty() ||
