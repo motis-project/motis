@@ -259,18 +259,31 @@ int generate(int ac, char** av) {
     stops.emplace_back(l);
   }
 
-  auto const get_place = [&](n::location_idx_t const l) {
+  auto const get_place =
+      [&](n::location_idx_t const l) -> std::optional<std::string> {
     if (!modes) {
       return d.tags_->id(*d.tt_, l);
     }
 
-    auto nodes = std::vector<osr::node_idx_t>{};
-    do {
-      nodes = node_rtree.in_radius(d.tt_->locations_.coordinates_[l], max_dist);
-    } while (nodes.empty());
+    auto const nodes =
+        node_rtree.in_radius(d.tt_->locations_.coordinates_[l], max_dist);
+    if (nodes.empty()) {
+      return std::nullopt;
+    }
 
     auto pos = d.w_->get_node_pos(rand_in(nodes));
     return fmt::format("{},{}", pos.lat(), pos.lng());
+  };
+
+  auto const random_place = [&]() {
+    auto stop_place = std::pair<n::location_idx_t, std::string>{};
+    auto do {
+      auto const l = random_stop(*d.tt_, stops);
+      auto const place = get_place(l);
+    }
+    while (!place.has_value())
+      ;
+    return *place;
   };
 
   auto const random_time = [&]() {
@@ -291,6 +304,8 @@ int generate(int ac, char** av) {
 
   {
     auto out = std::ofstream{"queries.txt"};
+    auto coords = std::ofstream{"coords.txt"};
+    coords << "from_lat, from_lon, to_lat, to_lon\n";
     auto const progress_tracker =
         utl::activate_progress_tracker(fmt::format("generating {} queries", n));
     progress_tracker->in_high(n);
@@ -313,9 +328,10 @@ int generate(int ac, char** av) {
         });
         p.fromPlace_ = get_place(from_stop);
         p.toPlace_ = get_place(stops[r]);
+        coords << p.fromPlace_ << ", " << p.toPlace_ << "\n";
       } else {
-        p.fromPlace_ = get_place(random_stop(*d.tt_, stops));
-        p.toPlace_ = get_place(random_stop(*d.tt_, stops));
+        p.fromPlace_ = random_place();
+        p.toPlace_ = random_place();
       }
 
       p.time_ = random_time();
