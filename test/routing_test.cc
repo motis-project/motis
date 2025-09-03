@@ -725,8 +725,8 @@ TEST(motis, routing) {
           "&useRoutedTransfers=true");
 
       EXPECT_EQ(
-          R"(date=2019-05-01, start=01:15, end=01:33, duration=00:18, transfers=0, legs=[
-    (from=- [track=-, scheduled_track=-, level=0], to=- [track=-, scheduled_track=-, level=-3], start=2019-05-01 01:15, mode="WALK", trip="-", end=2019-05-01 01:33)
+          R"(date=2019-05-01, start=01:15, end=01:32, duration=00:17, transfers=0, legs=[
+    (from=- [track=-, scheduled_track=-, level=0], to=- [track=-, scheduled_track=-, level=-3], start=2019-05-01 01:15, mode="WALK", trip="-", end=2019-05-01 01:32)
 ])",
           to_str(res.direct_));
     }
