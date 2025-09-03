@@ -4,6 +4,7 @@
 
 #include "utl/parallel_for.h"
 
+#include "osr/routing/parameters.h"
 #include "osr/routing/route.h"
 
 #include "motis/constants.h"
@@ -101,7 +102,7 @@ std::vector<n::td_footpath> get_td_footpaths(
     auto const neighbors = get_stops_with_traffic(
         tt, rtt, loc_rtree, start, get_max_distance(profile, max), start_l);
     auto const results = osr::route(
-        w, l, profile, start,
+        osr::get_parameters(profile), w, l, profile, start,
         utl::to_vec(neighbors,
                     [&](auto&& x) { return get_loc(tt, w, pl, matches, x); }),
         static_cast<osr::cost_t>(max.count()), dir, max_matching_distance,
