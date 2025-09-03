@@ -138,6 +138,7 @@ int compare(int ac, char** av) {
       }
     }
   };
+
   auto n_consumed = 0U;
   auto const consume_if_finished = [&](info const& x) {
     if (!is_finished(x)) {
@@ -183,7 +184,7 @@ int compare(int ac, char** av) {
   std::cout << "buffered: " << response_buf.size() << "\n";
   std::cout << "   equal: " << n_equal << "\n";
 
-  return 0;
+  return n_consumed == n_equal ? 0 : 1;
 }
 
 }  // namespace motis

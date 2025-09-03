@@ -6,18 +6,31 @@ import subprocess
 import shutil
 from pathlib import Path
 
+QUERIES = {
+    'raptor': {
+        'params': '?algorithm=RAPTOR',
+        'exec': '/home/felix/code/motis/cmake-build-release/motis'
+    },
+    'tb': {
+        'params': '?algorithm=TB',
+        'exec': '/home/felix/code/motis/cmake-build-release/motis'
+    }
+}
+
 
 def run_command(cmd, cwd=None):
     """Run a command and handle errors."""
     try:
+        print(cmd)
         print(f"Running: {' '.join(cmd)}")
         if cwd:
             print(f"Working directory: {cwd}")
-        
-        result = subprocess.run(cmd, cwd=cwd, check=True, capture_output=True, text=True)
+
+        result = subprocess.run(cmd, cwd=cwd, check=True, capture_output=True,
+                                text=True)
         if result.stdout:
             print("STDOUT:", result.stdout)
-        return result
+        return result.returncode
     except subprocess.CalledProcessError as e:
         print(f"Error running command: {' '.join(cmd)}")
         print(f"Return code: {e.returncode}")
@@ -31,79 +44,89 @@ def run_command(cmd, cwd=None):
 def get_directories(path):
     """Get all directories in the given path."""
     try:
-        return [d for d in os.listdir(path) if d != 'data' and os.path.isdir(os.path.join(path, d))]
+        return [d for d in os.listdir(path) if
+                d != 'data' and os.path.isdir(os.path.join(path, d))]
     except FileNotFoundError:
         print(f"Directory {path} not found")
         return []
 
 
-def main():
-    if len(sys.argv) != 2:
-        print("Usage: python script.py <ID>")
-        sys.exit(1)
-    
-    id_value = sys.argv[1]
-    
+def run(id_value):
+    motis = next(iter(QUERIES.items()))[1]['exec']
+    print(motis)
+    dir = f"reproduce/{id_value}"
+    os.makedirs(dir, exist_ok=True)
+
     # Step 1: Execute motis extract
     print(f"\n=== Step 1: Extracting data for ID {id_value} ===")
-    extract_cmd = ["./motis", "extract", "-i", f"fail/{id_value}_0.json", f"fail/{id_value}_1.json", "-o", id_value]
-    
-    try:
-        run_command(extract_cmd)
-    except subprocess.CalledProcessError:
-        print(f"Failed to extract data for ID {id_value}")
-        sys.exit(1)
-    
-    # Verify the directory was created
-    if not os.path.exists(id_value):
-        print(f"Error: Directory {id_value} was not created")
-        sys.exit(1)
-
+    run_command([
+        motis,
+        "extract",
+        "-i",
+        f"fail/{id_value}_0.json",
+        f"fail/{id_value}_1.json",
+        "-o", dir
+    ])
 
     # Step 2: Get timetable directories and run motis import
     print(f"\n=== Step 2: Importing timetables for ID {id_value} ===")
-    timetable_dirs = get_directories(id_value)
-    
+    timetable_dirs = get_directories(dir)
     if not timetable_dirs:
         print(f"Warning: No timetable directories found in {id_value}")
         sys.exit(1)
-    
+
     print(f"Found timetable directories: {timetable_dirs}")
-    
-
-    # Create config.yml
-    try:
-        run_command(["../motis", "config"] + timetable_dirs, cwd=id_value)
-    except subprocess.CalledProcessError:
-        print(f"Failed to configure timetables for ID {id_value}")
-        sys.exit(1)
-
-    # Import
-    try:
-        run_command(["../motis", "import"], cwd=id_value)
-    except subprocess.CalledProcessError:
-        print(f"Failed to import timetables for ID {id_value}")
-        sys.exit(1)
-
-
+    run_command([motis, 'config'] + timetable_dirs, cwd=dir)
+    run_command([motis, 'import'], cwd=dir)
 
     # Step 3: Copy query file
-    print(f"\n=== Step 3: Copying query file for ID {id_value} ===")
-    source_file = f"fail/{id_value}_q.txt"
-    dest_file = f"{id_value}/queries.txt"
-    
-    try:
-        if os.path.exists(source_file):
-            shutil.copy2(source_file, dest_file)
-            print(f"Copied {source_file} to {dest_file}")
-        else:
-            print(f"Warning: Source file {source_file} not found in {os.getcwd()}")
-    except Exception as e:
-        print(f"Error copying query file: {e}")
-        sys.exit(1)
-    
-    print(f"\n=== Processing complete for ID {id_value} ===")
+    print(f"\n=== Step 3: Copying query file for all algorithms {id_value} ===")
+    for name, run in QUERIES.items():
+        run_command([
+            motis,
+            'params',
+            '-i' f"../../fail/{id_value}_q.txt",
+            '-o', f"queries-{name}.txt",
+            '-p', run['params']
+        ], cwd=dir)
+
+    # Step 4: Run Queries
+    print(f"\n=== Step 4: Run queries {id_value} ===")
+    for name, params in QUERIES.items():
+        print(f"Running {name}")
+        run_command([
+            params['exec'],
+            'batch',
+            '-q', f"queries-{name}.txt",
+            '-r', f"responses-{name}.txt"
+        ], cwd=dir)
+
+    # Step 5: Compare
+    print(f"\n=== Step 5: Compare {id_value} ===")
+    cmd = [
+        motis,
+        'compare',
+        '-q', f"queries-{next(iter(QUERIES))}.txt",
+        '-r'
+    ]
+    cmd.extend([
+        f"responses-{name}.txt" for name, params in QUERIES.items()
+    ])
+
+    if run_command(cmd, cwd=dir) == 0:
+        print("NO DIFF")
+        return False
+    else:
+        print("REPRODUCED")
+        return True
 
 
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) == 2:
+        id_value = sys.argv[1]
+        run(id_value)
+    else:
+        for q in [d.removesuffix('_q.txt') for d in os.listdir('fail') if
+                  d.endswith('_q.txt')]:
+            if run(q):
+                break
