@@ -38,7 +38,7 @@ std::int32_t distance(nr::journey const& a, nr::journey const& b) {
            x.arrival_time() < y.arrival_time();
   };
 
-  return overtakes(a, b) || overtakes(b, a)
+  return overtakes(a, b)
              ? 0
              : std::max(
                    std::chrono::abs(a.departure_time() - b.departure_time()),
