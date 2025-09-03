@@ -8,6 +8,7 @@
 
 #include "osr/geojson.h"
 #include "osr/location.h"
+#include "osr/routing/parameters.h"
 
 #include "motis/location_routes.h"
 
@@ -296,8 +297,8 @@ std::vector<osr::match_t> get_reverse_platform_way_matches(
           auto const& m = way_matches->matches_[l];
           raw_matches = {m.begin(), m.end()};
         }
-        return lookup.match(query, true, dir, max_matching_distance, nullptr, p,
-                            raw_matches);
+        return lookup.match(osr::get_parameters(p), query, true, dir,
+                            max_matching_distance, nullptr, p, raw_matches);
       });
 };
 
