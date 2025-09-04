@@ -83,14 +83,14 @@ void copy_stops(hash_set<std::string>& stop_ids,
     auto n_lines = 0U;
     auto reader = utl::make_buf_reader(file_content);
     auto line = reader.read_line();
-    auto const header_permutation = utl::read_header<csv_stop>(line);
+    // auto const header_permutation = utl::read_header<csv_stop>(line);
     out << line.view() << "\n";
     while ((line = reader.read_line())) {
-      auto const row = utl::read_row<csv_stop>(header_permutation, line);
-      if (stop_ids.contains(row.stop_id_->view())) {
-        out << line.view() << "\n";
-        ++n_lines;
-      }
+      // auto const row = utl::read_row<csv_stop>(header_permutation, line);
+      // if (stop_ids.contains(row.stop_id_->view())) {
+      out << line.view() << "\n";
+      ++n_lines;
+      // }
     }
     fmt::println("  stops.txt: lines written: {}", n_lines);
   }

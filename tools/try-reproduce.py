@@ -30,6 +30,8 @@ def run_command(cmd, cwd=None):
                                 text=True)
         if result.stdout:
             print("STDOUT:", result.stdout)
+        if result.stderr:
+            print("STDERR:", result.stderr)
         return result.returncode
     except subprocess.CalledProcessError as e:
         print(f"Error running command: {' '.join(cmd)}")
