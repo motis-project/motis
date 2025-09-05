@@ -98,7 +98,7 @@ def try_reproduce(id_value, verbose=False):
         cmd([
             motis,
             'params',
-            '-i' f"../../fail/{id_value}_q.txt",
+            '-i', f"../../fail/{id_value}_q.txt",
             '-o', f"queries-{name}.txt",
             '-p', run['params']
         ], cwd=dir, verbose=verbose)

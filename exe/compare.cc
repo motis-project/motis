@@ -130,11 +130,12 @@ int compare(int ac, char** av) {
 
     if (mismatch && write_fails) {
       std::ofstream{fails_path / fmt::format("{}_q.txt", x.id_)}
-          << x.params_->to_url("/v1/plan");
+          << x.params_->to_url("/v1/plan") << "\n";
       for (auto i = 0U; i < x.responses_.size(); ++i) {
         std::ofstream{fails_path / fmt::format("{}_{}.json", x.id_, i)}
             << boost::json::serialize(
-                   boost::json::value_from(x.responses_[i].value()));
+                   boost::json::value_from(x.responses_[i].value()))
+            << "\n";
       }
     }
   };
