@@ -83,11 +83,14 @@ int batch(int ac, char** av) {
     }
   };
 
+  auto const pt = utl::activate_progress_tracker("batch");
+  pt->in_high(queries.size());
   if (mt) {
-    utl::parallel_for_run(queries.size(), compute_response);
+    utl::parallel_for_run(queries.size(), compute_response, pt->update_fn());
   } else {
     for (auto i = 0U; i != queries.size(); ++i) {
       compute_response(i);
+      pt->increment();
     }
   }
 

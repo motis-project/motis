@@ -7,11 +7,14 @@
 #include "conf/configuration.h"
 
 #include "boost/json/parse.hpp"
+#include "boost/json/serialize.hpp"
+#include "boost/json/value_from.hpp"
 #include "boost/json/value_to.hpp"
 
 #include "fmt/std.h"
 
 #include "utl/enumerate.h"
+#include "utl/file_utils.h"
 #include "utl/get_or_create.h"
 #include "utl/helpers/algorithm.h"
 #include "utl/overloaded.h"
@@ -32,6 +35,7 @@ namespace motis {
 int compare(int ac, char** av) {
   auto queries_path = fs::path{"queries.txt"};
   auto responses_paths = std::vector<std::string>{};
+  auto fails_path = fs::path{"fail"};
   auto desc = po::options_description{"Options"};
   desc.add_options()  //
       ("help", "Prints this help message")  //
@@ -49,25 +53,10 @@ int compare(int ac, char** av) {
     return 0;
   }
 
-  auto const open_file = [](fs::path const& p) {
-    auto f = std::ifstream{};
-    f.exceptions(std::ios_base::failbit | std::ios_base::badbit);
-    try {
-      f.open(p);
-    } catch (std::exception const& e) {
-      throw utl::fail("could not open file \"{}\": {}", p, e.what());
-    }
-    return f;
-  };
-
-  auto const read_line = [](std::ifstream& f) -> std::optional<std::string> {
-    if (f.peek() == EOF || f.eof()) {
-      return std::nullopt;
-    }
-    std::string line;
-    std::getline(f, line);
-    return line;
-  };
+  auto const write_fails = fs::is_directory(fails_path);
+  if (!write_fails) {
+    fmt::println("{} is not a directory, not writing fails", fails_path);
+  }
 
   struct info {
     unsigned id_;
@@ -83,7 +72,7 @@ int compare(int ac, char** av) {
     });
   };
   auto const is_finished = [](info const& x) {
-    return x.params_.has_value() &&
+    return x.params_.has_value() && !x.responses_.empty() &&
            utl::all_of(x.responses_, [](auto&& r) { return r.has_value(); });
   };
   auto const params = [](api::Itinerary const& x) {
@@ -97,6 +86,7 @@ int compare(int ac, char** av) {
   auto n_equal = 0U;
   auto const print_differences = [&](info const& x) {
     auto const& ref = x.responses_[0].value().itineraries_;
+    auto mismatch = false;
     for (auto i = 1U; i < x.responses_.size(); ++i) {
       auto const uut = x.responses_[i].value().itineraries_;
       if (std::ranges::equal(ref | std::views::transform(params),
@@ -105,6 +95,7 @@ int compare(int ac, char** av) {
         continue;
       }
 
+      mismatch = true;
       std::cout << "QUERY=" << x.id_ << "\n";
       utl::sorted_diff(
           ref, uut,
@@ -136,7 +127,19 @@ int compare(int ac, char** av) {
               }});
       std::cout << "\n\n";
     }
+
+    if (mismatch && write_fails) {
+      std::ofstream{fails_path / fmt::format("{}_q.txt", x.id_)}
+          << x.params_->to_url("/v1/plan") << "\n";
+      for (auto i = 0U; i < x.responses_.size(); ++i) {
+        std::ofstream{fails_path / fmt::format("{}_{}.json", x.id_, i)}
+            << boost::json::serialize(
+                   boost::json::value_from(x.responses_[i].value()))
+            << "\n";
+      }
+    }
   };
+
   auto n_consumed = 0U;
   auto const consume_if_finished = [&](info const& x) {
     if (!is_finished(x)) {
@@ -147,16 +150,16 @@ int compare(int ac, char** av) {
     ++n_consumed;
   };
 
-  auto query_file = open_file(queries_path);
+  auto query_file = utl::open_file(queries_path);
   auto responses_files =
-      utl::to_vec(responses_paths, [&](auto&& p) { return open_file(p); });
+      utl::to_vec(responses_paths, [&](auto&& p) { return utl::open_file(p); });
 
   auto query_id = 0U;
   auto done = false;
   while (!done) {
     done = true;
 
-    if (auto const q = read_line(query_file); q.has_value()) {
+    if (auto const q = utl::read_line(query_file); q.has_value()) {
       auto& info = get(query_id++);
       info.params_ = api::plan_params{boost::urls::url{*q}.params()};
       consume_if_finished(info);
@@ -164,7 +167,7 @@ int compare(int ac, char** av) {
     }
 
     for (auto const [i, res_file] : utl::enumerate(responses_files)) {
-      if (auto const r = read_line(res_file); r.has_value()) {
+      if (auto const r = utl::read_line(res_file); r.has_value()) {
         auto res =
             boost::json::value_to<api::plan_response>(boost::json::parse(*r));
         utl::sort(res.itineraries_,
@@ -182,7 +185,7 @@ int compare(int ac, char** av) {
   std::cout << "buffered: " << response_buf.size() << "\n";
   std::cout << "   equal: " << n_equal << "\n";
 
-  return 0;
+  return n_consumed == n_equal ? 0 : 1;
 }
 
 }  // namespace motis

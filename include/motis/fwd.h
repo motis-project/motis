@@ -32,6 +32,11 @@ struct run_stop;
 namespace routing {
 struct td_offset;
 struct offset;
+
+namespace tb {
+struct tb_data;
+}
+
 }  // namespace routing
 
 }  // namespace nigiri
