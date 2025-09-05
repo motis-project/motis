@@ -10,11 +10,11 @@ from pathlib import Path
 
 QUERIES = {
     'raptor': {
-        'params': '?algorithm=RAPTOR&timetableView=false',
+        'params': '?algorithm=RAPTOR&numItineraries=0',
         'exec': '/home/felix/code/motis/cmake-build-release/motis'
     },
     'tb': {
-        'params': '?algorithm=TB&timetableView=false',
+        'params': '?algorithm=TB&numItineraries=0',
         'exec': '/home/felix/code/motis/cmake-build-release/motis'
     }
 }
@@ -79,7 +79,8 @@ def try_reproduce(id_value, verbose=False):
         "-i",
         f"fail/{id_value}_0.json",
         f"fail/{id_value}_1.json",
-        "-o", dir
+        "-o", dir,
+        '--reduce', 'true'
     ], verbose=verbose)
 
     # Step 2: Get timetable directories and run motis import

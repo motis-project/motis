@@ -250,8 +250,11 @@ int extract(int ac, char** av) {
     auto const tag_end = p.stopId_.value().find('_');
     utl::verify(tag_end != std::string::npos, "no tag found for stop id {}",
                 p.stopId_.value());
-    fmt::println("important stop {}", p.stopId_.value().substr(tag_end + 1U));
-    important_stops.insert(p.stopId_.value().substr(tag_end + 1U));
+    auto const [_, added] =
+        important_stops.insert(p.stopId_.value().substr(tag_end + 1U));
+    if (added) {
+      fmt::println("important stop {}", p.stopId_.value().substr(tag_end + 1U));
+    }
   };
 
   auto todos = hash_map<std::string, hash_set<std::string>>{};
@@ -333,6 +336,7 @@ int extract(int ac, char** av) {
       fmt::println("writing {}/stop_times.txt, searching for trips={}",
                    out / dataset_dir.filename(), trip_ids);
       auto of = std::ofstream{out / dataset_dir.filename() / "stop_times.txt"};
+      fmt::println("important stops: {}", important_stops);
       copy_stop_times(trip_ids, important_stops,
                       dir->get_file("stop_times.txt").data(), stop_ids, of);
     }
