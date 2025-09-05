@@ -60,6 +60,10 @@ using namespace std::chrono_literals;
 constexpr auto const kODMLookAhead = 48h;
 constexpr auto const kSearchIntervalSize = 24h;
 constexpr auto const kODMDirectPeriod = 300s;
+constexpr auto const kODMDirectPhaseMinutes =
+    10;  // shifting to match requested time, depends on kMixer.max_distance_
+         // and domination rules currently leading to realized directPeriod of
+         // 40 minutes
 constexpr auto const kODMDirectFactor = 1.0;
 constexpr auto const kODMOffsetMinImprovement = 60s;
 constexpr auto const kODMMaxDuration = 3600s;
@@ -180,12 +184,13 @@ n::duration_t init_direct(std::vector<direct_ride>& direct_rides,
       std::chrono::duration_cast<n::unixtime_t::duration>(kODMDirectPeriod);
   if (odm_direct_duration < kODMMaxDuration) {
     if (query.arriveBy_) {
-      auto const base_time = intvl.to_ - odm_direct_duration;
+      auto const base_time = intvl.to_;
       auto const midnight = std::chrono::floor<std::chrono::days>(base_time);
       auto const mins_since_midnight =
           std::chrono::duration_cast<std::chrono::minutes>(base_time -
                                                            midnight);
-      auto const floored_5_min = (mins_since_midnight.count() / 5) * 5;
+      auto const floored_5_min =
+          (mins_since_midnight.count() / 5) * 5 - kODMDirectPhaseMinutes;
       auto const start_time = midnight + std::chrono::minutes(floored_5_min);
       for (auto arr = start_time; intvl.contains(arr); arr -= step) {
         direct_rides.push_back(
@@ -199,7 +204,8 @@ n::duration_t init_direct(std::vector<direct_ride>& direct_rides,
           std::chrono::duration_cast<std::chrono::minutes>(base_start -
                                                            midnight_start);
       auto const ceiled_5_min_start =
-          ((mins_since_midnight_start.count() + 4) / 5) * 5;
+          ((mins_since_midnight_start.count() + 4) / 5) * 5 +
+          kODMDirectPhaseMinutes;
       auto const start_time_for_depart =
           midnight_start + std::chrono::minutes(ceiled_5_min_start);
       for (auto dep = start_time_for_depart; intvl.contains(dep); dep += step) {
