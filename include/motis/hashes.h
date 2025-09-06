@@ -20,7 +20,7 @@ constexpr auto const n_version = []() {
   return meta_entry_t{"nigiri_bin_ver", 22U};
 };
 constexpr auto const tbd_version = []() {
-  return meta_entry_t{"nigiri_bin_ver", 1U};
+  return meta_entry_t{"tbd_bin_ver", 1U};
 };
 constexpr auto const matches_version = []() {
   return meta_entry_t{"matches_bin_ver", 4U};
