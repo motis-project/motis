@@ -14,7 +14,7 @@ namespace motis::odm {
 namespace n = nigiri;
 namespace nr = nigiri::routing;
 
-static constexpr auto const kMixerTracing = false;
+static constexpr auto const kMixerTracing = true;
 
 std::int32_t tally(std::int32_t const x,
                    std::vector<cost_threshold> const& ct) {
