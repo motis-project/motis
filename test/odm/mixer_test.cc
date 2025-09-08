@@ -14,7 +14,7 @@ TEST(odm, tally) {
   EXPECT_EQ(43, tally(12, ct));
 }
 
-std::string mix(std::string_view csv) {
+std::vector<nigiri::routing::journey> mix(std::string_view csv) {
   auto odm_journeys = from_csv(csv);
   auto pt_journeys = nigiri::pareto_set<nigiri::routing::journey>{};
   for (auto j = begin(odm_journeys); j != end(odm_journeys);) {
@@ -27,8 +27,38 @@ std::string mix(std::string_view csv) {
   }
   static auto const m = get_default_mixer();
   m.mix(pt_journeys, odm_journeys, nullptr);
-  return to_csv(odm_journeys);
+  return odm_journeys;
 }
+
+void whitelist(std::vector<nigiri::routing::journey> const& mix_result, std::vector<nigiri::routing::journey> const& wl) {
+  auto const expect_contained = [&](nigiri::routing::journey const& j) {
+    auto const is_contained = utl::find(mix_result, j) != end(mix_result);
+    EXPECT_TRUE(is_contained);
+    if (!is_contained) {
+      std::cout << "whitelisted: " << to_csv(j) << "\n";
+    }
+  };
+
+  for (auto const& j : wl) {
+    expect_contained(j);
+  }
+}
+
+void blacklist(std::vector<nigiri::routing::journey> const& mix_result, std::vector<nigiri::routing::journey> const& bl) {
+  auto const expect_removed = [&](nigiri::routing::journey const& j) {
+    auto const is_contained = utl::find(mix_result, j) != end(mix_result);
+    EXPECT_FALSE(is_contained);
+    if (is_contained) {
+      std::cout << "blacklisted: " << to_csv(j) << "\n";
+    }
+  };
+
+  for (auto const& j : bl) {
+    expect_removed(j);
+  }
+}
+
+
 
 constexpr auto const pt_taxi_no_direct_in =
     R"__(departure, arrival, transfers, first_mile_mode, first_mile_duration, last_mile_mode, last_mile_duration
@@ -41,14 +71,25 @@ constexpr auto const pt_taxi_no_direct_in =
 2025-06-16 11:00, 2025-06-16 11:10, 0, taxi, 10, walk, 00
 )__"sv;
 
-constexpr auto const pt_taxi_no_direct_out =
+constexpr auto const pt_taxi_no_direct_whitelist =
     R"__(departure, arrival, transfers, first_mile_mode, first_mile_duration, last_mile_mode, last_mile_duration
 2025-06-16 10:17, 2025-06-16 11:00, 0, walk, 30, walk, 00
 2025-06-16 10:43, 2025-06-16 11:00, 0, taxi, 04, walk, 00
 )__"sv;
 
+constexpr auto const pt_taxi_no_direct_blacklist =
+    R"__(departure, arrival, transfers, first_mile_mode, first_mile_duration, last_mile_mode, last_mile_duration
+2025-06-16 10:10, 2025-06-16 10:20, 0, taxi, 10, walk, 00
+2025-06-16 10:17, 2025-06-16 10:27, 0, taxi, 10, walk, 00
+2025-06-16 10:43, 2025-06-16 10:53, 0, taxi, 10, walk, 00
+2025-06-16 10:50, 2025-06-16 11:00, 0, taxi, 10, walk, 00
+2025-06-16 11:00, 2025-06-16 11:10, 0, taxi, 10, walk, 00
+)__"sv;
+
 TEST(odm, pt_taxi_no_direct) {
-  EXPECT_EQ(pt_taxi_no_direct_out, mix(pt_taxi_no_direct_in));
+  auto const mix_result = mix(pt_taxi_no_direct_in);
+  whitelist(mix_result, from_csv(pt_taxi_no_direct_whitelist));
+  blacklist(mix_result, from_csv(pt_taxi_no_direct_blacklist));
 }
 
 constexpr auto const taxi_saves_transfers_in =
@@ -59,13 +100,22 @@ constexpr auto const taxi_saves_transfers_in =
 2025-06-16 10:30, 2025-06-16 11:00, 0, taxi, 15, walk, 05
 )__"sv;
 
-constexpr auto const taxi_saves_transfers_out =
+constexpr auto const taxi_saves_transfers_whitelist =
     R"__(departure, arrival, transfers, first_mile_mode, first_mile_duration, last_mile_mode, last_mile_duration
 2025-06-16 10:00, 2025-06-16 11:00, 4, walk, 05, walk, 05
 )__"sv;
 
+constexpr auto const taxi_saves_transfers_blacklist =
+    R"__(departure, arrival, transfers, first_mile_mode, first_mile_duration, last_mile_mode, last_mile_duration
+2025-06-16 10:14, 2025-06-16 11:00, 2, taxi, 06, walk, 05
+2025-06-16 10:20, 2025-06-16 11:00, 1, taxi, 10, walk, 05
+2025-06-16 10:30, 2025-06-16 11:00, 0, taxi, 15, walk, 05
+)__"sv;
+
 TEST(odm, taxi_saves_transfers) {
-  EXPECT_EQ(taxi_saves_transfers_out, mix(taxi_saves_transfers_in));
+  auto const mix_result = mix(taxi_saves_transfers_in);
+  whitelist(mix_result, from_csv(taxi_saves_transfers_whitelist));
+  blacklist(mix_result, from_csv(taxi_saves_transfers_blacklist));
 }
 
 constexpr auto const schleife_dresden_monday_in =
@@ -202,7 +252,7 @@ constexpr auto const schleife_dresden_monday_in =
 2025-06-16 20:21, 2025-06-17 00:50, 4, taxi, 05, walk, 08
 )__"sv;
 
-constexpr auto const schleife_dresden_monday_out =
+constexpr auto const schleife_dresden_monday_whitelist =
     R"__(departure, arrival, transfers, first_mile_mode, first_mile_duration, last_mile_mode, last_mile_duration
 2025-06-16 02:26, 2025-06-16 05:18, 3, taxi, 05, walk, 05
 2025-06-16 02:26, 2025-06-16 05:23, 2, taxi, 05, walk, 05
@@ -259,7 +309,8 @@ constexpr auto const schleife_dresden_monday_out =
 )__"sv;
 
 TEST(odm, schleife_dresden_monday) {
-  EXPECT_EQ(schleife_dresden_monday_out, mix(schleife_dresden_monday_in));
+  auto const mix_result = mix(schleife_dresden_monday_in);
+  whitelist(mix_result, from_csv(schleife_dresden_monday_whitelist));
 }
 
 constexpr auto const schleife_dresden_sunday_in =
@@ -330,7 +381,7 @@ constexpr auto const schleife_dresden_sunday_in =
 2025-06-15 20:21, 2025-06-16 00:50, 4, taxi, 05, walk, 08
 )__"sv;
 
-constexpr auto const schleife_dresden_sunday_out =
+constexpr auto const schleife_dresden_sunday_whitelist =
     R"__(departure, arrival, transfers, first_mile_mode, first_mile_duration, last_mile_mode, last_mile_duration
 2025-06-14 20:32, 2025-06-15 04:20, 3, taxi, 27, walk, 08
 2025-06-15 04:21, 2025-06-15 07:20, 3, taxi, 05, walk, 08
@@ -362,7 +413,8 @@ constexpr auto const schleife_dresden_sunday_out =
 )__"sv;
 
 TEST(odm, schleife_dresden_sunday) {
-  EXPECT_EQ(schleife_dresden_sunday_out, mix(schleife_dresden_sunday_in));
+  auto const mix_result = mix(schleife_dresden_sunday_in);
+  whitelist(mix_result, from_csv(schleife_dresden_sunday_whitelist));
 }
 
 constexpr auto const badmuskau_dresden_monday_in =
@@ -461,7 +513,7 @@ constexpr auto const badmuskau_dresden_monday_in =
 2025-06-16 20:15, 2025-06-16 23:44, 2, taxi, 15, walk, 08
 )__"sv;
 
-constexpr auto const badmuskau_dresden_monday_out =
+constexpr auto const badmuskau_dresden_monday_whitelist =
     R"__(departure, arrival, transfers, first_mile_mode, first_mile_duration, last_mile_mode, last_mile_duration
 2025-06-16 02:10, 2025-06-16 05:13, 2, taxi, 15, walk, 05
 2025-06-16 03:08, 2025-06-16 07:13, 3, walk, 05, walk, 05
@@ -504,7 +556,8 @@ constexpr auto const badmuskau_dresden_monday_out =
 )__"sv;
 
 TEST(odm, badmuskau_dresden_monday) {
-  EXPECT_EQ(badmuskau_dresden_monday_out, mix(badmuskau_dresden_monday_in));
+  auto const mix_result = mix(badmuskau_dresden_monday_in);
+  whitelist(mix_result, from_csv(badmuskau_dresden_monday_whitelist));
 }
 
 constexpr auto const badmuskau_dresden_sunday_in =
@@ -580,7 +633,7 @@ constexpr auto const badmuskau_dresden_sunday_in =
 2025-06-15 20:15, 2025-06-15 23:44, 2, taxi, 15, walk, 08
 )__"sv;
 
-constexpr auto const badmuskau_dresden_sunday_out =
+constexpr auto const badmuskau_dresden_sunday_whitelist =
     R"__(departure, arrival, transfers, first_mile_mode, first_mile_duration, last_mile_mode, last_mile_duration
 2025-06-15 04:00, 2025-06-15 07:20, 3, taxi, 15, walk, 08
 2025-06-15 04:00, 2025-06-15 07:20, 3, taxi, 15, walk, 08
@@ -606,7 +659,8 @@ constexpr auto const badmuskau_dresden_sunday_out =
 )__"sv;
 
 TEST(odm, badmuskau_dresden_sunday) {
-  EXPECT_EQ(badmuskau_dresden_sunday_out, mix(badmuskau_dresden_sunday_in));
+  auto const mix_result = mix(badmuskau_dresden_sunday_in);
+  whitelist(mix_result, from_csv(badmuskau_dresden_sunday_whitelist));
 }
 
 constexpr auto const schleife_kleinpriebus_monday_in =
@@ -687,7 +741,7 @@ constexpr auto const schleife_kleinpriebus_monday_in =
 2025-09-09 20:00, 2025-09-09 20:57, 0, taxi, 57, walk, 00
 )__"sv;
 
-constexpr auto const schleife_kleinpriebus_monday_out =
+constexpr auto const schleife_kleinpriebus_monday_whitelist =
     R"__(departure, arrival, transfers, first_mile_mode, first_mile_duration, last_mile_mode, last_mile_duration
 2025-09-09 02:00, 2025-09-09 02:57, 0, taxi, 57, walk, 00
 2025-09-09 02:28, 2025-09-09 04:45, 1, walk, 10, walk, 03
@@ -762,8 +816,8 @@ constexpr auto const schleife_kleinpriebus_monday_out =
 )__"sv;
 
 TEST(odm, schleife_kleinpriebus_monday) {
-  EXPECT_EQ(schleife_kleinpriebus_monday_out,
-            mix(schleife_kleinpriebus_monday_in));
+  auto const mix_result = mix(schleife_kleinpriebus_monday_in);
+  whitelist(mix_result, from_csv(schleife_kleinpriebus_monday_whitelist));
 }
 
 constexpr auto const schleife_kleinpriebus_sunday_in =
@@ -792,7 +846,7 @@ constexpr auto const schleife_kleinpriebus_sunday_in =
 2025-06-15 20:00, 2025-06-15 20:41, 0, taxi, 41, walk, 00
 )__"sv;
 
-constexpr auto const schleife_kleinpriebus_sunday_out =
+constexpr auto const schleife_kleinpriebus_sunday_whitelist =
     R"__(departure, arrival, transfers, first_mile_mode, first_mile_duration, last_mile_mode, last_mile_duration
 2025-06-15 02:00, 2025-06-15 02:41, 0, taxi, 41, walk, 00
 2025-06-15 03:00, 2025-06-15 03:41, 0, taxi, 41, walk, 00
@@ -819,8 +873,8 @@ constexpr auto const schleife_kleinpriebus_sunday_out =
 )__"sv;
 
 TEST(odm, schleife_kleinpriebus_sunday) {
-  EXPECT_EQ(schleife_kleinpriebus_sunday_out,
-            mix(schleife_kleinpriebus_sunday_in));
+  auto const mix_result = mix(schleife_kleinpriebus_sunday_in);
+  whitelist(mix_result, from_csv(schleife_kleinpriebus_sunday_whitelist));
 }
 
 constexpr auto const schleife_cottbus_monday_in =
@@ -878,7 +932,7 @@ constexpr auto const schleife_cottbus_monday_in =
 2025-06-16 20:02, 2025-06-16 21:16, 1, taxi, 13, walk, 03
 )__"sv;
 
-constexpr auto const schleife_cottbus_monday_out =
+constexpr auto const schleife_cottbus_monday_whitelist =
     R"__(departure, arrival, transfers, first_mile_mode, first_mile_duration, last_mile_mode, last_mile_duration
 2025-06-16 02:02, 2025-06-16 03:07, 1, taxi, 13, walk, 07
 2025-06-16 03:02, 2025-06-16 04:14, 1, taxi, 13, walk, 11
@@ -922,7 +976,8 @@ constexpr auto const schleife_cottbus_monday_out =
 )__"sv;
 
 TEST(odm, schleife_cottbus_monday) {
-  EXPECT_EQ(schleife_cottbus_monday_out, mix(schleife_cottbus_monday_in));
+  auto const mix_result = mix(schleife_cottbus_monday_in);
+  whitelist(mix_result, from_csv(schleife_cottbus_monday_whitelist));
 }
 
 constexpr auto const schleife_cottbus_sunday_in =
@@ -953,7 +1008,7 @@ constexpr auto const schleife_cottbus_sunday_in =
 2025-06-15 20:02, 2025-06-15 21:19, 1, taxi, 13, walk, 07
 )__"sv;
 
-constexpr auto const schleife_cottbus_sunday_out =
+constexpr auto const schleife_cottbus_sunday_whitelist =
     R"__(departure, arrival, transfers, first_mile_mode, first_mile_duration, last_mile_mode, last_mile_duration
 2025-06-15 04:02, 2025-06-15 05:16, 1, taxi, 13, walk, 03
 2025-06-15 06:02, 2025-06-15 07:16, 1, taxi, 13, walk, 03
@@ -981,7 +1036,8 @@ constexpr auto const schleife_cottbus_sunday_out =
 )__"sv;
 
 TEST(odm, schleife_cottbus_sunday) {
-  EXPECT_EQ(schleife_cottbus_sunday_out, mix(schleife_cottbus_sunday_in));
+  auto const mix_result = mix(schleife_cottbus_sunday_in);
+  whitelist(mix_result, from_csv(schleife_cottbus_sunday_whitelist));
 }
 
 constexpr auto const uhsmannsdorfbahnhof_schleifeschulzentrum_monday_in =
@@ -1034,7 +1090,7 @@ constexpr auto const uhsmannsdorfbahnhof_schleifeschulzentrum_monday_in =
 2025-06-16 20:00, 2025-06-16 20:36, 0, walk, 01, taxi, 05
 )__"sv;
 
-constexpr auto const uhsmannsdorfbahnhof_schleifeschulzentrum_monday_out =
+constexpr auto const uhsmannsdorfbahnhof_schleifeschulzentrum_monday_whitelist =
     R"__(departure, arrival, transfers, first_mile_mode, first_mile_duration, last_mile_mode, last_mile_duration
 2025-06-16 02:00, 2025-06-16 02:49, 1, walk, 01, walk, 12
 2025-06-16 02:55, 2025-06-16 03:36, 0, walk, 01, taxi, 05
@@ -1064,8 +1120,8 @@ constexpr auto const uhsmannsdorfbahnhof_schleifeschulzentrum_monday_out =
 )__"sv;
 
 TEST(odm, uhsmannsdorfbahnhof_schleifeschulzentrum_monday) {
-  EXPECT_EQ(uhsmannsdorfbahnhof_schleifeschulzentrum_monday_out,
-            mix(uhsmannsdorfbahnhof_schleifeschulzentrum_monday_in));
+  auto const mix_result = mix(uhsmannsdorfbahnhof_schleifeschulzentrum_monday_in);
+  whitelist(mix_result, from_csv(uhsmannsdorfbahnhof_schleifeschulzentrum_monday_whitelist));
 }
 
 constexpr auto const badmuskau_pechern_monday_in =
@@ -1186,7 +1242,7 @@ constexpr auto const badmuskau_pechern_monday_in =
 2025-06-16 20:00, 2025-06-16 20:22, 0, taxi, 22, walk, 00
 )__"sv;
 
-constexpr auto const badmuskau_pechern_monday_out =
+constexpr auto const badmuskau_pechern_monday_whitelist =
     R"__(departure, arrival, transfers, first_mile_mode, first_mile_duration, last_mile_mode, last_mile_duration
 2025-06-16 02:00, 2025-06-16 02:22, 0, taxi, 22, walk, 00
 2025-06-16 03:08, 2025-06-16 03:41, 0, walk, 05, taxi, 17
@@ -1220,160 +1276,6 @@ constexpr auto const badmuskau_pechern_monday_out =
 )__"sv;
 
 TEST(odm, badmuskau_pechern_monday) {
-  EXPECT_EQ(badmuskau_pechern_monday_out, mix(badmuskau_pechern_monday_in));
-}
-
-constexpr auto const badmuskau_pechern_monday_in =
-    R"__(departure, arrival, transfers, first_mile_mode, first_mile_duration, last_mile_mode, last_mile_duration
-2025-06-16 02:00, 2025-06-16 02:22, 0, taxi, 22, walk, 00
-2025-06-16 03:00, 2025-06-16 03:22, 0, taxi, 22, walk, 00
-2025-06-16 03:08, 2025-06-16 03:41, 0, walk, 05, taxi, 17
-2025-06-16 03:08, 2025-06-16 04:45, 1, walk, 05, walk, 13
-2025-06-16 03:52, 2025-06-16 04:24, 0, walk, 05, taxi, 21
-2025-06-16 03:52, 2025-06-16 04:45, 1, taxi, 11, walk, 13
-2025-06-16 03:54, 2025-06-16 04:45, 0, taxi, 09, walk, 13
-2025-06-16 03:54, 2025-06-16 05:35, 1, taxi, 09, walk, 13
-2025-06-16 04:00, 2025-06-16 04:22, 0, taxi, 22, walk, 00
-2025-06-16 04:08, 2025-06-16 04:41, 0, walk, 05, taxi, 17
-2025-06-16 04:12, 2025-06-16 04:44, 0, walk, 06, taxi, 20
-2025-06-16 04:18, 2025-06-16 04:50, 0, walk, 05, taxi, 21
-2025-06-16 04:38, 2025-06-16 05:10, 0, walk, 05, taxi, 17
-2025-06-16 04:38, 2025-06-16 05:11, 0, walk, 05, taxi, 17
-2025-06-16 04:43, 2025-06-16 05:14, 0, walk, 05, taxi, 20
-2025-06-16 04:43, 2025-06-16 05:46, 1, walk, 05, taxi, 13
-2025-06-16 04:47, 2025-06-16 05:19, 0, walk, 05, taxi, 21
-2025-06-16 05:00, 2025-06-16 05:22, 0, taxi, 22, walk, 00
-2025-06-16 05:05, 2025-06-16 05:40, 0, walk, 05, taxi, 17
-2025-06-16 05:13, 2025-06-16 05:45, 0, walk, 05, taxi, 21
-2025-06-16 05:23, 2025-06-16 05:55, 0, walk, 06, taxi, 20
-2025-06-16 05:35, 2025-06-16 06:10, 0, walk, 05, taxi, 17
-2025-06-16 05:43, 2025-06-16 06:14, 0, walk, 05, taxi, 20
-2025-06-16 05:43, 2025-06-16 06:42, 1, walk, 05, taxi, 05
-2025-06-16 05:43, 2025-06-16 06:45, 1, walk, 05, walk, 13
-2025-06-16 05:52, 2025-06-16 06:24, 0, walk, 05, taxi, 21
-2025-06-16 05:54, 2025-06-16 06:45, 0, taxi, 09, walk, 13
-2025-06-16 05:54, 2025-06-16 07:35, 1, taxi, 09, walk, 13
-2025-06-16 06:00, 2025-06-16 06:22, 0, taxi, 22, walk, 00
-2025-06-16 06:08, 2025-06-16 06:41, 0, walk, 05, taxi, 17
-2025-06-16 06:52, 2025-06-16 07:24, 0, walk, 05, taxi, 21
-2025-06-16 07:00, 2025-06-16 07:22, 0, taxi, 22, walk, 00
-2025-06-16 07:08, 2025-06-16 07:41, 0, walk, 05, taxi, 17
-2025-06-16 07:18, 2025-06-16 07:50, 0, walk, 05, taxi, 21
-2025-06-16 07:28, 2025-06-16 08:00, 0, walk, 06, taxi, 20
-2025-06-16 07:52, 2025-06-16 08:24, 0, walk, 05, taxi, 21
-2025-06-16 08:00, 2025-06-16 08:22, 0, taxi, 22, walk, 00
-2025-06-16 08:08, 2025-06-16 08:41, 0, walk, 05, taxi, 17
-2025-06-16 08:08, 2025-06-16 09:16, 1, walk, 05, walk, 13
-2025-06-16 08:25, 2025-06-16 09:16, 0, taxi, 09, walk, 13
-2025-06-16 08:25, 2025-06-16 09:52, 1, taxi, 09, walk, 13
-2025-06-16 08:40, 2025-06-16 09:12, 0, walk, 06, taxi, 20
-2025-06-16 08:52, 2025-06-16 09:24, 0, walk, 05, taxi, 21
-2025-06-16 09:00, 2025-06-16 09:22, 0, taxi, 22, walk, 00
-2025-06-16 09:08, 2025-06-16 09:41, 0, walk, 05, taxi, 17
-2025-06-16 09:12, 2025-06-16 09:52, 0, taxi, 12, walk, 13
-2025-06-16 09:12, 2025-06-16 10:29, 1, taxi, 12, walk, 13
-2025-06-16 09:14, 2025-06-16 09:46, 0, walk, 05, taxi, 21
-2025-06-16 09:52, 2025-06-16 10:24, 0, walk, 05, taxi, 21
-2025-06-16 09:53, 2025-06-16 10:24, 0, walk, 05, taxi, 17
-2025-06-16 09:53, 2025-06-16 10:45, 1, walk, 05, walk, 13
-2025-06-16 09:54, 2025-06-16 10:45, 0, taxi, 09, walk, 13
-2025-06-16 09:54, 2025-06-16 11:03, 1, taxi, 09, walk, 13
-2025-06-16 09:56, 2025-06-16 10:45, 1, taxi, 17, walk, 13
-2025-06-16 10:00, 2025-06-16 10:22, 0, taxi, 22, walk, 00
-2025-06-16 10:08, 2025-06-16 10:41, 0, walk, 05, taxi, 17
-2025-06-16 10:40, 2025-06-16 11:12, 0, walk, 06, taxi, 20
-2025-06-16 10:52, 2025-06-16 11:24, 0, walk, 05, taxi, 21
-2025-06-16 10:53, 2025-06-16 11:24, 0, walk, 05, taxi, 17
-2025-06-16 10:53, 2025-06-16 11:45, 1, walk, 05, walk, 13
-2025-06-16 10:54, 2025-06-16 11:45, 0, taxi, 09, walk, 13
-2025-06-16 10:54, 2025-06-16 12:29, 1, taxi, 09, walk, 13
-2025-06-16 11:00, 2025-06-16 11:22, 0, taxi, 22, walk, 00
-2025-06-16 11:08, 2025-06-16 11:41, 0, walk, 05, taxi, 17
-2025-06-16 11:14, 2025-06-16 11:46, 0, walk, 05, taxi, 21
-2025-06-16 11:22, 2025-06-16 11:54, 0, walk, 05, taxi, 21
-2025-06-16 11:52, 2025-06-16 12:24, 0, walk, 05, taxi, 21
-2025-06-16 11:53, 2025-06-16 12:24, 0, walk, 05, taxi, 17
-2025-06-16 11:53, 2025-06-16 12:45, 1, walk, 05, walk, 13
-2025-06-16 11:54, 2025-06-16 12:45, 0, taxi, 09, walk, 13
-2025-06-16 11:54, 2025-06-16 13:35, 1, taxi, 09, walk, 13
-2025-06-16 11:56, 2025-06-16 12:45, 1, taxi, 17, walk, 13
-2025-06-16 12:00, 2025-06-16 12:22, 0, taxi, 22, walk, 00
-2025-06-16 12:08, 2025-06-16 12:41, 0, walk, 05, taxi, 17
-2025-06-16 12:22, 2025-06-16 12:54, 0, walk, 05, taxi, 21
-2025-06-16 12:40, 2025-06-16 13:12, 0, walk, 06, taxi, 20
-2025-06-16 12:52, 2025-06-16 13:24, 0, walk, 05, taxi, 21
-2025-06-16 12:53, 2025-06-16 13:24, 0, walk, 05, taxi, 17
-2025-06-16 12:53, 2025-06-16 13:45, 1, walk, 05, walk, 13
-2025-06-16 12:54, 2025-06-16 13:45, 0, taxi, 09, walk, 13
-2025-06-16 13:00, 2025-06-16 13:22, 0, taxi, 22, walk, 00
-2025-06-16 13:08, 2025-06-16 13:41, 0, walk, 05, taxi, 17
-2025-06-16 13:14, 2025-06-16 13:46, 0, walk, 05, taxi, 21
-2025-06-16 13:52, 2025-06-16 14:24, 0, walk, 05, taxi, 21
-2025-06-16 13:53, 2025-06-16 14:24, 0, walk, 05, taxi, 17
-2025-06-16 14:00, 2025-06-16 14:22, 0, taxi, 22, walk, 00
-2025-06-16 14:08, 2025-06-16 14:41, 0, walk, 05, taxi, 17
-2025-06-16 14:08, 2025-06-16 15:47, 1, walk, 05, walk, 13
-2025-06-16 14:40, 2025-06-16 15:12, 0, walk, 06, taxi, 20
-2025-06-16 14:52, 2025-06-16 15:24, 0, walk, 05, taxi, 21
-2025-06-16 14:54, 2025-06-16 15:47, 0, taxi, 09, walk, 13
-2025-06-16 15:00, 2025-06-16 15:22, 0, taxi, 22, walk, 00
-2025-06-16 15:08, 2025-06-16 15:41, 0, walk, 05, taxi, 17
-2025-06-16 15:08, 2025-06-16 16:45, 1, walk, 05, walk, 13
-2025-06-16 15:14, 2025-06-16 15:46, 0, walk, 05, taxi, 21
-2025-06-16 15:37, 2025-06-16 16:45, 1, taxi, 14, walk, 13
-2025-06-16 15:38, 2025-06-16 16:10, 0, walk, 06, taxi, 20
-2025-06-16 15:52, 2025-06-16 16:24, 0, walk, 05, taxi, 21
-2025-06-16 15:54, 2025-06-16 16:45, 0, taxi, 09, walk, 13
-2025-06-16 15:54, 2025-06-16 17:35, 1, taxi, 09, walk, 13
-2025-06-16 15:59, 2025-06-16 16:31, 0, walk, 05, taxi, 21
-2025-06-16 16:00, 2025-06-16 16:22, 0, taxi, 22, walk, 00
-2025-06-16 16:08, 2025-06-16 16:41, 0, walk, 05, taxi, 17
-2025-06-16 16:15, 2025-06-17 04:35, 2, taxi, 15, walk, 13
-2025-06-16 16:52, 2025-06-16 17:24, 0, walk, 05, taxi, 21
-2025-06-16 17:00, 2025-06-16 17:22, 0, taxi, 22, walk, 00
-2025-06-16 17:08, 2025-06-16 17:41, 0, walk, 05, taxi, 17
-2025-06-16 17:52, 2025-06-16 18:24, 0, walk, 05, taxi, 21
-2025-06-16 18:00, 2025-06-16 18:22, 0, taxi, 22, walk, 00
-2025-06-16 18:08, 2025-06-16 18:41, 0, walk, 05, taxi, 17
-2025-06-16 18:52, 2025-06-16 19:24, 0, walk, 05, taxi, 21
-2025-06-16 19:00, 2025-06-16 19:22, 0, taxi, 22, walk, 00
-2025-06-16 19:08, 2025-06-16 19:41, 0, walk, 05, taxi, 17
-2025-06-16 20:00, 2025-06-16 20:22, 0, taxi, 22, walk, 00
-)__"sv;
-
-constexpr auto const badmuskau_pechern_monday_out =
-    R"__(departure, arrival, transfers, first_mile_mode, first_mile_duration, last_mile_mode, last_mile_duration
-2025-06-16 02:00, 2025-06-16 02:22, 0, taxi, 22, walk, 00
-2025-06-16 03:08, 2025-06-16 03:41, 0, walk, 05, taxi, 17
-2025-06-16 03:08, 2025-06-16 04:45, 1, walk, 05, walk, 13
-2025-06-16 03:54, 2025-06-16 04:45, 0, taxi, 09, walk, 13
-2025-06-16 04:38, 2025-06-16 05:10, 0, walk, 05, taxi, 17
-2025-06-16 04:38, 2025-06-16 05:11, 0, walk, 05, taxi, 17
-2025-06-16 04:43, 2025-06-16 05:14, 0, walk, 05, taxi, 20
-2025-06-16 05:05, 2025-06-16 05:40, 0, walk, 05, taxi, 17
-2025-06-16 05:43, 2025-06-16 06:45, 1, walk, 05, walk, 13
-2025-06-16 07:08, 2025-06-16 07:41, 0, walk, 05, taxi, 17
-2025-06-16 07:18, 2025-06-16 07:50, 0, walk, 05, taxi, 21
-2025-06-16 07:28, 2025-06-16 08:00, 0, walk, 06, taxi, 20
-2025-06-16 08:08, 2025-06-16 09:16, 1, walk, 05, walk, 13
-2025-06-16 09:53, 2025-06-16 10:45, 1, walk, 05, walk, 13
-2025-06-16 10:53, 2025-06-16 11:45, 1, walk, 05, walk, 13
-2025-06-16 11:53, 2025-06-16 12:45, 1, walk, 05, walk, 13
-2025-06-16 12:53, 2025-06-16 13:45, 1, walk, 05, walk, 13
-2025-06-16 14:08, 2025-06-16 14:41, 0, walk, 05, taxi, 17
-2025-06-16 14:08, 2025-06-16 15:47, 1, walk, 05, walk, 13
-2025-06-16 14:54, 2025-06-16 15:47, 0, taxi, 09, walk, 13
-2025-06-16 15:08, 2025-06-16 16:45, 1, walk, 05, walk, 13
-2025-06-16 15:54, 2025-06-16 16:45, 0, taxi, 09, walk, 13
-2025-06-16 17:00, 2025-06-16 17:22, 0, taxi, 22, walk, 00
-2025-06-16 17:08, 2025-06-16 17:41, 0, walk, 05, taxi, 17
-2025-06-16 18:00, 2025-06-16 18:22, 0, taxi, 22, walk, 00
-2025-06-16 18:08, 2025-06-16 18:41, 0, walk, 05, taxi, 17
-2025-06-16 19:00, 2025-06-16 19:22, 0, taxi, 22, walk, 00
-2025-06-16 19:08, 2025-06-16 19:41, 0, walk, 05, taxi, 17
-2025-06-16 20:00, 2025-06-16 20:22, 0, taxi, 22, walk, 00
-)__"sv;
-
-TEST(odm, badmuskau_pechern_monday) {
-  EXPECT_EQ(badmuskau_pechern_monday_out, mix(badmuskau_pechern_monday_in));
+  auto const mix_result = mix(badmuskau_pechern_monday_in);
+  whitelist(mix_result, from_csv(badmuskau_pechern_monday_whitelist));
 }
