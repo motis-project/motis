@@ -756,6 +756,12 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
     metrics_->routing_execution_duration_seconds_total_.Observe(
         static_cast<double>(r.search_stats_.execute_time_.count()) / 1000.0);
 
+    if (!r.journeys_->empty()) {
+      metrics_->routing_journey_duration_seconds_.Observe(static_cast<double>(
+          to_seconds(r.journeys_->begin()->arrival_time() -
+                     r.journeys_->begin()->departure_time())));
+    }
+
     return {
         .debugOutput_ = join(std::move(query_stats), r.search_stats_.to_map(),
                              r.algo_stats_.to_map()),
@@ -765,9 +771,6 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
         .itineraries_ = utl::to_vec(
             *r.journeys_,
             [&, cache = street_routing_cache_t{}](auto&& j) mutable {
-              metrics_->routing_journey_duration_seconds_.Observe(
-                  static_cast<double>(
-                      to_seconds(j.arrival_time() - j.departure_time())));
               return journey_to_response(
                   w_, l_, pl_, *tt_, *tags_, fa_, e, rtt, matches_, elevations_,
                   shapes_, gbfs_rd, lp_, tz_, j, start, dest, cache,
