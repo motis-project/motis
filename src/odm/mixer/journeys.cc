@@ -114,49 +114,53 @@ std::vector<nigiri::routing::journey> from_csv(std::string_view const csv) {
   return journeys;
 }
 
+std::string to_csv(nigiri::routing::journey const& j) {
+  auto const mode_str = [&](nigiri::transport_mode_id_t const mode) {
+    return mode == kOdmTransportModeId ? "taxi" : "walk";
+  };
+
+  auto const first_mile_mode =
+      !j.legs_.empty() && std::holds_alternative<nigiri::routing::offset>(
+                              j.legs_.front().uses_)
+          ? mode_str(std::get<nigiri::routing::offset>(j.legs_.front().uses_)
+                         .transport_mode_id_)
+          : "walk";
+
+  auto const first_mile_duration =
+      !j.legs_.empty() && std::holds_alternative<nigiri::routing::offset>(
+                              j.legs_.front().uses_)
+          ? std::get<nigiri::routing::offset>(j.legs_.front().uses_)
+                .duration()
+                .count()
+          : nigiri::duration_t::rep{0};
+
+  auto const last_mile_mode =
+      j.legs_.size() > 1 && std::holds_alternative<nigiri::routing::offset>(
+                                j.legs_.back().uses_)
+          ? mode_str(std::get<nigiri::routing::offset>(j.legs_.back().uses_)
+                         .transport_mode_id_)
+          : "walk";
+
+  auto const last_mile_duration =
+      j.legs_.size() > 1 && std::holds_alternative<nigiri::routing::offset>(
+                                j.legs_.back().uses_)
+          ? std::get<nigiri::routing::offset>(j.legs_.back().uses_)
+                .duration()
+                .count()
+          : nigiri::duration_t::rep{0};
+
+  return fmt::format("{}, {}, {}, {}, {:0>2}, {}, {:0>2}", j.start_time_,
+                    j.dest_time_, j.transfers_, first_mile_mode,
+                    first_mile_duration, last_mile_mode, last_mile_duration);
+}
+
 std::string to_csv(std::vector<nigiri::routing::journey> const& jv) {
   auto ss = std::stringstream{};
   ss << "departure, arrival, transfers, first_mile_mode, "
         "first_mile_duration, last_mile_mode, last_mile_duration\n";
 
   for (auto const& j : jv) {
-    auto const mode_str = [&](nigiri::transport_mode_id_t const mode) {
-      return mode == kOdmTransportModeId ? "taxi" : "walk";
-    };
-
-    auto const first_mile_mode =
-        !j.legs_.empty() && std::holds_alternative<nigiri::routing::offset>(
-                                j.legs_.front().uses_)
-            ? mode_str(std::get<nigiri::routing::offset>(j.legs_.front().uses_)
-                           .transport_mode_id_)
-            : "walk";
-
-    auto const first_mile_duration =
-        !j.legs_.empty() && std::holds_alternative<nigiri::routing::offset>(
-                                j.legs_.front().uses_)
-            ? std::get<nigiri::routing::offset>(j.legs_.front().uses_)
-                  .duration()
-                  .count()
-            : nigiri::duration_t::rep{0};
-
-    auto const last_mile_mode =
-        j.legs_.size() > 1 && std::holds_alternative<nigiri::routing::offset>(
-                                  j.legs_.back().uses_)
-            ? mode_str(std::get<nigiri::routing::offset>(j.legs_.back().uses_)
-                           .transport_mode_id_)
-            : "walk";
-
-    auto const last_mile_duration =
-        j.legs_.size() > 1 && std::holds_alternative<nigiri::routing::offset>(
-                                  j.legs_.back().uses_)
-            ? std::get<nigiri::routing::offset>(j.legs_.back().uses_)
-                  .duration()
-                  .count()
-            : nigiri::duration_t::rep{0};
-
-    ss << fmt::format("{}, {}, {}, {}, {:0>2}, {}, {:0>2}\n", j.start_time_,
-                      j.dest_time_, j.transfers_, first_mile_mode,
-                      first_mile_duration, last_mile_mode, last_mile_duration);
+    ss << to_csv(j) << "\n";
   }
 
   return ss.str();
