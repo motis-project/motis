@@ -540,7 +540,7 @@ api::plan_response meta_router::run() {
                 search_intvl.from_ - std::chrono::minutes{kMixer.max_distance_},
                 search_intvl.to_};
 
-  init_prima(context_intvl, odm_intvl);
+  init_prima(search_intvl, odm_intvl);
   print_time(init_start,
              fmt::format("[init] (first_mile: {}, last_mile: {}, direct: {})",
                          p_->from_rides_.size(), p_->to_rides_.size(),
