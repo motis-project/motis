@@ -46,8 +46,9 @@ api::ModeEnum to_mode(osr::search_profile const m) {
     case osr::search_profile::kFoot: [[fallthrough]];
     case osr::search_profile::kWheelchair: return api::ModeEnum::WALK;
     case osr::search_profile::kCar: return api::ModeEnum::CAR;
-    case osr::search_profile::kBikeElevationLow:
+    case osr::search_profile::kBikeElevationLow: [[fallthrough]];
     case osr::search_profile::kBikeElevationHigh: [[fallthrough]];
+    case osr::search_profile::kBikeFast: [[fallthrough]];
     case osr::search_profile::kBike: return api::ModeEnum::BIKE;
     case osr::search_profile::kBikeSharing: [[fallthrough]];
     case osr::search_profile::kCarSharing: return api::ModeEnum::RENTAL;

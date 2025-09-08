@@ -408,11 +408,11 @@ api::stoptimes_response stop_times::operator()(
                       return std::optional{to_idx(x)};
                     }),
                 .routeShortName_ =
-                    std::string{api_version == 1U
-                                    ? s.display_name(ev_type)
-                                    : s.route_short_name(ev_type)},
+                    std::string{api_version < 4 ? s.display_name(ev_type)
+                                                : s.route_short_name(ev_type)},
                 .routeLongName_ = std::string{s.route_long_name(ev_type)},
                 .tripShortName_ = std::string{s.trip_short_name(ev_type)},
+                .displayName_ = std::string{s.display_name(ev_type)},
                 .pickupDropoffType_ =
                     in_out_allowed ? api::PickupDropoffTypeEnum::NORMAL
                                    : api::PickupDropoffTypeEnum::NOT_ALLOWED,

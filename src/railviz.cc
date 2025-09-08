@@ -279,18 +279,19 @@ void add_static_transports(n::timetable const& tt,
          tt.locations_.coordinates_[n::stop{seq[segment + 1]}.location_idx()]});
   };
   for (auto const [from, to] : utl::pairwise(stop_indices)) {
+    // TODO dwell times
     auto const box = get_box(from);
     if (!box.overlaps(area)) {
       continue;
     }
 
-    auto const dep_times = tt.event_times_at_stop(r, from, n::event_type::kDep);
+    auto const arr_times = tt.event_times_at_stop(r, to, n::event_type::kArr);
     for (auto const [i, t_idx] :
          utl::enumerate(tt.route_transport_ranges_[r])) {
       auto const day_offset =
-          static_cast<n::day_idx_t::value_t>(dep_times[i].days());
-      for (auto day = start_day; day <= end_day; ++day) {
-        auto const traffic_day = day - day_offset;
+          static_cast<n::day_idx_t::value_t>(arr_times[i].days());
+      for (auto traffic_day = start_day - day_offset; traffic_day <= end_day;
+           ++traffic_day) {
         auto const t = n::transport{t_idx, traffic_day};
         if (time_interval.overlaps({tt.event_time(t, from, n::event_type::kDep),
                                     tt.event_time(t, to, n::event_type::kArr) +
