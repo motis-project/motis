@@ -14,7 +14,7 @@ namespace motis::odm {
 namespace n = nigiri;
 namespace nr = nigiri::routing;
 
-static constexpr auto const kMixerTracing = false;
+static constexpr auto const kMixerTracing = true;
 
 std::int32_t tally(std::int32_t const x,
                    std::vector<cost_threshold> const& ct) {
@@ -38,11 +38,11 @@ std::int32_t distance(nr::journey const& a, nr::journey const& b) {
            x.arrival_time() < y.arrival_time();
   };
 
-  return overtakes(a, b) || overtakes(b, a)
+  return overtakes(a, b)
              ? 0
-             : std::min(
-                   std::chrono::abs(a.departure_time() - b.departure_time()),
-                   std::chrono::abs(a.arrival_time() - b.arrival_time()))
+             : ((std::chrono::abs(a.departure_time() - b.departure_time()) +
+                 std::chrono::abs(a.arrival_time() - b.arrival_time())) /
+                2)
                    .count();
 }
 
@@ -241,7 +241,7 @@ mixer get_default_mixer() {
                .prod_alpha_ = 0.4,
                .direct_taxi_penalty_ = 220,
                .min_distance_ = 15,
-               .max_distance_ = 60,
+               .max_distance_ = 90,
                .exp_distance_ = 1.045,
                .walk_cost_ = {{0, 1}, {15, 10}},
                .taxi_cost_ = {{0, 35}, {1, 12}},
