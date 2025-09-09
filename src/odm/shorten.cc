@@ -1,7 +1,13 @@
 #include "motis/odm/odm.h"
 
+#include <variant>
+
+#include "utl/erase_if.h"
+#include "utl/helpers/algorithm.h"
+
 #include "nigiri/for_each_meta.h"
 #include "nigiri/logging.h"
+#include "nigiri/routing/query.h"
 #include "nigiri/rt/frun.h"
 #include "nigiri/rt/rt_timetable.h"
 #include "nigiri/timetable.h"
@@ -16,9 +22,19 @@ namespace nr = nigiri::routing;
 void shorten(std::vector<nr::journey>& odm_journeys,
              std::vector<nr::start> const& from_rides,
              std::vector<nr::start> const& to_rides,
+             std::vector<nigiri::routing::offset> const& start_walk,
+             std::vector<nigiri::routing::offset> const& dest_walk,
              n::timetable const& tt,
              n::rt_timetable const* rtt,
              api::plan_params const& query) {
+
+  auto const one_pt_leg = [](n::routing::journey& j) {
+    return j.legs_.size() <= 3 &&
+           utl::count_if(j.legs_, [](auto const& l) {
+             return std::holds_alternative<
+                 nigiri::routing::journey::run_enter_exit>(l.uses_);
+           }) == 1;
+  };
 
   auto const shorten_first_leg = [&](n::routing::journey& j) {
     auto& odm_leg = begin(j.legs_)[0];
@@ -28,7 +44,16 @@ void shorten(std::vector<nr::journey>& odm_journeys,
         !std::holds_alternative<nr::journey::run_enter_exit>(pt_leg.uses_)) {
       return;
     }
-
+    if (one_pt_leg(j)) {
+      for (auto const& walk : dest_walk) {
+        if (pt_leg.from_ == walk.target_ &&
+            odm_leg.arr_time_ - kODMTransferBuffer + walk.duration_ <
+                j.arrival_time()) {
+          j.legs_.clear();
+          return;
+        }
+      }
+    }
     auto& ree = std::get<nr::journey::run_enter_exit>(pt_leg.uses_);
     auto run = n::rt::frun(tt, rtt, ree.r_);
     run.stop_range_.to_ = ree.stop_range_.to_ - 1U;
@@ -96,6 +121,17 @@ void shorten(std::vector<nr::journey>& odm_journeys,
       return;
     }
 
+    if (one_pt_leg(j)) {
+      for (auto const& walk : start_walk) {
+        if (pt_leg.to_ == walk.target_ &&
+            odm_leg.dep_time_ + kODMTransferBuffer - walk.duration_ >
+                j.departure_time()) {
+          j.legs_.clear();
+          return;
+        }
+      }
+    }
+
     auto& ree = std::get<n::routing::journey::run_enter_exit>(pt_leg.uses_);
     auto run = nigiri::rt::frun(tt, rtt, ree.r_);
     run.stop_range_.from_ = ree.stop_range_.from_ + 1U;
@@ -161,6 +197,7 @@ void shorten(std::vector<nr::journey>& odm_journeys,
     shorten_first_leg(j);
     shorten_last_leg(j);
   }
+  utl::erase_if(odm_journeys, [](auto& j) { return j.legs_.empty(); });
 }
 
 }  // namespace motis::odm
