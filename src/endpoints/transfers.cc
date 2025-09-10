@@ -1,6 +1,7 @@
 #include "motis/endpoints/transfers.h"
 
 #include "osr/geojson.h"
+#include "osr/routing/parameters.h"
 #include "osr/routing/route.h"
 
 #include "utl/pipes/all.h"
@@ -55,7 +56,7 @@ api::transfers_response transfers::operator()(
   for (auto const mode :
        {osr::search_profile::kFoot, osr::search_profile::kWheelchair}) {
     auto const results = osr::route(
-        w_, l_, mode, loc,
+        osr::get_parameters(mode), w_, l_, mode, loc,
         utl::to_vec(
             neighbors,
             [&](auto&& l) { return get_loc(tt_, w_, pl_, matches_, l); }),

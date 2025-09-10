@@ -185,6 +185,7 @@ struct osr_mapping {
         }
 
         auto const matches = l_.match<osr::foot<false>>(
+            osr::foot<false>::parameters{},
             osr::location{st.info_.pos_, osr::level_t{}}, false,
             osr::direction::kForward, kMaxGbfsMatchingDistance, nullptr);
         if (matches.empty()) {
@@ -264,6 +265,7 @@ struct osr_mapping {
         }
 
         auto const matches = l_.match<osr::foot<false>>(
+            osr::foot<false>::parameters{},
             osr::location{vs.pos_, osr::level_t{}}, false,
             osr::direction::kForward, kMaxGbfsMatchingDistance, nullptr);
         if (matches.empty()) {

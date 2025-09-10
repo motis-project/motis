@@ -10,6 +10,7 @@
 #include "utl/parallel_for.h"
 #include "utl/sorted_diff.h"
 
+#include "osr/routing/parameters.h"
 #include "osr/routing/profiles/foot.h"
 #include "osr/routing/route.h"
 #include "osr/util/infinite.h"
@@ -105,8 +106,9 @@ elevator_footpath_map_t compute_footpaths(
           return;
         }
         candidates[l] = lookup.match(
-            get_loc(tt, w, pl, matches, l), false, osr::direction::kForward,
-            mode.max_matching_distance_, nullptr, mode.profile_);
+            osr::get_parameters(mode.profile_), get_loc(tt, w, pl, matches, l),
+            false, osr::direction::kForward, mode.max_matching_distance_,
+            nullptr, mode.profile_);
       });
 
       n_done += tt.n_locations();
@@ -132,7 +134,8 @@ elevator_footpath_map_t compute_footpaths(
               });
 
           auto const results = osr::route(
-              w, lookup, mode.profile_, get_loc(tt, w, pl, matches, l),
+              osr::get_parameters(mode.profile_), w, lookup, mode.profile_,
+              get_loc(tt, w, pl, matches, l),
               utl::transform_to(s.neighbors_, s.neighbors_loc_,
                                 [&](n::location_idx_t const x) {
                                   return get_loc(tt, w, pl, matches, x);
