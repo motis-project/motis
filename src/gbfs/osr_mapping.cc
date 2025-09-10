@@ -152,12 +152,69 @@ struct osr_mapping {
     }
   }
 
+  std::vector<std::pair<osr::way_candidate const*, osr::node_candidate const*>>
+  get_node_matches(osr::location const& loc) const {
+    using footp = osr::bike_sharing::footp;
+    using bikep = osr::bike_sharing::bikep;
+    auto is_acceptable_node = [&](osr::node_candidate const& n) {
+      if (!n.valid() || n.dist_to_node_ > kMaxGbfsMatchingDistance) {
+        return false;
+      }
+      auto const& node_props = w_.r_->node_properties_[n.node_];
+      if (footp::node_cost(node_props) == osr::kInfeasible ||
+          bikep::node_cost(node_props) == osr::kInfeasible) {
+        return false;
+      }
+      // node needs to have at least one way accessible by foot and one by bike
+      return utl::any_of(w_.r_->node_ways_[n.node_],
+                         [&](auto const way_idx) {
+                           return footp::way_cost(
+                                      footp::parameters{},
+                                      w_.r_->way_properties_[way_idx],
+                                      osr::direction::kForward,
+                                      0U) != osr::kInfeasible;
+                         }) &&
+             utl::any_of(w_.r_->node_ways_[n.node_], [&](auto const way_idx) {
+               return bikep::way_cost(
+                          bikep::parameters{}, w_.r_->way_properties_[way_idx],
+                          osr::direction::kForward, 0U) != osr::kInfeasible;
+             });
+    };
+
+    auto const matches = l_.match<footp>(footp::parameters{}, loc, false,
+                                         osr::direction::kForward,
+                                         kMaxGbfsMatchingDistance, nullptr);
+    auto node_matches = std::vector<
+        std::pair<osr::way_candidate const*, osr::node_candidate const*>>{};
+    for (auto const& m : matches) {
+      if (is_acceptable_node(m.left_)) {
+        node_matches.emplace_back(&m, &m.left_);
+      }
+      if (is_acceptable_node(m.right_)) {
+        node_matches.emplace_back(&m, &m.right_);
+      }
+    }
+    utl::sort(node_matches, [](auto const& a, auto const& b) {
+      return a.second->dist_to_node_ < b.second->dist_to_node_;
+    });
+
+    auto connected_components = hash_set<osr::component_idx_t>{};
+    for (auto it = node_matches.begin(); it != node_matches.end();) {
+      auto const component = w_.r_->way_component_[it->first->way_];
+      if (!connected_components.insert(component).second) {
+        it = node_matches.erase(it);
+      } else {
+        ++it;
+      }
+    }
+
+    return node_matches;
+  }
+
   void map_stations() {
     for (auto [prod_b, rd_b] : utl::zip(provider_.products_, products_data_)) {
       auto& prod = prod_b;  // fix for apple clang
       auto& rd = rd_b;
-      auto next_node_id = static_cast<osr::node_idx_t>(
-          w_.n_nodes() + rd.additional_nodes_.size());
       for (auto const& [id, st] : provider_.stations_) {
         auto is_renting =
             st.status_.is_renting_ && st.status_.num_vehicles_available_ > 0;
@@ -184,19 +241,14 @@ struct osr_mapping {
           continue;
         }
 
-        auto const matches = l_.match<osr::foot<false>>(
-            osr::foot<false>::parameters{},
-            osr::location{st.info_.pos_, osr::level_t{}}, false,
-            osr::direction::kForward, kMaxGbfsMatchingDistance, nullptr);
+        auto const matches =
+            get_node_matches(osr::location{st.info_.pos_, osr::level_t{}});
         if (matches.empty()) {
           continue;
         }
 
-        auto const additional_node_id = next_node_id++;
-        rd.additional_node_coordinates_.push_back(
-            provider_.stations_.at(id).info_.pos_);
-        rd.additional_nodes_.push_back(
-            additional_node{additional_node::station{id}});
+        auto const additional_node_id = add_node(
+            rd, additional_node{additional_node::station{id}}, st.info_.pos_);
         if (is_renting) {
           rd.start_allowed_.set(additional_node_id, true);
         }
@@ -218,30 +270,22 @@ struct osr_mapping {
             });
           }
         }
-
         for (auto const& m : matches) {
-          auto const handle_node = [&](osr::node_candidate const& node) {
-            if (node.valid() &&
-                node.dist_to_node_ <= kMaxGbfsMatchingDistance) {
-              auto const edge_to_an = osr::additional_edge{
-                  additional_node_id,
-                  static_cast<osr::distance_t>(node.dist_to_node_)};
-              auto& node_edges = rd.additional_edges_[node.node_];
-              if (utl::find(node_edges, edge_to_an) == end(node_edges)) {
-                node_edges.emplace_back(edge_to_an);
-              }
+          auto const& node = *m.second;
+          auto const edge_to_an = osr::additional_edge{
+              additional_node_id,
+              static_cast<osr::distance_t>(node.dist_to_node_)};
+          auto& node_edges = rd.additional_edges_[node.node_];
+          if (utl::find(node_edges, edge_to_an) == end(node_edges)) {
+            node_edges.emplace_back(edge_to_an);
+          }
 
-              auto const edge_from_an = osr::additional_edge{
-                  node.node_, static_cast<osr::distance_t>(node.dist_to_node_)};
-              auto& an_edges = rd.additional_edges_[additional_node_id];
-              if (utl::find(an_edges, edge_from_an) == end(an_edges)) {
-                an_edges.emplace_back(edge_from_an);
-              }
-            }
-          };
-
-          handle_node(m.left_);
-          handle_node(m.right_);
+          auto const edge_from_an = osr::additional_edge{
+              node.node_, static_cast<osr::distance_t>(node.dist_to_node_)};
+          auto& an_edges = rd.additional_edges_[additional_node_id];
+          if (utl::find(an_edges, edge_from_an) == end(an_edges)) {
+            an_edges.emplace_back(edge_from_an);
+          }
         }
       }
     }
@@ -264,22 +308,19 @@ struct osr_mapping {
           continue;
         }
 
-        auto const matches = l_.match<osr::foot<false>>(
-            osr::foot<false>::parameters{},
-            osr::location{vs.pos_, osr::level_t{}}, false,
-            osr::direction::kForward, kMaxGbfsMatchingDistance, nullptr);
+        auto const matches =
+            get_node_matches(osr::location{vs.pos_, osr::level_t{}});
         if (matches.empty()) {
           continue;
         }
 
-        auto const additional_node_id = next_node_id++;
-        rd.additional_node_coordinates_.push_back(
-            provider_.vehicle_status_.at(vehicle_idx).pos_);
-        rd.additional_nodes_.push_back(
-            additional_node{additional_node::vehicle{vehicle_idx}});
+        auto const additional_node_id =
+            add_node(rd, additional_node{additional_node::vehicle{vehicle_idx}},
+                     vs.pos_);
         rd.start_allowed_.set(additional_node_id, true);
 
-        auto const& add_additional_edges = [&](osr::node_candidate const& nc) {
+        for (auto const& m : matches) {
+          auto const& nc = *m.second;
           auto const edge_to_an = osr::additional_edge{
               additional_node_id,
               static_cast<osr::distance_t>(nc.dist_to_node_)};
@@ -294,20 +335,22 @@ struct osr_mapping {
           if (utl::find(an_edges, edge_from_an) == end(an_edges)) {
             an_edges.push_back(edge_from_an);
           }
-        };
-
-        for (auto const& m : matches) {
-          if (m.left_.valid() &&
-              m.left_.dist_to_node_ <= kMaxGbfsMatchingDistance) {
-            add_additional_edges(m.left_);
-          }
-          if (m.right_.valid() &&
-              m.right_.dist_to_node_ <= kMaxGbfsMatchingDistance) {
-            add_additional_edges(m.right_);
-          }
         }
       }
     }
+  }
+
+  osr::node_idx_t add_node(routing_data& rd,
+                           additional_node&& an,
+                           geo::latlng const& pos) const {
+    auto const node_id = static_cast<osr::node_idx_t>(
+        w_.n_nodes() + rd.additional_nodes_.size());
+    rd.additional_nodes_.push_back(std::move(an));
+    rd.additional_node_coordinates_.push_back(pos);
+    assert(rd.start_allowed_.size() >=
+           static_cast<typename osr::bitvec<osr::node_idx_t>::size_type>(
+               node_id + 1));
+    return node_id;
   }
 
   osr::ways const& w_;
