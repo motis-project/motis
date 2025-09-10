@@ -293,8 +293,6 @@ struct osr_mapping {
 
   void map_vehicles() {
     for (auto [prod, rd] : utl::zip(provider_.products_, products_data_)) {
-      auto next_node_id = static_cast<osr::node_idx_t>(
-          w_.n_nodes() + rd.additional_nodes_.size());
       for (auto const [vehicle_idx, vs] :
            utl::enumerate(provider_.vehicle_status_)) {
         if (vs.is_disabled_ || vs.is_reserved_ ||
