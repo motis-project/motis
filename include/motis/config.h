@@ -42,6 +42,7 @@ struct config {
     std::string web_folder_{"ui"};
     unsigned n_threads_{0U};
     std::optional<std::string> data_attribution_link_{};
+    std::optional<std::vector<std::string>> lbs_{};
   };
   std::optional<server> server_{};
 
