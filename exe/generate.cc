@@ -6,7 +6,12 @@
 
 #include "boost/url/url.hpp"
 
+#include "nigiri/common/interval.h"
+#include "nigiri/routing/raptor/debug.h"
+#include "nigiri/routing/search.h"
 #include "nigiri/timetable.h"
+
+#include "utl/progress_tracker.h"
 
 #include "motis-api/motis-api.h"
 #include "motis/config.h"
@@ -23,6 +28,8 @@ namespace fs = std::filesystem;
 namespace po = boost::program_options;
 
 namespace motis {
+
+constexpr auto const kMinRank = 16UL;
 
 static std::atomic_uint32_t seed{0U};
 
@@ -72,6 +79,7 @@ int generate(int ac, char** av) {
   auto use_bike = false;
   auto use_car = false;
   auto use_odm = false;
+  auto lb_rank = true;
   auto p = api::plan_params{};
 
   auto const parse_date = [](std::string_view const s) {
@@ -148,7 +156,12 @@ int generate(int ac, char** av) {
       ("fastest_direct_factor",
        po::value(&p.fastestDirectFactor_)
            ->default_value(p.fastestDirectFactor_),
-       "sets fastest direct factor of the queries");
+       "sets fastest direct factor of the queries")  //
+      ("lb_rank", po::value(&lb_rank)->default_value(lb_rank),
+       "emit queries uniformly distributed over the lower bounds (lb) ranks, "
+       "lb rank n:  2^n-th stop when sorting all stops by their lb value from "
+       "the start (min. rank: 4, max. rank: derived from number of eligible "
+       "stops)");
   add_data_path_opt(desc, data_path);
   auto vm = parse_opt(ac, av, desc);
 
@@ -234,6 +247,8 @@ int generate(int ac, char** av) {
         node_rtree.add(d.w_->get_node_pos(i), i);
       }
     }
+  } else {
+    fmt::println("station-to-station");
   }
 
   auto stops = std::vector<n::location_idx_t>{};
@@ -246,33 +261,91 @@ int generate(int ac, char** av) {
     stops.emplace_back(l);
   }
 
-  auto const random_place = [&]() {
+  auto ss = std::optional<n::routing::search_state>{};
+  auto rs = std::optional<n::routing::raptor_state>{};
+  if (lb_rank) {
+    ss = n::routing::search_state{};
+    rs = n::routing::raptor_state{};
+    fmt::println("from and to pairings by lower bounds rank");
+  } else {
+    fmt::println("from and to uniformly at random");
+  }
+
+  auto const get_place =
+      [&](n::location_idx_t const l) -> std::optional<std::string> {
     if (!modes) {
-      return d.tags_->id(*d.tt_, random_stop(*d.tt_, stops));
+      return d.tags_->id(*d.tt_, l);
     }
 
-    auto nodes = std::vector<osr::node_idx_t>{};
-    do {
-      nodes = node_rtree.in_radius(
-          d.tt_->locations_.coordinates_[random_stop(*d.tt_, stops)], max_dist);
-    } while (nodes.empty());
+    auto const nodes =
+        node_rtree.in_radius(d.tt_->locations_.coordinates_[l], max_dist);
+    if (nodes.empty()) {
+      return std::nullopt;
+    }
 
-    auto pos = d.w_->get_node_pos(rand_in(nodes));
+    auto const pos = d.w_->get_node_pos(rand_in(nodes));
     return fmt::format("{},{}", pos.lat(), pos.lng());
+  };
+
+  auto const random_from_to = [&](auto const r) {
+    auto from_place = std::optional<std::string>{};
+    auto to_place = std::optional<std::string>{};
+
+    for (auto x = 0U; x != 1000U; ++x) {
+      auto const from_stop = random_stop(*d.tt_, stops);
+      from_place = get_place(from_stop);
+      if (!from_place) {
+        continue;
+      }
+
+      if (lb_rank) {
+        auto const s = n::routing::search<
+            n::direction::kBackward,
+            n::routing::raptor<n::direction::kBackward, false, 0,
+                               n::routing::search_mode::kOneToAll>>{
+            *d.tt_, nullptr, *ss, *rs,
+            nigiri::routing::query{
+                .start_time_ = d.tt_->date_range_.from_,
+                .destination_ = {{from_stop, n::duration_t{0U}, 0}}}};
+        utl::sort(stops, [&](auto const& a, auto const& b) {
+          return ss->travel_time_lower_bound_[to_idx(a)] <
+                 ss->travel_time_lower_bound_[to_idx(b)];
+        });
+        to_place = get_place(stops[r]);
+      } else {
+        to_place = get_place(random_stop(*d.tt_, stops));
+      }
+      if (to_place) {
+        break;
+      }
+    }
+
+    p.fromPlace_ = *from_place;
+    p.toPlace_ = *to_place;
+  };
+
+  auto const random_time = [&]() {
+    using namespace std::chrono_literals;
+    p.time_ =
+        *first_day +
+        rand_in(0U,
+                static_cast<std::uint32_t>((*last_day - *first_day).count())) *
+            date::days{1U} +
+        (time_of_day ? *time_of_day : rand_in(6U, 18U)) * 1h;
   };
 
   {
     auto out = std::ofstream{"queries.txt"};
-    for (auto i = 0U; i != n; ++i) {
-      using namespace std::chrono_literals;
-      p.fromPlace_ = random_place();
-      p.toPlace_ = random_place();
-      p.time_ = *first_day +
-                rand_in(0U, static_cast<std::uint32_t>(
-                                (*last_day - *first_day).count())) *
-                    date::days{1U} +
-                (time_of_day ? *time_of_day : rand_in(6U, 18U)) * 1h;
+    auto const progress_tracker =
+        utl::activate_progress_tracker(fmt::format("generating {} queries", n));
+    progress_tracker->in_high(n);
+    auto const silencer = utl::global_progress_bars{false};
+    for (auto [i, r] = std::tuple{0U, kMinRank}; i != n;
+         ++i, r = r * 2U < stops.size() ? r * 2U : kMinRank) {
+      random_from_to(r);
+      random_time();
       out << p.to_url("/api/v1/plan") << "\n";
+      progress_tracker->increment();
     }
   }
 
