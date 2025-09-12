@@ -518,16 +518,12 @@ api::plan_response meta_router::run() {
       start_time_.start_time_);
 
   auto const search_intvl =
-      query_.arriveBy_
-          ? n::interval<n::unixtime_t>{start_time_.extend_interval_earlier_
-                                           ? start_intvl.to_ -
-                                                 kSearchIntervalSize
-                                           : start_intvl.from_,
-                                       start_intvl.to_}
-          : n::interval<n::unixtime_t>{
-                start_intvl.from_, start_time_.extend_interval_later_
-                                       ? start_intvl.from_ + kSearchIntervalSize
-                                       : start_intvl.to_};
+      n::interval<n::unixtime_t>{start_time_.extend_interval_earlier_
+                                     ? start_intvl.to_ - kSearchIntervalSize
+                                     : start_intvl.from_,
+                                 start_time_.extend_interval_later_
+                                     ? start_intvl.from_ + kSearchIntervalSize
+                                     : start_intvl.to_};
 
   auto const context_intvl = n::interval<n::unixtime_t>{
       search_intvl.from_ - n::duration_t{kMixer.max_distance_},
