@@ -181,11 +181,23 @@ vector_map<n::location_idx_t, adr_extra_place_idx_t> adr_extend_tt(
       }
     }
 
+    auto const is_null_island = [](geo::latlng const& pos) {
+      return pos.lat() < 3.0 && pos.lng() < 3.0;
+    };
+    auto pos = tt.locations_.coordinates_[l];
+    if (is_null_island(pos)) {
+      for (auto const c : tt.locations_.children_[l]) {
+        if (!is_null_island(tt.locations_.coordinates_[c])) {
+          pos = tt.locations_.coordinates_[c];
+          break;
+        }
+      }
+    }
+
     t.place_type_.emplace_back(a::place_type::kExtra);
     t.place_names_.emplace_back(
         utl::to_vec(names, [](auto const& n) { return n.first; }));
-    t.place_coordinates_.emplace_back(
-        a::coordinates::from_latlng(tt.locations_.coordinates_[l]));
+    t.place_coordinates_.emplace_back(a::coordinates::from_latlng(pos));
     t.place_osm_ids_.emplace_back(to_idx(l));
     t.place_name_lang_.emplace_back(
         utl::to_vec(names, [](auto const& n) { return n.second; }));
@@ -196,8 +208,7 @@ vector_map<n::location_idx_t, adr_extra_place_idx_t> adr_extend_tt(
     if (area_db == nullptr) {
       t.place_areas_.emplace_back(no_areas_idx);
     } else {
-      area_db->lookup(
-          t, a::coordinates::from_latlng(tt.locations_.coordinates_[l]), areas);
+      area_db->lookup(t, a::coordinates::from_latlng(pos), areas);
       t.place_areas_.emplace_back(
           utl::get_or_create(area_set_lookup, areas, [&]() {
             auto const set_idx = a::area_set_idx_t{t.area_sets_.size()};
