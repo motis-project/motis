@@ -1,8 +1,13 @@
 #include "motis/adr_extend_tt.h"
 
+#include <string>
+#include <utility>
+#include <vector>
+
 #include "utl/get_or_create.h"
 #include "utl/parallel_for.h"
 #include "utl/timer.h"
+#include "utl/to_vec.h"
 
 #include "nigiri/timetable.h"
 
@@ -136,30 +141,57 @@ vector_map<n::location_idx_t, adr_extra_place_idx_t> adr_extend_tt(
   }
 
   // Add to typeahead.
+  auto const add_string = [&](auto const& s, a::place_idx_t const place_idx) {
+    auto const str_idx = a::string_idx_t{t.strings_.size()};
+    t.strings_.emplace_back(s);
+    t.string_to_location_.emplace_back(
+        std::initializer_list<std::uint32_t>{to_idx(place_idx)});
+    t.string_to_type_.emplace_back(
+        std::initializer_list<a::location_type_t>{a::location_type_t::kPlace});
+    return str_idx;
+  };
   auto areas = basic_string<a::area_idx_t>{};
   auto no_areas_idx = adr::area_set_idx_t{t.area_sets_.size()};
   if (area_db == nullptr) {
     t.area_sets_.emplace_back(areas);
   }
+
   for (auto const [prio, l] : utl::zip(importance, place_location)) {
-    auto const str_idx = a::string_idx_t{t.strings_.size()};
     auto const place_idx = a::place_idx_t{t.place_names_.size()};
+
+    auto names = std::vector<std::pair<a::string_idx_t, a::language_idx_t>>{
+        {add_string(tt.locations_.names_[l].view(), place_idx),
+         a::kDefaultLang}};
+    auto const add_alt_names = [&](n::location_idx_t const loc) {
+      for (auto const& an : tt.locations_.alt_names_[loc]) {
+        names.emplace_back(std::pair{
+            add_string(tt.locations_.alt_name_strings_[an].view(), place_idx),
+            t.get_or_create_lang_idx(
+                tt.languages_[tt.locations_.alt_name_langs_[an]].view())});
+      }
+    };
+    add_alt_names(l);
+    for (auto const& c : tt.locations_.children_[l]) {
+      if (tt.locations_.types_[c] == nigiri::location_type::kStation &&
+          tt.locations_.names_[c].view() != tt.locations_.names_[l].view()) {
+        names.emplace_back(
+            std::pair{add_string(tt.locations_.names_[c].view(), place_idx),
+                      a::kDefaultLang});
+        add_alt_names(c);
+      }
+    }
+
     t.place_type_.emplace_back(a::place_type::kExtra);
-    t.strings_.emplace_back(tt.locations_.names_[l].view());
     t.place_names_.emplace_back(
-        std::initializer_list<a::string_idx_t>{str_idx});
+        utl::to_vec(names, [](auto const& n) { return n.first; }));
     t.place_coordinates_.emplace_back(
         a::coordinates::from_latlng(tt.locations_.coordinates_[l]));
     t.place_osm_ids_.emplace_back(to_idx(l));
     t.place_name_lang_.emplace_back(
-        std::initializer_list<a::language_idx_t>{a::kDefaultLang});
+        utl::to_vec(names, [](auto const& n) { return n.second; }));
     t.place_population_.emplace_back(static_cast<std::uint16_t>(
         (prio * 1'000'000) / a::population::kCompressionFactor));
     t.place_is_way_.resize(t.place_is_way_.size() + 1U);
-    t.string_to_location_.emplace_back(
-        std::initializer_list<std::uint32_t>{to_idx(place_idx)});
-    t.string_to_type_.emplace_back(
-        std::initializer_list<a::location_type_t>{a::location_type_t::kPlace});
 
     if (area_db == nullptr) {
       t.place_areas_.emplace_back(no_areas_idx);

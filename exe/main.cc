@@ -262,7 +262,9 @@ int main(int ac, char** av) {
         auto const ids = utl::to_vec(
             vm["trip-id"].as<std::vector<std::string> >(),
             [](auto const& trip_id) {
-              auto const decoded = boost::urls::decode_view{trip_id};
+              // Set space_as_plus = true
+              auto const opts = boost::urls::encoding_opts{true};
+              auto const decoded = boost::urls::decode_view{trip_id, opts};
               return std::string{decoded.begin(), decoded.end()};
             });
 

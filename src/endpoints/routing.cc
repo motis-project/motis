@@ -13,6 +13,7 @@
 
 #include "osr/lookup.h"
 #include "osr/platforms.h"
+#include "osr/routing/parameters.h"
 #include "osr/routing/profile.h"
 #include "osr/routing/profiles/foot.h"
 #include "osr/routing/route.h"
@@ -206,13 +207,14 @@ std::vector<n::routing::offset> get_offsets(
 
     auto const route = [&](osr::search_profile const p,
                            osr::sharing_data const* sharing) {
-      auto const pos_match =
-          r.l_->match(pos, false, dir, max_matching_distance, nullptr, p);
+      auto const params = osr::get_parameters(p);
+      auto const pos_match = r.l_->match(params, pos, false, dir,
+                                         max_matching_distance, nullptr, p);
       auto const near_stop_matches = get_reverse_platform_way_matches(
           *r.l_, r.way_matches_, p, near_stops, near_stop_locations, dir,
           max_matching_distance);
-      return osr::route(*r.w_, *r.l_, p, pos, near_stop_locations, pos_match,
-                        near_stop_matches,
+      return osr::route(params, *r.w_, *r.l_, p, pos, near_stop_locations,
+                        pos_match, near_stop_matches,
                         static_cast<osr::cost_t>(max.count()), dir, nullptr,
                         sharing, elevations);
     };
@@ -771,6 +773,12 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
     metrics_->routing_execution_duration_seconds_total_.Observe(
         static_cast<double>(r.search_stats_.execute_time_.count()) / 1000.0);
 
+    if (!r.journeys_->empty()) {
+      metrics_->routing_journey_duration_seconds_.Observe(static_cast<double>(
+          to_seconds(r.journeys_->begin()->arrival_time() -
+                     r.journeys_->begin()->departure_time())));
+    }
+
     return {
         .debugOutput_ = join(std::move(query_stats), r.search_stats_.to_map(),
                              std::move(r.algo_stats_)),
@@ -780,9 +788,6 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
         .itineraries_ = utl::to_vec(
             *r.journeys_,
             [&, cache = street_routing_cache_t{}](auto&& j) mutable {
-              metrics_->routing_journey_duration_seconds_.Observe(
-                  static_cast<double>(
-                      to_seconds(j.arrival_time() - j.departure_time())));
               return journey_to_response(
                   w_, l_, pl_, *tt_, *tags_, fa_, e, rtt, matches_, elevations_,
                   shapes_, gbfs_rd, lp_, tz_, j, start, dest, cache,

@@ -500,10 +500,10 @@ TEST(motis, routing) {
         "&directModes=WALK,RENTAL");
 
     EXPECT_EQ(
-        R"(date=2019-05-01, start=01:25, end=01:32, duration=00:07, transfers=0, legs=[
+        R"(date=2019-05-01, start=01:25, end=01:36, duration=00:11, transfers=0, legs=[
     (from=- [track=-, scheduled_track=-, level=0], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 01:25, mode="WALK", trip="-", end=2019-05-01 01:26),
     (from=- [track=-, scheduled_track=-, level=0], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 01:26, mode="RENTAL", trip="-", end=2019-05-01 01:27),
-    (from=- [track=-, scheduled_track=-, level=0], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 01:27, mode="WALK", trip="-", end=2019-05-01 01:32)
+    (from=- [track=-, scheduled_track=-, level=0], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 01:27, mode="WALK", trip="-", end=2019-05-01 01:36)
 ])",
         to_str(res.direct_));
   }
@@ -513,16 +513,16 @@ TEST(motis, routing) {
     auto const res = routing(
         "?fromPlace=49.875308,8.6276673"
         "&toPlace=50.11347,8.67664"
-        "&time=2019-05-01T01:25Z"
+        "&time=2019-05-01T01:21Z"
         "&timetableView=false"
         "&useRoutedTransfers=true"
         "&preTransitModes=WALK,RENTAL");
 
     EXPECT_EQ(
-        R"(date=2019-05-01, start=01:25, end=02:15, duration=00:50, transfers=1, legs=[
-    (from=- [track=-, scheduled_track=-, level=0], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 01:25, mode="WALK", trip="-", end=2019-05-01 01:25),
-    (from=- [track=-, scheduled_track=-, level=0], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 01:25, mode="RENTAL", trip="-", end=2019-05-01 01:26),
-    (from=- [track=-, scheduled_track=-, level=0], to=test_DA_10 [track=10, scheduled_track=10, level=-1], start=2019-05-01 01:26, mode="WALK", trip="-", end=2019-05-01 01:33),
+        R"(date=2019-05-01, start=01:21, end=02:15, duration=00:54, transfers=1, legs=[
+    (from=- [track=-, scheduled_track=-, level=0], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 01:21, mode="WALK", trip="-", end=2019-05-01 01:22),
+    (from=- [track=-, scheduled_track=-, level=0], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 01:22, mode="RENTAL", trip="-", end=2019-05-01 01:24),
+    (from=- [track=-, scheduled_track=-, level=0], to=test_DA_10 [track=10, scheduled_track=10, level=-1], start=2019-05-01 01:24, mode="WALK", trip="-", end=2019-05-01 01:35),
     (from=test_DA_10 [track=10, scheduled_track=10, level=-1, alerts=["Yeah"]], to=test_FFM_12 [track=12, scheduled_track=10, level=0], start=2019-05-01 01:35, mode="HIGHSPEED_RAIL", trip="ICE", end=2019-05-01 01:55, alerts=["Hello"]),
     (from=test_FFM_12 [track=12, scheduled_track=10, level=0], to=test_de:6412:10:6:1 [track=U4, scheduled_track=U4, level=-2], start=2019-05-01 01:55, mode="WALK", trip="-", end=2019-05-01 02:00),
     (from=test_de:6412:10:6:1 [track=U4, scheduled_track=U4, level=-2], to=test_FFM_HAUPT_U [track=-, scheduled_track=-, level=-4], start=2019-05-01 02:05, mode="SUBWAY", trip="U4", end=2019-05-01 02:10),
@@ -725,8 +725,8 @@ TEST(motis, routing) {
           "&useRoutedTransfers=true");
 
       EXPECT_EQ(
-          R"(date=2019-05-01, start=01:15, end=01:33, duration=00:18, transfers=0, legs=[
-    (from=- [track=-, scheduled_track=-, level=0], to=- [track=-, scheduled_track=-, level=-3], start=2019-05-01 01:15, mode="WALK", trip="-", end=2019-05-01 01:33)
+          R"(date=2019-05-01, start=01:15, end=01:32, duration=00:17, transfers=0, legs=[
+    (from=- [track=-, scheduled_track=-, level=0], to=- [track=-, scheduled_track=-, level=-3], start=2019-05-01 01:15, mode="WALK", trip="-", end=2019-05-01 01:32)
 ])",
           to_str(res.direct_));
     }

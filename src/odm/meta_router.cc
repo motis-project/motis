@@ -540,7 +540,7 @@ api::plan_response meta_router::run() {
                 search_intvl.from_ - std::chrono::minutes{kMixer.max_distance_},
                 search_intvl.to_};
 
-  init_prima(context_intvl, odm_intvl);
+  init_prima(search_intvl, odm_intvl);
   print_time(init_start,
              fmt::format("[init] (first_mile: {}, last_mile: {}, direct: {})",
                          p_->from_rides_.size(), p_->to_rides_.size(),
@@ -729,6 +729,12 @@ api::plan_response meta_router::run() {
                               .count()) /
       1000.0);
 
+  if (!p_->odm_journeys_.empty()) {
+    r_.metrics_->routing_journey_duration_seconds_.Observe(static_cast<double>(
+        to_seconds(p_->odm_journeys_.begin()->arrival_time() -
+                   p_->odm_journeys_.begin()->departure_time())));
+  }
+
   return {
       .from_ = from_place_,
       .to_ = to_place_,
@@ -736,9 +742,6 @@ api::plan_response meta_router::run() {
       .itineraries_ = utl::to_vec(
           p_->odm_journeys_,
           [&, cache = street_routing_cache_t{}](auto&& j) mutable {
-            r_.metrics_->routing_journey_duration_seconds_.Observe(
-                static_cast<double>(
-                    to_seconds(j.arrival_time() - j.departure_time())));
             if (ep::blocked.get() == nullptr && r_.w_ != nullptr) {
               ep::blocked.reset(
                   new osr::bitvec<osr::node_idx_t>{r_.w_->n_nodes()});
