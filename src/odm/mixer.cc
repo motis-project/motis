@@ -120,7 +120,7 @@ void mixer::cost_dominance(
     std::vector<nigiri::routing::journey>& odm_journeys) const {
 
   auto const center = [](nr::journey const& j) -> n::unixtime_t {
-    return j.arrival_time() + j.travel_time() / 2;
+    return j.departure_time() + j.travel_time() / 2;
   };
 
   auto const intvl = [&]() {
@@ -142,9 +142,9 @@ void mixer::cost_dominance(
       auto const cost_j = cost(j);
       auto const center_j = center(j);
       auto const f_j = [&](n::unixtime_t const t) -> double {
-        return cost_j * (1 + std::chrono::abs(center_j - t) /
-                                 n::duration_t{static_cast<n::duration_t::rep>(
-                                     max_distance_)});
+        return cost_j * (1.0 + static_cast<double>(
+                                   std::chrono::abs(center_j - t).count()) /
+                                   static_cast<double>(max_distance_));
       };
       for (auto const [i, t] : utl::enumerate(intvl)) {
         cost_threshold[i] = std::min(cost_threshold[i], f_j(t));
@@ -160,10 +160,17 @@ void mixer::cost_dominance(
       cost_threshold_file << fmt::format("{},{}\n",
                                          intvl.from_ + n::duration_t{i}, cost);
     }
+    auto pt_journeys_file = std::ofstream{"pt_journeys.csv"};
+    pt_journeys_file << "departure,center,arrival,cost\n";
+    for (auto const& j : pt_journeys) {
+      pt_journeys_file << fmt::format("{},{},{},{}\n", j.departure_time(),
+                                      center(j), j.arrival_time(), cost(j));
+    }
     auto odm_journeys_file = std::ofstream{"odm_journeys.csv"};
-    odm_journeys_file << "time,cost\n";
+    odm_journeys_file << "departure,center,arrival,cost\n";
     for (auto const& j : odm_journeys) {
-      odm_journeys_file << fmt::format("{},{}\n", center(j), cost(j));
+      odm_journeys_file << fmt::format("{},{},{},{}\n", j.departure_time(),
+                                       center(j), j.arrival_time(), cost(j));
     }
   }
 
