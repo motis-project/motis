@@ -57,8 +57,8 @@ namespace motis::odm {
 namespace n = nigiri;
 using namespace std::chrono_literals;
 
-constexpr auto const kODMLookAhead = 48h;
-constexpr auto const kSearchIntervalSize = 24h;
+constexpr auto const kODMLookAhead = n::duration_t{24h};
+constexpr auto const kSearchIntervalSize = n::duration_t{6h};
 constexpr auto const kODMDirectPeriod = 300s;
 constexpr auto const kODMDirectFactor = 1.0;
 constexpr auto const kODMOffsetMinImprovement = 60s;
@@ -509,36 +509,32 @@ api::plan_response meta_router::run() {
   utl::verify(r_.tt_ != nullptr && r_.tags_ != nullptr,
               "mode=TRANSIT requires timetable to be loaded");
   auto stats = motis::ep::stats_map_t{};
+
   auto const start_intvl = std::visit(
       utl::overloaded{[](n::interval<n::unixtime_t> const i) { return i; },
                       [](n::unixtime_t const t) {
                         return n::interval<n::unixtime_t>{t, t};
                       }},
       start_time_.start_time_);
-  auto const odm_intvl =
-      !start_time_.extend_interval_later_
-          ? n::interval<n::unixtime_t>{start_intvl.to_ - kODMLookAhead,
-                                       start_intvl.to_ +
-                                           std::chrono::minutes{
-                                               kMixer.max_distance_}}
-          : n::interval<n::unixtime_t>{
-                start_intvl.from_ - std::chrono::minutes{kMixer.max_distance_},
-                start_intvl.from_ + kODMLookAhead};
+
   auto const search_intvl =
-      !start_time_.extend_interval_later_
-          ? n::interval<n::unixtime_t>{start_intvl.to_ - kSearchIntervalSize,
-                                       start_intvl.to_}
-          : n::interval<n::unixtime_t>{start_intvl.from_,
-                                       start_intvl.from_ + kSearchIntervalSize};
-  auto const context_intvl =
-      !start_time_.extend_interval_later_
-          ? n::interval<n::unixtime_t>{search_intvl.from_,
-                                       search_intvl.to_ +
-                                           std::chrono::minutes{
-                                               kMixer.max_distance_}}
-          : n::interval<n::unixtime_t>{
-                search_intvl.from_ - std::chrono::minutes{kMixer.max_distance_},
-                search_intvl.to_};
+      n::interval<n::unixtime_t>{start_time_.extend_interval_earlier_
+                                     ? start_intvl.to_ - kSearchIntervalSize
+                                     : start_intvl.from_,
+                                 start_time_.extend_interval_later_
+                                     ? start_intvl.from_ + kSearchIntervalSize
+                                     : start_intvl.to_};
+
+  auto const context_intvl = n::interval<n::unixtime_t>{
+      search_intvl.from_ - n::duration_t{kMixer.max_distance_},
+      search_intvl.to_ + n::duration_t{kMixer.max_distance_}};
+
+  auto const odm_intvl =
+      query_.arriveBy_
+          ? n::interval<n::unixtime_t>{context_intvl.from_ - kODMLookAhead,
+                                       context_intvl.to_}
+          : n::interval<n::unixtime_t>{context_intvl.from_,
+                                       context_intvl.to_ + kODMLookAhead};
 
   init_prima(search_intvl, odm_intvl);
   print_time(init_start,
@@ -718,7 +714,8 @@ api::plan_response meta_router::run() {
 
   // remove journeys added for mixing context
   std::erase_if(p_->odm_journeys_, [&](auto const& j) {
-    return !search_intvl.contains(j.start_time_);
+    return query_.arriveBy_ ? !search_intvl.contains(j.arrival_time())
+                            : !search_intvl.contains(j.departure_time());
   });
 
   r_.metrics_->routing_journeys_found_.Increment(
