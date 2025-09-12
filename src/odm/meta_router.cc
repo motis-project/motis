@@ -58,7 +58,7 @@ namespace n = nigiri;
 using namespace std::chrono_literals;
 
 constexpr auto const kODMLookAhead = n::duration_t{24h};
-constexpr auto const kSearchIntervalSize = n::duration_t{24h};
+constexpr auto const kSearchIntervalSize = n::duration_t{6h};
 constexpr auto const kODMDirectPeriod = 300s;
 constexpr auto const kODMDirectFactor = 1.0;
 constexpr auto const kODMOffsetMinImprovement = 60s;
