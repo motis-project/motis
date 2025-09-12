@@ -91,7 +91,6 @@ api::Place to_place(n::timetable const* tt,
                     place_t const start,
                     place_t const dest,
                     std::string_view name) {
-
   return std::visit(
       utl::overloaded{
           [&](osr::location const& l) { return to_place(l, name); },
@@ -120,11 +119,16 @@ api::Place to_place(n::timetable const* tt,
               };
 
               auto const pos = tt->locations_.coordinates_[l];
-              auto const p =
-                  tt->locations_.parents_[l] == n::location_idx_t::invalid()
-                      ? l
-                      : tt->locations_.parents_[l];
-              auto const timezone = get_tz(*tt, lp, tz, p);
+              auto const p = tt->locations_.get_root_idx(l);
+              auto const timezone =
+                  get_tz(*tt, lp, tz, tt->locations_.get_root_idx(l));
+              if (timezone == nullptr) {
+                std::cout << "NO TZ FOR " << tags->id(*tt, l) << " "
+                          << std::string{tt->locations_.names_[p].view()}
+                          << " at " << pos
+                          << ", parent_pos: " << tt->locations_.coordinates_[p]
+                          << "\n";
+              }
               return {.name_ = std::string{tt->locations_.names_[p].view()},
                       .stopId_ = tags->id(*tt, l),
                       .lat_ = pos.lat_,

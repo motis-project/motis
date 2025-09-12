@@ -30,6 +30,12 @@ date::time_zone const* get_tz(n::timetable const& tt,
                               n::location_idx_t const l) {
   auto const p = tt.locations_.parents_[l];
   auto const x = p == n::location_idx_t::invalid() ? l : p;
+  std::cout << "l=" << tt.locations_.names_[l].view()
+            << ", [id=" << tt.locations_.ids_[l].view() << "], " << "lp: " << lp
+            << ", tz: " << tz;
+  if (lp && tz) {
+    std::cout << ", tz->at(lp->at(x)): " << tz->at(lp->at(x)) << "\n";
+  }
   return (!lp || !tz) ? nullptr : tz->at(lp->at(x));
 }
 
@@ -80,6 +86,16 @@ vector_map<n::location_idx_t, adr_extra_place_idx_t> adr_extend_tt(
 
     place_location.resize(to_idx(i));
   }
+
+  // for (auto l = n::location_idx_t{0U}; l != tt.n_locations(); ++l) {
+  //   auto const p = tt.locations_.parents_[l];
+  //   if (p != n::location_idx_t::invalid()) {
+  //     location_place[l] = location_place[p];
+  //     if (location_place[l] == adr_extra_place_idx_t::invalid()) {
+  //       std::cout << "NO PLACE: " <<
+  //     }
+  //   }
+  // }
 
   // For each station without parent:
   // Compute importance = transport count weighted by clasz.
