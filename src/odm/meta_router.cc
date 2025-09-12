@@ -714,7 +714,8 @@ api::plan_response meta_router::run() {
 
   // remove journeys added for mixing context
   std::erase_if(p_->odm_journeys_, [&](auto const& j) {
-    return !search_intvl.contains(j.start_time_);
+    return query_.arriveBy_ ? !search_intvl.contains(j.arrival_time())
+                            : !search_intvl.contains(j.departure_time());
   });
 
   r_.metrics_->routing_journeys_found_.Increment(
