@@ -536,11 +536,6 @@ api::plan_response meta_router::run() {
           : n::interval<n::unixtime_t>{context_intvl.from_,
                                        context_intvl.to_ + kODMLookAhead};
 
-  fmt::println("start_intvl: {}", start_intvl);
-  fmt::println("search_intvl: {}", search_intvl);
-  fmt::println("context_intvl: {}", context_intvl);
-  fmt::println("odm_intvl: {}", odm_intvl);
-
   init_prima(search_intvl, odm_intvl);
   print_time(init_start,
              fmt::format("[init] (first_mile: {}, last_mile: {}, direct: {})",
