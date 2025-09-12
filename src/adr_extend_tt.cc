@@ -30,12 +30,6 @@ date::time_zone const* get_tz(n::timetable const& tt,
                               n::location_idx_t const l) {
   auto const p = tt.locations_.parents_[l];
   auto const x = p == n::location_idx_t::invalid() ? l : p;
-  std::cout << "l=" << tt.locations_.names_[l].view()
-            << ", [id=" << tt.locations_.ids_[l].view() << "], " << "lp: " << lp
-            << ", tz: " << tz;
-  if (lp && tz) {
-    std::cout << ", tz->at(lp->at(x)): " << tz->at(lp->at(x)) << "\n";
-  }
   return (!lp || !tz) ? nullptr : tz->at(lp->at(x));
 }
 
