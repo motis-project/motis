@@ -133,7 +133,7 @@ void mixer::cost_dominance(
     return intvl;
   }();
 
-  auto const cost_threshold = [&]() {
+  auto cost_threshold = [&]() {
     auto cost_threshold = std::vector<double>(
         intvl.size().count(), std::numeric_limits<double>::max());
     for (auto const& j : pt_journeys) {
@@ -150,6 +150,43 @@ void mixer::cost_dominance(
     }
     return cost_threshold;
   }();
+
+  auto const get_next_triangle =
+      [&](auto i) -> std::optional<std::tuple<std::uint32_t, std::uint32_t>> {
+    auto const get_next_local_minimum =
+        [&](auto i) -> std::optional<std::uint32_t> {
+      for (; 0 < i && i < cost_threshold.size() - 1; ++i) {
+        if (cost_threshold[i - 1] > cost_threshold[i] &&
+            cost_threshold[i] < cost_threshold[i + 1]) {
+          return i;
+        }
+      }
+      return std::nullopt;
+    };
+
+    auto const start = get_next_local_minimum(i);
+    if (!start) {
+      return std::nullopt;
+    }
+    auto const end = get_next_local_minimum(*start + 1);
+    if (!end) {
+      return std::nullopt;
+    }
+
+    return std::tuple{*start, *end};
+  };
+
+  auto x = 1U;
+  while (auto t = get_next_triangle(x)) {
+    auto const [start, end] = *t;
+    auto const mean = std::accumulate(begin(cost_threshold) + start,
+                                      begin(cost_threshold) + end, 0.0) /
+                      static_cast<double>(end - start);
+    for (auto j = start; j <= end; ++j) {
+      cost_threshold[j] = std::min(cost_threshold[j], mean);
+    }
+    x = end;
+  }
 
   if constexpr (kMixerTracing) {
     auto cost_threshold_file = std::ofstream{"cost_threshold.csv"};
