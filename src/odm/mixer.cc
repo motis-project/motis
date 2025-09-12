@@ -126,11 +126,9 @@ void mixer::cost_dominance(
   auto const intvl = [&]() {
     auto intvl =
         n::interval<n::unixtime_t>{n::unixtime_t::max(), n::unixtime_t::min()};
-    for (auto const& j : odm_journeys) {
-      intvl.from_ = std::min(intvl.from_, center(j));
-      intvl.to_ = std::max(
-          intvl.to_,
-          center(j) + n::duration_t{static_cast<n::duration_t::rep>(1)});
+    for (auto const& j : pt_journeys) {
+      intvl.from_ = std::min(intvl.from_, j.departure_time());
+      intvl.to_ = std::max(intvl.to_, j.arrival_time());
     }
     return intvl;
   }();
