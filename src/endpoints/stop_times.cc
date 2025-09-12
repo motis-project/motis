@@ -293,8 +293,7 @@ api::stoptimes_response stop_times::operator()(
               max_results);
 
   auto const x = tags_.get_location(tt_, query.stopId_);
-  auto const p = tt_.locations_.parents_[x];
-  auto const l = p == n::location_idx_t::invalid() ? x : p;
+  auto const l = tt_.locations_.get_root_idx(x);
   auto const allowed_clasz = to_clasz_mask(query.mode_);
   auto const [dir, time] = parse_cursor(query.pageCursor_.value_or(fmt::format(
       "{}|{}",
@@ -315,10 +314,16 @@ api::stoptimes_response stop_times::operator()(
     }
     auto const l_name = tt_.locations_.names_[l].view();
     utl::concat(locations, tt_.locations_.children_[l]);
+    for (auto const& c : tt_.locations_.children_[l]) {
+      utl::concat(locations, tt_.locations_.children_[c]);
+    }
     for (auto const eq : tt_.locations_.equivalences_[l]) {
       if (tt_.locations_.names_[eq].view() == l_name) {
         locations.emplace_back(eq);
         utl::concat(locations, tt_.locations_.children_[eq]);
+        for (auto const& c : tt_.locations_.children_[eq]) {
+          utl::concat(locations, tt_.locations_.children_[c]);
+        }
       }
     }
   };
@@ -408,11 +413,11 @@ api::stoptimes_response stop_times::operator()(
                       return std::optional{to_idx(x)};
                     }),
                 .routeShortName_ =
-                    std::string{api_version == 1U
-                                    ? s.display_name(ev_type)
-                                    : s.route_short_name(ev_type)},
+                    std::string{api_version < 4 ? s.display_name(ev_type)
+                                                : s.route_short_name(ev_type)},
                 .routeLongName_ = std::string{s.route_long_name(ev_type)},
                 .tripShortName_ = std::string{s.trip_short_name(ev_type)},
+                .displayName_ = std::string{s.display_name(ev_type)},
                 .pickupDropoffType_ =
                     in_out_allowed ? api::PickupDropoffTypeEnum::NORMAL
                                    : api::PickupDropoffTypeEnum::NOT_ALLOWED,

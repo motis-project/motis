@@ -4,6 +4,7 @@
 
 #include "utl/to_vec.h"
 
+#include "osr/routing/parameters.h"
 #include "osr/routing/route.h"
 
 #include "motis/mode_to_profile.h"
@@ -32,11 +33,10 @@ api::oneToMany_response one_to_many::operator()(
               "mode {} not supported for one-to-many",
               json::serialize(json::value_from(query.mode_)));
 
+  auto const profile = to_profile(query.mode_, api::PedestrianProfileEnum::FOOT,
+                                  query.elevationCosts_);
   auto const paths = osr::route(
-      w_, l_,
-      to_profile(query.mode_, api::PedestrianProfileEnum::FOOT,
-                 query.elevationCosts_),
-      *one, many, query.max_,
+      osr::get_parameters(profile), w_, l_, profile, *one, many, query.max_,
       query.arriveBy_ ? osr::direction::kBackward : osr::direction::kForward,
       query.maxMatchingDistance_, nullptr, nullptr, elevations_);
 
