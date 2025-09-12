@@ -2,7 +2,7 @@
 
 #include "fmt/format.h"
 
-#include "../deps/net/include/net/lb.h"
+#include "net/lb.h"
 #include "net/run.h"
 #include "net/stop_handler.h"
 #include "net/web_server/query_router.h"
