@@ -17,7 +17,7 @@
 [adr]
   url=git@github.com:triptix-tech/adr.git
   branch=master
-  commit=865c2f0ec415cb1b2d1776160ee0c78e89019764
+  commit=9c0ca086b037ff336ee644b0ea5aed8234b88438
 [googletest]
   url=git@github.com:motis-project/googletest.git
   branch=master
