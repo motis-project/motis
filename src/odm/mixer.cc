@@ -118,15 +118,58 @@ bool mixer::cost_dominates(nr::journey const& a, nr::journey const& b) const {
 void mixer::cost_dominance(
     nigiri::pareto_set<nigiri::routing::journey> const& pt_journeys,
     std::vector<nigiri::routing::journey>& odm_journeys) const {
-  auto const is_dominated = [&](nr::journey const& odm_journey) {
-    auto const dominates = [&](nr::journey const& pt_journey) -> bool {
-      return cost_dominates(pt_journey, odm_journey);
-    };
 
-    return utl::any_of(pt_journeys, dominates);
+  auto const center = [](nr::journey const& j) -> n::unixtime_t {
+    return j.arrival_time() + j.travel_time() / 2;
   };
 
-  std::erase_if(odm_journeys, is_dominated);
+  auto const intvl = [&]() {
+    auto intvl =
+        n::interval<n::unixtime_t>{n::unixtime_t::max(), n::unixtime_t::min()};
+    for (auto const& j : odm_journeys) {
+      intvl.from_ = std::min(intvl.from_, center(j));
+      intvl.to_ = std::max(
+          intvl.to_,
+          center(j) + n::duration_t{static_cast<n::duration_t::rep>(1)});
+    }
+    return intvl;
+  }();
+
+  auto const cost_threshold = [&]() {
+    auto cost_threshold = std::vector<double>(
+        intvl.size().count(), std::numeric_limits<double>::max());
+    for (auto const& j : pt_journeys) {
+      auto const cost_j = cost(j);
+      auto const center_j = center(j);
+      auto const f_j = [&](n::unixtime_t const t) -> double {
+        return cost_j * (1 + std::chrono::abs(center_j - t) /
+                                 n::duration_t{static_cast<n::duration_t::rep>(
+                                     max_distance_)});
+      };
+      for (auto const [i, t] : utl::enumerate(intvl)) {
+        cost_threshold[i] = std::min(cost_threshold[i], f_j(t));
+      }
+    }
+    return cost_threshold;
+  }();
+
+  if constexpr (kMixerTracing) {
+    auto cost_threshold_file = std::ofstream{"cost_threshold.csv"};
+    cost_threshold_file << "time,cost\n";
+    for (auto const [i, cost] : utl::enumerate(cost_threshold)) {
+      cost_threshold_file << fmt::format("{},{}\n",
+                                         intvl.from_ + n::duration_t{i}, cost);
+    }
+    auto odm_journeys_file = std::ofstream{"odm_journeys.csv"};
+    odm_journeys_file << "time,cost\n";
+    for (auto const& j : odm_journeys) {
+      odm_journeys_file << fmt::format("{},{}\n", center(j), cost(j));
+    }
+  }
+
+  std::erase_if(odm_journeys, [&](auto const& j) {
+    return cost_threshold[(center(j) - intvl.from_).count()] <= cost(j);
+  });
 }
 
 void establish_dominance(
