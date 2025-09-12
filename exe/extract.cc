@@ -60,7 +60,8 @@ void copy_stop_times(hash_set<std::string> const& trip_ids,
 
 void copy_stops(hash_set<std::string>& stop_ids,
                 std::string_view file_content,
-                std::ostream& out) {
+                std::ostream& out,
+                bool const filter_stops) {
   struct csv_stop {
     utl::csv_col<utl::cstr, UTL_NAME("stop_id")> stop_id_;
     utl::csv_col<utl::cstr, UTL_NAME("parent_station")> parent_station_;
@@ -83,14 +84,18 @@ void copy_stops(hash_set<std::string>& stop_ids,
     auto n_lines = 0U;
     auto reader = utl::make_buf_reader(file_content);
     auto line = reader.read_line();
-    // auto const header_permutation = utl::read_header<csv_stop>(line);
+    auto const header_permutation = utl::read_header<csv_stop>(line);
     out << line.view() << "\n";
     while ((line = reader.read_line())) {
-      // auto const row = utl::read_row<csv_stop>(header_permutation, line);
-      // if (stop_ids.contains(row.stop_id_->view())) {
-      out << line.view() << "\n";
-      ++n_lines;
-      // }
+      if (filter_stops) {
+        auto const row = utl::read_row<csv_stop>(header_permutation, line);
+        if (stop_ids.contains(row.stop_id_->view())) {
+          out << line.view() << "\n";
+          ++n_lines;
+        }
+      } else {
+        out << line.view() << "\n";
+      }
     }
     fmt::println("  stops.txt: lines written: {}", n_lines);
   }
@@ -227,11 +232,14 @@ int extract(int ac, char** av) {
   auto in = std::vector<fs::path>{"response.json"};
   auto out = fs::path{"gtfs"};
   auto reduce = false;
+  auto filter_stops = true;
   auto desc = po::options_description{"Options"};
   desc.add_options()  //
       ("help", "Prints this help message")  //
       ("reduce", po::value(&reduce)->default_value(reduce),
        "Only extract first and last stop of legs for stop times")  //
+      ("filter_stops", po::value(&filter_stops)->default_value(filter_stops),
+       "Filter stops")  //
       ("in,i", po::value(&in)->multitoken(),
        "PlanResponse JSON input files")  //
       ("out,o", po::value(&out), "output directory");
@@ -345,7 +353,7 @@ int extract(int ac, char** av) {
       fmt::println("writing {}/stops.txt, searching for stops={}",
                    out / dataset_dir.filename(), stop_ids);
       auto of = std::ofstream{out / dataset_dir.filename() / "stops.txt"};
-      copy_stops(stop_ids, dir->get_file("stops.txt").data(), of);
+      copy_stops(stop_ids, dir->get_file("stops.txt").data(), of, filter_stops);
     }
 
     {
