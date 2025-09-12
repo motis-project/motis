@@ -234,9 +234,6 @@ api::Itinerary street_routing(osr::ways const& w,
     if (!start_time.has_value() || !end_time.has_value()) {
       return {};
     }
-    std::cout << "ROUTING\n  FROM:  " << from << "     \n    TO:  " << to
-              << "\n  -> CREATING DUMMY LEG (mode=" << out.get_mode()
-              << ", profile=" << to_str(out.get_profile()) << ")\n";
     return dummy_itinerary(from_place, to_place, out.get_mode(), *start_time,
                            *end_time);
   }

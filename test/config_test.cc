@@ -42,6 +42,7 @@ tiles:
 timetable:
   first_day: 2024-10-02
   num_days: 2
+  tb: false
   railviz: true
   with_shapes: true
   adjust_footpaths: true
@@ -108,6 +109,7 @@ tiles:
 timetable:
   first_day: 2024-10-02
   num_days: 2
+  tb: false
   datasets:
     de:
       path: delfi.gtfs.zip

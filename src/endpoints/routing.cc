@@ -30,6 +30,10 @@
 #include "motis/constants.h"
 #include "motis/endpoints/routing.h"
 
+#include "nigiri/routing/tb/query_engine.h"
+#include "nigiri/routing/tb/tb_data.h"
+#include "nigiri/routing/tb/tb_search.h"
+
 #include "motis/config.h"
 #include "motis/flex/flex.h"
 #include "motis/flex/flex_output.h"
@@ -736,9 +740,6 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
       q.prf_idx_ = 0U;
     }
 
-    auto search_state = n::routing::search_state{};
-    auto raptor_state = n::routing::raptor_state{};
-
     auto const query_stats =
         stats_map_t{{"direct", UTL_TIMING_MS(direct)},
                     {"query_preparation", UTL_TIMING_MS(query_preparation)},
@@ -747,11 +748,25 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                     {"n_td_start_offsets", q.td_start_.size()},
                     {"n_td_dest_offsets", q.td_dest_.size()}};
 
-    auto const r = n::routing::raptor_search(
-        *tt_, rtt, search_state, raptor_state, std::move(q),
-        query.arriveBy_ ? n::direction::kBackward : n::direction::kForward,
-        query.timeout_.has_value() ? std::chrono::seconds{*query.timeout_}
-                                   : max_timeout);
+    auto search_state = n::routing::search_state{};
+    auto r = n::routing::routing_result{};
+    if (query.algorithm_ == api::algorithmEnum::RAPTOR || tbd_ == nullptr ||
+        (rtt != nullptr && rtt->n_rt_transports() != 0U) || query.arriveBy_ ||
+        q.prf_idx_ != tbd_->prf_idx_ ||
+        q.allowed_claszes_ != n::routing::all_clasz_allowed() ||
+        !q.td_start_.empty() || !q.td_dest_.empty() ||
+        !q.transfer_time_settings_.default_ || !q.via_stops_.empty() ||
+        q.require_bike_transport_ || q.require_car_transport_) {
+      auto raptor_state = n::routing::raptor_state{};
+      r = n::routing::raptor_search(
+          *tt_, rtt, search_state, raptor_state, std::move(q),
+          query.arriveBy_ ? n::direction::kBackward : n::direction::kForward,
+          query.timeout_.has_value() ? std::chrono::seconds{*query.timeout_}
+                                     : max_timeout);
+    } else {
+      auto tb_state = n::routing::tb::query_state{*tt_, *tbd_};
+      r = n::routing::tb::tb_search(*tt_, search_state, tb_state, std::move(q));
+    }
 
     metrics_->routing_journeys_found_.Increment(
         static_cast<double>(r.journeys_->size()));
@@ -766,7 +781,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
 
     return {
         .debugOutput_ = join(std::move(query_stats), r.search_stats_.to_map(),
-                             r.algo_stats_.to_map()),
+                             std::move(r.algo_stats_)),
         .from_ = from_p,
         .to_ = to_p,
         .direct_ = std::move(direct),

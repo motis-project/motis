@@ -215,7 +215,7 @@ export type Match = {
      */
     zip?: string;
     /**
-     * timezone
+     * timezone name (e.g. "Europe/Berlin")
      */
     tz?: string;
     /**
@@ -962,6 +962,10 @@ export type PlanData = {
          *
          */
         additionalTransferTime?: number;
+        /**
+         * algorithm to use
+         */
+        algorithm?: 'RAPTOR' | 'TB';
         /**
          * Optional. Default is `false`.
          *

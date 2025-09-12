@@ -245,7 +245,7 @@ export const MatchSchema = {
             type: 'string'
         },
         tz: {
-            description: 'timezone',
+            description: 'timezone name (e.g. "Europe/Berlin")',
             type: 'string'
         },
         areas: {
