@@ -67,11 +67,12 @@ struct io_thread {
   template <typename Fn>
   io_thread(char const* name, Fn&& f) {
     ioc_ = std::make_unique<asio::io_context>();
-    t_ = std::make_unique<std::thread>([&, f = std::move(f)]() {
-      utl::set_current_thread_name(name);
-      f(*ioc_);
-      ioc_->run();
-    });
+    t_ = std::make_unique<std::thread>(
+        [ioc = ioc_.get(), name, f = std::move(f)]() {
+          utl::set_current_thread_name(name);
+          f(*ioc);
+          ioc->run();
+        });
   }
 
   io_thread() = default;
