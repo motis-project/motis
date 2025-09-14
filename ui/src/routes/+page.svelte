@@ -589,6 +589,15 @@
 				/>
 			</Card>
 		</Control>
+		{#if showMap}
+			{#each routingResponses as r, rI (rI)}
+				{#await r then r}
+					{#each r.itineraries as it, i (i)}
+						<ItineraryGeoJson itinerary={it} id="{rI}-{i}" selected={false} {level} {theme} />
+					{/each}
+				{/await}
+			{/each}
+		{/if}
 	{/if}
 
 	{#if activeTab != 'isochrones' && page.state.selectedItinerary && !page.state.showDepartures}
@@ -614,7 +623,7 @@
 			</Card>
 		</Control>
 		{#if showMap}
-			<ItineraryGeoJson itinerary={page.state.selectedItinerary} {level} />
+			<ItineraryGeoJson itinerary={page.state.selectedItinerary} selected={true} {level} {theme} />
 			<StopGeoJSON itinerary={page.state.selectedItinerary} {theme} />
 		{/if}
 	{/if}

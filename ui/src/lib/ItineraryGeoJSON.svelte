@@ -66,18 +66,24 @@
 
 	const {
 		itinerary,
-		level
+		id,
+		selected,
+		level,
+		theme
 	}: {
 		itinerary: Itinerary;
+		id?: string;
+		selected: boolean;
 		level: number;
+		theme: 'light' | 'dark';
 	} = $props();
 
 	const geojson = $derived(itineraryToGeoJSON(itinerary));
 </script>
 
-<GeoJSON id="route" data={geojson}>
+<GeoJSON id="route-{id}" data={geojson}>
 	<Layer
-		id="path-outline"
+		id="path-outline-{id}"
 		type="line"
 		layout={{
 			'line-join': 'round',
@@ -85,13 +91,13 @@
 		}}
 		filter={['any', ['!has', 'level'], ['==', 'level', level]]}
 		paint={{
-			'line-color': ['get', 'outlineColor'],
+			'line-color': selected ? ['get', 'outlineColor'] : theme == 'dark' ? '#444' : '#999',
 			'line-width': 10,
 			'line-opacity': 0.8
 		}}
 	/>
 	<Layer
-		id="path"
+		id="path-{id}"
 		type="line"
 		layout={{
 			'line-join': 'round',
@@ -99,7 +105,7 @@
 		}}
 		filter={['any', ['!has', 'level'], ['==', 'level', level]]}
 		paint={{
-			'line-color': ['get', 'color'],
+			'line-color': selected ? ['get', 'color'] : theme == 'dark' ? '#777' : '#bbb',
 			'line-width': 7.5,
 			'line-opacity': 0.8
 		}}
