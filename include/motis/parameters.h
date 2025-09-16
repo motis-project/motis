@@ -16,13 +16,10 @@ struct profile_parameters {
   float const cycling_speed_{kBikeSpeed};
 };
 
-profile_parameters get_parameters(
-    api::PedestrianProfileEnum,
-    std::optional<api::PedestrianSpeed> const& = std::nullopt,
-    std::optional<api::CyclingSpeed> const& = std::nullopt);
+profile_parameters get_parameters(api::plan_params const&);
+
+profile_parameters get_parameters(api::oneToAll_params const&);
 
 osr::profile_parameters build_parameters(osr::search_profile,
                                          profile_parameters const&);
-// api::PedestrianSpeed,
-// api::CyclingSpeed = 0.0);
 }  // namespace motis

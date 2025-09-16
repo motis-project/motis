@@ -662,8 +662,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
     }
 
     UTL_START_TIMING(query_preparation);
-    auto const pr_params = get_parameters(
-        query.pedestrianProfile_, query.pedestrianSpeed_, query.cyclingSpeed_);
+    auto const pr_params = get_parameters(query);
     auto q = n::routing::query{
         .start_time_ = start_time.start_time_,
         .start_match_mode_ = get_match_mode(start),

@@ -238,11 +238,10 @@ void init_pt(std::vector<n::routing::start>& rides,
     return;
   }
 
-  auto offsets = r.get_offsets(rtt, l, dir, {api::ModeEnum::ODM}, std::nullopt,
-                               std::nullopt, std::nullopt, false,
-                               get_parameters(query.pedestrianProfile_),
-                               query.pedestrianProfile_, query.elevationCosts_,
-                               max, query.maxMatchingDistance_, gbfs_rd);
+  auto offsets = r.get_offsets(
+      rtt, l, dir, {api::ModeEnum::ODM}, std::nullopt, std::nullopt,
+      std::nullopt, false, get_parameters(query), query.pedestrianProfile_,
+      query.elevationCosts_, max, query.maxMatchingDistance_, gbfs_rd);
 
   std::erase_if(offsets, [&](n::routing::offset const& o) {
     auto const out_of_bounds =
@@ -589,8 +588,7 @@ api::plan_response meta_router::run() {
   auto const [from_rides_short, from_rides_long] =
       ride_time_halves(p_->from_rides_);
   auto const [to_rides_short, to_rides_long] = ride_time_halves(p_->to_rides_);
-  auto const params = get_parameters(
-      query_.pedestrianProfile_, query_.pedestrianSpeed_, query_.cyclingSpeed_);
+  auto const params = get_parameters(query_);
   fmt::println("Params: F: {}  C: {}", params.pedestrian_speed_,
                params.cycling_speed_);
 
