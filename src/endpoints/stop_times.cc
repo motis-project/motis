@@ -397,6 +397,8 @@ api::stoptimes_response stop_times::operator()(
                 .mode_ = to_mode(s.get_clasz(ev_type)),
                 .realTime_ = r.is_rt(),
                 .headsign_ = std::string{s.direction(ev_type)},
+                .tripTo_ = to_place(&tt_, &tags_, w_, pl_, matches_, lp_, tz_,
+                                    s.get_last_trip_stop(ev_type)),
                 .agencyId_ =
                     std::string{tt_.strings_.try_get(agency.id_).value_or("?")},
                 .agencyName_ =

@@ -406,6 +406,8 @@ api::Itinerary journey_to_response(
                     .scheduled_ = fr.is_scheduled(),
                     .interlineWithPreviousLeg_ = !is_first_part,
                     .headsign_ = std::string{enter_stop.direction()},
+                    .tripTo_ = to_place(enter_stop.get_last_trip_stop(),
+                                        n::event_type::kArr),
                     .routeColor_ = to_str(color.color_),
                     .routeTextColor_ = to_str(color.text_color_),
                     .routeType_ = enter_stop.route_type().and_then(

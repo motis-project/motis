@@ -2102,6 +2102,8 @@ components:
         - mode
         - realTime
         - headsign
+        - tripTo
+        -
         - agencyId
         - agencyName
         - agencyUrl
@@ -2126,9 +2128,12 @@ components:
           type: boolean
         headsign:
           description: |
-            For transit legs, the headsign of the bus or train being used.
+            Zhe headsign of the bus or train being used.
             For non-transit legs, null
           type: string
+        tripTo:
+          description: final stop of this trip
+          $ref: '#/components/schemas/Place'
         agencyId:
           type: string
         agencyName:
@@ -2478,6 +2483,9 @@ components:
             For transit legs, the headsign of the bus or train being used.
             For non-transit legs, null
           type: string
+        tripTo:
+          description: final stop of this trip (can differ from headsign)
+          $ref: '#/components/schemas/Place'
         routeColor:
           type: string
         routeTextColor:
