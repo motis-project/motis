@@ -327,13 +327,22 @@ jobs:
         if: matrix.config.preset != 'linux-debug'
         run: |
           ln -s deps/tiles/profile tiles-profiles
-          wget https://github.com/motis-project/test-data/raw/aachen/aachen.osm.pbf
-          wget https://github.com/motis-project/test-data/raw/aachen/AVV_GTFS_Masten_mit_SPNV.zip
+          wget -N https://github.com/motis-project/test-data/raw/aachen/aachen.osm.pbf
+          wget -N https://github.com/motis-project/test-data/raw/aachen/AVV_GTFS_Masten_mit_SPNV.zip
           ${{ matrix.config.emulator }} ./build/motis config aachen.osm.pbf AVV_GTFS_Masten_mit_SPNV.zip
           ${{ matrix.config.emulator }} ./build/motis import
           ${{ matrix.config.emulator }} ./build/motis generate -n 10
           ${{ matrix.config.emulator }} ./build/motis batch
           ${{ matrix.config.emulator }} ./build/motis compare -q queries.txt -r responses.txt responses.txt
+
+      - name: Test bin_ver compatibility with previous release
+        if: matrix.config.preset == 'linux-amd64-release'
+        run: |
+          wget -N https://github.com/motis-project/motis/releases/latest/download/motis-linux-amd64.tar.bz2
+          tar -xjf motis-linux-amd64.tar.bz2 ./motis
+          ${{ matrix.config.emulator }} ./motis import
+          ${{ matrix.config.emulator }} ./build/motis import
+          rm ./motis
 
       # ==== DISTRIBUTION ====
       - name: Create Distribution
