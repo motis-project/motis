@@ -13,7 +13,6 @@
 
 #include "osr/lookup.h"
 #include "osr/platforms.h"
-#include "osr/routing/parameters.h"
 #include "osr/routing/profile.h"
 #include "osr/routing/profiles/foot.h"
 #include "osr/routing/route.h"

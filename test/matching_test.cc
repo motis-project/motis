@@ -1,7 +1,6 @@
 #include "gtest/gtest.h"
 
 #include "osr/platforms.h"
-#include "osr/routing/parameters.h"
 #include "osr/routing/profile.h"
 #include "osr/routing/profiles/bike.h"
 #include "osr/routing/profiles/bike_sharing.h"
@@ -16,6 +15,7 @@
 #include "motis/config.h"
 #include "motis/import.h"
 #include "motis/match_platforms.h"
+#include "motis/parameters.h"
 
 using namespace std::string_view_literals;
 using namespace osr;
@@ -141,7 +141,7 @@ TEST(motis, get_way_candidates) {
         utl::zip(location_idxs, locs),
         [&](std::tuple<nigiri::location_idx_t, osr::location> const ll) {
           auto const& [l, query] = ll;
-          return d.l_->match(osr::get_parameters(profile), query, true,
+          return d.l_->match(motis::build_parameters(profile, {}), query, true,
                              osr::direction::kForward, 250, nullptr, profile);
         });
 
@@ -203,7 +203,7 @@ TEST(motis, get_way_candidates) {
       auto const remote_station =
           osr::location{{49.8731904, 8.6221451}, level_t{}};
       auto const raw = d.l_->get_raw_match(remote_station, dist);
-      auto const params = osr::get_parameters(profile);
+      auto const params = motis::build_parameters(profile, {});
       auto const with =
           d.l_->match(params, remote_station, true, osr::direction::kForward,
                       dist, nullptr, profile, raw);

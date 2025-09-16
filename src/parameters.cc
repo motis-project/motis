@@ -11,6 +11,10 @@
 
 namespace motis {
 
+template <typename T>
+concept HasPedestrianProfile =
+    requires(T const& params) { params.pedestrianProfile_; };
+
 auto default_pedestrian_speed(api::PedestrianProfileEnum const p) {
   return p == api::PedestrianProfileEnum::FOOT
              ? profile_parameters::kFootSpeed
@@ -18,14 +22,20 @@ auto default_pedestrian_speed(api::PedestrianProfileEnum const p) {
 }
 
 template <typename T>
-auto pedestrian_speed(T const& params) {
+auto pedestrian_speed(T const&) {
+  return profile_parameters::kFootSpeed;
+}
+
+template <typename T>
+auto pedestrian_speed(T const& params)
+  requires HasPedestrianProfile<T>
+{
   return default_pedestrian_speed(params.pedestrianProfile_);
 }
 
 template <typename T>
 auto pedestrian_speed(T const& params)
-  requires(
-      std::is_same_v<decltype(params.pedestrianSpeed_), std::optional<double>>)
+  requires HasPedestrianProfile<T> && requires { params.pedestrianSpeed_; }
 {
   return params.pedestrianSpeed_
       .and_then([](auto const speed) {
@@ -64,6 +74,10 @@ profile_parameters get_parameters(api::plan_params const& params) {
 }
 
 profile_parameters get_parameters(api::oneToAll_params const& params) {
+  return parameters(params);
+}
+
+profile_parameters get_parameters(api::oneToMany_params const& params) {
   return parameters(params);
 }
 

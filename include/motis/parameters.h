@@ -20,6 +20,8 @@ profile_parameters get_parameters(api::plan_params const&);
 
 profile_parameters get_parameters(api::oneToAll_params const&);
 
+profile_parameters get_parameters(api::oneToMany_params const&);
+
 osr::profile_parameters build_parameters(osr::search_profile,
                                          profile_parameters const&);
 }  // namespace motis
