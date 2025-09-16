@@ -215,7 +215,7 @@
 	let ignoreDirectRentalReturnConstraints = $state(
 		urlParams?.get('ignoreDirectRentalReturnConstraints') == 'true'
 	);
-	let slowDirect = $state(urlParams?.get('slowDirect') != 'false');
+	let slowDirect = $state(urlParams?.get('slowDirect') == 'true');
 
 	let isochronesData = $state<IsochronesPos[]>([]);
 	let isochronesOptions = $state<IsochronesOptions>({

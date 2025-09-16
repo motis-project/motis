@@ -42,6 +42,7 @@ struct config {
     std::string web_folder_{"ui"};
     unsigned n_threads_{0U};
     std::optional<std::string> data_attribution_link_{};
+    std::optional<std::vector<std::string>> lbs_{};
   };
   std::optional<server> server_{};
 
@@ -89,6 +90,7 @@ struct config {
 
     std::string first_day_{"TODAY"};
     std::uint16_t num_days_{365U};
+    bool tb_{false};
     bool railviz_{true};
     bool with_shapes_{true};
     bool adjust_footpaths_{true};

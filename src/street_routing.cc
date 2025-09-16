@@ -6,6 +6,7 @@
 #include "utl/get_or_create.h"
 
 #include "osr/routing/algorithms.h"
+#include "osr/routing/parameters.h"
 #include "osr/routing/route.h"
 #include "osr/routing/sharing_data.h"
 
@@ -220,8 +221,9 @@ api::Itinerary street_routing(osr::ways const& w,
       out.is_time_dependent() ? bound_time : n::unixtime_t{n::i32_minutes{0}}};
   auto const path = utl::get_or_create(cache, cache_key, [&]() {
     auto const& [e_nodes, e_states] = *s;
+    auto const profile = out.get_profile();
     return osr::route(
-        w, l, out.get_profile(), from, to,
+        osr::get_parameters(profile), w, l, profile, from, to,
         static_cast<osr::cost_t>(max.count()), osr::direction::kForward,
         max_matching_distance,
         s ? &set_blocked(e_nodes, e_states, blocked_mem) : nullptr,
@@ -232,9 +234,6 @@ api::Itinerary street_routing(osr::ways const& w,
     if (!start_time.has_value() || !end_time.has_value()) {
       return {};
     }
-    std::cout << "ROUTING\n  FROM:  " << from << "     \n    TO:  " << to
-              << "\n  -> CREATING DUMMY LEG (mode=" << out.get_mode()
-              << ", profile=" << to_str(out.get_profile()) << ")\n";
     return dummy_itinerary(from_place, to_place, out.get_mode(), *start_time,
                            *end_time);
   }

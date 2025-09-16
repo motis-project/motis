@@ -2,6 +2,7 @@
 
 #include "fmt/format.h"
 
+#include "net/lb.h"
 #include "net/run.h"
 #include "net/stop_handler.h"
 #include "net/web_server/query_router.h"
@@ -47,6 +48,7 @@ namespace fs = std::filesystem;
 namespace asio = boost::asio;
 
 namespace motis {
+
 template <typename T, typename From>
 void GET(auto&& r, std::string target, From& from) {
   if (auto const x = utl::init_from<T>(from); x.has_value()) {
@@ -61,105 +63,150 @@ void POST(auto&& r, std::string target, From& from) {
   }
 }
 
+struct io_thread {
+  template <typename Fn>
+  io_thread(char const* name, Fn&& f) {
+    ioc_ = std::make_unique<asio::io_context>();
+    t_ = std::make_unique<std::thread>(
+        [ioc = ioc_.get(), name, f = std::move(f)]() {
+          utl::set_current_thread_name(name);
+          f(*ioc);
+          ioc->run();
+        });
+  }
+
+  io_thread() = default;
+
+  void stop() {
+    if (ioc_ == nullptr) {
+      return;
+    }
+    ioc_->stop();
+  }
+
+  void join() {
+    if (t_ == nullptr) {
+      return;
+    }
+    t_->join();
+  }
+
+  std::unique_ptr<std::thread> t_;
+  std::unique_ptr<asio::io_context> ioc_;
+};
+
+struct motis_instance {
+  motis_instance(data& d, config const& c, std::string_view motis_version) {
+    qr_.add_header("Server", fmt::format("MOTIS {}", motis_version));
+    if (c.server_.value_or(config::server{}).data_attribution_link_) {
+      qr_.add_header("Link", fmt::format("<{}>; rel=\"license\"",
+                                         *c.server_->data_attribution_link_));
+    }
+
+    POST<ep::matches>(qr_, "/api/matches", d);
+    POST<ep::elevators>(qr_, "/api/elevators", d);
+    POST<ep::osr_routing>(qr_, "/api/route", d);
+    POST<ep::platforms>(qr_, "/api/platforms", d);
+    POST<ep::graph>(qr_, "/api/graph", d);
+    GET<ep::transfers>(qr_, "/api/debug/transfers", d);
+    GET<ep::flex_locations>(qr_, "/api/debug/flex", d);
+    GET<ep::levels>(qr_, "/api/v1/map/levels", d);
+    GET<ep::initial>(qr_, "/api/v1/map/initial", d);
+    GET<ep::reverse_geocode>(qr_, "/api/v1/reverse-geocode", d);
+    GET<ep::geocode>(qr_, "/api/v1/geocode", d);
+    GET<ep::routing>(qr_, "/api/v1/plan", d);
+    GET<ep::routing>(qr_, "/api/v2/plan", d);
+    GET<ep::routing>(qr_, "/api/v3/plan", d);
+    GET<ep::routing>(qr_, "/api/v4/plan", d);
+    GET<ep::stop_times>(qr_, "/api/v1/stoptimes", d);
+    GET<ep::stop_times>(qr_, "/api/v4/stoptimes", d);
+    GET<ep::trip>(qr_, "/api/v1/trip", d);
+    GET<ep::trip>(qr_, "/api/v2/trip", d);
+    GET<ep::trip>(qr_, "/api/v4/trip", d);
+    GET<ep::trips>(qr_, "/api/v1/map/trips", d);
+    GET<ep::trips>(qr_, "/api/v4/map/trips", d);
+    GET<ep::stops>(qr_, "/api/v1/map/stops", d);
+    GET<ep::one_to_all>(qr_, "/api/experimental/one-to-all", d);
+    GET<ep::one_to_all>(qr_, "/api/v1/one-to-all", d);
+    GET<ep::one_to_many>(qr_, "/api/v1/one-to-many", d);
+
+    if (!c.requires_rt_timetable_updates()) {
+      // Elevator updates are not compatible with RT-updates.
+      POST<ep::update_elevator>(qr_, "/api/update_elevator", d);
+    }
+
+    if (c.tiles_) {
+      utl::verify(d.tiles_ != nullptr, "tiles data not loaded");
+      qr_.route("GET", "/tiles/", ep::tiles{*d.tiles_});
+    }
+
+    qr_.route("GET", "/metrics",
+              ep::metrics{d.tt_.get(), d.tags_.get(), d.rt_, d.metrics_.get()});
+    qr_.route("GET", "/gtfsrt",
+              ep::gtfsrt{c, d.tt_.get(), d.tags_.get(), d.rt_});
+    qr_.serve_files(c.server_.value_or(config::server{}).web_folder_);
+    qr_.enable_cors();
+  }
+
+  void run(data& d, config const& c) {
+    if (d.w_ && d.l_ && c.has_gbfs_feeds()) {
+      gbfs_ = io_thread{"motis gbfs update", [&](boost::asio::io_context& ioc) {
+                          gbfs::run_gbfs_update(ioc, c, *d.w_, *d.l_, d.gbfs_);
+                        }};
+    }
+
+    if (c.requires_rt_timetable_updates()) {
+      rt_ = io_thread{"motis rt update", [&](boost::asio::io_context& ioc) {
+                        run_rt_update(ioc, c, d);
+                      }};
+    }
+
+    sched_.runner_.run(c.n_threads());
+    rt_.join();
+    gbfs_.join();
+  }
+
+  void stop() {
+    sched_.runner_.stop();
+    rt_.stop();
+    gbfs_.stop();
+  }
+
+  ctx::scheduler<ctx_data> sched_;
+  net::query_router<ctx_exec> qr_{ctx_exec{sched_.runner_.ios(), sched_}};
+  io_thread rt_, gbfs_;
+};
+
 int server(data d, config const& c, std::string_view const motis_version) {
-  auto const server_config = c.server_.value_or(config::server{});
+  auto m = motis_instance{d, c, motis_version};
 
-  auto sched = ctx::scheduler<ctx_data>{};
-  auto qr = net::query_router{ctx_exec{sched.runner_.ios(), sched}};
-  auto s = net::web_server{sched.runner_.ios()};
-  qr.add_header("Server", fmt::format("MOTIS {}", motis_version));
-  if (server_config.data_attribution_link_) {
-    qr.add_header("Link", fmt::format("<{}>; rel=\"license\"",
-                                      *server_config.data_attribution_link_));
-  }
-
-  POST<ep::matches>(qr, "/api/matches", d);
-  POST<ep::elevators>(qr, "/api/elevators", d);
-  POST<ep::osr_routing>(qr, "/api/route", d);
-  POST<ep::platforms>(qr, "/api/platforms", d);
-  POST<ep::graph>(qr, "/api/graph", d);
-  GET<ep::transfers>(qr, "/api/debug/transfers", d);
-  GET<ep::flex_locations>(qr, "/api/debug/flex", d);
-  GET<ep::levels>(qr, "/api/v1/map/levels", d);
-  GET<ep::initial>(qr, "/api/v1/map/initial", d);
-  GET<ep::reverse_geocode>(qr, "/api/v1/reverse-geocode", d);
-  GET<ep::geocode>(qr, "/api/v1/geocode", d);
-  GET<ep::routing>(qr, "/api/v1/plan", d);
-  GET<ep::routing>(qr, "/api/v2/plan", d);
-  GET<ep::routing>(qr, "/api/v3/plan", d);
-  GET<ep::routing>(qr, "/api/v4/plan", d);
-  GET<ep::stop_times>(qr, "/api/v1/stoptimes", d);
-  GET<ep::stop_times>(qr, "/api/v4/stoptimes", d);
-  GET<ep::trip>(qr, "/api/v1/trip", d);
-  GET<ep::trip>(qr, "/api/v2/trip", d);
-  GET<ep::trip>(qr, "/api/v4/trip", d);
-  GET<ep::trips>(qr, "/api/v1/map/trips", d);
-  GET<ep::trips>(qr, "/api/v4/map/trips", d);
-  GET<ep::stops>(qr, "/api/v1/map/stops", d);
-  GET<ep::one_to_all>(qr, "/api/experimental/one-to-all", d);
-  GET<ep::one_to_all>(qr, "/api/v1/one-to-all", d);
-  GET<ep::one_to_many>(qr, "/api/v1/one-to-many", d);
-
-  if (!c.requires_rt_timetable_updates()) {
-    // Elevator updates are not compatible with RT-updates.
-    POST<ep::update_elevator>(qr, "/api/update_elevator", d);
-  }
-
-  if (c.tiles_) {
-    utl::verify(d.tiles_ != nullptr, "tiles data not loaded");
-    qr.route("GET", "/tiles/", ep::tiles{*d.tiles_});
-  }
-
-  qr.route("GET", "/metrics",
-           ep::metrics{d.tt_.get(), d.tags_.get(), d.rt_, d.metrics_.get()});
-  qr.route("GET", "/gtfsrt", ep::gtfsrt{c, d.tt_.get(), d.tags_.get(), d.rt_});
-  qr.serve_files(server_config.web_folder_);
-  qr.enable_cors();
+  auto s = net::web_server{m.sched_.runner_.ios()};
   s.set_timeout(std::chrono::minutes{5});
-  s.on_http_request(std::move(qr));
+  s.on_http_request(m.qr_);
 
   auto ec = boost::system::error_code{};
+  auto const server_config = c.server_.value_or(config::server{});
   s.init(server_config.host_, server_config.port_, ec);
-  s.run();
-
   if (ec) {
     std::cerr << "error: " << ec << "\n";
     return 1;
   }
 
-  auto rt_update_thread = std::unique_ptr<std::thread>{};
-  auto rt_update_ioc = std::unique_ptr<asio::io_context>{};
-  if (c.requires_rt_timetable_updates()) {
-    rt_update_ioc = std::make_unique<asio::io_context>();
-    rt_update_thread = std::make_unique<std::thread>([&]() {
-      utl::set_current_thread_name("motis rt update");
-      run_rt_update(*rt_update_ioc, c, d);
-      rt_update_ioc->run();
-    });
+  auto lbs = std::vector<net::lb>{};
+  if (c.server_.value_or(config::server{}).lbs_) {
+    lbs = utl::to_vec(*c.server_.value_or(config::server{}).lbs_,
+                      [&](std::string const& url) {
+                        return net::lb{m.sched_.runner_.ios(), url, m.qr_};
+                      });
   }
 
-  auto gbfs_update_thread = std::unique_ptr<std::thread>{};
-  auto gbfs_update_ioc = std::unique_ptr<asio::io_context>{};
-  if (d.w_ && d.l_ && c.has_gbfs_feeds()) {
-    gbfs_update_ioc = std::make_unique<asio::io_context>();
-    gbfs_update_thread = std::make_unique<std::thread>([&]() {
-      utl::set_current_thread_name("motis gbfs update");
-      gbfs::run_gbfs_update(*gbfs_update_ioc, c, *d.w_, *d.l_, d.gbfs_);
-      gbfs_update_ioc->run();
-    });
-  }
-
-  auto const stop = net::stop_handler(sched.runner_.ios(), [&]() {
+  auto const stop = net::stop_handler(m.sched_.runner_.ios(), [&]() {
     utl::log_info("motis.server", "shutdown");
+    for (auto& lb : lbs) {
+      lb.stop();
+    }
     s.stop();
-    sched.runner_.stop();
-
-    if (rt_update_ioc != nullptr) {
-      rt_update_ioc->stop();
-    }
-    if (gbfs_update_ioc != nullptr) {
-      gbfs_update_ioc->stop();
-    }
+    m.stop();
   });
 
   utl::log_info(
@@ -168,14 +215,13 @@ int server(data d, config const& c, std::string_view const motis_version) {
       c.n_threads(), server_config.host_, server_config.port_,
       server_config.port_);
 
-  sched.runner_.run(c.n_threads());
-  if (rt_update_thread != nullptr) {
-    rt_update_thread->join();
+  for (auto const& lb : lbs) {
+    lb.run();
   }
-  if (gbfs_update_thread != nullptr) {
-    gbfs_update_thread->join();
-  }
+  s.run();
+  m.run(d, c);
 
   return 0;
 }
+
 }  // namespace motis
