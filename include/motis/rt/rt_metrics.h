@@ -331,7 +331,6 @@ struct gtfsrt_metrics {
     total_entities_success_.Increment(stats.total_entities_success_);
     total_entities_fail_.Increment(stats.total_entities_fail_);
     unsupported_deleted_.Increment(stats.unsupported_deleted_);
-    unsupported_vehicle_.Increment(stats.unsupported_vehicle_);
     unsupported_no_trip_id_.Increment(stats.unsupported_no_trip_id_);
     no_trip_update_.Increment(stats.no_trip_update_);
     trip_update_without_trip_.Increment(stats.trip_update_without_trip_);
