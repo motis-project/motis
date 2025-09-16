@@ -2103,7 +2103,6 @@ components:
         - realTime
         - headsign
         - tripTo
-        -
         - agencyId
         - agencyName
         - agencyUrl
