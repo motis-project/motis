@@ -13,6 +13,7 @@
 #include "motis/elevators/match_elevator.h"
 #include "motis/get_loc.h"
 #include "motis/match_platforms.h"
+#include "motis/parameters.h"
 #include "motis/tag_lookup.h"
 
 namespace json = boost::json;
@@ -56,7 +57,7 @@ api::transfers_response transfers::operator()(
   for (auto const mode :
        {osr::search_profile::kFoot, osr::search_profile::kWheelchair}) {
     auto const results = osr::route(
-        osr::get_parameters(mode), w_, l_, mode, loc,
+        build_parameters(mode, profile_parameters{}), w_, l_, mode, loc,
         utl::to_vec(
             neighbors,
             [&](auto&& l) { return get_loc(tt_, w_, pl_, matches_, l); }),
