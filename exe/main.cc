@@ -1,12 +1,12 @@
-#include "boost/program_options.hpp"
-#include "boost/url/decode_view.hpp"
-
 #include <cctype>
 #include <algorithm>
 #include <filesystem>
 #include <iostream>
 #include <string>
 #include <string_view>
+
+#include "boost/program_options.hpp"
+#include "boost/url/decode_view.hpp"
 
 #include "google/protobuf/stubs/common.h"
 
@@ -42,6 +42,7 @@ int generate(int, char**);
 int batch(int, char**);
 int compare(int, char**);
 int extract(int, char**);
+int params(int, char**);
 }  // namespace motis
 
 using namespace motis;
@@ -57,6 +58,7 @@ int main(int ac, char** av) {
         "Commands:\n"
         "  generate   generate random queries and write them to a file\n"
         "  batch      run queries from a file\n"
+        "  params     update query parameters for a batch file\n",
         "  compare    compare results from different batch runs\n"
         "  config     generate a config file from a list of input files\n"
         "  import     prepare input data, creates the data directory\n"
@@ -83,6 +85,7 @@ int main(int ac, char** av) {
   switch (cista::hash(cmd)) {
     case cista::hash("extract"): return_value = extract(ac, av); break;
     case cista::hash("generate"): return_value = generate(ac, av); break;
+    case cista::hash("params"): return_value = params(ac, av); break;
     case cista::hash("batch"): return_value = batch(ac, av); break;
     case cista::hash("compare"): return_value = compare(ac, av); break;
 
