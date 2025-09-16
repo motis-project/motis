@@ -46,6 +46,7 @@
 #include "motis/odm/odm.h"
 #include "motis/odm/prima.h"
 #include "motis/odm/shorten.h"
+#include "motis/parameters.h"
 #include "motis/place.h"
 #include "motis/street_routing.h"
 #include "motis/timetable/modes_to_clasz_mask.h"
@@ -239,6 +240,7 @@ void init_pt(std::vector<n::routing::start>& rides,
 
   auto offsets = r.get_offsets(rtt, l, dir, {api::ModeEnum::ODM}, std::nullopt,
                                std::nullopt, std::nullopt, false,
+                               get_parameters(query.pedestrianProfile_),
                                query.pedestrianProfile_, query.elevationCosts_,
                                max, query.maxMatchingDistance_, gbfs_rd);
 
@@ -587,6 +589,10 @@ api::plan_response meta_router::run() {
   auto const [from_rides_short, from_rides_long] =
       ride_time_halves(p_->from_rides_);
   auto const [to_rides_short, to_rides_long] = ride_time_halves(p_->to_rides_);
+  auto const params = get_parameters(
+      query_.pedestrianProfile_, query_.pedestrianSpeed_, query_.cyclingSpeed_);
+  fmt::println("Params: F: {}  C: {}", params.pedestrian_speed_,
+               params.cycling_speed_);
 
   auto const qf = query_factory{
       .base_query_ = get_base_query(context_intvl),
@@ -596,7 +602,7 @@ api::plan_response meta_router::run() {
                            : osr::direction::kForward,
           start_modes_, start_form_factors_, start_propulsion_types_,
           start_rental_providers_, start_ignore_rental_return_constraints_,
-          query_.pedestrianProfile_, query_.elevationCosts_,
+          params, query_.pedestrianProfile_, query_.elevationCosts_,
           std::chrono::seconds{query_.maxPreTransitTime_},
           query_.maxMatchingDistance_, gbfs_rd_),
       .dest_walk_ = r_.get_offsets(
@@ -605,7 +611,7 @@ api::plan_response meta_router::run() {
                            : osr::direction::kBackward,
           dest_modes_, dest_form_factors_, dest_propulsion_types_,
           dest_rental_providers_, dest_ignore_rental_return_constraints_,
-          query_.pedestrianProfile_, query_.elevationCosts_,
+          params, query_.pedestrianProfile_, query_.elevationCosts_,
           std::chrono::seconds{query_.maxPostTransitTime_},
           query_.maxMatchingDistance_, gbfs_rd_),
       .td_start_walk_ = r_.get_td_offsets(

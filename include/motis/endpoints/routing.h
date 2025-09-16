@@ -17,6 +17,7 @@
 #include "motis/elevators/elevators.h"
 #include "motis/fwd.h"
 #include "motis/match_platforms.h"
+#include "motis/parameters.h"
 #include "motis/place.h"
 
 namespace motis::ep {
@@ -61,6 +62,7 @@ struct routing {
       std::optional<std::vector<api::RentalPropulsionTypeEnum>> const&,
       std::optional<std::vector<std::string>> const& rental_providers,
       bool ignore_rental_return_constraints,
+      profile_parameters const&,
       api::PedestrianProfileEnum,
       api::ElevationCostsEnum,
       std::chrono::seconds max,
