@@ -122,17 +122,21 @@ void mixer::cost_dominance(
   };
 
   auto const intvl = [&]() {
-    auto intvl =
+    auto ret =
         n::interval<n::unixtime_t>{n::unixtime_t::max(), n::unixtime_t::min()};
     for (auto const& j : pt_journeys) {
-      intvl.from_ = std::min(intvl.from_, j.departure_time());
-      intvl.to_ = std::max(intvl.to_, j.arrival_time());
+      ret.from_ = std::min(ret.from_, j.departure_time());
+      ret.to_ = std::max(ret.to_, j.arrival_time());
     }
-    return intvl;
+    for (auto const& j : odm_journeys) {
+      ret.from_ = std::min(ret.from_, j.departure_time());
+      ret.to_ = std::max(ret.to_, j.arrival_time());
+    }
+    return ret;
   }();
 
   auto cost_threshold = [&]() {
-    auto cost_threshold = std::vector<double>(
+    auto ret = std::vector<double>(
         intvl.size().count(), std::numeric_limits<double>::max());
     for (auto const& j : pt_journeys) {
       auto const cost_j = cost(j);
@@ -143,10 +147,10 @@ void mixer::cost_dominance(
                                    static_cast<double>(max_distance_));
       };
       for (auto const [i, t] : utl::enumerate(intvl)) {
-        cost_threshold[i] = std::min(cost_threshold[i], f_j(t));
+        ret[i] = std::min(ret[i], f_j(t));
       }
     }
-    return cost_threshold;
+    return ret;
   }();
 
   auto const get_next_triangle =
