@@ -207,18 +207,16 @@ void mixer::cost_dominance(
       cost_threshold_file << fmt::format("{},{}\n",
                                          intvl.from_ + n::duration_t{i}, cost);
     }
-    auto pt_journeys_file = std::ofstream{"pt_journeys.csv"};
-    pt_journeys_file << "departure,center,arrival,cost\n";
-    for (auto const& j : pt_journeys) {
-      pt_journeys_file << fmt::format("{},{},{},{}\n", j.departure_time(),
-                                      center(j), j.arrival_time(), cost(j));
-    }
-    auto odm_journeys_file = std::ofstream{"odm_journeys.csv"};
-    odm_journeys_file << "departure,center,arrival,cost\n";
-    for (auto const& j : odm_journeys) {
-      odm_journeys_file << fmt::format("{},{},{},{}\n", j.departure_time(),
-                                       center(j), j.arrival_time(), cost(j));
-    }
+    auto const to_csv = [&](auto const& journeys, auto const& file_name) {
+      auto file = std::ofstream{file_name};
+      file << "departure,center,arrival,travel_time,transfers,odm_time,cost\n";
+      for (auto const& j : journeys) {
+        file << fmt::format("{},{},{},{},{},{},{}\n", j.departure_time(),
+                                     center(j), j.arrival_time(), j.travel_time(), j.transfers_, odm_time(j), cost(j));
+      }
+    };
+    to_csv(pt_journeys, "pt_journeys.csv");
+    to_csv(odm_journeys, "odm_journeys.csv");
   }
 
   std::erase_if(odm_journeys, [&](auto const& j) {
