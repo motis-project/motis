@@ -486,7 +486,7 @@ export const ReachableSchema = {
 export const StopTimeSchema = {
     description: 'departure or arrival event at a stop',
     type: 'object',
-    required: ['place', 'mode', 'realTime', 'headsign', 'agencyId', 'agencyName', 'agencyUrl', 'tripId', 'routeShortName', 'routeLongName', 'tripShortName', 'displayName', 'pickupDropoffType', 'cancelled', 'tripCancelled', 'source'],
+    required: ['place', 'mode', 'realTime', 'headsign', 'tripTo', 'agencyId', 'agencyName', 'agencyUrl', 'tripId', 'routeShortName', 'routeLongName', 'tripShortName', 'displayName', 'pickupDropoffType', 'cancelled', 'tripCancelled', 'source'],
     properties: {
         place: {
             '$ref': '#/components/schemas/Place',
@@ -501,10 +501,14 @@ export const StopTimeSchema = {
             type: 'boolean'
         },
         headsign: {
-            description: `For transit legs, the headsign of the bus or train being used.
+            description: `The headsign of the bus or train being used.
 For non-transit legs, null
 `,
             type: 'string'
+        },
+        tripTo: {
+            description: 'final stop of this trip',
+            '$ref': '#/components/schemas/Place'
         },
         agencyId: {
             type: 'string'
@@ -875,6 +879,10 @@ Scheduled times will equal realtime times in this case.
 For non-transit legs, null
 `,
             type: 'string'
+        },
+        tripTo: {
+            description: 'final stop of this trip (can differ from headsign)',
+            '$ref': '#/components/schemas/Place'
         },
         routeColor: {
             type: 'string'

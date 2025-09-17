@@ -441,11 +441,15 @@ export type StopTime = {
      */
     realTime: boolean;
     /**
-     * For transit legs, the headsign of the bus or train being used.
+     * The headsign of the bus or train being used.
      * For non-transit legs, null
      *
      */
     headsign: string;
+    /**
+     * final stop of this trip
+     */
+    tripTo: Place;
     agencyId: string;
     agencyName: string;
     agencyUrl: string;
@@ -730,6 +734,10 @@ export type Leg = {
      *
      */
     headsign?: string;
+    /**
+     * final stop of this trip (can differ from headsign)
+     */
+    tripTo?: Place;
     routeColor?: string;
     routeTextColor?: string;
     routeType?: number;

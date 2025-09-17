@@ -406,8 +406,15 @@ api::Itinerary journey_to_response(
                     .scheduled_ = fr.is_scheduled(),
                     .interlineWithPreviousLeg_ = !is_first_part,
                     .headsign_ = std::string{enter_stop.direction()},
-                    .tripTo_ = to_place(enter_stop.get_last_trip_stop(),
-                                        n::event_type::kArr),
+                    .tripTo_ =
+                        [&]() {
+                          auto const last = enter_stop.get_last_trip_stop();
+                          auto p = to_place(last, n::event_type::kArr);
+                          p.arrival_ = last.time(n::event_type::kArr);
+                          p.scheduledArrival_ =
+                              last.scheduled_time(n::event_type::kArr);
+                          return p;
+                        }(),
                     .routeColor_ = to_str(color.color_),
                     .routeTextColor_ = to_str(color.text_color_),
                     .routeType_ = enter_stop.route_type().and_then(

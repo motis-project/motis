@@ -264,9 +264,30 @@
 				<div class="grid gap-y-6 grid-cols-[max-content_max-content_auto] items-center">
 					{@render stopTimes(l.startTime, l.scheduledStartTime, l.realTime, l.from, 1)}
 				</div>
-				<div class="mt-2 mb-2 flex items-center text-muted-foreground leading-none">
+				<div class="mt-2 mb-2 flex items-center">
 					<ArrowRight class="stroke-muted-foreground size-4" />
-					<span class="ml-1">{l.headsign}</span>
+					<span class="ml-1">
+						{#if l.tripTo}
+							<Button
+								class="text-[length:inherit] text-muted-foreground leading-none justify-normal text-wrap text-left "
+								variant="link"
+								onclick={() =>
+									onClickStop(
+										l.tripTo!.name,
+										l.tripTo!.stopId!,
+										new Date(l.tripTo!.arrival!),
+										true
+									)}
+							>
+								{l.headsign}
+								{#if !l.headsign || !l.tripTo.name.startsWith(l.headsign)}
+									<br />({l.tripTo.name})
+								{/if}
+							</Button>
+						{:else}
+							{l.headsign}
+						{/if}
+					</span>
 				</div>
 				{#if l.loopedCalendarSince}
 					<div class="mt-2 flex items-center text-destructive leading-none">
