@@ -122,7 +122,7 @@
 						<div><ArrowRight class="stroke-muted-foreground h-4 w-4" /></div>
 						<span class="ml-1 leading-tight text-ellipsis overflow-hidden">
 							{stopTime.headsign}
-							{#if stopTime.tripTo && stopTime.tripTo.name != stopTime.headsign}
+							{#if !stopTime.headsign || !stopTime.tripTo.name.startsWith(stopTime.headsign)}
 								({stopTime.tripTo.name})
 							{/if}
 						</span>
