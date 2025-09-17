@@ -13,6 +13,7 @@ struct profile_parameters {
   constexpr static auto const kBikeSpeed = 4.2F;
 
   float const pedestrian_speed_{kFootSpeed};
+  float const wheelchair_speed_{kWheelchairSpeed};
   float const cycling_speed_{kBikeSpeed};
 };
 

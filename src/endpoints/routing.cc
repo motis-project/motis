@@ -127,8 +127,8 @@ n::routing::td_offsets_t get_td_offsets(
     utl::equal_ranges_linear(
         get_td_footpaths(*r.w_, *r.l_, *r.pl_, *r.tt_, rtt, *r.loc_tree_, *e,
                          *r.matches_, n::location_idx_t::invalid(), pos, dir,
-                         profile, max, max_matching_distance,
-                         build_parameters(profile, pr_params), *blocked),
+                         profile, max, max_matching_distance, pr_params,
+                         *blocked),
         [](n::td_footpath const& a, n::td_footpath const& b) {
           return a.target_ == b.target_;
         },

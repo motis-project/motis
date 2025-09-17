@@ -15,10 +15,16 @@ template <typename T>
 concept HasPedestrianProfile =
     requires(T const& params) { params.pedestrianProfile_; };
 
-auto default_pedestrian_speed(api::PedestrianProfileEnum const p) {
-  return p == api::PedestrianProfileEnum::FOOT
-             ? profile_parameters::kFootSpeed
-             : profile_parameters::kWheelchairSpeed;
+template <typename T>
+auto use_wheelchair(T const&) {
+  return false;
+}
+
+template <typename T>
+auto use_wheelchair(T const& t)
+  requires HasPedestrianProfile<T>
+{
+  return t.pedestrianProfile_ == api::PedestrianProfileEnum::WHEELCHAIR;
 }
 
 template <typename T>
@@ -26,11 +32,18 @@ auto pedestrian_speed(T const&) {
   return profile_parameters::kFootSpeed;
 }
 
+template <>
+auto pedestrian_speed(api::PedestrianProfileEnum const& p) {
+  return p == api::PedestrianProfileEnum::FOOT
+             ? profile_parameters::kFootSpeed
+             : profile_parameters::kWheelchairSpeed;
+}
+
 template <typename T>
 auto pedestrian_speed(T const& params)
   requires HasPedestrianProfile<T>
 {
-  return default_pedestrian_speed(params.pedestrianProfile_);
+  return pedestrian_speed(params.pedestrianProfile_);
 }
 
 template <typename T>
@@ -42,7 +55,7 @@ auto pedestrian_speed(T const& params)
         return speed > 0.0 ? std::optional{static_cast<float>(speed)}
                            : std::nullopt;
       })
-      .value_or(default_pedestrian_speed(params.pedestrianProfile_));
+      .value_or(pedestrian_speed(params.pedestrianProfile_));
 }
 
 template <typename T>
@@ -65,7 +78,12 @@ auto cycling_speed(T const& params)
 
 template <typename T>
 profile_parameters parameters(T const& params) {
-  return {.pedestrian_speed_ = pedestrian_speed(params),
+  auto const is_wheelchair = use_wheelchair(params);
+  auto const p_speed = pedestrian_speed(params);
+  return {.pedestrian_speed_ =
+              is_wheelchair ? profile_parameters::kFootSpeed : p_speed,
+          .wheelchair_speed_ =
+              is_wheelchair ? p_speed : profile_parameters::kWheelchairSpeed,
           .cycling_speed_ = cycling_speed(params)};
 }
 
@@ -89,7 +107,7 @@ osr::profile_parameters build_parameters(osr::search_profile const p,
           .speed_meters_per_second_ = params.pedestrian_speed_};
     case osr::search_profile::kWheelchair:
       return osr::foot<true, osr::elevator_tracking>::parameters{
-          .speed_meters_per_second_ = params.pedestrian_speed_};
+          .speed_meters_per_second_ = params.wheelchair_speed_};
     case osr::search_profile::kBike:
       return osr::bike<osr::bike_costing::kSafe,
                        osr::kElevationNoCost>::parameters{
@@ -114,7 +132,7 @@ osr::profile_parameters build_parameters(osr::search_profile const p,
     case osr::search_profile::kCarDropOffWheelchair:
       return osr::car_parking<true, false>::parameters{
           .car_ = {},
-          .foot_ = {.speed_meters_per_second_ = params.pedestrian_speed_}};
+          .foot_ = {.speed_meters_per_second_ = params.wheelchair_speed_}};
     case osr::search_profile::kCarParking:
       return osr::car_parking<false, true>::parameters{
           .car_ = {},
@@ -122,7 +140,7 @@ osr::profile_parameters build_parameters(osr::search_profile const p,
     case osr::search_profile::kCarParkingWheelchair:
       return osr::car_parking<true, true>::parameters{
           .car_ = {},
-          .foot_ = {.speed_meters_per_second_ = params.pedestrian_speed_}};
+          .foot_ = {.speed_meters_per_second_ = params.wheelchair_speed_}};
     case osr::search_profile::kBikeSharing:
       return osr::bike_sharing::parameters{
           .bike_ = {.speed_meters_per_second_ = params.cycling_speed_},
