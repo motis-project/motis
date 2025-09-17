@@ -166,13 +166,23 @@ void mixer::cost_dominance(
       return std::nullopt;
     };
 
-    auto const start = get_next_local_minimum(i);
+    auto start = get_next_local_minimum(i);
     if (!start) {
       return std::nullopt;
     }
-    auto const end = get_next_local_minimum(*start + 1);
+    auto end = get_next_local_minimum(*start + 1);
     if (!end) {
       return std::nullopt;
+    }
+
+    if (cost_threshold[*start] < cost_threshold[*end]) {
+      do {
+        ++(*start);
+      } while (cost_threshold[*start] < cost_threshold[*end]);
+    } else if (cost_threshold[*start] > cost_threshold[*end]) {
+      do {
+        --(*end);
+      } while (cost_threshold[*start] > cost_threshold[*end]);
     }
 
     return std::tuple{*start, *end};
