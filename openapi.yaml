@@ -2127,7 +2127,7 @@ components:
           type: boolean
         headsign:
           description: |
-            Zhe headsign of the bus or train being used.
+            The headsign of the bus or train being used.
             For non-transit legs, null
           type: string
         tripTo:
