@@ -75,15 +75,17 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
       gbfs_,   nullptr,   nullptr, nullptr,  metrics_};
   auto gbfs_rd = gbfs::gbfs_routing_data{w_, l_, gbfs_};
 
+  auto const pr_params = get_parameters(query);
   auto q = n::routing::query{
       .start_time_ = time,
       .start_match_mode_ = get_match_mode(one),
-      .start_ = r.get_offsets(
-          nullptr, one, one_dir, one_modes, std::nullopt, std::nullopt,
-          std::nullopt, false, get_parameters(query), query.pedestrianProfile_, query.elevationCosts_,
-          one_max_time, query.maxMatchingDistance_, gbfs_rd),
+      .start_ =
+          r.get_offsets(nullptr, one, one_dir, one_modes, std::nullopt,
+                        std::nullopt, std::nullopt, false, pr_params,
+                        query.pedestrianProfile_, query.elevationCosts_,
+                        one_max_time, query.maxMatchingDistance_, gbfs_rd),
       .td_start_ =
-          r.get_td_offsets(nullptr, nullptr, one, one_dir, one_modes,
+          r.get_td_offsets(nullptr, nullptr, one, one_dir, one_modes, pr_params,
                            query.pedestrianProfile_, query.elevationCosts_,
                            query.maxMatchingDistance_, one_max_time, time),
       .max_transfers_ = static_cast<std::uint8_t>(

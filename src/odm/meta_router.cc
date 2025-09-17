@@ -173,9 +173,9 @@ n::duration_t init_direct(std::vector<direct_ride>& direct_rides,
 
   auto [_, odm_direct_duration] = r.route_direct(
       e, gbfs, from_p, to_p, {api::ModeEnum::CAR}, std::nullopt, std::nullopt,
-      std::nullopt, false, intvl.from_, false, query.pedestrianProfile_,
-      query.elevationCosts_, kODMMaxDuration, query.maxMatchingDistance_,
-      kODMDirectFactor, api_version);
+      std::nullopt, false, intvl.from_, false, get_parameters(query),
+      query.pedestrianProfile_, query.elevationCosts_, kODMMaxDuration,
+      query.maxMatchingDistance_, kODMDirectFactor, api_version);
 
   auto const step =
       std::chrono::duration_cast<n::unixtime_t::duration>(kODMDirectPeriod);
@@ -589,8 +589,6 @@ api::plan_response meta_router::run() {
       ride_time_halves(p_->from_rides_);
   auto const [to_rides_short, to_rides_long] = ride_time_halves(p_->to_rides_);
   auto const params = get_parameters(query_);
-  fmt::println("Params: F: {}  C: {}", params.pedestrian_speed_,
-               params.cycling_speed_);
 
   auto const qf = query_factory{
       .base_query_ = get_base_query(context_intvl),
@@ -616,15 +614,15 @@ api::plan_response meta_router::run() {
           rtt_, e_, start_,
           query_.arriveBy_ ? osr::direction::kBackward
                            : osr::direction::kForward,
-          start_modes_, query_.pedestrianProfile_, query_.elevationCosts_,
-          query_.maxMatchingDistance_,
+          start_modes_, params, query_.pedestrianProfile_,
+          query_.elevationCosts_, query_.maxMatchingDistance_,
           std::chrono::seconds{query_.maxPreTransitTime_}, context_intvl),
       .td_dest_walk_ = r_.get_td_offsets(
           rtt_, e_, dest_,
           query_.arriveBy_ ? osr::direction::kForward
                            : osr::direction::kBackward,
-          dest_modes_, query_.pedestrianProfile_, query_.elevationCosts_,
-          query_.maxMatchingDistance_,
+          dest_modes_, params, query_.pedestrianProfile_,
+          query_.elevationCosts_, query_.maxMatchingDistance_,
           std::chrono::seconds{query_.maxPostTransitTime_}, context_intvl),
       .odm_start_short_ = query_.arriveBy_ ? get_td_offsets(to_rides_short)
                                            : get_td_offsets(from_rides_short),
@@ -755,7 +753,7 @@ api::plan_response meta_router::run() {
                 r_.matches_, r_.elevations_, r_.shapes_, gbfs_rd_, r_.lp_,
                 r_.tz_, j, start_, dest_, cache, ep::blocked.get(),
                 query_.requireCarTransport_ && query_.useRoutedTransfers_,
-                query_.pedestrianProfile_, query_.elevationCosts_,
+                params, query_.pedestrianProfile_, query_.elevationCosts_,
                 query_.joinInterlinedLegs_, query_.detailedTransfers_,
                 query_.withFares_, query_.withScheduledSkippedStops_,
                 r_.config_.timetable_.value().max_matching_distance_,

@@ -272,6 +272,7 @@ void add_flex_td_offsets(osr::ways const& w,
                          osr::direction const dir,
                          std::chrono::seconds const max,
                          double const max_matching_distance,
+                         profile_parameters const& pr_params,
                          flex_routing_data& frd,
                          n::routing::td_offsets_t& ret) {
   auto const max_dist = get_max_distance(osr::search_profile::kCarSharing, max);
@@ -281,7 +282,8 @@ void add_flex_td_offsets(osr::ways const& w,
         return get_location(&tt, &w, pl, matches, tt_location{l});
       });
 
-  auto const params = osr::get_parameters(osr::search_profile::kCarSharing);
+  auto const params =
+      build_parameters(osr::search_profile::kCarSharing, pr_params);
   auto const pos_match =
       lookup.match(params, pos, false, dir, max_matching_distance, nullptr,
                    osr::search_profile::kCarSharing);
