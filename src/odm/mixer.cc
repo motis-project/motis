@@ -156,11 +156,11 @@ void mixer::cost_dominance(
   auto const get_next_triangle =
       [&](auto i) -> std::optional<std::tuple<std::uint32_t, std::uint32_t>> {
     auto const get_next_local_minimum =
-        [&](auto i) -> std::optional<std::uint32_t> {
-      for (; 0 < i && i < cost_threshold.size() - 1; ++i) {
-        if (cost_threshold[i - 1] > cost_threshold[i] &&
-            cost_threshold[i] < cost_threshold[i + 1]) {
-          return i;
+        [&](auto j) -> std::optional<std::uint32_t> {
+      for (; 0 < j && j < cost_threshold.size() - 1; ++j) {
+        if (cost_threshold[j - 1] > cost_threshold[j] &&
+            cost_threshold[j] < cost_threshold[j + 1]) {
+          return j;
         }
       }
       return std::nullopt;
