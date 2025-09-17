@@ -31,7 +31,7 @@
 		time: queryTime.toISOString(),
 		arriveBy,
 		n: 10,
-		exactRadius: true,
+		exactRadius: false,
 		radius: 200,
 		language
 	});
