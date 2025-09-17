@@ -78,13 +78,11 @@ auto cycling_speed(T const& params)
 
 template <typename T>
 profile_parameters parameters(T const& params) {
-  auto const is_wheelchair = use_wheelchair(params);
-  auto const p_speed = pedestrian_speed(params);
-  return {.pedestrian_speed_ =
-              is_wheelchair ? profile_parameters::kFootSpeed : p_speed,
-          .wheelchair_speed_ =
-              is_wheelchair ? p_speed : profile_parameters::kWheelchairSpeed,
-          .cycling_speed_ = cycling_speed(params)};
+  return {
+      .pedestrian_speed_ = pedestrian_speed(params),
+      .cycling_speed_ = cycling_speed(params),
+      .use_wheelchair_ = use_wheelchair(params),
+  };
 }
 
 profile_parameters get_parameters(api::plan_params const& params) {
@@ -101,13 +99,17 @@ profile_parameters get_parameters(api::oneToMany_params const& params) {
 
 osr::profile_parameters build_parameters(osr::search_profile const p,
                                          profile_parameters const& params) {
+  // Ensure correct speed is used when using default parameters
+  auto const wheelchair_speed = params.use_wheelchair_
+                                    ? params.pedestrian_speed_
+                                    : profile_parameters::kWheelchairSpeed;
   switch (p) {
     case osr::search_profile::kFoot:
       return osr::foot<false, osr::elevator_tracking>::parameters{
           .speed_meters_per_second_ = params.pedestrian_speed_};
     case osr::search_profile::kWheelchair:
       return osr::foot<true, osr::elevator_tracking>::parameters{
-          .speed_meters_per_second_ = params.wheelchair_speed_};
+          .speed_meters_per_second_ = wheelchair_speed};
     case osr::search_profile::kBike:
       return osr::bike<osr::bike_costing::kSafe,
                        osr::kElevationNoCost>::parameters{
@@ -131,16 +133,14 @@ osr::profile_parameters build_parameters(osr::search_profile const p,
           .foot_ = {.speed_meters_per_second_ = params.pedestrian_speed_}};
     case osr::search_profile::kCarDropOffWheelchair:
       return osr::car_parking<true, false>::parameters{
-          .car_ = {},
-          .foot_ = {.speed_meters_per_second_ = params.wheelchair_speed_}};
+          .car_ = {}, .foot_ = {.speed_meters_per_second_ = wheelchair_speed}};
     case osr::search_profile::kCarParking:
       return osr::car_parking<false, true>::parameters{
           .car_ = {},
           .foot_ = {.speed_meters_per_second_ = params.pedestrian_speed_}};
     case osr::search_profile::kCarParkingWheelchair:
       return osr::car_parking<true, true>::parameters{
-          .car_ = {},
-          .foot_ = {.speed_meters_per_second_ = params.wheelchair_speed_}};
+          .car_ = {}, .foot_ = {.speed_meters_per_second_ = wheelchair_speed}};
     case osr::search_profile::kBikeSharing:
       return osr::bike_sharing::parameters{
           .bike_ = {.speed_meters_per_second_ = params.cycling_speed_},
