@@ -26,7 +26,15 @@
 		stopNameFromResponse: string;
 	} = $props();
 
-	let query = $derived({ stopId, time: queryTime.toISOString(), arriveBy, n: 10, language });
+	let query = $derived({
+		stopId,
+		time: queryTime.toISOString(),
+		arriveBy,
+		n: 10,
+		exactRadius: false,
+		radius: 200,
+		language
+	});
 	/* eslint-disable svelte/prefer-writable-derived */
 	let responses = $state<Array<Promise<StoptimesResponse>>>([]);
 	$effect(() => {
@@ -112,8 +120,12 @@
 				<span>
 					<div class="flex items-center text-muted-foreground min-w-0">
 						<div><ArrowRight class="stroke-muted-foreground h-4 w-4" /></div>
-						<span class="ml-1 leading-tight text-ellipsis overflow-hidden">{stopTime.headsign}</span
-						>
+						<span class="ml-1 leading-tight text-ellipsis overflow-hidden">
+							{stopTime.headsign}
+							{#if !stopTime.headsign || !stopTime.tripTo.name.startsWith(stopTime.headsign)}
+								({stopTime.tripTo.name})
+							{/if}
+						</span>
 					</div>
 					{#if stopTime.pickupDropoffType == 'NOT_ALLOWED'}
 						<div class="flex items-center text-destructive text-sm">
