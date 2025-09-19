@@ -1,5 +1,7 @@
 #include "motis/odm/mixer/mixer.h"
 
+#include <filesystem>
+
 #include "utl/overloaded.h"
 
 #include "nigiri/logging.h"
@@ -13,6 +15,7 @@ namespace motis::odm {
 
 namespace n = nigiri;
 namespace nr = nigiri::routing;
+namespace fs = std::filesystem;
 
 static constexpr auto const kMixerTracing = false;
 
@@ -115,7 +118,8 @@ double mixer::cost(nr::journey const& j) const {
 
 void mixer::cost_dominance(
     nigiri::pareto_set<nigiri::routing::journey> const& pt_journeys,
-    std::vector<nigiri::routing::journey>& odm_journeys) const {
+    std::vector<nigiri::routing::journey>& odm_journeys,
+    std::optional<std::string_view> const stats_path) const {
 
   auto const center = [](nr::journey const& j) -> n::unixtime_t {
     return j.departure_time() + j.travel_time() / 2;
@@ -200,15 +204,16 @@ void mixer::cost_dominance(
     x = end;
   }
 
-  if constexpr (true) {
-    auto cost_threshold_file = std::ofstream{"cost_threshold.csv"};
+  if (stats_path) {
+    auto cost_threshold_file =
+        std::ofstream{fs::path{*stats_path} / "cost_threshold.csv"};
     cost_threshold_file << "time,cost\n";
     for (auto const [i, cost] : utl::enumerate(cost_threshold)) {
       cost_threshold_file << fmt::format("{},{}\n",
                                          intvl.from_ + n::duration_t{i}, cost);
     }
     auto const to_csv = [&](auto const& journeys, auto const& file_name) {
-      auto file = std::ofstream{file_name};
+      auto file = std::ofstream{fs::path{*stats_path} / file_name};
       file << "departure,center,arrival,travel_time,transfers,odm_time,cost\n";
       for (auto const& j : journeys) {
         file << fmt::format("{},{},{},{},{},{},{}\n", j.departure_time(),
@@ -238,10 +243,11 @@ void add_pt_sort(n::pareto_set<nr::journey> const& pt_journeys,
 
 void mixer::mix(n::pareto_set<nr::journey> const& pt_journeys,
                 std::vector<nr::journey>& odm_journeys,
-                metrics_registry* metrics) const {
+                metrics_registry* metrics,
+                std::optional<std::string_view> const stats_path) const {
   pareto_dominance(odm_journeys);
   auto const pareto_n = odm_journeys.size();
-  cost_dominance(pt_journeys, odm_journeys);
+  cost_dominance(pt_journeys, odm_journeys, stats_path);
   auto const cost_n = odm_journeys.size();
 
   if (metrics != nullptr) {

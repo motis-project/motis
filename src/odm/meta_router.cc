@@ -69,7 +69,7 @@ constexpr auto const kWhitelistPath = "/api/whitelist";
 static auto const kReqHeaders = std::map<std::string, std::string>{
     {"Content-Type", "application/json"}, {"Accept", "application/json"}};
 static auto const kMixer = get_default_mixer();
-constexpr auto const kPrintMixerIO = true;
+constexpr auto const kPrintMixerIO = false;
 
 using td_offsets_t =
     n::hash_map<n::location_idx_t, std::vector<n::routing::td_offset>>;
@@ -709,7 +709,7 @@ api::plan_response meta_router::run() {
     n::log(n::log_lvl::debug, "motis.odm", "[mixing] Input Journeys:\n{}",
            to_csv(get_mixer_input(pt_result.journeys_, p_->odm_journeys_)));
   }
-  kMixer.mix(pt_result.journeys_, p_->odm_journeys_, r_.metrics_);
+  kMixer.mix(pt_result.journeys_, p_->odm_journeys_, r_.metrics_, std::nullopt);
   if (kPrintMixerIO) {
     n::log(n::log_lvl::debug, "motis.odm", "[mixing] Output Journeys:\n{}",
            to_csv(p_->odm_journeys_));

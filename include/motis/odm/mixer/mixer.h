@@ -23,14 +23,15 @@ std::int32_t tally(std::int32_t, std::vector<cost_threshold> const&);
 struct mixer {
   void mix(nigiri::pareto_set<nigiri::routing::journey> const& pt_journeys,
            std::vector<nigiri::routing::journey>& odm_journeys,
-           metrics_registry* metrics) const;
+           metrics_registry* metrics, std::optional<std::string_view> stats_path) const;
   static void pareto_dominance(
     std::vector<nigiri::routing::journey>& odm_journeys);
   std::int32_t transfer_cost(nigiri::routing::journey const&) const;
   double cost(nigiri::routing::journey const& j) const;
   void cost_dominance(
       nigiri::pareto_set<nigiri::routing::journey> const& pt_journeys,
-      std::vector<nigiri::routing::journey>& odm_journeys) const;
+      std::vector<nigiri::routing::journey>& odm_journeys,
+      std::optional<std::string_view> stats_path) const;
 
   double direct_taxi_penalty_;
   std::int32_t max_distance_;

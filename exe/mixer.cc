@@ -17,6 +17,8 @@
 #include "motis/odm/mixer/mixer.h"
 
 #include "./flags.h"
+#include "motis/odm/mixer/journeys.h"
+#include "utl/read_file.h"
 
 namespace fs = std::filesystem;
 namespace po = boost::program_options;
@@ -25,9 +27,9 @@ namespace json = boost::json;
 namespace motis {
 
 int mixer(int ac, char** av) {
-  auto cfg_path = fs::path{"mixer.json"};
-  auto in_path = fs::path{"journeys.csv"};
-  auto out_path = fs::path{"."};
+  auto cfg_path = std::string{"mixer.json"};
+  auto in_path = std::string{"journeys.csv"};
+  auto out_path = std::string{"."};
 
   auto desc = po::options_description{"Options"};
   desc.add_options()  //
@@ -43,9 +45,23 @@ int mixer(int ac, char** av) {
     std::cout << desc << "\n";
     return 0;
   }
+  auto const m = [&]() {
+    auto cfg_file = std::ifstream{cfg_path};
+    return json::value_to<odm::mixer>(json::parse(cfg_file));
+  }();
 
-  auto cfg_raw = std::ifstream{cfg_path};
-  auto const m = json::value_to<odm::mixer>(json::parse(cfg_raw));
+  auto const in_file = utl::read_file(in_path.c_str());
+  if (!in_file) {
+    fmt::println("Failed to read input file");
+    return 1;
+  }
+  auto odm_journeys = odm::from_csv(*in_file);
+  auto const pt_journeys = odm::separate_pt(odm_journeys);
+
+  m.mix(pt_journeys, odm_journeys, nullptr, std::string_view{out_path});
+
+  auto out_file = std::ofstream{fs::path{out_path} / "journeys.csv"};
+  out_file << odm::to_csv(odm_journeys);
 
   return 0U;
 }

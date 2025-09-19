@@ -7,6 +7,7 @@
 #include "utl/parser/line_range.h"
 
 #include "nigiri/common/parse_time.h"
+#include "nigiri/routing/pareto_set.h"
 
 #include "motis/odm/odm.h"
 #include "motis/transport_mode_ids.h"
@@ -26,7 +27,7 @@ struct csv_journey {
 };
 
 template <typename T>
-std::optional<T> read_number(const char* first, const char* last) {
+std::optional<T> read_number(char const* first, char const* last) {
   T n;
   auto [ptr, ec] = std::from_chars(first, last, n);
   if (ec == std::errc::invalid_argument ||
@@ -114,6 +115,20 @@ std::vector<nigiri::routing::journey> from_csv(std::string_view const csv) {
   return journeys;
 }
 
+nigiri::pareto_set<nigiri::routing::journey> separate_pt(
+    std::vector<nigiri::routing::journey>& journeys) {
+  auto pt_journeys = nigiri::pareto_set<nigiri::routing::journey>{};
+  for (auto j = begin(journeys); j != end(journeys);) {
+    if (is_pure_pt(*j)) {
+      pt_journeys.add(std::move(*j));
+      j = journeys.erase(j);
+    } else {
+      ++j;
+    }
+  }
+  return pt_journeys;
+}
+
 std::string to_csv(nigiri::routing::journey const& j) {
   auto const mode_str = [&](nigiri::transport_mode_id_t const mode) {
     return mode == kOdmTransportModeId ? "taxi" : "walk";
@@ -150,8 +165,8 @@ std::string to_csv(nigiri::routing::journey const& j) {
           : nigiri::duration_t::rep{0};
 
   return fmt::format("{}, {}, {}, {}, {:0>2}, {}, {:0>2}", j.start_time_,
-                    j.dest_time_, j.transfers_, first_mile_mode,
-                    first_mile_duration, last_mile_mode, last_mile_duration);
+                     j.dest_time_, j.transfers_, first_mile_mode,
+                     first_mile_duration, last_mile_mode, last_mile_duration);
 }
 
 std::string to_csv(std::vector<nigiri::routing::journey> const& jv) {

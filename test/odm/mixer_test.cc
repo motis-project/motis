@@ -16,17 +16,9 @@ TEST(odm, tally) {
 
 std::vector<nigiri::routing::journey> mix(std::string_view csv) {
   auto odm_journeys = from_csv(csv);
-  auto pt_journeys = nigiri::pareto_set<nigiri::routing::journey>{};
-  for (auto j = begin(odm_journeys); j != end(odm_journeys);) {
-    if (is_pure_pt(*j)) {
-      pt_journeys.add(std::move(*j));
-      j = odm_journeys.erase(j);
-    } else {
-      ++j;
-    }
-  }
+  auto const pt_journeys = separate_pt(odm_journeys);
   static auto const m = get_default_mixer();
-  m.mix(pt_journeys, odm_journeys, nullptr);
+  m.mix(pt_journeys, odm_journeys, nullptr, std::nullopt);
   return odm_journeys;
 }
 
