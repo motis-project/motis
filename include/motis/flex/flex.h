@@ -9,6 +9,7 @@
 #include "motis/flex/mode_id.h"
 #include "motis/fwd.h"
 #include "motis/match_platforms.h"
+#include "motis/parameters.h"
 
 namespace motis::flex {
 
@@ -53,6 +54,7 @@ void add_flex_td_offsets(osr::ways const&,
                          osr::direction,
                          std::chrono::seconds max,
                          double const max_matching_distance,
+                         profile_parameters const&,
                          flex_routing_data&,
                          nigiri::routing::td_offsets_t&);
 

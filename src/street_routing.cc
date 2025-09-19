@@ -204,6 +204,7 @@ api::Itinerary street_routing(osr::ways const& w,
                               std::optional<n::unixtime_t> const start_time,
                               std::optional<n::unixtime_t> const end_time,
                               double const max_matching_distance,
+                              profile_parameters const& pr_params,
                               street_routing_cache_t& cache,
                               osr::bitvec<osr::node_idx_t>& blocked_mem,
                               unsigned const api_version,
@@ -223,7 +224,7 @@ api::Itinerary street_routing(osr::ways const& w,
     auto const& [e_nodes, e_states] = *s;
     auto const profile = out.get_profile();
     return osr::route(
-        osr::get_parameters(profile), w, l, profile, from, to,
+        build_parameters(profile, pr_params), w, l, profile, from, to,
         static_cast<osr::cost_t>(max.count()), osr::direction::kForward,
         max_matching_distance,
         s ? &set_blocked(e_nodes, e_states, blocked_mem) : nullptr,
