@@ -6,6 +6,7 @@
 #include "utl/concat.h"
 #include "utl/enumerate.h"
 #include "utl/erase_duplicates.h"
+#include "utl/verify.h"
 
 #include "nigiri/routing/clasz_mask.h"
 #include "nigiri/rt/frun.h"
@@ -17,6 +18,7 @@
 #include "motis/data.h"
 #include "motis/journey_to_response.h"
 #include "motis/parse_location.h"
+#include "motis/place.h"
 #include "motis/tag_lookup.h"
 #include "motis/timetable/clasz_to_mode.h"
 #include "motis/timetable/modes_to_clasz_mask.h"
@@ -283,6 +285,59 @@ std::vector<n::rt::run> get_events(
   return evs;
 }
 
+std::vector<api::Place> other_stops_impl(std::string_view trip_id,
+                                         n::event_type ev_type,
+                                         n::rt::run_stop const& stop,
+                                         n::timetable const* tt,
+                                         n::rt_timetable const* rtt,
+                                         tag_lookup const& tags,
+                                         osr::ways const* w,
+                                         osr::platforms const* pl,
+                                         platform_matches_t const* matches,
+                                         location_place_map_t const* lp,
+                                         tz_map_t const* tz) {
+  auto const convert_stop = [&](n::rt::run_stop const& stop) {
+    auto result =
+        to_place(tt, &tags, w, pl, matches, lp, tz, tt_location{stop});
+    result.arrival_ = stop.time(n::event_type::kArr);
+    result.scheduledArrival_ = stop.scheduled_time(n::event_type::kArr);
+    result.departure_ = stop.time(n::event_type::kDep);
+    result.scheduledDeparture_ = stop.scheduled_time(n::event_type::kDep);
+    return result;
+  };
+
+  auto const [r, _] = tags.get_trip(*tt, rtt, trip_id);
+  auto fr = n::rt::frun{*tt, rtt, r};
+  assert(r.valid());
+  fr.stop_range_.to_ = fr.size();
+  fr.stop_range_.from_ = 0U;
+  auto it =
+      std::find_if(fr.begin(), fr.end(), [&](n::rt::run_stop const& stop2) {
+        // The stop index may be different so we have to compare the location
+        // index
+        return stop.get_location_idx() == stop2.get_location_idx();
+      });
+  if (ev_type == nigiri::event_type::kDep) {
+    utl::verify(it != fr.end(), "Could not find stopover location in trip");
+    ++it;
+    auto result = utl::to_vec(it, fr.end(), convert_stop);
+    utl::verify(!result.empty(), "Departure is last stop in trip");
+    // Departure time on terminus is meaningless
+    auto& terminus = result.back();
+    terminus.departure_.reset();
+    terminus.scheduledDeparture_.reset();
+    return result;
+  } else {
+    auto result = utl::to_vec(fr.begin(), it, convert_stop);
+    utl::verify(!result.empty(), "Arrival is first stop in trip");
+    // Arrival time on trip origin is meaningless
+    auto& origin = result.front();
+    origin.arrival_.reset();
+    origin.scheduledArrival_.reset();
+    return result;
+  }
+}
+
 api::stoptimes_response stop_times::operator()(
     boost::urls::url_view const& url) const {
   auto const query = api::stoptimes_params{url.params()};
@@ -392,6 +447,18 @@ api::stoptimes_response stop_times::operator()(
                      ? !s.out_allowed() && s.get_scheduled_stop().out_allowed()
                      : !s.in_allowed() && s.get_scheduled_stop().in_allowed());
 
+            auto const trip_id = tags_.id(tt_, s, ev_type);
+
+            auto const other_stops = [&](n::event_type desired_event)
+                -> std::optional<std::vector<api::Place>> {
+              if (desired_event != ev_type ||
+                  !query.fetchStops_.value_or(false)) {
+                return std::nullopt;
+              }
+              return other_stops_impl(trip_id, ev_type, s, &tt_, rtt, tags_, w_,
+                                      pl_, matches_, lp_, tz_);
+            };
+
             return {
                 .place_ = std::move(place),
                 .mode_ = to_mode(s.get_clasz(ev_type)),
@@ -409,7 +476,7 @@ api::stoptimes_response stop_times::operator()(
                 .routeColor_ = to_str(s.get_route_color(ev_type).color_),
                 .routeTextColor_ =
                     to_str(s.get_route_color(ev_type).text_color_),
-                .tripId_ = tags_.id(tt_, s, ev_type),
+                .tripId_ = trip_id,
                 .routeType_ =
                     s.route_type().and_then([](n::route_type_t const x) {
                       return std::optional{to_idx(x)};
@@ -420,6 +487,8 @@ api::stoptimes_response stop_times::operator()(
                 .routeLongName_ = std::string{s.route_long_name(ev_type)},
                 .tripShortName_ = std::string{s.trip_short_name(ev_type)},
                 .displayName_ = std::string{s.display_name(ev_type)},
+                .previousStops_ = other_stops(nigiri::event_type::kArr),
+                .nextStops_ = other_stops(nigiri::event_type::kDep),
                 .pickupDropoffType_ =
                     in_out_allowed ? api::PickupDropoffTypeEnum::NORMAL
                                    : api::PickupDropoffTypeEnum::NOT_ALLOWED,
