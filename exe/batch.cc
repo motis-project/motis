@@ -14,6 +14,7 @@
 #include "motis/config.h"
 #include "motis/data.h"
 #include "motis/endpoints/routing.h"
+#include "motis/motis_instance.h"
 
 #include "./flags.h"
 
@@ -45,14 +46,11 @@ int batch(int ac, char** av) {
     return 0;
   }
 
-  auto queries = std::vector<api::plan_params>{};
-  {
-    auto f = cista::mmap{queries_path.generic_string().c_str(),
-                         cista::mmap::protection::READ};
-    utl::for_each_token(utl::cstr{f.view()}, '\n', [&](utl::cstr s) {
-      queries.push_back(api::plan_params{boost::urls::url{s.view()}.params()});
-    });
-  }
+  auto queries = std::vector<std::string_view>{};
+  auto f = cista::mmap{queries_path.generic_string().c_str(),
+                       cista::mmap::protection::READ};
+  utl::for_each_token(utl::cstr{f.view()}, '\n',
+                      [&](utl::cstr s) { queries.push_back(s.view()); });
 
   auto const c = config::read(data_path / "config.yml");
   utl::verify(c.timetable_.has_value(), "timetable required");
@@ -60,36 +58,50 @@ int batch(int ac, char** av) {
   auto d = data{data_path, c};
   utl::verify(d.tt_, "timetable required");
 
-  auto mtx = std::mutex{};
+  struct state {};
+
   auto out = std::ofstream{responses_path};
   auto total = std::atomic_uint64_t{};
-  auto const routing = utl::init_from<ep::routing>(d).value();
-  auto const compute_response = [&](std::size_t const id) {
+  auto m = motis_instance{net::default_exec{}, d, c, ""};
+  auto const compute_response = [&](state&, std::size_t const id) {
+    auto response = std::string{};
     try {
-      UTL_START_TIMING(total);
-      auto response = routing(queries.at(id).to_url("/api/v1/plan"));
-      UTL_STOP_TIMING(total);
-
-      auto const timing = static_cast<std::uint64_t>(UTL_TIMING_MS(total));
-      response.debugOutput_.emplace("id", id);
-      response.debugOutput_.emplace("timing", timing);
-      {
-        auto const lock = std::scoped_lock{mtx};
-        out << json::serialize(json::value_from(response)) << "\n";
-      }
-      total += timing;
+      m.qr_(
+          net::web_server::http_req_t{boost::beast::http::verb::get,
+                                      boost::beast::string_view{queries.at(id)},
+                                      11},
+          [&](net::web_server::http_res_t const& res) {
+            std::visit(
+                [&](auto&& r) {
+                  using ResponseType = std::decay_t<decltype(r)>;
+                  if constexpr (std::is_same_v<ResponseType,
+                                               net::web_server::string_res_t>) {
+                    response = r.body();
+                  } else {
+                    throw utl::fail("not a valid response type: {}",
+                                    cista::type_str<ResponseType>());
+                  }
+                },
+                res);
+          },
+          false);
     } catch (std::exception const& e) {
       std::cerr << "ERROR IN QUERY " << id << ": " << e.what() << "\n";
     }
+    return response;
   };
 
   auto const pt = utl::activate_progress_tracker("batch");
   pt->in_high(queries.size());
   if (mt) {
-    utl::parallel_for_run(queries.size(), compute_response, pt->update_fn());
+    utl::parallel_ordered_collect_threadlocal<state>(
+        queries.size(), compute_response,
+        [&](std::size_t, std::string const& s) { out << s << "\n"; },
+        pt->update_fn());
   } else {
+    auto s = state{};
     for (auto i = 0U; i != queries.size(); ++i) {
-      compute_response(i);
+      compute_response(s, i);
       pt->increment();
     }
   }
