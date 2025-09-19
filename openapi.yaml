@@ -1379,6 +1379,17 @@ paths:
             If set to `true`, only stations that are phyiscally in the radius are considered.
             If set to `false`, additionally to the stations in the radius, equivalences with the same name and children are considered.
 
+        - name: fetchStops
+          in: query
+          schema:
+            type: boolean
+          required: false
+          description: |
+            Experimental. Expect unannounced breaking changes (without version bumps).
+
+            Optional. Default is `false`. If set to `true`, the following stops are returned
+            for departures and the previous stops are returned for arrivals.
+
         - name: pageCursor
           in: query
           required: false
@@ -2155,6 +2166,22 @@ components:
           type: string
         displayName:
           type: string
+        previousStops:
+          type: array
+          description: |
+            Experimental. Expect unannounced breaking changes (without version bumps).
+
+            Stops on the trips before this stop. Returned only if `fetchStop` and `arriveBy` are `true`.
+          items:
+            $ref: "#/components/schemas/Place"
+        nextStops:
+          type: array
+          description: |
+            Experimental. Expect unannounced breaking changes (without version bumps).
+
+            Stops on the trips after this stop. Returned only if `fetchStop` is `true` and `arriveBy` is `false`.
+          items:
+            $ref: "#/components/schemas/Place"
         pickupDropoffType:
           description: Type of pickup (for departures) or dropoff (for arrivals), may be disallowed either due to schedule, skipped stops or cancellations
           $ref: '#/components/schemas/PickupDropoffType'
