@@ -3,6 +3,8 @@
 #include <optional>
 #include <type_traits>
 
+#include "utl/verify.h"
+
 #include "osr/routing/profiles/bike.h"
 #include "osr/routing/profiles/bike_sharing.h"
 #include "osr/routing/profiles/car.h"
@@ -153,6 +155,7 @@ osr::profile_parameters build_parameters(osr::search_profile const p,
           .car_ = {},
           .foot_ = {.speed_meters_per_second_ = params.pedestrian_speed_}};
   }
+  throw utl::fail("{} is not a valid profile", static_cast<std::uint8_t>(p));
 }
 
 }  // namespace motis
