@@ -29,8 +29,9 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
       config_.limits_.value().onetoall_max_travel_minutes_;
   auto const query = api::oneToAll_params{url.params()};
   utl::verify(query.maxTravelTime_ <= max_travel_minutes,
-              "maxTravelTime too large: {} > {}", query.maxTravelTime_,
-              max_travel_minutes);
+              "maxTravelTime too large ({} > {}). The server admin can change "
+              "this limit in config.yml with 'onetoall_max_travel_minutes'. See documentation for details.",
+              query.maxTravelTime_, max_travel_minutes);
   if (query.maxTransfers_.has_value()) {
     utl::verify(query.maxTransfers_ >= 0U, "maxTransfers < 0: {}",
                 *query.maxTransfers_);
