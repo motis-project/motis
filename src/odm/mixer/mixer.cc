@@ -272,4 +272,27 @@ mixer get_default_mixer() {
                .transfer_cost_ = {{0, 10}}};
 }
 
+cost_threshold tag_invoke(boost::json::value_to_tag<cost_threshold> const&,
+                          boost::json::value const& jv) {
+  return cost_threshold{static_cast<std::int32_t>(jv.as_array()[0].as_int64()),
+                        static_cast<std::int32_t>(jv.as_array()[1].as_int64())};
+}
+
+mixer tag_invoke(boost::json::value_to_tag<mixer> const&,
+                 boost::json::value const& jv) {
+  auto m = mixer{};
+  m.direct_taxi_penalty_ = jv.at("direct_taxi_penalty").as_double();
+  m.max_distance_ = jv.at("max_distance").as_int64();
+  for (auto const& ct : jv.at("walk_cost").as_array()) {
+    m.walk_cost_.emplace_back(boost::json::value_to<cost_threshold>(ct));
+  }
+  for (auto const& ct : jv.at("taxi_cost").as_array()) {
+    m.walk_cost_.emplace_back(boost::json::value_to<cost_threshold>(ct));
+  }
+  for (auto const& ct : jv.at("transfer_cost").as_array()) {
+    m.walk_cost_.emplace_back(boost::json::value_to<cost_threshold>(ct));
+  }
+  return m;
+}
+
 }  // namespace motis::odm

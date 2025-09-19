@@ -14,6 +14,7 @@
 #include "motis/config.h"
 #include "motis/data.h"
 #include "motis/endpoints/routing.h"
+#include "motis/odm/mixer/mixer.h"
 
 #include "./flags.h"
 
@@ -42,6 +43,9 @@ int mixer(int ac, char** av) {
     std::cout << desc << "\n";
     return 0;
   }
+
+  auto cfg_raw = std::ifstream{cfg_path};
+  auto const m = json::value_to<odm::mixer>(json::parse(cfg_raw));
 
   return 0U;
 }
