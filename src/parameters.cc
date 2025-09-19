@@ -48,7 +48,9 @@ auto pedestrian_speed(T const& params)
 
 template <typename T>
 auto pedestrian_speed(T const& params)
-  requires HasPedestrianProfile<T> && requires { params.pedestrianSpeed_; }
+  requires HasPedestrianProfile<T> &&
+           std::is_same_v<decltype(params.pedestrianSpeed_),
+                          std::optional<double>>
 {
   return params.pedestrianSpeed_
       .and_then([](auto const speed) {

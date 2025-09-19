@@ -56,7 +56,7 @@ api::transfers_response transfers::operator()(
   for (auto const mode :
        {osr::search_profile::kFoot, osr::search_profile::kWheelchair}) {
     auto const results = osr::route(
-        build_parameters(mode, profile_parameters{}), w_, l_, mode, loc,
+        build_parameters(mode, {}), w_, l_, mode, loc,
         utl::to_vec(
             neighbors,
             [&](auto&& l) { return get_loc(tt_, w_, pl_, matches_, l); }),

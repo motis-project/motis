@@ -15,6 +15,7 @@
 #include "motis/elevators/elevators.h"
 #include "motis/fwd.h"
 #include "motis/match_platforms.h"
+#include "motis/parameters.h"
 #include "motis/place.h"
 #include "motis/street_routing.h"
 #include "motis/types.h"
