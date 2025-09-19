@@ -28,12 +28,8 @@ struct mixer {
       nigiri::pareto_set<nigiri::routing::journey> const& pt_journeys,
       std::vector<nigiri::routing::journey>& odm_journeys) const;
 
-  double cost_alpha_;
-  double prod_alpha_;
   double direct_taxi_penalty_;
-  std::int32_t min_distance_;
   std::int32_t max_distance_;
-  double exp_distance_;
   std::vector<cost_threshold> walk_cost_;
   std::vector<cost_threshold> taxi_cost_;
   std::vector<cost_threshold> transfer_cost_;

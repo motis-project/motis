@@ -136,8 +136,8 @@ void mixer::cost_dominance(
   }();
 
   auto cost_threshold = [&]() {
-    auto ret = std::vector<double>(
-        intvl.size().count(), std::numeric_limits<double>::max());
+    auto ret = std::vector<double>(intvl.size().count(),
+                                   std::numeric_limits<double>::max());
     for (auto const& j : pt_journeys) {
       auto const cost_j = cost(j);
       auto const center_j = center(j);
@@ -212,7 +212,8 @@ void mixer::cost_dominance(
       file << "departure,center,arrival,travel_time,transfers,odm_time,cost\n";
       for (auto const& j : journeys) {
         file << fmt::format("{},{},{},{},{},{},{}\n", j.departure_time(),
-                                     center(j), j.arrival_time(), j.travel_time(), j.transfers_, odm_time(j), cost(j));
+                            center(j), j.arrival_time(), j.travel_time(),
+                            j.transfers_, odm_time(j), cost(j));
       }
     };
     to_csv(pt_journeys, "pt_journeys.csv");
@@ -223,7 +224,6 @@ void mixer::cost_dominance(
     return cost_threshold[(center(j) - intvl.from_).count()] <= cost(j);
   });
 }
-
 
 void add_pt_sort(n::pareto_set<nr::journey> const& pt_journeys,
                  std::vector<nr::journey>& odm_journeys) {
@@ -265,12 +265,8 @@ std::vector<nr::journey> get_mixer_input(
 }
 
 mixer get_default_mixer() {
-  return mixer{.cost_alpha_ = 1.3,
-               .prod_alpha_ = 0.4,
-               .direct_taxi_penalty_ = 220,
-               .min_distance_ = 15,
+  return mixer{.direct_taxi_penalty_ = 220,
                .max_distance_ = 90,
-               .exp_distance_ = 1.045,
                .walk_cost_ = {{0, 1}, {15, 10}},
                .taxi_cost_ = {{0, 35}, {1, 12}},
                .transfer_cost_ = {{0, 10}}};
