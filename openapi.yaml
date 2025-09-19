@@ -1026,6 +1026,26 @@ paths:
             $ref: '#/components/schemas/PedestrianProfile'
             default: FOOT
 
+        - name: pedestrianSpeed
+          in: query
+          required: false
+          description: |
+            Optional
+
+            Average speed for pedestrian routing.
+          schema:
+            $ref: '#/components/schemas/PedestrianSpeed'
+
+        - name: cyclingSpeed
+          in: query
+          required: false
+          description: |
+            Optional
+
+            Average speed for bike routing.
+          schema:
+            $ref: '#/components/schemas/CyclingSpeed'
+
         - name: elevationCosts
           in: query
           required: false
