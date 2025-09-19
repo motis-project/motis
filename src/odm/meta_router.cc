@@ -42,7 +42,8 @@
 #include "motis/journey_to_response.h"
 #include "motis/metrics_registry.h"
 #include "motis/odm/bounds.h"
-#include "motis/odm/mixer.h"
+#include "motis/odm/mixer/journeys.h"
+#include "motis/odm/mixer/mixer.h"
 #include "motis/odm/odm.h"
 #include "motis/odm/prima.h"
 #include "motis/odm/shorten.h"
@@ -68,6 +69,7 @@ constexpr auto const kWhitelistPath = "/api/whitelist";
 static auto const kReqHeaders = std::map<std::string, std::string>{
     {"Content-Type", "application/json"}, {"Accept", "application/json"}};
 static auto const kMixer = get_default_mixer();
+constexpr auto const kPrintMixerIO = true;
 
 using td_offsets_t =
     n::hash_map<n::location_idx_t, std::vector<n::routing::td_offset>>;
@@ -636,8 +638,8 @@ api::plan_response meta_router::run() {
   utl::verify(!results.empty(), "odm: public transport result expected");
   auto const& pt_result = results.front();
   collect_odm_journeys(p_.get(), results);
-  shorten(p_->odm_journeys_, p_->from_rides_, p_->to_rides_, *tt_, rtt_,
-          query_);
+  shorten(p_->odm_journeys_, p_->from_rides_, p_->to_rides_, qf.start_walk_,
+          qf.dest_walk_, *tt_, rtt_, query_);
   utl::erase_duplicates(
       p_->odm_journeys_,
       [](auto const& a, auto const& b) {
@@ -703,7 +705,15 @@ api::plan_response meta_router::run() {
          "[mixing] {} PT journeys and {} ODM journeys",
          pt_result.journeys_.size(), p_->odm_journeys_.size());
 
+  if (kPrintMixerIO) {
+    n::log(n::log_lvl::debug, "motis.odm", "[mixing] Input Journeys:\n{}",
+           to_csv(get_mixer_input(pt_result.journeys_, p_->odm_journeys_)));
+  }
   kMixer.mix(pt_result.journeys_, p_->odm_journeys_, r_.metrics_);
+  if (kPrintMixerIO) {
+    n::log(n::log_lvl::debug, "motis.odm", "[mixing] Output Journeys:\n{}",
+           to_csv(p_->odm_journeys_));
+  }
 
   r_.metrics_->routing_odm_journeys_found_non_dominated_.Observe(
       static_cast<double>(p_->odm_journeys_.size() -

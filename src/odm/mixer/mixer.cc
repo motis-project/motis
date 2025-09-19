@@ -1,4 +1,4 @@
-#include "motis/odm/mixer.h"
+#include "motis/odm/mixer/mixer.h"
 
 #include "utl/overloaded.h"
 
@@ -82,11 +82,11 @@ double mixer::cost(nr::journey const& j) const {
             [&](nr::offset const& o) {
               if (o.transport_mode_id_ == kOdmTransportModeId) {
                 return tally(o.duration().count(), taxi_cost_);
-              } else if (o.transport_mode_id_ == kWalk) {
+              } else if (o.transport_mode_id_ == kWalkTransportModeId) {
                 return tally(o.duration().count(), walk_cost_);
               }
               utl::verify(o.transport_mode_id_ == kOdmTransportModeId ||
-                              o.transport_mode_id_ == kWalk,
+                              o.transport_mode_id_ == kWalkTransportModeId,
                           "unknown transport mode");
               return std::int32_t{0};
             }},
@@ -225,6 +225,17 @@ void mixer::cost_dominance(
 }
 
 
+void add_pt_sort(n::pareto_set<nr::journey> const& pt_journeys,
+                 std::vector<nr::journey>& odm_journeys) {
+  for (auto const& j : pt_journeys) {
+    odm_journeys.emplace_back(j);
+  }
+  utl::sort(odm_journeys, [](auto const& a, auto const& b) {
+    return std::tuple{a.departure_time(), a.arrival_time(), a.transfers_} <
+           std::tuple{b.departure_time(), b.arrival_time(), b.transfers_};
+  });
+}
+
 void mixer::mix(n::pareto_set<nr::journey> const& pt_journeys,
                 std::vector<nr::journey>& odm_journeys,
                 metrics_registry* metrics) const {
@@ -242,12 +253,15 @@ void mixer::mix(n::pareto_set<nr::journey> const& pt_journeys,
         static_cast<double>(odm_journeys.size()));
   }
 
-  for (auto const& j : pt_journeys) {
-    odm_journeys.emplace_back(j);
-  }
-  utl::sort(odm_journeys, [](auto const& a, auto const& b) {
-    return a.departure_time() < b.departure_time();
-  });
+  add_pt_sort(pt_journeys, odm_journeys);
+}
+
+std::vector<nr::journey> get_mixer_input(
+    n::pareto_set<nr::journey> const& pt_journeys,
+    std::vector<nr::journey> const& odm_journeys) {
+  auto ret = odm_journeys;
+  add_pt_sort(pt_journeys, ret);
+  return ret;
 }
 
 mixer get_default_mixer() {
