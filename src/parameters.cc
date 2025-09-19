@@ -1,5 +1,6 @@
 #include "motis/parameters.h"
 
+#include <optional>
 #include <type_traits>
 
 #include "osr/routing/profiles/bike.h"
