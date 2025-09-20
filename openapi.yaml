@@ -905,7 +905,7 @@ paths:
         - name: maxTravelTime
           in: query
           required: true
-          description: maximum travel time in minutes
+          description: The maximum travel time in minutes. Defaults to 90. The limit may be increased by the server administrator using `onetoall_max_travel_minutes` option in `config.yml`. See documentation for details.
           schema:
             type: integer
         - name: arriveBy
