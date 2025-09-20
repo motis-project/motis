@@ -3,17 +3,12 @@
 
 #include "conf/configuration.h"
 
-#include "boost/json/serialize.hpp"
-#include "boost/json/value_from.hpp"
-
 #include "utl/init_from.h"
 #include "utl/parallel_for.h"
 #include "utl/parser/cstr.h"
 
-#include "motis-api/motis-api.h"
 #include "motis/config.h"
 #include "motis/data.h"
-#include "motis/endpoints/routing.h"
 #include "motis/motis_instance.h"
 
 #include "./flags.h"
