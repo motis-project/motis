@@ -336,7 +336,7 @@ jobs:
           ${{ matrix.config.emulator }} ./build/motis compare -q queries.txt -r responses.txt responses.txt
 
       - name: Test bin_ver compatibility with previous release
-        if: matrix.config.preset == 'linux-amd64-release'
+        if: matrix.config.preset == 'linux-amd64-release' && github.event.action != 'published'
         run: |
           wget -N https://github.com/motis-project/motis/releases/latest/download/motis-linux-amd64.tar.bz2
           tar -xjf motis-linux-amd64.tar.bz2 ./motis
