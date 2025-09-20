@@ -59,6 +59,7 @@ int batch(int ac, char** av) {
   auto total = std::atomic_uint64_t{};
   auto m = motis_instance{net::default_exec{}, d, c, ""};
   auto const compute_response = [&](state&, std::size_t const id) {
+    UTL_START_TIMING(request);
     auto response = std::string{};
     try {
       m.qr_(
@@ -83,6 +84,7 @@ int batch(int ac, char** av) {
     } catch (std::exception const& e) {
       std::cerr << "ERROR IN QUERY " << id << ": " << e.what() << "\n";
     }
+    total += static_cast<std::uint64_t>(UTL_GET_TIMING_MS(request));
     return response;
   };
 
