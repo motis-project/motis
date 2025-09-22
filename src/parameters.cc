@@ -19,6 +19,12 @@ concept HasPedestrianProfile =
     requires(T const& params) { params.pedestrianProfile_; };
 
 template <typename T>
+concept HasPedestrianProfileAndSpeed =
+    HasPedestrianProfile<T> &&
+    std::is_same_v<decltype(std::declval<T>().pedestrianSpeed_),
+                   std::optional<double>>;
+
+template <typename T>
 auto use_wheelchair(T const&) {
   return false;
 }
@@ -51,9 +57,7 @@ auto pedestrian_speed(T const& params)
 
 template <typename T>
 auto pedestrian_speed(T const& params)
-  requires HasPedestrianProfile<T> &&
-           std::is_same_v<decltype(params.pedestrianSpeed_),
-                          std::optional<double>>
+  requires HasPedestrianProfileAndSpeed<T>
 {
   return params.pedestrianSpeed_
       .and_then([](auto const speed) {
