@@ -438,6 +438,9 @@ void collect_odm_journeys(
     for (auto const& j : r.journeys_) {
       if (uses_odm(j)) {
         p->odm_journeys_.push_back(j);
+        p->odm_journeys_.back().transfers_ +=
+            (j.legs_.empty() || !is_odm_leg(j.legs_.front()) ? 0U : 1U) +
+            (j.legs_.size() < 2U || !is_odm_leg(j.legs_.back()) ? 0U : 1U);
       }
     }
   }
