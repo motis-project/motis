@@ -9,6 +9,7 @@
 #include "motis-api/motis-api.h"
 #include "motis/fwd.h"
 #include "motis/match_platforms.h"
+#include "motis/osr/parameters.h"
 #include "motis/types.h"
 
 namespace motis {
@@ -74,6 +75,7 @@ api::Itinerary street_routing(osr::ways const&,
                               std::optional<nigiri::unixtime_t> start_time,
                               std::optional<nigiri::unixtime_t> end_time,
                               double max_matching_distance,
+                              osr_parameters const&,
                               street_routing_cache_t&,
                               osr::bitvec<osr::node_idx_t>& blocked_mem,
                               unsigned api_version,

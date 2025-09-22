@@ -13,6 +13,7 @@
 #include "motis/elevators/elevators.h"
 #include "motis/fwd.h"
 #include "motis/match_platforms.h"
+#include "motis/osr/parameters.h"
 
 namespace motis {
 
@@ -38,6 +39,7 @@ std::vector<nigiri::td_footpath> get_td_footpaths(
     osr::search_profile,
     std::chrono::seconds max,
     double max_matching_distance,
+    osr_parameters const&,
     osr::bitvec<osr::node_idx_t>& blocked_mem);
 
 std::optional<std::pair<nodes_t, states_t>> get_states_at(osr::ways const&,

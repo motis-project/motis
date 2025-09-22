@@ -4,10 +4,10 @@
 
 #include "utl/to_vec.h"
 
-#include "osr/routing/parameters.h"
 #include "osr/routing/route.h"
 
 #include "motis/mode_to_profile.h"
+#include "motis/osr/parameters.h"
 #include "motis/parse_location.h"
 
 namespace json = boost::json;
@@ -36,7 +36,8 @@ api::oneToMany_response one_to_many::operator()(
   auto const profile = to_profile(query.mode_, api::PedestrianProfileEnum::FOOT,
                                   query.elevationCosts_);
   auto const paths = osr::route(
-      osr::get_parameters(profile), w_, l_, profile, *one, many, query.max_,
+      to_profile_parameters(profile, get_osr_parameters(query)), w_, l_,
+      profile, *one, many, query.max_,
       query.arriveBy_ ? osr::direction::kBackward : osr::direction::kForward,
       query.maxMatchingDistance_, nullptr, nullptr, elevations_);
 

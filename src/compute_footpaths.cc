@@ -10,7 +10,6 @@
 #include "utl/parallel_for.h"
 #include "utl/sorted_diff.h"
 
-#include "osr/routing/parameters.h"
 #include "osr/routing/profiles/foot.h"
 #include "osr/routing/route.h"
 #include "osr/util/infinite.h"
@@ -20,6 +19,7 @@
 #include "motis/get_loc.h"
 #include "motis/match_platforms.h"
 #include "motis/max_distance.h"
+#include "motis/osr/parameters.h"
 #include "motis/point_rtree.h"
 
 namespace n = nigiri;
@@ -106,9 +106,9 @@ elevator_footpath_map_t compute_footpaths(
           return;
         }
         candidates[l] = lookup.match(
-            osr::get_parameters(mode.profile_), get_loc(tt, w, pl, matches, l),
-            false, osr::direction::kForward, mode.max_matching_distance_,
-            nullptr, mode.profile_);
+            to_profile_parameters(mode.profile_, {}),
+            get_loc(tt, w, pl, matches, l), false, osr::direction::kForward,
+            mode.max_matching_distance_, nullptr, mode.profile_);
       });
 
       n_done += tt.n_locations();
@@ -134,8 +134,8 @@ elevator_footpath_map_t compute_footpaths(
               });
 
           auto const results = osr::route(
-              osr::get_parameters(mode.profile_), w, lookup, mode.profile_,
-              get_loc(tt, w, pl, matches, l),
+              to_profile_parameters(mode.profile_, {}), w, lookup,
+              mode.profile_, get_loc(tt, w, pl, matches, l),
               utl::transform_to(s.neighbors_, s.neighbors_loc_,
                                 [&](n::location_idx_t const x) {
                                   return get_loc(tt, w, pl, matches, x);

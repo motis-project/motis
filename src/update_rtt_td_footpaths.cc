@@ -90,6 +90,7 @@ std::vector<n::td_footpath> get_td_footpaths(
     osr::search_profile const profile,
     std::chrono::seconds const max,
     double const max_matching_distance,
+    osr_parameters const& osr_params,
     osr::bitvec<osr::node_idx_t>& blocked_mem) {
   blocked_mem.resize(w.n_nodes());
 
@@ -102,7 +103,7 @@ std::vector<n::td_footpath> get_td_footpaths(
     auto const neighbors = get_stops_with_traffic(
         tt, rtt, loc_rtree, start, get_max_distance(profile, max), start_l);
     auto const results = osr::route(
-        osr::get_parameters(profile), w, l, profile, start,
+        to_profile_parameters(profile, osr_params), w, l, profile, start,
         utl::to_vec(neighbors,
                     [&](auto&& x) { return get_loc(tt, w, pl, matches, x); }),
         static_cast<osr::cost_t>(max.count()), dir, max_matching_distance,
@@ -146,7 +147,8 @@ void update_rtt_td_footpaths(
         auto fps = get_td_footpaths(w, l, pl, tt, &rtt, loc_rtree, e, matches,
                                     start, get_loc(tt, w, pl, matches, start),
                                     dir, osr::search_profile::kWheelchair, max,
-                                    kMaxWheelchairMatchingDistance, blocked);
+                                    kMaxWheelchairMatchingDistance,
+                                    osr_parameters{}, blocked);
         {
           auto const lock = std::unique_lock{
               dir == osr::direction::kForward ? out_mutex : in_mutex};

@@ -193,6 +193,26 @@ paths:
             $ref: '#/components/schemas/PedestrianProfile'
             default: FOOT
 
+        - name: pedestrianSpeed
+          in: query
+          required: false
+          description: |
+            Optional
+
+            Average speed for pedestrian routing.
+          schema:
+            $ref: '#/components/schemas/PedestrianSpeed'
+
+        - name: cyclingSpeed
+          in: query
+          required: false
+          description: |
+            Optional
+
+            Average speed for bike routing.
+          schema:
+            $ref: '#/components/schemas/CyclingSpeed'
+
         - name: elevationCosts
           in: query
           required: false
@@ -1005,6 +1025,26 @@ paths:
           schema:
             $ref: '#/components/schemas/PedestrianProfile'
             default: FOOT
+
+        - name: pedestrianSpeed
+          in: query
+          required: false
+          description: |
+            Optional
+
+            Average speed for pedestrian routing.
+          schema:
+            $ref: '#/components/schemas/PedestrianSpeed'
+
+        - name: cyclingSpeed
+          in: query
+          required: false
+          description: |
+            Optional
+
+            Average speed for bike routing.
+          schema:
+            $ref: '#/components/schemas/CyclingSpeed'
 
         - name: elevationCosts
           in: query
@@ -1902,6 +1942,14 @@ components:
       enum:
         - FOOT
         - WHEELCHAIR
+
+    PedestrianSpeed:
+      description: Average speed for pedestrian routing in meters per second
+      type: number
+
+    CyclingSpeed:
+      description: Average speed for bike routing in meters per second
+      type: number
 
     Mode:
       description: |
