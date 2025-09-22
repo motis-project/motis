@@ -248,10 +248,6 @@ void init_pt(std::vector<n::routing::start>& rides,
     auto const out_of_bounds =
         (r.odm_bounds_ != nullptr &&
          !r.odm_bounds_->contains(r.tt_->locations_.coordinates_[o.target_]));
-    /*if (out_of_bounds) {
-      n::log(n::log_lvl::debug, "motis.odm", "Bounds filtered: {}",
-             n::location{*r.tt_, o.target_});
-    }*/
     return out_of_bounds;
   });
 
