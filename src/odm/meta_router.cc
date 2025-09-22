@@ -676,9 +676,6 @@ api::plan_response meta_router::run() {
       whitelist_response = std::nullopt;
     }
   }
-
-  // mixing
-  auto const mixing_start = std::chrono::steady_clock::now();
   auto const whitelisted =
       whitelist_response && p_->whitelist_update(*whitelist_response);
   if (whitelisted) {
@@ -697,10 +694,12 @@ api::plan_response meta_router::run() {
       r_.metrics_->routing_execution_duration_seconds_whitelisting_);
   r_.metrics_->routing_odm_journeys_found_whitelist_.Observe(
       static_cast<double>(p_->odm_journeys_.size()));
+
+  // mixing
+  auto const mixing_start = std::chrono::steady_clock::now();
   n::log(n::log_lvl::debug, "motis.odm",
          "[mixing] {} PT journeys and {} ODM journeys",
          pt_result.journeys_.size(), p_->odm_journeys_.size());
-
   if (kPrintMixerIO) {
     n::log(n::log_lvl::debug, "motis.odm", "[mixing] Input Journeys:\n{}",
            to_csv(get_mixer_input(pt_result.journeys_, p_->odm_journeys_)));
@@ -710,14 +709,11 @@ api::plan_response meta_router::run() {
     n::log(n::log_lvl::debug, "motis.odm", "[mixing] Output Journeys:\n{}",
            to_csv(p_->odm_journeys_));
   }
-
   r_.metrics_->routing_odm_journeys_found_non_dominated_.Observe(
       static_cast<double>(p_->odm_journeys_.size() -
                           pt_result.journeys_.size()));
-
   print_time(mixing_start, "[mixing]",
              r_.metrics_->routing_execution_duration_seconds_mixing_);
-
   // remove journeys added for mixing context
   std::erase_if(p_->odm_journeys_, [&](auto const& j) {
     return query_.arriveBy_ ? !search_intvl.contains(j.arrival_time())
