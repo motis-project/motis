@@ -1,7 +1,5 @@
 #pragma once
 
-#include "boost/json/value_to.hpp"
-
 #include "nigiri/routing/journey.h"
 #include "nigiri/routing/pareto_set.h"
 #include "nigiri/types.h"
@@ -12,11 +10,12 @@
 namespace motis::odm {
 
 struct cost_threshold {
+  friend cost_threshold tag_invoke(boost::json::value_to_tag<cost_threshold>, boost::json::value const&);
+  friend void tag_invoke(boost::json::value_from_tag, boost::json::value&, cost_threshold const&);
+
   std::int32_t threshold_;
   std::int32_t cost_;
 };
-
-cost_threshold tag_invoke(boost::json::value_to_tag<cost_threshold> const&, boost::json::value const&);
 
 std::int32_t tally(std::int32_t, std::vector<cost_threshold> const&);
 
@@ -33,6 +32,11 @@ struct mixer {
       std::vector<nigiri::routing::journey>& odm_journeys,
       std::optional<std::string_view> stats_path) const;
 
+  friend std::ostream& operator<<(std::ostream&, mixer const&);
+
+  friend mixer tag_invoke(boost::json::value_to_tag<mixer>, boost::json::value const&);
+  friend void tag_invoke(boost::json::value_from_tag, boost::json::value&, mixer const&);
+
   double direct_taxi_penalty_;
   std::int32_t max_distance_;
   std::vector<cost_threshold> walk_cost_;
@@ -46,6 +50,6 @@ std::vector<nigiri::routing::journey> get_mixer_input(
 
 mixer get_default_mixer();
 
-mixer tag_invoke(boost::json::value_to_tag<mixer> const&, boost::json::value const&);
+
 
 }  // namespace motis::odm

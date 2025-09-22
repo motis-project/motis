@@ -2,6 +2,8 @@
 
 #include <filesystem>
 
+#include "boost/json.hpp"
+
 #include "utl/overloaded.h"
 
 #include "nigiri/logging.h"
@@ -18,6 +20,18 @@ namespace nr = nigiri::routing;
 namespace fs = std::filesystem;
 
 static constexpr auto const kMixerTracing = false;
+
+cost_threshold tag_invoke(boost::json::value_to_tag<cost_threshold>,
+                          boost::json::value const& jv) {
+  return cost_threshold{static_cast<std::int32_t>(jv.as_array()[0].as_int64()),
+                        static_cast<std::int32_t>(jv.as_array()[1].as_int64())};
+}
+
+void tag_invoke(boost::json::value_from_tag,
+                boost::json::value& jv,
+                cost_threshold const& ct) {
+  jv = boost::json::array{ct.threshold_, ct.cost_};
+}
 
 std::string label(nr::journey const& j) {
   return std::format("[dep: {}, arr: {}, dur: {}, transfers: {}, odm_time: {}]",
@@ -278,27 +292,33 @@ mixer get_default_mixer() {
                .transfer_cost_ = {{0, 10}}};
 }
 
-cost_threshold tag_invoke(boost::json::value_to_tag<cost_threshold> const&,
-                          boost::json::value const& jv) {
-  return cost_threshold{static_cast<std::int32_t>(jv.as_array()[0].as_int64()),
-                        static_cast<std::int32_t>(jv.as_array()[1].as_int64())};
+std::ostream& operator<<(std::ostream& o, mixer const& m) {
+  return o << boost::json::value_from(m);
 }
 
-mixer tag_invoke(boost::json::value_to_tag<mixer> const&,
+mixer tag_invoke(boost::json::value_to_tag<mixer>,
                  boost::json::value const& jv) {
   auto m = mixer{};
   m.direct_taxi_penalty_ = jv.at("direct_taxi_penalty").as_double();
   m.max_distance_ = jv.at("max_distance").as_int64();
-  for (auto const& ct : jv.at("walk_cost").as_array()) {
-    m.walk_cost_.emplace_back(boost::json::value_to<cost_threshold>(ct));
-  }
-  for (auto const& ct : jv.at("taxi_cost").as_array()) {
-    m.walk_cost_.emplace_back(boost::json::value_to<cost_threshold>(ct));
-  }
-  for (auto const& ct : jv.at("transfer_cost").as_array()) {
-    m.walk_cost_.emplace_back(boost::json::value_to<cost_threshold>(ct));
-  }
+  m.walk_cost_ =
+      boost::json::value_to<std::vector<cost_threshold>>(jv.at("walk_cost"));
+  m.taxi_cost_ =
+      boost::json::value_to<std::vector<cost_threshold>>(jv.at("taxi_cost"));
+  m.transfer_cost_ = boost::json::value_to<std::vector<cost_threshold>>(
+      jv.at("transfer_cost"));
   return m;
+}
+
+void tag_invoke(boost::json::value_from_tag,
+                boost::json::value& jv,
+                mixer const& m) {
+  jv = boost::json::object{
+      {"direct_taxi_penalty_", m.direct_taxi_penalty_},
+      {"max_distance", m.max_distance_},
+      {"walk_cost", boost::json::value_from(m.walk_cost_)},
+      {"taxi_cost", boost::json::value_from(m.taxi_cost_)},
+      {"transfer_cost", boost::json::value_from(m.transfer_cost_)}};
 }
 
 }  // namespace motis::odm
