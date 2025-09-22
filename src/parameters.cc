@@ -25,38 +25,38 @@ concept HasPedestrianProfileAndSpeed =
                    std::optional<double>>;
 
 template <typename T>
-auto use_wheelchair(T const&) {
+bool use_wheelchair(T const&) {
   return false;
 }
 
 template <typename T>
-auto use_wheelchair(T const& t)
+bool use_wheelchair(T const& t)
   requires HasPedestrianProfile<T>
 {
   return t.pedestrianProfile_ == api::PedestrianProfileEnum::WHEELCHAIR;
 }
 
 template <typename T>
-auto pedestrian_speed(T const&) {
+float pedestrian_speed(T const&) {
   return profile_parameters::kFootSpeed;
 }
 
 template <>
-auto pedestrian_speed(api::PedestrianProfileEnum const& p) {
+float pedestrian_speed(api::PedestrianProfileEnum const& p) {
   return p == api::PedestrianProfileEnum::FOOT
              ? profile_parameters::kFootSpeed
              : profile_parameters::kWheelchairSpeed;
 }
 
 template <typename T>
-auto pedestrian_speed(T const& params)
+float pedestrian_speed(T const& params)
   requires HasPedestrianProfile<T>
 {
   return pedestrian_speed(params.pedestrianProfile_);
 }
 
 template <typename T>
-auto pedestrian_speed(T const& params)
+float pedestrian_speed(T const& params)
   requires HasPedestrianProfileAndSpeed<T>
 {
   return params.pedestrianSpeed_
@@ -68,12 +68,12 @@ auto pedestrian_speed(T const& params)
 }
 
 template <typename T>
-auto cycling_speed(T const&) {
+float cycling_speed(T const&) {
   return profile_parameters::kBikeSpeed;
 }
 
 template <typename T>
-auto cycling_speed(T const& params)
+float cycling_speed(T const& params)
   requires(
       std::is_same_v<decltype(params.cyclingSpeed_), std::optional<double>>)
 {
