@@ -211,7 +211,7 @@ api::Itinerary journey_to_response(
     street_routing_cache_t& cache,
     osr::bitvec<osr::node_idx_t>* blocked_mem,
     bool const car_transfers,
-    profile_parameters const& pr_params,
+    osr_parameters const& osr_params,
     api::PedestrianProfileEnum const pedestrian_profile,
     api::ElevationCostsEnum const elevation_costs,
     bool const join_interlined_legs,
@@ -516,7 +516,7 @@ api::Itinerary journey_to_response(
                                j_leg.dep_time_, j_leg.arr_time_,
                                car_transfers ? 250.0
                                              : timetable_max_matching_distance,
-                               pr_params, cache, *blocked_mem, api_version,
+                               osr_params, cache, *blocked_mem, api_version,
                                std::chrono::duration_cast<std::chrono::seconds>(
                                    j_leg.arr_time_ - j_leg.dep_time_) +
                                    std::chrono::minutes{10})
@@ -542,7 +542,7 @@ api::Itinerary journey_to_response(
 
               append(street_routing(
                   *w, *l, e, elevations, from, to, *out, j_leg.dep_time_,
-                  j_leg.arr_time_, max_matching_distance, pr_params, cache,
+                  j_leg.arr_time_, max_matching_distance, osr_params, cache,
                   *blocked_mem, api_version,
                   std::chrono::duration_cast<std::chrono::seconds>(
                       j_leg.arr_time_ - j_leg.dep_time_) +

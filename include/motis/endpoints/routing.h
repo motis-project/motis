@@ -17,7 +17,7 @@
 #include "motis/elevators/elevators.h"
 #include "motis/fwd.h"
 #include "motis/match_platforms.h"
-#include "motis/parameters.h"
+#include "motis/osr/parameters.h"
 #include "motis/place.h"
 
 namespace motis::ep {
@@ -62,7 +62,7 @@ struct routing {
       std::optional<std::vector<api::RentalPropulsionTypeEnum>> const&,
       std::optional<std::vector<std::string>> const& rental_providers,
       bool ignore_rental_return_constraints,
-      profile_parameters const&,
+      osr_parameters const&,
       api::PedestrianProfileEnum,
       api::ElevationCostsEnum,
       std::chrono::seconds max,
@@ -76,7 +76,7 @@ struct routing {
                  place_t const&,
                  osr::direction,
                  std::vector<api::ModeEnum> const&,
-                 profile_parameters const&,
+                 osr_parameters const&,
                  api::PedestrianProfileEnum,
                  api::ElevationCostsEnum,
                  double max_matching_distance,
@@ -95,7 +95,7 @@ struct routing {
       bool ignore_rental_return_constraints,
       nigiri::unixtime_t time,
       bool arrive_by,
-      profile_parameters const&,
+      osr_parameters const&,
       api::PedestrianProfileEnum,
       api::ElevationCostsEnum,
       std::chrono::seconds max,

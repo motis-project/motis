@@ -7,7 +7,7 @@
 
 namespace motis {
 
-struct profile_parameters {
+struct osr_parameters {
   constexpr static auto const kFootSpeed = 1.2F;
   constexpr static auto const kWheelchairSpeed = 0.8F;
   constexpr static auto const kBikeSpeed = 4.2F;
@@ -17,12 +17,12 @@ struct profile_parameters {
   bool const use_wheelchair_{false};
 };
 
-profile_parameters get_parameters(api::plan_params const&);
+osr_parameters get_osr_parameters(api::plan_params const&);
 
-profile_parameters get_parameters(api::oneToAll_params const&);
+osr_parameters get_osr_parameters(api::oneToAll_params const&);
 
-profile_parameters get_parameters(api::oneToMany_params const&);
+osr_parameters get_osr_parameters(api::oneToMany_params const&);
 
-osr::profile_parameters build_parameters(osr::search_profile,
-                                         profile_parameters const&);
+osr::profile_parameters to_profile_parameters(osr::search_profile,
+                                              osr_parameters const&);
 }  // namespace motis

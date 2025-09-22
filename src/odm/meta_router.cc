@@ -46,7 +46,7 @@
 #include "motis/odm/odm.h"
 #include "motis/odm/prima.h"
 #include "motis/odm/shorten.h"
-#include "motis/parameters.h"
+#include "motis/osr/parameters.h"
 #include "motis/place.h"
 #include "motis/street_routing.h"
 #include "motis/timetable/modes_to_clasz_mask.h"
@@ -173,7 +173,7 @@ n::duration_t init_direct(std::vector<direct_ride>& direct_rides,
 
   auto [_, odm_direct_duration] = r.route_direct(
       e, gbfs, from_p, to_p, {api::ModeEnum::CAR}, std::nullopt, std::nullopt,
-      std::nullopt, false, intvl.from_, false, get_parameters(query),
+      std::nullopt, false, intvl.from_, false, get_osr_parameters(query),
       query.pedestrianProfile_, query.elevationCosts_, kODMMaxDuration,
       query.maxMatchingDistance_, kODMDirectFactor, api_version);
 
@@ -240,7 +240,7 @@ void init_pt(std::vector<n::routing::start>& rides,
 
   auto offsets = r.get_offsets(
       rtt, l, dir, {api::ModeEnum::ODM}, std::nullopt, std::nullopt,
-      std::nullopt, false, get_parameters(query), query.pedestrianProfile_,
+      std::nullopt, false, get_osr_parameters(query), query.pedestrianProfile_,
       query.elevationCosts_, max, query.maxMatchingDistance_, gbfs_rd);
 
   std::erase_if(offsets, [&](n::routing::offset const& o) {
@@ -588,7 +588,7 @@ api::plan_response meta_router::run() {
   auto const [from_rides_short, from_rides_long] =
       ride_time_halves(p_->from_rides_);
   auto const [to_rides_short, to_rides_long] = ride_time_halves(p_->to_rides_);
-  auto const params = get_parameters(query_);
+  auto const params = get_osr_parameters(query_);
 
   auto const qf = query_factory{
       .base_query_ = get_base_query(context_intvl),

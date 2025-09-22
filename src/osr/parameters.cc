@@ -1,4 +1,4 @@
-#include "motis/parameters.h"
+#include "motis/osr/parameters.h"
 
 #include <optional>
 #include <type_traits>
@@ -38,14 +38,14 @@ bool use_wheelchair(T const& t)
 
 template <typename T>
 float pedestrian_speed(T const&) {
-  return profile_parameters::kFootSpeed;
+  return osr_parameters::kFootSpeed;
 }
 
 template <>
 float pedestrian_speed(api::PedestrianProfileEnum const& p) {
   return p == api::PedestrianProfileEnum::FOOT
-             ? profile_parameters::kFootSpeed
-             : profile_parameters::kWheelchairSpeed;
+             ? osr_parameters::kFootSpeed
+             : osr_parameters::kWheelchairSpeed;
 }
 
 template <typename T>
@@ -69,7 +69,7 @@ float pedestrian_speed(T const& params)
 
 template <typename T>
 float cycling_speed(T const&) {
-  return profile_parameters::kBikeSpeed;
+  return osr_parameters::kBikeSpeed;
 }
 
 template <typename T>
@@ -82,11 +82,11 @@ float cycling_speed(T const& params)
         return speed > 0.0 ? std::optional{static_cast<float>(speed)}
                            : std::nullopt;
       })
-      .value_or(profile_parameters::kBikeSpeed);
+      .value_or(osr_parameters::kBikeSpeed);
 }
 
 template <typename T>
-profile_parameters parameters(T const& params) {
+osr_parameters to_osr_parameters(T const& params) {
   return {
       .pedestrian_speed_ = pedestrian_speed(params),
       .cycling_speed_ = cycling_speed(params),
@@ -94,24 +94,24 @@ profile_parameters parameters(T const& params) {
   };
 }
 
-profile_parameters get_parameters(api::plan_params const& params) {
-  return parameters(params);
+osr_parameters get_osr_parameters(api::plan_params const& params) {
+  return to_osr_parameters(params);
 }
 
-profile_parameters get_parameters(api::oneToAll_params const& params) {
-  return parameters(params);
+osr_parameters get_osr_parameters(api::oneToAll_params const& params) {
+  return to_osr_parameters(params);
 }
 
-profile_parameters get_parameters(api::oneToMany_params const& params) {
-  return parameters(params);
+osr_parameters get_osr_parameters(api::oneToMany_params const& params) {
+  return to_osr_parameters(params);
 }
 
-osr::profile_parameters build_parameters(osr::search_profile const p,
-                                         profile_parameters const& params) {
+osr::profile_parameters to_profile_parameters(osr::search_profile const p,
+                                              osr_parameters const& params) {
   // Ensure correct speed is used when using default parameters
   auto const wheelchair_speed = params.use_wheelchair_
                                     ? params.pedestrian_speed_
-                                    : profile_parameters::kWheelchairSpeed;
+                                    : osr_parameters::kWheelchairSpeed;
   switch (p) {
     case osr::search_profile::kFoot:
       return osr::foot<false, osr::elevator_tracking>::parameters{

@@ -15,7 +15,7 @@
 #include "motis/elevators/elevators.h"
 #include "motis/fwd.h"
 #include "motis/match_platforms.h"
-#include "motis/parameters.h"
+#include "motis/osr/parameters.h"
 #include "motis/place.h"
 #include "motis/street_routing.h"
 #include "motis/types.h"
@@ -52,7 +52,7 @@ api::Itinerary journey_to_response(osr::ways const*,
                                    street_routing_cache_t&,
                                    osr::bitvec<osr::node_idx_t>* blocked_mem,
                                    bool car_transfers,
-                                   profile_parameters const&,
+                                   osr_parameters const&,
                                    api::PedestrianProfileEnum,
                                    api::ElevationCostsEnum,
                                    bool join_interlined_legs,
