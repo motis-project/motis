@@ -88,46 +88,25 @@ std::int32_t mixer::transfer_cost(nr::journey const& j) const {
 }
 
 double mixer::cost(nr::journey const& j) const {
-
-  auto const leg_cost = [&](nr::journey::leg const& leg) {
-    return std::visit(
-        utl::overloaded{
-            [](nr::journey::run_enter_exit const&) { return std::int32_t{0}; },
-            [&](n::footpath const& fp) {
-              return tally(fp.duration().count(), walk_cost_);
-            },
-            [&](nr::offset const& o) {
-              if (o.transport_mode_id_ == kOdmTransportModeId) {
-                return tally(o.duration().count(), taxi_cost_);
-              } else if (o.transport_mode_id_ == kWalkTransportModeId) {
-                return tally(o.duration().count(), walk_cost_);
-              }
-              utl::verify(o.transport_mode_id_ == kOdmTransportModeId ||
-                              o.transport_mode_id_ == kWalkTransportModeId,
-                          "unknown transport mode");
-              return std::int32_t{0};
-            }},
-        leg.uses_);
+  auto const odm_cost = [&](auto const& l) {
+    return tally(std::chrono::abs(l.arr_time_ - l.dep_time_).count(),
+                 taxi_cost_);
   };
 
-  auto const pt_time = [](nr::journey const& j) {
-    auto const leg_duration = [](nr::journey::leg const& l) {
-      return std::visit(
-          utl::overloaded{[](nr::journey::run_enter_exit const&) {
-                            return n::duration_t{0};
-                          },
-                          [](n::footpath const& fp) { return fp.duration(); },
-                          [](nr::offset const& o) { return o.duration(); }},
-          l.uses_);
-    };
-    return j.travel_time() - leg_duration(j.legs_.front()) -
-           ((j.legs_.size() > 1) ? leg_duration(j.legs_.back())
-                                 : n::duration_t{0});
-  };
+  auto const odm_cost_first_mile =
+      j.legs_.empty() || !is_odm_leg(j.legs_.front())
+          ? 0
+          : odm_cost(j.legs_.front());
 
-  return leg_cost(j.legs_.front()) +
-         (j.legs_.size() > 1 ? leg_cost(j.legs_.back()) : 0) +
-         pt_time(j).count() + transfer_cost(j);
+  auto const odm_cost_last_mile =
+      j.legs_.size() < 2 || !is_odm_leg(j.legs_.back())
+          ? 0
+          : odm_cost(j.legs_.back());
+
+  auto const direct_taxi_penalty = is_direct_odm(j) ? direct_taxi_penalty_ : 0;
+
+  return odm_cost_first_mile + pt_time(j).count() + transfer_cost(j) +
+         odm_cost_last_mile + direct_taxi_penalty;
 };
 
 void mixer::cost_dominance(

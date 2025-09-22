@@ -32,6 +32,10 @@ n::duration_t odm_time(nr::journey const& j) {
                                [](auto const& l) { return odm_time(l); });
 }
 
+n::duration_t pt_time(nr::journey const& j) {
+  return j.travel_time() - odm_time(j);
+}
+
 bool is_direct_odm(nr::journey const& j) {
   return j.travel_time() == odm_time(j);
 }

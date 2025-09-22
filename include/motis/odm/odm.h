@@ -26,6 +26,8 @@ nigiri::duration_t odm_time(nigiri::routing::journey::leg const&);
 
 nigiri::duration_t odm_time(nigiri::routing::journey const&);
 
+nigiri::duration_t pt_time(nigiri::routing::journey const&);
+
 nigiri::duration_t duration(nigiri::routing::start const&);
 
 std::string odm_label(nigiri::routing::journey const&);
