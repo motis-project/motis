@@ -280,6 +280,16 @@ export const PedestrianProfileSchema = {
     enum: ['FOOT', 'WHEELCHAIR']
 } as const;
 
+export const PedestrianSpeedSchema = {
+    description: 'Average speed for pedestrian routing in meters per second',
+    type: 'number'
+} as const;
+
+export const CyclingSpeedSchema = {
+    description: 'Average speed for bike routing in meters per second',
+    type: 'number'
+} as const;
+
 export const ModeSchema = {
     description: `# Street modes
 
@@ -542,6 +552,26 @@ For non-transit legs, null
         },
         displayName: {
             type: 'string'
+        },
+        previousStops: {
+            type: 'array',
+            description: `Experimental. Expect unannounced breaking changes (without version bumps).
+
+Stops on the trips before this stop. Returned only if \`fetchStop\` and \`arriveBy\` are \`true\`.
+`,
+            items: {
+                '$ref': '#/components/schemas/Place'
+            }
+        },
+        nextStops: {
+            type: 'array',
+            description: `Experimental. Expect unannounced breaking changes (without version bumps).
+
+Stops on the trips after this stop. Returned only if \`fetchStop\` is \`true\` and \`arriveBy\` is \`false\`.
+`,
+            items: {
+                '$ref': '#/components/schemas/Place'
+            }
         },
         pickupDropoffType: {
             description: 'Type of pickup (for departures) or dropoff (for arrivals), may be disallowed either due to schedule, skipped stops or cancellations',
