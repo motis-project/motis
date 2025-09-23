@@ -410,10 +410,9 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
       route_with_profile(default_output{
           *w_, to_profile(m, pedestrian_profile, elevation_costs)});
     } else if (m == api::ModeEnum::RENTAL && gbfs_rd.has_data()) {
-      // could be bike sharing or car sharing - car sharing has the higher max
-      // distance, so we use this here to be safe
-      auto const max_dist =
-          get_max_distance(osr::search_profile::kCarSharing, max);
+      // use foot because this is always forward search and we need to walk to
+      // the station/vehicle
+      auto const max_dist = get_max_distance(osr::search_profile::kFoot, max);
       auto providers = hash_set<gbfs_provider_idx_t>{};
       auto routed = 0U;
       gbfs_rd.data_->provider_rtree_.in_radius(
