@@ -1,6 +1,6 @@
 #pragma once
 
-#include "motis/street_routing.h"
+#include "motis/osr/street_routing.h"
 
 namespace motis::gbfs {
 

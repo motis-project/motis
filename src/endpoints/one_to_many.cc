@@ -6,7 +6,7 @@
 
 #include "osr/routing/route.h"
 
-#include "motis/mode_to_profile.h"
+#include "motis/osr/mode_to_profile.h"
 #include "motis/osr/parameters.h"
 #include "motis/parse_location.h"
 

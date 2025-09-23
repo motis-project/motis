@@ -10,7 +10,7 @@
 #include "motis/constants.h"
 #include "motis/get_loc.h"
 #include "motis/get_stops_with_traffic.h"
-#include "motis/max_distance.h"
+#include "motis/osr/max_distance.h"
 
 namespace n = nigiri;
 using namespace std::chrono_literals;

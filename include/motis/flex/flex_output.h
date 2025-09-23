@@ -2,7 +2,7 @@
 
 #include "motis/flex/flex_routing_data.h"
 #include "motis/flex/mode_id.h"
-#include "motis/street_routing.h"
+#include "motis/osr/street_routing.h"
 
 namespace motis::flex {
 
