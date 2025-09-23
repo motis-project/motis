@@ -1,4 +1,4 @@
-#include "motis/street_routing.h"
+#include "motis/osr/street_routing.h"
 
 #include "geo/polyline_format.h"
 
@@ -11,7 +11,7 @@
 #include "osr/routing/sharing_data.h"
 
 #include "motis/constants.h"
-#include "motis/mode_to_profile.h"
+#include "motis/osr/mode_to_profile.h"
 #include "motis/place.h"
 #include "motis/polyline.h"
 #include "motis/transport_mode_ids.h"

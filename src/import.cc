@@ -48,10 +48,10 @@
 
 #include "motis/adr_extend_tt.h"
 #include "motis/clog_redirect.h"
-#include "motis/compute_footpaths.h"
 #include "motis/constants.h"
 #include "motis/data.h"
 #include "motis/hashes.h"
+#include "motis/osr/compute_footpaths.h"
 #include "motis/tag_lookup.h"
 #include "motis/tt_location_rtree.h"
 

@@ -6,8 +6,8 @@
 #include "motis/flex/flex.h"
 #include "motis/flex/flex_areas.h"
 #include "motis/flex/flex_routing_data.h"
+#include "motis/osr/street_routing.h"
 #include "motis/place.h"
-#include "motis/street_routing.h"
 
 namespace n = nigiri;
 

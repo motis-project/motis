@@ -1,4 +1,4 @@
-#include "motis/compute_footpaths.h"
+#include "motis/osr/compute_footpaths.h"
 
 #include "nigiri/loader/build_lb_graph.h"
 
@@ -18,7 +18,7 @@
 #include "motis/constants.h"
 #include "motis/get_loc.h"
 #include "motis/match_platforms.h"
-#include "motis/max_distance.h"
+#include "motis/osr/max_distance.h"
 #include "motis/osr/parameters.h"
 #include "motis/point_rtree.h"
 

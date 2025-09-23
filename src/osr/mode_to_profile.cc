@@ -1,4 +1,4 @@
-#include "motis/mode_to_profile.h"
+#include "motis/osr/mode_to_profile.h"
 
 #include "utl/verify.h"
 

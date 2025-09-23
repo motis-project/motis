@@ -16,8 +16,8 @@
 #include "motis/fwd.h"
 #include "motis/match_platforms.h"
 #include "motis/osr/parameters.h"
+#include "motis/osr/street_routing.h"
 #include "motis/place.h"
-#include "motis/street_routing.h"
 #include "motis/types.h"
 
 namespace motis {

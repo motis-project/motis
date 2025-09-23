@@ -12,11 +12,11 @@
 #include "osr/types.h"
 
 #include "motis/adr_extend_tt.h"
-#include "motis/compute_footpaths.h"
 #include "motis/config.h"
 #include "motis/fwd.h"
 #include "motis/gbfs/data.h"
 #include "motis/match_platforms.h"
+#include "motis/osr/compute_footpaths.h"
 #include "motis/rt/auser.h"
 #include "motis/types.h"
 
