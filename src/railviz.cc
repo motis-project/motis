@@ -379,14 +379,15 @@ api::trips_response get_trains(tag_lookup const& tags,
     return {
         .trips_ = {api::TripInfo{
             .tripId_ = tags.id(tt, from, n::event_type::kDep),
-            .routeShortName_ = api_version < 4 ? std::optional{std::string{
-                                                     from.display_name()}}
-                                               : std::nullopt,
-            .displayName_ = api_version >= 4 ? std::optional{std::string{
-                                                   from.display_name()}}
-                                             : std::nullopt}},
-        .routeColor_ =
-            to_str(from.get_route_color(nigiri::event_type::kDep).color_),
+            .routeShortName_ =
+                api_version < 4 ? std::optional{std::string{
+                                      from.display_name(n::event_type::kDep)}}
+                                : std::nullopt,
+            .displayName_ = api_version >= 4
+                                ? std::optional{std::string{
+                                      from.display_name(n::event_type::kDep)}}
+                                : std::nullopt}},
+        .routeColor_ = to_str(from.get_route_color(n::event_type::kDep).color_),
         .mode_ = to_mode(from.get_clasz(n::event_type::kDep)),
         .distance_ =
             fr.is_rt()

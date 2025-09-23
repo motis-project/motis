@@ -372,8 +372,10 @@ api::Itinerary journey_to_response(
 
                 auto const enter_stop = fr[common_stops.from_];
                 auto const exit_stop = fr[common_stops.to_ - 1U];
-                auto const color = enter_stop.get_route_color();
-                auto const agency = enter_stop.get_provider();
+                auto const color =
+                    enter_stop.get_route_color(n::event_type::kDep);
+                auto const agency =
+                    enter_stop.get_provider(n::event_type::kDep);
                 auto const fare_indices = get_fare_indices(fares, j_leg);
 
                 auto const src = [&]() {
@@ -389,7 +391,7 @@ api::Itinerary journey_to_response(
                     enter_stop.get_trip_start(n::event_type::kDep);
 
                 auto& leg = itinerary.legs_.emplace_back(api::Leg{
-                    .mode_ = to_mode(enter_stop.get_clasz()),
+                    .mode_ = to_mode(enter_stop.get_clasz(n::event_type::kDep)),
                     .from_ = to_place(enter_stop, n::event_type::kDep),
                     .to_ = to_place(exit_stop, n::event_type::kArr),
                     .duration_ =
@@ -406,10 +408,12 @@ api::Itinerary journey_to_response(
                     .realTime_ = fr.is_rt(),
                     .scheduled_ = fr.is_scheduled(),
                     .interlineWithPreviousLeg_ = !is_first_part,
-                    .headsign_ = std::string{enter_stop.direction()},
+                    .headsign_ =
+                        std::string{enter_stop.direction(n::event_type::kDep)},
                     .tripTo_ =
                         [&]() {
-                          auto const last = enter_stop.get_last_trip_stop();
+                          auto const last = enter_stop.get_last_trip_stop(
+                              n::event_type::kDep);
                           auto p = to_place(last, n::event_type::kArr);
                           p.arrival_ = last.time(n::event_type::kArr);
                           p.scheduledArrival_ =
@@ -418,10 +422,10 @@ api::Itinerary journey_to_response(
                         }(),
                     .routeColor_ = to_str(color.color_),
                     .routeTextColor_ = to_str(color.text_color_),
-                    .routeType_ = enter_stop.route_type().and_then(
-                        [](n::route_type_t const x) {
-                          return std::optional{to_idx(x)};
-                        }),
+                    .routeType_ = enter_stop.route_type(n::event_type::kDep)
+                                      .and_then([](n::route_type_t const x) {
+                                        return std::optional{to_idx(x)};
+                                      }),
                     .agencyName_ =
                         std::string{
                             tt.strings_.try_get(agency.name_).value_or("?")},
@@ -433,13 +437,15 @@ api::Itinerary journey_to_response(
                             tt.strings_.try_get(agency.id_).value_or("?")},
                     .tripId_ = tags.id(tt, enter_stop, n::event_type::kDep),
                     .routeShortName_ = {std::string{
-                        api_version > 3 ? enter_stop.route_short_name()
-                                        : enter_stop.display_name()}},
+                        api_version > 3
+                            ? enter_stop.route_short_name(n::event_type::kDep)
+                            : enter_stop.display_name(n::event_type::kDep)}},
                     .routeLongName_ = {std::string{
-                        enter_stop.route_long_name()}},
+                        enter_stop.route_long_name(n::event_type::kDep)}},
                     .tripShortName_ = {std::string{
-                        enter_stop.trip_short_name()}},
-                    .displayName_ = {std::string{enter_stop.display_name()}},
+                        enter_stop.trip_short_name(n::event_type::kDep)}},
+                    .displayName_ = {std::string{
+                        enter_stop.display_name(n::event_type::kDep)}},
                     .cancelled_ = fr.is_cancelled(),
                     .source_ = fmt::to_string(fr.dbg()),
                     .fareTransferIndex_ = fare_indices.and_then([](auto&& x) {
