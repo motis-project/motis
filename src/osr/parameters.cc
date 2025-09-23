@@ -61,7 +61,7 @@ float pedestrian_speed(T const& params)
 {
   return params.pedestrianSpeed_
       .and_then([](auto const speed) {
-        return speed > 0.01 && speed < 10.0
+        return speed > 0.3 && speed < 10.0
                    ? std::optional{static_cast<float>(speed)}
                    : std::nullopt;
       })
@@ -80,7 +80,7 @@ float cycling_speed(T const& params)
 {
   return params.cyclingSpeed_
       .and_then([](auto const speed) {
-        return speed > 0.01 && speed < 20.0
+        return speed > 0.3 && speed < 20.0
                    ? std::optional{static_cast<float>(speed)}
                    : std::nullopt;
       })
