@@ -8,11 +8,11 @@
 #include "nigiri/rt/rt_timetable.h"
 #include "nigiri/timetable.h"
 
+#include "motis/compute_footpaths.h"
 #include "motis/data.h"
 #include "motis/elevators/elevators.h"
 #include "motis/fwd.h"
 #include "motis/match_platforms.h"
-#include "motis/osr/compute_footpaths.h"
 #include "motis/osr/parameters.h"
 
 namespace motis {

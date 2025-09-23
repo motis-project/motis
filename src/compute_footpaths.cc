@@ -1,4 +1,4 @@
-#include "motis/osr/compute_footpaths.h"
+#include "motis/compute_footpaths.h"
 
 #include "nigiri/loader/build_lb_graph.h"
 
