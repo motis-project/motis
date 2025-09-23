@@ -1867,6 +1867,9 @@ components:
         houseNumber:
           description: house number
           type: string
+        country:
+          description: ISO3166-1 country code from OpenStreetMap
+          type: string
         zip:
           description: zip code
           type: string
