@@ -23,11 +23,11 @@
 #include "motis/flex/flex_output.h"
 #include "motis/gbfs/gbfs_output.h"
 #include "motis/gbfs/routing_data.h"
-#include "motis/mode_to_profile.h"
 #include "motis/odm/odm.h"
+#include "motis/osr/mode_to_profile.h"
+#include "motis/osr/street_routing.h"
 #include "motis/place.h"
 #include "motis/polyline.h"
-#include "motis/street_routing.h"
 #include "motis/tag_lookup.h"
 #include "motis/timetable/clasz_to_mode.h"
 #include "motis/timetable/time_conv.h"
@@ -211,6 +211,7 @@ api::Itinerary journey_to_response(
     street_routing_cache_t& cache,
     osr::bitvec<osr::node_idx_t>* blocked_mem,
     bool const car_transfers,
+    osr_parameters const& osr_params,
     api::PedestrianProfileEnum const pedestrian_profile,
     api::ElevationCostsEnum const elevation_costs,
     bool const join_interlined_legs,
@@ -515,7 +516,7 @@ api::Itinerary journey_to_response(
                                j_leg.dep_time_, j_leg.arr_time_,
                                car_transfers ? 250.0
                                              : timetable_max_matching_distance,
-                               cache, *blocked_mem, api_version,
+                               osr_params, cache, *blocked_mem, api_version,
                                std::chrono::duration_cast<std::chrono::seconds>(
                                    j_leg.arr_time_ - j_leg.dep_time_) +
                                    std::chrono::minutes{10})
@@ -541,8 +542,8 @@ api::Itinerary journey_to_response(
 
               append(street_routing(
                   *w, *l, e, elevations, from, to, *out, j_leg.dep_time_,
-                  j_leg.arr_time_, max_matching_distance, cache, *blocked_mem,
-                  api_version,
+                  j_leg.arr_time_, max_matching_distance, osr_params, cache,
+                  *blocked_mem, api_version,
                   std::chrono::duration_cast<std::chrono::seconds>(
                       j_leg.arr_time_ - j_leg.dep_time_) +
                       std::chrono::minutes{5}));
