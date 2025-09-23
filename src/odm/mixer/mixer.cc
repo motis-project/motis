@@ -210,8 +210,9 @@ void mixer::cost_dominance(
       file << "departure,center,arrival,travel_time,transfers,odm_time,cost\n";
       for (auto const& j : journeys) {
         file << fmt::format("{},{},{},{},{},{},{}\n", j.departure_time(),
-                            center(j), j.arrival_time(), j.travel_time(),
-                            j.transfers_, odm_time(j), cost(j));
+                            center(j), j.arrival_time(),
+                            j.travel_time().count(), j.transfers_,
+                            odm_time(j).count(), cost(j));
       }
     };
     to_csv(pt_journeys, "pt_journeys.csv");
