@@ -267,7 +267,6 @@ std::vector<nr::journey> get_mixer_input(
 mixer get_default_mixer() {
   return mixer{.direct_taxi_penalty_ = 220,
                .max_distance_ = 90,
-               .walk_cost_ = {{0, 1}, {15, 10}},
                .taxi_cost_ = {{0, 35}, {1, 12}},
                .transfer_cost_ = {{0, 10}}};
 }
@@ -281,8 +280,6 @@ mixer tag_invoke(boost::json::value_to_tag<mixer>,
   auto m = mixer{};
   m.direct_taxi_penalty_ = jv.at("direct_taxi_penalty").as_double();
   m.max_distance_ = jv.at("max_distance").as_int64();
-  m.walk_cost_ =
-      boost::json::value_to<std::vector<cost_threshold>>(jv.at("walk_cost"));
   m.taxi_cost_ =
       boost::json::value_to<std::vector<cost_threshold>>(jv.at("taxi_cost"));
   m.transfer_cost_ = boost::json::value_to<std::vector<cost_threshold>>(
@@ -296,7 +293,6 @@ void tag_invoke(boost::json::value_from_tag,
   jv = boost::json::object{
       {"direct_taxi_penalty_", m.direct_taxi_penalty_},
       {"max_distance", m.max_distance_},
-      {"walk_cost", boost::json::value_from(m.walk_cost_)},
       {"taxi_cost", boost::json::value_from(m.taxi_cost_)},
       {"transfer_cost", boost::json::value_from(m.transfer_cost_)}};
 }
