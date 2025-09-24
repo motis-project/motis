@@ -29,7 +29,9 @@ struct flex_output : public output {
   transport_mode_t get_cache_key() const override;
   osr::sharing_data const* get_sharing_data() const override;
   void annotate_leg(osr::node_idx_t, osr::node_idx_t, api::Leg&) const override;
-  api::Place get_place(osr::node_idx_t) const override;
+  api::Place get_place(
+      osr::node_idx_t,
+      std::optional<std::string> const& fallback_tz) const override;
 
   std::size_t get_additional_node_idx(osr::node_idx_t) const;
 

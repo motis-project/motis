@@ -70,12 +70,11 @@ api::ModeEnum default_output::get_mode() const {
 osr::search_profile default_output::get_profile() const { return profile_; }
 
 api::Place default_output::get_place(
-    osr::node_idx_t const n,
-    std::optional<std::string> const& fallback_tz) const {
+    osr::node_idx_t const n, std::optional<std::string> const& tz) const {
   auto const pos = w_.get_node_pos(n).as_latlng();
   return api::Place{.lat_ = pos.lat_,
                     .lon_ = pos.lng_,
-                    .tz_ = fallback_tz,
+                    .tz_ = tz,
                     .vertexType_ = api::VertexTypeEnum::NORMAL};
 }
 
