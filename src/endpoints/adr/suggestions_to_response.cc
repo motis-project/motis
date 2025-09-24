@@ -32,6 +32,7 @@ long get_area_lang_idx(a::typeahead const& t,
 
 api::geocode_response suggestions_to_response(
     adr::typeahead const& t,
+    adr::formatter const& f,
     n::timetable const* tt,
     tag_lookup const* tags,
     osr::ways const* w,
@@ -47,7 +48,7 @@ api::geocode_response suggestions_to_response(
     auto house_number = std::optional<std::string>{};
     auto id = std::string{};
     auto level = std::optional<double>{};
-    auto name = std::visit(
+    std::visit(
         utl::overloaded{
             [&](a::place_idx_t const p) {
               type = t.place_type_[p] == a::place_type::kExtra
@@ -118,16 +119,20 @@ api::geocode_response suggestions_to_response(
           .default_ = s.city_area_idx_.has_value() && *s.city_area_idx_ == i});
     }
 
+    auto const country_code = s.get_country_code(t);
+
     return api::Match{
         .type_ = type,
         .tokens_ = std::move(tokens),
-        .name_ = std::move(name),
+        .name_ = s.format(t, f, country_code.value_or("DE")),
         .id_ = std::move(id),
         .lat_ = s.coordinates_.as_latlng().lat_,
         .lon_ = s.coordinates_.as_latlng().lng_,
         .level_ = level,
         .street_ = std::move(street),
         .houseNumber_ = std::move(house_number),
+        .country_ = country_code.and_then(
+            [](std::string_view s) { return std::optional{std::string{s}}; }),
         .zip_ = s.zip_area_idx_.and_then([&](unsigned const zip_area_idx) {
           return std::optional<std::string>{
               t.strings_[t.area_names_[areas[zip_area_idx]][a::kDefaultLangIdx]]
