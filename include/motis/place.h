@@ -35,19 +35,23 @@ osr::level_t get_lvl(osr::ways const*,
                      platform_matches_t const*,
                      nigiri::location_idx_t);
 
-api::Place to_place(osr::location, std::string_view name);
+api::Place to_place(osr::location,
+                    std::string_view name,
+                    std::optional<std::string> const& tz);
 
-api::Place to_place(nigiri::timetable const*,
-                    tag_lookup const*,
-                    osr::ways const*,
-                    osr::platforms const*,
-                    platform_matches_t const*,
-                    location_place_map_t const*,
-                    tz_map_t const*,
-                    place_t,
-                    place_t start = osr::location{},
-                    place_t dest = osr::location{},
-                    std::string_view name = "");
+api::Place to_place(
+    nigiri::timetable const*,
+    tag_lookup const*,
+    osr::ways const*,
+    osr::platforms const*,
+    platform_matches_t const*,
+    location_place_map_t const*,
+    tz_map_t const*,
+    place_t,
+    place_t start = osr::location{},
+    place_t dest = osr::location{},
+    std::string_view name = "",
+    std::optional<std::string> const& fallback_tz = std::nullopt);
 
 api::Place to_place(nigiri::timetable const*,
                     tag_lookup const*,

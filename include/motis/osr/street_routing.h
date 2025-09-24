@@ -32,7 +32,9 @@ struct output {
   virtual void annotate_leg(osr::node_idx_t from_node,
                             osr::node_idx_t to_node,
                             api::Leg&) const = 0;
-  virtual api::Place get_place(osr::node_idx_t) const = 0;
+  virtual api::Place get_place(
+      osr::node_idx_t,
+      std::optional<std::string> const& fallback_tz = std::nullopt) const = 0;
 };
 
 struct default_output final : public output {
@@ -46,7 +48,9 @@ struct default_output final : public output {
   transport_mode_t get_cache_key() const override;
   osr::sharing_data const* get_sharing_data() const override;
   void annotate_leg(osr::node_idx_t, osr::node_idx_t, api::Leg&) const override;
-  api::Place get_place(osr::node_idx_t) const override;
+  api::Place get_place(osr::node_idx_t,
+                       std::optional<std::string> const& fallback_tz =
+                           std::nullopt) const override;
 
   osr::ways const& w_;
   osr::search_profile profile_;
