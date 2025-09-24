@@ -262,7 +262,7 @@ void mixer::mix(n::pareto_set<nr::journey> const& pt_journeys,
 
   auto const threshold_filter = [&](auto const& t) {
     std::erase_if(odm_journeys, [&](auto const& j) {
-      return t[(center(j) - intvl.from_).count()] <= cost(j);
+      return t[(center(j) - intvl.from_).count()] < cost(j);
     });
   };
 
