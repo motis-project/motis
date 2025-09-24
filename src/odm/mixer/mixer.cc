@@ -109,54 +109,37 @@ double mixer::cost(nr::journey const& j) const {
          odm_cost_last_mile + direct_taxi_penalty;
 };
 
-void mixer::cost_dominance(
-    nigiri::pareto_set<nigiri::routing::journey> const& pt_journeys,
-    std::vector<nigiri::routing::journey>& odm_journeys,
-    std::optional<std::string_view> const stats_path) const {
+n::unixtime_t center(nr::journey const& j) {
+  return j.departure_time() + j.travel_time() / 2;
+}
 
-  auto const center = [](nr::journey const& j) -> n::unixtime_t {
-    return j.departure_time() + j.travel_time() / 2;
-  };
+std::vector<double> mixer::get_threshold(
+    std::vector<nr::journey> const& v,
+    n::interval<nigiri::unixtime_t> const& intvl) const {
 
-  auto const intvl = [&]() {
-    auto ret =
-        n::interval<n::unixtime_t>{n::unixtime_t::max(), n::unixtime_t::min()};
-    for (auto const& j : pt_journeys) {
-      ret.from_ = std::min(ret.from_, j.departure_time());
-      ret.to_ = std::max(ret.to_, j.arrival_time());
-    }
-    for (auto const& j : odm_journeys) {
-      ret.from_ = std::min(ret.from_, j.departure_time());
-      ret.to_ = std::max(ret.to_, j.arrival_time());
-    }
-    return ret;
-  }();
+  auto threshold =
+      std::vector(intvl.size().count(), std::numeric_limits<double>::max());
 
-  auto cost_threshold = [&]() {
-    auto ret = std::vector<double>(intvl.size().count(),
-                                   std::numeric_limits<double>::max());
-    for (auto const& j : pt_journeys) {
-      auto const cost_j = cost(j);
-      auto const center_j = center(j);
-      auto const f_j = [&](n::unixtime_t const t) -> double {
-        return cost_j * (1.0 + static_cast<double>(
-                                   std::chrono::abs(center_j - t).count()) /
-                                   static_cast<double>(max_distance_));
-      };
-      for (auto const [i, t] : utl::enumerate(intvl)) {
-        ret[i] = std::min(ret[i], f_j(t));
-      }
+  for (auto const& j : v) {
+    auto const cost_j = cost(j);
+    auto const center_j = center(j);
+    auto const f_j = [&](n::unixtime_t const t) -> double {
+      return cost_j * (1.0 + static_cast<double>(
+                                 std::chrono::abs(center_j - t).count()) /
+                                 static_cast<double>(max_distance_));
+    };
+    for (auto const [i, t] : utl::enumerate(intvl)) {
+      threshold[i] = std::min(threshold[i], f_j(t));
     }
-    return ret;
-  }();
+  }
 
   auto const get_next_triangle =
       [&](auto i) -> std::optional<std::tuple<std::uint32_t, std::uint32_t>> {
     auto const get_next_local_minimum =
         [&](auto j) -> std::optional<std::uint32_t> {
-      for (; 0 < j && j < cost_threshold.size() - 1; ++j) {
-        if (cost_threshold[j - 1] > cost_threshold[j] &&
-            cost_threshold[j] < cost_threshold[j + 1]) {
+      for (; 0 < j && j < threshold.size() - 1; ++j) {
+        if (threshold[j - 1] > threshold[j] &&
+            threshold[j] < threshold[j + 1]) {
           return j;
         }
       }
@@ -172,14 +155,14 @@ void mixer::cost_dominance(
       return std::nullopt;
     }
 
-    if (cost_threshold[*start] < cost_threshold[*end]) {
+    if (threshold[*start] < threshold[*end]) {
       do {
         ++(*start);
-      } while (cost_threshold[*start] < cost_threshold[*end]);
-    } else if (cost_threshold[*start] > cost_threshold[*end]) {
+      } while (threshold[*start] < threshold[*end]);
+    } else if (threshold[*start] > threshold[*end]) {
       do {
         --(*end);
-      } while (cost_threshold[*start] > cost_threshold[*end]);
+      } while (threshold[*start] > threshold[*end]);
     }
 
     return std::tuple{*start, *end};
@@ -188,40 +171,50 @@ void mixer::cost_dominance(
   auto x = 1U;
   while (auto t = get_next_triangle(x)) {
     auto const [start, end] = *t;
-    auto const mean = std::accumulate(begin(cost_threshold) + start,
-                                      begin(cost_threshold) + end, 0.0) /
-                      static_cast<double>(end - start);
+    auto const mean =
+        std::accumulate(begin(threshold) + start, begin(threshold) + end, 0.0) /
+        static_cast<double>(end - start);
     for (auto j = start; j <= end; ++j) {
-      cost_threshold[j] = std::min(cost_threshold[j], mean);
+      threshold[j] = std::min(threshold[j], mean);
     }
     x = end;
   }
 
-  if (stats_path) {
-    auto cost_threshold_file =
-        std::ofstream{fs::path{*stats_path} / "cost_threshold.csv"};
-    cost_threshold_file << "time,cost\n";
-    for (auto const [i, cost] : utl::enumerate(cost_threshold)) {
-      cost_threshold_file << fmt::format("{},{}\n",
-                                         intvl.from_ + n::duration_t{i}, cost);
-    }
-    auto const to_csv = [&](auto const& journeys, auto const& file_name) {
-      auto file = std::ofstream{fs::path{*stats_path} / file_name};
-      file << "departure,center,arrival,travel_time,transfers,odm_time,cost\n";
-      for (auto const& j : journeys) {
-        file << fmt::format("{},{},{},{},{},{},{}\n", j.departure_time(),
-                            center(j), j.arrival_time(),
-                            j.travel_time().count(), j.transfers_,
-                            odm_time(j).count(), cost(j));
-      }
-    };
-    to_csv(pt_journeys, "pt_journeys.csv");
-    to_csv(odm_journeys, "odm_journeys.csv");
-  }
+  return threshold;
+}
 
-  std::erase_if(odm_journeys, [&](auto const& j) {
-    return cost_threshold[(center(j) - intvl.from_).count()] <= cost(j);
-  });
+void mixer::write_journeys(n::pareto_set<nr::journey> const& pt_journeys,
+                           std::vector<nr::journey> const& odm_journeys,
+                           std::string_view const stats_path) const {
+  auto const journeys_to_csv = [&](auto const& journeys,
+                                   auto const& file_name) {
+    auto file = std::ofstream{fs::path{stats_path} / file_name};
+    file << "departure,center,arrival,travel_time,transfers,odm_time,cost\n";
+    for (auto const& j : journeys) {
+      file << fmt::format("{},{},{},{},{},{},{}\n", j.departure_time(),
+                          center(j), j.arrival_time(), j.travel_time().count(),
+                          j.transfers_, odm_time(j).count(), cost(j));
+    }
+  };
+  journeys_to_csv(pt_journeys, "pt_journeys.csv");
+  journeys_to_csv(odm_journeys, "odm_journeys.csv");
+}
+
+void write_thresholds(std::vector<double> const& pt_threshold,
+                      std::vector<double> const& odm_threshold,
+                      n::interval<nigiri::unixtime_t> const& intvl,
+                      std::string_view const stats_path) {
+  auto const threshold_to_csv = [&](auto const& threshold,
+                                    auto const& file_name) {
+    auto threshold_file = std::ofstream{fs::path{stats_path} / file_name};
+    threshold_file << "time,cost\n";
+    for (auto const [i, cost] : utl::enumerate(threshold)) {
+      threshold_file << fmt::format("{},{}\n", intvl.from_ + n::duration_t{i},
+                                    cost);
+    }
+  };
+  threshold_to_csv(pt_threshold, "pt_threshold.csv");
+  threshold_to_csv(odm_threshold, "odm_threshold.csv");
 }
 
 void add_pt_sort(n::pareto_set<nr::journey> const& pt_journeys,
@@ -241,14 +234,48 @@ void mixer::mix(n::pareto_set<nr::journey> const& pt_journeys,
                 std::optional<std::string_view> const stats_path) const {
   pareto_dominance(odm_journeys);
   auto const pareto_n = odm_journeys.size();
-  cost_dominance(pt_journeys, odm_journeys, stats_path);
-  auto const cost_n = odm_journeys.size();
+
+  if (stats_path) {
+    write_journeys(pt_journeys, odm_journeys, *stats_path);
+  }
+
+  auto const intvl = [&]() {
+    auto ret =
+        n::interval<n::unixtime_t>{n::unixtime_t::max(), n::unixtime_t::min()};
+    for (auto const& j : pt_journeys) {
+      ret.from_ = std::min(ret.from_, j.departure_time());
+      ret.to_ = std::max(ret.to_, j.arrival_time());
+    }
+    for (auto const& j : odm_journeys) {
+      ret.from_ = std::min(ret.from_, j.departure_time());
+      ret.to_ = std::max(ret.to_, j.arrival_time());
+    }
+    return ret;
+  }();
+
+  auto const pt_threshold = get_threshold(pt_journeys.els_, intvl);
+  auto const odm_threshold = get_threshold(odm_journeys, intvl);
+
+  if (stats_path) {
+    write_thresholds(pt_threshold, odm_threshold, intvl, *stats_path);
+  }
+
+  auto const threshold_filter = [&](auto const& t) {
+    std::erase_if(odm_journeys, [&](auto const& j) {
+      return t[(center(j) - intvl.from_).count()] <= cost(j);
+    });
+  };
+
+  threshold_filter(pt_threshold);
+  auto const pt_filtered_n = odm_journeys.size();
+
+  threshold_filter(odm_threshold);
 
   if (metrics != nullptr) {
     metrics->routing_odm_journeys_found_non_dominated_pareto_.Observe(
         static_cast<double>(pareto_n));
     metrics->routing_odm_journeys_found_non_dominated_cost_.Observe(
-        static_cast<double>(cost_n));
+        static_cast<double>(pt_filtered_n));
     metrics->routing_odm_journeys_found_non_dominated_prod_.Observe(
         static_cast<double>(odm_journeys.size()));
   }
