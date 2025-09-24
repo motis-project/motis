@@ -14,9 +14,11 @@
 #include "osr/lookup.h"
 #include "osr/platforms.h"
 #include "osr/routing/profile.h"
+#include "osr/routing/profiles/car.h"
 #include "osr/routing/profiles/foot.h"
 #include "osr/routing/route.h"
 #include "osr/routing/sharing_data.h"
+#include "osr/types.h"
 
 #include "nigiri/common/interval.h"
 #include "nigiri/routing/limits.h"
@@ -194,10 +196,28 @@ std::vector<n::routing::offset> get_offsets(
   auto ignore_walk = false;
 
   auto const handle_mode = [&](api::ModeEnum const m) {
-    auto const profile = to_profile(m, pedestrian_profile, elevation_costs);
+    auto profile = to_profile(m, pedestrian_profile, elevation_costs);
 
     if (r.rt_->e_ && profile == osr::search_profile::kWheelchair) {
       return;  // handled by get_td_offsets
+    }
+
+    if (osr::is_rental_profile(profile)) {
+      if ((!form_factors.has_value() && !propulsion_types.has_value()) ||
+          (form_factors.has_value() &&
+           utl::any_of(*form_factors,
+                       [](auto const f) {
+                         return f == api::RentalFormFactorEnum::CAR ||
+                                f == api::RentalFormFactorEnum::MOPED ||
+                                f == api::RentalFormFactorEnum::OTHER;
+                       })) ||
+          (propulsion_types.has_value() &&
+           !utl::all_of(*propulsion_types, [](auto const f) {
+             return f == api::RentalPropulsionTypeEnum::HUMAN ||
+                    f == api::RentalPropulsionTypeEnum::ELECTRIC_ASSIST;
+           }))) {
+        profile = osr::search_profile::kCarSharing;
+      }
     }
 
     auto const max_dist = get_max_distance(profile, max);
@@ -230,7 +250,11 @@ std::vector<n::routing::offset> get_offsets(
 
       auto providers = hash_set<gbfs_provider_idx_t>{};
       gbfs_rd.data_->provider_rtree_.in_radius(
-          pos.pos_, max_dist, [&](auto const pi) { providers.insert(pi); });
+          pos.pos_,
+          dir == osr::direction::kForward
+              ? get_max_distance(osr::search_profile::kFoot, max)
+              : max_dist,
+          [&](auto const pi) { providers.insert(pi); });
 
       for (auto const& pi : providers) {
         auto const& provider = gbfs_rd.data_->providers_.at(pi);
