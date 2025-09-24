@@ -1,5 +1,7 @@
 #include "motis/odm/odm.h"
 
+#include "utl/pairwise.h"
+
 #include "nigiri/for_each_meta.h"
 #include "nigiri/logging.h"
 #include "nigiri/rt/frun.h"
@@ -35,7 +37,7 @@ void shorten(std::vector<nr::journey>& odm_journeys,
     auto min_stop_idx = ree.stop_range_.from_;
     auto min_odm_duration = odm_time(odm_leg);
     auto shorter_ride = std::optional<n::routing::start>{};
-    for (auto const stop : run) {
+    for (auto const [stop, _] : utl::pairwise(run)) {
       if (stop.is_cancelled() ||
           !stop.in_allowed(query.pedestrianProfile_ ==
                            api::PedestrianProfileEnum::WHEELCHAIR) ||
@@ -102,7 +104,7 @@ void shorten(std::vector<nr::journey>& odm_journeys,
     auto min_stop_idx = static_cast<n::stop_idx_t>(ree.stop_range_.to_ - 1U);
     auto min_odm_duration = odm_time(odm_leg);
     auto shorter_ride = std::optional<n::routing::start>{};
-    for (auto const stop : run) {
+    for (auto const [stop, _] : utl::pairwise(run)) {
       if (stop.is_cancelled() ||
           !stop.out_allowed(query.pedestrianProfile_ ==
                             api::PedestrianProfileEnum::WHEELCHAIR) ||
