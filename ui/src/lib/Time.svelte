@@ -51,15 +51,20 @@
 	}
 </script>
 
-<div class={cn('text-nowrap', className)} title={timeZoneOffset}>
+<div class={cn('text-nowrap grid-cols-1 grid-rows-2', className)} title={timeZoneOffset}>
 	{#if variant == 'schedule'}
-		{formatTime(scheduled, timeZone)}
-		<span class="text-xs font-normal">{isSameAsBrowserTimezone ? '' : timeZoneOffset}</span>
-		{weekday(scheduled)}
+		<div>
+			{formatTime(scheduled, timeZone)}
+			{weekday(scheduled)}
+		</div>
+		<div class="text-xs font-normal h-4">{isSameAsBrowserTimezone ? '' : timeZoneOffset}</div>
 	{:else if variant === 'realtime-show-always' || (variant === 'realtime' && isRealtime)}
 		<span class:text-destructive={highDelay} class:text-green-600={lowDelay} class="bg-white">
 			{formatTime(t, timeZone)}
+			{weekday(t)}
 		</span>
-		{weekday(t)}
+		{#if variant !== 'realtime-show-always'}
+			<div class="text-xs font-normal h-4"></div>
+		{/if}
 	{/if}
 </div>
