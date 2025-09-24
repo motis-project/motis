@@ -253,23 +253,22 @@ void mixer::mix(n::pareto_set<nr::journey> const& pt_journeys,
     return ret;
   }();
 
-  auto const pt_threshold = get_threshold(pt_journeys.els_, intvl);
-  auto const odm_threshold = get_threshold(odm_journeys, intvl);
-
-  if (stats_path) {
-    write_thresholds(pt_threshold, odm_threshold, intvl, *stats_path);
-  }
-
   auto const threshold_filter = [&](auto const& t) {
     std::erase_if(odm_journeys, [&](auto const& j) {
       return t[(center(j) - intvl.from_).count()] < cost(j);
     });
   };
 
+  auto const pt_threshold = get_threshold(pt_journeys.els_, intvl);
   threshold_filter(pt_threshold);
   auto const pt_filtered_n = odm_journeys.size();
 
+  auto const odm_threshold = get_threshold(odm_journeys, intvl);
   threshold_filter(odm_threshold);
+
+  if (stats_path) {
+    write_thresholds(pt_threshold, odm_threshold, intvl, *stats_path);
+  }
 
   if (metrics != nullptr) {
     metrics->routing_odm_journeys_found_non_dominated_pareto_.Observe(
