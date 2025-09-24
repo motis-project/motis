@@ -410,10 +410,9 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
       route_with_profile(default_output{
           *w_, to_profile(m, pedestrian_profile, elevation_costs)});
     } else if (m == api::ModeEnum::RENTAL && gbfs_rd.has_data()) {
-      // could be bike sharing or car sharing - car sharing has the higher max
-      // distance, so we use this here to be safe
-      auto const max_dist =
-          get_max_distance(osr::search_profile::kCarSharing, max);
+      // use foot because this is always forward search and we need to walk to
+      // the station/vehicle
+      auto const max_dist = get_max_distance(osr::search_profile::kFoot, max);
       auto providers = hash_set<gbfs_provider_idx_t>{};
       auto routed = 0U;
       gbfs_rd.data_->provider_rtree_.in_radius(
@@ -613,7 +612,10 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                          query.ignoreDirectRentalReturnConstraints_, *t,
                          query.arriveBy_, osr_params, query.pedestrianProfile_,
                          query.elevationCosts_,
-                         std::chrono::seconds{query.maxDirectTime_},
+                         std::min(std::chrono::seconds{query.maxDirectTime_},
+                                  std::chrono::seconds{
+                                      config_.limits_.value()
+                                          .street_routing_max_direct_seconds_}),
                          query.maxMatchingDistance_, query.fastestDirectFactor_,
                          api_version)
           : std::pair{std::vector<api::Itinerary>{}, kInfinityDuration};
@@ -663,29 +665,36 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
           .run();
     }
 
+    auto const pre_transit_time = std::min(
+        std::chrono::seconds{query.maxPreTransitTime_},
+        std::chrono::seconds{config_.limits_.value()
+                                 .street_routing_max_prepost_transit_seconds_});
+    auto const post_transit_time = std::min(
+        std::chrono::seconds{query.maxPostTransitTime_},
+        std::chrono::seconds{config_.limits_.value()
+                                 .street_routing_max_prepost_transit_seconds_});
+
     UTL_START_TIMING(query_preparation);
     auto q = n::routing::query{
         .start_time_ = start_time.start_time_,
         .start_match_mode_ = get_match_mode(start),
         .dest_match_mode_ = get_match_mode(dest),
         .use_start_footpaths_ = !is_intermodal(start),
-        .start_ = get_offsets(rtt, start,
-                              query.arriveBy_ ? osr::direction::kBackward
-                                              : osr::direction::kForward,
-                              start_modes, start_form_factors,
-                              start_propulsion_types, start_rental_providers,
-                              start_ignore_return_constraints, osr_params,
-                              query.pedestrianProfile_, query.elevationCosts_,
-                              std::chrono::seconds{query.maxPreTransitTime_},
-                              query.maxMatchingDistance_, gbfs_rd),
+        .start_ = get_offsets(
+            rtt, start,
+            query.arriveBy_ ? osr::direction::kBackward
+                            : osr::direction::kForward,
+            start_modes, start_form_factors, start_propulsion_types,
+            start_rental_providers, start_ignore_return_constraints, osr_params,
+            query.pedestrianProfile_, query.elevationCosts_, pre_transit_time,
+            query.maxMatchingDistance_, gbfs_rd),
         .destination_ = get_offsets(
             rtt, dest,
             query.arriveBy_ ? osr::direction::kForward
                             : osr::direction::kBackward,
             dest_modes, dest_form_factors, dest_propulsion_types,
             dest_rental_providers, dest_ignore_return_constraints, osr_params,
-            query.pedestrianProfile_, query.elevationCosts_,
-            std::chrono::seconds{query.maxPostTransitTime_},
+            query.pedestrianProfile_, query.elevationCosts_, post_transit_time,
             query.maxMatchingDistance_, gbfs_rd),
         .td_start_ =
             get_td_offsets(rtt, e, start,
@@ -693,16 +702,14 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                                            : osr::direction::kForward,
                            start_modes, osr_params, query.pedestrianProfile_,
                            query.elevationCosts_, query.maxMatchingDistance_,
-                           std::chrono::seconds{query.maxPreTransitTime_},
-                           start_time.start_time_),
+                           pre_transit_time, start_time.start_time_),
         .td_dest_ =
             get_td_offsets(rtt, e, dest,
                            query.arriveBy_ ? osr::direction::kForward
                                            : osr::direction::kBackward,
                            dest_modes, osr_params, query.pedestrianProfile_,
                            query.elevationCosts_, query.maxMatchingDistance_,
-                           std::chrono::seconds{query.maxPostTransitTime_},
-                           start_time.start_time_),
+                           post_transit_time, start_time.start_time_),
         .max_transfers_ = static_cast<std::uint8_t>(max_transfers),
         .max_travel_time_ = query.maxTravelTime_
                                 .and_then([](std::int64_t const dur) {

@@ -178,6 +178,8 @@ struct config {
     unsigned onetoall_max_travel_minutes_{90U};
     unsigned routing_max_timeout_seconds_{90U};
     unsigned gtfsrt_expose_max_trip_updates_{100U};
+    unsigned street_routing_max_prepost_transit_seconds_{3600U};
+    unsigned street_routing_max_direct_seconds_{21600U};
   };
   std::optional<limits> limits_{};
 

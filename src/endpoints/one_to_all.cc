@@ -65,7 +65,11 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
   auto const one_max_time = std::min(
       std::chrono::seconds{query.arriveBy_ ? query.maxPostTransitTime_
                                            : query.maxPreTransitTime_},
-      std::chrono::duration_cast<std::chrono::seconds>(max_travel_time));
+      std::min(
+          std::chrono::duration_cast<std::chrono::seconds>(max_travel_time),
+          std::chrono::seconds{
+              config_.limits_.value()
+                  .street_routing_max_prepost_transit_seconds_}));
   auto const one_dir =
       query.arriveBy_ ? osr::direction::kBackward : osr::direction::kForward;
 

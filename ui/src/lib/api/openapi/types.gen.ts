@@ -245,6 +245,16 @@ export type ElevationCosts = 'NONE' | 'LOW' | 'HIGH';
 export type PedestrianProfile = 'FOOT' | 'WHEELCHAIR';
 
 /**
+ * Average speed for pedestrian routing in meters per second
+ */
+export type PedestrianSpeed = number;
+
+/**
+ * Average speed for bike routing in meters per second
+ */
+export type CyclingSpeed = number;
+
+/**
  * # Street modes
  *
  * - `WALK`
@@ -461,6 +471,20 @@ export type StopTime = {
     routeLongName: string;
     tripShortName: string;
     displayName: string;
+    /**
+     * Experimental. Expect unannounced breaking changes (without version bumps).
+     *
+     * Stops on the trips before this stop. Returned only if `fetchStop` and `arriveBy` are `true`.
+     *
+     */
+    previousStops?: Array<Place>;
+    /**
+     * Experimental. Expect unannounced breaking changes (without version bumps).
+     *
+     * Stops on the trips after this stop. Returned only if `fetchStop` is `true` and `arriveBy` is `false`.
+     *
+     */
+    nextStops?: Array<Place>;
     /**
      * Type of pickup (for departures) or dropoff (for arrivals), may be disallowed either due to schedule, skipped stops or cancellations
      */
@@ -983,6 +1007,13 @@ export type PlanData = {
          */
         arriveBy?: boolean;
         /**
+         * Optional
+         *
+         * Average speed for bike routing.
+         *
+         */
+        cyclingSpeed?: CyclingSpeed;
+        /**
          * - true: Compute transfer polylines and step instructions.
          * - false: Only return basic information (start time, end time, duration) for transfers.
          *
@@ -1138,6 +1169,7 @@ export type PlanData = {
         /**
          * Optional. Default is 30min which is `1800`.
          * Maximum time in seconds for direct connections.
+         * Is limited by server config variable `street_routing_max_direct_seconds`.
          *
          */
         maxDirectTime?: number;
@@ -1151,12 +1183,14 @@ export type PlanData = {
         /**
          * Optional. Default is 15min which is `900`.
          * Maximum time in seconds for the last street leg.
+         * Is limited by server config variable `street_routing_max_prepost_transit_seconds`.
          *
          */
         maxPostTransitTime?: number;
         /**
          * Optional. Default is 15min which is `900`.
          * Maximum time in seconds for the first street leg.
+         * Is limited by server config variable `street_routing_max_prepost_transit_seconds`.
          *
          */
         maxPreTransitTime?: number;
@@ -1225,6 +1259,13 @@ export type PlanData = {
          *
          */
         pedestrianProfile?: PedestrianProfile;
+        /**
+         * Optional
+         *
+         * Average speed for pedestrian routing.
+         *
+         */
+        pedestrianSpeed?: PedestrianSpeed;
         /**
          * Optional. Default is `WALK`. Only applies if the `to` place is a coordinate (not a transit stop). Does not apply to direct connections (see `directModes`).
          *
@@ -1537,6 +1578,13 @@ export type OneToAllData = {
          */
         arriveBy?: boolean;
         /**
+         * Optional
+         *
+         * Average speed for bike routing.
+         *
+         */
+        cyclingSpeed?: CyclingSpeed;
+        /**
          * Optional. Default is `NONE`.
          *
          * Set an elevation cost profile, to penalize routes with incline.
@@ -1567,6 +1615,7 @@ export type OneToAllData = {
          * Optional. Default is 15min which is `900`.
          * - `arriveBy=true`: Maximum time in seconds for the street leg at `one` location.
          * - `arriveBy=false`: Currently not used
+         * Is limited by server config variable `street_routing_max_prepost_transit_seconds`.
          *
          */
         maxPostTransitTime?: number;
@@ -1574,6 +1623,7 @@ export type OneToAllData = {
          * Optional. Default is 15min which is `900`.
          * - `arriveBy=true`: Currently not used
          * - `arriveBy=false`: Maximum time in seconds for the street leg at `one` location.
+         * Is limited by server config variable `street_routing_max_prepost_transit_seconds`.
          *
          */
         maxPreTransitTime?: number;
@@ -1598,7 +1648,7 @@ export type OneToAllData = {
          */
         maxTransfers?: number;
         /**
-         * maximum travel time in minutes
+         * The maximum travel time in minutes. Defaults to 90. The limit may be increased by the server administrator using `onetoall_max_travel_minutes` option in `config.yml`. See documentation for details.
          */
         maxTravelTime: number;
         /**
@@ -1627,6 +1677,13 @@ export type OneToAllData = {
          *
          */
         pedestrianProfile?: PedestrianProfile;
+        /**
+         * Optional
+         *
+         * Average speed for pedestrian routing.
+         *
+         */
+        pedestrianSpeed?: PedestrianSpeed;
         /**
          * Optional. Default is `WALK`. The behavior depends on whether `arriveBy` is set:
          * - `arriveBy=true`: Only applies if the `one` place is a coordinate (not a transit stop).
@@ -1819,6 +1876,14 @@ export type StoptimesData = {
          *
          */
         exactRadius?: boolean;
+        /**
+         * Experimental. Expect unannounced breaking changes (without version bumps).
+         *
+         * Optional. Default is `false`. If set to `true`, the following stops are returned
+         * for departures and the previous stops are returned for arrivals.
+         *
+         */
+        fetchStops?: boolean;
         /**
          * language tags as used in OpenStreetMap / GTFS
          * (usually BCP-47 / ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
