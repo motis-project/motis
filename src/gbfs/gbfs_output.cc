@@ -37,7 +37,7 @@ transport_mode_t gbfs_output::get_cache_key() const {
 }
 
 osr::search_profile gbfs_output::get_profile() const {
-  return get_osr_profile(products_);
+  return get_osr_profile(products_.form_factor_);
 }
 
 osr::sharing_data const* gbfs_output::get_sharing_data() const {

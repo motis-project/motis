@@ -14,9 +14,11 @@
 #include "osr/lookup.h"
 #include "osr/platforms.h"
 #include "osr/routing/profile.h"
+#include "osr/routing/profiles/car.h"
 #include "osr/routing/profiles/foot.h"
 #include "osr/routing/route.h"
 #include "osr/routing/sharing_data.h"
+#include "osr/types.h"
 
 #include "nigiri/common/interval.h"
 #include "nigiri/routing/limits.h"
@@ -194,10 +196,19 @@ std::vector<n::routing::offset> get_offsets(
   auto ignore_walk = false;
 
   auto const handle_mode = [&](api::ModeEnum const m) {
-    auto const profile = to_profile(m, pedestrian_profile, elevation_costs);
+    auto profile = to_profile(m, pedestrian_profile, elevation_costs);
 
     if (r.rt_->e_ && profile == osr::search_profile::kWheelchair) {
       return;  // handled by get_td_offsets
+    }
+
+    if (osr::is_rental_profile(profile) &&
+        (!form_factors.has_value() ||
+         utl::any_of(*form_factors, [](auto const f) {
+           return gbfs::get_osr_profile(gbfs::from_api_form_factor(f)) ==
+                  osr::search_profile::kCarSharing;
+         }))) {
+      profile = osr::search_profile::kCarSharing;
     }
 
     auto const max_dist = get_max_distance(profile, max);
@@ -228,9 +239,14 @@ std::vector<n::routing::offset> get_offsets(
         return;
       }
 
+      auto const max_dist_to_departure =
+          dir == osr::direction::kForward
+              ? get_max_distance(osr::search_profile::kFoot, max)
+              : max_dist;
       auto providers = hash_set<gbfs_provider_idx_t>{};
       gbfs_rd.data_->provider_rtree_.in_radius(
-          pos.pos_, max_dist, [&](auto const pi) { providers.insert(pi); });
+          pos.pos_, max_dist_to_departure,
+          [&](auto const pi) { providers.insert(pi); });
 
       for (auto const& pi : providers) {
         auto const& provider = gbfs_rd.data_->providers_.at(pi);
@@ -256,7 +272,8 @@ std::vector<n::routing::offset> get_offsets(
           auto const sharing = prod_rd->get_sharing_data(
               r.w_->n_nodes(), ignore_rental_return_constraints);
 
-          auto const paths = route(gbfs::get_osr_profile(prod), &sharing);
+          auto const paths =
+              route(gbfs::get_osr_profile(prod.form_factor_), &sharing);
           ignore_walk = true;
           for (auto const [p, l] : utl::zip(paths, near_stops)) {
             if (p.has_value()) {
