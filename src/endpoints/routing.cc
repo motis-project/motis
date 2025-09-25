@@ -202,22 +202,13 @@ std::vector<n::routing::offset> get_offsets(
       return;  // handled by get_td_offsets
     }
 
-    if (osr::is_rental_profile(profile)) {
-      if ((!form_factors.has_value() && !propulsion_types.has_value()) ||
-          (form_factors.has_value() &&
-           utl::any_of(*form_factors,
-                       [](auto const f) {
-                         return f == api::RentalFormFactorEnum::CAR ||
-                                f == api::RentalFormFactorEnum::MOPED ||
-                                f == api::RentalFormFactorEnum::OTHER;
-                       })) ||
-          (propulsion_types.has_value() &&
-           !utl::all_of(*propulsion_types, [](auto const f) {
-             return f == api::RentalPropulsionTypeEnum::HUMAN ||
-                    f == api::RentalPropulsionTypeEnum::ELECTRIC_ASSIST;
-           }))) {
-        profile = osr::search_profile::kCarSharing;
-      }
+    if (osr::is_rental_profile(profile) &&
+        (!form_factors.has_value() ||
+         utl::any_of(*form_factors, [](auto const f) {
+           return gbfs::get_osr_profile(gbfs::from_api_form_factor(f)) ==
+                  osr::search_profile::kCarSharing;
+         }))) {
+      profile = osr::search_profile::kCarSharing;
     }
 
     auto const max_dist = get_max_distance(profile, max);
@@ -248,12 +239,13 @@ std::vector<n::routing::offset> get_offsets(
         return;
       }
 
-      auto providers = hash_set<gbfs_provider_idx_t>{};
-      gbfs_rd.data_->provider_rtree_.in_radius(
-          pos.pos_,
+      auto const max_dist_to_departure =
           dir == osr::direction::kForward
               ? get_max_distance(osr::search_profile::kFoot, max)
-              : max_dist,
+              : max_dist;
+      auto providers = hash_set<gbfs_provider_idx_t>{};
+      gbfs_rd.data_->provider_rtree_.in_radius(
+          pos.pos_, max_dist_to_departure,
           [&](auto const pi) { providers.insert(pi); });
 
       for (auto const& pi : providers) {
@@ -280,7 +272,8 @@ std::vector<n::routing::offset> get_offsets(
           auto const sharing = prod_rd->get_sharing_data(
               r.w_->n_nodes(), ignore_rental_return_constraints);
 
-          auto const paths = route(gbfs::get_osr_profile(prod), &sharing);
+          auto const paths =
+              route(gbfs::get_osr_profile(prod.form_factor_), &sharing);
           ignore_walk = true;
           for (auto const [p, l] : utl::zip(paths, near_stops)) {
             if (p.has_value()) {

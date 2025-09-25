@@ -6,6 +6,6 @@
 
 namespace motis::gbfs {
 
-osr::search_profile get_osr_profile(provider_products const&);
+osr::search_profile get_osr_profile(vehicle_form_factor const&);
 
 }  // namespace motis::gbfs
