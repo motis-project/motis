@@ -644,6 +644,8 @@ api::plan_response meta_router::run() {
 
   auto const routing_start = std::chrono::steady_clock::now();
   auto sub_queries = qf.make_queries(blacklisted);
+  n::log(n::log_lvl::debug, "motis.odm",
+         "[prepare queries] {} queries prepared", sub_queries.size());
   auto const results = search_interval(sub_queries);
   utl::verify(!results.empty(), "odm: public transport result expected");
   auto const& pt_result = results.front();

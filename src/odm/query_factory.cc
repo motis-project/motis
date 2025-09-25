@@ -12,14 +12,22 @@ std::vector<n::routing::query> query_factory::make_queries(
   queries.push_back(
       make(start_walk_, td_start_walk_, dest_walk_, td_dest_walk_));
   if (with_odm) {
-    queries.push_back(
-        make(start_walk_, td_start_walk_, dest_walk_, odm_dest_short_));
-    queries.push_back(
-        make(start_walk_, td_start_walk_, dest_walk_, odm_dest_long_));
-    queries.push_back(
-        make(start_walk_, odm_start_short_, dest_walk_, td_dest_walk_));
-    queries.push_back(
-        make(start_walk_, odm_start_long_, dest_walk_, td_dest_walk_));
+    if (odm_dest_short_.size() > 0) {
+      queries.push_back(
+          make(start_walk_, td_start_walk_, dest_walk_, odm_dest_short_));
+    }
+    if (odm_dest_long_.size() > 0) {
+      queries.push_back(
+          make(start_walk_, td_start_walk_, dest_walk_, odm_dest_long_));
+    }
+    if (odm_start_short_.size() > 0) {
+      queries.push_back(
+          make(start_walk_, odm_start_short_, dest_walk_, td_dest_walk_));
+    }
+    if (odm_start_long_.size() > 0) {
+      queries.push_back(
+          make(start_walk_, odm_start_long_, dest_walk_, td_dest_walk_));
+    }
   }
   return queries;
 }
