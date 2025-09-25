@@ -291,9 +291,9 @@ std::vector<nr::journey> get_mixer_input(
 }
 
 mixer get_default_mixer() {
-  return mixer{.direct_taxi_penalty_ = 220,
-               .max_distance_ = 90,
-               .taxi_cost_ = {{0, 35}, {1, 12}},
+  return mixer{.direct_taxi_penalty_ = 60,
+               .max_distance_ = 60,
+               .taxi_cost_ = {{0, 10}, {1, 4}},
                .transfer_cost_ = {{0, 10}}};
 }
 
