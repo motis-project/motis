@@ -651,10 +651,7 @@ api::plan_response meta_router::run() {
   shorten(p_->odm_journeys_, p_->from_rides_, p_->to_rides_, *tt_, rtt_,
           query_);
   utl::erase_duplicates(
-      p_->odm_journeys_,
-      [](auto const& a, auto const& b) {
-        return a.start_time_ < b.start_time_;
-      },
+      p_->odm_journeys_, std::less<n::routing::journey>{},
       [](auto const& a, auto const& b) {
         return a == b &&
                odm_time(a.legs_.front()) == odm_time(b.legs_.front()) &&
