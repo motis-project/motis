@@ -7,6 +7,7 @@
 
 #include "utl/enumerate.h"
 #include "utl/overloaded.h"
+#include "utl/visit.h"
 
 #include "geo/polyline_format.h"
 
@@ -349,13 +350,8 @@ api::Itinerary journey_to_response(
       return std::optional{osm_tz->name()};
     }
     return utl::visit(
-        j.legs_[1].uses_,
-        [&](n::routing::journey::run_enter_exit const& x) {
+        j.legs_[1].uses_, [&](n::routing::journey::run_enter_exit const& x) {
           return n::rt::frun{tt, rtt, x.r_}[0].get_tz_name(n::event_type::kDep);
-        },
-        [](n::footpath) -> std::optional<std::string> { return std::nullopt; },
-        [](n::routing::offset) -> std::optional<std::string> {
-          return std::nullopt;
         });
   };
 
