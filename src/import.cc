@@ -272,9 +272,10 @@ data import(config const& c, fs::path const& data_path, bool const write) {
 
         auto const& t = *c.timetable_;
 
-        auto const first_day = n::parse_date(t.first_day_);
+        auto const first_day =
+            n::parse_date(t.first_day_) - std::chrono::days{1};
         auto const interval = n::interval<date::sys_days>{
-            first_day, first_day + std::chrono::days{t.num_days_}};
+            first_day, first_day + std::chrono::days{t.num_days_ + 1U}};
 
         auto assistance = std::unique_ptr<nl::assistance_times>{};
         if (t.assistance_times_.has_value()) {
