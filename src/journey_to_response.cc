@@ -3,9 +3,11 @@
 #include <cmath>
 #include <iostream>
 #include <span>
+#include <variant>
 
 #include "utl/enumerate.h"
 #include "utl/overloaded.h"
+#include "utl/visit.h"
 
 #include "geo/polyline_format.h"
 
@@ -204,7 +206,7 @@ api::Itinerary journey_to_response(
     n::shapes_storage const* shapes,
     gbfs::gbfs_routing_data& gbfs_rd,
     location_place_map_t const* lp,
-    tz_map_t const* tz,
+    tz_map_t const* tz_map,
     n::routing::journey const& j,
     place_t const& start,
     place_t const& dest,
@@ -339,20 +341,38 @@ api::Itinerary journey_to_response(
                            std::move_iterator{end(x.legs_)});
   };
 
+  auto const get_first_run_tz = [&]() -> std::optional<std::string> {
+    if (j.legs_.size() < 2) {
+      return std::nullopt;
+    }
+    auto const osm_tz = get_tz(tt, lp, tz_map, j.legs_[1].from_);
+    if (osm_tz != nullptr) {
+      return std::optional{osm_tz->name()};
+    }
+    return utl::visit(
+        j.legs_[1].uses_, [&](n::routing::journey::run_enter_exit const& x) {
+          return n::rt::frun{tt, rtt, x.r_}[0].get_tz_name(n::event_type::kDep);
+        });
+  };
+
   for (auto const [_, j_leg] : utl::enumerate(j.legs_)) {
     auto const pred =
         itinerary.legs_.empty() ? nullptr : &itinerary.legs_.back();
-    auto const from = pred == nullptr
-                          ? to_place(&tt, &tags, w, pl, matches, lp, tz,
-                                     tt_location{j_leg.from_}, start, dest)
-                          : pred->to_;
-    auto const to = to_place(&tt, &tags, w, pl, matches, lp, tz,
-                             tt_location{j_leg.to_}, start, dest);
+    auto const fallback_tz =
+        pred == nullptr ? get_first_run_tz() : pred->to_.tz_;
+    auto const from =
+        pred == nullptr
+            ? to_place(&tt, &tags, w, pl, matches, lp, tz_map,
+                       tt_location{j_leg.from_}, start, dest, "", fallback_tz)
+            : pred->to_;
+    auto const to =
+        to_place(&tt, &tags, w, pl, matches, lp, tz_map, tt_location{j_leg.to_},
+                 start, dest, "", fallback_tz);
 
     auto const to_place = [&](n::rt::run_stop const& s,
                               n::event_type const ev_type) {
-      auto p =
-          ::motis::to_place(&tt, &tags, w, pl, matches, lp, tz, s, start, dest);
+      auto p = ::motis::to_place(&tt, &tags, w, pl, matches, lp, tz_map, s,
+                                 start, dest);
       p.alerts_ = get_alerts(*s.fr_, std::pair{s, ev_type}, language);
       return p;
     };

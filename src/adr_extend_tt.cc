@@ -30,7 +30,12 @@ date::time_zone const* get_tz(n::timetable const& tt,
                               n::location_idx_t const l) {
   auto const p = tt.locations_.parents_[l];
   auto const x = p == n::location_idx_t::invalid() ? l : p;
-  return (!lp || !tz) ? nullptr : tz->at(lp->at(x));
+
+  auto const p_idx = !lp || !tz ? adr_extra_place_idx_t::invalid() : lp->at(x);
+  if (p_idx != adr_extra_place_idx_t::invalid()) {
+    return tz->at(p_idx);
+  }
+  return nullptr;
 }
 
 vector_map<n::location_idx_t, adr_extra_place_idx_t> adr_extend_tt(
