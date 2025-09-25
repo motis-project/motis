@@ -9,6 +9,7 @@
 #include "motis-api/motis-api.h"
 #include "motis/fwd.h"
 #include "motis/match_platforms.h"
+#include "motis/osr/parameters.h"
 #include "motis/types.h"
 
 namespace motis {
@@ -31,7 +32,8 @@ struct output {
   virtual void annotate_leg(osr::node_idx_t from_node,
                             osr::node_idx_t to_node,
                             api::Leg&) const = 0;
-  virtual api::Place get_place(osr::node_idx_t) const = 0;
+  virtual api::Place get_place(osr::node_idx_t,
+                               std::optional<std::string> const& tz) const = 0;
 };
 
 struct default_output final : public output {
@@ -45,7 +47,8 @@ struct default_output final : public output {
   transport_mode_t get_cache_key() const override;
   osr::sharing_data const* get_sharing_data() const override;
   void annotate_leg(osr::node_idx_t, osr::node_idx_t, api::Leg&) const override;
-  api::Place get_place(osr::node_idx_t) const override;
+  api::Place get_place(osr::node_idx_t,
+                       std::optional<std::string> const& tz) const override;
 
   osr::ways const& w_;
   osr::search_profile profile_;
@@ -74,6 +77,7 @@ api::Itinerary street_routing(osr::ways const&,
                               std::optional<nigiri::unixtime_t> start_time,
                               std::optional<nigiri::unixtime_t> end_time,
                               double max_matching_distance,
+                              osr_parameters const&,
                               street_routing_cache_t&,
                               osr::bitvec<osr::node_idx_t>& blocked_mem,
                               unsigned api_version,

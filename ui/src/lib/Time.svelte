@@ -26,6 +26,16 @@
 	const delayMinutes = $derived((t.getTime() - scheduled.getTime()) / 60000);
 	const highDelay = $derived(isRealtime && delayMinutes > 3);
 	const lowDelay = $derived(isRealtime && delayMinutes <= 3);
+	const timeZoneOffset = $derived(
+		new Intl.DateTimeFormat(language, { timeZone, timeZoneName: 'shortOffset' })
+			.formatToParts(scheduled)
+			.find((part) => part.type === 'timeZoneName')!.value
+	);
+	const isSameAsBrowserTimezone = $derived(
+		new Intl.DateTimeFormat(language, { timeZoneName: 'shortOffset' })
+			.formatToParts(scheduled)
+			.find((part) => part.type === 'timeZoneName')!.value == timeZoneOffset
+	);
 
 	function weekday(time: Date) {
 		if (variant === 'realtime') {
@@ -41,14 +51,20 @@
 	}
 </script>
 
-<div class={cn('text-nowrap', className)}>
+<div class={cn('text-nowrap grid-cols-1 grid-rows-2', className)} title={timeZoneOffset}>
 	{#if variant == 'schedule'}
-		{formatTime(scheduled, timeZone)}
-		{weekday(scheduled)}
+		<div>
+			{formatTime(scheduled, timeZone)}
+			{weekday(scheduled)}
+		</div>
+		<div class="text-xs font-normal h-4">{isSameAsBrowserTimezone ? '' : timeZoneOffset}</div>
 	{:else if variant === 'realtime-show-always' || (variant === 'realtime' && isRealtime)}
-		<span class:text-destructive={highDelay} class:text-green-600={lowDelay}>
+		<span class:text-destructive={highDelay} class:text-green-600={lowDelay} class="bg-white">
 			{formatTime(t, timeZone)}
+			{weekday(t)}
 		</span>
-		{weekday(t)}
+		{#if variant !== 'realtime-show-always'}
+			<div class="text-xs font-normal h-4"></div>
+		{/if}
 	{/if}
 </div>

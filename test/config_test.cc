@@ -93,6 +93,8 @@ limits:
   onetoall_max_travel_minutes: 90
   routing_max_timeout_seconds: 90
   gtfsrt_expose_max_trip_updates: 100
+  street_routing_max_prepost_transit_seconds: 3600
+  street_routing_max_direct_seconds: 21600
 osr_footpath: true
 geocoding: true
 reverse_geocoding: false

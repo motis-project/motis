@@ -172,8 +172,7 @@ int compare(int ac, char** av) {
             boost::json::value_to<api::plan_response>(boost::json::parse(*r));
         utl::sort(res.itineraries_,
                   [&](auto&& a, auto&& b) { return params(a) < params(b); });
-        auto const id = res.debugOutput_.at("id");
-        auto& info = get(static_cast<unsigned>(id));
+        auto& info = get(query_id - 1);
         info.responses_[i] = std::move(res);
         consume_if_finished(info);
         done = false;

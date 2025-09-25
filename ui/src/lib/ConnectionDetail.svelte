@@ -52,7 +52,7 @@
 	<span>
 		{#if p.stopId}
 			<Button
-				class="text-[length:inherit] leading-none justify-normal text-wrap text-left"
+				class="ml-4 text-[length:inherit] leading-none justify-normal text-wrap text-left p-0 py-0 h-0"
 				variant="link"
 				onclick={() => onClickStop(p.name, p.stopId!, new Date(timestamp))}
 			>
@@ -261,7 +261,9 @@
 			</div>
 
 			<div class="pt-4 pl-6 border-l-4 left-4 relative" style={routeBorderColor(l)}>
-				<div class="grid gap-y-6 grid-cols-[max-content_max-content_auto] items-center">
+				<div
+					class="grid gap-y-6 grid-cols-[max-content_max-content_auto] items-start content-start content-start"
+				>
 					{@render stopTimes(l.startTime, l.scheduledStartTime, l.realTime, l.from, 1)}
 				</div>
 				<div class="mt-2 mb-2 flex items-center">
@@ -342,7 +344,9 @@
 								({formatDurationSec(l.duration)})
 							</span>
 						</summary>
-						<div class="mb-1 grid gap-y-4 grid-cols-[max-content_max-content_auto] items-center">
+						<div
+							class="mb-1 grid gap-y-4 grid-cols-[max-content_max-content_auto] items-start content-start"
+						>
 							{#each l.intermediateStops! as s, i (i)}
 								{@render stopTimes(s.arrival!, s.scheduledArrival!, l.realTime, s, 0)}
 							{/each}
@@ -351,7 +355,9 @@
 				{/if}
 
 				{#if !isLast && !(isLastPred && !isRelevantLeg(next!))}
-					<div class="grid gap-y-6 grid-cols-[max-content_max-content_auto] items-center pb-3">
+					<div
+						class="grid gap-y-6 grid-cols-[max-content_max-content_auto] items-start content-start pb-3"
+					>
 						{@render stopTimes(l.endTime!, l.scheduledEndTime!, l.realTime!, l.to, -1)}
 					</div>
 				{/if}
@@ -364,7 +370,9 @@
 		{:else if !(isLast && !isRelevantLeg(l)) && ((i == 0 && isRelevantLeg(l)) || !next || !next.displayName || l.mode != 'WALK' || (pred && (pred.mode == 'BIKE' || (l.mode == 'WALK' && pred.mode == 'CAR') || pred.mode == 'RENTAL')))}
 			<Route {onClickTrip} {l} />
 			<div class="pt-4 pl-6 border-l-4 left-4 relative" style={routeBorderColor(l)}>
-				<div class="grid gap-y-6 grid-cols-[max-content_max-content_auto] items-center">
+				<div
+					class="grid gap-y-6 grid-cols-[max-content_max-content_auto] items-start content-start"
+				>
 					{@render stopTimes(l.startTime, l.scheduledStartTime, l.realTime, l.from, 1)}
 				</div>
 				{#if l.mode == 'FLEX'}
@@ -377,7 +385,9 @@
 				{/if}
 				{@render streetLeg(l)}
 				{#if !isLast}
-					<div class="grid gap-y-6 grid-cols-[max-content_max-content_auto] items-center pb-4">
+					<div
+						class="grid gap-y-6 grid-cols-[max-content_max-content_auto] items-start content-start pb-4"
+					>
 						{@render stopTimes(l.endTime, l.scheduledEndTime, l.realTime, l.to, -1)}
 					</div>
 				{/if}
@@ -390,7 +400,7 @@
 			style={routeColor(lastLeg!)}
 		></div>
 		<div
-			class="relative left-[2.5px] bottom-[7px] grid gap-y-6 grid-cols-[max-content_max-content_auto] items-center"
+			class="relative left-[2.5px] bottom-[7px] grid gap-y-6 grid-cols-[max-content_max-content_auto] items-start content-start"
 		>
 			{@render stopTimes(
 				lastLeg!.endTime,

@@ -297,8 +297,7 @@ std::vector<api::Place> other_stops_impl(std::string_view trip_id,
                                          location_place_map_t const* lp,
                                          tz_map_t const* tz) {
   auto const convert_stop = [&](n::rt::run_stop const& stop) {
-    auto result =
-        to_place(tt, &tags, w, pl, matches, lp, tz, tt_location{stop});
+    auto result = to_place(tt, &tags, w, pl, matches, lp, tz, stop);
     result.arrival_ = stop.time(n::event_type::kArr);
     result.scheduledArrival_ = stop.scheduled_time(n::event_type::kArr);
     result.departure_ = stop.time(n::event_type::kDep);
@@ -478,7 +477,7 @@ api::stoptimes_response stop_times::operator()(
                     to_str(s.get_route_color(ev_type).text_color_),
                 .tripId_ = trip_id,
                 .routeType_ =
-                    s.route_type().and_then([](n::route_type_t const x) {
+                    s.route_type(ev_type).and_then([](n::route_type_t const x) {
                       return std::optional{to_idx(x)};
                     }),
                 .routeShortName_ =

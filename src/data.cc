@@ -10,6 +10,7 @@
 
 #include "adr/adr.h"
 #include "adr/cache.h"
+#include "adr/formatter.h"
 #include "adr/reverse.h"
 #include "adr/typeahead.h"
 
@@ -104,6 +105,7 @@ data::data(std::filesystem::path p, config const& c)
   }
 
   auto geocoder = std::async(std::launch::async, [&]() {
+    f_ = std::make_unique<adr::formatter>();
     if (c.geocoding_) {
       load_geocoder();
     }

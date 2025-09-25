@@ -6,8 +6,8 @@
 #include "motis/flex/flex.h"
 #include "motis/flex/flex_areas.h"
 #include "motis/flex/flex_routing_data.h"
+#include "motis/osr/street_routing.h"
 #include "motis/place.h"
-#include "motis/street_routing.h"
 
 namespace n = nigiri;
 
@@ -135,18 +135,21 @@ void flex_output::annotate_leg(osr::node_idx_t const from,
       time_windows[*to_stop].to_;
 }
 
-api::Place flex_output::get_place(osr::node_idx_t const n) const {
+api::Place flex_output::get_place(osr::node_idx_t const n,
+                                  std::optional<std::string> const& tz) const {
   if (w_.is_additional_node(n)) {
     auto const l = flex_routing_data_.get_additional_node(n);
     auto const c = tt_.locations_.coordinates_.at(l);
     return api::Place{.name_ = std::string{tt_.locations_.names_.at(l).view()},
                       .lat_ = c.lat_,
                       .lon_ = c.lng_,
+                      .tz_ = tz,
                       .vertexType_ = api::VertexTypeEnum::TRANSIT};
   } else {
     auto const pos = w_.get_node_pos(n).as_latlng();
     return api::Place{.lat_ = pos.lat_,
                       .lon_ = pos.lng_,
+                      .tz_ = tz,
                       .vertexType_ = api::VertexTypeEnum::NORMAL};
   }
 }

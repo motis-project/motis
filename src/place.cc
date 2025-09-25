@@ -1,5 +1,7 @@
 #include "motis/place.h"
 
+#include <variant>
+
 #include "osr/platforms.h"
 
 #include "nigiri/rt/frun.h"
@@ -21,12 +23,15 @@ tt_location::tt_location(nigiri::location_idx_t const l,
     : l_{l},
       scheduled_{scheduled == n::location_idx_t::invalid() ? l : scheduled} {}
 
-api::Place to_place(osr::location const l, std::string_view name) {
+api::Place to_place(osr::location const l,
+                    std::string_view name,
+                    std::optional<std::string> const& tz) {
   return {
       .name_ = std::string{name},
       .lat_ = l.pos_.lat_,
       .lon_ = l.pos_.lng_,
       .level_ = l.lvl_.to_float(),
+      .tz_ = tz,
       .vertexType_ = api::VertexTypeEnum::NORMAL,
   };
 }
@@ -86,23 +91,28 @@ api::Place to_place(n::timetable const* tt,
                     osr::platforms const* pl,
                     platform_matches_t const* matches,
                     location_place_map_t const* lp,
-                    tz_map_t const* tz,
+                    tz_map_t const* tz_map,
                     place_t const l,
                     place_t const start,
                     place_t const dest,
-                    std::string_view name) {
+                    std::string_view name,
+                    std::optional<std::string> const& fallback_tz) {
 
   return std::visit(
       utl::overloaded{
-          [&](osr::location const& l) { return to_place(l, name); },
+          [&](osr::location const& l) {
+            return to_place(l, name, fallback_tz);
+          },
           [&](tt_location const tt_l) -> api::Place {
             utl::verify(tt && tags, "resolving stops requires timetable");
 
             auto const l = tt_l.l_;
             if (l == n::get_special_station(n::special_station::kStart)) {
-              return to_place(std::get<osr::location>(start), "START");
+              return to_place(std::get<osr::location>(start), "START",
+                              fallback_tz);
             } else if (l == n::get_special_station(n::special_station::kEnd)) {
-              return to_place(std::get<osr::location>(dest), "END");
+              return to_place(std::get<osr::location>(dest), "END",
+                              fallback_tz);
             } else {
               auto const get_track = [&](n::location_idx_t const x) {
                 return tt->locations_.platform_codes_.at(x).empty()
@@ -124,14 +134,14 @@ api::Place to_place(n::timetable const* tt,
                   tt->locations_.parents_[l] == n::location_idx_t::invalid()
                       ? l
                       : tt->locations_.parents_[l];
-              auto const timezone = get_tz(*tt, lp, tz, p);
+              auto const timezone = get_tz(*tt, lp, tz_map, p);
               return {.name_ = std::string{tt->locations_.names_[p].view()},
                       .stopId_ = tags->id(*tt, l),
                       .lat_ = pos.lat_,
                       .lon_ = pos.lng_,
                       .level_ = get_level(w, pl, matches, l),
                       .tz_ = timezone == nullptr
-                                 ? std::nullopt
+                                 ? fallback_tz
                                  : std::optional{timezone->name()},
                       .scheduledTrack_ = get_track(tt_l.scheduled_),
                       .track_ = get_track(tt_l.l_),
@@ -148,13 +158,15 @@ api::Place to_place(n::timetable const* tt,
                     osr::platforms const* pl,
                     platform_matches_t const* matches,
                     location_place_map_t const* lp,
-                    tz_map_t const* tz,
+                    tz_map_t const* tz_map,
                     n::rt::run_stop const& s,
                     place_t const start,
                     place_t const dest) {
   auto const run_cancelled = s.fr_->is_cancelled();
-  auto p =
-      to_place(tt, tags, w, pl, matches, lp, tz, tt_location{s}, start, dest);
+  auto const fallback_tz = s.get_tz_name(
+      s.stop_idx_ == 0 ? n::event_type::kDep : n::event_type::kArr);
+  auto p = to_place(tt, tags, w, pl, matches, lp, tz_map, tt_location{s}, start,
+                    dest, "", fallback_tz);
   p.pickupType_ = !run_cancelled && s.in_allowed()
                       ? api::PickupDropoffTypeEnum::NORMAL
                       : api::PickupDropoffTypeEnum::NOT_ALLOWED;

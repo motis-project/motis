@@ -1,4 +1,4 @@
-#include "motis/street_routing.h"
+#include "motis/osr/street_routing.h"
 
 #include "geo/polyline_format.h"
 
@@ -11,7 +11,7 @@
 #include "osr/routing/sharing_data.h"
 
 #include "motis/constants.h"
-#include "motis/mode_to_profile.h"
+#include "motis/osr/mode_to_profile.h"
 #include "motis/place.h"
 #include "motis/polyline.h"
 #include "motis/transport_mode_ids.h"
@@ -69,10 +69,12 @@ api::ModeEnum default_output::get_mode() const {
 
 osr::search_profile default_output::get_profile() const { return profile_; }
 
-api::Place default_output::get_place(osr::node_idx_t const n) const {
+api::Place default_output::get_place(
+    osr::node_idx_t const n, std::optional<std::string> const& tz) const {
   auto const pos = w_.get_node_pos(n).as_latlng();
   return api::Place{.lat_ = pos.lat_,
                     .lon_ = pos.lng_,
+                    .tz_ = tz,
                     .vertexType_ = api::VertexTypeEnum::NORMAL};
 }
 
@@ -204,6 +206,7 @@ api::Itinerary street_routing(osr::ways const& w,
                               std::optional<n::unixtime_t> const start_time,
                               std::optional<n::unixtime_t> const end_time,
                               double const max_matching_distance,
+                              osr_parameters const& osr_params,
                               street_routing_cache_t& cache,
                               osr::bitvec<osr::node_idx_t>& blocked_mem,
                               unsigned const api_version,
@@ -223,7 +226,7 @@ api::Itinerary street_routing(osr::ways const& w,
     auto const& [e_nodes, e_states] = *s;
     auto const profile = out.get_profile();
     return osr::route(
-        osr::get_parameters(profile), w, l, profile, from, to,
+        to_profile_parameters(profile, osr_params), w, l, profile, from, to,
         static_cast<osr::cost_t>(max.count()), osr::direction::kForward,
         max_matching_distance,
         s ? &set_blocked(e_nodes, e_states, blocked_mem) : nullptr,
@@ -281,7 +284,8 @@ api::Itinerary street_routing(osr::ways const& w,
             .mode_ = out.get_mode() == api::ModeEnum::ODM ? api::ModeEnum::ODM
                                                           : to_mode(lb->mode_),
             .from_ = pred_place,
-            .to_ = is_last_leg ? to_place : out.get_place(to_node),
+            .to_ =
+                is_last_leg ? to_place : out.get_place(to_node, pred_place.tz_),
             .duration_ = std::chrono::duration_cast<std::chrono::seconds>(
                              t - pred_end_time)
                              .count(),

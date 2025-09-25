@@ -3,9 +3,11 @@
 #include <cmath>
 #include <iostream>
 #include <span>
+#include <variant>
 
 #include "utl/enumerate.h"
 #include "utl/overloaded.h"
+#include "utl/visit.h"
 
 #include "geo/polyline_format.h"
 
@@ -23,11 +25,11 @@
 #include "motis/flex/flex_output.h"
 #include "motis/gbfs/gbfs_output.h"
 #include "motis/gbfs/routing_data.h"
-#include "motis/mode_to_profile.h"
 #include "motis/odm/odm.h"
+#include "motis/osr/mode_to_profile.h"
+#include "motis/osr/street_routing.h"
 #include "motis/place.h"
 #include "motis/polyline.h"
-#include "motis/street_routing.h"
 #include "motis/tag_lookup.h"
 #include "motis/timetable/clasz_to_mode.h"
 #include "motis/timetable/time_conv.h"
@@ -204,13 +206,14 @@ api::Itinerary journey_to_response(
     n::shapes_storage const* shapes,
     gbfs::gbfs_routing_data& gbfs_rd,
     location_place_map_t const* lp,
-    tz_map_t const* tz,
+    tz_map_t const* tz_map,
     n::routing::journey const& j,
     place_t const& start,
     place_t const& dest,
     street_routing_cache_t& cache,
     osr::bitvec<osr::node_idx_t>* blocked_mem,
     bool const car_transfers,
+    osr_parameters const& osr_params,
     api::PedestrianProfileEnum const pedestrian_profile,
     api::ElevationCostsEnum const elevation_costs,
     bool const join_interlined_legs,
@@ -338,20 +341,38 @@ api::Itinerary journey_to_response(
                            std::move_iterator{end(x.legs_)});
   };
 
+  auto const get_first_run_tz = [&]() -> std::optional<std::string> {
+    if (j.legs_.size() < 2) {
+      return std::nullopt;
+    }
+    auto const osm_tz = get_tz(tt, lp, tz_map, j.legs_[1].from_);
+    if (osm_tz != nullptr) {
+      return std::optional{osm_tz->name()};
+    }
+    return utl::visit(
+        j.legs_[1].uses_, [&](n::routing::journey::run_enter_exit const& x) {
+          return n::rt::frun{tt, rtt, x.r_}[0].get_tz_name(n::event_type::kDep);
+        });
+  };
+
   for (auto const [_, j_leg] : utl::enumerate(j.legs_)) {
     auto const pred =
         itinerary.legs_.empty() ? nullptr : &itinerary.legs_.back();
-    auto const from = pred == nullptr
-                          ? to_place(&tt, &tags, w, pl, matches, lp, tz,
-                                     tt_location{j_leg.from_}, start, dest)
-                          : pred->to_;
-    auto const to = to_place(&tt, &tags, w, pl, matches, lp, tz,
-                             tt_location{j_leg.to_}, start, dest);
+    auto const fallback_tz =
+        pred == nullptr ? get_first_run_tz() : pred->to_.tz_;
+    auto const from =
+        pred == nullptr
+            ? to_place(&tt, &tags, w, pl, matches, lp, tz_map,
+                       tt_location{j_leg.from_}, start, dest, "", fallback_tz)
+            : pred->to_;
+    auto const to =
+        to_place(&tt, &tags, w, pl, matches, lp, tz_map, tt_location{j_leg.to_},
+                 start, dest, "", fallback_tz);
 
     auto const to_place = [&](n::rt::run_stop const& s,
                               n::event_type const ev_type) {
-      auto p =
-          ::motis::to_place(&tt, &tags, w, pl, matches, lp, tz, s, start, dest);
+      auto p = ::motis::to_place(&tt, &tags, w, pl, matches, lp, tz_map, s,
+                                 start, dest);
       p.alerts_ = get_alerts(*s.fr_, std::pair{s, ev_type}, language);
       return p;
     };
@@ -371,8 +392,10 @@ api::Itinerary journey_to_response(
 
                 auto const enter_stop = fr[common_stops.from_];
                 auto const exit_stop = fr[common_stops.to_ - 1U];
-                auto const color = enter_stop.get_route_color();
-                auto const agency = enter_stop.get_provider();
+                auto const color =
+                    enter_stop.get_route_color(n::event_type::kDep);
+                auto const agency =
+                    enter_stop.get_provider(n::event_type::kDep);
                 auto const fare_indices = get_fare_indices(fares, j_leg);
 
                 auto const src = [&]() {
@@ -388,7 +411,7 @@ api::Itinerary journey_to_response(
                     enter_stop.get_trip_start(n::event_type::kDep);
 
                 auto& leg = itinerary.legs_.emplace_back(api::Leg{
-                    .mode_ = to_mode(enter_stop.get_clasz()),
+                    .mode_ = to_mode(enter_stop.get_clasz(n::event_type::kDep)),
                     .from_ = to_place(enter_stop, n::event_type::kDep),
                     .to_ = to_place(exit_stop, n::event_type::kArr),
                     .duration_ =
@@ -405,10 +428,12 @@ api::Itinerary journey_to_response(
                     .realTime_ = fr.is_rt(),
                     .scheduled_ = fr.is_scheduled(),
                     .interlineWithPreviousLeg_ = !is_first_part,
-                    .headsign_ = std::string{enter_stop.direction()},
+                    .headsign_ =
+                        std::string{enter_stop.direction(n::event_type::kDep)},
                     .tripTo_ =
                         [&]() {
-                          auto const last = enter_stop.get_last_trip_stop();
+                          auto const last = enter_stop.get_last_trip_stop(
+                              n::event_type::kDep);
                           auto p = to_place(last, n::event_type::kArr);
                           p.arrival_ = last.time(n::event_type::kArr);
                           p.scheduledArrival_ =
@@ -417,10 +442,10 @@ api::Itinerary journey_to_response(
                         }(),
                     .routeColor_ = to_str(color.color_),
                     .routeTextColor_ = to_str(color.text_color_),
-                    .routeType_ = enter_stop.route_type().and_then(
-                        [](n::route_type_t const x) {
-                          return std::optional{to_idx(x)};
-                        }),
+                    .routeType_ = enter_stop.route_type(n::event_type::kDep)
+                                      .and_then([](n::route_type_t const x) {
+                                        return std::optional{to_idx(x)};
+                                      }),
                     .agencyName_ =
                         std::string{
                             tt.strings_.try_get(agency.name_).value_or("?")},
@@ -432,13 +457,15 @@ api::Itinerary journey_to_response(
                             tt.strings_.try_get(agency.id_).value_or("?")},
                     .tripId_ = tags.id(tt, enter_stop, n::event_type::kDep),
                     .routeShortName_ = {std::string{
-                        api_version > 3 ? enter_stop.route_short_name()
-                                        : enter_stop.display_name()}},
+                        api_version > 3
+                            ? enter_stop.route_short_name(n::event_type::kDep)
+                            : enter_stop.display_name(n::event_type::kDep)}},
                     .routeLongName_ = {std::string{
-                        enter_stop.route_long_name()}},
+                        enter_stop.route_long_name(n::event_type::kDep)}},
                     .tripShortName_ = {std::string{
-                        enter_stop.trip_short_name()}},
-                    .displayName_ = {std::string{enter_stop.display_name()}},
+                        enter_stop.trip_short_name(n::event_type::kDep)}},
+                    .displayName_ = {std::string{
+                        enter_stop.display_name(n::event_type::kDep)}},
                     .cancelled_ = fr.is_cancelled(),
                     .source_ = fmt::to_string(fr.dbg()),
                     .fareTransferIndex_ = fare_indices.and_then([](auto&& x) {
@@ -515,7 +542,7 @@ api::Itinerary journey_to_response(
                                j_leg.dep_time_, j_leg.arr_time_,
                                car_transfers ? 250.0
                                              : timetable_max_matching_distance,
-                               cache, *blocked_mem, api_version,
+                               osr_params, cache, *blocked_mem, api_version,
                                std::chrono::duration_cast<std::chrono::seconds>(
                                    j_leg.arr_time_ - j_leg.dep_time_) +
                                    std::chrono::minutes{10})
@@ -541,8 +568,8 @@ api::Itinerary journey_to_response(
 
               append(street_routing(
                   *w, *l, e, elevations, from, to, *out, j_leg.dep_time_,
-                  j_leg.arr_time_, max_matching_distance, cache, *blocked_mem,
-                  api_version,
+                  j_leg.arr_time_, max_matching_distance, osr_params, cache,
+                  *blocked_mem, api_version,
                   std::chrono::duration_cast<std::chrono::seconds>(
                       j_leg.arr_time_ - j_leg.dep_time_) +
                       std::chrono::minutes{5}));

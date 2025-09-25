@@ -37,7 +37,7 @@ transport_mode_t gbfs_output::get_cache_key() const {
 }
 
 osr::search_profile gbfs_output::get_profile() const {
-  return get_osr_profile(products_);
+  return get_osr_profile(products_.form_factor_);
 }
 
 osr::sharing_data const* gbfs_output::get_sharing_data() const {
@@ -107,17 +107,20 @@ void gbfs_output::annotate_leg(osr::node_idx_t const from_node,
   }
 }
 
-api::Place gbfs_output::get_place(osr::node_idx_t const n) const {
+api::Place gbfs_output::get_place(osr::node_idx_t const n,
+                                  std::optional<std::string> const& tz) const {
   if (w_.is_additional_node(n)) {
     auto const pos = get_sharing_data()->get_additional_node_coordinates(n);
     return api::Place{.name_ = get_node_name(n),
                       .lat_ = pos.lat_,
                       .lon_ = pos.lng_,
+                      .tz_ = tz,
                       .vertexType_ = api::VertexTypeEnum::BIKESHARE};
   } else {
     auto const pos = w_.get_node_pos(n).as_latlng();
     return api::Place{.lat_ = pos.lat_,
                       .lon_ = pos.lng_,
+                      .tz_ = tz,
                       .vertexType_ = api::VertexTypeEnum::NORMAL};
   }
 }

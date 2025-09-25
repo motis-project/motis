@@ -29,8 +29,10 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
       config_.limits_.value().onetoall_max_travel_minutes_;
   auto const query = api::oneToAll_params{url.params()};
   utl::verify(query.maxTravelTime_ <= max_travel_minutes,
-              "maxTravelTime too large: {} > {}", query.maxTravelTime_,
-              max_travel_minutes);
+              "maxTravelTime too large ({} > {}). The server admin can change "
+              "this limit in config.yml with 'onetoall_max_travel_minutes'. "
+              "See documentation for details.",
+              query.maxTravelTime_, max_travel_minutes);
   if (query.maxTransfers_.has_value()) {
     utl::verify(query.maxTransfers_ >= 0U, "maxTransfers < 0: {}",
                 *query.maxTransfers_);
@@ -63,7 +65,11 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
   auto const one_max_time = std::min(
       std::chrono::seconds{query.arriveBy_ ? query.maxPostTransitTime_
                                            : query.maxPreTransitTime_},
-      std::chrono::duration_cast<std::chrono::seconds>(max_travel_time));
+      std::min(
+          std::chrono::duration_cast<std::chrono::seconds>(max_travel_time),
+          std::chrono::seconds{
+              config_.limits_.value()
+                  .street_routing_max_prepost_transit_seconds_}));
   auto const one_dir =
       query.arriveBy_ ? osr::direction::kBackward : osr::direction::kForward;
 
@@ -73,17 +79,19 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
       gbfs_,   nullptr,   nullptr, nullptr,  metrics_};
   auto gbfs_rd = gbfs::gbfs_routing_data{w_, l_, gbfs_};
 
+  auto const osr_params = get_osr_parameters(query);
   auto q = n::routing::query{
       .start_time_ = time,
       .start_match_mode_ = get_match_mode(one),
-      .start_ = r.get_offsets(
-          nullptr, one, one_dir, one_modes, std::nullopt, std::nullopt,
-          std::nullopt, false, query.pedestrianProfile_, query.elevationCosts_,
-          one_max_time, query.maxMatchingDistance_, gbfs_rd),
-      .td_start_ =
-          r.get_td_offsets(nullptr, nullptr, one, one_dir, one_modes,
-                           query.pedestrianProfile_, query.elevationCosts_,
-                           query.maxMatchingDistance_, one_max_time, time),
+      .start_ =
+          r.get_offsets(nullptr, one, one_dir, one_modes, std::nullopt,
+                        std::nullopt, std::nullopt, false, osr_params,
+                        query.pedestrianProfile_, query.elevationCosts_,
+                        one_max_time, query.maxMatchingDistance_, gbfs_rd),
+      .td_start_ = r.get_td_offsets(
+          nullptr, nullptr, one, one_dir, one_modes, osr_params,
+          query.pedestrianProfile_, query.elevationCosts_,
+          query.maxMatchingDistance_, one_max_time, time),
       .max_transfers_ = static_cast<std::uint8_t>(
           query.maxTransfers_.value_or(n::routing::kMaxTransfers)),
       .max_travel_time_ = max_travel_time,

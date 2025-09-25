@@ -193,6 +193,26 @@ paths:
             $ref: '#/components/schemas/PedestrianProfile'
             default: FOOT
 
+        - name: pedestrianSpeed
+          in: query
+          required: false
+          description: |
+            Optional
+
+            Average speed for pedestrian routing.
+          schema:
+            $ref: '#/components/schemas/PedestrianSpeed'
+
+        - name: cyclingSpeed
+          in: query
+          required: false
+          description: |
+            Optional
+
+            Average speed for bike routing.
+          schema:
+            $ref: '#/components/schemas/CyclingSpeed'
+
         - name: elevationCosts
           in: query
           required: false
@@ -612,6 +632,7 @@ paths:
           description: |
             Optional. Default is 15min which is `900`.
             Maximum time in seconds for the first street leg.
+            Is limited by server config variable `street_routing_max_prepost_transit_seconds`.
           schema:
             type: integer
             default: 900
@@ -623,6 +644,7 @@ paths:
           description: |
             Optional. Default is 15min which is `900`.
             Maximum time in seconds for the last street leg.
+            Is limited by server config variable `street_routing_max_prepost_transit_seconds`.
           schema:
             type: integer
             default: 900
@@ -634,6 +656,7 @@ paths:
           description: |
             Optional. Default is 30min which is `1800`.
             Maximum time in seconds for direct connections.
+            Is limited by server config variable `street_routing_max_direct_seconds`.
           schema:
             type: integer
             default: 1800
@@ -905,7 +928,7 @@ paths:
         - name: maxTravelTime
           in: query
           required: true
-          description: maximum travel time in minutes
+          description: The maximum travel time in minutes. Defaults to 90. The limit may be increased by the server administrator using `onetoall_max_travel_minutes` option in `config.yml`. See documentation for details.
           schema:
             type: integer
         - name: arriveBy
@@ -1005,6 +1028,26 @@ paths:
           schema:
             $ref: '#/components/schemas/PedestrianProfile'
             default: FOOT
+
+        - name: pedestrianSpeed
+          in: query
+          required: false
+          description: |
+            Optional
+
+            Average speed for pedestrian routing.
+          schema:
+            $ref: '#/components/schemas/PedestrianSpeed'
+
+        - name: cyclingSpeed
+          in: query
+          required: false
+          description: |
+            Optional
+
+            Average speed for bike routing.
+          schema:
+            $ref: '#/components/schemas/CyclingSpeed'
 
         - name: elevationCosts
           in: query
@@ -1108,6 +1151,7 @@ paths:
             Optional. Default is 15min which is `900`.
               - `arriveBy=true`: Currently not used
               - `arriveBy=false`: Maximum time in seconds for the street leg at `one` location.
+            Is limited by server config variable `street_routing_max_prepost_transit_seconds`.
           schema:
             type: integer
             default: 900
@@ -1120,6 +1164,7 @@ paths:
             Optional. Default is 15min which is `900`.
               - `arriveBy=true`: Maximum time in seconds for the street leg at `one` location.
               - `arriveBy=false`: Currently not used
+            Is limited by server config variable `street_routing_max_prepost_transit_seconds`.
           schema:
             type: integer
             default: 900
@@ -1867,6 +1912,9 @@ components:
         houseNumber:
           description: house number
           type: string
+        country:
+          description: ISO3166-1 country code from OpenStreetMap
+          type: string
         zip:
           description: zip code
           type: string
@@ -1902,6 +1950,14 @@ components:
       enum:
         - FOOT
         - WHEELCHAIR
+
+    PedestrianSpeed:
+      description: Average speed for pedestrian routing in meters per second
+      type: number
+
+    CyclingSpeed:
+      description: Average speed for bike routing in meters per second
+      type: number
 
     Mode:
       description: |

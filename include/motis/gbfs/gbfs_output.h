@@ -1,6 +1,6 @@
 #pragma once
 
-#include "motis/street_routing.h"
+#include "motis/osr/street_routing.h"
 
 namespace motis::gbfs {
 
@@ -24,7 +24,8 @@ struct gbfs_output final : public output {
                     osr::node_idx_t const to_node,
                     api::Leg&) const override;
 
-  api::Place get_place(osr::node_idx_t) const override;
+  api::Place get_place(osr::node_idx_t,
+                       std::optional<std::string> const& tz) const override;
 
   std::size_t get_additional_node_idx(osr::node_idx_t const n) const;
 

@@ -1,4 +1,4 @@
-#include "motis/max_distance.h"
+#include "motis/osr/max_distance.h"
 
 #include <utility>
 

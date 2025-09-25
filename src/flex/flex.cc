@@ -16,7 +16,7 @@
 #include "motis/flex/flex_areas.h"
 #include "motis/flex/flex_routing_data.h"
 #include "motis/match_platforms.h"
-#include "motis/max_distance.h"
+#include "motis/osr/max_distance.h"
 
 namespace n = nigiri;
 
@@ -272,6 +272,7 @@ void add_flex_td_offsets(osr::ways const& w,
                          osr::direction const dir,
                          std::chrono::seconds const max,
                          double const max_matching_distance,
+                         osr_parameters const& osr_params,
                          flex_routing_data& frd,
                          n::routing::td_offsets_t& ret) {
   auto const max_dist = get_max_distance(osr::search_profile::kCarSharing, max);
@@ -281,7 +282,8 @@ void add_flex_td_offsets(osr::ways const& w,
         return get_location(&tt, &w, pl, matches, tt_location{l});
       });
 
-  auto const params = osr::get_parameters(osr::search_profile::kCarSharing);
+  auto const params =
+      to_profile_parameters(osr::search_profile::kCarSharing, osr_params);
   auto const pos_match =
       lookup.match(params, pos, false, dir, max_matching_distance, nullptr,
                    osr::search_profile::kCarSharing);
