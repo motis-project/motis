@@ -26,17 +26,6 @@ struct csv_journey {
       last_mile_duration_;
 };
 
-template <typename T>
-std::optional<T> read_number(char const* first, char const* last) {
-  T n;
-  auto [ptr, ec] = std::from_chars(first, last, n);
-  if (ec == std::errc::invalid_argument ||
-      ec == std::errc::result_out_of_range) {
-    return std::nullopt;
-  }
-  return n;
-}
-
 std::optional<nigiri::transport_mode_id_t> read_transport_mode(
     std::string_view m) {
   if (m == "taxi") {
