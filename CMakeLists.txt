@@ -150,6 +150,7 @@ target_link_libraries(motis
     ianatzdb-res
     pbf_sdf_fonts_res-res
     tiles_server_res-res
+    address_formatting_res-res
 )
 
 
