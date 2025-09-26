@@ -222,6 +222,3 @@ endforeach()
 if (MOTIS_MIMALLOC)
     target_compile_options(mimalloc PUBLIC ${MOTIS_TARGET_FLAGS})
 endif()
-
-# --- ODM ---
-file (CREATE_LINK ${CMAKE_SOURCE_DIR}/src/odm/cost_dom_vis.py ${CMAKE_BINARY_DIR}/cost_dom_vis.py SYMBOLIC)
