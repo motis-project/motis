@@ -61,6 +61,7 @@ using namespace std::chrono_literals;
 
 constexpr auto const kODMLookAhead = n::duration_t{24h};
 constexpr auto const kSearchIntervalSize = n::duration_t{6h};
+constexpr auto const kContextPadding = n::duration_t{2h};
 constexpr auto const kODMDirectPeriod = 300s;
 constexpr auto const kODMDirectFactor = 1.0;
 constexpr auto const kODMOffsetMinImprovement = 60s;
@@ -70,7 +71,6 @@ constexpr auto const kWhitelistPath = "/api/whitelist";
 static auto const kReqHeaders = std::map<std::string, std::string>{
     {"Content-Type", "application/json"}, {"Accept", "application/json"}};
 static auto const kMixer = get_default_mixer();
-constexpr auto const kPrintMixerIO = false;
 
 using td_offsets_t =
     n::hash_map<n::location_idx_t, std::vector<n::routing::td_offset>>;
@@ -531,8 +531,7 @@ api::plan_response meta_router::run() {
   search_intvl.to_ = r_.tt_->external_interval().clamp(search_intvl.to_);
 
   auto const context_intvl = n::interval<n::unixtime_t>{
-      search_intvl.from_ - n::duration_t{kMixer.max_distance_},
-      search_intvl.to_ + n::duration_t{kMixer.max_distance_}};
+      search_intvl.from_ - kContextPadding, search_intvl.to_ + kContextPadding};
 
   auto const odm_intvl =
       query_.arriveBy_
@@ -717,15 +716,7 @@ api::plan_response meta_router::run() {
   n::log(n::log_lvl::debug, "motis.odm",
          "[mixing] {} PT journeys and {} ODM journeys",
          pt_result.journeys_.size(), p_->odm_journeys_.size());
-  if (kPrintMixerIO) {
-    n::log(n::log_lvl::debug, "motis.odm", "[mixing] Input Journeys:\n{}",
-           to_csv(get_mixer_input(pt_result.journeys_, p_->odm_journeys_)));
-  }
   kMixer.mix(pt_result.journeys_, p_->odm_journeys_, r_.metrics_, std::nullopt);
-  if (kPrintMixerIO) {
-    n::log(n::log_lvl::debug, "motis.odm", "[mixing] Output Journeys:\n{}",
-           to_csv(p_->odm_journeys_));
-  }
   r_.metrics_->routing_odm_journeys_found_non_dominated_.Observe(
       static_cast<double>(p_->odm_journeys_.size() -
                           pt_result.journeys_.size()));
