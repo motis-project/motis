@@ -19,6 +19,7 @@ namespace motis::odm {
 namespace n = nigiri;
 namespace nr = nigiri::routing;
 namespace fs = std::filesystem;
+using namespace std::chrono_literals;
 
 static constexpr auto const kMixerTracing = false;
 
@@ -117,10 +118,10 @@ n::unixtime_t center(nr::journey const& j) {
 std::vector<double> mixer::get_threshold(
     std::vector<nr::journey> const& v,
     n::interval<nigiri::unixtime_t> const& intvl,
-    std::int32_t const doubling_distance) const {
+    std::int64_t const doubling_distance) const {
 
-  auto threshold =
-      std::vector(intvl.size().count(), std::numeric_limits<double>::max());
+  auto threshold = std::vector(static_cast<size_t>(intvl.size().count()),
+                               std::numeric_limits<double>::max());
 
   for (auto const& j : v) {
     auto const cost_j = cost(j);
@@ -130,7 +131,8 @@ std::vector<double> mixer::get_threshold(
                                  std::chrono::abs(center_j - t).count()) /
                                  static_cast<double>(doubling_distance));
     };
-    for (auto const [i, t] : utl::enumerate(intvl)) {
+    for (auto [i, t] = std::tuple{0U, intvl.from_}; t < intvl.to_;
+         ++i, t += 1min) {
       threshold[i] = std::min(threshold[i], f_j(t));
     }
   }
@@ -262,7 +264,8 @@ void mixer::mix(n::pareto_set<nr::journey> const& pt_journeys,
 
   auto const threshold_filter = [&](auto const& t) {
     std::erase_if(odm_journeys, [&](auto const& j) {
-      return t[(center(j) - intvl.from_).count()] < cost(j);
+      return t[static_cast<size_t>((center(j) - intvl.from_).count())] <
+             cost(j);
     });
   };
 
