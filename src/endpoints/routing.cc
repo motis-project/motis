@@ -5,6 +5,8 @@
 
 #include "boost/thread/tss.hpp"
 
+#include "openapi/missing_param_exception.h"
+
 #include "prometheus/counter.h"
 #include "prometheus/histogram.h"
 
@@ -344,18 +346,25 @@ std::vector<n::routing::offset> routing::get_offsets(
 }
 
 std::pair<n::routing::query, std::optional<n::unixtime_t>> get_start_time(
-    api::plan_params const& query) {
+    api::plan_params const& query, nigiri::timetable const* tt) {
   if (query.pageCursor_.has_value()) {
     return {cursor_to_query(*query.pageCursor_), std::nullopt};
   } else {
     auto const t = std::chrono::time_point_cast<n::i32_minutes>(
         *query.time_.value_or(openapi::now()));
-    auto const window = std::chrono::duration_cast<n::duration_t>(
-        std::chrono::seconds{query.searchWindow_ * (query.arriveBy_ ? -1 : 1)});
+    utl::verify_ex(tt->external_interval().contains(t),
+                   openapi::missing_param_exception{
+                       "query time is outside of loaded timetable window"});
+    auto const window =
+        std::chrono::duration_cast<n::duration_t>(std::chrono::seconds{
+            query.searchWindow_ *
+            (query.arriveBy_ ? -1 : 1)});  // TODO redundant minus
     return {{.start_time_ = query.timetableView_
                                 ? n::routing::start_time_t{n::interval{
-                                      query.arriveBy_ ? t - window : t,
-                                      query.arriveBy_ ? t : t + window}}
+                                      tt->external_interval().clamp(
+                                          query.arriveBy_ ? t - window : t),
+                                      tt->external_interval().clamp(
+                                          query.arriveBy_ ? t : t + window)}}
                                 : n::routing::start_time_t{t},
              .extend_interval_earlier_ = query.arriveBy_,
              .extend_interval_later_ = !query.arriveBy_},
@@ -617,7 +626,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
           : n::routing::kMaxTransfers;
   auto const osr_params = get_osr_parameters(query);
 
-  auto const [start_time, t] = get_start_time(query);
+  auto const [start_time, t] = get_start_time(query, tt_);
 
   UTL_START_TIMING(direct);
   auto [direct, fastest_direct] =
