@@ -188,7 +188,7 @@
 		{@const fareTransfer = itinerary.fareTransfers[l.fareTransferIndex]}
 		{@const includedInTransfer =
 			fareTransfer.rule == 'AB' || (fareTransfer.rule == 'A_AB' && l.effectiveFareLegIndex !== 0)}
-		<div class="list-inside pl-1 md:pl-4 my-8 text-xs font-bold">
+		<div class="pl-1 md:pl-4 my-8 text-xs font-bold">
 			{#if includedInTransfer || (prevTransitLeg && prevTransitLeg.fareTransferIndex === l.fareTransferIndex && prevTransitLeg.effectiveFareLegIndex === l.effectiveFareLegIndex)}
 				{t.includedInTicket}
 			{:else}
@@ -198,7 +198,7 @@
 				{/if}
 				<ul
 					class:list-disc={productOptions.length > 1}
-					class:list-inside={productOptions.length > 1}
+					class:list-outside={productOptions.length > 1}
 				>
 					{#each productOptions as products, i (i)}
 						{#each products as product, j (j)}
@@ -241,11 +241,20 @@
 								itinerary.fareTransfers[prevTransitLeg.fareTransferIndex].transferProducts!}
 							{#if prevTransitLeg.effectiveFareLegIndex === 0 && l.effectiveFareLegIndex === 1}
 								<br />
-								<span class="text-xs font-bold text-foreground">
-									Ticket: {pred.effectiveFareLegIndex}
-									{#each transferProducts as transferProduct (transferProduct.name)}
-										{@render productInfo(transferProduct)}
-									{/each}
+								<span class="text-xs font-bold text-foreground text-left">
+									{#if transferProducts.length > 1}
+										<div class="mb-1">{t.ticketOptions}:</div>
+									{/if}
+									<ul
+										class:list-disc={transferProducts.length > 1}
+										class:list-outside={transferProducts.length > 1}
+									>
+										{#each transferProducts as product, j (j)}
+											<li>
+												{@render productInfo(product)}
+											</li>
+										{/each}
+									</ul>
 								</span>
 							{/if}
 						{/if}
