@@ -54,6 +54,13 @@ struct http_client {
   boost::asio::awaitable<http_response> get(
       boost::urls::url url, std::map<std::string, std::string> headers);
 
+  boost::asio::awaitable<http_response> post(
+      boost::urls::url url,
+      std::map<std::string, std::string> headers,
+      std::string body);
+
+  boost::asio::awaitable<http_response> req(std::shared_ptr<request>);
+
   void set_proxy(boost::urls::url const&);
 
   hash_map<connection_key, std::shared_ptr<connection>> connections_;
