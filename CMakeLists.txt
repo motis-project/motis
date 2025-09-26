@@ -200,6 +200,14 @@ if (MOTIS_MIMALLOC)
                 $<TARGET_FILE:motis>
                 COMMENT "Ensure mimalloc.dll is loaded first"
         )
+        add_custom_command(
+                TARGET motis-test POST_BUILD
+                COMMAND "${CMAKE_SOURCE_DIR}/deps/mimalloc/bin/minject.exe"
+                --force --inplace
+                $<$<CONFIG:Debug>:--postfix=debug>
+                $<TARGET_FILE:motis-test>
+                COMMENT "Ensure mimalloc.dll is loaded first"
+        )
     endif()
     if (MSVC)
         target_link_options(motis PUBLIC "/include:mi_version")
