@@ -24,7 +24,7 @@ static constexpr auto const kMixerTracing = false;
 cost_threshold tag_invoke(boost::json::value_to_tag<cost_threshold>,
                           boost::json::value const& jv) {
   return cost_threshold{static_cast<std::int32_t>(jv.as_array()[0].as_int64()),
-                        static_cast<std::int32_t>(jv.as_array()[1].as_int64())};
+                        jv.as_array()[1].as_double()};
 }
 
 void tag_invoke(boost::json::value_from_tag,
@@ -71,19 +71,19 @@ void mixer::pareto_dominance(
   }
 }
 
-std::int32_t tally(std::int32_t const x,
-                   std::vector<cost_threshold> const& ct) {
-  auto acc = std::int32_t{0};
+double tally(std::int64_t const x, std::vector<cost_threshold> const& ct) {
+  auto acc = 0.0;
   for (auto i = 0U; i < ct.size() && ct[i].threshold_ < x; ++i) {
     auto const valid_until = i + 1U == ct.size()
-                                 ? std::numeric_limits<std::int32_t>::max()
+                                 ? std::numeric_limits<std::int64_t>::max()
                                  : ct[i + 1U].threshold_;
-    acc += (std::min(x, valid_until) - ct[i].threshold_) * ct[i].cost_;
+    acc += static_cast<double>(std::min(x, valid_until) - ct[i].threshold_) *
+           ct[i].cost_;
   }
   return acc;
 }
 
-std::int32_t mixer::transfer_cost(nr::journey const& j) const {
+double mixer::transfer_cost(nr::journey const& j) const {
   return tally(j.transfers_, transfer_cost_);
 }
 

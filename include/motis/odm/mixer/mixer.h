@@ -16,11 +16,11 @@ struct cost_threshold {
                          boost::json::value&,
                          cost_threshold const&);
 
-  std::int32_t threshold_;
-  std::int32_t cost_;
+  std::int64_t threshold_;
+  double cost_;
 };
 
-std::int32_t tally(std::int32_t, std::vector<cost_threshold> const&);
+double tally(std::int64_t, std::vector<cost_threshold> const&);
 
 struct mixer {
   void mix(nigiri::pareto_set<nigiri::routing::journey> const& pt_journeys,
@@ -29,7 +29,7 @@ struct mixer {
            std::optional<std::string_view> stats_path) const;
   static void pareto_dominance(
       std::vector<nigiri::routing::journey>& odm_journeys);
-  std::int32_t transfer_cost(nigiri::routing::journey const&) const;
+  double transfer_cost(nigiri::routing::journey const&) const;
   double cost(nigiri::routing::journey const& j) const;
   std::vector<double> get_threshold(
       std::vector<nigiri::routing::journey> const&,
