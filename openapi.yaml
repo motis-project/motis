@@ -1,13 +1,26 @@
 openapi: 3.1.0
 info:
   title: MOTIS API
-  description: This is the MOTIS routing API.
+  description: |
+    This is the MOTIS routing API.
+
+    Overview of MOTIS API versions:
+    MOTIS 0.x - deprecated/discontinued
+    MOTIS 2.x - current, providing:
+    /api/v5/{plan,trip,stoptimes,map/trips} renamed METRO mode to SUBURBAN, AREAL_LIFT to AERIAL_LIFT; since MOTIS 2.5.0
+    /api/v4/{plan,trip,stoptimes,map/trips} new displayName property, routeShortName only contains actual route short name from source; since MOTIS 2.2.0
+    /api/v3/plan with correct maxTransfers API parameter (transfers actually corresponding to number of changes between transit legs (and not to number of transit legs), i.e. maxTransfers=0 returns direct public transit connections, as expected); since MOTIS 2.0.84 
+    /api/v2/{plan,trip} returns Google polylines with precision=6; since MOTIS 2.0.60
+    /api/v1/{plan,trip} returns Google polylines with precision=7 (not defined for |longitude|>107)
+    /api/v1/* all other endpoints
+
+    If you use the JS client lib https://www.npmjs.com/package/@motis-project/motis-client, endpoint versions will be taken into account automatically (i.e. the newest one available will be used).
   contact:
     email: felix@triptix.tech
   license:
     name: MIT
     url: https://opensource.org/license/mit
-  version: v4
+  version: v5
 externalDocs:
   description: Find out more about MOTIS
   url: https://github.com/motis-project/motis
