@@ -10,6 +10,7 @@
 #include "nigiri/special_stations.h"
 
 #include "motis/metrics_registry.h"
+#include "motis/odm/mixer/journeys.h"
 #include "motis/odm/odm.h"
 #include "motis/transport_mode_ids.h"
 
@@ -115,7 +116,8 @@ n::unixtime_t center(nr::journey const& j) {
 
 std::vector<double> mixer::get_threshold(
     std::vector<nr::journey> const& v,
-    n::interval<nigiri::unixtime_t> const& intvl) const {
+    n::interval<nigiri::unixtime_t> const& intvl,
+    std::int32_t const doubling_distance) const {
 
   auto threshold =
       std::vector(intvl.size().count(), std::numeric_limits<double>::max());
@@ -126,7 +128,7 @@ std::vector<double> mixer::get_threshold(
     auto const f_j = [&](n::unixtime_t const t) -> double {
       return cost_j * (1.0 + static_cast<double>(
                                  std::chrono::abs(center_j - t).count()) /
-                                 static_cast<double>(max_distance_));
+                                 static_cast<double>(doubling_distance));
     };
     for (auto const [i, t] : utl::enumerate(intvl)) {
       threshold[i] = std::min(threshold[i], f_j(t));
@@ -235,6 +237,11 @@ void mixer::mix(n::pareto_set<nr::journey> const& pt_journeys,
   pareto_dominance(odm_journeys);
   auto const pareto_n = odm_journeys.size();
 
+  if constexpr (kMixerTracing) {
+    std::ofstream journeys_in{"journeys.csv"};
+    journeys_in << to_csv(get_mixer_input(pt_journeys, odm_journeys));
+  }
+
   if (stats_path) {
     write_journeys(pt_journeys, odm_journeys, *stats_path);
   }
@@ -259,11 +266,13 @@ void mixer::mix(n::pareto_set<nr::journey> const& pt_journeys,
     });
   };
 
-  auto const pt_threshold = get_threshold(pt_journeys.els_, intvl);
+  auto const pt_threshold =
+      get_threshold(pt_journeys.els_, intvl, pt_doubling_distance_);
   threshold_filter(pt_threshold);
   auto const pt_filtered_n = odm_journeys.size();
 
-  auto const odm_threshold = get_threshold(odm_journeys, intvl);
+  auto const odm_threshold =
+      get_threshold(odm_journeys, intvl, odm_doubling_distance_);
   threshold_filter(odm_threshold);
 
   if (stats_path) {
@@ -291,9 +300,10 @@ std::vector<nr::journey> get_mixer_input(
 }
 
 mixer get_default_mixer() {
-  return mixer{.direct_taxi_penalty_ = 60,
-               .max_distance_ = 60,
-               .taxi_cost_ = {{0, 10}, {1, 4}},
+  return mixer{.direct_taxi_penalty_ = 60.0,
+               .pt_doubling_distance_ = 30,
+               .odm_doubling_distance_ = 90,
+               .taxi_cost_ = {{0, 20.6}, {1, 4.9}},
                .transfer_cost_ = {{0, 10}}};
 }
 
@@ -305,7 +315,8 @@ mixer tag_invoke(boost::json::value_to_tag<mixer>,
                  boost::json::value const& jv) {
   auto m = mixer{};
   m.direct_taxi_penalty_ = jv.at("direct_taxi_penalty").as_double();
-  m.max_distance_ = jv.at("max_distance").as_int64();
+  m.pt_doubling_distance_ = jv.at("pt_doubling_distance").as_int64();
+  m.odm_doubling_distance_ = jv.at("odm_doubling_distance").as_int64();
   m.taxi_cost_ =
       boost::json::value_to<std::vector<cost_threshold>>(jv.at("taxi_cost"));
   m.transfer_cost_ = boost::json::value_to<std::vector<cost_threshold>>(
@@ -318,7 +329,8 @@ void tag_invoke(boost::json::value_from_tag,
                 mixer const& m) {
   jv = boost::json::object{
       {"direct_taxi_penalty_", m.direct_taxi_penalty_},
-      {"max_distance", m.max_distance_},
+      {"pt_doubling_distance", m.pt_doubling_distance_},
+      {"odm_doubling_distance", m.odm_doubling_distance_},
       {"taxi_cost", boost::json::value_from(m.taxi_cost_)},
       {"transfer_cost", boost::json::value_from(m.transfer_cost_)}};
 }
