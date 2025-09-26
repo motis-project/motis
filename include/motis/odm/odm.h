@@ -9,7 +9,7 @@
 namespace motis::odm {
 
 constexpr auto const kODMTransferBuffer = nigiri::duration_t{5};
-constexpr auto const kWalk =
+constexpr auto const kWalkTransportModeId =
     static_cast<nigiri::transport_mode_id_t>(api::ModeEnum::WALK);
 
 enum which_mile { kFirstMile, kLastMile };
@@ -25,6 +25,8 @@ bool is_direct_odm(nigiri::routing::journey const&);
 nigiri::duration_t odm_time(nigiri::routing::journey::leg const&);
 
 nigiri::duration_t odm_time(nigiri::routing::journey const&);
+
+nigiri::duration_t pt_time(nigiri::routing::journey const&);
 
 nigiri::duration_t duration(nigiri::routing::start const&);
 
