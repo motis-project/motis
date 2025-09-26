@@ -20,6 +20,9 @@
 
 #include "boost/json.hpp"
 
+#include "boost/url/encode.hpp"
+#include "boost/url/rfc/unreserved_chars.hpp"
+
 #include "cista/hash.h"
 
 #include "fmt/format.h"
@@ -167,7 +170,7 @@ struct gbfs_update {
             executor,
             [this, id, feed, dir, &no_hdr]() -> awaitable<void> {
               co_await init_feed(id, feed.url_, feed.headers_.value_or(no_hdr),
-                                 dir);
+                                 feed.oauth_, dir);
             },
             asio::deferred);
       });
@@ -219,19 +222,28 @@ struct gbfs_update {
     }
   }
 
-  awaitable<void> init_feed(std::string const& id,
-                            std::string const& url,
-                            headers_t const& headers,
-                            std::optional<std::filesystem::path> const& dir) {
+  awaitable<void> init_feed(
+      std::string const& id,
+      std::string const& url,
+      headers_t const& headers,
+      std::optional<config::gbfs::oauth_settings> const& oauth_settings,
+      std::optional<std::filesystem::path> const& dir) {
     // initialization of a (standalone or aggregated) feed from the config
     try {
-      auto discovery = co_await fetch_file("gbfs", url, headers, dir);
+      auto oauth = std::shared_ptr<oauth_state>{};
+      if (oauth_settings) {
+        oauth = std::make_shared<oauth_state>(
+            oauth_state{.settings_ = *oauth_settings});
+      }
+
+      auto discovery = co_await fetch_file("gbfs", url, headers, oauth, dir);
       auto const& root = discovery.json_.as_object();
       if ((root.contains("data") &&
            root.at("data").as_object().contains("datasets")) ||
           root.contains("systems")) {
         // file is not an individual feed, but a manifest.json / Lamassu file
-        co_return co_await init_aggregated_feed(id, url, headers, root);
+        co_return co_await init_aggregated_feed(id, url, headers,
+                                                std::move(oauth), root);
       }
 
       auto saf =
@@ -243,7 +255,8 @@ struct gbfs_update {
                   .dir_ = dir,
                   .default_restrictions_ = lookup_default_restrictions("", id),
                   .default_return_constraint_ =
-                      lookup_default_return_constraint("", id)}))
+                      lookup_default_return_constraint("", id),
+                  .oauth_ = std::move(oauth)}))
               .get();
 
       co_return co_await update_provider_feed(*saf, std::move(discovery));
@@ -316,7 +329,8 @@ struct gbfs_update {
 
     try {
       if (!discovery && needs_refresh(provider.file_infos_->urls_fi_)) {
-        discovery = co_await fetch_file("gbfs", pf.url_, pf.headers_, pf.dir_);
+        discovery = co_await fetch_file("gbfs", pf.url_, pf.headers_, pf.oauth_,
+                                        pf.dir_);
       }
       if (discovery) {
         file_infos->urls_ = parse_discovery(discovery->json_);
@@ -329,7 +343,7 @@ struct gbfs_update {
                               bool const force = false) -> awaitable<bool> {
         if (force || (file_infos->urls_.contains(name) && needs_refresh(fi))) {
           auto file = co_await fetch_file(name, file_infos->urls_.at(name),
-                                          pf.headers_, pf.dir_);
+                                          pf.headers_, pf.oauth_, pf.dir_);
           auto const hash_changed = file.hash_ != fi.hash_;
           auto j_root = file.json_.as_object();
           fi.expiry_ = file.next_refresh_;
@@ -599,6 +613,7 @@ struct gbfs_update {
   awaitable<void> init_aggregated_feed(std::string const& prefix,
                                        std::string const& url,
                                        headers_t const& headers,
+                                       std::shared_ptr<oauth_state>&& oauth,
                                        boost::json::object const& root) {
     auto af =
         d_->aggregated_feeds_
@@ -606,7 +621,8 @@ struct gbfs_update {
                 .id_ = prefix,
                 .url_ = url,
                 .headers_ = headers,
-                .expiry_ = get_expiry(root, std::chrono::hours{1})}))
+                .expiry_ = get_expiry(root, std::chrono::hours{1}),
+                .oauth_ = std::move(oauth)}))
             .get();
 
     co_return co_await process_aggregated_feed(*af, root);
@@ -614,7 +630,8 @@ struct gbfs_update {
 
   awaitable<void> update_aggregated_feed(aggregated_feed& af) {
     if (af.needs_update()) {
-      auto const file = co_await fetch_file("manifest", af.url_, af.headers_);
+      auto const file =
+          co_await fetch_file("manifest", af.url_, af.headers_, af.oauth_);
       co_await process_aggregated_feed(af, file.json_.as_object());
     } else {
       co_await update_aggregated_feed_provider_feeds(af);
@@ -646,7 +663,8 @@ struct gbfs_update {
             .default_restrictions_ =
                 lookup_default_restrictions(af.id_, combined_id),
             .default_return_constraint_ =
-                lookup_default_return_constraint(af.id_, combined_id)});
+                lookup_default_return_constraint(af.id_, combined_id),
+            .oauth_ = af.oauth_});
       }
     } else if (root.contains("systems")) {
       // Lamassu 2.3 format
@@ -661,7 +679,8 @@ struct gbfs_update {
             .default_restrictions_ =
                 lookup_default_restrictions(af.id_, combined_id),
             .default_return_constraint_ =
-                lookup_default_return_constraint(af.id_, combined_id)});
+                lookup_default_return_constraint(af.id_, combined_id),
+            .oauth_ = af.oauth_});
       }
     }
 
@@ -687,13 +706,17 @@ struct gbfs_update {
   awaitable<gbfs_file> fetch_file(
       std::string_view const name,
       std::string_view const url,
-      headers_t const& headers,
+      headers_t const& base_headers,
+      std::shared_ptr<oauth_state> const& oauth,
       std::optional<std::filesystem::path> const& dir = std::nullopt) {
     auto content = std::string{};
     if (dir.has_value()) {
       content = read_file(*dir / fmt::format("{}.json", name));
     } else {
-      auto const res = co_await client_.get(boost::urls::url{url}, headers);
+      auto headers = base_headers;
+      co_await get_oauth_token(oauth, headers);
+      auto const res =
+          co_await client_.get(boost::urls::url{url}, std::move(headers));
       content = get_http_body(res);
     }
     auto j = json::parse(content);
@@ -705,6 +728,49 @@ struct gbfs_update {
     co_return gbfs_file{.json_ = std::move(j),
                         .hash_ = hash_gbfs_data(content),
                         .next_refresh_ = next_refresh};
+  }
+
+  awaitable<void> get_oauth_token(std::shared_ptr<oauth_state> const& oauth,
+                                  headers_t& headers) {
+    if (oauth == nullptr || oauth->settings_.token_url_.empty()) {
+      co_return;
+    }
+    if (oauth->access_token_.empty() || !oauth->expiry_.has_value() ||
+        (*oauth->expiry_ - std::chrono::system_clock::now()) <
+            (std::chrono::seconds{60} + client_.timeout_)) {
+      // request a new token
+      auto const opt = boost::urls::encoding_opts(true);
+      auto const body = fmt::format(
+          "grant_type=client_credentials&client_id={}&client_secret={}",
+          boost::urls::encode(oauth->settings_.client_id_,
+                              boost::urls::unreserved_chars, opt),
+          boost::urls::encode(oauth->settings_.client_secret_,
+                              boost::urls::unreserved_chars, opt));
+      auto oauth_headers = oauth->settings_.headers_.value_or(headers_t{});
+      oauth_headers["Content-Type"] = "application/x-www-form-urlencoded";
+
+      auto const res =
+          co_await client_.post(boost::urls::url{oauth->settings_.token_url_},
+                                std::move(oauth_headers), body);
+      auto const res_body = get_http_body(res);
+      auto const res_json = json::parse(res_body);
+      auto const& j = res_json.as_object();
+      auto const token_type = j.at("token_type").as_string();
+      utl::verify(token_type == "Bearer", "unsupported oauth token type \"{}\"",
+                  token_type);
+      oauth->access_token_ =
+          static_cast<std::string>(j.at("access_token").as_string());
+
+      auto expires_in = oauth->settings_.expires_in_.value_or(60 * 60 * 24);
+      if (j.contains("expires_in")) {
+        expires_in =
+            std::min(expires_in, j.at("expires_in").to_number<unsigned>());
+      }
+      oauth->expiry_ =
+          std::chrono::system_clock::now() + std::chrono::seconds{expires_in};
+    }
+    headers["Authorization"] = fmt::format("Bearer {}", oauth->access_token_);
+    co_return;
   }
 
   geofencing_restrictions lookup_default_restrictions(std::string const& prefix,
@@ -785,16 +851,17 @@ void run_gbfs_update(boost::asio::io_context& ioc,
         auto executor = co_await asio::this_coro::executor;
         auto timer = asio::steady_timer{executor};
         auto ec = boost::system::error_code{};
+        auto cc = c;
 
         while (true) {
           // Remember when we started so we can schedule the next update.
           auto const start = std::chrono::steady_clock::now();
 
-          co_await update(c, w, l, data_ptr);
+          co_await update(cc, w, l, data_ptr);
 
           // Schedule next update.
           timer.expires_at(start +
-                           std::chrono::seconds{c.gbfs_->update_interval_});
+                           std::chrono::seconds{cc.gbfs_->update_interval_});
           co_await timer.async_wait(
               asio::redirect_error(asio::use_awaitable, ec));
           if (ec == asio::error::operation_aborted) {
