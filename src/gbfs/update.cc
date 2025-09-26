@@ -825,10 +825,21 @@ struct gbfs_update {
         states.insert(pf->oauth_);
       }
     }
-    for (auto& state : states) {
-      co_await refresh_oauth_token(
-          state, std::chrono::seconds{state->expires_in_ / 2});
-    }
+
+    auto executor = co_await asio::this_coro::executor;
+    co_await asio::experimental::make_parallel_group(
+        utl::to_vec(states,
+                    [&](auto const& state) {
+                      return boost::asio::co_spawn(
+                          executor,
+                          [this, state]() -> awaitable<void> {
+                            co_await refresh_oauth_token(
+                                state,
+                                std::chrono::seconds{state->expires_in_ / 2});
+                          },
+                          asio::deferred);
+                    }))
+        .async_wait(asio::experimental::wait_for_all(), asio::use_awaitable);
   }
 
   geofencing_restrictions lookup_default_restrictions(std::string const& prefix,
