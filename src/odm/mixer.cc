@@ -1,4 +1,4 @@
-#include "motis/odm/mixer/mixer.h"
+#include "motis/odm/mixer.h"
 
 #include <filesystem>
 
@@ -10,7 +10,7 @@
 #include "nigiri/special_stations.h"
 
 #include "motis/metrics_registry.h"
-#include "motis/odm/mixer/journeys.h"
+#include "motis/odm/journeys.h"
 #include "motis/odm/odm.h"
 #include "motis/transport_mode_ids.h"
 

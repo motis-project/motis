@@ -1,4 +1,4 @@
-#include "motis/odm/mixer/journeys.h"
+#include "motis/odm/journeys.h"
 
 #include <charconv>
 

@@ -1,7 +1,6 @@
 #include "gtest/gtest.h"
 
-#include "motis/odm/mixer/journeys.h"
-#include "motis/odm/mixer/mixer.h"
+#include "motis/odm/mixer.h"
 #include "motis/odm/odm.h"
 
 using namespace std::string_view_literals;

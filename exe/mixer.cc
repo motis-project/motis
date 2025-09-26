@@ -14,10 +14,10 @@
 #include "motis/config.h"
 #include "motis/data.h"
 #include "motis/endpoints/routing.h"
-#include "motis/odm/mixer/mixer.h"
+#include "motis/odm/mixer.h"
 
 #include "./flags.h"
-#include "motis/odm/mixer/journeys.h"
+#include "motis/odm/journeys.h"
 #include "utl/read_file.h"
 
 namespace fs = std::filesystem;
