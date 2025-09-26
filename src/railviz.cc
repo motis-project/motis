@@ -64,7 +64,7 @@ int min_zoom_level(n::clasz const clasz, float const distance) {
     case n::clasz::kRegional: return 7;
 
     // regional distance
-    case n::clasz::kMetro: return 8;
+    case n::clasz::kSuburban: return 8;
 
     // metro distance
     case n::clasz::kSubway: return 9;
@@ -85,7 +85,7 @@ int min_zoom_level(n::clasz const clasz, float const distance) {
 
     case n::clasz::kCableCar:
     case n::clasz::kFunicular:
-    case n::clasz::kAreaLift:
+    case n::clasz::kAerialLift:
     case n::clasz::kOther: return 11;
 
     default: throw utl::fail("unknown n::clasz {}", static_cast<int>(clasz));
@@ -388,7 +388,7 @@ api::trips_response get_trains(tag_lookup const& tags,
                                       from.display_name(n::event_type::kDep)}}
                                 : std::nullopt}},
         .routeColor_ = to_str(from.get_route_color(n::event_type::kDep).color_),
-        .mode_ = to_mode(from.get_clasz(n::event_type::kDep)),
+        .mode_ = to_mode(from.get_clasz(n::event_type::kDep), api_version),
         .distance_ =
             fr.is_rt()
                 ? rt_index.rt_distances_[fr.rt_]

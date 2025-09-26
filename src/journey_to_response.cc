@@ -411,7 +411,8 @@ api::Itinerary journey_to_response(
                     enter_stop.get_trip_start(n::event_type::kDep);
 
                 auto& leg = itinerary.legs_.emplace_back(api::Leg{
-                    .mode_ = to_mode(enter_stop.get_clasz(n::event_type::kDep)),
+                    .mode_ = to_mode(enter_stop.get_clasz(n::event_type::kDep),
+                                     api_version),
                     .from_ = to_place(enter_stop, n::event_type::kDep),
                     .to_ = to_place(exit_stop, n::event_type::kArr),
                     .duration_ =

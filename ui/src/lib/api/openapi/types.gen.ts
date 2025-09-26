@@ -211,6 +211,10 @@ export type Match = {
      */
     houseNumber?: string;
     /**
+     * ISO3166-1 country code from OpenStreetMap
+     */
+    country?: string;
+    /**
      * zip code
      */
     zip?: string;
@@ -270,13 +274,13 @@ export type CyclingSpeed = number;
  *
  * - `TRANSIT`: translates to `RAIL,TRAM,BUS,FERRY,AIRPLANE,COACH,CABLE_CAR,FUNICULAR,AREAL_LIFT,OTHER`
  * - `TRAM`: trams
- * - `SUBWAY`: subway trains
+ * - `SUBWAY`: subway trains (Paris Metro, London Underground, but also NYC Subway, Hamburger Hochbahn, and other non-underground services)
  * - `FERRY`: ferries
  * - `AIRPLANE`: airline flights
  * - `BUS`: short distance buses (does not include `COACH`)
  * - `COACH`: long distance buses (does not include `BUS`)
- * - `RAIL`: translates to `HIGHSPEED_RAIL,LONG_DISTANCE,NIGHT_RAIL,REGIONAL_RAIL,REGIONAL_FAST_RAIL,METRO,SUBWAY`
- * - `METRO`: metro trains
+ * - `RAIL`: translates to `HIGHSPEED_RAIL,LONG_DISTANCE,NIGHT_RAIL,REGIONAL_RAIL,REGIONAL_FAST_RAIL,SUBURBAN,SUBWAY`
+ * - `SUBURBAN`: suburban trains (e.g. S-Bahn, RER, Elizabeth Line, ...)
  * - `HIGHSPEED_RAIL`: long distance high speed trains (e.g. TGV)
  * - `LONG_DISTANCE`: long distance inter city trains
  * - `NIGHT_RAIL`: long distance night trains
@@ -284,10 +288,12 @@ export type CyclingSpeed = number;
  * - `REGIONAL_RAIL`: regional train
  * - `CABLE_CAR`: Cable tram. Used for street-level rail cars where the cable runs beneath the vehicle (e.g., cable car in San Francisco).
  * - `FUNICULAR`: Funicular. Any rail system designed for steep inclines.
- * - `AREAL_LIFT`: Aerial lift, suspended cable car (e.g., gondola lift, aerial tramway). Cable transport where cabins, cars, gondolas or open chairs are suspended by means of one or more cables.
+ * - `AERIAL_LIFT`: Aerial lift, suspended cable car (e.g., gondola lift, aerial tramway). Cable transport where cabins, cars, gondolas or open chairs are suspended by means of one or more cables.
+ * - `AREAL_LIFT`: deprecated
+ * - `METRO`: deprecated
  *
  */
-export type Mode = 'WALK' | 'BIKE' | 'RENTAL' | 'CAR' | 'CAR_PARKING' | 'CAR_DROPOFF' | 'ODM' | 'FLEX' | 'TRANSIT' | 'TRAM' | 'SUBWAY' | 'FERRY' | 'AIRPLANE' | 'METRO' | 'BUS' | 'COACH' | 'RAIL' | 'HIGHSPEED_RAIL' | 'LONG_DISTANCE' | 'NIGHT_RAIL' | 'REGIONAL_FAST_RAIL' | 'REGIONAL_RAIL' | 'CABLE_CAR' | 'FUNICULAR' | 'AREAL_LIFT' | 'OTHER';
+export type Mode = 'WALK' | 'BIKE' | 'RENTAL' | 'CAR' | 'CAR_PARKING' | 'CAR_DROPOFF' | 'ODM' | 'FLEX' | 'TRANSIT' | 'TRAM' | 'SUBWAY' | 'FERRY' | 'AIRPLANE' | 'SUBURBAN' | 'BUS' | 'COACH' | 'RAIL' | 'HIGHSPEED_RAIL' | 'LONG_DISTANCE' | 'NIGHT_RAIL' | 'REGIONAL_FAST_RAIL' | 'REGIONAL_RAIL' | 'CABLE_CAR' | 'FUNICULAR' | 'AERIAL_LIFT' | 'OTHER' | 'AREAL_LIFT' | 'METRO';
 
 /**
  * - `NORMAL` - latitude / longitude coordinate or address
@@ -985,6 +991,10 @@ export type Transfer = {
     car?: number;
 };
 
+export type Error = {
+    error?: string;
+};
+
 export type PlanData = {
     query: {
         /**
@@ -1426,7 +1436,7 @@ export type PlanData = {
         /**
          * Optional. Default is `TRANSIT` which allows all transit modes (no restriction).
          * Allowed modes for the transit part. If empty, no transit connections will be computed.
-         * For example, this can be used to allow only `METRO,SUBWAY,TRAM`.
+         * For example, this can be used to allow only `SUBURBAN,SUBWAY,TRAM`.
          *
          */
         transitModes?: Array<Mode>;
@@ -1506,7 +1516,7 @@ export type PlanResponse = ({
     nextPageCursor: string;
 });
 
-export type PlanError = unknown;
+export type PlanError = (Error);
 
 export type OneToManyData = {
     query: {
@@ -1734,7 +1744,7 @@ export type OneToAllData = {
         /**
          * Optional. Default is `TRANSIT` which allows all transit modes (no restriction).
          * Allowed modes for the transit part. If empty, no transit connections will be computed.
-         * For example, this can be used to allow only `METRO,SUBWAY,TRAM`.
+         * For example, this can be used to allow only `SUBURBAN,SUBWAY,TRAM`.
          *
          */
         transitModes?: Array<Mode>;
@@ -1750,7 +1760,7 @@ export type OneToAllData = {
 
 export type OneToAllResponse = (Reachable);
 
-export type OneToAllError = unknown;
+export type OneToAllError = (Error);
 
 export type ReverseGeocodeData = {
     query: {
@@ -1771,7 +1781,7 @@ export type ReverseGeocodeData = {
 
 export type ReverseGeocodeResponse = (Array<Match>);
 
-export type ReverseGeocodeError = unknown;
+export type ReverseGeocodeError = (Error);
 
 export type GeocodeData = {
     query: {
@@ -1810,7 +1820,7 @@ export type GeocodeData = {
 
 export type GeocodeResponse = (Array<Match>);
 
-export type GeocodeError = unknown;
+export type GeocodeError = (Error);
 
 export type TripData = {
     query: {
@@ -1843,7 +1853,7 @@ export type TripData = {
 
 export type TripResponse = (Itinerary);
 
-export type TripError = unknown;
+export type TripError = (Error);
 
 export type StoptimesData = {
     query: {
@@ -1958,7 +1968,7 @@ export type StoptimesResponse = ({
     nextPageCursor: string;
 });
 
-export type StoptimesError = unknown;
+export type StoptimesError = (Error);
 
 export type TripsData = {
     query: {
@@ -1987,7 +1997,7 @@ export type TripsData = {
 
 export type TripsResponse = (Array<TripSegment>);
 
-export type TripsError = unknown;
+export type TripsError = (Error);
 
 export type InitialResponse = ({
     /**
@@ -2004,7 +2014,7 @@ export type InitialResponse = ({
     zoom: number;
 });
 
-export type InitialError = unknown;
+export type InitialError = (Error);
 
 export type StopsData = {
     query: {
@@ -2021,7 +2031,7 @@ export type StopsData = {
 
 export type StopsResponse = (Array<Place>);
 
-export type StopsError = unknown;
+export type StopsError = (Error);
 
 export type LevelsData = {
     query: {
@@ -2038,7 +2048,7 @@ export type LevelsData = {
 
 export type LevelsResponse = (Array<(number)>);
 
-export type LevelsError = unknown;
+export type LevelsError = (Error);
 
 export type TransfersData = {
     query: {

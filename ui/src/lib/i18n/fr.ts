@@ -74,7 +74,7 @@ const translations: Translations = {
 	SUBWAY: 'Métro',
 	FERRY: 'Ferry',
 	AIRPLANE: 'Avion',
-	METRO: 'RER',
+	SUBURBAN: 'RER',
 	BUS: 'Bus',
 	COACH: 'Autocar',
 	RAIL: 'Train',
@@ -120,7 +120,7 @@ const translations: Translations = {
 	incline: 'Pente',
 	CABLE_CAR: 'Téléphérique',
 	FUNICULAR: 'Funiculaire',
-	AREAL_LIFT: 'Remontée mécanique',
+	AERIAL_LIFT: 'Remontée mécanique',
 	toll: 'Attention ! Route à péage.',
 	accessRestriction: 'Accès restreint',
 	continuesAs: 'Continue comme'

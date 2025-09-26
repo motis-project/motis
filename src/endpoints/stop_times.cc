@@ -19,6 +19,7 @@
 #include "motis/journey_to_response.h"
 #include "motis/parse_location.h"
 #include "motis/place.h"
+#include "motis/server.h"
 #include "motis/tag_lookup.h"
 #include "motis/timetable/clasz_to_mode.h"
 #include "motis/timetable/modes_to_clasz_mask.h"
@@ -340,7 +341,7 @@ std::vector<api::Place> other_stops_impl(std::string_view trip_id,
 api::stoptimes_response stop_times::operator()(
     boost::urls::url_view const& url) const {
   auto const query = api::stoptimes_params{url.params()};
-  auto const api_version = url.encoded_path().contains("/v1/") ? 1U : 2U;
+  auto const api_version = get_api_version(url);
 
   auto const max_results = config_.limits_.value().stoptimes_max_results_;
   utl::verify(query.n_ < max_results, "n={} > {} not allowed", query.n_,
@@ -460,7 +461,7 @@ api::stoptimes_response stop_times::operator()(
 
             return {
                 .place_ = std::move(place),
-                .mode_ = to_mode(s.get_clasz(ev_type)),
+                .mode_ = to_mode(s.get_clasz(ev_type), api_version),
                 .realTime_ = r.is_rt(),
                 .headsign_ = std::string{s.direction(ev_type)},
                 .tripTo_ = to_place(&tt_, &tags_, w_, pl_, matches_, lp_, tz_,

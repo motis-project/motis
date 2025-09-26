@@ -12,6 +12,7 @@
 #include "motis/gbfs/routing_data.h"
 #include "motis/journey_to_response.h"
 #include "motis/parse_location.h"
+#include "motis/server.h"
 #include "motis/tag_lookup.h"
 
 namespace n = nigiri;
@@ -23,9 +24,7 @@ api::Itinerary trip::operator()(boost::urls::url_view const& url) const {
   auto const rtt = rt->rtt_.get();
 
   auto query = api::trip_params{url.params()};
-  auto const api_version = url.encoded_path().contains("/v1/")   ? 1U
-                           : url.encoded_path().contains("/v2/") ? 2U
-                                                                 : 4U;
+  auto const api_version = get_api_version(url);
 
   auto const [r, _] = tags_.get_trip(tt_, rtt, query.tripId_);
   utl::verify(r.valid(), "trip not found: tripId={}, tt={}", query.tripId_,

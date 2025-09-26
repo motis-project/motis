@@ -117,7 +117,7 @@ vector_map<n::location_idx_t, adr_extra_place_idx_t> adr_extend_tt(
                                        /* Night */ 20,
                                        /* RegionalFast */ 16,
                                        /* Regional */ 15,
-                                       /* Metro */ 10,
+                                       /* Suburban */ 10,
                                        /* Subway */ 10,
                                        /* Tram */ 3,
                                        /* Bus  */ 2,

@@ -74,7 +74,7 @@ const translations: Translations = {
 	SUBWAY: 'Subway',
 	FERRY: 'Ferry',
 	AIRPLANE: 'Airplane',
-	METRO: 'Metropolitan Rail',
+	SUBURBAN: 'Suburban Rail',
 	BUS: 'Bus',
 	COACH: 'Coach',
 	RAIL: 'Train',
@@ -93,7 +93,7 @@ const translations: Translations = {
 	RENTAL_OTHER: 'Other shared vehicle',
 	CABLE_CAR: 'Cable car',
 	FUNICULAR: 'Funicular',
-	AREAL_LIFT: 'Aerial lift',
+	AERIAL_LIFT: 'Aerial lift',
 	routingSegments: {
 		maxTransfers: 'Max. transfers',
 		maxTravelTime: 'Max. travel time',

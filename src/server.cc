@@ -75,4 +75,14 @@ int server(data d, config const& c, std::string_view const motis_version) {
   return 0;
 }
 
+unsigned get_api_version(boost::urls::url_view const& url) {
+  std::regex rgx("\\/v(\\d{1,2})\\/");
+  std::smatch match;
+  auto const haystack = std::string(url.encoded_path());
+  if (std::regex_search(haystack, match, rgx)) {
+    return static_cast<unsigned>(std::stoi(match[1]));
+  }
+  return 0U;
+}
+
 }  // namespace motis
