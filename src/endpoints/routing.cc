@@ -5,7 +5,7 @@
 
 #include "boost/thread/tss.hpp"
 
-#include "openapi/missing_param_exception.h"
+#include "openapi/bad_request_exception.h"
 
 #include "prometheus/counter.h"
 #include "prometheus/histogram.h"
@@ -353,7 +353,7 @@ std::pair<n::routing::query, std::optional<n::unixtime_t>> get_start_time(
     auto const t = std::chrono::time_point_cast<n::i32_minutes>(
         *query.time_.value_or(openapi::now()));
     utl::verify_ex(tt->external_interval().contains(t),
-                   openapi::missing_param_exception{
+                   openapi::bad_request_exception{
                        "query time is outside of loaded timetable window"});
     auto const window =
         std::chrono::duration_cast<n::duration_t>(std::chrono::seconds{
