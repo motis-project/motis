@@ -8,7 +8,6 @@
 #include "nigiri/routing/pareto_set.h"
 #include "nigiri/special_stations.h"
 
-#include "motis/odm/mixer.h"
 #include "motis/odm/odm.h"
 #include "motis/odm/prima.h"
 #include "motis/transport_mode_ids.h"
@@ -17,146 +16,6 @@ namespace n = nigiri;
 using namespace motis::odm;
 using namespace std::chrono_literals;
 using namespace date;
-
-TEST(odm, tally) {
-  auto const ct = std::vector<cost_threshold>{{0, 30}, {1, 1}, {10, 2}};
-  EXPECT_EQ(0, tally(0, ct));
-  EXPECT_EQ(30, tally(1, ct));
-  EXPECT_EQ(43, tally(12, ct));
-}
-
-n::routing::journey direct_taxi(n::unixtime_t const dep,
-                                n::unixtime_t const arr) {
-  return {.legs_ = {n::routing::journey::leg{
-              n::direction::kForward,
-              get_special_station(n::special_station::kStart),
-              get_special_station(n::special_station::kEnd), dep, arr,
-              n::routing::offset{get_special_station(n::special_station::kEnd),
-                                 arr - dep, motis::kOdmTransportModeId}}},
-          .start_time_ = dep,
-          .dest_time_ = arr,
-          .dest_ = get_special_station(n::special_station::kEnd),
-          .transfers_ = 0U};
-}
-
-TEST(odm, pt_taxi_no_direct) {
-  auto pt = n::routing::journey{
-      .legs_ = {n::routing::journey::leg{
-          n::direction::kForward,
-          get_special_station(n::special_station::kStart),
-          n::location_idx_t{23U}, n::unixtime_t{10h + 17min},
-          n::unixtime_t{10h + 47min},
-          n::routing::offset{n::location_idx_t{23U}, 30min, kWalk}}},
-      .start_time_ = n::unixtime_t{10h + 17min},
-      .dest_time_ = n::unixtime_t{11h},
-      .dest_ = get_special_station(n::special_station::kEnd),
-      .transfers_ = 0U};
-
-  auto pt_journeys = n::pareto_set<n::routing::journey>{};
-  pt_journeys.add(n::routing::journey{pt});
-
-  auto pt_taxi = n::routing::journey{
-      .legs_ = {{n::direction::kForward,
-                 get_special_station(n::special_station::kStart),
-                 n::location_idx_t{23U}, n::unixtime_t{10h + 43min},
-                 n::unixtime_t{10h + 47min},
-                 n::routing::offset{n::location_idx_t{23U}, 4min,
-                                    motis::kOdmTransportModeId}},
-                {n::direction::kForward, n::location_idx_t{23U},
-                 get_special_station(n::special_station::kEnd),
-                 n::unixtime_t{10h + 47min}, n::unixtime_t{11h},
-                 n::routing::journey::run_enter_exit{
-                     n::rt::run{}, n::stop_idx_t{0}, n::stop_idx_t{1}}}},
-      .start_time_ = n::unixtime_t{10h + 43min},
-      .dest_time_ = n::unixtime_t{11h},
-      .dest_ = get_special_station(n::special_station::kEnd),
-      .transfers_ = 0U};
-
-  auto odm_journeys = std::vector<n::routing::journey>{
-      pt_taxi,
-      direct_taxi(n::unixtime_t{10h + 10min}, n::unixtime_t{10h + 20min}),
-      direct_taxi(n::unixtime_t{10h + 17min}, n::unixtime_t{10h + 27min}),
-      direct_taxi(n::unixtime_t{10h + 43min}, n::unixtime_t{10h + 53min}),
-      direct_taxi(n::unixtime_t{10h + 50min}, n::unixtime_t{11h + 00min}),
-      direct_taxi(n::unixtime_t{11h + 00min}, n::unixtime_t{11h + 10min})};
-
-  get_default_mixer().mix(pt_journeys, odm_journeys, nullptr);
-
-  ASSERT_EQ(odm_journeys.size(), 2U);
-  EXPECT_NE(utl::find(odm_journeys, pt), end(odm_journeys));
-  EXPECT_NE(utl::find(odm_journeys, pt_taxi), end(odm_journeys));
-}
-
-TEST(odm, taxi_saves_transfers) {
-  auto pt = n::routing::journey{
-      .legs_ = {n::routing::journey::leg{
-                    n::direction::kForward,
-                    get_special_station(n::special_station::kStart),
-                    n::location_idx_t{23U}, n::unixtime_t{10h},
-                    n::unixtime_t{10h + 5min},
-                    n::routing::offset{n::location_idx_t{23U}, 5min, kWalk}},
-                n::routing::journey::leg{
-                    n::direction::kForward, n::location_idx_t{42U},
-                    get_special_station(n::special_station::kEnd),
-                    n::unixtime_t{10h + 55min}, n::unixtime_t{11h},
-                    n::routing::offset{n::location_idx_t{42U}, 5min, kWalk}}},
-      .start_time_ = n::unixtime_t{10h},
-      .dest_time_ = n::unixtime_t{11h},
-      .dest_ = get_special_station(n::special_station::kEnd),
-      .transfers_ = 4U};
-
-  auto pt_journeys = n::pareto_set<n::routing::journey>{};
-  pt_journeys.add(n::routing::journey{pt});
-
-  auto odm_journeys = std::vector<n::routing::journey>{
-      {.legs_ = {{n::direction::kForward,
-                  get_special_station(n::special_station::kStart),
-                  n::location_idx_t{24U}, n::unixtime_t{10h + 14min},
-                  n::unixtime_t{10h + 20min},
-                  n::routing::offset{n::location_idx_t{24U}, 6min,
-                                     motis::kOdmTransportModeId}},
-                 {n::direction::kForward, n::location_idx_t{42U},
-                  get_special_station(n::special_station::kEnd),
-                  n::unixtime_t{10h + 55min}, n::unixtime_t{11h},
-                  n::routing::offset{n::location_idx_t{42U}, 5min, kWalk}}},
-       .start_time_ = n::unixtime_t{10h + 14min},
-       .dest_time_ = n::unixtime_t{11h},
-       .dest_ = get_special_station(n::special_station::kEnd),
-       .transfers_ = 2U},
-      {.legs_ = {{n::direction::kForward,
-                  get_special_station(n::special_station::kStart),
-                  n::location_idx_t{25U}, n::unixtime_t{10h + 20min},
-                  n::unixtime_t{10h + 30min},
-                  n::routing::offset{n::location_idx_t{25U}, 10min,
-                                     motis::kOdmTransportModeId}},
-                 {n::direction::kForward, n::location_idx_t{42U},
-                  get_special_station(n::special_station::kEnd),
-                  n::unixtime_t{10h + 55min}, n::unixtime_t{11h},
-                  n::routing::offset{n::location_idx_t{42U}, 5min, kWalk}}},
-       .start_time_ = n::unixtime_t{10h + 20min},
-       .dest_time_ = n::unixtime_t{11h},
-       .dest_ = get_special_station(n::special_station::kEnd),
-       .transfers_ = 1U},
-      {.legs_ = {{n::direction::kForward,
-                  get_special_station(n::special_station::kStart),
-                  n::location_idx_t{26U}, n::unixtime_t{10h + 30min},
-                  n::unixtime_t{10h + 45min},
-                  n::routing::offset{n::location_idx_t{26U}, 15min,
-                                     motis::kOdmTransportModeId}},
-                 {n::direction::kForward, n::location_idx_t{42U},
-                  get_special_station(n::special_station::kEnd),
-                  n::unixtime_t{10h + 55min}, n::unixtime_t{11h},
-                  n::routing::offset{n::location_idx_t{42U}, 5min, kWalk}}},
-       .start_time_ = n::unixtime_t{10h + 30min},
-       .dest_time_ = n::unixtime_t{11h},
-       .dest_ = get_special_station(n::special_station::kEnd),
-       .transfers_ = 0U}};
-
-  get_default_mixer().mix(pt_journeys, odm_journeys, nullptr);
-
-  ASSERT_EQ(odm_journeys.size(), 1U);
-  EXPECT_NE(utl::find(odm_journeys, pt), end(odm_journeys));
-}
 
 n::loader::mem_dir tt_files() {
   return n::loader::mem_dir::read(R"__(
@@ -283,7 +142,8 @@ TEST(odm, prima_update) {
                  {n::direction::kForward, get_loc_idx("A"),
                   get_special_station(special_station::kEnd),
                   n::unixtime_t{11h}, n::unixtime_t{12h},
-                  n::routing::offset{get_loc_idx("A"), 1h, kWalk}}},
+                  n::routing::offset{get_loc_idx("A"), 1h,
+                                     kWalkTransportModeId}}},
        .start_time_ = n::unixtime_t{10h},
        .dest_time_ = n::unixtime_t{12h},
        .dest_ = get_special_station(special_station::kEnd)});
@@ -297,7 +157,8 @@ TEST(odm, prima_update) {
                  {n::direction::kForward, get_loc_idx("B"),
                   get_special_station(special_station::kEnd),
                   n::unixtime_t{12h}, n::unixtime_t{13h},
-                  n::routing::offset{get_loc_idx("B"), 1h, kWalk}}},
+                  n::routing::offset{get_loc_idx("B"), 1h,
+                                     kWalkTransportModeId}}},
        .start_time_ = n::unixtime_t{11h},
        .dest_time_ = n::unixtime_t{13h},
        .dest_ = get_special_station(special_station::kEnd)});
