@@ -79,8 +79,9 @@ int server(data d, config const& c, std::string_view const motis_version) {
 }
 
 unsigned get_api_version(boost::urls::url_view const& url) {
-  if (url.encoded_path().length() > 3) {
-    return utl::parse<unsigned>(std::string_view{url.encoded_path().substr(2)});
+  if (url.encoded_path().length() > 7) {
+    return utl::parse<unsigned>(
+        std::string_view{url.encoded_path().substr(6, 2)});
   }
   return 0U;
 }
