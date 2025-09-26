@@ -650,8 +650,8 @@ api::plan_response meta_router::run() {
   utl::verify(!results.empty(), "odm: public transport result expected");
   auto const& pt_result = results.front();
   collect_odm_journeys(p_.get(), results);
-  shorten(p_->odm_journeys_, p_->from_rides_, p_->to_rides_, qf.start_walk_,
-          qf.dest_walk_, *tt_, rtt_, query_);
+  shorten(p_->odm_journeys_, p_->from_rides_, p_->to_rides_, *tt_, rtt_,
+          query_);
   utl::erase_duplicates(
       p_->odm_journeys_, std::less<n::routing::journey>{},
       [](auto const& a, auto const& b) {
