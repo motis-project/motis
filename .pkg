@@ -14,7 +14,7 @@
   url=git@github.com:motis-project/utl.git
   branch=master
   commit=a63d8c1822293b8f18dc0418905c3c21067aa051
-[adr]pkg.
+[adr]
   url=git@github.com:triptix-tech/adr.git
   branch=master
   commit=1bda1a54297b761bb812bb42962f971ce40844c0
