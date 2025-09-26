@@ -739,35 +739,60 @@ struct gbfs_update {
         (*oauth->expiry_ - std::chrono::system_clock::now()) <
             (std::chrono::seconds{60} + client_.timeout_)) {
       // request a new token
-      auto const opt = boost::urls::encoding_opts(true);
-      auto const body = fmt::format(
-          "grant_type=client_credentials&client_id={}&client_secret={}",
-          boost::urls::encode(oauth->settings_.client_id_,
-                              boost::urls::unreserved_chars, opt),
-          boost::urls::encode(oauth->settings_.client_secret_,
-                              boost::urls::unreserved_chars, opt));
-      auto oauth_headers = oauth->settings_.headers_.value_or(headers_t{});
-      oauth_headers["Content-Type"] = "application/x-www-form-urlencoded";
+      try {
+        auto const opt = boost::urls::encoding_opts(true);
+        auto const body = fmt::format(
+            "grant_type=client_credentials&client_id={}&client_secret={}",
+            boost::urls::encode(oauth->settings_.client_id_,
+                                boost::urls::unreserved_chars, opt),
+            boost::urls::encode(oauth->settings_.client_secret_,
+                                boost::urls::unreserved_chars, opt));
+        auto oauth_headers = oauth->settings_.headers_.value_or(headers_t{});
+        oauth_headers["Content-Type"] = "application/x-www-form-urlencoded";
 
-      auto const res =
-          co_await client_.post(boost::urls::url{oauth->settings_.token_url_},
-                                std::move(oauth_headers), body);
-      auto const res_body = get_http_body(res);
-      auto const res_json = json::parse(res_body);
-      auto const& j = res_json.as_object();
-      auto const token_type = j.at("token_type").as_string();
-      utl::verify(token_type == "Bearer", "unsupported oauth token type \"{}\"",
-                  token_type);
-      oauth->access_token_ =
-          static_cast<std::string>(j.at("access_token").as_string());
+        auto const res =
+            co_await client_.post(boost::urls::url{oauth->settings_.token_url_},
+                                  std::move(oauth_headers), body);
+        auto const res_body = get_http_body(res);
+        auto const res_json = json::parse(res_body);
+        auto const& j = res_json.as_object();
 
-      auto expires_in = oauth->settings_.expires_in_.value_or(60 * 60 * 24);
-      if (j.contains("expires_in")) {
-        expires_in =
-            std::min(expires_in, j.at("expires_in").to_number<unsigned>());
+        if (res.result_int() != 200) {
+          std::cerr << "[GBFS] oauth token request failed: ";
+          if (j.contains("error")) {
+            std::cerr << j.at("error").as_string();
+          } else {
+            std::cerr << "HTTP " << res.result_int();
+          }
+          if (j.contains("error_description")) {
+            std::cerr << " (" << j.at("error_description").as_string() << ")";
+          }
+          if (j.contains("error_uri")) {
+            std::cerr << " (" << j.at("error_uri").as_string() << ")";
+          }
+          std::cerr << " (token url: " << oauth->settings_.token_url_ << ")"
+                    << std::endl;
+          throw std::runtime_error("oauth token request failed");
+        }
+
+        auto const token_type = j.at("token_type").as_string();
+        utl::verify(token_type == "Bearer",
+                    "unsupported oauth token type \"{}\"", token_type);
+        oauth->access_token_ =
+            static_cast<std::string>(j.at("access_token").as_string());
+
+        auto expires_in = oauth->settings_.expires_in_.value_or(60 * 60 * 24);
+        if (j.contains("expires_in")) {
+          expires_in =
+              std::min(expires_in, j.at("expires_in").to_number<unsigned>());
+        }
+        oauth->expiry_ =
+            std::chrono::system_clock::now() + std::chrono::seconds{expires_in};
+      } catch (std::runtime_error const& e) {
+        std::cerr << "[GBFS] oauth token request error: " << e.what()
+                  << std::endl;
+        throw;
       }
-      oauth->expiry_ =
-          std::chrono::system_clock::now() + std::chrono::seconds{expires_in};
     }
     headers["Authorization"] = fmt::format("Bearer {}", oauth->access_token_);
     co_return;
