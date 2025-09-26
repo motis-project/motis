@@ -150,6 +150,7 @@ target_link_libraries(motis
     ianatzdb-res
     pbf_sdf_fonts_res-res
     tiles_server_res-res
+    address_formatting_res-res
 )
 
 
@@ -197,6 +198,14 @@ if (MOTIS_MIMALLOC)
                 --force --inplace
                 $<$<CONFIG:Debug>:--postfix=debug>
                 $<TARGET_FILE:motis>
+                COMMENT "Ensure mimalloc.dll is loaded first"
+        )
+        add_custom_command(
+                TARGET motis-test POST_BUILD
+                COMMAND "${CMAKE_SOURCE_DIR}/deps/mimalloc/bin/minject.exe"
+                --force --inplace
+                $<$<CONFIG:Debug>:--postfix=debug>
+                $<TARGET_FILE:motis-test>
                 COMMENT "Ensure mimalloc.dll is loaded first"
         )
     endif()

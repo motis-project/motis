@@ -123,10 +123,20 @@ struct config {
       std::optional<std::string> return_constraint_{};
     };
 
+    struct oauth_settings {
+      bool operator==(oauth_settings const&) const = default;
+      std::string token_url_;
+      std::string client_id_;
+      std::string client_secret_;
+      std::optional<headers_t> headers_{};
+      std::optional<unsigned> expires_in_;
+    };
+
     struct feed {
       bool operator==(feed const&) const = default;
       std::string url_;
       std::optional<headers_t> headers_{};
+      std::optional<oauth_settings> oauth_{};
     };
 
     std::map<std::string, feed> feeds_{};

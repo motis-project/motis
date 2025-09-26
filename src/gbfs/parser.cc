@@ -54,7 +54,11 @@ std::string optional_str(json::object const& obj, std::string_view key) {
 
 bool get_bool(gbfs_version const version,
               json::object const& obj,
-              std::string_view const key) {
+              std::string_view const key,
+              std::optional<bool> const def = std::nullopt) {
+  if (!obj.contains(key) && def.has_value()) {
+    return *def;
+  }
   return version == gbfs_version::k1 ? obj.at(key).to_number<int>() == 1
                                      : obj.at(key).as_bool();
 }
@@ -251,8 +255,8 @@ void load_station_status(gbfs_provider& provider, json::value const& root) {
     auto& station = station_it->second;
     station.status_ = station_status{
         .num_vehicles_available_ = 0U,
-        .is_renting_ = get_bool(version, station_obj, "is_renting"),
-        .is_returning_ = get_bool(version, station_obj, "is_returning")};
+        .is_renting_ = get_bool(version, station_obj, "is_renting", true),
+        .is_returning_ = get_bool(version, station_obj, "is_returning", true)};
 
     if (station_obj.contains("num_vehicles_available")) {
       // GBFS 3.x (but some 2.x feeds use this as well)
@@ -452,8 +456,8 @@ void load_vehicle_status(gbfs_provider& provider, json::value const& root) {
     provider.vehicle_status_.emplace_back(vehicle_status{
         .id_ = id,
         .pos_ = pos,
-        .is_reserved_ = get_bool(version, vehicle_obj, "is_reserved"),
-        .is_disabled_ = get_bool(version, vehicle_obj, "is_disabled"),
+        .is_reserved_ = get_bool(version, vehicle_obj, "is_reserved", false),
+        .is_disabled_ = get_bool(version, vehicle_obj, "is_disabled", false),
         .vehicle_type_idx_ = type_idx,
         .station_id_ = optional_str(vehicle_obj, "station_id"),
         .home_station_id_ = optional_str(vehicle_obj, "home_station_id"),
