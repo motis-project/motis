@@ -376,6 +376,7 @@ struct oauth_state {
   config::gbfs::oauth_settings settings_;
   std::string access_token_{};
   std::optional<std::chrono::system_clock::time_point> expiry_{};
+  unsigned expires_in_{};
 };
 
 struct provider_feed {

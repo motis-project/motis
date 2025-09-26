@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <filesystem>
 #include <fstream>
+#include <set>
 #include <sstream>
 #include <string_view>
 #include <utility>
@@ -190,6 +191,8 @@ struct gbfs_update {
       d_->provider_rtree_ = prev_d_->provider_rtree_;
       d_->cache_ = prev_d_->cache_;
 
+      co_await refresh_oauth_tokens();
+
       if (!d_->aggregated_feeds_->empty()) {
         co_await asio::experimental::make_parallel_group(
             utl::to_vec(*d_->aggregated_feeds_,
@@ -232,8 +235,9 @@ struct gbfs_update {
     try {
       auto oauth = std::shared_ptr<oauth_state>{};
       if (oauth_settings) {
-        oauth = std::make_shared<oauth_state>(
-            oauth_state{.settings_ = *oauth_settings});
+        oauth = std::make_shared<oauth_state>(oauth_state{
+            .settings_ = *oauth_settings,
+            .expires_in_ = oauth_settings->expires_in_.value_or(0)});
       }
 
       auto discovery = co_await fetch_file("gbfs", url, headers, oauth, dir);
@@ -731,71 +735,100 @@ struct gbfs_update {
   }
 
   awaitable<void> get_oauth_token(std::shared_ptr<oauth_state> const& oauth,
-                                  headers_t& headers) {
+                                  headers_t& headers,
+                                  std::chrono::seconds remaining_time_required =
+                                      std::chrono::seconds{120}) {
     if (oauth == nullptr || oauth->settings_.token_url_.empty()) {
       co_return;
     }
-    if (oauth->access_token_.empty() || !oauth->expiry_.has_value() ||
-        (*oauth->expiry_ - std::chrono::system_clock::now()) <
-            (std::chrono::seconds{60} + client_.timeout_)) {
-      // request a new token
-      try {
-        auto const opt = boost::urls::encoding_opts(true);
-        auto const body = fmt::format(
-            "grant_type=client_credentials&client_id={}&client_secret={}",
-            boost::urls::encode(oauth->settings_.client_id_,
-                                boost::urls::unreserved_chars, opt),
-            boost::urls::encode(oauth->settings_.client_secret_,
-                                boost::urls::unreserved_chars, opt));
-        auto oauth_headers = oauth->settings_.headers_.value_or(headers_t{});
-        oauth_headers["Content-Type"] = "application/x-www-form-urlencoded";
+    co_await refresh_oauth_token(oauth, remaining_time_required);
+    headers["Authorization"] = fmt::format("Bearer {}", oauth->access_token_);
+  }
 
-        auto const res =
-            co_await client_.post(boost::urls::url{oauth->settings_.token_url_},
-                                  std::move(oauth_headers), body);
-        auto const res_body = get_http_body(res);
-        auto const res_json = json::parse(res_body);
-        auto const& j = res_json.as_object();
+  awaitable<void> refresh_oauth_token(
+      std::shared_ptr<oauth_state> const& oauth,
+      std::chrono::seconds remaining_time_required) {
+    if (oauth == nullptr || oauth->settings_.token_url_.empty()) {
+      co_return;
+    }
+    if (!oauth->access_token_.empty() && oauth->expiry_.has_value() &&
+        (*oauth->expiry_ - std::chrono::system_clock::now()) >
+            remaining_time_required) {
+      // token still valid
+      co_return;
+    }
+    try {
+      auto const opt = boost::urls::encoding_opts(true);
+      auto const body = fmt::format(
+          "grant_type=client_credentials&client_id={}&client_secret={}",
+          boost::urls::encode(oauth->settings_.client_id_,
+                              boost::urls::unreserved_chars, opt),
+          boost::urls::encode(oauth->settings_.client_secret_,
+                              boost::urls::unreserved_chars, opt));
+      auto oauth_headers = oauth->settings_.headers_.value_or(headers_t{});
+      oauth_headers["Content-Type"] = "application/x-www-form-urlencoded";
 
-        if (res.result_int() != 200) {
-          std::cerr << "[GBFS] oauth token request failed: ";
-          if (j.contains("error")) {
-            std::cerr << j.at("error").as_string();
-          } else {
-            std::cerr << "HTTP " << res.result_int();
-          }
-          if (j.contains("error_description")) {
-            std::cerr << " (" << j.at("error_description").as_string() << ")";
-          }
-          if (j.contains("error_uri")) {
-            std::cerr << " (" << j.at("error_uri").as_string() << ")";
-          }
-          std::cerr << " (token url: " << oauth->settings_.token_url_ << ")"
-                    << std::endl;
-          throw std::runtime_error("oauth token request failed");
+      auto const res =
+          co_await client_.post(boost::urls::url{oauth->settings_.token_url_},
+                                std::move(oauth_headers), body);
+      auto const res_body = get_http_body(res);
+      auto const res_json = json::parse(res_body);
+      auto const& j = res_json.as_object();
+
+      if (res.result_int() != 200) {
+        std::cerr << "[GBFS] oauth token request failed: ";
+        if (j.contains("error")) {
+          std::cerr << j.at("error").as_string();
+        } else {
+          std::cerr << "HTTP " << res.result_int();
         }
-
-        auto const token_type = j.at("token_type").as_string();
-        utl::verify(token_type == "Bearer",
-                    "unsupported oauth token type \"{}\"", token_type);
-        oauth->access_token_ =
-            static_cast<std::string>(j.at("access_token").as_string());
-
-        auto expires_in = oauth->settings_.expires_in_.value_or(60 * 60 * 24);
-        if (j.contains("expires_in")) {
-          expires_in =
-              std::min(expires_in, j.at("expires_in").to_number<unsigned>());
+        if (j.contains("error_description")) {
+          std::cerr << " (" << j.at("error_description").as_string() << ")";
         }
-        oauth->expiry_ =
-            std::chrono::system_clock::now() + std::chrono::seconds{expires_in};
-      } catch (std::runtime_error const& e) {
-        std::cerr << "[GBFS] oauth token request error: " << e.what()
+        if (j.contains("error_uri")) {
+          std::cerr << " (" << j.at("error_uri").as_string() << ")";
+        }
+        std::cerr << " (token url: " << oauth->settings_.token_url_ << ")"
                   << std::endl;
-        throw;
+        throw std::runtime_error("oauth token request failed");
+      }
+
+      auto const token_type = j.at("token_type").as_string();
+      utl::verify(token_type == "Bearer", "unsupported oauth token type \"{}\"",
+                  token_type);
+      oauth->access_token_ =
+          static_cast<std::string>(j.at("access_token").as_string());
+
+      oauth->expires_in_ = oauth->settings_.expires_in_.value_or(60 * 60 * 24);
+      if (j.contains("expires_in")) {
+        oauth->expires_in_ = std::min(oauth->expires_in_,
+                                      j.at("expires_in").to_number<unsigned>());
+      }
+      oauth->expiry_ = std::chrono::system_clock::now() +
+                       std::chrono::seconds{oauth->expires_in_};
+    } catch (std::runtime_error const& e) {
+      std::cerr << "[GBFS] oauth token request error: " << e.what()
+                << std::endl;
+      throw;
+    }
+  }
+
+  awaitable<void> refresh_oauth_tokens() {
+    auto states = std::set<std::shared_ptr<oauth_state>>{};
+    for (auto const& af : *d_->aggregated_feeds_) {
+      if (af->oauth_ != nullptr) {
+        states.insert(af->oauth_);
       }
     }
-    headers["Authorization"] = fmt::format("Bearer {}", oauth->access_token_);
-    co_return;
+    for (auto const& pf : *d_->standalone_feeds_) {
+      if (pf->oauth_ != nullptr) {
+        states.insert(pf->oauth_);
+      }
+    }
+    for (auto& state : states) {
+      co_await refresh_oauth_token(
+          state, std::chrono::seconds{state->expires_in_ / 2});
+    }
   }
 
   geofencing_restrictions lookup_default_restrictions(std::string const& prefix,
