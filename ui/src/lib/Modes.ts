@@ -47,14 +47,14 @@ export const possibleTransitModes = [
 	'COACH',
 	'REGIONAL_FAST_RAIL',
 	'REGIONAL_RAIL',
-	'METRO',
+	'SUBURBAN',
 	'SUBWAY',
 	'TRAM',
 	'BUS',
 	'FERRY',
 	'CABLE_CAR',
 	'FUNICULAR',
-	'AREAL_LIFT',
+	'AERIAL_LIFT',
 	'OTHER'
 ];
 export type TransitMode = (typeof possibleTransitModes)[number];

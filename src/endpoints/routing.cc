@@ -53,6 +53,7 @@
 #include "motis/osr/mode_to_profile.h"
 #include "motis/osr/street_routing.h"
 #include "motis/parse_location.h"
+#include "motis/server.h"
 #include "motis/tag_lookup.h"
 #include "motis/timetable/modes_to_clasz_mask.h"
 #include "motis/timetable/time_conv.h"
@@ -563,9 +564,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
   }
 
   auto const query = api::plan_params{url.params()};
-  auto const api_version = url.encoded_path().contains("/v1/")   ? 1U
-                           : url.encoded_path().contains("/v2/") ? 2U
-                                                                 : 3U;
+  auto const api_version = get_api_version(url);
 
   auto const deduplicate = [](auto m) {
     utl::erase_duplicates(m);

@@ -76,7 +76,7 @@ const translations: Translations = {
 	SUBWAY: 'Metro',
 	FERRY: 'Prom',
 	AIRPLANE: 'Samolot',
-	METRO: 'Kolej miejska',
+	SUBURBAN: 'Kolej miejska',
 	BUS: 'Autobus',
 	COACH: 'Autokar dalekobieżny',
 	RAIL: 'Kolej',
@@ -122,7 +122,7 @@ const translations: Translations = {
 	incline: 'Nachylenie',
 	CABLE_CAR: 'Kolej linowa',
 	FUNICULAR: 'Kolej linowo-terenowa',
-	AREAL_LIFT: 'Wyciąg krzesełkowy',
+	AERIAL_LIFT: 'Wyciąg krzesełkowy',
 	toll: 'Uwaga! Za przejazd tą trasą pobierana jest opłata.',
 	accessRestriction: 'Ograniczony dostęp',
 	continuesAs: 'Kontynuuje jako'

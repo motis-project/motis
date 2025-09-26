@@ -95,13 +95,17 @@ struct motis_instance {
     GET<ep::routing>("/api/v2/plan", d);
     GET<ep::routing>("/api/v3/plan", d);
     GET<ep::routing>("/api/v4/plan", d);
+    GET<ep::routing>("/api/v5/plan", d);
     GET<ep::stop_times>("/api/v1/stoptimes", d);
     GET<ep::stop_times>("/api/v4/stoptimes", d);
+    GET<ep::stop_times>("/api/v5/stoptimes", d);
     GET<ep::trip>("/api/v1/trip", d);
     GET<ep::trip>("/api/v2/trip", d);
     GET<ep::trip>("/api/v4/trip", d);
+    GET<ep::trip>("/api/v5/trip", d);
     GET<ep::trips>("/api/v1/map/trips", d);
     GET<ep::trips>("/api/v4/map/trips", d);
+    GET<ep::trips>("/api/v5/map/trips", d);
     GET<ep::stops>("/api/v1/map/stops", d);
     GET<ep::one_to_all>("/api/experimental/one-to-all", d);
     GET<ep::one_to_all>("/api/v1/one-to-all", d);

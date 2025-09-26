@@ -1,3 +1,5 @@
+#include <string_view>
+
 #include "boost/asio/io_context.hpp"
 
 #include "fmt/format.h"
@@ -10,6 +12,7 @@
 #include "utl/enumerate.h"
 #include "utl/init_from.h"
 #include "utl/logging.h"
+#include "utl/parser/arg_parser.h"
 
 #include "ctx/ctx.h"
 
@@ -73,6 +76,13 @@ int server(data d, config const& c, std::string_view const motis_version) {
   m.join();
 
   return 0;
+}
+
+unsigned get_api_version(boost::urls::url_view const& url) {
+  if (url.encoded_path().length() > 3) {
+    return utl::parse<unsigned>(std::string_view{url.encoded_path().substr(2)});
+  }
+  return 0U;
 }
 
 }  // namespace motis
