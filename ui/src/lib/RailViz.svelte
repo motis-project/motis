@@ -270,8 +270,9 @@
 					}
 					return {
 						html: `${object.trips[0].displayName}<br>
-                  ${formatTime(new Date(object.departure), object.from.tz)} ${object.from.name}<br>
-                  ${formatTime(new Date(object.arrival), object.to.tz)} ${object.to.name}`
+						${object.from.track}<br>
+						${formatTime(new Date(object.departure), object.from.tz)} ${object.from.name}<br>
+						${formatTime(new Date(object.arrival), object.to.tz)} ${object.to.name}`
 					};
 				},
 				onClick: ({ object }) => {
@@ -304,6 +305,7 @@
 		}
 		clearTimeout(timer);
 		if (map && overlay) {
+			
 			map.removeControl(overlay);
 		}
 	});
