@@ -57,6 +57,9 @@
 				onclick={() => onClickStop(p.name, p.stopId!, new Date(timestamp))}
 			>
 				{p.name}
+				{#if p.track}
+					- {t.track} {p.track}
+				{/if}
 			</Button>
 			{@const pickupNotAllowedOrEnd = p.pickupType == 'NOT_ALLOWED' && isStartOrEnd != -1}
 			{@const dropoffNotAllowedOrStart = p.dropoffType == 'NOT_ALLOWED' && isStartOrEnd != 1}
