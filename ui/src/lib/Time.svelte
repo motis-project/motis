@@ -59,12 +59,14 @@
 		</div>
 		<div class="text-xs font-normal h-4">{isSameAsBrowserTimezone ? '' : timeZoneOffset}</div>
 	{:else if variant === 'realtime-show-always' || (variant === 'realtime' && isRealtime)}
-		<span class:text-destructive={highDelay} class:text-green-600={lowDelay} class="bg-white">
+		<span class:text-destructive={highDelay} class:text-green-600={lowDelay}>
 			{formatTime(t, timeZone)}
 			{weekday(t)}
 		</span>
-		{#if variant !== 'realtime-show-always'}
-			<div class="text-xs font-normal h-4"></div>
+		{#if variant === 'realtime-show-always' && !isSameAsBrowserTimezone}
+			<div class="text-xs font-normal h-4">
+				{isSameAsBrowserTimezone ? '' : timeZoneOffset}
+			</div>
 		{/if}
 	{/if}
 </div>
