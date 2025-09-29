@@ -403,8 +403,9 @@ n::routing::query meta_router::get_base_query(
               .min_transfer_time_ = n::duration_t{query_.minTransferTime_},
               .additional_time_ = n::duration_t{query_.additionalTransferTime_},
               .factor_ = static_cast<float>(query_.transferTimeFactor_)},
-      .via_stops_ = motis::ep::get_via_stops(*tt_, *r_.tags_, query_.via_,
-                                             query_.viaMinimumStay_),
+      .via_stops_ =
+          motis::ep::get_via_stops(*tt_, *r_.tags_, query_.via_,
+                                   query_.viaMinimumStay_, query_.arriveBy_),
       .fastest_direct_ = fastest_direct_ == ep::kInfinityDuration
                              ? std::nullopt
                              : std::optional{fastest_direct_}};
