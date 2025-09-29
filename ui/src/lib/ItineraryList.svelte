@@ -115,8 +115,8 @@
 								}}
 							>
 								<Card class="p-4">
-									<div class="text-base h-8 flex justify-around items-center space-x-1 w-full">
-										<div class="overflow-hidden basis-1/4">
+									<div class="text-base flex justify-around items-start space-x-1 w-full">
+										<div class="overflow-hidden basis-1/4 h-full flex flex-col">
 											<div class="text-xs font-bold uppercase text-slate-400">{t.departure}</div>
 											<Time
 												isRealtime={it.legs[0].realTime}
@@ -128,7 +128,7 @@
 											/>
 										</div>
 										<Separator orientation="vertical" />
-										<div class="overflow-hidden basis-1/4">
+										<div class="overflow-hidden basis-1/4 h-full flex flex-col">
 											<div class="text-xs font-bold uppercase text-slate-400">{t.arrival}</div>
 											<Time
 												isRealtime={it.legs[it.legs.length - 1].realTime}
@@ -140,13 +140,19 @@
 											/>
 										</div>
 										<Separator orientation="vertical" />
-										<div class="overflow-hidden basis-1/4">
-											<div class="text-xs font-bold uppercase text-slate-400">{t.transfers}</div>
-											<div class="text-center">{it.transfers}</div>
+										<div class="overflow-hidden basis-1/4 h-full flex flex-col">
+											<div class="text-xs font-bold uppercase text-slate-400">
+												{t.transfers}
+											</div>
+											<div class="text-center text-nowrap">
+												{it.transfers}
+											</div>
 										</div>
 										<Separator orientation="vertical" />
-										<div class="overflow-hidden basis-1/4">
-											<div class="text-xs font-bold uppercase text-slate-400">{t.duration}</div>
+										<div class="overflow-hidden basis-1/4 h-full flex flex-col">
+											<div class="text-xs font-bold uppercase text-slate-400">
+												{t.duration}
+											</div>
 											<div class="text-center text-nowrap">
 												{formatDurationSec(it.duration)}
 											</div>

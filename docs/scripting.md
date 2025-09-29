@@ -82,14 +82,14 @@ The `clasz` attribute is an internal grouping of transport modes in MOTIS that c
   - Night = 4
   - RegionalFast = 5
   - Regional = 6
-  - Metro = 7
+  - Suburban = 7
   - Subway = 8
   - Tram = 9
   - Bus = 10
   - Ship = 11
   - CableCar = 12
   - Funicular = 13
-  - AreaLift = 14
+  - AerialLift = 14
   - Other = 15
 
 The color is currently set as unsigned 32bit integer. In future versions, we might change this to a hex string like `#FF0000`.

@@ -6,6 +6,6 @@
 
 namespace motis {
 
-api::ModeEnum to_mode(nigiri::clasz);
+api::ModeEnum to_mode(nigiri::clasz, unsigned api_version);
 
 }  // namespace motis

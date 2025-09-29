@@ -394,7 +394,7 @@ api::Itinerary journey_to_response(
                 auto const exit_stop = fr[common_stops.to_ - 1U];
                 auto const color =
                     enter_stop.get_route_color(n::event_type::kDep);
-                auto const agency =
+                auto const& agency =
                     enter_stop.get_provider(n::event_type::kDep);
                 auto const fare_indices = get_fare_indices(fares, j_leg);
 
@@ -411,7 +411,8 @@ api::Itinerary journey_to_response(
                     enter_stop.get_trip_start(n::event_type::kDep);
 
                 auto& leg = itinerary.legs_.emplace_back(api::Leg{
-                    .mode_ = to_mode(enter_stop.get_clasz(n::event_type::kDep)),
+                    .mode_ = to_mode(enter_stop.get_clasz(n::event_type::kDep),
+                                     api_version),
                     .from_ = to_place(enter_stop, n::event_type::kDep),
                     .to_ = to_place(exit_stop, n::event_type::kArr),
                     .duration_ =

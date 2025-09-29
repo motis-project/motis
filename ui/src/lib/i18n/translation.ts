@@ -70,7 +70,7 @@ export type Translations = {
 	SUBWAY: string;
 	FERRY: string;
 	AIRPLANE: string;
-	METRO: string;
+	SUBURBAN: string;
 	BUS: string;
 	COACH: string;
 	RAIL: string;
@@ -116,7 +116,7 @@ export type Translations = {
 	incline: string;
 	CABLE_CAR: string;
 	FUNICULAR: string;
-	AREAL_LIFT: string;
+	AERIAL_LIFT: string;
 	toll: string;
 	accessRestriction: string;
 	continuesAs: string;

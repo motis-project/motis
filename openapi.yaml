@@ -1,13 +1,29 @@
 openapi: 3.1.0
 info:
   title: MOTIS API
-  description: This is the MOTIS routing API.
+  description: |
+    This is the MOTIS routing API.
+
+    Overview of MOTIS API versions:
+
+    MOTIS 0.x - deprecated/discontinued
+
+    MOTIS 2.x - current, providing:
+
+    * /api/v5/{plan,trip,stoptimes,map/trips} renamed METRO mode to SUBURBAN, AREAL_LIFT to AERIAL_LIFT; since MOTIS 2.5.0
+    * /api/v4/{plan,trip,stoptimes,map/trips} new displayName property, routeShortName only contains actual route short name from source; since MOTIS 2.2.0
+    * /api/v3/plan with correct maxTransfers API parameter (transfers actually corresponding to number of changes between transit legs (and not to number of transit legs), i.e. maxTransfers=0 returns direct public transit connections, as expected); since MOTIS 2.0.84 
+    * /api/v2/{plan,trip} returns Google polylines with precision=6; since MOTIS 2.0.60
+    * /api/v1/{plan,trip} returns Google polylines with precision=7 (not defined for |longitude|>107)
+    * /api/v1/* all other endpoints
+
+    If you use the JS client lib https://www.npmjs.com/package/@motis-project/motis-client, endpoint versions will be taken into account automatically (i.e. the newest one available will be used).
   contact:
     email: felix@triptix.tech
   license:
     name: MIT
     url: https://opensource.org/license/mit
-  version: v4
+  version: v5
 externalDocs:
   description: Find out more about MOTIS
   url: https://github.com/motis-project/motis
@@ -19,7 +35,7 @@ servers:
   - url: http://localhost:8080
     description: Local MOTIS server
 paths:
-  /api/v4/plan:
+  /api/v5/plan:
     get:
       tags:
         - routing
@@ -277,7 +293,7 @@ paths:
           description: |
             Optional. Default is `TRANSIT` which allows all transit modes (no restriction).
             Allowed modes for the transit part. If empty, no transit connections will be computed.
-            For example, this can be used to allow only `METRO,SUBWAY,TRAM`.
+            For example, this can be used to allow only `SUBURBAN,SUBWAY,TRAM`.
           schema:
             default:
               - TRANSIT
@@ -756,6 +772,12 @@ paths:
               - TB
             default: RAPTOR
       responses:
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '200':
           description: routing result
           content:
@@ -1079,7 +1101,7 @@ paths:
           description: |
             Optional. Default is `TRANSIT` which allows all transit modes (no restriction).
             Allowed modes for the transit part. If empty, no transit connections will be computed.
-            For example, this can be used to allow only `METRO,SUBWAY,TRAM`.
+            For example, this can be used to allow only `SUBURBAN,SUBWAY,TRAM`.
           schema:
             default:
               - TRANSIT
@@ -1171,6 +1193,12 @@ paths:
             minimum: 0
 
       responses:
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '200':
           description: |
             The starting position and a list of all reachable stops
@@ -1204,6 +1232,12 @@ paths:
           schema:
             $ref: '#/components/schemas/LocationType'
       responses:
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '200':
           description: A list of guesses to resolve the coordinates to a location
           content:
@@ -1267,6 +1301,12 @@ paths:
             default: 1
 
       responses:
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '200':
           description: A list of guesses to resolve the text to a location
           content:
@@ -1276,7 +1316,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/Match'
 
-  /api/v4/trip:
+  /api/v5/trip:
     get:
       tags:
         - timetable
@@ -1317,6 +1357,12 @@ paths:
           schema:
             type: string
       responses:
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '200':
           description: the requested trip as itinerary
           content:
@@ -1324,7 +1370,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Itinerary'
 
-  /api/v4/stoptimes:
+  /api/v5/stoptimes:
     get:
       tags:
         - timetable
@@ -1462,6 +1508,12 @@ paths:
           schema:
             type: string
       responses:
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '200':
           description: A list of departures/arrivals
           content:
@@ -1493,7 +1545,7 @@ paths:
                       The next page is a set of stop times AFTER the last stop time in this result.
                     type: string
 
-  /api/v4/map/trips:
+  /api/v5/map/trips:
     get:
       tags:
         - map
@@ -1537,6 +1589,12 @@ paths:
             type: string
             format: date-time
       responses:
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '200':
           description: a list of trips
           content:
@@ -1553,6 +1611,12 @@ paths:
       operationId: initial
       summary: initial location to view the map at after loading based on where public transport should be visible
       responses:
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '200':
           description: latitude, longitude and zoom level to set the map to
           content:
@@ -1594,6 +1658,12 @@ paths:
           schema:
             type: string
       responses:
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '200':
           description: array of stop places in the selected map section
           content:
@@ -1623,6 +1693,12 @@ paths:
           schema:
             type: string
       responses:
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '200':
           description: array of available levels
           content:
@@ -1976,13 +2052,13 @@ components:
 
           - `TRANSIT`: translates to `RAIL,TRAM,BUS,FERRY,AIRPLANE,COACH,CABLE_CAR,FUNICULAR,AREAL_LIFT,OTHER`
           - `TRAM`: trams
-          - `SUBWAY`: subway trains
+          - `SUBWAY`: subway trains (Paris Metro, London Underground, but also NYC Subway, Hamburger Hochbahn, and other non-underground services)
           - `FERRY`: ferries
           - `AIRPLANE`: airline flights
           - `BUS`: short distance buses (does not include `COACH`)
           - `COACH`: long distance buses (does not include `BUS`)
-          - `RAIL`: translates to `HIGHSPEED_RAIL,LONG_DISTANCE,NIGHT_RAIL,REGIONAL_RAIL,REGIONAL_FAST_RAIL,METRO,SUBWAY`
-          - `METRO`: metro trains 
+          - `RAIL`: translates to `HIGHSPEED_RAIL,LONG_DISTANCE,NIGHT_RAIL,REGIONAL_RAIL,REGIONAL_FAST_RAIL,SUBURBAN,SUBWAY`
+          - `SUBURBAN`: suburban trains (e.g. S-Bahn, RER, Elizabeth Line, ...)
           - `HIGHSPEED_RAIL`: long distance high speed trains (e.g. TGV)
           - `LONG_DISTANCE`: long distance inter city trains
           - `NIGHT_RAIL`: long distance night trains
@@ -1990,7 +2066,9 @@ components:
           - `REGIONAL_RAIL`: regional train
           - `CABLE_CAR`: Cable tram. Used for street-level rail cars where the cable runs beneath the vehicle (e.g., cable car in San Francisco).
           - `FUNICULAR`: Funicular. Any rail system designed for steep inclines.
-          - `AREAL_LIFT`: Aerial lift, suspended cable car (e.g., gondola lift, aerial tramway). Cable transport where cabins, cars, gondolas or open chairs are suspended by means of one or more cables.
+          - `AERIAL_LIFT`: Aerial lift, suspended cable car (e.g., gondola lift, aerial tramway). Cable transport where cabins, cars, gondolas or open chairs are suspended by means of one or more cables.
+          - `AREAL_LIFT`: deprecated
+          - `METRO`: deprecated
       type: string
       enum:
         # === Street ===
@@ -2008,7 +2086,7 @@ components:
         - SUBWAY
         - FERRY
         - AIRPLANE
-        - METRO
+        - SUBURBAN
         - BUS
         - COACH
         - RAIL
@@ -2019,8 +2097,10 @@ components:
         - REGIONAL_RAIL
         - CABLE_CAR
         - FUNICULAR
-        - AREAL_LIFT
+        - AERIAL_LIFT
         - OTHER
+        - AREAL_LIFT
+        - METRO
 
     VertexType:
       type: string
@@ -2825,3 +2905,8 @@ components:
           description: |
             optional; missing if no path was found with car routing
             transfer duration in minutes for the car profile
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
