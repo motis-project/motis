@@ -372,6 +372,13 @@ struct gbfs_provider {
   bool has_vehicles_to_rent_{};
 };
 
+struct oauth_state {
+  config::gbfs::oauth_settings settings_;
+  std::string access_token_{};
+  std::optional<std::chrono::system_clock::time_point> expiry_{};
+  unsigned expires_in_{};
+};
+
 struct provider_feed {
   bool operator==(provider_feed const& o) const { return id_ == o.id_; }
   bool operator==(std::string const& id) const { return id_ == id; }
@@ -383,6 +390,7 @@ struct provider_feed {
   std::optional<std::filesystem::path> dir_{};
   geofencing_restrictions default_restrictions_{};
   std::optional<return_constraint> default_return_constraint_{};
+  std::shared_ptr<oauth_state> oauth_{};
 };
 
 struct aggregated_feed {
@@ -400,6 +408,7 @@ struct aggregated_feed {
   headers_t headers_{};
   std::optional<std::chrono::system_clock::time_point> expiry_{};
   std::vector<provider_feed> feeds_{};
+  std::shared_ptr<oauth_state> oauth_{};
 };
 
 struct gbfs_data {

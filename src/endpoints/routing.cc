@@ -53,6 +53,7 @@
 #include "motis/osr/mode_to_profile.h"
 #include "motis/osr/street_routing.h"
 #include "motis/parse_location.h"
+#include "motis/server.h"
 #include "motis/tag_lookup.h"
 #include "motis/timetable/modes_to_clasz_mask.h"
 #include "motis/timetable/time_conv.h"
@@ -533,7 +534,8 @@ std::vector<n::routing::via_stop> get_via_stops(
     n::timetable const& tt,
     tag_lookup const& tags,
     std::optional<std::vector<std::string>> const& vias,
-    std::vector<std::int64_t> const& times) {
+    std::vector<std::int64_t> const& times,
+    bool const reverse) {
   if (!vias.has_value()) {
     return {};
   }
@@ -542,6 +544,10 @@ std::vector<n::routing::via_stop> get_via_stops(
   for (auto i = 0U; i != vias->size(); ++i) {
     ret.push_back({tags.get_location(tt, (*vias)[i]),
                    n::duration_t{i < times.size() ? times[i] : 0}});
+  }
+
+  if (reverse) {
+    std::reverse(begin(ret), end(ret));
   }
   return ret;
 }
@@ -563,9 +569,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
   }
 
   auto const query = api::plan_params{url.params()};
-  auto const api_version = url.encoded_path().contains("/v1/")   ? 1U
-                           : url.encoded_path().contains("/v2/") ? 2U
-                                                                 : 3U;
+  auto const api_version = get_api_version(url);
 
   auto const deduplicate = [](auto m) {
     utl::erase_duplicates(m);
@@ -766,8 +770,8 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                 .additional_time_ =
                     n::duration_t{query.additionalTransferTime_},
                 .factor_ = static_cast<float>(query.transferTimeFactor_)},
-        .via_stops_ =
-            get_via_stops(*tt_, *tags_, query.via_, query.viaMinimumStay_),
+        .via_stops_ = get_via_stops(*tt_, *tags_, query.via_,
+                                    query.viaMinimumStay_, query.arriveBy_),
         .fastest_direct_ = fastest_direct == kInfinityDuration
                                ? std::nullopt
                                : std::optional{fastest_direct},

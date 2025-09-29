@@ -240,6 +240,10 @@ export const MatchSchema = {
             description: 'house number',
             type: 'string'
         },
+        country: {
+            description: 'ISO3166-1 country code from OpenStreetMap',
+            type: 'string'
+        },
         zip: {
             description: 'zip code',
             type: 'string'
@@ -306,13 +310,13 @@ export const ModeSchema = {
 
   - \`TRANSIT\`: translates to \`RAIL,TRAM,BUS,FERRY,AIRPLANE,COACH,CABLE_CAR,FUNICULAR,AREAL_LIFT,OTHER\`
   - \`TRAM\`: trams
-  - \`SUBWAY\`: subway trains
+  - \`SUBWAY\`: subway trains (Paris Metro, London Underground, but also NYC Subway, Hamburger Hochbahn, and other non-underground services)
   - \`FERRY\`: ferries
   - \`AIRPLANE\`: airline flights
   - \`BUS\`: short distance buses (does not include \`COACH\`)
   - \`COACH\`: long distance buses (does not include \`BUS\`)
-  - \`RAIL\`: translates to \`HIGHSPEED_RAIL,LONG_DISTANCE,NIGHT_RAIL,REGIONAL_RAIL,REGIONAL_FAST_RAIL,METRO,SUBWAY\`
-  - \`METRO\`: metro trains 
+  - \`RAIL\`: translates to \`HIGHSPEED_RAIL,LONG_DISTANCE,NIGHT_RAIL,REGIONAL_RAIL,REGIONAL_FAST_RAIL,SUBURBAN,SUBWAY\`
+  - \`SUBURBAN\`: suburban trains (e.g. S-Bahn, RER, Elizabeth Line, ...)
   - \`HIGHSPEED_RAIL\`: long distance high speed trains (e.g. TGV)
   - \`LONG_DISTANCE\`: long distance inter city trains
   - \`NIGHT_RAIL\`: long distance night trains
@@ -320,10 +324,12 @@ export const ModeSchema = {
   - \`REGIONAL_RAIL\`: regional train
   - \`CABLE_CAR\`: Cable tram. Used for street-level rail cars where the cable runs beneath the vehicle (e.g., cable car in San Francisco).
   - \`FUNICULAR\`: Funicular. Any rail system designed for steep inclines.
-  - \`AREAL_LIFT\`: Aerial lift, suspended cable car (e.g., gondola lift, aerial tramway). Cable transport where cabins, cars, gondolas or open chairs are suspended by means of one or more cables.
+  - \`AERIAL_LIFT\`: Aerial lift, suspended cable car (e.g., gondola lift, aerial tramway). Cable transport where cabins, cars, gondolas or open chairs are suspended by means of one or more cables.
+  - \`AREAL_LIFT\`: deprecated
+  - \`METRO\`: deprecated
 `,
     type: 'string',
-    enum: ['WALK', 'BIKE', 'RENTAL', 'CAR', 'CAR_PARKING', 'CAR_DROPOFF', 'ODM', 'FLEX', 'TRANSIT', 'TRAM', 'SUBWAY', 'FERRY', 'AIRPLANE', 'METRO', 'BUS', 'COACH', 'RAIL', 'HIGHSPEED_RAIL', 'LONG_DISTANCE', 'NIGHT_RAIL', 'REGIONAL_FAST_RAIL', 'REGIONAL_RAIL', 'CABLE_CAR', 'FUNICULAR', 'AREAL_LIFT', 'OTHER']
+    enum: ['WALK', 'BIKE', 'RENTAL', 'CAR', 'CAR_PARKING', 'CAR_DROPOFF', 'ODM', 'FLEX', 'TRANSIT', 'TRAM', 'SUBWAY', 'FERRY', 'AIRPLANE', 'SUBURBAN', 'BUS', 'COACH', 'RAIL', 'HIGHSPEED_RAIL', 'LONG_DISTANCE', 'NIGHT_RAIL', 'REGIONAL_FAST_RAIL', 'REGIONAL_RAIL', 'CABLE_CAR', 'FUNICULAR', 'AERIAL_LIFT', 'OTHER', 'AREAL_LIFT', 'METRO']
 } as const;
 
 export const VertexTypeSchema = {
@@ -1224,6 +1230,15 @@ true if the wheelchair path uses an elevator
             description: `optional; missing if no path was found with car routing
 transfer duration in minutes for the car profile
 `
+        }
+    }
+} as const;
+
+export const ErrorSchema = {
+    type: 'object',
+    properties: {
+        error: {
+            type: 'string'
         }
     }
 } as const;

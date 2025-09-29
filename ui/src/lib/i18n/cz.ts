@@ -76,7 +76,7 @@ const translations: Translations = {
 	SUBWAY: 'Metro',
 	FERRY: 'Přívoz',
 	AIRPLANE: 'Letadlo',
-	METRO: 'Městská železnice',
+	SUBURBAN: 'Městská železnice',
 	BUS: 'Autobus',
 	COACH: 'Dálkový autokar',
 	RAIL: 'Železnice',
@@ -122,7 +122,7 @@ const translations: Translations = {
 	incline: 'Sklon',
 	CABLE_CAR: 'Lanová dráha',
 	FUNICULAR: 'Lanová dráha',
-	AREAL_LIFT: 'Lanová dráha',
+	AERIAL_LIFT: 'Lanová dráha',
 	toll: 'Pozor! Průjezd tuto trasou je placený.',
 	accessRestriction: 'Omezený dostup',
 	continuesAs: 'Pokračuje jako'

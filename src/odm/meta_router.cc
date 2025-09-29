@@ -42,6 +42,7 @@
 #include "motis/journey_to_response.h"
 #include "motis/metrics_registry.h"
 #include "motis/odm/bounds.h"
+#include "motis/odm/journeys.h"
 #include "motis/odm/mixer.h"
 #include "motis/odm/odm.h"
 #include "motis/odm/prima.h"
@@ -60,6 +61,7 @@ using namespace std::chrono_literals;
 
 constexpr auto const kODMLookAhead = n::duration_t{24h};
 constexpr auto const kSearchIntervalSize = n::duration_t{6h};
+constexpr auto const kContextPadding = n::duration_t{2h};
 constexpr auto const kODMDirectPeriod = 300s;
 constexpr auto const kODMDirectFactor = 1.0;
 constexpr auto const kODMOffsetMinImprovement = 60s;
@@ -247,10 +249,6 @@ void init_pt(std::vector<n::routing::start>& rides,
     auto const out_of_bounds =
         (r.odm_bounds_ != nullptr &&
          !r.odm_bounds_->contains(r.tt_->locations_.coordinates_[o.target_]));
-    /*if (out_of_bounds) {
-      n::log(n::log_lvl::debug, "motis.odm", "Bounds filtered: {}",
-             n::location{*r.tt_, o.target_});
-    }*/
     return out_of_bounds;
   });
 
@@ -405,8 +403,9 @@ n::routing::query meta_router::get_base_query(
               .min_transfer_time_ = n::duration_t{query_.minTransferTime_},
               .additional_time_ = n::duration_t{query_.additionalTransferTime_},
               .factor_ = static_cast<float>(query_.transferTimeFactor_)},
-      .via_stops_ = motis::ep::get_via_stops(*tt_, *r_.tags_, query_.via_,
-                                             query_.viaMinimumStay_),
+      .via_stops_ =
+          motis::ep::get_via_stops(*tt_, *r_.tags_, query_.via_,
+                                   query_.viaMinimumStay_, query_.arriveBy_),
       .fastest_direct_ = fastest_direct_ == ep::kInfinityDuration
                              ? std::nullopt
                              : std::optional{fastest_direct_}};
@@ -441,6 +440,9 @@ void collect_odm_journeys(
     for (auto const& j : r.journeys_) {
       if (uses_odm(j)) {
         p->odm_journeys_.push_back(j);
+        p->odm_journeys_.back().transfers_ +=
+            (j.legs_.empty() || !is_odm_leg(j.legs_.front()) ? 0U : 1U) +
+            (j.legs_.size() < 2U || !is_odm_leg(j.legs_.back()) ? 0U : 1U);
       }
     }
   }
@@ -530,8 +532,7 @@ api::plan_response meta_router::run() {
   search_intvl.to_ = r_.tt_->external_interval().clamp(search_intvl.to_);
 
   auto const context_intvl = n::interval<n::unixtime_t>{
-      search_intvl.from_ - n::duration_t{kMixer.max_distance_},
-      search_intvl.to_ + n::duration_t{kMixer.max_distance_}};
+      search_intvl.from_ - kContextPadding, search_intvl.to_ + kContextPadding};
 
   auto const odm_intvl =
       query_.arriveBy_
@@ -653,10 +654,7 @@ api::plan_response meta_router::run() {
   shorten(p_->odm_journeys_, p_->from_rides_, p_->to_rides_, *tt_, rtt_,
           query_);
   utl::erase_duplicates(
-      p_->odm_journeys_,
-      [](auto const& a, auto const& b) {
-        return a.start_time_ < b.start_time_;
-      },
+      p_->odm_journeys_, std::less<n::routing::journey>{},
       [](auto const& a, auto const& b) {
         return a == b &&
                odm_time(a.legs_.front()) == odm_time(b.legs_.front()) &&
@@ -692,9 +690,6 @@ api::plan_response meta_router::run() {
       whitelist_response = std::nullopt;
     }
   }
-
-  // mixing
-  auto const mixing_start = std::chrono::steady_clock::now();
   auto const whitelisted =
       whitelist_response && p_->whitelist_update(*whitelist_response);
   if (whitelisted) {
@@ -713,19 +708,18 @@ api::plan_response meta_router::run() {
       r_.metrics_->routing_execution_duration_seconds_whitelisting_);
   r_.metrics_->routing_odm_journeys_found_whitelist_.Observe(
       static_cast<double>(p_->odm_journeys_.size()));
+
+  // mixing
+  auto const mixing_start = std::chrono::steady_clock::now();
   n::log(n::log_lvl::debug, "motis.odm",
          "[mixing] {} PT journeys and {} ODM journeys",
          pt_result.journeys_.size(), p_->odm_journeys_.size());
-
-  kMixer.mix(pt_result.journeys_, p_->odm_journeys_, r_.metrics_);
-
+  kMixer.mix(pt_result.journeys_, p_->odm_journeys_, r_.metrics_, std::nullopt);
   r_.metrics_->routing_odm_journeys_found_non_dominated_.Observe(
       static_cast<double>(p_->odm_journeys_.size() -
                           pt_result.journeys_.size()));
-
   print_time(mixing_start, "[mixing]",
              r_.metrics_->routing_execution_duration_seconds_mixing_);
-
   // remove journeys added for mixing context
   std::erase_if(p_->odm_journeys_, [&](auto const& j) {
     return query_.arriveBy_ ? !search_intvl.contains(j.arrival_time())
