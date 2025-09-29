@@ -44,7 +44,8 @@ std::vector<nigiri::routing::via_stop> get_via_stops(
     nigiri::timetable const&,
     tag_lookup const&,
     std::optional<std::vector<std::string>> const& vias,
-    std::vector<std::int64_t> const& times);
+    std::vector<std::int64_t> const& times,
+    bool reverse);
 
 std::vector<api::ModeEnum> deduplicate(std::vector<api::ModeEnum>);
 

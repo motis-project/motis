@@ -534,7 +534,8 @@ std::vector<n::routing::via_stop> get_via_stops(
     n::timetable const& tt,
     tag_lookup const& tags,
     std::optional<std::vector<std::string>> const& vias,
-    std::vector<std::int64_t> const& times) {
+    std::vector<std::int64_t> const& times,
+    bool const reverse) {
   if (!vias.has_value()) {
     return {};
   }
@@ -543,6 +544,10 @@ std::vector<n::routing::via_stop> get_via_stops(
   for (auto i = 0U; i != vias->size(); ++i) {
     ret.push_back({tags.get_location(tt, (*vias)[i]),
                    n::duration_t{i < times.size() ? times[i] : 0}});
+  }
+
+  if (reverse) {
+    std::reverse(begin(ret), end(ret));
   }
   return ret;
 }
@@ -765,8 +770,8 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                 .additional_time_ =
                     n::duration_t{query.additionalTransferTime_},
                 .factor_ = static_cast<float>(query.transferTimeFactor_)},
-        .via_stops_ =
-            get_via_stops(*tt_, *tags_, query.via_, query.viaMinimumStay_),
+        .via_stops_ = get_via_stops(*tt_, *tags_, query.via_,
+                                    query.viaMinimumStay_, query.arriveBy_),
         .fastest_direct_ = fastest_direct == kInfinityDuration
                                ? std::nullopt
                                : std::optional{fastest_direct},
