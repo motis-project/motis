@@ -125,9 +125,9 @@
 							{#if !stopTime.headsign || !stopTime.tripTo.name.startsWith(stopTime.headsign)}
 								({stopTime.tripTo.name})
 							{/if}
-							
+
 							{#if stopTime.place.track}
-									- {t.track} {stopTime.place.track}
+								- {t.track} {stopTime.place.track}
 							{/if}
 						</span>
 					</div>

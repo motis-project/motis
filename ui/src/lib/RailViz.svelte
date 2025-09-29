@@ -53,7 +53,7 @@
 		arrival: number;
 		departure: number;
 		arrivalDelay: number;
-		departureDelay: number
+		departureDelay: number;
 	};
 
 	const getKeyFrames = (t: TripSegment): KeyFrameExt => {
@@ -141,7 +141,7 @@
 
 		const getDelayColor = (d: number, a: number, realTime: boolean): RGBA => {
 			const departureDelay = d / 60000;
-			const arrivalDelay = a/60000
+			const arrivalDelay = a / 60000;
 			if (!realTime) {
 				return [100, 100, 100, 255];
 			}
@@ -173,7 +173,9 @@
 			data: tripsWithFrame,
 			beforeId: 'road-name-text',
 			getColor: (d) =>
-				colorMode == 'rt' ? getDelayColor(d.departureDelay,d.arrivalDelay, d.realTime) : hexToRgb(getColor(d)[0]),
+				colorMode == 'rt'
+					? getDelayColor(d.departureDelay, d.arrivalDelay, d.realTime)
+					: hexToRgb(getColor(d)[0]),
 			getAngle: (d) => -d.heading + 90,
 			getPosition: (d) => d.point,
 			getSize: (_) => 48,
@@ -277,7 +279,7 @@
 					}
 					return {
 						html: `${object.trips[0].displayName}<br>
-						${object.from.track ? object.from.track + "<br>" : ""}
+						${object.from.track ? object.from.track + '<br>' : ''}
 						${formatTime(new Date(object.departure), object.from.tz)} ${object.from.name}<br>
 						${formatTime(new Date(object.arrival), object.to.tz)} ${object.to.name}`
 					};
@@ -312,7 +314,6 @@
 		}
 		clearTimeout(timer);
 		if (map && overlay) {
-			
 			map.removeControl(overlay);
 		}
 	});
