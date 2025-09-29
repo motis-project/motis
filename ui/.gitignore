@@ -1,6 +1,7 @@
 .DS_Store
 node_modules
 /build
+/.vscode
 /.svelte-kit
 /package
 .env
