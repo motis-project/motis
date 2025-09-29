@@ -40,6 +40,7 @@
 		{isRealtime}
 		{timestamp}
 		{scheduledTimestamp}
+		isArrival={isStartOrEnd == -1}
 	/>
 	<Time
 		variant="realtime"
@@ -48,6 +49,7 @@
 		{isRealtime}
 		{timestamp}
 		{scheduledTimestamp}
+		isArrival={isStartOrEnd == -1}
 	/>
 	<span>
 		{#if p.stopId}

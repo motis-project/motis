@@ -10,7 +10,8 @@
 		isRealtime,
 		variant,
 		queriedTime,
-		timeZone
+		timeZone,
+		isArrival
 	}: {
 		class?: string;
 		timestamp: string;
@@ -19,6 +20,7 @@
 		variant: 'schedule' | 'realtime' | 'realtime-show-always';
 		queriedTime?: string | undefined;
 		timeZone: string | undefined;
+		isArrival?: boolean | undefined
 	} = $props();
 
 	const t = $derived(new Date(timestamp));
@@ -26,6 +28,7 @@
 	const delayMinutes = $derived((t.getTime() - scheduled.getTime()) / 60000);
 	const highDelay = $derived(isRealtime && delayMinutes > 3);
 	const lowDelay = $derived(isRealtime && delayMinutes <= 3);
+	const Early = $derived(isRealtime && delayMinutes < -1);
 	const timeZoneOffset = $derived(
 		new Intl.DateTimeFormat(language, { timeZone, timeZoneName: 'shortOffset' })
 			.formatToParts(scheduled)
@@ -59,7 +62,7 @@
 		</div>
 		<div class="text-xs font-normal h-4">{isSameAsBrowserTimezone ? '' : timeZoneOffset}</div>
 	{:else if variant === 'realtime-show-always' || (variant === 'realtime' && isRealtime)}
-		<span class:text-destructive={highDelay} class:text-green-600={lowDelay} class="bg-white">
+		<span class:text-destructive={isArrival? highDelay : Early } class:text-green-600={isArrival? lowDelay : (lowDelay && !Early)} class="bg-white">
 			{formatTime(t, timeZone)}
 			{weekday(t)}
 		</span>
