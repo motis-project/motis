@@ -34,6 +34,12 @@ place_t get_place(nigiri::timetable const*,
                   tag_lookup const*,
                   std::string_view user_input);
 
+nigiri::interval<nigiri::unixtime_t> shrink(
+    bool const arrive_by,
+    std::size_t const max_size,
+    nigiri::interval<nigiri::unixtime_t> search_interval,
+    std::vector<nigiri::routing::journey>& journeys);
+
 bool is_intermodal(place_t const&);
 
 nigiri::routing::location_match_mode get_match_mode(place_t const&);

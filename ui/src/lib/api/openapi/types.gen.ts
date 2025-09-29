@@ -1184,6 +1184,23 @@ export type PlanData = {
          */
         maxDirectTime?: number;
         /**
+         * Optional. By default all computed itineraries will be returned
+         *
+         * The maximum number of itineraries to compute.
+         * This is only relevant if `timetableView=true`.
+         *
+         * Note: With the current implementation, setting this to a lower
+         * number will not result in any speedup.
+         *
+         * Note: The number of returned itineraries might be slightly higher
+         * than `maxItineraries` as there might be several itineraries with
+         * the same departure time but different number of transfers. In order
+         * to not miss any itineraries for paging, either none or all
+         * itineraries with the same departure time have to be returned.
+         *
+         */
+        maxItineraries?: number;
+        /**
          * Optional. Default is 25 meters.
          *
          * Maximum matching distance in meters to match geo coordinates to the street network.
