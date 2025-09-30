@@ -127,7 +127,7 @@
 		}
 	};
 
-	function parseIntOr(s: string | null | undefined, d: number) {
+	function parseIntOr<T>(s: string | null | undefined, d: T): T | number {
 		if (s) {
 			const v = parseInt(s);
 			return isNaN(v) ? d : v;
@@ -155,6 +155,11 @@
 		urlParams?.get('numItineraries')
 			? parseIntOr(urlParams.get('numItineraries'), defaultQuery.numItineraries)
 			: defaultQuery.numItineraries
+	);
+	let maxItineraries = $state(
+		urlParams?.get('maxItineraries')
+			? parseIntOr(urlParams.get('maxItineraries'), undefined)
+			: undefined
 	);
 	let arriveBy = $state<boolean>(urlParams?.get('arriveBy') == 'true');
 	let useRoutedTransfers = $state(
@@ -249,6 +254,7 @@
 						timetableView,
 						searchWindow,
 						numItineraries,
+						maxItineraries,
 						withFares: true,
 						slowDirect,
 						fastestDirectFactor: 1.5,
