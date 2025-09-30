@@ -145,7 +145,7 @@
 			if (!realTime) {
 				return [100, 100, 100, 255];
 			}
-			if (departureDelay < -1) {
+			if (departureDelay <= -1) {
 				return [255, 48, 71, 255];
 			} else if (arrivalDelay <= 3) {
 				return [69, 209, 74, 255];
@@ -279,7 +279,6 @@
 					}
 					return {
 						html: `${object.trips[0].displayName}<br>
-						${object.from.track ? object.from.track + '<br>' : ''}
 						${formatTime(new Date(object.departure), object.from.tz)} ${object.from.name}<br>
 						${formatTime(new Date(object.arrival), object.to.tz)} ${object.to.name}`
 					};

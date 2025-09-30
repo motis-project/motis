@@ -40,8 +40,7 @@ const translations: Translations = {
 		}
 	},
 	sharingProvider: 'Anbieter',
-	roundtripStationReturnConstraint:
-		'Das Fahrzeug muss wieder an der Abfahrtsstation abgestellt werden.',
+	roundtripStationReturnConstraint: 'Das Fahrzeug muss wieder an der Abfahrtsstation abgestellt werden.',
 	noItinerariesFound: 'Keine Verbindungen gefunden.',
 	advancedSearchOptions: 'Optionen',
 	selectTransitModes: 'Öffentliche Verkehrsmittel auswählen',
@@ -120,7 +119,8 @@ const translations: Translations = {
 	AERIAL_LIFT: 'Luftseilbahn',
 	toll: 'Achtung! Mautpflichtige Straße.',
 	accessRestriction: 'Kein Zugang',
-	continuesAs: 'Weiter als'
+	continuesAs: 'Weiter als',
+	platform: ''
 };
 
 export default translations;

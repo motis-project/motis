@@ -28,7 +28,10 @@
 	const delayMinutes = $derived((t.getTime() - scheduled.getTime()) / 60000);
 	const highDelay = $derived(isRealtime && delayMinutes > 3);
 	const lowDelay = $derived(isRealtime && delayMinutes <= 3);
-	const Early = $derived(isRealtime && delayMinutes < -1);
+	const early = $derived(isRealtime && delayMinutes <= -1);
+	const notOnTime = $derived(isArrival ? highDelay : early);
+	const roughlyOnTime = $derived(isArrival ? lowDelay : lowDelay && !early);
+
 	const timeZoneOffset = $derived(
 		new Intl.DateTimeFormat(language, { timeZone, timeZoneName: 'shortOffset' })
 			.formatToParts(scheduled)
@@ -63,9 +66,8 @@
 		<div class="text-xs font-normal h-4">{isSameAsBrowserTimezone ? '' : timeZoneOffset}</div>
 	{:else if variant === 'realtime-show-always' || (variant === 'realtime' && isRealtime)}
 		<span
-			class:text-destructive={isArrival ? highDelay : Early}
-			class:text-green-600={isArrival ? lowDelay : lowDelay && !Early}
-			class="bg-white"
+			class:text-destructive={notOnTime}
+			class:text-green-600={roughlyOnTime}
 		>
 			{formatTime(t, timeZone)}
 			{weekday(t)}
