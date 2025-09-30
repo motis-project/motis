@@ -110,7 +110,7 @@ n::routing::td_offsets_t get_td_offsets(
 
   auto ret = hash_map<n::location_idx_t, std::vector<n::routing::td_offset>>{};
   for (auto const m : modes) {
-    if (m == api::ModeEnum::ODM) {
+    if (m == api::ModeEnum::ODM || m == api::ModeEnum::RIDE_SHARING) {
       continue;
     } else if (m == api::ModeEnum::FLEX) {
       utl::verify(r.fa_, "FLEX areas not loaded");
@@ -674,9 +674,26 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
         end(post_transit_modes);
     auto const with_odm_direct =
         utl::find(direct_modes, api::ModeEnum::ODM) != end(direct_modes);
+    auto const with_ride_sharing_pre_transit =
+        utl::find(pre_transit_modes, api::ModeEnum::RIDE_SHARING) !=
+        end(pre_transit_modes);
+    auto const with_ride_sharing_post_transit =
+        utl::find(post_transit_modes, api::ModeEnum::RIDE_SHARING) !=
+        end(post_transit_modes);
+    auto const with_ride_sharing_direct =
+        utl::find(direct_modes, api::ModeEnum::RIDE_SHARING) !=
+        end(direct_modes);
 
-    if (with_odm_pre_transit || with_odm_post_transit || with_odm_direct) {
-      utl::verify(config_.has_odm(), "ODM not configured");
+    if (with_odm_pre_transit || with_odm_post_transit || with_odm_direct ||
+        with_ride_sharing_pre_transit || with_ride_sharing_post_transit ||
+        with_ride_sharing_direct) {
+      utl::verify(
+          !(with_odm_pre_transit || with_odm_post_transit || with_odm_direct) ||
+              config_.has_odm(),
+          "ODM not configured");
+      utl::verify(!(with_ride_sharing_pre_transit ||
+                    with_ride_sharing_post_transit || with_ride_sharing_direct),
+                  "RIDE_SHARING not configured");
       return odm::meta_router{*this,
                               query,
                               pre_transit_modes,
@@ -692,6 +709,9 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                               with_odm_pre_transit,
                               with_odm_post_transit,
                               with_odm_direct,
+                              with_ride_sharing_pre_transit,
+                              with_ride_sharing_post_transit,
+                              with_ride_sharing_direct,
                               api_version}
           .run();
     }

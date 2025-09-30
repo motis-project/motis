@@ -46,6 +46,9 @@ struct meta_router {
               bool odm_pre_transit,
               bool odm_post_transit,
               bool odm_direct,
+              bool ride_sharing_pre_transit,
+              bool ride_sharing_post_transit,
+              bool ride_sharing_direct,
               unsigned api_version);
   ~meta_router();
 
@@ -89,6 +92,9 @@ private:
   bool odm_pre_transit_;
   bool odm_post_transit_;
   bool odm_direct_;
+  bool ride_sharing_pre_transit_;
+  bool ride_sharing_post_transit_;
+  bool ride_sharing_direct_;
   unsigned api_version_;
 
   nigiri::timetable const* tt_;
