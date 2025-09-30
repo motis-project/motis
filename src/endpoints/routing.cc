@@ -598,7 +598,8 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
   auto const query = api::plan_params{url.params()};
   utl::verify<openapi::bad_request_exception>(
       !query.maxItineraries_.has_value() ||
-          (*query.maxItineraries_ >= query.numItineraries_),
+          (*query.maxItineraries_ >= 1 &&
+           *query.maxItineraries_ >= query.numItineraries_),
       "maxItineraries={} < numItineraries={}",
       query.maxItineraries_.value_or(0), query.numItineraries_);
 
