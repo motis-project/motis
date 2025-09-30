@@ -687,13 +687,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
     if (with_odm_pre_transit || with_odm_post_transit || with_odm_direct ||
         with_ride_sharing_pre_transit || with_ride_sharing_post_transit ||
         with_ride_sharing_direct) {
-      utl::verify(
-          !(with_odm_pre_transit || with_odm_post_transit || with_odm_direct) ||
-              config_.has_odm(),
-          "ODM not configured");
-      utl::verify(!(with_ride_sharing_pre_transit ||
-                    with_ride_sharing_post_transit || with_ride_sharing_direct),
-                  "RIDE_SHARING not configured");
+      utl::verify(config_.has_prima(), "PRIMA not configured");
       return odm::meta_router{*this,
                               query,
                               pre_transit_modes,
