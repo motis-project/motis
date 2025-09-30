@@ -46,39 +46,27 @@ struct capacities {
 
 struct prima {
 
-  prima(api::Place const& from,
-        api::Place const& to,
+  prima(osr::location const& from,
+        osr::location const& to,
         api::plan_params const& query);
-
-  nigiri::duration_t init_direct(ep::routing const& r,
-                                 elevators const* e,
-                                 gbfs::gbfs_routing_data& gbfs,
-                                 api::Place const& from_p,
-                                 api::Place const& to_p,
-                                 nigiri::interval<nigiri::unixtime_t> intvl,
-                                 api::plan_params const& query,
-                                 unsigned api_version);
-
-  void init_pt(ep::routing const& r,
-               osr::location const& l,
-               osr::direction dir,
-               api::plan_params const& query,
-               gbfs::gbfs_routing_data& gbfs_rd,
-               nigiri::timetable const& tt,
-               nigiri::rt_timetable const* rtt,
-               nigiri::interval<nigiri::unixtime_t> const& intvl,
-               nigiri::routing::query const& start_time,
-               nigiri::routing::location_match_mode location_match_mode,
-               std::chrono::seconds const max);
 
   void init(nigiri::interval<nigiri::unixtime_t> const& search_intvl,
             nigiri::interval<nigiri::unixtime_t> const& odm_intvl,
+            bool odm_pre_transit,
+            bool odm_post_transit,
+            bool odm_direct,
+            bool ride_sharing_pre_transit,
+            bool ride_sharing_post_transit,
+            bool ride_sharing_direct,
+            nigiri::timetable const& tt,
+            nigiri::rt_timetable const* rtt,
             ep::routing const& r,
             elevators const* e,
             gbfs::gbfs_routing_data& gbfs,
             api::Place const& from_p,
             api::Place const& to_p,
             api::plan_params const& query,
+            nigiri::routing::query const& n_query,
             unsigned api_version);
 
   std::string get_prima_request(nigiri::timetable const&) const;
@@ -87,18 +75,18 @@ struct prima {
   bool whitelist_update(std::string_view json);
   void adjust_to_whitelisting();
 
-  geo::latlng from_;
-  geo::latlng to_;
+  osr::location const& from_;
+  osr::location const& to_;
   nigiri::event_type fixed_;
   capacities cap_;
 
-  std::vector<nigiri::routing::start> from_rides_{};
-  std::vector<nigiri::routing::start> to_rides_{};
-  std::vector<direct_ride> direct_rides_{};
+  std::vector<nigiri::routing::start> first_mile_ride_sharing_{};
+  std::vector<nigiri::routing::start> last_mile_ride_sharing_{};
+  std::vector<direct_ride> direct_ride_sharing_{};
 
-  std::vector<nigiri::routing::start> prev_from_rides_{};
-  std::vector<nigiri::routing::start> prev_to_rides_{};
-  std::vector<direct_ride> prev_direct_rides_{};
+  std::vector<nigiri::routing::start> first_mile_taxi_{};
+  std::vector<nigiri::routing::start> last_mile_taxi{};
+  std::vector<direct_ride> direct_taxi_{};
 
   std::vector<nigiri::routing::journey> odm_journeys_{};
 };

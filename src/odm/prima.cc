@@ -14,6 +14,7 @@
 
 #include "motis/elevators/elevators.h"
 #include "motis/endpoints/routing.h"
+#include "motis/odm/bounds.h"
 #include "motis/odm/odm.h"
 
 namespace motis::odm {
@@ -24,8 +25,8 @@ namespace json = boost::json;
 static constexpr auto const kInfeasible =
     std::numeric_limits<n::unixtime_t>::min();
 
-prima::prima(api::Place const& from,
-             api::Place const& to,
+prima::prima(osr::location const& from,
+             osr::location const& to,
              api::plan_params const& query)
     : from_{geo::latlng{from.lat_, from.lon_}},
       to_{geo::latlng{to.lat_, to.lon_}},
@@ -40,24 +41,16 @@ prima::prima(api::Place const& from,
           .passengers_ = query.passengers_.value_or(1U),
           .luggage_ = query.luggage_.value_or(0U)} {}
 
-n::duration_t prima::init_direct(ep::routing const& r,
-                                 elevators const* e,
-                                 gbfs::gbfs_routing_data& gbfs,
-                                 api::Place const& from_p,
-                                 api::Place const& to_p,
-                                 n::interval<n::unixtime_t> const intvl,
-                                 api::plan_params const& query,
-                                 unsigned api_version) {
-  direct_rides_.clear();
-
-  auto const from_pos = geo::latlng{from_p.lat_, from_p.lon_};
-  auto const to_pos = geo::latlng{to_p.lat_, to_p.lon_};
-  if (r.odm_bounds_ != nullptr && (!r.odm_bounds_->contains(from_pos) ||
-                                   !r.odm_bounds_->contains(to_pos))) {
-    n::log(n::log_lvl::debug, "motis.prima",
-           "No direct connection, from: {}, to: {}", from_pos, to_pos);
-    return ep::kInfinityDuration;
-  }
+n::duration_t init_direct(std::vector<direct_ride>& rides,
+                          ep::routing const& r,
+                          elevators const* e,
+                          gbfs::gbfs_routing_data& gbfs,
+                          api::Place const& from_p,
+                          api::Place const& to_p,
+                          n::interval<n::unixtime_t> const intvl,
+                          api::plan_params const& query,
+                          unsigned api_version) {
+  rides.clear();
 
   auto [_, odm_direct_duration] = r.route_direct(
       e, gbfs, from_p, to_p, {api::ModeEnum::CAR}, std::nullopt, std::nullopt,
@@ -77,8 +70,7 @@ n::duration_t prima::init_direct(ep::routing const& r,
       auto const floored_5_min = (mins_since_midnight.count() / 5) * 5;
       auto const start_time = midnight + std::chrono::minutes(floored_5_min);
       for (auto arr = start_time; intvl.contains(arr); arr -= step) {
-        direct_rides_.push_back(
-            {.dep_ = arr - odm_direct_duration, .arr_ = arr});
+        rides.push_back({.dep_ = arr - odm_direct_duration, .arr_ = arr});
       }
     } else {
       auto const base_start = intvl.from_;
@@ -92,8 +84,7 @@ n::duration_t prima::init_direct(ep::routing const& r,
       auto const start_time_for_depart =
           midnight_start + std::chrono::minutes(ceiled_5_min_start);
       for (auto dep = start_time_for_depart; intvl.contains(dep); dep += step) {
-        direct_rides_.push_back(
-            {.dep_ = dep, .arr_ = dep + odm_direct_duration});
+        rides.push_back({.dep_ = dep, .arr_ = dep + odm_direct_duration});
       }
     }
   } else {
@@ -102,31 +93,27 @@ n::duration_t prima::init_direct(ep::routing const& r,
         "odm_direct_duration >= "
         "kODMMaxDuration ({} "
         ">= {})",
-        from_pos, to_pos, odm_direct_duration, kODMMaxDuration);
+        from_p, to_p, odm_direct_duration, kODMMaxDuration);
   }
 
   return odm_direct_duration;
 }
 
-void prima::init_pt(ep::routing const& r,
-                    osr::location const& l,
-                    osr::direction dir,
-                    api::plan_params const& query,
-                    gbfs::gbfs_routing_data& gbfs_rd,
-                    n::timetable const& tt,
-                    n::rt_timetable const* rtt,
-                    n::interval<n::unixtime_t> const& intvl,
-                    n::routing::query const& start_time,
-                    n::routing::location_match_mode location_match_mode,
-                    std::chrono::seconds const max) {
-  if (r.odm_bounds_ != nullptr && !r.odm_bounds_->contains(l.pos_)) {
-    n::log(n::log_lvl::debug, "motis.prima",
-           "no ODM-PT connection at {}: terminal out of bounds", l.pos_);
-    return;
-  }
+void init_pt(std::vector<nigiri::routing::start>& rides,
+             ep::routing const& r,
+             osr::location const& l,
+             osr::direction dir,
+             api::plan_params const& query,
+             gbfs::gbfs_routing_data& gbfs_rd,
+             n::timetable const& tt,
+             n::rt_timetable const* rtt,
+             n::interval<n::unixtime_t> const& intvl,
+             n::routing::query const& start_time,
+             n::routing::location_match_mode location_match_mode,
+             std::chrono::seconds const max) {
 
   auto offsets = r.get_offsets(
-      rtt, l, dir, {api::ModeEnum::ODM}, std::nullopt, std::nullopt,
+      rtt, l, dir, {api::ModeEnum::CAR}, std::nullopt, std::nullopt,
       std::nullopt, false, get_osr_parameters(query), query.pedestrianProfile_,
       query.elevationCosts_, max, query.maxMatchingDistance_, gbfs_rd);
 
@@ -154,18 +141,26 @@ void prima::init_pt(ep::routing const& r,
 
 void prima::init(n::interval<n::unixtime_t> const& search_intvl,
                  n::interval<n::unixtime_t> const& odm_intvl,
+                 bool odm_pre_transit,
+                 bool odm_post_transit,
+                 bool odm_direct,
+                 bool ride_sharing_pre_transit,
+                 bool ride_sharing_post_transit,
+                 bool ride_sharing_direct,
+                 nigiri::timetable const& tt,
+                 nigiri::rt_timetable const* rtt,
                  ep::routing const& r,
                  elevators const* e,
                  gbfs::gbfs_routing_data& gbfs,
                  api::Place const& from_p,
                  api::Place const& to_p,
                  api::plan_params const& query,
+                 nigiri::routing::query const& n_query,
                  unsigned api_version) {
   auto direct_duration = std::optional<std::chrono::seconds>{};
-  if (odm_direct_ && r_.w_ && r_.l_) {
-    direct_duration =
-        init_direct(p_->direct_rides_, r_, e_, gbfs_rd_, from_place_, to_place_,
-                    search_intvl, query_, api_version_);
+  if ((ride_sharing_direct || odm_direct) && r.w_ && r.l_) {
+    direct_duration = init_direct(direct_ride_sharing_, r, e, gbfs, from_p,
+                                  to_p, search_intvl, query, api_version);
   }
 
   auto const max_offset_duration =
@@ -175,26 +170,21 @@ void prima::init(n::interval<n::unixtime_t> const& search_intvl,
                      kODMMaxDuration)
           : kODMMaxDuration;
 
-  if (odm_pre_transit_ && holds_alternative<osr::location>(from_)) {
-    init_pt(p_->from_rides_, r_, std::get<osr::location>(from_),
-            osr::direction::kForward, query_, gbfs_rd_, *tt_, rtt_, odm_intvl,
-            start_time_,
-            query_.arriveBy_ ? start_time_.dest_match_mode_
-                             : start_time_.start_match_mode_,
-            max_offset_duration);
+  if (ride_sharing_pre_transit || odm_pre_transit) {
+    init_pt(
+        first_mile_ride_sharing_, r, from_, osr::direction::kForward, query,
+        gbfs, tt, rtt_, odm_intvl, n_query,
+        query.arriveBy_ ? n_query.dest_match_mode_ : n_query.start_match_mode_,
+        max_offset_duration);
   }
 
-  if (odm_post_transit_ && holds_alternative<osr::location>(to_)) {
-    init_pt(p_->to_rides_, r_, std::get<osr::location>(to_),
-            osr::direction::kBackward, query_, gbfs_rd_, *tt_, rtt_, odm_intvl,
-            start_time_,
-            query_.arriveBy_ ? start_time_.start_match_mode_
-                             : start_time_.dest_match_mode_,
-            max_offset_duration);
+  if (ride_sharing_post_transit || odm_post_transit_) {
+    init_pt(
+        last_mile_ride_sharing_, r, to_, osr::direction::kBackward, query, gbfs,
+        tt, rtt_, odm_intvl, n_query,
+        query.arriveBy_ ? n_query.start_match_mode_ : n_query.dest_match_mode_,
+        max_offset_duration);
   }
-
-  std::erase(start_modes_, api::ModeEnum::ODM);
-  std::erase(dest_modes_, api::ModeEnum::ODM);
 }
 
 std::int64_t to_millis(n::unixtime_t const t) {

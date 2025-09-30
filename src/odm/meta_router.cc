@@ -142,8 +142,7 @@ meta_router::meta_router(ep::routing const& r,
                           : query_.ignorePostTransitRentalReturnConstraints_},
       dest_ignore_rental_return_constraints_{
           query.arriveBy_ ? query_.ignorePostTransitRentalReturnConstraints_
-                          : query_.ignorePreTransitRentalReturnConstraints_},
-      p_{std::make_unique<prima>()} {}
+                          : query_.ignorePreTransitRentalReturnConstraints_} {}
 
 meta_router::~meta_router() = default;
 
@@ -381,9 +380,10 @@ api::plan_response meta_router::run() {
           : n::interval<n::unixtime_t>{context_intvl.from_,
                                        context_intvl.to_ + kODMLookAhead};
 
-  auto p = prima{from_place_, to_place_, query_};
+  auto p = prima{from_, to_, query_};
+  p.init(search_intvl, odm_intvl, r_, e_, gbfs_rd_, query_,
+         start_time_ api_version_);
 
-  init_prima(search_intvl, odm_intvl);
   print_time(init_start,
              fmt::format("[init] (first_mile: {}, last_mile: {}, direct: {})",
                          p_->from_rides_.size(), p_->to_rides_.size(),

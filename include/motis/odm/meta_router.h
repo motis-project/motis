@@ -28,8 +28,6 @@ struct journey;
 
 namespace motis::odm {
 
-struct prima;
-
 struct meta_router {
   meta_router(ep::routing const&,
               api::plan_params const&,
@@ -117,8 +115,6 @@ private:
   std::optional<std::vector<std::string>> const& dest_rental_providers_;
   bool start_ignore_rental_return_constraints_{};
   bool dest_ignore_rental_return_constraints_{};
-
-  std::unique_ptr<prima> p_;
 };
 
 }  // namespace motis::odm
