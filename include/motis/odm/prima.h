@@ -52,12 +52,12 @@ struct prima {
 
   void init(nigiri::interval<nigiri::unixtime_t> const& search_intvl,
             nigiri::interval<nigiri::unixtime_t> const& odm_intvl,
-            bool odm_pre_transit,
-            bool odm_post_transit,
-            bool odm_direct,
-            bool ride_sharing_pre_transit,
-            bool ride_sharing_post_transit,
-            bool ride_sharing_direct,
+            bool use_first_mile_taxi,
+            bool use_last_mile_taxi,
+            bool use_direct_taxi,
+            bool use_first_mile_ride_sharing,
+            bool use_last_mile_ride_sharing,
+            bool use_direct_ride_sharing,
             nigiri::timetable const& tt,
             nigiri::rt_timetable const* rtt,
             ep::routing const& r,
@@ -85,7 +85,7 @@ struct prima {
   std::vector<direct_ride> direct_ride_sharing_{};
 
   std::vector<nigiri::routing::start> first_mile_taxi_{};
-  std::vector<nigiri::routing::start> last_mile_taxi{};
+  std::vector<nigiri::routing::start> last_mile_taxi_{};
   std::vector<direct_ride> direct_taxi_{};
 
   std::vector<nigiri::routing::journey> odm_journeys_{};

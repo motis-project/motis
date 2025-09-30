@@ -28,8 +28,8 @@ static constexpr auto const kInfeasible =
 prima::prima(osr::location const& from,
              osr::location const& to,
              api::plan_params const& query)
-    : from_{geo::latlng{from.lat_, from.lon_}},
-      to_{geo::latlng{to.lat_, to.lon_}},
+    : from_{from},
+      to_{to},
       fixed_{query.arriveBy_ ? n::event_type::kArr : n::event_type::kDep},
       cap_{
           .wheelchairs_ = static_cast<std::uint8_t>(
@@ -52,7 +52,7 @@ n::duration_t init_direct(std::vector<direct_ride>& rides,
                           unsigned api_version) {
   rides.clear();
 
-  auto [_, odm_direct_duration] = r.route_direct(
+  auto [_, direct_duration] = r.route_direct(
       e, gbfs, from_p, to_p, {api::ModeEnum::CAR}, std::nullopt, std::nullopt,
       std::nullopt, false, intvl.from_, false, get_osr_parameters(query),
       query.pedestrianProfile_, query.elevationCosts_, kODMMaxDuration,
@@ -60,9 +60,9 @@ n::duration_t init_direct(std::vector<direct_ride>& rides,
 
   auto const step =
       std::chrono::duration_cast<n::unixtime_t::duration>(kODMDirectPeriod);
-  if (odm_direct_duration < kODMMaxDuration) {
+  if (direct_duration < kODMMaxDuration) {
     if (query.arriveBy_) {
-      auto const base_time = intvl.to_ - odm_direct_duration;
+      auto const base_time = intvl.to_ - direct_duration;
       auto const midnight = std::chrono::floor<std::chrono::days>(base_time);
       auto const mins_since_midnight =
           std::chrono::duration_cast<std::chrono::minutes>(base_time -
@@ -70,7 +70,7 @@ n::duration_t init_direct(std::vector<direct_ride>& rides,
       auto const floored_5_min = (mins_since_midnight.count() / 5) * 5;
       auto const start_time = midnight + std::chrono::minutes(floored_5_min);
       for (auto arr = start_time; intvl.contains(arr); arr -= step) {
-        rides.push_back({.dep_ = arr - odm_direct_duration, .arr_ = arr});
+        rides.push_back({.dep_ = arr - direct_duration, .arr_ = arr});
       }
     } else {
       auto const base_start = intvl.from_;
@@ -84,19 +84,19 @@ n::duration_t init_direct(std::vector<direct_ride>& rides,
       auto const start_time_for_depart =
           midnight_start + std::chrono::minutes(ceiled_5_min_start);
       for (auto dep = start_time_for_depart; intvl.contains(dep); dep += step) {
-        rides.push_back({.dep_ = dep, .arr_ = dep + odm_direct_duration});
+        rides.push_back({.dep_ = dep, .arr_ = dep + direct_duration});
       }
     }
   } else {
     fmt::println(
         "[init] No direct ODM connection, from: {}, to: {}: "
-        "odm_direct_duration >= "
+        "direct_duration >= "
         "kODMMaxDuration ({} "
         ">= {})",
-        from_p, to_p, odm_direct_duration, kODMMaxDuration);
+        from_p, to_p, direct_duration, kODMMaxDuration);
   }
 
-  return odm_direct_duration;
+  return direct_duration;
 }
 
 void init_pt(std::vector<nigiri::routing::start>& rides,
@@ -128,7 +128,6 @@ void init_pt(std::vector<nigiri::routing::start>& rides,
     o.duration_ += kODMTransferBuffer;
   }
 
-  rides.clear();
   rides.reserve(offsets.size() * 2);
 
   n::routing::get_starts(
@@ -141,12 +140,12 @@ void init_pt(std::vector<nigiri::routing::start>& rides,
 
 void prima::init(n::interval<n::unixtime_t> const& search_intvl,
                  n::interval<n::unixtime_t> const& odm_intvl,
-                 bool odm_pre_transit,
-                 bool odm_post_transit,
-                 bool odm_direct,
-                 bool ride_sharing_pre_transit,
-                 bool ride_sharing_post_transit,
-                 bool ride_sharing_direct,
+                 bool use_first_mile_taxi,
+                 bool use_last_mile_taxi,
+                 bool use_direct_taxi,
+                 bool use_first_mile_ride_sharing,
+                 bool use_last_mile_ride_sharing,
+                 bool use_direct_ride_sharing,
                  nigiri::timetable const& tt,
                  nigiri::rt_timetable const* rtt,
                  ep::routing const& r,
@@ -158,9 +157,19 @@ void prima::init(n::interval<n::unixtime_t> const& search_intvl,
                  nigiri::routing::query const& n_query,
                  unsigned api_version) {
   auto direct_duration = std::optional<std::chrono::seconds>{};
-  if ((ride_sharing_direct || odm_direct) && r.w_ && r.l_) {
+  if ((use_direct_ride_sharing || use_direct_taxi) && r.w_ && r.l_) {
     direct_duration = init_direct(direct_ride_sharing_, r, e, gbfs, from_p,
                                   to_p, search_intvl, query, api_version);
+
+    if (use_direct_taxi && r.odm_bounds_ != nullptr &&
+        r.odm_bounds_->contains(from_.pos_) &&
+        r.odm_bounds_->contains(to_.pos_)) {
+      direct_taxi_ = direct_ride_sharing_;
+    }
+
+    if (!use_direct_ride_sharing) {
+      direct_ride_sharing_.clear();
+    }
   }
 
   auto const max_offset_duration =
@@ -170,20 +179,46 @@ void prima::init(n::interval<n::unixtime_t> const& search_intvl,
                      kODMMaxDuration)
           : kODMMaxDuration;
 
-  if (ride_sharing_pre_transit || odm_pre_transit) {
+  if (use_first_mile_ride_sharing || use_first_mile_taxi) {
     init_pt(
         first_mile_ride_sharing_, r, from_, osr::direction::kForward, query,
-        gbfs, tt, rtt_, odm_intvl, n_query,
+        gbfs, tt, rtt, odm_intvl, n_query,
         query.arriveBy_ ? n_query.dest_match_mode_ : n_query.start_match_mode_,
         max_offset_duration);
+
+    if (use_first_mile_taxi && r.odm_bounds_ != nullptr &&
+        r.odm_bounds_->contains(from_.pos_)) {
+      for (auto const& i : first_mile_ride_sharing_) {
+        if (r.odm_bounds_->contains(tt.locations_.coordinates_[i.stop_])) {
+          first_mile_taxi_.emplace_back(i);
+        }
+      }
+    }
+
+    if (!use_first_mile_ride_sharing) {
+      first_mile_ride_sharing_.clear();
+    }
   }
 
-  if (ride_sharing_post_transit || odm_post_transit_) {
+  if (use_last_mile_ride_sharing || use_last_mile_taxi) {
     init_pt(
         last_mile_ride_sharing_, r, to_, osr::direction::kBackward, query, gbfs,
-        tt, rtt_, odm_intvl, n_query,
+        tt, rtt, odm_intvl, n_query,
         query.arriveBy_ ? n_query.start_match_mode_ : n_query.dest_match_mode_,
         max_offset_duration);
+
+    if (use_last_mile_taxi && r.odm_bounds_ != nullptr &&
+        r.odm_bounds_->contains(to_.pos_)) {
+      for (auto const& i : last_mile_ride_sharing_) {
+        if (r.odm_bounds_->contains(tt.locations_.coordinates_[i.stop_])) {
+          last_mile_taxi_.emplace_back(i);
+        }
+      }
+    }
+
+    if (!use_last_mile_ride_sharing) {
+      last_mile_ride_sharing_.clear();
+    }
   }
 }
 
@@ -241,11 +276,11 @@ json::value to_json(capacities const& c) {
 }
 
 json::value to_json(prima const& p, n::timetable const& tt) {
-  return {{"start", {{"lat", p.from_.lat_}, {"lng", p.from_.lng_}}},
-          {"target", {{"lat", p.to_.lat_}, {"lng", p.to_.lng_}}},
-          {"startBusStops", to_json(p.from_rides_, tt, kFirstMile)},
-          {"targetBusStops", to_json(p.to_rides_, tt, kLastMile)},
-          {"directTimes", to_json(p.direct_rides_, p.fixed_)},
+  return {{"start", {{"lat", p.from_.pos_.lat_}, {"lng", p.from_.pos_.lng_}}},
+          {"target", {{"lat", p.to_.pos_.lat_}, {"lng", p.to_.pos_.lng_}}},
+          {"startBusStops", to_json(p.first_mile_taxi_, tt, kFirstMile)},
+          {"targetBusStops", to_json(p.last_mile_taxi_, tt, kLastMile)},
+          {"directTimes", to_json(p.direct_taxi_, p.fixed_)},
           {"startFixed", p.fixed_ == n::event_type::kDep},
           {"capacities", to_json(p.cap_)}};
 }
@@ -255,7 +290,9 @@ std::string prima::get_prima_request(n::timetable const& tt) const {
 }
 
 std::size_t prima::n_events() const {
-  return from_rides_.size() + to_rides_.size() + direct_rides_.size();
+  return first_mile_ride_sharing_.size() + last_mile_ride_sharing_.size() +
+         direct_ride_sharing_.size() + first_mile_taxi_.size() +
+         last_mile_taxi_.size() + direct_taxi_.size();
 }
 
 std::size_t n_pt_updates(json::array const& update) {
@@ -266,38 +303,34 @@ std::size_t n_pt_updates(json::array const& update) {
 
 bool prima::blacklist_update(std::string_view json) {
 
-  auto const update_pt_rides =
-      [](std::vector<nigiri::routing::start>& rides,
-         std::vector<nigiri::routing::start>& prev_rides,
-         json::array const& update) {
-        auto with_errors = false;
-        std::swap(rides, prev_rides);
-        rides.clear();
-        auto prev_it = std::begin(prev_rides);
-        for (auto const& stop : update) {
-          for (auto const& ride_upd : stop.as_array()) {
-            if (auto const feasible = ride_upd.try_as_bool()) {
-              if (*feasible) {
-                rides.emplace_back(*prev_it);
-              }
-            } else {
-              with_errors = true;
-            }
-            ++prev_it;
-            if (prev_it == end(prev_rides)) {
-              return with_errors;
-            }
+  auto const update_pt_rides = [](std::vector<nigiri::routing::start>& rides,
+                                  json::array const& update) {
+    auto with_errors = false;
+    auto prev_rides =
+        std::exchange(rides, std::vector<nigiri::routing::start>{});
+    auto prev_it = std::begin(prev_rides);
+    for (auto const& stop : update) {
+      for (auto const& ride_upd : stop.as_array()) {
+        if (auto const feasible = ride_upd.try_as_bool()) {
+          if (*feasible) {
+            rides.emplace_back(*prev_it);
           }
+        } else {
+          with_errors = true;
         }
-        return with_errors;
-      };
+        ++prev_it;
+        if (prev_it == end(prev_rides)) {
+          return with_errors;
+        }
+      }
+    }
+    return with_errors;
+  };
 
   auto const update_direct_rides = [](std::vector<direct_ride>& rides,
-                                      std::vector<direct_ride>& prev_rides,
                                       json::array const& update) {
     auto with_errors = false;
-    std::swap(rides, prev_rides);
-    rides.clear();
+    auto prev_rides = std::exchange(rides, std::vector<direct_ride>{});
     for (auto const [prev, ride_upd] : utl::zip(prev_rides, update)) {
       if (auto const feasible = ride_upd.try_as_bool()) {
         if (*feasible) {
@@ -315,40 +348,40 @@ bool prima::blacklist_update(std::string_view json) {
     auto const o = json::parse(json).as_object();
 
     auto const n_pt_updates_from = n_pt_updates(o.at("start").as_array());
-    if (from_rides_.size() == n_pt_updates_from) {
-      with_errors |= update_pt_rides(from_rides_, prev_from_rides_,
-                                     o.at("start").as_array());
+    if (first_mile_taxi_.size() == n_pt_updates_from) {
+      with_errors |=
+          update_pt_rides(first_mile_taxi_, o.at("start").as_array());
     } else {
       n::log(
           n::log_lvl::debug, "motis.prima",
           "[blacklisting] from_rides_.size() != n_pt_updates_from ({} != {})",
-          from_rides_.size(), n_pt_updates_from);
+          first_mile_taxi_.size(), n_pt_updates_from);
       with_errors = true;
-      from_rides_.clear();
+      first_mile_taxi_.clear();
     }
 
     auto const n_pt_updates_to = n_pt_updates(o.at("target").as_array());
-    if (to_rides_.size() == n_pt_updates_to) {
+    if (last_mile_taxi_.size() == n_pt_updates_to) {
       with_errors |=
-          update_pt_rides(to_rides_, prev_to_rides_, o.at("target").as_array());
+          update_pt_rides(last_mile_taxi_, o.at("target").as_array());
     } else {
       n::log(n::log_lvl::debug, "motis.prima",
              "[blacklisting] to_rides_.size() != n_pt_updates_to ({} != {})",
-             to_rides_.size(), n_pt_updates_to);
+             last_mile_taxi_.size(), n_pt_updates_to);
       with_errors = true;
-      to_rides_.clear();
+      last_mile_taxi_.clear();
     }
 
-    if (direct_rides_.size() == o.at("direct").as_array().size()) {
-      with_errors |= update_direct_rides(direct_rides_, prev_direct_rides_,
-                                         o.at("direct").as_array());
+    if (direct_taxi_.size() == o.at("direct").as_array().size()) {
+      with_errors |=
+          update_direct_rides(direct_taxi_, o.at("direct").as_array());
     } else {
       n::log(
           n::log_lvl::debug, "motis.prima",
           "[blacklisting] direct_rides_.size() != n_direct_updates ({} != {})",
-          direct_rides_.size(), o.at("direct").as_array().size());
+          direct_taxi_.size(), o.at("direct").as_array().size());
       with_errors = true;
-      direct_rides_.clear();
+      direct_taxi_.clear();
     }
 
   } catch (std::exception const&) {
@@ -363,72 +396,79 @@ bool prima::blacklist_update(std::string_view json) {
   return true;
 }
 
-bool update_pt_rides(std::vector<nigiri::routing::start>& rides,
-                     std::vector<nigiri::routing::start>& prev_rides,
-                     json::array const& update,
-                     which_mile const wm) {
-  std::swap(rides, prev_rides);
-  rides.clear();
-
-  auto const n_pt_udpates = n_pt_updates(update);
-  if (prev_rides.size() != n_pt_udpates) {
-    n::log(n::log_lvl::debug, "motis.prima",
-           "[whitelisting] #rides != #updates ({} != {})", prev_rides.size(),
-           n_pt_udpates);
-    return true;
-  }
-
-  auto prev_it = std::begin(prev_rides);
-  for (auto const& stop : update) {
-    for (auto const& event : stop.as_array()) {
-      if (event.is_null()) {
-        rides.push_back({.time_at_start_ = kInfeasible,
-                         .time_at_stop_ = kInfeasible,
-                         .stop_ = prev_it->stop_});
-      } else {
-        auto const time_at_coord_str =
-            wm == kFirstMile
-                ? to_unix(event.as_object().at("pickupTime").as_int64())
-                : to_unix(event.as_object().at("dropoffTime").as_int64());
-        auto const time_at_stop_str =
-            wm == kFirstMile
-                ? to_unix(event.as_object().at("dropoffTime").as_int64())
-                : to_unix(event.as_object().at("pickupTime").as_int64());
-        rides.push_back({.time_at_start_ = time_at_coord_str,
-                         .time_at_stop_ = time_at_stop_str,
-                         .stop_ = prev_it->stop_});
-      }
-      ++prev_it;
-      if (prev_it == end(prev_rides)) {
-        return false;
-      }
-    }
-  }
-  return false;
-}
-
-bool update_direct_rides(std::vector<direct_ride>& rides,
-                         json::array const& update) {
-  if (rides.size() != update.size()) {
-    n::log(n::log_lvl::debug, "motis.prima",
-           "[whitelisting] #rides != #updates ({} != {})", rides.size(),
-           update.size());
-    rides.clear();
-    return true;
-  }
-
-  rides.clear();
-  for (auto const& ride : update) {
-    if (!ride.is_null()) {
-      rides.push_back({to_unix(ride.as_object().at("pickupTime").as_int64()),
-                       to_unix(ride.as_object().at("dropoffTime").as_int64())});
-    }
-  }
-
-  return false;
-}
-
 bool prima::whitelist_update(std::string_view json) {
+
+  auto const update_first_mile = [](std::vector<nigiri::routing::start>& rides,
+                                    json::array const& update) {
+    auto prev_rides =
+        std::exchange(rides, std::vector<nigiri::routing::start>{});
+  };
+
+  auto const update_pt_rides = [](std::vector<nigiri::routing::start>& rides,
+                                  json::array const& update,
+                                  which_mile const wm) {
+    auto prev_rides =
+        std::exchange(rides, std::vector<nigiri::routing::start>{});
+
+    auto const n_pt_udpates = n_pt_updates(update);
+    if (prev_rides.size() != n_pt_udpates) {
+      n::log(n::log_lvl::debug, "motis.prima",
+             "[whitelisting] #rides != #updates ({} != {})", prev_rides.size(),
+             n_pt_udpates);
+      return true;
+    }
+
+    auto prev_it = std::begin(prev_rides);
+    for (auto const& stop : update) {
+      for (auto const& event : stop.as_array()) {
+        if (event.is_null()) {
+          rides.push_back({.time_at_start_ = kInfeasible,
+                           .time_at_stop_ = kInfeasible,
+                           .stop_ = prev_it->stop_});
+        } else {
+          auto const time_at_coord_str =
+              wm == kFirstMile
+                  ? to_unix(event.as_object().at("pickupTime").as_int64())
+                  : to_unix(event.as_object().at("dropoffTime").as_int64());
+          auto const time_at_stop_str =
+              wm == kFirstMile
+                  ? to_unix(event.as_object().at("dropoffTime").as_int64())
+                  : to_unix(event.as_object().at("pickupTime").as_int64());
+          rides.push_back({.time_at_start_ = time_at_coord_str,
+                           .time_at_stop_ = time_at_stop_str,
+                           .stop_ = prev_it->stop_});
+        }
+        ++prev_it;
+        if (prev_it == end(prev_rides)) {
+          return false;
+        }
+      }
+    }
+    return false;
+  };
+
+  auto const update_direct_rides = [](std::vector<direct_ride>& rides,
+                                      json::array const& update) {
+    if (rides.size() != update.size()) {
+      n::log(n::log_lvl::debug, "motis.prima",
+             "[whitelisting] #rides != #updates ({} != {})", rides.size(),
+             update.size());
+      rides.clear();
+      return true;
+    }
+
+    rides.clear();
+    for (auto const& ride : update) {
+      if (!ride.is_null()) {
+        rides.push_back(
+            {to_unix(ride.as_object().at("pickupTime").as_int64()),
+             to_unix(ride.as_object().at("dropoffTime").as_int64())});
+      }
+    }
+
+    return false;
+  };
+
   auto with_errors = false;
   try {
     auto const o = json::parse(json).as_object();
@@ -436,8 +476,7 @@ bool prima::whitelist_update(std::string_view json) {
                                    o.at("start").as_array(), kFirstMile);
     with_errors |= update_pt_rides(to_rides_, prev_to_rides_,
                                    o.at("target").as_array(), kLastMile);
-    with_errors |=
-        update_direct_rides(direct_rides_, o.at("direct").as_array());
+    with_errors |= update_direct_rides(direct_taxi_, o.at("direct").as_array());
   } catch (std::exception const&) {
     n::log(n::log_lvl::debug, "motis.prima",
            "[whitelisting] could not parse response: {}", json);
