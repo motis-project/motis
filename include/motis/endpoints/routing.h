@@ -35,8 +35,8 @@ place_t get_place(nigiri::timetable const*,
                   std::string_view user_input);
 
 nigiri::interval<nigiri::unixtime_t> shrink(
-    bool const arrive_by,
-    std::size_t const max_size,
+    bool keep_late,
+    std::size_t max_size,
     nigiri::interval<nigiri::unixtime_t> search_interval,
     std::vector<nigiri::routing::journey>& journeys);
 

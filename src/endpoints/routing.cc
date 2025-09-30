@@ -317,7 +317,7 @@ std::vector<n::routing::offset> get_offsets(
   return offsets;
 }
 
-n::interval<n::unixtime_t> shrink(bool const arrive_by,
+n::interval<n::unixtime_t> shrink(bool const keep_late,
                                   std::size_t const max_size,
                                   n::interval<n::unixtime_t> search_interval,
                                   std::vector<n::routing::journey>& journeys) {
@@ -325,31 +325,31 @@ n::interval<n::unixtime_t> shrink(bool const arrive_by,
     return search_interval;
   }
 
-  if (arrive_by) {
+  if (keep_late) {
     auto cutoff_it =
         std::next(journeys.rbegin(), static_cast<int>(max_size - 1));
-    auto last_arr_time = cutoff_it->arrival_time();
+    auto last_arr_time = cutoff_it->start_time_;
     ++cutoff_it;
     while (cutoff_it != rend(journeys) &&
-           cutoff_it->arrival_time() == last_arr_time) {
+           cutoff_it->start_time_ == last_arr_time) {
       ++cutoff_it;
     }
     if (cutoff_it == rend(journeys)) {
       return search_interval;
     }
-    search_interval.from_ = cutoff_it->arrival_time() + std::chrono::minutes{1};
+    search_interval.from_ = cutoff_it->start_time_ + std::chrono::minutes{1};
     journeys.erase(begin(journeys), cutoff_it.base());
   } else {
     auto cutoff_it = std::next(begin(journeys), static_cast<int>(max_size - 1));
-    auto last_dep_time = cutoff_it->departure_time();
+    auto last_dep_time = cutoff_it->start_time_;
     while (cutoff_it != end(journeys) &&
-           cutoff_it->departure_time() == last_dep_time) {
+           cutoff_it->start_time_ == last_dep_time) {
       ++cutoff_it;
     }
     if (cutoff_it == end(journeys)) {
       return search_interval;
     }
-    search_interval.to_ = cutoff_it->departure_time();
+    search_interval.to_ = cutoff_it->start_time_;
     journeys.erase(cutoff_it, end(journeys));
   }
 
@@ -868,7 +868,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
     auto journeys = r.journeys_->els_;
     auto search_interval = r.interval_;
     if (query.maxItineraries_.has_value()) {
-      search_interval = shrink(query.arriveBy_,
+      search_interval = shrink(start_time.extend_interval_earlier_,
                                static_cast<std::size_t>(*query.maxItineraries_),
                                r.interval_, journeys);
     }

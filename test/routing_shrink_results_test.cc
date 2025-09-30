@@ -9,16 +9,17 @@ namespace n = nigiri;
 using iv = n::interval<n::unixtime_t>;
 
 TEST(motis, shrink) {
-  auto const j = [](std::uint8_t const transfers, n::unixtime_t const dep,
-                    n::unixtime_t const arr) {
-    auto x = n::routing::journey{};
-    x.start_time_ = dep;
-    x.dest_time_ = arr;
-    x.transfers_ = transfers;
-    return x;
-  };
   auto const d = date::sys_days{2025_y / September / 29};
   {
+    auto const j = [](std::uint8_t const transfers, n::unixtime_t const dep,
+                      n::unixtime_t const arr) {
+      auto x = n::routing::journey{};
+      x.start_time_ = dep;
+      x.dest_time_ = arr;
+      x.transfers_ = transfers;
+      return x;
+    };
+
     auto journeys = std::vector<n::routing::journey>{
         j(2, d + 10h, d + 11h),  //
         j(1, d + 10h, d + 12h),  //
@@ -46,6 +47,15 @@ TEST(motis, shrink) {
   }
 
   {
+    auto const j = [](std::uint8_t const transfers, n::unixtime_t const dep,
+                      n::unixtime_t const arr) {
+      auto x = n::routing::journey{};
+      x.start_time_ = arr;
+      x.dest_time_ = dep;
+      x.transfers_ = transfers;
+      return x;
+    };
+
     auto journeys = std::vector<n::routing::journey>{
         j(2, d + 10h, d + 11h),
         j(1, d + 10h, d + 12h),
