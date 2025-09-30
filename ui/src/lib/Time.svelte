@@ -65,10 +65,7 @@
 		</div>
 		<div class="text-xs font-normal h-4">{isSameAsBrowserTimezone ? '' : timeZoneOffset}</div>
 	{:else if variant === 'realtime-show-always' || (variant === 'realtime' && isRealtime)}
-		<span
-			class:text-destructive={notOnTime}
-			class:text-green-600={roughlyOnTime}
-		>
+		<span class:text-destructive={notOnTime} class:text-green-600={roughlyOnTime}>
 			{formatTime(t, timeZone)}
 			{weekday(t)}
 		</span>

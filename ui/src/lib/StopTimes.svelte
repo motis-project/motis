@@ -53,9 +53,7 @@
 		});
 </script>
 
-<div
-	class="gap-y-4 mb-1 text-base grid grid-cols-[auto_auto_1fr] items-start content-start"
->
+<div class="gap-y-4 mb-1 text-base grid grid-cols-[auto_auto_1fr] items-start content-start">
 	<div class="col-span-full w-full flex items-center justify-center">
 		<Button
 			class="font-bold"
@@ -100,62 +98,63 @@
 				{@const scheduledTimestamp = arriveBy
 					? stopTime.place.scheduledArrival!
 					: stopTime.place.scheduledDeparture!}
-					<Route class="max-w-20 text-ellipsis overflow-hidden" l={stopTime} {onClickTrip} />
-					<div class="flex px-4 justify-between gap-4">
-						<Time
+				<Route class="max-w-20 text-ellipsis overflow-hidden" l={stopTime} {onClickTrip} />
+				<div class="flex px-4 justify-between gap-4">
+					<Time
 						variant="schedule"
 						timeZone={stopTime.place.tz}
 						isRealtime={stopTime.realTime}
 						{timestamp}
 						{scheduledTimestamp}
 						queriedTime={queryTime.toISOString()}
-						/>
-						<Time
-							variant="realtime"
-							timeZone={stopTime.place.tz}
-							isRealtime={stopTime.realTime}
-							{timestamp}
-							{scheduledTimestamp}
-						/>
-					</div>					
-					<div class="w-full">
-						<div class="flex items-start justify-between text-base">
-							<div class="flex items-start gap-1">
-								<ArrowRight class="mt-1 shrink-0 stroke-muted-foreground h-4 w-4" />
-								{stopTime.headsign}
-								{#if !stopTime.headsign || !stopTime.tripTo.name.startsWith(stopTime.headsign)}
-									({stopTime.tripTo.name})
-								{/if}
-							</div>
-							{#if stopTime.place.track}
-								<span class="mt-1 text-nowrap px-1 border text-xs rounded-xl">
-									{t.track.slice(0,2)+ '.'} {stopTime.place.track}
-								</span>
+					/>
+					<Time
+						variant="realtime"
+						timeZone={stopTime.place.tz}
+						isRealtime={stopTime.realTime}
+						{timestamp}
+						{scheduledTimestamp}
+					/>
+				</div>
+				<div class="w-full">
+					<div class="flex items-start justify-between text-base">
+						<div class="flex items-start gap-1">
+							<ArrowRight class="mt-1 shrink-0 stroke-muted-foreground h-4 w-4" />
+							{stopTime.headsign}
+							{#if !stopTime.headsign || !stopTime.tripTo.name.startsWith(stopTime.headsign)}
+								({stopTime.tripTo.name})
 							{/if}
 						</div>
-						{#if stopTime.pickupDropoffType == 'NOT_ALLOWED'}
-							<div class="flex items-center text-destructive text-sm">
-								<CircleX class="stroke-destructive h-4 w-4" />
-								<span class="ml-1 leading-none">
-									{stopTime.tripCancelled
-										? t.tripCancelled
-										: stopTime.cancelled
-											? t.stopCancelled
-											: arriveBy
-												? t.outDisallowed
-												: t.inDisallowed}
-								</span>
-							</div>
-						{/if}
-						{#if stopTime.place.alerts}
-							<div class="flex items-center text-destructive text-sm">
-								<Info class="stroke-destructive h-4 w-4" />
-								<span class="ml-1 leading-none">
-									{t.alertsAvailable}
-								</span>
-							</div>
+						{#if stopTime.place.track}
+							<span class="mt-1 text-nowrap px-1 border text-xs rounded-xl">
+								{t.track.slice(0, 2) + '.'}
+								{stopTime.place.track}
+							</span>
 						{/if}
 					</div>
+					{#if stopTime.pickupDropoffType == 'NOT_ALLOWED'}
+						<div class="flex items-center text-destructive text-sm">
+							<CircleX class="stroke-destructive h-4 w-4" />
+							<span class="ml-1 leading-none">
+								{stopTime.tripCancelled
+									? t.tripCancelled
+									: stopTime.cancelled
+										? t.stopCancelled
+										: arriveBy
+											? t.outDisallowed
+											: t.inDisallowed}
+							</span>
+						</div>
+					{/if}
+					{#if stopTime.place.alerts}
+						<div class="flex items-center text-destructive text-sm">
+							<Info class="stroke-destructive h-4 w-4" />
+							<span class="ml-1 leading-none">
+								{t.alertsAvailable}
+							</span>
+						</div>
+					{/if}
+				</div>
 			{/each}
 			{#if !r.stopTimes.length}
 				<div class="col-span-full w-full flex items-center justify-center">

@@ -32,42 +32,42 @@
 	p: Place,
 	isStartOrEnd: number
 )}
-	{@const textColor = isStartOrEnd == 0?'text-muted-foreground':''}
-	<div class="flex items-baseline justify-between w-full {isStartOrEnd == 0?'text-sm':''}">
+	{@const textColor = isStartOrEnd == 0 ? 'text-muted-foreground' : ''}
+	<div class="flex items-baseline justify-between w-full {isStartOrEnd == 0 ? 'text-sm' : ''}">
 		<div class="flex justify-between">
 			<Time
-			variant="schedule"
-			class="font-semibold w-16 {textColor}"
-			queriedTime={timestamp}
-			timeZone={p.tz}
-			{isRealtime}
-			{timestamp}
-			{scheduledTimestamp}
-			isArrival={isStartOrEnd == -1}
-		/>
-		<Time
-			variant="realtime"
-			class="font-semibold w-16 {textColor}"
-			timeZone={p.tz}
-			{isRealtime}
-			{timestamp}
-			{scheduledTimestamp}
-			isArrival={isStartOrEnd == -1}
-		/>
+				variant="schedule"
+				class="font-semibold w-16 {textColor}"
+				queriedTime={timestamp}
+				timeZone={p.tz}
+				{isRealtime}
+				{timestamp}
+				{scheduledTimestamp}
+				isArrival={isStartOrEnd == -1}
+			/>
+			<Time
+				variant="realtime"
+				class="font-semibold w-16 {textColor}"
+				timeZone={p.tz}
+				{isRealtime}
+				{timestamp}
+				{scheduledTimestamp}
+				isArrival={isStartOrEnd == -1}
+			/>
 		</div>
-		<div class = "w-full ml-4">
+		<div class="w-full ml-4">
 			{#if p.stopId}
-				<div class = "flex items-center justify-between">
+				<div class="flex items-center justify-between">
 					<Button
-					class="text-[length:inherit] leading-none justify-normal text-wrap p-0 text-left {textColor}"
-					variant="link"
-					onclick={() => onClickStop(p.name, p.stopId!, new Date(timestamp))}
+						class="text-[length:inherit] leading-none justify-normal text-wrap p-0 text-left {textColor}"
+						variant="link"
+						onclick={() => onClickStop(p.name, p.stopId!, new Date(timestamp))}
 					>
 						{p.name}
 					</Button>
 					{#if p.track}
 						<span class="text-nowrap px-1 border text-xs rounded-xl">
-							{t.track.slice(0,2) +'.'}
+							{t.track.slice(0, 2) + '.'}
 							{p.track}
 						</span>
 					{/if}
@@ -106,7 +106,7 @@
 				<span class="px-4 py-2">{p.name || p.flex}</span>
 			{/if}
 		</div>
-	</div>	
+	</div>
 {/snippet}
 
 {#snippet streetLeg(l: Leg)}
@@ -364,9 +364,7 @@
 								({formatDurationSec(l.duration)})
 							</span>
 						</summary>
-						<div
-							class="mb-1 grid gap-y-4 items-start content-start"
-						>
+						<div class="mb-1 grid gap-y-4 items-start content-start">
 							{#each l.intermediateStops! as s, i (i)}
 								{@render stopTimes(s.arrival!, s.scheduledArrival!, l.realTime, s, 0)}
 							{/each}
