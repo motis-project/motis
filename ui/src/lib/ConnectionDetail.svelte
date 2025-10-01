@@ -74,8 +74,8 @@
 						</span>
 					{/if}
 				</div>
-				{@const pickupNotAllowedOrEnd = p.pickupType == 'NOT_ALLOWED' && isStartOrEnd != -1}
-				{@const dropoffNotAllowedOrStart = p.dropoffType == 'NOT_ALLOWED' && isStartOrEnd != 1}
+				{@const pickupNotAllowedOrEnd = p.pickupType == 'NOT_ALLOWED' && isStartOrEnd != 1}
+				{@const dropoffNotAllowedOrStart = p.dropoffType == 'NOT_ALLOWED' && isStartOrEnd != -1}
 				{#if (p as Place & { switchTo?: Leg }).switchTo}
 					{@const switchTo = (p as Place & { switchTo: Leg }).switchTo}
 					<div class="flex items-center text-sm">
@@ -387,7 +387,6 @@
 			<Route {onClickTrip} {l} />
 			<div class="pt-4 pl-6 border-l-4 left-4 relative" style={routeBorderColor(l)}>
 				{@render stopTimes(l.startTime, l.scheduledStartTime, l.realTime, l.from, l.mode, -1)}
-				start
 				{#if l.mode == 'FLEX'}
 					<div class="mt-2 flex items-center leading-none">
 						<span class="ml-1 text-sm">
