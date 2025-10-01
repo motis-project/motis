@@ -11,6 +11,7 @@
 #include "motis-api/motis-api.h"
 
 #include "motis/fwd.h"
+#include "motis/place.h"
 
 using namespace std::chrono_literals;
 
@@ -44,14 +45,20 @@ struct capacities {
   std::int64_t luggage_;
 };
 
+bool by_stop(nigiri::routing::start const& a, nigiri::routing::start const& b) {
+  return std::tie(a.stop_, a.time_at_start_, a.time_at_stop_) <
+         std::tie(b.stop_, b.time_at_start_, b.time_at_stop_);
+}
+
 struct prima {
 
-  prima(osr::location const& from,
+  prima(std::string const& prima_url,
+        osr::location const& from,
         osr::location const& to,
         api::plan_params const& query);
 
   void init(nigiri::interval<nigiri::unixtime_t> const& search_intvl,
-            nigiri::interval<nigiri::unixtime_t> const& odm_intvl,
+            nigiri::interval<nigiri::unixtime_t> const& taxi_intvl,
             bool use_first_mile_taxi,
             bool use_last_mile_taxi,
             bool use_direct_taxi,
@@ -63,30 +70,39 @@ struct prima {
             ep::routing const& r,
             elevators const* e,
             gbfs::gbfs_routing_data& gbfs,
-            api::Place const& from_p,
-            api::Place const& to_p,
+            api::Place const& from,
+            api::Place const& to,
             api::plan_params const& query,
             nigiri::routing::query const& n_query,
             unsigned api_version);
 
   std::string get_prima_request(nigiri::timetable const&) const;
-  std::size_t n_events() const;
-  bool blacklist_update(std::string_view json);
-  bool whitelist_update(std::string_view json,
-                        std::vector<nigiri::routing::journey>&);
+  std::size_t n_taxi_events() const;
+  std::size_t n_ride_sharing_events() const;
+  bool blacklist_update(nigiri::timetable const&);
+  bool whitelist_update(std::vector<nigiri::routing::journey>&,
+                        nigiri::timetable const&);
+  void add_direct(std::vector<nigiri::routing::journey>& taxi_journeys,
+                  place_t const& from,
+                  place_t const& to,
+                  bool arrive_by) const;
+
+  boost::urls::url taxi_blacklist_;
+  boost::urls::url taxi_whitelist_;
+  boost::urls::url ride_sharing_whitelist_;
 
   osr::location const& from_;
   osr::location const& to_;
   nigiri::event_type fixed_;
   capacities cap_;
 
-  std::vector<nigiri::routing::start> first_mile_ride_sharing_{};
-  std::vector<nigiri::routing::start> last_mile_ride_sharing_{};
-  std::vector<direct_ride> direct_ride_sharing_{};
-
   std::vector<nigiri::routing::start> first_mile_taxi_{};
   std::vector<nigiri::routing::start> last_mile_taxi_{};
   std::vector<direct_ride> direct_taxi_{};
+
+  std::vector<nigiri::routing::start> first_mile_ride_sharing_{};
+  std::vector<nigiri::routing::start> last_mile_ride_sharing_{};
+  std::vector<direct_ride> direct_ride_sharing_{};
 };
 
 }  // namespace motis::odm
