@@ -82,7 +82,7 @@ const translations: Translations = {
 	HIGHSPEED_RAIL: 'Hochgeschwindigkeitszug',
 	LONG_DISTANCE: 'Intercityzug',
 	NIGHT_RAIL: 'Nachtzug',
-	REGIONAL_FAST_RAIL: 'Regionalexpresszug',
+	REGIONAL_FAST_RAIL: 'Schnellzug',
 	REGIONAL_RAIL: 'Regionalzug',
 	OTHER: 'Andere',
 	routingSegments: {
