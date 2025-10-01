@@ -130,7 +130,7 @@
 						</div>
 						{#if stopTime.place.track}
 							<span class="mt-1 text-nowrap px-1 border text-xs rounded-xl">
-								{getModeLabel(stopTime.mode) == 'Track'? t.trackAbr: t.platformAbr}
+								{getModeLabel(stopTime.mode) == 'Track' ? t.trackAbr : t.platformAbr}
 								{stopTime.place.track}
 							</span>
 						{/if}

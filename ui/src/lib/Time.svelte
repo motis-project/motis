@@ -31,22 +31,23 @@
 	const early = $derived(isRealtime && delayMinutes <= -1);
 	const notOnTime = $derived(arriveBy ? highDelay : highDelay || early);
 	const roughlyOnTime = $derived(arriveBy ? lowDelay : lowDelay && !early);
-	const isValidDate = (d: Date) : boolean => {
-			return scheduled instanceof Date && !isNaN(scheduled.getTime());
-	}
-	const timeZoneOffset = $derived(isValidDate(scheduled)?
-		new Intl.DateTimeFormat(language, { timeZone, timeZoneName: 'shortOffset' })
-			.formatToParts(scheduled)
-			.find((part) => part.type === 'timeZoneName')!.value
+	const isValidDate = $derived(scheduled instanceof Date && !isNaN(scheduled.getTime()));
+
+	const timeZoneOffset = $derived(
+		isValidDate
+			? new Intl.DateTimeFormat(language, { timeZone, timeZoneName: 'shortOffset' })
+					.formatToParts(scheduled)
+					.find((part) => part.type === 'timeZoneName')!.value
 			: undefined
 	);
 	const isSameAsBrowserTimezone = $derived(() => {
-		if (!isValidDate(scheduled)) return false;
-		return	new Intl.DateTimeFormat(language, { timeZoneName: 'shortOffset' })
+		if (!isValidDate) return false;
+		return (
+			new Intl.DateTimeFormat(language, { timeZoneName: 'shortOffset' })
 				.formatToParts(scheduled)
 				.find((part) => part.type === 'timeZoneName')!.value == timeZoneOffset
-		}
-	);
+		);
+	});
 
 	function weekday(time: Date) {
 		if (variant === 'realtime') {

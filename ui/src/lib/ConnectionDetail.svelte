@@ -32,7 +32,7 @@
 	p: Place,
 	mode: Mode,
 	isStartOrEnd: number
-)}	
+)}
 	{@const arriveBy = isStartOrEnd == 0 || isStartOrEnd == 1}
 	{@const textColor = isStartOrEnd == 0 ? 'text-muted-foreground' : ''}
 	<div class="flex items-baseline justify-between w-full {isStartOrEnd == 0 ? 'text-sm' : ''}">
@@ -69,7 +69,7 @@
 					</Button>
 					{#if p.track}
 						<span class="text-nowrap mr-4 px-1 border text-xs rounded-xl">
-							{getModeLabel(mode) == 'Track'? t.trackAbr : t.platformAbr}
+							{getModeLabel(mode) == 'Track' ? t.trackAbr : t.platformAbr}
 							{p.track}
 						</span>
 					{/if}
