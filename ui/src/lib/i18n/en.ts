@@ -76,7 +76,7 @@ const translations: Translations = {
 	AIRPLANE: 'Airplane',
 	SUBURBAN: 'Suburban Rail',
 	BUS: 'Bus',
-	COACH: 'Coach',
+	COACH: 'Long Distance Bus / Coach',
 	RAIL: 'Train',
 	HIGHSPEED_RAIL: 'High Speed Rail',
 	LONG_DISTANCE: 'Intercity Rail',
