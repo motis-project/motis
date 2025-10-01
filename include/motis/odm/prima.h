@@ -72,8 +72,8 @@ struct prima {
   std::string get_prima_request(nigiri::timetable const&) const;
   std::size_t n_events() const;
   bool blacklist_update(std::string_view json);
-  bool whitelist_update(std::string_view json);
-  void adjust_to_whitelisting();
+  bool whitelist_update(std::string_view json,
+                        std::vector<nigiri::routing::journey>&);
 
   osr::location const& from_;
   osr::location const& to_;
@@ -87,8 +87,6 @@ struct prima {
   std::vector<nigiri::routing::start> first_mile_taxi_{};
   std::vector<nigiri::routing::start> last_mile_taxi_{};
   std::vector<direct_ride> direct_taxi_{};
-
-  std::vector<nigiri::routing::journey> odm_journeys_{};
 };
 
 }  // namespace motis::odm
