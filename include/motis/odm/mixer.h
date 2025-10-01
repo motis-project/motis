@@ -34,7 +34,7 @@ struct mixer {
   std::vector<double> get_threshold(
       std::vector<nigiri::routing::journey> const&,
       nigiri::interval<nigiri::unixtime_t> const&,
-      std::int64_t doubling_distance) const;
+      double slope) const;
   void write_journeys(
       nigiri::pareto_set<nigiri::routing::journey> const& pt_journeys,
       std::vector<nigiri::routing::journey> const& odm_journeys,
@@ -49,8 +49,8 @@ struct mixer {
                          mixer const&);
 
   double direct_taxi_penalty_;
-  std::int64_t pt_doubling_distance_;
-  std::int64_t odm_doubling_distance_;
+  double pt_slope_;
+  double odm_slope_;
   std::vector<cost_threshold> taxi_cost_;
   std::vector<cost_threshold> transfer_cost_;
 };
