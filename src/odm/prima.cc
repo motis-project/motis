@@ -95,13 +95,6 @@ n::duration_t init_direct(std::vector<direct_ride>& rides,
         rides.push_back({.dep_ = dep, .arr_ = dep + direct_duration});
       }
     }
-  } else {
-    fmt::println(
-        "[init] No direct ODM connection, from: {}, to: {}: "
-        "direct_duration >= "
-        "kODMMaxDuration ({} "
-        ">= {})",
-        from_p, to_p, direct_duration, kODMMaxDuration);
   }
 
   return direct_duration;

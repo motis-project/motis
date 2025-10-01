@@ -45,11 +45,6 @@ struct capacities {
   std::int64_t luggage_;
 };
 
-bool by_stop(nigiri::routing::start const& a, nigiri::routing::start const& b) {
-  return std::tie(a.stop_, a.time_at_start_, a.time_at_stop_) <
-         std::tie(b.stop_, b.time_at_start_, b.time_at_stop_);
-}
-
 struct prima {
 
   prima(std::string const& prima_url,
