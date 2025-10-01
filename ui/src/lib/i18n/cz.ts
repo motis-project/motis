@@ -28,6 +28,9 @@ const translations: Translations = {
 	switchToArrivals: 'Přepni na příjezdy',
 	switchToDepartures: 'Přepni na odjezdy',
 	track: 'Kolej',
+	platform: 'Nástupiště',
+	platformAbr: 'Nást.',
+	trackAbr: 'K.',
 	arrivalOnTrack: 'Příjezd na kolej',
 	tripIntermediateStops: (n: number) => {
 		if (n == 0) {

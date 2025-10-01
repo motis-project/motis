@@ -34,6 +34,9 @@ export type Translations = {
 	switchToDepartures: string;
 	arrivalOnTrack: string;
 	track: string;
+	platform: string;
+	trackAbr: string;
+	platformAbr: string;
 	tripIntermediateStops: (n: number) => string;
 	sharingProvider: string;
 	roundtripStationReturnConstraint: string;

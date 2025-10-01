@@ -4,7 +4,7 @@
 	import ArrowDown from 'lucide-svelte/icons/arrow-down';
 	import DollarSign from 'lucide-svelte/icons/dollar-sign';
 	import CircleX from 'lucide-svelte/icons/circle-x';
-	import type { FareProduct, Itinerary, Leg, Place, StepInstruction } from '$lib/api/openapi';
+	import type { FareProduct, Itinerary, Leg, Mode, Place, StepInstruction } from '$lib/api/openapi';
 	import Time from '$lib/Time.svelte';
 	import { routeBorderColor, routeColor } from '$lib/modeStyle';
 	import { formatDurationSec, formatDistanceMeters } from '$lib/formatDuration';
@@ -14,7 +14,7 @@
 	import { language, t } from '$lib/i18n/translation';
 	import { onClickStop, onClickTrip } from '$lib/utils';
 	import { formatDate, formatTime } from './toDateTime';
-
+	import { getModeLabel } from './map/getModeLabel';
 	const {
 		itinerary
 	}: {
@@ -30,8 +30,10 @@
 	scheduledTimestamp: string,
 	isRealtime: boolean,
 	p: Place,
+	mode: Mode,
 	isStartOrEnd: number
-)}
+)}	
+	{@const arriveBy = isStartOrEnd == 0 || isStartOrEnd == 1}
 	{@const textColor = isStartOrEnd == 0 ? 'text-muted-foreground' : ''}
 	<div class="flex items-baseline justify-between w-full {isStartOrEnd == 0 ? 'text-sm' : ''}">
 		<div class="flex justify-between">
@@ -43,16 +45,16 @@
 				{isRealtime}
 				{timestamp}
 				{scheduledTimestamp}
-				isArrival={isStartOrEnd == -1}
+				{arriveBy}
 			/>
 			<Time
 				variant="realtime"
-				class="font-semibold w-16 {textColor}"
+				class="font-semibold w-16"
 				timeZone={p.tz}
 				{isRealtime}
 				{timestamp}
 				{scheduledTimestamp}
-				isArrival={isStartOrEnd == -1}
+				{arriveBy}
 			/>
 		</div>
 		<div class="w-full ml-4">
@@ -66,8 +68,8 @@
 						{p.name}
 					</Button>
 					{#if p.track}
-						<span class="text-nowrap px-1 border text-xs rounded-xl">
-							{t.track.slice(0, 2) + '.'}
+						<span class="text-nowrap mr-4 px-1 border text-xs rounded-xl">
+							{getModeLabel(mode) == 'Track'? t.trackAbr : t.platformAbr}
 							{p.track}
 						</span>
 					{/if}
@@ -285,7 +287,7 @@
 			</div>
 
 			<div class="pt-4 pl-6 border-l-4 left-4 relative" style={routeBorderColor(l)}>
-				{@render stopTimes(l.startTime, l.scheduledStartTime, l.realTime, l.from, 1)}
+				{@render stopTimes(l.startTime, l.scheduledStartTime, l.realTime, l.from, l.mode, -1)}
 				<div class="mt-2 mb-2 flex items-center">
 					<ArrowRight class="stroke-muted-foreground size-4" />
 					<span class="ml-1">
@@ -366,14 +368,14 @@
 						</summary>
 						<div class="mb-1 grid gap-y-4 items-start content-start">
 							{#each l.intermediateStops! as s, i (i)}
-								{@render stopTimes(s.arrival!, s.scheduledArrival!, l.realTime, s, 0)}
+								{@render stopTimes(s.arrival!, s.scheduledArrival!, l.realTime, s, l.mode, 0)}
 							{/each}
 						</div>
 					</details>
 				{/if}
 
 				{#if !isLast && !(isLastPred && !isRelevantLeg(next!))}
-					{@render stopTimes(l.endTime!, l.scheduledEndTime!, l.realTime!, l.to, -1)}
+					{@render stopTimes(l.endTime!, l.scheduledEndTime!, l.realTime!, l.to, l.mode, 1)}
 				{/if}
 
 				{#if isLast || (isLastPred && !isRelevantLeg(next!))}
@@ -384,7 +386,8 @@
 		{:else if !(isLast && !isRelevantLeg(l)) && ((i == 0 && isRelevantLeg(l)) || !next || !next.displayName || l.mode != 'WALK' || (pred && (pred.mode == 'BIKE' || (l.mode == 'WALK' && pred.mode == 'CAR') || pred.mode == 'RENTAL')))}
 			<Route {onClickTrip} {l} />
 			<div class="pt-4 pl-6 border-l-4 left-4 relative" style={routeBorderColor(l)}>
-				{@render stopTimes(l.startTime, l.scheduledStartTime, l.realTime, l.from, 1)}
+				{@render stopTimes(l.startTime, l.scheduledStartTime, l.realTime, l.from, l.mode, -1)}
+				start
 				{#if l.mode == 'FLEX'}
 					<div class="mt-2 flex items-center leading-none">
 						<span class="ml-1 text-sm">
@@ -395,7 +398,7 @@
 				{/if}
 				{@render streetLeg(l)}
 				{#if !isLast}
-					{@render stopTimes(l.endTime, l.scheduledEndTime, l.realTime, l.to, -1)}
+					{@render stopTimes(l.endTime, l.scheduledEndTime, l.realTime, l.to, l.mode, 1)}
 				{/if}
 			</div>
 		{/if}
@@ -410,7 +413,8 @@
 			lastLeg!.scheduledEndTime,
 			lastLeg!.realTime,
 			lastLeg!.to,
-			-1
+			lastLeg!.mode,
+			1
 		)}
 	</div>
 </div>

@@ -28,6 +28,9 @@ const translations: Translations = {
 	switchToArrivals: 'Przełącz na przyjazdy',
 	switchToDepartures: 'Przełącz na odjazdy',
 	track: 'Tor',
+	platform: 'Peron',
+	trackAbr: 'T.',
+	platformAbr: 'Pr.',
 	arrivalOnTrack: 'Przyjazd na tor',
 	tripIntermediateStops: (n: number) => {
 		if (n == 0) {

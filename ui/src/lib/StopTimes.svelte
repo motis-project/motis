@@ -11,6 +11,7 @@
 	import { language, t } from '$lib/i18n/translation';
 	import type { RequestResult } from '@hey-api/client-fetch';
 	import { onClickStop, onClickTrip } from '$lib/utils';
+	import { getModeLabel } from './map/getModeLabel';
 
 	let {
 		stopId,
@@ -107,6 +108,7 @@
 						{timestamp}
 						{scheduledTimestamp}
 						queriedTime={queryTime.toISOString()}
+						{arriveBy}
 					/>
 					<Time
 						variant="realtime"
@@ -114,6 +116,7 @@
 						isRealtime={stopTime.realTime}
 						{timestamp}
 						{scheduledTimestamp}
+						{arriveBy}
 					/>
 				</div>
 				<div class="w-full">
@@ -127,7 +130,7 @@
 						</div>
 						{#if stopTime.place.track}
 							<span class="mt-1 text-nowrap px-1 border text-xs rounded-xl">
-								{t.track.slice(0, 2) + '.'}
+								{getModeLabel(stopTime.mode) == 'Track'? t.trackAbr: t.platformAbr}
 								{stopTime.place.track}
 							</span>
 						{/if}
