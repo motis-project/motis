@@ -57,23 +57,29 @@ struct prima {
             nigiri::routing::query const& n_query,
             unsigned api_version);
 
-  std::string get_taxi_request(nigiri::timetable const&) const;
   std::size_t n_taxi_events() const;
   std::size_t n_ride_sharing_events() const;
 
+  std::string make_taxi_request(nigiri::timetable const&) const;
+
   bool consume_blacklist_taxis_response(std::string_view json);
-  bool blacklist_taxis(nigiri::timetable const& tt);
+  bool blacklist_taxis(nigiri::timetable const&);
 
   void extract_taxis(std::vector<nigiri::routing::journey> const&);
   bool consume_whitelist_taxis_response(std::string_view json,
                                         std::vector<nigiri::routing::journey>&);
-  bool whitelist_taxis(std::vector<nigiri::routing::journey>& taxi_journeys,
+  bool whitelist_taxis(std::vector<nigiri::routing::journey>&,
                        nigiri::timetable const&);
 
-  void add_direct_taxis(std::vector<nigiri::routing::journey>& taxi_journeys,
+  void add_direct_taxis(std::vector<nigiri::routing::journey>&,
                         place_t const& from,
                         place_t const& to,
                         bool arrive_by) const;
+
+  std::string make_ride_sharing_request(nigiri::timetable const&) const;
+
+  bool consume_whitelist_ride_sharing_response(std::string_view json);
+  bool whitelist_ride_sharing(nigiri::timetable const&);
 
   boost::urls::url taxi_blacklist_;
   boost::urls::url taxi_whitelist_;

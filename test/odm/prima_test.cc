@@ -125,10 +125,10 @@ TEST(odm, prima_update) {
   p.direct_taxi_ = {{.dep_ = n::unixtime_t{10h}, .arr_ = n::unixtime_t{11h}},
                     {.dep_ = n::unixtime_t{11h}, .arr_ = n::unixtime_t{12h}}};
 
-  EXPECT_EQ(kExpectedInitial, p.get_taxi_request(tt));
+  EXPECT_EQ(kExpectedInitial, p.make_taxi_request(tt));
   EXPECT_FALSE(p.consume_blacklist_taxis_response(invalid_response));
   EXPECT_FALSE(p.consume_blacklist_taxis_response(blacklisting_response));
-  EXPECT_EQ(blacklisted, p.get_taxi_request(tt));
+  EXPECT_EQ(blacklisted, p.make_taxi_request(tt));
 
   auto taxi_journeys = std::vector<nigiri::routing::journey>{};
   taxi_journeys.push_back(

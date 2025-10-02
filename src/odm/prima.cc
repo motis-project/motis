@@ -34,6 +34,7 @@ constexpr auto const kODMOffsetMinImprovement = 60s;
 constexpr auto const kODMMaxDuration = 3600s;
 constexpr auto const kBlacklistPath = "/api/blacklist";
 constexpr auto const kWhitelistPath = "/api/whitelist";
+constexpr auto const kRidesharingPath = "/api/ridesharing_whitelist";
 static auto const kReqHeaders = std::map<std::string, std::string>{
     {"Content-Type", "application/json"}, {"Accept", "application/json"}};
 
@@ -46,6 +47,7 @@ prima::prima(std::string const& prima_url,
              api::plan_params const& query)
     : taxi_blacklist_{prima_url + kBlacklistPath},
       taxi_whitelist_{prima_url + kWhitelistPath},
+      ride_sharing_whitelist_{prima_url + kRidesharingPath},
       from_{from},
       to_{to},
       fixed_{query.arriveBy_ ? n::event_type::kArr : n::event_type::kDep},
@@ -286,18 +288,34 @@ json::value to_json(capacities const& c) {
           {"luggage", c.luggage_}};
 }
 
-json::value to_json(prima const& p, n::timetable const& tt) {
-  return {{"start", {{"lat", p.from_.pos_.lat_}, {"lng", p.from_.pos_.lng_}}},
-          {"target", {{"lat", p.to_.pos_.lat_}, {"lng", p.to_.pos_.lng_}}},
-          {"startBusStops", to_json(p.first_mile_taxi_, tt, kFirstMile)},
-          {"targetBusStops", to_json(p.last_mile_taxi_, tt, kLastMile)},
-          {"directTimes", to_json(p.direct_taxi_, p.fixed_)},
-          {"startFixed", p.fixed_ == n::event_type::kDep},
-          {"capacities", to_json(p.cap_)}};
+std::string make_request(osr::location const& from,
+                         osr::location const& to,
+                         std::vector<n::routing::start> const& first_mile,
+                         std::vector<n::routing::start> const& last_mile,
+                         std::vector<direct_ride> const& direct,
+                         n::event_type const fixed,
+                         capacities const& cap,
+                         n::timetable const& tt) {
+  return json::serialize(
+      json::value{{"start", {{"lat", from.pos_.lat_}, {"lng", from.pos_.lng_}}},
+                  {"target", {{"lat", to.pos_.lat_}, {"lng", to.pos_.lng_}}},
+                  {"startBusStops", to_json(first_mile, tt, kFirstMile)},
+                  {"targetBusStops", to_json(last_mile, tt, kLastMile)},
+                  {"directTimes", to_json(direct, fixed)},
+                  {"startFixed", fixed == n::event_type::kDep},
+                  {"capacities", to_json(cap)}});
 }
 
-std::string prima::get_taxi_request(n::timetable const& tt) const {
-  return json::serialize(to_json(*this, tt));
+std::string prima::make_taxi_request(n::timetable const& tt) const {
+  return make_request(from_, to_, first_mile_taxi_, last_mile_taxi_,
+                      direct_taxi_, fixed_, cap_, tt);
+}
+
+std::string prima::make_ride_sharing_request(
+    nigiri::timetable const& tt) const {
+  return make_request(from_, to_, first_mile_ride_sharing_,
+                      last_mile_ride_sharing_, direct_ride_sharing_, fixed_,
+                      cap_, tt);
 }
 
 std::size_t prima::n_taxi_events() const {
@@ -362,10 +380,11 @@ bool prima::consume_blacklist_taxis_response(std::string_view json) {
       with_errors |=
           update_pt_rides(first_mile_taxi_, o.at("start").as_array());
     } else {
-      n::log(n::log_lvl::debug, "motis.prima",
-             "[blacklisting] from_rides_.size() != n_updates_first_mile ({} != "
-             "{})",
-             first_mile_taxi_.size(), n_updates_first_mile);
+      n::log(
+          n::log_lvl::debug, "motis.prima",
+          "[blacklist taxi] from_rides_.size() != n_updates_first_mile ({} != "
+          "{})",
+          first_mile_taxi_.size(), n_updates_first_mile);
       with_errors = true;
       first_mile_taxi_.clear();
     }
@@ -376,9 +395,10 @@ bool prima::consume_blacklist_taxis_response(std::string_view json) {
       with_errors |=
           update_pt_rides(last_mile_taxi_, o.at("target").as_array());
     } else {
-      n::log(n::log_lvl::debug, "motis.prima",
-             "[blacklisting] to_rides_.size() != n_update_last_mile ({} != {})",
-             last_mile_taxi_.size(), n_update_last_mile);
+      n::log(
+          n::log_lvl::debug, "motis.prima",
+          "[blacklist taxi] to_rides_.size() != n_update_last_mile ({} != {})",
+          last_mile_taxi_.size(), n_update_last_mile);
       with_errors = true;
       last_mile_taxi_.clear();
     }
@@ -387,22 +407,22 @@ bool prima::consume_blacklist_taxis_response(std::string_view json) {
       with_errors |=
           update_direct_rides(direct_taxi_, o.at("direct").as_array());
     } else {
-      n::log(
-          n::log_lvl::debug, "motis.prima",
-          "[blacklisting] direct_rides_.size() != n_direct_updates ({} != {})",
-          direct_taxi_.size(), o.at("direct").as_array().size());
+      n::log(n::log_lvl::debug, "motis.prima",
+             "[blacklist taxi] direct_rides_.size() != n_direct_updates ({} != "
+             "{})",
+             direct_taxi_.size(), o.at("direct").as_array().size());
       with_errors = true;
       direct_taxi_.clear();
     }
 
   } catch (std::exception const&) {
     n::log(n::log_lvl::debug, "motis.prima",
-           "[blacklisting] could not parse response: {}", json);
+           "[blacklist taxi] could not parse response: {}", json);
     return false;
   }
   if (with_errors) {
     n::log(n::log_lvl::debug, "motis.prima",
-           "[blacklisting] parsed response with invalid values: {}", json);
+           "[blacklist taxi] parsed response with invalid values: {}", json);
     return false;
   }
   return true;
@@ -413,19 +433,19 @@ bool prima::blacklist_taxis(nigiri::timetable const& tt) {
   auto ioc = boost::asio::io_context{};
   try {
     n::log(n::log_lvl::debug, "motis.prima",
-           "[blacklisting] request for {} events", n_taxi_events());
+           "[blacklist taxi] request for {} events", n_taxi_events());
     boost::asio::co_spawn(
         ioc,
         [&]() -> boost::asio::awaitable<void> {
           auto const prima_msg = co_await http_POST(
-              taxi_blacklist_, kReqHeaders, get_taxi_request(tt), 10s);
+              taxi_blacklist_, kReqHeaders, make_taxi_request(tt), 10s);
           blacklist_response = get_http_body(prima_msg);
         },
         boost::asio::detached);
     ioc.run();
   } catch (std::exception const& e) {
     n::log(n::log_lvl::debug, "motis.prima",
-           "[blacklisting] networking failed: {}", e.what());
+           "[blacklist taxi] networking failed: {}", e.what());
     blacklist_response = std::nullopt;
   }
   if (!blacklist_response) {
@@ -466,7 +486,7 @@ bool prima::consume_whitelist_taxis_response(
     auto const n_pt_udpates = n_rides_in_response(update);
     if (first_mile_taxi_.size() != n_pt_udpates) {
       n::log(n::log_lvl::debug, "motis.prima",
-             "[whitelisting] first mile taxi #rides != #updates ({} != {})",
+             "[whitelist taxi] first mile taxi #rides != #updates ({} != {})",
              first_mile_taxi_.size(), n_pt_udpates);
       return true;
     }
@@ -533,7 +553,7 @@ bool prima::consume_whitelist_taxis_response(
     auto const n_pt_udpates = n_rides_in_response(update);
     if (last_mile_taxi_.size() != n_pt_udpates) {
       n::log(n::log_lvl::debug, "motis.prima",
-             "[whitelisting] last mile taxi #rides != #updates ({} != {})",
+             "[whitelist taxi] last mile taxi #rides != #updates ({} != {})",
              last_mile_taxi_.size(), n_pt_udpates);
       return true;
     }
@@ -597,7 +617,7 @@ bool prima::consume_whitelist_taxis_response(
   auto const update_direct_rides = [&](json::array const& update) {
     if (direct_taxi_.size() != update.size()) {
       n::log(n::log_lvl::debug, "motis.prima",
-             "[whitelisting] direct taxi #rides != #updates ({} != {})",
+             "[whitelist taxi] direct taxi #rides != #updates ({} != {})",
              direct_taxi_.size(), update.size());
       direct_taxi_.clear();
       return true;
@@ -623,12 +643,12 @@ bool prima::consume_whitelist_taxis_response(
     with_errors |= update_direct_rides(o.at("direct").as_array());
   } catch (std::exception const&) {
     n::log(n::log_lvl::debug, "motis.prima",
-           "[whitelisting] could not parse response: {}", json);
+           "[whitelist taxi] could not parse response: {}", json);
     return false;
   }
   if (with_errors) {
     n::log(n::log_lvl::debug, "motis.prima",
-           "[whitelisting] parsed response with errors: {}", json);
+           "[whitelist taxi] parsed response with errors: {}", json);
     return false;
   }
 
@@ -652,24 +672,24 @@ bool prima::whitelist_taxis(
   auto ioc = boost::asio::io_context{};
   try {
     n::log(n::log_lvl::debug, "motis.prima",
-           "[whitelisting] request for {} events", n_taxi_events());
+           "[whitelist taxi] request for {} events", n_taxi_events());
     boost::asio::co_spawn(
         ioc,
         [&]() -> boost::asio::awaitable<void> {
           auto const prima_msg = co_await http_POST(
-              taxi_whitelist_, kReqHeaders, get_taxi_request(tt), 10s);
+              taxi_whitelist_, kReqHeaders, make_taxi_request(tt), 10s);
           whitelist_response = get_http_body(prima_msg);
         },
         boost::asio::detached);
     ioc.run();
   } catch (std::exception const& e) {
     n::log(n::log_lvl::debug, "motis.prima",
-           "[whitelisting] networking failed: {}", e.what());
+           "[whitelist taxi] networking failed: {}", e.what());
     whitelist_response = std::nullopt;
   }
   if (!whitelist_response) {
     n::log(n::log_lvl::debug, "motis.prima",
-           "[whitelisting] failed, discarding taxi journeys");
+           "[whitelist taxi] failed, discarding taxi journeys");
     return false;
   }
 
@@ -709,7 +729,138 @@ void prima::add_direct_taxis(
         .transfers_ = 0U});
   }
   n::log(n::log_lvl::debug, "motis.prima",
-         "[whitelisting] added {} direct rides", direct_taxi_.size());
+         "[whitelist taxi] added {} direct rides", direct_taxi_.size());
+}
+
+bool prima::consume_whitelist_ride_sharing_response(std::string_view json) {
+  auto const update_first_mile = [&](json::array const& update) {
+    auto const n = n_rides_in_response(update);
+    if (first_mile_ride_sharing_.size() != n) {
+      n::log(n::log_lvl::debug, "motis.prima",
+             "[whitelist taxi] first mile ride-sharing #rides != #updates ({} "
+             "!= {})",
+             first_mile_ride_sharing_.size(), n);
+      first_mile_ride_sharing_.clear();
+      return true;
+    }
+
+    auto prev_first_mile = std::exchange(first_mile_ride_sharing_,
+                                         std::vector<n::routing::start>{});
+    auto prev_it = std::begin(prev_first_mile);
+    for (auto const& stop : update) {
+      for (auto const& event : stop.as_array()) {
+        if (!event.is_null()) {
+          first_mile_ride_sharing_.push_back(
+              {.time_at_start_ =
+                   to_unix(event.as_object().at("pickupTime").as_int64()),
+               .time_at_stop_ =
+                   to_unix(event.as_object().at("dropoffTime").as_int64()),
+               .stop_ = prev_it->stop_});
+        }
+        ++prev_it;
+      }
+    }
+    return false;
+  };
+
+  auto const update_last_mile = [&](json::array const& update) {
+    auto const n = n_rides_in_response(update);
+    if (last_mile_ride_sharing_.size() != n) {
+      n::log(n::log_lvl::debug, "motis.prima",
+             "[whitelist taxi] last mile ride-sharing #rides != #updates ({} "
+             "!= {})",
+             last_mile_ride_sharing_.size(), n);
+      last_mile_ride_sharing_.clear();
+      return true;
+    }
+
+    auto prev_last_mile = std::exchange(last_mile_ride_sharing_,
+                                        std::vector<n::routing::start>{});
+    auto prev_it = std::begin(prev_last_mile);
+    for (auto const& stop : update) {
+      for (auto const& event : stop.as_array()) {
+        if (!event.is_null()) {
+          last_mile_ride_sharing_.push_back(
+              {.time_at_start_ =
+                   to_unix(event.as_object().at("dropoffTime").as_int64()),
+               .time_at_stop_ =
+                   to_unix(event.as_object().at("pickupTime").as_int64()),
+               .stop_ = prev_it->stop_});
+        }
+        ++prev_it;
+      }
+    }
+    return false;
+  };
+
+  auto const update_direct = [&](json::array const& update) {
+    if (direct_ride_sharing_.size() != update.size()) {
+      n::log(n::log_lvl::debug, "motis.prima",
+             "[whitelist ride-sharing] direct ride-sharing #rides != #updates "
+             "({} != {})",
+             direct_ride_sharing_.size(), update.size());
+      direct_ride_sharing_.clear();
+      return true;
+    }
+
+    direct_ride_sharing_.clear();
+    for (auto const& ride : update) {
+      if (!ride.is_null()) {
+        direct_ride_sharing_.push_back(
+            {to_unix(ride.as_object().at("pickupTime").as_int64()),
+             to_unix(ride.as_object().at("dropoffTime").as_int64())});
+      }
+    }
+
+    return false;
+  };
+
+  auto with_errors = false;
+  try {
+    auto const o = json::parse(json).as_object();
+    with_errors |= update_first_mile(o.at("start").as_array());
+    with_errors |= update_last_mile(o.at("target").as_array());
+    with_errors |= update_direct(o.at("direct").as_array());
+  } catch (std::exception const&) {
+    n::log(n::log_lvl::debug, "motis.prima",
+           "[whitelist ride-sharing] could not parse response: {}", json);
+    return false;
+  }
+  if (with_errors) {
+    n::log(n::log_lvl::debug, "motis.prima",
+           "[whitelist ride-sharing] parsed response with errors: {}", json);
+    return false;
+  }
+
+  return true;
+}
+
+bool prima::whitelist_ride_sharing(nigiri::timetable const& tt) {
+  auto response = std::optional<std::string>{};
+  auto ioc = boost::asio::io_context{};
+  try {
+    n::log(n::log_lvl::debug, "motis.prima",
+           "[whitelist ride-sharing] request for {} events", n_taxi_events());
+    boost::asio::co_spawn(
+        ioc,
+        [&]() -> boost::asio::awaitable<void> {
+          auto const prima_msg =
+              co_await http_POST(ride_sharing_whitelist_, kReqHeaders,
+                                 make_ride_sharing_request(tt), 10s);
+          response = get_http_body(prima_msg);
+        },
+        boost::asio::detached);
+    ioc.run();
+  } catch (std::exception const& e) {
+    n::log(n::log_lvl::debug, "motis.prima",
+           "[whitelist ride-sharing] networking failed: {}", e.what());
+    response = std::nullopt;
+  }
+  if (!response) {
+    return false;
+  }
+
+  return consume_whitelist_ride_sharing_response(*response);
 }
 
 }  // namespace motis::odm
