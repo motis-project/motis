@@ -68,7 +68,11 @@
 						{p.name}
 					</Button>
 					{#if p.track}
-						<span class="text-nowrap mr-4 px-1 border text-xs rounded-xl">
+						<span
+							class="text-nowrap {isStartOrEnd != 0
+								? 'transform scale-150'
+								: ''} w- m-4 px-1 border text-xs rounded-xl"
+						>
 							{getModeLabel(mode) == 'Track' ? t.trackAbr : t.platformAbr}
 							{p.track}
 						</span>
@@ -97,7 +101,7 @@
 						</span>
 					</div>
 				{/if}
-				{#if isStartOrEnd && p.alerts}
+				{#if p.alerts}
 					{#each p.alerts as alert, i (i)}
 						<div class="text-destructive text-sm">
 							{alert.headerText}
@@ -237,16 +241,12 @@
 		{@const pred = i == 0 ? undefined : itinerary.legs[i - 1]}
 		{@const next = isLast ? undefined : itinerary.legs[i + 1]}
 		{@const prevTransitLeg = itinerary.legs.slice(0, i).find((l) => l.tripId)}
-
 		{#if l.displayName}
 			<div class="w-full flex justify-between items-center space-x-1">
 				<Route {onClickTrip} {l} />
 				{#if pred && (pred.from.track || isRelevantLeg(pred)) && (i != 1 || pred.displayName)}
 					<div class="border-t h-0 grow shrink"></div>
 					<div class="text-sm text-muted-foreground leading-none px-2 text-center">
-						{#if pred.from.track}
-							{t.arrivalOnTrack} {pred.from.track}{pred.duration ? ',' : ''}
-						{/if}
 						{#if pred.duration}
 							{formatDurationSec(pred.duration)} {t.walk}
 						{/if}
@@ -278,12 +278,6 @@
 					</div>
 				{/if}
 				<div class="border-t h-0 grow shrink"></div>
-				{#if l.from.track}
-					<div class="text-nowrap border rounded-xl px-2">
-						{t.track}
-						{l.from.track}
-					</div>
-				{/if}
 			</div>
 
 			<div class="pt-4 pl-6 border-l-4 left-4 relative" style={routeBorderColor(l)}>
@@ -366,7 +360,7 @@
 								({formatDurationSec(l.duration)})
 							</span>
 						</summary>
-						<div class="mb-1 grid gap-y-4 items-start content-start">
+						<div class="grid items-start content-start">
 							{#each l.intermediateStops! as s, i (i)}
 								{@render stopTimes(s.arrival!, s.scheduledArrival!, l.realTime, s, l.mode, 0)}
 							{/each}
