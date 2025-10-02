@@ -100,7 +100,7 @@
 						</span>
 					</div>
 				{/if}
-				{#if p.alerts}
+				{#if isStartOrEnd && p.alerts}
 					{#each p.alerts as alert, i (i)}
 						<div class="text-destructive text-sm">
 							{alert.headerText}
@@ -108,7 +108,7 @@
 					{/each}
 				{/if}
 			{:else}
-				<span class="px-4 py-2">{p.name || p.flex}</span>
+				<span>{p.name || p.flex}</span>
 			{/if}
 		</div>
 	</div>
@@ -379,7 +379,9 @@
 		{:else if !(isLast && !isRelevantLeg(l)) && ((i == 0 && isRelevantLeg(l)) || !next || !next.displayName || l.mode != 'WALK' || (pred && (pred.mode == 'BIKE' || (l.mode == 'WALK' && pred.mode == 'CAR') || pred.mode == 'RENTAL')))}
 			<Route {onClickTrip} {l} />
 			<div class="pt-4 pl-6 border-l-4 left-4 relative" style={routeBorderColor(l)}>
+				--
 				{@render stopTimes(l.startTime, l.scheduledStartTime, l.realTime, l.from, l.mode, -1, true)}
+				--
 				{#if l.mode == 'FLEX'}
 					<div class="mt-2 flex items-center leading-none">
 						<span class="ml-1 text-sm">
