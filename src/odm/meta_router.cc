@@ -294,14 +294,12 @@ api::plan_response meta_router::run() {
   utl::verify(r_.tt_ != nullptr && r_.tags_ != nullptr,
               "mode=TRANSIT requires timetable to be loaded");
   auto stats = motis::ep::stats_map_t{};
-
   auto const start_intvl = std::visit(
       utl::overloaded{[](n::interval<n::unixtime_t> const i) { return i; },
                       [](n::unixtime_t const t) {
                         return n::interval<n::unixtime_t>{t, t};
                       }},
       start_time_.start_time_);
-
   auto search_intvl =
       n::interval<n::unixtime_t>{start_time_.extend_interval_earlier_
                                      ? start_intvl.to_ - kSearchIntervalSize
@@ -309,20 +307,16 @@ api::plan_response meta_router::run() {
                                  start_time_.extend_interval_later_
                                      ? start_intvl.from_ + kSearchIntervalSize
                                      : start_intvl.to_};
-
   search_intvl.from_ = r_.tt_->external_interval().clamp(search_intvl.from_);
   search_intvl.to_ = r_.tt_->external_interval().clamp(search_intvl.to_);
-
   auto const context_intvl = n::interval<n::unixtime_t>{
       search_intvl.from_ - kContextPadding, search_intvl.to_ + kContextPadding};
-
   auto const taxi_intvl =
       query_.arriveBy_
           ? n::interval<n::unixtime_t>{context_intvl.from_ - kODMLookAhead,
                                        context_intvl.to_}
           : n::interval<n::unixtime_t>{context_intvl.from_,
                                        context_intvl.to_ + kODMLookAhead};
-
   auto const to_osr_loc = [&](auto const& place) {
     return std::visit(
         utl::overloaded{
@@ -334,14 +328,12 @@ api::plan_response meta_router::run() {
             }},
         place);
   };
-
   auto p = prima{r_.config_.prima_->url_, to_osr_loc(from_), to_osr_loc(to_),
                  query_};
   p.init(search_intvl, taxi_intvl, odm_pre_transit_, odm_post_transit_,
          odm_direct_, ride_sharing_pre_transit_, ride_sharing_post_transit_,
          ride_sharing_direct_, *tt_, rtt_, r_, e_, gbfs_rd_, from_place_,
          to_place_, query_, start_time_, api_version_);
-
   print_time(init_start,
              fmt::format("[init] (#first_mile_taxi: {}, #last_mile_taxi: {}, "
                          "#direct_taxi: {})",
@@ -363,13 +355,11 @@ api::plan_response meta_router::run() {
       static_cast<double>(p.n_taxi_events()));
 
   auto const prep_queries_start = std::chrono::steady_clock::now();
-
   auto const [first_mile_taxi_short, first_mile_taxi_long] =
       ride_time_halves(p.first_mile_taxi_);
   auto const [last_mile_taxi_short, last_mile_taxi_long] =
       ride_time_halves(p.last_mile_taxi_);
   auto const params = get_osr_parameters(query_);
-
   auto const pre_transit_time = std::min(
       std::chrono::seconds{query_.maxPreTransitTime_},
       std::chrono::seconds{r_.config_.limits_.value()
@@ -378,7 +368,6 @@ api::plan_response meta_router::run() {
       std::chrono::seconds{query_.maxPostTransitTime_},
       std::chrono::seconds{r_.config_.limits_.value()
                                .street_routing_max_prepost_transit_seconds_});
-
   auto const qf = query_factory{
       .base_query_ = get_base_query(context_intvl),
       .start_walk_ = r_.get_offsets(
