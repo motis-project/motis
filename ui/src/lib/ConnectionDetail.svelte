@@ -32,7 +32,7 @@
 	p: Place,
 	mode: Mode,
 	isStartOrEnd: number,
-	displayPlatform?: boolean
+	hidePlatform?: boolean
 )}
 	{@const arriveBy = isStartOrEnd == 0 || isStartOrEnd == 1}
 	{@const textColor = isStartOrEnd == 0 ? 'text-muted-foreground' : ''}
@@ -68,7 +68,7 @@
 					>
 						{p.name}
 					</Button>
-					{#if p.track && displayPlatform}
+					{#if p.track && !hidePlatform}
 						<span
 							class="text-nowrap {isStartOrEnd == 0 ? 'text-xs' : ''} w- m-4 px-1 border rounded-xl"
 						>
@@ -386,7 +386,7 @@
 					l.from,
 					l.mode,
 					-1,
-					false
+					true
 				)}
 				{#if l.mode == 'FLEX'}
 					<div class="mt-2 flex items-center leading-none">
@@ -398,7 +398,7 @@
 				{/if}
 				{@render streetLeg(l)}
 				{#if !isLast}
-					{@render stopTimes(l.endTime, l.scheduledEndTime, l.realTime, l.to, l.mode, 1)}
+					{@render stopTimes(l.endTime, l.scheduledEndTime, l.realTime, l.to, l.mode, 1, true)}
 				{/if}
 			</div>
 		{/if}
