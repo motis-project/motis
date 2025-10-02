@@ -77,7 +77,7 @@ void shorten(std::vector<nr::journey>& odm_journeys,
       auto const new_pt_time = pt_leg.arr_time_ - pt_leg.dep_time_;
 
       n::log(
-          n::log_lvl::debug, "motis.odm",
+          n::log_lvl::debug, "motis.prima",
           "Shortened ODM first leg: [ODM: {}, stop: {}, PT: {}] --> [ODM: {}, "
           "stop: {}, PT: {}] (ODM: -{}, PT: +{})",
           old_odm_time, old_stop, old_pt_time, new_odm_time, new_stop,
@@ -144,7 +144,7 @@ void shorten(std::vector<nr::journey>& odm_journeys,
       auto const new_pt_time = pt_leg.arr_time_ - pt_leg.dep_time_;
 
       n::log(
-          n::log_lvl::debug, "motis.odm",
+          n::log_lvl::debug, "motis.prima",
           "Shortened ODM last leg: [ODM: {}, stop: {}, PT: {}] --> [ODM: {}, "
           "stop: {}, PT: {}] (ODM: -{}, PT: +{})",
           old_odm_time, old_stop, old_pt_time, new_odm_time, new_stop,
@@ -155,7 +155,7 @@ void shorten(std::vector<nr::journey>& odm_journeys,
 
   for (auto& j : odm_journeys) {
     if (j.legs_.empty()) {
-      n::log(n::log_lvl::debug, "motis.odm", "shorten: journey without legs");
+      n::log(n::log_lvl::debug, "motis.prima", "shorten: journey without legs");
       continue;
     }
     shorten_first_leg(j);

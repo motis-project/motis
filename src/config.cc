@@ -113,7 +113,7 @@ void config::verify() const {
               "feature ELEVATORS requires STREET_ROUTING and TIMETABLE");
   utl::verify(!has_gbfs_feeds() || street_routing,
               "feature GBFS requires feature STREET_ROUTING");
-  utl::verify(!has_odm() || (street_routing && timetable_),
+  utl::verify(!has_prima() || (street_routing && timetable_),
               "feature ODM requires feature STREET_ROUTING");
   utl::verify(!has_elevators() || osr_footpath_,
               "feature ELEVATORS requires feature OSR_FOOTPATHS");
@@ -186,7 +186,7 @@ bool config::has_gbfs_feeds() const {
   return gbfs_.has_value() && !gbfs_->feeds_.empty();
 }
 
-bool config::has_odm() const { return odm_.has_value(); }
+bool config::has_prima() const { return prima_.has_value(); }
 
 unsigned config::n_threads() const {
   return server_

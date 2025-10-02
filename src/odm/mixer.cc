@@ -50,7 +50,7 @@ void mixer::pareto_dominance(
     auto const odm_time_b = odm_time(b);
     auto const ret = a.dominates(b) && odm_time_a < odm_time_b;
     if (kMixerTracing) {
-      n::log(n::log_lvl::debug, "motis.odm",
+      n::log(n::log_lvl::debug, "motis.prima",
              "{} pareto-dominates {}, odm_time: {} < {} --> {}", label(a),
              label(b), odm_time_a, odm_time_b, ret ? "true" : "false");
     }

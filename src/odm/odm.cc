@@ -11,6 +11,11 @@ namespace motis::odm {
 namespace n = nigiri;
 namespace nr = nigiri::routing;
 
+bool by_stop(nr::start const& a, nr::start const& b) {
+  return std::tie(a.stop_, a.time_at_start_, a.time_at_stop_) <
+         std::tie(b.stop_, b.time_at_start_, b.time_at_stop_);
+}
+
 bool is_odm_leg(nr::journey::leg const& l) {
   return std::holds_alternative<nr::offset>(l.uses_) &&
          std::get<nr::offset>(l.uses_).transport_mode_id_ ==
