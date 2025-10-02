@@ -31,7 +31,8 @@
 	isRealtime: boolean,
 	p: Place,
 	mode: Mode,
-	isStartOrEnd: number
+	isStartOrEnd: number,
+	displayPlatform?: boolean
 )}
 	{@const arriveBy = isStartOrEnd == 0 || isStartOrEnd == 1}
 	{@const textColor = isStartOrEnd == 0 ? 'text-muted-foreground' : ''}
@@ -67,11 +68,9 @@
 					>
 						{p.name}
 					</Button>
-					{#if p.track}
+					{#if p.track && displayPlatform}
 						<span
-							class="text-nowrap {isStartOrEnd != 0
-								? 'transform scale-150'
-								: ''} w- m-4 px-1 border text-xs rounded-xl"
+							class="text-nowrap {isStartOrEnd == 0 ? 'text-xs' : ''} w- m-4 px-1 border rounded-xl"
 						>
 							{getModeLabel(mode) == 'Track' ? t.trackAbr : t.platformAbr}
 							{p.track}
@@ -380,7 +379,15 @@
 		{:else if !(isLast && !isRelevantLeg(l)) && ((i == 0 && isRelevantLeg(l)) || !next || !next.displayName || l.mode != 'WALK' || (pred && (pred.mode == 'BIKE' || (l.mode == 'WALK' && pred.mode == 'CAR') || pred.mode == 'RENTAL')))}
 			<Route {onClickTrip} {l} />
 			<div class="pt-4 pl-6 border-l-4 left-4 relative" style={routeBorderColor(l)}>
-				{@render stopTimes(l.startTime, l.scheduledStartTime, l.realTime, l.from, l.mode, -1)}
+				{@render stopTimes(
+					l.startTime,
+					l.scheduledStartTime,
+					l.realTime,
+					l.from,
+					l.mode,
+					-1,
+					false
+				)}
 				{#if l.mode == 'FLEX'}
 					<div class="mt-2 flex items-center leading-none">
 						<span class="ml-1 text-sm">
