@@ -61,12 +61,12 @@ struct prima {
   std::size_t n_taxi_events() const;
   std::size_t n_ride_sharing_events() const;
 
-  bool consume_blacklist(std::string_view json);
-  bool blacklist_update(nigiri::timetable const&);
+  bool consume_blacklist_taxis_response(std::string_view json);
+  bool blacklist_taxis(nigiri::timetable const& tt);
 
   void extract_taxis(std::vector<nigiri::routing::journey> const&);
-  bool consume_whitelist_taxis(std::string_view json,
-                               std::vector<nigiri::routing::journey>&);
+  bool consume_whitelist_taxis_response(std::string_view json,
+                                        std::vector<nigiri::routing::journey>&);
   bool whitelist_taxis(std::vector<nigiri::routing::journey>& taxi_journeys,
                        nigiri::timetable const&);
 

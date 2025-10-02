@@ -315,7 +315,7 @@ std::size_t n_updates(json::array const& update) {
       [](auto const& a, auto const& b) { return a + b.as_array().size(); });
 }
 
-bool prima::consume_blacklist(std::string_view json) {
+bool prima::consume_blacklist_taxis_response(std::string_view json) {
   auto const update_pt_rides = [](std::vector<n::routing::start>& rides,
                                   json::array const& update) {
     auto with_errors = false;
@@ -409,7 +409,7 @@ bool prima::consume_blacklist(std::string_view json) {
   return true;
 }
 
-bool prima::blacklist_update(nigiri::timetable const& tt) {
+bool prima::blacklist_taxis(nigiri::timetable const& tt) {
   auto blacklist_response = std::optional<std::string>{};
   auto ioc = boost::asio::io_context{};
   try {
@@ -433,7 +433,7 @@ bool prima::blacklist_update(nigiri::timetable const& tt) {
     return false;
   }
 
-  return consume_blacklist(*blacklist_response);
+  return consume_blacklist_taxis_response(*blacklist_response);
 }
 
 void prima::extract_taxis(
@@ -460,9 +460,8 @@ void prima::extract_taxis(
   utl::erase_duplicates(last_mile_taxi_, by_stop, std::equal_to<>{});
 }
 
-bool prima::consume_whitelist_taxis(
-    std::string_view json,
-    std::vector<nigiri::routing::journey>& taxi_journeys) {
+bool prima::consume_whitelist_taxis_response(
+    std::string_view json, std::vector<nigiri::routing::journey>& journeys) {
 
   auto const update_first_mile = [&](json::array const& update) {
     auto const n_pt_udpates = n_updates(update);
@@ -512,9 +511,9 @@ bool prima::consume_whitelist_taxis(
       };
 
       if (curr.time_at_start_ == kInfeasible) {
-        utl::erase_if(taxi_journeys, uses_prev);
+        utl::erase_if(journeys, uses_prev);
       } else {
-        for (auto& j : taxi_journeys) {
+        for (auto& j : journeys) {
           if (uses_prev(j)) {
             auto const l = begin(j.legs_);
             l->dep_time_ = curr.time_at_start_;
@@ -580,9 +579,9 @@ bool prima::consume_whitelist_taxis(
           };
 
       if (curr.time_at_start_ == kInfeasible) {
-        utl::erase_if(taxi_journeys, uses_prev);
+        utl::erase_if(journeys, uses_prev);
       } else {
-        for (auto& j : taxi_journeys) {
+        for (auto& j : journeys) {
           if (uses_prev(j)) {
             auto const l = std::prev(end(j.legs_));
             l->dep_time_ = curr.time_at_stop_;
@@ -641,7 +640,7 @@ bool prima::consume_whitelist_taxis(
   }
 
   // adjust journey start/dest times after adjusting legs
-  for (auto& j : taxi_journeys) {
+  for (auto& j : journeys) {
     if (!j.legs_.empty()) {
       j.start_time_ = j.legs_.front().dep_time_;
       j.dest_time_ = j.legs_.back().arr_time_;
@@ -681,7 +680,7 @@ bool prima::whitelist_taxis(
     return false;
   }
 
-  return consume_whitelist_taxis(*whitelist_response, taxi_journeys);
+  return consume_whitelist_taxis_response(*whitelist_response, taxi_journeys);
 }
 
 void prima::add_direct_taxis(
