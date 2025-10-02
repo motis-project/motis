@@ -130,8 +130,8 @@ TEST(odm, prima_update) {
   EXPECT_FALSE(p.blacklist_update(invalid_response));
   EXPECT_TRUE(p.blacklist_update(blacklisting_response));
   EXPECT_EQ(blacklisted, p.get_taxi_request(tt));
-  EXPECT_FALSE(p.whitelist_update(invalid_response));
-  EXPECT_TRUE(p.whitelist_update(whitelisting_response));
+  EXPECT_FALSE(p.whitelist_taxis(invalid_response));
+  EXPECT_TRUE(p.whitelist_taxis(whitelisting_response));
 
   p.odm_journeys_.push_back(
       {.legs_ = {{n::direction::kForward,

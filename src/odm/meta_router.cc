@@ -445,7 +445,7 @@ api::plan_response meta_router::run() {
              r_.metrics_->routing_execution_duration_seconds_routing_);
 
   auto const whitelist_start = std::chrono::steady_clock::now();
-  p.whitelist_update(taxi_journeys, *tt_);
+  p.whitelist_taxis(taxi_journeys, *tt_);
   print_time(whitelist_start,
              fmt::format("[whitelisting] (#first_mile_taxi: {}, "
                          "#last_mile_taxi: {}, #direct_taxi: {})",

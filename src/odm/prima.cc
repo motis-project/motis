@@ -446,11 +446,14 @@ void prima::extract_taxis(
       }
     }
   }
-  utl::erase_duplicates(first_mile, by_stop, std::equal_to<>{});
+  utl::erase_duplicates(first_mile_taxi_, by_stop, std::equal_to<>{});
   utl::erase_duplicates(last_mile_taxi_, by_stop, std::equal_to<>{});
 }
 
-bool prima::consume_whitelist(std::vector<n::routing::journey>& taxi_journeys) {
+bool prima::consume_whitelist_taxis(
+    std::string_view json,
+    std::vector<nigiri::routing::journey>& taxi_journeys) {
+
   auto const update_first_mile = [&](json::array const& update) {
     auto const n_pt_udpates = n_updates(update);
     if (first_mile_taxi_.size() != n_pt_udpates) {
@@ -460,10 +463,10 @@ bool prima::consume_whitelist(std::vector<n::routing::journey>& taxi_journeys) {
       return true;
     }
 
-    auto prev_first_mile_taxi =
+    auto prev_first_mile =
         std::exchange(first_mile_taxi_, std::vector<n::routing::start>{});
 
-    auto prev_it = std::begin(prev_first_mile_taxi);
+    auto prev_it = std::begin(prev_first_mile);
     for (auto const& stop : update) {
       for (auto const& event : stop.as_array()) {
         if (event.is_null()) {
@@ -479,14 +482,14 @@ bool prima::consume_whitelist(std::vector<n::routing::journey>& taxi_journeys) {
                .stop_ = prev_it->stop_});
         }
         ++prev_it;
-        if (prev_it == end(prev_first_mile_taxi)) {
+        if (prev_it == end(prev_first_mile)) {
           return false;
         }
       }
     }
 
     for (auto const [curr, prev] :
-         utl::zip(first_mile_taxi_, prev_first_mile_taxi)) {
+         utl::zip(first_mile_taxi_, prev_first_mile)) {
 
       auto const uses_prev = [&, prev2 =
                                      prev /* hack for MacOS - fixed with 16 */](
@@ -530,10 +533,10 @@ bool prima::consume_whitelist(std::vector<n::routing::journey>& taxi_journeys) {
       return true;
     }
 
-    auto const prev_last_mile_taxi =
+    auto const prev_last_mile =
         std::exchange(last_mile_taxi_, std::vector<n::routing::start>{});
 
-    auto prev_it = std::begin(prev_last_mile_taxi);
+    auto prev_it = std::begin(prev_last_mile);
     for (auto const& stop : update) {
       for (auto const& event : stop.as_array()) {
         if (event.is_null()) {
@@ -549,28 +552,28 @@ bool prima::consume_whitelist(std::vector<n::routing::journey>& taxi_journeys) {
                .stop_ = prev_it->stop_});
         }
         ++prev_it;
-        if (prev_it == end(prev_last_mile_taxi)) {
+        if (prev_it == end(prev_last_mile)) {
           return false;
         }
       }
     }
 
-    for (auto const [curr, prev] :
-         utl::zip(last_mile_taxi_, prev_last_mile_taxi)) {
-
-      auto const uses_prev_to = [&, prev2 = prev](auto const& j) {
-        return j.legs_.size() > 1 &&
-               j.legs_.back().dep_time_ == prev2.time_at_stop_ &&
-               j.legs_.back().arr_time_ == prev2.time_at_start_ &&
-               j.legs_.back().from_ == prev2.stop_ &&
-               is_odm_leg(j.legs_.back());
-      };
+    for (auto const [curr, prev] : utl::zip(last_mile_taxi_, prev_last_mile)) {
+      auto const uses_prev =
+          [&,
+           prev2 = prev /* hack for MacOS - fixed with 16 */](auto const& j) {
+            return j.legs_.size() > 1 &&
+                   j.legs_.back().dep_time_ == prev2.time_at_stop_ &&
+                   j.legs_.back().arr_time_ == prev2.time_at_start_ &&
+                   j.legs_.back().from_ == prev2.stop_ &&
+                   is_odm_leg(j.legs_.back());
+          };
 
       if (curr.time_at_start_ == kInfeasible) {
-        utl::erase_if(taxi_journeys, uses_prev_to);
+        utl::erase_if(taxi_journeys, uses_prev);
       } else {
         for (auto& j : taxi_journeys) {
-          if (uses_prev_to(j)) {
+          if (uses_prev(j)) {
             auto const l = std::prev(end(j.legs_));
             l->dep_time_ = curr.time_at_stop_;
             l->arr_time_ = curr.time_at_start_;
@@ -612,19 +615,18 @@ bool prima::consume_whitelist(std::vector<n::routing::journey>& taxi_journeys) {
 
   auto with_errors = false;
   try {
-    auto const o = json::parse(*whitelist_response).as_object();
+    auto const o = json::parse(json).as_object();
     with_errors |= update_first_mile(o.at("start").as_array());
     with_errors |= update_last_mile(o.at("target").as_array());
     with_errors |= update_direct_rides(o.at("direct").as_array());
   } catch (std::exception const&) {
     n::log(n::log_lvl::debug, "motis.prima",
-           "[whitelisting] could not parse response: {}", *whitelist_response);
+           "[whitelisting] could not parse response: {}", json);
     return false;
   }
   if (with_errors) {
     n::log(n::log_lvl::debug, "motis.prima",
-           "[whitelisting] parsed response with errors: {}",
-           *whitelist_response);
+           "[whitelisting] parsed response with errors: {}", json);
     return false;
   }
 
@@ -639,8 +641,9 @@ bool prima::consume_whitelist(std::vector<n::routing::journey>& taxi_journeys) {
   return true;
 }
 
-bool prima::whitelist_update(std::vector<n::routing::journey>& taxi_journeys,
-                             n::timetable const& tt) {
+bool prima::whitelist_taxis(
+    std::vector<nigiri::routing::journey>& taxi_journeys,
+    nigiri::timetable const& tt) {
   extract_taxis(taxi_journeys);
 
   auto whitelist_response = std::optional<std::string>{};
@@ -668,13 +671,14 @@ bool prima::whitelist_update(std::vector<n::routing::journey>& taxi_journeys,
     return false;
   }
 
-  return consume_whitelist(taxi_journeys);
+  return consume_whitelist_taxis(*whitelist_response, taxi_journeys);
 }
 
-void prima::add_direct(std::vector<n::routing::journey>& taxi_journeys,
-                       place_t const& from,
-                       place_t const& to,
-                       bool const arrive_by) const {
+void prima::add_direct_taxis(
+    std::vector<nigiri::routing::journey>& taxi_journeys,
+    place_t const& from,
+    place_t const& to,
+    bool arrive_by) const {
   auto from_l = std::visit(
       utl::overloaded{[](osr::location const&) {
                         return get_special_station(n::special_station::kStart);

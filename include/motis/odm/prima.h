@@ -79,13 +79,15 @@ struct prima {
   bool blacklist_update(nigiri::timetable const&);
 
   void extract_taxis(std::vector<nigiri::routing::journey> const&);
-  bool consume_whitelist(std::vector<nigiri::routing::journey>&);
-  bool whitelist_update(std::vector<nigiri::routing::journey>&,
-                        nigiri::timetable const&);
-  void add_direct(std::vector<nigiri::routing::journey>& taxi_journeys,
-                  place_t const& from,
-                  place_t const& to,
-                  bool arrive_by) const;
+  bool consume_whitelist_taxis(std::string_view json,
+                               std::vector<nigiri::routing::journey>&);
+  bool whitelist_taxis(std::vector<nigiri::routing::journey>& taxi_journeys,
+                       nigiri::timetable const&);
+
+  void add_direct_taxis(std::vector<nigiri::routing::journey>& taxi_journeys,
+                        place_t const& from,
+                        place_t const& to,
+                        bool arrive_by) const;
 
   boost::urls::url taxi_blacklist_;
   boost::urls::url taxi_whitelist_;
