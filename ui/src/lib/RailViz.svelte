@@ -53,6 +53,7 @@
 		arrival: number;
 		departure: number;
 		arrivalDelay: number;
+		departureDelay: number;
 	};
 
 	const getKeyFrames = (t: TripSegment): KeyFrameExt => {
@@ -60,7 +61,9 @@
 		const departure = new Date(t.departure).getTime();
 		const arrival = new Date(t.arrival).getTime();
 		const scheduledArrival = new Date(t.scheduledArrival).getTime();
+		const scheduledDeparture = new Date(t.scheduledDeparture).getTime();
 		const arrivalDelay = arrival - scheduledArrival;
+		const departureDelay = departure - scheduledDeparture;
 		const coordinates = polyline.decode(t.polyline).map(([x, y]): [number, number] => [y, x]);
 		const totalDuration = arrival - departure;
 		let currDistance = 0;
@@ -88,7 +91,7 @@
 			console.log(totalDistance, currDistance);
 		}
 		keyFrames.push({ point: coordinates[coordinates.length - 1], time: arrival, heading: 0 });
-		return { keyFrames, arrival, departure, arrivalDelay };
+		return { keyFrames, arrival, departure, arrivalDelay, departureDelay };
 	};
 
 	const getFrame = (keyframes: Array<KeyFrame>, timestamp: number) => {
@@ -122,7 +125,7 @@
 	};
 
 	const getRailvizLayer = (
-		trips: Array<{ realTime: boolean; arrivalDelay: number } & KeyFrameExt>
+		trips: Array<{ realTime: boolean; arrivalDelay: number; departureDelay: number } & KeyFrameExt>
 	) => {
 		const now = new Date().getTime();
 
@@ -136,18 +139,21 @@
 			})
 			.filter((t) => t.point);
 
-		const getDelayColor = (d: number, realTime: boolean): RGBA => {
-			const delay = d / 60000;
+		const getDelayColor = (d: number, a: number, realTime: boolean): RGBA => {
+			const departureDelay = d / 60000;
+			const arrivalDelay = a / 60000;
 			if (!realTime) {
 				return [100, 100, 100, 255];
 			}
-			if (delay <= 3) {
+			if (departureDelay <= -1) {
+				return [255, 48, 71, 255];
+			} else if (arrivalDelay <= 3) {
 				return [69, 209, 74, 255];
-			} else if (delay <= 5) {
+			} else if (arrivalDelay <= 5) {
 				return [255, 237, 0, 255];
-			} else if (delay <= 10) {
+			} else if (arrivalDelay <= 10) {
 				return [255, 102, 0, 255];
-			} else if (delay <= 15) {
+			} else if (arrivalDelay <= 15) {
 				return [255, 48, 71, 255];
 			}
 			return [163, 0, 10, 255];
@@ -157,6 +163,7 @@
 			{
 				realTime: boolean;
 				arrivalDelay: number;
+				departureDelay: number;
 				routeColor?: string;
 				routeTextColor?: string;
 				mode: Mode;
@@ -166,7 +173,9 @@
 			data: tripsWithFrame,
 			beforeId: 'road-name-text',
 			getColor: (d) =>
-				colorMode == 'rt' ? getDelayColor(d.arrivalDelay, d.realTime) : hexToRgb(getColor(d)[0]),
+				colorMode == 'rt'
+					? getDelayColor(d.departureDelay, d.arrivalDelay, d.realTime)
+					: hexToRgb(getColor(d)[0]),
 			getAngle: (d) => -d.heading + 90,
 			getPosition: (d) => d.point,
 			getSize: (_) => 48,
@@ -270,8 +279,8 @@
 					}
 					return {
 						html: `${object.trips[0].displayName}<br>
-                  ${formatTime(new Date(object.departure), object.from.tz)} ${object.from.name}<br>
-                  ${formatTime(new Date(object.arrival), object.to.tz)} ${object.to.name}`
+						${formatTime(new Date(object.departure), object.from.tz)} ${object.from.name}<br>
+						${formatTime(new Date(object.arrival), object.to.tz)} ${object.to.name}`
 					};
 				},
 				onClick: ({ object }) => {

@@ -27,7 +27,10 @@ const translations: Translations = {
 	departures: 'Departures',
 	switchToArrivals: 'Switch to arrivals',
 	switchToDepartures: 'Switch to departures',
-	track: 'Track',
+	track: 'Platform',
+	platform: 'Platform',
+	trackAbr: 'Pl.',
+	platformAbr: 'Pl.',
 	arrivalOnTrack: 'Arrival on track',
 	tripIntermediateStops: (n: number) => {
 		switch (n) {

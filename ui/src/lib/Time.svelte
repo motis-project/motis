@@ -10,7 +10,8 @@
 		isRealtime,
 		variant,
 		queriedTime,
-		timeZone
+		timeZone,
+		arriveBy
 	}: {
 		class?: string;
 		timestamp: string;
@@ -19,6 +20,7 @@
 		variant: 'schedule' | 'realtime' | 'realtime-show-always';
 		queriedTime?: string | undefined;
 		timeZone: string | undefined;
+		arriveBy?: boolean | undefined;
 	} = $props();
 
 	const t = $derived(new Date(timestamp));
@@ -26,16 +28,26 @@
 	const delayMinutes = $derived((t.getTime() - scheduled.getTime()) / 60000);
 	const highDelay = $derived(isRealtime && delayMinutes > 3);
 	const lowDelay = $derived(isRealtime && delayMinutes <= 3);
+	const early = $derived(isRealtime && delayMinutes <= -1);
+	const notOnTime = $derived(arriveBy ? highDelay : highDelay || early);
+	const roughlyOnTime = $derived(arriveBy ? lowDelay : lowDelay && !early);
+	const isValidDate = $derived(scheduled instanceof Date && !isNaN(scheduled.getTime()));
+
 	const timeZoneOffset = $derived(
-		new Intl.DateTimeFormat(language, { timeZone, timeZoneName: 'shortOffset' })
-			.formatToParts(scheduled)
-			.find((part) => part.type === 'timeZoneName')!.value
+		isValidDate
+			? new Intl.DateTimeFormat(language, { timeZone, timeZoneName: 'shortOffset' })
+					.formatToParts(scheduled)
+					.find((part) => part.type === 'timeZoneName')!.value
+			: undefined
 	);
-	const isSameAsBrowserTimezone = $derived(
-		new Intl.DateTimeFormat(language, { timeZoneName: 'shortOffset' })
-			.formatToParts(scheduled)
-			.find((part) => part.type === 'timeZoneName')!.value == timeZoneOffset
-	);
+	const isSameAsBrowserTimezone = $derived(() => {
+		if (!isValidDate) return false;
+		return (
+			new Intl.DateTimeFormat(language, { timeZoneName: 'shortOffset' })
+				.formatToParts(scheduled)
+				.find((part) => part.type === 'timeZoneName')!.value == timeZoneOffset
+		);
+	});
 
 	function weekday(time: Date) {
 		if (variant === 'realtime') {
@@ -57,9 +69,9 @@
 			{formatTime(scheduled, timeZone)}
 			{weekday(scheduled)}
 		</div>
-		<div class="text-xs font-normal h-4">{isSameAsBrowserTimezone ? '' : timeZoneOffset}</div>
+		<div class="text-xs font-normal h-4">{isSameAsBrowserTimezone() ? '' : timeZoneOffset}</div>
 	{:else if variant === 'realtime-show-always' || (variant === 'realtime' && isRealtime)}
-		<span class:text-destructive={highDelay} class:text-green-600={lowDelay}>
+		<span class:text-destructive={notOnTime} class:text-green-600={roughlyOnTime}>
 			{formatTime(t, timeZone)}
 			{weekday(t)}
 		</span>

@@ -27,6 +27,9 @@ const translations: Translations = {
 	switchToArrivals: 'Afficher les arrivées',
 	switchToDepartures: 'Afficher les départs',
 	track: 'Voie',
+	platform: 'Quai',
+	trackAbr: 'V.',
+	platformAbr: 'Q.',
 	arrivalOnTrack: 'Arrivée sur la voie',
 	tripIntermediateStops: (n: number) => {
 		switch (n) {
