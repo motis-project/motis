@@ -13,20 +13,6 @@
 #include "motis/fwd.h"
 #include "motis/place.h"
 
-using namespace std::chrono_literals;
-
-constexpr auto const kODMLookAhead = nigiri::duration_t{24h};
-constexpr auto const kSearchIntervalSize = nigiri::duration_t{6h};
-constexpr auto const kContextPadding = nigiri::duration_t{2h};
-constexpr auto const kODMDirectPeriod = 300s;
-constexpr auto const kODMDirectFactor = 1.0;
-constexpr auto const kODMOffsetMinImprovement = 60s;
-constexpr auto const kODMMaxDuration = 3600s;
-constexpr auto const kBlacklistPath = "/api/blacklist";
-constexpr auto const kWhitelistPath = "/api/whitelist";
-static auto const kReqHeaders = std::map<std::string, std::string>{
-    {"Content-Type", "application/json"}, {"Accept", "application/json"}};
-
 namespace motis::ep {
 struct routing;
 }  // namespace motis::ep

@@ -26,6 +26,16 @@ namespace motis::odm {
 
 namespace n = nigiri;
 namespace json = boost::json;
+using namespace std::chrono_literals;
+
+constexpr auto const kODMDirectPeriod = 300s;
+constexpr auto const kODMDirectFactor = 1.0;
+constexpr auto const kODMOffsetMinImprovement = 60s;
+constexpr auto const kODMMaxDuration = 3600s;
+constexpr auto const kBlacklistPath = "/api/blacklist";
+constexpr auto const kWhitelistPath = "/api/whitelist";
+static auto const kReqHeaders = std::map<std::string, std::string>{
+    {"Content-Type", "application/json"}, {"Accept", "application/json"}};
 
 static constexpr auto const kInfeasible =
     std::numeric_limits<n::unixtime_t>::min();

@@ -57,11 +57,15 @@
 namespace motis::odm {
 
 namespace n = nigiri;
-
-static auto const kMixer = get_default_mixer();
+using namespace std::chrono_literals;
 
 using td_offsets_t =
     n::hash_map<n::location_idx_t, std::vector<n::routing::td_offset>>;
+
+constexpr auto const kODMLookAhead = nigiri::duration_t{24h};
+constexpr auto const kSearchIntervalSize = nigiri::duration_t{6h};
+constexpr auto const kContextPadding = nigiri::duration_t{2h};
+static auto const kMixer = get_default_mixer();
 
 void print_time(auto const& start,
                 std::string_view name,
