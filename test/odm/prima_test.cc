@@ -5,7 +5,6 @@
 #include "nigiri/loader/init_finish.h"
 #include "nigiri/common/parse_time.h"
 #include "nigiri/routing/journey.h"
-#include "nigiri/routing/pareto_set.h"
 #include "nigiri/special_stations.h"
 
 #include "motis/odm/odm.h"
@@ -128,7 +127,7 @@ TEST(odm, prima_update) {
 
   EXPECT_EQ(kExpectedInitial, p.get_taxi_request(tt));
   EXPECT_FALSE(p.consume_blacklist_taxis_response(invalid_response));
-  EXPECT_TRUE(p.consume_blacklist_taxis_response(blacklisting_response));
+  EXPECT_FALSE(p.consume_blacklist_taxis_response(blacklisting_response));
   EXPECT_EQ(blacklisted, p.get_taxi_request(tt));
 
   auto taxi_journeys = std::vector<nigiri::routing::journey>{};

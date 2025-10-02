@@ -309,9 +309,9 @@ std::size_t prima::n_ride_sharing_events() const {
          direct_ride_sharing_.size();
 }
 
-std::size_t n_updates(json::array const& update) {
+std::size_t n_rides_in_response(json::array const& ja) {
   return std::accumulate(
-      update.begin(), update.end(), std::size_t{0U},
+      ja.begin(), ja.end(), std::size_t{0U},
       [](auto const& a, auto const& b) { return a + b.as_array().size(); });
 }
 
@@ -331,9 +331,6 @@ bool prima::consume_blacklist_taxis_response(std::string_view json) {
           with_errors = true;
         }
         ++prev_it;
-        if (prev_it == end(prev_rides)) {
-          return with_errors;
-        }
       }
     }
     return with_errors;
@@ -359,7 +356,8 @@ bool prima::consume_blacklist_taxis_response(std::string_view json) {
   try {
     auto const o = json::parse(json).as_object();
 
-    auto const n_updates_first_mile = n_updates(o.at("start").as_array());
+    auto const n_updates_first_mile =
+        n_rides_in_response(o.at("start").as_array());
     if (first_mile_taxi_.size() == n_updates_first_mile) {
       with_errors |=
           update_pt_rides(first_mile_taxi_, o.at("start").as_array());
@@ -372,7 +370,8 @@ bool prima::consume_blacklist_taxis_response(std::string_view json) {
       first_mile_taxi_.clear();
     }
 
-    auto const n_update_last_mile = n_updates(o.at("target").as_array());
+    auto const n_update_last_mile =
+        n_rides_in_response(o.at("target").as_array());
     if (last_mile_taxi_.size() == n_update_last_mile) {
       with_errors |=
           update_pt_rides(last_mile_taxi_, o.at("target").as_array());
@@ -464,7 +463,7 @@ bool prima::consume_whitelist_taxis_response(
     std::string_view json, std::vector<nigiri::routing::journey>& journeys) {
 
   auto const update_first_mile = [&](json::array const& update) {
-    auto const n_pt_udpates = n_updates(update);
+    auto const n_pt_udpates = n_rides_in_response(update);
     if (first_mile_taxi_.size() != n_pt_udpates) {
       n::log(n::log_lvl::debug, "motis.prima",
              "[whitelisting] first mile taxi #rides != #updates ({} != {})",
@@ -491,9 +490,6 @@ bool prima::consume_whitelist_taxis_response(
                .stop_ = prev_it->stop_});
         }
         ++prev_it;
-        if (prev_it == end(prev_first_mile)) {
-          return false;
-        }
       }
     }
 
@@ -534,7 +530,7 @@ bool prima::consume_whitelist_taxis_response(
   };
 
   auto const update_last_mile = [&](json::array const& update) {
-    auto const n_pt_udpates = n_updates(update);
+    auto const n_pt_udpates = n_rides_in_response(update);
     if (last_mile_taxi_.size() != n_pt_udpates) {
       n::log(n::log_lvl::debug, "motis.prima",
              "[whitelisting] last mile taxi #rides != #updates ({} != {})",
@@ -561,9 +557,6 @@ bool prima::consume_whitelist_taxis_response(
                .stop_ = prev_it->stop_});
         }
         ++prev_it;
-        if (prev_it == end(prev_last_mile)) {
-          return false;
-        }
       }
     }
 
