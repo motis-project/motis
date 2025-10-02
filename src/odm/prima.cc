@@ -286,7 +286,7 @@ json::value to_json(prima const& p, n::timetable const& tt) {
           {"capacities", to_json(p.cap_)}};
 }
 
-std::string prima::get_prima_request(n::timetable const& tt) const {
+std::string prima::get_taxi_request(n::timetable const& tt) const {
   return json::serialize(to_json(*this, tt));
 }
 
@@ -305,31 +305,7 @@ std::size_t n_updates(json::array const& update) {
       [](auto const& a, auto const& b) { return a + b.as_array().size(); });
 }
 
-bool prima::blacklist_update(nigiri::timetable const& tt) {
-  auto blacklist_response = std::optional<std::string>{};
-  auto ioc = boost::asio::io_context{};
-  try {
-    n::log(n::log_lvl::debug, "motis.prima",
-           "[blacklisting] request for {} events", n_taxi_events());
-    boost::asio::co_spawn(
-        ioc,
-        [&]() -> boost::asio::awaitable<void> {
-          auto const prima_msg = co_await http_POST(
-              taxi_blacklist_, kReqHeaders, get_prima_request(tt), 10s);
-          blacklist_response = get_http_body(prima_msg);
-        },
-        boost::asio::detached);
-    ioc.run();
-  } catch (std::exception const& e) {
-    n::log(n::log_lvl::debug, "motis.prima",
-           "[blacklisting] networking failed: {}", e.what());
-    blacklist_response = std::nullopt;
-  }
-
-  if (!blacklist_response) {
-    return false;
-  }
-
+bool prima::consume_blacklist(std::string_view json) {
   auto const update_pt_rides = [](std::vector<n::routing::start>& rides,
                                   json::array const& update) {
     auto with_errors = false;
@@ -371,7 +347,7 @@ bool prima::blacklist_update(nigiri::timetable const& tt) {
 
   auto with_errors = false;
   try {
-    auto const o = json::parse(*blacklist_response).as_object();
+    auto const o = json::parse(json).as_object();
 
     auto const n_updates_first_mile = n_updates(o.at("start").as_array());
     if (first_mile_taxi_.size() == n_updates_first_mile) {
@@ -412,23 +388,49 @@ bool prima::blacklist_update(nigiri::timetable const& tt) {
 
   } catch (std::exception const&) {
     n::log(n::log_lvl::debug, "motis.prima",
-           "[blacklisting] could not parse response: {}", *blacklist_response);
+           "[blacklisting] could not parse response: {}", json);
     return false;
   }
   if (with_errors) {
     n::log(n::log_lvl::debug, "motis.prima",
-           "[blacklisting] parsed response with invalid values: {}",
-           *blacklist_response);
+           "[blacklisting] parsed response with invalid values: {}", json);
     return false;
   }
   return true;
 }
 
-bool prima::whitelist_update(std::vector<n::routing::journey>& taxi_journeys,
-                             n::timetable const& tt) {
+bool prima::blacklist_update(nigiri::timetable const& tt) {
+  auto blacklist_response = std::optional<std::string>{};
+  auto ioc = boost::asio::io_context{};
+  try {
+    n::log(n::log_lvl::debug, "motis.prima",
+           "[blacklisting] request for {} events", n_taxi_events());
+    boost::asio::co_spawn(
+        ioc,
+        [&]() -> boost::asio::awaitable<void> {
+          auto const prima_msg = co_await http_POST(
+              taxi_blacklist_, kReqHeaders, get_taxi_request(tt), 10s);
+          blacklist_response = get_http_body(prima_msg);
+        },
+        boost::asio::detached);
+    ioc.run();
+  } catch (std::exception const& e) {
+    n::log(n::log_lvl::debug, "motis.prima",
+           "[blacklisting] networking failed: {}", e.what());
+    blacklist_response = std::nullopt;
+  }
+  if (!blacklist_response) {
+    return false;
+  }
+
+  return consume_blacklist(*blacklist_response);
+}
+
+void prima::extract_taxis(
+    std::vector<nigiri::routing::journey> const& journeys) {
   first_mile_taxi_.clear();
   last_mile_taxi_.clear();
-  for (auto const& j : taxi_journeys) {
+  for (auto const& j : journeys) {
     if (!j.legs_.empty()) {
       if (is_odm_leg(j.legs_.front())) {
         first_mile_taxi_.push_back({.time_at_start_ = j.legs_.front().dep_time_,
@@ -444,35 +446,11 @@ bool prima::whitelist_update(std::vector<n::routing::journey>& taxi_journeys,
       }
     }
   }
-  utl::erase_duplicates(first_mile_taxi_, by_stop, std::equal_to<>{});
+  utl::erase_duplicates(first_mile, by_stop, std::equal_to<>{});
   utl::erase_duplicates(last_mile_taxi_, by_stop, std::equal_to<>{});
+}
 
-  auto whitelist_response = std::optional<std::string>{};
-  auto ioc = boost::asio::io_context{};
-  try {
-    n::log(n::log_lvl::debug, "motis.prima",
-           "[whitelisting] request for {} events", n_taxi_events());
-    boost::asio::co_spawn(
-        ioc,
-        [&]() -> boost::asio::awaitable<void> {
-          auto const prima_msg = co_await http_POST(
-              taxi_whitelist_, kReqHeaders, get_prima_request(tt), 10s);
-          whitelist_response = get_http_body(prima_msg);
-        },
-        boost::asio::detached);
-    ioc.run();
-  } catch (std::exception const& e) {
-    n::log(n::log_lvl::debug, "motis.prima",
-           "[whitelisting] networking failed: {}", e.what());
-    whitelist_response = std::nullopt;
-  }
-
-  if (!whitelist_response) {
-    n::log(n::log_lvl::debug, "motis.prima",
-           "[whitelisting] failed, discarding taxi journeys");
-    return false;
-  }
-
+bool prima::consume_whitelist(std::vector<n::routing::journey>& taxi_journeys) {
   auto const update_first_mile = [&](json::array const& update) {
     auto const n_pt_udpates = n_updates(update);
     if (first_mile_taxi_.size() != n_pt_udpates) {
@@ -659,6 +637,38 @@ bool prima::whitelist_update(std::vector<n::routing::journey>& taxi_journeys,
   }
 
   return true;
+}
+
+bool prima::whitelist_update(std::vector<n::routing::journey>& taxi_journeys,
+                             n::timetable const& tt) {
+  extract_taxis(taxi_journeys);
+
+  auto whitelist_response = std::optional<std::string>{};
+  auto ioc = boost::asio::io_context{};
+  try {
+    n::log(n::log_lvl::debug, "motis.prima",
+           "[whitelisting] request for {} events", n_taxi_events());
+    boost::asio::co_spawn(
+        ioc,
+        [&]() -> boost::asio::awaitable<void> {
+          auto const prima_msg = co_await http_POST(
+              taxi_whitelist_, kReqHeaders, get_taxi_request(tt), 10s);
+          whitelist_response = get_http_body(prima_msg);
+        },
+        boost::asio::detached);
+    ioc.run();
+  } catch (std::exception const& e) {
+    n::log(n::log_lvl::debug, "motis.prima",
+           "[whitelisting] networking failed: {}", e.what());
+    whitelist_response = std::nullopt;
+  }
+  if (!whitelist_response) {
+    n::log(n::log_lvl::debug, "motis.prima",
+           "[whitelisting] failed, discarding taxi journeys");
+    return false;
+  }
+
+  return consume_whitelist(taxi_journeys);
 }
 
 void prima::add_direct(std::vector<n::routing::journey>& taxi_journeys,

@@ -126,10 +126,10 @@ TEST(odm, prima_update) {
           {.dep_ = n::unixtime_t{10h}, .arr_ = n::unixtime_t{11h}},
           {.dep_ = n::unixtime_t{11h}, .arr_ = n::unixtime_t{12h}}}};
 
-  EXPECT_EQ(kExpectedInitial, p.get_prima_request(tt));
+  EXPECT_EQ(kExpectedInitial, p.get_taxi_request(tt));
   EXPECT_FALSE(p.blacklist_update(invalid_response));
   EXPECT_TRUE(p.blacklist_update(blacklisting_response));
-  EXPECT_EQ(blacklisted, p.get_prima_request(tt));
+  EXPECT_EQ(blacklisted, p.get_taxi_request(tt));
   EXPECT_FALSE(p.whitelist_update(invalid_response));
   EXPECT_TRUE(p.whitelist_update(whitelisting_response));
 

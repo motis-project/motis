@@ -71,10 +71,15 @@ struct prima {
             nigiri::routing::query const& n_query,
             unsigned api_version);
 
-  std::string get_prima_request(nigiri::timetable const&) const;
+  std::string get_taxi_request(nigiri::timetable const&) const;
   std::size_t n_taxi_events() const;
   std::size_t n_ride_sharing_events() const;
+
+  bool consume_blacklist(std::string_view json);
   bool blacklist_update(nigiri::timetable const&);
+
+  void extract_taxis(std::vector<nigiri::routing::journey> const&);
+  bool consume_whitelist(std::vector<nigiri::routing::journey>&);
   bool whitelist_update(std::vector<nigiri::routing::journey>&,
                         nigiri::timetable const&);
   void add_direct(std::vector<nigiri::routing::journey>& taxi_journeys,
