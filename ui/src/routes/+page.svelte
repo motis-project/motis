@@ -64,6 +64,7 @@
 	} from '$lib/Modes';
 	import { defaultQuery, omitDefaults } from '$lib/defaults';
 	import { LEVEL_MIN_ZOOM } from '$lib/constants';
+	import StopGeoJSON from '$lib/StopsGeoJSON.svelte';
 
 	const urlParams = browser ? new URLSearchParams(window.location.search) : undefined;
 
@@ -609,6 +610,7 @@
 				</Control>
 				{#if showMap}
 					<ItineraryGeoJson itinerary={page.state.selectedItinerary} {level} />
+					<StopGeoJSON itinerary={page.state.selectedItinerary} />
 				{/if}
 			{/if}
 
