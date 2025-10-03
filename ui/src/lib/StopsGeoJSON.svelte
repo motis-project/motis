@@ -17,10 +17,13 @@
 			features: legs.flatMap((l) => {
 				const stops = [
 					{
-						
 						type: 'Feature',
 						geometry: { type: 'Point', coordinates: [l.from.lon, l.from.lat] },
-						properties: { stopId: l.from.stopId, name: l.from.name, time: l.from.arrival }
+						properties: {
+							stopId: l.from.stopId,
+							name: l.from.name,
+							time: l.from.arrival ?? l.from.departure
+						}
 					},
 					{
 						type: 'Feature',
