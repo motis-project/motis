@@ -13,7 +13,7 @@
 	function stopsToGeoJSON(legs: Leg[]): GeoJSON.GeoJSON {
 		return {
 			type: 'FeatureCollection',
-			// @ts-ignore
+			//@ts-expect-error: type is safe
 			features: legs.flatMap((l) => {
 				const stops = [
 					{
