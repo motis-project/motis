@@ -7,6 +7,7 @@
 #include "nigiri/timetable.h"
 
 #include "motis-api/motis-api.h"
+#include "motis/transport_mode_ids.h"
 
 namespace motis::odm {
 
@@ -24,7 +25,7 @@ void shorten(std::vector<nr::journey>& odm_journeys,
     auto& odm_leg = begin(j.legs_)[0];
     auto& pt_leg = begin(j.legs_)[1];
 
-    if (!is_odm_leg(odm_leg) ||
+    if (!is_odm_leg(odm_leg, kOdmTransportModeId) ||
         !std::holds_alternative<nr::journey::run_enter_exit>(pt_leg.uses_)) {
       return;
     }
@@ -90,7 +91,7 @@ void shorten(std::vector<nr::journey>& odm_journeys,
     auto& odm_leg = rbegin(j.legs_)[0];
     auto& pt_leg = rbegin(j.legs_)[1];
 
-    if (!is_odm_leg(odm_leg) ||
+    if (!is_odm_leg(odm_leg, kOdmTransportModeId) ||
         !std::holds_alternative<n::routing::journey::run_enter_exit>(
             pt_leg.uses_)) {
       return;

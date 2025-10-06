@@ -271,21 +271,24 @@ std::vector<meta_router::routing_result> meta_router::search_interval(
       });
 }
 
-std::vector<n::routing::journey> collect_taxi_journeys(
-    std::vector<meta_router::routing_result> const& results) {
+std::vector<n::routing::journey> collect_odm_journeys(
+    std::vector<meta_router::routing_result> const& results,
+    nigiri::transport_mode_id_t const mode) {
   auto taxi_journeys = std::vector<n::routing::journey>{};
   for (auto const& r : results | std::views::drop(1)) {
     for (auto const& j : r.journeys_) {
-      if (uses_odm(j)) {
+      if (uses_odm(j, mode)) {
         taxi_journeys.push_back(j);
         taxi_journeys.back().transfers_ +=
-            (j.legs_.empty() || !is_odm_leg(j.legs_.front()) ? 0U : 1U) +
-            (j.legs_.size() < 2U || !is_odm_leg(j.legs_.back()) ? 0U : 1U);
+            (j.legs_.empty() || !is_odm_leg(j.legs_.front(), mode) ? 0U : 1U) +
+            (j.legs_.size() < 2U || !is_odm_leg(j.legs_.back(), mode) ? 0U
+                                                                      : 1U);
       }
     }
   }
   n::log(n::log_lvl::debug, "motis.prima",
-         "[routing] collected {} mixed Taxi-PT journeys", taxi_journeys.size());
+         "[routing] collected {} mixed ODM-PT journeys for mode {}",
+         taxi_journeys.size(), mode);
   return taxi_journeys;
 }
 
@@ -452,7 +455,9 @@ api::plan_response meta_router::run() {
   auto const results = search_interval(sub_queries);
   utl::verify(!results.empty(), "prima: public transport result expected");
   auto const& pt_result = results.front();
-  auto taxi_journeys = collect_taxi_journeys(results);
+  auto taxi_journeys = collect_odm_journeys(results, kOdmTransportModeId);
+  auto ride_share_journeys =
+      collect_odm_journeys(results, kRideSharingTransportModeId);
   shorten(taxi_journeys, p.first_mile_taxi_, p.last_mile_taxi_, *tt_, rtt_,
           query_);
   utl::erase_duplicates(
@@ -468,7 +473,14 @@ api::plan_response meta_router::run() {
              r_.metrics_->routing_execution_duration_seconds_routing_);
 
   auto const whitelist_start = std::chrono::steady_clock::now();
-  p.whitelist_taxis(taxi_journeys, *tt_);
+  if (p.whitelist_taxis(taxi_journeys, *tt_)) {
+    p.add_direct_odm(p.direct_taxi_, taxi_journeys, from_, to_,
+                     query_.arriveBy_, kOdmTransportModeId);
+  }
+  if (whitelisted_ride_sharing) {
+    p.add_direct_odm(p.direct_ride_sharing_, ride_share_journeys, from_, to_,
+                     query_.arriveBy_, kRideSharingTransportModeId);
+  }
   print_time(whitelist_start,
              fmt::format("[whitelisting] (#first_mile_taxi: {}, "
                          "#last_mile_taxi: {}, #direct_taxi: {})",
@@ -482,7 +494,8 @@ api::plan_response meta_router::run() {
   n::log(n::log_lvl::debug, "motis.prima",
          "[mixing] {} PT journeys and {} ODM journeys",
          pt_result.journeys_.size(), taxi_journeys.size());
-  kMixer.mix(pt_result.journeys_, taxi_journeys, r_.metrics_, std::nullopt);
+  kMixer.mix(pt_result.journeys_, taxi_journeys, ride_share_journeys,
+             r_.metrics_, std::nullopt);
   r_.metrics_->routing_odm_journeys_found_non_dominated_.Observe(
       static_cast<double>(taxi_journeys.size() - pt_result.journeys_.size()));
   print_time(mixing_start, "[mixing]",

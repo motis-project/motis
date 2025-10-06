@@ -34,7 +34,7 @@ constexpr auto const kODMOffsetMinImprovement = 60s;
 constexpr auto const kODMMaxDuration = 3600s;
 constexpr auto const kBlacklistPath = "/api/blacklist";
 constexpr auto const kWhitelistPath = "/api/whitelist";
-constexpr auto const kRidesharingPath = "/api/ridesharing_whitelist";
+constexpr auto const kRidesharingPath = "/api/whitelistRideShare";
 static auto const kReqHeaders = std::map<std::string, std::string>{
     {"Content-Type", "application/json"}, {"Accept", "application/json"}};
 
@@ -461,14 +461,14 @@ void prima::extract_taxis(
   last_mile_taxi_.clear();
   for (auto const& j : journeys) {
     if (!j.legs_.empty()) {
-      if (is_odm_leg(j.legs_.front())) {
+      if (is_odm_leg(j.legs_.front(), kOdmTransportModeId)) {
         first_mile_taxi_.push_back({.time_at_start_ = j.legs_.front().dep_time_,
                                     .time_at_stop_ = j.legs_.front().arr_time_,
                                     .stop_ = j.legs_.front().to_});
       }
     }
     if (j.legs_.size() > 1) {
-      if (is_odm_leg(j.legs_.back())) {
+      if (is_odm_leg(j.legs_.back(), kOdmTransportModeId)) {
         last_mile_taxi_.push_back({.time_at_start_ = j.legs_.back().arr_time_,
                                    .time_at_stop_ = j.legs_.back().dep_time_,
                                    .stop_ = j.legs_.back().from_});
@@ -523,7 +523,7 @@ bool prima::consume_whitelist_taxis_response(
                j.legs_.front().dep_time_ == prev2.time_at_start_ &&
                j.legs_.front().arr_time_ == prev2.time_at_stop_ &&
                j.legs_.front().to_ == prev2.stop_ &&
-               is_odm_leg(j.legs_.front());
+               is_odm_leg(j.legs_.front(), kOdmTransportModeId);
       };
 
       if (curr.time_at_start_ == kInfeasible) {
@@ -588,7 +588,7 @@ bool prima::consume_whitelist_taxis_response(
                    j.legs_.back().dep_time_ == prev2.time_at_stop_ &&
                    j.legs_.back().arr_time_ == prev2.time_at_start_ &&
                    j.legs_.back().from_ == prev2.stop_ &&
-                   is_odm_leg(j.legs_.back());
+                   is_odm_leg(j.legs_.back(), kOdmTransportModeId);
           };
 
       if (curr.time_at_start_ == kInfeasible) {
@@ -696,11 +696,12 @@ bool prima::whitelist_taxis(
   return consume_whitelist_taxis_response(*whitelist_response, taxi_journeys);
 }
 
-void prima::add_direct_taxis(
-    std::vector<nigiri::routing::journey>& taxi_journeys,
-    place_t const& from,
-    place_t const& to,
-    bool arrive_by) const {
+void prima::add_direct_odm(std::vector<direct_ride> const& direct,
+                           std::vector<nigiri::routing::journey>& odm_journeys,
+                           place_t const& from,
+                           place_t const& to,
+                           bool arrive_by,
+                           nigiri::transport_mode_id_t const mode) const {
   auto from_l = std::visit(
       utl::overloaded{[](osr::location const&) {
                         return get_special_station(n::special_station::kStart);
@@ -718,22 +719,23 @@ void prima::add_direct_taxis(
     std::swap(from_l, to_l);
   }
 
-  for (auto const& d : direct_taxi_) {
-    taxi_journeys.push_back(n::routing::journey{
+  for (auto const& d : direct) {
+    odm_journeys.push_back(n::routing::journey{
         .legs_ = {{n::direction::kForward, from_l, to_l, d.dep_, d.arr_,
                    n::routing::offset{to_l, std::chrono::abs(d.arr_ - d.dep_),
-                                      kOdmTransportModeId}}},
+                                      mode}}},
         .start_time_ = d.dep_,
         .dest_time_ = d.arr_,
         .dest_ = to_l,
         .transfers_ = 0U});
   }
   n::log(n::log_lvl::debug, "motis.prima",
-         "[whitelist taxi] added {} direct rides", direct_taxi_.size());
+         "[whitelist] added {} direct rides for mode {}", direct.size(), mode);
 }
 
 bool prima::consume_whitelist_ride_sharing_response(std::string_view json) {
   auto const update_first_mile = [&](json::array const& update) {
+    std::cout << "weird" << std::endl;
     auto const n = n_rides_in_response(update);
     if (first_mile_ride_sharing_.size() != n) {
       n::log(n::log_lvl::debug, "motis.prima",
@@ -748,14 +750,19 @@ bool prima::consume_whitelist_ride_sharing_response(std::string_view json) {
                                          std::vector<n::routing::start>{});
     auto prev_it = std::begin(prev_first_mile);
     for (auto const& stop : update) {
-      for (auto const& event : stop.as_array()) {
-        if (!event.is_null()) {
-          first_mile_ride_sharing_.push_back(
-              {.time_at_start_ =
-                   to_unix(event.as_object().at("pickupTime").as_int64()),
-               .time_at_stop_ =
-                   to_unix(event.as_object().at("dropoffTime").as_int64()),
-               .stop_ = prev_it->stop_});
+      for (auto const& time : stop.as_array()) {
+        if (!time.is_null() && time.is_array()) {
+          for (auto const& event : time.as_array()) {
+            first_mile_ride_sharing_.push_back(
+                {.time_at_start_ =
+                     to_unix(event.as_object().at("pickupTime").as_int64()),
+                 .time_at_stop_ =
+                     to_unix(event.as_object().at("dropoffTime").as_int64()),
+                 .stop_ = prev_it->stop_});
+            std::cout << "yay first"
+                      << event.as_object().at("pickupTime").as_int64()
+                      << std::endl;
+          }
         }
         ++prev_it;
       }
@@ -778,16 +785,21 @@ bool prima::consume_whitelist_ride_sharing_response(std::string_view json) {
                                         std::vector<n::routing::start>{});
     auto prev_it = std::begin(prev_last_mile);
     for (auto const& stop : update) {
-      for (auto const& event : stop.as_array()) {
-        if (!event.is_null()) {
-          last_mile_ride_sharing_.push_back(
-              {.time_at_start_ =
-                   to_unix(event.as_object().at("dropoffTime").as_int64()),
-               .time_at_stop_ =
-                   to_unix(event.as_object().at("pickupTime").as_int64()),
-               .stop_ = prev_it->stop_});
+      for (auto const& time : stop.as_array()) {
+        if (!time.is_null() && time.is_array()) {
+          for (auto const& event : time.as_array()) {
+            last_mile_ride_sharing_.push_back(
+                {.time_at_start_ =
+                     to_unix(event.as_object().at("dropoffTime").as_int64()),
+                 .time_at_stop_ =
+                     to_unix(event.as_object().at("pickupTime").as_int64()),
+                 .stop_ = prev_it->stop_});
+            std::cout << "yay last"
+                      << event.as_object().at("pickupTime").as_int64()
+                      << std::endl;
+          }
+          ++prev_it;
         }
-        ++prev_it;
       }
     }
     return false;
@@ -796,7 +808,8 @@ bool prima::consume_whitelist_ride_sharing_response(std::string_view json) {
   auto const update_direct = [&](json::array const& update) {
     if (direct_ride_sharing_.size() != update.size()) {
       n::log(n::log_lvl::debug, "motis.prima",
-             "[whitelist ride-sharing] direct ride-sharing #rides != #updates "
+             "[whitelist ride-sharing] direct ride-sharing #rides != "
+             "#updates "
              "({} != {})",
              direct_ride_sharing_.size(), update.size());
       direct_ride_sharing_.clear();
@@ -804,11 +817,18 @@ bool prima::consume_whitelist_ride_sharing_response(std::string_view json) {
     }
 
     direct_ride_sharing_.clear();
-    for (auto const& ride : update) {
-      if (!ride.is_null()) {
-        direct_ride_sharing_.push_back(
-            {to_unix(ride.as_object().at("pickupTime").as_int64()),
-             to_unix(ride.as_object().at("dropoffTime").as_int64())});
+    for (auto const& time : update) {
+      if (time.is_array()) {
+        for (auto const& ride : time.as_array()) {
+          if (!ride.is_null()) {
+            direct_ride_sharing_.push_back(
+                {to_unix(ride.as_object().at("pickupTime").as_int64()),
+                 to_unix(ride.as_object().at("dropoffTime").as_int64())});
+            std::cout << "yay direct"
+                      << ride.as_object().at("pickupTime").as_int64()
+                      << std::endl;
+          }
+        }
       }
     }
 
@@ -846,7 +866,7 @@ bool prima::whitelist_ride_sharing(nigiri::timetable const& tt) {
         [&]() -> boost::asio::awaitable<void> {
           auto const prima_msg =
               co_await http_POST(ride_sharing_whitelist_, kReqHeaders,
-                                 make_ride_sharing_request(tt), 10s);
+                                 make_ride_sharing_request(tt), 30s);
           response = get_http_body(prima_msg);
         },
         boost::asio::detached);
@@ -857,10 +877,11 @@ bool prima::whitelist_ride_sharing(nigiri::timetable const& tt) {
     response = std::nullopt;
   }
   if (!response) {
+    n::log(n::log_lvl::debug, "motis.prima",
+           "[whitelist ride share] failed, discarding ride share journeys");
     return false;
   }
 
   return consume_whitelist_ride_sharing_response(*response);
 }
-
 }  // namespace motis::odm

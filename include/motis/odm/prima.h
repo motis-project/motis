@@ -71,10 +71,12 @@ struct prima {
   bool whitelist_taxis(std::vector<nigiri::routing::journey>&,
                        nigiri::timetable const&);
 
-  void add_direct_taxis(std::vector<nigiri::routing::journey>&,
-                        place_t const& from,
-                        place_t const& to,
-                        bool arrive_by) const;
+  void add_direct_odm(std::vector<direct_ride> const&,
+                      std::vector<nigiri::routing::journey>&,
+                      place_t const& from,
+                      place_t const& to,
+                      bool arrive_by,
+                      nigiri::transport_mode_id_t) const;
 
   std::string make_ride_sharing_request(nigiri::timetable const&) const;
 
@@ -85,8 +87,8 @@ struct prima {
   boost::urls::url taxi_whitelist_;
   boost::urls::url ride_sharing_whitelist_;
 
-  osr::location const& from_;
-  osr::location const& to_;
+  osr::location const from_;
+  osr::location const to_;
   nigiri::event_type fixed_;
   capacities cap_;
 

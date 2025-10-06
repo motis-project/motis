@@ -308,7 +308,8 @@ api::Itinerary journey_to_response(
               [](n::routing::journey::leg const& leg) {
                 return holds_alternative<n::routing::journey::run_enter_exit>(
                            leg.uses_) ||
-                       odm::is_odm_leg(leg);
+                       odm::is_odm_leg(leg, kOdmTransportModeId) ||
+                       odm::is_odm_leg(leg, kRideSharingTransportModeId);
               }) -
               1),
       .fareTransfers_ =
