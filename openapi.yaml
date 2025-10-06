@@ -789,6 +789,7 @@ paths:
             type: string
             enum:
               - RAPTOR
+              - PONG
               - TB
             default: RAPTOR
       responses:

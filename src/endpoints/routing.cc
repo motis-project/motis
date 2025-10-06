@@ -33,6 +33,7 @@
 #include "motis/constants.h"
 #include "motis/endpoints/routing.h"
 
+#include "nigiri/routing/raptor/pong.h"
 #include "nigiri/routing/tb/query_engine.h"
 #include "nigiri/routing/tb/tb_data.h"
 #include "nigiri/routing/tb/tb_search.h"
@@ -394,7 +395,7 @@ std::pair<n::routing::query, std::optional<n::unixtime_t>> get_start_time(
         *query.time_.value_or(openapi::now()));
     utl::verify<openapi::bad_request_exception>(
         tt->external_interval().contains(t),
-        "query time is outside of loaded timetable window {}",
+        "query time {} is outside of loaded timetable window {}", t,
         tt->external_interval());
     auto const window =
         std::chrono::duration_cast<n::duration_t>(std::chrono::seconds{
@@ -842,13 +843,21 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
 
     auto search_state = n::routing::search_state{};
     auto r = n::routing::routing_result{};
-    if (query.algorithm_ == api::algorithmEnum::RAPTOR || tbd_ == nullptr ||
-        (rtt != nullptr && rtt->n_rt_transports() != 0U) || query.arriveBy_ ||
-        q.prf_idx_ != tbd_->prf_idx_ ||
-        q.allowed_claszes_ != n::routing::all_clasz_allowed() ||
-        !q.td_start_.empty() || !q.td_dest_.empty() ||
-        !q.transfer_time_settings_.default_ || !q.via_stops_.empty() ||
-        q.require_bike_transport_ || q.require_car_transport_) {
+    if (query.algorithm_ == api::algorithmEnum::PONG) {
+      auto raptor_state = n::routing::raptor_state{};
+      r = n::routing::pong_search(
+          *tt_, rtt, search_state, raptor_state, std::move(q),
+          query.arriveBy_ ? n::direction::kBackward : n::direction::kForward,
+          query.timeout_.has_value() ? std::chrono::seconds{*query.timeout_}
+                                     : max_timeout);
+    } else if (query.algorithm_ == api::algorithmEnum::RAPTOR ||
+               tbd_ == nullptr ||
+               (rtt != nullptr && rtt->n_rt_transports() != 0U) ||
+               query.arriveBy_ || q.prf_idx_ != tbd_->prf_idx_ ||
+               q.allowed_claszes_ != n::routing::all_clasz_allowed() ||
+               !q.td_start_.empty() || !q.td_dest_.empty() ||
+               !q.transfer_time_settings_.default_ || !q.via_stops_.empty() ||
+               q.require_bike_transport_ || q.require_car_transport_) {
       auto raptor_state = n::routing::raptor_state{};
       r = n::routing::raptor_search(
           *tt_, rtt, search_state, raptor_state, std::move(q),
