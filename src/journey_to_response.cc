@@ -554,7 +554,7 @@ api::Itinerary journey_to_response(
               auto out = std::unique_ptr<output>{};
               if (flex::mode_id::is_flex(x.transport_mode_id_)) {
                 out = std::make_unique<flex::flex_output>(
-                    *w, *l, pl, matches, tags, tt, *fl,
+                    *w, *l, pl, matches, lp, tz_map, tags, tt, *fl,
                     flex::mode_id{x.transport_mode_id_});
               } else if (x.transport_mode_id_ >= kGbfsTransportModeIdOffset) {
                 auto const is_pre_transit = pred == nullptr;

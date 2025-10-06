@@ -468,8 +468,8 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
           *tt_, *loc_tree_, time, get_location(from).pos_,
           osr::direction::kForward, max);
       for (auto const& [_, ids] : routings) {
-        route_with_profile(flex::flex_output{*w_, *l_, pl_, matches_, *tags_,
-                                             *tt_, *fa_, ids.front()});
+        route_with_profile(flex::flex_output{*w_, *l_, pl_, matches_, lp_, tz_,
+                                             *tags_, *tt_, *fa_, ids.front()});
       }
     } else if (m == api::ModeEnum::CAR || m == api::ModeEnum::BIKE ||
                m == api::ModeEnum::CAR_PARKING ||
