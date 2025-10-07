@@ -55,6 +55,7 @@
 	import IsochronesInfo from '$lib/IsochronesInfo.svelte';
 	import type { DisplayLevel, IsochronesOptions, IsochronesPos } from '$lib/map/IsochronesShared';
 	import IsochronesMask from '$lib/IsochronesMask.svelte';
+	import Rentals from '$lib/map/Rentals.svelte';
 	import {
 		getFormFactors,
 		getPrePostDirectModes,
@@ -674,6 +675,7 @@
 	{#if showMap}
 		{#if activeTab != 'isochrones'}
 			<RailViz {map} {bounds} {zoom} />
+			<Rentals {map} {bounds} {zoom} />
 		{/if}
 		<!-- Isochrones cannot be hidden the same way as RailViz -->
 		<Isochrones

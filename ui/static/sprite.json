@@ -1,9 +1,149 @@
 {
-	"elevator": {
-		"height": 20,
-		"pixelRatio": 1,
-		"width": 20,
-		"x": 0,
-		"y": 0
-	}
+  "bike_station": {
+    "height": 44,
+    "pixelRatio": 1,
+    "width": 43,
+    "x": 0,
+    "y": 0
+  },
+  "bike_station_empty": {
+    "height": 30,
+    "pixelRatio": 1,
+    "width": 30,
+    "x": 121,
+    "y": 44
+  },
+  "car_station": {
+    "height": 44,
+    "pixelRatio": 1,
+    "width": 43,
+    "x": 0,
+    "y": 44
+  },
+  "car_station_empty": {
+    "height": 30,
+    "pixelRatio": 1,
+    "width": 30,
+    "x": 129,
+    "y": 0
+  },
+  "cargo_bike_station": {
+    "height": 44,
+    "pixelRatio": 1,
+    "width": 43,
+    "x": 43,
+    "y": 0
+  },
+  "cargo_bike_station_empty": {
+    "height": 30,
+    "pixelRatio": 1,
+    "width": 30,
+    "x": 140,
+    "y": 74
+  },
+  "elevator": {
+    "height": 20,
+    "pixelRatio": 1,
+    "width": 20,
+    "x": 140,
+    "y": 104
+  },
+  "floating_bike": {
+    "height": 27,
+    "pixelRatio": 1,
+    "width": 27,
+    "x": 170,
+    "y": 60
+  },
+  "floating_bike_cluster": {
+    "height": 36,
+    "pixelRatio": 1,
+    "width": 35,
+    "x": 0,
+    "y": 88
+  },
+  "floating_car": {
+    "height": 27,
+    "pixelRatio": 1,
+    "width": 27,
+    "x": 181,
+    "y": 30
+  },
+  "floating_car_cluster": {
+    "height": 36,
+    "pixelRatio": 1,
+    "width": 35,
+    "x": 35,
+    "y": 88
+  },
+  "floating_cargo_bike": {
+    "height": 27,
+    "pixelRatio": 1,
+    "width": 27,
+    "x": 189,
+    "y": 0
+  },
+  "floating_cargo_bike_cluster": {
+    "height": 36,
+    "pixelRatio": 1,
+    "width": 35,
+    "x": 70,
+    "y": 88
+  },
+  "floating_moped": {
+    "height": 27,
+    "pixelRatio": 1,
+    "width": 27,
+    "x": 170,
+    "y": 87
+  },
+  "floating_moped_cluster": {
+    "height": 36,
+    "pixelRatio": 1,
+    "width": 35,
+    "x": 86,
+    "y": 44
+  },
+  "floating_scooter": {
+    "height": 27,
+    "pixelRatio": 1,
+    "width": 27,
+    "x": 197,
+    "y": 57
+  },
+  "floating_scooter_cluster": {
+    "height": 36,
+    "pixelRatio": 1,
+    "width": 35,
+    "x": 105,
+    "y": 80
+  },
+  "moped_station": {
+    "height": 44,
+    "pixelRatio": 1,
+    "width": 43,
+    "x": 43,
+    "y": 44
+  },
+  "moped_station_empty": {
+    "height": 30,
+    "pixelRatio": 1,
+    "width": 30,
+    "x": 151,
+    "y": 30
+  },
+  "scooter_station": {
+    "height": 44,
+    "pixelRatio": 1,
+    "width": 43,
+    "x": 86,
+    "y": 0
+  },
+  "scooter_station_empty": {
+    "height": 30,
+    "pixelRatio": 1,
+    "width": 30,
+    "x": 159,
+    "y": 0
+  }
 }
