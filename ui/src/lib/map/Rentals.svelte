@@ -1,30 +1,44 @@
 <script lang="ts">
 	import {
 		rentals,
+		type EncodedPolyline,
 		type RentalFormFactor,
 		type RentalProvider,
 		type RentalStation,
-		type RentalVehicle
+		type RentalVehicle,
+		type RentalZone
 	} from '$lib/api/openapi';
 	import { lngLatToStr } from '$lib/lngLatToStr';
+	import polyline from '@mapbox/polyline';
 	import maplibregl from 'maplibre-gl';
 	import type { ExpressionSpecification } from 'maplibre-gl';
 	import { onDestroy } from 'svelte';
 	import { t } from '$lib/i18n/translation';
-	import type { FeatureCollection, Feature, Point } from 'geojson';
+	import type {
+		FeatureCollection,
+		Feature,
+		MultiPolygon as GeoJSONMultiPolygon,
+		Point,
+		Polygon as GeoJSONPolygon,
+		Position
+	} from 'geojson';
 
 	let {
 		map,
 		bounds,
-		zoom
+		zoom,
+		showZones
 	}: {
 		map: maplibregl.Map | undefined;
 		bounds: maplibregl.LngLatBoundsLike | undefined;
 		zoom: number;
+		showZones: boolean;
 	} = $props();
 
 	const MIN_ZOOM = 14;
 	const FETCH_PADDING_RATIO = 0.5;
+	const ZONES_SOURCE_ID = 'rentals-zones';
+	const ZONES_LAYER_ID = 'rentals-zones-layer';
 	const STATIONS_SOURCE_ID = 'rentals-stations';
 	const STATIONS_LAYER_ID = 'rentals-stations-layer';
 	const VEHICLES_SOURCE_PREFIX = 'rentals-vehicles';
@@ -38,6 +52,7 @@
 	let providerById = new Map<string, RentalProvider>();
 	let stationById = new Map<string, RentalStation>();
 	let vehicleById = new Map<string, RentalVehicle>();
+	let zones: RentalZone[] = [];
 
 	const createScopedId = (providerId: string, entityId: string) => `${providerId}::${entityId}`;
 
@@ -60,6 +75,17 @@
 	type VehicleFeatureCollection = FeatureCollection<Point, VehicleFeatureProperties>;
 	type VehicleCollections = Record<string, VehicleFeatureCollection>;
 
+	type ZoneFeatureProperties = {
+		zone_index: number;
+		provider_id: string;
+		type: 'zone';
+	};
+
+	type ZoneFeatureCollection = FeatureCollection<
+		GeoJSONPolygon | GeoJSONMultiPolygon,
+		ZoneFeatureProperties
+	>;
+
 	const create_empty_vehicle_collection = (): VehicleFeatureCollection => ({
 		type: 'FeatureCollection',
 		features: [] as Feature<Point, VehicleFeatureProperties>[]
@@ -70,6 +96,10 @@
 		features: []
 	};
 	let vehicleDataByIcon: VehicleCollections;
+	let zoneData: ZoneFeatureCollection = {
+		type: 'FeatureCollection',
+		features: []
+	};
 
 	const station_icon_by_form_factor: Record<RentalFormFactor, string> = {
 		BICYCLE: 'bike_station',
@@ -133,6 +163,94 @@
 		}, {} as VehicleCollections);
 
 	vehicleDataByIcon = create_empty_vehicle_collections();
+
+	const create_empty_zone_collection = (): ZoneFeatureCollection => ({
+		type: 'FeatureCollection',
+		features: []
+	});
+
+	const decodePolylinePositions = (encoded: EncodedPolyline): Position[] => {
+		if (!encoded?.points || typeof encoded.precision !== 'number') {
+			return [];
+		}
+		try {
+			return polyline
+				.decode(encoded.points, encoded.precision)
+				.map(([lat, lng]) => [lng, lat] as Position);
+		} catch (error) {
+			console.error('Failed to decode rental zone polyline', error);
+			return [];
+		}
+	};
+
+	const ensureRingClosed = (ring: Position[]): Position[] => {
+		if (ring.length === 0) {
+			return ring;
+		}
+		const [firstLng, firstLat] = ring[0];
+		const [lastLng, lastLat] = ring[ring.length - 1];
+		if (firstLng === lastLng && firstLat === lastLat) {
+			return ring;
+		}
+		return [...ring, ring[0]];
+	};
+
+	const buildZoneGeometry = (zone: RentalZone): GeoJSONPolygon | GeoJSONMultiPolygon | null => {
+		const polygons = (zone.area ?? []).reduce<Position[][][]>((acc, polygon) => {
+			const rings = polygon
+				.map((encodedRing) => ensureRingClosed(decodePolylinePositions(encodedRing)))
+				.filter((ring) => ring.length >= 4);
+			if (rings.length > 0) {
+				acc.push(rings);
+			}
+			return acc;
+		}, []);
+		if (polygons.length === 0) {
+			return null;
+		}
+		if (polygons.length === 1) {
+			return {
+				type: 'Polygon',
+				coordinates: polygons[0]
+			};
+		}
+		return {
+			type: 'MultiPolygon',
+			coordinates: polygons
+		};
+	};
+
+	const buildZoneFeatures = (zonesInput: RentalZone[]): ZoneFeatureCollection => {
+		const features = zonesInput
+			.map<Feature<GeoJSONPolygon | GeoJSONMultiPolygon, ZoneFeatureProperties> | null>(
+				(zone, index) => {
+					const geometry = buildZoneGeometry(zone);
+					if (!geometry) {
+						return null;
+					}
+					return {
+						type: 'Feature',
+						id: `zone:${index}`,
+						geometry,
+						properties: {
+							zone_index: index,
+							provider_id: zone.providerId,
+							type: 'zone'
+						}
+					};
+				}
+			)
+			.filter(
+				(
+					feature
+				): feature is Feature<GeoJSONPolygon | GeoJSONMultiPolygon, ZoneFeatureProperties> =>
+					feature !== null
+			);
+		return {
+			type: 'FeatureCollection',
+			features
+		};
+	};
 
 	const zoom_scaled_icon_size: ExpressionSpecification = [
 		'interpolate',
@@ -285,6 +403,26 @@
 			return;
 		}
 
+		if (!targetMap.getSource(ZONES_SOURCE_ID)) {
+			targetMap.addSource(ZONES_SOURCE_ID, {
+				type: 'geojson',
+				data: zoneData
+			});
+		}
+
+		if (!targetMap.getLayer(ZONES_LAYER_ID)) {
+			targetMap.addLayer({
+				id: ZONES_LAYER_ID,
+				type: 'fill',
+				source: ZONES_SOURCE_ID,
+				paint: {
+					'fill-color': '#0ea5e9',
+					'fill-opacity': 0.12,
+					'fill-outline-color': '#0284c7'
+				}
+			});
+		}
+
 		for (const config of vehicle_source_configs) {
 			const data = vehicleDataByIcon[config.icon] ?? create_empty_vehicle_collection();
 			if (!targetMap.getSource(config.source_id)) {
@@ -403,6 +541,12 @@
 		if (targetMap.getSource(STATIONS_SOURCE_ID)) {
 			targetMap.removeSource(STATIONS_SOURCE_ID);
 		}
+		if (targetMap.getLayer(ZONES_LAYER_ID)) {
+			targetMap.removeLayer(ZONES_LAYER_ID);
+		}
+		if (targetMap.getSource(ZONES_SOURCE_ID)) {
+			targetMap.removeSource(ZONES_SOURCE_ID);
+		}
 	};
 
 	const setStationSourceData = (
@@ -437,6 +581,19 @@
 		}
 	};
 
+	const setZoneSourceData = (
+		data: ZoneFeatureCollection,
+		targetMap: maplibregl.Map | undefined
+	) => {
+		zoneData = data;
+		if (!targetMap) {
+			return;
+		}
+		ensureSourcesAndLayers(targetMap);
+		const source = targetMap.getSource(ZONES_SOURCE_ID) as maplibregl.GeoJSONSource | undefined;
+		source?.setData(zoneData);
+	};
+
 	const styleListeners = new WeakMap<maplibregl.Map, () => void>();
 	const pointerHandlers = new WeakMap<
 		maplibregl.Map,
@@ -451,6 +608,11 @@
 			vehicleClusterLeave: () => void;
 			vehicleLayerIds: string[];
 			vehicleClusterLayerIds: string[];
+			zoneEnter: (event: maplibregl.MapLayerMouseEvent) => void;
+			zoneLeave: () => void;
+			zoneClick: (event: maplibregl.MapLayerMouseEvent) => void;
+			zoneMapClick: (event: maplibregl.MapMouseEvent) => void;
+			zoneLayerId: string;
 		}
 	>();
 	const clusterClickHandlers = new WeakMap<
@@ -497,6 +659,24 @@
 		return typeof value === 'string' ? value : undefined;
 	};
 
+	const getNumberProperty = (
+		properties: Record<string, unknown> | undefined,
+		key: string
+	): number | undefined => {
+		if (!properties) {
+			return undefined;
+		}
+		const value = properties[key];
+		if (typeof value === 'number' && Number.isFinite(value)) {
+			return value;
+		}
+		if (typeof value === 'string') {
+			const parsed = Number(value);
+			return Number.isFinite(parsed) ? parsed : undefined;
+		}
+		return undefined;
+	};
+
 	const buildStationTooltipHtml = (feature: maplibregl.MapGeoJSONFeature | undefined) => {
 		const properties = feature?.properties as Record<string, unknown> | undefined;
 		const stationId = getStringProperty(properties, 'station_id');
@@ -529,6 +709,53 @@
 		return createTooltipHtml(`${t.sharingProvider}: ${providerName}`);
 	};
 
+	const buildZoneTooltipSection = (zone: RentalZone) => {
+		const providerName = providerById.get(zone.providerId)?.name;
+		const headerParts: string[] = [];
+		if (zone.name) {
+			headerParts.push(`<div>${escapeHtml(zone.name)}</div>`);
+		}
+		if (providerName) {
+			headerParts.push(`<div>${escapeHtml(`${t.sharingProvider}: ${providerName}`)}</div>`);
+		}
+		const headerHtml = headerParts.join('');
+		const restrictionsJson = JSON.stringify(zone.rules ?? [], null, 2);
+		const restrictionsHtml = `<pre class="m-0 max-w-full overflow-x-auto whitespace-pre-wrap break-words font-mono text-xs leading-snug bg-slate-50 p-2 rounded">${escapeHtml(restrictionsJson ?? '[]')}</pre>`;
+		return `<div class="space-y-2.5">${headerHtml}${restrictionsHtml}</div>`;
+	};
+
+	const buildZoneTooltipHtml = (features: maplibregl.MapGeoJSONFeature[] | undefined) => {
+		if (!features || features.length === 0) {
+			return '';
+		}
+		const seen = new Set<number>();
+		const sections: string[] = [];
+		for (const feature of features) {
+			const properties = feature?.properties as Record<string, unknown> | undefined;
+			const zoneIndex = getNumberProperty(properties, 'zone_index');
+			if (
+				zoneIndex === undefined ||
+				!Number.isInteger(zoneIndex) ||
+				zoneIndex < 0 ||
+				zoneIndex >= zones.length ||
+				seen.has(zoneIndex)
+			) {
+				continue;
+			}
+			const zone = zones[zoneIndex];
+			if (!zone) {
+				continue;
+			}
+			seen.add(zoneIndex);
+			sections.push(buildZoneTooltipSection(zone));
+		}
+		if (sections.length === 0) {
+			return '';
+		}
+		const separator = '<hr class="my-2 border-0 border-t border-slate-200" />';
+		return `<div class="max-h-80 overflow-y-auto space-y-3">${sections.join(separator)}</div>`;
+	};
+
 	const getOrCreatePopup = (targetMap: maplibregl.Map) => {
 		let popup = mapPopups.get(targetMap);
 		if (!popup) {
@@ -540,6 +767,7 @@
 			});
 			mapPopups.set(targetMap, popup);
 		}
+		popup.setMaxWidth('600px');
 		return popup;
 	};
 
@@ -557,6 +785,25 @@
 		popup?.remove();
 	};
 
+	const showZoneTooltip = (
+		targetMap: maplibregl.Map,
+		event: maplibregl.MapMouseEvent,
+		featureList?: maplibregl.MapGeoJSONFeature[]
+	) => {
+		const features =
+			featureList && featureList.length > 0
+				? (featureList as maplibregl.MapGeoJSONFeature[])
+				: (targetMap.queryRenderedFeatures(event.point, {
+						layers: [ZONES_LAYER_ID]
+					}) as maplibregl.MapGeoJSONFeature[]);
+		const html = buildZoneTooltipHtml(features);
+		if (html) {
+			showPopup(targetMap, event.lngLat, html);
+			return;
+		}
+		hidePopup(targetMap);
+	};
+
 	const attachStyleListener = (targetMap: maplibregl.Map) => {
 		if (styleListeners.has(targetMap)) {
 			return;
@@ -565,6 +812,7 @@
 			ensureSourcesAndLayers(targetMap);
 			setStationSourceData(stationData, targetMap);
 			setVehicleSourceData(vehicleDataByIcon, targetMap);
+			setZoneSourceData(zoneData, targetMap);
 		};
 		targetMap.on('styledata', handler);
 		styleListeners.set(targetMap, handler);
@@ -617,9 +865,29 @@
 			targetMap.getCanvas().style.cursor = '';
 			hidePopup(targetMap);
 		};
+		const zoneEnter = () => {
+			targetMap.getCanvas().style.cursor = 'pointer';
+		};
+		const zoneLeave = () => {
+			targetMap.getCanvas().style.cursor = '';
+		};
+		const zoneClick = (event: maplibregl.MapLayerMouseEvent) => {
+			showZoneTooltip(
+				targetMap,
+				event,
+				event.features as maplibregl.MapGeoJSONFeature[] | undefined
+			);
+		};
+		const zoneMapClick = (event: maplibregl.MapMouseEvent) => {
+			showZoneTooltip(targetMap, event);
+		};
 		targetMap.on('mouseenter', STATIONS_LAYER_ID, stationEnter);
 		targetMap.on('mousemove', STATIONS_LAYER_ID, stationMove);
 		targetMap.on('mouseleave', STATIONS_LAYER_ID, stationLeave);
+		targetMap.on('mouseenter', ZONES_LAYER_ID, zoneEnter);
+		targetMap.on('mouseleave', ZONES_LAYER_ID, zoneLeave);
+		targetMap.on('click', ZONES_LAYER_ID, zoneClick);
+		targetMap.on('click', zoneMapClick);
 		for (const layerId of vehicle_point_layer_ids) {
 			targetMap.on('mouseenter', layerId, vehicleEnter);
 			targetMap.on('mousemove', layerId, vehicleMove);
@@ -639,7 +907,12 @@
 			vehicleClusterEnter,
 			vehicleClusterLeave,
 			vehicleLayerIds: vehicle_point_layer_ids.slice(),
-			vehicleClusterLayerIds: vehicle_cluster_layer_ids.slice()
+			vehicleClusterLayerIds: vehicle_cluster_layer_ids.slice(),
+			zoneEnter,
+			zoneLeave,
+			zoneClick,
+			zoneMapClick,
+			zoneLayerId: ZONES_LAYER_ID
 		});
 	};
 
@@ -660,6 +933,10 @@
 			targetMap.off('mouseenter', layerId, handlers.vehicleClusterEnter);
 			targetMap.off('mouseleave', layerId, handlers.vehicleClusterLeave);
 		}
+		targetMap.off('mouseenter', handlers.zoneLayerId, handlers.zoneEnter);
+		targetMap.off('mouseleave', handlers.zoneLayerId, handlers.zoneLeave);
+		targetMap.off('click', handlers.zoneLayerId, handlers.zoneClick);
+		targetMap.off('click', handlers.zoneMapClick);
 		pointerHandlers.delete(targetMap);
 		hidePopup(targetMap);
 	};
@@ -735,6 +1012,7 @@
 		ensureSourcesAndLayers(targetMap);
 		setStationSourceData(stationData, targetMap);
 		setVehicleSourceData(vehicleDataByIcon, targetMap);
+		setZoneSourceData(zoneData, targetMap);
 		attachStyleListener(targetMap);
 		attachPointerEvents(targetMap);
 		attachClusterClickHandler(targetMap);
@@ -758,12 +1036,14 @@
 		stationById = new Map<string, RentalStation>();
 		vehicleById = new Map<string, RentalVehicle>();
 		providerById = new Map<string, RentalProvider>();
+		zones = [];
 	};
 
 	const setEmptyCollections = (targetMap: maplibregl.Map | undefined) => {
 		resetCachedData();
 		setStationSourceData(emptyStationCollection(), targetMap);
 		setVehicleSourceData(create_empty_vehicle_collections(), targetMap);
+		setZoneSourceData(create_empty_zone_collection(), targetMap);
 	};
 
 	const fetchRentals = async () => {
@@ -785,7 +1065,7 @@
 
 		try {
 			const { data, error } = await rentals({
-				query: { max, min }
+				query: { max, min, withZones: showZones }
 			});
 
 			if (token !== requestToken) {
@@ -808,6 +1088,8 @@
 			vehicleById = new Map<string, RentalVehicle>(
 				vehicles.map((vehicle) => [createScopedId(vehicle.providerId, vehicle.id), vehicle])
 			);
+			zones = data?.zones ?? [];
+			setZoneSourceData(buildZoneFeatures(zones), map);
 			setStationSourceData(buildStationFeatures(stations), map);
 			setVehicleSourceData(buildVehicleFeatures(vehicles), map);
 			loadedBounds = expandedBounds;

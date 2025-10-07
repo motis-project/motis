@@ -68,9 +68,9 @@
 
 	const urlParams = browser ? new URLSearchParams(window.location.search) : undefined;
 
-	const hasDebug = urlParams && urlParams.has('debug');
-	const hasDark = urlParams && urlParams.has('dark');
-	const hasLight = urlParams && urlParams.has('light');
+	const hasDebug: boolean = Boolean(urlParams?.has('debug'));
+	const hasDark: boolean = Boolean(urlParams?.has('dark'));
+	const hasLight: boolean = Boolean(urlParams?.has('light'));
 	const isSmallScreen = browser && window.innerWidth < 768;
 	let activeTab = $state<'connections' | 'departures' | 'isochrones'>('connections');
 	let dataAttributionLink: string | undefined = $state(undefined);
@@ -675,7 +675,7 @@
 	{#if showMap}
 		{#if activeTab != 'isochrones'}
 			<RailViz {map} {bounds} {zoom} />
-			<Rentals {map} {bounds} {zoom} />
+			<Rentals {map} {bounds} {zoom} showZones={hasDebug} />
 		{/if}
 		<!-- Isochrones cannot be hidden the same way as RailViz -->
 		<Isochrones
