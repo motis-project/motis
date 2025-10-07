@@ -59,9 +59,9 @@
 				{arriveBy}
 			/>
 		</div>
-		<div class="w-full ml-4">
+		<div class="w-full min-w-0 break-words mb-7 ml-2">
 			{#if p.stopId}
-				<div class="flex items-center justify-between">
+				<div class="flex max-h-6 items-center justify-between">
 					<Button
 						class="text-[length:inherit] leading-none justify-normal text-wrap p-0 text-left {textColor}"
 						variant="link"
@@ -109,13 +109,23 @@
 							<TriangleAlert class="size-4" />
 							<span> View alerts </span>
 						</summary>
-						<ul class="pl-1 list-disc list-inside">
-							{#each p.alerts as alert, i (i)}
-								<li class="text-sm break-words">
-									{alert.headerText}
-								</li>
-							{/each}
-						</ul>
+						{#each p.alerts as alert, i (i)}
+							<button
+								class="text-sm text-left w-full truncate"
+								onclick={(e) => {
+									e.currentTarget.classList.toggle('truncate');
+									e.currentTarget.classList.toggle('w-full');
+								}}
+							>
+								• {alert.headerText}
+								{#if alert.impactPeriod}
+									{alert.impactPeriod[0]?.start} - {alert.impactPeriod[1]?.end}
+								{/if}
+								{#if alert.descriptionText}
+									{alert.descriptionText}
+								{/if}
+							</button>
+						{/each}
 					</details>
 				{/if}
 			{:else}
@@ -343,13 +353,23 @@
 							<TriangleAlert class="size-4" />
 							<span> View alerts </span>
 						</summary>
-						<ul class="pl-1 list-disc list-inside">
-							{#each l.alerts as alert, i (i)}
-								<li class="text-sm break-words">
-									{alert.headerText}
-								</li>
-							{/each}
-						</ul>
+						{#each l.alerts as alert, i (i)}
+							<button
+								class="text-sm text-left w-full truncate"
+								onclick={(e) => {
+									e.currentTarget.classList.toggle('truncate');
+									e.currentTarget.classList.toggle('w-full');
+								}}
+							>
+								• {alert.headerText}
+								{#if alert.impactPeriod}
+									{alert.impactPeriod[0]?.start} - {alert.impactPeriod[1]?.end}
+								{/if}
+								{#if alert.descriptionText}
+									{alert.descriptionText}
+								{/if}
+							</button>
+						{/each}
 					</details>
 				{/if}
 				{#if l.intermediateStops?.length === 0}
