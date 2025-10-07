@@ -705,7 +705,7 @@
 			/>
 		{/if}
 
-		{#if stop && page.state.showDepartures}
+		{#if stop && page.state.showDepartures && activeTab != 'isochrones'}
 			<Marker
 				color="black"
 				draggable={false}
