@@ -705,7 +705,7 @@
 			/>
 		{/if}
 
-		{#if stop && activeTab == 'connections' && page.state.showDepartures}
+		{#if stop && page.state.showDepartures}
 			<Marker
 				color="black"
 				draggable={false}
