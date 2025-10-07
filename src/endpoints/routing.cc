@@ -437,8 +437,6 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
   if (!w_ || !l_) {
     return {};
   }
-  auto const omit_walk = gbfs_rd.has_data() &&
-                         utl::find(modes, api::ModeEnum::RENTAL) != end(modes);
   auto fastest_direct = kInfinityDuration;
   auto cache = street_routing_cache_t{};
   auto itineraries = std::vector<api::Itinerary>{};
@@ -473,8 +471,7 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
       }
     } else if (m == api::ModeEnum::CAR || m == api::ModeEnum::BIKE ||
                m == api::ModeEnum::CAR_PARKING ||
-               m == api::ModeEnum::CAR_DROPOFF ||
-               (!omit_walk && m == api::ModeEnum::WALK)) {
+               m == api::ModeEnum::CAR_DROPOFF || m == api::ModeEnum::WALK) {
       route_with_profile(default_output{
           *w_, to_profile(m, pedestrian_profile, elevation_costs)});
     } else if (m == api::ModeEnum::RENTAL && gbfs_rd.has_data()) {
