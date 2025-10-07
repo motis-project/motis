@@ -273,12 +273,10 @@ void load_station_status(gbfs_provider& provider, json::value const& root) {
       auto unrestricted_available = 0U;
       auto any_station_available = 0U;
       auto roundtrip_available = 0U;
-      auto total_available = 0U;
       for (auto const& vt : vta) {
         auto const vehicle_type_id =
             static_cast<std::string>(vt.at("vehicle_type_id").as_string());
         auto const count = vt.at("count").to_number<unsigned>();
-        total_available += count;
         if (auto const vt_idx = get_vehicle_type(provider, vehicle_type_id,
                                                  vehicle_start_type::kStation);
             vt_idx) {

@@ -33,6 +33,10 @@ api::rentals_response rental::operator()(
   auto gbfs = gbfs_;
   auto res = api::rentals_response{};
 
+  if (gbfs == nullptr) {
+    return res;
+  }
+
   auto const restrictions_to_api = [&](gbfs::geofencing_restrictions const& r) {
     return api::RentalZoneRestrictions{
         .vehicleTypeIds_ = {},
