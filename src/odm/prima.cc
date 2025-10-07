@@ -735,7 +735,6 @@ void prima::add_direct_odm(std::vector<direct_ride> const& direct,
 
 bool prima::consume_whitelist_ride_sharing_response(std::string_view json) {
   auto const update_first_mile = [&](json::array const& update) {
-    std::cout << "weird" << std::endl;
     auto const n = n_rides_in_response(update);
     if (first_mile_ride_sharing_.size() != n) {
       n::log(n::log_lvl::debug, "motis.prima",
@@ -759,9 +758,9 @@ bool prima::consume_whitelist_ride_sharing_response(std::string_view json) {
                  .time_at_stop_ =
                      to_unix(event.as_object().at("dropoffTime").as_int64()),
                  .stop_ = prev_it->stop_});
-            std::cout << "yay first"
-                      << event.as_object().at("pickupTime").as_int64()
-                      << std::endl;
+            first_mile_ride_sharing_tour_ids_.push_back(
+                static_cast<std::uint32_t>(
+                    event.as_object().at("tour").as_int64()));
           }
         }
         ++prev_it;
@@ -794,9 +793,9 @@ bool prima::consume_whitelist_ride_sharing_response(std::string_view json) {
                  .time_at_stop_ =
                      to_unix(event.as_object().at("pickupTime").as_int64()),
                  .stop_ = prev_it->stop_});
-            std::cout << "yay last"
-                      << event.as_object().at("pickupTime").as_int64()
-                      << std::endl;
+            last_mile_ride_sharing_tour_ids_.push_back(
+                static_cast<std::uint32_t>(
+                    event.as_object().at("tour").as_int64()));
           }
           ++prev_it;
         }
@@ -824,9 +823,8 @@ bool prima::consume_whitelist_ride_sharing_response(std::string_view json) {
             direct_ride_sharing_.push_back(
                 {to_unix(ride.as_object().at("pickupTime").as_int64()),
                  to_unix(ride.as_object().at("dropoffTime").as_int64())});
-            std::cout << "yay direct"
-                      << ride.as_object().at("pickupTime").as_int64()
-                      << std::endl;
+            direct_ride_sharing_tour_ids_.push_back(static_cast<std::uint32_t>(
+                ride.as_object().at("tour").as_int64()));
           }
         }
       }

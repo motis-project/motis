@@ -50,6 +50,7 @@
 #include "motis/osr/parameters.h"
 #include "motis/osr/street_routing.h"
 #include "motis/place.h"
+#include "motis/tag_lookup.h"
 #include "motis/timetable/modes_to_clasz_mask.h"
 #include "motis/timetable/time_conv.h"
 #include "motis/transport_mode_ids.h"
@@ -531,7 +532,7 @@ api::plan_response meta_router::run() {
               ep::blocked.reset(
                   new osr::bitvec<osr::node_idx_t>{r_.w_->n_nodes()});
             }
-            return journey_to_response(
+            auto response = journey_to_response(
                 r_.w_, r_.l_, r_.pl_, *tt_, *r_.tags_, r_.fa_, e_, rtt_,
                 r_.matches_, r_.elevations_, r_.shapes_, gbfs_rd_, r_.lp_,
                 r_.tz_, j, start_, dest_, cache, ep::blocked.get(),
@@ -544,6 +545,46 @@ api::plan_response meta_router::run() {
                 query_.ignorePreTransitRentalReturnConstraints_,
                 query_.ignorePostTransitRentalReturnConstraints_,
                 query_.language_);
+
+            if (response.legs_.front().mode_ == api::ModeEnum::RIDE_SHARING &&
+                response.legs_.size() == 1) {
+              for (auto const [i, a] : utl::enumerate(p.direct_ride_sharing_)) {
+                if (a.dep_ == response.legs_.front().startTime_ &&
+                    a.arr_ == response.legs_.front().endTime_) {
+                  response.legs_.front().tripId_ = std::optional{
+                      std::to_string(p.direct_ride_sharing_tour_ids_[i])};
+                  break;
+                }
+              }
+              return response;
+            }
+            if (response.legs_.front().mode_ == api::ModeEnum::RIDE_SHARING) {
+              for (auto const [i, a] :
+                   utl::enumerate(p.first_mile_ride_sharing_)) {
+                if (a.time_at_start_ == response.legs_.front().startTime_ &&
+                    a.time_at_stop_ == response.legs_.front().endTime_ &&
+                    r_.tags_->id(*tt_, a.stop_) ==
+                        response.legs_.front().to_.stopId_) {
+                  response.legs_.front().tripId_ = std::optional{
+                      std::to_string(p.first_mile_ride_sharing_tour_ids_[i])};
+                  break;
+                }
+              }
+            }
+            if (response.legs_.back().mode_ == api::ModeEnum::RIDE_SHARING) {
+              for (auto const [i, a] :
+                   utl::enumerate(p.last_mile_ride_sharing_)) {
+                if (a.time_at_start_ == response.legs_.front().endTime_ &&
+                    a.time_at_stop_ == response.legs_.front().startTime_ &&
+                    r_.tags_->id(*tt_, a.stop_) ==
+                        response.legs_.front().from_.stopId_) {
+                  response.legs_.front().tripId_ = std::optional{
+                      std::to_string(p.last_mile_ride_sharing_tour_ids_[i])};
+                  break;
+                }
+              }
+            }
+            return response;
           }),
       .previousPageCursor_ =
           fmt::format("EARLIER|{}", to_seconds(search_intvl.from_)),
