@@ -59,7 +59,6 @@
 
 	type StationFeatureProperties = {
 		icon: string;
-		icon_empty: string;
 		available: number;
 		provider_id: string;
 		station_id: string;
@@ -110,16 +109,6 @@
 		SCOOTER_SEATED: 'scooter_station',
 		SCOOTER_STANDING: 'scooter_station',
 		OTHER: 'bike_station'
-	};
-
-	const station_icon_empty_by_form_factor: Record<RentalFormFactor, string> = {
-		BICYCLE: 'bike_station_empty',
-		CARGO_BICYCLE: 'cargo_bike_station_empty',
-		CAR: 'car_station_empty',
-		MOPED: 'moped_station_empty',
-		SCOOTER_SEATED: 'scooter_station_empty',
-		SCOOTER_STANDING: 'scooter_station_empty',
-		OTHER: 'bike_station_empty'
 	};
 
 	const vehicle_icon_by_form_factor: Record<RentalFormFactor, string> = {
@@ -326,11 +315,6 @@
 		return station_icon_by_form_factor[formFactor ?? DEFAULT_FORM_FACTOR];
 	};
 
-	const getStationEmptyIconName = (station: RentalStation) => {
-		const formFactor = station.formFactors?.[0];
-		return station_icon_empty_by_form_factor[formFactor ?? DEFAULT_FORM_FACTOR];
-	};
-
 	const getVehicleIconName = (vehicle: RentalVehicle) => {
 		return vehicle_icon_by_form_factor[vehicle.formFactor];
 	};
@@ -353,7 +337,6 @@
 						},
 						properties: {
 							icon: getStationIconName(station),
-							icon_empty: getStationEmptyIconName(station),
 							available,
 							provider_id: station.providerId,
 							station_id: station.id,
@@ -489,21 +472,11 @@
 				type: 'symbol',
 				source: STATIONS_SOURCE_ID,
 				layout: {
-					'icon-image': [
-						'case',
-						['>', ['get', 'available'], 0],
-						['get', 'icon'],
-						['get', 'icon_empty']
-					],
+					'icon-image': ['get', 'icon'],
 					'icon-size': zoom_scaled_icon_size,
 					'icon-allow-overlap': true,
 					'icon-ignore-placement': true,
-					'text-field': [
-						'case',
-						['>', ['get', 'available'], 0],
-						['to-string', ['get', 'available']],
-						''
-					],
+					'text-field': ['to-string', ['get', 'available']],
 					'text-allow-overlap': true,
 					'text-ignore-placement': true,
 					'text-anchor': 'center',
@@ -512,7 +485,7 @@
 					'text-font': ['Noto Sans Display Regular']
 				},
 				paint: {
-					'icon-opacity': ['case', ['>', ['get', 'available'], 0], 1, 0.7],
+					'icon-opacity': 1,
 					'text-color': '#1e293b',
 					'text-halo-color': '#ffffff',
 					'text-halo-width': 1.5

@@ -6,26 +6,12 @@
     "x": 0,
     "y": 0
   },
-  "bike_station_empty": {
-    "height": 60,
-    "pixelRatio": 2,
-    "width": 60,
-    "x": 242,
-    "y": 88
-  },
   "car_station": {
     "height": 88,
     "pixelRatio": 2,
     "width": 86,
     "x": 0,
     "y": 88
-  },
-  "car_station_empty": {
-    "height": 60,
-    "pixelRatio": 2,
-    "width": 60,
-    "x": 258,
-    "y": 0
   },
   "cargo_bike_station": {
     "height": 88,
@@ -34,26 +20,19 @@
     "x": 86,
     "y": 0
   },
-  "cargo_bike_station_empty": {
-    "height": 60,
-    "pixelRatio": 2,
-    "width": 60,
-    "x": 280,
-    "y": 148
-  },
   "elevator": {
     "height": 40,
     "pixelRatio": 2,
     "width": 40,
-    "x": 280,
-    "y": 208
+    "x": 312,
+    "y": 0
   },
   "floating_bike": {
     "height": 54,
     "pixelRatio": 2,
     "width": 54,
-    "x": 340,
-    "y": 120
+    "x": 242,
+    "y": 88
   },
   "floating_bike_cluster": {
     "height": 72,
@@ -66,8 +45,8 @@
     "height": 54,
     "pixelRatio": 2,
     "width": 54,
-    "x": 362,
-    "y": 60
+    "x": 258,
+    "y": 0
   },
   "floating_car_cluster": {
     "height": 72,
@@ -80,8 +59,8 @@
     "height": 54,
     "pixelRatio": 2,
     "width": 54,
-    "x": 378,
-    "y": 0
+    "x": 280,
+    "y": 142
   },
   "floating_cargo_bike_cluster": {
     "height": 72,
@@ -94,8 +73,8 @@
     "height": 54,
     "pixelRatio": 2,
     "width": 54,
-    "x": 340,
-    "y": 174
+    "x": 280,
+    "y": 196
   },
   "floating_moped_cluster": {
     "height": 72,
@@ -108,8 +87,8 @@
     "height": 54,
     "pixelRatio": 2,
     "width": 54,
-    "x": 394,
-    "y": 114
+    "x": 296,
+    "y": 54
   },
   "floating_scooter_cluster": {
     "height": 72,
@@ -125,25 +104,11 @@
     "x": 86,
     "y": 88
   },
-  "moped_station_empty": {
-    "height": 60,
-    "pixelRatio": 2,
-    "width": 60,
-    "x": 302,
-    "y": 60
-  },
   "scooter_station": {
     "height": 88,
     "pixelRatio": 2,
     "width": 86,
     "x": 172,
-    "y": 0
-  },
-  "scooter_station_empty": {
-    "height": 60,
-    "pixelRatio": 2,
-    "width": 60,
-    "x": 318,
     "y": 0
   }
 }
