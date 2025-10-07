@@ -51,6 +51,7 @@
 	let activeMap: maplibregl.Map | undefined;
 	let providerById = new Map<string, RentalProvider>();
 	let stationById = new Map<string, RentalStation>();
+	/* eslint-disable-next-line @typescript-eslint/no-unused-vars */
 	let vehicleById = new Map<string, RentalVehicle>();
 	let zones: RentalZone[] = [];
 
@@ -963,11 +964,11 @@
 				const source = targetMap.getSource(config.source_id) as
 					| maplibregl.GeoJSONSource
 					| undefined;
-				if (!source || typeof (source as any).getClusterExpansionZoom !== 'function') {
+				if (!source || typeof source.getClusterExpansionZoom !== 'function') {
 					return;
 				}
 				try {
-					const zoomLevel = await (source as any).getClusterExpansionZoom(clusterId);
+					const zoomLevel = await source.getClusterExpansionZoom(clusterId);
 					if (typeof zoomLevel !== 'number') {
 						return;
 					}
