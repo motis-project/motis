@@ -4,6 +4,7 @@
 	import ArrowDown from 'lucide-svelte/icons/arrow-down';
 	import DollarSign from 'lucide-svelte/icons/dollar-sign';
 	import CircleX from 'lucide-svelte/icons/circle-x';
+	import TriangleAlert from 'lucide-svelte/icons/triangle-alert';
 	import type { FareProduct, Itinerary, Leg, Mode, Place, StepInstruction } from '$lib/api/openapi';
 	import Time from '$lib/Time.svelte';
 	import { routeBorderColor, routeColor } from '$lib/modeStyle';
@@ -73,13 +74,6 @@
 					>
 						{p.name}
 					</Button>
-					{#if p.track && !hidePlatform}
-						<span
-							class="text-nowrap {isStartOrEnd == 0 ? 'text-xs' : ''} w- m-4 px-1 border rounded-xl"
-						>
-							{p.name}
-						</Button>
-					</div>
 					{#if p.track && !hidePlatform}
 						<span class="text-nowrap px-2 border rounded-xl mx-1">
 							{getModeLabel(mode) == 'Track' ? t.trackAbr : t.platformAbr}
