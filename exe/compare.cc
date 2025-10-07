@@ -34,6 +34,7 @@ namespace json = boost::json;
 namespace motis {
 
 int compare(int ac, char** av) {
+  auto subset_check = false;
   auto queries_path = fs::path{"queries.txt"};
   auto responses_paths = std::vector<std::string>{};
   auto fails_path = fs::path{"fail"};
@@ -42,6 +43,8 @@ int compare(int ac, char** av) {
       ("help", "Prints this help message")  //
       ("queries,q", po::value(&queries_path)->default_value(queries_path),
        "queries file")  //
+      ("subset_check", po::value(&subset_check)->default_value(subset_check),
+       "only check subset ([1...N] <= [0])")  //
       ("responses,r",
        po::value(&responses_paths)
            ->multitoken()
@@ -67,6 +70,19 @@ int compare(int ac, char** av) {
   auto const params = [](api::Itinerary const& x) {
     return std::tie(x.startTime_, x.endTime_, x.transfers_);
   };
+  auto const equal = [&](std::vector<api::Itinerary> const& a,
+                         std::vector<api::Itinerary> const& b) {
+    if (subset_check) {
+      return utl::all_of(a, [&](api::Itinerary const& x) {
+        return utl::any_of(b, [&](api::Itinerary const& y) {
+          return params(x) == params(y);
+        });
+      });
+    } else {
+      return std::ranges::equal(a | std::views::transform(params),
+                                b | std::views::transform(params));
+    }
+  };
   auto const print_params = [](api::Itinerary const& x) {
     std::cout << x.startTime_ << ", " << x.endTime_
               << ", transfers=" << std::setw(2) << std::left << x.transfers_;
@@ -85,8 +101,7 @@ int compare(int ac, char** av) {
 
       auto const uut =
           x.responses_[i].value_or(api::plan_response{}).itineraries_;
-      if (std::ranges::equal(ref | std::views::transform(params),
-                             uut | std::views::transform(params))) {
+      if (equal(ref, uut)) {
         ++n_equal;
         continue;
       }
