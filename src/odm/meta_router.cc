@@ -574,11 +574,11 @@ api::plan_response meta_router::run() {
             if (response.legs_.back().mode_ == api::ModeEnum::RIDE_SHARING) {
               for (auto const [i, a] :
                    utl::enumerate(p.last_mile_ride_sharing_)) {
-                if (a.time_at_start_ == response.legs_.front().endTime_ &&
-                    a.time_at_stop_ == response.legs_.front().startTime_ &&
+                if (a.time_at_start_ == response.legs_.back().endTime_ &&
+                    a.time_at_stop_ == response.legs_.back().startTime_ &&
                     r_.tags_->id(*tt_, a.stop_) ==
-                        response.legs_.front().from_.stopId_) {
-                  response.legs_.front().tripId_ = std::optional{
+                        response.legs_.back().from_.stopId_) {
+                  response.legs_.back().tripId_ = std::optional{
                       std::to_string(p.last_mile_ride_sharing_tour_ids_[i])};
                   break;
                 }
