@@ -393,14 +393,14 @@ std::pair<n::routing::query, std::optional<n::unixtime_t>> get_start_time(
     auto const t = std::chrono::time_point_cast<n::i32_minutes>(
         *query.time_.value_or(openapi::now()));
     utl::verify<openapi::bad_request_exception>(
-        tt->external_interval().contains(t),
+        tt == nullptr || tt->external_interval().contains(t),
         "query time is outside of loaded timetable window {}",
-        tt->external_interval());
+        tt ? tt->external_interval() : n::interval<n::unixtime_t>{});
     auto const window =
         std::chrono::duration_cast<n::duration_t>(std::chrono::seconds{
             query.searchWindow_ *
             (query.arriveBy_ ? -1 : 1)});  // TODO redundant minus
-    return {{.start_time_ = query.timetableView_
+    return {{.start_time_ = query.timetableView_ && tt
                                 ? n::routing::start_time_t{n::interval{
                                       tt->external_interval().clamp(
                                           query.arriveBy_ ? t - window : t),
