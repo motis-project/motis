@@ -39,6 +39,7 @@
 	const FETCH_PADDING_RATIO = 0.5;
 	const ZONES_SOURCE_ID = 'rentals-zones';
 	const ZONES_LAYER_ID = 'rentals-zones-layer';
+	const ZONES_OUTLINE_LAYER_ID = 'rentals-zones-outline-layer';
 	const STATIONS_SOURCE_ID = 'rentals-stations';
 	const STATIONS_LAYER_ID = 'rentals-stations-layer';
 	const VEHICLES_SOURCE_PREFIX = 'rentals-vehicles';
@@ -443,8 +444,24 @@
 				source: ZONES_SOURCE_ID,
 				paint: {
 					'fill-color': '#0ea5e9',
-					'fill-opacity': 0.12,
-					'fill-outline-color': '#2563eb'
+					'fill-opacity': 0.12
+				}
+			});
+		}
+
+		if (!targetMap.getLayer(ZONES_OUTLINE_LAYER_ID)) {
+			targetMap.addLayer({
+				id: ZONES_OUTLINE_LAYER_ID,
+				type: 'line',
+				source: ZONES_SOURCE_ID,
+				layout: {
+					'line-join': 'round',
+					'line-cap': 'round'
+				},
+				paint: {
+					'line-color': '#0284c7',
+					'line-width': 3,
+					'line-opacity': 0.9
 				}
 			});
 		}
@@ -556,6 +573,9 @@
 		}
 		if (targetMap.getSource(STATIONS_SOURCE_ID)) {
 			targetMap.removeSource(STATIONS_SOURCE_ID);
+		}
+		if (targetMap.getLayer(ZONES_OUTLINE_LAYER_ID)) {
+			targetMap.removeLayer(ZONES_OUTLINE_LAYER_ID);
 		}
 		if (targetMap.getLayer(ZONES_LAYER_ID)) {
 			targetMap.removeLayer(ZONES_LAYER_ID);
@@ -692,7 +712,7 @@
 			zoneLeave: () => void;
 			zoneClick: (event: maplibregl.MapLayerMouseEvent) => void;
 			zoneMapClick: (event: maplibregl.MapMouseEvent) => void;
-			zoneLayerId: string;
+			zoneLayerIds: string[];
 		}
 	>();
 	const clusterClickHandlers = new WeakMap<
@@ -945,7 +965,7 @@
 			targetMap.getCanvas().style.cursor = '';
 			hidePopup(targetMap);
 		};
-		const zoneEnter = () => {
+		const zoneEnter = (_event: maplibregl.MapLayerMouseEvent) => {
 			targetMap.getCanvas().style.cursor = 'pointer';
 		};
 		const zoneLeave = () => {
@@ -964,9 +984,12 @@
 		targetMap.on('mouseenter', STATIONS_LAYER_ID, stationEnter);
 		targetMap.on('mousemove', STATIONS_LAYER_ID, stationMove);
 		targetMap.on('mouseleave', STATIONS_LAYER_ID, stationLeave);
-		targetMap.on('mouseenter', ZONES_LAYER_ID, zoneEnter);
-		targetMap.on('mouseleave', ZONES_LAYER_ID, zoneLeave);
-		targetMap.on('click', ZONES_LAYER_ID, zoneClick);
+		const zoneLayerIds = [ZONES_LAYER_ID, ZONES_OUTLINE_LAYER_ID];
+		for (const layerId of zoneLayerIds) {
+			targetMap.on('mouseenter', layerId, zoneEnter);
+			targetMap.on('mouseleave', layerId, zoneLeave);
+			targetMap.on('click', layerId, zoneClick);
+		}
 		targetMap.on('click', zoneMapClick);
 		for (const layerId of vehicle_point_layer_ids) {
 			targetMap.on('mouseenter', layerId, vehicleEnter);
@@ -992,7 +1015,7 @@
 			zoneLeave,
 			zoneClick,
 			zoneMapClick,
-			zoneLayerId: ZONES_LAYER_ID
+			zoneLayerIds: zoneLayerIds.slice()
 		});
 	};
 
@@ -1013,9 +1036,11 @@
 			targetMap.off('mouseenter', layerId, handlers.vehicleClusterEnter);
 			targetMap.off('mouseleave', layerId, handlers.vehicleClusterLeave);
 		}
-		targetMap.off('mouseenter', handlers.zoneLayerId, handlers.zoneEnter);
-		targetMap.off('mouseleave', handlers.zoneLayerId, handlers.zoneLeave);
-		targetMap.off('click', handlers.zoneLayerId, handlers.zoneClick);
+		for (const layerId of handlers.zoneLayerIds) {
+			targetMap.off('mouseenter', layerId, handlers.zoneEnter);
+			targetMap.off('mouseleave', layerId, handlers.zoneLeave);
+			targetMap.off('click', layerId, handlers.zoneClick);
+		}
 		targetMap.off('click', handlers.zoneMapClick);
 		pointerHandlers.delete(targetMap);
 		hidePopup(targetMap);
