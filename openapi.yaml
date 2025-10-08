@@ -779,7 +779,9 @@ paths:
             language tags as used in OpenStreetMap / GTFS
             (usually BCP-47 / ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
           schema:
-            type: string
+            type: array
+            items:
+              type: string
 
         - name: algorithm
           in: query
@@ -1288,7 +1290,9 @@ paths:
             language tags as used in OpenStreetMap
             (usually ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
           schema:
-            type: string
+            type: array
+            items:
+              type: string
 
         - name: type
           in: query
@@ -1375,7 +1379,9 @@ paths:
             language tags as used in OpenStreetMap / GTFS
             (usually BCP-47 / ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
           schema:
-            type: string
+            type: array
+            items:
+              type: string
       responses:
         '400':
           description: Bad Request
@@ -1526,7 +1532,9 @@ paths:
             language tags as used in OpenStreetMap / GTFS
             (usually BCP-47 / ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
           schema:
-            type: string
+            type: array
+            items:
+              type: string
       responses:
         '400':
           description: Bad Request
