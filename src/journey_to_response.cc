@@ -97,7 +97,7 @@ std::optional<fare_indices> get_fare_indices(
 std::optional<std::vector<api::Alert>> get_alerts(
     n::rt::frun const& fr,
     std::optional<std::pair<n::rt::run_stop, n::event_type>> const& s,
-    std::optional<std::string> const& language) {
+    std::optional<std::vector<std::string>> const& language) {
   if (fr.rtt_ == nullptr || !fr.is_scheduled()) {  // TODO added
     return std::nullopt;
   }
@@ -128,14 +128,20 @@ std::optional<std::vector<api::Alert>> get_alerts(
         return a.strings_.try_get(translations.front().text_)
             .and_then(convert_to_str);
       } else {
-        auto const it =
-            utl::find_if(translations, [&](n::translation const translation) {
-              auto const lang = a.strings_.try_get(translation.language_);
-              return lang.has_value() && lang->starts_with(*language);
-            });
-        return a.strings_
-            .try_get(it == end(translations) ? translations.front().text_
-                                             : it->text_)
+        for (auto const& req_lang : *language) {
+          auto const it =
+              utl::find_if(translations, [&](n::translation const translation) {
+                auto const translation_lang =
+                    a.strings_.try_get(translation.language_);
+                return translation_lang.has_value() &&
+                       translation_lang->starts_with(req_lang);
+              });
+          if (it == end(translations)) {
+            continue;
+          }
+          return a.strings_.try_get(it->text_).and_then(convert_to_str);
+        }
+        return a.strings_.try_get(translations.front().text_)
             .and_then(convert_to_str);
       }
     };
@@ -225,7 +231,7 @@ api::Itinerary journey_to_response(
     unsigned const api_version,
     bool const ignore_start_rental_return_constraints,
     bool const ignore_dest_rental_return_constraints,
-    std::optional<std::string> const& language) {
+    std::optional<std::vector<std::string>> const& language) {
   utl::verify(!j.legs_.empty(), "journey without legs");
 
   auto const fares =
