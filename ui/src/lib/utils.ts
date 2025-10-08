@@ -89,7 +89,7 @@ export const onClickStop = (
 
 export const onClickTrip = async (tripId: string, replace: boolean = false) => {
 	const { data: itinerary, error } = await trip({
-		query: { tripId, joinInterlinedLegs: false, language }
+		query: { tripId, joinInterlinedLegs: false, language: [language] }
 	});
 	if (error) {
 		console.log(error);
