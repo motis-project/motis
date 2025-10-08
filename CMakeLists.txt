@@ -125,7 +125,6 @@ target_link_libraries(motislib
     crypto
     tg
     lz4_static
-    lb
     web-server
     prometheus-cpp::core
     opentelemetry_trace
