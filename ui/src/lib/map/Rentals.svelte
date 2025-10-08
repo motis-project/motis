@@ -9,6 +9,8 @@
 		type RentalZone
 	} from '$lib/api/openapi';
 	import { lngLatToStr } from '$lib/lngLatToStr';
+	import Control from '$lib/map/Control.svelte';
+	import { cn } from '$lib/utils';
 	import polyline from '@mapbox/polyline';
 	import maplibregl from 'maplibre-gl';
 	import type { ExpressionSpecification } from 'maplibre-gl';
@@ -121,6 +123,16 @@
 		OTHER: 'floating_bike'
 	};
 
+	const svg_symbol_by_form_factor: Record<RentalFormFactor, string> = {
+		BICYCLE: 'bike',
+		CARGO_BICYCLE: 'cargo_bike',
+		CAR: 'car',
+		MOPED: 'moped',
+		SCOOTER_SEATED: 'scooter',
+		SCOOTER_STANDING: 'scooter',
+		OTHER: 'bike'
+	};
+
 	const vehicle_icons = Array.from(new Set(Object.values(vehicle_icon_by_form_factor)));
 
 	type VehicleSourceConfig = {
@@ -146,6 +158,12 @@
 	const vehicle_point_layer_ids = vehicle_source_configs.map((config) => config.point_layer_id);
 	const vehicle_cluster_layer_ids = vehicle_source_configs.map((config) => config.cluster_layer_id);
 
+	type ProviderOption = {
+		id: string;
+		name: string;
+		formFactors: RentalFormFactor[];
+	};
+
 	const create_empty_vehicle_collections = (): VehicleCollections =>
 		vehicle_source_configs.reduce((acc, config) => {
 			acc[config.icon] = create_empty_vehicle_collection();
@@ -154,10 +172,25 @@
 
 	vehicleDataByIcon = create_empty_vehicle_collections();
 
+	const create_empty_station_collection = (): FeatureCollection<
+		Point,
+		StationFeatureProperties
+	> => ({
+		type: 'FeatureCollection',
+		features: [] as Feature<Point, StationFeatureProperties>[]
+	});
+
 	const create_empty_zone_collection = (): ZoneFeatureCollection => ({
 		type: 'FeatureCollection',
 		features: []
 	});
+
+	let providerOptions = $state([] as ProviderOption[]);
+	let providerFilterId = $state<string | null>(null);
+
+	let fullStationData = create_empty_station_collection();
+	let fullVehicleDataByIcon = create_empty_vehicle_collections();
+	let fullZoneData = create_empty_zone_collection();
 
 	const decodePolylinePositions = (encoded: EncodedPolyline): Position[] => {
 		if (!encoded?.points || typeof encoded.precision !== 'number') {
@@ -382,6 +415,16 @@
 		return collections;
 	};
 
+	const buildProviderOptionsList = (providers: RentalProvider[]): ProviderOption[] => {
+		return providers.map((provider) => {
+			return {
+				id: provider.id,
+				name: provider.name,
+				formFactors: provider.formFactors
+			};
+		});
+	};
+
 	const ensureSourcesAndLayers = (targetMap: maplibregl.Map | undefined) => {
 		if (!targetMap || !targetMap.isStyleLoaded()) {
 			return;
@@ -402,7 +445,7 @@
 				paint: {
 					'fill-color': '#0ea5e9',
 					'fill-opacity': 0.12,
-					'fill-outline-color': '#0284c7'
+					'fill-outline-color': '#2563eb'
 				}
 			});
 		}
@@ -566,6 +609,68 @@
 		ensureSourcesAndLayers(targetMap);
 		const source = targetMap.getSource(ZONES_SOURCE_ID) as maplibregl.GeoJSONSource | undefined;
 		source?.setData(zoneData);
+	};
+
+	const filterStationsByProvider = (
+		data: FeatureCollection<Point, StationFeatureProperties>,
+		providerId: string | null
+	): FeatureCollection<Point, StationFeatureProperties> => {
+		if (!providerId) {
+			return data;
+		}
+		return {
+			type: 'FeatureCollection',
+			features: data.features.filter((feature) => feature.properties.provider_id === providerId)
+		};
+	};
+
+	const filterVehicleCollectionsByProvider = (
+		collections: VehicleCollections,
+		providerId: string | null
+	): VehicleCollections => {
+		if (!providerId) {
+			return collections;
+		}
+		return vehicle_source_configs.reduce((acc, config) => {
+			const original = collections[config.icon] ?? create_empty_vehicle_collection();
+			acc[config.icon] = {
+				type: 'FeatureCollection',
+				features: original.features.filter(
+					(feature) => feature.properties.provider_id === providerId
+				)
+			};
+			return acc;
+		}, {} as VehicleCollections);
+	};
+
+	const filterZoneDataByProvider = (
+		data: ZoneFeatureCollection,
+		providerId: string | null
+	): ZoneFeatureCollection => {
+		if (!providerId) {
+			return data;
+		}
+		return {
+			type: 'FeatureCollection',
+			features: data.features.filter((feature) => feature.properties.provider_id === providerId)
+		};
+	};
+
+	const applyProviderFilter = () => {
+		const selectedProvider = providerFilterId;
+		const filteredStations = filterStationsByProvider(fullStationData, selectedProvider);
+		const filteredVehicles = filterVehicleCollectionsByProvider(
+			fullVehicleDataByIcon,
+			selectedProvider
+		);
+		const filteredZones = filterZoneDataByProvider(fullZoneData, selectedProvider);
+		setStationSourceData(filteredStations, map);
+		setVehicleSourceData(filteredVehicles, map);
+		setZoneSourceData(filteredZones, map);
+	};
+
+	const toggleProviderFilter = (providerId: string) => {
+		providerFilterId = providerFilterId === providerId ? null : providerId;
 	};
 
 	const styleListeners = new WeakMap<maplibregl.Map, () => void>();
@@ -1001,11 +1106,6 @@
 		removeSourcesAndLayers(targetMap);
 	};
 
-	const emptyStationCollection = () => ({
-		type: 'FeatureCollection' as const,
-		features: [] as Feature<Point, StationFeatureProperties>[]
-	});
-
 	const resetCachedData = () => {
 		stationById = new Map<string, RentalStation>();
 		vehicleById = new Map<string, RentalVehicle>();
@@ -1015,9 +1115,14 @@
 
 	const setEmptyCollections = (targetMap: maplibregl.Map | undefined) => {
 		resetCachedData();
-		setStationSourceData(emptyStationCollection(), targetMap);
-		setVehicleSourceData(create_empty_vehicle_collections(), targetMap);
-		setZoneSourceData(create_empty_zone_collection(), targetMap);
+		fullStationData = create_empty_station_collection();
+		fullVehicleDataByIcon = create_empty_vehicle_collections();
+		fullZoneData = create_empty_zone_collection();
+		setStationSourceData(fullStationData, targetMap);
+		setVehicleSourceData(fullVehicleDataByIcon, targetMap);
+		setZoneSourceData(fullZoneData, targetMap);
+		providerOptions = [];
+		providerFilterId = null;
 	};
 
 	const fetchRentals = async () => {
@@ -1058,14 +1163,24 @@
 			stationById = new Map<string, RentalStation>(
 				stations.map((station) => [createScopedId(station.providerId, station.id), station])
 			);
+			const stationFeatures = buildStationFeatures(stations);
 			const vehicles = data?.vehicles ?? [];
 			vehicleById = new Map<string, RentalVehicle>(
 				vehicles.map((vehicle) => [createScopedId(vehicle.providerId, vehicle.id), vehicle])
 			);
+			const vehicleCollections = buildVehicleFeatures(vehicles);
 			zones = data?.zones ?? [];
-			setZoneSourceData(buildZoneFeatures(zones), map);
-			setStationSourceData(buildStationFeatures(stations), map);
-			setVehicleSourceData(buildVehicleFeatures(vehicles), map);
+			const zoneFeatures = buildZoneFeatures(zones);
+			fullStationData = stationFeatures;
+			fullVehicleDataByIcon = vehicleCollections;
+			fullZoneData = zoneFeatures;
+			const options = buildProviderOptionsList(providers);
+			options.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+			providerOptions = options;
+			if (providerFilterId && !options.some((option) => option.id === providerFilterId)) {
+				providerFilterId = null;
+			}
+			applyProviderFilter();
 			loadedBounds = expandedBounds;
 		} catch (error) {
 			console.error('Failed to load rental data', error);
@@ -1102,9 +1217,43 @@
 		fetchRentals();
 	});
 
+	$effect(() => {
+		applyProviderFilter();
+	});
+
 	onDestroy(() => {
 		if (activeMap) {
 			cleanupMapIntegration(activeMap);
 		}
 	});
 </script>
+
+{#if providerOptions.length > 1}
+	<Control position="bottom-right" class="mb-5">
+		<div class="flex flex-col items-end space-y-2">
+			{#each providerOptions as option (option.id)}
+				<button
+					type="button"
+					title={option.name}
+					class={cn(
+						'inline-flex max-w-sm items-center gap-2 rounded-md border-2 px-3 py-1.5 text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500',
+						providerFilterId === option.id
+							? 'border-blue-600 bg-accent text-accent-foreground'
+							: 'border-muted bg-popover text-foreground hover:bg-accent hover:text-accent-foreground'
+					)}
+					onclick={() => toggleProviderFilter(option.id)}
+					aria-pressed={providerFilterId === option.id}
+				>
+					<span class="truncate">{option.name}</span>
+					<span class="flex items-center gap-1">
+						{#each option.formFactors as formFactor (formFactor)}
+							<svg class="h-4 w-4 fill-current" aria-hidden="true" focusable="false">
+								<use href={`#${svg_symbol_by_form_factor[formFactor]}`} />
+							</svg>
+						{/each}
+					</span>
+				</button>
+			{/each}
+		</div>
+	</Control>
+{/if}
