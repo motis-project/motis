@@ -120,6 +120,10 @@ std::vector<double> mixer::get_threshold(
     n::interval<nigiri::unixtime_t> const& intvl,
     std::int64_t const doubling_distance) const {
 
+  if (intvl.from_ >= intvl.to_) {
+    return {};
+  }
+
   auto threshold = std::vector(static_cast<size_t>(intvl.size().count()),
                                std::numeric_limits<double>::max());
 
