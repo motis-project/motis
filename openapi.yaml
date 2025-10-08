@@ -2768,6 +2768,7 @@ components:
         - name
         - bbox
         - vehicleTypes
+        - formFactors
         - defaultRestrictions
         - globalGeofencingRules
       properties:
@@ -2799,6 +2800,11 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/RentalVehicleType'
+        formFactors:
+          type: array
+          description: List of form factors offered by this provider
+          items:
+            $ref: '#/components/schemas/RentalFormFactor'
         defaultRestrictions:
           $ref: '#/components/schemas/RentalZoneRestrictions'
         globalGeofencingRules:

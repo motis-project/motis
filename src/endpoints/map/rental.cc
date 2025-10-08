@@ -1,7 +1,11 @@
 #include "motis/endpoints/map/rental.h"
 
 #include <cassert>
+#include <array>
+#include <utility>
+#include <vector>
 
+#include "utl/enumerate.h"
 #include "utl/helpers/algorithm.h"
 #include "utl/to_vec.h"
 
@@ -85,6 +89,13 @@ api::rentals_response rental::operator()(
   };
 
   auto const add_provider = [&](gbfs::gbfs_provider const* provider) {
+    auto form_factors = std::vector<api::RentalFormFactorEnum>{};
+    for (auto const& vt : provider->vehicle_types_) {
+      auto const ff = gbfs::to_api_form_factor(vt.form_factor_);
+      if (utl::find(form_factors, ff) == end(form_factors)) {
+        form_factors.push_back(ff);
+      }
+    }
     res.providers_.emplace_back(api::RentalProvider{
         .id_ = provider->id_,
         .name_ = provider->sys_info_.name_,
@@ -105,6 +116,7 @@ api::rentals_response rental::operator()(
                       gbfs::to_api_return_constraint(vt.return_constraint_),
                   .returnConstraintGuessed_ = !vt.known_return_constraint_};
             }),
+        .formFactors_ = std::move(form_factors),
         .defaultRestrictions_ =
             restrictions_to_api(provider->default_restrictions_),
         .globalGeofencingRules_ = utl::to_vec(
@@ -156,25 +168,40 @@ api::rentals_response rental::operator()(
     if (query.withStations_) {
       for (auto const& st : provider->stations_ | std::views::values) {
         if (in_bbox(st.info_.pos_)) {
-          auto form_factors = hash_set<api::RentalFormFactorEnum>{};
+          auto form_factor_counts =
+              std::array<std::uint64_t,
+                         std::to_underlying(gbfs::vehicle_form_factor::kOther) +
+                             1>{};
           auto types_available = std::map<std::string, std::uint64_t>{};
           auto docks_available = std::map<std::string, std::uint64_t>{};
 
           for (auto const& [vti, count] : st.status_.vehicle_types_available_) {
             auto const& vt = provider->vehicle_types_[vti];
-            form_factors.insert(gbfs::to_api_form_factor(vt.form_factor_));
+            form_factor_counts[std::to_underlying(vt.form_factor_)] += count;
             types_available[vt.id_] = count;
           }
           for (auto const& [vti, count] : st.status_.vehicle_docks_available_) {
             auto const& vt = provider->vehicle_types_[vti];
-            form_factors.insert(gbfs::to_api_form_factor(
-                provider->vehicle_types_[vti].form_factor_));
+            form_factor_counts[std::to_underlying(vt.form_factor_)] += count;
             docks_available[vt.id_] = count;
           }
+
+          auto form_factors = std::vector<gbfs::vehicle_form_factor>{};
+          for (auto const [i, c] : utl::enumerate(form_factor_counts)) {
+            if (c > 0) {
+              form_factors.push_back(static_cast<gbfs::vehicle_form_factor>(i));
+            }
+          }
+
           if (form_factors.empty()) {
             for (auto const& vt : provider->vehicle_types_) {
-              form_factors.insert(gbfs::to_api_form_factor(vt.form_factor_));
+              form_factors.push_back(vt.form_factor_);
             }
+          } else {
+            utl::sort(form_factors, [&](auto const a, auto const b) {
+              return form_factor_counts[std::to_underlying(a)] >
+                     form_factor_counts[std::to_underlying(b)];
+            });
           }
 
           res.stations_.emplace_back(api::RentalStation{
@@ -191,7 +218,8 @@ api::rentals_response rental::operator()(
               .isRenting_ = st.status_.is_renting_,
               .isReturning_ = st.status_.is_returning_,
               .numVehiclesAvailable_ = st.status_.num_vehicles_available_,
-              .formFactors_ = utl::to_vec(form_factors),
+              .formFactors_ =
+                  utl::to_vec(form_factors, gbfs::to_api_form_factor),
               .vehicleTypesAvailable_ = std::move(types_available),
               .vehicleDocksAvailable_ = std::move(docks_available),
               .stationArea_ = st.info_.station_area_ != nullptr
