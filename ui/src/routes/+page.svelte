@@ -681,7 +681,7 @@
 	{#if showMap}
 		{#if activeTab != 'isochrones'}
 			<RailViz {map} {bounds} {zoom} />
-			<Rentals {map} {bounds} {zoom} showZones={hasDebug} />
+			<Rentals {map} {bounds} {zoom} />
 		{/if}
 		<!-- Isochrones cannot be hidden the same way as RailViz -->
 		<Isochrones

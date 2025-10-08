@@ -28,13 +28,11 @@
 	let {
 		map,
 		bounds,
-		zoom,
-		showZones
+		zoom
 	}: {
 		map: maplibregl.Map | undefined;
 		bounds: maplibregl.LngLatBoundsLike | undefined;
 		zoom: number;
-		showZones: boolean;
 	} = $props();
 
 	const MIN_ZOOM = 14;
@@ -187,6 +185,7 @@
 
 	let providerOptions = $state([] as ProviderOption[]);
 	let providerFilterId = $state<string | null>(null);
+	let showZones = $derived(providerFilterId != null || providerOptions.length <= 1);
 
 	let fullStationData = create_empty_station_collection();
 	let fullVehicleDataByIcon = create_empty_vehicle_collections();
@@ -663,7 +662,9 @@
 			fullVehicleDataByIcon,
 			selectedProvider
 		);
-		const filteredZones = filterZoneDataByProvider(fullZoneData, selectedProvider);
+		const filteredZones = showZones
+			? filterZoneDataByProvider(fullZoneData, selectedProvider)
+			: create_empty_zone_collection();
 		setStationSourceData(filteredStations, map);
 		setVehicleSourceData(filteredVehicles, map);
 		setZoneSourceData(filteredZones, map);
@@ -1144,7 +1145,7 @@
 
 		try {
 			const { data, error } = await rentals({
-				query: { max, min, withZones: showZones }
+				query: { max, min, withZones: true }
 			});
 
 			if (token !== requestToken) {
