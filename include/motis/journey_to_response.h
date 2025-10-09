@@ -30,6 +30,7 @@ double get_level(osr::ways const*,
 std::optional<std::vector<api::Alert>> get_alerts(
     nigiri::rt::frun const&,
     std::optional<std::pair<nigiri::rt::run_stop, nigiri::event_type>> const&,
+    bool fuzzy_stop,
     std::optional<std::vector<std::string>> const& language);
 
 api::Itinerary journey_to_response(
@@ -45,7 +46,7 @@ api::Itinerary journey_to_response(
     osr::elevation_storage const*,
     nigiri::shapes_storage const*,
     gbfs::gbfs_routing_data&,
-    location_place_map_t const*,
+    adr_ext const*,
     tz_map_t const*,
     nigiri::routing::journey const&,
     place_t const& start,

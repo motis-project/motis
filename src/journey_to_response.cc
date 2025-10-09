@@ -97,6 +97,7 @@ std::optional<fare_indices> get_fare_indices(
 std::optional<std::vector<api::Alert>> get_alerts(
     n::rt::frun const& fr,
     std::optional<std::pair<n::rt::run_stop, n::event_type>> const& s,
+    bool const fuzzy_stop,
     std::optional<std::vector<std::string>> const& language) {
   if (fr.rtt_ == nullptr || !fr.is_scheduled()) {  // TODO added
     return std::nullopt;
@@ -191,7 +192,7 @@ std::optional<std::vector<api::Alert>> get_alerts(
   for (auto const& t : tt.trip_ids_[x]) {
     auto const src = tt.trip_id_src_[t];
     rtt->alerts_.for_each_alert(
-        tt, src, x, fr.rt_, l,
+        tt, src, x, fr.rt_, l, fuzzy_stop,
         [&](n::alert_idx_t const a) { alerts.emplace_back(to_alert(a)); });
   }
 
@@ -211,7 +212,7 @@ api::Itinerary journey_to_response(
     osr::elevation_storage const* elevations,
     n::shapes_storage const* shapes,
     gbfs::gbfs_routing_data& gbfs_rd,
-    location_place_map_t const* lp,
+    adr_ext const* lp,
     tz_map_t const* tz_map,
     n::routing::journey const& j,
     place_t const& start,
@@ -379,7 +380,7 @@ api::Itinerary journey_to_response(
                               n::event_type const ev_type) {
       auto p = ::motis::to_place(&tt, &tags, w, pl, matches, lp, tz_map, s,
                                  start, dest);
-      p.alerts_ = get_alerts(*s.fr_, std::pair{s, ev_type}, language);
+      p.alerts_ = get_alerts(*s.fr_, std::pair{s, ev_type}, false, language);
       return p;
     };
 
@@ -482,7 +483,7 @@ api::Itinerary journey_to_response(
                         fare_indices.and_then([](auto&& x) {
                           return std::optional{x.effective_fare_leg_idx_};
                         }),
-                    .alerts_ = get_alerts(fr, std::nullopt, language),
+                    .alerts_ = get_alerts(fr, std::nullopt, false, language),
                     .loopedCalendarSince_ =
                         (fr.is_scheduled() &&
                          src != n::source_idx_t::invalid() &&

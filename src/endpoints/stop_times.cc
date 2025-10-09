@@ -295,7 +295,7 @@ std::vector<api::Place> other_stops_impl(std::string_view trip_id,
                                          osr::ways const* w,
                                          osr::platforms const* pl,
                                          platform_matches_t const* matches,
-                                         location_place_map_t const* lp,
+                                         adr_ext const* lp,
                                          tz_map_t const* tz) {
   auto const convert_stop = [&](n::rt::run_stop const& stop) {
     auto result = to_place(tt, &tags, w, pl, matches, lp, tz, stop);
@@ -427,7 +427,7 @@ api::stoptimes_response stop_times::operator()(
                 fr,
                 std::pair{s, fr.stop_range_.from_ != 0U ? n::event_type::kArr
                                                         : n::event_type::kDep},
-                query.language_);
+                true, query.language_);
             if (fr.stop_range_.from_ != 0U) {
               place.arrival_ = {s.time(n::event_type::kArr)};
               place.scheduledArrival_ = {s.scheduled_time(n::event_type::kArr)};

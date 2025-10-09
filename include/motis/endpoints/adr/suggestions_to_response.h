@@ -13,6 +13,7 @@ namespace motis {
 api::geocode_response suggestions_to_response(
     adr::typeahead const&,
     adr::formatter const&,
+    adr_ext const*,
     nigiri::timetable const*,
     tag_lookup const*,
     osr::ways const* w,
@@ -20,6 +21,7 @@ api::geocode_response suggestions_to_response(
     platform_matches_t const* matches,
     basic_string<adr::language_idx_t> const& lang_indices,
     std::vector<adr::token> const& token_pos,
-    std::vector<adr::suggestion> const&);
+    std::vector<adr::suggestion> const&,
+    unsigned const api_version);
 
 }  // namespace motis
