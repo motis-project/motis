@@ -8,6 +8,7 @@
 	import { language } from './i18n/translation';
 	import maplibregl from 'maplibre-gl';
 	import { onClickStop } from '$lib/utils';
+	import { getModeStyle, type LegLike } from './modeStyle';
 
 	let {
 		items = $bindable([]),
@@ -165,7 +166,10 @@
 						label={item.label}
 					>
 						{#if item.match?.type == 'STOP'}
-							<Bus />
+							{@const modeIcon = getModeStyle({ mode: item.match.modes![0] } as LegLike)}
+							<svg class="relative mr-2 min-w-6 min-h-6 max-w-6 max-h-6 rounded-full">
+								<use xlink:href={`#${modeIcon}`}></use>
+							</svg>
 						{:else if item.match?.type == 'ADDRESS'}
 							<House />
 						{:else if item.match?.type == 'PLACE'}
