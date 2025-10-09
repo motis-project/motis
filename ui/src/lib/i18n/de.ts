@@ -26,6 +26,9 @@ const translations: Translations = {
 	later: 'später',
 	earlier: 'früher',
 	track: 'Gleis',
+	platform: 'Steig',
+	trackAbr: 'Gl.',
+	platformAbr: 'Stg.',
 	arrivalOnTrack: 'Ankunft auf Gleis',
 	switchToArrivals: 'Wechsel zu Ankünften',
 	switchToDepartures: 'Wechsel zu Abfahrten',
@@ -82,7 +85,7 @@ const translations: Translations = {
 	HIGHSPEED_RAIL: 'Hochgeschwindigkeitszug',
 	LONG_DISTANCE: 'Intercityzug',
 	NIGHT_RAIL: 'Nachtzug',
-	REGIONAL_FAST_RAIL: 'Regionalexpresszug',
+	REGIONAL_FAST_RAIL: 'Schnellzug',
 	REGIONAL_RAIL: 'Regionalzug',
 	OTHER: 'Andere',
 	routingSegments: {

@@ -11,12 +11,18 @@
 	import { language, t } from '$lib/i18n/translation';
 	import type { RequestResult } from '@hey-api/client-fetch';
 	import { onClickStop, onClickTrip } from '$lib/utils';
+	import { getModeLabel } from './map/getModeLabel';
+	import { posToLocation } from './Location';
+	import type { Location } from './Location';
+	import maplibregl from 'maplibre-gl';
 
 	let {
 		stopId,
 		stopName,
 		time: queryTime,
 		stopNameFromResponse = $bindable(),
+		stop = $bindable(),
+		stopMarker = $bindable(),
 		arriveBy
 	}: {
 		stopId: string;
@@ -24,6 +30,8 @@
 		time: Date;
 		arriveBy?: boolean;
 		stopNameFromResponse: string;
+		stop: Location | undefined;
+		stopMarker: maplibregl.Marker | undefined;
 	} = $props();
 
 	let query = $derived({
@@ -49,13 +57,16 @@
 				throw new Error('HTTP ' + response.response?.status);
 			}
 			stopNameFromResponse = response.data?.place?.name || '';
+			let placeFromResponse = response.data?.place;
+			stop = posToLocation(
+				maplibregl.LngLat.convert([placeFromResponse.lon, placeFromResponse.lat])
+			);
+			stopMarker?.setLngLat(stop.match!);
 			return response.data!;
 		});
 </script>
 
-<div
-	class="text-base grid gap-y-2 gap-x-2 grid-cols-[repeat(3,max-content)_auto] auto-rows-fr items-center"
->
+<div class="gap-y-4 mb-1 text-base grid grid-cols-[auto_auto_1fr] items-start content-start">
 	<div class="col-span-full w-full flex items-center justify-center">
 		<Button
 			class="font-bold"
@@ -73,7 +84,7 @@
 	</div>
 	{#each responses as r, rI (rI)}
 		{#await r}
-			<div class="col-span-full w-full flex items-center justify-center">
+			<div class="flex items-center justify-center">
 				<LoaderCircle class="animate-spin w-12 h-12 m-20" />
 			</div>
 		{:then r}
@@ -95,37 +106,46 @@
 					<div class="border-t w-full h-0"></div>
 				</div>
 			{/if}
-
 			{#each r.stopTimes as stopTime, i (i)}
 				{@const timestamp = arriveBy ? stopTime.place.arrival! : stopTime.place.departure!}
 				{@const scheduledTimestamp = arriveBy
 					? stopTime.place.scheduledArrival!
 					: stopTime.place.scheduledDeparture!}
-				<Route class="w-fit max-w-32 text-ellipsis overflow-hidden" l={stopTime} {onClickTrip} />
-				<Time
-					variant="schedule"
-					timeZone={stopTime.place.tz}
-					isRealtime={stopTime.realTime}
-					{timestamp}
-					{scheduledTimestamp}
-					queriedTime={queryTime.toISOString()}
-				/>
-				<Time
-					variant="realtime"
-					timeZone={stopTime.place.tz}
-					isRealtime={stopTime.realTime}
-					{timestamp}
-					{scheduledTimestamp}
-				/>
-				<span>
-					<div class="flex items-center text-muted-foreground min-w-0">
-						<div><ArrowRight class="stroke-muted-foreground h-4 w-4" /></div>
-						<span class="ml-1 leading-tight text-ellipsis overflow-hidden">
+				<Route class="max-w-20 text-ellipsis overflow-hidden" l={stopTime} {onClickTrip} />
+				<div class="flex px-4 justify-between gap-4">
+					<Time
+						variant="schedule"
+						timeZone={stopTime.place.tz}
+						isRealtime={stopTime.realTime}
+						{timestamp}
+						{scheduledTimestamp}
+						queriedTime={queryTime.toISOString()}
+						{arriveBy}
+					/>
+					<Time
+						variant="realtime"
+						timeZone={stopTime.place.tz}
+						isRealtime={stopTime.realTime}
+						{timestamp}
+						{scheduledTimestamp}
+						{arriveBy}
+					/>
+				</div>
+				<div class="w-full">
+					<div class="flex items-start justify-between text-base">
+						<div class="flex items-start gap-1">
+							<ArrowRight class="mt-1 shrink-0 stroke-muted-foreground h-4 w-4" />
 							{stopTime.headsign}
 							{#if !stopTime.headsign || !stopTime.tripTo.name.startsWith(stopTime.headsign)}
 								({stopTime.tripTo.name})
 							{/if}
-						</span>
+						</div>
+						{#if stopTime.place.track}
+							<span class="mt-1 text-nowrap px-1 border text-xs rounded-xl">
+								{getModeLabel(stopTime.mode) == 'Track' ? t.trackAbr : t.platformAbr}
+								{stopTime.place.track}
+							</span>
+						{/if}
 					</div>
 					{#if stopTime.pickupDropoffType == 'NOT_ALLOWED'}
 						<div class="flex items-center text-destructive text-sm">
@@ -149,7 +169,7 @@
 							</span>
 						</div>
 					{/if}
-				</span>
+				</div>
 			{/each}
 			{#if !r.stopTimes.length}
 				<div class="col-span-full w-full flex items-center justify-center">

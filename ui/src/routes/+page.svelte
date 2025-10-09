@@ -64,6 +64,7 @@
 	} from '$lib/Modes';
 	import { defaultQuery, omitDefaults } from '$lib/defaults';
 	import { LEVEL_MIN_ZOOM } from '$lib/constants';
+	import StopGeoJSON from '$lib/StopsGeoJSON.svelte';
 
 	const urlParams = browser ? new URLSearchParams(window.location.search) : undefined;
 
@@ -127,7 +128,7 @@
 		}
 	};
 
-	function parseIntOr(s: string | null | undefined, d: number) {
+	function parseIntOr<T>(s: string | null | undefined, d: T): T | number {
 		if (s) {
 			const v = parseInt(s);
 			return isNaN(v) ? d : v;
@@ -139,11 +140,13 @@
 	let fromMarker = $state<maplibregl.Marker>();
 	let toMarker = $state<maplibregl.Marker>();
 	let oneMarker = $state<maplibregl.Marker>();
+	let stopMarker = $state<maplibregl.Marker>();
 	let from = $state<Location>(
 		parseLocation(urlParams?.get('fromPlace'), urlParams?.get('fromName'))
 	);
 	let to = $state<Location>(parseLocation(urlParams?.get('toPlace'), urlParams?.get('toName')));
 	let one = $state<Location>(parseLocation(urlParams?.get('one'), urlParams?.get('oneName')));
+	let stop = $state<Location>();
 	let time = $state<Date>(new Date(urlParams?.get('time') || Date.now()));
 	let timetableView = $state(urlParams?.get('timetableView') != 'false');
 	let searchWindow = $state(
@@ -155,6 +158,11 @@
 		urlParams?.get('numItineraries')
 			? parseIntOr(urlParams.get('numItineraries'), defaultQuery.numItineraries)
 			: defaultQuery.numItineraries
+	);
+	let maxItineraries = $state(
+		urlParams?.get('maxItineraries')
+			? parseIntOr(urlParams.get('maxItineraries'), undefined)
+			: undefined
 	);
 	let arriveBy = $state<boolean>(urlParams?.get('arriveBy') == 'true');
 	let useRoutedTransfers = $state(
@@ -249,6 +257,7 @@
 						timetableView,
 						searchWindow,
 						numItineraries,
+						maxItineraries,
 						withFares: true,
 						slowDirect,
 						fastestDirectFactor: 1.5,
@@ -603,6 +612,7 @@
 				</Control>
 				{#if showMap}
 					<ItineraryGeoJson itinerary={page.state.selectedItinerary} {level} />
+					<StopGeoJSON itinerary={page.state.selectedItinerary} />
 				{/if}
 			{/if}
 
@@ -636,6 +646,8 @@
 								stopId={page.state.selectedStop.stopId}
 								stopName={page.state.selectedStop.name}
 								time={page.state.selectedStop.time}
+								bind:stop
+								bind:stopMarker
 								bind:stopNameFromResponse
 								arriveBy={page.state.stopArriveBy}
 							/>
@@ -690,6 +702,16 @@
 				{level}
 				bind:location={from}
 				bind:marker={fromMarker}
+			/>
+		{/if}
+
+		{#if stop && page.state.showDepartures && activeTab != 'isochrones'}
+			<Marker
+				color="black"
+				draggable={false}
+				{level}
+				bind:location={stop}
+				bind:marker={stopMarker}
 			/>
 		{/if}
 

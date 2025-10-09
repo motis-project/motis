@@ -317,6 +317,45 @@ std::vector<n::routing::offset> get_offsets(
   return offsets;
 }
 
+n::interval<n::unixtime_t> shrink(bool const keep_late,
+                                  std::size_t const max_size,
+                                  n::interval<n::unixtime_t> search_interval,
+                                  std::vector<n::routing::journey>& journeys) {
+  if (journeys.size() <= max_size) {
+    return search_interval;
+  }
+
+  if (keep_late) {
+    auto cutoff_it =
+        std::next(journeys.rbegin(), static_cast<int>(max_size - 1));
+    auto last_arr_time = cutoff_it->start_time_;
+    ++cutoff_it;
+    while (cutoff_it != rend(journeys) &&
+           cutoff_it->start_time_ == last_arr_time) {
+      ++cutoff_it;
+    }
+    if (cutoff_it == rend(journeys)) {
+      return search_interval;
+    }
+    search_interval.from_ = cutoff_it->start_time_ + std::chrono::minutes{1};
+    journeys.erase(begin(journeys), cutoff_it.base());
+  } else {
+    auto cutoff_it = std::next(begin(journeys), static_cast<int>(max_size - 1));
+    auto last_dep_time = cutoff_it->start_time_;
+    while (cutoff_it != end(journeys) &&
+           cutoff_it->start_time_ == last_dep_time) {
+      ++cutoff_it;
+    }
+    if (cutoff_it == end(journeys)) {
+      return search_interval;
+    }
+    search_interval.to_ = cutoff_it->start_time_;
+    journeys.erase(cutoff_it, end(journeys));
+  }
+
+  return search_interval;
+}
+
 std::vector<n::routing::offset> routing::get_offsets(
     n::rt_timetable const* rtt,
     place_t const& p,
@@ -354,19 +393,20 @@ std::pair<n::routing::query, std::optional<n::unixtime_t>> get_start_time(
     auto const t = std::chrono::time_point_cast<n::i32_minutes>(
         *query.time_.value_or(openapi::now()));
     utl::verify<openapi::bad_request_exception>(
-        tt->external_interval().contains(t),
+        tt == nullptr || tt->external_interval().contains(t),
         "query time is outside of loaded timetable window {}",
-        tt->external_interval());
+        tt ? tt->external_interval() : n::interval<n::unixtime_t>{});
     auto const window =
         std::chrono::duration_cast<n::duration_t>(std::chrono::seconds{
             query.searchWindow_ *
             (query.arriveBy_ ? -1 : 1)});  // TODO redundant minus
-    return {{.start_time_ = query.timetableView_
+    return {{.start_time_ = query.timetableView_ && tt
                                 ? n::routing::start_time_t{n::interval{
                                       tt->external_interval().clamp(
                                           query.arriveBy_ ? t - window : t),
                                       tt->external_interval().clamp(
-                                          query.arriveBy_ ? t : t + window)}}
+                                          query.arriveBy_ ? t + n::duration_t{1}
+                                                          : t + window)}}
                                 : n::routing::start_time_t{t},
              .extend_interval_earlier_ = query.arriveBy_,
              .extend_interval_later_ = !query.arriveBy_},
@@ -397,8 +437,6 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
   if (!w_ || !l_) {
     return {};
   }
-  auto const omit_walk = gbfs_rd.has_data() &&
-                         utl::find(modes, api::ModeEnum::RENTAL) != end(modes);
   auto fastest_direct = kInfinityDuration;
   auto cache = street_routing_cache_t{};
   auto itineraries = std::vector<api::Itinerary>{};
@@ -428,13 +466,12 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
           *tt_, *loc_tree_, time, get_location(from).pos_,
           osr::direction::kForward, max);
       for (auto const& [_, ids] : routings) {
-        route_with_profile(flex::flex_output{*w_, *l_, pl_, matches_, *tags_,
-                                             *tt_, *fa_, ids.front()});
+        route_with_profile(flex::flex_output{*w_, *l_, pl_, matches_, lp_, tz_,
+                                             *tags_, *tt_, *fa_, ids.front()});
       }
     } else if (m == api::ModeEnum::CAR || m == api::ModeEnum::BIKE ||
                m == api::ModeEnum::CAR_PARKING ||
-               m == api::ModeEnum::CAR_DROPOFF ||
-               (!omit_walk && m == api::ModeEnum::WALK)) {
+               m == api::ModeEnum::CAR_DROPOFF || m == api::ModeEnum::WALK) {
       route_with_profile(default_output{
           *w_, to_profile(m, pedestrian_profile, elevation_costs)});
     } else if (m == api::ModeEnum::RENTAL && gbfs_rd.has_data()) {
@@ -560,6 +597,14 @@ std::vector<api::ModeEnum> deduplicate(std::vector<api::ModeEnum> m) {
 api::plan_response routing::operator()(boost::urls::url_view const& url) const {
   metrics_->routing_requests_.Increment();
 
+  auto const query = api::plan_params{url.params()};
+  utl::verify<openapi::bad_request_exception>(
+      !query.maxItineraries_.has_value() ||
+          (*query.maxItineraries_ >= 1 &&
+           *query.maxItineraries_ >= query.numItineraries_),
+      "maxItineraries={} < numItineraries={}",
+      query.maxItineraries_.value_or(0), query.numItineraries_);
+
   auto const rt = rt_;
   auto const rtt = rt->rtt_.get();
   auto const e = rt_->e_.get();
@@ -568,7 +613,6 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
     blocked.reset(new osr::bitvec<osr::node_idx_t>{w_->n_nodes()});
   }
 
-  auto const query = api::plan_params{url.params()};
   auto const api_version = get_api_version(url);
 
   auto const deduplicate = [](auto m) {
@@ -838,6 +882,14 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                      r.journeys_->begin()->departure_time())));
     }
 
+    auto journeys = r.journeys_->els_;
+    auto search_interval = r.interval_;
+    if (query.maxItineraries_.has_value()) {
+      search_interval = shrink(start_time.extend_interval_earlier_,
+                               static_cast<std::size_t>(*query.maxItineraries_),
+                               r.interval_, journeys);
+    }
+
     return {
         .debugOutput_ = join(std::move(query_stats), r.search_stats_.to_map(),
                              std::move(r.algo_stats_)),
@@ -845,7 +897,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
         .to_ = to_p,
         .direct_ = std::move(direct),
         .itineraries_ = utl::to_vec(
-            *r.journeys_,
+            journeys,
             [&, cache = street_routing_cache_t{}](auto&& j) mutable {
               return journey_to_response(
                   w_, l_, pl_, *tt_, *tags_, fa_, e, rtt, matches_, elevations_,
@@ -862,8 +914,9 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                   query.language_);
             }),
         .previousPageCursor_ =
-            fmt::format("EARLIER|{}", to_seconds(r.interval_.from_)),
-        .nextPageCursor_ = fmt::format("LATER|{}", to_seconds(r.interval_.to_)),
+            fmt::format("EARLIER|{}", to_seconds(search_interval.from_)),
+        .nextPageCursor_ =
+            fmt::format("LATER|{}", to_seconds(search_interval.to_)),
     };
   }
 

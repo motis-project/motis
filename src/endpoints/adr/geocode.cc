@@ -43,9 +43,11 @@ api::geocode_response geocode::operator()(
 
   auto lang_indices = basic_string<a::language_idx_t>{{a::kDefaultLang}};
   if (params.language_.has_value()) {
-    auto const l_idx = t_.resolve_language(*params.language_);
-    if (l_idx != a::language_idx_t::invalid()) {
-      lang_indices.push_back(l_idx);
+    for (auto const& language : *params.language_) {
+      auto const l_idx = t_.resolve_language(language);
+      if (l_idx != a::language_idx_t::invalid()) {
+        lang_indices.push_back(l_idx);
+      }
     }
   }
   auto const token_pos = a::get_suggestions<false>(

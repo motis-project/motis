@@ -28,6 +28,9 @@ const translations: Translations = {
 	switchToArrivals: 'Przełącz na przyjazdy',
 	switchToDepartures: 'Przełącz na odjazdy',
 	track: 'Tor',
+	platform: 'Peron',
+	trackAbr: 'T.',
+	platformAbr: 'Pr.',
 	arrivalOnTrack: 'Przyjazd na tor',
 	tripIntermediateStops: (n: number) => {
 		if (n == 0) {
@@ -83,7 +86,7 @@ const translations: Translations = {
 	HIGHSPEED_RAIL: 'Kolej dużych prędkości',
 	LONG_DISTANCE: 'Kolej dalekobieżna',
 	NIGHT_RAIL: 'Nocne pociągi',
-	REGIONAL_FAST_RAIL: 'Przyspieszona kolej regionalna',
+	REGIONAL_FAST_RAIL: 'Pociąg pospieszny',
 	REGIONAL_RAIL: 'Kolej regionalna',
 	OTHER: 'Inne',
 	routingSegments: {

@@ -118,7 +118,7 @@ n::unixtime_t center(nr::journey const& j) {
 std::vector<double> mixer::get_threshold(
     std::vector<nr::journey> const& v,
     n::interval<nigiri::unixtime_t> const& intvl,
-    std::int64_t const doubling_distance) const {
+    double const slope) const {
 
   if (intvl.from_ >= intvl.to_) {
     return {};
@@ -131,9 +131,9 @@ std::vector<double> mixer::get_threshold(
     auto const cost_j = cost(j);
     auto const center_j = center(j);
     auto const f_j = [&](n::unixtime_t const t) -> double {
-      return cost_j * (1.0 + static_cast<double>(
-                                 std::chrono::abs(center_j - t).count()) /
-                                 static_cast<double>(doubling_distance));
+      return slope *
+                 static_cast<double>(std::chrono::abs(center_j - t).count()) +
+             cost_j;
     };
     for (auto [i, t] = std::tuple{0U, intvl.from_}; t < intvl.to_;
          ++i, t += 1min) {
@@ -278,13 +278,11 @@ void mixer::mix(n::pareto_set<nr::journey> const& pt_journeys,
     });
   };
 
-  auto const pt_threshold =
-      get_threshold(pt_journeys.els_, intvl, pt_doubling_distance_);
+  auto const pt_threshold = get_threshold(pt_journeys.els_, intvl, pt_slope_);
   threshold_filter(pt_threshold);
   auto const pt_filtered_n = taxi_journeys.size();
 
-  auto const odm_threshold =
-      get_threshold(taxi_journeys, intvl, odm_doubling_distance_);
+  auto const odm_threshold = get_threshold(taxi_journeys, intvl, odm_slope_);
   threshold_filter(odm_threshold);
 
   if (stats_path) {
@@ -314,10 +312,10 @@ std::vector<nr::journey> get_mixer_input(
 
 mixer get_default_mixer() {
   return mixer{.direct_taxi_penalty_ = 20.0,
-               .pt_doubling_distance_ = 30,
-               .odm_doubling_distance_ = 90,
+               .pt_slope_ = 2.2,
+               .odm_slope_ = 2.0,
                .taxi_cost_ = {{0, 20.6}, {1, 4.9}},
-               .transfer_cost_ = {{0, 10}}};
+               .transfer_cost_ = {{0, 8.0}}};
 }
 
 std::ostream& operator<<(std::ostream& o, mixer const& m) {
@@ -328,8 +326,8 @@ mixer tag_invoke(boost::json::value_to_tag<mixer>,
                  boost::json::value const& jv) {
   auto m = mixer{};
   m.direct_taxi_penalty_ = jv.at("direct_taxi_penalty").as_double();
-  m.pt_doubling_distance_ = jv.at("pt_doubling_distance").as_int64();
-  m.odm_doubling_distance_ = jv.at("odm_doubling_distance").as_int64();
+  m.pt_slope_ = jv.at("pt_slope").as_double();
+  m.odm_slope_ = jv.at("odm_slope").as_double();
   m.taxi_cost_ =
       boost::json::value_to<std::vector<cost_threshold>>(jv.at("taxi_cost"));
   m.transfer_cost_ = boost::json::value_to<std::vector<cost_threshold>>(
@@ -342,8 +340,8 @@ void tag_invoke(boost::json::value_from_tag,
                 mixer const& m) {
   jv = boost::json::object{
       {"direct_taxi_penalty_", m.direct_taxi_penalty_},
-      {"pt_doubling_distance", m.pt_doubling_distance_},
-      {"odm_doubling_distance", m.odm_doubling_distance_},
+      {"pt_slope", m.pt_slope_},
+      {"odm_slope", m.odm_slope_},
       {"taxi_cost", boost::json::value_from(m.taxi_cost_)},
       {"transfer_cost", boost::json::value_from(m.transfer_cost_)}};
 }

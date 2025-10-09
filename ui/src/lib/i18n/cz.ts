@@ -28,6 +28,9 @@ const translations: Translations = {
 	switchToArrivals: 'Přepni na příjezdy',
 	switchToDepartures: 'Přepni na odjezdy',
 	track: 'Kolej',
+	platform: 'Nástupiště',
+	platformAbr: 'Nást.',
+	trackAbr: 'K.',
 	arrivalOnTrack: 'Příjezd na kolej',
 	tripIntermediateStops: (n: number) => {
 		if (n == 0) {
@@ -83,7 +86,7 @@ const translations: Translations = {
 	HIGHSPEED_RAIL: 'Vysokorychlostní železnice',
 	LONG_DISTANCE: 'Dálková železnice',
 	NIGHT_RAIL: 'Noční vlaky',
-	REGIONAL_FAST_RAIL: 'Zrychlená regionální železnice',
+	REGIONAL_FAST_RAIL: 'Zrychlená železnice',
 	REGIONAL_RAIL: 'Regionální železnice',
 	OTHER: 'Jiné',
 	routingSegments: {

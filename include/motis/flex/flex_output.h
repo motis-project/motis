@@ -17,6 +17,8 @@ struct flex_output : public output {
               osr::lookup const&,
               osr::platforms const*,
               platform_matches_t const*,
+              location_place_map_t const*,
+              tz_map_t const*,
               tag_lookup const&,
               nigiri::timetable const&,
               flex_areas const&,

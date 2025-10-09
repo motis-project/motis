@@ -3,6 +3,7 @@
 #include <iostream>
 
 #include "boost/asio/io_context.hpp"
+#include "boost/asio/post.hpp"
 
 #include "ctx/scheduler.h"
 
@@ -20,9 +21,10 @@ struct ctx_exec {
         [&, f = std::move(f), cb = std::move(cb)]() mutable {
           try {
             auto res = std::make_shared<net::web_server::http_res_t>(f());
-            io_.post([cb = std::move(cb), res = std::move(res)]() mutable {
-              cb(std::move(*res));
-            });
+            boost::asio::post(
+                io_, [cb = std::move(cb), res = std::move(res)]() mutable {
+                  cb(std::move(*res));
+                });
           } catch (...) {
             std::cerr << "UNEXPECTED EXCEPTION\n";
 
@@ -32,9 +34,10 @@ struct ctx_exec {
             str.prepare_payload();
 
             auto res = std::make_shared<net::web_server::http_res_t>(str);
-            io_.post([cb = std::move(cb), res = std::move(res)]() mutable {
-              cb(std::move(*res));
-            });
+            boost::asio::post(
+                io_, [cb = std::move(cb), res = std::move(res)]() mutable {
+                  cb(std::move(*res));
+                });
           }
         },
         CTX_LOCATION);

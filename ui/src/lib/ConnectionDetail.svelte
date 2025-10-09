@@ -4,7 +4,7 @@
 	import ArrowDown from 'lucide-svelte/icons/arrow-down';
 	import DollarSign from 'lucide-svelte/icons/dollar-sign';
 	import CircleX from 'lucide-svelte/icons/circle-x';
-	import type { FareProduct, Itinerary, Leg, Place, StepInstruction } from '$lib/api/openapi';
+	import type { FareProduct, Itinerary, Leg, Mode, Place, StepInstruction } from '$lib/api/openapi';
 	import Time from '$lib/Time.svelte';
 	import { routeBorderColor, routeColor } from '$lib/modeStyle';
 	import { formatDurationSec, formatDistanceMeters } from '$lib/formatDuration';
@@ -14,7 +14,7 @@
 	import { language, t } from '$lib/i18n/translation';
 	import { onClickStop, onClickTrip } from '$lib/utils';
 	import { formatDate, formatTime } from './toDateTime';
-
+	import { getModeLabel } from './map/getModeLabel';
 	const {
 		itinerary
 	}: {
@@ -30,68 +30,88 @@
 	scheduledTimestamp: string,
 	isRealtime: boolean,
 	p: Place,
-	isStartOrEnd: number
+	mode: Mode,
+	isStartOrEnd: number,
+	hidePlatform?: boolean
 )}
-	<Time
-		variant="schedule"
-		class="font-semibold w-16"
-		queriedTime={timestamp}
-		timeZone={p.tz}
-		{isRealtime}
-		{timestamp}
-		{scheduledTimestamp}
-	/>
-	<Time
-		variant="realtime"
-		class="font-semibold w-16"
-		timeZone={p.tz}
-		{isRealtime}
-		{timestamp}
-		{scheduledTimestamp}
-	/>
-	<span>
-		{#if p.stopId}
-			<Button
-				class="ml-4 text-[length:inherit] leading-none justify-normal text-wrap text-left p-0 py-0 h-0"
-				variant="link"
-				onclick={() => onClickStop(p.name, p.stopId!, new Date(timestamp))}
-			>
-				{p.name}
-			</Button>
-			{@const pickupNotAllowedOrEnd = p.pickupType == 'NOT_ALLOWED' && isStartOrEnd != -1}
-			{@const dropoffNotAllowedOrStart = p.dropoffType == 'NOT_ALLOWED' && isStartOrEnd != 1}
-			{#if (p as Place & { switchTo?: Leg }).switchTo}
-				{@const switchTo = (p as Place & { switchTo: Leg }).switchTo}
-				<div class="ml-4 flex items-center text-sm">
-					{t.continuesAs}
-					{switchTo.displayName!}
-					<ArrowRight class="mx-1 size-4" />
-					{switchTo.headsign}
+	{@const arriveBy = isStartOrEnd == 0 || isStartOrEnd == 1}
+	{@const textColor = isStartOrEnd == 0 ? 'text-muted-foreground' : ''}
+	<div class="flex items-baseline justify-between w-full {isStartOrEnd == 0 ? 'text-sm' : ''}">
+		<div class="flex justify-between">
+			<Time
+				variant="schedule"
+				class="font-semibold w-16 {textColor}"
+				queriedTime={timestamp}
+				timeZone={p.tz}
+				{isRealtime}
+				{timestamp}
+				{scheduledTimestamp}
+				{arriveBy}
+			/>
+			<Time
+				variant="realtime"
+				class="font-semibold w-16"
+				timeZone={p.tz}
+				{isRealtime}
+				{timestamp}
+				{scheduledTimestamp}
+				{arriveBy}
+			/>
+		</div>
+		<div class="w-full ml-4">
+			{#if p.stopId}
+				<div class="flex items-center justify-between">
+					<Button
+						class="text-[length:inherit] leading-none justify-normal text-wrap p-0 text-left {textColor}"
+						variant="link"
+						onclick={() => onClickStop(p.name, p.stopId!, new Date(timestamp))}
+					>
+						{p.name}
+					</Button>
+					{#if p.track && !hidePlatform}
+						<span
+							class="text-nowrap {isStartOrEnd == 0 ? 'text-xs' : ''} w- m-4 px-1 border rounded-xl"
+						>
+							{getModeLabel(mode) == 'Track' ? t.trackAbr : t.platformAbr}
+							{p.track}
+						</span>
+					{/if}
 				</div>
-			{/if}
-			{#if pickupNotAllowedOrEnd || dropoffNotAllowedOrStart}
-				<div class="ml-4 flex items-center text-destructive text-sm">
-					<CircleX class="stroke-destructive size-4" />
-					<span class="ml-1 leading-none">
-						{pickupNotAllowedOrEnd && dropoffNotAllowedOrStart
-							? t.inOutDisallowed
-							: pickupNotAllowedOrEnd
-								? t.inDisallowed
-								: t.outDisallowed}
-					</span>
-				</div>
-			{/if}
-			{#if isStartOrEnd && p.alerts}
-				{#each p.alerts as alert, i (i)}
-					<div class="ml-4 text-destructive text-sm">
-						{alert.headerText}
+				{@const pickupNotAllowedOrEnd = p.pickupType == 'NOT_ALLOWED' && isStartOrEnd != 1}
+				{@const dropoffNotAllowedOrStart = p.dropoffType == 'NOT_ALLOWED' && isStartOrEnd != -1}
+				{#if (p as Place & { switchTo?: Leg }).switchTo}
+					{@const switchTo = (p as Place & { switchTo: Leg }).switchTo}
+					<div class="flex items-center text-sm">
+						{t.continuesAs}
+						{switchTo.displayName!}
+						<ArrowRight class="mx-1 size-4" />
+						{switchTo.headsign}
 					</div>
-				{/each}
+				{/if}
+				{#if pickupNotAllowedOrEnd || dropoffNotAllowedOrStart}
+					<div class="flex items-center text-destructive text-sm">
+						<CircleX class="stroke-destructive size-4" />
+						<span class="ml-1 leading-none">
+							{pickupNotAllowedOrEnd && dropoffNotAllowedOrStart
+								? t.inOutDisallowed
+								: pickupNotAllowedOrEnd
+									? t.inDisallowed
+									: t.outDisallowed}
+						</span>
+					</div>
+				{/if}
+				{#if isStartOrEnd && p.alerts}
+					{#each p.alerts as alert, i (i)}
+						<div class="text-destructive text-sm">
+							{alert.headerText}
+						</div>
+					{/each}
+				{/if}
+			{:else}
+				<span>{p.name || p.flex}</span>
 			{/if}
-		{:else}
-			<span class="px-4 py-2">{p.name || p.flex}</span>
-		{/if}
-	</span>
+		</div>
+	</div>
 {/snippet}
 
 {#snippet streetLeg(l: Leg)}
@@ -220,16 +240,12 @@
 		{@const pred = i == 0 ? undefined : itinerary.legs[i - 1]}
 		{@const next = isLast ? undefined : itinerary.legs[i + 1]}
 		{@const prevTransitLeg = itinerary.legs.slice(0, i).find((l) => l.tripId)}
-
 		{#if l.displayName}
 			<div class="w-full flex justify-between items-center space-x-1">
 				<Route {onClickTrip} {l} />
 				{#if pred && (pred.from.track || isRelevantLeg(pred)) && (i != 1 || pred.displayName)}
 					<div class="border-t h-0 grow shrink"></div>
 					<div class="text-sm text-muted-foreground leading-none px-2 text-center">
-						{#if pred.from.track}
-							{t.arrivalOnTrack} {pred.from.track}{pred.duration ? ',' : ''}
-						{/if}
 						{#if pred.duration}
 							{formatDurationSec(pred.duration)} {t.walk}
 						{/if}
@@ -261,20 +277,10 @@
 					</div>
 				{/if}
 				<div class="border-t h-0 grow shrink"></div>
-				{#if l.from.track}
-					<div class="text-nowrap border rounded-xl px-2">
-						{t.track}
-						{l.from.track}
-					</div>
-				{/if}
 			</div>
 
 			<div class="pt-4 pl-6 border-l-4 left-4 relative" style={routeBorderColor(l)}>
-				<div
-					class="grid gap-y-6 grid-cols-[max-content_max-content_auto] items-start content-start content-start"
-				>
-					{@render stopTimes(l.startTime, l.scheduledStartTime, l.realTime, l.from, 1)}
-				</div>
+				{@render stopTimes(l.startTime, l.scheduledStartTime, l.realTime, l.from, l.mode, -1)}
 				<div class="mt-2 mb-2 flex items-center">
 					<ArrowRight class="stroke-muted-foreground size-4" />
 					<span class="ml-1">
@@ -353,22 +359,16 @@
 								({formatDurationSec(l.duration)})
 							</span>
 						</summary>
-						<div
-							class="mb-1 grid gap-y-4 grid-cols-[max-content_max-content_auto] items-start content-start"
-						>
+						<div class="grid items-start content-start">
 							{#each l.intermediateStops! as s, i (i)}
-								{@render stopTimes(s.arrival!, s.scheduledArrival!, l.realTime, s, 0)}
+								{@render stopTimes(s.arrival!, s.scheduledArrival!, l.realTime, s, l.mode, 0)}
 							{/each}
 						</div>
 					</details>
 				{/if}
 
 				{#if !isLast && !(isLastPred && !isRelevantLeg(next!))}
-					<div
-						class="grid gap-y-6 grid-cols-[max-content_max-content_auto] items-start content-start pb-3"
-					>
-						{@render stopTimes(l.endTime!, l.scheduledEndTime!, l.realTime!, l.to, -1)}
-					</div>
+					{@render stopTimes(l.endTime!, l.scheduledEndTime!, l.realTime!, l.to, l.mode, 1)}
 				{/if}
 
 				{#if isLast || (isLastPred && !isRelevantLeg(next!))}
@@ -379,11 +379,7 @@
 		{:else if !(isLast && !isRelevantLeg(l)) && ((i == 0 && isRelevantLeg(l)) || !next || !next.displayName || l.mode != 'WALK' || (pred && (pred.mode == 'BIKE' || (l.mode == 'WALK' && pred.mode == 'CAR') || pred.mode == 'RENTAL')))}
 			<Route {onClickTrip} {l} />
 			<div class="pt-4 pl-6 border-l-4 left-4 relative" style={routeBorderColor(l)}>
-				<div
-					class="grid gap-y-6 grid-cols-[max-content_max-content_auto] items-start content-start"
-				>
-					{@render stopTimes(l.startTime, l.scheduledStartTime, l.realTime, l.from, 1)}
-				</div>
+				{@render stopTimes(l.startTime, l.scheduledStartTime, l.realTime, l.from, l.mode, -1, true)}
 				{#if l.mode == 'FLEX'}
 					<div class="mt-2 flex items-center leading-none">
 						<span class="ml-1 text-sm">
@@ -394,11 +390,7 @@
 				{/if}
 				{@render streetLeg(l)}
 				{#if !isLast}
-					<div
-						class="grid gap-y-6 grid-cols-[max-content_max-content_auto] items-start content-start pb-4"
-					>
-						{@render stopTimes(l.endTime, l.scheduledEndTime, l.realTime, l.to, -1)}
-					</div>
+					{@render stopTimes(l.endTime, l.scheduledEndTime, l.realTime, l.to, l.mode, 1, true)}
 				{/if}
 			</div>
 		{/if}
@@ -408,16 +400,13 @@
 			class="absolute left-[-6px] top-[0px] w-[15px] h-[15px] rounded-full"
 			style={routeColor(lastLeg!)}
 		></div>
-		<div
-			class="relative left-[2.5px] bottom-[7px] grid gap-y-6 grid-cols-[max-content_max-content_auto] items-start content-start"
-		>
-			{@render stopTimes(
-				lastLeg!.endTime,
-				lastLeg!.scheduledEndTime,
-				lastLeg!.realTime,
-				lastLeg!.to,
-				-1
-			)}
-		</div>
+		{@render stopTimes(
+			lastLeg!.endTime,
+			lastLeg!.scheduledEndTime,
+			lastLeg!.realTime,
+			lastLeg!.to,
+			lastLeg!.mode,
+			1
+		)}
 	</div>
 </div>

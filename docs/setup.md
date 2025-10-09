@@ -104,6 +104,8 @@ limits:
   gtfsrt_expose_max_trip_updates: 100 # how many trip updates are allowed to be exposed via the gtfsrt endpoint
   street_routing_max_prepost_transit_seconds: 3600 # limit for maxPre/PostTransitTime API params, see below
   street_routing_max_direct_seconds: 21600 # limit for maxDirectTime API param, high values can lead to long-running, RAM-hungry queries 
+logging:
+  log_level: debug                # log-level (default = debug; Supported log-levels: error, info, debug)
 osr_footpath: true                # enable routing footpaths instead of using transfers from timetable datasets
 geocoding: true                   # enable geocoding for place/stop name autocompletion
 reverse_geocoding: false          # enable reverse geocoding for mapping a geo coordinate to nearby places/addresses

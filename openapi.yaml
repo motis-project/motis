@@ -558,6 +558,26 @@ paths:
             type: integer
             default: 5
 
+        - name: maxItineraries
+          in: query
+          required: false
+          description: |
+            Optional. By default all computed itineraries will be returned
+            
+            The maximum number of itineraries to compute.
+            This is only relevant if `timetableView=true`.
+            
+            Note: With the current implementation, setting this to a lower
+            number will not result in any speedup.
+            
+            Note: The number of returned itineraries might be slightly higher
+            than `maxItineraries` as there might be several itineraries with
+            the same departure time but different number of transfers. In order
+            to not miss any itineraries for paging, either none or all
+            itineraries with the same departure time have to be returned.
+          schema:
+            type: integer
+
         - name: pageCursor
           in: query
           required: false
@@ -759,7 +779,9 @@ paths:
             language tags as used in OpenStreetMap / GTFS
             (usually BCP-47 / ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
           schema:
-            type: string
+            type: array
+            items:
+              type: string
 
         - name: algorithm
           in: query
@@ -1268,7 +1290,9 @@ paths:
             language tags as used in OpenStreetMap
             (usually ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
           schema:
-            type: string
+            type: array
+            items:
+              type: string
 
         - name: type
           in: query
@@ -1355,7 +1379,9 @@ paths:
             language tags as used in OpenStreetMap / GTFS
             (usually BCP-47 / ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
           schema:
-            type: string
+            type: array
+            items:
+              type: string
       responses:
         '400':
           description: Bad Request
@@ -1506,7 +1532,9 @@ paths:
             language tags as used in OpenStreetMap / GTFS
             (usually BCP-47 / ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
           schema:
-            type: string
+            type: array
+            items:
+              type: string
       responses:
         '400':
           description: Bad Request

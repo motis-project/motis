@@ -193,6 +193,12 @@ struct config {
   };
   std::optional<limits> limits_{};
 
+  struct logging {
+    bool operator==(logging const&) const = default;
+    std::optional<std::string> log_level_{};
+  };
+  std::optional<logging> logging_{};
+
   bool osr_footpath_{false};
   bool geocoding_{false};
   bool reverse_geocoding_{false};

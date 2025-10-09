@@ -37,6 +37,7 @@ export const defaultQuery = {
 	additionalTransferTime: 0,
 	transferTimeFactor: 1,
 	numItineraries: 5,
+	maxItineraries: undefined,
 	passengers: 1,
 	luggage: 0,
 	slowDirect: false,

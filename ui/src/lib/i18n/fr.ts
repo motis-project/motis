@@ -27,6 +27,9 @@ const translations: Translations = {
 	switchToArrivals: 'Afficher les arrivées',
 	switchToDepartures: 'Afficher les départs',
 	track: 'Voie',
+	platform: 'Quai',
+	trackAbr: 'V.',
+	platformAbr: 'Q.',
 	arrivalOnTrack: 'Arrivée sur la voie',
 	tripIntermediateStops: (n: number) => {
 		switch (n) {
@@ -81,7 +84,7 @@ const translations: Translations = {
 	HIGHSPEED_RAIL: 'Train à grande vitesse',
 	LONG_DISTANCE: 'Train intercité',
 	NIGHT_RAIL: 'Train de nuit',
-	REGIONAL_FAST_RAIL: 'Train express régional',
+	REGIONAL_FAST_RAIL: 'Train express',
 	REGIONAL_RAIL: 'Train régional',
 	OTHER: 'Autres',
 	routingSegments: {

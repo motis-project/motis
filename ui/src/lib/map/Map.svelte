@@ -98,6 +98,13 @@
 				})
 			);
 
+			const scale = new maplibregl.ScaleControl({
+				maxWidth: 100,
+				unit: 'metric'
+			});
+
+			tmp.addControl(scale, 'bottom-left');
+
 			tmp.on('load', () => {
 				map = tmp;
 				ctx.map = tmp;
