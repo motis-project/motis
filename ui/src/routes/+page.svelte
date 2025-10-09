@@ -477,9 +477,7 @@
 
 {#snippet drawerContent()}
 	<Control
-		class={isSmallScreen && (page.state.selectedItinerary || page.state.selectedStop)
-			? 'hide'
-			: ''}
+		class={isSmallScreen && (page.state.selectedItinerary || page.state.selectedStop) ? 'hide' : ''}
 	>
 		<Tabs.Root bind:value={activeTab} class="max-w-full w-[520px] overflow-y-auto">
 			<Tabs.List class="grid grid-cols-3">
@@ -580,9 +578,8 @@
 				<div
 					class={'p-2 md:p-4 overflow-y-auto overflow-x-hidden min-h-0 ' +
 						(showMap ? 'md:max-h-[70vh]' : '')}
-					>
+				>
 					<ConnectionDetail itinerary={page.state.selectedItinerary} />
-				
 				</div>
 			</Card>
 		</Control>
@@ -667,7 +664,7 @@
 	<LevelSelect {bounds} {zoom} bind:level />
 
 	{#if isSmallScreen}
-		<Drawer class="absolute z-10 h-full mt-5 flex flex-col" bind:showMap={showMap}>
+		<Drawer class="absolute z-10 h-full mt-5 flex flex-col" bind:showMap>
 			{@render drawerContent()}
 		</Drawer>
 	{:else}
