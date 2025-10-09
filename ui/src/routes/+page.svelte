@@ -40,6 +40,7 @@
 	import Popup from '$lib/map/Popup.svelte';
 	import LevelSelect from '$lib/LevelSelect.svelte';
 	import { lngLatToStr } from '$lib/lngLatToStr';
+	import Drawer from '$lib/map/Drawer.svelte';
 	import { client } from '$lib/api/openapi';
 	import StopTimes from '$lib/StopTimes.svelte';
 	import { onMount, tick, untrack } from 'svelte';
@@ -474,6 +475,172 @@
 	{/if}
 {/snippet}
 
+{#snippet drawerContent()}
+	<Control
+		class={isSmallScreen && (page.state.selectedItinerary || page.state.selectedStop)
+			? 'hide'
+			: ''}
+	>
+		<Tabs.Root bind:value={activeTab} class="max-w-full w-[520px] overflow-y-auto">
+			<Tabs.List class="grid grid-cols-3">
+				<Tabs.Trigger value="connections">{t.connections}</Tabs.Trigger>
+				<Tabs.Trigger value="departures">{t.departures}</Tabs.Trigger>
+				<Tabs.Trigger value="isochrones">{t.isochrones.title}</Tabs.Trigger>
+			</Tabs.List>
+			<Tabs.Content value="connections">
+				<Card class="overflow-y-auto overflow-x-hidden bg-background rounded-lg">
+					<SearchMask
+						geocodingBiasPlace={center}
+						bind:from
+						bind:to
+						bind:time
+						bind:arriveBy
+						bind:useRoutedTransfers
+						bind:maxTransfers
+						bind:pedestrianProfile
+						bind:requireCarTransport
+						bind:requireBikeTransport
+						bind:transitModes
+						bind:preTransitModes
+						bind:postTransitModes
+						bind:directModes
+						bind:elevationCosts
+						bind:maxPreTransitTime
+						bind:maxPostTransitTime
+						bind:maxDirectTime
+						bind:ignorePreTransitRentalReturnConstraints
+						bind:ignorePostTransitRentalReturnConstraints
+						bind:ignoreDirectRentalReturnConstraints
+					/>
+				</Card>
+			</Tabs.Content>
+			<Tabs.Content value="departures">
+				<Card class="overflow-y-auto overflow-x-hidden bg-background rounded-lg">
+					<DeparturesMask bind:time />
+				</Card>
+			</Tabs.Content>
+			<Tabs.Content value="isochrones">
+				<Card class="overflow-y-auto overflow-x-hidden bg-background rounded-lg">
+					<IsochronesMask
+						bind:one
+						bind:maxTravelTime
+						geocodingBiasPlace={center}
+						bind:time
+						bind:useRoutedTransfers
+						bind:pedestrianProfile
+						bind:requireCarTransport
+						bind:requireBikeTransport
+						bind:transitModes
+						bind:maxTransfers
+						bind:preTransitModes
+						bind:postTransitModes
+						bind:maxPreTransitTime
+						bind:maxPostTransitTime
+						bind:arriveBy
+						bind:elevationCosts
+						bind:ignorePreTransitRentalReturnConstraints
+						bind:ignorePostTransitRentalReturnConstraints
+						bind:options={isochronesOptions}
+					/>
+				</Card>
+			</Tabs.Content>
+		</Tabs.Root>
+	</Control>
+
+	{#if activeTab != 'isochrones' && routingResponses.length !== 0 && !page.state.showDepartures}
+		<Control class="min-h-0 md:mb-2 {page.state.selectedItinerary ? 'hide' : ''}">
+			<Card
+				class="w-[520px] h-full md:max-h-[70vh] overflow-y-auto overflow-x-hidden bg-background rounded-lg"
+			>
+				<ItineraryList
+					{baseResponse}
+					{routingResponses}
+					{baseQuery}
+					selectItinerary={(selectedItinerary) => pushState('', { selectedItinerary })}
+					updateStartDest={preprocessItinerary(from, to)}
+				/>
+			</Card>
+		</Control>
+	{/if}
+
+	{#if activeTab != 'isochrones' && page.state.selectedItinerary && !page.state.showDepartures}
+		<Control class="min-h-0 md:mb-2">
+			<Card class="w-[520px] md:max-h-[70vh] h-full bg-background rounded-lg flex flex-col">
+				<div class="w-full flex justify-between items-center shadow-md pl-1 mb-1">
+					<h2 class="ml-2 text-base font-semibold">{t.journeyDetails}</h2>
+					<Button
+						variant="ghost"
+						onclick={() => {
+							closeItinerary();
+						}}
+					>
+						<X />
+					</Button>
+				</div>
+				<div
+					class={'p-2 md:p-4 overflow-y-auto overflow-x-hidden min-h-0 ' +
+						(showMap ? 'md:max-h-[70vh]' : '')}
+					>
+					<ConnectionDetail itinerary={page.state.selectedItinerary} />
+				
+				</div>
+			</Card>
+		</Control>
+		{#if showMap}
+			<ItineraryGeoJson itinerary={page.state.selectedItinerary} {level} />
+					<StopGeoJSON itinerary={page.state.selectedItinerary} />
+		{/if}
+	{/if}
+
+	{#if activeTab != 'isochrones' && page.state.selectedStop && page.state.showDepartures}
+		<Control class="min-h-0 md:mb-2">
+			<Card class="w-[520px] md:max-h-[70vh] h-full bg-background rounded-lg flex flex-col">
+				<div class="w-full flex justify-between items-center shadow-md pl-1 mb-1">
+					<h2 class="ml-2 text-base font-semibold">
+						{#if page.state.stopArriveBy}
+							{t.arrivals}
+						{:else}
+							{t.departures}
+						{/if}
+						in
+						{stopNameFromResponse}
+					</h2>
+					<Button
+						variant="ghost"
+						onclick={() => {
+							pushStateWithQueryString(
+								{ ...(page.state.tripId && { tripId: page.state.tripId }) },
+								{ selectedItinerary: page.state.selectedItinerary }
+							);
+						}}
+					>
+						<X />
+					</Button>
+				</div>
+				<div class="p-2 md:p-4 overflow-y-auto overflow-x-hidden min-h-0 md:max-h-[70vh]">
+					<StopTimes
+						stopId={page.state.selectedStop.stopId}
+						stopName={page.state.selectedStop.name}
+						time={page.state.selectedStop.time}
+								bind:stop
+								bind:stopMarker
+						bind:stopNameFromResponse
+						arriveBy={page.state.stopArriveBy}
+					/>
+				</div>
+			</Card>
+		</Control>
+	{/if}
+
+	{#if activeTab == 'isochrones' && one.match}
+		<Control class="min-h-0 md:mb-2 {isochronesOptions.status == 'DONE' ? 'hide' : ''}">
+			<Card class="w-[520px] overflow-y-auto overflow-x-hidden bg-background rounded-lg">
+				<IsochronesInfo options={isochronesOptions} />
+			</Card>
+		</Control>
+	{/if}
+{/snippet}
+
 <Map
 	bind:map
 	bind:bounds
@@ -499,172 +666,15 @@
 
 	<LevelSelect {bounds} {zoom} bind:level />
 
-	<div class="maplibregl-control-container">
+	{#if isSmallScreen}
+		<Drawer class="absolute z-10 h-full mt-5 flex flex-col" bind:showMap={showMap}>
+			{@render drawerContent()}
+		</Drawer>
+	{:else}
 		<div class="maplibregl-ctrl-top-left">
-			<Control
-				class={isSmallScreen && (page.state.selectedItinerary || page.state.selectedStop)
-					? 'hide'
-					: ''}
-			>
-				<Tabs.Root bind:value={activeTab} class="max-w-full w-[520px] overflow-y-auto">
-					<Tabs.List class="grid grid-cols-3">
-						<Tabs.Trigger value="connections">{t.connections}</Tabs.Trigger>
-						<Tabs.Trigger value="departures">{t.departures}</Tabs.Trigger>
-						<Tabs.Trigger value="isochrones">{t.isochrones.title}</Tabs.Trigger>
-					</Tabs.List>
-					<Tabs.Content value="connections">
-						<Card class="overflow-y-auto overflow-x-hidden bg-background rounded-lg">
-							<SearchMask
-								geocodingBiasPlace={center}
-								bind:from
-								bind:to
-								bind:time
-								bind:arriveBy
-								bind:useRoutedTransfers
-								bind:maxTransfers
-								bind:pedestrianProfile
-								bind:requireCarTransport
-								bind:requireBikeTransport
-								bind:transitModes
-								bind:preTransitModes
-								bind:postTransitModes
-								bind:directModes
-								bind:elevationCosts
-								bind:maxPreTransitTime
-								bind:maxPostTransitTime
-								bind:maxDirectTime
-								bind:ignorePreTransitRentalReturnConstraints
-								bind:ignorePostTransitRentalReturnConstraints
-								bind:ignoreDirectRentalReturnConstraints
-							/>
-						</Card>
-					</Tabs.Content>
-					<Tabs.Content value="departures">
-						<Card class="overflow-y-auto overflow-x-hidden bg-background rounded-lg">
-							<DeparturesMask bind:time />
-						</Card>
-					</Tabs.Content>
-					<Tabs.Content value="isochrones">
-						<Card class="overflow-y-auto overflow-x-hidden bg-background rounded-lg">
-							<IsochronesMask
-								bind:one
-								bind:maxTravelTime
-								geocodingBiasPlace={center}
-								bind:time
-								bind:useRoutedTransfers
-								bind:pedestrianProfile
-								bind:requireCarTransport
-								bind:requireBikeTransport
-								bind:transitModes
-								bind:maxTransfers
-								bind:preTransitModes
-								bind:postTransitModes
-								bind:maxPreTransitTime
-								bind:maxPostTransitTime
-								bind:arriveBy
-								bind:elevationCosts
-								bind:ignorePreTransitRentalReturnConstraints
-								bind:ignorePostTransitRentalReturnConstraints
-								bind:options={isochronesOptions}
-							/>
-						</Card>
-					</Tabs.Content>
-				</Tabs.Root>
-			</Control>
-
-			{#if activeTab != 'isochrones' && routingResponses.length !== 0 && !page.state.showDepartures}
-				<Control class="min-h-0 md:mb-2 {page.state.selectedItinerary ? 'hide' : ''}">
-					<Card
-						class="w-[520px] h-full md:max-h-[70vh] overflow-y-auto overflow-x-hidden bg-background rounded-lg"
-					>
-						<ItineraryList
-							{baseResponse}
-							{routingResponses}
-							{baseQuery}
-							selectItinerary={(selectedItinerary) => pushState('', { selectedItinerary })}
-							updateStartDest={preprocessItinerary(from, to)}
-						/>
-					</Card>
-				</Control>
-			{/if}
-
-			{#if activeTab != 'isochrones' && page.state.selectedItinerary && !page.state.showDepartures}
-				<Control class="min-h-0 mb-12 md:mb-2">
-					<Card class="w-[520px] h-full bg-background rounded-lg flex flex-col">
-						<div class="w-full flex justify-between items-center shadow-md pl-1 mb-1">
-							<h2 class="ml-2 text-base font-semibold">{t.journeyDetails}</h2>
-							<Button
-								variant="ghost"
-								onclick={() => {
-									closeItinerary();
-								}}
-							>
-								<X />
-							</Button>
-						</div>
-						<div
-							class={'p-2 md:p-4 overflow-y-auto overflow-x-hidden min-h-0 ' +
-								(showMap ? 'max-h-[40vh] md:max-h-[70vh]' : '')}
-						>
-							<ConnectionDetail itinerary={page.state.selectedItinerary} />
-						</div>
-					</Card>
-				</Control>
-				{#if showMap}
-					<ItineraryGeoJson itinerary={page.state.selectedItinerary} {level} />
-					<StopGeoJSON itinerary={page.state.selectedItinerary} />
-				{/if}
-			{/if}
-
-			{#if activeTab != 'isochrones' && page.state.selectedStop && page.state.showDepartures}
-				<Control class="min-h-0 md:mb-2">
-					<Card class="w-[520px] h-full bg-background rounded-lg flex flex-col">
-						<div class="w-full flex justify-between items-center shadow-md pl-1 mb-1">
-							<h2 class="ml-2 text-base font-semibold">
-								{#if page.state.stopArriveBy}
-									{t.arrivals}
-								{:else}
-									{t.departures}
-								{/if}
-								in
-								{stopNameFromResponse}
-							</h2>
-							<Button
-								variant="ghost"
-								onclick={() => {
-									pushStateWithQueryString(
-										{ ...(page.state.tripId && { tripId: page.state.tripId }) },
-										{ selectedItinerary: page.state.selectedItinerary }
-									);
-								}}
-							>
-								<X />
-							</Button>
-						</div>
-						<div class="p-2 md:p-4 overflow-y-auto overflow-x-hidden min-h-0 md:max-h-[70vh]">
-							<StopTimes
-								stopId={page.state.selectedStop.stopId}
-								stopName={page.state.selectedStop.name}
-								time={page.state.selectedStop.time}
-								bind:stop
-								bind:stopMarker
-								bind:stopNameFromResponse
-								arriveBy={page.state.stopArriveBy}
-							/>
-						</div>
-					</Card>
-				</Control>
-			{/if}
-
-			{#if activeTab == 'isochrones' && one.match}
-				<Control class="min-h-0 md:mb-2 {isochronesOptions.status == 'DONE' ? 'hide' : ''}">
-					<Card class="w-[520px] overflow-y-auto overflow-x-hidden bg-background rounded-lg">
-						<IsochronesInfo options={isochronesOptions} />
-					</Card>
-				</Control>
-			{/if}
+			{@render drawerContent()}
 		</div>
-	</div>
+	{/if}
 
 	<div class="maplibregl-ctrl-bottom-right">
 		<div class="maplibregl-ctrl maplibregl-ctrl-attrib">
