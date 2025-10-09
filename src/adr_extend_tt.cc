@@ -1,5 +1,7 @@
 #include "motis/adr_extend_tt.h"
 
+#include "nigiri/special_stations.h"
+
 #include <string>
 #include <utility>
 #include <vector>
@@ -69,7 +71,8 @@ adr_ext adr_extend_tt(nigiri::timetable const& tt,
 
     // Map each location + its equivalents with the same name to one place_idx.
     auto i = adr_extra_place_idx_t{0U};
-    for (auto l = n::location_idx_t{0U}; l != tt.n_locations(); ++l) {
+    for (auto l = n::location_idx_t{nigiri::kNSpecialStations};
+         l != tt.n_locations(); ++l) {
       if (ret.location_place_[l] == adr_extra_place_idx_t::invalid() &&
           tt.locations_.parents_[l] == n::location_idx_t::invalid()) {
         ret.location_place_[l] = i;
@@ -102,7 +105,7 @@ adr_ext adr_extend_tt(nigiri::timetable const& tt,
   ret.place_clasz_.resize(place_location.size());
   {
     auto const event_counts = utl::scoped_timer{"guesser event_counts"};
-    for (auto i = 0U; i != tt.n_locations(); ++i) {
+    for (auto i = n::kNSpecialStations; i != tt.n_locations(); ++i) {
       auto const l = n::location_idx_t{i};
 
       auto transport_counts = std::array<unsigned, n::kNumClasses>{};
@@ -134,13 +137,14 @@ adr_ext adr_extend_tt(nigiri::timetable const& tt,
                                        /* Other  */ 1};
       auto const root = tt.locations_.get_root_idx(l);
       auto const place_idx = ret.location_place_[root];
+
       for (auto const [clasz, t_count] : utl::enumerate(transport_counts)) {
         ret.place_importance_[place_idx] +=
             prio[clasz] * static_cast<float>(t_count);
 
+        auto const c = n::clasz{static_cast<std::uint8_t>(clasz)};
         if (t_count != 0U) {
-          ret.place_clasz_[place_idx] |=
-              static_cast<n::routing::clasz_mask_t>(clasz << 1U);
+          ret.place_clasz_[place_idx] |= n::routing::to_mask(c);
         }
       }
     }
