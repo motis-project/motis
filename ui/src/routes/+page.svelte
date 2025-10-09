@@ -585,7 +585,7 @@
 		</Control>
 		{#if showMap}
 			<ItineraryGeoJson itinerary={page.state.selectedItinerary} {level} />
-					<StopGeoJSON itinerary={page.state.selectedItinerary} />
+			<StopGeoJSON itinerary={page.state.selectedItinerary} />
 		{/if}
 	{/if}
 
@@ -619,8 +619,8 @@
 						stopId={page.state.selectedStop.stopId}
 						stopName={page.state.selectedStop.name}
 						time={page.state.selectedStop.time}
-								bind:stop
-								bind:stopMarker
+						bind:stop
+						bind:stopMarker
 						bind:stopNameFromResponse
 						arriveBy={page.state.stopArriveBy}
 					/>
