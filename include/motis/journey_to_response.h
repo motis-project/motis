@@ -30,6 +30,7 @@ double get_level(osr::ways const*,
 std::optional<std::vector<api::Alert>> get_alerts(
     nigiri::rt::frun const&,
     std::optional<std::pair<nigiri::rt::run_stop, nigiri::event_type>> const&,
+    bool fuzzy_stop,
     std::optional<std::vector<std::string>> const& language);
 
 api::Itinerary journey_to_response(
