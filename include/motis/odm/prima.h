@@ -83,6 +83,17 @@ struct prima {
   bool consume_whitelist_ride_sharing_response(std::string_view json);
   bool whitelist_ride_sharing(nigiri::timetable const&);
 
+  void fix_first_mile_duration(
+      std::vector<nigiri::routing::journey>& journeys,
+      std::vector<nigiri::routing::start> const& first_mile,
+      std::vector<nigiri::routing::start> const& prev_first_mile,
+      nigiri::transport_mode_id_t mode);
+  void fix_last_mile_duration(
+      std::vector<nigiri::routing::journey>& journeys,
+      std::vector<nigiri::routing::start> const& last_mile,
+      std::vector<nigiri::routing::start> const& prev_last_mile,
+      nigiri::transport_mode_id_t mode);
+
   boost::urls::url taxi_blacklist_;
   boost::urls::url taxi_whitelist_;
   boost::urls::url ride_sharing_whitelist_;

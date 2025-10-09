@@ -479,6 +479,82 @@ void prima::extract_taxis(
   utl::erase_duplicates(last_mile_taxi_, by_stop, std::equal_to<>{});
 }
 
+void prima::fix_first_mile_duration(
+    std::vector<nigiri::routing::journey>& journeys,
+    std::vector<nigiri::routing::start> const& first_mile,
+    std::vector<nigiri::routing::start> const& prev_first_mile,
+    nigiri::transport_mode_id_t const mode) {
+  for (auto const [curr, prev] : utl::zip(first_mile, prev_first_mile)) {
+
+    auto const uses_prev = [&,
+                            prev2 = prev /* hack for MacOS - fixed with 16 */](
+                               n::routing::journey const& j) {
+      return j.legs_.size() > 1 &&
+             j.legs_.front().dep_time_ == prev2.time_at_start_ &&
+             (j.legs_.front().arr_time_ == prev2.time_at_stop_ ||
+              mode == kRideSharingTransportModeId) &&
+             j.legs_.front().to_ == prev2.stop_ &&
+             is_odm_leg(j.legs_.front(), mode);
+    };
+
+    if (curr.time_at_start_ == kInfeasible) {
+      utl::erase_if(journeys, uses_prev);
+    } else {
+      for (auto& j : journeys) {
+        if (uses_prev(j)) {
+          auto const l = begin(j.legs_);
+          l->dep_time_ = curr.time_at_start_;
+          l->arr_time_ = curr.time_at_stop_;
+          std::get<n::routing::offset>(l->uses_).duration_ =
+              l->arr_time_ - l->dep_time_;
+          // fill gap (transfer/waiting) with footpath
+          j.legs_.emplace(
+              std::next(l), n::direction::kForward, l->to_, l->to_,
+              l->arr_time_, std::next(l)->dep_time_,
+              n::footpath{l->to_, std::next(l)->dep_time_ - l->arr_time_});
+        }
+      }
+    }
+  }
+};
+
+void prima::fix_last_mile_duration(
+    std::vector<nigiri::routing::journey>& journeys,
+    std::vector<nigiri::routing::start> const& last_mile,
+    std::vector<nigiri::routing::start> const& prev_last_mile,
+    nigiri::transport_mode_id_t const mode) {
+  for (auto const [curr, prev] : utl::zip(last_mile, prev_last_mile)) {
+    auto const uses_prev =
+        [&, prev2 = prev /* hack for MacOS - fixed with 16 */](auto const& j) {
+          return j.legs_.size() > 1 &&
+                 (j.legs_.back().dep_time_ == prev2.time_at_stop_ ||
+                  mode == kRideSharingTransportModeId) &&
+                 j.legs_.back().arr_time_ == prev2.time_at_start_ &&
+                 j.legs_.back().from_ == prev2.stop_ &&
+                 is_odm_leg(j.legs_.back(), mode);
+        };
+
+    if (curr.time_at_start_ == kInfeasible) {
+      utl::erase_if(journeys, uses_prev);
+    } else {
+      for (auto& j : journeys) {
+        if (uses_prev(j)) {
+          auto const l = std::prev(end(j.legs_));
+          l->dep_time_ = curr.time_at_stop_;
+          l->arr_time_ = curr.time_at_start_;
+          std::get<n::routing::offset>(l->uses_).duration_ =
+              l->arr_time_ - l->dep_time_;
+          // fill gap (transfer/waiting) with footpath
+          j.legs_.emplace(
+              l, n::direction::kForward, l->from_, l->from_,
+              std::prev(l)->arr_time_, l->dep_time_,
+              n::footpath{l->from_, l->dep_time_ - std::prev(l)->arr_time_});
+        }
+      }
+    }
+  }
+};
+
 bool prima::consume_whitelist_taxis_response(
     std::string_view json, std::vector<nigiri::routing::journey>& journeys) {
 
@@ -491,7 +567,7 @@ bool prima::consume_whitelist_taxis_response(
       return true;
     }
 
-    auto prev_first_mile =
+    auto const prev_first_mile =
         std::exchange(first_mile_taxi_, std::vector<n::routing::start>{});
 
     auto prev_it = std::begin(prev_first_mile);
@@ -512,40 +588,8 @@ bool prima::consume_whitelist_taxis_response(
         ++prev_it;
       }
     }
-
-    for (auto const [curr, prev] :
-         utl::zip(first_mile_taxi_, prev_first_mile)) {
-
-      auto const uses_prev = [&, prev2 =
-                                     prev /* hack for MacOS - fixed with 16 */](
-                                 n::routing::journey const& j) {
-        return j.legs_.size() > 1 &&
-               j.legs_.front().dep_time_ == prev2.time_at_start_ &&
-               j.legs_.front().arr_time_ == prev2.time_at_stop_ &&
-               j.legs_.front().to_ == prev2.stop_ &&
-               is_odm_leg(j.legs_.front(), kOdmTransportModeId);
-      };
-
-      if (curr.time_at_start_ == kInfeasible) {
-        utl::erase_if(journeys, uses_prev);
-      } else {
-        for (auto& j : journeys) {
-          if (uses_prev(j)) {
-            auto const l = begin(j.legs_);
-            l->dep_time_ = curr.time_at_start_;
-            l->arr_time_ = curr.time_at_stop_;
-            std::get<n::routing::offset>(l->uses_).duration_ =
-                l->arr_time_ - l->dep_time_;
-            // fill gap (transfer/waiting) with footpath
-            j.legs_.emplace(
-                std::next(l), n::direction::kForward, l->to_, l->to_,
-                l->arr_time_, std::next(l)->dep_time_,
-                n::footpath{l->to_, std::next(l)->dep_time_ - l->arr_time_});
-          }
-        }
-      }
-    }
-
+    fix_first_mile_duration(journeys, first_mile_taxi_, prev_first_mile,
+                            kOdmTransportModeId);
     return false;
   };
 
@@ -580,37 +624,8 @@ bool prima::consume_whitelist_taxis_response(
       }
     }
 
-    for (auto const [curr, prev] : utl::zip(last_mile_taxi_, prev_last_mile)) {
-      auto const uses_prev =
-          [&,
-           prev2 = prev /* hack for MacOS - fixed with 16 */](auto const& j) {
-            return j.legs_.size() > 1 &&
-                   j.legs_.back().dep_time_ == prev2.time_at_stop_ &&
-                   j.legs_.back().arr_time_ == prev2.time_at_start_ &&
-                   j.legs_.back().from_ == prev2.stop_ &&
-                   is_odm_leg(j.legs_.back(), kOdmTransportModeId);
-          };
-
-      if (curr.time_at_start_ == kInfeasible) {
-        utl::erase_if(journeys, uses_prev);
-      } else {
-        for (auto& j : journeys) {
-          if (uses_prev(j)) {
-            auto const l = std::prev(end(j.legs_));
-            l->dep_time_ = curr.time_at_stop_;
-            l->arr_time_ = curr.time_at_start_;
-            std::get<n::routing::offset>(l->uses_).duration_ =
-                l->arr_time_ - l->dep_time_;
-            // fill gap (transfer/waiting) with footpath
-            j.legs_.emplace(
-                l, n::direction::kForward, l->from_, l->from_,
-                std::prev(l)->arr_time_, l->dep_time_,
-                n::footpath{l->from_, l->dep_time_ - std::prev(l)->arr_time_});
-          }
-        }
-      }
-    }
-
+    fix_last_mile_duration(journeys, last_mile_taxi_, prev_last_mile,
+                           kOdmTransportModeId);
     return false;
   };
 

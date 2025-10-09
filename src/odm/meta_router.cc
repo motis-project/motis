@@ -338,6 +338,12 @@ api::plan_response meta_router::run() {
          odm_direct_, ride_sharing_pre_transit_, ride_sharing_post_transit_,
          ride_sharing_direct_, *tt_, rtt_, r_, e_, gbfs_rd_, from_place_,
          to_place_, query_, start_time_, api_version_);
+
+  std::erase(start_modes_, api::ModeEnum::ODM);
+  std::erase(start_modes_, api::ModeEnum::RIDE_SHARING);
+  std::erase(dest_modes_, api::ModeEnum::ODM);
+  std::erase(dest_modes_, api::ModeEnum::RIDE_SHARING);
+
   print_time(init_start,
              fmt::format("[init] (#first_mile_taxi: {}, #last_mile_taxi: {}, "
                          "#direct_taxi: {})",
@@ -457,10 +463,16 @@ api::plan_response meta_router::run() {
   utl::verify(!results.empty(), "prima: public transport result expected");
   auto const& pt_result = results.front();
   auto taxi_journeys = collect_odm_journeys(results, kOdmTransportModeId);
-  auto ride_share_journeys =
-      collect_odm_journeys(results, kRideSharingTransportModeId);
   shorten(taxi_journeys, p.first_mile_taxi_, p.last_mile_taxi_, *tt_, rtt_,
           query_);
+  auto ride_share_journeys =
+      collect_odm_journeys(results, kRideSharingTransportModeId);
+  p.fix_first_mile_duration(ride_share_journeys, p.first_mile_ride_sharing_,
+                            p.first_mile_ride_sharing_,
+                            kRideSharingTransportModeId);
+  p.fix_last_mile_duration(ride_share_journeys, p.last_mile_ride_sharing_,
+                           p.last_mile_ride_sharing_,
+                           kRideSharingTransportModeId);
   utl::erase_duplicates(
       taxi_journeys, std::less<n::routing::journey>{},
       [](auto const& a, auto const& b) {

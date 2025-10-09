@@ -68,5 +68,5 @@
   commit=638d55a1d559cc783fd3ef005d5f48e1cbbb5ea3
 [ctx]
   url=git@github.com:motis-project/ctx.git
-  branch=main
+  branch=master
   commit=9b495bdd798520007a4f1c13e51766a26f10ef10
