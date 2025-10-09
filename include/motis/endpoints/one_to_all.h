@@ -22,7 +22,7 @@ struct one_to_all {
   flex::flex_areas const* fa_;
   point_rtree<nigiri::location_idx_t> const* loc_tree_;
   platform_matches_t const* matches_;
-  location_place_map_t const* lp_;
+  adr_ext const* lp_;
   tz_map_t const* tz_;
   way_matches_storage const* way_matches_;
   std::shared_ptr<gbfs::gbfs_data> const& gbfs_;

@@ -211,7 +211,7 @@ api::Itinerary journey_to_response(
     osr::elevation_storage const* elevations,
     n::shapes_storage const* shapes,
     gbfs::gbfs_routing_data& gbfs_rd,
-    location_place_map_t const* lp,
+    adr_ext const* lp,
     tz_map_t const* tz_map,
     n::routing::journey const& j,
     place_t const& start,

@@ -54,6 +54,7 @@ struct elevators;
 struct metrics_registry;
 struct way_matches_storage;
 struct data;
+struct adr_ext;
 
 namespace odm {
 struct bounds;

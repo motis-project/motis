@@ -25,28 +25,31 @@ constexpr auto const kClaszMax =
     static_cast<std::underlying_type_t<n::clasz>>(n::kNumClasses);
 
 date::time_zone const* get_tz(n::timetable const& tt,
-                              location_place_map_t const* lp,
+                              adr_ext const* lp,
                               tz_map_t const* tz,
                               n::location_idx_t const l) {
   auto const p = tt.locations_.parents_[l];
   auto const x = p == n::location_idx_t::invalid() ? l : p;
 
-  auto const p_idx = !lp || !tz ? adr_extra_place_idx_t::invalid() : lp->at(x);
+  auto const p_idx =
+      !lp || !tz ? adr_extra_place_idx_t::invalid() : lp->location_place_.at(x);
   if (p_idx != adr_extra_place_idx_t::invalid()) {
     return tz->at(p_idx);
   }
+
   return nullptr;
 }
 
-vector_map<n::location_idx_t, adr_extra_place_idx_t> adr_extend_tt(
-    nigiri::timetable const& tt,
-    a::area_database const* area_db,
-    a::typeahead& t) {
+adr_ext adr_extend_tt(nigiri::timetable const& tt,
+                      a::area_database const* area_db,
+                      a::typeahead& t) {
   if (tt.n_locations() == 0) {
     return {};
   }
 
   auto const timer = utl::scoped_timer{"guesser candidates"};
+
+  auto ret = adr_ext{};
 
   auto area_set_lookup = [&]() {
     auto x = hash_map<basic_string<a::area_idx_t>, a::area_set_idx_t>{};
@@ -56,54 +59,57 @@ vector_map<n::location_idx_t, adr_extra_place_idx_t> adr_extend_tt(
     return x;
   }();
 
-  // Map each location + its equivalents with the same name to one place_idx
   // mapping: location_idx -> place_idx
   // reverse: place_idx -> location_idx
   auto place_location = vector_map<adr_extra_place_idx_t, n::location_idx_t>{};
-  auto location_place = vector_map<n::location_idx_t, adr_extra_place_idx_t>{};
   {
-    location_place.resize(tt.n_locations(), adr_extra_place_idx_t::invalid());
+    ret.location_place_.resize(tt.n_locations(),
+                               adr_extra_place_idx_t::invalid());
     place_location.resize(tt.n_locations(), n::location_idx_t::invalid());
 
+    // Map each location + its equivalents with the same name to one place_idx.
     auto i = adr_extra_place_idx_t{0U};
     for (auto l = n::location_idx_t{0U}; l != tt.n_locations(); ++l) {
-      if (location_place[l] == adr_extra_place_idx_t::invalid() &&
+      if (ret.location_place_[l] == adr_extra_place_idx_t::invalid() &&
           tt.locations_.parents_[l] == n::location_idx_t::invalid()) {
-        location_place[l] = i;
+        ret.location_place_[l] = i;
         place_location[i] = l;
 
         auto const name = tt.locations_.names_[l].view();
         for (auto const eq : tt.locations_.equivalences_[l]) {
           if (tt.locations_.names_[eq].view() == name) {
-            location_place[eq] = i;
+            ret.location_place_[eq] = i;
           }
         }
 
         ++i;
       }
     }
-
     place_location.resize(to_idx(i));
+
+    // Map all children to root.
+    for (auto l = n::location_idx_t{0U}; l != tt.n_locations(); ++l) {
+      if (tt.locations_.parents_[l] != n::location_idx_t::invalid()) {
+        ret.location_place_[l] =
+            ret.location_place_[tt.locations_.get_root_idx(l)];
+      }
+    }
   }
 
   // For each station without parent:
   // Compute importance = transport count weighted by clasz.
-  auto importance = vector_map<adr_extra_place_idx_t, float>{};
-  importance.resize(place_location.size());
+  ret.place_importance_.resize(place_location.size());
+  ret.place_clasz_.resize(place_location.size());
   {
     auto const event_counts = utl::scoped_timer{"guesser event_counts"};
     for (auto i = 0U; i != tt.n_locations(); ++i) {
       auto const l = n::location_idx_t{i};
-      if (tt.locations_.parents_[l] != n::location_idx_t::invalid() ||
-          location_place[l] >= importance.size()) {
-        continue;
-      }
 
       auto transport_counts = std::array<unsigned, n::kNumClasses>{};
       for (auto const& r : tt.location_routes_[l]) {
+        auto const clasz =
+            static_cast<std::underlying_type_t<n::clasz>>(tt.route_clasz_[r]);
         for (auto const tr : tt.route_transport_ranges_[r]) {
-          auto const clasz = static_cast<std::underlying_type_t<n::clasz>>(
-              tt.route_section_clasz_[r][0]);
           transport_counts[clasz] +=
               tt.bitfields_[tt.transport_traffic_days_[tr]].count();
         }
@@ -122,15 +128,20 @@ vector_map<n::location_idx_t, adr_extra_place_idx_t> adr_extend_tt(
                                        /* Tram */ 3,
                                        /* Bus  */ 2,
                                        /* Ship  */ 10,
+                                       /* CableCar */ 5,
+                                       /* Funicular */ 5,
+                                       /* AerialLift */ 5,
                                        /* Other  */ 1};
-      auto const p = tt.locations_.parents_[l];
-      auto const x = (p == n::location_idx_t::invalid()) ? l : p;
+      auto const root = tt.locations_.get_root_idx(l);
+      auto const place_idx = ret.location_place_[root];
       for (auto const [clasz, t_count] : utl::enumerate(transport_counts)) {
-        assert(clasz < kClaszMax);
-        assert(x < location_place.size());
-        assert(location_place[x] < importance.size());
-        importance[location_place[x]] +=
+        ret.place_importance_[place_idx] +=
             prio[clasz] * static_cast<float>(t_count);
+
+        if (t_count != 0U) {
+          ret.place_clasz_[place_idx] |=
+              static_cast<n::routing::clasz_mask_t>(clasz << 1U);
+        }
       }
     }
   }
@@ -138,9 +149,10 @@ vector_map<n::location_idx_t, adr_extra_place_idx_t> adr_extend_tt(
   // Normalize to interval [0, 1] by dividing by max. importance.
   {
     auto const normalize = utl::scoped_timer{"guesser normalize"};
-    auto const max_it = std::max_element(begin(importance), end(importance));
+    auto const max_it = std::max_element(begin(ret.place_importance_),
+                                         end(ret.place_importance_));
     auto const max_importance = std::max(*max_it, 1.F);
-    for (auto& i : importance) {
+    for (auto& i : ret.place_importance_) {
       i /= max_importance;
     }
   }
@@ -161,7 +173,7 @@ vector_map<n::location_idx_t, adr_extra_place_idx_t> adr_extend_tt(
     t.area_sets_.emplace_back(areas);
   }
 
-  for (auto const [prio, l] : utl::zip(importance, place_location)) {
+  for (auto const [prio, l] : utl::zip(ret.place_importance_, place_location)) {
     auto const place_idx = a::place_idx_t{t.place_names_.size()};
 
     auto names = std::vector<std::pair<a::string_idx_t, a::language_idx_t>>{
@@ -169,10 +181,10 @@ vector_map<n::location_idx_t, adr_extra_place_idx_t> adr_extend_tt(
          a::kDefaultLang}};
     auto const add_alt_names = [&](n::location_idx_t const loc) {
       for (auto const& an : tt.locations_.alt_names_[loc]) {
-        names.emplace_back(std::pair{
+        names.emplace_back(
             add_string(tt.locations_.alt_name_strings_[an].view(), place_idx),
             t.get_or_create_lang_idx(
-                tt.languages_[tt.locations_.alt_name_langs_[an]].view())});
+                tt.languages_[tt.locations_.alt_name_langs_[an]].view()));
       }
     };
     add_alt_names(l);
@@ -180,8 +192,8 @@ vector_map<n::location_idx_t, adr_extra_place_idx_t> adr_extend_tt(
       if (tt.locations_.types_[c] == nigiri::location_type::kStation &&
           tt.locations_.names_[c].view() != tt.locations_.names_[l].view()) {
         names.emplace_back(
-            std::pair{add_string(tt.locations_.names_[c].view(), place_idx),
-                      a::kDefaultLang});
+            add_string(tt.locations_.names_[c].view(), place_idx),
+            a::kDefaultLang);
         add_alt_names(c);
       }
     }
@@ -225,7 +237,7 @@ vector_map<n::location_idx_t, adr_extra_place_idx_t> adr_extend_tt(
 
   t.build_ngram_index();
 
-  return location_place;
+  return ret;
 }
 
 }  // namespace motis

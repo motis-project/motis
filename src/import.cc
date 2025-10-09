@@ -421,6 +421,7 @@ data import(config const& c, fs::path const& data_path, bool const write) {
            {tt_hash,
             osm_hash,
             adr_version(),
+            adr_ext_version(),
             n_version(),
             {"geocoding", c.geocoding_},
             {"reverse_geocoding", c.reverse_geocoding_}}};

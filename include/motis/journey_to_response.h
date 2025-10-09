@@ -45,7 +45,7 @@ api::Itinerary journey_to_response(
     osr::elevation_storage const*,
     nigiri::shapes_storage const*,
     gbfs::gbfs_routing_data&,
-    location_place_map_t const*,
+    adr_ext const*,
     tz_map_t const*,
     nigiri::routing::journey const&,
     place_t const& start,

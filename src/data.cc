@@ -288,8 +288,7 @@ void data::load_geocoder() {
   tc_ = std::make_unique<adr::cache>(t_->strings_.size(), 100U);
 
   if (config_.timetable_.has_value()) {
-    location_extra_place_ = cista::read<location_place_map_t>(
-        path_ / "adr" / "location_extra_place.bin");
+    adr_ext_ = cista::read<adr_ext>(path_ / "adr" / "location_extra_place.bin");
     tz_ = std::make_unique<
         vector_map<adr_extra_place_idx_t, date::time_zone const*>>();
     auto cache = hash_map<std::string, date::time_zone const*>{};
