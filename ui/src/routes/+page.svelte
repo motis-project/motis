@@ -87,7 +87,7 @@
 		document.documentElement.classList.add('dark');
 	}
 
-	let center = $state.raw<[number, number]>([8.652235, 49.876908]);
+	let center = $state.raw<[number, number]>([2.258882912876089, 48.72559118651327]);
 	let level = $state(0);
 	let zoom = $state(15);
 	let bounds = $state<maplibregl.LngLatBoundsLike>();
@@ -102,7 +102,7 @@
 			}
 			const r = d.data;
 			if (r) {
-				center = [r.lon, r.lat];
+				// center = [r.lon, r.lat];
 				zoom = r.zoom;
 			}
 		});

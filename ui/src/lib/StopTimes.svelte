@@ -41,7 +41,7 @@
 		n: 10,
 		exactRadius: false,
 		radius: 200,
-		language
+		language: [language]
 	});
 	/* eslint-disable svelte/prefer-writable-derived */
 	let responses = $state<Array<Promise<StoptimesResponse>>>([]);
