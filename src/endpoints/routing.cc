@@ -840,7 +840,14 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
 
     auto search_state = n::routing::search_state{};
     auto r = n::routing::routing_result{};
-    if (query.algorithm_ == api::algorithmEnum::PONG) {
+    if (query.algorithm_ == api::algorithmEnum::PONG &&
+        // arriveBy |  extend_later | PONG applicable
+        // ---------+---------------+---------------------
+        // FALSE    |  FALSE        | FALSE    => rRAPTOR
+        // FALSE    |  TRUE         | TRUE     => PONG
+        // TRUE     |  FALSE        | TRUE     => PONG
+        // TRUE     |  TRUE         | FALSE    => rRAPTOR
+        query.arriveBy_ != start_time.extend_interval_later_) {
       auto raptor_state = n::routing::raptor_state{};
       r = n::routing::pong_search(
           *tt_, rtt, search_state, raptor_state, std::move(q),
