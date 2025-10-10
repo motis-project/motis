@@ -29,7 +29,7 @@ struct config {
 
   bool requires_rt_timetable_updates() const;
   bool has_gbfs_feeds() const;
-  bool has_odm() const;
+  bool has_prima() const;
   bool has_elevators() const;
   bool use_street_routing() const;
 
@@ -148,12 +148,12 @@ struct config {
   };
   std::optional<gbfs> gbfs_{};
 
-  struct odm {
-    bool operator==(odm const&) const = default;
+  struct prima {
+    bool operator==(prima const&) const = default;
     std::string url_{};
     std::optional<std::string> bounds_{};
   };
-  std::optional<odm> odm_{};
+  std::optional<prima> prima_{};
 
   struct elevators {
     bool operator==(elevators const&) const = default;

@@ -9,7 +9,8 @@ namespace motis::odm {
 struct query_factory {
   static constexpr auto const kMaxSubQueries = 9U;
 
-  std::vector<nigiri::routing::query> make_queries(bool with_odm) const;
+  std::vector<nigiri::routing::query> make_queries(
+      bool with_taxi, bool with_ride_sharing) const;
 
 private:
   nigiri::routing::query make(
@@ -36,16 +37,22 @@ public:
       td_dest_walk_;
   nigiri::hash_map<nigiri::location_idx_t,
                    std::vector<nigiri::routing::td_offset>>
-      odm_start_short_;
+      start_taxi_short_;
   nigiri::hash_map<nigiri::location_idx_t,
                    std::vector<nigiri::routing::td_offset>>
-      odm_start_long_;
+      start_taxi_long_;
   nigiri::hash_map<nigiri::location_idx_t,
                    std::vector<nigiri::routing::td_offset>>
-      odm_dest_short_;
+      dest_taxi_short_;
   nigiri::hash_map<nigiri::location_idx_t,
                    std::vector<nigiri::routing::td_offset>>
-      odm_dest_long_;
+      dest_taxi_long_;
+  nigiri::hash_map<nigiri::location_idx_t,
+                   std::vector<nigiri::routing::td_offset>>
+      start_ride_sharing_;
+  nigiri::hash_map<nigiri::location_idx_t,
+                   std::vector<nigiri::routing::td_offset>>
+      dest_ride_sharing_;
 };
 
 }  // namespace motis::odm

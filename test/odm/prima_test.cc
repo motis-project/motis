@@ -5,12 +5,13 @@
 #include "nigiri/loader/init_finish.h"
 #include "nigiri/common/parse_time.h"
 #include "nigiri/routing/journey.h"
-#include "nigiri/routing/pareto_set.h"
 #include "nigiri/special_stations.h"
 
 #include "motis/odm/odm.h"
 #include "motis/odm/prima.h"
 #include "motis/transport_mode_ids.h"
+
+#include "motis-api/motis-api.h"
 
 namespace n = nigiri;
 using namespace motis::odm;
@@ -30,7 +31,7 @@ D,D,D,0.4,0.4,,,,
 }
 
 constexpr auto const kExpectedInitial =
-    R"({"start":{"lat":0E0,"lng":0E0},"target":{"lat":1E0,"lng":1E0},"startBusStops":[{"lat":1E-1,"lng":1E-1,"times":[39300000,42900000]},{"lat":2E-1,"lng":2E-1,"times":[42900000]}],"targetBusStops":[{"lat":3.0000000000000004E-1,"lng":3.0000000000000004E-1,"times":[47100000]},{"lat":4E-1,"lng":4E-1,"times":[50700000]}],"directTimes":[36000000,39600000],"startFixed":true,"capacities":{"wheelchairs":1,"bikes":0,"passengers":1,"luggage":0}})";
+    R"({"start":{"lat":0E0,"lng":0E0},"target":{"lat":0E0,"lng":0E0},"startBusStops":[{"lat":1E-1,"lng":1E-1,"times":[39300000,42900000]},{"lat":2E-1,"lng":2E-1,"times":[42900000]}],"targetBusStops":[{"lat":3.0000000000000004E-1,"lng":3.0000000000000004E-1,"times":[47100000]},{"lat":4E-1,"lng":4E-1,"times":[50700000]}],"directTimes":[36000000,39600000],"startFixed":true,"capacities":{"wheelchairs":1,"bikes":0,"passengers":1,"luggage":0}})";
 
 constexpr auto const invalid_response = R"({"message":"Internal Error"})";
 
@@ -43,7 +44,7 @@ constexpr auto const blacklisting_response = R"(
 )";
 
 constexpr auto const blacklisted =
-    R"({"start":{"lat":0E0,"lng":0E0},"target":{"lat":1E0,"lng":1E0},"startBusStops":[{"lat":1E-1,"lng":1E-1,"times":[39300000]},{"lat":2E-1,"lng":2E-1,"times":[42900000]}],"targetBusStops":[{"lat":3.0000000000000004E-1,"lng":3.0000000000000004E-1,"times":[47100000]}],"directTimes":[39600000],"startFixed":true,"capacities":{"wheelchairs":1,"bikes":0,"passengers":1,"luggage":0}})";
+    R"({"start":{"lat":0E0,"lng":0E0},"target":{"lat":0E0,"lng":0E0},"startBusStops":[{"lat":1E-1,"lng":1E-1,"times":[39300000]},{"lat":2E-1,"lng":2E-1,"times":[42900000]}],"targetBusStops":[{"lat":3.0000000000000004E-1,"lng":3.0000000000000004E-1,"times":[47100000]}],"directTimes":[39600000],"startFixed":true,"capacities":{"wheelchairs":1,"bikes":0,"passengers":1,"luggage":0}})";
 
 // 1970-01-01T09:57:00Z, 1970-01-01T10:55:00Z
 // 1970-01-01T14:07:00Z, 1970-01-01T14:46:00Z
@@ -102,38 +103,35 @@ TEST(odm, prima_update) {
     return tt.locations_.location_id_to_idx_.at({.id_ = s, .src_ = src});
   };
 
-  auto p = prima{
-      .from_ = {0.0, 0.0},
-      .to_ = {1.0, 1.0},
-      .fixed_ = n::event_type::kDep,
-      .cap_ = {.wheelchairs_ = 1, .bikes_ = 0, .passengers_ = 1, .luggage_ = 0},
-      .from_rides_ = {{.time_at_start_ = n::unixtime_t{10h},
-                       .time_at_stop_ = n::unixtime_t{11h},
-                       .stop_ = get_loc_idx("A")},
-                      {.time_at_start_ = n::unixtime_t{11h},
-                       .time_at_stop_ = n::unixtime_t{12h},
-                       .stop_ = get_loc_idx("A")},
-                      {.time_at_start_ = n::unixtime_t{11h},
-                       .time_at_stop_ = n::unixtime_t{12h},
-                       .stop_ = get_loc_idx("B")}},
-      .to_rides_ = {{.time_at_start_ = n::unixtime_t{14h},
-                     .time_at_stop_ = n::unixtime_t{13h},
-                     .stop_ = get_loc_idx("C")},
-                    {.time_at_start_ = n::unixtime_t{15h},
-                     .time_at_stop_ = n::unixtime_t{14h},
-                     .stop_ = get_loc_idx("D")}},
-      .direct_rides_ = {
-          {.dep_ = n::unixtime_t{10h}, .arr_ = n::unixtime_t{11h}},
-          {.dep_ = n::unixtime_t{11h}, .arr_ = n::unixtime_t{12h}}}};
+  auto const loc = osr::location{};
+  auto p = prima{"prima_url", loc, loc, motis::api::plan_params{}};
+  p.fixed_ = n::event_type::kDep;
+  p.cap_ = {.wheelchairs_ = 1, .bikes_ = 0, .passengers_ = 1, .luggage_ = 0};
+  p.first_mile_taxi_ = {{.time_at_start_ = n::unixtime_t{10h},
+                         .time_at_stop_ = n::unixtime_t{11h},
+                         .stop_ = get_loc_idx("A")},
+                        {.time_at_start_ = n::unixtime_t{11h},
+                         .time_at_stop_ = n::unixtime_t{12h},
+                         .stop_ = get_loc_idx("A")},
+                        {.time_at_start_ = n::unixtime_t{11h},
+                         .time_at_stop_ = n::unixtime_t{12h},
+                         .stop_ = get_loc_idx("B")}};
+  p.last_mile_taxi_ = {{.time_at_start_ = n::unixtime_t{14h},
+                        .time_at_stop_ = n::unixtime_t{13h},
+                        .stop_ = get_loc_idx("C")},
+                       {.time_at_start_ = n::unixtime_t{15h},
+                        .time_at_stop_ = n::unixtime_t{14h},
+                        .stop_ = get_loc_idx("D")}};
+  p.direct_taxi_ = {{.dep_ = n::unixtime_t{10h}, .arr_ = n::unixtime_t{11h}},
+                    {.dep_ = n::unixtime_t{11h}, .arr_ = n::unixtime_t{12h}}};
 
-  EXPECT_EQ(kExpectedInitial, p.get_prima_request(tt));
-  EXPECT_FALSE(p.blacklist_update(invalid_response));
-  EXPECT_TRUE(p.blacklist_update(blacklisting_response));
-  EXPECT_EQ(blacklisted, p.get_prima_request(tt));
-  EXPECT_FALSE(p.whitelist_update(invalid_response));
-  EXPECT_TRUE(p.whitelist_update(whitelisting_response));
+  EXPECT_EQ(kExpectedInitial, p.make_taxi_request(tt));
+  EXPECT_FALSE(p.consume_blacklist_taxis_response(invalid_response));
+  EXPECT_FALSE(p.consume_blacklist_taxis_response(blacklisting_response));
+  EXPECT_EQ(blacklisted, p.make_taxi_request(tt));
 
-  p.odm_journeys_.push_back(
+  auto taxi_journeys = std::vector<nigiri::routing::journey>{};
+  taxi_journeys.push_back(
       {.legs_ = {{n::direction::kForward,
                   get_special_station(special_station::kStart),
                   get_loc_idx("A"), n::unixtime_t{10h}, n::unixtime_t{11h},
@@ -148,7 +146,7 @@ TEST(odm, prima_update) {
        .dest_time_ = n::unixtime_t{12h},
        .dest_ = get_special_station(special_station::kEnd)});
 
-  p.odm_journeys_.push_back(
+  taxi_journeys.push_back(
       {.legs_ = {{n::direction::kForward,
                   get_special_station(special_station::kStart),
                   get_loc_idx("B"), n::unixtime_t{11h}, n::unixtime_t{12h},
@@ -163,7 +161,7 @@ TEST(odm, prima_update) {
        .dest_time_ = n::unixtime_t{13h},
        .dest_ = get_special_station(special_station::kEnd)});
 
-  p.odm_journeys_.push_back(
+  taxi_journeys.push_back(
       {.legs_ = {{n::direction::kForward,
                   get_special_station(special_station::kStart),
                   get_loc_idx("A"), n::unixtime_t{10h}, n::unixtime_t{11h},
@@ -181,11 +179,14 @@ TEST(odm, prima_update) {
        .dest_time_ = n::unixtime_t{14h},
        .dest_ = get_special_station(special_station::kEnd)});
 
-  p.adjust_to_whitelisting();
+  EXPECT_FALSE(
+      p.consume_whitelist_taxis_response(invalid_response, taxi_journeys));
+  EXPECT_TRUE(
+      p.consume_whitelist_taxis_response(whitelisting_response, taxi_journeys));
 
   auto ss = std::stringstream{};
   ss << "\n";
-  for (auto const& j : p.odm_journeys_) {
+  for (auto const& j : taxi_journeys) {
     j.print(ss, tt, nullptr);
     ss << "\n";
   }

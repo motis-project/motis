@@ -50,7 +50,7 @@ void mixer::pareto_dominance(
     auto const odm_time_b = odm_time(b);
     auto const ret = a.dominates(b) && odm_time_a < odm_time_b;
     if (kMixerTracing) {
-      n::log(n::log_lvl::debug, "motis.odm",
+      n::log(n::log_lvl::debug, "motis.prima",
              "{} pareto-dominates {}, odm_time: {} < {} --> {}", label(a),
              label(b), odm_time_a, odm_time_b, ret ? "true" : "false");
     }
@@ -96,12 +96,12 @@ double mixer::cost(nr::journey const& j) const {
   };
 
   auto const odm_cost_first_mile =
-      j.legs_.empty() || !is_odm_leg(j.legs_.front())
+      j.legs_.empty() || !is_odm_leg(j.legs_.front(), kOdmTransportModeId)
           ? 0
           : odm_cost(j.legs_.front());
 
   auto const odm_cost_last_mile =
-      j.legs_.size() < 2 || !is_odm_leg(j.legs_.back())
+      j.legs_.size() < 2 || !is_odm_leg(j.legs_.back(), kOdmTransportModeId)
           ? 0
           : odm_cost(j.legs_.back());
 
@@ -119,6 +119,10 @@ std::vector<double> mixer::get_threshold(
     std::vector<nr::journey> const& v,
     n::interval<nigiri::unixtime_t> const& intvl,
     double const slope) const {
+
+  if (intvl.from_ >= intvl.to_) {
+    return {};
+  }
 
   auto threshold = std::vector(static_cast<size_t>(intvl.size().count()),
                                std::numeric_limits<double>::max());
@@ -222,8 +226,12 @@ void write_thresholds(std::vector<double> const& pt_threshold,
 }
 
 void add_pt_sort(n::pareto_set<nr::journey> const& pt_journeys,
-                 std::vector<nr::journey>& odm_journeys) {
+                 std::vector<nr::journey>& odm_journeys,
+                 std::vector<nr::journey> const& ride_share_journeys) {
   for (auto const& j : pt_journeys) {
+    odm_journeys.emplace_back(j);
+  }
+  for (auto const& j : ride_share_journeys) {
     odm_journeys.emplace_back(j);
   }
   utl::sort(odm_journeys, [](auto const& a, auto const& b) {
@@ -233,19 +241,20 @@ void add_pt_sort(n::pareto_set<nr::journey> const& pt_journeys,
 }
 
 void mixer::mix(n::pareto_set<nr::journey> const& pt_journeys,
-                std::vector<nr::journey>& odm_journeys,
+                std::vector<nr::journey>& taxi_journeys,
+                std::vector<nr::journey> const& ride_share_journeys,
                 metrics_registry* metrics,
                 std::optional<std::string_view> const stats_path) const {
-  pareto_dominance(odm_journeys);
-  auto const pareto_n = odm_journeys.size();
+  pareto_dominance(taxi_journeys);
+  auto const pareto_n = taxi_journeys.size();
 
   if constexpr (kMixerTracing) {
     std::ofstream journeys_in{"journeys.csv"};
-    journeys_in << to_csv(get_mixer_input(pt_journeys, odm_journeys));
+    journeys_in << to_csv(get_mixer_input(pt_journeys, taxi_journeys));
   }
 
   if (stats_path) {
-    write_journeys(pt_journeys, odm_journeys, *stats_path);
+    write_journeys(pt_journeys, taxi_journeys, *stats_path);
   }
 
   auto const intvl = [&]() {
@@ -255,7 +264,7 @@ void mixer::mix(n::pareto_set<nr::journey> const& pt_journeys,
       ret.from_ = std::min(ret.from_, j.departure_time());
       ret.to_ = std::max(ret.to_, j.arrival_time());
     }
-    for (auto const& j : odm_journeys) {
+    for (auto const& j : taxi_journeys) {
       ret.from_ = std::min(ret.from_, j.departure_time());
       ret.to_ = std::max(ret.to_, j.arrival_time());
     }
@@ -263,7 +272,7 @@ void mixer::mix(n::pareto_set<nr::journey> const& pt_journeys,
   }();
 
   auto const threshold_filter = [&](auto const& t) {
-    std::erase_if(odm_journeys, [&](auto const& j) {
+    std::erase_if(taxi_journeys, [&](auto const& j) {
       return t[static_cast<size_t>((center(j) - intvl.from_).count())] <
              cost(j);
     });
@@ -271,9 +280,9 @@ void mixer::mix(n::pareto_set<nr::journey> const& pt_journeys,
 
   auto const pt_threshold = get_threshold(pt_journeys.els_, intvl, pt_slope_);
   threshold_filter(pt_threshold);
-  auto const pt_filtered_n = odm_journeys.size();
+  auto const pt_filtered_n = taxi_journeys.size();
 
-  auto const odm_threshold = get_threshold(odm_journeys, intvl, odm_slope_);
+  auto const odm_threshold = get_threshold(taxi_journeys, intvl, odm_slope_);
   threshold_filter(odm_threshold);
 
   if (stats_path) {
@@ -286,17 +295,18 @@ void mixer::mix(n::pareto_set<nr::journey> const& pt_journeys,
     metrics->routing_odm_journeys_found_non_dominated_cost_.Observe(
         static_cast<double>(pt_filtered_n));
     metrics->routing_odm_journeys_found_non_dominated_prod_.Observe(
-        static_cast<double>(odm_journeys.size()));
+        static_cast<double>(taxi_journeys.size()));
   }
 
-  add_pt_sort(pt_journeys, odm_journeys);
+  add_pt_sort(pt_journeys, taxi_journeys, ride_share_journeys);
 }
 
 std::vector<nr::journey> get_mixer_input(
     n::pareto_set<nr::journey> const& pt_journeys,
-    std::vector<nr::journey> const& odm_journeys) {
+    std::vector<nr::journey> const& odm_journeys,
+    std::vector<nr::journey>& ride_share_journeys) {
   auto ret = odm_journeys;
-  add_pt_sort(pt_journeys, ret);
+  add_pt_sort(pt_journeys, ret, ride_share_journeys);
   return ret;
 }
 

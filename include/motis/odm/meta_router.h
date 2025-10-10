@@ -28,8 +28,6 @@ struct journey;
 
 namespace motis::odm {
 
-struct prima;
-
 struct meta_router {
   meta_router(ep::routing const&,
               api::plan_params const&,
@@ -46,6 +44,9 @@ struct meta_router {
               bool odm_pre_transit,
               bool odm_post_transit,
               bool odm_direct,
+              bool ride_sharing_pre_transit,
+              bool ride_sharing_post_transit,
+              bool ride_sharing_direct,
               unsigned api_version);
   ~meta_router();
 
@@ -66,13 +67,10 @@ struct meta_router {
   };
 
 private:
-  void init_prima(nigiri::interval<nigiri::unixtime_t> const& search_intvl,
-                  nigiri::interval<nigiri::unixtime_t> const& odm_intvl);
   nigiri::routing::query get_base_query(
       nigiri::interval<nigiri::unixtime_t> const&) const;
   std::vector<routing_result> search_interval(
       std::vector<nigiri::routing::query> const&) const;
-  void add_direct() const;
 
   ep::routing const& r_;
   api::plan_params const& query_;
@@ -89,6 +87,9 @@ private:
   bool odm_pre_transit_;
   bool odm_post_transit_;
   bool odm_direct_;
+  bool ride_sharing_pre_transit_;
+  bool ride_sharing_post_transit_;
+  bool ride_sharing_direct_;
   unsigned api_version_;
 
   nigiri::timetable const* tt_;
@@ -113,8 +114,6 @@ private:
   std::optional<std::vector<std::string>> const& dest_rental_providers_;
   bool start_ignore_rental_return_constraints_{};
   bool dest_ignore_rental_return_constraints_{};
-
-  std::unique_ptr<prima> p_;
 };
 
 }  // namespace motis::odm
