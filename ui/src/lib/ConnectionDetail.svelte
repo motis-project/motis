@@ -73,7 +73,7 @@
 						</Button>
 					</div>
 					{#if p.track && !hidePlatform}
-						<span class="text-nowrap px-2 border rounded-xl mt-1 mx-1">
+						<span class="text-nowrap px-2 border rounded-xl mx-1">
 							{getModeLabel(mode) == 'Track' ? t.trackAbr : t.platformAbr}
 							{p.track}
 						</span>
