@@ -102,7 +102,7 @@
 			}
 			const r = d.data;
 			if (r) {
-				// center = [r.lon, r.lat];
+				center = [r.lon, r.lat];
 				zoom = r.zoom;
 			}
 		});
