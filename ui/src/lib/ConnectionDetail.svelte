@@ -4,6 +4,7 @@
 	import ArrowDown from 'lucide-svelte/icons/arrow-down';
 	import DollarSign from 'lucide-svelte/icons/dollar-sign';
 	import CircleX from 'lucide-svelte/icons/circle-x';
+	import TriangleAlert from 'lucide-svelte/icons/triangle-alert';
 	import type { FareProduct, Itinerary, Leg, Mode, Place, StepInstruction } from '$lib/api/openapi';
 	import Time from '$lib/Time.svelte';
 	import { routeBorderColor, routeColor } from '$lib/modeStyle';
@@ -58,9 +59,9 @@
 				{arriveBy}
 			/>
 		</div>
-		<div class="w-full ml-4">
+		<div class="w-full min-w-0 break-words mb-7 ml-2">
 			{#if p.stopId}
-				<div class="flex items-center justify-between">
+				<div class="flex max-h-6 items-center justify-between">
 					<Button
 						class="text-[length:inherit] leading-none justify-normal text-wrap p-0 text-left {textColor}"
 						variant="link"
@@ -101,11 +102,31 @@
 					</div>
 				{/if}
 				{#if isStartOrEnd && p.alerts}
-					{#each p.alerts as alert, i (i)}
-						<div class="text-destructive text-sm">
-							{alert.headerText}
-						</div>
-					{/each}
+					<details class="text-destructive text-sm">
+						<summary
+							class="flex items-center gap-2 hover:underline underline-offset-4 cursor-pointer transition-all"
+						>
+							<TriangleAlert class="size-4" />
+							<span> View alerts </span>
+						</summary>
+						{#each p.alerts as alert, i (i)}
+							<button
+								class="text-sm text-left w-full truncate"
+								onclick={(e) => {
+									e.currentTarget.classList.toggle('truncate');
+									e.currentTarget.classList.toggle('w-full');
+								}}
+							>
+								• {alert.headerText}
+								{#if alert.impactPeriod}
+									{alert.impactPeriod[0]?.start} - {alert.impactPeriod[1]?.end}
+								{/if}
+								{#if alert.descriptionText}
+									{alert.descriptionText}
+								{/if}
+							</button>
+						{/each}
+					</details>
 				{/if}
 			{:else}
 				<span>{p.name || p.flex}</span>
@@ -323,14 +344,33 @@
 						<span class="ml-1">{t.unscheduledTrip}</span>
 					</div>
 				{/if}
+
 				{#if l.alerts}
-					<ul class="mt-2">
+					<details class="text-destructive text-sm">
+						<summary
+							class="flex items-center gap-2 hover:underline underline-offset-4 cursor-pointer transition-all"
+						>
+							<TriangleAlert class="size-4" />
+							<span> View alerts </span>
+						</summary>
 						{#each l.alerts as alert, i (i)}
-							<li class="text-destructive text-sm font-bold">
-								{alert.headerText}
-							</li>
+							<button
+								class="text-sm text-left w-full truncate"
+								onclick={(e) => {
+									e.currentTarget.classList.toggle('truncate');
+									e.currentTarget.classList.toggle('w-full');
+								}}
+							>
+								• {alert.headerText}
+								{#if alert.impactPeriod}
+									{alert.impactPeriod[0]?.start} - {alert.impactPeriod[1]?.end}
+								{/if}
+								{#if alert.descriptionText}
+									{alert.descriptionText}
+								{/if}
+							</button>
 						{/each}
-					</ul>
+					</details>
 				{/if}
 				{#if l.intermediateStops?.length === 0}
 					<div class="pt-16 pb-8 pl-1 md:pl-4 flex items-center text-muted-foreground">
