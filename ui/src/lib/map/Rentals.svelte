@@ -91,7 +91,7 @@
 		ZoneFeatureProperties
 	>;
 
-	const create_empty_vehicle_collection = (): VehicleFeatureCollection => ({
+	const createEmptyVehicleCollection = (): VehicleFeatureCollection => ({
 		type: 'FeatureCollection',
 		features: [] as Feature<Point, VehicleFeatureProperties>[]
 	});
@@ -106,7 +106,7 @@
 		features: []
 	};
 
-	const station_icon_by_form_factor: Record<RentalFormFactor, string> = {
+	const stationIconByFormFactor: Record<RentalFormFactor, string> = {
 		BICYCLE: 'bike_station',
 		CARGO_BICYCLE: 'cargo_bike_station',
 		CAR: 'car_station',
@@ -116,7 +116,7 @@
 		OTHER: 'bike_station'
 	};
 
-	const vehicle_icon_by_form_factor: Record<RentalFormFactor, string> = {
+	const vehicleIconbyFormFactor: Record<RentalFormFactor, string> = {
 		BICYCLE: 'floating_bike',
 		CARGO_BICYCLE: 'floating_cargo_bike',
 		CAR: 'floating_car',
@@ -126,7 +126,7 @@
 		OTHER: 'floating_bike'
 	};
 
-	const svg_symbol_by_form_factor: Record<RentalFormFactor, string> = {
+	const svgSymbolByFormFactor: Record<RentalFormFactor, string> = {
 		BICYCLE: 'bike',
 		CARGO_BICYCLE: 'cargo_bike',
 		CAR: 'car',
@@ -136,7 +136,7 @@
 		OTHER: 'bike'
 	};
 
-	const form_factor_label: Record<RentalFormFactor, string> = {
+	const formFactorLabel: Record<RentalFormFactor, string> = {
 		BICYCLE: t.RENTAL_BICYCLE,
 		CARGO_BICYCLE: t.RENTAL_CARGO_BICYCLE,
 		CAR: t.RENTAL_CAR,
@@ -146,7 +146,7 @@
 		OTHER: t.RENTAL_OTHER
 	};
 
-	const vehicle_icons = Array.from(new Set(Object.values(vehicle_icon_by_form_factor)));
+	const vehicleIcons = Array.from(new Set(Object.values(vehicleIconbyFormFactor)));
 
 	type VehicleSourceConfig = {
 		icon: string;
@@ -156,7 +156,7 @@
 		cluster_icon: string;
 	};
 
-	const vehicle_source_configs: VehicleSourceConfig[] = vehicle_icons.map((icon) => ({
+	const vehicleSourceConfigs: VehicleSourceConfig[] = vehicleIcons.map((icon) => ({
 		icon,
 		source_id: `${VEHICLES_SOURCE_PREFIX}-${icon}`,
 		cluster_layer_id: `${VEHICLES_CLUSTER_LAYER_PREFIX}-${icon}`,
@@ -164,12 +164,12 @@
 		cluster_icon: `${icon}_cluster`
 	}));
 
-	const vehicle_source_config_by_icon = new Map(
-		vehicle_source_configs.map((config) => [config.icon, config] as const)
+	const vehicleSourceConfigByIcon = new Map(
+		vehicleSourceConfigs.map((config) => [config.icon, config] as const)
 	);
 
-	const vehicle_point_layer_ids = vehicle_source_configs.map((config) => config.point_layer_id);
-	const vehicle_cluster_layer_ids = vehicle_source_configs.map((config) => config.cluster_layer_id);
+	const vehiclePointLayerIds = vehicleSourceConfigs.map((config) => config.point_layer_id);
+	const vehicleClusterLayerIds = vehicleSourceConfigs.map((config) => config.cluster_layer_id);
 
 	type ProviderFormFactorSelection = {
 		providerId: string;
@@ -181,13 +181,13 @@
 		providerName: string;
 	};
 
-	const create_empty_vehicle_collections = (): VehicleCollections =>
-		vehicle_source_configs.reduce((acc, config) => {
-			acc[config.icon] = create_empty_vehicle_collection();
+	const createEmptyVehicleCollections = (): VehicleCollections =>
+		vehicleSourceConfigs.reduce((acc, config) => {
+			acc[config.icon] = createEmptyVehicleCollection();
 			return acc;
 		}, {} as VehicleCollections);
 
-	vehicleDataByIcon = create_empty_vehicle_collections();
+	vehicleDataByIcon = createEmptyVehicleCollections();
 
 	const create_empty_station_collection = (): FeatureCollection<
 		Point,
@@ -207,7 +207,7 @@
 	let showZones = $derived(providerFilter != null);
 
 	let fullStationData = create_empty_station_collection();
-	let fullVehicleDataByIcon = create_empty_vehicle_collections();
+	let fullVehicleDataByIcon = createEmptyVehicleCollections();
 	let fullZoneData = create_empty_zone_collection();
 
 	const decodePolylinePositions = (encoded: EncodedPolyline): Position[] => {
@@ -301,7 +301,7 @@
 	const ZONE_COLOR_RESTRICTED_FILL = '#ef4444';
 	const ZONE_COLOR_RESTRICTED_LINE = '#b91c1c';
 
-	const zone_fill_color_expression: ExpressionSpecification = [
+	const zoneFillColorExpression: ExpressionSpecification = [
 		'case',
 		['boolean', ['get', 'ride_end_allowed'], false],
 		ZONE_COLOR_ALLOWED_FILL,
@@ -310,7 +310,7 @@
 		ZONE_COLOR_RESTRICTED_FILL
 	];
 
-	const zone_line_color_expression: ExpressionSpecification = [
+	const zoneLineColorExpression: ExpressionSpecification = [
 		'case',
 		['boolean', ['get', 'ride_end_allowed'], false],
 		ZONE_COLOR_ALLOWED_LINE,
@@ -319,7 +319,7 @@
 		ZONE_COLOR_RESTRICTED_LINE
 	];
 
-	const zoom_scaled_icon_size: ExpressionSpecification = [
+	const zoomScaledIconSize: ExpressionSpecification = [
 		'interpolate',
 		['linear'],
 		['zoom'],
@@ -329,7 +329,7 @@
 		1
 	];
 
-	const zoom_scaled_text_size_small: ExpressionSpecification = [
+	const zoomScaledTextSizeSmall: ExpressionSpecification = [
 		'interpolate',
 		['linear'],
 		['zoom'],
@@ -339,7 +339,7 @@
 		10
 	];
 
-	const zoom_scaled_text_size_medium: ExpressionSpecification = [
+	const zoomScaledTextSizeMedium: ExpressionSpecification = [
 		'interpolate',
 		['linear'],
 		['zoom'],
@@ -349,7 +349,7 @@
 		12
 	];
 
-	const create_zoom_scaled_text_offset = (baseOffset: [number, number]): ExpressionSpecification =>
+	const createZoomScaledTextOffset = (baseOffset: [number, number]): ExpressionSpecification =>
 		[
 			'interpolate',
 			['linear'],
@@ -360,7 +360,7 @@
 			['literal', baseOffset]
 		] as unknown as ExpressionSpecification;
 
-	const zoom_scaled_text_offset = create_zoom_scaled_text_offset([0.8, -1.25]);
+	const zoomScaledTextOffset = createZoomScaledTextOffset([0.8, -1.25]);
 
 	const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
@@ -389,11 +389,11 @@
 
 	const getStationIconName = (station: RentalStation) => {
 		const formFactor = station.formFactors?.[0];
-		return station_icon_by_form_factor[formFactor ?? DEFAULT_FORM_FACTOR];
+		return stationIconByFormFactor[formFactor ?? DEFAULT_FORM_FACTOR];
 	};
 
 	const getVehicleIconName = (vehicle: RentalVehicle) => {
-		return vehicle_icon_by_form_factor[vehicle.formFactor];
+		return vehicleIconbyFormFactor[vehicle.formFactor];
 	};
 
 	const buildStationFeatures = (
@@ -426,8 +426,8 @@
 	};
 
 	const buildVehicleFeatures = (vehicles: RentalVehicle[]): VehicleCollections => {
-		const collections = create_empty_vehicle_collections();
-		const fallbackConfig = vehicle_source_configs[0];
+		const collections = createEmptyVehicleCollections();
+		const fallbackConfig = vehicleSourceConfigs[0];
 		if (!fallbackConfig) {
 			return collections;
 		}
@@ -435,7 +435,7 @@
 			.filter((vehicle) => !vehicle.stationId)
 			.forEach((vehicle) => {
 				const iconName = getVehicleIconName(vehicle);
-				const config = vehicle_source_config_by_icon.get(iconName) ?? fallbackConfig;
+				const config = vehicleSourceConfigByIcon.get(iconName) ?? fallbackConfig;
 				const targetCollection = collections[config.icon];
 				if (!targetCollection) {
 					return;
@@ -460,7 +460,7 @@
 		return collections;
 	};
 
-	const collect_provider_form_factors = (provider: RentalProvider): RentalFormFactor[] => {
+	const collectProviderFormFactors = (provider: RentalProvider): RentalFormFactor[] => {
 		const direct = Array.isArray(provider.formFactors)
 			? provider.formFactors.filter((factor): factor is RentalFormFactor => Boolean(factor))
 			: [];
@@ -481,7 +481,7 @@
 	const buildProviderOptionsList = (providers: RentalProvider[]): ProviderFormFactorOption[] => {
 		const options: ProviderFormFactorOption[] = [];
 		for (const provider of providers) {
-			const formFactors = collect_provider_form_factors(provider);
+			const formFactors = collectProviderFormFactors(provider);
 			for (const formFactor of formFactors) {
 				options.push({
 					key: `${provider.id}::${formFactor}`,
@@ -521,7 +521,7 @@
 				type: 'fill',
 				source: ZONES_SOURCE_ID,
 				paint: {
-					'fill-color': zone_fill_color_expression,
+					'fill-color': zoneFillColorExpression,
 					'fill-opacity': 0.3
 				},
 				layout: {
@@ -540,15 +540,15 @@
 					'line-cap': 'round'
 				},
 				paint: {
-					'line-color': zone_line_color_expression,
+					'line-color': zoneLineColorExpression,
 					'line-width': 3,
 					'line-opacity': 0.9
 				}
 			});
 		}
 
-		for (const config of vehicle_source_configs) {
-			const data = vehicleDataByIcon[config.icon] ?? create_empty_vehicle_collection();
+		for (const config of vehicleSourceConfigs) {
+			const data = vehicleDataByIcon[config.icon] ?? createEmptyVehicleCollection();
 			if (!targetMap.getSource(config.source_id)) {
 				targetMap.addSource(config.source_id, {
 					type: 'geojson',
@@ -565,15 +565,15 @@
 					filter: ['has', 'point_count'],
 					layout: {
 						'icon-image': config.cluster_icon,
-						'icon-size': zoom_scaled_icon_size,
+						'icon-size': zoomScaledIconSize,
 						'icon-allow-overlap': true,
 						'icon-ignore-placement': true,
 						'text-field': ['to-string', ['get', 'point_count']],
 						'text-allow-overlap': true,
 						'text-ignore-placement': true,
 						'text-anchor': 'center',
-						'text-offset': zoom_scaled_text_offset,
-						'text-size': zoom_scaled_text_size_small,
+						'text-offset': zoomScaledTextOffset,
+						'text-size': zoomScaledTextSizeSmall,
 						'text-font': ['Noto Sans Display Regular']
 					},
 					paint: {
@@ -591,7 +591,7 @@
 					filter: ['!', ['has', 'point_count']],
 					layout: {
 						'icon-image': config.icon,
-						'icon-size': zoom_scaled_icon_size,
+						'icon-size': zoomScaledIconSize,
 						'icon-allow-overlap': true,
 						'icon-ignore-placement': true
 					}
@@ -613,15 +613,15 @@
 				source: STATIONS_SOURCE_ID,
 				layout: {
 					'icon-image': ['get', 'icon'],
-					'icon-size': zoom_scaled_icon_size,
+					'icon-size': zoomScaledIconSize,
 					'icon-allow-overlap': true,
 					'icon-ignore-placement': true,
 					'text-field': ['to-string', ['get', 'available']],
 					'text-allow-overlap': true,
 					'text-ignore-placement': true,
 					'text-anchor': 'center',
-					'text-offset': zoom_scaled_text_offset,
-					'text-size': zoom_scaled_text_size_medium,
+					'text-offset': zoomScaledTextOffset,
+					'text-size': zoomScaledTextSizeMedium,
 					'text-font': ['Noto Sans Display Regular']
 				},
 				paint: {
@@ -638,7 +638,7 @@
 		if (!targetMap) {
 			return;
 		}
-		for (const config of vehicle_source_configs) {
+		for (const config of vehicleSourceConfigs) {
 			if (targetMap.getLayer(config.point_layer_id)) {
 				targetMap.removeLayer(config.point_layer_id);
 			}
@@ -683,16 +683,16 @@
 		dataByIcon: VehicleCollections,
 		targetMap: maplibregl.Map | undefined
 	) => {
-		const nextData = create_empty_vehicle_collections();
-		for (const config of vehicle_source_configs) {
-			nextData[config.icon] = dataByIcon?.[config.icon] ?? create_empty_vehicle_collection();
+		const nextData = createEmptyVehicleCollections();
+		for (const config of vehicleSourceConfigs) {
+			nextData[config.icon] = dataByIcon?.[config.icon] ?? createEmptyVehicleCollection();
 		}
 		vehicleDataByIcon = nextData;
 		if (!targetMap) {
 			return;
 		}
 		ensureSourcesAndLayers(targetMap);
-		for (const config of vehicle_source_configs) {
+		for (const config of vehicleSourceConfigs) {
 			const source = targetMap.getSource(config.source_id) as maplibregl.GeoJSONSource | undefined;
 			source?.setData(vehicleDataByIcon[config.icon]);
 		}
@@ -752,7 +752,7 @@
 						...feature,
 						properties: {
 							...feature.properties,
-							icon: station_icon_by_form_factor[selection.formFactor] ?? feature.properties.icon,
+							icon: stationIconByFormFactor[selection.formFactor] ?? feature.properties.icon,
 							available
 						}
 					};
@@ -767,8 +767,8 @@
 		if (!selection) {
 			return collections;
 		}
-		return vehicle_source_configs.reduce((acc, config) => {
-			const original = collections[config.icon] ?? create_empty_vehicle_collection();
+		return vehicleSourceConfigs.reduce((acc, config) => {
+			const original = collections[config.icon] ?? createEmptyVehicleCollection();
 			acc[config.icon] = {
 				type: 'FeatureCollection',
 				features: original.features.filter((feature) => {
@@ -782,7 +782,7 @@
 		}, {} as VehicleCollections);
 	};
 
-	const derive_zone_access_flags = (
+	const deriveZoneAccessFlags = (
 		zone: RentalZone | undefined,
 		selection: ProviderFormFactorSelection | null
 	): { rideThroughAllowed: boolean; rideEndAllowed: boolean } | null => {
@@ -796,8 +796,8 @@
 				return null;
 			}
 			return {
-				rideThroughAllowed: Boolean(fallbackRule.rideThroughAllowed),
-				rideEndAllowed: Boolean(fallbackRule.rideEndAllowed)
+				rideThroughAllowed: fallbackRule.rideThroughAllowed,
+				rideEndAllowed: fallbackRule.rideEndAllowed && !fallbackRule.stationParking
 			};
 		}
 		const provider = providerById.get(selection.providerId);
@@ -823,12 +823,12 @@
 			return null;
 		}
 		return {
-			rideThroughAllowed: Boolean(matchingRule.rideThroughAllowed),
-			rideEndAllowed: Boolean(matchingRule.rideEndAllowed)
+			rideThroughAllowed: matchingRule.rideThroughAllowed,
+			rideEndAllowed: matchingRule.rideEndAllowed && !matchingRule.stationParking
 		};
 	};
 
-	const decorate_zone_feature = (
+	const decorateZoneFeature = (
 		feature: Feature<GeoJSONPolygon | GeoJSONMultiPolygon, ZoneFeatureProperties>,
 		selection: ProviderFormFactorSelection | null
 	): Feature<GeoJSONPolygon | GeoJSONMultiPolygon, ZoneFeatureProperties> | null => {
@@ -837,7 +837,7 @@
 			typeof zoneIndex === 'number' && zoneIndex >= 0 && zoneIndex < zones.length
 				? zones[zoneIndex]
 				: undefined;
-		const access = derive_zone_access_flags(zone, selection);
+		const access = deriveZoneAccessFlags(zone, selection);
 		if (!access) {
 			return null;
 		}
@@ -859,7 +859,7 @@
 			? data.features.filter((feature) => feature.properties.provider_id === selection.providerId)
 			: data.features.slice();
 		const decorated = filtered
-			.map((feature) => decorate_zone_feature(feature, selection))
+			.map((feature) => decorateZoneFeature(feature, selection))
 			.filter(
 				(
 					feature
@@ -1194,12 +1194,12 @@
 			targetMap.on('click', layerId, zoneClick);
 		}
 		targetMap.on('click', zoneMapClick);
-		for (const layerId of vehicle_point_layer_ids) {
+		for (const layerId of vehiclePointLayerIds) {
 			targetMap.on('mouseenter', layerId, vehicleEnter);
 			targetMap.on('mousemove', layerId, vehicleMove);
 			targetMap.on('mouseleave', layerId, vehicleLeave);
 		}
-		for (const layerId of vehicle_cluster_layer_ids) {
+		for (const layerId of vehicleClusterLayerIds) {
 			targetMap.on('mouseenter', layerId, vehicleClusterEnter);
 			targetMap.on('mouseleave', layerId, vehicleClusterLeave);
 		}
@@ -1212,8 +1212,8 @@
 			vehicleLeave,
 			vehicleClusterEnter,
 			vehicleClusterLeave,
-			vehicleLayerIds: vehicle_point_layer_ids.slice(),
-			vehicleClusterLayerIds: vehicle_cluster_layer_ids.slice(),
+			vehicleLayerIds: vehiclePointLayerIds.slice(),
+			vehicleClusterLayerIds: vehicleClusterLayerIds.slice(),
 			zoneEnter,
 			zoneLeave,
 			zoneClick,
@@ -1255,7 +1255,7 @@
 			handlers = new Map();
 			clusterClickHandlers.set(targetMap, handlers);
 		}
-		for (const config of vehicle_source_configs) {
+		for (const config of vehicleSourceConfigs) {
 			if (handlers.has(config.cluster_layer_id)) {
 				continue;
 			}
@@ -1345,7 +1345,7 @@
 	const setEmptyCollections = (targetMap: maplibregl.Map | undefined) => {
 		resetCachedData();
 		fullStationData = create_empty_station_collection();
-		fullVehicleDataByIcon = create_empty_vehicle_collections();
+		fullVehicleDataByIcon = createEmptyVehicleCollections();
 		fullZoneData = create_empty_zone_collection();
 		setStationSourceData(fullStationData, targetMap);
 		setVehicleSourceData(fullVehicleDataByIcon, targetMap);
@@ -1469,7 +1469,7 @@
 			{#each providerOptions as option (option.key)}
 				<button
 					type="button"
-					title={`${option.providerName} (${form_factor_label[option.formFactor]})`}
+					title={`${option.providerName} (${formFactorLabel[option.formFactor]})`}
 					class={cn(
 						'inline-flex max-w-sm items-center gap-2 rounded-md border-2 px-3 py-1.5 text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500',
 						providerFilter?.providerId === option.providerId &&
@@ -1484,7 +1484,7 @@
 					<span class="truncate">{option.providerName}</span>
 					<span class="flex items-center gap-1 text-xs font-medium">
 						<svg class="h-4 w-4 fill-current" aria-hidden="true" focusable="false">
-							<use href={`#${svg_symbol_by_form_factor[option.formFactor]}`} />
+							<use href={`#${svgSymbolByFormFactor[option.formFactor]}`} />
 						</svg>
 					</span>
 				</button>
