@@ -1,5 +1,9 @@
 <script lang="ts">
 	import X from 'lucide-svelte/icons/x';
+	import Palette from 'lucide-svelte/icons/palette';
+	import Rss from 'lucide-svelte/icons/rss';
+	import Ban from 'lucide-svelte/icons/ban';
+	import LocateFixed from 'lucide-svelte/icons/locate-fixed';
 	import { getStyle } from '$lib/map/style';
 	import Map from '$lib/map/Map.svelte';
 	import Control from '$lib/map/Control.svelte';
@@ -74,6 +78,7 @@
 	const isSmallScreen = browser && window.innerWidth < 768;
 	let activeTab = $state<'connections' | 'departures' | 'isochrones'>('connections');
 	let dataAttributionLink: string | undefined = $state(undefined);
+	let colorMode = $state<'rt' | 'route' | 'none'>('route');
 	let showMap = $state(!isSmallScreen);
 	let lastSelectedItinerary: Itinerary | undefined = undefined;
 	let lastOneToAllQuery: OneToAllData | undefined = undefined;
@@ -92,6 +97,17 @@
 	let zoom = $state(15);
 	let bounds = $state<maplibregl.LngLatBoundsLike>();
 	let map = $state<maplibregl.Map>();
+
+	const geolocate = new maplibregl.GeolocateControl({
+		positionOptions: {
+			enableHighAccuracy: true
+		},
+		showAccuracyCircle: false
+	});
+
+	const getLocation = () => {
+		geolocate.trigger();
+	};
 
 	onMount(async () => {
 		initial().then((d) => {
@@ -165,6 +181,9 @@
 			: undefined
 	);
 	let arriveBy = $state<boolean>(urlParams?.get('arriveBy') == 'true');
+	let algorithm = $state<PlanData['query']['algorithm']>(
+		(urlParams?.get('algorithm') ?? 'RAPTOR') as PlanData['query']['algorithm']
+	);
 	let useRoutedTransfers = $state(
 		urlParams?.get('useRoutedTransfers') == 'true' || defaultQuery.useRoutedTransfers
 	);
@@ -284,7 +303,8 @@
 						maxDirectTime,
 						ignorePreTransitRentalReturnConstraints,
 						ignorePostTransitRentalReturnConstraints,
-						ignoreDirectRentalReturnConstraints
+						ignoreDirectRentalReturnConstraints,
+						algorithm
 					} as PlanData['query'])
 				} as PlanData)
 			: undefined
@@ -432,6 +452,12 @@
 		}
 		lastSelectedItinerary = page.state.selectedItinerary;
 	};
+
+	$effect(() => {
+		if (map) {
+			map.addControl(geolocate);
+		}
+	});
 
 	$effect(flyToSelectedItinerary);
 
@@ -679,7 +705,31 @@
 
 	{#if showMap}
 		{#if activeTab != 'isochrones'}
-			<RailViz {map} {bounds} {zoom} />
+			<Control
+				position={browser && window.innerWidth < 768 ? 'bottom-left' : 'top-right'}
+				class="pb-4"
+			>
+				<Button
+					size="icon"
+					onclick={() => {
+						colorMode = colorMode == 'route' ? 'rt' : colorMode == 'rt' ? 'none' : 'route';
+					}}
+				>
+					{#if colorMode == 'rt'}
+						<Rss class="h-[1.2rem] w-[1.2rem]" />
+					{:else if colorMode == 'none'}
+						<Ban class="h-[1.2rem] w-[1.2rem]" />
+					{:else}
+						<Palette class="h-[1.2rem] w-[1.2rem]" />
+					{/if}
+				</Button>
+				<Button size="icon" onclick={() => getLocation()}>
+					<LocateFixed class="w-5 h-5" />
+				</Button>
+			</Control>
+			{#if colorMode != 'none'}
+				<RailViz {map} {bounds} {zoom} {colorMode} />
+			{/if}
 		{/if}
 		<!-- Isochrones cannot be hidden the same way as RailViz -->
 		<Isochrones

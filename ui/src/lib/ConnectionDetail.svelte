@@ -36,11 +36,11 @@
 )}
 	{@const arriveBy = isStartOrEnd == 0 || isStartOrEnd == 1}
 	{@const textColor = isStartOrEnd == 0 ? 'text-muted-foreground' : ''}
-	<div class="flex items-baseline justify-between w-full {isStartOrEnd == 0 ? 'text-sm' : ''}">
+	<div class="flex items-baseline justify-between w-full">
 		<div class="flex justify-between">
 			<Time
 				variant="schedule"
-				class="font-semibold w-16 {textColor}"
+				class="font-semibold w-14 md:w-16 {textColor}"
 				queriedTime={timestamp}
 				timeZone={p.tz}
 				{isRealtime}
@@ -50,7 +50,7 @@
 			/>
 			<Time
 				variant="realtime"
-				class="font-semibold w-16"
+				class="font-semibold w-14 md:w-16"
 				timeZone={p.tz}
 				{isRealtime}
 				{timestamp}
@@ -58,55 +58,57 @@
 				{arriveBy}
 			/>
 		</div>
-		<div class="w-full ml-4">
+		<div class="w-full">
 			{#if p.stopId}
-				<div class="flex items-center justify-between">
-					<Button
-						class="text-[length:inherit] leading-none justify-normal text-wrap p-0 text-left {textColor}"
-						variant="link"
-						onclick={() => onClickStop(p.name, p.stopId!, new Date(timestamp))}
-					>
-						{p.name}
-					</Button>
-					{#if p.track && !hidePlatform}
-						<span
-							class="text-nowrap {isStartOrEnd == 0 ? 'text-xs' : ''} w- m-4 px-1 border rounded-xl"
+				{@const pickupNotAllowedOrEnd = p.pickupType == 'NOT_ALLOWED' && isStartOrEnd != 1}
+				{@const dropoffNotAllowedOrStart = p.dropoffType == 'NOT_ALLOWED' && isStartOrEnd != -1}
+				<div class="flex items-center justify-between mr-1">
+					<div class="flex flex-col">
+						<Button
+							class="text-[length:inherit] leading-none justify-normal text-wrap p-0 text-left {textColor}"
+							variant="link"
+							onclick={() => onClickStop(p.name, p.stopId!, new Date(timestamp))}
 						>
+							{p.name}
+						</Button>
+					</div>
+					{#if p.track && !hidePlatform}
+						<span class="text-nowrap px-2 border rounded-xl mt-1 mx-1">
 							{getModeLabel(mode) == 'Track' ? t.trackAbr : t.platformAbr}
 							{p.track}
 						</span>
 					{/if}
 				</div>
-				{@const pickupNotAllowedOrEnd = p.pickupType == 'NOT_ALLOWED' && isStartOrEnd != 1}
-				{@const dropoffNotAllowedOrStart = p.dropoffType == 'NOT_ALLOWED' && isStartOrEnd != -1}
-				{#if (p as Place & { switchTo?: Leg }).switchTo}
-					{@const switchTo = (p as Place & { switchTo: Leg }).switchTo}
-					<div class="flex items-center text-sm">
-						{t.continuesAs}
-						{switchTo.displayName!}
-						<ArrowRight class="mx-1 size-4" />
-						{switchTo.headsign}
-					</div>
-				{/if}
-				{#if pickupNotAllowedOrEnd || dropoffNotAllowedOrStart}
-					<div class="flex items-center text-destructive text-sm">
-						<CircleX class="stroke-destructive size-4" />
-						<span class="ml-1 leading-none">
-							{pickupNotAllowedOrEnd && dropoffNotAllowedOrStart
-								? t.inOutDisallowed
-								: pickupNotAllowedOrEnd
-									? t.inDisallowed
-									: t.outDisallowed}
-						</span>
-					</div>
-				{/if}
-				{#if isStartOrEnd && p.alerts}
-					{#each p.alerts as alert, i (i)}
-						<div class="text-destructive text-sm">
-							{alert.headerText}
+				<div>
+					{#if (p as Place & { switchTo?: Leg }).switchTo}
+						{@const switchTo = (p as Place & { switchTo: Leg }).switchTo}
+						<div class="flex items-center text-sm mt-1">
+							{t.continuesAs}
+							{switchTo.displayName!}
+							<ArrowRight class="mx-1 size-4" />
+							{switchTo.headsign}
 						</div>
-					{/each}
-				{/if}
+					{/if}
+					{#if pickupNotAllowedOrEnd || dropoffNotAllowedOrStart}
+						<div class="flex items-center text-destructive text-sm mt-1">
+							<CircleX class="stroke-destructive size-4" />
+							<span class="ml-1 leading-none">
+								{pickupNotAllowedOrEnd && dropoffNotAllowedOrStart
+									? t.inOutDisallowed
+									: pickupNotAllowedOrEnd
+										? t.inDisallowed
+										: t.outDisallowed}
+							</span>
+						</div>
+					{/if}
+					{#if isStartOrEnd && p.alerts}
+						{#each p.alerts as alert, i (i)}
+							<div class="text-destructive text-sm mt-1">
+								{alert.headerText}
+							</div>
+						{/each}
+					{/if}
+				</div>
 			{:else}
 				<span>{p.name || p.flex}</span>
 			{/if}
@@ -279,7 +281,7 @@
 				<div class="border-t h-0 grow shrink"></div>
 			</div>
 
-			<div class="pt-4 pl-6 border-l-4 left-4 relative" style={routeBorderColor(l)}>
+			<div class="pt-4 pl-4 sm:pl-6 border-l-4 left-4 relative" style={routeBorderColor(l)}>
 				{@render stopTimes(l.startTime, l.scheduledStartTime, l.realTime, l.from, l.mode, -1)}
 				<div class="mt-2 mb-2 flex items-center">
 					<ArrowRight class="stroke-muted-foreground size-4" />
@@ -340,7 +342,7 @@
 				{:else}
 					{@render ticketInfo(prevTransitLeg, l)}
 					<details class="[&_.collapsible]:open:-rotate-180 my-2">
-						<summary class="py-8 pl-1 md:pl-4 flex items-center text-muted-foreground">
+						<summary class="pt-4 pb-8 pl-1 md:pl-4 flex items-center text-muted-foreground">
 							<svg
 								class="collapsible rotate-0 transform transition-all duration-300"
 								fill="none"

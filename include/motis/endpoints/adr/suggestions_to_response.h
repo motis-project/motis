@@ -21,7 +21,6 @@ api::geocode_response suggestions_to_response(
     platform_matches_t const* matches,
     basic_string<adr::language_idx_t> const& lang_indices,
     std::vector<adr::token> const& token_pos,
-    std::vector<adr::suggestion> const&,
-    unsigned const api_version);
+    std::vector<adr::suggestion> const&);
 
 }  // namespace motis
