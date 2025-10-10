@@ -12,12 +12,17 @@
 	import type { RequestResult } from '@hey-api/client-fetch';
 	import { onClickStop, onClickTrip } from '$lib/utils';
 	import { getModeLabel } from './map/getModeLabel';
+	import { posToLocation } from './Location';
+	import type { Location } from './Location';
+	import maplibregl from 'maplibre-gl';
 
 	let {
 		stopId,
 		stopName,
 		time: queryTime,
 		stopNameFromResponse = $bindable(),
+		stop = $bindable(),
+		stopMarker = $bindable(),
 		arriveBy
 	}: {
 		stopId: string;
@@ -25,6 +30,8 @@
 		time: Date;
 		arriveBy?: boolean;
 		stopNameFromResponse: string;
+		stop: Location | undefined;
+		stopMarker: maplibregl.Marker | undefined;
 	} = $props();
 
 	let query = $derived({
@@ -34,7 +41,7 @@
 		n: 10,
 		exactRadius: false,
 		radius: 200,
-		language
+		language: [language]
 	});
 	/* eslint-disable svelte/prefer-writable-derived */
 	let responses = $state<Array<Promise<StoptimesResponse>>>([]);
@@ -50,6 +57,11 @@
 				throw new Error('HTTP ' + response.response?.status);
 			}
 			stopNameFromResponse = response.data?.place?.name || '';
+			let placeFromResponse = response.data?.place;
+			stop = posToLocation(
+				maplibregl.LngLat.convert([placeFromResponse.lon, placeFromResponse.lat])
+			);
+			stopMarker?.setLngLat(stop.match!);
 			return response.data!;
 		});
 </script>

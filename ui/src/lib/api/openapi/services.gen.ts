@@ -45,7 +45,7 @@ export const oneToAll = <ThrowOnError extends boolean = false>(options: Options<
 export const reverseGeocode = <ThrowOnError extends boolean = false>(options: Options<ReverseGeocodeData, ThrowOnError>) => {
     return (options?.client ?? client).get<ReverseGeocodeResponse, ReverseGeocodeError, ThrowOnError>({
         ...options,
-        url: '/api/v1/reverse-geocode'
+        url: '/api/v5/reverse-geocode'
     });
 };
 
@@ -55,7 +55,7 @@ export const reverseGeocode = <ThrowOnError extends boolean = false>(options: Op
 export const geocode = <ThrowOnError extends boolean = false>(options: Options<GeocodeData, ThrowOnError>) => {
     return (options?.client ?? client).get<GeocodeResponse, GeocodeError, ThrowOnError>({
         ...options,
-        url: '/api/v1/geocode'
+        url: '/api/v5/geocode'
     });
 };
 

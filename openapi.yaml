@@ -10,7 +10,7 @@ info:
 
     MOTIS 2.x - current, providing:
 
-    * /api/v5/{plan,trip,stoptimes,map/trips} renamed METRO mode to SUBURBAN, AREAL_LIFT to AERIAL_LIFT; since MOTIS 2.5.0
+    * /api/v5/{plan,trip,stoptimes,map/trips,geocode,reverse-geocode} renamed METRO mode to SUBURBAN, AREAL_LIFT to AERIAL_LIFT; since MOTIS 2.5.0
     * /api/v4/{plan,trip,stoptimes,map/trips} new displayName property, routeShortName only contains actual route short name from source; since MOTIS 2.2.0
     * /api/v3/plan with correct maxTransfers API parameter (transfers actually corresponding to number of changes between transit legs (and not to number of transit legs), i.e. maxTransfers=0 returns direct public transit connections, as expected); since MOTIS 2.0.84 
     * /api/v2/{plan,trip} returns Google polylines with precision=6; since MOTIS 2.0.60
@@ -779,7 +779,9 @@ paths:
             language tags as used in OpenStreetMap / GTFS
             (usually BCP-47 / ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
           schema:
-            type: string
+            type: array
+            items:
+              type: string
 
         - name: algorithm
           in: query
@@ -1229,7 +1231,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Reachable'
 
-  /api/v1/reverse-geocode:
+  /api/v5/reverse-geocode:
     get:
       tags:
         - geocode
@@ -1268,7 +1270,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/Match'
 
-  /api/v1/geocode:
+  /api/v5/geocode:
     get:
       tags:
         - geocode
@@ -1289,7 +1291,9 @@ paths:
             language tags as used in OpenStreetMap
             (usually ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
           schema:
-            type: string
+            type: array
+            items:
+              type: string
 
         - name: type
           in: query
@@ -1376,7 +1380,9 @@ paths:
             language tags as used in OpenStreetMap / GTFS
             (usually BCP-47 / ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
           schema:
-            type: string
+            type: array
+            items:
+              type: string
       responses:
         '400':
           description: Bad Request
@@ -1527,7 +1533,9 @@ paths:
             language tags as used in OpenStreetMap / GTFS
             (usually BCP-47 / ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
           schema:
-            type: string
+            type: array
+            items:
+              type: string
       responses:
         '400':
           description: Bad Request
@@ -1751,6 +1759,8 @@ paths:
                 type: object
                 required:
                   - place
+                  - root
+                  - equivalences
                   - hasFootTransfers
                   - hasWheelchairTransfers
                   - hasCarTransfers
@@ -1758,6 +1768,12 @@ paths:
                 properties:
                   place:
                     $ref: '#/components/schemas/Place'
+                  root:
+                    $ref: '#/components/schemas/Place'
+                  equivalences:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Place'
                   hasFootTransfers:
                     type: boolean
                     description: true if the server has foot transfers computed
@@ -1966,96 +1982,6 @@ components:
         - PLACE
         - STOP
 
-    Match:
-      description: GeoCoding match
-      type: object
-      required:
-        - type
-        - name
-        - id
-        - lat
-        - lon
-        - tokens
-        - areas
-        - score
-      properties:
-        type:
-          $ref: '#/components/schemas/LocationType'
-        tokens:
-          description: list of non-overlapping tokens that were matched
-          type: array
-          items:
-            $ref: '#/components/schemas/Token'
-        name:
-          description: name of the location (transit stop / PoI / address)
-          type: string
-        id:
-          description: unique ID of the location
-          type: string
-        lat:
-          description: latitude
-          type: number
-        lon:
-          description: longitude
-          type: number
-        level:
-          description: |
-            level according to OpenStreetMap
-            (at the moment only for public transport)
-          type: number
-        street:
-          description: street name
-          type: string
-        houseNumber:
-          description: house number
-          type: string
-        country:
-          description: ISO3166-1 country code from OpenStreetMap
-          type: string
-        zip:
-          description: zip code
-          type: string
-        tz:
-          description: timezone name (e.g. "Europe/Berlin")
-          type: string
-        areas:
-          description: list of areas
-          type: array
-          items:
-            $ref: '#/components/schemas/Area'
-        score:
-          description: score according to the internal scoring system (the scoring algorithm might change in the future)
-          type: number
-
-    ElevationCosts:
-      description: |
-        Different elevation cost profiles for street routing.
-        Using a elevation cost profile will prefer routes with a smaller incline and smaller difference in elevation, even if the routed way is longer.
-
-        - `NONE`: Ignore elevation data for routing. This is the default behavior
-        - `LOW`: Add a low penalty for inclines. This will favor longer paths, if the elevation increase and incline are smaller.
-        - `HIGH`: Add a high penalty for inclines. This will favor even longer paths, if the elevation increase and incline are smaller.
-      type: string
-      enum:
-        - NONE
-        - LOW
-        - HIGH
-
-    PedestrianProfile:
-      description: Different accessibility profiles for pedestrians.
-      type: string
-      enum:
-        - FOOT
-        - WHEELCHAIR
-
-    PedestrianSpeed:
-      description: Average speed for pedestrian routing in meters per second
-      type: number
-
-    CyclingSpeed:
-      description: Average speed for bike routing in meters per second
-      type: number
-
     Mode:
       description: |
         # Street modes
@@ -2122,6 +2048,104 @@ components:
         - OTHER
         - AREAL_LIFT
         - METRO
+
+    Match:
+      description: GeoCoding match
+      type: object
+      required:
+        - type
+        - name
+        - id
+        - lat
+        - lon
+        - tokens
+        - areas
+        - score
+      properties:
+        type:
+          $ref: '#/components/schemas/LocationType'
+        tokens:
+          description: list of non-overlapping tokens that were matched
+          type: array
+          items:
+            $ref: '#/components/schemas/Token'
+        name:
+          description: name of the location (transit stop / PoI / address)
+          type: string
+        id:
+          description: unique ID of the location
+          type: string
+        lat:
+          description: latitude
+          type: number
+        lon:
+          description: longitude
+          type: number
+        level:
+          description: |
+            level according to OpenStreetMap
+            (at the moment only for public transport)
+          type: number
+        street:
+          description: street name
+          type: string
+        houseNumber:
+          description: house number
+          type: string
+        country:
+          description: ISO3166-1 country code from OpenStreetMap
+          type: string
+        zip:
+          description: zip code
+          type: string
+        tz:
+          description: timezone name (e.g. "Europe/Berlin")
+          type: string
+        areas:
+          description: list of areas
+          type: array
+          items:
+            $ref: '#/components/schemas/Area'
+        score:
+          description: score according to the internal scoring system (the scoring algorithm might change in the future)
+          type: number
+        modes:
+          description: available transport modes for stops
+          type: array
+          items:
+            $ref: "#/components/schemas/Mode"
+        importance:
+          description: importance of a stop, normalized from [0, 1]
+          type: number
+
+    ElevationCosts:
+      description: |
+        Different elevation cost profiles for street routing.
+        Using a elevation cost profile will prefer routes with a smaller incline and smaller difference in elevation, even if the routed way is longer.
+
+        - `NONE`: Ignore elevation data for routing. This is the default behavior
+        - `LOW`: Add a low penalty for inclines. This will favor longer paths, if the elevation increase and incline are smaller.
+        - `HIGH`: Add a high penalty for inclines. This will favor even longer paths, if the elevation increase and incline are smaller.
+      type: string
+      enum:
+        - NONE
+        - LOW
+        - HIGH
+
+    PedestrianProfile:
+      description: Different accessibility profiles for pedestrians.
+      type: string
+      enum:
+        - FOOT
+        - WHEELCHAIR
+
+    PedestrianSpeed:
+      description: Average speed for pedestrian routing in meters per second
+      type: number
+
+    CyclingSpeed:
+      description: Average speed for bike routing in meters per second
+      type: number
 
     VertexType:
       type: string

@@ -43,19 +43,8 @@ int server(data d, config const& c, std::string_view const motis_version) {
     return 1;
   }
 
-  auto lbs = std::vector<net::lb>{};
-  if (c.server_.value_or(config::server{}).lbs_) {
-    lbs = utl::to_vec(*c.server_.value_or(config::server{}).lbs_,
-                      [&](std::string const& url) {
-                        return net::lb{scheduler.runner_.ios(), url, m.qr_};
-                      });
-  }
-
   auto const stop = net::stop_handler(scheduler.runner_.ios(), [&]() {
     utl::log_info("motis.server", "shutdown");
-    for (auto& lb : lbs) {
-      lb.stop();
-    }
     s.stop();
     m.stop();
     scheduler.runner_.stop();
@@ -67,9 +56,6 @@ int server(data d, config const& c, std::string_view const motis_version) {
       c.n_threads(), server_config.host_, server_config.port_,
       server_config.port_);
 
-  for (auto const& lb : lbs) {
-    lb.run();
-  }
   s.run();
   m.run(d, c);
   scheduler.runner_.run(c.n_threads());

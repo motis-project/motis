@@ -97,7 +97,8 @@ std::optional<fare_indices> get_fare_indices(
 std::optional<std::vector<api::Alert>> get_alerts(
     n::rt::frun const& fr,
     std::optional<std::pair<n::rt::run_stop, n::event_type>> const& s,
-    std::optional<std::string> const& language) {
+    bool const fuzzy_stop,
+    std::optional<std::vector<std::string>> const& language) {
   if (fr.rtt_ == nullptr || !fr.is_scheduled()) {  // TODO added
     return std::nullopt;
   }
@@ -128,14 +129,20 @@ std::optional<std::vector<api::Alert>> get_alerts(
         return a.strings_.try_get(translations.front().text_)
             .and_then(convert_to_str);
       } else {
-        auto const it =
-            utl::find_if(translations, [&](n::translation const translation) {
-              auto const lang = a.strings_.try_get(translation.language_);
-              return lang.has_value() && lang->starts_with(*language);
-            });
-        return a.strings_
-            .try_get(it == end(translations) ? translations.front().text_
-                                             : it->text_)
+        for (auto const& req_lang : *language) {
+          auto const it =
+              utl::find_if(translations, [&](n::translation const translation) {
+                auto const translation_lang =
+                    a.strings_.try_get(translation.language_);
+                return translation_lang.has_value() &&
+                       translation_lang->starts_with(req_lang);
+              });
+          if (it == end(translations)) {
+            continue;
+          }
+          return a.strings_.try_get(it->text_).and_then(convert_to_str);
+        }
+        return a.strings_.try_get(translations.front().text_)
             .and_then(convert_to_str);
       }
     };
@@ -185,7 +192,7 @@ std::optional<std::vector<api::Alert>> get_alerts(
   for (auto const& t : tt.trip_ids_[x]) {
     auto const src = tt.trip_id_src_[t];
     rtt->alerts_.for_each_alert(
-        tt, src, x, fr.rt_, l,
+        tt, src, x, fr.rt_, l, fuzzy_stop,
         [&](n::alert_idx_t const a) { alerts.emplace_back(to_alert(a)); });
   }
 
@@ -205,7 +212,7 @@ api::Itinerary journey_to_response(
     osr::elevation_storage const* elevations,
     n::shapes_storage const* shapes,
     gbfs::gbfs_routing_data& gbfs_rd,
-    location_place_map_t const* lp,
+    adr_ext const* lp,
     tz_map_t const* tz_map,
     n::routing::journey const& j,
     place_t const& start,
@@ -225,7 +232,7 @@ api::Itinerary journey_to_response(
     unsigned const api_version,
     bool const ignore_start_rental_return_constraints,
     bool const ignore_dest_rental_return_constraints,
-    std::optional<std::string> const& language) {
+    std::optional<std::vector<std::string>> const& language) {
   utl::verify(!j.legs_.empty(), "journey without legs");
 
   auto const fares =
@@ -373,7 +380,7 @@ api::Itinerary journey_to_response(
                               n::event_type const ev_type) {
       auto p = ::motis::to_place(&tt, &tags, w, pl, matches, lp, tz_map, s,
                                  start, dest);
-      p.alerts_ = get_alerts(*s.fr_, std::pair{s, ev_type}, language);
+      p.alerts_ = get_alerts(*s.fr_, std::pair{s, ev_type}, false, language);
       return p;
     };
 
@@ -476,7 +483,7 @@ api::Itinerary journey_to_response(
                         fare_indices.and_then([](auto&& x) {
                           return std::optional{x.effective_fare_leg_idx_};
                         }),
-                    .alerts_ = get_alerts(fr, std::nullopt, language),
+                    .alerts_ = get_alerts(fr, std::nullopt, false, language),
                     .loopedCalendarSince_ =
                         (fr.is_scheduled() &&
                          src != n::source_idx_t::invalid() &&

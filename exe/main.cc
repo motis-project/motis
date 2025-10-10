@@ -1,5 +1,4 @@
 #include <cctype>
-#include <algorithm>
 #include <filesystem>
 #include <iostream>
 #include <string>
@@ -10,17 +9,16 @@
 
 #include "google/protobuf/stubs/common.h"
 
-#include "utl/logging.h"
 #include "utl/progress_tracker.h"
 #include "utl/to_vec.h"
 
-#include "nigiri/logging.h"
 #include "nigiri/rt/util.h"
 
 #include "motis/analyze_shapes.h"
 #include "motis/config.h"
 #include "motis/data.h"
 #include "motis/import.h"
+#include "motis/logging.h"
 #include "motis/server.h"
 
 #include "./flags.h"
@@ -120,7 +118,7 @@ int main(int ac, char** av) {
     case cista::hash("server"):
       try {
         auto data_path = fs::path{"data"};
-        auto log_lvl = std::string{"DEBUG"};
+        auto log_lvl = std::string{};
 
         auto desc = po::options_description{"Server Options"};
         add_data_path_opt(desc, data_path);
@@ -132,26 +130,15 @@ int main(int ac, char** av) {
           return_value = 0;
           break;
         }
-        if (vm.count("log-level")) {
-          std::transform(log_lvl.begin(), log_lvl.end(), log_lvl.begin(),
-                         [](unsigned char const c) { return std::toupper(c); });
-          if (log_lvl == "ERROR"sv) {
-            utl::log_verbosity = utl::log_level::error;
-            nigiri::s_verbosity = nigiri::log_lvl::error;
-          } else if (log_lvl == "INFO"sv) {
-            utl::log_verbosity = utl::log_level::info;
-            nigiri::s_verbosity = nigiri::log_lvl::info;
-          } else if (log_lvl == "DEBUG"sv) {
-            utl::log_verbosity = utl::log_level::debug;
-            nigiri::s_verbosity = nigiri::log_lvl::debug;
-          } else {
-            fmt::println(std::cerr, "Unsupported log level '{}'\n", log_lvl);
-            return_value = 1;
-            break;
-          }
-        }
 
         auto const c = config::read(data_path / "config.yml");
+        if ((return_value = set_log_level(c))) {
+          break;
+        }
+        if (vm.count("log-level") &&
+            (return_value = set_log_level(std::move(log_lvl)))) {
+          break;
+        }
         return_value = server(data{data_path, c}, c, motis_version);
       } catch (std::exception const& e) {
         std::cerr << "unable to start server: " << e.what() << "\n";
@@ -176,6 +163,9 @@ int main(int ac, char** av) {
         }
 
         c = config::read(config_path);
+        if ((return_value = set_log_level(c))) {
+          break;
+        }
         auto const bars = utl::global_progress_bars{false};
         import(c, std::move(data_path));
         return_value = 0;
