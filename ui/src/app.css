@@ -122,3 +122,7 @@ body {
 .hide {
 	display: none;
 }
+html,
+body {
+	overscroll-behavior: none;
+}
