@@ -475,7 +475,7 @@
 	{/if}
 {/snippet}
 
-{#snippet drawerContent()}
+{#snippet resultContent()}
 	<Control
 		class={isSmallScreen && (page.state.selectedItinerary || page.state.selectedStop) ? 'hide' : ''}
 	>
@@ -664,12 +664,12 @@
 	<LevelSelect {bounds} {zoom} bind:level />
 
 	{#if isSmallScreen}
-		<Drawer class="absolute z-10 h-full mt-5 flex flex-col" bind:showMap>
-			{@render drawerContent()}
+		<Drawer class="relative z-10 h-full mt-5 flex flex-col" bind:showMap>
+			{@render resultContent()}
 		</Drawer>
 	{:else}
 		<div class="maplibregl-ctrl-top-left">
-			{@render drawerContent()}
+			{@render resultContent()}
 		</div>
 	{/if}
 
