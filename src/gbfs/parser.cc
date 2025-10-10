@@ -283,11 +283,13 @@ void load_station_status(gbfs_provider& provider, json::value const& root) {
           station.status_.vehicle_types_available_[*vt_idx] = count;
           switch (provider.vehicle_types_[*vt_idx].return_constraint_) {
             case return_constraint::kFreeFloating:
-              ++unrestricted_available;
+              unrestricted_available += count;
               break;
-            case return_constraint::kAnyStation: ++any_station_available; break;
+            case return_constraint::kAnyStation:
+              any_station_available += count;
+              break;
             case return_constraint::kRoundtripStation:
-              ++roundtrip_available;
+              roundtrip_available += count;
               break;
           }
         }

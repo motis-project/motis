@@ -12,7 +12,8 @@
 		"lint": "prettier --check . && eslint .",
 		"format": "prettier --write .",
 		"test:integration": "playwright test",
-		"test:unit": "vitest"
+		"test:unit": "vitest",
+		"update-sprite": "spreet sprite static/sprite && spreet --retina sprite static/sprite@2x"
 	},
 	"devDependencies": {
 		"@eslint/compat": "^1.2.9",

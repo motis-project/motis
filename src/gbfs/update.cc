@@ -404,6 +404,17 @@ struct gbfs_update {
         provider.has_vehicles_to_rent_ = prev_provider->has_vehicles_to_rent_;
       }
 
+      if (stations_updated || vehicle_status_updated) {
+        for (auto const& st : provider.stations_ | std::views::values) {
+          provider.bbox_.extend(st.info_.pos_);
+        }
+        for (auto const& vs : provider.vehicle_status_) {
+          provider.bbox_.extend(vs.pos_);
+        }
+      } else if (prev_provider != nullptr) {
+        provider.bbox_ = prev_provider->bbox_;
+      }
+
       data_changed = vehicle_types_updated || stations_updated ||
                      station_status_updated || vehicle_status_updated ||
                      geofencing_updated;
@@ -421,6 +432,7 @@ struct gbfs_update {
         provider.vehicle_status_ = prev_provider->vehicle_status_;
         provider.geofencing_zones_ = prev_provider->geofencing_zones_;
         provider.has_vehicles_to_rent_ = prev_provider->has_vehicles_to_rent_;
+        provider.bbox_ = prev_provider->bbox_;
       }
     }
 
