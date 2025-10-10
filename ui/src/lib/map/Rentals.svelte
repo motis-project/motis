@@ -70,6 +70,7 @@
 		icon: string;
 		provider_id: string;
 		vehicle_id: string;
+		form_factor: RentalFormFactor;
 		type: 'vehicle';
 	};
 
@@ -80,6 +81,9 @@
 		zone_index: number;
 		provider_id: string;
 		type: 'zone';
+		ride_end_allowed?: boolean;
+		ride_through_allowed?: boolean;
+		z?: number;
 	};
 
 	type ZoneFeatureCollection = FeatureCollection<
@@ -132,6 +136,16 @@
 		OTHER: 'bike'
 	};
 
+	const form_factor_label: Record<RentalFormFactor, string> = {
+		BICYCLE: t.RENTAL_BICYCLE,
+		CARGO_BICYCLE: t.RENTAL_CARGO_BICYCLE,
+		CAR: t.RENTAL_CAR,
+		MOPED: t.RENTAL_MOPED,
+		SCOOTER_SEATED: t.RENTAL_SCOOTER_SEATED,
+		SCOOTER_STANDING: t.RENTAL_SCOOTER_STANDING,
+		OTHER: t.RENTAL_OTHER
+	};
+
 	const vehicle_icons = Array.from(new Set(Object.values(vehicle_icon_by_form_factor)));
 
 	type VehicleSourceConfig = {
@@ -157,10 +171,14 @@
 	const vehicle_point_layer_ids = vehicle_source_configs.map((config) => config.point_layer_id);
 	const vehicle_cluster_layer_ids = vehicle_source_configs.map((config) => config.cluster_layer_id);
 
-	type ProviderOption = {
-		id: string;
-		name: string;
-		formFactors: RentalFormFactor[];
+	type ProviderFormFactorSelection = {
+		providerId: string;
+		formFactor: RentalFormFactor;
+	};
+
+	type ProviderFormFactorOption = ProviderFormFactorSelection & {
+		key: string;
+		providerName: string;
 	};
 
 	const create_empty_vehicle_collections = (): VehicleCollections =>
@@ -184,9 +202,9 @@
 		features: []
 	});
 
-	let providerOptions = $state([] as ProviderOption[]);
-	let providerFilterId = $state<string | null>(null);
-	let showZones = $derived(providerFilterId != null || providerOptions.length <= 1);
+	let providerOptions = $state([] as ProviderFormFactorOption[]);
+	let providerFilter = $state<ProviderFormFactorSelection | null>(null);
+	let showZones = $derived(providerFilter != null);
 
 	let fullStationData = create_empty_station_collection();
 	let fullVehicleDataByIcon = create_empty_vehicle_collections();
@@ -258,7 +276,8 @@
 						properties: {
 							zone_index: index,
 							provider_id: zone.providerId,
-							type: 'zone'
+							type: 'zone',
+							z: zone.z
 						}
 					};
 				}
@@ -274,6 +293,31 @@
 			features
 		};
 	};
+
+	const ZONE_COLOR_ALLOWED_FILL = '#22c55e';
+	const ZONE_COLOR_ALLOWED_LINE = '#15803d';
+	const ZONE_COLOR_THROUGH_FILL = '#f97316';
+	const ZONE_COLOR_THROUGH_LINE = '#c2410c';
+	const ZONE_COLOR_RESTRICTED_FILL = '#ef4444';
+	const ZONE_COLOR_RESTRICTED_LINE = '#b91c1c';
+
+	const zone_fill_color_expression: ExpressionSpecification = [
+		'case',
+		['boolean', ['get', 'ride_end_allowed'], false],
+		ZONE_COLOR_ALLOWED_FILL,
+		['boolean', ['get', 'ride_through_allowed'], false],
+		ZONE_COLOR_THROUGH_FILL,
+		ZONE_COLOR_RESTRICTED_FILL
+	];
+
+	const zone_line_color_expression: ExpressionSpecification = [
+		'case',
+		['boolean', ['get', 'ride_end_allowed'], false],
+		ZONE_COLOR_ALLOWED_LINE,
+		['boolean', ['get', 'ride_through_allowed'], false],
+		ZONE_COLOR_THROUGH_LINE,
+		ZONE_COLOR_RESTRICTED_LINE
+	];
 
 	const zoom_scaled_icon_size: ExpressionSpecification = [
 		'interpolate',
@@ -408,6 +452,7 @@
 						icon: config.icon,
 						provider_id: vehicle.providerId,
 						vehicle_id: vehicle.id,
+						form_factor: vehicle.formFactor,
 						type: 'vehicle'
 					}
 				});
@@ -415,14 +460,47 @@
 		return collections;
 	};
 
-	const buildProviderOptionsList = (providers: RentalProvider[]): ProviderOption[] => {
-		return providers.map((provider) => {
-			return {
-				id: provider.id,
-				name: provider.name,
-				formFactors: provider.formFactors
-			};
+	const collect_provider_form_factors = (provider: RentalProvider): RentalFormFactor[] => {
+		const direct = Array.isArray(provider.formFactors)
+			? provider.formFactors.filter((factor): factor is RentalFormFactor => Boolean(factor))
+			: [];
+		if (direct.length > 0) {
+			return Array.from(new Set(direct));
+		}
+		const derived = Array.isArray(provider.vehicleTypes)
+			? provider.vehicleTypes
+					.map((type) => type?.formFactor)
+					.filter((factor): factor is RentalFormFactor => Boolean(factor))
+			: [];
+		if (derived.length > 0) {
+			return Array.from(new Set(derived));
+		}
+		return [DEFAULT_FORM_FACTOR as RentalFormFactor];
+	};
+
+	const buildProviderOptionsList = (providers: RentalProvider[]): ProviderFormFactorOption[] => {
+		const options: ProviderFormFactorOption[] = [];
+		for (const provider of providers) {
+			const formFactors = collect_provider_form_factors(provider);
+			for (const formFactor of formFactors) {
+				options.push({
+					key: `${provider.id}::${formFactor}`,
+					providerId: provider.id,
+					providerName: provider.name,
+					formFactor
+				});
+			}
+		}
+		options.sort((a, b) => {
+			const nameCompare = a.providerName.localeCompare(b.providerName, undefined, {
+				sensitivity: 'base'
+			});
+			if (nameCompare !== 0) {
+				return nameCompare;
+			}
+			return a.formFactor.localeCompare(b.formFactor, undefined, { sensitivity: 'base' });
 		});
+		return options;
 	};
 
 	const ensureSourcesAndLayers = (targetMap: maplibregl.Map | undefined) => {
@@ -443,8 +521,11 @@
 				type: 'fill',
 				source: ZONES_SOURCE_ID,
 				paint: {
-					'fill-color': '#0ea5e9',
-					'fill-opacity': 0.12
+					'fill-color': zone_fill_color_expression,
+					'fill-opacity': 0.3
+				},
+				layout: {
+					'fill-sort-key': ['get', 'z']
 				}
 			});
 		}
@@ -459,7 +540,7 @@
 					'line-cap': 'round'
 				},
 				paint: {
-					'line-color': '#0284c7',
+					'line-color': zone_line_color_expression,
 					'line-width': 3,
 					'line-opacity': 0.9
 				}
@@ -630,68 +711,189 @@
 		source?.setData(zoneData);
 	};
 
-	const filterStationsByProvider = (
+	const filterStationsBySelection = (
 		data: FeatureCollection<Point, StationFeatureProperties>,
-		providerId: string | null
+		selection: ProviderFormFactorSelection | null
 	): FeatureCollection<Point, StationFeatureProperties> => {
-		if (!providerId) {
+		if (!selection) {
 			return data;
 		}
+		const provider = providerById.get(selection.providerId);
+		const form_factor_by_type_id = new Map<string, RentalFormFactor>(
+			(provider?.vehicleTypes ?? []).map((type) => [type.id, type.formFactor])
+		);
 		return {
 			type: 'FeatureCollection',
-			features: data.features.filter((feature) => feature.properties.provider_id === providerId)
+			features: data.features
+				.filter((feature) => {
+					if (feature.properties.provider_id !== selection.providerId) {
+						return false;
+					}
+					const stationKey = createScopedId(selection.providerId, feature.properties.station_id);
+					const station = stationById.get(stationKey);
+					const stationFormFactors = station?.formFactors ?? [];
+					return stationFormFactors.includes(selection.formFactor);
+				})
+				.map((feature) => {
+					const stationKey = createScopedId(selection.providerId, feature.properties.station_id);
+					const station = stationById.get(stationKey);
+					const vehicleTypesAvailable = station?.vehicleTypesAvailable ?? {};
+					const entries = Object.entries(vehicleTypesAvailable);
+					const available =
+						entries.length === 0
+							? (station?.numVehiclesAvailable ?? feature.properties.available)
+							: entries.reduce((acc, [typeId, count]) => {
+									if (form_factor_by_type_id.get(typeId) !== selection.formFactor) {
+										return acc;
+									}
+									return acc + (typeof count === 'number' ? count : 0);
+								}, 0);
+					return {
+						...feature,
+						properties: {
+							...feature.properties,
+							icon: station_icon_by_form_factor[selection.formFactor] ?? feature.properties.icon,
+							available
+						}
+					};
+				})
 		};
 	};
 
-	const filterVehicleCollectionsByProvider = (
+	const filterVehicleCollectionsBySelection = (
 		collections: VehicleCollections,
-		providerId: string | null
+		selection: ProviderFormFactorSelection | null
 	): VehicleCollections => {
-		if (!providerId) {
+		if (!selection) {
 			return collections;
 		}
 		return vehicle_source_configs.reduce((acc, config) => {
 			const original = collections[config.icon] ?? create_empty_vehicle_collection();
 			acc[config.icon] = {
 				type: 'FeatureCollection',
-				features: original.features.filter(
-					(feature) => feature.properties.provider_id === providerId
-				)
+				features: original.features.filter((feature) => {
+					if (feature.properties.provider_id !== selection.providerId) {
+						return false;
+					}
+					return feature.properties.form_factor === selection.formFactor;
+				})
 			};
 			return acc;
 		}, {} as VehicleCollections);
 	};
 
-	const filterZoneDataByProvider = (
-		data: ZoneFeatureCollection,
-		providerId: string | null
-	): ZoneFeatureCollection => {
-		if (!providerId) {
-			return data;
+	const derive_zone_access_flags = (
+		zone: RentalZone | undefined,
+		selection: ProviderFormFactorSelection | null
+	): { rideThroughAllowed: boolean; rideEndAllowed: boolean } | null => {
+		if (!zone) {
+			return null;
+		}
+		const rules = zone.rules ?? [];
+		const fallbackRule = rules[0];
+		if (!selection) {
+			if (!fallbackRule) {
+				return null;
+			}
+			return {
+				rideThroughAllowed: Boolean(fallbackRule.rideThroughAllowed),
+				rideEndAllowed: Boolean(fallbackRule.rideEndAllowed)
+			};
+		}
+		const provider = providerById.get(selection.providerId);
+		const vehicleTypes = provider?.vehicleTypes ?? [];
+		const matchesSelection = (rule: (typeof rules)[number] | undefined) => {
+			if (!rule) {
+				return false;
+			}
+			const indices = rule.vehicleTypeIdxs ?? [];
+			if (!Array.isArray(indices) || indices.length === 0) {
+				return true;
+			}
+			return indices.some((idx) => {
+				if (typeof idx !== 'number' || idx < 0 || idx >= vehicleTypes.length) {
+					return false;
+				}
+				const vehicleType = vehicleTypes[idx];
+				return vehicleType?.formFactor === selection.formFactor;
+			});
+		};
+		const matchingRule = rules.find((rule) => matchesSelection(rule));
+		if (!matchingRule) {
+			return null;
 		}
 		return {
+			rideThroughAllowed: Boolean(matchingRule.rideThroughAllowed),
+			rideEndAllowed: Boolean(matchingRule.rideEndAllowed)
+		};
+	};
+
+	const decorate_zone_feature = (
+		feature: Feature<GeoJSONPolygon | GeoJSONMultiPolygon, ZoneFeatureProperties>,
+		selection: ProviderFormFactorSelection | null
+	): Feature<GeoJSONPolygon | GeoJSONMultiPolygon, ZoneFeatureProperties> | null => {
+		const zoneIndex = feature.properties?.zone_index;
+		const zone =
+			typeof zoneIndex === 'number' && zoneIndex >= 0 && zoneIndex < zones.length
+				? zones[zoneIndex]
+				: undefined;
+		const access = derive_zone_access_flags(zone, selection);
+		if (!access) {
+			return null;
+		}
+		return {
+			...feature,
+			properties: {
+				...feature.properties,
+				ride_through_allowed: access.rideThroughAllowed,
+				ride_end_allowed: access.rideEndAllowed
+			}
+		};
+	};
+
+	const filterZoneDataBySelection = (
+		data: ZoneFeatureCollection,
+		selection: ProviderFormFactorSelection | null
+	): ZoneFeatureCollection => {
+		const filtered = selection
+			? data.features.filter((feature) => feature.properties.provider_id === selection.providerId)
+			: data.features.slice();
+		const decorated = filtered
+			.map((feature) => decorate_zone_feature(feature, selection))
+			.filter(
+				(
+					feature
+				): feature is Feature<GeoJSONPolygon | GeoJSONMultiPolygon, ZoneFeatureProperties> =>
+					feature !== null
+			);
+		return {
 			type: 'FeatureCollection',
-			features: data.features.filter((feature) => feature.properties.provider_id === providerId)
+			features: decorated
 		};
 	};
 
 	const applyProviderFilter = () => {
-		const selectedProvider = providerFilterId;
-		const filteredStations = filterStationsByProvider(fullStationData, selectedProvider);
-		const filteredVehicles = filterVehicleCollectionsByProvider(
+		const selectedFilter = providerFilter;
+		const filteredStations = filterStationsBySelection(fullStationData, selectedFilter);
+		const filteredVehicles = filterVehicleCollectionsBySelection(
 			fullVehicleDataByIcon,
-			selectedProvider
+			selectedFilter
 		);
 		const filteredZones = showZones
-			? filterZoneDataByProvider(fullZoneData, selectedProvider)
+			? filterZoneDataBySelection(fullZoneData, selectedFilter)
 			: create_empty_zone_collection();
 		setStationSourceData(filteredStations, map);
 		setVehicleSourceData(filteredVehicles, map);
 		setZoneSourceData(filteredZones, map);
 	};
 
-	const toggleProviderFilter = (providerId: string) => {
-		providerFilterId = providerFilterId === providerId ? null : providerId;
+	const toggleProviderFilter = (option: ProviderFormFactorOption) => {
+		const isActive =
+			providerFilter?.providerId === option.providerId &&
+			providerFilter?.formFactor === option.formFactor;
+		providerFilter = isActive
+			? null
+			: { providerId: option.providerId, formFactor: option.formFactor };
 	};
 
 	const styleListeners = new WeakMap<maplibregl.Map, () => void>();
@@ -818,6 +1020,7 @@
 		if (providerName) {
 			headerParts.push(`<div>${escapeHtml(`${t.sharingProvider}: ${providerName}`)}</div>`);
 		}
+		headerParts.push(`<div>Z: ${zone.z}</div>`);
 		const headerHtml = headerParts.join('');
 		const restrictionsJson = JSON.stringify(zone.rules ?? [], null, 2);
 		const restrictionsHtml = `<pre class="m-0 max-w-full overflow-x-auto whitespace-pre-wrap break-words font-mono text-xs leading-snug bg-slate-50 p-2 rounded">${escapeHtml(restrictionsJson ?? '[]')}</pre>`;
@@ -1148,7 +1351,7 @@
 		setVehicleSourceData(fullVehicleDataByIcon, targetMap);
 		setZoneSourceData(fullZoneData, targetMap);
 		providerOptions = [];
-		providerFilterId = null;
+		providerFilter = null;
 	};
 
 	const fetchRentals = async () => {
@@ -1201,10 +1404,16 @@
 			fullVehicleDataByIcon = vehicleCollections;
 			fullZoneData = zoneFeatures;
 			const options = buildProviderOptionsList(providers);
-			options.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
 			providerOptions = options;
-			if (providerFilterId && !options.some((option) => option.id === providerFilterId)) {
-				providerFilterId = null;
+			if (
+				providerFilter &&
+				!options.some(
+					(option) =>
+						option.providerId === providerFilter?.providerId &&
+						option.formFactor === providerFilter?.formFactor
+				)
+			) {
+				providerFilter = null;
 			}
 			applyProviderFilter();
 			loadedBounds = expandedBounds;
@@ -1254,29 +1463,29 @@
 	});
 </script>
 
-{#if providerOptions.length > 1}
+{#if providerOptions.length > 0}
 	<Control position="bottom-right" class="mb-5">
 		<div class="flex flex-col items-end space-y-2">
-			{#each providerOptions as option (option.id)}
+			{#each providerOptions as option (option.key)}
 				<button
 					type="button"
-					title={option.name}
+					title={`${option.providerName} (${form_factor_label[option.formFactor]})`}
 					class={cn(
 						'inline-flex max-w-sm items-center gap-2 rounded-md border-2 px-3 py-1.5 text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500',
-						providerFilterId === option.id
+						providerFilter?.providerId === option.providerId &&
+							providerFilter?.formFactor === option.formFactor
 							? 'border-blue-600 bg-accent text-accent-foreground'
 							: 'border-muted bg-popover text-foreground hover:bg-accent hover:text-accent-foreground'
 					)}
-					onclick={() => toggleProviderFilter(option.id)}
-					aria-pressed={providerFilterId === option.id}
+					onclick={() => toggleProviderFilter(option)}
+					aria-pressed={providerFilter?.providerId === option.providerId &&
+						providerFilter?.formFactor === option.formFactor}
 				>
-					<span class="truncate">{option.name}</span>
-					<span class="flex items-center gap-1">
-						{#each option.formFactors as formFactor (formFactor)}
-							<svg class="h-4 w-4 fill-current" aria-hidden="true" focusable="false">
-								<use href={`#${svg_symbol_by_form_factor[formFactor]}`} />
-							</svg>
-						{/each}
+					<span class="truncate">{option.providerName}</span>
+					<span class="flex items-center gap-1 text-xs font-medium">
+						<svg class="h-4 w-4 fill-current" aria-hidden="true" focusable="false">
+							<use href={`#${svg_symbol_by_form_factor[option.formFactor]}`} />
+						</svg>
 					</span>
 				</button>
 			{/each}
