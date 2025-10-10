@@ -1373,7 +1373,7 @@
 
 		try {
 			const { data, error } = await rentals({
-				query: { max, min, withZones: true }
+				query: { max, min }
 			});
 
 			if (token !== requestToken) {
@@ -1386,28 +1386,21 @@
 				return;
 			}
 
-			const providers = data?.providers ?? [];
-			providerById = new Map<string, RentalProvider>(providers.map((p) => [p.id, p]));
-			const stations = data?.stations ?? [];
+			providerById = new Map<string, RentalProvider>(data.providers.map((p) => [p.id, p]));
 			stationById = new Map<string, RentalStation>(
-				stations.map((station) => [createScopedId(station.providerId, station.id), station])
+				data.stations.map((station) => [createScopedId(station.providerId, station.id), station])
 			);
-			const stationFeatures = buildStationFeatures(stations);
-			const vehicles = data?.vehicles ?? [];
 			vehicleById = new Map<string, RentalVehicle>(
-				vehicles.map((vehicle) => [createScopedId(vehicle.providerId, vehicle.id), vehicle])
+				data.vehicles.map((vehicle) => [createScopedId(vehicle.providerId, vehicle.id), vehicle])
 			);
-			const vehicleCollections = buildVehicleFeatures(vehicles);
-			zones = data?.zones ?? [];
-			const zoneFeatures = buildZoneFeatures(zones);
-			fullStationData = stationFeatures;
-			fullVehicleDataByIcon = vehicleCollections;
-			fullZoneData = zoneFeatures;
-			const options = buildProviderOptionsList(providers);
-			providerOptions = options;
+			zones = data.zones;
+			fullStationData = buildStationFeatures(data.stations);
+			fullVehicleDataByIcon = buildVehicleFeatures(data.vehicles);
+			fullZoneData = buildZoneFeatures(zones);
+			providerOptions = buildProviderOptionsList(data.providers);
 			if (
 				providerFilter &&
-				!options.some(
+				!providerOptions.some(
 					(option) =>
 						option.providerId === providerFilter?.providerId &&
 						option.formFactor === providerFilter?.formFactor
