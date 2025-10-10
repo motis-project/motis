@@ -10,7 +10,7 @@ info:
 
     MOTIS 2.x - current, providing:
 
-    * /api/v5/{plan,trip,stoptimes,map/trips,geocode,reverse-geocode} renamed METRO mode to SUBURBAN, AREAL_LIFT to AERIAL_LIFT; since MOTIS 2.5.0
+    * /api/v5/{plan,trip,stoptimes,map/trips} renamed METRO mode to SUBURBAN, AREAL_LIFT to AERIAL_LIFT; since MOTIS 2.5.0
     * /api/v4/{plan,trip,stoptimes,map/trips} new displayName property, routeShortName only contains actual route short name from source; since MOTIS 2.2.0
     * /api/v3/plan with correct maxTransfers API parameter (transfers actually corresponding to number of changes between transit legs (and not to number of transit legs), i.e. maxTransfers=0 returns direct public transit connections, as expected); since MOTIS 2.0.84 
     * /api/v2/{plan,trip} returns Google polylines with precision=6; since MOTIS 2.0.60
@@ -791,6 +791,7 @@ paths:
             type: string
             enum:
               - RAPTOR
+              - PONG
               - TB
             default: RAPTOR
       responses:
@@ -1230,7 +1231,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Reachable'
 
-  /api/v5/reverse-geocode:
+  /api/v1/reverse-geocode:
     get:
       tags:
         - geocode
@@ -1269,7 +1270,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/Match'
 
-  /api/v5/geocode:
+  /api/v1/geocode:
     get:
       tags:
         - geocode

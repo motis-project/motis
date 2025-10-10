@@ -12,24 +12,20 @@
 	import maplibregl from 'maplibre-gl';
 	import { onDestroy, untrack } from 'svelte';
 	import Control from '$lib/map/Control.svelte';
-	import { Button } from '$lib/components/ui/button';
-	import Palette from 'lucide-svelte/icons/palette';
-	import Rss from 'lucide-svelte/icons/rss';
-	import LocateFixed from 'lucide-svelte/icons/locate-fixed';
-	import { browser } from '$app/environment';
 	import { onClickTrip } from '$lib/utils';
 
 	let {
 		map,
 		bounds,
-		zoom
+		zoom,
+		colorMode
 	}: {
 		map: maplibregl.Map | undefined;
 		bounds: maplibregl.LngLatBoundsLike | undefined;
 		zoom: number;
+		colorMode: 'rt' | 'route' | 'none';
 	} = $props();
 
-	let colorMode = $state<'rt' | 'route'>('route');
 	let railvizError = $state();
 
 	type RGBA = [number, number, number, number];
@@ -257,17 +253,6 @@
 		}, 60000);
 	};
 
-	const geolocate = new maplibregl.GeolocateControl({
-		positionOptions: {
-			enableHighAccuracy: true
-		},
-		showAccuracyCircle: false
-	});
-
-	const getLocation = () => {
-		geolocate.trigger();
-	};
-
 	$effect(() => {
 		if (map && !overlay) {
 			overlay = new MapboxOverlay({
@@ -288,9 +273,9 @@
 						return;
 					}
 					onClickTrip(object.trips[0].tripId);
-				}
+				},
+				getCursor: () => map.getCanvas().style.cursor
 			});
-			map.addControl(geolocate);
 			map.addControl(overlay);
 
 			console.log('updateRailviz: init');
@@ -317,25 +302,6 @@
 		}
 	});
 </script>
-
-<Control position={browser && window.innerWidth < 768 ? 'bottom-left' : 'top-right'} class="pb-4">
-	<Button
-		size="icon"
-		variant={colorMode ? 'default' : 'outline'}
-		onclick={() => {
-			colorMode = colorMode == 'rt' ? 'route' : 'rt';
-		}}
-	>
-		{#if colorMode == 'rt'}
-			<Rss class="h-[1.2rem] w-[1.2rem]" />
-		{:else}
-			<Palette class="h-[1.2rem] w-[1.2rem]" />
-		{/if}
-	</Button>
-	<Button size="icon" onclick={() => getLocation()}>
-		<LocateFixed class="w-5 h-5" />
-	</Button>
-</Control>
 
 {#if railvizError}
 	<Control position="bottom-left">

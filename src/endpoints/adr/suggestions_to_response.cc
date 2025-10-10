@@ -43,8 +43,7 @@ api::geocode_response suggestions_to_response(
     platform_matches_t const* matches,
     basic_string<a::language_idx_t> const& lang_indices,
     std::vector<adr::token> const& token_pos,
-    std::vector<adr::suggestion> const& suggestions,
-    unsigned const api_version) {
+    std::vector<adr::suggestion> const& suggestions) {
   return utl::to_vec(suggestions, [&](a::suggestion const& s) {
     auto const areas = t.area_sets_[s.area_set_];
     auto modes = std::optional<std::vector<api::ModeEnum>>{};
@@ -73,7 +72,7 @@ api::geocode_response suggestions_to_response(
               auto const i = adr_extra_place_idx_t{
                   static_cast<adr_extra_place_idx_t::value_t>(p -
                                                               t.ext_start_)};
-              modes = to_modes(ae->place_clasz_[i], api_version);
+              modes = to_modes(ae->place_clasz_[i], 5);
               importance = ae->place_importance_[i];
             }
           } else {

@@ -10,12 +10,12 @@ from pathlib import Path
 
 QUERIES = {
     'raptor': {
-        'params': '?algorithm=RAPTOR&numItineraries=0',
-        'exec': '/home/felix/code/motis/cmake-build-release/motis'
+        'params': '?algorithm=RAPTOR&numItineraries=5&maxItineraries=5',
+        'exec': '/home/felix/code/motis/cmake-build-relwithdebinfo/motis'
     },
-    'tb': {
-        'params': '?algorithm=TB&numItineraries=0',
-        'exec': '/home/felix/code/motis/cmake-build-release/motis'
+    'pong': {
+        'params': '?algorithm=PONG&numItineraries=5&maxItineraries=5',
+        'exec': '/home/felix/code/motis/cmake-build-relwithdebinfo/motis'
     }
 }
 
@@ -24,7 +24,8 @@ def update_timetable_config(path):
     with open(path, 'r') as file:
         config = yaml.safe_load(file)
 
-    config['timetable']['tb'] = True
+    # config['timetable']['tb'] = True
+    config['timetable']['first_day'] = '2025-10-04'
 
     with open(path, 'w') as file:
         yaml.safe_dump(config, file)
@@ -73,15 +74,22 @@ def try_reproduce(id_value, verbose=False):
     os.makedirs(dir, exist_ok=True)
 
     # Step 1: Execute motis extract
-    cmd([
+    extract_cmd = [
         motis,
         "extract",
+        "--filter_stops", "false",
         "-i",
-        f"fail/{id_value}_0.json",
-        f"fail/{id_value}_1.json",
-        "-o", dir,
-        '--reduce', 'true'
-    ], verbose=verbose)
+        f"fail/{id_value}_0.json"
+    ]
+
+    # Add second JSON file only if it exists
+    second_json = f"fail/{id_value}_1.json"
+    if os.path.exists(second_json):
+        extract_cmd.append(second_json)
+
+    extract_cmd.extend(["-o", dir, '--reduce', 'true'])
+
+    cmd(extract_cmd, verbose=verbose)
 
     # Step 2: Get timetable directories and run motis import
     timetable_dirs = get_directories(dir)
