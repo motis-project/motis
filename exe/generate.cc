@@ -178,9 +178,10 @@ int generate(int ac, char** av) {
   auto d = data{data_path, c};
   utl::verify(d.tt_, "timetable required");
 
-  first_day = first_day ? d.tt_->date_range_.clamp(*first_day)
-                        : std::chrono::time_point_cast<std::chrono::days>(
-                              d.tt_->external_interval().from_);
+  first_day = first_day
+                  ? d.tt_->date_range_.clamp(*first_day)
+                  : std::chrono::time_point_cast<date::sys_days::duration>(
+                        d.tt_->external_interval().from_);
   last_day = last_day ? d.tt_->date_range_.clamp(
                             std::max(*first_day + date::days{1U}, *last_day))
                       : d.tt_->date_range_.clamp(*first_day + date::days{14U});
