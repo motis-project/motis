@@ -26,7 +26,7 @@ api::stops_response stops::operator()(boost::urls::url_view const& url) const {
   loc_rtree_.find({min->pos_, max->pos_}, [&](n::location_idx_t const l) {
     utl::verify(res.size() < max_results, "too many items");
     res.emplace_back(
-        to_place(&tt_, &tags_, w_, pl_, matches_, lp_, tz_, tt_location{l}));
+        to_place(&tt_, &tags_, w_, pl_, matches_, ae_, tz_, tt_location{l}));
   });
   return res;
 }

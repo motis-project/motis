@@ -36,7 +36,7 @@ flex_output::flex_output(osr::ways const& w,
                          osr::lookup const& l,
                          osr::platforms const* pl,
                          platform_matches_t const* matches,
-                         adr_ext const* lp,
+                         adr_ext const* ae,
                          tz_map_t const* tz,
                          tag_lookup const& tags,
                          n::timetable const& tt,
@@ -45,7 +45,7 @@ flex_output::flex_output(osr::ways const& w,
     : w_{w},
       pl_{pl},
       matches_{matches},
-      lp_{lp},
+      ae_{ae},
       tz_{tz},
       tt_{tt},
       tags_{tags},
@@ -110,7 +110,7 @@ void flex_output::annotate_leg(osr::node_idx_t const from,
   auto const write_node_info = [&](api::Place& p, osr::node_idx_t const n) {
     if (w_.is_additional_node(n)) {
       auto const l = flex_routing_data_.get_additional_node(n);
-      p = to_place(&tt_, &tags_, &w_, pl_, matches_, lp_, tz_, tt_location{l});
+      p = to_place(&tt_, &tags_, &w_, pl_, matches_, ae_, tz_, tt_location{l});
     }
   };
   write_node_info(leg.from_, from);
