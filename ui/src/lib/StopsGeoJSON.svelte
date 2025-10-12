@@ -3,7 +3,7 @@
 	import GeoJSON from '$lib/map/GeoJSON.svelte';
 	import type { Itinerary, Leg } from './api/openapi';
 	import { onClickStop } from './utils';
-	import { getModeStyle } from './modeStyle';
+	import { getColor } from './modeStyle';
 
 	let {
 		itinerary = $bindable()
@@ -28,7 +28,7 @@
 								stopId: l.from.stopId,
 								name: l.from.name,
 								time: l.from.arrival ?? l.from.departure,
-								color: getModeStyle(l)[1]
+								color: getColor(l)[0]
 							}
 						},
 						{
@@ -38,7 +38,7 @@
 								stopId: l.to.stopId,
 								name: l.to.name,
 								time: l.to.arrival,
-								color: getModeStyle(l)[1]
+								color: getColor(l)[0]
 							}
 						}
 					];
@@ -53,7 +53,7 @@
 									stopId: s.stopId,
 									name: s.name,
 									time: s.arrival,
-									color: getModeStyle(l)[1]
+									color: getColor(l)[0]
 								}
 							}))
 						: [];

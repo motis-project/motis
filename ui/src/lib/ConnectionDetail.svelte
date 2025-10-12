@@ -283,7 +283,7 @@
 
 			<div class="pt-4 pl-4 sm:pl-6 border-l-4 left-4 relative" style={routeBorderColor(l)}>
 				{@render stopTimes(l.startTime, l.scheduledStartTime, l.realTime, l.from, l.mode, -1)}
-				<div class="mt-2 mb-2 flex items-center">
+				<div class="mb-2 flex items-center">
 					<ArrowRight class="stroke-muted-foreground size-4" />
 					<span class="ml-1">
 						{#if l.tripTo}
