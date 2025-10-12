@@ -27,14 +27,14 @@ constexpr auto const kClaszMax =
     static_cast<std::underlying_type_t<n::clasz>>(n::kNumClasses);
 
 date::time_zone const* get_tz(n::timetable const& tt,
-                              adr_ext const* lp,
+                              adr_ext const* ae,
                               tz_map_t const* tz,
                               n::location_idx_t const l) {
   auto const p = tt.locations_.parents_[l];
   auto const x = p == n::location_idx_t::invalid() ? l : p;
 
   auto const p_idx =
-      !lp || !tz ? adr_extra_place_idx_t::invalid() : lp->location_place_.at(x);
+      !ae || !tz ? adr_extra_place_idx_t::invalid() : ae->location_place_.at(x);
   if (p_idx != adr_extra_place_idx_t::invalid()) {
     return tz->at(p_idx);
   }
@@ -97,6 +97,12 @@ adr_ext adr_extend_tt(nigiri::timetable const& tt,
             ret.location_place_[tt.locations_.get_root_idx(l)];
       }
     }
+  }
+
+  for (auto const [l, p] : utl::enumerate(ret.location_place_)) {
+    utl::verify(
+        l < n::kNSpecialStations || p != adr_extra_place_idx_t::invalid(),
+        "invalid place for {}", n::location{tt, n::location_idx_t{l}});
   }
 
   // For each station without parent:

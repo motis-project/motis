@@ -2181,6 +2181,9 @@ components:
         stopId:
           description: The ID of the stop. This is often something that users don't care about.
           type: string
+        importance:
+          description: The importance of the stop between 0-1.
+          type: number
         lat:
           description: latitude
           type: number
