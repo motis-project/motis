@@ -90,9 +90,7 @@ struct motis_instance {
     GET<ep::levels>("/api/v1/map/levels", d);
     GET<ep::initial>("/api/v1/map/initial", d);
     GET<ep::reverse_geocode>("/api/v1/reverse-geocode", d);
-    GET<ep::reverse_geocode>("/api/v5/reverse-geocode", d);
     GET<ep::geocode>("/api/v1/geocode", d);
-    GET<ep::geocode>("/api/v5/geocode", d);
     GET<ep::routing>("/api/v1/plan", d);
     GET<ep::routing>("/api/v2/plan", d);
     GET<ep::routing>("/api/v3/plan", d);
