@@ -89,8 +89,9 @@ void print_category(category& cat,
                 << quantile(stat.values_, 0.5).value_;
 
       auto const from = static_cast<std::uint64_t>(
-          std::max(0L, static_cast<std::int64_t>(stat.values_.size()) -
-                           static_cast<std::int64_t>(top)));
+          std::max(static_cast<std::int64_t>(0L),
+                   static_cast<std::int64_t>(stat.values_.size()) -
+                       static_cast<std::int64_t>(top)));
       for (auto i = from; i != stat.values_.size(); ++i) {
         auto const i_rev = stat.values_.size() - (i - from) - 1;
         std::cout << "(v=" << stat.values_[i_rev].value_
