@@ -241,6 +241,14 @@ export const MatchSchema = {
         type: {
             '$ref': '#/components/schemas/LocationType'
         },
+        category: {
+            description: `Experimental. Type categories might be adjusted.
+
+For OSM stop locations: the amenity type based on
+https://wiki.openstreetmap.org/wiki/OpenStreetMap_Carto/Symbols
+`,
+            type: 'string'
+        },
         tokens: {
             description: 'list of non-overlapping tokens that were matched',
             type: 'array',
@@ -371,6 +379,10 @@ export const PlaceSchema = {
         stopId: {
             description: "The ID of the stop. This is often something that users don't care about.",
             type: 'string'
+        },
+        importance: {
+            description: 'The importance of the stop between 0-1.',
+            type: 'number'
         },
         lat: {
             description: 'latitude',

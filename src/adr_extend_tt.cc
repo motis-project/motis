@@ -221,7 +221,7 @@ adr_ext adr_extend_tt(nigiri::timetable const& tt,
       }
     }
 
-    t.place_type_.emplace_back(a::place_type::kExtra);
+    t.place_type_.emplace_back(a::amenity_category::kExtra);
     t.place_names_.emplace_back(
         utl::to_vec(names, [](auto const& n) { return n.first; }));
     t.place_coordinates_.emplace_back(a::coordinates::from_latlng(pos));

@@ -191,9 +191,10 @@ std::optional<std::vector<api::Alert>> get_alerts(
   auto alerts = std::vector<api::Alert>{};
   for (auto const& t : tt.trip_ids_[x]) {
     auto const src = tt.trip_id_src_[t];
-    rtt->alerts_.for_each_alert(
-        tt, src, x, fr.rt_, l, fuzzy_stop,
-        [&](n::alert_idx_t const a) { alerts.emplace_back(to_alert(a)); });
+    for (auto const& a :
+         rtt->alerts_.get_alerts(tt, src, x, fr.rt_, l, fuzzy_stop)) {
+      alerts.emplace_back(to_alert(a));
+    }
   }
 
   return alerts.empty() ? std::nullopt : std::optional{std::move(alerts)};

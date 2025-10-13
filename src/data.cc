@@ -294,7 +294,7 @@ void data::load_geocoder() {
     auto cache = hash_map<std::string, date::time_zone const*>{};
     for (auto const [type, areas] :
          utl::zip(t_->place_type_, t_->place_areas_)) {
-      if (type != adr::place_type::kExtra) {
+      if (type != adr::amenity_category::kExtra) {
         continue;
       }
 
