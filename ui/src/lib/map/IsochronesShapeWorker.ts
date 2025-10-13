@@ -27,6 +27,7 @@ let highestComputedLevel: DisplayLevel = 'NONE';
 let maxLevel: DisplayLevel = 'NONE';
 let working = false;
 let maxDistance = (_: IsochronesPos) => 0;
+let circleResolution: number = 64; // default 'steps' for @turf/circle
 
 self.onmessage = async function (event) {
 	const method = event.data.method;
@@ -36,6 +37,9 @@ self.onmessage = async function (event) {
 		const kilometersPerSecond = event.data.kilometersPerSecond;
 		const maxSeconds = event.data.maxSeconds;
 		maxDistance = getMaxDistanceFunction(kilometersPerSecond, maxSeconds);
+		if (event.data.circleResolution && event.data.circleResolution > 2) {
+			circleResolution = event.data.circleResolution;
+		}
 	} else if (method == 'set-max-level') {
 		maxLevel = event.data.level;
 		createShapes();
@@ -184,7 +188,7 @@ async function createCircles() {
 	}
 	const promises = rects.map(async (rect: RectType) => {
 		const c = circle([rect.data.lng, rect.data.lat], rect.distance, {
-			// steps: 64,
+			steps: circleResolution,
 			units: 'kilometers'
 		});
 		// bbox extent in [minX, minY, maxX, maxY] order
