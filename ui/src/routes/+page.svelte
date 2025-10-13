@@ -69,6 +69,7 @@
 	import { defaultQuery, omitDefaults } from '$lib/defaults';
 	import { LEVEL_MIN_ZOOM } from '$lib/constants';
 	import StopGeoJSON from '$lib/StopsGeoJSON.svelte';
+	import TrainFront from 'lucide-svelte/icons/train-front';
 
 	const urlParams = browser ? new URLSearchParams(window.location.search) : undefined;
 
@@ -78,7 +79,7 @@
 	const isSmallScreen = browser && window.innerWidth < 768;
 	let activeTab = $state<'connections' | 'departures' | 'isochrones'>('connections');
 	let dataAttributionLink: string | undefined = $state(undefined);
-	let colorMode = $state<'rt' | 'route' | 'none'>('route');
+	let colorMode = $state<'rt' | 'route' | 'mode' | 'none'>('route');
 	let showMap = $state(!isSmallScreen);
 	let lastSelectedItinerary: Itinerary | undefined = undefined;
 	let lastOneToAllQuery: OneToAllData | undefined = undefined;
@@ -718,11 +719,24 @@
 				<Button
 					size="icon"
 					onclick={() => {
-						colorMode = colorMode == 'route' ? 'rt' : colorMode == 'rt' ? 'none' : 'route';
+						colorMode = (function () {
+							switch (colorMode) {
+								case 'rt':
+									return 'route';
+								case 'route':
+									return 'mode';
+								case 'mode':
+									return 'none';
+								case 'none':
+									return 'rt';
+							}
+						})();
 					}}
 				>
 					{#if colorMode == 'rt'}
 						<Rss class="h-[1.2rem] w-[1.2rem]" />
+					{:else if colorMode == 'mode'}
+						<TrainFront class="h-[1.2rem] w-[1.2rem]" />
 					{:else if colorMode == 'none'}
 						<Ban class="h-[1.2rem] w-[1.2rem]" />
 					{:else}
