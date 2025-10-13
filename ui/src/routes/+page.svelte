@@ -644,7 +644,7 @@
 				</Control>
 				{#if showMap}
 					<ItineraryGeoJson itinerary={page.state.selectedItinerary} {level} />
-					<StopGeoJSON itinerary={page.state.selectedItinerary} />
+					<StopGeoJSON itinerary={page.state.selectedItinerary} {theme} />
 				{/if}
 			{/if}
 

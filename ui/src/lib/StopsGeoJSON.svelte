@@ -6,9 +6,11 @@
 	import { getColor } from './modeStyle';
 
 	let {
-		itinerary = $bindable()
+		itinerary = $bindable(),
+		theme
 	}: {
 		itinerary: Itinerary;
+		theme: 'dark' | 'light';
 	} = $props();
 
 	function stopsToGeoJSON(legs: Leg[]): GeoJSON.GeoJSON {
@@ -87,5 +89,31 @@
 		}}
 		onmousemove={(_, map) => (map.getCanvas().style.cursor = 'pointer')}
 		onmouseleave={(_, map) => (map.getCanvas().style.cursor = '')}
+	/>
+	<Layer
+		id="intermediate-stops-name"
+		type="symbol"
+		layout={{
+			'text-field': ['get', 'name'],
+			'text-font': ['Noto Sans Display Regular'],
+			'text-size': 12,
+			'text-offset': [0, 1],
+			'text-anchor': 'top'
+		}}
+		filter={true}
+		paint={{
+			'text-halo-width': 2,
+			// Use a darker hue of the line color for dark theme and a lighter hue for light theme
+			'text-halo-color': [
+				'interpolate-hcl',
+				['linear'],
+				0.6,
+				0,
+				['get', 'color'],
+				1,
+				theme == 'dark' ? '#000' : '#fff'
+			],
+			'text-color': theme == 'dark' ? '#fff' : '#000'
+		}}
 	/>
 </GeoJSON>
