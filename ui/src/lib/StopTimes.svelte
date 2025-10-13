@@ -3,7 +3,6 @@
 	import LoaderCircle from 'lucide-svelte/icons/loader-circle';
 	import ArrowRight from 'lucide-svelte/icons/arrow-right';
 	import CircleX from 'lucide-svelte/icons/circle-x';
-	import Info from 'lucide-svelte/icons/info';
 	import ErrorMessage from '$lib/ErrorMessage.svelte';
 	import Time from '$lib/Time.svelte';
 	import Route from '$lib/Route.svelte';
@@ -15,6 +14,7 @@
 	import { posToLocation } from './Location';
 	import type { Location } from './Location';
 	import maplibregl from 'maplibre-gl';
+	import Alerts from './Alerts.svelte';
 
 	let {
 		stopId,
@@ -162,12 +162,7 @@
 						</div>
 					{/if}
 					{#if stopTime.place.alerts}
-						<div class="flex items-center text-destructive text-sm">
-							<Info class="stroke-destructive h-4 w-4" />
-							<span class="ml-1 leading-none">
-								{t.alertsAvailable}
-							</span>
-						</div>
+						<Alerts timeZone={stopTime.place.tz ?? ''} alerts={stopTime.place.alerts} />
 					{/if}
 				</div>
 			{/each}

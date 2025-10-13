@@ -4,7 +4,6 @@
 	import ArrowDown from 'lucide-svelte/icons/arrow-down';
 	import DollarSign from 'lucide-svelte/icons/dollar-sign';
 	import CircleX from 'lucide-svelte/icons/circle-x';
-	import TriangleAlert from 'lucide-svelte/icons/triangle-alert';
 	import type { FareProduct, Itinerary, Leg, Mode, Place, StepInstruction } from '$lib/api/openapi';
 	import Time from '$lib/Time.svelte';
 	import { routeBorderColor, routeColor } from '$lib/modeStyle';
@@ -16,6 +15,7 @@
 	import { onClickStop, onClickTrip } from '$lib/utils';
 	import { formatDate, formatTime } from './toDateTime';
 	import { getModeLabel } from './map/getModeLabel';
+	import Alerts from './Alerts.svelte';
 	const {
 		itinerary
 	}: {
@@ -101,38 +101,14 @@
 						</span>
 					</div>
 				{/if}
-				{#if isStartOrEnd && p.alerts}
-					<details class="text-destructive text-sm">
-						<summary
-							class="flex items-center gap-2 hover:underline underline-offset-4 cursor-pointer transition-all"
-						>
-							<TriangleAlert class="size-4" />
-							<span> View alerts </span>
-						</summary>
-						{#each p.alerts as alert, i (i)}
-							<button
-								class="text-sm text-left w-full truncate"
-								onclick={(e) => {
-									e.currentTarget.classList.toggle('truncate');
-									e.currentTarget.classList.toggle('w-full');
-								}}
-							>
-								• {alert.headerText}
-								{#if alert.impactPeriod}
-									{alert.impactPeriod[0]?.start} - {alert.impactPeriod[1]?.end}
-								{/if}
-								{#if alert.descriptionText}
-									{alert.descriptionText}
-								{/if}
-							</button>
-						{/each}
-					</details>
-				{/if}
 			{:else}
 				<span>{p.name || p.flex}</span>
 			{/if}
 		</div>
 	</div>
+	{#if isStartOrEnd && p.alerts}
+		<Alerts timeZone={p.tz ?? ''} alerts={p.alerts} />
+	{/if}
 {/snippet}
 
 {#snippet streetLeg(l: Leg)}
@@ -300,7 +276,7 @@
 				<div class="border-t h-0 grow shrink"></div>
 			</div>
 
-			<div class="pt-4 pl-6 border-l-4 left-4 relative" style={routeBorderColor(l)}>
+			<div class="px-6 pt-2 border-l-4 left-4 w-full relative" style={routeBorderColor(l)}>
 				{@render stopTimes(l.startTime, l.scheduledStartTime, l.realTime, l.from, l.mode, -1)}
 				<div class="mt-2 mb-2 flex items-center">
 					<ArrowRight class="stroke-muted-foreground size-4" />
@@ -346,31 +322,7 @@
 				{/if}
 
 				{#if l.alerts}
-					<details class="text-destructive text-sm">
-						<summary
-							class="flex items-center gap-2 hover:underline underline-offset-4 cursor-pointer transition-all"
-						>
-							<TriangleAlert class="size-4" />
-							<span> View alerts </span>
-						</summary>
-						{#each l.alerts as alert, i (i)}
-							<button
-								class="text-sm text-left w-full truncate"
-								onclick={(e) => {
-									e.currentTarget.classList.toggle('truncate');
-									e.currentTarget.classList.toggle('w-full');
-								}}
-							>
-								• {alert.headerText}
-								{#if alert.impactPeriod}
-									{alert.impactPeriod[0]?.start} - {alert.impactPeriod[1]?.end}
-								{/if}
-								{#if alert.descriptionText}
-									{alert.descriptionText}
-								{/if}
-							</button>
-						{/each}
-					</details>
+					<Alerts timeZone={l.from.tz ?? ''} alerts={l.alerts} />
 				{/if}
 				{#if l.intermediateStops?.length === 0}
 					<div class="pt-16 pb-8 pl-1 md:pl-4 flex items-center text-muted-foreground">
@@ -418,6 +370,7 @@
 			</div>
 		{:else if !(isLast && !isRelevantLeg(l)) && ((i == 0 && isRelevantLeg(l)) || !next || !next.displayName || l.mode != 'WALK' || (pred && (pred.mode == 'BIKE' || (l.mode == 'WALK' && pred.mode == 'CAR') || pred.mode == 'RENTAL')))}
 			<Route {onClickTrip} {l} />
+
 			<div class="pt-4 pl-6 border-l-4 left-4 relative" style={routeBorderColor(l)}>
 				{@render stopTimes(l.startTime, l.scheduledStartTime, l.realTime, l.from, l.mode, -1, true)}
 				{#if l.mode == 'FLEX'}
@@ -435,11 +388,8 @@
 			</div>
 		{/if}
 	{/each}
-	<div class="relative pl-6 left-4">
-		<div
-			class="absolute left-[-6px] top-[0px] w-[15px] h-[15px] rounded-full"
-			style={routeColor(lastLeg!)}
-		></div>
+	<div class="ml-[10px] w-[15px] h-[15px] rounded-full" style={routeColor(lastLeg!)}></div>
+	<div class="relative w-full px-6 left-4">
 		{@render stopTimes(
 			lastLeg!.endTime,
 			lastLeg!.scheduledEndTime,
