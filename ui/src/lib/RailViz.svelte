@@ -3,7 +3,7 @@
 	import { MapboxOverlay } from '@deck.gl/mapbox';
 	import { IconLayer } from '@deck.gl/layers';
 	import { createTripIcon } from '$lib/map/createTripIcon';
-	import { getColor } from '$lib/modeStyle';
+	import { getColor, getModeStyle } from '$lib/modeStyle';
 	import getDistance from '@turf/rhumb-distance';
 	import getBearing from '@turf/rhumb-bearing';
 	import polyline from '@mapbox/polyline';
@@ -23,7 +23,7 @@
 		map: maplibregl.Map | undefined;
 		bounds: maplibregl.LngLatBoundsLike | undefined;
 		zoom: number;
-		colorMode: 'rt' | 'route' | 'none';
+		colorMode: 'rt' | 'route' | 'mode';
 	} = $props();
 
 	let railvizError = $state();
@@ -168,10 +168,16 @@
 			id: 'trips',
 			data: tripsWithFrame,
 			beforeId: 'road-name-text',
-			getColor: (d) =>
-				colorMode == 'rt'
-					? getDelayColor(d.departureDelay, d.arrivalDelay, d.realTime)
-					: hexToRgb(getColor(d)[0]),
+			getColor: (d) => {
+				switch (colorMode) {
+					case 'rt':
+						return getDelayColor(d.departureDelay, d.arrivalDelay, d.realTime);
+					case 'mode':
+						return hexToRgb(getModeStyle(d)[1]);
+					case 'route':
+						return hexToRgb(getColor(d)[0]);
+				}
+			},
 			getAngle: (d) => -d.heading + 90,
 			getPosition: (d) => d.point,
 			getSize: (_) => 48,
