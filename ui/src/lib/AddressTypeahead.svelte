@@ -188,7 +188,15 @@
 							{:else if item.match?.type == 'ADDRESS'}
 								<House class="size-5" />
 							{:else if item.match?.type == 'PLACE'}
-								<Place class="size-5" />
+								{#if !item.match?.category || item.match?.category == 'none'}
+									<Place class="size-5" />
+								{:else}
+									<img
+										src={`/icons/${item.match?.category}.svg`}
+										alt={item.match?.category}
+										class="size-5"
+									/>
+								{/if}
 							{/if}
 							<div class="flex flex-col ml-4">
 								<span class="font-semibold text-nowrap text-ellipsis overflow-hidden">
