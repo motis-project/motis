@@ -10,61 +10,52 @@
 	let isOpen = $state(false);
 </script>
 
-<div class="flex items-center justify-center">
-	<div class="w-full max-w-sm">
-		<div class="text-center flex flex-col items-center">
-			<button
-				onclick={() => (isOpen = !isOpen)}
-				class="p-2 bg-yellow-500 text-xs text-white font-bold rounded-lg hover:bg-yellow-600 transition-colors my-3 shadow-lg flex items-center"
+<div class="text-center mx-auto flex flex-col gap-3 max-w-sm items-center">
+	<button
+		onclick={() => (isOpen = !isOpen)}
+		class="p-2 bg-yellow-500 text-xs text-white font-bold rounded-lg hover:bg-yellow-600 transition-colors my-3 shadow-lg flex items-center"
+	>
+		<TriangleAlert class="size-4 mr-1" />
+		{t.alertsAvailable}
+		<ChevronDown
+			size={20}
+			class={`transition-transform duration-500 ${isOpen ? 'rotate-180' : ''}`}
+		/>
+	</button>
+	{#each alerts as alert, i (i)}
+		{#if isOpen}
+			<div
+				class="w-full items-center bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-2 rounded shadow"
 			>
-				<TriangleAlert class="size-4 mr-1" />
-				{t.alertsAvailable}
-				<ChevronDown
-					size={20}
-					class={`transition-transform duration-500 ${isOpen ? 'rotate-180' : ''}`}
-				/>
-			</button>
-			{#each alerts as alert, i (i)}
-				{#if isOpen}
-					<div class="mb-4 w-full">
-						<div
-							class="flex items-center bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 rounded shadow"
-						>
-							<div>
-								<p class="font-bold overflow-hidden">{alert.headerText}</p>
-								{#if alert.impactPeriod && alert.impactPeriod[0]?.start}
-									<span class="text-sm font-bold">
-										{t.from}
-										<Time
-											variant="schedule"
-											class="text-sm font-bold inline-flex justify-center gap-2 align-middle items-center"
-											{timeZone}
-											isRealtime={false}
-											timestamp={alert.impactPeriod[0]?.start ?? ''}
-											scheduledTimestamp={alert.impactPeriod[0]?.start ?? ''}
-										/>
-									</span>
-								{/if}
-								{#if alert.impactPeriod && alert.impactPeriod.length > 1 && alert.impactPeriod[alert.impactPeriod.length - 1]?.end}
-									<span class="text-sm block font-bold">
-										{t.to}
-										<Time
-											variant="schedule"
-											class="text-sm font-bold inline-flex justify-center gap-2 align-middle items-center"
-											{timeZone}
-											isRealtime={false}
-											timestamp={alert.impactPeriod[alert.impactPeriod.length - 1].end ?? ''}
-											scheduledTimestamp={alert.impactPeriod[0]?.start ?? ''}
-										/>
-									</span>
-								{/if}
-
-								<p class="text-sm overflow-hidden">{alert.descriptionText}</p>
-							</div>
-						</div>
-					</div>
+				<p class="font-bold overflow-hidden">{alert.headerText}</p>
+				{#if alert.impactPeriod && alert.impactPeriod[0]?.start}
+					<span class="text-sm font-bold">
+						{t.from}
+						<Time
+							variant="schedule"
+							class="text-sm font-bold inline-flex justify-center gap-2 align-middle items-center"
+							{timeZone}
+							isRealtime={false}
+							timestamp={alert.impactPeriod[0]?.start ?? ''}
+							scheduledTimestamp={alert.impactPeriod[0]?.start ?? ''}
+						/>
+					</span>
 				{/if}
-			{/each}
-		</div>
-	</div>
+				{#if alert.impactPeriod && alert.impactPeriod.length > 1 && alert.impactPeriod[alert.impactPeriod.length - 1]?.end}
+					<span class="text-sm block font-bold">
+						{t.to}
+						<Time
+							variant="schedule"
+							class="text-sm font-bold inline-flex justify-center gap-2 align-middle items-center"
+							{timeZone}
+							isRealtime={false}
+							timestamp={alert.impactPeriod[alert.impactPeriod.length - 1].end ?? ''}
+							scheduledTimestamp={alert.impactPeriod[0]?.start ?? ''}
+						/>
+					</span>
+				{/if}
+				<p class="text-sm overflow-hidden">{alert.descriptionText}</p>
+			</div>
+		{/if}
+	{/each}
 </div>
