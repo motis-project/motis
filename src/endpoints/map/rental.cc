@@ -50,8 +50,7 @@ api::rentals_response rental::operator()(
         .stationParking_ = r.station_parking_};
   };
 
-  auto const rule_to_api = [&](gbfs::gbfs_provider const* provider,
-                               gbfs::rule const& r) {
+  auto const rule_to_api = [&](gbfs::rule const& r) {
     return api::RentalZoneRestrictions{
         .vehicleTypeIdxs_ =
             utl::to_vec(r.vehicle_type_idxs_,
@@ -121,9 +120,9 @@ api::rentals_response rental::operator()(
         .formFactors_ = std::move(form_factors),
         .defaultRestrictions_ =
             restrictions_to_api(provider->default_restrictions_),
-        .globalGeofencingRules_ = utl::to_vec(
-            provider->geofencing_zones_.global_rules_,
-            [&](gbfs::rule const& r) { return rule_to_api(provider, r); })});
+        .globalGeofencingRules_ =
+            utl::to_vec(provider->geofencing_zones_.global_rules_,
+                        [&](gbfs::rule const& r) { return rule_to_api(r); })});
   };
 
   if (!filter_bbox && !filter_providers) {
@@ -274,7 +273,7 @@ api::rentals_response rental::operator()(
             .area_ = multipoly_to_api(zone.geom_.get()),
             .rules_ = utl::to_vec(
                 zone.rules_,
-                [&](gbfs::rule const& r) { return rule_to_api(provider, r); }),
+                [&](gbfs::rule const& r) { return rule_to_api(r); }),
         });
       }
     }
