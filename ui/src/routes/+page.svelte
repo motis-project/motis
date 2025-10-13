@@ -729,22 +729,6 @@
 		{#if one && activeTab == 'isochrones'}
 			<Marker color="yellow" draggable={true} {level} bind:location={one} bind:marker={oneMarker} />
 		{/if}
-	{:else}
-		<div class="maplibregl-control-container">
-			<div class="maplibregl-ctrl-bottom-left">
-				<Control class="pb-4">
-					<Button
-						size="icon"
-						variant="default"
-						onclick={() => {
-							showMap = true;
-							flyToSelectedItinerary();
-						}}
-					>
-						<MapIcon class="h-[1.2rem] w-[1.2rem]" />
-					</Button>
-				</Control>
-			</div>
-		</div>
+		
 	{/if}
 </Map>

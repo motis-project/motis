@@ -318,7 +318,7 @@
 	});
 </script>
 
-<Control position={browser && window.innerWidth < 768 ? 'bottom-left' : 'top-right'} class="pb-4">
+<Control position={'top-right'} class="pb-4">
 	<Button
 		size="icon"
 		variant={colorMode ? 'default' : 'outline'}
