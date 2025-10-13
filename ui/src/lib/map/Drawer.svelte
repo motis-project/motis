@@ -44,10 +44,10 @@
 		isDragging = false;
 		ref!.style.transition = '';
 		const delta = e.changedTouches[0].clientY - startY;
-		if (1 < delta && expanded) {
+		if ((70 < delta || delta == 0) && expanded) {
 			ref!.style.transform = `translateY(${window.innerHeight * maxTranslate}px)`;
 			expanded = false;
-		} else if (delta < -1 && !expanded) {
+		} else if ((delta < -70 || delta == 0) && !expanded) {
 			ref!.style.transform = `translateY(${minTranslate}px)`;
 			expanded = true;
 		} else {
@@ -84,7 +84,7 @@
 		></div>
 	</div>
 
-	<div class="overflow-auto">
+	<div class:overflow-auto={expanded}>
 		{@render children?.()}
 	</div>
 </div>
