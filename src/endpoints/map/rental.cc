@@ -261,7 +261,7 @@ api::rentals_response rental::operator()(
     if (query.withZones_) {
       auto const n_zones =
           static_cast<std::int64_t>(provider->geofencing_zones_.zones_.size());
-      for (auto const& [order, zone] :
+      for (auto const [order, zone] :
            utl::enumerate(provider->geofencing_zones_.zones_)) {
         if (filter_bbox && !bbox.overlaps(zone.bounding_box())) {
           continue;
