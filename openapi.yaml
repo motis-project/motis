@@ -2714,18 +2714,19 @@ components:
     RentalZoneRestrictions:
       type: object
       required:
-        - vehicleTypeIds
+        - vehicleTypeIdxs
         - rideStartAllowed
         - rideEndAllowed
         - rideThroughAllowed
       properties:
-        vehicleTypeIds:
+        vehicleTypeIdxs:
           type: array
           description: |
-            List of vehicle type IDs to which these restrictions apply.
+            List of vehicle types (as indices into the provider's vehicle types
+            array) to which these restrictions apply.
             If empty, the restrictions apply to all vehicle types of the provider.
           items:
-            type: string
+            type: integer
         rideStartAllowed:
           type: boolean
           description: whether the ride is allowed to start in this zone
@@ -2945,6 +2946,7 @@ components:
       type: object
       required:
         - providerId
+        - z
         - area
         - restrictions
       properties:
@@ -2954,6 +2956,9 @@ components:
         name:
           type: string
           description: Public name of the geofencing zone
+        z:
+          type: integer
+          description: Zone precedence / z-index (higher number = higher precedence)
         area:
           $ref: '#/components/schemas/MultiPolygon'
         rules:

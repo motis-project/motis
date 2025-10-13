@@ -43,7 +43,7 @@ api::rentals_response rental::operator()(
 
   auto const restrictions_to_api = [&](gbfs::geofencing_restrictions const& r) {
     return api::RentalZoneRestrictions{
-        .vehicleTypeIds_ = {},
+        .vehicleTypeIdxs_ = {},
         .rideStartAllowed_ = r.ride_start_allowed_,
         .rideEndAllowed_ = r.ride_end_allowed_,
         .rideThroughAllowed_ = r.ride_through_allowed_,
@@ -53,9 +53,11 @@ api::rentals_response rental::operator()(
   auto const rule_to_api = [&](gbfs::gbfs_provider const* provider,
                                gbfs::rule const& r) {
     return api::RentalZoneRestrictions{
-        .vehicleTypeIds_ = utl::to_vec(
-            r.vehicle_type_idxs_,
-            [&](auto const vti) { return provider->vehicle_types_[vti].id_; }),
+        .vehicleTypeIdxs_ =
+            utl::to_vec(r.vehicle_type_idxs_,
+                        [&](auto const vti) {
+                          return static_cast<std::int64_t>(to_idx(vti));
+                        }),
         .rideStartAllowed_ = r.ride_start_allowed_,
         .rideEndAllowed_ = r.ride_end_allowed_,
         .rideThroughAllowed_ = r.ride_through_allowed_,
@@ -258,13 +260,17 @@ api::rentals_response rental::operator()(
     }
 
     if (query.withZones_) {
-      for (auto const& zone : provider->geofencing_zones_.zones_) {
+      auto const n_zones =
+          static_cast<std::int64_t>(provider->geofencing_zones_.zones_.size());
+      for (auto const& [order, zone] :
+           utl::enumerate(provider->geofencing_zones_.zones_)) {
         if (filter_bbox && !bbox.overlaps(zone.bounding_box())) {
           continue;
         }
         res.zones_.emplace_back(api::RentalZone{
             .providerId_ = provider->id_,
             .name_ = zone.name_,
+            .z_ = n_zones - static_cast<std::int64_t>(order),
             .area_ = multipoly_to_api(zone.geom_.get()),
             .rules_ = utl::to_vec(
                 zone.rules_,

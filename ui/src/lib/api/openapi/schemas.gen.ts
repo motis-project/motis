@@ -860,15 +860,16 @@ are inner rings (holes).
 
 export const RentalZoneRestrictionsSchema = {
     type: 'object',
-    required: ['vehicleTypeIds', 'rideStartAllowed', 'rideEndAllowed', 'rideThroughAllowed'],
+    required: ['vehicleTypeIdxs', 'rideStartAllowed', 'rideEndAllowed', 'rideThroughAllowed'],
     properties: {
-        vehicleTypeIds: {
+        vehicleTypeIdxs: {
             type: 'array',
-            description: `List of vehicle type IDs to which these restrictions apply.
+            description: `List of vehicle types (as indices into the provider's vehicle types
+array) to which these restrictions apply.
 If empty, the restrictions apply to all vehicle types of the provider.
 `,
             items: {
-                type: 'string'
+                type: 'integer'
             }
         },
         rideStartAllowed: {
@@ -916,7 +917,7 @@ export const RentalVehicleTypeSchema = {
 
 export const RentalProviderSchema = {
     type: 'object',
-    required: ['id', 'name', 'bbox', 'vehicleTypes', 'defaultRestrictions', 'globalGeofencingRules'],
+    required: ['id', 'name', 'bbox', 'vehicleTypes', 'formFactors', 'defaultRestrictions', 'globalGeofencingRules'],
     properties: {
         id: {
             type: 'string',
@@ -953,6 +954,13 @@ export const RentalProviderSchema = {
             type: 'array',
             items: {
                 '$ref': '#/components/schemas/RentalVehicleType'
+            }
+        },
+        formFactors: {
+            type: 'array',
+            description: 'List of form factors offered by this provider',
+            items: {
+                '$ref': '#/components/schemas/RentalFormFactor'
             }
         },
         defaultRestrictions: {
@@ -1116,7 +1124,7 @@ export const RentalVehicleSchema = {
 
 export const RentalZoneSchema = {
     type: 'object',
-    required: ['providerId', 'area', 'restrictions'],
+    required: ['providerId', 'z', 'area', 'rules'],
     properties: {
         providerId: {
             type: 'string',
@@ -1125,6 +1133,10 @@ export const RentalZoneSchema = {
         name: {
             type: 'string',
             description: 'Public name of the geofencing zone'
+        },
+        z: {
+            type: 'integer',
+            description: 'Zone precedence / z-index (higher number = higher precedence)'
         },
         area: {
             '$ref': '#/components/schemas/MultiPolygon'

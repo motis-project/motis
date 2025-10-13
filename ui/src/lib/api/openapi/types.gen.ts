@@ -713,11 +713,12 @@ export type MultiPolygon = Array<Array<EncodedPolyline>>;
 
 export type RentalZoneRestrictions = {
     /**
-     * List of vehicle type IDs to which these restrictions apply.
+     * List of vehicle types (as indices into the provider's vehicle types
+     * array) to which these restrictions apply.
      * If empty, the restrictions apply to all vehicle types of the provider.
      *
      */
-    vehicleTypeIds: Array<(string)>;
+    vehicleTypeIdxs: Array<(number)>;
     /**
      * whether the ride is allowed to start in this zone
      */
@@ -783,6 +784,10 @@ export type RentalProvider = {
         number
     ];
     vehicleTypes: Array<RentalVehicleType>;
+    /**
+     * List of form factors offered by this provider
+     */
+    formFactors: Array<RentalFormFactor>;
     defaultRestrictions: RentalZoneRestrictions;
     globalGeofencingRules: Array<RentalZoneRestrictions>;
 };
@@ -922,8 +927,12 @@ export type RentalZone = {
      * Public name of the geofencing zone
      */
     name?: string;
+    /**
+     * Zone precedence / z-index (higher number = higher precedence)
+     */
+    z: number;
     area: MultiPolygon;
-    rules?: Array<RentalZoneRestrictions>;
+    rules: Array<RentalZoneRestrictions>;
 };
 
 export type Leg = {
@@ -1395,7 +1404,7 @@ export type PlanData = {
          * (usually BCP-47 / ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
          *
          */
-        language?: string;
+        language?: Array<(string)>;
         /**
          * Optional. Experimental. Number of luggage pieces; base unit: airline cabin luggage (e.g. for ODM or price calculation)
          *
@@ -2032,7 +2041,7 @@ export type GeocodeData = {
          * (usually ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
          *
          */
-        language?: string;
+        language?: Array<(string)>;
         /**
          * Optional. Used for biasing results towards the coordinate.
          *
@@ -2081,7 +2090,7 @@ export type TripData = {
          * (usually BCP-47 / ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
          *
          */
-        language?: string;
+        language?: Array<(string)>;
         /**
          * trip identifier (e.g. from an itinerary leg or stop event)
          */
@@ -2141,7 +2150,7 @@ export type StoptimesData = {
          * (usually BCP-47 / ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
          *
          */
-        language?: string;
+        language?: Array<(string)>;
         /**
          * Optional. Default is all transit modes.
          *
