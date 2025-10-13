@@ -4,7 +4,6 @@
 	import ArrowDown from 'lucide-svelte/icons/arrow-down';
 	import DollarSign from 'lucide-svelte/icons/dollar-sign';
 	import CircleX from 'lucide-svelte/icons/circle-x';
-	import TriangleAlert from 'lucide-svelte/icons/triangle-alert';
 	import type { FareProduct, Itinerary, Leg, Mode, Place, StepInstruction } from '$lib/api/openapi';
 	import Time from '$lib/Time.svelte';
 	import { routeBorderColor, routeColor } from '$lib/modeStyle';
