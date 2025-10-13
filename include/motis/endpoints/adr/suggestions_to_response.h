@@ -13,6 +13,7 @@ namespace motis {
 api::geocode_response suggestions_to_response(
     adr::typeahead const&,
     adr::formatter const&,
+    adr_ext const*,
     nigiri::timetable const*,
     tag_lookup const*,
     osr::ways const* w,

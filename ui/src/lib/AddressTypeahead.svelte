@@ -1,13 +1,13 @@
 <script lang="ts">
 	import { Combobox } from 'bits-ui';
-	import { geocode, type Match } from './api/openapi';
-	import Bus from 'lucide-svelte/icons/bus-front';
+	import { geocode, type Match, type Mode } from './api/openapi';
 	import House from 'lucide-svelte/icons/map-pin-house';
 	import Place from 'lucide-svelte/icons/map-pin';
 	import { parseCoordinatesToLocation, type Location } from './Location';
 	import { language } from './i18n/translation';
 	import maplibregl from 'maplibre-gl';
 	import { onClickStop } from '$lib/utils';
+	import { getModeStyle, type LegLike } from './modeStyle';
 
 	let {
 		items = $bindable([]),
@@ -132,6 +132,19 @@
 	});
 </script>
 
+{#snippet modeCircle(mode: Mode)}
+	{@const modeIcon = getModeStyle({ mode } as LegLike)[0]}
+	{@const modeColor = getModeStyle({ mode } as LegLike)[1]}
+	<div
+		class="rounded-full flex items-center justify-center p-1"
+		style="background-color: {modeColor}; fill: white;"
+	>
+		<svg class="relative size-4 rounded-full">
+			<use xlink:href={`#${modeIcon}`}></use>
+		</svg>
+	</div>
+{/snippet}
+
 <Combobox.Root
 	type="single"
 	allowDeselect={false}
@@ -165,23 +178,34 @@
 			>
 				{#each items as item (item.match)}
 					<Combobox.Item
-						class="flex w-full cursor-default select-none items-center rounded-sm py-4 pl-4 pr-2 text-sm outline-none data-[disabled]:pointer-events-none data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground data-[disabled]:opacity-50"
+						class="flex w-full cursor-default select-none rounded-sm py-4 pl-4 pr-2 text-sm outline-none data-[disabled]:pointer-events-none data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground data-[disabled]:opacity-50"
 						value={JSON.stringify(item.match)}
 						label={item.label}
 					>
+						<div class="flex items-center grow">
+							{#if item.match?.type == 'STOP'}
+								{@render modeCircle(item.match.modes?.length ? item.match.modes![0] : 'BUS')}
+							{:else if item.match?.type == 'ADDRESS'}
+								<House class="size-5" />
+							{:else if item.match?.type == 'PLACE'}
+								<Place class="size-5" />
+							{/if}
+							<div class="flex flex-col ml-4">
+								<span class="font-semibold text-nowrap text-ellipsis overflow-hidden">
+									{item.match?.name}
+								</span>
+								<span class="text-muted-foreground text-nowrap text-ellipsis overflow-hidden">
+									{getDisplayArea(item.match)}
+								</span>
+							</div>
+						</div>
 						{#if item.match?.type == 'STOP'}
-							<Bus />
-						{:else if item.match?.type == 'ADDRESS'}
-							<House />
-						{:else if item.match?.type == 'PLACE'}
-							<Place />
+							<div class="mt-1 ml-4 flex flex-row gap-1.5 items-center">
+								{#each item.match.modes! as mode, i (i)}
+									{@render modeCircle(mode)}
+								{/each}
+							</div>
 						{/if}
-						<span class="ml-4 font-semibold text-nowrap text-ellipsis overflow-hidden">
-							{item.match?.name}
-						</span>
-						<span class="ml-2 text-muted-foreground text-nowrap text-ellipsis overflow-hidden">
-							{getDisplayArea(item.match)}
-						</span>
 					</Combobox.Item>
 				{/each}
 			</Combobox.Content>

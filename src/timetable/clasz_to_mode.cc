@@ -1,5 +1,7 @@
 #include "motis/timetable/clasz_to_mode.h"
 
+#include "utl/for_each_bit_set.h"
+
 namespace n = nigiri;
 
 namespace motis {
@@ -28,6 +30,15 @@ api::ModeEnum to_mode(n::clasz const c, unsigned const api_version) {
     case n::clasz::kNumClasses:;
   }
   std::unreachable();
+}
+
+std::vector<api::ModeEnum> to_modes(nigiri::routing::clasz_mask_t const mask,
+                                    unsigned api_version) {
+  auto modes = std::vector<api::ModeEnum>{};
+  utl::for_each_set_bit(mask, [&](auto const i) {
+    modes.emplace_back(to_mode(static_cast<n::clasz>(i), api_version));
+  });
+  return modes;
 }
 
 }  // namespace motis

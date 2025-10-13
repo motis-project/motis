@@ -49,6 +49,7 @@ n::routing::clasz_mask_t to_clasz_mask(std::vector<api::ModeEnum> const& mode) {
       case api::ModeEnum::RENTAL:
       case api::ModeEnum::CAR:
       case api::ModeEnum::ODM:
+      case api::ModeEnum::RIDE_SHARING:
       case api::ModeEnum::FLEX:
       case api::ModeEnum::CAR_DROPOFF: [[fallthrough]];
       case api::ModeEnum::CAR_PARKING: break;

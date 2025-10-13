@@ -3,10 +3,10 @@
 	import { onDestroy, getContext, setContext, type Snippet } from 'svelte';
 	import type { MapMouseEvent, MapGeoJSONFeature } from 'maplibre-gl';
 
-	type ClickHandler = (e: MapMouseEvent & { features?: MapGeoJSONFeature[] }) => void;
-	type LayerEvents = Partial<
-		Record<'click' | 'mouseenter' | 'mouseleave' | 'mousemove', ClickHandler>
-	>;
+	type ClickHandler = (
+		e: MapMouseEvent & { features?: MapGeoJSONFeature[] },
+		map: maplibregl.Map
+	) => void;
 
 	let {
 		id,
@@ -16,7 +16,8 @@
 		paint,
 		beforeLayerId = 'road-ref-shield',
 		onclick,
-		events,
+		onmousemove,
+		onmouseleave,
 		children
 	}: {
 		id: string;
@@ -26,7 +27,8 @@
 		paint: Object; // eslint-disable-line
 		beforeLayerId?: string;
 		onclick?: ClickHandler;
-		events?: LayerEvents;
+		onmousemove?: ClickHandler;
+		onmouseleave?: ClickHandler;
 		children?: Snippet;
 	} = $props();
 
@@ -45,6 +47,24 @@
 		}
 		return state;
 	};
+
+	function click(e: MapMouseEvent & { features?: MapGeoJSONFeature[] }) {
+		if (onclick) {
+			onclick(e, ctx.map!);
+		}
+	}
+
+	function mousemove(e: MapMouseEvent & { features?: MapGeoJSONFeature[] }) {
+		if (onmousemove) {
+			onmousemove(e, ctx.map!);
+		}
+	}
+
+	function mouseleave(e: MapMouseEvent & { features?: MapGeoJSONFeature[] }) {
+		if (onmouseleave) {
+			onmouseleave(e, ctx.map!);
+		}
+	}
 
 	const processPendingMoves = (map: maplibregl.Map) => {
 		const state = pendingMoves.get(map);
@@ -117,41 +137,6 @@
 	let currLayout = $state.snapshot(layout);
 	let currPaint = $state.snapshot(paint);
 	let currBefore = beforeLayerId;
-	let registeredEvents: Array<[keyof LayerEvents, ClickHandler]> = [];
-
-	const clearEventListeners = () => {
-		if (!ctx.map) {
-			return;
-		}
-		for (const [eventName, handler] of registeredEvents) {
-			ctx.map.off(eventName, id, handler);
-		}
-		registeredEvents = [];
-	};
-
-	const resolveEvents = (): LayerEvents => {
-		const combined: LayerEvents = { ...(events ?? {}) };
-		if (onclick) {
-			combined.click = onclick;
-		}
-		return combined;
-	};
-
-	const updateEventListeners = () => {
-		if (!ctx.map || !layer.id) {
-			return;
-		}
-		clearEventListeners();
-		const combined = resolveEvents();
-		for (const eventName of Object.keys(combined) as (keyof LayerEvents)[]) {
-			const handler = combined[eventName];
-			if (!handler) {
-				continue;
-			}
-			ctx.map.on(eventName, id, handler);
-			registeredEvents.push([eventName, handler]);
-		}
-	};
 
 	let updateLayer = () => {
 		const map = ctx.map;
@@ -159,7 +144,6 @@
 		if (!source.id) {
 			if (l) {
 				layer.id = null;
-				clearEventListeners();
 				map?.removeLayer(id);
 			}
 			clearPendingForLayer(map, id);
@@ -192,7 +176,6 @@
 			currPaint = $state.snapshot(paint);
 			currBefore = beforeLayerId;
 			layer.id = id;
-			updateEventListeners();
 			if (beforeLayerId && !before) {
 				scheduleMoveLayer(map!, id, beforeLayerId);
 			}
@@ -212,7 +195,6 @@
 				scheduleMoveLayer(map!, id, beforeLayerId);
 			}
 		}
-		updateEventListeners();
 		if (map) {
 			processPendingMoves(map);
 		}
@@ -221,6 +203,15 @@
 	$effect(() => {
 		if (ctx.map && source.id) {
 			if (!initialized) {
+				if (onclick) {
+					ctx.map.on('click', id, click);
+				}
+				if (onmousemove) {
+					ctx.map.on('mousemove', id, mousemove);
+				}
+				if (onmouseleave) {
+					ctx.map.on('mouseleave', id, mouseleave);
+				}
 				ctx.map.on('styledata', updateLayer);
 				updateLayer();
 				initialized = true;
@@ -232,7 +223,15 @@
 	onDestroy(() => {
 		const l = ctx.map?.getLayer(id);
 		ctx.map?.off('styledata', updateLayer);
-		clearEventListeners();
+		if (onclick) {
+			ctx.map?.off('click', id, click);
+		}
+		if (onmousemove) {
+			ctx.map?.off('mousemove', id, mousemove);
+		}
+		if (onmouseleave) {
+			ctx.map?.off('mouseleave', id, mouseleave);
+		}
 		if (l) {
 			ctx.map?.removeLayer(id);
 		}

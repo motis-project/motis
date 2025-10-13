@@ -33,6 +33,7 @@
 #include "motis/constants.h"
 #include "motis/endpoints/routing.h"
 
+#include "nigiri/routing/raptor/pong.h"
 #include "nigiri/routing/tb/query_engine.h"
 #include "nigiri/routing/tb/tb_data.h"
 #include "nigiri/routing/tb/tb_search.h"
@@ -110,7 +111,7 @@ n::routing::td_offsets_t get_td_offsets(
 
   auto ret = hash_map<n::location_idx_t, std::vector<n::routing::td_offset>>{};
   for (auto const m : modes) {
-    if (m == api::ModeEnum::ODM) {
+    if (m == api::ModeEnum::ODM || m == api::ModeEnum::RIDE_SHARING) {
       continue;
     } else if (m == api::ModeEnum::FLEX) {
       utl::verify(r.fa_, "FLEX areas not loaded");
@@ -394,7 +395,7 @@ std::pair<n::routing::query, std::optional<n::unixtime_t>> get_start_time(
         *query.time_.value_or(openapi::now()));
     utl::verify<openapi::bad_request_exception>(
         tt == nullptr || tt->external_interval().contains(t),
-        "query time is outside of loaded timetable window {}",
+        "query time {} is outside of loaded timetable window {}", t,
         tt ? tt->external_interval() : n::interval<n::unixtime_t>{});
     auto const window =
         std::chrono::duration_cast<n::duration_t>(std::chrono::seconds{
@@ -466,7 +467,7 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
           *tt_, *loc_tree_, time, get_location(from).pos_,
           osr::direction::kForward, max);
       for (auto const& [_, ids] : routings) {
-        route_with_profile(flex::flex_output{*w_, *l_, pl_, matches_, lp_, tz_,
+        route_with_profile(flex::flex_output{*w_, *l_, pl_, matches_, ae_, tz_,
                                              *tags_, *tt_, *fa_, ids.front()});
       }
     } else if (m == api::ModeEnum::CAR || m == api::ModeEnum::BIKE ||
@@ -624,8 +625,8 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
   auto const direct_modes = deduplicate(query.directModes_);
   auto const from = get_place(tt_, tags_, query.fromPlace_);
   auto const to = get_place(tt_, tags_, query.toPlace_);
-  auto from_p = to_place(tt_, tags_, w_, pl_, matches_, lp_, tz_, from);
-  auto to_p = to_place(tt_, tags_, w_, pl_, matches_, lp_, tz_, to);
+  auto from_p = to_place(tt_, tags_, w_, pl_, matches_, ae_, tz_, from);
+  auto to_p = to_place(tt_, tags_, w_, pl_, matches_, ae_, tz_, to);
   if (from_p.vertexType_ == api::VertexTypeEnum::NORMAL) {
     from_p.name_ = "START";
   }
@@ -718,9 +719,20 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
         end(post_transit_modes);
     auto const with_odm_direct =
         utl::find(direct_modes, api::ModeEnum::ODM) != end(direct_modes);
+    auto const with_ride_sharing_pre_transit =
+        utl::find(pre_transit_modes, api::ModeEnum::RIDE_SHARING) !=
+        end(pre_transit_modes);
+    auto const with_ride_sharing_post_transit =
+        utl::find(post_transit_modes, api::ModeEnum::RIDE_SHARING) !=
+        end(post_transit_modes);
+    auto const with_ride_sharing_direct =
+        utl::find(direct_modes, api::ModeEnum::RIDE_SHARING) !=
+        end(direct_modes);
 
-    if (with_odm_pre_transit || with_odm_post_transit || with_odm_direct) {
-      utl::verify(config_.has_odm(), "ODM not configured");
+    if (with_odm_pre_transit || with_odm_post_transit || with_odm_direct ||
+        with_ride_sharing_pre_transit || with_ride_sharing_post_transit ||
+        with_ride_sharing_direct) {
+      utl::verify(config_.has_prima(), "PRIMA not configured");
       return odm::meta_router{*this,
                               query,
                               pre_transit_modes,
@@ -736,6 +748,9 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                               with_odm_pre_transit,
                               with_odm_post_transit,
                               with_odm_direct,
+                              with_ride_sharing_pre_transit,
+                              with_ride_sharing_post_transit,
+                              with_ride_sharing_direct,
                               api_version}
           .run();
     }
@@ -839,13 +854,28 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
 
     auto search_state = n::routing::search_state{};
     auto r = n::routing::routing_result{};
-    if (query.algorithm_ == api::algorithmEnum::RAPTOR || tbd_ == nullptr ||
-        (rtt != nullptr && rtt->n_rt_transports() != 0U) || query.arriveBy_ ||
-        q.prf_idx_ != tbd_->prf_idx_ ||
-        q.allowed_claszes_ != n::routing::all_clasz_allowed() ||
-        !q.td_start_.empty() || !q.td_dest_.empty() ||
-        !q.transfer_time_settings_.default_ || !q.via_stops_.empty() ||
-        q.require_bike_transport_ || q.require_car_transport_) {
+    if (query.algorithm_ == api::algorithmEnum::PONG &&
+        // arriveBy |  extend_later | PONG applicable
+        // ---------+---------------+---------------------
+        // FALSE    |  FALSE        | FALSE    => rRAPTOR
+        // FALSE    |  TRUE         | TRUE     => PONG
+        // TRUE     |  FALSE        | TRUE     => PONG
+        // TRUE     |  TRUE         | FALSE    => rRAPTOR
+        query.arriveBy_ != start_time.extend_interval_later_) {
+      auto raptor_state = n::routing::raptor_state{};
+      r = n::routing::pong_search(
+          *tt_, rtt, search_state, raptor_state, std::move(q),
+          query.arriveBy_ ? n::direction::kBackward : n::direction::kForward,
+          query.timeout_.has_value() ? std::chrono::seconds{*query.timeout_}
+                                     : max_timeout);
+    } else if (query.algorithm_ == api::algorithmEnum::RAPTOR ||
+               tbd_ == nullptr ||
+               (rtt != nullptr && rtt->n_rt_transports() != 0U) ||
+               query.arriveBy_ || q.prf_idx_ != tbd_->prf_idx_ ||
+               q.allowed_claszes_ != n::routing::all_clasz_allowed() ||
+               !q.td_start_.empty() || !q.td_dest_.empty() ||
+               !q.transfer_time_settings_.default_ || !q.via_stops_.empty() ||
+               q.require_bike_transport_ || q.require_car_transport_) {
       auto raptor_state = n::routing::raptor_state{};
       r = n::routing::raptor_search(
           *tt_, rtt, search_state, raptor_state, std::move(q),
@@ -887,7 +917,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
             [&, cache = street_routing_cache_t{}](auto&& j) mutable {
               return journey_to_response(
                   w_, l_, pl_, *tt_, *tags_, fa_, e, rtt, matches_, elevations_,
-                  shapes_, gbfs_rd, lp_, tz_, j, start, dest, cache,
+                  shapes_, gbfs_rd, ae_, tz_, j, start, dest, cache,
                   blocked.get(),
                   query.requireCarTransport_ && query.useRoutedTransfers_,
                   osr_params, query.pedestrianProfile_, query.elevationCosts_,
@@ -906,8 +936,8 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
     };
   }
 
-  return {.from_ = to_place(tt_, tags_, w_, pl_, matches_, lp_, tz_, from),
-          .to_ = to_place(tt_, tags_, w_, pl_, matches_, lp_, tz_, to),
+  return {.from_ = to_place(tt_, tags_, w_, pl_, matches_, ae_, tz_, from),
+          .to_ = to_place(tt_, tags_, w_, pl_, matches_, ae_, tz_, to),
           .direct_ = std::move(direct),
           .itineraries_ = {}};
 }

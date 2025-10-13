@@ -172,6 +172,44 @@ export type Token = [
 export type LocationType = 'ADDRESS' | 'PLACE' | 'STOP';
 
 /**
+ * # Street modes
+ *
+ * - `WALK`
+ * - `BIKE`
+ * - `RENTAL` Experimental. Expect unannounced breaking changes (without version bumps) for all parameters and returned structs.
+ * - `CAR`
+ * - `CAR_PARKING` Experimental. Expect unannounced breaking changes (without version bumps) for all parameters and returned structs.
+ * - `CAR_DROPOFF` Experimental. Expect unannounced breaking changes (without version bumps) for all perameters and returned structs.
+ * - `ODM` on-demand taxis from the Prima+ÖV Project
+ * - `RIDE_SHARING` ride sharing from the Prima+ÖV Project
+ * - `FLEX` flexible transports
+ *
+ * # Transit modes
+ *
+ * - `TRANSIT`: translates to `RAIL,TRAM,BUS,FERRY,AIRPLANE,COACH,CABLE_CAR,FUNICULAR,AREAL_LIFT,OTHER`
+ * - `TRAM`: trams
+ * - `SUBWAY`: subway trains (Paris Metro, London Underground, but also NYC Subway, Hamburger Hochbahn, and other non-underground services)
+ * - `FERRY`: ferries
+ * - `AIRPLANE`: airline flights
+ * - `BUS`: short distance buses (does not include `COACH`)
+ * - `COACH`: long distance buses (does not include `BUS`)
+ * - `RAIL`: translates to `HIGHSPEED_RAIL,LONG_DISTANCE,NIGHT_RAIL,REGIONAL_RAIL,REGIONAL_FAST_RAIL,SUBURBAN,SUBWAY`
+ * - `SUBURBAN`: suburban trains (e.g. S-Bahn, RER, Elizabeth Line, ...)
+ * - `HIGHSPEED_RAIL`: long distance high speed trains (e.g. TGV)
+ * - `LONG_DISTANCE`: long distance inter city trains
+ * - `NIGHT_RAIL`: long distance night trains
+ * - `REGIONAL_FAST_RAIL`: regional express routes that skip low traffic stops to be faster
+ * - `REGIONAL_RAIL`: regional train
+ * - `CABLE_CAR`: Cable tram. Used for street-level rail cars where the cable runs beneath the vehicle (e.g., cable car in San Francisco).
+ * - `FUNICULAR`: Funicular. Any rail system designed for steep inclines.
+ * - `AERIAL_LIFT`: Aerial lift, suspended cable car (e.g., gondola lift, aerial tramway). Cable transport where cabins, cars, gondolas or open chairs are suspended by means of one or more cables.
+ * - `AREAL_LIFT`: deprecated
+ * - `METRO`: deprecated
+ *
+ */
+export type Mode = 'WALK' | 'BIKE' | 'RENTAL' | 'CAR' | 'CAR_PARKING' | 'CAR_DROPOFF' | 'ODM' | 'RIDE_SHARING' | 'FLEX' | 'TRANSIT' | 'TRAM' | 'SUBWAY' | 'FERRY' | 'AIRPLANE' | 'SUBURBAN' | 'BUS' | 'COACH' | 'RAIL' | 'HIGHSPEED_RAIL' | 'LONG_DISTANCE' | 'NIGHT_RAIL' | 'REGIONAL_FAST_RAIL' | 'REGIONAL_RAIL' | 'CABLE_CAR' | 'FUNICULAR' | 'AERIAL_LIFT' | 'OTHER' | 'AREAL_LIFT' | 'METRO';
+
+/**
  * GeoCoding match
  */
 export type Match = {
@@ -230,6 +268,14 @@ export type Match = {
      * score according to the internal scoring system (the scoring algorithm might change in the future)
      */
     score: number;
+    /**
+     * available transport modes for stops
+     */
+    modes?: Array<Mode>;
+    /**
+     * importance of a stop, normalized from [0, 1]
+     */
+    importance?: number;
 };
 
 /**
@@ -259,43 +305,6 @@ export type PedestrianSpeed = number;
 export type CyclingSpeed = number;
 
 /**
- * # Street modes
- *
- * - `WALK`
- * - `BIKE`
- * - `RENTAL` Experimental. Expect unannounced breaking changes (without version bumps) for all parameters and returned structs.
- * - `CAR`
- * - `CAR_PARKING` Experimental. Expect unannounced breaking changes (without version bumps) for all parameters and returned structs.
- * - `CAR_DROPOFF` Experimental. Expect unannounced breaking changes (without version bumps) for all perameters and returned structs.
- * - `ODM` on-demand taxis from the Prima+ÖV Project
- * - `FLEX` flexible transports
- *
- * # Transit modes
- *
- * - `TRANSIT`: translates to `RAIL,TRAM,BUS,FERRY,AIRPLANE,COACH,CABLE_CAR,FUNICULAR,AREAL_LIFT,OTHER`
- * - `TRAM`: trams
- * - `SUBWAY`: subway trains (Paris Metro, London Underground, but also NYC Subway, Hamburger Hochbahn, and other non-underground services)
- * - `FERRY`: ferries
- * - `AIRPLANE`: airline flights
- * - `BUS`: short distance buses (does not include `COACH`)
- * - `COACH`: long distance buses (does not include `BUS`)
- * - `RAIL`: translates to `HIGHSPEED_RAIL,LONG_DISTANCE,NIGHT_RAIL,REGIONAL_RAIL,REGIONAL_FAST_RAIL,SUBURBAN,SUBWAY`
- * - `SUBURBAN`: suburban trains (e.g. S-Bahn, RER, Elizabeth Line, ...)
- * - `HIGHSPEED_RAIL`: long distance high speed trains (e.g. TGV)
- * - `LONG_DISTANCE`: long distance inter city trains
- * - `NIGHT_RAIL`: long distance night trains
- * - `REGIONAL_FAST_RAIL`: regional express routes that skip low traffic stops to be faster
- * - `REGIONAL_RAIL`: regional train
- * - `CABLE_CAR`: Cable tram. Used for street-level rail cars where the cable runs beneath the vehicle (e.g., cable car in San Francisco).
- * - `FUNICULAR`: Funicular. Any rail system designed for steep inclines.
- * - `AERIAL_LIFT`: Aerial lift, suspended cable car (e.g., gondola lift, aerial tramway). Cable transport where cabins, cars, gondolas or open chairs are suspended by means of one or more cables.
- * - `AREAL_LIFT`: deprecated
- * - `METRO`: deprecated
- *
- */
-export type Mode = 'WALK' | 'BIKE' | 'RENTAL' | 'CAR' | 'CAR_PARKING' | 'CAR_DROPOFF' | 'ODM' | 'FLEX' | 'TRANSIT' | 'TRAM' | 'SUBWAY' | 'FERRY' | 'AIRPLANE' | 'SUBURBAN' | 'BUS' | 'COACH' | 'RAIL' | 'HIGHSPEED_RAIL' | 'LONG_DISTANCE' | 'NIGHT_RAIL' | 'REGIONAL_FAST_RAIL' | 'REGIONAL_RAIL' | 'CABLE_CAR' | 'FUNICULAR' | 'AERIAL_LIFT' | 'OTHER' | 'AREAL_LIFT' | 'METRO';
-
-/**
  * - `NORMAL` - latitude / longitude coordinate or address
  * - `BIKESHARE` - bike sharing station
  * - `TRANSIT` - transit stop
@@ -319,6 +328,10 @@ export type Place = {
      * The ID of the stop. This is often something that users don't care about.
      */
     stopId?: string;
+    /**
+     * The importance of the stop between 0-1.
+     */
+    importance?: number;
     /**
      * latitude
      */
@@ -1241,7 +1254,7 @@ export type PlanData = {
         /**
          * algorithm to use
          */
-        algorithm?: 'RAPTOR' | 'TB';
+        algorithm?: 'RAPTOR' | 'PONG' | 'TB';
         /**
          * Optional. Default is `false`.
          *
@@ -2352,6 +2365,8 @@ export type TransfersData = {
 
 export type TransfersResponse = ({
     place: Place;
+    root: Place;
+    equivalences: Array<Place>;
     /**
      * true if the server has foot transfers computed
      */

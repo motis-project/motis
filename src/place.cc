@@ -90,14 +90,13 @@ api::Place to_place(n::timetable const* tt,
                     osr::ways const* w,
                     osr::platforms const* pl,
                     platform_matches_t const* matches,
-                    location_place_map_t const* lp,
+                    adr_ext const* ae,
                     tz_map_t const* tz_map,
                     place_t const l,
                     place_t const start,
                     place_t const dest,
                     std::string_view name,
                     std::optional<std::string> const& fallback_tz) {
-
   return std::visit(
       utl::overloaded{
           [&](osr::location const& l) {
@@ -134,9 +133,14 @@ api::Place to_place(n::timetable const* tt,
                   tt->locations_.parents_[l] == n::location_idx_t::invalid()
                       ? l
                       : tt->locations_.parents_[l];
-              auto const timezone = get_tz(*tt, lp, tz_map, p);
+              auto const timezone = get_tz(*tt, ae, tz_map, p);
               return {.name_ = std::string{tt->locations_.names_[p].view()},
                       .stopId_ = tags->id(*tt, l),
+                      .importance_ =
+                          ae == nullptr
+                              ? std::nullopt
+                              : std::optional{ae->place_importance_
+                                                  [ae->location_place_[l]]},
                       .lat_ = pos.lat_,
                       .lon_ = pos.lng_,
                       .level_ = get_level(w, pl, matches, l),
@@ -157,7 +161,7 @@ api::Place to_place(n::timetable const* tt,
                     osr::ways const* w,
                     osr::platforms const* pl,
                     platform_matches_t const* matches,
-                    location_place_map_t const* lp,
+                    adr_ext const* ae,
                     tz_map_t const* tz_map,
                     n::rt::run_stop const& s,
                     place_t const start,
@@ -165,7 +169,7 @@ api::Place to_place(n::timetable const* tt,
   auto const run_cancelled = s.fr_->is_cancelled();
   auto const fallback_tz = s.get_tz_name(
       s.stop_idx_ == 0 ? n::event_type::kDep : n::event_type::kArr);
-  auto p = to_place(tt, tags, w, pl, matches, lp, tz_map, tt_location{s}, start,
+  auto p = to_place(tt, tags, w, pl, matches, ae, tz_map, tt_location{s}, start,
                     dest, "", fallback_tz);
   p.pickupType_ = !run_cancelled && s.in_allowed()
                       ? api::PickupDropoffTypeEnum::NORMAL
