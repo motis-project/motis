@@ -254,6 +254,9 @@
 		status: 'DONE',
 		error: undefined
 	});
+	const isochronesCircleResolution = urlParams?.get('isochronesCircleResolution')
+		? parseIntOr(urlParams.get('isochronesCircleResolution'), defaultQuery.circleResolution)
+		: defaultQuery.circleResolution;
 
 	const toPlaceString = (l: Location) => {
 		if (l.match?.type === 'STOP') {
@@ -406,7 +409,10 @@
 						maxTravelTime: q.maxTravelTime * 60,
 						isochronesColor,
 						isochronesOpacity,
-						isochronesDisplayLevel
+						isochronesDisplayLevel,
+						...(isochronesCircleResolution && isochronesCircleResolution > 2
+							? { isochronesCircleResolution }
+							: {})
 					},
 					{},
 					true
@@ -739,6 +745,7 @@
 			streetModes={arriveBy ? preTransitModes : postTransitModes}
 			wheelchair={pedestrianProfile === 'WHEELCHAIR'}
 			maxAllTime={arriveBy ? maxPreTransitTime : maxPostTransitTime}
+			circleResolution={isochronesCircleResolution}
 			active={activeTab == 'isochrones'}
 			bind:options={isochronesOptions}
 		/>

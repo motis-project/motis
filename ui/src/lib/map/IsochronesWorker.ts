@@ -28,6 +28,7 @@ self.onmessage = async function (event) {
 		const isochronesData = event.data.data;
 		const kilometersPerSecond: number = event.data.kilometersPerSecond;
 		const maxSeconds: number = event.data.maxSeconds;
+		const circleResolution: number = event.data.circleResolution;
 		dataIndex = index;
 		rects = undefined;
 		circles = undefined;
@@ -37,7 +38,8 @@ self.onmessage = async function (event) {
 			index: dataIndex,
 			data: isochronesData,
 			kilometersPerSecond,
-			maxSeconds
+			maxSeconds,
+			circleResolution
 		});
 	} else if (method == 'set-max-display-level') {
 		if (shapeWorker !== undefined) {
