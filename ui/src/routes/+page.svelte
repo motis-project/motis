@@ -45,7 +45,6 @@
 	import StopTimes from '$lib/StopTimes.svelte';
 	import { onMount, tick, untrack } from 'svelte';
 	import RailViz from '$lib/RailViz.svelte';
-	import MapIcon from 'lucide-svelte/icons/map';
 	import { t } from '$lib/i18n/translation';
 	import { pushState } from '$app/navigation';
 	import { page } from '$app/state';
@@ -729,6 +728,5 @@
 		{#if one && activeTab == 'isochrones'}
 			<Marker color="yellow" draggable={true} {level} bind:location={one} bind:marker={oneMarker} />
 		{/if}
-		
 	{/if}
 </Map>

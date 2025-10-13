@@ -16,7 +16,6 @@
 	import Palette from 'lucide-svelte/icons/palette';
 	import Rss from 'lucide-svelte/icons/rss';
 	import LocateFixed from 'lucide-svelte/icons/locate-fixed';
-	import { browser } from '$app/environment';
 	import { onClickTrip } from '$lib/utils';
 
 	let {
@@ -318,7 +317,7 @@
 	});
 </script>
 
-<Control position={'top-right'} class="pb-4">
+<Control position="top-right" class="pb-4">
 	<Button
 		size="icon"
 		variant={colorMode ? 'default' : 'outline'}
