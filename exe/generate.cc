@@ -117,6 +117,10 @@ int generate(int ac, char** av) {
       modes->emplace_back(api::ModeEnum::ODM);
       use_odm = true;
     }
+    if (s.contains("RIDE_SHARING")) {
+      modes->emplace_back(api::ModeEnum::RIDE_SHARING);
+      use_odm = true;
+    }
   };
 
   auto const parse_time_of_day = [&](std::uint32_t const h) {
