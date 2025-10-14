@@ -27,6 +27,12 @@
 	} from 'geojson';
 	import StationPopup from '$lib/map/rentals/StationPopup.svelte';
 	import VehiclePopup from '$lib/map/rentals/VehiclePopup.svelte';
+	import {
+		zoomScaledIconSize,
+		zoomScaledTextOffset,
+		zoomScaledTextSizeMedium,
+		zoomScaledTextSizeSmall
+	} from './style';
 
 	let {
 		map,
@@ -86,48 +92,6 @@
 		rideEndAllowed: boolean;
 		rideThroughAllowed: boolean;
 	};
-
-	const zoomScaledIconSize: ExpressionSpecification = [
-		'interpolate',
-		['linear'],
-		['zoom'],
-		14,
-		0.6,
-		18,
-		1
-	];
-
-	const zoomScaledTextSizeMedium: ExpressionSpecification = [
-		'interpolate',
-		['linear'],
-		['zoom'],
-		14,
-		7.2,
-		18,
-		12
-	];
-
-	const zoomScaledTextSizeSmall: ExpressionSpecification = [
-		'interpolate',
-		['linear'],
-		['zoom'],
-		14,
-		6,
-		18,
-		10
-	];
-
-	const createZoomScaledTextOffset = (baseOffset: [number, number]): ExpressionSpecification => [
-		'interpolate',
-		['linear'],
-		['zoom'],
-		14,
-		['literal', [baseOffset[0] * 0.8, baseOffset[1] * 0.9]],
-		18,
-		['literal', baseOffset]
-	];
-
-	const zoomScaledTextOffset = createZoomScaledTextOffset([0.8, -1.25]);
 
 	const vehicleLayerConfigs = formFactors.map((formFactor) => {
 		const slug = formFactor.toLowerCase();
@@ -606,11 +570,8 @@
 	};
 
 	const handleStationMouseMove = (event: MapLayerMouseEvent, mapInstance: maplibregl.Map) => {
-		if (!mapInstance) {
-			return;
-		}
 		const feature = event.features?.[0];
-		if (!feature) {
+		if (!mapInstance || !feature) {
 			hideTooltip();
 			resetHoverCursor();
 			return;
@@ -638,11 +599,8 @@
 	};
 
 	const handleStationClick = (event: MapLayerMouseEvent, mapInstance: maplibregl.Map) => {
-		if (!mapInstance) {
-			return;
-		}
 		const feature = event.features?.[0];
-		if (!feature) {
+		if (!mapInstance || !feature) {
 			hidePopup();
 			return;
 		}
@@ -659,11 +617,8 @@
 	};
 
 	const handleVehicleMouseMove = (event: MapLayerMouseEvent, mapInstance: maplibregl.Map) => {
-		if (!mapInstance) {
-			return;
-		}
 		const feature = event.features?.[0];
-		if (!feature) {
+		if (!mapInstance || !feature) {
 			hideTooltip();
 			resetHoverCursor();
 			return;
@@ -691,11 +646,8 @@
 	};
 
 	const handleVehicleClick = (event: MapLayerMouseEvent, mapInstance: maplibregl.Map) => {
-		if (!mapInstance) {
-			return;
-		}
 		const feature = event.features?.[0];
-		if (!feature) {
+		if (!mapInstance || !feature) {
 			hidePopup();
 			return;
 		}
