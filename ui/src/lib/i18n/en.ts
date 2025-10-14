@@ -128,6 +128,11 @@ const translations: Translations = {
 	accessRestriction: 'No access',
 	continuesAs: 'Continues as',
 	rent: 'Rent'
+	rent: 'Rent',
+	rideThroughAllowed: 'Riding through allowed',
+	rideThroughNotAllowed: 'Riding through not allowed',
+	rideEndAllowed: 'Parking allowed',
+	rideEndNotAllowed: 'Parking only at stations'
 };
 
 export default translations;

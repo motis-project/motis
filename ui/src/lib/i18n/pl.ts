@@ -130,6 +130,11 @@ const translations: Translations = {
 	accessRestriction: 'Ograniczony dostęp',
 	continuesAs: 'Kontynuuje jako',
 	rent: 'Wypożycz'
+	rent: 'Wypożycz',
+	rideThroughAllowed: 'Przejazd dozwolony',
+	rideThroughNotAllowed: 'Przejazd niedozwolony',
+	rideEndAllowed: 'Parkowanie dozwolone',
+	rideEndNotAllowed: 'Parkowanie tylko na stacjach'
 };
 
 export default translations;

@@ -124,6 +124,10 @@ export type Translations = {
 	accessRestriction: string;
 	continuesAs: string;
 	rent: string;
+	rideThroughAllowed: string;
+	rideThroughNotAllowed: string;
+	rideEndAllowed: string;
+	rideEndNotAllowed: string;
 };
 
 const translations: Map<string, Translations> = new Map(

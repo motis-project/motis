@@ -27,6 +27,7 @@
 	} from 'geojson';
 	import StationPopup from '$lib/map/rentals/StationPopup.svelte';
 	import VehiclePopup from '$lib/map/rentals/VehiclePopup.svelte';
+	import ZonePopup from '$lib/map/rentals/ZonePopup.svelte';
 	import {
 		zoomScaledIconSize,
 		zoomScaledTextOffset,
@@ -386,6 +387,17 @@
 		};
 	};
 
+	const lookupZone = (properties: ZoneFeatureProperties) => {
+		const zone = rentalsData?.zones[properties.zoneIndex];
+		return {
+			key: String(properties.zoneIndex),
+			provider: providerById.get(properties.providerId),
+			zone,
+			rideThroughAllowed: properties.rideThroughAllowed,
+			rideEndAllowed: properties.rideEndAllowed
+		};
+	};
+
 	const createStationContent = (
 		provider: RentalProvider,
 		station: RentalStation,
@@ -414,6 +426,26 @@
 		const component = mount(VehiclePopup, {
 			target: container,
 			props: { provider, vehicle, showActions }
+		});
+		flushSync();
+		return {
+			element: container,
+			destroy: () => {
+				unmount(component);
+			}
+		};
+	};
+
+	const createZoneContent = (
+		provider: RentalProvider,
+		zone: RentalZone,
+		rideThroughAllowed: boolean,
+		rideEndAllowed: boolean
+	) => {
+		const container = document.createElement('div');
+		const component = mount(ZonePopup, {
+			target: container,
+			props: { provider, zone, rideThroughAllowed, rideEndAllowed }
 		});
 		flushSync();
 		return {
@@ -619,6 +651,34 @@
 		createVehicleContent(provider, entity as RentalVehicle, true)
 	);
 
+	const handleZoneClick = (event: MapLayerMouseEvent, mapInstance: maplibregl.Map) => {
+		if (!mapInstance) {
+			return;
+		}
+		// event.features is already sorted by z-order (topmost first)
+		const feature = event.features?.[0];
+		if (!feature) {
+			hidePopup();
+			return;
+		}
+
+		const result = lookupZone(feature.properties as ZoneFeatureProperties);
+		if (!result.zone || !result.provider) {
+			hidePopup();
+			return;
+		}
+		hideTooltip();
+		hidePopup();
+		showPopup(mapInstance, event.lngLat, result.key, () =>
+			createZoneContent(
+				result.provider!,
+				result.zone!,
+				result.rideThroughAllowed,
+				result.rideEndAllowed
+			)
+		);
+	};
+
 	$effect(() => {
 		if (!rentalsData) {
 			hideTooltip();
@@ -656,6 +716,7 @@
 			type="fill"
 			filter={['literal', true]}
 			layout={{ 'fill-sort-key': ['get', 'z'] }}
+			onclick={handleZoneClick}
 			paint={{
 				'fill-color': [
 					'case',
