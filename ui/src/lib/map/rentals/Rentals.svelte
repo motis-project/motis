@@ -16,7 +16,7 @@
 	import polyline from '@mapbox/polyline';
 	import maplibregl from 'maplibre-gl';
 	import type { MapLayerMouseEvent } from 'maplibre-gl';
-	import { flushSync, mount, onDestroy, unmount } from 'svelte';
+	import { mount, onDestroy, unmount } from 'svelte';
 	import type {
 		Feature,
 		FeatureCollection,
@@ -408,7 +408,6 @@
 			target: container,
 			props: { provider, station, showActions }
 		});
-		flushSync();
 		return {
 			element: container,
 			destroy: () => {
@@ -427,7 +426,6 @@
 			target: container,
 			props: { provider, vehicle, showActions }
 		});
-		flushSync();
 		return {
 			element: container,
 			destroy: () => {
@@ -447,7 +445,6 @@
 			target: container,
 			props: { provider, zone, rideThroughAllowed, rideEndAllowed }
 		});
-		flushSync();
 		return {
 			element: container,
 			destroy: () => {
