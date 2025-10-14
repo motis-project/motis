@@ -205,6 +205,7 @@ export const ModeSchema = {
   - \`CAR_PARKING\` Experimental. Expect unannounced breaking changes (without version bumps) for all parameters and returned structs.
   - \`CAR_DROPOFF\` Experimental. Expect unannounced breaking changes (without version bumps) for all perameters and returned structs.
   - \`ODM\` on-demand taxis from the Prima+ÖV Project
+  - \`RIDE_SHARING\` ride sharing from the Prima+ÖV Project
   - \`FLEX\` flexible transports
 
 # Transit modes
@@ -230,7 +231,7 @@ export const ModeSchema = {
   - \`METRO\`: deprecated
 `,
     type: 'string',
-    enum: ['WALK', 'BIKE', 'RENTAL', 'CAR', 'CAR_PARKING', 'CAR_DROPOFF', 'ODM', 'FLEX', 'TRANSIT', 'TRAM', 'SUBWAY', 'FERRY', 'AIRPLANE', 'SUBURBAN', 'BUS', 'COACH', 'RAIL', 'HIGHSPEED_RAIL', 'LONG_DISTANCE', 'NIGHT_RAIL', 'REGIONAL_FAST_RAIL', 'REGIONAL_RAIL', 'CABLE_CAR', 'FUNICULAR', 'AERIAL_LIFT', 'OTHER', 'AREAL_LIFT', 'METRO']
+    enum: ['WALK', 'BIKE', 'RENTAL', 'CAR', 'CAR_PARKING', 'CAR_DROPOFF', 'ODM', 'RIDE_SHARING', 'FLEX', 'TRANSIT', 'TRAM', 'SUBWAY', 'FERRY', 'AIRPLANE', 'SUBURBAN', 'BUS', 'COACH', 'RAIL', 'HIGHSPEED_RAIL', 'LONG_DISTANCE', 'NIGHT_RAIL', 'REGIONAL_FAST_RAIL', 'REGIONAL_RAIL', 'CABLE_CAR', 'FUNICULAR', 'AERIAL_LIFT', 'OTHER', 'AREAL_LIFT', 'METRO']
 } as const;
 
 export const MatchSchema = {
@@ -861,6 +862,314 @@ export const RentalSchema = {
         },
         returnConstraint: {
             '$ref': '#/components/schemas/RentalReturnConstraint'
+        }
+    }
+} as const;
+
+export const MultiPolygonSchema = {
+    type: 'array',
+    description: `A multi-polygon contains a number of polygons, each containing a number
+of rings, which are encoded as polylines (with precision 6).
+
+For each polygon, the first ring is the outer ring, all subsequent rings
+are inner rings (holes).
+`,
+    items: {
+        type: 'array',
+        items: {
+            '$ref': '#/components/schemas/EncodedPolyline'
+        }
+    }
+} as const;
+
+export const RentalZoneRestrictionsSchema = {
+    type: 'object',
+    required: ['vehicleTypeIdxs', 'rideStartAllowed', 'rideEndAllowed', 'rideThroughAllowed'],
+    properties: {
+        vehicleTypeIdxs: {
+            type: 'array',
+            description: `List of vehicle types (as indices into the provider's vehicle types
+array) to which these restrictions apply.
+If empty, the restrictions apply to all vehicle types of the provider.
+`,
+            items: {
+                type: 'integer'
+            }
+        },
+        rideStartAllowed: {
+            type: 'boolean',
+            description: 'whether the ride is allowed to start in this zone'
+        },
+        rideEndAllowed: {
+            type: 'boolean',
+            description: 'whether the ride is allowed to end in this zone'
+        },
+        rideThroughAllowed: {
+            type: 'boolean',
+            description: 'whether the ride is allowed to pass through this zone'
+        },
+        stationParking: {
+            type: 'boolean',
+            description: 'whether vehicles can only be parked at stations in this zone'
+        }
+    }
+} as const;
+
+export const RentalVehicleTypeSchema = {
+    type: 'object',
+    required: ['id', 'formFactor', 'propulsionType', 'returnConstraint', 'returnConstraintGuessed'],
+    properties: {
+        id: {
+            type: 'string',
+            description: 'Unique identifier of the vehicle type (unique within the provider)'
+        },
+        formFactor: {
+            '$ref': '#/components/schemas/RentalFormFactor'
+        },
+        propulsionType: {
+            '$ref': '#/components/schemas/RentalPropulsionType'
+        },
+        returnConstraint: {
+            '$ref': '#/components/schemas/RentalReturnConstraint'
+        },
+        returnConstraintGuessed: {
+            type: 'boolean',
+            description: 'Whether the return constraint was guessed instead of being specified by the rental provider'
+        }
+    }
+} as const;
+
+export const RentalProviderSchema = {
+    type: 'object',
+    required: ['id', 'name', 'bbox', 'vehicleTypes', 'formFactors', 'defaultRestrictions', 'globalGeofencingRules'],
+    properties: {
+        id: {
+            type: 'string',
+            description: 'Unique identifier of the rental provider'
+        },
+        name: {
+            type: 'string',
+            description: 'Name of the provider to be displayed to customers'
+        },
+        operator: {
+            type: 'string',
+            description: 'Name of the system operator'
+        },
+        url: {
+            type: 'string',
+            description: 'URL of the vehicle share system'
+        },
+        purchaseUrl: {
+            type: 'string',
+            description: 'URL where a customer can purchase a membership'
+        },
+        bbox: {
+            type: 'array',
+            description: `Bounding box of the area covered by this rental provider,
+[west, south, east, north] as [lon, lat, lon, lat]
+`,
+            minItems: 4,
+            maxItems: 4,
+            items: {
+                type: 'number'
+            }
+        },
+        vehicleTypes: {
+            type: 'array',
+            items: {
+                '$ref': '#/components/schemas/RentalVehicleType'
+            }
+        },
+        formFactors: {
+            type: 'array',
+            description: 'List of form factors offered by this provider',
+            items: {
+                '$ref': '#/components/schemas/RentalFormFactor'
+            }
+        },
+        defaultRestrictions: {
+            '$ref': '#/components/schemas/RentalZoneRestrictions'
+        },
+        globalGeofencingRules: {
+            type: 'array',
+            items: {
+                '$ref': '#/components/schemas/RentalZoneRestrictions'
+            }
+        }
+    }
+} as const;
+
+export const RentalStationSchema = {
+    type: 'object',
+    required: ['id', 'providerId', 'name', 'lat', 'lon', 'isRenting', 'isReturning', 'numVehiclesAvailable', 'formFactors', 'vehicleTypesAvailable', 'vehicleDocksAvailable'],
+    properties: {
+        id: {
+            type: 'string',
+            description: 'Unique identifier of the rental station'
+        },
+        providerId: {
+            type: 'string',
+            description: 'Unique identifier of the rental provider'
+        },
+        name: {
+            type: 'string',
+            description: 'Public name of the station'
+        },
+        lat: {
+            description: 'latitude',
+            type: 'number'
+        },
+        lon: {
+            description: 'longitude',
+            type: 'number'
+        },
+        address: {
+            type: 'string',
+            description: 'Address where the station is located'
+        },
+        crossStreet: {
+            type: 'string',
+            description: 'Cross street or landmark where the station is located'
+        },
+        rentalUriAndroid: {
+            type: 'string',
+            description: 'Rental URI for Android (deep link to the specific station)'
+        },
+        rentalUriIOS: {
+            type: 'string',
+            description: 'Rental URI for iOS (deep link to the specific station)'
+        },
+        rentalUriWeb: {
+            type: 'string',
+            description: 'Rental URI for web (deep link to the specific station)'
+        },
+        isRenting: {
+            type: 'boolean',
+            description: 'true if vehicles can be rented from this station, false if it is temporarily out of service'
+        },
+        isReturning: {
+            type: 'boolean',
+            description: 'true if vehicles can be returned to this station, false if it is temporarily out of service'
+        },
+        numVehiclesAvailable: {
+            type: 'integer',
+            description: 'Number of vehicles available for rental at this station'
+        },
+        formFactors: {
+            type: 'array',
+            description: 'List of form factors available for rental and/or return at this station',
+            items: {
+                '$ref': '#/components/schemas/RentalFormFactor'
+            }
+        },
+        vehicleTypesAvailable: {
+            type: 'object',
+            description: 'List of vehicle types currently available at this station (vehicle type ID -> count)',
+            additionalProperties: {
+                type: 'integer'
+            }
+        },
+        vehicleDocksAvailable: {
+            type: 'object',
+            description: 'List of vehicle docks currently available at this station (vehicle type ID -> count)',
+            additionalProperties: {
+                type: 'integer'
+            }
+        },
+        stationArea: {
+            '$ref': '#/components/schemas/MultiPolygon'
+        }
+    }
+} as const;
+
+export const RentalVehicleSchema = {
+    type: 'object',
+    required: ['id', 'providerId', 'typeId', 'lat', 'lon', 'formFactor', 'propulsionType', 'returnConstraint', 'isReserved', 'isDisabled'],
+    properties: {
+        id: {
+            type: 'string',
+            description: 'Unique identifier of the rental vehicle'
+        },
+        providerId: {
+            type: 'string',
+            description: 'Unique identifier of the rental provider'
+        },
+        typeId: {
+            type: 'string',
+            description: 'Vehicle type ID (unique within the provider)'
+        },
+        lat: {
+            description: 'latitude',
+            type: 'number'
+        },
+        lon: {
+            description: 'longitude',
+            type: 'number'
+        },
+        formFactor: {
+            '$ref': '#/components/schemas/RentalFormFactor'
+        },
+        propulsionType: {
+            '$ref': '#/components/schemas/RentalPropulsionType'
+        },
+        returnConstraint: {
+            '$ref': '#/components/schemas/RentalReturnConstraint'
+        },
+        stationId: {
+            type: 'string',
+            description: 'Station ID if the vehicle is currently at a station'
+        },
+        homeStationId: {
+            type: 'string',
+            description: 'Station ID where the vehicle must be returned, if applicable'
+        },
+        isReserved: {
+            type: 'boolean',
+            description: 'true if the vehicle is currently reserved by a customer, false otherwise'
+        },
+        isDisabled: {
+            type: 'boolean',
+            description: 'true if the vehicle is out of service, false otherwise'
+        },
+        rentalUriAndroid: {
+            type: 'string',
+            description: 'Rental URI for Android (deep link to the specific vehicle)'
+        },
+        rentalUriIOS: {
+            type: 'string',
+            description: 'Rental URI for iOS (deep link to the specific vehicle)'
+        },
+        rentalUriWeb: {
+            type: 'string',
+            description: 'Rental URI for web (deep link to the specific vehicle)'
+        }
+    }
+} as const;
+
+export const RentalZoneSchema = {
+    type: 'object',
+    required: ['providerId', 'z', 'area', 'rules'],
+    properties: {
+        providerId: {
+            type: 'string',
+            description: 'Unique identifier of the rental provider'
+        },
+        name: {
+            type: 'string',
+            description: 'Public name of the geofencing zone'
+        },
+        z: {
+            type: 'integer',
+            description: 'Zone precedence / z-index (higher number = higher precedence)'
+        },
+        area: {
+            '$ref': '#/components/schemas/MultiPolygon'
+        },
+        rules: {
+            type: 'array',
+            items: {
+                '$ref': '#/components/schemas/RentalZoneRestrictions'
+            }
         }
     }
 } as const;

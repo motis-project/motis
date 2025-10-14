@@ -20,7 +20,7 @@ api::RentalFormFactorEnum to_api_form_factor(vehicle_form_factor const ff) {
     case vehicle_form_factor::kScooterStanding:
       return api::RentalFormFactorEnum::SCOOTER_STANDING;
     case vehicle_form_factor::kScooterSeated:
-      return api::RentalFormFactorEnum::SCOOTER_STANDING;
+      return api::RentalFormFactorEnum::SCOOTER_SEATED;
     case vehicle_form_factor::kOther: return api::RentalFormFactorEnum::OTHER;
   }
   std::unreachable();

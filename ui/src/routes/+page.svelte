@@ -59,6 +59,7 @@
 	import IsochronesInfo from '$lib/IsochronesInfo.svelte';
 	import type { DisplayLevel, IsochronesOptions, IsochronesPos } from '$lib/map/IsochronesShared';
 	import IsochronesMask from '$lib/IsochronesMask.svelte';
+	import Rentals from '$lib/map/rentals/Rentals.svelte';
 	import {
 		getFormFactors,
 		getPrePostDirectModes,
@@ -73,9 +74,9 @@
 
 	const urlParams = browser ? new URLSearchParams(window.location.search) : undefined;
 
-	const hasDebug = urlParams && urlParams.has('debug');
-	const hasDark = urlParams && urlParams.has('dark');
-	const hasLight = urlParams && urlParams.has('light');
+	const hasDebug: boolean = Boolean(urlParams?.has('debug'));
+	const hasDark: boolean = Boolean(urlParams?.has('dark'));
+	const hasLight: boolean = Boolean(urlParams?.has('light'));
 	const isSmallScreen = browser && window.innerWidth < 768;
 	let activeTab = $state<'connections' | 'departures' | 'isochrones'>('connections');
 	let dataAttributionLink: string | undefined = $state(undefined);
@@ -749,6 +750,7 @@
 			</Control>
 			{#if colorMode != 'none'}
 				<RailViz {map} {bounds} {zoom} {colorMode} />
+				<Rentals {map} {bounds} {zoom} />
 			{/if}
 		{/if}
 		<!-- Isochrones cannot be hidden the same way as RailViz -->

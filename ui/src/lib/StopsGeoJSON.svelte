@@ -80,10 +80,10 @@
 			'circle-stroke-color': ['get', 'color']
 		}}
 		onclick={(e) => {
-			if (!e.features || e.features.length === 0) {
+			const s = e.features?.[0];
+			if (!s?.properties?.stopId) {
 				return;
 			}
-			const s = e.features[0];
 			console.log('Clicked Stop:', s.properties.name);
 			onClickStop(s.properties.name, s.properties.stopId, new Date(s.properties.time));
 		}}

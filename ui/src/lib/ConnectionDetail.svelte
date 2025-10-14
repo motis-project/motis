@@ -131,12 +131,20 @@
 		</span>
 		{#if l.rental && l.rental.systemName}
 			<span class="ml-6">
-				{t.sharingProvider}: <a href={l.rental.url} target="_blank">{l.rental.systemName}</a>
+				{t.sharingProvider}:
+				<a href={l.rental.url} target="_blank" class="hover:underline">{l.rental.systemName}</a>
 			</span>
 		{/if}
 		{#if l.rental?.returnConstraint == 'ROUNDTRIP_STATION'}
 			<span class="ml-6">
 				{t.roundtripStationReturnConstraint}
+			</span>
+		{/if}
+		{#if l.rental?.rentalUriWeb}
+			<span class="ml-6">
+				<Button class="font-bold" variant="outline" href={l.rental.rentalUriWeb} target="_blank">
+					{t.rent}
+				</Button>
 			</span>
 		{/if}
 		{#if stepsWithElevation && stepsWithElevation.length > 0}
