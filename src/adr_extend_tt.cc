@@ -99,10 +99,25 @@ adr_ext adr_extend_tt(nigiri::timetable const& tt,
     }
   }
 
-  for (auto const [l, p] : utl::enumerate(ret.location_place_)) {
-    utl::verify(
-        l < n::kNSpecialStations || p != adr_extra_place_idx_t::invalid(),
-        "invalid place for {}", n::location{tt, n::location_idx_t{l}});
+  for (auto const [i, p] : utl::enumerate(ret.location_place_)) {
+    auto const l = n::location_idx_t{i};
+    if (l >= n::kNSpecialStations && p == adr_extra_place_idx_t::invalid()) {
+      auto const parent =
+          tt.locations_.parents_[l] == n::location_idx_t::invalid()
+              ? n::get_special_station(n::special_station::kEnd)
+              : tt.locations_.parents_[l];
+      auto const grand_parent =
+          tt.locations_.parents_[parent] == n::location_idx_t::invalid()
+              ? n::get_special_station(n::special_station::kEnd)
+              : tt.locations_.parents_[parent];
+
+      utl::log_error("adr_extend",
+                     "invalid place for {} (parent={}, grand_parent={})",
+                     n::location{tt, l}, n::location{tt, parent},
+                     n::location{tt, grand_parent});
+
+      ret.location_place_[l] = adr_extra_place_idx_t{0U};
+    }
   }
 
   // For each station without parent:
