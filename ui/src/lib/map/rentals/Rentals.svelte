@@ -726,7 +726,7 @@
 			id={ZONE_LAYER_ID}
 			{beforeLayerId}
 			type="fill"
-			filter={['literal', true]}
+			filter={true}
 			layout={{ 'fill-sort-key': ['get', 'z'] }}
 			onclick={handleZoneClick}
 			paint={{
@@ -745,7 +745,7 @@
 			id={ZONE_OUTLINE_LAYER_ID}
 			{beforeLayerId}
 			type="line"
-			filter={['literal', true]}
+			filter={true}
 			layout={{}}
 			paint={{
 				'line-color': [
@@ -767,9 +767,9 @@
 	<GeoJSON id={STATION_LAYER_ID} data={stationFeatures}>
 		<Layer
 			id={STATION_LAYER_ID}
-			beforeLayerId={undefined}
+			beforeLayerId=""
 			type="symbol"
-			filter={['literal', true]}
+			filter={true}
 			layout={{
 				'icon-image': ['get', 'icon'],
 				'icon-size': zoomScaledIconSize,
