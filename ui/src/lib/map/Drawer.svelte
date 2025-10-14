@@ -23,10 +23,44 @@
 	let startY = 0;
 	let currentY = 0;
 	let isDragging = false;
+	let fromHandle = false;
+
+	const getScrollableElement = (element: Element): Element | null => {
+		while (element && element !== document.documentElement) {
+			const style = window.getComputedStyle(element);
+			const overflowY = style.overflowY;
+			const overflowX = style.overflowX;
+			const hasScrollableY =
+				overflowY !== 'visible' &&
+				overflowY !== 'hidden' &&
+				element.scrollHeight > element.clientHeight;
+			const hasScrollableX =
+				overflowX !== 'visible' &&
+				overflowX !== 'hidden' &&
+				element.scrollWidth > element.clientWidth;
+
+			if (
+				element.className.split(' ').includes('bottom-sheet') &&
+				(hasScrollableY || hasScrollableX)
+			) {
+				return element;
+			}
+
+			if (hasScrollableY || hasScrollableX) {
+				return element;
+			}
+
+			element = element.parentElement as HTMLElement;
+		}
+
+		return null;
+	};
 
 	const ontouchstart = (e: TouchEvent) => {
+		const target = !fromHandle ? (e.target as Element) : null;
+		const scrollableElement = target ? (getScrollableElement(target) as HTMLElement) : null;
 		startY = e.touches[0].clientY;
-		isDragging = true;
+		isDragging = expanded ? (scrollableElement ? scrollableElement.scrollTop === 0 : true) : true;
 	};
 
 	const ontouchmove = (e: TouchEvent) => {
@@ -44,15 +78,16 @@
 		isDragging = false;
 		ref!.style.transition = '';
 		const delta = e.changedTouches[0].clientY - startY;
-		if ((70 < delta || delta == 0) && expanded) {
+		if ((70 < delta || (delta == 0 && fromHandle)) && expanded) {
 			ref!.style.transform = `translateY(${window.innerHeight * maxTranslate}px)`;
 			expanded = false;
-		} else if ((delta < -70 || delta == 0) && !expanded) {
+		} else if ((delta < -70 || (delta == 0 && fromHandle)) && !expanded) {
 			ref!.style.transform = `translateY(${minTranslate}px)`;
 			expanded = true;
 		} else {
 			ref!.style.transform = `translateY(${expanded ? minTranslate : window.innerHeight * maxTranslate}px)`;
 		}
+		fromHandle = false;
 	};
 </script>
 
@@ -63,12 +98,16 @@
 		className
 	)}
 	{...restProps}
+	{ontouchstart}
 	{ontouchmove}
 	{ontouchend}
 >
 	<div
 		class="mx-auto my-5 relative before:content-[''] before:absolute before:inset-[-20px] before:inset-x-[-50vw] flex items-center justify-center"
-		{ontouchstart}
+		ontouchstart={(e) => {
+			fromHandle = true;
+			ontouchstart(e);
+		}}
 	>
 		<div
 			class="absolute transition-all duration-200"
