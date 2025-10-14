@@ -127,7 +127,6 @@ const translations: Translations = {
 	toll: 'Warning! A fee must be paid to use this route.',
 	accessRestriction: 'No access',
 	continuesAs: 'Continues as',
-	rent: 'Rent'
 	rent: 'Rent',
 	rideThroughAllowed: 'Riding through allowed',
 	rideThroughNotAllowed: 'Riding through not allowed',

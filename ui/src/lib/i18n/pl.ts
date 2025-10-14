@@ -129,7 +129,6 @@ const translations: Translations = {
 	toll: 'Uwaga! Za przejazd tą trasą pobierana jest opłata.',
 	accessRestriction: 'Ograniczony dostęp',
 	continuesAs: 'Kontynuuje jako',
-	rent: 'Wypożycz'
 	rent: 'Wypożycz',
 	rideThroughAllowed: 'Przejazd dozwolony',
 	rideThroughNotAllowed: 'Przejazd niedozwolony',

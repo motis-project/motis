@@ -127,7 +127,6 @@ const translations: Translations = {
 	toll: 'Attention ! Route à péage.',
 	accessRestriction: 'Accès restreint',
 	continuesAs: 'Continue comme',
-	rent: 'Louer'
 	rent: 'Louer',
 	rideThroughAllowed: 'Passage autorisé',
 	rideThroughNotAllowed: 'Passage non autorisé',

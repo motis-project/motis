@@ -124,7 +124,6 @@ const translations: Translations = {
 	toll: 'Achtung! Mautpflichtige Straße.',
 	accessRestriction: 'Kein Zugang',
 	continuesAs: 'Weiter als',
-	rent: 'Ausleihen'
 	rent: 'Ausleihen',
 	rideThroughAllowed: 'Durchfahrt erlaubt',
 	rideThroughNotAllowed: 'Durchfahrt nicht erlaubt',

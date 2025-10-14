@@ -129,7 +129,6 @@ const translations: Translations = {
 	toll: 'Pozor! Průjezd tuto trasou je placený.',
 	accessRestriction: 'Omezený dostup',
 	continuesAs: 'Pokračuje jako',
-	rent: 'Půjčit si'
 	rent: 'Půjčit si',
 	rideThroughAllowed: 'Průjezd povolen',
 	rideThroughNotAllowed: 'Průjezd zakázán',
