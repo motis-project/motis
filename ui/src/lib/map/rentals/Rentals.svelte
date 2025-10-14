@@ -4,6 +4,7 @@
 		type RentalFormFactor,
 		type RentalProvider,
 		type RentalStation,
+		type RentalVehicle,
 		type RentalZone
 	} from '$lib/api/openapi';
 	import { lngLatToStr } from '$lib/lngLatToStr';
@@ -25,6 +26,7 @@
 		Position
 	} from 'geojson';
 	import StationPopup from '$lib/map/rentals/StationPopup.svelte';
+	import VehiclePopup from '$lib/map/rentals/VehiclePopup.svelte';
 
 	let {
 		map,
@@ -397,12 +399,26 @@
 			new Map(rentalsData?.stations.map((s) => [createScopedId(s.providerId, s.id), s]) ?? [])
 	);
 
+	let vehicleById = $derived.by(
+		(): Map<string, RentalVehicle> =>
+			new Map(rentalsData?.vehicles.map((v) => [createScopedId(v.providerId, v.id), v]) ?? [])
+	);
+
 	const lookupStation = (properties: StationFeatureProperties) => {
 		const key = createScopedId(properties.providerId, properties.stationId);
 		return {
 			key,
 			provider: providerById.get(properties.providerId),
 			station: stationById.get(key)
+		};
+	};
+
+	const lookupVehicle = (properties: VehicleFeatureProperties) => {
+		const key = createScopedId(properties.providerId, properties.vehicleId);
+		return {
+			key,
+			provider: providerById.get(properties.providerId),
+			vehicle: vehicleById.get(key)
 		};
 	};
 
@@ -415,6 +431,25 @@
 		const component = mount(StationPopup, {
 			target: container,
 			props: { provider, station, showActions }
+		});
+		flushSync();
+		return {
+			element: container,
+			destroy: () => {
+				unmount(component);
+			}
+		};
+	};
+
+	const createVehicleContent = (
+		provider: RentalProvider,
+		vehicle: RentalVehicle,
+		showActions: boolean
+	) => {
+		const container = document.createElement('div');
+		const component = mount(VehiclePopup, {
+			target: container,
+			props: { provider, vehicle, showActions }
 		});
 		flushSync();
 		return {
@@ -511,6 +546,27 @@
 		}
 	};
 
+	const showVehicleTooltip = (
+		targetMap: maplibregl.Map,
+		lngLat: maplibregl.LngLatLike,
+		key: string,
+		provider: RentalProvider,
+		vehicle: RentalVehicle
+	) => {
+		const popup = ensureTooltipPopup();
+		if (activeTooltipKey !== key) {
+			tooltipContentDestroy?.();
+			const { element, destroy } = createVehicleContent(provider, vehicle, true);
+			tooltipContentDestroy = destroy;
+			popup.setDOMContent(element);
+			activeTooltipKey = key;
+		}
+		popup.setLngLat(lngLat);
+		if (!popup.isOpen()) {
+			popup.addTo(targetMap);
+		}
+	};
+
 	const showStationPopup = (
 		targetMap: maplibregl.Map,
 		lngLat: maplibregl.LngLatLike,
@@ -521,6 +577,25 @@
 		const popup = ensureDetailPopup();
 		popupContentDestroy?.();
 		const { element, destroy } = createStationContent(provider, station, true);
+		popupContentDestroy = destroy;
+		popup.setDOMContent(element);
+		popup.setLngLat(lngLat);
+		if (!popup.isOpen()) {
+			popup.addTo(targetMap);
+		}
+		activePopupKey = key;
+	};
+
+	const showVehiclePopup = (
+		targetMap: maplibregl.Map,
+		lngLat: maplibregl.LngLatLike,
+		key: string,
+		provider: RentalProvider,
+		vehicle: RentalVehicle
+	) => {
+		const popup = ensureDetailPopup();
+		popupContentDestroy?.();
+		const { element, destroy } = createVehicleContent(provider, vehicle, true);
 		popupContentDestroy = destroy;
 		popup.setDOMContent(element);
 		popup.setLngLat(lngLat);
@@ -583,6 +658,59 @@
 		showStationPopup(mapInstance, event.lngLat, key, provider, station);
 	};
 
+	const handleVehicleMouseMove = (event: MapLayerMouseEvent, mapInstance: maplibregl.Map) => {
+		if (!mapInstance) {
+			return;
+		}
+		const feature = event.features?.[0];
+		if (!feature) {
+			hideTooltip();
+			resetHoverCursor();
+			return;
+		}
+		const { key, provider, vehicle } = lookupVehicle(
+			feature.properties as VehicleFeatureProperties
+		);
+		if (!vehicle || !provider) {
+			hideTooltip();
+			resetHoverCursor();
+			return;
+		}
+		lastHoverCanvas = mapInstance.getCanvas();
+		lastHoverCanvas.style.cursor = 'pointer';
+		if (activePopupKey === key) {
+			hideTooltip();
+			return;
+		}
+		showVehicleTooltip(mapInstance, event.lngLat, key, provider, vehicle);
+	};
+
+	const handleVehicleMouseLeave = (_event: MapLayerMouseEvent, _mapInstance: maplibregl.Map) => {
+		resetHoverCursor();
+		hideTooltip();
+	};
+
+	const handleVehicleClick = (event: MapLayerMouseEvent, mapInstance: maplibregl.Map) => {
+		if (!mapInstance) {
+			return;
+		}
+		const feature = event.features?.[0];
+		if (!feature) {
+			hidePopup();
+			return;
+		}
+		const { key, provider, vehicle } = lookupVehicle(
+			feature.properties as VehicleFeatureProperties
+		);
+		if (!vehicle || !provider) {
+			hidePopup();
+			return;
+		}
+		hideTooltip();
+		hidePopup();
+		showVehiclePopup(mapInstance, event.lngLat, key, provider, vehicle);
+	};
+
 	$effect(() => {
 		if (!rentalsData) {
 			hideTooltip();
@@ -590,10 +718,14 @@
 			resetHoverCursor();
 			return;
 		}
-		if (activeTooltipKey && !stationById.has(activeTooltipKey)) {
+		if (
+			activeTooltipKey &&
+			!stationById.has(activeTooltipKey) &&
+			!vehicleById.has(activeTooltipKey)
+		) {
 			hideTooltip();
 		}
-		if (activePopupKey && !stationById.has(activePopupKey)) {
+		if (activePopupKey && !stationById.has(activePopupKey) && !vehicleById.has(activePopupKey)) {
 			hidePopup();
 		}
 	});
@@ -724,6 +856,9 @@
 				'icon-allow-overlap': true,
 				'icon-ignore-placement': true
 			}}
+			onmousemove={handleVehicleMouseMove}
+			onmouseleave={handleVehicleMouseLeave}
+			onclick={handleVehicleClick}
 			paint={{}}
 		/>
 	</GeoJSON>
