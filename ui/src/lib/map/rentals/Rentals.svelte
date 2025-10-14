@@ -15,7 +15,7 @@
 	import { cn } from '$lib/utils';
 	import polyline from '@mapbox/polyline';
 	import maplibregl from 'maplibre-gl';
-	import type { ExpressionSpecification, MapLayerMouseEvent } from 'maplibre-gl';
+	import type { MapLayerMouseEvent } from 'maplibre-gl';
 	import { flushSync, mount, onDestroy, unmount } from 'svelte';
 	import type {
 		Feature,
@@ -489,17 +489,16 @@
 		}
 	};
 
-	const showStationTooltip = (
+	const showTooltip = (
 		targetMap: maplibregl.Map,
 		lngLat: maplibregl.LngLatLike,
 		key: string,
-		provider: RentalProvider,
-		station: RentalStation
+		createContent: () => { element: HTMLElement; destroy: () => void }
 	) => {
 		const popup = ensureTooltipPopup();
 		if (activeTooltipKey !== key) {
 			tooltipContentDestroy?.();
-			const { element, destroy } = createStationContent(provider, station, true);
+			const { element, destroy } = createContent();
 			tooltipContentDestroy = destroy;
 			popup.setDOMContent(element);
 			activeTooltipKey = key;
@@ -510,37 +509,15 @@
 		}
 	};
 
-	const showVehicleTooltip = (
+	const showPopup = (
 		targetMap: maplibregl.Map,
 		lngLat: maplibregl.LngLatLike,
 		key: string,
-		provider: RentalProvider,
-		vehicle: RentalVehicle
-	) => {
-		const popup = ensureTooltipPopup();
-		if (activeTooltipKey !== key) {
-			tooltipContentDestroy?.();
-			const { element, destroy } = createVehicleContent(provider, vehicle, true);
-			tooltipContentDestroy = destroy;
-			popup.setDOMContent(element);
-			activeTooltipKey = key;
-		}
-		popup.setLngLat(lngLat);
-		if (!popup.isOpen()) {
-			popup.addTo(targetMap);
-		}
-	};
-
-	const showStationPopup = (
-		targetMap: maplibregl.Map,
-		lngLat: maplibregl.LngLatLike,
-		key: string,
-		provider: RentalProvider,
-		station: RentalStation
+		createContent: () => { element: HTMLElement; destroy: () => void }
 	) => {
 		const popup = ensureDetailPopup();
 		popupContentDestroy?.();
-		const { element, destroy } = createStationContent(provider, station, true);
+		const { element, destroy } = createContent();
 		popupContentDestroy = destroy;
 		popup.setDOMContent(element);
 		popup.setLngLat(lngLat);
@@ -550,118 +527,97 @@
 		activePopupKey = key;
 	};
 
-	const showVehiclePopup = (
-		targetMap: maplibregl.Map,
-		lngLat: maplibregl.LngLatLike,
-		key: string,
-		provider: RentalProvider,
-		vehicle: RentalVehicle
-	) => {
-		const popup = ensureDetailPopup();
-		popupContentDestroy?.();
-		const { element, destroy } = createVehicleContent(provider, vehicle, true);
-		popupContentDestroy = destroy;
-		popup.setDOMContent(element);
-		popup.setLngLat(lngLat);
-		if (!popup.isOpen()) {
-			popup.addTo(targetMap);
-		}
-		activePopupKey = key;
-	};
+	const createMouseMoveHandler =
+		<T,>(
+			lookup: (properties: T) => {
+				key: string;
+				provider: RentalProvider | undefined;
+				station?: RentalStation;
+				vehicle?: RentalVehicle;
+			},
+			createContent: (
+				provider: RentalProvider,
+				entity: RentalStation | RentalVehicle
+			) => { element: HTMLElement; destroy: () => void }
+		) =>
+		(event: MapLayerMouseEvent, mapInstance: maplibregl.Map) => {
+			const feature = event.features?.[0];
+			if (!mapInstance || !feature) {
+				hideTooltip();
+				resetHoverCursor();
+				return;
+			}
+			const result = lookup(feature.properties as T);
+			const entity = result.station || result.vehicle;
+			if (!entity || !result.provider) {
+				hideTooltip();
+				resetHoverCursor();
+				return;
+			}
+			lastHoverCanvas = mapInstance.getCanvas();
+			lastHoverCanvas.style.cursor = 'pointer';
+			if (activePopupKey === result.key) {
+				hideTooltip();
+				return;
+			}
+			showTooltip(mapInstance, event.lngLat, result.key, () =>
+				createContent(result.provider!, entity)
+			);
+		};
 
-	const handleStationMouseMove = (event: MapLayerMouseEvent, mapInstance: maplibregl.Map) => {
-		const feature = event.features?.[0];
-		if (!mapInstance || !feature) {
-			hideTooltip();
+	const createMouseLeaveHandler =
+		() => (_event: MapLayerMouseEvent, _mapInstance: maplibregl.Map) => {
 			resetHoverCursor();
-			return;
-		}
-		const { key, provider, station } = lookupStation(
-			feature.properties as StationFeatureProperties
-		);
-		if (!station || !provider) {
 			hideTooltip();
-			resetHoverCursor();
-			return;
-		}
-		lastHoverCanvas = mapInstance.getCanvas();
-		lastHoverCanvas.style.cursor = 'pointer';
-		if (activePopupKey === key) {
+		};
+
+	const createClickHandler =
+		<T,>(
+			lookup: (properties: T) => {
+				key: string;
+				provider: RentalProvider | undefined;
+				station?: RentalStation;
+				vehicle?: RentalVehicle;
+			},
+			createContent: (
+				provider: RentalProvider,
+				entity: RentalStation | RentalVehicle
+			) => { element: HTMLElement; destroy: () => void }
+		) =>
+		(event: MapLayerMouseEvent, mapInstance: maplibregl.Map) => {
+			const feature = event.features?.[0];
+			if (!mapInstance || !feature) {
+				hidePopup();
+				return;
+			}
+			const result = lookup(feature.properties as T);
+			const entity = result.station || result.vehicle;
+			if (!entity || !result.provider) {
+				hidePopup();
+				return;
+			}
 			hideTooltip();
-			return;
-		}
-		showStationTooltip(mapInstance, event.lngLat, key, provider, station);
-	};
-
-	const handleStationMouseLeave = (_event: MapLayerMouseEvent, _mapInstance: maplibregl.Map) => {
-		resetHoverCursor();
-		hideTooltip();
-	};
-
-	const handleStationClick = (event: MapLayerMouseEvent, mapInstance: maplibregl.Map) => {
-		const feature = event.features?.[0];
-		if (!mapInstance || !feature) {
 			hidePopup();
-			return;
-		}
-		const { key, provider, station } = lookupStation(
-			feature.properties as StationFeatureProperties
-		);
-		if (!station || !provider) {
-			hidePopup();
-			return;
-		}
-		hideTooltip();
-		hidePopup();
-		showStationPopup(mapInstance, event.lngLat, key, provider, station);
-	};
+			showPopup(mapInstance, event.lngLat, result.key, () =>
+				createContent(result.provider!, entity)
+			);
+		};
 
-	const handleVehicleMouseMove = (event: MapLayerMouseEvent, mapInstance: maplibregl.Map) => {
-		const feature = event.features?.[0];
-		if (!mapInstance || !feature) {
-			hideTooltip();
-			resetHoverCursor();
-			return;
-		}
-		const { key, provider, vehicle } = lookupVehicle(
-			feature.properties as VehicleFeatureProperties
-		);
-		if (!vehicle || !provider) {
-			hideTooltip();
-			resetHoverCursor();
-			return;
-		}
-		lastHoverCanvas = mapInstance.getCanvas();
-		lastHoverCanvas.style.cursor = 'pointer';
-		if (activePopupKey === key) {
-			hideTooltip();
-			return;
-		}
-		showVehicleTooltip(mapInstance, event.lngLat, key, provider, vehicle);
-	};
+	const handleStationMouseMove = createMouseMoveHandler(lookupStation, (provider, entity) =>
+		createStationContent(provider, entity as RentalStation, true)
+	);
+	const handleStationMouseLeave = createMouseLeaveHandler();
+	const handleStationClick = createClickHandler(lookupStation, (provider, entity) =>
+		createStationContent(provider, entity as RentalStation, true)
+	);
 
-	const handleVehicleMouseLeave = (_event: MapLayerMouseEvent, _mapInstance: maplibregl.Map) => {
-		resetHoverCursor();
-		hideTooltip();
-	};
-
-	const handleVehicleClick = (event: MapLayerMouseEvent, mapInstance: maplibregl.Map) => {
-		const feature = event.features?.[0];
-		if (!mapInstance || !feature) {
-			hidePopup();
-			return;
-		}
-		const { key, provider, vehicle } = lookupVehicle(
-			feature.properties as VehicleFeatureProperties
-		);
-		if (!vehicle || !provider) {
-			hidePopup();
-			return;
-		}
-		hideTooltip();
-		hidePopup();
-		showVehiclePopup(mapInstance, event.lngLat, key, provider, vehicle);
-	};
+	const handleVehicleMouseMove = createMouseMoveHandler(lookupVehicle, (provider, entity) =>
+		createVehicleContent(provider, entity as RentalVehicle, true)
+	);
+	const handleVehicleMouseLeave = createMouseLeaveHandler();
+	const handleVehicleClick = createClickHandler(lookupVehicle, (provider, entity) =>
+		createVehicleContent(provider, entity as RentalVehicle, true)
+	);
 
 	$effect(() => {
 		if (!rentalsData) {
