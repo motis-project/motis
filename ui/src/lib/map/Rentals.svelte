@@ -14,8 +14,8 @@
 	import { cn } from '$lib/utils';
 	import polyline from '@mapbox/polyline';
 	import maplibregl from 'maplibre-gl';
-	import type { ExpressionSpecification, MapGeoJSONFeature, MapLayerMouseEvent } from 'maplibre-gl';
-	import { onDestroy } from 'svelte';
+	import type { ExpressionSpecification, MapLayerMouseEvent } from 'maplibre-gl';
+	import { flushSync, mount, onDestroy, unmount } from 'svelte';
 	import type {
 		Feature,
 		FeatureCollection,
@@ -24,7 +24,7 @@
 		MultiPolygon as GeoMultiPolygon,
 		Position
 	} from 'geojson';
-	import { t } from '$lib/i18n/translation';
+	import RentalsStationPopup from './RentalsStationPopup.svelte';
 
 	let {
 		map,
@@ -406,52 +406,23 @@
 		};
 	};
 
-	const createExternalLink = (href: string, text: string, variant: 'link' | 'button' = 'link') => {
-		const a = document.createElement('a');
-		a.href = href;
-		a.target = '_blank';
-		a.className =
-			variant === 'button'
-				? 'inline-flex items-center justify-center rounded-md bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white no-underline hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500'
-				: 'text-blue-600 dark:text-blue-300 hover:underline';
-		a.textContent = text;
-		return a;
-	};
-
-	const createStationPopupNode = (
+	const createStationContent = (
 		provider: RentalProvider,
 		station: RentalStation,
-		interactive: boolean
+		showActions: boolean
 	) => {
 		const container = document.createElement('div');
-		container.className = 'space-y-3 text-sm leading-tight text-primary';
-		const header = document.createElement('div');
-		header.className = 'space-y-1';
-		const title = document.createElement('div');
-		title.className = 'font-semibold';
-		title.textContent = station.name;
-		header.appendChild(title);
-		const providerRow = document.createElement('div');
-		const providerLabel = document.createElement('span');
-		providerLabel.textContent = `${t.sharingProvider}: `;
-		providerRow.appendChild(providerLabel);
-		if (provider.url) {
-			const providerName = createExternalLink(provider.url, provider.name);
-			providerRow.appendChild(providerName);
-		} else {
-			const providerName = document.createElement('span');
-			providerName.textContent = provider.name;
-			providerRow.appendChild(providerName);
-		}
-		header.appendChild(providerRow);
-		container.appendChild(header);
-
-		const rentalUrl = station.rentalUriWeb;
-		if (rentalUrl) {
-			container.appendChild(createExternalLink(rentalUrl, t.rent, 'button'));
-		}
-
-		return container;
+		const component = mount(RentalsStationPopup, {
+			target: container,
+			props: { provider, station, showActions }
+		});
+		flushSync();
+		return {
+			element: container,
+			destroy: () => {
+				unmount(component);
+			}
+		};
 	};
 
 	let tooltipPopup: maplibregl.Popup | null = null;
@@ -459,6 +430,8 @@
 	let activeTooltipKey: string | null = null;
 	let activePopupKey: string | null = null;
 	let lastHoverCanvas: HTMLCanvasElement | null = null;
+	let tooltipContentDestroy: (() => void) | null = null;
+	let popupContentDestroy: (() => void) | null = null;
 
 	const ensureTooltipPopup = () => {
 		if (!tooltipPopup) {
@@ -466,6 +439,11 @@
 				closeButton: false,
 				closeOnClick: false,
 				offset: 12
+			});
+			tooltipPopup.on('close', () => {
+				tooltipContentDestroy?.();
+				tooltipContentDestroy = null;
+				activeTooltipKey = null;
 			});
 		}
 		return tooltipPopup;
@@ -475,10 +453,12 @@
 		if (!detailPopup) {
 			detailPopup = new maplibregl.Popup({
 				closeButton: true,
-				closeOnClick: false,
+				closeOnClick: true,
 				offset: 12
 			});
 			detailPopup.on('close', () => {
+				popupContentDestroy?.();
+				popupContentDestroy = null;
 				activePopupKey = null;
 			});
 		}
@@ -486,6 +466,8 @@
 	};
 
 	const hideTooltip = () => {
+		tooltipContentDestroy?.();
+		tooltipContentDestroy = null;
 		if (tooltipPopup) {
 			tooltipPopup.remove();
 		}
@@ -493,6 +475,8 @@
 	};
 
 	const hidePopup = () => {
+		popupContentDestroy?.();
+		popupContentDestroy = null;
 		if (detailPopup) {
 			detailPopup.remove();
 		}
@@ -514,10 +498,17 @@
 		station: RentalStation
 	) => {
 		const popup = ensureTooltipPopup();
-		popup.setDOMContent(createStationPopupNode(provider, station, false));
+		if (activeTooltipKey !== key) {
+			tooltipContentDestroy?.();
+			const { element, destroy } = createStationContent(provider, station, true);
+			tooltipContentDestroy = destroy;
+			popup.setDOMContent(element);
+			activeTooltipKey = key;
+		}
 		popup.setLngLat(lngLat);
-		popup.addTo(targetMap);
-		activeTooltipKey = key;
+		if (!popup.isOpen()) {
+			popup.addTo(targetMap);
+		}
 	};
 
 	const showStationPopup = (
@@ -528,9 +519,14 @@
 		station: RentalStation
 	) => {
 		const popup = ensureDetailPopup();
-		popup.setDOMContent(createStationPopupNode(provider, station, true));
+		popupContentDestroy?.();
+		const { element, destroy } = createStationContent(provider, station, true);
+		popupContentDestroy = destroy;
+		popup.setDOMContent(element);
 		popup.setLngLat(lngLat);
-		popup.addTo(targetMap);
+		if (!popup.isOpen()) {
+			popup.addTo(targetMap);
+		}
 		activePopupKey = key;
 	};
 
