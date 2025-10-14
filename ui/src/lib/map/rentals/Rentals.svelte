@@ -655,6 +655,18 @@
 		if (!mapInstance) {
 			return;
 		}
+
+		// Check if there's a station or vehicle at this location (they should take priority)
+		const vehiclePointLayers = vehicleLayerConfigs.map((c) => c.pointLayerId);
+		const priorityLayers = [STATION_LAYER_ID, ...vehiclePointLayers];
+		const priorityFeatures = mapInstance.queryRenderedFeatures(event.point, {
+			layers: priorityLayers
+		});
+		if (priorityFeatures.length > 0) {
+			// Let station/vehicle click handlers handle this
+			return;
+		}
+
 		// event.features is already sorted by z-order (topmost first)
 		const feature = event.features?.[0];
 		if (!feature) {
@@ -755,6 +767,7 @@
 	<GeoJSON id={STATION_LAYER_ID} data={stationFeatures}>
 		<Layer
 			id={STATION_LAYER_ID}
+			beforeLayerId={undefined}
 			type="symbol"
 			filter={['literal', true]}
 			layout={{
