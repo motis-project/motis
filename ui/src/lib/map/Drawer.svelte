@@ -29,24 +29,12 @@
 		while (element && element !== document.documentElement) {
 			const style = window.getComputedStyle(element);
 			const overflowY = style.overflowY;
-			const overflowX = style.overflowX;
 			const hasScrollableY =
 				overflowY !== 'visible' &&
 				overflowY !== 'hidden' &&
 				element.scrollHeight > element.clientHeight;
-			const hasScrollableX =
-				overflowX !== 'visible' &&
-				overflowX !== 'hidden' &&
-				element.scrollWidth > element.clientWidth;
 
-			if (
-				element.className.split(' ').includes('bottom-sheet') &&
-				(hasScrollableY || hasScrollableX)
-			) {
-				return element;
-			}
-
-			if (hasScrollableY || hasScrollableX) {
+			if (hasScrollableY) {
 				return element;
 			}
 
