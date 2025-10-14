@@ -25,7 +25,6 @@
 				<a
 					href={provider.url}
 					target="_blank"
-					rel="noopener noreferrer"
 					class="text-blue-600 dark:text-blue-300 hover:underline"
 				>
 					{provider.name}

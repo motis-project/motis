@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { RentalProvider, RentalVehicle } from '$lib/api/openapi';
+	import { Button } from '$lib/components/ui/button';
 	import { t } from '$lib/i18n/translation';
 
 	let {
@@ -20,7 +21,6 @@
 			<a
 				href={provider.url}
 				target="_blank"
-				rel="noopener noreferrer"
 				class="text-blue-600 dark:text-blue-300 hover:underline"
 			>
 				{provider.name}
@@ -30,13 +30,8 @@
 		{/if}
 	</div>
 	{#if showActions && vehicle.rentalUriWeb}
-		<a
-			href={vehicle.rentalUriWeb}
-			target="_blank"
-			rel="noopener noreferrer"
-			class="inline-flex items-center justify-center rounded-md bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white no-underline hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500"
-		>
+		<Button class="font-bold" variant="outline" href={vehicle.rentalUriWeb} target="_blank">
 			{t.rent}
-		</a>
+		</Button>
 	{/if}
 </div>

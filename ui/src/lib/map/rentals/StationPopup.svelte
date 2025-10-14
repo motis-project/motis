@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { RentalProvider, RentalStation } from '$lib/api/openapi';
+	import { Button } from '$lib/components/ui/button';
 	import { t } from '$lib/i18n/translation';
 
 	let {
@@ -31,12 +32,8 @@
 		</div>
 	</div>
 	{#if showActions && station.rentalUriWeb}
-		<a
-			href={station.rentalUriWeb}
-			target="_blank"
-			class="inline-flex items-center justify-center rounded-md bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white no-underline hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500"
-		>
+		<Button class="font-bold" variant="outline" href={station.rentalUriWeb} target="_blank">
 			{t.rent}
-		</a>
+		</Button>
 	{/if}
 </div>
