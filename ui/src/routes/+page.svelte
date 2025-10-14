@@ -59,7 +59,7 @@
 	import IsochronesInfo from '$lib/IsochronesInfo.svelte';
 	import type { DisplayLevel, IsochronesOptions, IsochronesPos } from '$lib/map/IsochronesShared';
 	import IsochronesMask from '$lib/IsochronesMask.svelte';
-	import Rentals from '$lib/map/Rentals.svelte';
+	import Rentals from '$lib/map/rentals/Rentals.svelte';
 	import {
 		getFormFactors,
 		getPrePostDirectModes,

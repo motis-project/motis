@@ -10,7 +10,7 @@
 	import Control from '$lib/map/Control.svelte';
 	import GeoJSON from '$lib/map/GeoJSON.svelte';
 	import Layer from '$lib/map/Layer.svelte';
-	import { formFactorAssets, DEFAULT_FORM_FACTOR } from '$lib/map/RentalsAssets';
+	import { formFactorAssets, DEFAULT_FORM_FACTOR } from '$lib/map/rentals/assets';
 	import { cn } from '$lib/utils';
 	import polyline from '@mapbox/polyline';
 	import maplibregl from 'maplibre-gl';
@@ -24,7 +24,7 @@
 		MultiPolygon as GeoMultiPolygon,
 		Position
 	} from 'geojson';
-	import RentalsStationPopup from './RentalsStationPopup.svelte';
+	import StationPopup from '$lib/map/rentals/StationPopup.svelte';
 
 	let {
 		map,
@@ -412,7 +412,7 @@
 		showActions: boolean
 	) => {
 		const container = document.createElement('div');
-		const component = mount(RentalsStationPopup, {
+		const component = mount(StationPopup, {
 			target: container,
 			props: { provider, station, showActions }
 		});
