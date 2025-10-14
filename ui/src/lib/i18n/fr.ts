@@ -126,7 +126,8 @@ const translations: Translations = {
 	AERIAL_LIFT: 'Remontée mécanique',
 	toll: 'Attention ! Route à péage.',
 	accessRestriction: 'Accès restreint',
-	continuesAs: 'Continue comme'
+	continuesAs: 'Continue comme',
+	rent: 'Louer'
 };
 
 export default translations;

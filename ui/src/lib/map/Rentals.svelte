@@ -14,7 +14,7 @@
 	import { cn } from '$lib/utils';
 	import polyline from '@mapbox/polyline';
 	import maplibregl from 'maplibre-gl';
-	import type { ExpressionSpecification } from 'maplibre-gl';
+	import type { ExpressionSpecification, MapGeoJSONFeature, MapLayerMouseEvent } from 'maplibre-gl';
 	import { onDestroy } from 'svelte';
 	import type {
 		Feature,
@@ -24,6 +24,7 @@
 		MultiPolygon as GeoMultiPolygon,
 		Position
 	} from 'geojson';
+	import { t } from '$lib/i18n/translation';
 
 	let {
 		map,
@@ -384,6 +385,230 @@
 			};
 		}
 	);
+
+	const createScopedId = (providerId: string, entityId: string) => `${providerId}::${entityId}`;
+
+	let providerById = $derived.by(
+		(): Map<string, RentalProvider> => new Map(rentalsData?.providers.map((p) => [p.id, p]) ?? [])
+	);
+
+	let stationById = $derived.by(
+		(): Map<string, RentalStation> =>
+			new Map(rentalsData?.stations.map((s) => [createScopedId(s.providerId, s.id), s]) ?? [])
+	);
+
+	const lookupStation = (properties: StationFeatureProperties) => {
+		const key = createScopedId(properties.providerId, properties.stationId);
+		return {
+			key,
+			provider: providerById.get(properties.providerId),
+			station: stationById.get(key)
+		};
+	};
+
+	const createExternalLink = (href: string, text: string, variant: 'link' | 'button' = 'link') => {
+		const a = document.createElement('a');
+		a.href = href;
+		a.target = '_blank';
+		a.className =
+			variant === 'button'
+				? 'inline-flex items-center justify-center rounded-md bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white no-underline hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500'
+				: 'text-blue-600 dark:text-blue-300 hover:underline';
+		a.textContent = text;
+		return a;
+	};
+
+	const createStationPopupNode = (
+		provider: RentalProvider,
+		station: RentalStation,
+		interactive: boolean
+	) => {
+		const container = document.createElement('div');
+		container.className = 'space-y-3 text-sm leading-tight text-primary';
+		const header = document.createElement('div');
+		header.className = 'space-y-1';
+		const title = document.createElement('div');
+		title.className = 'font-semibold';
+		title.textContent = station.name;
+		header.appendChild(title);
+		const providerRow = document.createElement('div');
+		const providerLabel = document.createElement('span');
+		providerLabel.textContent = `${t.sharingProvider}: `;
+		providerRow.appendChild(providerLabel);
+		if (provider.url) {
+			const providerName = createExternalLink(provider.url, provider.name);
+			providerRow.appendChild(providerName);
+		} else {
+			const providerName = document.createElement('span');
+			providerName.textContent = provider.name;
+			providerRow.appendChild(providerName);
+		}
+		header.appendChild(providerRow);
+		container.appendChild(header);
+
+		const rentalUrl = station.rentalUriWeb;
+		if (rentalUrl) {
+			container.appendChild(createExternalLink(rentalUrl, t.rent, 'button'));
+		}
+
+		return container;
+	};
+
+	let tooltipPopup: maplibregl.Popup | null = null;
+	let detailPopup: maplibregl.Popup | null = null;
+	let activeTooltipKey: string | null = null;
+	let activePopupKey: string | null = null;
+	let lastHoverCanvas: HTMLCanvasElement | null = null;
+
+	const ensureTooltipPopup = () => {
+		if (!tooltipPopup) {
+			tooltipPopup = new maplibregl.Popup({
+				closeButton: false,
+				closeOnClick: false,
+				offset: 12
+			});
+		}
+		return tooltipPopup;
+	};
+
+	const ensureDetailPopup = () => {
+		if (!detailPopup) {
+			detailPopup = new maplibregl.Popup({
+				closeButton: true,
+				closeOnClick: false,
+				offset: 12
+			});
+			detailPopup.on('close', () => {
+				activePopupKey = null;
+			});
+		}
+		return detailPopup;
+	};
+
+	const hideTooltip = () => {
+		if (tooltipPopup) {
+			tooltipPopup.remove();
+		}
+		activeTooltipKey = null;
+	};
+
+	const hidePopup = () => {
+		if (detailPopup) {
+			detailPopup.remove();
+		}
+		activePopupKey = null;
+	};
+
+	const resetHoverCursor = () => {
+		if (lastHoverCanvas) {
+			lastHoverCanvas.style.cursor = '';
+			lastHoverCanvas = null;
+		}
+	};
+
+	const showStationTooltip = (
+		targetMap: maplibregl.Map,
+		lngLat: maplibregl.LngLatLike,
+		key: string,
+		provider: RentalProvider,
+		station: RentalStation
+	) => {
+		const popup = ensureTooltipPopup();
+		popup.setDOMContent(createStationPopupNode(provider, station, false));
+		popup.setLngLat(lngLat);
+		popup.addTo(targetMap);
+		activeTooltipKey = key;
+	};
+
+	const showStationPopup = (
+		targetMap: maplibregl.Map,
+		lngLat: maplibregl.LngLatLike,
+		key: string,
+		provider: RentalProvider,
+		station: RentalStation
+	) => {
+		const popup = ensureDetailPopup();
+		popup.setDOMContent(createStationPopupNode(provider, station, true));
+		popup.setLngLat(lngLat);
+		popup.addTo(targetMap);
+		activePopupKey = key;
+	};
+
+	const handleStationMouseMove = (event: MapLayerMouseEvent, mapInstance: maplibregl.Map) => {
+		if (!mapInstance) {
+			return;
+		}
+		const feature = event.features?.[0];
+		if (!feature) {
+			hideTooltip();
+			resetHoverCursor();
+			return;
+		}
+		const { key, provider, station } = lookupStation(
+			feature.properties as StationFeatureProperties
+		);
+		if (!station || !provider) {
+			hideTooltip();
+			resetHoverCursor();
+			return;
+		}
+		lastHoverCanvas = mapInstance.getCanvas();
+		lastHoverCanvas.style.cursor = 'pointer';
+		if (activePopupKey === key) {
+			hideTooltip();
+			return;
+		}
+		showStationTooltip(mapInstance, event.lngLat, key, provider, station);
+	};
+
+	const handleStationMouseLeave = (_event: MapLayerMouseEvent, _mapInstance: maplibregl.Map) => {
+		resetHoverCursor();
+		hideTooltip();
+	};
+
+	const handleStationClick = (event: MapLayerMouseEvent, mapInstance: maplibregl.Map) => {
+		if (!mapInstance) {
+			return;
+		}
+		const feature = event.features?.[0];
+		if (!feature) {
+			hidePopup();
+			return;
+		}
+		const { key, provider, station } = lookupStation(
+			feature.properties as StationFeatureProperties
+		);
+		if (!station || !provider) {
+			hidePopup();
+			return;
+		}
+		hideTooltip();
+		hidePopup();
+		showStationPopup(mapInstance, event.lngLat, key, provider, station);
+	};
+
+	$effect(() => {
+		if (!rentalsData) {
+			hideTooltip();
+			hidePopup();
+			resetHoverCursor();
+			return;
+		}
+		if (activeTooltipKey && !stationById.has(activeTooltipKey)) {
+			hideTooltip();
+		}
+		if (activePopupKey && !stationById.has(activePopupKey)) {
+			hidePopup();
+		}
+	});
+
+	onDestroy(() => {
+		hideTooltip();
+		hidePopup();
+		resetHoverCursor();
+		tooltipPopup = null;
+		detailPopup = null;
+	});
 </script>
 
 {#if zoneFeatures.features.length > 0}
@@ -448,6 +673,9 @@
 				'text-size': zoomScaledTextSizeMedium,
 				'text-font': ['Noto Sans Display Regular']
 			}}
+			onmousemove={handleStationMouseMove}
+			onmouseleave={handleStationMouseLeave}
+			onclick={handleStationClick}
 			paint={{
 				'icon-opacity': 1,
 				'text-color': '#1e293b',

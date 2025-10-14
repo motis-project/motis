@@ -123,6 +123,7 @@ export type Translations = {
 	toll: string;
 	accessRestriction: string;
 	continuesAs: string;
+	rent: string;
 };
 
 const translations: Map<string, Translations> = new Map(

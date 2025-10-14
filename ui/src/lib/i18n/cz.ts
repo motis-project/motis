@@ -128,7 +128,8 @@ const translations: Translations = {
 	AERIAL_LIFT: 'Lanová dráha',
 	toll: 'Pozor! Průjezd tuto trasou je placený.',
 	accessRestriction: 'Omezený dostup',
-	continuesAs: 'Pokračuje jako'
+	continuesAs: 'Pokračuje jako',
+	rent: 'Půjčit si'
 };
 
 export default translations;

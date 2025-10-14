@@ -128,7 +128,8 @@ const translations: Translations = {
 	AERIAL_LIFT: 'Wyciąg krzesełkowy',
 	toll: 'Uwaga! Za przejazd tą trasą pobierana jest opłata.',
 	accessRestriction: 'Ograniczony dostęp',
-	continuesAs: 'Kontynuuje jako'
+	continuesAs: 'Kontynuuje jako',
+	rent: 'Wypożycz'
 };
 
 export default translations;

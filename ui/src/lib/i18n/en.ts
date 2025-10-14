@@ -126,7 +126,8 @@ const translations: Translations = {
 	incline: 'Incline',
 	toll: 'Warning! A fee must be paid to use this route.',
 	accessRestriction: 'No access',
-	continuesAs: 'Continues as'
+	continuesAs: 'Continues as',
+	rent: 'Rent'
 };
 
 export default translations;
