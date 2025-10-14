@@ -12,7 +12,7 @@ struct trips {
   osr::ways const* w_;
   osr::platforms const* pl_;
   platform_matches_t const* matches_;
-  adr_ext const* lp_;
+  adr_ext const* ae_;
   tz_map_t const* tz_;
   tag_lookup const& tags_;
   nigiri::timetable const& tt_;

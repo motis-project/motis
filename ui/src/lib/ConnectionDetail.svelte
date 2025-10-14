@@ -37,11 +37,11 @@
 )}
 	{@const arriveBy = isStartOrEnd == 0 || isStartOrEnd == 1}
 	{@const textColor = isStartOrEnd == 0 ? 'text-muted-foreground' : ''}
-	<div class="flex items-baseline justify-between w-full {isStartOrEnd == 0 ? 'text-sm' : ''}">
+	<div class="flex items-baseline justify-between w-full">
 		<div class="flex justify-between">
 			<Time
 				variant="schedule"
-				class="font-semibold w-16 {textColor}"
+				class="font-semibold w-14 md:w-16 {textColor}"
 				queriedTime={timestamp}
 				timeZone={p.tz}
 				{isRealtime}
@@ -51,7 +51,7 @@
 			/>
 			<Time
 				variant="realtime"
-				class="font-semibold w-16"
+				class="font-semibold w-14 md:w-16"
 				timeZone={p.tz}
 				{isRealtime}
 				{timestamp}
@@ -73,6 +73,11 @@
 						<span
 							class="text-nowrap {isStartOrEnd == 0 ? 'text-xs' : ''} w- m-4 px-1 border rounded-xl"
 						>
+							{p.name}
+						</Button>
+					</div>
+					{#if p.track && !hidePlatform}
+						<span class="text-nowrap px-2 border rounded-xl mx-1">
 							{getModeLabel(mode) == 'Track' ? t.trackAbr : t.platformAbr}
 							{p.track}
 						</span>
@@ -278,7 +283,7 @@
 
 			<div class="px-6 pt-2 border-l-4 left-4 w-full relative" style={routeBorderColor(l)}>
 				{@render stopTimes(l.startTime, l.scheduledStartTime, l.realTime, l.from, l.mode, -1)}
-				<div class="mt-2 mb-2 flex items-center">
+				<div class="mb-2 flex items-center">
 					<ArrowRight class="stroke-muted-foreground size-4" />
 					<span class="ml-1">
 						{#if l.tripTo}
@@ -332,7 +337,7 @@
 				{:else}
 					{@render ticketInfo(prevTransitLeg, l)}
 					<details class="[&_.collapsible]:open:-rotate-180 my-2">
-						<summary class="py-8 pl-1 md:pl-4 flex items-center text-muted-foreground">
+						<summary class="pt-4 pb-8 pl-1 md:pl-4 flex items-center text-muted-foreground">
 							<svg
 								class="collapsible rotate-0 transform transition-all duration-300"
 								fill="none"

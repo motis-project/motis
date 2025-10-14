@@ -10,6 +10,9 @@
 
 #include "motis-api/motis-api.h"
 
+#include "motis/fwd.h"
+#include "motis/place.h"
+
 namespace motis::ep {
 struct routing;
 }  // namespace motis::ep
@@ -29,29 +32,87 @@ struct capacities {
 };
 
 struct prima {
-  void init(api::Place const& from,
-            api::Place const& to,
-            api::plan_params const& query);
-  std::string get_prima_request(nigiri::timetable const&) const;
-  std::size_t n_events() const;
-  bool blacklist_update(std::string_view json);
-  bool whitelist_update(std::string_view json);
-  void adjust_to_whitelisting();
 
-  geo::latlng from_;
-  geo::latlng to_;
+  prima(std::string const& prima_url,
+        osr::location const& from,
+        osr::location const& to,
+        api::plan_params const& query);
+
+  void init(nigiri::interval<nigiri::unixtime_t> const& search_intvl,
+            nigiri::interval<nigiri::unixtime_t> const& taxi_intvl,
+            bool use_first_mile_taxi,
+            bool use_last_mile_taxi,
+            bool use_direct_taxi,
+            bool use_first_mile_ride_sharing,
+            bool use_last_mile_ride_sharing,
+            bool use_direct_ride_sharing,
+            nigiri::timetable const& tt,
+            nigiri::rt_timetable const* rtt,
+            ep::routing const& r,
+            elevators const* e,
+            gbfs::gbfs_routing_data& gbfs,
+            api::Place const& from,
+            api::Place const& to,
+            api::plan_params const& query,
+            nigiri::routing::query const& n_query,
+            unsigned api_version);
+
+  std::size_t n_taxi_events() const;
+  std::size_t n_ride_sharing_events() const;
+
+  std::string make_taxi_request(nigiri::timetable const&) const;
+
+  bool consume_blacklist_taxis_response(std::string_view json);
+  bool blacklist_taxis(nigiri::timetable const&);
+
+  void extract_taxis(std::vector<nigiri::routing::journey> const&);
+  bool consume_whitelist_taxis_response(std::string_view json,
+                                        std::vector<nigiri::routing::journey>&);
+  bool whitelist_taxis(std::vector<nigiri::routing::journey>&,
+                       nigiri::timetable const&);
+
+  void add_direct_odm(std::vector<direct_ride> const&,
+                      std::vector<nigiri::routing::journey>&,
+                      place_t const& from,
+                      place_t const& to,
+                      bool arrive_by,
+                      nigiri::transport_mode_id_t) const;
+
+  std::string make_ride_sharing_request(nigiri::timetable const&) const;
+
+  bool consume_whitelist_ride_sharing_response(std::string_view json);
+  bool whitelist_ride_sharing(nigiri::timetable const&);
+
+  void fix_first_mile_duration(
+      std::vector<nigiri::routing::journey>& journeys,
+      std::vector<nigiri::routing::start> const& first_mile,
+      std::vector<nigiri::routing::start> const& prev_first_mile,
+      nigiri::transport_mode_id_t mode);
+  void fix_last_mile_duration(
+      std::vector<nigiri::routing::journey>& journeys,
+      std::vector<nigiri::routing::start> const& last_mile,
+      std::vector<nigiri::routing::start> const& prev_last_mile,
+      nigiri::transport_mode_id_t mode);
+
+  boost::urls::url taxi_blacklist_;
+  boost::urls::url taxi_whitelist_;
+  boost::urls::url ride_sharing_whitelist_;
+
+  osr::location const from_;
+  osr::location const to_;
   nigiri::event_type fixed_;
   capacities cap_;
 
-  std::vector<nigiri::routing::start> from_rides_{};
-  std::vector<nigiri::routing::start> to_rides_{};
-  std::vector<direct_ride> direct_rides_{};
+  std::vector<nigiri::routing::start> first_mile_taxi_{};
+  std::vector<nigiri::routing::start> last_mile_taxi_{};
+  std::vector<direct_ride> direct_taxi_{};
 
-  std::vector<nigiri::routing::start> prev_from_rides_{};
-  std::vector<nigiri::routing::start> prev_to_rides_{};
-  std::vector<direct_ride> prev_direct_rides_{};
-
-  std::vector<nigiri::routing::journey> odm_journeys_{};
+  std::vector<nigiri::routing::start> first_mile_ride_sharing_{};
+  std::vector<std::uint32_t> first_mile_ride_sharing_tour_ids_{};
+  std::vector<nigiri::routing::start> last_mile_ride_sharing_{};
+  std::vector<std::uint32_t> last_mile_ride_sharing_tour_ids_{};
+  std::vector<direct_ride> direct_ride_sharing_{};
+  std::vector<std::uint32_t> direct_ride_sharing_tour_ids_{};
 };
 
 }  // namespace motis::odm

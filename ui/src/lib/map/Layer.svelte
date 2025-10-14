@@ -3,7 +3,10 @@
 	import { onDestroy, getContext, setContext, type Snippet } from 'svelte';
 	import type { MapMouseEvent, MapGeoJSONFeature } from 'maplibre-gl';
 
-	type ClickHandler = (e: MapMouseEvent & { features?: MapGeoJSONFeature[] }) => void;
+	type ClickHandler = (
+		e: MapMouseEvent & { features?: MapGeoJSONFeature[] },
+		map: maplibregl.Map
+	) => void;
 
 	let {
 		id,
@@ -12,6 +15,8 @@
 		layout,
 		paint,
 		onclick,
+		onmousemove,
+		onmouseleave,
 		children
 	}: {
 		id: string;
@@ -20,12 +25,26 @@
 		layout: Object; // eslint-disable-line
 		paint: Object; // eslint-disable-line
 		onclick?: ClickHandler;
+		onmousemove?: ClickHandler;
+		onmouseleave?: ClickHandler;
 		children?: Snippet;
 	} = $props();
 
 	function click(e: MapMouseEvent & { features?: MapGeoJSONFeature[] }) {
 		if (onclick) {
-			onclick(e);
+			onclick(e, ctx.map!);
+		}
+	}
+
+	function mousemove(e: MapMouseEvent & { features?: MapGeoJSONFeature[] }) {
+		if (onmousemove) {
+			onmousemove(e, ctx.map!);
+		}
+	}
+
+	function mouseleave(e: MapMouseEvent & { features?: MapGeoJSONFeature[] }) {
+		if (onmouseleave) {
+			onmouseleave(e, ctx.map!);
 		}
 	}
 
@@ -86,6 +105,12 @@
 				if (onclick) {
 					ctx.map.on('click', id, click);
 				}
+				if (onmousemove) {
+					ctx.map.on('mousemove', id, mousemove);
+				}
+				if (onmouseleave) {
+					ctx.map.on('mouseleave', id, mouseleave);
+				}
 				ctx.map.on('styledata', updateLayer);
 				updateLayer();
 				initialized = true;
@@ -98,6 +123,12 @@
 		ctx.map?.off('styledata', updateLayer);
 		if (onclick) {
 			ctx.map?.off('click', id, click);
+		}
+		if (onmousemove) {
+			ctx.map?.off('mousemove', id, mousemove);
+		}
+		if (onmouseleave) {
+			ctx.map?.off('mouseleave', id, mouseleave);
 		}
 		if (l) {
 			ctx.map?.removeLayer(id);

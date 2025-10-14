@@ -7,6 +7,7 @@
 #include "nigiri/timetable.h"
 
 #include "motis-api/motis-api.h"
+#include "motis/transport_mode_ids.h"
 
 namespace motis::odm {
 
@@ -24,7 +25,7 @@ void shorten(std::vector<nr::journey>& odm_journeys,
     auto& odm_leg = begin(j.legs_)[0];
     auto& pt_leg = begin(j.legs_)[1];
 
-    if (!is_odm_leg(odm_leg) ||
+    if (!is_odm_leg(odm_leg, kOdmTransportModeId) ||
         !std::holds_alternative<nr::journey::run_enter_exit>(pt_leg.uses_)) {
       return;
     }
@@ -77,7 +78,7 @@ void shorten(std::vector<nr::journey>& odm_journeys,
       auto const new_pt_time = pt_leg.arr_time_ - pt_leg.dep_time_;
 
       n::log(
-          n::log_lvl::debug, "motis.odm",
+          n::log_lvl::debug, "motis.prima",
           "Shortened ODM first leg: [ODM: {}, stop: {}, PT: {}] --> [ODM: {}, "
           "stop: {}, PT: {}] (ODM: -{}, PT: +{})",
           old_odm_time, old_stop, old_pt_time, new_odm_time, new_stop,
@@ -90,7 +91,7 @@ void shorten(std::vector<nr::journey>& odm_journeys,
     auto& odm_leg = rbegin(j.legs_)[0];
     auto& pt_leg = rbegin(j.legs_)[1];
 
-    if (!is_odm_leg(odm_leg) ||
+    if (!is_odm_leg(odm_leg, kOdmTransportModeId) ||
         !std::holds_alternative<n::routing::journey::run_enter_exit>(
             pt_leg.uses_)) {
       return;
@@ -144,7 +145,7 @@ void shorten(std::vector<nr::journey>& odm_journeys,
       auto const new_pt_time = pt_leg.arr_time_ - pt_leg.dep_time_;
 
       n::log(
-          n::log_lvl::debug, "motis.odm",
+          n::log_lvl::debug, "motis.prima",
           "Shortened ODM last leg: [ODM: {}, stop: {}, PT: {}] --> [ODM: {}, "
           "stop: {}, PT: {}] (ODM: -{}, PT: +{})",
           old_odm_time, old_stop, old_pt_time, new_odm_time, new_stop,
@@ -155,7 +156,7 @@ void shorten(std::vector<nr::journey>& odm_journeys,
 
   for (auto& j : odm_journeys) {
     if (j.legs_.empty()) {
-      n::log(n::log_lvl::debug, "motis.odm", "shorten: journey without legs");
+      n::log(n::log_lvl::debug, "motis.prima", "shorten: journey without legs");
       continue;
     }
     shorten_first_leg(j);

@@ -295,10 +295,10 @@ std::vector<api::Place> other_stops_impl(std::string_view trip_id,
                                          osr::ways const* w,
                                          osr::platforms const* pl,
                                          platform_matches_t const* matches,
-                                         adr_ext const* lp,
+                                         adr_ext const* ae,
                                          tz_map_t const* tz) {
   auto const convert_stop = [&](n::rt::run_stop const& stop) {
-    auto result = to_place(tt, &tags, w, pl, matches, lp, tz, stop);
+    auto result = to_place(tt, &tags, w, pl, matches, ae, tz, stop);
     result.arrival_ = stop.time(n::event_type::kArr);
     result.scheduledArrival_ = stop.scheduled_time(n::event_type::kArr);
     result.departure_ = stop.time(n::event_type::kDep);
@@ -422,7 +422,7 @@ api::stoptimes_response stop_times::operator()(
             auto const s = fr[0];
             auto const& agency = s.get_provider(ev_type);
             auto const run_cancelled = fr.is_cancelled();
-            auto place = to_place(&tt_, &tags_, w_, pl_, matches_, lp_, tz_, s);
+            auto place = to_place(&tt_, &tags_, w_, pl_, matches_, ae_, tz_, s);
             place.alerts_ = get_alerts(
                 fr,
                 std::pair{s, fr.stop_range_.from_ != 0U ? n::event_type::kArr
@@ -456,7 +456,7 @@ api::stoptimes_response stop_times::operator()(
                 return std::nullopt;
               }
               return other_stops_impl(trip_id, ev_type, s, &tt_, rtt, tags_, w_,
-                                      pl_, matches_, lp_, tz_);
+                                      pl_, matches_, ae_, tz_);
             };
 
             return {
@@ -464,7 +464,7 @@ api::stoptimes_response stop_times::operator()(
                 .mode_ = to_mode(s.get_clasz(ev_type), api_version),
                 .realTime_ = r.is_rt(),
                 .headsign_ = std::string{s.direction(ev_type)},
-                .tripTo_ = to_place(&tt_, &tags_, w_, pl_, matches_, lp_, tz_,
+                .tripTo_ = to_place(&tt_, &tags_, w_, pl_, matches_, ae_, tz_,
                                     s.get_last_trip_stop(ev_type)),
                 .agencyId_ =
                     std::string{tt_.strings_.try_get(agency.id_).value_or("?")},
@@ -497,7 +497,7 @@ api::stoptimes_response stop_times::operator()(
                 .source_ = fmt::format("{}", fmt::streamed(fr.dbg()))};
           }),
       .place_ =
-          to_place(&tt_, &tags_, w_, pl_, matches_, lp_, tz_, tt_location{x}),
+          to_place(&tt_, &tags_, w_, pl_, matches_, ae_, tz_, tt_location{x}),
       .previousPageCursor_ =
           events.empty()
               ? ""

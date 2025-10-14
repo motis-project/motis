@@ -195,6 +195,44 @@ export const LocationTypeSchema = {
     enum: ['ADDRESS', 'PLACE', 'STOP']
 } as const;
 
+export const ModeSchema = {
+    description: `# Street modes
+
+  - \`WALK\`
+  - \`BIKE\`
+  - \`RENTAL\` Experimental. Expect unannounced breaking changes (without version bumps) for all parameters and returned structs.
+  - \`CAR\`
+  - \`CAR_PARKING\` Experimental. Expect unannounced breaking changes (without version bumps) for all parameters and returned structs.
+  - \`CAR_DROPOFF\` Experimental. Expect unannounced breaking changes (without version bumps) for all perameters and returned structs.
+  - \`ODM\` on-demand taxis from the Prima+ÖV Project
+  - \`FLEX\` flexible transports
+
+# Transit modes
+
+  - \`TRANSIT\`: translates to \`RAIL,TRAM,BUS,FERRY,AIRPLANE,COACH,CABLE_CAR,FUNICULAR,AREAL_LIFT,OTHER\`
+  - \`TRAM\`: trams
+  - \`SUBWAY\`: subway trains (Paris Metro, London Underground, but also NYC Subway, Hamburger Hochbahn, and other non-underground services)
+  - \`FERRY\`: ferries
+  - \`AIRPLANE\`: airline flights
+  - \`BUS\`: short distance buses (does not include \`COACH\`)
+  - \`COACH\`: long distance buses (does not include \`BUS\`)
+  - \`RAIL\`: translates to \`HIGHSPEED_RAIL,LONG_DISTANCE,NIGHT_RAIL,REGIONAL_RAIL,REGIONAL_FAST_RAIL,SUBURBAN,SUBWAY\`
+  - \`SUBURBAN\`: suburban trains (e.g. S-Bahn, RER, Elizabeth Line, ...)
+  - \`HIGHSPEED_RAIL\`: long distance high speed trains (e.g. TGV)
+  - \`LONG_DISTANCE\`: long distance inter city trains
+  - \`NIGHT_RAIL\`: long distance night trains
+  - \`REGIONAL_FAST_RAIL\`: regional express routes that skip low traffic stops to be faster
+  - \`REGIONAL_RAIL\`: regional train
+  - \`CABLE_CAR\`: Cable tram. Used for street-level rail cars where the cable runs beneath the vehicle (e.g., cable car in San Francisco).
+  - \`FUNICULAR\`: Funicular. Any rail system designed for steep inclines.
+  - \`AERIAL_LIFT\`: Aerial lift, suspended cable car (e.g., gondola lift, aerial tramway). Cable transport where cabins, cars, gondolas or open chairs are suspended by means of one or more cables.
+  - \`AREAL_LIFT\`: deprecated
+  - \`METRO\`: deprecated
+`,
+    type: 'string',
+    enum: ['WALK', 'BIKE', 'RENTAL', 'CAR', 'CAR_PARKING', 'CAR_DROPOFF', 'ODM', 'FLEX', 'TRANSIT', 'TRAM', 'SUBWAY', 'FERRY', 'AIRPLANE', 'SUBURBAN', 'BUS', 'COACH', 'RAIL', 'HIGHSPEED_RAIL', 'LONG_DISTANCE', 'NIGHT_RAIL', 'REGIONAL_FAST_RAIL', 'REGIONAL_RAIL', 'CABLE_CAR', 'FUNICULAR', 'AERIAL_LIFT', 'OTHER', 'AREAL_LIFT', 'METRO']
+} as const;
+
 export const MatchSchema = {
     description: 'GeoCoding match',
     type: 'object',
@@ -202,6 +240,14 @@ export const MatchSchema = {
     properties: {
         type: {
             '$ref': '#/components/schemas/LocationType'
+        },
+        category: {
+            description: `Experimental. Type categories might be adjusted.
+
+For OSM stop locations: the amenity type based on
+https://wiki.openstreetmap.org/wiki/OpenStreetMap_Carto/Symbols
+`,
+            type: 'string'
         },
         tokens: {
             description: 'list of non-overlapping tokens that were matched',
@@ -262,6 +308,17 @@ export const MatchSchema = {
         score: {
             description: 'score according to the internal scoring system (the scoring algorithm might change in the future)',
             type: 'number'
+        },
+        modes: {
+            description: 'available transport modes for stops',
+            type: 'array',
+            items: {
+                '$ref': '#/components/schemas/Mode'
+            }
+        },
+        importance: {
+            description: 'importance of a stop, normalized from [0, 1]',
+            type: 'number'
         }
     }
 } as const;
@@ -294,44 +351,6 @@ export const CyclingSpeedSchema = {
     type: 'number'
 } as const;
 
-export const ModeSchema = {
-    description: `# Street modes
-
-  - \`WALK\`
-  - \`BIKE\`
-  - \`RENTAL\` Experimental. Expect unannounced breaking changes (without version bumps) for all parameters and returned structs.
-  - \`CAR\`
-  - \`CAR_PARKING\` Experimental. Expect unannounced breaking changes (without version bumps) for all parameters and returned structs.
-  - \`CAR_DROPOFF\` Experimental. Expect unannounced breaking changes (without version bumps) for all perameters and returned structs.
-  - \`ODM\` on-demand taxis from the Prima+ÖV Project
-  - \`FLEX\` flexible transports
-
-# Transit modes
-
-  - \`TRANSIT\`: translates to \`RAIL,TRAM,BUS,FERRY,AIRPLANE,COACH,CABLE_CAR,FUNICULAR,AREAL_LIFT,OTHER\`
-  - \`TRAM\`: trams
-  - \`SUBWAY\`: subway trains (Paris Metro, London Underground, but also NYC Subway, Hamburger Hochbahn, and other non-underground services)
-  - \`FERRY\`: ferries
-  - \`AIRPLANE\`: airline flights
-  - \`BUS\`: short distance buses (does not include \`COACH\`)
-  - \`COACH\`: long distance buses (does not include \`BUS\`)
-  - \`RAIL\`: translates to \`HIGHSPEED_RAIL,LONG_DISTANCE,NIGHT_RAIL,REGIONAL_RAIL,REGIONAL_FAST_RAIL,SUBURBAN,SUBWAY\`
-  - \`SUBURBAN\`: suburban trains (e.g. S-Bahn, RER, Elizabeth Line, ...)
-  - \`HIGHSPEED_RAIL\`: long distance high speed trains (e.g. TGV)
-  - \`LONG_DISTANCE\`: long distance inter city trains
-  - \`NIGHT_RAIL\`: long distance night trains
-  - \`REGIONAL_FAST_RAIL\`: regional express routes that skip low traffic stops to be faster
-  - \`REGIONAL_RAIL\`: regional train
-  - \`CABLE_CAR\`: Cable tram. Used for street-level rail cars where the cable runs beneath the vehicle (e.g., cable car in San Francisco).
-  - \`FUNICULAR\`: Funicular. Any rail system designed for steep inclines.
-  - \`AERIAL_LIFT\`: Aerial lift, suspended cable car (e.g., gondola lift, aerial tramway). Cable transport where cabins, cars, gondolas or open chairs are suspended by means of one or more cables.
-  - \`AREAL_LIFT\`: deprecated
-  - \`METRO\`: deprecated
-`,
-    type: 'string',
-    enum: ['WALK', 'BIKE', 'RENTAL', 'CAR', 'CAR_PARKING', 'CAR_DROPOFF', 'ODM', 'FLEX', 'TRANSIT', 'TRAM', 'SUBWAY', 'FERRY', 'AIRPLANE', 'SUBURBAN', 'BUS', 'COACH', 'RAIL', 'HIGHSPEED_RAIL', 'LONG_DISTANCE', 'NIGHT_RAIL', 'REGIONAL_FAST_RAIL', 'REGIONAL_RAIL', 'CABLE_CAR', 'FUNICULAR', 'AERIAL_LIFT', 'OTHER', 'AREAL_LIFT', 'METRO']
-} as const;
-
 export const VertexTypeSchema = {
     type: 'string',
     description: `- \`NORMAL\` - latitude / longitude coordinate or address
@@ -360,6 +379,10 @@ export const PlaceSchema = {
         stopId: {
             description: "The ID of the stop. This is often something that users don't care about.",
             type: 'string'
+        },
+        importance: {
+            description: 'The importance of the stop between 0-1.',
+            type: 'number'
         },
         lat: {
             description: 'latitude',
