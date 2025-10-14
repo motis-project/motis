@@ -70,6 +70,7 @@
 	import { defaultQuery, omitDefaults } from '$lib/defaults';
 	import { LEVEL_MIN_ZOOM } from '$lib/constants';
 	import StopGeoJSON from '$lib/StopsGeoJSON.svelte';
+	import TrainFront from 'lucide-svelte/icons/train-front';
 
 	const urlParams = browser ? new URLSearchParams(window.location.search) : undefined;
 
@@ -79,7 +80,7 @@
 	const isSmallScreen = browser && window.innerWidth < 768;
 	let activeTab = $state<'connections' | 'departures' | 'isochrones'>('connections');
 	let dataAttributionLink: string | undefined = $state(undefined);
-	let colorMode = $state<'rt' | 'route' | 'none'>('route');
+	let colorMode = $state<'rt' | 'route' | 'mode' | 'none'>('route');
 	let showMap = $state(!isSmallScreen);
 	let lastSelectedItinerary: Itinerary | undefined = undefined;
 	let lastOneToAllQuery: OneToAllData | undefined = undefined;
@@ -255,6 +256,9 @@
 		status: 'DONE',
 		error: undefined
 	});
+	const isochronesCircleResolution = urlParams?.get('isochronesCircleResolution')
+		? parseIntOr(urlParams.get('isochronesCircleResolution'), defaultQuery.circleResolution)
+		: defaultQuery.circleResolution;
 
 	const toPlaceString = (l: Location) => {
 		if (l.match?.type === 'STOP') {
@@ -407,7 +411,10 @@
 						maxTravelTime: q.maxTravelTime * 60,
 						isochronesColor,
 						isochronesOpacity,
-						isochronesDisplayLevel
+						isochronesDisplayLevel,
+						...(isochronesCircleResolution && isochronesCircleResolution > 2
+							? { isochronesCircleResolution }
+							: {})
 					},
 					{},
 					true
@@ -639,7 +646,7 @@
 				</Control>
 				{#if showMap}
 					<ItineraryGeoJson itinerary={page.state.selectedItinerary} {level} />
-					<StopGeoJSON itinerary={page.state.selectedItinerary} />
+					<StopGeoJSON itinerary={page.state.selectedItinerary} {theme} />
 				{/if}
 			{/if}
 
@@ -713,11 +720,24 @@
 				<Button
 					size="icon"
 					onclick={() => {
-						colorMode = colorMode == 'route' ? 'rt' : colorMode == 'rt' ? 'none' : 'route';
+						colorMode = (function () {
+							switch (colorMode) {
+								case 'rt':
+									return 'route';
+								case 'route':
+									return 'mode';
+								case 'mode':
+									return 'none';
+								case 'none':
+									return 'rt';
+							}
+						})();
 					}}
 				>
 					{#if colorMode == 'rt'}
 						<Rss class="h-[1.2rem] w-[1.2rem]" />
+					{:else if colorMode == 'mode'}
+						<TrainFront class="h-[1.2rem] w-[1.2rem]" />
 					{:else if colorMode == 'none'}
 						<Ban class="h-[1.2rem] w-[1.2rem]" />
 					{:else}
@@ -741,6 +761,7 @@
 			streetModes={arriveBy ? preTransitModes : postTransitModes}
 			wheelchair={pedestrianProfile === 'WHEELCHAIR'}
 			maxAllTime={arriveBy ? maxPreTransitTime : maxPostTransitTime}
+			circleResolution={isochronesCircleResolution}
 			active={activeTab == 'isochrones'}
 			bind:options={isochronesOptions}
 		/>

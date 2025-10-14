@@ -24,6 +24,7 @@
 		streetModes,
 		wheelchair,
 		maxAllTime,
+		circleResolution,
 		active,
 		options = $bindable()
 	}: {
@@ -33,6 +34,7 @@
 		streetModes: PrePostDirectMode[];
 		wheelchair: boolean;
 		maxAllTime: number;
+		circleResolution: number | undefined;
 		active: boolean;
 		options: IsochronesOptions;
 	} = $props();
@@ -192,7 +194,8 @@
 				index: ++dataIndex,
 				data: $state.snapshot(isochronesData),
 				kilometersPerSecond: $state.snapshot(kilometersPerSecond),
-				maxSeconds: $state.snapshot(maxAllTime)
+				maxSeconds: $state.snapshot(maxAllTime),
+				circleResolution
 			});
 
 			lastData = isochronesData;

@@ -215,6 +215,14 @@ export type Mode = 'WALK' | 'BIKE' | 'RENTAL' | 'CAR' | 'CAR_PARKING' | 'CAR_DRO
 export type Match = {
     type: LocationType;
     /**
+     * Experimental. Type categories might be adjusted.
+     *
+     * For OSM stop locations: the amenity type based on
+     * https://wiki.openstreetmap.org/wiki/OpenStreetMap_Carto/Symbols
+     *
+     */
+    category?: string;
+    /**
      * list of non-overlapping tokens that were matched
      */
     tokens: Array<Token>;

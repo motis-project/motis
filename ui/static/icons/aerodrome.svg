@@ -1,0 +1,12 @@
+<svg xmlns:dc="http://purl.org/dc/elements/1.1/" 
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" 
+   xmlns:svg="http://www.w3.org/2000/svg" 
+   xmlns="http://www.w3.org/2000/svg" 
+   version="1.1" 
+   width="12"
+   height="12"
+   viewBox="0 0 12 12" 
+   id="svg2">
+	<path fill-rule="evenodd" fill="#8461C4" d="M 6 0 C 5.254644 0 5 2 5 2 L 5 3.96875 L 0 7.5 L 0 8.5 L 5 7.25 L 5 9.65625 L 3 11 L 3 12 L 6 11.25 L 9 12 L 9 11 L 7 9.65625 L 7 7.25 L 12 8.5 L 12 7.5 L 7 3.96875 L 7 2 C 7 2 6.745356 0 6 0 z"/>
+</svg>
