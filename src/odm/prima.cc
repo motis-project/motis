@@ -504,7 +504,10 @@ void prima::fix_first_mile_duration(
         if (uses_prev(j)) {
           auto const l = begin(j.legs_);
           l->dep_time_ = curr.time_at_start_;
-          l->arr_time_ = curr.time_at_stop_;
+          l->arr_time_ =
+              curr.time_at_stop_ - (mode == kRideSharingTransportModeId
+                                        ? kODMTransferBuffer
+                                        : nigiri::duration_t{0});
           std::get<n::routing::offset>(l->uses_).duration_ =
               l->arr_time_ - l->dep_time_;
           // fill gap (transfer/waiting) with footpath
@@ -540,7 +543,10 @@ void prima::fix_last_mile_duration(
       for (auto& j : journeys) {
         if (uses_prev(j)) {
           auto const l = std::prev(end(j.legs_));
-          l->dep_time_ = curr.time_at_stop_;
+          l->dep_time_ =
+              curr.time_at_stop_ + (mode == kRideSharingTransportModeId
+                                        ? kODMTransferBuffer
+                                        : nigiri::duration_t{0});
           l->arr_time_ = curr.time_at_start_;
           std::get<n::routing::offset>(l->uses_).duration_ =
               l->arr_time_ - l->dep_time_;
@@ -771,7 +777,8 @@ bool prima::consume_whitelist_ride_sharing_response(std::string_view json) {
                 {.time_at_start_ =
                      to_unix(event.as_object().at("pickupTime").as_int64()),
                  .time_at_stop_ =
-                     to_unix(event.as_object().at("dropoffTime").as_int64()),
+                     to_unix(event.as_object().at("dropoffTime").as_int64()) +
+                     kODMTransferBuffer,
                  .stop_ = prev_it->stop_});
             first_mile_ride_sharing_tour_ids_.push_back(
                 static_cast<std::uint32_t>(
@@ -806,7 +813,8 @@ bool prima::consume_whitelist_ride_sharing_response(std::string_view json) {
                 {.time_at_start_ =
                      to_unix(event.as_object().at("dropoffTime").as_int64()),
                  .time_at_stop_ =
-                     to_unix(event.as_object().at("pickupTime").as_int64()),
+                     to_unix(event.as_object().at("pickupTime").as_int64()) -
+                     kODMTransferBuffer,
                  .stop_ = prev_it->stop_});
             last_mile_ride_sharing_tour_ids_.push_back(
                 static_cast<std::uint32_t>(
