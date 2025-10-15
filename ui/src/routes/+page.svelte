@@ -515,7 +515,7 @@
 	bind:center
 	transformRequest={(url: string) => {
 		if (url.startsWith('/sprite')) {
-			return { url: `${window.location.origin}${url}` };
+			return { url: new URL(url.slice(1), window.location.href).toString() };
 		}
 		if (url.startsWith('/')) {
 			return { url: `${client.getConfig().baseUrl}/tiles${url}` };
