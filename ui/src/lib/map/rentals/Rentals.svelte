@@ -760,38 +760,36 @@
 	</GeoJSON>
 {/if}
 
-{#if stationFeatures.features.length > 0}
-	<GeoJSON id={STATION_LAYER_ID} data={stationFeatures}>
-		<Layer
-			id={STATION_LAYER_ID}
-			beforeLayerId=""
-			type="symbol"
-			filter={true}
-			layout={{
-				'icon-image': ['get', 'icon'],
-				'icon-size': zoomScaledIconSize,
-				'icon-allow-overlap': true,
-				'icon-ignore-placement': true,
-				'text-field': ['to-string', ['get', 'available']],
-				'text-allow-overlap': true,
-				'text-ignore-placement': true,
-				'text-anchor': 'center',
-				'text-offset': zoomScaledTextOffset,
-				'text-size': zoomScaledTextSizeMedium,
-				'text-font': ['Noto Sans Display Regular']
-			}}
-			onmousemove={handleStationMouseMove}
-			onmouseleave={handleStationMouseLeave}
-			onclick={handleStationClick}
-			paint={{
-				'icon-opacity': 1,
-				'text-color': '#1e293b',
-				'text-halo-color': '#ffffff',
-				'text-halo-width': 1.5
-			}}
-		/>
-	</GeoJSON>
-{/if}
+<GeoJSON id={STATION_LAYER_ID} data={stationFeatures}>
+	<Layer
+		id={STATION_LAYER_ID}
+		beforeLayerId=""
+		type="symbol"
+		filter={true}
+		layout={{
+			'icon-image': ['get', 'icon'],
+			'icon-size': zoomScaledIconSize,
+			'icon-allow-overlap': true,
+			'icon-ignore-placement': true,
+			'text-field': ['to-string', ['get', 'available']],
+			'text-allow-overlap': true,
+			'text-ignore-placement': true,
+			'text-anchor': 'center',
+			'text-offset': zoomScaledTextOffset,
+			'text-size': zoomScaledTextSizeMedium,
+			'text-font': ['Noto Sans Display Regular']
+		}}
+		onmousemove={handleStationMouseMove}
+		onmouseleave={handleStationMouseLeave}
+		onclick={handleStationClick}
+		paint={{
+			'icon-opacity': 1,
+			'text-color': '#1e293b',
+			'text-halo-color': '#ffffff',
+			'text-halo-width': 1.5
+		}}
+	/>
+</GeoJSON>
 
 {#each vehicleLayerConfigs as config (config.sourceId)}
 	<GeoJSON
