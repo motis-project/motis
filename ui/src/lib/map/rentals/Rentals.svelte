@@ -29,11 +29,19 @@
 	import VehiclePopup from '$lib/map/rentals/VehiclePopup.svelte';
 	import ZonePopup from '$lib/map/rentals/ZonePopup.svelte';
 	import {
+		createZoomScaledSize,
+		DEFAULT_COLOR,
+		DEFAULT_CONTRAST_COLOR,
 		zoomScaledIconSize,
 		zoomScaledTextOffset,
 		zoomScaledTextSizeMedium,
 		zoomScaledTextSizeSmall
 	} from './style';
+
+	import { colord, extend } from 'colord';
+	import a11yPlugin from 'colord/plugins/a11y';
+
+	extend([a11yPlugin]);
 
 	let {
 		map,
@@ -47,7 +55,9 @@
 
 	const MIN_ZOOM = 14;
 	const FETCH_PADDING_RATIO = 0.5;
-	const STATION_LAYER_ID = 'rentals-stations';
+	const STATION_SOURCE_ID = 'rentals-stations';
+	const STATION_BG_LAYER_ID = 'rentals-station-bg';
+	const STATION_ICON_LAYER_ID = 'rentals-stations-icons';
 	const VEHICLE_SOURCE_PREFIX = 'rentals-vehicles';
 	const VEHICLE_CLUSTER_RADIUS = 50;
 	const ZONE_LAYER_ID = 'rentals-zones';
@@ -73,12 +83,16 @@
 		available: number;
 		providerId: string;
 		stationId: string;
+		color: string;
+		contrastColor: string;
 	};
 
 	type VehicleFeatureProperties = {
 		icon: string;
 		providerId: string;
 		vehicleId: string;
+		color: string;
+		contrastColor: string;
 	};
 
 	type VehicleCollections = Record<
@@ -99,8 +113,10 @@
 		return {
 			formFactor,
 			sourceId: `${VEHICLE_SOURCE_PREFIX}-${slug}`,
-			clusterLayerId: `${VEHICLE_SOURCE_PREFIX}-${slug}-cluster`,
-			pointLayerId: `${VEHICLE_SOURCE_PREFIX}-${slug}-point`
+			clusterBgLayerId: `${VEHICLE_SOURCE_PREFIX}-${slug}-cluster-bg`,
+			clusterIconLayerId: `${VEHICLE_SOURCE_PREFIX}-${slug}-cluster-icon`,
+			pointBgLayerId: `${VEHICLE_SOURCE_PREFIX}-${slug}-point-bg`,
+			pointIconLayerId: `${VEHICLE_SOURCE_PREFIX}-${slug}-point-icon`
 		};
 	});
 
@@ -120,6 +136,30 @@
 			);
 
 	let providerOptions = $derived(rentalsData ? buildProviderOptions(rentalsData.providers) : []);
+
+	type ProviderColors = {
+		color: string;
+		contrastColor: string;
+	};
+
+	let providerColors = $derived.by((): Record<string, ProviderColors> => {
+		if (!rentalsData) {
+			return {};
+		}
+		return Object.fromEntries(
+			rentalsData.providers.map((provider) => [
+				provider.id,
+				{
+					color: provider.color || DEFAULT_COLOR,
+					contrastColor: provider.color
+						? colord('#ffffff').isReadable(provider.color)
+							? '#ffffff'
+							: '#000000'
+						: DEFAULT_CONTRAST_COLOR
+				}
+			])
+		);
+	});
 
 	const isSameFilter = (a: DisplayFilter | null, b: DisplayFilter | null) =>
 		a?.providerId === b?.providerId && a?.formFactor === b?.formFactor;
@@ -241,10 +281,13 @@
 					properties: {
 						icon: formFactorAssets[
 							filter ? filter.formFactor : (station.formFactors[0] ?? DEFAULT_FORM_FACTOR)
-						].station,
+						].icon,
 						available: stationAvailability(station, formFactorByVehicleType, filter),
 						providerId: station.providerId,
-						stationId: station.id
+						stationId: station.id,
+						color: providerColors[station.providerId]?.color || DEFAULT_COLOR,
+						contrastColor:
+							providerColors[station.providerId]?.contrastColor || DEFAULT_CONTRAST_COLOR
 					}
 				};
 			})
@@ -279,7 +322,10 @@
 					properties: {
 						icon: formFactorAssets[vehicle.formFactor].vehicle,
 						providerId: vehicle.providerId,
-						vehicleId: vehicle.id
+						vehicleId: vehicle.id,
+						color: providerColors[vehicle.providerId]?.color || DEFAULT_COLOR,
+						contrastColor:
+							providerColors[vehicle.providerId]?.contrastColor || DEFAULT_CONTRAST_COLOR
 					}
 				});
 			});
@@ -654,8 +700,12 @@
 		}
 
 		// Check if there's a station or vehicle at this location (they should take priority)
-		const vehiclePointLayers = vehicleLayerConfigs.map((c) => c.pointLayerId);
-		const priorityLayers = [STATION_LAYER_ID, ...vehiclePointLayers];
+		const priorityLayers = [
+			STATION_BG_LAYER_ID,
+			STATION_ICON_LAYER_ID,
+			...vehicleLayerConfigs.map((c) => c.pointBgLayerId),
+			...vehicleLayerConfigs.map((c) => c.pointIconLayerId)
+		];
 		const priorityFeatures = mapInstance.queryRenderedFeatures(event.point, {
 			layers: priorityLayers
 		});
@@ -717,7 +767,7 @@
 </script>
 
 {#if zoneFeatures.features.length > 0}
-	{@const beforeLayerId = vehicleLayerConfigs[0]?.pointLayerId ?? STATION_LAYER_ID}
+	{@const beforeLayerId = vehicleLayerConfigs[0]?.pointBgLayerId ?? STATION_BG_LAYER_ID}
 	<GeoJSON id={ZONE_LAYER_ID} data={zoneFeatures}>
 		<Layer
 			id={ZONE_LAYER_ID}
@@ -760,14 +810,14 @@
 	</GeoJSON>
 {/if}
 
-<GeoJSON id={STATION_LAYER_ID} data={stationFeatures}>
+<GeoJSON id={STATION_SOURCE_ID} data={stationFeatures}>
 	<Layer
-		id={STATION_LAYER_ID}
-		beforeLayerId=""
+		id={STATION_BG_LAYER_ID}
+		beforeLayerId={STATION_ICON_LAYER_ID}
 		type="symbol"
 		filter={true}
 		layout={{
-			'icon-image': ['get', 'icon'],
+			'icon-image': 'station_bg',
 			'icon-size': zoomScaledIconSize,
 			'icon-allow-overlap': true,
 			'icon-ignore-placement': true,
@@ -783,10 +833,27 @@
 		onmouseleave={handleStationMouseLeave}
 		onclick={handleStationClick}
 		paint={{
-			'icon-opacity': 1,
-			'text-color': '#1e293b',
-			'text-halo-color': '#ffffff',
-			'text-halo-width': 1.5
+			'icon-color': ['get', 'color'],
+			'text-color': ['get', 'contrastColor']
+		}}
+	/>
+	<Layer
+		id={STATION_ICON_LAYER_ID}
+		beforeLayerId=""
+		type="symbol"
+		filter={true}
+		layout={{
+			'icon-image': ['get', 'icon'],
+			'icon-size': zoomScaledIconSize,
+			'icon-allow-overlap': true,
+			'icon-ignore-placement': true
+		}}
+		onmousemove={handleStationMouseMove}
+		onmouseleave={handleStationMouseLeave}
+		onclick={handleStationClick}
+		paint={{
+			'icon-color': '#ffffff',
+			'icon-translate': [-3, 3]
 		}}
 	/>
 </GeoJSON>
@@ -795,11 +862,30 @@
 	<GeoJSON
 		id={config.sourceId}
 		data={vehicleCollections[config.formFactor]}
-		options={{ cluster: true, clusterRadius: VEHICLE_CLUSTER_RADIUS }}
+		options={{
+			cluster: true,
+			clusterRadius: VEHICLE_CLUSTER_RADIUS,
+			clusterProperties: {
+				color: ['coalesce', ['get', 'color']],
+				contrastColor: ['coalesce', ['get', 'contrastColor']]
+			}
+		}}
 	>
 		<Layer
-			id={config.clusterLayerId}
-			beforeLayerId={STATION_LAYER_ID}
+			id={config.clusterBgLayerId}
+			beforeLayerId={config.clusterIconLayerId}
+			type="circle"
+			filter={['has', 'point_count']}
+			layout={{}}
+			paint={{
+				'circle-color': '#ffffff',
+				'circle-radius': createZoomScaledSize(15),
+				'circle-translate': [-1.75, 2]
+			}}
+		/>
+		<Layer
+			id={config.clusterIconLayerId}
+			beforeLayerId={STATION_BG_LAYER_ID}
 			type="symbol"
 			filter={['has', 'point_count']}
 			layout={{
@@ -816,15 +902,24 @@
 				'text-font': ['Noto Sans Display Regular']
 			}}
 			paint={{
-				'icon-opacity': 1,
-				'text-color': '#1e293b',
-				'text-halo-color': '#ffffff',
-				'text-halo-width': 1.5
+				'icon-color': ['get', 'color'],
+				'text-color': ['get', 'contrastColor']
 			}}
 		/>
 		<Layer
-			id={config.pointLayerId}
-			beforeLayerId={STATION_LAYER_ID}
+			id={config.pointBgLayerId}
+			beforeLayerId={config.pointIconLayerId}
+			type="circle"
+			filter={['!', ['has', 'point_count']]}
+			layout={{}}
+			paint={{
+				'circle-color': '#ffffff',
+				'circle-radius': createZoomScaledSize(13)
+			}}
+		/>
+		<Layer
+			id={config.pointIconLayerId}
+			beforeLayerId={STATION_BG_LAYER_ID}
 			type="symbol"
 			filter={['!', ['has', 'point_count']]}
 			layout={{
@@ -833,10 +928,12 @@
 				'icon-allow-overlap': true,
 				'icon-ignore-placement': true
 			}}
+			paint={{
+				'icon-color': ['get', 'color']
+			}}
 			onmousemove={handleVehicleMouseMove}
 			onmouseleave={handleVehicleMouseLeave}
 			onclick={handleVehicleClick}
-			paint={{}}
 		/>
 	</GeoJSON>
 {/each}

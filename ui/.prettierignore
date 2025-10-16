@@ -5,3 +5,4 @@ yarn.lock
 src/lib/api/openapi/**
 src/lib/components/**
 static/sprite*.json
+static/icons/**.svg

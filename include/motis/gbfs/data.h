@@ -99,6 +99,7 @@ struct system_information {
   std::string url_;
   std::string purchase_url_;
   std::string mail_;
+  std::string color_;
 };
 
 struct rental_uris {
@@ -364,6 +365,7 @@ struct gbfs_products_ref {
 struct gbfs_provider {
   std::string id_;  // from config
   gbfs_provider_idx_t idx_{gbfs_provider_idx_t::invalid()};
+  std::string group_id_;
 
   std::shared_ptr<provider_file_infos> file_infos_{};
 
@@ -381,6 +383,16 @@ struct gbfs_provider {
   vector_map<gbfs_products_idx_t, provider_products> products_;
   bool has_vehicles_to_rent_{};
   geo::box bbox_{};
+
+  std::optional<std::string> color_{};
+};
+
+struct gbfs_group {
+  std::string id_;
+  std::string name_;
+  std::optional<std::string> color_;
+
+  std::vector<gbfs_provider_idx_t> providers_;
 };
 
 struct oauth_state {
@@ -401,6 +413,8 @@ struct provider_feed {
   std::optional<std::filesystem::path> dir_{};
   geofencing_restrictions default_restrictions_{};
   std::optional<return_constraint> default_return_constraint_{};
+  std::optional<std::string> config_group_{};
+  std::optional<std::string> config_color_{};
   std::shared_ptr<oauth_state> oauth_{};
 };
 
@@ -436,6 +450,8 @@ struct gbfs_data {
   vector_map<gbfs_provider_idx_t, std::unique_ptr<gbfs_provider>> providers_{};
   hash_map<std::string, gbfs_provider_idx_t> provider_by_id_{};
   point_rtree<gbfs_provider_idx_t> provider_rtree_{};
+
+  hash_map<std::string, gbfs_group> groups_{};
 
   lru_cache<gbfs_provider_idx_t, provider_routing_data> cache_;
 
