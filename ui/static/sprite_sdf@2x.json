@@ -1,0 +1,138 @@
+{
+  "bike": {
+    "height": 52,
+    "pixelRatio": 2,
+    "width": 58,
+    "x": 260,
+    "y": 0,
+    "sdf": true
+  },
+  "car": {
+    "height": 46,
+    "pixelRatio": 2,
+    "width": 50,
+    "x": 318,
+    "y": 0,
+    "sdf": true
+  },
+  "cargo_bike": {
+    "height": 44,
+    "pixelRatio": 2,
+    "width": 66,
+    "x": 296,
+    "y": 148,
+    "sdf": true
+  },
+  "elevator": {
+    "height": 52,
+    "pixelRatio": 2,
+    "width": 52,
+    "x": 296,
+    "y": 192,
+    "sdf": true
+  },
+  "floating_bike": {
+    "height": 66,
+    "pixelRatio": 2,
+    "width": 66,
+    "x": 164,
+    "y": 164,
+    "sdf": true
+  },
+  "floating_bike_cluster": {
+    "height": 82,
+    "pixelRatio": 2,
+    "width": 82,
+    "x": 0,
+    "y": 96,
+    "sdf": true
+  },
+  "floating_car": {
+    "height": 66,
+    "pixelRatio": 2,
+    "width": 66,
+    "x": 0,
+    "y": 178,
+    "sdf": true
+  },
+  "floating_car_cluster": {
+    "height": 82,
+    "pixelRatio": 2,
+    "width": 82,
+    "x": 82,
+    "y": 96,
+    "sdf": true
+  },
+  "floating_cargo_bike": {
+    "height": 66,
+    "pixelRatio": 2,
+    "width": 66,
+    "x": 66,
+    "y": 178,
+    "sdf": true
+  },
+  "floating_cargo_bike_cluster": {
+    "height": 82,
+    "pixelRatio": 2,
+    "width": 82,
+    "x": 96,
+    "y": 0,
+    "sdf": true
+  },
+  "floating_moped": {
+    "height": 66,
+    "pixelRatio": 2,
+    "width": 66,
+    "x": 230,
+    "y": 164,
+    "sdf": true
+  },
+  "floating_moped_cluster": {
+    "height": 82,
+    "pixelRatio": 2,
+    "width": 82,
+    "x": 164,
+    "y": 82,
+    "sdf": true
+  },
+  "floating_scooter": {
+    "height": 66,
+    "pixelRatio": 2,
+    "width": 66,
+    "x": 246,
+    "y": 82,
+    "sdf": true
+  },
+  "floating_scooter_cluster": {
+    "height": 82,
+    "pixelRatio": 2,
+    "width": 82,
+    "x": 178,
+    "y": 0,
+    "sdf": true
+  },
+  "moped": {
+    "height": 42,
+    "pixelRatio": 2,
+    "width": 56,
+    "x": 312,
+    "y": 52,
+    "sdf": true
+  },
+  "scooter": {
+    "height": 48,
+    "pixelRatio": 2,
+    "width": 54,
+    "x": 348,
+    "y": 192,
+    "sdf": true
+  },
+  "station_bg": {
+    "height": 96,
+    "pixelRatio": 2,
+    "width": 96,
+    "x": 0,
+    "y": 0,
+    "sdf": true
+  }
+}

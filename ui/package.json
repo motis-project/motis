@@ -13,7 +13,7 @@
 		"format": "prettier --write .",
 		"test:integration": "playwright test",
 		"test:unit": "vitest",
-		"update-sprite": "spreet sprite static/sprite && spreet --retina sprite static/sprite@2x"
+		"update-sprite": "spreet sprite --sdf static/sprite_sdf && spreet --sdf --retina sprite static/sprite_sdf@2x"
 	},
 	"devDependencies": {
 		"@eslint/compat": "^1.2.9",

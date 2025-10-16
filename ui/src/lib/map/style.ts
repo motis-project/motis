@@ -132,7 +132,7 @@ export const getStyle = (theme: 'light' | 'dark', level: number): StyleSpecifica
 			}
 		},
 		glyphs: '/glyphs/{fontstack}/{range}.pbf',
-		sprite: `/sprite`,
+		sprite: `/sprite_sdf`,
 		layers: [
 			{
 				id: 'background',

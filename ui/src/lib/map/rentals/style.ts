@@ -1,34 +1,18 @@
 import type { ExpressionSpecification } from 'maplibre-gl';
 
-export const zoomScaledIconSize: ExpressionSpecification = [
+export const createZoomScaledSize = (baseSize: number): ExpressionSpecification => [
 	'interpolate',
 	['linear'],
 	['zoom'],
 	14,
-	0.6,
+	baseSize * 0.6,
 	18,
-	1
+	baseSize
 ];
 
-export const zoomScaledTextSizeMedium: ExpressionSpecification = [
-	'interpolate',
-	['linear'],
-	['zoom'],
-	14,
-	7.2,
-	18,
-	12
-];
-
-export const zoomScaledTextSizeSmall: ExpressionSpecification = [
-	'interpolate',
-	['linear'],
-	['zoom'],
-	14,
-	6,
-	18,
-	10
-];
+export const zoomScaledIconSize = createZoomScaledSize(1);
+export const zoomScaledTextSizeMedium = createZoomScaledSize(12);
+export const zoomScaledTextSizeSmall = createZoomScaledSize(10);
 
 export const createZoomScaledTextOffset = (
 	baseOffset: [number, number]
@@ -43,3 +27,6 @@ export const createZoomScaledTextOffset = (
 ];
 
 export const zoomScaledTextOffset = createZoomScaledTextOffset([0.8, -1.25]);
+
+export const DEFAULT_COLOR = '#2563eb';
+export const DEFAULT_CONTRAST_COLOR = '#ffffff'
