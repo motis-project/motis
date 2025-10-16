@@ -134,6 +134,7 @@ api::rentals_response rental::operator()(
 
   auto const add_provider_group = [&](gbfs::gbfs_group const& group) {
     auto form_factors = std::vector<api::RentalFormFactorEnum>{};
+    auto color = group.color_;
     for (auto const& pi : group.providers_) {
       auto const& provider = gbfs->providers_.at(pi);
       assert(provider != nullptr);
@@ -142,12 +143,15 @@ api::rentals_response rental::operator()(
         if (utl::find(form_factors, ff) == end(form_factors)) {
           form_factors.push_back(ff);
         }
+        if (!color && provider->color_) {
+          color = provider->color_;
+        }
       }
     }
     res.providerGroups_.emplace_back(api::RentalProviderGroup{
         .id_ = group.id_,
         .name_ = group.name_,
-        .color_ = group.color_,
+        .color_ = color,
         .providers_ = query.withProviders_
                           ? utl::to_vec(group.providers_,
                                         [&](auto const pi) {
