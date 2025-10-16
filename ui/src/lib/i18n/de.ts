@@ -123,7 +123,12 @@ const translations: Translations = {
 	AERIAL_LIFT: 'Luftseilbahn',
 	toll: 'Achtung! Mautpflichtige Straße.',
 	accessRestriction: 'Kein Zugang',
-	continuesAs: 'Weiter als'
+	continuesAs: 'Weiter als',
+	rent: 'Ausleihen',
+	rideThroughAllowed: 'Durchfahrt erlaubt',
+	rideThroughNotAllowed: 'Durchfahrt nicht erlaubt',
+	rideEndAllowed: 'Parken erlaubt',
+	rideEndNotAllowed: 'Parken nur an Stationen'
 };
 
 export default translations;

@@ -37,13 +37,15 @@ export const defaultQuery = {
 	additionalTransferTime: 0,
 	transferTimeFactor: 1,
 	numItineraries: 5,
+	circleResolution: undefined,
 	maxItineraries: undefined,
 	passengers: 1,
 	luggage: 0,
 	slowDirect: false,
 	isochronesDisplayLevel: 'GEOMETRY_CIRCLES',
 	isochronesColor: '#ffff00',
-	isochronesOpacity: 250
+	isochronesOpacity: 250,
+	algorithm: 'RAPTOR'
 };
 
 export const omitDefaults = (query: PlanData['query']): PlanData['query'] => {

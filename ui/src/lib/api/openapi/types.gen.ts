@@ -172,10 +172,56 @@ export type Token = [
 export type LocationType = 'ADDRESS' | 'PLACE' | 'STOP';
 
 /**
+ * # Street modes
+ *
+ * - `WALK`
+ * - `BIKE`
+ * - `RENTAL` Experimental. Expect unannounced breaking changes (without version bumps) for all parameters and returned structs.
+ * - `CAR`
+ * - `CAR_PARKING` Experimental. Expect unannounced breaking changes (without version bumps) for all parameters and returned structs.
+ * - `CAR_DROPOFF` Experimental. Expect unannounced breaking changes (without version bumps) for all perameters and returned structs.
+ * - `ODM` on-demand taxis from the Prima+ÖV Project
+ * - `RIDE_SHARING` ride sharing from the Prima+ÖV Project
+ * - `FLEX` flexible transports
+ *
+ * # Transit modes
+ *
+ * - `TRANSIT`: translates to `RAIL,TRAM,BUS,FERRY,AIRPLANE,COACH,CABLE_CAR,FUNICULAR,AREAL_LIFT,OTHER`
+ * - `TRAM`: trams
+ * - `SUBWAY`: subway trains (Paris Metro, London Underground, but also NYC Subway, Hamburger Hochbahn, and other non-underground services)
+ * - `FERRY`: ferries
+ * - `AIRPLANE`: airline flights
+ * - `BUS`: short distance buses (does not include `COACH`)
+ * - `COACH`: long distance buses (does not include `BUS`)
+ * - `RAIL`: translates to `HIGHSPEED_RAIL,LONG_DISTANCE,NIGHT_RAIL,REGIONAL_RAIL,REGIONAL_FAST_RAIL,SUBURBAN,SUBWAY`
+ * - `SUBURBAN`: suburban trains (e.g. S-Bahn, RER, Elizabeth Line, ...)
+ * - `HIGHSPEED_RAIL`: long distance high speed trains (e.g. TGV)
+ * - `LONG_DISTANCE`: long distance inter city trains
+ * - `NIGHT_RAIL`: long distance night trains
+ * - `REGIONAL_FAST_RAIL`: regional express routes that skip low traffic stops to be faster
+ * - `REGIONAL_RAIL`: regional train
+ * - `CABLE_CAR`: Cable tram. Used for street-level rail cars where the cable runs beneath the vehicle (e.g., cable car in San Francisco).
+ * - `FUNICULAR`: Funicular. Any rail system designed for steep inclines.
+ * - `AERIAL_LIFT`: Aerial lift, suspended cable car (e.g., gondola lift, aerial tramway). Cable transport where cabins, cars, gondolas or open chairs are suspended by means of one or more cables.
+ * - `AREAL_LIFT`: deprecated
+ * - `METRO`: deprecated
+ *
+ */
+export type Mode = 'WALK' | 'BIKE' | 'RENTAL' | 'CAR' | 'CAR_PARKING' | 'CAR_DROPOFF' | 'ODM' | 'RIDE_SHARING' | 'FLEX' | 'TRANSIT' | 'TRAM' | 'SUBWAY' | 'FERRY' | 'AIRPLANE' | 'SUBURBAN' | 'BUS' | 'COACH' | 'RAIL' | 'HIGHSPEED_RAIL' | 'LONG_DISTANCE' | 'NIGHT_RAIL' | 'REGIONAL_FAST_RAIL' | 'REGIONAL_RAIL' | 'CABLE_CAR' | 'FUNICULAR' | 'AERIAL_LIFT' | 'OTHER' | 'AREAL_LIFT' | 'METRO';
+
+/**
  * GeoCoding match
  */
 export type Match = {
     type: LocationType;
+    /**
+     * Experimental. Type categories might be adjusted.
+     *
+     * For OSM stop locations: the amenity type based on
+     * https://wiki.openstreetmap.org/wiki/OpenStreetMap_Carto/Symbols
+     *
+     */
+    category?: string;
     /**
      * list of non-overlapping tokens that were matched
      */
@@ -230,6 +276,14 @@ export type Match = {
      * score according to the internal scoring system (the scoring algorithm might change in the future)
      */
     score: number;
+    /**
+     * available transport modes for stops
+     */
+    modes?: Array<Mode>;
+    /**
+     * importance of a stop, normalized from [0, 1]
+     */
+    importance?: number;
 };
 
 /**
@@ -259,43 +313,6 @@ export type PedestrianSpeed = number;
 export type CyclingSpeed = number;
 
 /**
- * # Street modes
- *
- * - `WALK`
- * - `BIKE`
- * - `RENTAL` Experimental. Expect unannounced breaking changes (without version bumps) for all parameters and returned structs.
- * - `CAR`
- * - `CAR_PARKING` Experimental. Expect unannounced breaking changes (without version bumps) for all parameters and returned structs.
- * - `CAR_DROPOFF` Experimental. Expect unannounced breaking changes (without version bumps) for all perameters and returned structs.
- * - `ODM` on-demand taxis from the Prima+ÖV Project
- * - `FLEX` flexible transports
- *
- * # Transit modes
- *
- * - `TRANSIT`: translates to `RAIL,TRAM,BUS,FERRY,AIRPLANE,COACH,CABLE_CAR,FUNICULAR,AREAL_LIFT,OTHER`
- * - `TRAM`: trams
- * - `SUBWAY`: subway trains (Paris Metro, London Underground, but also NYC Subway, Hamburger Hochbahn, and other non-underground services)
- * - `FERRY`: ferries
- * - `AIRPLANE`: airline flights
- * - `BUS`: short distance buses (does not include `COACH`)
- * - `COACH`: long distance buses (does not include `BUS`)
- * - `RAIL`: translates to `HIGHSPEED_RAIL,LONG_DISTANCE,NIGHT_RAIL,REGIONAL_RAIL,REGIONAL_FAST_RAIL,SUBURBAN,SUBWAY`
- * - `SUBURBAN`: suburban trains (e.g. S-Bahn, RER, Elizabeth Line, ...)
- * - `HIGHSPEED_RAIL`: long distance high speed trains (e.g. TGV)
- * - `LONG_DISTANCE`: long distance inter city trains
- * - `NIGHT_RAIL`: long distance night trains
- * - `REGIONAL_FAST_RAIL`: regional express routes that skip low traffic stops to be faster
- * - `REGIONAL_RAIL`: regional train
- * - `CABLE_CAR`: Cable tram. Used for street-level rail cars where the cable runs beneath the vehicle (e.g., cable car in San Francisco).
- * - `FUNICULAR`: Funicular. Any rail system designed for steep inclines.
- * - `AERIAL_LIFT`: Aerial lift, suspended cable car (e.g., gondola lift, aerial tramway). Cable transport where cabins, cars, gondolas or open chairs are suspended by means of one or more cables.
- * - `AREAL_LIFT`: deprecated
- * - `METRO`: deprecated
- *
- */
-export type Mode = 'WALK' | 'BIKE' | 'RENTAL' | 'CAR' | 'CAR_PARKING' | 'CAR_DROPOFF' | 'ODM' | 'FLEX' | 'TRANSIT' | 'TRAM' | 'SUBWAY' | 'FERRY' | 'AIRPLANE' | 'SUBURBAN' | 'BUS' | 'COACH' | 'RAIL' | 'HIGHSPEED_RAIL' | 'LONG_DISTANCE' | 'NIGHT_RAIL' | 'REGIONAL_FAST_RAIL' | 'REGIONAL_RAIL' | 'CABLE_CAR' | 'FUNICULAR' | 'AERIAL_LIFT' | 'OTHER' | 'AREAL_LIFT' | 'METRO';
-
-/**
  * - `NORMAL` - latitude / longitude coordinate or address
  * - `BIKESHARE` - bike sharing station
  * - `TRANSIT` - transit stop
@@ -319,6 +336,10 @@ export type Place = {
      * The ID of the stop. This is often something that users don't care about.
      */
     stopId?: string;
+    /**
+     * The importance of the stop between 0-1.
+     */
+    importance?: number;
     /**
      * latitude
      */
@@ -701,6 +722,240 @@ export type Rental = {
     returnConstraint?: RentalReturnConstraint;
 };
 
+/**
+ * A multi-polygon contains a number of polygons, each containing a number
+ * of rings, which are encoded as polylines (with precision 6).
+ *
+ * For each polygon, the first ring is the outer ring, all subsequent rings
+ * are inner rings (holes).
+ *
+ */
+export type MultiPolygon = Array<Array<EncodedPolyline>>;
+
+export type RentalZoneRestrictions = {
+    /**
+     * List of vehicle types (as indices into the provider's vehicle types
+     * array) to which these restrictions apply.
+     * If empty, the restrictions apply to all vehicle types of the provider.
+     *
+     */
+    vehicleTypeIdxs: Array<(number)>;
+    /**
+     * whether the ride is allowed to start in this zone
+     */
+    rideStartAllowed: boolean;
+    /**
+     * whether the ride is allowed to end in this zone
+     */
+    rideEndAllowed: boolean;
+    /**
+     * whether the ride is allowed to pass through this zone
+     */
+    rideThroughAllowed: boolean;
+    /**
+     * whether vehicles can only be parked at stations in this zone
+     */
+    stationParking?: boolean;
+};
+
+export type RentalVehicleType = {
+    /**
+     * Unique identifier of the vehicle type (unique within the provider)
+     */
+    id: string;
+    formFactor: RentalFormFactor;
+    propulsionType: RentalPropulsionType;
+    returnConstraint: RentalReturnConstraint;
+    /**
+     * Whether the return constraint was guessed instead of being specified by the rental provider
+     */
+    returnConstraintGuessed: boolean;
+};
+
+export type RentalProvider = {
+    /**
+     * Unique identifier of the rental provider
+     */
+    id: string;
+    /**
+     * Name of the provider to be displayed to customers
+     */
+    name: string;
+    /**
+     * Name of the system operator
+     */
+    operator?: string;
+    /**
+     * URL of the vehicle share system
+     */
+    url?: string;
+    /**
+     * URL where a customer can purchase a membership
+     */
+    purchaseUrl?: string;
+    /**
+     * Bounding box of the area covered by this rental provider,
+     * [west, south, east, north] as [lon, lat, lon, lat]
+     *
+     */
+    bbox: [
+        number,
+        number,
+        number,
+        number
+    ];
+    vehicleTypes: Array<RentalVehicleType>;
+    /**
+     * List of form factors offered by this provider
+     */
+    formFactors: Array<RentalFormFactor>;
+    defaultRestrictions: RentalZoneRestrictions;
+    globalGeofencingRules: Array<RentalZoneRestrictions>;
+};
+
+export type RentalStation = {
+    /**
+     * Unique identifier of the rental station
+     */
+    id: string;
+    /**
+     * Unique identifier of the rental provider
+     */
+    providerId: string;
+    /**
+     * Public name of the station
+     */
+    name: string;
+    /**
+     * latitude
+     */
+    lat: number;
+    /**
+     * longitude
+     */
+    lon: number;
+    /**
+     * Address where the station is located
+     */
+    address?: string;
+    /**
+     * Cross street or landmark where the station is located
+     */
+    crossStreet?: string;
+    /**
+     * Rental URI for Android (deep link to the specific station)
+     */
+    rentalUriAndroid?: string;
+    /**
+     * Rental URI for iOS (deep link to the specific station)
+     */
+    rentalUriIOS?: string;
+    /**
+     * Rental URI for web (deep link to the specific station)
+     */
+    rentalUriWeb?: string;
+    /**
+     * true if vehicles can be rented from this station, false if it is temporarily out of service
+     */
+    isRenting: boolean;
+    /**
+     * true if vehicles can be returned to this station, false if it is temporarily out of service
+     */
+    isReturning: boolean;
+    /**
+     * Number of vehicles available for rental at this station
+     */
+    numVehiclesAvailable: number;
+    /**
+     * List of form factors available for rental and/or return at this station
+     */
+    formFactors: Array<RentalFormFactor>;
+    /**
+     * List of vehicle types currently available at this station (vehicle type ID -> count)
+     */
+    vehicleTypesAvailable: {
+        [key: string]: (number);
+    };
+    /**
+     * List of vehicle docks currently available at this station (vehicle type ID -> count)
+     */
+    vehicleDocksAvailable: {
+        [key: string]: (number);
+    };
+    stationArea?: MultiPolygon;
+};
+
+export type RentalVehicle = {
+    /**
+     * Unique identifier of the rental vehicle
+     */
+    id: string;
+    /**
+     * Unique identifier of the rental provider
+     */
+    providerId: string;
+    /**
+     * Vehicle type ID (unique within the provider)
+     */
+    typeId: string;
+    /**
+     * latitude
+     */
+    lat: number;
+    /**
+     * longitude
+     */
+    lon: number;
+    formFactor: RentalFormFactor;
+    propulsionType: RentalPropulsionType;
+    returnConstraint: RentalReturnConstraint;
+    /**
+     * Station ID if the vehicle is currently at a station
+     */
+    stationId?: string;
+    /**
+     * Station ID where the vehicle must be returned, if applicable
+     */
+    homeStationId?: string;
+    /**
+     * true if the vehicle is currently reserved by a customer, false otherwise
+     */
+    isReserved: boolean;
+    /**
+     * true if the vehicle is out of service, false otherwise
+     */
+    isDisabled: boolean;
+    /**
+     * Rental URI for Android (deep link to the specific vehicle)
+     */
+    rentalUriAndroid?: string;
+    /**
+     * Rental URI for iOS (deep link to the specific vehicle)
+     */
+    rentalUriIOS?: string;
+    /**
+     * Rental URI for web (deep link to the specific vehicle)
+     */
+    rentalUriWeb?: string;
+};
+
+export type RentalZone = {
+    /**
+     * Unique identifier of the rental provider
+     */
+    providerId: string;
+    /**
+     * Public name of the geofencing zone
+     */
+    name?: string;
+    /**
+     * Zone precedence / z-index (higher number = higher precedence)
+     */
+    z: number;
+    area: MultiPolygon;
+    rules: Array<RentalZoneRestrictions>;
+};
+
 export type Leg = {
     /**
      * Transport mode for this leg
@@ -1007,7 +1262,7 @@ export type PlanData = {
         /**
          * algorithm to use
          */
-        algorithm?: 'RAPTOR' | 'TB';
+        algorithm?: 'RAPTOR' | 'PONG' | 'TB';
         /**
          * Optional. Default is `false`.
          *
@@ -1170,7 +1425,7 @@ export type PlanData = {
          * (usually BCP-47 / ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
          *
          */
-        language?: string;
+        language?: Array<(string)>;
         /**
          * Optional. Experimental. Number of luggage pieces; base unit: airline cabin luggage (e.g. for ODM or price calculation)
          *
@@ -1807,7 +2062,7 @@ export type GeocodeData = {
          * (usually ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
          *
          */
-        language?: string;
+        language?: Array<(string)>;
         /**
          * Optional. Used for biasing results towards the coordinate.
          *
@@ -1856,7 +2111,7 @@ export type TripData = {
          * (usually BCP-47 / ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
          *
          */
-        language?: string;
+        language?: Array<(string)>;
         /**
          * trip identifier (e.g. from an itinerary leg or stop event)
          */
@@ -1916,7 +2171,7 @@ export type StoptimesData = {
          * (usually BCP-47 / ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
          *
          */
-        language?: string;
+        language?: Array<(string)>;
         /**
          * Optional. Default is all transit modes.
          *
@@ -2067,6 +2322,46 @@ export type LevelsResponse = (Array<(number)>);
 
 export type LevelsError = (Error);
 
+export type RentalsData = {
+    query?: {
+        /**
+         * latitude,longitude pair of the upper left coordinate
+         */
+        max?: string;
+        /**
+         * latitude,longitude pair of the lower right coordinate
+         */
+        min?: string;
+        /**
+         * A list of rental providers to return.
+         * If empty (the default), all providers in the map section are returned.
+         *
+         */
+        providers?: Array<(string)>;
+        /**
+         * Optional. Include stations in output (requires at least min+max or providers filter).
+         */
+        withStations?: boolean;
+        /**
+         * Optional. Include free-floating vehicles in output (requires at least min+max or providers filter).
+         */
+        withVehicles?: boolean;
+        /**
+         * Optional. Include geofencing zones in output (requires at least min+max or providers filter).
+         */
+        withZones?: boolean;
+    };
+};
+
+export type RentalsResponse = ({
+    providers: Array<RentalProvider>;
+    stations: Array<RentalStation>;
+    vehicles: Array<RentalVehicle>;
+    zones: Array<RentalZone>;
+});
+
+export type RentalsError = (Error);
+
 export type TransfersData = {
     query: {
         /**
@@ -2078,6 +2373,8 @@ export type TransfersData = {
 
 export type TransfersResponse = ({
     place: Place;
+    root: Place;
+    equivalences: Array<Place>;
     /**
      * true if the server has foot transfers computed
      */

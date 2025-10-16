@@ -117,6 +117,10 @@ int generate(int ac, char** av) {
       modes->emplace_back(api::ModeEnum::ODM);
       use_odm = true;
     }
+    if (s.contains("RIDE_SHARING")) {
+      modes->emplace_back(api::ModeEnum::RIDE_SHARING);
+      use_odm = true;
+    }
   };
 
   auto const parse_time_of_day = [&](std::uint32_t const h) {
@@ -178,8 +182,10 @@ int generate(int ac, char** av) {
   auto d = data{data_path, c};
   utl::verify(d.tt_, "timetable required");
 
-  first_day = first_day ? d.tt_->date_range_.clamp(*first_day)
-                        : d.tt_->date_range_.from_;
+  first_day = first_day
+                  ? d.tt_->date_range_.clamp(*first_day)
+                  : std::chrono::time_point_cast<date::sys_days::duration>(
+                        d.tt_->external_interval().from_);
   last_day = last_day ? d.tt_->date_range_.clamp(
                             std::max(*first_day + date::days{1U}, *last_day))
                       : d.tt_->date_range_.clamp(*first_day + date::days{14U});
@@ -190,7 +196,8 @@ int generate(int ac, char** av) {
         *first_day, *last_day);
     return 1;
   }
-  fmt::println("date range: [{}, {}]", *first_day, *last_day);
+  fmt::println("date range: [{}, {}], tt={}", *first_day, *last_day,
+               d.tt_->external_interval());
 
   auto const use_odm_bounds = modes && use_odm && d.odm_bounds_ != nullptr;
   auto node_rtree = point_rtree<osr::node_idx_t>{};

@@ -100,8 +100,8 @@ data::data(std::filesystem::path p, config const& c)
 
   rt_ = std::make_shared<rt>();
 
-  if (c.odm_.has_value() && c.odm_->bounds_.has_value()) {
-    odm_bounds_ = std::make_unique<odm::bounds>(*c.odm_->bounds_);
+  if (c.prima_.has_value() && c.prima_->bounds_.has_value()) {
+    odm_bounds_ = std::make_unique<odm::bounds>(*c.prima_->bounds_);
   }
 
   auto geocoder = std::async(std::launch::async, [&]() {
@@ -294,7 +294,7 @@ void data::load_geocoder() {
     auto cache = hash_map<std::string, date::time_zone const*>{};
     for (auto const [type, areas] :
          utl::zip(t_->place_type_, t_->place_areas_)) {
-      if (type != adr::place_type::kExtra) {
+      if (type != adr::amenity_category::kExtra) {
         continue;
       }
 

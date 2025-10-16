@@ -1,5 +1,9 @@
 <script lang="ts">
 	import X from 'lucide-svelte/icons/x';
+	import Palette from 'lucide-svelte/icons/palette';
+	import Rss from 'lucide-svelte/icons/rss';
+	import Ban from 'lucide-svelte/icons/ban';
+	import LocateFixed from 'lucide-svelte/icons/locate-fixed';
 	import { getStyle } from '$lib/map/style';
 	import Map from '$lib/map/Map.svelte';
 	import Control from '$lib/map/Control.svelte';
@@ -55,6 +59,7 @@
 	import IsochronesInfo from '$lib/IsochronesInfo.svelte';
 	import type { DisplayLevel, IsochronesOptions, IsochronesPos } from '$lib/map/IsochronesShared';
 	import IsochronesMask from '$lib/IsochronesMask.svelte';
+	import Rentals from '$lib/map/rentals/Rentals.svelte';
 	import {
 		getFormFactors,
 		getPrePostDirectModes,
@@ -65,15 +70,17 @@
 	import { defaultQuery, omitDefaults } from '$lib/defaults';
 	import { LEVEL_MIN_ZOOM } from '$lib/constants';
 	import StopGeoJSON from '$lib/StopsGeoJSON.svelte';
+	import TrainFront from 'lucide-svelte/icons/train-front';
 
 	const urlParams = browser ? new URLSearchParams(window.location.search) : undefined;
 
-	const hasDebug = urlParams && urlParams.has('debug');
-	const hasDark = urlParams && urlParams.has('dark');
-	const hasLight = urlParams && urlParams.has('light');
+	const hasDebug: boolean = Boolean(urlParams?.has('debug'));
+	const hasDark: boolean = Boolean(urlParams?.has('dark'));
+	const hasLight: boolean = Boolean(urlParams?.has('light'));
 	const isSmallScreen = browser && window.innerWidth < 768;
 	let activeTab = $state<'connections' | 'departures' | 'isochrones'>('connections');
 	let dataAttributionLink: string | undefined = $state(undefined);
+	let colorMode = $state<'rt' | 'route' | 'mode' | 'none'>('route');
 	let showMap = $state(!isSmallScreen);
 	let lastSelectedItinerary: Itinerary | undefined = undefined;
 	let lastOneToAllQuery: OneToAllData | undefined = undefined;
@@ -87,11 +94,22 @@
 		document.documentElement.classList.add('dark');
 	}
 
-	let center = $state.raw<[number, number]>([8.652235, 49.876908]);
+	let center = $state.raw<[number, number]>([2.258882912876089, 48.72559118651327]);
 	let level = $state(0);
 	let zoom = $state(15);
 	let bounds = $state<maplibregl.LngLatBoundsLike>();
 	let map = $state<maplibregl.Map>();
+
+	const geolocate = new maplibregl.GeolocateControl({
+		positionOptions: {
+			enableHighAccuracy: true
+		},
+		showAccuracyCircle: false
+	});
+
+	const getLocation = () => {
+		geolocate.trigger();
+	};
 
 	onMount(async () => {
 		initial().then((d) => {
@@ -165,6 +183,9 @@
 			: undefined
 	);
 	let arriveBy = $state<boolean>(urlParams?.get('arriveBy') == 'true');
+	let algorithm = $state<PlanData['query']['algorithm']>(
+		(urlParams?.get('algorithm') ?? 'RAPTOR') as PlanData['query']['algorithm']
+	);
 	let useRoutedTransfers = $state(
 		urlParams?.get('useRoutedTransfers') == 'true' || defaultQuery.useRoutedTransfers
 	);
@@ -235,6 +256,9 @@
 		status: 'DONE',
 		error: undefined
 	});
+	const isochronesCircleResolution = urlParams?.get('isochronesCircleResolution')
+		? parseIntOr(urlParams.get('isochronesCircleResolution'), defaultQuery.circleResolution)
+		: defaultQuery.circleResolution;
 
 	const toPlaceString = (l: Location) => {
 		if (l.match?.type === 'STOP') {
@@ -284,7 +308,8 @@
 						maxDirectTime,
 						ignorePreTransitRentalReturnConstraints,
 						ignorePostTransitRentalReturnConstraints,
-						ignoreDirectRentalReturnConstraints
+						ignoreDirectRentalReturnConstraints,
+						algorithm
 					} as PlanData['query'])
 				} as PlanData)
 			: undefined
@@ -386,7 +411,10 @@
 						maxTravelTime: q.maxTravelTime * 60,
 						isochronesColor,
 						isochronesOpacity,
-						isochronesDisplayLevel
+						isochronesDisplayLevel,
+						...(isochronesCircleResolution && isochronesCircleResolution > 2
+							? { isochronesCircleResolution }
+							: {})
 					},
 					{},
 					true
@@ -432,6 +460,12 @@
 		}
 		lastSelectedItinerary = page.state.selectedItinerary;
 	};
+
+	$effect(() => {
+		if (map) {
+			map.addControl(geolocate);
+		}
+	});
 
 	$effect(flyToSelectedItinerary);
 
@@ -644,7 +678,7 @@
 	bind:center
 	transformRequest={(url: string) => {
 		if (url.startsWith('/sprite')) {
-			return { url: `${window.location.origin}${url}` };
+			return { url: new URL(url.slice(1), window.location.href).toString() };
 		}
 		if (url.startsWith('/')) {
 			return { url: `${client.getConfig().baseUrl}/tiles${url}` };
@@ -685,7 +719,45 @@
 
 	{#if showMap}
 		{#if activeTab != 'isochrones'}
-			<RailViz {map} {bounds} {zoom} />
+			<Control
+				position={browser && window.innerWidth < 768 ? 'bottom-left' : 'top-right'}
+				class="pb-4"
+			>
+				<Button
+					size="icon"
+					onclick={() => {
+						colorMode = (function () {
+							switch (colorMode) {
+								case 'rt':
+									return 'route';
+								case 'route':
+									return 'mode';
+								case 'mode':
+									return 'none';
+								case 'none':
+									return 'rt';
+							}
+						})();
+					}}
+				>
+					{#if colorMode == 'rt'}
+						<Rss class="h-[1.2rem] w-[1.2rem]" />
+					{:else if colorMode == 'mode'}
+						<TrainFront class="h-[1.2rem] w-[1.2rem]" />
+					{:else if colorMode == 'none'}
+						<Ban class="h-[1.2rem] w-[1.2rem]" />
+					{:else}
+						<Palette class="h-[1.2rem] w-[1.2rem]" />
+					{/if}
+				</Button>
+				<Button size="icon" onclick={() => getLocation()}>
+					<LocateFixed class="w-5 h-5" />
+				</Button>
+			</Control>
+			{#if colorMode != 'none'}
+				<RailViz {map} {bounds} {zoom} {colorMode} />
+				<Rentals {map} {bounds} {zoom} />
+			{/if}
 		{/if}
 		<!-- Isochrones cannot be hidden the same way as RailViz -->
 		<Isochrones
@@ -695,6 +767,7 @@
 			streetModes={arriveBy ? preTransitModes : postTransitModes}
 			wheelchair={pedestrianProfile === 'WHEELCHAIR'}
 			maxAllTime={arriveBy ? maxPreTransitTime : maxPostTransitTime}
+			circleResolution={isochronesCircleResolution}
 			active={activeTab == 'isochrones'}
 			bind:options={isochronesOptions}
 		/>

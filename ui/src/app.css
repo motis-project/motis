@@ -105,6 +105,26 @@ body {
 
 .maplibregl-popup-content {
 	background-color: hsl(var(--background)) !important;
+	padding: 12px 40px 12px 12px !important;
+}
+
+.maplibregl-popup-close-button {
+	font-size: 24px !important;
+	width: 32px !important;
+	height: 32px !important;
+	line-height: 32px !important;
+	padding: 0 !important;
+	display: flex !important;
+	align-items: center !important;
+	justify-content: center !important;
+	color: hsl(var(--foreground)) !important;
+	opacity: 0.7;
+	transition: opacity 0.2s;
+}
+
+.maplibregl-popup-close-button:hover {
+	background-color: hsl(var(--accent)) !important;
+	opacity: 1;
 }
 
 .maplibregl-control-container .maplibregl-ctrl-top-left {
