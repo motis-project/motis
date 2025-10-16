@@ -33,6 +33,8 @@ api::rentals_response rental::operator()(
   auto const filter_bbox = min.has_value() && max.has_value();
   auto const filter_providers =
       query.providers_.has_value() && !query.providers_->empty();
+  auto const filter_groups =
+      query.providerGroups_.has_value() && !query.providerGroups_->empty();
 
   auto gbfs = gbfs_;
   auto res = api::rentals_response{};
@@ -90,6 +92,9 @@ api::rentals_response rental::operator()(
   };
 
   auto const add_provider = [&](gbfs::gbfs_provider const* provider) {
+    if (!query.withProviders_) {
+      return;
+    }
     auto form_factors = std::vector<api::RentalFormFactorEnum>{};
     for (auto const& vt : provider->vehicle_types_) {
       auto const ff = gbfs::to_api_form_factor(vt.form_factor_);
@@ -100,9 +105,11 @@ api::rentals_response rental::operator()(
     res.providers_.emplace_back(api::RentalProvider{
         .id_ = provider->id_,
         .name_ = provider->sys_info_.name_,
+        .groupId_ = provider->group_id_,
         .operator_ = provider->sys_info_.operator_,
         .url_ = provider->sys_info_.url_,
         .purchaseUrl_ = provider->sys_info_.purchase_url_,
+        .color_ = provider->color_,
         .bbox_ = {provider->bbox_.min_.lng_, provider->bbox_.min_.lat_,
                   provider->bbox_.max_.lng_, provider->bbox_.max_.lat_},
         .vehicleTypes_ = utl::to_vec(
@@ -125,11 +132,39 @@ api::rentals_response rental::operator()(
                         [&](gbfs::rule const& r) { return rule_to_api(r); })});
   };
 
-  if (!filter_bbox && !filter_providers) {
+  auto const add_provider_group = [&](gbfs::gbfs_group const& group) {
+    auto form_factors = std::vector<api::RentalFormFactorEnum>{};
+    for (auto const& pi : group.providers_) {
+      auto const& provider = gbfs->providers_.at(pi);
+      assert(provider != nullptr);
+      for (auto const& vt : provider->vehicle_types_) {
+        auto const ff = gbfs::to_api_form_factor(vt.form_factor_);
+        if (utl::find(form_factors, ff) == end(form_factors)) {
+          form_factors.push_back(ff);
+        }
+      }
+    }
+    res.providerGroups_.emplace_back(api::RentalProviderGroup{
+        .id_ = group.id_,
+        .name_ = group.name_,
+        .color_ = group.color_,
+        .providers_ = query.withProviders_
+                          ? utl::to_vec(group.providers_,
+                                        [&](auto const pi) {
+                                          return gbfs->providers_.at(pi)->id_;
+                                        })
+                          : std::vector<std::string>{},
+        .formFactors_ = form_factors});
+  };
+
+  if (!filter_bbox && !filter_providers && !filter_groups) {
     for (auto const& provider : gbfs->providers_) {
       if (provider != nullptr) {
         add_provider(provider.get());
       }
+    }
+    for (auto const& group : gbfs->groups_ | std::views::values) {
+      add_provider_group(group);
     }
     return res;
   }
@@ -140,24 +175,47 @@ api::rentals_response rental::operator()(
   };
 
   auto providers = hash_set<gbfs::gbfs_provider const*>{};
+  auto provider_groups = hash_set<std::string>{};
 
   if (filter_bbox) {
     gbfs->provider_rtree_.find(bbox, [&](gbfs_provider_idx_t const pi) {
       auto const& provider = gbfs->providers_.at(pi);
-      if (provider == nullptr ||
-          (filter_providers && utl::find(*query.providers_, provider->id_) ==
-                                   end(*query.providers_))) {
+      if (provider == nullptr) {
+        return;
+      }
+      if ((filter_providers || filter_groups) &&
+          !((filter_providers && utl::find(*query.providers_, provider->id_) !=
+                                     end(*query.providers_)) ||
+            (filter_groups &&
+             utl::find(*query.providerGroups_, provider->group_id_) !=
+                 end(*query.providerGroups_)))) {
         return;
       }
       providers.insert(provider.get());
+      provider_groups.insert(provider->group_id_);
     });
-  } else if (filter_providers) {
-    for (auto const& id : *query.providers_) {
-      if (auto const it = gbfs->provider_by_id_.find(id);
-          it != end(gbfs->provider_by_id_)) {
-        auto const& provider = gbfs->providers_.at(it->second);
-        if (provider != nullptr) {
-          providers.insert(provider.get());
+  } else if (filter_providers || filter_groups) {
+    if (filter_providers) {
+      for (auto const& id : *query.providers_) {
+        if (auto const it = gbfs->provider_by_id_.find(id);
+            it != end(gbfs->provider_by_id_)) {
+          auto const& provider = gbfs->providers_.at(it->second);
+          if (provider != nullptr) {
+            providers.insert(provider.get());
+            provider_groups.insert(provider->group_id_);
+          }
+        }
+      }
+    }
+    if (filter_groups) {
+      for (auto const& id : *query.providerGroups_) {
+        if (auto const it = gbfs->groups_.find(id); it != end(gbfs->groups_)) {
+          provider_groups.insert(it->second.id_);
+          for (auto const pi : it->second.providers_) {
+            auto const& provider = gbfs->providers_.at(pi);
+            assert(provider != nullptr);
+            providers.insert(provider.get());
+          }
         }
       }
     }
@@ -208,6 +266,7 @@ api::rentals_response rental::operator()(
           res.stations_.emplace_back(api::RentalStation{
               .id_ = st.info_.id_,
               .providerId_ = provider->id_,
+              .providerGroupId_ = provider->group_id_,
               .name_ = st.info_.name_,
               .lat_ = st.info_.pos_.lat_,
               .lon_ = st.info_.pos_.lng_,
@@ -238,6 +297,7 @@ api::rentals_response rental::operator()(
           res.vehicles_.emplace_back(api::RentalVehicle{
               .id_ = vs.id_,
               .providerId_ = provider->id_,
+              .providerGroupId_ = provider->group_id_,
               .typeId_ = vt.id_,
               .lat_ = vs.pos_.lat_,
               .lon_ = vs.pos_.lng_,
@@ -268,6 +328,7 @@ api::rentals_response rental::operator()(
         }
         res.zones_.emplace_back(api::RentalZone{
             .providerId_ = provider->id_,
+            .providerGroupId_ = provider->group_id_,
             .name_ = zone.name_,
             .z_ = n_zones - static_cast<std::int64_t>(order),
             .area_ = multipoly_to_api(zone.geom_.get()),
@@ -277,6 +338,10 @@ api::rentals_response rental::operator()(
         });
       }
     }
+  }
+
+  for (auto const& group_id : provider_groups) {
+    add_provider_group(gbfs->groups_.at(group_id));
   }
 
   return res;

@@ -137,9 +137,23 @@ struct config {
       std::string url_;
       std::optional<headers_t> headers_{};
       std::optional<oauth_settings> oauth_{};
+      std::optional<
+          std::variant<std::string, std::map<std::string, std::string>>>
+          group_{};
+      std::optional<
+          std::variant<std::string, std::map<std::string, std::string>>>
+          color_{};
+    };
+
+    struct group {
+      bool operator==(group const&) const = default;
+      std::optional<std::string> name_{};
+      std::optional<std::string> color_{};
+      std::optional<std::string> url_{};
     };
 
     std::map<std::string, feed> feeds_{};
+    std::map<std::string, group> groups_{};
     std::map<std::string, restrictions> default_restrictions_{};
     unsigned update_interval_{60};
     unsigned http_timeout_{30};

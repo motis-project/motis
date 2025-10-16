@@ -202,6 +202,12 @@ void load_system_information(gbfs_provider& provider, json::value const& root) {
   si.url_ = optional_str(data, "url");
   si.purchase_url_ = optional_str(data, "purchase_url");
   si.mail_ = optional_str(data, "email");
+  if (data.contains("brand_assets")) {
+    auto const& ba = data.at("brand_assets").as_object();
+    si.color_ = optional_str(ba, "color");
+  } else {
+    si.color_ = "";
+  }
 }
 
 void load_station_information(gbfs_provider& provider,
