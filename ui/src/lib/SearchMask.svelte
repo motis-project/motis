@@ -34,7 +34,10 @@
 		maxDirectTime = $bindable(),
 		ignorePreTransitRentalReturnConstraints = $bindable(),
 		ignorePostTransitRentalReturnConstraints = $bindable(),
-		ignoreDirectRentalReturnConstraints = $bindable()
+		ignoreDirectRentalReturnConstraints = $bindable(),
+		preTransitProviderGroups = $bindable(),
+		postTransitProviderGroups = $bindable(),
+		directProviderGroups = $bindable()
 	}: {
 		geocodingBiasPlace?: maplibregl.LngLatLike;
 		from: Location;
@@ -57,6 +60,9 @@
 		ignorePreTransitRentalReturnConstraints: boolean;
 		ignorePostTransitRentalReturnConstraints: boolean;
 		ignoreDirectRentalReturnConstraints: boolean;
+		preTransitProviderGroups: string[];
+		postTransitProviderGroups: string[];
+		directProviderGroups: string[];
 	} = $props();
 
 	let fromItems = $state<Array<Location>>([]);
@@ -161,6 +167,9 @@
 			bind:ignorePreTransitRentalReturnConstraints
 			bind:ignorePostTransitRentalReturnConstraints
 			bind:ignoreDirectRentalReturnConstraints
+			bind:preTransitProviderGroups
+			bind:postTransitProviderGroups
+			bind:directProviderGroups
 		/>
 	</div>
 </div>

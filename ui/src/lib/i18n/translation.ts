@@ -39,11 +39,13 @@ export type Translations = {
 	platformAbr: string;
 	tripIntermediateStops: (n: number) => string;
 	sharingProvider: string;
+	sharingProviders: string;
 	roundtripStationReturnConstraint: string;
 	noItinerariesFound: string;
 	advancedSearchOptions: string;
 	selectTransitModes: string;
 	defaultSelectedModes: string;
+	defaultSelectedProviders: string;
 	selectElevationCosts: string;
 	wheelchair: string;
 	useRoutedTransfers: string;

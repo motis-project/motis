@@ -29,4 +29,4 @@ export const createZoomScaledTextOffset = (
 export const zoomScaledTextOffset = createZoomScaledTextOffset([0.8, -1.25]);
 
 export const DEFAULT_COLOR = '#2563eb';
-export const DEFAULT_CONTRAST_COLOR = '#ffffff'
+export const DEFAULT_CONTRAST_COLOR = '#ffffff';

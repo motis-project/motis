@@ -45,11 +45,13 @@ const translations: Translations = {
 		return `${n} mezizastávek`;
 	},
 	sharingProvider: 'Poskytovatel dat',
+	sharingProviders: 'Poskytovatelé dat',
 	roundtripStationReturnConstraint: 'Pojezd musí být vrácen k počáteční stanice',
 	noItinerariesFound: 'Spojení nebylo nalezeno.',
 	advancedSearchOptions: 'Možnosti',
 	selectTransitModes: 'Vyber dopravní prostředky',
 	defaultSelectedModes: 'Všechny dopravní prostředky',
+	defaultSelectedProviders: 'Všichni poskytovatelé',
 	selectElevationCosts: 'Bez prudkého stoupání.',
 	wheelchair: 'Bezbariérové přestupy',
 	useRoutedTransfers: 'Počítej trasu pro přestupy',

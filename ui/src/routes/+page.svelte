@@ -217,6 +217,9 @@
 			getUrlArray('directRentalFormFactors') as RentalFormFactor[]
 		)
 	);
+	let preTransitProviderGroups = $state<string[]>(getUrlArray('preTransitRentalProviderGroups'));
+	let postTransitProviderGroups = $state<string[]>(getUrlArray('postTransitRentalProviderGroups'));
+	let directProviderGroups = $state<string[]>(getUrlArray('directRentalProviderGroups'));
 	let elevationCosts = $state<ElevationCosts>(
 		(urlParams?.get('elevationCosts') ?? 'NONE') as ElevationCosts
 	);
@@ -270,6 +273,13 @@
 		}
 	};
 
+	const providerGroupsForQuery = (modes: PrePostDirectMode[], groups: string[]): string[] => {
+		if (!modes.some((mode) => mode.startsWith('RENTAL_'))) {
+			return [];
+		}
+		return Array.from(new Set(groups));
+	};
+
 	let baseQuery = $derived(
 		from.match && to.match
 			? ({
@@ -297,6 +307,15 @@
 						preTransitRentalFormFactors: getFormFactors(preTransitModes),
 						postTransitRentalFormFactors: getFormFactors(postTransitModes),
 						directRentalFormFactors: getFormFactors(directModes),
+						preTransitRentalProviderGroups: providerGroupsForQuery(
+							preTransitModes,
+							preTransitProviderGroups
+						),
+						postTransitRentalProviderGroups: providerGroupsForQuery(
+							postTransitModes,
+							postTransitProviderGroups
+						),
+						directRentalProviderGroups: providerGroupsForQuery(directModes, directProviderGroups),
 						requireBikeTransport,
 						requireCarTransport,
 						elevationCosts,
@@ -570,6 +589,9 @@
 								bind:ignorePreTransitRentalReturnConstraints
 								bind:ignorePostTransitRentalReturnConstraints
 								bind:ignoreDirectRentalReturnConstraints
+								bind:preTransitProviderGroups
+								bind:postTransitProviderGroups
+								bind:directProviderGroups
 							/>
 						</Card>
 					</Tabs.Content>
@@ -600,6 +622,9 @@
 								bind:ignorePreTransitRentalReturnConstraints
 								bind:ignorePostTransitRentalReturnConstraints
 								bind:options={isochronesOptions}
+								bind:preTransitProviderGroups
+								bind:postTransitProviderGroups
+								bind:directProviderGroups
 							/>
 						</Card>
 					</Tabs.Content>
