@@ -7,11 +7,8 @@
 	import { type PrePostDirectMode, getFormFactors } from '$lib/Modes';
 	import { formFactorAssets } from '$lib/map/rentals/assets';
 	import { DEFAULT_COLOR } from '$lib/map/rentals/style';
-	import {
-		getRentalProviderGroups,
-		getCachedRentalProviderGroups
-	} from '$lib/rentals/providerGroups';
-	import type { RentalFormFactor, RentalProviderGroup } from '$lib/api/openapi';
+	import { rentals, type RentalFormFactor } from '$lib/api/openapi';
+	import { createQuery } from '@tanstack/svelte-query';
 
 	let {
 		label,
@@ -38,11 +35,6 @@
 		label: t[value as TranslationKey] as string
 	}));
 
-	const initialProviderGroups = getCachedRentalProviderGroups() ?? [];
-	let providerGroupData = $state<RentalProviderGroup[]>(initialProviderGroups);
-	let providerGroupsLoading = $state(false);
-	let providerGroupsFailed = $state(false);
-
 	type ProviderOption = {
 		id: string;
 		name: string;
@@ -50,14 +42,28 @@
 		formFactors: RentalFormFactor[];
 	};
 
-	const allProviderGroupOptions = $derived.by((): ProviderOption[] =>
-		providerGroupData.map((group) => ({
-			id: group.id,
-			name: group.name,
-			color: group.color ?? DEFAULT_COLOR,
-			formFactors: group.formFactors
-		}))
-	);
+	const providerGroupsQuery = createQuery(() => ({
+		queryKey: ['rentalProviderGroups'],
+		queryFn: async () => {
+			const { data, error } = await rentals({ query: { withProviders: false } });
+			if (error) {
+				throw error;
+			}
+			return data;
+		},
+		staleTime: 0
+	}));
+
+	const allProviderGroupOptions = $derived.by((): ProviderOption[] => {
+		return (providerGroupsQuery.data?.providerGroups || [])
+			.map((group) => ({
+				id: group.id,
+				name: group.name,
+				color: group.color ?? DEFAULT_COLOR,
+				formFactors: group.formFactors
+			}))
+			.sort((a, b) => a.name.localeCompare(b.name));
+	});
 
 	const selectedRentalFormFactors = $derived(getFormFactors(modes));
 
@@ -72,36 +78,10 @@
 		});
 	});
 
-	const ensureProviderGroups = async () => {
-		if (providerGroupData.length || providerGroupsLoading) {
-			return;
-		}
-		providerGroupsLoading = true;
-		try {
-			providerGroupData = await getRentalProviderGroups();
-			providerGroupsFailed = false;
-		} catch (err) {
-			console.error('[StreetModes] failed to load rental provider groups', err);
-			providerGroupsFailed = true;
-		} finally {
-			providerGroupsLoading = false;
-		}
-	};
-
 	const containsRental = (modes: PrePostDirectMode[]) =>
 		modes.some((mode) => mode.startsWith('RENTAL_'));
 
 	const showRental = $derived(containsRental(modes));
-
-	$effect(() => {
-		if (!showRental) {
-			providerGroupsFailed = false;
-			return;
-		}
-		if (providerGroupData.length === 0 && !providerGroupsLoading && !providerGroupsFailed) {
-			void ensureProviderGroups();
-		}
-	});
 
 	$effect(() => {
 		if (!providerGroupOptions.length) {
