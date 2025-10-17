@@ -71,6 +71,7 @@
 		providerId: string;
 		providerName: string;
 		formFactor: RentalFormFactor;
+		color: string;
 	};
 
 	let rentalsData = $state<RentalsPayload | null>(null);
@@ -126,7 +127,8 @@
 				provider.formFactors.map((formFactor) => ({
 					providerId: provider.id,
 					providerName: provider.name,
-					formFactor
+					formFactor,
+					color: provider.color || DEFAULT_COLOR
 				}))
 			)
 			.sort(
@@ -957,7 +959,12 @@
 				>
 					<span class="truncate">{option.providerName}</span>
 					<span class="flex items-center gap-1 text-xs font-medium">
-						<svg class="h-4 w-4 fill-current" aria-hidden="true" focusable="false">
+						<svg
+							class="h-4 w-4 fill-current"
+							aria-hidden="true"
+							focusable="false"
+							style={`color: ${option.color}`}
+						>
 							<use href={`#${formFactorAssets[option.formFactor].svg}`} />
 						</svg>
 					</span>
