@@ -621,7 +621,7 @@
 		</Control>
 		{#if showMap}
 			<ItineraryGeoJson itinerary={page.state.selectedItinerary} {level} />
-			<StopGeoJSON itinerary={page.state.selectedItinerary} />
+			<StopGeoJSON itinerary={page.state.selectedItinerary} {theme} />
 		{/if}
 	{/if}
 
@@ -722,7 +722,7 @@
 	{#if showMap}
 		{#if activeTab != 'isochrones'}
 			<Control
-				position={browser && window.innerWidth < 768 ? 'bottom-left' : 'top-right'}
+				position={'top-right'}
 				class="pb-4"
 			>
 				<Button
