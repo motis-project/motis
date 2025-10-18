@@ -3,6 +3,7 @@
 	import { setContext, type Snippet } from 'svelte';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import { createShield } from './shield';
+	import { browser } from '$app/environment';
 
 	let {
 		map = $bindable(),
@@ -103,7 +104,7 @@
 				unit: 'metric'
 			});
 
-			tmp.addControl(scale, 'bottom-left');
+			tmp.addControl(scale, browser && window.innerWidth < 768 ? 'top-left' : 'bottom-left');
 
 			tmp.on('load', () => {
 				map = tmp;
