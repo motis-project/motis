@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { cn } from '$lib/utils.js';
 	import ChevronDown from 'lucide-svelte/icons/chevron-down';
-	import { type Snippet } from 'svelte';
+	import { onMount, onDestroy, type Snippet } from 'svelte';
 	import type { HTMLAttributes } from 'svelte/elements';
 
 	let {
@@ -24,6 +24,40 @@
 	let currentY = 0;
 	let isDragging = false;
 	let fromHandle = false;
+	let container: HTMLElement | null;
+	let isChanged = false;
+
+	onMount(() => {
+		const handlePopState = () => {
+			if (isChanged) {
+				const savedScrollPos = parseFloat(localStorage.getItem(`scroll:${window.location.href}`)!);
+				container!.scrollTop = savedScrollPos;
+			}
+		};
+
+		container?.addEventListener('scrollend', () => {
+			console.log('SAVED: ', container?.scrollTop);
+			localStorage.setItem(`scroll:${window.location.href}`, container!.scrollTop.toString());
+		});
+
+		const observer = new MutationObserver(() => {
+			isChanged = true;
+			container!.scrollTop = 0;
+		});
+
+		window.addEventListener('popstate', handlePopState);
+
+		observer.observe(container!, {
+			childList: true,
+			subtree: false
+		});
+
+		onDestroy(() => {
+			console.log('DESTROED');
+			window.removeEventListener('popstate', handlePopState);
+			observer.disconnect();
+		});
+	});
 
 	const getScrollableElement = (element: Element): Element | null => {
 		while (element && element !== document.documentElement) {
@@ -75,6 +109,7 @@
 		} else {
 			ref!.style.transform = `translateY(${expanded ? minTranslate : window.innerHeight * maxTranslate}px)`;
 		}
+		showMap = true;
 		fromHandle = false;
 	};
 </script>
@@ -82,7 +117,7 @@
 <div
 	bind:this={ref}
 	class={cn(
-		'bg-card text-card-foreground rounded-xl pb-2 h-full border shadow max-w-full transition-transform duration-200 ease-out',
+		'bg-card text-card-foreground rounded-xl pb-8 h-full border shadow max-w-full transition-transform duration-200 ease-out',
 		className
 	)}
 	{...restProps}
@@ -102,7 +137,7 @@
 			class:opacity-0={!expanded}
 			class:opacity-100={expanded}
 		>
-			<ChevronDown class="size-14 text-gray-300 scale-x-150" strokeWidth={3} />
+			<ChevronDown class="size-12 text-gray-300 scale-x-150" strokeWidth={3.5} />
 		</div>
 		<div
 			class="w-14 h-2 bg-gray-300 rounded-full transition-all duration-200"
@@ -111,7 +146,7 @@
 		></div>
 	</div>
 
-	<div class:overflow-auto={expanded}>
+	<div bind:this={container} class:overflow-auto={expanded}>
 		{@render children?.()}
 	</div>
 </div>

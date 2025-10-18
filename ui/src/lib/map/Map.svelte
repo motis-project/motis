@@ -103,7 +103,7 @@
 				unit: 'metric'
 			});
 
-			tmp.addControl(scale, 'bottom-left');
+			tmp.addControl(scale, 'top-left');
 
 			tmp.on('load', () => {
 				map = tmp;

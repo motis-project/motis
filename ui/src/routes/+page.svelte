@@ -28,7 +28,6 @@
 	import maplibregl from 'maplibre-gl';
 	import { browser } from '$app/environment';
 	import {
-		closeItinerary,
 		cn,
 		getUrlArray,
 		onClickStop,
@@ -423,9 +422,9 @@
 				});
 			});
 			const padding = {
-				top: isSmallScreen ? Math.max(window.innerHeight / 2, 400) : 96,
+				top: 96,
 				right: 96,
-				bottom: 96,
+				bottom: isSmallScreen ? window.innerHeight * 0.3 : 96,
 				left: isSmallScreen ? 96 : 640
 			};
 			map.flyTo({ ...map.cameraForBounds(box, { padding }) });
@@ -547,13 +546,17 @@
 	{#if activeTab != 'isochrones' && routingResponses.length !== 0 && !page.state.showDepartures}
 		<Control class="min-h-0 md:mb-2 {page.state.selectedItinerary ? 'hide' : ''}">
 			<Card
-				class="w-[520px] h-full md:max-h-[70vh] overflow-y-auto overflow-x-hidden bg-background rounded-lg"
+				class="w-[520px] h-full md:max-h-[60vh] {isSmallScreen
+					? 'border-0 shadow-none'
+					: ''} overflow-x-hidden bg-background rounded-lg"
 			>
 				<ItineraryList
 					{baseResponse}
 					{routingResponses}
 					{baseQuery}
-					selectItinerary={(selectedItinerary) => pushState('', { selectedItinerary })}
+					selectItinerary={(selectedItinerary) => {
+						pushState('journeyDetails' + window.location.search, { selectedItinerary });
+					}}
 					updateStartDest={preprocessItinerary(from, to)}
 				/>
 			</Card>
@@ -562,13 +565,13 @@
 
 	{#if activeTab != 'isochrones' && page.state.selectedItinerary && !page.state.showDepartures}
 		<Control class="min-h-0 md:mb-2">
-			<Card class="w-[520px] md:max-h-[70vh] h-full bg-background rounded-lg flex flex-col">
+			<Card class="w-[520px] md:max-h-[60vh] h-full bg-background rounded-lg flex flex-col">
 				<div class="w-full flex justify-between items-center shadow-md pl-1 mb-1">
 					<h2 class="ml-2 text-base font-semibold">{t.journeyDetails}</h2>
 					<Button
 						variant="ghost"
 						onclick={() => {
-							closeItinerary();
+							history.back();
 						}}
 					>
 						<X />
@@ -576,7 +579,7 @@
 				</div>
 				<div
 					class={'p-2 md:p-4 overflow-y-auto overflow-x-hidden min-h-0 ' +
-						(showMap ? 'md:max-h-[70vh]' : '')}
+						(showMap ? 'md:max-h-[60vh]' : '')}
 				>
 					<ConnectionDetail itinerary={page.state.selectedItinerary} />
 				</div>
@@ -590,7 +593,7 @@
 
 	{#if activeTab != 'isochrones' && page.state.selectedStop && page.state.showDepartures}
 		<Control class="min-h-0 md:mb-2">
-			<Card class="w-[520px] md:max-h-[70vh] h-full bg-background rounded-lg flex flex-col">
+			<Card class="w-[520px] md:max-h-[60vh] h-full bg-background rounded-lg flex flex-col">
 				<div class="w-full flex justify-between items-center shadow-md pl-1 mb-1">
 					<h2 class="ml-2 text-base font-semibold">
 						{#if page.state.stopArriveBy}
@@ -604,16 +607,13 @@
 					<Button
 						variant="ghost"
 						onclick={() => {
-							pushStateWithQueryString(
-								{ ...(page.state.tripId && { tripId: page.state.tripId }) },
-								{ selectedItinerary: page.state.selectedItinerary }
-							);
+							history.back();
 						}}
 					>
 						<X />
 					</Button>
 				</div>
-				<div class="p-2 md:p-4 overflow-y-auto overflow-x-hidden min-h-0 md:max-h-[70vh]">
+				<div class="p-2 md:p-4 overflow-y-auto overflow-x-hidden min-h-0 md:max-h-[60vh]">
 					<StopTimes
 						stopId={page.state.selectedStop.stopId}
 						stopName={page.state.selectedStop.name}
@@ -662,17 +662,19 @@
 
 	<LevelSelect {bounds} {zoom} bind:level />
 
-	{#if isSmallScreen}
-		<Drawer class="relative z-10 h-full mt-5 flex flex-col" bind:showMap>
-			{@render resultContent()}
-		</Drawer>
-	{:else}
-		<div class="maplibregl-ctrl-top-left">
-			{@render resultContent()}
-		</div>
+	{#if browser}
+		{#if isSmallScreen}
+			<Drawer class="relative z-10 h-full mt-5 flex flex-col" bind:showMap>
+				{@render resultContent()}
+			</Drawer>
+		{:else}
+			<div class="maplibregl-ctrl-top-left">
+				{@render resultContent()}
+			</div>
+		{/if}
 	{/if}
 
-	<div class="maplibregl-ctrl-bottom-right">
+	<div class="maplibregl-ctrl-{isSmallScreen ? 'top-left ml-[8rem]' : 'bottom-right'}">
 		<div class="maplibregl-ctrl maplibregl-ctrl-attrib">
 			<div class="maplibregl-ctrl-attrib-inner">
 				&copy; <a href="http://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>
