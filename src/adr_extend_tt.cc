@@ -27,14 +27,14 @@ constexpr auto const kClaszMax =
     static_cast<std::underlying_type_t<n::clasz>>(n::kNumClasses);
 
 date::time_zone const* get_tz(n::timetable const& tt,
-                              adr_ext const* lp,
+                              adr_ext const* ae,
                               tz_map_t const* tz,
                               n::location_idx_t const l) {
   auto const p = tt.locations_.parents_[l];
   auto const x = p == n::location_idx_t::invalid() ? l : p;
 
   auto const p_idx =
-      !lp || !tz ? adr_extra_place_idx_t::invalid() : lp->location_place_.at(x);
+      !ae || !tz ? adr_extra_place_idx_t::invalid() : ae->location_place_.at(x);
   if (p_idx != adr_extra_place_idx_t::invalid()) {
     return tz->at(p_idx);
   }
@@ -96,6 +96,27 @@ adr_ext adr_extend_tt(nigiri::timetable const& tt,
         ret.location_place_[l] =
             ret.location_place_[tt.locations_.get_root_idx(l)];
       }
+    }
+  }
+
+  for (auto const [i, p] : utl::enumerate(ret.location_place_)) {
+    auto const l = n::location_idx_t{i};
+    if (l >= n::kNSpecialStations && p == adr_extra_place_idx_t::invalid()) {
+      auto const parent =
+          tt.locations_.parents_[l] == n::location_idx_t::invalid()
+              ? n::get_special_station(n::special_station::kEnd)
+              : tt.locations_.parents_[l];
+      auto const grand_parent =
+          tt.locations_.parents_[parent] == n::location_idx_t::invalid()
+              ? n::get_special_station(n::special_station::kEnd)
+              : tt.locations_.parents_[parent];
+
+      utl::log_error("adr_extend",
+                     "invalid place for {} (parent={}, grand_parent={})",
+                     n::location{tt, l}, n::location{tt, parent},
+                     n::location{tt, grand_parent});
+
+      ret.location_place_[l] = adr_extra_place_idx_t{0U};
     }
   }
 
@@ -215,7 +236,7 @@ adr_ext adr_extend_tt(nigiri::timetable const& tt,
       }
     }
 
-    t.place_type_.emplace_back(a::place_type::kExtra);
+    t.place_type_.emplace_back(a::amenity_category::kExtra);
     t.place_names_.emplace_back(
         utl::to_vec(names, [](auto const& n) { return n.first; }));
     t.place_coordinates_.emplace_back(a::coordinates::from_latlng(pos));

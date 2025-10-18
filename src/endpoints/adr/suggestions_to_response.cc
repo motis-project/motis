@@ -43,8 +43,7 @@ api::geocode_response suggestions_to_response(
     platform_matches_t const* matches,
     basic_string<a::language_idx_t> const& lang_indices,
     std::vector<adr::token> const& token_pos,
-    std::vector<adr::suggestion> const& suggestions,
-    unsigned const api_version) {
+    std::vector<adr::suggestion> const& suggestions) {
   return utl::to_vec(suggestions, [&](a::suggestion const& s) {
     auto const areas = t.area_sets_[s.area_set_];
     auto modes = std::optional<std::vector<api::ModeEnum>>{};
@@ -54,10 +53,11 @@ api::geocode_response suggestions_to_response(
     auto house_number = std::optional<std::string>{};
     auto id = std::string{};
     auto level = std::optional<double>{};
+    auto category = std::optional<std::string>{};
     utl::visit(
         s.location_,
         [&](a::place_idx_t const p) {
-          type = t.place_type_[p] == a::place_type::kExtra
+          type = t.place_type_[p] == a::amenity_category::kExtra
                      ? api::LocationTypeEnum::STOP
                      : api::LocationTypeEnum::PLACE;
           if (type == api::LocationTypeEnum::STOP) {
@@ -73,10 +73,11 @@ api::geocode_response suggestions_to_response(
               auto const i = adr_extra_place_idx_t{
                   static_cast<adr_extra_place_idx_t::value_t>(p -
                                                               t.ext_start_)};
-              modes = to_modes(ae->place_clasz_[i], api_version);
+              modes = to_modes(ae->place_clasz_[i], 5);
               importance = ae->place_importance_[i];
             }
           } else {
+            category = to_str(t.place_type_[p]);
             id = fmt::format("{}/{}",
                              t.place_is_way_[to_idx(p)] ? "way" : "node",
                              t.place_osm_ids_[p]);
@@ -136,6 +137,7 @@ api::geocode_response suggestions_to_response(
 
     return api::Match{
         .type_ = type,
+        .category_ = std::move(category),
         .tokens_ = std::move(tokens),
         .name_ = s.format(t, f, country_code.value_or("DE")),
         .id_ = std::move(id),
@@ -157,7 +159,7 @@ api::geocode_response suggestions_to_response(
                 : std::optional{std::string{t.timezone_names_[s.tz_].view()}},
         .areas_ = std::move(api_areas),
         .score_ = s.score_,
-        .modes_ = modes,
+        .modes_ = std::move(modes),
         .importance_ = importance};
   });
 }

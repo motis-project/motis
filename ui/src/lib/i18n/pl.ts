@@ -128,7 +128,12 @@ const translations: Translations = {
 	AERIAL_LIFT: 'Wyciąg krzesełkowy',
 	toll: 'Uwaga! Za przejazd tą trasą pobierana jest opłata.',
 	accessRestriction: 'Ograniczony dostęp',
-	continuesAs: 'Kontynuuje jako'
+	continuesAs: 'Kontynuuje jako',
+	rent: 'Wypożycz',
+	rideThroughAllowed: 'Przejazd dozwolony',
+	rideThroughNotAllowed: 'Przejazd niedozwolony',
+	rideEndAllowed: 'Parkowanie dozwolone',
+	rideEndNotAllowed: 'Parkowanie tylko na stacjach'
 };
 
 export default translations;

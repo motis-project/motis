@@ -191,9 +191,10 @@ std::optional<std::vector<api::Alert>> get_alerts(
   auto alerts = std::vector<api::Alert>{};
   for (auto const& t : tt.trip_ids_[x]) {
     auto const src = tt.trip_id_src_[t];
-    rtt->alerts_.for_each_alert(
-        tt, src, x, fr.rt_, l, fuzzy_stop,
-        [&](n::alert_idx_t const a) { alerts.emplace_back(to_alert(a)); });
+    for (auto const& a :
+         rtt->alerts_.get_alerts(tt, src, x, fr.rt_, l, fuzzy_stop)) {
+      alerts.emplace_back(to_alert(a));
+    }
   }
 
   return alerts.empty() ? std::nullopt : std::optional{std::move(alerts)};
@@ -212,7 +213,7 @@ api::Itinerary journey_to_response(
     osr::elevation_storage const* elevations,
     n::shapes_storage const* shapes,
     gbfs::gbfs_routing_data& gbfs_rd,
-    adr_ext const* lp,
+    adr_ext const* ae,
     tz_map_t const* tz_map,
     n::routing::journey const& j,
     place_t const& start,
@@ -315,7 +316,8 @@ api::Itinerary journey_to_response(
               [](n::routing::journey::leg const& leg) {
                 return holds_alternative<n::routing::journey::run_enter_exit>(
                            leg.uses_) ||
-                       odm::is_odm_leg(leg);
+                       odm::is_odm_leg(leg, kOdmTransportModeId) ||
+                       odm::is_odm_leg(leg, kRideSharingTransportModeId);
               }) -
               1),
       .fareTransfers_ =
@@ -352,7 +354,7 @@ api::Itinerary journey_to_response(
     if (j.legs_.size() < 2) {
       return std::nullopt;
     }
-    auto const osm_tz = get_tz(tt, lp, tz_map, j.legs_[1].from_);
+    auto const osm_tz = get_tz(tt, ae, tz_map, j.legs_[1].from_);
     if (osm_tz != nullptr) {
       return std::optional{osm_tz->name()};
     }
@@ -369,16 +371,16 @@ api::Itinerary journey_to_response(
         pred == nullptr ? get_first_run_tz() : pred->to_.tz_;
     auto const from =
         pred == nullptr
-            ? to_place(&tt, &tags, w, pl, matches, lp, tz_map,
+            ? to_place(&tt, &tags, w, pl, matches, ae, tz_map,
                        tt_location{j_leg.from_}, start, dest, "", fallback_tz)
             : pred->to_;
     auto const to =
-        to_place(&tt, &tags, w, pl, matches, lp, tz_map, tt_location{j_leg.to_},
+        to_place(&tt, &tags, w, pl, matches, ae, tz_map, tt_location{j_leg.to_},
                  start, dest, "", fallback_tz);
 
     auto const to_place = [&](n::rt::run_stop const& s,
                               n::event_type const ev_type) {
-      auto p = ::motis::to_place(&tt, &tags, w, pl, matches, lp, tz_map, s,
+      auto p = ::motis::to_place(&tt, &tags, w, pl, matches, ae, tz_map, s,
                                  start, dest);
       p.alerts_ = get_alerts(*s.fr_, std::pair{s, ev_type}, false, language);
       return p;
@@ -561,7 +563,7 @@ api::Itinerary journey_to_response(
               auto out = std::unique_ptr<output>{};
               if (flex::mode_id::is_flex(x.transport_mode_id_)) {
                 out = std::make_unique<flex::flex_output>(
-                    *w, *l, pl, matches, lp, tz_map, tags, tt, *fl,
+                    *w, *l, pl, matches, ae, tz_map, tags, tt, *fl,
                     flex::mode_id{x.transport_mode_id_});
               } else if (x.transport_mode_id_ >= kGbfsTransportModeIdOffset) {
                 auto const is_pre_transit = pred == nullptr;

@@ -31,12 +31,12 @@ default_output::default_output(osr::ways const& w,
 default_output::default_output(osr::ways const& w,
                                nigiri::transport_mode_id_t const id)
     : w_{w},
-      profile_{id == kOdmTransportModeId
+      profile_{id == kOdmTransportModeId || id == kRideSharingTransportModeId
                    ? osr::search_profile::kCar
                    : osr::search_profile{static_cast<
                          std::underlying_type_t<osr::search_profile>>(id)}},
       id_{id} {
-  utl::verify(id <= kOdmTransportModeId, "invalid mode id={}", id);
+  utl::verify(id <= kRideSharingTransportModeId, "invalid mode id={}", id);
 }
 
 default_output::~default_output() = default;
@@ -44,6 +44,9 @@ default_output::~default_output() = default;
 api::ModeEnum default_output::get_mode() const {
   if (id_ == kOdmTransportModeId) {
     return api::ModeEnum::ODM;
+  }
+  if (id_ == kRideSharingTransportModeId) {
+    return api::ModeEnum::RIDE_SHARING;
   }
 
   switch (profile_) {
@@ -281,8 +284,11 @@ api::Itinerary street_routing(osr::ways const& w,
         }
 
         auto& leg = itinerary.legs_.emplace_back(api::Leg{
-            .mode_ = out.get_mode() == api::ModeEnum::ODM ? api::ModeEnum::ODM
-                                                          : to_mode(lb->mode_),
+            .mode_ = out.get_mode() == api::ModeEnum::ODM
+                         ? api::ModeEnum::ODM
+                         : (out.get_mode() == api::ModeEnum::RIDE_SHARING
+                                ? api::ModeEnum::RIDE_SHARING
+                                : to_mode(lb->mode_)),
             .from_ = pred_place,
             .to_ =
                 is_last_leg ? to_place : out.get_place(to_node, pred_place.tz_),

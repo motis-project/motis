@@ -10,7 +10,7 @@ info:
 
     MOTIS 2.x - current, providing:
 
-    * /api/v5/{plan,trip,stoptimes,map/trips,geocode,reverse-geocode} renamed METRO mode to SUBURBAN, AREAL_LIFT to AERIAL_LIFT; since MOTIS 2.5.0
+    * /api/v5/{plan,trip,stoptimes,map/trips} renamed METRO mode to SUBURBAN, AREAL_LIFT to AERIAL_LIFT; since MOTIS 2.5.0
     * /api/v4/{plan,trip,stoptimes,map/trips} new displayName property, routeShortName only contains actual route short name from source; since MOTIS 2.2.0
     * /api/v3/plan with correct maxTransfers API parameter (transfers actually corresponding to number of changes between transit legs (and not to number of transit legs), i.e. maxTransfers=0 returns direct public transit connections, as expected); since MOTIS 2.0.84 
     * /api/v2/{plan,trip} returns Google polylines with precision=6; since MOTIS 2.0.60
@@ -791,6 +791,7 @@ paths:
             type: string
             enum:
               - RAPTOR
+              - PONG
               - TB
             default: RAPTOR
       responses:
@@ -1230,7 +1231,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Reachable'
 
-  /api/v5/reverse-geocode:
+  /api/v1/reverse-geocode:
     get:
       tags:
         - geocode
@@ -1269,7 +1270,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/Match'
 
-  /api/v5/geocode:
+  /api/v1/geocode:
     get:
       tags:
         - geocode
@@ -1736,6 +1737,103 @@ paths:
                 items:
                   type: number
 
+  /api/v1/map/rentals:
+    get:
+      tags:
+        - map
+      summary: Get all rental stations and vehicles for a map section or provider
+      operationId: rentals
+      description: |
+        If neither the map section (`min` and `max`) nor the `providers`
+        parameter is provided, returns a list of all available rental providers,
+        but no station, vehicle or zone data.
+        
+        Either the map section (`min` and `max`) or the `providers` parameter
+        must be provided to retrieve station, vehicle and zone data.
+        
+        If only the map section is provided, all data in the area is returned.
+        If only the `providers` parameter is provided, all data for the given providers is returned.
+        If both parameters are provided, only data for the given providers in the map section is returned.
+      parameters:
+        - name: min
+          in: query
+          required: false
+          description: latitude,longitude pair of the lower right coordinate
+          schema:
+            type: string
+        - name: max
+          in: query
+          required: false
+          description: latitude,longitude pair of the upper left coordinate
+          schema:
+            type: string
+        - name: providers
+          in: query
+          required: false
+          description: |
+            A list of rental providers to return.
+            If empty (the default), all providers in the map section are returned.
+          schema:
+            type: array
+            items:
+              type: string
+        - name: withStations
+          in: query
+          required: false
+          description: Optional. Include stations in output (requires at least min+max or providers filter).
+          schema:
+            type: boolean
+            default: true
+        - name: withVehicles
+          in: query
+          required: false
+          description: Optional. Include free-floating vehicles in output (requires at least min+max or providers filter).
+          schema:
+            type: boolean
+            default: true
+        - name: withZones
+          in: query
+          required: false
+          description: Optional. Include geofencing zones in output (requires at least min+max or providers filter).
+          schema:
+            type: boolean
+            default: true
+      responses:
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '200':
+          description: Rentals in the map section or for the given providers
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - providers
+                  - stations
+                  - vehicles
+                  - zones
+                properties:
+                  providers:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RentalProvider'
+                  stations:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RentalStation'
+                  vehicles:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RentalVehicle'
+                  zones:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RentalZone'
+
   /api/debug/transfers:
     get:
       tags:
@@ -1992,6 +2090,7 @@ components:
           - `CAR_PARKING` Experimental. Expect unannounced breaking changes (without version bumps) for all parameters and returned structs.
           - `CAR_DROPOFF` Experimental. Expect unannounced breaking changes (without version bumps) for all perameters and returned structs.
           - `ODM` on-demand taxis from the Prima+ÖV Project
+          - `RIDE_SHARING` ride sharing from the Prima+ÖV Project
           - `FLEX` flexible transports
 
         # Transit modes
@@ -2025,6 +2124,7 @@ components:
         - CAR_PARKING
         - CAR_DROPOFF
         - ODM
+        - RIDE_SHARING
         - FLEX
         # === Transit ===
         - TRANSIT
@@ -2063,6 +2163,13 @@ components:
       properties:
         type:
           $ref: '#/components/schemas/LocationType'
+        category:
+          description: |
+            Experimental. Type categories might be adjusted.
+            
+            For OSM stop locations: the amenity type based on
+            https://wiki.openstreetmap.org/wiki/OpenStreetMap_Carto/Symbols
+          type: string
         tokens:
           description: list of non-overlapping tokens that were matched
           type: array
@@ -2180,6 +2287,9 @@ components:
         stopId:
           description: The ID of the stop. This is often something that users don't care about.
           type: string
+        importance:
+          description: The importance of the stop between 0-1.
+          type: number
         lat:
           description: latitude
           type: number
@@ -2616,6 +2726,274 @@ components:
           $ref: '#/components/schemas/RentalPropulsionType'
         returnConstraint:
           $ref: '#/components/schemas/RentalReturnConstraint'
+
+    MultiPolygon:
+      type: array
+      description: |
+        A multi-polygon contains a number of polygons, each containing a number
+        of rings, which are encoded as polylines (with precision 6).
+        
+        For each polygon, the first ring is the outer ring, all subsequent rings
+        are inner rings (holes).
+      items: # polygons
+        type: array
+        items: # rings
+          $ref: '#/components/schemas/EncodedPolyline'
+
+    RentalZoneRestrictions:
+      type: object
+      required:
+        - vehicleTypeIdxs
+        - rideStartAllowed
+        - rideEndAllowed
+        - rideThroughAllowed
+      properties:
+        vehicleTypeIdxs:
+          type: array
+          description: |
+            List of vehicle types (as indices into the provider's vehicle types
+            array) to which these restrictions apply.
+            If empty, the restrictions apply to all vehicle types of the provider.
+          items:
+            type: integer
+        rideStartAllowed:
+          type: boolean
+          description: whether the ride is allowed to start in this zone
+        rideEndAllowed:
+          type: boolean
+          description: whether the ride is allowed to end in this zone
+        rideThroughAllowed:
+          type: boolean
+          description: whether the ride is allowed to pass through this zone
+        stationParking:
+          type: boolean
+          description: whether vehicles can only be parked at stations in this zone
+
+    RentalVehicleType:
+      type: object
+      required:
+        - id
+        - formFactor
+        - propulsionType
+        - returnConstraint
+        - returnConstraintGuessed
+      properties:
+        id:
+          type: string
+          description: Unique identifier of the vehicle type (unique within the provider)
+        formFactor:
+          $ref: '#/components/schemas/RentalFormFactor'
+        propulsionType:
+          $ref: '#/components/schemas/RentalPropulsionType'
+        returnConstraint:
+          $ref: '#/components/schemas/RentalReturnConstraint'
+        returnConstraintGuessed:
+          type: boolean
+          description: Whether the return constraint was guessed instead of being specified by the rental provider
+
+    RentalProvider:
+      type: object
+      required:
+        - id
+        - name
+        - bbox
+        - vehicleTypes
+        - formFactors
+        - defaultRestrictions
+        - globalGeofencingRules
+      properties:
+        id:
+          type: string
+          description: Unique identifier of the rental provider
+        name:
+          type: string
+          description: Name of the provider to be displayed to customers
+        operator:
+          type: string
+          description: Name of the system operator
+        url:
+          type: string
+          description: URL of the vehicle share system
+        purchaseUrl:
+          type: string
+          description: URL where a customer can purchase a membership
+        bbox:
+          type: array
+          description: |
+            Bounding box of the area covered by this rental provider,
+            [west, south, east, north] as [lon, lat, lon, lat]
+          minItems: 4
+          maxItems: 4
+          items:
+            type: number
+        vehicleTypes:
+          type: array
+          items:
+            $ref: '#/components/schemas/RentalVehicleType'
+        formFactors:
+          type: array
+          description: List of form factors offered by this provider
+          items:
+            $ref: '#/components/schemas/RentalFormFactor'
+        defaultRestrictions:
+          $ref: '#/components/schemas/RentalZoneRestrictions'
+        globalGeofencingRules:
+          type: array
+          items:
+            $ref: '#/components/schemas/RentalZoneRestrictions'
+
+    RentalStation:
+      type: object
+      required:
+        - id
+        - providerId
+        - name
+        - lat
+        - lon
+        - isRenting
+        - isReturning
+        - numVehiclesAvailable
+        - formFactors
+        - vehicleTypesAvailable
+        - vehicleDocksAvailable
+      properties:
+        id:
+          type: string
+          description: Unique identifier of the rental station
+        providerId:
+          type: string
+          description: Unique identifier of the rental provider
+        name:
+          type: string
+          description: Public name of the station
+        lat:
+          description: latitude
+          type: number
+        lon:
+          description: longitude
+          type: number
+        address:
+          type: string
+          description: Address where the station is located
+        crossStreet:
+          type: string
+          description: Cross street or landmark where the station is located
+        rentalUriAndroid:
+          type: string
+          description: Rental URI for Android (deep link to the specific station)
+        rentalUriIOS:
+          type: string
+          description: Rental URI for iOS (deep link to the specific station)
+        rentalUriWeb:
+          type: string
+          description: Rental URI for web (deep link to the specific station)
+        isRenting:
+          type: boolean
+          description: true if vehicles can be rented from this station, false if it is temporarily out of service
+        isReturning:
+          type: boolean
+          description: true if vehicles can be returned to this station, false if it is temporarily out of service
+        numVehiclesAvailable:
+          type: integer
+          description: Number of vehicles available for rental at this station
+        formFactors:
+          type: array
+          description: List of form factors available for rental and/or return at this station
+          items:
+            $ref: '#/components/schemas/RentalFormFactor'
+        vehicleTypesAvailable:
+          type: object
+          description: List of vehicle types currently available at this station (vehicle type ID -> count)
+          additionalProperties:
+            type: integer
+        vehicleDocksAvailable:
+          type: object
+          description: List of vehicle docks currently available at this station (vehicle type ID -> count)
+          additionalProperties:
+            type: integer
+        stationArea:
+          $ref: '#/components/schemas/MultiPolygon'
+
+    RentalVehicle:
+      type: object
+      required:
+        - id
+        - providerId
+        - typeId
+        - lat
+        - lon
+        - formFactor
+        - propulsionType
+        - returnConstraint
+        - isReserved
+        - isDisabled
+      properties:
+        id:
+          type: string
+          description: Unique identifier of the rental vehicle
+        providerId:
+          type: string
+          description: Unique identifier of the rental provider
+        typeId:
+          type: string
+          description: Vehicle type ID (unique within the provider)
+        lat:
+          description: latitude
+          type: number
+        lon:
+          description: longitude
+          type: number
+        formFactor:
+          $ref: '#/components/schemas/RentalFormFactor'
+        propulsionType:
+          $ref: '#/components/schemas/RentalPropulsionType'
+        returnConstraint:
+          $ref: '#/components/schemas/RentalReturnConstraint'
+        stationId:
+          type: string
+          description: Station ID if the vehicle is currently at a station
+        homeStationId:
+          type: string
+          description: Station ID where the vehicle must be returned, if applicable
+        isReserved:
+          type: boolean
+          description: true if the vehicle is currently reserved by a customer, false otherwise
+        isDisabled:
+          type: boolean
+          description: true if the vehicle is out of service, false otherwise
+        rentalUriAndroid:
+          type: string
+          description: Rental URI for Android (deep link to the specific vehicle)
+        rentalUriIOS:
+          type: string
+          description: Rental URI for iOS (deep link to the specific vehicle)
+        rentalUriWeb:
+          type: string
+          description: Rental URI for web (deep link to the specific vehicle)
+
+    RentalZone:
+      type: object
+      required:
+        - providerId
+        - z
+        - area
+        - rules
+      properties:
+        providerId:
+          type: string
+          description: Unique identifier of the rental provider
+        name:
+          type: string
+          description: Public name of the geofencing zone
+        z:
+          type: integer
+          description: Zone precedence / z-index (higher number = higher precedence)
+        area:
+          $ref: '#/components/schemas/MultiPolygon'
+        rules:
+          type: array
+          items:
+            $ref: '#/components/schemas/RentalZoneRestrictions'
 
     Leg:
       type: object
