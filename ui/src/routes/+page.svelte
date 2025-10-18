@@ -31,13 +31,7 @@
 	import ItineraryGeoJson from '$lib/ItineraryGeoJSON.svelte';
 	import maplibregl from 'maplibre-gl';
 	import { browser } from '$app/environment';
-	import {
-		cn,
-		getUrlArray,
-		onClickStop,
-		onClickTrip,
-		pushStateWithQueryString
-	} from '$lib/utils';
+	import { cn, getUrlArray, onClickStop, onClickTrip, pushStateWithQueryString } from '$lib/utils';
 	import Debug from '$lib/Debug.svelte';
 	import Marker from '$lib/map/Marker.svelte';
 	import Popup from '$lib/map/Popup.svelte';
@@ -721,10 +715,7 @@
 
 	{#if showMap}
 		{#if activeTab != 'isochrones'}
-			<Control
-				position={'top-right'}
-				class="pb-4"
-			>
+			<Control position="top-right" class="pb-4">
 				<Button
 					size="icon"
 					onclick={() => {

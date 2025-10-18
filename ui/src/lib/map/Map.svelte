@@ -104,7 +104,7 @@
 				unit: 'metric'
 			});
 
-			tmp.addControl(scale, browser && window.innerWidth < 768 ? 'top-left': 'bottom-left');
+			tmp.addControl(scale, browser && window.innerWidth < 768 ? 'top-left' : 'bottom-left');
 
 			tmp.on('load', () => {
 				map = tmp;

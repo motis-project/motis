@@ -24,22 +24,20 @@
 	let currentY = 0;
 	let isDragging = false;
 	let fromHandle = false;
-	let container : HTMLElement | null;
+	let container: HTMLElement | null;
 	let isBack = false;
 
-	
 	onMount(() => {
-		const handlePopState =  () =>  {
-				isBack = true;
-				const savedScrollPos = parseFloat(localStorage.getItem(`scroll:${window.location.href}`)!);
-				container!.scrollTop = savedScrollPos; 
-				setTimeout(() => isBack = false,10);
-			};
+		const handlePopState = () => {
+			isBack = true;
+			const savedScrollPos = parseFloat(localStorage.getItem(`scroll:${window.location.href}`)!);
+			container!.scrollTop = savedScrollPos;
+			setTimeout(() => (isBack = false), 10);
+		};
 
 		container?.addEventListener('scrollend', () => {
 			localStorage.setItem(`scroll:${window.location.href}`, container!.scrollTop.toString());
-		})
-		
+		});
 
 		const observer = new MutationObserver(() => {
 			if (!isBack) {
@@ -49,19 +47,15 @@
 
 		window.addEventListener('popstate', handlePopState);
 
-		
-		observer.observe(
-			container!,
-			{
-				childList: true,
-				subtree: false,
-			}
-		);
+		observer.observe(container!, {
+			childList: true,
+			subtree: false
+		});
 
 		onDestroy(() => {
-    		window.removeEventListener('popstate', handlePopState);
+			window.removeEventListener('popstate', handlePopState);
 			observer.disconnect();
-  		});
+		});
 	});
 
 	const getScrollableElement = (element: Element): Element | null => {
@@ -82,7 +76,7 @@
 
 		return null;
 	};
-	
+
 	const ontouchstart = (e: TouchEvent) => {
 		const target = !fromHandle ? (e.target as Element) : null;
 		const scrollableElement = target ? (getScrollableElement(target) as HTMLElement) : null;
