@@ -1,8 +1,9 @@
 <script lang="ts">
 	import { cn } from '$lib/utils.js';
 	import ChevronDown from 'lucide-svelte/icons/chevron-down';
-	import { onMount, onDestroy, type Snippet } from 'svelte';
+	import { onMount, type Snippet } from 'svelte';
 	import type { HTMLAttributes } from 'svelte/elements';
+	import { restoreScroll, resetScroll } from './handleScroll';
 
 	let {
 		ref = $bindable(null),
@@ -25,37 +26,11 @@
 	let isDragging = false;
 	let fromHandle = false;
 	let container: HTMLElement | null;
-	let isBack = false;
 
-	onMount(() => {
-		const handlePopState = () => {
-			isBack = true;
-			const savedScrollPos = parseFloat(localStorage.getItem(`scroll:${window.location.href}`)!);
-			container!.scrollTop = savedScrollPos;
-			setTimeout(() => (isBack = false), 10);
-		};
+	onMount(() => restoreScroll(container!));
 
-		container?.addEventListener('scrollend', () => {
-			localStorage.setItem(`scroll:${window.location.href}`, container!.scrollTop.toString());
-		});
-
-		const observer = new MutationObserver(() => {
-			if (!isBack) {
-				container!.scrollTop = 0;
-			}
-		});
-
-		window.addEventListener('popstate', handlePopState);
-
-		observer.observe(container!, {
-			childList: true,
-			subtree: false
-		});
-
-		onDestroy(() => {
-			window.removeEventListener('popstate', handlePopState);
-			observer.disconnect();
-		});
+	$effect(() => {
+		resetScroll(container!);
 	});
 
 	const getScrollableElement = (element: Element): Element | null => {

@@ -2,6 +2,8 @@
 	import type { WithElementRef } from "bits-ui";
 	import type { HTMLAttributes } from "svelte/elements";
 	import { cn } from "$lib/utils.js";
+	import {onMount } from "svelte";
+	import { restoreScroll} from "$lib/map/handleScroll";
 
 	let {
 		ref = $bindable(null),
@@ -9,6 +11,13 @@
 		children,
 		...restProps
 	}: WithElementRef<HTMLAttributes<HTMLDivElement>> = $props();
+	
+	onMount(
+		() => {
+			restoreScroll(ref!);
+		}
+	);
+
 </script>
 
 <div

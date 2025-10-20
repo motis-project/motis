@@ -583,7 +583,7 @@
 					{routingResponses}
 					{baseQuery}
 					selectItinerary={(selectedItinerary) => {
-						pushState('journeyDetails' + window.location.search, { selectedItinerary });
+						pushState('', { selectedItinerary });
 					}}
 					updateStartDest={preprocessItinerary(from, to)}
 				/>
