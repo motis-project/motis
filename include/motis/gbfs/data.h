@@ -390,9 +390,9 @@ struct gbfs_provider {
 struct gbfs_group {
   std::string id_;
   std::string name_;
-  std::optional<std::string> color_;
+  std::optional<std::string> color_{};
 
-  std::vector<gbfs_provider_idx_t> providers_;
+  std::vector<gbfs_provider_idx_t> providers_{};
 };
 
 struct oauth_state {
