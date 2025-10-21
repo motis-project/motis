@@ -246,9 +246,24 @@ n::unixtime_t to_unix(std::int64_t const t) {
       std::chrono::duration_cast<n::i32_minutes>(std::chrono::milliseconds{t})};
 }
 
-json::array to_json(std::vector<n::routing::start> const& v,
-                    n::timetable const& tt,
-                    which_mile const wm) {
+json::array to_json_blacklist(std::vector<n::routing::start> const& v,
+                              n::timetable const& tt) {
+  auto a = json::array{};
+  utl::equal_ranges_linear(
+      v,
+      [](n::routing::start const& a, n::routing::start const& b) {
+        return a.stop_ == b.stop_;
+      },
+      [&](auto&& from_it, auto&&) {
+        auto const& pos = tt.locations_.coordinates_[from_it->stop_];
+        a.emplace_back(json::value{{"lat", pos.lat_}, {"lng", pos.lng_}});
+      });
+  return a;
+}
+
+json::array to_json_whitelist(std::vector<n::routing::start> const& v,
+                              n::timetable const& tt,
+                              which_mile const wm) {
   auto a = json::array{};
   utl::equal_ranges_linear(
       v,
@@ -263,7 +278,7 @@ json::array to_json(std::vector<n::routing::start> const& v,
             {"times",
              utl::all(from_it, to_it) |
                  utl::transform([&](n::routing::start const& s) {
-                   return wm == which_mile::kFirstMile
+                   return wm == kFirstMile
                               ? to_millis(s.time_at_stop_ - kODMTransferBuffer)
                               : to_millis(s.time_at_stop_ + kODMTransferBuffer);
                  }) |
@@ -288,34 +303,49 @@ json::value to_json(capacities const& c) {
           {"luggage", c.luggage_}};
 }
 
-std::string make_request(osr::location const& from,
-                         osr::location const& to,
-                         std::vector<n::routing::start> const& first_mile,
-                         std::vector<n::routing::start> const& last_mile,
-                         std::vector<direct_ride> const& direct,
-                         n::event_type const fixed,
-                         capacities const& cap,
-                         n::timetable const& tt) {
-  return json::serialize(
-      json::value{{"start", {{"lat", from.pos_.lat_}, {"lng", from.pos_.lng_}}},
-                  {"target", {{"lat", to.pos_.lat_}, {"lng", to.pos_.lng_}}},
-                  {"startBusStops", to_json(first_mile, tt, kFirstMile)},
-                  {"targetBusStops", to_json(last_mile, tt, kLastMile)},
-                  {"directTimes", to_json(direct, fixed)},
-                  {"startFixed", fixed == n::event_type::kDep},
-                  {"capacities", to_json(cap)}});
+std::string prima::make_taxi_blacklist_request(
+    nigiri::timetable const& tt,
+    nigiri::interval<nigiri::unixtime_t> const& taxi_intvl) const {
+  return json::serialize(json::value{
+      {"start", {{"lat", from_.pos_.lat_}, {"lng", from_.pos_.lng_}}},
+      {"target", {{"lat", to_.pos_.lat_}, {"lng", to_.pos_.lng_}}},
+      {"startBusStops", to_json_blacklist(first_mile_taxi_, tt)},
+      {"targetBusStops", to_json_blacklist(last_mile_taxi_, tt)},
+      {"earliest", to_millis(taxi_intvl.from_)},
+      {"latest", to_millis(taxi_intvl.to_)},
+      {"startFixed", fixed_ == n::event_type::kDep},
+      {"capacities", to_json(cap_)}});
 }
 
-std::string prima::make_taxi_request(n::timetable const& tt) const {
-  return make_request(from_, to_, first_mile_taxi_, last_mile_taxi_,
-                      direct_taxi_, fixed_, cap_, tt);
+std::string make_whitelist_request(
+    osr::location const& from,
+    osr::location const& to,
+    std::vector<n::routing::start> const& first_mile,
+    std::vector<n::routing::start> const& last_mile,
+    std::vector<direct_ride> const& direct,
+    n::event_type const fixed,
+    capacities const& cap,
+    n::timetable const& tt) {
+  return json::serialize(json::value{
+      {"start", {{"lat", from.pos_.lat_}, {"lng", from.pos_.lng_}}},
+      {"target", {{"lat", to.pos_.lat_}, {"lng", to.pos_.lng_}}},
+      {"startBusStops", to_json_whitelist(first_mile, tt, kFirstMile)},
+      {"targetBusStops", to_json_whitelist(last_mile, tt, kLastMile)},
+      {"directTimes", to_json(direct, fixed)},
+      {"startFixed", fixed == n::event_type::kDep},
+      {"capacities", to_json(cap)}});
+}
+
+std::string prima::make_taxi_whitelist_request(n::timetable const& tt) const {
+  return make_whitelist_request(from_, to_, first_mile_taxi_, last_mile_taxi_,
+                                direct_taxi_, fixed_, cap_, tt);
 }
 
 std::string prima::make_ride_sharing_request(
     nigiri::timetable const& tt) const {
-  return make_request(from_, to_, first_mile_ride_sharing_,
-                      last_mile_ride_sharing_, direct_ride_sharing_, fixed_,
-                      cap_, tt);
+  return make_whitelist_request(from_, to_, first_mile_ride_sharing_,
+                                last_mile_ride_sharing_, direct_ride_sharing_,
+                                fixed_, cap_, tt);
 }
 
 std::size_t prima::n_taxi_events() const {
@@ -428,7 +458,9 @@ bool prima::consume_blacklist_taxis_response(std::string_view json) {
   return true;
 }
 
-bool prima::blacklist_taxis(nigiri::timetable const& tt) {
+bool prima::blacklist_taxis(
+    nigiri::timetable const& tt,
+    nigiri::interval<nigiri::unixtime_t> const& taxi_intvl) {
   auto blacklist_response = std::optional<std::string>{};
   auto ioc = boost::asio::io_context{};
   try {
@@ -438,7 +470,8 @@ bool prima::blacklist_taxis(nigiri::timetable const& tt) {
         ioc,
         [&]() -> boost::asio::awaitable<void> {
           auto const prima_msg = co_await http_POST(
-              taxi_blacklist_, kReqHeaders, make_taxi_request(tt), 10s);
+              taxi_blacklist_, kReqHeaders,
+              make_taxi_blacklist_request(tt, taxi_intvl), 10s);
           blacklist_response = get_http_body(prima_msg);
         },
         boost::asio::detached);
@@ -697,8 +730,9 @@ bool prima::whitelist_taxis(
     boost::asio::co_spawn(
         ioc,
         [&]() -> boost::asio::awaitable<void> {
-          auto const prima_msg = co_await http_POST(
-              taxi_whitelist_, kReqHeaders, make_taxi_request(tt), 10s);
+          auto const prima_msg =
+              co_await http_POST(taxi_whitelist_, kReqHeaders,
+                                 make_taxi_whitelist_request(tt), 10s);
           whitelist_response = get_http_body(prima_msg);
         },
         boost::asio::detached);

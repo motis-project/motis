@@ -352,7 +352,7 @@ api::plan_response meta_router::run() {
              r_.metrics_->routing_execution_duration_seconds_init_);
 
   auto const blacklist_start = std::chrono::steady_clock::now();
-  auto const blacklisted_taxis = p.blacklist_taxis(*tt_);
+  auto const blacklisted_taxis = p.blacklist_taxis(*tt_, taxi_intvl);
   n::log(n::log_lvl::debug, "motis.prima",
          "[blacklist taxi] taxi events after blacklisting: {}",
          p.n_taxi_events());
