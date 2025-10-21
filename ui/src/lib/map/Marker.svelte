@@ -29,14 +29,14 @@
 					color
 				})
 					.setLngLat(location.match)
-					.addTo(ctx.map)
-					.on('dragend', () => {
-						if (marker && location.match) {
-							let x = posToLocation(marker.getLngLat(), level ?? 0);
-							location = x;
-							location.label = x.label;
-						}
-					});
+					.addTo(ctx.map);
+				marker.on('dragend', () => {
+					if (marker && location.match) {
+						let x = posToLocation(marker.getLngLat(), level ?? 0);
+						location = x;
+						location.label = x.label;
+					}
+				});
 				initialized = true;
 			}
 		}
