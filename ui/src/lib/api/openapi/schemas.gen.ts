@@ -1215,7 +1215,7 @@ export const RentalVehicleSchema = {
 
 export const RentalZoneSchema = {
     type: 'object',
-    required: ['providerId', 'providerGroupId', 'z', 'area', 'rules'],
+    required: ['providerId', 'providerGroupId', 'z', 'bbox', 'area', 'rules'],
     properties: {
         providerId: {
             type: 'string',
@@ -1232,6 +1232,17 @@ export const RentalZoneSchema = {
         z: {
             type: 'integer',
             description: 'Zone precedence / z-index (higher number = higher precedence)'
+        },
+        bbox: {
+            type: 'array',
+            description: `Bounding box of the area covered by this zone,
+[west, south, east, north] as [lon, lat, lon, lat]
+`,
+            minItems: 4,
+            maxItems: 4,
+            items: {
+                type: 'number'
+            }
         },
         area: {
             '$ref': '#/components/schemas/MultiPolygon'

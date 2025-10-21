@@ -27,6 +27,7 @@
 		"@types/eslint": "^9.6.1",
 		"@types/geojson": "^7946.0.16",
 		"@types/mapbox__polyline": "^1.0.5",
+		"@types/rbush": "^4.0.0",
 		"@typescript-eslint/eslint-plugin": "^8.32.1",
 		"@typescript-eslint/parser": "^8.32.1",
 		"autoprefixer": "^10.4.21",
@@ -62,6 +63,7 @@
 		"@tanstack/svelte-query": "^6.0.3",
 		"@turf/circle": "^7.2.0",
 		"@turf/destination": "^7.2.0",
+		"@turf/difference": "^7.2.0",
 		"@turf/helpers": "^7.2.0",
 		"@turf/rhumb-bearing": "^7.2.0",
 		"@turf/rhumb-distance": "^7.2.0",
@@ -69,6 +71,7 @@
 		"colord": "^2.9.3",
 		"geojson": "^0.5.0",
 		"maplibre-gl": "^4.7.1",
+		"rbush": "^4.0.1",
 		"svelte-radix": "^1.1.1"
 	},
 	"devEngines": {

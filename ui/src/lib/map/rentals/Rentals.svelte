@@ -6,7 +6,8 @@
 		type RentalProvider,
 		type RentalStation,
 		type RentalVehicle,
-		type RentalZone
+		type RentalZone,
+		type RentalZoneRestrictions
 	} from '$lib/api/openapi';
 	import { lngLatToStr } from '$lib/lngLatToStr';
 	import Control from '$lib/map/Control.svelte';
@@ -24,6 +25,9 @@
 	} from '$lib/map/rentals/assets';
 	import { cn } from '$lib/utils';
 	import polyline from '@mapbox/polyline';
+	import { difference } from '@turf/difference';
+	import { feature, featureCollection } from '@turf/helpers';
+	import RBush from 'rbush';
 	import maplibregl from 'maplibre-gl';
 	import type { MapLayerMouseEvent } from 'maplibre-gl';
 	import { mount, onDestroy, unmount } from 'svelte';
@@ -500,41 +504,117 @@
 	};
 
 	let zoneFeatures = $derived.by(
-		(): FeatureCollection<GeoPolygon | GeoMultiPolygon, ZoneFeatureProperties> => {
-			const features: Array<Feature<GeoPolygon | GeoMultiPolygon, ZoneFeatureProperties>> = [];
+		(): FeatureCollection<GeoMultiPolygon | GeoPolygon, ZoneFeatureProperties> => {
 			const provider = rentalsData?.providers?.find(
 				(candidate) => candidate.id === displayFilter?.providerId
 			);
+			const filter = displayFilter;
 
-			if (!rentalsData || !displayFilter || !provider) {
-				return { type: 'FeatureCollection', features };
+			if (!rentalsData || !filter || !provider) {
+				return { type: 'FeatureCollection', features: [] };
 			}
 
-			for (let i = 0; i < rentalsData.zones.length; ++i) {
-				const zone = rentalsData.zones[i];
-				if (zone.providerId !== displayFilter.providerId) {
-					continue;
-				}
-				const rule = findMatchingRule(zone, provider, displayFilter.formFactor);
-				if (!rule) {
-					continue;
-				}
-				features.push({
-					type: 'Feature',
-					geometry: buildZoneGeometry(zone),
-					properties: {
-						zoneIndex: i,
-						providerId: zone.providerId,
-						z: zone.z,
-						rideEndAllowed: rule.rideEndAllowed && !rule.stationParking,
-						rideThroughAllowed: rule.rideThroughAllowed
+			console.time('Filter Zones');
+			const zones: Array<{
+				zone: RentalZone;
+				zoneIndex: number;
+				rule: RentalZoneRestrictions;
+				feature: Feature<GeoMultiPolygon | GeoPolygon, ZoneFeatureProperties> | null;
+			}> = rentalsData.zones
+				.filter((zone) => zone.providerId === filter.providerId)
+				.map((zone, index) => ({
+					zone,
+					zoneIndex: index,
+					rule: findMatchingRule(zone, provider, filter.formFactor)
+				}))
+				.filter(
+					(
+						entry
+					): entry is {
+						zone: RentalZone;
+						zoneIndex: number;
+						rule: RentalZoneRestrictions;
+					} => entry.rule !== undefined
+				)
+				.sort((a, b) => b.zone.z - a.zone.z)
+				.map((entry) => ({
+					...entry,
+					feature: feature(buildZoneGeometry(entry.zone), {
+						zoneIndex: entry.zoneIndex,
+						providerId: entry.zone.providerId,
+						z: entry.zone.z,
+						rideEndAllowed: entry.rule.rideEndAllowed && !entry.rule.stationParking,
+						rideThroughAllowed: entry.rule.rideThroughAllowed
+					})
+				}));
+			console.timeEnd('Filter Zones');
+
+			console.log(`zoneFeatures: ${zones.length}/${rentalsData.zones.length} matching zones`);
+
+			if (zones.length === 0) {
+				return { type: 'FeatureCollection', features: [] };
+			}
+
+			const features: Array<Feature<GeoMultiPolygon | GeoPolygon, ZoneFeatureProperties>> = [];
+
+			console.time('R-Tree Creation');
+			const rtree = new RBush<{
+				minX: number;
+				minY: number;
+				maxX: number;
+				maxY: number;
+				zone: (typeof zones)[number];
+			}>();
+			rtree.load(
+				zones.map((z) => ({
+					minX: z.zone.bbox[0],
+					minY: z.zone.bbox[1],
+					maxX: z.zone.bbox[2],
+					maxY: z.zone.bbox[3],
+					zone: z
+				}))
+			);
+			console.timeEnd('R-Tree Creation');
+
+			console.time('Zone Clipping');
+			for (const z of zones) {
+				console.time(`Clipping Zone ${z.zoneIndex}`);
+				const candidates = rtree
+					.search({
+						minX: z.zone.bbox[0],
+						minY: z.zone.bbox[1],
+						maxX: z.zone.bbox[2],
+						maxY: z.zone.bbox[3]
+					})
+					.filter((c) => c.zone.zone.z > z.zone.z)
+					.sort((a, b) => b.zone.zone.z - a.zone.zone.z);
+
+				console.log(`Clipping Zone ${z.zoneIndex}: ${candidates.length} higher zones`);
+
+				let clipped: Feature<GeoMultiPolygon | GeoPolygon, ZoneFeatureProperties> | null =
+					z.feature;
+				if (candidates.length > 0) {
+					for (const higher of candidates) {
+						if (clipped && higher.zone.feature) {
+							clipped = difference(featureCollection([clipped, higher.zone.feature])) as Feature<
+								GeoMultiPolygon | GeoPolygon,
+								ZoneFeatureProperties
+							> | null;
+						}
+						if (!clipped) {
+							break;
+						}
 					}
-				});
+					z.feature = clipped;
+				}
+				if (clipped) {
+					features.push(clipped);
+				}
+				console.timeEnd(`Clipping Zone ${z.zoneIndex}`);
 			}
-			return {
-				type: 'FeatureCollection',
-				features
-			};
+			console.timeEnd('Zone Clipping');
+
+			return featureCollection(features);
 		}
 	);
 

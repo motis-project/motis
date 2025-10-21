@@ -327,7 +327,8 @@ api::rentals_response rental::operator()(
           static_cast<std::int64_t>(provider->geofencing_zones_.zones_.size());
       for (auto const [order, zone] :
            utl::enumerate(provider->geofencing_zones_.zones_)) {
-        if (filter_bbox && !bbox.overlaps(zone.bounding_box())) {
+        auto const bbox = zone.bounding_box();
+        if (filter_bbox && !bbox.overlaps(bbox)) {
           continue;
         }
         res.zones_.emplace_back(api::RentalZone{
@@ -335,6 +336,8 @@ api::rentals_response rental::operator()(
             .providerGroupId_ = provider->group_id_,
             .name_ = zone.name_,
             .z_ = n_zones - static_cast<std::int64_t>(order),
+            .bbox_ = {bbox.min_.lng_, bbox.min_.lat_, bbox.max_.lng_,
+                      bbox.max_.lat_},
             .area_ = multipoly_to_api(zone.geom_.get()),
             .rules_ = utl::to_vec(
                 zone.rules_,

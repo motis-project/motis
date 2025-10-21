@@ -1013,6 +1013,17 @@ export type RentalZone = {
      * Zone precedence / z-index (higher number = higher precedence)
      */
     z: number;
+    /**
+     * Bounding box of the area covered by this zone,
+     * [west, south, east, north] as [lon, lat, lon, lat]
+     *
+     */
+    bbox: [
+        number,
+        number,
+        number,
+        number
+    ];
     area: MultiPolygon;
     rules: Array<RentalZoneRestrictions>;
 };
