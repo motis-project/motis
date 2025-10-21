@@ -532,16 +532,15 @@
 	bind:bounds
 	bind:zoom
 	bind:center
-	transformRequest={(url: string) => {
-		if (url.startsWith('/sprite')) {
-			return { url: new URL(url.slice(1), window.location.href).toString() };
-		}
-		if (url.startsWith('/')) {
-			return { url: `${client.getConfig().baseUrl}/tiles${url}` };
-		}
-	}}
 	class={cn('h-dvh overflow-clip', theme)}
-	style={showMap ? getStyle(theme, level) : undefined}
+	style={showMap && browser
+		? getStyle(
+				theme,
+				level,
+				window.location.origin + window.location.pathname,
+				client.getConfig().baseUrl || window.location.origin + window.location.pathname
+			)
+		: undefined}
 	attribution={false}
 >
 	{#if hasDebug}
