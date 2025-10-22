@@ -5,6 +5,7 @@
 	import type { HTMLAttributes } from 'svelte/elements';
 	import { restoreScroll, resetScroll } from './handleScroll';
 
+
 	let {
 		ref = $bindable(null),
 		showMap = $bindable(),
@@ -27,11 +28,14 @@
 	let fromHandle = false;
 	let container: HTMLElement | null;
 
-	onMount(() => restoreScroll(container!));
+	onMount(() => {
+		console.log("MOUNTED")
+		const cleanup = restoreScroll(container!);
+		return cleanup;
+	} );
+	
+	$effect(() => resetScroll(container!));
 
-	$effect(() => {
-		resetScroll(container!);
-	});
 
 	const getScrollableElement = (element: Element): Element | null => {
 		while (element && element !== document.documentElement) {
@@ -83,7 +87,6 @@
 		} else {
 			ref!.style.transform = `translateY(${expanded ? minTranslate : window.innerHeight * maxTranslate}px)`;
 		}
-		showMap = true;
 		fromHandle = false;
 	};
 </script>
@@ -103,6 +106,7 @@
 		class="mx-auto my-5 relative before:content-[''] before:absolute before:inset-[-20px] before:inset-x-[-50vw] flex items-center justify-center"
 		ontouchstart={(e) => {
 			fromHandle = true;
+			showMap = true;
 			ontouchstart(e);
 		}}
 	>

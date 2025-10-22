@@ -307,7 +307,6 @@
 										l.tripTo!.name,
 										l.tripTo!.stopId!,
 										new Date(l.tripTo!.arrival!),
-										true
 									)}
 							>
 								{l.headsign}

@@ -4,6 +4,7 @@
 	import { cn } from "$lib/utils.js";
 	import {onMount } from "svelte";
 	import { restoreScroll} from "$lib/map/handleScroll";
+	import { browser } from "$app/environment";
 
 	let {
 		ref = $bindable(null),
@@ -14,7 +15,10 @@
 	
 	onMount(
 		() => {
-			restoreScroll(ref!);
+			if (!(browser && window.innerWidth < 768)) {
+				const cleanup = restoreScroll(ref!);
+				return cleanup;
+			}	
 		}
 	);
 

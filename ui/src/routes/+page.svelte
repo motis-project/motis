@@ -67,6 +67,7 @@
 
 	const urlParams = browser ? new URLSearchParams(window.location.search) : undefined;
 
+
 	const hasDebug: boolean = Boolean(urlParams?.has('debug'));
 	const hasDark: boolean = Boolean(urlParams?.has('dark'));
 	const hasLight: boolean = Boolean(urlParams?.has('light'));
@@ -583,7 +584,7 @@
 					{routingResponses}
 					{baseQuery}
 					selectItinerary={(selectedItinerary) => {
-						pushState('', { selectedItinerary });
+						pushState('', {selectedItinerary: selectedItinerary, scrollY: undefined});
 					}}
 					updateStartDest={preprocessItinerary(from, to)}
 				/>
