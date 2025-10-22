@@ -177,7 +177,7 @@ gbfs:
 
 # Real time protocols
 
-MOTIS supports multiple protocols for real time feeds. This sections shows a list of the protocols, including some pitfalls:
+MOTIS supports multiple protocols for real time feeds. This section shows a list of the protocols, including some pitfalls:
 
 | Protocol | `protocol` | Note |
 | ---- | ---- | ---- |
