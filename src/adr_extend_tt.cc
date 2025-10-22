@@ -48,63 +48,110 @@ date::time_zone const* get_tz(n::timetable const& tt,
   return nullptr;
 }
 
-float get_score(std::string a,
-                std::string b,
-                std::vector<adr::sift_offset>& sift4_dist) {
-  auto normalize_buf = adr::utf8_normalize_buf_t{};
-  auto const get_tokens = [&](std::string const& in) {
-    auto tokens = std::vector<std::string>{};
-    utl::for_each_token(utl::cstr{in}, ' ', [&](utl::cstr tok) mutable {
-      if (tok.empty()) {
-        return;
-      }
-      tokens.emplace_back(adr::normalize(tok.view(), normalize_buf));
-    });
-    return tokens;
-  };
+void normalize(std::string& x) {
+  adr::erase_fillers(x);
 
-  adr::erase_fillers(a);
-  adr::erase_fillers(b);
-
-  auto const a_tokens = get_tokens(a);
-  auto const b_tokens = get_tokens(b);
-
-  auto const a_phrases = adr::get_phrases(a_tokens);
-  auto const b_phrases = adr::get_phrases(b_tokens);
-
-  auto const not_matched_penalty = [](std::vector<std::string> const& tokens,
-                                      std::uint8_t const matched_tokens_mask) {
-    auto total_score = 0.F;
-    for (auto const [t_idx, token] : utl::enumerate(tokens)) {
-      if ((matched_tokens_mask & (1U << t_idx)) == 0U) {
-        total_score += token.size() * 3.0F;
-      }
-    }
-    return total_score;
-  };
-  auto const get_score =
-      [&](adr::phrase const& x, std::vector<std::string> const& x_tokens,
-          adr::phrase const& y, std::vector<std::string> const& y_tokens) {
-        return adr::get_match_score(x.s_, y.s_, sift4_dist, normalize_buf) +
-               not_matched_penalty(x_tokens, x.token_bits_) +
-               not_matched_penalty(y_tokens, y.token_bits_);
-      };
-
-  std::string best_a, best_b;
-  auto min = adr::kNoMatch;
-  for (auto const& x : a_phrases) {
-    for (auto const& y : b_phrases) {
-      auto const score = std::min(get_score(x, a_tokens, y, b_tokens),
-                                  get_score(y, b_tokens, x, a_tokens));
-      if (score < min) {
-        best_a = x.s_;
-        best_b = y.s_;
-        min = score;
-      }
+  auto const removals = std::initializer_list<std::string_view>{
+      "tief",    "oben", "gleis", "platform", "gl",   "gare",
+      "bahnhof", "bhf",  "bf",    "strasse",  "gasse"};
+  for (auto const r : removals) {
+    auto const pos = x.find(r);
+    if (pos != std::string::npos) {
+      x.erase(pos, r.size());
     }
   }
 
-  return min;
+  auto const replacements =
+      std::initializer_list<std::pair<std::string_view, std::string_view>>{
+          {"flixtrain", "hbf"}, {"hauptbf", "hbf"}, {"haupt", "hbf"},
+          {"centrale", "hbf"},  {"station", ""},    {"zob", "hbf"}};
+  for (auto const [search, replace] : replacements) {
+    auto const pos = x.find(search);
+    if (pos != std::string::npos) {
+      x.replace(pos, search.size(), replace);
+    }
+  }
+}
+
+adr::score_t get_diff(std::string str1,
+                      std::string str2,
+                      std::vector<adr::sift_offset>& sift4_offset_arr) {
+  str1 = adr::normalize(str1);
+  str2 = adr::normalize(str2);
+
+  normalize(str1);
+  normalize(str2);
+
+  std::cout << "normalized str1: " << str1 << "\n";
+  std::cout << "normalized str2: " << str2 << "\n";
+
+  if (str1.contains("hbf") && str2.contains("hbf")) {
+    return 0;
+  }
+
+  auto a = std::vector<std::string_view>{};
+  auto b = std::vector<std::string_view>{};
+
+  adr::for_each_token(
+      str1,
+      [&](auto&& p_token) mutable {
+        if (!p_token.empty()) {
+          a.emplace_back(p_token);
+        }
+        return utl::continue_t::kContinue;
+      },
+      ' ', '-');
+  adr::for_each_token(
+      str2,
+      [&](auto&& p_token) mutable {
+        if (!p_token.empty()) {
+          b.emplace_back(p_token);
+        }
+        return utl::continue_t::kContinue;
+      },
+      ' ', '-');
+
+  auto covered = std::uint32_t{};
+  auto score = adr::score_t{0U};
+
+  for (auto i = 0U; i != a.size(); ++i) {
+    auto best = std::numeric_limits<adr::score_t>::max();
+    auto best_j = 0U;
+    for (auto j = 0U; j != b.size(); ++j) {
+      if ((covered & (1U << j)) != 0U) {
+        continue;
+      }
+
+      auto const dist = std::min(
+          static_cast<adr::edit_dist_t>(std::max(a[i].size(), b[i].size())),
+          adr::sift4(a[i], b[j], 3,
+                     static_cast<adr::edit_dist_t>(
+                         std::min(a[i].size(), b[j].size()) / 2U + 2U),
+                     sift4_offset_arr));
+      if (dist < best) {
+        best = dist;
+        best_j = j;
+      }
+    }
+
+    // std::cout << "matched " << a[i] << " => " << b[best_j] << ": score=" <<
+    // best
+    //           << "\n";
+
+    covered |= (1U << best_j);
+    score += best;
+  }
+
+  for (auto j = 0U; j != b.size(); ++j) {
+    if ((covered & (1U << j)) == 0U) {
+      // std::cout << "not covered: " << b[j] << " -> penalty=" << b[j].size()
+      //           << "\n";
+      score += b[j].size();
+    }
+  }
+
+  return static_cast<float>(score) /
+         static_cast<float>(std::max(str1.length(), str2.length()));
 }
 
 adr_ext adr_extend_tt(nigiri::timetable const& tt,
@@ -143,62 +190,54 @@ adr_ext adr_extend_tt(nigiri::timetable const& tt,
     // Map each location + its equivalents with the same name to one
     // place_idx.
     auto sift4_dist = std::vector<adr::sift_offset>{};
-    auto tmp1 = adr::utf8_normalize_buf_t{};
-    auto tmp2 = adr::utf8_normalize_buf_t{};
     auto features = json::array{};
     auto locations = hash_set<n::location_idx_t>{};
     for (auto l = n::location_idx_t{nigiri::kNSpecialStations};
          l != tt.n_locations(); ++l) {
-      if (ret.location_place_[l] == adr_extra_place_idx_t::invalid() &&
-          tt.locations_.parents_[l] == n::location_idx_t::invalid()) {
-        auto const place_idx = add_place(l);
+      if (ret.location_place_[l] != adr_extra_place_idx_t::invalid() ||
+          tt.locations_.parents_[l] != n::location_idx_t::invalid()) {
+        continue;
+      }
 
-        auto const name = tt.locations_.names_[l].view();
-        for (auto const eq : tt.locations_.equivalences_[l]) {
-          if (tt.locations_.parents_[eq] != n::location_idx_t::invalid()) {
-            continue;
-          }
+      auto const place_idx = add_place(l);
 
-          if (tt.locations_.names_[eq].view() == name) {
+      auto const name = tt.locations_.names_[l].view();
+      for (auto const eq : tt.locations_.equivalences_[l]) {
+        if (ret.location_place_[eq] != adr_extra_place_idx_t::invalid() ||
+            tt.locations_.parents_[eq] != n::location_idx_t::invalid()) {
+          continue;
+        }
+
+        if (tt.locations_.names_[eq].view() == name) {
+          ret.location_place_[eq] = place_idx;
+        } else {
+          locations.insert(l);
+          locations.insert(eq);
+          auto const dist = geo::distance(tt.locations_.coordinates_[l],
+                                          tt.locations_.coordinates_[eq]);
+          auto const str_diff = get_diff(
+              std::string{tt.locations_.names_[l].view()},
+              std::string{tt.locations_.names_[eq].view()}, sift4_dist);
+          auto const cutoff = (500.F - 1750.F * str_diff);
+          auto const good = dist < cutoff;
+
+          if (good) {
             ret.location_place_[eq] = place_idx;
-          } else {
-            locations.insert(l);
-            locations.insert(eq);
-
-            auto str1 = std::string{name};
-            auto str2 = std::string{tt.locations_.names_[eq].view()};
-
-            adr::erase_fillers(str1);
-            adr::erase_fillers(str2);
-
-            auto const str_match_score = get_score(
-                std::string{name}, std::string{tt.locations_.names_[eq].view()},
-                sift4_dist);
-            auto const dist = geo::distance(tt.locations_.coordinates_[l],
-                                            tt.locations_.coordinates_[eq]);
-            auto const score = dist / 35.0 + str_match_score / 10.F;
-            auto const good = str_match_score < 0.1 && score < 1.1;
-
-            if (good) {
-              ret.location_place_[eq] = place_idx;
-              place_location.back().push_back(eq);
-            }
-
-            features.emplace_back(json::value{
-                {"type", "Feature"},
-                {"properties",
-                 {{"stroke", good ? "#00FF00" : "#FF0000"},
-                  {"stroke-width", "2"},
-                  {"stroke-opacity", "1"},
-                  {"l", fmt::to_string(n::location{tt, l})},
-                  {"eq", fmt::to_string(n::location{tt, eq})},
-                  {"score", score},
-                  {"str_match_score", str_match_score},
-                  {"distance", dist}}},
-                {"geometry",
-                 osr::to_line_string({tt.locations_.coordinates_[l],
-                                      tt.locations_.coordinates_[eq]})}});
+            place_location.back().push_back(eq);
           }
+
+          features.emplace_back(json::value{
+              {"type", "Feature"},
+              {"properties",
+               {{"stroke", good ? "#0000FF" : "#FF0000"},
+                {"l", fmt::to_string(n::location{tt, l})},
+                {"eq", fmt::to_string(n::location{tt, eq})},
+                {"cutoff", cutoff},
+                {"str_diff", str_diff},
+                {"distance", dist}}},
+              {"geometry",
+               osr::to_line_string({tt.locations_.coordinates_[l],
+                                    tt.locations_.coordinates_[eq]})}});
         }
       }
     }
@@ -291,6 +330,12 @@ adr_ext adr_extend_tt(nigiri::timetable const& tt,
         auto const c = n::clasz{static_cast<std::uint8_t>(clasz)};
         if (t_count != 0U) {
           ret.place_clasz_[place_idx] |= n::routing::to_mask(c);
+
+          if (tt.locations_.names_[root].view().contains("Kiel")) {
+            std::clog
+                << tt.locations_.names_[place_location[place_idx][0]].view()
+                << "[place=" << place_idx << "]" << ": " << to_str(c) << "\n";
+          }
         }
       }
     }
