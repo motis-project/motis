@@ -14,6 +14,7 @@ declare global {
 			stopArriveBy?: boolean;
 			tripId?: string;
 			showDepartures?: boolean;
+			scrollY?: number;
 		}
 		// interface Platform {}
 	}

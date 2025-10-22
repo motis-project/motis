@@ -139,6 +139,14 @@ body {
 	display: none;
 }
 
+.maplibregl-ctrl-top-left .maplibregl-ctrl.maplibregl-ctrl-scale {
+	margin-top: 25px;
+}
+
 .hide {
 	display: none;
+}
+html,
+body {
+	overscroll-behavior: none;
 }
