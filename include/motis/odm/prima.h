@@ -63,15 +63,16 @@ struct prima {
   std::string make_taxi_blacklist_request(
       nigiri::timetable const&,
       nigiri::interval<nigiri::unixtime_t> const&) const;
-  std::string make_taxi_whitelist_request(nigiri::timetable const&) const;
 
   bool consume_blacklist_taxis_response(std::string_view json);
   bool blacklist_taxis(nigiri::timetable const&,
                        nigiri::interval<nigiri::unixtime_t> const&);
 
-  void extract_taxis(std::vector<nigiri::routing::journey> const&);
-  bool consume_whitelist_taxis_response(std::string_view json,
-                                        std::vector<nigiri::routing::journey>&);
+  bool consume_whitelist_taxis_response(
+      std::string_view json,
+      std::vector<nigiri::routing::journey>&,
+      std::vector<nigiri::routing::start>& first_mile_taxi_rides,
+      std::vector<nigiri::routing::start>& last_mile_taxi_rides);
   bool whitelist_taxis(std::vector<nigiri::routing::journey>&,
                        nigiri::timetable const&);
 
@@ -87,17 +88,6 @@ struct prima {
   bool consume_whitelist_ride_sharing_response(std::string_view json);
   bool whitelist_ride_sharing(nigiri::timetable const&);
 
-  void fix_first_mile_duration(
-      std::vector<nigiri::routing::journey>& journeys,
-      std::vector<nigiri::routing::start> const& first_mile,
-      std::vector<nigiri::routing::start> const& prev_first_mile,
-      nigiri::transport_mode_id_t mode);
-  void fix_last_mile_duration(
-      std::vector<nigiri::routing::journey>& journeys,
-      std::vector<nigiri::routing::start> const& last_mile,
-      std::vector<nigiri::routing::start> const& prev_last_mile,
-      nigiri::transport_mode_id_t mode);
-
   boost::urls::url taxi_blacklist_;
   boost::urls::url taxi_whitelist_;
   boost::urls::url ride_sharing_whitelist_;
@@ -107,8 +97,8 @@ struct prima {
   nigiri::event_type fixed_;
   capacities cap_;
 
-  std::vector<nigiri::routing::start> first_mile_taxi_{};
-  std::vector<nigiri::routing::start> last_mile_taxi_{};
+  std::vector<nigiri::routing::offset> first_mile_taxi_{};
+  std::vector<nigiri::routing::offset> last_mile_taxi_{};
   std::vector<direct_ride> direct_taxi_{};
 
   std::vector<nigiri::routing::start> first_mile_ride_sharing_{};
@@ -118,5 +108,16 @@ struct prima {
   std::vector<direct_ride> direct_ride_sharing_{};
   std::vector<std::uint32_t> direct_ride_sharing_tour_ids_{};
 };
+
+void fix_first_mile_duration(
+    std::vector<nigiri::routing::journey>& journeys,
+    std::vector<nigiri::routing::start> const& first_mile,
+    std::vector<nigiri::routing::start> const& prev_first_mile,
+    nigiri::transport_mode_id_t mode);
+void fix_last_mile_duration(
+    std::vector<nigiri::routing::journey>& journeys,
+    std::vector<nigiri::routing::start> const& last_mile,
+    std::vector<nigiri::routing::start> const& prev_last_mile,
+    nigiri::transport_mode_id_t mode);
 
 }  // namespace motis::odm

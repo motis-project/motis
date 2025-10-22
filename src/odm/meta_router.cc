@@ -151,21 +151,22 @@ meta_router::meta_router(ep::routing const& r,
 
 meta_router::~meta_router() = default;
 
-auto ride_time_halves(std::vector<n::routing::start>& rides) {
+auto ride_time_halves(std::vector<n::routing::offset>& offsets) {
   auto const by_duration = [&](auto const& a, auto const& b) {
-    return duration(a) < duration(b);
+    return a.duration_ < b.duration_;
   };
 
-  utl::sort(rides, by_duration);
+  utl::sort(offsets, by_duration);
   auto const split =
-      rides.empty() ? 0
-                    : std::distance(begin(rides),
-                                    std::upper_bound(begin(rides), end(rides),
-                                                     rides[rides.size() / 2],
-                                                     by_duration));
+      offsets.empty()
+          ? 0
+          : std::distance(
+                begin(offsets),
+                std::upper_bound(begin(offsets), end(offsets),
+                                 offsets[offsets.size() / 2], by_duration));
 
-  auto lo = rides | std::views::take(split);
-  auto hi = rides | std::views::drop(split);
+  auto lo = offsets | std::views::take(split);
+  auto hi = offsets | std::views::drop(split);
   std::ranges::sort(lo, by_stop);
   std::ranges::sort(hi, by_stop);
   return std::pair{lo, hi};
@@ -467,12 +468,12 @@ api::plan_response meta_router::run() {
           query_);
   auto ride_share_journeys =
       collect_odm_journeys(results, kRideSharingTransportModeId);
-  p.fix_first_mile_duration(ride_share_journeys, p.first_mile_ride_sharing_,
-                            p.first_mile_ride_sharing_,
-                            kRideSharingTransportModeId);
-  p.fix_last_mile_duration(ride_share_journeys, p.last_mile_ride_sharing_,
-                           p.last_mile_ride_sharing_,
-                           kRideSharingTransportModeId);
+  fix_first_mile_duration(ride_share_journeys, p.first_mile_ride_sharing_,
+                          p.first_mile_ride_sharing_,
+                          kRideSharingTransportModeId);
+  fix_last_mile_duration(ride_share_journeys, p.last_mile_ride_sharing_,
+                         p.last_mile_ride_sharing_,
+                         kRideSharingTransportModeId);
   utl::erase_duplicates(
       taxi_journeys, std::less<n::routing::journey>{},
       [](auto const& a, auto const& b) {
