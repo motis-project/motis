@@ -28,7 +28,6 @@
 	let container: HTMLElement | null;
 
 	onMount(() => {
-		console.log('MOUNTED');
 		const cleanup = restoreScroll(container!);
 		return cleanup;
 	});
@@ -92,7 +91,7 @@
 <div
 	bind:this={ref}
 	class={cn(
-		'bg-card text-card-foreground rounded-xl pb-8 h-full border shadow max-w-full transition-transform duration-200 ease-out',
+		'bg-card text-card-foreground rounded-xl pb-5 h-full border shadow max-w-full transition-transform duration-200 ease-out',
 		className
 	)}
 	{...restProps}
