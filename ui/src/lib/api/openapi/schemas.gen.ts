@@ -816,8 +816,16 @@ export const RentalReturnConstraintSchema = {
 export const RentalSchema = {
     description: 'Vehicle rental',
     type: 'object',
-    required: ['systemId'],
+    required: ['providerId', 'providerGroupId', 'systemId'],
     properties: {
+        providerId: {
+            type: 'string',
+            description: 'Rental provider ID'
+        },
+        providerGroupId: {
+            type: 'string',
+            description: 'Rental provider group ID'
+        },
         systemId: {
             type: 'string',
             description: 'Vehicle share system ID'
@@ -829,6 +837,12 @@ export const RentalSchema = {
         url: {
             type: 'string',
             description: 'URL of the vehicle share system'
+        },
+        color: {
+            type: 'string',
+            description: `Color associated with this provider, in hexadecimal RGB format
+(e.g. "#FF0000" for red). Can be empty.
+`
         },
         stationName: {
             type: 'string',
@@ -941,7 +955,7 @@ export const RentalVehicleTypeSchema = {
 
 export const RentalProviderSchema = {
     type: 'object',
-    required: ['id', 'name', 'bbox', 'vehicleTypes', 'formFactors', 'defaultRestrictions', 'globalGeofencingRules'],
+    required: ['id', 'name', 'groupId', 'bbox', 'vehicleTypes', 'formFactors', 'defaultRestrictions', 'globalGeofencingRules'],
     properties: {
         id: {
             type: 'string',
@@ -950,6 +964,10 @@ export const RentalProviderSchema = {
         name: {
             type: 'string',
             description: 'Name of the provider to be displayed to customers'
+        },
+        groupId: {
+            type: 'string',
+            description: 'Id of the rental provider group this provider belongs to'
         },
         operator: {
             type: 'string',
@@ -962,6 +980,12 @@ export const RentalProviderSchema = {
         purchaseUrl: {
             type: 'string',
             description: 'URL where a customer can purchase a membership'
+        },
+        color: {
+            type: 'string',
+            description: `Color associated with this provider, in hexadecimal RGB format
+(e.g. "#FF0000" for red). Can be empty.
+`
         },
         bbox: {
             type: 'array',
@@ -999,9 +1023,44 @@ export const RentalProviderSchema = {
     }
 } as const;
 
+export const RentalProviderGroupSchema = {
+    type: 'object',
+    required: ['id', 'name', 'providers', 'formFactors'],
+    properties: {
+        id: {
+            type: 'string',
+            description: 'Unique identifier of the rental provider group'
+        },
+        name: {
+            type: 'string',
+            description: 'Name of the provider group to be displayed to customers'
+        },
+        color: {
+            type: 'string',
+            description: `Color associated with this provider group, in hexadecimal RGB format
+(e.g. "#FF0000" for red). Can be empty.
+`
+        },
+        providers: {
+            type: 'array',
+            description: 'List of rental provider IDs that belong to this group',
+            items: {
+                type: 'string'
+            }
+        },
+        formFactors: {
+            type: 'array',
+            description: 'List of form factors offered by this provider group',
+            items: {
+                '$ref': '#/components/schemas/RentalFormFactor'
+            }
+        }
+    }
+} as const;
+
 export const RentalStationSchema = {
     type: 'object',
-    required: ['id', 'providerId', 'name', 'lat', 'lon', 'isRenting', 'isReturning', 'numVehiclesAvailable', 'formFactors', 'vehicleTypesAvailable', 'vehicleDocksAvailable'],
+    required: ['id', 'providerId', 'providerGroupId', 'name', 'lat', 'lon', 'isRenting', 'isReturning', 'numVehiclesAvailable', 'formFactors', 'vehicleTypesAvailable', 'vehicleDocksAvailable'],
     properties: {
         id: {
             type: 'string',
@@ -1010,6 +1069,10 @@ export const RentalStationSchema = {
         providerId: {
             type: 'string',
             description: 'Unique identifier of the rental provider'
+        },
+        providerGroupId: {
+            type: 'string',
+            description: 'Unique identifier of the rental provider group'
         },
         name: {
             type: 'string',
@@ -1084,7 +1147,7 @@ export const RentalStationSchema = {
 
 export const RentalVehicleSchema = {
     type: 'object',
-    required: ['id', 'providerId', 'typeId', 'lat', 'lon', 'formFactor', 'propulsionType', 'returnConstraint', 'isReserved', 'isDisabled'],
+    required: ['id', 'providerId', 'providerGroupId', 'typeId', 'lat', 'lon', 'formFactor', 'propulsionType', 'returnConstraint', 'isReserved', 'isDisabled'],
     properties: {
         id: {
             type: 'string',
@@ -1093,6 +1156,10 @@ export const RentalVehicleSchema = {
         providerId: {
             type: 'string',
             description: 'Unique identifier of the rental provider'
+        },
+        providerGroupId: {
+            type: 'string',
+            description: 'Unique identifier of the rental provider group'
         },
         typeId: {
             type: 'string',
@@ -1148,11 +1215,15 @@ export const RentalVehicleSchema = {
 
 export const RentalZoneSchema = {
     type: 'object',
-    required: ['providerId', 'z', 'area', 'rules'],
+    required: ['providerId', 'providerGroupId', 'z', 'area', 'rules'],
     properties: {
         providerId: {
             type: 'string',
             description: 'Unique identifier of the rental provider'
+        },
+        providerGroupId: {
+            type: 'string',
+            description: 'Unique identifier of the rental provider group'
         },
         name: {
             type: 'string',

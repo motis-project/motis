@@ -23,6 +23,9 @@ importers:
       '@mapbox/polyline':
         specifier: ^1.2.1
         version: 1.2.1
+      '@tanstack/svelte-query':
+        specifier: ^6.0.3
+        version: 6.0.3(svelte@5.33.4)
       '@turf/circle':
         specifier: ^7.2.0
         version: 7.2.0
@@ -718,6 +721,14 @@ packages:
 
   '@swc/helpers@0.5.17':
     resolution: {integrity: sha512-5IKx/Y13RsYd+sauPb2x+U/xZikHjolzfuDgTAl/Tdf3Q8rslRvC19NKDLgAJQ6wsqADk10ntlv08nPFw/gO/A==}
+
+  '@tanstack/query-core@5.90.5':
+    resolution: {integrity: sha512-wLamYp7FaDq6ZnNehypKI5fNvxHPfTYylE0m/ZpuuzJfJqhR5Pxg9gvGBHZx4n7J+V5Rg5mZxHHTlv25Zt5u+w==}
+
+  '@tanstack/svelte-query@6.0.3':
+    resolution: {integrity: sha512-+elBl7JMr5C5RVHYu/DMxH06IrDZPpORFm4Rtyg9Qe9ww6gvG9naCvPw5arMoMq7si4Y3pJDTuX8PbQgy/RRMQ==}
+    peerDependencies:
+      svelte: ^5.25.0
 
   '@turf/circle@7.2.0':
     resolution: {integrity: sha512-1AbqBYtXhstrHmnW6jhLwsv7TtmT0mW58Hvl1uZXEDM1NCVXIR50yDipIeQPjrCuJ/Zdg/91gU8+4GuDCAxBGA==}
@@ -2898,6 +2909,13 @@ snapshots:
   '@swc/helpers@0.5.17':
     dependencies:
       tslib: 2.8.1
+
+  '@tanstack/query-core@5.90.5': {}
+
+  '@tanstack/svelte-query@6.0.3(svelte@5.33.4)':
+    dependencies:
+      '@tanstack/query-core': 5.90.5
+      svelte: 5.33.4
 
   '@turf/circle@7.2.0':
     dependencies:

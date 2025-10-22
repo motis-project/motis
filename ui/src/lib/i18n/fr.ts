@@ -42,12 +42,14 @@ const translations: Translations = {
 		}
 	},
 	sharingProvider: 'Fournisseur',
+	sharingProviders: 'Fournisseurs',
 	transfers: 'correspondances',
 	roundtripStationReturnConstraint: 'Le véhicule doit être retourné à la station de départ.',
 	noItinerariesFound: 'Aucun itinéraire trouvé.',
 	advancedSearchOptions: 'Options',
 	selectTransitModes: 'Sélectionner les modes de transport en commun',
 	defaultSelectedModes: 'Tous les transports en commun',
+	defaultSelectedProviders: 'Tous les fournisseurs',
 	selectElevationCosts: 'Évitez les pentes abruptes.', // TODO Online translated
 	wheelchair: 'Correspondances accessibles',
 	useRoutedTransfers: 'Utiliser les correspondances routées',

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { browser } from '$app/environment';
 	import {
 		rentals,
 		type RentalFormFactor,
@@ -11,7 +12,16 @@
 	import Control from '$lib/map/Control.svelte';
 	import GeoJSON from '$lib/map/GeoJSON.svelte';
 	import Layer from '$lib/map/Layer.svelte';
-	import { formFactorAssets, DEFAULT_FORM_FACTOR } from '$lib/map/rentals/assets';
+	import {
+		DEFAULT_FORM_FACTOR,
+		ICON_TYPES,
+		formFactorAssets,
+		colorizeIcon,
+		getIconBaseName,
+		getIconUrl,
+		getIconDimensions,
+		type IconType
+	} from '$lib/map/rentals/assets';
 	import { cn } from '$lib/utils';
 	import polyline from '@mapbox/polyline';
 	import maplibregl from 'maplibre-gl';
@@ -29,6 +39,7 @@
 	import VehiclePopup from '$lib/map/rentals/VehiclePopup.svelte';
 	import ZonePopup from '$lib/map/rentals/ZonePopup.svelte';
 	import {
+		DEFAULT_COLOR,
 		zoomScaledIconSize,
 		zoomScaledTextOffset,
 		zoomScaledTextSizeMedium,
@@ -47,7 +58,8 @@
 
 	const MIN_ZOOM = 14;
 	const FETCH_PADDING_RATIO = 0.5;
-	const STATION_LAYER_ID = 'rentals-stations';
+	const STATION_SOURCE_ID = 'rentals-stations';
+	const STATION_ICON_LAYER_ID = 'rentals-stations-icons';
 	const VEHICLE_SOURCE_PREFIX = 'rentals-vehicles';
 	const VEHICLE_CLUSTER_RADIUS = 50;
 	const ZONE_LAYER_ID = 'rentals-zones';
@@ -55,30 +67,77 @@
 
 	const formFactors = Object.keys(formFactorAssets) as RentalFormFactor[];
 
+	const getIconId = (formFactor: RentalFormFactor, type: IconType, color: string) =>
+		`${getIconBaseName(formFactor, type)}-${color}`;
+
 	type RentalsPayload = Awaited<ReturnType<typeof rentals>>['data'];
+	type RentalsPayloadData = NonNullable<RentalsPayload>;
+
+	const collectFormFactorsByColor = (data: RentalsPayloadData) => {
+		const formFactorsByColor = new Map<string, Set<RentalFormFactor>>();
+		const providerColorById = new Map<string, string>();
+
+		const addFormFactor = (color: string, formFactor: RentalFormFactor) => {
+			let formFactors = formFactorsByColor.get(color);
+			if (!formFactors) {
+				formFactors = new Set<RentalFormFactor>();
+				formFactorsByColor.set(color, formFactors);
+			}
+			formFactors.add(formFactor);
+		};
+
+		for (const provider of data.providers) {
+			const color = provider.color || DEFAULT_COLOR;
+			providerColorById.set(provider.id, color);
+			for (const formFactor of provider.formFactors) {
+				addFormFactor(color, formFactor);
+			}
+		}
+		for (const station of data.stations) {
+			const color = providerColorById.get(station.providerId) ?? DEFAULT_COLOR;
+			if (station.formFactors.length === 0) {
+				addFormFactor(color, DEFAULT_FORM_FACTOR);
+			}
+			for (const formFactor of station.formFactors) {
+				addFormFactor(color, formFactor);
+			}
+		}
+		for (const vehicle of data.vehicles) {
+			const color = providerColorById.get(vehicle.providerId) ?? DEFAULT_COLOR;
+			addFormFactor(color, vehicle.formFactor);
+		}
+		return formFactorsByColor;
+	};
 
 	type DisplayFilter = {
 		providerId: string;
 		providerName: string;
 		formFactor: RentalFormFactor;
+		color: string;
 	};
 
 	let rentalsData = $state<RentalsPayload | null>(null);
 	let loadedBounds = $state<maplibregl.LngLatBounds | null>(null);
 	let requestToken = 0;
 	let displayFilter = $state<DisplayFilter | null>(null);
+	let iconsReady = $state(false);
+	let iconRequestToken = 0;
+	let activeIconIds = new Set<string>();
 
 	type StationFeatureProperties = {
 		icon: string;
 		available: number;
 		providerId: string;
 		stationId: string;
+		color: string;
 	};
 
 	type VehicleFeatureProperties = {
 		icon: string;
+		clusterIcon: string;
 		providerId: string;
 		vehicleId: string;
+		color: string;
 	};
 
 	type VehicleCollections = Record<
@@ -110,7 +169,8 @@
 				provider.formFactors.map((formFactor) => ({
 					providerId: provider.id,
 					providerName: provider.name,
-					formFactor
+					formFactor,
+					color: provider.color || DEFAULT_COLOR
 				}))
 			)
 			.sort(
@@ -120,6 +180,26 @@
 			);
 
 	let providerOptions = $derived(rentalsData ? buildProviderOptions(rentalsData.providers) : []);
+
+	type ProviderColors = {
+		color: string;
+	};
+
+	let providerColors = $derived.by((): Record<string, ProviderColors> => {
+		if (!rentalsData) {
+			return {};
+		}
+		return Object.fromEntries(
+			rentalsData.providers.map((provider) => {
+				return [
+					provider.id,
+					{
+						color: provider.color || DEFAULT_COLOR
+					}
+				];
+			})
+		);
+	});
 
 	const isSameFilter = (a: DisplayFilter | null, b: DisplayFilter | null) =>
 		a?.providerId === b?.providerId && a?.formFactor === b?.formFactor;
@@ -197,6 +277,104 @@
 		requestToken += 1;
 	});
 
+	const clearMapIcons = (mapInstance: maplibregl.Map | undefined) => {
+		if (!mapInstance || activeIconIds.size === 0) {
+			return;
+		}
+		for (const id of activeIconIds) {
+			if (mapInstance.hasImage(id)) {
+				mapInstance.removeImage(id);
+			}
+		}
+		activeIconIds = new Set<string>();
+	};
+
+	$effect(() => {
+		const mapInstance = map;
+		const data = rentalsData;
+		if (!browser || !mapInstance) {
+			iconsReady = false;
+			iconRequestToken += 1;
+			clearMapIcons(mapInstance);
+			return;
+		}
+
+		if (!data) {
+			iconsReady = false;
+			iconRequestToken += 1;
+			clearMapIcons(mapInstance);
+			return;
+		}
+
+		const dataPayload = data as RentalsPayloadData;
+		const formFactorsByColor = collectFormFactorsByColor(dataPayload);
+		if (formFactorsByColor.size === 0) {
+			iconRequestToken += 1;
+			clearMapIcons(mapInstance);
+			iconsReady = true;
+			return;
+		}
+
+		const token = ++iconRequestToken;
+		iconsReady = false;
+		const neededIds = new Set<string>();
+		const tasks: Promise<void>[] = [];
+
+		formFactorsByColor.forEach((formFactors, color) => {
+			formFactors.forEach((formFactor) => {
+				ICON_TYPES.forEach((type) => {
+					const dimensions = getIconDimensions(type);
+					const id = getIconId(formFactor, type, color);
+					neededIds.add(id);
+					if (!mapInstance.hasImage(id)) {
+						tasks.push(
+							(async () => {
+								try {
+									const image = await colorizeIcon(getIconUrl(formFactor, type), color, dimensions);
+									if (token !== iconRequestToken || !mapInstance) {
+										return;
+									}
+									if (!mapInstance.hasImage(id)) {
+										try {
+											mapInstance.addImage(id, image);
+										} catch (addError) {
+											console.error(`[Rentals] failed to register icon ${id}`, addError);
+										}
+									}
+								} catch (error) {
+									console.error(`[Rentals] failed to prepare icon ${id}`, error);
+								}
+							})()
+						);
+					}
+				});
+			});
+		});
+
+		void (async () => {
+			await Promise.allSettled(tasks);
+			if (token !== iconRequestToken || !mapInstance) {
+				return;
+			}
+
+			const previousIds = Array.from(activeIconIds);
+			for (const id of previousIds) {
+				if (!neededIds.has(id) && mapInstance.hasImage(id)) {
+					mapInstance.removeImage(id);
+				}
+			}
+
+			const newActiveIds = new Set<string>();
+			neededIds.forEach((id) => {
+				if (mapInstance.hasImage(id)) {
+					newActiveIds.add(id);
+				}
+			});
+			activeIconIds = newActiveIds;
+			iconsReady = neededIds.size === newActiveIds.size;
+		})();
+	});
+
 	const stationAvailability = (
 		station: RentalStation,
 		formFactorByVehicleType: Map<string, RentalFormFactor> | null,
@@ -211,7 +389,7 @@
 	};
 
 	let stationFeatures = $derived.by((): FeatureCollection<Point, StationFeatureProperties> => {
-		if (!rentalsData) {
+		if (!rentalsData || !iconsReady) {
 			return { type: 'FeatureCollection', features: [] };
 		}
 		const filter = displayFilter;
@@ -232,6 +410,11 @@
 		return {
 			type: 'FeatureCollection',
 			features: stations.map((station) => {
+				const provider = providerColors[station.providerId];
+				const color = provider?.color ?? DEFAULT_COLOR;
+				const formFactor = filter
+					? filter.formFactor
+					: (station.formFactors[0] ?? DEFAULT_FORM_FACTOR);
 				return {
 					type: 'Feature',
 					geometry: {
@@ -239,12 +422,11 @@
 						coordinates: [station.lon, station.lat]
 					},
 					properties: {
-						icon: formFactorAssets[
-							filter ? filter.formFactor : (station.formFactors[0] ?? DEFAULT_FORM_FACTOR)
-						].station,
+						icon: getIconId(formFactor, 'station', color),
 						available: stationAvailability(station, formFactorByVehicleType, filter),
 						providerId: station.providerId,
-						stationId: station.id
+						stationId: station.id,
+						color
 					}
 				};
 			})
@@ -256,7 +438,7 @@
 			acc[formFactor] = { type: 'FeatureCollection', features: [] };
 			return acc;
 		}, {} as VehicleCollections);
-		if (!rentalsData) {
+		if (!rentalsData || !iconsReady) {
 			return collections;
 		}
 		const filter = displayFilter;
@@ -270,6 +452,8 @@
 			.filter((vehicle) => !vehicle.stationId)
 			.forEach((vehicle) => {
 				const collection = collections[vehicle.formFactor];
+				const provider = providerColors[vehicle.providerId];
+				const color = provider?.color ?? DEFAULT_COLOR;
 				collection.features.push({
 					type: 'Feature',
 					geometry: {
@@ -277,15 +461,16 @@
 						coordinates: [vehicle.lon, vehicle.lat]
 					},
 					properties: {
-						icon: formFactorAssets[vehicle.formFactor].vehicle,
+						icon: getIconId(vehicle.formFactor, 'vehicle', color),
+						clusterIcon: getIconId(vehicle.formFactor, 'cluster', color),
 						providerId: vehicle.providerId,
-						vehicleId: vehicle.id
+						vehicleId: vehicle.id,
+						color
 					}
 				});
 			});
 		return collections;
 	});
-
 	const buildZoneGeometry = (zone: RentalZone): GeoMultiPolygon => {
 		return {
 			type: 'MultiPolygon',
@@ -654,8 +839,10 @@
 		}
 
 		// Check if there's a station or vehicle at this location (they should take priority)
-		const vehiclePointLayers = vehicleLayerConfigs.map((c) => c.pointLayerId);
-		const priorityLayers = [STATION_LAYER_ID, ...vehiclePointLayers];
+		const priorityLayers = [
+			STATION_ICON_LAYER_ID,
+			...vehicleLayerConfigs.map((c) => c.pointLayerId)
+		];
 		const priorityFeatures = mapInstance.queryRenderedFeatures(event.point, {
 			layers: priorityLayers
 		});
@@ -711,13 +898,14 @@
 		hideTooltip();
 		hidePopup();
 		resetHoverCursor();
+		clearMapIcons(map);
 		tooltipPopup = null;
 		detailPopup = null;
 	});
 </script>
 
 {#if zoneFeatures.features.length > 0}
-	{@const beforeLayerId = vehicleLayerConfigs[0]?.pointLayerId ?? STATION_LAYER_ID}
+	{@const beforeLayerId = vehicleLayerConfigs[0]?.pointLayerId ?? STATION_ICON_LAYER_ID}
 	<GeoJSON id={ZONE_LAYER_ID} data={zoneFeatures}>
 		<Layer
 			id={ZONE_LAYER_ID}
@@ -760,19 +948,19 @@
 	</GeoJSON>
 {/if}
 
-<GeoJSON id={STATION_LAYER_ID} data={stationFeatures}>
+<GeoJSON id={STATION_SOURCE_ID} data={stationFeatures}>
 	<Layer
-		id={STATION_LAYER_ID}
+		id={STATION_ICON_LAYER_ID}
 		beforeLayerId=""
 		type="symbol"
 		filter={true}
 		layout={{
 			'icon-image': ['get', 'icon'],
 			'icon-size': zoomScaledIconSize,
-			'icon-allow-overlap': true,
+			'icon-allow-overlap': false,
 			'icon-ignore-placement': true,
 			'text-field': ['to-string', ['get', 'available']],
-			'text-allow-overlap': true,
+			'text-allow-overlap': false,
 			'text-ignore-placement': true,
 			'text-anchor': 'center',
 			'text-offset': zoomScaledTextOffset,
@@ -783,10 +971,7 @@
 		onmouseleave={handleStationMouseLeave}
 		onclick={handleStationClick}
 		paint={{
-			'icon-opacity': 1,
-			'text-color': '#1e293b',
-			'text-halo-color': '#ffffff',
-			'text-halo-width': 1.5
+			'text-color': '#000'
 		}}
 	/>
 </GeoJSON>
@@ -795,15 +980,23 @@
 	<GeoJSON
 		id={config.sourceId}
 		data={vehicleCollections[config.formFactor]}
-		options={{ cluster: true, clusterRadius: VEHICLE_CLUSTER_RADIUS }}
+		options={{
+			cluster: true,
+			clusterRadius: VEHICLE_CLUSTER_RADIUS,
+			clusterProperties: {
+				color: ['coalesce', ['get', 'color']],
+				icon: ['coalesce', ['get', 'icon']],
+				clusterIcon: ['coalesce', ['get', 'clusterIcon']]
+			}
+		}}
 	>
 		<Layer
 			id={config.clusterLayerId}
-			beforeLayerId={STATION_LAYER_ID}
+			beforeLayerId={STATION_ICON_LAYER_ID}
 			type="symbol"
 			filter={['has', 'point_count']}
 			layout={{
-				'icon-image': formFactorAssets[config.formFactor].cluster,
+				'icon-image': ['get', 'clusterIcon'],
 				'icon-size': zoomScaledIconSize,
 				'icon-allow-overlap': true,
 				'icon-ignore-placement': true,
@@ -816,27 +1009,24 @@
 				'text-font': ['Noto Sans Display Regular']
 			}}
 			paint={{
-				'icon-opacity': 1,
-				'text-color': '#1e293b',
-				'text-halo-color': '#ffffff',
-				'text-halo-width': 1.5
+				'text-color': '#000'
 			}}
 		/>
 		<Layer
 			id={config.pointLayerId}
-			beforeLayerId={STATION_LAYER_ID}
+			beforeLayerId={STATION_ICON_LAYER_ID}
 			type="symbol"
 			filter={['!', ['has', 'point_count']]}
 			layout={{
-				'icon-image': formFactorAssets[config.formFactor].vehicle,
+				'icon-image': ['get', 'icon'],
 				'icon-size': zoomScaledIconSize,
 				'icon-allow-overlap': true,
 				'icon-ignore-placement': true
 			}}
+			paint={{}}
 			onmousemove={handleVehicleMouseMove}
 			onmouseleave={handleVehicleMouseLeave}
 			onclick={handleVehicleClick}
-			paint={{}}
 		/>
 	</GeoJSON>
 {/each}
@@ -860,7 +1050,12 @@
 				>
 					<span class="truncate">{option.providerName}</span>
 					<span class="flex items-center gap-1 text-xs font-medium">
-						<svg class="h-4 w-4 fill-current" aria-hidden="true" focusable="false">
+						<svg
+							class="h-4 w-4 fill-current"
+							aria-hidden="true"
+							focusable="false"
+							style={`color: ${option.color}`}
+						>
 							<use href={`#${formFactorAssets[option.formFactor].svg}`} />
 						</svg>
 					</span>

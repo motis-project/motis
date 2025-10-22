@@ -682,6 +682,14 @@ export type RentalReturnConstraint = 'NONE' | 'ANY_STATION' | 'ROUNDTRIP_STATION
  */
 export type Rental = {
     /**
+     * Rental provider ID
+     */
+    providerId: string;
+    /**
+     * Rental provider group ID
+     */
+    providerGroupId: string;
+    /**
      * Vehicle share system ID
      */
     systemId: string;
@@ -693,6 +701,12 @@ export type Rental = {
      * URL of the vehicle share system
      */
     url?: string;
+    /**
+     * Color associated with this provider, in hexadecimal RGB format
+     * (e.g. "#FF0000" for red). Can be empty.
+     *
+     */
+    color?: string;
     /**
      * Name of the station
      */
@@ -782,6 +796,10 @@ export type RentalProvider = {
      */
     name: string;
     /**
+     * Id of the rental provider group this provider belongs to
+     */
+    groupId: string;
+    /**
      * Name of the system operator
      */
     operator?: string;
@@ -793,6 +811,12 @@ export type RentalProvider = {
      * URL where a customer can purchase a membership
      */
     purchaseUrl?: string;
+    /**
+     * Color associated with this provider, in hexadecimal RGB format
+     * (e.g. "#FF0000" for red). Can be empty.
+     *
+     */
+    color?: string;
     /**
      * Bounding box of the area covered by this rental provider,
      * [west, south, east, north] as [lon, lat, lon, lat]
@@ -813,6 +837,31 @@ export type RentalProvider = {
     globalGeofencingRules: Array<RentalZoneRestrictions>;
 };
 
+export type RentalProviderGroup = {
+    /**
+     * Unique identifier of the rental provider group
+     */
+    id: string;
+    /**
+     * Name of the provider group to be displayed to customers
+     */
+    name: string;
+    /**
+     * Color associated with this provider group, in hexadecimal RGB format
+     * (e.g. "#FF0000" for red). Can be empty.
+     *
+     */
+    color?: string;
+    /**
+     * List of rental provider IDs that belong to this group
+     */
+    providers: Array<(string)>;
+    /**
+     * List of form factors offered by this provider group
+     */
+    formFactors: Array<RentalFormFactor>;
+};
+
 export type RentalStation = {
     /**
      * Unique identifier of the rental station
@@ -822,6 +871,10 @@ export type RentalStation = {
      * Unique identifier of the rental provider
      */
     providerId: string;
+    /**
+     * Unique identifier of the rental provider group
+     */
+    providerGroupId: string;
     /**
      * Public name of the station
      */
@@ -895,6 +948,10 @@ export type RentalVehicle = {
      */
     providerId: string;
     /**
+     * Unique identifier of the rental provider group
+     */
+    providerGroupId: string;
+    /**
      * Vehicle type ID (unique within the provider)
      */
     typeId: string;
@@ -944,6 +1001,10 @@ export type RentalZone = {
      * Unique identifier of the rental provider
      */
     providerId: string;
+    /**
+     * Unique identifier of the rental provider group
+     */
+    providerGroupId: string;
     /**
      * Public name of the geofencing zone
      */
@@ -1329,6 +1390,16 @@ export type PlanData = {
          *
          * Optional. Only applies to direct connections.
          *
+         * A list of rental provider groups that are allowed to be used for direct connections.
+         * If empty (the default), all providers are allowed.
+         *
+         */
+        directRentalProviderGroups?: Array<(string)>;
+        /**
+         * Experimental. Expect unannounced breaking changes (without version bumps).
+         *
+         * Optional. Only applies to direct connections.
+         *
          * A list of rental providers that are allowed to be used for direct connections.
          * If empty (the default), all providers are allowed.
          *
@@ -1580,6 +1651,16 @@ export type PlanData = {
         /**
          * Experimental. Expect unannounced breaking changes (without version bumps).
          *
+         * Optional. Only applies if the `to` place is a coordinate (not a transit stop). Does not apply to direct connections (see `directRentalProviderGroups`).
+         *
+         * A list of rental provider groups that are allowed to be used from the last transit stop to the `to` coordinate.
+         * If empty (the default), all providers are allowed.
+         *
+         */
+        postTransitRentalProviderGroups?: Array<(string)>;
+        /**
+         * Experimental. Expect unannounced breaking changes (without version bumps).
+         *
          * Optional. Only applies if the `to` place is a coordinate (not a transit stop). Does not apply to direct connections (see `directRentalProviders`).
          *
          * A list of rental providers that are allowed to be used from the last transit stop to the `to` coordinate.
@@ -1616,6 +1697,16 @@ export type PlanData = {
          *
          */
         preTransitRentalPropulsionTypes?: Array<RentalPropulsionType>;
+        /**
+         * Experimental. Expect unannounced breaking changes (without version bumps).
+         *
+         * Optional. Only applies if the `from` place is a coordinate (not a transit stop). Does not apply to direct connections (see `directRentalProviderGroups`).
+         *
+         * A list of rental provider groups that are allowed to be used from the `from` coordinate to the first transit stop.
+         * If empty (the default), all providers are allowed.
+         *
+         */
+        preTransitRentalProviderGroups?: Array<(string)>;
         /**
          * Experimental. Expect unannounced breaking changes (without version bumps).
          *
@@ -2333,11 +2424,27 @@ export type RentalsData = {
          */
         min?: string;
         /**
+         * A list of rental provider groups to return.
+         * If both `providerGroups` and `providers` are empty/not specified,
+         * all providers in the map section are returned.
+         *
+         */
+        providerGroups?: Array<(string)>;
+        /**
          * A list of rental providers to return.
-         * If empty (the default), all providers in the map section are returned.
+         * If both `providerGroups` and `providers` are empty/not specified,
+         * all providers in the map section are returned.
          *
          */
         providers?: Array<(string)>;
+        /**
+         * Optional. Include providers in output. If false, only provider
+         * groups are returned.
+         *
+         * Also affects the providers list for each provider group.
+         *
+         */
+        withProviders?: boolean;
         /**
          * Optional. Include stations in output (requires at least min+max or providers filter).
          */
@@ -2354,6 +2461,7 @@ export type RentalsData = {
 };
 
 export type RentalsResponse = ({
+    providerGroups: Array<RentalProviderGroup>;
     providers: Array<RentalProvider>;
     stations: Array<RentalStation>;
     vehicles: Array<RentalVehicle>;

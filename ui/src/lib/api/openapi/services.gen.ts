@@ -124,23 +124,28 @@ export const levels = <ThrowOnError extends boolean = false>(options: Options<Le
 };
 
 /**
- * Get all rental stations and vehicles for a map section or provider
- * If neither the map section (`min` and `max`) nor the `providers`
- * parameter is provided, returns a list of all available rental providers,
- * but no station, vehicle or zone data.
+ * Get a list of rental providers or all rental stations and vehicles for
+ * a map section or provider
  *
- * Either the map section (`min` and `max`) or the `providers` parameter
+ * If neither the map section (`min` and `max`) nor a provider filter
+ * (either `providerGroups` or `providers`) is provided, returns a list of
+ * all available rental providers, but no station, vehicle or zone data.
+ * Provide the `withProviders=false` parameter to retrieve only provider
+ * groups if detailed feed information is not required.
+ *
+ * Either the map section (`min` and `max`) or the provider filter
+ * (either `providerGroups` or `providers`)
  * must be provided to retrieve station, vehicle and zone data.
  *
  * If only the map section is provided, all data in the area is returned.
- * If only the `providers` parameter is provided, all data for the given providers is returned.
+ * If only the provider filter is provided, all data for the given providers is returned.
  * If both parameters are provided, only data for the given providers in the map section is returned.
  *
  */
 export const rentals = <ThrowOnError extends boolean = false>(options?: Options<RentalsData, ThrowOnError>) => {
     return (options?.client ?? client).get<RentalsResponse, RentalsError, ThrowOnError>({
         ...options,
-        url: '/api/v1/map/rentals'
+        url: '/api/v1/rentals'
     });
 };
 

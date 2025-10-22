@@ -45,11 +45,13 @@ const translations: Translations = {
 		return `${n} przystanków pośrednich`;
 	},
 	sharingProvider: 'Dostawca danych',
+	sharingProviders: 'Dostawcy danych',
 	roundtripStationReturnConstraint: 'Pojazd musi zostać zwrócony do stacji początkowej.',
 	noItinerariesFound: 'Nie znaleziono połączeń.',
 	advancedSearchOptions: 'Opcje',
 	selectTransitModes: 'Wybierz środki transportu',
 	defaultSelectedModes: 'Wszystkie środki transportu',
+	defaultSelectedProviders: 'Wszyscy dostawcy',
 	selectElevationCosts: 'Unikaj stromych nachyleń.',
 	wheelchair: 'Bezbarierowe przesiadki',
 	useRoutedTransfers: 'Wyznacz trasy dla przesiadek',

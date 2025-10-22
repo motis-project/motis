@@ -43,11 +43,13 @@ const translations: Translations = {
 		}
 	},
 	sharingProvider: 'Provider',
+	sharingProviders: 'Providers',
 	roundtripStationReturnConstraint: 'The vehicle must be returned to the departure station.',
 	noItinerariesFound: 'No itineraries found.',
 	advancedSearchOptions: 'Options',
 	selectTransitModes: 'Select transit modes',
 	defaultSelectedModes: 'All transit modes',
+	defaultSelectedProviders: 'All providers',
 	selectElevationCosts: 'Avoid steep incline.',
 	useRoutedTransfers: 'Use routed transfers',
 	wheelchair: 'Accessible transfers',

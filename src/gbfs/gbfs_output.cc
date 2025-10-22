@@ -20,9 +20,12 @@ gbfs_output::gbfs_output(osr::ways const& w,
       sharing_data_{prod_rd_->get_sharing_data(
           w_.n_nodes(), ignore_rental_return_constraints)},
       rental_{
+          .providerId_ = provider_.id_,
+          .providerGroupId_ = provider_.group_id_,
           .systemId_ = provider_.sys_info_.id_,
           .systemName_ = provider_.sys_info_.name_,
           .url_ = provider_.sys_info_.url_,
+          .color_ = provider_.color_,
           .formFactor_ = to_api_form_factor(products_.form_factor_),
           .propulsionType_ = to_api_propulsion_type(products_.propulsion_type_),
           .returnConstraint_ =

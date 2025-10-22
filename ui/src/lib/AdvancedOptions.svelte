@@ -39,6 +39,9 @@
 		ignorePreTransitRentalReturnConstraints = $bindable(),
 		ignorePostTransitRentalReturnConstraints = $bindable(),
 		ignoreDirectRentalReturnConstraints = $bindable(),
+		preTransitProviderGroups = $bindable(),
+		postTransitProviderGroups = $bindable(),
+		directProviderGroups = $bindable(),
 		additionalComponents
 	}: {
 		useRoutedTransfers: boolean;
@@ -59,6 +62,9 @@
 		ignorePreTransitRentalReturnConstraints: boolean;
 		ignorePostTransitRentalReturnConstraints: boolean;
 		ignoreDirectRentalReturnConstraints: boolean | undefined;
+		preTransitProviderGroups: string[];
+		postTransitProviderGroups: string[];
+		directProviderGroups: string[];
 		additionalComponents?: Snippet;
 	} = $props();
 
@@ -212,6 +218,7 @@
 				possibleModes={prePostDirectModes}
 				possibleMaxTransitTime={possiblePrePostDurations}
 				ignoreRentalReturnConstraints={ignorePreTransitRentalReturnConstraints}
+				bind:providerGroups={preTransitProviderGroups}
 			></StreetModes>
 
 			<!-- Last mile -->
@@ -222,6 +229,7 @@
 				possibleModes={prePostDirectModes}
 				possibleMaxTransitTime={possiblePrePostDurations}
 				ignoreRentalReturnConstraints={ignorePostTransitRentalReturnConstraints}
+				bind:providerGroups={postTransitProviderGroups}
 			></StreetModes>
 
 			<!-- Direct -->
@@ -233,6 +241,7 @@
 					possibleModes={prePostDirectModes}
 					possibleMaxTransitTime={possibleDirectDurations}
 					ignoreRentalReturnConstraints={ignoreDirectRentalReturnConstraints}
+					bind:providerGroups={directProviderGroups}
 				></StreetModes>
 			{/if}
 		</div>

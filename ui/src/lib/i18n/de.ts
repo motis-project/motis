@@ -43,12 +43,14 @@ const translations: Translations = {
 		}
 	},
 	sharingProvider: 'Anbieter',
+	sharingProviders: 'Anbieter',
 	roundtripStationReturnConstraint:
 		'Das Fahrzeug muss wieder an der Abfahrtsstation abgestellt werden.',
 	noItinerariesFound: 'Keine Verbindungen gefunden.',
 	advancedSearchOptions: 'Optionen',
 	selectTransitModes: 'Öffentliche Verkehrsmittel auswählen',
 	defaultSelectedModes: 'Alle Verkehrsmittel',
+	defaultSelectedProviders: 'Alle Anbieter',
 	selectElevationCosts: 'Steile Steigungen vermeiden.',
 	useRoutedTransfers: 'Geroutete Umstiege verwenden',
 	wheelchair: 'Barrierefreie Umstiege',
