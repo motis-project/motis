@@ -15,7 +15,7 @@
 	
 	onMount(
 		() => {
-			if (!(browser && window.innerWidth < 768)) {
+			if (!(browser && window.innerWidth < 768) && ref!.classList.contains("scrollable")) {
 				const cleanup = restoreScroll(ref!);
 				return cleanup;
 			}	

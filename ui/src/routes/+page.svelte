@@ -67,7 +67,6 @@
 
 	const urlParams = browser ? new URLSearchParams(window.location.search) : undefined;
 
-
 	const hasDebug: boolean = Boolean(urlParams?.has('debug'));
 	const hasDark: boolean = Boolean(urlParams?.has('dark'));
 	const hasLight: boolean = Boolean(urlParams?.has('light'));
@@ -575,7 +574,7 @@
 	{#if activeTab != 'isochrones' && routingResponses.length !== 0 && !page.state.showDepartures}
 		<Control class="min-h-0 md:mb-2 {page.state.selectedItinerary ? 'hide' : ''}">
 			<Card
-				class="w-[520px] h-full md:max-h-[60vh] {isSmallScreen
+				class="scrollable w-[520px] h-full md:max-h-[60vh] {isSmallScreen
 					? 'border-0 shadow-none'
 					: ''} overflow-x-hidden bg-background rounded-lg"
 			>
@@ -584,7 +583,7 @@
 					{routingResponses}
 					{baseQuery}
 					selectItinerary={(selectedItinerary) => {
-						pushState('', {selectedItinerary: selectedItinerary, scrollY: undefined});
+						pushState('', { selectedItinerary: selectedItinerary, scrollY: undefined });
 					}}
 					updateStartDest={preprocessItinerary(from, to)}
 				/>
