@@ -175,9 +175,9 @@ gbfs:
   http_timeout: 10
 ```
 
-# Realtime protocols
+# Real time protocols
 
-MOTIS supports multiple protocols for real time feeds. This sections shows a list of each protocol, including some pitfalls:
+MOTIS supports multiple protocols for real time feeds. This sections shows a list of the protocols, including some pitfalls:
 
 | Protocol | `protocol` | Note |
 | ---- | ---- | ---- |
