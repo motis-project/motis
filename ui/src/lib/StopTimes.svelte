@@ -161,10 +161,12 @@
 							</span>
 						</div>
 					{/if}
-					{#if stopTime.place.alerts}
-						<Alerts timeZone={stopTime.place.tz ?? ''} alerts={stopTime.place.alerts} />
-					{/if}
 				</div>
+				{#if stopTime.place.alerts}
+					<div class="col-span-full -mt-10 md:-mt-5">
+						<Alerts timeZone={stopTime.place.tz ?? ''} alerts={stopTime.place.alerts} />
+					</div>
+				{/if}
 			{/each}
 			{#if !r.stopTimes.length}
 				<div class="col-span-full w-full flex items-center justify-center">

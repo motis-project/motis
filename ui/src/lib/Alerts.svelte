@@ -10,10 +10,10 @@
 	let isOpen = $state(false);
 </script>
 
-<div class="text-center mx-auto flex flex-col gap-3 max-w-sm items-center">
+<div class="flex flex-col gap-2 max-w-sm items-start">
 	<button
 		onclick={() => (isOpen = !isOpen)}
-		class="p-2 bg-yellow-500 text-xs text-white font-bold rounded-lg hover:bg-yellow-600 transition-colors my-3 shadow-lg flex items-center"
+		class="p-1 bg-yellow-500 scale-[0.65] origin-top-left text-white font-bold rounded-lg hover:bg-yellow-600 transition-colors shadow-lg flex items-center"
 	>
 		<TriangleAlert class="size-4 mr-1" />
 		{t.alertsAvailable}

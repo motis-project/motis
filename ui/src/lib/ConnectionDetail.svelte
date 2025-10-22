@@ -109,7 +109,9 @@
 		</div>
 	</div>
 	{#if isStartOrEnd && p.alerts}
-		<Alerts timeZone={p.tz ?? ''} alerts={p.alerts} />
+		<div class="-mt-2">
+			<Alerts timeZone={p.tz ?? ''} alerts={p.alerts} />
+		</div>
 	{/if}
 {/snippet}
 
@@ -288,7 +290,7 @@
 
 			<div class="px-6 pt-2 border-l-4 left-4 w-full relative" style={routeBorderColor(l)}>
 				{@render stopTimes(l.startTime, l.scheduledStartTime, l.realTime, l.from, l.mode, -1)}
-				<div class="mb-2 flex items-center">
+				<div class="mt-3 flex items-center">
 					<ArrowRight class="stroke-muted-foreground size-4" />
 					<span class="ml-1">
 						{#if l.tripTo}
@@ -308,6 +310,9 @@
 						{/if}
 					</span>
 				</div>
+				{#if l.alerts}
+					<Alerts timeZone={l.from.tz ?? ''} alerts={l.alerts} />
+				{/if}
 				{#if l.loopedCalendarSince}
 					<div class="mt-2 flex items-center text-destructive leading-none">
 						{t.dataExpiredSince}
@@ -326,9 +331,6 @@
 					</div>
 				{/if}
 
-				{#if l.alerts}
-					<Alerts timeZone={l.from.tz ?? ''} alerts={l.alerts} />
-				{/if}
 				{#if l.intermediateStops?.length === 0}
 					<div class="pt-16 pb-8 pl-1 md:pl-4 flex items-center text-muted-foreground">
 						{t.tripIntermediateStops(0)}
