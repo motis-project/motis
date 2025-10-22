@@ -67,7 +67,6 @@
 
 	const urlParams = browser ? new URLSearchParams(window.location.search) : undefined;
 
-
 	const hasDebug: boolean = Boolean(urlParams?.has('debug'));
 	const hasDark: boolean = Boolean(urlParams?.has('dark'));
 	const hasLight: boolean = Boolean(urlParams?.has('light'));
@@ -577,14 +576,14 @@
 			<Card
 				class="w-[520px] h-full md:max-h-[60vh] {isSmallScreen
 					? 'border-0 shadow-none'
-					: ''} overflow-x-hidden bg-background rounded-lg"
+					: ''} overflow-x-hidden bg-background rounded-lg mb-2"
 			>
 				<ItineraryList
 					{baseResponse}
 					{routingResponses}
 					{baseQuery}
 					selectItinerary={(selectedItinerary) => {
-						pushState('', {selectedItinerary: selectedItinerary, scrollY: undefined});
+						pushState('', { selectedItinerary: selectedItinerary, scrollY: undefined });
 					}}
 					updateStartDest={preprocessItinerary(from, to)}
 				/>
@@ -594,7 +593,7 @@
 
 	{#if activeTab != 'isochrones' && page.state.selectedItinerary && !page.state.showDepartures}
 		<Control class="min-h-0 md:mb-2">
-			<Card class="w-[520px] md:max-h-[60vh] h-full bg-background rounded-lg flex flex-col">
+			<Card class="w-[520px] md:max-h-[60vh] h-full bg-background rounded-lg flex flex-col mb-2">
 				<div class="w-full flex justify-between items-center shadow-md pl-1 mb-1">
 					<h2 class="ml-2 text-base font-semibold">{t.journeyDetails}</h2>
 					<Button
@@ -622,7 +621,7 @@
 
 	{#if activeTab != 'isochrones' && page.state.selectedStop && page.state.showDepartures}
 		<Control class="min-h-0 md:mb-2">
-			<Card class="w-[520px] md:max-h-[60vh] h-full bg-background rounded-lg flex flex-col">
+			<Card class="w-[520px] md:max-h-[60vh] h-full bg-background rounded-lg flex flex-col mb-2">
 				<div class="w-full flex justify-between items-center shadow-md pl-1 mb-1">
 					<h2 class="ml-2 text-base font-semibold">
 						{#if page.state.stopArriveBy}
@@ -703,7 +702,7 @@
 		{/if}
 	{/if}
 
-	<div class="maplibregl-ctrl-{isSmallScreen ? 'top-left ml-[8rem]' : 'bottom-right'}">
+	<div class="maplibregl-ctrl-{isSmallScreen ? 'top-left' : 'bottom-right'}">
 		<div class="maplibregl-ctrl maplibregl-ctrl-attrib">
 			<div class="maplibregl-ctrl-attrib-inner">
 				&copy; <a href="http://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>

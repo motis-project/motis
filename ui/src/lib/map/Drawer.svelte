@@ -5,7 +5,6 @@
 	import type { HTMLAttributes } from 'svelte/elements';
 	import { restoreScroll, resetScroll } from './handleScroll';
 
-
 	let {
 		ref = $bindable(null),
 		showMap = $bindable(),
@@ -29,13 +28,11 @@
 	let container: HTMLElement | null;
 
 	onMount(() => {
-		console.log("MOUNTED")
 		const cleanup = restoreScroll(container!);
 		return cleanup;
-	} );
-	
-	$effect(() => resetScroll(container!));
+	});
 
+	$effect(() => resetScroll(container!));
 
 	const getScrollableElement = (element: Element): Element | null => {
 		while (element && element !== document.documentElement) {
@@ -94,7 +91,7 @@
 <div
 	bind:this={ref}
 	class={cn(
-		'bg-card text-card-foreground rounded-xl pb-8 h-full border shadow max-w-full transition-transform duration-200 ease-out',
+		'bg-card text-card-foreground rounded-xl pb-5 h-full border shadow max-w-full transition-transform duration-200 ease-out',
 		className
 	)}
 	{...restProps}

@@ -303,11 +303,7 @@
 								class="text-[length:inherit] text-muted-foreground leading-none justify-normal text-wrap text-left "
 								variant="link"
 								onclick={() =>
-									onClickStop(
-										l.tripTo!.name,
-										l.tripTo!.stopId!,
-										new Date(l.tripTo!.arrival!),
-									)}
+									onClickStop(l.tripTo!.name, l.tripTo!.stopId!, new Date(l.tripTo!.arrival!))}
 							>
 								{l.headsign}
 								{#if !l.headsign || !l.tripTo.name.startsWith(l.headsign)}
