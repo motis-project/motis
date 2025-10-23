@@ -210,6 +210,12 @@ void prima::init(n::interval<n::unixtime_t> const& search_intvl,
       last_mile_ride_sharing_.clear();
     }
   }
+
+  auto const by_duration = [](auto const& a, auto const& b) {
+    return a.duration_ < b.duration_;
+  };
+  utl::sort(first_mile_taxi_, by_duration);
+  utl::sort(last_mile_taxi_, by_duration);
 }
 
 std::int64_t to_millis(n::unixtime_t const t) {

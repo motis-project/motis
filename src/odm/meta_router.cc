@@ -151,28 +151,41 @@ meta_router::meta_router(ep::routing const& r,
 
 meta_router::~meta_router() = default;
 
-auto ride_time_halves(std::vector<n::routing::offset>& offsets) {
-  auto const by_duration = [&](auto const& a, auto const& b) {
-    return a.duration_ < b.duration_;
-  };
-
-  utl::sort(offsets, by_duration);
+auto get_td_offsets_taxi(std::vector<n::routing::offset> const& offsets,
+                         std::vector<service_times_t> const& times) {
   auto const split =
       offsets.empty()
           ? 0
-          : std::distance(
-                begin(offsets),
-                std::upper_bound(begin(offsets), end(offsets),
-                                 offsets[offsets.size() / 2], by_duration));
+          : std::distance(begin(offsets),
+                          std::upper_bound(begin(offsets), end(offsets),
+                                           offsets[offsets.size() / 2],
+                                           [](auto const& a, auto const& b) {
+                                             return a.duration_ < b.duration_;
+                                           }));
 
-  auto lo = offsets | std::views::take(split);
-  auto hi = offsets | std::views::drop(split);
-  std::ranges::sort(lo, by_stop);
-  std::ranges::sort(hi, by_stop);
-  return std::pair{lo, hi};
+  auto const offsets_lo = offsets | std::views::take(split);
+  auto const times_lo = times | std::views::take(split);
+  auto const offsets_hi = offsets | std::views::drop(split);
+  auto const times_hi = times | std::views::drop(split);
+
+  auto const derive_td_offsets = [](auto const& offsets_split,
+                                    auto const& times_split) {
+    auto td_offsets = td_offsets_t{};
+    for (auto const [o, t] : std::views::zip(offsets_split, times_split)) {
+      td_offsets.emplace(o.target_, std::vector<n::routing::td_offset>{});
+      for (auto const& i : t) {
+        td_offsets[o.target_].emplace_back(i.from_, i.size(),
+                                           kOdmTransportModeId);
+      }
+    }
+    return td_offsets;
+  };
+
+  return std::pair{derive_td_offsets(offsets_lo, times_lo),
+                   derive_td_offsets(offsets_hi, times_hi)};
 }
 
-auto get_td_offsets(auto const& rides, auto const mode) {
+auto get_td_offsets_ridesharing(auto const& rides) {
   auto td_offsets = td_offsets_t{};
   utl::equal_ranges_linear(
       rides, [](auto const& a, auto const& b) { return a.stop_ == b.stop_; },
@@ -196,11 +209,11 @@ auto get_td_offsets(auto const& rides, auto const mode) {
           td_offsets.at(from_it->stop_)
               .push_back({.valid_from_ = dep,
                           .duration_ = dur,
-                          .transport_mode_id_ = mode});
+                          .transport_mode_id_ = kRideSharingTransportModeId});
           td_offsets.at(from_it->stop_)
               .push_back({.valid_from_ = dep + dur,
                           .duration_ = n::footpath::kMaxDuration,
-                          .transport_mode_id_ = mode});
+                          .transport_mode_id_ = kRideSharingTransportModeId});
         }
       });
   return td_offsets;
@@ -382,9 +395,9 @@ api::plan_response meta_router::run() {
 
   auto const prep_queries_start = std::chrono::steady_clock::now();
   auto const [first_mile_taxi_short, first_mile_taxi_long] =
-      ride_time_halves(p.first_mile_taxi_);
+      get_td_offsets_taxi(p.first_mile_taxi_, p.first_mile_taxi_times_);
   auto const [last_mile_taxi_short, last_mile_taxi_long] =
-      ride_time_halves(p.last_mile_taxi_);
+      get_td_offsets_taxi(p.last_mile_taxi_, p.last_mile_taxi_times_);
   auto const params = get_osr_parameters(query_);
   auto const pre_transit_time = std::min(
       std::chrono::seconds{query_.maxPreTransitTime_},
@@ -427,31 +440,21 @@ api::plan_response meta_router::run() {
                             query_.elevationCosts_, query_.maxMatchingDistance_,
                             post_transit_time, context_intvl),
       .start_taxi_short_ =
-          query_.arriveBy_
-              ? get_td_offsets(last_mile_taxi_short, kOdmTransportModeId)
-              : get_td_offsets(first_mile_taxi_short, kOdmTransportModeId),
+          query_.arriveBy_ ? last_mile_taxi_short : first_mile_taxi_short,
       .start_taxi_long_ =
-          query_.arriveBy_
-              ? get_td_offsets(last_mile_taxi_long, kOdmTransportModeId)
-              : get_td_offsets(first_mile_taxi_long, kOdmTransportModeId),
+          query_.arriveBy_ ? last_mile_taxi_long : first_mile_taxi_long,
       .dest_taxi_short_ =
-          query_.arriveBy_
-              ? get_td_offsets(first_mile_taxi_short, kOdmTransportModeId)
-              : get_td_offsets(last_mile_taxi_short, kOdmTransportModeId),
+          query_.arriveBy_ ? first_mile_taxi_short : last_mile_taxi_short,
       .dest_taxi_long_ =
+          query_.arriveBy_ ? first_mile_taxi_long : last_mile_taxi_long,
+      .start_ride_sharing_ =
           query_.arriveBy_
-              ? get_td_offsets(first_mile_taxi_long, kOdmTransportModeId)
-              : get_td_offsets(last_mile_taxi_long, kOdmTransportModeId),
-      .start_ride_sharing_ = query_.arriveBy_
-                                 ? get_td_offsets(p.last_mile_ride_sharing_,
-                                                  kRideSharingTransportModeId)
-                                 : get_td_offsets(p.first_mile_ride_sharing_,
-                                                  kRideSharingTransportModeId),
-      .dest_ride_sharing_ = query_.arriveBy_
-                                ? get_td_offsets(p.first_mile_ride_sharing_,
-                                                 kRideSharingTransportModeId)
-                                : get_td_offsets(p.last_mile_ride_sharing_,
-                                                 kRideSharingTransportModeId)};
+              ? get_td_offsets_ridesharing(p.last_mile_ride_sharing_)
+              : get_td_offsets_ridesharing(p.first_mile_ride_sharing_),
+      .dest_ride_sharing_ =
+          query_.arriveBy_
+              ? get_td_offsets_ridesharing(p.first_mile_ride_sharing_)
+              : get_td_offsets_ridesharing(p.last_mile_ride_sharing_)};
   print_time(prep_queries_start, "[prepare queries]",
              r_.metrics_->routing_execution_duration_seconds_preparing_);
 
@@ -488,12 +491,12 @@ api::plan_response meta_router::run() {
 
   auto const whitelist_start = std::chrono::steady_clock::now();
   if (p.whitelist_taxi(taxi_journeys, *tt_)) {
-    p.add_direct_odm(p.direct_taxi_, taxi_journeys, from_, to_,
-                     query_.arriveBy_, kOdmTransportModeId);
+    add_direct_odm(p.direct_taxi_, taxi_journeys, from_, to_, query_.arriveBy_,
+                   kOdmTransportModeId);
   }
   if (whitelisted_ride_sharing) {
-    p.add_direct_odm(p.direct_ride_sharing_, ride_share_journeys, from_, to_,
-                     query_.arriveBy_, kRideSharingTransportModeId);
+    add_direct_odm(p.direct_ride_sharing_, ride_share_journeys, from_, to_,
+                   query_.arriveBy_, kRideSharingTransportModeId);
   }
   print_time(whitelist_start,
              fmt::format("[whitelisting] (#first_mile_taxi: {}, "
