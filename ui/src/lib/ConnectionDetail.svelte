@@ -40,7 +40,7 @@
 	<div
 		class="flex items-baseline {isStartOrEnd == 0
 			? 'text-sm'
-			: ''} pr-2 justify-between w-full text-wrap"
+			: ''} pb-2 pr-2 justify-between w-full text-wrap"
 	>
 		<div class="flex justify-between">
 			<Time
