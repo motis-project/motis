@@ -159,10 +159,10 @@ void prima::init(n::interval<n::unixtime_t> const& search_intvl,
                  api::plan_params const& query,
                  n::routing::query const& n_query,
                  unsigned api_version) {
-  auto direct_duration = std::optional<std::chrono::seconds>{};
+  direct_duration_ = std::optional<std::chrono::seconds>{};
   if ((use_direct_ride_sharing || use_direct_taxi) && r.w_ && r.l_) {
-    direct_duration = init_direct(direct_ride_sharing_, r, e, gbfs, from, to,
-                                  search_intvl, query, api_version);
+    direct_duration_ = init_direct(direct_ride_sharing_, r, e, gbfs, from, to,
+                                   search_intvl, query, api_version);
 
     if (use_direct_taxi && r.odm_bounds_ != nullptr &&
         r.odm_bounds_->contains(from_.pos_) &&
@@ -176,8 +176,8 @@ void prima::init(n::interval<n::unixtime_t> const& search_intvl,
   }
 
   auto const max_offset_duration =
-      direct_duration
-          ? std::min(std::max(*direct_duration, kODMOffsetMinImprovement) -
+      direct_duration_
+          ? std::min(std::max(*direct_duration_, kODMOffsetMinImprovement) -
                          kODMOffsetMinImprovement,
                      kODMMaxDuration)
           : kODMMaxDuration;
@@ -321,6 +321,14 @@ std::string make_whitelist_request(
                   {"directTimes", to_json(direct, fixed)},
                   {"startFixed", fixed == n::event_type::kDep},
                   {"capacities", to_json(cap)}});
+}
+
+std::string prima::make_whitelist_taxi_request(
+    std::vector<nigiri::routing::start> const& first_mile,
+    std::vector<nigiri::routing::start> const& last_mile,
+    nigiri::timetable const& tt) const {
+  return make_whitelist_request(from_, to_, first_mile, last_mile, direct_taxi_,
+                                fixed_, cap_, tt);
 }
 
 std::string prima::make_ride_sharing_request(
