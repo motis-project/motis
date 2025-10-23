@@ -67,22 +67,21 @@ struct prima {
   std::size_t n_taxi_events() const;
   std::size_t n_ride_sharing_events() const;
 
-  std::string make_taxi_blacklist_request(
+  std::string make_blacklist_taxi_request(
       nigiri::timetable const&,
       nigiri::interval<nigiri::unixtime_t> const&) const;
-
-  bool consume_blacklist_taxis_response(std::string_view json);
-  bool blacklist_taxis(nigiri::timetable const&,
+  bool consume_blacklist_taxi_response(std::string_view json);
+  bool blacklist_taxi(nigiri::timetable const&,
                        nigiri::interval<nigiri::unixtime_t> const&);
 
   std::string make_whitelist_taxi_request(std::vector<nigiri::routing::start> const& first_mile,
     std::vector<nigiri::routing::start> const& last_mile, nigiri::timetable const&) const;
-  bool consume_whitelist_taxis_response(
+  bool consume_whitelist_taxi_response(
       std::string_view json,
       std::vector<nigiri::routing::journey>&,
       std::vector<nigiri::routing::start>& first_mile_taxi_rides,
       std::vector<nigiri::routing::start>& last_mile_taxi_rides);
-  bool whitelist_taxis(std::vector<nigiri::routing::journey>&,
+  bool whitelist_taxi(std::vector<nigiri::routing::journey>&,
                        nigiri::timetable const&);
 
   void add_direct_odm(std::vector<direct_ride> const&,
@@ -93,8 +92,7 @@ struct prima {
                       nigiri::transport_mode_id_t) const;
 
   std::string make_ride_sharing_request(nigiri::timetable const&) const;
-
-  bool consume_whitelist_ride_sharing_response(std::string_view json);
+  bool consume_ride_sharing_response(std::string_view json);
   bool whitelist_ride_sharing(nigiri::timetable const&);
 
   boost::urls::url taxi_blacklist_;
@@ -121,6 +119,10 @@ struct prima {
   std::vector<direct_ride> direct_ride_sharing_{};
   std::vector<std::uint32_t> direct_ride_sharing_tour_ids_{};
 };
+
+void extract_taxis(std::vector<nigiri::routing::journey> const&,
+                   std::vector<nigiri::routing::start>& first_mile_taxi_rides,
+                   std::vector<nigiri::routing::start>& last_mile_taxi_rides);
 
 void fix_first_mile_duration(
     std::vector<nigiri::routing::journey>& journeys,

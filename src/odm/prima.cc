@@ -290,7 +290,7 @@ json::value to_json(capacities const& c) {
           {"luggage", c.luggage_}};
 }
 
-std::string prima::make_taxi_blacklist_request(
+std::string prima::make_blacklist_taxi_request(
     nigiri::timetable const& tt,
     nigiri::interval<nigiri::unixtime_t> const& taxi_intvl) const {
   return json::serialize(json::value{
@@ -353,7 +353,7 @@ std::size_t n_rides_in_response(json::array const& ja) {
       [](auto const& a, auto const& b) { return a + b.as_array().size(); });
 }
 
-bool prima::consume_blacklist_taxis_response(std::string_view json) {
+bool prima::consume_blacklist_taxi_response(std::string_view json) {
   auto const update_pt_rides = [](std::vector<n::routing::start>& rides,
                                   json::array const& update) {
     auto with_errors = false;
@@ -448,7 +448,7 @@ bool prima::consume_blacklist_taxis_response(std::string_view json) {
   return true;
 }
 
-bool prima::blacklist_taxis(
+bool prima::blacklist_taxi(
     nigiri::timetable const& tt,
     nigiri::interval<nigiri::unixtime_t> const& taxi_intvl) {
   auto blacklist_response = std::optional<std::string>{};
@@ -461,7 +461,7 @@ bool prima::blacklist_taxis(
         [&]() -> boost::asio::awaitable<void> {
           auto const prima_msg = co_await http_POST(
               taxi_blacklist_, kReqHeaders,
-              make_taxi_blacklist_request(tt, taxi_intvl), 10s);
+              make_blacklist_taxi_request(tt, taxi_intvl), 10s);
           blacklist_response = get_http_body(prima_msg);
         },
         boost::asio::detached);
@@ -475,7 +475,7 @@ bool prima::blacklist_taxis(
     return false;
   }
 
-  return consume_blacklist_taxis_response(*blacklist_response);
+  return consume_blacklist_taxi_response(*blacklist_response);
 }
 
 void extract_taxis(std::vector<nigiri::routing::journey> const& journeys,
@@ -585,7 +585,7 @@ void fix_last_mile_duration(
   }
 };
 
-bool prima::consume_whitelist_taxis_response(
+bool prima::consume_whitelist_taxi_response(
     std::string_view json,
     std::vector<nigiri::routing::journey>& journeys,
     std::vector<nigiri::routing::start>& first_mile_taxi_rides,
@@ -711,9 +711,8 @@ bool prima::consume_whitelist_taxis_response(
   return true;
 }
 
-bool prima::whitelist_taxis(
-    std::vector<nigiri::routing::journey>& taxi_journeys,
-    nigiri::timetable const& tt) {
+bool prima::whitelist_taxi(std::vector<nigiri::routing::journey>& taxi_journeys,
+                           nigiri::timetable const& tt) {
   auto first_mile_taxi_rides = std::vector<nigiri::routing::start>{};
   auto last_mile_taxi_rides = std::vector<nigiri::routing::start>{};
   extract_taxis(taxi_journeys, first_mile_taxi_rides, last_mile_taxi_rides);
@@ -747,9 +746,9 @@ bool prima::whitelist_taxis(
     return false;
   }
 
-  return consume_whitelist_taxis_response(*whitelist_response, taxi_journeys,
-                                          first_mile_taxi_rides,
-                                          last_mile_taxi_rides);
+  return consume_whitelist_taxi_response(*whitelist_response, taxi_journeys,
+                                         first_mile_taxi_rides,
+                                         last_mile_taxi_rides);
 }
 
 void prima::add_direct_odm(std::vector<direct_ride> const& direct,
@@ -789,7 +788,7 @@ void prima::add_direct_odm(std::vector<direct_ride> const& direct,
          "[whitelist] added {} direct rides for mode {}", direct.size(), mode);
 }
 
-bool prima::consume_whitelist_ride_sharing_response(std::string_view json) {
+bool prima::consume_ride_sharing_response(std::string_view json) {
   auto const update_first_mile = [&](json::array const& update) {
     auto const n = n_rides_in_response(update);
     if (first_mile_ride_sharing_.size() != n) {
@@ -938,6 +937,6 @@ bool prima::whitelist_ride_sharing(nigiri::timetable const& tt) {
     return false;
   }
 
-  return consume_whitelist_ride_sharing_response(*response);
+  return consume_ride_sharing_response(*response);
 }
 }  // namespace motis::odm

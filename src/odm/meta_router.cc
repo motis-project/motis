@@ -353,7 +353,7 @@ api::plan_response meta_router::run() {
              r_.metrics_->routing_execution_duration_seconds_init_);
 
   auto const blacklist_start = std::chrono::steady_clock::now();
-  auto const blacklisted_taxis = p.blacklist_taxis(*tt_, taxi_intvl);
+  auto const blacklisted_taxis = p.blacklist_taxi(*tt_, taxi_intvl);
   n::log(n::log_lvl::debug, "motis.prima",
          "[blacklist taxi] taxi events after blacklisting: {}",
          p.n_taxi_events());
@@ -487,7 +487,7 @@ api::plan_response meta_router::run() {
              r_.metrics_->routing_execution_duration_seconds_routing_);
 
   auto const whitelist_start = std::chrono::steady_clock::now();
-  if (p.whitelist_taxis(taxi_journeys, *tt_)) {
+  if (p.whitelist_taxi(taxi_journeys, *tt_)) {
     p.add_direct_odm(p.direct_taxi_, taxi_journeys, from_, to_,
                      query_.arriveBy_, kOdmTransportModeId);
   }

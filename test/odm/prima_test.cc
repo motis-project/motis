@@ -120,8 +120,8 @@ TEST(odm, prima_update) {
       {get_loc_idx("D"), n::duration_t{60min}, motis::kOdmTransportModeId}};
   p.direct_taxi_ = {};
 
-  EXPECT_FALSE(p.consume_blacklist_taxis_response(invalid_response));
-  EXPECT_FALSE(p.consume_blacklist_taxis_response(blacklisting_response));
+  EXPECT_FALSE(p.consume_blacklist_taxi_response(invalid_response));
+  EXPECT_FALSE(p.consume_blacklist_taxi_response(blacklisting_response));
 
   ASSERT_EQ(p.first_mile_taxi_.size(), 2);
   EXPECT_EQ(p.first_mile_taxi_[0].target_, get_loc_idx("A"));
@@ -196,10 +196,15 @@ TEST(odm, prima_update) {
        .dest_time_ = n::unixtime_t{14h},
        .dest_ = get_special_station(special_station::kEnd)});
 
-  EXPECT_FALSE(
-      p.consume_whitelist_taxis_response(invalid_response, taxi_journeys));
-  EXPECT_TRUE(
-      p.consume_whitelist_taxis_response(whitelisting_response, taxi_journeys));
+  auto first_mile_taxi_rides = std::vector<nigiri::routing::start>{};
+  auto last_mile_taxi_rides = std::vector<nigiri::routing::start>{};
+  extract_taxis(taxi_journeys, first_mile_taxi_rides, last_mile_taxi_rides);
+  EXPECT_FALSE(p.consume_whitelist_taxi_response(
+      invalid_response, taxi_journeys, first_mile_taxi_rides,
+      last_mile_taxi_rides));
+  EXPECT_TRUE(p.consume_whitelist_taxi_response(
+      whitelisting_response, taxi_journeys, first_mile_taxi_rides,
+      last_mile_taxi_rides));
 
   auto ss = std::stringstream{};
   ss << "\n";
