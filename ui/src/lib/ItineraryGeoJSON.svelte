@@ -68,12 +68,14 @@
 		itinerary,
 		id,
 		selected,
+		selectItinerary,
 		level,
 		theme
 	}: {
 		itinerary: Itinerary;
 		id?: string;
 		selected: boolean;
+		selectItinerary?: () => void;
 		level: number;
 		theme: 'light' | 'dark';
 	} = $props();
@@ -104,6 +106,11 @@
 			'line-cap': 'round'
 		}}
 		filter={['any', ['!has', 'level'], ['==', 'level', level]]}
+		onclick={selectItinerary
+			? (_) => {
+					selectItinerary();
+				}
+			: undefined}
 		paint={{
 			'line-color': selected ? ['get', 'color'] : theme == 'dark' ? '#777' : '#bbb',
 			'line-width': 7.5,

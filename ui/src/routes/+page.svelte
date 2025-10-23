@@ -610,7 +610,16 @@
 			{#each routingResponses as r, rI (rI)}
 				{#await r then r}
 					{#each r.itineraries as it, i (i)}
-						<ItineraryGeoJson itinerary={it} id="{rI}-{i}" selected={false} {level} {theme} />
+						<ItineraryGeoJson
+							itinerary={it}
+							id="{rI}-{i}"
+							selected={false}
+							selectItinerary={() => {
+								pushState('', { selectedItinerary: it });
+							}}
+							{level}
+							{theme}
+						/>
 					{/each}
 				{/await}
 			{/each}
