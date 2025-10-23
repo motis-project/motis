@@ -29,7 +29,7 @@ TEST(adr_extend, str_diff_test) {
   //     get_diff("Kiel Bahnhof (Fähre)", "Kiel Hbf/Kaistraße", sift4_dist);
   // std::cout << str_match_score3 << "\n";
 
-  auto const str_match_score4 = get_diff(
-      "Hauptbahnhof (tief)", "Hauptbf (Arnulf-Klett-Platz)", sift4_dist);
+  auto const str_match_score4 = get_diff("Halle (Saale), Hauptbahnhof/ZOB",
+                                         "Halle(Saale)Hbf", sift4_dist);
   std::cout << str_match_score4 << "\n";
 }

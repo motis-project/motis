@@ -49,11 +49,11 @@ date::time_zone const* get_tz(n::timetable const& tt,
 }
 
 void normalize(std::string& x) {
-  adr::erase_fillers(x);
+  x = adr::normalize(x);
 
   auto const removals = std::initializer_list<std::string_view>{
-      "tief",    "oben", "gleis", "platform", "gl",   "gare",
-      "bahnhof", "bhf",  "bf",    "strasse",  "gasse"};
+      "tief", "oben",    "gleis", "platform", "gl",
+      "gare", "bahnhof", "bhf",   "strasse",  "gasse"};
   for (auto const r : removals) {
     auto const pos = x.find(r);
     if (pos != std::string::npos) {
@@ -64,7 +64,8 @@ void normalize(std::string& x) {
   auto const replacements =
       std::initializer_list<std::pair<std::string_view, std::string_view>>{
           {"flixtrain", "hbf"}, {"hauptbf", "hbf"}, {"haupt", "hbf"},
-          {"centrale", "hbf"},  {"station", ""},    {"zob", "hbf"}};
+          {"centrale", "hbf"},  {"station", "hbf"}, {"zob", "hbf"},
+          {"anleger", "fähre"}};
   for (auto const [search, replace] : replacements) {
     auto const pos = x.find(search);
     if (pos != std::string::npos) {
@@ -82,8 +83,8 @@ adr::score_t get_diff(std::string str1,
   normalize(str1);
   normalize(str2);
 
-  std::cout << "normalized str1: " << str1 << "\n";
-  std::cout << "normalized str2: " << str2 << "\n";
+  // std::cout << "normalized str1: " << str1 << "\n";
+  // std::cout << "normalized str2: " << str2 << "\n";
 
   if (str1.contains("hbf") && str2.contains("hbf")) {
     return 0;
@@ -183,6 +184,32 @@ adr_ext adr_extend_tt(nigiri::timetable const& tt,
     return i;
   };
 
+  auto const get_transitive_equivalences = [&](n::location_idx_t const l) {
+    auto q = std::vector<n::location_idx_t>{};
+    auto visited = hash_set<n::location_idx_t>{};
+
+    auto const visit = [&](n::location_idx_t const x) {
+      auto const [_, inserted] = visited.insert(x);
+      if (!inserted) {
+        return;
+      }
+      for (auto const eq : tt.locations_.equivalences_[x]) {
+        if (!visited.contains(eq)) {
+          q.push_back(eq);
+        }
+      }
+    };
+
+    visit(l);
+    while (!q.empty()) {
+      auto const next = q.back();
+      q.resize(q.size() - 1);
+      visit(next);
+    }
+
+    return visited;
+  };
+
   {
     ret.location_place_.resize(tt.n_locations(),
                                adr_extra_place_idx_t::invalid());
@@ -202,13 +229,15 @@ adr_ext adr_extend_tt(nigiri::timetable const& tt,
       auto const place_idx = add_place(l);
 
       auto const name = tt.locations_.names_[l].view();
-      for (auto const eq : tt.locations_.equivalences_[l]) {
+      for (auto const eq : get_transitive_equivalences(l)) {
         if (ret.location_place_[eq] != adr_extra_place_idx_t::invalid() ||
             tt.locations_.parents_[eq] != n::location_idx_t::invalid()) {
           continue;
         }
 
         if (tt.locations_.names_[eq].view() == name) {
+          fmt::println(std::clog, "adding to {}: {}  *** name match",
+                       n::location{tt, l}, n::location{tt, eq});
           ret.location_place_[eq] = place_idx;
         } else {
           locations.insert(l);
@@ -222,8 +251,21 @@ adr_ext adr_extend_tt(nigiri::timetable const& tt,
           auto const good = dist < cutoff;
 
           if (good) {
+            fmt::println(std::clog, "adding to {}: {}  *** fuzzy match",
+                         n::location{tt, l}, n::location{tt, eq});
+
             ret.location_place_[eq] = place_idx;
-            place_location.back().push_back(eq);
+
+            auto existing = place_location.back();
+            if (utl::find_if(existing, [&](n::location_idx_t const x) {
+                  return tt.locations_.names_[x].view() ==
+                         tt.locations_.names_[eq].view();
+                }) == end(existing)) {
+              place_location.back().push_back(eq);
+            }
+          } else {
+            fmt::println(std::clog, "NO MATCH {}: {}", n::location{tt, l},
+                         n::location{tt, eq});
           }
 
           features.emplace_back(json::value{
@@ -305,14 +347,14 @@ adr_ext adr_extend_tt(nigiri::timetable const& tt,
 
       constexpr auto const prio =
           std::array<float, kClaszMax>{/* Air */ 20,
-                                       /* HighSpeed */ 20,
-                                       /* LongDistance */ 20,
-                                       /* Coach */ 20,
-                                       /* Night */ 20,
-                                       /* RegionalFast */ 16,
-                                       /* Regional */ 15,
-                                       /* Suburban */ 10,
-                                       /* Subway */ 10,
+                                       /* HighSpeed */ 30,
+                                       /* LongDistance */ 25,
+                                       /* Coach */ 22,
+                                       /* Night */ 25,
+                                       /* RegionalFast */ 20,
+                                       /* Regional */ 20,
+                                       /* Suburban */ 15,
+                                       /* Subway */ 12,
                                        /* Tram */ 3,
                                        /* Bus  */ 2,
                                        /* Ship  */ 10,
@@ -330,12 +372,6 @@ adr_ext adr_extend_tt(nigiri::timetable const& tt,
         auto const c = n::clasz{static_cast<std::uint8_t>(clasz)};
         if (t_count != 0U) {
           ret.place_clasz_[place_idx] |= n::routing::to_mask(c);
-
-          if (tt.locations_.names_[root].view().contains("Kiel")) {
-            std::clog
-                << tt.locations_.names_[place_location[place_idx][0]].view()
-                << "[place=" << place_idx << "]" << ": " << to_str(c) << "\n";
-          }
         }
       }
     }
@@ -415,6 +451,14 @@ adr_ext adr_extend_tt(nigiri::timetable const& tt,
     auto const pos =
         a::coordinates::from_latlng(tt.locations_.coordinates_[locations[0]]);
 
+    fmt::println(std::clog, "names: {}, stops={}, prio={}",
+                 names | std::views::transform([&](auto&& n) {
+                   return t.strings_[n.first].view();
+                 }),
+                 locations | std::views::transform(
+                                 [&](auto&& l) { return n::location{tt, l}; }),
+                 prio);
+
     t.place_type_.emplace_back(a::amenity_category::kExtra);
     t.place_names_.emplace_back(
         names | std::views::transform([](auto&& n) { return n.first; }));
@@ -423,7 +467,7 @@ adr_ext adr_extend_tt(nigiri::timetable const& tt,
     t.place_coordinates_.emplace_back(pos);
     t.place_osm_ids_.emplace_back(to_idx(locations[0]));
     t.place_population_.emplace_back(static_cast<std::uint16_t>(
-        (prio * 10'000'000) / a::population::kCompressionFactor));
+        (prio * 1'000'000) / a::population::kCompressionFactor));
     t.place_is_way_.resize(t.place_is_way_.size() + 1U);
 
     if (area_db == nullptr) {
