@@ -19,12 +19,21 @@ struct routing;
 
 namespace motis::odm {
 
-using service_times_t = std::vector<nigiri::interval<nigiri::unixtime_t>>;
+using namespace std::chrono_literals;
 
-struct taxi_offset {
-  nigiri::routing::offset o_;
-  service_times_t t_;
-};
+constexpr auto kODMDirectPeriod = 300s;
+constexpr auto kODMDirectFactor = 1.0;
+constexpr auto kODMOffsetMinImprovement = 60s;
+constexpr auto kODMMaxDuration = 3600s;
+constexpr auto kBlacklistPath = "/api/blacklist";
+constexpr auto kWhitelistPath = "/api/whitelist";
+constexpr auto kRidesharingPath = "/api/whitelistRideShare";
+constexpr auto kInfeasible =
+    std::numeric_limits<nigiri::unixtime_t>::min();
+static auto const kReqHeaders = std::map<std::string, std::string>{
+      {"Content-Type", "application/json"}, {"Accept", "application/json"}};
+
+using service_times_t = std::vector<nigiri::interval<nigiri::unixtime_t>>;
 
 struct direct_ride {
   nigiri::unixtime_t dep_;
@@ -37,6 +46,8 @@ struct capacities {
   std::int64_t passengers_;
   std::int64_t luggage_;
 };
+
+void tag_invoke(boost::json::value_from_tag const&, boost::json::value&, capacities const&);
 
 struct prima {
 
@@ -84,16 +95,11 @@ struct prima {
   bool whitelist_taxi(std::vector<nigiri::routing::journey>&,
                        nigiri::timetable const&);
 
-  void add_direct_odm(std::vector<direct_ride> const&,
-                      std::vector<nigiri::routing::journey>&,
-                      place_t const& from,
-                      place_t const& to,
-                      bool arrive_by,
-                      nigiri::transport_mode_id_t) const;
-
   std::string make_ride_sharing_request(nigiri::timetable const&) const;
   bool consume_ride_sharing_response(std::string_view json);
   bool whitelist_ride_sharing(nigiri::timetable const&);
+
+  api::plan_params const& query_;
 
   boost::urls::url taxi_blacklist_;
   boost::urls::url taxi_whitelist_;
@@ -135,6 +141,27 @@ void fix_last_mile_duration(
     std::vector<nigiri::routing::start> const& prev_last_mile,
     nigiri::transport_mode_id_t mode);
 
+std::int64_t to_millis(nigiri::unixtime_t);
+
 nigiri::unixtime_t to_unix(std::int64_t);
+
+std::size_t n_rides_in_response(boost::json::array const&);
+
+std::string make_whitelist_request(
+    osr::location const& from,
+    osr::location const& to,
+    std::vector<nigiri::routing::start> const& first_mile,
+    std::vector<nigiri::routing::start> const& last_mile,
+    std::vector<direct_ride> const& direct,
+    nigiri::event_type fixed,
+    capacities const&,
+    nigiri::timetable const&);
+
+void add_direct_odm(std::vector<direct_ride> const&,
+                    std::vector<nigiri::routing::journey>&,
+                    place_t const& from,
+                    place_t const& to,
+                    bool arrive_by,
+                    nigiri::transport_mode_id_t);
 
 }  // namespace motis::odm
