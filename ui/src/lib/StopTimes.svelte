@@ -66,7 +66,7 @@
 		});
 </script>
 
-<div class="gap-y-4 mb-1 text-base grid grid-cols-[auto_auto_1fr] items-start content-start">
+<div class="gap-y-3 mb-1 text-base grid grid-cols-[auto_1fr] items-start content-start">
 	<div class="col-span-full w-full flex items-center justify-center">
 		<Button
 			class="font-bold"
@@ -111,25 +111,29 @@
 				{@const scheduledTimestamp = arriveBy
 					? stopTime.place.scheduledArrival!
 					: stopTime.place.scheduledDeparture!}
-				<Route class="max-w-20 text-ellipsis overflow-hidden" l={stopTime} {onClickTrip} />
-				<div class="flex px-4 justify-between gap-4">
-					<Time
-						variant="schedule"
-						timeZone={stopTime.place.tz}
-						isRealtime={stopTime.realTime}
-						{timestamp}
-						{scheduledTimestamp}
-						queriedTime={queryTime.toISOString()}
-						{arriveBy}
-					/>
-					<Time
-						variant="realtime"
-						timeZone={stopTime.place.tz}
-						isRealtime={stopTime.realTime}
-						{timestamp}
-						{scheduledTimestamp}
-						{arriveBy}
-					/>
+				<div class="">
+					<div class="flex col justify-between">
+						<Route class="max-w-20 text-ellipsis overflow-hidden" l={stopTime} {onClickTrip} />
+						<div class="mx-4">
+							<Time
+								variant="schedule"
+								timeZone={stopTime.place.tz}
+								isRealtime={stopTime.realTime}
+								{timestamp}
+								{scheduledTimestamp}
+								queriedTime={queryTime.toISOString()}
+								{arriveBy}
+							/>
+							<Time
+								variant="realtime"
+								timeZone={stopTime.place.tz}
+								isRealtime={stopTime.realTime}
+								{timestamp}
+								{scheduledTimestamp}
+								{arriveBy}
+							/>
+						</div>
+					</div>
 				</div>
 				<div class="w-full">
 					<div class="flex items-start justify-between text-base">
@@ -147,6 +151,11 @@
 							</span>
 						{/if}
 					</div>
+					{#if stopTime.place.alerts}
+						<div class="mt-2">
+							<Alerts timeZone={stopTime.place.tz ?? ''} alerts={stopTime.place.alerts} />
+						</div>
+					{/if}
 					{#if stopTime.pickupDropoffType == 'NOT_ALLOWED'}
 						<div class="flex items-center text-destructive text-sm">
 							<CircleX class="stroke-destructive h-4 w-4" />
@@ -162,11 +171,7 @@
 						</div>
 					{/if}
 				</div>
-				{#if stopTime.place.alerts}
-					<div class="col-span-full -mt-10 md:-mt-5">
-						<Alerts timeZone={stopTime.place.tz ?? ''} alerts={stopTime.place.alerts} />
-					</div>
-				{/if}
+				<div class="border col-span-full"></div>
 			{/each}
 			{#if !r.stopTimes.length}
 				<div class="col-span-full w-full flex items-center justify-center">

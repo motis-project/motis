@@ -40,7 +40,7 @@
 	<div
 		class="flex items-baseline {isStartOrEnd == 0
 			? 'text-sm'
-			: ''} pb-2 pr-2 justify-between w-full text-wrap"
+			: ''} pr-2 justify-between w-full text-wrap"
 	>
 		<div class="flex justify-between">
 			<Time
@@ -109,7 +109,7 @@
 		</div>
 	</div>
 	{#if isStartOrEnd && p.alerts}
-		<div class="-mt-2">
+		<div class="-mt-1">
 			<Alerts timeZone={p.tz ?? ''} alerts={p.alerts} />
 		</div>
 	{/if}
@@ -290,7 +290,7 @@
 
 			<div class="px-6 pt-2 border-l-4 left-4 w-full relative" style={routeBorderColor(l)}>
 				{@render stopTimes(l.startTime, l.scheduledStartTime, l.realTime, l.from, l.mode, -1)}
-				<div class="mt-3 flex items-center">
+				<div class="mt-5 flex items-center">
 					<ArrowRight class="stroke-muted-foreground size-4" />
 					<span class="ml-1">
 						{#if l.tripTo}
@@ -338,8 +338,8 @@
 					{@render ticketInfo(prevTransitLeg, l)}
 				{:else}
 					{@render ticketInfo(prevTransitLeg, l)}
-					<details class="[&_.collapsible]:open:-rotate-180 my-2">
-						<summary class="pt-4 pb-8 pl-1 md:pl-4 flex items-center text-muted-foreground">
+					<details class="[&_.collapsible]:open:-rotate-180">
+						<summary class="pt-4 pb-4 pl-1 md:pl-4 flex items-center text-muted-foreground">
 							<svg
 								class="collapsible rotate-0 transform transition-all duration-300"
 								fill="none"
