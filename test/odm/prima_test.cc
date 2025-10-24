@@ -170,22 +170,20 @@ TEST(odm, prima_update) {
        .dest_ = get_special_station(special_station::kEnd)});
 
   taxi_journeys.push_back(
-      {.legs_ = {{n::direction::kForward,
-                  get_special_station(special_station::kStart),
-                  get_loc_idx("A"), n::unixtime_t{10h}, n::unixtime_t{11h},
-                  n::routing::offset{get_loc_idx("A"), 1h,
-                                     motis::kOdmTransportModeId}},
-                 {n::direction::kForward, get_loc_idx("A"), get_loc_idx("C"),
-                  n::unixtime_t{11h}, n::unixtime_t{13h},
-                  n::routing::offset{get_loc_idx("C"), 2h,
-                                     motis::kFlexModeIdOffset}},
-                 {n::direction::kForward, get_loc_idx("C"),
-                  get_special_station(special_station::kEnd),
-                  n::unixtime_t{13h}, n::unixtime_t{14h},
-                  n::routing::offset{get_loc_idx("C"), 1h,
-                                     motis::kOdmTransportModeId}}},
-       .start_time_ = n::unixtime_t{10h},
-       .dest_time_ = n::unixtime_t{14h},
+      {.legs_ =
+           {{direction::kForward, get_special_station(special_station::kStart),
+             get_loc_idx("A"), unixtime_t{10h}, unixtime_t{11h},
+             routing::offset{get_loc_idx("A"), 1h, motis::kOdmTransportModeId}},
+            {direction::kForward, get_loc_idx("A"), get_loc_idx("C"),
+             unixtime_t{11h}, unixtime_t{13h},
+             routing::offset{get_loc_idx("C"), 2h, motis::kFlexModeIdOffset}},
+            {direction::kForward, get_loc_idx("C"),
+             get_special_station(special_station::kEnd), unixtime_t{13h},
+             unixtime_t{14h},
+             routing::offset{get_loc_idx("C"), 1h,
+                             motis::kOdmTransportModeId}}},
+       .start_time_ = unixtime_t{10h},
+       .dest_time_ = unixtime_t{14h},
        .dest_ = get_special_station(special_station::kEnd)});
 
   p.direct_taxi_ = {
