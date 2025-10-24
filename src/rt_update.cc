@@ -153,7 +153,9 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
                                       fmt::println("[auser] fetch url: {}",
                                                    fetch_url.c_str());
                                       auto const res = co_await http_GET(
-                                          fetch_url, headers_t{}, timeout);
+                                          fetch_url,
+                                          a.ep_.headers_.value_or(headers_t{}),
+                                          timeout);
                                       ret = auser.consume_update(
                                           get_http_body(res), *rtt);
                                     } catch (std::exception const& e) {
