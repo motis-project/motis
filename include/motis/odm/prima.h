@@ -135,6 +135,7 @@ void fix_first_mile_duration(
     std::vector<nigiri::routing::start> const& first_mile,
     std::vector<nigiri::routing::start> const& prev_first_mile,
     nigiri::transport_mode_id_t mode);
+
 void fix_last_mile_duration(
     std::vector<nigiri::routing::journey>& journeys,
     std::vector<nigiri::routing::start> const& last_mile,

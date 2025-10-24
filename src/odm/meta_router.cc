@@ -467,8 +467,8 @@ api::plan_response meta_router::run() {
   utl::verify(!results.empty(), "prima: public transport result expected");
   auto const& pt_result = results.front();
   auto taxi_journeys = collect_odm_journeys(results, kOdmTransportModeId);
-  shorten(taxi_journeys, p.first_mile_taxi_, p.last_mile_taxi_, *tt_, rtt_,
-          query_);
+  shorten(taxi_journeys, p.first_mile_taxi_, p.first_mile_taxi_times_,
+          p.last_mile_taxi_, p.last_mile_taxi_times_, *tt_, rtt_, query_);
   auto ride_share_journeys =
       collect_odm_journeys(results, kRideSharingTransportModeId);
   fix_first_mile_duration(ride_share_journeys, p.first_mile_ride_sharing_,
