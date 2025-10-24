@@ -42,8 +42,8 @@ std::string prima::make_blacklist_taxi_request(
 }
 
 n::interval<n::unixtime_t> read_intvl(json::value const& jv) {
-  return n::interval{to_unix(jv.as_object().at("start").as_int64()),
-                     to_unix(jv.as_object().at("end").as_int64())};
+  return n::interval{to_unix(jv.as_object().at("startTime").as_int64()),
+                     to_unix(jv.as_object().at("endTime").as_int64())};
 }
 
 bool prima::consume_blacklist_taxi_response(std::string_view json) {
