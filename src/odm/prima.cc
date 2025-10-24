@@ -293,10 +293,6 @@ std::string make_whitelist_request(
                   {"capacities", json::value_from(cap)}});
 }
 
-std::size_t prima::n_taxi_events() const {
-  return first_mile_taxi_.size() + last_mile_taxi_.size() + direct_taxi_.size();
-}
-
 std::size_t prima::n_ride_sharing_events() const {
   return first_mile_ride_sharing_.size() + last_mile_ride_sharing_.size() +
          direct_ride_sharing_.size();

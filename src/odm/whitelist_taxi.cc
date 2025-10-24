@@ -186,7 +186,9 @@ bool prima::whitelist_taxi(std::vector<nigiri::routing::journey>& taxi_journeys,
   auto ioc = boost::asio::io_context{};
   try {
     n::log(n::log_lvl::debug, "motis.prima",
-           "[whitelist taxi] request for {} events", n_taxi_events());
+           "[whitelist taxi] request for {} rides",
+           first_mile_taxi_rides.size() + last_mile_taxi_rides.size() +
+               direct_taxi_.size());
     boost::asio::co_spawn(
         ioc,
         [&]() -> boost::asio::awaitable<void> {

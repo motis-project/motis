@@ -358,26 +358,22 @@ api::plan_response meta_router::run() {
   std::erase(dest_modes_, api::ModeEnum::ODM);
   std::erase(dest_modes_, api::ModeEnum::RIDE_SHARING);
 
-  print_time(init_start,
-             fmt::format("[init] (#first_mile_taxi: {}, #last_mile_taxi: {}, "
-                         "#direct_taxi: {})",
-                         p.first_mile_taxi_.size(), p.last_mile_taxi_.size(),
-                         p.direct_taxi_.size()),
-             r_.metrics_->routing_execution_duration_seconds_init_);
+  print_time(
+      init_start,
+      fmt::format("[init] (#first_mile_offsets: {}, #last_mile_offsets: {}, "
+                  "#direct_rides: {})",
+                  p.first_mile_taxi_.size(), p.last_mile_taxi_.size(),
+                  p.direct_taxi_.size()),
+      r_.metrics_->routing_execution_duration_seconds_init_);
 
   auto const blacklist_start = std::chrono::steady_clock::now();
   auto const blacklisted_taxis = p.blacklist_taxi(*tt_, taxi_intvl);
-  n::log(n::log_lvl::debug, "motis.prima",
-         "[blacklist taxi] taxi events after blacklisting: {}",
-         p.n_taxi_events());
   print_time(blacklist_start,
-             fmt::format("[blacklist taxi] (#first_mile_taxi: {}, "
-                         "#last_mile_taxi: {}, #direct_taxi: {})",
+             fmt::format("[blacklist taxi] (#first_mile_offsets: {}, "
+                         "#last_mile_offsets: {}, #direct_rides: {})",
                          p.first_mile_taxi_.size(), p.last_mile_taxi_.size(),
                          p.direct_taxi_.size()),
              r_.metrics_->routing_execution_duration_seconds_blacklisting_);
-  r_.metrics_->routing_odm_journeys_found_blacklist_.Observe(
-      static_cast<double>(p.n_taxi_events()));
 
   auto const whitelist_ride_sharing_start = std::chrono::steady_clock::now();
   auto const whitelisted_ride_sharing = p.whitelist_ride_sharing(*tt_);

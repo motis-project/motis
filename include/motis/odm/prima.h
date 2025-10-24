@@ -75,7 +75,6 @@ struct prima {
             nigiri::routing::query const& n_query,
             unsigned api_version);
 
-  std::size_t n_taxi_events() const;
   std::size_t n_ride_sharing_events() const;
 
   std::string make_blacklist_taxi_request(
@@ -84,6 +83,7 @@ struct prima {
   bool consume_blacklist_taxi_response(std::string_view json);
   bool blacklist_taxi(nigiri::timetable const&,
                        nigiri::interval<nigiri::unixtime_t> const&);
+  std::string service_times(nigiri::timetable const&) const;
 
   std::string make_whitelist_taxi_request(std::vector<nigiri::routing::start> const& first_mile,
     std::vector<nigiri::routing::start> const& last_mile, nigiri::timetable const&) const;

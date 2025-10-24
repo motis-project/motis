@@ -102,8 +102,8 @@ bool prima::blacklist_taxi(
   auto blacklist_response = std::optional<std::string>{};
   auto ioc = boost::asio::io_context{};
   try {
-    n::log(n::log_lvl::debug, "motis.prima",
-           "[blacklist taxi] request for {} events", n_taxi_events());
+    n::log(n::log_lvl::debug, "motis.prima", "[blacklist taxi] request for {}",
+           taxi_intvl);
     boost::asio::co_spawn(
         ioc,
         [&]() -> boost::asio::awaitable<void> {
@@ -124,6 +124,31 @@ bool prima::blacklist_taxi(
   }
 
   return consume_blacklist_taxi_response(*blacklist_response);
+}
+
+std::string prima::service_times(n::timetable const& tt) const {
+  auto ss = std::stringstream{};
+
+  auto const first_last_mile_times = [&](auto const& offsets,
+                                         auto const& times) {
+    for (auto const [o, t] : utl::zip(offsets, times)) {
+      ss << tt.locations_.names_[o.target_].view() << ": ";
+      for (auto const& i : t) {
+        ss << i << " ";
+      }
+      ss << "\n";
+    }
+  };
+
+  ss << "first_mile:\n";
+  first_last_mile_times(first_mile_taxi_, first_mile_taxi_times_);
+
+  ss << "last_mile:\n";
+  first_last_mile_times(last_mile_taxi_, last_mile_taxi_times_);
+
+  ss << "\n";
+
+  return ss.str();
 }
 
 }  // namespace motis::odm
