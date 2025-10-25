@@ -131,7 +131,9 @@ data::data(std::filesystem::path p, config const& c)
               return rt.protocol_ ==
                          config::timetable::dataset::rt::protocol::auser ||
                      rt.protocol_ ==
-                         config::timetable::dataset::rt::protocol::siri;
+                         config::timetable::dataset::rt::protocol::siri ||
+                     rt.protocol_ ==
+                         config::timetable::dataset::rt::protocol::siri_json;
             })) {
           load_auser_updater(tag, d);
         }
@@ -345,14 +347,22 @@ void data::load_auser_updater(std::string_view tag,
   if (!auser_) {
     auser_ = std::make_unique<std::map<std::string, auser>>();
   }
-  for (auto const& rt : *d.rt_) {
-    if (rt.protocol_ == config::timetable::dataset::rt::protocol::auser) {
-      auser_->try_emplace(rt.url_, *tt_, tags_->get_src(tag),
-                          n::rt::vdv_aus::updater::xml_format::kVdv);
-    } else if (rt.protocol_ == config::timetable::dataset::rt::protocol::siri) {
-      auser_->try_emplace(rt.url_, *tt_, tags_->get_src(tag),
-                          n::rt::vdv_aus::updater::xml_format::kSiri);
+
+  auto const convert = [](config::timetable::dataset::rt::protocol const p) {
+    switch (p) {
+      case config::timetable::dataset::rt::protocol::auser:
+        return n::rt::vdv_aus::updater::xml_format::kVdv;
+      case config::timetable::dataset::rt::protocol::siri:
+        return n::rt::vdv_aus::updater::xml_format::kSiri;
+      case config::timetable::dataset::rt::protocol::siri_json:
+        return n::rt::vdv_aus::updater::xml_format::kSiriJson;
+      case config::timetable::dataset::rt::protocol::gtfsrt: std::unreachable();
     }
+  };
+
+  for (auto const& rt : *d.rt_) {
+    auser_->try_emplace(rt.url_, *tt_, tags_->get_src(tag),
+                        convert(rt.protocol_));
   }
 }
 
