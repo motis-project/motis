@@ -3,6 +3,7 @@
 #include "pugixml.hpp"
 
 #include "nigiri/common/parse_time.h"
+#include "nigiri/rt/json_to_xml.h"
 
 #include "motis/http_req.h"
 
@@ -25,7 +26,12 @@ std::string auser::fetch_url(std::string_view base_url) {
 n::rt::vdv_aus::statistics auser::consume_update(
     std::string const& auser_update, n::rt_timetable& rtt) {
   auto vdvaus = pugi::xml_document{};
-  vdvaus.load_string(auser_update.c_str());
+  if (upd_.get_format() == n::rt::vdv_aus::updater::xml_format::kSiriJson) {
+    vdvaus = n::rt::to_xml(auser_update);
+  } else {
+    vdvaus.load_string(auser_update.c_str());
+  }
+
   auto stats = upd_.update(rtt, vdvaus);
 
   try {

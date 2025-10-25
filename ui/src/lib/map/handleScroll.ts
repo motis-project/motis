@@ -9,7 +9,7 @@ export const restoreScroll = (container: HTMLElement) => {
 
 	const handlePopState = (event: PopStateEvent) => {
 		requestAnimationFrame(() => {
-			container.scrollTop = event.state?.['sveltekit:states'].scrollY;
+			container.scrollTop = event.state?.['sveltekit:states']?.scrollY ?? 0;
 		});
 	};
 
