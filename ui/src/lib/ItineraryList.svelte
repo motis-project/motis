@@ -23,12 +23,14 @@
 		baseResponse,
 		baseQuery,
 		selectItinerary,
+		selectedItineraryIdx = $bindable(),
 		updateStartDest
 	}: {
 		routingResponses: Array<Promise<PlanResponse>>;
 		baseResponse: Promise<PlanResponse> | undefined;
 		baseQuery: PlanData | undefined;
 		selectItinerary: (it: Itinerary) => void;
+		selectedItineraryIdx: [number, number] | undefined;
 		updateStartDest: (r: { data: PlanResponse | undefined; error: unknown }) => PlanResponse;
 	} = $props();
 
@@ -112,6 +114,7 @@
 							<button
 								onclick={() => {
 									selectItinerary(it);
+									selectedItineraryIdx = [rI, i];
 								}}
 							>
 								<Card class="p-4">

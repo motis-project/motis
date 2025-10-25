@@ -76,6 +76,7 @@
 	let colorMode = $state<'rt' | 'route' | 'mode' | 'none'>('route');
 	let showMap = $state(!isSmallScreen);
 	let lastSelectedItinerary: Itinerary | undefined = undefined;
+	let selectedItineraryIdx = $state<[number, number] | undefined>(undefined);
 	let lastOneToAllQuery: OneToAllData | undefined = undefined;
 
 	let theme: 'light' | 'dark' =
@@ -429,27 +430,33 @@
 		});
 	}
 
-	const flyToSelectedItinerary = () => {
-		if (lastSelectedItinerary === page.state.selectedItinerary) {
-			return;
-		}
-		if (page.state.selectedItinerary && map) {
-			const start = maplibregl.LngLat.convert(page.state.selectedItinerary.legs[0].from);
-			const box = new maplibregl.LngLatBounds(start, start);
-			page.state.selectedItinerary.legs.forEach((l) => {
+	const flyToItineraries = (itineraries: Itinerary[], map: maplibregl.Map) => {
+		const start = maplibregl.LngLat.convert(itineraries[0].legs[0].from);
+		const box = new maplibregl.LngLatBounds(start, start);
+		itineraries.forEach((i) => {
+			i.legs.forEach((l) => {
 				box.extend(l.from);
 				box.extend(l.to);
 				l.intermediateStops?.forEach((x) => {
 					box.extend(x);
 				});
 			});
-			const padding = {
-				top: 96,
-				right: 96,
-				bottom: isSmallScreen ? window.innerHeight * 0.3 : 96,
-				left: isSmallScreen ? 96 : 640
-			};
-			map.flyTo({ ...map.cameraForBounds(box, { padding }) });
+		});
+		const padding = {
+			top: 96,
+			right: 96,
+			bottom: isSmallScreen ? window.innerHeight * 0.3 : 96,
+			left: isSmallScreen ? 96 : 640
+		};
+		map.flyTo({ ...map.cameraForBounds(box, { padding }) });
+	};
+
+	const flyToSelectedItinerary = () => {
+		if (lastSelectedItinerary === page.state.selectedItinerary) {
+			return;
+		}
+		if (page.state.selectedItinerary && map) {
+			flyToItineraries([page.state.selectedItinerary], map);
 		}
 		lastSelectedItinerary = page.state.selectedItinerary;
 	};
@@ -461,6 +468,17 @@
 	});
 
 	$effect(flyToSelectedItinerary);
+
+	$effect(() => {
+		Promise.all(routingResponses).then((responses) => {
+			if (map) {
+				flyToItineraries(
+					responses.flatMap((response) => response.itineraries),
+					map
+				);
+			}
+		});
+	});
 
 	type CloseFn = () => void;
 </script>
@@ -585,10 +603,32 @@
 					selectItinerary={(selectedItinerary) => {
 						pushState('', { selectedItinerary: selectedItinerary, scrollY: undefined });
 					}}
+					bind:selectedItineraryIdx
 					updateStartDest={preprocessItinerary(from, to)}
 				/>
 			</Card>
 		</Control>
+		{#if showMap}
+			{#each routingResponses as r, rI (rI)}
+				{#await r then r}
+					{#each r.itineraries as it, i (i)}
+						{#if selectedItineraryIdx == undefined || (selectedItineraryIdx != undefined && selectedItineraryIdx[0] != rI) || selectedItineraryIdx[1] != i}
+							<ItineraryGeoJson
+								itinerary={it}
+								id="{rI}-{i}"
+								selected={false}
+								selectItinerary={() => {
+									pushState('', { selectedItinerary: it });
+									selectedItineraryIdx = [rI, i];
+								}}
+								{level}
+								{theme}
+							/>
+						{/if}
+					{/each}
+				{/await}
+			{/each}
+		{/if}
 	{/if}
 
 	{#if activeTab != 'isochrones' && page.state.selectedItinerary && !page.state.showDepartures}
@@ -614,7 +654,7 @@
 			</Card>
 		</Control>
 		{#if showMap}
-			<ItineraryGeoJson itinerary={page.state.selectedItinerary} {level} />
+			<ItineraryGeoJson itinerary={page.state.selectedItinerary} selected={true} {level} {theme} />
 			<StopGeoJSON itinerary={page.state.selectedItinerary} {theme} />
 		{/if}
 	{/if}
@@ -636,6 +676,7 @@
 						variant="ghost"
 						onclick={() => {
 							history.back();
+							selectedItineraryIdx = undefined;
 						}}
 					>
 						<X />
@@ -748,7 +789,16 @@
 				</Button>
 			</Control>
 			{#if colorMode != 'none'}
-				<RailViz {map} {bounds} {zoom} {colorMode} />
+				<RailViz
+					selectTrip={(tripId) => {
+						onClickTrip(tripId);
+						selectedItineraryIdx = undefined;
+					}}
+					{map}
+					{bounds}
+					{zoom}
+					{colorMode}
+				/>
 				<Rentals {map} {bounds} {zoom} />
 			{/if}
 		{/if}

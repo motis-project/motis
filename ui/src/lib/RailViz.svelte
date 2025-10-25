@@ -12,14 +12,15 @@
 	import maplibregl from 'maplibre-gl';
 	import { onDestroy, untrack } from 'svelte';
 	import Control from '$lib/map/Control.svelte';
-	import { onClickTrip } from '$lib/utils';
 
 	let {
+		selectTrip,
 		map,
 		bounds,
 		zoom,
 		colorMode
 	}: {
+		selectTrip: (tripId: string) => void;
 		map: maplibregl.Map | undefined;
 		bounds: maplibregl.LngLatBoundsLike | undefined;
 		zoom: number;
@@ -278,7 +279,7 @@
 					if (!object) {
 						return;
 					}
-					onClickTrip(object.trips[0].tripId);
+					selectTrip(object.trips[0].tripId);
 				},
 				getCursor: () => map.getCanvas().style.cursor
 			});
