@@ -358,6 +358,7 @@ void data::load_auser_updater(std::string_view tag,
         return n::rt::vdv_aus::updater::xml_format::kSiriJson;
       case config::timetable::dataset::rt::protocol::gtfsrt: std::unreachable();
     }
+    std::unreachable();
   };
 
   for (auto const& rt : *d.rt_) {
