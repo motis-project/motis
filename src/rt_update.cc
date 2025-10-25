@@ -77,6 +77,7 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
                     endpoints.push_back(gtfs_rt_endpoint{
                         ep, src, tag, gtfsrt_metrics{tag, metric_families}});
                     break;
+                  case config::timetable::dataset::rt::protocol::siri_json:
                   case config::timetable::dataset::rt::protocol::siri:
                     [[fallthrough]];
                   case config::timetable::dataset::rt::protocol::auser:
