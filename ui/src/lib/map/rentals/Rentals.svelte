@@ -990,7 +990,7 @@
 		/>
 		<Layer
 			id={config.pointLayerId}
-			beforeLayerId={STATION_ICON_LAYER_ID}
+			beforeLayerId={config.clusterLayerId}
 			type="symbol"
 			filter={['!', ['has', 'point_count']]}
 			layout={{
