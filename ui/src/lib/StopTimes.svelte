@@ -3,7 +3,6 @@
 	import LoaderCircle from 'lucide-svelte/icons/loader-circle';
 	import ArrowRight from 'lucide-svelte/icons/arrow-right';
 	import CircleX from 'lucide-svelte/icons/circle-x';
-	import Info from 'lucide-svelte/icons/info';
 	import ErrorMessage from '$lib/ErrorMessage.svelte';
 	import Time from '$lib/Time.svelte';
 	import Route from '$lib/Route.svelte';
@@ -15,6 +14,7 @@
 	import { posToLocation } from './Location';
 	import type { Location } from './Location';
 	import maplibregl from 'maplibre-gl';
+	import Alerts from './Alerts.svelte';
 
 	let {
 		stopId,
@@ -66,7 +66,7 @@
 		});
 </script>
 
-<div class="gap-y-4 mb-1 text-base grid grid-cols-[auto_auto_1fr] items-start content-start">
+<div class="gap-y-3 mb-1 text-base grid grid-cols-[auto_1fr] items-start content-start">
 	<div class="col-span-full w-full flex items-center justify-center">
 		<Button
 			class="font-bold"
@@ -111,25 +111,29 @@
 				{@const scheduledTimestamp = arriveBy
 					? stopTime.place.scheduledArrival!
 					: stopTime.place.scheduledDeparture!}
-				<Route class="max-w-20 text-ellipsis overflow-hidden" l={stopTime} {onClickTrip} />
-				<div class="flex px-4 justify-between gap-4">
-					<Time
-						variant="schedule"
-						timeZone={stopTime.place.tz}
-						isRealtime={stopTime.realTime}
-						{timestamp}
-						{scheduledTimestamp}
-						queriedTime={queryTime.toISOString()}
-						{arriveBy}
-					/>
-					<Time
-						variant="realtime"
-						timeZone={stopTime.place.tz}
-						isRealtime={stopTime.realTime}
-						{timestamp}
-						{scheduledTimestamp}
-						{arriveBy}
-					/>
+				<div class="">
+					<div class="flex col justify-between">
+						<Route class="max-w-20 text-ellipsis overflow-hidden" l={stopTime} {onClickTrip} />
+						<div class="mx-4">
+							<Time
+								variant="schedule"
+								timeZone={stopTime.place.tz}
+								isRealtime={stopTime.realTime}
+								{timestamp}
+								{scheduledTimestamp}
+								queriedTime={queryTime.toISOString()}
+								{arriveBy}
+							/>
+							<Time
+								variant="realtime"
+								timeZone={stopTime.place.tz}
+								isRealtime={stopTime.realTime}
+								{timestamp}
+								{scheduledTimestamp}
+								{arriveBy}
+							/>
+						</div>
+					</div>
 				</div>
 				<div class="w-full">
 					<div class="flex items-start justify-between text-base">
@@ -147,6 +151,11 @@
 							</span>
 						{/if}
 					</div>
+					{#if stopTime.place.alerts}
+						<div class="mt-2">
+							<Alerts timeZone={stopTime.place.tz ?? ''} alerts={stopTime.place.alerts} />
+						</div>
+					{/if}
 					{#if stopTime.pickupDropoffType == 'NOT_ALLOWED'}
 						<div class="flex items-center text-destructive text-sm">
 							<CircleX class="stroke-destructive h-4 w-4" />
@@ -161,15 +170,8 @@
 							</span>
 						</div>
 					{/if}
-					{#if stopTime.place.alerts}
-						<div class="flex items-center text-destructive text-sm">
-							<Info class="stroke-destructive h-4 w-4" />
-							<span class="ml-1 leading-none">
-								{t.alertsAvailable}
-							</span>
-						</div>
-					{/if}
 				</div>
+				<div class="border col-span-full"></div>
 			{/each}
 			{#if !r.stopTimes.length}
 				<div class="col-span-full w-full flex items-center justify-center">

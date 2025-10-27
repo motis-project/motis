@@ -78,7 +78,7 @@ leg 0: (START, START) [1970-01-01 09:57] -> (A, A) [1970-01-01 10:55]
 leg 1: (A, A) [1970-01-01 10:55] -> (A, A) [1970-01-01 11:00]
   FOOTPATH (duration=5)
 leg 2: (A, A) [1970-01-01 11:00] -> (C, C) [1970-01-01 13:00]
-  FOOTPATH (duration=120)
+  MUMO (id=1000000, duration=120)
 leg 3: (C, C) [1970-01-01 13:00] -> (C, C) [1970-01-01 14:07]
   FOOTPATH (duration=67)
 leg 4: (C, C) [1970-01-01 14:07] -> (END, END) [1970-01-01 14:46]
@@ -169,7 +169,8 @@ TEST(odm, prima_update) {
                                      motis::kOdmTransportModeId}},
                  {n::direction::kForward, get_loc_idx("A"), get_loc_idx("C"),
                   n::unixtime_t{11h}, n::unixtime_t{13h},
-                  n::footpath{get_loc_idx("C"), 2h}},
+                  n::routing::offset{get_loc_idx("C"), 2h,
+                                     motis::kFlexModeIdOffset}},
                  {n::direction::kForward, get_loc_idx("C"),
                   get_special_station(special_station::kEnd),
                   n::unixtime_t{13h}, n::unixtime_t{14h},

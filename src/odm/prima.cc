@@ -1,6 +1,7 @@
 #include "motis/odm/prima.h"
 
 #include <ranges>
+#include <variant>
 
 #include "boost/asio/co_spawn.hpp"
 #include "boost/asio/detached.hpp"
@@ -493,6 +494,7 @@ void prima::fix_first_mile_duration(
                                n::routing::journey const& j) {
       return j.legs_.size() > 1 &&
              j.legs_.front().dep_time_ == prev2.time_at_start_ &&
+             j.legs_.front().arr_time_ >= prev2.time_at_stop_ &&
              (j.legs_.front().arr_time_ == prev2.time_at_stop_ ||
               mode == kRideSharingTransportModeId) &&
              j.legs_.front().to_ == prev2.stop_ &&
@@ -505,6 +507,10 @@ void prima::fix_first_mile_duration(
       for (auto& j : journeys) {
         if (uses_prev(j)) {
           auto const l = begin(j.legs_);
+          if (std::holds_alternative<n::footpath>(std::next(l)->uses_)) {
+            continue;  // odm leg fixed already before with a different
+                       // time_at_stop (rideshare)
+          }
           l->dep_time_ = curr.time_at_start_;
           l->arr_time_ =
               curr.time_at_stop_ - (mode == kRideSharingTransportModeId
@@ -532,6 +538,7 @@ void prima::fix_last_mile_duration(
     auto const uses_prev =
         [&, prev2 = prev /* hack for MacOS - fixed with 16 */](auto const& j) {
           return j.legs_.size() > 1 &&
+                 j.legs_.back().dep_time_ <= prev2.time_at_stop_ &&
                  (j.legs_.back().dep_time_ == prev2.time_at_stop_ ||
                   mode == kRideSharingTransportModeId) &&
                  j.legs_.back().arr_time_ == prev2.time_at_start_ &&
@@ -545,6 +552,10 @@ void prima::fix_last_mile_duration(
       for (auto& j : journeys) {
         if (uses_prev(j)) {
           auto const l = std::prev(end(j.legs_));
+          if (std::holds_alternative<n::footpath>(std::prev(l)->uses_)) {
+            continue;  // odm leg fixed already before with a different
+                       // time_at_stop (rideshare)
+          }
           l->dep_time_ =
               curr.time_at_stop_ + (mode == kRideSharingTransportModeId
                                         ? kODMTransferBuffer

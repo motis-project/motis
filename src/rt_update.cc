@@ -77,6 +77,7 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
                     endpoints.push_back(gtfs_rt_endpoint{
                         ep, src, tag, gtfsrt_metrics{tag, metric_families}});
                     break;
+                  case config::timetable::dataset::rt::protocol::siri_json:
                   case config::timetable::dataset::rt::protocol::siri:
                     [[fallthrough]];
                   case config::timetable::dataset::rt::protocol::auser:
@@ -153,7 +154,9 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
                                       fmt::println("[auser] fetch url: {}",
                                                    fetch_url.c_str());
                                       auto const res = co_await http_GET(
-                                          fetch_url, headers_t{}, timeout);
+                                          fetch_url,
+                                          a.ep_.headers_.value_or(headers_t{}),
+                                          timeout);
                                       ret = auser.consume_update(
                                           get_http_body(res), *rtt);
                                     } catch (std::exception const& e) {

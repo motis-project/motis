@@ -25,6 +25,8 @@ MOTIS provides an easy-to-use **REST API** (JSON via HTTP) with
 an [**OpenAPI specification**](https://redocly.github.io/redoc/?url=https://raw.githubusercontent.com/motis-project/motis/refs/heads/master/openapi.yaml) ([source](openapi.yaml))
 that allows you to generate clients for your favorite programming language. You may also directly use the pre-generated [JS client](https://www.npmjs.com/package/@motis-project/motis-client). Some more available client libraries are listed [over at Transitous](https://transitous.org/api/).
 
+Also checkout [**Transitous**](https://transitous.org), which operates a MOTIS instance with global coverage (as far as available) at [api.transitous.org](https://api.transitous.org).
+Please make sure to read the [Usage Policy](https://transitous.org/api/) before integrating this endpoint into your app.
 
 # Features
 

@@ -20,6 +20,7 @@ timetable:
         - url: https://api.opentransportdata.swiss/gtfsrt2020
           headers:
             Authorization: MY_API_KEY
+          protocol: gtfsrt
 gbfs:
   feeds:
     montreal:
@@ -76,6 +77,7 @@ timetable:                          # if not set, no timetable will be loaded
         - url: https://api.opentransportdata.swiss/gtfsrt2020
           headers:
             Authorization: MY_API_KEY
+          protocol: gtfsrt          # specify the real time protocol (default: gtfsrt)
     nl:
       path: nl_ovapi.gtfs.zip
       default_bikes_allowed: false
@@ -172,3 +174,14 @@ gbfs:
   update_interval: 300
   http_timeout: 10
 ```
+
+# Real time protocols
+
+MOTIS supports multiple protocols for real time feeds. This section shows a list of the protocols, including some pitfalls:
+
+| Protocol | `protocol` | Note |
+| ---- | ---- | ---- |
+| GTFS-RT | `gtfsrt` | This is the default, if `protocol` is ommitted. |
+| SIRI (XML) | `siri` | Currently limited to SIRI Lite. Still work in progress. Use with care. |
+| SIRI (JSON) | `siri_json` | Same as `siri`, but expects JSON server responses |
+| VDV AUS / VDV454 | `auser` | Requires [`auser`](https://github.com/motis-project/auser) for subscription handling |
