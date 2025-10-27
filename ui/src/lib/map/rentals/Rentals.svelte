@@ -1008,7 +1008,7 @@
 {/each}
 
 {#if providerOptions.length > 0}
-	<Control position="bottom-right" class="mb-5">
+	<Control position="top-right" class="mb-5">
 		<div class="flex flex-col items-end space-y-2">
 			{#each providerOptions as option (`${option.providerId}::${option.formFactor}`)}
 				{@const active = isSameFilter(displayFilter, option)}

@@ -68,10 +68,10 @@ export const formFactorAssets: Record<RentalFormFactor, FormFactorAssets> = {
 		label: t.RENTAL_SCOOTER_STANDING
 	},
 	OTHER: {
-		svg: 'bike',
-		station: 'bike_station',
-		vehicle: 'floating_bike',
-		cluster: 'floating_bike_cluster',
+		svg: 'other',
+		station: 'other_station',
+		vehicle: 'floating_other',
+		cluster: 'floating_other_cluster',
 		label: t.RENTAL_OTHER
 	}
 };
