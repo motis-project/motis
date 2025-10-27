@@ -30,49 +30,49 @@ export const formFactorAssets: Record<RentalFormFactor, FormFactorAssets> = {
 		station: 'bike_station',
 		vehicle: 'floating_bike',
 		cluster: 'floating_bike_cluster',
-		label: t.RENTAL_BICYCLE
+		label: t.bike
 	},
 	CARGO_BICYCLE: {
 		svg: 'cargo_bike',
 		station: 'cargo_bike_station',
 		vehicle: 'floating_cargo_bike',
 		cluster: 'floating_cargo_bike_cluster',
-		label: t.RENTAL_CARGO_BICYCLE
+		label: t.cargoBike
 	},
 	CAR: {
 		svg: 'car',
 		station: 'car_station',
 		vehicle: 'floating_car',
 		cluster: 'floating_car_cluster',
-		label: t.RENTAL_CAR
+		label: t.car
 	},
 	MOPED: {
 		svg: 'moped',
 		station: 'moped_station',
 		vehicle: 'floating_moped',
 		cluster: 'floating_moped_cluster',
-		label: t.RENTAL_MOPED
+		label: t.moped
 	},
 	SCOOTER_SEATED: {
 		svg: 'scooter',
 		station: 'scooter_station',
 		vehicle: 'floating_scooter',
 		cluster: 'floating_scooter_cluster',
-		label: t.RENTAL_SCOOTER_SEATED
+		label: t.scooterSeated
 	},
 	SCOOTER_STANDING: {
 		svg: 'scooter',
 		station: 'scooter_station',
 		vehicle: 'floating_scooter',
 		cluster: 'floating_scooter_cluster',
-		label: t.RENTAL_SCOOTER_STANDING
+		label: t.scooterStanding
 	},
 	OTHER: {
 		svg: 'other',
 		station: 'other_station',
 		vehicle: 'floating_other',
 		cluster: 'floating_other_cluster',
-		label: t.RENTAL_OTHER
+		label: t.unknownVehicleType
 	}
 };
 

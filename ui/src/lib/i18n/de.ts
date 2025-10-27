@@ -14,6 +14,7 @@ const translations: Translations = {
 	car: 'Auto',
 	taxi: 'Taxi',
 	moped: 'Moped',
+	unknownVehicleType: 'Unbekannter Fahrzeugtyp',
 	from: 'Von',
 	to: 'Nach',
 	position: 'Position',

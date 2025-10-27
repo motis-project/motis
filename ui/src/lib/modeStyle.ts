@@ -30,7 +30,7 @@ export const getModeStyle = (l: LegLike): [string, string, string] => {
 					return ['scooter', '#075985', 'white'];
 				case 'OTHER':
 				default:
-					return ['bike', '#075985', 'white'];
+					return ['other', '#075985', 'white'];
 			}
 
 		case 'CAR':

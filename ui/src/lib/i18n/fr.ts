@@ -13,6 +13,7 @@ const translations: Translations = {
 	car: 'Voiture',
 	taxi: 'Taxi',
 	moped: 'Mobylette',
+	unknownVehicleType: 'Type de véhicule inconnu',
 	from: 'De',
 	to: 'À',
 	position: 'Position',

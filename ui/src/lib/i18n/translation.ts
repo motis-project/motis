@@ -19,6 +19,7 @@ export type Translations = {
 	car: string;
 	taxi: string;
 	moped: string;
+	unknownVehicleType: string;
 	from: string;
 	to: string;
 	position: string;

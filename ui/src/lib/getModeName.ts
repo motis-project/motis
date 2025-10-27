@@ -24,7 +24,7 @@ export const getModeName = (l: Leg) => {
 					return t.scooterStanding;
 				case 'OTHER':
 				default:
-					return t.bike;
+					return t.unknownVehicleType;
 			}
 		case 'CAR':
 		case 'CAR_PARKING':
