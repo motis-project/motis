@@ -62,9 +62,10 @@ api::geocode_response suggestions_to_response(
                      : api::LocationTypeEnum::PLACE;
           if (type == api::LocationTypeEnum::STOP) {
             if (tt != nullptr && tags != nullptr) {
-              auto const l = n::location_idx_t{t.place_osm_ids_[p]};
+              auto const l = n::location_idx_t{
+                  static_cast<n::location_idx_t::value_t>(s.get_osm_id(t))};
               level = get_level(w, pl, matches, l);
-              id = tags->id(*tt, n::location_idx_t{t.place_osm_ids_[p]});
+              id = tags->id(*tt, l);
             } else {
               id = fmt::format("stop/{}", p);
             }

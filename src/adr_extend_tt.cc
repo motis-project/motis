@@ -1,5 +1,5 @@
 #include "osr/geojson.h"
-;
+
 #include "motis/adr_extend_tt.h"
 
 #include "nigiri/special_stations.h"
@@ -465,7 +465,8 @@ adr_ext adr_extend_tt(nigiri::timetable const& tt,
     t.place_name_lang_.emplace_back(
         names | std::views::transform([](auto&& n) { return n.second; }));
     t.place_coordinates_.emplace_back(pos);
-    t.place_osm_ids_.emplace_back(to_idx(locations[0]));
+    t.place_osm_ids_.emplace_back(
+        locations | std::views::transform([&](auto&& l) { return to_idx(l); }));
     t.place_population_.emplace_back(static_cast<std::uint16_t>(
         (prio * 1'000'000) / a::population::kCompressionFactor));
     t.place_is_way_.resize(t.place_is_way_.size() + 1U);
