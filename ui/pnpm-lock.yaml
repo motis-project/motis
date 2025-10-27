@@ -57,7 +57,7 @@ importers:
         specifier: ^0.5.0
         version: 0.5.0
       maplibre-gl:
-        specifier: ^5.9.0
+        specifier: ^5.10.0
         version: 5.10.0
       rbush:
         specifier: ^4.0.1
