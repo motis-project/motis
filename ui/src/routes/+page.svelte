@@ -774,8 +774,8 @@
 			</Control>
 			{#if colorMode != 'none'}
 				<RailViz {map} {bounds} {zoom} {colorMode} />
-				<Rentals {map} {bounds} {zoom} />
 			{/if}
+			<Rentals {map} {bounds} {zoom} />
 		{/if}
 		<!-- Isochrones cannot be hidden the same way as RailViz -->
 		<Isochrones

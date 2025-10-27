@@ -16,6 +16,7 @@
 		"update-sprite": "spreet sprite --sdf static/sprite_sdf && spreet --sdf --retina sprite static/sprite_sdf@2x"
 	},
 	"devDependencies": {
+		"@types/earcut": "^3.0.0",
 		"@eslint/compat": "^1.2.9",
 		"@eslint/eslintrc": "^3.3.1",
 		"@eslint/js": "^9.27.0",
@@ -55,9 +56,9 @@
 	},
 	"type": "module",
 	"dependencies": {
-		"@deck.gl/core": "~9.0.40",
-		"@deck.gl/layers": "~9.0.40",
-		"@deck.gl/mapbox": "~9.0.40",
+		"@deck.gl/core": "~9.2.2",
+		"@deck.gl/layers": "~9.2.2",
+		"@deck.gl/mapbox": "~9.2.2",
 		"@hey-api/client-fetch": "^0.4.4",
 		"@mapbox/polyline": "^1.2.1",
 		"@tanstack/svelte-query": "^6.0.3",
@@ -70,7 +71,8 @@
 		"@turf/union": "^7.2.0",
 		"colord": "^2.9.3",
 		"geojson": "^0.5.0",
-		"maplibre-gl": "^4.7.1",
+		"earcut": "^3.0.2",
+		"maplibre-gl": "^5.9.0",
 		"rbush": "^4.0.1",
 		"svelte-radix": "^1.1.1"
 	},

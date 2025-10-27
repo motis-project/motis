@@ -6,8 +6,7 @@
 		type RentalProvider,
 		type RentalStation,
 		type RentalVehicle,
-		type RentalZone,
-		type RentalZoneRestrictions
+		type RentalZone
 	} from '$lib/api/openapi';
 	import { lngLatToStr } from '$lib/lngLatToStr';
 	import Control from '$lib/map/Control.svelte';
@@ -25,20 +24,10 @@
 	} from '$lib/map/rentals/assets';
 	import { cn } from '$lib/utils';
 	import polyline from '@mapbox/polyline';
-	import { difference } from '@turf/difference';
-	import { feature, featureCollection } from '@turf/helpers';
-	import RBush from 'rbush';
 	import maplibregl from 'maplibre-gl';
 	import type { MapLayerMouseEvent } from 'maplibre-gl';
 	import { mount, onDestroy, unmount } from 'svelte';
-	import type {
-		Feature,
-		FeatureCollection,
-		Point,
-		Polygon as GeoPolygon,
-		MultiPolygon as GeoMultiPolygon,
-		Position
-	} from 'geojson';
+	import type { FeatureCollection, Point, Position } from 'geojson';
 	import StationPopup from '$lib/map/rentals/StationPopup.svelte';
 	import VehiclePopup from '$lib/map/rentals/VehiclePopup.svelte';
 	import ZonePopup from '$lib/map/rentals/ZonePopup.svelte';
@@ -49,6 +38,14 @@
 		zoomScaledTextSizeMedium,
 		zoomScaledTextSizeSmall
 	} from './style';
+	import ZoneLayer from './ZoneLayer.svelte';
+	import type {
+		RentalZoneFeature,
+		RentalZoneFeatureCollection,
+		RentalZoneFeatureProperties
+	} from './zone-types';
+
+	let zoneLayerRef = $state<ZoneLayer | null>(null);
 
 	let {
 		map,
@@ -67,7 +64,6 @@
 	const VEHICLE_SOURCE_PREFIX = 'rentals-vehicles';
 	const VEHICLE_CLUSTER_RADIUS = 50;
 	const ZONE_LAYER_ID = 'rentals-zones';
-	const ZONE_OUTLINE_LAYER_ID = 'rentals-zones-outline';
 
 	const formFactors = Object.keys(formFactorAssets) as RentalFormFactor[];
 
@@ -148,14 +144,6 @@
 		RentalFormFactor,
 		FeatureCollection<Point, VehicleFeatureProperties>
 	>;
-
-	type ZoneFeatureProperties = {
-		zoneIndex: number;
-		providerId: string;
-		z: number;
-		rideEndAllowed: boolean;
-		rideThroughAllowed: boolean;
-	};
 
 	const vehicleLayerConfigs = formFactors.map((formFactor) => {
 		const slug = formFactor.toLowerCase();
@@ -475,7 +463,7 @@
 			});
 		return collections;
 	});
-	const buildZoneGeometry = (zone: RentalZone): GeoMultiPolygon => {
+	const buildZoneGeometry = (zone: RentalZone): RentalZoneFeature['geometry'] => {
 		return {
 			type: 'MultiPolygon',
 			coordinates: zone.area.map((polygon) =>
@@ -503,120 +491,43 @@
 		});
 	};
 
-	let zoneFeatures = $derived.by(
-		(): FeatureCollection<GeoMultiPolygon | GeoPolygon, ZoneFeatureProperties> => {
-			const provider = rentalsData?.providers?.find(
-				(candidate) => candidate.id === displayFilter?.providerId
-			);
-			const filter = displayFilter;
+	let zoneFeatures = $derived.by((): RentalZoneFeatureCollection => {
+		const provider = rentalsData?.providers?.find(
+			(candidate) => candidate.id === displayFilter?.providerId
+		);
+		const filter = displayFilter;
 
-			if (!rentalsData || !filter || !provider) {
-				return { type: 'FeatureCollection', features: [] };
-			}
-
-			console.time('Filter Zones');
-			const zones: Array<{
-				zone: RentalZone;
-				zoneIndex: number;
-				rule: RentalZoneRestrictions;
-				feature: Feature<GeoMultiPolygon | GeoPolygon, ZoneFeatureProperties> | null;
-			}> = rentalsData.zones
-				.filter((zone) => zone.providerId === filter.providerId)
-				.map((zone, index) => ({
-					zone,
-					zoneIndex: index,
-					rule: findMatchingRule(zone, provider, filter.formFactor)
-				}))
-				.filter(
-					(
-						entry
-					): entry is {
-						zone: RentalZone;
-						zoneIndex: number;
-						rule: RentalZoneRestrictions;
-					} => entry.rule !== undefined
-				)
-				.sort((a, b) => b.zone.z - a.zone.z)
-				.map((entry) => ({
-					...entry,
-					feature: feature(buildZoneGeometry(entry.zone), {
-						zoneIndex: entry.zoneIndex,
-						providerId: entry.zone.providerId,
-						z: entry.zone.z,
-						rideEndAllowed: entry.rule.rideEndAllowed && !entry.rule.stationParking,
-						rideThroughAllowed: entry.rule.rideThroughAllowed
-					})
-				}));
-			console.timeEnd('Filter Zones');
-
-			console.log(`zoneFeatures: ${zones.length}/${rentalsData.zones.length} matching zones`);
-
-			if (zones.length === 0) {
-				return { type: 'FeatureCollection', features: [] };
-			}
-
-			const features: Array<Feature<GeoMultiPolygon | GeoPolygon, ZoneFeatureProperties>> = [];
-
-			console.time('R-Tree Creation');
-			const rtree = new RBush<{
-				minX: number;
-				minY: number;
-				maxX: number;
-				maxY: number;
-				zone: (typeof zones)[number];
-			}>();
-			rtree.load(
-				zones.map((z) => ({
-					minX: z.zone.bbox[0],
-					minY: z.zone.bbox[1],
-					maxX: z.zone.bbox[2],
-					maxY: z.zone.bbox[3],
-					zone: z
-				}))
-			);
-			console.timeEnd('R-Tree Creation');
-
-			console.time('Zone Clipping');
-			for (const z of zones) {
-				console.time(`Clipping Zone ${z.zoneIndex}`);
-				const candidates = rtree
-					.search({
-						minX: z.zone.bbox[0],
-						minY: z.zone.bbox[1],
-						maxX: z.zone.bbox[2],
-						maxY: z.zone.bbox[3]
-					})
-					.filter((c) => c.zone.zone.z > z.zone.z)
-					.sort((a, b) => b.zone.zone.z - a.zone.zone.z);
-
-				console.log(`Clipping Zone ${z.zoneIndex}: ${candidates.length} higher zones`);
-
-				let clipped: Feature<GeoMultiPolygon | GeoPolygon, ZoneFeatureProperties> | null =
-					z.feature;
-				if (candidates.length > 0) {
-					for (const higher of candidates) {
-						if (clipped && higher.zone.feature) {
-							clipped = difference(featureCollection([clipped, higher.zone.feature])) as Feature<
-								GeoMultiPolygon | GeoPolygon,
-								ZoneFeatureProperties
-							> | null;
-						}
-						if (!clipped) {
-							break;
-						}
-					}
-					z.feature = clipped;
-				}
-				if (clipped) {
-					features.push(clipped);
-				}
-				console.timeEnd(`Clipping Zone ${z.zoneIndex}`);
-			}
-			console.timeEnd('Zone Clipping');
-
-			return featureCollection(features);
+		if (!rentalsData || !filter || !provider) {
+			return { type: 'FeatureCollection', features: [] };
 		}
-	);
+
+		const features: RentalZoneFeature[] = rentalsData.zones
+			.filter((zone) => zone.providerId === filter.providerId)
+			.map((zone, index) => {
+				const rule = findMatchingRule(zone, provider, filter.formFactor);
+				if (!rule) {
+					return null;
+				}
+				return {
+					type: 'Feature',
+					geometry: buildZoneGeometry(zone),
+					properties: {
+						zoneIndex: index,
+						providerId: zone.providerId,
+						z: zone.z,
+						rideEndAllowed: rule.rideEndAllowed && !rule.stationParking,
+						rideThroughAllowed: rule.rideThroughAllowed
+					}
+				} satisfies RentalZoneFeature;
+			})
+			.filter((feature): feature is RentalZoneFeature => feature !== null)
+			.sort((a, b) => b.properties.z - a.properties.z);
+
+		return {
+			type: 'FeatureCollection',
+			features
+		};
+	});
 
 	const createScopedId = (providerId: string, entityId: string) => `${providerId}::${entityId}`;
 
@@ -652,7 +563,7 @@
 		};
 	};
 
-	const lookupZone = (properties: ZoneFeatureProperties) => {
+	const lookupZone = (properties: RentalZoneFeatureProperties) => {
 		const zone = rentalsData?.zones[properties.zoneIndex];
 		return {
 			key: String(properties.zoneIndex),
@@ -913,7 +824,11 @@
 		createVehicleContent(provider, entity as RentalVehicle, true)
 	);
 
-	const handleZoneClick = (event: MapLayerMouseEvent, mapInstance: maplibregl.Map) => {
+	const handleZoneClick = (
+		event: maplibregl.MapMouseEvent,
+		mapInstance: maplibregl.Map,
+		layer: ZoneLayer
+	) => {
 		if (!mapInstance) {
 			return;
 		}
@@ -927,18 +842,16 @@
 			layers: priorityLayers
 		});
 		if (priorityFeatures.length > 0) {
-			// Let station/vehicle click handlers handle this
 			return;
 		}
 
-		// event.features is already sorted by z-order (topmost first)
-		const feature = event.features?.[0];
+		const feature = layer.pick(event.point);
 		if (!feature) {
 			hidePopup();
 			return;
 		}
 
-		const result = lookupZone(feature.properties as ZoneFeatureProperties);
+		const result = lookupZone(feature.properties);
 		if (!result.zone || !result.provider) {
 			hidePopup();
 			return;
@@ -954,6 +867,23 @@
 			)
 		);
 	};
+
+	$effect(() => {
+		const mapInstance = map;
+		const layer = zoneLayerRef;
+		const hasZones = zoneFeatures.features.length > 0;
+		if (!mapInstance || !layer || !hasZones) {
+			return;
+		}
+
+		const handler = (event: maplibregl.MapMouseEvent) => {
+			handleZoneClick(event, mapInstance, layer);
+		};
+		mapInstance.on('click', handler);
+		return () => {
+			mapInstance.off('click', handler);
+		};
+	});
 
 	$effect(() => {
 		if (!rentalsData) {
@@ -986,46 +916,12 @@
 
 {#if zoneFeatures.features.length > 0}
 	{@const beforeLayerId = vehicleLayerConfigs[0]?.pointLayerId ?? STATION_ICON_LAYER_ID}
-	<GeoJSON id={ZONE_LAYER_ID} data={zoneFeatures}>
-		<Layer
-			id={ZONE_LAYER_ID}
-			{beforeLayerId}
-			type="fill"
-			filter={true}
-			layout={{ 'fill-sort-key': ['get', 'z'] }}
-			onclick={handleZoneClick}
-			paint={{
-				'fill-color': [
-					'case',
-					['==', ['get', 'rideEndAllowed'], true],
-					'#22c55e',
-					['==', ['get', 'rideThroughAllowed'], false],
-					'#ef4444',
-					'#f97316'
-				],
-				'fill-opacity': 0.3
-			}}
-		/>
-		<Layer
-			id={ZONE_OUTLINE_LAYER_ID}
-			{beforeLayerId}
-			type="line"
-			filter={true}
-			layout={{}}
-			paint={{
-				'line-color': [
-					'case',
-					['==', ['get', 'rideEndAllowed'], true],
-					'#15803d',
-					['==', ['get', 'rideThroughAllowed'], false],
-					'#b91c1c',
-					'#c2410c'
-				],
-				'line-width': 3,
-				'line-opacity': 0.9
-			}}
-		/>
-	</GeoJSON>
+	<ZoneLayer
+		bind:this={zoneLayerRef}
+		id={ZONE_LAYER_ID}
+		features={zoneFeatures.features}
+		{beforeLayerId}
+	/>
 {/if}
 
 <GeoJSON id={STATION_SOURCE_ID} data={stationFeatures}>
