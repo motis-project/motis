@@ -54,10 +54,10 @@ export const formFactorAssets: Record<RentalFormFactor, FormFactorAssets> = {
 		label: t.moped
 	},
 	SCOOTER_SEATED: {
-		svg: 'scooter',
-		station: 'scooter_station',
-		vehicle: 'floating_scooter',
-		cluster: 'floating_scooter_cluster',
+		svg: 'seated_scooter',
+		station: 'seated_scooter_station',
+		vehicle: 'floating_seated_scooter',
+		cluster: 'floating_seated_scooter_cluster',
 		label: t.scooterSeated
 	},
 	SCOOTER_STANDING: {
