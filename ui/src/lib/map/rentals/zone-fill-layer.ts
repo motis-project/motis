@@ -8,7 +8,6 @@ import type { RentalZoneFeature, RentalZoneFeatureProperties } from './zone-type
 
 type GLContext = WebGLRenderingContext | WebGL2RenderingContext;
 
-const DEBUG = true;
 const DEFAULT_OPACITY = 0.4;
 const STRIPE_WIDTH_PX = 6.0;
 const STRIPE_OPACITY_VARIATION = 0.1;
@@ -121,7 +120,6 @@ export class ZoneFillLayer implements maplibregl.CustomLayerInterface {
 	private height = 0;
 	private pickingWidth = 0;
 	private pickingHeight = 0;
-	private debugFrameCount = 0;
 	private fillPrograms = new Map<string, FillProgramState>();
 	private pickingLookup = new Map<number, RentalZoneFeature>();
 	private pickingPixel = new Uint8Array(4);
@@ -151,18 +149,9 @@ export class ZoneFillLayer implements maplibregl.CustomLayerInterface {
 		this.geometryDirty = true;
 		this.updateGeometry();
 		this.map?.triggerRepaint();
-		if (DEBUG) {
-			console.debug('[ZoneFillLayer] setFeatures', {
-				features: features.length,
-				geometryDirty: this.geometryDirty
-			});
-		}
 	}
 
 	onAdd(map: MapLibreMap, gl: GLContext) {
-		if (DEBUG) {
-			console.debug('[ZoneFillLayer] onAdd');
-		}
 		this.map = map;
 		this.gl = gl;
 		this.initialize(gl);
@@ -170,9 +159,6 @@ export class ZoneFillLayer implements maplibregl.CustomLayerInterface {
 	}
 
 	onRemove(_map: MapLibreMap, gl: GLContext) {
-		if (DEBUG) {
-			console.debug('[ZoneFillLayer] onRemove');
-		}
 		this.cleanup(gl);
 	}
 
@@ -352,14 +338,6 @@ export class ZoneFillLayer implements maplibregl.CustomLayerInterface {
 
 		gl.blendFuncSeparate(prevBlendSrcRGB, prevBlendDstRGB, prevBlendSrcAlpha, prevBlendDstAlpha);
 		gl.blendEquationSeparate(prevBlendEquationRGB, prevBlendEquationAlpha);
-
-		if (DEBUG && this.debugFrameCount < 5) {
-			console.debug('[ZoneFillLayer] render frame', {
-				frame: this.debugFrameCount,
-				buffers: this.zoneBuffers.length
-			});
-		}
-		this.debugFrameCount += 1;
 	}
 
 	private initialize(gl: GLContext) {
@@ -578,17 +556,9 @@ void main() {
 		this.pickingLookup.clear();
 
 		const features = [...this.features].sort((a, b) => a.properties.z - b.properties.z);
-		if (DEBUG) {
-			console.debug('[ZoneFillLayer] updateGeometry', {
-				features: features.length
-			});
-		}
 		for (const feature of features) {
 			const triangles = this.buildTriangles(feature);
 			if (triangles.length === 0) {
-				if (DEBUG) {
-					console.debug('[ZoneFillLayer] no triangles for feature', feature.properties);
-				}
 				continue;
 			}
 			const buffer = this.gl.createBuffer();
@@ -608,16 +578,9 @@ void main() {
 				pickingIdx,
 				z: feature.properties.z
 			});
-			// if (DEBUG) {
-			// 	console.debug('[ZoneFillLayer] triangles created', {
-			// 		zone: feature.properties.zoneIndex,
-			// 		vertices: triangles.length / 2
-			// 	});
-			// }
 		}
 		this.gl.bindBuffer(this.gl.ARRAY_BUFFER, null);
 		this.geometryDirty = false;
-		this.debugFrameCount = 0;
 	}
 
 	private clearZoneBuffers(gl: GLContext) {
