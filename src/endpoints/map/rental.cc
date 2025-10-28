@@ -258,7 +258,10 @@ api::rentals_response rental::operator()(
 
           if (form_factors.empty()) {
             for (auto const& vt : provider->vehicle_types_) {
-              form_factors.push_back(vt.form_factor_);
+              if (utl::find(form_factors, vt.form_factor_) ==
+                  end(form_factors)) {
+                form_factors.push_back(vt.form_factor_);
+              }
             }
           } else {
             utl::sort(form_factors, [&](auto const a, auto const b) {
