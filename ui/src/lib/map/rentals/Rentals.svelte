@@ -1109,7 +1109,7 @@
 					type="button"
 					title={`${option.providerGroupName} (${formFactorAssets[option.formFactor].label})`}
 					class={cn(
-						'inline-flex max-w-sm items-center gap-2 rounded-md border-2 px-3 py-1.5 text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500',
+						'inline-flex max-w-72 items-center gap-2 rounded-md border-2 px-3 py-1.5 text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500',
 						active
 							? 'border-blue-600 bg-accent text-accent-foreground'
 							: 'border-muted bg-popover text-foreground hover:bg-accent hover:text-accent-foreground'
