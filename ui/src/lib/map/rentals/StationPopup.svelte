@@ -1,7 +1,22 @@
 <script lang="ts">
-	import type { RentalProvider, RentalStation } from '$lib/api/openapi';
+	import type {
+		RentalFormFactor,
+		RentalPropulsionType,
+		RentalProvider,
+		RentalReturnConstraint,
+		RentalStation
+	} from '$lib/api/openapi';
 	import { Button } from '$lib/components/ui/button';
-	import { Copy } from '@lucide/svelte';
+	import {
+		Copy,
+		FlagTriangleLeft,
+		Fuel,
+		PlugZap,
+		RefreshCcw,
+		Zap,
+		type Icon as IconType
+	} from '@lucide/svelte';
+	import { formFactorAssets } from '$lib/map/rentals/assets';
 	import { t } from '$lib/i18n/translation';
 
 	let {
@@ -32,11 +47,74 @@
 	async function copyDebugInfo() {
 		await navigator.clipboard.writeText(JSON.stringify(debugInfo, null, 2));
 	}
+
+	type IconInfo = {
+		component: typeof IconType;
+		title: string;
+	};
+
+	type VehicleRow = {
+		id: string;
+		available: number;
+		formFactor: RentalFormFactor;
+		name: string;
+		propulsionIcon: IconInfo | null;
+		returnIcon: IconInfo | null;
+	};
+
+	const propulsionTypes: Record<
+		RentalPropulsionType,
+		{ component: typeof IconType; title: string } | null
+	> = {
+		ELECTRIC: { component: Zap, title: t.electric },
+		ELECTRIC_ASSIST: { component: Zap, title: t.electricAssist },
+		HYBRID: { component: PlugZap, title: t.hybrid },
+		PLUG_IN_HYBRID: { component: PlugZap, title: t.plugInHybrid },
+		COMBUSTION: { component: Fuel, title: t.combustion },
+		COMBUSTION_DIESEL: { component: Fuel, title: t.combustionDiesel },
+		HYDROGEN_FUEL_CELL: { component: Fuel, title: t.hydrogenFuelCell },
+		HUMAN: null
+	};
+
+	const returnConstraints: Record<
+		RentalReturnConstraint,
+		{ component: typeof IconType; title: string } | null
+	> = {
+		ANY_STATION: { component: FlagTriangleLeft, title: t.returnOnlyAtStations },
+		ROUNDTRIP_STATION: { component: RefreshCcw, title: t.roundtripStationReturnConstraint },
+		NONE: null
+	};
+
+	const vehicleRows = $derived.by<VehicleRow[]>(() => {
+		return Object.entries(station.vehicleTypesAvailable)
+			.map(([id, count]) => {
+				const vt = provider.vehicleTypes.find((vt) => vt.id === id)!;
+				const name = vt.name || formFactorAssets[vt.formFactor].label;
+
+				return {
+					id,
+					available: count,
+					formFactor: vt.formFactor,
+					name,
+					propulsionIcon: propulsionTypes[vt.propulsionType],
+					returnIcon: returnConstraints[vt.returnConstraint]
+				};
+			})
+			.sort((a, b) => {
+				if (b.available !== a.available) {
+					return b.available - a.available;
+				}
+				return a.name.localeCompare(b.name);
+			});
+	});
 </script>
 
 <div class="space-y-3 text-sm leading-tight text-foreground">
 	<div class="space-y-1">
 		<div class="font-semibold">{station.name}</div>
+		{#if station.address}
+			<div>{station.address}</div>
+		{/if}
 		<div>
 			{t.sharingProvider}: {#if provider.url}
 				<a
@@ -51,6 +129,56 @@
 			{/if}
 		</div>
 	</div>
+	{#if vehicleRows.length}
+		<div class="max-w-96">
+			<table class="w-full table-fixed text-xs">
+				<tbody>
+					{#each vehicleRows as vehicle (vehicle.id)}
+						<tr class="border-b border-border last:border-0">
+							<td class="w-8 pr-2 align-middle">
+								{vehicle.available}x
+							</td>
+							<td class="w-6 pr-2 align-middle">
+								<svg class="h-4 w-4 fill-current" aria-hidden="true" focusable="false">
+									<title>{formFactorAssets[vehicle.formFactor].label}</title>
+									<use href={`#${formFactorAssets[vehicle.formFactor].svg}`} />
+								</svg>
+							</td>
+							<td class="w-6 pr-2 align-middle">
+								{#if vehicle.propulsionIcon}
+									{@const PropulsionIcon = vehicle.propulsionIcon.component}
+									<span
+										class="inline-flex h-4 w-4 items-center justify-center text-muted-foreground"
+										role="img"
+										title={vehicle.propulsionIcon.title}
+										aria-label={vehicle.propulsionIcon.title}
+									>
+										<PropulsionIcon class="h-4 w-4" aria-hidden="true" />
+									</span>
+								{/if}
+							</td>
+							<td class="truncate align-middle" title={vehicle.name} aria-label={vehicle.name}>
+								{vehicle.name}
+							</td>
+							<td class="w-8 pl-2 align-middle text-right">
+								{#if vehicle.returnIcon}
+									{@const ReturnIcon = vehicle.returnIcon.component}
+									<span
+										class="inline-flex h-4 w-4 items-center justify-center text-muted-foreground"
+										role="img"
+										title={vehicle.returnIcon.title}
+										aria-label={vehicle.returnIcon.title}
+									>
+										<ReturnIcon class="h-4 w-4" aria-hidden="true" />
+									</span>
+								{/if}
+							</td>
+						</tr>
+					{/each}
+				</tbody>
+			</table>
+		</div>
+	{/if}
 	{#if showActions && station.rentalUriWeb}
 		<Button class="font-bold" variant="outline" href={station.rentalUriWeb} target="_blank">
 			{t.rent}
