@@ -707,7 +707,7 @@
 	attribution={false}
 >
 	{#if hasDebug}
-		<Control position="top-right">
+		<Control position="top-right" class="text-right">
 			<Debug {bounds} {level} {zoom} />
 		</Control>
 	{/if}
@@ -739,7 +739,7 @@
 
 	{#if showMap}
 		{#if activeTab != 'isochrones'}
-			<Control position="top-right" class="pb-4">
+			<Control position="top-right" class="pb-4 text-right">
 				<Button
 					size="icon"
 					onclick={() => {
