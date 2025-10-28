@@ -1,7 +1,7 @@
 #include "gtest/gtest.h"
-#include "motis/transport_mode_ids.h"
 
-#include "motis/odm/get_td_offsets.h"
+#include "motis/odm/td_offsets.h"
+#include "motis/transport_mode_ids.h"
 
 using namespace nigiri;
 using namespace nigiri::routing;
