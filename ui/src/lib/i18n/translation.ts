@@ -20,6 +20,13 @@ export type Translations = {
 	taxi: string;
 	moped: string;
 	unknownVehicleType: string;
+	electricAssist: string;
+	electric: string;
+	combustion: string;
+	combustionDiesel: string;
+	hybrid: string;
+	plugInHybrid: string;
+	hydrogenFuelCell: string;
 	from: string;
 	to: string;
 	position: string;
@@ -41,6 +48,7 @@ export type Translations = {
 	tripIntermediateStops: (n: number) => string;
 	sharingProvider: string;
 	sharingProviders: string;
+	returnOnlyAtStations: string;
 	roundtripStationReturnConstraint: string;
 	noItinerariesFound: string;
 	advancedSearchOptions: string;
