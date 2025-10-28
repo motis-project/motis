@@ -68,9 +68,9 @@ void main() {
 }
 `;
 
-const ZONE_COLOR_ALLOWED = new Float32Array([0.13333333, 0.77254902, 0.36862745, 1]); // #22c55e
-const ZONE_COLOR_FORBIDDEN = new Float32Array([0.9372549, 0.26666667, 0.26666667, 1]); // #ef4444
-const ZONE_COLOR_RESTRICTED = new Float32Array([0.97647059, 0.45098039, 0.08627451, 1]); // #f97316
+const ZONE_COLOR_ALLOWED = new Float32Array([0.13333333, 0.77254902, 0.36862745, 1]); // #22c55e (green)
+const ZONE_COLOR_FORBIDDEN = new Float32Array([0.9372549, 0.26666667, 0.26666667, 1]); // #ef4444 (red)
+const ZONE_COLOR_RESTRICTED = new Float32Array([1, 0.84313725, 0, 1]); // #ffd700 (yellow)
 
 export const getZoneColor = (properties: RentalZoneFeatureProperties) => {
 	if (properties.rideEndAllowed) {
