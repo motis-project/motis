@@ -58,7 +58,7 @@
 		zoom: number;
 	} = $props();
 
-	const MIN_ZOOM = 14;
+	const MIN_ZOOM = 13;
 	const FETCH_PADDING_RATIO = 0.5;
 	const STATION_SOURCE_ID = 'rentals-stations';
 	const STATION_ICON_LAYER_ID = 'rentals-stations-icons';
@@ -269,135 +269,6 @@
 		return formFactorsByColor;
 	};
 
-	$effect(() => {
-		if (!map || !bounds || zoom <= MIN_ZOOM) {
-			if (zoom <= MIN_ZOOM - 4) {
-				rentalsData = null;
-				loadedBounds = null;
-				requestToken += 1;
-			}
-			return;
-		}
-
-		const mapBounds = maplibregl.LngLatBounds.convert(bounds);
-		if (boundsContain(loadedBounds, mapBounds)) {
-			return;
-		}
-
-		void fetchRentals(mapBounds);
-	});
-
-	$effect(() => {
-		if (
-			displayFilter &&
-			!providerGroupOptions.some((option) => isSameFilter(option, displayFilter))
-		) {
-			displayFilter = null;
-		}
-	});
-
-	onDestroy(() => {
-		requestToken += 1;
-	});
-
-	const clearMapIcons = (mapInstance: maplibregl.Map | undefined) => {
-		if (!mapInstance || activeIconIds.size === 0) {
-			return;
-		}
-		for (const id of activeIconIds) {
-			if (mapInstance.hasImage(id)) {
-				mapInstance.removeImage(id);
-			}
-		}
-		activeIconIds = new Set<string>();
-	};
-
-	$effect(() => {
-		const mapInstance = map;
-		const data = rentalsData;
-		if (!browser || !mapInstance) {
-			iconsReady = false;
-			iconRequestToken += 1;
-			clearMapIcons(mapInstance);
-			return;
-		}
-
-		if (!data) {
-			iconsReady = false;
-			iconRequestToken += 1;
-			clearMapIcons(mapInstance);
-			return;
-		}
-
-		const dataPayload = data as RentalsPayloadData;
-		const formFactorsByColor = collectFormFactorsByColor(dataPayload);
-		if (formFactorsByColor.size === 0) {
-			iconRequestToken += 1;
-			clearMapIcons(mapInstance);
-			iconsReady = true;
-			return;
-		}
-
-		const token = ++iconRequestToken;
-		iconsReady = false;
-		const neededIds = new Set<string>();
-		const tasks: Promise<void>[] = [];
-
-		formFactorsByColor.forEach((formFactors, color) => {
-			formFactors.forEach((formFactor) => {
-				ICON_TYPES.forEach((type) => {
-					const dimensions = getIconDimensions(type);
-					const id = getIconId(formFactor, type, color);
-					neededIds.add(id);
-					if (!mapInstance.hasImage(id)) {
-						tasks.push(
-							(async () => {
-								try {
-									const image = await colorizeIcon(getIconUrl(formFactor, type), color, dimensions);
-									if (token !== iconRequestToken || !mapInstance) {
-										return;
-									}
-									if (!mapInstance.hasImage(id)) {
-										try {
-											mapInstance.addImage(id, image);
-										} catch (addError) {
-											console.error(`[Rentals] failed to register icon ${id}`, addError);
-										}
-									}
-								} catch (error) {
-									console.error(`[Rentals] failed to prepare icon ${id}`, error);
-								}
-							})()
-						);
-					}
-				});
-			});
-		});
-
-		void (async () => {
-			await Promise.allSettled(tasks);
-			if (token !== iconRequestToken || !mapInstance) {
-				return;
-			}
-
-			const previousIds = Array.from(activeIconIds);
-			for (const id of previousIds) {
-				if (!neededIds.has(id) && mapInstance.hasImage(id)) {
-					mapInstance.removeImage(id);
-				}
-			}
-
-			const newActiveIds = new Set<string>();
-			neededIds.forEach((id) => {
-				if (mapInstance.hasImage(id)) {
-					newActiveIds.add(id);
-				}
-			});
-			activeIconIds = newActiveIds;
-			iconsReady = neededIds.size === newActiveIds.size;
-		})();
-	});
-
 	const stationAvailability = (
 		station: RentalStation,
 		formFactorsByProvider: Record<string, VehicleTypeFormFactors>,
@@ -496,7 +367,7 @@
 			});
 		return collections;
 	});
-	
+
 	const buildZoneGeometry = (zone: RentalZone): RentalZoneFeature['geometry'] => {
 		return {
 			type: 'MultiPolygon',
@@ -908,6 +779,131 @@
 	};
 
 	$effect(() => {
+		if (!map || !bounds || zoom <= MIN_ZOOM) {
+			if (zoom <= MIN_ZOOM) {
+				rentalsData = null;
+				loadedBounds = null;
+				requestToken += 1;
+			}
+			return;
+		}
+
+		const mapBounds = maplibregl.LngLatBounds.convert(bounds);
+		if (boundsContain(loadedBounds, mapBounds)) {
+			return;
+		}
+
+		void fetchRentals(mapBounds);
+	});
+
+	$effect(() => {
+		if (
+			displayFilter &&
+			!providerGroupOptions.some((option) => isSameFilter(option, displayFilter))
+		) {
+			displayFilter = null;
+		}
+	});
+
+	const clearMapIcons = (mapInstance: maplibregl.Map | undefined) => {
+		if (!mapInstance || activeIconIds.size === 0) {
+			return;
+		}
+		for (const id of activeIconIds) {
+			if (mapInstance.hasImage(id)) {
+				mapInstance.removeImage(id);
+			}
+		}
+		activeIconIds = new Set<string>();
+	};
+
+	$effect(() => {
+		const mapInstance = map;
+		const data = rentalsData;
+		if (!browser || !mapInstance) {
+			iconsReady = false;
+			iconRequestToken += 1;
+			clearMapIcons(mapInstance);
+			return;
+		}
+
+		if (!data) {
+			iconsReady = false;
+			iconRequestToken += 1;
+			clearMapIcons(mapInstance);
+			return;
+		}
+
+		const dataPayload = data as RentalsPayloadData;
+		const formFactorsByColor = collectFormFactorsByColor(dataPayload);
+		if (formFactorsByColor.size === 0) {
+			iconRequestToken += 1;
+			clearMapIcons(mapInstance);
+			iconsReady = true;
+			return;
+		}
+
+		const token = ++iconRequestToken;
+		iconsReady = false;
+		const neededIds = new Set<string>();
+		const tasks: Promise<void>[] = [];
+
+		formFactorsByColor.forEach((formFactors, color) => {
+			formFactors.forEach((formFactor) => {
+				ICON_TYPES.forEach((type) => {
+					const dimensions = getIconDimensions(type);
+					const id = getIconId(formFactor, type, color);
+					neededIds.add(id);
+					if (!mapInstance.hasImage(id)) {
+						tasks.push(
+							(async () => {
+								try {
+									const image = await colorizeIcon(getIconUrl(formFactor, type), color, dimensions);
+									if (token !== iconRequestToken || !mapInstance) {
+										return;
+									}
+									if (!mapInstance.hasImage(id)) {
+										try {
+											mapInstance.addImage(id, image);
+										} catch (addError) {
+											console.error(`[Rentals] failed to register icon ${id}`, addError);
+										}
+									}
+								} catch (error) {
+									console.error(`[Rentals] failed to prepare icon ${id}`, error);
+								}
+							})()
+						);
+					}
+				});
+			});
+		});
+
+		void (async () => {
+			await Promise.allSettled(tasks);
+			if (token !== iconRequestToken || !mapInstance) {
+				return;
+			}
+
+			const previousIds = Array.from(activeIconIds);
+			for (const id of previousIds) {
+				if (!neededIds.has(id) && mapInstance.hasImage(id)) {
+					mapInstance.removeImage(id);
+				}
+			}
+
+			const newActiveIds = new Set<string>();
+			neededIds.forEach((id) => {
+				if (mapInstance.hasImage(id)) {
+					newActiveIds.add(id);
+				}
+			});
+			activeIconIds = newActiveIds;
+			iconsReady = neededIds.size === newActiveIds.size;
+		})();
+	});
+
+	$effect(() => {
 		const mapInstance = map;
 		const layer = zoneLayerRef;
 		const hasZones = zoneFeatures.features.length > 0;
@@ -944,6 +940,7 @@
 	});
 
 	onDestroy(() => {
+		requestToken += 1;
 		hideTooltip();
 		hidePopup();
 		resetHoverCursor();
