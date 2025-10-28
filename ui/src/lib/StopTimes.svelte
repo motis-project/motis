@@ -1,8 +1,6 @@
 <script lang="ts">
 	import { stoptimes, type StoptimesError, type StoptimesResponse } from '$lib/api/openapi';
-	import LoaderCircle from 'lucide-svelte/icons/loader-circle';
-	import ArrowRight from 'lucide-svelte/icons/arrow-right';
-	import CircleX from 'lucide-svelte/icons/circle-x';
+	import { LoaderCircle, ArrowRight, CircleX } from '@lucide/svelte';
 	import ErrorMessage from '$lib/ErrorMessage.svelte';
 	import Time from '$lib/Time.svelte';
 	import Route from '$lib/Route.svelte';

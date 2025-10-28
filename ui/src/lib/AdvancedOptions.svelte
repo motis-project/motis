@@ -3,8 +3,7 @@
 	import Button from '$lib/components/ui/button/button.svelte';
 	import { t } from '$lib/i18n/translation';
 	import * as Select from '$lib/components/ui/select';
-	import ChevronUp from 'lucide-svelte/icons/chevron-up';
-	import ChevronDown from 'lucide-svelte/icons/chevron-down';
+	import { ChevronUp, ChevronDown } from '@lucide/svelte';
 	import { Switch } from './components/ui/switch';
 	import type { ElevationCosts } from '$lib/api/openapi';
 	import { defaultQuery } from '$lib/defaults';

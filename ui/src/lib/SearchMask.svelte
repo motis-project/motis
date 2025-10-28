@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { t } from '$lib/i18n/translation';
-	import ArrowUpDown from 'lucide-svelte/icons/arrow-up-down';
-	import LocateFixed from 'lucide-svelte/icons/locate-fixed';
+	import { ArrowUpDown, LocateFixed } from '@lucide/svelte';
 	import maplibregl from 'maplibre-gl';
 	import * as RadioGroup from '$lib/components/ui/radio-group';
 	import Button from '$lib/components/ui/button/button.svelte';

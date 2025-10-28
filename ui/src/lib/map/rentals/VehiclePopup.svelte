@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { RentalProvider, RentalVehicle } from '$lib/api/openapi';
 	import { Button } from '$lib/components/ui/button';
-	import Copy from 'lucide-svelte/icons/copy';
+	import { Copy } from '@lucide/svelte';
 	import { t } from '$lib/i18n/translation';
 
 	let {

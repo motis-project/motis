@@ -1,9 +1,5 @@
 <script lang="ts">
-	import X from 'lucide-svelte/icons/x';
-	import Palette from 'lucide-svelte/icons/palette';
-	import Rss from 'lucide-svelte/icons/rss';
-	import Ban from 'lucide-svelte/icons/ban';
-	import LocateFixed from 'lucide-svelte/icons/locate-fixed';
+	import { X, Palette, Rss, Ban, LocateFixed, TrainFront } from '@lucide/svelte';
 	import { getStyle } from '$lib/map/style';
 	import Map from '$lib/map/Map.svelte';
 	import Control from '$lib/map/Control.svelte';
@@ -63,7 +59,6 @@
 	import { defaultQuery, omitDefaults } from '$lib/defaults';
 	import { LEVEL_MIN_ZOOM } from '$lib/constants';
 	import StopGeoJSON from '$lib/StopsGeoJSON.svelte';
-	import TrainFront from 'lucide-svelte/icons/train-front';
 
 	const urlParams = browser ? new URLSearchParams(window.location.search) : undefined;
 

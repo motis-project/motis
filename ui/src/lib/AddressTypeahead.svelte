@@ -1,8 +1,7 @@
 <script lang="ts">
 	import { Combobox } from 'bits-ui';
 	import { geocode, type Match, type Mode } from './api/openapi';
-	import House from 'lucide-svelte/icons/map-pin-house';
-	import Place from 'lucide-svelte/icons/map-pin';
+	import { MapPinHouse as House, MapPin as Place } from '@lucide/svelte';
 	import { parseCoordinatesToLocation, type Location } from './Location';
 	import { language } from './i18n/translation';
 	import maplibregl from 'maplibre-gl';

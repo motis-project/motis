@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { t } from '$lib/i18n/translation';
-	import BusFront from 'lucide-svelte/icons/bus-front';
+	import { BusFront } from '@lucide/svelte';
 	import * as Select from '$lib/components/ui/select';
 	import { possibleTransitModes, type TransitMode } from '$lib/Modes';
 
