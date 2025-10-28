@@ -62,6 +62,7 @@
 		"@hey-api/client-fetch": "^0.4.4",
 		"@mapbox/polyline": "^1.2.1",
 		"@tanstack/svelte-query": "^6.0.3",
+		"@turf/boolean-point-in-polygon": "^7.2.0",
 		"@turf/circle": "^7.2.0",
 		"@turf/destination": "^7.2.0",
 		"@turf/difference": "^7.2.0",

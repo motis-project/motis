@@ -29,6 +29,9 @@
 	import type { MapLayerMouseEvent } from 'maplibre-gl';
 	import { mount, onDestroy, unmount } from 'svelte';
 	import type { FeatureCollection, Point, Position } from 'geojson';
+	import RBush from 'rbush';
+	import { point } from '@turf/helpers';
+	import { booleanPointInPolygon } from '@turf/boolean-point-in-polygon';
 	import StationPopup from '$lib/map/rentals/StationPopup.svelte';
 	import VehiclePopup from '$lib/map/rentals/VehiclePopup.svelte';
 	import ZonePopup from '$lib/map/rentals/ZonePopup.svelte';
@@ -51,11 +54,13 @@
 	let {
 		map,
 		bounds,
-		zoom
+		zoom,
+		debug = false
 	}: {
 		map: maplibregl.Map | undefined;
 		bounds: maplibregl.LngLatBoundsLike | undefined;
 		zoom: number;
+		debug?: boolean;
 	} = $props();
 
 	const MIN_ZOOM = 13;
@@ -439,6 +444,32 @@
 		};
 	});
 
+	let zoneRTree = $derived.by(() => {
+		const data = rentalsData;
+		const rtree = new RBush<{
+			minX: number;
+			minY: number;
+			maxX: number;
+			maxY: number;
+			feature: RentalZoneFeature;
+		}>();
+		if (data && debug) {
+			rtree.load(
+				zoneFeatures.features.map((feature) => {
+					const zone = data.zones[feature.properties.zoneIndex];
+					return {
+						minX: zone.bbox[0],
+						minY: zone.bbox[1],
+						maxX: zone.bbox[2],
+						maxY: zone.bbox[3],
+						feature
+					};
+				})
+			);
+		}
+		return rtree;
+	});
+
 	const createScopedId = (providerId: string, entityId: string) => `${providerId}::${entityId}`;
 
 	let providerById = $derived.by(
@@ -492,7 +523,7 @@
 		const container = document.createElement('div');
 		const component = mount(StationPopup, {
 			target: container,
-			props: { provider, station, showActions }
+			props: { provider, station, showActions, debug }
 		});
 		return {
 			element: container,
@@ -510,7 +541,7 @@
 		const container = document.createElement('div');
 		const component = mount(VehiclePopup, {
 			target: container,
-			props: { provider, vehicle, showActions }
+			props: { provider, vehicle, showActions, debug }
 		});
 		return {
 			element: container,
@@ -524,12 +555,21 @@
 		provider: RentalProvider,
 		zone: RentalZone,
 		rideThroughAllowed: boolean,
-		rideEndAllowed: boolean
+		rideEndAllowed: boolean,
+		allZonesAtPoint: RentalZoneFeature[]
 	) => {
 		const container = document.createElement('div');
 		const component = mount(ZonePopup, {
 			target: container,
-			props: { provider, zone, rideThroughAllowed, rideEndAllowed }
+			props: {
+				provider,
+				zone,
+				rideThroughAllowed,
+				rideEndAllowed,
+				debug,
+				allZonesAtPoint,
+				zoneData: rentalsData?.zones ?? []
+			}
 		});
 		return {
 			element: container,
@@ -552,7 +592,8 @@
 			tooltipPopup = new maplibregl.Popup({
 				closeButton: false,
 				closeOnClick: false,
-				offset: 12
+				offset: 12,
+				maxWidth: 'none'
 			});
 			tooltipPopup.on('close', () => {
 				tooltipContentDestroy?.();
@@ -568,7 +609,8 @@
 			detailPopup = new maplibregl.Popup({
 				closeButton: true,
 				closeOnClick: true,
-				offset: 12
+				offset: 12,
+				maxWidth: 'none'
 			});
 			detailPopup.on('close', () => {
 				popupContentDestroy?.();
@@ -766,6 +808,20 @@
 			hidePopup();
 			return;
 		}
+
+		const allZonesAtPoint = zoneRTree
+			.search({
+				minX: event.lngLat.lng,
+				minY: event.lngLat.lat,
+				maxX: event.lngLat.lng,
+				maxY: event.lngLat.lat
+			})
+			.map((item) => item.feature)
+			.filter((feature) =>
+				booleanPointInPolygon(point([event.lngLat.lng, event.lngLat.lat]), feature)
+			)
+			.sort((a, b) => b.properties.z - a.properties.z);
+
 		hideTooltip();
 		hidePopup();
 		showPopup(mapInstance, event.lngLat, result.key, () =>
@@ -773,7 +829,8 @@
 				result.provider!,
 				result.zone!,
 				result.rideThroughAllowed,
-				result.rideEndAllowed
+				result.rideEndAllowed,
+				allZonesAtPoint
 			)
 		);
 	};

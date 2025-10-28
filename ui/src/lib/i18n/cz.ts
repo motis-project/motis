@@ -133,6 +133,7 @@ const translations: Translations = {
 	accessRestriction: 'Omezený dostup',
 	continuesAs: 'Pokračuje jako',
 	rent: 'Půjčit si',
+	copyToClipboard: 'Kopírovat do schránky',
 	rideThroughAllowed: 'Průjezd povolen',
 	rideThroughNotAllowed: 'Průjezd zakázán',
 	rideEndAllowed: 'Parkování povoleno',

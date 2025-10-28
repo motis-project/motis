@@ -128,8 +128,9 @@ const translations: Translations = {
 	accessRestriction: 'Kein Zugang',
 	continuesAs: 'Weiter als',
 	rent: 'Ausleihen',
+	copyToClipboard: 'In die Zwischenablage kopieren',
 	rideThroughAllowed: 'Durchfahrt erlaubt',
-	rideThroughNotAllowed: 'Durchfahrt nicht erlaubt',
+	rideThroughNotAllowed: 'Durchfahrt verboten',
 	rideEndAllowed: 'Parken erlaubt',
 	rideEndNotAllowed: 'Parken nur an Stationen'
 };

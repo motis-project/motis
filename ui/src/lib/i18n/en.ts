@@ -131,6 +131,7 @@ const translations: Translations = {
 	accessRestriction: 'No access',
 	continuesAs: 'Continues as',
 	rent: 'Rent',
+	copyToClipboard: 'Copy to clipboard',
 	rideThroughAllowed: 'Riding through allowed',
 	rideThroughNotAllowed: 'Riding through not allowed',
 	rideEndAllowed: 'Parking allowed',

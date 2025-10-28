@@ -127,6 +127,7 @@ export type Translations = {
 	accessRestriction: string;
 	continuesAs: string;
 	rent: string;
+	copyToClipboard: string;
 	rideThroughAllowed: string;
 	rideThroughNotAllowed: string;
 	rideEndAllowed: string;
