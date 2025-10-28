@@ -153,11 +153,13 @@ std::optional<vehicle_type_idx_t> get_vehicle_type(
     std::string const& vehicle_type_id,
     vehicle_start_type const start_type) {
   auto const add_vehicle_type = [&](vehicle_form_factor const ff,
-                                    propulsion_type const pt) {
+                                    propulsion_type const pt,
+                                    std::string const& name) {
     auto const idx = vehicle_type_idx_t{provider.vehicle_types_.size()};
     provider.vehicle_types_.emplace_back(vehicle_type{
         .id_ = vehicle_type_id,
         .idx_ = idx,
+        .name_ = name,
         .form_factor_ = ff,
         .propulsion_type_ = pt,
         .return_constraint_ = provider.default_return_constraint_.value_or(
@@ -177,11 +179,12 @@ std::optional<vehicle_type_idx_t> get_vehicle_type(
                  provider.temp_vehicle_types_.find(vehicle_type_id);
              temp_it != end(provider.temp_vehicle_types_)) {
     return add_vehicle_type(temp_it->second.form_factor_,
-                            temp_it->second.propulsion_type_);
+                            temp_it->second.propulsion_type_,
+                            temp_it->second.name_);
   } else if (vehicle_type_id.empty()) {
     // providers that don't use vehicle types
     return add_vehicle_type(vehicle_form_factor::kBicycle,
-                            propulsion_type::kHuman);
+                            propulsion_type::kHuman, "");
   }
   return {};
 }
@@ -393,6 +396,7 @@ void load_vehicle_types(gbfs_provider& provider, json::value const& root) {
   for (auto const& v : root.at("data").at("vehicle_types").as_array()) {
     auto const id =
         static_cast<std::string>(v.at("vehicle_type_id").as_string());
+    auto const name = optional_str(v.as_object(), "name");
     auto const rc = parse_return_constraint(v.as_object());
     auto const form_factor = parse_form_factor(
         static_cast<std::string_view>(v.at("form_factor").as_string()));
@@ -403,6 +407,7 @@ void load_vehicle_types(gbfs_provider& provider, json::value const& root) {
       provider.vehicle_types_.emplace_back(
           vehicle_type{.id_ = id,
                        .idx_ = idx,
+                       .name_ = name,
                        .form_factor_ = form_factor,
                        .propulsion_type_ = propulsion_type,
                        .return_constraint_ = *rc,
@@ -413,6 +418,7 @@ void load_vehicle_types(gbfs_provider& provider, json::value const& root) {
     } else {
       provider.temp_vehicle_types_[id] = temp_vehicle_type{
           .id_ = id,
+          .name_ = name,
           .form_factor_ = form_factor,
           .propulsion_type_ = propulsion_type,
       };

@@ -117,6 +117,7 @@ api::rentals_response rental::operator()(
             [&](gbfs::vehicle_type const& vt) {
               return api::RentalVehicleType{
                   .id_ = vt.id_,
+                  .name_ = vt.name_,
                   .formFactor_ = gbfs::to_api_form_factor(vt.form_factor_),
                   .propulsionType_ =
                       gbfs::to_api_propulsion_type(vt.propulsion_type_),

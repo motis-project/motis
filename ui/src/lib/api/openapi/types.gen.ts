@@ -777,6 +777,10 @@ export type RentalVehicleType = {
      * Unique identifier of the vehicle type (unique within the provider)
      */
     id: string;
+    /**
+     * Public name of the vehicle type (can be empty)
+     */
+    name?: string;
     formFactor: RentalFormFactor;
     propulsionType: RentalPropulsionType;
     returnConstraint: RentalReturnConstraint;

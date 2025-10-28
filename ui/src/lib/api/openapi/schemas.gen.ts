@@ -937,6 +937,10 @@ export const RentalVehicleTypeSchema = {
             type: 'string',
             description: 'Unique identifier of the vehicle type (unique within the provider)'
         },
+        name: {
+            type: 'string',
+            description: 'Public name of the vehicle type (can be empty)'
+        },
         formFactor: {
             '$ref': '#/components/schemas/RentalFormFactor'
         },
