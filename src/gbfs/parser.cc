@@ -196,7 +196,6 @@ std::optional<vehicle_type_idx_t> get_vehicle_type(
 }
 
 void load_system_information(gbfs_provider& provider, json::value const& root) {
-  auto const version = get_version(root);
   auto const& data = root.at("data").as_object();
 
   auto& si = provider.sys_info_;
@@ -218,8 +217,6 @@ void load_system_information(gbfs_provider& provider, json::value const& root) {
 void load_station_information(gbfs_provider& provider,
                               json::value const& root) {
   provider.stations_.clear();
-
-  auto const version = get_version(root);
 
   auto const& stations_arr = root.at("data").at("stations").as_array();
   for (auto const& s : stations_arr) {
