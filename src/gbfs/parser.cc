@@ -33,23 +33,29 @@ gbfs_version get_version(json::value const& root) {
   }
 }
 
-std::string get_localized_string(gbfs_version const version,
-                                 json::value const& v) {
-  if (version == gbfs_version::k3) {
+std::string get_localized_string(json::value const& v) {
+  if (v.is_array()) {
     auto const& arr = v.as_array();
     if (!arr.empty()) {
       return static_cast<std::string>(
           arr[0].as_object().at("text").as_string());
     }
     return "";
-  } else {
+  } else if (v.is_string()) {
     return static_cast<std::string>(v.as_string());
+  } else {
+    return "";
   }
 }
 
 std::string optional_str(json::object const& obj, std::string_view key) {
   return obj.contains(key) ? static_cast<std::string>(obj.at(key).as_string())
                            : "";
+}
+
+std::string optional_localized_str(json::object const& obj,
+                                   std::string_view key) {
+  return obj.contains(key) ? get_localized_string(obj.at(key)) : "";
 }
 
 bool get_bool(gbfs_version const version,
@@ -195,13 +201,9 @@ void load_system_information(gbfs_provider& provider, json::value const& root) {
 
   auto& si = provider.sys_info_;
   si.id_ = static_cast<std::string>(data.at("system_id").as_string());
-  si.name_ = get_localized_string(version, data.at("name"));
-  si.name_short_ = data.contains("short_name")
-                       ? get_localized_string(version, data.at("short_name"))
-                       : "";
-  si.operator_ = data.contains("operator")
-                     ? get_localized_string(version, data.at("operator"))
-                     : "";
+  si.name_ = get_localized_string(data.at("name"));
+  si.name_short_ = optional_localized_str(data, "name_short");
+  si.operator_ = optional_localized_str(data, "operator");
   si.url_ = optional_str(data, "url");
   si.purchase_url_ = optional_str(data, "purchase_url");
   si.mail_ = optional_str(data, "email");
@@ -224,7 +226,7 @@ void load_station_information(gbfs_provider& provider,
     auto const& station_obj = s.as_object();
     auto const station_id =
         static_cast<std::string>(station_obj.at("station_id").as_string());
-    auto const name = get_localized_string(version, station_obj.at("name"));
+    auto const name = get_localized_string(station_obj.at("name"));
     auto const lat = station_obj.at("lat").as_double();
     auto const lon = station_obj.at("lon").as_double();
 
@@ -238,13 +240,15 @@ void load_station_information(gbfs_provider& provider,
       }
     }
 
-    provider.stations_[station_id] =
-        station{.info_ = {.id_ = station_id,
-                          .name_ = name,
-                          .pos_ = geo::latlng{lat, lon},
-                          .rental_uris_ = parse_rental_uris(station_obj),
-                          .station_area_ = std::shared_ptr<tg_geom>(
-                              area, tg_geom_deleter{})}};
+    provider.stations_[station_id] = station{
+        .info_ = {.id_ = station_id,
+                  .name_ = name,
+                  .pos_ = geo::latlng{lat, lon},
+                  .address_ = optional_str(station_obj, "address"),
+                  .cross_street_ = optional_str(station_obj, "cross_street"),
+                  .rental_uris_ = parse_rental_uris(station_obj),
+                  .station_area_ =
+                      std::shared_ptr<tg_geom>(area, tg_geom_deleter{})}};
   }
 }
 
@@ -396,7 +400,7 @@ void load_vehicle_types(gbfs_provider& provider, json::value const& root) {
   for (auto const& v : root.at("data").at("vehicle_types").as_array()) {
     auto const id =
         static_cast<std::string>(v.at("vehicle_type_id").as_string());
-    auto const name = optional_str(v.as_object(), "name");
+    auto const name = optional_localized_str(v.as_object(), "name");
     auto const rc = parse_return_constraint(v.as_object());
     auto const form_factor = parse_form_factor(
         static_cast<std::string_view>(v.at("form_factor").as_string()));
@@ -536,9 +540,7 @@ void load_geofencing_zones(gbfs_provider& provider, json::value const& root) {
 
         auto* geom = parse_multipolygon(z.at("geometry").as_object());
 
-        auto name = props.contains("name")
-                        ? get_localized_string(version, props.at("name"))
-                        : std::string{};
+        auto name = optional_localized_str(props, "name");
 
         return zone{geom, std::move(rules), std::move(name)};
       });
