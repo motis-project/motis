@@ -3,6 +3,7 @@
 	import {
 		rentals,
 		type RentalFormFactor,
+		type RentalProviderGroup,
 		type RentalProvider,
 		type RentalStation,
 		type RentalVehicle,
@@ -73,45 +74,9 @@
 	type RentalsPayload = Awaited<ReturnType<typeof rentals>>['data'];
 	type RentalsPayloadData = NonNullable<RentalsPayload>;
 
-	const collectFormFactorsByColor = (data: RentalsPayloadData) => {
-		const formFactorsByColor = new Map<string, Set<RentalFormFactor>>();
-		const providerColorById = new Map<string, string>();
-
-		const addFormFactor = (color: string, formFactor: RentalFormFactor) => {
-			let formFactors = formFactorsByColor.get(color);
-			if (!formFactors) {
-				formFactors = new Set<RentalFormFactor>();
-				formFactorsByColor.set(color, formFactors);
-			}
-			formFactors.add(formFactor);
-		};
-
-		for (const provider of data.providers) {
-			const color = provider.color || DEFAULT_COLOR;
-			providerColorById.set(provider.id, color);
-			for (const formFactor of provider.formFactors) {
-				addFormFactor(color, formFactor);
-			}
-		}
-		for (const station of data.stations) {
-			const color = providerColorById.get(station.providerId) ?? DEFAULT_COLOR;
-			if (station.formFactors.length === 0) {
-				addFormFactor(color, DEFAULT_FORM_FACTOR);
-			}
-			for (const formFactor of station.formFactors) {
-				addFormFactor(color, formFactor);
-			}
-		}
-		for (const vehicle of data.vehicles) {
-			const color = providerColorById.get(vehicle.providerId) ?? DEFAULT_COLOR;
-			addFormFactor(color, vehicle.formFactor);
-		}
-		return formFactorsByColor;
-	};
-
 	type DisplayFilter = {
-		providerId: string;
-		providerName: string;
+		providerGroupId: string;
+		providerGroupName: string;
 		formFactor: RentalFormFactor;
 		color: string;
 	};
@@ -155,46 +120,62 @@
 		};
 	});
 
-	const buildProviderOptions = (providers: RentalProvider[]): DisplayFilter[] =>
-		providers
-			.flatMap((provider) =>
-				provider.formFactors.map((formFactor) => ({
-					providerId: provider.id,
-					providerName: provider.name,
+	const buildProviderGroupOptions = (providerGroups: RentalProviderGroup[]): DisplayFilter[] =>
+		providerGroups
+			.flatMap((group) =>
+				group.formFactors.map((formFactor) => ({
+					providerGroupId: group.id,
+					providerGroupName: group.name,
 					formFactor,
-					color: provider.color || DEFAULT_COLOR
+					color: group.color || DEFAULT_COLOR
 				}))
 			)
 			.sort(
 				(a, b) =>
-					a.providerName.localeCompare(b.providerName, undefined, { sensitivity: 'base' }) ||
-					a.formFactor.localeCompare(b.formFactor, undefined, { sensitivity: 'base' })
+					a.providerGroupName.localeCompare(b.providerGroupName, undefined, {
+						sensitivity: 'base'
+					}) || a.formFactor.localeCompare(b.formFactor, undefined, { sensitivity: 'base' })
 			);
 
-	let providerOptions = $derived(rentalsData ? buildProviderOptions(rentalsData.providers) : []);
+	let providerGroupOptions = $derived(
+		rentalsData ? buildProviderGroupOptions(rentalsData.providerGroups) : []
+	);
 
-	type ProviderColors = {
-		color: string;
-	};
+	let providerGroupColors = $derived.by(
+		() =>
+			new Map(
+				(rentalsData?.providerGroups ?? []).map((group) => [group.id, group.color || DEFAULT_COLOR])
+			)
+	);
 
-	let providerColors = $derived.by((): Record<string, ProviderColors> => {
-		if (!rentalsData) {
-			return {};
-		}
-		return Object.fromEntries(
-			rentalsData.providers.map((provider) => {
-				return [
+	let providerColors = $derived.by(
+		() =>
+			new Map(
+				(rentalsData?.providers ?? []).map((provider) => [
 					provider.id,
-					{
-						color: provider.color || DEFAULT_COLOR
-					}
-				];
-			})
-		);
-	});
+					provider.color || providerGroupColors.get(provider.groupId) || DEFAULT_COLOR
+				])
+			)
+	);
+
+	type VehicleTypeFormFactors = Record<string, RentalFormFactor>;
+
+	let vehicleTypeFormFactorsByProviderId = $derived.by(
+		(): Record<string, VehicleTypeFormFactors> => {
+			if (!rentalsData) {
+				return {};
+			}
+			return Object.fromEntries(
+				rentalsData.providers.map((provider) => [
+					provider.id,
+					Object.fromEntries(provider.vehicleTypes.map((type) => [type.id, type.formFactor]))
+				])
+			);
+		}
+	);
 
 	const isSameFilter = (a: DisplayFilter | null, b: DisplayFilter | null) =>
-		a?.providerId === b?.providerId && a?.formFactor === b?.formFactor;
+		a?.providerGroupId === b?.providerGroupId && a?.formFactor === b?.formFactor;
 
 	const toggleFilter = (option: DisplayFilter) => {
 		displayFilter = isSameFilter(displayFilter, option) ? null : option;
@@ -243,11 +224,58 @@
 		});
 	};
 
+	const collectFormFactorsByColor = (data: RentalsPayloadData) => {
+		const formFactorsByColor = new Map<string, Set<RentalFormFactor>>();
+		const providerColorById = new Map<string, string>();
+		const providerGroupColorById = new Map<string, string>(
+			data.providerGroups.map((group) => [group.id, group.color || DEFAULT_COLOR])
+		);
+
+		const addFormFactor = (color: string, formFactor: RentalFormFactor) => {
+			let formFactors = formFactorsByColor.get(color);
+			if (!formFactors) {
+				formFactors = new Set<RentalFormFactor>();
+				formFactorsByColor.set(color, formFactors);
+			}
+			formFactors.add(formFactor);
+		};
+
+		for (const provider of data.providers) {
+			const color = provider.color || providerGroupColorById.get(provider.groupId) || DEFAULT_COLOR;
+			providerColorById.set(provider.id, color);
+			for (const formFactor of provider.formFactors) {
+				addFormFactor(color, formFactor);
+			}
+		}
+		for (const station of data.stations) {
+			const color =
+				providerColorById.get(station.providerId) ||
+				providerGroupColorById.get(station.providerGroupId) ||
+				DEFAULT_COLOR;
+			if (station.formFactors.length === 0) {
+				addFormFactor(color, DEFAULT_FORM_FACTOR);
+			}
+			for (const formFactor of station.formFactors) {
+				addFormFactor(color, formFactor);
+			}
+		}
+		for (const vehicle of data.vehicles) {
+			const color =
+				providerColorById.get(vehicle.providerId) ||
+				providerGroupColorById.get(vehicle.providerGroupId) ||
+				DEFAULT_COLOR;
+			addFormFactor(color, vehicle.formFactor);
+		}
+		return formFactorsByColor;
+	};
+
 	$effect(() => {
 		if (!map || !bounds || zoom <= MIN_ZOOM) {
-			rentalsData = null;
-			loadedBounds = null;
-			requestToken += 1;
+			if (zoom <= MIN_ZOOM - 4) {
+				rentalsData = null;
+				loadedBounds = null;
+				requestToken += 1;
+			}
 			return;
 		}
 
@@ -260,7 +288,10 @@
 	});
 
 	$effect(() => {
-		if (displayFilter && !providerOptions.some((option) => isSameFilter(option, displayFilter))) {
+		if (
+			displayFilter &&
+			!providerGroupOptions.some((option) => isSameFilter(option, displayFilter))
+		) {
 			displayFilter = null;
 		}
 	});
@@ -369,14 +400,18 @@
 
 	const stationAvailability = (
 		station: RentalStation,
-		formFactorByVehicleType: Map<string, RentalFormFactor> | null,
+		formFactorsByProvider: Record<string, VehicleTypeFormFactors>,
 		filter: DisplayFilter | null
 	) => {
-		if (!filter || !formFactorByVehicleType) {
+		if (!filter) {
+			return station.numVehiclesAvailable;
+		}
+		const formFactors = formFactorsByProvider[station.providerId];
+		if (!formFactors) {
 			return station.numVehiclesAvailable;
 		}
 		return Object.entries(station.vehicleTypesAvailable).reduce((sum, [typeId, count]) => {
-			return formFactorByVehicleType.get(typeId) === filter.formFactor ? sum + count : sum;
+			return formFactors[typeId] === filter.formFactor ? sum + count : sum;
 		}, 0);
 	};
 
@@ -388,22 +423,17 @@
 		const stations = filter
 			? rentalsData.stations.filter(
 					(station) =>
-						station.providerId === filter.providerId &&
+						station.providerGroupId === filter.providerGroupId &&
 						station.formFactors.includes(filter.formFactor)
 				)
 			: rentalsData.stations;
-		const formFactorByVehicleType = filter
-			? new Map(
-					rentalsData.providers
-						.find((p) => p.id === filter.providerId)
-						?.vehicleTypes.map((type) => [type.id, type.formFactor]) ?? []
-				)
-			: null;
 		return {
 			type: 'FeatureCollection',
 			features: stations.map((station) => {
-				const provider = providerColors[station.providerId];
-				const color = provider?.color ?? DEFAULT_COLOR;
+				const color =
+					providerColors.get(station.providerId) ||
+					providerGroupColors.get(station.providerGroupId) ||
+					DEFAULT_COLOR;
 				const formFactor = filter
 					? filter.formFactor
 					: (station.formFactors[0] ?? DEFAULT_FORM_FACTOR);
@@ -415,7 +445,7 @@
 					},
 					properties: {
 						icon: getIconId(formFactor, 'station', color),
-						available: stationAvailability(station, formFactorByVehicleType, filter),
+						available: stationAvailability(station, vehicleTypeFormFactorsByProviderId, filter),
 						providerId: station.providerId,
 						stationId: station.id,
 						color
@@ -437,15 +467,18 @@
 		const vehicles = filter
 			? rentalsData.vehicles.filter(
 					(vehicle) =>
-						vehicle.providerId === filter.providerId && vehicle.formFactor === filter.formFactor
+						vehicle.providerGroupId === filter.providerGroupId &&
+						vehicle.formFactor === filter.formFactor
 				)
 			: rentalsData.vehicles;
 		vehicles
 			.filter((vehicle) => !vehicle.stationId)
 			.forEach((vehicle) => {
 				const collection = collections[vehicle.formFactor];
-				const provider = providerColors[vehicle.providerId];
-				const color = provider?.color ?? DEFAULT_COLOR;
+				const color =
+					providerColors.get(vehicle.providerId) ||
+					providerGroupColors.get(vehicle.providerGroupId) ||
+					DEFAULT_COLOR;
 				collection.features.push({
 					type: 'Feature',
 					geometry: {
@@ -463,6 +496,7 @@
 			});
 		return collections;
 	});
+	
 	const buildZoneGeometry = (zone: RentalZone): RentalZoneFeature['geometry'] => {
 		return {
 			type: 'MultiPolygon',
@@ -492,36 +526,41 @@
 	};
 
 	let zoneFeatures = $derived.by((): RentalZoneFeatureCollection => {
-		const provider = rentalsData?.providers?.find(
-			(candidate) => candidate.id === displayFilter?.providerId
-		);
+		const data = rentalsData;
 		const filter = displayFilter;
 
-		if (!rentalsData || !filter || !provider) {
+		if (!data || !filter) {
 			return { type: 'FeatureCollection', features: [] };
 		}
 
-		const features: RentalZoneFeature[] = rentalsData.zones
-			.filter((zone) => zone.providerId === filter.providerId)
-			.map((zone, index) => {
-				const rule = findMatchingRule(zone, provider, filter.formFactor);
-				if (!rule) {
-					return null;
+		const features: RentalZoneFeature[] = [];
+
+		data.zones.forEach((zone, index) => {
+			if (zone.providerGroupId !== filter.providerGroupId) {
+				return;
+			}
+			const provider = data.providers.find((candidate) => candidate.id === zone.providerId);
+			if (!provider) {
+				return;
+			}
+			const rule = findMatchingRule(zone, provider, filter.formFactor);
+			if (!rule) {
+				return;
+			}
+			features.push({
+				type: 'Feature',
+				geometry: buildZoneGeometry(zone),
+				properties: {
+					zoneIndex: index,
+					providerId: zone.providerId,
+					z: zone.z,
+					rideEndAllowed: rule.rideEndAllowed && !rule.stationParking,
+					rideThroughAllowed: rule.rideThroughAllowed
 				}
-				return {
-					type: 'Feature',
-					geometry: buildZoneGeometry(zone),
-					properties: {
-						zoneIndex: index,
-						providerId: zone.providerId,
-						z: zone.z,
-						rideEndAllowed: rule.rideEndAllowed && !rule.stationParking,
-						rideThroughAllowed: rule.rideThroughAllowed
-					}
-				} satisfies RentalZoneFeature;
-			})
-			.filter((feature): feature is RentalZoneFeature => feature !== null)
-			.sort((a, b) => b.properties.z - a.properties.z);
+			} satisfies RentalZoneFeature);
+		});
+
+		features.sort((a, b) => b.properties.z - a.properties.z);
 
 		return {
 			type: 'FeatureCollection',
@@ -1007,14 +1046,14 @@
 	</GeoJSON>
 {/each}
 
-{#if providerOptions.length > 0}
+{#if providerGroupOptions.length > 0}
 	<Control position="top-right" class="mb-5">
 		<div class="flex flex-col items-end space-y-2">
-			{#each providerOptions as option (`${option.providerId}::${option.formFactor}`)}
+			{#each providerGroupOptions as option (`${option.providerGroupId}::${option.formFactor}`)}
 				{@const active = isSameFilter(displayFilter, option)}
 				<button
 					type="button"
-					title={`${option.providerName} (${formFactorAssets[option.formFactor].label})`}
+					title={`${option.providerGroupName} (${formFactorAssets[option.formFactor].label})`}
 					class={cn(
 						'inline-flex max-w-sm items-center gap-2 rounded-md border-2 px-3 py-1.5 text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500',
 						active
@@ -1024,7 +1063,7 @@
 					onclick={() => toggleFilter(option)}
 					aria-pressed={active}
 				>
-					<span class="truncate">{option.providerName}</span>
+					<span class="truncate">{option.providerGroupName}</span>
 					<span class="flex items-center gap-1 text-xs font-medium">
 						<svg
 							class="h-4 w-4 fill-current"
