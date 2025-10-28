@@ -182,5 +182,6 @@ MOTIS supports multiple protocols for real time feeds. This section shows a list
 | Protocol | `protocol` | Note |
 | ---- | ---- | ---- |
 | GTFS-RT | `gtfsrt` | This is the default, if `protocol` is ommitted. |
-| SIRI | `siri` | Currently limited to SIRI Lite. Still work in progress. Use with care. |
+| SIRI (XML) | `siri` | Currently limited to SIRI Lite. Still work in progress. Use with care. |
+| SIRI (JSON) | `siri_json` | Same as `siri`, but expects JSON server responses |
 | VDV AUS / VDV454 | `auser` | Requires [`auser`](https://github.com/motis-project/auser) for subscription handling |
