@@ -15,6 +15,7 @@
 	import { onClickStop, onClickTrip } from '$lib/utils';
 	import { formatDate, formatTime } from './toDateTime';
 	import { getModeLabel } from './map/getModeLabel';
+	import Alerts from './Alerts.svelte';
 	const {
 		itinerary
 	}: {
@@ -35,12 +36,12 @@
 	hidePlatform?: boolean
 )}
 	{@const arriveBy = isStartOrEnd == 0 || isStartOrEnd == 1}
-	{@const textColor = isStartOrEnd == 0 ? 'text-muted-foreground' : ''}
-	<div class="flex items-baseline justify-between w-full">
+	{@const textColor = isStartOrEnd == 0 ? '' : 'font-semibold'}
+	<div class="flex items-baseline justify-between w-full {textColor}">
 		<div class="flex justify-between">
 			<Time
 				variant="schedule"
-				class="font-semibold w-14 md:w-16 {textColor}"
+				class="w-14 md:w-16"
 				queriedTime={timestamp}
 				timeZone={p.tz}
 				{isRealtime}
@@ -50,7 +51,7 @@
 			/>
 			<Time
 				variant="realtime"
-				class="font-semibold w-14 md:w-16"
+				class="w-14 md:w-16"
 				timeZone={p.tz}
 				{isRealtime}
 				{timestamp}
@@ -63,7 +64,7 @@
 				{@const pickupNotAllowedOrEnd = p.pickupType == 'NOT_ALLOWED' && isStartOrEnd != 1}
 				{@const dropoffNotAllowedOrStart = p.dropoffType == 'NOT_ALLOWED' && isStartOrEnd != -1}
 				<div class="flex items-center justify-between mr-1">
-					<div class="flex flex-col">
+					<div class="flex flex-row items-center justify-center">
 						<Button
 							class="text-[length:inherit] leading-none justify-normal text-wrap p-0 text-left {textColor}"
 							variant="link"
@@ -71,6 +72,10 @@
 						>
 							{p.name}
 						</Button>
+
+						{#if isStartOrEnd != 0}
+							<Alerts alerts={p.alerts} variant="icon" />
+						{/if}
 					</div>
 					{#if p.track && !hidePlatform}
 						<span class="text-nowrap px-2 border rounded-xl mx-1">
@@ -100,13 +105,6 @@
 										: t.outDisallowed}
 							</span>
 						</div>
-					{/if}
-					{#if isStartOrEnd && p.alerts}
-						{#each p.alerts as alert, i (i)}
-							<div class="text-destructive text-sm mt-1">
-								{alert.headerText}
-							</div>
-						{/each}
 					{/if}
 				</div>
 			{:else}
@@ -218,28 +216,30 @@
 		{@const fareTransfer = itinerary.fareTransfers[l.fareTransferIndex]}
 		{@const includedInTransfer =
 			fareTransfer.rule == 'AB' || (fareTransfer.rule == 'A_AB' && l.effectiveFareLegIndex !== 0)}
-		<div class="pl-1 md:pl-4 my-8 text-xs font-bold">
-			{#if includedInTransfer || (prevTransitLeg && prevTransitLeg.fareTransferIndex === l.fareTransferIndex && prevTransitLeg.effectiveFareLegIndex === l.effectiveFareLegIndex)}
-				{t.includedInTicket}
-			{:else}
-				{@const productOptions = fareTransfer.effectiveFareLegProducts[l.effectiveFareLegIndex]}
-				{#if productOptions.length > 1}
-					<div class="mb-1">{t.ticketOptions}:</div>
-				{/if}
-				<ul
-					class:list-disc={productOptions.length > 1}
-					class:list-outside={productOptions.length > 1}
-				>
-					{#each productOptions as products, i (i)}
-						{#each products as product, j (j)}
-							<li>
-								{@render productInfo(product)}
-							</li>
+		{#if includedInTransfer || fareTransfer.effectiveFareLegProducts[l.effectiveFareLegIndex].length > 0}
+			<div class="pl-1 md:pl-4 my-8 text-xs font-bold">
+				{#if includedInTransfer || (prevTransitLeg && prevTransitLeg.fareTransferIndex === l.fareTransferIndex && prevTransitLeg.effectiveFareLegIndex === l.effectiveFareLegIndex)}
+					{t.includedInTicket}
+				{:else}
+					{@const productOptions = fareTransfer.effectiveFareLegProducts[l.effectiveFareLegIndex]}
+					{#if productOptions.length > 1}
+						<div class="mb-1">{t.ticketOptions}:</div>
+					{/if}
+					<ul
+						class:list-disc={productOptions.length > 1}
+						class:list-outside={productOptions.length > 1}
+					>
+						{#each productOptions as products, i (i)}
+							{#each products as product, j (j)}
+								<li>
+									{@render productInfo(product)}
+								</li>
+							{/each}
 						{/each}
-					{/each}
-				</ul>
-			{/if}
-		</div>
+					</ul>
+				{/if}
+			</div>
+		{/if}
 	{/if}
 {/snippet}
 
@@ -291,7 +291,7 @@
 
 			<div class="pt-4 pl-4 sm:pl-6 border-l-4 left-4 relative" style={routeBorderColor(l)}>
 				{@render stopTimes(l.startTime, l.scheduledStartTime, l.realTime, l.from, l.mode, -1)}
-				<div class="mb-2 flex items-center">
+				<div class="flex items-center">
 					<ArrowRight class="stroke-muted-foreground size-4" />
 					<span class="ml-1">
 						{#if l.tripTo}
@@ -316,6 +316,9 @@
 						{/if}
 					</span>
 				</div>
+
+				<Alerts alerts={l.alerts} variant="icon" />
+
 				{#if l.loopedCalendarSince}
 					<div class="mt-2 flex items-center text-destructive leading-none">
 						{t.dataExpiredSince}
@@ -333,24 +336,15 @@
 						<span class="ml-1">{t.unscheduledTrip}</span>
 					</div>
 				{/if}
-				{#if l.alerts}
-					<ul class="mt-2">
-						{#each l.alerts as alert, i (i)}
-							<li class="text-destructive text-sm font-bold">
-								{alert.headerText}
-							</li>
-						{/each}
-					</ul>
-				{/if}
 				{#if l.intermediateStops?.length === 0}
-					<div class="pt-16 pb-8 pl-1 md:pl-4 flex items-center text-muted-foreground">
+					<div class="py-10 pl-1 md:pl-4 flex items-center text-muted-foreground">
 						{t.tripIntermediateStops(0)}
 					</div>
 					{@render ticketInfo(prevTransitLeg, l)}
 				{:else}
 					{@render ticketInfo(prevTransitLeg, l)}
 					<details class="[&_.collapsible]:open:-rotate-180 my-2">
-						<summary class="pt-4 pb-8 pl-1 md:pl-4 flex items-center text-muted-foreground">
+						<summary class="py-10 pl-1 md:pl-4 flex items-center text-muted-foreground">
 							<svg
 								class="collapsible rotate-0 transform transition-all duration-300"
 								fill="none"
@@ -369,7 +363,7 @@
 								({formatDurationSec(l.duration)})
 							</span>
 						</summary>
-						<div class="grid items-start content-start">
+						<div class="grid gap-2 items-start content-start pb-2">
 							{#each l.intermediateStops! as s, i (i)}
 								{@render stopTimes(s.arrival!, s.scheduledArrival!, l.realTime, s, l.mode, 0)}
 							{/each}
@@ -405,18 +399,20 @@
 			</div>
 		{/if}
 	{/each}
-	<div class="relative pl-6 left-4">
+	<div class="relative pl-6 left-5">
 		<div
-			class="absolute left-[-6px] top-[0px] w-[15px] h-[15px] rounded-full"
+			class="absolute left-[-9px] w-[15px] h-[15px] rounded-full"
 			style={routeColor(lastLeg!)}
 		></div>
-		{@render stopTimes(
-			lastLeg!.endTime,
-			lastLeg!.scheduledEndTime,
-			lastLeg!.realTime,
-			lastLeg!.to,
-			lastLeg!.mode,
-			1
-		)}
+		<div class="relative top-[-6px] mb-[-6px]">
+			{@render stopTimes(
+				lastLeg!.endTime,
+				lastLeg!.scheduledEndTime,
+				lastLeg!.realTime,
+				lastLeg!.to,
+				lastLeg!.mode,
+				1
+			)}
+		</div>
 	</div>
 </div>

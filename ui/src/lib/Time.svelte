@@ -69,14 +69,14 @@
 			{formatTime(scheduled, timeZone)}
 			{weekday(scheduled)}
 		</div>
-		<div class="text-xs font-normal h-4">{isSameAsBrowserTimezone() ? '' : timeZoneOffset}</div>
+		<div class="text-xs font-normal">{isSameAsBrowserTimezone() ? '' : timeZoneOffset}</div>
 	{:else if variant === 'realtime-show-always' || (variant === 'realtime' && isRealtime)}
 		<span class:text-destructive={notOnTime} class:text-green-600={roughlyOnTime}>
 			{formatTime(t, timeZone)}
 			{weekday(t)}
 		</span>
 		{#if variant === 'realtime-show-always' && !isSameAsBrowserTimezone}
-			<div class="text-xs font-normal h-4">
+			<div class="text-xs font-normal">
 				{isSameAsBrowserTimezone ? '' : timeZoneOffset}
 			</div>
 		{/if}
