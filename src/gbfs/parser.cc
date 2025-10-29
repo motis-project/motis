@@ -399,10 +399,10 @@ void load_vehicle_types(gbfs_provider& provider, json::value const& root) {
         static_cast<std::string>(v.at("vehicle_type_id").as_string());
     auto const name = optional_localized_str(v.as_object(), "name");
     auto const rc = parse_return_constraint(v.as_object());
-    auto const form_factor = parse_form_factor(
-        static_cast<std::string_view>(v.at("form_factor").as_string()));
-    auto const propulsion_type = parse_propulsion_type(
-        static_cast<std::string_view>(v.at("propulsion_type").as_string()));
+    auto const form_factor =
+        parse_form_factor(optional_str(v.as_object(), "form_factor"));
+    auto const propulsion_type =
+        parse_propulsion_type(optional_str(v.as_object(), "propulsion_type"));
     if (rc) {
       auto const idx = vehicle_type_idx_t{provider.vehicle_types_.size()};
       provider.vehicle_types_.emplace_back(
