@@ -47,6 +47,7 @@
 #include "motis/odm/odm.h"
 #include "motis/odm/prima.h"
 #include "motis/odm/shorten.h"
+#include "motis/odm/td_offsets.h"
 #include "motis/osr/parameters.h"
 #include "motis/osr/street_routing.h"
 #include "motis/place.h"
