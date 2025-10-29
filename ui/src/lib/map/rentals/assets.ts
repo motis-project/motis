@@ -5,7 +5,6 @@ import type {
 	RentalReturnConstraint
 } from '$lib/api/openapi';
 import {
-	Copy,
 	FlagTriangleLeft,
 	Fuel,
 	PlugZap,

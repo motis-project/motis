@@ -26,7 +26,7 @@
 	import { cn } from '$lib/utils';
 	import polyline from '@mapbox/polyline';
 	import maplibregl from 'maplibre-gl';
-	import type { MapLayerMouseEvent } from 'maplibre-gl';
+	import type { GeoJSONSource, MapLayerMouseEvent } from 'maplibre-gl';
 	import { mount, onDestroy, unmount } from 'svelte';
 	import type { FeatureCollection, Point, Position } from 'geojson';
 	import RBush from 'rbush';
@@ -768,6 +768,37 @@
 		createStationContent(provider, entity as RentalStation, true)
 	);
 
+	const handleClusterClick = async (event: MapLayerMouseEvent, mapInstance: maplibregl.Map) => {
+		const feature = event.features?.[0];
+		const clusterId = feature?.properties?.cluster_id;
+		const sourceId = feature?.source;
+		if (!mapInstance || !feature || typeof clusterId !== 'number' || !sourceId) {
+			return;
+		}
+		const source = mapInstance.getSource(sourceId) as GeoJSONSource | undefined;
+		if (!source) {
+			return;
+		}
+
+		hideTooltip();
+		hidePopup();
+		mapInstance.getCanvas().style.cursor = '';
+
+		const zoom = await source.getClusterExpansionZoom(clusterId);
+		mapInstance.easeTo({
+			center: (feature.geometry as Point).coordinates as [number, number],
+			zoom
+		});
+	};
+
+	const handleClusterMouseEnter = (event: MapLayerMouseEvent, mapInstance: maplibregl.Map) => {
+		mapInstance.getCanvas().style.cursor = 'pointer';
+	};
+
+	const handleClusterMouseLeave = (event: MapLayerMouseEvent, mapInstance: maplibregl.Map) => {
+		mapInstance.getCanvas().style.cursor = '';
+	};
+
 	const handleVehicleMouseMove = createMouseMoveHandler(lookupVehicle, (provider, entity) =>
 		createVehicleContent(provider, entity as RentalVehicle, true)
 	);
@@ -788,7 +819,8 @@
 		// Check if there's a station or vehicle at this location (they should take priority)
 		const priorityLayers = [
 			STATION_ICON_LAYER_ID,
-			...vehicleLayerConfigs.map((c) => c.pointLayerId)
+			...vehicleLayerConfigs.map((c) => c.pointLayerId),
+			...vehicleLayerConfigs.map((c) => c.clusterLayerId)
 		];
 		const priorityFeatures = mapInstance.queryRenderedFeatures(event.point, {
 			layers: priorityLayers
@@ -1080,6 +1112,9 @@
 			paint={{
 				'text-color': '#000'
 			}}
+			onclick={handleClusterClick}
+			onmouseenter={handleClusterMouseEnter}
+			onmouseleave={handleClusterMouseLeave}
 		/>
 		<Layer
 			id={config.pointLayerId}
