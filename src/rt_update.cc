@@ -17,7 +17,7 @@
 #include "motis/constants.h"
 #include "motis/data.h"
 #include "motis/elevators/update_elevators.h"
-#include "motis/http_req.h"
+#include "motis/http_client.h"
 #include "motis/railviz.h"
 #include "motis/rt/auser.h"
 #include "motis/rt/rt_metrics.h"
@@ -31,13 +31,13 @@ namespace motis {
 
 asio::awaitable<ptr<elevators>> update_elevators(config const& c,
                                                  data const& d,
+                                                 http_client& client,
                                                  n::rt_timetable& new_rtt) {
   utl::verify(c.has_elevators() && c.get_elevators()->url_ && c.timetable_,
               "elevator update requires settings for timetable + elevators");
   auto const res =
-      co_await http_GET(boost::urls::url{*c.get_elevators()->url_},
-                        c.get_elevators()->headers_.value_or(headers_t{}),
-                        std::chrono::seconds{c.get_elevators()->http_timeout_});
+      co_await client.get(boost::urls::url{*c.get_elevators()->url_},
+                          c.get_elevators()->headers_.value_or(headers_t{}));
   co_return update_elevators(c, d, get_http_body(res), new_rtt);
 }
 
@@ -59,6 +59,9 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
   boost::asio::co_spawn(
       ioc,
       [&c, &d]() -> awaitable<void> {
+        auto client = http_client{};
+        client.timeout_ = std::chrono::seconds{c.timetable_->http_timeout_};
+
         auto executor = co_await asio::this_coro::executor;
         auto timer = asio::steady_timer{executor};
         auto ec = boost::system::error_code{};
@@ -107,9 +110,6 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
                     : n::rt::create_rt_timetable(*d.tt_, today));
 
             // Schedule updates for each real-time endpoint.
-            auto const timeout =
-                std::chrono::seconds{c.timetable_->http_timeout_};
-
             if (!endpoints.empty()) {
               auto awaitables = utl::to_vec(
                   endpoints,
@@ -127,10 +127,9 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
                                       -> awaitable<void> {
                                     g.metrics_.updates_requested_.Increment();
                                     try {
-                                      auto const res = co_await http_GET(
+                                      auto const res = co_await client.get(
                                           boost::urls::url{g.ep_.url_},
-                                          g.ep_.headers_.value_or(headers_t{}),
-                                          timeout);
+                                          g.ep_.headers_.value_or(headers_t{}));
                                       ret = n::rt::gtfsrt_update_buf(
                                           *d.tt_, *rtt, g.src_, g.tag_,
                                           get_http_body(res));
@@ -153,10 +152,9 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
                                           auser.fetch_url(a.ep_.url_)};
                                       fmt::println("[auser] fetch url: {}",
                                                    fetch_url.c_str());
-                                      auto const res = co_await http_GET(
+                                      auto const res = co_await client.get(
                                           fetch_url,
-                                          a.ep_.headers_.value_or(headers_t{}),
-                                          timeout);
+                                          a.ep_.headers_.value_or(headers_t{}));
                                       ret = auser.consume_update(
                                           get_http_body(res), *rtt);
                                     } catch (std::exception const& e) {
@@ -243,7 +241,7 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
             // Update real-time timetable shared pointer.
             auto railviz_rt = std::make_unique<railviz_rt_index>(*d.tt_, *rtt);
             auto elevators = c.has_elevators() && c.get_elevators()->url_
-                                 ? co_await update_elevators(c, d, *rtt)
+                                 ? co_await update_elevators(c, d, client, *rtt)
                                  : std::move(d.rt_->e_);
             d.rt_ = std::make_shared<rt>(std::move(rtt), std::move(elevators),
                                          std::move(railviz_rt));

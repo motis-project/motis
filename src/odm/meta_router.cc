@@ -38,7 +38,6 @@
 #include "motis/elevators/elevators.h"
 #include "motis/endpoints/routing.h"
 #include "motis/gbfs/routing_data.h"
-#include "motis/http_req.h"
 #include "motis/journey_to_response.h"
 #include "motis/metrics_registry.h"
 #include "motis/odm/bounds.h"

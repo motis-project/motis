@@ -16,6 +16,7 @@
 #include "boost/beast/http/message.hpp"
 #include "boost/url/url.hpp"
 
+#include "boost/asio/awaitable.hpp"
 #include "boost/asio/co_spawn.hpp"
 #include "boost/asio/detached.hpp"
 #include "boost/asio/experimental/awaitable_operators.hpp"
@@ -27,9 +28,13 @@
 #include "boost/beast/ssl/ssl_stream.hpp"
 #include "boost/beast/version.hpp"
 
+#include "boost/iostreams/copy.hpp"
+#include "boost/iostreams/filter/gzip.hpp"
+#include "boost/iostreams/filtering_stream.hpp"
+#include "boost/iostreams/filtering_streambuf.hpp"
+
 #include "utl/verify.h"
 
-#include "motis/http_req.h"
 #include "motis/types.h"
 
 namespace beast = boost::beast;
@@ -45,6 +50,20 @@ namespace motis {
 
 constexpr auto const kMotisUserAgent =
     "MOTIS/" MOTIS_VERSION " " BOOST_BEAST_VERSION_STRING;
+
+std::string get_http_body(http_response const& res) {
+  auto body = beast::buffers_to_string(res.body().data());
+  if (res[http::field::content_encoding] == "gzip") {
+    auto const src = boost::iostreams::array_source{body.data(), body.size()};
+    auto is = boost::iostreams::filtering_istream{};
+    auto os = std::stringstream{};
+    is.push(boost::iostreams::gzip_decompressor{});
+    is.push(src);
+    boost::iostreams::copy(is, os);
+    body = os.str();
+  }
+  return body;
+}
 
 std::string http_client::error_category_impl::message(int ev) const {
   switch (static_cast<error>(ev)) {
