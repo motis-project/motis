@@ -1,7 +1,5 @@
 #include "motis/direct_filter.h"
 
-#include "boost/mpl/pair.hpp"
-
 #include <variant>
 
 #include "utl/erase_if.h"
