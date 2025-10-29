@@ -243,61 +243,59 @@ void add_pt_sort(n::pareto_set<nr::journey> const& pt_journeys,
 void mixer::mix(n::pareto_set<nr::journey> const& pt_journeys,
                 std::vector<nr::journey>& taxi_journeys,
                 std::vector<nr::journey> const& ride_share_journeys,
-                metrics_registry*,
-                std::optional<std::string_view> const) const {
+                metrics_registry* metrics,
+                std::optional<std::string_view> const stats_path) const {
   pareto_dominance(taxi_journeys);
-  // auto const pareto_n = taxi_journeys.size();
-  //
-  // if constexpr (kMixerTracing) {
-  //   std::ofstream journeys_in{"journeys.csv"};
-  //   journeys_in << to_csv(get_mixer_input(pt_journeys, taxi_journeys));
-  // }
-  //
-  // if (stats_path) {
-  //   write_journeys(pt_journeys, taxi_journeys, *stats_path);
-  // }
-  //
-  // auto const intvl = [&]() {
-  //   auto ret =
-  //       n::interval<n::unixtime_t>{n::unixtime_t::max(),
-  //       n::unixtime_t::min()};
-  //   for (auto const& j : pt_journeys) {
-  //     ret.from_ = std::min(ret.from_, j.departure_time());
-  //     ret.to_ = std::max(ret.to_, j.arrival_time());
-  //   }
-  //   for (auto const& j : taxi_journeys) {
-  //     ret.from_ = std::min(ret.from_, j.departure_time());
-  //     ret.to_ = std::max(ret.to_, j.arrival_time());
-  //   }
-  //   return ret;
-  // }();
-  //
-  // auto const threshold_filter = [&](auto const& t) {
-  //   std::erase_if(taxi_journeys, [&](auto const& j) {
-  //     return t[static_cast<size_t>((center(j) - intvl.from_).count())] <
-  //            cost(j);
-  //   });
-  // };
-  //
-  // auto const pt_threshold = get_threshold(pt_journeys.els_, intvl,
-  // pt_slope_); threshold_filter(pt_threshold); auto const pt_filtered_n =
-  // taxi_journeys.size();
-  //
-  // auto const odm_threshold = get_threshold(taxi_journeys, intvl, odm_slope_);
-  // threshold_filter(odm_threshold);
-  //
-  // if (stats_path) {
-  //   write_thresholds(pt_threshold, odm_threshold, intvl, *stats_path);
-  // }
-  //
-  // if (metrics != nullptr) {
-  //   metrics->routing_odm_journeys_found_non_dominated_pareto_.Observe(
-  //       static_cast<double>(pareto_n));
-  //   metrics->routing_odm_journeys_found_non_dominated_cost_.Observe(
-  //       static_cast<double>(pt_filtered_n));
-  //   metrics->routing_odm_journeys_found_non_dominated_prod_.Observe(
-  //       static_cast<double>(taxi_journeys.size()));
-  // }
+  auto const pareto_n = taxi_journeys.size();
+
+  if constexpr (kMixerTracing) {
+    std::ofstream journeys_in{"journeys.csv"};
+    journeys_in << to_csv(get_mixer_input(pt_journeys, taxi_journeys));
+  }
+
+  if (stats_path) {
+    write_journeys(pt_journeys, taxi_journeys, *stats_path);
+  }
+
+  auto const intvl = [&]() {
+    auto ret =
+        n::interval<n::unixtime_t>{n::unixtime_t::max(), n::unixtime_t::min()};
+    for (auto const& j : pt_journeys) {
+      ret.from_ = std::min(ret.from_, j.departure_time());
+      ret.to_ = std::max(ret.to_, j.arrival_time());
+    }
+    for (auto const& j : taxi_journeys) {
+      ret.from_ = std::min(ret.from_, j.departure_time());
+      ret.to_ = std::max(ret.to_, j.arrival_time());
+    }
+    return ret;
+  }();
+
+  auto const threshold_filter = [&](auto const& t) {
+    std::erase_if(taxi_journeys, [&](auto const& j) {
+      return t[static_cast<size_t>((center(j) - intvl.from_).count())] <
+             cost(j);
+    });
+  };
+
+  auto const pt_threshold = get_threshold(pt_journeys.els_, intvl, pt_slope_);
+  threshold_filter(pt_threshold);
+  auto const pt_filtered_n = taxi_journeys.size();
+  auto const odm_threshold = get_threshold(taxi_journeys, intvl, odm_slope_);
+  threshold_filter(odm_threshold);
+
+  if (stats_path) {
+    write_thresholds(pt_threshold, odm_threshold, intvl, *stats_path);
+  }
+
+  if (metrics != nullptr) {
+    metrics->routing_odm_journeys_found_non_dominated_pareto_.Observe(
+        static_cast<double>(pareto_n));
+    metrics->routing_odm_journeys_found_non_dominated_cost_.Observe(
+        static_cast<double>(pt_filtered_n));
+    metrics->routing_odm_journeys_found_non_dominated_prod_.Observe(
+        static_cast<double>(taxi_journeys.size()));
+  }
 
   add_pt_sort(pt_journeys, taxi_journeys, ride_share_journeys);
 }

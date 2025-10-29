@@ -132,9 +132,10 @@ std::string prima::service_times(n::timetable const& tt) const {
   auto const first_last_mile_times = [&](auto const& offsets,
                                          auto const& times) {
     for (auto const [o, t] : utl::zip(offsets, times)) {
-      ss << tt.locations_.names_[o.target_].view() << ": ";
+      ss << tt.locations_.names_[o.target_].view() << ", " << o.duration_
+         << ":\n";
       for (auto const& i : t) {
-        ss << i << " ";
+        ss << i << "\n";
       }
       ss << "\n";
     }

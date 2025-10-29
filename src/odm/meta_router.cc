@@ -174,7 +174,9 @@ auto get_td_offsets_taxi(std::vector<n::routing::offset> const& offsets,
     for (auto const [o, t] : std::views::zip(offsets_split, times_split)) {
       td_offsets.emplace(o.target_, std::vector<n::routing::td_offset>{});
       for (auto const& i : t) {
-        td_offsets[o.target_].emplace_back(i.from_, i.size(),
+        td_offsets[o.target_].emplace_back(i.from_, o.duration_,
+                                           kOdmTransportModeId);
+        td_offsets[o.target_].emplace_back(i.to_, n::footpath::kMaxDuration,
                                            kOdmTransportModeId);
       }
     }
