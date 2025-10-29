@@ -28,10 +28,9 @@ constexpr auto kODMMaxDuration = 3600s;
 constexpr auto kBlacklistPath = "/api/blacklist";
 constexpr auto kWhitelistPath = "/api/whitelist";
 constexpr auto kRidesharingPath = "/api/whitelistRideShare";
-constexpr auto kInfeasible =
-    std::numeric_limits<nigiri::unixtime_t>::min();
+constexpr auto kInfeasible = std::numeric_limits<nigiri::unixtime_t>::min();
 static auto const kReqHeaders = std::map<std::string, std::string>{
-      {"Content-Type", "application/json"}, {"Accept", "application/json"}};
+    {"Content-Type", "application/json"}, {"Accept", "application/json"}};
 
 using service_times_t = std::vector<nigiri::interval<nigiri::unixtime_t>>;
 
@@ -47,7 +46,9 @@ struct capacities {
   std::int64_t luggage_;
 };
 
-void tag_invoke(boost::json::value_from_tag const&, boost::json::value&, capacities const&);
+void tag_invoke(boost::json::value_from_tag const&,
+                boost::json::value&,
+                capacities const&);
 
 struct prima {
 
@@ -82,18 +83,20 @@ struct prima {
       nigiri::interval<nigiri::unixtime_t> const&) const;
   bool consume_blacklist_taxi_response(std::string_view json);
   bool blacklist_taxi(nigiri::timetable const&,
-                       nigiri::interval<nigiri::unixtime_t> const&);
+                      nigiri::interval<nigiri::unixtime_t> const&);
   std::string service_times(nigiri::timetable const&) const;
 
-  std::string make_whitelist_taxi_request(std::vector<nigiri::routing::start> const& first_mile,
-    std::vector<nigiri::routing::start> const& last_mile, nigiri::timetable const&) const;
+  std::string make_whitelist_taxi_request(
+      std::vector<nigiri::routing::start> const& first_mile,
+      std::vector<nigiri::routing::start> const& last_mile,
+      nigiri::timetable const&) const;
   bool consume_whitelist_taxi_response(
       std::string_view json,
       std::vector<nigiri::routing::journey>&,
       std::vector<nigiri::routing::start>& first_mile_taxi_rides,
       std::vector<nigiri::routing::start>& last_mile_taxi_rides);
   bool whitelist_taxi(std::vector<nigiri::routing::journey>&,
-                       nigiri::timetable const&);
+                      nigiri::timetable const&);
 
   std::string make_ride_sharing_request(nigiri::timetable const&) const;
   bool consume_ride_sharing_response(std::string_view json);
