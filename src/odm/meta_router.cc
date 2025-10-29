@@ -324,9 +324,10 @@ api::plan_response meta_router::run() {
 
   auto const prep_queries_start = std::chrono::steady_clock::now();
   auto const [first_mile_taxi_short, first_mile_taxi_long] =
-      get_td_offsets_split(p.first_mile_taxi_, p.first_mile_taxi_times_, kOdmTransportModeId);
-  auto const [last_mile_taxi_short, last_mile_taxi_long] =
-      get_td_offsets_split(p.last_mile_taxi_, p.last_mile_taxi_times_, kOdmTransportModeId);
+      get_td_offsets_split(p.first_mile_taxi_, p.first_mile_taxi_times_,
+                           kOdmTransportModeId);
+  auto const [last_mile_taxi_short, last_mile_taxi_long] = get_td_offsets_split(
+      p.last_mile_taxi_, p.last_mile_taxi_times_, kOdmTransportModeId);
   auto const params = get_osr_parameters(query_);
   auto const pre_transit_time = std::min(
       std::chrono::seconds{query_.maxPreTransitTime_},
@@ -376,14 +377,16 @@ api::plan_response meta_router::run() {
           query_.arriveBy_ ? first_mile_taxi_short : last_mile_taxi_short,
       .dest_taxi_long_ =
           query_.arriveBy_ ? first_mile_taxi_long : last_mile_taxi_long,
-      .start_ride_sharing_ =
-          query_.arriveBy_
-              ? get_td_offsets(p.last_mile_ride_sharing_, kRideSharingTransportModeId)
-              : get_td_offsets(p.first_mile_ride_sharing_, kRideSharingTransportModeId),
-      .dest_ride_sharing_ =
-          query_.arriveBy_
-              ? get_td_offsets(p.first_mile_ride_sharing_, kRideSharingTransportModeId)
-              : get_td_offsets(p.last_mile_ride_sharing_, kRideSharingTransportModeId)};
+      .start_ride_sharing_ = query_.arriveBy_
+                                 ? get_td_offsets(p.last_mile_ride_sharing_,
+                                                  kRideSharingTransportModeId)
+                                 : get_td_offsets(p.first_mile_ride_sharing_,
+                                                  kRideSharingTransportModeId),
+      .dest_ride_sharing_ = query_.arriveBy_
+                                ? get_td_offsets(p.first_mile_ride_sharing_,
+                                                 kRideSharingTransportModeId)
+                                : get_td_offsets(p.last_mile_ride_sharing_,
+                                                 kRideSharingTransportModeId)};
   print_time(prep_queries_start, "[prepare queries]",
              r_.metrics_->routing_execution_duration_seconds_preparing_);
 
