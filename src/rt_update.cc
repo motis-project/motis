@@ -1,5 +1,7 @@
 #include "motis/rt_update.h"
 
+#include <memory>
+
 #include "boost/asio/co_spawn.hpp"
 #include "boost/asio/detached.hpp"
 #include "boost/asio/experimental/parallel_group.hpp"
@@ -55,6 +57,17 @@ struct auser_endpoint {
   vdvaus_metrics metrics_;
 };
 
+struct request_wait_logger {
+  template <typename Executor>
+  request_wait_logger(Executor const& executor, std::string url)
+      : timer_{executor}, url_{std::move(url)} {}
+
+  void cancel() { timer_.cancel(); }
+
+  asio::steady_timer timer_;
+  std::string url_;
+};
+
 void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
   boost::asio::co_spawn(
       ioc,
@@ -66,6 +79,50 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
         auto timer = asio::steady_timer{executor};
         auto ec = boost::system::error_code{};
 
+        auto start_wait_logger = [&](std::string url) {
+          auto ctx =
+              std::make_shared<request_wait_logger>(executor, std::move(url));
+          asio::co_spawn(
+              executor,
+              [ctx]() -> awaitable<void> {
+                while (true) {
+                  ctx->timer_.expires_after(std::chrono::seconds{5});
+                  auto timer_ec = boost::system::error_code{};
+                  co_await ctx->timer_.async_wait(
+                      asio::redirect_error(asio::use_awaitable, timer_ec));
+                  if (timer_ec == asio::error::operation_aborted) {
+                    co_return;
+                  }
+
+                  fmt::println("{} waiting for ...", ctx->url_);
+                }
+              },
+              asio::detached);
+          return ctx;
+        };
+
+        auto stop_wait_logger = [&](std::shared_ptr<request_wait_logger>& ctx) {
+          if (ctx) {
+            ctx->cancel();
+            ctx.reset();
+          }
+        };
+
+        auto const whitelist = hash_set<std::string_view>{
+            R"(https://gtfs.bus-tracker.fr/gtfs-rt/yelo)",
+            R"(https://gtfs.bus-tracker.fr/gtfs-rt/tcar/trip-updates)",
+            R"(https://gtfs.bus-tracker.fr/gtfs-rt/tcl)",
+            R"(https://gtfs.bus-tracker.fr/gtfs-rt/tango/trip-updates)",
+            R"(https://gtfs.bus-tracker.fr/gtfs-rt/lia/trip-updates)",
+            R"(http://rt.gtfs.baguette.pirnet.si/gtfs-rt/HZPP/trip_updates.pb)",
+            R"(http://rt.gtfs.baguette.pirnet.si/gtfs-rt/apSisak/trip_updates.pb)",
+            R"(http://rt.gtfs.baguette.pirnet.si/gtfs-rt/prometSplit/trip_updates.pb)",
+            R"(http://rt.gtfs.baguette.pirnet.si/gtfs-rt/Srbijavoz_ghl/trip_updates.pb)",
+            R"(https://rt.gtfs.derp.si/sources/celje/trip_updates)",
+            R"(https://rt.gtfs.derp.si/sources/lpp/all)",
+            R"(https://rt.gtfs.derp.si/sources/marprom/trip_updates)",
+            R"(https://rt.gtfs.derp.si/sources/ijpp/trip_updates)",
+        };
         auto const endpoints = [&]() {
           auto endpoints =
               std::vector<std::variant<gtfs_rt_endpoint, auser_endpoint>>{};
@@ -75,6 +132,9 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
             if (dataset.rt_.has_value()) {
               auto const src = d.tags_->get_src(tag);
               for (auto const& ep : *dataset.rt_) {
+                if (!whitelist.contains(ep.url_)) {
+                  continue;
+                }
                 switch (ep.protocol_) {
                   case config::timetable::dataset::rt::protocol::gtfsrt:
                     endpoints.push_back(gtfs_rt_endpoint{
@@ -126,14 +186,18 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
                                   [&](gtfs_rt_endpoint const& g)
                                       -> awaitable<void> {
                                     g.metrics_.updates_requested_.Increment();
+                                    auto wait_logger =
+                                        start_wait_logger(g.ep_.url_);
                                     try {
                                       auto const res = co_await client.get(
                                           boost::urls::url{g.ep_.url_},
                                           g.ep_.headers_.value_or(headers_t{}));
+                                      stop_wait_logger(wait_logger);
                                       ret = n::rt::gtfsrt_update_buf(
                                           *d.tt_, *rtt, g.src_, g.tag_,
                                           get_http_body(res));
                                     } catch (std::exception const& e) {
+                                      stop_wait_logger(wait_logger);
                                       g.metrics_.updates_error_.Increment();
                                       n::log(n::log_lvl::error, "motis.rt",
                                              "RT FETCH ERROR: tag={}, error={}",
@@ -147,17 +211,25 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
                                       -> awaitable<void> {
                                     a.metrics_.updates_requested_.Increment();
                                     auto& auser = d.auser_->at(a.ep_.url_);
+                                    std::shared_ptr<request_wait_logger>
+                                        wait_logger;
                                     try {
-                                      auto const fetch_url = boost::urls::url{
-                                          auser.fetch_url(a.ep_.url_)};
+                                      auto const fetch_url_string =
+                                          auser.fetch_url(a.ep_.url_);
+                                      wait_logger =
+                                          start_wait_logger(fetch_url_string);
+                                      auto const fetch_url =
+                                          boost::urls::url{fetch_url_string};
                                       fmt::println("[auser] fetch url: {}",
                                                    fetch_url.c_str());
                                       auto const res = co_await client.get(
                                           fetch_url,
                                           a.ep_.headers_.value_or(headers_t{}));
+                                      stop_wait_logger(wait_logger);
                                       ret = auser.consume_update(
                                           get_http_body(res), *rtt);
                                     } catch (std::exception const& e) {
+                                      stop_wait_logger(wait_logger);
                                       a.metrics_.updates_error_.Increment();
                                       n::log(n::log_lvl::error, "motis.rt",
                                              "VDV AUS FETCH ERROR: tag={}, "

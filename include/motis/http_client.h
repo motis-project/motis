@@ -71,6 +71,11 @@ struct http_client {
 
   void set_proxy(boost::urls::url const&);
 
+private:
+  boost::asio::awaitable<http_response> perform_request(
+      std::shared_ptr<request>);
+
+public:
   hash_map<connection_key, std::shared_ptr<connection>> connections_;
   std::chrono::seconds timeout_{std::chrono::seconds{10}};
 
