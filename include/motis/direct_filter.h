@@ -8,6 +8,7 @@
 
 namespace motis {
 
-void direct_filter(std::vector<api::Itinerary> const& direct, std::vector<nigiri::routing::journey> &);
+void direct_filter(std::vector<api::Itinerary> const& direct,
+                   std::vector<nigiri::routing::journey>&);
 
-} // namespace motis
+}  // namespace motis
