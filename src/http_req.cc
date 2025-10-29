@@ -73,10 +73,11 @@ asio::awaitable<http_response> req_tls(
                                        boost::asio::error::get_ssl_category()}};
   }
 
-  stream.next_layer().expires_after(timeout);
-
   auto const results = co_await resolver.async_resolve(
       url.host(), url.has_port() ? url.port() : "443");
+
+  stream.next_layer().expires_after(timeout);
+
   co_await beast::get_lowest_layer(stream).async_connect(results);
   co_await stream.async_handshake(ssl::stream_base::client);
   co_return co_await req(std::move(stream), url, headers, body);
