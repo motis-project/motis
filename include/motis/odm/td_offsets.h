@@ -1,3 +1,5 @@
+#pragma once
+
 #include "nigiri/routing/query.h"
 #include "nigiri/routing/start_times.h"
 #include "nigiri/types.h"
