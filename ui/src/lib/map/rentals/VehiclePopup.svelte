@@ -3,6 +3,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Copy } from '@lucide/svelte';
 	import { t } from '$lib/i18n/translation';
+	import { formFactorAssets, propulsionTypes, returnConstraints } from './assets';
 
 	let {
 		provider,
@@ -15,6 +16,10 @@
 		showActions?: boolean;
 		debug?: boolean;
 	} = $props();
+
+	let vehicleType = $derived.by(() => provider.vehicleTypes.find((vt) => vt.id == vehicle.typeId));
+	let propulsion = $derived(propulsionTypes[vehicle.propulsionType]);
+	let returnConstraint = $derived(returnConstraints[vehicle.returnConstraint]);
 
 	let debugInfo = $derived({
 		vehicle,
@@ -30,7 +35,24 @@
 	}
 </script>
 
-<div class="space-y-3 text-sm leading-tight text-foreground">
+<div class="space-y-3 text-sm leading-tight text-foreground max-w-80">
+	<div class="flex gap-2">
+		<svg class="h-4 w-4 fill-current flex-none" aria-hidden="true" focusable="false">
+			<title>{formFactorAssets[vehicle.formFactor].label}</title>
+			<use href={`#${formFactorAssets[vehicle.formFactor].svg}`} />
+		</svg>
+		{#if propulsion}
+			<span
+				class="inline-flex h-4 w-4 items-center justify-center text-muted-foreground"
+				role="img"
+				title={propulsion.title}
+				aria-label={propulsion.title}
+			>
+				<propulsion.component class="h-4 w-4" aria-hidden="true" />
+			</span>
+		{/if}
+		<span>{vehicleType?.name || formFactorAssets[vehicle.formFactor].label}</span>
+	</div>
 	<div>
 		{t.sharingProvider}:
 		{#if provider.url}
@@ -45,6 +67,19 @@
 			{provider.name}
 		{/if}
 	</div>
+	{#if returnConstraint}
+		<div class="flex gap-2">
+			<span
+				class="inline-flex h-4 w-4 items-center justify-center text-muted-foreground flex-none"
+				role="img"
+				title={returnConstraint.title}
+				aria-label={returnConstraint.title}
+			>
+				<returnConstraint.component class="h-4 w-4" aria-hidden="true" />
+			</span>
+			<span>{returnConstraint.title}</span>
+		</div>
+	{/if}
 	{#if showActions && vehicle.rentalUriWeb}
 		<Button class="font-bold" variant="outline" href={vehicle.rentalUriWeb} target="_blank">
 			{t.rent}

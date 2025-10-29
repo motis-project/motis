@@ -1,5 +1,18 @@
 import { browser } from '$app/environment';
-import type { RentalFormFactor } from '$lib/api/openapi';
+import type {
+	RentalFormFactor,
+	RentalPropulsionType,
+	RentalReturnConstraint
+} from '$lib/api/openapi';
+import {
+	Copy,
+	FlagTriangleLeft,
+	Fuel,
+	PlugZap,
+	RefreshCcw,
+	Zap,
+	type Icon as LucideIcon
+} from '@lucide/svelte';
 import { t } from '$lib/i18n/translation';
 
 export type FormFactorAssets = {
@@ -74,6 +87,29 @@ export const formFactorAssets: Record<RentalFormFactor, FormFactorAssets> = {
 		cluster: 'floating_other_cluster',
 		label: t.unknownVehicleType
 	}
+};
+
+export const propulsionTypes: Record<
+	RentalPropulsionType,
+	{ component: typeof LucideIcon; title: string } | null
+> = {
+	ELECTRIC: { component: Zap, title: t.electric },
+	ELECTRIC_ASSIST: { component: Zap, title: t.electricAssist },
+	HYBRID: { component: PlugZap, title: t.hybrid },
+	PLUG_IN_HYBRID: { component: PlugZap, title: t.plugInHybrid },
+	COMBUSTION: { component: Fuel, title: t.combustion },
+	COMBUSTION_DIESEL: { component: Fuel, title: t.combustionDiesel },
+	HYDROGEN_FUEL_CELL: { component: Fuel, title: t.hydrogenFuelCell },
+	HUMAN: null
+};
+
+export const returnConstraints: Record<
+	RentalReturnConstraint,
+	{ component: typeof LucideIcon; title: string } | null
+> = {
+	ANY_STATION: { component: FlagTriangleLeft, title: t.returnOnlyAtStations },
+	ROUNDTRIP_STATION: { component: RefreshCcw, title: t.roundtripStationReturnConstraint },
+	NONE: null
 };
 
 export const getIconBaseName = (formFactor: RentalFormFactor, type: IconType) =>
