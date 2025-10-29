@@ -697,6 +697,11 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
           : std::pair{std::vector<api::Itinerary>{}, kInfinityDuration};
   UTL_STOP_TIMING(direct);
 
+  std::cout << "direct Itineraries:\n";
+  for (auto const& d : direct) {
+    std::cout << d.legs_.front().mode_ << std::endl;
+  }
+
   if (!query.transitModes_.empty() && fastest_direct > 5min &&
       max_transfers >= 0) {
     utl::verify(tt_ != nullptr && tags_ != nullptr,
