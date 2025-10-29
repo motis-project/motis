@@ -1,5 +1,7 @@
 #include "motis/odm/odm.h"
 
+#include <filesystem>
+
 #include "nigiri/for_each_meta.h"
 #include "nigiri/logging.h"
 #include "nigiri/rt/frun.h"
@@ -14,6 +16,16 @@ namespace motis::odm {
 
 namespace n = nigiri;
 namespace nr = nigiri::routing;
+
+void write_journeys_to_file(std::vector<nr::journey> const& v,
+                            std::string_view const f,
+                            n::timetable const& tt) {
+  auto of = std::ofstream{std::filesystem::path{f}};
+  for (auto const& j : v) {
+    j.print(of, tt, nullptr, true);
+    of << "\n";
+  }
+}
 
 void shorten(std::vector<nr::journey>& odm_journeys,
              std::vector<nigiri::routing::offset> const& first_mile_taxi,
@@ -87,13 +99,12 @@ void shorten(std::vector<nr::journey>& odm_journeys,
       auto const new_stop = tt.locations_.get(odm_leg.to_).name_;
       auto const new_pt_time = pt_leg.arr_time_ - pt_leg.dep_time_;
 
-      n::log(
-          n::log_lvl::debug, "motis.prima",
-          "Shortened ODM first leg: [ODM: {}, stop: {}, PT: {}] --> [ODM: {}, "
-          "stop: {}, PT: {}] (ODM: -{}, PT: +{})",
-          old_odm_time, old_stop, old_pt_time, new_odm_time, new_stop,
-          new_pt_time, std::chrono::minutes{old_odm_time - new_odm_time},
-          new_pt_time - old_pt_time);
+      n::log(n::log_lvl::debug, "motis.prima",
+             "shorten first leg: [stop: {}, ODM: {}, PT: {}] -> [stop: {}, "
+             "ODM: {}, PT: {}] (ODM: -{}, PT: +{})",
+             old_stop, old_odm_time, old_pt_time, new_stop, new_odm_time,
+             new_pt_time, std::chrono::minutes{old_odm_time - new_odm_time},
+             new_pt_time - old_pt_time);
     }
   };
 
@@ -161,16 +172,16 @@ void shorten(std::vector<nr::journey>& odm_journeys,
       auto const new_stop = tt.locations_.get(odm_leg.from_).name_;
       auto const new_pt_time = pt_leg.arr_time_ - pt_leg.dep_time_;
 
-      n::log(
-          n::log_lvl::debug, "motis.prima",
-          "Shortened ODM last leg: [ODM: {}, stop: {}, PT: {}] --> [ODM: {}, "
-          "stop: {}, PT: {}] (ODM: -{}, PT: +{})",
-          old_odm_time, old_stop, old_pt_time, new_odm_time, new_stop,
-          new_pt_time, std::chrono::minutes{old_odm_time - new_odm_time},
-          new_pt_time - old_pt_time);
+      n::log(n::log_lvl::debug, "motis.prima",
+             "shorten last leg: [stop: {}, ODM: {}, PT: {}] -> [stop: {}, "
+             "ODM: {}, PT: {}] (ODM: -{}, PT: +{})",
+             old_stop, old_odm_time, old_pt_time, new_stop, new_odm_time,
+             new_pt_time, std::chrono::minutes{old_odm_time - new_odm_time},
+             new_pt_time - old_pt_time);
     }
   };
 
+  write_journeys_to_file(odm_journeys, "shorten_in.txt", tt);
   for (auto& j : odm_journeys) {
     if (j.legs_.empty()) {
       n::log(n::log_lvl::debug, "motis.prima", "shorten: journey without legs");
@@ -179,6 +190,7 @@ void shorten(std::vector<nr::journey>& odm_journeys,
     shorten_first_leg(j);
     shorten_last_leg(j);
   }
+  write_journeys_to_file(odm_journeys, "shorten_out.txt", tt);
 }
 
 }  // namespace motis::odm
