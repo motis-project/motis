@@ -791,11 +791,11 @@
 		});
 	};
 
-	const handleClusterMouseEnter = (event: MapLayerMouseEvent, mapInstance: maplibregl.Map) => {
+	const handleClusterMouseEnter = (_event: MapLayerMouseEvent, mapInstance: maplibregl.Map) => {
 		mapInstance.getCanvas().style.cursor = 'pointer';
 	};
 
-	const handleClusterMouseLeave = (event: MapLayerMouseEvent, mapInstance: maplibregl.Map) => {
+	const handleClusterMouseLeave = (_event: MapLayerMouseEvent, mapInstance: maplibregl.Map) => {
 		mapInstance.getCanvas().style.cursor = '';
 	};
 

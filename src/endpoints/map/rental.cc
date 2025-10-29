@@ -244,14 +244,16 @@ api::rentals_response rental::operator()(
           for (auto const& [vti, count] : st.status_.vehicle_types_available_) {
             auto const& vt = provider->vehicle_types_[vti];
             auto const api_ff = gbfs::to_api_form_factor(vt.form_factor_);
-            form_factor_counts[std::to_underlying(api_ff)] += count;
+            form_factor_counts[static_cast<std::size_t>(
+                std::to_underlying(api_ff))] += count;
             types_available[vt.id_] = count;
             form_factors.insert(api_ff);
           }
           for (auto const& [vti, count] : st.status_.vehicle_docks_available_) {
             auto const& vt = provider->vehicle_types_[vti];
             auto const api_ff = gbfs::to_api_form_factor(vt.form_factor_);
-            form_factor_counts[std::to_underlying(api_ff)] += count;
+            form_factor_counts[static_cast<std::size_t>(
+                std::to_underlying(api_ff))] += count;
             docks_available[vt.id_] = count;
             form_factors.insert(api_ff);
           }
@@ -264,8 +266,10 @@ api::rentals_response rental::operator()(
 
           auto sorted_form_factors = utl::to_vec(form_factors);
           utl::sort(sorted_form_factors, [&](auto const a, auto const b) {
-            return form_factor_counts[std::to_underlying(a)] >
-                   form_factor_counts[std::to_underlying(b)];
+            return form_factor_counts[static_cast<std::size_t>(
+                       std::to_underlying(a))] >
+                   form_factor_counts[static_cast<std::size_t>(
+                       std::to_underlying(b))];
           });
 
           res.stations_.emplace_back(api::RentalStation{
