@@ -17,16 +17,6 @@ namespace motis::odm {
 namespace n = nigiri;
 namespace nr = nigiri::routing;
 
-void write_journeys_to_file(std::vector<nr::journey> const& v,
-                            std::string_view const f,
-                            n::timetable const& tt) {
-  auto of = std::ofstream{std::filesystem::path{f}};
-  for (auto const& j : v) {
-    j.print(of, tt, nullptr, true);
-    of << "\n";
-  }
-}
-
 void shorten(std::vector<nr::journey>& odm_journeys,
              std::vector<nigiri::routing::offset> const& first_mile_taxi,
              std::vector<service_times_t> const& first_mile_taxi_times,
@@ -181,7 +171,6 @@ void shorten(std::vector<nr::journey>& odm_journeys,
     }
   };
 
-  write_journeys_to_file(odm_journeys, "shorten_in.txt", tt);
   for (auto& j : odm_journeys) {
     if (j.legs_.empty()) {
       n::log(n::log_lvl::debug, "motis.prima", "shorten: journey without legs");
@@ -190,7 +179,6 @@ void shorten(std::vector<nr::journey>& odm_journeys,
     shorten_first_leg(j);
     shorten_last_leg(j);
   }
-  write_journeys_to_file(odm_journeys, "shorten_out.txt", tt);
 }
 
 }  // namespace motis::odm
