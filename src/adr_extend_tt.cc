@@ -49,6 +49,16 @@ date::time_zone const* get_tz(n::timetable const& tt,
 }
 
 void normalize(std::string& x) {
+  auto const replace_str = [&](std::string_view search,
+                               std::string_view replace) {
+    auto const pos = x.find(search);
+    if (pos != std::string::npos) {
+      x.replace(pos, search.size(), replace);
+    }
+  };
+
+  replace_str("Int.", "Hbf");
+
   x = adr::normalize(x);
 
   auto const removals = std::initializer_list<std::string_view>{
@@ -63,14 +73,11 @@ void normalize(std::string& x) {
 
   auto const replacements =
       std::initializer_list<std::pair<std::string_view, std::string_view>>{
-          {"flixtrain", "hbf"}, {"hauptbf", "hbf"}, {"haupt", "hbf"},
-          {"centrale", "hbf"},  {"station", "hbf"}, {"zob", "hbf"},
-          {"anleger", "fähre"}};
+          {"flixtrain", "hbf"}, {"hauptbf", "hbf"},       {"haupt", "hbf"},
+          {"centrale", "hbf"},  {"station", "hbf"},       {"zob", "hbf"},
+          {"int", "hbf"},       {"international", "hbf"}, {"anleger", "fähre"}};
   for (auto const [search, replace] : replacements) {
-    auto const pos = x.find(search);
-    if (pos != std::string::npos) {
-      x.replace(pos, search.size(), replace);
-    }
+    replace_str(search, replace);
   }
 }
 
