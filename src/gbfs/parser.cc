@@ -338,7 +338,9 @@ void load_station_status(gbfs_provider& provider, json::value const& root) {
 
 vehicle_form_factor parse_form_factor(std::string_view const s) {
   switch (cista::hash(s)) {
-    case cista::hash("bicycle"): return vehicle_form_factor::kBicycle;
+    case cista::hash("bicycle"):
+    case cista::hash("bike"):  // non-standard
+      return vehicle_form_factor::kBicycle;
     case cista::hash("cargo_bicycle"):
       return vehicle_form_factor::kCargoBicycle;
     case cista::hash("car"): return vehicle_form_factor::kCar;
