@@ -46,7 +46,7 @@
 </script>
 
 {#if availableLevels.length > 1}
-	<Control position="top-right" class="mb-5">
+	<Control position="bottom-right" class="mb-5">
 		<RadioGroup class="flex flex-col items-end space-y-1" bind:value>
 			{#each availableLevels as l (l)}
 				<Label

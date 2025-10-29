@@ -36,11 +36,7 @@
 )}
 	{@const arriveBy = isStartOrEnd == 0 || isStartOrEnd == 1}
 	{@const textColor = isStartOrEnd == 0 ? 'text-muted-foreground' : ''}
-	<div
-		class="flex items-baseline {isStartOrEnd == 0
-			? 'text-sm'
-			: ''} pb-2 pr-2 justify-between w-full text-wrap"
-	>
+	<div class="flex items-baseline justify-between w-full">
 		<div class="flex justify-between">
 			<Time
 				variant="schedule"
@@ -303,7 +299,12 @@
 								class="text-[length:inherit] text-muted-foreground leading-none justify-normal text-wrap text-left "
 								variant="link"
 								onclick={() =>
-									onClickStop(l.tripTo!.name, l.tripTo!.stopId!, new Date(l.tripTo!.arrival!))}
+									onClickStop(
+										l.tripTo!.name,
+										l.tripTo!.stopId!,
+										new Date(l.tripTo!.arrival!),
+										true
+									)}
 							>
 								{l.headsign}
 								{#if !l.headsign || !l.tripTo.name.startsWith(l.headsign)}
