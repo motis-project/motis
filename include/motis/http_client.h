@@ -71,7 +71,7 @@ struct http_client {
 
   void set_proxy(boost::urls::url const&);
 
-  void shutdown();
+  boost::asio::awaitable<void> shutdown();
 
 private:
   boost::asio::awaitable<http_response> perform_request(

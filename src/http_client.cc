@@ -446,8 +446,9 @@ void http_client::set_proxy(boost::urls::url const& url) {
   proxy_.port_ = url.has_port() ? url.port() : (proxy_.ssl_ ? "443" : "80");
 }
 
-void http_client::shutdown() {
+asio::awaitable<void> http_client::shutdown() {
   for (auto const& [_, con] : connections_) {
+    co_await con->fail_all_requests(make_error_code(error::timeout));
     con->close();
   }
 }

@@ -110,7 +110,7 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
                 co_await timer.async_wait(
                     asio::redirect_error(asio::use_awaitable, timer_ec));
                 std::cout << "-- RT GLOBAL TIMEOUT" << std::endl;
-                client.shutdown();
+                co_await client.shutdown();
               },
               asio::detached);
 
