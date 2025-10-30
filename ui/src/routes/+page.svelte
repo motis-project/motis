@@ -534,7 +534,7 @@
 	<LevelSelect {bounds} {zoom} bind:level />
 
 	<div class="maplibregl-control-container">
-		<div class="maplibregl-ctrl-top-left">
+		<div class="maplibregl-ctrl-top-left flex flex-col gap-2">
 			<Control
 				class={isSmallScreen && (page.state.selectedItinerary || page.state.selectedStop)
 					? 'hide'

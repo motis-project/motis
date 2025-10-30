@@ -66,6 +66,9 @@ importers:
       '@hey-api/openapi-ts':
         specifier: ^0.53.12
         version: 0.53.12(typescript@5.8.3)
+      '@lucide/svelte':
+        specifier: ^0.482.0
+        version: 0.482.0(svelte@5.33.4)
       '@playwright/test':
         specifier: ^1.52.0
         version: 1.52.0
@@ -477,6 +480,11 @@ packages:
     resolution: {integrity: sha512-eg45Ux6xqsAfqPUqJkhmbFZh9qfmYuPfA+34VcLtfeXIwAngeP6o4SrTmm9LWLGUKiSh47anCEV1p7borDgvGQ==}
     peerDependencies:
       '@loaders.gl/core': ^4.3.0
+
+  '@lucide/svelte@0.482.0':
+    resolution: {integrity: sha512-n2ycHU9cNcleRDwwpEHBJ6pYzVhHIaL3a+9dQa8kns9hB2g05bY+v2p2KP8v0pZwtNhYTHk/F2o2uZ1bVtQGhw==}
+    peerDependencies:
+      svelte: ^5
 
   '@luma.gl/constants@9.0.28':
     resolution: {integrity: sha512-mw3YwYfCbpCa8y28nNZGaJemprSkqthsunz0V79qpnMrFD3pOMIh+rw/hjQuqVW9ffmSXx+xY2bI8FT1YC8f7A==}
@@ -2675,6 +2683,10 @@ snapshots:
   '@loaders.gl/worker-utils@4.3.3(@loaders.gl/core@4.3.3)':
     dependencies:
       '@loaders.gl/core': 4.3.3
+
+  '@lucide/svelte@0.482.0(svelte@5.33.4)':
+    dependencies:
+      svelte: 5.33.4
 
   '@luma.gl/constants@9.0.28': {}
 

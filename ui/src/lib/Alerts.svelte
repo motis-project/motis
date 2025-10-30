@@ -1,40 +1,81 @@
 <script lang="ts">
 	import Info from 'lucide-svelte/icons/info';
-	import { Button } from './components/ui/button';
+	import ChevronRight from 'lucide-svelte/icons/chevron-right';
+	import * as Dialog from '$lib/components/ui/dialog';
+	import { Button, buttonVariants } from './components/ui/button';
 	import type { Alert } from '$lib/api/openapi';
+	import { formatDateTime, getTz } from './toDateTime';
+	import { cn } from './utils';
 
 	const {
 		alerts = [],
-		variant = 'icon'
+		variant = 'icon',
+		tz
 	}: {
 		alerts?: Alert[];
 		variant?: 'icon' | 'full';
+		tz: string | undefined;
 	} = $props();
 </script>
 
 {#if alerts.length > 0}
-	{#if variant === 'full'}
-		<div class="w-full pr-2 md:pr-4 mt-2">
-			<Button
-				class="w-full justify-start flex flex-col items-start bg-blue-100 dark:bg-blue-950 shadow-none"
-				variant="outline"
-			>
-				<div class="font-bold flex gap-2 items-center text-blue-700 dark:text-blue-500">
-					<Info /> Informationen
-					{#if alerts.length > 1}
-						<span class="text-muted-foreground font-normal text-sm">
-							+{alerts.length - 1} mehr
+	<Dialog.Root>
+		<Dialog.Trigger class="max-w-full pr-4  {variant == 'full' ? 'pt-2' : 'ml-2'}">
+			{#if variant === 'full'}
+				<div
+					class={cn(
+						buttonVariants({ variant: 'outline' }),
+						'max-w-full flex items-center bg-blue-50 dark:bg-blue-950 shadow-none'
+					)}
+				>
+					<div class="flex flex-col gap-1 overflow-hidden">
+						<div class="font-bold flex gap-2 items-center text-blue-700 dark:text-blue-500">
+							<Info /> Informationen
+							{#if alerts.length > 1}
+								<span class="text-muted-foreground font-normal">
+									+{alerts.length - 1} mehr
+								</span>
+							{/if}
+						</div>
+						<span class="font-normal text-muted-foreground overflow-hidden text-ellipsis w-full">
+							{alerts[0].descriptionText}
 						</span>
-					{/if}
+					</div>
+					<ChevronRight class="size-4" />
 				</div>
-				<span class="font-normal text-muted-foreground overflow-hidden text-ellipsis w-full">
-					{alerts[0].descriptionText}
-				</span>
-			</Button>
-		</div>
-	{:else}
-		<Button class="ml-2 rounded-full" variant="outline" size="sm">
-			<Info />
-		</Button>
-	{/if}
+			{:else}
+				<Info />
+			{/if}
+		</Dialog.Trigger>
+		<Dialog.Content>
+			<Dialog.Header>
+				<Dialog.Description class="space-y-4">
+					{#each alerts as alert}
+						<div class="last:mb-0 text-justify">
+							<h3 class="font-bold text-blue-700 dark:text-blue-500 mb-1 flex items-center gap-2">
+								<Info class="size-5" />{alert.headerText}
+							</h3>
+							{#each alert.impactPeriod as impactPeriod}
+								{@const start = new Date(impactPeriod.start)}
+								{@const end = new Date(impactPeriod.end)}
+								<p>
+									<strong>Gültig von:</strong>
+									{formatDateTime(start, tz)}
+									<strong>bis</strong>
+									{formatDateTime(end, tz)}
+									<span class="text-xs font-normal">{getTz(start, tz)}</span>
+								</p>
+							{/each}
+							{#if alert.causeDetail}
+								<p>{alert.causeDetail}</p>
+							{/if}
+							{#if alert.descriptionText}
+								<p>{alert.descriptionText}</p>
+							{/if}
+						</div>
+					{/each}
+				</Dialog.Description>
+			</Dialog.Header>
+		</Dialog.Content>
+	</Dialog.Root>
 {/if}

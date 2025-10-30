@@ -17,7 +17,7 @@
 
 <button
 	class={cn(
-		'flex items-center text-nowrap rounded-full pl-2 pr-1 h-8 font-bold',
+		'flex items-center text-nowrap rounded-full pl-2 pr-1 h-8 font-bold max-w-48 overflow-x-hidden text-ellipsis',
 		className,
 		l.displayName ? 'pr-3' : undefined
 	)}

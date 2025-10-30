@@ -23,6 +23,7 @@ export const TimeRangeSchema = {
 The interval is considered active at time t if t is greater than or equal to the start time and less than the end time.
 `,
     type: 'object',
+    required: ['start', 'end'],
     properties: {
         start: {
             description: `If missing, the interval starts at minus infinity.

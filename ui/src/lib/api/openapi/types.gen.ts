@@ -26,13 +26,13 @@ export type TimeRange = {
      * If a TimeRange is provided, either start or end must be provided - both fields cannot be empty.
      *
      */
-    start?: string;
+    start: string;
     /**
      * If missing, the interval ends at plus infinity.
      * If a TimeRange is provided, either start or end must be provided - both fields cannot be empty.
      *
      */
-    end?: string;
+    end: string;
 };
 
 /**

@@ -75,9 +75,9 @@
 			{formatTime(t, timeZone)}
 			{weekday(t)}
 		</span>
-		{#if variant === 'realtime-show-always' && !isSameAsBrowserTimezone}
+		{#if variant === 'realtime-show-always' && !isSameAsBrowserTimezone()}
 			<div class="text-xs font-normal">
-				{isSameAsBrowserTimezone ? '' : timeZoneOffset}
+				{isSameAsBrowserTimezone() ? '' : timeZoneOffset}
 			</div>
 		{/if}
 	{/if}
