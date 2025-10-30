@@ -399,7 +399,7 @@
 			</div>
 		{/if}
 	{/each}
-	<div class="relative pl-6 left-5">
+	<div class="relative pl-4 md:pl-5 left-5">
 		<div
 			class="absolute left-[-9px] w-[15px] h-[15px] rounded-full"
 			style={routeColor(lastLeg!)}

@@ -63,7 +63,7 @@
 	}
 </script>
 
-<div class={cn('text-nowrap grid-cols-1 grid-rows-2', className)} title={timeZoneOffset}>
+<div class={cn('text-nowrap flex flex-col', className)} title={timeZoneOffset}>
 	{#if variant == 'schedule'}
 		<div>
 			{formatTime(scheduled, timeZone)}
