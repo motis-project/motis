@@ -8,8 +8,6 @@
 #include <utility>
 #include <vector>
 
-#include "boost/json.hpp"
-
 #include "utl/get_or_create.h"
 #include "utl/parallel_for.h"
 #include "utl/timer.h"
@@ -90,9 +88,6 @@ adr::score_t get_diff(std::string str1,
   normalize(str1);
   normalize(str2);
 
-  // std::cout << "normalized str1: " << str1 << "\n";
-  // std::cout << "normalized str2: " << str2 << "\n";
-
   if (str1.contains("hbf") && str2.contains("hbf")) {
     return 0;
   }
@@ -142,18 +137,12 @@ adr::score_t get_diff(std::string str1,
       }
     }
 
-    // std::cout << "matched " << a[i] << " => " << b[best_j] << ": score=" <<
-    // best
-    //           << "\n";
-
     covered |= (1U << best_j);
     score += best;
   }
 
   for (auto j = 0U; j != b.size(); ++j) {
     if ((covered & (1U << j)) == 0U) {
-      // std::cout << "not covered: " << b[j] << " -> penalty=" << b[j].size()
-      //           << "\n";
       score += b[j].size();
     }
   }
@@ -224,8 +213,6 @@ adr_ext adr_extend_tt(nigiri::timetable const& tt,
     // Map each location + its equivalents with the same name to one
     // place_idx.
     auto sift4_dist = std::vector<adr::sift_offset>{};
-    auto features = json::array{};
-    auto locations = hash_set<n::location_idx_t>{};
     for (auto l = n::location_idx_t{nigiri::kNSpecialStations};
          l != tt.n_locations(); ++l) {
       if (ret.location_place_[l] != adr_extra_place_idx_t::invalid() ||
@@ -247,8 +234,6 @@ adr_ext adr_extend_tt(nigiri::timetable const& tt,
                        n::location{tt, l}, n::location{tt, eq});
           ret.location_place_[eq] = place_idx;
         } else {
-          locations.insert(l);
-          locations.insert(eq);
           auto const dist = geo::distance(tt.locations_.coordinates_[l],
                                           tt.locations_.coordinates_[eq]);
           auto const str_diff = get_diff(
@@ -274,34 +259,9 @@ adr_ext adr_extend_tt(nigiri::timetable const& tt,
             fmt::println(std::clog, "NO MATCH {}: {}", n::location{tt, l},
                          n::location{tt, eq});
           }
-
-          features.emplace_back(json::value{
-              {"type", "Feature"},
-              {"properties",
-               {{"stroke", good ? "#0000FF" : "#FF0000"},
-                {"l", fmt::to_string(n::location{tt, l})},
-                {"eq", fmt::to_string(n::location{tt, eq})},
-                {"cutoff", cutoff},
-                {"str_diff", str_diff},
-                {"distance", dist}}},
-              {"geometry",
-               osr::to_line_string({tt.locations_.coordinates_[l],
-                                    tt.locations_.coordinates_[eq]})}});
         }
       }
     }
-
-    for (auto const l : locations) {
-      features.emplace_back(json::value{
-          {"type", "Feature"},
-          {"properties", {{"name", fmt::to_string(n::location{tt, l})}}},
-          {"geometry", osr::to_point(osr::point::from_latlng(
-                           tt.locations_.coordinates_[l]))}});
-    }
-
-    std::clog << json::serialize(json::value{{"type", "FeatureCollection"},
-                                             {"features", features}})
-              << "\n";
 
     // Map all children to root.
     for (auto l = n::location_idx_t{0U}; l != tt.n_locations(); ++l) {
