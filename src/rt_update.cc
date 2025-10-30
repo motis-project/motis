@@ -152,8 +152,9 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
                                     } catch (std::exception const& e) {
                                       g.metrics_.updates_error_.Increment();
                                       n::log(n::log_lvl::error, "motis.rt",
-                                             "RT FETCH ERROR: tag={}, error={}",
-                                             g.tag_, e.what());
+                                             "RT FETCH ERROR: tag={}, url={}, "
+                                             "error={}",
+                                             g.tag_, g.ep_.url_, e.what());
                                       ret = n::rt::statistics{
                                           .parser_error_ = true,
                                           .no_header_ = true};
