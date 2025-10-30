@@ -163,10 +163,8 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
                                     a.metrics_.updates_requested_.Increment();
                                     auto& auser = d.auser_->at(a.ep_.url_);
                                     try {
-                                      auto const fetch_url_string =
-                                          auser.fetch_url(a.ep_.url_);
-                                      auto const fetch_url =
-                                          boost::urls::url{fetch_url_string};
+                                      auto const fetch_url = boost::urls::url{
+                                          auser.fetch_url(a.ep_.url_)};
                                       fmt::println("[auser] fetch url: {}",
                                                    fetch_url.c_str());
                                       auto const res = co_await client.get(
