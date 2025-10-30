@@ -158,7 +158,6 @@ struct http_client::connection
   }
 
   asio::awaitable<void> connect() {
-    auto const conn = conn_id();
     auto executor = co_await asio::this_coro::executor;
     auto resolver = asio::ip::tcp::resolver{executor};
 
@@ -190,7 +189,6 @@ struct http_client::connection
   }
 
   asio::awaitable<void> send_requests() {
-    auto const conn = conn_id();
     try {
       auto const send_request =
           [&](std::shared_ptr<request> request) -> asio::awaitable<void> {
@@ -240,7 +238,6 @@ struct http_client::connection
   }
 
   asio::awaitable<void> receive_responses() {
-    auto const conn = conn_id();
     try {
       for (;;) {
         auto buffer = beast::flat_buffer{};
@@ -273,7 +270,6 @@ struct http_client::connection
   }
 
   asio::awaitable<void> run() {
-    auto const conn = conn_id();
     using namespace boost::asio::experimental::awaitable_operators;
     auto const self = shared_from_this();
     do {
@@ -342,8 +338,6 @@ struct http_client::connection
   unsigned n_connects_{};
   // number of retries for the current request (reset after successful request)
   unsigned n_current_retries_{};
-
-  std::string conn_id() const { return key_.host_ + ":" + key_.port_; }
 };
 
 http_client::~http_client() {
