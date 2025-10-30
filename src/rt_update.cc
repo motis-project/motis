@@ -108,21 +108,6 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
           }
         };
 
-        auto const whitelist = hash_set<std::string_view>{
-            R"(https://gtfs.bus-tracker.fr/gtfs-rt/yelo)",
-            R"(https://gtfs.bus-tracker.fr/gtfs-rt/tcar/trip-updates)",
-            R"(https://gtfs.bus-tracker.fr/gtfs-rt/tcl)",
-            R"(https://gtfs.bus-tracker.fr/gtfs-rt/tango/trip-updates)",
-            R"(https://gtfs.bus-tracker.fr/gtfs-rt/lia/trip-updates)",
-            R"(http://rt.gtfs.baguette.pirnet.si/gtfs-rt/HZPP/trip_updates.pb)",
-            R"(http://rt.gtfs.baguette.pirnet.si/gtfs-rt/apSisak/trip_updates.pb)",
-            R"(http://rt.gtfs.baguette.pirnet.si/gtfs-rt/prometSplit/trip_updates.pb)",
-            R"(http://rt.gtfs.baguette.pirnet.si/gtfs-rt/Srbijavoz_ghl/trip_updates.pb)",
-            R"(https://rt.gtfs.derp.si/sources/celje/trip_updates)",
-            R"(https://rt.gtfs.derp.si/sources/lpp/all)",
-            R"(https://rt.gtfs.derp.si/sources/marprom/trip_updates)",
-            R"(https://rt.gtfs.derp.si/sources/ijpp/trip_updates)",
-        };
         auto const endpoints = [&]() {
           auto endpoints =
               std::vector<std::variant<gtfs_rt_endpoint, auser_endpoint>>{};
@@ -132,9 +117,6 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
             if (dataset.rt_.has_value()) {
               auto const src = d.tags_->get_src(tag);
               for (auto const& ep : *dataset.rt_) {
-                if (!whitelist.contains(ep.url_)) {
-                  continue;
-                }
                 switch (ep.protocol_) {
                   case config::timetable::dataset::rt::protocol::gtfsrt:
                     endpoints.push_back(gtfs_rt_endpoint{
