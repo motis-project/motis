@@ -281,7 +281,6 @@ void mixer::mix(n::pareto_set<nr::journey> const& pt_journeys,
   auto const pt_threshold = get_threshold(pt_journeys.els_, intvl, pt_slope_);
   threshold_filter(pt_threshold);
   auto const pt_filtered_n = taxi_journeys.size();
-
   auto const odm_threshold = get_threshold(taxi_journeys, intvl, odm_slope_);
   threshold_filter(odm_threshold);
 

@@ -152,26 +152,6 @@ meta_router::meta_router(ep::routing const& r,
 
 meta_router::~meta_router() = default;
 
-auto ride_time_halves(std::vector<n::routing::start>& rides) {
-  auto const by_duration = [&](auto const& a, auto const& b) {
-    return duration(a) < duration(b);
-  };
-
-  utl::sort(rides, by_duration);
-  auto const split =
-      rides.empty() ? 0
-                    : std::distance(begin(rides),
-                                    std::upper_bound(begin(rides), end(rides),
-                                                     rides[rides.size() / 2],
-                                                     by_duration));
-
-  auto lo = rides | std::views::take(split);
-  auto hi = rides | std::views::drop(split);
-  std::ranges::sort(lo, by_stop);
-  std::ranges::sort(hi, by_stop);
-  return std::pair{lo, hi};
-}
-
 n::routing::query meta_router::get_base_query(
     n::interval<n::unixtime_t> const& intvl) const {
   return {
@@ -311,26 +291,22 @@ api::plan_response meta_router::run() {
   std::erase(dest_modes_, api::ModeEnum::ODM);
   std::erase(dest_modes_, api::ModeEnum::RIDE_SHARING);
 
-  print_time(init_start,
-             fmt::format("[init] (#first_mile_taxi: {}, #last_mile_taxi: {}, "
-                         "#direct_taxi: {})",
-                         p.first_mile_taxi_.size(), p.last_mile_taxi_.size(),
-                         p.direct_taxi_.size()),
-             r_.metrics_->routing_execution_duration_seconds_init_);
+  print_time(
+      init_start,
+      fmt::format("[init] (#first_mile_offsets: {}, #last_mile_offsets: {}, "
+                  "#direct_rides: {})",
+                  p.first_mile_taxi_.size(), p.last_mile_taxi_.size(),
+                  p.direct_taxi_.size()),
+      r_.metrics_->routing_execution_duration_seconds_init_);
 
   auto const blacklist_start = std::chrono::steady_clock::now();
-  auto const blacklisted_taxis = p.blacklist_taxis(*tt_);
-  n::log(n::log_lvl::debug, "motis.prima",
-         "[blacklist taxi] taxi events after blacklisting: {}",
-         p.n_taxi_events());
+  auto const blacklisted_taxis = p.blacklist_taxi(*tt_, taxi_intvl);
   print_time(blacklist_start,
-             fmt::format("[blacklist taxi] (#first_mile_taxi: {}, "
-                         "#last_mile_taxi: {}, #direct_taxi: {})",
+             fmt::format("[blacklist taxi] (#first_mile_offsets: {}, "
+                         "#last_mile_offsets: {}, #direct_rides: {})",
                          p.first_mile_taxi_.size(), p.last_mile_taxi_.size(),
                          p.direct_taxi_.size()),
              r_.metrics_->routing_execution_duration_seconds_blacklisting_);
-  r_.metrics_->routing_odm_journeys_found_blacklist_.Observe(
-      static_cast<double>(p.n_taxi_events()));
 
   auto const whitelist_ride_sharing_start = std::chrono::steady_clock::now();
   auto const whitelisted_ride_sharing = p.whitelist_ride_sharing(*tt_);
@@ -348,9 +324,10 @@ api::plan_response meta_router::run() {
 
   auto const prep_queries_start = std::chrono::steady_clock::now();
   auto const [first_mile_taxi_short, first_mile_taxi_long] =
-      ride_time_halves(p.first_mile_taxi_);
-  auto const [last_mile_taxi_short, last_mile_taxi_long] =
-      ride_time_halves(p.last_mile_taxi_);
+      get_td_offsets_split(p.first_mile_taxi_, p.first_mile_taxi_times_,
+                           kOdmTransportModeId);
+  auto const [last_mile_taxi_short, last_mile_taxi_long] = get_td_offsets_split(
+      p.last_mile_taxi_, p.last_mile_taxi_times_, kOdmTransportModeId);
   auto const params = get_osr_parameters(query_);
   auto const pre_transit_time = std::min(
       std::chrono::seconds{query_.maxPreTransitTime_},
@@ -393,21 +370,13 @@ api::plan_response meta_router::run() {
                             query_.elevationCosts_, query_.maxMatchingDistance_,
                             post_transit_time, context_intvl),
       .start_taxi_short_ =
-          query_.arriveBy_
-              ? get_td_offsets(last_mile_taxi_short, kOdmTransportModeId)
-              : get_td_offsets(first_mile_taxi_short, kOdmTransportModeId),
+          query_.arriveBy_ ? last_mile_taxi_short : first_mile_taxi_short,
       .start_taxi_long_ =
-          query_.arriveBy_
-              ? get_td_offsets(last_mile_taxi_long, kOdmTransportModeId)
-              : get_td_offsets(first_mile_taxi_long, kOdmTransportModeId),
+          query_.arriveBy_ ? last_mile_taxi_long : first_mile_taxi_long,
       .dest_taxi_short_ =
-          query_.arriveBy_
-              ? get_td_offsets(first_mile_taxi_short, kOdmTransportModeId)
-              : get_td_offsets(last_mile_taxi_short, kOdmTransportModeId),
+          query_.arriveBy_ ? first_mile_taxi_short : last_mile_taxi_short,
       .dest_taxi_long_ =
-          query_.arriveBy_
-              ? get_td_offsets(first_mile_taxi_long, kOdmTransportModeId)
-              : get_td_offsets(last_mile_taxi_long, kOdmTransportModeId),
+          query_.arriveBy_ ? first_mile_taxi_long : last_mile_taxi_long,
       .start_ride_sharing_ = query_.arriveBy_
                                  ? get_td_offsets(p.last_mile_ride_sharing_,
                                                   kRideSharingTransportModeId)
@@ -430,16 +399,16 @@ api::plan_response meta_router::run() {
   utl::verify(!results.empty(), "prima: public transport result expected");
   auto const& pt_result = results.front();
   auto taxi_journeys = collect_odm_journeys(results, kOdmTransportModeId);
-  shorten(taxi_journeys, p.first_mile_taxi_, p.last_mile_taxi_, *tt_, rtt_,
-          query_);
+  shorten(taxi_journeys, p.first_mile_taxi_, p.first_mile_taxi_times_,
+          p.last_mile_taxi_, p.last_mile_taxi_times_, *tt_, rtt_, query_);
   auto ride_share_journeys =
       collect_odm_journeys(results, kRideSharingTransportModeId);
-  p.fix_first_mile_duration(ride_share_journeys, p.first_mile_ride_sharing_,
-                            p.first_mile_ride_sharing_,
-                            kRideSharingTransportModeId);
-  p.fix_last_mile_duration(ride_share_journeys, p.last_mile_ride_sharing_,
-                           p.last_mile_ride_sharing_,
-                           kRideSharingTransportModeId);
+  fix_first_mile_duration(ride_share_journeys, p.first_mile_ride_sharing_,
+                          p.first_mile_ride_sharing_,
+                          kRideSharingTransportModeId);
+  fix_last_mile_duration(ride_share_journeys, p.last_mile_ride_sharing_,
+                         p.last_mile_ride_sharing_,
+                         kRideSharingTransportModeId);
   utl::erase_duplicates(
       taxi_journeys, std::less<n::routing::journey>{},
       [](auto const& a, auto const& b) {
@@ -453,13 +422,13 @@ api::plan_response meta_router::run() {
              r_.metrics_->routing_execution_duration_seconds_routing_);
 
   auto const whitelist_start = std::chrono::steady_clock::now();
-  if (p.whitelist_taxis(taxi_journeys, *tt_)) {
-    p.add_direct_odm(p.direct_taxi_, taxi_journeys, from_, to_,
-                     query_.arriveBy_, kOdmTransportModeId);
+  if (p.whitelist_taxi(taxi_journeys, *tt_)) {
+    add_direct_odm(p.direct_taxi_, taxi_journeys, from_, to_, query_.arriveBy_,
+                   kOdmTransportModeId);
   }
   if (whitelisted_ride_sharing) {
-    p.add_direct_odm(p.direct_ride_sharing_, ride_share_journeys, from_, to_,
-                     query_.arriveBy_, kRideSharingTransportModeId);
+    add_direct_odm(p.direct_ride_sharing_, ride_share_journeys, from_, to_,
+                   query_.arriveBy_, kRideSharingTransportModeId);
   }
   print_time(whitelist_start,
              fmt::format("[whitelisting] (#first_mile_taxi: {}, "

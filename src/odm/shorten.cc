@@ -1,5 +1,7 @@
 #include "motis/odm/odm.h"
 
+#include <filesystem>
+
 #include "nigiri/for_each_meta.h"
 #include "nigiri/logging.h"
 #include "nigiri/rt/frun.h"
@@ -7,6 +9,7 @@
 #include "nigiri/timetable.h"
 
 #include "motis-api/motis-api.h"
+#include "motis/odm/prima.h"
 #include "motis/transport_mode_ids.h"
 
 namespace motis::odm {
@@ -15,8 +18,10 @@ namespace n = nigiri;
 namespace nr = nigiri::routing;
 
 void shorten(std::vector<nr::journey>& odm_journeys,
-             std::vector<nr::start> const& from_rides,
-             std::vector<nr::start> const& to_rides,
+             std::vector<nigiri::routing::offset> const& first_mile_taxi,
+             std::vector<service_times_t> const& first_mile_taxi_times,
+             std::vector<nigiri::routing::offset> const& last_mile_taxi,
+             std::vector<service_times_t> const& last_mile_taxi_times,
              n::timetable const& tt,
              n::rt_timetable const* rtt,
              api::plan_params const& query) {
@@ -46,15 +51,22 @@ void shorten(std::vector<nr::journey>& odm_journeys,
            !stop.cars_allowed(n::event_type::kDep))) {
         continue;
       }
-      for (auto& ride : from_rides) {
+      for (auto const [offset, times] :
+           utl::zip(first_mile_taxi, first_mile_taxi_times)) {
         if (n::routing::matches(tt, n::routing::location_match_mode::kExact,
-                                ride.stop_, stop.get_location_idx()) &&
-            ride.time_at_stop_ == stop.time(n::event_type::kDep)) {
-          auto const cur_odm_duration = duration(ride);
-          if (cur_odm_duration < min_odm_duration) {
+                                offset.target_, stop.get_location_idx()) &&
+            utl::any_of(times, [&](auto const& t) {
+              return t.contains(stop.time(n::event_type::kDep) -
+                                offset.duration_) &&
+                     t.contains(stop.time(n::event_type::kDep) - 1min);
+            })) {
+          if (offset.duration_ < min_odm_duration) {
             min_stop_idx = stop.stop_idx_;
-            min_odm_duration = cur_odm_duration;
-            shorter_ride = ride;
+            min_odm_duration = offset.duration_;
+            shorter_ride = {.time_at_start_ = stop.time(n::event_type::kDep) -
+                                              offset.duration_,
+                            .time_at_stop_ = stop.time(n::event_type::kDep),
+                            .stop_ = offset.target_};
           }
           break;
         }
@@ -77,13 +89,12 @@ void shorten(std::vector<nr::journey>& odm_journeys,
       auto const new_stop = tt.locations_.get(odm_leg.to_).name_;
       auto const new_pt_time = pt_leg.arr_time_ - pt_leg.dep_time_;
 
-      n::log(
-          n::log_lvl::debug, "motis.prima",
-          "Shortened ODM first leg: [ODM: {}, stop: {}, PT: {}] --> [ODM: {}, "
-          "stop: {}, PT: {}] (ODM: -{}, PT: +{})",
-          old_odm_time, old_stop, old_pt_time, new_odm_time, new_stop,
-          new_pt_time, std::chrono::minutes{old_odm_time - new_odm_time},
-          new_pt_time - old_pt_time);
+      n::log(n::log_lvl::debug, "motis.prima",
+             "shorten first leg: [stop: {}, ODM: {}, PT: {}] -> [stop: {}, "
+             "ODM: {}, PT: {}] (ODM: -{}, PT: +{})",
+             old_stop, old_odm_time, old_pt_time, new_stop, new_odm_time,
+             new_pt_time, std::chrono::minutes{old_odm_time - new_odm_time},
+             new_pt_time - old_pt_time);
     }
   };
 
@@ -113,15 +124,22 @@ void shorten(std::vector<nr::journey>& odm_journeys,
            !stop.cars_allowed(n::event_type::kArr))) {
         continue;
       }
-      for (auto& ride : to_rides) {
+      for (auto const [offset, times] :
+           utl::zip(last_mile_taxi, last_mile_taxi_times)) {
         if (n::routing::matches(tt, n::routing::location_match_mode::kExact,
-                                ride.stop_, stop.get_location_idx()) &&
-            ride.time_at_stop_ == stop.time(n::event_type::kArr)) {
-          auto const cur_odm_duration = duration(ride);
-          if (cur_odm_duration < min_odm_duration) {
+                                offset.target_, stop.get_location_idx()) &&
+            utl::any_of(times, [&](auto const& t) {
+              return t.contains(stop.time(n::event_type::kArr)) &&
+                     t.contains(stop.time(n::event_type::kArr) +
+                                offset.duration_ - 1min);
+            })) {
+          if (offset.duration_ < min_odm_duration) {
             min_stop_idx = stop.stop_idx_;
-            min_odm_duration = cur_odm_duration;
-            shorter_ride = ride;
+            min_odm_duration = offset.duration_;
+            shorter_ride = {.time_at_start_ = stop.time(n::event_type::kArr) +
+                                              offset.duration_,
+                            .time_at_stop_ = stop.time(n::event_type::kArr),
+                            .stop_ = offset.target_};
           }
           break;
         }
@@ -144,13 +162,12 @@ void shorten(std::vector<nr::journey>& odm_journeys,
       auto const new_stop = tt.locations_.get(odm_leg.from_).name_;
       auto const new_pt_time = pt_leg.arr_time_ - pt_leg.dep_time_;
 
-      n::log(
-          n::log_lvl::debug, "motis.prima",
-          "Shortened ODM last leg: [ODM: {}, stop: {}, PT: {}] --> [ODM: {}, "
-          "stop: {}, PT: {}] (ODM: -{}, PT: +{})",
-          old_odm_time, old_stop, old_pt_time, new_odm_time, new_stop,
-          new_pt_time, std::chrono::minutes{old_odm_time - new_odm_time},
-          new_pt_time - old_pt_time);
+      n::log(n::log_lvl::debug, "motis.prima",
+             "shorten last leg: [stop: {}, ODM: {}, PT: {}] -> [stop: {}, "
+             "ODM: {}, PT: {}] (ODM: -{}, PT: +{})",
+             old_stop, old_odm_time, old_pt_time, new_stop, new_odm_time,
+             new_pt_time, std::chrono::minutes{old_odm_time - new_odm_time},
+             new_pt_time - old_pt_time);
     }
   };
 

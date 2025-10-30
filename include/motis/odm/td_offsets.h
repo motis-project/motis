@@ -1,6 +1,10 @@
+#pragma once
+
 #include "nigiri/routing/query.h"
 #include "nigiri/routing/start_times.h"
 #include "nigiri/types.h"
+
+#include "motis/odm/prima.h"
 
 namespace motis::odm {
 
@@ -56,4 +60,10 @@ nigiri::routing::td_offsets_t get_td_offsets(
 
   return td_offsets;
 }
+
+std::pair<nigiri::routing::td_offsets_t, nigiri::routing::td_offsets_t>
+get_td_offsets_split(std::vector<nigiri::routing::offset> const&,
+                     std::vector<service_times_t> const&,
+                     nigiri::transport_mode_id_t);
+
 }  // namespace motis::odm
