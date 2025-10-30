@@ -243,13 +243,18 @@ struct http_client::connection
         auto buffer = beast::flat_buffer{};
         auto res = http::response<http::dynamic_body>{};
 
+        auto p = http::response_parser<http::dynamic_body>{};
+        p.eager(true);
+        p.body_limit(kBodySizeLimit);
+
         if (ssl()) {
           beast::get_lowest_layer(*ssl_stream_).expires_after(timeout_);
-          co_await http::async_read(*ssl_stream_, buffer, res);
+          co_await http::async_read(*ssl_stream_, buffer, p);
         } else {
           stream_->expires_after(timeout_);
-          co_await http::async_read(*stream_, buffer, res);
+          co_await http::async_read(*stream_, buffer, p);
         }
+
         ++n_received_;
 
         if (!unlimited_pipelining_) {
@@ -263,7 +268,7 @@ struct http_client::connection
         n_current_retries_ = 0;
 
         co_await req->response_channel_.async_send(boost::system::error_code{},
-                                                   std::move(res));
+                                                   p.release());
       }
     } catch (std::exception const&) {
     }
