@@ -71,6 +71,7 @@ std::string http_client::error_category_impl::message(int const ev) const {
     case error::success: return "success";
     case error::too_many_redirects: return "too many redirects";
     case error::request_failed: return "request failed (max retries reached)";
+    case error::timeout: return "request timeout reached";
   }
   std::unreachable();
 }
@@ -161,8 +162,8 @@ struct http_client::connection
     auto executor = co_await asio::this_coro::executor;
     auto resolver = asio::ip::tcp::resolver{executor};
 
-    auto const host = proxy_ ? proxy_.host_ : key_.host_;
-    auto const port = proxy_ ? proxy_.port_ : key_.port_;
+    auto const& host = proxy_ ? proxy_.host_ : key_.host_;
+    auto const& port = proxy_ ? proxy_.port_ : key_.port_;
 
     auto const results = co_await resolver.async_resolve(host, port);
     ++n_connects_;
@@ -237,6 +238,7 @@ struct http_client::connection
     } catch (std::exception const&) {
     }
   }
+
   asio::awaitable<void> receive_responses() {
     auto const conn = conn_id();
     try {
@@ -442,6 +444,12 @@ void http_client::set_proxy(boost::urls::url const& url) {
   proxy_.ssl_ = url.scheme_id() == boost::urls::scheme::https;
   proxy_.host_ = url.host();
   proxy_.port_ = url.has_port() ? url.port() : (proxy_.ssl_ ? "443" : "80");
+}
+
+void http_client::shutdown() {
+  for (auto const& [_, con] : connections_) {
+    con->close();
+  }
 }
 
 }  // namespace motis

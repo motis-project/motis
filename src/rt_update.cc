@@ -57,56 +57,13 @@ struct auser_endpoint {
   vdvaus_metrics metrics_;
 };
 
-struct request_wait_logger {
-  template <typename Executor>
-  request_wait_logger(Executor const& executor, std::string url)
-      : timer_{executor}, url_{std::move(url)} {}
-
-  void cancel() { timer_.cancel(); }
-
-  asio::steady_timer timer_;
-  std::string url_;
-};
-
 void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
   boost::asio::co_spawn(
       ioc,
       [&c, &d]() -> awaitable<void> {
-        auto client = http_client{};
-        client.timeout_ = std::chrono::seconds{c.timetable_->http_timeout_};
-
         auto executor = co_await asio::this_coro::executor;
         auto timer = asio::steady_timer{executor};
         auto ec = boost::system::error_code{};
-
-        auto start_wait_logger = [&](std::string url) {
-          auto ctx =
-              std::make_shared<request_wait_logger>(executor, std::move(url));
-          asio::co_spawn(
-              executor,
-              [ctx]() -> awaitable<void> {
-                while (true) {
-                  ctx->timer_.expires_after(std::chrono::seconds{5});
-                  auto timer_ec = boost::system::error_code{};
-                  co_await ctx->timer_.async_wait(
-                      asio::redirect_error(asio::use_awaitable, timer_ec));
-                  if (timer_ec == asio::error::operation_aborted) {
-                    co_return;
-                  }
-
-                  fmt::println("{} waiting for ...", ctx->url_);
-                }
-              },
-              asio::detached);
-          return ctx;
-        };
-
-        auto stop_wait_logger = [&](std::shared_ptr<request_wait_logger>& ctx) {
-          if (ctx) {
-            ctx->cancel();
-            ctx.reset();
-          }
-        };
 
         auto const endpoints = [&]() {
           auto endpoints =
@@ -140,6 +97,23 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
           // Remember when we started, so we can schedule the next update.
           auto const start = std::chrono::steady_clock::now();
 
+          auto client = http_client{};
+          client.timeout_ = std::chrono::seconds{c.timetable_->http_timeout_};
+
+          asio::co_spawn(
+              executor,
+              [&]() -> awaitable<void> {
+                auto executor = co_await asio::this_coro::executor;
+                auto timer = asio::steady_timer{executor};
+                timer.expires_after(client.timeout_);
+                auto timer_ec = boost::system::error_code{};
+                co_await timer.async_wait(
+                    asio::redirect_error(asio::use_awaitable, timer_ec));
+                std::cout << "-- RT GLOBAL TIMEOUT" << std::endl;
+                client.shutdown();
+              },
+              asio::detached);
+
           {
             auto t = utl::scoped_timer{"rt update"};
 
@@ -168,18 +142,14 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
                                   [&](gtfs_rt_endpoint const& g)
                                       -> awaitable<void> {
                                     g.metrics_.updates_requested_.Increment();
-                                    auto wait_logger =
-                                        start_wait_logger(g.ep_.url_);
                                     try {
                                       auto const res = co_await client.get(
                                           boost::urls::url{g.ep_.url_},
                                           g.ep_.headers_.value_or(headers_t{}));
-                                      stop_wait_logger(wait_logger);
                                       ret = n::rt::gtfsrt_update_buf(
                                           *d.tt_, *rtt, g.src_, g.tag_,
                                           get_http_body(res));
                                     } catch (std::exception const& e) {
-                                      stop_wait_logger(wait_logger);
                                       g.metrics_.updates_error_.Increment();
                                       n::log(n::log_lvl::error, "motis.rt",
                                              "RT FETCH ERROR: tag={}, error={}",
@@ -193,13 +163,9 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
                                       -> awaitable<void> {
                                     a.metrics_.updates_requested_.Increment();
                                     auto& auser = d.auser_->at(a.ep_.url_);
-                                    std::shared_ptr<request_wait_logger>
-                                        wait_logger;
                                     try {
                                       auto const fetch_url_string =
                                           auser.fetch_url(a.ep_.url_);
-                                      wait_logger =
-                                          start_wait_logger(fetch_url_string);
                                       auto const fetch_url =
                                           boost::urls::url{fetch_url_string};
                                       fmt::println("[auser] fetch url: {}",
@@ -207,11 +173,9 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
                                       auto const res = co_await client.get(
                                           fetch_url,
                                           a.ep_.headers_.value_or(headers_t{}));
-                                      stop_wait_logger(wait_logger);
                                       ret = auser.consume_update(
                                           get_http_body(res), *rtt);
                                     } catch (std::exception const& e) {
-                                      stop_wait_logger(wait_logger);
                                       a.metrics_.updates_error_.Increment();
                                       n::log(n::log_lvl::error, "motis.rt",
                                              "VDV AUS FETCH ERROR: tag={}, "

@@ -29,7 +29,7 @@ constexpr auto const kUnlimitedHttpPipelining =
 std::string get_http_body(http_response const&);
 
 struct http_client {
-  enum class error { success = 0, too_many_redirects, request_failed };
+  enum class error { success, too_many_redirects, request_failed, timeout };
 
   struct error_category_impl : public boost::system::error_category {
     virtual ~error_category_impl() = default;
@@ -70,6 +70,8 @@ struct http_client {
   boost::asio::awaitable<http_response> req(std::shared_ptr<request>);
 
   void set_proxy(boost::urls::url const&);
+
+  void shutdown();
 
 private:
   boost::asio::awaitable<http_response> perform_request(
