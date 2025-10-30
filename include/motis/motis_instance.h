@@ -147,9 +147,8 @@ struct motis_instance {
 
   void run(data& d, config const& c) {
     if (d.w_ && d.l_ && c.has_gbfs_feeds()) {
-      gbfs_ = io_thread{"motis gbfs update", [&](boost::asio::io_context&) {
-                          // gbfs::run_gbfs_update(ioc, c, *d.w_, *d.l_,
-                          // d.gbfs_);
+      gbfs_ = io_thread{"motis gbfs update", [&](boost::asio::io_context& ioc) {
+                          gbfs::run_gbfs_update(ioc, c, *d.w_, *d.l_, d.gbfs_);
                         }};
     }
 
