@@ -27,6 +27,10 @@ export type Translations = {
 	duration: string;
 	later: string;
 	earlier: string;
+	validFrom: string;
+	until: string;
+	information: string;
+	more: string;
 	arrivals: string;
 	departures: string;
 	connections: string;
@@ -140,8 +144,9 @@ const translations: Map<string, Translations> = new Map(
 	})
 );
 
+const urlParams = browser ? new URLSearchParams(window.location.search) : undefined;
 const translationsKey = (
-	browser ? (navigator.languages.find((l) => translations.has(l.slice(0, 2))) ?? 'en') : 'en'
+	browser ? (urlParams?.get('language') ?? navigator.languages.find((l) => translations.has(l.slice(0, 2))) ?? 'en') : 'en'
 )?.slice(0, 2);
 
 export const language = translationsKey ?? (browser ? navigator.language : 'en');

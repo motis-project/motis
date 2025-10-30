@@ -2,10 +2,11 @@
 	import Info from 'lucide-svelte/icons/info';
 	import ChevronRight from 'lucide-svelte/icons/chevron-right';
 	import * as Dialog from '$lib/components/ui/dialog';
-	import { Button, buttonVariants } from './components/ui/button';
+	import { buttonVariants } from './components/ui/button';
 	import type { Alert } from '$lib/api/openapi';
 	import { formatDateTime, getTz } from './toDateTime';
 	import { cn } from './utils';
+	import { t } from './i18n/translation';
 
 	const {
 		alerts = [],
@@ -30,10 +31,12 @@
 				>
 					<div class="flex flex-col gap-1 overflow-hidden">
 						<div class="font-bold flex gap-2 items-center text-blue-700 dark:text-blue-500">
-							<Info /> Informationen
+							<Info />
+							{t.information}
 							{#if alerts.length > 1}
 								<span class="text-muted-foreground font-normal">
-									+{alerts.length - 1} mehr
+									+{alerts.length - 1}
+									{t.more}
 								</span>
 							{/if}
 						</div>
@@ -59,9 +62,9 @@
 								{@const start = new Date(impactPeriod.start)}
 								{@const end = new Date(impactPeriod.end)}
 								<p>
-									<strong>Gültig von:</strong>
+									<strong>{t.validFrom}:</strong>
 									{formatDateTime(start, tz)}
-									<strong>bis</strong>
+									<strong>{t.until}</strong>
 									{formatDateTime(end, tz)}
 									<span class="text-xs font-normal">{getTz(start, tz)}</span>
 								</p>
