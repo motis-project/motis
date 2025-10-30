@@ -146,7 +146,11 @@ const translations: Map<string, Translations> = new Map(
 
 const urlParams = browser ? new URLSearchParams(window.location.search) : undefined;
 const translationsKey = (
-	browser ? (urlParams?.get('language') ?? navigator.languages.find((l) => translations.has(l.slice(0, 2))) ?? 'en') : 'en'
+	browser
+		? (urlParams?.get('language') ??
+			navigator.languages.find((l) => translations.has(l.slice(0, 2))) ??
+			'en')
+		: 'en'
 )?.slice(0, 2);
 
 export const language = translationsKey ?? (browser ? navigator.language : 'en');

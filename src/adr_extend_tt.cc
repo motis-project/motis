@@ -76,7 +76,7 @@ void normalize(std::string& x) {
           {"flixtrain", "hbf"}, {"hauptbf", "hbf"},       {"haupt", "hbf"},
           {"centrale", "hbf"},  {"station", "hbf"},       {"zob", "hbf"},
           {"int", "hbf"},       {"international", "hbf"}, {"anleger", "fähre"}};
-  for (auto const [search, replace] : replacements) {
+  for (auto const& [search, replace] : replacements) {
     replace_str(search, replace);
   }
 }

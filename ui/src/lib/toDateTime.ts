@@ -30,14 +30,15 @@ export const formatDateTime = (d: Date, timeZone: string | undefined): string =>
 };
 
 export const getTz = (d: Date, timeZone: string | undefined): string | undefined => {
-	const timeZoneOffset =
-		new Intl.DateTimeFormat(language, { timeZone, timeZoneName: 'shortOffset' })
-			.formatToParts(d)
-			.find((part) => part.type === 'timeZoneName')!.value
-	const isSameAsBrowserTimezone = (
+	const timeZoneOffset = new Intl.DateTimeFormat(language, {
+		timeZone,
+		timeZoneName: 'shortOffset'
+	})
+		.formatToParts(d)
+		.find((part) => part.type === 'timeZoneName')!.value;
+	const isSameAsBrowserTimezone =
 		new Intl.DateTimeFormat(language, { timeZoneName: 'shortOffset' })
 			.formatToParts(d)
-			.find((part) => part.type === 'timeZoneName')!.value == timeZoneOffset
-	);
+			.find((part) => part.type === 'timeZoneName')!.value == timeZoneOffset;
 	return isSameAsBrowserTimezone ? undefined : timeZoneOffset;
-}
+};

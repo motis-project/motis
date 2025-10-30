@@ -53,22 +53,24 @@
 		<Dialog.Content>
 			<Dialog.Header>
 				<Dialog.Description class="space-y-4">
-					{#each alerts as alert}
+					{#each alerts as alert, i (i)}
 						<div class="last:mb-0 text-justify">
 							<h3 class="font-bold text-blue-700 dark:text-blue-500 mb-1 flex items-center gap-2">
 								<Info class="size-5" />{alert.headerText}
 							</h3>
-							{#each alert.impactPeriod as impactPeriod}
-								{@const start = new Date(impactPeriod.start)}
-								{@const end = new Date(impactPeriod.end)}
-								<p>
-									<strong>{t.validFrom}:</strong>
-									{formatDateTime(start, tz)}
-									<strong>{t.until}</strong>
-									{formatDateTime(end, tz)}
-									<span class="text-xs font-normal">{getTz(start, tz)}</span>
-								</p>
-							{/each}
+							{#if alert.impactPeriod}
+								{#each alert.impactPeriod as impactPeriod, j (j)}
+									{@const start = new Date(impactPeriod.start)}
+									{@const end = new Date(impactPeriod.end)}
+									<p>
+										<strong>{t.validFrom}:</strong>
+										{formatDateTime(start, tz)}
+										<strong>{t.until}</strong>
+										{formatDateTime(end, tz)}
+										<span class="text-xs font-normal">{getTz(start, tz)}</span>
+									</p>
+								{/each}
+							{/if}
 							{#if alert.causeDetail}
 								<p>{alert.causeDetail}</p>
 							{/if}
