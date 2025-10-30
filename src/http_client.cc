@@ -16,10 +16,12 @@
 #include "boost/beast/http/message.hpp"
 #include "boost/url/url.hpp"
 
+#include "boost/asio/awaitable.hpp"
 #include "boost/asio/co_spawn.hpp"
 #include "boost/asio/detached.hpp"
 #include "boost/asio/experimental/awaitable_operators.hpp"
 #include "boost/asio/experimental/channel.hpp"
+#include "boost/asio/redirect_error.hpp"
 #include "boost/asio/ssl.hpp"
 
 #include "boost/beast/core.hpp"
@@ -27,9 +29,13 @@
 #include "boost/beast/ssl/ssl_stream.hpp"
 #include "boost/beast/version.hpp"
 
+#include "boost/iostreams/copy.hpp"
+#include "boost/iostreams/filter/gzip.hpp"
+#include "boost/iostreams/filtering_stream.hpp"
+#include "boost/iostreams/filtering_streambuf.hpp"
+
 #include "utl/verify.h"
 
-#include "motis/http_req.h"
 #include "motis/types.h"
 
 namespace beast = boost::beast;
@@ -46,11 +52,26 @@ namespace motis {
 constexpr auto const kMotisUserAgent =
     "MOTIS/" MOTIS_VERSION " " BOOST_BEAST_VERSION_STRING;
 
-std::string http_client::error_category_impl::message(int ev) const {
+std::string get_http_body(http_response const& res) {
+  auto body = beast::buffers_to_string(res.body().data());
+  if (res[http::field::content_encoding] == "gzip") {
+    auto const src = boost::iostreams::array_source{body.data(), body.size()};
+    auto is = boost::iostreams::filtering_istream{};
+    auto os = std::stringstream{};
+    is.push(boost::iostreams::gzip_decompressor{});
+    is.push(src);
+    boost::iostreams::copy(is, os);
+    body = os.str();
+  }
+  return body;
+}
+
+std::string http_client::error_category_impl::message(int const ev) const {
   switch (static_cast<error>(ev)) {
     case error::success: return "success";
     case error::too_many_redirects: return "too many redirects";
     case error::request_failed: return "request failed (max retries reached)";
+    case error::timeout: return "request timeout reached";
   }
   std::unreachable();
 }
@@ -60,9 +81,9 @@ boost::system::error_category const& http_client_error_category() {
   return instance;
 }
 
-boost::system::error_code make_error_code(http_client::error e) {
-  return boost::system::error_code(static_cast<int>(e),
-                                   http_client_error_category());
+boost::system::error_code make_error_code(http_client::error const e) {
+  return boost::system::error_code{static_cast<int>(e),
+                                   http_client_error_category()};
 }
 
 struct http_client::request {
@@ -140,8 +161,8 @@ struct http_client::connection
     auto executor = co_await asio::this_coro::executor;
     auto resolver = asio::ip::tcp::resolver{executor};
 
-    auto const host = proxy_ ? proxy_.host_ : key_.host_;
-    auto const port = proxy_ ? proxy_.port_ : key_.port_;
+    auto const& host = proxy_ ? proxy_.host_ : key_.host_;
+    auto const& port = proxy_ ? proxy_.port_ : key_.port_;
 
     auto const results = co_await resolver.async_resolve(host, port);
     ++n_connects_;
@@ -155,15 +176,15 @@ struct http_client::connection
                                            asio::error::get_ssl_category()}};
       }
 
-      beast::get_lowest_layer(*ssl_stream_).expires_after(timeout_);
+      beast::get_lowest_layer(*ssl_stream_)
+          .expires_after(std::chrono::seconds{5});
       co_await beast::get_lowest_layer(*ssl_stream_).async_connect(results);
       co_await ssl_stream_->async_handshake(ssl::stream_base::client);
     } else {
       stream_ = std::make_unique<beast::tcp_stream>(executor);
-      stream_->expires_after(timeout_);
+      stream_->expires_after(std::chrono::seconds{5});
       co_await stream_->async_connect(results);
     }
-
     requests_in_flight_->reset();
   }
 
@@ -222,13 +243,18 @@ struct http_client::connection
         auto buffer = beast::flat_buffer{};
         auto res = http::response<http::dynamic_body>{};
 
+        auto p = http::response_parser<http::dynamic_body>{};
+        p.eager(true);
+        p.body_limit(kBodySizeLimit);
+
         if (ssl()) {
           beast::get_lowest_layer(*ssl_stream_).expires_after(timeout_);
-          co_await http::async_read(*ssl_stream_, buffer, res);
+          co_await http::async_read(*ssl_stream_, buffer, p);
         } else {
           stream_->expires_after(timeout_);
-          co_await http::async_read(*stream_, buffer, res);
+          co_await http::async_read(*stream_, buffer, p);
         }
+
         ++n_received_;
 
         if (!unlimited_pipelining_) {
@@ -241,32 +267,8 @@ struct http_client::connection
         pending_requests_.pop_front();
         n_current_retries_ = 0;
 
-        auto const code = res.result_int();
-        if (code >= 300 && code < 400) {  // redirect
-          auto const location = res[http::field::location];
-          auto next_url = boost::urls::url{};
-          auto const resolve_result = boost::urls::resolve(
-              req->url_, boost::urls::url{location}, next_url);
-          if (resolve_result.has_error()) {
-            co_await req->response_channel_.async_send(resolve_result.error(),
-                                                       std::move(res));
-            continue;
-          }
-
-          ++req->n_redirects_;
-          req->url_ = next_url;
-          if (req->n_redirects_ > 3) {
-            co_await req->response_channel_.async_send(
-                error::too_many_redirects, std::move(res));
-          } else {
-            co_await request_channel_.async_send(boost::system::error_code{},
-                                                 req);
-          }
-          continue;
-        }
-
         co_await req->response_channel_.async_send(boost::system::error_code{},
-                                                   std::move(res));
+                                                   p.release());
       }
     } catch (std::exception const&) {
     }
@@ -349,6 +351,34 @@ http_client::~http_client() {
   }
 }
 
+asio::awaitable<http_response> http_client::perform_request(
+    std::shared_ptr<request> const r) {
+  auto const https = r->url_.scheme_id() == boost::urls::scheme::https;
+  auto const key = connection_key{
+      r->url_.host(),
+      r->url_.has_port() ? r->url_.port() : (https ? "443" : "80"), https};
+
+  auto const conn = key.host_ + ":" + key.port_;
+
+  auto executor = co_await asio::this_coro::executor;
+  if (auto const it = connections_.find(key); it == connections_.end()) {
+    auto new_conn = std::make_shared<connection>(executor, connections_, key,
+                                                 timeout_, proxy_, 1);
+    connections_[key] = new_conn;
+    asio::co_spawn(executor, new_conn->run(), asio::detached);
+  }
+
+  co_await connections_[key]->request_channel_.async_send(
+      boost::system::error_code{}, r);
+  auto ec = boost::system::error_code{};
+  auto response = co_await r->response_channel_.async_receive(
+      asio::redirect_error(asio::use_awaitable, ec));
+  if (ec) {
+    throw boost::system::system_error{ec};
+  }
+  co_return std::move(response);
+}
+
 asio::awaitable<http_response> http_client::get(
     boost::urls::url url, std::map<std::string, std::string> headers) {
   auto executor = co_await asio::this_coro::executor;
@@ -368,29 +398,58 @@ asio::awaitable<http_response> http_client::post(
 
 asio::awaitable<http_response> http_client::req(
     std::shared_ptr<request> const r) {
-  auto const https = r->url_.scheme_id() == boost::urls::scheme::https;
-  auto const key = connection_key{
-      r->url_.host(),
-      r->url_.has_port() ? r->url_.port() : (https ? "443" : "80"), https};
-
   auto executor = co_await asio::this_coro::executor;
-  if (auto const it = connections_.find(key); it == connections_.end()) {
-    auto conn = std::make_shared<connection>(executor, connections_, key,
-                                             timeout_, proxy_, 1);
-    connections_[key] = conn;
-    asio::co_spawn(executor, conn->run(), asio::detached);
-  }
 
-  co_await connections_[key]->request_channel_.async_send(
-      boost::system::error_code{}, r);
-  auto response = co_await r->response_channel_.async_receive();
-  co_return response;
+  auto current_request = r;
+  auto redirects = r->n_redirects_;
+
+  while (true) {
+    auto response = co_await perform_request(current_request);
+
+    auto const status = response.result_int();
+    if (status < 300 || status >= 400) {
+      co_return response;
+    }
+
+    auto const location = response[http::field::location];
+    if (location.empty()) {
+      co_return response;
+    }
+
+    ++redirects;
+    if (redirects > 3) {
+      throw boost::system::system_error{
+          make_error_code(error::too_many_redirects)};
+    }
+
+    auto next_url = boost::urls::url{};
+    auto const resolve_result = boost::urls::resolve(
+        current_request->url_, boost::urls::url{location}, next_url);
+    if (resolve_result.has_error()) {
+      throw boost::system::system_error{resolve_result.error()};
+    }
+
+    auto method = current_request->method_;
+    auto headers = std::move(current_request->headers_);
+    auto body = std::move(current_request->body_);
+    current_request = std::make_shared<request>(std::move(next_url), method,
+                                                std::move(headers),
+                                                std::move(body), executor);
+    current_request->n_redirects_ = redirects;
+  }
 }
 
 void http_client::set_proxy(boost::urls::url const& url) {
   proxy_.ssl_ = url.scheme_id() == boost::urls::scheme::https;
   proxy_.host_ = url.host();
   proxy_.port_ = url.has_port() ? url.port() : (proxy_.ssl_ ? "443" : "80");
+}
+
+asio::awaitable<void> http_client::shutdown() {
+  for (auto const& [_, con] : connections_) {
+    co_await con->fail_all_requests(make_error_code(error::timeout));
+    con->close();
+  }
 }
 
 }  // namespace motis

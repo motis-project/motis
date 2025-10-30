@@ -5,7 +5,7 @@
 #include "nigiri/common/parse_time.h"
 #include "nigiri/rt/json_to_xml.h"
 
-#include "motis/http_req.h"
+#include "motis/http_client.h"
 
 namespace n = nigiri;
 

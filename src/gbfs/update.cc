@@ -38,7 +38,6 @@
 #include "motis/data.h"
 #include "motis/gbfs/data.h"
 #include "motis/http_client.h"
-#include "motis/http_req.h"
 
 #include "motis/gbfs/compression.h"
 #include "motis/gbfs/osr_mapping.h"
