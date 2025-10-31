@@ -54,7 +54,7 @@ jobs:
 
       - name: Build
         working-directory: ui
-        run: pnpm run build
+        run: pnpm -r build
 
   formatting:
     runs-on: ubuntu-latest
