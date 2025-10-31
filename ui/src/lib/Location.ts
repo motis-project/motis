@@ -1,5 +1,5 @@
 import maplibregl from 'maplibre-gl';
-import type { Match } from './api/openapi';
+import type { Match } from '@motis-project/motis-client';
 
 const COORD_LVL_REGEX = /^([+-]?\d+(\.\d+)?)\s*,\s*([+-]?\d+(\.\d+)?)\s*,\s*([+-]?\d+(\.\d+)?)$/;
 const COORD_REGEX = /^([+-]?\d+(\.\d+)?)\s*,\s*([+-]?\d+(\.\d+)?)$/;

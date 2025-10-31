@@ -34,6 +34,7 @@
 		const dateTimeLocalValue = e.target!.value!;
 		const fakeUtcTime = new Date(`${dateTimeLocalValue}Z`);
 		if (!isNaN(fakeUtcTime.getTime())) {
+			/* eslint-disable-next-line svelte/prefer-svelte-reactivity */
 			value = new Date(fakeUtcTime.getTime() + fakeUtcTime.getTimezoneOffset() * 60000);
 		}
 	}}

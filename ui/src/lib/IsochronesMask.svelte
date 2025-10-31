@@ -6,7 +6,7 @@
 	import * as RadioGroup from '$lib/components/ui/radio-group';
 	import Button from '$lib/components/ui/button/button.svelte';
 	import { Label } from '$lib/components/ui/label';
-	import { type ElevationCosts, type PedestrianProfile } from '$lib/api/openapi';
+	import { type ElevationCosts, type PedestrianProfile } from '@motis-project/motis-client';
 	import * as Select from '$lib/components/ui/select';
 	import type { DisplayLevel, IsochronesOptions } from '$lib/map/IsochronesShared';
 	import AddressTypeahead from '$lib/AddressTypeahead.svelte';

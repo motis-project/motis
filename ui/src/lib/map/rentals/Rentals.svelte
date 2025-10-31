@@ -8,7 +8,7 @@
 		type RentalStation,
 		type RentalVehicle,
 		type RentalZone
-	} from '$lib/api/openapi';
+	} from '@motis-project/motis-client';
 	import { lngLatToStr } from '$lib/lngLatToStr';
 	import Control from '$lib/map/Control.svelte';
 	import GeoJSON from '$lib/map/GeoJSON.svelte';
@@ -48,6 +48,7 @@
 		RentalZoneFeatureCollection,
 		RentalZoneFeatureProperties
 	} from './zone-types';
+	import { SvelteSet } from 'svelte/reactivity';
 
 	let zoneLayerRef = $state<ZoneLayer | null>(null);
 
@@ -92,7 +93,7 @@
 	let displayFilter = $state<DisplayFilter | null>(null);
 	let iconsReady = $state(false);
 	let iconRequestToken = 0;
-	let activeIconIds = new Set<string>();
+	let activeIconIds = new SvelteSet<string>();
 
 	type StationFeatureProperties = {
 		icon: string;
@@ -230,15 +231,18 @@
 	};
 
 	const collectFormFactorsByColor = (data: RentalsPayloadData) => {
+		/* eslint-disable svelte/prefer-svelte-reactivity */
 		const formFactorsByColor = new Map<string, Set<RentalFormFactor>>();
 		const providerColorById = new Map<string, string>();
 		const providerGroupColorById = new Map<string, string>(
 			data.providerGroups.map((group) => [group.id, group.color || DEFAULT_COLOR])
 		);
+		/* eslint-enable svelte/prefer-svelte-reactivity */
 
 		const addFormFactor = (color: string, formFactor: RentalFormFactor) => {
 			let formFactors = formFactorsByColor.get(color);
 			if (!formFactors) {
+				/* eslint-disable-next-line svelte/prefer-svelte-reactivity */
 				formFactors = new Set<RentalFormFactor>();
 				formFactorsByColor.set(color, formFactors);
 			}
@@ -903,7 +907,7 @@
 				mapInstance.removeImage(id);
 			}
 		}
-		activeIconIds = new Set<string>();
+		activeIconIds = new SvelteSet<string>();
 	};
 
 	$effect(() => {
@@ -934,6 +938,7 @@
 
 		const token = ++iconRequestToken;
 		iconsReady = false;
+		/* eslint-disable-next-line svelte/prefer-svelte-reactivity */
 		const neededIds = new Set<string>();
 		const tasks: Promise<void>[] = [];
 
@@ -981,7 +986,7 @@
 				}
 			}
 
-			const newActiveIds = new Set<string>();
+			const newActiveIds = new SvelteSet<string>();
 			neededIds.forEach((id) => {
 				if (mapInstance.hasImage(id)) {
 					newActiveIds.add(id);

@@ -1,4 +1,4 @@
-import type { Mode, RentalFormFactor } from './api/openapi';
+import type { Mode, RentalFormFactor } from '@motis-project/motis-client';
 
 export const prePostDirectModes = [
 	'WALK',

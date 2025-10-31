@@ -1,4 +1,4 @@
-import type { Leg } from './api/openapi';
+import type { Leg } from '@motis-project/motis-client';
 
 import { t } from './i18n/translation';
 

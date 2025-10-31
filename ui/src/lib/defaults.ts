@@ -1,4 +1,4 @@
-import type { PlanData } from './api/openapi';
+import type { PlanData } from '@motis-project/motis-client';
 
 export const defaultQuery = {
 	time: undefined,

@@ -44,6 +44,10 @@ jobs:
         working-directory: ui
         run: pnpm install
 
+      - name: Build
+        working-directory: ui
+        run: pnpm -r build
+
       - name: Code Lint
         working-directory: ui
         run: pnpm run lint
@@ -51,10 +55,6 @@ jobs:
       - name: Svelte Check
         working-directory: ui
         run: pnpm run check
-
-      - name: Build
-        working-directory: ui
-        run: pnpm run build
 
   formatting:
     runs-on: ubuntu-latest

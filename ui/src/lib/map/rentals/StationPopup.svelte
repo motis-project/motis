@@ -1,5 +1,9 @@
 <script lang="ts">
-	import type { RentalFormFactor, RentalProvider, RentalStation } from '$lib/api/openapi';
+	import type {
+		RentalFormFactor,
+		RentalProvider,
+		RentalStation
+	} from '@motis-project/motis-client';
 	import { Button } from '$lib/components/ui/button';
 	import { Copy, type Icon as IconType } from '@lucide/svelte';
 	import { formFactorAssets, propulsionTypes, returnConstraints } from '$lib/map/rentals/assets';
