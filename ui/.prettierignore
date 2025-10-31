@@ -2,7 +2,7 @@
 pnpm-lock.yaml
 package-lock.json
 yarn.lock
-src/lib/api/openapi/**
+api/**
 src/lib/components/**
 static/sprite*.json
 static/icons/**.svg

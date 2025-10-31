@@ -1,4 +1,4 @@
-import type { Itinerary, Place, PlanResponse } from '$lib/api/openapi';
+import type { Itinerary, Place, PlanResponse } from '@motis-project/motis-client';
 import type { Location } from '$lib/Location';
 import polyline from '@mapbox/polyline';
 

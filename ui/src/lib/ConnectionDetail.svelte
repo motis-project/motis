@@ -1,6 +1,13 @@
 <script lang="ts">
 	import { ArrowRight, ArrowUp, ArrowDown, DollarSign, CircleX } from '@lucide/svelte';
-	import type { FareProduct, Itinerary, Leg, Mode, Place, StepInstruction } from '$lib/api/openapi';
+	import type {
+		FareProduct,
+		Itinerary,
+		Leg,
+		Mode,
+		Place,
+		StepInstruction
+	} from '@motis-project/motis-client';
 	import Time from '$lib/Time.svelte';
 	import { routeBorderColor, routeColor } from '$lib/modeStyle';
 	import { formatDurationSec, formatDistanceMeters } from '$lib/formatDuration';

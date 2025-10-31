@@ -20,7 +20,7 @@
 		type PlanData,
 		type ReachablePlace,
 		type RentalFormFactor
-	} from '$lib/api/openapi';
+	} from '@motis-project/motis-client';
 	import ItineraryList from '$lib/ItineraryList.svelte';
 	import ConnectionDetail from '$lib/ConnectionDetail.svelte';
 	import { Button } from '$lib/components/ui/button';
@@ -34,7 +34,7 @@
 	import LevelSelect from '$lib/LevelSelect.svelte';
 	import { lngLatToStr } from '$lib/lngLatToStr';
 	import Drawer from '$lib/map/Drawer.svelte';
-	import { client } from '$lib/api/openapi';
+	import { client } from '@motis-project/motis-client';
 	import StopTimes from '$lib/StopTimes.svelte';
 	import { onMount, tick, untrack } from 'svelte';
 	import RailViz from '$lib/RailViz.svelte';

@@ -1,4 +1,4 @@
-import type { Mode, Rental } from './api/openapi';
+import type { Mode, Rental } from '@motis-project/motis-client';
 
 export type Colorable = { routeColor?: string; routeTextColor?: string; mode: Mode };
 

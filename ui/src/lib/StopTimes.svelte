@@ -1,5 +1,9 @@
 <script lang="ts">
-	import { stoptimes, type StoptimesError, type StoptimesResponse } from '$lib/api/openapi';
+	import {
+		stoptimes,
+		type StoptimesError,
+		type StoptimesResponse
+	} from '@motis-project/motis-client';
 	import { LoaderCircle, ArrowRight, CircleX } from '@lucide/svelte';
 	import ErrorMessage from '$lib/ErrorMessage.svelte';
 	import Time from '$lib/Time.svelte';

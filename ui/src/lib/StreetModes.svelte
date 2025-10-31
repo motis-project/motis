@@ -7,7 +7,7 @@
 	import { type PrePostDirectMode, getFormFactors } from '$lib/Modes';
 	import { formFactorAssets } from '$lib/map/rentals/assets';
 	import { DEFAULT_COLOR } from '$lib/map/rentals/style';
-	import { rentals, type RentalFormFactor } from '$lib/api/openapi';
+	import { rentals, type RentalFormFactor } from '@motis-project/motis-client';
 	import { createQuery } from '@tanstack/svelte-query';
 
 	let {

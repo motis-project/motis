@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Combobox } from 'bits-ui';
-	import { geocode, type Match, type Mode } from './api/openapi';
+	import { geocode, type Match, type Mode } from '@motis-project/motis-client';
 	import { MapPinHouse as House, MapPin as Place } from '@lucide/svelte';
 	import { parseCoordinatesToLocation, type Location } from './Location';
 	import { language } from './i18n/translation';
@@ -39,6 +39,7 @@
 				area = match.areas[0]!.name;
 			}
 
+			/* eslint-disable-next-line svelte/prefer-svelte-reactivity */
 			const areas = new Set<number>();
 			match.areas.forEach((a, i) => {
 				if (a.matched || a.unique || a.default) {
@@ -87,6 +88,7 @@
 				match
 			};
 		});
+		/* eslint-disable-next-line svelte/prefer-svelte-reactivity */
 		const shown = new Set<string>();
 		items = items.filter((x) => {
 			const entry = x.match?.type + x.label!;
