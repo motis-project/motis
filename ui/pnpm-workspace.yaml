@@ -1,2 +1,4 @@
 packages:
   - 'src/lib/api'
+
+includeWorkspaceRoot: true
