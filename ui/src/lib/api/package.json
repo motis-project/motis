@@ -9,9 +9,9 @@
 		"/dist"
 	],
 	"scripts": {
-		"generate": "npx @hey-api/openapi-ts -i ../../../../openapi.yaml -o ./openapi/ -c @hey-api/client-fetch",
+		"generate": "openapi-ts -i ../../../../openapi.yaml -o ./openapi/ -c @hey-api/client-fetch",
 		"transpile": "tsup openapi/**/*.ts --format esm --dts -d=./dist",
-		"build": "npm run generate && npm run transpile"
+		"build": "pnpm generate && pnpm transpile"
 	},
 	"repository": {
 		"type": "git",
