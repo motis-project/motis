@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { Alert } from './api/openapi';
+	import type { Alert } from '@motis-project/motis-client';
 	import { t } from '$lib/i18n/translation';
 	import { TriangleAlert, ChevronDown } from '@lucide/svelte';
 	import Time from './Time.svelte';

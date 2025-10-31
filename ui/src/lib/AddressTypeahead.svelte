@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Combobox } from 'bits-ui';
-	import { geocode, type Match, type Mode } from './api/openapi';
+	import { geocode, type Match, type Mode } from '@motis-project/motis-client';
 	import { MapPinHouse as House, MapPin as Place } from '@lucide/svelte';
 	import { parseCoordinatesToLocation, type Location } from './Location';
 	import { language } from './i18n/translation';

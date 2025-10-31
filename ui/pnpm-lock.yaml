@@ -28,7 +28,7 @@ importers:
         version: 1.2.1
       '@motis-project/motis-client':
         specifier: workspace:^
-        version: link:src/lib/api
+        version: link:api
       '@tanstack/svelte-query':
         specifier: ^6.0.3
         version: 6.0.3(svelte@5.43.2)
@@ -184,7 +184,7 @@ importers:
         specifier: ^1.6.1
         version: 1.6.1
 
-  src/lib/api:
+  api:
     dependencies:
       '@hey-api/client-fetch':
         specifier: ^0.4.4
@@ -192,16 +192,16 @@ importers:
     devDependencies:
       '@hey-api/openapi-ts':
         specifier: ^0.53.12
-        version: 0.53.12(typescript@5.8.3)
+        version: 0.53.12(typescript@5.9.3)
       tslib:
         specifier: ^2.8.1
         version: 2.8.1
       tsup:
         specifier: ^8.4.0
-        version: 8.5.0(jiti@2.4.2)(postcss@8.5.6)(typescript@5.8.3)(yaml@2.8.0)
+        version: 8.5.0(jiti@2.4.2)(postcss@8.5.6)(typescript@5.9.3)(yaml@2.8.0)
       typescript:
         specifier: ^5.7.3
-        version: 5.8.3
+        version: 5.9.3
 
 packages:
 
@@ -2577,11 +2577,6 @@ packages:
       eslint: ^8.57.0 || ^9.0.0
       typescript: '>=4.8.4 <6.0.0'
 
-  typescript@5.8.3:
-    resolution: {integrity: sha512-p1diW6TqL9L07nNxvRMM7hMMw4c5XOo/1ibL4aAIGmSAt9slTE1Xgw5KWuof2uTOvCg9BY7ZRi+GaF+7sfgPeQ==}
-    engines: {node: '>=14.17'}
-    hasBin: true
-
   typescript@5.9.3:
     resolution: {integrity: sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw==}
     engines: {node: '>=14.17'}
@@ -3020,16 +3015,6 @@ snapshots:
   '@floating-ui/utils@0.2.9': {}
 
   '@hey-api/client-fetch@0.4.4': {}
-
-  '@hey-api/openapi-ts@0.53.12(typescript@5.8.3)':
-    dependencies:
-      '@apidevtools/json-schema-ref-parser': 11.7.2
-      c12: 2.0.1
-      commander: 12.1.0
-      handlebars: 4.7.8
-      typescript: 5.8.3
-    transitivePeerDependencies:
-      - magicast
 
   '@hey-api/openapi-ts@0.53.12(typescript@5.9.3)':
     dependencies:
@@ -5039,13 +5024,13 @@ snapshots:
 
   tslib@2.8.1: {}
 
-  tsup@8.5.0(jiti@2.4.2)(postcss@8.5.6)(typescript@5.8.3)(yaml@2.8.0):
+  tsup@8.5.0(jiti@2.4.2)(postcss@8.5.6)(typescript@5.9.3)(yaml@2.8.0):
     dependencies:
       bundle-require: 5.1.0(esbuild@0.25.11)
       cac: 6.7.14
       chokidar: 4.0.3
       consola: 3.4.2
-      debug: 4.4.1
+      debug: 4.4.3
       esbuild: 0.25.11
       fix-dts-default-cjs-exports: 1.0.1
       joycon: 3.1.1
@@ -5060,7 +5045,7 @@ snapshots:
       tree-kill: 1.2.2
     optionalDependencies:
       postcss: 8.5.6
-      typescript: 5.8.3
+      typescript: 5.9.3
     transitivePeerDependencies:
       - jiti
       - supports-color
@@ -5089,8 +5074,6 @@ snapshots:
       typescript: 5.9.3
     transitivePeerDependencies:
       - supports-color
-
-  typescript@5.8.3: {}
 
   typescript@5.9.3: {}
 

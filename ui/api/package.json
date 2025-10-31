@@ -9,7 +9,7 @@
 		"/dist"
 	],
 	"scripts": {
-		"generate": "openapi-ts -i ../../../../openapi.yaml -o ./openapi/ -c @hey-api/client-fetch",
+		"generate": "openapi-ts -i ../../openapi.yaml -o ./openapi/ -c @hey-api/client-fetch",
 		"transpile": "tsup openapi/**/*.ts --format esm --dts -d=./dist",
 		"build": "pnpm generate && pnpm transpile"
 	},
