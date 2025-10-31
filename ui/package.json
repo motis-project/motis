@@ -13,7 +13,8 @@
 		"format": "prettier --write .",
 		"test:integration": "playwright test",
 		"test:unit": "vitest",
-		"update-sprite": "spreet sprite --sdf static/sprite_sdf && spreet --sdf --retina sprite static/sprite_sdf@2x"
+		"update-sprite": "spreet sprite --sdf static/sprite_sdf && spreet --sdf --retina sprite static/sprite_sdf@2x",
+		"update-api": "pnpm --filter @motis-project/motis-client generate"
 	},
 	"devDependencies": {
 		"@eslint/compat": "^1.2.9",
@@ -55,6 +56,7 @@
 	},
 	"type": "module",
 	"dependencies": {
+		"@motis-project/motis-client": "workspace:^",
 		"@deck.gl/core": "~9.2.2",
 		"@deck.gl/layers": "~9.2.2",
 		"@deck.gl/mapbox": "~9.2.2",

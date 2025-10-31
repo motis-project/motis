@@ -1,14 +1,20 @@
-Generate OpenAPI client:
+Build UI (the `-r` is important to also update the OpenAPI client):
 
 ```bash
-cd src/lib/api
-npm run generate
+pnpm -r build
+```
+
+Generate OpenAPI client (when openapi.yaml has been changed, included in `pnpm -r build`):
+
+```bash
+pnpm update-api
 ```
 
 To publish a new version to npmjs:
 
 ```bash
-npm run build
-npm version patch --no-git-tag-version
-npm publish --access public
+cd src/lib/api
+pnpm build
+pnpm version patch --no-git-tag-version
+pnpm publish --access public
 ```

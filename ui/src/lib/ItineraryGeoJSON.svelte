@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Layer from '$lib/map/Layer.svelte';
 	import GeoJSON from '$lib/map/GeoJSON.svelte';
-	import type { Itinerary, Mode } from '$lib/api/openapi';
+	import type { Itinerary, Mode } from '@motis-project/motis-client';
 	import { getColor } from '$lib/modeStyle';
 	import polyline from '@mapbox/polyline';
 	import { colord } from 'colord';

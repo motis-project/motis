@@ -8,7 +8,7 @@
 		type RentalStation,
 		type RentalVehicle,
 		type RentalZone
-	} from '$lib/api/openapi';
+	} from '@motis-project/motis-client';
 	import { lngLatToStr } from '$lib/lngLatToStr';
 	import Control from '$lib/map/Control.svelte';
 	import GeoJSON from '$lib/map/GeoJSON.svelte';

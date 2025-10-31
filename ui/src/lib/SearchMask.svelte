@@ -5,7 +5,7 @@
 	import * as RadioGroup from '$lib/components/ui/radio-group';
 	import Button from '$lib/components/ui/button/button.svelte';
 	import { Label } from '$lib/components/ui/label';
-	import type { ElevationCosts, PedestrianProfile } from '$lib/api/openapi';
+	import type { ElevationCosts, PedestrianProfile } from '@motis-project/motis-client';
 	import AddressTypeahead from '$lib/AddressTypeahead.svelte';
 	import AdvancedOptions from '$lib/AdvancedOptions.svelte';
 	import DateInput from '$lib/DateInput.svelte';

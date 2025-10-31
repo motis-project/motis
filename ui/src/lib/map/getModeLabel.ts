@@ -1,4 +1,4 @@
-import type { Mode } from '$lib/api/openapi';
+import type { Mode } from '@motis-project/motis-client';
 
 export const getModeLabel = (mode: Mode): string => {
 	switch (mode) {

@@ -1,6 +1,6 @@
 // See https://kit.svelte.dev/docs/types#app
 
-import type { Itinerary } from '$lib/api/openapi';
+import type { Itinerary } from '@motis-project/motis-client';
 
 // for information about these interfaces
 declare global {

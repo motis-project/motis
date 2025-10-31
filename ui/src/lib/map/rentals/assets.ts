@@ -3,7 +3,7 @@ import type {
 	RentalFormFactor,
 	RentalPropulsionType,
 	RentalReturnConstraint
-} from '$lib/api/openapi';
+} from '@motis-project/motis-client';
 import {
 	FlagTriangleLeft,
 	Fuel,

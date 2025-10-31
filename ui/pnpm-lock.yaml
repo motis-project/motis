@@ -26,6 +26,9 @@ importers:
       '@mapbox/polyline':
         specifier: ^1.2.1
         version: 1.2.1
+      '@motis-project/motis-client':
+        specifier: workspace:^
+        version: link:src/lib/api
       '@tanstack/svelte-query':
         specifier: ^6.0.3
         version: 6.0.3(svelte@5.33.4)

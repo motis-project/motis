@@ -5,7 +5,7 @@
 	import * as Select from '$lib/components/ui/select';
 	import { ChevronUp, ChevronDown } from '@lucide/svelte';
 	import { Switch } from './components/ui/switch';
-	import type { ElevationCosts } from '$lib/api/openapi';
+	import type { ElevationCosts } from '@motis-project/motis-client';
 	import { defaultQuery } from '$lib/defaults';
 	import { formatDurationSec } from './formatDuration';
 	import {
