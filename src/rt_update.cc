@@ -95,20 +95,20 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
           // Remember when we started, so we can schedule the next update.
           auto const start = std::chrono::steady_clock::now();
 
-          auto client = http_client{};
-          client.timeout_ = std::chrono::seconds{c.timetable_->http_timeout_};
+          auto client = std::make_shared<http_client>();
+          client->timeout_ = std::chrono::seconds{c.timetable_->http_timeout_};
 
           asio::co_spawn(
               executor,
-              [&]() -> awaitable<void> {
+              [client]() -> awaitable<void> {
                 auto executor = co_await asio::this_coro::executor;
                 auto timer = asio::steady_timer{executor};
-                timer.expires_after(client.timeout_);
+                timer.expires_after(client->timeout_);
                 auto timer_ec = boost::system::error_code{};
                 co_await timer.async_wait(
                     asio::redirect_error(asio::use_awaitable, timer_ec));
                 std::cout << "-- RT GLOBAL TIMEOUT" << std::endl;
-                co_await client.shutdown();
+                co_await client->shutdown();
               },
               asio::detached);
 
@@ -141,7 +141,7 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
                                       -> awaitable<void> {
                                     g.metrics_.updates_requested_.Increment();
                                     try {
-                                      auto const res = co_await client.get(
+                                      auto const res = co_await client->get(
                                           boost::urls::url{g.ep_.url_},
                                           g.ep_.headers_.value_or(headers_t{}));
                                       ret = n::rt::gtfsrt_update_buf(
@@ -167,7 +167,7 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
                                           auser.fetch_url(a.ep_.url_)};
                                       fmt::println("[auser] fetch url: {}",
                                                    fetch_url.c_str());
-                                      auto const res = co_await client.get(
+                                      auto const res = co_await client->get(
                                           fetch_url,
                                           a.ep_.headers_.value_or(headers_t{}));
                                       ret = auser.consume_update(
@@ -255,9 +255,10 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
 
             // Update real-time timetable shared pointer.
             auto railviz_rt = std::make_unique<railviz_rt_index>(*d.tt_, *rtt);
-            auto elevators = c.has_elevators() && c.get_elevators()->url_
-                                 ? co_await update_elevators(c, d, client, *rtt)
-                                 : std::move(d.rt_->e_);
+            auto elevators =
+                c.has_elevators() && c.get_elevators()->url_
+                    ? co_await update_elevators(c, d, *client, *rtt)
+                    : std::move(d.rt_->e_);
             d.rt_ = std::make_shared<rt>(std::move(rtt), std::move(elevators),
                                          std::move(railviz_rt));
           }

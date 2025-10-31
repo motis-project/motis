@@ -446,7 +446,10 @@ void http_client::set_proxy(boost::urls::url const& url) {
 }
 
 asio::awaitable<void> http_client::shutdown() {
-  for (auto const& [_, con] : connections_) {
+  while (!connections_.empty()) {
+    auto const it = connections_.begin();
+    auto const con = it->second;
+    connections_.erase(it);
     co_await con->fail_all_requests(make_error_code(error::timeout));
     con->close();
   }
