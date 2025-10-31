@@ -141,6 +141,7 @@
 	let source: { id: string | null } = getContext('source'); // from GeoJSON component
 
 	let initialized = false;
+	// @ts-ignore
 	let currFilter = $state.snapshot(filter);
 	let currLayout = $state.snapshot(layout);
 	let currPaint = $state.snapshot(paint);

@@ -10,7 +10,18 @@
 		"sourceMap": true,
 		"strict": true,
 		"moduleResolution": "bundler"
-	}
+	},
+	"exclude": [
+		"../node_modules/**",
+		"../src/service-worker.js",
+		"../src/service-worker/**/*.js",
+		"../src/service-worker.ts",
+		"../src/service-worker/**/*.ts",
+		"../src/service-worker.d.ts",
+		"../src/service-worker/**/*.d.ts",
+		"src/lib/api/dist/**",
+		"src/lib/api/node_modules/**"
+	]
 	// Path aliases are handled by https://kit.svelte.dev/docs/configuration#alias
 	// except $lib which is handled by https://kit.svelte.dev/docs/configuration#files
 	//
