@@ -155,7 +155,7 @@
 					</div>
 					{#if stopTime.place.alerts}
 						<div class="mt-2">
-							<Alerts timeZone={stopTime.place.tz ?? ''} alerts={stopTime.place.alerts} />
+							<Alerts tz={stopTime.place.tz} alerts={stopTime.place.alerts} />
 						</div>
 					{/if}
 					{#if stopTime.pickupDropoffType == 'NOT_ALLOWED'}

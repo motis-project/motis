@@ -130,7 +130,7 @@ const translations: Translations = {
 		validFrom: 'Platí od',
 		until: 'do',
 		information: 'Informace',
-		more: 'více',
+		more: 'více'
 	},
 	RENTAL_BICYCLE: 'Sdílené kolo',
 	RENTAL_CARGO_BICYCLE: 'Sdílené nákladní kolo',

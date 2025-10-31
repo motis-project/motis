@@ -128,7 +128,7 @@ const translations: Translations = {
 		validFrom: 'Valable du',
 		until: 'au',
 		information: 'Informations',
-		more: 'de plus',
+		more: 'de plus'
 	},
 	RENTAL_BICYCLE: 'Vélo partagé',
 	RENTAL_CARGO_BICYCLE: 'Vélo cargo partagé',

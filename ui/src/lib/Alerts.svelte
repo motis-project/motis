@@ -2,7 +2,7 @@
 	import { Info, ChevronRight } from '@lucide/svelte';
 	import * as Dialog from '$lib/components/ui/dialog';
 	import { buttonVariants } from './components/ui/button';
-    import type { Alert } from '@motis-project/motis-client';
+	import type { Alert } from '@motis-project/motis-client';
 	import { formatDateTime, getTz } from './toDateTime';
 	import { cn } from './utils';
 	import { t } from './i18n/translation';
