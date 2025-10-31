@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { t } from '$lib/i18n/translation';
 	import { Slider } from 'bits-ui';
-	import LocateFixed from 'lucide-svelte/icons/locate-fixed';
+	import { LocateFixed } from '@lucide/svelte';
 	import maplibregl from 'maplibre-gl';
 	import * as RadioGroup from '$lib/components/ui/radio-group';
 	import Button from '$lib/components/ui/button/button.svelte';
@@ -39,7 +39,10 @@
 		elevationCosts = $bindable(),
 		ignorePreTransitRentalReturnConstraints = $bindable(),
 		ignorePostTransitRentalReturnConstraints = $bindable(),
-		options = $bindable()
+		options = $bindable(),
+		preTransitProviderGroups = $bindable(),
+		postTransitProviderGroups = $bindable(),
+		directProviderGroups = $bindable()
 	}: {
 		one: Location;
 		maxTravelTime: number;
@@ -60,6 +63,9 @@
 		ignorePreTransitRentalReturnConstraints: boolean;
 		ignorePostTransitRentalReturnConstraints: boolean;
 		options: IsochronesOptions;
+		preTransitProviderGroups: string[];
+		postTransitProviderGroups: string[];
+		directProviderGroups: string[];
 	} = $props();
 
 	const possibleMaxTravelTimes = minutesToSeconds([
@@ -93,6 +99,9 @@
 			const tmpTime = maxPreTransitTime;
 			maxPreTransitTime = maxPostTransitTime;
 			maxPostTransitTime = tmpTime;
+			const tmpProviderGroups = preTransitProviderGroups;
+			preTransitProviderGroups = postTransitProviderGroups;
+			postTransitProviderGroups = tmpProviderGroups;
 			lastSearchDir = searchDir;
 		}
 	};
@@ -206,6 +215,9 @@
 			bind:ignorePostTransitRentalReturnConstraints
 			ignoreDirectRentalReturnConstraints={undefined}
 			{additionalComponents}
+			bind:preTransitProviderGroups
+			bind:postTransitProviderGroups
+			bind:directProviderGroups
 		/>
 	</div>
 </div>

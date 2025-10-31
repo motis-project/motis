@@ -1,8 +1,7 @@
 <script lang="ts">
-	import TriangleAlert from 'lucide-svelte/icons/triangle-alert';
 	import type { Alert } from './api/openapi';
 	import { t } from '$lib/i18n/translation';
-	import ChevronDown from 'lucide-svelte/icons/chevron-down';
+	import { TriangleAlert, ChevronDown } from '@lucide/svelte';
 	import Time from './Time.svelte';
 
 	let { alerts, timeZone }: { alerts: Alert[]; timeZone: string } = $props();

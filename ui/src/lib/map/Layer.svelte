@@ -17,6 +17,7 @@
 		beforeLayerId = 'road-ref-shield',
 		onclick,
 		onmousemove,
+		onmouseenter,
 		onmouseleave,
 		children
 	}: {
@@ -28,6 +29,7 @@
 		beforeLayerId?: string;
 		onclick?: ClickHandler;
 		onmousemove?: ClickHandler;
+		onmouseenter?: ClickHandler;
 		onmouseleave?: ClickHandler;
 		children?: Snippet;
 	} = $props();
@@ -57,6 +59,12 @@
 	function mousemove(e: MapMouseEvent & { features?: MapGeoJSONFeature[] }) {
 		if (onmousemove) {
 			onmousemove(e, ctx.map!);
+		}
+	}
+
+	function mouseenter(e: MapMouseEvent & { features?: MapGeoJSONFeature[] }) {
+		if (onmouseenter) {
+			onmouseenter(e, ctx.map!);
 		}
 	}
 
@@ -209,6 +217,9 @@
 				if (onmousemove) {
 					ctx.map.on('mousemove', id, mousemove);
 				}
+				if (onmouseenter) {
+					ctx.map.on('mouseenter', id, mouseenter);
+				}
 				if (onmouseleave) {
 					ctx.map.on('mouseleave', id, mouseleave);
 				}
@@ -228,6 +239,9 @@
 		}
 		if (onmousemove) {
 			ctx.map?.off('mousemove', id, mousemove);
+		}
+		if (onmouseenter) {
+			ctx.map?.off('mouseenter', id, mouseenter);
 		}
 		if (onmouseleave) {
 			ctx.map?.off('mouseleave', id, mouseleave);

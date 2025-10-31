@@ -84,7 +84,7 @@
 			currDistance += distance;
 		}
 		if (Math.abs(totalDistance - currDistance) > 1) {
-			console.log(totalDistance, currDistance);
+			console.debug(totalDistance, currDistance);
 		}
 		keyFrames.push({ point: coordinates[coordinates.length - 1], time: arrival, heading: 0 });
 		return { keyFrames, arrival, departure, arrivalDelay, departureDelay };
@@ -94,7 +94,7 @@
 		const i = keyframes.findIndex((s) => s.time >= timestamp);
 
 		if (i === -1 || i === 0) {
-			console.log(
+			console.debug(
 				'not found, timestamp=',
 				new Date(timestamp),
 				' #keyframes=',
@@ -254,37 +254,47 @@
 		await updateRailvizLayer();
 		clearTimeout(timer); // Ensure previous timer is cleared
 		timer = setTimeout(() => {
-			console.log('updateRailviz: timer');
+			console.debug('updateRailviz: timer');
 			updateRailviz();
 		}, 60000);
 	};
+
+	const tooltipPopup = new maplibregl.Popup({
+		closeButton: false,
+		closeOnClick: false,
+		maxWidth: 'none'
+	});
 
 	$effect(() => {
 		if (map && !overlay) {
 			overlay = new MapboxOverlay({
 				interleaved: true,
 				layers: [],
-				getTooltip: ({ object }) => {
-					if (!object) {
-						return null;
-					}
-					return {
-						html: `${object.trips[0].displayName}<br>
-						${formatTime(new Date(object.departure), object.from.tz)} ${object.from.name}<br>
-						${formatTime(new Date(object.arrival), object.to.tz)} ${object.to.name}`
-					};
-				},
 				onClick: ({ object }) => {
 					if (!object) {
 						return;
 					}
 					onClickTrip(object.trips[0].tripId);
 				},
-				getCursor: () => map.getCanvas().style.cursor
+				getCursor: () => map.getCanvas().style.cursor,
+				onHover: ({ object, coordinate }) => {
+					if (object && coordinate) {
+						tooltipPopup
+							.setLngLat(coordinate as [number, number])
+							.setHTML(
+								`<strong>${object.trips[0].displayName}</strong><br>
+							${formatTime(new Date(object.departure), object.from.tz)} ${object.from.name}<br>
+							${formatTime(new Date(object.arrival), object.to.tz)} ${object.to.name}`
+							)
+							.addTo(map);
+					} else {
+						tooltipPopup.remove();
+					}
+				}
 			});
 			map.addControl(overlay);
 
-			console.log('updateRailviz: init');
+			console.debug('updateRailviz: init');
 			untrack(() => updateRailviz());
 		}
 	});
@@ -292,7 +302,7 @@
 	$effect(() => {
 		if (overlay && bounds && zoom && colorMode) {
 			untrack(() => {
-				console.log(`updateRailviz: effect ${overlay} ${bounds} ${zoom} ${colorMode}`);
+				console.debug(`updateRailviz: effect ${overlay} ${bounds} ${zoom} ${colorMode}`);
 				updateRailviz();
 			});
 		}

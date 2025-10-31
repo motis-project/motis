@@ -1,5 +1,5 @@
 <script lang="ts">
-	import Bug from 'lucide-svelte/icons/bug';
+	import { Bug, X, LoaderCircle } from '@lucide/svelte';
 	import { Button } from '$lib/components/ui/button';
 	import GeoJSON from '$lib/map/GeoJSON.svelte';
 	import Layer from '$lib/map/Layer.svelte';
@@ -20,8 +20,6 @@
 	import geojson from 'geojson';
 	import Popup from '$lib/map/Popup.svelte';
 	import { client } from '$lib/api/openapi';
-	import X from 'lucide-svelte/icons/x';
-	import LoaderCircle from 'lucide-svelte/icons/loader-circle';
 	import DateInput from './DateInput.svelte';
 
 	const baseUrl = client.getConfig().baseUrl;

@@ -1,9 +1,5 @@
 <script lang="ts">
-	import ArrowRight from 'lucide-svelte/icons/arrow-right';
-	import ArrowUp from 'lucide-svelte/icons/arrow-up';
-	import ArrowDown from 'lucide-svelte/icons/arrow-down';
-	import DollarSign from 'lucide-svelte/icons/dollar-sign';
-	import CircleX from 'lucide-svelte/icons/circle-x';
+	import { ArrowRight, ArrowUp, ArrowDown, DollarSign, CircleX } from '@lucide/svelte';
 	import type { FareProduct, Itinerary, Leg, Mode, Place, StepInstruction } from '$lib/api/openapi';
 	import Time from '$lib/Time.svelte';
 	import { routeBorderColor, routeColor } from '$lib/modeStyle';

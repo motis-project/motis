@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { cn } from '$lib/utils.js';
-	import ChevronDown from 'lucide-svelte/icons/chevron-down';
+	import { ChevronDown } from '@lucide/svelte';
 	import { onMount, type Snippet } from 'svelte';
 	import type { HTMLAttributes } from 'svelte/elements';
 	import { restoreScroll, resetScroll } from './handleScroll';

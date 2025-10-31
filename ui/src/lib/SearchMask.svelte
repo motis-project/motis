@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { t } from '$lib/i18n/translation';
-	import ArrowUpDown from 'lucide-svelte/icons/arrow-up-down';
-	import LocateFixed from 'lucide-svelte/icons/locate-fixed';
+	import { ArrowUpDown, LocateFixed } from '@lucide/svelte';
 	import maplibregl from 'maplibre-gl';
 	import * as RadioGroup from '$lib/components/ui/radio-group';
 	import Button from '$lib/components/ui/button/button.svelte';
@@ -34,7 +33,10 @@
 		maxDirectTime = $bindable(),
 		ignorePreTransitRentalReturnConstraints = $bindable(),
 		ignorePostTransitRentalReturnConstraints = $bindable(),
-		ignoreDirectRentalReturnConstraints = $bindable()
+		ignoreDirectRentalReturnConstraints = $bindable(),
+		preTransitProviderGroups = $bindable(),
+		postTransitProviderGroups = $bindable(),
+		directProviderGroups = $bindable()
 	}: {
 		geocodingBiasPlace?: maplibregl.LngLatLike;
 		from: Location;
@@ -57,6 +59,9 @@
 		ignorePreTransitRentalReturnConstraints: boolean;
 		ignorePostTransitRentalReturnConstraints: boolean;
 		ignoreDirectRentalReturnConstraints: boolean;
+		preTransitProviderGroups: string[];
+		postTransitProviderGroups: string[];
+		directProviderGroups: string[];
 	} = $props();
 
 	let fromItems = $state<Array<Location>>([]);
@@ -161,6 +166,9 @@
 			bind:ignorePreTransitRentalReturnConstraints
 			bind:ignorePostTransitRentalReturnConstraints
 			bind:ignoreDirectRentalReturnConstraints
+			bind:preTransitProviderGroups
+			bind:postTransitProviderGroups
+			bind:directProviderGroups
 		/>
 	</div>
 </div>

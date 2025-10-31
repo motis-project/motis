@@ -3,8 +3,7 @@
 	import Button from '$lib/components/ui/button/button.svelte';
 	import { t } from '$lib/i18n/translation';
 	import * as Select from '$lib/components/ui/select';
-	import ChevronUp from 'lucide-svelte/icons/chevron-up';
-	import ChevronDown from 'lucide-svelte/icons/chevron-down';
+	import { ChevronUp, ChevronDown } from '@lucide/svelte';
 	import { Switch } from './components/ui/switch';
 	import type { ElevationCosts } from '$lib/api/openapi';
 	import { defaultQuery } from '$lib/defaults';
@@ -39,6 +38,9 @@
 		ignorePreTransitRentalReturnConstraints = $bindable(),
 		ignorePostTransitRentalReturnConstraints = $bindable(),
 		ignoreDirectRentalReturnConstraints = $bindable(),
+		preTransitProviderGroups = $bindable(),
+		postTransitProviderGroups = $bindable(),
+		directProviderGroups = $bindable(),
 		additionalComponents
 	}: {
 		useRoutedTransfers: boolean;
@@ -59,6 +61,9 @@
 		ignorePreTransitRentalReturnConstraints: boolean;
 		ignorePostTransitRentalReturnConstraints: boolean;
 		ignoreDirectRentalReturnConstraints: boolean | undefined;
+		preTransitProviderGroups: string[];
+		postTransitProviderGroups: string[];
+		directProviderGroups: string[];
 		additionalComponents?: Snippet;
 	} = $props();
 
@@ -212,6 +217,7 @@
 				possibleModes={prePostDirectModes}
 				possibleMaxTransitTime={possiblePrePostDurations}
 				ignoreRentalReturnConstraints={ignorePreTransitRentalReturnConstraints}
+				bind:providerGroups={preTransitProviderGroups}
 			></StreetModes>
 
 			<!-- Last mile -->
@@ -222,6 +228,7 @@
 				possibleModes={prePostDirectModes}
 				possibleMaxTransitTime={possiblePrePostDurations}
 				ignoreRentalReturnConstraints={ignorePostTransitRentalReturnConstraints}
+				bind:providerGroups={postTransitProviderGroups}
 			></StreetModes>
 
 			<!-- Direct -->
@@ -233,6 +240,7 @@
 					possibleModes={prePostDirectModes}
 					possibleMaxTransitTime={possibleDirectDurations}
 					ignoreRentalReturnConstraints={ignoreDirectRentalReturnConstraints}
+					bind:providerGroups={directProviderGroups}
 				></StreetModes>
 			{/if}
 		</div>

@@ -1,9 +1,5 @@
 <script lang="ts">
-	import X from 'lucide-svelte/icons/x';
-	import Palette from 'lucide-svelte/icons/palette';
-	import Rss from 'lucide-svelte/icons/rss';
-	import Ban from 'lucide-svelte/icons/ban';
-	import LocateFixed from 'lucide-svelte/icons/locate-fixed';
+	import { X, Palette, Rss, Ban, LocateFixed, TrainFront } from '@lucide/svelte';
 	import { getStyle } from '$lib/map/style';
 	import Map from '$lib/map/Map.svelte';
 	import Control from '$lib/map/Control.svelte';
@@ -63,7 +59,6 @@
 	import { defaultQuery, omitDefaults } from '$lib/defaults';
 	import { LEVEL_MIN_ZOOM } from '$lib/constants';
 	import StopGeoJSON from '$lib/StopsGeoJSON.svelte';
-	import TrainFront from 'lucide-svelte/icons/train-front';
 
 	const urlParams = browser ? new URLSearchParams(window.location.search) : undefined;
 
@@ -210,6 +205,9 @@
 			getUrlArray('directRentalFormFactors') as RentalFormFactor[]
 		)
 	);
+	let preTransitProviderGroups = $state<string[]>(getUrlArray('preTransitRentalProviderGroups'));
+	let postTransitProviderGroups = $state<string[]>(getUrlArray('postTransitRentalProviderGroups'));
+	let directProviderGroups = $state<string[]>(getUrlArray('directRentalProviderGroups'));
 	let elevationCosts = $state<ElevationCosts>(
 		(urlParams?.get('elevationCosts') ?? 'NONE') as ElevationCosts
 	);
@@ -263,6 +261,13 @@
 		}
 	};
 
+	const providerGroupsForQuery = (modes: PrePostDirectMode[], groups: string[]): string[] => {
+		if (!modes.some((mode) => mode.startsWith('RENTAL_'))) {
+			return [];
+		}
+		return Array.from(new Set(groups));
+	};
+
 	let baseQuery = $derived(
 		from.match && to.match
 			? ({
@@ -290,6 +295,15 @@
 						preTransitRentalFormFactors: getFormFactors(preTransitModes),
 						postTransitRentalFormFactors: getFormFactors(postTransitModes),
 						directRentalFormFactors: getFormFactors(directModes),
+						preTransitRentalProviderGroups: providerGroupsForQuery(
+							preTransitModes,
+							preTransitProviderGroups
+						),
+						postTransitRentalProviderGroups: providerGroupsForQuery(
+							postTransitModes,
+							postTransitProviderGroups
+						),
+						directRentalProviderGroups: providerGroupsForQuery(directModes, directProviderGroups),
 						requireBikeTransport,
 						requireCarTransport,
 						elevationCosts,
@@ -535,6 +549,9 @@
 						bind:ignorePreTransitRentalReturnConstraints
 						bind:ignorePostTransitRentalReturnConstraints
 						bind:ignoreDirectRentalReturnConstraints
+						bind:preTransitProviderGroups
+						bind:postTransitProviderGroups
+						bind:directProviderGroups
 					/>
 				</Card>
 			</Tabs.Content>
@@ -565,6 +582,9 @@
 						bind:ignorePreTransitRentalReturnConstraints
 						bind:ignorePostTransitRentalReturnConstraints
 						bind:options={isochronesOptions}
+						bind:preTransitProviderGroups
+						bind:postTransitProviderGroups
+						bind:directProviderGroups
 					/>
 				</Card>
 			</Tabs.Content>
@@ -670,20 +690,19 @@
 	bind:bounds
 	bind:zoom
 	bind:center
-	transformRequest={(url: string) => {
-		if (url.startsWith('/sprite')) {
-			return { url: new URL(url.slice(1), window.location.href).toString() };
-		}
-		if (url.startsWith('/')) {
-			return { url: `${client.getConfig().baseUrl}/tiles${url}` };
-		}
-	}}
 	class={cn('h-dvh overflow-clip', theme)}
-	style={showMap ? getStyle(theme, level) : undefined}
+	style={showMap && browser
+		? getStyle(
+				theme,
+				level,
+				window.location.origin + window.location.pathname,
+				client.getConfig().baseUrl || window.location.origin + window.location.pathname
+			)
+		: undefined}
 	attribution={false}
 >
 	{#if hasDebug}
-		<Control position="top-right">
+		<Control position="top-right" class="text-right">
 			<Debug {bounds} {level} {zoom} />
 		</Control>
 	{/if}
@@ -715,7 +734,7 @@
 
 	{#if showMap}
 		{#if activeTab != 'isochrones'}
-			<Control position="top-right" class="pb-4">
+			<Control position="top-right" class="pb-4 text-right">
 				<Button
 					size="icon"
 					onclick={() => {
@@ -749,8 +768,8 @@
 			</Control>
 			{#if colorMode != 'none'}
 				<RailViz {map} {bounds} {zoom} {colorMode} />
-				<Rentals {map} {bounds} {zoom} />
 			{/if}
+			<Rentals {map} {bounds} {zoom} debug={hasDebug} />
 		{/if}
 		<!-- Isochrones cannot be hidden the same way as RailViz -->
 		<Isochrones

@@ -126,12 +126,12 @@ struct osr_mapping {
               if (!applies(r.vehicle_type_idxs_, prod.vehicle_types_)) {
                 continue;
               }
-              start_allowed = r.ride_start_allowed_;
-              end_allowed = r.ride_end_allowed_;
-              through_allowed = r.ride_through_allowed_;
               if (r.station_parking_.has_value()) {
                 station_parking = r.station_parking_.value();
               }
+              start_allowed = r.ride_start_allowed_;
+              end_allowed = r.ride_end_allowed_ && !station_parking;
+              through_allowed = r.ride_through_allowed_;
               break;
             }
             if (start_allowed.has_value()) {
@@ -139,7 +139,7 @@ struct osr_mapping {
             }
           }
         }
-        if (end_allowed.has_value() && !station_parking) {
+        if (end_allowed.has_value()) {
           rd.end_allowed_.set(n, *end_allowed);
         }
         if (through_allowed.has_value()) {

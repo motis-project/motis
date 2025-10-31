@@ -19,6 +19,14 @@ export type Translations = {
 	car: string;
 	taxi: string;
 	moped: string;
+	unknownVehicleType: string;
+	electricAssist: string;
+	electric: string;
+	combustion: string;
+	combustionDiesel: string;
+	hybrid: string;
+	plugInHybrid: string;
+	hydrogenFuelCell: string;
 	from: string;
 	to: string;
 	position: string;
@@ -39,11 +47,14 @@ export type Translations = {
 	platformAbr: string;
 	tripIntermediateStops: (n: number) => string;
 	sharingProvider: string;
+	sharingProviders: string;
+	returnOnlyAtStations: string;
 	roundtripStationReturnConstraint: string;
 	noItinerariesFound: string;
 	advancedSearchOptions: string;
 	selectTransitModes: string;
 	defaultSelectedModes: string;
+	defaultSelectedProviders: string;
 	selectElevationCosts: string;
 	wheelchair: string;
 	useRoutedTransfers: string;
@@ -124,6 +135,7 @@ export type Translations = {
 	accessRestriction: string;
 	continuesAs: string;
 	rent: string;
+	copyToClipboard: string;
 	rideThroughAllowed: string;
 	rideThroughNotAllowed: string;
 	rideEndAllowed: string;

@@ -112,6 +112,8 @@ private:
       dest_propulsion_types_;
   std::optional<std::vector<std::string>> const& start_rental_providers_;
   std::optional<std::vector<std::string>> const& dest_rental_providers_;
+  std::optional<std::vector<std::string>> const& start_rental_provider_groups_;
+  std::optional<std::vector<std::string>> const& dest_rental_provider_groups_;
   bool start_ignore_rental_return_constraints_{};
   bool dest_ignore_rental_return_constraints_{};
 };

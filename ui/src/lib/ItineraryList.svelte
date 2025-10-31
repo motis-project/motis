@@ -13,7 +13,7 @@
 		type PlanResponse
 	} from '$lib/api/openapi';
 	import Time from '$lib/Time.svelte';
-	import LoaderCircle from 'lucide-svelte/icons/loader-circle';
+	import { LoaderCircle } from '@lucide/svelte';
 	import { t } from '$lib/i18n/translation';
 	import DirectConnection from '$lib/DirectConnection.svelte';
 	import type { RequestResult } from '@hey-api/client-fetch';

@@ -1,0 +1,10 @@
+{
+  "elevator": {
+    "height": 26,
+    "pixelRatio": 1,
+    "width": 26,
+    "x": 0,
+    "y": 0,
+    "sdf": true
+  }
+}

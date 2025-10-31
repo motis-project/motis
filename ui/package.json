@@ -13,7 +13,7 @@
 		"format": "prettier --write .",
 		"test:integration": "playwright test",
 		"test:unit": "vitest",
-		"update-sprite": "spreet sprite static/sprite && spreet --retina sprite static/sprite@2x"
+		"update-sprite": "spreet sprite --sdf static/sprite_sdf && spreet --sdf --retina sprite static/sprite_sdf@2x"
 	},
 	"devDependencies": {
 		"@eslint/compat": "^1.2.9",
@@ -24,9 +24,11 @@
 		"@sveltejs/adapter-static": "^3.0.8",
 		"@sveltejs/kit": "^2.21.1",
 		"@sveltejs/vite-plugin-svelte": "^4.0.4",
+		"@types/earcut": "^3.0.0",
 		"@types/eslint": "^9.6.1",
 		"@types/geojson": "^7946.0.16",
 		"@types/mapbox__polyline": "^1.0.5",
+		"@types/rbush": "^4.0.0",
 		"@typescript-eslint/eslint-plugin": "^8.32.1",
 		"@typescript-eslint/parser": "^8.32.1",
 		"autoprefixer": "^10.4.21",
@@ -36,7 +38,6 @@
 		"eslint-config-prettier": "^10.1.5",
 		"eslint-plugin-svelte": "^3.9.0",
 		"globals": "^16.2.0",
-		"lucide-svelte": "^0.460.1",
 		"postcss": "^8.5.3",
 		"prettier": "^3.5.3",
 		"prettier-plugin-svelte": "^3.4.0",
@@ -54,21 +55,32 @@
 	},
 	"type": "module",
 	"dependencies": {
-		"@deck.gl/core": "~9.0.40",
-		"@deck.gl/layers": "~9.0.40",
-		"@deck.gl/mapbox": "~9.0.40",
+		"@deck.gl/core": "~9.2.2",
+		"@deck.gl/layers": "~9.2.2",
+		"@deck.gl/mapbox": "~9.2.2",
 		"@hey-api/client-fetch": "^0.4.4",
+		"@lucide/svelte": "^0.548.0",
 		"@mapbox/polyline": "^1.2.1",
+		"@tanstack/svelte-query": "^6.0.3",
+		"@turf/boolean-point-in-polygon": "^7.2.0",
 		"@turf/circle": "^7.2.0",
 		"@turf/destination": "^7.2.0",
+		"@turf/difference": "^7.2.0",
 		"@turf/helpers": "^7.2.0",
-		"@turf/union": "^7.2.0",
 		"@turf/rhumb-bearing": "^7.2.0",
 		"@turf/rhumb-distance": "^7.2.0",
+		"@turf/union": "^7.2.0",
 		"colord": "^2.9.3",
+		"earcut": "^3.0.2",
 		"geojson": "^0.5.0",
-		"maplibre-gl": "^4.7.1",
+		"maplibre-gl": "^5.10.0",
+		"rbush": "^4.0.1",
 		"svelte-radix": "^1.1.1"
 	},
-	"packageManager": "pnpm@10.11.0+sha512.6540583f41cc5f628eb3d9773ecee802f4f9ef9923cc45b69890fb47991d4b092964694ec3a4f738a420c918a333062c8b925d312f42e4f0c263eb603551f977"
+	"devEngines": {
+		"packageManager": {
+			"name": "pnpm",
+			"onFail": "error"
+		}
+	}
 }
