@@ -134,6 +134,12 @@ const translations: Translations = {
 		noData: 'No data',
 		requestFailed: 'Request failed'
 	},
+	alerts: {
+		validFrom: 'Valid from',
+		until: 'until',
+		information: 'Information',
+		more: 'more'
+	},
 	incline: 'Incline',
 	toll: 'Warning! A fee must be paid to use this route.',
 	accessRestriction: 'No access',

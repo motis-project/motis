@@ -1,4 +1,7 @@
 packages:
-  - 'api'
+  - api
 
 includeWorkspaceRoot: true
+
+onlyBuiltDependencies:
+  - esbuild

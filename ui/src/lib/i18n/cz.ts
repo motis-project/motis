@@ -126,6 +126,12 @@ const translations: Translations = {
 		noData: 'Žádné data',
 		requestFailed: 'Chyba žádosti'
 	},
+	alerts: {
+		validFrom: 'Platí od',
+		until: 'do',
+		information: 'Informace',
+		more: 'více'
+	},
 	RENTAL_BICYCLE: 'Sdílené kolo',
 	RENTAL_CARGO_BICYCLE: 'Sdílené nákladní kolo',
 	RENTAL_CAR: 'Sdílené auto',

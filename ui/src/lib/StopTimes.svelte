@@ -152,12 +152,8 @@
 								{stopTime.place.track}
 							</span>
 						{/if}
+						<Alerts tz={stopTime.place.tz} alerts={stopTime.place.alerts} />
 					</div>
-					{#if stopTime.place.alerts}
-						<div class="mt-2">
-							<Alerts timeZone={stopTime.place.tz ?? ''} alerts={stopTime.place.alerts} />
-						</div>
-					{/if}
 					{#if stopTime.pickupDropoffType == 'NOT_ALLOWED'}
 						<div class="flex items-center text-destructive text-sm">
 							<CircleX class="stroke-destructive h-4 w-4" />

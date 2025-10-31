@@ -121,6 +121,12 @@ const translations: Translations = {
 		noData: 'Keine Daten',
 		requestFailed: 'Anfrage fehlgeschlagen'
 	},
+	alerts: {
+		validFrom: 'Gültig von',
+		until: 'bis',
+		information: 'Informationen',
+		more: 'mehr'
+	},
 	RENTAL_BICYCLE: 'Bikesharing',
 	RENTAL_CARGO_BICYCLE: 'Lastenrad Sharing',
 	RENTAL_CAR: 'Car Sharing',
