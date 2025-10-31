@@ -216,7 +216,7 @@
 				bind:maxTransitTime={maxPreTransitTime}
 				possibleModes={prePostDirectModes}
 				possibleMaxTransitTime={possiblePrePostDurations}
-				ignoreRentalReturnConstraints={ignorePreTransitRentalReturnConstraints}
+				bind:ignoreRentalReturnConstraints={ignorePreTransitRentalReturnConstraints}
 				bind:providerGroups={preTransitProviderGroups}
 			></StreetModes>
 
@@ -227,7 +227,7 @@
 				bind:maxTransitTime={maxPostTransitTime}
 				possibleModes={prePostDirectModes}
 				possibleMaxTransitTime={possiblePrePostDurations}
-				ignoreRentalReturnConstraints={ignorePostTransitRentalReturnConstraints}
+				bind:ignoreRentalReturnConstraints={ignorePostTransitRentalReturnConstraints}
 				bind:providerGroups={postTransitProviderGroups}
 			></StreetModes>
 
@@ -239,7 +239,7 @@
 					bind:maxTransitTime={maxDirectTime}
 					possibleModes={prePostDirectModes}
 					possibleMaxTransitTime={possibleDirectDurations}
-					ignoreRentalReturnConstraints={ignoreDirectRentalReturnConstraints}
+					bind:ignoreRentalReturnConstraints={ignoreDirectRentalReturnConstraints}
 					bind:providerGroups={directProviderGroups}
 				></StreetModes>
 			{/if}
