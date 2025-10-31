@@ -120,6 +120,12 @@ export type Translations = {
 		noData: string;
 		requestFailed: string;
 	};
+	alerts: {
+		validFrom: string;
+		until: string;
+		information: string;
+		more: string;
+	};
 	RENTAL_BICYCLE: string;
 	RENTAL_CARGO_BICYCLE: string;
 	RENTAL_CAR: string;

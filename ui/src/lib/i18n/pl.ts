@@ -126,6 +126,12 @@ const translations: Translations = {
 		noData: 'Brak danych',
 		requestFailed: 'Błąd zapytania'
 	},
+	alerts: {
+		validFrom: 'Ważne od',
+		until: 'do',
+		information: 'Informacje',
+		more: 'więcej'
+	},
 	RENTAL_BICYCLE: 'Rower współdzielony',
 	RENTAL_CARGO_BICYCLE: 'Rower cargo współdzielony',
 	RENTAL_CAR: 'Samochód współdzielony',
