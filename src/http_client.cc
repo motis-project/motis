@@ -147,6 +147,7 @@ struct http_client::connection
           asio::ip::tcp::socket::shutdown_both, ec);
       beast::get_lowest_layer(*stream_).socket().close(ec);
     }
+    request_channel_.close();
   }
 
   asio::awaitable<void> fail_all_requests(boost::system::error_code const ec) {
