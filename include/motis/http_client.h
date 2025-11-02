@@ -41,6 +41,8 @@ struct http_client {
     friend bool operator==(connection_key const&,
                            connection_key const&) = default;
 
+    cista::hash_t hash() const { return cista::build_hash(host_, port_, ssl_); }
+
     std::string host_;
     std::string port_;
     bool ssl_{};
@@ -57,6 +59,7 @@ struct http_client {
   struct connection;
   struct request;
 
+  http_client();
   ~http_client();
 
   boost::asio::awaitable<http_response> get(
@@ -83,6 +86,9 @@ public:
 
   proxy_settings proxy_{};
 };
+
+extern unsigned client_count;
+extern hash_map<http_client::connection_key, unsigned> connection_count;
 
 }  // namespace motis
 
