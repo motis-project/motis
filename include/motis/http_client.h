@@ -57,7 +57,7 @@ struct http_client {
   struct connection;
   struct request;
 
-  http_client();
+  ~http_client();
 
   boost::asio::awaitable<http_response> get(
       boost::urls::url url, std::map<std::string, std::string> headers);
