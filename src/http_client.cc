@@ -49,9 +49,6 @@ namespace motis {
 #define MOTIS_VERSION "unknown"
 #endif
 
-unsigned client_count = 0U;
-hash_map<http_client::connection_key, unsigned> connection_count = {};
-
 constexpr auto const kMotisUserAgent =
     "MOTIS/" MOTIS_VERSION " " BOOST_BEAST_VERSION_STRING;
 
@@ -135,13 +132,6 @@ struct http_client::connection
     ssl_ctx_.set_options(ssl::context::default_workarounds |
                          ssl::context::no_sslv2 | ssl::context::no_sslv3 |
                          ssl::context::single_dh_use);
-    std::cerr << "NEW " << key_.host_ << ", " << key_.port_
-              << " [#total=" << ++connection_count[key_] << "]\n";
-  }
-
-  ~connection() {
-    std::cerr << "DEL " << key_.host_ << ", " << key_.port_
-              << " [#total=" << --connection_count[key_] << "]\n";
   }
 
   void close() {
@@ -355,12 +345,7 @@ struct http_client::connection
   unsigned n_current_retries_{};
 };
 
-http_client::http_client() {
-  std::cout << "CTOR HTTP CLIENT " << ++client_count << "\n";
-}
-
 http_client::~http_client() {
-  std::cout << "DTOR HTTP CLIENT " << --client_count << "\n";
   for (auto const& [key, conn] : connections_) {
     conn->close();
   }

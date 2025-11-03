@@ -60,7 +60,6 @@ struct http_client {
   struct request;
 
   http_client();
-  ~http_client();
 
   boost::asio::awaitable<http_response> get(
       boost::urls::url url, std::map<std::string, std::string> headers);
@@ -86,9 +85,6 @@ public:
 
   proxy_settings proxy_{};
 };
-
-extern unsigned client_count;
-extern hash_map<http_client::connection_key, unsigned> connection_count;
 
 }  // namespace motis
 
