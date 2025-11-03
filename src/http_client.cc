@@ -459,7 +459,6 @@ asio::awaitable<void> http_client::shutdown() {
     con->requests_in_flight_->cancel();
     con->close();
     con->request_channel_.close();
-    con->unlimited_pipelining_ = true;
   }
 }
 
