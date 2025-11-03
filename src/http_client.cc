@@ -466,13 +466,10 @@ asio::awaitable<void> http_client::shutdown() {
     auto const con = it->second;
     connections_.erase(it);
     co_await con->fail_all_requests(make_error_code(error::timeout));
-    if (con->requests_in_flight_) {
-      con->unlimited_pipelining_ = true;
-      con->requests_in_flight_->cancel();
-    }
-    con->close();
+    con->requests_in_flight_->cancel();
     con->request_channel_.close();
     con->pending_requests_.clear();
+    con->close();
   }
 }
 
