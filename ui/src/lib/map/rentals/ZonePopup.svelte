@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { RentalProvider, RentalZone } from '@motis-project/motis-client';
+	import type { RentalProvider, RentalStation, RentalZone } from '@motis-project/motis-client';
 	import { Button } from '$lib/components/ui/button';
 	import { Copy } from '@lucide/svelte';
 	import { t } from '$lib/i18n/translation';
@@ -8,32 +8,51 @@
 	let {
 		provider,
 		zone,
+		station,
 		rideThroughAllowed,
 		rideEndAllowed,
+		stationArea,
 		allZonesAtPoint = [],
 		zoneData = [],
+		stationData = [],
 		debug = false
 	}: {
 		provider: RentalProvider;
-		zone: RentalZone;
+		zone: RentalZone | undefined;
+		station: RentalStation | undefined;
 		rideThroughAllowed: boolean;
 		rideEndAllowed: boolean;
+		stationArea: boolean;
 		allZonesAtPoint?: RentalZoneFeature[];
 		zoneData?: RentalZone[];
+		stationData?: RentalStation[];
 		debug?: boolean;
 	} = $props();
 
 	let debugInfo = $derived({
-		zone: { ...zone, area: '...' },
+		...(zone ? { zone: { ...zone, area: '...' } } : {}),
+		...(station ? { station: { ...station, stationArea: '...' } } : {}),
 		provider: provider,
 		allZonesAtPoint: allZonesAtPoint.map((feature) => ({
-			zoneIndex: feature.properties.zoneIndex,
 			z: feature.properties.z,
+			zoneIndex: feature.properties.zoneIndex,
+			stationIndex: feature.properties.stationIndex,
 			rideThroughAllowed: feature.properties.rideThroughAllowed,
 			rideEndAllowed: feature.properties.rideEndAllowed,
+			stationArea: feature.properties.stationArea,
 			zone: (() => {
+				if (feature.properties.zoneIndex === undefined) {
+					return null;
+				}
 				const zone = zoneData[feature.properties.zoneIndex];
 				return zone ? { ...zone, area: '...' } : null;
+			})(),
+			station: (() => {
+				if (feature.properties.stationIndex === undefined) {
+					return null;
+				}
+				const station = stationData[feature.properties.stationIndex];
+				return station ? { ...station, stationArea: '...' } : null;
 			})()
 		}))
 	});
@@ -45,8 +64,18 @@
 
 <div class="space-y-3 text-sm leading-tight text-foreground">
 	<div class="space-y-1">
-		{#if zone.name}
-			<div class="font-semibold">{zone.name}</div>
+		{#if zone}
+			{#if zone.name}
+				<div class="font-semibold">{t.rentalGeofencingZone}: {zone.name}</div>
+			{:else}
+				<div class="font-semibold">{t.rentalGeofencingZone}</div>
+			{/if}
+		{:else if station}
+			{#if station.name}
+				<div class="font-semibold">{t.rentalStation}: {station.name}</div>
+			{:else}
+				<div class="font-semibold">{t.rentalStation}</div>
+			{/if}
 		{/if}
 		<div>
 			{t.sharingProvider}: {#if provider.url}

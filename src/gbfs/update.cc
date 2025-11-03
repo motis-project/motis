@@ -440,6 +440,7 @@ struct gbfs_update {
             provider.group_id_,
             gbfs_group{.id_ = provider.group_id_,
                        .name_ = group_name.value_or(provider.group_id_),
+                       .color_ = {},
                        .providers_ = {provider.idx_}});
       } else {
         it->second.providers_.push_back(provider.idx_);

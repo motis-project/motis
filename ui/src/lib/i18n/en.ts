@@ -54,6 +54,8 @@ const translations: Translations = {
 	sharingProviders: 'Providers',
 	returnOnlyAtStations: 'The vehicle must be returned at a station.',
 	roundtripStationReturnConstraint: 'The vehicle must be returned to the departure station.',
+	rentalStation: 'Station',
+	rentalGeofencingZone: 'Zone',
 	noItinerariesFound: 'No itineraries found.',
 	advancedSearchOptions: 'Options',
 	selectTransitModes: 'Select transit modes',
