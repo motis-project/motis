@@ -41,8 +41,6 @@ struct http_client {
     friend bool operator==(connection_key const&,
                            connection_key const&) = default;
 
-    cista::hash_t hash() const { return cista::build_hash(host_, port_, ssl_); }
-
     std::string host_;
     std::string port_;
     bool ssl_{};
