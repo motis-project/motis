@@ -56,6 +56,8 @@ const translations: Translations = {
 	sharingProviders: 'Dostawcy danych',
 	returnOnlyAtStations: 'Pojazd musi zostać zwrócony na stacji.',
 	roundtripStationReturnConstraint: 'Pojazd musi zostać zwrócony do stacji początkowej.',
+	rentalStation: 'Stacja',
+	rentalGeofencingZone: 'Strefa',
 	noItinerariesFound: 'Nie znaleziono połączeń.',
 	advancedSearchOptions: 'Opcje',
 	selectTransitModes: 'Wybierz środki transportu',

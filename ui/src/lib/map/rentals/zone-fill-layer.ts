@@ -50,7 +50,7 @@ void main() {
 `;
 
 const SCREEN_FRAGMENT_SHADER_SOURCE = `
-precision mediump float;
+precision highp float;
 uniform sampler2D u_texture;
 uniform float u_opacity_primary;
 uniform float u_opacity_secondary;
@@ -71,8 +71,12 @@ void main() {
 const ZONE_COLOR_ALLOWED = new Float32Array([0.13333333, 0.77254902, 0.36862745, 1]); // #22c55e (green)
 const ZONE_COLOR_FORBIDDEN = new Float32Array([0.9372549, 0.26666667, 0.26666667, 1]); // #ef4444 (red)
 const ZONE_COLOR_RESTRICTED = new Float32Array([1, 0.84313725, 0, 1]); // #ffd700 (yellow)
+const ZONE_COLOR_STATION = new Float32Array([0.25882354, 0.52156866, 0.95686275, 1]); // #4287f5 (blue)
 
 export const getZoneColor = (properties: RentalZoneFeatureProperties) => {
+	if (properties.stationArea) {
+		return ZONE_COLOR_STATION;
+	}
 	if (properties.rideEndAllowed) {
 		return ZONE_COLOR_ALLOWED;
 	}
@@ -477,7 +481,7 @@ void main() {
 `;
 
 		const fragmentSource = `#version 300 es
-precision mediump float;
+precision highp float;
 uniform vec4 u_color;
 out vec4 fragColor;
 void main() {

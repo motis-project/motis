@@ -1,11 +1,13 @@
 import type { Feature, FeatureCollection, MultiPolygon } from 'geojson';
 
 export type RentalZoneFeatureProperties = {
-	zoneIndex: number;
+	zoneIndex?: number;
+	stationIndex?: number;
 	providerId: string;
 	z: number;
 	rideEndAllowed: boolean;
 	rideThroughAllowed: boolean;
+	stationArea: boolean;
 };
 
 export type RentalZoneFeature = Feature<MultiPolygon, RentalZoneFeatureProperties>;
