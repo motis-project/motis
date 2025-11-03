@@ -54,6 +54,8 @@ const translations: Translations = {
 	transfers: 'correspondances',
 	returnOnlyAtStations: 'Le véhicule doit être retourné à une station.',
 	roundtripStationReturnConstraint: 'Le véhicule doit être retourné à la station de départ.',
+	rentalStation: 'Station',
+	rentalGeofencingZone: 'Zone',
 	noItinerariesFound: 'Aucun itinéraire trouvé.',
 	advancedSearchOptions: 'Options',
 	selectTransitModes: 'Sélectionner les modes de transport en commun',

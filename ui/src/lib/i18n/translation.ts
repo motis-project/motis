@@ -50,6 +50,8 @@ export type Translations = {
 	sharingProviders: string;
 	returnOnlyAtStations: string;
 	roundtripStationReturnConstraint: string;
+	rentalStation: string;
+	rentalGeofencingZone: string;
 	noItinerariesFound: string;
 	advancedSearchOptions: string;
 	selectTransitModes: string;

@@ -232,69 +232,73 @@ api::rentals_response rental::operator()(
 
     if (query.withStations_) {
       for (auto const& st : provider->stations_ | std::views::values) {
-        if (in_bbox(st.info_.pos_)) {
-          auto form_factor_counts =
-              std::array<std::uint64_t,
-                         std::to_underlying(api::RentalFormFactorEnum::OTHER) +
-                             1>{};
-          auto types_available = std::map<std::string, std::uint64_t>{};
-          auto docks_available = std::map<std::string, std::uint64_t>{};
-          auto form_factors = std::set<api::RentalFormFactorEnum>{};
-
-          for (auto const& [vti, count] : st.status_.vehicle_types_available_) {
-            auto const& vt = provider->vehicle_types_[vti];
-            auto const api_ff = gbfs::to_api_form_factor(vt.form_factor_);
-            form_factor_counts[static_cast<std::size_t>(
-                std::to_underlying(api_ff))] += count;
-            types_available[vt.id_] = count;
-            form_factors.insert(api_ff);
-          }
-          for (auto const& [vti, count] : st.status_.vehicle_docks_available_) {
-            auto const& vt = provider->vehicle_types_[vti];
-            auto const api_ff = gbfs::to_api_form_factor(vt.form_factor_);
-            form_factor_counts[static_cast<std::size_t>(
-                std::to_underlying(api_ff))] += count;
-            docks_available[vt.id_] = count;
-            form_factors.insert(api_ff);
-          }
-
-          if (form_factors.empty()) {
-            for (auto const& vt : provider->vehicle_types_) {
-              form_factors.insert(gbfs::to_api_form_factor(vt.form_factor_));
-            }
-          }
-
-          auto sorted_form_factors = utl::to_vec(form_factors);
-          utl::sort(sorted_form_factors, [&](auto const a, auto const b) {
-            return form_factor_counts[static_cast<std::size_t>(
-                       std::to_underlying(a))] >
-                   form_factor_counts[static_cast<std::size_t>(
-                       std::to_underlying(b))];
-          });
-
-          res.stations_.emplace_back(api::RentalStation{
-              .id_ = st.info_.id_,
-              .providerId_ = provider->id_,
-              .providerGroupId_ = provider->group_id_,
-              .name_ = st.info_.name_,
-              .lat_ = st.info_.pos_.lat_,
-              .lon_ = st.info_.pos_.lng_,
-              .address_ = st.info_.address_,
-              .crossStreet_ = st.info_.cross_street_,
-              .rentalUriAndroid_ = st.info_.rental_uris_.android_,
-              .rentalUriIOS_ = st.info_.rental_uris_.ios_,
-              .rentalUriWeb_ = st.info_.rental_uris_.web_,
-              .isRenting_ = st.status_.is_renting_,
-              .isReturning_ = st.status_.is_returning_,
-              .numVehiclesAvailable_ = st.status_.num_vehicles_available_,
-              .formFactors_ = sorted_form_factors,
-              .vehicleTypesAvailable_ = std::move(types_available),
-              .vehicleDocksAvailable_ = std::move(docks_available),
-              .stationArea_ = st.info_.station_area_ != nullptr
-                                  ? std::optional{multipoly_to_api(
-                                        st.info_.station_area_.get())}
-                                  : std::nullopt});
+        auto const sbb = st.info_.bounding_box();
+        if (filter_bbox && !sbb.overlaps(bbox)) {
+          continue;
         }
+        auto form_factor_counts =
+            std::array<std::uint64_t,
+                       std::to_underlying(api::RentalFormFactorEnum::OTHER) +
+                           1>{};
+        auto types_available = std::map<std::string, std::uint64_t>{};
+        auto docks_available = std::map<std::string, std::uint64_t>{};
+        auto form_factors = std::set<api::RentalFormFactorEnum>{};
+
+        for (auto const& [vti, count] : st.status_.vehicle_types_available_) {
+          auto const& vt = provider->vehicle_types_[vti];
+          auto const api_ff = gbfs::to_api_form_factor(vt.form_factor_);
+          form_factor_counts[static_cast<std::size_t>(
+              std::to_underlying(api_ff))] += count;
+          types_available[vt.id_] = count;
+          form_factors.insert(api_ff);
+        }
+        for (auto const& [vti, count] : st.status_.vehicle_docks_available_) {
+          auto const& vt = provider->vehicle_types_[vti];
+          auto const api_ff = gbfs::to_api_form_factor(vt.form_factor_);
+          form_factor_counts[static_cast<std::size_t>(
+              std::to_underlying(api_ff))] += count;
+          docks_available[vt.id_] = count;
+          form_factors.insert(api_ff);
+        }
+
+        if (form_factors.empty()) {
+          for (auto const& vt : provider->vehicle_types_) {
+            form_factors.insert(gbfs::to_api_form_factor(vt.form_factor_));
+          }
+        }
+
+        auto sorted_form_factors = utl::to_vec(form_factors);
+        utl::sort(sorted_form_factors, [&](auto const a, auto const b) {
+          return form_factor_counts[static_cast<std::size_t>(
+                     std::to_underlying(a))] >
+                 form_factor_counts[static_cast<std::size_t>(
+                     std::to_underlying(b))];
+        });
+
+        res.stations_.emplace_back(api::RentalStation{
+            .id_ = st.info_.id_,
+            .providerId_ = provider->id_,
+            .providerGroupId_ = provider->group_id_,
+            .name_ = st.info_.name_,
+            .lat_ = st.info_.pos_.lat_,
+            .lon_ = st.info_.pos_.lng_,
+            .address_ = st.info_.address_,
+            .crossStreet_ = st.info_.cross_street_,
+            .rentalUriAndroid_ = st.info_.rental_uris_.android_,
+            .rentalUriIOS_ = st.info_.rental_uris_.ios_,
+            .rentalUriWeb_ = st.info_.rental_uris_.web_,
+            .isRenting_ = st.status_.is_renting_,
+            .isReturning_ = st.status_.is_returning_,
+            .numVehiclesAvailable_ = st.status_.num_vehicles_available_,
+            .formFactors_ = sorted_form_factors,
+            .vehicleTypesAvailable_ = std::move(types_available),
+            .vehicleDocksAvailable_ = std::move(docks_available),
+            .stationArea_ = st.info_.station_area_ != nullptr
+                                ? std::optional{multipoly_to_api(
+                                      st.info_.station_area_.get())}
+                                : std::nullopt,
+            .bbox_ = {sbb.min_.lng_, sbb.min_.lat_, sbb.max_.lng_,
+                      sbb.max_.lat_}});
       }
     }
 

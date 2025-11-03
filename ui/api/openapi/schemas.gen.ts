@@ -1065,7 +1065,7 @@ export const RentalProviderGroupSchema = {
 
 export const RentalStationSchema = {
     type: 'object',
-    required: ['id', 'providerId', 'providerGroupId', 'name', 'lat', 'lon', 'isRenting', 'isReturning', 'numVehiclesAvailable', 'formFactors', 'vehicleTypesAvailable', 'vehicleDocksAvailable'],
+    required: ['id', 'providerId', 'providerGroupId', 'name', 'lat', 'lon', 'isRenting', 'isReturning', 'numVehiclesAvailable', 'formFactors', 'vehicleTypesAvailable', 'vehicleDocksAvailable', 'bbox'],
     properties: {
         id: {
             type: 'string',
@@ -1146,6 +1146,17 @@ export const RentalStationSchema = {
         },
         stationArea: {
             '$ref': '#/components/schemas/MultiPolygon'
+        },
+        bbox: {
+            type: 'array',
+            description: `Bounding box of the area covered by this station,
+[west, south, east, north] as [lon, lat, lon, lat]
+`,
+            minItems: 4,
+            maxItems: 4,
+            items: {
+                type: 'number'
+            }
         }
     }
 } as const;

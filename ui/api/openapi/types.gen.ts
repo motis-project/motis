@@ -940,6 +940,17 @@ export type RentalStation = {
         [key: string]: (number);
     };
     stationArea?: MultiPolygon;
+    /**
+     * Bounding box of the area covered by this station,
+     * [west, south, east, north] as [lon, lat, lon, lat]
+     *
+     */
+    bbox: [
+        number,
+        number,
+        number,
+        number
+    ];
 };
 
 export type RentalVehicle = {

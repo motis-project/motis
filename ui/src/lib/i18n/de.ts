@@ -55,6 +55,8 @@ const translations: Translations = {
 	returnOnlyAtStations: 'Das Fahrzeug muss an einer Station zurückgegeben werden.',
 	roundtripStationReturnConstraint:
 		'Das Fahrzeug muss wieder an der Abfahrtsstation abgestellt werden.',
+	rentalStation: 'Station',
+	rentalGeofencingZone: 'Zone',
 	noItinerariesFound: 'Keine Verbindungen gefunden.',
 	advancedSearchOptions: 'Optionen',
 	selectTransitModes: 'Öffentliche Verkehrsmittel auswählen',

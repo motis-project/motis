@@ -7,7 +7,8 @@
 		type RentalProvider,
 		type RentalStation,
 		type RentalVehicle,
-		type RentalZone
+		type RentalZone,
+		type MultiPolygon
 	} from '@motis-project/motis-client';
 	import { lngLatToStr } from '$lib/lngLatToStr';
 	import Control from '$lib/map/Control.svelte';
@@ -56,11 +57,13 @@
 		map,
 		bounds,
 		zoom,
+		theme,
 		debug = false
 	}: {
 		map: maplibregl.Map | undefined;
 		bounds: maplibregl.LngLatBoundsLike | undefined;
 		zoom: number;
+		theme: 'light' | 'dark';
 		debug?: boolean;
 	} = $props();
 
@@ -377,10 +380,10 @@
 		return collections;
 	});
 
-	const buildZoneGeometry = (zone: RentalZone): RentalZoneFeature['geometry'] => {
+	const buildZoneGeometry = (mp: MultiPolygon): RentalZoneFeature['geometry'] => {
 		return {
 			type: 'MultiPolygon',
-			coordinates: zone.area.map((polygon) =>
+			coordinates: mp.map((polygon) =>
 				polygon.map((encoded) =>
 					polyline
 						.decode(encoded.points, encoded.precision)
@@ -414,6 +417,7 @@
 		}
 
 		const features: RentalZoneFeature[] = [];
+		let maxGeofencingZ = 0;
 
 		data.zones.forEach((zone, index) => {
 			if (zone.providerGroupId !== filter.providerGroupId) {
@@ -429,13 +433,40 @@
 			}
 			features.push({
 				type: 'Feature',
-				geometry: buildZoneGeometry(zone),
+				geometry: buildZoneGeometry(zone.area),
 				properties: {
 					zoneIndex: index,
 					providerId: zone.providerId,
 					z: zone.z,
 					rideEndAllowed: rule.rideEndAllowed && !rule.stationParking,
-					rideThroughAllowed: rule.rideThroughAllowed
+					rideThroughAllowed: rule.rideThroughAllowed,
+					stationArea: false
+				}
+			} satisfies RentalZoneFeature);
+			if (zone.z > maxGeofencingZ) {
+				maxGeofencingZ = zone.z;
+			}
+		});
+
+		const stationAreaZ = maxGeofencingZ + 1;
+		data.stations.forEach((station, index) => {
+			if (
+				!station.stationArea ||
+				station.providerGroupId !== filter.providerGroupId ||
+				!station.formFactors.includes(filter.formFactor)
+			) {
+				return;
+			}
+			features.push({
+				type: 'Feature',
+				geometry: buildZoneGeometry(station.stationArea),
+				properties: {
+					stationIndex: index,
+					providerId: station.providerId,
+					z: stationAreaZ,
+					rideEndAllowed: true,
+					rideThroughAllowed: true,
+					stationArea: true
 				}
 			} satisfies RentalZoneFeature);
 		});
@@ -460,12 +491,15 @@
 		if (data && debug) {
 			rtree.load(
 				zoneFeatures.features.map((feature) => {
-					const zone = data.zones[feature.properties.zoneIndex];
+					const bbox =
+						feature.properties.zoneIndex !== undefined
+							? data.zones[feature.properties.zoneIndex].bbox
+							: data.stations[feature.properties.stationIndex!].bbox;
 					return {
-						minX: zone.bbox[0],
-						minY: zone.bbox[1],
-						maxX: zone.bbox[2],
-						maxY: zone.bbox[3],
+						minX: bbox[0],
+						minY: bbox[1],
+						maxX: bbox[2],
+						maxY: bbox[3],
 						feature
 					};
 				})
@@ -508,14 +542,24 @@
 		};
 	};
 
-	const lookupZone = (properties: RentalZoneFeatureProperties) => {
-		const zone = rentalsData?.zones[properties.zoneIndex];
+	const lookupZoneOrStation = (properties: RentalZoneFeatureProperties) => {
+		const zone =
+			properties.zoneIndex !== undefined ? rentalsData?.zones[properties.zoneIndex] : undefined;
+		const station =
+			properties.stationIndex !== undefined
+				? rentalsData?.stations[properties.stationIndex]
+				: undefined;
 		return {
-			key: String(properties.zoneIndex),
+			key:
+				properties.zoneIndex !== undefined
+					? `zone-${properties.zoneIndex}`
+					: `station-${properties.stationIndex}`,
 			provider: providerById.get(properties.providerId),
 			zone,
+			station,
 			rideThroughAllowed: properties.rideThroughAllowed,
-			rideEndAllowed: properties.rideEndAllowed
+			rideEndAllowed: properties.rideEndAllowed,
+			stationArea: properties.stationArea
 		};
 	};
 
@@ -557,7 +601,8 @@
 
 	const createZoneContent = (
 		provider: RentalProvider,
-		zone: RentalZone,
+		zone: RentalZone | undefined,
+		station: RentalStation | undefined,
 		rideThroughAllowed: boolean,
 		rideEndAllowed: boolean,
 		allZonesAtPoint: RentalZoneFeature[]
@@ -568,11 +613,13 @@
 			props: {
 				provider,
 				zone,
+				station,
 				rideThroughAllowed,
 				rideEndAllowed,
 				debug,
 				allZonesAtPoint,
-				zoneData: rentalsData?.zones ?? []
+				zoneData: rentalsData?.zones ?? [],
+				stationData: rentalsData?.stations ?? []
 			}
 		});
 		return {
@@ -839,8 +886,8 @@
 			return;
 		}
 
-		const result = lookupZone(feature.properties);
-		if (!result.zone || !result.provider) {
+		const result = lookupZoneOrStation(feature.properties);
+		if ((!result.zone && !result.station) || !result.provider) {
 			hidePopup();
 			return;
 		}
@@ -857,13 +904,13 @@
 				booleanPointInPolygon(point([event.lngLat.lng, event.lngLat.lat]), feature)
 			)
 			.sort((a, b) => b.properties.z - a.properties.z);
-
 		hideTooltip();
 		hidePopup();
 		showPopup(mapInstance, event.lngLat, result.key, () =>
 			createZoneContent(
 				result.provider!,
-				result.zone!,
+				result.zone,
+				result.station,
 				result.rideThroughAllowed,
 				result.rideEndAllowed,
 				allZonesAtPoint
@@ -1051,6 +1098,7 @@
 		id={ZONE_LAYER_ID}
 		features={zoneFeatures.features}
 		{beforeLayerId}
+		opacity={theme === 'dark' ? 0.3 : 0.4}
 	/>
 {/if}
 

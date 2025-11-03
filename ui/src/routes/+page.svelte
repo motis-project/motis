@@ -769,7 +769,7 @@
 			{#if colorMode != 'none'}
 				<RailViz {map} {bounds} {zoom} {colorMode} />
 			{/if}
-			<Rentals {map} {bounds} {zoom} debug={hasDebug} />
+			<Rentals {map} {bounds} {zoom} {theme} debug={hasDebug} />
 		{/if}
 		<!-- Isochrones cannot be hidden the same way as RailViz -->
 		<Isochrones

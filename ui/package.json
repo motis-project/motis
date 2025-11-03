@@ -15,7 +15,7 @@
 		"test:integration": "playwright test",
 		"test:unit": "vitest",
 		"update-sprite": "spreet sprite --sdf static/sprite_sdf && spreet --sdf --retina sprite static/sprite_sdf@2x",
-		"update-api": "pnpm --filter @motis-project/motis-client generate"
+		"update-api": "pnpm --filter @motis-project/motis-client build"
 	},
 	"devDependencies": {
 		"@eslint/compat": "^1.4.1",

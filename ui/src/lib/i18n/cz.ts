@@ -56,6 +56,8 @@ const translations: Translations = {
 	sharingProviders: 'Poskytovatelé dat',
 	returnOnlyAtStations: 'Vozidlo musí být vráceno na stanici.',
 	roundtripStationReturnConstraint: 'Pojezd musí být vrácen k počáteční stanice',
+	rentalStation: 'Stanice',
+	rentalGeofencingZone: 'Zóna',
 	noItinerariesFound: 'Spojení nebylo nalezeno.',
 	advancedSearchOptions: 'Možnosti',
 	selectTransitModes: 'Vyber dopravní prostředky',
