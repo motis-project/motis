@@ -28,7 +28,7 @@ constexpr auto const kUnlimitedHttpPipelining =
 
 std::string get_http_body(http_response const&);
 
-struct http_client {
+struct http_client : std::enable_shared_from_this<http_client> {
   enum class error { success, too_many_redirects, request_failed, timeout };
 
   struct error_category_impl : public boost::system::error_category {

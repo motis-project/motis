@@ -440,7 +440,7 @@ bool prima::blacklist_taxis(nigiri::timetable const& tt) {
     boost::asio::co_spawn(
         ioc,
         [&]() -> boost::asio::awaitable<void> {
-          auto const prima_msg = co_await http_client{}.post(
+          auto const prima_msg = co_await std::make_shared<http_client>()->post(
               taxi_blacklist_, kReqHeaders, make_taxi_request(tt));
           blacklist_response = get_http_body(prima_msg);
         },
@@ -710,7 +710,7 @@ bool prima::whitelist_taxis(
     boost::asio::co_spawn(
         ioc,
         [&]() -> boost::asio::awaitable<void> {
-          auto const prima_msg = co_await http_client{}.post(
+          auto const prima_msg = co_await std::make_shared<http_client>()->post(
               taxi_whitelist_, kReqHeaders, make_taxi_request(tt));
           whitelist_response = get_http_body(prima_msg);
         },
@@ -898,9 +898,9 @@ bool prima::whitelist_ride_sharing(nigiri::timetable const& tt) {
     boost::asio::co_spawn(
         ioc,
         [&]() -> boost::asio::awaitable<void> {
-          auto const prima_msg =
-              co_await http_client{}.post(ride_sharing_whitelist_, kReqHeaders,
-                                          make_ride_sharing_request(tt));
+          auto const prima_msg = co_await std::make_shared<http_client>()->post(
+              ride_sharing_whitelist_, kReqHeaders,
+              make_ride_sharing_request(tt));
           response = get_http_body(prima_msg);
         },
         boost::asio::detached);
