@@ -11,7 +11,6 @@
 		station,
 		rideThroughAllowed,
 		rideEndAllowed,
-		stationArea,
 		allZonesAtPoint = [],
 		zoneData = [],
 		stationData = [],
@@ -22,7 +21,6 @@
 		station: RentalStation | undefined;
 		rideThroughAllowed: boolean;
 		rideEndAllowed: boolean;
-		stationArea: boolean;
 		allZonesAtPoint?: RentalZoneFeature[];
 		zoneData?: RentalZone[];
 		stationData?: RentalStation[];

@@ -605,7 +605,6 @@
 		station: RentalStation | undefined,
 		rideThroughAllowed: boolean,
 		rideEndAllowed: boolean,
-		stationArea: boolean,
 		allZonesAtPoint: RentalZoneFeature[]
 	) => {
 		const container = document.createElement('div');
@@ -617,7 +616,6 @@
 				station,
 				rideThroughAllowed,
 				rideEndAllowed,
-				stationArea,
 				debug,
 				allZonesAtPoint,
 				zoneData: rentalsData?.zones ?? [],
@@ -915,7 +913,6 @@
 				result.station,
 				result.rideThroughAllowed,
 				result.rideEndAllowed,
-				result.stationArea,
 				allZonesAtPoint
 			)
 		);
