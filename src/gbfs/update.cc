@@ -141,10 +141,15 @@ struct gbfs_update {
               osr::lookup const& l,
               gbfs_data* d,
               gbfs_data const* prev_d)
-      : c_{c}, w_{w}, l_{l}, d_{d}, prev_d_{prev_d} {
-    client_.timeout_ = std::chrono::seconds{c.http_timeout_};
+      : c_{c},
+        w_{w},
+        l_{l},
+        d_{d},
+        prev_d_{prev_d},
+        client_{std::make_shared<http_client>()} {
+    client_->timeout_ = std::chrono::seconds{c.http_timeout_};
     if (c.proxy_ && !c.proxy_->empty()) {
-      client_.set_proxy(boost::urls::url{*c.proxy_});
+      client_->set_proxy(boost::urls::url{*c.proxy_});
     }
   }
 
@@ -772,7 +777,7 @@ struct gbfs_update {
       auto headers = base_headers;
       co_await get_oauth_token(oauth, headers);
       auto const res =
-          co_await client_.get(boost::urls::url{url}, std::move(headers));
+          co_await client_->get(boost::urls::url{url}, std::move(headers));
       content = get_http_body(res);
     }
     auto j = json::parse(content);
@@ -821,8 +826,8 @@ struct gbfs_update {
       oauth_headers["Content-Type"] = "application/x-www-form-urlencoded";
 
       auto const res =
-          co_await client_.post(boost::urls::url{oauth->settings_.token_url_},
-                                std::move(oauth_headers), body);
+          co_await client_->post(boost::urls::url{oauth->settings_.token_url_},
+                                 std::move(oauth_headers), body);
       auto const res_body = get_http_body(res);
       auto const res_json = json::parse(res_body);
       auto const& j = res_json.as_object();
@@ -976,7 +981,7 @@ struct gbfs_update {
   gbfs_data* d_;
   gbfs_data const* prev_d_;
 
-  http_client client_;
+  std::shared_ptr<http_client> client_;
 };
 
 awaitable<void> update(config const& c,

@@ -113,13 +113,13 @@ struct http_client::connection
     : public std::enable_shared_from_this<connection> {
   template <typename Executor>
   connection(Executor const& executor,
-             hash_map<connection_key, std::shared_ptr<connection>>& connections,
+             std::weak_ptr<http_client> client,
              connection_key key,
              std::chrono::seconds const timeout,
              proxy_settings const& proxy,
              std::size_t const max_in_flight = 1)
       : key_{std::move(key)},
-        connections_{connections},
+        client_{client},
         unlimited_pipelining_{max_in_flight == kUnlimitedHttpPipelining},
         request_channel_{executor},
         requests_in_flight_{std::make_unique<
@@ -147,7 +147,6 @@ struct http_client::connection
           asio::ip::tcp::socket::shutdown_both, ec);
       beast::get_lowest_layer(*stream_).socket().close(ec);
     }
-    request_channel_.close();
   }
 
   asio::awaitable<void> fail_all_requests(boost::system::error_code const ec) {
@@ -310,13 +309,17 @@ struct http_client::connection
         }
       }
     } while (!pending_requests_.empty());
-    connections_.erase(key_);
+
+    auto const c = client_.lock();
+    if (c) {
+      c->connections_.erase(key_);
+    }
   }
 
   bool ssl() const { return proxy_ ? proxy_.ssl_ : key_.ssl_; }
 
   connection_key key_{};
-  hash_map<connection_key, std::shared_ptr<connection>>& connections_;
+  std::weak_ptr<http_client> client_;
   bool unlimited_pipelining_{false};
 
   std::unique_ptr<beast::tcp_stream> stream_;
@@ -363,8 +366,8 @@ asio::awaitable<http_response> http_client::perform_request(
 
   auto executor = co_await asio::this_coro::executor;
   if (auto const it = connections_.find(key); it == connections_.end()) {
-    auto new_conn = std::make_shared<connection>(executor, connections_, key,
-                                                 timeout_, proxy_, 1);
+    auto new_conn = std::make_shared<connection>(executor, shared_from_this(),
+                                                 key, timeout_, proxy_, 1);
     connections_[key] = new_conn;
     asio::co_spawn(executor, new_conn->run(), asio::detached);
   }
@@ -452,7 +455,10 @@ asio::awaitable<void> http_client::shutdown() {
     auto const con = it->second;
     connections_.erase(it);
     co_await con->fail_all_requests(make_error_code(error::timeout));
+    con->unlimited_pipelining_ = true;
+    con->requests_in_flight_->cancel();
     con->close();
+    con->request_channel_.close();
   }
 }
 
