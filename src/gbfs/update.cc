@@ -883,6 +883,12 @@ struct gbfs_update {
       }
     }
 
+    if (states.empty()) {
+      // this is necessary, because calling async_wait on an empty group
+      // causes everything to break
+      co_return;
+    }
+
     auto executor = co_await asio::this_coro::executor;
     co_await asio::experimental::make_parallel_group(
         utl::to_vec(states,
