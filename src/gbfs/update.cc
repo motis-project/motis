@@ -18,6 +18,7 @@
 #include "boost/asio/experimental/parallel_group.hpp"
 #include "boost/asio/redirect_error.hpp"
 #include "boost/asio/steady_timer.hpp"
+#include "boost/stacktrace.hpp"
 
 #include "boost/json.hpp"
 
@@ -28,6 +29,7 @@
 
 #include "fmt/format.h"
 
+#include "utl/enumerate.h"
 #include "utl/helpers/algorithm.h"
 #include "utl/overloaded.h"
 #include "utl/sorted_diff.h"
@@ -463,6 +465,13 @@ struct gbfs_update {
     } catch (std::exception const& ex) {
       std::cerr << "[GBFS] error processing feed " << pf.id_ << " (" << pf.url_
                 << "): " << ex.what() << "\n";
+      if (!std::string_view{ex.what()}.starts_with("HTTP ")) {
+        if (auto const trace =
+                boost::stacktrace::stacktrace::from_current_exception();
+            trace) {
+          std::cerr << trace << std::endl;
+        }
+      }
 
       // keep previous data
       if (prev_provider != nullptr) {
@@ -780,6 +789,10 @@ struct gbfs_update {
       auto const res =
           co_await client_->get(boost::urls::url{url}, std::move(headers));
       content = get_http_body(res);
+      if (res.result_int() != 200) {
+        throw std::runtime_error(
+            fmt::format("HTTP {} fetching {}", res.result_int(), url));
+      }
     }
     auto j = json::parse(content);
     auto j_root = j.as_object();
@@ -1005,7 +1018,16 @@ awaitable<void> update(config const& c,
   auto const d = std::make_shared<gbfs_data>(c.gbfs_->cache_size_);
 
   auto update = gbfs_update{*c.gbfs_, w, l, d.get(), prev_d.get()};
-  co_await update.run();
+  try {
+    co_await update.run();
+  } catch (std::exception const& e) {
+    std::cerr << "[GBFS] update error: " << e.what() << std::endl;
+    if (auto const trace =
+            boost::stacktrace::stacktrace::from_current_exception();
+        trace) {
+      std::cerr << trace << std::endl;
+    }
+  }
   data_ptr = d;
 }
 
