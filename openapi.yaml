@@ -474,6 +474,7 @@ paths:
             type: array
             items:
               type: string
+          explode: false
 
         - name: directRentalProviderGroups
           in: query
@@ -489,6 +490,7 @@ paths:
             type: array
             items:
               type: string
+          explode: false
 
         - name: preTransitRentalProviders
           in: query
@@ -504,6 +506,7 @@ paths:
             type: array
             items:
               type: string
+          explode: false
 
         - name: preTransitRentalProviderGroups
           in: query
@@ -519,6 +522,7 @@ paths:
             type: array
             items:
               type: string
+          explode: false
 
         - name: postTransitRentalProviders
           in: query
@@ -534,6 +538,7 @@ paths:
             type: array
             items:
               type: string
+          explode: false
 
         - name: postTransitRentalProviderGroups
           in: query
@@ -549,6 +554,7 @@ paths:
             type: array
             items:
               type: string
+          explode: false
 
         - name: ignoreDirectRentalReturnConstraints
           in: query
@@ -827,6 +833,7 @@ paths:
             type: array
             items:
               type: string
+          explode: false
 
         - name: algorithm
           in: query
@@ -923,6 +930,7 @@ paths:
             type: array
             items:
               type: string
+          explode: false
         - name: mode
           in: query
           required: true
@@ -1339,6 +1347,7 @@ paths:
             type: array
             items:
               type: string
+          explode: false
 
         - name: type
           in: query
@@ -1428,6 +1437,7 @@ paths:
             type: array
             items:
               type: string
+          explode: false
       responses:
         '400':
           description: Bad Request
@@ -1504,6 +1514,7 @@ paths:
               $ref: '#/components/schemas/Mode'
             default:
               - TRANSIT
+          explode: false
           description: |
             Optional. Default is all transit modes.
             
@@ -1581,6 +1592,7 @@ paths:
             type: array
             items:
               type: string
+          explode: false
       responses:
         '400':
           description: Bad Request
@@ -1828,6 +1840,7 @@ paths:
             type: array
             items:
               type: string
+          explode: false
         - name: providers
           in: query
           required: false
@@ -1839,6 +1852,7 @@ paths:
             type: array
             items:
               type: string
+          explode: false
         - name: withProviders
           in: query
           required: false
