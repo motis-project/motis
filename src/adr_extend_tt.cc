@@ -272,6 +272,12 @@ adr_ext adr_extend_tt(nigiri::timetable const& tt,
     }
   }
 
+  for (auto const [i, place] : utl::enumerate(ret.location_place_)) {
+    if (place == adr_extra_place_idx_t::invalid()) {
+      place = adr_extra_place_idx_t{0U};
+    }
+  }
+
   for (auto const [i, p] : utl::enumerate(ret.location_place_)) {
     auto const l = n::location_idx_t{i};
     if (l >= n::kNSpecialStations && p == adr_extra_place_idx_t::invalid()) {
