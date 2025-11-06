@@ -23,7 +23,7 @@
 		map: maplibregl.Map | undefined;
 		bounds: maplibregl.LngLatBoundsLike | undefined;
 		zoom: number;
-		colorMode: 'rt' | 'route' | 'mode';
+		colorMode: 'rt' | 'route' | 'mode' | 'none';
 	} = $props();
 
 	let railvizError = $state();
@@ -219,6 +219,16 @@
 	let animation: number | null = null;
 	const updateRailvizLayer = async () => {
 		try {
+			if (colorMode == 'none') {
+				if (animation) {
+					cancelAnimationFrame(animation);
+				}
+				overlay!.setProps({
+					layers: []
+				});
+				clearTimeout(timer);
+				return;
+			}
 			const { data, error, response } = await railvizRequest();
 			if (animation) {
 				cancelAnimationFrame(animation);
