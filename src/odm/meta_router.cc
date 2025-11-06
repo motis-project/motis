@@ -64,7 +64,7 @@ using td_offsets_t =
     n::hash_map<n::location_idx_t, std::vector<n::routing::td_offset>>;
 
 constexpr auto const kODMLookAhead = nigiri::duration_t{24h};
-constexpr auto const kSearchIntervalSize = nigiri::duration_t{6h};
+constexpr auto const kSearchIntervalSize = nigiri::duration_t{10h};
 constexpr auto const kContextPadding = nigiri::duration_t{2h};
 static auto const kMixer = get_default_mixer();
 
@@ -547,6 +547,8 @@ api::plan_response meta_router::run() {
             if (response.legs_.front().mode_ == api::ModeEnum::RIDE_SHARING) {
               for (auto const [i, a] :
                    utl::enumerate(p.first_mile_ride_sharing_)) {
+                std::cout << "restore " << a.stop_ << a.time_at_start_ << " "
+                          << response.legs_.front().startTime_ << std::endl;
                 if (a.time_at_start_ ==
                         response.legs_.front()
                             .startTime_ &&  // not looking at time_at_stop_
@@ -557,6 +559,7 @@ api::plan_response meta_router::run() {
                         response.legs_.front().to_.stopId_) {
                   response.legs_.front().tripId_ = std::optional{
                       std::to_string(p.first_mile_ride_sharing_tour_ids_[i])};
+                  std::cout << "found" << std::endl;
                   break;
                 }
               }
@@ -564,6 +567,7 @@ api::plan_response meta_router::run() {
             if (response.legs_.back().mode_ == api::ModeEnum::RIDE_SHARING) {
               for (auto const [i, a] :
                    utl::enumerate(p.last_mile_ride_sharing_)) {
+
                 if (a.time_at_start_ ==
                         response.legs_.back()
                             .endTime_ &&  // not looking at time_at_stop_
