@@ -176,6 +176,8 @@
 						return hexToRgb(getModeStyle(d)[1]);
 					case 'route':
 						return hexToRgb(getColor(d)[0]);
+					case 'none':
+						return hexToRgb(getColor(d)[0]);
 				}
 			},
 			getAngle: (d) => -d.heading + 90,
