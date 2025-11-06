@@ -766,9 +766,7 @@
 					<LocateFixed class="w-5 h-5" />
 				</Button>
 			</Control>
-			{#if colorMode != 'none'}
-				<RailViz {map} {bounds} {zoom} {colorMode} />
-			{/if}
+			<RailViz {map} {bounds} {zoom} {colorMode} />
 			<Rentals {map} {bounds} {zoom} {theme} debug={hasDebug} />
 		{/if}
 		<!-- Isochrones cannot be hidden the same way as RailViz -->
