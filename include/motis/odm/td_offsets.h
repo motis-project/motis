@@ -13,7 +13,9 @@ nigiri::routing::td_offsets_t get_td_offsets(
       rides, [](auto const& a, auto const& b) { return a.stop_ == b.stop_; },
       [&](auto&& from_it, auto&& to_it) {
         td_offsets.emplace(from_it->stop_,
-                           std::vector<nigiri::routing::td_offset>{});
+                           std::vector<nigiri::routing::td_offset>{
+                               {nigiri::unixtime_t{nigiri::i32_minutes{0U}},
+                                nigiri::footpath::kMaxDuration, mode}});
 
         for (auto const& r : nigiri::it_range{from_it, to_it}) {
           auto const tdo = nigiri::routing::td_offset{
@@ -34,9 +36,9 @@ nigiri::routing::td_offsets_t get_td_offsets(
           }
 
           if (i + 1 == end(td_offsets.at(r.stop_)) ||
-              (i + 1)->valid_from_ != tdo.valid_from_ + 1min) {
+              (i + 1)->valid_from_ > tdo.valid_from_ + tdo.duration_) {
             td_offsets.at(r.stop_).insert(
-                i + 1, {.valid_from_ = tdo.valid_from_ + 1min,
+                i + 1, {.valid_from_ = tdo.valid_from_ + tdo.duration_,
                         .duration_ = nigiri::footpath::kMaxDuration,
                         .transport_mode_id_ = mode});
           }
