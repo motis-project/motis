@@ -10,7 +10,7 @@
     ```shell
     motis$ cd ui
     motis/ui$ pnpm install
-    motis/ui$ pnpm build
+    motis/ui$ pnpm -r build
     ```
    
 3. Move the UI build into the build folder of `motis`:
