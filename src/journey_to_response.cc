@@ -150,13 +150,12 @@ std::optional<std::vector<api::Alert>> get_alerts(
         .communicationPeriod_ =
             a.communication_period_[x].empty()
                 ? std::nullopt
-                : std::optional<std::vector<api::TimeRange>>{utl::to_vec(
-                      a.communication_period_[x], to_time_range)},
-        .impactPeriod_ =
-            a.impact_period_[x].empty()
-                ? std::nullopt
-                : std::optional<std::vector<api::TimeRange>>{utl::to_vec(
-                      a.impact_period_[x], to_time_range)},
+                : std::optional{utl::to_vec(a.communication_period_[x],
+                                            to_time_range)},
+        .impactPeriod_ = a.impact_period_[x].empty()
+                             ? std::nullopt
+                             : std::optional{utl::to_vec(a.impact_period_[x],
+                                                         to_time_range)},
         .cause_ = to_cause(a.cause_[x]),
         .causeDetail_ = get_translation(a.cause_detail_[x]),
         .effect_ = to_effect(a.effect_[x]),
