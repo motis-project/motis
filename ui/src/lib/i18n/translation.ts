@@ -164,7 +164,9 @@ const translationsKey = (
 	browser ? (navigator.languages.find((l) => translations.has(l.slice(0, 2))) ?? 'en') : 'en'
 )?.slice(0, 2);
 
-const urlLanguage = browser ? new URLSearchParams(window.location.search).get('language') : undefined;
+const urlLanguage = browser
+	? new URLSearchParams(window.location.search).get('language')
+	: undefined;
 
 export const language = urlLanguage ?? translationsKey;
 export const t = translationsKey ? translations.get(translationsKey)! : en;

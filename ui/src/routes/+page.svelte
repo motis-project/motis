@@ -126,13 +126,7 @@
 			const stopId = urlParams.get('stopId');
 			if (stopId !== null) {
 				const time = urlParams.has('time') ? new Date(urlParams.get('time')!) : new Date();
-				onClickStop(
-					'',
-					stopId,
-					time,
-					urlParams.get('stopArriveBy') == 'true',
-					true
-				);
+				onClickStop('', stopId, time, urlParams.get('stopArriveBy') == 'true', true);
 			}
 		}
 	};
