@@ -47,6 +47,7 @@ export const pushStateWithQueryString = (
 	preserveFromUrl(queryParams, 'dark');
 	preserveFromUrl(queryParams, 'light');
 	preserveFromUrl(queryParams, 'motis');
+	preserveFromUrl(queryParams, 'language');
 	const params = new URLSearchParams(queryParams);
 	const updateState = replace ? replaceState : pushState;
 	updateState('?' + params.toString(), newState);
