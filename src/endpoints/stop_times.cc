@@ -304,10 +304,16 @@ std::vector<api::Place> other_stops_impl(n::rt::frun fr,
     return result;
   };
 
+  auto const orig_location = fr[fr.first_valid()].get_location_idx();
   if (ev_type == nigiri::event_type::kDep) {
     ++fr.stop_range_.from_;
     fr.stop_range_.to_ = fr.size();
-    auto result = utl::to_vec(fr, convert_stop);
+    // Return next stops until one stop before the loop closes
+    auto const it =
+        utl::find_if(fr, [orig_location](n::rt::run_stop const& stop) {
+          return orig_location == stop.get_location_idx();
+        });
+    auto result = utl::to_vec(fr.begin(), it, convert_stop);
     utl::verify(!result.empty(), "Departure is last stop in trip");
     // Departure time on terminus is meaningless
     auto& terminus = result.back();
@@ -317,7 +323,12 @@ std::vector<api::Place> other_stops_impl(n::rt::frun fr,
   } else {
     fr.stop_range_.from_ = 0;
     --fr.stop_range_.to_;
-    auto result = utl::to_vec(fr, convert_stop);
+    // Return previous stops beginning one stop before the loop closes
+    auto const it = std::find_if(
+        fr.rbegin(), fr.rend(), [orig_location](n::rt::run_stop const& stop) {
+          return orig_location == stop.get_location_idx();
+        });
+    auto result = utl::to_vec(it.base(), fr.end(), convert_stop);
     utl::verify(!result.empty(), "Arrival is first stop in trip");
     // Arrival time on trip origin is meaningless
     auto& origin = result.front();
@@ -444,8 +455,8 @@ api::stoptimes_response stop_times::operator()(
                   !query.fetchStops_.value_or(false)) {
                 return std::nullopt;
               }
-              return other_stops_impl(fr, ev_type, &tt_, tags_, w_,
-                                      pl_, matches_, ae_, tz_);
+              return other_stops_impl(fr, ev_type, &tt_, tags_, w_, pl_,
+                                      matches_, ae_, tz_);
             };
 
             return {
