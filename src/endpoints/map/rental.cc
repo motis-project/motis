@@ -139,7 +139,12 @@ api::rentals_response rental::operator()(
     auto color = group.color_;
     for (auto const& pi : group.providers_) {
       auto const& provider = gbfs->providers_.at(pi);
-      assert(provider != nullptr);
+      if (provider == nullptr) {
+        // shouldn't be possible, but just in case...
+        std::cerr << "[rental api] warning: provider group " << group.id_
+                  << " references missing provider idx " << to_idx(pi) << "\n";
+        continue;
+      }
       for (auto const& vt : provider->vehicle_types_) {
         auto const ff = gbfs::to_api_form_factor(vt.form_factor_);
         if (utl::find(form_factors, ff) == end(form_factors)) {
@@ -219,7 +224,13 @@ api::rentals_response rental::operator()(
           provider_groups.insert(it->second.id_);
           for (auto const pi : it->second.providers_) {
             auto const& provider = gbfs->providers_.at(pi);
-            assert(provider != nullptr);
+            if (provider == nullptr) {
+              // shouldn't be possible, but just in case...
+              std::cerr << "[rental api] warning: provider group "
+                        << it->second.id_ << " references missing provider idx "
+                        << to_idx(pi) << "\n";
+              continue;
+            }
             providers.insert(provider.get());
           }
         }
