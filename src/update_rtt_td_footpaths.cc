@@ -2,6 +2,7 @@
 
 #include <map>
 
+#include "utl/equal_ranges_linear.h"
 #include "utl/parallel_for.h"
 
 #include "osr/routing/parameters.h"
@@ -121,6 +122,19 @@ std::vector<n::td_footpath> get_td_footpaths(
   }
 
   utl::sort(fps);
+
+  utl::equal_ranges_linear(
+      fps, [](auto const& a, auto const& b) { return a.target_ == b.target_; },
+      [&](std::vector<n::td_footpath>::iterator& lb,
+          std::vector<n::td_footpath>::iterator& ub) {
+        for (auto it = lb; it != ub; ++it) {
+          if (it->duration_ == n::footpath::kMaxDuration && it != lb &&
+              (it - 1)->duration_ != n::footpath::kMaxDuration) {
+            // TODO support feasible, but longer paths
+            it->valid_from_ -= (it - 1)->duration_ - n::duration_t{1U};
+          }
+        }
+      });
 
   return fps;
 }

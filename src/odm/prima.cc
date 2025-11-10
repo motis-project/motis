@@ -133,13 +133,6 @@ void init_pt(std::vector<n::routing::start>& rides,
                                query.pedestrianProfile_, query.elevationCosts_,
                                max, query.maxMatchingDistance_, gbfs_rd);
 
-  std::erase_if(offsets, [&](n::routing::offset const& o) {
-    auto const out_of_bounds =
-        (r.odm_bounds_ != nullptr &&
-         !r.odm_bounds_->contains(r.tt_->locations_.coordinates_[o.target_]));
-    return out_of_bounds;
-  });
-
   for (auto& o : offsets) {
     o.duration_ += kODMTransferBuffer;
   }

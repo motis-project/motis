@@ -139,7 +139,12 @@ api::rentals_response rental::operator()(
     auto color = group.color_;
     for (auto const& pi : group.providers_) {
       auto const& provider = gbfs->providers_.at(pi);
-      assert(provider != nullptr);
+      if (provider == nullptr) {
+        // shouldn't be possible, but just in case...
+        std::cerr << "[rental api] warning: provider group " << group.id_
+                  << " references missing provider idx " << to_idx(pi) << "\n";
+        continue;
+      }
       for (auto const& vt : provider->vehicle_types_) {
         auto const ff = gbfs::to_api_form_factor(vt.form_factor_);
         if (utl::find(form_factors, ff) == end(form_factors)) {
@@ -219,7 +224,13 @@ api::rentals_response rental::operator()(
           provider_groups.insert(it->second.id_);
           for (auto const pi : it->second.providers_) {
             auto const& provider = gbfs->providers_.at(pi);
-            assert(provider != nullptr);
+            if (provider == nullptr) {
+              // shouldn't be possible, but just in case...
+              std::cerr << "[rental api] warning: provider group "
+                        << it->second.id_ << " references missing provider idx "
+                        << to_idx(pi) << "\n";
+              continue;
+            }
             providers.insert(provider.get());
           }
         }
@@ -303,29 +314,39 @@ api::rentals_response rental::operator()(
     }
 
     if (query.withVehicles_) {
+      auto const add_vehicle = [&](gbfs::vehicle_status const& vs,
+                                   gbfs::vehicle_type const& vt) {
+        res.vehicles_.emplace_back(api::RentalVehicle{
+            .id_ = vs.id_,
+            .providerId_ = provider->id_,
+            .providerGroupId_ = provider->group_id_,
+            .typeId_ = vt.id_,
+            .lat_ = vs.pos_.lat_,
+            .lon_ = vs.pos_.lng_,
+            .formFactor_ = gbfs::to_api_form_factor(vt.form_factor_),
+            .propulsionType_ =
+                gbfs::to_api_propulsion_type(vt.propulsion_type_),
+            .returnConstraint_ =
+                gbfs::to_api_return_constraint(vt.return_constraint_),
+            .stationId_ = vs.station_id_,
+            .homeStationId_ = vs.home_station_id_,
+            .isReserved_ = vs.is_reserved_,
+            .isDisabled_ = vs.is_disabled_,
+            .rentalUriAndroid_ = vs.rental_uris_.android_,
+            .rentalUriIOS_ = vs.rental_uris_.ios_,
+            .rentalUriWeb_ = vs.rental_uris_.web_,
+        });
+      };
+      auto const fallback_vt =
+          gbfs::vehicle_type{.form_factor_ = gbfs::vehicle_form_factor::kOther};
       for (auto const& vs : provider->vehicle_status_) {
         if (in_bbox(vs.pos_)) {
-          auto const& vt = provider->vehicle_types_[vs.vehicle_type_idx_];
-          res.vehicles_.emplace_back(api::RentalVehicle{
-              .id_ = vs.id_,
-              .providerId_ = provider->id_,
-              .providerGroupId_ = provider->group_id_,
-              .typeId_ = vt.id_,
-              .lat_ = vs.pos_.lat_,
-              .lon_ = vs.pos_.lng_,
-              .formFactor_ = gbfs::to_api_form_factor(vt.form_factor_),
-              .propulsionType_ =
-                  gbfs::to_api_propulsion_type(vt.propulsion_type_),
-              .returnConstraint_ =
-                  gbfs::to_api_return_constraint(vt.return_constraint_),
-              .stationId_ = vs.station_id_,
-              .homeStationId_ = vs.home_station_id_,
-              .isReserved_ = vs.is_reserved_,
-              .isDisabled_ = vs.is_disabled_,
-              .rentalUriAndroid_ = vs.rental_uris_.android_,
-              .rentalUriIOS_ = vs.rental_uris_.ios_,
-              .rentalUriWeb_ = vs.rental_uris_.web_,
-          });
+          if (vs.vehicle_type_idx_ != gbfs::vehicle_type_idx_t::invalid()) {
+            auto const& vt = provider->vehicle_types_.at(vs.vehicle_type_idx_);
+            add_vehicle(vs, vt);
+          } else {
+            add_vehicle(vs, fallback_vt);
+          }
         }
       }
     }
