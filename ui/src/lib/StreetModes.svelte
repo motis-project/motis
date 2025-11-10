@@ -163,11 +163,11 @@
 			>
 				<span>{selectedProviderGroupsLabel}</span>
 			</Select.Trigger>
-			<Select.Content sideOffset={10}>
+			<Select.Content sideOffset={10} class="max-w-[100svw]">
 				{#each providerGroupOptions as option (option.id)}
 					<Select.Item value={option.id} label={option.name}>
 						<div class="flex w-full items-center justify-between gap-2">
-							<span>{option.name}</span>
+							<span class="truncate">{option.name}</span>
 							{#if option.formFactors.length}
 								<div class="flex items-center gap-1" style={`color: ${option.color}`}>
 									{#each Array.from(new Set(option.formFactors.map((ff) => formFactorAssets[ff].svg))).sort() as icon (icon)}
