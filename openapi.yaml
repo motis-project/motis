@@ -845,6 +845,7 @@ paths:
               - RAPTOR
               - PONG
               - TB
+              - MCRAPTOR
             default: RAPTOR
       responses:
         '400':
