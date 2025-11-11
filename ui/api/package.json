@@ -25,6 +25,7 @@
 	"homepage": "https://github.com/motis-project/motis#readme",
 	"devDependencies": {
 		"@hey-api/openapi-ts": "^0.53.12",
+		"pnpm": "^10.0.0",
 		"tslib": "^2.8.1",
 		"tsup": "^8.4.0",
 		"typescript": "^5.7.3"

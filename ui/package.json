@@ -85,5 +85,8 @@
 			"name": "pnpm",
 			"onFail": "error"
 		}
-	}
+	},
+	"workspaces": [
+		"api/"
+	]
 }
