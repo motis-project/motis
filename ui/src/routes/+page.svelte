@@ -172,7 +172,7 @@
 	);
 	let arriveBy = $state<boolean>(urlParams?.get('arriveBy') == 'true');
 	let algorithm = $state<PlanData['query']['algorithm']>(
-		(urlParams?.get('algorithm') ?? 'RAPTOR') as PlanData['query']['algorithm']
+		(urlParams?.get('algorithm') ?? 'PONG') as PlanData['query']['algorithm']
 	);
 	let useRoutedTransfers = $state(
 		urlParams?.get('useRoutedTransfers') == 'true' || defaultQuery.useRoutedTransfers
@@ -696,7 +696,9 @@
 				theme,
 				level,
 				window.location.origin + window.location.pathname,
-				client.getConfig().baseUrl || window.location.origin + window.location.pathname
+				client.getConfig().baseUrl
+					? client.getConfig().baseUrl + '/'
+					: window.location.origin + window.location.pathname
 			)
 		: undefined}
 	attribution={false}
@@ -766,9 +768,7 @@
 					<LocateFixed class="w-5 h-5" />
 				</Button>
 			</Control>
-			{#if colorMode != 'none'}
-				<RailViz {map} {bounds} {zoom} {colorMode} />
-			{/if}
+			<RailViz {map} {bounds} {zoom} {colorMode} />
 			<Rentals {map} {bounds} {zoom} {theme} debug={hasDebug} />
 		{/if}
 		<!-- Isochrones cannot be hidden the same way as RailViz -->

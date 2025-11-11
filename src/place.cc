@@ -130,14 +130,14 @@ api::Place to_place(n::timetable const* tt,
               };
 
               auto const pos = tt->locations_.coordinates_[l];
-              auto const p =
-                  tt->locations_.parents_[l] == n::location_idx_t::invalid()
-                      ? l
-                      : tt->locations_.parents_[l];
+              auto const p = tt->locations_.get_root_idx(l);
               auto const timezone = get_tz(*tt, ae, tz_map, p);
               return {
                   .name_ = std::string{tt->locations_.names_.at(p).view()},
                   .stopId_ = tags->id(*tt, l),
+                  .parentId_ = p == n::location_idx_t::invalid()
+                                   ? std::nullopt
+                                   : std::optional{tags->id(*tt, p)},
                   .importance_ = ae == nullptr
                                      ? std::nullopt
                                      : std::optional{ae->place_importance_.at(

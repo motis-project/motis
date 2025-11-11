@@ -11,25 +11,49 @@ type GLContext = WebGLRenderingContext | WebGL2RenderingContext;
 const DEFAULT_OPACITY = 0.4;
 const STRIPE_WIDTH_PX = 6.0;
 const STRIPE_OPACITY_VARIATION = 0.1;
+const POSITION_COMPONENTS = 2;
+const POSITION_STRIDE_BYTES = POSITION_COMPONENTS * Float32Array.BYTES_PER_ELEMENT;
+const COLOR_COMPONENTS = 4;
+const COLOR_STRIDE_BYTES = COLOR_COMPONENTS * Float32Array.BYTES_PER_ELEMENT;
 
-type ZoneBuffer = {
-	buffer: WebGLBuffer;
-	vertexCount: number;
-	color: Float32Array;
-	pickingColor: Float32Array;
-	pickingIdx: number;
-	z: number;
+const FILL_VERTEX_SHADER_SOURCE = `#version 300 es
+precision highp float;
+in vec2 a_pos;
+in vec4 a_color;
+out vec4 v_color;
+uniform vec4 u_zone_base;
+uniform vec4 u_zone_scale_x;
+uniform vec4 u_zone_scale_y;
+void main() {
+	v_color = a_color;
+	gl_Position = u_zone_base + a_pos.x * u_zone_scale_x + a_pos.y * u_zone_scale_y;
+}
+`;
+
+const FILL_FRAGMENT_SHADER_SOURCE = `#version 300 es
+precision mediump float;
+in vec4 v_color;
+out vec4 fragColor;
+void main() {
+	fragColor = v_color;
+}
+`;
+
+type ZoneGeometry = {
+	vertices: number[]; // mercator [x0, y0, x1, y1, ...]
+	minX: number;
+	minY: number;
+	maxX: number;
+	maxY: number;
 };
 
 type FillProgramState = {
 	program: WebGLProgram;
 	positionLocation: number;
-	colorLocation: WebGLUniformLocation | null;
-	projectionMatrixLocation: WebGLUniformLocation | null;
-	fallbackMatrixLocation: WebGLUniformLocation | null;
-	tileMercatorLocation: WebGLUniformLocation | null;
-	clippingPlaneLocation: WebGLUniformLocation | null;
-	projectionTransitionLocation: WebGLUniformLocation | null;
+	colorLocation: number;
+	baseLocation: WebGLUniformLocation | null;
+	scaleXLocation: WebGLUniformLocation | null;
+	scaleYLocation: WebGLUniformLocation | null;
 };
 
 type ZoneFillLayerOptions = {
@@ -99,6 +123,52 @@ const decodePickingColor = (px: Uint8Array): number => {
 	return (px[0] << 16) | (px[1] << 8) | px[2];
 };
 
+type ZoneClipFrame = {
+	base: Float32Array;
+	scaleX: Float32Array;
+	scaleY: Float32Array;
+};
+
+const toClipCoordinates = (
+	map: MapLibreMap,
+	width: number,
+	height: number,
+	pixelRatioX: number,
+	pixelRatioY: number,
+	lngLat: maplibregl.LngLat
+): Float32Array => {
+	const point = map.project(lngLat);
+	const px = point.x * pixelRatioX;
+	const py = point.y * pixelRatioY;
+	const clipX = (px / width) * 2 - 1;
+	const clipY = 1 - (py / height) * 2;
+	return new Float32Array([clipX, clipY, 0, 1]);
+};
+
+const computeZoneClipFrame = (
+	map: MapLibreMap,
+	width: number,
+	height: number,
+	pixelRatioX: number,
+	pixelRatioY: number,
+	origin: Float32Array,
+	extent: Float32Array
+): ZoneClipFrame => {
+	const originLngLat = new maplibregl.MercatorCoordinate(origin[0], origin[1]).toLngLat();
+	const maxLngLat = new maplibregl.MercatorCoordinate(
+		origin[0] + extent[0],
+		origin[1] + extent[1]
+	).toLngLat();
+
+	const base = toClipCoordinates(map, width, height, pixelRatioX, pixelRatioY, originLngLat);
+	const maxClip = toClipCoordinates(map, width, height, pixelRatioX, pixelRatioY, maxLngLat);
+
+	const scaleX = new Float32Array([maxClip[0] - base[0], 0, 0, 0]);
+	const scaleY = new Float32Array([0, maxClip[1] - base[1], 0, 0]);
+
+	return { base, scaleX, scaleY };
+};
+
 const toPoint = (p: PointLike): maplibregl.Point => {
 	return Array.isArray(p) ? new maplibregl.Point(p[0], p[1]) : p;
 };
@@ -117,16 +187,21 @@ export class ZoneFillLayer implements maplibregl.CustomLayerInterface {
 	private pickingFramebuffer: WebGLFramebuffer | null = null;
 	private pickingTexture: WebGLTexture | null = null;
 	private quadBuffer: WebGLBuffer | null = null;
-	private zoneBuffers: ZoneBuffer[] = [];
 	private features: RentalZoneFeature[] = [];
 	private geometryDirty = true;
 	private width = 0;
 	private height = 0;
 	private pickingWidth = 0;
 	private pickingHeight = 0;
-	private fillPrograms = new Map<string, FillProgramState>();
+	private fillProgram: FillProgramState | null = null;
 	private pickingLookup = new Map<number, RentalZoneFeature>();
 	private pickingPixel = new Uint8Array(4);
+	private positionBuffer: WebGLBuffer | null = null;
+	private colorBuffer: WebGLBuffer | null = null;
+	private pickingColorBuffer: WebGLBuffer | null = null;
+	private vertexCount = 0;
+	private globalOrigin = new Float32Array([0, 0]);
+	private globalExtent = new Float32Array([1, 1]);
 
 	private screenPositionLocation = -1;
 	private screenTexCoordLocation = -1;
@@ -173,7 +248,7 @@ export class ZoneFillLayer implements maplibregl.CustomLayerInterface {
 		if (!gl) {
 			return;
 		}
-		this.clearZoneBuffers(gl);
+		this.deleteGeometryBuffers(gl);
 		if (this.framebuffer) {
 			gl.deleteFramebuffer(this.framebuffer);
 			this.framebuffer = null;
@@ -194,10 +269,10 @@ export class ZoneFillLayer implements maplibregl.CustomLayerInterface {
 			gl.deleteBuffer(this.quadBuffer);
 			this.quadBuffer = null;
 		}
-		for (const program of this.fillPrograms.values()) {
-			gl.deleteProgram(program.program);
+		if (this.fillProgram) {
+			gl.deleteProgram(this.fillProgram.program);
+			this.fillProgram = null;
 		}
-		this.fillPrograms.clear();
 		this.pickingLookup.clear();
 		if (this.screenProgram) {
 			gl.deleteProgram(this.screenProgram);
@@ -212,24 +287,48 @@ export class ZoneFillLayer implements maplibregl.CustomLayerInterface {
 		this.map = null;
 	}
 
-	prerender(gl: GLContext, options: CustomRenderMethodInput) {
-		if (this.zoneBuffers.length === 0) {
+	prerender(gl: GLContext, _options: CustomRenderMethodInput) {
+		if (
+			!this.map ||
+			this.vertexCount === 0 ||
+			!this.positionBuffer ||
+			!this.colorBuffer ||
+			!this.pickingColorBuffer
+		) {
 			return;
 		}
 
+		const map = this.map;
 		const width = gl.drawingBufferWidth;
 		const height = gl.drawingBufferHeight;
 		if (width === 0 || height === 0) {
 			return;
 		}
 
-		const fillProgram = this.getFillProgram(gl, options.shaderData);
-		if (!fillProgram) {
+		const fillProgram = this.ensureFillProgram(gl);
+		if (!fillProgram || fillProgram.positionLocation < 0 || fillProgram.colorLocation < 0) {
 			return;
 		}
 
-		const matrix = new Float32Array(options.defaultProjectionData.mainMatrix);
-		const fallbackMatrix = new Float32Array(options.defaultProjectionData.fallbackMatrix);
+		const canvas = map.getCanvas();
+		const rect = canvas.getBoundingClientRect();
+		const cssWidth = rect.width;
+		const cssHeight = rect.height;
+		if (cssWidth === 0 || cssHeight === 0) {
+			return;
+		}
+
+		const pixelRatioX = width / cssWidth;
+		const pixelRatioY = height / cssHeight;
+		const clipFrame = computeZoneClipFrame(
+			map,
+			width,
+			height,
+			pixelRatioX,
+			pixelRatioY,
+			this.globalOrigin,
+			this.globalExtent
+		);
 
 		this.ensureFramebuffer(gl, width, height);
 		this.ensurePickingFramebuffer(gl, width, height);
@@ -249,41 +348,48 @@ export class ZoneFillLayer implements maplibregl.CustomLayerInterface {
 		gl.disable(gl.STENCIL_TEST);
 		gl.disable(gl.CULL_FACE);
 
-		const renderToFramebuffer = (
-			fb: WebGLFramebuffer,
-			getZoneColor: (zone: ZoneBuffer) => Float32Array
-		) => {
+		const renderToFramebuffer = (fb: WebGLFramebuffer, colorBuffer: WebGLBuffer) => {
 			gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
 			gl.viewport(0, 0, width, height);
 			gl.clearColor(0, 0, 0, 0);
 			gl.clear(gl.COLOR_BUFFER_BIT);
 
 			gl.useProgram(fillProgram.program);
-			gl.uniformMatrix4fv(fillProgram.projectionMatrixLocation, false, matrix);
-			gl.uniformMatrix4fv(fillProgram.fallbackMatrixLocation, false, fallbackMatrix);
-			gl.uniform4fv(
-				fillProgram.tileMercatorLocation,
-				options.defaultProjectionData.tileMercatorCoords
-			);
-			gl.uniform4fv(fillProgram.clippingPlaneLocation, options.defaultProjectionData.clippingPlane);
-			gl.uniform1f(
-				fillProgram.projectionTransitionLocation,
-				options.defaultProjectionData.projectionTransition
+			gl.uniform4fv(fillProgram.baseLocation, clipFrame.base);
+			gl.uniform4fv(fillProgram.scaleXLocation, clipFrame.scaleX);
+			gl.uniform4fv(fillProgram.scaleYLocation, clipFrame.scaleY);
+
+			gl.bindBuffer(gl.ARRAY_BUFFER, this.positionBuffer);
+			gl.enableVertexAttribArray(fillProgram.positionLocation);
+			gl.vertexAttribPointer(
+				fillProgram.positionLocation,
+				POSITION_COMPONENTS,
+				gl.FLOAT,
+				false,
+				POSITION_STRIDE_BYTES,
+				0
 			);
 
-			gl.enableVertexAttribArray(fillProgram.positionLocation);
-			for (const zone of this.zoneBuffers) {
-				gl.bindBuffer(gl.ARRAY_BUFFER, zone.buffer);
-				gl.vertexAttribPointer(fillProgram.positionLocation, 2, gl.FLOAT, false, 0, 0);
-				gl.uniform4fv(fillProgram.colorLocation, getZoneColor(zone));
-				gl.drawArrays(gl.TRIANGLES, 0, zone.vertexCount);
-			}
-			gl.bindBuffer(gl.ARRAY_BUFFER, null);
+			gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+			gl.enableVertexAttribArray(fillProgram.colorLocation);
+			gl.vertexAttribPointer(
+				fillProgram.colorLocation,
+				COLOR_COMPONENTS,
+				gl.FLOAT,
+				false,
+				COLOR_STRIDE_BYTES,
+				0
+			);
+
+			gl.drawArrays(gl.TRIANGLES, 0, this.vertexCount);
+
 			gl.disableVertexAttribArray(fillProgram.positionLocation);
+			gl.disableVertexAttribArray(fillProgram.colorLocation);
+			gl.bindBuffer(gl.ARRAY_BUFFER, null);
 		};
 
-		renderToFramebuffer(this.framebuffer, (zone) => zone.color);
-		renderToFramebuffer(this.pickingFramebuffer, (zone) => zone.pickingColor);
+		renderToFramebuffer(this.framebuffer, this.colorBuffer);
+		renderToFramebuffer(this.pickingFramebuffer, this.pickingColorBuffer);
 
 		gl.bindFramebuffer(gl.FRAMEBUFFER, previousFramebuffer);
 		gl.viewport(previousViewport[0], previousViewport[1], previousViewport[2], previousViewport[3]);
@@ -303,7 +409,7 @@ export class ZoneFillLayer implements maplibregl.CustomLayerInterface {
 	}
 
 	render(gl: GLContext, _options: CustomRenderMethodInput) {
-		if (!this.screenProgram || !this.texture || !this.quadBuffer || this.zoneBuffers.length === 0) {
+		if (!this.screenProgram || !this.texture || !this.quadBuffer || this.vertexCount === 0) {
 			return;
 		}
 
@@ -462,34 +568,12 @@ export class ZoneFillLayer implements maplibregl.CustomLayerInterface {
 		this.pickingHeight = height;
 	}
 
-	private getFillProgram(
-		gl: GLContext,
-		shaderData: CustomRenderMethodInput['shaderData']
-	): FillProgramState | null {
-		const cached = this.fillPrograms.get(shaderData.variantName);
-		if (cached) {
-			return cached;
+	private ensureFillProgram(gl: GLContext): FillProgramState | null {
+		if (this.fillProgram) {
+			return this.fillProgram;
 		}
 
-		const vertexSource = `#version 300 es
-${shaderData.vertexShaderPrelude}
-${shaderData.define}
-in vec2 a_pos;
-void main() {
-	gl_Position = projectTile(a_pos);
-}
-`;
-
-		const fragmentSource = `#version 300 es
-precision highp float;
-uniform vec4 u_color;
-out vec4 fragColor;
-void main() {
-	fragColor = u_color;
-}
-`;
-
-		const program = this.createProgram(gl, vertexSource, fragmentSource);
+		const program = this.createProgram(gl, FILL_VERTEX_SHADER_SOURCE, FILL_FRAGMENT_SHADER_SOURCE);
 		if (!program) {
 			return null;
 		}
@@ -497,15 +581,13 @@ void main() {
 		const state: FillProgramState = {
 			program,
 			positionLocation: gl.getAttribLocation(program, 'a_pos'),
-			colorLocation: gl.getUniformLocation(program, 'u_color'),
-			projectionMatrixLocation: gl.getUniformLocation(program, 'u_projection_matrix'),
-			fallbackMatrixLocation: gl.getUniformLocation(program, 'u_projection_fallback_matrix'),
-			tileMercatorLocation: gl.getUniformLocation(program, 'u_projection_tile_mercator_coords'),
-			clippingPlaneLocation: gl.getUniformLocation(program, 'u_projection_clipping_plane'),
-			projectionTransitionLocation: gl.getUniformLocation(program, 'u_projection_transition')
+			colorLocation: gl.getAttribLocation(program, 'a_color'),
+			baseLocation: gl.getUniformLocation(program, 'u_zone_base'),
+			scaleXLocation: gl.getUniformLocation(program, 'u_zone_scale_x'),
+			scaleYLocation: gl.getUniformLocation(program, 'u_zone_scale_y')
 		};
 
-		this.fillPrograms.set(shaderData.variantName, state);
+		this.fillProgram = state;
 		return state;
 	}
 
@@ -552,46 +634,129 @@ void main() {
 	}
 
 	private updateGeometry() {
-		if (!this.gl || !this.geometryDirty) {
+		const gl = this.gl;
+		if (!gl || !this.geometryDirty) {
 			return;
 		}
 
-		this.clearZoneBuffers(this.gl);
+		this.deleteGeometryBuffers(gl);
 		this.pickingLookup.clear();
 
 		const features = [...this.features].sort((a, b) => a.properties.z - b.properties.z);
+		const zoneGeometries: ZoneGeometry[] = [];
+		const colorValues: number[] = [];
+		const pickingValues: number[] = [];
+		let totalVertices = 0;
+		let globalMinX = Number.POSITIVE_INFINITY;
+		let globalMinY = Number.POSITIVE_INFINITY;
+		let globalMaxX = Number.NEGATIVE_INFINITY;
+		let globalMaxY = Number.NEGATIVE_INFINITY;
+		let zoneIdx = 0;
+
 		for (const feature of features) {
-			const triangles = this.buildTriangles(feature);
-			if (triangles.length === 0) {
+			const geometry = this.buildZoneGeometry(feature);
+			if (!geometry) {
 				continue;
 			}
-			const buffer = this.gl.createBuffer();
-			if (!buffer) {
+			const vertexCount = geometry.vertices.length / POSITION_COMPONENTS;
+			if (vertexCount === 0) {
 				continue;
 			}
-			this.gl.bindBuffer(this.gl.ARRAY_BUFFER, buffer);
-			this.gl.bufferData(this.gl.ARRAY_BUFFER, triangles, this.gl.STATIC_DRAW);
-			const pickingIdx = this.zoneBuffers.length + 1;
+
+			zoneGeometries.push(geometry);
+			totalVertices += vertexCount;
+			globalMinX = Math.min(globalMinX, geometry.minX);
+			globalMinY = Math.min(globalMinY, geometry.minY);
+			globalMaxX = Math.max(globalMaxX, geometry.maxX);
+			globalMaxY = Math.max(globalMaxY, geometry.maxY);
+
+			const pickingIdx = zoneIdx + 1;
+			zoneIdx += 1;
+			const color = getZoneColor(feature.properties);
 			const pickingColor = encodePickingColor(pickingIdx);
 			this.pickingLookup.set(pickingIdx, feature);
-			this.zoneBuffers.push({
-				buffer,
-				vertexCount: triangles.length / 2,
-				color: getZoneColor(feature.properties),
-				pickingColor,
-				pickingIdx,
-				z: feature.properties.z
-			});
+
+			for (let i = 0; i < vertexCount; ++i) {
+				colorValues.push(color[0], color[1], color[2], color[3]);
+				pickingValues.push(pickingColor[0], pickingColor[1], pickingColor[2], pickingColor[3]);
+			}
 		}
-		this.gl.bindBuffer(this.gl.ARRAY_BUFFER, null);
+
+		const extentX = globalMaxX - globalMinX;
+		const extentY = globalMaxY - globalMinY;
+
+		if (
+			totalVertices === 0 ||
+			globalMinX === Number.POSITIVE_INFINITY ||
+			globalMinY === Number.POSITIVE_INFINITY ||
+			globalMaxX === Number.NEGATIVE_INFINITY ||
+			globalMaxY === Number.NEGATIVE_INFINITY ||
+			extentX === 0 ||
+			extentY === 0
+		) {
+			this.vertexCount = 0;
+			this.geometryDirty = false;
+			return;
+		}
+
+		this.globalOrigin = new Float32Array([globalMinX, globalMinY]);
+		this.globalExtent = new Float32Array([extentX, extentY]);
+
+		const positions = new Float32Array(totalVertices * POSITION_COMPONENTS);
+		let posOffset = 0;
+		for (const geometry of zoneGeometries) {
+			for (let i = 0; i < geometry.vertices.length; i += POSITION_COMPONENTS) {
+				const x = geometry.vertices[i];
+				const y = geometry.vertices[i + 1];
+				positions[posOffset++] = (x - globalMinX) / extentX;
+				positions[posOffset++] = (y - globalMinY) / extentY;
+			}
+		}
+
+		const colorArray = new Float32Array(colorValues);
+		const pickingArray = new Float32Array(pickingValues);
+
+		this.positionBuffer = gl.createBuffer();
+		this.colorBuffer = gl.createBuffer();
+		this.pickingColorBuffer = gl.createBuffer();
+		if (!this.positionBuffer || !this.colorBuffer || !this.pickingColorBuffer) {
+			console.error('[ZoneFillLayer] Failed to allocate geometry buffers');
+			this.deleteGeometryBuffers(gl);
+			this.geometryDirty = false;
+			return;
+		}
+
+		gl.bindBuffer(gl.ARRAY_BUFFER, this.positionBuffer);
+		gl.bufferData(gl.ARRAY_BUFFER, positions, gl.STATIC_DRAW);
+
+		gl.bindBuffer(gl.ARRAY_BUFFER, this.colorBuffer);
+		gl.bufferData(gl.ARRAY_BUFFER, colorArray, gl.STATIC_DRAW);
+
+		gl.bindBuffer(gl.ARRAY_BUFFER, this.pickingColorBuffer);
+		gl.bufferData(gl.ARRAY_BUFFER, pickingArray, gl.STATIC_DRAW);
+
+		gl.bindBuffer(gl.ARRAY_BUFFER, null);
+
+		this.vertexCount = totalVertices;
 		this.geometryDirty = false;
 	}
 
-	private clearZoneBuffers(gl: GLContext) {
-		for (const zone of this.zoneBuffers) {
-			gl.deleteBuffer(zone.buffer);
+	private deleteGeometryBuffers(gl: GLContext) {
+		if (this.positionBuffer) {
+			gl.deleteBuffer(this.positionBuffer);
+			this.positionBuffer = null;
 		}
-		this.zoneBuffers = [];
+		if (this.colorBuffer) {
+			gl.deleteBuffer(this.colorBuffer);
+			this.colorBuffer = null;
+		}
+		if (this.pickingColorBuffer) {
+			gl.deleteBuffer(this.pickingColorBuffer);
+			this.pickingColorBuffer = null;
+		}
+		this.vertexCount = 0;
+		this.globalOrigin = new Float32Array([0, 0]);
+		this.globalExtent = new Float32Array([1, 1]);
 	}
 
 	pickFeatureAt(pointLike: PointLike): RentalZoneFeature | null {
@@ -633,33 +798,46 @@ void main() {
 		return this.pickingLookup.get(index) ?? null;
 	}
 
-	private buildTriangles(feature: RentalZoneFeature): Float32Array {
-		const triangles: number[] = [];
+	private buildZoneGeometry(feature: RentalZoneFeature): ZoneGeometry | null {
+		const vertices: number[] = [];
+		let minX = Number.POSITIVE_INFINITY;
+		let minY = Number.POSITIVE_INFINITY;
+		let maxX = Number.NEGATIVE_INFINITY;
+		let maxY = Number.NEGATIVE_INFINITY;
 
 		const appendPoly = (coords: Position[][]) => {
 			if (!coords.length) {
 				return;
 			}
 
-			const data = flatten(
-				coords.map((ring) =>
-					ring.map(([lng, lat]) => {
-						const merc = maplibregl.MercatorCoordinate.fromLngLat([lng, lat]);
-						return [merc.x, merc.y];
-					})
-				)
+			const mercatorCoords = coords.map((ring) =>
+				ring.map(([lng, lat]) => {
+					const merc = maplibregl.MercatorCoordinate.fromLngLat([lng, lat]);
+					minX = Math.min(minX, merc.x);
+					minY = Math.min(minY, merc.y);
+					maxX = Math.max(maxX, merc.x);
+					maxY = Math.max(maxY, merc.y);
+					return [merc.x, merc.y];
+				})
 			);
+			const data = flatten(mercatorCoords);
 			const indices = earcut(data.vertices, data.holes, data.dimensions);
+			const stride = data.dimensions;
 
 			for (const index of indices) {
-				const base = index * 2;
-				triangles.push(data.vertices[base], data.vertices[base + 1]);
+				const base = index * stride;
+				vertices.push(data.vertices[base], data.vertices[base + 1]);
 			}
 		};
 
 		for (const polygon of feature.geometry.coordinates) {
 			appendPoly(polygon);
 		}
-		return new Float32Array(triangles);
+
+		if (vertices.length === 0) {
+			return null;
+		}
+
+		return { vertices, minX, minY, maxX, maxY };
 	}
 }

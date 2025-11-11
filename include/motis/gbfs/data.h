@@ -72,9 +72,9 @@ enum class return_constraint : std::uint8_t {
 };
 
 struct vehicle_type {
-  std::string id_;
+  std::string id_{};
   vehicle_type_idx_t idx_{vehicle_type_idx_t::invalid()};
-  std::string name_;
+  std::string name_{};
   vehicle_form_factor form_factor_{};
   propulsion_type propulsion_type_{};
   return_constraint return_constraint_{};

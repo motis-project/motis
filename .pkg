@@ -1,7 +1,7 @@
 [nigiri]
   url=git@github.com:motis-project/nigiri.git
   branch=master
-  commit=d64c5acc2d82b3babe1d419aa63babb21e89f1d1
+  commit=a68850efe17508472e6a457806d0872dc87d0323
 [cista]
   url=git@github.com:felixguendling/cista.git
   branch=master
@@ -16,8 +16,8 @@
   commit=a63d8c1822293b8f18dc0418905c3c21067aa051
 [adr]
   url=git@github.com:schaerfo/adr.git
-  branch=filter-stops-by-mode
-  commit=09b92f3a8fc9d4272f355ea4f948cbf7f65917e3
+  branch=master
+  commit=c27f76c3220f0255adf9fb0ec4e68603846233fa
 [googletest]
   url=git@github.com:motis-project/googletest.git
   branch=master

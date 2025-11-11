@@ -2394,6 +2394,9 @@ components:
         stopId:
           description: The ID of the stop. This is often something that users don't care about.
           type: string
+        parentId:
+          description: If it's not a root stop, this field contains the `stopId` of the parent stop.
+          type: string
         importance:
           description: The importance of the stop between 0-1.
           type: number
@@ -2515,6 +2518,8 @@ components:
         - agencyName
         - agencyUrl
         - tripId
+        - routeId
+        - directionId
         - routeShortName
         - routeLongName
         - tripShortName
@@ -2546,6 +2551,10 @@ components:
         agencyName:
           type: string
         agencyUrl:
+          type: string
+        routeId:
+          type: string
+        directionId:
           type: string
         routeColor:
           type: string
@@ -3264,6 +3273,10 @@ components:
         tripTo:
           description: final stop of this trip (can differ from headsign)
           $ref: '#/components/schemas/Place'
+        routeId:
+          type: string
+        directionId:
+          type: string
         routeColor:
           type: string
         routeTextColor:
