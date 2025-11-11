@@ -74,9 +74,9 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
       query.arriveBy_ ? osr::direction::kBackward : osr::direction::kForward;
 
   auto const r = routing{
-      config_, w_,        l_,      pl_,      elevations_,  &tt_, nullptr,
-      &tags_,  loc_tree_, fa_,     matches_, way_matches_, rt_,  nullptr,
-      gbfs_,   nullptr,   nullptr, nullptr, nullptr,  metrics_};
+      config_, w_,        l_,      pl_,      elevations_,  &tt_,    nullptr,
+      &tags_,  loc_tree_, fa_,     matches_, way_matches_, rt_,     nullptr,
+      gbfs_,   nullptr,   nullptr, nullptr,  nullptr,      metrics_};
   auto gbfs_rd = gbfs::gbfs_routing_data{w_, l_, gbfs_};
 
   auto const osr_params = get_osr_parameters(query);
