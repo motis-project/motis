@@ -166,6 +166,7 @@ struct config {
     bool operator==(prima const&) const = default;
     std::string url_{};
     std::optional<std::string> bounds_{};
+    std::optional<std::string> ride_sharing_bounds_{};
   };
   std::optional<prima> prima_{};
 
