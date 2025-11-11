@@ -15,7 +15,7 @@
   branch=master
   commit=a63d8c1822293b8f18dc0418905c3c21067aa051
 [adr]
-  url=git@github.com:schaerfo/adr.git
+  url=git@github.com:triptix-tech/adr.git
   branch=master
   commit=c27f76c3220f0255adf9fb0ec4e68603846233fa
 [googletest]
