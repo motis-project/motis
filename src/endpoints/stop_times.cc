@@ -473,6 +473,9 @@ api::stoptimes_response stop_times::operator()(
                         tt_.strings_.try_get(agency.name_).value_or("?")},
                 .agencyUrl_ =
                     std::string{tt_.strings_.try_get(agency.url_).value_or("")},
+                .routeId_ = std::string{s.get_route_id(n::event_type::kDep)},
+                .directionId_ =
+                    s.get_direction_id(n::event_type::kDep) == 0 ? "0" : "1",
                 .routeColor_ = to_str(s.get_route_color(ev_type).color_),
                 .routeTextColor_ =
                     to_str(s.get_route_color(ev_type).text_color_),
