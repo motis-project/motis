@@ -450,6 +450,12 @@ api::Itinerary journey_to_response(
                               last.scheduled_time(n::event_type::kArr);
                           return p;
                         }(),
+                    .routeId_ = std::string{enter_stop.get_route_id(
+                        n::event_type::kDep)},
+                    .directionId_ =
+                        enter_stop.get_direction_id(n::event_type::kDep) == 0
+                            ? "0"
+                            : "1",
                     .routeColor_ = to_str(color.color_),
                     .routeTextColor_ = to_str(color.text_color_),
                     .routeType_ = enter_stop.route_type(n::event_type::kDep)
