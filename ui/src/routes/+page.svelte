@@ -118,18 +118,15 @@
 
 	const applyPageStateFromURL = () => {
 		if (browser && urlParams) {
-			if (urlParams.has('tripId')) {
-				onClickTrip(urlParams.get('tripId')!, true);
+			const tripId = urlParams.get('tripId');
+			if (tripId !== null) {
+				onClickTrip(tripId, true);
 			}
-			if (urlParams.has('stopId')) {
+
+			const stopId = urlParams.get('stopId');
+			if (stopId !== null) {
 				const time = urlParams.has('time') ? new Date(urlParams.get('time')!) : new Date();
-				onClickStop(
-					'',
-					urlParams.get('stopId')!,
-					time,
-					urlParams.get('stopArriveBy') == 'true',
-					true
-				);
+				onClickStop('', stopId, time, urlParams.get('stopArriveBy') == 'true', true);
 			}
 		}
 	};
