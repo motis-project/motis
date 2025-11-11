@@ -100,8 +100,14 @@ data::data(std::filesystem::path p, config const& c)
 
   rt_ = std::make_shared<rt>();
 
-  if (c.prima_.has_value() && c.prima_->bounds_.has_value()) {
-    odm_bounds_ = std::make_unique<odm::bounds>(*c.prima_->bounds_);
+  if (c.prima_.has_value()) {
+    if (c.prima_->bounds_.has_value()) {
+      odm_bounds_ = std::make_unique<odm::bounds>(*c.prima_->bounds_);
+    }
+    if (c.prima_->ride_sharing_bounds_.has_value()) {
+      ride_sharing_bounds_ =
+          std::make_unique<odm::bounds>(*c.prima_->ride_sharing_bounds_);
+    }
   }
 
   auto geocoder = std::async(std::launch::async, [&]() {
