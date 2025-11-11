@@ -887,7 +887,8 @@ bool prima::whitelist_ride_sharing(nigiri::timetable const& tt) {
   auto ioc = boost::asio::io_context{};
   try {
     n::log(n::log_lvl::debug, "motis.prima",
-           "[whitelist ride-sharing] request for {} events", n_taxi_events());
+           "[whitelist ride-sharing] request for {} events",
+           n_ride_sharing_events());
     boost::asio::co_spawn(
         ioc,
         [&]() -> boost::asio::awaitable<void> {
