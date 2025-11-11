@@ -1,4 +1,5 @@
 import { browser } from '$app/environment';
+import bg from './bg';
 import en from './en';
 import de from './de';
 import fr from './fr';
@@ -152,6 +153,7 @@ export type Translations = {
 
 const translations: Map<string, Translations> = new Map(
 	Object.entries({
+		bg,
 		pl,
 		en,
 		de,
