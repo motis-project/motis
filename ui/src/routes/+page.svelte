@@ -696,7 +696,9 @@
 				theme,
 				level,
 				window.location.origin + window.location.pathname,
-				client.getConfig().baseUrl || window.location.origin + window.location.pathname
+				client.getConfig().baseUrl
+					? client.getConfig().baseUrl + '/'
+					: window.location.origin + window.location.pathname
 			)
 		: undefined}
 	attribution={false}
