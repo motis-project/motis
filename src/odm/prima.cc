@@ -133,6 +133,12 @@ void init_pt(std::vector<n::routing::start>& rides,
                                query.pedestrianProfile_, query.elevationCosts_,
                                max, query.maxMatchingDistance_, gbfs_rd);
 
+  std::erase_if(offsets, [&](n::routing::offset const& o) {
+    return r.ride_sharing_bounds_ != nullptr &&
+           !r.ride_sharing_bounds_->contains(
+               r.tt_->locations_.coordinates_[o.target_]);
+  });
+
   for (auto& o : offsets) {
     o.duration_ += kODMTransferBuffer;
   }
@@ -166,7 +172,10 @@ void prima::init(n::interval<n::unixtime_t> const& search_intvl,
                  n::routing::query const& n_query,
                  unsigned api_version) {
   auto direct_duration = std::optional<std::chrono::seconds>{};
-  if ((use_direct_ride_sharing || use_direct_taxi) && r.w_ && r.l_) {
+  if ((use_direct_ride_sharing || use_direct_taxi) && r.w_ && r.l_ &&
+      (r.ride_sharing_bounds_ == nullptr ||
+       (r.ride_sharing_bounds_->contains(from_.pos_) &&
+        r.ride_sharing_bounds_->contains(to_.pos_)))) {
     direct_duration = init_direct(direct_ride_sharing_, r, e, gbfs, from, to,
                                   search_intvl, query, api_version);
 
@@ -887,7 +896,8 @@ bool prima::whitelist_ride_sharing(nigiri::timetable const& tt) {
   auto ioc = boost::asio::io_context{};
   try {
     n::log(n::log_lvl::debug, "motis.prima",
-           "[whitelist ride-sharing] request for {} events", n_taxi_events());
+           "[whitelist ride-sharing] request for {} events",
+           n_ride_sharing_events());
     boost::asio::co_spawn(
         ioc,
         [&]() -> boost::asio::awaitable<void> {

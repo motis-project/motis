@@ -159,6 +159,9 @@ target_link_libraries(motis
     address_formatting_res-res
 )
 
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
+    target_link_options(motis PRIVATE -Wl,-no_deduplicate)
+endif()
 
 # --- TEST ---
 add_library(motis-generated INTERFACE)

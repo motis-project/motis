@@ -15,6 +15,7 @@
 #include "motis/endpoints/adr/filter_conv.h"
 #include "motis/endpoints/adr/suggestions_to_response.h"
 #include "motis/parse_location.h"
+#include "motis/timetable/modes_to_clasz_mask.h"
 
 namespace n = nigiri;
 namespace a = adr;
@@ -38,6 +39,10 @@ api::geocode_response geocode::operator()(
     utl::verify(parsed.has_value(), "could not parse place {}", s);
     return std::optional{parsed.value().pos_};
   });
+  auto const allowed_modes =
+      params.mode_.transform([](std::vector<api::ModeEnum> const& modes) {
+        return to_clasz_mask(modes);
+      });
 
   auto& ctx = get_guess_context(t_, cache_);
 
@@ -50,9 +55,25 @@ api::geocode_response geocode::operator()(
       }
     }
   }
-  auto const token_pos = a::get_suggestions<false>(
-      t_, params.text_, 10U, lang_indices, ctx, place,
-      static_cast<float>(params.placeBias_), to_filter_type(params.type_));
+  auto const place_filter =
+      allowed_modes
+          .transform([&](n::routing::clasz_mask_t allowed) {
+            return std::function{[allowed, this](adr::place_idx_t place_idx) {
+              if (t_.place_type_[place_idx] != adr::amenity_category::kExtra) {
+                return true;
+              }
+              auto const i = adr_extra_place_idx_t{
+                  static_cast<adr_extra_place_idx_t::value_t>(place_idx -
+                                                              t_.ext_start_)};
+              auto const available = ae_->place_clasz_[i];
+              return static_cast<bool>(available & allowed);
+            }};
+          })
+          .value_or(std::function<bool(adr::place_idx_t)>{});
+  auto const token_pos =
+      a::get_suggestions<false>(t_, params.text_, 10U, lang_indices, ctx, place,
+                                static_cast<float>(params.placeBias_),
+                                to_filter_type(params.type_), place_filter);
   return suggestions_to_response(t_, f_, ae_, tt_, tags_, w_, pl_, matches_,
                                  lang_indices, token_pos, ctx.suggestions_);
 }

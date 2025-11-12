@@ -108,6 +108,10 @@ osr_parameters get_osr_parameters(api::oneToMany_params const& params) {
   return to_osr_parameters(params);
 }
 
+osr_parameters get_osr_parameters(api::OneToManyParams const& params) {
+  return to_osr_parameters(params);
+}
+
 osr::profile_parameters to_profile_parameters(osr::search_profile const p,
                                               osr_parameters const& params) {
   // Ensure correct speed is used when using default parameters

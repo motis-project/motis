@@ -17,4 +17,8 @@ struct bounds {
   tg_geom* geom_{nullptr};
 };
 
+struct ride_sharing_bounds : bounds {
+  using bounds::bounds;
+};
+
 }  // namespace motis::odm

@@ -40,6 +40,7 @@
 #include "nigiri/routing/tb/tb_search.h"
 
 #include "motis/config.h"
+#include "motis/direct_filter.h"
 #include "motis/flex/flex.h"
 #include "motis/flex/flex_output.h"
 #include "motis/gbfs/data.h"
@@ -940,6 +941,8 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                                static_cast<std::size_t>(*query.maxItineraries_),
                                r.interval_, journeys);
     }
+
+    direct_filter(direct, journeys);
 
     return {
         .debugOutput_ = join(std::move(query_stats), r.search_stats_.to_map(),

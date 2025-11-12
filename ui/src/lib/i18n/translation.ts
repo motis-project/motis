@@ -1,4 +1,5 @@
 import { browser } from '$app/environment';
+import bg from './bg';
 import en from './en';
 import de from './de';
 import fr from './fr';
@@ -152,6 +153,7 @@ export type Translations = {
 
 const translations: Map<string, Translations> = new Map(
 	Object.entries({
+		bg,
 		pl,
 		en,
 		de,
@@ -164,5 +166,9 @@ const translationsKey = (
 	browser ? (navigator.languages.find((l) => translations.has(l.slice(0, 2))) ?? 'en') : 'en'
 )?.slice(0, 2);
 
-export const language = translationsKey ?? (browser ? navigator.language : 'en');
+const urlLanguage = browser
+	? new URLSearchParams(window.location.search).get('language')
+	: undefined;
+
+export const language = urlLanguage ?? translationsKey;
 export const t = translationsKey ? translations.get(translationsKey)! : en;

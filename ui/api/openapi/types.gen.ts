@@ -2181,6 +2181,12 @@ export type GeocodeData = {
          */
         language?: Array<(string)>;
         /**
+         * Optional. Filter stops by available transport modes.
+         * Defaults to applying no filter.
+         *
+         */
+        mode?: Array<Mode>;
+        /**
          * Optional. Used for biasing results towards the coordinate.
          *
          * Format: latitude,longitude in degrees

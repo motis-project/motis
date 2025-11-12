@@ -130,6 +130,7 @@ struct routing {
   adr_ext const* ae_;
   tz_map_t const* tz_;
   odm::bounds const* odm_bounds_;
+  odm::ride_sharing_bounds const* ride_sharing_bounds_;
   metrics_registry* metrics_;
 };
 
