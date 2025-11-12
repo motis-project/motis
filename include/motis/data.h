@@ -103,7 +103,7 @@ struct data {
   ptr<tiles_data> tiles_;
   std::shared_ptr<rt> rt_{std::make_shared<rt>()};
   std::shared_ptr<gbfs::gbfs_data> gbfs_{};
-  ptr<odm::bounds> odm_bounds_;
+  ptr<odm::taxi_bounds> odm_bounds_;
   ptr<odm::bounds> ride_sharing_bounds_;
   ptr<flex::flex_areas> flex_areas_;
   ptr<metrics_registry> metrics_;

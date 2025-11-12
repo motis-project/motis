@@ -17,4 +17,12 @@ struct bounds {
   tg_geom* geom_{nullptr};
 };
 
+struct taxi_bounds : bounds {
+  explicit taxi_bounds(std::filesystem::path const&);
+};
+
+struct ride_sharing_bounds : bounds {
+  explicit ride_sharing_bounds(std::filesystem::path const&);
+};
+
 }  // namespace motis::odm

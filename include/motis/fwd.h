@@ -58,7 +58,9 @@ struct adr_ext;
 
 namespace odm {
 struct bounds;
-}
+struct taxi_bounds;
+struct ride_sharing_bounds;
+}  // namespace odm
 
 namespace gbfs {
 struct gbfs_data;
