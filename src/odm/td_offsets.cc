@@ -31,7 +31,7 @@ get_td_offsets_split(std::vector<nigiri::routing::offset> const& offsets,
       for (auto const& i : t) {
         td_offsets[o.target_].emplace_back(i.from_, o.duration_, mode);
         td_offsets[o.target_].emplace_back(
-            i.to_, nigiri::footpath::kMaxDuration, mode);
+            i.to_ - o.duration_ + 1min, nigiri::footpath::kMaxDuration, mode);
       }
     }
     return td_offsets;
