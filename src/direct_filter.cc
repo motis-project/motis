@@ -1,16 +1,9 @@
 #include "motis/direct_filter.h"
 
-#include <variant>
-
 #include "utl/erase_if.h"
+#include "utl/visit.h"
 
 #include "nigiri/types.h"
-
-#include "absl/strings/str_format.h"
-#include "ctre.hpp"
-#include "osr/routing/mode.h"
-#include "sol/types.hpp"
-#include "utl/visit.h"
 
 namespace motis {
 
