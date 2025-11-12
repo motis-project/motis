@@ -14,6 +14,14 @@ const translations: Translations = {
 	car: 'Auto',
 	taxi: 'Taxi',
 	moped: 'Moped',
+	unknownVehicleType: 'Unbekannter Fahrzeugtyp',
+	electricAssist: 'Elektromotorunterstützung',
+	electric: 'Elektrisch',
+	combustion: 'Benzin',
+	combustionDiesel: 'Diesel',
+	hybrid: 'Hybrid',
+	plugInHybrid: 'Plug-in Hybrid',
+	hydrogenFuelCell: 'Wasserstoff-Brennstoffzelle',
 	from: 'Von',
 	to: 'Nach',
 	position: 'Position',
@@ -43,12 +51,17 @@ const translations: Translations = {
 		}
 	},
 	sharingProvider: 'Anbieter',
+	sharingProviders: 'Anbieter',
+	returnOnlyAtStations: 'Das Fahrzeug muss an einer Station zurückgegeben werden.',
 	roundtripStationReturnConstraint:
 		'Das Fahrzeug muss wieder an der Abfahrtsstation abgestellt werden.',
+	rentalStation: 'Station',
+	rentalGeofencingZone: 'Zone',
 	noItinerariesFound: 'Keine Verbindungen gefunden.',
 	advancedSearchOptions: 'Optionen',
 	selectTransitModes: 'Öffentliche Verkehrsmittel auswählen',
 	defaultSelectedModes: 'Alle Verkehrsmittel',
+	defaultSelectedProviders: 'Alle Anbieter',
 	selectElevationCosts: 'Steile Steigungen vermeiden.',
 	useRoutedTransfers: 'Geroutete Umstiege verwenden',
 	wheelchair: 'Barrierefreie Umstiege',
@@ -110,6 +123,12 @@ const translations: Translations = {
 		noData: 'Keine Daten',
 		requestFailed: 'Anfrage fehlgeschlagen'
 	},
+	alerts: {
+		validFrom: 'Gültig von',
+		until: 'bis',
+		information: 'Informationen',
+		more: 'mehr'
+	},
 	RENTAL_BICYCLE: 'Bikesharing',
 	RENTAL_CARGO_BICYCLE: 'Lastenrad Sharing',
 	RENTAL_CAR: 'Car Sharing',
@@ -125,8 +144,9 @@ const translations: Translations = {
 	accessRestriction: 'Kein Zugang',
 	continuesAs: 'Weiter als',
 	rent: 'Ausleihen',
+	copyToClipboard: 'In die Zwischenablage kopieren',
 	rideThroughAllowed: 'Durchfahrt erlaubt',
-	rideThroughNotAllowed: 'Durchfahrt nicht erlaubt',
+	rideThroughNotAllowed: 'Durchfahrt verboten',
 	rideEndAllowed: 'Parken erlaubt',
 	rideEndNotAllowed: 'Parken nur an Stationen'
 };

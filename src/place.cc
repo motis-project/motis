@@ -40,7 +40,8 @@ osr::level_t get_lvl(osr::ways const* w,
                      osr::platforms const* pl,
                      platform_matches_t const* matches,
                      n::location_idx_t const l) {
-  return w && pl && matches ? pl->get_level(*w, (*matches)[l]) : osr::kNoLevel;
+  return w && pl && matches ? pl->get_level(*w, (*matches).at(l))
+                            : osr::kNoLevel;
 }
 
 double get_level(osr::ways const* w,
@@ -78,7 +79,7 @@ osr::location get_location(n::timetable const* tt,
               default:
                 utl::verify(tt != nullptr,
                             "resolving stop coordinates: timetable not set");
-                return osr::location{tt->locations_.coordinates_[l_idx],
+                return osr::location{tt->locations_.coordinates_.at(l_idx),
                                      get_lvl(w, pl, matches, l_idx)};
             }
           }},
@@ -117,7 +118,7 @@ api::Place to_place(n::timetable const* tt,
                 return tt->locations_.platform_codes_.at(x).empty()
                            ? std::nullopt
                            : std::optional{std::string{
-                                 tt->locations_.platform_codes_[x].view()}};
+                                 tt->locations_.platform_codes_.at(x).view()}};
               };
 
               // check if description is available, if not, return nullopt
@@ -125,32 +126,31 @@ api::Place to_place(n::timetable const* tt,
                 return tt->locations_.descriptions_.at(x).empty()
                            ? std::nullopt
                            : std::optional{std::string{
-                                 tt->locations_.descriptions_[x].view()}};
+                                 tt->locations_.descriptions_.at(x).view()}};
               };
 
               auto const pos = tt->locations_.coordinates_[l];
-              auto const p =
-                  tt->locations_.parents_[l] == n::location_idx_t::invalid()
-                      ? l
-                      : tt->locations_.parents_[l];
+              auto const p = tt->locations_.get_root_idx(l);
               auto const timezone = get_tz(*tt, ae, tz_map, p);
-              return {.name_ = std::string{tt->locations_.names_[p].view()},
-                      .stopId_ = tags->id(*tt, l),
-                      .importance_ =
-                          ae == nullptr
-                              ? std::nullopt
-                              : std::optional{ae->place_importance_
-                                                  [ae->location_place_[l]]},
-                      .lat_ = pos.lat_,
-                      .lon_ = pos.lng_,
-                      .level_ = get_level(w, pl, matches, l),
-                      .tz_ = timezone == nullptr
-                                 ? fallback_tz
-                                 : std::optional{timezone->name()},
-                      .scheduledTrack_ = get_track(tt_l.scheduled_),
-                      .track_ = get_track(tt_l.l_),
-                      .description_ = get_description(tt_l.scheduled_),
-                      .vertexType_ = api::VertexTypeEnum::TRANSIT};
+              return {
+                  .name_ = std::string{tt->locations_.names_.at(p).view()},
+                  .stopId_ = tags->id(*tt, l),
+                  .parentId_ = p == n::location_idx_t::invalid()
+                                   ? std::nullopt
+                                   : std::optional{tags->id(*tt, p)},
+                  .importance_ = ae == nullptr
+                                     ? std::nullopt
+                                     : std::optional{ae->place_importance_.at(
+                                           ae->location_place_.at(l))},
+                  .lat_ = pos.lat_,
+                  .lon_ = pos.lng_,
+                  .level_ = get_level(w, pl, matches, l),
+                  .tz_ = timezone == nullptr ? fallback_tz
+                                             : std::optional{timezone->name()},
+                  .scheduledTrack_ = get_track(tt_l.scheduled_),
+                  .track_ = get_track(tt_l.l_),
+                  .description_ = get_description(tt_l.scheduled_),
+                  .vertexType_ = api::VertexTypeEnum::TRANSIT};
             }
           }},
       l);

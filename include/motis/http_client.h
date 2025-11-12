@@ -9,19 +9,27 @@
 #include <type_traits>
 
 #include "boost/asio/awaitable.hpp"
+#include "boost/beast/http/dynamic_body.hpp"
+#include "boost/beast/http/message.hpp"
 #include "boost/system.hpp"
 #include "boost/url/url.hpp"
 
-#include "motis/http_req.h"
 #include "motis/types.h"
 
 namespace motis {
 
+using http_response =
+    boost::beast::http::response<boost::beast::http::dynamic_body>;
+
+constexpr auto const kBodySizeLimit = 512U * 1024U * 1024U;  // 512 M
+
 constexpr auto const kUnlimitedHttpPipelining =
     std::numeric_limits<std::size_t>::max();
 
-struct http_client {
-  enum class error { success = 0, too_many_redirects, request_failed };
+std::string get_http_body(http_response const&);
+
+struct http_client : std::enable_shared_from_this<http_client> {
+  enum class error { success, too_many_redirects, request_failed, timeout };
 
   struct error_category_impl : public boost::system::error_category {
     virtual ~error_category_impl() = default;
@@ -63,6 +71,13 @@ struct http_client {
 
   void set_proxy(boost::urls::url const&);
 
+  boost::asio::awaitable<void> shutdown();
+
+private:
+  boost::asio::awaitable<http_response> perform_request(
+      std::shared_ptr<request>);
+
+public:
   hash_map<connection_key, std::shared_ptr<connection>> connections_;
   std::chrono::seconds timeout_{std::chrono::seconds{10}};
 

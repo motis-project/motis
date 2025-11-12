@@ -38,7 +38,6 @@
 #include "motis/elevators/elevators.h"
 #include "motis/endpoints/routing.h"
 #include "motis/gbfs/routing_data.h"
-#include "motis/http_req.h"
 #include "motis/journey_to_response.h"
 #include "motis/metrics_registry.h"
 #include "motis/odm/bounds.h"
@@ -65,7 +64,7 @@ using td_offsets_t =
     n::hash_map<n::location_idx_t, std::vector<n::routing::td_offset>>;
 
 constexpr auto const kODMLookAhead = nigiri::duration_t{24h};
-constexpr auto const kSearchIntervalSize = nigiri::duration_t{6h};
+constexpr auto const kSearchIntervalSize = nigiri::duration_t{10h};
 constexpr auto const kContextPadding = nigiri::duration_t{2h};
 static auto const kMixer = get_default_mixer();
 
@@ -143,6 +142,12 @@ meta_router::meta_router(ep::routing const& r,
       dest_rental_providers_{query_.arriveBy_
                                  ? query_.preTransitRentalProviders_
                                  : query_.postTransitRentalProviders_},
+      start_rental_provider_groups_{
+          query_.arriveBy_ ? query_.postTransitRentalProviderGroups_
+                           : query_.preTransitRentalProviderGroups_},
+      dest_rental_provider_groups_{
+          query_.arriveBy_ ? query_.preTransitRentalProviderGroups_
+                           : query_.postTransitRentalProviderGroups_},
       start_ignore_rental_return_constraints_{
           query.arriveBy_ ? query_.ignorePreTransitRentalReturnConstraints_
                           : query_.ignorePostTransitRentalReturnConstraints_},
@@ -344,17 +349,19 @@ api::plan_response meta_router::run() {
           query_.arriveBy_ ? osr::direction::kBackward
                            : osr::direction::kForward,
           start_modes_, start_form_factors_, start_propulsion_types_,
-          start_rental_providers_, start_ignore_rental_return_constraints_,
-          params, query_.pedestrianProfile_, query_.elevationCosts_,
-          pre_transit_time, query_.maxMatchingDistance_, gbfs_rd_),
+          start_rental_providers_, start_rental_provider_groups_,
+          start_ignore_rental_return_constraints_, params,
+          query_.pedestrianProfile_, query_.elevationCosts_, pre_transit_time,
+          query_.maxMatchingDistance_, gbfs_rd_),
       .dest_walk_ = r_.get_offsets(
           rtt_, dest_,
           query_.arriveBy_ ? osr::direction::kForward
                            : osr::direction::kBackward,
           dest_modes_, dest_form_factors_, dest_propulsion_types_,
-          dest_rental_providers_, dest_ignore_rental_return_constraints_,
-          params, query_.pedestrianProfile_, query_.elevationCosts_,
-          post_transit_time, query_.maxMatchingDistance_, gbfs_rd_),
+          dest_rental_providers_, dest_rental_provider_groups_,
+          dest_ignore_rental_return_constraints_, params,
+          query_.pedestrianProfile_, query_.elevationCosts_, post_transit_time,
+          query_.maxMatchingDistance_, gbfs_rd_),
       .td_start_walk_ =
           r_.get_td_offsets(rtt_, e_, start_,
                             query_.arriveBy_ ? osr::direction::kBackward

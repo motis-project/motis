@@ -68,6 +68,7 @@ struct routing {
       std::optional<std::vector<api::RentalFormFactorEnum>> const&,
       std::optional<std::vector<api::RentalPropulsionTypeEnum>> const&,
       std::optional<std::vector<std::string>> const& rental_providers,
+      std::optional<std::vector<std::string>> const& rental_provider_groups,
       bool ignore_rental_return_constraints,
       osr_parameters const&,
       api::PedestrianProfileEnum,
@@ -99,6 +100,7 @@ struct routing {
       std::optional<std::vector<api::RentalFormFactorEnum>> const&,
       std::optional<std::vector<api::RentalPropulsionTypeEnum>> const&,
       std::optional<std::vector<std::string>> const& rental_providers,
+      std::optional<std::vector<std::string>> const& rental_provider_groups,
       bool ignore_rental_return_constraints,
       nigiri::unixtime_t time,
       bool arrive_by,
@@ -128,6 +130,7 @@ struct routing {
   adr_ext const* ae_;
   tz_map_t const* tz_;
   odm::bounds const* odm_bounds_;
+  odm::bounds const* ride_sharing_bounds_;
   metrics_registry* metrics_;
 };
 

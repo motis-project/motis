@@ -11,9 +11,9 @@
 		type PlanData,
 		type PlanError,
 		type PlanResponse
-	} from '$lib/api/openapi';
+	} from '@motis-project/motis-client';
 	import Time from '$lib/Time.svelte';
-	import LoaderCircle from 'lucide-svelte/icons/loader-circle';
+	import { LoaderCircle } from '@lucide/svelte';
 	import { t } from '$lib/i18n/translation';
 	import DirectConnection from '$lib/DirectConnection.svelte';
 	import type { RequestResult } from '@hey-api/client-fetch';

@@ -2,7 +2,7 @@
 	import { Button, type ButtonProps } from '$lib/components/ui/button';
 	import { formatDurationSec } from '$lib/formatDuration';
 	import { getModeStyle, routeColor } from './modeStyle';
-	import type { Itinerary } from './api/openapi';
+	import type { Itinerary } from '@motis-project/motis-client';
 
 	const {
 		d,

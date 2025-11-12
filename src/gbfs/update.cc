@@ -18,6 +18,7 @@
 #include "boost/asio/experimental/parallel_group.hpp"
 #include "boost/asio/redirect_error.hpp"
 #include "boost/asio/steady_timer.hpp"
+#include "boost/stacktrace.hpp"
 
 #include "boost/json.hpp"
 
@@ -28,6 +29,7 @@
 
 #include "fmt/format.h"
 
+#include "utl/enumerate.h"
 #include "utl/helpers/algorithm.h"
 #include "utl/overloaded.h"
 #include "utl/sorted_diff.h"
@@ -38,7 +40,6 @@
 #include "motis/data.h"
 #include "motis/gbfs/data.h"
 #include "motis/http_client.h"
-#include "motis/http_req.h"
 
 #include "motis/gbfs/compression.h"
 #include "motis/gbfs/osr_mapping.h"
@@ -142,10 +143,15 @@ struct gbfs_update {
               osr::lookup const& l,
               gbfs_data* d,
               gbfs_data const* prev_d)
-      : c_{c}, w_{w}, l_{l}, d_{d}, prev_d_{prev_d} {
-    client_.timeout_ = std::chrono::seconds{c.http_timeout_};
+      : c_{c},
+        w_{w},
+        l_{l},
+        d_{d},
+        prev_d_{prev_d},
+        client_{std::make_shared<http_client>()} {
+    client_->timeout_ = std::chrono::seconds{c.http_timeout_};
     if (c.proxy_ && !c.proxy_->empty()) {
-      client_.set_proxy(boost::urls::url{*c.proxy_});
+      client_->set_proxy(boost::urls::url{*c.proxy_});
     }
   }
 
@@ -158,7 +164,12 @@ struct gbfs_update {
       d_->standalone_feeds_ =
           std::make_shared<std::vector<std::unique_ptr<provider_feed>>>();
 
-      auto const no_hdr = headers_t{};
+      for (auto const& [id, group] : c_.groups_) {
+        d_->groups_.emplace(id, gbfs_group{.id_ = id,
+                                           .name_ = group.name_.value_or(id),
+                                           .color_ = group.color_});
+      }
+
       auto awaitables = utl::to_vec(c_.feeds_, [&](auto const& f) {
         auto const& id = f.first;
         auto const& feed = f.second;
@@ -169,9 +180,8 @@ struct gbfs_update {
 
         return boost::asio::co_spawn(
             executor,
-            [this, id, feed, dir, &no_hdr]() -> awaitable<void> {
-              co_await init_feed(id, feed.url_, feed.headers_.value_or(no_hdr),
-                                 feed.oauth_, dir);
+            [this, id, feed, dir]() -> awaitable<void> {
+              co_await init_feed(id, feed, dir);
             },
             asio::deferred);
       });
@@ -190,6 +200,11 @@ struct gbfs_update {
       d_->provider_by_id_ = prev_d_->provider_by_id_;
       d_->provider_rtree_ = prev_d_->provider_rtree_;
       d_->cache_ = prev_d_->cache_;
+
+      d_->groups_ = prev_d_->groups_;
+      for (auto& group : d_->groups_ | std::views::values) {
+        group.providers_.clear();
+      }
 
       co_await refresh_oauth_tokens();
 
@@ -225,28 +240,27 @@ struct gbfs_update {
     }
   }
 
-  awaitable<void> init_feed(
-      std::string const& id,
-      std::string const& url,
-      headers_t const& headers,
-      std::optional<config::gbfs::oauth_settings> const& oauth_settings,
-      std::optional<std::filesystem::path> const& dir) {
+  awaitable<void> init_feed(std::string const& id,
+                            config::gbfs::feed const& config,
+                            std::optional<std::filesystem::path> const& dir) {
     // initialization of a (standalone or aggregated) feed from the config
     try {
+      auto const headers = config.headers_.value_or(headers_t{});
       auto oauth = std::shared_ptr<oauth_state>{};
-      if (oauth_settings) {
-        oauth = std::make_shared<oauth_state>(oauth_state{
-            .settings_ = *oauth_settings,
-            .expires_in_ = oauth_settings->expires_in_.value_or(0)});
+      if (config.oauth_) {
+        oauth = std::make_shared<oauth_state>(
+            oauth_state{.settings_ = *config.oauth_,
+                        .expires_in_ = config.oauth_->expires_in_.value_or(0)});
       }
 
-      auto discovery = co_await fetch_file("gbfs", url, headers, oauth, dir);
+      auto discovery =
+          co_await fetch_file("gbfs", config.url_, headers, oauth, dir);
       auto const& root = discovery.json_.as_object();
       if ((root.contains("data") &&
            root.at("data").as_object().contains("datasets")) ||
           root.contains("systems")) {
         // file is not an individual feed, but a manifest.json / Lamassu file
-        co_return co_await init_aggregated_feed(id, url, headers,
+        co_return co_await init_aggregated_feed(id, config.url_, headers,
                                                 std::move(oauth), root);
       }
 
@@ -254,19 +268,21 @@ struct gbfs_update {
           d_->standalone_feeds_
               ->emplace_back(std::make_unique<provider_feed>(provider_feed{
                   .id_ = id,
-                  .url_ = url,
+                  .url_ = config.url_,
                   .headers_ = headers,
                   .dir_ = dir,
                   .default_restrictions_ = lookup_default_restrictions("", id),
                   .default_return_constraint_ =
                       lookup_default_return_constraint("", id),
+                  .config_group_ = lookup_group("", id),
+                  .config_color_ = lookup_color("", id),
                   .oauth_ = std::move(oauth)}))
               .get();
 
       co_return co_await update_provider_feed(*saf, std::move(discovery));
     } catch (std::exception const& ex) {
-      std::cerr << "[GBFS] error initializing feed " << id << " (" << url
-                << "): " << ex.what() << "\n";
+      std::cerr << "[GBFS] error initializing feed " << id << " ("
+                << config.url_ << "): " << ex.what() << "\n";
     }
   }
 
@@ -301,6 +317,10 @@ struct gbfs_update {
       provider.idx_ = idx;
       provider.default_restrictions_ = pf.default_restrictions_;
       provider.default_return_constraint_ = pf.default_return_constraint_;
+      provider.color_ = pf.config_color_;
+      if (pf.config_group_) {
+        provider.group_id_ = *pf.config_group_;
+      }
     };
 
     if (auto it = d_->provider_by_id_.find(pf.id_);
@@ -404,6 +424,30 @@ struct gbfs_update {
         provider.has_vehicles_to_rent_ = prev_provider->has_vehicles_to_rent_;
       }
 
+      if (!provider.color_.has_value() && !provider.sys_info_.color_.empty()) {
+        provider.color_ = provider.sys_info_.color_;
+      }
+
+      auto group_name = std::optional<std::string>{};
+      if (provider.group_id_.empty()) {
+        auto generated_id = provider.sys_info_.name_;
+        std::erase(generated_id, ',');
+        provider.group_id_ = generated_id;
+        group_name = provider.sys_info_.name_;
+      }
+
+      if (auto it = d_->groups_.find(provider.group_id_);
+          it == end(d_->groups_)) {
+        d_->groups_.emplace(
+            provider.group_id_,
+            gbfs_group{.id_ = provider.group_id_,
+                       .name_ = group_name.value_or(provider.group_id_),
+                       .color_ = {},
+                       .providers_ = {provider.idx_}});
+      } else {
+        it->second.providers_.push_back(provider.idx_);
+      }
+
       if (stations_updated || vehicle_status_updated) {
         for (auto const& st : provider.stations_ | std::views::values) {
           provider.bbox_.extend(st.info_.pos_);
@@ -421,6 +465,13 @@ struct gbfs_update {
     } catch (std::exception const& ex) {
       std::cerr << "[GBFS] error processing feed " << pf.id_ << " (" << pf.url_
                 << "): " << ex.what() << "\n";
+      if (!std::string_view{ex.what()}.starts_with("HTTP ")) {
+        if (auto const trace =
+                boost::stacktrace::stacktrace::from_current_exception();
+            trace) {
+          std::cerr << trace << std::endl;
+        }
+      }
 
       // keep previous data
       if (prev_provider != nullptr) {
@@ -680,6 +731,8 @@ struct gbfs_update {
                 lookup_default_restrictions(af.id_, combined_id),
             .default_return_constraint_ =
                 lookup_default_return_constraint(af.id_, combined_id),
+            .config_group_ = lookup_group(af.id_, system_id),
+            .config_color_ = lookup_color(af.id_, system_id),
             .oauth_ = af.oauth_});
       }
     } else if (root.contains("systems")) {
@@ -696,6 +749,8 @@ struct gbfs_update {
                 lookup_default_restrictions(af.id_, combined_id),
             .default_return_constraint_ =
                 lookup_default_return_constraint(af.id_, combined_id),
+            .config_group_ = lookup_group(af.id_, system_id),
+            .config_color_ = lookup_color(af.id_, system_id),
             .oauth_ = af.oauth_});
       }
     }
@@ -732,8 +787,12 @@ struct gbfs_update {
       auto headers = base_headers;
       co_await get_oauth_token(oauth, headers);
       auto const res =
-          co_await client_.get(boost::urls::url{url}, std::move(headers));
+          co_await client_->get(boost::urls::url{url}, std::move(headers));
       content = get_http_body(res);
+      if (res.result_int() != 200) {
+        throw std::runtime_error(
+            fmt::format("HTTP {} fetching {}", res.result_int(), url));
+      }
     }
     auto j = json::parse(content);
     auto j_root = j.as_object();
@@ -781,8 +840,8 @@ struct gbfs_update {
       oauth_headers["Content-Type"] = "application/x-www-form-urlencoded";
 
       auto const res =
-          co_await client_.post(boost::urls::url{oauth->settings_.token_url_},
-                                std::move(oauth_headers), body);
+          co_await client_->post(boost::urls::url{oauth->settings_.token_url_},
+                                 std::move(oauth_headers), body);
       auto const res_body = get_http_body(res);
       auto const res_json = json::parse(res_body);
       auto const& j = res_json.as_object();
@@ -836,6 +895,12 @@ struct gbfs_update {
       if (pf->oauth_ != nullptr) {
         states.insert(pf->oauth_);
       }
+    }
+
+    if (states.empty()) {
+      // this is necessary, because calling async_wait on an empty group
+      // causes everything to break
+      co_return;
     }
 
     auto executor = co_await asio::this_coro::executor;
@@ -893,6 +958,42 @@ struct gbfs_update {
     }
   }
 
+  template <typename Getter>
+  std::optional<std::string> lookup_mapping(std::string const& af_id,
+                                            std::string const& system_id,
+                                            Getter getter) {
+    auto const& af_config = c_.feeds_.at(af_id.empty() ? system_id : af_id);
+    auto const& opt = getter(af_config);
+    if (opt.has_value()) {
+      return std::visit(
+          utl::overloaded{
+              [&](std::string const& s) -> std::optional<std::string> {
+                return std::optional{s};
+              },
+              [&](std::map<std::string, std::string> const& m)
+                  -> std::optional<std::string> {
+                if (auto const it = m.find(system_id); it != end(m)) {
+                  return std::optional{it->second};
+                }
+                return {};
+              }},
+          *opt);
+    }
+    return {};
+  }
+
+  std::optional<std::string> lookup_group(std::string const& af_id,
+                                          std::string const& system_id) {
+    return lookup_mapping(af_id, system_id,
+                          [](auto const& cfg) { return cfg.group_; });
+  }
+
+  std::optional<std::string> lookup_color(std::string const& af_id,
+                                          std::string const& system_id) {
+    return lookup_mapping(af_id, system_id,
+                          [](auto const& cfg) { return cfg.color_; });
+  }
+
   config::gbfs const& c_;
   osr::ways const& w_;
   osr::lookup const& l_;
@@ -900,7 +1001,7 @@ struct gbfs_update {
   gbfs_data* d_;
   gbfs_data const* prev_d_;
 
-  http_client client_;
+  std::shared_ptr<http_client> client_;
 };
 
 awaitable<void> update(config const& c,
@@ -917,7 +1018,16 @@ awaitable<void> update(config const& c,
   auto const d = std::make_shared<gbfs_data>(c.gbfs_->cache_size_);
 
   auto update = gbfs_update{*c.gbfs_, w, l, d.get(), prev_d.get()};
-  co_await update.run();
+  try {
+    co_await update.run();
+  } catch (std::exception const& e) {
+    std::cerr << "[GBFS] update error: " << e.what() << std::endl;
+    if (auto const trace =
+            boost::stacktrace::stacktrace::from_current_exception();
+        trace) {
+      std::cerr << trace << std::endl;
+    }
+  }
   data_ptr = d;
 }
 

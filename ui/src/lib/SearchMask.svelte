@@ -1,17 +1,16 @@
 <script lang="ts">
 	import { t } from '$lib/i18n/translation';
-	import ArrowUpDown from 'lucide-svelte/icons/arrow-up-down';
-	import LocateFixed from 'lucide-svelte/icons/locate-fixed';
+	import { ArrowUpDown, LocateFixed } from '@lucide/svelte';
 	import maplibregl from 'maplibre-gl';
 	import * as RadioGroup from '$lib/components/ui/radio-group';
 	import Button from '$lib/components/ui/button/button.svelte';
 	import { Label } from '$lib/components/ui/label';
-	import type { ElevationCosts, PedestrianProfile } from '$lib/api/openapi';
+	import type { ElevationCosts, Mode, PedestrianProfile } from '@motis-project/motis-client';
 	import AddressTypeahead from '$lib/AddressTypeahead.svelte';
 	import AdvancedOptions from '$lib/AdvancedOptions.svelte';
 	import DateInput from '$lib/DateInput.svelte';
 	import { posToLocation, type Location } from '$lib/Location';
-	import type { PrePostDirectMode, TransitMode } from '$lib/Modes';
+	import type { PrePostDirectMode } from '$lib/Modes';
 
 	let {
 		geocodingBiasPlace,
@@ -34,7 +33,10 @@
 		maxDirectTime = $bindable(),
 		ignorePreTransitRentalReturnConstraints = $bindable(),
 		ignorePostTransitRentalReturnConstraints = $bindable(),
-		ignoreDirectRentalReturnConstraints = $bindable()
+		ignoreDirectRentalReturnConstraints = $bindable(),
+		preTransitProviderGroups = $bindable(),
+		postTransitProviderGroups = $bindable(),
+		directProviderGroups = $bindable()
 	}: {
 		geocodingBiasPlace?: maplibregl.LngLatLike;
 		from: Location;
@@ -46,7 +48,7 @@
 		maxTransfers: number;
 		requireCarTransport: boolean;
 		requireBikeTransport: boolean;
-		transitModes: TransitMode[];
+		transitModes: Mode[];
 		preTransitModes: PrePostDirectMode[];
 		postTransitModes: PrePostDirectMode[];
 		directModes: PrePostDirectMode[];
@@ -57,6 +59,9 @@
 		ignorePreTransitRentalReturnConstraints: boolean;
 		ignorePostTransitRentalReturnConstraints: boolean;
 		ignoreDirectRentalReturnConstraints: boolean;
+		preTransitProviderGroups: string[];
+		postTransitProviderGroups: string[];
+		directProviderGroups: string[];
 	} = $props();
 
 	let fromItems = $state<Array<Location>>([]);
@@ -82,6 +87,7 @@
 		placeholder={t.from}
 		bind:selected={from}
 		bind:items={fromItems}
+		{transitModes}
 	/>
 	<AddressTypeahead
 		place={geocodingBiasPlace}
@@ -89,6 +95,7 @@
 		placeholder={t.to}
 		bind:selected={to}
 		bind:items={toItems}
+		{transitModes}
 	/>
 	<Button
 		variant="ghost"
@@ -161,6 +168,9 @@
 			bind:ignorePreTransitRentalReturnConstraints
 			bind:ignorePostTransitRentalReturnConstraints
 			bind:ignoreDirectRentalReturnConstraints
+			bind:preTransitProviderGroups
+			bind:postTransitProviderGroups
+			bind:directProviderGroups
 		/>
 	</div>
 </div>

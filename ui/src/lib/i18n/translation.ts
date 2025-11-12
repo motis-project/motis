@@ -1,4 +1,5 @@
 import { browser } from '$app/environment';
+import bg from './bg';
 import en from './en';
 import de from './de';
 import fr from './fr';
@@ -19,6 +20,14 @@ export type Translations = {
 	car: string;
 	taxi: string;
 	moped: string;
+	unknownVehicleType: string;
+	electricAssist: string;
+	electric: string;
+	combustion: string;
+	combustionDiesel: string;
+	hybrid: string;
+	plugInHybrid: string;
+	hydrogenFuelCell: string;
 	from: string;
 	to: string;
 	position: string;
@@ -39,11 +48,16 @@ export type Translations = {
 	platformAbr: string;
 	tripIntermediateStops: (n: number) => string;
 	sharingProvider: string;
+	sharingProviders: string;
+	returnOnlyAtStations: string;
 	roundtripStationReturnConstraint: string;
+	rentalStation: string;
+	rentalGeofencingZone: string;
 	noItinerariesFound: string;
 	advancedSearchOptions: string;
 	selectTransitModes: string;
 	defaultSelectedModes: string;
+	defaultSelectedProviders: string;
 	selectElevationCosts: string;
 	wheelchair: string;
 	useRoutedTransfers: string;
@@ -109,6 +123,12 @@ export type Translations = {
 		noData: string;
 		requestFailed: string;
 	};
+	alerts: {
+		validFrom: string;
+		until: string;
+		information: string;
+		more: string;
+	};
 	RENTAL_BICYCLE: string;
 	RENTAL_CARGO_BICYCLE: string;
 	RENTAL_CAR: string;
@@ -124,6 +144,7 @@ export type Translations = {
 	accessRestriction: string;
 	continuesAs: string;
 	rent: string;
+	copyToClipboard: string;
 	rideThroughAllowed: string;
 	rideThroughNotAllowed: string;
 	rideEndAllowed: string;
@@ -132,6 +153,7 @@ export type Translations = {
 
 const translations: Map<string, Translations> = new Map(
 	Object.entries({
+		bg,
 		pl,
 		en,
 		de,
@@ -144,5 +166,9 @@ const translationsKey = (
 	browser ? (navigator.languages.find((l) => translations.has(l.slice(0, 2))) ?? 'en') : 'en'
 )?.slice(0, 2);
 
-export const language = translationsKey ?? (browser ? navigator.language : 'en');
+const urlLanguage = browser
+	? new URLSearchParams(window.location.search).get('language')
+	: undefined;
+
+export const language = urlLanguage ?? translationsKey;
 export const t = translationsKey ? translations.get(translationsKey)! : en;

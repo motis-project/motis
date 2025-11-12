@@ -1,5 +1,5 @@
 <script lang="ts">
-	import Bug from 'lucide-svelte/icons/bug';
+	import { Bug, X, LoaderCircle } from '@lucide/svelte';
 	import { Button } from '$lib/components/ui/button';
 	import GeoJSON from '$lib/map/GeoJSON.svelte';
 	import Layer from '$lib/map/Layer.svelte';
@@ -12,16 +12,14 @@
 		TableRow
 	} from '$lib/components/ui/table';
 	import maplibregl from 'maplibre-gl';
-	import { transfers } from '$lib/api/openapi';
+	import { transfers } from '@motis-project/motis-client';
 	import Control from '$lib/map/Control.svelte';
 	import * as Card from '$lib/components/ui/card';
 	import Marker from '$lib/map/Marker.svelte';
 	import { posToLocation, type Location as ApiLocation } from '$lib/Location';
 	import geojson from 'geojson';
 	import Popup from '$lib/map/Popup.svelte';
-	import { client } from '$lib/api/openapi';
-	import X from 'lucide-svelte/icons/x';
-	import LoaderCircle from 'lucide-svelte/icons/loader-circle';
+	import { client } from '@motis-project/motis-client';
 	import DateInput from './DateInput.svelte';
 
 	const baseUrl = client.getConfig().baseUrl;

@@ -17,6 +17,8 @@
 
 #include "utl/verify.h"
 
+#include "motis/http_client.h"
+
 namespace motis {
 
 namespace beast = boost::beast;
@@ -73,10 +75,11 @@ asio::awaitable<http_response> req_tls(
                                        boost::asio::error::get_ssl_category()}};
   }
 
-  stream.next_layer().expires_after(timeout);
-
   auto const results = co_await resolver.async_resolve(
       url.host(), url.has_port() ? url.port() : "443");
+
+  stream.next_layer().expires_after(timeout);
+
   co_await beast::get_lowest_layer(stream).async_connect(results);
   co_await stream.async_handshake(ssl::stream_base::client);
   co_return co_await req(std::move(stream), url, headers, body);
@@ -164,20 +167,6 @@ asio::awaitable<http::response<http::dynamic_body>> http_POST(
   }
   throw utl::fail(R"(too many redirects: "{}", latest="{}")",
                   fmt::streamed(url), fmt::streamed(next_url));
-}
-
-std::string get_http_body(http_response const& res) {
-  auto body = beast::buffers_to_string(res.body().data());
-  if (res[http::field::content_encoding] == "gzip") {
-    auto const src = boost::iostreams::array_source{body.data(), body.size()};
-    auto is = boost::iostreams::filtering_istream{};
-    auto os = std::stringstream{};
-    is.push(boost::iostreams::gzip_decompressor{});
-    is.push(src);
-    boost::iostreams::copy(is, os);
-    body = os.str();
-  }
-  return body;
 }
 
 }  // namespace motis

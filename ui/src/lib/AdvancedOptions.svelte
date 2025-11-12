@@ -3,10 +3,9 @@
 	import Button from '$lib/components/ui/button/button.svelte';
 	import { t } from '$lib/i18n/translation';
 	import * as Select from '$lib/components/ui/select';
-	import ChevronUp from 'lucide-svelte/icons/chevron-up';
-	import ChevronDown from 'lucide-svelte/icons/chevron-down';
+	import { ChevronUp, ChevronDown } from '@lucide/svelte';
 	import { Switch } from './components/ui/switch';
-	import type { ElevationCosts } from '$lib/api/openapi';
+	import type { ElevationCosts } from '@motis-project/motis-client';
 	import { defaultQuery } from '$lib/defaults';
 	import { formatDurationSec } from './formatDuration';
 	import {
@@ -39,6 +38,9 @@
 		ignorePreTransitRentalReturnConstraints = $bindable(),
 		ignorePostTransitRentalReturnConstraints = $bindable(),
 		ignoreDirectRentalReturnConstraints = $bindable(),
+		preTransitProviderGroups = $bindable(),
+		postTransitProviderGroups = $bindable(),
+		directProviderGroups = $bindable(),
 		additionalComponents
 	}: {
 		useRoutedTransfers: boolean;
@@ -59,6 +61,9 @@
 		ignorePreTransitRentalReturnConstraints: boolean;
 		ignorePostTransitRentalReturnConstraints: boolean;
 		ignoreDirectRentalReturnConstraints: boolean | undefined;
+		preTransitProviderGroups: string[];
+		postTransitProviderGroups: string[];
+		directProviderGroups: string[];
 		additionalComponents?: Snippet;
 	} = $props();
 
@@ -211,7 +216,8 @@
 				bind:maxTransitTime={maxPreTransitTime}
 				possibleModes={prePostDirectModes}
 				possibleMaxTransitTime={possiblePrePostDurations}
-				ignoreRentalReturnConstraints={ignorePreTransitRentalReturnConstraints}
+				bind:ignoreRentalReturnConstraints={ignorePreTransitRentalReturnConstraints}
+				bind:providerGroups={preTransitProviderGroups}
 			></StreetModes>
 
 			<!-- Last mile -->
@@ -221,7 +227,8 @@
 				bind:maxTransitTime={maxPostTransitTime}
 				possibleModes={prePostDirectModes}
 				possibleMaxTransitTime={possiblePrePostDurations}
-				ignoreRentalReturnConstraints={ignorePostTransitRentalReturnConstraints}
+				bind:ignoreRentalReturnConstraints={ignorePostTransitRentalReturnConstraints}
+				bind:providerGroups={postTransitProviderGroups}
 			></StreetModes>
 
 			<!-- Direct -->
@@ -232,7 +239,8 @@
 					bind:maxTransitTime={maxDirectTime}
 					possibleModes={prePostDirectModes}
 					possibleMaxTransitTime={possibleDirectDurations}
-					ignoreRentalReturnConstraints={ignoreDirectRentalReturnConstraints}
+					bind:ignoreRentalReturnConstraints={ignoreDirectRentalReturnConstraints}
+					bind:providerGroups={directProviderGroups}
 				></StreetModes>
 			{/if}
 		</div>

@@ -16,7 +16,6 @@
 #include "nigiri/logging.h"
 #include "nigiri/timetable.h"
 
-#include "fmt/compile.h"
 #include "motis/elevators/elevators.h"
 #include "motis/endpoints/routing.h"
 #include "motis/http_req.h"
@@ -61,9 +60,10 @@ n::duration_t init_direct(std::vector<direct_ride>& rides,
                           unsigned api_version) {
   auto [_, direct_duration] = r.route_direct(
       e, gbfs, from_p, to_p, {api::ModeEnum::CAR}, std::nullopt, std::nullopt,
-      std::nullopt, false, intvl.from_, false, get_osr_parameters(query),
-      query.pedestrianProfile_, query.elevationCosts_, kODMMaxDuration,
-      query.maxMatchingDistance_, kODMDirectFactor, api_version);
+      std::nullopt, std::nullopt, false, intvl.from_, false,
+      get_osr_parameters(query), query.pedestrianProfile_,
+      query.elevationCosts_, kODMMaxDuration, query.maxMatchingDistance_,
+      kODMDirectFactor, api_version);
 
   auto const step =
       std::chrono::duration_cast<n::unixtime_t::duration>(kODMDirectPeriod);
@@ -99,8 +99,8 @@ n::duration_t init_direct(std::vector<direct_ride>& rides,
   return direct_duration;
 }
 
-void init_pt(std::vector<n::routing::offset>& taxi_offsets,
-             std::vector<n::routing::start>& ridesharing_rides,
+void init_pt(std::vector<n::routing::offset>& offsets,
+             std::vector<n::routing::start>& rides,
              ep::routing const& r,
              osr::location const& l,
              osr::direction dir,
@@ -112,18 +112,28 @@ void init_pt(std::vector<n::routing::offset>& taxi_offsets,
              n::routing::query const& start_time,
              n::routing::location_match_mode location_match_mode,
              std::chrono::seconds const max) {
-  taxi_offsets = r.get_offsets(
+  offsets = r.get_offsets(
       rtt, l, dir, {api::ModeEnum::CAR}, std::nullopt, std::nullopt,
-      std::nullopt, false, get_osr_parameters(query), query.pedestrianProfile_,
+      std::nullopt, std::nullopt,false, get_osr_parameters(query), query.pedestrianProfile_,
       query.elevationCosts_, max, query.maxMatchingDistance_, gbfs_rd);
 
-  ridesharing_rides.reserve(taxi_offsets.size() * 2);
+  std::erase_if(offsets, [&](n::routing::offset const& o) {
+    return r.ride_sharing_bounds_ != nullptr &&
+           !r.ride_sharing_bounds_->contains(
+               r.tt_->locations_.coordinates_[o.target_]);
+  });
+
+  for (auto& o : offsets) {
+    o.duration_ += kODMTransferBuffer;
+  }
+
+  rides.reserve(offsets.size() * 2);
 
   n::routing::get_starts(
       dir == osr::direction::kForward ? n::direction::kForward
                                       : n::direction::kBackward,
-      tt, rtt, intvl, taxi_offsets, {}, n::routing::kMaxTravelTime,
-      location_match_mode, false, ridesharing_rides, true, start_time.prf_idx_,
+      tt, rtt, intvl, offsets, {}, n::routing::kMaxTravelTime,
+      location_match_mode, false, rides, true, start_time.prf_idx_,
       start_time.transfer_time_settings_);
 }
 
@@ -146,7 +156,10 @@ void prima::init(n::interval<n::unixtime_t> const& search_intvl,
                  n::routing::query const& n_query,
                  unsigned api_version) {
   direct_duration_ = std::optional<std::chrono::minutes>{};
-  if ((use_direct_ride_sharing || use_direct_taxi) && r.w_ && r.l_) {
+  if ((use_direct_ride_sharing || use_direct_taxi) && r.w_ && r.l_&&
+      (r.ride_sharing_bounds_ == nullptr ||
+       (r.ride_sharing_bounds_->contains(from_.pos_) &&
+        r.ride_sharing_bounds_->contains(to_.pos_)))) {
     direct_duration_ = init_direct(direct_ride_sharing_, r, e, gbfs, from, to,
                                    search_intvl, query, api_version);
 

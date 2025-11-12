@@ -6,6 +6,10 @@ set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
 
 option(MOTIS_MIMALLOC "use mimalloc" OFF)
 
+set(MOTIS_STACKTRACE "AUTO" CACHE STRING "Enable stacktrace support (AUTO, ON, OFF)")
+set_property(CACHE MOTIS_STACKTRACE PROPERTY STRINGS "AUTO;ON;OFF")
+set(_MOTIS_STACKTRACE_ON "$<OR:$<STREQUAL:${MOTIS_STACKTRACE},ON>,$<AND:$<STREQUAL:${MOTIS_STACKTRACE},AUTO>,$<CONFIG:Debug>>>")
+
 if (NOT DEFINED CMAKE_MSVC_RUNTIME_LIBRARY)
     if (MOTIS_MIMALLOC)
         set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
@@ -130,6 +134,8 @@ target_link_libraries(motislib
     prometheus-cpp::core
     opentelemetry_trace
     opentelemetry_exporter_otlp_http
+    Boost::stacktrace
+    "$<${_MOTIS_STACKTRACE_ON}:Boost::stacktrace_from_exception>"
 )
 
 
@@ -217,7 +223,7 @@ endif()
 
 # --- UI ---
 add_custom_target(motis-web-ui
-        COMMAND pnpm install && pnpm build
+        COMMAND pnpm install && pnpm -r build
         WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/ui"
         VERBATIM
 )

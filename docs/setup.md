@@ -142,17 +142,122 @@ timetable:
         - url: https://stc.traines.eu/mirror/german-delfi-gtfs-rt/latest.gtfs-rt.pbf
 ```
 
-# GBFS Configuration and Default Restrictions
+# GBFS Configuration
 
 This examples shows how to configure multiple GBFS feeds.  
 A GBFS feed might describe a single system or area, `callabike` in this example, or a set of feeds, that are combined to a manifest, like `mobidata-bw` here. For readability, optional headers are not included.
+
+```yaml
+gbfs:
+  feeds:
+    # GBFS feed:
+    callabike:
+      url: https://api.mobidata-bw.de/sharing/gbfs/callabike/gbfs
+    # GBFS manifest / Lamassu feed:
+    mobidata-bw:
+      url: https://api.mobidata-bw.de/sharing/gbfs/v3/manifest.json
+  update_interval: 300
+  http_timeout: 10
+```
+
+## Provider Groups + Colors
+
+GBFS providers (feeds) can be grouped into "provider groups". For example, a provider may operate in multiple locations and provide a feed per location.
+To groups these different feeds into a single provider group, specify the same group name for each feed in the configuration.
+
+Feeds that don't have an explicit group setting in the configuration, their group name is derived from the system name. Group names
+may not contain commas. The API supports both provider groups and individual providers.
+
+Provider colors are loaded from the feed (`brand_assets.color`) if available, but can also be set in the configuration
+to override the values contained in the feed or to set colors for feeds that don't include color information.
+Colors can be set for groups (applies to all providers belonging to the group) or individual providers
+(overrides group color for that feed).
+
+```yaml
+gbfs:
+  feeds:
+    de-CallaBike:
+      url: https://api.mobidata-bw.de/sharing/gbfs/v2/callabike/gbfs
+      color: "#db0016"
+    de-VRNnextbike:
+      url: https://gbfs.nextbike.net/maps/gbfs/v2/nextbike_vn/gbfs.json
+      group: nextbike # uses the group color defined below
+    de-NextbikeFrankfurt:
+      url: https://gbfs.nextbike.net/maps/gbfs/v2/nextbike_ff/gbfs.json
+      group: nextbike
+    de-KVV.nextbike:
+      url: https://gbfs.nextbike.net/maps/gbfs/v2/nextbike_fg/gbfs.json
+      group: nextbike
+      color: "#c30937" # override color for this particular feed
+  groups:
+    nextbike:
+      # name: nextbike # Optional: Override the name (otherwise the group id, here "nextbike", is used)
+      color: "#0046d6"
+```
+
+For aggregated feeds (manifest.json or Lamassu), groups and colors can either be assigned to all providers listed in the aggregated feed
+or individually by using the system_id:
+
+```yaml
+gbfs:
+  feeds:
+    aggregated-single-group:
+      url: https://example.com/one-provider-group/manifest.json
+      group: Example
+      color: "#db0016" # or assign a color to the group
+    aggregated-multiple-groups:
+      url: https://example.com/multiple-provider-groups/manifest.json
+      group:
+        source-nextbike-westbike: nextbike # "source-nextbike-westbike" is the system_id
+        source-voi-muenster: VOI
+        source-voi-duisburg-oberhausen: VOI
+      # colors can be specified for individual feeds using the same syntax,
+      # but in this example they are defined for the groups below
+      #color:
+      #  "source-nextbike-westbike": "#0046d6"
+      #  "source-voi-muenster": "#f26961"
+  groups:
+    nextbike:
+      color: "#0046d6"
+    VOI:
+      color: "#f26961"
+```
+
+## HTTP Headers + OAuth
+
+If a feed requires specific HTTP headers, they can be defined like this:
+
+```yaml
+gbfs:
+  feeds:
+    example:
+      url: https://example.com/gbfs
+      headers:
+        authorization: MY_OTHER_API_KEY
+        other-header: other-value
+```
+
+OAuth with client credentials and bearer token types is also supported:
+
+```yaml
+gbfs:
+  feeds:
+    example:
+      url: https://example.com/gbfs
+      oauth:
+        token_url: https://example.com/openid-connect/token
+        client_id: gbfs
+        client_secret: example
+```
+
+## Default Restrictions
 
 A GBFS feed can define geofencing zones and rules, that apply to areas within these zones.
 For restrictions on areas not included in these geofencing zones, a feed may contain global rules.
 If these are missing, it's possible to define `default_restrictions`, that apply to either a single feed or a manifest.
 The following example shows possible configurations:
 
-```
+```yaml
 gbfs:
   feeds:
     # GBFS feed:

@@ -119,20 +119,35 @@ const colors = {
 	}
 };
 
-export const getStyle = (theme: 'light' | 'dark', level: number): StyleSpecification => {
+function getUrlBase(url: string): string {
+	const { origin, pathname } = new URL(url);
+	return origin + pathname.slice(0, pathname.lastIndexOf('/') + 1);
+}
+
+// this doesn't escape {}-parameters
+function getAbsoluteUrl(base: string, relative: string): string {
+	return getUrlBase(base) + relative;
+}
+
+export const getStyle = (
+	theme: 'light' | 'dark',
+	level: number,
+	staticBaseUrl: string,
+	apiBaseUrl: string
+): StyleSpecification => {
 	const c = colors[theme];
 	return {
 		version: 8,
 		sources: {
 			osm: {
 				type: 'vector',
-				tiles: ['/{z}/{x}/{y}.mvt'],
+				tiles: [getAbsoluteUrl(apiBaseUrl, 'tiles/{z}/{x}/{y}.mvt')],
 				maxzoom: 20,
 				attribution: ''
 			}
 		},
-		glyphs: '/glyphs/{fontstack}/{range}.pbf',
-		sprite: `/sprite`,
+		glyphs: getAbsoluteUrl(apiBaseUrl, 'tiles/glyphs/{fontstack}/{range}.pbf'),
+		sprite: getAbsoluteUrl(staticBaseUrl, 'sprite_sdf'),
 		layers: [
 			{
 				id: 'background',

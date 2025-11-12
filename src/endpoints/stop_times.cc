@@ -286,11 +286,9 @@ std::vector<n::rt::run> get_events(
   return evs;
 }
 
-std::vector<api::Place> other_stops_impl(std::string_view trip_id,
+std::vector<api::Place> other_stops_impl(n::rt::frun fr,
                                          n::event_type ev_type,
-                                         n::rt::run_stop const& stop,
                                          n::timetable const* tt,
-                                         n::rt_timetable const* rtt,
                                          tag_lookup const& tags,
                                          osr::ways const* w,
                                          osr::platforms const* pl,
@@ -306,21 +304,16 @@ std::vector<api::Place> other_stops_impl(std::string_view trip_id,
     return result;
   };
 
-  auto const [r, _] = tags.get_trip(*tt, rtt, trip_id);
-  auto fr = n::rt::frun{*tt, rtt, r};
-  assert(r.valid());
-  fr.stop_range_.to_ = fr.size();
-  fr.stop_range_.from_ = 0U;
-  auto it =
-      std::find_if(fr.begin(), fr.end(), [&](n::rt::run_stop const& stop2) {
-        // The stop index may be different so we have to compare the location
-        // index
-        return stop.get_location_idx() == stop2.get_location_idx();
-      });
+  auto const orig_location = fr[fr.first_valid()].get_location_idx();
   if (ev_type == nigiri::event_type::kDep) {
-    utl::verify(it != fr.end(), "Could not find stopover location in trip");
-    ++it;
-    auto result = utl::to_vec(it, fr.end(), convert_stop);
+    ++fr.stop_range_.from_;
+    fr.stop_range_.to_ = fr.size();
+    // Return next stops until one stop before the loop closes
+    auto const it =
+        utl::find_if(fr, [orig_location](n::rt::run_stop const& stop) {
+          return orig_location == stop.get_location_idx();
+        });
+    auto result = utl::to_vec(fr.begin(), it, convert_stop);
     utl::verify(!result.empty(), "Departure is last stop in trip");
     // Departure time on terminus is meaningless
     auto& terminus = result.back();
@@ -328,7 +321,14 @@ std::vector<api::Place> other_stops_impl(std::string_view trip_id,
     terminus.scheduledDeparture_.reset();
     return result;
   } else {
-    auto result = utl::to_vec(fr.begin(), it, convert_stop);
+    fr.stop_range_.from_ = 0;
+    --fr.stop_range_.to_;
+    // Return previous stops beginning one stop before the loop closes
+    auto const it = std::find_if(
+        fr.rbegin(), fr.rend(), [orig_location](n::rt::run_stop const& stop) {
+          return orig_location == stop.get_location_idx();
+        });
+    auto result = utl::to_vec(it.base(), fr.end(), convert_stop);
     utl::verify(!result.empty(), "Arrival is first stop in trip");
     // Arrival time on trip origin is meaningless
     auto& origin = result.front();
@@ -455,8 +455,8 @@ api::stoptimes_response stop_times::operator()(
                   !query.fetchStops_.value_or(false)) {
                 return std::nullopt;
               }
-              return other_stops_impl(trip_id, ev_type, s, &tt_, rtt, tags_, w_,
-                                      pl_, matches_, ae_, tz_);
+              return other_stops_impl(fr, ev_type, &tt_, tags_, w_, pl_,
+                                      matches_, ae_, tz_);
             };
 
             return {
@@ -473,6 +473,9 @@ api::stoptimes_response stop_times::operator()(
                         tt_.strings_.try_get(agency.name_).value_or("?")},
                 .agencyUrl_ =
                     std::string{tt_.strings_.try_get(agency.url_).value_or("")},
+                .routeId_ = std::string{s.get_route_id(n::event_type::kDep)},
+                .directionId_ =
+                    s.get_direction_id(n::event_type::kDep) == 0 ? "0" : "1",
                 .routeColor_ = to_str(s.get_route_color(ev_type).color_),
                 .routeTextColor_ =
                     to_str(s.get_route_color(ev_type).text_color_),

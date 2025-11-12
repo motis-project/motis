@@ -1,8 +1,7 @@
 <script lang="ts">
 	import { Combobox } from 'bits-ui';
-	import { geocode, type Match, type Mode } from './api/openapi';
-	import House from 'lucide-svelte/icons/map-pin-house';
-	import Place from 'lucide-svelte/icons/map-pin';
+	import { geocode, type Match, type Mode } from '@motis-project/motis-client';
+	import { MapPinHouse as House, MapPin as Place } from '@lucide/svelte';
 	import { parseCoordinatesToLocation, type Location } from './Location';
 	import { language } from './i18n/translation';
 	import maplibregl from 'maplibre-gl';
@@ -15,6 +14,7 @@
 		placeholder,
 		name,
 		place,
+		transitModes,
 		onlyStations = $bindable(false)
 	}: {
 		items?: Array<Location>;
@@ -22,6 +22,7 @@
 		placeholder?: string;
 		name?: string;
 		place?: maplibregl.LngLatLike;
+		transitModes?: Mode[];
 		onlyStations?: boolean;
 	} = $props();
 
@@ -40,6 +41,7 @@
 				area = match.areas[0]!.name;
 			}
 
+			/* eslint-disable-next-line svelte/prefer-svelte-reactivity */
 			const areas = new Set<number>();
 			match.areas.forEach((a, i) => {
 				if (a.matched || a.unique || a.default) {
@@ -70,12 +72,14 @@
 
 		const pos = place ? maplibregl.LngLat.convert(place) : undefined;
 		const biasPlace = pos ? { place: `${pos.lat},${pos.lng}` } : {};
+		console.log(transitModes);
 		const { data: matches, error } = await geocode({
 			query: {
 				...biasPlace,
 				text: inputValue,
 				language: [language],
-				type: onlyStations ? 'STOP' : undefined
+				type: onlyStations ? 'STOP' : undefined,
+				mode: transitModes
 			}
 		});
 		if (error) {
@@ -88,6 +92,7 @@
 				match
 			};
 		});
+		/* eslint-disable-next-line svelte/prefer-svelte-reactivity */
 		const shown = new Set<string>();
 		items = items.filter((x) => {
 			const entry = x.match?.type + x.label!;

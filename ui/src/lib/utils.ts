@@ -3,7 +3,7 @@ import { twMerge } from 'tailwind-merge';
 import { browser } from '$app/environment';
 import { pushState, replaceState } from '$app/navigation';
 import { page } from '$app/state';
-import { trip } from '$lib/api/openapi';
+import { trip } from '@motis-project/motis-client';
 import { joinInterlinedLegs } from './preprocessItinerary';
 import { language } from './i18n/translation';
 
@@ -47,6 +47,7 @@ export const pushStateWithQueryString = (
 	preserveFromUrl(queryParams, 'dark');
 	preserveFromUrl(queryParams, 'light');
 	preserveFromUrl(queryParams, 'motis');
+	preserveFromUrl(queryParams, 'language');
 	const params = new URLSearchParams(queryParams);
 	const updateState = replace ? replaceState : pushState;
 	updateState('?' + params.toString(), newState);

@@ -474,6 +474,23 @@ paths:
             type: array
             items:
               type: string
+          explode: false
+
+        - name: directRentalProviderGroups
+          in: query
+          required: false
+          description: |
+            Experimental. Expect unannounced breaking changes (without version bumps).
+            
+            Optional. Only applies to direct connections.
+            
+            A list of rental provider groups that are allowed to be used for direct connections.
+            If empty (the default), all providers are allowed.
+          schema:
+            type: array
+            items:
+              type: string
+          explode: false
 
         - name: preTransitRentalProviders
           in: query
@@ -489,6 +506,23 @@ paths:
             type: array
             items:
               type: string
+          explode: false
+
+        - name: preTransitRentalProviderGroups
+          in: query
+          required: false
+          description: |
+            Experimental. Expect unannounced breaking changes (without version bumps).
+            
+            Optional. Only applies if the `from` place is a coordinate (not a transit stop). Does not apply to direct connections (see `directRentalProviderGroups`).
+            
+            A list of rental provider groups that are allowed to be used from the `from` coordinate to the first transit stop.
+            If empty (the default), all providers are allowed.
+          schema:
+            type: array
+            items:
+              type: string
+          explode: false
 
         - name: postTransitRentalProviders
           in: query
@@ -504,6 +538,23 @@ paths:
             type: array
             items:
               type: string
+          explode: false
+
+        - name: postTransitRentalProviderGroups
+          in: query
+          required: false
+          description: |
+            Experimental. Expect unannounced breaking changes (without version bumps).
+            
+            Optional. Only applies if the `to` place is a coordinate (not a transit stop). Does not apply to direct connections (see `directRentalProviderGroups`).
+            
+            A list of rental provider groups that are allowed to be used from the last transit stop to the `to` coordinate.
+            If empty (the default), all providers are allowed.
+          schema:
+            type: array
+            items:
+              type: string
+          explode: false
 
         - name: ignoreDirectRentalReturnConstraints
           in: query
@@ -782,6 +833,7 @@ paths:
             type: array
             items:
               type: string
+          explode: false
 
         - name: algorithm
           in: query
@@ -878,6 +930,7 @@ paths:
             type: array
             items:
               type: string
+          explode: false
         - name: mode
           in: query
           required: true
@@ -1294,6 +1347,7 @@ paths:
             type: array
             items:
               type: string
+          explode: false
 
         - name: type
           in: query
@@ -1305,6 +1359,18 @@ paths:
             For example, this can be used to allow only `ADDRESS` and `STOP` results.
           schema:
             $ref: '#/components/schemas/LocationType'
+
+        - name: mode
+          in: query
+          required: false
+          description: |
+            Optional. Filter stops by available transport modes.
+            Defaults to applying no filter.
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/Mode'
+          explode: false
 
         - name: place
           in: query
@@ -1383,6 +1449,7 @@ paths:
             type: array
             items:
               type: string
+          explode: false
       responses:
         '400':
           description: Bad Request
@@ -1459,6 +1526,7 @@ paths:
               $ref: '#/components/schemas/Mode'
             default:
               - TRANSIT
+          explode: false
           description: |
             Optional. Default is all transit modes.
             
@@ -1536,6 +1604,7 @@ paths:
             type: array
             items:
               type: string
+          explode: false
       responses:
         '400':
           description: Bad Request
@@ -1737,22 +1806,27 @@ paths:
                 items:
                   type: number
 
-  /api/v1/map/rentals:
+  /api/v1/rentals:
     get:
       tags:
         - map
-      summary: Get all rental stations and vehicles for a map section or provider
+      summary: |
+        Get a list of rental providers or all rental stations and vehicles for
+        a map section or provider
       operationId: rentals
       description: |
-        If neither the map section (`min` and `max`) nor the `providers`
-        parameter is provided, returns a list of all available rental providers,
-        but no station, vehicle or zone data.
+        If neither the map section (`min` and `max`) nor a provider filter
+        (either `providerGroups` or `providers`) is provided, returns a list of
+        all available rental providers, but no station, vehicle or zone data.
+        Provide the `withProviders=false` parameter to retrieve only provider
+        groups if detailed feed information is not required.
         
-        Either the map section (`min` and `max`) or the `providers` parameter
+        Either the map section (`min` and `max`) or the provider filter
+        (either `providerGroups` or `providers`)
         must be provided to retrieve station, vehicle and zone data.
         
         If only the map section is provided, all data in the area is returned.
-        If only the `providers` parameter is provided, all data for the given providers is returned.
+        If only the provider filter is provided, all data for the given providers is returned.
         If both parameters are provided, only data for the given providers in the map section is returned.
       parameters:
         - name: min
@@ -1767,16 +1841,41 @@ paths:
           description: latitude,longitude pair of the upper left coordinate
           schema:
             type: string
+        - name: providerGroups
+          in: query
+          required: false
+          description: |
+            A list of rental provider groups to return.
+            If both `providerGroups` and `providers` are empty/not specified,
+            all providers in the map section are returned.
+          schema:
+            type: array
+            items:
+              type: string
+          explode: false
         - name: providers
           in: query
           required: false
           description: |
             A list of rental providers to return.
-            If empty (the default), all providers in the map section are returned.
+            If both `providerGroups` and `providers` are empty/not specified,
+            all providers in the map section are returned.
           schema:
             type: array
             items:
               type: string
+          explode: false
+        - name: withProviders
+          in: query
+          required: false
+          description: |
+            Optional. Include providers in output. If false, only provider
+            groups are returned.
+            
+            Also affects the providers list for each provider group.
+          schema:
+            type: boolean
+            default: true
         - name: withStations
           in: query
           required: false
@@ -1812,11 +1911,16 @@ paths:
               schema:
                 type: object
                 required:
+                  - providerGroups
                   - providers
                   - stations
                   - vehicles
                   - zones
                 properties:
+                  providerGroups:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RentalProviderGroup'
                   providers:
                     type: array
                     items:
@@ -1935,6 +2039,9 @@ components:
         A time interval.
         The interval is considered active at time t if t is greater than or equal to the start time and less than the end time.
       type: object
+      required:
+        - start
+        - end
       properties:
         start:
           description: |
@@ -2287,6 +2394,9 @@ components:
         stopId:
           description: The ID of the stop. This is often something that users don't care about.
           type: string
+        parentId:
+          description: If it's not a root stop, this field contains the `stopId` of the parent stop.
+          type: string
         importance:
           description: The importance of the stop between 0-1.
           type: number
@@ -2408,6 +2518,8 @@ components:
         - agencyName
         - agencyUrl
         - tripId
+        - routeId
+        - directionId
         - routeShortName
         - routeLongName
         - tripShortName
@@ -2439,6 +2551,10 @@ components:
         agencyName:
           type: string
         agencyUrl:
+          type: string
+        routeId:
+          type: string
+        directionId:
           type: string
         routeColor:
           type: string
@@ -2691,8 +2807,16 @@ components:
       description: Vehicle rental
       type: object
       required:
+        - providerId
+        - providerGroupId
         - systemId
       properties:
+        providerId:
+          type: string
+          description: Rental provider ID
+        providerGroupId:
+          type: string
+          description: Rental provider group ID
         systemId:
           type: string
           description: Vehicle share system ID
@@ -2702,6 +2826,11 @@ components:
         url:
           type: string
           description: URL of the vehicle share system
+        color:
+          type: string
+          description: |
+            Color associated with this provider, in hexadecimal RGB format
+            (e.g. "#FF0000" for red). Can be empty.
         stationName:
           type: string
           description: Name of the station
@@ -2781,6 +2910,9 @@ components:
         id:
           type: string
           description: Unique identifier of the vehicle type (unique within the provider)
+        name:
+          type: string
+          description: Public name of the vehicle type (can be empty)
         formFactor:
           $ref: '#/components/schemas/RentalFormFactor'
         propulsionType:
@@ -2796,6 +2928,7 @@ components:
       required:
         - id
         - name
+        - groupId
         - bbox
         - vehicleTypes
         - formFactors
@@ -2808,6 +2941,9 @@ components:
         name:
           type: string
           description: Name of the provider to be displayed to customers
+        groupId:
+          type: string
+          description: Id of the rental provider group this provider belongs to
         operator:
           type: string
           description: Name of the system operator
@@ -2817,6 +2953,11 @@ components:
         purchaseUrl:
           type: string
           description: URL where a customer can purchase a membership
+        color:
+          type: string
+          description: |
+            Color associated with this provider, in hexadecimal RGB format
+            (e.g. "#FF0000" for red). Can be empty.
         bbox:
           type: array
           description: |
@@ -2842,11 +2983,42 @@ components:
           items:
             $ref: '#/components/schemas/RentalZoneRestrictions'
 
+    RentalProviderGroup:
+      type: object
+      required:
+        - id
+        - name
+        - providers
+        - formFactors
+      properties:
+        id:
+          type: string
+          description: Unique identifier of the rental provider group
+        name:
+          type: string
+          description: Name of the provider group to be displayed to customers
+        color:
+          type: string
+          description: |
+            Color associated with this provider group, in hexadecimal RGB format
+            (e.g. "#FF0000" for red). Can be empty.
+        providers:
+          type: array
+          description: List of rental provider IDs that belong to this group
+          items:
+            type: string
+        formFactors:
+          type: array
+          description: List of form factors offered by this provider group
+          items:
+            $ref: '#/components/schemas/RentalFormFactor'
+
     RentalStation:
       type: object
       required:
         - id
         - providerId
+        - providerGroupId
         - name
         - lat
         - lon
@@ -2856,6 +3028,7 @@ components:
         - formFactors
         - vehicleTypesAvailable
         - vehicleDocksAvailable
+        - bbox
       properties:
         id:
           type: string
@@ -2863,6 +3036,9 @@ components:
         providerId:
           type: string
           description: Unique identifier of the rental provider
+        providerGroupId:
+          type: string
+          description: Unique identifier of the rental provider group
         name:
           type: string
           description: Public name of the station
@@ -2913,12 +3089,22 @@ components:
             type: integer
         stationArea:
           $ref: '#/components/schemas/MultiPolygon'
+        bbox:
+          type: array
+          description: |
+            Bounding box of the area covered by this station,
+            [west, south, east, north] as [lon, lat, lon, lat]
+          minItems: 4
+          maxItems: 4
+          items:
+            type: number
 
     RentalVehicle:
       type: object
       required:
         - id
         - providerId
+        - providerGroupId
         - typeId
         - lat
         - lon
@@ -2934,6 +3120,9 @@ components:
         providerId:
           type: string
           description: Unique identifier of the rental provider
+        providerGroupId:
+          type: string
+          description: Unique identifier of the rental provider group
         typeId:
           type: string
           description: Vehicle type ID (unique within the provider)
@@ -2975,19 +3164,33 @@ components:
       type: object
       required:
         - providerId
+        - providerGroupId
         - z
+        - bbox
         - area
         - rules
       properties:
         providerId:
           type: string
           description: Unique identifier of the rental provider
+        providerGroupId:
+          type: string
+          description: Unique identifier of the rental provider group
         name:
           type: string
           description: Public name of the geofencing zone
         z:
           type: integer
           description: Zone precedence / z-index (higher number = higher precedence)
+        bbox:
+          type: array
+          description: |
+            Bounding box of the area covered by this zone,
+            [west, south, east, north] as [lon, lat, lon, lat]
+          minItems: 4
+          maxItems: 4
+          items:
+            type: number
         area:
           $ref: '#/components/schemas/MultiPolygon'
         rules:
@@ -3070,6 +3273,10 @@ components:
         tripTo:
           description: final stop of this trip (can differ from headsign)
           $ref: '#/components/schemas/Place'
+        routeId:
+          type: string
+        directionId:
+          type: string
         routeColor:
           type: string
         routeTextColor:
@@ -3327,6 +3534,59 @@ components:
           description: |
             optional; missing if no path was found with car routing
             transfer duration in minutes for the car profile
+    OneToManyParams:
+      type: object
+      required:
+        - one
+        - many
+        - mode
+        - max
+        - maxMatchingDistance
+        - elevationCosts
+        - arriveBy
+      properties:
+        one:
+          description: geo location as latitude;longitude
+          type: string
+        many:
+          description: geo locations as latitude;longitude,latitude;longitude,...
+          type: array
+          items:
+              type: string
+          explode: false
+        mode:
+          description: |
+            routing profile to use (currently supported: \`WALK\`, \`BIKE\`, \`CAR\`)
+          $ref: '#/components/schemas/Mode'
+        max:
+          description: maximum travel time in seconds
+          type: number
+        maxMatchingDistance:
+          description: maximum matching distance in meters to match geo coordinates to the street network
+          type: number
+        elevationCosts:
+          description: |
+            Optional. Default is `NONE`.
+
+            Set an elevation cost profile, to penalize routes with incline.
+            - `NONE`: No additional costs for elevations. This is the default behavior
+            - `LOW`: Add a low cost for increase in elevation and incline along the way. This will prefer routes with less ascent, if small detours are required.
+            - `HIGH`: Add a high cost for increase in elevation and incline along the way. This will prefer routes with less ascent, if larger detours are required.
+
+            As using an elevation costs profile will increase the travel duration,
+            routing through steep terrain may exceed the maximal allowed duration,
+            causing a location to appear unreachable.
+            Increasing the maximum travel time for these segments may resolve this issue.
+
+            Elevation cost profiles are currently used by following street modes:
+            - `BIKE`
+          $ref: '#/components/schemas/ElevationCosts'
+          default: NONE
+        arriveBy:
+          description: |
+            true = many to one
+            false = one to many
+          type: boolean
     Error:
       type: object
       properties:

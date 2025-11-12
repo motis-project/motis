@@ -44,7 +44,8 @@ export default ts.config(
 					varsIgnorePattern: '^_',
 					ignoreRestSiblings: true
 				}
-			]
+			],
+			'svelte/no-navigation-without-resolve': 'off'
 		}
 	}
 );
