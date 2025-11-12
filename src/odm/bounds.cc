@@ -37,9 +37,4 @@ bool bounds::contains(geo::latlng const& x) const {
   return result;
 }
 
-taxi_bounds::taxi_bounds(std::filesystem::path const& p) : bounds(p) {}
-
-ride_sharing_bounds::ride_sharing_bounds(std::filesystem::path const& p)
-    : bounds(p) {}
-
 }  // namespace motis::odm
