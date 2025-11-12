@@ -3536,33 +3536,35 @@ components:
             transfer duration in minutes for the car profile
     OneToManyParams:
       type: object
+      required:
+        - one
+        - many
+        - mode
+        - max
+        - maxMatchingDistance
+        - elevationCosts
+        - arriveBy
       properties:
         one:
-          required: true
           description: geo location as latitude;longitude
           type: string
         many:
-          required: true
           description: geo locations as latitude;longitude,latitude;longitude,...
           type: array
           items:
               type: string
           explode: false
         mode:
-          required: true
           description: |
             routing profile to use (currently supported: \`WALK\`, \`BIKE\`, \`CAR\`)
           $ref: '#/components/schemas/Mode'
         max:
-          required: true
           description: maximum travel time in seconds
           type: number
         maxMatchingDistance:
-          required: true
           description: maximum matching distance in meters to match geo coordinates to the street network
           type: number
         elevationCosts:
-          required: true
           description: |
             Optional. Default is `NONE`.
 
@@ -3581,7 +3583,6 @@ components:
           $ref: '#/components/schemas/ElevationCosts'
           default: NONE
         arriveBy:
-          required: true
           description: |
             true = many to one
             false = one to many
