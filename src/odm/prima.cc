@@ -112,10 +112,11 @@ void init_pt(std::vector<n::routing::offset>& offsets,
              n::routing::query const& start_time,
              n::routing::location_match_mode location_match_mode,
              std::chrono::seconds const max) {
-  offsets = r.get_offsets(
-      rtt, l, dir, {api::ModeEnum::CAR}, std::nullopt, std::nullopt,
-      std::nullopt, std::nullopt,false, get_osr_parameters(query), query.pedestrianProfile_,
-      query.elevationCosts_, max, query.maxMatchingDistance_, gbfs_rd);
+  offsets = r.get_offsets(rtt, l, dir, {api::ModeEnum::CAR}, std::nullopt,
+                          std::nullopt, std::nullopt, std::nullopt, false,
+                          get_osr_parameters(query), query.pedestrianProfile_,
+                          query.elevationCosts_, max,
+                          query.maxMatchingDistance_, gbfs_rd);
 
   std::erase_if(offsets, [&](n::routing::offset const& o) {
     return r.ride_sharing_bounds_ != nullptr &&
@@ -156,7 +157,7 @@ void prima::init(n::interval<n::unixtime_t> const& search_intvl,
                  n::routing::query const& n_query,
                  unsigned api_version) {
   direct_duration_ = std::optional<std::chrono::minutes>{};
-  if ((use_direct_ride_sharing || use_direct_taxi) && r.w_ && r.l_&&
+  if ((use_direct_ride_sharing || use_direct_taxi) && r.w_ && r.l_ &&
       (r.ride_sharing_bounds_ == nullptr ||
        (r.ride_sharing_bounds_->contains(from_.pos_) &&
         r.ride_sharing_bounds_->contains(to_.pos_)))) {
