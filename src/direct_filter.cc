@@ -6,59 +6,50 @@
 
 #include "nigiri/types.h"
 
+#include "absl/strings/str_format.h"
+#include "ctre.hpp"
+#include "osr/routing/mode.h"
+#include "sol/types.hpp"
+#include "utl/visit.h"
+
 namespace motis {
 
 using namespace std::chrono_literals;
+namespace n = nigiri;
 
 void direct_filter(std::vector<api::Itinerary> const& direct,
-                   std::vector<nigiri::routing::journey>& journeys) {
-  auto const get_direct_duration = [&](auto const m) {
+                   std::vector<n::routing::journey>& journeys) {
+  auto const get_direct_duration = [&](auto const transport_mode_id) {
+    auto const m = static_cast<api::ModeEnum>(transport_mode_id);
     auto const i = utl::find_if(
         direct, [&](auto const& d) { return d.legs_.front().mode_ == m; });
     return i != end(direct)
-               ? nigiri::duration_t{std::chrono::round<std::chrono::minutes>(
+               ? n::duration_t{std::chrono::round<std::chrono::minutes>(
                      std::chrono::seconds{i->duration_})}
-               : nigiri::duration_t::max();
+               : n::duration_t::max();
   };
 
-  auto const not_better_than_direct = [&](nigiri::routing::journey const& j) {
-    auto const first_leg_mode =
-        std::holds_alternative<nigiri::routing::offset>(j.legs_.front().uses_)
-            ? std::optional{std::get<nigiri::routing::offset>(
-                                j.legs_.front().uses_)
-                                .transport_mode_id_}
-            : std::nullopt;
+  auto const not_better_than_direct = [&](n::routing::journey const& j) {
+    auto const first_leg_offset = utl::visit(
+        j.legs_.front().uses_,
+        [&](n::routing::offset const& o) { return std::optional{o}; });
 
-    auto const last_leg_mode =
-        std::holds_alternative<nigiri::routing::offset>(j.legs_.back().uses_)
-            ? std::optional{std::get<nigiri::routing::offset>(
-                                j.legs_.back().uses_)
-                                .transport_mode_id_}
-            : std::nullopt;
+    auto const last_leg_offset = utl::visit(
+        j.legs_.back().uses_,
+        [&](n::routing::offset const& o) { return std::optional{o}; });
 
-    if ((first_leg_mode || last_leg_mode) &&
-        (!(first_leg_mode && last_leg_mode) ||
-         *first_leg_mode == *last_leg_mode)) {
-      auto const pre_post_duration =
-          (first_leg_mode
-               ? std::get<nigiri::routing::offset>(j.legs_.front().uses_)
-                     .duration_
-               : nigiri::duration_t{0min}) +
-          (last_leg_mode
-               ? std::get<nigiri::routing::offset>(j.legs_.back().uses_)
-                     .duration_
-               : nigiri::duration_t{0min});
-      auto const mode = static_cast<api::ModeEnum>(
-          first_leg_mode ? *first_leg_mode : *last_leg_mode);
-      auto const not_better = pre_post_duration >= get_direct_duration(mode);
-      if (not_better) {
-        fmt::println("[direct_filter] dep: {}, arr: {}, pre_post_duration: {}",
-                     j.departure_time(), j.arrival_time(), pre_post_duration);
-      }
-      return not_better;
-    }
+    auto const longer_than_direct = [&](n::routing::offset const& o) {
+      return std::optional{o.duration_ >=
+                           get_direct_duration(o.transport_mode_id_)};
+    };
 
-    return false;
+    return first_leg_offset.and_then(longer_than_direct).value_or(false) ||
+           last_leg_offset.and_then(longer_than_direct).value_or(false) ||
+           (first_leg_offset && last_leg_offset &&
+            first_leg_offset->transport_mode_id_ ==
+                last_leg_offset->transport_mode_id_ &&
+            first_leg_offset->duration_ + last_leg_offset->duration_ >=
+                get_direct_duration(first_leg_offset->transport_mode_id_));
   };
 
   utl::erase_if(journeys, not_better_than_direct);
