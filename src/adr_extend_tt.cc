@@ -1,5 +1,3 @@
-#include "osr/geojson.h"
-
 #include "motis/adr_extend_tt.h"
 
 #include "nigiri/special_stations.h"
@@ -15,7 +13,6 @@
 
 #include "nigiri/timetable.h"
 
-#include "adr/area_database.h"
 #include "adr/score.h"
 #include "adr/typeahead.h"
 
@@ -23,7 +20,6 @@
 
 namespace a = adr;
 namespace n = nigiri;
-namespace json = boost::json;
 
 namespace motis {
 
@@ -152,7 +148,7 @@ adr::score_t get_diff(std::string str1,
 }
 
 adr_ext adr_extend_tt(nigiri::timetable const& tt,
-                      a::area_database const* area_db,
+                      geo::area_db_lookup<adr::area_idx_t> const* area_db,
                       a::typeahead& t) {
   if (tt.n_locations() == 0) {
     return {};
@@ -447,7 +443,10 @@ adr_ext adr_extend_tt(nigiri::timetable const& tt,
     if (area_db == nullptr) {
       t.place_areas_.emplace_back(no_areas_idx);
     } else {
-      area_db->lookup(t, a::coordinates::from_latlng(pos), areas);
+      area_db->lookup(a::coordinates::from_latlng(pos), areas);
+      utl::sort(areas, [&](adr::area_idx_t const a, adr::area_idx_t const b) {
+        return t.area_admin_level_[a] < t.area_admin_level_[b];
+      });
       t.place_areas_.emplace_back(
           utl::get_or_create(area_set_lookup, areas, [&]() {
             auto const set_idx = a::area_set_idx_t{t.area_sets_.size()};
