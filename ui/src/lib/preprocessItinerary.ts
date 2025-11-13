@@ -15,14 +15,20 @@ export const joinInterlinedLegs = (it: Itinerary) => {
 			pred.scheduledEndTime = curr.scheduledEndTime;
 			pred.realTime ||= curr.realTime;
 			pred.intermediateStops!.push(...curr.intermediateStops!);
-			pred.legGeometry = {
-				points: polyline.encode([
-					...polyline.decode(pred.legGeometry.points),
-					...polyline.decode(curr.legGeometry.points)
-				]),
-				precision: pred.legGeometry.precision,
-				length: pred.legGeometry.length + curr.legGeometry.length
-			};
+			const prevGeom = pred.legGeometry;
+			const currGeom = curr.legGeometry;
+			if (prevGeom && currGeom) {
+				pred.legGeometry = {
+					points: polyline.encode([
+						...polyline.decode(prevGeom.points),
+						...polyline.decode(currGeom.points)
+					]),
+					precision: prevGeom.precision,
+					length: prevGeom.length + currGeom.length
+				};
+			} else {
+				pred.legGeometry = undefined;
+			}
 		} else {
 			joinedLegs.push(it.legs[i]);
 		}

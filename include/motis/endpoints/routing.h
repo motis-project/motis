@@ -110,6 +110,7 @@ struct routing {
       std::chrono::seconds max,
       double max_matching_distance,
       double fastest_direct_factor,
+      bool with_leg_geometry,
       unsigned api_version) const;
 
   config const& config_;

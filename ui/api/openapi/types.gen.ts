@@ -1135,7 +1135,10 @@ export type Leg = {
      *
      */
     intermediateStops?: Array<Place>;
-    legGeometry: EncodedPolyline;
+    /**
+     * Encoded geometry of this leg. Omitted when `withLegGeometry=false` was requested.
+     */
+    legGeometry?: EncodedPolyline;
     /**
      * A series of turn by turn instructions
      * used for walking, biking and driving.
@@ -1862,6 +1865,10 @@ export type PlanData = {
          * Optional. Include intermediate stops where passengers can not alight/board according to schedule.
          */
         withScheduledSkippedStops?: boolean;
+        /**
+         * Optional. Set to false to omit `legGeometry` objects from the response.
+         */
+        withLegGeometry?: boolean;
     };
 };
 

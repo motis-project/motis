@@ -60,7 +60,7 @@ api::Itinerary trip::operator()(boost::urls::url_view const& url) const {
       tt_location{to_l.get_location_idx()}, cache, &blocked, false,
       osr_parameters{}, api::PedestrianProfileEnum::FOOT,
       api::ElevationCostsEnum::NONE, query.joinInterlinedLegs_, true, false,
-      query.withScheduledSkippedStops_,
+      query.withScheduledSkippedStops_, true,
       config_.timetable_.value().max_matching_distance_, kMaxMatchingDistance,
       api_version, false, false, query.language_);
 }

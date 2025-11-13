@@ -211,6 +211,7 @@ api::Itinerary street_routing(osr::ways const& w,
                               double const max_matching_distance,
                               osr_parameters const& osr_params,
                               street_routing_cache_t& cache,
+                              bool const with_leg_geometry,
                               osr::bitvec<osr::node_idx_t>& blocked_mem,
                               unsigned const api_version,
                               std::chrono::seconds const max) {
@@ -273,14 +274,22 @@ api::Itinerary street_routing(osr::ways const& w,
         auto const from_node = range.front().from_;
         auto const to_node = range.back().to_;
 
-        auto concat = geo::polyline{};
         auto dist = 0.0;
+        auto concat = geo::polyline{};
         for (auto const& p : range) {
-          utl::concat(concat, p.polyline_);
+          if (with_leg_geometry) {
+            utl::concat(concat, p.polyline_);
+          }
           if (p.cost_ != osr::kInfeasible) {
             t += std::chrono::seconds{p.cost_};
             dist += p.dist_;
           }
+        }
+
+        auto leg_geometry = std::optional<api::EncodedPolyline>{};
+        if (with_leg_geometry) {
+          leg_geometry = api_version == 1 ? to_polyline<7>(concat)
+                                          : to_polyline<6>(concat);
         }
 
         auto& leg = itinerary.legs_.emplace_back(api::Leg{
@@ -298,8 +307,7 @@ api::Itinerary street_routing(osr::ways const& w,
             .startTime_ = pred_end_time,
             .endTime_ = is_last_leg && end_time ? *end_time : t,
             .distance_ = dist,
-            .legGeometry_ = api_version == 1 ? to_polyline<7>(concat)
-                                             : to_polyline<6>(concat),
+            .legGeometry_ = std::move(leg_geometry),
             .steps_ = get_step_instructions(w, elevations, from, to, range,
                                             api_version)});
 

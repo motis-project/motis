@@ -1274,7 +1274,7 @@ export const RentalZoneSchema = {
 
 export const LegSchema = {
     type: 'object',
-    required: ['mode', 'startTime', 'endTime', 'scheduledStartTime', 'scheduledEndTime', 'realTime', 'scheduled', 'duration', 'from', 'to', 'legGeometry'],
+    required: ['mode', 'startTime', 'endTime', 'scheduledStartTime', 'scheduledEndTime', 'realTime', 'scheduled', 'duration', 'from', 'to'],
     properties: {
         mode: {
             '$ref': '#/components/schemas/Mode',
@@ -1401,6 +1401,7 @@ and the Place where the leg ends. For non-transit legs, null.
             }
         },
         legGeometry: {
+            description: 'Encoded geometry of this leg. Omitted when `withLegGeometry=false` was requested.',
             '$ref': '#/components/schemas/EncodedPolyline'
         },
         steps: {

@@ -823,6 +823,14 @@ paths:
             type: boolean
             default: false
 
+        - name: withLegGeometry
+          in: query
+          required: false
+          description: Optional. Set to false to omit `legGeometry` objects from the response to reduce payload size.
+          schema:
+            type: boolean
+            default: true
+
         - name: language
           in: query
           required: false
@@ -3211,7 +3219,6 @@ components:
         - duration
         - from
         - to
-        - legGeometry
       properties:
         mode:
           $ref: '#/components/schemas/Mode'
@@ -3313,6 +3320,7 @@ components:
           items:
             $ref: "#/components/schemas/Place"
         legGeometry:
+          description: Encoded geometry of this leg. Omitted when `withLegGeometry=false` was requested.
           $ref: '#/components/schemas/EncodedPolyline'
         steps:
           description: |
