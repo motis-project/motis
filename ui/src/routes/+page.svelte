@@ -440,27 +440,33 @@
 		});
 	}
 
-	const flyToSelectedItinerary = () => {
-		if (lastSelectedItinerary === page.state.selectedItinerary) {
-			return;
-		}
-		if (page.state.selectedItinerary && map) {
-			const start = maplibregl.LngLat.convert(page.state.selectedItinerary.legs[0].from);
-			const box = new maplibregl.LngLatBounds(start, start);
-			page.state.selectedItinerary.legs.forEach((l) => {
+	const flyToItineraries = (itineraries: Itinerary[], map: maplibregl.Map) => {
+		const start = maplibregl.LngLat.convert(itineraries[0].legs[0].from);
+		const box = new maplibregl.LngLatBounds(start, start);
+		itineraries.forEach((i) => {
+			i.legs.forEach((l) => {
 				box.extend(l.from);
 				box.extend(l.to);
 				l.intermediateStops?.forEach((x) => {
 					box.extend(x);
 				});
 			});
-			const padding = {
-				top: 96,
-				right: 96,
-				bottom: isSmallScreen ? window.innerHeight * 0.3 : 96,
-				left: isSmallScreen ? 96 : 640
-			};
-			map.flyTo({ ...map.cameraForBounds(box, { padding }) });
+		});
+		const padding = {
+			top: 96,
+			right: 96,
+			bottom: isSmallScreen ? window.innerHeight * 0.3 : 96,
+			left: isSmallScreen ? 96 : 640
+		};
+		map.flyTo({ ...map.cameraForBounds(box, { padding }) });
+	};
+
+	const flyToSelectedItinerary = () => {
+		if (lastSelectedItinerary === page.state.selectedItinerary) {
+			return;
+		}
+		if (page.state.selectedItinerary && map) {
+			flyToItineraries([page.state.selectedItinerary], map);
 		}
 		lastSelectedItinerary = page.state.selectedItinerary;
 	};
@@ -472,6 +478,17 @@
 	});
 
 	$effect(flyToSelectedItinerary);
+
+	$effect(() => {
+		Promise.all(routingResponses).then((responses) => {
+			if (map) {
+				flyToItineraries(
+					responses.flatMap((response) => response.itineraries),
+					map
+				);
+			}
+		});
+	});
 
 	type CloseFn = () => void;
 </script>
@@ -606,6 +623,24 @@
 				/>
 			</Card>
 		</Control>
+		{#if showMap}
+			{#each routingResponses as r, rI (rI)}
+				{#await r then r}
+					{#each r.itineraries as it, i (i)}
+						<ItineraryGeoJson
+							itinerary={it}
+							id="{rI}-{i}"
+							selected={false}
+							selectItinerary={() => {
+								pushState('', { selectedItinerary: it });
+							}}
+							{level}
+							{theme}
+						/>
+					{/each}
+				{/await}
+			{/each}
+		{/if}
 	{/if}
 
 	{#if activeTab != 'isochrones' && page.state.selectedItinerary && !page.state.showDepartures}
@@ -631,7 +666,7 @@
 			</Card>
 		</Control>
 		{#if showMap}
-			<ItineraryGeoJson itinerary={page.state.selectedItinerary} {level} />
+			<ItineraryGeoJson itinerary={page.state.selectedItinerary} selected={true} {level} {theme} />
 			<StopGeoJSON itinerary={page.state.selectedItinerary} {theme} />
 		{/if}
 	{/if}
