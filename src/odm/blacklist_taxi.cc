@@ -11,11 +11,11 @@
 
 #include "motis/http_req.h"
 
-namespace motis::odm {
-
 namespace n = nigiri;
 namespace json = boost::json;
 using namespace std::chrono_literals;
+
+namespace motis::odm {
 
 json::array to_json(std::vector<n::routing::offset> const& offsets,
                     n::timetable const& tt) {
@@ -28,8 +28,8 @@ json::array to_json(std::vector<n::routing::offset> const& offsets,
 }
 
 std::string prima::make_blacklist_taxi_request(
-    nigiri::timetable const& tt,
-    nigiri::interval<nigiri::unixtime_t> const& taxi_intvl) const {
+    n::timetable const& tt,
+    n::interval<n::unixtime_t> const& taxi_intvl) const {
   return json::serialize(json::value{
       {"start", {{"lat", from_.pos_.lat_}, {"lng", from_.pos_.lng_}}},
       {"target", {{"lat", to_.pos_.lat_}, {"lng", to_.pos_.lng_}}},
@@ -96,9 +96,8 @@ bool prima::consume_blacklist_taxi_response(std::string_view json) {
   return true;
 }
 
-bool prima::blacklist_taxi(
-    nigiri::timetable const& tt,
-    nigiri::interval<nigiri::unixtime_t> const& taxi_intvl) {
+bool prima::blacklist_taxi(n::timetable const& tt,
+                           n::interval<n::unixtime_t> const& taxi_intvl) {
   auto blacklist_response = std::optional<std::string>{};
   auto ioc = boost::asio::io_context{};
   try {
@@ -124,32 +123,6 @@ bool prima::blacklist_taxi(
   }
 
   return consume_blacklist_taxi_response(*blacklist_response);
-}
-
-std::string prima::service_times(n::timetable const& tt) const {
-  auto ss = std::stringstream{};
-
-  auto const first_last_mile_times = [&](auto const& offsets,
-                                         auto const& times) {
-    for (auto const [o, t] : utl::zip(offsets, times)) {
-      ss << tt.locations_.names_[o.target_].view() << ", " << o.duration_
-         << ":\n";
-      for (auto const& i : t) {
-        ss << i << "\n";
-      }
-      ss << "\n";
-    }
-  };
-
-  ss << "first_mile:\n";
-  first_last_mile_times(first_mile_taxi_, first_mile_taxi_times_);
-
-  ss << "last_mile:\n";
-  first_last_mile_times(last_mile_taxi_, last_mile_taxi_times_);
-
-  ss << "\n";
-
-  return ss.str();
 }
 
 }  // namespace motis::odm

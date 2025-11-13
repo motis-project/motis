@@ -14,6 +14,7 @@
 #include "motis-api/motis-api.h"
 
 namespace n = nigiri;
+namespace nr = nigiri::routing;
 using namespace motis::odm;
 using namespace std::chrono_literals;
 using namespace date;
@@ -84,17 +85,13 @@ leg 4: (C, C) [1970-01-01 14:07] -> (END, END) [1970-01-01 14:46]
 )";
 
 TEST(odm, prima_update) {
-  using namespace nigiri;
-  using namespace nigiri::loader;
-  using namespace nigiri::loader::gtfs;
-
-  timetable tt;
+  n::timetable tt;
   tt.date_range_ = {date::sys_days{2017_y / January / 1},
                     date::sys_days{2017_y / January / 2}};
-  register_special_stations(tt);
-  auto const src = source_idx_t{0};
-  gtfs::load_timetable({}, src, tt_files(), tt);
-  finalize(tt);
+  n::loader::register_special_stations(tt);
+  auto const src = n::source_idx_t{0};
+  n::loader::gtfs::load_timetable({}, src, tt_files(), tt);
+  n::loader::finalize(tt);
 
   auto const get_loc_idx = [&](auto&& s) {
     return tt.locations_.location_id_to_idx_.at({.id_ = s, .src_ = src});
@@ -102,18 +99,18 @@ TEST(odm, prima_update) {
 
   auto const loc = osr::location{};
   auto p = prima{"prima_url", loc, loc, motis::api::plan_params{}};
-  p.fixed_ = event_type::kDep;
+  p.fixed_ = n::event_type::kDep;
   p.cap_ = {.wheelchairs_ = 1, .bikes_ = 0, .passengers_ = 1, .luggage_ = 0};
   p.first_mile_taxi_ = {
-      {get_loc_idx("A"), duration_t{60min}, motis::kOdmTransportModeId},
-      {get_loc_idx("B"), duration_t{60min}, motis::kOdmTransportModeId}};
+      {get_loc_idx("A"), n::duration_t{60min}, motis::kOdmTransportModeId},
+      {get_loc_idx("B"), n::duration_t{60min}, motis::kOdmTransportModeId}};
   p.last_mile_taxi_ = {
-      {get_loc_idx("C"), duration_t{60min}, motis::kOdmTransportModeId},
-      {get_loc_idx("D"), duration_t{60min}, motis::kOdmTransportModeId}};
+      {get_loc_idx("C"), n::duration_t{60min}, motis::kOdmTransportModeId},
+      {get_loc_idx("D"), n::duration_t{60min}, motis::kOdmTransportModeId}};
 
-  EXPECT_EQ(
-      p.make_blacklist_taxi_request(tt, {unixtime_t{0h}, unixtime_t{48h}}),
-      blacklist_request);
+  EXPECT_EQ(p.make_blacklist_taxi_request(
+                tt, {n::unixtime_t{0h}, n::unixtime_t{48h}}),
+            blacklist_request);
 
   EXPECT_FALSE(p.consume_blacklist_taxi_response(invalid_response));
   EXPECT_TRUE(p.consume_blacklist_taxi_response(blacklist_response));
@@ -137,60 +134,61 @@ TEST(odm, prima_update) {
   EXPECT_EQ(p.last_mile_taxi_times_[1].size(), 0);
 
   auto const expected_direct_interval =
-      interval{to_unix(43200000), to_unix(64800000)};
+      n::interval{to_unix(43200000), to_unix(64800000)};
   for (auto const& d : p.direct_taxi_) {
     EXPECT_TRUE(expected_direct_interval.contains(d.dep_));
   }
 
-  auto taxi_journeys = std::vector<nigiri::routing::journey>{};
+  auto taxi_journeys = std::vector<nr::journey>{};
   taxi_journeys.push_back(
-      {.legs_ =
-           {{direction::kForward, get_special_station(special_station::kStart),
-             get_loc_idx("A"), unixtime_t{10h}, unixtime_t{11h},
-             routing::offset{get_loc_idx("A"), 1h, motis::kOdmTransportModeId}},
-            {direction::kForward, get_loc_idx("A"),
-             get_special_station(special_station::kEnd), unixtime_t{11h},
-             unixtime_t{12h},
-             routing::offset{get_loc_idx("A"), 1h, kWalkTransportModeId}}},
-       .start_time_ = unixtime_t{10h},
-       .dest_time_ = unixtime_t{12h},
-       .dest_ = get_special_station(special_station::kEnd)});
+      {.legs_ = {{n::direction::kForward,
+                  n::get_special_station(n::special_station::kStart),
+                  get_loc_idx("A"), n::unixtime_t{10h}, n::unixtime_t{11h},
+                  nr::offset{get_loc_idx("A"), 1h, motis::kOdmTransportModeId}},
+                 {n::direction::kForward, get_loc_idx("A"),
+                  n::get_special_station(n::special_station::kEnd),
+                  n::unixtime_t{11h}, n::unixtime_t{12h},
+                  nr::offset{get_loc_idx("A"), 1h, kWalkTransportModeId}}},
+       .start_time_ = n::unixtime_t{10h},
+       .dest_time_ = n::unixtime_t{12h},
+       .dest_ = n::get_special_station(n::special_station::kEnd)});
 
   taxi_journeys.push_back(
-      {.legs_ =
-           {{direction::kForward, get_special_station(special_station::kStart),
-             get_loc_idx("B"), unixtime_t{11h}, unixtime_t{12h},
-             routing::offset{get_loc_idx("B"), 1h, motis::kOdmTransportModeId}},
-            {direction::kForward, get_loc_idx("B"),
-             get_special_station(special_station::kEnd), unixtime_t{12h},
-             unixtime_t{13h},
-             routing::offset{get_loc_idx("B"), 1h, kWalkTransportModeId}}},
-       .start_time_ = unixtime_t{11h},
-       .dest_time_ = unixtime_t{13h},
-       .dest_ = get_special_station(special_station::kEnd)});
+      {.legs_ = {{n::direction::kForward,
+                  n::get_special_station(n::special_station::kStart),
+                  get_loc_idx("B"), n::unixtime_t{11h}, n::unixtime_t{12h},
+                  nr::offset{get_loc_idx("B"), 1h, motis::kOdmTransportModeId}},
+                 {n::direction::kForward, get_loc_idx("B"),
+                  n::get_special_station(n::special_station::kEnd),
+                  n::unixtime_t{12h}, n::unixtime_t{13h},
+                  nr::offset{get_loc_idx("B"), 1h, kWalkTransportModeId}}},
+       .start_time_ = n::unixtime_t{11h},
+       .dest_time_ = n::unixtime_t{13h},
+       .dest_ = n::get_special_station(n::special_station::kEnd)});
 
   taxi_journeys.push_back(
-      {.legs_ =
-           {{direction::kForward, get_special_station(special_station::kStart),
-             get_loc_idx("A"), unixtime_t{10h}, unixtime_t{11h},
-             routing::offset{get_loc_idx("A"), 1h, motis::kOdmTransportModeId}},
-            {direction::kForward, get_loc_idx("A"), get_loc_idx("C"),
-             unixtime_t{11h}, unixtime_t{13h},
-             routing::offset{get_loc_idx("C"), 2h, motis::kFlexModeIdOffset}},
-            {direction::kForward, get_loc_idx("C"),
-             get_special_station(special_station::kEnd), unixtime_t{13h},
-             unixtime_t{14h},
-             routing::offset{get_loc_idx("C"), 1h,
+      {.legs_ = {{n::direction::kForward,
+                  n::get_special_station(n::special_station::kStart),
+                  get_loc_idx("A"), n::unixtime_t{10h}, n::unixtime_t{11h},
+                  n::routing::offset{get_loc_idx("A"), 1h,
+                                     motis::kOdmTransportModeId}},
+                 {n::direction::kForward, get_loc_idx("A"), get_loc_idx("C"),
+                  n::unixtime_t{11h}, n::unixtime_t{13h},
+                  nr::offset{get_loc_idx("C"), 2h, motis::kFlexModeIdOffset}},
+                 {n::direction::kForward, get_loc_idx("C"),
+                  n::get_special_station(n::special_station::kEnd),
+                  n::unixtime_t{13h}, n::unixtime_t{14h},
+                  nr::offset{get_loc_idx("C"), 1h,
                              motis::kOdmTransportModeId}}},
-       .start_time_ = unixtime_t{10h},
-       .dest_time_ = unixtime_t{14h},
-       .dest_ = get_special_station(special_station::kEnd)});
+       .start_time_ = n::unixtime_t{10h},
+       .dest_time_ = n::unixtime_t{14h},
+       .dest_ = n::get_special_station(n::special_station::kEnd)});
 
   p.direct_taxi_ = {
-      direct_ride{.dep_ = unixtime_t{11h}, .arr_ = unixtime_t{12h}}};
+      direct_ride{.dep_ = n::unixtime_t{11h}, .arr_ = n::unixtime_t{12h}}};
 
-  auto first_mile_taxi_rides = std::vector<routing::start>{};
-  auto last_mile_taxi_rides = std::vector<routing::start>{};
+  auto first_mile_taxi_rides = std::vector<nr::start>{};
+  auto last_mile_taxi_rides = std::vector<nr::start>{};
   extract_taxis(taxi_journeys, first_mile_taxi_rides, last_mile_taxi_rides);
   EXPECT_FALSE(p.consume_whitelist_taxi_response(
       invalid_response, taxi_journeys, first_mile_taxi_rides,

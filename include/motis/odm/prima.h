@@ -19,12 +19,10 @@ struct routing;
 
 namespace motis::odm {
 
-using namespace std::chrono_literals;
-
-constexpr auto kODMDirectPeriod = 300s;
+constexpr auto kODMDirectPeriod = std::chrono::seconds{300};
 constexpr auto kODMDirectFactor = 1.0;
-constexpr auto kODMOffsetMinImprovement = 60s;
-constexpr auto kODMMaxDuration = 3600s;
+constexpr auto kODMOffsetMinImprovement = std::chrono::seconds{60};
+constexpr auto kODMMaxDuration = std::chrono::seconds{3600};
 constexpr auto kBlacklistPath = "/api/blacklist";
 constexpr auto kWhitelistPath = "/api/whitelist";
 constexpr auto kRidesharingPath = "/api/whitelistRideShare";
@@ -84,7 +82,6 @@ struct prima {
   bool consume_blacklist_taxi_response(std::string_view json);
   bool blacklist_taxi(nigiri::timetable const&,
                       nigiri::interval<nigiri::unixtime_t> const&);
-  std::string service_times(nigiri::timetable const&) const;
 
   std::string make_whitelist_taxi_request(
       std::vector<nigiri::routing::start> const& first_mile,

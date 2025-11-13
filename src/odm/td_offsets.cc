@@ -2,12 +2,16 @@
 
 #include <ranges>
 
+using namespace std::chrono_literals;
+namespace n = nigiri;
+namespace nr = nigiri::routing;
+
 namespace motis::odm {
 
-std::pair<nigiri::routing::td_offsets_t, nigiri::routing::td_offsets_t>
-get_td_offsets_split(std::vector<nigiri::routing::offset> const& offsets,
-                     std::vector<service_times_t> const& times,
-                     nigiri::transport_mode_id_t const mode) {
+std::pair<nr::td_offsets_t, nr::td_offsets_t> get_td_offsets_split(
+    std::vector<nr::offset> const& offsets,
+    std::vector<service_times_t> const& times,
+    n::transport_mode_id_t const mode) {
   auto const split =
       offsets.empty()
           ? 0
@@ -25,13 +29,13 @@ get_td_offsets_split(std::vector<nigiri::routing::offset> const& offsets,
 
   auto const derive_td_offsets = [&](auto const& offsets_split,
                                      auto const& times_split) {
-    auto td_offsets = nigiri::routing::td_offsets_t{};
+    auto td_offsets = nr::td_offsets_t{};
     for (auto const [o, t] : std::views::zip(offsets_split, times_split)) {
-      td_offsets.emplace(o.target_, std::vector<nigiri::routing::td_offset>{});
+      td_offsets.emplace(o.target_, std::vector<nr::td_offset>{});
       for (auto const& i : t) {
         td_offsets[o.target_].emplace_back(i.from_, o.duration_, mode);
-        td_offsets[o.target_].emplace_back(
-            i.to_ - o.duration_ + 1min, nigiri::footpath::kMaxDuration, mode);
+        td_offsets[o.target_].emplace_back(i.to_ - o.duration_ + 1min,
+                                           n::footpath::kMaxDuration, mode);
       }
     }
     return td_offsets;

@@ -8,14 +8,14 @@
 #include "motis/http_req.h"
 #include "motis/odm/odm.h"
 
-namespace motis::odm {
-
 namespace n = nigiri;
+namespace nr = nigiri::routing;
 namespace json = boost::json;
 using namespace std::chrono_literals;
 
-std::string prima::make_ride_sharing_request(
-    nigiri::timetable const& tt) const {
+namespace motis::odm {
+
+std::string prima::make_ride_sharing_request(n::timetable const& tt) const {
   return make_whitelist_request(from_, to_, first_mile_ride_sharing_,
                                 last_mile_ride_sharing_, direct_ride_sharing_,
                                 fixed_, cap_, tt);
@@ -33,8 +33,8 @@ bool prima::consume_ride_sharing_response(std::string_view json) {
       return true;
     }
 
-    auto prev_first_mile = std::exchange(first_mile_ride_sharing_,
-                                         std::vector<n::routing::start>{});
+    auto prev_first_mile =
+        std::exchange(first_mile_ride_sharing_, std::vector<nr::start>{});
     auto prev_it = std::begin(prev_first_mile);
     for (auto const& stop : update) {
       for (auto const& time : stop.as_array()) {
@@ -69,8 +69,8 @@ bool prima::consume_ride_sharing_response(std::string_view json) {
       return true;
     }
 
-    auto prev_last_mile = std::exchange(last_mile_ride_sharing_,
-                                        std::vector<n::routing::start>{});
+    auto prev_last_mile =
+        std::exchange(last_mile_ride_sharing_, std::vector<nr::start>{});
     auto prev_it = std::begin(prev_last_mile);
     for (auto const& stop : update) {
       for (auto const& time : stop.as_array()) {
@@ -143,7 +143,7 @@ bool prima::consume_ride_sharing_response(std::string_view json) {
   return true;
 }
 
-bool prima::whitelist_ride_sharing(nigiri::timetable const& tt) {
+bool prima::whitelist_ride_sharing(n::timetable const& tt) {
   auto response = std::optional<std::string>{};
   auto ioc = boost::asio::io_context{};
   try {

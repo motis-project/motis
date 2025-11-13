@@ -1,10 +1,7 @@
 #include "motis/odm/prima.h"
 
-#include <ranges>
 #include <variant>
 
-#include "boost/asio/co_spawn.hpp"
-#include "boost/asio/detached.hpp"
 #include "boost/asio/io_context.hpp"
 #include "boost/json.hpp"
 
@@ -23,10 +20,11 @@
 #include "motis/odm/odm.h"
 #include "motis/transport_mode_ids.h"
 
-namespace motis::odm {
-
 namespace n = nigiri;
+namespace nr = nigiri::routing;
 namespace json = boost::json;
+
+namespace motis::odm {
 
 prima::prima(std::string const& prima_url,
              osr::location const& from,
@@ -318,11 +316,10 @@ std::size_t n_rides_in_response(json::array const& ja) {
       [](auto const& a, auto const& b) { return a + b.as_array().size(); });
 }
 
-void fix_first_mile_duration(
-    std::vector<nigiri::routing::journey>& journeys,
-    std::vector<nigiri::routing::start> const& first_mile,
-    std::vector<nigiri::routing::start> const& prev_first_mile,
-    nigiri::transport_mode_id_t const mode) {
+void fix_first_mile_duration(std::vector<nr::journey>& journeys,
+                             std::vector<nr::start> const& first_mile,
+                             std::vector<nr::start> const& prev_first_mile,
+                             n::transport_mode_id_t const mode) {
   for (auto const [curr, prev] : utl::zip(first_mile, prev_first_mile)) {
 
     auto const uses_prev = [&,
@@ -351,7 +348,7 @@ void fix_first_mile_duration(
           l->arr_time_ =
               curr.time_at_stop_ - (mode == kRideSharingTransportModeId
                                         ? kODMTransferBuffer
-                                        : nigiri::duration_t{0});
+                                        : n::duration_t{0});
           std::get<n::routing::offset>(l->uses_).duration_ =
               l->arr_time_ - l->dep_time_;
           // fill gap (transfer/waiting) with footpath
@@ -365,11 +362,10 @@ void fix_first_mile_duration(
   }
 };
 
-void fix_last_mile_duration(
-    std::vector<nigiri::routing::journey>& journeys,
-    std::vector<nigiri::routing::start> const& last_mile,
-    std::vector<nigiri::routing::start> const& prev_last_mile,
-    nigiri::transport_mode_id_t const mode) {
+void fix_last_mile_duration(std::vector<nr::journey>& journeys,
+                            std::vector<nr::start> const& last_mile,
+                            std::vector<nr::start> const& prev_last_mile,
+                            n::transport_mode_id_t const mode) {
   for (auto const [curr, prev] : utl::zip(last_mile, prev_last_mile)) {
     auto const uses_prev =
         [&, prev2 = prev /* hack for MacOS - fixed with 16 */](auto const& j) {
@@ -395,7 +391,7 @@ void fix_last_mile_duration(
           l->dep_time_ =
               curr.time_at_stop_ + (mode == kRideSharingTransportModeId
                                         ? kODMTransferBuffer
-                                        : nigiri::duration_t{0});
+                                        : n::duration_t{0});
           l->arr_time_ = curr.time_at_start_;
           std::get<n::routing::offset>(l->uses_).duration_ =
               l->arr_time_ - l->dep_time_;
@@ -411,11 +407,11 @@ void fix_last_mile_duration(
 };
 
 void add_direct_odm(std::vector<direct_ride> const& direct,
-                    std::vector<nigiri::routing::journey>& odm_journeys,
+                    std::vector<nr::journey>& odm_journeys,
                     place_t const& from,
                     place_t const& to,
                     bool arrive_by,
-                    nigiri::transport_mode_id_t const mode) {
+                    n::transport_mode_id_t const mode) {
   auto from_l = std::visit(
       utl::overloaded{[](osr::location const&) {
                         return get_special_station(n::special_station::kStart);

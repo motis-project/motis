@@ -11,23 +11,24 @@
 #include "motis/odm/odm.h"
 #include "motis/transport_mode_ids.h"
 
-namespace motis::odm {
-
 namespace n = nigiri;
+namespace nr = nigiri::routing;
 namespace json = boost::json;
 using namespace std::chrono_literals;
 
+namespace motis::odm {
+
 std::string prima::make_whitelist_taxi_request(
-    std::vector<nigiri::routing::start> const& first_mile,
-    std::vector<nigiri::routing::start> const& last_mile,
-    nigiri::timetable const& tt) const {
+    std::vector<nr::start> const& first_mile,
+    std::vector<nr::start> const& last_mile,
+    n::timetable const& tt) const {
   return make_whitelist_request(from_, to_, first_mile, last_mile, direct_taxi_,
                                 fixed_, cap_, tt);
 }
 
-void extract_taxis(std::vector<nigiri::routing::journey> const& journeys,
-                   std::vector<nigiri::routing::start>& first_mile_taxi_rides,
-                   std::vector<nigiri::routing::start>& last_mile_taxi_rides) {
+void extract_taxis(std::vector<nr::journey> const& journeys,
+                   std::vector<nr::start>& first_mile_taxi_rides,
+                   std::vector<nr::start>& last_mile_taxi_rides) {
   for (auto const& j : journeys) {
     if (!j.legs_.empty()) {
       if (is_odm_leg(j.legs_.front(), kOdmTransportModeId)) {
@@ -52,9 +53,9 @@ void extract_taxis(std::vector<nigiri::routing::journey> const& journeys,
 
 bool prima::consume_whitelist_taxi_response(
     std::string_view json,
-    std::vector<nigiri::routing::journey>& journeys,
-    std::vector<nigiri::routing::start>& first_mile_taxi_rides,
-    std::vector<nigiri::routing::start>& last_mile_taxi_rides) {
+    std::vector<nr::journey>& journeys,
+    std::vector<nr::start>& first_mile_taxi_rides,
+    std::vector<nr::start>& last_mile_taxi_rides) {
 
   auto const update_first_mile = [&](json::array const& update) {
     auto const n_pt_udpates = n_rides_in_response(update);
@@ -66,7 +67,7 @@ bool prima::consume_whitelist_taxi_response(
     }
 
     auto const prev_first_mile =
-        std::exchange(first_mile_taxi_rides, std::vector<n::routing::start>{});
+        std::exchange(first_mile_taxi_rides, std::vector<nr::start>{});
 
     auto prev_it = std::begin(prev_first_mile);
     for (auto const& stop : update) {
@@ -101,7 +102,7 @@ bool prima::consume_whitelist_taxi_response(
     }
 
     auto const prev_last_mile =
-        std::exchange(last_mile_taxi_rides, std::vector<n::routing::start>{});
+        std::exchange(last_mile_taxi_rides, std::vector<nr::start>{});
 
     auto prev_it = std::begin(prev_last_mile);
     for (auto const& stop : update) {
@@ -176,10 +177,10 @@ bool prima::consume_whitelist_taxi_response(
   return true;
 }
 
-bool prima::whitelist_taxi(std::vector<nigiri::routing::journey>& taxi_journeys,
-                           nigiri::timetable const& tt) {
-  auto first_mile_taxi_rides = std::vector<nigiri::routing::start>{};
-  auto last_mile_taxi_rides = std::vector<nigiri::routing::start>{};
+bool prima::whitelist_taxi(std::vector<nr::journey>& taxi_journeys,
+                           n::timetable const& tt) {
+  auto first_mile_taxi_rides = std::vector<nr::start>{};
+  auto last_mile_taxi_rides = std::vector<nr::start>{};
   extract_taxis(taxi_journeys, first_mile_taxi_rides, last_mile_taxi_rides);
 
   auto whitelist_response = std::optional<std::string>{};

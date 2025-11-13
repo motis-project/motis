@@ -7,13 +7,7 @@
 
 #include <vector>
 
-#include "fmt/std.h"
-
-#include "boost/asio/co_spawn.hpp"
-#include "boost/asio/detached.hpp"
 #include "boost/asio/io_context.hpp"
-#include "boost/fiber/future.hpp"
-#include "boost/fiber/future/packaged_task.hpp"
 #include "boost/thread/tss.hpp"
 
 #include "prometheus/histogram.h"
@@ -55,17 +49,17 @@
 #include "motis/timetable/time_conv.h"
 #include "motis/transport_mode_ids.h"
 
-namespace motis::odm {
-
 namespace n = nigiri;
 using namespace std::chrono_literals;
 
 using td_offsets_t =
     n::hash_map<n::location_idx_t, std::vector<n::routing::td_offset>>;
 
-constexpr auto const kODMLookAhead = nigiri::duration_t{24h};
-constexpr auto const kSearchIntervalSize = nigiri::duration_t{10h};
-constexpr auto const kContextPadding = nigiri::duration_t{2h};
+namespace motis::odm {
+
+constexpr auto kODMLookAhead = nigiri::duration_t{24h};
+constexpr auto kSearchIntervalSize = nigiri::duration_t{10h};
+constexpr auto kContextPadding = nigiri::duration_t{2h};
 static auto const kMixer = get_default_mixer();
 
 void print_time(auto const& start,
