@@ -795,9 +795,11 @@ bool prima::consume_whitelist_ride_sharing_response(std::string_view json) {
                      to_unix(event.as_object().at("dropoffTime").as_int64()) +
                      kODMTransferBuffer,
                  .stop_ = prev_it->stop_});
-            first_mile_ride_sharing_tour_ids_.push_back(
-                static_cast<std::uint32_t>(
-                    event.as_object().at("tour").as_int64()));
+            first_mile_ride_sharing_tour_ids_.emplace_back(
+                event.as_object().at("tripId").as_string());
+            utl::verify(first_mile_ride_sharing_.size() ==
+                            first_mile_ride_sharing_tour_ids_.size(),
+                        "weird");
           }
         }
         ++prev_it;
@@ -831,9 +833,11 @@ bool prima::consume_whitelist_ride_sharing_response(std::string_view json) {
                      to_unix(event.as_object().at("pickupTime").as_int64()) -
                      kODMTransferBuffer,
                  .stop_ = prev_it->stop_});
-            last_mile_ride_sharing_tour_ids_.push_back(
-                static_cast<std::uint32_t>(
-                    event.as_object().at("tour").as_int64()));
+            last_mile_ride_sharing_tour_ids_.emplace_back(
+                event.as_object().at("tripId").as_string());
+            utl::verify(last_mile_ride_sharing_.size() ==
+                            last_mile_ride_sharing_tour_ids_.size(),
+                        "weird");
           }
           ++prev_it;
         }
@@ -861,8 +865,11 @@ bool prima::consume_whitelist_ride_sharing_response(std::string_view json) {
             direct_ride_sharing_.push_back(
                 {to_unix(ride.as_object().at("pickupTime").as_int64()),
                  to_unix(ride.as_object().at("dropoffTime").as_int64())});
-            direct_ride_sharing_tour_ids_.push_back(static_cast<std::uint32_t>(
-                ride.as_object().at("tour").as_int64()));
+            direct_ride_sharing_tour_ids_.emplace_back(
+                ride.as_object().at("tripId").as_string());
+            utl::verify(direct_ride_sharing_.size() ==
+                            direct_ride_sharing_tour_ids_.size(),
+                        "weird");
           }
         }
       }
