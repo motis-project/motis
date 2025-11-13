@@ -46,6 +46,10 @@
 						};
 					});
 				} else {
+					const geometry = l.legGeometry;
+					if (!geometry) {
+						return [];
+					}
 					const color = `${getColor(l)[0]}`;
 					const outlineColor = colord(color).darken(0.2).toHex();
 					return {
@@ -56,7 +60,7 @@
 						},
 						geometry: {
 							type: 'LineString',
-							coordinates: polyline.decode(l.legGeometry.points, PRECISION).map(([x, y]) => [y, x])
+							coordinates: polyline.decode(geometry.points, PRECISION).map(([x, y]) => [y, x])
 						}
 					};
 				}

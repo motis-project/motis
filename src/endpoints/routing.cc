@@ -456,6 +456,7 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
     std::chrono::seconds max,
     double const max_matching_distance,
     double const fastest_direct_factor,
+    bool const with_leg_geometry,
     unsigned const api_version) const {
   if (!w_ || !l_) {
     return {};
@@ -469,7 +470,7 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
         *w_, *l_, e, elevations_, from, to, out,
         arrive_by ? std::nullopt : std::optional{time},
         arrive_by ? std::optional{time} : std::nullopt, max_matching_distance,
-        osr_params, cache, *blocked, api_version, max);
+        osr_params, with_leg_geometry, cache, *blocked, api_version, max);
     if (itinerary.legs_.empty()) {
       return false;
     }
@@ -720,7 +721,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                              config_.limits_.value()
                                  .street_routing_max_direct_seconds_}),
                 query.maxMatchingDistance_, query.fastestDirectFactor_,
-                api_version)
+                query.withLegGeometry_, api_version)
           : std::pair{std::vector<api::Itinerary>{}, kInfinityDuration};
   UTL_STOP_TIMING(direct);
 
@@ -954,6 +955,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                   osr_params, query.pedestrianProfile_, query.elevationCosts_,
                   query.joinInterlinedLegs_, query.detailedTransfers_,
                   query.withFares_, query.withScheduledSkippedStops_,
+                  query.withLegGeometry_,
                   config_.timetable_.value().max_matching_distance_,
                   query.maxMatchingDistance_, api_version,
                   query.ignorePreTransitRentalReturnConstraints_,
