@@ -101,10 +101,10 @@ TEST(odm, prima_update) {
   auto p = prima{"prima_url", loc, loc, motis::api::plan_params{}};
   p.fixed_ = n::event_type::kDep;
   p.cap_ = {.wheelchairs_ = 1, .bikes_ = 0, .passengers_ = 1, .luggage_ = 0};
-  p.first_mile_taxi_ = {
+  p.first_mile_taxi_offsets_ = {
       {get_loc_idx("A"), n::duration_t{60min}, motis::kOdmTransportModeId},
       {get_loc_idx("B"), n::duration_t{60min}, motis::kOdmTransportModeId}};
-  p.last_mile_taxi_ = {
+  p.last_mile_taxi_offsets_ = {
       {get_loc_idx("C"), n::duration_t{60min}, motis::kOdmTransportModeId},
       {get_loc_idx("D"), n::duration_t{60min}, motis::kOdmTransportModeId}};
 
@@ -115,22 +115,22 @@ TEST(odm, prima_update) {
   EXPECT_FALSE(p.consume_blacklist_taxi_response(invalid_response));
   EXPECT_TRUE(p.consume_blacklist_taxi_response(blacklist_response));
 
-  ASSERT_EQ(p.first_mile_taxi_.size(), 2);
-  EXPECT_EQ(p.first_mile_taxi_[0].target_, get_loc_idx("A"));
+  ASSERT_EQ(p.first_mile_taxi_offsets_.size(), 2);
+  EXPECT_EQ(p.first_mile_taxi_offsets_[0].target_, get_loc_idx("A"));
   ASSERT_EQ(p.first_mile_taxi_times_[0].size(), 1);
   EXPECT_EQ(p.first_mile_taxi_times_[0][0].from_, to_unix(32400000));
   EXPECT_EQ(p.first_mile_taxi_times_[0][0].to_, to_unix(43200000));
-  EXPECT_EQ(p.first_mile_taxi_[1].target_, get_loc_idx("B"));
+  EXPECT_EQ(p.first_mile_taxi_offsets_[1].target_, get_loc_idx("B"));
   ASSERT_EQ(p.first_mile_taxi_times_[1].size(), 1);
   EXPECT_EQ(p.first_mile_taxi_times_[1][0].from_, to_unix(43200000));
   EXPECT_EQ(p.first_mile_taxi_times_[1][0].to_, to_unix(64800000));
 
-  ASSERT_EQ(p.last_mile_taxi_.size(), 2);
-  EXPECT_EQ(p.last_mile_taxi_[0].target_, get_loc_idx("C"));
+  ASSERT_EQ(p.last_mile_taxi_offsets_.size(), 2);
+  EXPECT_EQ(p.last_mile_taxi_offsets_[0].target_, get_loc_idx("C"));
   ASSERT_EQ(p.last_mile_taxi_times_[0].size(), 1);
   EXPECT_EQ(p.last_mile_taxi_times_[0][0].from_, to_unix(43200000));
   EXPECT_EQ(p.last_mile_taxi_times_[0][0].to_, to_unix(64800000));
-  EXPECT_EQ(p.last_mile_taxi_[1].target_, get_loc_idx("D"));
+  EXPECT_EQ(p.last_mile_taxi_offsets_[1].target_, get_loc_idx("D"));
   EXPECT_EQ(p.last_mile_taxi_times_[1].size(), 0);
 
   auto const expected_direct_interval =
