@@ -12,10 +12,10 @@
 
 namespace motis::odm {
 
-template <typename T>
+template <typename A, typename B>
 void fix_first_mile_duration(std::vector<nigiri::routing::journey>& journeys,
-                             std::vector<T> const& first_mile,
-                             std::vector<T> const& prev_first_mile,
+                             std::vector<A> const& first_mile,
+                             std::vector<B> const& prev_first_mile,
                              nigiri::transport_mode_id_t const mode) {
   for (auto const [curr, prev] : utl::zip(first_mile, prev_first_mile)) {
 
@@ -59,10 +59,10 @@ void fix_first_mile_duration(std::vector<nigiri::routing::journey>& journeys,
   }
 }
 
-template <typename T>
+template <typename A, typename B>
 void fix_last_mile_duration(std::vector<nigiri::routing::journey>& journeys,
-                            std::vector<T> const& last_mile,
-                            std::vector<T> const& prev_last_mile,
+                            std::vector<A> const& last_mile,
+                            std::vector<B> const& prev_last_mile,
                             nigiri::transport_mode_id_t const mode) {
   for (auto const [curr, prev] : utl::zip(last_mile, prev_last_mile)) {
     auto const uses_prev =

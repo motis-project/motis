@@ -35,7 +35,7 @@ using service_times_t = std::vector<nigiri::interval<nigiri::unixtime_t>>;
 struct prima_data {
   std::int64_t passenger_delta_{};
   std::int64_t approach_return_delta_{};
-  std::int64_t fully_payed_delta_{};
+  std::int64_t fully_paid_delta_{};
   std::int64_t waiting_time_delta_{};
   std::int64_t cost_{};
 };
