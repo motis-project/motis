@@ -436,8 +436,8 @@ jobs:
       # for OIDC-based publishing to npm
       - name: setup npm v11
         run: pnpm install -g npm@11
-      - run: pnpm version from-git --no-git-tag-version
-        working-directory: ui/api
+      #- run: pnpm version from-git --no-git-tag-version
+      #  working-directory: ui/api
       - run: pnpm ci
         working-directory: ui/api
       - run: pnpm run build
