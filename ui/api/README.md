@@ -8,7 +8,9 @@ For example:
 const response = await stoptimes({
 	throwOnError: true,
 	baseUrl: 'https://api.transitous.org',
-	userAgent: 'my-user-agent',
+	headers: {
+		'User-Agent': 'my-user-agent'
+	},
 	query: {
 		stopId: 'de-DELFI_de:06412:7010:1:3',
 		n: 10,
