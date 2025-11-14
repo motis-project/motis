@@ -54,8 +54,7 @@ namespace n = nigiri;
 namespace nr = nigiri::routing;
 using namespace std::chrono_literals;
 
-using td_offsets_t =
-    n::hash_map<n::location_idx_t, std::vector<nr::td_offset>>;
+using td_offsets_t = n::hash_map<n::location_idx_t, std::vector<nr::td_offset>>;
 
 namespace motis::odm {
 
@@ -213,11 +212,10 @@ std::vector<meta_router::routing_result> meta_router::search_interval(
     };
     return ctx_call(ctx_data{}, std::move(fn));
   });
-  return utl::to_vec(
-      tasks,
-      [](ctx::future_ptr<ctx_data, routing_result> const& t) {
-        return t->val();
-      });
+  return utl::to_vec(tasks,
+                     [](ctx::future_ptr<ctx_data, routing_result> const& t) {
+                       return t->val();
+                     });
 }
 
 std::vector<nr::journey> collect_odm_journeys(
