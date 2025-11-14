@@ -501,7 +501,7 @@ api::plan_response meta_router::run() {
                 if (a.dep_ == response.legs_.front().startTime_ &&
                     a.arr_ == response.legs_.front().endTime_) {
                   response.legs_.front().tripId_ = std::optional{
-                      std::to_string(p.direct_ride_sharing_tour_ids_[i])};
+                      p.direct_ride_sharing_tour_ids_.at(i).view()};
                   break;
                 }
               }
@@ -519,7 +519,7 @@ api::plan_response meta_router::run() {
                     r_.tags_->id(*tt_, a.stop_) ==
                         response.legs_.front().to_.stopId_) {
                   response.legs_.front().tripId_ = std::optional{
-                      std::to_string(p.first_mile_ride_sharing_tour_ids_[i])};
+                      p.first_mile_ride_sharing_tour_ids_.at(i).view()};
                   break;
                 }
               }
@@ -535,7 +535,7 @@ api::plan_response meta_router::run() {
                     r_.tags_->id(*tt_, a.stop_) ==
                         response.legs_.back().from_.stopId_) {
                   response.legs_.back().tripId_ = std::optional{
-                      std::to_string(p.last_mile_ride_sharing_tour_ids_[i])};
+                      p.last_mile_ride_sharing_tour_ids_.at(i).view()};
                   break;
                 }
               }

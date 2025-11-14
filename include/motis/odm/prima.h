@@ -119,11 +119,11 @@ struct prima {
   std::vector<direct_ride> direct_taxi_{};
 
   std::vector<nigiri::routing::start> first_mile_ride_sharing_{};
-  std::vector<std::uint32_t> first_mile_ride_sharing_tour_ids_{};
+  nigiri::vecvec<size_t, char> first_mile_ride_sharing_tour_ids_{};
   std::vector<nigiri::routing::start> last_mile_ride_sharing_{};
-  std::vector<std::uint32_t> last_mile_ride_sharing_tour_ids_{};
+  nigiri::vecvec<size_t, char> last_mile_ride_sharing_tour_ids_{};
   std::vector<direct_ride> direct_ride_sharing_{};
-  std::vector<std::uint32_t> direct_ride_sharing_tour_ids_{};
+  nigiri::vecvec<size_t, char> direct_ride_sharing_tour_ids_{};
 };
 
 void extract_taxis(std::vector<nigiri::routing::journey> const&,
