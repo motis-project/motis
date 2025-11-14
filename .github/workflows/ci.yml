@@ -421,6 +421,7 @@ jobs:
   publish-motis-client:
     #if: github.event.action == 'published'
     runs-on: ubuntu-latest
+    #needs: linux
     permissions:
       contents: read
       packages: write
@@ -430,17 +431,14 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10
       # for OIDC-based publishing to npm
       - name: setup npm v11
-        run: pnpm install -g npm@11
-      #- run: pnpm version from-git --no-git-tag-version
+        run: npm install -g npm@11
+      #- run: npm version from-git --no-git-tag-version
       #  working-directory: ui/api
-      - run: pnpm ci
+      - run: npm ci
         working-directory: ui/api
-      - run: pnpm run build
+      - run: npm run build
         working-directory: ui/api
       - run: npm publish --provenance --access public   
         working-directory: ui/api
