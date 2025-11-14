@@ -35,6 +35,7 @@
 #include "motis/journey_to_response.h"
 #include "motis/metrics_registry.h"
 #include "motis/odm/bounds.h"
+#include "motis/odm/fix_duration.h"
 #include "motis/odm/journeys.h"
 #include "motis/odm/mixer.h"
 #include "motis/odm/odm.h"
@@ -50,10 +51,11 @@
 #include "motis/transport_mode_ids.h"
 
 namespace n = nigiri;
+namespace nr = nigiri::routing;
 using namespace std::chrono_literals;
 
 using td_offsets_t =
-    n::hash_map<n::location_idx_t, std::vector<n::routing::td_offset>>;
+    n::hash_map<n::location_idx_t, std::vector<nr::td_offset>>;
 
 namespace motis::odm {
 
@@ -80,7 +82,7 @@ meta_router::meta_router(ep::routing const& r,
                          std::variant<osr::location, tt_location> const& to,
                          api::Place const& from_p,
                          api::Place const& to_p,
-                         nigiri::routing::query const& start_time,
+                         nr::query const& start_time,
                          std::vector<api::Itinerary>& direct,
                          nigiri::duration_t const fastest_direct,
                          bool const odm_pre_transit,
@@ -151,7 +153,7 @@ meta_router::meta_router(ep::routing const& r,
 
 meta_router::~meta_router() = default;
 
-n::routing::query meta_router::get_base_query(
+nr::query meta_router::get_base_query(
     n::interval<n::unixtime_t> const& intvl) const {
   return {
       .start_time_ = intvl,
@@ -160,7 +162,7 @@ n::routing::query meta_router::get_base_query(
       .use_start_footpaths_ = !motis::ep::is_intermodal(start_),
       .max_transfers_ = static_cast<std::uint8_t>(
           query_.maxTransfers_.has_value() ? *query_.maxTransfers_
-                                           : n::routing::kMaxTransfers),
+                                           : nr::kMaxTransfers),
       .max_travel_time_ = query_.maxTravelTime_
                               .and_then([](std::int64_t const dur) {
                                 return std::optional{n::duration_t{dur}};
@@ -181,7 +183,7 @@ n::routing::query meta_router::get_base_query(
       .require_bike_transport_ = query_.requireBikeTransport_,
       .require_car_transport_ = query_.requireCarTransport_,
       .transfer_time_settings_ =
-          n::routing::transfer_time_settings{
+          nr::transfer_time_settings{
               .default_ = (query_.minTransferTime_ == 0 &&
                            query_.additionalTransferTime_ == 0 &&
                            query_.transferTimeFactor_ == 1.0),
@@ -197,13 +199,13 @@ n::routing::query meta_router::get_base_query(
 }
 
 std::vector<meta_router::routing_result> meta_router::search_interval(
-    std::vector<n::routing::query> const& sub_queries) const {
-  auto const tasks = utl::to_vec(sub_queries, [&](n::routing::query const& q) {
+    std::vector<nr::query> const& sub_queries) const {
+  auto const tasks = utl::to_vec(sub_queries, [&](nr::query const& q) {
     auto fn = [&, q = std::move(q)]() mutable {
       auto const timeout = std::chrono::seconds{query_.timeout_.value_or(
           r_.config_.limits_.value().routing_max_timeout_seconds_)};
-      auto search_state = n::routing::search_state{};
-      auto raptor_state = n::routing::raptor_state{};
+      auto search_state = nr::search_state{};
+      auto raptor_state = nr::raptor_state{};
       return routing_result{raptor_search(
           *tt_, rtt_, search_state, raptor_state, std::move(q),
           query_.arriveBy_ ? n::direction::kBackward : n::direction::kForward,
@@ -213,15 +215,15 @@ std::vector<meta_router::routing_result> meta_router::search_interval(
   });
   return utl::to_vec(
       tasks,
-      [](ctx::future_ptr<ctx_data, meta_router::routing_result> const& t) {
+      [](ctx::future_ptr<ctx_data, routing_result> const& t) {
         return t->val();
       });
 }
 
-std::vector<n::routing::journey> collect_odm_journeys(
+std::vector<nr::journey> collect_odm_journeys(
     std::vector<meta_router::routing_result> const& results,
     nigiri::transport_mode_id_t const mode) {
-  auto taxi_journeys = std::vector<n::routing::journey>{};
+  auto taxi_journeys = std::vector<nr::journey>{};
   for (auto const& r : results | std::views::drop(1)) {
     for (auto const& j : r.journeys_) {
       if (uses_odm(j, mode)) {
@@ -294,18 +296,19 @@ api::plan_response meta_router::run() {
       init_start,
       fmt::format("[init] (#first_mile_offsets: {}, #last_mile_offsets: {}, "
                   "#direct_rides: {})",
-                  p.first_mile_taxi_offsets_.size(), p.last_mile_taxi_offsets_.size(),
-                  p.direct_taxi_.size()),
+                  p.first_mile_taxi_offsets_.size(),
+                  p.last_mile_taxi_offsets_.size(), p.direct_taxi_.size()),
       r_.metrics_->routing_execution_duration_seconds_init_);
 
   auto const blacklist_start = std::chrono::steady_clock::now();
   auto const blacklisted_taxis = p.blacklist_taxi(*tt_, taxi_intvl);
-  print_time(blacklist_start,
-             fmt::format("[blacklist taxi] (#first_mile_offsets: {}, "
-                         "#last_mile_offsets: {}, #direct_rides: {})",
-                         p.first_mile_taxi_offsets_.size(), p.last_mile_taxi_offsets_.size(),
-                         p.direct_taxi_.size()),
-             r_.metrics_->routing_execution_duration_seconds_blacklisting_);
+  print_time(
+      blacklist_start,
+      fmt::format("[blacklist taxi] (#first_mile_offsets: {}, "
+                  "#last_mile_offsets: {}, #direct_rides: {})",
+                  p.first_mile_taxi_offsets_.size(),
+                  p.last_mile_taxi_offsets_.size(), p.direct_taxi_.size()),
+      r_.metrics_->routing_execution_duration_seconds_blacklisting_);
 
   auto const whitelist_ride_sharing_start = std::chrono::steady_clock::now();
   auto const whitelisted_ride_sharing = p.whitelist_ride_sharing(*tt_);
@@ -401,17 +404,18 @@ api::plan_response meta_router::run() {
   auto const& pt_result = results.front();
   auto taxi_journeys = collect_odm_journeys(results, kOdmTransportModeId);
   shorten(taxi_journeys, p.first_mile_taxi_offsets_, p.first_mile_taxi_times_,
-          p.last_mile_taxi_offsets_, p.last_mile_taxi_times_, *tt_, rtt_, query_);
+          p.last_mile_taxi_offsets_, p.last_mile_taxi_times_, *tt_, rtt_,
+          query_);
   auto ride_share_journeys =
       collect_odm_journeys(results, kRideSharingTransportModeId);
-  fix_first_mile_duration(ride_share_journeys, p.first_mile_ride_sharing_,
-                          p.first_mile_ride_sharing_,
-                          kRideSharingTransportModeId);
+  fix_first_mile_duration<>(ride_share_journeys, p.first_mile_ride_sharing_,
+                            p.first_mile_ride_sharing_,
+                            kRideSharingTransportModeId);
   fix_last_mile_duration(ride_share_journeys, p.last_mile_ride_sharing_,
                          p.last_mile_ride_sharing_,
                          kRideSharingTransportModeId);
   utl::erase_duplicates(
-      taxi_journeys, std::less<n::routing::journey>{},
+      taxi_journeys, std::less<nr::journey>{},
       [](auto const& a, auto const& b) {
         return a == b &&
                odm_time(a.legs_.front()) == odm_time(b.legs_.front()) &&
@@ -431,12 +435,13 @@ api::plan_response meta_router::run() {
     add_direct_odm(p.direct_ride_sharing_, ride_share_journeys, from_, to_,
                    query_.arriveBy_, kRideSharingTransportModeId);
   }
-  print_time(whitelist_start,
-             fmt::format("[whitelisting] (#first_mile_taxi: {}, "
-                         "#last_mile_taxi: {}, #direct_taxi: {})",
-                         p.first_mile_taxi_offsets_.size(), p.last_mile_taxi_offsets_.size(),
-                         p.direct_taxi_.size()),
-             r_.metrics_->routing_execution_duration_seconds_whitelisting_);
+  print_time(
+      whitelist_start,
+      fmt::format("[whitelisting] (#first_mile_taxi: {}, "
+                  "#last_mile_taxi: {}, #direct_taxi: {})",
+                  p.first_mile_taxi_offsets_.size(),
+                  p.last_mile_taxi_offsets_.size(), p.direct_taxi_.size()),
+      r_.metrics_->routing_execution_duration_seconds_whitelisting_);
   r_.metrics_->routing_odm_journeys_found_whitelist_.Observe(
       static_cast<double>(taxi_journeys.size()));
 

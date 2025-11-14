@@ -43,7 +43,7 @@ struct prima_data {
 struct direct_ride {
   nigiri::unixtime_t dep_;
   nigiri::unixtime_t arr_;
-  prima_data pd_;
+  prima_data pd_{};
 };
 
 struct ride : nigiri::routing::start {

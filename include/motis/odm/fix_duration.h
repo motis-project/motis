@@ -12,7 +12,7 @@
 
 namespace motis::odm {
 
-template <typename A, typename B>
+template <typename A = nigiri::routing::start, typename B = nigiri::routing::start>
 void fix_first_mile_duration(std::vector<nigiri::routing::journey>& journeys,
                              std::vector<A> const& first_mile,
                              std::vector<B> const& prev_first_mile,
@@ -59,7 +59,7 @@ void fix_first_mile_duration(std::vector<nigiri::routing::journey>& journeys,
   }
 }
 
-template <typename A, typename B>
+template <typename A = nigiri::routing::start, typename B = nigiri::routing::start>
 void fix_last_mile_duration(std::vector<nigiri::routing::journey>& journeys,
                             std::vector<A> const& last_mile,
                             std::vector<B> const& prev_last_mile,

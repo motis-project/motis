@@ -81,25 +81,27 @@ bool prima::consume_whitelist_taxi_response(
       return true;
     }
 
-    auto in_it = std::begin(first_mile_in);
+    auto i = std::begin(first_mile_in);
     for (auto const& stop : update) {
       for (auto const& event : stop.as_array()) {
         if (event.is_null()) {
           first_mile_taxi_rides_.push_back(
-              {{kInfeasible, kInfeasible, in_it->stop_}, .pd_ = {}});
+              {{kInfeasible, kInfeasible, i->stop_}, .pd_ = {}});
         } else {
           auto const o = event.as_object();
           first_mile_taxi_rides_.push_back(
               {{.time_at_start_ = to_unix(o.at("pickupTime").as_int64()),
                 .time_at_stop_ = to_unix(o.at("dropoffTime").as_int64()),
-                .stop_ = in_it->stop_},
+                .stop_ = i->stop_},
                .pd_ = read_prima_data(o)});
         }
-        ++in_it;
+        ++i;
       }
     }
+
     fix_first_mile_duration<ride>(journeys, first_mile_taxi_rides_,
                                   first_mile_in, kOdmTransportModeId);
+
     return false;
   };
 
@@ -112,27 +114,27 @@ bool prima::consume_whitelist_taxi_response(
       return true;
     }
 
-    auto prev_it = std::begin(last_mile_in);
+    auto i = std::begin(last_mile_in);
     for (auto const& stop : update) {
       for (auto const& event : stop.as_array()) {
         if (event.is_null()) {
-          last_mile_in.push_back({.time_at_start_ = kInfeasible,
-                                  .time_at_stop_ = kInfeasible,
-                                  .stop_ = prev_it->stop_});
+          last_mile_taxi_rides_.push_back(
+              {{kInfeasible, kInfeasible, i->stop_}, .pd_ = {}});
         } else {
-          last_mile_in.push_back(
-              {.time_at_start_ =
-                   to_unix(event.as_object().at("dropoffTime").as_int64()),
-               .time_at_stop_ =
-                   to_unix(event.as_object().at("pickupTime").as_int64()),
-               .stop_ = prev_it->stop_});
+          auto const o = event.as_object();
+          last_mile_taxi_rides_.push_back(
+              {{.time_at_start_ = to_unix(o.at("dropoffTime").as_int64()),
+                .time_at_stop_ = to_unix(o.at("pickupTime").as_int64()),
+                .stop_ = i->stop_},
+               .pd_ = read_prima_data(o)});
         }
-        ++prev_it;
+        ++i;
       }
     }
 
     fix_last_mile_duration<ride>(journeys, last_mile_taxi_rides_, last_mile_in,
                                  kOdmTransportModeId);
+
     return false;
   };
 
@@ -148,9 +150,10 @@ bool prima::consume_whitelist_taxi_response(
     direct_taxi_.clear();
     for (auto const& ride : update) {
       if (!ride.is_null()) {
-        direct_taxi_.push_back(
-            {to_unix(ride.as_object().at("pickupTime").as_int64()),
-             to_unix(ride.as_object().at("dropoffTime").as_int64())});
+        auto const o = ride.as_object();
+        direct_taxi_.push_back({to_unix(o.at("pickupTime").as_int64()),
+                                to_unix(o.at("dropoffTime").as_int64()),
+                                .pd_ = read_prima_data(o)});
       }
     }
 
