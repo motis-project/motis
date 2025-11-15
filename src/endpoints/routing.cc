@@ -903,7 +903,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
 
     auto search_state = n::routing::search_state{};
     auto r = n::routing::routing_result{};
-    if (query.algorithm_ == api::algorithmEnum::PONG &&
+    if (query.algorithm_ == api::algorithmEnum::PONG && !query.timetableView_ &&
         // arriveBy |  extend_later | PONG applicable
         // ---------+---------------+---------------------
         // FALSE    |  FALSE        | FALSE    => rRAPTOR
