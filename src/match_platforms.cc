@@ -292,7 +292,6 @@ std::vector<osr::match_t> get_reverse_platform_way_matches(
     std::span<osr::location const> const osr_locations,
     osr::direction const dir,
     double const max_matching_distance) {
-  auto timer = utl::scoped_timer{"get_reverse_platform_way_matches"};
   auto const use_raw_matches =
       way_matches && !way_matches->matches_.empty() &&
       way_matches->max_matching_distance_ >= max_matching_distance;
