@@ -105,8 +105,8 @@ data::data(std::filesystem::path p, config const& c)
       odm_bounds_ = std::make_unique<odm::bounds>(*c.prima_->bounds_);
     }
     if (c.prima_->ride_sharing_bounds_.has_value()) {
-      ride_sharing_bounds_ =
-          std::make_unique<odm::bounds>(*c.prima_->ride_sharing_bounds_);
+      ride_sharing_bounds_ = std::make_unique<odm::ride_sharing_bounds>(
+          *c.prima_->ride_sharing_bounds_);
     }
   }
 

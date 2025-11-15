@@ -4,24 +4,21 @@
 
 #include "boost/json.hpp"
 
-#include "utl/overloaded.h"
-
 #include "nigiri/logging.h"
-#include "nigiri/special_stations.h"
 
 #include "motis/metrics_registry.h"
 #include "motis/odm/journeys.h"
 #include "motis/odm/odm.h"
 #include "motis/transport_mode_ids.h"
 
-namespace motis::odm {
-
 namespace n = nigiri;
 namespace nr = nigiri::routing;
 namespace fs = std::filesystem;
 using namespace std::chrono_literals;
 
-static constexpr auto const kMixerTracing = false;
+namespace motis::odm {
+
+static constexpr auto kMixerTracing = false;
 
 cost_threshold tag_invoke(boost::json::value_to_tag<cost_threshold>,
                           boost::json::value const& jv) {
@@ -41,8 +38,7 @@ std::string label(nr::journey const& j) {
                      std::uint32_t{j.transfers_}, odm_time(j));
 }
 
-void mixer::pareto_dominance(
-    std::vector<nigiri::routing::journey>& odm_journeys) {
+void mixer::pareto_dominance(std::vector<nr::journey>& odm_journeys) {
 
   auto const pareto_dom = [](nr::journey const& a,
                              nr::journey const& b) -> bool {
@@ -117,7 +113,7 @@ n::unixtime_t center(nr::journey const& j) {
 
 std::vector<double> mixer::get_threshold(
     std::vector<nr::journey> const& v,
-    n::interval<nigiri::unixtime_t> const& intvl,
+    n::interval<n::unixtime_t> const& intvl,
     double const slope) const {
 
   if (intvl.from_ >= intvl.to_) {
@@ -210,7 +206,7 @@ void mixer::write_journeys(n::pareto_set<nr::journey> const& pt_journeys,
 
 void write_thresholds(std::vector<double> const& pt_threshold,
                       std::vector<double> const& odm_threshold,
-                      n::interval<nigiri::unixtime_t> const& intvl,
+                      n::interval<n::unixtime_t> const& intvl,
                       std::string_view const stats_path) {
   auto const threshold_to_csv = [&](auto const& threshold,
                                     auto const& file_name) {
@@ -281,7 +277,6 @@ void mixer::mix(n::pareto_set<nr::journey> const& pt_journeys,
   auto const pt_threshold = get_threshold(pt_journeys.els_, intvl, pt_slope_);
   threshold_filter(pt_threshold);
   auto const pt_filtered_n = taxi_journeys.size();
-
   auto const odm_threshold = get_threshold(taxi_journeys, intvl, odm_slope_);
   threshold_filter(odm_threshold);
 

@@ -341,7 +341,7 @@
 				{/if}
 				{#if l.intermediateStops?.length === 0}
 					<div class="py-10 pl-4 md:pl-4 flex items-center text-muted-foreground">
-						{t.tripIntermediateStops(0)}
+						{t.tripIntermediateStops(0)} ({formatDurationSec(l.duration)})
 					</div>
 					{@render ticketInfo(prevTransitLeg, l)}
 				{:else}
