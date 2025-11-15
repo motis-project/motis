@@ -56,6 +56,7 @@ void add_flex_td_offsets(osr::ways const&,
                          double const max_matching_distance,
                          osr_parameters const&,
                          flex_routing_data&,
-                         nigiri::routing::td_offsets_t&);
+                         nigiri::routing::td_offsets_t&,
+                         std::map<std::string, std::uint64_t>& stats);
 
 }  // namespace motis::flex
