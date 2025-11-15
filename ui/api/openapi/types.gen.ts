@@ -337,6 +337,10 @@ export type Place = {
      */
     stopId?: string;
     /**
+     * If it's not a root stop, this field contains the `stopId` of the parent stop.
+     */
+    parentId?: string;
+    /**
      * The importance of the stop between 0-1.
      */
     importance?: number;
@@ -490,6 +494,8 @@ export type StopTime = {
     agencyId: string;
     agencyName: string;
     agencyUrl: string;
+    routeId: string;
+    directionId: string;
     routeColor?: string;
     routeTextColor?: string;
     tripId: string;
@@ -1110,6 +1116,8 @@ export type Leg = {
      * final stop of this trip (can differ from headsign)
      */
     tripTo?: Place;
+    routeId?: string;
+    directionId?: string;
     routeColor?: string;
     routeTextColor?: string;
     routeType?: number;

@@ -382,6 +382,10 @@ export const PlaceSchema = {
             description: "The ID of the stop. This is often something that users don't care about.",
             type: 'string'
         },
+        parentId: {
+            description: "If it's not a root stop, this field contains the `stopId` of the parent stop.",
+            type: 'string'
+        },
         importance: {
             description: 'The importance of the stop between 0-1.',
             type: 'number'
@@ -527,7 +531,7 @@ export const ReachableSchema = {
 export const StopTimeSchema = {
     description: 'departure or arrival event at a stop',
     type: 'object',
-    required: ['place', 'mode', 'realTime', 'headsign', 'tripTo', 'agencyId', 'agencyName', 'agencyUrl', 'tripId', 'routeShortName', 'routeLongName', 'tripShortName', 'displayName', 'pickupDropoffType', 'cancelled', 'tripCancelled', 'source'],
+    required: ['place', 'mode', 'realTime', 'headsign', 'tripTo', 'agencyId', 'agencyName', 'agencyUrl', 'tripId', 'routeId', 'directionId', 'routeShortName', 'routeLongName', 'tripShortName', 'displayName', 'pickupDropoffType', 'cancelled', 'tripCancelled', 'source'],
     properties: {
         place: {
             '$ref': '#/components/schemas/Place',
@@ -558,6 +562,12 @@ For non-transit legs, null
             type: 'string'
         },
         agencyUrl: {
+            type: 'string'
+        },
+        routeId: {
+            type: 'string'
+        },
+        directionId: {
             type: 'string'
         },
         routeColor: {
@@ -1349,6 +1359,12 @@ For non-transit legs, null
         tripTo: {
             description: 'final stop of this trip (can differ from headsign)',
             '$ref': '#/components/schemas/Place'
+        },
+        routeId: {
+            type: 'string'
+        },
+        directionId: {
+            type: 'string'
         },
         routeColor: {
             type: 'string'
