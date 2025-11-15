@@ -9,7 +9,7 @@
 
 #include "cista/io.h"
 
-#include "adr/area_database.h"
+#include "geo/area_db.h"
 
 #include "utl/erase_if.h"
 #include "utl/read_file.h"
@@ -42,7 +42,6 @@
 #include "osr/ways.h"
 
 #include "adr/adr.h"
-#include "adr/area_database.h"
 #include "adr/reverse.h"
 #include "adr/typeahead.h"
 
@@ -368,63 +367,67 @@ data import(config const& c, fs::path const& data_path, bool const write) {
       [&]() { d.load_tbd(); },
       {tt_hash, n_version(), tbd_version()}};
 
-  auto adr_extend =
-      task{"adr_extend",
-           [&]() {
-             return c.timetable_.has_value() &&
-                    (c.geocoding_ || c.reverse_geocoding_);
-           },
-           [&]() { return d.tt_.get() != nullptr; },
-           [&]() {
-             auto const area_db = d.t_ ? (std::optional<adr::area_database>{
-                                             std::in_place, data_path / "adr",
-                                             cista::mmap::protection::READ})
-                                       : std::nullopt;
-             if (!d.t_) {
-               d.t_ = cista::wrapped<adr::typeahead>{
-                   cista::raw::make_unique<adr::typeahead>()};
-             }
-             auto const location_extra_place = adr_extend_tt(
-                 *d.tt_, area_db.has_value() ? &*area_db : nullptr, *d.t_);
-             if (write) {
-               auto ec = std::error_code{};
-               std::filesystem::create_directories(data_path / "adr", ec);
-               cista::write(data_path / "adr" / "t_ext.bin", *d.t_);
-               cista::write(data_path / "adr" / "location_extra_place.bin",
-                            location_extra_place);
-             }
-             d.r_.reset();
-             {
-               auto r = adr::reverse{data_path / "adr",
-                                     cista::mmap::protection::WRITE};
-               r.build_rtree(*d.t_);
-               r.write();
-             }
-             d.t_.reset();
-             if (c.geocoding_) {
-               d.load_geocoder();
-             }
-             if (c.reverse_geocoding_) {
-               d.load_reverse_geocoder();
-             }
-           },
-           [&]() {
-             d.t_.reset();
-             d.r_.reset();
-             if (c.geocoding_) {
-               d.load_geocoder();
-             }
-             if (c.reverse_geocoding_) {
-               d.load_reverse_geocoder();
-             }
-           },
-           {tt_hash,
-            osm_hash,
-            adr_version(),
-            adr_ext_version(),
-            n_version(),
-            {"geocoding", c.geocoding_},
-            {"reverse_geocoding", c.reverse_geocoding_}}};
+  auto adr_extend = task{
+      "adr_extend",
+      [&]() {
+        return c.timetable_.has_value() &&
+               (c.geocoding_ || c.reverse_geocoding_);
+      },
+      [&]() { return d.tt_.get() != nullptr; },
+      [&]() {
+        auto const area_db_storage =
+            d.t_ ? (std::optional<geo::area_db_storage<adr::area_idx_t>>{
+                       std::in_place, data_path / "adr",
+                       cista::mmap::protection::READ})
+                 : std::nullopt;
+        auto const area_db_lookup = area_db_storage.and_then(
+            [](auto&& s) { return std::optional{geo::area_db_lookup{s}}; });
+        if (!d.t_) {
+          d.t_ = cista::wrapped<adr::typeahead>{
+              cista::raw::make_unique<adr::typeahead>()};
+        }
+        auto const location_extra_place = adr_extend_tt(
+            *d.tt_, area_db_lookup.has_value() ? &*area_db_lookup : nullptr,
+            *d.t_);
+        if (write) {
+          auto ec = std::error_code{};
+          std::filesystem::create_directories(data_path / "adr", ec);
+          cista::write(data_path / "adr" / "t_ext.bin", *d.t_);
+          cista::write(data_path / "adr" / "location_extra_place.bin",
+                       location_extra_place);
+        }
+        d.r_.reset();
+        {
+          auto r =
+              adr::reverse{data_path / "adr", cista::mmap::protection::WRITE};
+          r.build_rtree(*d.t_);
+          r.write();
+        }
+        d.t_.reset();
+        if (c.geocoding_) {
+          d.load_geocoder();
+        }
+        if (c.reverse_geocoding_) {
+          d.load_reverse_geocoder();
+        }
+      },
+      [&]() {
+        d.t_.reset();
+        d.r_.reset();
+        if (c.geocoding_) {
+          d.load_geocoder();
+        }
+        if (c.reverse_geocoding_) {
+          d.load_reverse_geocoder();
+        }
+      },
+      {tt_hash,
+       osm_hash,
+       adr_version(),
+       adr_ext_version(),
+       n_version(),
+       {"geocoding", c.geocoding_},
+       {"reverse_geocoding", c.reverse_geocoding_}}};
 
   auto osr_footpath_settings_hash =
       meta_entry_t{"osr_footpath_settings", cista::BASE_HASH};

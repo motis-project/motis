@@ -2,9 +2,12 @@
 
 #include "date/tz.h"
 
+#include "geo/area_db.h"
+
 #include "nigiri/routing/clasz_mask.h"
 #include "nigiri/types.h"
 
+#include "adr/types.h"
 #include "motis/fwd.h"
 #include "motis/types.h"
 
@@ -28,7 +31,7 @@ date::time_zone const* get_tz(nigiri::timetable const&,
                               nigiri::location_idx_t);
 
 adr_ext adr_extend_tt(nigiri::timetable const&,
-                      adr::area_database const*,
+                      geo::area_db_lookup<adr::area_idx_t> const*,
                       adr::typeahead&);
 
 }  // namespace motis
