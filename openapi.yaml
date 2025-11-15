@@ -845,7 +845,7 @@ paths:
               - RAPTOR
               - PONG
               - TB
-            default: RAPTOR
+            default: PONG
       responses:
         '400':
           description: Bad Request
@@ -3552,7 +3552,7 @@ components:
           description: geo locations as latitude;longitude,latitude;longitude,...
           type: array
           items:
-              type: string
+            type: string
           explode: false
         mode:
           description: |

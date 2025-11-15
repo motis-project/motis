@@ -153,9 +153,7 @@
 	let time = $state<Date>(new Date(urlParams?.get('time') || Date.now()));
 	let timetableView = $state(urlParams?.get('timetableView') != 'false');
 	let searchWindow = $state(
-		urlParams?.get('searchWindow')
-			? parseInt(urlParams.get('searchWindow')!)
-			: defaultQuery.searchWindow
+		urlParams?.get('searchWindow') ? parseInt(urlParams.get('searchWindow')!) : 900
 	);
 	let numItineraries = $state(
 		urlParams?.get('numItineraries')
@@ -169,7 +167,7 @@
 	);
 	let arriveBy = $state<boolean>(urlParams?.get('arriveBy') == 'true');
 	let algorithm = $state<PlanData['query']['algorithm']>(
-		(urlParams?.get('algorithm') ?? 'PONG') as PlanData['query']['algorithm']
+		(urlParams?.get('algorithm') ?? defaultQuery.algorithm) as PlanData['query']['algorithm']
 	);
 	let useRoutedTransfers = $state(
 		urlParams?.get('useRoutedTransfers') == 'true' || defaultQuery.useRoutedTransfers

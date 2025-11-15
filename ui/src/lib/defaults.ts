@@ -48,7 +48,7 @@ export const defaultQuery = {
 	isochronesDisplayLevel: 'GEOMETRY_CIRCLES',
 	isochronesColor: '#ffff00',
 	isochronesOpacity: 250,
-	algorithm: 'RAPTOR'
+	algorithm: 'PONG'
 };
 
 export const omitDefaults = (query: PlanData['query']): PlanData['query'] => {
