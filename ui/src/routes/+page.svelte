@@ -68,10 +68,16 @@
 	const isSmallScreen = browser && window.innerWidth < 768;
 	let activeTab = $state<'connections' | 'departures' | 'isochrones'>('connections');
 	let dataAttributionLink: string | undefined = $state(undefined);
-	let colorMode = $state<'rt' | 'route' | 'mode' | 'none'>('route');
+	let colorMode = $state<'rt' | 'route' | 'mode' | 'none'>('none');
 	let showMap = $state(!isSmallScreen);
 	let lastSelectedItinerary: Itinerary | undefined = undefined;
 	let lastOneToAllQuery: OneToAllData | undefined = undefined;
+
+	$effect(() => {
+		if (activeTab == 'isochrones') {
+			colorMode = 'none';
+		}
+	});
 
 	let theme: 'light' | 'dark' =
 		(hasDark ? 'dark' : hasLight ? 'light' : undefined) ??
@@ -798,10 +804,10 @@
 					<LocateFixed class="w-5 h-5" />
 				</Button>
 			</Control>
-			<RailViz {map} {bounds} {zoom} {colorMode} />
 			<Rentals {map} {bounds} {zoom} {theme} debug={hasDebug} />
 		{/if}
-		<!-- Isochrones cannot be hidden the same way as RailViz -->
+
+		<RailViz {map} {bounds} {zoom} {colorMode} />
 		<Isochrones
 			{map}
 			{bounds}
