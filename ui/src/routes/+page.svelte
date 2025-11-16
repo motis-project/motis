@@ -534,9 +534,7 @@
 {/snippet}
 
 {#snippet resultContent()}
-	<Control
-		class={isSmallScreen && (page.state.selectedItinerary || page.state.selectedStop) ? 'hide' : ''}
-	>
+	<Control>
 		<Tabs.Root bind:value={activeTab} class="max-w-full w-[520px] overflow-y-auto">
 			<Tabs.List class="grid grid-cols-3">
 				<Tabs.Trigger value="connections">{t.connections}</Tabs.Trigger>
@@ -609,7 +607,7 @@
 		</Tabs.Root>
 	</Control>
 
-	{#if activeTab != 'isochrones' && routingResponses.length !== 0 && !page.state.showDepartures}
+	{#if activeTab == 'connections' && routingResponses.length !== 0 && !page.state.showDepartures}
 		<Control class="min-h-0 md:mb-2 {page.state.selectedItinerary ? 'hide' : ''}">
 			<Card
 				class="scrollable w-[520px] h-full md:max-h-[60vh] {isSmallScreen
@@ -675,7 +673,7 @@
 		{/if}
 	{/if}
 
-	{#if activeTab != 'isochrones' && page.state.selectedStop && page.state.showDepartures}
+	{#if activeTab == 'departures' && page.state.selectedStop && page.state.showDepartures}
 		<Control class="min-h-0 md:mb-2">
 			<Card class="w-[520px] md:max-h-[60vh] h-full bg-background rounded-lg flex flex-col mb-2">
 				<div class="w-full flex justify-between items-center shadow-md pl-1 mb-1">
