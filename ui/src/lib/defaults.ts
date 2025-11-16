@@ -7,7 +7,7 @@ export const defaultQuery = {
 	arriveBy: false,
 	timetableView: true,
 	withFares: false,
-	searchWindow: 7200,
+	searchWindow: 900,
 	pedestrianProfile: 'FOOT',
 	transitModes: ['TRANSIT'],
 	preTransitModes: ['WALK'],

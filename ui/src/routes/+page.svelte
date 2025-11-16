@@ -159,7 +159,9 @@
 	let time = $state<Date>(new Date(urlParams?.get('time') || Date.now()));
 	let timetableView = $state(urlParams?.get('timetableView') != 'false');
 	let searchWindow = $state(
-		urlParams?.get('searchWindow') ? parseInt(urlParams.get('searchWindow')!) : 900
+		urlParams?.get('searchWindow')
+			? parseInt(urlParams.get('searchWindow')!)
+			: defaultQuery.searchWindow
 	);
 	let numItineraries = $state(
 		urlParams?.get('numItineraries')

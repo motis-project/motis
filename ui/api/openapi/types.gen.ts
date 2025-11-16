@@ -1814,9 +1814,9 @@ export type PlanData = {
          */
         requireCarTransport?: boolean;
         /**
-         * Optional. Default is 2 hours which is `7200`.
+         * Optional. Default is 15 minutes which is `900`.
          *
-         * The length of the search-window in seconds. Default value two hours.
+         * The length of the search-window in seconds. Default value 15 minutes.
          *
          * - `arriveBy=true`: number of seconds between the earliest departure time and latest departure time
          * - `arriveBy=false`: number of seconds between the earliest arrival time and the latest arrival time
