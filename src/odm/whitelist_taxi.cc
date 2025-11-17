@@ -85,11 +85,11 @@ bool prima::consume_whitelist_taxi_response(
     for (auto const& stop : update) {
       for (auto const& event : stop.as_array()) {
         if (event.is_null()) {
-          first_mile_taxi_rides_.push_back(
+          first_mile_taxi_.push_back(
               {{kInfeasible, kInfeasible, i->stop_}, {}});
         } else {
           auto const o = event.as_object();
-          first_mile_taxi_rides_.push_back(
+          first_mile_taxi_.push_back(
               {{.time_at_start_ = to_unix(o.at("pickupTime").as_int64()),
                 .time_at_stop_ = to_unix(o.at("dropoffTime").as_int64()),
                 .stop_ = i->stop_},
@@ -99,8 +99,8 @@ bool prima::consume_whitelist_taxi_response(
       }
     }
 
-    fix_first_mile_duration<ride>(journeys, first_mile_taxi_rides_,
-                                  first_mile_in, kOdmTransportModeId);
+    fix_first_mile_duration<ride>(journeys, first_mile_taxi_, first_mile_in,
+                                  kOdmTransportModeId);
 
     return false;
   };
@@ -118,11 +118,10 @@ bool prima::consume_whitelist_taxi_response(
     for (auto const& stop : update) {
       for (auto const& event : stop.as_array()) {
         if (event.is_null()) {
-          last_mile_taxi_rides_.push_back(
-              {{kInfeasible, kInfeasible, i->stop_}, {}});
+          last_mile_taxi_.push_back({{kInfeasible, kInfeasible, i->stop_}, {}});
         } else {
           auto const o = event.as_object();
-          last_mile_taxi_rides_.push_back(
+          last_mile_taxi_.push_back(
               {{.time_at_start_ = to_unix(o.at("dropoffTime").as_int64()),
                 .time_at_stop_ = to_unix(o.at("pickupTime").as_int64()),
                 .stop_ = i->stop_},
@@ -132,7 +131,7 @@ bool prima::consume_whitelist_taxi_response(
       }
     }
 
-    fix_last_mile_duration<ride>(journeys, last_mile_taxi_rides_, last_mile_in,
+    fix_last_mile_duration<ride>(journeys, last_mile_taxi_, last_mile_in,
                                  kOdmTransportModeId);
 
     return false;

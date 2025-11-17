@@ -112,6 +112,8 @@ struct prima {
   bool consume_ride_sharing_response(std::string_view json);
   bool whitelist_ride_sharing(nigiri::timetable const&);
 
+  bool uses_pooling(nigiri::routing::journey const&) const;
+
   api::plan_params const& query_;
 
   boost::urls::url taxi_blacklist_;
@@ -129,8 +131,8 @@ struct prima {
   std::vector<nigiri::routing::offset> last_mile_taxi_offsets_{};
   std::vector<service_times_t> first_mile_taxi_times_{};
   std::vector<service_times_t> last_mile_taxi_times_{};
-  std::vector<ride> first_mile_taxi_rides_{};
-  std::vector<ride> last_mile_taxi_rides_{};
+  std::vector<ride> first_mile_taxi_{};
+  std::vector<ride> last_mile_taxi_{};
   std::vector<direct_ride> direct_taxi_{};
 
   std::vector<nigiri::routing::start> first_mile_ride_sharing_{};

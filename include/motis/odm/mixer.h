@@ -6,6 +6,7 @@
 
 #include "motis-api/motis-api.h"
 #include "motis/fwd.h"
+#include "motis/odm/prima.h"
 
 namespace motis::odm {
 
@@ -26,16 +27,19 @@ struct mixer {
   void mix(nigiri::pareto_set<nigiri::routing::journey> const& pt_journeys,
            std::vector<nigiri::routing::journey>& odm_journeys,
            std::vector<nigiri::routing::journey> const& ride_share_journeys,
+           prima const&,
            metrics_registry* metrics,
            std::optional<std::string_view> stats_path) const;
   static void pareto_dominance(
       std::vector<nigiri::routing::journey>& odm_journeys);
   double transfer_cost(nigiri::routing::journey const&) const;
-  double cost(nigiri::routing::journey const& j) const;
+  double cost(nigiri::routing::journey const& j,
+              bool pooling_override = false) const;
   std::vector<double> get_threshold(
       std::vector<nigiri::routing::journey> const&,
       nigiri::interval<nigiri::unixtime_t> const&,
-      double slope) const;
+      double slope,
+      bool pooling_override = false) const;
   void write_journeys(
       nigiri::pareto_set<nigiri::routing::journey> const& pt_journeys,
       std::vector<nigiri::routing::journey> const& odm_journeys,
