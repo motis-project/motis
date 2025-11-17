@@ -395,27 +395,28 @@ struct gbfs_update {
 
       auto const stations_updated = co_await update(
           "station_information", file_infos->station_information_fi_,
-          load_station_information);
+          load_station_information, vehicle_types_updated);
       if (!stations_updated && prev_provider != nullptr) {
         provider.stations_ = prev_provider->stations_;
       }
 
-      auto const station_status_updated =
-          co_await update("station_status", file_infos->station_status_fi_,
-                          load_station_status, stations_updated);
+      auto const station_status_updated = co_await update(
+          "station_status", file_infos->station_status_fi_, load_station_status,
+          stations_updated || vehicle_types_updated);
 
       auto const vehicle_status_updated =
           co_await update("vehicle_status", file_infos->vehicle_status_fi_,
-                          load_vehicle_status)  // 3.x
+                          load_vehicle_status, vehicle_types_updated)  // 3.x
           || co_await update("free_bike_status", file_infos->vehicle_status_fi_,
-                             load_vehicle_status);  // 1.x / 2.x
+                             load_vehicle_status,
+                             vehicle_types_updated);  // 1.x / 2.x
       if (!vehicle_status_updated && prev_provider != nullptr) {
         provider.vehicle_status_ = prev_provider->vehicle_status_;
       }
 
       auto const geofencing_updated =
           co_await update("geofencing_zones", file_infos->geofencing_zones_fi_,
-                          load_geofencing_zones);
+                          load_geofencing_zones, vehicle_types_updated);
       if (!geofencing_updated && prev_provider != nullptr) {
         provider.geofencing_zones_ = prev_provider->geofencing_zones_;
       }
