@@ -26,10 +26,10 @@
 #include "osr/routing/sharing_data.h"
 #include "osr/types.h"
 
+#include "motis/box_rtree.h"
 #include "motis/config.h"
 #include "motis/fwd.h"
 #include "motis/point_rtree.h"
-#include "motis/box_rtree.h"
 #include "motis/types.h"
 
 #include "motis/gbfs/lru_cache.h"
