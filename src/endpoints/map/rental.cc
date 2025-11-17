@@ -200,7 +200,7 @@ api::rentals_response rental::operator()(
   auto provider_groups = hash_set<std::string>{};
 
   if (filter_bbox) {
-    gbfs->provider_rtree_.find(bbox, [&](gbfs_provider_idx_t const pi) {
+    auto check_provider = [&](gbfs_provider_idx_t const pi) {
       auto const& provider = gbfs->providers_.at(pi);
       if (provider == nullptr) {
         return;
@@ -215,7 +215,11 @@ api::rentals_response rental::operator()(
       }
       providers.insert(provider.get());
       provider_groups.insert(provider->group_id_);
-    });
+    };
+    gbfs->provider_rtree_.find(
+        bbox, [&](gbfs_provider_idx_t const pi) { check_provider(pi); });
+    gbfs->provider_zone_rtree_.find(
+        bbox, [&](gbfs_provider_idx_t const pi) { check_provider(pi); });
   } else if (filter_providers || filter_groups) {
     if (filter_providers) {
       for (auto const& id : *query.providers_) {
