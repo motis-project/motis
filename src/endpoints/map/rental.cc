@@ -256,7 +256,11 @@ api::rentals_response rental::operator()(
         auto form_factors = std::set<api::RentalFormFactorEnum>{};
 
         for (auto const& [vti, count] : st.status_.vehicle_types_available_) {
-          auto const& vt = provider->vehicle_types_[vti];
+          if (vti == gbfs::vehicle_type_idx_t::invalid() ||
+              cista::to_idx(vti) >= provider->vehicle_types_.size()) {
+            continue;
+          }
+          auto const& vt = provider->vehicle_types_.at(vti);
           auto const api_ff = gbfs::to_api_form_factor(vt.form_factor_);
           form_factor_counts[static_cast<std::size_t>(
               std::to_underlying(api_ff))] += count;
@@ -264,7 +268,11 @@ api::rentals_response rental::operator()(
           form_factors.insert(api_ff);
         }
         for (auto const& [vti, count] : st.status_.vehicle_docks_available_) {
-          auto const& vt = provider->vehicle_types_[vti];
+          if (vti == gbfs::vehicle_type_idx_t::invalid() ||
+              cista::to_idx(vti) >= provider->vehicle_types_.size()) {
+            continue;
+          }
+          auto const& vt = provider->vehicle_types_.at(vti);
           auto const api_ff = gbfs::to_api_form_factor(vt.form_factor_);
           form_factor_counts[static_cast<std::size_t>(
               std::to_underlying(api_ff))] += count;
@@ -341,7 +349,9 @@ api::rentals_response rental::operator()(
           gbfs::vehicle_type{.form_factor_ = gbfs::vehicle_form_factor::kOther};
       for (auto const& vs : provider->vehicle_status_) {
         if (in_bbox(vs.pos_)) {
-          if (vs.vehicle_type_idx_ != gbfs::vehicle_type_idx_t::invalid()) {
+          if (vs.vehicle_type_idx_ != gbfs::vehicle_type_idx_t::invalid() &&
+              cista::to_idx(vs.vehicle_type_idx_) <
+                  provider->vehicle_types_.size()) {
             auto const& vt = provider->vehicle_types_.at(vs.vehicle_type_idx_);
             add_vehicle(vs, vt);
           } else {
