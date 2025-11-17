@@ -922,7 +922,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                                        : max_timeout);
       } catch (std::exception const& e) {
         std::cout << "PONG EXCEPTION: " << e.what() << "\n";
-        algorithm = api::algorithmEnum::PONG;
+        algorithm = api::algorithmEnum::RAPTOR;
         goto repeat;
       }
     } else if (algorithm == api::algorithmEnum::RAPTOR || tbd_ == nullptr ||
