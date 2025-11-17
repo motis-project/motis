@@ -903,7 +903,9 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
 
     auto search_state = n::routing::search_state{};
     auto r = n::routing::routing_result{};
-    if (query.algorithm_ == api::algorithmEnum::PONG && query.timetableView_ &&
+    auto algorithm = query.algorithm_;
+  repeat:
+    if (algorithm == api::algorithmEnum::PONG && query.timetableView_ &&
         // arriveBy |  extend_later | PONG applicable
         // ---------+---------------+---------------------
         // FALSE    |  FALSE        | FALSE    => rRAPTOR
@@ -911,14 +913,19 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
         // TRUE     |  FALSE        | TRUE     => PONG
         // TRUE     |  TRUE         | FALSE    => rRAPTOR
         query.arriveBy_ != start_time.extend_interval_later_) {
-      auto raptor_state = n::routing::raptor_state{};
-      r = n::routing::pong_search(
-          *tt_, rtt, search_state, raptor_state, std::move(q),
-          query.arriveBy_ ? n::direction::kBackward : n::direction::kForward,
-          query.timeout_.has_value() ? std::chrono::seconds{*query.timeout_}
-                                     : max_timeout);
-    } else if (query.algorithm_ == api::algorithmEnum::RAPTOR ||
-               tbd_ == nullptr ||
+      try {
+        auto raptor_state = n::routing::raptor_state{};
+        r = n::routing::pong_search(
+            *tt_, rtt, search_state, raptor_state, std::move(q),
+            query.arriveBy_ ? n::direction::kBackward : n::direction::kForward,
+            query.timeout_.has_value() ? std::chrono::seconds{*query.timeout_}
+                                       : max_timeout);
+      } catch (std::exception const& e) {
+        std::cout << "PONG EXCEPTION: " << e.what() << "\n";
+        algorithm = api::algorithmEnum::PONG;
+        goto repeat;
+      }
+    } else if (algorithm == api::algorithmEnum::RAPTOR || tbd_ == nullptr ||
                (rtt != nullptr && rtt->n_rt_transports() != 0U) ||
                query.arriveBy_ || q.prf_idx_ != tbd_->prf_idx_ ||
                q.allowed_claszes_ != n::routing::all_clasz_allowed() ||
