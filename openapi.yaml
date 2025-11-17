@@ -845,7 +845,7 @@ paths:
               - RAPTOR
               - PONG
               - TB
-            default: PONG
+            default: RAPTOR
       responses:
         '400':
           description: Bad Request
