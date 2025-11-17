@@ -365,7 +365,10 @@ struct gbfs_update {
       auto const update = [&](std::string_view const name, file_info& fi,
                               auto const& fn,
                               bool const force = false) -> awaitable<bool> {
-        if (force || (file_infos->urls_.contains(name) && needs_refresh(fi))) {
+        if (!file_infos->urls_.contains(name)) {
+          co_return false;
+        }
+        if (force || needs_refresh(fi)) {
           auto file = co_await fetch_file(name, file_infos->urls_.at(name),
                                           pf.headers_, pf.oauth_, pf.dir_);
           auto const hash_changed = file.hash_ != fi.hash_;
