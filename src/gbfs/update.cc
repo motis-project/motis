@@ -199,6 +199,7 @@ struct gbfs_update {
       d_->providers_.resize(prev_d_->providers_.size());
       d_->provider_by_id_ = prev_d_->provider_by_id_;
       d_->provider_rtree_ = prev_d_->provider_rtree_;
+      d_->provider_zone_rtree_ = prev_d_->provider_zone_rtree_;
       d_->cache_ = prev_d_->cache_;
 
       d_->groups_ = prev_d_->groups_;
@@ -350,6 +351,7 @@ struct gbfs_update {
       std::optional<gbfs_file> discovery = std::nullopt) {
     auto& file_infos = provider.file_infos_;
     auto data_changed = false;
+    auto geofencing_updated = false;
 
     try {
       if (!discovery && needs_refresh(provider.file_infos_->urls_fi_)) {
@@ -419,7 +421,7 @@ struct gbfs_update {
         provider.vehicle_status_ = prev_provider->vehicle_status_;
       }
 
-      auto const geofencing_updated =
+      geofencing_updated =
           co_await update("geofencing_zones", file_infos->geofencing_zones_fi_,
                           load_geofencing_zones, vehicle_types_updated);
       if ((!geofencing_updated && !vehicle_types_updated) &&
@@ -501,7 +503,7 @@ struct gbfs_update {
             provider.products_,
             [](auto const& prod) { return prod.has_vehicles_to_rent_; });
 
-        update_rtree(provider, prev_provider);
+        update_rtree(provider, prev_provider, geofencing_updated);
 
         d_->cache_.try_add_or_update(provider.idx_, [&]() {
           return compute_provider_routing_data(w_, l_, provider);
@@ -615,11 +617,14 @@ struct gbfs_update {
   }
 
   void update_rtree(gbfs_provider const& provider,
-                    gbfs_provider const* prev_provider) {
+                    gbfs_provider const* prev_provider,
+                    bool const zones_changed) {
     auto added_stations = 0U;
     auto added_vehicles = 0U;
+    auto added_zones = 0U;
     auto removed_stations = 0U;
     auto removed_vehicles = 0U;
+    auto removed_zones = 0U;
     auto moved_stations = 0U;
     auto moved_vehicles = 0U;
 
@@ -670,6 +675,16 @@ struct gbfs_update {
                 d_->provider_rtree_.add(b.pos_, provider.idx_);
                 ++moved_vehicles;
               }});
+      if (zones_changed) {
+        for (auto const& zone : prev_provider->geofencing_zones_.zones_) {
+          d_->provider_zone_rtree_.remove(zone.bounding_box(), provider.idx_);
+          ++removed_zones;
+        }
+        for (auto const& zone : provider.geofencing_zones_.zones_) {
+          d_->provider_zone_rtree_.add(zone.bounding_box(), provider.idx_);
+          ++added_zones;
+        }
+      }
     } else {
       for (auto const& station : provider.stations_) {
         d_->provider_rtree_.add(station.second.info_.pos_, provider.idx_);
@@ -680,6 +695,9 @@ struct gbfs_update {
           d_->provider_rtree_.add(vehicle.pos_, provider.idx_);
           ++added_vehicles;
         }
+      }
+      for (auto const& zone : provider.geofencing_zones_.zones_) {
+        d_->provider_zone_rtree_.add(zone.bounding_box(), provider.idx_);
       }
     }
   }
