@@ -68,10 +68,16 @@
 	const isSmallScreen = browser && window.innerWidth < 768;
 	let activeTab = $state<'connections' | 'departures' | 'isochrones'>('connections');
 	let dataAttributionLink: string | undefined = $state(undefined);
-	let colorMode = $state<'rt' | 'route' | 'mode' | 'none'>('route');
+	let colorMode = $state<'rt' | 'route' | 'mode' | 'none'>('none');
 	let showMap = $state(!isSmallScreen);
 	let lastSelectedItinerary: Itinerary | undefined = undefined;
 	let lastOneToAllQuery: OneToAllData | undefined = undefined;
+
+	$effect(() => {
+		if (activeTab == 'isochrones') {
+			colorMode = 'none';
+		}
+	});
 
 	let theme: 'light' | 'dark' =
 		(hasDark ? 'dark' : hasLight ? 'light' : undefined) ??
@@ -169,7 +175,7 @@
 	);
 	let arriveBy = $state<boolean>(urlParams?.get('arriveBy') == 'true');
 	let algorithm = $state<PlanData['query']['algorithm']>(
-		(urlParams?.get('algorithm') ?? 'PONG') as PlanData['query']['algorithm']
+		(urlParams?.get('algorithm') ?? defaultQuery.algorithm) as PlanData['query']['algorithm']
 	);
 	let useRoutedTransfers = $state(
 		urlParams?.get('useRoutedTransfers') == 'true' || defaultQuery.useRoutedTransfers
@@ -530,9 +536,7 @@
 {/snippet}
 
 {#snippet resultContent()}
-	<Control
-		class={isSmallScreen && (page.state.selectedItinerary || page.state.selectedStop) ? 'hide' : ''}
-	>
+	<Control>
 		<Tabs.Root bind:value={activeTab} class="max-w-full w-[520px] overflow-y-auto">
 			<Tabs.List class="grid grid-cols-3">
 				<Tabs.Trigger value="connections">{t.connections}</Tabs.Trigger>
@@ -540,34 +544,36 @@
 				<Tabs.Trigger value="isochrones">{t.isochrones.title}</Tabs.Trigger>
 			</Tabs.List>
 			<Tabs.Content value="connections">
-				<Card class="overflow-y-auto overflow-x-hidden bg-background rounded-lg">
-					<SearchMask
-						geocodingBiasPlace={center}
-						bind:from
-						bind:to
-						bind:time
-						bind:arriveBy
-						bind:useRoutedTransfers
-						bind:maxTransfers
-						bind:pedestrianProfile
-						bind:requireCarTransport
-						bind:requireBikeTransport
-						bind:transitModes
-						bind:preTransitModes
-						bind:postTransitModes
-						bind:directModes
-						bind:elevationCosts
-						bind:maxPreTransitTime
-						bind:maxPostTransitTime
-						bind:maxDirectTime
-						bind:ignorePreTransitRentalReturnConstraints
-						bind:ignorePostTransitRentalReturnConstraints
-						bind:ignoreDirectRentalReturnConstraints
-						bind:preTransitProviderGroups
-						bind:postTransitProviderGroups
-						bind:directProviderGroups
-					/>
-				</Card>
+				{#if !page.state.selectedItinerary}
+					<Card class="overflow-y-auto overflow-x-hidden bg-background rounded-lg">
+						<SearchMask
+							geocodingBiasPlace={center}
+							bind:from
+							bind:to
+							bind:time
+							bind:arriveBy
+							bind:useRoutedTransfers
+							bind:maxTransfers
+							bind:pedestrianProfile
+							bind:requireCarTransport
+							bind:requireBikeTransport
+							bind:transitModes
+							bind:preTransitModes
+							bind:postTransitModes
+							bind:directModes
+							bind:elevationCosts
+							bind:maxPreTransitTime
+							bind:maxPostTransitTime
+							bind:maxDirectTime
+							bind:ignorePreTransitRentalReturnConstraints
+							bind:ignorePostTransitRentalReturnConstraints
+							bind:ignoreDirectRentalReturnConstraints
+							bind:preTransitProviderGroups
+							bind:postTransitProviderGroups
+							bind:directProviderGroups
+						/>
+					</Card>
+				{/if}
 			</Tabs.Content>
 			<Tabs.Content value="departures">
 				<Card class="overflow-y-auto overflow-x-hidden bg-background rounded-lg">
@@ -605,7 +611,7 @@
 		</Tabs.Root>
 	</Control>
 
-	{#if activeTab != 'isochrones' && routingResponses.length !== 0 && !page.state.showDepartures}
+	{#if activeTab == 'connections' && routingResponses.length !== 0 && !page.state.showDepartures}
 		<Control class="min-h-0 md:mb-2 {page.state.selectedItinerary ? 'hide' : ''}">
 			<Card
 				class="scrollable w-[520px] h-full md:max-h-[60vh] {isSmallScreen
@@ -671,7 +677,7 @@
 		{/if}
 	{/if}
 
-	{#if activeTab != 'isochrones' && page.state.selectedStop && page.state.showDepartures}
+	{#if activeTab == 'departures' && page.state.selectedStop && page.state.showDepartures}
 		<Control class="min-h-0 md:mb-2">
 			<Card class="w-[520px] md:max-h-[60vh] h-full bg-background rounded-lg flex flex-col mb-2">
 				<div class="w-full flex justify-between items-center shadow-md pl-1 mb-1">
@@ -800,10 +806,10 @@
 					<LocateFixed class="w-5 h-5" />
 				</Button>
 			</Control>
-			<RailViz {map} {bounds} {zoom} {colorMode} />
 			<Rentals {map} {bounds} {zoom} {theme} debug={hasDebug} />
 		{/if}
-		<!-- Isochrones cannot be hidden the same way as RailViz -->
+
+		<RailViz {map} {bounds} {zoom} {colorMode} />
 		<Isochrones
 			{map}
 			{bounds}

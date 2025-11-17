@@ -263,17 +263,25 @@ void way_matches_storage::preprocess_osr_matches(
     nigiri::timetable const& tt,
     osr::platforms const& pl,
     osr::ways const& w,
-    osr::lookup const& l,
+    osr::lookup const& lookup,
     platform_matches_t const& platform_matches) {
-  auto const progress_tracker = utl::get_active_progress_tracker();
-  progress_tracker->in_high(tt.n_locations());
-  for (auto i = n::location_idx_t{0U}; i != tt.n_locations(); ++i) {
-    matches_.emplace_back(
-        l.get_raw_match(osr::location{tt.locations_.coordinates_[i],
-                                      pl.get_level(w, platform_matches[i])},
-                        max_matching_distance_));
-    progress_tracker->increment();
-  }
+  auto const pt = utl::get_active_progress_tracker();
+  pt->in_high(tt.n_locations());
+
+  utl::parallel_ordered_collect_threadlocal<int>(
+      tt.n_locations(),
+      [&](int, std::size_t const idx) {
+        auto const l =
+            n::location_idx_t{static_cast<n::location_idx_t::value_t>(idx)};
+        return lookup.get_raw_match(
+            osr::location{tt.locations_.coordinates_[l],
+                          pl.get_level(w, platform_matches[l])},
+            max_matching_distance_);
+      },
+      [&](std::size_t, std::vector<osr::raw_way_candidate>&& l) {
+        matches_.emplace_back(l);
+      },
+      pt->update_fn());
 }
 
 std::vector<osr::match_t> get_reverse_platform_way_matches(

@@ -337,6 +337,10 @@ export type Place = {
      */
     stopId?: string;
     /**
+     * If it's not a root stop, this field contains the `stopId` of the parent stop.
+     */
+    parentId?: string;
+    /**
      * The importance of the stop between 0-1.
      */
     importance?: number;
@@ -490,6 +494,8 @@ export type StopTime = {
     agencyId: string;
     agencyName: string;
     agencyUrl: string;
+    routeId: string;
+    directionId: string;
     routeColor?: string;
     routeTextColor?: string;
     tripId: string;
@@ -1110,6 +1116,8 @@ export type Leg = {
      * final stop of this trip (can differ from headsign)
      */
     tripTo?: Place;
+    routeId?: string;
+    directionId?: string;
     routeColor?: string;
     routeTextColor?: string;
     routeType?: number;
@@ -1331,6 +1339,54 @@ export type Transfer = {
      *
      */
     car?: number;
+};
+
+export type OneToManyParams = {
+    /**
+     * geo location as latitude;longitude
+     */
+    one: string;
+    /**
+     * geo locations as latitude;longitude,latitude;longitude,...
+     */
+    many: Array<(string)>;
+    /**
+     * routing profile to use (currently supported: \`WALK\`, \`BIKE\`, \`CAR\`)
+     *
+     */
+    mode: Mode;
+    /**
+     * maximum travel time in seconds
+     */
+    max: number;
+    /**
+     * maximum matching distance in meters to match geo coordinates to the street network
+     */
+    maxMatchingDistance: number;
+    /**
+     * Optional. Default is `NONE`.
+     *
+     * Set an elevation cost profile, to penalize routes with incline.
+     * - `NONE`: No additional costs for elevations. This is the default behavior
+     * - `LOW`: Add a low cost for increase in elevation and incline along the way. This will prefer routes with less ascent, if small detours are required.
+     * - `HIGH`: Add a high cost for increase in elevation and incline along the way. This will prefer routes with less ascent, if larger detours are required.
+     *
+     * As using an elevation costs profile will increase the travel duration,
+     * routing through steep terrain may exceed the maximal allowed duration,
+     * causing a location to appear unreachable.
+     * Increasing the maximum travel time for these segments may resolve this issue.
+     *
+     * Elevation cost profiles are currently used by following street modes:
+     * - `BIKE`
+     *
+     */
+    elevationCosts: ElevationCosts;
+    /**
+     * true = many to one
+     * false = one to many
+     *
+     */
+    arriveBy: boolean;
 };
 
 export type Error = {
@@ -1758,9 +1814,9 @@ export type PlanData = {
          */
         requireCarTransport?: boolean;
         /**
-         * Optional. Default is 2 hours which is `7200`.
+         * Optional. Default is 15 minutes which is `900`.
          *
-         * The length of the search-window in seconds. Default value two hours.
+         * The length of the search-window in seconds. Default value 15 minutes.
          *
          * - `arriveBy=true`: number of seconds between the earliest departure time and latest departure time
          * - `arriveBy=false`: number of seconds between the earliest arrival time and the latest arrival time

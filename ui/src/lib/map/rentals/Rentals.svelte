@@ -67,7 +67,7 @@
 		debug?: boolean;
 	} = $props();
 
-	const MIN_ZOOM = 13;
+	const MIN_ZOOM = 11;
 	const FETCH_PADDING_RATIO = 0.5;
 	const STATION_SOURCE_ID = 'rentals-stations';
 	const STATION_ICON_LAYER_ID = 'rentals-stations-icons';

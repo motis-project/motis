@@ -158,13 +158,13 @@ TEST(motis, get_way_candidates) {
       utl::sort(sorted_with, sort_by_way);
       utl::sort(sorted_without, sort_by_way);
       for (auto [a, b] : utl::zip(sorted_with, sorted_without)) {
-        ASSERT_EQ(a.dist_to_way_, b.dist_to_way_);
+        ASSERT_FLOAT_EQ(a.dist_to_way_, b.dist_to_way_);
         ASSERT_EQ(a.way_, b.way_);
         for (auto const& [anc, bnc] :
              {std::tuple{a.left_, b.left_}, std::tuple{a.right_, b.right_}}) {
           ASSERT_EQ(anc.node_, bnc.node_);
           if (anc.valid()) {
-            EXPECT_EQ(anc.dist_to_node_, bnc.dist_to_node_);
+            EXPECT_FLOAT_EQ(anc.dist_to_node_, bnc.dist_to_node_);
             EXPECT_EQ(anc.cost_, bnc.cost_);
             EXPECT_EQ(anc.lvl_, bnc.lvl_);
             EXPECT_EQ(anc.way_dir_, bnc.way_dir_);
