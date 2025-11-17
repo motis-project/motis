@@ -49,9 +49,9 @@ constexpr auto blacklist_response = R"(
 // 1970-01-01T11:30:00Z, 1970-01-01T12:30:00Z
 constexpr auto whitelisting_response = R"(
 {
-  "start": [[{"pickupTime": 35820000, "dropoffTime": 39300000}],[null]],
-  "target": [[{"pickupTime": 50820000, "dropoffTime": 53160000}]],
-  "direct": [{"pickupTime": 41400000,"dropoffTime": 45000000}]
+  "start": [[{"pickupTime": 35820000, "dropoffTime": 39300000, "passengerDuration": 3480000, "approachPlusReturnDurationDelta": 3600000, "fullyPayedDurationDelta": 3480000, "taxiWaitingTime": 0, "cost": 23}],[null]],
+  "target": [[{"pickupTime": 50820000, "dropoffTime": 53160000, "passengerDuration": 2340000, "approachPlusReturnDurationDelta": 3600000, "fullyPayedDurationDelta": 2340000, "taxiWaitingTime": 0, "cost": 23}]],
+  "direct": [{"pickupTime": 41400000, "dropoffTime": 45000000, "passengerDuration": 3600000, "approachPlusReturnDurationDelta": 3600000, "fullyPayedDurationDelta": 3600000, "taxiWaitingTime": 0, "cost": 23}]
 }
 )";
 
@@ -139,8 +139,7 @@ TEST(odm, prima_update) {
     EXPECT_TRUE(expected_direct_interval.contains(d.dep_));
   }
 
-  auto taxi_journeys = std::vector<nr::journey>{};
-  taxi_journeys.push_back(
+  auto journeys = std::vector<nr::journey>{
       {.legs_ = {{n::direction::kForward,
                   n::get_special_station(n::special_station::kStart),
                   get_loc_idx("A"), n::unixtime_t{10h}, n::unixtime_t{11h},
@@ -151,9 +150,7 @@ TEST(odm, prima_update) {
                   nr::offset{get_loc_idx("A"), 1h, kWalkTransportModeId}}},
        .start_time_ = n::unixtime_t{10h},
        .dest_time_ = n::unixtime_t{12h},
-       .dest_ = n::get_special_station(n::special_station::kEnd)});
-
-  taxi_journeys.push_back(
+       .dest_ = n::get_special_station(n::special_station::kEnd)},
       {.legs_ = {{n::direction::kForward,
                   n::get_special_station(n::special_station::kStart),
                   get_loc_idx("B"), n::unixtime_t{11h}, n::unixtime_t{12h},
@@ -164,9 +161,7 @@ TEST(odm, prima_update) {
                   nr::offset{get_loc_idx("B"), 1h, kWalkTransportModeId}}},
        .start_time_ = n::unixtime_t{11h},
        .dest_time_ = n::unixtime_t{13h},
-       .dest_ = n::get_special_station(n::special_station::kEnd)});
-
-  taxi_journeys.push_back(
+       .dest_ = n::get_special_station(n::special_station::kEnd)},
       {.legs_ = {{n::direction::kForward,
                   n::get_special_station(n::special_station::kStart),
                   get_loc_idx("A"), n::unixtime_t{10h}, n::unixtime_t{11h},
@@ -182,24 +177,20 @@ TEST(odm, prima_update) {
                              motis::kOdmTransportModeId}}},
        .start_time_ = n::unixtime_t{10h},
        .dest_time_ = n::unixtime_t{14h},
-       .dest_ = n::get_special_station(n::special_station::kEnd)});
+       .dest_ = n::get_special_station(n::special_station::kEnd)}};
 
   p.direct_taxi_ = {
       direct_ride{.dep_ = n::unixtime_t{11h}, .arr_ = n::unixtime_t{12h}}};
 
-  auto first_mile_taxi_rides = std::vector<nr::start>{};
-  auto last_mile_taxi_rides = std::vector<nr::start>{};
-  extract_taxis(taxi_journeys, first_mile_taxi_rides, last_mile_taxi_rides);
+  auto const [first_mile_taxi, last_mile_taxi] = extract_taxis(journeys);
   EXPECT_FALSE(p.consume_whitelist_taxi_response(
-      invalid_response, taxi_journeys, first_mile_taxi_rides,
-      last_mile_taxi_rides));
+      invalid_response, journeys, first_mile_taxi, last_mile_taxi));
   EXPECT_TRUE(p.consume_whitelist_taxi_response(
-      whitelisting_response, taxi_journeys, first_mile_taxi_rides,
-      last_mile_taxi_rides));
+      whitelisting_response, journeys, first_mile_taxi, last_mile_taxi));
 
   auto ss = std::stringstream{};
   ss << "\n";
-  for (auto const& j : taxi_journeys) {
+  for (auto const& j : journeys) {
     j.print(ss, tt, nullptr);
     ss << "\n";
   }

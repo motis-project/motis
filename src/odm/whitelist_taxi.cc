@@ -86,14 +86,14 @@ bool prima::consume_whitelist_taxi_response(
       for (auto const& event : stop.as_array()) {
         if (event.is_null()) {
           first_mile_taxi_rides_.push_back(
-              {{kInfeasible, kInfeasible, i->stop_}, .pd_ = {}});
+              {{kInfeasible, kInfeasible, i->stop_}, {}});
         } else {
           auto const o = event.as_object();
           first_mile_taxi_rides_.push_back(
               {{.time_at_start_ = to_unix(o.at("pickupTime").as_int64()),
                 .time_at_stop_ = to_unix(o.at("dropoffTime").as_int64()),
                 .stop_ = i->stop_},
-               .pd_ = read_prima_data(o)});
+               read_prima_data(o)});
         }
         ++i;
       }
@@ -119,14 +119,14 @@ bool prima::consume_whitelist_taxi_response(
       for (auto const& event : stop.as_array()) {
         if (event.is_null()) {
           last_mile_taxi_rides_.push_back(
-              {{kInfeasible, kInfeasible, i->stop_}, .pd_ = {}});
+              {{kInfeasible, kInfeasible, i->stop_}, {}});
         } else {
           auto const o = event.as_object();
           last_mile_taxi_rides_.push_back(
               {{.time_at_start_ = to_unix(o.at("dropoffTime").as_int64()),
                 .time_at_stop_ = to_unix(o.at("pickupTime").as_int64()),
                 .stop_ = i->stop_},
-               .pd_ = read_prima_data(o)});
+               read_prima_data(o)});
         }
         ++i;
       }
@@ -153,7 +153,7 @@ bool prima::consume_whitelist_taxi_response(
         auto const o = ride.as_object();
         direct_taxi_.push_back({to_unix(o.at("pickupTime").as_int64()),
                                 to_unix(o.at("dropoffTime").as_int64()),
-                                .pd_ = read_prima_data(o)});
+                                read_prima_data(o)});
       }
     }
 
@@ -188,9 +188,9 @@ bool prima::consume_whitelist_taxi_response(
   return true;
 }
 
-bool prima::whitelist_taxi(std::vector<nr::journey>& taxi_journeys,
+bool prima::whitelist_taxi(std::vector<nr::journey>& journeys,
                            n::timetable const& tt) {
-  auto const [first_mile, last_mile] = extract_taxis(taxi_journeys);
+  auto const [first_mile, last_mile] = extract_taxis(journeys);
 
   auto whitelist_response = std::optional<std::string>{};
   auto ioc = boost::asio::io_context{};
@@ -221,7 +221,7 @@ bool prima::whitelist_taxi(std::vector<nr::journey>& taxi_journeys,
     return false;
   }
 
-  return consume_whitelist_taxi_response(*whitelist_response, taxi_journeys,
+  return consume_whitelist_taxi_response(*whitelist_response, journeys,
                                          first_mile, last_mile);
 }
 
