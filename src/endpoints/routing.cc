@@ -904,43 +904,47 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
     auto search_state = n::routing::search_state{};
     auto r = n::routing::routing_result{};
     auto algorithm = query.algorithm_;
-  repeat:
-    if (algorithm == api::algorithmEnum::PONG && query.timetableView_ &&
-        // arriveBy |  extend_later | PONG applicable
-        // ---------+---------------+---------------------
-        // FALSE    |  FALSE        | FALSE    => rRAPTOR
-        // FALSE    |  TRUE         | TRUE     => PONG
-        // TRUE     |  FALSE        | TRUE     => PONG
-        // TRUE     |  TRUE         | FALSE    => rRAPTOR
-        query.arriveBy_ != start_time.extend_interval_later_) {
-      try {
+    while (true) {
+      if (algorithm == api::algorithmEnum::PONG && query.timetableView_ &&
+          // arriveBy |  extend_later | PONG applicable
+          // ---------+---------------+---------------------
+          // FALSE    |  FALSE        | FALSE    => rRAPTOR
+          // FALSE    |  TRUE         | TRUE     => PONG
+          // TRUE     |  FALSE        | TRUE     => PONG
+          // TRUE     |  TRUE         | FALSE    => rRAPTOR
+          query.arriveBy_ != start_time.extend_interval_later_) {
+        try {
+          auto raptor_state = n::routing::raptor_state{};
+          r = n::routing::pong_search(
+              *tt_, rtt, search_state, raptor_state, std::move(q),
+              query.arriveBy_ ? n::direction::kBackward
+                              : n::direction::kForward,
+              query.timeout_.has_value() ? std::chrono::seconds{*query.timeout_}
+                                         : max_timeout);
+        } catch (std::exception const& e) {
+          std::cout << "PONG EXCEPTION: " << e.what() << "\n";
+          algorithm = api::algorithmEnum::RAPTOR;
+          continue;
+        }
+      } else if (algorithm == api::algorithmEnum::RAPTOR || tbd_ == nullptr ||
+                 (rtt != nullptr && rtt->n_rt_transports() != 0U) ||
+                 query.arriveBy_ || q.prf_idx_ != tbd_->prf_idx_ ||
+                 q.allowed_claszes_ != n::routing::all_clasz_allowed() ||
+                 !q.td_start_.empty() || !q.td_dest_.empty() ||
+                 !q.transfer_time_settings_.default_ || !q.via_stops_.empty() ||
+                 q.require_bike_transport_ || q.require_car_transport_) {
         auto raptor_state = n::routing::raptor_state{};
-        r = n::routing::pong_search(
+        r = n::routing::raptor_search(
             *tt_, rtt, search_state, raptor_state, std::move(q),
             query.arriveBy_ ? n::direction::kBackward : n::direction::kForward,
             query.timeout_.has_value() ? std::chrono::seconds{*query.timeout_}
                                        : max_timeout);
-      } catch (std::exception const& e) {
-        std::cout << "PONG EXCEPTION: " << e.what() << "\n";
-        algorithm = api::algorithmEnum::RAPTOR;
-        goto repeat;
+      } else {
+        auto tb_state = n::routing::tb::query_state{*tt_, *tbd_};
+        r = n::routing::tb::tb_search(*tt_, search_state, tb_state,
+                                      std::move(q));
       }
-    } else if (algorithm == api::algorithmEnum::RAPTOR || tbd_ == nullptr ||
-               (rtt != nullptr && rtt->n_rt_transports() != 0U) ||
-               query.arriveBy_ || q.prf_idx_ != tbd_->prf_idx_ ||
-               q.allowed_claszes_ != n::routing::all_clasz_allowed() ||
-               !q.td_start_.empty() || !q.td_dest_.empty() ||
-               !q.transfer_time_settings_.default_ || !q.via_stops_.empty() ||
-               q.require_bike_transport_ || q.require_car_transport_) {
-      auto raptor_state = n::routing::raptor_state{};
-      r = n::routing::raptor_search(
-          *tt_, rtt, search_state, raptor_state, std::move(q),
-          query.arriveBy_ ? n::direction::kBackward : n::direction::kForward,
-          query.timeout_.has_value() ? std::chrono::seconds{*query.timeout_}
-                                     : max_timeout);
-    } else {
-      auto tb_state = n::routing::tb::query_state{*tt_, *tbd_};
-      r = n::routing::tb::tb_search(*tt_, search_state, tb_state, std::move(q));
+      break;
     }
 
     metrics_->routing_journeys_found_.Increment(
