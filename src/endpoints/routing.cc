@@ -916,7 +916,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
           auto search_state = n::routing::search_state{};
           auto raptor_state = n::routing::raptor_state{};
           r = n::routing::pong_search(
-              *tt_, rtt, search_state, raptor_state, std::move(q),
+              *tt_, rtt, search_state, raptor_state, q,
               query.arriveBy_ ? n::direction::kBackward
                               : n::direction::kForward,
               query.timeout_.has_value() ? std::chrono::seconds{*query.timeout_}
@@ -936,15 +936,14 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
         auto raptor_state = n::routing::raptor_state{};
         auto search_state = n::routing::search_state{};
         r = n::routing::raptor_search(
-            *tt_, rtt, search_state, raptor_state, std::move(q),
+            *tt_, rtt, search_state, raptor_state, q,
             query.arriveBy_ ? n::direction::kBackward : n::direction::kForward,
             query.timeout_.has_value() ? std::chrono::seconds{*query.timeout_}
                                        : max_timeout);
       } else {
         auto search_state = n::routing::search_state{};
         auto tb_state = n::routing::tb::query_state{*tt_, *tbd_};
-        r = n::routing::tb::tb_search(*tt_, search_state, tb_state,
-                                      std::move(q));
+        r = n::routing::tb::tb_search(*tt_, search_state, tb_state, q);
       }
       break;
     }
