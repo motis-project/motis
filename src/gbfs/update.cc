@@ -621,10 +621,8 @@ struct gbfs_update {
                     bool const zones_changed) {
     auto added_stations = 0U;
     auto added_vehicles = 0U;
-    auto added_zones = 0U;
     auto removed_stations = 0U;
     auto removed_vehicles = 0U;
-    auto removed_zones = 0U;
     auto moved_stations = 0U;
     auto moved_vehicles = 0U;
 
@@ -678,11 +676,9 @@ struct gbfs_update {
       if (zones_changed) {
         for (auto const& zone : prev_provider->geofencing_zones_.zones_) {
           d_->provider_zone_rtree_.remove(zone.bounding_box(), provider.idx_);
-          ++removed_zones;
         }
         for (auto const& zone : provider.geofencing_zones_.zones_) {
           d_->provider_zone_rtree_.add(zone.bounding_box(), provider.idx_);
-          ++added_zones;
         }
       }
     } else {
