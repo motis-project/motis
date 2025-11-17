@@ -903,6 +903,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
 
     auto r = n::routing::routing_result{};
     auto algorithm = query.algorithm_;
+    auto search_state = n::routing::search_state{};
     while (true) {
       if (algorithm == api::algorithmEnum::PONG && query.timetableView_ &&
           // arriveBy |  extend_later | PONG applicable
@@ -913,7 +914,6 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
           // TRUE     |  TRUE         | FALSE    => rRAPTOR
           query.arriveBy_ != start_time.extend_interval_later_) {
         try {
-          auto search_state = n::routing::search_state{};
           auto raptor_state = n::routing::raptor_state{};
           r = n::routing::pong_search(
               *tt_, rtt, search_state, raptor_state, q,
@@ -934,14 +934,12 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                  !q.transfer_time_settings_.default_ || !q.via_stops_.empty() ||
                  q.require_bike_transport_ || q.require_car_transport_) {
         auto raptor_state = n::routing::raptor_state{};
-        auto search_state = n::routing::search_state{};
         r = n::routing::raptor_search(
             *tt_, rtt, search_state, raptor_state, q,
             query.arriveBy_ ? n::direction::kBackward : n::direction::kForward,
             query.timeout_.has_value() ? std::chrono::seconds{*query.timeout_}
                                        : max_timeout);
       } else {
-        auto search_state = n::routing::search_state{};
         auto tb_state = n::routing::tb::query_state{*tt_, *tbd_};
         r = n::routing::tb::tb_search(*tt_, search_state, tb_state, q);
       }
