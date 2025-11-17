@@ -155,17 +155,28 @@ api::rentals_response rental::operator()(
         }
       }
     }
-    res.providerGroups_.emplace_back(api::RentalProviderGroup{
-        .id_ = group.id_,
-        .name_ = group.name_,
-        .color_ = color,
-        .providers_ = query.withProviders_
-                          ? utl::to_vec(group.providers_,
-                                        [&](auto const pi) {
-                                          return gbfs->providers_.at(pi)->id_;
-                                        })
-                          : std::vector<std::string>{},
-        .formFactors_ = form_factors});
+    auto provider_ids = std::vector<std::string>{};
+    if (query.withProviders_) {
+      provider_ids.reserve(group.providers_.size());
+      for (auto const& pi : group.providers_) {
+        auto const& provider = gbfs->providers_.at(pi);
+        if (provider == nullptr) {
+          // shouldn't be possible, but just in case...
+          std::cerr << "[rental api] warning: provider group " << group.id_
+                    << " references missing provider idx " << to_idx(pi)
+                    << " (providers list)\n";
+          continue;
+        }
+        provider_ids.push_back(provider->id_);
+      }
+    }
+
+    res.providerGroups_.emplace_back(
+        api::RentalProviderGroup{.id_ = group.id_,
+                                 .name_ = group.name_,
+                                 .color_ = color,
+                                 .providers_ = std::move(provider_ids),
+                                 .formFactors_ = form_factors});
   };
 
   if (!filter_bbox && !filter_providers && !filter_groups) {
