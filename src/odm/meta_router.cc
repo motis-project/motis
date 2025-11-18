@@ -496,7 +496,7 @@ api::plan_response meta_router::run() {
                 query_.maxMatchingDistance_, api_version_,
                 query_.ignorePreTransitRentalReturnConstraints_,
                 query_.ignorePostTransitRentalReturnConstraints_,
-                query_.language_);
+                query_.language_, &p);
 
             if (response.legs_.front().mode_ == api::ModeEnum::RIDE_SHARING &&
                 response.legs_.size() == 1) {
@@ -543,16 +543,6 @@ api::plan_response meta_router::run() {
                 }
               }
             }
-            if (response.legs_.size() == 1 &&
-                response.legs_.front().mode_ == api::ModeEnum::ODM) {
-            }
-            if (response.legs_.size() > 1 &&
-                response.legs_.front().mode_ == api::ModeEnum::ODM) {
-            }
-            if (response.legs_.size() > 1 &&
-                response.legs_.back().mode_ == api::ModeEnum::ODM) {
-            }
-
             return response;
           }),
       .previousPageCursor_ =

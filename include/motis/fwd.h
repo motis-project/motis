@@ -59,6 +59,7 @@ struct adr_ext;
 namespace odm {
 struct bounds;
 struct ride_sharing_bounds;
+struct prima;
 }  // namespace odm
 
 namespace gbfs {
