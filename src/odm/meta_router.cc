@@ -543,6 +543,16 @@ api::plan_response meta_router::run() {
                 }
               }
             }
+            if (response.legs_.size() == 1 &&
+                response.legs_.front().mode_ == api::ModeEnum::ODM) {
+            }
+            if (response.legs_.size() > 1 &&
+                response.legs_.front().mode_ == api::ModeEnum::ODM) {
+            }
+            if (response.legs_.size() > 1 &&
+                response.legs_.back().mode_ == api::ModeEnum::ODM) {
+            }
+
             return response;
           }),
       .previousPageCursor_ =
