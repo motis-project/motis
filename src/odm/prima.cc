@@ -26,6 +26,8 @@ namespace json = boost::json;
 
 namespace motis::odm {
 
+constexpr auto kFullyPaidFactor = 2;
+
 prima::prima(std::string const& prima_url,
              osr::location const& from,
              osr::location const& to,
@@ -348,7 +350,8 @@ void add_direct_odm(std::vector<direct_ride> const& direct,
 }
 
 bool prima::is_pooling_ride(auto const& r) const {
-  return r.pd_.passenger_delta_ / cap_.passengers_ < r.pd_.fully_paid_delta_;
+  return r.pd_.passenger_delta_ / cap_.passengers_ >
+         kFullyPaidFactor * r.pd_.fully_paid_delta_;
 }
 
 bool prima::is_direct_pooling(nr::journey::leg const& l) const {
