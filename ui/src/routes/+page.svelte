@@ -677,7 +677,7 @@
 		{/if}
 	{/if}
 
-	{#if activeTab == 'departures' && page.state.selectedStop && page.state.showDepartures}
+	{#if activeTab != 'isochrones' && page.state.selectedStop && page.state.showDepartures}
 		<Control class="min-h-0 md:mb-2">
 			<Card class="w-[520px] md:max-h-[60vh] h-full bg-background rounded-lg flex flex-col mb-2">
 				<div class="w-full flex justify-between items-center shadow-md pl-1 mb-1">
