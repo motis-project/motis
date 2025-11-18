@@ -1,18 +1,19 @@
 #pragma once
 
-#include "nigiri/types.h"
 #include "nigiri/footpath.h"
 #include "nigiri/routing/journey.h"
+#include "nigiri/types.h"
 
-#include  "utl/erase_if.h"
+#include "utl/erase_if.h"
 
-#include "motis/transport_mode_ids.h"
 #include "motis/odm/odm.h"
 #include "motis/odm/prima.h"
+#include "motis/transport_mode_ids.h"
 
 namespace motis::odm {
 
-template <typename A = nigiri::routing::start, typename B = nigiri::routing::start>
+template <typename A = nigiri::routing::start,
+          typename B = nigiri::routing::start>
 void fix_first_mile_duration(std::vector<nigiri::routing::journey>& journeys,
                              std::vector<A> const& first_mile,
                              std::vector<B> const& prev_first_mile,
@@ -59,7 +60,8 @@ void fix_first_mile_duration(std::vector<nigiri::routing::journey>& journeys,
   }
 }
 
-template <typename A = nigiri::routing::start, typename B = nigiri::routing::start>
+template <typename A = nigiri::routing::start,
+          typename B = nigiri::routing::start>
 void fix_last_mile_duration(std::vector<nigiri::routing::journey>& journeys,
                             std::vector<A> const& last_mile,
                             std::vector<B> const& prev_last_mile,
@@ -97,11 +99,12 @@ void fix_last_mile_duration(std::vector<nigiri::routing::journey>& journeys,
           j.legs_.emplace(
               l, nigiri::direction::kForward, l->from_, l->from_,
               std::prev(l)->arr_time_, l->dep_time_,
-              nigiri::footpath{l->from_, l->dep_time_ - std::prev(l)->arr_time_});
+              nigiri::footpath{l->from_,
+                               l->dep_time_ - std::prev(l)->arr_time_});
         }
       }
     }
   }
 }
 
-} // namespace motis::odm
+}  // namespace motis::odm
