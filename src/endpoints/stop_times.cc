@@ -297,10 +297,14 @@ std::vector<api::Place> other_stops_impl(n::rt::frun fr,
                                          tz_map_t const* tz) {
   auto const convert_stop = [&](n::rt::run_stop const& stop) {
     auto result = to_place(tt, &tags, w, pl, matches, ae, tz, stop);
-    result.arrival_ = stop.time(n::event_type::kArr);
-    result.scheduledArrival_ = stop.scheduled_time(n::event_type::kArr);
-    result.departure_ = stop.time(n::event_type::kDep);
-    result.scheduledDeparture_ = stop.scheduled_time(n::event_type::kDep);
+    if (stop.fr_->stop_range_.from_ != stop.stop_idx_) {
+      result.arrival_ = stop.time(n::event_type::kArr);
+      result.scheduledArrival_ = stop.scheduled_time(n::event_type::kArr);
+    }
+    if (stop.fr_->stop_range_.to_ - 1 != stop.stop_idx_) {
+      result.departure_ = stop.time(n::event_type::kDep);
+      result.scheduledDeparture_ = stop.scheduled_time(n::event_type::kDep);
+    }
     return result;
   };
 
@@ -315,10 +319,6 @@ std::vector<api::Place> other_stops_impl(n::rt::frun fr,
         });
     auto result = utl::to_vec(fr.begin(), it, convert_stop);
     utl::verify(!result.empty(), "Departure is last stop in trip");
-    // Departure time on terminus is meaningless
-    auto& terminus = result.back();
-    terminus.departure_.reset();
-    terminus.scheduledDeparture_.reset();
     return result;
   } else {
     fr.stop_range_.from_ = 0;
@@ -330,10 +330,6 @@ std::vector<api::Place> other_stops_impl(n::rt::frun fr,
         });
     auto result = utl::to_vec(it.base(), fr.end(), convert_stop);
     utl::verify(!result.empty(), "Arrival is first stop in trip");
-    // Arrival time on trip origin is meaningless
-    auto& origin = result.front();
-    origin.arrival_.reset();
-    origin.scheduledArrival_.reset();
     return result;
   }
 }
@@ -473,9 +469,8 @@ api::stoptimes_response stop_times::operator()(
                         tt_.strings_.try_get(agency.name_).value_or("?")},
                 .agencyUrl_ =
                     std::string{tt_.strings_.try_get(agency.url_).value_or("")},
-                .routeId_ = std::string{s.get_route_id(n::event_type::kDep)},
-                .directionId_ =
-                    s.get_direction_id(n::event_type::kDep) == 0 ? "0" : "1",
+                .routeId_ = std::string{s.get_route_id(ev_type)},
+                .directionId_ = s.get_direction_id(ev_type) == 0 ? "0" : "1",
                 .routeColor_ = to_str(s.get_route_color(ev_type).color_),
                 .routeTextColor_ =
                     to_str(s.get_route_color(ev_type).text_color_),
