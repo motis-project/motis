@@ -112,6 +112,10 @@ struct prima {
   bool consume_ride_sharing_response(std::string_view json);
   bool whitelist_ride_sharing(nigiri::timetable const&);
 
+  bool is_pooling_ride(auto const&) const;
+  bool is_direct_pooling(nigiri::routing::journey::leg const&) const;
+  bool is_first_mile_pooling(nigiri::routing::journey::leg const&) const;
+  bool is_last_mile_pooling(nigiri::routing::journey::leg const&) const;
   bool uses_pooling(nigiri::routing::journey const&) const;
 
   api::plan_params const& query_;

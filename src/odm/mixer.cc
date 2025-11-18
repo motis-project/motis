@@ -39,7 +39,7 @@ std::string label(nr::journey const& j) {
                      std::uint32_t{j.transfers_}, odm_time(j));
 }
 
-std::vector<nr::journey> protect_pooling(std::vector<nr::journey>& journeys,
+std::vector<nr::journey> extract_pooling(std::vector<nr::journey>& journeys,
                                          prima const& p) {
   std::vector<nr::journey> pooling;
   for (auto i = begin(journeys); i != end(journeys);) {
@@ -259,10 +259,11 @@ void funnel_and_sort(n::pareto_set<nr::journey> const& pt_journeys,
 void mixer::mix(n::pareto_set<nr::journey> const& pt_journeys,
                 std::vector<nr::journey>& taxi_journeys,
                 std::vector<nr::journey> const& ride_share_journeys,
-                prima const& p,
+                prima const* p,
                 metrics_registry* metrics,
                 std::optional<std::string_view> const stats_path) const {
-  auto const pooling = protect_pooling(taxi_journeys, p);
+  auto const pooling = p != nullptr ? extract_pooling(taxi_journeys, *p)
+                                    : std::vector<nr::journey>{};
 
   pareto_dominance(taxi_journeys);
   auto const pareto_n = taxi_journeys.size();

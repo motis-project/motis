@@ -447,7 +447,7 @@ api::plan_response meta_router::run() {
   n::log(n::log_lvl::debug, "motis.prima",
          "[mixing] {} PT journeys and {} ODM journeys",
          pt_result.journeys_.size(), taxi_journeys.size());
-  kMixer.mix(pt_result.journeys_, taxi_journeys, ride_share_journeys,
+  kMixer.mix(pt_result.journeys_, taxi_journeys, ride_share_journeys, &p,
              r_.metrics_, std::nullopt);
   r_.metrics_->routing_odm_journeys_found_non_dominated_.Observe(
       static_cast<double>(taxi_journeys.size() - pt_result.journeys_.size()));

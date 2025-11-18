@@ -27,7 +27,7 @@ struct mixer {
   void mix(nigiri::pareto_set<nigiri::routing::journey> const& pt_journeys,
            std::vector<nigiri::routing::journey>& odm_journeys,
            std::vector<nigiri::routing::journey> const& ride_share_journeys,
-           prima const&,
+           prima const*,
            metrics_registry* metrics,
            std::optional<std::string_view> stats_path) const;
   static void pareto_dominance(

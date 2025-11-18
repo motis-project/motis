@@ -59,7 +59,7 @@ int mixer(int ac, char** av) {
   auto const pt_journeys = odm::separate_pt(odm_journeys);
 
   auto ride_share_journeys = std::vector<nigiri::routing::journey>{};
-  m.mix(pt_journeys, odm_journeys, ride_share_journeys, nullptr,
+  m.mix(pt_journeys, odm_journeys, ride_share_journeys, nullptr, nullptr,
         std::string_view{out_path});
 
   auto out_file = std::ofstream{fs::path{out_path} / "journeys.csv"};

@@ -7,7 +7,7 @@
 
 #include "utl/erase_if.h"
 #include "utl/pipes.h"
-#include "utl/zip.h"
+#include "utl/visit.h"
 
 #include "nigiri/common/parse_time.h"
 #include "nigiri/logging.h"
@@ -347,53 +347,53 @@ void add_direct_odm(std::vector<direct_ride> const& direct,
          "[whitelist] added {} direct rides for mode {}", direct.size(), mode);
 }
 
+bool prima::is_pooling_ride(auto const& r) const {
+  return r.pd_.passenger_delta_ / cap_.passengers_ < r.pd_.fully_paid_delta_;
+}
+
+bool prima::is_direct_pooling(nr::journey::leg const& l) const {
+  if (!is_odm_leg(l, kOdmTransportModeId)) {
+    return false;
+  }
+
+  auto const r = utl::find_if(direct_taxi_, [&](auto const& x) {
+    return x.dep_ == l.dep_time_ && x.arr_ == l.arr_time_;
+  });
+
+  return r != end(direct_taxi_) && is_pooling_ride(*r);
+}
+
+bool prima::is_first_mile_pooling(nr::journey::leg const& l) const {
+  if (!is_odm_leg(l, kOdmTransportModeId)) {
+    return false;
+  }
+
+  auto const r = utl::find_if(first_mile_taxi_, [&](auto const& x) {
+    return x.time_at_start_ == l.dep_time_ && x.time_at_stop_ == l.arr_time_ &&
+           x.stop_ == l.to_;
+  });
+
+  return r != end(first_mile_taxi_) && is_pooling_ride(*r);
+}
+
+bool prima::is_last_mile_pooling(nr::journey::leg const& l) const {
+  if (!is_odm_leg(l, kOdmTransportModeId)) {
+    return false;
+  }
+
+  auto const r = utl::find_if(last_mile_taxi_, [&](auto const& x) {
+    return x.time_at_stop_ == l.dep_time_ && x.time_at_start_ == l.arr_time_ &&
+           x.stop_ == l.from_;
+  });
+
+  return r != end(last_mile_taxi_) && is_pooling_ride(*r);
+}
+
 bool prima::uses_pooling(nr::journey const& j) const {
-  auto const is_pooling_ride = [&](auto const& r) {
-    return r.pd_.passenger_delta_ / cap_.passengers_ < r.pd_.fully_paid_delta_;
-  };
-
-  if (is_direct_odm(j)) {
-    if (auto const ride = utl::find_if(direct_taxi_,
-                                       [&](auto const& r) {
-                                         return r.dep_ == j.departure_time() &&
-                                                r.arr_ == j.arrival_time();
-                                       });
-        ride != end(direct_taxi_)) {
-      return is_pooling_ride(*ride);
-    }
-  }
-
-  if (!j.legs_.empty() && is_odm_leg(j.legs_.front(), kOdmTransportModeId)) {
-    if (auto const ride = utl::find_if(
-            first_mile_taxi_,
-            [&](auto const& r) {
-              return r.time_at_start_ == j.legs_.front().dep_time_ &&
-                     r.time_at_stop_ == j.legs_.front().arr_time_ &&
-                     r.stop_ == j.legs_.front().to_;
-            });
-        ride != end(first_mile_taxi_)) {
-      if (is_pooling_ride(*ride)) {
-        return true;
-      }
-    }
-  }
-
-  if (j.legs_.size() > 1 && is_odm_leg(j.legs_.back(), kOdmTransportModeId)) {
-    if (auto const ride = utl::find_if(
-            last_mile_taxi_,
-            [&](auto const& r) {
-              return r.time_at_stop_ == j.legs_.back().dep_time_ &&
-                     r.time_at_start_ == j.legs_.back().arr_time_ &&
-                     r.stop_ == j.legs_.back().from_;
-            });
-        ride != end(last_mile_taxi_)) {
-      if (is_pooling_ride(*ride)) {
-        return true;
-      }
-    }
-  }
-
-  return false;
+  return !j.legs_.empty() &&
+         ((is_direct_odm(j) && is_direct_pooling(j.legs_.front())) ||
+          is_first_mile_pooling(j.legs_.front()) ||
+          (j.legs_.size() > 1 && is_last_mile_pooling(j.legs_.back())));
 }
 
 }  // namespace motis::odm
