@@ -12,6 +12,7 @@
 
 #include "utl/erase_duplicates.h"
 #include "utl/helpers/algorithm.h"
+#include "utl/timing.h"
 
 #include "osr/lookup.h"
 #include "osr/platforms.h"
@@ -106,7 +107,8 @@ n::routing::td_offsets_t get_td_offsets(
     api::ElevationCostsEnum const elevation_costs,
     double const max_matching_distance,
     std::chrono::seconds const max,
-    nigiri::routing::start_time_t const& start_time) {
+    nigiri::routing::start_time_t const& start_time,
+    stats_map_t& stats) {
   if (!r.w_ || !r.l_ || !r.pl_ || !r.tt_ || !r.loc_tree_ || !r.matches_) {
     return {};
   }
@@ -116,12 +118,15 @@ n::routing::td_offsets_t get_td_offsets(
     if (m == api::ModeEnum::ODM || m == api::ModeEnum::RIDE_SHARING) {
       continue;
     } else if (m == api::ModeEnum::FLEX) {
+      UTL_START_TIMING(flex_timer);
       utl::verify(r.fa_, "FLEX areas not loaded");
       auto frd = flex::flex_routing_data{};
       flex::add_flex_td_offsets(*r.w_, *r.l_, r.pl_, r.matches_, r.way_matches_,
                                 *r.tt_, *r.fa_, *r.loc_tree_, start_time, pos,
                                 dir, max, max_matching_distance, osr_params,
-                                frd, ret);
+                                frd, ret, stats);
+      stats.emplace(fmt::format("prepare_{}_FLEX", to_str(dir)),
+                    UTL_GET_TIMING_MS(flex_timer));
       continue;
     }
 
@@ -165,14 +170,15 @@ n::routing::td_offsets_t routing::get_td_offsets(
     api::ElevationCostsEnum const elevation_costs,
     double const max_matching_distance,
     std::chrono::seconds const max,
-    nigiri::routing::start_time_t const& start_time) const {
+    nigiri::routing::start_time_t const& start_time,
+    stats_map_t& stats) const {
   return std::visit(
       utl::overloaded{[&](tt_location) { return n::routing::td_offsets_t{}; },
                       [&](osr::location const& pos) {
                         return ::motis::ep::get_td_offsets(
                             *this, rtt, e, pos, dir, modes, osr_params,
                             pedestrian_profile, elevation_costs,
-                            max_matching_distance, max, start_time);
+                            max_matching_distance, max, start_time, stats);
                       }},
       p);
 }
@@ -213,7 +219,8 @@ std::vector<n::routing::offset> get_offsets(
     api::ElevationCostsEnum const elevation_costs,
     std::chrono::seconds const max,
     double const max_matching_distance,
-    gbfs::gbfs_routing_data& gbfs_rd) {
+    gbfs::gbfs_routing_data& gbfs_rd,
+    stats_map_t& stats) {
   if (!r.w_ || !r.l_ || !r.pl_ || !r.tt_ || !r.loc_tree_ || !r.matches_) {
     return {};
   }
@@ -221,6 +228,8 @@ std::vector<n::routing::offset> get_offsets(
   auto ignore_walk = false;
 
   auto const handle_mode = [&](api::ModeEnum const m) {
+    UTL_START_TIMING(timer);
+
     auto profile = to_profile(m, pedestrian_profile, elevation_costs);
 
     if (r.rt_->e_ && profile == osr::search_profile::kWheelchair) {
@@ -274,6 +283,8 @@ std::vector<n::routing::offset> get_offsets(
           [&](auto const pi) { providers.insert(pi); });
 
       for (auto const& pi : providers) {
+        UTL_START_TIMING(provider_timer);
+
         auto const& provider = gbfs_rd.data_->providers_.at(pi);
         if (!include_rental_provider(rental_providers, rental_provider_groups,
                                      provider.get())) {
@@ -308,6 +319,10 @@ std::vector<n::routing::offset> get_offsets(
             }
           }
         }
+
+        stats.emplace(fmt::format("prepare_{}_{}_{}", to_str(dir),
+                                  fmt::streamed(m), provider->id_),
+                      UTL_GET_TIMING_MS(provider_timer));
       }
 
     } else {
@@ -321,6 +336,9 @@ std::vector<n::routing::offset> get_offsets(
         }
       }
     }
+
+    stats.emplace(fmt::format("prepare_{}_{}", to_str(dir), fmt::streamed(m)),
+                  UTL_GET_TIMING_MS(timer));
   };
 
   if (utl::find(modes, api::ModeEnum::RENTAL) != end(modes)) {
@@ -393,7 +411,8 @@ std::vector<n::routing::offset> routing::get_offsets(
     api::ElevationCostsEnum const elevation_costs,
     std::chrono::seconds const max,
     double const max_matching_distance,
-    gbfs::gbfs_routing_data& gbfs_rd) const {
+    gbfs::gbfs_routing_data& gbfs_rd,
+    stats_map_t& stats) const {
   return std::visit(
       utl::overloaded{[&](tt_location const l) { return station_start(l.l_); },
                       [&](osr::location const& pos) {
@@ -403,7 +422,7 @@ std::vector<n::routing::offset> routing::get_offsets(
                             rental_provider_groups,
                             ignore_rental_return_constraints, osr_params,
                             pedestrian_profile, elevation_costs, max,
-                            max_matching_distance, gbfs_rd);
+                            max_matching_distance, gbfs_rd, stats);
                       }},
       p);
 }
@@ -793,43 +812,44 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                                  .street_routing_max_prepost_transit_seconds_});
 
     UTL_START_TIMING(query_preparation);
+    auto prepare_stats = std::map<std::string, std::uint64_t>{};
     auto q = n::routing::query{
         .start_time_ = start_time.start_time_,
         .start_match_mode_ = get_match_mode(start),
         .dest_match_mode_ = get_match_mode(dest),
         .use_start_footpaths_ = !is_intermodal(start),
-        .start_ =
-            get_offsets(rtt, start,
-                        query.arriveBy_ ? osr::direction::kBackward
-                                        : osr::direction::kForward,
-                        start_modes, start_form_factors, start_propulsion_types,
-                        start_rental_providers, start_rental_provider_groups,
-                        start_ignore_return_constraints, osr_params,
-                        query.pedestrianProfile_, query.elevationCosts_,
-                        pre_transit_time, query.maxMatchingDistance_, gbfs_rd),
-        .destination_ =
-            get_offsets(rtt, dest,
-                        query.arriveBy_ ? osr::direction::kForward
-                                        : osr::direction::kBackward,
-                        dest_modes, dest_form_factors, dest_propulsion_types,
-                        dest_rental_providers, dest_rental_provider_groups,
-                        dest_ignore_return_constraints, osr_params,
-                        query.pedestrianProfile_, query.elevationCosts_,
-                        post_transit_time, query.maxMatchingDistance_, gbfs_rd),
-        .td_start_ =
-            get_td_offsets(rtt, e, start,
-                           query.arriveBy_ ? osr::direction::kBackward
-                                           : osr::direction::kForward,
-                           start_modes, osr_params, query.pedestrianProfile_,
-                           query.elevationCosts_, query.maxMatchingDistance_,
-                           pre_transit_time, start_time.start_time_),
-        .td_dest_ =
-            get_td_offsets(rtt, e, dest,
-                           query.arriveBy_ ? osr::direction::kForward
-                                           : osr::direction::kBackward,
-                           dest_modes, osr_params, query.pedestrianProfile_,
-                           query.elevationCosts_, query.maxMatchingDistance_,
-                           post_transit_time, start_time.start_time_),
+        .start_ = get_offsets(
+            rtt, start,
+            query.arriveBy_ ? osr::direction::kBackward
+                            : osr::direction::kForward,
+            start_modes, start_form_factors, start_propulsion_types,
+            start_rental_providers, start_rental_provider_groups,
+            start_ignore_return_constraints, osr_params,
+            query.pedestrianProfile_, query.elevationCosts_, pre_transit_time,
+            query.maxMatchingDistance_, gbfs_rd, prepare_stats),
+        .destination_ = get_offsets(
+            rtt, dest,
+            query.arriveBy_ ? osr::direction::kForward
+                            : osr::direction::kBackward,
+            dest_modes, dest_form_factors, dest_propulsion_types,
+            dest_rental_providers, dest_rental_provider_groups,
+            dest_ignore_return_constraints, osr_params,
+            query.pedestrianProfile_, query.elevationCosts_, post_transit_time,
+            query.maxMatchingDistance_, gbfs_rd, prepare_stats),
+        .td_start_ = get_td_offsets(
+            rtt, e, start,
+            query.arriveBy_ ? osr::direction::kBackward
+                            : osr::direction::kForward,
+            start_modes, osr_params, query.pedestrianProfile_,
+            query.elevationCosts_, query.maxMatchingDistance_, pre_transit_time,
+            start_time.start_time_, prepare_stats),
+        .td_dest_ = get_td_offsets(
+            rtt, e, dest,
+            query.arriveBy_ ? osr::direction::kForward
+                            : osr::direction::kBackward,
+            dest_modes, osr_params, query.pedestrianProfile_,
+            query.elevationCosts_, query.maxMatchingDistance_,
+            post_transit_time, start_time.start_time_, prepare_stats),
         .max_transfers_ = static_cast<std::uint8_t>(max_transfers),
         .max_travel_time_ = query.maxTravelTime_
                                 .and_then([](std::int64_t const dur) {
@@ -876,51 +896,61 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
 
     auto const query_stats =
         stats_map_t{{"direct", UTL_TIMING_MS(direct)},
-                    {"query_preparation", UTL_TIMING_MS(query_preparation)},
+                    {"prepare", UTL_TIMING_MS(query_preparation)},
                     {"n_start_offsets", q.start_.size()},
                     {"n_dest_offsets", q.destination_.size()},
                     {"n_td_start_offsets", q.td_start_.size()},
                     {"n_td_dest_offsets", q.td_dest_.size()}};
 
-    auto search_state = n::routing::search_state{};
     auto r = n::routing::routing_result{};
-    if (query.algorithm_ == api::algorithmEnum::PONG &&
-        // arriveBy |  extend_later | PONG applicable
-        // ---------+---------------+---------------------
-        // FALSE    |  FALSE        | FALSE    => rRAPTOR
-        // FALSE    |  TRUE         | TRUE     => PONG
-        // TRUE     |  FALSE        | TRUE     => PONG
-        // TRUE     |  TRUE         | FALSE    => rRAPTOR
-        query.arriveBy_ != start_time.extend_interval_later_) {
-      auto raptor_state = n::routing::raptor_state{};
-      r = n::routing::pong_search(
-          *tt_, rtt, search_state, raptor_state, std::move(q),
-          query.arriveBy_ ? n::direction::kBackward : n::direction::kForward,
-          query.timeout_.has_value() ? std::chrono::seconds{*query.timeout_}
-                                     : max_timeout);
-    } else if (query.algorithm_ == api::algorithmEnum::MCRAPTOR) {
-      auto raptor_state = n::routing::raptor_state{};
-      r = n::routing::mcraptor_search(
-          *tt_, rtt, search_state, raptor_state, std::move(q),
-          query.timeout_.has_value() ? std::chrono::seconds{*query.timeout_}
-                                     : max_timeout);
-    } else if (query.algorithm_ == api::algorithmEnum::RAPTOR ||
-               tbd_ == nullptr ||
-               (rtt != nullptr && rtt->n_rt_transports() != 0U) ||
-               query.arriveBy_ || q.prf_idx_ != tbd_->prf_idx_ ||
-               q.allowed_claszes_ != n::routing::all_clasz_allowed() ||
-               !q.td_start_.empty() || !q.td_dest_.empty() ||
-               !q.transfer_time_settings_.default_ || !q.via_stops_.empty() ||
-               q.require_bike_transport_ || q.require_car_transport_) {
-      auto raptor_state = n::routing::raptor_state{};
-      r = n::routing::raptor_search(
-          *tt_, rtt, search_state, raptor_state, std::move(q),
-          query.arriveBy_ ? n::direction::kBackward : n::direction::kForward,
-          query.timeout_.has_value() ? std::chrono::seconds{*query.timeout_}
-                                     : max_timeout);
-    } else {
-      auto tb_state = n::routing::tb::query_state{*tt_, *tbd_};
-      r = n::routing::tb::tb_search(*tt_, search_state, tb_state, std::move(q));
+    auto algorithm = query.algorithm_;
+    auto search_state = n::routing::search_state{};
+    while (true) {
+      if (algorithm == api::algorithmEnum::PONG && query.timetableView_ &&
+          // arriveBy |  extend_later | PONG applicable
+          // ---------+---------------+---------------------
+          // FALSE    |  FALSE        | FALSE    => rRAPTOR
+          // FALSE    |  TRUE         | TRUE     => PONG
+          // TRUE     |  FALSE        | TRUE     => PONG
+          // TRUE     |  TRUE         | FALSE    => rRAPTOR
+          query.arriveBy_ != start_time.extend_interval_later_) {
+        try {
+          auto raptor_state = n::routing::raptor_state{};
+          r = n::routing::pong_search(
+              *tt_, rtt, search_state, raptor_state, q,
+              query.arriveBy_ ? n::direction::kBackward
+                              : n::direction::kForward,
+              query.timeout_.has_value() ? std::chrono::seconds{*query.timeout_}
+                                         : max_timeout);
+        } catch (std::exception const& e) {
+          std::cout << "PONG EXCEPTION: " << e.what() << "\n";
+          algorithm = api::algorithmEnum::RAPTOR;
+          continue;
+        }
+      } else if (algorithm_ == api::algorithmEnum::MCRAPTOR) {
+        auto raptor_state = n::routing::raptor_state{};
+        r = n::routing::mcraptor_search(
+            *tt_, rtt, search_state, raptor_state, q,
+            query.timeout_.has_value() ? std::chrono::seconds{*query.timeout_}
+                                       : max_timeout);
+      } else if (algorithm == api::algorithmEnum::RAPTOR || tbd_ == nullptr ||
+                 (rtt != nullptr && rtt->n_rt_transports() != 0U) ||
+                 query.arriveBy_ || q.prf_idx_ != tbd_->prf_idx_ ||
+                 q.allowed_claszes_ != n::routing::all_clasz_allowed() ||
+                 !q.td_start_.empty() || !q.td_dest_.empty() ||
+                 !q.transfer_time_settings_.default_ || !q.via_stops_.empty() ||
+                 q.require_bike_transport_ || q.require_car_transport_) {
+        auto raptor_state = n::routing::raptor_state{};
+        r = n::routing::raptor_search(
+            *tt_, rtt, search_state, raptor_state, q,
+            query.arriveBy_ ? n::direction::kBackward : n::direction::kForward,
+            query.timeout_.has_value() ? std::chrono::seconds{*query.timeout_}
+                                       : max_timeout);
+      } else {
+        auto tb_state = n::routing::tb::query_state{*tt_, *tbd_};
+        r = n::routing::tb::tb_search(*tt_, search_state, tb_state, q);
+      }
+      break;
     }
 
     metrics_->routing_journeys_found_.Increment(
@@ -945,8 +975,9 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
     direct_filter(direct, journeys);
 
     return {
-        .debugOutput_ = join(std::move(query_stats), r.search_stats_.to_map(),
-                             std::move(r.algo_stats_)),
+        .debugOutput_ =
+            join(std::move(prepare_stats), std::move(query_stats),
+                 r.search_stats_.to_map(), std::move(r.algo_stats_)),
         .from_ = from_p,
         .to_ = to_p,
         .direct_ = std::move(direct),

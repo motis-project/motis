@@ -155,17 +155,28 @@ api::rentals_response rental::operator()(
         }
       }
     }
-    res.providerGroups_.emplace_back(api::RentalProviderGroup{
-        .id_ = group.id_,
-        .name_ = group.name_,
-        .color_ = color,
-        .providers_ = query.withProviders_
-                          ? utl::to_vec(group.providers_,
-                                        [&](auto const pi) {
-                                          return gbfs->providers_.at(pi)->id_;
-                                        })
-                          : std::vector<std::string>{},
-        .formFactors_ = form_factors});
+    auto provider_ids = std::vector<std::string>{};
+    if (query.withProviders_) {
+      provider_ids.reserve(group.providers_.size());
+      for (auto const& pi : group.providers_) {
+        auto const& provider = gbfs->providers_.at(pi);
+        if (provider == nullptr) {
+          // shouldn't be possible, but just in case...
+          std::cerr << "[rental api] warning: provider group " << group.id_
+                    << " references missing provider idx " << to_idx(pi)
+                    << " (providers list)\n";
+          continue;
+        }
+        provider_ids.push_back(provider->id_);
+      }
+    }
+
+    res.providerGroups_.emplace_back(
+        api::RentalProviderGroup{.id_ = group.id_,
+                                 .name_ = group.name_,
+                                 .color_ = color,
+                                 .providers_ = std::move(provider_ids),
+                                 .formFactors_ = form_factors});
   };
 
   if (!filter_bbox && !filter_providers && !filter_groups) {
@@ -189,7 +200,7 @@ api::rentals_response rental::operator()(
   auto provider_groups = hash_set<std::string>{};
 
   if (filter_bbox) {
-    gbfs->provider_rtree_.find(bbox, [&](gbfs_provider_idx_t const pi) {
+    auto check_provider = [&](gbfs_provider_idx_t const pi) {
       auto const& provider = gbfs->providers_.at(pi);
       if (provider == nullptr) {
         return;
@@ -204,7 +215,11 @@ api::rentals_response rental::operator()(
       }
       providers.insert(provider.get());
       provider_groups.insert(provider->group_id_);
-    });
+    };
+    gbfs->provider_rtree_.find(
+        bbox, [&](gbfs_provider_idx_t const pi) { check_provider(pi); });
+    gbfs->provider_zone_rtree_.find(
+        bbox, [&](gbfs_provider_idx_t const pi) { check_provider(pi); });
   } else if (filter_providers || filter_groups) {
     if (filter_providers) {
       for (auto const& id : *query.providers_) {
@@ -256,7 +271,11 @@ api::rentals_response rental::operator()(
         auto form_factors = std::set<api::RentalFormFactorEnum>{};
 
         for (auto const& [vti, count] : st.status_.vehicle_types_available_) {
-          auto const& vt = provider->vehicle_types_[vti];
+          if (vti == gbfs::vehicle_type_idx_t::invalid() ||
+              cista::to_idx(vti) >= provider->vehicle_types_.size()) {
+            continue;
+          }
+          auto const& vt = provider->vehicle_types_.at(vti);
           auto const api_ff = gbfs::to_api_form_factor(vt.form_factor_);
           form_factor_counts[static_cast<std::size_t>(
               std::to_underlying(api_ff))] += count;
@@ -264,7 +283,11 @@ api::rentals_response rental::operator()(
           form_factors.insert(api_ff);
         }
         for (auto const& [vti, count] : st.status_.vehicle_docks_available_) {
-          auto const& vt = provider->vehicle_types_[vti];
+          if (vti == gbfs::vehicle_type_idx_t::invalid() ||
+              cista::to_idx(vti) >= provider->vehicle_types_.size()) {
+            continue;
+          }
+          auto const& vt = provider->vehicle_types_.at(vti);
           auto const api_ff = gbfs::to_api_form_factor(vt.form_factor_);
           form_factor_counts[static_cast<std::size_t>(
               std::to_underlying(api_ff))] += count;
@@ -341,7 +364,9 @@ api::rentals_response rental::operator()(
           gbfs::vehicle_type{.form_factor_ = gbfs::vehicle_form_factor::kOther};
       for (auto const& vs : provider->vehicle_status_) {
         if (in_bbox(vs.pos_)) {
-          if (vs.vehicle_type_idx_ != gbfs::vehicle_type_idx_t::invalid()) {
+          if (vs.vehicle_type_idx_ != gbfs::vehicle_type_idx_t::invalid() &&
+              cista::to_idx(vs.vehicle_type_idx_) <
+                  provider->vehicle_types_.size()) {
             auto const& vt = provider->vehicle_types_.at(vs.vehicle_type_idx_);
             add_vehicle(vs, vt);
           } else {

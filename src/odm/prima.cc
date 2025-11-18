@@ -110,11 +110,12 @@ void init_pt(std::vector<n::routing::offset>& offsets,
              n::routing::query const& start_time,
              n::routing::location_match_mode location_match_mode,
              std::chrono::seconds const max) {
+  auto stats = std::map<std::string, std::uint64_t>{};
   offsets = r.get_offsets(rtt, l, dir, {api::ModeEnum::CAR}, std::nullopt,
                           std::nullopt, std::nullopt, std::nullopt, false,
                           get_osr_parameters(query), query.pedestrianProfile_,
                           query.elevationCosts_, max,
-                          query.maxMatchingDistance_, gbfs_rd);
+                          query.maxMatchingDistance_, gbfs_rd, stats);
 
   std::erase_if(offsets, [&](n::routing::offset const& o) {
     return r.ride_sharing_bounds_ != nullptr &&

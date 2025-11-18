@@ -382,6 +382,10 @@ export const PlaceSchema = {
             description: "The ID of the stop. This is often something that users don't care about.",
             type: 'string'
         },
+        parentId: {
+            description: "If it's not a root stop, this field contains the `stopId` of the parent stop.",
+            type: 'string'
+        },
         importance: {
             description: 'The importance of the stop between 0-1.',
             type: 'number'
@@ -527,7 +531,7 @@ export const ReachableSchema = {
 export const StopTimeSchema = {
     description: 'departure or arrival event at a stop',
     type: 'object',
-    required: ['place', 'mode', 'realTime', 'headsign', 'tripTo', 'agencyId', 'agencyName', 'agencyUrl', 'tripId', 'routeShortName', 'routeLongName', 'tripShortName', 'displayName', 'pickupDropoffType', 'cancelled', 'tripCancelled', 'source'],
+    required: ['place', 'mode', 'realTime', 'headsign', 'tripTo', 'agencyId', 'agencyName', 'agencyUrl', 'tripId', 'routeId', 'directionId', 'routeShortName', 'routeLongName', 'tripShortName', 'displayName', 'pickupDropoffType', 'cancelled', 'tripCancelled', 'source'],
     properties: {
         place: {
             '$ref': '#/components/schemas/Place',
@@ -558,6 +562,12 @@ For non-transit legs, null
             type: 'string'
         },
         agencyUrl: {
+            type: 'string'
+        },
+        routeId: {
+            type: 'string'
+        },
+        directionId: {
             type: 'string'
         },
         routeColor: {
@@ -1350,6 +1360,12 @@ For non-transit legs, null
             description: 'final stop of this trip (can differ from headsign)',
             '$ref': '#/components/schemas/Place'
         },
+        routeId: {
+            type: 'string'
+        },
+        directionId: {
+            type: 'string'
+        },
         routeColor: {
             type: 'string'
         },
@@ -1660,6 +1676,63 @@ true if the wheelchair path uses an elevator
             description: `optional; missing if no path was found with car routing
 transfer duration in minutes for the car profile
 `
+        }
+    }
+} as const;
+
+export const OneToManyParamsSchema = {
+    type: 'object',
+    required: ['one', 'many', 'mode', 'max', 'maxMatchingDistance', 'elevationCosts', 'arriveBy'],
+    properties: {
+        one: {
+            description: 'geo location as latitude;longitude',
+            type: 'string'
+        },
+        many: {
+            description: 'geo locations as latitude;longitude,latitude;longitude,...',
+            type: 'array',
+            items: {
+                type: 'string'
+            },
+            explode: false
+        },
+        mode: {
+            description: `routing profile to use (currently supported: \`WALK\`, \`BIKE\`, \`CAR\`)
+`,
+            '$ref': '#/components/schemas/Mode'
+        },
+        max: {
+            description: 'maximum travel time in seconds',
+            type: 'number'
+        },
+        maxMatchingDistance: {
+            description: 'maximum matching distance in meters to match geo coordinates to the street network',
+            type: 'number'
+        },
+        elevationCosts: {
+            description: `Optional. Default is \`NONE\`.
+
+Set an elevation cost profile, to penalize routes with incline.
+- \`NONE\`: No additional costs for elevations. This is the default behavior
+- \`LOW\`: Add a low cost for increase in elevation and incline along the way. This will prefer routes with less ascent, if small detours are required.
+- \`HIGH\`: Add a high cost for increase in elevation and incline along the way. This will prefer routes with less ascent, if larger detours are required.
+
+As using an elevation costs profile will increase the travel duration,
+routing through steep terrain may exceed the maximal allowed duration,
+causing a location to appear unreachable.
+Increasing the maximum travel time for these segments may resolve this issue.
+
+Elevation cost profiles are currently used by following street modes:
+- \`BIKE\`
+`,
+            '$ref': '#/components/schemas/ElevationCosts',
+            default: 'NONE'
+        },
+        arriveBy: {
+            description: `true = many to one
+false = one to many
+`,
+            type: 'boolean'
         }
     }
 } as const;

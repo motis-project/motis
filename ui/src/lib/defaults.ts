@@ -7,7 +7,7 @@ export const defaultQuery = {
 	arriveBy: false,
 	timetableView: true,
 	withFares: false,
-	searchWindow: 7200,
+	searchWindow: 900,
 	pedestrianProfile: 'FOOT',
 	transitModes: ['TRANSIT'],
 	preTransitModes: ['WALK'],
@@ -48,7 +48,7 @@ export const defaultQuery = {
 	isochronesDisplayLevel: 'GEOMETRY_CIRCLES',
 	isochronesColor: '#ffff00',
 	isochronesOpacity: 250,
-	algorithm: 'RAPTOR'
+	algorithm: 'PONG'
 };
 
 export const omitDefaults = (query: PlanData['query']): PlanData['query'] => {
