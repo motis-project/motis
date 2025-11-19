@@ -50,7 +50,7 @@ constexpr auto blacklist_response = R"(
 constexpr auto whitelisting_response = R"(
 {
   "start": [[{"pickupTime": 35820000, "dropoffTime": 39300000, "passengerDuration": 3480000, "approachPlusReturnDurationDelta": 3600000, "fullyPayedDurationDelta": 3480000, "taxiWaitingTime": 0, "cost": 23}],[null]],
-  "target": [[{"pickupTime": 50820000, "dropoffTime": 53160000, "passengerDuration": 2340000, "approachPlusReturnDurationDelta": 3600000, "fullyPayedDurationDelta": 2340000, "taxiWaitingTime": 0, "cost": 23}]],
+  "target": [[{"pickupTime": 50820000, "dropoffTime": 53160000, "passengerDuration": 2340000, "approachPlusReturnDurationDelta": -1800000, "fullyPayedDurationDelta": 2340000, "taxiWaitingTime": 0, "cost": 42.23}]],
   "direct": [{"pickupTime": 41400000, "dropoffTime": 45000000, "passengerDuration": 3600000, "approachPlusReturnDurationDelta": 3600000, "fullyPayedDurationDelta": 3600000, "taxiWaitingTime": 0, "cost": 23}]
 }
 )";

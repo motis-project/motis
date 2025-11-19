@@ -37,7 +37,7 @@ struct prima_data {
   std::int64_t approach_return_delta_{};
   std::int64_t fully_paid_delta_{};
   std::int64_t waiting_time_delta_{};
-  std::int64_t cost_{};
+  double cost_{};
 };
 
 struct direct_ride {

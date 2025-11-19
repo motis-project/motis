@@ -69,7 +69,7 @@ bool prima::consume_whitelist_taxi_response(
             o.at("approachPlusReturnDurationDelta").as_int64(),
         .fully_paid_delta_ = o.at("fullyPayedDurationDelta").as_int64(),
         .waiting_time_delta_ = o.at("taxiWaitingTime").as_int64(),
-        .cost_ = o.at("cost").as_int64()};
+        .cost_ = value_to<double>(o.at("cost"))};
   };
 
   auto const update_first_mile = [&](json::array const& update) {
