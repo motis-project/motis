@@ -571,7 +571,6 @@
 					<Card class="overflow-y-auto overflow-x-hidden bg-background rounded-lg">
 						<SearchMask
 							geocodingBiasPlace={center}
-							{maxTravelTimeLimit}
 							{maxPrePostTransitTimeLimit}
 							{maxDirectTimeLimit}
 							{hasElevation}
