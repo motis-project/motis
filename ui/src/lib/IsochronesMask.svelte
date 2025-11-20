@@ -15,6 +15,7 @@
 	import { posToLocation, type Location } from '$lib/Location';
 	import { formatDurationSec } from '$lib/formatDuration';
 	import type { PrePostDirectMode, TransitMode } from '$lib/Modes';
+	import { generateTimes } from './generateTimes';
 
 	const minutesToSeconds = (minutes: number[]) => {
 		return minutes.map((m) => m * 60);
@@ -78,27 +79,8 @@
 		directProviderGroups: string[];
 	} = $props();
 
-	const generateMaxTravelTimes = () => {
-		const times: number[] = [];
-		let t = 1;
-		let max = maxTravelTimeLimit ?? 240;
-		while (t <= max) {
-			times.push(t);
-			if (t < 5) {
-				t += 4;
-			} else if (t < 80) {
-				t += 10;
-			} else if (t < 120) {
-				t += 30;
-			} else {
-				t += 60;
-			}
-		}
-		return times;
-	};
-
 	const possibleMaxTravelTimes = $derived(
-		minutesToSeconds(generateMaxTravelTimes()).map((s) => ({
+		minutesToSeconds(generateTimes(maxTravelTimeLimit, 240)).map((s) => ({
 			value: s.toString(),
 			label: formatDurationSec(s)
 		}))
@@ -226,7 +208,6 @@
 		</RadioGroup.Root>
 		<AdvancedOptions
 			bind:useRoutedTransfers
-			{maxTravelTimeLimit}
 			{maxPrePostTransitTimeLimit}
 			{maxDirectTimeLimit}
 			{hasElevation}

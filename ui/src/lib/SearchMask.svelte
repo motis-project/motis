@@ -14,7 +14,6 @@
 
 	let {
 		geocodingBiasPlace,
-		maxTravelTimeLimit,
 		maxPrePostTransitTimeLimit,
 		maxDirectTimeLimit,
 		hasElevation,
@@ -44,7 +43,6 @@
 		directProviderGroups = $bindable()
 	}: {
 		geocodingBiasPlace?: maplibregl.LngLatLike;
-		maxTravelTimeLimit: number | undefined;
 		maxPrePostTransitTimeLimit: number | undefined;
 		maxDirectTimeLimit: number | undefined;
 		hasElevation: boolean | undefined;

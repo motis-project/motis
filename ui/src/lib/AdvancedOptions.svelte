@@ -18,6 +18,7 @@
 	import StreetModes from '$lib/StreetModes.svelte';
 	import TransitModeSelect from '$lib/TransitModeSelect.svelte';
 	import { type NumberSelectOption } from '$lib/NumberSelect.svelte';
+	import { generateTimes } from './generateTimes';
 
 	let {
 		useRoutedTransfers = $bindable(),
@@ -80,44 +81,8 @@
 		label: i.toString()
 	}));
 
-	const generateDirectDurations = () => {
-		const times: number[] = [];
-		let t = 5;
-		let max = maxDirectTimeLimit ?? 60 * 60;
-		while (t <= max / 60) {
-			times.push(t * 60);
-			if (t < 50) {
-				t += 5;
-			} else if (t < 60) {
-				t += 10;
-			} else if (t < 120) {
-				t += 30;
-			} else {
-				t += 60;
-			}
-		}
-		return times;
-	};
-
-	const generatePrePostDurations = () => {
-		const times: number[] = [];
-		let t = 1;
-		let max = maxPrePostTransitTimeLimit ?? 60 * 60;
-		while (t <= max / 60) {
-			times.push(t * 60);
-			if (t < 5) {
-				t += 4;
-			} else if (t < 30) {
-				t += 5;
-			} else {
-				t += 10;
-			}
-		}
-		return times;
-	};
-
-	const possibleDirectDurations = $derived(generateDirectDurations());
-	const possiblePrePostDurations = $derived(generatePrePostDurations());
+	const possibleDirectDurations = $derived(generateTimes(maxDirectTimeLimit, 60 * 60));
+	const possiblePrePostDurations = $derived(generateTimes(maxPrePostTransitTimeLimit, 60 * 60));
 
 	function setModes(mode: PrePostDirectMode) {
 		return function (checked: boolean) {
