@@ -23,6 +23,11 @@
 	let {
 		one = $bindable(),
 		maxTravelTime = $bindable(),
+		maxTravelTimeLimit,
+		maxPrePostTransitTimeLimit,
+		maxDirectTimeLimit,
+		hasElevation,
+		routeFootPath,
 		geocodingBiasPlace,
 		time = $bindable(),
 		useRoutedTransfers = $bindable(),
@@ -46,6 +51,11 @@
 	}: {
 		one: Location;
 		maxTravelTime: number;
+		maxTravelTimeLimit: number | undefined;
+		maxPrePostTransitTimeLimit: number | undefined;
+		maxDirectTimeLimit: number | undefined;
+		hasElevation: boolean | undefined;
+		routeFootPath: boolean;
 		geocodingBiasPlace?: maplibregl.LngLatLike;
 		time: Date;
 		useRoutedTransfers: boolean;
@@ -68,9 +78,31 @@
 		directProviderGroups: string[];
 	} = $props();
 
-	const possibleMaxTravelTimes = minutesToSeconds([
-		1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 75, 80, 90, 120, 150, 180, 210, 240
-	]).map((s) => ({ value: s.toString(), label: formatDurationSec(s) }));
+	const generateMaxTravelTimes = () => {
+		const times: number[] = [];
+		let t = 1;
+		let max = maxTravelTimeLimit ?? 240;
+		while (t <= max) {
+			times.push(t);
+			if (t < 5) {
+				t += 4;
+			} else if (t < 80) {
+				t += 10;
+			} else if (t < 120) {
+				t += 30;
+			} else {
+				t += 60;
+			}
+		}
+		return times;
+	};
+
+	const possibleMaxTravelTimes = $derived(
+		minutesToSeconds(generateMaxTravelTimes()).map((s) => ({
+			value: s.toString(),
+			label: formatDurationSec(s)
+		}))
+	);
 	const displayLevels = new Map<DisplayLevel, string>([
 		['OVERLAY_RECTS', t.isochrones.canvasRects],
 		['OVERLAY_CIRCLES', t.isochrones.canvasCircles],
@@ -194,6 +226,11 @@
 		</RadioGroup.Root>
 		<AdvancedOptions
 			bind:useRoutedTransfers
+			{maxTravelTimeLimit}
+			{maxPrePostTransitTimeLimit}
+			{maxDirectTimeLimit}
+			{hasElevation}
+			{routeFootPath}
 			bind:wheelchair={
 				() => pedestrianProfile === 'WHEELCHAIR',
 				(v) => (pedestrianProfile = v ? 'WHEELCHAIR' : 'FOOT')

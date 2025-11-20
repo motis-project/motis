@@ -14,6 +14,11 @@
 
 	let {
 		geocodingBiasPlace,
+		maxTravelTimeLimit,
+		maxPrePostTransitTimeLimit,
+		maxDirectTimeLimit,
+		hasElevation,
+		routeFootPath,
 		from = $bindable(),
 		to = $bindable(),
 		time = $bindable(),
@@ -39,6 +44,11 @@
 		directProviderGroups = $bindable()
 	}: {
 		geocodingBiasPlace?: maplibregl.LngLatLike;
+		maxTravelTimeLimit: number | undefined;
+		maxPrePostTransitTimeLimit: number | undefined;
+		maxDirectTimeLimit: number | undefined;
+		hasElevation: boolean | undefined;
+		routeFootPath: boolean;
 		from: Location;
 		to: Location;
 		time: Date;
@@ -148,6 +158,10 @@
 			</Label>
 		</RadioGroup.Root>
 		<AdvancedOptions
+			{maxPrePostTransitTimeLimit}
+			{maxDirectTimeLimit}
+			{hasElevation}
+			{routeFootPath}
 			bind:useRoutedTransfers
 			bind:wheelchair={
 				() => pedestrianProfile === 'WHEELCHAIR',

@@ -21,6 +21,10 @@
 
 	let {
 		useRoutedTransfers = $bindable(),
+		maxPrePostTransitTimeLimit,
+		maxDirectTimeLimit,
+		hasElevation,
+		routeFootPath,
 		wheelchair = $bindable(),
 		requireBikeTransport = $bindable(),
 		requireCarTransport = $bindable(),
@@ -44,6 +48,10 @@
 		additionalComponents
 	}: {
 		useRoutedTransfers: boolean;
+		maxPrePostTransitTimeLimit: number | undefined;
+		maxDirectTimeLimit: number | undefined;
+		hasElevation: boolean | undefined;
+		routeFootPath: boolean;
 		wheelchair: boolean;
 		requireBikeTransport: boolean;
 		requireCarTransport: boolean;
@@ -72,37 +80,45 @@
 		label: i.toString()
 	}));
 
-	const possibleDirectDurations = [
-		5 * 60,
-		10 * 60,
-		15 * 60,
-		20 * 60,
-		25 * 60,
-		30 * 60,
-		35 * 60,
-		40 * 60,
-		45 * 60,
-		50 * 60,
-		60 * 60,
-		90 * 60,
-		120 * 60,
-		180 * 60,
-		240 * 60,
-		300 * 60,
-		360 * 60
-	];
-	const possiblePrePostDurations = [
-		1 * 60,
-		5 * 60,
-		10 * 60,
-		15 * 60,
-		20 * 60,
-		25 * 60,
-		30 * 60,
-		40 * 60,
-		50 * 60,
-		60 * 60
-	];
+	const generateDirectDurations = () => {
+		const times: number[] = [];
+		let t = 5;
+		let max = maxDirectTimeLimit ?? 60 * 60;
+		while (t <= max / 60) {
+			times.push(t * 60);
+			if (t < 50) {
+				t += 5;
+			} else if (t < 60) {
+				t += 10;
+			} else if (t < 120) {
+				t += 30;
+			} else {
+				t += 60;
+			}
+		}
+		return times;
+	};
+
+	const generatePrePostDurations = () => {
+		const times: number[] = [];
+		let t = 1;
+		let max = maxPrePostTransitTimeLimit ?? 60 * 60;
+		while (t <= max / 60) {
+			times.push(t * 60);
+			if (t < 5) {
+				t += 4;
+			} else if (t < 30) {
+				t += 5;
+			} else {
+				t += 10;
+			}
+		}
+		return times;
+	};
+
+	const possibleDirectDurations = $derived(generateDirectDurations());
+	const possiblePrePostDurations = $derived(generatePrePostDurations());
+
 	function setModes(mode: PrePostDirectMode) {
 		return function (checked: boolean) {
 			if (checked) {
@@ -150,16 +166,18 @@
 		<TransitModeSelect bind:transitModes />
 
 		<div class="space-y-2">
-			<Switch
-				bind:checked={useRoutedTransfers}
-				label={t.useRoutedTransfers}
-				id="useRoutedTransfers"
-				onCheckedChange={(checked) => {
-					if (wheelchair && !checked) {
-						wheelchair = false;
-					}
-				}}
-			/>
+			{#if routeFootPath}
+				<Switch
+					bind:checked={useRoutedTransfers}
+					label={t.useRoutedTransfers}
+					id="useRoutedTransfers"
+					onCheckedChange={(checked) => {
+						if (wheelchair && !checked) {
+							wheelchair = false;
+						}
+					}}
+				/>
+			{/if}
 			<Switch
 				bind:checked={wheelchair}
 				label={t.wheelchair}
@@ -246,24 +264,25 @@
 		</div>
 
 		<!-- Elevation Costs -->
-		<div class="grid grid-cols-2 items-center">
-			<div class="text-sm">
-				{t.selectElevationCosts}
+		{#if hasElevation}
+			<div class="grid grid-cols-2 items-center">
+				<div class="text-sm">
+					{t.selectElevationCosts}
+				</div>
+				<Select.Root disabled={!allowElevationCosts} type="single" bind:value={elevationCosts}>
+					<Select.Trigger aria-label={t.selectElevationCosts}>
+						{t.elevationCosts[elevationCosts]}
+					</Select.Trigger>
+					<Select.Content sideOffset={10}>
+						{#each possibleElevationCosts as costs, i (i + costs.value)}
+							<Select.Item value={costs.value} label={costs.label}>
+								{costs.label}
+							</Select.Item>
+						{/each}
+					</Select.Content>
+				</Select.Root>
 			</div>
-			<Select.Root disabled={!allowElevationCosts} type="single" bind:value={elevationCosts}>
-				<Select.Trigger aria-label={t.selectElevationCosts}>
-					{t.elevationCosts[elevationCosts]}
-				</Select.Trigger>
-				<Select.Content sideOffset={10}>
-					{#each possibleElevationCosts as costs, i (i + costs.value)}
-						<Select.Item value={costs.value} label={costs.label}>
-							{costs.label}
-						</Select.Item>
-					{/each}
-				</Select.Content>
-			</Select.Root>
-		</div>
-
+		{/if}
 		{#if additionalComponents}
 			{@render additionalComponents()}
 		{/if}

@@ -72,6 +72,11 @@
 	let showMap = $state(!isSmallScreen);
 	let lastSelectedItinerary: Itinerary | undefined = undefined;
 	let lastOneToAllQuery: OneToAllData | undefined = undefined;
+	let hasElevation: boolean | undefined = $state();
+	let routeFootPath: boolean = $state(false);
+	let maxPrePostTransitTimeLimit: number | undefined = $state();
+	let maxDirectTimeLimit: number | undefined = $state();
+	let maxTravelTimeLimit: number | undefined = $state();
 
 	$effect(() => {
 		if (activeTab == 'isochrones') {
@@ -116,6 +121,12 @@
 			if (r) {
 				center = [r.lon, r.lat];
 				zoom = r.zoom;
+				hasElevation = r.hasElevation;
+				routeFootPath = r.routeFootPath;
+				maxPrePostTransitTimeLimit = r.maxPrePostTransitTimeLimit;
+				maxDirectTimeLimit = r.maxDirectTimeLimit;
+				maxTravelTimeLimit = r.maxTravelTimeLimit;
+				console.log('initial response:', r);
 			}
 		});
 		await tick();
@@ -217,17 +228,29 @@
 	let maxTransfers = $state<number>(
 		parseIntOr(urlParams?.get('maxTransfers'), defaultQuery.maxTransfers)
 	);
-	let maxTravelTime = $state<number>(
-		parseIntOr(urlParams?.get('maxTravelTime'), defaultQuery.maxTravelTime)
+	let maxTravelTime = $derived<number>(
+		parseIntOr(
+			urlParams?.get('maxTravelTime'),
+			Math.min(defaultQuery.maxTravelTime, maxTravelTimeLimit ?? Infinity)
+		)
 	);
-	let maxPreTransitTime = $state<number>(
-		parseIntOr(urlParams?.get('maxPreTransitTime'), defaultQuery.maxPreTransitTime)
+	let maxPreTransitTime = $derived<number>(
+		parseIntOr(
+			urlParams?.get('maxPreTransitTime'),
+			Math.min(defaultQuery.maxPreTransitTime, maxPrePostTransitTimeLimit ?? Infinity)
+		)
 	);
-	let maxPostTransitTime = $state<number>(
-		parseIntOr(urlParams?.get('maxPostTransitTime'), defaultQuery.maxPostTransitTime)
+	let maxPostTransitTime = $derived<number>(
+		parseIntOr(
+			urlParams?.get('maxPostTransitTime'),
+			Math.min(defaultQuery.maxPostTransitTime, maxPrePostTransitTimeLimit ?? Infinity)
+		)
 	);
-	let maxDirectTime = $state<number>(
-		parseIntOr(urlParams?.get('maxDirectTime'), defaultQuery.maxDirectTime)
+	let maxDirectTime = $derived<number>(
+		parseIntOr(
+			urlParams?.get('maxDirectTime'),
+			Math.min(defaultQuery.maxDirectTime, maxDirectTimeLimit ?? Infinity)
+		)
 	);
 	let ignorePreTransitRentalReturnConstraints = $state(
 		urlParams?.get('ignorePreTransitRentalReturnConstraints') == 'true'
@@ -548,6 +571,11 @@
 					<Card class="overflow-y-auto overflow-x-hidden bg-background rounded-lg">
 						<SearchMask
 							geocodingBiasPlace={center}
+							{maxTravelTimeLimit}
+							{maxPrePostTransitTimeLimit}
+							{maxDirectTimeLimit}
+							{hasElevation}
+							{routeFootPath}
 							bind:from
 							bind:to
 							bind:time
@@ -584,6 +612,11 @@
 				<Card class="overflow-y-auto overflow-x-hidden bg-background rounded-lg">
 					<IsochronesMask
 						bind:one
+						{maxTravelTimeLimit}
+						{maxPrePostTransitTimeLimit}
+						{maxDirectTimeLimit}
+						{hasElevation}
+						{routeFootPath}
 						bind:maxTravelTime
 						geocodingBiasPlace={center}
 						bind:time

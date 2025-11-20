@@ -2463,6 +2463,26 @@ export type InitialResponse = ({
      * zoom level
      */
     zoom: number;
+    /**
+     * true if elevation is loaded
+     */
+    hasElevation?: boolean;
+    /**
+     * enable routing footpaths
+     */
+    routeFootPath: boolean;
+    /**
+     * limit for maxTravelTime API param
+     */
+    maxTravelTimeLimit: number;
+    /**
+     * limit for maxPre/PostTransitTime API param
+     */
+    maxPrePostTransitTimeLimit: number;
+    /**
+     * limit for maxDirectTime API param
+     */
+    maxDirectTimeLimit: number;
 });
 
 export type InitialError = (Error);

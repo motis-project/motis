@@ -1725,6 +1725,10 @@ paths:
                   - lat
                   - lon
                   - zoom
+                  - routeFootPath
+                  - maxTravelTimeLimit
+                  - maxPrePostTransitTimeLimit
+                  - maxDirectTimeLimit
                 properties:
                   lat:
                     description: latitude
@@ -1735,6 +1739,26 @@ paths:
                   zoom:
                     description: zoom level
                     type: number
+                  hasElevation: 
+                    description: true if elevation is loaded
+                    type: boolean
+                  routeFootPath: 
+                    description: enable routing footpaths
+                    type: boolean
+                  maxTravelTimeLimit: 
+                    description: limit for maxTravelTime API param
+                    type: number
+                  maxPrePostTransitTimeLimit: 
+                    description: limit for maxPre/PostTransitTime API param
+                    type: number
+                  maxDirectTimeLimit: 
+                    description: limit for maxDirectTime API param
+                    type: number
+                  
+                  
+                  
+
+                  
 
   /api/v1/map/stops:
     get:
