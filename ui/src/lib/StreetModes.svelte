@@ -12,6 +12,7 @@
 
 	let {
 		label,
+		disabled,
 		modes = $bindable(),
 		maxTransitTime = $bindable(),
 		possibleModes,
@@ -20,6 +21,7 @@
 		providerGroups = $bindable()
 	}: {
 		label: string;
+		disabled?: boolean;
 		modes: PrePostDirectMode[];
 		maxTransitTime: number;
 		possibleModes: readonly PrePostDirectMode[];
@@ -122,7 +124,7 @@
 	<div class="text-sm">
 		{label}
 	</div>
-	<Select.Root type="multiple" bind:value={modes}>
+	<Select.Root {disabled} type="multiple" bind:value={modes}>
 		<Select.Trigger class="flex items-center w-full overflow-hidden" aria-label={label}>
 			<span>{selectedModesLabel}</span>
 		</Select.Trigger>
@@ -135,6 +137,7 @@
 		</Select.Content>
 	</Select.Root>
 	<Select.Root
+		{disabled}
 		type="single"
 		bind:value={() => maxTransitTime.toString(), (v) => (maxTransitTime = parseInt(v))}
 	>
@@ -156,7 +159,7 @@
 		{t.sharingProviders}
 	</div>
 	<div class={cn('col-span-2 col-start-2', showRental || 'hidden')}>
-		<Select.Root type="multiple" bind:value={providerGroups}>
+		<Select.Root {disabled} type="multiple" bind:value={providerGroups}>
 			<Select.Trigger
 				class="flex items-center w-full overflow-hidden"
 				aria-label={t.sharingProviders}
@@ -185,6 +188,7 @@
 	</div>
 	<div class={cn('col-span-2 col-start-2', showRental || 'hidden')}>
 		<Switch
+			{disabled}
 			bind:checked={
 				() => !ignoreRentalReturnConstraints, (v) => (ignoreRentalReturnConstraints = !v)
 			}

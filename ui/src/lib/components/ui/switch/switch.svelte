@@ -4,12 +4,14 @@
 
 	let {
 		checked = $bindable(false),
+		disabled,
 		label,
 		id,
 		class: className,
 		onCheckedChange: onCheckedChange
 	}: {
 		checked: boolean;
+		disabled?: boolean;
 		label: string;
 		id: string;
 		class?: string;
@@ -20,6 +22,7 @@
 <div class="flex items-center space-x-3 my-2">
 	<Switch.Root
 		{id}
+		{disabled}
 		bind:checked
 		class={cn(
 			'peer inline-flex h-[21px] min-h-[21px] w-[45px] shrink-0 cursor-pointer items-center rounded-full px-[3px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-foreground data-[state=unchecked]:bg-border data-[state=unchecked]:shadow-mini-inset dark:data-[state=checked]:bg-foreground',

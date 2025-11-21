@@ -11,6 +11,7 @@ struct initial {
   api::initial_response operator()(boost::urls::url_view const&) const;
 
   nigiri::timetable const& tt_;
+  config const& config_;
 };
 
 }  // namespace motis::ep

@@ -5,7 +5,12 @@
 	import * as RadioGroup from '$lib/components/ui/radio-group';
 	import Button from '$lib/components/ui/button/button.svelte';
 	import { Label } from '$lib/components/ui/label';
-	import type { ElevationCosts, Mode, PedestrianProfile } from '@motis-project/motis-client';
+	import type {
+		ElevationCosts,
+		Mode,
+		PedestrianProfile,
+		ServerConfig
+	} from '@motis-project/motis-client';
 	import AddressTypeahead from '$lib/AddressTypeahead.svelte';
 	import AdvancedOptions from '$lib/AdvancedOptions.svelte';
 	import DateInput from '$lib/DateInput.svelte';
@@ -14,6 +19,7 @@
 
 	let {
 		geocodingBiasPlace,
+		serverConfig,
 		from = $bindable(),
 		to = $bindable(),
 		time = $bindable(),
@@ -39,6 +45,7 @@
 		directProviderGroups = $bindable()
 	}: {
 		geocodingBiasPlace?: maplibregl.LngLatLike;
+		serverConfig: ServerConfig | undefined;
 		from: Location;
 		to: Location;
 		time: Date;
@@ -148,6 +155,7 @@
 			</Label>
 		</RadioGroup.Root>
 		<AdvancedOptions
+			{serverConfig}
 			bind:useRoutedTransfers
 			bind:wheelchair={
 				() => pedestrianProfile === 'WHEELCHAIR',
