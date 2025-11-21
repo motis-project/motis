@@ -14,5 +14,9 @@ export const generateTimes = (limit: number | undefined, defaultLimit: number): 
 			t += 60;
 		}
 	}
+	if (times[times.length - 1] !== max) {
+		times.push(max);
+	}
+
 	return times;
 };

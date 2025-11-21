@@ -5,7 +5,7 @@
 	import * as Select from '$lib/components/ui/select';
 	import { ChevronUp, ChevronDown } from '@lucide/svelte';
 	import { Switch } from './components/ui/switch';
-	import type { ElevationCosts } from '@motis-project/motis-client';
+	import type { ElevationCosts, ServerConfig } from '@motis-project/motis-client';
 	import { defaultQuery } from '$lib/defaults';
 	import { formatDurationSec } from './formatDuration';
 	import {
@@ -22,10 +22,7 @@
 
 	let {
 		useRoutedTransfers = $bindable(),
-		maxPrePostTransitTimeLimit,
-		maxDirectTimeLimit,
-		hasElevation,
-		routeFootPath,
+		serverConfig,
 		wheelchair = $bindable(),
 		requireBikeTransport = $bindable(),
 		requireCarTransport = $bindable(),
@@ -49,10 +46,7 @@
 		additionalComponents
 	}: {
 		useRoutedTransfers: boolean;
-		maxPrePostTransitTimeLimit: number | undefined;
-		maxDirectTimeLimit: number | undefined;
-		hasElevation: boolean | undefined;
-		routeFootPath: boolean;
+		serverConfig: ServerConfig | undefined;
 		wheelchair: boolean;
 		requireBikeTransport: boolean;
 		requireCarTransport: boolean;
@@ -81,8 +75,12 @@
 		label: i.toString()
 	}));
 
-	const possibleDirectDurations = $derived(generateTimes(maxDirectTimeLimit, 60 * 60));
-	const possiblePrePostDurations = $derived(generateTimes(maxPrePostTransitTimeLimit, 60 * 60));
+	const possibleDirectDurations = $derived(
+		generateTimes(serverConfig?.maxDirectTimeLimit, 60 * 60)
+	);
+	const possiblePrePostDurations = $derived(
+		generateTimes(serverConfig?.maxPrePostTransitTimeLimit, 60 * 60)
+	);
 
 	function setModes(mode: PrePostDirectMode) {
 		return function (checked: boolean) {
@@ -110,11 +108,14 @@
 	];
 	let expanded = $state<boolean>(false);
 	let allowElevationCosts = $derived(
-		requireBikeTransport ||
-			preTransitModes.includes('BIKE') ||
-			postTransitModes.includes('BIKE') ||
-			directModes?.includes('BIKE')
+		serverConfig?.hasElevation &&
+			(requireBikeTransport ||
+				preTransitModes.includes('BIKE') ||
+				postTransitModes.includes('BIKE') ||
+				directModes?.includes('BIKE'))
 	);
+	let allowStreetRouting = $derived(serverConfig?.hasStreetRouting);
+	let allowRoutedTransfers = $derived(serverConfig?.hasRoutedTransfers);
 </script>
 
 <Button variant="ghost" onclick={() => (expanded = !expanded)}>
@@ -131,20 +132,21 @@
 		<TransitModeSelect bind:transitModes />
 
 		<div class="space-y-2">
-			{#if routeFootPath}
-				<Switch
-					bind:checked={useRoutedTransfers}
-					label={t.useRoutedTransfers}
-					id="useRoutedTransfers"
-					onCheckedChange={(checked) => {
-						if (wheelchair && !checked) {
-							wheelchair = false;
-						}
-					}}
-				/>
-			{/if}
+			<Switch
+				bind:checked={useRoutedTransfers}
+				disabled={!allowRoutedTransfers}
+				label={t.useRoutedTransfers}
+				id="useRoutedTransfers"
+				onCheckedChange={(checked) => {
+					if (wheelchair && !checked) {
+						wheelchair = false;
+					}
+				}}
+			/>
+
 			<Switch
 				bind:checked={wheelchair}
+				disabled={!allowRoutedTransfers}
 				label={t.wheelchair}
 				id="wheelchair"
 				onCheckedChange={(checked) => {
@@ -164,7 +166,7 @@
 				label={t.requireCarTransport}
 				id="requireCarTransport"
 				onCheckedChange={(checked) => {
-					if (checked && !useRoutedTransfers) {
+					if (checked && !useRoutedTransfers && allowRoutedTransfers) {
 						useRoutedTransfers = true;
 					}
 					setModes('CAR')(checked);
@@ -195,6 +197,7 @@
 			<!-- First mile -->
 			<StreetModes
 				label={t.routingSegments.firstMile}
+				disabled={!allowStreetRouting}
 				bind:modes={preTransitModes}
 				bind:maxTransitTime={maxPreTransitTime}
 				possibleModes={prePostDirectModes}
@@ -206,6 +209,7 @@
 			<!-- Last mile -->
 			<StreetModes
 				label={t.routingSegments.lastMile}
+				disabled={!allowStreetRouting}
 				bind:modes={postTransitModes}
 				bind:maxTransitTime={maxPostTransitTime}
 				possibleModes={prePostDirectModes}
@@ -218,6 +222,7 @@
 			{#if directModes !== undefined && maxDirectTime !== undefined && ignoreDirectRentalReturnConstraints !== undefined}
 				<StreetModes
 					label={t.routingSegments.direct}
+					disabled={!allowStreetRouting}
 					bind:modes={directModes}
 					bind:maxTransitTime={maxDirectTime}
 					possibleModes={prePostDirectModes}
@@ -229,25 +234,27 @@
 		</div>
 
 		<!-- Elevation Costs -->
-		{#if hasElevation}
-			<div class="grid grid-cols-2 items-center">
-				<div class="text-sm">
-					{t.selectElevationCosts}
-				</div>
-				<Select.Root disabled={!allowElevationCosts} type="single" bind:value={elevationCosts}>
-					<Select.Trigger aria-label={t.selectElevationCosts}>
-						{t.elevationCosts[elevationCosts]}
-					</Select.Trigger>
-					<Select.Content sideOffset={10}>
-						{#each possibleElevationCosts as costs, i (i + costs.value)}
-							<Select.Item value={costs.value} label={costs.label}>
-								{costs.label}
-							</Select.Item>
-						{/each}
-					</Select.Content>
-				</Select.Root>
+		<div class="grid grid-cols-2 items-center">
+			<div class="text-sm">
+				{t.selectElevationCosts}
 			</div>
-		{/if}
+			<Select.Root
+				disabled={!allowElevationCosts || !allowStreetRouting}
+				type="single"
+				bind:value={elevationCosts}
+			>
+				<Select.Trigger aria-label={t.selectElevationCosts}>
+					{t.elevationCosts[elevationCosts]}
+				</Select.Trigger>
+				<Select.Content sideOffset={10}>
+					{#each possibleElevationCosts as costs, i (i + costs.value)}
+						<Select.Item value={costs.value} label={costs.label}>
+							{costs.label}
+						</Select.Item>
+					{/each}
+				</Select.Content>
+			</Select.Root>
+		</div>
 		{#if additionalComponents}
 			{@render additionalComponents()}
 		{/if}

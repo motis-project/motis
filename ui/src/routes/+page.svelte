@@ -19,7 +19,8 @@
 		type PedestrianProfile,
 		type PlanData,
 		type ReachablePlace,
-		type RentalFormFactor
+		type RentalFormFactor,
+		type ServerConfig
 	} from '@motis-project/motis-client';
 	import ItineraryList from '$lib/ItineraryList.svelte';
 	import ConnectionDetail from '$lib/ConnectionDetail.svelte';
@@ -72,11 +73,7 @@
 	let showMap = $state(!isSmallScreen);
 	let lastSelectedItinerary: Itinerary | undefined = undefined;
 	let lastOneToAllQuery: OneToAllData | undefined = undefined;
-	let hasElevation: boolean | undefined = $state();
-	let routeFootPath: boolean = $state(false);
-	let maxPrePostTransitTimeLimit: number | undefined = $state();
-	let maxDirectTimeLimit: number | undefined = $state();
-	let maxTravelTimeLimit: number | undefined = $state();
+	let serverConfig: ServerConfig | undefined = $state();
 
 	$effect(() => {
 		if (activeTab == 'isochrones') {
@@ -121,12 +118,7 @@
 			if (r) {
 				center = [r.lon, r.lat];
 				zoom = r.zoom;
-				hasElevation = r.hasElevation;
-				routeFootPath = r.routeFootPath;
-				maxPrePostTransitTimeLimit = r.maxPrePostTransitTimeLimit;
-				maxDirectTimeLimit = r.maxDirectTimeLimit;
-				maxTravelTimeLimit = r.maxTravelTimeLimit;
-				console.log('initial response:', r);
+				serverConfig = r.serverConfig;
 			}
 		});
 		await tick();
@@ -231,25 +223,28 @@
 	let maxTravelTime = $derived<number>(
 		parseIntOr(
 			urlParams?.get('maxTravelTime'),
-			Math.min(defaultQuery.maxTravelTime, maxTravelTimeLimit ?? Infinity)
+			Math.min(defaultQuery.maxTravelTime, serverConfig?.maxOneToAllTravelTimeLimit ?? Infinity)
 		)
 	);
 	let maxPreTransitTime = $derived<number>(
 		parseIntOr(
 			urlParams?.get('maxPreTransitTime'),
-			Math.min(defaultQuery.maxPreTransitTime, maxPrePostTransitTimeLimit ?? Infinity)
+			Math.min(defaultQuery.maxPreTransitTime, serverConfig?.maxPrePostTransitTimeLimit ?? Infinity)
 		)
 	);
 	let maxPostTransitTime = $derived<number>(
 		parseIntOr(
 			urlParams?.get('maxPostTransitTime'),
-			Math.min(defaultQuery.maxPostTransitTime, maxPrePostTransitTimeLimit ?? Infinity)
+			Math.min(
+				defaultQuery.maxPostTransitTime,
+				serverConfig?.maxPrePostTransitTimeLimit ?? Infinity
+			)
 		)
 	);
 	let maxDirectTime = $derived<number>(
 		parseIntOr(
 			urlParams?.get('maxDirectTime'),
-			Math.min(defaultQuery.maxDirectTime, maxDirectTimeLimit ?? Infinity)
+			Math.min(defaultQuery.maxDirectTime, serverConfig?.maxDirectTimeLimit ?? Infinity)
 		)
 	);
 	let ignorePreTransitRentalReturnConstraints = $state(
@@ -571,10 +566,7 @@
 					<Card class="overflow-y-auto overflow-x-hidden bg-background rounded-lg">
 						<SearchMask
 							geocodingBiasPlace={center}
-							{maxPrePostTransitTimeLimit}
-							{maxDirectTimeLimit}
-							{hasElevation}
-							{routeFootPath}
+							{serverConfig}
 							bind:from
 							bind:to
 							bind:time
@@ -611,11 +603,7 @@
 				<Card class="overflow-y-auto overflow-x-hidden bg-background rounded-lg">
 					<IsochronesMask
 						bind:one
-						{maxTravelTimeLimit}
-						{maxPrePostTransitTimeLimit}
-						{maxDirectTimeLimit}
-						{hasElevation}
-						{routeFootPath}
+						{serverConfig}
 						bind:maxTravelTime
 						geocodingBiasPlace={center}
 						bind:time

@@ -58,22 +58,25 @@ api::initial_response initial::operator()(boost::urls::url_view const&) const {
       config_.limits_->street_routing_max_direct_seconds_;
   auto const street_routing_max_prepost_transit_seconds =
       config_.limits_->street_routing_max_prepost_transit_seconds_;
-  auto const osr_footpath = config_.osr_footpath_;
+  auto const has_osr_footpath = config_.osr_footpath_;
+  auto const has_street_routing = config_.get_street_routing().has_value();
   auto const has_elevation_data_dir =
-      config_.get_street_routing().has_value() &&
+      has_street_routing &&
       config_.get_street_routing()->elevation_data_dir_.has_value();
 
-  return {
-      .lat_ = center.lat_,
-      .lon_ = center.lng_,
-      .zoom_ = static_cast<double>(zoom),
-      .hasElevation_ = static_cast<std::optional<bool>>(has_elevation_data_dir),
-      .routeFootPath_ = osr_footpath,
-      .maxTravelTimeLimit_ = static_cast<double>(onetoall_max_travel_minutes),
-      .maxPrePostTransitTimeLimit_ =
-          static_cast<double>(street_routing_max_prepost_transit_seconds),
-      .maxDirectTimeLimit_ =
-          static_cast<double>(street_routing_max_direct_seconds)};
+  return {.lat_ = center.lat_,
+          .lon_ = center.lng_,
+          .zoom_ = static_cast<double>(zoom),
+          .serverConfig_ = api::ServerConfig{
+              .hasElevation_ = has_elevation_data_dir,
+              .hasRoutedTransfers_ = has_osr_footpath,
+              .hasStreetRouting_ = has_street_routing,
+              .maxOneToAllTravelTimeLimit_ =
+                  static_cast<double>(onetoall_max_travel_minutes),
+              .maxPrePostTransitTimeLimit_ = static_cast<double>(
+                  street_routing_max_prepost_transit_seconds),
+              .maxDirectTimeLimit_ =
+                  static_cast<double>(street_routing_max_direct_seconds)}};
 }
 
 }  // namespace motis::ep
