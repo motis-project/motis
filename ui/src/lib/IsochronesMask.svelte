@@ -19,7 +19,7 @@
 	import { posToLocation, type Location } from '$lib/Location';
 	import { formatDurationSec } from '$lib/formatDuration';
 	import type { PrePostDirectMode, TransitMode } from '$lib/Modes';
-	import { generateTimes } from './generateTimes';	
+	import { generateTimes } from './generateTimes';
 
 	let {
 		one = $bindable(),
