@@ -240,6 +240,9 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
               }
             }
 
+            // Update lbs.
+            rtt->update_lbs(*d.tt_);
+
             // Update real-time timetable shared pointer.
             auto railviz_rt = std::make_unique<railviz_rt_index>(*d.tt_, *rtt);
             auto elevators = c.has_elevators() && c.get_elevators()->url_
