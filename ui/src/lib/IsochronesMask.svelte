@@ -71,7 +71,7 @@
 		directProviderGroups: string[];
 	} = $props();
 	const possibleMaxTravelTimes = $derived(
-		generateTimes((serverConfig?.maxOneToAllTravelTimeLimit ?? 4) * 60).map((s) => ({
+		generateTimes((serverConfig?.maxOneToAllTravelTimeLimit ?? 240) * 60).map((s) => ({
 			value: s.toString(),
 			label: formatDurationSec(s)
 		}))
