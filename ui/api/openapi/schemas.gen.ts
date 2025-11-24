@@ -1755,15 +1755,15 @@ export const ServerConfigSchema = {
             type: 'boolean'
         },
         maxOneToAllTravelTimeLimit: {
-            description: 'limit for maxTravelTime API param',
+            description: 'limit for maxTravelTime API param in minutes',
             type: 'number'
         },
         maxPrePostTransitTimeLimit: {
-            description: 'limit for maxPrePostTransitTime API param',
+            description: 'limit for maxPrePostTransitTime API param in seconds',
             type: 'number'
         },
         maxDirectTimeLimit: {
-            description: 'limit for maxDirectTime API param',
+            description: 'limit for maxDirectTime API param in seconds',
             type: 'number'
         }
     }

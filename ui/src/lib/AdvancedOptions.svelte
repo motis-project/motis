@@ -76,10 +76,10 @@
 	}));
 
 	const possibleDirectDurations = $derived(
-		generateTimes(serverConfig?.maxDirectTimeLimit, 60 * 60)
+		generateTimes(serverConfig?.maxDirectTimeLimit?? 60*60)
 	);
 	const possiblePrePostDurations = $derived(
-		generateTimes(serverConfig?.maxPrePostTransitTimeLimit, 60 * 60)
+		generateTimes(serverConfig?.maxPrePostTransitTimeLimit?? 60*60)
 	);
 
 	function setModes(mode: PrePostDirectMode) {
@@ -163,6 +163,7 @@
 			/>
 			<Switch
 				bind:checked={requireCarTransport}
+				disabled={!allowRoutedTransfers}
 				label={t.requireCarTransport}
 				id="requireCarTransport"
 				onCheckedChange={(checked) => {

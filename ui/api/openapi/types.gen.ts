@@ -1403,15 +1403,15 @@ export type ServerConfig = {
      */
     hasStreetRouting: boolean;
     /**
-     * limit for maxTravelTime API param
+     * limit for maxTravelTime API param in minutes
      */
     maxOneToAllTravelTimeLimit?: number;
     /**
-     * limit for maxPrePostTransitTime API param
+     * limit for maxPrePostTransitTime API param in seconds
      */
     maxPrePostTransitTimeLimit: number;
     /**
-     * limit for maxDirectTime API param
+     * limit for maxDirectTime API param in seconds
      */
     maxDirectTimeLimit: number;
 };
