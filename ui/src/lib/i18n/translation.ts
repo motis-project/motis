@@ -162,13 +162,17 @@ const translations: Map<string, Translations> = new Map(
 	})
 );
 
-const translationsKey = (
-	browser ? (navigator.languages.find((l) => translations.has(l.slice(0, 2))) ?? 'en') : 'en'
-)?.slice(0, 2);
-
 const urlLanguage = browser
 	? new URLSearchParams(window.location.search).get('language')
 	: undefined;
+
+const translationsKey = (
+	urlLanguage && translations.get(urlLanguage ?? '')
+		? urlLanguage
+		: browser
+			? (navigator.languages.find((l) => translations.has(l.slice(0, 2))) ?? 'en')
+			: 'en'
+)?.slice(0, 2);
 
 export const language = urlLanguage ?? translationsKey;
 export const t = translationsKey ? translations.get(translationsKey)! : en;
