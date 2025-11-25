@@ -1716,7 +1716,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '200':
-          description: latitude, longitude and zoom level to set the map to
+          description: latitude, longitude, zoom level to set the map to, and routing options configuration and limits
           content:
             application/json:
               schema:
@@ -1735,6 +1735,8 @@ paths:
                   zoom:
                     description: zoom level
                     type: number
+                  serverConfig:
+                    $ref: '#/components/schemas/ServerConfig'        
 
   /api/v1/map/stops:
     get:
@@ -3587,6 +3589,35 @@ components:
             true = many to one
             false = one to many
           type: boolean
+    ServerConfig:
+      Description: server configuration
+      type: object
+      required:
+        - hasElevation
+        - hasRoutedTransfers
+        - hasStreetRouting
+        - maxTravelTimeLimit
+        - maxPrePostTransitTimeLimit
+        - maxDirectTimeLimit
+      properties:
+        hasElevation:
+          description: true if elevation is loaded
+          type: boolean
+        hasRoutedTransfers:
+          description: true if routed transfers available
+          type: boolean
+        hasStreetRouting:
+          description: true if street routing is available
+          type: boolean
+        maxOneToAllTravelTimeLimit:
+          description: limit for maxTravelTime API param in minutes
+          type: number
+        maxPrePostTransitTimeLimit:
+          description: limit for maxPrePostTransitTime API param in seconds
+          type: number
+        maxDirectTimeLimit:
+          description: limit for maxDirectTime API param in seconds
+          type: number
     Error:
       type: object
       properties:
