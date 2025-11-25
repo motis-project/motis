@@ -565,35 +565,35 @@
 				<Tabs.Trigger value="isochrones">{t.isochrones.title}</Tabs.Trigger>
 			</Tabs.List>
 			<Tabs.Content value="connections">
-        <Card class="overflow-y-auto overflow-x-hidden bg-background rounded-lg">
-          <SearchMask
-            geocodingBiasPlace={center}
-            {serverConfig}
-            bind:from
-            bind:to
-            bind:time
-            bind:arriveBy
-            bind:useRoutedTransfers
-            bind:maxTransfers
-            bind:pedestrianProfile
-            bind:requireCarTransport
-            bind:requireBikeTransport
-            bind:transitModes
-            bind:preTransitModes
-            bind:postTransitModes
-            bind:directModes
-            bind:elevationCosts
-            bind:maxPreTransitTime
-            bind:maxPostTransitTime
-            bind:maxDirectTime
-            bind:ignorePreTransitRentalReturnConstraints
-            bind:ignorePostTransitRentalReturnConstraints
-            bind:ignoreDirectRentalReturnConstraints
-            bind:preTransitProviderGroups
-            bind:postTransitProviderGroups
-            bind:directProviderGroups
-          />
-        </Card>
+				<Card class="overflow-y-auto overflow-x-hidden bg-background rounded-lg">
+					<SearchMask
+						geocodingBiasPlace={center}
+						{serverConfig}
+						bind:from
+						bind:to
+						bind:time
+						bind:arriveBy
+						bind:useRoutedTransfers
+						bind:maxTransfers
+						bind:pedestrianProfile
+						bind:requireCarTransport
+						bind:requireBikeTransport
+						bind:transitModes
+						bind:preTransitModes
+						bind:postTransitModes
+						bind:directModes
+						bind:elevationCosts
+						bind:maxPreTransitTime
+						bind:maxPostTransitTime
+						bind:maxDirectTime
+						bind:ignorePreTransitRentalReturnConstraints
+						bind:ignorePostTransitRentalReturnConstraints
+						bind:ignoreDirectRentalReturnConstraints
+						bind:preTransitProviderGroups
+						bind:postTransitProviderGroups
+						bind:directProviderGroups
+					/>
+				</Card>
 			</Tabs.Content>
 			<Tabs.Content value="departures">
 				<Card class="overflow-y-auto overflow-x-hidden bg-background rounded-lg">
