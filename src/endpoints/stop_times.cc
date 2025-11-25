@@ -297,11 +297,13 @@ std::vector<api::Place> other_stops_impl(n::rt::frun fr,
                                          tz_map_t const* tz) {
   auto const convert_stop = [&](n::rt::run_stop const& stop) {
     auto result = to_place(tt, &tags, w, pl, matches, ae, tz, stop);
-    if (stop.fr_->stop_range_.from_ != stop.stop_idx_) {
+    if (ev_type == n::event_type::kDep ||
+        stop.fr_->stop_range_.from_ != stop.stop_idx_) {
       result.arrival_ = stop.time(n::event_type::kArr);
       result.scheduledArrival_ = stop.scheduled_time(n::event_type::kArr);
     }
-    if (stop.fr_->stop_range_.to_ - 1 != stop.stop_idx_) {
+    if (ev_type == n::event_type::kArr ||
+        stop.fr_->stop_range_.to_ - 1 != stop.stop_idx_) {
       result.departure_ = stop.time(n::event_type::kDep);
       result.scheduledDeparture_ = stop.scheduled_time(n::event_type::kDep);
     }

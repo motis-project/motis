@@ -5,7 +5,7 @@
 	import * as Select from '$lib/components/ui/select';
 	import { ChevronUp, ChevronDown } from '@lucide/svelte';
 	import { Switch } from './components/ui/switch';
-	import type { ElevationCosts } from '@motis-project/motis-client';
+	import type { ElevationCosts, ServerConfig } from '@motis-project/motis-client';
 	import { defaultQuery } from '$lib/defaults';
 	import { formatDurationSec } from './formatDuration';
 	import {
@@ -18,9 +18,11 @@
 	import StreetModes from '$lib/StreetModes.svelte';
 	import TransitModeSelect from '$lib/TransitModeSelect.svelte';
 	import { type NumberSelectOption } from '$lib/NumberSelect.svelte';
+	import { generateTimes } from './generateTimes';
 
 	let {
 		useRoutedTransfers = $bindable(),
+		serverConfig,
 		wheelchair = $bindable(),
 		requireBikeTransport = $bindable(),
 		requireCarTransport = $bindable(),
@@ -44,6 +46,7 @@
 		additionalComponents
 	}: {
 		useRoutedTransfers: boolean;
+		serverConfig: ServerConfig | undefined;
 		wheelchair: boolean;
 		requireBikeTransport: boolean;
 		requireCarTransport: boolean;
@@ -72,37 +75,13 @@
 		label: i.toString()
 	}));
 
-	const possibleDirectDurations = [
-		5 * 60,
-		10 * 60,
-		15 * 60,
-		20 * 60,
-		25 * 60,
-		30 * 60,
-		35 * 60,
-		40 * 60,
-		45 * 60,
-		50 * 60,
-		60 * 60,
-		90 * 60,
-		120 * 60,
-		180 * 60,
-		240 * 60,
-		300 * 60,
-		360 * 60
-	];
-	const possiblePrePostDurations = [
-		1 * 60,
-		5 * 60,
-		10 * 60,
-		15 * 60,
-		20 * 60,
-		25 * 60,
-		30 * 60,
-		40 * 60,
-		50 * 60,
-		60 * 60
-	];
+	const possibleDirectDurations = $derived(
+		generateTimes(serverConfig?.maxDirectTimeLimit ?? 60 * 60)
+	);
+	const possiblePrePostDurations = $derived(
+		generateTimes(serverConfig?.maxPrePostTransitTimeLimit ?? 60 * 60)
+	);
+
 	function setModes(mode: PrePostDirectMode) {
 		return function (checked: boolean) {
 			if (checked) {
@@ -129,11 +108,14 @@
 	];
 	let expanded = $state<boolean>(false);
 	let allowElevationCosts = $derived(
-		requireBikeTransport ||
-			preTransitModes.includes('BIKE') ||
-			postTransitModes.includes('BIKE') ||
-			directModes?.includes('BIKE')
+		serverConfig?.hasElevation &&
+			(requireBikeTransport ||
+				preTransitModes.includes('BIKE') ||
+				postTransitModes.includes('BIKE') ||
+				directModes?.includes('BIKE'))
 	);
+	let allowStreetRouting = $derived(serverConfig?.hasStreetRouting);
+	let allowRoutedTransfers = $derived(serverConfig?.hasRoutedTransfers);
 </script>
 
 <Button variant="ghost" onclick={() => (expanded = !expanded)}>
@@ -152,6 +134,7 @@
 		<div class="space-y-2">
 			<Switch
 				bind:checked={useRoutedTransfers}
+				disabled={!allowRoutedTransfers}
 				label={t.useRoutedTransfers}
 				id="useRoutedTransfers"
 				onCheckedChange={(checked) => {
@@ -160,8 +143,10 @@
 					}
 				}}
 			/>
+
 			<Switch
 				bind:checked={wheelchair}
+				disabled={!allowRoutedTransfers}
 				label={t.wheelchair}
 				id="wheelchair"
 				onCheckedChange={(checked) => {
@@ -178,10 +163,11 @@
 			/>
 			<Switch
 				bind:checked={requireCarTransport}
+				disabled={!allowRoutedTransfers}
 				label={t.requireCarTransport}
 				id="requireCarTransport"
 				onCheckedChange={(checked) => {
-					if (checked && !useRoutedTransfers) {
+					if (checked && !useRoutedTransfers && allowRoutedTransfers) {
 						useRoutedTransfers = true;
 					}
 					setModes('CAR')(checked);
@@ -212,6 +198,7 @@
 			<!-- First mile -->
 			<StreetModes
 				label={t.routingSegments.firstMile}
+				disabled={!allowStreetRouting}
 				bind:modes={preTransitModes}
 				bind:maxTransitTime={maxPreTransitTime}
 				possibleModes={prePostDirectModes}
@@ -223,6 +210,7 @@
 			<!-- Last mile -->
 			<StreetModes
 				label={t.routingSegments.lastMile}
+				disabled={!allowStreetRouting}
 				bind:modes={postTransitModes}
 				bind:maxTransitTime={maxPostTransitTime}
 				possibleModes={prePostDirectModes}
@@ -235,6 +223,7 @@
 			{#if directModes !== undefined && maxDirectTime !== undefined && ignoreDirectRentalReturnConstraints !== undefined}
 				<StreetModes
 					label={t.routingSegments.direct}
+					disabled={!allowStreetRouting}
 					bind:modes={directModes}
 					bind:maxTransitTime={maxDirectTime}
 					possibleModes={prePostDirectModes}
@@ -250,7 +239,11 @@
 			<div class="text-sm">
 				{t.selectElevationCosts}
 			</div>
-			<Select.Root disabled={!allowElevationCosts} type="single" bind:value={elevationCosts}>
+			<Select.Root
+				disabled={!allowElevationCosts || !allowStreetRouting}
+				type="single"
+				bind:value={elevationCosts}
+			>
 				<Select.Trigger aria-label={t.selectElevationCosts}>
 					{t.elevationCosts[elevationCosts]}
 				</Select.Trigger>
@@ -263,7 +256,6 @@
 				</Select.Content>
 			</Select.Root>
 		</div>
-
 		{#if additionalComponents}
 			{@render additionalComponents()}
 		{/if}

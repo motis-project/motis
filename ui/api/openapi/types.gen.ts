@@ -1389,6 +1389,33 @@ export type OneToManyParams = {
     arriveBy: boolean;
 };
 
+export type ServerConfig = {
+    /**
+     * true if elevation is loaded
+     */
+    hasElevation: boolean;
+    /**
+     * true if routed transfers available
+     */
+    hasRoutedTransfers: boolean;
+    /**
+     * true if street routing is available
+     */
+    hasStreetRouting: boolean;
+    /**
+     * limit for maxTravelTime API param in minutes
+     */
+    maxOneToAllTravelTimeLimit?: number;
+    /**
+     * limit for maxPrePostTransitTime API param in seconds
+     */
+    maxPrePostTransitTimeLimit: number;
+    /**
+     * limit for maxDirectTime API param in seconds
+     */
+    maxDirectTimeLimit: number;
+};
+
 export type Error = {
     error?: string;
 };
@@ -2463,6 +2490,7 @@ export type InitialResponse = ({
      * zoom level
      */
     zoom: number;
+    serverConfig?: ServerConfig;
 });
 
 export type InitialError = (Error);

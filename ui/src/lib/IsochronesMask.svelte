@@ -6,7 +6,11 @@
 	import * as RadioGroup from '$lib/components/ui/radio-group';
 	import Button from '$lib/components/ui/button/button.svelte';
 	import { Label } from '$lib/components/ui/label';
-	import { type ElevationCosts, type PedestrianProfile } from '@motis-project/motis-client';
+	import {
+		type ElevationCosts,
+		type PedestrianProfile,
+		type ServerConfig
+	} from '@motis-project/motis-client';
 	import * as Select from '$lib/components/ui/select';
 	import type { DisplayLevel, IsochronesOptions } from '$lib/map/IsochronesShared';
 	import AddressTypeahead from '$lib/AddressTypeahead.svelte';
@@ -15,14 +19,12 @@
 	import { posToLocation, type Location } from '$lib/Location';
 	import { formatDurationSec } from '$lib/formatDuration';
 	import type { PrePostDirectMode, TransitMode } from '$lib/Modes';
-
-	const minutesToSeconds = (minutes: number[]) => {
-		return minutes.map((m) => m * 60);
-	};
+	import { generateTimes } from './generateTimes';
 
 	let {
 		one = $bindable(),
 		maxTravelTime = $bindable(),
+		serverConfig,
 		geocodingBiasPlace,
 		time = $bindable(),
 		useRoutedTransfers = $bindable(),
@@ -46,6 +48,7 @@
 	}: {
 		one: Location;
 		maxTravelTime: number;
+		serverConfig: ServerConfig | undefined;
 		geocodingBiasPlace?: maplibregl.LngLatLike;
 		time: Date;
 		useRoutedTransfers: boolean;
@@ -67,10 +70,16 @@
 		postTransitProviderGroups: string[];
 		directProviderGroups: string[];
 	} = $props();
+	const minutesToSeconds = (n: number): number => n * 60;
+	const possibleMaxTravelTimes = $derived(
+		generateTimes(
+			minutesToSeconds(Math.min(serverConfig?.maxOneToAllTravelTimeLimit ?? 4 * 60, 6 * 60))
+		).map((s) => ({
+			value: s.toString(),
+			label: formatDurationSec(s)
+		}))
+	);
 
-	const possibleMaxTravelTimes = minutesToSeconds([
-		1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 75, 80, 90, 120, 150, 180, 210, 240
-	]).map((s) => ({ value: s.toString(), label: formatDurationSec(s) }));
 	const displayLevels = new Map<DisplayLevel, string>([
 		['OVERLAY_RECTS', t.isochrones.canvasRects],
 		['OVERLAY_CIRCLES', t.isochrones.canvasCircles],
@@ -194,6 +203,7 @@
 		</RadioGroup.Root>
 		<AdvancedOptions
 			bind:useRoutedTransfers
+			{serverConfig}
 			bind:wheelchair={
 				() => pedestrianProfile === 'WHEELCHAIR',
 				(v) => (pedestrianProfile = v ? 'WHEELCHAIR' : 'FOOT')

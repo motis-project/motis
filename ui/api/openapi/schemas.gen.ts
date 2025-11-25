@@ -1737,6 +1737,38 @@ false = one to many
     }
 } as const;
 
+export const ServerConfigSchema = {
+    Description: 'server configuration',
+    type: 'object',
+    required: ['hasElevation', 'hasRoutedTransfers', 'hasStreetRouting', 'maxTravelTimeLimit', 'maxPrePostTransitTimeLimit', 'maxDirectTimeLimit'],
+    properties: {
+        hasElevation: {
+            description: 'true if elevation is loaded',
+            type: 'boolean'
+        },
+        hasRoutedTransfers: {
+            description: 'true if routed transfers available',
+            type: 'boolean'
+        },
+        hasStreetRouting: {
+            description: 'true if street routing is available',
+            type: 'boolean'
+        },
+        maxOneToAllTravelTimeLimit: {
+            description: 'limit for maxTravelTime API param in minutes',
+            type: 'number'
+        },
+        maxPrePostTransitTimeLimit: {
+            description: 'limit for maxPrePostTransitTime API param in seconds',
+            type: 'number'
+        },
+        maxDirectTimeLimit: {
+            description: 'limit for maxDirectTime API param in seconds',
+            type: 'number'
+        }
+    }
+} as const;
+
 export const ErrorSchema = {
     type: 'object',
     properties: {
