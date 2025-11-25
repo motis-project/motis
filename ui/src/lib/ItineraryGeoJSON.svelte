@@ -85,7 +85,7 @@
 		['==', ['abs', ['get', 'levelDiff']], 0],
 		1,
 		['<=', ['abs', ['get', 'levelDiff']], 1],
-		0.6,
+		0.5,
 		['<=', ['abs', ['get', 'levelDiff']], 2],
 		0.3,
 		0.1
@@ -100,7 +100,7 @@
 			'line-join': 'round',
 			'line-cap': 'round'
 		}}
-		filter={['>=', ['get', 'levelDiff'], 0]}
+		filter={['any', ['!', ['has', 'level']], ['>=', ['get', 'levelDiff'], 0]]}
 		paint={{
 			'line-color': selected ? ['get', 'outlineColor'] : theme == 'dark' ? '#444' : '#999',
 			'line-width': ['case', ['<', ['get', 'levelDiff'], 0], 3, 9],
@@ -130,7 +130,7 @@
 			'line-join': 'round',
 			'line-cap': 'round'
 		}}
-		filter={['>=', ['get', 'levelDiff'], 0]}
+		filter={['!', ['has', 'level']]}
 		onclick={selectItinerary
 			? (_) => {
 					selectItinerary();
