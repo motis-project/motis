@@ -223,7 +223,10 @@
 	let maxTravelTime = $derived<number>(
 		parseIntOr(
 			urlParams?.get('maxTravelTime'),
-			Math.min(defaultQuery.maxTravelTime, serverConfig?.maxOneToAllTravelTimeLimit ?? Infinity)
+			Math.min(
+				defaultQuery.maxTravelTime,
+				60 * (serverConfig?.maxOneToAllTravelTimeLimit ?? Infinity)
+			)
 		)
 	);
 	let maxPreTransitTime = $derived<number>(

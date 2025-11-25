@@ -70,8 +70,11 @@
 		postTransitProviderGroups: string[];
 		directProviderGroups: string[];
 	} = $props();
+	const minutesToSeconds = (n: number): number => n * 60;
 	const possibleMaxTravelTimes = $derived(
-		generateTimes((serverConfig?.maxOneToAllTravelTimeLimit ?? 240) * 60).map((s) => ({
+		generateTimes(
+			minutesToSeconds(Math.min(serverConfig?.maxOneToAllTravelTimeLimit ?? 4 * 60, 6 * 60))
+		).map((s) => ({
 			value: s.toString(),
 			label: formatDurationSec(s)
 		}))

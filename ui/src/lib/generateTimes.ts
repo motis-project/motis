@@ -1,9 +1,7 @@
 export const generateTimes = (limit: number): number[] => {
 	const times: number[] = [];
 	let t = 1;
-	const defaultLimit = 6 * 60 * 60;
-	const max = Math.min(defaultLimit, limit);
-	while (t <= max / 60) {
+	while (t <= limit / 60) {
 		times.push(t * 60);
 		if (t < 5) {
 			t += 4;
@@ -17,8 +15,8 @@ export const generateTimes = (limit: number): number[] => {
 			t += 60;
 		}
 	}
-	if (times[times.length - 1] !== max) {
-		times.push(max);
+	if (times[times.length - 1] !== limit) {
+		times.push(limit);
 	}
 
 	return times;
