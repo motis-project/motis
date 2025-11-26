@@ -58,7 +58,6 @@ timetable:                          # if not set, no timetable will be loaded
   num_days: 365                     # number of days to load, default is 365 days
   railviz: true                     # enable viewing vehicles in real-time on the map, requires some extra lookup data structures
   with_shapes: true                 # extract and serve shapes (if disabled, direct lines are used)
-  ignore_errors: false              # ignore errors when a dataset could not be loaded
   adjust_footpaths: true            # if footpaths are too fast, they are adjusted if set to true
   merge_dupes_intra_src: false      # duplicates within the same datasets will be merged
   merge_dupes_inter_src: false      # duplicates withing different datasets will be merged
