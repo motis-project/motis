@@ -9,7 +9,7 @@
 	import polyline from '@mapbox/polyline';
 	import { formatTime } from '$lib/toDateTime';
 	import { lngLatToStr } from '$lib/lngLatToStr';
-	import maplibregl, { type BooleanTypeT } from 'maplibre-gl';
+	import maplibregl from 'maplibre-gl';
 	import { onDestroy, untrack } from 'svelte';
 	import Control from '$lib/map/Control.svelte';
 	import { onClickTrip } from '$lib/utils';
@@ -42,7 +42,7 @@
 		return '#' + ((1 << 24) | (rgba[0] << 16) | (rgba[1] << 8) | rgba[2]).toString(16).slice(1);
 	}
 
-	const getDelayColor = (delay: number, realTime: boolean, debug?: boolean): RGBA => {
+	const getDelayColor = (delay: number, realTime: boolean): RGBA => {
 		delay = delay / 60000;
 		if (!realTime) {
 			return [100, 100, 100, 255];
