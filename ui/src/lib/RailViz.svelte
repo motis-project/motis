@@ -309,10 +309,10 @@
 							popup.setHTML(
 								`<strong>${object.trips[0].displayName}</strong><br>
 
-							<span style="color: ${rgbToHex(getDelayColor(object.departureDelay, true, true))}">${formatTime(new Date(object.departure), object.from.tz)}</span>
+							<span style="color: ${rgbToHex(getDelayColor(object.departureDelay, true))}">${formatTime(new Date(object.departure), object.from.tz)}</span>
 							<span class="line-through">${formatTime(new Date(object.scheduledDeparture), object.from.tz)}</span>  ${object.from.name}<br>
 
-							<span style="color: ${rgbToHex(getDelayColor(object.arrivalDelay, true, true))}">${formatTime(new Date(object.arrival), object.to.tz)}</span>
+							<span style="color: ${rgbToHex(getDelayColor(object.arrivalDelay, true))}">${formatTime(new Date(object.arrival), object.to.tz)}</span>
 							<span class="line-through">${formatTime(new Date(object.scheduledArrival), object.to.tz)}</span> ${object.to.name}`
 							);
 						} else {
