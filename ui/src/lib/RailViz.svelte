@@ -142,9 +142,9 @@
 				return [100, 100, 100, 255];
 			}
 			if (departureDelay <= -1) {
-				return [255, 48, 71, 255];
+				return [100, 255, 0, 255];
 			} else if (arrivalDelay <= 3) {
-				return [69, 209, 74, 255];
+				return [69, 194, 74, 255];
 			} else if (arrivalDelay <= 5) {
 				return [255, 237, 0, 255];
 			} else if (arrivalDelay <= 10) {
