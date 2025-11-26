@@ -13,6 +13,7 @@
 	import { onDestroy, untrack } from 'svelte';
 	import Control from '$lib/map/Control.svelte';
 	import { onClickTrip } from '$lib/utils';
+	import { getDelayColor, rgbToHex, type RGBA } from './delayColor';
 
 	let {
 		map,
@@ -28,8 +29,6 @@
 
 	let railvizError = $state();
 
-	type RGBA = [number, number, number, number];
-
 	function hexToRgb(hex: string): RGBA {
 		var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
 		if (!result) {
@@ -38,36 +37,11 @@
 		return [parseInt(result[1], 16), parseInt(result[2], 16), parseInt(result[3], 16), 255];
 	}
 
-	function rgbToHex(rgba: RGBA): string {
-		return '#' + ((1 << 24) | (rgba[0] << 16) | (rgba[1] << 8) | rgba[2]).toString(16).slice(1);
-	}
-
-	const getDelayColor = (delay: number, realTime: boolean): RGBA => {
-		delay = delay / 60000;
-		if (!realTime) {
-			return [100, 100, 100, 255];
-		}
-		if (delay <= -5) {
-			return [255, 0, 255, 255];
-		} else if (delay <= -1) {
-			return [138, 82, 254, 255];
-		} else if (delay <= 3) {
-			return [69, 194, 74, 255];
-		} else if (delay <= 5) {
-			return [255, 237, 0, 255];
-		} else if (delay <= 10) {
-			return [255, 102, 0, 255];
-		} else if (delay <= 15) {
-			return [255, 48, 71, 255];
-		}
-		return [163, 0, 10, 255];
-	};
-
 	const getSegmentDelayColor = (d: number, a: number, realTime: boolean): RGBA => {
 		if (d / 60000 <= -1) {
-			return getDelayColor(d, realTime);
+			return getDelayColor(d, true, realTime);
 		} else {
-			return getDelayColor(a, realTime);
+			return getDelayColor(a, false, realTime);
 		}
 	};
 
@@ -309,10 +283,10 @@
 							popup.setHTML(
 								`<strong>${object.trips[0].displayName}</strong><br>
 
-							<span style="color: ${rgbToHex(getDelayColor(object.departureDelay, true))}">${formatTime(new Date(object.departure), object.from.tz)}</span>
+							<span style="color: ${rgbToHex(getDelayColor(object.departureDelay, true, true))}">${formatTime(new Date(object.departure), object.from.tz)}</span>
 							<span class="line-through">${formatTime(new Date(object.scheduledDeparture), object.from.tz)}</span>  ${object.from.name}<br>
 
-							<span style="color: ${rgbToHex(getDelayColor(object.arrivalDelay, true))}">${formatTime(new Date(object.arrival), object.to.tz)}</span>
+							<span style="color: ${rgbToHex(getDelayColor(object.arrivalDelay, false, true))}">${formatTime(new Date(object.arrival), object.to.tz)}</span>
 							<span class="line-through">${formatTime(new Date(object.scheduledArrival), object.to.tz)}</span> ${object.to.name}`
 							);
 						} else {
