@@ -125,14 +125,28 @@ cista::hash_t hash_gbfs_data(std::string_view const json) {
 }
 
 std::chrono::system_clock::time_point get_expiry(
-    boost::json::object const& root,
-    std::chrono::seconds const def = std::chrono::seconds{0}) {
+    json::object const& root,
+    std::chrono::seconds const def = std::chrono::seconds{0},
+    std::map<std::string, unsigned> const& default_ttl = {},
+    std::map<std::string, unsigned> const& overwrite_ttl = {},
+    std::string_view const name = "") {
   auto const now = std::chrono::system_clock::now();
+  if (auto const it = overwrite_ttl.find(std::string{name});
+      it != end(overwrite_ttl)) {
+    return now + std::chrono::seconds{it->second};
+  }
   if (root.contains("data")) {
     auto const& data = root.at("data").as_object();
     if (data.contains("ttl")) {
-      return now + std::chrono::seconds{data.at("ttl").to_number<int>()};
+      auto const ttl = data.at("ttl").to_number<int>();
+      if (ttl > 0) {
+        return now + std::chrono::seconds{ttl};
+      }
     }
+  }
+  if (auto const it = default_ttl.find(std::string{name});
+      it != end(default_ttl)) {
+    return now + std::chrono::seconds{it->second};
   }
   return now + def;
 }
@@ -254,15 +268,35 @@ struct gbfs_update {
                         .expires_in_ = config.oauth_->expires_in_.value_or(0)});
       }
 
-      auto discovery =
-          co_await fetch_file("gbfs", config.url_, headers, oauth, dir);
+      auto const merge_ttl_map =
+          [](std::optional<std::map<std::string, unsigned>> const& feed_map,
+             std::optional<std::map<std::string, unsigned>> const& global_map) {
+            auto res = global_map.value_or(std::map<std::string, unsigned>{});
+            if (feed_map) {
+              for (auto const& [k, v] : *feed_map) {
+                res[k] = v;
+              }
+            }
+            return res;
+          };
+
+      auto const default_ttl =
+          merge_ttl_map(config.ttl_.value_or(config::gbfs::ttl{}).default_,
+                        c_.ttl_.value_or(config::gbfs::ttl{}).default_);
+      auto const overwrite_ttl =
+          merge_ttl_map(config.ttl_.value_or(config::gbfs::ttl{}).overwrite_,
+                        c_.ttl_.value_or(config::gbfs::ttl{}).overwrite_);
+
+      auto discovery = co_await fetch_file("gbfs", config.url_, headers, oauth,
+                                           dir, default_ttl, overwrite_ttl);
       auto const& root = discovery.json_.as_object();
       if ((root.contains("data") &&
            root.at("data").as_object().contains("datasets")) ||
           root.contains("systems")) {
         // file is not an individual feed, but a manifest.json / Lamassu file
         co_return co_await init_aggregated_feed(id, config.url_, headers,
-                                                std::move(oauth), root);
+                                                std::move(oauth), root,
+                                                default_ttl, overwrite_ttl);
       }
 
       auto saf =
@@ -277,7 +311,9 @@ struct gbfs_update {
                       lookup_default_return_constraint("", id),
                   .config_group_ = lookup_group("", id),
                   .config_color_ = lookup_color("", id),
-                  .oauth_ = std::move(oauth)}))
+                  .oauth_ = std::move(oauth),
+                  .default_ttl_ = default_ttl,
+                  .overwrite_ttl_ = overwrite_ttl}))
               .get();
 
       co_return co_await update_provider_feed(*saf, std::move(discovery));
@@ -355,8 +391,9 @@ struct gbfs_update {
 
     try {
       if (!discovery && needs_refresh(provider.file_infos_->urls_fi_)) {
-        discovery = co_await fetch_file("gbfs", pf.url_, pf.headers_, pf.oauth_,
-                                        pf.dir_);
+        discovery =
+            co_await fetch_file("gbfs", pf.url_, pf.headers_, pf.oauth_,
+                                pf.dir_, pf.default_ttl_, pf.overwrite_ttl_);
       }
       if (discovery) {
         file_infos->urls_ = parse_discovery(discovery->json_);
@@ -372,7 +409,8 @@ struct gbfs_update {
         }
         if (force || needs_refresh(fi)) {
           auto file = co_await fetch_file(name, file_infos->urls_.at(name),
-                                          pf.headers_, pf.oauth_, pf.dir_);
+                                          pf.headers_, pf.oauth_, pf.dir_,
+                                          pf.default_ttl_, pf.overwrite_ttl_);
           auto const hash_changed = file.hash_ != fi.hash_;
           auto j_root = file.json_.as_object();
           fi.expiry_ = file.next_refresh_;
@@ -698,19 +736,25 @@ struct gbfs_update {
     }
   }
 
-  awaitable<void> init_aggregated_feed(std::string const& prefix,
-                                       std::string const& url,
-                                       headers_t const& headers,
-                                       std::shared_ptr<oauth_state>&& oauth,
-                                       boost::json::object const& root) {
+  awaitable<void> init_aggregated_feed(
+      std::string const& prefix,
+      std::string const& url,
+      headers_t const& headers,
+      std::shared_ptr<oauth_state>&& oauth,
+      boost::json::object const& root,
+      std::map<std::string, unsigned> const& default_ttl = {},
+      std::map<std::string, unsigned> const& overwrite_ttl = {}) {
     auto af =
         d_->aggregated_feeds_
             ->emplace_back(std::make_unique<aggregated_feed>(aggregated_feed{
                 .id_ = prefix,
                 .url_ = url,
                 .headers_ = headers,
-                .expiry_ = get_expiry(root, std::chrono::hours{1}),
-                .oauth_ = std::move(oauth)}))
+                .expiry_ = get_expiry(root, std::chrono::hours{1}, default_ttl,
+                                      overwrite_ttl, "manifest"),
+                .oauth_ = std::move(oauth),
+                .default_ttl_ = default_ttl,
+                .overwrite_ttl_ = overwrite_ttl}))
             .get();
 
     co_return co_await process_aggregated_feed(*af, root);
@@ -719,7 +763,8 @@ struct gbfs_update {
   awaitable<void> update_aggregated_feed(aggregated_feed& af) {
     if (af.needs_update()) {
       auto const file =
-          co_await fetch_file("manifest", af.url_, af.headers_, af.oauth_);
+          co_await fetch_file("manifest", af.url_, af.headers_, af.oauth_,
+                              std::nullopt, af.default_ttl_, af.overwrite_ttl_);
       co_await process_aggregated_feed(af, file.json_.as_object());
     } else {
       co_await update_aggregated_feed_provider_feeds(af);
@@ -754,7 +799,9 @@ struct gbfs_update {
                 lookup_default_return_constraint(af.id_, combined_id),
             .config_group_ = lookup_group(af.id_, system_id),
             .config_color_ = lookup_color(af.id_, system_id),
-            .oauth_ = af.oauth_});
+            .oauth_ = af.oauth_,
+            .default_ttl_ = af.default_ttl_,
+            .overwrite_ttl_ = af.overwrite_ttl_});
       }
     } else if (root.contains("systems")) {
       // Lamassu 2.3 format
@@ -772,7 +819,9 @@ struct gbfs_update {
                 lookup_default_return_constraint(af.id_, combined_id),
             .config_group_ = lookup_group(af.id_, system_id),
             .config_color_ = lookup_color(af.id_, system_id),
-            .oauth_ = af.oauth_});
+            .oauth_ = af.oauth_,
+            .default_ttl_ = af.default_ttl_,
+            .overwrite_ttl_ = af.overwrite_ttl_});
       }
     }
 
@@ -800,7 +849,9 @@ struct gbfs_update {
       std::string_view const url,
       headers_t const& base_headers,
       std::shared_ptr<oauth_state> const& oauth,
-      std::optional<std::filesystem::path> const& dir = std::nullopt) {
+      std::optional<std::filesystem::path> const& dir = std::nullopt,
+      std::map<std::string, unsigned> const& default_ttl = {},
+      std::map<std::string, unsigned> const& overwrite_ttl = {}) {
     auto content = std::string{};
     if (dir.has_value()) {
       content = read_file(*dir / fmt::format("{}.json", name));
@@ -817,10 +868,8 @@ struct gbfs_update {
     }
     auto j = json::parse(content);
     auto j_root = j.as_object();
-    auto const next_refresh =
-        std::chrono::system_clock::now() +
-        std::chrono::seconds{
-            j_root.contains("ttl") ? j_root.at("ttl").to_number<int>() : 0};
+    auto const next_refresh = get_expiry(j_root, std::chrono::seconds{0},
+                                         default_ttl, overwrite_ttl, name);
     co_return gbfs_file{.json_ = std::move(j),
                         .hash_ = hash_gbfs_data(content),
                         .next_refresh_ = next_refresh};

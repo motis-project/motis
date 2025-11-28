@@ -419,6 +419,8 @@ struct provider_feed {
   std::optional<std::string> config_group_{};
   std::optional<std::string> config_color_{};
   std::shared_ptr<oauth_state> oauth_{};
+  std::map<std::string, unsigned> default_ttl_{};
+  std::map<std::string, unsigned> overwrite_ttl_{};
 };
 
 struct aggregated_feed {
@@ -437,6 +439,8 @@ struct aggregated_feed {
   std::optional<std::chrono::system_clock::time_point> expiry_{};
   std::vector<provider_feed> feeds_{};
   std::shared_ptr<oauth_state> oauth_{};
+  std::map<std::string, unsigned> default_ttl_{};
+  std::map<std::string, unsigned> overwrite_ttl_{};
 };
 
 struct gbfs_data {
