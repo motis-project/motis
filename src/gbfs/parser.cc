@@ -57,8 +57,7 @@ std::string get_as_string(json::object const& obj, std::string_view const key) {
   } else if (val.is_uint64()) {
     return std::to_string(val.as_uint64());
   } else {
-    throw utl::fail("invalid type for key {}: {}", key,
-                    json::to_string(val.kind()));
+    return json::serialize(val);
   }
 }
 
