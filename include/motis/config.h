@@ -114,6 +114,13 @@ struct config {
   struct gbfs {
     bool operator==(gbfs const&) const = default;
 
+    struct ttl {
+      bool operator==(ttl const&) const = default;
+
+      std::optional<std::map<std::string, unsigned>> default_{};
+      std::optional<std::map<std::string, unsigned>> overwrite_{};
+    };
+
     struct restrictions {
       bool operator==(restrictions const&) const = default;
       bool ride_start_allowed_{true};
@@ -143,6 +150,7 @@ struct config {
       std::optional<
           std::variant<std::string, std::map<std::string, std::string>>>
           color_{};
+      std::optional<ttl> ttl_{};
     };
 
     struct group {
@@ -159,6 +167,7 @@ struct config {
     unsigned http_timeout_{30};
     unsigned cache_size_{50};
     std::optional<std::string> proxy_{};
+    std::optional<ttl> ttl_{};
   };
   std::optional<gbfs> gbfs_{};
 
