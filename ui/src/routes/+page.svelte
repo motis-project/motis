@@ -25,7 +25,7 @@
 	import ItineraryList from '$lib/ItineraryList.svelte';
 	import ConnectionDetail from '$lib/ConnectionDetail.svelte';
 	import { Button } from '$lib/components/ui/button';
-	import ItineraryGeoJson from '$lib/ItineraryGeoJSON.svelte';
+	import ItineraryGeoJson from '$lib/map/itineraries/ItineraryGeoJSON.svelte';
 	import maplibregl from 'maplibre-gl';
 	import { browser } from '$app/environment';
 	import { cn, getUrlArray, onClickStop, onClickTrip, pushStateWithQueryString } from '$lib/utils';
@@ -59,7 +59,7 @@
 	} from '$lib/Modes';
 	import { defaultQuery, omitDefaults } from '$lib/defaults';
 	import { LEVEL_MIN_ZOOM } from '$lib/constants';
-	import StopGeoJSON from '$lib/StopsGeoJSON.svelte';
+	import StopGeoJSON from '$lib/map/stops/StopsGeoJSON.svelte';
 
 	const urlParams = browser ? new URLSearchParams(window.location.search) : undefined;
 
