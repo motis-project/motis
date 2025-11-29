@@ -32,9 +32,22 @@ static auto const kReqHeaders = std::map<std::string, std::string>{
 
 using service_times_t = std::vector<nigiri::interval<nigiri::unixtime_t>>;
 
+struct prima_data {
+  std::int64_t passenger_delta_{};
+  std::int64_t approach_return_delta_{};
+  std::int64_t fully_paid_delta_{};
+  std::int64_t waiting_time_delta_{};
+  double cost_{};
+};
+
 struct direct_ride {
   nigiri::unixtime_t dep_;
   nigiri::unixtime_t arr_;
+  prima_data pd_{};
+};
+
+struct ride : nigiri::routing::start {
+  prima_data pd_{};
 };
 
 struct capacities {
@@ -90,14 +103,20 @@ struct prima {
   bool consume_whitelist_taxi_response(
       std::string_view json,
       std::vector<nigiri::routing::journey>&,
-      std::vector<nigiri::routing::start>& first_mile_taxi_rides,
-      std::vector<nigiri::routing::start>& last_mile_taxi_rides);
+      std::vector<nigiri::routing::start> const& first_mile_in,
+      std::vector<nigiri::routing::start> const& last_mile_in);
   bool whitelist_taxi(std::vector<nigiri::routing::journey>&,
                       nigiri::timetable const&);
 
   std::string make_ride_sharing_request(nigiri::timetable const&) const;
   bool consume_ride_sharing_response(std::string_view json);
   bool whitelist_ride_sharing(nigiri::timetable const&);
+
+  bool is_pooling_ride(auto const&) const;
+  bool is_direct_pooling(nigiri::routing::journey::leg const&) const;
+  bool is_first_mile_pooling(nigiri::routing::journey::leg const&) const;
+  bool is_last_mile_pooling(nigiri::routing::journey::leg const&) const;
+  bool uses_pooling(nigiri::routing::journey const&) const;
 
   api::plan_params const& query_;
 
@@ -112,10 +131,12 @@ struct prima {
 
   std::optional<std::chrono::seconds> direct_duration_;
 
-  std::vector<nigiri::routing::offset> first_mile_taxi_{};
-  std::vector<nigiri::routing::offset> last_mile_taxi_{};
+  std::vector<nigiri::routing::offset> first_mile_taxi_offsets_{};
+  std::vector<nigiri::routing::offset> last_mile_taxi_offsets_{};
   std::vector<service_times_t> first_mile_taxi_times_{};
   std::vector<service_times_t> last_mile_taxi_times_{};
+  std::vector<ride> first_mile_taxi_{};
+  std::vector<ride> last_mile_taxi_{};
   std::vector<direct_ride> direct_taxi_{};
 
   std::vector<nigiri::routing::start> first_mile_ride_sharing_{};
@@ -126,21 +147,9 @@ struct prima {
   nigiri::vecvec<size_t, char> direct_ride_sharing_tour_ids_{};
 };
 
-void extract_taxis(std::vector<nigiri::routing::journey> const&,
-                   std::vector<nigiri::routing::start>& first_mile_taxi_rides,
-                   std::vector<nigiri::routing::start>& last_mile_taxi_rides);
-
-void fix_first_mile_duration(
-    std::vector<nigiri::routing::journey>& journeys,
-    std::vector<nigiri::routing::start> const& first_mile,
-    std::vector<nigiri::routing::start> const& prev_first_mile,
-    nigiri::transport_mode_id_t mode);
-
-void fix_last_mile_duration(
-    std::vector<nigiri::routing::journey>& journeys,
-    std::vector<nigiri::routing::start> const& last_mile,
-    std::vector<nigiri::routing::start> const& prev_last_mile,
-    nigiri::transport_mode_id_t mode);
+std::tuple<std::vector<nigiri::routing::start>,
+           std::vector<nigiri::routing::start>>
+extract_taxis(std::vector<nigiri::routing::journey> const&);
 
 std::int64_t to_millis(nigiri::unixtime_t);
 
