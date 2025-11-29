@@ -2,8 +2,8 @@
 	import Layer from '$lib/map/Layer.svelte';
 	import GeoJSON from '$lib/map/GeoJSON.svelte';
 	import type { Itinerary, Leg } from '@motis-project/motis-client';
-	import { onClickStop } from './utils';
-	import { getColor } from './modeStyle';
+	import { onClickStop } from '../../utils';
+	import { getColor } from '../../modeStyle';
 
 	let {
 		itinerary = $bindable(),

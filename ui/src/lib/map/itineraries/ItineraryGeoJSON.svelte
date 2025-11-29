@@ -5,6 +5,23 @@
 	import { getColor } from '$lib/modeStyle';
 	import polyline from '@mapbox/polyline';
 	import { colord } from 'colord';
+	import { layers } from './itineraryLayers';
+	import type { FilterSpecification } from 'maplibre-gl';
+	import {
+		_isLowerLevelRoutingFilter,
+		_isUpperLevelRoutingFilter,
+		_isCurrentLevelRoutingFilter,
+		_leadsToLowerLevelRoutingFilter,
+		_leadsUpToCurrentLevelRoutingFilter,
+		_leadsDownToCurrentLevelRoutingFilter,
+		_leadsToUpperLevelRoutingFilter,
+		_connectsToCurrentLevelRoutingFilter,
+		_isCurrentLevelFilter,
+		_ceilFromLevel,
+		_ceilToLevel,
+		_floorFromLevel,
+		_floorToLevel
+	} from './layerFilters';
 	export const PRECISION = 6;
 
 	const {
@@ -51,9 +68,10 @@
 							properties: {
 								color,
 								outlineColor,
-								level: p.fromLevel,
-								way: p.osmWay,
-								levelDiff: p.fromLevel - level
+								fromLevel: p.fromLevel,
+								toLevel: p.toLevel,
+								level: level,
+								way: p.osmWay
 							},
 							geometry: {
 								type: 'LineString',
@@ -80,49 +98,18 @@
 		};
 	}
 	const geojson = $derived(itineraryToGeoJSON(itinerary));
-	const opacityExpression = [
-		'case',
-		['==', ['abs', ['get', 'levelDiff']], 0],
-		1,
-		['<=', ['abs', ['get', 'levelDiff']], 1],
-		0.5,
-		['<=', ['abs', ['get', 'levelDiff']], 2],
-		0.3,
-		0.1
-	];
 </script>
 
 <GeoJSON id="route-{id}" data={geojson}>
-	<Layer
-		id="path-outline-solid-{id}"
-		type="line"
-		layout={{
-			'line-join': 'round',
-			'line-cap': 'round'
-		}}
-		filter={['any', ['!', ['has', 'level']], ['>=', ['get', 'levelDiff'], 0]]}
-		paint={{
-			'line-color': selected ? ['get', 'outlineColor'] : theme == 'dark' ? '#444' : '#999',
-			'line-width': ['case', ['<', ['get', 'levelDiff'], 0], 3, 9],
-			'line-opacity': opacityExpression
-		}}
-	/>
-	<Layer
-		id="path-outline-dashed-{id}"
-		type="line"
-		layout={{
-			'line-join': 'round',
-			'line-cap': 'butt'
-		}}
-		filter={['<', ['get', 'levelDiff'], 0]}
-		paint={{
-			'line-color': selected ? ['get', 'outlineColor'] : theme == 'dark' ? '#444' : '#999',
-			'line-width': ['case', ['<', ['get', 'levelDiff'], 0], 3, 9],
-			'line-opacity': opacityExpression,
-			'line-gap-width': ['case', ['<', ['get', 'levelDiff'], 0], 3, 0],
-			'line-dasharray': [3, 1]
-		}}
-	/>
+	{#each layers as layer (layer.id)}
+		<Layer
+			id={layer.id}
+			type={layer.type}
+			layout={layer.layout}
+			filter={layer.filter as FilterSpecification}
+			paint={layer.paint}
+		></Layer>
+	{/each}
 	<Layer
 		id="path-{id}"
 		type="line"
@@ -130,7 +117,7 @@
 			'line-join': 'round',
 			'line-cap': 'round'
 		}}
-		filter={['!', ['has', 'level']]}
+		filter={['!', ['has', 'fromLevel']]}
 		onclick={selectItinerary
 			? (_) => {
 					selectItinerary();
@@ -138,8 +125,23 @@
 			: undefined}
 		paint={{
 			'line-color': selected ? ['get', 'color'] : theme == 'dark' ? '#777' : '#bbb',
-			'line-width': 9,
-			'line-opacity': opacityExpression
+			'line-width': 7.5,
+			'line-opacity': 0.8
+		}}
+	/>
+	<Layer
+		id="path-outline-{id}"
+		type="line"
+		layout={{
+			'line-join': 'round',
+			'line-cap': 'round'
+		}}
+		filter={['!', ['has', 'fromLevel']]}
+		paint={{
+			'line-color': selected ? ['get', 'outlineColor'] : theme == 'dark' ? '#444' : '#999',
+			'line-width': 1.5,
+			'line-gap-width': 7.5,
+			'line-opacity': 0.8
 		}}
 	/>
 </GeoJSON>

@@ -27,6 +27,7 @@
 		} else {
 			ctx.map!.addSource(id, {
 				type: 'geojson',
+				lineMetrics: true,
 				data,
 				...(options ?? {})
 			});
