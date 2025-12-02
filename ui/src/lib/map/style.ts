@@ -7,6 +7,7 @@ const colors = {
 		water: '#99ddff',
 		rail: '#a8a8a8',
 		pedestrian: '#e8e7eb',
+		ferryRoute: 'rgba(102, 102, 255, 0.5)',
 
 		sport: '#d0f4be',
 		sportOutline: '#b3e998',
@@ -65,6 +66,7 @@ const colors = {
 		water: '#1f2830',
 		rail: '#808080',
 		pedestrian: '#292929',
+		ferryRoute: 'rgba(58, 77, 139, 0.5)',
 
 		sport: '#272525',
 		sportOutline: '#272525',
@@ -588,6 +590,17 @@ export const getStyle = (
 							['*', ['var', 'base'], 3]
 						]
 					]
+				}
+			},
+			{
+				id: 'ferry_routes',
+				type: 'line',
+				source: 'osm',
+				'source-layer': 'ferry',
+				paint: {
+					'line-width': 1.5,
+					'line-dasharray': [2, 3],
+					'line-color': c.ferryRoute
 				}
 			},
 			{
