@@ -11,7 +11,8 @@ import {
 	_ceilFromLevel,
 	_ceilToLevel,
 	_floorFromLevel,
-	_floorToLevel
+	_floorToLevel,
+	_isLowerLevelFilter
 } from './layerFilters';
 
 /// Routing path current level line color.
@@ -28,35 +29,6 @@ const _routingPathWidth = 7;
 const _routingPathOutlineWidth = _routingPathWidth + 2;
 
 export const layers = [
-	// Indoor routing - Below current level \\
-
-	{
-		id: 'indoor-routing-path-below-outline',
-		type: 'line',
-		filter: _isLowerLevelRoutingFilter,
-		layout: {
-			'line-join': 'round',
-			'line-cap': 'round'
-		},
-		paint: {
-			'line-color': _routingPathOtherLevelOutlineColor,
-			'line-width': _routingPathOutlineWidth
-		}
-	},
-	{
-		id: 'indoor-routing-path-below',
-		type: 'line',
-		filter: _isLowerLevelRoutingFilter,
-		layout: {
-			'line-join': 'round',
-			'line-cap': 'round'
-		},
-		paint: {
-			'line-color': _routingPathOtherLevelFillColor,
-			'line-width': _routingPathWidth
-		}
-	},
-
 	// Indoor routing - Outline - Current level \\
 
 	{
@@ -216,9 +188,9 @@ export const layers = [
 		},
 		paint: {
 			'line-color': _routingPathOtherLevelOutlineColor,
-			'line-width': 1,
-			'line-gap-width': 5,
-			'line-dasharray': ['literal', [4, 4]]
+			'line-width': 2,
+			'line-gap-width': 6,
+			'line-dasharray': ['literal', [2, 2]]
 		}
 	},
 

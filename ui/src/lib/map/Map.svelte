@@ -59,7 +59,7 @@
 			if (!ctx.map && el) {
 				createMap(el);
 			} else if (ctx.map) {
-				ctx.map.setStyle(style || null);
+				ctx.map?.setStyle(style || null);
 			}
 		}
 	};

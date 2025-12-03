@@ -102,13 +102,15 @@
 
 <GeoJSON id="route-{id}" data={geojson}>
 	{#each layers as layer (layer.id)}
-		<Layer
-			id={layer.id}
-			type={layer.type}
-			layout={layer.layout}
-			filter={layer.filter as FilterSpecification}
-			paint={layer.paint}
-		></Layer>
+		{#if !('line-gradient' in layer.paint) && selected}
+			<Layer
+				id={layer.id}
+				type={layer.type}
+				layout={layer.layout}
+				filter={layer.filter as FilterSpecification}
+				paint={layer.paint}
+			></Layer>
+		{/if}
 	{/each}
 	<Layer
 		id="path-{id}"
@@ -144,4 +146,17 @@
 			'line-opacity': 0.8
 		}}
 	/>
+</GeoJSON>
+<GeoJSON id="route-{id}-metrics" data={geojson} lineMetrics={true}>
+	{#each layers as layer (layer.id)}
+		{#if 'line-gradient' in layer.paint && selected}
+			<Layer
+				id="{layer.id}-metrics"
+				type={layer.type}
+				layout={layer.layout}
+				filter={layer.filter as FilterSpecification}
+				paint={layer.paint}
+			></Layer>
+		{/if}
+	{/each}
 </GeoJSON>

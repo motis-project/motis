@@ -72,8 +72,8 @@ export const _leadsUpToCurrentLevelRoutingFilter = [
 
 // indoor tile layer \\
 
-export const _ceilLevel = ['ceil', ['to-number', ['get', 'level']]];
-export const _floorLevel = ['floor', ['to-number', ['get', 'level']]];
+export const _ceilLevel = ['coalesce', ['ceil', ['to-number', ['get', 'level']]], 0];
+export const _floorLevel = ['coalesce', ['floor', ['to-number', ['get', 'level']]], 0];
 
 /// Filter to only show element if level matches current level.
 ///
