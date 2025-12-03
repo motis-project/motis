@@ -199,6 +199,37 @@ std::optional<std::vector<api::Alert>> get_alerts(
   return alerts.empty() ? std::nullopt : std::optional{std::move(alerts)};
 }
 
+struct parent_name_hash {
+  bool operator()(n::location_idx_t const l) const {
+    return cista::hash(
+        tt_->locations_.names_[tt_->locations_.get_root_idx(l)].view());
+  }
+  n::timetable const* tt_{nullptr};
+};
+
+struct parent_name_eq {
+  bool operator()(n::location_idx_t const a, n::location_idx_t const b) const {
+    return tt_->locations_.names_[tt_->locations_.get_root_idx(a)].view() ==
+           tt_->locations_.names_[tt_->locations_.get_root_idx(b)].view();
+  }
+  n::timetable const* tt_{nullptr};
+};
+
+using unique_stop_map_t =
+    hash_map<n::location_idx_t, bool, parent_name_hash, parent_name_eq>;
+
+void get_is_unique_stop_name(n::rt::frun const& fr,
+                             n::interval<n::stop_idx_t> const& stops,
+                             unique_stop_map_t& is_unique) {
+  is_unique.clear();
+  for (auto const i : stops) {
+    auto const [it, is_new] = is_unique.emplace(fr[i].get_location_idx(), true);
+    if (!is_new) {
+      it->second = false;
+    }
+  }
+}
+
 api::Itinerary journey_to_response(
     osr::ways const* w,
     osr::lookup const* l,
@@ -377,11 +408,17 @@ api::Itinerary journey_to_response(
         to_place(&tt, &tags, w, pl, matches, ae, tz_map, tt_location{j_leg.to_},
                  start, dest, "", fallback_tz);
 
+    auto is_unique =
+        unique_stop_map_t{0U, parent_name_hash{&tt}, parent_name_eq{&tt}};
     auto const to_place = [&](n::rt::run_stop const& s,
                               n::event_type const ev_type) {
       auto p = ::motis::to_place(&tt, &tags, w, pl, matches, ae, tz_map, s,
                                  start, dest);
       p.alerts_ = get_alerts(*s.fr_, std::pair{s, ev_type}, false, language);
+      if (auto const it = is_unique.find(s.get_location_idx());
+          it != end(is_unique) && !it->second) {
+        p.name_ = tt.locations_.names_[s.get_location_idx()].view();
+      }
       return p;
     };
 
@@ -397,6 +434,8 @@ api::Itinerary journey_to_response(
                 if (common_stops.size() <= 1) {
                   return;
                 }
+
+                get_is_unique_stop_name(fr, common_stops, is_unique);
 
                 auto const enter_stop = fr[common_stops.from_];
                 auto const exit_stop = fr[common_stops.to_ - 1U];

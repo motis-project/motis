@@ -52,7 +52,7 @@ export const possibleTransitModes = [
 	'TRAM',
 	'BUS',
 	'FERRY',
-	'CABLE_CAR',
+	'ODM',
 	'FUNICULAR',
 	'AERIAL_LIFT',
 	'OTHER'

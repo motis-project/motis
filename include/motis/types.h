@@ -26,8 +26,11 @@ using vector_map = nigiri::vector_map<K, V>;
 template <typename T>
 using hash_set = nigiri::hash_set<T>;
 
-template <typename K, typename V>
-using hash_map = nigiri::hash_map<K, V>;
+template <typename K,
+          typename V,
+          typename Hash = cista::hash_all,
+          typename Equality = cista::equals_all>
+using hash_map = nigiri::hash_map<K, V, Hash, Equality>;
 
 template <typename T>
 using basic_string = std::basic_string<T, cista::char_traits<T>>;

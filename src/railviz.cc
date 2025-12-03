@@ -83,7 +83,7 @@ int min_zoom_level(n::clasz const clasz, float const distance) {
         return 10;
       }
 
-    case n::clasz::kCableCar:
+    case n::clasz::kODM:
     case n::clasz::kFunicular:
     case n::clasz::kAerialLift:
     case n::clasz::kOther: return 11;
