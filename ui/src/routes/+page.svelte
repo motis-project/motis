@@ -650,7 +650,7 @@
 				/>
 			</Card>
 		</Control>
-		{#if showMap}
+		{#if showMap && !page.state.selectedItinerary}
 			{#each routingResponses as r, rI (rI)}
 				{#await r then r}
 					{#each r.itineraries as it, i (i)}
