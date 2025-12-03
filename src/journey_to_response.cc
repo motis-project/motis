@@ -199,6 +199,38 @@ std::optional<std::vector<api::Alert>> get_alerts(
   return alerts.empty() ? std::nullopt : std::optional{std::move(alerts)};
 }
 
+struct parent_name_hash {
+  bool operator()(n::location_idx_t const l) const {
+    return cista::hash(
+        tt_->locations_.names_[tt_->locations_.get_root_idx(l)].view());
+  }
+  n::timetable const* tt_{nullptr};
+};
+
+struct parent_name_eq {
+  bool operator()(n::location_idx_t const a, n::location_idx_t const b) const {
+    return tt_->locations_.names_[tt_->locations_.get_root_idx(a)].view() ==
+           tt_->locations_.names_[tt_->locations_.get_root_idx(b)].view();
+  }
+  n::timetable const* tt_{nullptr};
+};
+
+auto get_is_unique_stop_name(n::timetable const& tt,
+                             n::rt::frun const& fr,
+                             n::interval<n::stop_idx_t> const& stops) {
+  auto is_unique =
+      hash_map<n::location_idx_t, bool, parent_name_hash, parent_name_eq>{
+          static_cast<unsigned>(stops.size()), parent_name_hash{&tt},
+          parent_name_eq{&tt}};
+  for (auto const i : stops) {
+    auto const [it, is_new] = is_unique.emplace(fr[i].get_location_idx(), true);
+    if (!is_new) {
+      it->second = false;
+    }
+  }
+  return is_unique;
+}
+
 api::Itinerary journey_to_response(
     osr::ways const* w,
     osr::lookup const* l,
@@ -398,6 +430,8 @@ api::Itinerary journey_to_response(
                   return;
                 }
 
+                auto const unique_stop_name =
+                    get_is_unique_stop_name(tt, fr, common_stops);
                 auto const enter_stop = fr[common_stops.from_];
                 auto const exit_stop = fr[common_stops.to_ - 1U];
                 auto const color =
@@ -534,6 +568,11 @@ api::Itinerary journey_to_response(
                   p.arrival_ = stop.time(n::event_type::kArr);
                   p.scheduledArrival_ =
                       stop.scheduled_time(n::event_type::kArr);
+
+                  if (!unique_stop_name.at(stop.get_location_idx())) {
+                    p.name_ =
+                        tt.locations_.names_[stop.get_location_idx()].view();
+                  }
                 }
                 is_first_part = false;
               };
