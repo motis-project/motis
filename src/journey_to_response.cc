@@ -215,20 +215,19 @@ struct parent_name_eq {
   n::timetable const* tt_{nullptr};
 };
 
-auto get_is_unique_stop_name(n::timetable const& tt,
-                             n::rt::frun const& fr,
-                             n::interval<n::stop_idx_t> const& stops) {
-  auto is_unique =
-      hash_map<n::location_idx_t, bool, parent_name_hash, parent_name_eq>{
-          static_cast<unsigned>(stops.size()), parent_name_hash{&tt},
-          parent_name_eq{&tt}};
+using unique_stop_map_t =
+    hash_map<n::location_idx_t, bool, parent_name_hash, parent_name_eq>;
+
+void get_is_unique_stop_name(n::rt::frun const& fr,
+                             n::interval<n::stop_idx_t> const& stops,
+                             unique_stop_map_t& is_unique) {
+  is_unique.clear();
   for (auto const i : stops) {
     auto const [it, is_new] = is_unique.emplace(fr[i].get_location_idx(), true);
     if (!is_new) {
       it->second = false;
     }
   }
-  return is_unique;
 }
 
 api::Itinerary journey_to_response(
@@ -409,11 +408,17 @@ api::Itinerary journey_to_response(
         to_place(&tt, &tags, w, pl, matches, ae, tz_map, tt_location{j_leg.to_},
                  start, dest, "", fallback_tz);
 
+    auto is_unique =
+        unique_stop_map_t{0U, parent_name_hash{&tt}, parent_name_eq{&tt}};
     auto const to_place = [&](n::rt::run_stop const& s,
                               n::event_type const ev_type) {
       auto p = ::motis::to_place(&tt, &tags, w, pl, matches, ae, tz_map, s,
                                  start, dest);
       p.alerts_ = get_alerts(*s.fr_, std::pair{s, ev_type}, false, language);
+      if (auto const it = is_unique.find(s.get_location_idx());
+          it != end(is_unique) && !it->second) {
+        p.name_ = tt.locations_.names_[s.get_location_idx()].view();
+      }
       return p;
     };
 
@@ -430,8 +435,8 @@ api::Itinerary journey_to_response(
                   return;
                 }
 
-                auto const unique_stop_name =
-                    get_is_unique_stop_name(tt, fr, common_stops);
+                get_is_unique_stop_name(fr, common_stops, is_unique);
+
                 auto const enter_stop = fr[common_stops.from_];
                 auto const exit_stop = fr[common_stops.to_ - 1U];
                 auto const color =
@@ -568,11 +573,6 @@ api::Itinerary journey_to_response(
                   p.arrival_ = stop.time(n::event_type::kArr);
                   p.scheduledArrival_ =
                       stop.scheduled_time(n::event_type::kArr);
-
-                  if (!unique_stop_name.at(stop.get_location_idx())) {
-                    p.name_ =
-                        tt.locations_.names_[stop.get_location_idx()].view();
-                  }
                 }
                 is_first_part = false;
               };
