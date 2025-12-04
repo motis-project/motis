@@ -74,4 +74,8 @@ osr::location get_location(nigiri::timetable const*,
                            place_t const start = {},
                            place_t const dest = {});
 
+place_t get_place(nigiri::timetable const*,
+                  tag_lookup const*,
+                  std::string_view user_input);
+
 }  // namespace motis
