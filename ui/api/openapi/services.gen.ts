@@ -127,19 +127,23 @@ export const levels = <ThrowOnError extends boolean = false>(options: Options<Le
  * Get a list of rental providers or all rental stations and vehicles for
  * a map section or provider
  *
- * If neither the map section (`min` and `max`) nor a provider filter
- * (either `providerGroups` or `providers`) is provided, returns a list of
- * all available rental providers, but no station, vehicle or zone data.
+ * Various options to filter the providers, stations and vehicles are
+ * available. If none of these filters are provided, a list of all
+ * available rental providers is returned without any station, vehicle or
+ * zone data.
+ *
+ * At least one of the following filters must be provided to retrieve
+ * station, vehicle and zone data:
+ *
+ * - A bounding box defined by the `min` and `max` parameters
+ * - A circle defined by the `point` and `radius` parameters
+ * - A list of provider groups via the `providerGroups` parameter
+ * - A list of providers via the `providers` parameter
+ *
+ * Only data that matches all the provided filters is returned.
+ *
  * Provide the `withProviders=false` parameter to retrieve only provider
  * groups if detailed feed information is not required.
- *
- * Either the map section (`min` and `max`) or the provider filter
- * (either `providerGroups` or `providers`)
- * must be provided to retrieve station, vehicle and zone data.
- *
- * If only the map section is provided, all data in the area is returned.
- * If only the provider filter is provided, all data for the given providers is returned.
- * If both parameters are provided, only data for the given providers in the map section is returned.
  *
  */
 export const rentals = <ThrowOnError extends boolean = false>(options?: Options<RentalsData, ThrowOnError>) => {

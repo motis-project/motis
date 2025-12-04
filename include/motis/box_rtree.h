@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <array>
 
 #include "cista/strong.h"
@@ -74,6 +75,28 @@ struct box_rtree {
     rtree_delete(
         rtree_, min_corner.data(), max_corner.data(),
         reinterpret_cast<void*>(static_cast<std::size_t>(cista::to_idx(t))));
+  }
+
+  std::vector<T> in_radius(geo::latlng const& x, double distance) const {
+    auto ret = std::vector<T>{};
+    in_radius(x, distance, [&](auto&& item) { ret.emplace_back(item); });
+    return ret;
+  }
+
+  template <typename Fn>
+  void in_radius(geo::latlng const& x, double distance, Fn&& fn) const {
+    auto const rad_sq = distance * distance;
+    auto const approx_distance_lng_degrees =
+        geo::approx_distance_lng_degrees(x);
+    find(geo::box{x, distance}, [&](geo::box const& box, T const item) {
+      auto const closest =
+          geo::latlng{std::clamp(x.lat(), box.min_.lat(), box.max_.lat()),
+                      std::clamp(x.lng(), box.min_.lng(), box.max_.lng())};
+      if (geo::approx_squared_distance(x, closest,
+                                       approx_distance_lng_degrees) < rad_sq) {
+        fn(item);
+      }
+    });
   }
 
   template <typename Fn>

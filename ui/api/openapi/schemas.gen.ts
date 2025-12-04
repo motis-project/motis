@@ -225,11 +225,12 @@ export const ModeSchema = {
   - \`NIGHT_RAIL\`: long distance night trains
   - \`REGIONAL_FAST_RAIL\`: regional express routes that skip low traffic stops to be faster
   - \`REGIONAL_RAIL\`: regional train
-  - \`CABLE_CAR\`: Cable tram. Used for street-level rail cars where the cable runs beneath the vehicle (e.g., cable car in San Francisco).
   - \`FUNICULAR\`: Funicular. Any rail system designed for steep inclines.
   - \`AERIAL_LIFT\`: Aerial lift, suspended cable car (e.g., gondola lift, aerial tramway). Cable transport where cabins, cars, gondolas or open chairs are suspended by means of one or more cables.
+  - \`ODM\`: demand responsive transport
   - \`AREAL_LIFT\`: deprecated
   - \`METRO\`: deprecated
+  - \`CABLE_CAR\`: deprecated
 `,
     type: 'string',
     enum: ['WALK', 'BIKE', 'RENTAL', 'CAR', 'CAR_PARKING', 'CAR_DROPOFF', 'ODM', 'RIDE_SHARING', 'FLEX', 'TRANSIT', 'TRAM', 'SUBWAY', 'FERRY', 'AIRPLANE', 'SUBURBAN', 'BUS', 'COACH', 'RAIL', 'HIGHSPEED_RAIL', 'LONG_DISTANCE', 'NIGHT_RAIL', 'REGIONAL_FAST_RAIL', 'REGIONAL_RAIL', 'CABLE_CAR', 'FUNICULAR', 'AERIAL_LIFT', 'OTHER', 'AREAL_LIFT', 'METRO']

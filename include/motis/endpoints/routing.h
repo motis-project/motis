@@ -30,10 +30,6 @@ extern boost::thread_specific_ptr<osr::bitvec<osr::node_idx_t>> blocked;
 
 using stats_map_t = std::map<std::string, std::uint64_t>;
 
-place_t get_place(nigiri::timetable const*,
-                  tag_lookup const*,
-                  std::string_view user_input);
-
 nigiri::interval<nigiri::unixtime_t> shrink(
     bool keep_late,
     std::size_t max_size,

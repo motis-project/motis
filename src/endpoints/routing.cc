@@ -70,17 +70,6 @@ namespace motis::ep {
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 boost::thread_specific_ptr<osr::bitvec<osr::node_idx_t>> blocked;
 
-place_t get_place(n::timetable const* tt,
-                  tag_lookup const* tags,
-                  std::string_view input) {
-  if (auto const location = parse_location(input); location.has_value()) {
-    return *location;
-  }
-  utl::verify(tt != nullptr && tags != nullptr,
-              R"(could not parse location (no timetable loaded): "{}")", input);
-  return tt_location{tags->get_location(*tt, input)};
-}
-
 bool is_intermodal(place_t const& p) {
   return std::holds_alternative<osr::location>(p);
 }

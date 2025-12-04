@@ -1,6 +1,7 @@
 #include "motis/endpoints/map/rental.h"
 
 #include <cassert>
+#include <algorithm>
 #include <array>
 #include <set>
 #include <utility>
@@ -8,16 +9,20 @@
 
 #include "utl/enumerate.h"
 #include "utl/helpers/algorithm.h"
+#include "utl/overloaded.h"
 #include "utl/to_vec.h"
 
 #include "geo/box.h"
 #include "geo/polyline.h"
 #include "geo/polyline_format.h"
 
+#include "nigiri/timetable.h"
+
 #include "motis-api/motis-api.h"
 #include "motis/gbfs/data.h"
 #include "motis/gbfs/mode.h"
 #include "motis/parse_location.h"
+#include "motis/place.h"
 
 namespace json = boost::json;
 
@@ -28,10 +33,23 @@ api::rentals_response rental::operator()(
   auto const parse_loc = [](std::string_view const sv) {
     return parse_location(sv);
   };
+  auto const parse_place_pos = [&](std::string_view const sv) {
+    auto const place = get_place(tt_, tags_, sv);
+    return std::visit(
+        utl::overloaded{[&](osr::location const& l) { return l.pos_; },
+                        [&](tt_location const tt_l) {
+                          return tt_->locations_.coordinates_.at(tt_l.l_);
+                        }},
+        place);
+  };
+
   auto const query = api::rentals_params{url.params()};
   auto const min = query.min_.and_then(parse_loc);
   auto const max = query.max_.and_then(parse_loc);
+  auto const point_pos = query.point_.transform(parse_place_pos);
+  auto const point_radius = query.radius_;
   auto const filter_bbox = min.has_value() && max.has_value();
+  auto const filter_point = point_pos.has_value() && point_radius.has_value();
   auto const filter_providers =
       query.providers_.has_value() && !query.providers_->empty();
   auto const filter_groups =
@@ -179,7 +197,7 @@ api::rentals_response rental::operator()(
                                  .formFactors_ = form_factors});
   };
 
-  if (!filter_bbox && !filter_providers && !filter_groups) {
+  if (!filter_bbox && !filter_point && !filter_providers && !filter_groups) {
     for (auto const& provider : gbfs->providers_) {
       if (provider != nullptr) {
         add_provider(provider.get());
@@ -196,26 +214,60 @@ api::rentals_response rental::operator()(
     return filter_bbox ? bbox.contains(pos) : true;
   };
 
+  auto const approx_distance_lng_degrees =
+      point_pos ? geo::approx_distance_lng_degrees(*point_pos) : 0.0;
+  auto const point_radius_squared =
+      point_radius ? (*point_radius) * (*point_radius) : 0.0;
+  auto const in_radius = [&](geo::latlng const& pos) {
+    return filter_point ? geo::approx_squared_distance(
+                              *point_pos, pos, approx_distance_lng_degrees) <=
+                              point_radius_squared
+                        : true;
+  };
+
+  auto const include_bbox = [&](geo::box const& b) {
+    if (filter_bbox && !b.overlaps(bbox)) {
+      return false;
+    }
+    if (filter_point) {
+      auto const closest =
+          geo::latlng{std::clamp(point_pos->lat(), b.min_.lat(), b.max_.lat()),
+                      std::clamp(point_pos->lng(), b.min_.lng(), b.max_.lng())};
+      return geo::approx_squared_distance(*point_pos, closest,
+                                          approx_distance_lng_degrees) <=
+             point_radius_squared;
+    }
+    return true;
+  };
+
   auto providers = hash_set<gbfs::gbfs_provider const*>{};
   auto provider_groups = hash_set<std::string>{};
 
-  if (filter_bbox) {
-    auto check_provider = [&](gbfs_provider_idx_t const pi) {
-      auto const& provider = gbfs->providers_.at(pi);
-      if (provider == nullptr) {
-        return;
-      }
-      if ((filter_providers || filter_groups) &&
-          !((filter_providers && utl::find(*query.providers_, provider->id_) !=
-                                     end(*query.providers_)) ||
-            (filter_groups &&
-             utl::find(*query.providerGroups_, provider->group_id_) !=
-                 end(*query.providerGroups_)))) {
-        return;
-      }
-      providers.insert(provider.get());
-      provider_groups.insert(provider->group_id_);
-    };
+  auto check_provider = [&](gbfs_provider_idx_t const pi) {
+    auto const& provider = gbfs->providers_.at(pi);
+    if (provider == nullptr || providers.contains(provider.get())) {
+      return;
+    }
+    if ((filter_providers || filter_groups) &&
+        !((filter_providers && utl::find(*query.providers_, provider->id_) !=
+                                   end(*query.providers_)) ||
+          (filter_groups &&
+           utl::find(*query.providerGroups_, provider->group_id_) !=
+               end(*query.providerGroups_)))) {
+      return;
+    }
+    providers.insert(provider.get());
+    provider_groups.insert(provider->group_id_);
+  };
+
+  if (filter_point) {
+    gbfs->provider_rtree_.in_radius(
+        *point_pos, *point_radius,
+        [&](gbfs_provider_idx_t const pi) { check_provider(pi); });
+    gbfs->provider_zone_rtree_.in_radius(
+        *point_pos, *point_radius,
+        [&](gbfs_provider_idx_t const pi) { check_provider(pi); });
+  } else if (filter_bbox) {
     gbfs->provider_rtree_.find(
         bbox, [&](gbfs_provider_idx_t const pi) { check_provider(pi); });
     gbfs->provider_zone_rtree_.find(
@@ -259,7 +311,7 @@ api::rentals_response rental::operator()(
     if (query.withStations_) {
       for (auto const& st : provider->stations_ | std::views::values) {
         auto const sbb = st.info_.bounding_box();
-        if (filter_bbox && !sbb.overlaps(bbox)) {
+        if (!include_bbox(sbb)) {
           continue;
         }
         auto form_factor_counts =
@@ -363,7 +415,7 @@ api::rentals_response rental::operator()(
       auto const fallback_vt =
           gbfs::vehicle_type{.form_factor_ = gbfs::vehicle_form_factor::kOther};
       for (auto const& vs : provider->vehicle_status_) {
-        if (in_bbox(vs.pos_)) {
+        if (in_bbox(vs.pos_) && in_radius(vs.pos_)) {
           if (vs.vehicle_type_idx_ != gbfs::vehicle_type_idx_t::invalid() &&
               cista::to_idx(vs.vehicle_type_idx_) <
                   provider->vehicle_types_.size()) {
@@ -382,7 +434,7 @@ api::rentals_response rental::operator()(
       for (auto const [order, zone] :
            utl::enumerate(provider->geofencing_zones_.zones_)) {
         auto const zbb = zone.bounding_box();
-        if (filter_bbox && !zbb.overlaps(bbox)) {
+        if (!include_bbox(zbb)) {
           continue;
         }
         res.zones_.emplace_back(api::RentalZone{

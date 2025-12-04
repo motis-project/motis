@@ -8,6 +8,7 @@
 #include "nigiri/special_stations.h"
 #include "nigiri/timetable.h"
 
+#include "motis/parse_location.h"
 #include "motis/tag_lookup.h"
 
 namespace n = nigiri;
@@ -181,6 +182,17 @@ api::Place to_place(n::timetable const* tt,
                                    (s.get_scheduled_stop().in_allowed() ||
                                     s.get_scheduled_stop().out_allowed()));
   return p;
+}
+
+place_t get_place(n::timetable const* tt,
+                  tag_lookup const* tags,
+                  std::string_view input) {
+  if (auto const location = parse_location(input); location.has_value()) {
+    return *location;
+  }
+  utl::verify(tt != nullptr && tags != nullptr,
+              R"(could not parse location (no timetable loaded): "{}")", input);
+  return tt_location{tags->get_location(*tt, input)};
 }
 
 }  // namespace motis
