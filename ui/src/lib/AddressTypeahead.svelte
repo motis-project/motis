@@ -72,7 +72,6 @@
 
 		const pos = place ? maplibregl.LngLat.convert(place) : undefined;
 		const biasPlace = pos ? { place: `${pos.lat},${pos.lng}` } : {};
-		console.log(transitModes);
 		const { data: matches, error } = await geocode({
 			query: {
 				...biasPlace,

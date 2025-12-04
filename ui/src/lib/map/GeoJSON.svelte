@@ -6,11 +6,12 @@
 	class Props {
 		id!: string;
 		data!: GeoJSON.GeoJSON;
+		lineMetrics?: boolean;
 		children!: Snippet;
 		options?: Omit<GeoJSONSourceSpecification, 'type' | 'data'>;
 	}
 
-	let { id, data, children, options }: Props = $props();
+	let { id, data, lineMetrics = false, children, options }: Props = $props();
 
 	let ctx: { map: maplibregl.Map | null } = getContext('map');
 
@@ -27,6 +28,7 @@
 		} else {
 			ctx.map!.addSource(id, {
 				type: 'geojson',
+				lineMetrics,
 				data,
 				...(options ?? {})
 			});
