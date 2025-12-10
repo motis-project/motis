@@ -538,6 +538,19 @@ api::Itinerary journey_to_response(
                             : std::nullopt,
                 });
 
+                auto const attributes =
+                    tt.attribute_combinations_[enter_stop
+                                                   .get_attribute_combination(
+                                                       n::event_type::kDep)];
+                if (!leg.alerts_ && !attributes.empty()) {
+                  leg.alerts_ = std::vector<api::Alert>{};
+                }
+                for (auto const& a : attributes) {
+                  leg.alerts_->push_back(api::Alert{
+                      .headerText_ = tt.attributes_[a].code_.str(),
+                      .descriptionText_ = tt.attributes_[a].text_.str()});
+                }
+
                 leg.from_.vertexType_ = api::VertexTypeEnum::TRANSIT;
                 leg.from_.departure_ = leg.startTime_;
                 leg.from_.scheduledDeparture_ = leg.scheduledStartTime_;

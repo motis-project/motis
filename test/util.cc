@@ -5,8 +5,8 @@
 namespace motis::test {
 
 using namespace std::string_view_literals;
-using namespace date;
 using namespace std::chrono_literals;
+using namespace date;
 
 using feed_entity = std::variant<trip_update, alert>;
 

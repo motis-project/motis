@@ -112,9 +112,9 @@ cista::hash_t hash_file(fs::path const& p) {
     return cista::hash(p.generic_string());
   } else if (fs::is_directory(p)) {
     auto h = cista::BASE_HASH;
-    for (auto const& file : fs::directory_iterator{p}) {
-      h = cista::hash_combine(h, hash_file(file));
-    }
+    // for (auto const& file : fs::directory_iterator{p}) {
+    //   h = cista::hash_combine(h, hash_file(file));
+    // }
     return h;
   } else {
     auto const mmap =
