@@ -33,8 +33,8 @@ std::string prima::make_blacklist_taxi_request(
   return json::serialize(json::value{
       {"start", {{"lat", from_.pos_.lat_}, {"lng", from_.pos_.lng_}}},
       {"target", {{"lat", to_.pos_.lat_}, {"lng", to_.pos_.lng_}}},
-      {"startBusStops", to_json(first_mile_taxi_, tt)},
-      {"targetBusStops", to_json(last_mile_taxi_, tt)},
+      {"startBusStops", to_json(first_mile_taxi_offsets_, tt)},
+      {"targetBusStops", to_json(last_mile_taxi_offsets_, tt)},
       {"earliest", to_millis(taxi_intvl.from_)},
       {"latest", to_millis(taxi_intvl.to_)},
       {"startFixed", fixed_ == n::event_type::kDep},
@@ -78,9 +78,9 @@ bool prima::consume_blacklist_taxi_response(std::string_view json) {
   try {
     auto const o = json::parse(json).as_object();
 
-    read_service_times(o.at("start").as_array(), first_mile_taxi_,
+    read_service_times(o.at("start").as_array(), first_mile_taxi_offsets_,
                        first_mile_taxi_times_);
-    read_service_times(o.at("target").as_array(), last_mile_taxi_,
+    read_service_times(o.at("target").as_array(), last_mile_taxi_offsets_,
                        last_mile_taxi_times_);
 
     if (direct_duration_ && *direct_duration_ < kODMMaxDuration) {

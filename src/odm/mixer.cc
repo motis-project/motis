@@ -9,6 +9,7 @@
 #include "motis/metrics_registry.h"
 #include "motis/odm/journeys.h"
 #include "motis/odm/odm.h"
+#include "motis/odm/prima.h"
 #include "motis/transport_mode_ids.h"
 
 namespace n = nigiri;
@@ -36,6 +37,20 @@ std::string label(nr::journey const& j) {
   return std::format("[dep: {}, arr: {}, dur: {}, transfers: {}, odm_time: {}]",
                      j.departure_time(), j.arrival_time(), j.travel_time(),
                      std::uint32_t{j.transfers_}, odm_time(j));
+}
+
+std::vector<nr::journey> extract_pooling(std::vector<nr::journey>& journeys,
+                                         prima const& p) {
+  std::vector<nr::journey> pooling;
+  for (auto i = begin(journeys); i != end(journeys);) {
+    if (p.uses_pooling(*i)) {
+      pooling.push_back(*i);
+      i = journeys.erase(i);
+    } else {
+      ++i;
+    }
+  }
+  return pooling;
 }
 
 void mixer::pareto_dominance(std::vector<nr::journey>& odm_journeys) {
@@ -85,7 +100,11 @@ double mixer::transfer_cost(nr::journey const& j) const {
   return tally(j.transfers_, transfer_cost_);
 }
 
-double mixer::cost(nr::journey const& j) const {
+double mixer::cost(nr::journey const& j, bool const pooling_override) const {
+  if (!uses_odm(j, kOdmTransportModeId) || pooling_override) {
+    return j.travel_time().count() + transfer_cost(j);
+  }
+
   auto const odm_cost = [&](auto const& l) {
     return tally(std::chrono::abs(l.arr_time_ - l.dep_time_).count(),
                  taxi_cost_);
@@ -114,7 +133,8 @@ n::unixtime_t center(nr::journey const& j) {
 std::vector<double> mixer::get_threshold(
     std::vector<nr::journey> const& v,
     n::interval<n::unixtime_t> const& intvl,
-    double const slope) const {
+    double const slope,
+    bool const pooling_override) const {
 
   if (intvl.from_ >= intvl.to_) {
     return {};
@@ -124,7 +144,7 @@ std::vector<double> mixer::get_threshold(
                                std::numeric_limits<double>::max());
 
   for (auto const& j : v) {
-    auto const cost_j = cost(j);
+    auto const cost_j = cost(j, pooling_override);
     auto const center_j = center(j);
     auto const f_j = [&](n::unixtime_t const t) -> double {
       return slope *
@@ -221,15 +241,15 @@ void write_thresholds(std::vector<double> const& pt_threshold,
   threshold_to_csv(odm_threshold, "odm_threshold.csv");
 }
 
-void add_pt_sort(n::pareto_set<nr::journey> const& pt_journeys,
-                 std::vector<nr::journey>& odm_journeys,
-                 std::vector<nr::journey> const& ride_share_journeys) {
-  for (auto const& j : pt_journeys) {
-    odm_journeys.emplace_back(j);
-  }
-  for (auto const& j : ride_share_journeys) {
-    odm_journeys.emplace_back(j);
-  }
+void funnel_and_sort(n::pareto_set<nr::journey> const& pt_journeys,
+                     std::vector<nr::journey>& odm_journeys,
+                     std::vector<nr::journey> const& ride_share_journeys,
+                     std::vector<nr::journey> const& pooling) {
+  odm_journeys.insert(end(odm_journeys), begin(pt_journeys), end(pt_journeys));
+  odm_journeys.insert(end(odm_journeys), begin(ride_share_journeys),
+                      end(ride_share_journeys));
+  odm_journeys.insert(end(odm_journeys), begin(pooling), end(pooling));
+
   utl::sort(odm_journeys, [](auto const& a, auto const& b) {
     return std::tuple{a.departure_time(), a.arrival_time(), a.transfers_} <
            std::tuple{b.departure_time(), b.arrival_time(), b.transfers_};
@@ -239,8 +259,12 @@ void add_pt_sort(n::pareto_set<nr::journey> const& pt_journeys,
 void mixer::mix(n::pareto_set<nr::journey> const& pt_journeys,
                 std::vector<nr::journey>& taxi_journeys,
                 std::vector<nr::journey> const& ride_share_journeys,
+                prima const* p,
                 metrics_registry* metrics,
                 std::optional<std::string_view> const stats_path) const {
+  auto const pooling = p != nullptr ? extract_pooling(taxi_journeys, *p)
+                                    : std::vector<nr::journey>{};
+
   pareto_dominance(taxi_journeys);
   auto const pareto_n = taxi_journeys.size();
 
@@ -254,16 +278,19 @@ void mixer::mix(n::pareto_set<nr::journey> const& pt_journeys,
   }
 
   auto const intvl = [&]() {
-    auto ret =
-        n::interval<n::unixtime_t>{n::unixtime_t::max(), n::unixtime_t::min()};
-    for (auto const& j : pt_journeys) {
-      ret.from_ = std::min(ret.from_, j.departure_time());
-      ret.to_ = std::max(ret.to_, j.arrival_time());
-    }
-    for (auto const& j : taxi_journeys) {
-      ret.from_ = std::min(ret.from_, j.departure_time());
-      ret.to_ = std::max(ret.to_, j.arrival_time());
-    }
+    auto ret = n::interval{n::unixtime_t::max(), n::unixtime_t::min()};
+
+    auto const min_max = [&](auto const& journeys) {
+      for (auto const& j : journeys) {
+        ret.from_ = std::min(ret.from_, j.departure_time());
+        ret.to_ = std::max(ret.to_, j.arrival_time());
+      }
+    };
+
+    min_max(pt_journeys);
+    min_max(taxi_journeys);
+    min_max(pooling);
+
     return ret;
   }();
 
@@ -277,6 +304,8 @@ void mixer::mix(n::pareto_set<nr::journey> const& pt_journeys,
   auto const pt_threshold = get_threshold(pt_journeys.els_, intvl, pt_slope_);
   threshold_filter(pt_threshold);
   auto const pt_filtered_n = taxi_journeys.size();
+  auto const pooling_threshold = get_threshold(pooling, intvl, pt_slope_, true);
+  threshold_filter(pooling_threshold);
   auto const odm_threshold = get_threshold(taxi_journeys, intvl, odm_slope_);
   threshold_filter(odm_threshold);
 
@@ -293,7 +322,7 @@ void mixer::mix(n::pareto_set<nr::journey> const& pt_journeys,
         static_cast<double>(taxi_journeys.size()));
   }
 
-  add_pt_sort(pt_journeys, taxi_journeys, ride_share_journeys);
+  funnel_and_sort(pt_journeys, taxi_journeys, ride_share_journeys, pooling);
 }
 
 std::vector<nr::journey> get_mixer_input(
@@ -301,7 +330,8 @@ std::vector<nr::journey> get_mixer_input(
     std::vector<nr::journey> const& odm_journeys,
     std::vector<nr::journey>& ride_share_journeys) {
   auto ret = odm_journeys;
-  add_pt_sort(pt_journeys, ret, ride_share_journeys);
+  auto const pooling = std::vector<nr::journey>{};
+  funnel_and_sort(pt_journeys, ret, ride_share_journeys, pooling);
   return ret;
 }
 

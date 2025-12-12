@@ -26,6 +26,7 @@
 #include "motis/gbfs/gbfs_output.h"
 #include "motis/gbfs/routing_data.h"
 #include "motis/odm/odm.h"
+#include "motis/odm/prima.h"
 #include "motis/osr/mode_to_profile.h"
 #include "motis/osr/street_routing.h"
 #include "motis/place.h"
@@ -64,6 +65,26 @@ void cleanup_intermodal(api::Itinerary& i) {
   }
   if (i.legs_.back().to_.name_ == "START") {
     i.legs_.back().to_.name_ = "END";
+  }
+}
+
+void mark_odm_with_pooling(n::routing::journey const& j,
+                           api::Itinerary& i,
+                           odm::prima const* p) {
+  if (p == nullptr) {
+    return;
+  }
+  if (j.legs_.size() == 1 && p->is_direct_pooling(j.legs_.front())) {
+    i.legs_.front().displayName_ = "POOLING";
+    return;
+  }
+  if (j.legs_.size() > 1) {
+    if (p->is_first_mile_pooling(j.legs_.front())) {
+      i.legs_.front().displayName_ = "POOLING";
+    }
+    if (p->is_last_mile_pooling(j.legs_.back())) {
+      i.legs_.back().displayName_ = "POOLING";
+    }
   }
 }
 
@@ -263,7 +284,8 @@ api::Itinerary journey_to_response(
     unsigned const api_version,
     bool const ignore_start_rental_return_constraints,
     bool const ignore_dest_rental_return_constraints,
-    std::optional<std::vector<std::string>> const& language) {
+    std::optional<std::vector<std::string>> const& language,
+    odm::prima const* p) {
   utl::verify(!j.legs_.empty(), "journey without legs");
 
   auto const fares =
@@ -632,6 +654,7 @@ api::Itinerary journey_to_response(
   }
 
   cleanup_intermodal(itinerary);
+  mark_odm_with_pooling(j, itinerary, p);
 
   return itinerary;
 }
