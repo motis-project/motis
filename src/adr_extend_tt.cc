@@ -350,6 +350,8 @@ adr_ext adr_extend_tt(nigiri::timetable const& tt,
     }
   }
 
+  utl::verify(!ret.place_importance_.empty(), "no places");
+
   // Normalize to interval [0, 1] by dividing by max. importance.
   {
     auto const normalize = utl::scoped_timer{"guesser normalize"};

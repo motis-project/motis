@@ -40,7 +40,7 @@
 							{/if}
 						</div>
 						<span class="font-normal text-muted-foreground overflow-hidden text-ellipsis w-full">
-							{alerts[0].descriptionText}
+							{alerts[0].descriptionText || alerts[0].headerText}
 						</span>
 					</div>
 					<ChevronRight class="size-4" />
