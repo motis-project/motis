@@ -92,6 +92,7 @@ struct routing {
   std::pair<std::vector<api::Itinerary>, nigiri::duration_t> route_direct(
       elevators const*,
       gbfs::gbfs_routing_data&,
+      nigiri::lang_t const&,
       api::Place const& from,
       api::Place const& to,
       std::vector<api::ModeEnum> const&,

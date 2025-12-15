@@ -10,7 +10,6 @@
 #include "utl/enumerate.h"
 
 #include "nigiri/loader/gtfs/stop_seq_number_encoding.h"
-#include "nigiri/location.h"
 #include "nigiri/rt/frun.h"
 #include "nigiri/rt/rt_timetable.h"
 #include "nigiri/timetable.h"

@@ -294,9 +294,10 @@ std::vector<api::Place> other_stops_impl(n::rt::frun fr,
                                          osr::platforms const* pl,
                                          platform_matches_t const* matches,
                                          adr_ext const* ae,
-                                         tz_map_t const* tz) {
+                                         tz_map_t const* tz,
+                                         n::lang_t const& lang) {
   auto const convert_stop = [&](n::rt::run_stop const& stop) {
-    auto result = to_place(tt, &tags, w, pl, matches, ae, tz, stop);
+    auto result = to_place(tt, &tags, w, pl, matches, ae, tz, lang, stop);
     if (ev_type == n::event_type::kDep ||
         stop.fr_->stop_range_.from_ != stop.stop_idx_) {
       result.arrival_ = stop.time(n::event_type::kArr);
@@ -339,6 +340,7 @@ std::vector<api::Place> other_stops_impl(n::rt::frun fr,
 api::stoptimes_response stop_times::operator()(
     boost::urls::url_view const& url) const {
   auto const query = api::stoptimes_params{url.params()};
+  auto const& lang = query.language_;
   auto const api_version = get_api_version(url);
 
   auto const max_results = config_.limits_.value().stoptimes_max_results_;
@@ -365,13 +367,13 @@ api::stoptimes_response stop_times::operator()(
       locations.emplace_back(l);
       return;
     }
-    auto const l_name = tt_.locations_.names_[l].view();
+    auto const l_name = tt_.get_default_translation(tt_.locations_.names_[l]);
     utl::concat(locations, tt_.locations_.children_[l]);
     for (auto const& c : tt_.locations_.children_[l]) {
       utl::concat(locations, tt_.locations_.children_[c]);
     }
     for (auto const eq : tt_.locations_.equivalences_[l]) {
-      if (tt_.locations_.names_[eq].view() == l_name) {
+      if (tt_.get_default_translation(tt_.locations_.names_[eq]) == l_name) {
         locations.emplace_back(eq);
         utl::concat(locations, tt_.locations_.children_[eq]);
         for (auto const& c : tt_.locations_.children_[eq]) {
@@ -420,7 +422,8 @@ api::stoptimes_response stop_times::operator()(
             auto const s = fr[0];
             auto const& agency = s.get_provider(ev_type);
             auto const run_cancelled = fr.is_cancelled();
-            auto place = to_place(&tt_, &tags_, w_, pl_, matches_, ae_, tz_, s);
+            auto place = to_place(&tt_, &tags_, w_, pl_, matches_, ae_, tz_,
+                                  query.language_, s);
             place.alerts_ = get_alerts(
                 fr,
                 std::pair{s, fr.stop_range_.from_ != 0U ? n::event_type::kArr
@@ -454,23 +457,20 @@ api::stoptimes_response stop_times::operator()(
                 return std::nullopt;
               }
               return other_stops_impl(fr, ev_type, &tt_, tags_, w_, pl_,
-                                      matches_, ae_, tz_);
+                                      matches_, ae_, tz_, query.language_);
             };
 
             return {
                 .place_ = std::move(place),
                 .mode_ = to_mode(s.get_clasz(ev_type), api_version),
                 .realTime_ = r.is_rt(),
-                .headsign_ = std::string{s.direction(ev_type)},
+                .headsign_ = std::string{s.direction(lang, ev_type)},
                 .tripTo_ = to_place(&tt_, &tags_, w_, pl_, matches_, ae_, tz_,
-                                    s.get_last_trip_stop(ev_type)),
+                                    lang, s.get_last_trip_stop(ev_type)),
                 .agencyId_ =
                     std::string{tt_.strings_.try_get(agency.id_).value_or("?")},
-                .agencyName_ =
-                    std::string{
-                        tt_.strings_.try_get(agency.name_).value_or("?")},
-                .agencyUrl_ =
-                    std::string{tt_.strings_.try_get(agency.url_).value_or("")},
+                .agencyName_ = std::string{tt_.translate(lang, agency.name_)},
+                .agencyUrl_ = std::string{tt_.translate(lang, agency.url_)},
                 .routeId_ = std::string{s.get_route_id(ev_type)},
                 .directionId_ = s.get_direction_id(ev_type) == 0 ? "0" : "1",
                 .routeColor_ = to_str(s.get_route_color(ev_type).color_),
@@ -482,11 +482,12 @@ api::stoptimes_response stop_times::operator()(
                       return std::optional{to_idx(x)};
                     }),
                 .routeShortName_ =
-                    std::string{api_version < 4 ? s.display_name(ev_type)
-                                                : s.route_short_name(ev_type)},
-                .routeLongName_ = std::string{s.route_long_name(ev_type)},
-                .tripShortName_ = std::string{s.trip_short_name(ev_type)},
-                .displayName_ = std::string{s.display_name(ev_type)},
+                    std::string{api_version < 4
+                                    ? s.display_name(ev_type, lang)
+                                    : s.route_short_name(ev_type, lang)},
+                .routeLongName_ = std::string{s.route_long_name(ev_type, lang)},
+                .tripShortName_ = std::string{s.trip_short_name(ev_type, lang)},
+                .displayName_ = std::string{s.display_name(ev_type, lang)},
                 .previousStops_ = other_stops(nigiri::event_type::kArr),
                 .nextStops_ = other_stops(nigiri::event_type::kDep),
                 .pickupDropoffType_ =
@@ -496,8 +497,8 @@ api::stoptimes_response stop_times::operator()(
                 .tripCancelled_ = run_cancelled,
                 .source_ = fmt::format("{}", fmt::streamed(fr.dbg()))};
           }),
-      .place_ =
-          to_place(&tt_, &tags_, w_, pl_, matches_, ae_, tz_, tt_location{x}),
+      .place_ = to_place(&tt_, &tags_, w_, pl_, matches_, ae_, tz_, lang,
+                         tt_location{x}),
       .previousPageCursor_ =
           events.empty()
               ? ""

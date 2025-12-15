@@ -73,7 +73,9 @@ api::ModeEnum default_output::get_mode() const {
 osr::search_profile default_output::get_profile() const { return profile_; }
 
 api::Place default_output::get_place(
-    osr::node_idx_t const n, std::optional<std::string> const& tz) const {
+    nigiri::lang_t const&,
+    osr::node_idx_t const n,
+    std::optional<std::string> const& tz) const {
   auto const pos = w_.get_node_pos(n).as_latlng();
   return api::Place{.lat_ = pos.lat_,
                     .lon_ = pos.lng_,
@@ -95,7 +97,8 @@ osr::sharing_data const* default_output::get_sharing_data() const {
   return nullptr;
 }
 
-void default_output::annotate_leg(osr::node_idx_t,
+void default_output::annotate_leg(n::lang_t const&,
+                                  osr::node_idx_t,
                                   osr::node_idx_t,
                                   api::Leg&) const {}
 
@@ -203,6 +206,7 @@ api::Itinerary street_routing(osr::ways const& w,
                               osr::lookup const& l,
                               elevators const* e,
                               osr::elevation_storage const* elevations,
+                              n::lang_t const& lang,
                               api::Place const& from_place,
                               api::Place const& to_place,
                               output const& out,
@@ -290,8 +294,8 @@ api::Itinerary street_routing(osr::ways const& w,
                                 ? api::ModeEnum::RIDE_SHARING
                                 : to_mode(lb->mode_)),
             .from_ = pred_place,
-            .to_ =
-                is_last_leg ? to_place : out.get_place(to_node, pred_place.tz_),
+            .to_ = is_last_leg ? to_place
+                               : out.get_place(lang, to_node, pred_place.tz_),
             .duration_ = std::chrono::duration_cast<std::chrono::seconds>(
                              t - pred_end_time)
                              .count(),
@@ -312,7 +316,7 @@ api::Itinerary street_routing(osr::ways const& w,
         leg.to_.pickupType_ = std::nullopt;
         leg.to_.dropoffType_ = std::nullopt;
 
-        out.annotate_leg(from_node, to_node, leg);
+        out.annotate_leg(lang, from_node, to_node, leg);
 
         pred_place = leg.to_;
         pred_end_time = t;
