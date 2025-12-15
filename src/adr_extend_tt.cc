@@ -291,10 +291,9 @@ adr_ext adr_extend_tt(nigiri::timetable const& tt,
               ? n::get_special_station(n::special_station::kEnd)
               : tt.locations_.parents_[parent];
 
-      utl::log_error("adr_extend",
-                     "invalid place for {} (parent={}, grand_parent={})",
-                     n::loc{tt, l}, n::loc{tt, parent},
-                     n::loc{tt, grand_parent});
+      utl::log_error(
+          "adr_extend", "invalid place for {} (parent={}, grand_parent={})",
+          n::loc{tt, l}, n::loc{tt, parent}, n::loc{tt, grand_parent});
 
       ret.location_place_[l] = adr_extra_place_idx_t{0U};
     }
