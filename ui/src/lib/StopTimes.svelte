@@ -115,7 +115,7 @@
 					: stopTime.place.scheduledDeparture!}
 				<div class="">
 					<div class="flex col justify-between">
-						<Route class="max-w-20 text-ellipsis overflow-hidden" l={stopTime} {onClickTrip} />
+						<Route class="max-w-30 text-ellipsis overflow-hidden" l={stopTime} {onClickTrip} />
 						<div class="mx-4">
 							<Time
 								variant="schedule"
