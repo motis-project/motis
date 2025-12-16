@@ -28,13 +28,30 @@ timetable:
 
 Some string fields are translated. Their default getter (e.g. `get_name`) now
 returns the default string, while the accompanying `get_*_translations`
-functions expose the full translation list. Each entry in that list is of type
+functions expose the full translation list. Lists can be accessed with
+[sol2 container operations](https://sol2.readthedocs.io/en/latest/containers.html).
+Each entry in that list is of type
 `translation` and provides:
 
   - `get_language`
   - `set_language`
   - `get_text`
   - `set_text`
+
+Example snippet of how to read and write translations:
+
+```lua
+function process_route(route)
+  route:set_short_name({
+    translation.new('en', 'EN_SHORT_NAME'),
+    translation.new('de', 'DE_SHORT_NAME'),
+    translation.new('fr', 'FR_SHORT_NAME')
+  })
+  route:get_short_name_translations():add(translation.new('hu', 'HU_SHORT_NAME'))
+  print(route:get_short_name_translations():get(1):get_text())
+  print(route:get_short_name_translations():get(1):get_language())
+end
+```
 
 ### Location (stops, platforms, tracks)
 
