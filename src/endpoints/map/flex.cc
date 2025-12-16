@@ -54,13 +54,15 @@ boost::json::value flex_locations::operator()(
   tt_.flex_area_rtree_.search(
       min->pos_.lnglat_float(), max->pos_.lnglat_float(),
       [&](auto&&, auto&&, n::flex_area_idx_t const a) {
-        features.emplace_back(
-            json::value{{"type", "Feature"},
-                        {"id", tt_.strings_.get(tt_.flex_area_id_[a])},
-                        {"geometry", to_geometry(tt_, a)},
-                        {"properties",
-                         {{"stop_name", tt_.flex_area_name_[a].view()},
-                          {"stop_desc", tt_.flex_area_desc_[a].view()}}}});
+        features.emplace_back(json::value{
+            {"type", "Feature"},
+            {"id", tt_.strings_.get(tt_.flex_area_id_[a])},
+            {"geometry", to_geometry(tt_, a)},
+            {"properties",
+             {{"stop_name",
+               tt_.translate(query.language_, tt_.flex_area_name_[a])},
+              {"stop_desc",
+               tt_.translate(query.language_, tt_.flex_area_desc_[a])}}}});
         return true;
       });
   loc_rtree_.find({min->pos_, max->pos_}, [&](n::location_idx_t const l) {
@@ -71,12 +73,13 @@ boost::json::value flex_locations::operator()(
           {"geometry", osr::to_point(osr::point::from_latlng(
                            tt_.locations_.coordinates_[l]))},
           {"properties",
-           {{"name", tt_.locations_.names_[l].view()},
+           {{"name", tt_.translate(query.language_, tt_.locations_.names_[l])},
             {"location_groups",
              utl::transform_to<json::array>(
                  tt_.location_location_groups_[l],
                  [&](n::location_group_idx_t const l) -> json::string {
-                   return {tt_.strings_.get(tt_.location_group_name_[l])};
+                   return {tt_.translate(query.language_,
+                                         tt_.location_group_name_[l])};
                  })}}}});
     }
     return true;

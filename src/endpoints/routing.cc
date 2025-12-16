@@ -447,6 +447,7 @@ std::pair<n::routing::query, std::optional<n::unixtime_t>> get_start_time(
 std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
     elevators const* e,
     gbfs::gbfs_routing_data& gbfs_rd,
+    n::lang_t const& lang,
     api::Place const& from,
     api::Place const& to,
     std::vector<api::ModeEnum> const& modes,
@@ -474,7 +475,7 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
 
   auto const route_with_profile = [&](output const& out) {
     auto itinerary = street_routing(
-        *w_, *l_, e, elevations_, from, to, out,
+        *w_, *l_, e, elevations_, lang, from, to, out,
         arrive_by ? std::nullopt : std::optional{time},
         arrive_by ? std::optional{time} : std::nullopt, max_matching_distance,
         osr_params, cache, *blocked, api_version, max);
@@ -650,13 +651,14 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
     utl::erase_duplicates(m);
     return m;
   };
+  auto const& lang = query.language_;
   auto const pre_transit_modes = deduplicate(query.preTransitModes_);
   auto const post_transit_modes = deduplicate(query.postTransitModes_);
   auto const direct_modes = deduplicate(query.directModes_);
   auto const from = get_place(tt_, tags_, query.fromPlace_);
   auto const to = get_place(tt_, tags_, query.toPlace_);
-  auto from_p = to_place(tt_, tags_, w_, pl_, matches_, ae_, tz_, from);
-  auto to_p = to_place(tt_, tags_, w_, pl_, matches_, ae_, tz_, to);
+  auto from_p = to_place(tt_, tags_, w_, pl_, matches_, ae_, tz_, lang, from);
+  auto to_p = to_place(tt_, tags_, w_, pl_, matches_, ae_, tz_, lang, to);
   if (from_p.vertexType_ == api::VertexTypeEnum::NORMAL) {
     from_p.name_ = "START";
   }
@@ -718,7 +720,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
   auto [direct, fastest_direct] =
       t.has_value() && !direct_modes.empty() && w_ && l_
           ? route_direct(
-                e, gbfs_rd, from_p, to_p, direct_modes,
+                e, gbfs_rd, lang, from_p, to_p, direct_modes,
                 query.directRentalFormFactors_,
                 query.directRentalPropulsionTypes_,
                 query.directRentalProviders_, query.directRentalProviderGroups_,
@@ -988,10 +990,11 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
     };
   }
 
-  return {.from_ = to_place(tt_, tags_, w_, pl_, matches_, ae_, tz_, from),
-          .to_ = to_place(tt_, tags_, w_, pl_, matches_, ae_, tz_, to),
-          .direct_ = std::move(direct),
-          .itineraries_ = {}};
+  return {
+      .from_ = to_place(tt_, tags_, w_, pl_, matches_, ae_, tz_, lang, from),
+      .to_ = to_place(tt_, tags_, w_, pl_, matches_, ae_, tz_, lang, to),
+      .direct_ = std::move(direct),
+      .itineraries_ = {}};
 }
 
 }  // namespace motis::ep

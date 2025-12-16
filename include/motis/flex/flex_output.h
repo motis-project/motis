@@ -7,6 +7,7 @@
 namespace motis::flex {
 
 std::string_view get_flex_stop_name(nigiri::timetable const&,
+                                    nigiri::lang_t const&,
                                     nigiri::flex_stop_t const&);
 
 std::string_view get_flex_id(nigiri::timetable const&,
@@ -30,8 +31,12 @@ struct flex_output : public output {
   bool is_time_dependent() const override;
   transport_mode_t get_cache_key() const override;
   osr::sharing_data const* get_sharing_data() const override;
-  void annotate_leg(osr::node_idx_t, osr::node_idx_t, api::Leg&) const override;
+  void annotate_leg(nigiri::lang_t const&,
+                    osr::node_idx_t,
+                    osr::node_idx_t,
+                    api::Leg&) const override;
   api::Place get_place(
+      nigiri::lang_t const&,
       osr::node_idx_t,
       std::optional<std::string> const& fallback_tz) const override;
 

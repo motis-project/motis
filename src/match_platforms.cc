@@ -220,7 +220,7 @@ osr::platform_idx_t get_match(n::timetable const& tt,
     auto const dist = geo::distance(*center, ref);
     auto const match_bonus =
         get_match_bonus(pl.platform_names_[x], tt.locations_.ids_[l].view(),
-                        tt.locations_.names_[l].view());
+                        tt.get_default_translation(tt.locations_.names_[l]));
     auto const lvl = pl.get_level(w, x);
     auto const lvl_bonus =
         lvl != osr::kNoLevel && lvl.to_float() != 0.0F ? 5 : 0;
@@ -236,7 +236,7 @@ osr::platform_idx_t get_match(n::timetable const& tt,
 
   if (best != osr::platform_idx_t::invalid()) {
     get_match_bonus(pl.platform_names_[best], tt.locations_.ids_[l].view(),
-                    tt.locations_.names_[l].view());
+                    tt.get_default_translation(tt.locations_.names_[l]));
   }
 
   return best;

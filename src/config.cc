@@ -161,7 +161,9 @@ void config::verify_input_files_exist() const {
                       fs::is_regular_file(d.path_),
                   "timetable dataset {} does not exist: {}", tag, d.path_);
 
-      utl::verify(!d.script_.has_value() || fs::is_regular_file(*d.script_),
+      utl::verify(!d.script_.has_value() ||
+                      d.script_->starts_with("\nfunction") ||
+                      fs::is_regular_file(*d.script_),
                   "user script for {} not found at path: \"{}\"", tag,
                   d.script_.value_or(""));
 
