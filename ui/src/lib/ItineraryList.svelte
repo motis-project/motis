@@ -10,7 +10,8 @@
 		type Leg,
 		type PlanData,
 		type PlanError,
-		type PlanResponse
+		type PlanResponse,
+		type Error as ApiError
 	} from '@motis-project/motis-client';
 	import Time from '$lib/Time.svelte';
 	import { LoaderCircle } from '@lucide/svelte';
@@ -29,7 +30,7 @@
 		baseResponse: Promise<PlanResponse> | undefined;
 		baseQuery: PlanData | undefined;
 		selectItinerary: (it: Itinerary) => void;
-		updateStartDest: (r: { data: PlanResponse | undefined; error: unknown }) => PlanResponse;
+		updateStartDest: (r: Awaited<RequestResult<PlanResponse, ApiError, false>>) => PlanResponse;
 	} = $props();
 
 	const throwOnError = (promise: RequestResult<PlanResponse, PlanError, false>) =>
