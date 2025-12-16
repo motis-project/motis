@@ -1,6 +1,12 @@
-import type { Itinerary, Place, PlanResponse } from '@motis-project/motis-client';
+import type {
+	Itinerary,
+	Place,
+	PlanResponse,
+	Error as ApiError
+} from '@motis-project/motis-client';
 import type { Location } from '$lib/Location';
 import polyline from '@mapbox/polyline';
+import type { RequestResult } from '@hey-api/client-fetch';
 
 export const joinInterlinedLegs = (it: Itinerary) => {
 	const joinedLegs = [];
@@ -41,12 +47,13 @@ export const preprocessItinerary = (from: Location, to: Location) => {
 		joinInterlinedLegs(it);
 	};
 
-	return (r: { data: PlanResponse | undefined; error: unknown }) => {
+	return (r: Awaited<RequestResult<PlanResponse, ApiError, false>>): PlanResponse => {
+		if (r.error?.error) throw new Error(r.error.error);
 		if (r.error) throw new Error(String(r.error));
 
-		r.data!.itineraries.forEach(updateItinerary);
-		r.data!.direct.forEach(updateItinerary);
+		r.data.itineraries.forEach(updateItinerary);
+		r.data.direct.forEach(updateItinerary);
 
-		return r.data!;
+		return r.data;
 	};
 };
