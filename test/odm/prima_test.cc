@@ -90,7 +90,8 @@ TEST(odm, prima_update) {
                     date::sys_days{2017_y / January / 2}};
   n::loader::register_special_stations(tt);
   auto const src = n::source_idx_t{0};
-  n::loader::gtfs::load_timetable({}, src, tt_files(), tt);
+  n::loader::gtfs::load_timetable({.default_tz_ = "Europe/Berlin"}, src,
+                                  tt_files(), tt);
   n::loader::finalize(tt);
 
   auto const get_loc_idx = [&](auto&& s) {

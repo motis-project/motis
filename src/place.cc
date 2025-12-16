@@ -134,7 +134,7 @@ api::Place to_place(n::timetable const* tt,
               auto const timezone = get_tz(*tt, ae, tz_map, p);
               return {
                   .name_ = std::string{tt->translate(
-                      lang, tt->locations_.descriptions_.at(p))},
+                      lang, tt->locations_.names_.at(p))},
                   .stopId_ = tags->id(*tt, l),
                   .parentId_ = p == n::location_idx_t::invalid()
                                    ? std::nullopt
