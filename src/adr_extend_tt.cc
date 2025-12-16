@@ -14,6 +14,7 @@
 #include "utl/to_vec.h"
 
 #include "nigiri/timetable.h"
+#include "nigiri/translations_view.h"
 
 #include "adr/area_database.h"
 #include "adr/score.h"
@@ -385,7 +386,7 @@ adr_ext adr_extend_tt(nigiri::timetable const& tt,
     auto names = std::vector<std::pair<a::string_idx_t, a::language_idx_t>>{};
     auto const add_names = [&](n::location_idx_t const loc) {
       for (auto const [lang, text] :
-           tt.get_translation_view(tt.locations_.names_[loc])) {
+           n::get_translation_view(tt, tt.locations_.names_[loc])) {
         names.emplace_back(add_string(text, place_idx),
                            t.get_or_create_lang_idx(tt.languages_.get(lang)));
       }

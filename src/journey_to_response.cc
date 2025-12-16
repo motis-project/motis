@@ -508,15 +508,16 @@ api::Itinerary journey_to_response(
                             tt.strings_.try_get(agency.id_).value_or("?")},
                     .tripId_ = tags.id(tt, enter_stop, n::event_type::kDep),
                     .routeShortName_ = {std::string{
-                        api_version > 3
-                            ? enter_stop.route_short_name(n::event_type::kDep)
-                            : enter_stop.display_name(n::event_type::kDep)}},
+                        api_version > 3 ? enter_stop.route_short_name(
+                                              n::event_type::kDep, lang)
+                                        : enter_stop.display_name(
+                                              n::event_type::kDep, lang)}},
                     .routeLongName_ = {std::string{
-                        enter_stop.route_long_name(n::event_type::kDep)}},
+                        enter_stop.route_long_name(n::event_type::kDep, lang)}},
                     .tripShortName_ = {std::string{
-                        enter_stop.trip_short_name(n::event_type::kDep)}},
+                        enter_stop.trip_short_name(n::event_type::kDep, lang)}},
                     .displayName_ = {std::string{
-                        enter_stop.display_name(n::event_type::kDep)}},
+                        enter_stop.display_name(n::event_type::kDep, lang)}},
                     .cancelled_ = fr.is_cancelled(),
                     .source_ = fmt::to_string(fr.dbg()),
                     .fareTransferIndex_ = fare_indices.and_then([](auto&& x) {

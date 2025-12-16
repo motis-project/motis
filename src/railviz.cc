@@ -380,12 +380,12 @@ api::trips_response get_trains(tag_lookup const& tags,
         .trips_ = {api::TripInfo{
             .tripId_ = tags.id(tt, from, n::event_type::kDep),
             .routeShortName_ =
-                api_version < 4 ? std::optional{std::string{
-                                      from.display_name(n::event_type::kDep)}}
+                api_version < 4 ? std::optional{std::string{from.display_name(
+                                      n::event_type::kDep, query.language_)}}
                                 : std::nullopt,
             .displayName_ = api_version >= 4
-                                ? std::optional{std::string{
-                                      from.display_name(n::event_type::kDep)}}
+                                ? std::optional{std::string{from.display_name(
+                                      n::event_type::kDep, query.language_)}}
                                 : std::nullopt}},
         .routeColor_ = to_str(from.get_route_color(n::event_type::kDep).color_),
         .mode_ = to_mode(from.get_clasz(n::event_type::kDep), api_version),
