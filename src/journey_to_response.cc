@@ -545,7 +545,8 @@ api::Itinerary journey_to_response(
                 }
                 for (auto const& a : attributes) {
                   leg.alerts_->push_back(
-                      api::Alert{.headerText_ = std::string{tt.translate(
+                      api::Alert{.code_ = tt.attributes_[a].code_,
+                                 .headerText_ = std::string{tt.translate(
                                      lang, tt.attributes_[a].text_)}});
                 }
 
