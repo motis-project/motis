@@ -64,12 +64,14 @@ stop_times,stop_headsign,fr,Vers Parent Deux,T1,1,
 
 constexpr auto kScript = R"(
 function process_route(route)
-  print(route:get_short_name())
   route:set_short_name({
     translation.new('en', 'EN_SHORT_NAME'),
     translation.new('de', 'DE_SHORT_NAME'),
     translation.new('fr', 'FR_SHORT_NAME')
   })
+  route:get_short_name_translations():add(translation.new('hu', 'HU_SHORT_NAME'))
+  print(route:get_short_name_translations():get(1):get_text())
+  print(route:get_short_name_translations():get(1):get_language())
 end
 )";
 

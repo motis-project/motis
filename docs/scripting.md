@@ -24,16 +24,31 @@ timetable:
 
 ## Types
 
+### Translation List
+
+Some string fields are translated. Their default getter (e.g. `get_name`) now
+returns the default string, while the accompanying `get_*_translations`
+functions expose the full translation list. Each entry in that list is of type
+`translation` and provides:
+
+  - `get_language`
+  - `set_language`
+  - `get_text`
+  - `set_text`
+
 ### Location (stops, platforms, tracks)
 
 processing via `function process_location()`
 
   - `get_id`
   - `get_name`
+  - `get_name_translations`
   - `set_name`
   - `get_platform_code`
+  - `get_platform_code_translations`
   - `set_platform_code`
   - `get_description`
+  - `get_description_translations`
   - `set_description`
   - `get_pos`
   - `set_pos`
@@ -48,8 +63,10 @@ processing via `function process_agency(agency)`
 
   - `get_id`
   - `get_name`
+  - `get_name_translations`
   - `set_name`
   - `get_url`
+  - `get_url_translations`
   - `set_url`
   - `get_timezone`
   - `set_timezone`
@@ -60,8 +77,10 @@ processing via `function process_route(location)`
 
   - `get_id`
   - `get_short_name`
+  - `get_short_name_translations`
   - `set_short_name`
   - `get_long_name`
+  - `get_long_name_translations`
   - `set_long_name`
   - `get_route_type`
   - `set_route_type`
@@ -100,10 +119,13 @@ processing via `function process_trip(trip)`
 
   - `get_id`
   - `get_headsign`
+  - `get_headsign_translations`
   - `set_headsign`
   - `get_short_name`
+  - `get_short_name_translations`
   - `set_short_name`
   - `get_display_name`
+  - `get_display_name_translations`
   - `set_display_name`
   - `get_route`
 
