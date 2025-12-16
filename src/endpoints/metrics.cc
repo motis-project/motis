@@ -43,12 +43,10 @@ void update_all_runs_metrics(nigiri::timetable const& tt,
   metric_by_agency.reserve(tt.n_agencies());
   for (auto i = nigiri::provider_idx_t{0}; i < tt.n_agencies(); ++i) {
     auto const& p = tt.providers_[i];
-    auto const agency_name = tt.strings_.get(p.name_);
-    auto const agency_id = tt.strings_.get(p.id_);
-    auto const labels =
-        prometheus::Labels{{"tag", std::string{tags.get_tag(p.src_)}},
-                           {"agency_name", std::string{agency_name}},
-                           {"agency_id", std::string{agency_id}}};
+    auto const labels = prometheus::Labels{
+        {"tag", std::string{tags.get_tag(p.src_)}},
+        {"agency_name", std::string{tt.get_default_translation(p.name_)}},
+        {"agency_id", std::string{tt.strings_.get(p.id_)}}};
     auto& sched = metrics.current_trips_running_scheduled_count_.Add(labels);
     auto& real =
         metrics.current_trips_running_scheduled_with_realtime_count_.Add(

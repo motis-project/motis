@@ -83,32 +83,32 @@ api::transfers_response transfers::operator()(
     }
   }
 
-  auto const to_place = [&](n::location const l) -> api::Place {
-    return {.name_ = std::string{l.name_},
-            .stopId_ = std::string{l.id_},
-            .lat_ = l.pos_.lat(),
-            .lon_ = l.pos_.lng(),
-            .level_ = pl_.get_level(w_, matches_[l.l_]).to_float(),
-            .vertexType_ = api::VertexTypeEnum::NORMAL};
+  auto const to_place = [&](n::location_idx_t const l) -> api::Place {
+    return {
+        .name_ =
+            std::string{tt_.get_default_translation(tt_.locations_.names_[l])},
+        .stopId_ = std::string{tt_.locations_.ids_[l].view()},
+        .lat_ = tt_.locations_.coordinates_[l].lat(),
+        .lon_ = tt_.locations_.coordinates_[l].lng(),
+        .level_ = pl_.get_level(w_, matches_[l]).to_float(),
+        .vertexType_ = api::VertexTypeEnum::NORMAL};
   };
 
-  return {
-      .place_ = to_place(tt_.locations_.get(l)),
-      .root_ = to_place(tt_.locations_.get(tt_.locations_.get_root_idx(l))),
-      .equivalences_ = utl::to_vec(tt_.locations_.equivalences_[l],
-                                   [&](n::location_idx_t const eq) {
-                                     return to_place(tt_.locations_.get(eq));
-                                   }),
-      .hasFootTransfers_ =
-          !tt_.locations_.footpaths_out_[n::kFootProfile].empty(),
-      .hasWheelchairTransfers_ =
-          !tt_.locations_.footpaths_out_[n::kWheelchairProfile].empty(),
-      .hasCarTransfers_ =
-          !tt_.locations_.footpaths_out_[n::kCarProfile].empty(),
-      .transfers_ = utl::to_vec(footpaths, [&](auto&& e) {
-        e.second.to_ = to_place(tt_.locations_.get(e.first));
-        return e.second;
-      })};
+  return {.place_ = to_place(l),
+          .root_ = to_place(tt_.locations_.get_root_idx(l)),
+          .equivalences_ = utl::to_vec(
+              tt_.locations_.equivalences_[l],
+              [&](n::location_idx_t const eq) { return to_place(eq); }),
+          .hasFootTransfers_ =
+              !tt_.locations_.footpaths_out_[n::kFootProfile].empty(),
+          .hasWheelchairTransfers_ =
+              !tt_.locations_.footpaths_out_[n::kWheelchairProfile].empty(),
+          .hasCarTransfers_ =
+              !tt_.locations_.footpaths_out_[n::kCarProfile].empty(),
+          .transfers_ = utl::to_vec(footpaths, [&](auto&& e) {
+            e.second.to_ = to_place(e.first);
+            return e.second;
+          })};
 }
 
 }  // namespace motis::ep

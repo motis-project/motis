@@ -108,17 +108,17 @@ struct fmt::formatter<motis::task> : fmt::ostream_formatter {};
 namespace motis {
 
 cista::hash_t hash_file(fs::path const& p) {
-  if (p.generic_string().starts_with("\n#")) {
-    return cista::hash(p.generic_string());
+  auto const str = p.generic_string();
+  if (str.starts_with("\nfunction") || str.starts_with("\n#")) {
+    return cista::hash(str);
   } else if (fs::is_directory(p)) {
     auto h = cista::BASE_HASH;
-    for (auto const& file : fs::directory_iterator{p}) {
-      h = cista::hash_combine(h, hash_file(file));
-    }
+    // for (auto const& file : fs::directory_iterator{p}) {
+    //   h = cista::hash_combine(h, hash_file(file));
+    // }
     return h;
   } else {
-    auto const mmap =
-        cista::mmap{p.generic_string().c_str(), cista::mmap::protection::READ};
+    auto const mmap = cista::mmap{str.c_str(), cista::mmap::protection::READ};
     return cista::hash_combine(
         cista::hash(mmap.view().substr(
             0U, std::min(mmap.size(),
@@ -314,6 +314,9 @@ data import(config const& c, fs::path const& data_path, bool const write) {
                        .user_script_ =
                            dc.script_
                                .and_then([](std::string const& path) {
+                                 if (path.starts_with("\nfunction")) {
+                                   return std::optional{path};
+                                 }
                                  return std::optional{std::string{
                                      cista::mmap{path.c_str(),
                                                  cista::mmap::protection::READ}

@@ -367,11 +367,12 @@ void add_flex_td_offsets(osr::ways const& w,
         fmt::format("prepare_{}_FLEX_{}", to_str(dir),
                     tt.flex_stop_seq_[stop_seq.first][stop_seq.second].apply(
                         utl::overloaded{[&](n::location_group_idx_t const g) {
-                                          return tt.strings_.get(
+                                          return tt.get_default_translation(
                                               tt.location_group_name_[g]);
                                         },
                                         [&](n::flex_area_idx_t const a) {
-                                          return tt.flex_area_name_[a].view();
+                                          return tt.get_default_translation(
+                                              tt.flex_area_name_[a]);
                                         }})),
         UTL_GET_TIMING_MS(routing_timer));
   }

@@ -20,11 +20,13 @@ struct gbfs_output final : public output {
 
   osr::sharing_data const* get_sharing_data() const override;
 
-  void annotate_leg(osr::node_idx_t const from_node,
+  void annotate_leg(nigiri::lang_t const&,
+                    osr::node_idx_t const from_node,
                     osr::node_idx_t const to_node,
                     api::Leg&) const override;
 
-  api::Place get_place(osr::node_idx_t,
+  api::Place get_place(nigiri::lang_t const&,
+                       osr::node_idx_t,
                        std::optional<std::string> const& tz) const override;
 
   std::size_t get_additional_node_idx(osr::node_idx_t const n) const;

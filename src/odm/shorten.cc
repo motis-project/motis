@@ -74,8 +74,8 @@ void shorten(std::vector<nr::journey>& odm_journeys,
     if (shorter_ride) {
       auto& odm_offset = std::get<nr::offset>(odm_leg.uses_);
 
+      auto const old_stop = odm_leg.to_;
       auto const old_odm_time = std::chrono::minutes{odm_offset.duration_};
-      auto const old_stop = tt.locations_.get(odm_leg.to_).name_;
       auto const old_pt_time = pt_leg.arr_time_ - pt_leg.dep_time_;
 
       j.start_time_ = odm_leg.dep_time_ = shorter_ride->time_at_start_;
@@ -84,15 +84,16 @@ void shorten(std::vector<nr::journey>& odm_journeys,
       odm_leg.to_ = odm_offset.target_ = pt_leg.from_ = shorter_ride->stop_;
       ree.stop_range_.from_ = min_stop_idx;
 
+      auto const new_stop = odm_leg.to_;
       auto const new_odm_time = std::chrono::minutes{odm_offset.duration_};
-      auto const new_stop = tt.locations_.get(odm_leg.to_).name_;
       auto const new_pt_time = pt_leg.arr_time_ - pt_leg.dep_time_;
 
       n::log(n::log_lvl::debug, "motis.prima",
              "shorten first leg: [stop: {}, ODM: {}, PT: {}] -> [stop: {}, "
              "ODM: {}, PT: {}] (ODM: -{}, PT: +{})",
-             old_stop, old_odm_time, old_pt_time, new_stop, new_odm_time,
-             new_pt_time, std::chrono::minutes{old_odm_time - new_odm_time},
+             n::loc{tt, old_stop}, old_odm_time, old_pt_time,
+             n::loc{tt, new_stop}, new_odm_time, new_pt_time,
+             std::chrono::minutes{old_odm_time - new_odm_time},
              new_pt_time - old_pt_time);
     }
   };
@@ -146,8 +147,8 @@ void shorten(std::vector<nr::journey>& odm_journeys,
     if (shorter_ride) {
       auto& odm_offset = std::get<nr::offset>(odm_leg.uses_);
 
+      auto const old_stop = odm_leg.from_;
       auto const old_odm_time = std::chrono::minutes{odm_offset.duration_};
-      auto const old_stop = tt.locations_.get(odm_leg.from_).name_;
       auto const old_pt_time = pt_leg.arr_time_ - pt_leg.dep_time_;
 
       ree.stop_range_.to_ = min_stop_idx + 1U;
@@ -156,15 +157,16 @@ void shorten(std::vector<nr::journey>& odm_journeys,
       odm_offset.duration_ = min_odm_duration;
       j.dest_time_ = odm_leg.arr_time_ = shorter_ride->time_at_start_;
 
+      auto const new_stop = odm_leg.from_;
       auto const new_odm_time = std::chrono::minutes{odm_offset.duration_};
-      auto const new_stop = tt.locations_.get(odm_leg.from_).name_;
       auto const new_pt_time = pt_leg.arr_time_ - pt_leg.dep_time_;
 
       n::log(n::log_lvl::debug, "motis.prima",
              "shorten last leg: [stop: {}, ODM: {}, PT: {}] -> [stop: {}, "
              "ODM: {}, PT: {}] (ODM: -{}, PT: +{})",
-             old_stop, old_odm_time, old_pt_time, new_stop, new_odm_time,
-             new_pt_time, std::chrono::minutes{old_odm_time - new_odm_time},
+             n::loc{tt, old_stop}, old_odm_time, old_pt_time,
+             n::loc{tt, new_stop}, new_odm_time, new_pt_time,
+             std::chrono::minutes{old_odm_time - new_odm_time},
              new_pt_time - old_pt_time);
     }
   };

@@ -1686,6 +1686,17 @@ paths:
           schema:
             type: string
             format: date-time
+        - name: language
+          in: query
+          required: false
+          description: |
+            language tags as used in OpenStreetMap / GTFS
+            (usually BCP-47 / ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
+          schema:
+            type: array
+            items:
+              type: string
+          explode: false
       responses:
         '400':
           description: Bad Request
@@ -1751,12 +1762,26 @@ paths:
           description: latitude,longitude pair of the lower right coordinate
           schema:
             type: string
+
         - name: max
           in: query
           required: true
           description: latitude,longitude pair of the upper left coordinate
           schema:
             type: string
+
+        - name: language
+          in: query
+          required: false
+          description: |
+            language tags as used in OpenStreetMap / GTFS
+            (usually BCP-47 / ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
+          schema:
+            type: array
+            items:
+              type: string
+          explode: false
+
       responses:
         '400':
           description: Bad Request

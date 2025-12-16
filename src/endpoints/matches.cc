@@ -51,11 +51,12 @@ json::value matches::operator()(json::value const& query) const {
     auto const pos = tt_.locations_.coordinates_[l];
     auto const match = get_match(tt_, pl_, w_, l);
     auto props =
-        json::value{{"name", tt_.locations_.names_[l].view()},
-                    {"id", tags_.id(tt_, l)},
-                    {"src", to_idx(tt_.locations_.src_[l])},
-                    {"type", "location"},
-                    {"trips", fmt::format("{}", get_location_routes(tt_, l))}}
+        json::value{
+            {"name", tt_.get_default_translation(tt_.locations_.names_[l])},
+            {"id", tags_.id(tt_, l)},
+            {"src", to_idx(tt_.locations_.src_[l])},
+            {"type", "location"},
+            {"trips", fmt::format("{}", get_location_routes(tt_, l))}}
             .as_object();
     if (match == osr::platform_idx_t::invalid()) {
       props.emplace("level", "-");
