@@ -24,6 +24,7 @@ const translations: Translations = {
 	hydrogenFuelCell: 'Водородна горивна клетка',
 	from: 'От',
 	to: 'До',
+	via: 'Чрез',
 	position: 'местоположение',
 	arrival: 'Пристигане',
 	departure: 'Заминаване',
@@ -72,6 +73,7 @@ const translations: Translations = {
 	timetableSources: 'Източници на разписания',
 	tripCancelled: 'Пътуването е отменено',
 	stopCancelled: 'Спирката е отменена',
+	addStop: 'Добави спирка',
 	inOutDisallowed: 'Качване/слизане не е позволено',
 	inDisallowed: 'Качването не е позволено',
 	outDisallowed: 'Слизането не е позволено',
@@ -108,7 +110,11 @@ const translations: Translations = {
 		direct: 'Директна връзка',
 		maxPreTransitTime: 'Максимално време преди транзит',
 		maxPostTransitTime: 'Максимално време след транзит',
-		maxDirectTime: 'Максимално време без транзит'
+		maxDirectTime: 'Максимално време без транзит',
+		additionalTransferTime: 'Допълнително време за прехвърляне',
+		pedestrianSpeed: 'Скорост на пешеходец',
+		cyclingSpeed: 'Скорост на велосипедист',
+		transferTimeFactor: 'Фактор на времето за прехвърляне'
 	},
 	elevationCosts: {
 		NONE: 'Без наклон',

@@ -5,11 +5,13 @@
 	import * as RadioGroup from '$lib/components/ui/radio-group';
 	import Button from '$lib/components/ui/button/button.svelte';
 	import { Label } from '$lib/components/ui/label';
-	import type {
-		ElevationCosts,
-		Mode,
-		PedestrianProfile,
-		ServerConfig
+	import {
+		type CyclingSpeed,
+		type PedestrianSpeed,
+		type ElevationCosts,
+		type Mode,
+		type PedestrianProfile,
+		type ServerConfig
 	} from '@motis-project/motis-client';
 	import AddressTypeahead from '$lib/AddressTypeahead.svelte';
 	import AdvancedOptions from '$lib/AdvancedOptions.svelte';
@@ -22,6 +24,7 @@
 		serverConfig,
 		from = $bindable(),
 		to = $bindable(),
+		via = $bindable(),
 		time = $bindable(),
 		arriveBy = $bindable(),
 		pedestrianProfile = $bindable(),
@@ -34,6 +37,8 @@
 		postTransitModes = $bindable(),
 		directModes = $bindable(),
 		elevationCosts = $bindable(),
+		viaMinimumStay = $bindable(),
+		transferTimeFactor = $bindable(),
 		maxPreTransitTime = $bindable(),
 		maxPostTransitTime = $bindable(),
 		maxDirectTime = $bindable(),
@@ -42,12 +47,16 @@
 		ignoreDirectRentalReturnConstraints = $bindable(),
 		preTransitProviderGroups = $bindable(),
 		postTransitProviderGroups = $bindable(),
-		directProviderGroups = $bindable()
+		directProviderGroups = $bindable(),
+		pedestrianSpeed = $bindable(),
+		cyclingSpeed = $bindable(),
+		additionalTransferTime = $bindable()
 	}: {
 		geocodingBiasPlace?: maplibregl.LngLatLike;
 		serverConfig: ServerConfig | undefined;
 		from: Location;
 		to: Location;
+		via: Location[];
 		time: Date;
 		arriveBy: boolean;
 		pedestrianProfile: PedestrianProfile;
@@ -60,6 +69,8 @@
 		postTransitModes: PrePostDirectMode[];
 		directModes: PrePostDirectMode[];
 		elevationCosts: ElevationCosts;
+		viaMinimumStay: number[];
+		transferTimeFactor: number;
 		maxPreTransitTime: number;
 		maxPostTransitTime: number;
 		maxDirectTime: number;
@@ -69,11 +80,14 @@
 		preTransitProviderGroups: string[];
 		postTransitProviderGroups: string[];
 		directProviderGroups: string[];
+		pedestrianSpeed: PedestrianSpeed;
+		cyclingSpeed: CyclingSpeed;
+		additionalTransferTime: number;
 	} = $props();
 
 	let fromItems = $state<Array<Location>>([]);
 	let toItems = $state<Array<Location>>([]);
-
+	let viaItems = $state<Array<Location>>([]);
 	const getLocation = () => {
 		if (navigator && navigator.geolocation) {
 			navigator.geolocation.getCurrentPosition(applyPosition, (e) => console.log(e), {
@@ -84,6 +98,15 @@
 
 	const applyPosition = (position: { coords: { latitude: number; longitude: number } }) => {
 		from = posToLocation({ lat: position.coords.latitude, lon: position.coords.longitude }, 0);
+	};
+
+	let availableViaSlots = $derived(2 - via.length);
+	const removeViaStop = (index: number) => {
+		via.splice(index, 1);
+		viaMinimumStay.splice(index, 1);
+	};
+	const addViaStop = () => {
+		via.push({} as Location);
 	};
 </script>
 
@@ -104,6 +127,38 @@
 		bind:items={toItems}
 		{transitModes}
 	/>
+	{#each via as _, i (i)}
+		<div class="flex justify-between gap-4">
+			<AddressTypeahead
+				place={geocodingBiasPlace}
+				name={t.via}
+				placeholder={t.via}
+				bind:selected={via[i]}
+				bind:items={viaItems}
+				{transitModes}
+			/>
+			<input
+				type="number"
+				min="0"
+				bind:value={viaMinimumStay[i]}
+				placeholder="Min Stay (min)"
+				class="text-sm w-32 text-center border"
+			/>
+			<Button
+				variant="outline"
+				size="icon"
+				onclick={() => removeViaStop(i)}
+				class="hover:bg-red-50 hover:text-red-600 aspect-square font-bold"
+			>
+				x
+			</Button>
+		</div>
+	{/each}
+	{#if availableViaSlots > 0}
+		<Button variant="outline" onclick={() => addViaStop()}
+			>+ {t.addStop} (max {availableViaSlots})</Button
+		>
+	{/if}
 	<Button
 		variant="ghost"
 		class="absolute z-10 right-4 top-0"
@@ -169,6 +224,7 @@
 			bind:preTransitModes
 			bind:postTransitModes
 			bind:directModes
+			bind:transferTimeFactor
 			bind:maxPreTransitTime
 			bind:maxPostTransitTime
 			bind:maxDirectTime
@@ -179,6 +235,10 @@
 			bind:preTransitProviderGroups
 			bind:postTransitProviderGroups
 			bind:directProviderGroups
+			bind:pedestrianSpeed
+			bind:cyclingSpeed
+			bind:additionalTransferTime
+			bind:pedestrianProfile
 		/>
 	</div>
 </div>

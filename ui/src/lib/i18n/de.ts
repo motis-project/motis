@@ -24,6 +24,7 @@ const translations: Translations = {
 	hydrogenFuelCell: 'Wasserstoff-Brennstoffzelle',
 	from: 'Von',
 	to: 'Nach',
+	via: 'Über',
 	position: 'Position',
 	arrival: 'Ankunft',
 	departure: 'Abfahrt',
@@ -73,6 +74,7 @@ const translations: Translations = {
 	timetableSources: 'Fahrplandatenquellen',
 	tripCancelled: 'Fahrt entfällt',
 	stopCancelled: 'Halt entfällt',
+	addStop: 'Haltestelle hinzufügen',
 	inOutDisallowed: 'Ein-/Ausstieg nicht möglich',
 	inDisallowed: 'Einstieg nicht möglich',
 	outDisallowed: 'Ausstieg nicht möglich',
@@ -109,7 +111,11 @@ const translations: Translations = {
 		direct: 'Direktverbindung',
 		maxPreTransitTime: 'Max. Vorlaufzeit',
 		maxPostTransitTime: 'Max. Nachlaufzeit',
-		maxDirectTime: 'Max. Direktzeit'
+		maxDirectTime: 'Max. Direktzeit',
+		additionalTransferTime: 'Zusätzliche Umstiegszeit',
+		pedestrianSpeed: 'Fußgängergeschwindigkeit',
+		cyclingSpeed: 'Fahrradtgeschwindigkeit',
+		transferTimeFactor: 'Umstiegszeitfaktor'
 	},
 	elevationCosts: { NONE: 'Keine Umwege', LOW: 'Kleine Umwege', HIGH: 'Große Umwege' },
 	isochrones: {
