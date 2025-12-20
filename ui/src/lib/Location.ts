@@ -64,6 +64,10 @@ export const parseLocation = (
 		}
 		return coord;
 	}
+	return parseIDToLocation(place, name);
+};
+
+export const parseIDToLocation = (place: string, name?: string | undefined | null): Location => {
 	return {
 		label: name || '',
 		match: {
@@ -78,4 +82,13 @@ export const parseLocation = (
 			score: 0
 		}
 	};
+};
+
+export const parseLocations = (places?: string[], names?: string[]): Location[] => {
+	if (!places || places.length === 0) return [];
+	const locations: Location[] = [];
+	for (let i = 0; i < places.length; ++i) {
+		locations.push(parseLocation(places[i], names && names.length > i ? names[i] : undefined));
+	}
+	return locations;
 };

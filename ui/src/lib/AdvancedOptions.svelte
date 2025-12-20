@@ -5,7 +5,13 @@
 	import * as Select from '$lib/components/ui/select';
 	import { ChevronUp, ChevronDown } from '@lucide/svelte';
 	import { Switch } from './components/ui/switch';
-	import type { ElevationCosts, ServerConfig } from '@motis-project/motis-client';
+	import type {
+		CyclingSpeed,
+		ElevationCosts,
+		PedestrianProfile,
+		PedestrianSpeed,
+		ServerConfig
+	} from '@motis-project/motis-client';
 	import { defaultQuery } from '$lib/defaults';
 	import type { Location } from '$lib/Location';
 	import { formatDurationSec } from './formatDuration';
@@ -21,7 +27,7 @@
 	import { type NumberSelectOption } from '$lib/NumberSelect.svelte';
 	import { generateTimes } from './generateTimes';
 	import ViaStopOptions from './ViaStopOptions.svelte';
-
+	import Slider from './components/ui/slider/Slider.svelte';
 	let {
 		useRoutedTransfers = $bindable(),
 		serverConfig,
@@ -35,6 +41,7 @@
 		preTransitModes = $bindable(),
 		postTransitModes = $bindable(),
 		directModes = $bindable(undefined),
+		transferTimeFactor = $bindable(),
 		maxPreTransitTime = $bindable(),
 		maxPostTransitTime = $bindable(),
 		maxDirectTime = $bindable(undefined),
@@ -48,6 +55,10 @@
 		via = $bindable(),
 		viaMinimumStay = $bindable(),
 		viaLabels = $bindable(),
+		pedestrianSpeed = $bindable(),
+		cyclingSpeed = $bindable(),
+		additionalTransferTime = $bindable(),
+		pedestrianProfile = $bindable(),
 		additionalComponents
 	}: {
 		useRoutedTransfers: boolean;
@@ -62,6 +73,7 @@
 		preTransitModes: PrePostDirectMode[];
 		postTransitModes: PrePostDirectMode[];
 		directModes: PrePostDirectMode[] | undefined;
+		transferTimeFactor: number;
 		maxPreTransitTime: number;
 		maxPostTransitTime: number;
 		maxDirectTime: number | undefined;
@@ -75,9 +87,12 @@
 		via: undefined | Location[];
 		viaMinimumStay: undefined | number[];
 		viaLabels: Record<string, string>;
+		pedestrianSpeed: PedestrianSpeed;
+		cyclingSpeed: CyclingSpeed;
+		additionalTransferTime: number;
 		additionalComponents?: Snippet;
+		pedestrianProfile: PedestrianProfile;
 	} = $props();
-
 	const possibleMaxTransfers = [...Array(defaultQuery.maxTransfers + 1).keys()].map((i) => ({
 		value: i.toString(),
 		label: i.toString()
@@ -88,6 +103,11 @@
 	);
 	const possiblePrePostDurations = $derived(
 		generateTimes(serverConfig?.maxPrePostTransitTimeLimit ?? 60 * 60)
+	);
+	const hasBikeMode = $derived(
+		preTransitModes.includes('BIKE') ||
+			postTransitModes.includes('BIKE') ||
+			directModes?.includes('BIKE')
 	);
 
 	function setModes(mode: PrePostDirectMode) {
@@ -124,6 +144,9 @@
 	);
 	let allowStreetRouting = $derived(serverConfig?.hasStreetRouting);
 	let allowRoutedTransfers = $derived(serverConfig?.hasRoutedTransfers);
+	$effect(() => {
+		transferTimeFactor = Math.max(1, pedestrianSpeed / defaultQuery.pedestrianSpeed);
+	});
 </script>
 
 <Button variant="ghost" onclick={() => (expanded = !expanded)}>
@@ -203,8 +226,15 @@
 						labelFormatter={formatDurationSec}
 					/>
 				{/if}
+				<div class="text-sm">{t.routingSegments.additionalTransferTime}</div>
+				<input
+					type="number"
+					min="0"
+					bind:value={additionalTransferTime}
+					placeholder="Duration (min)"
+					class="text-sm w-32 border text-right w-full h-9 rounded-md"
+				/>
 			</div>
-
 			<!-- First mile -->
 			<StreetModes
 				label={t.routingSegments.firstMile}
@@ -242,6 +272,20 @@
 					bind:providerGroups={directProviderGroups}
 				></StreetModes>
 			{/if}
+
+			<div class="grid grid-cols-[1fr_2fr_1fr] items-center gap-2">
+				<span class="text-sm">{t.routingSegments.pedestrianSpeed}</span>
+				<Slider
+					min={pedestrianProfile == 'FOOT' ? 0.8 : 0.5}
+					step={0.1}
+					max={pedestrianProfile == 'FOOT' ? 2 : 1.6}
+					bind:value={pedestrianSpeed}
+				/>
+			</div>
+			<div class="grid grid-cols-[1fr_2fr_1fr] items-center gap-2">
+				<span class="text-sm">{t.routingSegments.cyclingSpeed}</span>
+				<Slider min={2.7} max={7} step={0.1} disabled={!hasBikeMode} bind:value={cyclingSpeed} />
+			</div>
 		</div>
 
 		<!-- Elevation Costs -->

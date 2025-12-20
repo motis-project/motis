@@ -28,8 +28,6 @@ const translations: Translations = {
 	viaStops: 'Mezizastávky',
 	addViaStop: 'Přidat mezizastávku',
 	removeViaStop: 'Odebrat mezizastávku',
-	viaStayDuration: 'Minimální pobyt',
-	position: 'Pozice',
 	arrival: 'Příjezd',
 	departure: 'Odjezd',
 	duration: 'Čas cesty',
@@ -79,6 +77,7 @@ const translations: Translations = {
 	timetableSources: 'Zdroje dát JŘ',
 	tripCancelled: 'Spoj odřeknut',
 	stopCancelled: 'Zastávka bez obsluhy',
+	addStop: 'Přidat zastávku',
 	inOutDisallowed: 'Vstup/výstup není povolen',
 	inDisallowed: 'Vstup není povolen',
 	outDisallowed: 'Výstup není povolen',
@@ -115,7 +114,11 @@ const translations: Translations = {
 		direct: 'Přímé spojení',
 		maxPreTransitTime: 'Max. čas přesunu',
 		maxPostTransitTime: 'Max. čas přesunu',
-		maxDirectTime: 'Max. čas přesunu'
+		maxDirectTime: 'Max. čas přesunu',
+		additionalTransferTime: 'Dodatečný čas přestupu',
+		pedestrianSpeed: 'Rychlost chůze',
+		cyclingSpeed: 'Rychlost cyklisty',
+		transferTimeFactor: 'Faktor času přestupu'
 	},
 	elevationCosts: {
 		NONE: 'Bez odklonů',

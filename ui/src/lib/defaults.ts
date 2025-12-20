@@ -1,4 +1,4 @@
-import type { PlanData } from '@motis-project/motis-client';
+import { type PlanData } from '@motis-project/motis-client';
 
 export const defaultQuery = {
 	time: undefined,
@@ -38,6 +38,8 @@ export const defaultQuery = {
 	maxPreTransitTime: 900,
 	maxPostTransitTime: 900,
 	maxDirectTime: 1800,
+	pedestrianSpeed: 1.2,
+	cyclingSpeed: 4.2,
 	fastestDirectFactor: 1.0,
 	additionalTransferTime: 0,
 	transferTimeFactor: 1,

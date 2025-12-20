@@ -20,7 +20,9 @@
 		type PlanData,
 		type ReachablePlace,
 		type RentalFormFactor,
-		type ServerConfig
+		type ServerConfig,
+		type CyclingSpeed,
+		type PedestrianSpeed
 	} from '@motis-project/motis-client';
 	import ItineraryList from '$lib/ItineraryList.svelte';
 	import ConnectionDetail from '$lib/ConnectionDetail.svelte';
@@ -159,7 +161,6 @@
 	let to = $state<Location>(parseLocation(urlParams?.get('toPlace'), urlParams?.get('toName')));
 	let one = $state<Location>(parseLocation(urlParams?.get('one'), urlParams?.get('oneName')));
 	let stop = $state<Location>();
-
 	let viaParam = getUrlArray('via');
 	let viaLabels = $state(
 		urlParams?.has('viaLabel0')
@@ -177,7 +178,6 @@
 	let viaMinimumStay = $state(
 		urlParams?.has('via') ? getUrlArray('viaMinimumStay').map((s) => parseIntOr(s, 0)) : undefined
 	);
-
 	let time = $state<Date>(new Date(urlParams?.get('time') || Date.now()));
 	let timetableView = $state(urlParams?.get('timetableView') != 'false');
 	let searchWindow = $state(
@@ -207,6 +207,12 @@
 			? urlParams.get('pedestrianProfile')
 			: defaultQuery.pedestrianProfile) as PedestrianProfile
 	);
+	let pedestrianSpeed = $state(
+		parseIntOr(urlParams?.get('pedestrianSpeed'), defaultQuery.pedestrianSpeed)
+	) as PedestrianSpeed;
+	let cyclingSpeed = $state(
+		parseIntOr(urlParams?.get('cyclingSpeed'), defaultQuery.cyclingSpeed)
+	) as CyclingSpeed;
 	let requireBikeTransport = $state(urlParams?.get('requireBikeTransport') == 'true');
 	let requireCarTransport = $state(urlParams?.get('requireCarTransport') == 'true');
 	let transitModes = $state<Mode[]>(
@@ -268,6 +274,12 @@
 			urlParams?.get('maxDirectTime'),
 			Math.min(defaultQuery.maxDirectTime, serverConfig?.maxDirectTimeLimit ?? Infinity)
 		)
+	);
+	let transferTimeFactor = $state(
+		parseIntOr(urlParams?.get('transferTimeFactor'), defaultQuery.transferTimeFactor)
+	);
+	let additionalTransferTime = $state(
+		parseIntOr(urlParams?.get('additionalTransferTime'), defaultQuery.additionalTransferTime)
 	);
 	let ignorePreTransitRentalReturnConstraints = $state(
 		urlParams?.get('ignorePreTransitRentalReturnConstraints') == 'true'
@@ -352,6 +364,10 @@
 						elevationCosts,
 						useRoutedTransfers,
 						maxTransfers: maxTransfers,
+						additionalTransferTime,
+						cyclingSpeed,
+						pedestrianSpeed,
+						transferTimeFactor,
 						maxMatchingDistance: pedestrianProfile == 'WHEELCHAIR' ? 8 : 250,
 						maxPreTransitTime,
 						maxPostTransitTime,
@@ -377,6 +393,10 @@
 						transitModes,
 						maxTransfers,
 						arriveBy,
+						cyclingSpeed,
+						pedestrianSpeed,
+						transferTimeFactor,
+						additionalTransferTime,
 						useRoutedTransfers,
 						pedestrianProfile,
 						requireBikeTransport,
@@ -618,6 +638,10 @@
 						bind:via
 						bind:viaMinimumStay
 						bind:viaLabels
+						bind:pedestrianSpeed
+						bind:cyclingSpeed
+						bind:additionalTransferTime
+						bind:transferTimeFactor
 					/>
 				</Card>
 			</Tabs.Content>
