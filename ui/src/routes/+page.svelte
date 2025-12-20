@@ -666,6 +666,10 @@
 						bind:maxTransfers
 						bind:preTransitModes
 						bind:postTransitModes
+						bind:additionalTransferTime
+						bind:transferTimeFactor
+						bind:cyclingSpeed
+						bind:pedestrianSpeed
 						bind:maxPreTransitTime
 						bind:maxPostTransitTime
 						bind:arriveBy

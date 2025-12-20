@@ -7,6 +7,8 @@
 	import Button from '$lib/components/ui/button/button.svelte';
 	import { Label } from '$lib/components/ui/label';
 	import {
+		type PedestrianSpeed,
+		type CyclingSpeed,
 		type ElevationCosts,
 		type PedestrianProfile,
 		type ServerConfig
@@ -35,6 +37,10 @@
 		maxTransfers = $bindable(),
 		preTransitModes = $bindable(),
 		postTransitModes = $bindable(),
+		additionalTransferTime = $bindable(),
+		transferTimeFactor = $bindable(),
+		cyclingSpeed = $bindable(),
+		pedestrianSpeed = $bindable(),
 		maxPreTransitTime = $bindable(),
 		maxPostTransitTime = $bindable(),
 		arriveBy = $bindable(),
@@ -59,6 +65,10 @@
 		maxTransfers: number;
 		preTransitModes: PrePostDirectMode[];
 		postTransitModes: PrePostDirectMode[];
+		additionalTransferTime: number;
+		transferTimeFactor: number;
+		cyclingSpeed: CyclingSpeed;
+		pedestrianSpeed: PedestrianSpeed;
 		maxPreTransitTime: number;
 		maxPostTransitTime: number;
 		arriveBy: boolean;
@@ -213,6 +223,11 @@
 			bind:transitModes
 			bind:maxTransfers
 			bind:maxTravelTime
+			bind:additionalTransferTime
+			bind:cyclingSpeed
+			bind:pedestrianProfile
+			bind:pedestrianSpeed
+			bind:transferTimeFactor
 			{possibleMaxTravelTimes}
 			bind:preTransitModes
 			bind:postTransitModes
