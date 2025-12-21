@@ -30,6 +30,11 @@ export type Translations = {
 	hydrogenFuelCell: string;
 	from: string;
 	to: string;
+	viaStop: string;
+	viaStops: string;
+	addViaStop: string;
+	removeViaStop: string;
+	viaStayDuration: string;
 	position: string;
 	arrival: string;
 	departure: string;

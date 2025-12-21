@@ -15,7 +15,9 @@
 		name,
 		place,
 		transitModes,
-		onlyStations = $bindable(false)
+		onlyStations = $bindable(false),
+		allowCoordinates = true,
+		openStopOnSelect = true
 	}: {
 		items?: Array<Location>;
 		selected: Location;
@@ -24,6 +26,8 @@
 		place?: maplibregl.LngLatLike;
 		transitModes?: Mode[];
 		onlyStations?: boolean;
+		allowCoordinates?: boolean;
+		openStopOnSelect?: boolean;
 	} = $props();
 
 	let inputValue = $state('');
@@ -63,11 +67,13 @@
 	};
 
 	const updateGuesses = async () => {
-		const coord = parseCoordinatesToLocation(inputValue);
-		if (coord) {
-			selected = coord;
-			items = [];
-			return;
+		if (allowCoordinates) {
+			const coord = parseCoordinatesToLocation(inputValue);
+			if (coord) {
+				selected = coord;
+				items = [];
+				return;
+			}
 		}
 
 		const pos = place ? maplibregl.LngLat.convert(place) : undefined;
@@ -157,7 +163,7 @@
 		if (e) {
 			selected = deserialize(e);
 			inputValue = selected.label!;
-			if (onlyStations && selected.match) {
+			if (onlyStations && openStopOnSelect && selected.match) {
 				const match = selected.match;
 				onClickStop(match.name, match.id, new Date(), undefined, true);
 			}

@@ -3,7 +3,7 @@
 	import Button from '$lib/components/ui/button/button.svelte';
 	import { t } from '$lib/i18n/translation';
 	import * as Select from '$lib/components/ui/select';
-	import { ChevronUp, ChevronDown } from '@lucide/svelte';
+	import { ChevronUp, ChevronDown, X } from '@lucide/svelte';
 	import { Switch } from './components/ui/switch';
 	import type { ElevationCosts, ServerConfig } from '@motis-project/motis-client';
 	import { defaultQuery } from '$lib/defaults';
@@ -19,6 +19,8 @@
 	import TransitModeSelect from '$lib/TransitModeSelect.svelte';
 	import { type NumberSelectOption } from '$lib/NumberSelect.svelte';
 	import { generateTimes } from './generateTimes';
+	import AddressTypeahead from '$lib/AddressTypeahead.svelte';
+	import type { Location } from '$lib/Location';
 
 	let {
 		useRoutedTransfers = $bindable(),
@@ -43,6 +45,9 @@
 		preTransitProviderGroups = $bindable(),
 		postTransitProviderGroups = $bindable(),
 		directProviderGroups = $bindable(),
+		viaStops = $bindable([] as Location[]),
+		viaMinimumStay = $bindable([] as number[]),
+		showViaStops = false,
 		additionalComponents
 	}: {
 		useRoutedTransfers: boolean;
@@ -67,6 +72,9 @@
 		preTransitProviderGroups: string[];
 		postTransitProviderGroups: string[];
 		directProviderGroups: string[];
+		viaStops?: Location[];
+		viaMinimumStay?: number[];
+		showViaStops?: boolean;
 		additionalComponents?: Snippet;
 	} = $props();
 
@@ -77,6 +85,13 @@
 
 	const possibleDirectDurations = $derived(
 		generateTimes(serverConfig?.maxDirectTimeLimit ?? 60 * 60)
+	);
+	const possibleViaStayDurations = $derived([0, ...possibleDirectDurations]);
+	const viaMinimumStayOptions = $derived(
+		possibleViaStayDurations.map((duration) => ({
+			value: duration.toString(),
+			label: formatDurationSec(duration)
+		}))
 	);
 	const possiblePrePostDurations = $derived(
 		generateTimes(serverConfig?.maxPrePostTransitTimeLimit ?? 60 * 60)
@@ -116,6 +131,37 @@
 	);
 	let allowStreetRouting = $derived(serverConfig?.hasStreetRouting);
 	let allowRoutedTransfers = $derived(serverConfig?.hasRoutedTransfers);
+	const emptyLocation = (): Location => ({ label: '', match: undefined });
+	let viaStopItems = $state<Location[][]>(viaStops.map(() => []));
+	const addViaStop = () => {
+		if (viaStops.length >= 2) {
+			return;
+		}
+		viaStopItems = [...viaStopItems, []];
+		viaMinimumStay = [...viaMinimumStay, 0];
+		viaStops = [...viaStops, emptyLocation()];
+	};
+	const removeViaStop = (index: number) => {
+		viaStops = viaStops.filter((_, i) => i !== index);
+		viaStopItems = viaStopItems.filter((_, i) => i !== index);
+		viaMinimumStay = viaMinimumStay.filter((_, i) => i !== index);
+	};
+	$effect(() => {
+		if (viaStopItems.length > viaStops.length) {
+			viaStopItems = viaStopItems.slice(0, viaStops.length);
+		} else if (viaStopItems.length < viaStops.length) {
+			const diff = viaStops.length - viaStopItems.length;
+			viaStopItems = [...viaStopItems, ...Array.from({ length: diff }, () => [])];
+		}
+	});
+	$effect(() => {
+		if (viaMinimumStay.length > viaStops.length) {
+			viaMinimumStay = viaMinimumStay.slice(0, viaStops.length);
+		} else if (viaMinimumStay.length < viaStops.length) {
+			const diff = viaStops.length - viaMinimumStay.length;
+			viaMinimumStay = [...viaMinimumStay, ...Array.from({ length: diff }, () => 0)];
+		}
+	});
 </script>
 
 <Button variant="ghost" onclick={() => (expanded = !expanded)}>
@@ -173,6 +219,52 @@
 					setModes('CAR')(checked);
 				}}
 			/>
+			<div class="space-y-2">
+				<div class="flex items-center justify-between">
+					<div class="text-sm">
+						{t.viaStops}
+					</div>
+					<Button variant="outline" onclick={addViaStop} disabled={viaStops.length >= 2}>
+						{t.addViaStop}
+					</Button>
+				</div>
+				<div class="space-y-2">
+					{#each viaStops as viaStop, index (index)}
+						<div class="flex gap-2 items-start">
+							<div class="grow flex flex-col gap-1">
+								<div class="flex gap-2">
+									<div class="grow">
+										<AddressTypeahead
+											placeholder={t.viaStop}
+											name={`via-${index}`}
+											bind:selected={viaStops[index]}
+											bind:items={viaStopItems[index]}
+											onlyStations={true}
+											allowCoordinates={false}
+											openStopOnSelect={false}
+										/>
+									</div>
+									<div class="w-24">
+										<NumberSelect
+											bind:value={viaMinimumStay[index]}
+											possibleValues={viaMinimumStayOptions}
+											labelFormatter={formatDurationSec}
+										/>
+									</div>
+								</div>
+							</div>
+							<Button
+								variant="ghost"
+								size="icon"
+								onclick={() => removeViaStop(index)}
+								aria-label={t.removeViaStop}
+							>
+								<X class="size-4" />
+							</Button>
+						</div>
+					{/each}
+				</div>
+			</div>
 
 			<div
 				class="grid {maxTravelTime === undefined
