@@ -43,8 +43,9 @@
 		preTransitProviderGroups = $bindable(),
 		postTransitProviderGroups = $bindable(),
 		directProviderGroups = $bindable(),
-		viaStops = $bindable(),
-		viaMinimumStay = $bindable()
+		via = $bindable(),
+		viaMinimumStay = $bindable(),
+		viaLabels = $bindable()
 	}: {
 		geocodingBiasPlace?: maplibregl.LngLatLike;
 		serverConfig: ServerConfig | undefined;
@@ -71,8 +72,9 @@
 		preTransitProviderGroups: string[];
 		postTransitProviderGroups: string[];
 		directProviderGroups: string[];
-		viaStops: Location[];
+		via: Location[];
 		viaMinimumStay: number[];
+		viaLabels: Record<string, string>;
 	} = $props();
 
 	let fromItems = $state<Array<Location>>([]);
@@ -183,9 +185,9 @@
 			bind:preTransitProviderGroups
 			bind:postTransitProviderGroups
 			bind:directProviderGroups
-			bind:viaStops
+			bind:via
 			bind:viaMinimumStay
-			showViaStops={true}
+			bind:viaLabels
 		/>
 	</div>
 </div>

@@ -159,20 +159,25 @@
 	let to = $state<Location>(parseLocation(urlParams?.get('toPlace'), urlParams?.get('toName')));
 	let one = $state<Location>(parseLocation(urlParams?.get('one'), urlParams?.get('oneName')));
 	let stop = $state<Location>();
-	const viaFromUrl = getUrlArray('via').slice(0, 2);
-	const viaMinimumStayFromUrl = getUrlArray('viaMinimumStay')
-		.slice(0, 2)
-		.map((value) => {
-			const minutes = parseInt(value ?? '0');
-			return Number.isFinite(minutes) ? minutes * 60 : 0;
-		});
-	while (viaMinimumStayFromUrl.length < viaFromUrl.length) {
-		viaMinimumStayFromUrl.push(0);
-	}
-	let viaStops = $state<Location[]>(
-		viaFromUrl.map((id, index) => parseLocation(id, urlParams?.get(`viaName${index}`)))
+
+	let viaParam = getUrlArray('via');
+	let viaLabels = $state(
+		urlParams?.has('viaLabel0')
+			? Array.from({ length: viaParam.length }).reduce<Record<string, string>>((acc, _, i) => {
+					acc[`viaLabel${i}`] = urlParams?.get(`viaLabel${i}`) ?? '';
+					return acc;
+				}, {})
+			: {}
 	);
-	let viaMinimumStay = $state<number[]>(viaMinimumStayFromUrl);
+	let via = $state(
+		urlParams?.has('via')
+			? viaParam.map((str, i) => parseLocation(str, viaLabels[`viaLabel${i}`]))
+			: undefined
+	);
+	let viaMinimumStay = $state(
+		urlParams?.has('via') ? getUrlArray('viaMinimumStay').map((s) => parseIntOr(s, 0)) : undefined
+	);
+
 	let time = $state<Date>(new Date(urlParams?.get('time') || Date.now()));
 	let timetableView = $state(urlParams?.get('timetableView') != 'false');
 	let searchWindow = $state(
@@ -305,27 +310,6 @@
 		}
 		return Array.from(new Set(groups));
 	};
-	type ViaStopForQuery = { id: string; label: string; stay: number };
-	let viaStopsForQuery = $state<ViaStopForQuery[]>([]);
-	$effect(() => {
-		const next = viaStops
-			.map((stop, index) => {
-				if (stop.match?.type === 'STOP' && stop.match.id) {
-					return { id: stop.match.id, label: stop.label, stay: viaMinimumStay[index] ?? 0 };
-				}
-				return undefined;
-			})
-			.filter((entry): entry is ViaStopForQuery => Boolean(entry));
-		const unchanged =
-			next.length === viaStopsForQuery.length &&
-			next.every(
-				(entry, index) =>
-					entry.id === viaStopsForQuery[index]?.id && entry.label === viaStopsForQuery[index]?.label
-			);
-		if (!unchanged) {
-			viaStopsForQuery = next;
-		}
-	});
 
 	let baseQuery = $derived(
 		from.match && to.match
@@ -376,13 +360,8 @@
 						ignorePostTransitRentalReturnConstraints,
 						ignoreDirectRentalReturnConstraints,
 						algorithm,
-						via: viaStopsForQuery.map((entry) => entry.id),
-						...(() => {
-							const viaStayMinutes = viaStopsForQuery.map((entry) => Math.round(entry.stay / 60));
-							return viaStayMinutes.some((value) => value > 0)
-								? { viaMinimumStay: viaStayMinutes }
-								: {};
-						})()
+						via: via ? via.map((v) => v.match?.id) : undefined,
+						viaMinimumStay
 					} as PlanData['query'])
 				} as PlanData)
 			: undefined
@@ -427,21 +406,12 @@
 				const base = plan(baseQuery).then(preprocessItinerary(from, to));
 				baseResponse = base;
 				routingResponses = [base];
-				const viaNameParams = viaStopsForQuery.reduce<Record<string, string>>(
-					(acc, { label, id }, index) => {
-						if (label && label !== id) {
-							acc[`viaName${index}`] = label;
-						}
-						return acc;
-					},
-					{}
-				);
 				pushStateWithQueryString(
 					{
 						...q,
 						...(q.fromPlace == from.label ? {} : { fromName: from.label }),
 						...(q.toPlace == to.label ? {} : { toName: to.label }),
-						...viaNameParams
+						...viaLabels
 					},
 					{},
 					true
@@ -645,8 +615,9 @@
 						bind:preTransitProviderGroups
 						bind:postTransitProviderGroups
 						bind:directProviderGroups
-						bind:viaStops
+						bind:via
 						bind:viaMinimumStay
+						bind:viaLabels
 					/>
 				</Card>
 			</Tabs.Content>

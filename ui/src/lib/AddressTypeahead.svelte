@@ -1,11 +1,10 @@
 <script lang="ts">
 	import { Combobox } from 'bits-ui';
-	import { geocode, type Match, type Mode } from '@motis-project/motis-client';
+	import { geocode, type LocationType, type Match, type Mode } from '@motis-project/motis-client';
 	import { MapPinHouse as House, MapPin as Place } from '@lucide/svelte';
 	import { parseCoordinatesToLocation, type Location } from './Location';
 	import { language } from './i18n/translation';
 	import maplibregl from 'maplibre-gl';
-	import { onClickStop } from '$lib/utils';
 	import { getModeStyle, type LegLike } from './modeStyle';
 
 	let {
@@ -14,20 +13,18 @@
 		placeholder,
 		name,
 		place,
+		type,
 		transitModes,
-		onlyStations = $bindable(false),
-		allowCoordinates = true,
-		openStopOnSelect = true
+		onChange = () => {}
 	}: {
 		items?: Array<Location>;
 		selected: Location;
 		placeholder?: string;
 		name?: string;
 		place?: maplibregl.LngLatLike;
+		type?: undefined | LocationType;
 		transitModes?: Mode[];
-		onlyStations?: boolean;
-		allowCoordinates?: boolean;
-		openStopOnSelect?: boolean;
+		onChange?: (location: Location) => void;
 	} = $props();
 
 	let inputValue = $state('');
@@ -67,13 +64,12 @@
 	};
 
 	const updateGuesses = async () => {
-		if (allowCoordinates) {
-			const coord = parseCoordinatesToLocation(inputValue);
-			if (coord) {
-				selected = coord;
-				items = [];
-				return;
-			}
+		const coord = parseCoordinatesToLocation(inputValue);
+		if (coord) {
+			selected = coord;
+			items = [];
+			onChange(selected);
+			return;
 		}
 
 		const pos = place ? maplibregl.LngLat.convert(place) : undefined;
@@ -83,8 +79,8 @@
 				...biasPlace,
 				text: inputValue,
 				language: [language],
-				type: onlyStations ? 'STOP' : undefined,
-				mode: transitModes
+				mode: transitModes,
+				type
 			}
 		});
 		if (error) {
@@ -163,10 +159,7 @@
 		if (e) {
 			selected = deserialize(e);
 			inputValue = selected.label!;
-			if (onlyStations && openStopOnSelect && selected.match) {
-				const match = selected.match;
-				onClickStop(match.name, match.id, new Date(), undefined, true);
-			}
+			onChange(selected);
 		}
 	}}
 >
