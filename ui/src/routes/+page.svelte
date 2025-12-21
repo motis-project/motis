@@ -400,10 +400,10 @@
 	let stopNameFromResponse = $state<string>('');
 	$effect(() => {
 		if (baseQuery && activeTab == 'connections') {
-			const q = baseQuery.query;
 			clearTimeout(searchDebounceTimer);
 			searchDebounceTimer = setTimeout(() => {
 				const base = plan(baseQuery).then(preprocessItinerary(from, to));
+				const q = baseQuery.query;
 				baseResponse = base;
 				routingResponses = [base];
 				pushStateWithQueryString(
