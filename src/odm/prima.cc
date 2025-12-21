@@ -132,7 +132,7 @@ void init_pt(std::vector<n::routing::offset>& offsets,
   n::routing::get_starts(
       dir == osr::direction::kForward ? n::direction::kForward
                                       : n::direction::kBackward,
-      tt, rtt, intvl, offsets, {}, n::routing::kMaxTravelTime,
+      tt, rtt, intvl, offsets, {}, {}, n::routing::kMaxTravelTime,
       location_match_mode, false, rides, true, start_time.prf_idx_,
       start_time.transfer_time_settings_);
 }
