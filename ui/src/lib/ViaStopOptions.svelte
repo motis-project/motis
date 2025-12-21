@@ -46,9 +46,7 @@
 	};
 
 	$effect(() => {
-		const filtered = vias
-			.filter((v) => v.match.match && v.match.match.id)
-			.map((v) => $state.snapshot(v));
+		const filtered = vias.filter((v) => v.match?.match?.id).map((v) => $state.snapshot(v));
 
 		const oldVia = $state.snapshot(via);
 		const nextVia = filtered.length > 0 ? filtered.map((f) => f.match) : undefined;
