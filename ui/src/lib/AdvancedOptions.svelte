@@ -3,7 +3,7 @@
 	import Button from '$lib/components/ui/button/button.svelte';
 	import { t } from '$lib/i18n/translation';
 	import * as Select from '$lib/components/ui/select';
-	import { ChevronUp, ChevronDown, X } from '@lucide/svelte';
+	import { ChevronUp, ChevronDown } from '@lucide/svelte';
 	import { Switch } from './components/ui/switch';
 	import type { ElevationCosts, ServerConfig } from '@motis-project/motis-client';
 	import { defaultQuery } from '$lib/defaults';

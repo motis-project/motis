@@ -72,8 +72,8 @@
 		preTransitProviderGroups: string[];
 		postTransitProviderGroups: string[];
 		directProviderGroups: string[];
-		via: Location[];
-		viaMinimumStay: number[];
+		via: undefined | Location[];
+		viaMinimumStay: undefined | number[];
 		viaLabels: Record<string, string>;
 	} = $props();
 
