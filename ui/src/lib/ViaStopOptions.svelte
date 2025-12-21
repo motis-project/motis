@@ -60,11 +60,19 @@
 			viaMinimumStay = nextViaMinimumStay;
 		}
 
+		const nextViaLabels: Record<string, string> = {};
 		filtered.forEach((f, i) => {
-			if (viaLabels[`viaLabel${i}`] === f.match.label) {
-				return;
+			nextViaLabels[`viaLabel${i}`] = f.match.label;
+		});
+		Object.keys(viaLabels).forEach((key) => {
+			if (!(key in nextViaLabels)) {
+				delete viaLabels[key];
 			}
-			viaLabels[`viaLabel${i}`] = f.match.label;
+		});
+		Object.keys(nextViaLabels).forEach((key) => {
+			if (viaLabels[key] !== nextViaLabels[key]) {
+				viaLabels[key] = nextViaLabels[key];
+			}
 		});
 	});
 </script>
