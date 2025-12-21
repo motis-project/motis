@@ -219,52 +219,59 @@
 					setModes('CAR')(checked);
 				}}
 			/>
-			<div class="space-y-2">
-				<div class="flex items-center justify-between">
-					<div class="text-sm">
-						{t.viaStops}
-					</div>
-					<Button variant="outline" onclick={addViaStop} disabled={viaStops.length >= 2}>
-						{t.addViaStop}
-					</Button>
-				</div>
+			{#if showViaStops}
 				<div class="space-y-2">
-					{#each viaStops as viaStop, index (index)}
-						<div class="flex gap-2 items-start">
-							<div class="grow flex flex-col gap-1">
-								<div class="flex gap-2">
-									<div class="grow">
-										<AddressTypeahead
-											placeholder={t.viaStop}
-											name={`via-${index}`}
-											bind:selected={viaStops[index]}
-											bind:items={viaStopItems[index]}
-											onlyStations={true}
-											allowCoordinates={false}
-											openStopOnSelect={false}
-										/>
-									</div>
-									<div class="w-24">
-										<NumberSelect
-											bind:value={viaMinimumStay[index]}
-											possibleValues={viaMinimumStayOptions}
-											labelFormatter={formatDurationSec}
-										/>
+					<div class="flex items-center justify-between">
+						<div class="text-sm">
+							{t.viaStops}
+						</div>
+						<Button
+							variant="outline"
+							size="sm"
+							onclick={addViaStop}
+							disabled={viaStops.length >= 2}
+						>
+							{t.addViaStop}
+						</Button>
+					</div>
+					<div class="space-y-2">
+						{#each viaStops as _viaStop, index (index)}
+							<div class="flex gap-2 items-start">
+								<div class="grow flex flex-col gap-1">
+									<div class="flex gap-2">
+										<div class="grow">
+											<AddressTypeahead
+												placeholder={t.viaStop}
+												name={`via-${index}`}
+												bind:selected={viaStops[index]}
+												bind:items={viaStopItems[index]}
+												onlyStations={true}
+												allowCoordinates={false}
+												openStopOnSelect={false}
+											/>
+										</div>
+										<div class="w-24">
+											<NumberSelect
+												bind:value={viaMinimumStay[index]}
+												possibleValues={viaMinimumStayOptions}
+												labelFormatter={formatDurationSec}
+											/>
+										</div>
 									</div>
 								</div>
+								<Button
+									variant="ghost"
+									size="icon"
+									onclick={() => removeViaStop(index)}
+									aria-label={t.removeViaStop}
+								>
+									<X class="size-4" />
+								</Button>
 							</div>
-							<Button
-								variant="ghost"
-								size="icon"
-								onclick={() => removeViaStop(index)}
-								aria-label={t.removeViaStop}
-							>
-								<X class="size-4" />
-							</Button>
-						</div>
-					{/each}
+						{/each}
+					</div>
 				</div>
-			</div>
+			{/if}
 
 			<div
 				class="grid {maxTravelTime === undefined
