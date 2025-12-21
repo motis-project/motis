@@ -4,7 +4,7 @@
 	import Map from '$lib/map/Map.svelte';
 	import Control from '$lib/map/Control.svelte';
 	import SearchMask from '$lib/SearchMask.svelte';
-	import { parseLocation, posToLocation, type Location } from '$lib/Location';
+	import { parseLocations, parseLocation, posToLocation, type Location } from '$lib/Location';
 	import { Card } from '$lib/components/ui/card';
 	import {
 		initial,
@@ -20,7 +20,9 @@
 		type PlanData,
 		type ReachablePlace,
 		type RentalFormFactor,
-		type ServerConfig
+		type ServerConfig,
+		type CyclingSpeed,
+		type PedestrianSpeed
 	} from '@motis-project/motis-client';
 	import ItineraryList from '$lib/ItineraryList.svelte';
 	import ConnectionDetail from '$lib/ConnectionDetail.svelte';
@@ -159,6 +161,10 @@
 	let to = $state<Location>(parseLocation(urlParams?.get('toPlace'), urlParams?.get('toName')));
 	let one = $state<Location>(parseLocation(urlParams?.get('one'), urlParams?.get('oneName')));
 	let stop = $state<Location>();
+	let via = $state<Location[]>(parseLocations(getUrlArray('via'), getUrlArray('viaNames')));
+	let viaMinimumStay = $state<number[]>(
+		getUrlArray('viaMinumumStay', ['0', '0']).map((s) => parseInt(s))
+	);
 	let time = $state<Date>(new Date(urlParams?.get('time') || Date.now()));
 	let timetableView = $state(urlParams?.get('timetableView') != 'false');
 	let searchWindow = $state(
@@ -188,6 +194,12 @@
 			? urlParams.get('pedestrianProfile')
 			: defaultQuery.pedestrianProfile) as PedestrianProfile
 	);
+	let pedestrianSpeed = $state(
+		parseIntOr(urlParams?.get('pedestrianSpeed'), defaultQuery.pedestrianSpeed)
+	) as PedestrianSpeed;
+	let cyclingSpeed = $state(
+		parseIntOr(urlParams?.get('cyclingSpeed'), defaultQuery.cyclingSpeed)
+	) as CyclingSpeed;
 	let requireBikeTransport = $state(urlParams?.get('requireBikeTransport') == 'true');
 	let requireCarTransport = $state(urlParams?.get('requireCarTransport') == 'true');
 	let transitModes = $state<Mode[]>(
@@ -250,6 +262,12 @@
 			Math.min(defaultQuery.maxDirectTime, serverConfig?.maxDirectTimeLimit ?? Infinity)
 		)
 	);
+	let transferTimeFactor = $state(
+		parseIntOr(urlParams?.get('transferTimeFactor'), defaultQuery.transferTimeFactor)
+	);
+	let additionalTransferTime = $state(
+		parseIntOr(urlParams?.get('additionalTransferTime'), defaultQuery.additionalTransferTime)
+	);
 	let ignorePreTransitRentalReturnConstraints = $state(
 		urlParams?.get('ignorePreTransitRentalReturnConstraints') == 'true'
 	);
@@ -299,6 +317,8 @@
 						time: time.toISOString(),
 						fromPlace: toPlaceString(from),
 						toPlace: toPlaceString(to),
+						via: via.map((p) => (p.match ? toPlaceString(p) : '')).filter((p) => p != ''),
+						viaMinimumStay,
 						arriveBy,
 						timetableView,
 						searchWindow,
@@ -333,6 +353,10 @@
 						elevationCosts,
 						useRoutedTransfers,
 						maxTransfers: maxTransfers,
+						additionalTransferTime,
+						cyclingSpeed,
+						pedestrianSpeed,
+						transferTimeFactor,
 						maxMatchingDistance: pedestrianProfile == 'WHEELCHAIR' ? 8 : 250,
 						maxPreTransitTime,
 						maxPostTransitTime,
@@ -355,6 +379,10 @@
 						transitModes,
 						maxTransfers,
 						arriveBy,
+						cyclingSpeed,
+						pedestrianSpeed,
+						transferTimeFactor,
+						additionalTransferTime,
 						useRoutedTransfers,
 						pedestrianProfile,
 						requireBikeTransport,
@@ -571,6 +599,7 @@
 						{serverConfig}
 						bind:from
 						bind:to
+						bind:via
 						bind:time
 						bind:arriveBy
 						bind:useRoutedTransfers
@@ -583,6 +612,7 @@
 						bind:postTransitModes
 						bind:directModes
 						bind:elevationCosts
+						bind:viaMinimumStay
 						bind:maxPreTransitTime
 						bind:maxPostTransitTime
 						bind:maxDirectTime
@@ -592,6 +622,10 @@
 						bind:preTransitProviderGroups
 						bind:postTransitProviderGroups
 						bind:directProviderGroups
+						bind:pedestrianSpeed
+						bind:cyclingSpeed
+						bind:additionalTransferTime
+						bind:transferTimeFactor
 					/>
 				</Card>
 			</Tabs.Content>
@@ -616,6 +650,10 @@
 						bind:maxTransfers
 						bind:preTransitModes
 						bind:postTransitModes
+						bind:additionalTransferTime
+						bind:transferTimeFactor
+						bind:cyclingSpeed
+						bind:pedestrianSpeed
 						bind:maxPreTransitTime
 						bind:maxPostTransitTime
 						bind:arriveBy
