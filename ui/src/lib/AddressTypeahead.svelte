@@ -1,11 +1,10 @@
 <script lang="ts">
 	import { Combobox } from 'bits-ui';
-	import { geocode, type Match, type Mode } from '@motis-project/motis-client';
+	import { geocode, type LocationType, type Match, type Mode } from '@motis-project/motis-client';
 	import { MapPinHouse as House, MapPin as Place } from '@lucide/svelte';
 	import { parseCoordinatesToLocation, type Location } from './Location';
 	import { language } from './i18n/translation';
 	import maplibregl from 'maplibre-gl';
-	import { onClickStop } from '$lib/utils';
 	import { getModeStyle, type LegLike } from './modeStyle';
 
 	let {
@@ -14,16 +13,18 @@
 		placeholder,
 		name,
 		place,
+		type,
 		transitModes,
-		onlyStations = $bindable(false)
+		onChange = () => {}
 	}: {
 		items?: Array<Location>;
 		selected: Location;
 		placeholder?: string;
 		name?: string;
 		place?: maplibregl.LngLatLike;
+		type?: undefined | LocationType;
 		transitModes?: Mode[];
-		onlyStations?: boolean;
+		onChange?: (location: Location) => void;
 	} = $props();
 
 	let inputValue = $state('');
@@ -67,6 +68,7 @@
 		if (coord) {
 			selected = coord;
 			items = [];
+			onChange(selected);
 			return;
 		}
 
@@ -77,8 +79,8 @@
 				...biasPlace,
 				text: inputValue,
 				language: [language],
-				type: onlyStations ? 'STOP' : undefined,
-				mode: transitModes
+				mode: transitModes,
+				type
 			}
 		});
 		if (error) {
@@ -157,10 +159,7 @@
 		if (e) {
 			selected = deserialize(e);
 			inputValue = selected.label!;
-			if (onlyStations && selected.match) {
-				const match = selected.match;
-				onClickStop(match.name, match.id, new Date(), undefined, true);
-			}
+			onChange(selected);
 		}
 	}}
 >

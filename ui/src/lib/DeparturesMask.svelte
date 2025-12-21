@@ -2,6 +2,7 @@
 	import AddressTypeahead from '$lib/AddressTypeahead.svelte';
 	import { type Location } from '$lib/Location';
 	import { t } from '$lib/i18n/translation';
+	import { onClickStop } from '$lib/utils';
 
 	let {
 		time = $bindable()
@@ -19,6 +20,11 @@
 		placeholder={t.from}
 		bind:selected={from}
 		bind:items={fromItems}
-		onlyStations={true}
+		type="STOP"
+		onChange={(location) => {
+			if (location.match) {
+				onClickStop(location.label, location.match.id, time);
+			}
+		}}
 	/>
 </div>

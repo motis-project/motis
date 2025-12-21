@@ -228,6 +228,9 @@
 			bind:preTransitProviderGroups
 			bind:postTransitProviderGroups
 			bind:directProviderGroups
+			via={undefined}
+			viaMinimumStay={undefined}
+			viaLabels={{}}
 		/>
 	</div>
 </div>

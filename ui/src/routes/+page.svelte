@@ -159,6 +159,25 @@
 	let to = $state<Location>(parseLocation(urlParams?.get('toPlace'), urlParams?.get('toName')));
 	let one = $state<Location>(parseLocation(urlParams?.get('one'), urlParams?.get('oneName')));
 	let stop = $state<Location>();
+
+	let viaParam = getUrlArray('via');
+	let viaLabels = $state(
+		urlParams?.has('viaLabel0')
+			? Array.from({ length: viaParam.length }).reduce<Record<string, string>>((acc, _, i) => {
+					acc[`viaLabel${i}`] = urlParams?.get(`viaLabel${i}`) ?? '';
+					return acc;
+				}, {})
+			: {}
+	);
+	let via = $state(
+		urlParams?.has('via')
+			? viaParam.map((str, i) => parseLocation(str, viaLabels[`viaLabel${i}`]))
+			: undefined
+	);
+	let viaMinimumStay = $state(
+		urlParams?.has('via') ? getUrlArray('viaMinimumStay').map((s) => parseIntOr(s, 0)) : undefined
+	);
+
 	let time = $state<Date>(new Date(urlParams?.get('time') || Date.now()));
 	let timetableView = $state(urlParams?.get('timetableView') != 'false');
 	let searchWindow = $state(
@@ -340,11 +359,14 @@
 						ignorePreTransitRentalReturnConstraints,
 						ignorePostTransitRentalReturnConstraints,
 						ignoreDirectRentalReturnConstraints,
-						algorithm
+						algorithm,
+						via: via ? via.map((v) => v.match?.id) : undefined,
+						viaMinimumStay
 					} as PlanData['query'])
 				} as PlanData)
 			: undefined
 	);
+
 	let isochronesQuery = $derived(
 		one?.match
 			? ({
@@ -388,7 +410,8 @@
 					{
 						...q,
 						...(q.fromPlace == from.label ? {} : { fromName: from.label }),
-						...(q.toPlace == to.label ? {} : { toName: to.label })
+						...(q.toPlace == to.label ? {} : { toName: to.label }),
+						...viaLabels
 					},
 					{},
 					true
@@ -592,6 +615,9 @@
 						bind:preTransitProviderGroups
 						bind:postTransitProviderGroups
 						bind:directProviderGroups
+						bind:via
+						bind:viaMinimumStay
+						bind:viaLabels
 					/>
 				</Card>
 			</Tabs.Content>

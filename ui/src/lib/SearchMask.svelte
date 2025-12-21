@@ -42,7 +42,10 @@
 		ignoreDirectRentalReturnConstraints = $bindable(),
 		preTransitProviderGroups = $bindable(),
 		postTransitProviderGroups = $bindable(),
-		directProviderGroups = $bindable()
+		directProviderGroups = $bindable(),
+		via = $bindable(),
+		viaMinimumStay = $bindable(),
+		viaLabels = $bindable()
 	}: {
 		geocodingBiasPlace?: maplibregl.LngLatLike;
 		serverConfig: ServerConfig | undefined;
@@ -69,6 +72,9 @@
 		preTransitProviderGroups: string[];
 		postTransitProviderGroups: string[];
 		directProviderGroups: string[];
+		via: undefined | Location[];
+		viaMinimumStay: undefined | number[];
+		viaLabels: Record<string, string>;
 	} = $props();
 
 	let fromItems = $state<Array<Location>>([]);
@@ -179,6 +185,9 @@
 			bind:preTransitProviderGroups
 			bind:postTransitProviderGroups
 			bind:directProviderGroups
+			bind:via
+			bind:viaMinimumStay
+			bind:viaLabels
 		/>
 	</div>
 </div>

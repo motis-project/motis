@@ -4,6 +4,8 @@ export const defaultQuery = {
 	time: undefined,
 	fromPlace: undefined,
 	toPlace: undefined,
+	via: undefined,
+	viaMinimumStay: undefined,
 	arriveBy: false,
 	timetableView: true,
 	withFares: false,
