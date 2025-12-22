@@ -2,6 +2,8 @@
 
 #include "nigiri/rt/create_rt_timetable.h"
 
+#include "openapi/not_found_exception.h"
+
 #include "motis/constants.h"
 #include "motis/elevators/elevators.h"
 #include "motis/elevators/parse_fasta.h"
@@ -22,15 +24,15 @@ json::value update_elevator::operator()(json::value const& query) const {
 
   auto const rt_copy = rt_;
   auto const e = rt_copy->e_.get();
-  utl::verify(e != nullptr, "elevators not available");
+  utl::verify<openapi::not_found_exception>(e != nullptr,
+                                            "Elevators not available");
 
   auto const rtt = rt_copy->rtt_.get();
   auto elevators_copy = e->elevators_;
   auto const it =
       utl::find_if(elevators_copy, [&](auto&& x) { return x.id_ == id; });
-  if (it == end(elevators_copy)) {
-    return json::value{{"error", "id not found"}};
-  }
+  utl::verify<openapi::not_found_exception>(it != end(elevators_copy),
+                                            "Id ({}) not found", id);
 
   it->status_ = new_status;
   it->out_of_service_ = new_out_of_service;

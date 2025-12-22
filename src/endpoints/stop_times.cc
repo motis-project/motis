@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <memory>
 
+#include "openapi/bad_request_exception.h"
 #include "utl/concat.h"
 #include "utl/enumerate.h"
 #include "utl/erase_duplicates.h"
@@ -321,7 +322,8 @@ std::vector<api::Place> other_stops_impl(n::rt::frun fr,
           return orig_location == stop.get_location_idx();
         });
     auto result = utl::to_vec(fr.begin(), it, convert_stop);
-    utl::verify(!result.empty(), "Departure is last stop in trip");
+    utl::verify<openapi::bad_request_exception>(
+        !result.empty(), "Departure is last stop in trip");
     return result;
   } else {
     fr.stop_range_.from_ = 0;
@@ -332,7 +334,8 @@ std::vector<api::Place> other_stops_impl(n::rt::frun fr,
           return orig_location == stop.get_location_idx();
         });
     auto result = utl::to_vec(it.base(), fr.end(), convert_stop);
-    utl::verify(!result.empty(), "Arrival is first stop in trip");
+    utl::verify<openapi::bad_request_exception>(
+        !result.empty(), "Arrival is first stop in trip");
     return result;
   }
 }
@@ -344,8 +347,9 @@ api::stoptimes_response stop_times::operator()(
   auto const api_version = get_api_version(url);
 
   auto const max_results = config_.limits_.value().stoptimes_max_results_;
-  utl::verify(query.n_ < max_results, "n={} > {} not allowed", query.n_,
-              max_results);
+  utl::verify<openapi::bad_request_exception>(
+      query.n_ < max_results, "results ({}) exceeded server limit ({}})",
+      query.n_, max_results);
 
   auto const x = tags_.get_location(tt_, query.stopId_);
   auto const l = tt_.locations_.get_root_idx(x);

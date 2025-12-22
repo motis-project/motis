@@ -1,5 +1,6 @@
 #include "motis/endpoints/platforms.h"
 
+#include "openapi/bad_request_exception.h"
 #include "osr/geojson.h"
 
 namespace json = boost::json;
@@ -22,7 +23,8 @@ json::value platforms::operator()(json::value const& query) const {
   auto gj = osr::geojson_writer{.w_ = w_, .platforms_ = &pl_};
   pl_.find(min, max, [&](osr::platform_idx_t const i) {
     if (level == osr::kNoLevel || pl_.get_level(w_, i) == level) {
-      utl::verify(gj.features_.size() < kLimit, "too many platforms");
+      utl::verify<openapi::bad_request_exception>(gj.features_.size() < kLimit,
+                                                  "Too many platforms");
       gj.write_platform(i);
     }
   });

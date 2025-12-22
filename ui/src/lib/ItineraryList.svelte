@@ -36,10 +36,7 @@
 	const throwOnError = (promise: RequestResult<PlanResponse, PlanError, false>) =>
 		promise.then((response) => {
 			console.log(response.error);
-			if (response.error)
-				throw new Error(
-					String((response.error as Record<string, unknown>).error ?? response.error)
-				);
+			if (response.error) throw response.error;
 			return response;
 		});
 </script>
