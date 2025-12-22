@@ -20,7 +20,8 @@
 		type PlanData,
 		type ReachablePlace,
 		type RentalFormFactor,
-		type ServerConfig
+		type ServerConfig,
+		type Error
 	} from '@motis-project/motis-client';
 	import ItineraryList from '$lib/ItineraryList.svelte';
 	import ConnectionDetail from '$lib/ConnectionDetail.svelte';
@@ -434,10 +435,9 @@
 				isochronesOptions.error = undefined;
 				isochronesQueryTimeout = setTimeout(() => {
 					oneToAll(isochronesQuery)
-						.then((r: { data: OneToAllResponse | undefined; error: unknown }) => {
+						.then((r: { data: OneToAllResponse | undefined; error: Error | undefined }) => {
 							if (r.error) {
-								const msg = (r.error as { error: string }).error;
-								throw new Error(String(msg));
+								throw r.error;
 							}
 							const all = r.data!.all!.map((p: ReachablePlace) => {
 								return {
@@ -452,7 +452,7 @@
 						})
 						.catch((e: Error) => {
 							isochronesOptions.status = 'FAILED';
-							isochronesOptions.error = e.message;
+							isochronesOptions.error = e;
 						});
 				}, 60);
 			}

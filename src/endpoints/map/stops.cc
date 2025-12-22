@@ -17,14 +17,16 @@ api::stops_response stops::operator()(boost::urls::url_view const& url) const {
   auto const min = parse_location(query.min_);
   auto const max = parse_location(query.max_);
   utl::verify<openapi::bad_request_exception>(
-      min.has_value(), "min not a coordinate: {}", query.min_);
+      min.has_value(), "Min not a coordinate: {}", query.min_);
   utl::verify<openapi::bad_request_exception>(
-      max.has_value(), "max not a coordinate: {}request_exception", query.max_);
+      max.has_value(), "Max not a coordinate: {}", query.max_);
   auto res = api::stops_response{};
 
   auto const max_results = config_.limits_.value().stops_max_results_;
   loc_rtree_.find({min->pos_, max->pos_}, [&](n::location_idx_t const l) {
-    utl::verify(res.size() < max_results, "too many items");
+    utl::verify<openapi::bad_request_exception>(
+        res.size() < max_results, "Results ({}) exceed server limit ({})",
+        res.size(), max_results);
     res.emplace_back(to_place(&tt_, &tags_, w_, pl_, matches_, ae_, tz_,
                               query.language_, tt_location{l}));
   });

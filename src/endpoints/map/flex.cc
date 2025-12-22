@@ -9,6 +9,7 @@
 #include "motis-api/motis-api.h"
 #include "motis/parse_location.h"
 #include "motis/tag_lookup.h"
+#include "openapi/bad_request_exception.h"
 
 namespace json = boost::json;
 namespace n = nigiri;
@@ -47,8 +48,10 @@ boost::json::value flex_locations::operator()(
   auto const min = parse_location(query.min_);
   auto const max = parse_location(query.max_);
 
-  utl::verify(min.has_value(), "min not a coordinate: {}", query.min_);
-  utl::verify(max.has_value(), "max not a coordinate: {}", query.max_);
+  utl::verify<openapi::bad_request_exception>(
+      min.has_value(), "Min not a coordinate: {}", query.min_);
+  utl::verify<openapi::bad_request_exception>(
+      max.has_value(), "Max not a coordinate: {}", query.max_);
 
   auto features = json::array{};
   tt_.flex_area_rtree_.search(

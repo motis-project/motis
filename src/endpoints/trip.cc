@@ -14,6 +14,7 @@
 #include "motis/parse_location.h"
 #include "motis/server.h"
 #include "motis/tag_lookup.h"
+#include "openapi/not_found_exception.h"
 
 namespace n = nigiri;
 
@@ -27,8 +28,9 @@ api::Itinerary trip::operator()(boost::urls::url_view const& url) const {
   auto const api_version = get_api_version(url);
 
   auto const [r, _] = tags_.get_trip(tt_, rtt, query.tripId_);
-  utl::verify(r.valid(), "trip not found: tripId={}, tt={}", query.tripId_,
-              tt_.external_interval());
+  utl::verify<openapi::not_found_exception>(
+      r.valid(), "Trip not found: tripId={}, tt={}", query.tripId_,
+      tt_.external_interval());
 
   auto fr = n::rt::frun{tt_, rtt, r};
   fr.stop_range_.to_ = fr.size();

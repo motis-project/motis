@@ -21,8 +21,6 @@
 		<ErrorMessage e={t.isochrones.noData} />
 	{/if}
 	{#if options.status == 'FAILED'}
-		<ErrorMessage
-			e={`${t.isochrones.requestFailed}` + (options.error ? `: ${options.error}` : '')}
-		/>
+		<ErrorMessage e={options.error!} />
 	{/if}
 </div>

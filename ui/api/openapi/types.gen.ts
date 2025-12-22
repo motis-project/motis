@@ -1422,7 +1422,14 @@ export type ServerConfig = {
 };
 
 export type Error = {
-    error?: string;
+    /**
+     * status code
+     */
+    status: number;
+    /**
+     * error message
+     */
+    message: string;
 };
 
 export type PlanData = {

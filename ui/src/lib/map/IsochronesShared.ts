@@ -1,5 +1,5 @@
 import type { Feature, GeoJsonProperties, MultiPolygon, Polygon } from 'geojson';
-
+import type { Error } from '@motis-project/motis-client';
 const DisplayLevels = ['NONE', 'OVERLAY_RECTS', 'OVERLAY_CIRCLES', 'GEOMETRY_CIRCLES'] as const;
 
 export type DisplayLevel = (typeof DisplayLevels)[number];
@@ -11,7 +11,7 @@ export interface IsochronesOptions {
 	color: string;
 	opacity: number;
 	status: StatusLevel;
-	error: string | undefined;
+	error: Error | undefined;
 }
 export interface IsochronesPos {
 	lat: number;
