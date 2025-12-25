@@ -243,13 +243,14 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
                                           fetch_url,
                                           a.ep_.headers_.value_or(headers_t{}),
                                           timeout);
-                                      auto const body = get_http_body(res);
+                                      auto body = get_http_body(res);
                                       if (dump_rt) {
                                         std::ofstream{get_dump_path(a)}.write(
                                             body.c_str(),
                                             static_cast<long>(body.size()));
                                       }
-                                      ret = auser.consume_update(body, *rtt);
+                                      ret = auser.consume_update(body, *rtt,
+                                                                 true);
                                     } catch (std::exception const& e) {
                                       a.metrics_.updates_error_.Increment();
                                       n::log(n::log_lvl::error, "motis.rt",

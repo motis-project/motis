@@ -39,7 +39,7 @@
 #include "motis/config.h"
 #include "motis/data.h"
 #include "motis/gbfs/data.h"
-#include "motis/http_client.h"
+#include "motis/http_req.h"
 
 #include "motis/gbfs/compression.h"
 #include "motis/gbfs/osr_mapping.h"
@@ -162,12 +162,7 @@ struct gbfs_update {
         l_{l},
         d_{d},
         prev_d_{prev_d},
-        client_{std::make_shared<http_client>()} {
-    client_->timeout_ = std::chrono::seconds{c.http_timeout_};
-    if (c.proxy_ && !c.proxy_->empty()) {
-      client_->set_proxy(boost::urls::url{*c.proxy_});
-    }
-  }
+        timeout_{c.http_timeout_} {}
 
   awaitable<void> run() {
     auto executor = co_await asio::this_coro::executor;
@@ -858,8 +853,8 @@ struct gbfs_update {
     } else {
       auto headers = base_headers;
       co_await get_oauth_token(oauth, headers);
-      auto const res =
-          co_await client_->get(boost::urls::url{url}, std::move(headers));
+      auto const res = co_await http_GET(boost::urls::url{url},
+                                         std::move(headers), timeout_);
       content = get_http_body(res);
       if (res.result_int() != 200) {
         throw std::runtime_error(
@@ -910,8 +905,8 @@ struct gbfs_update {
       oauth_headers["Content-Type"] = "application/x-www-form-urlencoded";
 
       auto const res =
-          co_await client_->post(boost::urls::url{oauth->settings_.token_url_},
-                                 std::move(oauth_headers), body);
+          co_await http_POST(boost::urls::url{oauth->settings_.token_url_},
+                             std::move(oauth_headers), body, timeout_);
       auto const res_body = get_http_body(res);
       auto const res_json = json::parse(res_body);
       auto const& j = res_json.as_object();
@@ -1071,7 +1066,7 @@ struct gbfs_update {
   gbfs_data* d_;
   gbfs_data const* prev_d_;
 
-  std::shared_ptr<http_client> client_;
+  std::chrono::seconds timeout_;
 };
 
 awaitable<void> update(config const& c,

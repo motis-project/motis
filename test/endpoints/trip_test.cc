@@ -1,11 +1,18 @@
 #include "gtest/gtest.h"
 
+#include "utl/init_from.h"
+
+#include "nigiri/common/parse_time.h"
+#include "nigiri/rt/create_rt_timetable.h"
+#include "nigiri/rt/frun.h"
+#include "nigiri/rt/rt_timetable.h"
+
 #include "motis/config.h"
 #include "motis/data.h"
 #include "motis/endpoints/trip.h"
 #include "motis/import.h"
-
-#include "utl/init_from.h"
+#include "motis/rt/auser.h"
+#include "motis/tag_lookup.h"
 
 using namespace std::string_view_literals;
 using namespace motis;
@@ -377,6 +384,9 @@ TEST(motis, trip_notice_translations) {
                                    .datasets_ = {{"netex", {.path_ = kNetex}}}},
              .street_routing_ = false};
   auto d = import(c, "test/data", true);
+  auto const day = date::sys_days{2024_y / December / 15};
+  d.init_rtt(day);
+  auto& rtt = *d.rt_->rtt_;
 
   auto const trip_ep = utl::init_from<ep::trip>(d).value();
   auto const base_trip = std::string{
@@ -402,4 +412,130 @@ TEST(motis, trip_notice_translations) {
   expect_notice("en"sv, "Free Internet with the SBB FreeSurf app");
   expect_notice("fr"sv, "Connexion Internet gratuite avec l'app FreeSurf CFF");
   expect_notice("it"sv, "Connessione Internet gratuita con l'app FreeSurf FFS");
+
+  auto const sched_dep = std::chrono::time_point_cast<std::chrono::seconds>(
+      nigiri::parse_time("2024-12-15T05:50:00+01:00", "%FT%T%Ez"));
+  auto const sched_arr = std::chrono::time_point_cast<std::chrono::seconds>(
+      nigiri::parse_time("2024-12-15T05:57:00+01:00", "%FT%T%Ez"));
+  auto const check_leg =
+      [&](api::Leg const& leg, std::chrono::sys_seconds const dep,
+          std::chrono::sys_seconds const arr, bool const is_rt) {
+        EXPECT_EQ(dep, *leg.startTime_);
+        EXPECT_EQ(arr, *leg.endTime_);
+        EXPECT_EQ(sched_dep, *leg.scheduledStartTime_);
+        EXPECT_EQ(sched_arr, *leg.scheduledEndTime_);
+        EXPECT_EQ(is_rt, leg.realTime_);
+      };
+
+  auto const base_res = trip_ep(base_trip);
+  ASSERT_EQ(1, base_res.legs_.size());
+  check_leg(base_res.legs_.front(), sched_dep, sched_arr, false);
+
+  {
+    constexpr auto kNetexSiriUpdate = R"(<?xml version="1.0" encoding="UTF-8"?>
+<Siri xmlns="http://www.siri.org.uk/siri" version="2.0">
+  <ServiceDelivery>
+    <ResponseTimestamp>2024-12-15T05:40:00</ResponseTimestamp>
+    <EstimatedTimetableDelivery version="2.0">
+      <ResponseTimestamp>2024-12-15T05:40:00</ResponseTimestamp>
+      <EstimatedJourneyVersionFrame>
+        <RecordedAtTime>2024-12-15T05:40:00</RecordedAtTime>
+        <EstimatedVehicleJourney>
+          <LineRef>LineDoesNotMatter</LineRef>
+          <DirectionRef>Up</DirectionRef>
+          <FramedVehicleJourneyRef>
+            <DataFrameRef>2024-12-15</DataFrameRef>
+            <DatedVehicleJourneyRef>unknown</DatedVehicleJourneyRef>
+          </FramedVehicleJourneyRef>
+          <RecordedCalls>
+            <RecordedCall>
+              <StopPointRef>ch:1:sloid:30243:0:403158</StopPointRef>
+              <AimedDepartureTime>2024-12-15T05:50:00+01:00</AimedDepartureTime>
+              <ExpectedDepartureTime>2024-12-15T05:52:00+01:00</ExpectedDepartureTime>
+            </RecordedCall>
+          </RecordedCalls>
+          <EstimatedCalls>
+            <EstimatedCall>
+              <StopPointRef>ch:1:sloid:1954:0:845083</StopPointRef>
+              <AimedArrivalTime>2024-12-15T05:57:00+01:00</AimedArrivalTime>
+              <ExpectedArrivalTime>2024-12-15T05:59:00+01:00</ExpectedArrivalTime>
+            </EstimatedCall>
+          </EstimatedCalls>
+        </EstimatedVehicleJourney>
+      </EstimatedJourneyVersionFrame>
+    </EstimatedTimetableDelivery>
+  </ServiceDelivery>
+</Siri>
+)";
+
+    auto siri_updater = auser(*d.tt_, d.tags_->get_src("netex"),
+                              nigiri::rt::vdv_aus::updater::xml_format::kSiri);
+    auto const expected_siri_state =
+        nigiri::parse_time_no_tz("2024-12-15T05:40:00")
+            .time_since_epoch()
+            .count();
+    auto const siri_stats = siri_updater.consume_update(kNetexSiriUpdate, rtt);
+    EXPECT_EQ(1U, siri_stats.matched_runs_);
+    EXPECT_EQ(2U, siri_stats.updated_events_);
+    EXPECT_EQ(expected_siri_state, siri_updater.update_state_);
+    auto const siri_dep = std::chrono::time_point_cast<std::chrono::seconds>(
+        nigiri::parse_time("2024-12-15T05:52:00+01:00", "%FT%T%Ez"));
+    auto const siri_arr = std::chrono::time_point_cast<std::chrono::seconds>(
+        nigiri::parse_time("2024-12-15T05:59:00+01:00", "%FT%T%Ez"));
+    auto const siri_res = trip_ep(base_trip);
+    ASSERT_EQ(1, siri_res.legs_.size());
+    check_leg(siri_res.legs_.front(), siri_dep, siri_arr, true);
+  }
+
+  {
+    constexpr auto kNetexVdvUpdate =
+        R"(<?xml version="1.0" encoding="iso-8859-1"?>
+<DatenAbrufenAntwort>
+  <Bestaetigung Zst="2024-12-15T05:40:00" Ergebnis="ok" Fehlernummer="0" />
+  <AUSNachricht AboID="1" auser_id="314159">
+    <IstFahrt Zst="2024-12-15T05:50:00">
+      <LinienID>NET</LinienID>
+      <RichtungsID>1</RichtungsID>
+      <FahrtRef>
+        <FahrtID>
+          <FahrtBezeichner>NETEX</FahrtBezeichner>
+          <Betriebstag>2024-12-15</Betriebstag>
+        </FahrtID>
+      </FahrtRef>
+      <Komplettfahrt>true</Komplettfahrt>
+      <BetreiberID>MOTIS</BetreiberID>
+      <IstHalt>
+        <HaltID>ch:1:sloid:30243:0:403158</HaltID>
+        <Abfahrtszeit>2024-12-15T04:50:00</Abfahrtszeit>
+        <IstAbfahrtPrognose>2024-12-15T04:56:00</IstAbfahrtPrognose>
+      </IstHalt>
+      <IstHalt>
+        <HaltID>ch:1:sloid:1954:0:845083</HaltID>
+        <Ankunftszeit>2024-12-15T04:57:00</Ankunftszeit>
+        <IstAnkunftPrognose>2024-12-15T05:03:00</IstAnkunftPrognose>
+      </IstHalt>
+      <LinienText>NET</LinienText>
+      <ProduktID>NET</ProduktID>
+      <RichtungsText>Netex Demo</RichtungsText>
+      <Zusatzfahrt>false</Zusatzfahrt>
+      <FaelltAus>false</FaelltAus>
+    </IstFahrt>
+  </AUSNachricht>
+</DatenAbrufenAntwort>
+)";
+
+    auto vdv_updater = auser(*d.tt_, d.tags_->get_src("netex"),
+                             nigiri::rt::vdv_aus::updater::xml_format::kVdv);
+    auto const vdv_stats = vdv_updater.consume_update(kNetexVdvUpdate, rtt);
+    EXPECT_EQ(1U, vdv_stats.matched_runs_);
+    EXPECT_EQ(2U, vdv_stats.updated_events_);
+    EXPECT_EQ(314159, vdv_updater.update_state_);
+    auto const vdv_dep = std::chrono::time_point_cast<std::chrono::seconds>(
+        nigiri::parse_time("2024-12-15T04:56:00", "%FT%T"));
+    auto const vdv_arr = std::chrono::time_point_cast<std::chrono::seconds>(
+        nigiri::parse_time("2024-12-15T05:03:00", "%FT%T"));
+    auto const vdv_res = trip_ep(base_trip);
+    ASSERT_EQ(1, vdv_res.legs_.size());
+    check_leg(vdv_res.legs_.front(), vdv_dep, vdv_arr, true);
+  }
 }
