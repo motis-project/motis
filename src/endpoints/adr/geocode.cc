@@ -16,7 +16,7 @@
 #include "motis/endpoints/adr/suggestions_to_response.h"
 #include "motis/parse_location.h"
 #include "motis/timetable/modes_to_clasz_mask.h"
-#include "openapi/bad_request_exception.h"
+#include "net/bad_request_exception.h"
 
 namespace n = nigiri;
 namespace a = adr;
@@ -37,8 +37,8 @@ api::geocode_response geocode::operator()(
   auto const params = api::geocode_params{url.params()};
   auto const place = params.place_.and_then([](std::string const& s) {
     auto const parsed = parse_location(s);
-    utl::verify<openapi::bad_request_exception>(parsed.has_value(),
-                                                "Could not parse place {}", s);
+    utl::verify<net::bad_request_exception>(parsed.has_value(),
+                                            "Could not parse place {}", s);
     return std::optional{parsed.value().pos_};
   });
   auto const allowed_modes =

@@ -1,14 +1,14 @@
 <script lang="ts">
-	import type { Error } from '@motis-project/motis-client';
 	import { CircleAlert, SearchX, ServerCrash } from '@lucide/svelte';
 
 	let {
-		e
+		message,
+		status
 	}: {
-		e: Error | string;
+		message: string;
+		status: number | undefined;
 	} = $props();
 
-	let error = (typeof e == 'string' ? { status: 404, message: e } : e) as Error;
 	const getErrorType = (status: number) => {
 		switch (status) {
 			case 400:
@@ -17,8 +17,10 @@
 				return 'Not Found';
 			case 500:
 				return 'Internal Server Error';
+			case 422:
+				return 'Unprocessable Entity';
 			default:
-				return 'Unkown';
+				return 'Unknown';
 		}
 	};
 
@@ -28,26 +30,27 @@
 				return CircleAlert;
 			case 404:
 				return SearchX;
+			case 422:
 			case 500:
 				return ServerCrash;
 			default:
 				return SearchX;
 		}
 	};
-	let Icon = $state(getErrorIcon(error.status));
+	let Icon = $state(getErrorIcon(status ?? 404));
 </script>
 
 <div
-	class="p-4 mx-auto my-4 w-80 flex flex-col items-center gap-5 rounded-lg border border-destructive/20"
+	class="p-4 mx-auto my-4 w-96 flex flex-col items-center gap-5 rounded-lg border border-destructive/20"
 >
 	<div class="flex items-center gap-4 mx-auto">
 		<Icon class="h-7 w-7 text-destructive" />
 		<h2 class="text-xl font-semibold text-destructive">
-			{error.status}
-			{getErrorType(error.status)}
+			{status}
+			{getErrorType(status ?? 404)}
 		</h2>
 	</div>
 	<p class="text-lg text-muted-foreground mb-3">
-		{error.message}
+		{message}
 	</p>
 </div>

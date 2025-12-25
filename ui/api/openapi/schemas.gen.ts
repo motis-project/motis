@@ -1776,13 +1776,9 @@ export const ServerConfigSchema = {
 
 export const ErrorSchema = {
     type: 'object',
-    required: ['status', 'message'],
+    required: ['error'],
     properties: {
-        status: {
-            type: 'number',
-            description: 'status code'
-        },
-        message: {
+        error: {
             type: 'string',
             description: 'error message'
         }

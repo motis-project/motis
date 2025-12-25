@@ -1,5 +1,7 @@
 #include "motis/endpoints/levels.h"
 
+#include "net/bad_request_exception.h"
+
 #include "utl/pipes/all.h"
 #include "utl/pipes/vec.h"
 #include "utl/to_vec.h"
@@ -8,7 +10,6 @@
 
 #include "motis/parse_location.h"
 #include "motis/types.h"
-#include "openapi/bad_request_exception.h"
 
 namespace json = boost::json;
 
@@ -19,9 +20,9 @@ api::levels_response levels::operator()(
   auto const query = api::levels_params{url.params()};
   auto const min = parse_location(query.min_);
   auto const max = parse_location(query.max_);
-  utl::verify<openapi::bad_request_exception>(
+  utl::verify<net::bad_request_exception>(
       min.has_value(), "Min not a coordinate: {}", query.min_);
-  utl::verify<openapi::bad_request_exception>(
+  utl::verify<net::bad_request_exception>(
       max.has_value(), "Max not a coordinate: {}", query.max_);
   auto levels = hash_set<float>{};
   l_.find({min->pos_, max->pos_}, [&](osr::way_idx_t const x) {
