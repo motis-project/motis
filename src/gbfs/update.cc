@@ -35,6 +35,7 @@
 #include "utl/sorted_diff.h"
 #include "utl/timer.h"
 #include "utl/to_vec.h"
+#include "utl/verify.h"
 
 #include "motis/config.h"
 #include "motis/data.h"
@@ -359,7 +360,8 @@ struct gbfs_update {
         it != end(d_->provider_by_id_)) {
       // existing provider, keep idx
       auto const idx = it->second;
-      assert(d_->providers_.at(idx) == nullptr);
+      utl::verify(d_->providers_.at(idx) == nullptr,
+                  "provider slot {} already in use", idx);
       d_->providers_[idx] = std::make_unique<gbfs_provider>();
       auto& provider = *d_->providers_[idx].get();
       init_provider(provider, idx);

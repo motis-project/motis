@@ -13,6 +13,7 @@
 #include "motis/journey_to_response.h"
 #include "motis/tag_lookup.h"
 #include "motis/timetable/clasz_to_mode.h"
+#include "utl/verify.h"
 
 namespace a = adr;
 namespace n = nigiri;
@@ -100,7 +101,7 @@ api::geocode_response suggestions_to_response(
 
     auto tokens = std::vector<std::vector<double>>{};
     utl::for_each_set_bit(s.matched_tokens_, [&](auto const i) {
-      assert(i < token_pos.size());
+      utl::verify(i < token_pos.size(), "token_pos index {} out of range", i);
       tokens.emplace_back(
           std::vector<double>{static_cast<double>(token_pos[i].start_idx_),
                               static_cast<double>(token_pos[i].size_)});
