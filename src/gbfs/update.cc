@@ -157,7 +157,12 @@ struct gbfs_update {
               osr::lookup const& l,
               gbfs_data* d,
               gbfs_data const* prev_d)
-      : c_{c}, w_{w}, l_{l}, d_{d}, prev_d_{prev_d} {}
+      : c_{c},
+        w_{w},
+        l_{l},
+        d_{d},
+        prev_d_{prev_d},
+        timeout_{c.http_timeout_} {}
 
   awaitable<void> run() {
     auto executor = co_await asio::this_coro::executor;
