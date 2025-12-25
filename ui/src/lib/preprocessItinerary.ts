@@ -48,7 +48,7 @@ export const preprocessItinerary = (from: Location, to: Location) => {
 	};
 
 	return (r: Awaited<RequestResult<PlanResponse, ApiError, false>>): PlanResponse => {
-		if (r.error) throw r.error;
+		if (r.error) throw { error: r.error.error, status: r.response?.status };
 		r.data.itineraries.forEach(updateItinerary);
 		r.data.direct.forEach(updateItinerary);
 

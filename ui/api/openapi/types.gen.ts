@@ -1423,13 +1423,9 @@ export type ServerConfig = {
 
 export type Error = {
     /**
-     * status code
-     */
-    status: number;
-    /**
      * error message
      */
-    message: string;
+    error: string;
 };
 
 export type PlanData = {

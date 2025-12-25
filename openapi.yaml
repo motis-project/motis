@@ -3758,12 +3758,8 @@ components:
     Error:
       type: object
       required:
-        - status
-        - message
+        - error
       properties:
-        status:
-          type: number 
-          description: status code
-        message:
+        error:
           type: string
           description: error message

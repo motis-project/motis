@@ -1,6 +1,6 @@
 #include "motis/endpoints/elevators.h"
 
-#include "openapi/bad_request_exception.h"
+#include "net/too_many_exception.h"
 #include "osr/geojson.h"
 
 #include "boost/json.hpp"
@@ -75,8 +75,8 @@ json::value elevators::operator()(json::value const& query) const {
   auto const max = geo::latlng{q[3].as_double(), q[2].as_double()};
 
   e->elevators_rtree_.find(geo::box{min, max}, [&](elevator_idx_t const i) {
-    utl::verify<openapi::bad_request_exception>(matches.size() < kLimit,
-                                                "too many elevators");
+    utl::verify<net::too_many_exception>(matches.size() < kLimit,
+                                         "too many elevators");
     auto const& x = e->elevators_[i];
     matches.emplace_back(json::value{
         {"type", "Feature"},
@@ -95,8 +95,8 @@ json::value elevators::operator()(json::value const& query) const {
     auto const pos = w_.get_node_pos(n);
     if (match != elevator_idx_t::invalid()) {
       auto const& x = e->elevators_[match];
-      utl::verify<openapi::bad_request_exception>(matches.size() < kLimit,
-                                                  "too many elevators");
+      utl::verify<net::too_many_exception>(matches.size() < kLimit,
+                                           "too many elevators");
       matches.emplace_back(json::value{
           {"type", "Feature"},
           {"properties",

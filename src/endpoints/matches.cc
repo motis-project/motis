@@ -1,11 +1,11 @@
 #include "motis/endpoints/matches.h"
 
+#include "net/too_many_exception.h"
 #include "osr/geojson.h"
 
 #include "motis/location_routes.h"
 #include "motis/match_platforms.h"
 #include "motis/tag_lookup.h"
-#include "openapi/bad_request_exception.h"
 
 namespace json = boost::json;
 namespace n = nigiri;
@@ -31,8 +31,8 @@ json::value matches::operator()(json::value const& query) const {
   auto matches = json::array{};
 
   pl_.find(min, max, [&](osr::platform_idx_t const p) {
-    utl::verify<openapi::bad_request_exception>(matches.size() < kLimit,
-                                                "Too many items");
+    utl::verify<net::too_many_exception>(matches.size() < kLimit,
+                                         "Too many items");
 
     auto const center = get_platform_center(pl_, w_, p);
     if (!center.has_value()) {
@@ -48,8 +48,8 @@ json::value matches::operator()(json::value const& query) const {
   });
 
   loc_rtree_.find({min, max}, [&](n::location_idx_t const l) {
-    utl::verify<openapi::bad_request_exception>(matches.size() < kLimit,
-                                                "Too many items");
+    utl::verify<net::too_many_exception>(matches.size() < kLimit,
+                                         "Too many items");
 
     auto const pos = tt_.locations_.coordinates_[l];
     auto const match = get_match(tt_, pl_, w_, l);
