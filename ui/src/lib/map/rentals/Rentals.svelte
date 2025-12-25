@@ -309,7 +309,7 @@
 						station.providerGroupId === filter.providerGroupId &&
 						station.formFactors.includes(filter.formFactor)
 				)
-			: rentalsData.stations;
+			: ([] as RentalStation[]);
 		return {
 			type: 'FeatureCollection',
 			features: stations.map((station) => {
@@ -353,7 +353,7 @@
 						vehicle.providerGroupId === filter.providerGroupId &&
 						vehicle.formFactor === filter.formFactor
 				)
-			: rentalsData.vehicles;
+			: ([] as RentalVehicle[]);
 		vehicles
 			.filter((vehicle) => !vehicle.stationId)
 			.forEach((vehicle) => {
