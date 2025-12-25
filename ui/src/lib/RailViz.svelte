@@ -47,9 +47,9 @@
 		if (!realTime) {
 			return [100, 100, 100, 255];
 		}
-		if (delay <= -5) {
+		if (delay <= -30) {
 			return [255, 0, 255, 255];
-		} else if (delay <= -1) {
+		} else if (delay <= -6) {
 			return [138, 82, 254, 255];
 		} else if (delay <= 3) {
 			return [69, 194, 74, 255];
@@ -61,14 +61,6 @@
 			return [255, 48, 71, 255];
 		}
 		return [163, 0, 10, 255];
-	};
-
-	const getSegmentDelayColor = (d: number, a: number, realTime: boolean): RGBA => {
-		if (d / 60000 <= -1) {
-			return getDelayColor(d, realTime);
-		} else {
-			return getDelayColor(a, realTime);
-		}
 	};
 
 	type KeyFrame = {
@@ -184,7 +176,7 @@
 			getColor: (d) => {
 				switch (colorMode) {
 					case 'rt':
-						return getSegmentDelayColor(d.departureDelay, d.arrivalDelay, d.realTime);
+						return getDelayColor(d.departureDelay, d.realTime);
 					case 'mode':
 						return hexToRgb(getModeStyle(d)[1]);
 					case 'route':
@@ -310,10 +302,10 @@
 								`<strong>${object.trips[0].displayName}</strong><br>
 
 							<span style="color: ${rgbToHex(getDelayColor(object.departureDelay, true))}">${formatTime(new Date(object.departure), object.from.tz)}</span>
-							<span class="line-through">${formatTime(new Date(object.scheduledDeparture), object.from.tz)}</span>  ${object.from.name}<br>
+							<span ${object.departureDelay != 0 ? 'class="line-through"' : ''}>${formatTime(new Date(object.scheduledDeparture), object.from.tz)}</span>  ${object.from.name}<br>
 
 							<span style="color: ${rgbToHex(getDelayColor(object.arrivalDelay, true))}">${formatTime(new Date(object.arrival), object.to.tz)}</span>
-							<span class="line-through">${formatTime(new Date(object.scheduledArrival), object.to.tz)}</span> ${object.to.name}`
+							<span ${object.arrivalDelay != 0 ? 'class="line-through"' : ''}>${formatTime(new Date(object.scheduledArrival), object.to.tz)}</span> ${object.to.name}`
 							);
 						} else {
 							popup.setHTML(
