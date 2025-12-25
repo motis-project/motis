@@ -9,6 +9,7 @@
 #include "utl/erase_if.h"
 #include "utl/parallel_for.h"
 #include "utl/sorted_diff.h"
+#include "utl/verify.h"
 
 #include "osr/routing/profiles/foot.h"
 #include "osr/routing/route.h"
@@ -177,7 +178,11 @@ elevator_footpath_map_t compute_footpaths(
                 [](auto&& a, auto&& b) { return a.target() < b.target(); },
                 [](auto&& a, auto&& b) { return a.target() == b.target(); },
                 utl::overloaded{
-                    [](n::footpath, n::footpath) { assert(false); },
+                    [](n::footpath, n::footpath) {
+                      utl::verify(
+                          false,
+                          "unexpected comparator invocation in sorted_diff");
+                    },
                     [&](utl::op const op, n::footpath const x) {
                       if (op == utl::op::kDel) {
                         auto const dist = geo::distance(
@@ -208,7 +213,9 @@ elevator_footpath_map_t compute_footpaths(
     for (auto const [i, out] : utl::enumerate(transfers)) {
       auto const l = n::location_idx_t{i};
       for (auto const fp : out) {
-        assert(fp.target() < tt.n_locations());
+        utl::verify(fp.target() < tt.n_locations(),
+                    "footpath target {} out of range {}", fp.target(),
+                    tt.n_locations());
         transfers_in[fp.target()].push_back(n::footpath{l, fp.duration()});
       }
     }

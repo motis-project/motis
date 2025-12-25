@@ -10,6 +10,7 @@
 
 #include "motis/parse_location.h"
 #include "motis/tag_lookup.h"
+#include "utl/verify.h"
 
 namespace n = nigiri;
 
@@ -71,11 +72,13 @@ osr::location get_location(n::timetable const* tt,
             switch (to_idx(l_idx)) {
               case static_cast<n::location_idx_t::value_t>(
                   n::special_station::kStart):
-                assert(std::holds_alternative<osr::location>(start));
+                utl::verify(std::holds_alternative<osr::location>(start),
+                            "start is not an osr::location");
                 return std::get<osr::location>(start);
               case static_cast<n::location_idx_t::value_t>(
                   n::special_station::kEnd):
-                assert(std::holds_alternative<osr::location>(dest));
+                utl::verify(std::holds_alternative<osr::location>(dest),
+                            "dest is not an osr::location");
                 return std::get<osr::location>(dest);
               default:
                 utl::verify(tt != nullptr,
