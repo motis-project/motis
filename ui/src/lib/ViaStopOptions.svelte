@@ -21,7 +21,7 @@
 	const possibleViaStayDurations = $derived([0, ...generateTimes(2 * 60 * 60)]);
 	const viaMinimumStayOptions = $derived(
 		possibleViaStayDurations.map((duration) => ({
-			value: duration.toString(),
+			value: (duration / 60).toString(),
 			label: formatDurationSec(duration)
 		}))
 	);
