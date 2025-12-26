@@ -6,7 +6,7 @@
 	import { t } from './i18n/translation';
 	import type { Location } from '$lib/Location';
 	import { generateTimes } from './generateTimes';
-	import { formatDurationSec } from './formatDuration';
+	import { formatDurationMin } from './formatDuration';
 
 	let {
 		via = $bindable(),
@@ -22,7 +22,7 @@
 	const viaMinimumStayOptions = $derived(
 		possibleViaStayDurations.map((duration) => ({
 			value: (duration / 60).toString(),
-			label: formatDurationSec(duration)
+			label: formatDurationMin(duration / 60)
 		}))
 	);
 
@@ -103,7 +103,7 @@
 							<NumberSelect
 								bind:value={vias[index].stay}
 								possibleValues={viaMinimumStayOptions}
-								labelFormatter={formatDurationSec}
+								labelFormatter={formatDurationMin}
 							/>
 						</div>
 					</div>
