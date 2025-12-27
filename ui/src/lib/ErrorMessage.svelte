@@ -41,7 +41,7 @@
 </script>
 
 <div
-	class="p-4 mx-auto my-4 w-96 flex flex-col items-center gap-5 rounded-lg border border-destructive/20"
+	class="p-4 my-4 mx-auto min-w-96 max-w-fit flex flex-col items-center gap-5 rounded-lg border border-destructive/20"
 >
 	<div class="flex items-center gap-4 mx-auto">
 		<Icon class="h-7 w-7 text-destructive" />
@@ -50,7 +50,7 @@
 			{getErrorType(status ?? 404)}
 		</h2>
 	</div>
-	<p class="text-lg text-muted-foreground mb-3">
+	<p class="text-lg text-muted-foreground max-w-[40ch] break-words">
 		{message}
 	</p>
 </div>
