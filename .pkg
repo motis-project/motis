@@ -25,7 +25,11 @@
 [net]
   url=git@github.com:motis-project/net.git
   branch=master
+<<<<<<< HEAD
   commit=bb00cafad46dd4ea4064b9651d982f31b9853c19
+=======
+  commit=f5201df5ee61e68f806509c1c7e30b34aa8bf513
+>>>>>>> dc392a02 (update net)
 [openapi-cpp]
   url=git@github.com:triptix-tech/openapi-cpp.git
   branch=master
