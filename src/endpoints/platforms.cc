@@ -1,6 +1,7 @@
 #include "motis/endpoints/platforms.h"
 
 #include "net/too_many_exception.h"
+
 #include "osr/geojson.h"
 
 namespace json = boost::json;
@@ -24,7 +25,7 @@ json::value platforms::operator()(json::value const& query) const {
   pl_.find(min, max, [&](osr::platform_idx_t const i) {
     if (level == osr::kNoLevel || pl_.get_level(w_, i) == level) {
       utl::verify<net::too_many_exception>(gj.features_.size() < kLimit,
-                                           "Too many platforms");
+                                           "too many platforms");
       gj.write_platform(i);
     }
   });

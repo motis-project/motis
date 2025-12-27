@@ -25,14 +25,14 @@ json::value update_elevator::operator()(json::value const& query) const {
   auto const rt_copy = rt_;
   auto const e = rt_copy->e_.get();
   utl::verify<net::not_found_exception>(e != nullptr,
-                                        "Elevators not available");
+                                        "elevators not available");
 
   auto const rtt = rt_copy->rtt_.get();
   auto elevators_copy = e->elevators_;
   auto const it =
       utl::find_if(elevators_copy, [&](auto&& x) { return x.id_ == id; });
   utl::verify<net::not_found_exception>(it != end(elevators_copy),
-                                        "Id ({}) not found", id);
+                                        "id {} not found", id);
 
   it->status_ = new_status;
   it->out_of_service_ = new_out_of_service;

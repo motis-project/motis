@@ -15,7 +15,6 @@
 #include "geo/box.h"
 #include "geo/polyline.h"
 #include "geo/polyline_format.h"
-#include "utl/verify.h"
 
 #include "nigiri/timetable.h"
 
@@ -97,8 +96,7 @@ api::rentals_response rental::operator()(
   };
 
   auto const multipoly_to_api = [&](tg_geom* const geom) {
-    utl::verify(tg_geom_typeof(geom) == TG_MULTIPOLYGON,
-                "unexpected geom type");
+    assert(tg_geom_typeof(geom) == TG_MULTIPOLYGON);
     auto mp = api::MultiPolygon{};
     for (auto i = 0; i != tg_geom_num_polys(geom); ++i) {
       auto const* poly = tg_geom_poly_at(geom, i);

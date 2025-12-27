@@ -39,7 +39,7 @@ api::geocode_response geocode::operator()(
   auto const place = params.place_.and_then([](std::string const& s) {
     auto const parsed = parse_location(s);
     utl::verify<net::bad_request_exception>(parsed.has_value(),
-                                            "Could not parse place {}", s);
+                                            "could not parse place {}", s);
     return std::optional{parsed.value().pos_};
   });
   auto const allowed_modes =

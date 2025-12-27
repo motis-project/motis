@@ -140,7 +140,7 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
 
   auto const max_results = config_.limits_.value().onetoall_max_results_;
   utl::verify<net::too_many_exception>(reachable.count() <= max_results,
-                                       "Results ({}) exceed server limit ({})",
+                                       "too many results: {} > {}",
                                        reachable.count(), max_results);
 
   auto all = std::vector<api::ReachablePlace>{};

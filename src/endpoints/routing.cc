@@ -425,7 +425,7 @@ std::pair<n::routing::query, std::optional<n::unixtime_t>> get_start_time(
         *query.time_.value_or(openapi::now()));
     utl::verify<net::bad_request_exception>(
         tt == nullptr || tt->external_interval().contains(t),
-        "Query time {} is outside of loaded timetable window {}", t,
+        "query time {} is outside of loaded timetable window {}", t,
         tt ? tt->external_interval() : n::interval<n::unixtime_t>{});
     auto const window =
         std::chrono::duration_cast<n::duration_t>(std::chrono::seconds{
@@ -703,12 +703,10 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
   auto const dest_ignore_return_constraints =
       query.arriveBy_ ? query.ignorePreTransitRentalReturnConstraints_
                       : query.ignorePostTransitRentalReturnConstraints_;
-  auto const max_search_window =
-      config_.limits_.value().plan_max_search_window_minutes_;
   utl::verify<net::too_many_exception>(
-      query.searchWindow_ / 60 < max_search_window,
-      "searchWindow size ({}) exceeded server limit ({})", query.searchWindow_,
-      max_search_window * 60);
+      query.searchWindow_ / 60 <
+          config_.limits_.value().plan_max_search_window_minutes_,
+      "maximum searchWindow size exceeded");
 
   auto const max_transfers =
       query.maxTransfers_.has_value() &&
@@ -746,13 +744,13 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
     auto const max_results = config_.limits_.value().plan_max_results_;
     utl::verify<net::too_many_exception>(
         query.numItineraries_ <= max_results,
-        "numItineraries exceeded server limit ({}) ", max_results);
+        "maximum number of minimum itineraries is {}", max_results);
     auto const max_timeout = std::chrono::seconds{
         config_.limits_.value().routing_max_timeout_seconds_};
     utl::verify<net::too_many_exception>(
         !query.timeout_.has_value() ||
             std::chrono::seconds{*query.timeout_} <= max_timeout,
-        "timeout exceeded server limit ({})", max_timeout);
+        "maximum allowed timeout is {}", max_timeout);
 
     auto const with_odm_pre_transit =
         utl::find(pre_transit_modes, api::ModeEnum::ODM) !=

@@ -30,7 +30,7 @@ api::Itinerary trip::operator()(boost::urls::url_view const& url) const {
 
   auto const [r, _] = tags_.get_trip(tt_, rtt, query.tripId_);
   utl::verify<net::not_found_exception>(r.valid(),
-                                        "Trip not found: tripId={}, tt={}",
+                                        "trip not found: tripId={}, tt={}",
                                         query.tripId_, tt_.external_interval());
 
   auto fr = n::rt::frun{tt_, rtt, r};

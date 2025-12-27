@@ -6,7 +6,6 @@
 #include <vector>
 
 #include "cista/strong.h"
-#include "utl/verify.h"
 
 namespace motis::gbfs {
 
@@ -32,7 +31,7 @@ struct partition {
     auto in_s =
         std::vector<bool>(static_cast<std::size_t>(cista::to_idx(n_)), false);
     for (auto const elem : s) {
-      utl::verify(elem < n_, "refine element {} out of range {}", elem, n_);
+      assert(elem < n_);
       in_s[static_cast<std::size_t>(cista::to_idx(elem))] = true;
     }
 
