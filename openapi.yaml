@@ -847,6 +847,12 @@ paths:
               - TB
             default: PONG
       responses:
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '404':
           description: Not Found
           content:
@@ -1281,6 +1287,12 @@ paths:
             minimum: 0
 
       responses:
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '404':
           description: Not Found
           content:
@@ -1480,7 +1492,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Itinerary'
+                $ref: '#/components/schemas/Itinerary' 
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '400':
           description: Bad Request
           content:
@@ -1642,6 +1660,12 @@ paths:
               type: string
           explode: false
       responses:
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '404':
           description: Not Found
           content:
@@ -1746,6 +1770,12 @@ paths:
               type: string
           explode: false
       responses:
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '400':
           description: Bad Request
           content:
@@ -1843,6 +1873,12 @@ paths:
           explode: false
 
       responses:
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '500':
           description: Internal Server Error
           content:
@@ -1892,6 +1928,12 @@ paths:
       responses:
         '500':
           description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Unprocessable Entity
           content:
             application/json:
               schema:
