@@ -1,6 +1,6 @@
-#include <ctime>
-
 #include "motis/tag_lookup.h"
+
+#include <ctime>
 
 #include "fmt/chrono.h"
 #include "fmt/core.h"
@@ -8,12 +8,15 @@
 #include "cista/io.h"
 
 #include "utl/enumerate.h"
+#include "utl/parser/split.h"
 #include "utl/verify.h"
+
+#include "net/bad_request_exception.h"
+#include "net/not_found_exception.h"
 
 #include "nigiri/rt/frun.h"
 #include "nigiri/rt/gtfsrt_resolve_run.h"
 #include "nigiri/timetable.h"
-#include "utl/parser/split.h"
 
 namespace n = nigiri;
 
@@ -25,19 +28,23 @@ trip_id<std::string_view> split_trip_id(std::string_view id) {
 
   auto ret = motis::trip_id{};
 
-  utl::verify(date.valid(), "invalid tripId date {}", id);
+  utl::verify<net::bad_request_exception>(date.valid(),
+                                          "invalid tripId date {}", id);
   ret.start_date_ = date.view();
 
-  utl::verify(start_time.valid(), "invalid tripId start_time {}", id);
+  utl::verify<net::bad_request_exception>(start_time.valid(),
+                                          "invalid tripId start_time {}", id);
   ret.start_time_ = start_time.view();
 
-  utl::verify(tag.valid(), "invalid tripId tag {}", id);
+  utl::verify<net::bad_request_exception>(tag.valid(), "invalid tripId tag {}",
+                                          id);
   ret.tag_ = tag.view();
 
   // allow trip ids starting with underscore
   auto const trip_id_len_plus_one =
       static_cast<std::size_t>(id.data() + id.size() - tag.str) - tag.length();
-  utl::verify(trip_id_len_plus_one > 1, "invalid tripId id {}", id);
+  utl::verify<net::bad_request_exception>(trip_id_len_plus_one > 1,
+                                          "invalid tripId id {}", id);
   ret.trip_id_ =
       std::string_view{tag.str + tag.length() + 1, trip_id_len_plus_one - 1};
 
@@ -53,7 +60,8 @@ std::pair<std::string_view, std::string_view> split_tag_id(std::string_view x) {
 }
 
 void tag_lookup::add(n::source_idx_t const src, std::string_view str) {
-  utl::verify(tag_to_src_.size() == to_idx(src), "invalid tag");
+  utl::verify<net::bad_request_exception>(tag_to_src_.size() == to_idx(src),
+                                          "invalid tag");
   tag_to_src_.emplace(std::string{str}, src);
   src_to_tag_.emplace_back(str);
 }
@@ -138,8 +146,8 @@ nigiri::location_idx_t tag_lookup::get_location(nigiri::timetable const& tt,
   try {
     return tt.locations_.location_id_to_idx_.at({{id}, src});
   } catch (...) {
-    throw utl::fail(
-        R"(could not find timetable location "{}", tag="{}", id="{}", src={})",
+    throw utl::fail<net::not_found_exception>(
+        R"(Could not find timetable location "{}", tag="{}", id="{}", src={})",
         s, tag, id, static_cast<int>(to_idx(src)));
   }
 }

@@ -2,6 +2,8 @@
 
 #include "utl/to_vec.h"
 
+#include "net/bad_request_exception.h"
+
 #include "osr/geojson.h"
 
 #include "nigiri/timetable.h"
@@ -47,8 +49,10 @@ boost::json::value flex_locations::operator()(
   auto const min = parse_location(query.min_);
   auto const max = parse_location(query.max_);
 
-  utl::verify(min.has_value(), "min not a coordinate: {}", query.min_);
-  utl::verify(max.has_value(), "max not a coordinate: {}", query.max_);
+  utl::verify<net::bad_request_exception>(
+      min.has_value(), "min not a coordinate: {}", query.min_);
+  utl::verify<net::bad_request_exception>(
+      max.has_value(), "max not a coordinate: {}", query.max_);
 
   auto features = json::array{};
   tt_.flex_area_rtree_.search(

@@ -40,6 +40,10 @@ export type TimeRange = {
  */
 export type Alert = {
     /**
+     * Attribute or notice code (e.g. for HRDF or NeTEx)
+     */
+    code?: string;
+    /**
      * Time when the alert should be shown to the user.
      * If missing, the alert will be shown as long as it appears in the feed.
      * If multiple ranges are given, the alert will be shown during all of them.
@@ -1418,7 +1422,10 @@ export type ServerConfig = {
 };
 
 export type Error = {
-    error?: string;
+    /**
+     * error message
+     */
+    error: string;
 };
 
 export type PlanData = {
@@ -2456,6 +2463,12 @@ export type TripsData = {
          */
         endTime: string;
         /**
+         * language tags as used in OpenStreetMap / GTFS
+         * (usually BCP-47 / ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
+         *
+         */
+        language?: Array<(string)>;
+        /**
          * latitude,longitude pair of the upper left coordinate
          */
         max: string;
@@ -2498,6 +2511,12 @@ export type InitialError = (Error);
 
 export type StopsData = {
     query: {
+        /**
+         * language tags as used in OpenStreetMap / GTFS
+         * (usually BCP-47 / ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
+         *
+         */
+        language?: Array<(string)>;
         /**
          * latitude,longitude pair of the upper left coordinate
          */

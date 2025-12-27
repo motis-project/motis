@@ -2,6 +2,8 @@
 
 #include <chrono>
 
+#include "net/not_found_exception.h"
+
 #include "nigiri/routing/journey.h"
 #include "nigiri/rt/frun.h"
 #include "nigiri/rt/gtfsrt_resolve_run.h"
@@ -27,8 +29,9 @@ api::Itinerary trip::operator()(boost::urls::url_view const& url) const {
   auto const api_version = get_api_version(url);
 
   auto const [r, _] = tags_.get_trip(tt_, rtt, query.tripId_);
-  utl::verify(r.valid(), "trip not found: tripId={}, tt={}", query.tripId_,
-              tt_.external_interval());
+  utl::verify<net::not_found_exception>(r.valid(),
+                                        "trip not found: tripId={}, tt={}",
+                                        query.tripId_, tt_.external_interval());
 
   auto fr = n::rt::frun{tt_, rtt, r};
   fr.stop_range_.to_ = fr.size();
