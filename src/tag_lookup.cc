@@ -1,6 +1,6 @@
-#include <ctime>
-
 #include "motis/tag_lookup.h"
+
+#include <ctime>
 
 #include "fmt/chrono.h"
 #include "fmt/core.h"
@@ -9,6 +9,7 @@
 
 #include "utl/enumerate.h"
 #include "utl/verify.h"
+#include "utl/parser/split.h"
 
 #include "net/bad_request_exception.h"
 #include "net/not_found_exception.h"
@@ -16,7 +17,6 @@
 #include "nigiri/rt/frun.h"
 #include "nigiri/rt/gtfsrt_resolve_run.h"
 #include "nigiri/timetable.h"
-#include "utl/parser/split.h"
 
 namespace n = nigiri;
 
