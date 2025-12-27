@@ -360,8 +360,7 @@ struct gbfs_update {
         it != end(d_->provider_by_id_)) {
       // existing provider, keep idx
       auto const idx = it->second;
-      utl::verify(d_->providers_.at(idx) == nullptr,
-                  "provider slot {} already in use", idx);
+      assert(d_->providers_.at(idx) == nullptr);
       d_->providers_[idx] = std::make_unique<gbfs_provider>();
       auto& provider = *d_->providers_[idx].get();
       init_provider(provider, idx);

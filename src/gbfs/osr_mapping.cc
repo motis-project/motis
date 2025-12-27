@@ -16,7 +16,6 @@
 #include "utl/enumerate.h"
 #include "utl/helpers/algorithm.h"
 #include "utl/to_vec.h"
-#include "utl/verify.h"
 #include "utl/zip.h"
 
 #include "motis/constants.h"
@@ -354,11 +353,9 @@ struct osr_mapping {
         w_.n_nodes() + rd.additional_nodes_.size());
     rd.additional_nodes_.push_back(std::move(an));
     rd.additional_node_coordinates_.push_back(pos);
-    utl::verify(
-        rd.start_allowed_.size() >=
-            static_cast<typename osr::bitvec<osr::node_idx_t>::size_type>(
-                node_id + 1),
-        "insufficient start_allowed_ size for node {}", node_id);
+    assert(rd.start_allowed_.size() >=
+           static_cast<typename osr::bitvec<osr::node_idx_t>::size_type>(
+               node_id + 1));
     return node_id;
   }
 

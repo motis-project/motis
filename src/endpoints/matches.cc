@@ -1,6 +1,7 @@
 #include "motis/endpoints/matches.h"
 
 #include "net/too_many_exception.h"
+
 #include "osr/geojson.h"
 
 #include "motis/location_routes.h"
@@ -32,7 +33,7 @@ json::value matches::operator()(json::value const& query) const {
 
   pl_.find(min, max, [&](osr::platform_idx_t const p) {
     utl::verify<net::too_many_exception>(matches.size() < kLimit,
-                                         "Too many items");
+                                         "too many items");
 
     auto const center = get_platform_center(pl_, w_, p);
     if (!center.has_value()) {
@@ -49,7 +50,7 @@ json::value matches::operator()(json::value const& query) const {
 
   loc_rtree_.find({min, max}, [&](n::location_idx_t const l) {
     utl::verify<net::too_many_exception>(matches.size() < kLimit,
-                                         "Too many items");
+                                         "too many items");
 
     auto const pos = tt_.locations_.coordinates_[l];
     auto const match = get_match(tt_, pl_, w_, l);

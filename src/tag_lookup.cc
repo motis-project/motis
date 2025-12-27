@@ -29,14 +29,14 @@ trip_id<std::string_view> split_trip_id(std::string_view id) {
   auto ret = motis::trip_id{};
 
   utl::verify<net::bad_request_exception>(date.valid(),
-                                          "Invalid tripId date {}", id);
+                                          "invalid tripId date {}", id);
   ret.start_date_ = date.view();
 
   utl::verify<net::bad_request_exception>(start_time.valid(),
-                                          "Invalid tripId start_time {}", id);
+                                          "invalid tripId start_time {}", id);
   ret.start_time_ = start_time.view();
 
-  utl::verify<net::bad_request_exception>(tag.valid(), "Invalid tripId tag {}",
+  utl::verify<net::bad_request_exception>(tag.valid(), "invalid tripId tag {}",
                                           id);
   ret.tag_ = tag.view();
 
@@ -44,7 +44,7 @@ trip_id<std::string_view> split_trip_id(std::string_view id) {
   auto const trip_id_len_plus_one =
       static_cast<std::size_t>(id.data() + id.size() - tag.str) - tag.length();
   utl::verify<net::bad_request_exception>(trip_id_len_plus_one > 1,
-                                          "Invalid tripId id {}", id);
+                                          "invalid tripId id {}", id);
   ret.trip_id_ =
       std::string_view{tag.str + tag.length() + 1, trip_id_len_plus_one - 1};
 
@@ -61,7 +61,7 @@ std::pair<std::string_view, std::string_view> split_tag_id(std::string_view x) {
 
 void tag_lookup::add(n::source_idx_t const src, std::string_view str) {
   utl::verify<net::bad_request_exception>(tag_to_src_.size() == to_idx(src),
-                                          "Invalid tag");
+                                          "invalid tag");
   tag_to_src_.emplace(std::string{str}, src);
   src_to_tag_.emplace_back(str);
 }

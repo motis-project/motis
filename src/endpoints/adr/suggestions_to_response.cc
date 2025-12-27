@@ -4,7 +4,6 @@
 #include "utl/helpers/algorithm.h"
 #include "utl/overloaded.h"
 #include "utl/to_vec.h"
-#include "utl/verify.h"
 #include "utl/visit.h"
 
 #include "nigiri/timetable.h"
@@ -101,7 +100,7 @@ api::geocode_response suggestions_to_response(
 
     auto tokens = std::vector<std::vector<double>>{};
     utl::for_each_set_bit(s.matched_tokens_, [&](auto const i) {
-      utl::verify(i < token_pos.size(), "token_pos index {} out of range", i);
+      assert(i < token_pos.size());
       tokens.emplace_back(
           std::vector<double>{static_cast<double>(token_pos[i].start_idx_),
                               static_cast<double>(token_pos[i].size_)});

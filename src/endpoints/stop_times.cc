@@ -99,8 +99,7 @@ struct static_ev_iterator : public ev_iterator {
   }
 
   n::rt::run get() const override {
-    utl::verify(is_active(),
-                "static_ev_iterator::get called when iterator is not active");
+    assert(is_active());
     return n::rt::run{
         .t_ = t(),
         .stop_range_ = {stop_idx_, static_cast<n::stop_idx_t>(stop_idx_ + 1U)}};
@@ -159,12 +158,9 @@ struct rt_ev_iterator : public ev_iterator {
             !n::routing::is_allowed(
                 allowed_clasz, rtt.rt_transport_section_clasz_[rt_t].at(0)) ||
             (dir == n::direction::kForward ? time() < start : time() > start)} {
-    utl::verify(
-        (ev_type == n::event_type::kDep &&
-         stop_idx_ < rtt_.rt_transport_location_seq_[rt_t].size() - 1U) ||
-            (ev_type == n::event_type::kArr && stop_idx_ > 0U),
-        "invalid event type/stop_idx combination: ev_type={}, stop_idx={}",
-        static_cast<int>(ev_type), static_cast<int>(stop_idx_));
+    assert((ev_type == n::event_type::kDep &&
+            stop_idx_ < rtt_.rt_transport_location_seq_[rt_t].size() - 1U) ||
+           (ev_type == n::event_type::kArr && stop_idx_ > 0U));
   }
 
   ~rt_ev_iterator() override = default;
@@ -282,7 +278,7 @@ std::vector<n::rt::run> get_events(
           }
           return fwd ? a->time() < b->time() : a->time() > b->time();
         });
-    utl::verify(!(*it)->finished(), "selected iterator finished unexpectedly");
+    assert(!(*it)->finished());
     if (evs.size() >= count && (*it)->time() != last_time) {
       break;
     }
@@ -354,8 +350,7 @@ api::stoptimes_response stop_times::operator()(
 
   auto const max_results = config_.limits_.value().stoptimes_max_results_;
   utl::verify<net::too_many_exception>(
-      query.n_ < max_results, "results ({}) exceeded server limit ({}})",
-      query.n_, max_results);
+      query.n_ < max_results, "n={} > {} not allowed", query.n_, max_results);
 
   auto const x = tags_.get_location(tt_, query.stopId_);
   auto const l = tt_.locations_.get_root_idx(x);

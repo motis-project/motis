@@ -68,7 +68,7 @@ static utl::generator<std::pair<Time, std::vector<bool>>> get_state_changes(
         return a.curr_->valid_from_ < b.curr_->valid_from_;
       }
     });
-    utl::verify(it != end(its), "get_state_changes: no next range found");
+    assert(it != end(its));
     return *it;
   };
 
