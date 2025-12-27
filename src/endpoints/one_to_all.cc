@@ -3,9 +3,10 @@
 #include <chrono>
 #include <vector>
 
+#include "utl/verify.h"
+
 #include "net/bad_request_exception.h"
 #include "net/too_many_exception.h"
-#include "utl/verify.h"
 
 #include "nigiri/common/delta_t.h"
 #include "nigiri/routing/limits.h"

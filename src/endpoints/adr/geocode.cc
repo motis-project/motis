@@ -7,6 +7,8 @@
 
 #include "fmt/format.h"
 
+#include "net/bad_request_exception.h"
+
 #include "nigiri/timetable.h"
 
 #include "adr/adr.h"
@@ -16,7 +18,6 @@
 #include "motis/endpoints/adr/suggestions_to_response.h"
 #include "motis/parse_location.h"
 #include "motis/timetable/modes_to_clasz_mask.h"
-#include "net/bad_request_exception.h"
 
 namespace n = nigiri;
 namespace a = adr;

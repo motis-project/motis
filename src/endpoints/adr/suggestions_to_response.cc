@@ -5,6 +5,7 @@
 #include "utl/overloaded.h"
 #include "utl/to_vec.h"
 #include "utl/visit.h"
+#include "utl/verify.h"
 
 #include "nigiri/timetable.h"
 
@@ -13,7 +14,6 @@
 #include "motis/journey_to_response.h"
 #include "motis/tag_lookup.h"
 #include "motis/timetable/clasz_to_mode.h"
-#include "utl/verify.h"
 
 namespace a = adr;
 namespace n = nigiri;
