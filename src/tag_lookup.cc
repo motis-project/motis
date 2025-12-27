@@ -8,8 +8,8 @@
 #include "cista/io.h"
 
 #include "utl/enumerate.h"
-#include "utl/verify.h"
 #include "utl/parser/split.h"
+#include "utl/verify.h"
 
 #include "net/bad_request_exception.h"
 #include "net/not_found_exception.h"

@@ -4,8 +4,8 @@
 #include "utl/helpers/algorithm.h"
 #include "utl/overloaded.h"
 #include "utl/to_vec.h"
-#include "utl/visit.h"
 #include "utl/verify.h"
+#include "utl/visit.h"
 
 #include "nigiri/timetable.h"
 
