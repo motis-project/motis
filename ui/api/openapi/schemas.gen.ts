@@ -47,6 +47,10 @@ export const AlertSchema = {
     type: 'object',
     required: ['headerText', 'descriptionText'],
     properties: {
+        code: {
+            type: 'string',
+            description: 'Attribute or notice code (e.g. for HRDF or NeTEx)'
+        },
         communicationPeriod: {
             description: `Time when the alert should be shown to the user.
 If missing, the alert will be shown as long as it appears in the feed.

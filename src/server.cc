@@ -31,6 +31,14 @@ int server(data d, config const& c, std::string_view const motis_version) {
   auto m = motis_instance{ctx_exec{scheduler.runner_.ios(), scheduler}, d, c,
                           motis_version};
 
+  auto lbs = std::vector<net::lb>{};
+  if (c.server_.value_or(config::server{}).lbs_) {
+    lbs = utl::to_vec(*c.server_.value_or(config::server{}).lbs_,
+                      [&](std::string const& url) {
+                        return net::lb{scheduler.runner_.ios(), url, m.qr_};
+                      });
+  }
+
   auto s = net::web_server{scheduler.runner_.ios()};
   s.set_timeout(std::chrono::minutes{5});
   s.on_http_request(m.qr_);
@@ -45,6 +53,9 @@ int server(data d, config const& c, std::string_view const motis_version) {
 
   auto const stop = net::stop_handler(scheduler.runner_.ios(), [&]() {
     utl::log_info("motis.server", "shutdown");
+    for (auto& lb : lbs) {
+      lb.stop();
+    }
     s.stop();
     m.stop();
     scheduler.runner_.stop();
@@ -56,6 +67,9 @@ int server(data d, config const& c, std::string_view const motis_version) {
       c.n_threads(), server_config.host_, server_config.port_,
       server_config.port_);
 
+  for (auto& lb : lbs) {
+    lb.run();
+  }
   s.run();
   m.run(d, c);
   scheduler.runner_.run(c.n_threads());
