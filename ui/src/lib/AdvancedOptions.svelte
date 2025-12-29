@@ -89,7 +89,7 @@
 		viaLabels: Record<string, string>;
 		pedestrianSpeed: PedestrianSpeed;
 		cyclingSpeed: CyclingSpeed;
-		additionalTransferTime: number;
+		additionalTransferTime: number | undefined;
 		additionalComponents?: Snippet;
 		pedestrianProfile: PedestrianProfile;
 	} = $props();
@@ -145,7 +145,7 @@
 	let allowStreetRouting = $derived(serverConfig?.hasStreetRouting);
 	let allowRoutedTransfers = $derived(serverConfig?.hasRoutedTransfers);
 	$effect(() => {
-		transferTimeFactor = Math.max(1, pedestrianSpeed / defaultQuery.pedestrianSpeed);
+		transferTimeFactor = Math.max(1, defaultQuery.pedestrianSpeed / pedestrianSpeed);
 	});
 </script>
 
@@ -281,10 +281,12 @@
 					max={pedestrianProfile == 'FOOT' ? 2 : 1.6}
 					bind:value={pedestrianSpeed}
 				/>
+				<div class="text-sm">{pedestrianSpeed} m/s</div>
 			</div>
 			<div class="grid grid-cols-[1fr_2fr_1fr] items-center gap-2">
 				<span class="text-sm">{t.routingSegments.cyclingSpeed}</span>
 				<Slider min={2.7} max={7} step={0.1} disabled={!hasBikeMode} bind:value={cyclingSpeed} />
+				<div class="text-sm">{cyclingSpeed} m/s</div>
 			</div>
 		</div>
 

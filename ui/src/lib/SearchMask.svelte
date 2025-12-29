@@ -84,7 +84,7 @@
 		viaLabels: Record<string, string>;
 		pedestrianSpeed: PedestrianSpeed;
 		cyclingSpeed: CyclingSpeed;
-		additionalTransferTime: number;
+		additionalTransferTime: number | undefined;
 	} = $props();
 
 	let fromItems = $state<Array<Location>>([]);

@@ -41,7 +41,7 @@ export const defaultQuery = {
 	pedestrianSpeed: 1.2,
 	cyclingSpeed: 4.2,
 	fastestDirectFactor: 1.0,
-	additionalTransferTime: 0,
+	additionalTransferTime: undefined,
 	transferTimeFactor: 1,
 	numItineraries: 5,
 	circleResolution: undefined,

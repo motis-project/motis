@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.20)
 project(motis LANGUAGES C CXX ASM)
 
 set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 option(MOTIS_MIMALLOC "use mimalloc" OFF)
 
