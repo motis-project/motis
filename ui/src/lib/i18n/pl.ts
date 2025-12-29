@@ -29,6 +29,7 @@ const translations: Translations = {
 	addViaStop: 'Dodaj przystanek pośredni',
 	removeViaStop: 'Usuń przystanek pośredni',
 	viaStayDuration: 'Minimalny postój',
+	position: 'Pozycja',
 	arrival: 'Przyjazd',
 	departure: 'Odjazd',
 	duration: 'Czas trwania',

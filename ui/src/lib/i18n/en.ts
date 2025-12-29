@@ -29,6 +29,7 @@ const translations: Translations = {
 	addViaStop: 'Add via stop',
 	removeViaStop: 'Remove via stop',
 	viaStayDuration: 'Minimum stay',
+	position: 'Position',
 	arrival: 'Arrival',
 	departure: 'Departure',
 	connections: 'Connections',

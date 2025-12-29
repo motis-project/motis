@@ -83,12 +83,3 @@ export const parseIDToLocation = (place: string, name?: string | undefined | nul
 		}
 	};
 };
-
-export const parseLocations = (places?: string[], names?: string[]): Location[] => {
-	if (!places || places.length === 0) return [];
-	const locations: Location[] = [];
-	for (let i = 0; i < places.length; ++i) {
-		locations.push(parseLocation(places[i], names && names.length > i ? names[i] : undefined));
-	}
-	return locations;
-};

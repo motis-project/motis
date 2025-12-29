@@ -28,6 +28,7 @@ const translations: Translations = {
 	viaStops: 'Mezizastávky',
 	addViaStop: 'Přidat mezizastávku',
 	removeViaStop: 'Odebrat mezizastávku',
+	position: 'Pozice',
 	arrival: 'Příjezd',
 	departure: 'Odjezd',
 	duration: 'Čas cesty',
