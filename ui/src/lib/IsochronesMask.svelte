@@ -65,7 +65,7 @@
 		maxTransfers: number;
 		preTransitModes: PrePostDirectMode[];
 		postTransitModes: PrePostDirectMode[];
-		additionalTransferTime: number;
+		additionalTransferTime: number | undefined;
 		transferTimeFactor: number;
 		cyclingSpeed: CyclingSpeed;
 		pedestrianSpeed: PedestrianSpeed;
