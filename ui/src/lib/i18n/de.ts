@@ -118,7 +118,7 @@ const translations: Translations = {
 		maxDirectTime: 'Max. Direktzeit',
 		additionalTransferTime: 'Zusätzliche Umstiegszeit',
 		pedestrianSpeed: 'Fußgängergeschwindigkeit',
-		cyclingSpeed: 'Fahrradtgeschwindigkeit',
+		cyclingSpeed: 'Fahrradgeschwindigkeit',
 		transferTimeFactor: 'Umstiegszeitfaktor'
 	},
 	elevationCosts: { NONE: 'Keine Umwege', LOW: 'Kleine Umwege', HIGH: 'Große Umwege' },
