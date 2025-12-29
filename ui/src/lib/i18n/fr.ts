@@ -115,7 +115,7 @@ const translations: Translations = {
 		maxPreTransitTime: 'Durée max. avant transit',
 		maxPostTransitTime: 'Durée max. après transit',
 		maxDirectTime: 'Durée max. directe',
-		additionalTransferTime: 'Durée de transfert supplémentaire',
+		additionalTransferTime: 'Durée de correspondance supplémentaire',
 		pedestrianSpeed: 'Vitesse piéton',
 		cyclingSpeed: 'Vitesse vélo',
 		transferTimeFactor: 'Facteur de durée de transfert'
