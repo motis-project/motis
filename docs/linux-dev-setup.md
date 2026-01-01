@@ -37,6 +37,6 @@ ninja
 git clone git@github.com:motis-project/motis.git
 cd motis
 mkdir build && cd build
-CXX=clang++-18 CC=clang-18 CXXFLAGS=-stdlib=libc++ cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -GNinja ..
+CXX=clang++-21 CC=clang-21 CXXFLAGS=-stdlib=libc++ cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -GNinja ..
 ninja
 ```

@@ -70,8 +70,8 @@
       "generator": "Ninja",
       "binaryDir": "${sourceDir}/build/sanitizer",
       "cacheVariables": {
-        "CMAKE_C_COMPILER": "clang-18",
-        "CMAKE_CXX_COMPILER": "clang++-18",
+        "CMAKE_C_COMPILER": "clang-21",
+        "CMAKE_CXX_COMPILER": "clang++-21",
         "CMAKE_EXE_LINKER_FLAGS": "-lc++abi",
         "CMAKE_BUILD_TYPE": "Debug",
         "CTX_ASAN": "ON",
@@ -119,8 +119,8 @@
       "generator": "Ninja",
       "binaryDir": "${sourceDir}/build/clang-tidy",
       "cacheVariables": {
-        "CMAKE_C_COMPILER": "clang-18",
-        "CMAKE_CXX_COMPILER": "clang++-18",
+        "CMAKE_C_COMPILER": "clang-21",
+        "CMAKE_CXX_COMPILER": "clang++-21",
         "CMAKE_CXX_FLAGS": "-stdlib=libc++",
         "CMAKE_EXE_LINKER_FLAGS": "-lc++abi",
         "CMAKE_BUILD_TYPE": "Release",
