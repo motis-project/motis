@@ -66,7 +66,7 @@ jobs:
         run: |
           find include src test \
             -type f -a \( -name "*.cc" -o -name "*.h" -o -name ".cuh" -o -name ".cu" \) \
-            -print0 | xargs -0 clang-format-18 -i
+            -print0 | xargs -0 clang-format-21 -i
 
       - name: Check for differences
         run: |
@@ -444,5 +444,5 @@ jobs:
         working-directory: ui/api
       - run: pnpm run build
         working-directory: ui/api
-      - run: npm publish --provenance --access public   
+      - run: npm publish --provenance --access public
         working-directory: ui/api
