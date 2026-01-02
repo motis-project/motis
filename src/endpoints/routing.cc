@@ -5,7 +5,8 @@
 
 #include "boost/thread/tss.hpp"
 
-#include "openapi/bad_request_exception.h"
+#include "net/bad_request_exception.h"
+#include "net/too_many_exception.h"
 
 #include "prometheus/counter.h"
 #include "prometheus/histogram.h"
@@ -422,7 +423,7 @@ std::pair<n::routing::query, std::optional<n::unixtime_t>> get_start_time(
   } else {
     auto const t = std::chrono::time_point_cast<n::i32_minutes>(
         *query.time_.value_or(openapi::now()));
-    utl::verify<openapi::bad_request_exception>(
+    utl::verify<net::bad_request_exception>(
         tt == nullptr || tt->external_interval().contains(t),
         "query time {} is outside of loaded timetable window {}", t,
         tt ? tt->external_interval() : n::interval<n::unixtime_t>{});
@@ -630,7 +631,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
   metrics_->routing_requests_.Increment();
 
   auto const query = api::plan_params{url.params()};
-  utl::verify<openapi::bad_request_exception>(
+  utl::verify<net::bad_request_exception>(
       !query.maxItineraries_.has_value() ||
           (*query.maxItineraries_ >= 1 &&
            *query.maxItineraries_ >= query.numItineraries_),
@@ -702,10 +703,10 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
   auto const dest_ignore_return_constraints =
       query.arriveBy_ ? query.ignorePreTransitRentalReturnConstraints_
                       : query.ignorePostTransitRentalReturnConstraints_;
-
-  utl::verify(query.searchWindow_ / 60 <
-                  config_.limits_.value().plan_max_search_window_minutes_,
-              "maximum searchWindow size exceeded");
+  utl::verify<net::too_many_exception>(
+      query.searchWindow_ / 60 <
+          config_.limits_.value().plan_max_search_window_minutes_,
+      "maximum searchWindow size exceeded");
 
   auto const max_transfers =
       query.maxTransfers_.has_value() &&
@@ -741,13 +742,15 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                 "mode=TRANSIT requires timetable to be loaded");
 
     auto const max_results = config_.limits_.value().plan_max_results_;
-    utl::verify(query.numItineraries_ <= max_results,
-                "maximum number of minimum itineraries is {}", max_results);
+    utl::verify<net::too_many_exception>(
+        query.numItineraries_ <= max_results,
+        "maximum number of minimum itineraries is {}", max_results);
     auto const max_timeout = std::chrono::seconds{
         config_.limits_.value().routing_max_timeout_seconds_};
-    utl::verify(!query.timeout_.has_value() ||
-                    std::chrono::seconds{*query.timeout_} <= max_timeout,
-                "maximum allowed timeout is {}", max_timeout);
+    utl::verify<net::too_many_exception>(
+        !query.timeout_.has_value() ||
+            std::chrono::seconds{*query.timeout_} <= max_timeout,
+        "maximum allowed timeout is {}", max_timeout);
 
     auto const with_odm_pre_transit =
         utl::find(pre_transit_modes, api::ModeEnum::ODM) !=
