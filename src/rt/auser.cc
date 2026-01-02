@@ -42,10 +42,16 @@ n::rt::vdv_aus::statistics auser::consume_update(
     auto const prev_update = update_state_;
     update_state_ =
         upd_.get_format() == n::rt::vdv_aus::updater::xml_format::kVdv
-            ? vdvaus.child("DatenAbrufenAntwort")
-                  .child("AUSNachricht")
-                  .attribute("auser_id")
-                  .as_llong(0ULL)
+            ? [&]() {
+              auto const opt1 = vdvaus.child("DatenAbrufenAntwort")
+                 .child("AUSNachricht")
+                 .attribute("auser_id")
+                 .as_llong(0ULL);
+              auto const opt2 = vdvaus.child("AUSNachricht")
+                 .attribute("auser_id")
+                 .as_llong(0ULL);
+              return opt1 ? opt1 : opt2;
+            }()
             : n::parse_time_no_tz(vdvaus.child("Siri")
                                       .child("ServiceDelivery")
                                       .child_value("ResponseTimestamp"))
