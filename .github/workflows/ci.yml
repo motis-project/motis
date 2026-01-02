@@ -279,6 +279,8 @@ jobs:
         config:
           - preset: linux-amd64-release
             artifact: linux-amd64
+          - preset: linux-arm64-release
+            artifact: linux-arm64
           - preset: linux-sanitizer
           - preset: linux-debug
             emulator: valgrind --suppressions=deps/osr/docs/tbb.supp --suppressions=deps/osr/docs/pthread.supp --suppressions=tools/suppress.txt --leak-check=full --gen-suppressions=all --error-exitcode=1
@@ -313,11 +315,12 @@ jobs:
 
       # ==== TESTS ====
       - name: Run Integration Tests
+        if: matrix.config.preset != 'linux-arm64-release'
         run: ${{ matrix.config.emulator }} build/motis-test
 
       # ==== FULL DATASET TEST ====
       - name: Test Full Dataset
-        if: matrix.config.preset != 'linux-debug'
+        if: matrix.config.preset != 'linux-debug' && matrix.config.preset != 'linux-arm64-release'
         run: |
           ln -s deps/tiles/profile tiles-profiles
           wget -N https://github.com/motis-project/test-data/raw/aachen/aachen.osm.pbf
@@ -409,7 +412,7 @@ jobs:
           context: .
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          platforms: linux/amd64
+          platforms: linux/amd64,linux/arm64
 
   publish-motis-client:
     if: github.event.action == 'published'
