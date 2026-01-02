@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { CircleAlert, SearchX, ServerCrash } from '@lucide/svelte';
+	import { CircleAlert, CircleCheck, SearchX, ServerCrash } from '@lucide/svelte';
 
 	let {
 		message,
@@ -11,6 +11,8 @@
 
 	const getErrorType = (status: number) => {
 		switch (status) {
+			case 200:
+				return 'OK';
 			case 400:
 				return 'Bad Request';
 			case 404:
@@ -26,6 +28,8 @@
 
 	const getErrorIcon = (status: number) => {
 		switch (status) {
+			case 200:
+				return CircleCheck;
 			case 400:
 				return CircleAlert;
 			case 404:

@@ -433,23 +433,30 @@
 				isochronesOptions.status = 'WORKING';
 				isochronesOptions.errorMessage = undefined;
 				isochronesQueryTimeout = setTimeout(async () => {
-					const { data, error, response } = await oneToAll(isochronesQuery);
-					if (error) {
+					try {
+						const { data, error, response } = await oneToAll(isochronesQuery);
+						if (error) {
+							isochronesOptions.status = 'FAILED';
+							isochronesOptions.errorCode = response.status;
+							isochronesOptions.errorMessage = error.error;
+							return;
+						}
+						const all = data!.all!.map((p: ReachablePlace) => {
+							return {
+								lat: p.place?.lat,
+								lng: p.place?.lon,
+								seconds: maxTravelTime - 60 * (p.duration ?? 0),
+								name: p.place?.name
+							} as IsochronesPos;
+						});
+
+						isochronesData = [...all];
+						isochronesOptions.status = isochronesData.length == 0 ? 'EMPTY' : 'WORKING';
+					} catch (e) {
 						isochronesOptions.status = 'FAILED';
-						isochronesOptions.errorCode = response.status;
-						isochronesOptions.errorMessage = error.error;
-						return;
+						isochronesOptions.errorMessage = String(e);
+						isochronesOptions.errorCode = 404;
 					}
-					const all = data!.all!.map((p: ReachablePlace) => {
-						return {
-							lat: p.place?.lat,
-							lng: p.place?.lon,
-							seconds: maxTravelTime - 60 * (p.duration ?? 0),
-							name: p.place?.name
-						} as IsochronesPos;
-					});
-					isochronesData = [...all];
-					isochronesOptions.status = isochronesData.length == 0 ? 'EMPTY' : 'WORKING';
 				}, 60);
 			}
 			untrack(() => {
