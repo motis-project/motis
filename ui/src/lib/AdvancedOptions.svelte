@@ -163,54 +163,54 @@
 		<TransitModeSelect bind:transitModes />
 
 		<div class="space-y-2">
-			<Switch
-				bind:checked={useRoutedTransfers}
-				disabled={!allowRoutedTransfers}
-				label={t.useRoutedTransfers}
-				id="useRoutedTransfers"
-				onCheckedChange={(checked) => {
-					if (wheelchair && !checked) {
-						wheelchair = false;
-					}
-				}}
-			/>
+			<div class="grid grid-cols-2">
+				<Switch
+					bind:checked={useRoutedTransfers}
+					disabled={!allowRoutedTransfers}
+					label={t.useRoutedTransfers}
+					id="useRoutedTransfers"
+					onCheckedChange={(checked) => {
+						if (wheelchair && !checked) {
+							wheelchair = false;
+						}
+					}}
+				/>
 
-			<Switch
-				bind:checked={wheelchair}
-				disabled={!allowRoutedTransfers}
-				label={t.wheelchair}
-				id="wheelchair"
-				onCheckedChange={(checked) => {
-					if (checked && !useRoutedTransfers) {
-						useRoutedTransfers = true;
-					}
-				}}
-			/>
-			<Switch
-				bind:checked={requireBikeTransport}
-				label={t.requireBikeTransport}
-				onCheckedChange={setModes('BIKE')}
-				id="requireBikeTransport"
-			/>
-			<Switch
-				bind:checked={requireCarTransport}
-				disabled={!allowRoutedTransfers}
-				label={t.requireCarTransport}
-				id="requireCarTransport"
-				onCheckedChange={(checked) => {
-					if (checked && !useRoutedTransfers && allowRoutedTransfers) {
-						useRoutedTransfers = true;
-					}
-					setModes('CAR')(checked);
-				}}
-			/>
-
+				<Switch
+					bind:checked={wheelchair}
+					disabled={!allowRoutedTransfers}
+					label={t.wheelchair}
+					id="wheelchair"
+					onCheckedChange={(checked) => {
+						if (checked && !useRoutedTransfers) {
+							useRoutedTransfers = true;
+						}
+					}}
+				/>
+				<Switch
+					bind:checked={requireBikeTransport}
+					label={t.requireBikeTransport}
+					onCheckedChange={setModes('BIKE')}
+					id="requireBikeTransport"
+				/>
+				<Switch
+					bind:checked={requireCarTransport}
+					disabled={!allowRoutedTransfers}
+					label={t.requireCarTransport}
+					id="requireCarTransport"
+					onCheckedChange={(checked) => {
+						if (checked && !useRoutedTransfers && allowRoutedTransfers) {
+							useRoutedTransfers = true;
+						}
+						setModes('CAR')(checked);
+					}}
+				/>
+			</div>
 			<ViaStopOptions bind:via bind:viaMinimumStay bind:viaLabels />
 
 			<div
-				class="grid {maxTravelTime === undefined
-					? 'grid-cols-2'
-					: 'grid-cols-4'} items-center gap-2"
+				class="grid grid-cols-4
+				items-center gap-x-4 gap-y-2"
 			>
 				<div class="text-sm">
 					{t.routingSegments.maxTransfers}
@@ -231,8 +231,8 @@
 					type="number"
 					min="0"
 					bind:value={additionalTransferTime}
-					placeholder="Duration (min)"
-					class="text-sm w-32 border text-right w-full h-9 rounded-md"
+					placeholder={t.duration + ' (min)'}
+					class="text-sm border w-full h-full pl-1 text-center rounded-md"
 				/>
 			</div>
 			<!-- First mile -->
@@ -273,20 +273,18 @@
 				></StreetModes>
 			{/if}
 
-			<div class="grid grid-cols-[1fr_2fr_1fr] items-center gap-2">
-				<span class="text-sm">{t.routingSegments.pedestrianSpeed}</span>
+			<div class="grid grid-cols-[1fr_2fr_1fr] text-sm items-center gap-2">
+				<span>{t.routingSegments.pedestrianSpeed}</span>
 				<Slider
 					min={pedestrianProfile == 'FOOT' ? 0.8 : 0.5}
 					step={0.1}
-					max={pedestrianProfile == 'FOOT' ? 2 : 1.6}
+					max={pedestrianProfile == 'FOOT' ? 3 : 1.6}
 					bind:value={pedestrianSpeed}
 				/>
-				<div class="text-sm">{pedestrianSpeed} m/s</div>
-			</div>
-			<div class="grid grid-cols-[1fr_2fr_1fr] items-center gap-2">
-				<span class="text-sm">{t.routingSegments.cyclingSpeed}</span>
+				<div>{(pedestrianSpeed * 3.6).toFixed(1)} km/h</div>
+				<span>{t.routingSegments.cyclingSpeed}</span>
 				<Slider min={2.7} max={7} step={0.1} disabled={!hasBikeMode} bind:value={cyclingSpeed} />
-				<div class="text-sm">{cyclingSpeed} m/s</div>
+				<div>{(cyclingSpeed * 3.6).toFixed(1)} km/h</div>
 			</div>
 		</div>
 

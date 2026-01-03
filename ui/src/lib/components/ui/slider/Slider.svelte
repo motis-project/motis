@@ -17,7 +17,7 @@
 	} = $props();
 </script>
 
-<div class="w-full md:max-w-[180px]">
+<div class="w-full {disabled ? 'opacity-10' : ''} md:max-w-[180px]">
 	<Slider.Root
 		type="single"
 		{min}
@@ -25,7 +25,7 @@
 		{step}
 		{disabled}
 		bind:value
-		class="relative bg-gray-300 flex rounded w-full touch-none select-none items-center"
+		class="relative bg-slate-200 flex rounded w-full touch-none select-none items-center"
 	>
 		<span class="bg-dark-10 relative h-2 w-full grow cursor-pointer overflow-hidden rounded-full">
 			<Slider.Range class="bg-foreground absolute h-full" />
@@ -33,9 +33,8 @@
 		<Slider.Thumb
 			index={0}
 			class={cn(
-				'border-border-input bg-black border-black block size-[15px] cursor-pointer rounded-full shadow-sm disabled:pointer-events-none disabled:opacity-50'
+				'border-border-input bg-black border-black block size-[15px] cursor-pointer rounded-full shadow-sm'
 			)}
 		/>
 	</Slider.Root>
 </div>
-
