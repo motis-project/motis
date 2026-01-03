@@ -5,7 +5,13 @@
 	import * as Select from '$lib/components/ui/select';
 	import { ChevronUp, ChevronDown } from '@lucide/svelte';
 	import { Switch } from './components/ui/switch';
-	import type { ElevationCosts, ServerConfig } from '@motis-project/motis-client';
+	import type {
+		CyclingSpeed,
+		ElevationCosts,
+		PedestrianProfile,
+		PedestrianSpeed,
+		ServerConfig
+	} from '@motis-project/motis-client';
 	import { defaultQuery } from '$lib/defaults';
 	import type { Location } from '$lib/Location';
 	import { formatDurationSec } from './formatDuration';
@@ -21,7 +27,7 @@
 	import { type NumberSelectOption } from '$lib/NumberSelect.svelte';
 	import { generateTimes } from './generateTimes';
 	import ViaStopOptions from './ViaStopOptions.svelte';
-
+	import Slider from './components/ui/slider/Slider.svelte';
 	let {
 		useRoutedTransfers = $bindable(),
 		serverConfig,
@@ -35,6 +41,7 @@
 		preTransitModes = $bindable(),
 		postTransitModes = $bindable(),
 		directModes = $bindable(undefined),
+		transferTimeFactor = $bindable(),
 		maxPreTransitTime = $bindable(),
 		maxPostTransitTime = $bindable(),
 		maxDirectTime = $bindable(undefined),
@@ -48,6 +55,10 @@
 		via = $bindable(),
 		viaMinimumStay = $bindable(),
 		viaLabels = $bindable(),
+		pedestrianSpeed = $bindable(),
+		cyclingSpeed = $bindable(),
+		additionalTransferTime = $bindable(),
+		pedestrianProfile = $bindable(),
 		additionalComponents
 	}: {
 		useRoutedTransfers: boolean;
@@ -62,6 +73,7 @@
 		preTransitModes: PrePostDirectMode[];
 		postTransitModes: PrePostDirectMode[];
 		directModes: PrePostDirectMode[] | undefined;
+		transferTimeFactor: number;
 		maxPreTransitTime: number;
 		maxPostTransitTime: number;
 		maxDirectTime: number | undefined;
@@ -75,9 +87,12 @@
 		via: undefined | Location[];
 		viaMinimumStay: undefined | number[];
 		viaLabels: Record<string, string>;
+		pedestrianSpeed: PedestrianSpeed;
+		cyclingSpeed: CyclingSpeed;
+		additionalTransferTime: number | undefined;
 		additionalComponents?: Snippet;
+		pedestrianProfile: PedestrianProfile;
 	} = $props();
-
 	const possibleMaxTransfers = [...Array(defaultQuery.maxTransfers + 1).keys()].map((i) => ({
 		value: i.toString(),
 		label: i.toString()
@@ -88,6 +103,11 @@
 	);
 	const possiblePrePostDurations = $derived(
 		generateTimes(serverConfig?.maxPrePostTransitTimeLimit ?? 60 * 60)
+	);
+	const hasBikeMode = $derived(
+		preTransitModes.includes('BIKE') ||
+			postTransitModes.includes('BIKE') ||
+			directModes?.includes('BIKE')
 	);
 
 	function setModes(mode: PrePostDirectMode) {
@@ -124,6 +144,9 @@
 	);
 	let allowStreetRouting = $derived(serverConfig?.hasStreetRouting);
 	let allowRoutedTransfers = $derived(serverConfig?.hasRoutedTransfers);
+	$effect(() => {
+		transferTimeFactor = Math.max(1, defaultQuery.pedestrianSpeed / pedestrianSpeed);
+	});
 </script>
 
 <Button variant="ghost" onclick={() => (expanded = !expanded)}>
@@ -140,54 +163,54 @@
 		<TransitModeSelect bind:transitModes />
 
 		<div class="space-y-2">
-			<Switch
-				bind:checked={useRoutedTransfers}
-				disabled={!allowRoutedTransfers}
-				label={t.useRoutedTransfers}
-				id="useRoutedTransfers"
-				onCheckedChange={(checked) => {
-					if (wheelchair && !checked) {
-						wheelchair = false;
-					}
-				}}
-			/>
+			<div class="grid grid-cols-2">
+				<Switch
+					bind:checked={useRoutedTransfers}
+					disabled={!allowRoutedTransfers}
+					label={t.useRoutedTransfers}
+					id="useRoutedTransfers"
+					onCheckedChange={(checked) => {
+						if (wheelchair && !checked) {
+							wheelchair = false;
+						}
+					}}
+				/>
 
-			<Switch
-				bind:checked={wheelchair}
-				disabled={!allowRoutedTransfers}
-				label={t.wheelchair}
-				id="wheelchair"
-				onCheckedChange={(checked) => {
-					if (checked && !useRoutedTransfers) {
-						useRoutedTransfers = true;
-					}
-				}}
-			/>
-			<Switch
-				bind:checked={requireBikeTransport}
-				label={t.requireBikeTransport}
-				onCheckedChange={setModes('BIKE')}
-				id="requireBikeTransport"
-			/>
-			<Switch
-				bind:checked={requireCarTransport}
-				disabled={!allowRoutedTransfers}
-				label={t.requireCarTransport}
-				id="requireCarTransport"
-				onCheckedChange={(checked) => {
-					if (checked && !useRoutedTransfers && allowRoutedTransfers) {
-						useRoutedTransfers = true;
-					}
-					setModes('CAR')(checked);
-				}}
-			/>
-
+				<Switch
+					bind:checked={wheelchair}
+					disabled={!allowRoutedTransfers}
+					label={t.wheelchair}
+					id="wheelchair"
+					onCheckedChange={(checked) => {
+						if (checked && !useRoutedTransfers) {
+							useRoutedTransfers = true;
+						}
+					}}
+				/>
+				<Switch
+					bind:checked={requireBikeTransport}
+					label={t.requireBikeTransport}
+					onCheckedChange={setModes('BIKE')}
+					id="requireBikeTransport"
+				/>
+				<Switch
+					bind:checked={requireCarTransport}
+					disabled={!allowRoutedTransfers}
+					label={t.requireCarTransport}
+					id="requireCarTransport"
+					onCheckedChange={(checked) => {
+						if (checked && !useRoutedTransfers && allowRoutedTransfers) {
+							useRoutedTransfers = true;
+						}
+						setModes('CAR')(checked);
+					}}
+				/>
+			</div>
 			<ViaStopOptions bind:via bind:viaMinimumStay bind:viaLabels />
 
 			<div
-				class="grid {maxTravelTime === undefined
-					? 'grid-cols-2'
-					: 'grid-cols-4'} items-center gap-2"
+				class="grid grid-cols-4
+				items-center gap-x-4 gap-y-2"
 			>
 				<div class="text-sm">
 					{t.routingSegments.maxTransfers}
@@ -203,8 +226,15 @@
 						labelFormatter={formatDurationSec}
 					/>
 				{/if}
+				<div class="text-sm">{t.routingSegments.additionalTransferTime}</div>
+				<input
+					type="number"
+					min="0"
+					bind:value={additionalTransferTime}
+					placeholder={t.duration + ' (min)'}
+					class="text-sm border w-full h-full pl-1 text-center rounded-md"
+				/>
 			</div>
-
 			<!-- First mile -->
 			<StreetModes
 				label={t.routingSegments.firstMile}
@@ -242,6 +272,20 @@
 					bind:providerGroups={directProviderGroups}
 				></StreetModes>
 			{/if}
+
+			<div class="grid grid-cols-[1fr_2fr_1fr] text-sm items-center gap-2">
+				<span>{t.routingSegments.pedestrianSpeed}</span>
+				<Slider
+					min={pedestrianProfile == 'FOOT' ? 0.8 : 0.5}
+					step={0.1}
+					max={pedestrianProfile == 'FOOT' ? 3 : 1.6}
+					bind:value={pedestrianSpeed}
+				/>
+				<div>{(pedestrianSpeed * 3.6).toFixed(1)} km/h</div>
+				<span>{t.routingSegments.cyclingSpeed}</span>
+				<Slider min={2.7} max={7} step={0.1} disabled={!hasBikeMode} bind:value={cyclingSpeed} />
+				<div>{(cyclingSpeed * 3.6).toFixed(1)} km/h</div>
+			</div>
 		</div>
 
 		<!-- Elevation Costs -->

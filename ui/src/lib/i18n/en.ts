@@ -76,6 +76,7 @@ const translations: Translations = {
 	default: 'Default',
 	timetableSources: 'Timetable sources',
 	tripCancelled: 'Trip cancelled',
+	addStop: 'Add Stop',
 	stopCancelled: 'Stop cancelled',
 	inOutDisallowed: 'Entry/exit not possible',
 	inDisallowed: 'Entry not possible',
@@ -123,7 +124,11 @@ const translations: Translations = {
 		direct: 'Direct connection',
 		maxPreTransitTime: 'Max. pre-transit time',
 		maxPostTransitTime: 'Max. post-transit time',
-		maxDirectTime: 'Max. direct time'
+		maxDirectTime: 'Max. direct time',
+		additionalTransferTime: 'Additional transfer time',
+		pedestrianSpeed: 'Pedestrian speed',
+		cyclingSpeed: 'Cycling speed',
+		transferTimeFactor: 'Transfer time factor'
 	},
 	elevationCosts: {
 		NONE: 'No detours',
