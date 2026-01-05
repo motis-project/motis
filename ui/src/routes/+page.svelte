@@ -66,13 +66,21 @@
 	const hasDark: boolean = Boolean(urlParams?.has('dark'));
 	const hasLight: boolean = Boolean(urlParams?.has('light'));
 	const isSmallScreen = browser && window.innerWidth < 768;
-	let activeTab = $state<'connections' | 'departures' | 'isochrones'>('connections');
+	let activeTab = $derived<'connections' | 'departures' | 'isochrones'>(
+		page.state.activeTab ??
+			(urlParams?.has('one')
+				? 'isochrones'
+				: urlParams?.has('stopId')
+					? 'departures'
+					: 'connections')
+	);
 	let dataAttributionLink: string | undefined = $state(undefined);
 	let colorMode = $state<'rt' | 'route' | 'mode' | 'none'>('none');
 	let showMap = $state(!isSmallScreen);
 	let lastSelectedItinerary: Itinerary | undefined = undefined;
 	let lastOneToAllQuery: OneToAllData | undefined = undefined;
 	let serverConfig: ServerConfig | undefined = $state();
+	let dataLoaded: boolean = $state(false);
 
 	$effect(() => {
 		if (activeTab == 'isochrones') {
@@ -94,6 +102,18 @@
 	let zoom = $state(15);
 	let bounds = $state<maplibregl.LngLatBoundsLike>();
 	let map = $state<maplibregl.Map>();
+	let style = $derived(
+		browser
+			? getStyle(
+					theme,
+					level,
+					window.location.origin + window.location.pathname,
+					client.getConfig().baseUrl
+						? client.getConfig().baseUrl + '/'
+						: window.location.origin + window.location.pathname
+				)
+			: undefined
+	);
 
 	const geolocate = new maplibregl.GeolocateControl({
 		positionOptions: {
@@ -119,6 +139,7 @@
 				zoom = r.zoom;
 				serverConfig = r.serverConfig;
 			}
+			dataLoaded = true;
 		});
 		await tick();
 		applyPageStateFromURL();
@@ -413,7 +434,7 @@
 						...(q.toPlace == to.label ? {} : { toName: to.label }),
 						...viaLabels
 					},
-					{},
+					{ activeTab: 'connections' },
 					true
 				);
 			}, 400);
@@ -473,7 +494,7 @@
 							? { isochronesCircleResolution }
 							: {})
 					},
-					{},
+					{ activeTab: 'isochrones' },
 					true
 				);
 			});
@@ -584,7 +605,16 @@
 
 {#snippet resultContent()}
 	<Control>
-		<Tabs.Root bind:value={activeTab} class="max-w-full w-[520px] overflow-y-auto">
+		<Tabs.Root
+			bind:value={
+				() => activeTab,
+				(v) => {
+					activeTab = v;
+					pushState('', { activeTab: v });
+				}
+			}
+			class="max-w-full w-[520px] overflow-y-auto"
+		>
 			<Tabs.List class="grid grid-cols-3">
 				<Tabs.Trigger value="connections">{t.connections}</Tabs.Trigger>
 				<Tabs.Trigger value="departures">{t.departures}</Tabs.Trigger>
@@ -673,7 +703,11 @@
 					{routingResponses}
 					{baseQuery}
 					selectItinerary={(selectedItinerary) => {
-						pushState('', { selectedItinerary: selectedItinerary, scrollY: undefined });
+						pushState('', {
+							selectedItinerary: selectedItinerary,
+							scrollY: undefined,
+							activeTab: 'connections'
+						});
 					}}
 					updateStartDest={preprocessItinerary(from, to)}
 				/>
@@ -688,7 +722,10 @@
 							id="{rI}-{i}"
 							selected={false}
 							selectItinerary={() => {
-								pushState('', { selectedItinerary: it });
+								pushState('', {
+									selectedItinerary: it,
+									activeTab: 'connections'
+								});
 							}}
 							{level}
 							{theme}
@@ -699,9 +736,9 @@
 		{/if}
 	{/if}
 
-	{#if activeTab != 'isochrones' && page.state.selectedItinerary && !page.state.showDepartures}
-		<Control class="min-h-0 md:mb-2">
-			<Card class="w-[520px] md:max-h-[60vh] h-full bg-background rounded-lg flex flex-col mb-2">
+	{#if activeTab == 'connections' && page.state.selectedItinerary}
+		<Control class="min-h-0 md:mb-2 md:flex">
+			<Card class="w-[520px] bg-background rounded-lg  flex flex-col mb-2">
 				<div class="w-full flex justify-between items-center shadow-md pl-1 mb-1">
 					<h2 class="ml-2 text-base font-semibold">{t.journeyDetails}</h2>
 					<Button
@@ -727,7 +764,7 @@
 		{/if}
 	{/if}
 
-	{#if activeTab != 'isochrones' && page.state.selectedStop && page.state.showDepartures}
+	{#if activeTab == 'departures' && page.state.selectedStop}
 		<Control class="min-h-0 md:mb-2">
 			<Card class="w-[520px] md:max-h-[60vh] h-full bg-background rounded-lg flex flex-col mb-2">
 				<div class="w-full flex justify-between items-center shadow-md pl-1 mb-1">
@@ -772,6 +809,21 @@
 		</Control>
 	{/if}
 {/snippet}
+{#if dataLoaded}
+	<Map
+		bind:map
+		bind:bounds
+		bind:zoom
+		bind:center
+		class={cn('h-dvh overflow-clip', theme)}
+		style={showMap ? style : undefined}
+		attribution={false}
+	>
+		{#if hasDebug}
+			<Control position="top-right" class="text-right">
+				<Debug {bounds} {level} {zoom} />
+			</Control>
+		{/if}
 
 <Map
 	bind:map
@@ -797,27 +849,29 @@
 		</Control>
 	{/if}
 
-	<LevelSelect {bounds} {zoom} bind:level />
+		<LevelSelect {bounds} {zoom} bind:level />
 
-	{#if browser}
-		{#if isSmallScreen}
-			<Drawer class="relative z-10 h-full mt-5 flex flex-col" bind:showMap>
-				{@render resultContent()}
-			</Drawer>
-		{:else}
-			<div class="maplibregl-ctrl-top-left">
-				{@render resultContent()}
-			</div>
+		{#if browser}
+			{#if isSmallScreen}
+				<Drawer class="relative z-10 h-full mt-5 flex flex-col" bind:showMap>
+					{@render resultContent()}
+				</Drawer>
+			{:else}
+				<div class="maplibregl-ctrl-top-left flex flex-col max-h-[97vh]">
+					{@render resultContent()}
+				</div>
+			{/if}
 		{/if}
 	{/if}
 
-	<div class="maplibregl-ctrl-{isSmallScreen ? 'top-left' : 'bottom-right'}">
-		<div class="maplibregl-ctrl maplibregl-ctrl-attrib">
-			<div class="maplibregl-ctrl-attrib-inner">
-				&copy; <a href="http://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>
-				{#if dataAttributionLink}
-					| <a href={dataAttributionLink} target="_blank">{t.timetableSources}</a>
-				{/if}
+		<div class="maplibregl-ctrl-{isSmallScreen ? 'top-left' : 'bottom-right'}">
+			<div class="maplibregl-ctrl maplibregl-ctrl-attrib">
+				<div class="maplibregl-ctrl-attrib-inner">
+					&copy; <a href="http://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>
+					{#if dataAttributionLink}
+						| <a href={dataAttributionLink} target="_blank">{t.timetableSources}</a>
+					{/if}
+				</div>
 			</div>
 		</div>
 	</div>
@@ -859,47 +913,95 @@
 			<Rentals {map} {bounds} {zoom} {theme} debug={hasDebug} />
 		{/if}
 
-		<RailViz {map} {bounds} {zoom} {colorMode} />
-		<Isochrones
-			{map}
-			{bounds}
-			{isochronesData}
-			streetModes={arriveBy ? preTransitModes : postTransitModes}
-			wheelchair={pedestrianProfile === 'WHEELCHAIR'}
-			maxAllTime={arriveBy ? maxPreTransitTime : maxPostTransitTime}
-			circleResolution={isochronesCircleResolution}
-			active={activeTab == 'isochrones'}
-			bind:options={isochronesOptions}
-		/>
+		{#if showMap}
+			{#if activeTab != 'isochrones'}
+				<Control position="top-right" class="pb-4 text-right">
+					<Button
+						size="icon"
+						onclick={() => {
+							colorMode = (function () {
+								switch (colorMode) {
+									case 'rt':
+										return 'route';
+									case 'route':
+										return 'mode';
+									case 'mode':
+										return 'none';
+									case 'none':
+										return 'rt';
+								}
+							})();
+						}}
+					>
+						{#if colorMode == 'rt'}
+							<Rss class="h-[1.2rem] w-[1.2rem]" />
+						{:else if colorMode == 'mode'}
+							<TrainFront class="h-[1.2rem] w-[1.2rem]" />
+						{:else if colorMode == 'none'}
+							<Ban class="h-[1.2rem] w-[1.2rem]" />
+						{:else}
+							<Palette class="h-[1.2rem] w-[1.2rem]" />
+						{/if}
+					</Button>
+					<Button size="icon" onclick={() => getLocation()}>
+						<LocateFixed class="w-5 h-5" />
+					</Button>
+				</Control>
+				<Rentals {map} {bounds} {zoom} {theme} debug={hasDebug} />
+			{/if}
 
-		<Popup trigger="contextmenu" children={contextMenu} />
-
-		{#if from && activeTab == 'connections'}
-			<Marker
-				color="green"
-				draggable={true}
-				{level}
-				bind:location={from}
-				bind:marker={fromMarker}
-			/>
-		{/if}
-
-		{#if stop && page.state.showDepartures && activeTab != 'isochrones'}
-			<Marker
-				color="black"
-				draggable={false}
-				{level}
-				bind:location={stop}
-				bind:marker={stopMarker}
+			<RailViz {map} {bounds} {zoom} {colorMode} />
+			<Isochrones
+				{map}
+				{bounds}
+				{isochronesData}
+				streetModes={arriveBy ? preTransitModes : postTransitModes}
+				wheelchair={pedestrianProfile === 'WHEELCHAIR'}
+				maxAllTime={arriveBy ? maxPreTransitTime : maxPostTransitTime}
+				circleResolution={isochronesCircleResolution}
+				active={activeTab == 'isochrones'}
+				bind:options={isochronesOptions}
 			/>
 		{/if}
 
 		{#if to && activeTab == 'connections'}
-			<Marker color="red" draggable={true} {level} bind:location={to} bind:marker={toMarker} />
+			<Popup trigger="contextmenu" children={contextMenu} />
 		{/if}
 
-		{#if one && activeTab == 'isochrones'}
-			<Marker color="yellow" draggable={true} {level} bind:location={one} bind:marker={oneMarker} />
+			{#if from && activeTab == 'connections'}
+				<Marker
+					color="green"
+					draggable={true}
+					{level}
+					bind:location={from}
+					bind:marker={fromMarker}
+				/>
+			{/if}
+
+			{#if stop && activeTab == 'departures'}
+				<Marker
+					color="black"
+					draggable={false}
+					{level}
+					bind:location={stop}
+					bind:marker={stopMarker}
+				/>
+			{/if}
+
+			{#if to && activeTab == 'connections'}
+				<Marker color="red" draggable={true} {level} bind:location={to} bind:marker={toMarker} />
+			{/if}
+
+			{#if one && activeTab == 'isochrones'}
+				<Marker
+					color="yellow"
+					draggable={true}
+					{level}
+					bind:location={one}
+					bind:marker={oneMarker}
+				/>
+			{/if}
 		{/if}
 	{/if}
-</Map>
+	</Map>
+{/if}
