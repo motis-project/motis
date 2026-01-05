@@ -78,6 +78,7 @@
 	let colorMode = $state<'rt' | 'route' | 'mode' | 'none'>('none');
 	let showMap = $state(!isSmallScreen);
 	let lastOneToAllQuery: OneToAllData | undefined = undefined;
+	let lastPlanQuery: PlanData | undefined = undefined;
 	let serverConfig: ServerConfig | undefined = $state();
 	let dataLoaded: boolean = $state(false);
 
@@ -419,7 +420,8 @@
 	let routingResponses = $state<Array<Promise<PlanResponse>>>([]);
 	let stopNameFromResponse = $state<string>('');
 	$effect(() => {
-		if (baseQuery && activeTab == 'connections') {
+		if (baseQuery && baseQuery != lastPlanQuery && activeTab == 'connections') {
+			lastPlanQuery = baseQuery;
 			clearTimeout(searchDebounceTimer);
 			searchDebounceTimer = setTimeout(() => {
 				const base = plan(baseQuery).then(preprocessItinerary(from, to));
@@ -534,7 +536,7 @@
 					left: isSmallScreen ? 96 : 640
 				}
 			})
-		};
+		});
 	};
 
 	const flyToLocation = (location: Location) => {
@@ -706,7 +708,7 @@
 	{#if activeTab == 'connections' && routingResponses.length !== 0 && !page.state.selectedItinerary}
 		<Control class="min-h-0 md:flex md:flex-col md:mb-2} ">
 			<Card
-				class="scrollable w-[520px] h-full md:max-h-[60vh] {isSmallScreen
+				class="scrollable w-[520px] h-full md:h-[70vh] {isSmallScreen
 					? 'border-0 shadow-none'
 					: ''} overflow-x-hidden bg-background rounded-lg mb-2"
 			>
@@ -861,44 +863,6 @@
 				</div>
 			</div>
 		</div>
-	</div>
-
-	{#if showMap}
-		{#if activeTab != 'isochrones'}
-			<Control position="top-right" class="pb-4 text-right">
-				<Button
-					size="icon"
-					onclick={() => {
-						colorMode = (function () {
-							switch (colorMode) {
-								case 'rt':
-									return 'route';
-								case 'route':
-									return 'mode';
-								case 'mode':
-									return 'none';
-								case 'none':
-									return 'rt';
-							}
-						})();
-					}}
-				>
-					{#if colorMode == 'rt'}
-						<Rss class="h-[1.2rem] w-[1.2rem]" />
-					{:else if colorMode == 'mode'}
-						<TrainFront class="h-[1.2rem] w-[1.2rem]" />
-					{:else if colorMode == 'none'}
-						<Ban class="h-[1.2rem] w-[1.2rem]" />
-					{:else}
-						<Palette class="h-[1.2rem] w-[1.2rem]" />
-					{/if}
-				</Button>
-				<Button size="icon" onclick={() => getLocation()}>
-					<LocateFixed class="w-5 h-5" />
-				</Button>
-			</Control>
-			<Rentals {map} {bounds} {zoom} {theme} debug={hasDebug} />
-		{/if}
 
 		{#if showMap}
 			{#if activeTab != 'isochrones'}
@@ -949,11 +913,8 @@
 				active={activeTab == 'isochrones'}
 				bind:options={isochronesOptions}
 			/>
-		{/if}
 
-		{#if to && activeTab == 'connections'}
 			<Popup trigger="contextmenu" children={contextMenu} />
-		{/if}
 
 			{#if from && activeTab == 'connections'}
 				<Marker
@@ -989,6 +950,5 @@
 				/>
 			{/if}
 		{/if}
-	{/if}
 	</Map>
 {/if}
