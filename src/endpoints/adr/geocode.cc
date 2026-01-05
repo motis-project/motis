@@ -7,6 +7,8 @@
 
 #include "fmt/format.h"
 
+#include "net/bad_request_exception.h"
+
 #include "nigiri/timetable.h"
 
 #include "adr/adr.h"
@@ -36,7 +38,8 @@ api::geocode_response geocode::operator()(
   auto const params = api::geocode_params{url.params()};
   auto const place = params.place_.and_then([](std::string const& s) {
     auto const parsed = parse_location(s);
-    utl::verify(parsed.has_value(), "could not parse place {}", s);
+    utl::verify<net::bad_request_exception>(parsed.has_value(),
+                                            "could not parse place {}", s);
     return std::optional{parsed.value().pos_};
   });
   auto const allowed_modes =

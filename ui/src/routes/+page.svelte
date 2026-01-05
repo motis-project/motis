@@ -12,7 +12,6 @@
 		plan,
 		type ElevationCosts,
 		type OneToAllData,
-		type OneToAllResponse,
 		type PlanResponse,
 		type Itinerary,
 		type Mode,
@@ -288,7 +287,8 @@
 		color: urlParams?.get('isochronesColor') ?? defaultQuery.isochronesColor,
 		opacity: parseIntOr(urlParams?.get('isochronesOpacity'), defaultQuery.isochronesOpacity),
 		status: 'DONE',
-		error: undefined
+		errorMessage: undefined,
+		errorCode: undefined
 	});
 	const isochronesCircleResolution = urlParams?.get('isochronesCircleResolution')
 		? parseIntOr(urlParams.get('isochronesCircleResolution'), defaultQuery.circleResolution)
@@ -431,29 +431,32 @@
 				lastOneToAllQuery = isochronesQuery;
 				clearTimeout(isochronesQueryTimeout);
 				isochronesOptions.status = 'WORKING';
-				isochronesOptions.error = undefined;
-				isochronesQueryTimeout = setTimeout(() => {
-					oneToAll(isochronesQuery)
-						.then((r: { data: OneToAllResponse | undefined; error: unknown }) => {
-							if (r.error) {
-								const msg = (r.error as { error: string }).error;
-								throw new Error(String(msg));
-							}
-							const all = r.data!.all!.map((p: ReachablePlace) => {
-								return {
-									lat: p.place?.lat,
-									lng: p.place?.lon,
-									seconds: maxTravelTime - 60 * (p.duration ?? 0),
-									name: p.place?.name
-								} as IsochronesPos;
-							});
-							isochronesData = [...all];
-							isochronesOptions.status = isochronesData.length == 0 ? 'EMPTY' : 'WORKING';
-						})
-						.catch((e: Error) => {
+				isochronesOptions.errorMessage = undefined;
+				isochronesQueryTimeout = setTimeout(async () => {
+					try {
+						const { data, error, response } = await oneToAll(isochronesQuery);
+						if (error) {
 							isochronesOptions.status = 'FAILED';
-							isochronesOptions.error = e.message;
+							isochronesOptions.errorCode = response.status;
+							isochronesOptions.errorMessage = error.error;
+							return;
+						}
+						const all = data!.all!.map((p: ReachablePlace) => {
+							return {
+								lat: p.place?.lat,
+								lng: p.place?.lon,
+								seconds: maxTravelTime - 60 * (p.duration ?? 0),
+								name: p.place?.name
+							} as IsochronesPos;
 						});
+
+						isochronesData = [...all];
+						isochronesOptions.status = isochronesData.length == 0 ? 'EMPTY' : 'WORKING';
+					} catch (e) {
+						isochronesOptions.status = 'FAILED';
+						isochronesOptions.errorMessage = String(e);
+						isochronesOptions.errorCode = 404;
+					}
 				}, 60);
 			}
 			untrack(() => {

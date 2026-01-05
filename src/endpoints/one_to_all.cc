@@ -5,6 +5,9 @@
 
 #include "utl/verify.h"
 
+#include "net/bad_request_exception.h"
+#include "net/too_many_exception.h"
+
 #include "nigiri/common/delta_t.h"
 #include "nigiri/routing/limits.h"
 #include "nigiri/routing/one_to_all.h"
@@ -28,17 +31,20 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
   auto const max_travel_minutes =
       config_.limits_.value().onetoall_max_travel_minutes_;
   auto const query = api::oneToAll_params{url.params()};
-  utl::verify(query.maxTravelTime_ <= max_travel_minutes,
-              "maxTravelTime too large ({} > {}). The server admin can change "
-              "this limit in config.yml with 'onetoall_max_travel_minutes'. "
-              "See documentation for details.",
-              query.maxTravelTime_, max_travel_minutes);
+  utl::verify<net::too_many_exception>(
+      query.maxTravelTime_ <= max_travel_minutes,
+      "maxTravelTime too large ({} > {}). The server admin can change "
+      "this limit in config.yml with 'onetoall_max_travel_minutes'. "
+      "See documentation for details.",
+      query.maxTravelTime_, max_travel_minutes);
   if (query.maxTransfers_.has_value()) {
-    utl::verify(query.maxTransfers_ >= 0U, "maxTransfers < 0: {}",
-                *query.maxTransfers_);
-    utl::verify(query.maxTransfers_ <= n::routing::kMaxTransfers,
-                "maxTransfers > {}: {}", n::routing::kMaxTransfers,
-                *query.maxTransfers_);
+    utl::verify<net::bad_request_exception>(query.maxTransfers_ >= 0U,
+                                            "maxTransfers < 0: {}",
+                                            *query.maxTransfers_);
+    utl::verify<net::too_many_exception>(
+        query.maxTransfers_ <= n::routing::kMaxTransfers,
+        "maxTransfers > {}: {}", n::routing::kMaxTransfers,
+        *query.maxTransfers_);
   }
 
   auto const unreachable = query.arriveBy_
@@ -133,8 +139,9 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
   }
 
   auto const max_results = config_.limits_.value().onetoall_max_results_;
-  utl::verify(reachable.count() <= max_results, "too many results: {} > {}",
-              reachable.count(), max_results);
+  utl::verify<net::too_many_exception>(reachable.count() <= max_results,
+                                       "too many results: {} > {}",
+                                       reachable.count(), max_results);
 
   auto all = std::vector<api::ReachablePlace>{};
   all.reserve(reachable.count());

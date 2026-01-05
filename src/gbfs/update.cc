@@ -35,6 +35,7 @@
 #include "utl/sorted_diff.h"
 #include "utl/timer.h"
 #include "utl/to_vec.h"
+#include "utl/verify.h"
 
 #include "motis/config.h"
 #include "motis/data.h"
