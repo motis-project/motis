@@ -77,7 +77,6 @@
 	let dataAttributionLink: string | undefined = $state(undefined);
 	let colorMode = $state<'rt' | 'route' | 'mode' | 'none'>('none');
 	let showMap = $state(!isSmallScreen);
-	let lastSelectedItinerary: Itinerary | undefined = undefined;
 	let lastOneToAllQuery: OneToAllData | undefined = undefined;
 	let serverConfig: ServerConfig | undefined = $state();
 	let dataLoaded: boolean = $state(false);
@@ -543,13 +542,9 @@
 	};
 
 	const flyToSelectedItinerary = () => {
-		if (lastSelectedItinerary === page.state.selectedItinerary) {
-			return;
-		}
 		if (page.state.selectedItinerary && map) {
 			flyToItineraries([page.state.selectedItinerary], map);
 		}
-		lastSelectedItinerary = page.state.selectedItinerary;
 	};
 
 	$effect(() => {
@@ -574,7 +569,6 @@
 		if (!map || activeTab != 'connections' || !baseQuery) return;
 		Promise.all(routingResponses).then((responses) => {
 			if (map) {
-				flyToItineraries(
 				let it = responses.flatMap((response) => response.itineraries);
 				if (it.length !== 0) {
 					flyToItineraries(it, map);
@@ -582,7 +576,6 @@
 			}
 		});
 	});
-
 	type CloseFn = () => void;
 </script>
 
@@ -710,8 +703,8 @@
 		</Tabs.Root>
 	</Control>
 
-	{#if activeTab == 'connections' && routingResponses.length !== 0 && !page.state.showDepartures}
-		<Control class="min-h-0 md:mb-2 {page.state.selectedItinerary ? 'hide' : ''}">
+	{#if activeTab == 'connections' && routingResponses.length !== 0 && !page.state.selectedItinerary}
+		<Control class="min-h-0 md:flex md:flex-col md:mb-2} ">
 			<Card
 				class="scrollable w-[520px] h-full md:max-h-[60vh] {isSmallScreen
 					? 'border-0 shadow-none'
@@ -844,30 +837,6 @@
 			</Control>
 		{/if}
 
-<Map
-	bind:map
-	bind:bounds
-	bind:zoom
-	bind:center
-	class={cn('h-dvh overflow-clip', theme)}
-	style={showMap && browser
-		? getStyle(
-				theme,
-				level,
-				window.location.origin + window.location.pathname,
-				client.getConfig().baseUrl
-					? client.getConfig().baseUrl + '/'
-					: window.location.origin + window.location.pathname
-			)
-		: undefined}
-	attribution={false}
->
-	{#if hasDebug}
-		<Control position="top-right" class="text-right">
-			<Debug {bounds} {level} {zoom} />
-		</Control>
-	{/if}
-
 		<LevelSelect {bounds} {zoom} bind:level />
 
 		{#if browser}
@@ -881,7 +850,6 @@
 				</div>
 			{/if}
 		{/if}
-	{/if}
 
 		<div class="maplibregl-ctrl-{isSmallScreen ? 'top-left' : 'bottom-right'}">
 			<div class="maplibregl-ctrl maplibregl-ctrl-attrib">
