@@ -526,13 +526,20 @@
 				});
 			});
 		});
-		const padding = {
-			top: 96,
-			right: 96,
-			bottom: isSmallScreen ? window.innerHeight * 0.3 : 96,
-			left: isSmallScreen ? 96 : 640
+		map.flyTo({
+			...map.cameraForBounds(box, {
+				padding: {
+					top: 96,
+					right: 96,
+					bottom: isSmallScreen ? window.innerHeight * 0.3 : 96,
+					left: isSmallScreen ? 96 : 640
+				}
+			})
 		};
-		map.flyTo({ ...map.cameraForBounds(box, { padding }) });
+	};
+
+	const flyToLocation = (location: Location) => {
+		map?.flyTo({ center: location.match, zoom: 11 });
 	};
 
 	const flyToSelectedItinerary = () => {
@@ -551,15 +558,27 @@
 		}
 	});
 
-	$effect(flyToSelectedItinerary);
+	$effect(() => {
+		if (map) {
+			if (page.state.selectedItinerary && activeTab == 'connections') {
+				flyToSelectedItinerary();
+			} else if (activeTab == 'departures' && stop && stop.match) {
+				flyToLocation(stop);
+			} else if (activeTab == 'isochrones' && one && one.match) {
+				flyToLocation(one);
+			}
+		}
+	});
 
 	$effect(() => {
+		if (!map || activeTab != 'connections' || !baseQuery) return;
 		Promise.all(routingResponses).then((responses) => {
 			if (map) {
 				flyToItineraries(
-					responses.flatMap((response) => response.itineraries),
-					map
-				);
+				let it = responses.flatMap((response) => response.itineraries);
+				if (it.length !== 0) {
+					flyToItineraries(it, map);
+				}
 			}
 		});
 	});
