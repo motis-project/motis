@@ -438,6 +438,15 @@ api::plan_response meta_router::run() {
   r_.metrics_->routing_odm_journeys_found_whitelist_.Observe(
       static_cast<double>(taxi_journeys.size()));
 
+  taxi_journeys.insert(end(taxi_journeys), begin(pt_result.journeys_),
+                       end(pt_result.journeys_));
+  taxi_journeys.insert(end(taxi_journeys), begin(ride_share_journeys),
+                       end(ride_share_journeys));
+  utl::sort(taxi_journeys, [](auto const& a, auto const& b) {
+    return std::tuple{a.departure_time(), a.arrival_time(), a.transfers_} <
+           std::tuple{b.departure_time(), b.arrival_time(), b.transfers_};
+  });
+
   r_.metrics_->routing_journeys_found_.Increment(
       static_cast<double>(taxi_journeys.size()));
   r_.metrics_->routing_execution_duration_seconds_total_.Observe(
