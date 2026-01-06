@@ -237,6 +237,32 @@ std::vector<n::routing::journey> collect_odm_journeys(
   return taxi_journeys;
 }
 
+void pareto_dominance(std::vector<n::routing::journey>& odm_journeys) {
+
+  auto const pareto_dom = [](n::routing::journey const& a,
+                             n::routing::journey const& b) -> bool {
+    auto const odm_time_a = odm_time(a);
+    auto const odm_time_b = odm_time(b);
+    return a.dominates(b) && odm_time_a < odm_time_b;
+    ;
+  };
+
+  for (auto b = begin(odm_journeys); b != end(odm_journeys);) {
+    auto is_dominated = false;
+    for (auto a = begin(odm_journeys); a != end(odm_journeys); ++a) {
+      if (a != b && pareto_dom(*a, *b)) {
+        is_dominated = true;
+        break;
+      }
+    }
+    if (is_dominated) {
+      b = odm_journeys.erase(b);
+    } else {
+      ++b;
+    }
+  }
+}
+
 api::plan_response meta_router::run() {
   auto const init_start = std::chrono::steady_clock::now();
   utl::verify(r_.tt_ != nullptr && r_.tags_ != nullptr,
@@ -438,6 +464,7 @@ api::plan_response meta_router::run() {
   r_.metrics_->routing_odm_journeys_found_whitelist_.Observe(
       static_cast<double>(taxi_journeys.size()));
 
+  pareto_dominance(taxi_journeys);
   taxi_journeys.insert(end(taxi_journeys), begin(pt_result.journeys_),
                        end(pt_result.journeys_));
   taxi_journeys.insert(end(taxi_journeys), begin(ride_share_journeys),
