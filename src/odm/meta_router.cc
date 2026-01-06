@@ -36,7 +36,6 @@
 #include "motis/metrics_registry.h"
 #include "motis/odm/bounds.h"
 #include "motis/odm/journeys.h"
-#include "motis/odm/mixer.h"
 #include "motis/odm/odm.h"
 #include "motis/odm/prima.h"
 #include "motis/odm/shorten.h"
@@ -60,7 +59,6 @@ namespace motis::odm {
 constexpr auto kODMLookAhead = nigiri::duration_t{24h};
 constexpr auto kSearchIntervalSize = nigiri::duration_t{10h};
 constexpr auto kContextPadding = nigiri::duration_t{2h};
-static auto const kMixer = get_default_mixer();
 
 void print_time(auto const& start,
                 std::string_view name,
@@ -439,22 +437,6 @@ api::plan_response meta_router::run() {
              r_.metrics_->routing_execution_duration_seconds_whitelisting_);
   r_.metrics_->routing_odm_journeys_found_whitelist_.Observe(
       static_cast<double>(taxi_journeys.size()));
-
-  auto const mixing_start = std::chrono::steady_clock::now();
-  n::log(n::log_lvl::debug, "motis.prima",
-         "[mixing] {} PT journeys and {} ODM journeys",
-         pt_result.journeys_.size(), taxi_journeys.size());
-  kMixer.mix(pt_result.journeys_, taxi_journeys, ride_share_journeys,
-             r_.metrics_, std::nullopt);
-  r_.metrics_->routing_odm_journeys_found_non_dominated_.Observe(
-      static_cast<double>(taxi_journeys.size() - pt_result.journeys_.size()));
-  print_time(mixing_start, "[mixing]",
-             r_.metrics_->routing_execution_duration_seconds_mixing_);
-  // remove journeys added for mixing context
-  std::erase_if(taxi_journeys, [&](auto const& j) {
-    return query_.arriveBy_ ? !search_intvl.contains(j.arrival_time())
-                            : !search_intvl.contains(j.departure_time());
-  });
 
   r_.metrics_->routing_journeys_found_.Increment(
       static_cast<double>(taxi_journeys.size()));
