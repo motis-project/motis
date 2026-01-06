@@ -2650,6 +2650,11 @@ components:
           description: Time that on-demand service ends
           type: string
           format: date-time
+        modes:
+          description: available transport modes for stops
+          type: array
+          items:
+            $ref: "#/components/schemas/Mode"
 
     ReachablePlace:
       description: Place reachable by One-to-All
