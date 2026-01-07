@@ -830,7 +830,8 @@
 		bind:zoom
 		bind:center
 		class={cn('h-dvh overflow-clip', theme)}
-		style={showMap ? style : undefined}
+		{style}
+		hide={!showMap}
 		attribution={false}
 	>
 		{#if hasDebug}
