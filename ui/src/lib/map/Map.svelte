@@ -38,6 +38,7 @@
 			} else if (ctx.map) {
 				ctx.map.setStyle(style || null);
 			}
+			currStyle = style;
 		}
 	};
 
