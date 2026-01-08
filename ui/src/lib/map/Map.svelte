@@ -10,7 +10,6 @@
 		bounds = $bindable(),
 		center = $bindable(),
 		style,
-		hide,
 		attribution,
 		transformRequest,
 		children,
@@ -23,7 +22,6 @@
 		center: maplibregl.LngLatLike;
 		bounds?: maplibregl.LngLatBoundsLike | undefined;
 		zoom: number;
-		hide: boolean;
 		children?: Snippet;
 		class: string;
 	} = $props();
@@ -42,13 +40,6 @@
 			}
 		}
 	};
-
-	$effect(() => {
-		if (!map) return;
-		map.getStyle().layers.forEach((l) => {
-			map?.setLayoutProperty(l.id, 'visibility', hide ? 'none' : 'visible');
-		});
-	});
 
 	const createMap = (container: HTMLElement) => {
 		if (!style) {
