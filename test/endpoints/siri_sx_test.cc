@@ -261,10 +261,10 @@ TEST(motis, trip_siri_sx_alerts) {
   std::filesystem::remove_all("test/data", ec);
 
   auto const c = config{
-      .timetable_ = config::timetable{.first_day_ = "2026-01-10",
-                                      .num_days_ = 1,
-                                      .datasets_ = {{"test", {.path_ =
-                                                                  kSiriSxGtfs}}}},
+      .timetable_ =
+          config::timetable{.first_day_ = "2026-01-10",
+                            .num_days_ = 1,
+                            .datasets_ = {{"test", {.path_ = kSiriSxGtfs}}}},
       .street_routing_ = false};
   auto d = import(c, "test/data", true);
   d.init_rtt(sys_days{2026_y / January / 10});
