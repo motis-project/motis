@@ -2,6 +2,8 @@
 
 #include <variant>
 
+#include "utl/verify.h"
+
 #include "osr/platforms.h"
 
 #include "nigiri/rt/frun.h"

@@ -34,13 +34,11 @@
 	} = $props();
 
 	const throwOnError = (promise: RequestResult<PlanResponse, PlanError, false>) =>
-		promise.then((response) => {
-			console.log(response.error);
-			if (response.error)
-				throw new Error(
-					String((response.error as Record<string, unknown>).error ?? response.error)
-				);
-			return response;
+		promise.then((res) => {
+			if (res.error) {
+				throw { error: res.error.error, status: res.response.status };
+			}
+			return res;
 		});
 </script>
 
@@ -189,14 +187,14 @@
 							</div>
 						{/if}
 					{:catch e}
-						<ErrorMessage {e} />
+						<ErrorMessage message={e.error ?? e} status={e.status ?? 404} />
 					{/await}
 				{/each}
 			</div>
 		{:else if r.direct.length === 0}
-			<ErrorMessage e={t.noItinerariesFound} />
+			<ErrorMessage message={t.noItinerariesFound} status={200} />
 		{/if}
 	{:catch e}
-		<ErrorMessage {e} />
+		<ErrorMessage message={e.error ?? e} status={e.status ?? 404} />
 	{/await}
 {/if}
