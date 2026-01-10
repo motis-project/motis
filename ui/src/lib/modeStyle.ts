@@ -92,8 +92,9 @@ export const getModeStyle = (l: LegLike): [string, string, string] => {
 
 export const getColor = (l: Colorable): [string, string] => {
 	const [_, defaultColor, defaultTextColor] = getModeStyle(l);
-	if (!l.routeColor) return [defaultColor, defaultTextColor];
-
+	if (!l.routeColor) {
+		return [defaultColor, defaultTextColor];
+	}
 	return [`#${l.routeColor}`, `#${l.routeTextColor}`];
 };
 
