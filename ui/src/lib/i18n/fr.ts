@@ -77,6 +77,7 @@ const translations: Translations = {
 	timetableSources: 'Sources des horaires',
 	tripCancelled: 'Voyage annulé',
 	stopCancelled: 'Arrêt supprimé',
+	addStop: 'Ajouter un arrêt',
 	inOutDisallowed: 'Impossible de monter/descendre',
 	inDisallowed: 'Impossible de monter',
 	outDisallowed: 'Impossible de descendre',
@@ -113,7 +114,11 @@ const translations: Translations = {
 		direct: 'Connexion directe',
 		maxPreTransitTime: 'Durée max. avant transit',
 		maxPostTransitTime: 'Durée max. après transit',
-		maxDirectTime: 'Durée max. directe'
+		maxDirectTime: 'Durée max. directe',
+		additionalTransferTime: 'Durée de correspondance supplémentaire',
+		pedestrianSpeed: 'Vitesse piéton',
+		cyclingSpeed: 'Vitesse vélo',
+		transferTimeFactor: 'Facteur de durée de transfert'
 	},
 	elevationCosts: {
 		NONE: 'Pas de détours',
