@@ -6,7 +6,6 @@
 	import polyline from '@mapbox/polyline';
 	import { colord } from 'colord';
 	import { layers } from './itineraryLayers';
-	import type { FilterSpecification } from 'maplibre-gl';
 	export const PRECISION = 6;
 
 	const {
@@ -92,7 +91,7 @@
 				id={layer.id}
 				type={layer.type}
 				layout={layer.layout}
-				filter={layer.filter as FilterSpecification}
+				filter={layer.filter}
 				paint={layer.paint}
 			></Layer>
 		{/if}
@@ -139,7 +138,7 @@
 				id="{layer.id}-metrics"
 				type={layer.type}
 				layout={layer.layout}
-				filter={layer.filter as FilterSpecification}
+				filter={layer.filter}
 				paint={layer.paint}
 			></Layer>
 		{/if}
