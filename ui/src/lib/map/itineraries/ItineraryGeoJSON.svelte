@@ -112,7 +112,7 @@
 		paint={{
 			'line-color': selected ? ['get', 'color'] : theme == 'dark' ? '#777' : '#bbb',
 			'line-width': 7.5,
-			'line-opacity': 0.8
+			'line-opacity': 1
 		}}
 	/>
 	<Layer
@@ -127,7 +127,7 @@
 			'line-color': selected ? ['get', 'outlineColor'] : theme == 'dark' ? '#444' : '#999',
 			'line-width': 1.5,
 			'line-gap-width': 7.5,
-			'line-opacity': 0.8
+			'line-opacity': 1
 		}}
 	/>
 </GeoJSON>
