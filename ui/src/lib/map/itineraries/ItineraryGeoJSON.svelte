@@ -7,21 +7,6 @@
 	import { colord } from 'colord';
 	import { layers } from './itineraryLayers';
 	import type { FilterSpecification } from 'maplibre-gl';
-	import {
-		_isLowerLevelRoutingFilter,
-		_isUpperLevelRoutingFilter,
-		_isCurrentLevelRoutingFilter,
-		_leadsToLowerLevelRoutingFilter,
-		_leadsUpToCurrentLevelRoutingFilter,
-		_leadsDownToCurrentLevelRoutingFilter,
-		_leadsToUpperLevelRoutingFilter,
-		_connectsToCurrentLevelRoutingFilter,
-		_isCurrentLevelFilter,
-		_ceilFromLevel,
-		_ceilToLevel,
-		_floorFromLevel,
-		_floorToLevel
-	} from './layerFilters';
 	export const PRECISION = 6;
 
 	const {
