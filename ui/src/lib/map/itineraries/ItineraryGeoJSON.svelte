@@ -91,7 +91,7 @@
 				id={layer.id}
 				type={layer.type}
 				layout={layer.layout}
-				filter={layer.filter}
+				filter={['all', ['has', 'fromLevel'], layer.filter]}
 				paint={layer.paint}
 			></Layer>
 		{/if}
