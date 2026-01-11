@@ -1,32 +1,25 @@
 import {
-	_isLowerLevelRoutingFilter,
-	_isUpperLevelRoutingFilter,
-	_isCurrentLevelRoutingFilter,
-	_leadsToLowerLevelRoutingFilter,
-	_leadsUpToCurrentLevelRoutingFilter,
-	_leadsDownToCurrentLevelRoutingFilter,
-	_leadsToUpperLevelRoutingFilter,
-	_connectsToCurrentLevelRoutingFilter,
-	_isCurrentLevelFilter,
-	_ceilFromLevel,
-	_ceilToLevel,
-	_floorFromLevel,
-	_floorToLevel,
-	_isLowerLevelFilter
+	isLowerLevelRoutingFilter,
+	isUpperLevelRoutingFilter,
+	isCurrentLevelRoutingFilter,
+	leadsToLowerLevelRoutingFilter,
+	leadsUpToCurrentLevelRoutingFilter,
+	leadsDownToCurrentLevelRoutingFilter,
+	leadsToUpperLevelRoutingFilter
 } from './layerFilters';
 
 /// Routing path current level line color.
-const _routingPathFillColor = '#42a5f5';
+const routingPathFillColor = '#42a5f5';
 /// Routing path current level line outline color.
-const _routingPathOutlineColor = '#0077c2';
+const routingPathOutlineColor = '#0077c2';
 /// Routing path other level line color.
-const _routingPathOtherLevelFillColor = '#aaaaaa';
+const routingPathOtherLevelFillColor = '#aaaaaa';
 /// Routing path other level line outline color.
-const _routingPathOtherLevelOutlineColor = '#555555';
+const routingPathOtherLevelOutlineColor = '#555555';
 /// Routing path line color.
-const _routingPathWidth = 7;
+const routingPathWidth = 7;
 /// Routing path line color.
-const _routingPathOutlineWidth = _routingPathWidth + 2;
+const routingPathOutlineWidth = routingPathWidth + 2;
 
 export const layers = [
 	// Indoor routing - Outline - Current level \\
@@ -34,14 +27,14 @@ export const layers = [
 	{
 		id: 'indoor-routing-path-current-outline',
 		type: 'line',
-		filter: _isCurrentLevelRoutingFilter,
+		filter: isCurrentLevelRoutingFilter,
 		layout: {
 			'line-join': 'round',
 			'line-cap': 'round'
 		},
 		paint: {
-			'line-color': _routingPathOutlineColor,
-			'line-width': _routingPathOutlineWidth
+			'line-color': routingPathOutlineColor,
+			'line-width': routingPathOutlineWidth
 		}
 	},
 
@@ -50,80 +43,80 @@ export const layers = [
 	{
 		id: 'indoor-routing-lower-path-down-outline',
 		type: 'line',
-		filter: _leadsToLowerLevelRoutingFilter,
+		filter: leadsToLowerLevelRoutingFilter,
 		layout: {
 			'line-join': 'round'
 		},
 		paint: {
-			'line-width': _routingPathOutlineWidth,
+			'line-width': routingPathOutlineWidth,
 			'line-gradient': [
 				'interpolate',
 				['linear'],
 				['line-progress'],
 				0,
-				_routingPathOutlineColor,
+				routingPathOutlineColor,
 				1,
-				_routingPathOtherLevelOutlineColor
+				routingPathOtherLevelOutlineColor
 			]
 		}
 	},
 	{
 		id: 'indoor-routing-lower-path-down',
 		type: 'line',
-		filter: _leadsToLowerLevelRoutingFilter,
+		filter: leadsToLowerLevelRoutingFilter,
 		layout: {
 			'line-join': 'round'
 		},
 		paint: {
-			'line-width': _routingPathWidth,
+			'line-width': routingPathWidth,
 			'line-gradient': [
 				'interpolate',
 				['linear'],
 				['line-progress'],
 				0,
-				_routingPathFillColor,
+				routingPathFillColor,
 				1,
-				_routingPathOtherLevelFillColor
+				routingPathOtherLevelFillColor
 			]
 		}
 	},
 	{
 		id: 'indoor-routing-lower-path-up-outline',
 		type: 'line',
-		filter: _leadsUpToCurrentLevelRoutingFilter,
+		filter: leadsUpToCurrentLevelRoutingFilter,
 		layout: {
 			'line-join': 'round'
 		},
 		paint: {
-			'line-width': _routingPathOutlineWidth,
+			'line-width': routingPathOutlineWidth,
 			'line-gradient': [
 				'interpolate',
 				['linear'],
 				['line-progress'],
 				0,
-				_routingPathOtherLevelOutlineColor,
+				routingPathOtherLevelOutlineColor,
 				1,
-				_routingPathOutlineColor
+				routingPathOutlineColor
 			]
 		}
 	},
 	{
 		id: 'indoor-routing-lower-path-up',
 		type: 'line',
-		filter: _leadsUpToCurrentLevelRoutingFilter,
+		filter: leadsUpToCurrentLevelRoutingFilter,
 		layout: {
 			'line-join': 'round'
 		},
 		paint: {
-			'line-width': _routingPathWidth,
+			'line-width': routingPathWidth,
 			'line-gradient': [
 				'interpolate',
 				['linear'],
 				['line-progress'],
 				0,
-				_routingPathOtherLevelFillColor,
+				routingPathOtherLevelFillColor,
 				1,
-				_routingPathFillColor
+				routingPathFillColor
 			]
 		}
 	},
@@ -133,12 +126,12 @@ export const layers = [
 	{
 		id: 'indoor-routing-upper-path-down-outline',
 		type: 'line',
-		filter: _leadsDownToCurrentLevelRoutingFilter,
+		filter: leadsDownToCurrentLevelRoutingFilter,
 		layout: {
 			'line-join': 'round'
 		},
 		paint: {
-			'line-width': _routingPathOutlineWidth,
+			'line-width': routingPathOutlineWidth,
 			// 'line-gradient' must be specified using an expression
 			// with the special 'line-progress' property
 			// the source must have the 'lineMetrics' option set to true
@@ -149,29 +142,29 @@ export const layers = [
 				['linear'],
 				['line-progress'],
 				0,
-				_routingPathOtherLevelOutlineColor,
+				routingPathOtherLevelOutlineColor,
 				1,
-				_routingPathOutlineColor
+				routingPathOutlineColor
 			]
 		}
 	},
 	{
 		id: 'indoor-routing-upper-path-up-outline',
 		type: 'line',
-		filter: _leadsToUpperLevelRoutingFilter,
+		filter: leadsToUpperLevelRoutingFilter,
 		layout: {
 			'line-join': 'round'
 		},
 		paint: {
-			'line-width': _routingPathOutlineWidth,
+			'line-width': routingPathOutlineWidth,
 			'line-gradient': [
 				'interpolate',
 				['linear'],
 				['line-progress'],
 				0,
-				_routingPathOutlineColor,
+				routingPathOutlineColor,
 				1,
-				_routingPathOtherLevelOutlineColor
+				routingPathOtherLevelOutlineColor
 			]
 		}
 	},
@@ -182,12 +175,12 @@ export const layers = [
 		id: 'indoor-routing-path-concealed-below-outline',
 		// required, otherwise line-dasharray will scale with metrics
 		type: 'line',
-		filter: _isLowerLevelRoutingFilter,
+		filter: isLowerLevelRoutingFilter,
 		layout: {
 			'line-join': 'round'
 		},
 		paint: {
-			'line-color': _routingPathOtherLevelOutlineColor,
+			'line-color': routingPathOtherLevelOutlineColor,
 			'line-width': 2,
 			'line-gap-width': 6,
 			'line-dasharray': ['literal', [2, 2]]
@@ -199,14 +192,14 @@ export const layers = [
 	{
 		id: 'indoor-routing-path-above-outline',
 		type: 'line',
-		filter: _isUpperLevelRoutingFilter,
+		filter: isUpperLevelRoutingFilter,
 		layout: {
 			'line-join': 'round',
 			'line-cap': 'round'
 		},
 		paint: {
-			'line-color': _routingPathOtherLevelOutlineColor,
-			'line-width': _routingPathOutlineWidth
+			'line-color': routingPathOtherLevelOutlineColor,
+			'line-width': routingPathOutlineWidth
 		}
 	},
 
@@ -215,14 +208,14 @@ export const layers = [
 	{
 		id: 'indoor-routing-path-current',
 		type: 'line',
-		filter: _isCurrentLevelRoutingFilter,
+		filter: isCurrentLevelRoutingFilter,
 		layout: {
 			'line-join': 'round',
 			'line-cap': 'round'
 		},
 		paint: {
-			'line-color': _routingPathFillColor,
-			'line-width': _routingPathWidth
+			'line-color': routingPathFillColor,
+			'line-width': routingPathWidth
 		}
 	},
 
@@ -231,42 +224,42 @@ export const layers = [
 	{
 		id: 'indoor-routing-upper-path-down',
 		type: 'line',
-		filter: _leadsDownToCurrentLevelRoutingFilter,
+		filter: leadsDownToCurrentLevelRoutingFilter,
 		layout: {
 			'line-join': 'round',
 			'line-cap': 'round'
 		},
 		paint: {
-			'line-width': _routingPathWidth,
+			'line-width': routingPathWidth,
 			'line-gradient': [
 				'interpolate',
 				['linear'],
 				['line-progress'],
 				0,
-				_routingPathOtherLevelFillColor,
+				routingPathOtherLevelFillColor,
 				1,
-				_routingPathFillColor
+				routingPathFillColor
 			]
 		}
 	},
 	{
 		id: 'indoor-routing-upper-path-up',
 		type: 'line',
-		filter: _leadsToUpperLevelRoutingFilter,
+		filter: leadsToUpperLevelRoutingFilter,
 		layout: {
 			'line-join': 'round',
 			'line-cap': 'round'
 		},
 		paint: {
-			'line-width': _routingPathWidth,
+			'line-width': routingPathWidth,
 			'line-gradient': [
 				'interpolate',
 				['linear'],
 				['line-progress'],
 				0,
-				_routingPathFillColor,
+				routingPathFillColor,
 				1,
-				_routingPathOtherLevelFillColor
+				routingPathOtherLevelFillColor
 			]
 		}
 	},
@@ -276,14 +269,14 @@ export const layers = [
 	{
 		id: 'indoor-routing-path-above',
 		type: 'line',
-		filter: _isUpperLevelRoutingFilter,
+		filter: isUpperLevelRoutingFilter,
 		layout: {
 			'line-join': 'round',
 			'line-cap': 'round'
 		},
 		paint: {
-			'line-color': _routingPathOtherLevelFillColor,
-			'line-width': _routingPathWidth
+			'line-color': routingPathOtherLevelFillColor,
+			'line-width': routingPathWidth
 		}
 	}
 ] as const;
