@@ -864,7 +864,7 @@ struct gbfs_update {
       auto headers = base_headers;
       co_await get_oauth_token(oauth, headers);
       auto const res = co_await http_GET(boost::urls::url{url},
-                                         std::move(headers), timeout_);
+                                         std::move(headers), timeout_, proxy_);
       content = get_http_body(res);
       if (res.result_int() != 200) {
         throw std::runtime_error(
