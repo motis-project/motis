@@ -95,7 +95,7 @@
 		type="symbol"
 		layout={{
 			'text-field': ['get', 'name'],
-			'text-font': ['Noto Sans Display Regular'],
+			'text-font': ['Noto Sans Regular'],
 			'text-size': 12,
 			'text-offset': [0, 1],
 			'text-anchor': 'top'
