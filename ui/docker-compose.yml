@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  motis-ui:
+    image: motis-ui:latest
+    ports:
+      - "80:80"
+    environment:
+      - MOTIS_BACKEND_URL=http://192.168.0.20:8090
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 3s
+      start_period: 5s
+      retries: 3
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: any
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+      placement:
+        constraints: []
+    networks:
+      - default
+
+networks:
+  default:
+    driver: overlay
+    attachable: true

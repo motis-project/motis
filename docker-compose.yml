@@ -1,0 +1,11 @@
+services:
+  motis:
+    image: motis:latest
+    container_name: motis
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/data
+    user: motis
+    restart: unless-stopped
+    command: ["/motis", "server", "/data"]

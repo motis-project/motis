@@ -26,6 +26,7 @@
 		maxTravelTime = $bindable(),
 		serverConfig,
 		geocodingBiasPlace,
+		geocodingBiasPlaceBias,
 		time = $bindable(),
 		useRoutedTransfers = $bindable(),
 		pedestrianProfile = $bindable(),
@@ -51,6 +52,7 @@
 		maxTravelTime: number;
 		serverConfig: ServerConfig | undefined;
 		geocodingBiasPlace?: maplibregl.LngLatLike;
+		geocodingBiasPlaceBias?: number;
 		time: Date;
 		useRoutedTransfers: boolean;
 		pedestrianProfile: PedestrianProfile;
@@ -158,6 +160,7 @@
 <div id="isochrones-searchmask-container" class="flex flex-col space-y-4 p-4 relative">
 	<AddressTypeahead
 		place={geocodingBiasPlace}
+		placeBias={geocodingBiasPlaceBias}
 		name="one"
 		placeholder={t.position}
 		bind:selected={one}

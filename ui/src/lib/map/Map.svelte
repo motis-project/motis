@@ -16,7 +16,7 @@
 		class: className
 	}: {
 		map?: maplibregl.Map;
-		style: maplibregl.StyleSpecification | undefined;
+	style: maplibregl.StyleSpecification | string | undefined;
 		attribution: string | undefined | false;
 		transformRequest?: maplibregl.RequestTransformFunction;
 		center: maplibregl.LngLatLike;
@@ -27,7 +27,7 @@
 	} = $props();
 
 	let el: HTMLElement | null = null;
-	let currStyle: maplibregl.StyleSpecification | undefined = style;
+let currStyle: maplibregl.StyleSpecification | string | undefined = style;
 	let ctx = $state<{ map: maplibregl.Map | undefined }>({ map: undefined });
 	setContext('map', ctx);
 
@@ -85,6 +85,25 @@
 			tmp.addControl(scale, browser && window.innerWidth < 768 ? 'top-left' : 'bottom-left');
 
 			tmp.on('load', () => {
+				if (!tmp.hasImage('shield')) {
+					tmp.addImage(
+						'shield',
+						...createShield({
+							fill: 'hsl(0, 0%, 98%)',
+							stroke: 'hsl(0, 0%, 75%)'
+						})
+					);
+				}
+
+				if (!tmp.hasImage('shield-dark')) {
+					tmp.addImage(
+						'shield-dark',
+						...createShield({
+							fill: 'hsl(0, 0%, 16%)',
+							stroke: 'hsl(0, 0%, 30%)'
+						})
+					);
+				}
 				map = tmp;
 				ctx.map = tmp;
 				bounds = tmp.getBounds();

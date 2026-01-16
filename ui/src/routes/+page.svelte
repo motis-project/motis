@@ -100,6 +100,9 @@
 	}
 
 	let center = $state.raw<[number, number]>([2.258882912876089, 48.72559118651327]);
+	let userLocation = $state<[number, number] | undefined>(undefined);
+	const geocodingBiasPlace = $derived(userLocation ?? center);
+	const geocodingBiasPlaceBias = $derived(userLocation ? 100 : undefined);
 	let level = $state(0);
 	let zoom = $state(15);
 	let bounds = $state<maplibregl.LngLatBoundsLike>();
@@ -129,6 +132,15 @@
 	};
 
 	onMount(async () => {
+		if (browser && navigator.geolocation) {
+			navigator.geolocation.getCurrentPosition(
+				(pos) => {
+					userLocation = [pos.coords.longitude, pos.coords.latitude];
+				},
+				(err) => console.warn('Geolocation error:', err),
+				{ enableHighAccuracy: true }
+			);
+		}
 		initial().then((d) => {
 			if (d.response.headers.has('Link')) {
 				dataAttributionLink = d.response.headers
@@ -639,7 +651,8 @@
 			<Tabs.Content value="connections">
 				<Card class="overflow-y-auto overflow-x-hidden bg-background rounded-lg">
 					<SearchMask
-						geocodingBiasPlace={center}
+						geocodingBiasPlace={geocodingBiasPlace}
+						geocodingBiasPlaceBias={geocodingBiasPlaceBias}
 						{serverConfig}
 						bind:from
 						bind:to
@@ -682,7 +695,8 @@
 						bind:one
 						{serverConfig}
 						bind:maxTravelTime
-						geocodingBiasPlace={center}
+						geocodingBiasPlace={geocodingBiasPlace}
+						geocodingBiasPlaceBias={geocodingBiasPlaceBias}
 						bind:time
 						bind:useRoutedTransfers
 						bind:pedestrianProfile
@@ -868,6 +882,7 @@
 			<div class="maplibregl-ctrl maplibregl-ctrl-attrib">
 				<div class="maplibregl-ctrl-attrib-inner">
 					&copy; <a href="http://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>
+					| <a href="https://www.maptiler.com/copyright/" target="_blank">MapTiler</a>
 					{#if dataAttributionLink}
 						| <a href={dataAttributionLink} target="_blank">{t.timetableSources}</a>
 					{/if}

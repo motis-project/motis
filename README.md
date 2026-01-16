@@ -106,6 +106,7 @@ Build MOTIS from source:
 - [for Linux](docs/linux-dev-setup.md)
 - [for Windows](docs/windows-dev-setup.md)
 - [for macOS](docs/macos-dev-setup.md)
+- [with Docker Compose](docs/docker-build.md)
 
 Set up a server using your build:
 - [for Linux](docs/dev-setup-server.md)

@@ -1,0 +1,16 @@
+FROM alpine:3.20
+
+# Copy the compiled binary from the build directory
+COPY build/docker-relwithdebinfo/motis /motis
+
+# Create motis user and data directory
+RUN addgroup -S motis && adduser -S motis -G motis && \
+    mkdir /data && \
+    chown motis:motis /data && \
+    chmod +x /motis
+
+EXPOSE 8080
+VOLUME ["/data"]
+USER motis
+
+CMD ["/motis", "server", "/data"]

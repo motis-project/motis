@@ -1,4 +1,10 @@
 import type { StyleSpecification } from 'maplibre-gl';
+
+const MAPTILER_KEY = import.meta.env.VITE_MAPTILER_API_KEY || '';
+const MAPTILER_STYLE_URL = MAPTILER_KEY
+	? `https://api.maptiler.com/maps/openstreetmap/style.json?key=${MAPTILER_KEY}`
+	: '';
+const USE_MAPTILER_STYLE = MAPTILER_KEY !== '';
 const colors = {
 	light: {
 		background: '#f8f4f0',
@@ -135,7 +141,10 @@ export const getStyle = (
 	level: number,
 	staticBaseUrl: string,
 	apiBaseUrl: string
-): StyleSpecification => {
+): StyleSpecification | string => {
+	if (USE_MAPTILER_STYLE) {
+		return MAPTILER_STYLE_URL;
+	}
 	const c = colors[theme];
 	return {
 		version: 8,

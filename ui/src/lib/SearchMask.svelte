@@ -19,6 +19,7 @@
 
 	let {
 		geocodingBiasPlace,
+		geocodingBiasPlaceBias,
 		serverConfig,
 		from = $bindable(),
 		to = $bindable(),
@@ -49,6 +50,7 @@
 		hasDebug = false
 	}: {
 		geocodingBiasPlace?: maplibregl.LngLatLike;
+		geocodingBiasPlaceBias?: number;
 		serverConfig: ServerConfig | undefined;
 		from: Location;
 		to: Location;
@@ -98,6 +100,7 @@
 <div id="searchmask-container" class="flex flex-col space-y-4 p-4 relative">
 	<AddressTypeahead
 		place={geocodingBiasPlace}
+		placeBias={geocodingBiasPlaceBias}
 		name="from"
 		placeholder={t.from}
 		bind:selected={from}
@@ -106,6 +109,7 @@
 	/>
 	<AddressTypeahead
 		place={geocodingBiasPlace}
+		placeBias={geocodingBiasPlaceBias}
 		name="to"
 		placeholder={t.to}
 		bind:selected={to}

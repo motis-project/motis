@@ -13,6 +13,7 @@
 		placeholder,
 		name,
 		place,
+		placeBias,
 		type,
 		transitModes,
 		onChange = () => {}
@@ -22,6 +23,7 @@
 		placeholder?: string;
 		name?: string;
 		place?: maplibregl.LngLatLike;
+		placeBias?: number;
 		type?: undefined | LocationType;
 		transitModes?: Mode[];
 		onChange?: (location: Location) => void;
@@ -73,21 +75,79 @@
 
 		const pos = place ? maplibregl.LngLat.convert(place) : undefined;
 		const biasPlace = pos ? { place: `${pos.lat},${pos.lng}` } : {};
-		const { data: matches, error } = await geocode({
-			query: {
-				...biasPlace,
-				text: inputValue,
-				language: [language],
-				mode: transitModes,
-				type
+		const baseQuery = {
+			...biasPlace,
+			placeBias,
+			text: inputValue,
+			language: [language],
+			mode: transitModes
+		};
+
+		// If a specific type is requested, use single query (backward compatibility)
+		if (type) {
+			const { data: matches, error } = await geocode({
+				query: {
+					...baseQuery,
+					type
+				}
+			});
+			if (error) {
+				console.error('TYPEAHEAD ERROR: ', error);
+				return;
 			}
-		});
-		if (error) {
-			console.error('TYPEAHEAD ERROR: ', error);
+			items = matches!.map((match: Match): Location => {
+				return {
+					label: getLabel(match),
+					match
+				};
+			});
+			/* eslint-disable-next-line svelte/prefer-svelte-reactivity */
+			const shown = new Set<string>();
+			items = items.filter((x) => {
+				const entry = x.match?.type + x.label!;
+				if (shown.has(entry)) {
+					return false;
+				}
+				shown.add(entry);
+				return true;
+			});
 			return;
 		}
-		items = matches!.map((match: Match): Location => {
-			return {
+
+		// Make 3 parallel requests for STOP, PLACE, and ADDRESS
+		const [stopsResult, placesResult, addressesResult] = await Promise.all([
+			geocode({
+				query: {
+					...baseQuery,
+					type: 'STOP'
+				}
+			}),
+			geocode({
+				query: {
+					...baseQuery,
+					type: 'PLACE'
+				}
+			}),
+			geocode({
+				query: {
+					...baseQuery,
+					type: 'ADDRESS'
+				}
+			})
+		]);
+
+		// Handle errors - continue with successful requests
+		const allErrors = [stopsResult.error, placesResult.error, addressesResult.error].filter(
+			(e) => e !== undefined
+		);
+		if (allErrors.length > 0) {
+			console.error('TYPEAHEAD ERROR: ', allErrors);
+		}
+
+		// Convert matches to Locations and limit each type: 5 STOPS, 3 PLACES, 2 ADDRESSES
+		const stops = (stopsResult.data ?? [])
+			.slice(0, 5)
+			.map((match: Match): Location => ({
 				label: getLabel(match),
 				match
 			};
