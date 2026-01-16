@@ -6,6 +6,7 @@
 	import { language } from './i18n/translation';
 	import maplibregl from 'maplibre-gl';
 	import { getModeStyle, type LegLike } from './modeStyle';
+	import getDistance from '@turf/rhumb-distance';
 
 	let {
 		items = $bindable([]),
@@ -62,6 +63,25 @@
 	const getLabel = (match: Match) => {
 		const displayArea = getDisplayArea(match);
 		return displayArea ? match.name + ', ' + displayArea : match.name;
+	};
+
+	// Calculate distance in meters between two lat/lng coordinates
+	const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+		return getDistance([lon1, lat1], [lon2, lat2], { units: 'meters' });
+	};
+
+	// Get type bonus multiplier (proportional reduction)
+	const getTypeBonus = (type: string | undefined): number => {
+		switch (type) {
+			case 'STOP':
+				return 0.1; // -90%
+			case 'PLACE':
+				return 0.5; // -50%
+			case 'ADDRESS':
+				return 1.0; // 0%
+			default:
+				return 1.0;
+		}
 	};
 
 	const updateGuesses = async () => {
@@ -144,14 +164,17 @@
 			console.error('TYPEAHEAD ERROR: ', allErrors);
 		}
 
-		// Convert matches to Locations and limit each type: 5 STOPS, 3 PLACES, 2 ADDRESSES
+		// Convert matches to Locations and limit each type to 20 results
 		const stops = (stopsResult.data ?? [])
-			.slice(0, 5)
+			.slice(0, 20)
 			.map((match: Match): Location => ({
 				label: getLabel(match),
 				match
 			};
 		});
+
+		// Limit to 10 results total
+		items = deduplicated.slice(0, 10);
 	};
 
 	const deserialize = (s: string): Location => {

@@ -8,6 +8,14 @@ RUN npm install -g pnpm@latest
 # Set working directory
 WORKDIR /app
 
+# Accept build arguments for MapTiler configuration
+ARG VITE_MAPTILER_API_KEY
+ARG VITE_MAPTILER_STYLE
+
+# Set environment variables for Vite build
+ENV VITE_MAPTILER_API_KEY=${VITE_MAPTILER_API_KEY}
+ENV VITE_MAPTILER_STYLE=${VITE_MAPTILER_STYLE}
+
 # Copy workspace configuration files
 COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
 

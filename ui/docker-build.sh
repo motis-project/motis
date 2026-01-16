@@ -26,8 +26,27 @@ if [ ! -f "openapi.yaml" ]; then
     fi
 fi
 
-# Construire l'image
-docker build -t "${IMAGE_NAME}:${IMAGE_TAG}" .
+# Charger les variables d'environnement depuis .env si le fichier existe
+BUILD_ARGS=""
+if [ -f ".env" ]; then
+    echo "📋 Chargement des variables d'environnement depuis .env..."
+    # Source le fichier .env et extraire les variables VITE_MAPTILER_*
+    set -a
+    source .env
+    set +a
+    
+    # Construire les arguments --build-arg pour Docker
+    if [ -n "${VITE_MAPTILER_API_KEY:-}" ]; then
+        BUILD_ARGS="${BUILD_ARGS} --build-arg VITE_MAPTILER_API_KEY=${VITE_MAPTILER_API_KEY}"
+    fi
+    if [ -n "${VITE_MAPTILER_STYLE:-}" ]; then
+        BUILD_ARGS="${BUILD_ARGS} --build-arg VITE_MAPTILER_STYLE=${VITE_MAPTILER_STYLE}"
+    fi
+fi
+
+# Construire l'image avec les build args
+echo "🔨 Build args: ${BUILD_ARGS:-aucun}"
+docker build ${BUILD_ARGS} -t "${IMAGE_NAME}:${IMAGE_TAG}" .
 
 echo "✅ Image construite avec succès"
 
@@ -73,7 +92,7 @@ echo "✅ Fichier docker-compose.yml généré: ${COMPOSE_FILE}"
 # Vérifier si le service existe déjà
 if docker service ls --format '{{.Name}}' | grep -q "^${SERVICE_NAME}$"; then
     echo "🔄 Mise à jour du service Docker Swarm: ${SERVICE_NAME}"
-    docker service update --image "${IMAGE_NAME}:${IMAGE_TAG}" "${SERVICE_NAME}"
+    docker service update --force --image "${IMAGE_NAME}:${IMAGE_TAG}" "${SERVICE_NAME}"
     echo "✅ Service mis à jour avec succès"
 else
     echo "📦 Déploiement du nouveau stack Docker Swarm: ${STACK_NAME}"
