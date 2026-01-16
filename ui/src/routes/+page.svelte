@@ -63,6 +63,28 @@
 
 	const urlParams = browser ? new URLSearchParams(window.location.search) : undefined;
 
+	// Load saved options from localStorage
+	const savedOptions = browser ? loadOptions() : null;
+	const defaultOptions = getDefaultOptions();
+
+	// Helper function to get value with priority: URL > localStorage > default
+	function getValue<T>(
+		urlKey: string | null,
+		savedValue: T | undefined,
+		defaultValue: T
+	): T {
+		if (urlKey !== null && urlParams?.has(urlKey)) {
+			// URL params have highest priority
+			return urlParams.get(urlKey) as T;
+		}
+		if (savedValue !== undefined) {
+			// Then localStorage
+			return savedValue;
+		}
+		// Finally defaults
+		return defaultValue;
+	}
+
 	const hasDebug: boolean = Boolean(urlParams?.has('debug'));
 	const hasDark: boolean = Boolean(urlParams?.has('dark'));
 	const hasLight: boolean = Boolean(urlParams?.has('light'));
@@ -90,21 +112,109 @@
 		}
 	});
 
+	// Save options to localStorage when they change (with debounce)
+	// Only save after initial data load to avoid saving during initialization
+	let saveOptionsTimer: number;
+	const saveOptionsToStorage = () => {
+		if (!browser || !dataLoaded) return;
+		clearTimeout(saveOptionsTimer);
+		saveOptionsTimer = setTimeout(() => {
+			const optionsToSave: Partial<SavedOptions> = {
+				arriveBy,
+				timetableView,
+				searchWindow,
+				numItineraries,
+				algorithm,
+				useRoutedTransfers,
+				pedestrianProfile,
+				requireBikeTransport,
+				requireCarTransport,
+				transitModes,
+				preTransitModes,
+				postTransitModes,
+				directModes,
+				elevationCosts,
+				maxTransfers,
+				maxPreTransitTime,
+				maxPostTransitTime,
+				maxDirectTime,
+				ignorePreTransitRentalReturnConstraints,
+				ignorePostTransitRentalReturnConstraints,
+				ignoreDirectRentalReturnConstraints,
+				preTransitProviderGroups,
+				postTransitProviderGroups,
+				directProviderGroups,
+				isochronesDisplayLevel: isochronesOptions.displayLevel,
+				isochronesColor: isochronesOptions.color,
+				isochronesOpacity: isochronesOptions.opacity,
+				isochronesCircleResolution,
+				theme,
+				colorMode,
+				showMap,
+				center,
+				zoom,
+				level
+			};
+			saveOptions(optionsToSave);
+		}, 500);
+	};
+
+	// Save options when they change (only after data is loaded)
+	$effect(() => {
+		if (!dataLoaded) return;
+		// Track all option changes
+		arriveBy;
+		timetableView;
+		searchWindow;
+		numItineraries;
+		algorithm;
+		useRoutedTransfers;
+		pedestrianProfile;
+		requireBikeTransport;
+		requireCarTransport;
+		transitModes;
+		preTransitModes;
+		postTransitModes;
+		directModes;
+		elevationCosts;
+		maxTransfers;
+		maxPreTransitTime;
+		maxPostTransitTime;
+		maxDirectTime;
+		ignorePreTransitRentalReturnConstraints;
+		ignorePostTransitRentalReturnConstraints;
+		ignoreDirectRentalReturnConstraints;
+		preTransitProviderGroups;
+		postTransitProviderGroups;
+		directProviderGroups;
+		isochronesOptions.displayLevel;
+		isochronesOptions.color;
+		isochronesOptions.opacity;
+		isochronesCircleResolution;
+		theme;
+		colorMode;
+		showMap;
+		center;
+		zoom;
+		level;
+		saveOptionsToStorage();
+	});
+
 	let theme: 'light' | 'dark' =
 		(hasDark ? 'dark' : hasLight ? 'light' : undefined) ??
-		(browser && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
-			? 'dark'
-			: 'light');
+		(savedOptions?.theme ?? defaultOptions.theme);
 	if (theme === 'dark') {
 		document.documentElement.classList.add('dark');
 	}
 
-	let center = $state.raw<[number, number]>([2.258882912876089, 48.72559118651327]);
+	let center = $state.raw<[number, number]>(
+		savedOptions?.center ?? [2.258882912876089, 48.72559118651327]
+	);
 	let userLocation = $state<[number, number] | undefined>(undefined);
 	const geocodingBiasPlace = $derived(userLocation ?? center);
 	const geocodingBiasPlaceBias = $derived(userLocation ? 100 : undefined);
-	let level = $state(0);
-	let zoom = $state(15);
+	let level = $state(savedOptions?.level ?? 0);
+	let zoom = $state(savedOptions?.zoom ?? 15);
 	let bounds = $state<maplibregl.LngLatBoundsLike>();
 	let map = $state<maplibregl.Map>();
 	let style = $derived(
@@ -213,65 +323,129 @@
 	);
 
 	let time = $state<Date>(new Date(urlParams?.get('time') || Date.now()));
-	let timetableView = $state(urlParams?.get('timetableView') != 'false');
+	let timetableView = $state(
+		urlParams?.get('timetableView') != 'false'
+			? urlParams?.get('timetableView') != 'false'
+			: savedOptions?.timetableView ?? defaultQuery.timetableView
+	);
 	let searchWindow = $state(
 		urlParams?.get('searchWindow')
 			? parseInt(urlParams.get('searchWindow')!)
-			: defaultQuery.searchWindow
+			: savedOptions?.searchWindow ?? defaultQuery.searchWindow
 	);
 	let numItineraries = $state(
 		urlParams?.get('numItineraries')
 			? parseIntOr(urlParams.get('numItineraries'), defaultQuery.numItineraries)
-			: defaultQuery.numItineraries
+			: savedOptions?.numItineraries ?? defaultQuery.numItineraries
 	);
 	let maxItineraries = $state(
 		urlParams?.get('maxItineraries')
 			? parseIntOr(urlParams.get('maxItineraries'), undefined)
 			: undefined
 	);
-	let arriveBy = $state<boolean>(urlParams?.get('arriveBy') == 'true');
+	let arriveBy = $state<boolean>(
+		urlParams?.get('arriveBy') == 'true'
+			? true
+			: urlParams?.get('arriveBy') == 'false'
+				? false
+				: savedOptions?.arriveBy ?? defaultQuery.arriveBy
+	);
 	let algorithm = $state<PlanData['query']['algorithm']>(
-		(urlParams?.get('algorithm') ?? defaultQuery.algorithm) as PlanData['query']['algorithm']
+		(urlParams?.get('algorithm') ??
+			savedOptions?.algorithm ??
+			defaultQuery.algorithm) as PlanData['query']['algorithm']
 	);
 	let useRoutedTransfers = $state(
-		urlParams?.get('useRoutedTransfers') == 'true' || defaultQuery.useRoutedTransfers
+		urlParams?.get('useRoutedTransfers') == 'true'
+			? true
+			: urlParams?.get('useRoutedTransfers') == 'false'
+				? false
+				: savedOptions?.useRoutedTransfers ?? defaultQuery.useRoutedTransfers
 	);
 	let pedestrianProfile = $state<PedestrianProfile>(
 		(urlParams?.has('pedestrianProfile')
 			? urlParams.get('pedestrianProfile')
-			: defaultQuery.pedestrianProfile) as PedestrianProfile
+			: savedOptions?.pedestrianProfile ?? defaultQuery.pedestrianProfile) as PedestrianProfile
 	);
-	let requireBikeTransport = $state(urlParams?.get('requireBikeTransport') == 'true');
-	let requireCarTransport = $state(urlParams?.get('requireCarTransport') == 'true');
+	let requireBikeTransport = $state(
+		urlParams?.get('requireBikeTransport') == 'true'
+			? true
+			: urlParams?.get('requireBikeTransport') == 'false'
+				? false
+				: savedOptions?.requireBikeTransport ?? defaultQuery.requireBikeTransport
+	);
+	let requireCarTransport = $state(
+		urlParams?.get('requireCarTransport') == 'true'
+			? true
+			: urlParams?.get('requireCarTransport') == 'false'
+				? false
+				: savedOptions?.requireCarTransport ?? defaultQuery.requireCarTransport
+	);
 	let transitModes = $state<Mode[]>(
-		getUrlArray('transitModes', defaultQuery.transitModes) as Mode[]
+		urlParams?.has('transitModes')
+			? (getUrlArray('transitModes') as Mode[])
+			: savedOptions?.transitModes ?? (defaultQuery.transitModes as Mode[])
 	);
 	let preTransitModes = $state<PrePostDirectMode[]>(
-		getPrePostDirectModes(
-			getUrlArray('preTransitModes', defaultQuery.preTransitModes) as Mode[],
-			getUrlArray('preTransitRentalFormFactors') as RentalFormFactor[]
-		)
+		urlParams?.has('preTransitModes')
+			? getPrePostDirectModes(
+					getUrlArray('preTransitModes') as Mode[],
+					getUrlArray('preTransitRentalFormFactors') as RentalFormFactor[]
+				)
+			: savedOptions?.preTransitModes ??
+				getPrePostDirectModes(
+					defaultQuery.preTransitModes as Mode[],
+					[]
+				)
 	);
 	let postTransitModes = $state<PrePostDirectMode[]>(
-		getPrePostDirectModes(
-			getUrlArray('postTransitModes', defaultQuery.postTransitModes) as Mode[],
-			getUrlArray('postTransitRentalFormFactors') as RentalFormFactor[]
-		)
+		urlParams?.has('postTransitModes')
+			? getPrePostDirectModes(
+					getUrlArray('postTransitModes') as Mode[],
+					getUrlArray('postTransitRentalFormFactors') as RentalFormFactor[]
+				)
+			: savedOptions?.postTransitModes ??
+				getPrePostDirectModes(
+					defaultQuery.postTransitModes as Mode[],
+					[]
+				)
 	);
 	let directModes = $state<PrePostDirectMode[]>(
-		getPrePostDirectModes(
-			getUrlArray('directModes', defaultQuery.directModes) as Mode[],
-			getUrlArray('directRentalFormFactors') as RentalFormFactor[]
-		)
+		urlParams?.has('directModes')
+			? getPrePostDirectModes(
+					getUrlArray('directModes') as Mode[],
+					getUrlArray('directRentalFormFactors') as RentalFormFactor[]
+				)
+			: savedOptions?.directModes ??
+				getPrePostDirectModes(
+					defaultQuery.directModes as Mode[],
+					[]
+				)
 	);
-	let preTransitProviderGroups = $state<string[]>(getUrlArray('preTransitRentalProviderGroups'));
-	let postTransitProviderGroups = $state<string[]>(getUrlArray('postTransitRentalProviderGroups'));
-	let directProviderGroups = $state<string[]>(getUrlArray('directRentalProviderGroups'));
+	let preTransitProviderGroups = $state<string[]>(
+		urlParams?.has('preTransitRentalProviderGroups')
+			? getUrlArray('preTransitRentalProviderGroups')
+			: savedOptions?.preTransitProviderGroups ?? []
+	);
+	let postTransitProviderGroups = $state<string[]>(
+		urlParams?.has('postTransitRentalProviderGroups')
+			? getUrlArray('postTransitRentalProviderGroups')
+			: savedOptions?.postTransitProviderGroups ?? []
+	);
+	let directProviderGroups = $state<string[]>(
+		urlParams?.has('directRentalProviderGroups')
+			? getUrlArray('directRentalProviderGroups')
+			: savedOptions?.directProviderGroups ?? []
+	);
 	let elevationCosts = $state<ElevationCosts>(
-		(urlParams?.get('elevationCosts') ?? 'NONE') as ElevationCosts
+		(urlParams?.get('elevationCosts') ??
+			savedOptions?.elevationCosts ??
+			'NONE') as ElevationCosts
 	);
 	let maxTransfers = $state<number>(
-		parseIntOr(urlParams?.get('maxTransfers'), defaultQuery.maxTransfers)
+		urlParams?.get('maxTransfers')
+			? parseIntOr(urlParams.get('maxTransfers'), defaultQuery.maxTransfers)
+			: savedOptions?.maxTransfers ?? defaultQuery.maxTransfers
 	);
 	let maxTravelTime = $derived<number>(
 		parseIntOr(
@@ -285,14 +459,17 @@
 	let maxPreTransitTime = $derived<number>(
 		parseIntOr(
 			urlParams?.get('maxPreTransitTime'),
-			Math.min(defaultQuery.maxPreTransitTime, serverConfig?.maxPrePostTransitTimeLimit ?? Infinity)
+			Math.min(
+				savedOptions?.maxPreTransitTime ?? defaultQuery.maxPreTransitTime,
+				serverConfig?.maxPrePostTransitTimeLimit ?? Infinity
+			)
 		)
 	);
 	let maxPostTransitTime = $derived<number>(
 		parseIntOr(
 			urlParams?.get('maxPostTransitTime'),
 			Math.min(
-				defaultQuery.maxPostTransitTime,
+				savedOptions?.maxPostTransitTime ?? defaultQuery.maxPostTransitTime,
 				serverConfig?.maxPrePostTransitTimeLimit ?? Infinity
 			)
 		)
@@ -300,17 +477,35 @@
 	let maxDirectTime = $derived<number>(
 		parseIntOr(
 			urlParams?.get('maxDirectTime'),
-			Math.min(defaultQuery.maxDirectTime, serverConfig?.maxDirectTimeLimit ?? Infinity)
+			Math.min(
+				savedOptions?.maxDirectTime ?? defaultQuery.maxDirectTime,
+				serverConfig?.maxDirectTimeLimit ?? Infinity
+			)
 		)
 	);
 	let ignorePreTransitRentalReturnConstraints = $state(
 		urlParams?.get('ignorePreTransitRentalReturnConstraints') == 'true'
+			? true
+			: urlParams?.get('ignorePreTransitRentalReturnConstraints') == 'false'
+				? false
+				: savedOptions?.ignorePreTransitRentalReturnConstraints ??
+					defaultQuery.ignorePreTransitRentalReturnConstraints
 	);
 	let ignorePostTransitRentalReturnConstraints = $state(
 		urlParams?.get('ignorePostTransitRentalReturnConstraints') == 'true'
+			? true
+			: urlParams?.get('ignorePostTransitRentalReturnConstraints') == 'false'
+				? false
+				: savedOptions?.ignorePostTransitRentalReturnConstraints ??
+					defaultQuery.ignorePostTransitRentalReturnConstraints
 	);
 	let ignoreDirectRentalReturnConstraints = $state(
 		urlParams?.get('ignoreDirectRentalReturnConstraints') == 'true'
+			? true
+			: urlParams?.get('ignoreDirectRentalReturnConstraints') == 'false'
+				? false
+				: savedOptions?.ignoreDirectRentalReturnConstraints ??
+					defaultQuery.ignoreDirectRentalReturnConstraints
 	);
 	let slowDirect = $state(urlParams?.get('slowDirect') == 'true');
 
@@ -318,16 +513,24 @@
 	let isochronesOptions = $state<IsochronesOptions>({
 		displayLevel:
 			(urlParams?.get('isochronesDisplayLevel') as DisplayLevel) ??
+			savedOptions?.isochronesDisplayLevel ??
 			defaultQuery.isochronesDisplayLevel,
-		color: urlParams?.get('isochronesColor') ?? defaultQuery.isochronesColor,
-		opacity: parseIntOr(urlParams?.get('isochronesOpacity'), defaultQuery.isochronesOpacity),
+		color:
+			urlParams?.get('isochronesColor') ??
+			savedOptions?.isochronesColor ??
+			defaultQuery.isochronesColor,
+		opacity: parseIntOr(
+			urlParams?.get('isochronesOpacity'),
+			savedOptions?.isochronesOpacity ?? defaultQuery.isochronesOpacity
+		),
 		status: 'DONE',
 		errorMessage: undefined,
 		errorCode: undefined
 	});
-	const isochronesCircleResolution = urlParams?.get('isochronesCircleResolution')
-		? parseIntOr(urlParams.get('isochronesCircleResolution'), defaultQuery.circleResolution)
-		: defaultQuery.circleResolution;
+	const isochronesCircleResolution =
+		urlParams?.get('isochronesCircleResolution')
+			? parseIntOr(urlParams.get('isochronesCircleResolution'), defaultQuery.circleResolution)
+			: savedOptions?.isochronesCircleResolution ?? defaultQuery.circleResolution;
 
 	const toPlaceString = (l: Location) => {
 		if (l.match?.type === 'STOP') {
