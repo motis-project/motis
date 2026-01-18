@@ -1,7 +1,7 @@
 /// <reference lib="webworker" />trips
 import polyline from '@mapbox/polyline';
 import { client, trips, type TripSegment } from '@motis-project/motis-client';
-import type { Trip, Position, Data, MetaData, Query } from './types';
+import type { Trip, Position, TransferData, MetaData, Query } from './types';
 import type { QuerySerializerOptions } from '@hey-api/client-fetch';
 import { getDelayColor, hexToRgb } from './Color';
 import { getModeStyle, getColor } from './modeStyle';
@@ -106,7 +106,7 @@ const processSegment = (s: TripSegment): Trip => {
 };
 
 //STATE UPDATE
-function updateState(data: Data, colorMode: string) {
+function updateState(data: TransferData, colorMode: string) {
 	let posIndex = 0;
 	let colorIndex = 0;
 	let angleIndex = 0;
