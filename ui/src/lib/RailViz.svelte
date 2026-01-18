@@ -1,19 +1,14 @@
 <script lang="ts">
-	import { trips, type Mode, type TripSegment } from '@motis-project/motis-client';
+	import { lngLatToStr } from '$lib/lngLatToStr';
 	import { MapboxOverlay } from '@deck.gl/mapbox';
 	import { IconLayer } from '@deck.gl/layers';
 	import { createTripIcon } from '$lib/map/createTripIcon';
-	import { getColor, getModeStyle } from '$lib/modeStyle';
-	import getDistance from '@turf/rhumb-distance';
-	import getBearing from '@turf/rhumb-bearing';
-	import polyline from '@mapbox/polyline';
-	import { formatTime } from '$lib/toDateTime';
-	import { lngLatToStr } from '$lib/lngLatToStr';
 	import maplibregl from 'maplibre-gl';
-	import { onDestroy, untrack } from 'svelte';
-	import Control from '$lib/map/Control.svelte';
-	import { onClickTrip } from '$lib/utils';
-
+	import { onDestroy, onMount, untrack } from 'svelte';
+	import { formatTime } from './toDateTime';
+	import { onClickTrip } from './utils';
+	import { getDelayColor, rgbToHex } from './Color';
+	import type { MetaData } from './types';
 	let {
 		map,
 		bounds,
@@ -26,329 +21,201 @@
 		colorMode: 'rt' | 'route' | 'mode' | 'none';
 	} = $props();
 
-	let railvizError = $state();
-
-	type RGBA = [number, number, number, number];
-
-	function hexToRgb(hex: string): RGBA {
-		var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-		if (!result) {
-			throw `${hex} is not a hex color #RRGGBB`;
-		}
-		return [parseInt(result[1], 16), parseInt(result[2], 16), parseInt(result[3], 16), 255];
-	}
-
-	function rgbToHex(rgba: RGBA): string {
-		return '#' + ((1 << 24) | (rgba[0] << 16) | (rgba[1] << 8) | rgba[2]).toString(16).slice(1);
-	}
-
-	const getDelayColor = (delay: number, realTime: boolean): RGBA => {
-		delay = delay / 60000;
-		if (!realTime) {
-			return [100, 100, 100, 255];
-		}
-		if (delay <= -30) {
-			return [255, 0, 255, 255];
-		} else if (delay <= -6) {
-			return [138, 82, 254, 255];
-		} else if (delay <= 3) {
-			return [69, 194, 74, 255];
-		} else if (delay <= 5) {
-			return [255, 237, 0, 255];
-		} else if (delay <= 10) {
-			return [255, 102, 0, 255];
-		} else if (delay <= 15) {
-			return [255, 48, 71, 255];
-		}
-		return [163, 0, 10, 255];
-	};
-
-	type KeyFrame = {
-		point: [number, number];
-		heading: number;
-		time: number;
-	};
-
-	type KeyFrameExt = {
-		keyFrames: Array<KeyFrame>;
-		arrival: number;
-		departure: number;
-		arrivalDelay: number;
-		departureDelay: number;
-	};
-
-	const getKeyFrames = (t: TripSegment): KeyFrameExt => {
-		let keyFrames: Array<KeyFrame> = [];
-		const departure = new Date(t.departure).getTime();
-		const arrival = new Date(t.arrival).getTime();
-		const scheduledArrival = new Date(t.scheduledArrival).getTime();
-		const scheduledDeparture = new Date(t.scheduledDeparture).getTime();
-		const arrivalDelay = arrival - scheduledArrival;
-		const departureDelay = departure - scheduledDeparture;
-		const coordinates = polyline.decode(t.polyline).map(([x, y]): [number, number] => [y, x]);
-		const totalDuration = arrival - departure;
-		let currDistance = 0;
-
-		let totalDistance = 0;
-		for (let i = 0; i < coordinates.length - 1; i++) {
-			let from = coordinates[i];
-			let to = coordinates[i + 1];
-			totalDistance += getDistance(from, to, { units: 'meters' });
-		}
-
-		for (let i = 0; i < coordinates.length - 1; i++) {
-			let from = coordinates[i];
-			let to = coordinates[i + 1];
-
-			const distance = getDistance(from, to, { units: 'meters' });
-			const heading = getBearing(from, to);
-
-			const r = currDistance / totalDistance;
-			keyFrames.push({ point: from, heading, time: departure + r * totalDuration });
-
-			currDistance += distance;
-		}
-		if (Math.abs(totalDistance - currDistance) > 1) {
-			console.debug(totalDistance, currDistance);
-		}
-		keyFrames.push({ point: coordinates[coordinates.length - 1], time: arrival, heading: 0 });
-		return { keyFrames, arrival, departure, arrivalDelay, departureDelay };
-	};
-
-	const getFrame = (keyframes: Array<KeyFrame>, timestamp: number) => {
-		const i = keyframes.findIndex((s) => s.time >= timestamp);
-
-		if (i === -1 || i === 0) {
-			console.debug(
-				'not found, timestamp=',
-				new Date(timestamp),
-				' #keyframes=',
-				keyframes.length,
-				' first=',
-				new Date(keyframes[0].time),
-				', last=',
-				new Date(keyframes[keyframes.length - 1].time)
-			);
-			return;
-		}
-
-		const startState = keyframes[i - 1];
-		const endState = keyframes[i];
-		const r = (timestamp - startState.time) / (endState.time - startState.time);
-
+	//QUERY
+	let startTime = $state(new Date(Date.now()));
+	let endTime = $derived(new Date(startTime.getTime() + 180000));
+	let query = $derived.by(() => {
+		if (!bounds || !zoom) return null;
+		const b = maplibregl.LngLatBounds.convert(bounds);
+		const max = lngLatToStr(b.getNorthWest());
+		const min = lngLatToStr(b.getSouthEast());
 		return {
-			point: [
-				startState.point[0] * (1 - r) + endState.point[0] * r,
-				startState.point[1] * (1 - r) + endState.point[1] * r
-			],
-			heading: startState.heading
+			min,
+			max,
+			startTime: startTime.toISOString(),
+			endTime: endTime.toISOString(),
+			zoom
 		};
+	});
+
+	//TRANSFERABLES
+	let isProcessing = false;
+	const TRIPS_NUM = 6000;
+	const positions = new Float64Array(TRIPS_NUM * 2);
+	const angles = new Float32Array(TRIPS_NUM);
+	const colors = new Uint8Array(TRIPS_NUM * 3);
+	const DATA = {
+		length: TRIPS_NUM,
+		positions,
+		colors,
+		angles
 	};
 
-	const getRailvizLayer = (
-		trips: Array<{ realTime: boolean; arrivalDelay: number; departureDelay: number } & KeyFrameExt>
-	) => {
-		const now = new Date().getTime();
-
-		const tripsWithFrame = trips
-			.filter((t) => now >= t.departure && now <= t.arrival)
-			.map((t) => {
-				return {
-					...t,
-					...getFrame(t.keyFrames, now)
-				};
-			})
-			.filter((t) => t.point);
-
-		return new IconLayer<
-			{
-				realTime: boolean;
-				arrivalDelay: number;
-				departureDelay: number;
-				routeColor?: string;
-				routeTextColor?: string;
-				mode: Mode;
-			} & KeyFrame
-		>({
-			id: 'trips',
-			data: tripsWithFrame,
-			beforeId: 'road-name-text',
-			getColor: (d) => {
-				switch (colorMode) {
-					case 'rt':
-						return getDelayColor(d.departureDelay, d.realTime);
-					case 'mode':
-						return hexToRgb(getModeStyle(d)[1]);
-					case 'route':
-						return hexToRgb(getColor(d)[0]);
-					case 'none':
-						return hexToRgb(getColor(d)[0]);
-				}
-			},
-			getAngle: (d) => -d.heading + 90,
-			getPosition: (d) => d.point,
-			getSize: (_) => 48,
-			getIcon: (_) => 'marker',
-			pickable: true,
-			// @ts-expect-error: canvas element seems to work fine
-			iconAtlas: createTripIcon(128),
-			iconMapping: {
-				marker: {
-					x: 0,
-					y: 0,
-					width: 128,
-					height: 128,
-					anchorY: 64,
-					anchorX: 64,
-					mask: true
-				}
-			}
-		});
-	};
-
-	const railvizRequest = () => {
-		const b = maplibregl.LngLatBounds.convert(bounds!);
-		const min = lngLatToStr(b.getNorthWest());
-		const max = lngLatToStr(b.getSouthEast());
-		const startTime = new Date();
-		const endTime = new Date(startTime.getTime() + 180000);
-		return trips({
-			query: {
-				min,
-				max,
-				startTime: startTime.toISOString(),
-				endTime: endTime.toISOString(),
-				zoom
-			}
-		});
-	};
-
-	let animation: number | null = null;
-	const updateRailvizLayer = async () => {
-		try {
-			if (colorMode == 'none') {
-				if (animation) {
-					cancelAnimationFrame(animation);
-				}
-				overlay!.setProps({
-					layers: []
-				});
-				clearTimeout(timer);
-				return;
-			}
-			const { data, error, response } = await railvizRequest();
-			if (animation) {
-				cancelAnimationFrame(animation);
-			}
-
-			if (error) {
-				railvizError = `map trips error status ${response.status}`;
-				return;
-			}
-
-			railvizError = undefined;
-
-			const tripSegmentsWithKeyFrames = data!.map((tripSegment: TripSegment) => {
-				return { ...tripSegment, ...getKeyFrames(tripSegment) };
-			});
-
-			const onAnimationFrame = () => {
-				overlay!.setProps({
-					layers: [getRailvizLayer(tripSegmentsWithKeyFrames)]
-				});
-				animation = requestAnimationFrame(onAnimationFrame);
-			};
-
-			onAnimationFrame();
-		} catch (e) {
-			railvizError = e;
-		}
-	};
-
-	let timer: number | undefined;
-	let overlay = $state.raw<MapboxOverlay>();
-	const updateRailviz = async () => {
-		await updateRailvizLayer();
-		clearTimeout(timer); // Ensure previous timer is cleared
-		timer = setTimeout(() => {
-			console.debug('updateRailviz: timer');
-			updateRailviz();
-		}, 60000);
-	};
-
-	const tooltipPopup = new maplibregl.Popup({
+	//INTERACTION
+	const popup = new maplibregl.Popup({
 		closeButton: false,
 		closeOnClick: false,
 		maxWidth: 'none'
 	});
+	type HoverEvent = {
+		index?: number;
+		coordinate?: number[];
+	};
 
-	$effect(() => {
-		if (map && !overlay) {
-			overlay = new MapboxOverlay({
-				interleaved: true,
-				layers: [],
-				onClick: ({ object }) => {
-					if (!object) {
-						return;
-					}
-					onClickTrip(object.trips[0].tripId);
-				},
-				getCursor: () => map.getCanvas().style.cursor,
-				onHover: ({ object, coordinate }) => {
-					if (object && coordinate) {
-						const popup = tooltipPopup.setLngLat(coordinate as [number, number]);
-						if (object.realTime) {
-							popup.setHTML(
-								`<strong>${object.trips[0].displayName}</strong><br>
+	type ClickEvent = {
+		index: number;
+	};
+	const onHover = ({ index, coordinate }: HoverEvent) => {
+		const trip = coordinate && index && index !== -1 ? metadata[index] : null;
 
-							<span style="color: ${rgbToHex(getDelayColor(object.departureDelay, true))}">${formatTime(new Date(object.departure), object.from.tz)}</span>
-							<span ${object.departureDelay != 0 ? 'class="line-through"' : ''}>${formatTime(new Date(object.scheduledDeparture), object.from.tz)}</span>  ${object.from.name}<br>
+		if (trip && map) {
+			map.getCanvas().style.cursor = 'pointer';
+			const content = trip.realtime
+				? `<strong>${trip.displayName}</strong><br>
+			       <span style="color: ${rgbToHex(getDelayColor(trip.departureDelay, true))}">${formatTime(new Date(trip.departure), trip.tz)}</span>
+			       <span ${trip.departureDelay != 0 ? 'class="line-through"' : ''}>${formatTime(new Date(trip.scheduledDeparture), trip.tz)}</span> ${trip.from}<br>
+			       <span style="color: ${rgbToHex(getDelayColor(trip.arrivalDelay, true))}">${formatTime(new Date(trip.arrival), trip.tz)}</span>
+			       <span ${trip.arrivalDelay != 0 ? 'class="line-through"' : ''}>${formatTime(new Date(trip.scheduledArrival), trip.tz)}</span> ${trip.to}`
+				: `<strong>${trip.displayName}</strong><br>
+			       ${formatTime(new Date(trip.departure), trip.tz)} ${trip.from}<br>
+			       ${formatTime(new Date(trip.arrival), trip.tz)} ${trip.to}`;
+			popup
+				.setLngLat(coordinate as maplibregl.LngLatLike)
+				.setHTML(content)
+				.addTo(map);
+		} else if (map) {
+			map.getCanvas().style.cursor = '';
+			popup.remove();
+		}
+	};
+	const onClick = ({ index }: ClickEvent) => {
+		if (index !== -1 && metadata[index]) {
+			onClickTrip(metadata[index].id);
+		}
+	};
 
-							<span style="color: ${rgbToHex(getDelayColor(object.arrivalDelay, true))}">${formatTime(new Date(object.arrival), object.to.tz)}</span>
-							<span ${object.arrivalDelay != 0 ? 'class="line-through"' : ''}>${formatTime(new Date(object.scheduledArrival), object.to.tz)}</span> ${object.to.name}`
-							);
-						} else {
-							popup.setHTML(
-								`<strong>${object.trips[0].displayName}</strong><br>
-							${formatTime(new Date(object.departure), object.from.tz)} ${object.from.name}<br>
-							${formatTime(new Date(object.arrival), object.to.tz)} ${object.to.name}`
-							);
-						}
-						popup.addTo(map);
-					} else {
-						tooltipPopup.remove();
-					}
+	//ANIMATION
+	const TripIcon = createTripIcon(128);
+	const IconMapping = {
+		marker: {
+			x: 0,
+			y: 0,
+			width: 128,
+			height: 128,
+			anchorY: 64,
+			anchorX: 64,
+			mask: true
+		}
+	};
+	const createLayer = () => {
+		return new IconLayer({
+			id: 'trips-layer',
+			data: {
+				length: DATA.length,
+				attributes: {
+					getPosition: { value: DATA.positions, size: 2 },
+					getAngle: { value: DATA.angles, size: 1 },
+					getColor: { value: DATA.colors, size: 3, normalized: true }
 				}
-			});
-			map.addControl(overlay);
+			},
+			beforeId: 'road-name-text',
+			// @ts-expect-error: canvas element seems to work fine
+			iconAtlas: TripIcon,
+			iconMapping: IconMapping,
+			pickable: colorMode != 'none',
+			getSize: 50,
+			getIcon: (_) => 'marker',
+			colorFormat: 'RGB',
+			visible: colorMode !== 'none',
+			useDevicePixels: false,
+			parameters: { depthTest: false }
+		});
+	};
+	let animationId: number;
+	const animate = () => {
+		if (DATA.positions.byteLength === 0) return;
+		worker.postMessage(
+			{
+				type: 'update',
+				colorMode,
+				positions: DATA.positions,
+				angles: DATA.angles,
+				colors: DATA.colors,
+				length: DATA.length
+			},
+			[DATA.positions.buffer, DATA.angles.buffer, DATA.colors.buffer]
+		);
+	};
 
-			console.debug('updateRailviz: init');
-			untrack(() => updateRailviz());
-		}
-	});
-
+	// UPDATE
 	$effect(() => {
-		if (overlay && bounds && zoom && colorMode) {
-			untrack(() => {
-				console.debug(`updateRailviz: effect ${overlay} ${bounds} ${zoom} ${colorMode}`);
-				updateRailviz();
-			});
+		if (!query || isProcessing) return;
+		untrack(() => {
+			if (colorMode === 'none') return;
+			isProcessing = true;
+			worker.postMessage({ type: 'fetch', query });
+		});
+	});
+	setInterval(() => {
+		if (query && colorMode !== 'none') {
+			startTime = new Date();
+		}
+	}, 60000);
+	//SETUP
+	let overlay: MapboxOverlay;
+	let worker: Worker;
+	let metadata: MetaData[];
+	onMount(() => {
+		const origin = new URL(window.location.href).searchParams.get('motis');
+		worker = new Worker(new URL('tripsWorker.ts', import.meta.url), { type: 'module' });
+		worker.postMessage({ type: 'init', origin });
+		worker.onmessage = (e) => {
+			if (e.data.type == 'fetch-complete') {
+				metadata = e.data.metadata;
+				isProcessing = false;
+				animate();
+				return;
+			}
+			const { positions, angles, length, colors } = e.data;
+			DATA.positions = new Float64Array(positions.buffer);
+			DATA.angles = new Float32Array(angles.buffer);
+			DATA.colors = new Uint8Array(colors.buffer);
+			DATA.length = length;
+			overlay.setProps({ layers: [createLayer()] });
+			animationId = requestAnimationFrame(animate);
+		};
+		overlay = new MapboxOverlay({
+			interleaved: true,
+			onHover,
+			onClick
+		});
+	});
+	/*
+	$effect(() => {
+		if (colorMode === 'none' || cancel) {
+			cancelAnimationFrame(animationId);
 		}
 	});
-
+	let cancel = $state(false);
+	*/
+	$effect(() => {
+		if (!map || !overlay) return;
+		map.addControl(overlay);
+		/*
+		untrack(() => {
+			map.on('movestart', () => {
+				cancel = true;
+			});
+			map.on('moveend', () => {
+				cancel = false;
+			});
+		});
+		 */
+	});
 	onDestroy(() => {
-		if (animation) {
-			cancelAnimationFrame(animation);
-		}
-		clearTimeout(timer);
-		if (map && overlay) {
-			map.removeControl(overlay);
-		}
+		if (animationId) cancelAnimationFrame(animationId);
+		if (overlay) map?.removeControl(overlay);
+		worker.terminate();
+		popup.remove();
 	});
 </script>
-
-{#if railvizError}
-	<Control position="bottom-left">
-		{railvizError}
-	</Control>
-{/if}

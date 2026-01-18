@@ -37,7 +37,6 @@
 	import { client } from '@motis-project/motis-client';
 	import StopTimes from '$lib/StopTimes.svelte';
 	import { onMount, tick, untrack } from 'svelte';
-	import RailViz from '$lib/RailViz.svelte';
 	import { t } from '$lib/i18n/translation';
 	import { pushState } from '$app/navigation';
 	import { page } from '$app/state';
@@ -59,6 +58,7 @@
 	import { defaultQuery, omitDefaults } from '$lib/defaults';
 	import { LEVEL_MIN_ZOOM } from '$lib/constants';
 	import StopGeoJSON from '$lib/map/stops/StopsGeoJSON.svelte';
+	import RailViz from '$lib/RailViz.svelte';
 
 	const urlParams = browser ? new URLSearchParams(window.location.search) : undefined;
 
@@ -75,7 +75,7 @@
 					: 'connections')
 	);
 	let dataAttributionLink: string | undefined = $state(undefined);
-	let colorMode = $state<'rt' | 'route' | 'mode' | 'none'>('none');
+	let colorMode = $state<'rt' | 'route' | 'mode' | 'none'>('route');
 	let showMap = $state(!isSmallScreen);
 	let lastOneToAllQuery: OneToAllData | undefined = undefined;
 	let lastPlanQuery: PlanData | undefined = undefined;
