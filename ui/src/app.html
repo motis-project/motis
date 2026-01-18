@@ -4,6 +4,12 @@
 		<meta charset="utf-8" />
 		<title>MOTIS</title>
 		<link rel="icon" href="%sveltekit.assets%/favicon.ico" />
+		<link
+			rel="preload"
+			href="https://unpkg.com/maplibre-gl@^5.16.0/dist/maplibre-gl.css"
+			as="style"
+			onload="this.onload=null;this.rel='stylesheet'"
+		/>
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		%sveltekit.head%
 	</head>

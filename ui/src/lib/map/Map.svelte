@@ -1,7 +1,6 @@
 <script lang="ts">
 	import maplibregl from 'maplibre-gl';
 	import { setContext, type Snippet } from 'svelte';
-	import 'maplibre-gl/dist/maplibre-gl.css';
 	import { createShield } from './shield';
 	import { browser } from '$app/environment';
 	let {
@@ -41,7 +40,6 @@
 			currStyle = style;
 		}
 	};
-
 	const createMap = (container: HTMLElement) => {
 		if (!style) {
 			return;
@@ -54,13 +52,14 @@
 				bounds,
 				center,
 				style,
+				pitchWithRotate: false,
+				fadeDuration: 0,
 				transformRequest,
 				attributionControl:
 					attribution === false || attribution === undefined
 						? attribution
 						: { customAttribution: attribution }
 			});
-
 			tmp.addImage(
 				'shield',
 				...createShield({
@@ -87,6 +86,7 @@
 			tmp.on('load', () => {
 				map = tmp;
 				ctx.map = tmp;
+				bounds = tmp.getBounds();
 				tmp.on('moveend', () => {
 					zoom = tmp.getZoom();
 					center = tmp.getCenter();
