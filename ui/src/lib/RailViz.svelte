@@ -40,7 +40,7 @@
 
 	//TRANSFERABLES
 	let isProcessing = false;
-	const TRIPS_NUM = 6000;
+	const TRIPS_NUM = 6500;
 	const positions = new Float64Array(TRIPS_NUM * 2);
 	const angles = new Float32Array(TRIPS_NUM);
 	const colors = new Uint8Array(TRIPS_NUM * 3);
