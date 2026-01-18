@@ -503,7 +503,7 @@
 	});
 
 	if (browser) {
-		addEventListener('paste', (event) => {
+		addEventListener('paste', (event: ClipboardEvent) => {
 			const paste = event.clipboardData!.getData('text');
 			const json = JSON.parse(paste);
 			console.log('paste: ', json);
