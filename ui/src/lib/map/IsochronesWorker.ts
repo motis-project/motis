@@ -19,7 +19,7 @@ let shapeWorker: Worker | undefined = undefined;
 let rects: LngLatBounds[] | undefined = undefined;
 let circles: CircleType[] | undefined = undefined;
 
-self.onmessage = async function (event) {
+self.onmessage = async function(event) {
 	const method = event.data.method;
 	if (method == 'set-canvas') {
 		canvas = event.data.canvas;
@@ -180,7 +180,7 @@ function createWorker() {
 					const msg: UpdateMessage = event.data;
 					switch (msg.level) {
 						case 'OVERLAY_RECTS':
-							rects = msg.data;
+							rects = msg.data as maplibregl.LngLatBounds[];
 							self.postMessage({
 								method: 'update-display-level',
 								index: dataIndex,
