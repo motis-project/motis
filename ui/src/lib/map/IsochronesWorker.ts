@@ -19,7 +19,7 @@ let shapeWorker: Worker | undefined = undefined;
 let rects: LngLatBounds[] | undefined = undefined;
 let circles: CircleType[] | undefined = undefined;
 
-self.onmessage = async function(event) {
+self.onmessage = async function (event) {
 	const method = event.data.method;
 	if (method == 'set-canvas') {
 		canvas = event.data.canvas;
