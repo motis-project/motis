@@ -13,7 +13,7 @@ declare global {
 			selectedStop?: { name: string; stopId: string; time: Date };
 			stopArriveBy?: boolean;
 			tripId?: string;
-			showDepartures?: boolean;
+			activeTab?: 'connections' | 'departures' | 'isochrones';
 			scrollY?: number;
 		}
 		// interface Platform {}

@@ -12,7 +12,8 @@ struct auser {
         nigiri::rt::vdv_aus::updater::xml_format);
   std::string fetch_url(std::string_view base_url);
   nigiri::rt::vdv_aus::statistics consume_update(std::string const&,
-                                                 nigiri::rt_timetable&);
+                                                 nigiri::rt_timetable&,
+                                                 bool inplace = false);
 
   std::chrono::nanoseconds::rep update_state_{0};
   nigiri::rt::vdv_aus::updater upd_;

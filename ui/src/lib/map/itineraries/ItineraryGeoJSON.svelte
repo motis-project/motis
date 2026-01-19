@@ -5,8 +5,24 @@
 	import { getColor } from '$lib/modeStyle';
 	import polyline from '@mapbox/polyline';
 	import { colord } from 'colord';
-
+	import { layers } from './itineraryLayers';
 	export const PRECISION = 6;
+
+	const {
+		itinerary,
+		id,
+		selected,
+		selectItinerary,
+		level,
+		theme
+	}: {
+		itinerary: Itinerary;
+		id?: string;
+		selected: boolean;
+		selectItinerary?: () => void;
+		level: number;
+		theme: 'light' | 'dark';
+	} = $props();
 
 	function isIndividualTransport(m: Mode): boolean {
 		return m == 'WALK' || m == 'BIKE' || m == 'CAR';
@@ -36,7 +52,9 @@
 							properties: {
 								color,
 								outlineColor,
-								level: p.fromLevel,
+								fromLevel: p.fromLevel,
+								toLevel: p.toLevel,
+								level: level,
 								way: p.osmWay
 							},
 							geometry: {
@@ -63,41 +81,21 @@
 			})
 		};
 	}
-
-	const {
-		itinerary,
-		id,
-		selected,
-		selectItinerary,
-		level,
-		theme
-	}: {
-		itinerary: Itinerary;
-		id?: string;
-		selected: boolean;
-		selectItinerary?: () => void;
-		level: number;
-		theme: 'light' | 'dark';
-	} = $props();
-
 	const geojson = $derived(itineraryToGeoJSON(itinerary));
 </script>
 
 <GeoJSON id="route-{id}" data={geojson}>
-	<Layer
-		id="path-outline-{id}"
-		type="line"
-		layout={{
-			'line-join': 'round',
-			'line-cap': 'round'
-		}}
-		filter={['any', ['!has', 'level'], ['==', 'level', level]]}
-		paint={{
-			'line-color': selected ? ['get', 'outlineColor'] : theme == 'dark' ? '#444' : '#999',
-			'line-width': 10,
-			'line-opacity': 0.8
-		}}
-	/>
+	{#each layers as layer (layer.id)}
+		{#if !('line-gradient' in layer.paint) && selected}
+			<Layer
+				id={layer.id}
+				type={layer.type}
+				layout={layer.layout}
+				filter={['all', ['has', 'fromLevel'], layer.filter]}
+				paint={layer.paint}
+			></Layer>
+		{/if}
+	{/each}
 	<Layer
 		id="path-{id}"
 		type="line"
@@ -105,7 +103,7 @@
 			'line-join': 'round',
 			'line-cap': 'round'
 		}}
-		filter={['any', ['!has', 'level'], ['==', 'level', level]]}
+		filter={['!', ['has', 'fromLevel']]}
 		onclick={selectItinerary
 			? (_) => {
 					selectItinerary();
@@ -114,7 +112,35 @@
 		paint={{
 			'line-color': selected ? ['get', 'color'] : theme == 'dark' ? '#777' : '#bbb',
 			'line-width': 7.5,
-			'line-opacity': 0.8
+			'line-opacity': 1
 		}}
 	/>
+	<Layer
+		id="path-outline-{id}"
+		type="line"
+		layout={{
+			'line-join': 'round',
+			'line-cap': 'round'
+		}}
+		filter={['!', ['has', 'fromLevel']]}
+		paint={{
+			'line-color': selected ? ['get', 'outlineColor'] : theme == 'dark' ? '#444' : '#999',
+			'line-width': 1.5,
+			'line-gap-width': 7.5,
+			'line-opacity': 1
+		}}
+	/>
+</GeoJSON>
+<GeoJSON id="route-{id}-metrics" data={geojson} lineMetrics={true}>
+	{#each layers as layer (layer.id)}
+		{#if 'line-gradient' in layer.paint && selected}
+			<Layer
+				id="{layer.id}-metrics"
+				type={layer.type}
+				layout={layer.layout}
+				filter={layer.filter}
+				paint={layer.paint}
+			></Layer>
+		{/if}
+	{/each}
 </GeoJSON>

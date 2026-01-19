@@ -7,6 +7,7 @@
 	import { Switch } from './components/ui/switch';
 	import type { ElevationCosts, ServerConfig } from '@motis-project/motis-client';
 	import { defaultQuery } from '$lib/defaults';
+	import type { Location } from '$lib/Location';
 	import { formatDurationSec } from './formatDuration';
 	import {
 		possibleTransitModes,
@@ -19,6 +20,7 @@
 	import TransitModeSelect from '$lib/TransitModeSelect.svelte';
 	import { type NumberSelectOption } from '$lib/NumberSelect.svelte';
 	import { generateTimes } from './generateTimes';
+	import ViaStopOptions from './ViaStopOptions.svelte';
 
 	let {
 		useRoutedTransfers = $bindable(),
@@ -43,6 +45,9 @@
 		preTransitProviderGroups = $bindable(),
 		postTransitProviderGroups = $bindable(),
 		directProviderGroups = $bindable(),
+		via = $bindable(),
+		viaMinimumStay = $bindable(),
+		viaLabels = $bindable(),
 		additionalComponents
 	}: {
 		useRoutedTransfers: boolean;
@@ -67,6 +72,9 @@
 		preTransitProviderGroups: string[];
 		postTransitProviderGroups: string[];
 		directProviderGroups: string[];
+		via: undefined | Location[];
+		viaMinimumStay: undefined | number[];
+		viaLabels: Record<string, string>;
 		additionalComponents?: Snippet;
 	} = $props();
 
@@ -173,6 +181,8 @@
 					setModes('CAR')(checked);
 				}}
 			/>
+
+			<ViaStopOptions bind:via bind:viaMinimumStay bind:viaLabels />
 
 			<div
 				class="grid {maxTravelTime === undefined

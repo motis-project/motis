@@ -29,10 +29,12 @@ struct output {
   virtual bool is_time_dependent() const = 0;
   virtual transport_mode_t get_cache_key() const = 0;
   virtual osr::sharing_data const* get_sharing_data() const = 0;
-  virtual void annotate_leg(osr::node_idx_t from_node,
+  virtual void annotate_leg(nigiri::lang_t const&,
+                            osr::node_idx_t from_node,
                             osr::node_idx_t to_node,
                             api::Leg&) const = 0;
-  virtual api::Place get_place(osr::node_idx_t,
+  virtual api::Place get_place(nigiri::lang_t const&,
+                               osr::node_idx_t,
                                std::optional<std::string> const& tz) const = 0;
 };
 
@@ -46,8 +48,12 @@ struct default_output final : public output {
   osr::search_profile get_profile() const override;
   transport_mode_t get_cache_key() const override;
   osr::sharing_data const* get_sharing_data() const override;
-  void annotate_leg(osr::node_idx_t, osr::node_idx_t, api::Leg&) const override;
-  api::Place get_place(osr::node_idx_t,
+  void annotate_leg(nigiri::lang_t const&,
+                    osr::node_idx_t,
+                    osr::node_idx_t,
+                    api::Leg&) const override;
+  api::Place get_place(nigiri::lang_t const&,
+                       osr::node_idx_t,
                        std::optional<std::string> const& tz) const override;
 
   osr::ways const& w_;
@@ -71,6 +77,7 @@ api::Itinerary street_routing(osr::ways const&,
                               osr::lookup const&,
                               elevators const*,
                               osr::elevation_storage const*,
+                              nigiri::lang_t const& lang,
                               api::Place const& from,
                               api::Place const& to,
                               output const&,

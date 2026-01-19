@@ -28,6 +28,7 @@
 		"@sveltejs/vite-plugin-svelte": "^6.2.1",
 		"@types/earcut": "^3.0.0",
 		"@types/eslint": "^9.6.1",
+		"@types/estree": "^1.0.8",
 		"@types/geojson": "^7946.0.16",
 		"@types/mapbox__polyline": "^1.0.5",
 		"@types/rbush": "^4.0.0",

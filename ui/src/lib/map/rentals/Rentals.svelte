@@ -309,7 +309,7 @@
 						station.providerGroupId === filter.providerGroupId &&
 						station.formFactors.includes(filter.formFactor)
 				)
-			: rentalsData.stations;
+			: ([] as RentalStation[]);
 		return {
 			type: 'FeatureCollection',
 			features: stations.map((station) => {
@@ -353,7 +353,7 @@
 						vehicle.providerGroupId === filter.providerGroupId &&
 						vehicle.formFactor === filter.formFactor
 				)
-			: rentalsData.vehicles;
+			: ([] as RentalVehicle[]);
 		vehicles
 			.filter((vehicle) => !vehicle.stationId)
 			.forEach((vehicle) => {
@@ -1119,7 +1119,7 @@
 			'text-anchor': 'center',
 			'text-offset': zoomScaledTextOffset,
 			'text-size': zoomScaledTextSizeMedium,
-			'text-font': ['Noto Sans Display Regular']
+			'text-font': ['Noto Sans Regular']
 		}}
 		onmousemove={handleStationMouseMove}
 		onmouseleave={handleStationMouseLeave}
@@ -1160,7 +1160,7 @@
 				'text-anchor': 'center',
 				'text-offset': zoomScaledTextOffset,
 				'text-size': zoomScaledTextSizeSmall,
-				'text-font': ['Noto Sans Display Regular']
+				'text-font': ['Noto Sans Regular']
 			}}
 			paint={{
 				'text-color': '#000'

@@ -33,6 +33,7 @@ using namespace std::string_view_literals;
 using namespace motis;
 using namespace date;
 using namespace std::chrono_literals;
+using namespace test;
 namespace n = nigiri;
 
 constexpr auto const kGTFS = R"(
@@ -79,68 +80,48 @@ ICE,00:45:00,00:45:00,FFM_10,1,0,0
 # calendar_dates.txt
 service_id,date,exception_type
 S1,20190501,1
-)"sv;
+)";
 
 TEST(motis, stop_times) {
   auto ec = std::error_code{};
   std::filesystem::remove_all("test/data", ec);
 
-  auto const c =
-      config{.server_ = {{.web_folder_ = "ui/build", .n_threads_ = 1U}},
-             .osm_ = {"test/resources/test_case.osm.pbf"},
-             .tiles_ = {{.profile_ = "deps/tiles/profile/full.lua",
-                         .db_size_ = 1024U * 1024U * 25U}},
-             .timetable_ =
-                 config::timetable{
-                     .first_day_ = "2019-05-01",
-                     .num_days_ = 2,
-                     .use_osm_stop_coordinates_ = false,
-                     .extend_missing_footpaths_ = false,
-                     .datasets_ = {{"test", {.path_ = std::string{kGTFS}}}}},
-             .street_routing_ = true,
-             .osr_footpath_ = true,
-             .geocoding_ = true,
-             .reverse_geocoding_ = true};
+  auto const c = config{.timetable_ = config::timetable{
+                            .first_day_ = "2019-05-01",
+                            .num_days_ = 2,
+                            .datasets_ = {{"test", {.path_ = kGTFS}}}}};
   auto d = import(c, "test/data", true);
   d.init_rtt(date::sys_days{2019_y / May / 1});
 
   auto const stats =
-      n::rt::gtfsrt_update_msg(*d.tt_, *d.rt_->rtt_, n::source_idx_t{0}, "test",
-                               test::to_feed_msg(
-                                   {test::trip_update{
-                                        .trip_ = {.trip_id_ = "ICE",
-                                                  .start_time_ = {"00:35:00"},
-                                                  .date_ = {"20190501"}},
-                                        .stop_updates_ =
-                                            {{.stop_id_ = "FFM_12",
+      n::rt::gtfsrt_update_msg(
+          *d.tt_, *d.rt_->rtt_, n::source_idx_t{0}, "test",
+          to_feed_msg({trip_update{
+                           .trip_ = {.trip_id_ = "ICE",
+                                     .start_time_ = {"00:35:00"},
+                                     .date_ = {"20190501"}},
+                           .stop_updates_ = {{.stop_id_ = "FFM_12",
                                               .seq_ = std::optional{1U},
                                               .ev_type_ = n::event_type::kArr,
                                               .delay_minutes_ = 10,
                                               .stop_assignment_ = "FFM_12"}}},
-                                    test::alert{.header_ = "Yeah",
-                                                .description_ = "Yeah!!",
-                                                .entities_ =
-                                                    {{.trip_ =
-                                                          {
-                                                              {.trip_id_ =
-                                                                   "ICE",
-                                                               .start_time_ = {"00:35:00"},
-                                                               .date_ = {"20"
-                                                                         "19"
-                                                                         "05"
-                                                                         "0"
-                                                                         "1"}},
-                                                          },
-                                                      .stop_id_ = "DA"}}},
-                                    test::alert{
-                                        .header_ = "Hello",
-                                        .description_ = "World",
-                                        .entities_ =
-                                            {{.trip_ =
-                                                  {{.trip_id_ = "ICE",
-                                                    .start_time_ = {"00:35:00"},
-                                                    .date_ = {"20190501"}}}}}}},
-                                   date::sys_days{2019_y / May / 1} + 9h));
+                       alert{
+                           .header_ = "Yeah",
+                           .description_ = "Yeah!!",
+                           .entities_ = {{.trip_ =
+                                              {
+                                                  {.trip_id_ = "ICE",
+                                                   .start_time_ = {"00:35:00"},
+                                                   .date_ = {"20190501"}},
+                                              },
+                                          .stop_id_ = "DA"}}},
+                       alert{.header_ = "Hello",
+                             .description_ = "World",
+                             .entities_ =
+                                 {{.trip_ = {{.trip_id_ = "ICE",
+                                              .start_time_ = {"00:35:00"},
+                                              .date_ = {"20190501"}}}}}}},
+                      date::sys_days{2019_y / May / 1} + 9h));
   EXPECT_EQ(1U, stats.total_entities_success_);
   EXPECT_EQ(2U, stats.alert_total_resolve_success_);
 
@@ -153,8 +134,6 @@ TEST(motis, stop_times) {
         "&time=2019-04-30T23:30:00.000Z"
         "&arriveBy=true"
         "&n=3"
-        //"&exactRadius=false"
-        //"&radius=200"
         "&language=de"
         "&fetchStops=true");
 

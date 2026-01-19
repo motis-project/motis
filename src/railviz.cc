@@ -380,12 +380,12 @@ api::trips_response get_trains(tag_lookup const& tags,
         .trips_ = {api::TripInfo{
             .tripId_ = tags.id(tt, from, n::event_type::kDep),
             .routeShortName_ =
-                api_version < 4 ? std::optional{std::string{
-                                      from.display_name(n::event_type::kDep)}}
+                api_version < 4 ? std::optional{std::string{from.display_name(
+                                      n::event_type::kDep, query.language_)}}
                                 : std::nullopt,
             .displayName_ = api_version >= 4
-                                ? std::optional{std::string{
-                                      from.display_name(n::event_type::kDep)}}
+                                ? std::optional{std::string{from.display_name(
+                                      n::event_type::kDep, query.language_)}}
                                 : std::nullopt}},
         .routeColor_ = to_str(from.get_route_color(n::event_type::kDep).color_),
         .mode_ = to_mode(from.get_clasz(n::event_type::kDep), api_version),
@@ -394,9 +394,10 @@ api::trips_response get_trains(tag_lookup const& tags,
                 ? rt_index.rt_distances_[fr.rt_]
                 : static_index
                       .static_distances_[tt.transport_route_[fr.t_.t_idx_]],
-        .from_ =
-            to_place(&tt, &tags, w, pl, matches, ae, tz, tt_location{from}),
-        .to_ = to_place(&tt, &tags, w, pl, matches, ae, tz, tt_location{to}),
+        .from_ = to_place(&tt, &tags, w, pl, matches, ae, tz, query.language_,
+                          tt_location{from}),
+        .to_ = to_place(&tt, &tags, w, pl, matches, ae, tz, query.language_,
+                        tt_location{to}),
         .departure_ = from.time(n::event_type::kDep),
         .arrival_ = to.time(n::event_type::kArr),
         .scheduledDeparture_ = from.scheduled_time(n::event_type::kDep),

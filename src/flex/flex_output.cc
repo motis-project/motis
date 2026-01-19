@@ -14,12 +14,15 @@ namespace n = nigiri;
 namespace motis::flex {
 
 std::string_view get_flex_stop_name(n::timetable const& tt,
+                                    n::lang_t const& lang,
                                     n::flex_stop_t const& s) {
-  return s.apply(utl::overloaded{
-      [&](n::flex_area_idx_t const a) { return tt.flex_area_name_[a].view(); },
-      [&](n::location_group_idx_t const lg) {
-        return tt.strings_.get(tt.location_group_name_[lg]);
-      }});
+  return s.apply(
+      utl::overloaded{[&](n::flex_area_idx_t const a) {
+                        return tt.translate(lang, tt.flex_area_name_[a]);
+                      },
+                      [&](n::location_group_idx_t const lg) {
+                        return tt.translate(lang, tt.location_group_name_[lg]);
+                      }});
 }
 
 std::string_view get_flex_id(n::timetable const& tt, n::flex_stop_t const& s) {
@@ -70,7 +73,8 @@ osr::sharing_data const* flex_output::get_sharing_data() const {
   return &sharing_data_;
 }
 
-void flex_output::annotate_leg(osr::node_idx_t const from,
+void flex_output::annotate_leg(n::lang_t const& lang,
+                               osr::node_idx_t const from,
                                osr::node_idx_t const to,
                                api::Leg& leg) const {
   if (from == osr::node_idx_t::invalid() || to == osr::node_idx_t::invalid()) {
@@ -110,16 +114,17 @@ void flex_output::annotate_leg(osr::node_idx_t const from,
   auto const write_node_info = [&](api::Place& p, osr::node_idx_t const n) {
     if (w_.is_additional_node(n)) {
       auto const l = flex_routing_data_.get_additional_node(n);
-      p = to_place(&tt_, &tags_, &w_, pl_, matches_, ae_, tz_, tt_location{l});
+      p = to_place(&tt_, &tags_, &w_, pl_, matches_, ae_, tz_, lang,
+                   tt_location{l});
     }
   };
   write_node_info(leg.from_, from);
   write_node_info(leg.to_, to);
 
   leg.mode_ = api::ModeEnum::FLEX;
-  leg.from_.flex_ = get_flex_stop_name(tt_, stop_seq[*from_stop]);
+  leg.from_.flex_ = get_flex_stop_name(tt_, lang, stop_seq[*from_stop]);
   leg.from_.flexId_ = get_flex_id(tt_, stop_seq[*from_stop]);
-  leg.to_.flex_ = get_flex_stop_name(tt_, stop_seq[*to_stop]);
+  leg.to_.flex_ = get_flex_stop_name(tt_, lang, stop_seq[*to_stop]);
   leg.to_.flexId_ = get_flex_id(tt_, stop_seq[*to_stop]);
 
   auto const time_windows = tt_.flex_transport_stop_time_windows_[t];
@@ -139,16 +144,18 @@ void flex_output::annotate_leg(osr::node_idx_t const from,
       time_windows[*to_stop].to_;
 }
 
-api::Place flex_output::get_place(osr::node_idx_t const n,
+api::Place flex_output::get_place(n::lang_t const& lang,
+                                  osr::node_idx_t const n,
                                   std::optional<std::string> const& tz) const {
   if (w_.is_additional_node(n)) {
     auto const l = flex_routing_data_.get_additional_node(n);
     auto const c = tt_.locations_.coordinates_.at(l);
-    return api::Place{.name_ = std::string{tt_.locations_.names_.at(l).view()},
-                      .lat_ = c.lat_,
-                      .lon_ = c.lng_,
-                      .tz_ = tz,
-                      .vertexType_ = api::VertexTypeEnum::TRANSIT};
+    return api::Place{
+        .name_ = std::string{tt_.translate(lang, tt_.locations_.names_.at(l))},
+        .lat_ = c.lat_,
+        .lon_ = c.lng_,
+        .tz_ = tz,
+        .vertexType_ = api::VertexTypeEnum::TRANSIT};
   } else {
     auto const pos = w_.get_node_pos(n).as_latlng();
     return api::Place{.lat_ = pos.lat_,

@@ -88,6 +88,9 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
             -Wno-deprecated-declarations
             -Wno-reserved-identifier
             -Wno-implicit-int-float-conversion
+            -Wno-nrvo
+            -Wno-thread-safety-negative
+            -Wno-unused-private-field
             -Werror)
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
     set(motis-compile-options -Wall -Wextra -Werror -Wno-unknown-pragmas -Wno-deprecated-declarations)
@@ -130,6 +133,7 @@ target_link_libraries(motislib
     crypto
     tg
     lz4_static
+    lb
     web-server
     prometheus-cpp::core
     opentelemetry_trace

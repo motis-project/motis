@@ -74,9 +74,8 @@ int compare(int ac, char** av) {
                          std::vector<api::Itinerary> const& b) {
     if (subset_check) {
       return utl::all_of(a, [&](api::Itinerary const& x) {
-        return utl::any_of(b, [&](api::Itinerary const& y) {
-          return params(x) == params(y);
-        });
+        return utl::any_of(
+            b, [&](api::Itinerary const& y) { return params(x) == params(y); });
       });
     } else {
       return std::ranges::equal(a | std::views::transform(params),

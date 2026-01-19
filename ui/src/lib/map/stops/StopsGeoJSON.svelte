@@ -2,8 +2,8 @@
 	import Layer from '$lib/map/Layer.svelte';
 	import GeoJSON from '$lib/map/GeoJSON.svelte';
 	import type { Itinerary, Leg } from '@motis-project/motis-client';
-	import { onClickStop } from './utils';
-	import { getColor } from './modeStyle';
+	import { onClickStop } from '../../utils';
+	import { getColor } from '../../modeStyle';
 
 	let {
 		itinerary = $bindable(),
@@ -16,7 +16,6 @@
 	function stopsToGeoJSON(legs: Leg[]): GeoJSON.GeoJSON {
 		return {
 			type: 'FeatureCollection',
-			//@ts-expect-error: type is safe
 			features: legs
 				.filter((l) => {
 					return l.mode !== 'WALK' && l.mode !== 'BIKE' && l.mode !== 'CAR';
@@ -24,8 +23,8 @@
 				.flatMap((l) => {
 					const stops = [
 						{
-							type: 'Feature',
-							geometry: { type: 'Point', coordinates: [l.from.lon, l.from.lat] },
+							type: 'Feature' as const,
+							geometry: { type: 'Point' as const, coordinates: [l.from.lon, l.from.lat] },
 							properties: {
 								stopId: l.from.stopId,
 								name: l.from.name,
@@ -34,8 +33,8 @@
 							}
 						},
 						{
-							type: 'Feature',
-							geometry: { type: 'Point', coordinates: [l.to.lon, l.to.lat] },
+							type: 'Feature' as const,
+							geometry: { type: 'Point' as const, coordinates: [l.to.lon, l.to.lat] },
 							properties: {
 								stopId: l.to.stopId,
 								name: l.to.name,
@@ -46,9 +45,9 @@
 					];
 					const intermediateStops = l.intermediateStops
 						? l.intermediateStops.map((s) => ({
-								type: 'Feature',
+								type: 'Feature' as const,
 								geometry: {
-									type: 'Point',
+									type: 'Point' as const,
 									coordinates: [s.lon, s.lat]
 								},
 								properties: {
@@ -95,7 +94,7 @@
 		type="symbol"
 		layout={{
 			'text-field': ['get', 'name'],
-			'text-font': ['Noto Sans Display Regular'],
+			'text-font': ['Noto Sans Regular'],
 			'text-size': 12,
 			'text-offset': [0, 1],
 			'text-anchor': 'top'

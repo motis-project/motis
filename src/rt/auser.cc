@@ -5,7 +5,7 @@
 #include "nigiri/common/parse_time.h"
 #include "nigiri/rt/json_to_xml.h"
 
-#include "motis/http_client.h"
+#include "motis/http_req.h"
 
 namespace n = nigiri;
 
@@ -24,12 +24,16 @@ std::string auser::fetch_url(std::string_view base_url) {
 }
 
 n::rt::vdv_aus::statistics auser::consume_update(
-    std::string const& auser_update, n::rt_timetable& rtt) {
+    std::string const& auser_update, n::rt_timetable& rtt, bool const inplace) {
   auto vdvaus = pugi::xml_document{};
   if (upd_.get_format() == n::rt::vdv_aus::updater::xml_format::kSiriJson) {
     vdvaus = n::rt::to_xml(auser_update);
   } else {
-    vdvaus.load_string(auser_update.c_str());
+    inplace ? vdvaus.load_buffer_inplace(
+                  const_cast<void*>(
+                      reinterpret_cast<void const*>(auser_update.data())),
+                  auser_update.size())
+            : vdvaus.load_string(auser_update.c_str());
   }
 
   auto stats = upd_.update(rtt, vdvaus);
@@ -38,14 +42,19 @@ n::rt::vdv_aus::statistics auser::consume_update(
     auto const prev_update = update_state_;
     update_state_ =
         upd_.get_format() == n::rt::vdv_aus::updater::xml_format::kVdv
-            ? vdvaus.select_node("//AUSNachricht")
-                  .node()
-                  .attribute("auser_id")
-                  .as_llong(0ULL)
-            : n::parse_time_no_tz(vdvaus.select_node("//RecordedAtTime")
-                                      .node()
-                                      .text()
-                                      .as_string())
+            ? [&]() {
+              auto const opt1 = vdvaus.child("DatenAbrufenAntwort")
+                 .child("AUSNachricht")
+                 .attribute("auser_id")
+                 .as_llong(0ULL);
+              auto const opt2 = vdvaus.child("AUSNachricht")
+                 .attribute("auser_id")
+                 .as_llong(0ULL);
+              return opt1 ? opt1 : opt2;
+            }()
+            : n::parse_time_no_tz(vdvaus.child("Siri")
+                                      .child("ServiceDelivery")
+                                      .child_value("ResponseTimestamp"))
                   .time_since_epoch()
                   .count();
     fmt::println("[auser] {} --> {}", prev_update, update_state_);

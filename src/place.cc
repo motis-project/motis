@@ -2,6 +2,8 @@
 
 #include <variant>
 
+#include "utl/verify.h"
+
 #include "osr/platforms.h"
 
 #include "nigiri/rt/frun.h"
@@ -94,6 +96,7 @@ api::Place to_place(n::timetable const* tt,
                     platform_matches_t const* matches,
                     adr_ext const* ae,
                     tz_map_t const* tz_map,
+                    n::lang_t const& lang,
                     place_t const l,
                     place_t const start,
                     place_t const dest,
@@ -116,25 +119,24 @@ api::Place to_place(n::timetable const* tt,
                               fallback_tz);
             } else {
               auto const get_track = [&](n::location_idx_t const x) {
-                return tt->locations_.platform_codes_.at(x).empty()
-                           ? std::nullopt
-                           : std::optional{std::string{
-                                 tt->locations_.platform_codes_.at(x).view()}};
+                auto const p =
+                    tt->translate(lang, tt->locations_.platform_codes_.at(x));
+                return p.empty() ? std::nullopt : std::optional{std::string{p}};
               };
 
               // check if description is available, if not, return nullopt
               auto const get_description = [&](n::location_idx_t const x) {
-                return tt->locations_.descriptions_.at(x).empty()
-                           ? std::nullopt
-                           : std::optional{std::string{
-                                 tt->locations_.descriptions_.at(x).view()}};
+                auto const p =
+                    tt->translate(lang, tt->locations_.descriptions_.at(x));
+                return p.empty() ? std::nullopt : std::optional{std::string{p}};
               };
 
               auto const pos = tt->locations_.coordinates_[l];
               auto const p = tt->locations_.get_root_idx(l);
               auto const timezone = get_tz(*tt, ae, tz_map, p);
               return {
-                  .name_ = std::string{tt->locations_.names_.at(p).view()},
+                  .name_ = std::string{tt->translate(
+                      lang, tt->locations_.names_.at(p))},
                   .stopId_ = tags->id(*tt, l),
                   .parentId_ = p == n::location_idx_t::invalid()
                                    ? std::nullopt
@@ -164,14 +166,15 @@ api::Place to_place(n::timetable const* tt,
                     platform_matches_t const* matches,
                     adr_ext const* ae,
                     tz_map_t const* tz_map,
+                    n::lang_t const& lang,
                     n::rt::run_stop const& s,
                     place_t const start,
                     place_t const dest) {
   auto const run_cancelled = s.fr_->is_cancelled();
   auto const fallback_tz = s.get_tz_name(
       s.stop_idx_ == 0 ? n::event_type::kDep : n::event_type::kArr);
-  auto p = to_place(tt, tags, w, pl, matches, ae, tz_map, tt_location{s}, start,
-                    dest, "", fallback_tz);
+  auto p = to_place(tt, tags, w, pl, matches, ae, tz_map, lang, tt_location{s},
+                    start, dest, "", fallback_tz);
   p.pickupType_ = !run_cancelled && s.in_allowed()
                       ? api::PickupDropoffTypeEnum::NORMAL
                       : api::PickupDropoffTypeEnum::NOT_ALLOWED;

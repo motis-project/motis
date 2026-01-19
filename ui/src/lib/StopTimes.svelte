@@ -56,7 +56,7 @@
 		promise.then((response) => {
 			if (response.error) {
 				console.log(response.error);
-				throw new Error('HTTP ' + response.response?.status);
+				throw { error: response.error.error, status: response.response.status };
 			}
 			stopNameFromResponse = response.data?.place?.name || '';
 			let placeFromResponse = response.data?.place;
@@ -115,7 +115,7 @@
 					: stopTime.place.scheduledDeparture!}
 				<div class="">
 					<div class="flex col justify-between">
-						<Route class="max-w-20 text-ellipsis overflow-hidden" l={stopTime} {onClickTrip} />
+						<Route class="max-w-30 text-ellipsis overflow-hidden" l={stopTime} {onClickTrip} />
 						<div class="mx-4">
 							<Time
 								variant="schedule"
@@ -173,7 +173,7 @@
 			{/each}
 			{#if !r.stopTimes.length}
 				<div class="col-span-full w-full flex items-center justify-center">
-					<ErrorMessage e={t.noItinerariesFound} />
+					<ErrorMessage message={t.noItinerariesFound} status={404} />
 				</div>
 			{/if}
 
@@ -195,7 +195,7 @@
 			{/if}
 		{:catch e}
 			<div class="col-span-full w-full flex items-center justify-center">
-				<ErrorMessage {e} />
+				<ErrorMessage message={e.error} status={e.status} />
 			</div>
 		{/await}
 	{/each}

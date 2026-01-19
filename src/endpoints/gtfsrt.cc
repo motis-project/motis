@@ -9,8 +9,9 @@
 
 #include "utl/enumerate.h"
 
+#include "net/too_many_exception.h"
+
 #include "nigiri/loader/gtfs/stop_seq_number_encoding.h"
-#include "nigiri/location.h"
 #include "nigiri/rt/frun.h"
 #include "nigiri/rt/rt_timetable.h"
 #include "nigiri/timetable.h"
@@ -185,10 +186,11 @@ net::reply gtfsrt::operator()(net::route_request const& req, bool) const {
   auto const rt = rt_;
   auto const rtt = rt->rtt_.get();
 
-  utl::verify(config_.limits_.value().gtfsrt_expose_max_trip_updates_ != 0 &&
-                  rtt->n_rt_transports() <
-                      config_.limits_.value().gtfsrt_expose_max_trip_updates_,
-              "number of trip updates above configured limit");
+  utl::verify<net::too_many_exception>(
+      config_.limits_.value().gtfsrt_expose_max_trip_updates_ != 0 &&
+          rtt->n_rt_transports() <
+              config_.limits_.value().gtfsrt_expose_max_trip_updates_,
+      "number of trip updates above configured limit");
 
   auto fm = transit_realtime::FeedMessage();
   auto fh = fm.mutable_header();

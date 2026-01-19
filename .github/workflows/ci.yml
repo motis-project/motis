@@ -66,7 +66,7 @@ jobs:
         run: |
           find include src test \
             -type f -a \( -name "*.cc" -o -name "*.h" -o -name ".cuh" -o -name ".cu" \) \
-            -print0 | xargs -0 clang-format-18 -i
+            -print0 | xargs -0 clang-format-21 -i
 
       - name: Check for differences
         run: |
@@ -167,12 +167,6 @@ jobs:
 
   macos:
     runs-on: macos-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        config:
-          - preset: macos-arm64
-            tests: On
     env:
       BUILDCACHE_COMPRESS: true
       BUILDCACHE_DIRECT_MODE: true
@@ -201,11 +195,11 @@ jobs:
         id: restore-buildcache
         with:
           path: ${{ github.workspace }}/.buildcache
-          key: buildcache-${{ matrix.config.preset }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}-${{ hashFiles('**/*.cc') }}
+          key: buildcache-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}-${{ hashFiles('**/*.cc') }}
           restore-keys: |
-            buildcache-${{ matrix.config.preset }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}-
-            buildcache-${{ matrix.config.preset }}-${{ hashFiles('.pkg') }}-
-            buildcache-${{ matrix.config.preset }}-
+            buildcache-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}-
+            buildcache-${{ hashFiles('.pkg') }}-
+            buildcache-
 
       - name: Dependencies Cache
         uses: actions/cache/restore@v4
@@ -217,7 +211,7 @@ jobs:
 
       # ==== BUILD ====
       - name: CMake
-        run: cmake -G Ninja -S . -B build --preset=${{ matrix.config.preset }}
+        run: cmake -G Ninja -S . -B build --preset=macos-arm64
 
       - name: Build
         run: |
@@ -252,13 +246,13 @@ jobs:
           mv build/motis motis/motis
           mv ui/build motis/ui
           cp -r deps/tiles/profile motis/tiles-profiles
-          tar -C ./motis -cjf motis-${{ matrix.config.preset }}.tar.bz2 ./motis ./tiles-profiles ./ui
+          tar -C ./motis -cjf motis-macos-arm64.tar.bz2 ./motis ./tiles-profiles ./ui
 
       - name: Upload Distribution
         uses: actions/upload-artifact@v4
         with:
-          name: motis-${{ matrix.config.preset }}
-          path: motis-${{ matrix.config.preset }}.tar.bz2
+          name: motis-macos-arm64
+          path: motis-macos-arm64.tar.bz2
 
       # ==== RELEASE ====
       - name: Upload Release
@@ -268,8 +262,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ./motis-${{ matrix.config.preset }}.tar.bz2
-          asset_name: motis-${{ matrix.config.preset }}.tar.bz2
+          asset_path: ./motis-macos-arm64.tar.bz2
+          asset_name: motis-macos-arm64.tar.bz2
           asset_content_type: application/x-tar
 
   linux:
@@ -285,7 +279,8 @@ jobs:
         config:
           - preset: linux-amd64-release
             artifact: linux-amd64
-          - preset: clang-tidy
+          - preset: linux-arm64-release
+            artifact: linux-arm64
           - preset: linux-sanitizer
           - preset: linux-debug
             emulator: valgrind --suppressions=deps/osr/docs/tbb.supp --suppressions=deps/osr/docs/pthread.supp --suppressions=tools/suppress.txt --leak-check=full --gen-suppressions=all --error-exitcode=1
@@ -320,11 +315,12 @@ jobs:
 
       # ==== TESTS ====
       - name: Run Integration Tests
+        if: matrix.config.preset != 'linux-arm64-release'
         run: ${{ matrix.config.emulator }} build/motis-test
 
       # ==== FULL DATASET TEST ====
       - name: Test Full Dataset
-        if: matrix.config.preset != 'linux-debug'
+        if: matrix.config.preset != 'linux-debug' && matrix.config.preset != 'linux-arm64-release'
         run: |
           ln -s deps/tiles/profile tiles-profiles
           wget -N https://github.com/motis-project/test-data/raw/aachen/aachen.osm.pbf
@@ -416,7 +412,7 @@ jobs:
           context: .
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          platforms: linux/amd64
+          platforms: linux/amd64,linux/arm64
 
   publish-motis-client:
     if: github.event.action == 'published'
@@ -444,5 +440,5 @@ jobs:
         working-directory: ui/api
       - run: pnpm run build
         working-directory: ui/api
-      - run: npm publish --provenance --access public   
+      - run: npm publish --provenance --access public
         working-directory: ui/api

@@ -56,6 +56,8 @@
       "toolchainFile": "/opt/aarch64-unknown-linux-musl/toolchain-arm64.cmake",
       "cacheVariables": {
         "CMAKE_CROSSCOMPILING_EMULATOR": "qemu-aarch64-static",
+        "CMAKE_C_FLAGS": "-mcpu=neoverse-n1",
+        "CMAKE_CXX_FLAGS": "-mcpu=neoverse-n1",
         "CMAKE_EXE_LINKER_FLAGS": "-B/opt/mold",
         "CMAKE_BUILD_TYPE": "Release",
         "MOTIS_MIMALLOC": "ON"
@@ -70,8 +72,8 @@
       "generator": "Ninja",
       "binaryDir": "${sourceDir}/build/sanitizer",
       "cacheVariables": {
-        "CMAKE_C_COMPILER": "clang-18",
-        "CMAKE_CXX_COMPILER": "clang++-18",
+        "CMAKE_C_COMPILER": "clang-21",
+        "CMAKE_CXX_COMPILER": "clang++-21",
         "CMAKE_EXE_LINKER_FLAGS": "-lc++abi",
         "CMAKE_BUILD_TYPE": "Debug",
         "CTX_ASAN": "ON",
@@ -119,8 +121,8 @@
       "generator": "Ninja",
       "binaryDir": "${sourceDir}/build/clang-tidy",
       "cacheVariables": {
-        "CMAKE_C_COMPILER": "clang-18",
-        "CMAKE_CXX_COMPILER": "clang++-18",
+        "CMAKE_C_COMPILER": "clang-21",
+        "CMAKE_CXX_COMPILER": "clang++-21",
         "CMAKE_CXX_FLAGS": "-stdlib=libc++",
         "CMAKE_EXE_LINKER_FLAGS": "-lc++abi",
         "CMAKE_BUILD_TYPE": "Release",

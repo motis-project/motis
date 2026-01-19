@@ -14,6 +14,7 @@
 #include "utl/to_vec.h"
 
 #include "nigiri/timetable.h"
+#include "nigiri/translations_view.h"
 
 #include "adr/area_database.h"
 #include "adr/score.h"
@@ -222,42 +223,43 @@ adr_ext adr_extend_tt(nigiri::timetable const& tt,
 
       auto const place_idx = add_place(l);
 
-      auto const name = tt.locations_.names_[l].view();
+      auto const name = tt.get_default_translation(tt.locations_.names_[l]);
       for (auto const eq : get_transitive_equivalences(l)) {
         if (ret.location_place_[eq] != adr_extra_place_idx_t::invalid() ||
             tt.locations_.parents_[eq] != n::location_idx_t::invalid()) {
           continue;
         }
 
-        if (tt.locations_.names_[eq].view() == name) {
+        if (tt.get_default_translation(tt.locations_.names_[eq]) == name) {
           fmt::println(std::clog, "adding to {}: {}  *** name match",
-                       n::location{tt, l}, n::location{tt, eq});
+                       n::loc{tt, l}, n::loc{tt, eq});
           ret.location_place_[eq] = place_idx;
         } else {
           auto const dist = geo::distance(tt.locations_.coordinates_[l],
                                           tt.locations_.coordinates_[eq]);
-          auto const str_diff = get_diff(
-              std::string{tt.locations_.names_[l].view()},
-              std::string{tt.locations_.names_[eq].view()}, sift4_dist);
+          auto const eq_name =
+              tt.get_default_translation(tt.locations_.names_[eq]);
+          auto const str_diff =
+              get_diff(std::string{name}, std::string{eq_name}, sift4_dist);
           auto const cutoff = (500.F - 1750.F * str_diff);
           auto const good = dist < cutoff;
 
           if (good) {
             fmt::println(std::clog, "adding to {}: {}  *** fuzzy match",
-                         n::location{tt, l}, n::location{tt, eq});
+                         n::loc{tt, l}, n::loc{tt, eq});
 
             ret.location_place_[eq] = place_idx;
 
             auto existing = place_location.back();
             if (utl::find_if(existing, [&](n::location_idx_t const x) {
-                  return tt.locations_.names_[x].view() ==
-                         tt.locations_.names_[eq].view();
+                  return tt.get_default_translation(tt.locations_.names_[x]) ==
+                         tt.get_default_translation(tt.locations_.names_[eq]);
                 }) == end(existing)) {
               place_location.back().push_back(eq);
             }
           } else {
-            fmt::println(std::clog, "NO MATCH {}: {}", n::location{tt, l},
-                         n::location{tt, eq});
+            fmt::println(std::clog, "NO MATCH {}: {}", n::loc{tt, l},
+                         n::loc{tt, eq});
           }
         }
       }
@@ -290,10 +292,9 @@ adr_ext adr_extend_tt(nigiri::timetable const& tt,
               ? n::get_special_station(n::special_station::kEnd)
               : tt.locations_.parents_[parent];
 
-      utl::log_error("adr_extend",
-                     "invalid place for {} (parent={}, grand_parent={})",
-                     n::location{tt, l}, n::location{tt, parent},
-                     n::location{tt, grand_parent});
+      utl::log_error(
+          "adr_extend", "invalid place for {} (parent={}, grand_parent={})",
+          n::loc{tt, l}, n::loc{tt, parent}, n::loc{tt, grand_parent});
 
       ret.location_place_[l] = adr_extra_place_idx_t{0U};
     }
@@ -350,6 +351,8 @@ adr_ext adr_extend_tt(nigiri::timetable const& tt,
     }
   }
 
+  utl::verify(!ret.place_importance_.empty(), "no places");
+
   // Normalize to interval [0, 1] by dividing by max. importance.
   {
     auto const normalize = utl::scoped_timer{"guesser normalize"};
@@ -383,27 +386,21 @@ adr_ext adr_extend_tt(nigiri::timetable const& tt,
     auto const place_idx = a::place_idx_t{t.place_names_.size()};
 
     auto names = std::vector<std::pair<a::string_idx_t, a::language_idx_t>>{};
-    auto const add_alt_names = [&](n::location_idx_t const loc) {
-      for (auto const& an : tt.locations_.alt_names_[loc]) {
-        names.emplace_back(
-            add_string(tt.locations_.alt_name_strings_[an].view(), place_idx),
-            t.get_or_create_lang_idx(
-                tt.languages_[tt.locations_.alt_name_langs_[an]].view()));
+    auto const add_names = [&](n::location_idx_t const loc) {
+      for (auto const [lang, text] :
+           n::get_translation_view(tt, tt.locations_.names_[loc])) {
+        names.emplace_back(add_string(text, place_idx),
+                           t.get_or_create_lang_idx(tt.languages_.get(lang)));
       }
     };
 
     for (auto const l : locations) {
-      names.emplace_back(add_string(tt.locations_.names_[l].view(), place_idx),
-                         a::kDefaultLang);
-
-      add_alt_names(l);
+      add_names(l);
       for (auto const& c : tt.locations_.children_[l]) {
         if (tt.locations_.types_[c] == nigiri::location_type::kStation &&
-            tt.locations_.names_[c].view() != tt.locations_.names_[l].view()) {
-          names.emplace_back(
-              add_string(tt.locations_.names_[c].view(), place_idx),
-              a::kDefaultLang);
-          add_alt_names(c);
+            tt.get_default_translation(tt.locations_.names_[c]) !=
+                tt.get_default_translation(tt.locations_.names_[l])) {
+          add_names(c);
         }
       }
 
@@ -429,7 +426,7 @@ adr_ext adr_extend_tt(nigiri::timetable const& tt,
                    return t.strings_[n.first].view();
                  }),
                  locations | std::views::transform(
-                                 [&](auto&& l) { return n::location{tt, l}; }),
+                                 [&](auto&& l) { return n::loc{tt, l}; }),
                  prio);
 
     t.place_type_.emplace_back(a::amenity_category::kExtra);

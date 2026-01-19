@@ -286,6 +286,56 @@ MOTIS supports multiple protocols for real time feeds. This section shows a list
 | Protocol | `protocol` | Note |
 | ---- | ---- | ---- |
 | GTFS-RT | `gtfsrt` | This is the default, if `protocol` is ommitted. |
-| SIRI (XML) | `siri` | Currently limited to SIRI Lite. Still work in progress. Use with care. |
-| SIRI (JSON) | `siri_json` | Same as `siri`, but expects JSON server responses |
+| SIRI Lite (XML) | `siri` | Currently limited to SIRI Lite ET and SX. Still work in progress. Use with care. |
+| SIRI Lite (JSON) | `siri_json` | Same as `siri`, but expects JSON server responses. See below for expected JSON structure. |
 | VDV AUS / VDV454 | `auser` | Requires [`auser`](https://github.com/motis-project/auser) for subscription handling |
+
+## Supported SIRI Lite services
+
+SIRI feeds are divided into multiple feeds called services (check for instance
+[this](https://en.wikipedia.org/wiki/Service_Interface_for_Real_Time_Information#CEN_SIRI_Functional_Services)
+for a list of all services). Right now MOTIS only supports parsing the
+"Estimated Timetable" (or ET) and the "Situation Exchange" (or SX) SIRI
+services. You can see examples of such feeds
+[here](https://github.com/SIRI-CEN/SIRI/blob/2.2/examples/siri_exm_ET/ext_estimatedTimetable_response.xml)
+and
+[here](https://github.com/SIRI-CEN/SIRI/blob/2.2/examples/siri_exm_SX/exx_situationExchange_response.xml).
+
+If you are using the `siri_json` protocol, note that MOTIS expects the
+following JSON structure:
+
+- **Valid** SIRI Lite JSON response:
+
+  ```json
+  {
+    "ResponseTimestamp": "2004-12-17T09:30:46-05:00",
+    "ProducerRef": "KUBRICK",
+    "Status": true,
+    "MoreData": false,
+    "EstimatedTimetableDelivery": [
+      ...
+    ]
+  }
+  ```
+
+- **Invalid** SIRI Lite JSON response:
+
+  ```json
+  {
+    "Siri": {
+      "ServiceDelivery": {
+        "ResponseTimestamp": "2004-12-17T09:30:46-05:00",
+        "ProducerRef": "KUBRICK",
+        "Status": true,
+        "MoreData": false,
+        "EstimatedTimetableDelivery": [
+          ...
+        ]
+      }
+    }
+  }
+  ```
+
+If, as above, the two top keys `"Siri"` and `"ServiceDelivery"` are included in
+the JSON response, MOTIS will fail to parse the SIRI Lite feed, throwing
+`[VERIFY FAIL] unable to parse time ""` errors.

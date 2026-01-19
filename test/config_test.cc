@@ -51,6 +51,7 @@ timetable:
   link_stop_distance: 100
   update_interval: 60
   http_timeout: 30
+  canned_rt: false
   incremental_rt_update: false
   use_osm_stop_coordinates: false
   extend_missing_footpaths: false

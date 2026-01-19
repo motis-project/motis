@@ -1,5 +1,7 @@
 #include "motis/rt_update.h"
 
+#include <filesystem>
+
 #include "boost/asio/co_spawn.hpp"
 #include "boost/asio/detached.hpp"
 #include "boost/asio/experimental/parallel_group.hpp"
@@ -7,6 +9,7 @@
 #include "boost/asio/steady_timer.hpp"
 #include "boost/beast/core/buffers_to_string.hpp"
 
+#include "utl/read_file.h"
 #include "utl/timer.h"
 
 #include "nigiri/rt/create_rt_timetable.h"
@@ -25,6 +28,7 @@
 
 namespace n = nigiri;
 namespace asio = boost::asio;
+namespace fs = std::filesystem;
 using asio::awaitable;
 
 namespace motis {
@@ -39,6 +43,25 @@ asio::awaitable<ptr<elevators>> update_elevators(config const& c,
                         c.get_elevators()->headers_.value_or(headers_t{}),
                         std::chrono::seconds{c.get_elevators()->http_timeout_});
   co_return update_elevators(c, d, get_http_body(res), new_rtt);
+}
+
+std::string get_dump_path(auto&& ep) {
+  auto const normalize = [](std::string const& x) {
+    auto ret = std::string{};
+    ret.resize(x.size());
+    for (auto [to, from] : utl::zip(ret, x)) {
+      auto const c = from;
+      if (('0' <= c && c <= '9') ||  //
+          ('a' <= c && c <= 'z') ||  //
+          ('A' <= c && c <= 'Z')) {
+        to = c;
+      } else {
+        to = '_';
+      }
+    }
+    return ret;
+  };
+  return fmt::format("dump_rt/{}-{}", ep.tag_, normalize(ep.ep_.url_));
 }
 
 struct gtfs_rt_endpoint {
@@ -59,6 +82,11 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
   boost::asio::co_spawn(
       ioc,
       [&c, &d]() -> awaitable<void> {
+        auto const dump_rt = fs::is_directory("dump_rt");
+        if (dump_rt) {
+          fmt::println("WARNING: DUMPING TO dump_rt\n");
+        }
+
         auto executor = co_await asio::this_coro::executor;
         auto timer = asio::steady_timer{executor};
         auto ec = boost::system::error_code{};
@@ -110,7 +138,60 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
             auto const timeout =
                 std::chrono::seconds{c.timetable_->http_timeout_};
 
-            if (!endpoints.empty()) {
+            using stats_t =
+                std::variant<n::rt::statistics, n::rt::vdv_aus::statistics>;
+            if (c.timetable_->canned_rt_) {
+              fmt::println("WARNING: READING CANNED RT");
+
+              auto const stats =
+                  utl::to_vec(endpoints, [&](auto&& ep) -> stats_t {
+                    try {
+                      return utl::visit(
+                          ep,
+                          [&](gtfs_rt_endpoint const& g) -> stats_t {
+                            auto const path = get_dump_path(g);
+                            auto const body = utl::read_file(path.c_str());
+                            if (body.has_value()) {
+                              return n::rt::gtfsrt_update_buf(
+                                  *d.tt_, *rtt, g.src_, g.tag_, *body);
+                            } else {
+                              return n::rt::statistics{.parser_error_ = true};
+                            }
+                          },
+                          [&](auser_endpoint const& a) -> stats_t {
+                            auto const path = get_dump_path(a);
+                            auto& auser = d.auser_->at(a.ep_.url_);
+                            auto const body = utl::read_file(path.c_str());
+                            if (body.has_value()) {
+                              return auser.consume_update(*body, *rtt);
+                            } else {
+                              return n::rt::vdv_aus::statistics{.error_ = true};
+                            }
+                          });
+                    } catch (std::exception const& e) {
+                      std::cout << "EXCEPTION: " << e.what() << "\n";
+                      return n::rt::statistics{.parser_error_ = true};
+                    }
+                  });
+
+              for (auto const [s, ep] : utl::zip(stats, endpoints)) {
+                utl::visit(
+                    ep,
+                    [&](gtfs_rt_endpoint const& g) {
+                      n::log(n::log_lvl::info, "motis.rt",
+                             "GTFS-RT update stats for tag={}, url={}: {}",
+                             g.tag_, g.ep_.url_,
+                             fmt::streamed(std::get<n::rt::statistics>(s)));
+                    },
+                    [&](auser_endpoint const& a) {
+                      n::log(n::log_lvl::info, "motis.rt",
+                             "VDV AUS update stats for tag={}, url={}:\n{}",
+                             a.tag_, a.ep_.url_,
+                             fmt::streamed(
+                                 std::get<n::rt::vdv_aus::statistics>(s)));
+                    });
+              }
+            } else if (!endpoints.empty()) {
               auto awaitables = utl::to_vec(
                   endpoints,
                   [&](std::variant<gtfs_rt_endpoint, auser_endpoint> const& x) {
@@ -131,9 +212,14 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
                                           boost::urls::url{g.ep_.url_},
                                           g.ep_.headers_.value_or(headers_t{}),
                                           timeout);
+                                      auto const body = get_http_body(res);
+                                      if (dump_rt) {
+                                        std::ofstream{get_dump_path(g)}.write(
+                                            body.c_str(),
+                                            static_cast<long>(body.size()));
+                                      }
                                       ret = n::rt::gtfsrt_update_buf(
-                                          *d.tt_, *rtt, g.src_, g.tag_,
-                                          get_http_body(res));
+                                          *d.tt_, *rtt, g.src_, g.tag_, body);
                                     } catch (std::exception const& e) {
                                       g.metrics_.updates_error_.Increment();
                                       n::log(n::log_lvl::error, "motis.rt",
@@ -157,8 +243,14 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
                                           fetch_url,
                                           a.ep_.headers_.value_or(headers_t{}),
                                           timeout);
-                                      ret = auser.consume_update(
-                                          get_http_body(res), *rtt);
+                                      auto body = get_http_body(res);
+                                      if (dump_rt) {
+                                        std::ofstream{get_dump_path(a)}.write(
+                                            body.c_str(),
+                                            static_cast<long>(body.size()));
+                                      }
+                                      ret = auser.consume_update(body, *rtt,
+                                                                 true);
                                     } catch (std::exception const& e) {
                                       a.metrics_.updates_error_.Increment();
                                       n::log(n::log_lvl::error, "motis.rt",
