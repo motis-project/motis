@@ -49,6 +49,7 @@
 #include "motis/adr_extend_tt.h"
 #include "motis/clog_redirect.h"
 #include "motis/compute_footpaths.h"
+#include "motis/compute_shapes.h"
 #include "motis/constants.h"
 #include "motis/data.h"
 #include "motis/hashes.h"
@@ -515,6 +516,30 @@ data import(config const& c, fs::path const& data_path, bool const write) {
            {tt_hash, osm_hash, elevation_dir_hash, osr_version(), n_version(),
             matches_version()}};
 
+  auto compute_missing_shapes = task{
+      "compute_shapes",
+      [&]() {
+        return c.timetable_ && c.timetable_->with_shapes_ &&
+               c.timetable_->compute_missing_shapes_ && c.use_street_routing();
+      },
+      [&]() { return d.tt_ && /*d.tags_ &&*/ d.w_ && d.pl_ && d.l_ && d.pl_; },
+      [&]() {
+        // re-open in write mode
+        d.shapes_ = {};
+        d.shapes_ = std::make_unique<n::shapes_storage>(
+            data_path, cista::mmap::protection::MODIFY);
+
+        compute_shapes(*d.w_, *d.l_, *d.pl_, *d.tt_, *d.shapes_,
+                       c.timetable_->shapes_debug_);
+      },
+      [&]() { d.load_shapes(); },
+      {tt_hash,
+       osm_hash,
+       osr_version(),
+       n_version(),
+       {"compute_missing_shapes",
+        c.timetable_.value_or(config::timetable{}).compute_missing_shapes_}}};
+
   auto tiles = task{
       "tiles",
       [&]() { return c.tiles_.has_value(); },
@@ -566,7 +591,8 @@ data import(config const& c, fs::path const& data_path, bool const write) {
       {tiles_version(), osm_hash, tiles_hash}};
 
   auto tasks = std::vector<task>{
-      tiles, osr, adr, tt, tbd, adr_extend, osr_footpath, matches, flex_areas};
+      tiles,      osr,          adr,     tt,         tbd,
+      adr_extend, osr_footpath, matches, flex_areas, compute_missing_shapes};
   utl::erase_if(tasks, [&](auto&& t) {
     if (!t.should_run_()) {
       return true;
