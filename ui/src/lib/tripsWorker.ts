@@ -35,9 +35,11 @@ const lerp = (p0: Position, p1: Position, t0: number, t1: number, time: number):
 //PROCESSING
 const metadata: MetaData[] = [];
 let index = 0;
+let status: number;
 let tripsData: Trip[] = [];
 const fetchData = async (query: Query) => {
-	const { data } = await trips({ query });
+	const { data, response } = await trips({ query });
+	status = response.status;
 	if (!data) return;
 	index = 0;
 	tripsData = data.map((t) => processSegment(t));
@@ -173,7 +175,7 @@ self.onmessage = async (e) => {
 		}
 		case 'fetch':
 			await fetchData(e.data.query);
-			postMessage({ type: 'fetch-complete', metadata });
+			postMessage({ type: 'fetch-complete', status, metadata });
 			break;
 		case 'update': {
 			const positions = new Float64Array(e.data.positions.buffer);

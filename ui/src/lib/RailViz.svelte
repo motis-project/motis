@@ -9,6 +9,7 @@
 	import { onClickTrip } from './utils';
 	import { getDelayColor, rgbToHex } from './Color';
 	import type { MetaData } from './types';
+	import Control from './map/Control.svelte';
 	let {
 		map,
 		bounds,
@@ -24,6 +25,7 @@
 	//QUERY
 	let startTime = $state(new Date(Date.now()));
 	let endTime = $derived(new Date(startTime.getTime() + 180000));
+	let canceled = $derived(colorMode === 'none');
 	let query = $derived.by(() => {
 		if (!bounds || !zoom) return null;
 		const b = maplibregl.LngLatBounds.convert(bounds);
@@ -108,6 +110,7 @@
 		}
 	};
 	const createLayer = () => {
+		if (!DATA.positions || DATA.positions.byteLength === 0) return;
 		return new IconLayer({
 			id: 'trips-layer',
 			data: {
@@ -134,7 +137,7 @@
 	};
 	let animationId: number;
 	const animate = () => {
-		if (DATA.positions.byteLength === 0) return;
+		if (!DATA.positions || DATA.positions.length === 0) return;
 		worker.postMessage(
 			{
 				type: 'update',
@@ -150,9 +153,8 @@
 
 	// UPDATE
 	$effect(() => {
-		if (!query || isProcessing) return;
+		if (!query || isProcessing || canceled) return;
 		untrack(() => {
-			if (colorMode === 'none') return;
 			isProcessing = true;
 			worker.postMessage({ type: 'fetch', query });
 		});
@@ -163,6 +165,7 @@
 		}
 	}, 60000);
 	//SETUP
+	let status = $state();
 	let overlay: MapboxOverlay;
 	let worker: Worker;
 	let metadata: MetaData[];
@@ -173,15 +176,15 @@
 		worker.onmessage = (e) => {
 			if (e.data.type == 'fetch-complete') {
 				metadata = e.data.metadata;
+				status = e.data.status;
 				isProcessing = false;
-				animate();
-				return;
+			} else {
+				const { positions, angles, length, colors } = e.data;
+				DATA.positions = new Float64Array(positions.buffer);
+				DATA.angles = new Float32Array(angles.buffer);
+				DATA.colors = new Uint8Array(colors.buffer);
+				DATA.length = length;
 			}
-			const { positions, angles, length, colors } = e.data;
-			DATA.positions = new Float64Array(positions.buffer);
-			DATA.angles = new Float32Array(angles.buffer);
-			DATA.colors = new Uint8Array(colors.buffer);
-			DATA.length = length;
 			overlay.setProps({ layers: [createLayer()] });
 			animationId = requestAnimationFrame(animate);
 		};
@@ -191,27 +194,9 @@
 			onClick
 		});
 	});
-	/*
-	$effect(() => {
-		if (colorMode === 'none' || cancel) {
-			cancelAnimationFrame(animationId);
-		}
-	});
-	let cancel = $state(false);
-	*/
 	$effect(() => {
 		if (!map || !overlay) return;
 		map.addControl(overlay);
-		/*
-		untrack(() => {
-			map.on('movestart', () => {
-				cancel = true;
-			});
-			map.on('moveend', () => {
-				cancel = false;
-			});
-		});
-		 */
 	});
 	onDestroy(() => {
 		if (animationId) cancelAnimationFrame(animationId);
@@ -220,3 +205,7 @@
 		popup.remove();
 	});
 </script>
+
+{#if status && status !== 200}
+	<Control position="bottom-left">trips response status: {status}</Control>
+{/if}
