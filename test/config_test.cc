@@ -45,6 +45,7 @@ timetable:
   tb: false
   railviz: true
   with_shapes: true
+  compute_missing_shapes: false
   adjust_footpaths: true
   merge_dupes_intra_src: false
   merge_dupes_inter_src: false
