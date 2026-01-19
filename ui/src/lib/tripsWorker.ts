@@ -33,7 +33,7 @@ const lerp = (p0: Position, p1: Position, t0: number, t1: number, time: number):
 };
 
 //PROCESSING
-const metadata: MetaData[] = [];
+const metadata: MetaData[] = new Array(6500);
 let index = 0;
 let status: number;
 let tripsData: Trip[] = [];
@@ -190,6 +190,7 @@ self.onmessage = async (e) => {
 			updateState(data, e.data.colorMode);
 			postMessage(
 				{
+					metadata: e.data.index ? metadata[e.data.index] : undefined,
 					angles: data.angles,
 					positions: data.positions,
 					colors: data.colors,

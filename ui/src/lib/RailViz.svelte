@@ -68,9 +68,10 @@
 		index: number;
 	};
 	const onHover = ({ index, coordinate }: HoverEvent) => {
-		const trip = coordinate && index && index !== -1 ? metadata[index] : null;
-
-		if (trip && map) {
+		if (coordinate && index && index !== -1 && map) {
+			metaDataIndex = index;
+			const trip = metaData;
+			if (!trip) return;
 			map.getCanvas().style.cursor = 'pointer';
 			const content = trip.realtime
 				? `<strong>${trip.displayName}</strong><br>
@@ -91,8 +92,9 @@
 		}
 	};
 	const onClick = ({ index }: ClickEvent) => {
-		if (index !== -1 && metadata[index]) {
-			onClickTrip(metadata[index].id);
+		metaDataIndex = index;
+		if (index !== -1 && metaData) {
+			onClickTrip(metaData.id);
 		}
 	};
 
@@ -141,6 +143,7 @@
 		worker.postMessage(
 			{
 				type: 'update',
+				index: metaDataIndex,
 				colorMode,
 				positions: DATA.positions,
 				angles: DATA.angles,
@@ -168,18 +171,21 @@
 	let status = $state();
 	let overlay: MapboxOverlay;
 	let worker: Worker;
-	let metadata: MetaData[];
+	let metaData: MetaData;
+	let metaDataIndex: number;
 	onMount(() => {
 		const origin = new URL(window.location.href).searchParams.get('motis');
 		worker = new Worker(new URL('tripsWorker.ts', import.meta.url), { type: 'module' });
 		worker.postMessage({ type: 'init', origin });
 		worker.onmessage = (e) => {
 			if (e.data.type == 'fetch-complete') {
-				metadata = e.data.metadata;
 				status = e.data.status;
 				isProcessing = false;
 			} else {
-				const { positions, angles, length, colors } = e.data;
+				const { positions, angles, length, colors, metadata } = e.data;
+				if (metadata) {
+					metaData = metadata;
+				}
 				DATA.positions = new Float64Array(positions.buffer);
 				DATA.angles = new Float32Array(angles.buffer);
 				DATA.colors = new Uint8Array(colors.buffer);
