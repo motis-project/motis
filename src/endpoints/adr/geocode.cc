@@ -42,7 +42,7 @@ api::geocode_response geocode::operator()(
                                             "could not parse place {}", s);
     return std::optional{parsed.value().pos_};
   });
-  auto const allowed_modes =
+  auto const required_modes =
       params.mode_.transform([](std::vector<api::ModeEnum> const& modes) {
         return to_clasz_mask(modes);
       });
@@ -59,17 +59,18 @@ api::geocode_response geocode::operator()(
     }
   }
   auto const place_filter =
-      allowed_modes
-          .transform([&](n::routing::clasz_mask_t allowed) {
-            return std::function{[allowed, this](adr::place_idx_t place_idx) {
+      required_modes
+          .transform([&](n::routing::clasz_mask_t required_clasz) {
+            return std::function{[&,
+                                  required_clasz](adr::place_idx_t place_idx) {
               if (t_.place_type_[place_idx] != adr::amenity_category::kExtra) {
                 return true;
               }
               auto const i = adr_extra_place_idx_t{
                   static_cast<adr_extra_place_idx_t::value_t>(place_idx -
                                                               t_.ext_start_)};
-              auto const available = ae_->place_clasz_[i];
-              return static_cast<bool>(available & allowed);
+              return (ae_->place_clasz_.at(i) & required_clasz) ==
+                     required_clasz;
             }};
           })
           .value_or(std::function<bool(adr::place_idx_t)>{});
