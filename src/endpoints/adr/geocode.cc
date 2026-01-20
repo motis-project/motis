@@ -60,15 +60,17 @@ api::geocode_response geocode::operator()(
   }
   auto const place_filter =
       required_modes
-          .transform([&](n::routing::clasz_mask_t required) {
-            return std::function{[&](adr::place_idx_t place_idx) {
+          .transform([&](n::routing::clasz_mask_t required_clasz) {
+            return std::function{[&,
+                                  required_clasz](adr::place_idx_t place_idx) {
               if (t_.place_type_[place_idx] != adr::amenity_category::kExtra) {
                 return true;
               }
               auto const i = adr_extra_place_idx_t{
                   static_cast<adr_extra_place_idx_t::value_t>(place_idx -
                                                               t_.ext_start_)};
-              return (ae_->place_clasz_.at(i) & required) == required;
+              return (ae_->place_clasz_.at(i) & required_clasz) ==
+                     required_clasz;
             }};
           })
           .value_or(std::function<bool(adr::place_idx_t)>{});
