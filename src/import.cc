@@ -378,6 +378,7 @@ void import(config const& c,
                        .reservation_not_required_default_ = to_clasz_bool_array(
                            dc.default_reservation_not_required_,
                            dc.clasz_reservation_not_required_),
+                       .default_feed_lang_ = dc.default_feed_lang_,
                        .extend_calendar_ = dc.extend_calendar_,
                        .user_script_ =
                            dc.script_
