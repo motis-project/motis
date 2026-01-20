@@ -135,16 +135,7 @@ api::Place to_place(n::timetable const* tt,
               auto const pos = tt->locations_.coordinates_[l];
               auto const p = tt->locations_.get_root_idx(l);
               auto const timezone = get_tz(*tt, ae, tz_map, p);
-              
-              auto modes = std::optional<std::vector<api::ModeEnum>>{};
-              if (ae != nullptr) {
-                try {
-                  auto const place_idx = ae->location_place_.at(p);
-                  modes = to_modes(ae->place_clasz_.at(place_idx), 5);
-                } catch (...) {
-                }
-              }
-              
+
               return {
                   .name_ = std::string{tt->translate(
                       lang, tt->locations_.names_.at(p))},
@@ -165,7 +156,12 @@ api::Place to_place(n::timetable const* tt,
                   .track_ = get_track(tt_l.l_),
                   .description_ = get_description(tt_l.scheduled_),
                   .vertexType_ = api::VertexTypeEnum::TRANSIT,
-                  .modes_ = std::move(modes)};
+                  .modes_ =
+                      ae != nullptr
+                          ? std::optional<std::vector<api::ModeEnum>>{to_modes(
+                                ae->place_clasz_.at(ae->location_place_.at(p)),
+                                5)}
+                          : std::nullopt};
             }
           }},
       l);
