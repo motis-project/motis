@@ -6,7 +6,7 @@ export type Trip = {
 	routeColor?: string;
 	mode: Mode;
 	departureDelay: number;
-	path: Position[];
+	path: Float64Array;
 	arrivalDelay: number;
 	timestamps: Float64Array;
 	currentIndx: number;
