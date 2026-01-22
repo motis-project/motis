@@ -58,7 +58,7 @@ using td_offsets_t =
 namespace motis::odm {
 
 constexpr auto kODMLookAhead = nigiri::duration_t{24h};
-constexpr auto kSearchIntervalSize = nigiri::duration_t{10h};
+constexpr auto kSearchIntervalSize = nigiri::duration_t{2h};
 constexpr auto kContextPadding = nigiri::duration_t{2h};
 static auto const kMixer = get_default_mixer();
 
