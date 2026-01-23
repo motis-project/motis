@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { client } from '@motis-project/motis-client';
 	import { lngLatToStr } from '$lib/lngLatToStr';
 	import { MapboxOverlay } from '@deck.gl/mapbox';
 	import { IconLayer } from '@deck.gl/layers';
@@ -195,7 +196,7 @@
 	const metaDataMap = new SvelteMap<number, MetaData>();
 
 	onMount(() => {
-		const origin = new URL(window.location.href).searchParams.get('motis');
+		const origin = client.getConfig().baseUrl;
 		worker = new Worker(new URL('tripsWorker.ts', import.meta.url), { type: 'module' });
 		worker.postMessage({ type: 'init', origin });
 		worker.onmessage = (e) => {
