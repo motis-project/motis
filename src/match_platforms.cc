@@ -112,7 +112,7 @@ double get_match_bonus(Collection&& names,
   }
   if (auto const track = get_track(ref);
       track.has_value() && has_number_match(names, *track)) {
-    bonus += std::max(0.0, 60.0 - size);
+    bonus += std::max(0.0, 20.0 - size);
   }
   if (has_exact_match(names, name)) {
     bonus += std::max(0.0, 15.0 - size);
