@@ -283,7 +283,7 @@ self.onmessage = async (e) => {
 	switch (e.data.type) {
 		case 'init': {
 			const querySerializer = { array: { explode: false } } as QuerySerializerOptions;
-			client.setConfig({ baseUrl: e.data.origin, querySerializer });
+			client.setConfig({ baseUrl: e.data.baseUrl, querySerializer });
 			break;
 		}
 		case 'fetch':
