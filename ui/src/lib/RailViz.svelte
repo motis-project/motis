@@ -11,6 +11,7 @@
 	import type { MetaData } from './types';
 	import Control from './map/Control.svelte';
 	import { SvelteMap } from 'svelte/reactivity';
+	import { client } from '@motis-project/motis-client';
 	let {
 		map,
 		bounds,
@@ -195,9 +196,8 @@
 	const metaDataMap = new SvelteMap<number, MetaData>();
 
 	onMount(() => {
-		const origin = new URL(window.location.href).searchParams.get('motis');
 		worker = new Worker(new URL('tripsWorker.ts', import.meta.url), { type: 'module' });
-		worker.postMessage({ type: 'init', origin });
+		worker.postMessage({ type: 'init', baseUrl: client.getConfig().baseUrl });
 		worker.onmessage = (e) => {
 			if (e.data.type == 'fetch-complete') {
 				metaDataMap.clear();
