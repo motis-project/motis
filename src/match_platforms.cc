@@ -129,7 +129,7 @@ int compare_platform_code(Collection&& names, std::string_view platform_code) {
   auto bonus = 0;
   for (auto const& x : names) {
     if (std::string_view{x} == platform_code) {
-      bonus += first_match ? 40 : 15;
+      bonus += first_match ? 50 : 15;
       first_match = false;
     }
   }
