@@ -54,7 +54,6 @@ json::value matches::operator()(json::value const& query) const {
                                }},
                osr::to_ref(pl_.platform_ref_[p][0]));
 
-
     matches.emplace_back(json::value{
         {"type", "Feature"},
         {"properties", platform_data},

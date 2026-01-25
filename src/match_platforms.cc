@@ -136,7 +136,6 @@ int compare_platform_code(Collection&& names, std::string_view platform_code) {
   return bonus;
 }
 
-
 struct center {
   template <typename T>
   void add(T const& polyline) {
@@ -242,8 +241,7 @@ osr::platform_idx_t get_match(n::timetable const& tt,
     auto const routes_bonus = get_routes_bonus(tt, l, pl.platform_names_[x]);
     auto const code_bonus = compare_platform_code(
         pl.platform_names_[x],
-        tt.get_default_translation(tt.locations_.platform_codes_[l])
-        );
+        tt.get_default_translation(tt.locations_.platform_codes_[l]));
 
     auto const score =
         dist - match_bonus - way_bonus - lvl_bonus - routes_bonus - code_bonus;
