@@ -430,11 +430,12 @@ api::stoptimes_response stop_times::operator()(
             auto place = to_place(&tt_, &tags_, w_, pl_, matches_, ae_, tz_,
                                   query.language_, s);
             if (query.withAlerts_) {
-              place.alerts_ = get_alerts(
-                  fr,
-                  std::pair{s, fr.stop_range_.from_ != 0U ? n::event_type::kArr
-                                                          : n::event_type::kDep},
-                  true, query.language_);
+              place.alerts_ =
+                  get_alerts(fr,
+                             std::pair{s, fr.stop_range_.from_ != 0U
+                                              ? n::event_type::kArr
+                                              : n::event_type::kDep},
+                             true, query.language_);
             }
             if (fr.stop_range_.from_ != 0U) {
               place.arrival_ = {s.time(n::event_type::kArr)};

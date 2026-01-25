@@ -183,8 +183,8 @@ TEST(motis, stop_times) {
         "&fetchStops=true"
         "&withAlerts=false");
     EXPECT_EQ(3, res2.stopTimes_.size());
-    for (const auto& stopTime : res2.stopTimes_) {
-      EXPECT_EQ(0, stopTime.place_.alerts_->size());
+    for (auto const& stopTime : res2.stopTimes_) {
+      EXPECT_FALSE(stopTime.place_.alerts_.has_value());
     }
   }
 }
