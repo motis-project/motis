@@ -171,4 +171,20 @@ TEST(motis, stop_times) {
     EXPECT_EQ(false, sbahn.realTime_);
     EXPECT_EQ(2, sbahn.previousStops_->size());
   }
+
+  {
+    // same test with alerts off
+    auto const res2 = stop_times(
+        "/api/v5/stoptimes?stopId=test_FFM_10"
+        "&time=2019-04-30T23:30:00.000Z"
+        "&arriveBy=true"
+        "&n=3"
+        "&language=de"
+        "&fetchStops=true"
+        "&withAlerts=false");
+    EXPECT_EQ(3, res2.stopTimes_.size());
+    for (auto const& stopTime : res2.stopTimes_) {
+      EXPECT_FALSE(stopTime.place_.alerts_.has_value());
+    }
+  }
 }

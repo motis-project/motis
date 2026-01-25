@@ -1659,6 +1659,15 @@ paths:
             items:
               type: string
           explode: false
+
+        - name: withAlerts
+          in: query
+          required: false
+          description: Optional. Default is `true`. If set to `false`, alerts are omitted in the metadata of place for all stopTimes.
+          schema:
+            type: boolean
+            default: true
+
       responses:
         '422':
           description: Unprocessable Entity
