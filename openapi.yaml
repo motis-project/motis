@@ -3531,6 +3531,10 @@ components:
             by looping active weekdays, e.g. from calendar.txt in GTFS.
           type: string
           format: date-time
+        bikesAllowed:
+          description: |
+            Whether bikes can be carried on this leg.
+          type: boolean
 
     RiderCategory:
       type: object
