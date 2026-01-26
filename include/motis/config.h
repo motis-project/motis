@@ -90,6 +90,8 @@ struct config {
       bool operator==(shapes_debug const&) const = default;
       std::filesystem::path path_;
       std::optional<std::vector<std::string>> trips_{};
+      std::optional<std::vector<std::string>> route_ids_{};
+      std::optional<std::vector<unsigned>> route_indices_{};
       bool all_{false};
       bool all_with_beelines_{false};
     };

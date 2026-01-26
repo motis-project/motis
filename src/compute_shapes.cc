@@ -4,6 +4,7 @@
 #include <map>
 #include <optional>
 #include <ranges>
+#include <set>
 #include <vector>
 
 #include "boost/stacktrace.hpp"
@@ -77,13 +78,20 @@ void compute_shapes(
   auto segments_routed = 0ULL;
   auto segments_beelined = 0ULL;
 
-  auto const debug_enabled = debug && !debug->path_.empty() &&
-                             (debug->all_ || debug->all_with_beelines_ ||
-                              (debug->trips_ && !debug->trips_->empty()));
+  auto const debug_enabled =
+      debug && !debug->path_.empty() &&
+      (debug->all_ || debug->all_with_beelines_ ||
+       (debug->trips_ && !debug->trips_->empty()) ||
+       (debug->route_ids_ && !debug->route_ids_->empty()) ||
+       (debug->route_indices_ && !debug->route_indices_->empty()));
 
   if (debug_enabled) {
     std::filesystem::create_directories(debug->path_);
   }
+
+  shapes.trip_offset_indices_.resize(tt.n_trips());
+  shapes.route_bboxes_.resize(tt.n_routes());
+  shapes.route_segment_bboxes_.resize(tt.n_routes());
 
   for (auto r = n::route_idx_t{0U}; r != tt.n_routes(); ++r) {
     auto profile = get_profile(tt.route_clasz_[r]);
@@ -101,19 +109,47 @@ void compute_shapes(
       continue;
     }
     auto const transports = tt.route_transport_ranges_[r];
-    auto debug_path_fn =
-        std::move_only_function<std::optional<std::filesystem::path>(
-            osr::matched_route const&)>{nullptr};
+    auto debug_path_fn = std::function<std::optional<std::filesystem::path>(
+        osr::matched_route const&)>{nullptr};
 
     if (debug_enabled) {
       debug_path_fn = [&debug, r, &tt](osr::matched_route const& res)
           -> std::optional<std::filesystem::path> {
-        if (debug->all_ ||
-            (debug->all_with_beelines_ && res.n_beelined_ > 0U)) {
-          return debug->path_ / fmt::format("route_{}", to_idx(r));
-        } else if (debug->trips_ && !debug->trips_->empty()) {
+        auto include =
+            debug->all_ || (debug->all_with_beelines_ && res.n_beelined_ > 0U);
+        auto tags = std::set<std::string>{};
+
+        if (debug->route_indices_ && !debug->route_indices_->empty()) {
+          auto const& debug_route_indices = *debug->route_indices_;
+          if (std::ranges::contains(debug_route_indices, to_idx(r))) {
+            include = true;
+          }
+        }
+
+        if (debug->route_ids_ && !debug->route_ids_->empty()) {
+          auto const& debug_route_ids = *debug->route_ids_;
+          for (auto const transport_idx : tt.route_transport_ranges_[r]) {
+            auto const frun = n::rt::frun{
+                tt, nullptr,
+                n::rt::run{
+                    .t_ = n::transport{transport_idx, n::day_idx_t{0}},
+                    .stop_range_ =
+                        n::interval{n::stop_idx_t{0U},
+                                    static_cast<n::stop_idx_t>(
+                                        tt.route_location_seq_[r].size())},
+                    .rt_ = n::rt_transport_idx_t::invalid()}};
+
+            auto const rsn = frun[0].get_route_id(n::event_type::kDep);
+            if (std::ranges::contains(debug_route_ids, rsn)) {
+              tags.emplace(fmt::format("route_{}", rsn));
+              include = true;
+              break;
+            }
+          }
+        }
+
+        if (debug->trips_ && !debug->trips_->empty()) {
           auto const& debug_trip_ids = *debug->trips_;
-          auto debug_path = std::optional<std::filesystem::path>{};
           for (auto const transport_idx : tt.route_transport_ranges_[r]) {
             auto const frun = n::rt::frun{
                 tt, nullptr,
@@ -130,15 +166,24 @@ void compute_shapes(
               for (auto const trip_id_idx : tt.trip_ids_[trip_idx]) {
                 auto const trip_id = tt.trip_id_strings_.at(trip_id_idx).view();
                 if (std::ranges::contains(debug_trip_ids, trip_id)) {
-                  debug_path = debug->path_ / trip_id;
+                  tags.emplace(fmt::format("trip_{}", trip_id));
+                  include = true;
                   return;
                 }
               }
             });
           }
-          return debug_path;
         }
-        return {};
+
+        if (include) {
+          auto fn = fmt::format("r_{}", to_idx(r));
+          for (auto const& tag : tags) {
+            fn += fmt::format("_{}", tag);
+          }
+          return debug->path_ / fn;
+        } else {
+          return {};
+        }
       };
     }
 
@@ -165,11 +210,11 @@ void compute_shapes(
 
     try {
       auto const max_segment_cost = profile == osr::search_profile::kRailway
-                                        ? osr::cost_t{5000U}
-                                        : osr::cost_t{1000U};
-      auto const matched_route = osr::map_match(
-          w, lookup, *profile, profile_params, match_points, max_segment_cost,
-          nullptr, nullptr, std::move(debug_path_fn));
+                                        ? osr::cost_t{10000U}
+                                        : osr::cost_t{5000U};
+      auto const matched_route =
+          osr::map_match(w, lookup, *profile, profile_params, match_points,
+                         max_segment_cost, nullptr, nullptr, debug_path_fn);
 
       ++routes_matched;
       segments_routed += matched_route.n_routed_;
@@ -227,13 +272,17 @@ void compute_shapes(
       auto const shape_idx = static_cast<n::shape_idx_t>(shapes.data_.size());
       shapes.data_.emplace_back(shape);
 
+      shapes.route_bboxes_[r] = route_bbox;
+      // TODO
+      // shapes.route_segment_bboxes_[r] = segment_bboxes;
+
       auto range_to_offsets = std::map<std::pair<n::stop_idx_t, n::stop_idx_t>,
                                        n::shape_offset_idx_t>{};
 
       for (auto const transport_idx : transports) {
         auto const frun = n::rt::frun{
             tt, nullptr,
-            n::rt::run{.t_ = n::transport{transport_idx},
+            n::rt::run{.t_ = n::transport{transport_idx, n::day_idx_t{0}},
                        .stop_range_ = n::interval{n::stop_idx_t{0U},
                                                   static_cast<n::stop_idx_t>(
                                                       stops.size())},
