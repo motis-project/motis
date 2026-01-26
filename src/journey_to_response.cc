@@ -534,7 +534,8 @@ api::Itinerary journey_to_response(
                          tt.src_end_date_[src] < service_day)
                             ? std::optional{tt.src_end_date_[src]}
                             : std::nullopt,
-                });
+                    .bikesAllowed_ =
+                        enter_stop.bikes_allowed(nigiri::event_type::kDep)});
 
                 auto const attributes =
                     tt.attribute_combinations_[enter_stop
