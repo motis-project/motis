@@ -55,6 +55,7 @@ std::optional<osr::search_profile> get_profile(n::clasz const clasz) {
     case n::clasz::kRegional:
     case n::clasz::kRegionalFast:
     case n::clasz::kSuburban:
+    case n::clasz::kSubway:
     case n::clasz::kFunicular: return osr::search_profile::kRailway;
     default: return std::nullopt;
   }
