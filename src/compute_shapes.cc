@@ -211,9 +211,8 @@ void compute_shapes(
     //           "\n";
 
     try {
-      auto const max_segment_cost = profile == osr::search_profile::kRailway
-                                        ? osr::cost_t{10000U}
-                                        : osr::cost_t{5000U};
+      auto const max_segment_cost = static_cast<osr::cost_t>(
+          std::numeric_limits<osr::cost_t>::max() - 1U);
       auto const matched_route =
           osr::map_match(w, lookup, *profile, profile_params, match_points,
                          max_segment_cost, nullptr, nullptr, debug_path_fn);
