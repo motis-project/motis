@@ -95,7 +95,8 @@ void compute_shapes(
   shapes.route_segment_bboxes_.resize(tt.n_routes());
 
   for (auto r = n::route_idx_t{0U}; r != tt.n_routes(); ++r) {
-    auto profile = get_profile(tt.route_clasz_[r]);
+    auto const clasz = tt.route_clasz_[r];
+    auto profile = get_profile(clasz);
     if (!profile) {
       progress_tracker->increment();
       continue;
@@ -114,7 +115,7 @@ void compute_shapes(
         osr::matched_route const&)>{nullptr};
 
     if (debug_enabled) {
-      debug_path_fn = [&debug, r, &tt](osr::matched_route const& res)
+      debug_path_fn = [&debug, r, clasz, &tt](osr::matched_route const& res)
           -> std::optional<std::filesystem::path> {
         auto include =
             debug->all_ || (debug->all_with_beelines_ && res.n_beelined_ > 0U);
@@ -177,7 +178,7 @@ void compute_shapes(
         }
 
         if (include) {
-          auto fn = fmt::format("r_{}", to_idx(r));
+          auto fn = fmt::format("r_{}_{}", to_idx(r), to_str(clasz));
           for (auto const& tag : tags) {
             fn += fmt::format("_{}", tag);
           }
