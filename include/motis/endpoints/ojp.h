@@ -8,16 +8,18 @@
 #include "motis/endpoints/map/stops.h"
 #include "motis/endpoints/routing.h"
 #include "motis/endpoints/stop_times.h"
+#include "motis/endpoints/trip.h"
 
 namespace motis::ep {
 
 struct ojp {
   net::reply operator()(net::route_request const&, bool) const;
 
-  std::optional<routing> r_;
-  std::optional<geocode> geocoding_;
-  std::optional<stops> s_;
-  std::optional<stop_times> st_;
+  std::optional<routing> routing_ep_;
+  std::optional<geocode> geocoding_ep_;
+  std::optional<stops> stops_ep_;
+  std::optional<stop_times> stop_times_ep_;
+  std::optional<trip> trip_ep_;
 };
 
 }  // namespace motis::ep
