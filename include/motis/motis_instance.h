@@ -20,6 +20,7 @@
 #include "motis/endpoints/map/trips.h"
 #include "motis/endpoints/matches.h"
 #include "motis/endpoints/metrics.h"
+#include "motis/endpoints/ojp.h"
 #include "motis/endpoints/one_to_all.h"
 #include "motis/endpoints/one_to_many.h"
 #include "motis/endpoints/one_to_many_post.h"
@@ -126,6 +127,14 @@ struct motis_instance {
       qr_.route("GET", "/tiles/", ep::tiles{*d.tiles_});
     }
 
+    qr_.route("POST", "/api/v2/ojp",
+              ep::ojp{
+                  .r_ = utl::init_from<ep::routing>(d),
+                  .geocoding_ = utl::init_from<ep::geocode>(d),
+                  .s_ = utl::init_from<ep::stops>(d),
+                  .st_ = utl::init_from<ep::stop_times>(d),
+              });
+
     qr_.route("GET", "/metrics",
               ep::metrics{d.tt_.get(), d.tags_.get(), d.rt_, d.metrics_.get()});
     qr_.route("GET", "/gtfsrt",
@@ -136,14 +145,14 @@ struct motis_instance {
 
   template <typename T, typename From>
   void GET(std::string target, From& from) {
-    if (auto const x = utl::init_from<T>(from); x.has_value()) {
+    if (auto x = utl::init_from<T>(from); x.has_value()) {
       qr_.get(std::move(target), std::move(*x));
     }
   }
 
   template <typename T, typename From>
   void POST(std::string target, From& from) {
-    if (auto const x = utl::init_from<T>(from); x.has_value()) {
+    if (auto x = utl::init_from<T>(from); x.has_value()) {
       qr_.post(std::move(target), std::move(*x));
     }
   }

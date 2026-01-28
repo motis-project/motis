@@ -348,7 +348,7 @@ api::stoptimes_response stop_times::operator()(
   auto const& lang = query.language_;
   auto const api_version = get_api_version(url);
 
-  auto const max_results = config_.limits_.value().stoptimes_max_results_;
+  auto const max_results = config_.get_limits().stoptimes_max_results_;
   utl::verify<net::too_many_exception>(
       query.n_ < max_results, "n={} > {} not allowed", query.n_, max_results);
 
