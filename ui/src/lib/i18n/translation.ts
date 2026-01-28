@@ -4,7 +4,7 @@ import en from './en';
 import de from './de';
 import fr from './fr';
 import pl from './pl';
-import cz from './cz';
+import cs from './cs';
 
 export type Translations = {
 	ticket: string;
@@ -163,7 +163,7 @@ const translations: Map<string, Translations> = new Map(
 		en,
 		de,
 		fr,
-		cz
+		cs
 	})
 );
 
