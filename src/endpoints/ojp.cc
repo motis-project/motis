@@ -188,21 +188,21 @@ net::reply ojp::operator()(net::route_request const& http_req, bool) const {
   auto response = pugi::xml_document{};
   if (auto const loc_req = req.child("OJPLocationInformationRequest");
       loc_req) {
-    auto const initial_input = loc_req.child("InitialInput");
-    auto const name = initial_input.child("Name").text();
-    auto const geo = initial_input.child("GeoRestriction");
+    auto const input = loc_req.child("InitialInput");
+    auto const name = input.child("Name").text();
+    auto const geo = input.child("GeoRestriction");
     utl::verify(static_cast<bool>(name) ^ static_cast<bool>(geo),
                 "only Name XOR GeoRestriction implemented");
+
+    auto const context = req.child("siri:ServiceRequestContext");
+    auto const language = context.child("siri:Language").text().as_string();
+    auto const lang = language ? language : std::string{"de"};
+
     if (name) {
       utl::verify(geocoding_.has_value(), "geocoding not loaded");
 
-      auto const context = req.child("siri:ServiceRequestContext");
-      auto const language = context.child("siri:Language").text().as_string();
-      auto const lang = language ? language : std::string{"de"};
-
-      auto const restrictions = loc_req.child("Restrictions");
-      auto const type =
-          to_upper_ascii(restrictions.child("Type").text().as_string());
+      auto const type = to_upper_ascii(
+          loc_req.child("Restrictions").child("Type").text().as_string());
 
       auto url = boost::urls::url{};
       auto params = url.params();
@@ -215,9 +215,6 @@ net::reply ojp::operator()(net::route_request const& http_req, bool) const {
       response = build_geocode_response(lang, (*geocoding_)(url));
     } else if (geo) {
       utl::verify(s_.has_value(), "stops not loaded");
-      auto const context = req.child("siri:ServiceRequestContext");
-      auto const language = context.child("siri:Language").text().as_string();
-      auto const lang = language ? language : std::string{"de"};
 
       auto const rect = geo.child("Rectangle");
       auto const upper_left = rect.child("UpperLeft");
