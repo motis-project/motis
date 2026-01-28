@@ -372,28 +372,32 @@ constexpr auto const kOjpMapStopsResponse =
     <siri:ServiceDelivery>
       <siri:ResponseTimestamp>2026-01-28T07:38:53.987Z</siri:ResponseTimestamp>
       <siri:ProducerRef>MOTIS</siri:ProducerRef>
-      <siri:ResponseMessageIdentifier>ojp-stop-event-1</siri:ResponseMessageIdentifier>
+      <siri:ResponseMessageIdentifier>3</siri:ResponseMessageIdentifier>
       <OJPStopEventDelivery>
         <siri:ResponseTimestamp>2026-01-28T07:38:53.987Z</siri:ResponseTimestamp>
         <siri:DefaultLanguage>de</siri:DefaultLanguage>
         <StopEventResponseContext>
           <Places>
             <Place>
-              <StopPlace>
-                <StopPlaceRef>test_8507000</StopPlaceRef>
-                <StopPlaceName>
-                  <Text xml:lang="de">Stop 8507000</Text>
-                </StopPlaceName>
-              </StopPlace>
-              <Name>
-                <Text xml:lang="de">Stop 8507000</Text>
-              </Name>
+              <Name>Stop 8507000</Name>
               <GeoPosition>
-                <siri:Longitude>8.629</siri:Longitude>
                 <siri:Latitude>49.872</siri:Latitude>
+                <siri:Longitude>8.629</siri:Longitude>
               </GeoPosition>
+              <StopPoint>
+                <siri:StopPointRef>test_8507000</siri:StopPointRef>
+                <StopPointName>
+                  <Text xml:lang="de">Stop 8507000</Text>
+                </StopPointName>
+                <ParentRef>test_8507000</ParentRef>
+              </StopPoint>
             </Place>
             <Place>
+              <Name>Stop 8507000</Name>
+              <GeoPosition>
+                <siri:Latitude>49.872</siri:Latitude>
+                <siri:Longitude>8.629</siri:Longitude>
+              </GeoPosition>
               <StopPoint>
                 <siri:StopPointRef>test_8507000_1</siri:StopPointRef>
                 <StopPointName>
@@ -401,29 +405,46 @@ constexpr auto const kOjpMapStopsResponse =
                 </StopPointName>
                 <ParentRef>test_8507000</ParentRef>
               </StopPoint>
-              <Name>
-                <Text xml:lang="de">Stop 8507000</Text>
-              </Name>
+            </Place>
+            <Place>
+              <Name>Darmstadt Hauptbahnhof</Name>
               <GeoPosition>
-                <siri:Longitude>8.629</siri:Longitude>
-                <siri:Latitude>49.872</siri:Latitude>
+                <siri:Latitude>49.8726</siri:Latitude>
+                <siri:Longitude>8.63085</siri:Longitude>
               </GeoPosition>
+              <StopPoint>
+                <siri:StopPointRef>test_DA</siri:StopPointRef>
+                <StopPointName>
+                  <Text xml:lang="de">Darmstadt Hauptbahnhof</Text>
+                </StopPointName>
+                <ParentRef>test_DA</ParentRef>
+              </StopPoint>
+            </Place>
+            <Place>
+              <Name>Darmstadt Hauptbahnhof</Name>
+              <GeoPosition>
+                <siri:Latitude>49.8736</siri:Latitude>
+                <siri:Longitude>8.63003</siri:Longitude>
+              </GeoPosition>
+              <StopPoint>
+                <siri:StopPointRef>test_DA_3</siri:StopPointRef>
+                <StopPointName>
+                  <Text xml:lang="de">Darmstadt Hauptbahnhof</Text>
+                </StopPointName>
+                <ParentRef>test_DA</ParentRef>
+              </StopPoint>
             </Place>
           </Places>
           <Situations />
         </StopEventResponseContext>
         <StopEventResult>
-          <Id>ojp-stop-event-1</Id>
+          <Id>1</Id>
           <StopEvent>
             <ThisCall>
               <CallAtStop>
                 <siri:StopPointRef>test_8507000_1</siri:StopPointRef>
-                <StopPointName>
-                  <Text xml:lang="de">Stop 8507000</Text>
-                </StopPointName>
-                <PlannedQuay>
-                  <Text xml:lang="de">1</Text>
-                </PlannedQuay>
+                <StopPointName>Stop 8507000</StopPointName>
+                <PlannedQuay>1</PlannedQuay>
                 <ServiceDeparture>
                   <TimetabledTime>2026-01-28T06:00:00Z</TimetabledTime>
                   <EstimatedTime>2026-01-28T06:00:00Z</EstimatedTime>
@@ -434,12 +455,8 @@ constexpr auto const kOjpMapStopsResponse =
             <OnwardCall>
               <CallAtStop>
                 <siri:StopPointRef>test_DA_3</siri:StopPointRef>
-                <StopPointName>
-                  <Text xml:lang="de">Darmstadt Hauptbahnhof</Text>
-                </StopPointName>
-                <PlannedQuay>
-                  <Text xml:lang="de">3</Text>
-                </PlannedQuay>
+                <StopPointName>Darmstadt Hauptbahnhof</StopPointName>
+                <PlannedQuay>3</PlannedQuay>
                 <ServiceArrival>
                   <TimetabledTime>2026-01-28T06:30:00Z</TimetabledTime>
                   <EstimatedTime>2026-01-28T06:30:00Z</EstimatedTime>
@@ -448,14 +465,32 @@ constexpr auto const kOjpMapStopsResponse =
               </CallAtStop>
             </OnwardCall>
             <Service>
-              <OperatingDayRef>2026-01-28</OperatingDayRef>
+              <OperatingDayRef>20260128</OperatingDayRef>
               <JourneyRef>20260128_07:00_test_T1</JourneyRef>
+              <PublicCode>R1</PublicCode>
+              <PublicCode>R1</PublicCode>
+              <siri:LineRef>R1</siri:LineRef>
+              <siri:DirectionRef>0</siri:DirectionRef>
               <Mode>
                 <PtMode>bus</PtMode>
+                <Name>
+                  <Text xml:lang="de">R1</Text>
+                </Name>
+                <ShortName>
+                  <Text xml:lang="de">R1</Text>
+                </ShortName>
               </Mode>
               <PublishedServiceName>
                 <Text xml:lang="de">R1</Text>
               </PublishedServiceName>
+              <TrainNumber></TrainNumber>
+              <OriginText>
+                <Text xml:lang="de">n/a</Text>
+              </OriginText>
+              <siri:OperatorRef>TEST</siri:OperatorRef>
+              <DestinationText>
+                <Text xml:lang="de">Darmstadt Hauptbahnhof</Text>
+              </DestinationText>
             </Service>
           </StopEvent>
         </StopEventResult>
@@ -471,7 +506,7 @@ constexpr auto const kOjpMapStopsResponse =
     <siri:ServiceDelivery>
       <siri:ResponseTimestamp>2026-01-28T07:42:51.310Z</siri:ResponseTimestamp>
       <siri:ProducerRef>MOTIS</siri:ProducerRef>
-      <siri:ResponseMessageIdentifier>3</siri:ResponseMessageIdentifier>
+      <siri:ResponseMessageIdentifier>4</siri:ResponseMessageIdentifier>
       <OJPTripInfoDelivery>
         <siri:ResponseTimestamp>2026-01-28T07:42:51.310Z</siri:ResponseTimestamp>
         <siri:DefaultLanguage>de</siri:DefaultLanguage>
@@ -815,7 +850,7 @@ TEST(motis, ojp_requests) {
 
   expect_response(send_request(kOjpGeocodingRequest), kOjpGeocodingResponse);
   expect_response(send_request(kOjpMapStopsRequest), kOjpMapStopsResponse);
-  // expect_response(send_request(kOjpStopEventRequest), kOjpStopEventResponse);
+  expect_response(send_request(kOjpStopEventRequest), kOjpStopEventResponse);
   expect_response(send_request(kOjpTripInfoRequest), kOjpTripInfoResponse);
   // expect_response(send_request(kOjpRoutingRequest), kOjpRoutingResponse);
 }

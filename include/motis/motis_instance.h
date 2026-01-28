@@ -127,7 +127,7 @@ struct motis_instance {
       qr_.route("GET", "/tiles/", ep::tiles{*d.tiles_});
     }
 
-    qr_.route("POST", "/api/v2/ojp",
+    qr_.route("POST", "/ojp20",
               ep::ojp{
                   .routing_ep_ = utl::init_from<ep::routing>(d),
                   .geocoding_ep_ = utl::init_from<ep::geocode>(d),
