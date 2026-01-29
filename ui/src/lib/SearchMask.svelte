@@ -167,6 +167,8 @@
 			</Label>
 		</RadioGroup.Root>
 		<AdvancedOptions
+		geocodingBiasPlace={geocodingBiasPlace}
+		geocodingBiasPlaceBias={geocodingBiasPlaceBias}
 			{serverConfig}
 			bind:useRoutedTransfers
 			bind:wheelchair={

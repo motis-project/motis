@@ -6,7 +6,7 @@
 	import { language } from './i18n/translation';
 	import maplibregl from 'maplibre-gl';
 	import { getModeStyle, type LegLike } from './modeStyle';
-	import getDistance from '@turf/rhumb-distance';
+	import { Bm25Scorer, DEFAULT_ADDRESS_ABBREVIATIONS, isNumericToken, normalizeAndTokenize } from './geocoding/bm25';
 
 	let {
 		items = $bindable([]),
@@ -65,23 +65,164 @@
 		return displayArea ? match.name + ', ' + displayArea : match.name;
 	};
 
-	// Calculate distance in meters between two lat/lng coordinates
-	const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
-		return getDistance([lon1, lat1], [lon2, lat2], { units: 'meters' });
+	type GeocodeCandidateType = 'STOP' | 'PLACE' | 'ADDRESS';
+	interface GeocodeCandidate {
+		readonly type: GeocodeCandidateType;
+		readonly id: string;
+		readonly result: string;
+		readonly street: string;
+		readonly number: string;
+		readonly zip: string;
+		readonly country: string;
+		readonly area: string;
+		readonly match: Match;
+	}
+
+	const TYPE_PRIORITY_MAP = new Map<GeocodeCandidateType, number>([
+		['STOP', 0],
+		['PLACE', 1],
+		['ADDRESS', 2]
+	]);
+
+	const ADDRESS_TYPE_TERMS: readonly string[] = [
+		'rue',
+		'chemin',
+		'route',
+		'allee',
+		'avenue',
+		'boulevard',
+		'cours',
+		'esplanade',
+		'impasse',
+		'place',
+		'quai',
+		'sentier',
+		'square'
+	];
+
+	const BM25_CONFIG = {
+		k1: 1.2,
+		b: 0.75,
+		exactMatchBoost: 1.0,
+		prefixMatchBoost: 0.5,
+		numericExactBoost: 2.0,
+		numericPrefixBoost: 1.0,
+		fieldWeights: {
+			number: 3.0,
+			zip: 2.8,
+			street: 2.0,
+			area: 1.2,
+			result: 1.0,
+			country: 0.6
+		},
+		fieldOrder: ['number', 'zip', 'street', 'area', 'result', 'country']
+	} as const;
+
+	const MAX_GEOCODE_RESULTS = 12;
+	const MIN_RESULTS_PER_TYPE = 2;
+
+	const shouldPrioritizeAddresses = (text: string): boolean => {
+		const tokens = normalizeAndTokenize(text, DEFAULT_ADDRESS_ABBREVIATIONS);
+		if (tokens.length === 0) return false;
+		if (tokens.some((token) => isNumericToken(token))) return true;
+		return tokens.some((token) => ADDRESS_TYPE_TERMS.includes(token));
 	};
 
-	// Get type bonus multiplier (proportional reduction)
-	const getTypeBonus = (type: string | undefined): number => {
-		switch (type) {
-			case 'STOP':
-				return 0.1; // -90%
-			case 'PLACE':
-				return 0.5; // -50%
-			case 'ADDRESS':
-				return 1.0; // 0%
-			default:
-				return 1.0;
+	const getTypePriority = (type: GeocodeCandidateType, prioritizeAddresses: boolean): number => {
+		const defaultPriority = TYPE_PRIORITY_MAP.get(type) ?? 2;
+		if (!prioritizeAddresses) return defaultPriority;
+
+		const addressOriginalPriority = TYPE_PRIORITY_MAP.get('ADDRESS') ?? 2;
+		if (addressOriginalPriority === 0) return defaultPriority;
+		if (type === 'ADDRESS') return 0;
+		if (defaultPriority < addressOriginalPriority) return defaultPriority + 1;
+		return defaultPriority;
+	};
+
+	const filterDuplicateResults = (matches: readonly Match[]): Match[] => {
+		const seenResults = new Set<string>();
+		const seenIds = new Set<string>();
+		return matches.filter((m) => {
+			const result = m.name ?? '';
+			const id = m.id ?? '';
+			if (seenResults.has(result) || (id !== '' && seenIds.has(id))) {
+				return false;
+			}
+			seenResults.add(result);
+			if (id !== '') {
+				seenIds.add(id);
+			}
+			return true;
+		});
+	};
+
+	const buildCandidate = (m: Match): GeocodeCandidate => {
+		const area = m.areas.map((a) => a.name).join(' ');
+		return {
+			type: m.type as GeocodeCandidateType,
+			id: m.id ?? '',
+			result: m.name ?? '',
+			street: m.street ?? '',
+			number: m.houseNumber ?? '',
+			zip: m.zip ?? '',
+			country: m.country ?? '',
+			area,
+			match: m
+		};
+	};
+
+	const sortResultsByRelevance = (candidates: readonly GeocodeCandidate[], queryText: string): GeocodeCandidate[] => {
+		if (candidates.length === 0) return [];
+		const prioritizeAddresses = shouldPrioritizeAddresses(queryText);
+		const scorer = new Bm25Scorer<GeocodeCandidate>(BM25_CONFIG, DEFAULT_ADDRESS_ABBREVIATIONS);
+		scorer.index(candidates, (item) => {
+			return {
+				result: normalizeAndTokenize(item.result, DEFAULT_ADDRESS_ABBREVIATIONS),
+				street: normalizeAndTokenize(item.street, DEFAULT_ADDRESS_ABBREVIATIONS),
+				number: normalizeAndTokenize(item.number, DEFAULT_ADDRESS_ABBREVIATIONS),
+				zip: normalizeAndTokenize(item.zip, DEFAULT_ADDRESS_ABBREVIATIONS),
+				area: normalizeAndTokenize(item.area, DEFAULT_ADDRESS_ABBREVIATIONS),
+				country: normalizeAndTokenize(item.country, DEFAULT_ADDRESS_ABBREVIATIONS)
+			};
+		});
+
+		return scorer.search(
+			queryText,
+			candidates,
+			(item) => getTypePriority(item.type, prioritizeAddresses),
+			prioritizeAddresses
+		);
+	};
+
+	const selectDiversifiedResults = (
+		sortedResults: readonly GeocodeCandidate[],
+		maxResults: number = MAX_GEOCODE_RESULTS
+	): GeocodeCandidate[] => {
+		const selected: GeocodeCandidate[] = [];
+		const usedIndices = new Set<number>();
+		const typeCounts = new Map<GeocodeCandidateType, number>([
+			['STOP', 0],
+			['PLACE', 0],
+			['ADDRESS', 0]
+		]);
+
+		for (let i = 0; i < sortedResults.length && selected.length < maxResults; i++) {
+			const item = sortedResults[i];
+			const currentCount = typeCounts.get(item.type) ?? 0;
+			if (currentCount < MIN_RESULTS_PER_TYPE) {
+				selected.push(item);
+				usedIndices.add(i);
+				typeCounts.set(item.type, currentCount + 1);
+			}
 		}
+
+		for (let i = 0; i < sortedResults.length && selected.length < maxResults; i++) {
+			if (!usedIndices.has(i)) {
+				selected.push(sortedResults[i]);
+			}
+		}
+
+		return selected;
 	};
 
 	const updateGuesses = async () => {
@@ -95,9 +236,11 @@
 
 		const pos = place ? maplibregl.LngLat.convert(place) : undefined;
 		const biasPlace = pos ? { place: `${pos.lat},${pos.lng}` } : {};
+		const isBiasEnabled = placeBias !== undefined;
+		const effectivePlaceBias: number | undefined = isBiasEnabled ? 5 : undefined;
+
 		const baseQuery = {
 			...biasPlace,
-			placeBias,
 			text: inputValue,
 			language: [language],
 			mode: transitModes
@@ -108,6 +251,7 @@
 			const { data: matches, error } = await geocode({
 				query: {
 					...baseQuery,
+					placeBias: effectivePlaceBias,
 					type
 				}
 			});
@@ -115,22 +259,13 @@
 				console.error('TYPEAHEAD ERROR: ', error);
 				return;
 			}
-			items = matches!.map((match: Match): Location => {
-				return {
-					label: getLabel(match),
-					match
-				};
-			});
-			/* eslint-disable-next-line svelte/prefer-svelte-reactivity */
-			const shown = new Set<string>();
-			items = items.filter((x) => {
-				const entry = x.match?.type + x.label!;
-				if (shown.has(entry)) {
-					return false;
-				}
-				shown.add(entry);
-				return true;
-			});
+			const deduplicatedMatches = filterDuplicateResults(matches ?? []);
+			const candidates = deduplicatedMatches.map(buildCandidate);
+			const sortedCandidates = sortResultsByRelevance(candidates, inputValue).slice(0, MAX_GEOCODE_RESULTS);
+			items = sortedCandidates.map((candidate): Location => ({
+				label: getLabel(candidate.match),
+				match: candidate.match
+			}));
 			return;
 		}
 
@@ -139,18 +274,21 @@
 			geocode({
 				query: {
 					...baseQuery,
+					placeBias: effectivePlaceBias,
 					type: 'STOP'
 				}
 			}),
 			geocode({
 				query: {
 					...baseQuery,
+					placeBias: effectivePlaceBias,
 					type: 'PLACE'
 				}
 			}),
 			geocode({
 				query: {
 					...baseQuery,
+					placeBias: effectivePlaceBias,
 					type: 'ADDRESS'
 				}
 			})
@@ -173,8 +311,10 @@
 			};
 		});
 
-		// Limit to 10 results total
-		items = deduplicated.slice(0, 10);
+		items = selectedCandidates.map((candidate): Location => ({
+			label: getLabel(candidate.match),
+			match: candidate.match
+		}));
 	};
 
 	const deserialize = (s: string): Location => {

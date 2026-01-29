@@ -3,10 +3,15 @@
 	import { type Location } from '$lib/Location';
 	import { t } from '$lib/i18n/translation';
 	import { onClickStop } from '$lib/utils';
+	import maplibregl from 'maplibre-gl';
 
 	let {
+		geocodingBiasPlace,
+		geocodingBiasPlaceBias,
 		time = $bindable()
 	}: {
+		geocodingBiasPlace?: maplibregl.LngLatLike;
+		geocodingBiasPlaceBias?: number;
 		time: Date;
 	} = $props();
 
@@ -16,6 +21,8 @@
 
 <div id="searchmask-container" class="flex flex-col space-y-4 p-4 relative">
 	<AddressTypeahead
+		place={geocodingBiasPlace}
+		placeBias={geocodingBiasPlaceBias}
 		name="from"
 		placeholder={t.from}
 		bind:selected={from}

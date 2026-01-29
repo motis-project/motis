@@ -21,8 +21,11 @@
 	import { type NumberSelectOption } from '$lib/NumberSelect.svelte';
 	import { generateTimes } from './generateTimes';
 	import ViaStopOptions from './ViaStopOptions.svelte';
+	import maplibregl from 'maplibre-gl';
 
 	let {
+		geocodingBiasPlace,
+		geocodingBiasPlaceBias,
 		useRoutedTransfers = $bindable(),
 		serverConfig,
 		wheelchair = $bindable(),
@@ -51,6 +54,8 @@
 		hasDebug = false,
 		additionalComponents
 	}: {
+		geocodingBiasPlace?: maplibregl.LngLatLike;
+		geocodingBiasPlaceBias?: number;
 		useRoutedTransfers: boolean;
 		serverConfig: ServerConfig | undefined;
 		wheelchair: boolean;
@@ -188,7 +193,13 @@
 				}}
 			/>
 
-			<ViaStopOptions bind:via bind:viaMinimumStay bind:viaLabels />
+			<ViaStopOptions
+				bind:via
+				bind:viaMinimumStay
+				bind:viaLabels
+				geocodingBiasPlace={geocodingBiasPlace}
+				geocodingBiasPlaceBias={geocodingBiasPlaceBias}
+			/>
 
 			<div
 				class="grid {maxTravelTime === undefined

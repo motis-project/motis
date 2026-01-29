@@ -7,12 +7,17 @@
 	import type { Location } from '$lib/Location';
 	import { generateTimes } from './generateTimes';
 	import { formatDurationMin } from './formatDuration';
+	import maplibregl from 'maplibre-gl';
 
 	let {
+		geocodingBiasPlace,
+		geocodingBiasPlaceBias,
 		via = $bindable(),
 		viaMinimumStay = $bindable(),
 		viaLabels = $bindable()
 	}: {
+		geocodingBiasPlace?: maplibregl.LngLatLike;
+		geocodingBiasPlaceBias?: number;
 		via: undefined | Location[];
 		viaMinimumStay: undefined | number[];
 		viaLabels: Record<string, string>;
@@ -97,6 +102,8 @@
 								name={`via-${index}`}
 								bind:selected={vias[index].match}
 								type="STOP"
+								place={geocodingBiasPlace}
+								placeBias={geocodingBiasPlaceBias}
 							/>
 						</div>
 						<div class="w-24">

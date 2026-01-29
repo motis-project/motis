@@ -212,7 +212,7 @@
 	);
 	let userLocation = $state<[number, number] | undefined>(undefined);
 	const geocodingBiasPlace = $derived(userLocation ?? center);
-	const geocodingBiasPlaceBias = $derived(userLocation ? 100 : undefined);
+	const geocodingBiasPlaceBias = $derived(userLocation ? 5 : undefined);
 	let level = $state(savedOptions?.level ?? 0);
 	let zoom = $state(savedOptions?.zoom ?? 15);
 	let bounds = $state<maplibregl.LngLatBoundsLike>();
@@ -889,7 +889,11 @@
 			</Tabs.Content>
 			<Tabs.Content value="departures">
 				<Card class="overflow-y-auto overflow-x-hidden bg-background rounded-lg">
-					<DeparturesMask bind:time />
+					<DeparturesMask
+						bind:time
+						geocodingBiasPlace={geocodingBiasPlace}
+						geocodingBiasPlaceBias={geocodingBiasPlaceBias}
+					/>
 				</Card>
 			</Tabs.Content>
 			<Tabs.Content value="isochrones">
