@@ -92,111 +92,110 @@
 			/>
 		</div>
 	{:then r}
-		<div class="gap-y-3 mb-1 text-base grid grid-cols-[auto_1fr] items-start content-start">
-			{#if rI === 0 && r.previousPageCursor.length}
-				<div class="col-span-full w-full flex justify-between items-center space-x-4">
-					<div class="border-t w-full h-0"></div>
-					<button
-						onclick={() => {
-							responses.splice(
-								0,
-								0,
-								throwOnError(stoptimes({ query: { ...query, pageCursor: r.previousPageCursor } }))
-							);
-						}}
-						class="px-2 py-1 bg-blue-600 hover:!bg-blue-700 text-white font-bold text-sm border rounded-lg text-nowrap"
-					>
-						{t.earlier}
-					</button>
-					<div class="border-t w-full h-0"></div>
-				</div>
-			{/if}
-			{#each r.stopTimes as stopTime, i (i)}
-				{@const timestamp = arriveBy ? stopTime.place.arrival! : stopTime.place.departure!}
-				{@const scheduledTimestamp = arriveBy
-					? stopTime.place.scheduledArrival!
-					: stopTime.place.scheduledDeparture!}
-				<div class="">
-					<div class="flex col justify-between">
-						<Route class="max-w-30 text-ellipsis overflow-hidden" l={stopTime} {onClickTrip} />
-						<div class="mx-4">
-							<Time
-								variant="schedule"
-								timeZone={stopTime.place.tz}
-								isRealtime={stopTime.realTime}
-								{timestamp}
-								{scheduledTimestamp}
-								queriedTime={queryTime.toISOString()}
-								{arriveBy}
-							/>
-							<Time
-								variant="realtime"
-								timeZone={stopTime.place.tz}
-								isRealtime={stopTime.realTime}
-								{timestamp}
-								{scheduledTimestamp}
-								{arriveBy}
-							/>
-						</div>
-					</div>
-				</div>
-				<div class="w-full">
-					<div class="flex items-start justify-between text-base">
-						<div class="flex items-start gap-1">
-							<ArrowRight class="mt-1 shrink-0 stroke-muted-foreground h-4 w-4" />
-							{stopTime.headsign}
-							{#if !stopTime.headsign || !stopTime.tripTo.name.startsWith(stopTime.headsign)}
-								({stopTime.tripTo.name})
-							{/if}
-						</div>
-						{#if stopTime.place.track}
-							<span class="mt-1 text-nowrap px-1 border text-xs rounded-xl">
-								{getModeLabel(stopTime.mode) == 'Track' ? t.trackAbr : t.platformAbr}
-								{stopTime.place.track}
-							</span>
-						{/if}
-						<Alerts tz={stopTime.place.tz} alerts={stopTime.place.alerts} />
-					</div>
-					{#if stopTime.pickupDropoffType == 'NOT_ALLOWED'}
-						<div class="flex items-center text-destructive text-sm">
-							<CircleX class="stroke-destructive h-4 w-4" />
-							<span class="ml-1 leading-none">
-								{stopTime.tripCancelled
-									? t.tripCancelled
-									: stopTime.cancelled
-										? t.stopCancelled
-										: arriveBy
-											? t.outDisallowed
-											: t.inDisallowed}
-							</span>
-						</div>
-					{/if}
-				</div>
-				<div class="border col-span-full"></div>
-			{/each}
-			{#if !r.stopTimes.length}
-				<div class="col-span-full w-full flex items-center justify-center">
-					<ErrorMessage message={t.noItinerariesFound} status={404} />
-				</div>
-			{/if}
+		{#if rI === 0 && r.previousPageCursor.length}
+			<div class="col-span-full flex justify-center items-center border-b pb-4">
+				<button
+					onclick={() => {
+						responses.splice(
+							0,
+							0,
+							throwOnError(stoptimes({ query: { ...query, pageCursor: r.previousPageCursor } }))
+						);
+					}}
+					class="px-2 py-1 bg-blue-600 hover:!bg-blue-700 text-white font-bold text-sm border rounded-lg text-nowrap"
+				>
+					{t.earlier}
+				</button>
+			</div>
+		{/if}
+		{#each r.stopTimes as stopTime, i (i)}
+			{@const timestamp = arriveBy ? stopTime.place.arrival! : stopTime.place.departure!}
+			{@const scheduledTimestamp = arriveBy
+				? stopTime.place.scheduledArrival!
+				: stopTime.place.scheduledDeparture!}
 
-			{#if rI === responses.length - 1 && r.nextPageCursor.length}
-				<div class="col-span-full w-full flex justify-between items-center space-x-4">
-					<div class="border-t w-full h-0"></div>
-					<button
-						onclick={() => {
-							responses.push(
-								throwOnError(stoptimes({ query: { ...query, pageCursor: r.nextPageCursor } }))
-							);
-						}}
-						class="px-2 py-1 bg-blue-600 hover:!bg-blue-700 text-white text-sm font-bold border rounded-lg text-nowrap"
-					>
-						{t.later}
-					</button>
-					<div class="border-t w-full h-0"></div>
+			<div
+				class="gap-y-2 p-3 text-base grid grid-cols-[auto_1fr] border-b hover:bg-slate-100 dark:hover:bg-slate-800 duration-500 ease-out transition-all"
+			>
+				<div class="flex col-span-full justify-center">
+					<Route class="text-ellipsis" l={stopTime} {onClickTrip} />
 				</div>
-			{/if}
-		</div>
+
+				<div class="flex-col gap-2 w-28">
+					<Time
+						variant="schedule"
+						timeZone={stopTime.place.tz}
+						isRealtime={stopTime.realTime}
+						{timestamp}
+						{scheduledTimestamp}
+						queriedTime={queryTime.toISOString()}
+						{arriveBy}
+					/>
+					<Time
+						variant="realtime"
+						timeZone={stopTime.place.tz}
+						isRealtime={stopTime.realTime}
+						{timestamp}
+						{scheduledTimestamp}
+						{arriveBy}
+					/>
+				</div>
+				<div class="flex items-start justify-between text-base">
+					<div class="flex items-center gap-3">
+						<ArrowRight class="stroke-muted-foreground h-4 w-4" />
+						<span>
+							{stopTime.headsign}
+							{#if !stopTime.headsign}
+								{stopTime.tripTo.name}
+							{:else if !stopTime.tripTo.name.startsWith(stopTime.headsign)}
+								<span class="stroke-muted-foreground">({stopTime.tripTo.name})</span>
+							{/if}
+						</span>
+					</div>
+					{#if stopTime.place.track}
+						<span class="text-nowrap ml-3 text-sm px-2 border rounded-lg">
+							{getModeLabel(stopTime.mode) == 'Track' ? t.trackAbr : t.platformAbr}
+							{stopTime.place.track}
+						</span>
+					{/if}
+					<Alerts tz={stopTime.place.tz} alerts={stopTime.place.alerts} />
+				</div>
+				{#if stopTime.pickupDropoffType == 'NOT_ALLOWED'}
+					<div class="flex items-center text-destructive text-sm">
+						<CircleX class="stroke-destructive h-4 w-4" />
+						<span class="ml-1 leading-none">
+							{stopTime.tripCancelled
+								? t.tripCancelled
+								: stopTime.cancelled
+									? t.stopCancelled
+									: arriveBy
+										? t.outDisallowed
+										: t.inDisallowed}
+						</span>
+					</div>
+				{/if}
+			</div>
+		{/each}
+		{#if !r.stopTimes.length}
+			<div class="col-span-full w-full flex items-center justify-center">
+				<ErrorMessage message={t.noItinerariesFound} status={404} />
+			</div>
+		{/if}
+
+		{#if rI === responses.length - 1 && r.nextPageCursor.length}
+			<div class="col-span-full flex mt-4 justify-center items-center">
+				<button
+					onclick={() => {
+						responses.push(
+							throwOnError(stoptimes({ query: { ...query, pageCursor: r.nextPageCursor } }))
+						);
+					}}
+					class="px-2 py-1 bg-blue-600 hover:!bg-blue-700 text-white text-sm font-bold border rounded-lg text-nowrap"
+				>
+					{t.later}
+				</button>
+			</div>
+		{/if}
 	{:catch e}
 		<div class="col-span-full w-full flex items-center justify-center">
 			<ErrorMessage message={e.error} status={e.status} />
