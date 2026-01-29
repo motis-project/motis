@@ -68,28 +68,31 @@
 		});
 </script>
 
-<div class="gap-y-3 mb-1 text-base grid grid-cols-[auto_1fr] items-start content-start">
-	<div class="col-span-full w-full flex items-center justify-center">
-		<Button
-			class="font-bold"
-			variant="outline"
-			onclick={() => {
-				onClickStop(stopName, stopId, queryTime, !arriveBy);
-			}}
-		>
-			{#if arriveBy}
-				{t.switchToDepartures}
-			{:else}
-				{t.switchToArrivals}
-			{/if}
-		</Button>
-	</div>
-	{#each responses as r, rI (rI)}
-		{#await r}
-			<div class="flex items-center justify-center">
-				<LoaderCircle class="animate-spin w-12 h-12 m-20" />
-			</div>
-		{:then r}
+<div class="flex justify-center mb-4">
+	<Button
+		class="font-bold"
+		variant="outline"
+		onclick={() => {
+			onClickStop(stopName, stopId, queryTime, !arriveBy);
+		}}
+	>
+		{#if arriveBy}
+			{t.switchToDepartures}
+		{:else}
+			{t.switchToArrivals}
+		{/if}
+	</Button>
+</div>
+{#each responses as r, rI (rI)}
+	{#await r}
+		<div class="flex items-center justify-center">
+			<LoaderCircle
+				class="animate-spin w-20 h-20 my-60
+				"
+			/>
+		</div>
+	{:then r}
+		<div class="gap-y-3 mb-1 text-base grid grid-cols-[auto_1fr] items-start content-start">
 			{#if rI === 0 && r.previousPageCursor.length}
 				<div class="col-span-full w-full flex justify-between items-center space-x-4">
 					<div class="border-t w-full h-0"></div>
@@ -193,10 +196,10 @@
 					<div class="border-t w-full h-0"></div>
 				</div>
 			{/if}
-		{:catch e}
-			<div class="col-span-full w-full flex items-center justify-center">
-				<ErrorMessage message={e.error} status={e.status} />
-			</div>
-		{/await}
-	{/each}
-</div>
+		</div>
+	{:catch e}
+		<div class="col-span-full w-full flex items-center justify-center">
+			<ErrorMessage message={e.error} status={e.status} />
+		</div>
+	{/await}
+{/each}
