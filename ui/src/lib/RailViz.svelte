@@ -14,11 +14,15 @@
 	import { client } from '@motis-project/motis-client';
 	let {
 		map,
+		overlay,
+		layers,
 		bounds,
 		zoom,
 		colorMode
 	}: {
 		map: maplibregl.Map | undefined;
+		overlay: MapboxOverlay;
+		layers: IconLayer[];
 		bounds: maplibregl.LngLatBoundsLike | undefined;
 		zoom: number;
 		colorMode: 'rt' | 'route' | 'mode' | 'none';
@@ -170,6 +174,10 @@
 	};
 
 	// UPDATE
+	const updateOverlayLayers = (l: IconLayer) => {
+		layers[0] = l;
+		overlay.setProps({ layers: [...layers] });
+	};
 	$effect(() => {
 		if (!query || isProcessing || canceled) return;
 		untrack(() => {
@@ -190,12 +198,15 @@
 
 	//SETUP
 	let status = $state();
-	let overlay: MapboxOverlay;
 	let worker: Worker;
 	let metadata: MetaData | undefined = $state();
 	const metaDataMap = new SvelteMap<number, MetaData>();
 
 	onMount(() => {
+		overlay.setProps({
+			onHover,
+			onClick
+		});
 		worker = new Worker(new URL('tripsWorker.ts', import.meta.url), { type: 'module' });
 		worker.postMessage({ type: 'init', baseUrl: client.getConfig().baseUrl });
 		worker.onmessage = (e) => {
@@ -220,26 +231,19 @@
 					metadata = undefined;
 				}
 			}
-			overlay.setProps({ layers: [createLayer()] });
+			const layer = createLayer();
+			if (layer) {
+				updateOverlayLayers(layer);
+			}
 			if (canceled) {
 				cancelAnimationFrame(animationId);
 			} else {
 				animationId = requestAnimationFrame(animate);
 			}
 		};
-		overlay = new MapboxOverlay({
-			interleaved: true,
-			onHover,
-			onClick
-		});
-	});
-	$effect(() => {
-		if (!map || !overlay) return;
-		map.addControl(overlay);
 	});
 	onDestroy(() => {
 		if (animationId) cancelAnimationFrame(animationId);
-		if (overlay) map?.removeControl(overlay);
 		worker.terminate();
 		popup.remove();
 	});
