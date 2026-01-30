@@ -478,6 +478,16 @@ api::Itinerary journey_to_response(
                     .interlineWithPreviousLeg_ = !is_first_part,
                     .headsign_ = std::string{enter_stop.direction(
                         lang, n::event_type::kDep)},
+                    .tripFrom_ =
+                        [&]() {
+                          auto const first = exit_stop.get_first_trip_stop(
+                              n::event_type::kArr);
+                          auto p = to_place(first, n::event_type::kDep);
+                          p.departure_ = first.time(n::event_type::kDep);
+                          p.scheduledDeparture_ =
+                              first.scheduled_time(n::event_type::kDep);
+                          return p;
+                        }(),
                     .tripTo_ =
                         [&]() {
                           auto const last = enter_stop.get_last_trip_stop(

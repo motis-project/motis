@@ -147,6 +147,8 @@ TEST(motis, stop_times) {
     auto const& ice = res.stopTimes_[0];
     EXPECT_EQ(api::ModeEnum::HIGHSPEED_RAIL, ice.mode_);
     EXPECT_EQ("20190501_00:35_test_ICE", ice.tripId_);
+    EXPECT_EQ("test_DA_10", ice.tripFrom_.stopId_);
+    EXPECT_EQ("test_FFM_12", ice.tripTo_.stopId_);
     EXPECT_EQ("ICE", ice.displayName_);
     EXPECT_EQ("FFM Hbf", ice.headsign_);
     EXPECT_EQ("ICE", ice.routeId_);
@@ -162,6 +164,8 @@ TEST(motis, stop_times) {
         api::ModeEnum::SUBWAY,
         sbahn.mode_);  // mode can't change with block_id so sticks from U4
     EXPECT_EQ("20190501_01:15_test_S3", sbahn.tripId_);
+    EXPECT_EQ("test_FFM_101", sbahn.tripFrom_.stopId_);
+    EXPECT_EQ("test_FFM_10", sbahn.tripTo_.stopId_);
     EXPECT_EQ("S3", sbahn.displayName_);
     EXPECT_EQ("FFM Hbf", sbahn.headsign_);
     EXPECT_EQ("S3", sbahn.routeId_);

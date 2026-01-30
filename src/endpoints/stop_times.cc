@@ -473,6 +473,8 @@ api::stoptimes_response stop_times::operator()(
                 .mode_ = to_mode(s.get_clasz(ev_type), api_version),
                 .realTime_ = r.is_rt(),
                 .headsign_ = std::string{s.direction(lang, ev_type)},
+                .tripFrom_ = to_place(&tt_, &tags_, w_, pl_, matches_, ae_, tz_,
+                                      lang, s.get_first_trip_stop(ev_type)),
                 .tripTo_ = to_place(&tt_, &tags_, w_, pl_, matches_, ae_, tz_,
                                     lang, s.get_last_trip_stop(ev_type)),
                 .agencyId_ =
