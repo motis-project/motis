@@ -59,6 +59,9 @@
 	import { LEVEL_MIN_ZOOM } from '$lib/constants';
 	import StopGeoJSON from '$lib/map/stops/StopsGeoJSON.svelte';
 	import RailViz from '$lib/RailViz.svelte';
+	import StopsView from '$lib/map/stops/StopsView.svelte';
+	import { MapboxOverlay } from '@deck.gl/mapbox';
+	import { IconLayer } from '@deck.gl/layers';
 
 	const urlParams = browser ? new URLSearchParams(window.location.search) : undefined;
 
@@ -66,6 +69,18 @@
 	const hasDark: boolean = Boolean(urlParams?.has('dark'));
 	const hasLight: boolean = Boolean(urlParams?.has('light'));
 	const isSmallScreen = browser && window.innerWidth < 768;
+	const layers: IconLayer[] = [
+		new IconLayer({
+			id: 'trips-layer'
+		}),
+		new IconLayer({
+			id: 'stops-view-layer'
+		})
+	];
+	const overlay: MapboxOverlay = new MapboxOverlay({
+		interleaved: true,
+		layers
+	});
 	let activeTab = $derived<'connections' | 'departures' | 'isochrones'>(
 		page.state.activeTab ??
 			(urlParams?.has('one')
@@ -87,7 +102,10 @@
 			colorMode = 'none';
 		}
 	});
-
+	$effect(() => {
+		if (!map) return;
+		map.addControl(overlay);
+	});
 	let theme: 'light' | 'dark' =
 		(hasDark ? 'dark' : hasLight ? 'light' : undefined) ??
 		(browser && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
@@ -901,7 +919,8 @@
 				<Rentals {map} {bounds} {zoom} {theme} debug={hasDebug} />
 			{/if}
 
-			<RailViz {map} {bounds} {zoom} {colorMode} />
+			<StopsView {overlay} {layers} {bounds} {zoom} />
+			<RailViz {map} {bounds} {zoom} {colorMode} {overlay} {layers} />
 			<Isochrones
 				{map}
 				{bounds}
