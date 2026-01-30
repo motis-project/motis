@@ -19,6 +19,7 @@
 #include "motis/timetable/clasz_to_mode.h"
 
 namespace n = nigiri;
+namespace sr = std::ranges;
 
 namespace motis::ep {
 
@@ -161,12 +162,72 @@ transport_mode to_pt_mode(api::ModeEnum mode) {
   }
 }
 
+void append(std::string_view lang,
+            pugi::xml_node node,
+            std::string_view name,
+            std::string_view value) {
+  auto text = node.append_child(name).append_child("Text");
+  text.append_attribute("xml:lang").set_value(lang);
+  text.text().set(value.data());
+}
+
+template <typename T>
+void append(std::string_view lang,
+            pugi::xml_node node,
+            std::string_view name,
+            std::optional<T> value) {
+  if (value.has_value()) {
+    append(lang, node, name, *value);
+  }
+}
+
+void append(pugi::xml_node node, std::string_view name, auto&& value) {
+  node.append_child(name).text().set(value);
+}
+
+void append(pugi::xml_node node,
+            std::string_view name,
+            std::optional<std::string> value) {
+  if (value.has_value()) {
+    node.append_child(name).text().set(*value);
+  }
+}
+
+void append_stop_ref(pugi::xml_node node, api::Place const& p) {
+  append(node, p.parentId_ ? "siri:StopPointRef" : "siri:StopPlaceRef",
+         p.stopId_);
+}
+
+void append_position(pugi::xml_node node,
+                     geo::latlng const& pos,
+                     std::string_view name = "Position") {
+  auto geo = node.append_child(name);
+  geo.append_child("siri:Latitude").text().set(pos.lat_, 6);
+  geo.append_child("siri:Longitude").text().set(pos.lng_, 6);
+}
+
+std::string_view get_place_ref(pugi::xml_node ref) {
+  if (auto a = ref.child("StopPlaceRef")) {
+    return a.text().as_string();
+  }
+  if (auto b = ref.child("siri:StopPlaceRef")) {
+    return b.text().as_string();
+  }
+  if (auto c = ref.child("StopPointRef")) {
+    return c.text().as_string();
+  }
+  if (auto d = ref.child("siri:StopPointRef")) {
+    return d.text().as_string();
+  }
+  return "";
+}
+
 pugi::xml_node append_mode(pugi::xml_node service, transport_mode const m) {
   auto const [transport_mode, submode_type, submode] = m;
   auto mode = service.append_child("Mode");
-  mode.append_child("PtMode").text().set(transport_mode);
+  append(mode, "PtMode", transport_mode);
   if (!submode_type.empty() && !submode.empty()) {
-    mode.append_child(fmt::format("siri:{}", submode_type)).text().set(submode);
+    append(mode, fmt::format("siri:{}", submode_type), submode);
   }
   return mode;
 }
@@ -209,35 +270,6 @@ std::string duration_to_iso(std::chrono::seconds const dur) {
                      s ? fmt::format("{}S", s) : "");
 }
 
-void append(std::string_view lang,
-            pugi::xml_node node,
-            std::string_view name,
-            std::string_view value) {
-  auto text = node.append_child(name).append_child("Text");
-  text.append_attribute("xml:lang").set_value(lang);
-  text.text().set(value.data());
-}
-
-void append(pugi::xml_node node, char const* name, auto&& value) {
-  node.append_child(name).text().set(value);
-}
-
-void append(pugi::xml_node node,
-            char const* name,
-            std::optional<std::string> value) {
-  if (value.has_value()) {
-    node.append_child(name).text().set(*value);
-  }
-}
-
-void append_position(pugi::xml_node node,
-                     geo::latlng const& pos,
-                     std::string_view name = "Position") {
-  auto geo = node.append_child(name);
-  geo.append_child("siri:Latitude").text().set(pos.lat_, 6);
-  geo.append_child("siri:Longitude").text().set(pos.lng_, 6);
-}
-
 std::string xml_to_str(pugi::xml_document const& doc) {
   auto out = std::ostringstream{};
   doc.save(out, "  ", pugi::format_indent);
@@ -262,13 +294,9 @@ std::pair<pugi::xml_document, pugi::xml_node> create_ojp_response() {
 
   auto response = ojp.append_child("OJPResponse");
   auto service_delivery = response.append_child("siri:ServiceDelivery");
-  service_delivery.append_child("siri:ResponseTimestamp")
-      .text()
-      .set(now_timestamp());
-  service_delivery.append_child("siri:ProducerRef").text().set("MOTIS");
-  service_delivery.append_child("siri:ResponseMessageIdentifier")
-      .text()
-      .set(++response_id);
+  append(service_delivery, "siri:ResponseTimestamp", now_timestamp());
+  append(service_delivery, "siri:ProducerRef", "MOTIS");
+  append(service_delivery, "siri:ResponseMessageIdentifier", ++response_id);
 
   return {std::move(doc), service_delivery};
 }
@@ -279,12 +307,8 @@ pugi::xml_document build_geocode_response(
 
   auto location_information =
       service_delivery.append_child("OJPLocationInformationDelivery");
-  location_information.append_child("siri:ResponseTimestamp")
-      .text()
-      .set(now_timestamp());
-  location_information.append_child("siri:DefaultLanguage")
-      .text()
-      .set(language);
+  append(location_information, "siri:ResponseTimestamp", now_timestamp());
+  append(location_information, "siri:DefaultLanguage", language);
 
   for (auto const& match : matches) {
     auto const stop_ref = match.id_;
@@ -296,9 +320,11 @@ pugi::xml_document build_geocode_response(
 
     append(language, stop_place, "StopPlaceName", name);
 
-    auto const private_code = stop_place.append_child("PrivateCode");
-    append(private_code, "System", "EFA");
-    append(private_code, "Value", stop_ref);
+    {
+      auto const private_code = stop_place.append_child("PrivateCode");
+      append(private_code, "System", "EFA");
+      append(private_code, "Value", stop_ref);
+    }
 
     append(place, "TopographicPlaceRef", "n/a");
 
@@ -351,8 +377,10 @@ pugi::xml_document build_map_stops_response(
 
     append_position(place, {stop.lat_, stop.lon_}, "GeoPosition");
 
-    if (stop.modes_.has_value() && !stop.modes_->empty()) {
-      append_mode(place, to_pt_mode(stop.modes_->front()));
+    if (stop.modes_.has_value()) {
+      for (auto const& m : *stop.modes_) {
+        append_mode(place, to_pt_mode(m));
+      }
     }
 
     place_result.append_child("Complete").text().set(true);
@@ -461,10 +489,7 @@ pugi::xml_document build_trip_info_response(trip const& trip_ep,
   if (include_calls) {
     auto add_call = [&, n = 0](api::Place const& place) mutable {
       auto c = result.append_child("PreviousCall");
-      c.append_child(place.parentId_.has_value() ? "siri:StopPointRef"
-                                                 : "siri:StopPlaceRef")
-          .text()
-          .set(*place.stopId_);
+      append_stop_ref(c, place);
       append(c, "StopPointName", place.name_);
       if (place.scheduledTrack_.has_value()) {
         append(c, "PlannedQuay", place.scheduledTrack_);
@@ -509,16 +534,14 @@ pugi::xml_document build_trip_info_response(trip const& trip_ep,
 
     auto mode =
         append_mode(service, get_transport_mode(leg.routeType_.value()));
-    append(language, mode, "Name", leg.displayName_.value());  // TODO Zug?
-    append(language, mode, "ShortName", leg.displayName_.value());
+    append(language, mode, "Name", "TODO");  // TODO Zug
+    append(language, mode, "ShortName", "TODO");  // TODO RE
 
     append(language, service, "PublishedServiceName", leg.displayName_.value());
-    service.append_child("TrainNumber").text().set(leg.tripShortName_.value());
+    append(service, "TrainNumber", leg.tripShortName_);  // TODO separate field
     append(language, service, "OriginText", "n/a");  // TODO
-    service.append_child("siri:OperatorRef").text().set(leg.agencyId_.value());
-    if (leg.headsign_) {
-      append(language, service, "DestinationText", *leg.headsign_);
-    }
+    append(service, "siri:OperatorRef", leg.agencyId_);
+    append(language, service, "DestinationText", leg.headsign_);
   }
 
   if (include_track) {
@@ -526,13 +549,11 @@ pugi::xml_document build_trip_info_response(trip const& trip_ep,
         result.append_child("JourneyTrack").append_child("TrackSection");
 
     auto start = section.append_child("TrackSectionStart");
-    start.append_child("siri:StopPointRef")
-        .text()
-        .set(leg.from_.stopId_.value());
+    append_stop_ref(start, leg.from_);
     append(start, "Name", leg.from_.name_);
 
     auto end = section.append_child("TrackSectionEnd");
-    end.append_child("siri:StopPointRef").text().set(leg.to_.stopId_.value());
+    append_stop_ref(end, leg.to_);
     append(end, "Name", leg.to_.name_);
 
     auto link = section.append_child("LinkProjection");
@@ -542,7 +563,7 @@ pugi::xml_document build_trip_info_response(trip const& trip_ep,
 
     append(section, "Duration",
            duration_to_iso(std::chrono::seconds{leg.duration_}));
-    append(section, "Length", fmt::format("{}", leg.distance_.value_or(0.0)));
+    append(section, "Length", leg.distance_.value_or(0.0));
   }
 
   return std::move(doc);
@@ -597,7 +618,7 @@ pugi::xml_document build_stop_event_response(
     auto add_call = [&, order = 0](pugi::xml_node parent,
                                    api::Place const& place) mutable {
       auto call = parent.append_child("CallAtStop");
-      call.append_child("siri:StopPointRef").text().set(*place.stopId_);
+      append_stop_ref(call, place);
       append(call, "StopPointName", place.name_);
       if (place.scheduledTrack_.has_value()) {
         append(call, "PlannedQuay", place.scheduledTrack_);
@@ -665,13 +686,9 @@ pugi::xml_document build_stop_event_response(
     append(language, service, "PublishedServiceName", st.displayName_);
     append(service, "TrainNumber", st.tripShortName_);
     append(language, service, "OriginText",
-           st.previousStops_
-               .and_then([](std::vector<api::Place> const& x)
-                             -> std::optional<std::string> {
-                 return x.empty() ? std::nullopt
-                                  : std::optional{x.front().name_};
-               })
-               .value_or("n/a"));
+           st.previousStops_.and_then([](std::vector<api::Place> const& x) {
+             return x.empty() ? std::nullopt : std::optional{x.front().name_};
+           }));
     append(service, "siri:OperatorRef", st.agencyId_);
     if (!st.headsign_.empty()) {
       append(language, service, "DestinationText", st.headsign_);
@@ -715,128 +732,177 @@ pugi::xml_document build_trip_response(routing const& routing_ep,
     result.append_child("Id").text().set(id);
 
     auto trip = result.append_child("Trip");
-    trip.append_child("Id").text().set(id);
+    append(trip, "Id", id);
     append(trip, "Duration",
            duration_to_iso(std::chrono::seconds{it.duration_}));
     append(trip, "StartTime", time_to_iso(it.startTime_));
     append(trip, "EndTime", time_to_iso(it.endTime_));
-    trip.append_child("Transfers").text().set(it.transfers_);
-
-    auto distance = 0.0;
-    for (auto const& leg : it.legs_) {
-      distance += leg.distance_.value_or(0.0);
-    }
-    trip.append_child("Distance").text().set(distance, 6);
+    append(trip, "Transfers", it.transfers_);
+    append(trip, "Distance",
+           sr::fold_left(it.legs_, 0.0, [](auto const sum, auto const& leg) {
+             return sum + leg.legGeometry_.length_;
+           }));
 
     auto leg_idx = 0;
+    api::Leg const* prev = nullptr;
     for (auto const& leg : it.legs_) {
-      auto leg_node = trip.append_child("Leg");
-      leg_node.append_child("Id").text().set(++leg_idx);
-      append(leg_node, "Duration",
-             duration_to_iso(std::chrono::seconds{leg.duration_}));
+      if (leg.displayName_.has_value()) {
+        if (leg.interlineWithPreviousLeg_.value_or(false) && prev != nullptr) {
+          auto leg_node = trip.append_child("Leg");
+          append(leg_node, "Id", ++leg_idx);
+          append(leg_node, "Duration",
+                 duration_to_iso(std::chrono::seconds{leg.duration_}));
 
-      auto timed_leg = leg_node.append_child("TimedLeg");
+          auto transfer_leg = leg_node.append_child("TransferLeg");
 
-      auto add_call = [&](pugi::xml_node parent, api::Place const& place,
-                          bool const is_departure, int order) {
-        parent.append_child("siri:StopPointRef").text().set(*place.stopId_);
-        append(language, parent, "StopPointName", place.name_);
-        if (place.scheduledTrack_.has_value()) {
-          append(language, parent, "PlannedQuay", *place.scheduledTrack_);
+          append(transfer_leg, "TransferType", "remainInVehicle");
+
+          auto leg_start = transfer_leg.append_child("LegStart");
+          append_stop_ref(leg_start, prev->to_);
+          append(language, leg_start, "Name", prev->to_.name_);
+
+          auto leg_end = transfer_leg.append_child("LegEnd");
+          append_stop_ref(leg_end, leg.from_);
+          append(language, leg_end, "Name", leg.from_.name_);
+
+          append(transfer_leg, "Duration",
+                 duration_to_iso(leg.startTime_.time_ - prev->endTime_.time_));
+
+          auto const co2 = leg_node.append_child("EmissionCO2");
+          append(co2, "KilogramPerPersonKm", 0);
         }
 
-        if (is_departure) {
-          auto dep = parent.append_child("ServiceDeparture");
-          append(dep, "TimetabledTime",
-                 (place.scheduledDeparture_.has_value()
-                      ? place.scheduledDeparture_
-                      : std::optional{leg.scheduledStartTime_})
-                     .transform(time_to_iso));
-          append(dep, "EstimatedTime",
-                 (place.departure_.has_value() ? place.departure_
-                                               : std::optional{leg.startTime_})
-                     .transform(time_to_iso));
-        } else {
-          auto arr = parent.append_child("ServiceArrival");
-          append(arr, "TimetabledTime",
-                 (place.scheduledArrival_.has_value()
-                      ? place.scheduledArrival_
-                      : std::optional{leg.scheduledEndTime_})
-                     .transform(time_to_iso));
-          append(arr, "EstimatedTime",
-                 (place.arrival_.has_value() ? place.arrival_
-                                             : std::optional{leg.endTime_})
-                     .transform(time_to_iso));
-        }
+        auto leg_node = trip.append_child("Leg");
+        append(leg_node, "Id", ++leg_idx);
+        append(leg_node, "Duration",
+               duration_to_iso(std::chrono::seconds{leg.duration_}));
 
-        parent.append_child("Order").text().set(order);
-      };
-
-      add_call(timed_leg.append_child("LegBoard"), leg.from_, true, 1);
-      add_call(timed_leg.append_child("LegAlight"), leg.to_, false, 2);
-
-      auto service = timed_leg.append_child("Service");
-      auto const start_day =
-          date::floor<date::days>(std::chrono::sys_seconds{it.startTime_});
-      append(service, "OperatingDayRef", date::format("%F", start_day));
-      append(service, "JourneyRef", leg.tripId_);
-      append(service, "LineRef", leg.routeId_);
-      append(service, "DirectionRef", leg.directionId_);
-      append(service, "siri:OperatorRef", leg.agencyId_);
-
-      auto const product_category = service.append_child("ProductCategory");
-      append(language, product_category, "Name",
-             leg.routeLongName_.value_or(leg.routeLongName_.value_or("")));
-      append(language, product_category, "ShortName",
-             leg.routeShortName_.value_or(leg.routeShortName_.value_or("")));
-
-      append(language, service, "DestinationText",
-             leg.headsign_.value_or("n/a"));
-
-      // TODO
-      // <Attribute>
-      //         <UserText>
-      //                 <Text xml:lang="de">Niederflureinstieg</Text>
-      //         </UserText>
-      //         <Code>A__NF</Code>
-      //         <Importance>50</Importance>
-      // </Attribute>
-
-      append(language, service, "PublishedServiceName",
-             leg.displayName_.value_or("n/a"));
-      append_mode(service, get_transport_mode(leg.routeType_.value_or(3)));
-
-      if (include_track_sections || include_leg_projection) {
-        auto leg_track = timed_leg.append_child("LegTrack");
-        auto section = leg_track.append_child("TrackSection");
-
-        auto start = section.append_child("TrackSectionStart");
-        start.append_child("siri:StopPointRef")
-            .text()
-            .set(leg.from_.stopId_.value());
-        append(language, start, "Name", leg.from_.name_);
-
-        auto end = section.append_child("TrackSectionEnd");
-        end.append_child("siri:StopPointRef")
-            .text()
-            .set(leg.to_.stopId_.value());
-        append(language, end, "Name", leg.to_.name_);
-
-        if (include_leg_projection) {
-          auto link = section.append_child("LinkProjection");
-          for (auto const& pos :
-               geo::decode_polyline<6>(leg.legGeometry_.points_)) {
-            append_position(link, pos);
+        auto add_call = [&, order = 0](pugi::xml_node parent,
+                                       api::Place const& place) mutable {
+          append_stop_ref(parent, place);
+          append(language, parent, "StopPointName", place.name_);
+          if (place.scheduledTrack_.has_value()) {
+            append(language, parent, "PlannedQuay", *place.scheduledTrack_);
           }
+
+          if (place.departure_) {
+            auto dep = parent.append_child("ServiceDeparture");
+            append(dep, "TimetabledTime",
+                   place.scheduledDeparture_.transform(time_to_iso));
+            append(dep, "EstimatedTime",
+                   place.departure_.transform(time_to_iso));
+          }
+
+          if (place.arrival_) {
+            auto arr = parent.append_child("ServiceArrival");
+            append(arr, "TimetabledTime",
+                   place.scheduledArrival_.transform(time_to_iso));
+            append(arr, "EstimatedTime", place.arrival_.transform(time_to_iso));
+          }
+
+          parent.append_child("Order").text().set(++order);
+        };
+
+        auto timed_leg = leg_node.append_child("TimedLeg");
+        add_call(timed_leg.append_child("LegBoard"), leg.from_);
+        for (auto const& stop : *leg.intermediateStops_) {
+          add_call(timed_leg.append_child("LegIntermediate"), stop);
+        }
+        add_call(timed_leg.append_child("LegAlight"), leg.to_);
+
+        auto service = timed_leg.append_child("Service");
+        auto const [start_day, _, _1, _2] = split_trip_id(leg.tripId_.value());
+        append(service, "OperatingDayRef", start_day);
+        append(service, "JourneyRef", leg.tripId_);
+        append(service, "LineRef", leg.routeId_);
+        append(service, "DirectionRef", leg.directionId_);
+        append(service, "siri:OperatorRef", leg.agencyId_);
+
+        {
+          auto const product_category = service.append_child("ProductCategory");
+          append(language, product_category, "Name", "RegioExpress");  // TODO
+          append(language, product_category, "ShortName", "RE");  // TODO
+          append(product_category, "ProductCategoryRef", 24);  // TODO
         }
 
-        if (include_track_sections) {
+        append(language, service, "DestinationText", leg.headsign_);
+
+        // TODO
+        // <Attribute>
+        //         <UserText>
+        //                 <Text xml:lang="de">Niederflureinstieg</Text>
+        //         </UserText>
+        //         <Code>A__NF</Code>
+        //         <Importance>50</Importance>
+        // </Attribute>
+
+        append(language, service, "PublishedServiceName", leg.displayName_);
+
+        {
+          auto mode =
+              append_mode(service, get_transport_mode(leg.routeType_.value()));
+          append(language, mode, "Name", "TODO");  // TODO
+          append(language, mode, "ShortName", "TODO");  // TODO
+        }
+
+        if (include_track_sections || include_leg_projection) {
+          auto leg_track = timed_leg.append_child("LegTrack");
+          auto section = leg_track.append_child("TrackSection");
+
+          auto start = section.append_child("TrackSectionStart");
+          append_stop_ref(start, leg.from_);
+          append(language, start, "Name", leg.from_.name_);
+
+          auto end = section.append_child("TrackSectionEnd");
+          append_stop_ref(start, leg.to_);
+          append(language, end, "Name", leg.to_.name_);
+
+          if (include_leg_projection) {
+            auto link = section.append_child("LinkProjection");
+            for (auto const& pos :
+                 geo::decode_polyline<6>(leg.legGeometry_.points_)) {
+              append_position(link, pos);
+            }
+          }
+
           append(section, "Duration",
                  duration_to_iso(std::chrono::seconds{leg.duration_}));
-          append(section, "Length",
-                 fmt::format("{}", leg.distance_.value_or(0.0)));
+          append(section, "Length", leg.legGeometry_.length_);
         }
+      } else {
+        auto leg_node = trip.append_child("Leg");
+        append(leg_node, "Id", ++leg_idx);
+        append(leg_node, "Duration",
+               duration_to_iso(std::chrono::seconds{leg.duration_}));
+
+        auto transfer_leg = leg_node.append_child("TransferLeg");
+
+        append(transfer_leg, "TransferType", "walk");
+
+        auto leg_start = transfer_leg.append_child("LegStart");
+        append_stop_ref(leg_start, leg.from_);
+        append(language, leg_start, "Name", leg.from_.name_);
+
+        auto leg_end = transfer_leg.append_child("LegEnd");
+        append_stop_ref(leg_end, leg.to_);
+        append(language, leg_end, "Name", leg.to_.name_);
+
+        append(transfer_leg, "Duration",
+               duration_to_iso(std::chrono::seconds{leg.duration_}));
+
+        auto path_guidance = transfer_leg.append_child("PathGuidance");
+        auto track_section = path_guidance.append_child("TrackSection");
+
+        auto track_section_start =
+            track_section.append_child("TrackSectionStart");
+        append_stop_ref(track_section_start, leg.from_);
+        append(language, track_section_start, "Name", leg.from_.name_);
+
+        auto track_section_end = track_section.append_child("TrackSectionEnd");
+        append_stop_ref(track_section_end, leg.to_);
+        append(language, track_section_end, "Name", leg.to_.name_);
       }
+      prev = &leg;
     }
   }
 
@@ -946,22 +1012,6 @@ net::reply ojp::operator()(net::route_request const& http_req, bool) const {
     auto const origin_ref = origin.child("PlaceRef");
     auto const destination_ref = destination.child("PlaceRef");
 
-    auto const get_place_ref = [](pugi::xml_node ref) -> std::string_view {
-      if (auto a = ref.child("StopPlaceRef")) {
-        return a.text().as_string();
-      }
-      if (auto b = ref.child("siri:StopPlaceRef")) {
-        return b.text().as_string();
-      }
-      if (auto c = ref.child("StopPointRef")) {
-        return c.text().as_string();
-      }
-      if (auto d = ref.child("siri:StopPointRef")) {
-        return d.text().as_string();
-      }
-      return "";
-    };
-
     auto const from_id = get_place_ref(origin_ref);
     auto const to_id = get_place_ref(destination_ref);
     utl::verify<net::bad_request_exception>(
@@ -988,6 +1038,7 @@ net::reply ojp::operator()(net::route_request const& http_req, bool) const {
     url_params.append({"toPlace", to_id});
     url_params.append({"time", !dep_time.empty() ? dep_time : arr_time});
     url_params.append({"numItineraries", fmt::format("{}", num_results)});
+    url_params.append({"joinInterlinedLegs", "false"});
     url_params.append({"language", lang});
     if (dep_time.empty()) {
       url_params.append({"arriveBy", "true"});
@@ -1001,8 +1052,7 @@ net::reply ojp::operator()(net::route_request const& http_req, bool) const {
 
     auto const location = stop_times_req.child("Location");
     auto const place_ref = location.child("PlaceRef");
-    auto const stop_id =
-        place_ref.child("siri:StopPointRef").text().as_string();
+    auto const stop_id = get_place_ref(place_ref);
     auto const dep_arr_time = location.child("DepArrTime").text().as_string();
 
     auto const params = stop_times_req.child("Params");
