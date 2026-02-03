@@ -117,11 +117,7 @@
 			<div
 				class="gap-y-2 p-3 text-base grid grid-cols-[auto_1fr] border-b hover:bg-slate-100 dark:hover:bg-slate-800 duration-500 ease-out transition-all"
 			>
-				<div class="flex col-span-full justify-center">
-					<Route class="text-ellipsis" l={stopTime} {onClickTrip} />
-				</div>
-
-				<div class="flex-col gap-2 w-28">
+				<div class="flex flex-col w-24">
 					<Time
 						variant="schedule"
 						timeZone={stopTime.place.tz}
@@ -140,28 +136,33 @@
 						{arriveBy}
 					/>
 				</div>
-				<div class="flex items-start justify-between text-base">
-					<div class="flex items-center gap-3">
-						<ArrowRight class="stroke-muted-foreground h-4 w-4" />
-						<span>
-							{stopTime.headsign}
-							{#if !stopTime.headsign}
-								{stopTime.tripTo.name}
-							{:else if !stopTime.tripTo.name.startsWith(stopTime.headsign)}
-								<span class="stroke-muted-foreground">({stopTime.tripTo.name})</span>
-							{/if}
-						</span>
+				<div class="flex-col text-base">
+					<div class="flex justify-between">
+						<Route class="text-ellipsis mb-2" l={stopTime} {onClickTrip} />
+						{#if stopTime.place.track}
+							<span class="text-nowrap ml-3 text-sm py-1 px-3 rounded-lg">
+								{getModeLabel(stopTime.mode) == 'Track' ? t.trackAbr : t.platformAbr}
+								{stopTime.place.track}
+							</span>
+						{/if}
 					</div>
-					{#if stopTime.place.track}
-						<span class="text-nowrap ml-3 text-sm px-2 border rounded-lg">
-							{getModeLabel(stopTime.mode) == 'Track' ? t.trackAbr : t.platformAbr}
-							{stopTime.place.track}
-						</span>
-					{/if}
-					<Alerts tz={stopTime.place.tz} alerts={stopTime.place.alerts} />
+					<div class="flex items-center justify-between">
+						<div class="flex items-center gap-3">
+							<ArrowRight class="shrink-0 stroke-muted-foreground h-4 w-4" />
+							<span>
+								{stopTime.headsign}
+								{#if !stopTime.headsign}
+									{stopTime.tripTo.name}
+								{:else if !stopTime.tripTo.name.startsWith(stopTime.headsign)}
+									<span class="stroke-muted-foreground">({stopTime.tripTo.name})</span>
+								{/if}
+							</span>
+						</div>
+						<Alerts tz={stopTime.place.tz} alerts={stopTime.place.alerts} />
+					</div>
 				</div>
 				{#if stopTime.pickupDropoffType == 'NOT_ALLOWED'}
-					<div class="flex items-center text-destructive text-sm">
+					<div class="flex items-center col-span-full text-destructive text-sm">
 						<CircleX class="stroke-destructive h-4 w-4" />
 						<span class="ml-1 leading-none">
 							{stopTime.tripCancelled
