@@ -149,7 +149,7 @@
 					<div class="flex items-center justify-between">
 						<div class="flex items-center gap-3">
 							<ArrowRight class="shrink-0 stroke-muted-foreground h-4 w-4" />
-							<span>
+							<span class="leading-none">
 								{stopTime.headsign}
 								{#if !stopTime.headsign}
 									{stopTime.tripTo.name}
