@@ -446,12 +446,33 @@ api::routes_response get_routes(tag_lookup const& tags,
         auto route_long_names = std::set<std::string>{};
         auto const stops = tt.route_location_seq_[r];
         auto shape_added = false;
+
+        auto const get_box = [&](std::size_t segment) {
+          if (shapes != nullptr) {
+            auto const box = shapes->get_bounding_box(r, segment);
+            if (box.has_value()) {
+              return *box;
+            }
+          }
+          // Fallback, if no segment bounding box can be loaded
+          return geo::make_box(
+              {tt.locations_
+                   .coordinates_[n::stop{stops[segment]}.location_idx()],
+               tt.locations_
+                   .coordinates_[n::stop{stops[segment + 1]}.location_idx()]});
+        };
+
         for (auto const transport_idx : tt.route_transport_ranges_[r]) {
           auto const stop_indices = n::interval{
               n::stop_idx_t{0U}, static_cast<n::stop_idx_t>(stops.size())};
           for (auto const [from, to] : utl::pairwise(stop_indices)) {
             enc.reset();
             auto n_points = 0;
+
+            auto const box = get_box(from);
+            if (!box.overlaps(area)) {
+              continue;
+            }
 
             auto const fr = n::rt::frun{
                 tt, nullptr,
