@@ -148,6 +148,8 @@ export type Translations = {
 	toll: string;
 	accessRestriction: string;
 	continuesAs: string;
+	DEBUG_BUS_ROUTE: string;
+	DEBUG_RAILWAY_ROUTE: string;
 	rent: string;
 	copyToClipboard: string;
 	rideThroughAllowed: string;

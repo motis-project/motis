@@ -2497,6 +2497,8 @@ components:
         - ODM  # Transit | Street
         - RIDE_SHARING
         - FLEX
+        - DEBUG_BUS_ROUTE
+        - DEBUG_RAILWAY_ROUTE
         # === Transit ===
         - TRANSIT
         - TRAM
