@@ -2784,6 +2784,7 @@ components:
         - mode
         - realTime
         - headsign
+        - tripFrom
         - tripTo
         - agencyId
         - agencyName
@@ -2814,6 +2815,9 @@ components:
             The headsign of the bus or train being used.
             For non-transit legs, null
           type: string
+        tripFrom:
+          description: first stop of this trip
+          $ref: '#/components/schemas/Place'
         tripTo:
           description: final stop of this trip
           $ref: '#/components/schemas/Place'
@@ -3541,6 +3545,9 @@ components:
             For transit legs, the headsign of the bus or train being used.
             For non-transit legs, null
           type: string
+        tripFrom:
+          description: first stop of this trip
+          $ref: '#/components/schemas/Place'
         tripTo:
           description: final stop of this trip (can differ from headsign)
           $ref: '#/components/schemas/Place'
