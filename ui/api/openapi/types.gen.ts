@@ -497,6 +497,10 @@ export type StopTime = {
      */
     headsign: string;
     /**
+     * first stop of this trip
+     */
+    tripFrom: Place;
+    /**
      * final stop of this trip
      */
     tripTo: Place;
@@ -1121,6 +1125,10 @@ export type Leg = {
      *
      */
     headsign?: string;
+    /**
+     * first stop of this trip
+     */
+    tripFrom?: Place;
     /**
      * final stop of this trip (can differ from headsign)
      */
