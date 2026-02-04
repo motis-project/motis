@@ -94,6 +94,7 @@ struct config {
       std::optional<std::vector<unsigned>> route_indices_{};
       bool all_{false};
       bool all_with_beelines_{false};
+      unsigned slow_{0U};
     };
 
     bool operator==(timetable const&) const = default;

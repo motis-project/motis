@@ -1,7 +1,10 @@
 #include "motis/compute_shapes.h"
 
+#include <chrono>
 #include <algorithm>
+#include <iostream>
 #include <map>
+#include <mutex>
 #include <optional>
 #include <ranges>
 #include <set>
@@ -78,6 +81,8 @@ void compute_shapes(
   auto routes_matched = 0ULL;
   auto segments_routed = 0ULL;
   auto segments_beelined = 0ULL;
+  auto dijkstra_early_terminations = 0ULL;
+  auto dijkstra_full_runs = 0ULL;
 
   auto const debug_enabled =
       debug && !debug->path_.empty() &&
@@ -90,26 +95,45 @@ void compute_shapes(
     std::filesystem::create_directories(debug->path_);
   }
 
+  std::clog << "\n** compute_shapes [start] **\n"
+            << "  routes=" << tt.n_routes() << "\n  trips=" << tt.n_trips()
+            << "\n  shapes.trip_offset_indices_="
+            << shapes.trip_offset_indices_.size()
+            << "\n  shapes.route_bboxes_=" << shapes.route_bboxes_.size()
+            << "\n  shapes.route_segment_bboxes_="
+            << shapes.route_segment_bboxes_.size()
+            << "\n  shapes.data=" << shapes.data_.size()
+            << "\n  shapes.offsets=" << shapes.offsets_.size()
+            << "\n  shapes.trip_offset_indices_="
+            << shapes.trip_offset_indices_.size() << "\n\n";
+
   shapes.trip_offset_indices_.resize(tt.n_trips());
   shapes.route_bboxes_.resize(tt.n_routes());
   shapes.route_segment_bboxes_.resize(tt.n_routes());
 
-  for (auto r = n::route_idx_t{0U}; r != tt.n_routes(); ++r) {
+  auto shapes_mutex = std::mutex{};
+
+  auto const process_route = [&](std::size_t const route_idx) {
+    auto const r =
+        n::route_idx_t{static_cast<n::route_idx_t::value_t>(route_idx)};
+
     auto const clasz = tt.route_clasz_[r];
     auto profile = get_profile(clasz);
     if (!profile) {
       progress_tracker->increment();
-      continue;
+      return;
     }
     auto const profile_params = osr::get_parameters(*profile);
 
     auto const stops = tt.route_location_seq_[r];
     if (stops.size() < 2U) {
-      std::cerr << "[compute_shapes] skipping route " << r << ", "
+      auto l = std::scoped_lock{shapes_mutex};
+      std::clog << "[compute_shapes] skipping route " << r << ", "
                 << stops.size() << " stops\n";
       progress_tracker->increment();
-      continue;
+      return;
     }
+
     auto const transports = tt.route_transport_ranges_[r];
     auto debug_path_fn = std::function<std::optional<std::filesystem::path>(
         osr::matched_route const&)>{nullptr};
@@ -177,6 +201,11 @@ void compute_shapes(
           }
         }
 
+        if (debug->slow_ != 0U && res.d_total_.count() > debug->slow_) {
+          include = true;
+          tags.emplace("slow");
+        }
+
         if (include) {
           auto fn = fmt::format("r_{}_{}", to_idx(r), to_str(clasz));
           for (auto const& tag : tags) {
@@ -204,25 +233,17 @@ void compute_shapes(
       return osr::location{pos, osr::level_t{osr::kNoLevel}};
     });
 
-    // std::cerr << "[compute_shapes] route " << r << ", " << stops.size()
-    //           << " stops, " << transports.size()
-    //           << " transports, profile: " << to_str(*profile)
-    //           << ", clasz: " << static_cast<int>(tt.route_clasz_[r]) <<
-    //           "\n";
-
     try {
-      auto const max_segment_cost = static_cast<osr::cost_t>(
-          std::numeric_limits<osr::cost_t>::max() - 1U);
       auto const matched_route =
           osr::map_match(w, lookup, *profile, profile_params, match_points,
-                         max_segment_cost, nullptr, nullptr, debug_path_fn);
+                         nullptr, nullptr, debug_path_fn);
 
       ++routes_matched;
       segments_routed += matched_route.n_routed_;
       segments_beelined += matched_route.n_beelined_;
-
-      // std::cerr << "  routed=" << matched_route.n_routed_
-      //           << ", beelined=" << matched_route.n_beelined_ << "\n";
+      dijkstra_early_terminations +=
+          matched_route.n_dijkstra_early_terminations_;
+      dijkstra_full_runs += matched_route.n_dijkstra_full_runs_;
 
       utl::verify(matched_route.segment_offsets_.size() == match_points.size(),
                   "[compute_shapes] segment offsets ({}) != match points ({})",
@@ -270,12 +291,25 @@ void compute_shapes(
           "[compute_shapes] mismatch: offsets.size()={}, stops.size()={}",
           offsets.size(), stops.size());
 
+      auto const l = std::scoped_lock{shapes_mutex};
+
       auto const shape_idx = static_cast<n::shape_idx_t>(shapes.data_.size());
       shapes.data_.emplace_back(shape);
 
       shapes.route_bboxes_[r] = route_bbox;
-      // TODO
-      // shapes.route_segment_bboxes_[r] = segment_bboxes;
+      auto rsb = shapes.route_segment_bboxes_[r];
+      if (!rsb.empty()) {
+        if (rsb.size() != segment_bboxes.size()) {
+          fmt::println(std::clog,
+                       "[compute_shapes] route {}: segment bbox size "
+                       "mismatch: storage={}, computed={}",
+                       r, rsb.size(), segment_bboxes.size());
+        } else {
+          for (auto i = 0U; i < segment_bboxes.size(); ++i) {
+            rsb[i] = segment_bboxes[i];
+          }
+        }
+      }
 
       auto range_to_offsets = std::map<std::pair<n::stop_idx_t, n::stop_idx_t>,
                                        n::shape_offset_idx_t>{};
@@ -317,11 +351,27 @@ void compute_shapes(
       }
     }
     progress_tracker->increment();
-  }
+  };
+
+  utl::parallel_for_run(tt.n_routes(), process_route);
+
+  std::clog << "\n** compute_shapes [end] **\n"
+            << "  routes=" << tt.n_routes() << "\n  trips=" << tt.n_trips()
+            << "\n  shapes.trip_offset_indices_="
+            << shapes.trip_offset_indices_.size()
+            << "\n  shapes.route_bboxes_=" << shapes.route_bboxes_.size()
+            << "\n  shapes.route_segment_bboxes_="
+            << shapes.route_segment_bboxes_.size()
+            << "\n  shapes.data=" << shapes.data_.size()
+            << "\n  shapes.offsets=" << shapes.offsets_.size()
+            << "\n  shapes.trip_offset_indices_="
+            << shapes.trip_offset_indices_.size() << "\n\n";
 
   fmt::println(std::clog,
-               "{} routes matched, {} segments routed, {} segments beelined",
-               routes_matched, segments_routed, segments_beelined);
+               "{} routes matched, {} segments routed, {} segments beelined, "
+               "{} dijkstra early terminations, {} dijkstra full runs",
+               routes_matched, segments_routed, segments_beelined,
+               dijkstra_early_terminations, dijkstra_full_runs);
 }
 
 }  // namespace motis
