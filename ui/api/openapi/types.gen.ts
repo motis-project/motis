@@ -428,6 +428,10 @@ export type Place = {
      * Time that on-demand service ends
      */
     flexEndPickupDropOffWindow?: string;
+    /**
+     * available transport modes for stops
+     */
+    modes?: Array<Mode>;
 };
 
 /**
@@ -1179,6 +1183,11 @@ export type Leg = {
      *
      */
     loopedCalendarSince?: string;
+    /**
+     * Whether bikes can be carried on this leg.
+     *
+     */
+    bikesAllowed?: boolean;
 };
 
 export type RiderCategory = {
@@ -1426,6 +1435,46 @@ export type Error = {
      * error message
      */
     error: string;
+};
+
+/**
+ * route segment between two stops to show a route on a map
+ */
+export type RouteSegment = {
+    from: Place;
+    to: Place;
+    polyline: EncodedPolyline;
+};
+
+/**
+ * XXX
+ */
+export type RouteInfo = {
+    /**
+     * Transport mode for this route
+     */
+    mode: Mode;
+    /**
+     * List of route IDs associated with this route
+     */
+    routeIds: Array<(string)>;
+    /**
+     * List of route short names associated with this route
+     */
+    routeShortNames: Array<(string)>;
+    /**
+     * List of route long names associated with this route
+     */
+    routeLongNames: Array<(string)>;
+    /**
+     * Number of stops along this route
+     */
+    numStops: number;
+    /**
+     * Internal route index for debugging purposes
+     */
+    routeIdx: number;
+    segments: Array<RouteSegment>;
 };
 
 export type PlanData = {
@@ -2425,6 +2474,10 @@ export type StoptimesData = {
          */
         time?: string;
         /**
+         * Optional. Default is `true`. If set to `false`, alerts are omitted in the metadata of place for all stopTimes.
+         */
+        withAlerts?: boolean;
+        /**
          * Optional. Include stoptimes where passengers can not alight/board according to schedule.
          */
         withScheduledSkippedStops?: boolean;
@@ -2548,6 +2601,33 @@ export type LevelsData = {
 export type LevelsResponse = (Array<(number)>);
 
 export type LevelsError = (Error);
+
+export type RoutesData = {
+    query: {
+        /**
+         * language tags as used in OpenStreetMap / GTFS
+         * (usually BCP-47 / ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
+         *
+         */
+        language?: Array<(string)>;
+        /**
+         * latitude,longitude pair of the upper left coordinate
+         */
+        max: string;
+        /**
+         * latitude,longitude pair of the lower right coordinate
+         */
+        min: string;
+        /**
+         * current zoom level
+         */
+        zoom: number;
+    };
+};
+
+export type RoutesResponse = (Array<RouteInfo>);
+
+export type RoutesError = (Error);
 
 export type RentalsData = {
     query?: {

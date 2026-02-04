@@ -484,6 +484,13 @@ Can be missing if neither real-time updates nor the schedule timetable contains 
             description: 'Time that on-demand service ends',
             type: 'string',
             format: 'date-time'
+        },
+        modes: {
+            description: 'available transport modes for stops',
+            type: 'array',
+            items: {
+                '$ref': '#/components/schemas/Mode'
+            }
         }
     }
 } as const;
@@ -1462,6 +1469,11 @@ by looping active weekdays, e.g. from calendar.txt in GTFS.
 `,
             type: 'string',
             format: 'date-time'
+        },
+        bikesAllowed: {
+            description: `Whether bikes can be carried on this leg.
+`,
+            type: 'boolean'
         }
     }
 } as const;
@@ -1781,6 +1793,70 @@ export const ErrorSchema = {
         error: {
             type: 'string',
             description: 'error message'
+        }
+    }
+} as const;
+
+export const RouteSegmentSchema = {
+    description: 'route segment between two stops to show a route on a map',
+    type: 'object',
+    required: ['from', 'to', 'polyline'],
+    properties: {
+        from: {
+            '$ref': '#/components/schemas/Place'
+        },
+        to: {
+            '$ref': '#/components/schemas/Place'
+        },
+        polyline: {
+            '$ref': '#/components/schemas/EncodedPolyline'
+        }
+    }
+} as const;
+
+export const RouteInfoSchema = {
+    description: 'XXX',
+    type: 'object',
+    required: ['mode', 'routeIds', 'routeShortNames', 'routeLongNames', 'numStops', 'routeIdx', 'segments'],
+    properties: {
+        mode: {
+            '$ref': '#/components/schemas/Mode',
+            description: 'Transport mode for this route'
+        },
+        routeIds: {
+            type: 'array',
+            items: {
+                type: 'string'
+            },
+            description: 'List of route IDs associated with this route'
+        },
+        routeShortNames: {
+            type: 'array',
+            items: {
+                type: 'string'
+            },
+            description: 'List of route short names associated with this route'
+        },
+        routeLongNames: {
+            type: 'array',
+            items: {
+                type: 'string'
+            },
+            description: 'List of route long names associated with this route'
+        },
+        numStops: {
+            type: 'integer',
+            description: 'Number of stops along this route'
+        },
+        routeIdx: {
+            type: 'integer',
+            description: 'Internal route index for debugging purposes'
+        },
+        segments: {
+            type: 'array',
+            items: {
+                '$ref': '#/components/schemas/RouteSegment'
+            }
         }
     }
 } as const;

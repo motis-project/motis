@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { X, Palette, Rss, Ban, LocateFixed, TrainFront } from '@lucide/svelte';
+	import { X, Palette, Rss, Ban, LocateFixed, TrainFront, Waypoints } from '@lucide/svelte';
 	import { getStyle } from '$lib/map/style';
 	import Map from '$lib/map/Map.svelte';
 	import Control from '$lib/map/Control.svelte';
@@ -48,6 +48,7 @@
 	import type { DisplayLevel, IsochronesOptions, IsochronesPos } from '$lib/map/IsochronesShared';
 	import IsochronesMask from '$lib/IsochronesMask.svelte';
 	import Rentals from '$lib/map/rentals/Rentals.svelte';
+	import Routes from '$lib/map/routes/Routes.svelte';
 	import {
 		getFormFactors,
 		getPrePostDirectModes,
@@ -77,6 +78,7 @@
 	let dataAttributionLink: string | undefined = $state(undefined);
 	let colorMode = $state<'rt' | 'route' | 'mode' | 'none'>('none');
 	let showMap = $state(!isSmallScreen);
+	let showRoutes = $state(false);
 	let lastOneToAllQuery: OneToAllData | undefined = undefined;
 	let lastPlanQuery: PlanData | undefined = undefined;
 	let serverConfig: ServerConfig | undefined = $state();
@@ -896,6 +898,18 @@
 					</Button>
 					<Button size="icon" onclick={() => getLocation()}>
 						<LocateFixed class="w-5 h-5" />
+					</Button>
+				</Control>
+				{#if showRoutes}
+					<Routes {map} {bounds} {zoom} />
+				{/if}
+				<Control position="top-right" class="pb-2 text-right">
+					<Button
+						size="icon"
+						variant={showRoutes ? 'default' : 'secondary'}
+						onclick={() => (showRoutes = !showRoutes)}
+					>
+						<Waypoints class="w-5 h-5" />
 					</Button>
 				</Control>
 				<Rentals {map} {bounds} {zoom} {theme} debug={hasDebug} />

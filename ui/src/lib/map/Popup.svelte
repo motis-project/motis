@@ -34,7 +34,8 @@
 			}
 			popup = new maplibregl.Popup({
 				anchor: 'top-left',
-				closeButton: false
+				closeButton: false,
+				maxWidth: 'none'
 			});
 			popup.setLngLat(e.lngLat);
 			popup.addTo(ctx.map!);
