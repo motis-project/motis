@@ -237,7 +237,7 @@ export const ModeSchema = {
   - \`CABLE_CAR\`: deprecated
 `,
     type: 'string',
-    enum: ['WALK', 'BIKE', 'RENTAL', 'CAR', 'CAR_PARKING', 'CAR_DROPOFF', 'ODM', 'RIDE_SHARING', 'FLEX', 'DEBUG_BUS_ROUTE', 'DEBUG_RAILWAY_ROUTE', 'TRANSIT', 'TRAM', 'SUBWAY', 'FERRY', 'AIRPLANE', 'SUBURBAN', 'BUS', 'COACH', 'RAIL', 'HIGHSPEED_RAIL', 'LONG_DISTANCE', 'NIGHT_RAIL', 'REGIONAL_FAST_RAIL', 'REGIONAL_RAIL', 'CABLE_CAR', 'FUNICULAR', 'AERIAL_LIFT', 'OTHER', 'AREAL_LIFT', 'METRO']
+    enum: ['WALK', 'BIKE', 'RENTAL', 'CAR', 'CAR_PARKING', 'CAR_DROPOFF', 'ODM', 'RIDE_SHARING', 'FLEX', 'DEBUG_BUS_ROUTE', 'DEBUG_RAILWAY_ROUTE', 'DEBUG_FERRY_ROUTE', 'TRANSIT', 'TRAM', 'SUBWAY', 'FERRY', 'AIRPLANE', 'SUBURBAN', 'BUS', 'COACH', 'RAIL', 'HIGHSPEED_RAIL', 'LONG_DISTANCE', 'NIGHT_RAIL', 'REGIONAL_FAST_RAIL', 'REGIONAL_RAIL', 'CABLE_CAR', 'FUNICULAR', 'AERIAL_LIFT', 'OTHER', 'AREAL_LIFT', 'METRO']
 } as const;
 
 export const MatchSchema = {
@@ -1806,7 +1806,7 @@ export const ErrorSchema = {
 } as const;
 
 export const RouteSegmentSchema = {
-    description: 'route segment between two stops to show a route on a map',
+    description: 'Route segment between two stops to show a route on a map',
     type: 'object',
     required: ['from', 'to', 'polyline'],
     properties: {
@@ -1823,7 +1823,7 @@ export const RouteSegmentSchema = {
 } as const;
 
 export const RouteInfoSchema = {
-    description: 'XXX',
+    description: 'Information about a transit route',
     type: 'object',
     required: ['mode', 'routeIds', 'routeShortNames', 'routeLongNames', 'numStops', 'routeIdx', 'segments'],
     properties: {

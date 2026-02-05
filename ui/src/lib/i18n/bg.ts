@@ -158,7 +158,8 @@ const translations: Translations = {
 	rideEndAllowed: 'Паркиране е позволено',
 	rideEndNotAllowed: 'Паркиране не е позволено',
 	DEBUG_BUS_ROUTE: 'Маршрут на автобус (Отстраняване на грешки)',
-	DEBUG_RAILWAY_ROUTE: 'Маршрут на влак (Отстраняване на грешки)'
+	DEBUG_RAILWAY_ROUTE: 'Маршрут на влак (Отстраняване на грешки)',
+	DEBUG_FERRY_ROUTE: 'Маршрут на ферибот (Отстраняване на грешки)'
 };
 
 export default translations;

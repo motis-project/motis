@@ -68,6 +68,7 @@ api::ModeEnum default_output::get_mode() const {
     case osr::search_profile::kBus: return api::ModeEnum::DEBUG_BUS_ROUTE;
     case osr::search_profile::kRailway:
       return api::ModeEnum::DEBUG_RAILWAY_ROUTE;
+    case osr::search_profile::kFerry: return api::ModeEnum::DEBUG_FERRY_ROUTE;
   }
 
   return api::ModeEnum::OTHER;

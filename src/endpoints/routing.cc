@@ -507,6 +507,7 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
                m == api::ModeEnum::CAR_DROPOFF ||
                m == api::ModeEnum::DEBUG_BUS_ROUTE ||
                m == api::ModeEnum::DEBUG_RAILWAY_ROUTE ||
+               m == api::ModeEnum::DEBUG_FERRY_ROUTE ||
                m == api::ModeEnum::WALK) {
       route_with_profile(default_output{
           *w_, to_profile(m, pedestrian_profile, elevation_costs)});

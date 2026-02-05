@@ -57,6 +57,7 @@ api::ModeEnum to_mode(osr::search_profile const m) {
     case osr::search_profile::kBus: return api::ModeEnum::DEBUG_BUS_ROUTE;
     case osr::search_profile::kRailway:
       return api::ModeEnum::DEBUG_RAILWAY_ROUTE;
+    case osr::search_profile::kFerry: return api::ModeEnum::DEBUG_FERRY_ROUTE;
   }
   std::unreachable();
 }

@@ -15,7 +15,8 @@ export const prePostDirectModes = [
 	'RENTAL_SCOOTER_SEATED',
 	'RENTAL_OTHER',
 	'DEBUG_BUS_ROUTE',
-	'DEBUG_RAILWAY_ROUTE'
+	'DEBUG_RAILWAY_ROUTE',
+	'DEBUG_FERRY_ROUTE'
 ] as const;
 export type PrePostDirectMode = (typeof prePostDirectModes)[number];
 

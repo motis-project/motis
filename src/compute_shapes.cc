@@ -50,7 +50,8 @@ namespace motis {
 std::optional<osr::search_profile> get_profile(n::clasz const clasz) {
   switch (clasz) {
     case n::clasz::kBus:
-    case n::clasz::kCoach: return osr::search_profile::kBus;
+    case n::clasz::kCoach:
+    case n::clasz::kODM: return osr::search_profile::kBus;
     case n::clasz::kTram:
     case n::clasz::kHighSpeed:
     case n::clasz::kLongDistance:
@@ -60,6 +61,7 @@ std::optional<osr::search_profile> get_profile(n::clasz const clasz) {
     case n::clasz::kSuburban:
     case n::clasz::kSubway:
     case n::clasz::kFunicular: return osr::search_profile::kRailway;
+    case n::clasz::kShip: return osr::search_profile::kFerry;
     default: return std::nullopt;
   }
 }

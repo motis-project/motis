@@ -212,7 +212,7 @@ export type LocationType = 'ADDRESS' | 'PLACE' | 'STOP';
  * - `CABLE_CAR`: deprecated
  *
  */
-export type Mode = 'WALK' | 'BIKE' | 'RENTAL' | 'CAR' | 'CAR_PARKING' | 'CAR_DROPOFF' | 'ODM' | 'RIDE_SHARING' | 'FLEX' | 'DEBUG_BUS_ROUTE' | 'DEBUG_RAILWAY_ROUTE' | 'TRANSIT' | 'TRAM' | 'SUBWAY' | 'FERRY' | 'AIRPLANE' | 'SUBURBAN' | 'BUS' | 'COACH' | 'RAIL' | 'HIGHSPEED_RAIL' | 'LONG_DISTANCE' | 'NIGHT_RAIL' | 'REGIONAL_FAST_RAIL' | 'REGIONAL_RAIL' | 'CABLE_CAR' | 'FUNICULAR' | 'AERIAL_LIFT' | 'OTHER' | 'AREAL_LIFT' | 'METRO';
+export type Mode = 'WALK' | 'BIKE' | 'RENTAL' | 'CAR' | 'CAR_PARKING' | 'CAR_DROPOFF' | 'ODM' | 'RIDE_SHARING' | 'FLEX' | 'DEBUG_BUS_ROUTE' | 'DEBUG_RAILWAY_ROUTE' | 'DEBUG_FERRY_ROUTE' | 'TRANSIT' | 'TRAM' | 'SUBWAY' | 'FERRY' | 'AIRPLANE' | 'SUBURBAN' | 'BUS' | 'COACH' | 'RAIL' | 'HIGHSPEED_RAIL' | 'LONG_DISTANCE' | 'NIGHT_RAIL' | 'REGIONAL_FAST_RAIL' | 'REGIONAL_RAIL' | 'CABLE_CAR' | 'FUNICULAR' | 'AERIAL_LIFT' | 'OTHER' | 'AREAL_LIFT' | 'METRO';
 
 /**
  * GeoCoding match
@@ -1446,7 +1446,7 @@ export type Error = {
 };
 
 /**
- * route segment between two stops to show a route on a map
+ * Route segment between two stops to show a route on a map
  */
 export type RouteSegment = {
     from: Place;
@@ -1455,7 +1455,7 @@ export type RouteSegment = {
 };
 
 /**
- * XXX
+ * Information about a transit route
  */
 export type RouteInfo = {
     /**
@@ -2633,7 +2633,15 @@ export type RoutesData = {
     };
 };
 
-export type RoutesResponse = (Array<RouteInfo>);
+export type RoutesResponse = ({
+    routes: Array<RouteInfo>;
+    /**
+     * Indicates whether some routes were filtered out due to
+     * the zoom level.
+     *
+     */
+    zoomFiltered: boolean;
+});
 
 export type RoutesError = (Error);
 

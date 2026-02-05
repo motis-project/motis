@@ -2034,13 +2034,24 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '200':
-          description: a list of routes
+          description: a list of routes in the area
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/RouteInfo'
+                type: object
+                required:
+                  - routes
+                  - zoomFiltered
+                properties:
+                  routes:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RouteInfo'
+                  zoomFiltered:
+                    type: boolean
+                    description: |
+                      Indicates whether some routes were filtered out due to
+                      the zoom level.
 
   /api/v1/rentals:
     get:
@@ -2499,6 +2510,7 @@ components:
         - FLEX
         - DEBUG_BUS_ROUTE
         - DEBUG_RAILWAY_ROUTE
+        - DEBUG_FERRY_ROUTE
         # === Transit ===
         - TRANSIT
         - TRAM
@@ -3908,7 +3920,7 @@ components:
           description: error message
 
     RouteSegment:
-      description: route segment between two stops to show a route on a map
+      description: Route segment between two stops to show a route on a map
       type: object
       required:
         - from
@@ -3923,7 +3935,7 @@ components:
           $ref: '#/components/schemas/EncodedPolyline'
 
     RouteInfo:
-      description: XXX
+      description: Information about a transit route
       type: object
       required:
         - mode

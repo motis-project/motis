@@ -150,6 +150,7 @@ export type Translations = {
 	continuesAs: string;
 	DEBUG_BUS_ROUTE: string;
 	DEBUG_RAILWAY_ROUTE: string;
+	DEBUG_FERRY_ROUTE: string;
 	rent: string;
 	copyToClipboard: string;
 	rideThroughAllowed: string;

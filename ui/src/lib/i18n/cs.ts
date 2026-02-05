@@ -160,7 +160,8 @@ const translations: Translations = {
 	rideEndAllowed: 'Parkování povoleno',
 	rideEndNotAllowed: 'Parkování pouze na stanicích',
 	DEBUG_BUS_ROUTE: 'Trasa autobusu (Debug)',
-	DEBUG_RAILWAY_ROUTE: 'Trasa vlaku (Debug)'
+	DEBUG_RAILWAY_ROUTE: 'Trasa vlaku (Debug)',
+	DEBUG_FERRY_ROUTE: 'Trasa trajektu (Debug)'
 };
 
 export default translations;

@@ -166,6 +166,7 @@ osr::profile_parameters to_profile_parameters(osr::search_profile const p,
           .foot_ = {.speed_meters_per_second_ = params.pedestrian_speed_}};
     case osr::search_profile::kBus: return osr::bus::parameters{};
     case osr::search_profile::kRailway: return osr::railway::parameters{};
+    case osr::search_profile::kFerry: return osr::ferry::parameters{};
   }
   throw utl::fail("{} is not a valid profile", static_cast<std::uint8_t>(p));
 }

@@ -155,7 +155,8 @@ const translations: Translations = {
 	rideEndAllowed: 'Parken erlaubt',
 	rideEndNotAllowed: 'Parken nur an Stationen',
 	DEBUG_BUS_ROUTE: 'Busroute (Debug)',
-	DEBUG_RAILWAY_ROUTE: 'Bahnroute (Debug)'
+	DEBUG_RAILWAY_ROUTE: 'Bahnroute (Debug)',
+	DEBUG_FERRY_ROUTE: 'Fährenroute (Debug)'
 };
 
 export default translations;
