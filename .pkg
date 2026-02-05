@@ -9,7 +9,7 @@
 [osr]
   url=git@github.com:motis-project/osr.git
   branch=master
-  commit=c1b104ab9af17bfb715d3b19c1a4aa9622f67f0c
+  commit=f6bd17dbad5783302a0aad712b7e773d828d9dc3
 [utl]
   url=git@github.com:motis-project/utl.git
   branch=master
