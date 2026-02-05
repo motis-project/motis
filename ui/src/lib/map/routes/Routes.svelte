@@ -27,6 +27,7 @@
 
 	let routesData = $state<RoutesPayload | null>(null);
 	let loadedBounds = $state<maplibregl.LngLatBounds | null>(null);
+	let loadedZoom = $state<number | null>(null);
 	let requestToken = 0;
 	let hoveredArrayIdx = $state<number | null>(null);
 
@@ -68,7 +69,11 @@
 
 	const fetchRoutes = async (mapBounds: maplibregl.LngLatBounds) => {
 		const expandedBounds = expandBounds(mapBounds);
-		if (loadedBounds && boundsContain(loadedBounds, mapBounds)) {
+		const isBoundsContained = loadedBounds && boundsContain(loadedBounds, mapBounds);
+		const isZoomSufficient =
+			!routesData?.zoomFiltered || Math.floor(zoom) <= Math.floor(loadedZoom ?? 0);
+
+		if (isBoundsContained && isZoomSufficient) {
 			return;
 		}
 
@@ -88,6 +93,7 @@
 
 		routesData = data;
 		loadedBounds = expandedBounds;
+		loadedZoom = zoom;
 	};
 
 	$effect(() => {
@@ -103,7 +109,7 @@
 		}
 		return {
 			type: 'FeatureCollection',
-			features: routesData.flatMap((route, arrayIdx) => {
+			features: routesData.routes.flatMap((route, arrayIdx) => {
 				const name = Array.from(new Set(route.routeShortNames)).join(', ');
 				const color = getRouteColor(name);
 				return route.segments.map((segment) => ({
@@ -128,7 +134,7 @@
 		if (!routesData || hoveredArrayIdx === null) {
 			return { type: 'FeatureCollection', features: [] };
 		}
-		const route = routesData[hoveredArrayIdx];
+		const route = routesData.routes[hoveredArrayIdx];
 		if (!route) {
 			return { type: 'FeatureCollection', features: [] };
 		}
@@ -157,7 +163,7 @@
 		if (!routesData || hoveredArrayIdx === null) {
 			return { type: 'FeatureCollection', features: [] };
 		}
-		const route = routesData[hoveredArrayIdx];
+		const route = routesData.routes[hoveredArrayIdx];
 		if (!route) {
 			return { type: 'FeatureCollection', features: [] };
 		}
@@ -207,7 +213,7 @@
 	};
 
 	const getRoutesFromFeatures = (features: maplibregl.MapGeoJSONFeature[]) => {
-		const rd = routesData;
+		const rd = routesData?.routes;
 		if (!rd || !rd.length) {
 			return [] as Array<{ route: RouteInfo; arrayIdx: number; color: string }>;
 		}

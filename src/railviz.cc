@@ -435,6 +435,7 @@ api::routes_response get_routes(tag_lookup const& tags,
     auto const cl = n::clasz{c};
     if (!should_display(cl, zoom_level,
                         std::numeric_limits<float>::infinity())) {
+      res.zoomFiltered_ = true;
       continue;
     }
 
@@ -523,7 +524,7 @@ api::routes_response get_routes(tag_lookup const& tags,
           }
           shape_added = true;
         }
-        res.emplace_back(api::RouteInfo{
+        res.routes_.emplace_back(api::RouteInfo{
             .mode_ = to_mode(cl, api_version),
             .routeIds_ = utl::to_vec(route_ids),
             .routeShortNames_ = utl::to_vec(route_short_names),
@@ -532,9 +533,12 @@ api::routes_response get_routes(tag_lookup const& tags,
             .routeIdx_ = to_idx(r),
             .segments_ = std::move(route_segments),
         });
+      } else {
+        res.zoomFiltered_ = true;
       }
     }
   }
+
   return res;
 }
 
