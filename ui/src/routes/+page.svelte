@@ -838,6 +838,13 @@
 		{#if hasDebug}
 			<Control position="top-right" class="text-right">
 				<Debug {bounds} {level} {zoom} />
+				<Button
+					size="icon"
+					variant={showRoutes ? 'default' : 'outline'}
+					onclick={() => (showRoutes = !showRoutes)}
+				>
+					<Waypoints class="w-5 h-5" />
+				</Button>
 			</Control>
 		{/if}
 
@@ -903,15 +910,6 @@
 				{#if showRoutes}
 					<Routes {map} {bounds} {zoom} />
 				{/if}
-				<Control position="top-right" class="pb-2 text-right">
-					<Button
-						size="icon"
-						variant={showRoutes ? 'default' : 'secondary'}
-						onclick={() => (showRoutes = !showRoutes)}
-					>
-						<Waypoints class="w-5 h-5" />
-					</Button>
-				</Control>
 				<Rentals {map} {bounds} {zoom} {theme} debug={hasDebug} />
 			{/if}
 
