@@ -1,4 +1,4 @@
-#include "motis/compute_shapes.h"
+#include "motis/route_shapes.h"
 
 #include <chrono>
 #include <algorithm>
@@ -21,6 +21,7 @@
 #include "utl/parallel_for.h"
 #include "utl/progress_tracker.h"
 #include "utl/sorted_diff.h"
+#include "utl/timing.h"
 #include "utl/to_vec.h"
 #include "utl/verify.h"
 
@@ -66,13 +67,13 @@ std::optional<osr::search_profile> get_profile(n::clasz const clasz) {
   }
 }
 
-void compute_shapes(
-    osr::ways const& w,
-    osr::lookup const& lookup,
-    osr::platforms const& pl,
-    n::timetable& tt,
-    n::shapes_storage& shapes,
-    std::optional<config::timetable::shapes_debug> const& debug) {
+void route_shapes(osr::ways const& w,
+                  osr::lookup const& lookup,
+                  osr::platforms const& pl,
+                  n::timetable& tt,
+                  n::shapes_storage& shapes,
+                  config::timetable::route_shapes const& conf,
+                  std::array<bool, n::kNumClasses> const& clasz_enabled) {
   fmt::println(std::clog, "computing shapes");
 
   auto const progress_tracker = utl::get_active_progress_tracker();
@@ -86,6 +87,7 @@ void compute_shapes(
   auto dijkstra_early_terminations = 0ULL;
   auto dijkstra_full_runs = 0ULL;
 
+  auto const& debug = conf.debug_;
   auto const debug_enabled =
       debug && !debug->path_.empty() &&
       (debug->all_ || debug->all_with_beelines_ ||
@@ -97,7 +99,7 @@ void compute_shapes(
     std::filesystem::create_directories(debug->path_);
   }
 
-  std::clog << "\n** compute_shapes [start] **\n"
+  std::clog << "\n** route_shapes [start] **\n"
             << "  routes=" << tt.n_routes() << "\n  trips=" << tt.n_trips()
             << "\n  shapes.trip_offset_indices_="
             << shapes.trip_offset_indices_.size()
@@ -121,17 +123,17 @@ void compute_shapes(
 
     auto const clasz = tt.route_clasz_[r];
     auto profile = get_profile(clasz);
-    if (!profile) {
+    if (!profile || !clasz_enabled[static_cast<std::size_t>(clasz)]) {
       progress_tracker->increment();
       return;
     }
     auto const profile_params = osr::get_parameters(*profile);
 
     auto const stops = tt.route_location_seq_[r];
-    if (stops.size() < 2U) {
+    if (stops.size() < 2U ||
+        conf.max_stops_ != 0U && stops.size() > conf.max_stops_) {
       auto l = std::scoped_lock{shapes_mutex};
-      std::clog << "[compute_shapes] skipping route " << r << ", "
-                << stops.size() << " stops\n";
+      std::clog << "skipping route " << r << ", " << stops.size() << " stops\n";
       progress_tracker->increment();
       return;
     }
@@ -248,7 +250,7 @@ void compute_shapes(
       dijkstra_full_runs += matched_route.n_dijkstra_full_runs_;
 
       utl::verify(matched_route.segment_offsets_.size() == match_points.size(),
-                  "[compute_shapes] segment offsets ({}) != match points ({})",
+                  "[route_shapes] segment offsets ({}) != match points ({})",
                   matched_route.segment_offsets_.size(), match_points.size());
 
       segment_bboxes.resize(stops.size() - 1U);
@@ -288,10 +290,9 @@ void compute_shapes(
         offsets.emplace_back(static_cast<std::uint32_t>(shape.size() - 1U));
       }
 
-      utl::verify(
-          offsets.size() == stops.size(),
-          "[compute_shapes] mismatch: offsets.size()={}, stops.size()={}",
-          offsets.size(), stops.size());
+      utl::verify(offsets.size() == stops.size(),
+                  "[route_shapes] mismatch: offsets.size()={}, stops.size()={}",
+                  offsets.size(), stops.size());
 
       auto const l = std::scoped_lock{shapes_mutex};
 
@@ -303,7 +304,7 @@ void compute_shapes(
       if (!rsb.empty()) {
         if (rsb.size() != segment_bboxes.size()) {
           fmt::println(std::clog,
-                       "[compute_shapes] route {}: segment bbox size "
+                       "[route_shapes] route {}: segment bbox size "
                        "mismatch: storage={}, computed={}",
                        r, rsb.size(), segment_bboxes.size());
         } else {
@@ -343,7 +344,7 @@ void compute_shapes(
       }
     } catch (std::exception const& e) {
       fmt::println(std::clog,
-                   "[compute_shapes] route {}: map matching failed: {}", r,
+                   "[route_shapes] route {}: map matching failed: {}", r,
                    e.what());
 
       if (auto const trace =
@@ -355,9 +356,11 @@ void compute_shapes(
     progress_tracker->increment();
   };
 
-  utl::parallel_for_run(tt.n_routes(), process_route);
+  utl::parallel_for_run(
+      tt.n_routes(), process_route, utl::noop_progress_update{},
+      utl::parallel_error_strategy::QUIT_EXEC, conf.n_threads_);
 
-  std::clog << "\n** compute_shapes [end] **\n"
+  std::clog << "\n** route_shapes [end] **\n"
             << "  routes=" << tt.n_routes() << "\n  trips=" << tt.n_trips()
             << "\n  shapes.trip_offset_indices_="
             << shapes.trip_offset_indices_.size()

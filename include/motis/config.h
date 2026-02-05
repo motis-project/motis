@@ -97,6 +97,14 @@ struct config {
       unsigned slow_{0U};
     };
 
+    struct route_shapes {
+      bool missing_shapes_{false};
+      std::optional<std::map<std::string, bool>> clasz_{};
+      unsigned max_stops_{0U};
+      unsigned n_threads_{0U};
+      std::optional<shapes_debug> debug_{};
+    };
+
     bool operator==(timetable const&) const = default;
 
     std::string first_day_{"TODAY"};
@@ -104,7 +112,6 @@ struct config {
     bool tb_{false};
     bool railviz_{true};
     bool with_shapes_{true};
-    bool compute_missing_shapes_{false};
     bool adjust_footpaths_{true};
     bool merge_dupes_intra_src_{false};
     bool merge_dupes_inter_src_{false};
@@ -121,7 +128,7 @@ struct config {
     std::optional<std::string> default_timezone_{};
     std::map<std::string, dataset> datasets_{};
     std::optional<std::filesystem::path> assistance_times_{};
-    std::optional<shapes_debug> shapes_debug_{};
+    std::optional<route_shapes> route_shapes_{};
   };
   std::optional<timetable> timetable_{};
 
