@@ -305,7 +305,7 @@ std::vector<int64_t> collect_requested_direct_times(
   result.reserve(rides.size());
 
   for (auto const& r : rides) {
-    result.push_back(static_cast<uint64_t>(
+    result.push_back(static_cast<int64_t>(
         to_millis(fixed == n::event_type::kDep ? r.dep_ : r.arr_)));
   }
 
