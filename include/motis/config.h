@@ -98,6 +98,7 @@ struct config {
     };
 
     struct route_shapes {
+      bool operator==(route_shapes const&) const = default;
       bool missing_shapes_{false};
       std::optional<std::map<std::string, bool>> clasz_{};
       unsigned max_stops_{0U};
