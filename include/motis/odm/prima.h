@@ -130,17 +130,23 @@ struct prima {
 
   std::vector<nigiri::routing::start> whitelist_first_mile_taxi_;
   std::vector<nigiri::routing::start> whitelist_last_mile_taxi_;
-  std::vector<nigiri::routing::start> whitelist_direct_taxi_;
 
-  std::vector<std::vector<nigiri::unixtime_t>> whitelist_first_mile_pickup_times_;
-  std::vector<std::vector<nigiri::unixtime_t>> whitelist_first_mile_dropoff_times_;
-  std::vector<std::vector<nigiri::unixtime_t>> whitelist_last_mile_pickup_times_;
-  std::vector<std::vector<nigiri::unixtime_t>> whitelist_last_mile_dropoff_times_;
+  std::vector<std::vector<nigiri::unixtime_t>>
+      whitelist_first_mile_pickup_times_;
+  std::vector<std::vector<nigiri::unixtime_t>>
+      whitelist_first_mile_dropoff_times_;
+  std::vector<std::vector<nigiri::unixtime_t>>
+      whitelist_last_mile_pickup_times_;
+  std::vector<std::vector<nigiri::unixtime_t>>
+      whitelist_last_mile_dropoff_times_;
   std::vector<nigiri::unixtime_t> whitelist_direct_pickup_times_;
   std::vector<nigiri::unixtime_t> whitelist_direct_dropoff_times_;
 
-  void persist_whitelist_taxi_response(
-    boost::json::object const& response);
+  std::vector<std::vector<int64_t>> whitelist_requested_first_mile_times_;
+  std::vector<std::vector<int64_t>> whitelist_requested_last_mile_times_;
+  std::vector<int64_t> whitelist_requested_direct_times_;
+
+  void persist_whitelist_taxi_response(boost::json::object const& response);
 };
 
 void extract_taxis(std::vector<nigiri::routing::journey> const&,
