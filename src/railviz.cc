@@ -410,7 +410,7 @@ api::trips_response get_trains(tag_lookup const& tags,
 
 api::routes_response get_routes(tag_lookup const& tags,
                                 n::timetable const& tt,
-                                n::rt_timetable const* rtt,
+                                n::rt_timetable const*,
                                 n::shapes_storage const* shapes,
                                 osr::ways const* w,
                                 osr::platforms const* pl,
@@ -418,7 +418,7 @@ api::routes_response get_routes(tag_lookup const& tags,
                                 adr_ext const* ae,
                                 tz_map_t const* tz,
                                 railviz_static_index::impl const& static_index,
-                                railviz_rt_index::impl const& rt_index,
+                                railviz_rt_index::impl const&,
                                 api::routes_params const& query,
                                 unsigned const api_version) {
   auto const zoom_level = static_cast<int>(query.zoom_);

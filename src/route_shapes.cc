@@ -69,7 +69,7 @@ std::optional<osr::search_profile> get_profile(n::clasz const clasz) {
 
 void route_shapes(osr::ways const& w,
                   osr::lookup const& lookup,
-                  osr::platforms const& pl,
+                  osr::platforms const&,
                   n::timetable& tt,
                   n::shapes_storage& shapes,
                   config::timetable::route_shapes const& conf,
@@ -131,7 +131,7 @@ void route_shapes(osr::ways const& w,
 
     auto const stops = tt.route_location_seq_[r];
     if (stops.size() < 2U ||
-        conf.max_stops_ != 0U && stops.size() > conf.max_stops_) {
+        (conf.max_stops_ != 0U && stops.size() > conf.max_stops_)) {
       auto l = std::scoped_lock{shapes_mutex};
       std::clog << "skipping route " << r << ", " << stops.size() << " stops\n";
       progress_tracker->increment();

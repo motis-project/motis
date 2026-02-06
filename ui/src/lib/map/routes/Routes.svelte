@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { SvelteMap, SvelteSet } from 'svelte/reactivity';
 	import { getModeName } from '$lib/getModeName';
 	import { lngLatToStr } from '$lib/lngLatToStr';
 	import GeoJSON from '$lib/map/GeoJSON.svelte';
@@ -168,7 +169,10 @@
 			return { type: 'FeatureCollection', features: [] };
 		}
 
-		const stopMap = new Map<string, { lat: number; lon: number; name: string; color: string }>();
+		const stopMap = new SvelteMap<
+			string,
+			{ lat: number; lon: number; name: string; color: string }
+		>();
 		const name = Array.from(new Set(route.routeShortNames)).join(', ');
 		const color = getRouteColor(name);
 
@@ -217,8 +221,8 @@
 		if (!rd || !rd.length) {
 			return [] as Array<{ route: RouteInfo; arrayIdx: number; color: string }>;
 		}
-		const indexes = new Set<number>();
-		const colorMap = new Map<number, string>();
+		const indexes = new SvelteSet<number>();
+		const colorMap = new SvelteMap<number, string>();
 		for (const feature of features) {
 			const props = feature.properties as RouteFeatureProperties | null;
 			if (props?.arrayIdx !== undefined && props?.color !== undefined) {
@@ -235,7 +239,11 @@
 	};
 </script>
 
-{#snippet routesPopup(event: maplibregl.MapMouseEvent, _2: () => void, features: any)}
+{#snippet routesPopup(
+	event: maplibregl.MapMouseEvent,
+	_2: () => void,
+	features: maplibregl.MapGeoJSONFeature[] | undefined
+)}
 	{@const routeFeaturesAtPoint = getRouteFeaturesAtPoint(event, features)}
 	{@const routesAtPoint = getRoutesFromFeatures(routeFeaturesAtPoint)}
 	<div
@@ -277,7 +285,7 @@
 						<td class="pr-3">{getRouteModeName(entry.route.mode)}</td>
 						<td class="pr-3 whitespace-nowrap">
 							{#if entry.route.routeIds.length}
-								{#each entry.route.routeIds as routeId, idIdx}
+								{#each entry.route.routeIds as routeId, idIdx (routeId)}
 									{routeId}{#if idIdx < entry.route.routeIds.length - 1}<br />{/if}
 								{/each}
 							{:else}
@@ -286,7 +294,7 @@
 						</td>
 						<td class="pr-1">
 							{#if entry.route.routeShortNames.length}
-								{#each entry.route.routeShortNames as shortName, shortIdx}
+								{#each entry.route.routeShortNames as shortName, shortIdx (shortName)}
 									{shortName}{#if shortIdx < entry.route.routeShortNames.length - 1}<br />{/if}
 								{/each}
 							{:else}
