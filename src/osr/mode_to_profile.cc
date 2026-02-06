@@ -10,6 +10,8 @@ api::ModeEnum to_mode(osr::mode const m) {
     case osr::mode::kWheelchair: return api::ModeEnum::WALK;
     case osr::mode::kBike: return api::ModeEnum::BIKE;
     case osr::mode::kCar: return api::ModeEnum::CAR;
+    case osr::mode::kRailway: return api::ModeEnum::DEBUG_RAILWAY_ROUTE;
+    case osr::mode::kFerry: return api::ModeEnum::DEBUG_FERRY_ROUTE;
   }
   std::unreachable();
 }
