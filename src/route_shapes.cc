@@ -331,7 +331,7 @@ void route_shapes(osr::ways const& w,
           auto it = range_to_offsets.find(key);
           if (it == end(range_to_offsets)) {
             auto trip_offsets = std::vector<n::shape_offset_t>{};
-            trip_offsets.reserve(range.size());
+            trip_offsets.reserve(static_cast<std::size_t>(range.size()));
             for (auto const i : range) {
               trip_offsets.push_back(offsets.at(i));
             }
