@@ -5,18 +5,51 @@
 #include "nigiri/common/delta_t.h"
 #include "nigiri/routing/one_to_all.h"
 
-#include "osr/location.h"
-
 #include "motis/endpoints/one_to_many_post.h"
 #include "motis/endpoints/routing.h"
 #include "motis/gbfs/routing_data.h"
 #include "motis/metrics_registry.h"
+#include "motis/osr/mode_to_profile.h"
 #include "motis/timetable/modes_to_clasz_mask.h"
 
 namespace motis::ep {
 
 namespace n = nigiri;
 
+api::oneToMany_response one_to_many_direct(
+    osr::ways const& w_,
+    osr::lookup const& l_,
+    api::ModeEnum const mode,
+    osr::location const& one,
+    std::vector<osr::location> const& many,
+    double const max_travel_time,
+    double const max_matching_distance,
+    bool const arrive_by,
+    // osr::direction const dir,
+    // osr::search_profile const profile,
+    osr_parameters const& params,
+    // osr::profile_parameters const& params,
+    api::PedestrianProfileEnum const pedestrian_profile,
+    api::ElevationCostsEnum const elevation_costs,
+    osr::elevation_storage const* elevations_) {
+
+  utl::verify(mode == api::ModeEnum::BIKE || mode == api::ModeEnum::CAR ||
+                  mode == api::ModeEnum::WALK,
+              "mode {} not supported for one-to-many",
+              boost::json::serialize(boost::json::value_from(mode)));
+
+  auto const profile = to_profile(mode, pedestrian_profile, elevation_costs);
+  auto const paths = osr::route(
+      to_profile_parameters(profile, params), w_, l_, profile, one, many,
+      max_travel_time,
+      arrive_by ? osr::direction::kBackward : osr::direction::kForward,
+      max_matching_distance, nullptr, nullptr, elevations_);
+
+  return utl::to_vec(paths, [](std::optional<osr::path> const& p) {
+    return p.has_value() ? api::Duration{.duration_ = p->cost_}
+                         : api::Duration{};
+  });
+}
 api::oneToMany_response one_to_many::operator()(
     boost::urls::url_view const& url) const {
   auto const query = api::oneToMany_params{url.params()};
@@ -51,8 +84,6 @@ api::oneToMany_response one_to_many::operator()(
   bool requireCarTransport_{false};
 */
 
-// TODO Add direct routing
-
 template <typename Endpoint, typename Query>
 api::oneToManyIntermodal_response run_one_to_many_intermodal(
     Endpoint const& ep, Query const& query) {
@@ -71,6 +102,24 @@ api::oneToManyIntermodal_response run_one_to_many_intermodal(
     return *y;
   });
 
+  auto const pedestrian_profile =
+      query.pedestrianProfile_.value_or(api::PedestrianProfileEnum::FOOT);
+  auto const elevation_costs =
+      query.elevationCosts_.value_or(api::ElevationCostsEnum::NONE);
+
+  utl::verify(
+      !query.directModes_.has_value() || query.directModes_->size() == 1,
+      "Only one direct mode supported. Got {}", query.directModes_->size());
+  auto const direct_durations =
+      query.directModes_
+          ? one_to_many_direct(
+                *ep.w_, *ep.l_, (*query.directModes_)[0], *one, many,
+                std::min(query.maxDirectTime_.value_or(query.maxTravelTime_),
+                         query.maxTravelTime_),
+                query.maxMatchingDistance_, query.arriveBy_,
+                get_osr_parameters(query), pedestrian_profile, elevation_costs,
+                ep.elevations_)
+          : api::oneToManyIntermodal_response{};
   auto const one_modes = deduplicate(
       (query.arriveBy_ ? query.postTransitModes_ : query.preTransitModes_)
           .value_or(std::vector{api::ModeEnum::WALK}));
@@ -95,10 +144,6 @@ api::oneToManyIntermodal_response run_one_to_many_intermodal(
       query.arriveBy_ ? osr::direction::kBackward : osr::direction::kForward;
   auto const many_dir =
       query.arriveBy_ ? osr::direction::kForward : osr::direction::kBackward;
-  auto const pedestrian_profile =
-      query.pedestrianProfile_.value_or(api::PedestrianProfileEnum::FOOT);
-  auto const elevation_costs =
-      query.elevationCosts_.value_or(api::ElevationCostsEnum::NONE);
 
   auto const r = routing{ep.config_,     ep.w_,   ep.l_,       ep.pl_,
                          ep.elevations_, &ep.tt_, nullptr,     &ep.tags_,
@@ -170,6 +215,8 @@ api::oneToManyIntermodal_response run_one_to_many_intermodal(
   auto const dir =
       query.arriveBy_ ? n::direction::kBackward : n::direction::kForward;
 
+  // TODO Rewrite loop
+  auto i = 0U;
   return utl::to_vec(
       // many_offsets,
       // [&](std::vector<n::routing::offset> const& offsets) -> api::Duration {
@@ -180,21 +227,26 @@ api::oneToManyIntermodal_response run_one_to_many_intermodal(
             elevation_costs, many_max_time, query.maxMatchingDistance_, gbfs_rd,
             prepare_stats);
         // fmt::println("Testing {} offsets ...", offsets.size());
-        auto best = unreachable;
+        auto best = (direct_durations.size() > 0 &&
+                     direct_durations[i].duration_.has_value())
+                        ? direct_durations[i].duration_
+                        : unreachable;
+        ++i;
         for (auto const offset : offsets) {
           auto const loc = offset.target();
           if (reachable.test(to_idx(loc))) {
             auto const fastest = n::routing::get_fastest_one_to_all_offsets(
                 ep.tt_, state, dir, loc, time, q.max_transfers_);
+            // Convert minutes to seconds
             auto const total = static_cast<n::delta_t>(
-                fastest.duration_ + offset.duration().count());
+                60 * (fastest.duration_ + offset.duration().count()));
             // fmt::println(
             //     "Testing {}: fastest={}, off_dur={}, total={} "
             //     "(best={}) (ur={}) (k={}) (pos={})",
             //     loc, fastest.duration_, offset.duration().count(), total,
             //     best, unreachable, fastest.k_,
             //     ep.tt_.locations_.coordinates_[loc]);
-            if (total < best) {
+            if (total < best) {  // TODO is_better() + best()   (reverse)
               best = total;
             }
           }  // else

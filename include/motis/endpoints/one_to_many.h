@@ -6,21 +6,35 @@
 
 #include "utl/to_vec.h"
 
-#include "osr/routing/route.h"
-
 #include "nigiri/types.h"
+
+#include "osr/location.h"
+#include "osr/routing/route.h"
 
 #include "motis-api/motis-api.h"
 
 #include "motis/data.h"
 #include "motis/fwd.h"
 #include "motis/match_platforms.h"
-#include "motis/osr/mode_to_profile.h"
 #include "motis/osr/parameters.h"
 #include "motis/parse_location.h"
 #include "motis/point_rtree.h"
 
 namespace motis::ep {
+
+api::oneToMany_response one_to_many_direct(
+    osr::ways const& w_,
+    osr::lookup const& l_,
+    api::ModeEnum const mode,
+    osr::location const& one,
+    std::vector<osr::location> const& many,
+    double const max_travel_time,
+    double const max_matching_distance,
+    bool const arrive_by,
+    osr_parameters const& params,
+    api::PedestrianProfileEnum,
+    api::ElevationCostsEnum,
+    osr::elevation_storage const* elevations_);
 
 template <typename Params>
 api::oneToMany_response one_to_many_handle_request(
@@ -37,24 +51,10 @@ api::oneToMany_response one_to_many_handle_request(
     return *y;
   });
 
-  utl::verify(query.mode_ == api::ModeEnum::BIKE ||
-                  query.mode_ == api::ModeEnum::CAR ||
-                  query.mode_ == api::ModeEnum::WALK,
-              "mode {} not supported for one-to-many",
-              boost::json::serialize(boost::json::value_from(query.mode_)));
-
-  auto const profile = to_profile(query.mode_, api::PedestrianProfileEnum::FOOT,
-                                  query.elevationCosts_);
-  auto const paths = osr::route(
-      to_profile_parameters(profile, get_osr_parameters(query)), w_, l_,
-      profile, *one, many, query.max_,
-      query.arriveBy_ ? osr::direction::kBackward : osr::direction::kForward,
-      query.maxMatchingDistance_, nullptr, nullptr, elevations_);
-
-  return utl::to_vec(paths, [](std::optional<osr::path> const& p) {
-    return p.has_value() ? api::Duration{.duration_ = p->cost_}
-                         : api::Duration{};
-  });
+  return one_to_many_direct(
+      w_, l_, query.mode_, *one, many, query.max_, query.maxMatchingDistance_,
+      query.arriveBy_, get_osr_parameters(query),
+      api::PedestrianProfileEnum::FOOT, query.elevationCosts_, elevations_);
 }
 
 template <typename Endpoint, typename Query>
