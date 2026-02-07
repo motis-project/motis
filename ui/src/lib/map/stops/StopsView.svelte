@@ -60,7 +60,7 @@
 		const border = (2 / 64) * size;
 
 		// Main circle with semi-transparent red fill
-		ctx.fillStyle = 'rgba(255, 0, 0, 0.7)';
+		ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
 		ctx.beginPath();
 		ctx.arc(center, center, radius, 0, Math.PI * 2);
 		ctx.fill();
@@ -139,9 +139,8 @@
 			// @ts-expect-error: canvas element seems to work fine
 			iconAtlas: StopIcon,
 			iconMapping: IconMapping,
-			visible: stopMode !== 'none',
-			sizeScale: 5,
-			getSize: 4,
+			visible: stopMode !== 'none' && zoom >= 12,
+			getSize: 10,
 			pickable: true,
 			useDevicePixels: false,
 			parameters: { depthTest: false },
