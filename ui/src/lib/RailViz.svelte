@@ -110,15 +110,15 @@
 	};
 
 	//ANIMATION
-	const TripIcon = createTripIcon(128);
+	const TripIcon = createTripIcon(50);
 	const IconMapping = {
 		marker: {
 			x: 0,
 			y: 0,
-			width: 128,
-			height: 128,
-			anchorY: 64,
-			anchorX: 64,
+			width: 50,
+			height: 50,
+			anchorY: 25,
+			anchorX: 25,
 			mask: true
 		}
 	};
@@ -139,7 +139,7 @@
 			iconAtlas: TripIcon,
 			iconMapping: IconMapping,
 			pickable: colorMode != 'none',
-			sizeScale: 5,
+			sizeScale: 4,
 			getSize: 10,
 			getIcon: (_) => 'marker',
 			colorFormat: 'RGB',
