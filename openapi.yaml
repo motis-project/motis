@@ -2391,7 +2391,7 @@ components:
 
         # Transit modes
 
-          - `TRANSIT`: translates to `RAIL,TRAM,BUS,FERRY,AIRPLANE,COACH,CABLE_CAR,FUNICULAR,AREAL_LIFT,OTHER`
+          - `TRANSIT`: translates to `TRAM,FERRY,AIRPLANE,BUS,COACH,RAIL,FUNICULAR,AERIAL_LIFT,OTHER`
           - `TRAM`: trams
           - `SUBWAY`: subway trains (Paris Metro, London Underground, but also NYC Subway, Hamburger Hochbahn, and other non-underground services)
           - `FERRY`: ferries
@@ -2438,12 +2438,12 @@ components:
         - NIGHT_RAIL
         - REGIONAL_FAST_RAIL
         - REGIONAL_RAIL
-        - CABLE_CAR
         - FUNICULAR
         - AERIAL_LIFT
         - OTHER
         - AREAL_LIFT
         - METRO
+        - CABLE_CAR
 
     Match:
       description: GeoCoding match
