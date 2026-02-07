@@ -626,4 +626,4 @@ api::plan_response meta_router::run() {
       .nextPageCursor_ = fmt::format("LATER|{}", to_seconds(search_intvl.to_))};
 }
 
-}  // namespace motis::odmtest
+}  // namespace motis::odm
