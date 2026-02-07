@@ -59,7 +59,6 @@
 		const radius = size * 0.4;
 		const border = (2 / 64) * size;
 
-		// Main circle with semi-transparent red fill
 		ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
 		ctx.beginPath();
 		ctx.arc(center, center, radius, 0, Math.PI * 2);
@@ -68,13 +67,6 @@
 		// Gray border
 		ctx.strokeStyle = 'rgba(120, 120, 120, 1.0)';
 		ctx.lineWidth = border;
-		ctx.stroke();
-
-		// White ring inside
-		ctx.strokeStyle = '#ffffff';
-		ctx.lineWidth = size * 0.04;
-		ctx.beginPath();
-		ctx.arc(center, center, radius * 0.65, 0, Math.PI * 2);
 		ctx.stroke();
 
 		// White dot in center
@@ -140,7 +132,7 @@
 			iconAtlas: StopIcon,
 			iconMapping: IconMapping,
 			visible: stopMode !== 'none' && zoom >= 12,
-			getSize: 10,
+			getSize: 15,
 			pickable: true,
 			useDevicePixels: false,
 			parameters: { depthTest: false },
