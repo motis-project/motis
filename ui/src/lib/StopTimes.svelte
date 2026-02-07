@@ -115,7 +115,7 @@
 				: stopTime.place.scheduledDeparture!}
 
 			<div
-				class="gap-y-2 p-3 text-base grid grid-cols-[auto_1fr] border-b hover:bg-slate-100 dark:hover:bg-slate-800 duration-500 ease-out transition-all"
+				class="gap-y-2 p-3 w-full text-base grid grid-cols-[auto_1fr] border-b duration-500 ease-out transition-all"
 			>
 				<div class="flex flex-col w-24">
 					<Time
@@ -140,7 +140,7 @@
 					<div class="flex justify-between">
 						<Route class="text-ellipsis mb-2" l={stopTime} {onClickTrip} />
 						{#if stopTime.place.track}
-							<span class="text-nowrap ml-3 text-sm py-1 px-3 rounded-lg">
+							<span class="text-nowrap ml-3 h-fit px-1 text-base border font-semibold rounded-lg">
 								{getModeLabel(stopTime.mode) == 'Track' ? t.trackAbr : t.platformAbr}
 								{stopTime.place.track}
 							</span>
@@ -162,7 +162,7 @@
 					</div>
 				</div>
 				{#if stopTime.pickupDropoffType == 'NOT_ALLOWED'}
-					<div class="flex items-center col-span-full text-destructive text-sm">
+					<div class="flex ml-24 items-center col-span-full text-destructive text-sm">
 						<CircleX class="stroke-destructive h-4 w-4" />
 						<span class="ml-1 leading-none">
 							{stopTime.tripCancelled
