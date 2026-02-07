@@ -12,13 +12,18 @@
 	import Control from './map/Control.svelte';
 	import { SvelteMap } from 'svelte/reactivity';
 	import { client } from '@motis-project/motis-client';
+	import type { PickingInfo } from '@deck.gl/core';
 	let {
 		map,
+		overlay,
+		layers,
 		bounds,
 		zoom,
 		colorMode
 	}: {
 		map: maplibregl.Map | undefined;
+		overlay: MapboxOverlay;
+		layers: IconLayer[];
 		bounds: maplibregl.LngLatBoundsLike | undefined;
 		zoom: number;
 		colorMode: 'rt' | 'route' | 'mode' | 'none';
@@ -61,37 +66,29 @@
 		closeOnClick: false,
 		maxWidth: 'none'
 	});
-	type HoverEvent = {
-		index?: number;
-		coordinate?: number[];
-	};
-
-	type ClickEvent = {
-		index: number;
-	};
 
 	let hoverCoordinate: maplibregl.LngLatLike | null = $state(null);
 	let activeHoverIndex: number | null = $state(null);
 
-	const onHover = ({ index, coordinate }: HoverEvent) => {
-		if (index == null || index === -1 || !coordinate) {
+	const onHover = (info: PickingInfo) => {
+		if (info.index === -1 || !info.coordinate) {
 			activeHoverIndex = null; // Clear index
 			hoverCoordinate = null;
 			popup.remove();
 			if (map) map.getCanvas().style.cursor = '';
 			return;
 		}
-		if (index !== activeHoverIndex) {
+		if (info.index !== activeHoverIndex) {
 			metadata = undefined;
 		}
-		hoverCoordinate = coordinate as maplibregl.LngLatLike;
-		activeHoverIndex = index;
-		if (metaDataMap.has(index)) {
-			metadata = metaDataMap.get(index);
+		hoverCoordinate = info.coordinate as maplibregl.LngLatLike;
+		activeHoverIndex = info.index;
+		if (metaDataMap.has(info.index)) {
+			metadata = metaDataMap.get(info.index);
 		}
 	};
-	const onClick = ({ index }: ClickEvent) => {
-		if (index !== -1 && metadata) {
+	const onClick = (info: PickingInfo) => {
+		if (info.picked && info.index !== -1 && metadata) {
 			onClickTrip(metadata.id);
 		}
 	};
@@ -113,15 +110,15 @@
 	};
 
 	//ANIMATION
-	const TripIcon = createTripIcon(128);
+	const TripIcon = createTripIcon(50);
 	const IconMapping = {
 		marker: {
 			x: 0,
 			y: 0,
-			width: 128,
-			height: 128,
-			anchorY: 64,
-			anchorX: 64,
+			width: 50,
+			height: 50,
+			anchorY: 25,
+			anchorX: 25,
 			mask: true
 		}
 	};
@@ -142,13 +139,15 @@
 			iconAtlas: TripIcon,
 			iconMapping: IconMapping,
 			pickable: colorMode != 'none',
-			sizeScale: 5,
+			sizeScale: 4,
 			getSize: 10,
 			getIcon: (_) => 'marker',
 			colorFormat: 'RGB',
 			visible: colorMode !== 'none',
 			useDevicePixels: false,
-			parameters: { depthTest: false }
+			parameters: { depthTest: false },
+			onClick,
+			onHover
 		});
 	};
 	let animationId: number;
@@ -170,6 +169,10 @@
 	};
 
 	// UPDATE
+	const updateOverlayLayers = (l: IconLayer) => {
+		layers[0] = l;
+		overlay.setProps({ layers: [...layers] });
+	};
 	$effect(() => {
 		if (!query || isProcessing || canceled) return;
 		untrack(() => {
@@ -190,7 +193,6 @@
 
 	//SETUP
 	let status = $state();
-	let overlay: MapboxOverlay;
 	let worker: Worker;
 	let metadata: MetaData | undefined = $state();
 	const metaDataMap = new SvelteMap<number, MetaData>();
@@ -220,26 +222,19 @@
 					metadata = undefined;
 				}
 			}
-			overlay.setProps({ layers: [createLayer()] });
+			const layer = createLayer();
+			if (layer) {
+				updateOverlayLayers(layer);
+			}
 			if (canceled) {
 				cancelAnimationFrame(animationId);
 			} else {
 				animationId = requestAnimationFrame(animate);
 			}
 		};
-		overlay = new MapboxOverlay({
-			interleaved: true,
-			onHover,
-			onClick
-		});
-	});
-	$effect(() => {
-		if (!map || !overlay) return;
-		map.addControl(overlay);
 	});
 	onDestroy(() => {
 		if (animationId) cancelAnimationFrame(animationId);
-		if (overlay) map?.removeControl(overlay);
 		worker.terminate();
 		popup.remove();
 	});
