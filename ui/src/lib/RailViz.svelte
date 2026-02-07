@@ -12,6 +12,7 @@
 	import Control from './map/Control.svelte';
 	import { SvelteMap } from 'svelte/reactivity';
 	import { client } from '@motis-project/motis-client';
+	import type { PickingInfo } from '@deck.gl/core';
 	let {
 		map,
 		overlay,
@@ -65,37 +66,29 @@
 		closeOnClick: false,
 		maxWidth: 'none'
 	});
-	type HoverEvent = {
-		index?: number;
-		coordinate?: number[];
-	};
-
-	type ClickEvent = {
-		index: number;
-	};
 
 	let hoverCoordinate: maplibregl.LngLatLike | null = $state(null);
 	let activeHoverIndex: number | null = $state(null);
 
-	const onHover = ({ index, coordinate }: HoverEvent) => {
-		if (index == null || index === -1 || !coordinate) {
+	const onHover = (info: PickingInfo) => {
+		if (info.index === -1 || !info.coordinate) {
 			activeHoverIndex = null; // Clear index
 			hoverCoordinate = null;
 			popup.remove();
 			if (map) map.getCanvas().style.cursor = '';
 			return;
 		}
-		if (index !== activeHoverIndex) {
+		if (info.index !== activeHoverIndex) {
 			metadata = undefined;
 		}
-		hoverCoordinate = coordinate as maplibregl.LngLatLike;
-		activeHoverIndex = index;
-		if (metaDataMap.has(index)) {
-			metadata = metaDataMap.get(index);
+		hoverCoordinate = info.coordinate as maplibregl.LngLatLike;
+		activeHoverIndex = info.index;
+		if (metaDataMap.has(info.index)) {
+			metadata = metaDataMap.get(info.index);
 		}
 	};
-	const onClick = ({ index }: ClickEvent) => {
-		if (index !== -1 && metadata) {
+	const onClick = (info: PickingInfo) => {
+		if (info.picked && info.index !== -1 && metadata) {
 			onClickTrip(metadata.id);
 		}
 	};
@@ -152,7 +145,9 @@
 			colorFormat: 'RGB',
 			visible: colorMode !== 'none',
 			useDevicePixels: false,
-			parameters: { depthTest: false }
+			parameters: { depthTest: false },
+			onClick,
+			onHover
 		});
 	};
 	let animationId: number;
@@ -203,10 +198,6 @@
 	const metaDataMap = new SvelteMap<number, MetaData>();
 
 	onMount(() => {
-		overlay.setProps({
-			onHover,
-			onClick
-		});
 		worker = new Worker(new URL('tripsWorker.ts', import.meta.url), { type: 'module' });
 		worker.postMessage({ type: 'init', baseUrl: client.getConfig().baseUrl });
 		worker.onmessage = (e) => {

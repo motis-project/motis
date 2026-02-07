@@ -1,5 +1,14 @@
 <script lang="ts">
-	import { X, Palette, Rss, Ban, LocateFixed, TrainFront } from '@lucide/svelte';
+	import {
+		X,
+		Palette,
+		Rss,
+		Ban,
+		LocateFixed,
+		TrainFront,
+		MapPinHouse,
+		MapPin
+	} from '@lucide/svelte';
 	import { getStyle } from '$lib/map/style';
 	import Map from '$lib/map/Map.svelte';
 	import Control from '$lib/map/Control.svelte';
@@ -91,12 +100,12 @@
 	);
 	let dataAttributionLink: string | undefined = $state(undefined);
 	let colorMode = $state<'rt' | 'route' | 'mode' | 'none'>('none');
+	let stopMode = $state<'all' | 'parent' | 'none'>('none');
 	let showMap = $state(!isSmallScreen);
 	let lastOneToAllQuery: OneToAllData | undefined = undefined;
 	let lastPlanQuery: PlanData | undefined = undefined;
 	let serverConfig: ServerConfig | undefined = $state();
 	let dataLoaded: boolean = $state(false);
-
 	$effect(() => {
 		if (activeTab == 'isochrones') {
 			colorMode = 'none';
@@ -915,11 +924,34 @@
 					<Button size="icon" onclick={() => getLocation()}>
 						<LocateFixed class="w-5 h-5" />
 					</Button>
+					<Button
+						size="icon"
+						onclick={() => {
+							stopMode = (function () {
+								switch (stopMode) {
+									case 'all':
+										return 'parent';
+									case 'parent':
+										return 'none';
+									case 'none':
+										return 'all';
+								}
+							})();
+						}}
+					>
+						{#if stopMode == 'all'}
+							<MapPinHouse class="h-[1.2rem] w-[1.2rem]" />
+						{:else if stopMode == 'parent'}
+							<MapPin class="h-[1.2rem] w-[1.2rem]" />
+						{:else if stopMode == 'none'}
+							<Ban class="h-[1.2rem] w-[1.2rem]" />
+						{/if}
+					</Button>
 				</Control>
 				<Rentals {map} {bounds} {zoom} {theme} debug={hasDebug} />
 			{/if}
 
-			<StopsView {overlay} {layers} {bounds} {zoom} />
+			<StopsView {map} {stopMode} {overlay} {layers} {bounds} {zoom} />
 			<RailViz {map} {bounds} {zoom} {colorMode} {overlay} {layers} />
 			<Isochrones
 				{map}
