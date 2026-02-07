@@ -356,7 +356,8 @@ bool prima::whitelist_taxi(std::vector<nr::journey>& taxi_journeys,
            "[whitelist taxi] failed, discarding taxi journeys");
     return false;
   }
-  persist_whitelist_taxi_response(boost::json::parse(*whitelist_response).as_object());
+  persist_whitelist_taxi_response(
+      boost::json::parse(*whitelist_response).as_object());
 
   return consume_whitelist_taxi_response(*whitelist_response, taxi_journeys,
                                          first_mile_taxi_rides,
