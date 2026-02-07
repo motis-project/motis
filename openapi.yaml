@@ -266,7 +266,7 @@ paths:
 
         - name: detailedTransfers
           in: query
-          required: true
+          required: false
           description: |
             - true: Compute transfer polylines and step instructions.
             - false: Only return basic information (start time, end time, duration) for transfers.
