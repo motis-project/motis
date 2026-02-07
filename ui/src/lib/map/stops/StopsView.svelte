@@ -157,7 +157,6 @@
 	});
 
 	//UPDATE
-	const zoomToImportance = $derived(Math.pow(10, 6 - 0.5 * zoom));
 	const updateOverlayLayers = (l: IconLayer) => {
 		layers[1] = l;
 		overlay.setProps({ layers: [...layers] });
@@ -175,17 +174,15 @@
 				if (!data) return;
 				let index = 0;
 				for (let i = 0; i < data.length; ++i) {
-					if (!data[i].importance || data[i].importance! >= zoomToImportance) {
-						if (stopMode == 'parent' && data[i].parentId != data[i].stopId) continue;
-						metadata[index] = {
-							name: data[i].name,
-							stopId: data[i].stopId,
-							parentId: data[i].parentId
-						};
-						positions[2 * index] = data[i].lon;
-						positions[2 * index + 1] = data[i].lat;
-						index++;
-					}
+					if (stopMode == 'parent' && data[i].parentId != data[i].stopId) continue;
+					metadata[index] = {
+						name: data[i].name,
+						stopId: data[i].stopId,
+						parentId: data[i].parentId
+					};
+					positions[2 * index] = data[i].lon;
+					positions[2 * index + 1] = data[i].lat;
+					index++;
 				}
 				stopsData.length = index;
 			}
