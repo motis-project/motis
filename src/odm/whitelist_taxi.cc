@@ -51,13 +51,15 @@ void extract_taxis(std::vector<nr::journey> const& journeys,
   utl::erase_duplicates(last_mile_taxi_rides, by_stop, std::equal_to<>{});
 }
 
-void prima::extract_first_and_direct_taxis_for_prima(
+void prima::extract_taxis_for_persisting(
     std::vector<nr::journey> const& journeys) {
   whitelist_first_mile_taxi_.clear();
   whitelist_last_mile_taxi_.clear();
 
   for (auto const& j : journeys) {
-    if (j.legs_.empty()) continue;
+    if (j.legs_.empty()) {
+      continue;
+    }
 
     if (j.legs_.size() == 1) {
       continue;
@@ -75,13 +77,13 @@ void prima::extract_first_and_direct_taxis_for_prima(
            .stop_ = j.legs_.back().from_});
     }
   }
-  auto const order_stop = [](nigiri::routing::start s1,
-                             nigiri::routing::start s2) {
-    return s1.stop_ < s2.stop_;
+  auto const order_stop = [](nigiri::routing::start const& a,
+                             nigiri::routing::start const& b) {
+    return a.stop_ < b.stop_;
   };
-  auto const same_stop = [](nigiri::routing::start s1,
-                            nigiri::routing::start s2) {
-    return s1.stop_ == s2.stop_;
+  auto const same_stop = [](nigiri::routing::start const& a,
+                            nigiri::routing::start const& b) {
+    return a.stop_ == b.stop_;
   };
   utl::erase_duplicates(whitelist_first_mile_taxi_, order_stop, same_stop);
   utl::erase_duplicates(whitelist_last_mile_taxi_, order_stop, same_stop);
@@ -223,8 +225,8 @@ void prima::persist_whitelist_taxi_response(boost::json::object const& o) {
   whitelist_direct_dropoff_times_.clear();
 
   for (auto const& stop : o.at("start").as_array()) {
-    std::vector<nigiri::unixtime_t> pickups;
-    std::vector<nigiri::unixtime_t> dropoffs;
+    auto pickups = std::vector<nigiri::unixtime_t>{};
+    auto dropoffs = std::vector<nigiri::unixtime_t>{};
 
     for (auto const& event : stop.as_array()) {
       if (event.is_null()) {
@@ -243,8 +245,8 @@ void prima::persist_whitelist_taxi_response(boost::json::object const& o) {
   }
 
   for (auto const& stop : o.at("target").as_array()) {
-    std::vector<nigiri::unixtime_t> pickups;
-    std::vector<nigiri::unixtime_t> dropoffs;
+    auto pickups = std::vector<nigiri::unixtime_t>{};
+    auto dropoffs = std::vector<nigiri::unixtime_t>{};
 
     for (auto const& event : stop.as_array()) {
       if (event.is_null()) {
@@ -277,8 +279,7 @@ void prima::persist_whitelist_taxi_response(boost::json::object const& o) {
 
 std::vector<std::vector<int64_t>> collect_requested_times(
     std::vector<n::routing::start> const& rides, which_mile wm) {
-
-  std::vector<std::vector<int64_t>> result;
+  auto result = std::vector<std::vector<int64_t>>{};
 
   utl::equal_ranges_linear(
       rides, [](auto const& a, auto const& b) { return a.stop_ == b.stop_; },
@@ -300,8 +301,7 @@ std::vector<std::vector<int64_t>> collect_requested_times(
 
 std::vector<int64_t> collect_requested_direct_times(
     std::vector<direct_ride> const& rides, n::event_type fixed) {
-
-  std::vector<int64_t> result;
+  auto result = std::vector<int64_t>{};
   result.reserve(rides.size());
 
   for (auto const& r : rides) {
@@ -317,7 +317,7 @@ bool prima::whitelist_taxi(std::vector<nr::journey>& taxi_journeys,
   auto first_mile_taxi_rides = std::vector<nr::start>{};
   auto last_mile_taxi_rides = std::vector<nr::start>{};
   extract_taxis(taxi_journeys, first_mile_taxi_rides, last_mile_taxi_rides);
-  extract_first_and_direct_taxis_for_prima(taxi_journeys);
+  extract_taxis_for_persisting(taxi_journeys);
 
   auto whitelist_response = std::optional<std::string>{};
   auto ioc = boost::asio::io_context{};
@@ -356,8 +356,7 @@ bool prima::whitelist_taxi(std::vector<nr::journey>& taxi_journeys,
            "[whitelist taxi] failed, discarding taxi journeys");
     return false;
   }
-  auto const parsed = boost::json::parse(*whitelist_response).as_object();
-  persist_whitelist_taxi_response(parsed);
+  persist_whitelist_taxi_response(boost::json::parse(*whitelist_response).as_object());
 
   return consume_whitelist_taxi_response(*whitelist_response, taxi_journeys,
                                          first_mile_taxi_rides,

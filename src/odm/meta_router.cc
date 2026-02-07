@@ -540,9 +540,9 @@ api::plan_response meta_router::run() {
                 }
               }
             }
-            auto match_direct_taxi =
-                [&](auto& leg) -> std::optional<std::string> {
-              for (std::size_t i = 0;
+            auto const match_direct_taxi =
+                [&](motis::api::Leg& leg) -> std::optional<std::string> {
+              for (auto i = 0U;
                    i < p.whitelist_direct_pickup_times_.size(); ++i) {
                 if (p.whitelist_direct_pickup_times_[i] == leg.startTime_ &&
                     p.whitelist_direct_dropoff_times_[i] == leg.endTime_) {
@@ -553,15 +553,15 @@ api::plan_response meta_router::run() {
               return std::nullopt;
             };
 
-            auto match_first_mile_taxi =
-                [&](auto& leg) -> std::optional<std::string> {
-              for (std::size_t s = 0; s < p.whitelist_first_mile_taxi_.size();
+            auto const match_first_mile_taxi =
+                [&](motis::api::Leg& leg) -> std::optional<std::string> {
+              for (auto s = 0U; s < p.whitelist_first_mile_taxi_.size();
                    ++s) {
                 if (leg.to_.stopId_ !=
                     r_.tags_->id(*tt_, p.whitelist_first_mile_taxi_[s].stop_)) {
                   continue;
                 }
-                for (std::size_t e = 0;
+                for (auto e = 0U;
                      e < p.whitelist_first_mile_pickup_times_[s].size(); ++e) {
                   if (p.whitelist_first_mile_pickup_times_[s][e] ==
                           leg.startTime_ &&
@@ -575,15 +575,15 @@ api::plan_response meta_router::run() {
               return std::nullopt;
             };
 
-            auto match_last_mile_taxi =
-                [&](auto& leg) -> std::optional<std::string> {
-              for (std::size_t s = 0; s < p.whitelist_last_mile_taxi_.size();
+            auto const match_last_mile_taxi =
+                [&](motis::api::Leg& leg) -> std::optional<std::string> {
+              for (auto s = 0U; s < p.whitelist_last_mile_taxi_.size();
                    ++s) {
                 if (leg.from_.stopId_ !=
                     r_.tags_->id(*tt_, p.whitelist_last_mile_taxi_[s].stop_)) {
                   continue;
                 }
-                for (std::size_t e = 0;
+                for (auto e = 0U;
                      e < p.whitelist_last_mile_pickup_times_[s].size(); ++e) {
                   if (p.whitelist_last_mile_pickup_times_[s][e] ==
                           leg.startTime_ &&
@@ -599,7 +599,7 @@ api::plan_response meta_router::run() {
 
             if (response.legs_.size() == 1 &&
                 response.legs_.front().mode_ == api::ModeEnum::ODM) {
-              if (auto id = match_direct_taxi(response.legs_.front());
+              if (auto const id = match_direct_taxi(response.legs_.front());
                   id.has_value()) {
                 response.legs_.front().tripId_ = std::optional{*id};
               }
@@ -607,14 +607,14 @@ api::plan_response meta_router::run() {
             }
             if (!response.legs_.empty() &&
                 response.legs_.front().mode_ == api::ModeEnum::ODM) {
-              if (auto id = match_first_mile_taxi(response.legs_.front());
+              if (auto const id = match_first_mile_taxi(response.legs_.front());
                   id.has_value()) {
                 response.legs_.front().tripId_ = std::optional{*id};
               }
             }
             if (!response.legs_.empty() &&
                 response.legs_.back().mode_ == api::ModeEnum::ODM) {
-              if (auto id = match_last_mile_taxi(response.legs_.back());
+              if (auto const id = match_last_mile_taxi(response.legs_.back());
                   id.has_value()) {
                 response.legs_.back().tripId_ = std::optional{*id};
               }
