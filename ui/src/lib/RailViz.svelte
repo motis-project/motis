@@ -12,7 +12,6 @@
 	import Control from './map/Control.svelte';
 	import { client } from '@motis-project/motis-client';
 	import type { PickingInfo } from '@deck.gl/core';
-
 	let {
 		map,
 		overlay,
@@ -190,10 +189,6 @@
 	let metadata: MetaData | undefined = $state();
 
 	onMount(() => {
-		overlay.setProps({
-			onHover,
-			onClick
-		});
 		worker = new Worker(new URL('tripsWorker.ts', import.meta.url), { type: 'module' });
 		worker.postMessage({ type: 'init', baseUrl: client.getConfig().baseUrl });
 		worker.onmessage = (e) => {

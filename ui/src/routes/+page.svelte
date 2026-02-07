@@ -7,7 +7,9 @@
 		LocateFixed,
 		TrainFront,
 		Waypoints,
-		MountainSnow
+		MountainSnow,
+		MapPinHouse,
+		MapPin
 	} from '@lucide/svelte';
 	import { getStyle } from '$lib/map/style';
 	import Map from '$lib/map/Map.svelte';
@@ -100,7 +102,8 @@
 					: 'connections')
 	);
 	let dataAttributionLink: string | undefined = $state(undefined);
-	let colorMode = $state<'rt' | 'route' | 'mode' | 'none'>(isSmallScreen ? 'none' : 'rt');
+	let colorMode = $state<'rt' | 'route' | 'mode' | 'none'>('none');
+	let stopMode = $state<'all' | 'parent' | 'none'>('none');
 	let showMap = $state(!isSmallScreen);
 	let showRoutes = $state(false);
 	let routesOverlaySession = $state(0);
@@ -108,7 +111,6 @@
 	let lastPlanQuery: PlanData | undefined = undefined;
 	let serverConfig: ServerConfig | undefined = $state();
 	let dataLoaded: boolean = $state(false);
-
 	$effect(() => {
 		if (activeTab == 'isochrones') {
 			colorMode = 'none';
@@ -955,6 +957,29 @@
 					<Button size="icon" onclick={() => getLocation()}>
 						<LocateFixed class="w-5 h-5" />
 					</Button>
+					<Button
+						size="icon"
+						onclick={() => {
+							stopMode = (function () {
+								switch (stopMode) {
+									case 'all':
+										return 'parent';
+									case 'parent':
+										return 'none';
+									case 'none':
+										return 'all';
+								}
+							})();
+						}}
+					>
+						{#if stopMode == 'all'}
+							<MapPinHouse class="h-[1.2rem] w-[1.2rem]" />
+						{:else if stopMode == 'parent'}
+							<MapPin class="h-[1.2rem] w-[1.2rem]" />
+						{:else if stopMode == 'none'}
+							<Ban class="h-[1.2rem] w-[1.2rem]" />
+						{/if}
+					</Button>
 				</Control>
 				{#if showRoutes}
 					{#key routesOverlaySession}
@@ -969,7 +994,7 @@
 				<Rentals {map} {bounds} {zoom} {theme} debug={hasDebug} />
 			{/if}
 
-			<StopsView {overlay} {layers} {bounds} {zoom} />
+			<StopsView {map} {stopMode} {overlay} {layers} {bounds} {zoom} />
 			<RailViz {map} {bounds} {zoom} {colorMode} {overlay} {layers} />
 			<Isochrones
 				{map}
