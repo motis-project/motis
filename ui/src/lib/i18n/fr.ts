@@ -156,7 +156,10 @@ const translations: Translations = {
 	rideThroughAllowed: 'Passage autorisé',
 	rideThroughNotAllowed: 'Passage non autorisé',
 	rideEndAllowed: 'Stationnement autorisé',
-	rideEndNotAllowed: 'Stationnement uniquement aux stations'
+	rideEndNotAllowed: 'Stationnement uniquement aux stations',
+	DEBUG_BUS_ROUTE: 'Itinéraire de bus (Debug)',
+	DEBUG_RAILWAY_ROUTE: 'Itinéraire ferroviaire (Debug)',
+	DEBUG_FERRY_ROUTE: 'Itinéraire de ferry (Debug)'
 };
 
 export default translations;

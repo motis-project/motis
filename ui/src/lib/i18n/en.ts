@@ -156,7 +156,10 @@ const translations: Translations = {
 	rideThroughAllowed: 'Riding through allowed',
 	rideThroughNotAllowed: 'Riding through not allowed',
 	rideEndAllowed: 'Parking allowed',
-	rideEndNotAllowed: 'Parking only at stations'
+	rideEndNotAllowed: 'Parking only at stations',
+	DEBUG_BUS_ROUTE: 'Bus Route (Debug)',
+	DEBUG_RAILWAY_ROUTE: 'Railway Route (Debug)',
+	DEBUG_FERRY_ROUTE: 'Ferry Route (Debug)'
 };
 
 export default translations;

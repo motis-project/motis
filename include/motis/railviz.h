@@ -38,4 +38,18 @@ api::trips_response get_trains(tag_lookup const&,
                                api::trips_params const&,
                                unsigned api_version);
 
+api::routes_response get_routes(tag_lookup const&,
+                                nigiri::timetable const&,
+                                nigiri::rt_timetable const*,
+                                nigiri::shapes_storage const*,
+                                osr::ways const*,
+                                osr::platforms const*,
+                                platform_matches_t const*,
+                                adr_ext const*,
+                                tz_map_t const*,
+                                railviz_static_index::impl const&,
+                                railviz_rt_index::impl const&,
+                                api::routes_params const&,
+                                unsigned api_version);
+
 }  // namespace motis

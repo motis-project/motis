@@ -22,10 +22,13 @@ export const joinInterlinedLegs = (it: Itinerary) => {
 			pred.realTime ||= curr.realTime;
 			pred.intermediateStops!.push(...curr.intermediateStops!);
 			pred.legGeometry = {
-				points: polyline.encode([
-					...polyline.decode(pred.legGeometry.points),
-					...polyline.decode(curr.legGeometry.points)
-				]),
+				points: polyline.encode(
+					[
+						...polyline.decode(pred.legGeometry.points, pred.legGeometry.precision),
+						...polyline.decode(curr.legGeometry.points, curr.legGeometry.precision)
+					],
+					pred.legGeometry.precision
+				),
 				precision: pred.legGeometry.precision,
 				length: pred.legGeometry.length + curr.legGeometry.length
 			};

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { client } from '@motis-project/motis-client';
 	import { lngLatToStr } from '$lib/lngLatToStr';
 	import { MapboxOverlay } from '@deck.gl/mapbox';
 	import { IconLayer } from '@deck.gl/layers';
@@ -11,7 +12,7 @@
 	import type { MetaData } from './types';
 	import Control from './map/Control.svelte';
 	import { SvelteMap } from 'svelte/reactivity';
-	import { client } from '@motis-project/motis-client';
+
 	let {
 		map,
 		bounds,
