@@ -38,6 +38,7 @@ S1,20190501,1
 )";
 
 TEST(motis, itinerary_id) {
+  std::cout << "TEST(motis, itinerary_id) running..." << std::endl;
   auto c = config{
       .timetable_ =
           config::timetable{
@@ -53,8 +54,8 @@ TEST(motis, itinerary_id) {
     auto d = import(c, "test/data", true);
     auto const routing = utl::init_from<ep::routing>(d).value();
     original = routing(
-                   "?fromPlace=DA"
-                   "&toPlace=FFM"
+                   "?fromPlace=test_DA"
+                   "&toPlace=test_FFM"
                    "&time=2019-05-01T02:00Z"
                    "&timetableView=false"
                    "&directModes=WALK,RENTAL")
@@ -68,13 +69,37 @@ TEST(motis, itinerary_id) {
     auto d = import(c, "test/data", true);
     auto const routing = utl::init_from<ep::routing>(d).value();
     auto const expected = routing(
-                              "?fromPlace=FFM"
-                              "&toPlace=DA"
+                              "?fromPlace=test_FFM"
+                              "&toPlace=test_DA"
                               "&time=2019-05-01T02:00Z"
                               "&timetableView=false"
                               "&directModes=WALK,RENTAL")
                               .itineraries_.at(0);
 
-    EXPECT_EQ(expected, reconstruct_itinerary(*d.tt_, original.id_));
+    auto const id_ = generate_itinerary_id(original);
+    std::cout << "id_: " << id_ << '\n' << std::endl;
+
+    EXPECT_EQ(expected,
+              reconstruct_itinerary(
+                  motis::ep::stops{.config_ = d.config_,
+                                   .w_ = d.w_.get(),
+                                   .pl_ = d.pl_.get(),
+                                   .matches_ = d.matches_.get(),
+                                   .ae_ = d.adr_ext_.get(),
+                                   .tz_ = d.tz_.get(),
+                                   .loc_rtree_ = *d.location_rtree_,
+                                   .tags_ = *d.tags_,
+                                   .tt_ = *d.tt_},
+                  motis::ep::stop_times{.config_ = d.config_,
+                                        .w_ = d.w_.get(),
+                                        .pl_ = d.pl_.get(),
+                                        .matches_ = d.matches_.get(),
+                                        .ae_ = d.adr_ext_.get(),
+                                        .tz_ = d.tz_.get(),
+                                        .loc_rtree_ = *d.location_rtree_,
+                                        .tt_ = *d.tt_,
+                                        .tags_ = *d.tags_,
+                                        .rt_ = d.rt_},
+                  id_));
   }
 }
