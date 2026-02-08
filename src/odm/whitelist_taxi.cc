@@ -51,6 +51,44 @@ void extract_taxis(std::vector<nr::journey> const& journeys,
   utl::erase_duplicates(last_mile_taxi_rides, by_stop, std::equal_to<>{});
 }
 
+void prima::extract_taxis_for_persisting(
+    std::vector<nr::journey> const& journeys) {
+  whitelist_first_mile_taxi_.clear();
+  whitelist_last_mile_taxi_.clear();
+
+  for (auto const& j : journeys) {
+    if (j.legs_.empty()) {
+      continue;
+    }
+
+    if (j.legs_.size() == 1) {
+      continue;
+    }
+    if (is_odm_leg(j.legs_.front(), kOdmTransportModeId)) {
+      whitelist_first_mile_taxi_.push_back(
+          {.time_at_start_ = j.legs_.front().dep_time_,
+           .time_at_stop_ = j.legs_.front().arr_time_,
+           .stop_ = j.legs_.front().to_});
+    }
+    if (is_odm_leg(j.legs_.back(), kOdmTransportModeId)) {
+      whitelist_last_mile_taxi_.push_back(
+          {.time_at_start_ = j.legs_.back().dep_time_,
+           .time_at_stop_ = j.legs_.back().arr_time_,
+           .stop_ = j.legs_.back().from_});
+    }
+  }
+  auto const order_stop = [](nigiri::routing::start const& a,
+                             nigiri::routing::start const& b) {
+    return a.stop_ < b.stop_;
+  };
+  auto const same_stop = [](nigiri::routing::start const& a,
+                            nigiri::routing::start const& b) {
+    return a.stop_ == b.stop_;
+  };
+  utl::erase_duplicates(whitelist_first_mile_taxi_, order_stop, same_stop);
+  utl::erase_duplicates(whitelist_last_mile_taxi_, order_stop, same_stop);
+}
+
 bool prima::consume_whitelist_taxi_response(
     std::string_view json,
     std::vector<nr::journey>& journeys,
@@ -177,11 +215,109 @@ bool prima::consume_whitelist_taxi_response(
   return true;
 }
 
+void prima::persist_whitelist_taxi_response(boost::json::object const& o) {
+
+  whitelist_first_mile_pickup_times_.clear();
+  whitelist_first_mile_dropoff_times_.clear();
+  whitelist_last_mile_pickup_times_.clear();
+  whitelist_last_mile_dropoff_times_.clear();
+  whitelist_direct_pickup_times_.clear();
+  whitelist_direct_dropoff_times_.clear();
+
+  for (auto const& stop : o.at("start").as_array()) {
+    auto pickups = std::vector<nigiri::unixtime_t>{};
+    auto dropoffs = std::vector<nigiri::unixtime_t>{};
+
+    for (auto const& event : stop.as_array()) {
+      if (event.is_null()) {
+        pickups.push_back(kInfeasible);
+        dropoffs.push_back(kInfeasible);
+      } else {
+        pickups.push_back(
+            to_unix(event.as_object().at("pickupTime").as_int64()));
+        dropoffs.push_back(
+            to_unix(event.as_object().at("dropoffTime").as_int64()));
+      }
+    }
+
+    whitelist_first_mile_pickup_times_.push_back(std::move(pickups));
+    whitelist_first_mile_dropoff_times_.push_back(std::move(dropoffs));
+  }
+
+  for (auto const& stop : o.at("target").as_array()) {
+    auto pickups = std::vector<nigiri::unixtime_t>{};
+    auto dropoffs = std::vector<nigiri::unixtime_t>{};
+
+    for (auto const& event : stop.as_array()) {
+      if (event.is_null()) {
+        pickups.push_back(kInfeasible);
+        dropoffs.push_back(kInfeasible);
+      } else {
+        pickups.push_back(
+            to_unix(event.as_object().at("pickupTime").as_int64()));
+        dropoffs.push_back(
+            to_unix(event.as_object().at("dropoffTime").as_int64()));
+      }
+    }
+
+    whitelist_last_mile_pickup_times_.push_back(std::move(pickups));
+    whitelist_last_mile_dropoff_times_.push_back(std::move(dropoffs));
+  }
+
+  for (auto const& ride : o.at("direct").as_array()) {
+    if (ride.is_null()) {
+      whitelist_direct_pickup_times_.push_back(kInfeasible);
+      whitelist_direct_dropoff_times_.push_back(kInfeasible);
+    } else {
+      whitelist_direct_pickup_times_.push_back(
+          to_unix(ride.as_object().at("pickupTime").as_int64()));
+      whitelist_direct_dropoff_times_.push_back(
+          to_unix(ride.as_object().at("dropoffTime").as_int64()));
+    }
+  }
+}
+
+std::vector<std::vector<int64_t>> collect_requested_times(
+    std::vector<n::routing::start> const& rides, which_mile wm) {
+  auto result = std::vector<std::vector<int64_t>>{};
+
+  utl::equal_ranges_linear(
+      rides, [](auto const& a, auto const& b) { return a.stop_ == b.stop_; },
+      [&](auto&& from_it, auto&& to_it) {
+        std::vector<int64_t> times;
+
+        for (auto it = from_it; it != to_it; ++it) {
+          auto t = wm == kFirstMile ? it->time_at_stop_ - kODMTransferBuffer
+                                    : it->time_at_stop_ + kODMTransferBuffer;
+
+          times.push_back(static_cast<int64_t>(to_millis(t)));
+        }
+
+        result.push_back(std::move(times));
+      });
+
+  return result;
+}
+
+std::vector<int64_t> collect_requested_direct_times(
+    std::vector<direct_ride> const& rides, n::event_type fixed) {
+  auto result = std::vector<int64_t>{};
+  result.reserve(rides.size());
+
+  for (auto const& r : rides) {
+    result.push_back(static_cast<int64_t>(
+        to_millis(fixed == n::event_type::kDep ? r.dep_ : r.arr_)));
+  }
+
+  return result;
+}
+
 bool prima::whitelist_taxi(std::vector<nr::journey>& taxi_journeys,
                            n::timetable const& tt) {
   auto first_mile_taxi_rides = std::vector<nr::start>{};
   auto last_mile_taxi_rides = std::vector<nr::start>{};
   extract_taxis(taxi_journeys, first_mile_taxi_rides, last_mile_taxi_rides);
+  extract_taxis_for_persisting(taxi_journeys);
 
   auto whitelist_response = std::optional<std::string>{};
   auto ioc = boost::asio::io_context{};
@@ -190,6 +326,13 @@ bool prima::whitelist_taxi(std::vector<nr::journey>& taxi_journeys,
            "[whitelist taxi] request for {} rides",
            first_mile_taxi_rides.size() + last_mile_taxi_rides.size() +
                direct_taxi_.size());
+    whitelist_requested_first_mile_times_ =
+        collect_requested_times(first_mile_taxi_rides, kFirstMile);
+    whitelist_requested_last_mile_times_ =
+        collect_requested_times(last_mile_taxi_rides, kLastMile);
+    whitelist_requested_direct_times_ =
+        collect_requested_direct_times(direct_taxi_, fixed_);
+
     boost::asio::co_spawn(
         ioc,
         [&]() -> boost::asio::awaitable<void> {
@@ -213,6 +356,8 @@ bool prima::whitelist_taxi(std::vector<nr::journey>& taxi_journeys,
            "[whitelist taxi] failed, discarding taxi journeys");
     return false;
   }
+  persist_whitelist_taxi_response(
+      boost::json::parse(*whitelist_response).as_object());
 
   return consume_whitelist_taxi_response(*whitelist_response, taxi_journeys,
                                          first_mile_taxi_rides,
