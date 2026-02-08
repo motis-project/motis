@@ -162,34 +162,41 @@ transport_mode to_pt_mode(api::ModeEnum mode) {
   }
 }
 
+template <typename T>
 void append(std::string_view lang,
             pugi::xml_node node,
             std::string_view name,
-            std::string_view value) {
+            T const& value) {
   auto text = node.append_child(name).append_child("Text");
   text.append_attribute("xml:lang").set_value(lang);
-  text.text().set(value.data());
+  text.text().set(value);
 }
 
 template <typename T>
 void append(std::string_view lang,
             pugi::xml_node node,
             std::string_view name,
-            std::optional<T> value) {
+            std::optional<T> const& value) {
   if (value.has_value()) {
     append(lang, node, name, *value);
   }
 }
 
-void append(pugi::xml_node node, std::string_view name, auto&& value) {
+template <typename T>
+void append(pugi::xml_node node, std::string_view name, T const& value) {
   node.append_child(name).text().set(value);
 }
 
+template <typename T>
 void append(pugi::xml_node node,
             std::string_view name,
-            std::optional<std::string> value) {
+            std::optional<T> const& value) {
   if (value.has_value()) {
-    node.append_child(name).text().set(*value);
+    if constexpr (std::is_same_v<std::string, T>) {
+      node.append_child(name).text().set(value->data());
+    } else {
+      node.append_child(name).text().set(*value);
+    }
   }
 }
 
@@ -202,8 +209,8 @@ void append_position(pugi::xml_node node,
                      geo::latlng const& pos,
                      std::string_view name = "Position") {
   auto geo = node.append_child(name);
-  geo.append_child("siri:Latitude").text().set(pos.lat_, 6);
   geo.append_child("siri:Longitude").text().set(pos.lng_, 6);
+  geo.append_child("siri:Latitude").text().set(pos.lat_, 7);
 }
 
 std::string_view get_place_ref(pugi::xml_node ref) {
@@ -413,14 +420,14 @@ void add_place(auto const& t,
   auto place = places_node.append_child("Place");
   if (p.parentId_.has_value()) {
     auto sp = place.append_child("StopPoint");
-    sp.append_child("siri:StopPointRef").text().set(*p.stopId_);
+    append(sp, "siri:StopPointRef", p.stopId_.value());
     append(language, sp, "StopPointName", p.name_);
     if (p.parentId_.has_value()) {
       append(sp, "ParentRef", *p.parentId_);
     }
   } else {
     auto sp = place.append_child("StopPlace");
-    sp.append_child("siri:StopPlaceRef").text().set(*p.stopId_);
+    append(sp, "siri:StopPlaceRef", p.stopId_.value());
     append(language, sp, "StopPlaceName", p.name_);
     if (p.parentId_.has_value()) {
       append(sp, "ParentRef", *p.parentId_);
@@ -490,10 +497,10 @@ pugi::xml_document build_trip_info_response(trip const& trip_ep,
     auto add_call = [&, n = 0](api::Place const& place) mutable {
       auto c = result.append_child("PreviousCall");
       append_stop_ref(c, place);
-      append(c, "StopPointName", place.name_);
-      if (place.scheduledTrack_.has_value()) {
-        append(c, "PlannedQuay", place.scheduledTrack_);
-      }
+      append(language, c, "StopPointName", place.name_);
+      append(language, c, "PlannedQuay", place.scheduledTrack_);
+      append(language, c, "NameSuffix",
+             "PLATFORM_ACCESS_WITHOUT_ASSISTANCE");  // TODO real data
 
       auto arr = c.append_child("ServiceArrival");
       append(arr, "TimetabledTime",
@@ -519,18 +526,9 @@ pugi::xml_document build_trip_info_response(trip const& trip_ep,
     auto service = result.append_child("Service");
     append(service, "OperatingDayRef", operating_day);
     append(service, "JourneyRef", journey_ref);
-
-    auto const public_code = leg.routeShortName_.value_or(
-        leg.displayName_.value_or(leg.routeLongName_.value_or("")));
-    if (!public_code.empty()) {
-      append(service, "PublicCode", public_code);
-    }
-
     append(service, "PublicCode", leg.routeShortName_);
-    service.append_child("siri:LineRef").text().set(leg.routeId_.value());
-    service.append_child("siri:DirectionRef")
-        .text()
-        .set(leg.directionId_.value());
+    append(service, "siri:LineRef", leg.routeId_);
+    append(service, "siri:DirectionRef", leg.directionId_);
 
     auto mode =
         append_mode(service, get_transport_mode(leg.routeType_.value()));
@@ -538,9 +536,13 @@ pugi::xml_document build_trip_info_response(trip const& trip_ep,
     append(language, mode, "ShortName", "TODO");  // TODO RE
 
     append(language, service, "PublishedServiceName", leg.displayName_.value());
-    append(service, "TrainNumber", leg.tripShortName_);  // TODO separate field
-    append(language, service, "OriginText", "n/a");  // TODO
+    append(service, "TrainNumber", leg.tripShortName_);
+    append(language, service, "OriginText", leg.tripFrom_.value().name_);
     append(service, "siri:OperatorRef", leg.agencyId_);
+    append(
+        service, "DestinationStopPointRef",
+        leg.tripTo_.transform([](api::Place const& to) { return to.stopId_; })
+            .value());
     append(language, service, "DestinationText", leg.headsign_);
   }
 
@@ -550,11 +552,11 @@ pugi::xml_document build_trip_info_response(trip const& trip_ep,
 
     auto start = section.append_child("TrackSectionStart");
     append_stop_ref(start, leg.from_);
-    append(start, "Name", leg.from_.name_);
+    append(language, start, "Name", leg.from_.name_);
 
     auto end = section.append_child("TrackSectionEnd");
     append_stop_ref(end, leg.to_);
-    append(end, "Name", leg.to_.name_);
+    append(language, end, "Name", leg.to_.name_);
 
     auto link = section.append_child("LinkProjection");
     for (auto const& pos : geo::decode_polyline<6>(leg.legGeometry_.points_)) {
@@ -690,9 +692,7 @@ pugi::xml_document build_stop_event_response(
              return x.empty() ? std::nullopt : std::optional{x.front().name_};
            }));
     append(service, "siri:OperatorRef", st.agencyId_);
-    if (!st.headsign_.empty()) {
-      append(language, service, "DestinationText", st.headsign_);
-    }
+    append(language, service, "DestinationText", st.headsign_);
   }
 
   return std::move(doc);
