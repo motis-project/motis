@@ -78,8 +78,10 @@ void prima::extract_taxis_for_persisting(
     }
   }
 
-  utl::erase_duplicates(whitelist_first_mile_locations_, std::less<>{}, std::equal_to<>{});
-  utl::erase_duplicates(whitelist_last_mile_locations_, std::less<>{}, std::equal_to<>{});
+  utl::erase_duplicates(whitelist_first_mile_locations_, std::less<>{},
+                        std::equal_to<>{});
+  utl::erase_duplicates(whitelist_last_mile_locations_, std::less<>{},
+                        std::equal_to<>{});
 }
 
 bool prima::consume_whitelist_taxi_response(
@@ -213,7 +215,8 @@ bool prima::consume_whitelist_taxi_response(
 }
 
 void prima::insert_requested_times() {
-  auto const in_inner = [&](boost::json::array& inner, std::vector<int64_t> const& requested) {
+  auto const in_inner = [&](boost::json::array& inner,
+                            std::vector<int64_t> const& requested) {
     for (auto i = 0U; i != inner.size(); ++i) {
       if (inner[i].is_null()) {
         continue;
@@ -223,16 +226,21 @@ void prima::insert_requested_times() {
     }
   };
 
-  auto const in_outer = [&](boost::json::array& outer, std::vector<std::vector<int64_t>> const& requested) {
-    for (auto i = 0U; i != outer.size(); ++i) {
-        auto& inner = outer[i].as_array();
-        in_inner(inner, requested[i]);
-    }
-  };
+  auto const in_outer =
+      [&](boost::json::array& outer,
+          std::vector<std::vector<int64_t>> const& requested) {
+        for (auto i = 0U; i != outer.size(); ++i) {
+          auto& inner = outer[i].as_array();
+          in_inner(inner, requested[i]);
+        }
+      };
 
-  in_outer(whitelist_response_.at("start").as_array(), whitelist_requested_first_mile_times_);
-  in_outer(whitelist_response_.at("target").as_array(), whitelist_requested_last_mile_times_);
-  in_inner(whitelist_response_.at("direct").as_array(), whitelist_requested_direct_times_);
+  in_outer(whitelist_response_.at("start").as_array(),
+           whitelist_requested_first_mile_times_);
+  in_outer(whitelist_response_.at("target").as_array(),
+           whitelist_requested_last_mile_times_);
+  in_inner(whitelist_response_.at("direct").as_array(),
+           whitelist_requested_direct_times_);
 }
 
 std::vector<std::vector<std::int64_t>> collect_requested_times(

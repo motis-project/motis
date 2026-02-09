@@ -540,25 +540,31 @@ api::plan_response meta_router::run() {
               }
             }
 
-            auto const match_times =
-                [&](motis::api::Leg& leg, boost::json::array& entries) -> std::optional<std::string> {
-                for (auto e = 0U; e != entries.size(); ++e) {
-                  if(entries[e].is_null()){
-                    continue;
-                  }
-                  auto const& entry = entries[e].as_object();
-                  if (to_unix(entry.at("pickupTime").as_int64()) == leg.startTime_ &&
-                    to_unix(entry.at("dropoffTime").as_int64()) == leg.endTime_) {
-                    return boost::json::serialize(entry);
-                  }
+            auto const match_times = [&](motis::api::Leg const& leg,
+                                         boost::json::array const& entries)
+                -> std::optional<std::string> {
+              for (auto e = 0U; e != entries.size(); ++e) {
+                if (entries[e].is_null()) {
+                  continue;
                 }
+                auto const& entry = entries[e].as_object();
+                if (to_unix(entry.at("pickupTime").as_int64()) ==
+                        leg.startTime_ &&
+                    to_unix(entry.at("dropoffTime").as_int64()) ==
+                        leg.endTime_) {
+                  return boost::json::serialize(entry);
+                }
+              }
               return std::nullopt;
             };
 
             auto const match_location =
-                [&](motis::api::Leg& leg, boost::json::array& outer, std::vector<nigiri::location_idx_t> locations) -> std::optional<std::string> {
+                [&](motis::api::Leg const& leg, boost::json::array const& outer,
+                    std::vector<nigiri::location_idx_t> const& locations,
+                    bool const checkTo) -> std::optional<std::string> {
               for (auto s = 0U; s < locations.size(); ++s) {
-                if (leg.to_.stopId_ != r_.tags_->id(*tt_, locations[s])) {
+                if ((checkTo ? leg.to_.stopId_ : leg.from_.stopId_) !=
+                    r_.tags_->id(*tt_, locations[s])) {
                   continue;
                 }
                 auto& inner = outer[s].as_array();
@@ -571,7 +577,9 @@ api::plan_response meta_router::run() {
 
             if (response.legs_.size() == 1 &&
                 response.legs_.front().mode_ == api::ModeEnum::ODM) {
-              if (auto const id = match_times(response.legs_.front(), p.whitelist_response_.at("direct").as_array());
+              if (auto const id = match_times(
+                      response.legs_.front(),
+                      p.whitelist_response_.at("direct").as_array());
                   id.has_value()) {
                 response.legs_.front().tripId_ = std::optional{*id};
               }
@@ -579,14 +587,20 @@ api::plan_response meta_router::run() {
             }
             if (!response.legs_.empty() &&
                 response.legs_.front().mode_ == api::ModeEnum::ODM) {
-              if (auto const id = match_location(response.legs_.front(), p.whitelist_response_.at("start").as_array(), p.whitelist_first_mile_locations_);
+              if (auto const id = match_location(
+                      response.legs_.front(),
+                      p.whitelist_response_.at("start").as_array(),
+                      p.whitelist_first_mile_locations_, true);
                   id.has_value()) {
                 response.legs_.front().tripId_ = std::optional{*id};
               }
             }
             if (!response.legs_.empty() &&
                 response.legs_.back().mode_ == api::ModeEnum::ODM) {
-              if (auto const id = match_location(response.legs_.back(),  p.whitelist_response_.at("target").as_array(), p.whitelist_last_mile_locations_);
+              if (auto const id = match_location(
+                      response.legs_.back(),
+                      p.whitelist_response_.at("target").as_array(),
+                      p.whitelist_last_mile_locations_, false);
                   id.has_value()) {
                 response.legs_.back().tripId_ = std::optional{*id};
               }
