@@ -19,6 +19,7 @@
 #include "motis/match_platforms.h"
 #include "motis/osr/parameters.h"
 #include "motis/parse_location.h"
+#include "motis/place.h"
 #include "motis/point_rtree.h"
 
 namespace motis::ep {
@@ -61,7 +62,10 @@ api::oneToMany_response one_to_many_handle_request(
 
 template <typename Endpoint, typename Query>
 api::oneToManyIntermodal_response run_one_to_many_intermodal(
-    Endpoint const& ep, Query const& query);
+    Endpoint const&,
+    Query const&,
+    place_t const&,
+    std::vector<place_t> const& many);
 
 struct one_to_many {
   api::oneToMany_response operator()(boost::urls::url_view const&) const;

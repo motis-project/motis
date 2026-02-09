@@ -4100,10 +4100,26 @@ components:
         - arriveBy
       properties:
         one:
-          description: geo location as latitude;longitude
+          description: |
+            \`latitude,longitude[,level]\` tuple with
+            - latitude and longitude in degrees
+            - (optional) level: the OSM level (default: 0)
+
+            OR
+
+            stop id
           type: string
         many:
-          description: geo locations as latitude;longitude,latitude;longitude,...
+          description: |
+            array of:
+
+            \`latitude,longitude[,level]\` tuple with
+            - latitude and longitude in degrees
+            - (optional) level: the OSM level (default: 0)
+
+            OR
+
+            stop id
           type: array
           items:
             type: string

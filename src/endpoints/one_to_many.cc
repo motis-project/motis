@@ -4,10 +4,14 @@
 #include <optional>
 
 #include "utl/enumerate.h"
+#include "utl/overloaded.h"
 
 #include "nigiri/common/delta_t.h"
 #include "nigiri/routing/one_to_all.h"
 #include "nigiri/types.h"
+
+#include "osr/location.h"
+#include "osr/types.h"
 
 #include "motis/endpoints/one_to_many_post.h"
 #include "motis/endpoints/routing.h"
@@ -58,21 +62,15 @@ api::oneToMany_response one_to_many::operator()(
 
 template <typename Endpoint, typename Query>
 api::oneToManyIntermodal_response run_one_to_many_intermodal(
-    Endpoint const& ep, Query const& query) {
+    Endpoint const& ep,
+    Query const& query,
+    place_t const& one,
+    std::vector<place_t> const& many) {
   ep.metrics_->routing_requests_.Increment();
 
   auto const time = std::chrono::time_point_cast<std::chrono::minutes>(
       *query.time_.value_or(openapi::now()));
   auto const max_travel_time = n::duration_t{query.maxTravelTime_};
-
-  auto const one = parse_location(query.one_, ';');
-  utl::verify(one.has_value(), "{} is not a valid geo coordinate", query.one_);
-
-  auto const many = utl::to_vec(query.many_, [](auto&& x) {
-    auto const y = parse_location(x, ';');
-    utl::verify(y.has_value(), "{} is not a valid geo coordinate", x);
-    return *y;
-  });
 
   auto const pedestrian_profile =
       query.pedestrianProfile_.value_or(api::PedestrianProfileEnum::FOOT);
@@ -85,16 +83,28 @@ api::oneToManyIntermodal_response run_one_to_many_intermodal(
       !query.directModes_.has_value() || query.directModes_->size() == 1,
       "Only one direct mode supported. Got {}", query.directModes_->size());
   auto durations =
-      query.directModes_
-          ? one_to_many_direct(
-                *ep.w_, *ep.l_, (*query.directModes_)[0], *one, many,
-                std::min(query.maxDirectTime_.value_or(query.maxTravelTime_),
-                         query.maxTravelTime_),
-                query.maxMatchingDistance_,
-                query.arriveBy_ ? osr::direction::kBackward
-                                : osr::direction::kForward,
-                osr_params, pedestrian_profile, elevation_costs, ep.elevations_)
-          : api::oneToManyIntermodal_response{many.size()};
+      query.directModes_ ? [&]() {
+        auto const to_location = [&](place_t const p) {
+          return std::visit(
+              utl::overloaded{
+                  [&](tt_location const& l) -> osr::location {
+                    return {ep.tt_.locations_.coordinates_[l.l_],
+                            osr::level_t{}};
+                  },
+                  [&](osr::location const& l) -> osr::location { return l; }},
+              p);
+        };
+        return one_to_many_direct(
+            *ep.w_, *ep.l_, (*query.directModes_)[0], to_location(one),
+            utl::to_vec(many, to_location),
+            std::min(query.maxDirectTime_.value_or(query.maxTravelTime_),
+                     query.maxTravelTime_),
+            query.maxMatchingDistance_,
+            query.arriveBy_ ? osr::direction::kBackward
+                            : osr::direction::kForward,
+            osr_params, pedestrian_profile, elevation_costs, ep.elevations_);
+      }()
+                         : api::oneToManyIntermodal_response{many.size()};
 
   // TODO Should this always be calculated?
   // TODO What if transitModes.empty() and maxDirectTime == 0?
@@ -144,13 +154,13 @@ api::oneToManyIntermodal_response run_one_to_many_intermodal(
 
   auto q = n::routing::query{
       .start_time_ = time,
-      .start_match_mode_ = get_match_mode(*one),
-      .start_ = r.get_offsets(nullptr, *one, one_dir, one_modes, std::nullopt,
+      .start_match_mode_ = get_match_mode(one),
+      .start_ = r.get_offsets(nullptr, one, one_dir, one_modes, std::nullopt,
                               std::nullopt, std::nullopt, std::nullopt, false,
                               osr_params, pedestrian_profile, elevation_costs,
                               one_max_time, query.maxMatchingDistance_, gbfs_rd,
                               prepare_stats),
-      .td_start_ = r.get_td_offsets(nullptr, nullptr, *one, one_dir, one_modes,
+      .td_start_ = r.get_td_offsets(nullptr, nullptr, one, one_dir, one_modes,
                                     osr_params, pedestrian_profile,
                                     elevation_costs, query.maxMatchingDistance_,
                                     one_max_time, time, prepare_stats),
@@ -230,19 +240,29 @@ api::oneToManyIntermodal_response run_one_to_many_intermodal(
 api::oneToManyIntermodal_response one_to_many_intermodal::operator()(
     boost::urls::url_view const& url) const {
   auto const query = api::oneToManyIntermodal_params{url.params()};
-  return run_one_to_many_intermodal(*this, query);
+  auto const one = parse_location(query.one_, ';');
+  utl::verify(one.has_value(), "{} is not a valid geo coordinate", query.one_);
+
+  auto const many = utl::to_vec(query.many_, [](auto&& x) -> place_t {
+    auto const y = parse_location(x, ';');
+    utl::verify(y.has_value(), "{} is not a valid geo coordinate", x);
+    return *y;
+  });
+  return run_one_to_many_intermodal(*this, query, *one, many);
 }
 
-template api::oneToManyIntermodal_response
-run_one_to_many_intermodal<one_to_many_intermodal,
-                           api::oneToManyIntermodal_params>(
-    one_to_many_intermodal const& ep,
-    api::oneToManyIntermodal_params const& query);
+template api::oneToManyIntermodal_response run_one_to_many_intermodal<
+    one_to_many_intermodal,
+    api::oneToManyIntermodal_params>(one_to_many_intermodal const&,
+                                     api::oneToManyIntermodal_params const&,
+                                     place_t const&,
+                                     std::vector<place_t> const&);
 
-template api::oneToManyIntermodal_response
-run_one_to_many_intermodal<one_to_many_intermodal_post,
-                           api::OneToManyIntermodalParams>(
-    one_to_many_intermodal_post const& ep,
-    api::OneToManyIntermodalParams const& query);
+template api::oneToManyIntermodal_response run_one_to_many_intermodal<
+    one_to_many_intermodal_post,
+    api::OneToManyIntermodalParams>(one_to_many_intermodal_post const&,
+                                    api::OneToManyIntermodalParams const&,
+                                    place_t const&,
+                                    std::vector<place_t> const&);
 
 }  // namespace motis::ep
