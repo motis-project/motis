@@ -327,4 +327,4 @@ self.onmessage = async (e) => {
 	}
 };
 
-export { };
+export {};
