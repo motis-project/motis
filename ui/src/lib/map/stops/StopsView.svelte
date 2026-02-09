@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t } from '$lib/i18n/translation';
 	import { lngLatToStr } from '$lib/lngLatToStr';
 	import { MapboxOverlay } from '@deck.gl/mapbox';
 	import { IconLayer } from '@deck.gl/layers';
@@ -7,6 +8,9 @@
 	import { stops } from '@motis-project/motis-client';
 	import { type PickingInfo } from '@deck.gl/core';
 	import { onClickStop } from '$lib/utils';
+	import Control from '../Control.svelte';
+	import { createStopIcon } from '../createIcon';
+
 	let {
 		map,
 		overlay,
@@ -44,42 +48,15 @@
 	};
 	type MetaData = {
 		name: string;
-		stopId: string | undefined;
-		parentId: string | undefined;
+		stopId?: string;
+		track?: string;
 	};
 	const metadata: MetaData[] = [];
+	let status = $state();
 
 	//LAYER
-	const createStopIcon = (size: number) => {
-		const canvas = document.createElement('canvas');
-		canvas.width = size;
-		canvas.height = size;
-		const ctx = canvas.getContext('2d')!;
-		const center = size / 2;
-		const radius = size * 0.4;
-		const border = (2 / 64) * size;
-
-		ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-		ctx.beginPath();
-		ctx.arc(center, center, radius, 0, Math.PI * 2);
-		ctx.fill();
-
-		// Gray border
-		ctx.strokeStyle = 'rgba(120, 120, 120, 1.0)';
-		ctx.lineWidth = border;
-		ctx.stroke();
-
-		// White dot in center
-		ctx.fillStyle = '#ffffff';
-		ctx.beginPath();
-		ctx.arc(center, center, radius * 0.35, 0, Math.PI * 2);
-		ctx.fill();
-
-		return canvas;
-	};
 	const ICON_SIZE = 50;
 	const StopIcon = createStopIcon(ICON_SIZE);
-
 	const IconMapping = {
 		marker: {
 			x: 0,
@@ -91,33 +68,6 @@
 			mask: false
 		}
 	};
-
-	const popup = new maplibregl.Popup({
-		closeButton: false,
-		closeOnClick: false,
-		maxWidth: 'none'
-	});
-
-	const onHover = (info: PickingInfo) => {
-		if (info.picked && info.index != -1) {
-			const data = metadata[info.index];
-			const content = `<strong>${data.name}</strong><br>`;
-			popup
-				.setLngLat(info.coordinate as LngLatLike)
-				.setHTML(content)
-				.addTo(map!);
-		} else {
-			popup.remove();
-		}
-	};
-
-	const onClick = (info: PickingInfo) => {
-		if (info.picked && info.index != -1) {
-			const data = metadata[info.index];
-			onClickStop(data.name, data.stopId!, new Date(Date.now()));
-		}
-	};
-
 	const createLayer = () => {
 		return new IconLayer({
 			id: 'stops-view-layer',
@@ -142,6 +92,34 @@
 		});
 	};
 
+	//INTERACTION
+	const popup = new maplibregl.Popup({
+		closeButton: false,
+		closeOnClick: true,
+		closeOnMove: true,
+		maxWidth: 'none'
+	});
+	const onHover = (info: PickingInfo) => {
+		if (info.picked && info.index != -1) {
+			const data = metadata[info.index];
+			const content = `<strong>${data.name}</strong><br>
+			${data.track ? `<strong>${t.track}: ${data.track}</strong><br>` : ''}`;
+			popup
+				.setLngLat(info.coordinate as LngLatLike)
+				.setHTML(content)
+				.addTo(map!);
+		} else {
+			popup.remove();
+		}
+	};
+
+	const onClick = (info: PickingInfo) => {
+		if (info.picked && info.index != -1) {
+			const data = metadata[info.index];
+			onClickStop(data.name, data.stopId!, new Date(Date.now()));
+		}
+	};
+
 	//SETUP
 	onMount(() => {
 		updateOverlayLayers(createLayer());
@@ -161,19 +139,21 @@
 		if (!query || stopMode == 'none') return;
 		untrack(async () => {
 			if (zoom >= 12) {
-				const { data } = await stops({ query });
+				const { data, response } = await stops({ query });
+				status = response.status;
 				if (!data) return;
 				let index = 0;
 				for (let i = 0; i < data.length; ++i) {
-					if (stopMode == 'parent' && data[i].parentId != data[i].stopId) continue;
-					metadata[index] = {
-						name: data[i].name,
-						stopId: data[i].stopId,
-						parentId: data[i].parentId
-					};
-					positions[2 * index] = data[i].lon;
-					positions[2 * index + 1] = data[i].lat;
-					index++;
+					if (data[i].parentId === data[i].stopId) {
+						metadata[index] = {
+							name: data[i].name,
+							stopId: data[i].stopId,
+							track: data[i].track
+						};
+						positions[2 * index] = data[i].lon;
+						positions[2 * index + 1] = data[i].lat;
+						index++;
+					}
 				}
 				stopsData.length = index;
 			}
@@ -181,3 +161,7 @@
 		});
 	});
 </script>
+
+{#if status && status !== 200}
+	<Control position="bottom-left">stops response status: {status}</Control>
+{/if}

@@ -2,7 +2,7 @@
 	import { lngLatToStr } from '$lib/lngLatToStr';
 	import { MapboxOverlay } from '@deck.gl/mapbox';
 	import { IconLayer } from '@deck.gl/layers';
-	import { createTripIcon } from '$lib/map/createTripIcon';
+	import { createTripIcon } from '$lib/map/createIcon';
 	import maplibregl from 'maplibre-gl';
 	import { onDestroy, onMount, untrack } from 'svelte';
 	import { formatTime } from './toDateTime';
