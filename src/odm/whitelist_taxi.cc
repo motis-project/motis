@@ -57,8 +57,8 @@ void extract_taxis(std::vector<nr::journey> const& journeys,
 
 void prima::extract_taxis_for_persisting(
     std::vector<nr::journey> const& journeys) {
-  whitelist_first_mile_taxi_.clear();
-  whitelist_last_mile_taxi_.clear();
+  whitelist_first_mile_locations_.clear();
+  whitelist_last_mile_locations_.clear();
 
   for (auto const& j : journeys) {
     if (j.legs_.empty()) {
@@ -70,16 +70,16 @@ void prima::extract_taxis_for_persisting(
     }
 
     if (is_odm_leg(j.legs_.front(), kOdmTransportModeId)) {
-      whitelist_first_mile_taxi_.push_back(j.legs_.front().to_);
+      whitelist_first_mile_locations_.push_back(j.legs_.front().to_);
     }
 
     if (is_odm_leg(j.legs_.back(), kOdmTransportModeId)) {
-      whitelist_last_mile_taxi_.push_back(j.legs_.back().from_);
+      whitelist_last_mile_locations_.push_back(j.legs_.back().from_);
     }
   }
 
-  utl::erase_duplicates(whitelist_first_mile_taxi_, std::less<>{}, std::equal_to<>{});
-  utl::erase_duplicates(whitelist_last_mile_taxi_, std::less<>{}, std::equal_to<>{});
+  utl::erase_duplicates(whitelist_first_mile_locations_, std::less<>{}, std::equal_to<>{});
+  utl::erase_duplicates(whitelist_last_mile_locations_, std::less<>{}, std::equal_to<>{});
 }
 
 bool prima::consume_whitelist_taxi_response(
@@ -212,39 +212,27 @@ bool prima::consume_whitelist_taxi_response(
   return true;
 }
 
-void prima::persist_whitelist_taxi_response(boost::json::object const& o) {
-  whitelist_first_mile_pickup_times_.clear();
-  whitelist_first_mile_dropoff_times_.clear();
-  whitelist_last_mile_pickup_times_.clear();
-  whitelist_last_mile_dropoff_times_.clear();
-  whitelist_direct_pickup_times_.clear();
-  whitelist_direct_dropoff_times_.clear();
-
-  auto const get_time = [](char const* key) {
-    return [key](json::value const& ev) {
-      return ev.is_null() ? kInfeasible
-                          : to_unix(ev.as_object().at(key).as_int64());
-    };
+void prima::insert_requested_times() {
+  auto const in_inner = [&](boost::json::array& inner, std::vector<int64_t> const& requested) {
+    for (auto i = 0U; i != inner.size(); ++i) {
+      if (inner[i].is_null()) {
+        continue;
+      }
+      auto& entry = inner[i].as_object();
+      entry["requestedTime"] = requested[i];
+    }
   };
 
-  for (auto const& stop : o.at("start").as_array()) {
-    whitelist_first_mile_pickup_times_.push_back(
-        utl::to_vec(stop.as_array(), get_time("pickupTime")));
-    whitelist_first_mile_dropoff_times_.push_back(
-        utl::to_vec(stop.as_array(), get_time("dropoffTime")));
-  }
+  auto const in_outer = [&](boost::json::array& outer, std::vector<std::vector<int64_t>> const& requested) {
+    for (auto i = 0U; i != outer.size(); ++i) {
+        auto& inner = outer[i].as_array();
+        in_inner(inner, requested[i]);
+    }
+  };
 
-  for (auto const& stop : o.at("target").as_array()) {
-    whitelist_last_mile_pickup_times_.push_back(
-        utl::to_vec(stop.as_array(), get_time("pickupTime")));
-    whitelist_last_mile_dropoff_times_.push_back(
-        utl::to_vec(stop.as_array(), get_time("dropoffTime")));
-  }
-
-  for (auto const& ride : o.at("direct").as_array()) {
-    whitelist_direct_pickup_times_.push_back(get_time("pickupTime")(ride));
-    whitelist_direct_dropoff_times_.push_back(get_time("dropoffTime")(ride));
-  }
+  in_outer(whitelist_response_.at("start").as_array(), whitelist_requested_first_mile_times_);
+  in_outer(whitelist_response_.at("target").as_array(), whitelist_requested_last_mile_times_);
+  in_inner(whitelist_response_.at("direct").as_array(), whitelist_requested_direct_times_);
 }
 
 std::vector<std::vector<std::int64_t>> collect_requested_times(
@@ -314,9 +302,8 @@ bool prima::whitelist_taxi(std::vector<nr::journey>& taxi_journeys,
            "[whitelist taxi] failed, discarding taxi journeys");
     return false;
   }
-  persist_whitelist_taxi_response(
-      boost::json::parse(*whitelist_response).as_object());
-
+  whitelist_response_ = json::parse(whitelist_response.value()).as_object();
+  insert_requested_times();
   return consume_whitelist_taxi_response(*whitelist_response, taxi_journeys,
                                          first_mile_taxi_rides,
                                          last_mile_taxi_rides);

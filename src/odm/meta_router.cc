@@ -469,7 +469,6 @@ api::plan_response meta_router::run() {
         to_seconds(taxi_journeys.begin()->arrival_time() -
                    taxi_journeys.begin()->departure_time())));
   }
-
   return {
       .from_ = from_place_,
       .to_ = to_place_,
@@ -540,56 +539,31 @@ api::plan_response meta_router::run() {
                 }
               }
             }
-            auto const match_direct_taxi =
-                [&](motis::api::Leg& leg) -> std::optional<std::string> {
-              for (auto i = 0U; i < p.whitelist_direct_pickup_times_.size();
-                   ++i) {
-                if (p.whitelist_direct_pickup_times_[i] == leg.startTime_ &&
-                    p.whitelist_direct_dropoff_times_[i] == leg.endTime_) {
-                  return boost::json::serialize(boost::json::value_from(
-                      (p.whitelist_requested_direct_times_[i])));
+
+            auto const match_times =
+                [&](motis::api::Leg& leg, boost::json::array& entries) -> std::optional<std::string> {
+                for (auto e = 0U; e != entries.size(); ++e) {
+                  if(entries[e].is_null()){
+                    continue;
+                  }
+                  auto const& entry = entries[e].as_object();
+                  if (to_unix(entry.at("pickupTime").as_int64()) == leg.startTime_ &&
+                    to_unix(entry.at("dropoffTime").as_int64()) == leg.endTime_) {
+                    return boost::json::serialize(entry);
+                  }
                 }
-              }
               return std::nullopt;
             };
 
-            auto const match_first_mile_taxi =
-                [&](motis::api::Leg& leg) -> std::optional<std::string> {
-              for (auto s = 0U; s < p.whitelist_first_mile_taxi_.size(); ++s) {
-                if (leg.to_.stopId_ !=
-                    r_.tags_->id(*tt_, p.whitelist_first_mile_taxi_[s])) {
+            auto const match_location =
+                [&](motis::api::Leg& leg, boost::json::array& outer, std::vector<nigiri::location_idx_t> locations) -> std::optional<std::string> {
+              for (auto s = 0U; s < locations.size(); ++s) {
+                if (leg.to_.stopId_ != r_.tags_->id(*tt_, locations[s])) {
                   continue;
                 }
-                for (auto e = 0U;
-                     e < p.whitelist_first_mile_pickup_times_[s].size(); ++e) {
-                  if (p.whitelist_first_mile_pickup_times_[s][e] ==
-                          leg.startTime_ &&
-                      p.whitelist_first_mile_dropoff_times_[s][e] ==
-                          leg.endTime_) {
-                    return boost::json::serialize(boost::json::value_from(
-                        (p.whitelist_requested_first_mile_times_[s][e])));
-                  }
-                }
-              }
-              return std::nullopt;
-            };
-
-            auto const match_last_mile_taxi =
-                [&](motis::api::Leg& leg) -> std::optional<std::string> {
-              for (auto s = 0U; s < p.whitelist_last_mile_taxi_.size(); ++s) {
-                if (leg.from_.stopId_ !=
-                    r_.tags_->id(*tt_, p.whitelist_last_mile_taxi_[s])) {
-                  continue;
-                }
-                for (auto e = 0U;
-                     e < p.whitelist_last_mile_pickup_times_[s].size(); ++e) {
-                  if (p.whitelist_last_mile_pickup_times_[s][e] ==
-                          leg.startTime_ &&
-                      p.whitelist_last_mile_dropoff_times_[s][e] ==
-                          leg.endTime_) {
-                    return boost::json::serialize(boost::json::value_from(
-                        (p.whitelist_requested_last_mile_times_[s][e])));
-                  }
+                auto& inner = outer[s].as_array();
+                if (auto result = match_times(leg, inner)) {
+                  return result;
                 }
               }
               return std::nullopt;
@@ -597,7 +571,7 @@ api::plan_response meta_router::run() {
 
             if (response.legs_.size() == 1 &&
                 response.legs_.front().mode_ == api::ModeEnum::ODM) {
-              if (auto const id = match_direct_taxi(response.legs_.front());
+              if (auto const id = match_times(response.legs_.front(), p.whitelist_response_.at("direct").as_array());
                   id.has_value()) {
                 response.legs_.front().tripId_ = std::optional{*id};
               }
@@ -605,14 +579,14 @@ api::plan_response meta_router::run() {
             }
             if (!response.legs_.empty() &&
                 response.legs_.front().mode_ == api::ModeEnum::ODM) {
-              if (auto const id = match_first_mile_taxi(response.legs_.front());
+              if (auto const id = match_location(response.legs_.front(), p.whitelist_response_.at("start").as_array(), p.whitelist_first_mile_locations_);
                   id.has_value()) {
                 response.legs_.front().tripId_ = std::optional{*id};
               }
             }
             if (!response.legs_.empty() &&
                 response.legs_.back().mode_ == api::ModeEnum::ODM) {
-              if (auto const id = match_last_mile_taxi(response.legs_.back());
+              if (auto const id = match_location(response.legs_.back(),  p.whitelist_response_.at("target").as_array(), p.whitelist_last_mile_locations_);
                   id.has_value()) {
                 response.legs_.back().tripId_ = std::optional{*id};
               }
