@@ -11,7 +11,6 @@ api::oneToMany_response one_to_many_post::operator()(
 
 api::oneToManyIntermodal_response one_to_many_intermodal_post::operator()(
     api::OneToManyIntermodalParams const& query) const {
-  fmt::println("POST(1)");
   return run_one_to_many_intermodal(*this, query);
 }
 

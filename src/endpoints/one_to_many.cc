@@ -26,13 +26,10 @@ api::oneToMany_response one_to_many_direct(
     api::ModeEnum const mode,
     osr::location const& one,
     std::vector<osr::location> const& many,
-    double const max_travel_time,
+    double const max_direct_time,
     double const max_matching_distance,
-    bool const arrive_by,
-    // osr::direction const dir,
-    // osr::search_profile const profile,
+    osr::direction const dir,
     osr_parameters const& params,
-    // osr::profile_parameters const& params,
     api::PedestrianProfileEnum const pedestrian_profile,
     api::ElevationCostsEnum const elevation_costs,
     osr::elevation_storage const* elevations_) {
@@ -43,11 +40,10 @@ api::oneToMany_response one_to_many_direct(
               boost::json::serialize(boost::json::value_from(mode)));
 
   auto const profile = to_profile(mode, pedestrian_profile, elevation_costs);
-  auto const paths = osr::route(
-      to_profile_parameters(profile, params), w_, l_, profile, one, many,
-      max_travel_time,
-      arrive_by ? osr::direction::kBackward : osr::direction::kForward,
-      max_matching_distance, nullptr, nullptr, elevations_);
+  auto const paths =
+      osr::route(to_profile_parameters(profile, params), w_, l_, profile, one,
+                 many, max_direct_time, dir, max_matching_distance, nullptr,
+                 nullptr, elevations_);
 
   return utl::to_vec(paths, [](std::optional<osr::path> const& p) {
     return p.has_value() ? api::Duration{.duration_ = p->cost_}
@@ -82,6 +78,7 @@ api::oneToManyIntermodal_response run_one_to_many_intermodal(
       query.pedestrianProfile_.value_or(api::PedestrianProfileEnum::FOOT);
   auto const elevation_costs =
       query.elevationCosts_.value_or(api::ElevationCostsEnum::NONE);
+  auto const osr_params = get_osr_parameters(query);
 
   // Get street routing durations
   utl::verify(
@@ -93,9 +90,10 @@ api::oneToManyIntermodal_response run_one_to_many_intermodal(
                 *ep.w_, *ep.l_, (*query.directModes_)[0], *one, many,
                 std::min(query.maxDirectTime_.value_or(query.maxTravelTime_),
                          query.maxTravelTime_),
-                query.maxMatchingDistance_, query.arriveBy_,
-                get_osr_parameters(query), pedestrian_profile, elevation_costs,
-                ep.elevations_)
+                query.maxMatchingDistance_,
+                query.arriveBy_ ? osr::direction::kBackward
+                                : osr::direction::kForward,
+                osr_params, pedestrian_profile, elevation_costs, ep.elevations_)
           : api::oneToManyIntermodal_response{many.size()};
 
   // TODO Should this always be calculated?
@@ -142,7 +140,6 @@ api::oneToManyIntermodal_response run_one_to_many_intermodal(
                          nullptr,        nullptr, nullptr,     ep.metrics_};
   auto gbfs_rd = gbfs::gbfs_routing_data{ep.w_, ep.l_, ep.gbfs_};
 
-  auto const osr_params = get_osr_parameters(query);
   auto prepare_stats = std::map<std::string, std::uint64_t>{};
 
   auto q = n::routing::query{
@@ -232,7 +229,6 @@ api::oneToManyIntermodal_response run_one_to_many_intermodal(
 
 api::oneToManyIntermodal_response one_to_many_intermodal::operator()(
     boost::urls::url_view const& url) const {
-  fmt::println("GET(1)");
   auto const query = api::oneToManyIntermodal_params{url.params()};
   return run_one_to_many_intermodal(*this, query);
 }

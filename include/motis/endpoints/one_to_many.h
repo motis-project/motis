@@ -10,6 +10,7 @@
 
 #include "osr/location.h"
 #include "osr/routing/route.h"
+#include "osr/types.h"
 
 #include "motis-api/motis-api.h"
 
@@ -28,9 +29,9 @@ api::oneToMany_response one_to_many_direct(
     api::ModeEnum const mode,
     osr::location const& one,
     std::vector<osr::location> const& many,
-    double const max_travel_time,
+    double const max_direct_time,
     double const max_matching_distance,
-    bool const arrive_by,
+    osr::direction,
     osr_parameters const& params,
     api::PedestrianProfileEnum,
     api::ElevationCostsEnum,
@@ -53,8 +54,9 @@ api::oneToMany_response one_to_many_handle_request(
 
   return one_to_many_direct(
       w_, l_, query.mode_, *one, many, query.max_, query.maxMatchingDistance_,
-      query.arriveBy_, get_osr_parameters(query),
-      api::PedestrianProfileEnum::FOOT, query.elevationCosts_, elevations_);
+      query.arriveBy_ ? osr::direction::kBackward : osr::direction::kForward,
+      get_osr_parameters(query), api::PedestrianProfileEnum::FOOT,
+      query.elevationCosts_, elevations_);
 }
 
 template <typename Endpoint, typename Query>
