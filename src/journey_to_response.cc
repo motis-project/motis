@@ -498,8 +498,8 @@ api::Itinerary journey_to_response(
                               last.scheduled_time(n::event_type::kArr);
                           return p;
                         }(),
-                    .routeId_ = std::string{enter_stop.get_route_id(
-                        n::event_type::kDep)},
+                    .routeId_ = tags.route_id(tt, enter_stop,
+                        n::event_type::kDep),
                     .directionId_ =
                         enter_stop.get_direction_id(n::event_type::kDep) == 0
                             ? "0"

@@ -127,6 +127,22 @@ std::string tag_lookup::id(nigiri::timetable const& tt,
                      std::move(t.trip_id_));
 }
 
+std::string tag_lookup::route_id(nigiri::timetable const& tt,
+                                 n::rt::run_stop s,
+                                 n::event_type const ev_type) const {
+  auto const bare = s.get_route_id(ev_type);
+  auto tag = std::string_view{};
+  if (s.fr_->is_scheduled()) {
+    auto const t = s.get_trip_idx(ev_type);
+    auto const id_idx = tt.trip_ids_[t].front();
+    tag = get_tag(tt.trip_id_src_[id_idx]);
+  } else {
+    tag = get_tag(s.fr_->id().src_);
+  }
+  return tag.empty() ? std::string{bare}
+                     : fmt::format("{}_{}", tag, bare);
+}
+
 std::pair<nigiri::rt::run, nigiri::trip_idx_t> tag_lookup::get_trip(
     nigiri::timetable const& tt,
     nigiri::rt_timetable const* rtt,
