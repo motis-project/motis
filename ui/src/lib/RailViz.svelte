@@ -67,24 +67,15 @@
 		maxWidth: 'none'
 	});
 
-	let hoverCoordinate: maplibregl.LngLatLike | null = $state(null);
 	let activeHoverIndex: number | null = $state(null);
 
 	const onHover = (info: PickingInfo) => {
-		if (info.index === -1 || !info.coordinate) {
-			activeHoverIndex = null; // Clear index
-			hoverCoordinate = null;
-			popup.remove();
-			if (map) map.getCanvas().style.cursor = '';
-			return;
-		}
-		if (info.index !== activeHoverIndex) {
-			metadata = undefined;
-		}
-		hoverCoordinate = info.coordinate as maplibregl.LngLatLike;
 		activeHoverIndex = info.index;
-		if (metaDataMap.has(info.index)) {
-			metadata = metaDataMap.get(info.index);
+		if (info.picked && info.index !== -1 && metadata) {
+			createPopup(metadata, info.coordinate as maplibregl.LngLatLike);
+		} else {
+			metadata = undefined;
+			popup.remove();
 		}
 	};
 	const onClick = (info: PickingInfo) => {
@@ -92,33 +83,33 @@
 			onClickTrip(metadata.id);
 		}
 	};
-	const updatePopup = (trip: MetaData) => {
-		if (!trip || !map || !hoverCoordinate) return;
+	const createPopup = (trip: MetaData, hoverCoordinate: maplibregl.LngLatLike) => {
+		if (!trip || !map) return;
 
 		map.getCanvas().style.cursor = 'pointer';
 		const content = trip.realtime
 			? `<strong>${trip.displayName}</strong><br>
-           <span style="color: ${rgbToHex(getDelayColor(trip.departureDelay, true))}">${formatTime(new Date(trip.departure), trip.tz)}</span>
-           <span ${trip.departureDelay != 0 ? 'class="line-through"' : ''}>${formatTime(new Date(trip.scheduledDeparture), trip.tz)}</span> ${trip.from}<br>
-           <span style="color: ${rgbToHex(getDelayColor(trip.arrivalDelay, true))}">${formatTime(new Date(trip.arrival), trip.tz)}</span>
-           <span ${trip.arrivalDelay != 0 ? 'class="line-through"' : ''}>${formatTime(new Date(trip.scheduledArrival), trip.tz)}</span> ${trip.to}`
+			   <span style="color: ${rgbToHex(getDelayColor(trip.departureDelay, true))}">${formatTime(new Date(trip.departure), trip.tz)}</span>
+			   <span ${trip.departureDelay != 0 ? 'class="line-through"' : ''}>${formatTime(new Date(trip.scheduledDeparture), trip.tz)}</span> ${trip.from}<br>
+			   <span style="color: ${rgbToHex(getDelayColor(trip.arrivalDelay, true))}">${formatTime(new Date(trip.arrival), trip.tz)}</span>
+			   <span ${trip.arrivalDelay != 0 ? 'class="line-through"' : ''}>${formatTime(new Date(trip.scheduledArrival), trip.tz)}</span> ${trip.to}`
 			: `<strong>${trip.displayName}</strong><br>
-           ${formatTime(new Date(trip.departure), trip.tz)} ${trip.from}<br>
-           ${formatTime(new Date(trip.arrival), trip.tz)} ${trip.to}`;
+			   ${formatTime(new Date(trip.departure), trip.tz)} ${trip.from}<br>
+			   ${formatTime(new Date(trip.arrival), trip.tz)} ${trip.to}`;
 
 		popup.setLngLat(hoverCoordinate).setHTML(content).addTo(map);
 	};
 
 	//ANIMATION
-	const TripIcon = createTripIcon(50);
+	const TripIcon = createTripIcon(100);
 	const IconMapping = {
 		marker: {
 			x: 0,
 			y: 0,
-			width: 50,
-			height: 50,
-			anchorY: 25,
-			anchorX: 25,
+			width: 100,
+			height: 100,
+			anchorY: 50,
+			anchorX: 50,
 			mask: true
 		}
 	};
@@ -139,7 +130,7 @@
 			iconAtlas: TripIcon,
 			iconMapping: IconMapping,
 			pickable: colorMode != 'none',
-			sizeScale: 4,
+			sizeScale: 5,
 			getSize: 10,
 			getIcon: (_) => 'marker',
 			colorFormat: 'RGB',
@@ -158,8 +149,7 @@
 				type: 'update',
 				colorMode,
 				positions: DATA.positions,
-				index:
-					activeHoverIndex !== null && !metaDataMap.has(activeHoverIndex) ? activeHoverIndex : -1,
+				index: activeHoverIndex,
 				angles: DATA.angles,
 				colors: DATA.colors,
 				length: DATA.length
@@ -180,11 +170,7 @@
 			worker.postMessage({ type: 'fetch', query });
 		});
 	});
-	$effect(() => {
-		if (activeHoverIndex && hoverCoordinate && metadata) {
-			updatePopup(metadata);
-		}
-	});
+
 	setInterval(() => {
 		if (query && colorMode !== 'none') {
 			startTime = new Date();
@@ -195,32 +181,23 @@
 	let status = $state();
 	let worker: Worker;
 	let metadata: MetaData | undefined = $state();
-	const metaDataMap = new SvelteMap<number, MetaData>();
+	// const metaDataMap = new SvelteMap<number, MetaData>();
 
 	onMount(() => {
 		worker = new Worker(new URL('tripsWorker.ts', import.meta.url), { type: 'module' });
 		worker.postMessage({ type: 'init', baseUrl: client.getConfig().baseUrl });
 		worker.onmessage = (e) => {
 			if (e.data.type == 'fetch-complete') {
-				metaDataMap.clear();
+				// metaDataMap.clear();
 				status = e.data.status;
 				isProcessing = false;
 			} else {
-				const { positions, angles, length, colors, metadata: incomingMetaData } = e.data;
+				const { positions, angles, length, colors } = e.data;
 				DATA.positions = new Float64Array(positions.buffer);
 				DATA.angles = new Float32Array(angles.buffer);
 				DATA.colors = new Uint8Array(colors.buffer);
 				DATA.length = length;
-				if (activeHoverIndex !== null) {
-					if (e.data.metadata) {
-						metaDataMap.set(activeHoverIndex, incomingMetaData);
-						metadata = e.data.metadata;
-					} else {
-						metadata = metaDataMap.get(activeHoverIndex);
-					}
-				} else {
-					metadata = undefined;
-				}
+				metadata = e.data.metadata;
 			}
 			const layer = createLayer();
 			if (layer) {
