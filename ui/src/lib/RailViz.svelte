@@ -10,7 +10,6 @@
 	import { getDelayColor, rgbToHex } from './Color';
 	import type { MetaData } from './types';
 	import Control from './map/Control.svelte';
-	import { SvelteMap } from 'svelte/reactivity';
 	import { client } from '@motis-project/motis-client';
 	import type { PickingInfo } from '@deck.gl/core';
 	let {
@@ -101,15 +100,15 @@
 	};
 
 	//ANIMATION
-	const TripIcon = createTripIcon(100);
+	const TripIcon = createTripIcon(128);
 	const IconMapping = {
 		marker: {
 			x: 0,
 			y: 0,
-			width: 100,
-			height: 100,
-			anchorY: 50,
-			anchorX: 50,
+			width: 128,
+			height: 128,
+			anchorY: 64,
+			anchorX: 64,
 			mask: true
 		}
 	};
@@ -181,14 +180,12 @@
 	let status = $state();
 	let worker: Worker;
 	let metadata: MetaData | undefined = $state();
-	// const metaDataMap = new SvelteMap<number, MetaData>();
 
 	onMount(() => {
 		worker = new Worker(new URL('tripsWorker.ts', import.meta.url), { type: 'module' });
 		worker.postMessage({ type: 'init', baseUrl: client.getConfig().baseUrl });
 		worker.onmessage = (e) => {
 			if (e.data.type == 'fetch-complete') {
-				// metaDataMap.clear();
 				status = e.data.status;
 				isProcessing = false;
 			} else {
