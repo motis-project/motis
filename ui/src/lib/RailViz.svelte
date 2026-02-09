@@ -108,15 +108,15 @@
 	};
 
 	//ANIMATION
-	const TripIcon = createTripIcon(50);
+	const TripIcon = createTripIcon(100);
 	const IconMapping = {
 		marker: {
 			x: 0,
 			y: 0,
-			width: 50,
-			height: 50,
-			anchorY: 25,
-			anchorX: 25,
+			width: 100,
+			height: 100,
+			anchorY: 50,
+			anchorX: 50,
 			mask: true
 		}
 	};
@@ -137,7 +137,7 @@
 			iconAtlas: TripIcon,
 			iconMapping: IconMapping,
 			pickable: colorMode != 'none',
-			sizeScale: 4,
+			sizeScale: 5,
 			getSize: 10,
 			getIcon: (_) => 'marker',
 			colorFormat: 'RGB',
@@ -177,6 +177,10 @@
 			worker.postMessage({ type: 'fetch', query });
 		});
 	});
+<<<<<<< HEAD
+=======
+
+>>>>>>> 0944415f (fix railviz bug)
 	setInterval(() => {
 		if (query && colorMode !== 'none') {
 			startTime = new Date();
@@ -187,12 +191,20 @@
 	let status = $state();
 	let worker: Worker;
 	let metadata: MetaData | undefined = $state();
+<<<<<<< HEAD
+=======
+	// const metaDataMap = new SvelteMap<number, MetaData>();
+>>>>>>> 0944415f (fix railviz bug)
 
 	onMount(() => {
 		worker = new Worker(new URL('tripsWorker.ts', import.meta.url), { type: 'module' });
 		worker.postMessage({ type: 'init', baseUrl: client.getConfig().baseUrl });
 		worker.onmessage = (e) => {
 			if (e.data.type == 'fetch-complete') {
+<<<<<<< HEAD
+=======
+				// metaDataMap.clear();
+>>>>>>> 0944415f (fix railviz bug)
 				status = e.data.status;
 				activeHoverIndex = -1;
 				isProcessing = false;
@@ -203,10 +215,13 @@
 				DATA.colors = new Uint8Array(colors.buffer);
 				DATA.length = length;
 				metadata = e.data.metadata;
+<<<<<<< HEAD
 				if (clickRequested != -1 && e.data.metadataIndex == clickRequested && metadata) {
 					onClickTrip(metadata.id);
 					clickRequested = -1;
 				}
+=======
+>>>>>>> 0944415f (fix railviz bug)
 			}
 			const layer = createLayer();
 			if (layer) {
