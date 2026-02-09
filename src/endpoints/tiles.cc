@@ -36,6 +36,8 @@ net::reply tiles::operator()(net::route_request const& req, bool) const {
                                                req.version()};
       res.body() =
           std::string_view{reinterpret_cast<char const*>(mem.ptr_), mem.size_};
+      res.insert(boost::beast::http::field::content_type,
+                 "application/x-protobuf");
       res.keep_alive(req.keep_alive());
       return res;
     } catch (std::out_of_range const&) {
