@@ -130,8 +130,8 @@ struct prima {
   std::vector<direct_ride> direct_ride_sharing_{};
   nigiri::vecvec<size_t, char> direct_ride_sharing_tour_ids_{};
 
-  std::vector<nigiri::routing::start> whitelist_first_mile_taxi_;
-  std::vector<nigiri::routing::start> whitelist_last_mile_taxi_;
+  std::vector<nigiri::location_idx_t> whitelist_first_mile_taxi_;
+  std::vector<nigiri::location_idx_t> whitelist_last_mile_taxi_;
 
   std::vector<std::vector<nigiri::unixtime_t>>
       whitelist_first_mile_pickup_times_;

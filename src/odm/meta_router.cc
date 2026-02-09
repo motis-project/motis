@@ -557,7 +557,7 @@ api::plan_response meta_router::run() {
                 [&](motis::api::Leg& leg) -> std::optional<std::string> {
               for (auto s = 0U; s < p.whitelist_first_mile_taxi_.size(); ++s) {
                 if (leg.to_.stopId_ !=
-                    r_.tags_->id(*tt_, p.whitelist_first_mile_taxi_[s].stop_)) {
+                    r_.tags_->id(*tt_, p.whitelist_first_mile_taxi_[s])) {
                   continue;
                 }
                 for (auto e = 0U;
@@ -578,7 +578,7 @@ api::plan_response meta_router::run() {
                 [&](motis::api::Leg& leg) -> std::optional<std::string> {
               for (auto s = 0U; s < p.whitelist_last_mile_taxi_.size(); ++s) {
                 if (leg.from_.stopId_ !=
-                    r_.tags_->id(*tt_, p.whitelist_last_mile_taxi_[s].stop_)) {
+                    r_.tags_->id(*tt_, p.whitelist_last_mile_taxi_[s])) {
                   continue;
                 }
                 for (auto e = 0U;

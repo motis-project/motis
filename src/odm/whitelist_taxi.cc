@@ -70,24 +70,16 @@ void prima::extract_taxis_for_persisting(
     }
 
     if (is_odm_leg(j.legs_.front(), kOdmTransportModeId)) {
-      whitelist_first_mile_taxi_.push_back({
-          .time_at_start_ = j.legs_.front().dep_time_,
-          .time_at_stop_ = j.legs_.front().arr_time_,
-          .stop_ = j.legs_.front().to_,
-      });
+      whitelist_first_mile_taxi_.push_back(j.legs_.front().to_);
     }
 
     if (is_odm_leg(j.legs_.back(), kOdmTransportModeId)) {
-      whitelist_last_mile_taxi_.push_back({
-          .time_at_start_ = j.legs_.back().dep_time_,
-          .time_at_stop_ = j.legs_.back().arr_time_,
-          .stop_ = j.legs_.back().from_,
-      });
+      whitelist_last_mile_taxi_.push_back(j.legs_.back().from_);
     }
   }
 
-  utl::erase_duplicates(whitelist_first_mile_taxi_, by_stop, std::equal_to<>{});
-  utl::erase_duplicates(whitelist_last_mile_taxi_, by_stop, std::equal_to<>{});
+  utl::erase_duplicates(whitelist_first_mile_taxi_, std::less<>{}, std::equal_to<>{});
+  utl::erase_duplicates(whitelist_last_mile_taxi_, std::less<>{}, std::equal_to<>{});
 }
 
 bool prima::consume_whitelist_taxi_response(
