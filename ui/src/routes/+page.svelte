@@ -103,7 +103,7 @@
 	);
 	let dataAttributionLink: string | undefined = $state(undefined);
 	let colorMode = $state<'rt' | 'route' | 'mode' | 'none'>('none');
-	let stopMode = $state<'all' | 'parent' | 'none'>('none');
+	let stopMode = $state<'parent' | 'none'>('none');
 	let showMap = $state(!isSmallScreen);
 	let showRoutes = $state(false);
 	let routesOverlaySession = $state(0);
@@ -954,31 +954,27 @@
 							<Palette class="h-[1.2rem] w-[1.2rem]" />
 						{/if}
 					</Button>
-					<Button size="icon" onclick={() => getLocation()}>
-						<LocateFixed class="w-5 h-5" />
-					</Button>
 					<Button
 						size="icon"
 						onclick={() => {
 							stopMode = (function () {
 								switch (stopMode) {
-									case 'all':
-										return 'parent';
 									case 'parent':
 										return 'none';
 									case 'none':
-										return 'all';
+										return 'parent';
 								}
 							})();
 						}}
 					>
-						{#if stopMode == 'all'}
-							<MapPinHouse class="h-[1.2rem] w-[1.2rem]" />
-						{:else if stopMode == 'parent'}
+						{#if stopMode == 'parent'}
 							<MapPin class="h-[1.2rem] w-[1.2rem]" />
-						{:else if stopMode == 'none'}
+						{:else}
 							<Ban class="h-[1.2rem] w-[1.2rem]" />
 						{/if}
+					</Button>
+					<Button size="icon" onclick={() => getLocation()}>
+						<LocateFixed class="w-5 h-5" />
 					</Button>
 				</Control>
 				{#if showRoutes}
