@@ -1,9 +1,13 @@
 #include "motis/endpoints/one_to_many.h"
 
+#include <limits>
 #include <optional>
+
+#include "utl/enumerate.h"
 
 #include "nigiri/common/delta_t.h"
 #include "nigiri/routing/one_to_all.h"
+#include "nigiri/types.h"
 
 #include "motis/endpoints/one_to_many_post.h"
 #include "motis/endpoints/routing.h"
@@ -56,34 +60,6 @@ api::oneToMany_response one_to_many::operator()(
   return one_to_many_handle_request(query, w_, l_, elevations_);
 }
 
-/*
-  std::string one_{};
-  std::vector<std::string> many_{};
-  std::optional<openapi::date_time_t> time_{};
-  std::int64_t maxTravelTime_{};
-  double maxMatchingDistance_{};
-  bool arriveBy_{};
-  std::optional<std::int64_t> maxTransfers_{};
-  std::int64_t minTransferTime_{0};
-  std::int64_t additionalTransferTime_{0};
-  double transferTimeFactor_{1.0};
-  bool useRoutedTransfers_{false};
-  PedestrianProfileEnum pedestrianProfile_{PedestrianProfileEnum::FOOT};
-  std::optional<PedestrianSpeed> pedestrianSpeed_{};
-  std::optional<CyclingSpeed> cyclingSpeed_{};
-  ElevationCostsEnum elevationCosts_{ElevationCostsEnum::NONE};
-  std::vector<ModeEnum> transitModes_{std::vector<ModeEnum>{ModeEnum::TRANSIT}};
-  std::vector<ModeEnum> preTransitModes_{std::vector<ModeEnum>{ModeEnum::WALK}};
-  std::vector<ModeEnum>
-  postTransitModes_{std::vector<ModeEnum>{ModeEnum::WALK}};
-  std::vector<ModeEnum> directModes_{std::vector<ModeEnum>{ModeEnum::WALK}};
-  std::int64_t maxPreTransitTime_{900};
-  std::int64_t maxPostTransitTime_{900};
-  std::int64_t maxDirectTime_{1800};
-  bool requireBikeTransport_{false};
-  bool requireCarTransport_{false};
-*/
-
 template <typename Endpoint, typename Query>
 api::oneToManyIntermodal_response run_one_to_many_intermodal(
     Endpoint const& ep, Query const& query) {
@@ -107,10 +83,11 @@ api::oneToManyIntermodal_response run_one_to_many_intermodal(
   auto const elevation_costs =
       query.elevationCosts_.value_or(api::ElevationCostsEnum::NONE);
 
+  // Get street routing durations
   utl::verify(
       !query.directModes_.has_value() || query.directModes_->size() == 1,
       "Only one direct mode supported. Got {}", query.directModes_->size());
-  auto const direct_durations =
+  auto durations =
       query.directModes_
           ? one_to_many_direct(
                 *ep.w_, *ep.l_, (*query.directModes_)[0], *one, many,
@@ -119,7 +96,11 @@ api::oneToManyIntermodal_response run_one_to_many_intermodal(
                 query.maxMatchingDistance_, query.arriveBy_,
                 get_osr_parameters(query), pedestrian_profile, elevation_costs,
                 ep.elevations_)
-          : api::oneToManyIntermodal_response{};
+          : api::oneToManyIntermodal_response{many.size()};
+
+  // TODO Should this always be calculated?
+  // TODO What if transitModes.empty() and maxDirectTime == 0?
+  // Following code is similar to One-to-All
   auto const one_modes = deduplicate(
       (query.arriveBy_ ? query.postTransitModes_ : query.preTransitModes_)
           .value_or(std::vector{api::ModeEnum::WALK}));
@@ -144,6 +125,15 @@ api::oneToManyIntermodal_response run_one_to_many_intermodal(
       query.arriveBy_ ? osr::direction::kBackward : osr::direction::kForward;
   auto const many_dir =
       query.arriveBy_ ? osr::direction::kForward : osr::direction::kBackward;
+  constexpr auto const kInf = std::numeric_limits<double>::infinity();
+
+  auto const to_duration = [&](n::delta_t const d) -> double {
+    return 60.0 * (query.arriveBy_ ? -1 * d : d);
+  };
+  auto const to_seconds = [](n::duration_t const d) { return 60 * d.count(); };
+  auto const unreachable = query.arriveBy_
+                               ? nigiri::kInvalidDelta<n::direction::kBackward>
+                               : nigiri::kInvalidDelta<n::direction::kForward>;
 
   auto const r = routing{ep.config_,     ep.w_,   ep.l_,       ep.pl_,
                          ep.elevations_, &ep.tt_, nullptr,     &ep.tags_,
@@ -196,66 +186,48 @@ api::oneToManyIntermodal_response run_one_to_many_intermodal(
   if (ep.tt_.locations_.footpaths_out_.at(q.prf_idx_).empty()) {
     q.prf_idx_ = n::kDefaultProfile;
   }
-  // Up to now same as one_to_many_im
+
+  // Compute and update durations using transits
+
   auto const state =
       query.arriveBy_
           ? n::routing::one_to_all<n::direction::kBackward>(
                 ep.tt_, nullptr, q)  // Missing RT support
           : n::routing::one_to_all<n::direction::kForward>(ep.tt_, nullptr, q);
-
-  auto const unreachable = query.arriveBy_
-                               ? nigiri::kInvalidDelta<n::direction::kBackward>
-                               : nigiri::kInvalidDelta<n::direction::kForward>;
   auto reachable = nigiri::bitvec{ep.tt_.n_locations()};
   for (auto i = 0U; i != ep.tt_.n_locations(); ++i) {
     if (state.template get_best<0>()[i][0] != unreachable) {
       reachable.set(i);
     }
   }
-  auto const dir =
-      query.arriveBy_ ? n::direction::kBackward : n::direction::kForward;
-
-  // TODO Rewrite loop
-  auto i = 0U;
-  return utl::to_vec(
-      // many_offsets,
-      // [&](std::vector<n::routing::offset> const& offsets) -> api::Duration {
-      many, [&](osr::location const l) -> api::Duration {
-        auto const offsets = r.get_offsets(
-            nullptr, l, many_dir, many_modes, std::nullopt, std::nullopt,
-            std::nullopt, std::nullopt, false, osr_params, pedestrian_profile,
-            elevation_costs, many_max_time, query.maxMatchingDistance_, gbfs_rd,
-            prepare_stats);
-        // fmt::println("Testing {} offsets ...", offsets.size());
-        auto best = (direct_durations.size() > 0 &&
-                     direct_durations[i].duration_.has_value())
-                        ? direct_durations[i].duration_
-                        : unreachable;
-        ++i;
-        for (auto const offset : offsets) {
-          auto const loc = offset.target();
-          if (reachable.test(to_idx(loc))) {
-            auto const fastest = n::routing::get_fastest_one_to_all_offsets(
-                ep.tt_, state, dir, loc, time, q.max_transfers_);
-            // Convert minutes to seconds
-            auto const total = static_cast<n::delta_t>(
-                60 * (fastest.duration_ + offset.duration().count()));
-            // fmt::println(
-            //     "Testing {}: fastest={}, off_dur={}, total={} "
-            //     "(best={}) (ur={}) (k={}) (pos={})",
-            //     loc, fastest.duration_, offset.duration().count(), total,
-            //     best, unreachable, fastest.k_,
-            //     ep.tt_.locations_.coordinates_[loc]);
-            if (total < best) {  // TODO is_better() + best()   (reverse)
-              best = total;
-            }
-          }  // else
-             // fmt::println("Target {} is unreachable (dur={}) (pos={})", loc,
-             //              offset.duration(),
-             //              ep.tt_.locations_.coordinates_[loc]);
+  for (auto const [i, l] : utl::enumerate(many)) {
+    auto best = kInf;
+    auto const offsets = r.get_offsets(
+        nullptr, l, many_dir, many_modes, std::nullopt, std::nullopt,
+        std::nullopt, std::nullopt, false, osr_params, pedestrian_profile,
+        elevation_costs, many_max_time, query.maxMatchingDistance_, gbfs_rd,
+        prepare_stats);
+    for (auto const offset : offsets) {
+      auto const loc = offset.target();
+      if (reachable.test(to_idx(loc))) {
+        auto const fastest = n::routing::get_fastest_one_to_all_offsets(
+            ep.tt_, state,
+            query.arriveBy_ ? n::direction::kBackward : n::direction::kForward,
+            loc, time, q.max_transfers_);
+        auto const total =
+            to_duration(fastest.duration_) + to_seconds(offset.duration());
+        if (total < best) {
+          best = total;
         }
-        return best < unreachable ? api::Duration{best} : api::Duration{};
-      });
+      }
+    }
+    if (best < kInf && (!durations[i].duration_.has_value() ||
+                        best < *durations[i].duration_)) {
+      durations[i].duration_ = best;
+    }
+  }
+
+  return durations;
 }
 
 api::oneToManyIntermodal_response one_to_many_intermodal::operator()(
