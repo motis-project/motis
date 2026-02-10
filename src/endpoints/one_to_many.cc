@@ -164,7 +164,7 @@ void update_transit_durations(
           : n::routing::one_to_all<n::direction::kForward>(ep.tt_, nullptr, q);
   auto reachable = nigiri::bitvec{ep.tt_.n_locations()};
   for (auto i = 0U; i != ep.tt_.n_locations(); ++i) {
-    if (state.template get_best<0>()[i][0] != unreachable) {
+    if (state.template get_tmp<0>()[i][0] != unreachable) {
       reachable.set(i);
     }
   }
