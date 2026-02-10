@@ -187,6 +187,7 @@
 		worker.onmessage = (e) => {
 			if (e.data.type == 'fetch-complete') {
 				status = e.data.status;
+				activeHoverIndex = -1;
 				isProcessing = false;
 			} else {
 				const { positions, angles, length, colors } = e.data;
