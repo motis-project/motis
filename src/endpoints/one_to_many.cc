@@ -54,58 +54,19 @@ api::oneToMany_response one_to_many_direct(
                          : api::Duration{};
   });
 }
-api::oneToMany_response one_to_many::operator()(
-    boost::urls::url_view const& url) const {
-  auto const query = api::oneToMany_params{url.params()};
-  return one_to_many_handle_request(query, w_, l_, elevations_);
-}
 
 template <typename Endpoint, typename Query>
-api::oneToManyIntermodal_response run_one_to_many_intermodal(
+void update_transit_durations(
+    api::oneToMany_response& durations,
     Endpoint const& ep,
     Query const& query,
     place_t const& one,
-    std::vector<place_t> const& many) {
-  ep.metrics_->routing_requests_.Increment();
-
-  auto const time = std::chrono::time_point_cast<std::chrono::minutes>(
-      *query.time_.value_or(openapi::now()));
-  auto const max_travel_time = n::duration_t{query.maxTravelTime_};
-
-  auto const pedestrian_profile =
-      query.pedestrianProfile_.value_or(api::PedestrianProfileEnum::FOOT);
-  auto const elevation_costs =
-      query.elevationCosts_.value_or(api::ElevationCostsEnum::NONE);
-  auto const osr_params = get_osr_parameters(query);
-
-  // Get street routing durations
-  utl::verify(
-      !query.directModes_.has_value() || query.directModes_->size() == 1,
-      "Only one direct mode supported. Got {}", query.directModes_->size());
-  auto durations =
-      query.directModes_ ? [&]() {
-        auto const to_location = [&](place_t const p) {
-          return std::visit(
-              utl::overloaded{
-                  [&](tt_location const& l) -> osr::location {
-                    return {ep.tt_.locations_.coordinates_[l.l_],
-                            osr::level_t{}};
-                  },
-                  [&](osr::location const& l) -> osr::location { return l; }},
-              p);
-        };
-        return one_to_many_direct(
-            *ep.w_, *ep.l_, (*query.directModes_)[0], to_location(one),
-            utl::to_vec(many, to_location),
-            std::min(query.maxDirectTime_.value_or(query.maxTravelTime_),
-                     query.maxTravelTime_),
-            query.maxMatchingDistance_,
-            query.arriveBy_ ? osr::direction::kBackward
-                            : osr::direction::kForward,
-            osr_params, pedestrian_profile, elevation_costs, ep.elevations_);
-      }()
-                         : api::oneToManyIntermodal_response{many.size()};
-
+    std::vector<place_t> const& many,
+    auto const& time,
+    n::duration_t const max_travel_time,
+    api::PedestrianProfileEnum const pedestrian_profile,
+    api::ElevationCostsEnum const elevation_costs,
+    osr_parameters const& osr_params) {
   // TODO Should this always be calculated?
   // TODO What if transitModes.empty() and maxDirectTime == 0?
   // Following code is similar to One-to-All
@@ -233,6 +194,63 @@ api::oneToManyIntermodal_response run_one_to_many_intermodal(
       durations[i].duration_ = best;
     }
   }
+}
+
+api::oneToMany_response one_to_many::operator()(
+    boost::urls::url_view const& url) const {
+  auto const query = api::oneToMany_params{url.params()};
+  return one_to_many_handle_request(query, w_, l_, elevations_);
+}
+
+template <typename Endpoint, typename Query>
+api::oneToManyIntermodal_response run_one_to_many_intermodal(
+    Endpoint const& ep,
+    Query const& query,
+    place_t const& one,
+    std::vector<place_t> const& many) {
+  ep.metrics_->routing_requests_.Increment();
+
+  auto const time = std::chrono::time_point_cast<std::chrono::minutes>(
+      *query.time_.value_or(openapi::now()));
+  auto const max_travel_time = n::duration_t{query.maxTravelTime_};
+
+  auto const pedestrian_profile =
+      query.pedestrianProfile_.value_or(api::PedestrianProfileEnum::FOOT);
+  auto const elevation_costs =
+      query.elevationCosts_.value_or(api::ElevationCostsEnum::NONE);
+  auto const osr_params = get_osr_parameters(query);
+
+  // Get street routing durations
+  utl::verify(
+      !query.directModes_.has_value() || query.directModes_->size() == 1,
+      "Only one direct mode supported. Got {}", query.directModes_->size());
+  auto durations =
+      query.directModes_ ? [&]() {
+        auto const to_location = [&](place_t const p) {
+          return std::visit(
+              utl::overloaded{
+                  [&](tt_location const& l) -> osr::location {
+                    return {ep.tt_.locations_.coordinates_[l.l_],
+                            osr::level_t{}};
+                  },
+                  [&](osr::location const& l) -> osr::location { return l; }},
+              p);
+        };
+        return one_to_many_direct(
+            *ep.w_, *ep.l_, (*query.directModes_)[0], to_location(one),
+            utl::to_vec(many, to_location),
+            std::min(query.maxDirectTime_.value_or(query.maxTravelTime_),
+                     query.maxTravelTime_),
+            query.maxMatchingDistance_,
+            query.arriveBy_ ? osr::direction::kBackward
+                            : osr::direction::kForward,
+            osr_params, pedestrian_profile, elevation_costs, ep.elevations_);
+      }()
+                         : api::oneToManyIntermodal_response{many.size()};
+
+  update_transit_durations(durations, ep, query, one, many, time,
+                           max_travel_time, pedestrian_profile, elevation_costs,
+                           osr_params);
 
   return durations;
 }
