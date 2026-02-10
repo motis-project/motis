@@ -523,7 +523,8 @@ data import(config const& c, fs::path const& data_path, bool const write) {
       [&]() {
         return c.timetable_ && c.timetable_->with_shapes_ &&
                c.timetable_->route_shapes_ &&
-               c.timetable_->route_shapes_->missing_shapes_ &&
+               (c.timetable_->route_shapes_->missing_shapes_ ||
+                c.timetable_->route_shapes_->replace_shapes_) &&
                c.use_street_routing();
       },
       [&]() { return d.tt_ && /*d.tags_ &&*/ d.w_ && d.pl_ && d.l_ && d.pl_; },
@@ -546,7 +547,11 @@ data import(config const& c, fs::path const& data_path, bool const write) {
        {"missing_shapes",
         c.timetable_.value_or(config::timetable{})
             .route_shapes_.value_or(config::timetable::route_shapes{})
-            .missing_shapes_}}};
+            .missing_shapes_},
+       {"replace_shapes",
+        c.timetable_.value_or(config::timetable{})
+            .route_shapes_.value_or(config::timetable::route_shapes{})
+            .replace_shapes_}}};
 
   auto tiles = task{
       "tiles",

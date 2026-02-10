@@ -667,6 +667,7 @@
 						bind:via
 						bind:viaMinimumStay
 						bind:viaLabels
+						{hasDebug}
 					/>
 				</Card>
 			</Tabs.Content>
@@ -701,6 +702,7 @@
 						bind:preTransitProviderGroups
 						bind:postTransitProviderGroups
 						bind:directProviderGroups
+						{hasDebug}
 					/>
 				</Card>
 			</Tabs.Content>

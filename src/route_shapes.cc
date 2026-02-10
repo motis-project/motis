@@ -86,6 +86,7 @@ void route_shapes(osr::ways const& w,
   auto segments_beelined = 0ULL;
   auto dijkstra_early_terminations = 0ULL;
   auto dijkstra_full_runs = 0ULL;
+  auto routes_with_existing_shapes = 0ULL;
 
   auto const& debug = conf.debug_;
   auto const debug_enabled =
@@ -93,7 +94,8 @@ void route_shapes(osr::ways const& w,
       (debug->all_ || debug->all_with_beelines_ ||
        (debug->trips_ && !debug->trips_->empty()) ||
        (debug->route_ids_ && !debug->route_ids_->empty()) ||
-       (debug->route_indices_ && !debug->route_indices_->empty()));
+       (debug->route_indices_ && !debug->route_indices_->empty()) ||
+       debug->slow_ != 0U);
 
   if (debug_enabled) {
     std::filesystem::create_directories(debug->path_);
@@ -139,6 +141,32 @@ void route_shapes(osr::ways const& w,
     }
 
     auto const transports = tt.route_transport_ranges_[r];
+
+    if (!conf.replace_shapes_) {
+      auto existing_shapes = true;
+      for (auto const transport_idx : transports) {
+        auto const frun = n::rt::frun{
+            tt, nullptr,
+            n::rt::run{.t_ = n::transport{transport_idx, n::day_idx_t{0}},
+                       .stop_range_ = n::interval{n::stop_idx_t{0U},
+                                                  static_cast<n::stop_idx_t>(
+                                                      stops.size())},
+                       .rt_ = n::rt_transport_idx_t::invalid()}};
+        frun.for_each_trip(
+            [&](n::trip_idx_t const trip_idx, n::interval<n::stop_idx_t>) {
+              auto const shp = shapes.get_shape(trip_idx);
+              if (shp.empty()) {
+                existing_shapes = false;
+              }
+            });
+        if (existing_shapes) {
+          ++routes_with_existing_shapes;
+          progress_tracker->increment();
+          return;
+        }
+      }
+    }
+
     auto debug_path_fn = std::function<std::optional<std::filesystem::path>(
         osr::matched_route const&)>{nullptr};
 
@@ -314,7 +342,7 @@ void route_shapes(osr::ways const& w,
         }
       }
 
-      auto range_to_offsets = std::map<std::pair<n::stop_idx_t, n::stop_idx_t>,
+      auto range_to_offsets = hash_map<std::pair<n::stop_idx_t, n::stop_idx_t>,
                                        n::shape_offset_idx_t>{};
 
       for (auto const transport_idx : transports) {
@@ -374,9 +402,11 @@ void route_shapes(osr::ways const& w,
 
   fmt::println(std::clog,
                "{} routes matched, {} segments routed, {} segments beelined, "
-               "{} dijkstra early terminations, {} dijkstra full runs",
+               "{} dijkstra early terminations, {} dijkstra full runs\n{} "
+               "routes with existing shapes skipped",
                routes_matched, segments_routed, segments_beelined,
-               dijkstra_early_terminations, dijkstra_full_runs);
+               dijkstra_early_terminations, dijkstra_full_runs,
+               routes_with_existing_shapes);
 }
 
 }  // namespace motis

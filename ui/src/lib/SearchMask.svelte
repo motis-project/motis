@@ -45,7 +45,8 @@
 		directProviderGroups = $bindable(),
 		via = $bindable(),
 		viaMinimumStay = $bindable(),
-		viaLabels = $bindable()
+		viaLabels = $bindable(),
+		hasDebug = false
 	}: {
 		geocodingBiasPlace?: maplibregl.LngLatLike;
 		serverConfig: ServerConfig | undefined;
@@ -75,6 +76,7 @@
 		via: undefined | Location[];
 		viaMinimumStay: undefined | number[];
 		viaLabels: Record<string, string>;
+		hasDebug: boolean;
 	} = $props();
 
 	let fromItems = $state<Array<Location>>([]);
@@ -188,6 +190,7 @@
 			bind:via
 			bind:viaMinimumStay
 			bind:viaLabels
+			{hasDebug}
 		/>
 	</div>
 </div>

@@ -133,7 +133,7 @@ export const levels = <ThrowOnError extends boolean = false>(options: Options<Le
 export const routes = <ThrowOnError extends boolean = false>(options: Options<RoutesData, ThrowOnError>) => {
     return (options?.client ?? client).get<RoutesResponse, RoutesError, ThrowOnError>({
         ...options,
-        url: '/api/v1/map/routes'
+        url: '/api/experimental/map/routes'
     });
 };
 

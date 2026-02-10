@@ -1968,7 +1968,7 @@ paths:
                 items:
                   type: number
 
-  /api/v1/map/routes:
+  /api/experimental/map/routes:
     get:
       tags:
         - map
