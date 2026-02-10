@@ -8,14 +8,35 @@ import yaml
 from multiprocessing import Pool
 from pathlib import Path
 
+
+def resolve_motis_exec():
+    env_exec = os.environ.get("MOTIS_EXEC")
+    if env_exec:
+        return env_exec
+
+    repo_root = Path(__file__).resolve().parents[1]
+    candidates = [
+        repo_root / "build" / "motis",
+        repo_root / "cmake-build-relwithdebinfo" / "motis",
+    ]
+
+    for candidate in candidates:
+        if candidate.exists():
+            return str(candidate)
+
+    return "motis"
+
+
+MOTIS_EXEC = resolve_motis_exec()
+
 QUERIES = {
     'raptor': {
         'params': '?algorithm=RAPTOR&numItineraries=5&maxItineraries=5',
-        'exec': '/home/felix/code/motis/cmake-build-relwithdebinfo/motis'
+        'exec': MOTIS_EXEC
     },
     'pong': {
         'params': '?algorithm=PONG&numItineraries=5&maxItineraries=5',
-        'exec': '/home/felix/code/motis/cmake-build-relwithdebinfo/motis'
+        'exec': MOTIS_EXEC
     }
 }
 
