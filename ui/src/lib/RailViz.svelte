@@ -64,6 +64,7 @@
 	});
 
 	let activeHoverIndex: number | null = $state(null);
+	let clickRequested = -1;
 
 	const onHover = (info: PickingInfo) => {
 		activeHoverIndex = info.index;
@@ -75,8 +76,14 @@
 		}
 	};
 	const onClick = (info: PickingInfo) => {
-		if (info.picked && info.index !== -1 && metadata) {
-			onClickTrip(metadata.id);
+		if (info.picked && info.index !== -1) {
+			if (info.index != activeHoverIndex || !metadata) {
+				metadata = undefined;
+				activeHoverIndex = info.index;
+				clickRequested = info.index;
+			} else if (metadata) {
+				onClickTrip(metadata.id);
+			}
 		}
 	};
 	const createPopup = (trip: MetaData, hoverCoordinate: maplibregl.LngLatLike) => {
@@ -188,6 +195,10 @@
 				DATA.colors = new Uint8Array(colors.buffer);
 				DATA.length = length;
 				metadata = e.data.metadata;
+				if (clickRequested != -1 && e.data.metadataIndex == clickRequested && metadata) {
+					onClickTrip(metadata.id);
+					clickRequested = -1;
+				}
 			}
 			overlay.setProps({ layers: [createLayer()] });
 			if (canceled) {
