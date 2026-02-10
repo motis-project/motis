@@ -190,7 +190,7 @@ export type LocationType = 'ADDRESS' | 'PLACE' | 'STOP';
  *
  * # Transit modes
  *
- * - `TRANSIT`: translates to `RAIL,TRAM,BUS,FERRY,AIRPLANE,COACH,CABLE_CAR,FUNICULAR,AREAL_LIFT,OTHER`
+ * - `TRANSIT`: translates to `TRAM,FERRY,AIRPLANE,BUS,COACH,RAIL,ODM,FUNICULAR,AERIAL_LIFT,OTHER`
  * - `TRAM`: trams
  * - `SUBWAY`: subway trains (Paris Metro, London Underground, but also NYC Subway, Hamburger Hochbahn, and other non-underground services)
  * - `FERRY`: ferries
@@ -198,21 +198,21 @@ export type LocationType = 'ADDRESS' | 'PLACE' | 'STOP';
  * - `BUS`: short distance buses (does not include `COACH`)
  * - `COACH`: long distance buses (does not include `BUS`)
  * - `RAIL`: translates to `HIGHSPEED_RAIL,LONG_DISTANCE,NIGHT_RAIL,REGIONAL_RAIL,REGIONAL_FAST_RAIL,SUBURBAN,SUBWAY`
- * - `SUBURBAN`: suburban trains (e.g. S-Bahn, RER, Elizabeth Line, ...)
  * - `HIGHSPEED_RAIL`: long distance high speed trains (e.g. TGV)
  * - `LONG_DISTANCE`: long distance inter city trains
  * - `NIGHT_RAIL`: long distance night trains
  * - `REGIONAL_FAST_RAIL`: regional express routes that skip low traffic stops to be faster
  * - `REGIONAL_RAIL`: regional train
+ * - `SUBURBAN`: suburban trains (e.g. S-Bahn, RER, Elizabeth Line, ...)
+ * - `ODM`: demand responsive transport
  * - `FUNICULAR`: Funicular. Any rail system designed for steep inclines.
  * - `AERIAL_LIFT`: Aerial lift, suspended cable car (e.g., gondola lift, aerial tramway). Cable transport where cabins, cars, gondolas or open chairs are suspended by means of one or more cables.
- * - `ODM`: demand responsive transport
  * - `AREAL_LIFT`: deprecated
  * - `METRO`: deprecated
  * - `CABLE_CAR`: deprecated
  *
  */
-export type Mode = 'WALK' | 'BIKE' | 'RENTAL' | 'CAR' | 'CAR_PARKING' | 'CAR_DROPOFF' | 'ODM' | 'RIDE_SHARING' | 'FLEX' | 'TRANSIT' | 'TRAM' | 'SUBWAY' | 'FERRY' | 'AIRPLANE' | 'SUBURBAN' | 'BUS' | 'COACH' | 'RAIL' | 'HIGHSPEED_RAIL' | 'LONG_DISTANCE' | 'NIGHT_RAIL' | 'REGIONAL_FAST_RAIL' | 'REGIONAL_RAIL' | 'CABLE_CAR' | 'FUNICULAR' | 'AERIAL_LIFT' | 'OTHER' | 'AREAL_LIFT' | 'METRO';
+export type Mode = 'WALK' | 'BIKE' | 'RENTAL' | 'CAR' | 'CAR_PARKING' | 'CAR_DROPOFF' | 'ODM' | 'RIDE_SHARING' | 'FLEX' | 'TRANSIT' | 'TRAM' | 'SUBWAY' | 'FERRY' | 'AIRPLANE' | 'BUS' | 'COACH' | 'RAIL' | 'HIGHSPEED_RAIL' | 'LONG_DISTANCE' | 'NIGHT_RAIL' | 'REGIONAL_FAST_RAIL' | 'REGIONAL_RAIL' | 'SUBURBAN' | 'FUNICULAR' | 'AERIAL_LIFT' | 'OTHER' | 'AREAL_LIFT' | 'METRO' | 'CABLE_CAR';
 
 /**
  * GeoCoding match
@@ -428,6 +428,10 @@ export type Place = {
      * Time that on-demand service ends
      */
     flexEndPickupDropOffWindow?: string;
+    /**
+     * available transport modes for stops
+     */
+    modes?: Array<Mode>;
 };
 
 /**
@@ -492,6 +496,10 @@ export type StopTime = {
      *
      */
     headsign: string;
+    /**
+     * first stop of this trip
+     */
+    tripFrom: Place;
     /**
      * final stop of this trip
      */
@@ -1118,6 +1126,10 @@ export type Leg = {
      */
     headsign?: string;
     /**
+     * first stop of this trip
+     */
+    tripFrom?: Place;
+    /**
      * final stop of this trip (can differ from headsign)
      */
     tripTo?: Place;
@@ -1179,6 +1191,11 @@ export type Leg = {
      *
      */
     loopedCalendarSince?: string;
+    /**
+     * Whether bikes can be carried on this leg.
+     *
+     */
+    bikesAllowed?: boolean;
 };
 
 export type RiderCategory = {
@@ -1461,7 +1478,7 @@ export type PlanData = {
          * - false: Only return basic information (start time, end time, duration) for transfers.
          *
          */
-        detailedTransfers: boolean;
+        detailedTransfers?: boolean;
         /**
          * Optional. Default is `WALK` which will compute walking routes as direct connections.
          *
@@ -2424,6 +2441,10 @@ export type StoptimesData = {
          *
          */
         time?: string;
+        /**
+         * Optional. Default is `true`. If set to `false`, alerts are omitted in the metadata of place for all stopTimes.
+         */
+        withAlerts?: boolean;
         /**
          * Optional. Include stoptimes where passengers can not alight/board according to schedule.
          */
