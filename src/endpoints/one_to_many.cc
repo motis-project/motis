@@ -1,5 +1,6 @@
 #include "motis/endpoints/one_to_many.h"
 
+#include <chrono>
 #include <limits>
 #include <optional>
 
@@ -63,7 +64,7 @@ void update_transit_durations(
     place_t const& one,
     std::vector<place_t> const& many,
     auto const& time,
-    n::duration_t const max_travel_time,
+    std::chrono::seconds const max_travel_time,
     api::PedestrianProfileEnum const pedestrian_profile,
     api::ElevationCostsEnum const elevation_costs,
     osr_parameters const& osr_params) {
@@ -77,7 +78,7 @@ void update_transit_durations(
       (query.arriveBy_ ? query.preTransitModes_ : query.postTransitModes_)
           .value_or(std::vector{api::ModeEnum::WALK}));
   auto const max_travel_time_limit = std::min(
-      std::chrono::duration_cast<std::chrono::seconds>(max_travel_time),
+      max_travel_time,
       std::chrono::seconds{ep.config_.limits_.value()
                                .street_routing_max_prepost_transit_seconds_});
   auto const one_max_time =
@@ -127,7 +128,8 @@ void update_transit_durations(
                                     one_max_time, time, prepare_stats),
       .max_transfers_ = static_cast<std::uint8_t>(
           query.maxTransfers_.value_or(n::routing::kMaxTransfers)),
-      .max_travel_time_ = max_travel_time,
+      .max_travel_time_ =
+          std::chrono::duration_cast<n::duration_t>(max_travel_time),
       .prf_idx_ = query.useRoutedTransfers_.value_or(false)
                       ? (query.pedestrianProfile_ ==
                                  api::PedestrianProfileEnum::WHEELCHAIR
@@ -144,9 +146,9 @@ void update_transit_durations(
                            query.additionalTransferTime_ == 0 &&
                            query.transferTimeFactor_ == 1.0),
               .min_transfer_time_ =
-                  n::duration_t{query.minTransferTime_.value_or(0)},
+                  n::duration_t{query.minTransferTime_.value_or(0) / 60},
               .additional_time_ =
-                  n::duration_t{query.additionalTransferTime_.value_or(0)},
+                  n::duration_t{query.additionalTransferTime_.value_or(0) / 60},
               .factor_ =
                   static_cast<float>(query.transferTimeFactor_.value_or(1.0))},
   };
@@ -164,7 +166,9 @@ void update_transit_durations(
           : n::routing::one_to_all<n::direction::kForward>(ep.tt_, nullptr, q);
   auto reachable = nigiri::bitvec{ep.tt_.n_locations()};
   for (auto i = 0U; i != ep.tt_.n_locations(); ++i) {
-    if (state.template get_tmp<0>()[i][0] != unreachable) {
+    // Only allow connections at directly reachable stops without footpath
+    if (state.template get_tmp<0>()[i][0] != unreachable &&
+        state.template get_best<0>()[i][0] != unreachable) {
       reachable.set(i);
     }
   }
@@ -189,8 +193,9 @@ void update_transit_durations(
         }
       }
     }
-    if (best < kInf && (!durations[i].duration_.has_value() ||
-                        best < *durations[i].duration_)) {
+    if (best < kInf && best <= max_travel_time.count() &&
+        (!durations[i].duration_.has_value() ||
+         best < *durations[i].duration_)) {
       durations[i].duration_ = best;
     }
   }
@@ -212,7 +217,6 @@ api::oneToManyIntermodal_response run_one_to_many_intermodal(
 
   auto const time = std::chrono::time_point_cast<std::chrono::minutes>(
       *query.time_.value_or(openapi::now()));
-  auto const max_travel_time = n::duration_t{query.maxTravelTime_};
 
   auto const pedestrian_profile =
       query.pedestrianProfile_.value_or(api::PedestrianProfileEnum::FOOT);
@@ -249,8 +253,8 @@ api::oneToManyIntermodal_response run_one_to_many_intermodal(
                          : api::oneToManyIntermodal_response{many.size()};
 
   update_transit_durations(durations, ep, query, one, many, time,
-                           max_travel_time, pedestrian_profile, elevation_costs,
-                           osr_params);
+                           std::chrono::seconds{query.maxTravelTime_},
+                           pedestrian_profile, elevation_costs, osr_params);
 
   return durations;
 }
