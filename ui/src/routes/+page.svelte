@@ -75,7 +75,7 @@
 					: 'connections')
 	);
 	let dataAttributionLink: string | undefined = $state(undefined);
-	let colorMode = $state<'rt' | 'route' | 'mode' | 'none'>('none');
+	let colorMode = $state<'rt' | 'route' | 'mode' | 'none'>(isSmallScreen ? 'none' : 'rt');
 	let showMap = $state(!isSmallScreen);
 	let lastOneToAllQuery: OneToAllData | undefined = undefined;
 	let lastPlanQuery: PlanData | undefined = undefined;
