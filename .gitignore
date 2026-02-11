@@ -21,3 +21,6 @@ config.yaml
 config.yml
 config.ini
 
+.DS_Store
+.vscode/
+
