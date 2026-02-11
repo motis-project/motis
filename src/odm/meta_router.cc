@@ -345,7 +345,8 @@ api::plan_response meta_router::run() {
           start_modes_, start_form_factors_, start_propulsion_types_,
           start_rental_providers_, start_rental_provider_groups_,
           start_ignore_rental_return_constraints_, params,
-          query_.pedestrianProfile_, query_.elevationCosts_, pre_transit_time,
+          query_.pedestrianProfile_, query_.elevationCosts_,
+          query_.arriveBy_ ? post_transit_time : pre_transit_time,
           query_.maxMatchingDistance_, gbfs_rd_, prepare_stats),
       .dest_walk_ = r_.get_offsets(
           rtt_, dest_,
@@ -354,22 +355,25 @@ api::plan_response meta_router::run() {
           dest_modes_, dest_form_factors_, dest_propulsion_types_,
           dest_rental_providers_, dest_rental_provider_groups_,
           dest_ignore_rental_return_constraints_, params,
-          query_.pedestrianProfile_, query_.elevationCosts_, post_transit_time,
+          query_.pedestrianProfile_, query_.elevationCosts_,
+          query_.arriveBy_ ? pre_transit_time : post_transit_time,
           query_.maxMatchingDistance_, gbfs_rd_, prepare_stats),
-      .td_start_walk_ =
-          r_.get_td_offsets(rtt_, e_, start_,
-                            query_.arriveBy_ ? osr::direction::kBackward
-                                             : osr::direction::kForward,
-                            start_modes_, params, query_.pedestrianProfile_,
-                            query_.elevationCosts_, query_.maxMatchingDistance_,
-                            pre_transit_time, context_intvl, prepare_stats),
-      .td_dest_walk_ =
-          r_.get_td_offsets(rtt_, e_, dest_,
-                            query_.arriveBy_ ? osr::direction::kForward
-                                             : osr::direction::kBackward,
-                            dest_modes_, params, query_.pedestrianProfile_,
-                            query_.elevationCosts_, query_.maxMatchingDistance_,
-                            post_transit_time, context_intvl, prepare_stats),
+      .td_start_walk_ = r_.get_td_offsets(
+          rtt_, e_, start_,
+          query_.arriveBy_ ? osr::direction::kBackward
+                           : osr::direction::kForward,
+          start_modes_, params, query_.pedestrianProfile_,
+          query_.elevationCosts_, query_.maxMatchingDistance_,
+          query_.arriveBy_ ? post_transit_time : pre_transit_time,
+          context_intvl, prepare_stats),
+      .td_dest_walk_ = r_.get_td_offsets(
+          rtt_, e_, dest_,
+          query_.arriveBy_ ? osr::direction::kForward
+                           : osr::direction::kBackward,
+          dest_modes_, params, query_.pedestrianProfile_,
+          query_.elevationCosts_, query_.maxMatchingDistance_,
+          query_.arriveBy_ ? pre_transit_time : post_transit_time,
+          context_intvl, prepare_stats),
       .start_taxi_short_ =
           query_.arriveBy_ ? last_mile_taxi_short : first_mile_taxi_short,
       .start_taxi_long_ =
