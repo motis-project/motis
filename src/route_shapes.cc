@@ -233,7 +233,7 @@ void route_shapes(osr::ways const& w,
           }
         }
 
-        if (debug->slow_ != 0U && res.d_total_.count() > debug->slow_) {
+        if (debug->slow_ != 0U && res.total_duration_.count() > debug->slow_) {
           include = true;
           tags.emplace("slow");
         }
