@@ -1245,8 +1245,6 @@ paths:
           description: |
             Optional. Default is 15min which is `900`.
             Maximum time in seconds for the first street leg.
-              - `arriveBy=true`: Currently not used
-              - `arriveBy=false`: Maximum time in seconds for the street leg at `one` location.
             Is limited by server config variable `street_routing_max_prepost_transit_seconds`.
           schema:
             type: integer
@@ -4271,8 +4269,6 @@ components:
           description: |
             Optional. Default is 15min which is `900`.
             Maximum time in seconds for the first street leg.
-              - `arriveBy=true`: Currently not used
-              - `arriveBy=false`: Maximum time in seconds for the street leg at `one` location.
             Is limited by server config variable `street_routing_max_prepost_transit_seconds`.
           type: integer
           minimum: 0

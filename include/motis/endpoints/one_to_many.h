@@ -25,18 +25,18 @@
 namespace motis::ep {
 
 api::oneToMany_response one_to_many_direct(
-    osr::ways const& w_,
-    osr::lookup const& l_,
-    api::ModeEnum const mode,
+    osr::ways const&,
+    osr::lookup const&,
+    api::ModeEnum const,
     osr::location const& one,
     std::vector<osr::location> const& many,
     double const max_direct_time,
     double const max_matching_distance,
     osr::direction,
-    osr_parameters const& params,
+    osr_parameters const&,
     api::PedestrianProfileEnum,
     api::ElevationCostsEnum,
-    osr::elevation_storage const* elevations_);
+    osr::elevation_storage const*);
 
 template <typename Params>
 api::oneToMany_response one_to_many_handle_request(

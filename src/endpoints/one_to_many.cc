@@ -9,10 +9,6 @@
 
 #include "nigiri/common/delta_t.h"
 #include "nigiri/routing/one_to_all.h"
-#include "nigiri/types.h"
-
-#include "osr/location.h"
-#include "osr/types.h"
 
 #include "motis/endpoints/one_to_many_post.h"
 #include "motis/endpoints/routing.h"
@@ -26,8 +22,8 @@ namespace motis::ep {
 namespace n = nigiri;
 
 api::oneToMany_response one_to_many_direct(
-    osr::ways const& w_,
-    osr::lookup const& l_,
+    osr::ways const& w,
+    osr::lookup const& l,
     api::ModeEnum const mode,
     osr::location const& one,
     std::vector<osr::location> const& many,
@@ -46,7 +42,7 @@ api::oneToMany_response one_to_many_direct(
 
   auto const profile = to_profile(mode, pedestrian_profile, elevation_costs);
   auto const paths =
-      osr::route(to_profile_parameters(profile, params), w_, l_, profile, one,
+      osr::route(to_profile_parameters(profile, params), w, l, profile, one,
                  many, max_direct_time, dir, max_matching_distance, nullptr,
                  nullptr, elevations_);
 
@@ -69,41 +65,40 @@ void update_transit_durations(
     api::ElevationCostsEnum const elevation_costs,
     osr_parameters const& osr_params) {
   // TODO Should this always be calculated?
-  // TODO What if transitModes.empty() and maxDirectTime == 0?
-  // Following code is similar to One-to-All
+  // Code is similar to One-to-All
   auto const one_modes = deduplicate(
       (query.arriveBy_ ? query.postTransitModes_ : query.preTransitModes_)
           .value_or(std::vector{api::ModeEnum::WALK}));
   auto const many_modes = deduplicate(
       (query.arriveBy_ ? query.preTransitModes_ : query.postTransitModes_)
           .value_or(std::vector{api::ModeEnum::WALK}));
-  auto const max_travel_time_limit = std::min(
+  auto const max_prepost_seconds = std::min(
       max_travel_time,
       std::chrono::seconds{ep.config_.limits_.value()
                                .street_routing_max_prepost_transit_seconds_});
-  auto const one_max_time =
+  auto const one_max_seconds =
       std::min(std::chrono::seconds{(query.arriveBy_ ? query.maxPostTransitTime_
                                                      : query.maxPreTransitTime_)
                                         .value_or(900)},
-               max_travel_time_limit);
-  auto const many_max_time = std::min(
+               max_prepost_seconds);
+  auto const many_max_seconds = std::min(
       std::chrono::seconds{(query.arriveBy_ ? query.maxPreTransitTime_
                                             : query.maxPostTransitTime_)
                                .value_or(900)},
-      max_travel_time_limit);
+      max_prepost_seconds);
   auto const one_dir =
       query.arriveBy_ ? osr::direction::kBackward : osr::direction::kForward;
-  auto const many_dir =
-      query.arriveBy_ ? osr::direction::kForward : osr::direction::kBackward;
+  auto const unreachable = query.arriveBy_
+                               ? n::kInvalidDelta<n::direction::kBackward>
+                               : n::kInvalidDelta<n::direction::kForward>;
   constexpr auto const kInf = std::numeric_limits<double>::infinity();
 
-  auto const to_duration = [&](n::delta_t const d) -> double {
+  auto const delta_to_seconds = [&](n::delta_t const d) -> double {
     return 60.0 * (query.arriveBy_ ? -1 * d : d);
   };
-  auto const to_seconds = [](n::duration_t const d) { return 60 * d.count(); };
-  auto const unreachable = query.arriveBy_
-                               ? nigiri::kInvalidDelta<n::direction::kBackward>
-                               : nigiri::kInvalidDelta<n::direction::kForward>;
+  auto const duration_to_seconds = [](n::duration_t const d) {
+    return 60 * d.count();
+  };
 
   auto const r = routing{ep.config_,     ep.w_,   ep.l_,       ep.pl_,
                          ep.elevations_, &ep.tt_, nullptr,     &ep.tags_,
@@ -120,12 +115,12 @@ void update_transit_durations(
       .start_ = r.get_offsets(nullptr, one, one_dir, one_modes, std::nullopt,
                               std::nullopt, std::nullopt, std::nullopt, false,
                               osr_params, pedestrian_profile, elevation_costs,
-                              one_max_time, query.maxMatchingDistance_, gbfs_rd,
-                              prepare_stats),
+                              one_max_seconds, query.maxMatchingDistance_,
+                              gbfs_rd, prepare_stats),
       .td_start_ = r.get_td_offsets(nullptr, nullptr, one, one_dir, one_modes,
                                     osr_params, pedestrian_profile,
                                     elevation_costs, query.maxMatchingDistance_,
-                                    one_max_time, time, prepare_stats),
+                                    one_max_seconds, time, prepare_stats),
       .max_transfers_ = static_cast<std::uint8_t>(
           query.maxTransfers_.value_or(n::routing::kMaxTransfers)),
       .max_travel_time_ =
@@ -164,7 +159,7 @@ void update_transit_durations(
           ? n::routing::one_to_all<n::direction::kBackward>(
                 ep.tt_, nullptr, q)  // Missing RT support
           : n::routing::one_to_all<n::direction::kForward>(ep.tt_, nullptr, q);
-  auto reachable = nigiri::bitvec{ep.tt_.n_locations()};
+  auto reachable = n::bitvec{ep.tt_.n_locations()};
   for (auto i = 0U; i != ep.tt_.n_locations(); ++i) {
     // Only allow connections at directly reachable stops without footpath
     if (state.template get_tmp<0>()[i][0] != unreachable &&
@@ -175,10 +170,11 @@ void update_transit_durations(
   for (auto const [i, l] : utl::enumerate(many)) {
     auto best = kInf;
     auto const offsets = r.get_offsets(
-        nullptr, l, many_dir, many_modes, std::nullopt, std::nullopt,
-        std::nullopt, std::nullopt, false, osr_params, pedestrian_profile,
-        elevation_costs, many_max_time, query.maxMatchingDistance_, gbfs_rd,
-        prepare_stats);
+        nullptr, l,
+        query.arriveBy_ ? osr::direction::kForward : osr::direction::kBackward,
+        many_modes, std::nullopt, std::nullopt, std::nullopt, std::nullopt,
+        false, osr_params, pedestrian_profile, elevation_costs,
+        many_max_seconds, query.maxMatchingDistance_, gbfs_rd, prepare_stats);
     for (auto const offset : offsets) {
       auto const loc = offset.target();
       if (reachable.test(to_idx(loc))) {
@@ -186,8 +182,8 @@ void update_transit_durations(
             ep.tt_, state,
             query.arriveBy_ ? n::direction::kBackward : n::direction::kForward,
             loc, time, q.max_transfers_);
-        auto const total =
-            to_duration(fastest.duration_) + to_seconds(offset.duration());
+        auto const total = delta_to_seconds(fastest.duration_) +
+                           duration_to_seconds(offset.duration());
         if (total < best) {
           best = total;
         }
@@ -243,8 +239,12 @@ api::oneToManyIntermodal_response run_one_to_many_intermodal(
         return one_to_many_direct(
             *ep.w_, *ep.l_, (*query.directModes_)[0], to_location(one),
             utl::to_vec(many, to_location),
-            std::min(query.maxDirectTime_.value_or(query.maxTravelTime_),
-                     query.maxTravelTime_),
+            std::min(
+                std::min(query.maxDirectTime_.value_or(query.maxTravelTime_),
+                         query.maxTravelTime_),
+                static_cast<std::int64_t>(
+                    ep.config_.limits_.value()
+                        .street_routing_max_direct_seconds_)),
             query.maxMatchingDistance_,
             query.arriveBy_ ? osr::direction::kBackward
                             : osr::direction::kForward,
