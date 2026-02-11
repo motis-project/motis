@@ -1529,8 +1529,15 @@ paths:
           in: query
           schema:
             type: string
-          required: true
+          required: false
           description: stop id of the stop to retrieve departures/arrivals for
+
+        - name: center
+          in: query
+          schema:
+            type: string
+          required: false
+          description: Anchor coordination (can be used instead of stopId)
 
         - name: time
           in: query

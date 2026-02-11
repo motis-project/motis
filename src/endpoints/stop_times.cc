@@ -352,8 +352,28 @@ api::stoptimes_response stop_times::operator()(
   utl::verify<net::too_many_exception>(
       query.n_ < max_results, "n={} > {} not allowed", query.n_, max_results);
 
-  auto const x = tags_.get_location(tt_, query.stopId_);
-  auto const l = tt_.locations_.get_root_idx(x);
+  auto anchor_stop = std::optional<n::location_idx_t>{};
+  if (query.stopId_.has_value() && !query.stopId_->empty()) {
+    try {
+      anchor_stop = tags_.get_location(tt_, *query.stopId_);
+    } catch (...) {
+    }
+  }
+
+  auto center_anchor = std::optional<osr::location>{};
+  if (!anchor_stop.has_value()) {
+    utl::verify<net::bad_request_exception>(
+        query.center_.has_value() && !query.center_->empty(),
+        "stopId not found && center missing");
+    center_anchor = parse_location(*query.center_);
+    utl::verify<net::bad_request_exception>(center_anchor.has_value(),
+                                            "center is not a coordinate: {}",
+                                            *query.center_);
+    utl::verify<net::bad_request_exception>(
+        query.radius_.has_value(),
+        "radius is required when using center without stopId");
+  }
+
   auto const allowed_clasz = to_clasz_mask(query.mode_);
   auto const [dir, time] = parse_cursor(query.pageCursor_.value_or(fmt::format(
       "{}|{}",
@@ -366,7 +386,8 @@ api::stoptimes_response stop_times::operator()(
           query.time_.value_or(openapi::now())->time_since_epoch())
           .count())));
 
-  auto locations = std::vector{l};
+  auto response_place = api::Place{};
+  auto locations = std::vector<n::location_idx_t>{};
   auto const add = [&](n::location_idx_t const l) {
     if (query.exactRadius_) {
       locations.emplace_back(l);
@@ -388,12 +409,24 @@ api::stoptimes_response stop_times::operator()(
     }
   };
 
-  if (query.radius_) {
-    loc_rtree_.in_radius(tt_.locations_.coordinates_[x],
+  if (anchor_stop.has_value()) {
+    auto const x = *anchor_stop;
+    auto const l = tt_.locations_.get_root_idx(x);
+    locations.emplace_back(l);
+    if (query.radius_) {
+      loc_rtree_.in_radius(tt_.locations_.coordinates_[x],
+                           static_cast<double>(*query.radius_),
+                           [&](n::location_idx_t const y) { add(y); });
+    } else {
+      add(x);
+    }
+    response_place = to_place(&tt_, &tags_, w_, pl_, matches_, ae_, tz_, lang,
+                              tt_location{x});
+  } else {
+    loc_rtree_.in_radius(center_anchor->pos_,
                          static_cast<double>(*query.radius_),
                          [&](n::location_idx_t const y) { add(y); });
-  } else {
-    add(x);
+    response_place = to_place(*center_anchor, "center", std::nullopt);
   }
   utl::erase_duplicates(locations);
 
@@ -507,8 +540,7 @@ api::stoptimes_response stop_times::operator()(
                 .tripCancelled_ = run_cancelled,
                 .source_ = fmt::format("{}", fmt::streamed(fr.dbg()))};
           }),
-      .place_ = to_place(&tt_, &tags_, w_, pl_, matches_, ae_, tz_, lang,
-                         tt_location{x}),
+      .place_ = std::move(response_place),
       .previousPageCursor_ =
           events.empty()
               ? ""
