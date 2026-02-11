@@ -155,10 +155,10 @@ void update_transit_durations(
   // Compute and update durations using transits
 
   auto const state =
-      query.arriveBy_
-          ? n::routing::one_to_all<n::direction::kBackward>(
-                ep.tt_, nullptr, q)  // Missing RT support
-          : n::routing::one_to_all<n::direction::kForward>(ep.tt_, nullptr, q);
+      query.arriveBy_ ? n::routing::one_to_all<n::direction::kBackward>(
+                            ep.tt_, ep.rt_ ? ep.rt_->rtt_.get() : nullptr, q)
+                      : n::routing::one_to_all<n::direction::kForward>(
+                            ep.tt_, ep.rt_ ? ep.rt_->rtt_.get() : nullptr, q);
   auto reachable = n::bitvec{ep.tt_.n_locations()};
   for (auto i = 0U; i != ep.tt_.n_locations(); ++i) {
     // Only allow connections at directly reachable stops without footpath
