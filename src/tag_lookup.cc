@@ -139,8 +139,7 @@ std::string tag_lookup::route_id(nigiri::timetable const& tt,
   } else {
     tag = get_tag(s.fr_->id().src_);
   }
-  return tag.empty() ? std::string{bare}
-                     : fmt::format("{}_{}", tag, bare);
+  return tag.empty() ? std::string{bare} : fmt::format("{}_{}", tag, bare);
 }
 
 std::pair<nigiri::rt::run, nigiri::trip_idx_t> tag_lookup::get_trip(
