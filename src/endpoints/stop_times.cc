@@ -397,7 +397,7 @@ api::stoptimes_response stop_times::operator()(
   }
   utl::erase_duplicates(locations);
 
-  auto const rt = rt_;
+  auto const rt = std::atomic_load(&rt_);
   auto const rtt = rt->rtt_.get();
   auto const ev_type =
       query.arriveBy_ ? n::event_type::kArr : n::event_type::kDep;

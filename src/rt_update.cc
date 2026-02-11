@@ -340,8 +340,10 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
             auto elevators = c.has_elevators() && c.get_elevators()->url_
                                  ? co_await update_elevators(c, d, *rtt)
                                  : std::move(d.rt_->e_);
-            d.rt_ = std::make_shared<rt>(std::move(rtt), std::move(elevators),
-                                         std::move(railviz_rt));
+            auto new_rt = std::make_shared<rt>(std::move(rtt),
+                                               std::move(elevators),
+                                               std::move(railviz_rt));
+            std::atomic_store(&d.rt_, std::move(new_rt));
           }
 
           // Schedule next update.
