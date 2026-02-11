@@ -3,6 +3,8 @@
 /.pkg.mutex
 /.clang-tidy
 /.idea
+.vscode/
+.DS_Store
 /deps
 *.zip
 *.bin
@@ -20,7 +22,4 @@ fasta.json
 config.yaml
 config.yml
 config.ini
-
-.DS_Store
-.vscode/
 
