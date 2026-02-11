@@ -81,15 +81,6 @@ TEST(motis, itinerary_id) {
 
     EXPECT_EQ(expected,
               reconstruct_itinerary(
-                  motis::ep::stops{.config_ = d.config_,
-                                   .w_ = d.w_.get(),
-                                   .pl_ = d.pl_.get(),
-                                   .matches_ = d.matches_.get(),
-                                   .ae_ = d.adr_ext_.get(),
-                                   .tz_ = d.tz_.get(),
-                                   .loc_rtree_ = *d.location_rtree_,
-                                   .tags_ = *d.tags_,
-                                   .tt_ = *d.tt_},
                   motis::ep::stop_times{.config_ = d.config_,
                                         .w_ = d.w_.get(),
                                         .pl_ = d.pl_.get(),
