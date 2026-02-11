@@ -104,7 +104,7 @@ osr_parameters get_osr_parameters(api::oneToAll_params const& params) {
   return to_osr_parameters(params);
 }
 
-osr_parameters get_osr_parameters(api::oneToMany_params const& params) {
+osr_parameters get_osr_parameters(api::oneToManyGet_params const& params) {
   return to_osr_parameters(params);
 }
 

@@ -15,7 +15,7 @@
 namespace motis::ep {
 
 template <typename Params>
-api::oneToMany_response one_to_many_handle_request(
+api::oneToManyGet_response one_to_many_handle_request(
     Params const& query,
     osr::ways const& w_,
     osr::lookup const& l_,
@@ -50,7 +50,7 @@ api::oneToMany_response one_to_many_handle_request(
 }
 
 struct one_to_many {
-  api::oneToMany_response operator()(boost::urls::url_view const&) const;
+  api::oneToManyGet_response operator()(boost::urls::url_view const&) const;
 
   osr::ways const& w_;
   osr::lookup const& l_;

@@ -932,7 +932,7 @@ paths:
       summary: |
         Street routing from one to many places or many to one.
         The order in the response array corresponds to the order of coordinates of the \`many\` parameter in the query.
-      operationId: getOneToMany
+      operationId: oneToManyGet
       parameters:
         - name: one
           in: query
@@ -1026,7 +1026,7 @@ paths:
       summary: |
         Street routing from one to many places or many to one.
         The order in the response array corresponds to the order of coordinates of the \`many\` parameter in the body.
-      operationId: postOneToMany
+      operationId: oneToManyPost
       requestBody:
         required: true
         content:
