@@ -38,6 +38,8 @@ struct tag_lookup {
 
   nigiri::location_idx_t get_location(nigiri::timetable const&,
                                       std::string_view) const;
+  std::optional<nigiri::location_idx_t> find_location(nigiri::timetable const&,
+                                                      std::string_view) const;
   std::pair<nigiri::rt::run, nigiri::trip_idx_t> get_trip(
       nigiri::timetable const&,
       nigiri::rt_timetable const*,

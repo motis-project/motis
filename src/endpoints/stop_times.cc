@@ -354,10 +354,7 @@ api::stoptimes_response stop_times::operator()(
 
   auto anchor_stop = std::optional<n::location_idx_t>{};
   if (query.stopId_.has_value() && !query.stopId_->empty()) {
-    try {
-      anchor_stop = tags_.get_location(tt_, *query.stopId_);
-    } catch (...) {
-    }
+    anchor_stop = tags_.find_location(tt_, *query.stopId_);
   }
 
   auto center_anchor = std::optional<osr::location>{};

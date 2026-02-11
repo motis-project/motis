@@ -141,14 +141,24 @@ std::pair<nigiri::rt::run, nigiri::trip_idx_t> tag_lookup::get_trip(
 
 nigiri::location_idx_t tag_lookup::get_location(nigiri::timetable const& tt,
                                                 std::string_view s) const {
+  auto res = find_location(tt, s);
+  if (!res.has_value()) {
+    auto const [tag, id] = split_tag_id(s);
+    throw utl::fail<net::not_found_exception>(
+        R"(Could not find timetable location "{}", tag="{}", id="{}", src={})",
+        s, tag, id, static_cast<int>(to_idx(get_src(tag))));
+  }
+  return *res;
+}
+
+std::optional<nigiri::location_idx_t> tag_lookup::find_location(
+    nigiri::timetable const& tt, std::string_view s) const {
   auto const [tag, id] = split_tag_id(s);
   auto const src = get_src(tag);
   try {
     return tt.locations_.location_id_to_idx_.at({{id}, src});
   } catch (...) {
-    throw utl::fail<net::not_found_exception>(
-        R"(Could not find timetable location "{}", tag="{}", id="{}", src={})",
-        s, tag, id, static_cast<int>(to_idx(src)));
+    return std::nullopt;
   }
 }
 
