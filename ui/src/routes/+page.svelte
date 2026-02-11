@@ -76,7 +76,7 @@
 					: 'connections')
 	);
 	let dataAttributionLink: string | undefined = $state(undefined);
-	let colorMode = $state<'rt' | 'route' | 'mode' | 'none'>('none');
+	let colorMode = $state<'rt' | 'route' | 'mode' | 'none'>(isSmallScreen ? 'none' : 'rt');
 	let showMap = $state(!isSmallScreen);
 	let showRoutes = $state(false);
 	let lastOneToAllQuery: OneToAllData | undefined = undefined;
@@ -833,7 +833,7 @@
 		bind:bounds
 		bind:zoom
 		bind:center
-		class={cn('h-dvh overflow-clip', theme)}
+		class={cn('h-dvh pt-2 overflow-clip', theme)}
 		style={showMap ? style : undefined}
 		attribution={false}
 	>
@@ -854,7 +854,7 @@
 
 		{#if browser}
 			{#if isSmallScreen}
-				<Drawer class="relative z-10 h-full mt-5 flex flex-col" bind:showMap>
+				<Drawer class="relative z-10 h-full mt-3 flex flex-col" bind:showMap>
 					{@render resultContent()}
 				</Drawer>
 			{:else}
