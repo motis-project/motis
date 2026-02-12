@@ -127,6 +127,12 @@ std::string tag_lookup::id(n::timetable const& tt,
                      std::move(t.trip_id_));
 }
 
+std::string tag_lookup::route_id(n::rt::run_stop s,
+                                 n::event_type const ev_type) const {
+  return fmt::format("{}_{}", get_tag(s.fr_->id().src_),
+                     s.get_route_id(ev_type));
+}
+
 std::pair<n::rt::run, n::trip_idx_t> tag_lookup::get_trip(
     n::timetable const& tt,
     n::rt_timetable const* rtt,

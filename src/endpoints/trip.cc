@@ -22,7 +22,7 @@ namespace n = nigiri;
 namespace motis::ep {
 
 api::Itinerary trip::operator()(boost::urls::url_view const& url) const {
-  auto const rt = rt_;
+  auto const rt = std::atomic_load(&rt_);
   auto const rtt = rt->rtt_.get();
 
   auto query = api::trip_params{url.params()};
