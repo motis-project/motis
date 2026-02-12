@@ -229,7 +229,7 @@ TEST(motis, stop_times) {
   {
     // stoptimes in radius = r
     auto const r = 110.0;
-    auto const c = geo::latlng{50.10563, 8.66218};
+    auto const center = geo::latlng{50.10563, 8.66218};
     auto const res =
         stop_times(std::format("/api/v5/stoptimes?center={},{}"
                                "&radius={}"
@@ -239,11 +239,11 @@ TEST(motis, stop_times) {
                                "&n=200"
                                "&language=de"
                                "&fetchStops=true",
-                               c.lat_, c.lng_, r));
+                               center.lat_, center.lng_, r));
     EXPECT_FALSE(res.stopTimes_.empty());
     for (auto const& v : res.stopTimes_) {
       auto const dist =
-          geo::distance(c, geo::latlng{v.place_.lat_, v.place_.lon_});
+          geo::distance(center, geo::latlng{v.place_.lat_, v.place_.lon_});
       EXPECT_LE(dist, r);
     }
   }
