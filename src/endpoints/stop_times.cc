@@ -481,7 +481,7 @@ api::stoptimes_response stop_times::operator()(
                     std::string{tt_.strings_.try_get(agency.id_).value_or("?")},
                 .agencyName_ = std::string{tt_.translate(lang, agency.name_)},
                 .agencyUrl_ = std::string{tt_.translate(lang, agency.url_)},
-                .routeId_ = std::string{s.get_route_id(ev_type)},
+                .routeId_ = tags_.route_id(s, ev_type),
                 .directionId_ = s.get_direction_id(ev_type) == 0 ? "0" : "1",
                 .routeColor_ = to_str(s.get_route_color(ev_type).color_),
                 .routeTextColor_ =

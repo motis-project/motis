@@ -151,7 +151,7 @@ TEST(motis, stop_times) {
     EXPECT_EQ("test_FFM_12", ice.tripTo_.stopId_);
     EXPECT_EQ("ICE", ice.displayName_);
     EXPECT_EQ("FFM Hbf", ice.headsign_);
-    EXPECT_EQ("ICE", ice.routeId_);
+    EXPECT_EQ("test_ICE", ice.routeId_);
     EXPECT_EQ("2019-04-30 22:55", format_time(ice.place_.arrival_.value()));
     EXPECT_EQ("2019-04-30 22:45",
               format_time(ice.place_.scheduledArrival_.value()));
@@ -168,7 +168,7 @@ TEST(motis, stop_times) {
     EXPECT_EQ("test_FFM_10", sbahn.tripTo_.stopId_);
     EXPECT_EQ("S3", sbahn.displayName_);
     EXPECT_EQ("FFM Hbf", sbahn.headsign_);
-    EXPECT_EQ("S3", sbahn.routeId_);
+    EXPECT_EQ("test_S3", sbahn.routeId_);
     EXPECT_EQ("2019-04-30 23:20", format_time(sbahn.place_.arrival_.value()));
     EXPECT_EQ("2019-04-30 23:20",
               format_time(sbahn.place_.scheduledArrival_.value()));
