@@ -95,7 +95,13 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
     set(motis-compile-options -Wall -Wextra -Werror -Wno-unknown-pragmas -Wno-deprecated-declarations)
 elseif (MSVC)
-    set(motis-compile-options /WX /bigobj)
+    set(motis-compile-options
+            /WX
+            /bigobj
+            # clang-21 libc++ seems not to have a special overloaded std::atomic<std::shared_ptr<T>>
+            # check if future version support std::atomic<std::shared_ptr<rt>>
+            /D_SILENCE_CXX20_OLD_SHARED_PTR_ATOMIC_SUPPORT_DEPRECATION_WARNING
+    )
 else ()
     set(motis-compile-options
             -Wall

@@ -221,7 +221,8 @@ std::vector<n::routing::offset> get_offsets(
 
     auto profile = to_profile(m, pedestrian_profile, elevation_costs);
 
-    if (r.rt_->e_ && profile == osr::search_profile::kWheelchair) {
+    if (auto const rt = std::atomic_load(&r.rt_);
+        rt->e_ && profile == osr::search_profile::kWheelchair) {
       return;  // handled by get_td_offsets
     }
 
@@ -638,9 +639,9 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
       "maxItineraries={} < numItineraries={}",
       query.maxItineraries_.value_or(0), query.numItineraries_);
 
-  auto const rt = rt_;
+  auto const rt = std::atomic_load(&rt_);
   auto const rtt = rt->rtt_.get();
-  auto const e = rt_->e_.get();
+  auto const e = rt->e_.get();
   auto gbfs_rd = gbfs::gbfs_routing_data{w_, l_, gbfs_};
   if (blocked.get() == nullptr && w_ != nullptr) {
     blocked.reset(new osr::bitvec<osr::node_idx_t>{w_->n_nodes()});
