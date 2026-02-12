@@ -1,7 +1,5 @@
 #include "motis/endpoints/map/trips.h"
 
-#include <memory>
-
 #include "motis-api/motis-api.h"
 #include "motis/data.h"
 #include "motis/fwd.h"
