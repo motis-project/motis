@@ -266,7 +266,7 @@ paths:
 
         - name: detailedTransfers
           in: query
-          required: true
+          required: false
           description: |
             - true: Compute transfer polylines and step instructions.
             - false: Only return basic information (start time, end time, duration) for transfers.
@@ -1659,6 +1659,15 @@ paths:
             items:
               type: string
           explode: false
+
+        - name: withAlerts
+          in: query
+          required: false
+          description: Optional. Default is `true`. If set to `false`, alerts are omitted in the metadata of place for all stopTimes.
+          schema:
+            type: boolean
+            default: true
+
       responses:
         '422':
           description: Unprocessable Entity
@@ -2382,7 +2391,7 @@ components:
 
         # Transit modes
 
-          - `TRANSIT`: translates to `RAIL,TRAM,BUS,FERRY,AIRPLANE,COACH,CABLE_CAR,FUNICULAR,AREAL_LIFT,OTHER`
+          - `TRANSIT`: translates to `TRAM,FERRY,AIRPLANE,BUS,COACH,RAIL,ODM,FUNICULAR,AERIAL_LIFT,OTHER`
           - `TRAM`: trams
           - `SUBWAY`: subway trains (Paris Metro, London Underground, but also NYC Subway, Hamburger Hochbahn, and other non-underground services)
           - `FERRY`: ferries
@@ -2390,15 +2399,15 @@ components:
           - `BUS`: short distance buses (does not include `COACH`)
           - `COACH`: long distance buses (does not include `BUS`)
           - `RAIL`: translates to `HIGHSPEED_RAIL,LONG_DISTANCE,NIGHT_RAIL,REGIONAL_RAIL,REGIONAL_FAST_RAIL,SUBURBAN,SUBWAY`
-          - `SUBURBAN`: suburban trains (e.g. S-Bahn, RER, Elizabeth Line, ...)
           - `HIGHSPEED_RAIL`: long distance high speed trains (e.g. TGV)
           - `LONG_DISTANCE`: long distance inter city trains
           - `NIGHT_RAIL`: long distance night trains
           - `REGIONAL_FAST_RAIL`: regional express routes that skip low traffic stops to be faster
           - `REGIONAL_RAIL`: regional train
+          - `SUBURBAN`: suburban trains (e.g. S-Bahn, RER, Elizabeth Line, ...)
+          - `ODM`: demand responsive transport
           - `FUNICULAR`: Funicular. Any rail system designed for steep inclines.
           - `AERIAL_LIFT`: Aerial lift, suspended cable car (e.g., gondola lift, aerial tramway). Cable transport where cabins, cars, gondolas or open chairs are suspended by means of one or more cables.
-          - `ODM`: demand responsive transport
           - `AREAL_LIFT`: deprecated
           - `METRO`: deprecated
           - `CABLE_CAR`: deprecated
@@ -2420,7 +2429,6 @@ components:
         - SUBWAY
         - FERRY
         - AIRPLANE
-        - SUBURBAN
         - BUS
         - COACH
         - RAIL
@@ -2429,12 +2437,13 @@ components:
         - NIGHT_RAIL
         - REGIONAL_FAST_RAIL
         - REGIONAL_RAIL
-        - CABLE_CAR
+        - SUBURBAN
         - FUNICULAR
         - AERIAL_LIFT
         - OTHER
         - AREAL_LIFT
         - METRO
+        - CABLE_CAR
 
     Match:
       description: GeoCoding match
@@ -2650,6 +2659,11 @@ components:
           description: Time that on-demand service ends
           type: string
           format: date-time
+        modes:
+          description: available transport modes for stops
+          type: array
+          items:
+            $ref: "#/components/schemas/Mode"
 
     ReachablePlace:
       description: Place reachable by One-to-All
@@ -2694,6 +2708,7 @@ components:
         - mode
         - realTime
         - headsign
+        - tripFrom
         - tripTo
         - agencyId
         - agencyName
@@ -2724,6 +2739,9 @@ components:
             The headsign of the bus or train being used.
             For non-transit legs, null
           type: string
+        tripFrom:
+          description: first stop of this trip
+          $ref: '#/components/schemas/Place'
         tripTo:
           description: final stop of this trip
           $ref: '#/components/schemas/Place'
@@ -3451,6 +3469,9 @@ components:
             For transit legs, the headsign of the bus or train being used.
             For non-transit legs, null
           type: string
+        tripFrom:
+          description: first stop of this trip
+          $ref: '#/components/schemas/Place'
         tripTo:
           description: final stop of this trip (can differ from headsign)
           $ref: '#/components/schemas/Place'
@@ -3526,6 +3547,10 @@ components:
             by looping active weekdays, e.g. from calendar.txt in GTFS.
           type: string
           format: date-time
+        bikesAllowed:
+          description: |
+            Whether bikes can be carried on this leg.
+          type: boolean
 
     RiderCategory:
       type: object

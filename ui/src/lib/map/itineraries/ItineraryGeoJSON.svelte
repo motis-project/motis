@@ -6,22 +6,6 @@
 	import polyline from '@mapbox/polyline';
 	import { colord } from 'colord';
 	import { layers } from './itineraryLayers';
-	import type { FilterSpecification } from 'maplibre-gl';
-	import {
-		_isLowerLevelRoutingFilter,
-		_isUpperLevelRoutingFilter,
-		_isCurrentLevelRoutingFilter,
-		_leadsToLowerLevelRoutingFilter,
-		_leadsUpToCurrentLevelRoutingFilter,
-		_leadsDownToCurrentLevelRoutingFilter,
-		_leadsToUpperLevelRoutingFilter,
-		_connectsToCurrentLevelRoutingFilter,
-		_isCurrentLevelFilter,
-		_ceilFromLevel,
-		_ceilToLevel,
-		_floorFromLevel,
-		_floorToLevel
-	} from './layerFilters';
 	export const PRECISION = 6;
 
 	const {
@@ -107,7 +91,7 @@
 				id={layer.id}
 				type={layer.type}
 				layout={layer.layout}
-				filter={layer.filter as FilterSpecification}
+				filter={['all', ['has', 'fromLevel'], layer.filter]}
 				paint={layer.paint}
 			></Layer>
 		{/if}
@@ -128,7 +112,7 @@
 		paint={{
 			'line-color': selected ? ['get', 'color'] : theme == 'dark' ? '#777' : '#bbb',
 			'line-width': 7.5,
-			'line-opacity': 0.8
+			'line-opacity': 1
 		}}
 	/>
 	<Layer
@@ -143,7 +127,7 @@
 			'line-color': selected ? ['get', 'outlineColor'] : theme == 'dark' ? '#444' : '#999',
 			'line-width': 1.5,
 			'line-gap-width': 7.5,
-			'line-opacity': 0.8
+			'line-opacity': 1
 		}}
 	/>
 </GeoJSON>
@@ -154,7 +138,7 @@
 				id="{layer.id}-metrics"
 				type={layer.type}
 				layout={layer.layout}
-				filter={layer.filter as FilterSpecification}
+				filter={layer.filter}
 				paint={layer.paint}
 			></Layer>
 		{/if}

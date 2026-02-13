@@ -397,7 +397,7 @@ api::stoptimes_response stop_times::operator()(
   }
   utl::erase_duplicates(locations);
 
-  auto const rt = rt_;
+  auto const rt = std::atomic_load(&rt_);
   auto const rtt = rt->rtt_.get();
   auto const ev_type =
       query.arriveBy_ ? n::event_type::kArr : n::event_type::kDep;
@@ -429,11 +429,14 @@ api::stoptimes_response stop_times::operator()(
             auto const run_cancelled = fr.is_cancelled();
             auto place = to_place(&tt_, &tags_, w_, pl_, matches_, ae_, tz_,
                                   query.language_, s);
-            place.alerts_ = get_alerts(
-                fr,
-                std::pair{s, fr.stop_range_.from_ != 0U ? n::event_type::kArr
-                                                        : n::event_type::kDep},
-                true, query.language_);
+            if (query.withAlerts_) {
+              place.alerts_ =
+                  get_alerts(fr,
+                             std::pair{s, fr.stop_range_.from_ != 0U
+                                              ? n::event_type::kArr
+                                              : n::event_type::kDep},
+                             true, query.language_);
+            }
             if (fr.stop_range_.from_ != 0U) {
               place.arrival_ = {s.time(n::event_type::kArr)};
               place.scheduledArrival_ = {s.scheduled_time(n::event_type::kArr)};
@@ -470,13 +473,15 @@ api::stoptimes_response stop_times::operator()(
                 .mode_ = to_mode(s.get_clasz(ev_type), api_version),
                 .realTime_ = r.is_rt(),
                 .headsign_ = std::string{s.direction(lang, ev_type)},
+                .tripFrom_ = to_place(&tt_, &tags_, w_, pl_, matches_, ae_, tz_,
+                                      lang, s.get_first_trip_stop(ev_type)),
                 .tripTo_ = to_place(&tt_, &tags_, w_, pl_, matches_, ae_, tz_,
                                     lang, s.get_last_trip_stop(ev_type)),
                 .agencyId_ =
                     std::string{tt_.strings_.try_get(agency.id_).value_or("?")},
                 .agencyName_ = std::string{tt_.translate(lang, agency.name_)},
                 .agencyUrl_ = std::string{tt_.translate(lang, agency.url_)},
-                .routeId_ = std::string{s.get_route_id(ev_type)},
+                .routeId_ = tags_.route_id(s, ev_type),
                 .directionId_ = s.get_direction_id(ev_type) == 0 ? "0" : "1",
                 .routeColor_ = to_str(s.get_route_color(ev_type).color_),
                 .routeTextColor_ =

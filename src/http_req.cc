@@ -35,13 +35,16 @@ asio::awaitable<http_response> req_no_tls(
     boost::urls::url const& url,
     std::map<std::string, std::string> const& headers,
     std::optional<std::string> const& body,
-    std::chrono::seconds const timeout) {
+    std::chrono::seconds const timeout,
+    std::optional<proxy> const& proxy) {
   auto executor = co_await asio::this_coro::executor;
   auto resolver = asio::ip::tcp::resolver{executor};
   auto stream = beast::tcp_stream{executor};
 
-  auto const results = co_await resolver.async_resolve(
-      url.host(), url.has_port() ? url.port() : "80");
+  auto const host = proxy ? proxy->host_ : url.host();
+  auto const port =
+      proxy ? proxy->port_ : std::string{url.has_port() ? url.port() : "80"};
+  auto const results = co_await resolver.async_resolve(host, port);
 
   stream.expires_after(timeout);
 
@@ -53,7 +56,8 @@ asio::awaitable<http_response> req_tls(
     boost::urls::url const& url,
     std::map<std::string, std::string> const& headers,
     std::optional<std::string> const& body,
-    std::chrono::seconds const timeout) {
+    std::chrono::seconds const timeout,
+    std::optional<proxy> const& proxy) {
   auto ssl_ctx = ssl::context{ssl::context::tlsv12_client};
   ssl_ctx.set_default_verify_paths();
   ssl_ctx.set_verify_mode(ssl::verify_none);
@@ -65,16 +69,17 @@ asio::awaitable<http_response> req_tls(
   auto resolver = asio::ip::tcp::resolver{executor};
   auto stream = ssl::stream<beast::tcp_stream>{executor, ssl_ctx};
 
-  auto const host = url.host();
-  // NOLINTNEXTLINE(cppcoreguidelines-pro-type-cstyle-cast)
+  auto const host = proxy ? proxy->host_ : url.host();
+  auto const port =
+      proxy ? proxy->port_ : std::string{url.has_port() ? url.port() : "443"};
+
   if (!SSL_set_tlsext_host_name(stream.native_handle(),
                                 const_cast<char*>(host.c_str()))) {
-    throw boost::system::system_error{{static_cast<int>(::ERR_get_error()),
-                                       boost::asio::error::get_ssl_category()}};
+    throw boost::system::system_error{
+        {static_cast<int>(::ERR_get_error()), asio::error::get_ssl_category()}};
   }
 
-  auto const results = co_await resolver.async_resolve(
-      url.host(), url.has_port() ? url.port() : "443");
+  auto const results = co_await resolver.async_resolve(host, port);
 
   stream.next_layer().expires_after(timeout);
 
@@ -121,14 +126,17 @@ asio::awaitable<http_response> req(
 asio::awaitable<http::response<http::dynamic_body>> http_GET(
     boost::urls::url url,
     std::map<std::string, std::string> const& headers,
-    std::chrono::seconds const timeout) {
+    std::chrono::seconds const timeout,
+    std::optional<proxy> const& proxy) {
   auto n_redirects = 0U;
   auto next_url = url;
   while (n_redirects < 3U) {
-    auto const res =
-        co_await (next_url.scheme_id() == boost::urls::scheme::https
-                      ? req_tls(next_url, headers, std::nullopt, timeout)
-                      : req_no_tls(next_url, headers, std::nullopt, timeout));
+    auto const use_tls =
+        proxy.has_value() ? proxy->use_tls_
+                          : next_url.scheme_id() == boost::urls::scheme::https;
+    auto const res = co_await (
+        use_tls ? req_tls(next_url, headers, std::nullopt, timeout, proxy)
+                : req_no_tls(next_url, headers, std::nullopt, timeout, proxy));
     auto const code = res.base().result_int();
     if (code >= 300 && code < 400) {
       next_url = boost::urls::url{res.base()["Location"]};
@@ -146,14 +154,17 @@ asio::awaitable<http::response<http::dynamic_body>> http_POST(
     boost::urls::url url,
     std::map<std::string, std::string> const& headers,
     std::string const& body,
-    std::chrono::seconds timeout) {
+    std::chrono::seconds timeout,
+    std::optional<proxy> const& proxy) {
   auto n_redirects = 0U;
   auto next_url = url;
   while (n_redirects < 3U) {
-    auto const res =
-        co_await (next_url.scheme_id() == boost::urls::scheme::https
-                      ? req_tls(next_url, headers, body, timeout)
-                      : req_no_tls(next_url, headers, body, timeout));
+    auto const use_tls =
+        proxy.has_value() ? proxy->use_tls_
+                          : next_url.scheme_id() == boost::urls::scheme::https;
+    auto const res = co_await (
+        use_tls ? req_tls(next_url, headers, body, timeout, proxy)
+                : req_no_tls(next_url, headers, body, timeout, proxy));
     auto const code = res.base().result_int();
     if (code >= 300 && code < 400) {
       next_url = boost::urls::url{res.base()["Location"]};

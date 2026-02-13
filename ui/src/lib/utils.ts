@@ -6,6 +6,7 @@ import { page } from '$app/state';
 import { trip } from '@motis-project/motis-client';
 import { joinInterlinedLegs } from './preprocessItinerary';
 import { language } from './i18n/translation';
+import { tick } from 'svelte';
 
 export function cn(...inputs: ClassValue[]) {
 	return twMerge(clsx(inputs));
@@ -36,7 +37,7 @@ export const preserveFromUrl = (
 	}
 };
 
-export const pushStateWithQueryString = (
+export const pushStateWithQueryString = async (
 	// eslint-disable-next-line
 	queryParams: Record<string, any>,
 
@@ -50,7 +51,13 @@ export const pushStateWithQueryString = (
 	preserveFromUrl(queryParams, 'language');
 	const params = new URLSearchParams(queryParams);
 	const updateState = replace ? replaceState : pushState;
-	updateState('?' + params.toString(), newState);
+	try {
+		updateState('?' + params.toString(), newState);
+	} catch (e) {
+		console.log(e);
+		await tick();
+		updateState('?' + params.toString(), newState);
+	}
 };
 
 export const closeItinerary = () => {
@@ -82,7 +89,7 @@ export const onClickStop = (
 			selectedStop: { name, stopId, time },
 			selectedItinerary: replace ? undefined : page.state.selectedItinerary,
 			tripId: replace ? undefined : page.state.tripId,
-			showDepartures: true
+			activeTab: 'departures'
 		},
 		replace
 	);
@@ -104,7 +111,7 @@ export const onClickTrip = async (tripId: string, replace: boolean = false) => {
 			selectedItinerary: itinerary,
 			tripId: tripId,
 			selectedStop: replace ? undefined : page.state.selectedStop,
-			showDepartures: false
+			activeTab: 'connections'
 		},
 		replace
 	);

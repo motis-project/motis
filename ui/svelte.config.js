@@ -8,6 +8,7 @@ const config = {
 	preprocess: vitePreprocess(),
 
 	kit: {
+		inlineStyleThreshold: 5000,
 		adapter: adapter({
 			// default options are shown. On some platforms
 			// these options are set automatically — see below

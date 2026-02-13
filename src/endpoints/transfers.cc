@@ -23,7 +23,7 @@ namespace motis::ep {
 api::transfers_response transfers::operator()(
     boost::urls::url_view const& url) const {
   auto const q = motis::api::transfers_params{url.params()};
-  auto const rt = rt_;
+  auto const rt = std::atomic_load(&rt_);
   auto const e = rt->e_.get();
   auto const l = tags_.get_location(tt_, q.id_);
 

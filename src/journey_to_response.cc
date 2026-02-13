@@ -478,6 +478,16 @@ api::Itinerary journey_to_response(
                     .interlineWithPreviousLeg_ = !is_first_part,
                     .headsign_ = std::string{enter_stop.direction(
                         lang, n::event_type::kDep)},
+                    .tripFrom_ =
+                        [&]() {
+                          auto const first = exit_stop.get_first_trip_stop(
+                              n::event_type::kArr);
+                          auto p = to_place(first, n::event_type::kDep);
+                          p.departure_ = first.time(n::event_type::kDep);
+                          p.scheduledDeparture_ =
+                              first.scheduled_time(n::event_type::kDep);
+                          return p;
+                        }(),
                     .tripTo_ =
                         [&]() {
                           auto const last = enter_stop.get_last_trip_stop(
@@ -488,8 +498,7 @@ api::Itinerary journey_to_response(
                               last.scheduled_time(n::event_type::kArr);
                           return p;
                         }(),
-                    .routeId_ = std::string{enter_stop.get_route_id(
-                        n::event_type::kDep)},
+                    .routeId_ = tags.route_id(enter_stop, n::event_type::kDep),
                     .directionId_ =
                         enter_stop.get_direction_id(n::event_type::kDep) == 0
                             ? "0"
@@ -534,7 +543,8 @@ api::Itinerary journey_to_response(
                          tt.src_end_date_[src] < service_day)
                             ? std::optional{tt.src_end_date_[src]}
                             : std::nullopt,
-                });
+                    .bikesAllowed_ =
+                        enter_stop.bikes_allowed(nigiri::event_type::kDep)});
 
                 auto const attributes =
                     tt.attribute_combinations_[enter_stop

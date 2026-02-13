@@ -548,7 +548,7 @@
 					layout={{
 						'symbol-placement': 'point',
 						'text-field': ['get', 'name'],
-						'text-font': ['Noto Sans Display Regular'],
+						'text-font': ['Noto Sans Regular'],
 						'text-size': 16
 					}}
 					filter={['literal', true]}

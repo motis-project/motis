@@ -215,7 +215,7 @@ export const ModeSchema = {
 
 # Transit modes
 
-  - \`TRANSIT\`: translates to \`RAIL,TRAM,BUS,FERRY,AIRPLANE,COACH,CABLE_CAR,FUNICULAR,AREAL_LIFT,OTHER\`
+  - \`TRANSIT\`: translates to \`TRAM,FERRY,AIRPLANE,BUS,COACH,RAIL,ODM,FUNICULAR,AERIAL_LIFT,OTHER\`
   - \`TRAM\`: trams
   - \`SUBWAY\`: subway trains (Paris Metro, London Underground, but also NYC Subway, Hamburger Hochbahn, and other non-underground services)
   - \`FERRY\`: ferries
@@ -223,21 +223,21 @@ export const ModeSchema = {
   - \`BUS\`: short distance buses (does not include \`COACH\`)
   - \`COACH\`: long distance buses (does not include \`BUS\`)
   - \`RAIL\`: translates to \`HIGHSPEED_RAIL,LONG_DISTANCE,NIGHT_RAIL,REGIONAL_RAIL,REGIONAL_FAST_RAIL,SUBURBAN,SUBWAY\`
-  - \`SUBURBAN\`: suburban trains (e.g. S-Bahn, RER, Elizabeth Line, ...)
   - \`HIGHSPEED_RAIL\`: long distance high speed trains (e.g. TGV)
   - \`LONG_DISTANCE\`: long distance inter city trains
   - \`NIGHT_RAIL\`: long distance night trains
   - \`REGIONAL_FAST_RAIL\`: regional express routes that skip low traffic stops to be faster
   - \`REGIONAL_RAIL\`: regional train
+  - \`SUBURBAN\`: suburban trains (e.g. S-Bahn, RER, Elizabeth Line, ...)
+  - \`ODM\`: demand responsive transport
   - \`FUNICULAR\`: Funicular. Any rail system designed for steep inclines.
   - \`AERIAL_LIFT\`: Aerial lift, suspended cable car (e.g., gondola lift, aerial tramway). Cable transport where cabins, cars, gondolas or open chairs are suspended by means of one or more cables.
-  - \`ODM\`: demand responsive transport
   - \`AREAL_LIFT\`: deprecated
   - \`METRO\`: deprecated
   - \`CABLE_CAR\`: deprecated
 `,
     type: 'string',
-    enum: ['WALK', 'BIKE', 'RENTAL', 'CAR', 'CAR_PARKING', 'CAR_DROPOFF', 'ODM', 'RIDE_SHARING', 'FLEX', 'TRANSIT', 'TRAM', 'SUBWAY', 'FERRY', 'AIRPLANE', 'SUBURBAN', 'BUS', 'COACH', 'RAIL', 'HIGHSPEED_RAIL', 'LONG_DISTANCE', 'NIGHT_RAIL', 'REGIONAL_FAST_RAIL', 'REGIONAL_RAIL', 'CABLE_CAR', 'FUNICULAR', 'AERIAL_LIFT', 'OTHER', 'AREAL_LIFT', 'METRO']
+    enum: ['WALK', 'BIKE', 'RENTAL', 'CAR', 'CAR_PARKING', 'CAR_DROPOFF', 'ODM', 'RIDE_SHARING', 'FLEX', 'TRANSIT', 'TRAM', 'SUBWAY', 'FERRY', 'AIRPLANE', 'BUS', 'COACH', 'RAIL', 'HIGHSPEED_RAIL', 'LONG_DISTANCE', 'NIGHT_RAIL', 'REGIONAL_FAST_RAIL', 'REGIONAL_RAIL', 'SUBURBAN', 'FUNICULAR', 'AERIAL_LIFT', 'OTHER', 'AREAL_LIFT', 'METRO', 'CABLE_CAR']
 } as const;
 
 export const MatchSchema = {
@@ -484,6 +484,13 @@ Can be missing if neither real-time updates nor the schedule timetable contains 
             description: 'Time that on-demand service ends',
             type: 'string',
             format: 'date-time'
+        },
+        modes: {
+            description: 'available transport modes for stops',
+            type: 'array',
+            items: {
+                '$ref': '#/components/schemas/Mode'
+            }
         }
     }
 } as const;
@@ -536,7 +543,7 @@ export const ReachableSchema = {
 export const StopTimeSchema = {
     description: 'departure or arrival event at a stop',
     type: 'object',
-    required: ['place', 'mode', 'realTime', 'headsign', 'tripTo', 'agencyId', 'agencyName', 'agencyUrl', 'tripId', 'routeId', 'directionId', 'routeShortName', 'routeLongName', 'tripShortName', 'displayName', 'pickupDropoffType', 'cancelled', 'tripCancelled', 'source'],
+    required: ['place', 'mode', 'realTime', 'headsign', 'tripFrom', 'tripTo', 'agencyId', 'agencyName', 'agencyUrl', 'tripId', 'routeId', 'directionId', 'routeShortName', 'routeLongName', 'tripShortName', 'displayName', 'pickupDropoffType', 'cancelled', 'tripCancelled', 'source'],
     properties: {
         place: {
             '$ref': '#/components/schemas/Place',
@@ -555,6 +562,10 @@ export const StopTimeSchema = {
 For non-transit legs, null
 `,
             type: 'string'
+        },
+        tripFrom: {
+            description: 'first stop of this trip',
+            '$ref': '#/components/schemas/Place'
         },
         tripTo: {
             description: 'final stop of this trip',
@@ -1361,6 +1372,10 @@ For non-transit legs, null
 `,
             type: 'string'
         },
+        tripFrom: {
+            description: 'first stop of this trip',
+            '$ref': '#/components/schemas/Place'
+        },
         tripTo: {
             description: 'final stop of this trip (can differ from headsign)',
             '$ref': '#/components/schemas/Place'
@@ -1462,6 +1477,11 @@ by looping active weekdays, e.g. from calendar.txt in GTFS.
 `,
             type: 'string',
             format: 'date-time'
+        },
+        bikesAllowed: {
+            description: `Whether bikes can be carried on this leg.
+`,
+            type: 'boolean'
         }
     }
 } as const;

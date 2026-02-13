@@ -27,7 +27,7 @@
 		}
 	};
 
-	const onTrigger = (e: maplibregl.MapMouseEvent) => {
+	const onTrigger = (e: maplibregl.MapLayerMouseEvent) => {
 		if (ctx.map) {
 			if (popup) {
 				popup.remove();
@@ -39,7 +39,6 @@
 			popup.setLngLat(e.lngLat);
 			popup.addTo(ctx.map!);
 			event = e;
-			// @ts-expect-error features is secret -.-
 			features = e.features;
 		}
 	};
