@@ -52,6 +52,7 @@
 #include "motis/constants.h"
 #include "motis/data.h"
 #include "motis/hashes.h"
+#include "motis/route_shapes.h"
 #include "motis/tag_lookup.h"
 #include "motis/tt_location_rtree.h"
 
@@ -199,6 +200,19 @@ data import(config const& c, fs::path const& data_path, bool const write) {
     }
   }
 
+  auto const to_clasz_bool_array =
+      [&](bool const default_allowed,
+          std::optional<std::map<std::string, bool>> const& clasz_allowed) {
+        auto a = std::array<bool, n::kNumClasses>{};
+        a.fill(default_allowed);
+        if (clasz_allowed.has_value()) {
+          for (auto const& [clasz, allowed] : *clasz_allowed) {
+            a[static_cast<unsigned>(n::to_clasz(clasz))] = allowed;
+          }
+        }
+        return a;
+      };
+
   auto d = data{data_path};
 
   auto osr = task{"osr",
@@ -256,20 +270,6 @@ data import(config const& c, fs::path const& data_path, bool const write) {
       [&]() { return c.timetable_.has_value(); },
       [&]() { return true; },
       [&]() {
-        auto const to_clasz_bool_array =
-            [&](bool const default_allowed,
-                std::optional<std::map<std::string, bool>> const&
-                    clasz_allowed) {
-              auto a = std::array<bool, n::kNumClasses>{};
-              a.fill(default_allowed);
-              if (clasz_allowed.has_value()) {
-                for (auto const& [clasz, allowed] : *clasz_allowed) {
-                  a[static_cast<unsigned>(n::to_clasz(clasz))] = allowed;
-                }
-              }
-              return a;
-            };
-
         auto const& t = *c.timetable_;
 
         auto const first_day =
@@ -518,6 +518,41 @@ data import(config const& c, fs::path const& data_path, bool const write) {
            {tt_hash, osm_hash, elevation_dir_hash, osr_version(), n_version(),
             matches_version()}};
 
+  auto route_shapes_task = task{
+      "route_shapes",
+      [&]() {
+        return c.timetable_ && c.timetable_->with_shapes_ &&
+               c.timetable_->route_shapes_ &&
+               (c.timetable_->route_shapes_->missing_shapes_ ||
+                c.timetable_->route_shapes_->replace_shapes_) &&
+               c.use_street_routing();
+      },
+      [&]() { return d.tt_ && /*d.tags_ &&*/ d.w_ && d.pl_ && d.l_ && d.pl_; },
+      [&]() {
+        // re-open in write mode
+        d.shapes_ = {};
+        d.shapes_ = std::make_unique<n::shapes_storage>(
+            data_path, cista::mmap::protection::MODIFY);
+
+        route_shapes(
+            *d.w_, *d.l_, *d.pl_, *d.tt_, *d.shapes_,
+            *c.timetable_->route_shapes_,
+            to_clasz_bool_array(true, c.timetable_->route_shapes_->clasz_));
+      },
+      [&]() { d.load_shapes(); },
+      {tt_hash,
+       osm_hash,
+       osr_version(),
+       n_version(),
+       {"missing_shapes",
+        c.timetable_.value_or(config::timetable{})
+            .route_shapes_.value_or(config::timetable::route_shapes{})
+            .missing_shapes_},
+       {"replace_shapes",
+        c.timetable_.value_or(config::timetable{})
+            .route_shapes_.value_or(config::timetable::route_shapes{})
+            .replace_shapes_}}};
+
   auto tiles = task{
       "tiles",
       [&]() { return c.tiles_.has_value(); },
@@ -569,7 +604,8 @@ data import(config const& c, fs::path const& data_path, bool const write) {
       {tiles_version(), osm_hash, tiles_hash}};
 
   auto tasks = std::vector<task>{
-      tiles, osr, adr, tt, tbd, adr_extend, osr_footpath, matches, flex_areas};
+      tiles,      osr,          adr,     tt,         tbd,
+      adr_extend, osr_footpath, matches, flex_areas, route_shapes_task};
   utl::erase_if(tasks, [&](auto&& t) {
     if (!t.should_run_()) {
       return true;

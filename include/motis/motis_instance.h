@@ -16,6 +16,7 @@
 #include "motis/endpoints/levels.h"
 #include "motis/endpoints/map/flex_locations.h"
 #include "motis/endpoints/map/rental.h"
+#include "motis/endpoints/map/routes.h"
 #include "motis/endpoints/map/stops.h"
 #include "motis/endpoints/map/trips.h"
 #include "motis/endpoints/matches.h"
@@ -109,6 +110,7 @@ struct motis_instance {
     GET<ep::trips>("/api/v4/map/trips", d);
     GET<ep::trips>("/api/v5/map/trips", d);
     GET<ep::stops>("/api/v1/map/stops", d);
+    GET<ep::routes>("/api/experimental/map/routes", d);
     GET<ep::rental>("/api/v1/map/rentals", d);
     GET<ep::rental>("/api/v1/rentals", d);
     GET<ep::one_to_all>("/api/experimental/one-to-all", d);

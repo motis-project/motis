@@ -233,6 +233,12 @@
 		}
 	});
 
+	$effect(() => {
+		if (initialized) {
+			updateLayer();
+		}
+	});
+
 	onDestroy(() => {
 		const l = ctx.map?.getLayer(id);
 		ctx.map?.off('styledata', updateLayer);

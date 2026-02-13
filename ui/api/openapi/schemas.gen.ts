@@ -237,7 +237,7 @@ export const ModeSchema = {
   - \`CABLE_CAR\`: deprecated
 `,
     type: 'string',
-    enum: ['WALK', 'BIKE', 'RENTAL', 'CAR', 'CAR_PARKING', 'CAR_DROPOFF', 'ODM', 'RIDE_SHARING', 'FLEX', 'TRANSIT', 'TRAM', 'SUBWAY', 'FERRY', 'AIRPLANE', 'BUS', 'COACH', 'RAIL', 'HIGHSPEED_RAIL', 'LONG_DISTANCE', 'NIGHT_RAIL', 'REGIONAL_FAST_RAIL', 'REGIONAL_RAIL', 'SUBURBAN', 'FUNICULAR', 'AERIAL_LIFT', 'OTHER', 'AREAL_LIFT', 'METRO', 'CABLE_CAR']
+    enum: ['WALK', 'BIKE', 'RENTAL', 'CAR', 'CAR_PARKING', 'CAR_DROPOFF', 'ODM', 'RIDE_SHARING', 'FLEX', 'DEBUG_BUS_ROUTE', 'DEBUG_RAILWAY_ROUTE', 'DEBUG_FERRY_ROUTE', 'TRANSIT', 'TRAM', 'SUBWAY', 'FERRY', 'AIRPLANE', 'BUS', 'COACH', 'RAIL', 'HIGHSPEED_RAIL', 'LONG_DISTANCE', 'NIGHT_RAIL', 'REGIONAL_FAST_RAIL', 'REGIONAL_RAIL', 'SUBURBAN', 'FUNICULAR', 'AERIAL_LIFT', 'OTHER', 'AREAL_LIFT', 'METRO', 'CABLE_CAR']
 } as const;
 
 export const MatchSchema = {
@@ -1801,6 +1801,70 @@ export const ErrorSchema = {
         error: {
             type: 'string',
             description: 'error message'
+        }
+    }
+} as const;
+
+export const RouteSegmentSchema = {
+    description: 'Route segment between two stops to show a route on a map',
+    type: 'object',
+    required: ['from', 'to', 'polyline'],
+    properties: {
+        from: {
+            '$ref': '#/components/schemas/Place'
+        },
+        to: {
+            '$ref': '#/components/schemas/Place'
+        },
+        polyline: {
+            '$ref': '#/components/schemas/EncodedPolyline'
+        }
+    }
+} as const;
+
+export const RouteInfoSchema = {
+    description: 'Information about a transit route',
+    type: 'object',
+    required: ['mode', 'routeIds', 'routeShortNames', 'routeLongNames', 'numStops', 'routeIdx', 'segments'],
+    properties: {
+        mode: {
+            '$ref': '#/components/schemas/Mode',
+            description: 'Transport mode for this route'
+        },
+        routeIds: {
+            type: 'array',
+            items: {
+                type: 'string'
+            },
+            description: 'List of route IDs associated with this route'
+        },
+        routeShortNames: {
+            type: 'array',
+            items: {
+                type: 'string'
+            },
+            description: 'List of route short names associated with this route'
+        },
+        routeLongNames: {
+            type: 'array',
+            items: {
+                type: 'string'
+            },
+            description: 'List of route long names associated with this route'
+        },
+        numStops: {
+            type: 'integer',
+            description: 'Number of stops along this route'
+        },
+        routeIdx: {
+            type: 'integer',
+            description: 'Internal route index for debugging purposes'
+        },
+        segments: {
+            type: 'array',
+            items: {
+                '$ref': '#/components/schemas/RouteSegment'
+            }
         }
     }
 } as const;

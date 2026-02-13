@@ -148,12 +148,16 @@ export type Translations = {
 	toll: string;
 	accessRestriction: string;
 	continuesAs: string;
+	DEBUG_BUS_ROUTE: string;
+	DEBUG_RAILWAY_ROUTE: string;
+	DEBUG_FERRY_ROUTE: string;
 	rent: string;
 	copyToClipboard: string;
 	rideThroughAllowed: string;
 	rideThroughNotAllowed: string;
 	rideEndAllowed: string;
 	rideEndNotAllowed: string;
+	routes: (n: number) => string;
 };
 
 const translations: Map<string, Translations> = new Map(

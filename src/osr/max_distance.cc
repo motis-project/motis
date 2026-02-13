@@ -21,6 +21,9 @@ double get_max_distance(osr::search_profile const profile,
     case osr::search_profile::kCarSharing: [[fallthrough]];
     case osr::search_profile::kCarParking: [[fallthrough]];
     case osr::search_profile::kCarParkingWheelchair: return seconds * 28.0;
+    case osr::search_profile::kBus: return seconds * 5.0;
+    case osr::search_profile::kRailway: return seconds * 5.5;
+    case osr::search_profile::kFerry: return seconds * 4.0;
   }
   std::unreachable();
 }
