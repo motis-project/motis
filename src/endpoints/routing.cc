@@ -30,6 +30,7 @@
 #include "nigiri/routing/query.h"
 #include "nigiri/routing/raptor/raptor_state.h"
 #include "nigiri/routing/raptor_search.h"
+#include "nigiri/routing/mcraptor/mcraptor_search.h"
 #include "nigiri/special_stations.h"
 
 #include "motis/constants.h"
@@ -926,6 +927,12 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
           algorithm = api::algorithmEnum::RAPTOR;
           continue;
         }
+      } else if (algorithm_ == api::algorithmEnum::MCRAPTOR) {
+        auto raptor_state = n::routing::raptor_state{};
+        r = n::routing::mcraptor_search(
+            *tt_, rtt, search_state, raptor_state, q,
+            query.timeout_.has_value() ? std::chrono::seconds{*query.timeout_}
+                                       : max_timeout);
       } else if (algorithm == api::algorithmEnum::RAPTOR || tbd_ == nullptr ||
                  (rtt != nullptr && rtt->n_rt_transports() != 0U) ||
                  query.arriveBy_ || q.prf_idx_ != tbd_->prf_idx_ ||
