@@ -308,7 +308,8 @@ self.onmessage = async (e) => {
 					positions: data.positions,
 					colors: data.colors,
 					length: data.length,
-					metadata: hovIndex !== -1 ? metadata[hovIndex] : null
+					metadata: metadata[hovIndex],
+					metadataIndex: hovIndex
 				},
 				[data.angles.buffer, data.positions.buffer, data.colors.buffer]
 			);

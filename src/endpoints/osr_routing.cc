@@ -21,7 +21,7 @@ osr::location parse_location(json::value const& v) {
 }
 
 json::value osr_routing::operator()(json::value const& query) const {
-  auto const rt = rt_;
+  auto const rt = std::atomic_load(&rt_);
   auto const e = rt->e_.get();
 
   auto const& q = query.as_object();

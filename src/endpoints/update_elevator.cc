@@ -22,7 +22,7 @@ json::value update_elevator::operator()(json::value const& query) const {
   auto const new_status = q.at("status").as_string() != "INACTIVE";
   auto const new_out_of_service = parse_out_of_service(q);
 
-  auto const rt_copy = rt_;
+  auto const rt_copy = std::atomic_load(&rt_);
   auto const e = rt_copy->e_.get();
   utl::verify<net::not_found_exception>(e != nullptr,
                                         "elevators not available");
@@ -52,10 +52,11 @@ json::value update_elevator::operator()(json::value const& query) const {
       w_, l_, pl_, tt_, loc_rtree_, new_e, matches_, tasks, rtt, new_rtt,
       std::chrono::seconds{c_.timetable_.value().max_footpath_length_ * 60});
 
-  rt_ = std::make_shared<rt>(
+  auto new_rt = std::make_shared<rt>(
       std::make_unique<n::rt_timetable>(std::move(new_rtt)),
       std::make_unique<elevators>(std::move(new_e)),
-      std::move(rt_->railviz_rt_));
+      std::move(rt_copy->railviz_rt_));
+  std::atomic_store(&rt_, std::move(new_rt));
 
   return json::string{{"success", true}};
 }

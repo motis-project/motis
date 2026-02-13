@@ -39,7 +39,7 @@ else ()
             message(FATAL "Error: NO_BUILDCACHE was not set but buildcache was not in path and system OS detection failed")
         endif ()
 
-        set(buildcache-url "https://gitlab.com/bits-n-bites/buildcache/-/releases/v0.31.5/downloads/${buildcache-archive}")
+        set(buildcache-url "https://gitlab.com/bits-n-bites/buildcache/-/releases/v0.31.7/downloads/${buildcache-archive}")
         message(STATUS "Downloading buildcache binary from ${buildcache-url}")
         file(DOWNLOAD "${buildcache-url}" ${CMAKE_CURRENT_BINARY_DIR}/${buildcache-archive})
         execute_process(

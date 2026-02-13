@@ -183,7 +183,7 @@ void add_cancelled_transports(n::timetable const& tt,
 
 net::reply gtfsrt::operator()(net::route_request const& req, bool) const {
   utl::verify(tt_ != nullptr && tags_ != nullptr, "no tt initialized");
-  auto const rt = rt_;
+  auto const rt = std::atomic_load(&rt_);
   auto const rtt = rt->rtt_.get();
 
   utl::verify<net::too_many_exception>(

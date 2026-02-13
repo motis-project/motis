@@ -91,7 +91,7 @@
 <div
 	bind:this={ref}
 	class={cn(
-		'bg-card text-card-foreground rounded-xl pb-5 h-full border shadow max-w-full transition-transform duration-200 ease-out',
+		'bg-card text-card-foreground rounded-xl pb-3 h-full border shadow max-w-full transition-transform duration-200 ease-out',
 		className
 	)}
 	{...restProps}
@@ -101,10 +101,10 @@
 >
 	<div
 		class="mx-auto my-5 relative before:content-[''] before:absolute before:inset-[-20px] before:inset-x-[-50vw] flex items-center justify-center"
-		ontouchstart={(e) => {
-			fromHandle = true;
+		onclick={() => {
 			showMap = true;
-			ontouchstart(e);
+			ref!.style.transform = `translateY(${(expanded ? window.innerHeight : 0) * maxTranslate}px)`;
+			expanded = !expanded;
 		}}
 	>
 		<div
