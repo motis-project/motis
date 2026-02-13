@@ -154,8 +154,9 @@ void route_shapes(osr::ways const& w,
                        .rt_ = n::rt_transport_idx_t::invalid()}};
         frun.for_each_trip(
             [&](n::trip_idx_t const trip_idx, n::interval<n::stop_idx_t>) {
-              auto const shp = shapes.get_shape(trip_idx);
-              if (shp.empty()) {
+              auto const shape_idx = shapes.get_shape_idx(trip_idx);
+              auto const shape_src = shapes.get_shape_source(shape_idx);
+              if (shape_src == n::shape_source::kNone) {
                 existing_shapes = false;
               }
             });
@@ -326,6 +327,7 @@ void route_shapes(osr::ways const& w,
 
       auto const shape_idx = static_cast<n::shape_idx_t>(shapes.data_.size());
       shapes.data_.emplace_back(shape);
+      shapes.shape_sources_.emplace_back(n::shape_source::kRouted);
 
       shapes.route_bboxes_[r] = route_bbox;
       auto rsb = shapes.route_segment_bboxes_[r];
