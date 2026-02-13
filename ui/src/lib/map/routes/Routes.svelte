@@ -11,6 +11,7 @@
 	import maplibregl from 'maplibre-gl';
 	import type { FeatureCollection, LineString, Point } from 'geojson';
 	import { routes, type Leg, type RouteInfo } from '@motis-project/motis-client';
+	import { getDecorativeColors } from '$lib/map/colors';
 
 	let {
 		map,
@@ -141,6 +142,7 @@
 		}
 		const name = Array.from(new Set(route.routeShortNames)).join(', ');
 		const color = getRouteColor(name);
+		const { outlineColor, chevronColor } = getDecorativeColors(color);
 		return {
 			type: 'FeatureCollection',
 			features: route.segments.map((segment) => ({
@@ -153,6 +155,8 @@
 				},
 				properties: {
 					color,
+					outlineColor,
+					chevronColor,
 					name,
 					arrayIdx: hoveredArrayIdx
 				}
@@ -374,6 +378,30 @@
 		layout={{
 			'line-cap': 'round',
 			'line-join': 'round'
+		}}
+	/>
+	<Layer
+		id="routes-hover-chevrons"
+		type="symbol"
+		filter={['all']}
+		beforeLayerId="routes-names"
+		layout={{
+			'symbol-placement': 'line',
+			'symbol-spacing': 40,
+			'text-field': '›',
+			'text-size': 24,
+			'text-font': ['Noto Sans Bold'],
+			'text-keep-upright': false,
+			'text-allow-overlap': true,
+			'text-rotation-alignment': 'map',
+			'text-offset': [0, -0.1]
+		}}
+		paint={{
+			'text-color': ['get', 'chevronColor'],
+			'text-opacity': 0.85,
+			'text-halo-color': ['get', 'outlineColor'],
+			'text-halo-width': 0.5,
+			'text-halo-blur': 0.2
 		}}
 	/>
 </GeoJSON>

@@ -4,7 +4,7 @@
 	import type { Itinerary, Mode } from '@motis-project/motis-client';
 	import { getColor } from '$lib/modeStyle';
 	import polyline from '@mapbox/polyline';
-	import { colord } from 'colord';
+	import { getDecorativeColors } from '$lib/map/colors';
 	import { layers } from './itineraryLayers';
 	export const PRECISION = 6;
 
@@ -35,16 +35,6 @@
 			default:
 				return '#42a5f5';
 		}
-	}
-
-	function getDecorativeColors(baseColor: string) {
-		const outlineColor = colord(baseColor).darken(0.2).toHex();
-		const tinted = colord(baseColor).isDark()
-			? colord(baseColor).lighten(0.35)
-			: colord(baseColor).darken(0.35);
-		const chevronColor = tinted.alpha(0.85).toRgbString();
-
-		return { outlineColor, chevronColor };
 	}
 
 	function itineraryToGeoJSON(i: Itinerary): GeoJSON.GeoJSON {
