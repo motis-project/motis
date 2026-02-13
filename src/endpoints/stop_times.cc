@@ -9,6 +9,7 @@
 #include "utl/verify.h"
 
 #include "net/bad_request_exception.h"
+#include "net/not_found_exception.h"
 #include "net/too_many_exception.h"
 
 #include "nigiri/routing/clasz_mask.h"
@@ -352,8 +353,13 @@ api::stoptimes_response stop_times::operator()(
   utl::verify<net::too_many_exception>(
       query.n_ < max_results, "n={} > {} not allowed", query.n_, max_results);
 
-  auto const query_stop = query.stopId_.and_then(
-      [&](std::string const& x) { return tags_.find_location(tt_, x); });
+  auto const query_stop = query.stopId_.and_then([&](std::string const& x) {
+    auto const loc = tags_.find_location(tt_, x);
+    utl::verify<net::not_found_exception>(
+        loc.has_value() || query.center_.has_value(),
+        "stopId '{}' not found and no alternative center is provided", x);
+    return loc;
+  });
 
   auto const query_center = query.center_.and_then(
       [&](std::string const& x) { return parse_location(x); });

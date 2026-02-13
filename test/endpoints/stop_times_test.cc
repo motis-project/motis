@@ -9,6 +9,7 @@
 #include "boost/json.hpp"
 
 #include "net/bad_request_exception.h"
+#include "net/not_found_exception.h"
 
 #ifdef NO_DATA
 #undef NO_DATA
@@ -208,6 +209,15 @@ TEST(motis, stop_times) {
     EXPECT_EQ("center", res.place_.name_);
     EXPECT_FALSE(res.place_.stopId_.has_value());
     EXPECT_FALSE(res.stopTimes_.empty());
+  }
+
+  {
+    // invalid stopId without center
+    EXPECT_THROW(stop_times("/api/v5/stoptimes?stopId=test_SOMETHING_RANDOM"
+                            "&time=2019-04-30T23:30:00.000Z"
+                            "&arriveBy=true"
+                            "&n=3"),
+                 net::not_found_exception);
   }
 
   {
