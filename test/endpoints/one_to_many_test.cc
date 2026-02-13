@@ -17,6 +17,7 @@
 
 #include "utl/init_from.h"
 
+#include "nigiri/common/parse_time.h"
 #include "nigiri/rt/gtfsrt_update.h"
 
 #include "motis-api/motis-api.h"
@@ -102,11 +103,10 @@ TEST(motis, one_to_many) {
   {
     auto const one_to_many_get =
         utl::init_from<ep::one_to_many_intermodal>(d).value();
-    [[maybe_unused]] auto const one_to_many_post =
+    auto const one_to_many_post =
         utl::init_from<ep::one_to_many_intermodal_post>(d).value();
     // GET Request, forward
     {
-      fmt::println("DEBUG BBB");
       auto const durations = one_to_many_get(
           "/api/experimental/one-to-many-intermodal?one=49.8722439;8.6320624"
           "&many="
@@ -153,6 +153,64 @@ TEST(motis, one_to_many) {
                                             {2940.0},
                                             {}}),
                 durations);
+    }
+    // POST Request, backward
+    {
+      auto const durations = one_to_many_post(api::OneToManyIntermodalParams{
+          .one_ = "50.113816,8.679421,0",
+          .many_ =
+              {
+                  "49.87336,8.62926",  // DA_10
+                  "50.10593,8.66118",  // FFM_10
+                  // "test_FFM_10",  // TODO No result
+                  "50.107577,8.6638173",  // de:6412:10:6:1
+                  "50.10739,8.66333",  // FFM_101
+                  "test_FFM_101",
+                  "50.11385,8.67912",  // FFM_HAUPT_U
+                  "test_FFM_HAUPT_U",
+                  "50.11404,8.67824",  // FFM_HAUPT_S
+                  "50.113385,8.678328,0",  // Close, near FFM_HAUPT, level 0
+                  "50.113385,8.678328,-2",  // Close, near FFM_HAUPT, level -2
+                  "50.111900,8.675208",  // Far, near FFM_HAUPT
+                  "50.106543,8.663474,0",  // Close, near FFM
+                  "50.106941,8.659617",  // Too far from de:6412:10:6:1
+                  "50.104298,8.660285",  // Far, near FFM
+                  "49.872243,8.632062",  // Near DA
+                  "49.875368,8.627596",  // Far, near DA
+              },
+          .time_ = {std::chrono::time_point_cast<std::chrono::seconds>(
+              n::parse_time("2019-05-01T01:25:00.000+02:00", "%FT%T%Ez"))},
+          .maxTravelTime_ = 5600,
+          .maxMatchingDistance_ = 250.0,
+          .directModes_ = {{api::ModeEnum::WALK}},  // TODO Should be default
+          .arriveBy_ = true,
+          .maxPreTransitTime_ = 360,
+          .maxDirectTime_ = 300});
+
+      EXPECT_EQ((std::vector<api::Duration>{{3180.0},
+                                            {1020.0},
+                                            // {1020.0},
+                                            {780.0},
+                                            {780.0},
+                                            {720.0},
+                                            {159.0},
+                                            {159.0},
+                                            {127.0},
+                                            {103.0},
+                                            {123.0},
+                                            {},
+                                            {900.0},
+                                            {1080.0},
+                                            {},
+                                            {3420.0},
+                                            {}}),
+                durations);
+    }
+    // POST, forward, routed, short pre-transit
+    {
+    }
+    // GET, backward, routed, short post-transit
+    {
     }
   }
 
