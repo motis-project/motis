@@ -99,119 +99,173 @@ TEST(motis, one_to_many) {
              .street_routing_ = true};
   auto d = import(c, "test/data", true);
 
-  // One-to-Many without realtime data
+  auto const one_to_many_get =
+      utl::init_from<ep::one_to_many_intermodal>(d).value();
+  auto const one_to_many_post =
+      utl::init_from<ep::one_to_many_intermodal_post>(d).value();
+  // GET Request, forward
   {
-    auto const one_to_many_get =
-        utl::init_from<ep::one_to_many_intermodal>(d).value();
-    auto const one_to_many_post =
-        utl::init_from<ep::one_to_many_intermodal_post>(d).value();
-    // GET Request, forward
-    {
-      auto const durations = one_to_many_get(
-          "/api/experimental/one-to-many-intermodal?one=49.8722439;8.6320624"
-          "&many="
-          "49.87336;8.62926,"  // DA_10
-          "50.10593;8.66118,"  // FFM_10
-          "50.107577;8.6638173,"  // de:6412:10:6:1
-          "50.10739;8.66333,"  // FFM_101
-          "50.11385;8.67912,"  // FFM_HAUPT_U
-          "50.11404;8.67824,"  // FFM_HAUPT_S
-          "49.872855;8.632008,"  // Near one
-          "49.872504;8.628988,"  // Inside DA station
-          "49.874399;8.630361,"  // Still reachable, near DA
-          "49.875368;8.627596,"  // Far, near DA
-          "50.106596;8.663485,"  // Inside FFM station
-          "50.105021;8.663308,"  // Outside FFM station
-          "50.107654;8.669103,"  // Far, near FFM
-          "50.113494;8.679129,"  // Near FFM_HAUPT_U
-          "50.114080;8.677027,"  // Near FFM_HAUPT_S
-          "50.114520;8.673050,"  // Too far from FFM_HAUPT_U
-          "50.114773;8.672604"  // Far, near FFM_HAUPT
-          "&time=2019-04-30T22:30:00.000Z"
-          "&maxTravelTime=3600"  // TODO To minutes
-          "&maxMatchingDistance=250"
-          "&maxDirectTime=540"
-          "&maxPostTransitTime=420"
-          "&directModes=WALK"
-          "&arriveBy=false");
+    auto const durations = one_to_many_get(
+        "/api/experimental/one-to-many-intermodal?one=49.8722439;8.6320624"
+        "&many="
+        "49.87336;8.62926,"  // DA_10
+        "50.10593;8.66118,"  // FFM_10
+        "50.107577;8.6638173,"  // de:6412:10:6:1
+        "50.10739;8.66333,"  // FFM_101
+        "50.11385;8.67912,"  // FFM_HAUPT_U
+        "50.11404;8.67824,"  // FFM_HAUPT_S
+        "49.872855;8.632008,"  // Near one
+        "49.872504;8.628988,"  // Inside DA station
+        "49.874399;8.630361,"  // Still reachable, near DA
+        "49.875368;8.627596,"  // Far, near DA
+        "50.106596;8.663485,"  // Inside FFM station
+        "50.105021;8.663308,"  // Outside FFM station
+        "50.107654;8.669103,"  // Far, near FFM
+        "50.113494;8.679129,"  // Near FFM_HAUPT_U
+        "50.114080;8.677027,"  // Near FFM_HAUPT_S
+        "50.114520;8.673050,"  // Too far from FFM_HAUPT_U
+        "50.114773;8.672604"  // Far, near FFM_HAUPT
+        "&time=2019-04-30T22:30:00.000Z"
+        "&maxTravelTime=3600"  // TODO To minutes
+        "&maxMatchingDistance=250"
+        "&maxDirectTime=540"
+        "&maxPostTransitTime=420"
+        "&directModes=WALK"
+        "&arriveBy=false");
 
-      EXPECT_EQ((std::vector<api::Duration>{{282.0},
-                                            {1080.0},
-                                            {1380.0},
-                                            {1380.0},
-                                            {2580.0},
-                                            {2580.0},
-                                            {123.0},
-                                            {242.0},
-                                            {530.0},
-                                            {},
-                                            {1260.0},
-                                            {1440.0},
-                                            {},
-                                            {2700.0},
-                                            {2640.0},
-                                            {2940.0},
-                                            {}}),
-                durations);
-    }
-    // POST Request, backward
-    {
-      auto const durations = one_to_many_post(api::OneToManyIntermodalParams{
-          .one_ = "50.113816,8.679421,0",
-          .many_ =
-              {
-                  "49.87336,8.62926",  // DA_10
-                  "50.10593,8.66118",  // FFM_10
-                  // "test_FFM_10",  // TODO No result
-                  "50.107577,8.6638173",  // de:6412:10:6:1
-                  "50.10739,8.66333",  // FFM_101
-                  "test_FFM_101",
-                  "50.11385,8.67912",  // FFM_HAUPT_U
-                  "test_FFM_HAUPT_U",
-                  "50.11404,8.67824",  // FFM_HAUPT_S
-                  "50.113385,8.678328,0",  // Close, near FFM_HAUPT, level 0
-                  "50.113385,8.678328,-2",  // Close, near FFM_HAUPT, level -2
-                  "50.111900,8.675208",  // Far, near FFM_HAUPT
-                  "50.106543,8.663474,0",  // Close, near FFM
-                  "50.106941,8.659617",  // Too far from de:6412:10:6:1
-                  "50.104298,8.660285",  // Far, near FFM
-                  "49.872243,8.632062",  // Near DA
-                  "49.875368,8.627596",  // Far, near DA
-              },
-          .time_ = {std::chrono::time_point_cast<std::chrono::seconds>(
-              n::parse_time("2019-05-01T01:25:00.000+02:00", "%FT%T%Ez"))},
-          .maxTravelTime_ = 5600,
-          .maxMatchingDistance_ = 250.0,
-          .directModes_ = {{api::ModeEnum::WALK}},  // TODO Should be default
-          .arriveBy_ = true,
-          .maxPreTransitTime_ = 360,
-          .maxDirectTime_ = 300});
+    EXPECT_EQ((std::vector<api::Duration>{{282.0},
+                                          {1080.0},
+                                          {1380.0},
+                                          {1380.0},
+                                          {2580.0},
+                                          {2580.0},
+                                          {123.0},
+                                          {242.0},
+                                          {530.0},
+                                          {},
+                                          {1260.0},
+                                          {1440.0},
+                                          {},
+                                          {2700.0},
+                                          {2640.0},
+                                          {2940.0},
+                                          {}}),
+              durations);
+  }
+  // POST Request, backward
+  {
+    auto const durations = one_to_many_post(api::OneToManyIntermodalParams{
+        .one_ = "50.113816,8.679421,0",
+        .many_ =
+            {
+                "49.87336,8.62926",  // DA_10
+                "50.10593,8.66118",  // FFM_10
+                // "test_FFM_10",  // TODO No result
+                "50.107577,8.6638173",  // de:6412:10:6:1
+                "50.10739,8.66333",  // FFM_101
+                "test_FFM_101",
+                "50.11385,8.67912",  // FFM_HAUPT_U
+                "test_FFM_HAUPT_U",
+                "50.11404,8.67824",  // FFM_HAUPT_S
+                "50.113385,8.678328,0",  // Close, near FFM_HAUPT, level 0
+                "50.113385,8.678328,-2",  // Close, near FFM_HAUPT, level -2
+                "50.111900,8.675208",  // Far, near FFM_HAUPT
+                "50.106543,8.663474,0",  // Close, near FFM
+                "50.106941,8.659617",  // Too far from de:6412:10:6:1
+                "50.104298,8.660285",  // Far, near FFM
+                "49.872243,8.632062",  // Near DA
+                "49.875368,8.627596",  // Far, near DA
+            },
+        .time_ = {std::chrono::time_point_cast<std::chrono::seconds>(
+            n::parse_time("2019-05-01T01:25:00.000+02:00", "%FT%T%Ez"))},
+        .maxTravelTime_ = 3600,
+        .maxMatchingDistance_ = 250.0,
+        .directModes_ = {{api::ModeEnum::WALK}},  // TODO Should be default
+        .arriveBy_ = true,
+        .maxPreTransitTime_ = 360,
+        .maxDirectTime_ = 300});
 
-      EXPECT_EQ((std::vector<api::Duration>{{3180.0},
-                                            {1020.0},
-                                            // {1020.0},
-                                            {780.0},
-                                            {780.0},
-                                            {720.0},
-                                            {159.0},
-                                            {159.0},
-                                            {127.0},
-                                            {103.0},
-                                            {123.0},
-                                            {},
-                                            {900.0},
-                                            {1080.0},
-                                            {},
-                                            {3420.0},
-                                            {}}),
-                durations);
-    }
-    // POST, forward, routed, short pre-transit
-    {
-    }
-    // GET, backward, routed, short post-transit
-    {
-    }
+    EXPECT_EQ((std::vector<api::Duration>{{3180.0},
+                                          {1020.0},
+                                          // {1020.0},
+                                          {780.0},
+                                          {780.0},
+                                          {720.0},
+                                          {159.0},
+                                          {159.0},
+                                          {127.0},
+                                          {103.0},
+                                          {123.0},
+                                          {},
+                                          {900.0},
+                                          {1080.0},
+                                          {},
+                                          {3420.0},
+                                          {}}),
+              durations);
+  }
+  // POST, forward, routed, short pre-transit
+  {
+    auto const durations = one_to_many_post(api::OneToManyIntermodalParams{
+        .one_ = "50.106941,8.659617",
+        .many_ =
+            {
+                "test_DA_10",
+                "50.107577,8.6638173",  // de:6412:10:6:1
+                "test_FFM_HAUPT_S",
+                "50.11385,8.67912",  // FFM_HAUPT_U
+                "50.105884,8.664241",  // Near FFM
+                "50.113291,8.678321,0",  // Near FFM_HAUPT
+                "50.113127,8.678879,-2",  // Near FFM_HAUPT
+                "50.114141,8.677025,-3",  // Near FFM_HAUPT
+                "50.113589,8.679070,-4",  // Near FFM_HAUPT
+            },
+        .time_ = {std::chrono::time_point_cast<std::chrono::seconds>(
+            n::parse_time("2019-05-01T00:55:00.000+02:00", "%FT%T%Ez"))},
+        .maxTravelTime_ = 3600,
+        .maxMatchingDistance_ = 250.0,
+        .directModes_ = {{api::ModeEnum::WALK}},  // TODO Should be default
+        .arriveBy_ = false,
+        .useRoutedTransfers_ = true,
+        .maxPreTransitTime_ = 360});  // Too short to reach U4
+
+    EXPECT_EQ((std::vector<api::Duration>{{},
+                                          {459.0},
+                                          {1620.0},
+                                          {1740.0},
+                                          {397.0},
+                                          {1800.0},
+                                          {1800.0},
+                                          {1740.0},
+                                          {1740.0}}),
+              durations);
+  }
+  // GET, backward, with wheelchair, short post-transit
+  {
+    auto const durations = one_to_many_get(
+        "/api/experimental/one-to-many-intermodal"
+        "?one=50.11385;8.67912"  // FFM_HAUPT_U
+        "&many="
+        "50.107577;8.6638173,"  // de:6412:10:6:1
+        "50.10739;8.66333,"  // FFM_101
+        "50.11404;8.67824,"  // FFM_HAUPT_S
+        "50.113465;8.678477,"  // Near FFM_HAUPT
+        "50.112519;8.676565,"  // Far, near FFM_HAUPT
+        "&time=2019-04-30T23:30:00.000Z"
+        "&maxTravelTime=3600"  // TODO To minutes
+        "&maxMatchingDistance=250"
+        "&maxDirectTime=540"
+        "&maxPostTransitTime=240"
+        "&directModes=WALK"
+        "&pedestrianProfile=WHEELCHAIR"
+        "&arriveBy=true");
+
+    EXPECT_EQ((std::vector<api::Duration>{{1680.0},
+                                          {},  // Cannot leave from U4
+                                          {281.0},
+                                          {404.0},
+                                          {}}),
+              durations);
   }
 
   d.init_rtt(date::sys_days{2019_y / May / 1});
