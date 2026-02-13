@@ -9,6 +9,7 @@
 #include "utl/verify.h"
 
 #include "net/bad_request_exception.h"
+#include "net/not_found_exception.h"
 #include "net/too_many_exception.h"
 
 #include "nigiri/routing/clasz_mask.h"
@@ -352,8 +353,37 @@ api::stoptimes_response stop_times::operator()(
   utl::verify<net::too_many_exception>(
       query.n_ < max_results, "n={} > {} not allowed", query.n_, max_results);
 
-  auto const x = tags_.get_location(tt_, query.stopId_);
-  auto const l = tt_.locations_.get_root_idx(x);
+  auto const query_stop = query.stopId_.and_then([&](std::string const& x) {
+    auto const loc = tags_.find_location(tt_, x);
+    utl::verify<net::not_found_exception>(
+        loc.has_value() || query.center_.has_value(),
+        "stopId '{}' not found and no alternative center is provided", x);
+    return loc;
+  });
+
+  auto const query_center = query.center_.and_then(
+      [&](std::string const& x) { return parse_location(x); });
+
+  auto const center =
+      query_stop
+          .transform([&](n::location_idx_t const l) {
+            return tt_.locations_.coordinates_[l];
+          })
+          .or_else([&]() {
+            return query_center.transform(
+                [](osr::location const& loc) { return loc.pos_; });
+          });
+
+  utl::verify<net::bad_request_exception>(
+      center.has_value(), "no coordinates: stop_found={}, center_parsed={}",
+      query_stop.has_value(), query_center.has_value());
+
+  utl::verify<net::bad_request_exception>(
+      query_stop.has_value() ||
+          (query_center.has_value() && query.radius_.has_value()),
+      "no radius: stop_found={}, center_parsed={}", query_stop.has_value(),
+      query_center.has_value());
+
   auto const allowed_clasz = to_clasz_mask(query.mode_);
   auto const [dir, time] = parse_cursor(query.pageCursor_.value_or(fmt::format(
       "{}|{}",
@@ -366,17 +396,19 @@ api::stoptimes_response stop_times::operator()(
           query.time_.value_or(openapi::now())->time_since_epoch())
           .count())));
 
-  auto locations = std::vector{l};
+  auto locations = std::vector<n::location_idx_t>{};
   auto const add = [&](n::location_idx_t const l) {
     if (query.exactRadius_) {
       locations.emplace_back(l);
       return;
     }
+
     auto const l_name = tt_.get_default_translation(tt_.locations_.names_[l]);
     utl::concat(locations, tt_.locations_.children_[l]);
     for (auto const& c : tt_.locations_.children_[l]) {
       utl::concat(locations, tt_.locations_.children_[c]);
     }
+
     for (auto const eq : tt_.locations_.equivalences_[l]) {
       if (tt_.get_default_translation(tt_.locations_.names_[eq]) == l_name) {
         locations.emplace_back(eq);
@@ -388,12 +420,16 @@ api::stoptimes_response stop_times::operator()(
     }
   };
 
-  if (query.radius_) {
-    loc_rtree_.in_radius(tt_.locations_.coordinates_[x],
-                         static_cast<double>(*query.radius_),
-                         [&](n::location_idx_t const y) { add(y); });
+  if (query_stop.has_value()) {
+    locations.emplace_back(tt_.locations_.get_root_idx(*query_stop));
+    if (query.radius_) {
+      loc_rtree_.in_radius(*center, static_cast<double>(*query.radius_), add);
+    } else {
+      add(*query_stop);
+    }
   } else {
-    add(x);
+    loc_rtree_.in_radius(*center, static_cast<double>(query.radius_.value()),
+                         add);
   }
   utl::erase_duplicates(locations);
 
@@ -507,8 +543,18 @@ api::stoptimes_response stop_times::operator()(
                 .tripCancelled_ = run_cancelled,
                 .source_ = fmt::format("{}", fmt::streamed(fr.dbg()))};
           }),
-      .place_ = to_place(&tt_, &tags_, w_, pl_, matches_, ae_, tz_, lang,
-                         tt_location{x}),
+      .place_ =
+          query_stop
+              .transform([&](n::location_idx_t const l) {
+                return to_place(&tt_, &tags_, w_, pl_, matches_, ae_, tz_, lang,
+                                tt_location{l});
+              })
+              .or_else([&]() {
+                return query_center.transform([](osr::location const& loc) {
+                  return to_place(loc, "center", std::nullopt);
+                });
+              })
+              .value(),
       .previousPageCursor_ =
           events.empty()
               ? ""
