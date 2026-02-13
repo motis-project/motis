@@ -1537,7 +1537,12 @@ paths:
           schema:
             type: string
           required: false
-          description: Anchor coordination (can be used instead of stopId)
+          description: |
+            Anchor coordinate. Format: latitude,longitude pair.
+            Used as fallback when "stopId" is missing or can't be found.
+            If both are provided and "stopId" resolves, "stopId" is used.
+            If "stopId" does not resolve, "center" is used instead. "radius" is
+            required when querying by "center" (i.e. without a valid "stopId").
 
         - name: time
           in: query
