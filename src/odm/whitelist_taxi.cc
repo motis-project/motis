@@ -310,11 +310,15 @@ bool prima::whitelist_taxi(std::vector<nr::journey>& taxi_journeys,
            "[whitelist taxi] failed, discarding taxi journeys");
     return false;
   }
-  whitelist_response_ = json::parse(whitelist_response.value()).as_object();
-  insert_requested_times();
-  return consume_whitelist_taxi_response(*whitelist_response, taxi_journeys,
+  auto const was_whitelist_response_valid = consume_whitelist_taxi_response(*whitelist_response, taxi_journeys,
                                          first_mile_taxi_rides,
                                          last_mile_taxi_rides);
+  if(!was_whitelist_response_valid) {
+    return false;
+  }
+  whitelist_response_ = json::parse(whitelist_response.value()).as_object();
+  insert_requested_times();
+  return true;
 }
 
 }  // namespace motis::odm

@@ -423,7 +423,8 @@ api::plan_response meta_router::run() {
              r_.metrics_->routing_execution_duration_seconds_routing_);
 
   auto const whitelist_start = std::chrono::steady_clock::now();
-  if (p.whitelist_taxi(taxi_journeys, *tt_)) {
+  auto const was_whitelist_response_valid = p.whitelist_taxi(taxi_journeys, *tt_);
+  if (was_whitelist_response_valid) {
     add_direct_odm(p.direct_taxi_, taxi_journeys, from_, to_, query_.arriveBy_,
                    kOdmTransportModeId);
   }
@@ -561,9 +562,10 @@ api::plan_response meta_router::run() {
             auto const match_location =
                 [&](motis::api::Leg const& leg, boost::json::array const& outer,
                     std::vector<nigiri::location_idx_t> const& locations,
-                    bool const checkTo) -> std::optional<std::string> {
+                    bool const check_to) -> std::optional<std::string> {
+              auto& stop_id = check_to ? leg.to_.stopId_ : leg.from_.stopId_;
               for (auto s = 0U; s < locations.size(); ++s) {
-                if ((checkTo ? leg.to_.stopId_ : leg.from_.stopId_) !=
+                if (stop_id !=
                     r_.tags_->id(*tt_, locations[s])) {
                   continue;
                 }
@@ -574,7 +576,9 @@ api::plan_response meta_router::run() {
               }
               return std::nullopt;
             };
-
+            if(!was_whitelist_response_valid) {
+                return response;
+            }
             if (response.legs_.size() == 1 &&
                 response.legs_.front().mode_ == api::ModeEnum::ODM) {
               if (auto const id = match_times(
