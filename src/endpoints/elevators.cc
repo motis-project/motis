@@ -62,7 +62,7 @@ namespace motis::ep {
 constexpr auto const kLimit = 4096U;
 
 json::value elevators::operator()(json::value const& query) const {
-  auto const rt = rt_;
+  auto const rt = std::atomic_load(&rt_);
   auto const e = rt->e_.get();
 
   auto matches = json::array{};
