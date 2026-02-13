@@ -159,7 +159,17 @@ const translations: Translations = {
 	rideEndNotAllowed: 'Stationnement uniquement aux stations',
 	DEBUG_BUS_ROUTE: 'Itinéraire de bus (Debug)',
 	DEBUG_RAILWAY_ROUTE: 'Itinéraire ferroviaire (Debug)',
-	DEBUG_FERRY_ROUTE: 'Itinéraire de ferry (Debug)'
+	DEBUG_FERRY_ROUTE: 'Itinéraire de ferry (Debug)',
+	routes: (n: number) => {
+		switch (n) {
+			case 0:
+				return 'Aucun itinéraire';
+			case 1:
+				return '1 itinéraire';
+			default:
+				return `${n} itinéraires`;
+		}
+	}
 };
 
 export default translations;

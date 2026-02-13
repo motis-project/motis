@@ -12,6 +12,7 @@
 	import type { FeatureCollection, LineString, Point } from 'geojson';
 	import { routes, type Leg, type RouteInfo } from '@motis-project/motis-client';
 	import { getDecorativeColors } from '$lib/map/colors';
+	import { t } from '$lib/i18n/translation';
 
 	let {
 		map,
@@ -239,6 +240,9 @@
 				const route = rd[arrayIdx];
 				return { route, arrayIdx, color: colorMap.get(arrayIdx) };
 			})
+			.filter(
+				(entry): entry is { route: RouteInfo; arrayIdx: number; color: string } => !!entry.route
+			)
 			.sort((a, b) => a.route.routeIdx - b.route.routeIdx);
 	};
 </script>
@@ -258,7 +262,7 @@
 			hoveredArrayIdx = null;
 		}}
 	>
-		<div class="font-semibold mb-2">{routesAtPoint.length} routes at this point</div>
+		<div class="font-semibold mb-2">{t.routes(routesAtPoint.length)}</div>
 		<table class="w-full text-sm border-separate border-spacing-y-1">
 			<thead class="text-xs uppercase text-muted-foreground">
 				<tr>

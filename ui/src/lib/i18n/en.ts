@@ -159,7 +159,17 @@ const translations: Translations = {
 	rideEndNotAllowed: 'Parking only at stations',
 	DEBUG_BUS_ROUTE: 'Bus Route (Debug)',
 	DEBUG_RAILWAY_ROUTE: 'Railway Route (Debug)',
-	DEBUG_FERRY_ROUTE: 'Ferry Route (Debug)'
+	DEBUG_FERRY_ROUTE: 'Ferry Route (Debug)',
+	routes: (n: number) => {
+		switch (n) {
+			case 0:
+				return 'No routes';
+			case 1:
+				return '1 route';
+			default:
+				return `${n} routes`;
+		}
+	}
 };
 
 export default translations;
