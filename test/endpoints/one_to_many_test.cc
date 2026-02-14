@@ -270,65 +270,72 @@ TEST(motis, one_to_many) {
   }
   // Bug: Should not connect final footpath with first or last mile
   {
-    // Last location should not be reachable when arriving with U4
     auto const many = std::vector<std::string>{
         "test_FFM_HAUPT_U", "50.11385,8.67912,-4",  // FFM_HAUPT_U
         "test_FFM_HAUPT_S", "50.11404,8.67824,-3",  // FFM_HAUPT_S
         "50.114093,8.676546"};  // Test location
-    auto const durations = one_to_many_post(api::OneToManyIntermodalParams{
-        // .one_ = "test_de:6412:10:6:1",
-        .one_ = "50.108056,8.663177,-2",
-        // .one_ = "50.107567,8.663783,-3",  // TODO Set matching mode
-        .many_ = many,
-        .time_ = {std::chrono::time_point_cast<std::chrono::seconds>(
-            n::parse_time("2019-05-01T01:00:00.000+02:00", "%FT%T%Ez"))},
-        .maxTravelTime_ = 1800,
-        .maxMatchingDistance_ = 250.0,
-        .arriveBy_ = false,
-        .useRoutedTransfers_ = true,
-        .pedestrianProfile_ = api::PedestrianProfileEnum::WHEELCHAIR,
-        .maxPostTransitTime_ = 360});  // Too short to reach from U4
+    {
+      // Last location should not be reachable when only arriving with U4
+      auto const durations = one_to_many_post(api::OneToManyIntermodalParams{
+          .one_ = "50.108056,8.663177,-2",  // Near de:6412:10:6:1
+          .many_ = many,
+          .time_ = {std::chrono::time_point_cast<std::chrono::seconds>(
+              n::parse_time("2019-05-01T01:00:00.000+02:00", "%FT%T%Ez"))},
+          .maxTravelTime_ = 1800,
+          .maxMatchingDistance_ = 250.0,
+          .arriveBy_ = false,
+          .useRoutedTransfers_ = true,
+          .pedestrianProfile_ = api::PedestrianProfileEnum::WHEELCHAIR,
+          .maxPostTransitTime_ = 360});  // Too short to reach from U4
 
-    EXPECT_EQ((std::vector<api::Duration>{
-                  {720.0}, {780.0}, {} /* FIXME */, {960.0}, {}}),
-              durations);
+      EXPECT_EQ((std::vector<api::Duration>{
+                    {720.0}, {780.0}, {} /* FIXME */, {960.0}, {}}),
+                durations);
+    }
 
-    // Test that location is reachable from FFM_HAUPT_S after arrival
-    auto const test_durations = one_to_many_post(api::OneToManyIntermodalParams{
-        // .one_ = "test_FFM_101",
-        // .one_ = "50.107066,8.663604,0",
-        .one_ = "50.10739,8.66333,-3",
-        // .one_ = "50.107577,8.6638173,-1",
-        .many_ = many,
-        // .many_ = {"test_FFM_HAUPT_U", "test_FFM_HAUPT_S", one},
-        // .many_ = {"test_FFM_HAUPT_S", test_location},
-        .time_ = {std::chrono::time_point_cast<std::chrono::seconds>(
-            n::parse_time("2019-05-01T01:00:00.000+02:00", "%FT%T%Ez"))},
-        .maxTravelTime_ = 1800,
-        .maxMatchingDistance_ = 250.0,
-        .arriveBy_ = false,
-        .useRoutedTransfers_ = true,
-        .pedestrianProfile_ = api::PedestrianProfileEnum::WHEELCHAIR,
-        .maxPostTransitTime_ = 360});  // Reachable from S3
-    EXPECT_EQ((std::vector<api::Duration>{
-                  {} /* FIXME */, {1620.0}, {1320.0}, {1380.0}, {1680.0}}),
-              test_durations);
+    {
+      // Test that location is reachable from FFM_HAUPT_S after arrival
+      auto const test_durations =
+          one_to_many_post(api::OneToManyIntermodalParams{
+              .one_ = "50.10739,8.66333,-3",  // Near FFM_101
+              .many_ = many,
+              .time_ = {std::chrono::time_point_cast<std::chrono::seconds>(
+                  n::parse_time("2019-05-01T01:00:00.000+02:00", "%FT%T%Ez"))},
+              .maxTravelTime_ = 1800,
+              .maxMatchingDistance_ = 250.0,
+              .arriveBy_ = false,
+              .useRoutedTransfers_ = true,
+              .pedestrianProfile_ = api::PedestrianProfileEnum::WHEELCHAIR,
+              .maxPostTransitTime_ = 360});  // Reachable from S3
+      EXPECT_EQ((std::vector<api::Duration>{
+                    {} /* FIXME */, {1620.0}, {1320.0}, {1380.0}, {1680.0}}),
+                test_durations);
+    }
 
-    // Stations should also be reachable, if arrival is possible
-    auto const walk_durations = one_to_many_post(api::OneToManyIntermodalParams{
-        .one_ = "50.107066,8.663604,0",
-        .many_ = many,
-        .time_ = {std::chrono::time_point_cast<std::chrono::seconds>(
-            n::parse_time("2019-05-01T01:00:00.000+02:00", "%FT%T%Ez"))},
-        .maxTravelTime_ = 1800,
-        .maxMatchingDistance_ = 250.0,
-        .arriveBy_ = false,
-        .useRoutedTransfers_ = true,
-        .pedestrianProfile_ = api::PedestrianProfileEnum::FOOT,
-        .maxPostTransitTime_ = 360});  // Reachable from S3
-    EXPECT_EQ((std::vector<api::Duration>{
-                  {720.0}, {780.0}, {720.0}, {780.0}, {960.0}}),
-              walk_durations);
+    {
+      // Ensure all arriving stations are reachable
+      // Also check that the correct arrival time is used
+      auto const walk_durations =
+          one_to_many_post(api::OneToManyIntermodalParams{
+              .one_ = "50.107066,8.663604,0",
+              .many_ = many,
+              .time_ = {std::chrono::time_point_cast<std::chrono::seconds>(
+                  n::parse_time("2019-05-01T01:00:00.000+02:00", "%FT%T%Ez"))},
+              .maxTravelTime_ = 1800,
+              .maxMatchingDistance_ = 250.0,
+              .arriveBy_ = false,
+              .useRoutedTransfers_ = true,
+              .pedestrianProfile_ = api::PedestrianProfileEnum::FOOT,
+              .maxPostTransitTime_ = 240});  // Only reachable from S3
+      EXPECT_EQ((std::vector<api::Duration>{
+                    {720.0},
+                    {780.0},
+                    {720.0},
+                    {780.0},
+                    {960.0},  // FIXME Must start at FFM_HAUPT_S => 1380 | 1500
+                }),
+                walk_durations);
+    }
   }
 
   d.init_rtt(date::sys_days{2019_y / May / 1});
