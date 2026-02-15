@@ -533,8 +533,10 @@ pugi::xml_document build_trip_info_response(trip const& trip_ep,
 
     auto mode =
         append_mode(service, get_transport_mode(leg.routeType_.value()));
-    append(language, mode, "Name", "TODO");  // TODO Zug
-    append(language, mode, "ShortName", "TODO");  // TODO RE
+    append(language, mode, "Name",
+           leg.category_.transform([](auto&& x) { return x.name_; }));
+    append(language, mode, "ShortName",
+           leg.category_.transform([](auto&& x) { return x.shortName_; }));
 
     append(language, service, "PublishedServiceName", leg.displayName_.value());
     append(service, "TrainNumber", leg.tripShortName_);
@@ -814,10 +816,14 @@ pugi::xml_document build_trip_response(routing const& routing_ep,
         append(service, "siri:OperatorRef", leg.agencyId_);
 
         {
-          auto const product_category = service.append_child("ProductCategory");
-          append(language, product_category, "Name", "RegioExpress");  // TODO
-          append(language, product_category, "ShortName", "RE");  // TODO
-          append(product_category, "ProductCategoryRef", 24);  // TODO
+          auto const category = service.append_child("ProductCategory");
+          append(language, category, "Name",
+                 leg.category_.transform([](auto&& x) { return x.name_; }));
+          append(
+              language, category, "ShortName",
+              leg.category_.transform([](auto&& x) { return x.shortName_; }));
+          append(language, category, "ProductCategoryRef",
+                 leg.category_.transform([](auto&& x) { return x.id_; }));
         }
 
         append(language, service, "DestinationText", leg.headsign_);
@@ -836,8 +842,11 @@ pugi::xml_document build_trip_response(routing const& routing_ep,
         {
           auto mode =
               append_mode(service, get_transport_mode(leg.routeType_.value()));
-          append(language, mode, "Name", "TODO");  // TODO
-          append(language, mode, "ShortName", "TODO");  // TODO
+          append(language, mode, "Name",
+                 leg.category_.transform([](auto&& x) { return x.name_; }));
+          append(
+              language, mode, "ShortName",
+              leg.category_.transform([](auto&& x) { return x.shortName_; }));
         }
 
         if (include_track_sections || include_leg_projection) {
