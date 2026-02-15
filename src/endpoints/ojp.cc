@@ -1131,8 +1131,6 @@ net::reply ojp::operator()(net::route_request const& http_req, bool) const {
       url_params.append({"arriveBy", "true"});
     }
 
-    std::cout << url << "\n";
-
     response = build_trip_response(
         *routing_ep_, lang, (*routing_ep_)(url), include_track_sections,
         include_leg_projection, include_intermediate_stops);

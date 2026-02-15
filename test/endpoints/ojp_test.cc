@@ -2134,7 +2134,7 @@ TEST(motis, ojp_requests) {
                   "NOW");
     normalize_tag("<siri:ResponseMessageIdentifier>",
                   "</siri:ResponseMessageIdentifier>", "MSG");
-    normalize_tag("<LinkProjection></LinkProjection>", "");
+    normalize_tag("<LinkProjection>", "</LinkProjection>", "");
 
     return out;
   };
