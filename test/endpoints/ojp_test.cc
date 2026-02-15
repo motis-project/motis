@@ -1,7 +1,6 @@
 #include "gtest/gtest.h"
 
 #include <filesystem>
-#include <fstream>
 #include <string>
 #include <string_view>
 
@@ -297,6 +296,1012 @@ U4,01:05:00,25:01:00,3600
 </OJP>
 )";
 
+[[maybe_unused]] auto const kOjpIntermodalRoutingResponse = [] {
+  auto out = std::string{};
+  out.reserve(39806);
+  out += R"OJP(<?xml version="1.0" encoding="utf-8"?>
+<OJP xmlns:siri="http://www.siri.org.uk/siri" xmlns="http://www.vdv.de/ojp" version="2.0">
+  <OJPResponse>
+    <siri:ServiceDelivery>
+      <siri:ResponseTimestamp>NOW</siri:ResponseTimestamp>
+      <siri:ProducerRef>MOTIS</siri:ProducerRef>
+      <siri:ResponseMessageIdentifier>1</siri:ResponseMessageIdentifier>
+      <OJPTripDelivery>
+        <siri:ResponseTimestamp>NOW</siri:ResponseTimestamp>
+        <siri:DefaultLanguage>de</siri:DefaultLanguage>
+        <TripResponseContext>
+          <Places>
+            <Place>
+              <StopPlace>
+                <siri:StopPlaceRef>test_FFM</siri:StopPlaceRef>
+                <StopPlaceName>
+                  <Text xml:lang="de">FFM Hbf</Text>
+                </StopPlaceName>
+              </StopPlace>
+              <Name>
+                <Text xml:lang="de">FFM Hbf</Text>
+              </Name>
+              <GeoPosition>
+                <siri:Longitude>8.66341</siri:Longitude>
+                <siri:Latitude>50.10701</siri:Latitude>
+              </GeoPosition>
+            </Place>
+            <Place>
+              <StopPoint>
+                <siri:StopPointRef>test_de:6412:10:6:1</siri:StopPointRef>
+                <StopPointName>
+                  <Text xml:lang="de">FFM Hbf</Text>
+                </StopPointName>
+                <ParentRef>test_FFM</ParentRef>
+              </StopPoint>
+              <Name>
+                <Text xml:lang="de">FFM Hbf</Text>
+              </Name>
+              <GeoPosition>
+                <siri:Longitude>8.66382</siri:Longitude>
+                <siri:Latitude>50.10758</siri:Latitude>
+              </GeoPosition>
+            </Place>
+            <Place>
+              <StopPlace>
+                <siri:StopPlaceRef>test_FFM_HAUPT</siri:StopPlaceRef>
+                <StopPlaceName>
+                  <Text xml:lang="de">FFM Hauptwache</Text>
+                </StopPlaceName>
+              </StopPlace>
+              <Name>
+                <Text xml:lang="de">FFM Hauptwache</Text>
+              </Name>
+              <GeoPosition>
+                <siri:Longitude>8.67835</siri:Longitude>
+                <siri:Latitude>50.11403</siri:Latitude>
+              </GeoPosition>
+            </Place>
+            <Place>
+              <StopPoint>
+                <siri:StopPointRef>test_FFM_HAUPT_U</siri:StopPointRef>
+                <StopPointName>
+                  <Text xml:lang="de">FFM Hauptwache</Text>
+                </StopPointName>
+                <ParentRef>test_FFM_HAUPT</ParentRef>
+              </StopPoint>
+              <Name>
+                <Text xml:lang="de">FFM Hauptwache</Text>
+              </Name>
+              <GeoPosition>
+                <siri:Longitude>8.67912</siri:Longitude>
+                <siri:Latitude>50.11385</siri:Latitude>
+              </GeoPosition>
+            </Place>
+            <Place>
+              <StopPoint>
+                <siri:StopPointRef>test_FFM_101</siri:StopPointRef>
+                <StopPointName>
+                  <Text xml:lang="de">FFM Hbf</Text>
+                </StopPointName>
+                <ParentRef>test_FFM</ParentRef>
+              </StopPoint>
+              <Name>
+                <Text xml:lang="de">FFM Hbf</Text>
+              </Name>
+              <GeoPosition>
+                <siri:Longitude>8.66333</siri:Longitude>
+                <siri:Latitude>50.10739</siri:Latitude>
+              </GeoPosition>
+            </Place>
+            <Place>
+              <StopPoint>
+                <siri:StopPointRef>test_FFM_HAUPT_S</siri:StopPointRef>
+                <StopPointName>
+                  <Text xml:lang="de">FFM Hauptwache</Text>
+                </StopPointName>
+                <ParentRef>test_FFM_HAUPT</ParentRef>
+              </StopPoint>
+              <Name>
+                <Text xml:lang="de">FFM Hauptwache</Text>
+              </Name>
+              <GeoPosition>
+                <siri:Longitude>8.67824</siri:Longitude>
+                <siri:Latitude>50.11404</siri:Latitude>
+              </GeoPosition>
+            </Place>
+          </Places>
+        </TripResponseContext>
+        <TripResult>
+          <Id>1</Id>
+          <Trip>
+            <Id>1</Id>
+            <Duration>PT19M</Duration>
+            <StartTime>2019-05-01T01:55:00Z</StartTime>
+            <EndTime>2019-05-01T02:14:00Z</EndTime>
+            <Transfers>0</Transfers>
+            <Distance>102</Distance>
+            <Leg>
+              <Id>1</Id>
+              <Duration>PT10M</Duration>
+              <ContinuousLeg>
+                <LegStart>
+                  <GeoPosition>
+                    <siri:Longitude>8.6587</siri:Longitude>
+                    <siri:Latitude>50.10408</siri:Latitude>
+                  </GeoPosition>
+                  <Name>
+                    <Text xml:lang="de">START</Text>
+                  </Name>
+                </LegStart>
+                <LegEnd>
+                  <siri:StopPointRef>test_de:6412:10:6:1</siri:StopPointRef>
+                  <Name>
+                    <Text xml:lang="de">FFM Hbf</Text>
+                  </Name>
+                </LegEnd>
+                <Service>
+                  <PersonalModeOfOperation>own</PersonalModeOfOperation>
+                  <PersonalMode>foot</PersonalMode>
+                </Service>
+                <Duration>PT10M</Duration>
+                <Length>57</Length>
+                <LegTrack>
+                  <TrackSection>
+                    <TrackSectionStart>
+                      <GeoPosition>
+                        <siri:Longitude>8.6587</siri:Longitude>
+                        <siri:Latitude>50.10408</siri:Latitude>
+                      </GeoPosition>
+                      <Name>
+                        <Text xml:lang="de">START</Text>
+                      </Name>
+                    </TrackSectionStart>
+                    <TrackSectionEnd>
+                      <siri:StopPointRef>test_de:6412:10:6:1</siri:StopPointRef>
+                      <Name>
+                        <Text xml:lang="de">FFM Hbf</Text>
+                      </Name>
+                    </TrackSectionEnd>
+                    <LinkProjection></LinkProjection>
+                    <Duration>PT10M</Duration>
+                    <Length>57</Length>
+                  </TrackSection>
+                </LegTrack>
+              </ContinuousLeg>
+            </Leg>
+            <Leg>
+              <Id>2</Id>
+              <Duration>PT5M</Duration>
+              <TimedLeg>
+                <LegBoard>
+                  <siri:StopPointRef>test_de:6412:10:6:1</siri:StopPointRef>
+                  <StopPointName>
+                    <Text xml:lang="de">FFM Hbf</Text>
+                  </StopPointName>
+                  <PlannedQuay>
+                    <Text xml:lang="de">U4</Text>
+                  </PlannedQuay>
+                  <ServiceDeparture>
+                    <TimetabledTime>2019-05-01T02:05:00Z</TimetabledTime>
+                    <EstimatedTime>2019-05-01T02:05:00Z</EstimatedTime>
+                  </ServiceDeparture>
+                  <Order>1</Order>
+                </LegBoard>
+                <LegAlight>
+                  <siri:StopPointRef>test_FFM_HAUPT_U</siri:StopPointRef>
+                  <StopPointName>
+                    <Text xml:lang="de">FFM Hauptwache</Text>
+                  </StopPointName>
+                  <ServiceArrival>
+                    <TimetabledTime>2019-05-01T02:10:00Z</TimetabledTime>
+                    <EstimatedTime>2019-05-01T02:10:00Z</EstimatedTime>
+                  </ServiceArrival>
+                  <Order>2</Order>
+                </LegAlight>
+                <Service>
+                  <OperatingDayRef>20190501</OperatingDayRef>
+                  <JourneyRef>20190501_04:05_test_U4</JourneyRef>
+                  <LineRef>test_U4</LineRef>
+                  <DirectionRef>0</DirectionRef>
+                  <siri:OperatorRef>DB</siri:OperatorRef>
+                  <ProductCategory />
+                  <DestinationText>
+                    <Text xml:lang="de">FFM Hauptwache</Text>
+                  </DestinationText>
+                  <PublishedServiceName>
+                    <Text xml:lang="de">U4</Text>
+                  </PublishedServiceName>
+                  <Mode>
+                    <PtMode>metro</PtMode>
+                    <siri:MetroSubmode>tube</siri:MetroSubmode>
+                  </Mode>
+                </Service>
+                <LegTrack>
+                  <TrackSection>
+                    <TrackSectionStart>
+                      <siri:StopPointRef>test_de:6412:10:6:1</siri:StopPointRef>
+                      <Name>
+                        <Text xml:lang="de">FFM Hbf</Text>
+                      </Name>
+                      <siri:StopPointRef>test_FFM_HAUPT_U</siri:StopPointRef>
+                    </TrackSectionStart>
+                    <TrackSectionEnd>
+                      <Name>
+                        <Text xml:lang="de">FFM Hauptwache</Text>
+                      </Name>
+                    </TrackSectionEnd>
+                    <LinkProjection></LinkProjection>
+                    <Duration>PT5M</Duration>
+                    <Length>2</Length>
+                  </TrackSection>
+                </LegTrack>
+              </TimedLeg>
+            </Leg>
+            <Leg>
+              <Id>3</Id>
+              <Duration>PT4M</Duration>
+              <ContinuousLeg>
+                <LegStart>
+                  <siri:StopPointRef>test_FFM_HAUPT_U</siri:StopPointRef>
+                  <Name>
+                    <Text xml:lang="de">FFM Hauptwache</Text>
+                  </Name>
+                </LegStart>
+                <LegEnd>
+                  <GeoPosition>
+                    <siri:Longitude>8.67672</siri:Longitude>
+                    <siri:Latitude>50.11327</siri:Latitude>
+                  </GeoPosition>
+                  <Name>
+                    <Text xml:lang="de">END</Text>
+                  </Name>
+                </LegEnd>
+                <Service>
+                  <PersonalModeOfOperation>own</PersonalModeOfOperation>
+                  <PersonalMode>foot</PersonalMode>
+                </Service>
+                <Duration>PT4M</Duration>
+                <Length>43</Length>
+                <LegTrack>
+                  <TrackSection>
+                    <TrackSectionStart>
+                      <siri:StopPointRef>test_FFM_HAUPT_U</siri:StopPointRef>
+                      <Name>
+                        <Text xml:lang="de">FFM Hauptwache</Text>
+                      </Name>
+                    </TrackSectionStart>
+                    <TrackSectionEnd>
+                      <GeoPosition>
+                        <siri:Longitude>8.67672</siri:Longitude>
+                        <siri:Latitude>50.11327</siri:Latitude>
+                      </GeoPosition>
+                      <Name>
+                        <Text xml:lang="de">END</Text>
+                      </Name>
+                    </TrackSectionEnd>
+                    <LinkProjection></LinkProjection>
+                    <Duration>PT4M</Duration>
+                    <Length>43</Length>
+                  </TrackSection>
+                </LegTrack>
+              </ContinuousLeg>
+            </Leg>
+          </Trip>
+        </TripResult>
+        <TripResult>
+          <Id>2</Id>
+          <Trip>
+            <Id>2</Id>
+            <Duration>PT19M</Duration>
+            <StartTime>2019-05-01T02:05:00Z</StartTime>
+            <EndTime>2019-05-01T02:24:00Z</EndTime>
+            <Transfers>0</Transfers>
+            <Distance>110</Distance>
+            <Leg>
+              <Id>1</Id>
+              <Duration>PT10M</Duration>
+              <ContinuousLeg>
+                <LegStart>
+                  <GeoPosition>
+                    <siri:Longitude>8.6587</siri:Longitude>
+                    <siri:Latitude>50.10408</siri:Latitude>
+                  </GeoPosition>
+                  <Name>
+                    <Text xml:lang="de">START</Text>
+                  </Name>
+                </L)OJP";
+  out += R"OJP(egStart>
+                <LegEnd>
+                  <siri:StopPointRef>test_FFM_101</siri:StopPointRef>
+                  <Name>
+                    <Text xml:lang="de">FFM Hbf</Text>
+                  </Name>
+                </LegEnd>
+                <Service>
+                  <PersonalModeOfOperation>own</PersonalModeOfOperation>
+                  <PersonalMode>foot</PersonalMode>
+                </Service>
+                <Duration>PT10M</Duration>
+                <Length>80</Length>
+                <LegTrack>
+                  <TrackSection>
+                    <TrackSectionStart>
+                      <GeoPosition>
+                        <siri:Longitude>8.6587</siri:Longitude>
+                        <siri:Latitude>50.10408</siri:Latitude>
+                      </GeoPosition>
+                      <Name>
+                        <Text xml:lang="de">START</Text>
+                      </Name>
+                    </TrackSectionStart>
+                    <TrackSectionEnd>
+                      <siri:StopPointRef>test_FFM_101</siri:StopPointRef>
+                      <Name>
+                        <Text xml:lang="de">FFM Hbf</Text>
+                      </Name>
+                    </TrackSectionEnd>
+                    <LinkProjection></LinkProjection>
+                    <Duration>PT10M</Duration>
+                    <Length>80</Length>
+                  </TrackSection>
+                </LegTrack>
+              </ContinuousLeg>
+            </Leg>
+            <Leg>
+              <Id>2</Id>
+              <Duration>PT5M</Duration>
+              <TimedLeg>
+                <LegBoard>
+                  <siri:StopPointRef>test_FFM_101</siri:StopPointRef>
+                  <StopPointName>
+                    <Text xml:lang="de">FFM Hbf</Text>
+                  </StopPointName>
+                  <PlannedQuay>
+                    <Text xml:lang="de">101</Text>
+                  </PlannedQuay>
+                  <ServiceDeparture>
+                    <TimetabledTime>2019-05-01T02:15:00Z</TimetabledTime>
+                    <EstimatedTime>2019-05-01T02:15:00Z</EstimatedTime>
+                  </ServiceDeparture>
+                  <Order>1</Order>
+                </LegBoard>
+                <LegAlight>
+                  <siri:StopPointRef>test_FFM_HAUPT_S</siri:StopPointRef>
+                  <StopPointName>
+                    <Text xml:lang="de">FFM Hauptwache</Text>
+                  </StopPointName>
+                  <ServiceArrival>
+                    <TimetabledTime>2019-05-01T02:20:00Z</TimetabledTime>
+                    <EstimatedTime>2019-05-01T02:20:00Z</EstimatedTime>
+                  </ServiceArrival>
+                  <Order>2</Order>
+                </LegAlight>
+                <Service>
+                  <OperatingDayRef>20190501</OperatingDayRef>
+                  <JourneyRef>20190501_04:15_test_S3</JourneyRef>
+                  <LineRef>test_S3</LineRef>
+                  <DirectionRef>0</DirectionRef>
+                  <siri:OperatorRef>DB</siri:OperatorRef>
+                  <ProductCategory />
+                  <DestinationText>
+                    <Text xml:lang="de">FFM Hauptwache</Text>
+                  </DestinationText>
+                  <PublishedServiceName>
+                    <Text xml:lang="de">S3</Text>
+                  </PublishedServiceName>
+                  <Mode>
+                    <PtMode>rail</PtMode>
+                    <siri:RailSubmode>suburbanRailway</siri:RailSubmode>
+                  </Mode>
+                </Service>
+                <LegTrack>
+                  <TrackSection>
+                    <TrackSectionStart>
+                      <siri:StopPointRef>test_FFM_101</siri:StopPointRef>
+                      <Name>
+                        <Text xml:lang="de">FFM Hbf</Text>
+                      </Name>
+                      <siri:StopPointRef>test_FFM_HAUPT_S</siri:StopPointRef>
+                    </TrackSectionStart>
+                    <TrackSectionEnd>
+                      <Name>
+                        <Text xml:lang="de">FFM Hauptwache</Text>
+                      </Name>
+                    </TrackSectionEnd>
+                    <LinkProjection></LinkProjection>
+                    <Duration>PT5M</Duration>
+                    <Length>2</Length>
+                  </TrackSection>
+                </LegTrack>
+              </TimedLeg>
+            </Leg>
+            <Leg>
+              <Id>3</Id>
+              <Duration>PT4M</Duration>
+              <ContinuousLeg>
+                <LegStart>
+                  <siri:StopPointRef>test_FFM_HAUPT_S</siri:StopPointRef>
+                  <Name>
+                    <Text xml:lang="de">FFM Hauptwache</Text>
+                  </Name>
+                </LegStart>
+                <LegEnd>
+                  <GeoPosition>
+                    <siri:Longitude>8.67672</siri:Longitude>
+                    <siri:Latitude>50.11327</siri:Latitude>
+                  </GeoPosition>
+                  <Name>
+                    <Text xml:lang="de">END</Text>
+                  </Name>
+                </LegEnd>
+                <Service>
+                  <PersonalModeOfOperation>own</PersonalModeOfOperation>
+                  <PersonalMode>foot</PersonalMode>
+                </Service>
+                <Duration>PT4M</Duration>
+                <Length>28</Length>
+                <LegTrack>
+                  <TrackSection>
+                    <TrackSectionStart>
+                      <siri:StopPointRef>test_FFM_HAUPT_S</siri:StopPointRef>
+                      <Name>
+                        <Text xml:lang="de">FFM Hauptwache</Text>
+                      </Name>
+                    </TrackSectionStart>
+                    <TrackSectionEnd>
+                      <GeoPosition>
+                        <siri:Longitude>8.67672</siri:Longitude>
+                        <siri:Latitude>50.11327</siri:Latitude>
+                      </GeoPosition>
+                      <Name>
+                        <Text xml:lang="de">END</Text>
+                      </Name>
+                    </TrackSectionEnd>
+                    <LinkProjection></LinkProjection>
+                    <Duration>PT4M</Duration>
+                    <Length>28</Length>
+                  </TrackSection>
+                </LegTrack>
+              </ContinuousLeg>
+            </Leg>
+          </Trip>
+        </TripResult>
+        <TripResult>
+          <Id>3</Id>
+          <Trip>
+            <Id>3</Id>
+            <Duration>PT19M</Duration>
+            <StartTime>2019-05-01T02:55:00Z</StartTime>
+            <EndTime>2019-05-01T03:14:00Z</EndTime>
+            <Transfers>0</Transfers>
+            <Distance>102</Distance>
+            <Leg>
+              <Id>1</Id>
+              <Duration>PT10M</Duration>
+              <ContinuousLeg>
+                <LegStart>
+                  <GeoPosition>
+                    <siri:Longitude>8.6587</siri:Longitude>
+                    <siri:Latitude>50.10408</siri:Latitude>
+                  </GeoPosition>
+                  <Name>
+                    <Text xml:lang="de">START</Text>
+                  </Name>
+                </LegStart>
+                <LegEnd>
+                  <siri:StopPointRef>test_de:6412:10:6:1</siri:StopPointRef>
+                  <Name>
+                    <Text xml:lang="de">FFM Hbf</Text>
+                  </Name>
+                </LegEnd>
+                <Service>
+                  <PersonalModeOfOperation>own</PersonalModeOfOperation>
+                  <PersonalMode>foot</PersonalMode>
+                </Service>
+                <Duration>PT10M</Duration>
+                <Length>57</Length>
+                <LegTrack>
+                  <TrackSection>
+                    <TrackSectionStart>
+                      <GeoPosition>
+                        <siri:Longitude>8.6587</siri:Longitude>
+                        <siri:Latitude>50.10408</siri:Latitude>
+                      </GeoPosition>
+                      <Name>
+                        <Text xml:lang="de">START</Text>
+                      </Name>
+                    </TrackSectionStart>
+                    <TrackSectionEnd>
+                      <siri:StopPointRef>test_de:6412:10:6:1</siri:StopPointRef>
+                      <Name>
+                        <Text xml:lang="de">FFM Hbf</Text>
+                      </Name>
+                    </TrackSectionEnd>
+                    <LinkProjection></LinkProjection>
+                    <Duration>PT10M</Duration>
+                    <Length>57</Length>
+                  </TrackSection>
+                </LegTrack>
+              </ContinuousLeg>
+            </Leg>
+            <Leg>
+              <Id>2</Id>
+              <Duration>PT5M</Duration>
+              <TimedLeg>
+                <LegBoard>
+                  <siri:StopPointRef>test_de:6412:10:6:1</siri:StopPointRef>
+                  <StopPointName>
+                    <Text xml:lang="de">FFM Hbf</Text>
+                  </StopPointName>
+                  <PlannedQuay>
+                    <Text xml:lang="de">U4</Text>
+                  </PlannedQuay>
+                  <ServiceDeparture>
+                    <TimetabledTime>2019-05-01T03:05:00Z</TimetabledTime>
+                    <EstimatedTime>2019-05-01T03:05:00Z</EstimatedTime>
+                  </ServiceDeparture>
+                  <Order>1</Order>
+                </LegBoard>
+                <LegAlight>
+                  <siri:StopPointRef>test_FFM_HAUPT_U</siri:StopPointRef>
+                  <StopPointName>
+                    <Text xml:lang="de">FFM Hauptwache</Text>
+                  </StopPointName>
+                  <ServiceArrival>
+                    <TimetabledTime>2019-05-01T03:10:00Z</TimetabledTime>
+                    <EstimatedTime>2019-05-01T03:10:00Z</EstimatedTime>
+                  </ServiceArrival>
+                  <Order>2</Order>
+                </LegAlight>
+                <Service>
+                  <OperatingDayRef>20190501</OperatingDayRef>
+                  <JourneyRef>20190501_05:05_test_U4</JourneyRef>
+                  <LineRef>test_U4</LineRef>
+                  <DirectionRef>0</DirectionRef>
+                  <siri:OperatorRef>DB</siri:OperatorRef>
+                  <ProductCategory />
+                  <DestinationText>
+                    <Text xml:lang="de">FFM Hauptwache</Text>
+                  </DestinationText>
+                  <PublishedServiceName>
+                    <Text xml:lang="de">U4</Text>
+                  </PublishedServiceName>
+                  <Mode>
+                    <PtMode>metro</PtMode>
+                    <siri:MetroSubmode>tube</siri:MetroSubmode>
+                  </Mode>
+                </Service>
+                <LegTrack>
+                  <TrackSection>
+                    <TrackSectionStart>
+                      <siri:StopPointRef>test_de:6412:10:6:1</siri:StopPointRef>
+                      <Name>
+                        <Text xml:lang="de">FFM Hbf</Text>
+                      </Name>
+                      <siri:StopPointRef>test_FFM_HAUPT_U</siri:StopPointRef>
+                    </TrackSectionStart>
+                    <TrackSectionEnd>
+                      <Name>
+                        <Text xml:lang="de">FFM Hauptwache</Text>
+                      </Name>
+                    </TrackSectionEnd>
+                    <LinkProjection></LinkProjection>
+                    <Duration>PT5M</Duration>
+                    <Length>2</Length>
+                  </TrackSection>
+                </LegTrack>
+              </TimedLeg>
+            </Leg>
+            <Leg>
+              <Id>3</Id>
+              <Duration>PT4M</Duration>
+              <ContinuousLeg>
+                <LegStart>
+                  <siri:StopPointRef>test_FFM_HAUPT_U</siri:StopPointRef>
+                  <Name>
+                    <Text xml:lang="de">FFM Hauptwache</Text>
+                  </Name>
+                </LegStart>
+                <LegEnd>
+                  <GeoPosition>
+                    <siri:Longitude>8.67672</siri:Longitude>
+                 )OJP";
+  out += R"OJP(   <siri:Latitude>50.11327</siri:Latitude>
+                  </GeoPosition>
+                  <Name>
+                    <Text xml:lang="de">END</Text>
+                  </Name>
+                </LegEnd>
+                <Service>
+                  <PersonalModeOfOperation>own</PersonalModeOfOperation>
+                  <PersonalMode>foot</PersonalMode>
+                </Service>
+                <Duration>PT4M</Duration>
+                <Length>43</Length>
+                <LegTrack>
+                  <TrackSection>
+                    <TrackSectionStart>
+                      <siri:StopPointRef>test_FFM_HAUPT_U</siri:StopPointRef>
+                      <Name>
+                        <Text xml:lang="de">FFM Hauptwache</Text>
+                      </Name>
+                    </TrackSectionStart>
+                    <TrackSectionEnd>
+                      <GeoPosition>
+                        <siri:Longitude>8.67672</siri:Longitude>
+                        <siri:Latitude>50.11327</siri:Latitude>
+                      </GeoPosition>
+                      <Name>
+                        <Text xml:lang="de">END</Text>
+                      </Name>
+                    </TrackSectionEnd>
+                    <LinkProjection></LinkProjection>
+                    <Duration>PT4M</Duration>
+                    <Length>43</Length>
+                  </TrackSection>
+                </LegTrack>
+              </ContinuousLeg>
+            </Leg>
+          </Trip>
+        </TripResult>
+        <TripResult>
+          <Id>4</Id>
+          <Trip>
+            <Id>4</Id>
+            <Duration>PT19M</Duration>
+            <StartTime>2019-05-01T03:05:00Z</StartTime>
+            <EndTime>2019-05-01T03:24:00Z</EndTime>
+            <Transfers>0</Transfers>
+            <Distance>110</Distance>
+            <Leg>
+              <Id>1</Id>
+              <Duration>PT10M</Duration>
+              <ContinuousLeg>
+                <LegStart>
+                  <GeoPosition>
+                    <siri:Longitude>8.6587</siri:Longitude>
+                    <siri:Latitude>50.10408</siri:Latitude>
+                  </GeoPosition>
+                  <Name>
+                    <Text xml:lang="de">START</Text>
+                  </Name>
+                </LegStart>
+                <LegEnd>
+                  <siri:StopPointRef>test_FFM_101</siri:StopPointRef>
+                  <Name>
+                    <Text xml:lang="de">FFM Hbf</Text>
+                  </Name>
+                </LegEnd>
+                <Service>
+                  <PersonalModeOfOperation>own</PersonalModeOfOperation>
+                  <PersonalMode>foot</PersonalMode>
+                </Service>
+                <Duration>PT10M</Duration>
+                <Length>80</Length>
+                <LegTrack>
+                  <TrackSection>
+                    <TrackSectionStart>
+                      <GeoPosition>
+                        <siri:Longitude>8.6587</siri:Longitude>
+                        <siri:Latitude>50.10408</siri:Latitude>
+                      </GeoPosition>
+                      <Name>
+                        <Text xml:lang="de">START</Text>
+                      </Name>
+                    </TrackSectionStart>
+                    <TrackSectionEnd>
+                      <siri:StopPointRef>test_FFM_101</siri:StopPointRef>
+                      <Name>
+                        <Text xml:lang="de">FFM Hbf</Text>
+                      </Name>
+                    </TrackSectionEnd>
+                    <LinkProjection></LinkProjection>
+                    <Duration>PT10M</Duration>
+                    <Length>80</Length>
+                  </TrackSection>
+                </LegTrack>
+              </ContinuousLeg>
+            </Leg>
+            <Leg>
+              <Id>2</Id>
+              <Duration>PT5M</Duration>
+              <TimedLeg>
+                <LegBoard>
+                  <siri:StopPointRef>test_FFM_101</siri:StopPointRef>
+                  <StopPointName>
+                    <Text xml:lang="de">FFM Hbf</Text>
+                  </StopPointName>
+                  <PlannedQuay>
+                    <Text xml:lang="de">101</Text>
+                  </PlannedQuay>
+                  <ServiceDeparture>
+                    <TimetabledTime>2019-05-01T03:15:00Z</TimetabledTime>
+                    <EstimatedTime>2019-05-01T03:15:00Z</EstimatedTime>
+                  </ServiceDeparture>
+                  <Order>1</Order>
+                </LegBoard>
+                <LegAlight>
+                  <siri:StopPointRef>test_FFM_HAUPT_S</siri:StopPointRef>
+                  <StopPointName>
+                    <Text xml:lang="de">FFM Hauptwache</Text>
+                  </StopPointName>
+                  <ServiceArrival>
+                    <TimetabledTime>2019-05-01T03:20:00Z</TimetabledTime>
+                    <EstimatedTime>2019-05-01T03:20:00Z</EstimatedTime>
+                  </ServiceArrival>
+                  <Order>2</Order>
+                </LegAlight>
+                <Service>
+                  <OperatingDayRef>20190501</OperatingDayRef>
+                  <JourneyRef>20190501_05:15_test_S3</JourneyRef>
+                  <LineRef>test_S3</LineRef>
+                  <DirectionRef>0</DirectionRef>
+                  <siri:OperatorRef>DB</siri:OperatorRef>
+                  <ProductCategory />
+                  <DestinationText>
+                    <Text xml:lang="de">FFM Hauptwache</Text>
+                  </DestinationText>
+                  <PublishedServiceName>
+                    <Text xml:lang="de">S3</Text>
+                  </PublishedServiceName>
+                  <Mode>
+                    <PtMode>rail</PtMode>
+                    <siri:RailSubmode>suburbanRailway</siri:RailSubmode>
+                  </Mode>
+                </Service>
+                <LegTrack>
+                  <TrackSection>
+                    <TrackSectionStart>
+                      <siri:StopPointRef>test_FFM_101</siri:StopPointRef>
+                      <Name>
+                        <Text xml:lang="de">FFM Hbf</Text>
+                      </Name>
+                      <siri:StopPointRef>test_FFM_HAUPT_S</siri:StopPointRef>
+                    </TrackSectionStart>
+                    <TrackSectionEnd>
+                      <Name>
+                        <Text xml:lang="de">FFM Hauptwache</Text>
+                      </Name>
+                    </TrackSectionEnd>
+                    <LinkProjection></LinkProjection>
+                    <Duration>PT5M</Duration>
+                    <Length>2</Length>
+                  </TrackSection>
+                </LegTrack>
+              </TimedLeg>
+            </Leg>
+            <Leg>
+              <Id>3</Id>
+              <Duration>PT4M</Duration>
+              <ContinuousLeg>
+                <LegStart>
+                  <siri:StopPointRef>test_FFM_HAUPT_S</siri:StopPointRef>
+                  <Name>
+                    <Text xml:lang="de">FFM Hauptwache</Text>
+                  </Name>
+                </LegStart>
+                <LegEnd>
+                  <GeoPosition>
+                    <siri:Longitude>8.67672</siri:Longitude>
+                    <siri:Latitude>50.11327</siri:Latitude>
+                  </GeoPosition>
+                  <Name>
+                    <Text xml:lang="de">END</Text>
+                  </Name>
+                </LegEnd>
+                <Service>
+                  <PersonalModeOfOperation>own</PersonalModeOfOperation>
+                  <PersonalMode>foot</PersonalMode>
+                </Service>
+                <Duration>PT4M</Duration>
+                <Length>28</Length>
+                <LegTrack>
+                  <TrackSection>
+                    <TrackSectionStart>
+                      <siri:StopPointRef>test_FFM_HAUPT_S</siri:StopPointRef>
+                      <Name>
+                        <Text xml:lang="de">FFM Hauptwache</Text>
+                      </Name>
+                    </TrackSectionStart>
+                    <TrackSectionEnd>
+                      <GeoPosition>
+                        <siri:Longitude>8.67672</siri:Longitude>
+                        <siri:Latitude>50.11327</siri:Latitude>
+                      </GeoPosition>
+                      <Name>
+                        <Text xml:lang="de">END</Text>
+                      </Name>
+                    </TrackSectionEnd>
+                    <LinkProjection></LinkProjection>
+                    <Duration>PT4M</Duration>
+                    <Length>28</Length>
+                  </TrackSection>
+                </LegTrack>
+              </ContinuousLeg>
+            </Leg>
+          </Trip>
+        </TripResult>
+        <TripResult>
+          <Id>5</Id>
+          <Trip>
+            <Id>5</Id>
+            <Duration>PT19M</Duration>
+            <StartTime>2019-05-01T03:55:00Z</StartTime>
+            <EndTime>2019-05-01T04:14:00Z</EndTime>
+            <Transfers>0</Transfers>
+            <Distance>102</Distance>
+            <Leg>
+              <Id>1</Id>
+              <Duration>PT10M</Duration>
+              <ContinuousLeg>
+                <LegStart>
+                  <GeoPosition>
+                    <siri:Longitude>8.6587</siri:Longitude>
+                    <siri:Latitude>50.10408</siri:Latitude>
+                  </GeoPosition>
+                  <Name>
+                    <Text xml:lang="de">START</Text>
+                  </Name>
+                </LegStart>
+                <LegEnd>
+                  <siri:StopPointRef>test_de:6412:10:6:1</siri:StopPointRef>
+                  <Name>
+                    <Text xml:lang="de">FFM Hbf</Text>
+                  </Name>
+                </LegEnd>
+                <Service>
+                  <PersonalModeOfOperation>own</PersonalModeOfOperation>
+                  <PersonalMode>foot</PersonalMode>
+                </Service>
+                <Duration>PT10M</Duration>
+                <Length>57</Length>
+                <LegTrack>
+                  <TrackSection>
+                    <TrackSectionStart>
+                      <GeoPosition>
+                        <siri:Longitude>8.6587</siri:Longitude>
+                        <siri:Latitude>50.10408</siri:Latitude>
+                      </GeoPosition>
+                      <Name>
+                        <Text xml:lang="de">START</Text>
+                      </Name>
+                    </TrackSectionStart>
+                    <TrackSectionEnd>
+                      <siri:StopPointRef>test_de:6412:10:6:1</siri:StopPointRef>
+                      <Name>
+                        <Text xml:lang="de">FFM Hbf</Text>
+                      </Name>
+                    </TrackSectionEnd>
+                    <LinkProjection></LinkProjection>
+                    <Duration>PT10M</Duration>
+                    <Length>57</Length>
+                  </TrackSection>
+                </LegTrack>
+              </ContinuousLeg>
+            </Leg>
+            <Leg>
+              <Id>2</Id>
+              <Duration>PT5M</Duration>
+              <TimedLeg>
+                <LegBoard>
+                  <siri:StopPointRef>test_de:6412:10:6:1</siri:StopPointRef>
+                  <StopPointName>
+                    <Text xml:lang="de">FFM Hbf</Text>
+                  </StopPointName>
+                  <PlannedQuay>
+                    <Text xml:lang="de">U4</Text>
+                  </PlannedQuay>
+                  <ServiceDeparture>
+                    <TimetabledTime>2019-05-01T04:05:00Z</TimetabledTime>
+                    <EstimatedTime>2019-05-01T04:05:00Z</EstimatedTime>
+                  </ServiceDeparture>
+                  <Order>1</Order>
+                </LegBoard>
+                <LegAlight>
+                  <siri:StopPointRef>test_FFM_HAUPT_U</siri:StopPointRef>
+                  <StopPointName>
+                    <Text xml:lang="de">FFM Hauptwache</Text>
+                  </StopPointName>
+                  <ServiceArrival>
+                    <TimetabledTime>2019-05-01T04:10:00Z</TimetabledTime>
+                    <EstimatedTime>2019-05-01T04:10:00Z</EstimatedTime>
+            )OJP";
+  out += R"OJP(      </ServiceArrival>
+                  <Order>2</Order>
+                </LegAlight>
+                <Service>
+                  <OperatingDayRef>20190501</OperatingDayRef>
+                  <JourneyRef>20190501_06:05_test_U4</JourneyRef>
+                  <LineRef>test_U4</LineRef>
+                  <DirectionRef>0</DirectionRef>
+                  <siri:OperatorRef>DB</siri:OperatorRef>
+                  <ProductCategory />
+                  <DestinationText>
+                    <Text xml:lang="de">FFM Hauptwache</Text>
+                  </DestinationText>
+                  <PublishedServiceName>
+                    <Text xml:lang="de">U4</Text>
+                  </PublishedServiceName>
+                  <Mode>
+                    <PtMode>metro</PtMode>
+                    <siri:MetroSubmode>tube</siri:MetroSubmode>
+                  </Mode>
+                </Service>
+                <LegTrack>
+                  <TrackSection>
+                    <TrackSectionStart>
+                      <siri:StopPointRef>test_de:6412:10:6:1</siri:StopPointRef>
+                      <Name>
+                        <Text xml:lang="de">FFM Hbf</Text>
+                      </Name>
+                      <siri:StopPointRef>test_FFM_HAUPT_U</siri:StopPointRef>
+                    </TrackSectionStart>
+                    <TrackSectionEnd>
+                      <Name>
+                        <Text xml:lang="de">FFM Hauptwache</Text>
+                      </Name>
+                    </TrackSectionEnd>
+                    <LinkProjection></LinkProjection>
+                    <Duration>PT5M</Duration>
+                    <Length>2</Length>
+                  </TrackSection>
+                </LegTrack>
+              </TimedLeg>
+            </Leg>
+            <Leg>
+              <Id>3</Id>
+              <Duration>PT4M</Duration>
+              <ContinuousLeg>
+                <LegStart>
+                  <siri:StopPointRef>test_FFM_HAUPT_U</siri:StopPointRef>
+                  <Name>
+                    <Text xml:lang="de">FFM Hauptwache</Text>
+                  </Name>
+                </LegStart>
+                <LegEnd>
+                  <GeoPosition>
+                    <siri:Longitude>8.67672</siri:Longitude>
+                    <siri:Latitude>50.11327</siri:Latitude>
+                  </GeoPosition>
+                  <Name>
+                    <Text xml:lang="de">END</Text>
+                  </Name>
+                </LegEnd>
+                <Service>
+                  <PersonalModeOfOperation>own</PersonalModeOfOperation>
+                  <PersonalMode>foot</PersonalMode>
+                </Service>
+                <Duration>PT4M</Duration>
+                <Length>43</Length>
+                <LegTrack>
+                  <TrackSection>
+                    <TrackSectionStart>
+                      <siri:StopPointRef>test_FFM_HAUPT_U</siri:StopPointRef>
+                      <Name>
+                        <Text xml:lang="de">FFM Hauptwache</Text>
+                      </Name>
+                    </TrackSectionStart>
+                    <TrackSectionEnd>
+                      <GeoPosition>
+                        <siri:Longitude>8.67672</siri:Longitude>
+                        <siri:Latitude>50.11327</siri:Latitude>
+                      </GeoPosition>
+                      <Name>
+                        <Text xml:lang="de">END</Text>
+                      </Name>
+                    </TrackSectionEnd>
+                    <LinkProjection></LinkProjection>
+                    <Duration>PT4M</Duration>
+                    <Length>43</Length>
+                  </TrackSection>
+                </LegTrack>
+              </ContinuousLeg>
+            </Leg>
+          </Trip>
+        </TripResult>
+      </OJPTripDelivery>
+    </siri:ServiceDelivery>
+  </OJPResponse>
+</OJP>)OJP";
+  return out;
+}();
+
 [[maybe_unused]] constexpr auto const kOjpGeocodingResponse =
     R"(<?xml version="1.0" encoding="utf-8"?>
 <OJP xmlns:siri="http://www.siri.org.uk/siri" xmlns="http://www.vdv.de/ojp" version="2.0">
@@ -570,16 +1575,7 @@ U4,01:05:00,25:01:00,3600
                   <Text xml:lang="de">FFM Hbf</Text>
                 </Name>
               </TrackSectionEnd>
-              <LinkProjection>
-                <Position>
-                  <siri:Longitude>8.62926</siri:Longitude>
-                  <siri:Latitude>49.87336</siri:Latitude>
-                </Position>
-                <Position>
-                  <siri:Longitude>8.66118</siri:Longitude>
-                  <siri:Latitude>50.10593</siri:Latitude>
-                </Position>
-              </LinkProjection>
+              <LinkProjection></LinkProjection>
               <Duration>PT10M</Duration>
               <Length>0</Length>
             </TrackSection>
@@ -740,16 +1736,7 @@ U4,01:05:00,25:01:00,3600
                         <Text xml:lang="de">FFM Hbf</Text>
                       </Name>
                     </TrackSectionEnd>
-                    <LinkProjection>
-                      <Position>
-                        <siri:Longitude>8.62926</siri:Longitude>
-                        <siri:Latitude>49.87336</siri:Latitude>
-                      </Position>
-                      <Position>
-                        <siri:Longitude>8.66118</siri:Longitude>
-                        <siri:Latitude>50.10593</siri:Latitude>
-                      </Position>
-                    </LinkProjection>
+                    <LinkProjection></LinkProjection>
                     <Duration>PT10M</Duration>
                     <Length>2</Length>
                   </TrackSection>
@@ -831,16 +1818,7 @@ U4,01:05:00,25:01:00,3600
                         <Text xml:lang="de">FFM Hbf</Text>
                       </Name>
                     </TrackSectionEnd>
-                    <LinkProjection>
-                      <Position>
-                        <siri:Longitude>8.62926</siri:Longitude>
-                        <siri:Latitude>49.87336</siri:Latitude>
-                      </Position>
-                      <Position>
-                        <siri:Longitude>8.66118</siri:Longitude>
-                        <siri:Latitude>50.10593</siri:Latitude>
-                      </Position>
-                    </LinkProjection>
+                    <LinkProjection></LinkProjection>
                     <Duration>PT10M</Duration>
                     <Length>2</Length>
                   </TrackSection>
@@ -922,16 +1900,7 @@ U4,01:05:00,25:01:00,3600
                         <Text xml:lang="de">FFM Hbf</Text>
                       </Name>
                     </TrackSectionEnd>
-                    <LinkProjection>
-                      <Position>
-                        <siri:Longitude>8.62926</siri:Longitude>
-                        <siri:Latitude>49.87336</siri:Latitude>
-                      </Position>
-                      <Position>
-                        <siri:Longitude>8.66118</siri:Longitude>
-                        <siri:Latitude>50.10593</siri:Latitude>
-                      </Position>
-                    </LinkProjection>
+                    <LinkProjection></LinkProjection>
                     <Duration>PT10M</Duration>
                     <Length>2</Length>
                   </TrackSection>
@@ -1013,16 +1982,7 @@ U4,01:05:00,25:01:00,3600
                         <Text xml:lang="de">FFM Hbf</Text>
                       </Name>
                     </TrackSectionEnd>
-                    <LinkProjection>
-                      <Position>
-                        <siri:Longitude>8.62926</siri:Longitude>
-                        <siri:Latitude>49.87336</siri:Latitude>
-                      </Position>
-                      <Position>
-                        <siri:Longitude>8.66118</siri:Longitude>
-                        <siri:Latitude>50.10593</siri:Latitude>
-                      </Position>
-                    </LinkProjection>
+                    <LinkProjection></LinkProjection>
                     <Duration>PT10M</Duration>
                     <Length>2</Length>
                   </TrackSection>
@@ -1104,16 +2064,7 @@ U4,01:05:00,25:01:00,3600
                         <Text xml:lang="de">FFM Hbf</Text>
                       </Name>
                     </TrackSectionEnd>
-                    <LinkProjection>
-                      <Position>
-                        <siri:Longitude>8.62926</siri:Longitude>
-                        <siri:Latitude>49.87336</siri:Latitude>
-                      </Position>
-                      <Position>
-                        <siri:Longitude>8.66118</siri:Longitude>
-                        <siri:Latitude>50.10593</siri:Latitude>
-                      </Position>
-                    </LinkProjection>
+                    <LinkProjection></LinkProjection>
                     <Duration>PT10M</Duration>
                     <Length>2</Length>
                   </TrackSection>
@@ -1175,7 +2126,7 @@ TEST(motis, ojp_requests) {
           break;
         }
         out.replace(value_start, value_end - value_start, replacement);
-        pos = value_end + end_tag.size();
+        pos = value_start + replacement.size() + end_tag.size();
       }
     };
 
@@ -1183,6 +2134,7 @@ TEST(motis, ojp_requests) {
                   "NOW");
     normalize_tag("<siri:ResponseMessageIdentifier>",
                   "</siri:ResponseMessageIdentifier>", "MSG");
+    normalize_tag("<LinkProjection></LinkProjection>", "");
 
     return out;
   };
@@ -1202,4 +2154,6 @@ TEST(motis, ojp_requests) {
   expect_response(send_request(kOjpStopEventRequest), kOjpStopEventResponse);
   expect_response(send_request(kOjpTripInfoRequest), kOjpTripInfoResponse);
   expect_response(send_request(kOjpRoutingRequest), kOjpRoutingResponse);
+  expect_response(send_request(kOjpIntermodalRoutingRequest),
+                  kOjpIntermodalRoutingResponse);
 }
