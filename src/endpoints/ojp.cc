@@ -208,7 +208,19 @@ void append_stop_ref(pugi::xml_node node, api::Place const& p) {
 
 void append_position(pugi::xml_node node,
                      geo::latlng const& pos,
-                     std::string_view name = "Position") {
+                     std::string_view name = "Position");
+
+void append_place_ref_or_geo(pugi::xml_node node, api::Place const& p) {
+  if (p.stopId_.has_value()) {
+    append_stop_ref(node, p);
+  } else {
+    append_position(node, {p.lat_, p.lon_}, "GeoPosition");
+  }
+}
+
+void append_position(pugi::xml_node node,
+                     geo::latlng const& pos,
+                     std::string_view name) {
   auto geo = node.append_child(name);
   geo.append_child("siri:Longitude").text().set(pos.lng_, 6);
   geo.append_child("siri:Latitude").text().set(pos.lat_, 7);
@@ -228,6 +240,26 @@ std::string_view get_place_ref(pugi::xml_node ref) {
     return d.text().as_string();
   }
   return "";
+}
+
+std::string get_place_ref_or_geo(pugi::xml_node ref) {
+  if (auto const id = get_place_ref(ref); !id.empty()) {
+    return std::string{id};
+  }
+
+  auto const geo = ref.child("GeoPosition");
+  utl::verify(geo,
+              "PlaceRef.StopPlaceRef or PlaceRef.GeoPosition should be set");
+
+  auto const lat_node = geo.child("siri:Latitude");
+  auto const lon_node = geo.child("siri:Longitude");
+  utl::verify(
+      lat_node && lon_node,
+      "StopPlaceRef.GeoPosition needs siri:Latitude and siri:Longitude");
+
+  auto const lat = lat_node.text().as_double();
+  auto const lng = lon_node.text().as_double();
+  return fmt::format("{},{}", lat, lng);
 }
 
 pugi::xml_node append_mode(pugi::xml_node service, transport_mode const m) {
@@ -741,6 +773,8 @@ pugi::xml_document build_trip_response(routing const& routing_ep,
         }));
 
     auto leg_idx = 0;
+    auto leg_pos = 0U;
+    auto const leg_count = it.legs_.size();
     api::Leg const* prev = nullptr;
     for (auto const& leg : it.legs_) {
       if (leg.displayName_.has_value()) {
@@ -874,39 +908,94 @@ pugi::xml_document build_trip_response(routing const& routing_ep,
           append(section, "Length", leg.legGeometry_.length_);
         }
       } else {
+        auto const is_first_or_last =
+            (leg_pos == 0U) || (leg_pos + 1U == leg_count);
         auto leg_node = trip.append_child("Leg");
         append(leg_node, "Id", ++leg_idx);
         append(leg_node, "Duration",
                duration_to_iso(std::chrono::seconds{leg.duration_}));
 
-        auto transfer_leg = leg_node.append_child("TransferLeg");
+        if (is_first_or_last) {
+          auto continuous_leg = leg_node.append_child("ContinuousLeg");
+          auto leg_start = continuous_leg.append_child("LegStart");
+          append_place_ref_or_geo(leg_start, leg.from_);
+          append(language, leg_start, "Name", leg.from_.name_);
 
-        append(transfer_leg, "TransferType", "walk");
+          auto leg_end = continuous_leg.append_child("LegEnd");
+          append_place_ref_or_geo(leg_end, leg.to_);
+          append(language, leg_end, "Name", leg.to_.name_);
 
-        auto leg_start = transfer_leg.append_child("LegStart");
-        append_stop_ref(leg_start, leg.from_);
-        append(language, leg_start, "Name", leg.from_.name_);
+          auto service = continuous_leg.append_child("Service");
+          append(service, "PersonalModeOfOperation", "own");
+          append(service, "PersonalMode", "foot");
 
-        auto leg_end = transfer_leg.append_child("LegEnd");
-        append_stop_ref(leg_end, leg.to_);
-        append(language, leg_end, "Name", leg.to_.name_);
+          append(continuous_leg, "Duration",
+                 duration_to_iso(std::chrono::seconds{leg.duration_}));
+          append(continuous_leg, "Length", leg.legGeometry_.length_);
 
-        append(transfer_leg, "Duration",
-               duration_to_iso(std::chrono::seconds{leg.duration_}));
+          auto leg_track = continuous_leg.append_child("LegTrack");
+          auto track_section = leg_track.append_child("TrackSection");
 
-        auto path_guidance = transfer_leg.append_child("PathGuidance");
-        auto track_section = path_guidance.append_child("TrackSection");
+          auto track_section_start =
+              track_section.append_child("TrackSectionStart");
+          append_place_ref_or_geo(track_section_start, leg.from_);
+          append(language, track_section_start, "Name", leg.from_.name_);
 
-        auto track_section_start =
-            track_section.append_child("TrackSectionStart");
-        append_stop_ref(track_section_start, leg.from_);
-        append(language, track_section_start, "Name", leg.from_.name_);
+          auto track_section_end =
+              track_section.append_child("TrackSectionEnd");
+          append_place_ref_or_geo(track_section_end, leg.to_);
+          append(language, track_section_end, "Name", leg.to_.name_);
 
-        auto track_section_end = track_section.append_child("TrackSectionEnd");
-        append_stop_ref(track_section_end, leg.to_);
-        append(language, track_section_end, "Name", leg.to_.name_);
+          auto link_projection = track_section.append_child("LinkProjection");
+          for (auto const& pos :
+               geo::decode_polyline<6>(leg.legGeometry_.points_)) {
+            append_position(link_projection, pos);
+          }
+
+          append(track_section, "Duration",
+                 duration_to_iso(std::chrono::seconds{leg.duration_}));
+          append(track_section, "Length", leg.legGeometry_.length_);
+        } else {
+          auto transfer_leg = leg_node.append_child("TransferLeg");
+          append(transfer_leg, "TransferType", "walk");
+
+          auto leg_start = transfer_leg.append_child("LegStart");
+          append_place_ref_or_geo(leg_start, leg.from_);
+          append(language, leg_start, "Name", leg.from_.name_);
+
+          auto leg_end = transfer_leg.append_child("LegEnd");
+          append_place_ref_or_geo(leg_end, leg.to_);
+          append(language, leg_end, "Name", leg.to_.name_);
+
+          append(transfer_leg, "Duration",
+                 duration_to_iso(std::chrono::seconds{leg.duration_}));
+
+          auto path_guidance = transfer_leg.append_child("PathGuidance");
+          auto track_section = path_guidance.append_child("TrackSection");
+
+          auto track_section_start =
+              track_section.append_child("TrackSectionStart");
+          append_place_ref_or_geo(track_section_start, leg.from_);
+          append(language, track_section_start, "Name", leg.from_.name_);
+
+          auto track_section_end =
+              track_section.append_child("TrackSectionEnd");
+          append_place_ref_or_geo(track_section_end, leg.to_);
+          append(language, track_section_end, "Name", leg.to_.name_);
+
+          auto link_projection = track_section.append_child("LinkProjection");
+          for (auto const& pos :
+               geo::decode_polyline<6>(leg.legGeometry_.points_)) {
+            append_position(link_projection, pos);
+          }
+
+          append(track_section, "Duration",
+                 duration_to_iso(std::chrono::seconds{leg.duration_}));
+          append(track_section, "Length", leg.legGeometry_.length_);
+        }
       }
       prev = &leg;
+      ++leg_pos;
     }
   }
 
@@ -1016,12 +1105,6 @@ net::reply ojp::operator()(net::route_request const& http_req, bool) const {
     auto const origin_ref = origin.child("PlaceRef");
     auto const destination_ref = destination.child("PlaceRef");
 
-    auto const from_id = get_place_ref(origin_ref);
-    auto const to_id = get_place_ref(destination_ref);
-    utl::verify<net::bad_request_exception>(
-        !from_id.empty() && !to_id.empty(),
-        "missing origin/destination stop ref");
-
     auto const dep_time =
         std::string_view{origin.child("DepArrTime").text().as_string()};
     auto const arr_time =
@@ -1038,8 +1121,8 @@ net::reply ojp::operator()(net::route_request const& http_req, bool) const {
 
     auto url = boost::urls::url{"/api/v5/plan"};
     auto url_params = url.params();
-    url_params.append({"fromPlace", from_id});
-    url_params.append({"toPlace", to_id});
+    url_params.append({"fromPlace", get_place_ref_or_geo(origin_ref)});
+    url_params.append({"toPlace", get_place_ref_or_geo(destination_ref)});
     url_params.append({"time", !dep_time.empty() ? dep_time : arr_time});
     url_params.append({"numItineraries", fmt::format("{}", num_results)});
     url_params.append({"joinInterlinedLegs", "false"});
@@ -1047,6 +1130,8 @@ net::reply ojp::operator()(net::route_request const& http_req, bool) const {
     if (dep_time.empty()) {
       url_params.append({"arriveBy", "true"});
     }
+
+    std::cout << url << "\n";
 
     response = build_trip_response(
         *routing_ep_, lang, (*routing_ep_)(url), include_track_sections,
