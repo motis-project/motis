@@ -20,6 +20,7 @@
 
 namespace n = nigiri;
 namespace sr = std::ranges;
+using namespace std::string_view_literals;
 
 namespace motis::ep {
 
@@ -613,9 +614,7 @@ pugi::xml_document build_stop_event_response(
   auto idx = 0;
   for (auto const& st : stop_times_res.stopTimes_) {
     auto result = delivery.append_child("StopEventResult");
-    result.append_child("Id").text().set(++idx);
-
-    auto stop_event = result.append_child("StopEvent");
+    append(result, "Id", ++idx);
 
     auto add_call = [&, order = 0](pugi::xml_node parent,
                                    api::Place const& place) mutable {
@@ -640,8 +639,10 @@ pugi::xml_document build_stop_event_response(
         append(dep, "EstimatedTime", place.departure_.transform(time_to_iso));
       }
 
-      call.append_child("Order").text().set(++order);
+      append(call, "Order", ++order);
     };
+
+    auto stop_event = result.append_child("StopEvent");
 
     if (include_previous_calls && st.previousStops_.has_value()) {
       for (auto const& p : *st.previousStops_) {
@@ -649,10 +650,7 @@ pugi::xml_document build_stop_event_response(
       }
     }
 
-    {
-      auto this_call = stop_event.append_child("ThisCall");
-      add_call(this_call, st.place_);
-    }
+    add_call(stop_event.append_child("ThisCall"), st.place_);
 
     if (include_onward_calls && st.nextStops_.has_value()) {
       for (auto const& p : *st.nextStops_) {
@@ -706,13 +704,9 @@ pugi::xml_document build_trip_response(routing const& routing_ep,
                                        bool const include_intermediate_stops) {
   auto [doc, service_delivery] = create_ojp_response();
 
-  service_delivery.child("siri:ResponseMessageIdentifier")
-      .text()
-      .set(++response_id);
-
   auto delivery = service_delivery.append_child("OJPTripDelivery");
-  delivery.append_child("siri:ResponseTimestamp").text().set(now_timestamp());
-  delivery.append_child("siri:DefaultLanguage").text().set(language.data());
+  append(delivery, "siri:ResponseTimestamp", now_timestamp());
+  append(delivery, "siri:DefaultLanguage", language.data());
 
   auto const lang = n::lang_t{{std::string{language}}};
   auto ctx = delivery.append_child("TripResponseContext");
@@ -738,10 +732,11 @@ pugi::xml_document build_trip_response(routing const& routing_ep,
     append(trip, "StartTime", time_to_iso(it.startTime_));
     append(trip, "EndTime", time_to_iso(it.endTime_));
     append(trip, "Transfers", it.transfers_);
-    append(trip, "Distance",
-           sr::fold_left(it.legs_, 0.0, [](auto const sum, auto const& leg) {
-             return sum + leg.legGeometry_.length_;
-           }));
+    append(
+        trip, "Distance",
+        sr::fold_left(it.legs_, 0.0, [](double const sum, api::Leg const& l) {
+          return sum + l.legGeometry_.length_;
+        }));
 
     auto leg_idx = 0;
     api::Leg const* prev = nullptr;
@@ -1073,7 +1068,7 @@ net::reply ojp::operator()(net::route_request const& http_req, bool) const {
       url_params.append({"time", dep_arr_time});
     }
     url_params.append({"fetchStops", "true"});
-    if (std::string_view{stop_event_type} == "arrival") {
+    if (stop_event_type == "arrival"sv) {
       url_params.append({"arriveBy", "true"});
     }
 
