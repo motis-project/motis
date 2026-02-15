@@ -49,12 +49,8 @@ api::oneToMany_response one_to_many_handle_request(
       profile, *one, many, query.max_,
       query.arriveBy_ ? osr::direction::kBackward : osr::direction::kForward,
       query.maxMatchingDistance_, nullptr, nullptr, elevations_,
-      with_distance
-          ? std::function<bool(osr::path const&)>{[](osr::path const&) {
-              return true;
-            }}
-          : std::function<bool(osr::path const&)>{
-                [](osr::path const&) { return false; }});
+      std::function<bool(osr::path const&)>{
+          [with_distance](osr::path const&) { return with_distance; }});
 
   return utl::to_vec(paths, [&](std::optional<osr::path> const& p) {
     if (!p.has_value()) {
