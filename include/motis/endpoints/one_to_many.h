@@ -37,15 +37,34 @@ api::oneToMany_response one_to_many_handle_request(
 
   auto const profile = to_profile(query.mode_, api::PedestrianProfileEnum::FOOT,
                                   query.elevationCosts_);
+  auto const with_distance = [](auto const& v) {
+    if constexpr (requires { v.value_or(false); }) {
+      return v.value_or(false);
+    } else {
+      return static_cast<bool>(v);
+    }
+  }(query.distance_);
   auto const paths = osr::route(
       to_profile_parameters(profile, get_osr_parameters(query)), w_, l_,
       profile, *one, many, query.max_,
       query.arriveBy_ ? osr::direction::kBackward : osr::direction::kForward,
-      query.maxMatchingDistance_, nullptr, nullptr, elevations_);
+      query.maxMatchingDistance_, nullptr, nullptr, elevations_,
+      with_distance
+          ? std::function<bool(osr::path const&)>{[](osr::path const&) {
+              return true;
+            }}
+          : std::function<bool(osr::path const&)>{
+                [](osr::path const&) { return false; }});
 
-  return utl::to_vec(paths, [](std::optional<osr::path> const& p) {
-    return p.has_value() ? api::Duration{.duration_ = p->cost_}
-                         : api::Duration{};
+  return utl::to_vec(paths, [&](std::optional<osr::path> const& p) {
+    if (!p.has_value()) {
+      return api::Duration{};
+    }
+    auto d = api::Duration{.duration_ = p->cost_};
+    if (with_distance) {
+      d.distance_ = p->dist_;
+    }
+    return d;
   });
 }
 
