@@ -53,14 +53,12 @@ api::oneToMany_response one_to_many_handle_request(
           [with_distance](osr::path const&) { return with_distance; }});
 
   return utl::to_vec(paths, [&](std::optional<osr::path> const& p) {
-    if (!p.has_value()) {
-      return api::Duration{};
-    }
-    auto d = api::Duration{.duration_ = p->cost_};
-    if (with_distance) {
-      d.distance_ = p->dist_;
-    }
-    return d;
+    return p.has_value()
+               ? api::Duration{.duration_ = p->cost_,
+                               .distance_ = with_distance
+                                                ? std::optional{p->dist_}
+                                                : std::nullopt}
+               : api::Duration{};
   });
 }
 
