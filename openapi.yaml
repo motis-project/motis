@@ -1004,7 +1004,7 @@ paths:
             Optional. Default is `false`.
             If true, the response includes the distance in meters
             for each path. This requires path reconstruction and
-            may be slower than duration-only queries.
+            is slower than duration-only queries.
           schema:
             type: boolean
             default: false
