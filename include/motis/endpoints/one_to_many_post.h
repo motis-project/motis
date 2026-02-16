@@ -6,7 +6,8 @@
 namespace motis::ep {
 
 struct one_to_many_post {
-  api::oneToMany_response operator()(motis::api::OneToManyParams const&) const;
+  api::oneToManyPost_response operator()(
+      motis::api::OneToManyParams const&) const;
 
   osr::ways const& w_;
   osr::lookup const& l_;

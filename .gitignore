@@ -3,6 +3,8 @@
 /.pkg.mutex
 /.clang-tidy
 /.idea
+.vscode/
+.DS_Store
 /deps
 *.zip
 *.bin

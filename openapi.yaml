@@ -997,6 +997,17 @@ paths:
             false = one to many
           schema:
             type: boolean
+        - name: withDistance
+          in: query
+          required: false
+          description: |
+            Optional. Default is `false`.
+            If true, the response includes the distance in meters
+            for each path. This requires path reconstruction and
+            is slower than duration-only queries.
+          schema:
+            type: boolean
+            default: false
       responses:
         '200':
           description: |
@@ -1008,6 +1019,54 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Duration'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      tags:
+        - routing
+      summary: |
+        Street routing from one to many places or many to one.
+        The order in the response array corresponds to the order of coordinates of the \`many\` parameter in the body.
+      operationId: oneToManyPost
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OneToManyParams'
+      responses:
+        '200':
+          description: |
+            A list of durations.
+            If no path was found, the object is empty.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Duration'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
   /api/v1/one-to-all:
     get:
@@ -1529,8 +1588,20 @@ paths:
           in: query
           schema:
             type: string
-          required: true
+          required: false
           description: stop id of the stop to retrieve departures/arrivals for
+
+        - name: center
+          in: query
+          schema:
+            type: string
+          required: false
+          description: |
+            Anchor coordinate. Format: latitude,longitude pair.
+            Used as fallback when "stopId" is missing or can't be found.
+            If both are provided and "stopId" resolves, "stopId" is used.
+            If "stopId" does not resolve, "center" is used instead. "radius" is
+            required when querying by "center" (i.e. without a valid "stopId").
 
         - name: time
           in: query
@@ -2330,6 +2401,9 @@ components:
         duration:
           type: number
           description: duration in seconds if a path was found, otherwise missing
+        distance:
+          type: number
+          description: distance in meters if a path was found and distance computation was requested, otherwise missing
 
     Area:
       description: Administrative area
@@ -3797,6 +3871,14 @@ components:
             true = many to one
             false = one to many
           type: boolean
+        withDistance:
+          description: |
+            Optional. Default is `false`.
+            If true, the response includes the distance in meters
+            for each path. This requires path reconstruction and
+            may be slower than duration-only queries.
+          type: boolean
+          default: false
     ServerConfig:
       Description: server configuration
       type: object
