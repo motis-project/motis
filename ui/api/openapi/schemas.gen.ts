@@ -148,6 +148,10 @@ export const DurationSchema = {
         duration: {
             type: 'number',
             description: 'duration in seconds if a path was found, otherwise missing'
+        },
+        distance: {
+            type: 'number',
+            description: 'distance in meters if a path was found and distance computation was requested, otherwise missing'
         }
     }
 } as const;
@@ -1758,6 +1762,15 @@ Elevation cost profiles are currently used by following street modes:
 false = one to many
 `,
             type: 'boolean'
+        },
+        withDistance: {
+            description: `Optional. Default is \`false\`.
+If true, the response includes the distance in meters
+for each path. This requires path reconstruction and
+may be slower than duration-only queries.
+`,
+            type: 'boolean',
+            default: false
         }
     }
 } as const;

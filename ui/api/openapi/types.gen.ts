@@ -130,6 +130,10 @@ export type Duration = {
      * duration in seconds if a path was found, otherwise missing
      */
     duration?: number;
+    /**
+     * distance in meters if a path was found and distance computation was requested, otherwise missing
+     */
+    distance?: number;
 };
 
 /**
@@ -1409,6 +1413,14 @@ export type OneToManyParams = {
      *
      */
     arriveBy: boolean;
+    /**
+     * Optional. Default is `false`.
+     * If true, the response includes the distance in meters
+     * for each path. This requires path reconstruction and
+     * may be slower than duration-only queries.
+     *
+     */
+    withDistance?: boolean;
 };
 
 export type ServerConfig = {
@@ -2104,6 +2116,14 @@ export type OneToManyData = {
          * geo location as latitude;longitude
          */
         one: string;
+        /**
+         * Optional. Default is `false`.
+         * If true, the response includes the distance in meters
+         * for each path. This requires path reconstruction and
+         * is slower than duration-only queries.
+         *
+         */
+        withDistance?: boolean;
     };
 };
 
@@ -2419,6 +2439,15 @@ export type StoptimesData = {
          */
         arriveBy?: boolean;
         /**
+         * Anchor coordinate. Format: latitude,longitude pair.
+         * Used as fallback when "stopId" is missing or can't be found.
+         * If both are provided and "stopId" resolves, "stopId" is used.
+         * If "stopId" does not resolve, "center" is used instead. "radius" is
+         * required when querying by "center" (i.e. without a valid "stopId").
+         *
+         */
+        center?: string;
+        /**
          * This parameter will be ignored in case `pageCursor` is set.
          *
          * Optional. Default is
@@ -2485,7 +2514,7 @@ export type StoptimesData = {
         /**
          * stop id of the stop to retrieve departures/arrivals for
          */
-        stopId: string;
+        stopId?: string;
         /**
          * Optional. Defaults to the current time.
          *
