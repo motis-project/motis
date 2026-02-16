@@ -209,7 +209,6 @@ struct id_score {
   bool operator<(id_score const& o) const {
     return id < o.id || (id == o.id && score > o.score);
   }
-  bool operator==(id_score const& o) const { return id == o.id; }
 };
 struct FromTo {
   motis::api::Place const* from;
