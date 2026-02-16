@@ -161,7 +161,6 @@ bool prima::consume_whitelist_taxi_response(
 
     fix_last_mile_duration(journeys, last_mile_taxi_rides, prev_last_mile,
                            kOdmTransportModeId);
-
     return false;
   };
 
