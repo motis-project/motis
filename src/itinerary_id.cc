@@ -19,6 +19,8 @@
 #include "motis/place.h"
 #include "motis/tag_lookup.h"
 
+#include "geo/polyline_format.h"
+
 namespace {
 std::int64_t to_epoch_seconds(openapi::date_time_t const& t) {
   auto const sys = static_cast<std::chrono::sys_seconds>(t);
@@ -55,18 +57,16 @@ struct leg_hint {
   motis::api::ModeEnum mode;
 
   explicit leg_hint(boost::json::object const& l) {
-    auto const& from_coord = l.at("from_coord").as_array();
-    auto const& to_coord = l.at("to_coord").as_array();
+    auto const& encoded_coords = l.at("coords").as_string();
+    auto const coords = geo::decode_polyline(encoded_coords);
 
     trip_id = l.at("trip_id").as_string().c_str();
     from_stop_id = l.at("from_id").as_string().c_str();
     to_stop_id = l.at("to_id").as_string().c_str();
     sched_start = l.at("sched_start").as_int64();
     sched_end = l.at("sched_end").as_int64();
-    from_latlng =
-        geo::latlng{from_coord.at(0).as_double(), from_coord.at(1).as_double()};
-    to_latlng =
-        geo::latlng{to_coord.at(0).as_double(), to_coord.at(1).as_double()};
+    from_latlng = coords[0];
+    to_latlng = coords[1];
     mode = static_cast<motis::api::ModeEnum>(l.at("mode").as_int64());
   }
 };
@@ -261,9 +261,10 @@ std::string generate_itinerary_id(api::Itinerary const& itin) {
     auto leg_obj = boost::json::object{};
     leg_obj["trip_id"] = trip_id;
     leg_obj["from_id"] = from_id;
-    leg_obj["from_coord"] = boost::json::array{leg.from_.lat_, leg.from_.lon_};
     leg_obj["to_id"] = to_id;
-    leg_obj["to_coord"] = boost::json::array{leg.to_.lat_, leg.to_.lon_};
+    leg_obj["coords"] = geo::encode_polyline(
+        geo::polyline{geo::latlng{leg.from_.lat_, leg.from_.lon_},
+                      geo::latlng{leg.to_.lat_, leg.to_.lon_}});
     leg_obj["sched_start"] = sched_start;
     leg_obj["sched_end"] = sched_end;
     leg_obj["mode"] = static_cast<int>(leg.mode_);
