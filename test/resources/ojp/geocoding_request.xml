@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<OJP xmlns="http://www.vdv.de/ojp" xmlns:siri="http://www.siri.org.uk/siri" version="2.0">
+<OJPRequest>
+  <siri:ServiceRequest>
+    <siri:ServiceRequestContext>
+      <siri:Language>de</siri:Language>
+    </siri:ServiceRequestContext>
+    <siri:RequestTimestamp>2026-01-28T07:22:00.862Z</siri:RequestTimestamp>
+    <siri:RequestorRef>OJP_DemoApp_Beta_OJP2.0</siri:RequestorRef>
+    <OJPLocationInformationRequest>
+      <siri:RequestTimestamp>2026-01-28T07:22:00.862Z</siri:RequestTimestamp>
+      <InitialInput>
+        <Name>Darmstadt Hauptbahnhof</Name>
+      </InitialInput>
+      <Restrictions>
+        <Type>stop</Type>
+        <NumberOfResults>10</NumberOfResults>
+        <IncludePtModes>true</IncludePtModes>
+      </Restrictions>
+    </OJPLocationInformationRequest>
+  </siri:ServiceRequest>
+</OJPRequest>
+
+</OJP>

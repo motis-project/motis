@@ -1143,7 +1143,7 @@ net::reply ojp::operator()(net::route_request const& http_req, bool) const {
     auto const dep_arr_time = location.child("DepArrTime").text().as_string();
 
     auto const params = stop_times_req.child("Params");
-    auto const n = params.child("NumberOfResults").text().as_int(10);
+    auto const number_of_results = params.child("NumberOfResults");
     auto const stop_event_type =
         params.child("StopEventType").text().as_string();
     auto const include_prev =
@@ -1155,7 +1155,10 @@ net::reply ojp::operator()(net::route_request const& http_req, bool) const {
     auto url_params = url.params();
     url_params.append({"stopId", stop_id});
     url_params.append({"language", lang});
-    url_params.append({"n", fmt::format("{}", n)});
+    if (number_of_results) {
+      url_params.append(
+          {"n", fmt::to_string(number_of_results.text().as_int())});
+    }
     if (dep_arr_time) {
       url_params.append({"time", dep_arr_time});
     }
