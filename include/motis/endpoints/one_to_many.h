@@ -20,6 +20,9 @@ api::oneToMany_response one_to_many_handle_request(
     osr::ways const& w_,
     osr::lookup const& l_,
     osr::elevation_storage const* elevations_) {
+  // required field with default value, not std::optional
+  static_assert(std::is_same_v<decltype(query.withDistance_), bool>);
+
   auto const one = parse_location(query.one_, ';');
   utl::verify(one.has_value(), "{} is not a valid geo coordinate", query.one_);
 
@@ -37,15 +40,23 @@ api::oneToMany_response one_to_many_handle_request(
 
   auto const profile = to_profile(query.mode_, api::PedestrianProfileEnum::FOOT,
                                   query.elevationCosts_);
+
   auto const paths = osr::route(
       to_profile_parameters(profile, get_osr_parameters(query)), w_, l_,
       profile, *one, many, query.max_,
       query.arriveBy_ ? osr::direction::kBackward : osr::direction::kForward,
-      query.maxMatchingDistance_, nullptr, nullptr, elevations_);
+      query.maxMatchingDistance_, nullptr, nullptr, elevations_,
+      [&](auto&&) { return query.withDistance_; });
 
-  return utl::to_vec(paths, [](std::optional<osr::path> const& p) {
-    return p.has_value() ? api::Duration{.duration_ = p->cost_}
-                         : api::Duration{};
+  return utl::to_vec(paths, [&](std::optional<osr::path> const& p) {
+    return p
+        .transform([&](osr::path const& x) {
+          return api::Duration{.duration_ = x.cost_,
+                               .distance_ = query.withDistance_
+                                                ? std::optional{x.dist_}
+                                                : std::nullopt};
+        })
+        .value_or(api::Duration{});
   });
 }
 
