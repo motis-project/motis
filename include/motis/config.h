@@ -216,6 +216,7 @@ struct config {
     unsigned street_routing_max_prepost_transit_seconds_{3600U};
     unsigned street_routing_max_direct_seconds_{21600U};
   };
+  limits get_limits() const { return limits_.value_or(limits{}); }
   std::optional<limits> limits_{};
 
   struct logging {
