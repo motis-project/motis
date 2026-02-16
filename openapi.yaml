@@ -1588,8 +1588,20 @@ paths:
           in: query
           schema:
             type: string
-          required: true
+          required: false
           description: stop id of the stop to retrieve departures/arrivals for
+
+        - name: center
+          in: query
+          schema:
+            type: string
+          required: false
+          description: |
+            Anchor coordinate. Format: latitude,longitude pair.
+            Used as fallback when "stopId" is missing or can't be found.
+            If both are provided and "stopId" resolves, "stopId" is used.
+            If "stopId" does not resolve, "center" is used instead. "radius" is
+            required when querying by "center" (i.e. without a valid "stopId").
 
         - name: time
           in: query
