@@ -8,6 +8,9 @@
 #include "boost/asio/detached.hpp"
 #include "boost/json.hpp"
 
+#include "net/bad_request_exception.h"
+#include "net/not_found_exception.h"
+
 #ifdef NO_DATA
 #undef NO_DATA
 #endif
@@ -190,5 +193,85 @@ TEST(motis, stop_times) {
     for (auto const& stopTime : res2.stopTimes_) {
       EXPECT_FALSE(stopTime.place_.alerts_.has_value());
     }
+  }
+
+  {
+    // center-only query, radius is required
+    auto const res = stop_times(
+        "/api/v5/stoptimes?center=50.10593,8.66118"
+        "&radius=250"
+        "&time=2019-04-30T23:30:00.000Z"
+        "&arriveBy=true"
+        "&n=3"
+        "&language=de"
+        "&fetchStops=true");
+
+    EXPECT_EQ("center", res.place_.name_);
+    EXPECT_FALSE(res.place_.stopId_.has_value());
+    EXPECT_FALSE(res.stopTimes_.empty());
+  }
+
+  {
+    // invalid stopId without center
+    EXPECT_THROW(stop_times("/api/v5/stoptimes?stopId=test_SOMETHING_RANDOM"
+                            "&time=2019-04-30T23:30:00.000Z"
+                            "&arriveBy=true"
+                            "&n=3"),
+                 net::not_found_exception);
+  }
+
+  {
+    // invalid stopId should fall back to center
+    auto const res = stop_times(
+        "/api/v5/stoptimes?stopId=test_SOMETHING_RANDOM"
+        "&center=50.10593,8.66118"
+        "&radius=250"
+        "&time=2019-04-30T23:30:00.000Z"
+        "&arriveBy=true"
+        "&n=3"
+        "&language=de");
+
+    EXPECT_EQ("center", res.place_.name_);
+    EXPECT_FALSE(res.place_.stopId_.has_value());
+    EXPECT_FALSE(res.stopTimes_.empty());
+  }
+
+  {
+    // stoptimes in radius = r
+    auto const r = 110.0;
+    auto const center = geo::latlng{50.10563, 8.66218};
+    auto const res =
+        stop_times(std::format("/api/v5/stoptimes?center={},{}"
+                               "&radius={}"
+                               "&exactRadius=true"
+                               "&time=2019-04-30T23:30:00.000Z"
+                               "&arriveBy=true"
+                               "&n=200"
+                               "&language=de"
+                               "&fetchStops=true",
+                               center.lat_, center.lng_, r));
+    EXPECT_FALSE(res.stopTimes_.empty());
+    for (auto const& v : res.stopTimes_) {
+      auto const dist =
+          geo::distance(center, geo::latlng{v.place_.lat_, v.place_.lon_});
+      EXPECT_LE(dist, r);
+    }
+  }
+
+  {
+    // neither stopId nor center -> panic
+    EXPECT_THROW(stop_times("/api/v5/stoptimes?time=2019-04-30T23:30:00.000Z"
+                            "&arriveBy=true"
+                            "&n=3"),
+                 net::bad_request_exception);
+  }
+
+  {
+    // center without stopId requires radius
+    EXPECT_THROW(stop_times("/api/v5/stoptimes?center=50.10593,8.66118"
+                            "&time=2019-04-30T23:30:00.000Z"
+                            "&arriveBy=true"
+                            "&n=3"),
+                 net::bad_request_exception);
   }
 }
