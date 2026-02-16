@@ -352,14 +352,13 @@ api::stoptimes_response stop_times::operator()(
   auto const max_results = config_.limits_.value().stoptimes_max_results_;
   utl::verify<net::too_many_exception>(
       query.n_ < max_results, "n={} > {} not allowed", query.n_, max_results);
+  utl::verify<net::bad_request_exception>(
+      query.stopId_.has_value() ||
+          (query.center_.has_value() && query.radius_.has_value()),
+      "no stop and no center with radius (at least one is required)");
 
-  auto const query_stop = query.stopId_.and_then([&](std::string const& x) {
-    auto const loc = tags_.find_location(tt_, x);
-    utl::verify<net::not_found_exception>(
-        loc.has_value() || query.center_.has_value(),
-        "stopId '{}' not found and no alternative center is provided", x);
-    return loc;
-  });
+  auto const query_stop = query.stopId_.and_then(
+      [&](std::string const& x) { return tags_.find_location(tt_, x); });
 
   auto const query_center = query.center_.and_then(
       [&](std::string const& x) { return parse_location(x); });
@@ -374,15 +373,15 @@ api::stoptimes_response stop_times::operator()(
                 [](osr::location const& loc) { return loc.pos_; });
           });
 
-  utl::verify<net::bad_request_exception>(
-      center.has_value(), "no coordinates: stop_found={}, center_parsed={}",
-      query_stop.has_value(), query_center.has_value());
-
-  utl::verify<net::bad_request_exception>(
+  utl::verify<net::not_found_exception>(
       query_stop.has_value() ||
           (query_center.has_value() && query.radius_.has_value()),
       "no radius: stop_found={}, center_parsed={}", query_stop.has_value(),
       query_center.has_value());
+
+  utl::verify<net::bad_request_exception>(
+      center.has_value(), "no coordinates: stop_found={}, center_parsed={}",
+      query_stop.has_value(), query_center.has_value());
 
   auto const allowed_clasz = to_clasz_mask(query.mode_);
   auto const [dir, time] = parse_cursor(query.pageCursor_.value_or(fmt::format(
