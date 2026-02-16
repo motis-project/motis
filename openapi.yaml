@@ -997,7 +997,7 @@ paths:
             false = one to many
           schema:
             type: boolean
-        - name: distance
+        - name: withDistance
           in: query
           required: false
           description: |
@@ -3855,7 +3855,7 @@ components:
             true = many to one
             false = one to many
           type: boolean
-        distance:
+        withDistance:
           description: |
             Optional. Default is `false`.
             If true, the response includes the distance in meters
