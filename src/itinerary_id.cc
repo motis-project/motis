@@ -73,11 +73,12 @@ struct leg_hint {
 
 motis::api::stoptimes_response stoptimes_in_radius(
     motis::ep::stop_times const& st_ep,
-    std::string_view center_stop_id,
+    geo::latlng const& center,
     std::int64_t sched_start,
     motis::api::ModeEnum mode,
     int n,
-    int radius_m) {
+    int radius_m,
+    bool arriveBy) {
   std::ostringstream oss;
   oss << mode;
 
@@ -86,66 +87,34 @@ motis::api::stoptimes_response stoptimes_in_radius(
   auto const iso = fmt::format("{:%FT%TZ}", t);
 
   auto const query = fmt::format(
-      "?stopId={}&time={}&arriveBy=false&direction=LATER&n={}"
+      "?center={},{}&time={}&arriveBy={}&direction=LATER&n={}"
       "&radius={}&exactRadius=true&fetchStops=true&mode={}",
-      center_stop_id, iso, n, radius_m, oss.str());
+      center.lat_, center.lng_, iso, arriveBy ? "true" : "false", n, radius_m,
+      oss.str());
 
   return st_ep(boost::urls::url_view{query});
-}
-
-struct stop_match {
-  motis::api::StopTime st;
-  motis::api::Place to;
-};
-
-std::optional<stop_match> pick_best_candidate(
-    motis::api::stoptimes_response const& response, leg_hint const& lh) {
-  std::optional<stop_match> best;
-  double best_score = -1e18;
-
-  for (auto const& st : response.stopTimes_) {
-    if (st.mode_ != lh.mode) continue;
-    if (!st.nextStops_) continue;
-
-    //
-    double base_score =
-        -geo::distance({st.place_.lat_, st.place_.lon_}, lh.from_latlng);
-
-    //
-    // double prev_dist = 1e18;
-    for (auto const& ns : *st.nextStops_) {
-      if (!ns.stopId_) continue;
-      // LATER
-      // if (*ns.stopId_ == lh.to_stop_id) {
-      //}
-      auto dist = geo::distance(lh.to_latlng, {ns.lat_, ns.lon_});
-      auto score = base_score - dist;
-      if (best_score < score) {
-        best_score = score;
-        best = {st, ns};
-      }
-      // early break if we're getting further away
-      // if (dist > prev_dist) break;
-      // prev_dist = dist;
-    }
-  }
-  return best;
 }
 
 nigiri::rt::frun make_frun_from_stoptime(motis::tag_lookup const& tags,
                                          nigiri::timetable const& tt,
                                          nigiri::rt_timetable const* rtt,
-                                         motis::api::StopTime const& st) {
+                                         std::string_view const tripId) {
 
-  auto const [run, _] = tags.get_trip(tt, rtt, st.tripId_);
+  auto const [run, _] = tags.get_trip(tt, rtt, tripId);
   return nigiri::rt::frun{tt, rtt, run};
 }
 
 std::optional<nigiri::stop_idx_t> find_stop_by_location(
-    nigiri::rt::frun const& fr, nigiri::location_idx_t const loc) {
+    nigiri::rt::frun const& fr,
+    nigiri::location_idx_t const loc,
+    openapi::date_time_t const& scheduled_time,
+    nigiri::event_type const ev_type) {
+  auto const target_sec = to_epoch_seconds(scheduled_time);
+
   for (auto i = nigiri::stop_idx_t{0U}; i < fr.size(); ++i) {
     auto const rs = fr[i];
-    if (rs.get_location_idx() == loc) {
+    if (rs.get_location_idx() == loc &&
+        motis::to_seconds(rs.scheduled_time(ev_type)) == target_sec) {
       return rs.stop_idx_;
     }
   }
@@ -155,23 +124,24 @@ std::optional<nigiri::stop_idx_t> find_stop_by_location(
 std::optional<nigiri::stop_idx_t> find_stop_by_place(
     nigiri::rt::frun const& fr,
     motis::tag_lookup const& tags,
-    motis::api::Place const& p) {
+    motis::api::Place const& p,
+    nigiri::event_type const ev_type) {
 
   if (!p.stopId_) {
     return std::nullopt;
   }
-  std::cout << "branch: " << p.stopId_.value() << std::endl;  // TEMP
-  if (p.stopId_->find('_') != std::string::npos) {
-    auto const loc = tags.get_location(*fr.tt_, *p.stopId_);
-    return find_stop_by_location(fr, loc);
-  }
-  for (auto i = nigiri::stop_idx_t{0U}; i < fr.size(); ++i) {
-    if (fr[i].get_location_id() == *p.stopId_) {
-      return i;
-    }
+  auto t = (ev_type == nigiri::event_type::kArr ? p.scheduledArrival_
+                                                : p.scheduledDeparture_);
+  if (!t.has_value()) {
+    return std::nullopt;
   }
 
-  return std::nullopt;
+  auto const loc = tags.find_location(*fr.tt_, *p.stopId_);
+  if (!loc.has_value()) {
+    return std::nullopt;
+  }
+
+  return find_stop_by_location(fr, *loc, *t, ev_type);
 }
 
 motis::api::Itinerary build_itinerary_from_frun(
@@ -231,6 +201,20 @@ motis::api::Itinerary build_itinerary_from_frun(
       stoptimes_ep.config_.timetable_.value().max_matching_distance_,
       motis::kMaxMatchingDistance, api_version, false, false, std::nullopt);
 }
+
+struct id_score {
+  std::string_view id;
+  double score;
+  motis::api::Place const* place_;
+  bool operator<(id_score const& o) const {
+    return id < o.id || (id == o.id && score > o.score);
+  }
+  bool operator==(id_score const& o) const { return id == o.id; }
+};
+struct FromTo {
+  motis::api::Place const* from;
+  motis::api::Place const* to;
+};
 }  // namespace
 
 namespace motis {
@@ -299,28 +283,66 @@ api::Itinerary reconstruct_itinerary(motis::ep::stop_times const& stoptimes_ep,
           std::chrono::seconds{query_start_sec})};
 
   //
-  auto const response =
-      stoptimes_in_radius(stoptimes_ep, lh.from_stop_id,
-                          lh.sched_start - lookback_t, lh.mode, 70, 100);
+  auto const from_str =
+      stoptimes_in_radius(stoptimes_ep, lh.from_latlng,
+                          lh.sched_start - lookback_t, lh.mode, 70, 100, false);
+  auto const to_str =
+      stoptimes_in_radius(stoptimes_ep, lh.to_latlng, lh.sched_end - lookback_t,
+                          lh.mode, 70, 100, true);
 
-  auto const best = pick_best_candidate(response, lh);
-  utl::verify(best.has_value(),
-              "reconstruct_itinerary: no matching trip found");
+  std::vector<id_score> to_cands;
+  for (auto const& st : to_str.stopTimes_) {
+    to_cands.push_back(
+        {st.tripId_,
+         -geo::distance(geo::latlng{st.place_.lat_, st.place_.lon_},
+                        lh.to_latlng) -
+             std::abs(0),  // MODIFY TO INClUDE TIME PENALTY // TODO
+         &st.place_});
+  }
+  std::sort(to_cands.begin(), to_cands.end());
 
-  auto const fr =
+  // pick the best frun
+  std::optional<std::string_view> best_tripId;
+  std::optional<FromTo> best_fromTo;
+  double best_score = -1e18;
+
+  for (auto const& from_st : from_str.stopTimes_) {
+    auto it = std::lower_bound(to_cands.begin(), to_cands.end(),
+                               id_score{from_st.tripId_, 0, nullptr});
+    if (it == to_cands.end() || it->id != from_st.tripId_) {
+      continue;
+    }
+    double score = it->score - geo::distance(geo::latlng{from_st.place_.lat_,
+                                                         from_st.place_.lon_},
+                                             lh.from_latlng);
+    if (score > best_score) {
+      best_score = score;
+      best_tripId = from_st.tripId_;
+      best_fromTo.emplace(&from_st.place_, it->place_);
+    }
+  }
+  //
+  utl::verify(best_tripId.has_value() && best_fromTo.has_value(),
+              "no matching route is found");
+  auto const best_fr =
       make_frun_from_stoptime(stoptimes_ep.tags_, stoptimes_ep.tt_,
-                              stoptimes_ep.rt_->rtt_.get(), best->st);
+                              stoptimes_ep.rt_->rtt_.get(), *best_tripId);
 
   auto const from_idx =
-      find_stop_by_place(fr, stoptimes_ep.tags_, best->st.place_);
-  auto const to_idx = find_stop_by_place(fr, stoptimes_ep.tags_, best->to);
+      find_stop_by_place(best_fr, stoptimes_ep.tags_, *(best_fromTo->from),
+                         nigiri::event_type::kDep);
+  auto const to_idx =
+      find_stop_by_place(best_fr, stoptimes_ep.tags_, *(best_fromTo->to),
+                         nigiri::event_type::kArr);
   utl::verify(
       from_idx.has_value() && to_idx.has_value(),
       //              "form_idx.has_value() && to_idx.has_value() isn't true");
       "reconstruct_itinerary: could not map from/to stop in frun");
+  utl::verify(*from_idx < *to_idx,
+              "reconstruct_itinerary: invalid stop order (from >= to)");
 
   return build_itinerary_from_frun(
-      fr, *from_idx, *to_idx, stoptimes_ep,
+      best_fr, *from_idx, *to_idx, stoptimes_ep,
       stoptimes_ep.rt_ ? stoptimes_ep.rt_->rtt_.get() : nullptr, journey_start);
 }
 }  // namespace motis
