@@ -3982,42 +3982,67 @@ components:
         polyline:
           $ref: '#/components/schemas/EncodedPolyline'
 
+    RouteColor:
+      type: object
+      required:
+        - color
+        - textColor
+      properties:
+        color:
+          type: string
+        textColor:
+          type: string
+
+    RoutePathSource:
+      type: string
+      enum:
+        - NONE
+        - TIMETABLE
+        - ROUTED
+
+    TransitRouteInfo:
+      type: object
+      required:
+        - id
+        - shortName
+        - longName
+      properties:
+        id:
+          type: string
+        shortName:
+          type: string
+        longName:
+          type: string
+        color:
+          type: string
+        textColor:
+          type: string
+
     RouteInfo:
-      description: Information about a transit route
       type: object
       required:
         - mode
-        - routeIds
-        - routeShortNames
-        - routeLongNames
+        - transitRoutes
         - numStops
         - routeIdx
+        - pathSource
         - segments
       properties:
         mode:
           $ref: '#/components/schemas/Mode'
           description: Transport mode for this route
-        routeIds:
+        transitRoutes:
           type: array
           items:
-            type: string
-          description: List of route IDs associated with this route
-        routeShortNames:
-          type: array
-          items:
-            type: string
-          description: List of route short names associated with this route
-        routeLongNames:
-          type: array
-          items:
-            type: string
-          description: List of route long names associated with this route
+            $ref: '#/components/schemas/TransitRouteInfo'
         numStops:
           type: integer
           description: Number of stops along this route
         routeIdx:
           type: integer
           description: Internal route index for debugging purposes
+        pathSource:
+          $ref: '#/components/schemas/RoutePathSource'
         segments:
           type: array
           items:

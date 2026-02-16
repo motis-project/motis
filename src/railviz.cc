@@ -1,9 +1,9 @@
 #include "motis/railviz.h"
 
 #include <ranges>
-#include <set>
 
 #include "cista/containers/rtree.h"
+#include "cista/reflection/comparable.h"
 
 #include "utl/enumerate.h"
 #include "utl/get_or_create.h"
@@ -408,6 +408,15 @@ api::trips_response get_trains(tag_lookup const& tags,
   });
 }
 
+struct route_info {
+  CISTA_COMPARABLE()
+
+  std::string_view id_;
+  std::string_view short_name_;
+  std::string_view long_name_;
+  nigiri::route_color color_;
+};
+
 api::routes_response get_routes(tag_lookup const& tags,
                                 n::timetable const& tt,
                                 n::rt_timetable const*,
@@ -442,9 +451,7 @@ api::routes_response get_routes(tag_lookup const& tags,
     for (auto const& r : static_index.static_geo_indices_[c].get_routes(area)) {
       if (should_display(cl, zoom_level, static_index.static_distances_[r])) {
         auto route_segments = std::vector<api::RouteSegment>{};
-        auto route_ids = std::set<std::string>{};
-        auto route_short_names = std::set<std::string>{};
-        auto route_long_names = std::set<std::string>{};
+        auto route_infos = hash_set<route_info>{};
         auto const stops = tt.route_location_seq_[r];
         auto shape_added = false;
 
@@ -463,17 +470,14 @@ api::routes_response get_routes(tag_lookup const& tags,
                    .coordinates_[n::stop{stops[segment + 1]}.location_idx()]});
         };
 
+        auto path_source = api::RoutePathSourceEnum::NONE;
+
         for (auto const transport_idx : tt.route_transport_ranges_[r]) {
           auto const stop_indices = n::interval{
               n::stop_idx_t{0U}, static_cast<n::stop_idx_t>(stops.size())};
           for (auto const [from, to] : utl::pairwise(stop_indices)) {
             enc.reset();
             auto n_points = 0;
-
-            auto const box = get_box(from);
-            if (!box.overlaps(area)) {
-              continue;
-            }
 
             auto const fr = n::rt::frun{
                 tt, nullptr,
@@ -482,32 +486,42 @@ api::routes_response get_routes(tag_lookup const& tags,
                     .stop_range_ =
                         n::interval{from, static_cast<n::stop_idx_t>(to + 1U)},
                     .rt_ = n::rt_transport_idx_t::invalid()}};
-            if (!shape_added) {
-              fr.for_each_shape_point(
-                  shapes, n::interval{n::stop_idx_t{0U}, n::stop_idx_t{2U}},
-                  [&](auto&& p) {
-                    enc.push(p);
-                    ++n_points;
-                  });
-            }
             if (from == stop_indices.from_) {
-              auto const rid = fr[0].get_route_id(n::event_type::kDep);
-              if (!rid.empty() && rid != "?") {
-                route_ids.emplace(rid);
-              }
-              auto const rsn =
-                  fr[0].route_short_name(n::event_type::kDep, query.language_);
-              if (!rsn.empty() && rsn != "?") {
-                route_short_names.emplace(rsn);
-              }
-              auto const rln =
-                  fr[0].route_long_name(n::event_type::kDep, query.language_);
-              if (!rln.empty() && rln != "?") {
-                route_long_names.emplace(rln);
-              }
+              route_infos.emplace(route_info{
+                  .id_ = fr[0].get_route_id(n::event_type::kDep),
+                  .short_name_ = fr[0].route_short_name(n::event_type::kDep,
+                                                        query.language_),
+                  .long_name_ = fr[0].route_long_name(n::event_type::kDep,
+                                                      query.language_),
+                  .color_ = fr[0].get_route_color(n::event_type::kDep)});
             }
-            if (shape_added) {
+
+            if (shape_added || !get_box(from).overlaps(area)) {
               continue;
+            }
+
+            fr.for_each_shape_point(
+                shapes, n::interval{n::stop_idx_t{0U}, n::stop_idx_t{2U}},
+                [&](auto&& p) {
+                  enc.push(p);
+                  ++n_points;
+                });
+            if (fr.is_scheduled()) {
+              auto const trp_idx = fr.trip_idx();
+              auto const shp_idx = shapes->get_shape_idx(trp_idx);
+              if (shp_idx != n::shape_idx_t::invalid()) {
+                switch (shapes->shape_sources_[shp_idx]) {
+                  case n::shape_source::kNone:
+                    path_source = api::RoutePathSourceEnum::NONE;
+                    break;
+                  case n::shape_source::kTimetable:
+                    path_source = api::RoutePathSourceEnum::TIMETABLE;
+                    break;
+                  case n::shape_source::kRouted:
+                    path_source = api::RoutePathSourceEnum::ROUTED;
+                    break;
+                }
+              }
             }
 
             route_segments.emplace_back(api::RouteSegment{
@@ -526,11 +540,19 @@ api::routes_response get_routes(tag_lookup const& tags,
         }
         res.routes_.emplace_back(api::RouteInfo{
             .mode_ = to_mode(cl, api_version),
-            .routeIds_ = utl::to_vec(route_ids),
-            .routeShortNames_ = utl::to_vec(route_short_names),
-            .routeLongNames_ = utl::to_vec(route_long_names),
+            .transitRoutes_ =
+                utl::to_vec(route_infos,
+                            [&](auto const& ri) {
+                              return api::TransitRouteInfo{
+                                  .id_ = std::string{ri.id_},
+                                  .shortName_ = std::string{ri.short_name_},
+                                  .longName_ = std::string{ri.long_name_},
+                                  .color_ = to_str(ri.color_.color_),
+                                  .textColor_ = to_str(ri.color_.text_color_)};
+                            }),
             .numStops_ = static_cast<std::int64_t>(stops.size()),
             .routeIdx_ = to_idx(r),
+            .pathSource_ = path_source,
             .segments_ = std::move(route_segments),
         });
       } else {

@@ -56,6 +56,14 @@
 
 	const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
+	const getRouteDisplayProps = (route: RouteInfo) => {
+		const shortNames = Array.from(new Set(route.transitRoutes.map((r) => r.shortName)));
+		const name = shortNames.join(', ');
+		const apiColor = route.transitRoutes.find((r) => r.color)?.color;
+		const color = apiColor ? `#${apiColor}` : getRouteColor(name);
+		return { name, color };
+	};
+
 	const expandBounds = (value: maplibregl.LngLatBounds) => {
 		const sw = value.getSouthWest();
 		const ne = value.getNorthEast();
@@ -113,8 +121,7 @@
 		return {
 			type: 'FeatureCollection',
 			features: routesData.routes.flatMap((route, arrayIdx) => {
-				const name = Array.from(new Set(route.routeShortNames)).join(', ');
-				const color = getRouteColor(name);
+				const { name, color } = getRouteDisplayProps(route);
 				return route.segments.map((segment) => ({
 					type: 'Feature',
 					geometry: {
@@ -141,8 +148,7 @@
 		if (!route) {
 			return { type: 'FeatureCollection', features: [] };
 		}
-		const name = Array.from(new Set(route.routeShortNames)).join(', ');
-		const color = getRouteColor(name);
+		const { name, color } = getRouteDisplayProps(route);
 		const { outlineColor, chevronColor } = getDecorativeColors(color);
 		return {
 			type: 'FeatureCollection',
@@ -178,8 +184,7 @@
 			string,
 			{ lat: number; lon: number; name: string; color: string }
 		>();
-		const name = Array.from(new Set(route.routeShortNames)).join(', ');
-		const color = getRouteColor(name);
+		const { color } = getRouteDisplayProps(route);
 
 		route.segments.forEach((segment) => {
 			[segment.from, segment.to].forEach((stop) => {
@@ -255,7 +260,7 @@
 	{@const routeFeaturesAtPoint = getRouteFeaturesAtPoint(event, features)}
 	{@const routesAtPoint = getRoutesFromFeatures(routeFeaturesAtPoint)}
 	<div
-		class="min-w-[340px] max-w-[480px] max-h-[480px] overflow-y-auto pr-1 text-sm"
+		class="min-w-[340px] max-w-[750px] max-h-[480px] overflow-y-auto pr-1 text-sm"
 		role="dialog"
 		tabindex="0"
 		onmouseleave={() => {
@@ -272,6 +277,7 @@
 					<th class="text-left font-medium">ID</th>
 					<th class="text-left font-medium">Name</th>
 					<th class="text-left font-medium">Stops</th>
+					<th class="text-left font-medium">Source</th>
 				</tr>
 			</thead>
 			<tbody>
@@ -292,24 +298,25 @@
 						<td class="pr-3">{entry.route.routeIdx}</td>
 						<td class="pr-3">{getRouteModeName(entry.route.mode)}</td>
 						<td class="pr-3 whitespace-nowrap">
-							{#if entry.route.routeIds.length}
-								{#each entry.route.routeIds as routeId, idIdx (routeId)}
-									{routeId}{#if idIdx < entry.route.routeIds.length - 1}<br />{/if}
+							{#if entry.route.transitRoutes.length}
+								{#each entry.route.transitRoutes as tr, i (tr.id + i)}
+									{tr.id}{#if i < entry.route.transitRoutes.length - 1}<br />{/if}
 								{/each}
 							{:else}
 								<span class="text-muted-foreground">—</span>
 							{/if}
 						</td>
 						<td class="pr-1">
-							{#if entry.route.routeShortNames.length}
-								{#each entry.route.routeShortNames as shortName, shortIdx (shortName)}
-									{shortName}{#if shortIdx < entry.route.routeShortNames.length - 1}<br />{/if}
+							{#if entry.route.transitRoutes.length}
+								{#each entry.route.transitRoutes as tr, i (tr.id + i)}
+									{tr.shortName}{#if i < entry.route.transitRoutes.length - 1}<br />{/if}
 								{/each}
 							{:else}
 								<span class="text-muted-foreground">—</span>
 							{/if}
 						</td>
 						<td class="pr-1">{entry.route.numStops}</td>
+						<td class="pr-3">{entry.route.pathSource}</td>
 					</tr>
 				{/each}
 			</tbody>

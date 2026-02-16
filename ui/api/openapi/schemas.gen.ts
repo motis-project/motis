@@ -1822,35 +1822,59 @@ export const RouteSegmentSchema = {
     }
 } as const;
 
-export const RouteInfoSchema = {
-    description: 'Information about a transit route',
+export const RouteColorSchema = {
     type: 'object',
-    required: ['mode', 'routeIds', 'routeShortNames', 'routeLongNames', 'numStops', 'routeIdx', 'segments'],
+    required: ['color', 'textColor'],
+    properties: {
+        color: {
+            type: 'string'
+        },
+        textColor: {
+            type: 'string'
+        }
+    }
+} as const;
+
+export const RoutePathSourceSchema = {
+    type: 'string',
+    enum: ['NONE', 'TIMETABLE', 'ROUTED']
+} as const;
+
+export const TransitRouteInfoSchema = {
+    type: 'object',
+    required: ['id', 'shortName', 'longName'],
+    properties: {
+        id: {
+            type: 'string'
+        },
+        shortName: {
+            type: 'string'
+        },
+        longName: {
+            type: 'string'
+        },
+        color: {
+            type: 'string'
+        },
+        textColor: {
+            type: 'string'
+        }
+    }
+} as const;
+
+export const RouteInfoSchema = {
+    type: 'object',
+    required: ['mode', 'transitRoutes', 'numStops', 'routeIdx', 'pathSource', 'segments'],
     properties: {
         mode: {
             '$ref': '#/components/schemas/Mode',
             description: 'Transport mode for this route'
         },
-        routeIds: {
+        transitRoutes: {
             type: 'array',
             items: {
-                type: 'string'
-            },
-            description: 'List of route IDs associated with this route'
-        },
-        routeShortNames: {
-            type: 'array',
-            items: {
-                type: 'string'
-            },
-            description: 'List of route short names associated with this route'
-        },
-        routeLongNames: {
-            type: 'array',
-            items: {
-                type: 'string'
-            },
-            description: 'List of route long names associated with this route'
+                '$ref': '#/components/schemas/TransitRouteInfo'
+            }
         },
         numStops: {
             type: 'integer',
@@ -1859,6 +1883,9 @@ export const RouteInfoSchema = {
         routeIdx: {
             type: 'integer',
             description: 'Internal route index for debugging purposes'
+        },
+        pathSource: {
+            '$ref': '#/components/schemas/RoutePathSource'
         },
         segments: {
             type: 'array',

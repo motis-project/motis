@@ -1454,26 +1454,27 @@ export type RouteSegment = {
     polyline: EncodedPolyline;
 };
 
-/**
- * Information about a transit route
- */
+export type RouteColor = {
+    color: string;
+    textColor: string;
+};
+
+export type RoutePathSource = 'NONE' | 'TIMETABLE' | 'ROUTED';
+
+export type TransitRouteInfo = {
+    id: string;
+    shortName: string;
+    longName: string;
+    color?: string;
+    textColor?: string;
+};
+
 export type RouteInfo = {
     /**
      * Transport mode for this route
      */
     mode: Mode;
-    /**
-     * List of route IDs associated with this route
-     */
-    routeIds: Array<(string)>;
-    /**
-     * List of route short names associated with this route
-     */
-    routeShortNames: Array<(string)>;
-    /**
-     * List of route long names associated with this route
-     */
-    routeLongNames: Array<(string)>;
+    transitRoutes: Array<TransitRouteInfo>;
     /**
      * Number of stops along this route
      */
@@ -1482,6 +1483,7 @@ export type RouteInfo = {
      * Internal route index for debugging purposes
      */
     routeIdx: number;
+    pathSource: RoutePathSource;
     segments: Array<RouteSegment>;
 };
 
@@ -2107,7 +2109,15 @@ export type OneToManyData = {
 
 export type OneToManyResponse = (Array<Duration>);
 
-export type OneToManyError = unknown;
+export type OneToManyError = (Error);
+
+export type OneToManyPostData = {
+    body: OneToManyParams;
+};
+
+export type OneToManyPostResponse = (Array<Duration>);
+
+export type OneToManyPostError = (Error);
 
 export type OneToAllData = {
     query: {
