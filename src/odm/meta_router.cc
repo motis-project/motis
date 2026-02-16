@@ -244,7 +244,6 @@ void pareto_dominance(std::vector<n::routing::journey>& odm_journeys) {
     auto const odm_time_a = odm_time(a);
     auto const odm_time_b = odm_time(b);
     return a.dominates(b) && odm_time_a < odm_time_b;
-    ;
   };
 
   for (auto b = begin(odm_journeys); b != end(odm_journeys);) {
@@ -492,6 +491,12 @@ api::plan_response meta_router::run() {
                    taxi_journeys.begin()->departure_time())));
   }
 
+  fmt::println("Number of taxi journeys in result: {}",
+               std::count_if(begin(taxi_journeys), end(taxi_journeys),
+                             [](auto const& j) {
+                               return uses_odm(j, kOdmTransportModeId);
+                             }));
+
   return {
       .from_ = from_place_,
       .to_ = to_place_,
@@ -535,9 +540,9 @@ api::plan_response meta_router::run() {
                 if (a.time_at_start_ ==
                         response.legs_.front()
                             .startTime_ &&  // not looking at time_at_stop_
-                                            // because we would again need to
-                                            // take into account the 5 min
-                                            // shift...
+                                            // because we would again need
+                                            // to take into account the 5
+                                            // min shift...
                     r_.tags_->id(*tt_, a.stop_) ==
                         response.legs_.front().to_.stopId_) {
                   response.legs_.front().tripId_ = std::optional{
@@ -552,8 +557,9 @@ api::plan_response meta_router::run() {
                 if (a.time_at_start_ ==
                         response.legs_.back()
                             .endTime_ &&  // not looking at time_at_stop_
-                                          // because we would again need to take
-                                          // into account the 5 min shift...
+                                          // because we would again need to
+                                          // take into account the 5 min
+                                          // shift...
                     r_.tags_->id(*tt_, a.stop_) ==
                         response.legs_.back().from_.stopId_) {
                   response.legs_.back().tripId_ = std::optional{
