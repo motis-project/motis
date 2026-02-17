@@ -22,10 +22,28 @@
 #include "geo/polyline_format.h"
 
 namespace {
+constexpr auto kItineraryTimeBase = std::chrono::sys_days{
+    std::chrono::year{2026} / std::chrono::month{1} / std::chrono::day{1}};
+
 std::int64_t to_epoch_seconds(openapi::date_time_t const& t) {
   auto const sys = static_cast<std::chrono::sys_seconds>(t);
   return std::chrono::duration_cast<std::chrono::seconds>(
              sys.time_since_epoch())
+      .count();
+}
+
+std::int64_t to_itinerary_minutes(std::int64_t const epoch_seconds) {
+  return std::chrono::duration_cast<std::chrono::minutes>(
+             std::chrono::seconds{epoch_seconds} -
+             kItineraryTimeBase.time_since_epoch())
+      .count();
+}
+
+std::int64_t to_epoch_seconds_from_itinerary_minutes(
+    std::int64_t const minutes) {
+  return std::chrono::duration_cast<std::chrono::seconds>(
+             (kItineraryTimeBase + std::chrono::minutes{minutes})
+                 .time_since_epoch())
       .count();
 }
 
@@ -63,8 +81,15 @@ struct leg_hint {
     trip_id = l.at("trip_id").as_string().c_str();
     from_stop_id = l.at("from_id").as_string().c_str();
     to_stop_id = l.at("to_id").as_string().c_str();
-    sched_start = l.at("sched_start").as_int64();
-    sched_end = l.at("sched_end").as_int64();
+    // time
+    auto const sched_delta = l.at("sched_delta");
+    auto const sched_start_m = l.at("sched_start").as_int64();
+    auto const sched_delta_m = sched_delta.as_int64();
+    utl::verify(sched_delta_m >= 0, "itinerary id: sched_delta < 0");
+    sched_start = to_epoch_seconds_from_itinerary_minutes(sched_start_m);
+    sched_end =
+        to_epoch_seconds_from_itinerary_minutes(sched_start_m + sched_delta_m);
+
     from_latlng = coords[0];
     to_latlng = coords[1];
     mode = static_cast<motis::api::ModeEnum>(l.at("mode").as_int64());
@@ -240,6 +265,10 @@ std::string generate_itinerary_id(api::Itinerary const& itin) {
     utl::verify(sched_end >= sched_start,
                 "itinerary id: leg {} scheduledEndTime < scheduledStartTime",
                 i);
+    auto const sched_start_m = to_itinerary_minutes(sched_start);
+    auto const sched_end_m = to_itinerary_minutes(sched_end);
+    auto const sched_delta_m = sched_end_m - sched_start_m;
+    utl::verify(sched_delta_m >= 0, "itinerary id: leg {} sched_delta < 0", i);
 
     auto leg_obj = boost::json::object{};
     leg_obj["trip_id"] = trip_id;
@@ -248,8 +277,8 @@ std::string generate_itinerary_id(api::Itinerary const& itin) {
     leg_obj["coords"] = geo::encode_polyline(
         geo::polyline{geo::latlng{leg.from_.lat_, leg.from_.lon_},
                       geo::latlng{leg.to_.lat_, leg.to_.lon_}});
-    leg_obj["sched_start"] = sched_start;
-    leg_obj["sched_end"] = sched_end;
+    leg_obj["sched_start"] = sched_start_m;
+    leg_obj["sched_delta"] = sched_delta_m;
     leg_obj["mode"] = static_cast<int>(leg.mode_);
 
     legs.emplace_back(std::move(leg_obj));
@@ -333,10 +362,8 @@ api::Itinerary reconstruct_itinerary(motis::ep::stop_times const& stoptimes_ep,
   auto const to_idx =
       find_stop_by_place(best_fr, stoptimes_ep.tags_, *(best_fromTo->to),
                          nigiri::event_type::kArr);
-  utl::verify(
-      from_idx.has_value() && to_idx.has_value(),
-      //              "form_idx.has_value() && to_idx.has_value() isn't true");
-      "reconstruct_itinerary: could not map from/to stop in frun");
+  utl::verify(from_idx.has_value() && to_idx.has_value(),
+              "reconstruct_itinerary: could not map from/to stop in frun");
   utl::verify(*from_idx < *to_idx,
               "reconstruct_itinerary: invalid stop order (from >= to)");
 
