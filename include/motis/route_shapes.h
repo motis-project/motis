@@ -3,6 +3,7 @@
 #include <optional>
 
 #include "nigiri/types.h"
+#include "cista/containers/hash_map.h"
 #include "geo/box.h"
 #include "osr/routing/profile.h"
 
@@ -24,7 +25,7 @@ struct shape_cache_entry {
 using shape_cache_key =
     nigiri::pair<osr::search_profile, nigiri::vector<geo::latlng>>;
 
-using shape_cache_t = hash_map<shape_cache_key, shape_cache_entry>;
+using shape_cache_t = cista::raw::hash_map<shape_cache_key, shape_cache_entry>;
 
 void route_shapes(osr::ways const&,
                   osr::lookup const&,

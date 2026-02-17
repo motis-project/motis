@@ -224,15 +224,13 @@ route_shape_result route_shape(
   return r;
 }
 
-void route_shapes(
-    osr::ways const& w,
-    osr::lookup const& lookup,
-    n::timetable& tt,
-    n::shapes_storage& shapes,
-    config::timetable::route_shapes const& conf,
-    std::array<bool, n::kNumClasses> const& clasz_enabled,
-    hash_map<nigiri::pair<osr::search_profile, nigiri::vector<geo::latlng>>,
-             shape_cache_entry>* cache) {
+void route_shapes(osr::ways const& w,
+                  osr::lookup const& lookup,
+                  n::timetable& tt,
+                  n::shapes_storage& shapes,
+                  config::timetable::route_shapes const& conf,
+                  std::array<bool, n::kNumClasses> const& clasz_enabled,
+                  shape_cache_t* cache) {
   fmt::println(std::clog, "computing shapes");
 
   auto const progress_tracker = utl::get_active_progress_tracker();

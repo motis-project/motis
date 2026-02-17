@@ -545,21 +545,23 @@ data import(config const& c, fs::path const& data_path, bool const write) {
                  data_path, cista::mmap::protection::MODIFY, use_shapes_cache);
 
              auto const shape_cache_path = data_path / "shape_cache.bin";
-             auto shape_cache = shape_cache_t{};
+             auto shape_cache = cista::wrapped<shape_cache_t>{};
              if (use_shapes_cache) {
                if (fs::exists(shape_cache_path) && reuse_shapes_cache) {
                  std::clog << "loading existing shape cache from "
                            << shape_cache_path << "\n";
-                 shape_cache = *cista::read<shape_cache_t>(shape_cache_path);
+                 shape_cache = cista::read<shape_cache_t>(shape_cache_path);
                } else {
                  std::clog << "creating new shape cache\n";
+                 shape_cache =
+                     cista::wrapped{cista::raw::make_unique<shape_cache_t>()};
                }
              }
 
              route_shapes(
                  *d.w_, *d.l_, *d.tt_, *d.shapes_, *c.timetable_->route_shapes_,
                  to_clasz_bool_array(true, c.timetable_->route_shapes_->clasz_),
-                 use_shapes_cache ? &shape_cache : nullptr);
+                 use_shapes_cache ? shape_cache.get() : nullptr);
 
              if (use_shapes_cache) {
                cista::write(shape_cache_path, shape_cache);
