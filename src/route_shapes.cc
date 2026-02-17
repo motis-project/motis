@@ -81,8 +81,10 @@ route_shape_result route_shape(
     std::optional<config::timetable::shapes_debug> const& debug,
     bool const debug_enabled) {
   auto r = route_shape_result{};
-  r.offsets_.reserve(match_points.size());
-  r.segment_bboxes_.reserve(match_points.size() - 1U);
+  r.offsets_.reserve(
+      static_cast<decltype(r.offsets_)::size_type>(match_points.size()));
+  r.segment_bboxes_.reserve(static_cast<decltype(r.segment_bboxes_)::size_type>(
+      match_points.size() - 1U));
 
   auto debug_path_fn = std::function<std::optional<std::filesystem::path>(
       osr::matched_route const&)>{nullptr};
@@ -181,11 +183,14 @@ route_shape_result route_shape(
               "[route_shapes] segment offsets ({}) != match points ({})",
               matched_route.segment_offsets_.size(), match_points.size());
 
-  r.segment_bboxes_.resize(match_points.size() - 1U);
+  r.segment_bboxes_.resize(static_cast<decltype(r.segment_bboxes_)::size_type>(
+      match_points.size() - 1U));
   r.shape_.clear();
-  r.shape_.reserve(matched_route.path_.segments_.size() * 8U);
+  r.shape_.reserve(static_cast<decltype(r.shape_)::size_type>(
+      matched_route.path_.segments_.size() * 8U));
   r.offsets_.clear();
-  r.offsets_.reserve(match_points.size());
+  r.offsets_.reserve(
+      static_cast<decltype(r.offsets_)::size_type>(match_points.size()));
   r.offsets_.emplace_back(0U);
 
   for (auto seg_idx = 0U; seg_idx < match_points.size() - 1U; ++seg_idx) {
@@ -387,7 +392,7 @@ void route_shapes(osr::ways const& w,
     try {
       auto cache_key =
           cache != nullptr
-              ? std::optional{n::pair{
+              ? std::optional{shape_cache_key{
                     *profile,
                     cista::raw::to_vec(match_points,
                                        [](auto const& mp) { return mp.pos_; })}}
