@@ -101,6 +101,7 @@ struct config {
       bool operator==(route_shapes const&) const = default;
       bool missing_shapes_{false};
       bool replace_shapes_{false};
+      bool cache_{false};
       std::optional<std::map<std::string, bool>> clasz_{};
       unsigned max_stops_{0U};
       unsigned n_threads_{0U};

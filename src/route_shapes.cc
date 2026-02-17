@@ -3,7 +3,6 @@
 #include <chrono>
 #include <algorithm>
 #include <iostream>
-#include <map>
 #include <mutex>
 #include <optional>
 #include <ranges>
@@ -12,16 +11,9 @@
 
 #include "boost/stacktrace.hpp"
 
-#include "cista/mmap.h"
-#include "cista/serialization.h"
-
-#include "utl/concat.h"
-#include "utl/enumerate.h"
-#include "utl/erase_if.h"
 #include "utl/parallel_for.h"
 #include "utl/progress_tracker.h"
 #include "utl/sorted_diff.h"
-#include "utl/timing.h"
 #include "utl/to_vec.h"
 #include "utl/verify.h"
 
@@ -39,9 +31,7 @@
 #include "osr/routing/route.h"
 #include "osr/types.h"
 
-#include "motis/constants.h"
 #include "motis/match_platforms.h"
-#include "motis/osr/max_distance.h"
 #include "motis/types.h"
 
 namespace n = nigiri;
@@ -67,13 +57,182 @@ std::optional<osr::search_profile> get_profile(n::clasz const clasz) {
   }
 }
 
-void route_shapes(osr::ways const& w,
-                  osr::lookup const& lookup,
-                  osr::platforms const&,
-                  n::timetable& tt,
-                  n::shapes_storage& shapes,
-                  config::timetable::route_shapes const& conf,
-                  std::array<bool, n::kNumClasses> const& clasz_enabled) {
+struct route_shape_result {
+  n::vector<geo::latlng> shape_;
+  n::vector<n::shape_offset_t> offsets_;
+  geo::box route_bbox_{};
+  n::vector<geo::box> segment_bboxes_;
+
+  unsigned segments_routed_{};
+  unsigned segments_beelined_{};
+  unsigned dijkstra_early_terminations_{};
+  unsigned dijkstra_full_runs_{};
+};
+
+route_shape_result route_shape(
+    osr::ways const& w,
+    osr::lookup const& lookup,
+    n::timetable& tt,
+    std::vector<osr::location> const& match_points,
+    osr::search_profile const profile,
+    osr::profile_parameters const& profile_params,
+    n::clasz const clasz,
+    n::route_idx_t const route_idx,
+    std::optional<config::timetable::shapes_debug> const& debug,
+    bool const debug_enabled) {
+  auto r = route_shape_result{};
+  r.offsets_.reserve(match_points.size());
+  r.segment_bboxes_.reserve(match_points.size() - 1U);
+
+  auto debug_path_fn = std::function<std::optional<std::filesystem::path>(
+      osr::matched_route const&)>{nullptr};
+
+  if (debug_enabled) {
+    debug_path_fn = [&debug, route_idx, clasz,
+                     &tt](osr::matched_route const& res)
+        -> std::optional<std::filesystem::path> {
+      auto include =
+          debug->all_ || (debug->all_with_beelines_ && res.n_beelined_ > 0U);
+      auto tags = std::set<std::string>{};
+
+      if (debug->route_indices_ && !debug->route_indices_->empty()) {
+        auto const& debug_route_indices = *debug->route_indices_;
+        if (std::ranges::contains(debug_route_indices, to_idx(route_idx))) {
+          include = true;
+        }
+      }
+
+      if (debug->route_ids_ && !debug->route_ids_->empty()) {
+        auto const& debug_route_ids = *debug->route_ids_;
+        for (auto const transport_idx : tt.route_transport_ranges_[route_idx]) {
+          auto const frun = n::rt::frun{
+              tt, nullptr,
+              n::rt::run{.t_ = n::transport{transport_idx, n::day_idx_t{0}},
+                         .stop_range_ =
+                             n::interval{
+                                 n::stop_idx_t{0U},
+                                 static_cast<n::stop_idx_t>(
+                                     tt.route_location_seq_[route_idx].size())},
+                         .rt_ = n::rt_transport_idx_t::invalid()}};
+
+          auto const rsn = frun[0].get_route_id(n::event_type::kDep);
+          if (std::ranges::contains(debug_route_ids, rsn)) {
+            tags.emplace(fmt::format("route_{}", rsn));
+            include = true;
+            break;
+          }
+        }
+      }
+
+      if (debug->trips_ && !debug->trips_->empty()) {
+        auto const& debug_trip_ids = *debug->trips_;
+        for (auto const transport_idx : tt.route_transport_ranges_[route_idx]) {
+          auto const frun = n::rt::frun{
+              tt, nullptr,
+              n::rt::run{.t_ = n::transport{transport_idx},
+                         .stop_range_ =
+                             n::interval{
+                                 n::stop_idx_t{0U},
+                                 static_cast<n::stop_idx_t>(
+                                     tt.route_location_seq_[route_idx].size())},
+                         .rt_ = n::rt_transport_idx_t::invalid()}};
+
+          frun.for_each_trip([&](n::trip_idx_t const trip_idx,
+                                 n::interval<n::stop_idx_t> const) {
+            for (auto const trip_id_idx : tt.trip_ids_[trip_idx]) {
+              auto const trip_id = tt.trip_id_strings_.at(trip_id_idx).view();
+              if (std::ranges::contains(debug_trip_ids, trip_id)) {
+                tags.emplace(fmt::format("trip_{}", trip_id));
+                include = true;
+                return;
+              }
+            }
+          });
+        }
+      }
+
+      if (debug->slow_ != 0U && res.total_duration_.count() > debug->slow_) {
+        include = true;
+        tags.emplace("slow");
+      }
+
+      if (include) {
+        auto fn = fmt::format("r_{}_{}", to_idx(route_idx), to_str(clasz));
+        for (auto const& tag : tags) {
+          fn += fmt::format("_{}", tag);
+        }
+        return debug->path_ / fn;
+      } else {
+        return {};
+      }
+    };
+  }
+
+  auto const matched_route =
+      osr::map_match(w, lookup, profile, profile_params, match_points, nullptr,
+                     nullptr, debug_path_fn);
+
+  r.segments_routed_ = matched_route.n_routed_;
+  r.segments_beelined_ = matched_route.n_beelined_;
+  r.dijkstra_early_terminations_ = matched_route.n_dijkstra_early_terminations_;
+  r.dijkstra_full_runs_ = matched_route.n_dijkstra_full_runs_;
+
+  utl::verify(matched_route.segment_offsets_.size() == match_points.size(),
+              "[route_shapes] segment offsets ({}) != match points ({})",
+              matched_route.segment_offsets_.size(), match_points.size());
+
+  r.segment_bboxes_.resize(match_points.size() - 1U);
+  r.shape_.clear();
+  r.shape_.reserve(matched_route.path_.segments_.size() * 8U);
+  r.offsets_.clear();
+  r.offsets_.reserve(match_points.size());
+  r.offsets_.emplace_back(0U);
+
+  for (auto seg_idx = 0U; seg_idx < match_points.size() - 1U; ++seg_idx) {
+    auto& seg_bbox = r.segment_bboxes_[seg_idx];
+
+    if (!r.shape_.empty()) {
+      seg_bbox.extend(r.shape_.back());
+    }
+
+    auto const start = matched_route.segment_offsets_[seg_idx];
+    auto const end = (seg_idx + 1U < match_points.size() - 1U)
+                         ? matched_route.segment_offsets_[seg_idx + 1U]
+                         : matched_route.path_.segments_.size();
+
+    for (auto ps_idx = start; ps_idx < end; ++ps_idx) {
+      auto const& ps = matched_route.path_.segments_[ps_idx];
+      for (auto const& pt : ps.polyline_) {
+        r.route_bbox_.extend(pt);
+        seg_bbox.extend(pt);
+      }
+      if (!ps.polyline_.empty()) {
+        auto first = ps.polyline_.begin();
+        if (!r.shape_.empty() && r.shape_.back() == *first) {
+          ++first;
+        }
+        r.shape_.insert(r.shape_.end(), first, ps.polyline_.end());
+      }
+    }
+
+    r.offsets_.emplace_back(static_cast<std::uint32_t>(r.shape_.size() - 1U));
+  }
+
+  utl::verify(r.offsets_.size() == match_points.size(),
+              "[route_shapes] mismatch: offsets.size()={}, stops.size()={}",
+              r.offsets_.size(), match_points.size());
+  return r;
+}
+
+void route_shapes(
+    osr::ways const& w,
+    osr::lookup const& lookup,
+    n::timetable& tt,
+    n::shapes_storage& shapes,
+    config::timetable::route_shapes const& conf,
+    std::array<bool, n::kNumClasses> const& clasz_enabled,
+    hash_map<nigiri::pair<osr::search_profile, nigiri::vector<geo::latlng>>,
+             shape_cache_entry>* cache) {
   fmt::println(std::clog, "computing shapes");
 
   auto const progress_tracker = utl::get_active_progress_tracker();
@@ -87,6 +246,7 @@ void route_shapes(osr::ways const& w,
   auto dijkstra_early_terminations = 0ULL;
   auto dijkstra_full_runs = 0ULL;
   auto routes_with_existing_shapes = 0ULL;
+  auto cache_hits = 0ULL;
 
   auto const& debug = conf.debug_;
   auto const debug_enabled =
@@ -118,6 +278,58 @@ void route_shapes(osr::ways const& w,
   shapes.route_segment_bboxes_.resize(tt.n_routes());
 
   auto shapes_mutex = std::mutex{};
+
+  auto const store_shape =
+      [&](n::route_idx_t const r, n::shape_idx_t const shape_idx,
+          n::vector<n::shape_offset_t> const& offsets,
+          geo::box const& route_bbox, n::vector<geo::box> const& segment_bboxes,
+          std::vector<osr::location> const& match_points,
+          n::interval<n::transport_idx_t> const& transports) {
+        shapes.route_bboxes_[r] = route_bbox;
+        auto rsb = shapes.route_segment_bboxes_[r];
+        if (!rsb.empty()) {
+          if (rsb.size() != segment_bboxes.size()) {
+            fmt::println(std::clog,
+                         "[route_shapes] route {}: segment bbox size "
+                         "mismatch: storage={}, computed={}",
+                         r, rsb.size(), segment_bboxes.size());
+          } else {
+            for (auto i = 0U; i < segment_bboxes.size(); ++i) {
+              rsb[i] = segment_bboxes[i];
+            }
+          }
+        }
+
+        auto range_to_offsets =
+            hash_map<std::pair<n::stop_idx_t, n::stop_idx_t>,
+                     n::shape_offset_idx_t>{};
+
+        for (auto const transport_idx : transports) {
+          auto const frun = n::rt::frun{
+              tt, nullptr,
+              n::rt::run{.t_ = n::transport{transport_idx, n::day_idx_t{0}},
+                         .stop_range_ = n::interval{n::stop_idx_t{0U},
+                                                    static_cast<n::stop_idx_t>(
+                                                        match_points.size())},
+                         .rt_ = n::rt_transport_idx_t::invalid()}};
+          frun.for_each_trip([&](n::trip_idx_t const trip_idx,
+                                 n::interval<n::stop_idx_t> const range) {
+            auto const key = std::pair{range.from_, range.to_};
+            auto it = range_to_offsets.find(key);
+            if (it == end(range_to_offsets)) {
+              auto trip_offsets = std::vector<n::shape_offset_t>{};
+              trip_offsets.reserve(static_cast<std::size_t>(range.size()));
+              for (auto const i : range) {
+                trip_offsets.push_back(offsets.at(i));
+              }
+              auto const offsets_idx = shapes.add_offsets(trip_offsets);
+              it = range_to_offsets.emplace(key, offsets_idx).first;
+            }
+
+            shapes.trip_offset_indices_[trip_idx] = {shape_idx, it->second};
+          });
+        }
+      };
 
   auto const process_route = [&](std::size_t const route_idx) {
     auto const r =
@@ -168,98 +380,6 @@ void route_shapes(osr::ways const& w,
       }
     }
 
-    auto debug_path_fn = std::function<std::optional<std::filesystem::path>(
-        osr::matched_route const&)>{nullptr};
-
-    if (debug_enabled) {
-      debug_path_fn = [&debug, r, clasz, &tt](osr::matched_route const& res)
-          -> std::optional<std::filesystem::path> {
-        auto include =
-            debug->all_ || (debug->all_with_beelines_ && res.n_beelined_ > 0U);
-        auto tags = std::set<std::string>{};
-
-        if (debug->route_indices_ && !debug->route_indices_->empty()) {
-          auto const& debug_route_indices = *debug->route_indices_;
-          if (std::ranges::contains(debug_route_indices, to_idx(r))) {
-            include = true;
-          }
-        }
-
-        if (debug->route_ids_ && !debug->route_ids_->empty()) {
-          auto const& debug_route_ids = *debug->route_ids_;
-          for (auto const transport_idx : tt.route_transport_ranges_[r]) {
-            auto const frun = n::rt::frun{
-                tt, nullptr,
-                n::rt::run{
-                    .t_ = n::transport{transport_idx, n::day_idx_t{0}},
-                    .stop_range_ =
-                        n::interval{n::stop_idx_t{0U},
-                                    static_cast<n::stop_idx_t>(
-                                        tt.route_location_seq_[r].size())},
-                    .rt_ = n::rt_transport_idx_t::invalid()}};
-
-            auto const rsn = frun[0].get_route_id(n::event_type::kDep);
-            if (std::ranges::contains(debug_route_ids, rsn)) {
-              tags.emplace(fmt::format("route_{}", rsn));
-              include = true;
-              break;
-            }
-          }
-        }
-
-        if (debug->trips_ && !debug->trips_->empty()) {
-          auto const& debug_trip_ids = *debug->trips_;
-          for (auto const transport_idx : tt.route_transport_ranges_[r]) {
-            auto const frun = n::rt::frun{
-                tt, nullptr,
-                n::rt::run{
-                    .t_ = n::transport{transport_idx},
-                    .stop_range_ =
-                        n::interval{n::stop_idx_t{0U},
-                                    static_cast<n::stop_idx_t>(
-                                        tt.route_location_seq_[r].size())},
-                    .rt_ = n::rt_transport_idx_t::invalid()}};
-
-            frun.for_each_trip([&](n::trip_idx_t const trip_idx,
-                                   n::interval<n::stop_idx_t> const) {
-              for (auto const trip_id_idx : tt.trip_ids_[trip_idx]) {
-                auto const trip_id = tt.trip_id_strings_.at(trip_id_idx).view();
-                if (std::ranges::contains(debug_trip_ids, trip_id)) {
-                  tags.emplace(fmt::format("trip_{}", trip_id));
-                  include = true;
-                  return;
-                }
-              }
-            });
-          }
-        }
-
-        if (debug->slow_ != 0U && res.total_duration_.count() > debug->slow_) {
-          include = true;
-          tags.emplace("slow");
-        }
-
-        if (include) {
-          auto fn = fmt::format("r_{}_{}", to_idx(r), to_str(clasz));
-          for (auto const& tag : tags) {
-            fn += fmt::format("_{}", tag);
-          }
-          return debug->path_ / fn;
-        } else {
-          return {};
-        }
-      };
-    }
-
-    auto shape = std::vector<geo::latlng>{};
-
-    auto offsets = std::vector<n::shape_offset_t>{};
-    offsets.reserve(stops.size());
-
-    auto route_bbox = geo::box{};
-    auto segment_bboxes = std::vector<geo::box>{};
-    segment_bboxes.reserve(stops.size() - 1U);
-
     auto const match_points = utl::to_vec(stops, [&](auto const stop_idx) {
       auto const loc_idx = n::stop{stop_idx}.location_idx();
       auto const pos = tt.locations_.coordinates_[loc_idx];
@@ -267,110 +387,51 @@ void route_shapes(osr::ways const& w,
     });
 
     try {
-      auto const matched_route =
-          osr::map_match(w, lookup, *profile, profile_params, match_points,
-                         nullptr, nullptr, debug_path_fn);
+      auto cache_key =
+          cache != nullptr
+              ? std::optional{n::pair{
+                    *profile,
+                    cista::raw::to_vec(match_points,
+                                       [](auto const& mp) { return mp.pos_; })}}
+              : std::nullopt;
 
-      ++routes_matched;
-      segments_routed += matched_route.n_routed_;
-      segments_beelined += matched_route.n_beelined_;
-      dijkstra_early_terminations +=
-          matched_route.n_dijkstra_early_terminations_;
-      dijkstra_full_runs += matched_route.n_dijkstra_full_runs_;
-
-      utl::verify(matched_route.segment_offsets_.size() == match_points.size(),
-                  "[route_shapes] segment offsets ({}) != match points ({})",
-                  matched_route.segment_offsets_.size(), match_points.size());
-
-      segment_bboxes.resize(stops.size() - 1U);
-      shape.clear();
-      shape.reserve(matched_route.path_.segments_.size() * 8U);
-      offsets.clear();
-      offsets.reserve(stops.size());
-      offsets.emplace_back(0U);
-
-      for (auto seg_idx = 0U; seg_idx < stops.size() - 1U; ++seg_idx) {
-        auto& seg_bbox = segment_bboxes[seg_idx];
-
-        if (!shape.empty()) {
-          seg_bbox.extend(shape.back());
+      if (cache != nullptr) {
+        auto const l = std::scoped_lock{shapes_mutex};
+        if (auto it = cache->find(*cache_key); it != end(*cache)) {
+          auto const& ce = it->second;
+          ++cache_hits;
+          utl::verify(ce.shape_idx_ < shapes.data_.size(),
+                      "[route_shapes] cache shape idx out of bounds: {} >= {}",
+                      ce.shape_idx_, shapes.data_.size());
+          store_shape(r, ce.shape_idx_, ce.offsets_, ce.route_bbox_,
+                      ce.segment_bboxes_, match_points, transports);
+          return;
         }
-
-        auto const start = matched_route.segment_offsets_[seg_idx];
-        auto const end = (seg_idx + 1U < stops.size() - 1U)
-                             ? matched_route.segment_offsets_[seg_idx + 1U]
-                             : matched_route.path_.segments_.size();
-
-        for (auto ps_idx = start; ps_idx < end; ++ps_idx) {
-          auto const& ps = matched_route.path_.segments_[ps_idx];
-          for (auto const& pt : ps.polyline_) {
-            route_bbox.extend(pt);
-            seg_bbox.extend(pt);
-          }
-          if (!ps.polyline_.empty()) {
-            auto first = ps.polyline_.begin();
-            if (!shape.empty() && shape.back() == *first) {
-              ++first;
-            }
-            shape.insert(shape.end(), first, ps.polyline_.end());
-          }
-        }
-
-        offsets.emplace_back(static_cast<std::uint32_t>(shape.size() - 1U));
       }
 
-      utl::verify(offsets.size() == stops.size(),
-                  "[route_shapes] mismatch: offsets.size()={}, stops.size()={}",
-                  offsets.size(), stops.size());
+      auto rsr = route_shape(w, lookup, tt, match_points, *profile,
+                             profile_params, clasz, r, debug, debug_enabled);
+      ++routes_matched;
+      segments_routed += rsr.segments_routed_;
+      segments_beelined += rsr.segments_beelined_;
+      dijkstra_early_terminations += rsr.dijkstra_early_terminations_;
+      dijkstra_full_runs += rsr.dijkstra_full_runs_;
 
       auto const l = std::scoped_lock{shapes_mutex};
 
       auto const shape_idx = static_cast<n::shape_idx_t>(shapes.data_.size());
-      shapes.data_.emplace_back(shape);
+      shapes.data_.emplace_back(rsr.shape_);
       shapes.shape_sources_.emplace_back(n::shape_source::kRouted);
 
-      shapes.route_bboxes_[r] = route_bbox;
-      auto rsb = shapes.route_segment_bboxes_[r];
-      if (!rsb.empty()) {
-        if (rsb.size() != segment_bboxes.size()) {
-          fmt::println(std::clog,
-                       "[route_shapes] route {}: segment bbox size "
-                       "mismatch: storage={}, computed={}",
-                       r, rsb.size(), segment_bboxes.size());
-        } else {
-          for (auto i = 0U; i < segment_bboxes.size(); ++i) {
-            rsb[i] = segment_bboxes[i];
-          }
-        }
-      }
-
-      auto range_to_offsets = hash_map<std::pair<n::stop_idx_t, n::stop_idx_t>,
-                                       n::shape_offset_idx_t>{};
-
-      for (auto const transport_idx : transports) {
-        auto const frun = n::rt::frun{
-            tt, nullptr,
-            n::rt::run{.t_ = n::transport{transport_idx, n::day_idx_t{0}},
-                       .stop_range_ = n::interval{n::stop_idx_t{0U},
-                                                  static_cast<n::stop_idx_t>(
-                                                      stops.size())},
-                       .rt_ = n::rt_transport_idx_t::invalid()}};
-        frun.for_each_trip([&](n::trip_idx_t const trip_idx,
-                               n::interval<n::stop_idx_t> const range) {
-          auto const key = std::pair{range.from_, range.to_};
-          auto it = range_to_offsets.find(key);
-          if (it == end(range_to_offsets)) {
-            auto trip_offsets = std::vector<n::shape_offset_t>{};
-            trip_offsets.reserve(static_cast<std::size_t>(range.size()));
-            for (auto const i : range) {
-              trip_offsets.push_back(offsets.at(i));
-            }
-            auto const offsets_idx = shapes.add_offsets(trip_offsets);
-            it = range_to_offsets.emplace(key, offsets_idx).first;
-          }
-
-          shapes.trip_offset_indices_[trip_idx] = {shape_idx, it->second};
-        });
+      store_shape(r, shape_idx, rsr.offsets_, rsr.route_bbox_,
+                  rsr.segment_bboxes_, match_points, transports);
+      if (cache != nullptr) {
+        cache->emplace(*cache_key,
+                       shape_cache_entry{
+                           .shape_idx_ = shape_idx,
+                           .offsets_ = std::move(rsr.offsets_),
+                           .route_bbox_ = rsr.route_bbox_,
+                           .segment_bboxes_ = std::move(rsr.segment_bboxes_)});
       }
     } catch (std::exception const& e) {
       fmt::println(std::clog,
@@ -405,10 +466,10 @@ void route_shapes(osr::ways const& w,
   fmt::println(std::clog,
                "{} routes matched, {} segments routed, {} segments beelined, "
                "{} dijkstra early terminations, {} dijkstra full runs\n{} "
-               "routes with existing shapes skipped",
+               "routes with existing shapes skipped\n{} cache hits",
                routes_matched, segments_routed, segments_beelined,
                dijkstra_early_terminations, dijkstra_full_runs,
-               routes_with_existing_shapes);
+               routes_with_existing_shapes, cache_hits);
 }
 
 }  // namespace motis
