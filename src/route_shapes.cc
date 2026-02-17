@@ -403,6 +403,7 @@ void route_shapes(osr::ways const& w,
                       ce.shape_idx_, shapes.data_.size());
           store_shape(r, ce.shape_idx_, ce.offsets_, ce.route_bbox_,
                       ce.segment_bboxes_, match_points, transports);
+          progress_tracker->increment();
           return;
         }
       }
