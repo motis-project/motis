@@ -1643,6 +1643,20 @@ paths:
             in case `EARLIER` is selected and the previous `n`
             arrivals / departures if `LATER` is selected.
 
+        - name: window
+          in: query
+          required: false
+          description: |
+            Optional. Window in seconds around `time`.
+
+            If set, `direction` is ignored and stop times from both
+            directions are considered for a maximum of `n` events in each direction.
+            Only stop times inside [`time - window`, `time + window`] are
+            returned.
+          schema:
+            type: integer
+            minimum: 0
+
         - name: mode
           in: query
           schema:
