@@ -1,6 +1,7 @@
 #include "motis/endpoints/stop_times.h"
 
 #include <algorithm>
+#include <limits>
 #include <memory>
 
 #include "utl/concat.h"
@@ -201,7 +202,8 @@ std::vector<n::rt::run> get_events(
     n::direction const dir,
     std::size_t const count,
     n::routing::clasz_mask_t const allowed_clasz,
-    bool const with_scheduled_skipped_stops) {
+    bool const with_scheduled_skipped_stops,
+    std::optional<n::duration_t> const max_time_diff = std::nullopt) {
   auto iterators = std::vector<std::unique_ptr<ev_iterator>>{};
 
   if (rtt != nullptr) {
@@ -280,11 +282,16 @@ std::vector<n::rt::run> get_events(
           return fwd ? a->time() < b->time() : a->time() > b->time();
         });
     assert(!(*it)->finished());
-    if (evs.size() >= count && (*it)->time() != last_time) {
+    auto const current_time = (*it)->time();
+    if (max_time_diff.has_value() &&
+        std::chrono::abs(current_time - time) > *max_time_diff) {
+      break;
+    }
+    if (evs.size() >= count && current_time != last_time) {
       break;
     }
     evs.emplace_back((*it)->get());
-    last_time = (*it)->time();
+    last_time = current_time;
     (*it)->increment();
   }
   return evs;
@@ -436,23 +443,15 @@ api::stoptimes_response stop_times::operator()(
   auto const rtt = rt->rtt_.get();
   auto const ev_type =
       query.arriveBy_ ? n::event_type::kArr : n::event_type::kDep;
-  auto const count = static_cast<std::size_t>(query.n_);
+  auto const count = query.window_.has_value()
+                         ? std::numeric_limits<std::size_t>::max()
+                         : static_cast<std::size_t>(query.n_);
   auto const window = query.window_.transform([](auto const w) {
     return std::chrono::duration_cast<n::duration_t>(std::chrono::seconds{w});
   });
-  auto events = std::vector<n::rt::run>{};
-  if (window.has_value()) {
-    events =
-        get_events(locations, tt_, rtt, time, ev_type, n::direction::kBackward,
-                   count, allowed_clasz, query.withScheduledSkippedStops_);
-    auto later =
-        get_events(locations, tt_, rtt, time, ev_type, n::direction::kForward,
-                   count, allowed_clasz, query.withScheduledSkippedStops_);
-    utl::concat(events, later);
-  } else {
-    events = get_events(locations, tt_, rtt, time, ev_type, dir, count,
-                        allowed_clasz, query.withScheduledSkippedStops_);
-  }
+  auto events =
+      get_events(locations, tt_, rtt, time, ev_type, dir, count, allowed_clasz,
+                 query.withScheduledSkippedStops_, window);
 
   auto const to_tuple = [&](n::rt::run const& x) {
     auto const fr_a = n::rt::frun{tt_, rtt, x};
@@ -469,17 +468,6 @@ api::stoptimes_response stop_times::operator()(
                            }),
                end(events));
 
-  if (window.has_value()) {
-    auto const earliest = time - *window;
-    auto const latest = time + *window;
-    events.erase(std::remove_if(begin(events), end(events),
-                                [&](n::rt::run const& x) {
-                                  auto const ev_time =
-                                      n::rt::frun{tt_, rtt, x}[0].time(ev_type);
-                                  return ev_time < earliest || ev_time > latest;
-                                }),
-                 end(events));
-  }
   return {
       .stopTimes_ = utl::to_vec(
           events,
@@ -581,7 +569,7 @@ api::stoptimes_response stop_times::operator()(
               })
               .value(),
       .previousPageCursor_ =
-          events.empty() || window.has_value()
+          events.empty()
               ? ""
               : fmt::format(
                     "EARLIER|{}",
@@ -589,7 +577,7 @@ api::stoptimes_response stop_times::operator()(
                         n::rt::frun{tt_, rtt, events.front()}[0].time(ev_type) -
                         std::chrono::minutes{1})),
       .nextPageCursor_ =
-          events.empty() || window.has_value()
+          events.empty()
               ? ""
               : fmt::format(
                     "LATER|{}",
