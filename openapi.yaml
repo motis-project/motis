@@ -1649,10 +1649,8 @@ paths:
           description: |
             Optional. Window in seconds around `time`.
 
-            If set, `direction` is ignored and stop times from both
-            directions are considered for a maximum of `n` events in each direction.
-            Only stop times inside [`time - window`, `time + window`] are
-            returned.
+            If set, `n` is ignored.
+            Limiting the response to those that are at most `window` seconds aways in time.
           schema:
             type: integer
             minimum: 0
