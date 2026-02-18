@@ -217,10 +217,13 @@ data import(config const& c, fs::path const& data_path, bool const write) {
                                 c.timetable_->with_shapes_ &&
                                 c.timetable_->route_shapes_.has_value() &&
                                 c.timetable_->route_shapes_->cache_;
-  auto const existing_tt_hashes = read_hashes(data_path, "tt");
+  auto const existing_rs_hashes = read_hashes(data_path, "route_shapes");
   auto const reuse_shapes_cache =
-      existing_tt_hashes.find("nigiri_bin_ver") != end(existing_tt_hashes) &&
-      existing_tt_hashes.at("nigiri_bin_ver") == n_version().second;
+      existing_rs_hashes.find("nigiri_bin_ver") != end(existing_rs_hashes) &&
+      existing_rs_hashes.at("nigiri_bin_ver") == n_version().second &&
+      existing_rs_hashes.find("shapes_cache_ver") != end(existing_rs_hashes) &&
+      existing_rs_hashes.at("shapes_cache_ver") ==
+          shapes_cache_version().second;
 
   auto d = data{data_path};
 
@@ -574,6 +577,7 @@ data import(config const& c, fs::path const& data_path, bool const write) {
        osm_hash,
        osr_version(),
        n_version(),
+       shapes_cache_version(),
        {"missing_shapes",
         c.timetable_.value_or(config::timetable{})
             .route_shapes_.value_or(config::timetable::route_shapes{})

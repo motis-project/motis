@@ -34,6 +34,9 @@ constexpr auto const tiles_version = []() {
 constexpr auto const osr_footpath_version = []() {
   return meta_entry_t{"osr_footpath_bin_ver", 3U};
 };
+constexpr auto const shapes_cache_version = []() {
+  return meta_entry_t{"shapes_cache_ver", 1U};
+};
 
 std::string to_str(meta_t const&);
 
