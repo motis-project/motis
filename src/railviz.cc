@@ -509,8 +509,8 @@ api::routes_response get_routes(tag_lookup const& tags,
             if (fr.is_scheduled()) {
               auto const trp_idx = fr.trip_idx();
               auto const shp_idx = shapes->get_shape_idx(trp_idx);
-              if (shp_idx != n::shape_idx_t::invalid()) {
-                switch (shapes->shape_sources_[shp_idx]) {
+              if (shp_idx != n::scoped_shape_idx_t::invalid()) {
+                switch (n::get_shape_source(shp_idx)) {
                   case n::shape_source::kNone:
                     path_source = api::RoutePathSourceEnum::NONE;
                     break;

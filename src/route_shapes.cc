@@ -272,6 +272,7 @@ void route_shapes(osr::ways const& w,
             << "\n  shapes.route_segment_bboxes_="
             << shapes.route_segment_bboxes_.size()
             << "\n  shapes.data=" << shapes.data_.size()
+            << "\n  shapes.routed_data=" << shapes.routed_data_.size()
             << "\n  shapes.offsets=" << shapes.offsets_.size()
             << "\n  shapes.trip_offset_indices_="
             << shapes.trip_offset_indices_.size() << "\n\n";
@@ -283,7 +284,7 @@ void route_shapes(osr::ways const& w,
   auto shapes_mutex = std::mutex{};
 
   auto const store_shape =
-      [&](n::route_idx_t const r, n::shape_idx_t const shape_idx,
+      [&](n::route_idx_t const r, n::scoped_shape_idx_t const shape_idx,
           n::vector<n::shape_offset_t> const& offsets,
           geo::box const& route_bbox, n::vector<geo::box> const& segment_bboxes,
           std::vector<osr::location> const& match_points,
@@ -370,8 +371,7 @@ void route_shapes(osr::ways const& w,
         frun.for_each_trip(
             [&](n::trip_idx_t const trip_idx, n::interval<n::stop_idx_t>) {
               auto const shape_idx = shapes.get_shape_idx(trip_idx);
-              auto const shape_src = shapes.get_shape_source(shape_idx);
-              if (shape_src == n::shape_source::kNone) {
+              if (shape_idx == n::scoped_shape_idx_t::invalid()) {
                 existing_shapes = false;
               }
             });
@@ -403,9 +403,18 @@ void route_shapes(osr::ways const& w,
         if (auto it = cache->find(*cache_key); it != end(*cache)) {
           auto const& ce = it->second;
           ++cache_hits;
-          utl::verify(ce.shape_idx_ < shapes.data_.size(),
-                      "[route_shapes] cache shape idx out of bounds: {} >= {}",
-                      ce.shape_idx_, shapes.data_.size());
+          auto const local_shape_idx = n::get_local_shape_idx(ce.shape_idx_);
+          utl::verify(ce.shape_idx_ != n::scoped_shape_idx_t::invalid() &&
+                          n::get_shape_source(ce.shape_idx_) ==
+                              n::shape_source::kRouted,
+                      "[route_shapes] invalid cached shape index: {}",
+                      ce.shape_idx_);
+          utl::verify(
+              local_shape_idx != n::shape_idx_t::invalid() &&
+                  static_cast<std::size_t>(to_idx(local_shape_idx)) <
+                      shapes.routed_data_.size(),
+              "[route_shapes] cache routed shape idx out of bounds: {} >= {}",
+              local_shape_idx, shapes.routed_data_.size());
           store_shape(r, ce.shape_idx_, ce.offsets_, ce.route_bbox_,
                       ce.segment_bboxes_, match_points, transports);
           progress_tracker->increment();
@@ -423,9 +432,11 @@ void route_shapes(osr::ways const& w,
 
       auto const l = std::scoped_lock{shapes_mutex};
 
-      auto const shape_idx = static_cast<n::shape_idx_t>(shapes.data_.size());
-      shapes.data_.emplace_back(rsr.shape_);
-      shapes.shape_sources_.emplace_back(n::shape_source::kRouted);
+      auto const local_shape_idx =
+          static_cast<n::shape_idx_t>(shapes.routed_data_.size());
+      auto const shape_idx =
+          n::to_scoped_shape_idx(local_shape_idx, n::shape_source::kRouted);
+      shapes.routed_data_.emplace_back(rsr.shape_);
 
       store_shape(r, shape_idx, rsr.offsets_, rsr.route_bbox_,
                   rsr.segment_bboxes_, match_points, transports);
@@ -463,6 +474,7 @@ void route_shapes(osr::ways const& w,
             << "\n  shapes.route_segment_bboxes_="
             << shapes.route_segment_bboxes_.size()
             << "\n  shapes.data=" << shapes.data_.size()
+            << "\n  shapes.routed_data=" << shapes.routed_data_.size()
             << "\n  shapes.offsets=" << shapes.offsets_.size()
             << "\n  shapes.trip_offset_indices_="
             << shapes.trip_offset_indices_.size() << "\n\n";

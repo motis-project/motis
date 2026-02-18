@@ -14,9 +14,11 @@
 namespace motis {
 
 struct shape_cache_entry {
-  bool valid() const { return shape_idx_ != nigiri::shape_idx_t::invalid(); }
+  bool valid() const {
+    return shape_idx_ != nigiri::scoped_shape_idx_t::invalid();
+  }
 
-  nigiri::shape_idx_t shape_idx_{nigiri::shape_idx_t::invalid()};
+  nigiri::scoped_shape_idx_t shape_idx_{nigiri::scoped_shape_idx_t::invalid()};
   nigiri::vector<nigiri::shape_offset_t> offsets_;
   geo::box route_bbox_;
   nigiri::vector<geo::box> segment_bboxes_;
