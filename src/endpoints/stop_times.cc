@@ -436,9 +436,23 @@ api::stoptimes_response stop_times::operator()(
   auto const rtt = rt->rtt_.get();
   auto const ev_type =
       query.arriveBy_ ? n::event_type::kArr : n::event_type::kDep;
-  auto events = get_events(locations, tt_, rtt, time, ev_type, dir,
-                           static_cast<std::size_t>(query.n_), allowed_clasz,
-                           query.withScheduledSkippedStops_);
+  auto const count = static_cast<std::size_t>(query.n_);
+  auto const window = query.window_.transform([](auto const w) {
+    return std::chrono::duration_cast<n::duration_t>(std::chrono::seconds{w});
+  });
+  auto events = std::vector<n::rt::run>{};
+  if (window.has_value()) {
+    events =
+        get_events(locations, tt_, rtt, time, ev_type, n::direction::kBackward,
+                   count, allowed_clasz, query.withScheduledSkippedStops_);
+    auto later =
+        get_events(locations, tt_, rtt, time, ev_type, n::direction::kForward,
+                   count, allowed_clasz, query.withScheduledSkippedStops_);
+    utl::concat(events, later);
+  } else {
+    events = get_events(locations, tt_, rtt, time, ev_type, dir, count,
+                        allowed_clasz, query.withScheduledSkippedStops_);
+  }
 
   auto const to_tuple = [&](n::rt::run const& x) {
     auto const fr_a = n::rt::frun{tt_, rtt, x};
@@ -454,6 +468,18 @@ api::stoptimes_response stop_times::operator()(
                              return to_tuple(a) == to_tuple(b);
                            }),
                end(events));
+
+  if (window.has_value()) {
+    auto const earliest = time - *window;
+    auto const latest = time + *window;
+    events.erase(std::remove_if(begin(events), end(events),
+                                [&](n::rt::run const& x) {
+                                  auto const ev_time =
+                                      n::rt::frun{tt_, rtt, x}[0].time(ev_type);
+                                  return ev_time < earliest || ev_time > latest;
+                                }),
+                 end(events));
+  }
   return {
       .stopTimes_ = utl::to_vec(
           events,
@@ -555,7 +581,7 @@ api::stoptimes_response stop_times::operator()(
               })
               .value(),
       .previousPageCursor_ =
-          events.empty()
+          events.empty() || window.has_value()
               ? ""
               : fmt::format(
                     "EARLIER|{}",
@@ -563,7 +589,7 @@ api::stoptimes_response stop_times::operator()(
                         n::rt::frun{tt_, rtt, events.front()}[0].time(ev_type) -
                         std::chrono::minutes{1})),
       .nextPageCursor_ =
-          events.empty()
+          events.empty() || window.has_value()
               ? ""
               : fmt::format(
                     "LATER|{}",
