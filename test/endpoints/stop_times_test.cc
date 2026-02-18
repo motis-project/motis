@@ -180,6 +180,38 @@ TEST(motis, stop_times) {
   }
 
   {
+    // window query
+    std::cout << ": window query: " << std::endl;
+    auto const res = stop_times(
+        "/api/v5/stoptimes?stopId=test_FFM_10"
+        "&time=2019-04-30T23:00:00.000Z"
+        "&arriveBy=true"
+        "&window=1800"
+        "&n=10"
+        "&language=de");
+
+    auto const format_time = [&](auto&& t, char const* fmt = "%F %H:%M") {
+      return date::format(fmt, *t);
+    };
+
+    auto has_before = false;
+    auto has_after = false;
+    std::cout << "size:  " << res.stopTimes_.size() << std::endl;
+    for (auto const& stop_time : res.stopTimes_) {
+      auto const arr = format_time(stop_time.place_.arrival_.value());
+      std::cout << ": " << arr << std::endl;
+      has_before = has_before || arr < "2019-04-30 23:00";
+      has_after = has_after || arr > "2019-04-30 23:00";
+      EXPECT_GE(arr, "2019-04-30 22:30");
+      EXPECT_LE(arr, "2019-04-30 23:30");
+    }
+    EXPECT_TRUE(has_before);
+    EXPECT_TRUE(has_after);
+    EXPECT_TRUE(res.previousPageCursor_.empty());
+    EXPECT_TRUE(res.nextPageCursor_.empty());
+  }
+
+  {
     // same test with alerts off
     auto const res2 = stop_times(
         "/api/v5/stoptimes?stopId=test_FFM_10"
