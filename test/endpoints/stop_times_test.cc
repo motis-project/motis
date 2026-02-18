@@ -276,34 +276,50 @@ TEST(motis, stop_times) {
   }
 
   {
-    // window query
-    std::cout << ": window query: " << std::endl;
+    // window query LATER
     auto const res = stop_times(
-        "/api/v5/stoptimes?stopId=test_FFM_10"
+        "/api/v5/stoptimes?stopId=test_FFM_101"
         "&time=2019-04-30T23:00:00.000Z"
         "&arriveBy=true"
+        "&direction=LATER"
         "&window=1800"
-        "&n=10"
+        "&n=1"
         "&language=de");
 
     auto const format_time = [&](auto&& t, char const* fmt = "%F %H:%M") {
       return date::format(fmt, *t);
     };
 
-    auto has_before = false;
-    auto has_after = false;
-    std::cout << "size:  " << res.stopTimes_.size() << std::endl;
+    EXPECT_EQ(2, res.stopTimes_.size());  // n is ignored if window is set
     for (auto const& stop_time : res.stopTimes_) {
       auto const arr = format_time(stop_time.place_.arrival_.value());
-      std::cout << ": " << arr << std::endl;
-      has_before = has_before || arr < "2019-04-30 23:00";
-      has_after = has_after || arr > "2019-04-30 23:00";
-      EXPECT_GE(arr, "2019-04-30 22:30");
+      std::cout << "arr: " << arr << std::endl;
+      EXPECT_GE(arr, "2019-04-30 23:00");
       EXPECT_LE(arr, "2019-04-30 23:30");
     }
-    EXPECT_TRUE(has_before);
-    EXPECT_TRUE(has_after);
-    EXPECT_TRUE(res.previousPageCursor_.empty());
-    EXPECT_TRUE(res.nextPageCursor_.empty());
+    EXPECT_FALSE(res.previousPageCursor_.empty());
+    EXPECT_FALSE(res.nextPageCursor_.empty());
+  }
+  {
+    // window query EARLIER
+    auto const res = stop_times(
+        "/api/v5/stoptimes?stopId=test_FFM_101"
+        "&time=2019-04-30T23:15:00.000Z"
+        "&arriveBy=true"
+        "&direction=EARLIER"
+        "&window=1800"
+        "&n=1"
+        "&language=de");
+
+    auto const format_time = [&](auto&& t, char const* fmt = "%F %H:%M") {
+      return date::format(fmt, *t);
+    };
+
+    for (auto const& stop_time : res.stopTimes_) {
+      auto const arr = format_time(stop_time.place_.arrival_.value());
+      std::cout << "arr E: " << arr << std::endl;
+      EXPECT_GE(arr, "2019-04-30 22:45");
+      EXPECT_LE(arr, "2019-04-30 23:15");
+    }
   }
 }
