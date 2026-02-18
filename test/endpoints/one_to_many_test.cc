@@ -59,18 +59,28 @@ LANGEN,Langen,49.99359,8.65677,1,,1
 FFM_HAUPT,FFM Hauptwache,50.11403,8.67835,1,,
 FFM_HAUPT_U,Hauptwache U1/U2/U3/U8,50.11385,8.67912,0,FFM_HAUPT,
 FFM_HAUPT_S,FFM Hauptwache S,50.11404,8.67824,0,FFM_HAUPT,
+PAUL1,Römer/Paulskirche,50.110979,8.682276,0,,
+PAUL2,Römer/Paulskirche,50.110828,8.681587,0,,
+FFM_C,FFM C,50.107812,8.664628,0,,
+FFM_B,FFM B,50.107519,8.664775,0,,
 
 # routes.txt
 route_id,agency_id,route_short_name,route_long_name,route_desc,route_type
 S3,DB,S3,,,109
 U4,DB,U4,,,402
 ICE,DB,ICE,,,101
+11_1,DB,11,,,0
+11_2,DB,11,,,0
 
 # trips.txt
 route_id,service_id,trip_id,trip_headsign,block_id
 S3,S1,S3,,block_1
 U4,S1,U4,,block_1
 ICE,S1,ICE,,
+11_1,S1,11_1_1,,
+11_1,S1,11_1_2,,
+11_2,S1,11_2_1,,
+11_2,S1,11_2_2,,
 
 # stop_times.txt
 trip_id,arrival_time,departure_time,stop_id,stop_sequence,pickup_type,drop_off_type
@@ -80,6 +90,14 @@ U4,01:05:00,01:05:00,de:6412:10:6:1,0,0,0
 U4,01:10:00,01:10:00,FFM_HAUPT_U,1,0,0
 ICE,00:35:00,00:35:00,DA_10,0,0,0
 ICE,00:45:00,00:45:00,FFM_10,1,0,0
+11_1_1,12:00:00,12:00:00,PAUL1,0,0,0
+11_1_1,12:10:00,12:10:00,FFM_C,1,0,0
+11_1_2,12:15:00,12:15:00,PAUL1,0,0,0
+11_1_2,12:25:00,12:25:00,FFM_C,1,0,0
+11_2_1,12:05:00,12:05:00,FFM_B,0,0,0
+11_2_1,12:15:00,12:15:00,PAUL2,1,0,0
+11_2_2,12:20:00,12:20:00,FFM_B,0,0,0
+11_2_2,12:30:00,12:30:00,PAUL2,1,0,0
 
 # calendar_dates.txt
 service_id,date,exception_type
@@ -251,7 +269,7 @@ TEST(motis, one_to_many) {
         "50.10739;8.66333,"  // FFM_101
         "50.11404;8.67824,"  // FFM_HAUPT_S
         "50.113465;8.678477,"  // Near FFM_HAUPT
-        "50.112519;8.676565,"  // Far, near FFM_HAUPT
+        "50.112519;8.676565"  // Far, near FFM_HAUPT
         "&time=2019-04-30T23:30:00.000Z"
         "&maxTravelTime=3600"  // TODO To minutes
         "&maxMatchingDistance=250"
@@ -267,6 +285,81 @@ TEST(motis, one_to_many) {
                                           {404.0},
                                           {}}),
               durations);
+  }
+  // Oneway direction tests
+  {
+    // GET, forward, preTransitModes + direct
+    {
+      auto const durations = one_to_many_get(
+          "/api/experimental/one-to-many-intermodal"
+          "?one=50.107328;8.664836"
+          "&many="
+          "50.107812;8.664628,"  // FFM C  (shorter path)
+          "50.107519;8.664775,"  // FFM B  (longer path, due to oneway)
+          "50.110828;8.681587"  // PAUL2
+          "&time=2019-05-01T10:00:00.00Z"
+          "&maxTravelTime=3600"  // TODO To minutes
+          "&maxMatchingDistance=250"
+          "&maxDirectTime=3600"
+          "&directModes=BIKE"
+          "&preTransitModes=BIKE"
+          "&arriveBy=false"
+          "&cyclingSpeed=2.4");
+
+      EXPECT_EQ((std::vector<api::Duration>{{229.0}, {321.0}, {1980.0}}),
+                durations);
+    }
+    // POST, backward, postTransitModes + direct
+    {
+      auto const durations = one_to_many_post(api::OneToManyIntermodalParams{
+          .one_ = "50.107326,8.665237",
+          .many_ = {"test_FFM_B", "test_FFM_C", "test_PAUL1"},
+          .time_ = {std::chrono::time_point_cast<std::chrono::seconds>(
+              n::parse_time("2019-05-01T12:30:00.000+02:00", "%FT%T%Ez"))},
+          .maxTravelTime_ = 3600,
+          .maxMatchingDistance_ = 250.0,
+          .directModes_ = {{api::ModeEnum::BIKE}},
+          .postTransitModes_ = {{api::ModeEnum::BIKE}},
+          .arriveBy_ = true,
+          .cyclingSpeed_ = 2.2,
+          .maxDirectTime_ = 1800});
+
+      EXPECT_EQ((std::vector<api::Duration>{{228.0}, {335.0}, {1920.0}}),
+                durations);
+    }
+    // POST, forward, postTransitModes
+    {
+      auto const durations = one_to_many_post(api::OneToManyIntermodalParams{
+          .one_ = "test_PAUL1",
+          .many_ = {"test_FFM_C", "50.107326,8.665237"},
+          .time_ = {std::chrono::time_point_cast<std::chrono::seconds>(
+              n::parse_time("2019-05-01T12:00:00.000+02:00", "%FT%T%Ez"))},
+          .maxTravelTime_ = 1800,
+          .maxMatchingDistance_ = 250.0,
+          .postTransitModes_ = {{api::ModeEnum::BIKE}},
+          .arriveBy_ = false});
+
+      EXPECT_EQ((std::vector<api::Duration>{{720.0}, {900.0}}), durations);
+    }
+    // GET, backward, preTransitModes
+    {
+      auto const durations = one_to_many_get(
+          "/api/experimental/one-to-many-intermodal"
+          "?one=50.110828;8.681587"  // PAUL2
+          "&many="
+          "50.107812;8.664628,"  // FFM C
+          "50.107519;8.664775,"  // FFM B
+          "50.107328;8.664836"  // Long preTransit due to oneway
+          "&time=2019-05-01T10:20:00.00Z"
+          "&maxTravelTime=3600"  // TODO To minutes
+          "&maxMatchingDistance=250"
+          "&preTransitModes=BIKE"
+          "&arriveBy=true"
+          "&cyclingSpeed=2.4");
+
+      EXPECT_EQ((std::vector<api::Duration>{{1140.0}, {1080.0}, {1380.0}}),
+                durations);
+    }
   }
   // Bug: Should not connect final footpath with first or last mile
   {
