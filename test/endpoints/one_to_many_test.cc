@@ -1,43 +1,28 @@
-#include "motis/endpoints/one_to_many_post.h"
-#include "motis/endpoints/stop_times.h"  //  TODO Delete
 
 #include "gtest/gtest.h"
 
 #include <chrono>
-#include <sstream>
-
-#include "boost/asio/co_spawn.hpp"
-#include "boost/asio/detached.hpp"
-#include "boost/json.hpp"
 
 #ifdef NO_DATA
 #undef NO_DATA
 #endif
-#include "gtfsrt/gtfs-realtime.pb.h"
 
 #include "utl/init_from.h"
 
 #include "nigiri/common/parse_time.h"
-#include "nigiri/rt/gtfsrt_update.h"
 
 #include "motis-api/motis-api.h"
+
 #include "motis/config.h"
-#include "motis/data.h"
-#include "motis/elevators/elevators.h"
-#include "motis/elevators/parse_fasta.h"
 #include "motis/endpoints/one_to_many.h"
-#include "motis/endpoints/routing.h"
-#include "motis/gbfs/update.h"
+#include "motis/endpoints/one_to_many_post.h"
 #include "motis/import.h"
 
-#include "../util.h"
-
-namespace json = boost::json;
 using namespace std::string_view_literals;
 using namespace motis;
 using namespace date;
 using namespace std::chrono_literals;
-using namespace test;
+
 namespace n = nigiri;
 
 constexpr auto const kGTFS = R"(
@@ -428,107 +413,6 @@ TEST(motis, one_to_many) {
                     {960.0},  // FIXME Must start at FFM_HAUPT_S => 1380 | 1500
                 }),
                 walk_durations);
-    }
-  }
-
-  d.init_rtt(date::sys_days{2019_y / May / 1});
-  auto const stats =
-      n::rt::gtfsrt_update_msg(
-          *d.tt_, *d.rt_->rtt_, n::source_idx_t{0}, "test",
-          to_feed_msg({trip_update{
-                           .trip_ = {.trip_id_ = "ICE",
-                                     .start_time_ = {"00:35:00"},
-                                     .date_ = {"20190501"}},
-                           .stop_updates_ = {{.stop_id_ = "FFM_12",
-                                              .seq_ = std::optional{1U},
-                                              .ev_type_ = n::event_type::kArr,
-                                              .delay_minutes_ = 10,
-                                              .stop_assignment_ = "FFM_12"}}},
-                       alert{
-                           .header_ = "Yeah",
-                           .description_ = "Yeah!!",
-                           .entities_ = {{.trip_ =
-                                              {
-                                                  {.trip_id_ = "ICE",
-                                                   .start_time_ = {"00:35:00"},
-                                                   .date_ = {"20190501"}},
-                                              },
-                                          .stop_id_ = "DA"}}},
-                       alert{.header_ = "Hello",
-                             .description_ = "World",
-                             .entities_ =
-                                 {{.trip_ = {{.trip_id_ = "ICE",
-                                              .start_time_ = {"00:35:00"},
-                                              .date_ = {"20190501"}}}}}}},
-                      date::sys_days{2019_y / May / 1} + 9h));
-  EXPECT_EQ(1U, stats.total_entities_success_);
-  EXPECT_EQ(2U, stats.alert_total_resolve_success_);
-
-  // TODO Delete after
-  auto const stop_times = utl::init_from<ep::stop_times>(d).value();
-  EXPECT_EQ(d.rt_->rtt_.get(), stop_times.rt_->rtt_.get());
-
-  {
-    auto const res = stop_times(
-        "/api/v5/stoptimes?stopId=test_FFM_10"
-        "&time=2019-04-30T23:30:00.000Z"
-        "&arriveBy=true"
-        "&n=3"
-        "&language=de"
-        "&fetchStops=true");
-
-    auto const format_time = [&](auto&& t, char const* fmt = "%F %H:%M") {
-      return date::format(fmt, *t);
-    };
-
-    EXPECT_EQ("test_FFM_10", res.place_.stopId_);
-    EXPECT_EQ(3, res.stopTimes_.size());
-
-    auto const& ice = res.stopTimes_[0];
-    EXPECT_EQ(api::ModeEnum::HIGHSPEED_RAIL, ice.mode_);
-    EXPECT_EQ("20190501_00:35_test_ICE", ice.tripId_);
-    EXPECT_EQ("test_DA_10", ice.tripFrom_.stopId_);
-    EXPECT_EQ("test_FFM_12", ice.tripTo_.stopId_);
-    EXPECT_EQ("ICE", ice.displayName_);
-    EXPECT_EQ("FFM Hbf", ice.headsign_);
-    EXPECT_EQ("ICE", ice.routeId_);
-    EXPECT_EQ("2019-04-30 22:55", format_time(ice.place_.arrival_.value()));
-    EXPECT_EQ("2019-04-30 22:45",
-              format_time(ice.place_.scheduledArrival_.value()));
-    EXPECT_EQ(true, ice.realTime_);
-    EXPECT_EQ(1, ice.previousStops_->size());
-    EXPECT_EQ(1, ice.place_.alerts_->size());
-
-    auto const& sbahn = res.stopTimes_[2];
-    EXPECT_EQ(
-        api::ModeEnum::SUBWAY,
-        sbahn.mode_);  // mode can't change with block_id so sticks from U4
-    EXPECT_EQ("20190501_01:15_test_S3", sbahn.tripId_);
-    EXPECT_EQ("test_FFM_101", sbahn.tripFrom_.stopId_);
-    EXPECT_EQ("test_FFM_10", sbahn.tripTo_.stopId_);
-    EXPECT_EQ("S3", sbahn.displayName_);
-    EXPECT_EQ("FFM Hbf", sbahn.headsign_);
-    EXPECT_EQ("S3", sbahn.routeId_);
-    EXPECT_EQ("2019-04-30 23:20", format_time(sbahn.place_.arrival_.value()));
-    EXPECT_EQ("2019-04-30 23:20",
-              format_time(sbahn.place_.scheduledArrival_.value()));
-    EXPECT_EQ(false, sbahn.realTime_);
-    EXPECT_EQ(2, sbahn.previousStops_->size());
-  }
-
-  {
-    // same test with alerts off
-    auto const res2 = stop_times(
-        "/api/v5/stoptimes?stopId=test_FFM_10"
-        "&time=2019-04-30T23:30:00.000Z"
-        "&arriveBy=true"
-        "&n=3"
-        "&language=de"
-        "&fetchStops=true"
-        "&withAlerts=false");
-    EXPECT_EQ(3, res2.stopTimes_.size());
-    for (auto const& stopTime : res2.stopTimes_) {
-      EXPECT_FALSE(stopTime.place_.alerts_.has_value());
     }
   }
 }
