@@ -1648,9 +1648,8 @@ paths:
           required: false
           description: |
             Optional. Window in seconds around `time`.
-
-            If set, `n` is ignored.
             Limiting the response to those that are at most `window` seconds aways in time.
+            If both `n` and `window` are set, it uses whichever returns more.
           schema:
             type: integer
             minimum: 0
@@ -1673,8 +1672,8 @@ paths:
           in: query
           schema:
             type: integer
-          required: true
-          description: the number of events
+          required: false
+          description: the number of events (alternatively a window could be given)
 
         - name: radius
           in: query

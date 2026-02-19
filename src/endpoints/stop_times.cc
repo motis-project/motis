@@ -1,7 +1,6 @@
 #include "motis/endpoints/stop_times.h"
 
 #include <algorithm>
-#include <limits>
 #include <memory>
 
 #include "utl/concat.h"
@@ -283,11 +282,10 @@ std::vector<n::rt::run> get_events(
         });
     assert(!(*it)->finished());
     auto const current_time = (*it)->time();
-    if (max_time_diff.has_value() &&
-        std::chrono::abs(current_time - time) > *max_time_diff) {
-      break;
-    }
-    if (evs.size() >= count && current_time != last_time) {
+    if ((!max_time_diff.has_value() ||
+         (max_time_diff.has_value() &&
+          std::chrono::abs(current_time - time) > *max_time_diff)) &&
+        (evs.size() >= count && current_time != last_time)) {
       break;
     }
     evs.emplace_back((*it)->get());
@@ -357,8 +355,13 @@ api::stoptimes_response stop_times::operator()(
   auto const api_version = get_api_version(url);
 
   auto const max_results = config_.limits_.value().stoptimes_max_results_;
-  utl::verify<net::too_many_exception>(
-      query.n_ < max_results, "n={} > {} not allowed", query.n_, max_results);
+  utl::verify<net::bad_request_exception>(
+      query.n_.has_value() || query.window_.has_value(),
+      "neither 'n' nor 'window' is provided");
+  if (query.n_.has_value()) {
+    utl::verify<net::too_many_exception>(
+        query.n_ < max_results, "n={} > {} not allowed", query.n_, max_results);
+  }
   utl::verify<net::bad_request_exception>(
       query.stopId_.has_value() ||
           (query.center_.has_value() && query.radius_.has_value()),
@@ -443,14 +446,12 @@ api::stoptimes_response stop_times::operator()(
   auto const rtt = rt->rtt_.get();
   auto const ev_type =
       query.arriveBy_ ? n::event_type::kArr : n::event_type::kDep;
-  auto const count = query.window_.has_value()
-                         ? std::numeric_limits<std::size_t>::max()
-                         : static_cast<std::size_t>(query.n_);
   auto const window = query.window_.transform([](auto const w) {
     return std::chrono::duration_cast<n::duration_t>(std::chrono::seconds{w});
   });
   auto events =
-      get_events(locations, tt_, rtt, time, ev_type, dir, count, allowed_clasz,
+      get_events(locations, tt_, rtt, time, ev_type, dir,
+                 static_cast<std::size_t>(query.n_.value_or(0)), allowed_clasz,
                  query.withScheduledSkippedStops_, window);
 
   auto const to_tuple = [&](n::rt::run const& x) {

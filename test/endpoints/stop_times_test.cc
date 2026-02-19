@@ -283,7 +283,6 @@ TEST(motis, stop_times) {
         "&arriveBy=true"
         "&direction=LATER"
         "&window=1800"
-        "&n=1"
         "&language=de");
 
     auto const format_time = [&](auto&& t, char const* fmt = "%F %H:%M") {
@@ -308,7 +307,6 @@ TEST(motis, stop_times) {
         "&arriveBy=true"
         "&direction=EARLIER"
         "&window=1800"
-        "&n=1"
         "&language=de");
 
     auto const format_time = [&](auto&& t, char const* fmt = "%F %H:%M") {
@@ -320,6 +318,27 @@ TEST(motis, stop_times) {
       std::cout << "arr E: " << arr << std::endl;
       EXPECT_GE(arr, "2019-04-30 22:45");
       EXPECT_LE(arr, "2019-04-30 23:15");
+    }
+  }
+  {
+    // window query EARLIER (small window large n)
+    auto const res = stop_times(
+        "/api/v5/stoptimes?stopId=test_FFM_101"
+        "&time=2019-04-30T23:15:00.000Z"
+        "&arriveBy=true"
+        "&direction=LATER"
+        "&window=60"
+        "&n=2"
+        "&language=de");
+
+    auto const format_time = [&](auto&& t, char const* fmt = "%F %H:%M") {
+      return date::format(fmt, *t);
+    };
+
+    EXPECT_GT(res.stopTimes_.size(), 1);
+    for (auto const& stop_time : res.stopTimes_) {
+      auto const arr = format_time(stop_time.place_.arrival_.value());
+      std::cout << "arr E2: " << arr << std::endl;
     }
   }
 }
