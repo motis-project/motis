@@ -36,7 +36,8 @@ api::oneToMany_response one_to_many_direct(
     osr_parameters const&,
     api::PedestrianProfileEnum,
     api::ElevationCostsEnum,
-    osr::elevation_storage const*);
+    osr::elevation_storage const*,
+    bool with_distance);
 
 template <typename Params>
 api::oneToMany_response one_to_many_handle_request(
@@ -44,6 +45,9 @@ api::oneToMany_response one_to_many_handle_request(
     osr::ways const& w_,
     osr::lookup const& l_,
     osr::elevation_storage const* elevations_) {
+  // required field with default value, not std::optional
+  static_assert(std::is_same_v<decltype(query.withDistance_), bool>);
+
   auto const one = parse_location(query.one_, ';');
   utl::verify(one.has_value(), "{} is not a valid geo coordinate", query.one_);
 
@@ -57,7 +61,7 @@ api::oneToMany_response one_to_many_handle_request(
       w_, l_, query.mode_, *one, many, query.max_, query.maxMatchingDistance_,
       query.arriveBy_ ? osr::direction::kBackward : osr::direction::kForward,
       get_osr_parameters(query), api::PedestrianProfileEnum::FOOT,
-      query.elevationCosts_, elevations_);
+      query.elevationCosts_, elevations_, query.withDistance_);
 }
 
 template <typename Endpoint, typename Query>

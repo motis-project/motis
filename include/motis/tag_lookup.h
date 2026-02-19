@@ -31,6 +31,7 @@ struct tag_lookup {
   std::string id(nigiri::timetable const&,
                  nigiri::rt::run_stop,
                  nigiri::event_type) const;
+  std::string route_id(nigiri::rt::run_stop, nigiri::event_type) const;
 
   trip_id<std::string> id_fragments(nigiri::timetable const&,
                                     nigiri::rt::run_stop,
@@ -38,6 +39,8 @@ struct tag_lookup {
 
   nigiri::location_idx_t get_location(nigiri::timetable const&,
                                       std::string_view) const;
+  std::optional<nigiri::location_idx_t> find_location(nigiri::timetable const&,
+                                                      std::string_view) const;
   std::pair<nigiri::rt::run, nigiri::trip_idx_t> get_trip(
       nigiri::timetable const&,
       nigiri::rt_timetable const*,
