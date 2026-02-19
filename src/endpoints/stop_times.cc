@@ -283,8 +283,7 @@ std::vector<n::rt::run> get_events(
     assert(!(*it)->finished());
     auto const current_time = (*it)->time();
     if ((!max_time_diff.has_value() ||
-         (max_time_diff.has_value() &&
-          std::chrono::abs(current_time - time) > *max_time_diff)) &&
+         std::chrono::abs(current_time - time) > *max_time_diff) &&
         (evs.size() >= count && current_time != last_time)) {
       break;
     }
@@ -355,12 +354,19 @@ api::stoptimes_response stop_times::operator()(
   auto const api_version = get_api_version(url);
 
   auto const max_results = config_.limits_.value().stoptimes_max_results_;
+  auto const max_window = config_.limits_.value().stoptimes_max_window_;
   utl::verify<net::bad_request_exception>(
       query.n_.has_value() || query.window_.has_value(),
       "neither 'n' nor 'window' is provided");
   if (query.n_.has_value()) {
-    utl::verify<net::too_many_exception>(
-        query.n_ < max_results, "n={} > {} not allowed", query.n_, max_results);
+    utl::verify<net::too_many_exception>(*query.n_ <= max_results,
+                                         "n={} > {} not allowed", *query.n_,
+                                         max_results);
+  }
+  if (query.window_.has_value()) {
+    utl::verify<net::too_many_exception>(*query.window_ <= max_window,
+                                         "window={} > {} not allowed",
+                                         *query.window_, max_window);
   }
   utl::verify<net::bad_request_exception>(
       query.stopId_.has_value() ||

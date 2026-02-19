@@ -206,6 +206,7 @@ struct config {
   struct limits {
     bool operator==(limits const&) const = default;
     unsigned stoptimes_max_results_{256U};
+    unsigned stoptimes_max_window_{2U * 60U * 60U};
     unsigned plan_max_results_{256U};
     unsigned plan_max_search_window_minutes_{5760U};
     unsigned stops_max_results_{2048U};
