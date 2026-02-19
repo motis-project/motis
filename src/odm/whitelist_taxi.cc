@@ -213,35 +213,6 @@ bool prima::consume_whitelist_taxi_response(
   return true;
 }
 
-void prima::insert_requested_times() {
-  auto const in_inner = [&](boost::json::array& inner,
-                            std::vector<int64_t> const& requested) {
-    for (auto i = 0U; i != inner.size(); ++i) {
-      if (inner[i].is_null()) {
-        continue;
-      }
-      auto& entry = inner[i].as_object();
-      entry["requestedTime"] = requested[i];
-    }
-  };
-
-  auto const in_outer =
-      [&](boost::json::array& outer,
-          std::vector<std::vector<int64_t>> const& requested) {
-        for (auto i = 0U; i != outer.size(); ++i) {
-          auto& inner = outer[i].as_array();
-          in_inner(inner, requested[i]);
-        }
-      };
-
-  in_outer(whitelist_response_.at("start").as_array(),
-           whitelist_requested_first_mile_times_);
-  in_outer(whitelist_response_.at("target").as_array(),
-           whitelist_requested_last_mile_times_);
-  in_inner(whitelist_response_.at("direct").as_array(),
-           whitelist_requested_direct_times_);
-}
-
 std::vector<std::vector<std::int64_t>> collect_requested_times(
     std::vector<n::routing::start> const& rides, which_mile wm) {
   auto result = std::vector<std::vector<std::int64_t>>{};
@@ -316,7 +287,6 @@ bool prima::whitelist_taxi(std::vector<nr::journey>& taxi_journeys,
     return false;
   }
   whitelist_response_ = json::parse(whitelist_response.value()).as_object();
-  insert_requested_times();
   return true;
 }
 

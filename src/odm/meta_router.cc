@@ -545,18 +545,23 @@ api::plan_response meta_router::run() {
             auto const match_times = [&](motis::api::Leg const& leg,
                                          boost::json::array const& entries)
                 -> std::optional<std::string> {
-              for (auto e = 0U; e != entries.size(); ++e) {
-                if (entries[e].is_null()) {
-                  continue;
-                }
-                auto const& entry = entries[e].as_object();
-                if (to_unix(entry.at("pickupTime").as_int64()) ==
-                        leg.startTime_ &&
-                    to_unix(entry.at("dropoffTime").as_int64()) ==
-                        leg.endTime_) {
-                  return boost::json::serialize(entry);
-                }
+              auto const it = std::find_if(
+                  std::begin(entries), std::end(entries),
+                  [&](boost::json::value const& json_entry) {
+                    if (json_entry.is_null()) {
+                      return false;
+                    }
+                    auto const& object_entry = json_entry.as_object();
+                    return to_unix(object_entry.at("pickupTime").as_int64()) ==
+                               leg.startTime_ &&
+                           to_unix(object_entry.at("dropoffTime").as_int64()) ==
+                               leg.endTime_;
+                  });
+
+              if (it != std::end(entries)) {
+                return boost::json::serialize(it->as_object());
               }
+
               return std::nullopt;
             };
 
@@ -564,18 +569,20 @@ api::plan_response meta_router::run() {
                 [&](motis::api::Leg const& leg, boost::json::array const& outer,
                     std::vector<nigiri::location_idx_t> const& locations,
                     bool const check_to) -> std::optional<std::string> {
-              auto& stop_id = check_to ? leg.to_.stopId_ : leg.from_.stopId_;
-              for (auto s = 0U; s < locations.size(); ++s) {
-                if (stop_id != r_.tags_->id(*tt_, locations[s])) {
+              auto const& stop_id =
+                  check_to ? leg.to_.stopId_ : leg.from_.stopId_;
+              for (auto const [loc, outer_value] : utl::zip(locations, outer)) {
+                if (stop_id != r_.tags_->id(*tt_, loc)) {
                   continue;
                 }
-                auto& inner = outer[s].as_array();
+                auto const& inner = outer_value.as_array();
                 if (auto result = match_times(leg, inner)) {
                   return result;
                 }
               }
               return std::nullopt;
             };
+
             if (!was_whitelist_response_valid) {
               return response;
             }

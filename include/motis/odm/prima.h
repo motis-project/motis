@@ -102,8 +102,6 @@ struct prima {
   void extract_taxis_for_persisting(
       std::vector<nigiri::routing::journey> const& journeys);
 
-  void insert_requested_times();
-
   api::plan_params const& query_;
 
   boost::urls::url taxi_blacklist_;
