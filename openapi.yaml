@@ -1363,6 +1363,55 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Duration"
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    post:
+      tags:
+        - routing
+      summary: |
+        One to many routing
+        Computes the minimal duration from one place to many or vice versa.
+        The order in the response array corresponds to the order of coordinates of the \`many\` parameter in the query.
+      operationId: oneToManyIntermodalPost
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OneToManyIntermodalParams"
+      responses:
+        "200":
+          description: |
+            A list of durations.
+            If no path was found, the object is empty.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Duration"
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 
   /api/v1/one-to-all:
     get:
