@@ -2,9 +2,12 @@
 
 #include <optional>
 
-#include "nigiri/types.h"
 #include "cista/containers/hash_map.h"
+
 #include "geo/box.h"
+
+#include "nigiri/types.h"
+
 #include "osr/routing/profile.h"
 
 #include "motis/config.h"
