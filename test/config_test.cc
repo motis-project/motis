@@ -87,7 +87,6 @@ elevators: false
 street_routing: true
 limits:
   stoptimes_max_results: 256
-  stoptimes_max_window: 7200
   plan_max_results: 256
   plan_max_search_window_minutes: 5760
   stops_max_results: 2048

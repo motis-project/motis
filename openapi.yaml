@@ -1673,7 +1673,9 @@ paths:
           schema:
             type: integer
           required: false
-          description: the number of events (alternatively a window could be given)
+          description: |
+            Minimum number of events to return. If both `n` and `window`
+            are provided, the API uses whichever returns more events.
 
         - name: radius
           in: query
