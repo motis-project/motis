@@ -1,4 +1,3 @@
-
 #include "gtest/gtest.h"
 
 #include <chrono>
@@ -186,8 +185,8 @@ TEST(motis, one_to_many) {
             n::parse_time("2019-05-01T01:25:00.000+02:00", "%FT%T%Ez"))},
         .maxTravelTime_ = 3600,
         .maxMatchingDistance_ = 250.0,
-        .directModes_ = {{api::ModeEnum::WALK}},  // TODO Should be default
         .arriveBy_ = true,
+        .directModes_ = {{api::ModeEnum::WALK}},  // TODO Should be default
         .maxPreTransitTime_ = 360,
         .maxDirectTime_ = 300});
 
@@ -231,9 +230,9 @@ TEST(motis, one_to_many) {
             n::parse_time("2019-05-01T00:55:00.000+02:00", "%FT%T%Ez"))},
         .maxTravelTime_ = 3600,
         .maxMatchingDistance_ = 250.0,
-        .directModes_ = {{api::ModeEnum::WALK}},  // TODO Should be default
         .arriveBy_ = false,
         .useRoutedTransfers_ = true,
+        .directModes_ = {{api::ModeEnum::WALK}},  // TODO Should be default
         .maxPreTransitTime_ = 360});  // Too short to reach U4
 
     EXPECT_EQ((std::vector<api::Duration>{{},
@@ -311,10 +310,10 @@ TEST(motis, one_to_many) {
               n::parse_time("2019-05-01T12:30:00.000+02:00", "%FT%T%Ez"))},
           .maxTravelTime_ = 3600,
           .maxMatchingDistance_ = 250.0,
-          .directModes_ = {{api::ModeEnum::BIKE}},
-          .postTransitModes_ = {{api::ModeEnum::BIKE}},
           .arriveBy_ = true,
           .cyclingSpeed_ = 2.2,
+          .directModes_ = {{api::ModeEnum::BIKE}},
+          .postTransitModes_ = {{api::ModeEnum::BIKE}},
           .maxDirectTime_ = 1800});
 
       EXPECT_EQ((std::vector<api::Duration>{{228.0}, {335.0}, {1920.0}}),
@@ -329,8 +328,8 @@ TEST(motis, one_to_many) {
               n::parse_time("2019-05-01T12:00:00.000+02:00", "%FT%T%Ez"))},
           .maxTravelTime_ = 1800,
           .maxMatchingDistance_ = 250.0,
-          .postTransitModes_ = {{api::ModeEnum::BIKE}},
-          .arriveBy_ = false});
+          .arriveBy_ = false,
+          .postTransitModes_ = {{api::ModeEnum::BIKE}}});
 
       EXPECT_EQ((std::vector<api::Duration>{{720.0}, {840.0}}), durations);
     }
