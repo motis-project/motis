@@ -61,11 +61,7 @@ void prima::extract_taxis_for_persisting(
   whitelist_last_mile_locations_.clear();
 
   for (auto const& j : journeys) {
-    if (j.legs_.empty()) {
-      continue;
-    }
-
-    if (j.legs_.size() == 1) {
+    if (j.legs_.size() <= 1) {
       continue;
     }
 
