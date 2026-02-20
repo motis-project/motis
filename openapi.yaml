@@ -1551,7 +1551,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Itinerary' 
+                $ref: '#/components/schemas/Itinerary'
         '422':
           description: Unprocessable Entity
           content:
@@ -3744,6 +3744,7 @@ components:
         - startTime
         - endTime
         - transfers
+        - id
         - legs
       properties:
         duration:
@@ -3760,6 +3761,9 @@ components:
         transfers:
           type: integer
           description: The number of transfers this trip has.
+        id:
+          type: string
+          description: TODO
         legs:
           description: Journey legs
           type: array
