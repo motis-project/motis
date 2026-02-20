@@ -229,7 +229,7 @@ api::oneToManyIntermodal_response run_one_to_many_intermodal(
                 std::chrono::duration_cast<std::chrono::seconds>(
                     n::duration_t{dur})};
           })
-          .value_or(kInfinityDuration);
+          .value_or(nigiri::routing::kMaxTravelTime);
   auto const max_matching_distance = query.maxMatchingDistance_.value_or(250.0);
   auto const arrive_by = query.arriveBy_.value_or(false);
 

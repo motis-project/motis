@@ -353,6 +353,33 @@ TEST(motis, one_to_many) {
                 durations);
     }
   }
+  // Transfer time settings  (FIXME Times are also added for final footpath)
+  {
+    // minTransferTime
+    {
+      auto const durations = one_to_many_get(
+          "/api/experimental/one-to-many-intermodal"
+          "?one=49.872710;8.631168"  // Near DA
+          "&many=50.113487;8.678913"  // Near FFM_HAUPT
+          "&time=2019-04-30T22:30:00.00Z"
+          "&useRoutedTransfers=true"
+          "&minTransferTime=21");
+
+      EXPECT_EQ((std::vector<api::Duration>{{4320.0}}), durations);
+    }
+    // additionalTransferTime
+    {
+      auto const durations = one_to_many_post(api::OneToManyIntermodalParams{
+          .one_ = "49.872710, 8.631168",  // Near DA
+          .many_ = {"50.113487, 8.678913"},  // Near FFM_HAUPT
+          .time_ = {std::chrono::time_point_cast<std::chrono::seconds>(
+              n::parse_time("2019-05-01T00:30:00.000+02:00", "%FT%T%Ez"))},
+          .additionalTransferTime_ = 17,
+          .useRoutedTransfers_ = true});
+
+      EXPECT_EQ((std::vector<api::Duration>{{4200.0}}), durations);
+    }
+  }
   // Bug: Should not connect final footpath with first or last mile
   {
     auto const many = std::vector<std::string>{
