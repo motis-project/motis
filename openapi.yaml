@@ -1643,6 +1643,17 @@ paths:
             in case `EARLIER` is selected and the previous `n`
             arrivals / departures if `LATER` is selected.
 
+        - name: window
+          in: query
+          required: false
+          description: |
+            Optional. Window in seconds around `time`.
+            Limiting the response to those that are at most `window` seconds aways in time.
+            If both `n` and `window` are set, it uses whichever returns more.
+          schema:
+            type: integer
+            minimum: 0
+
         - name: mode
           in: query
           schema:
@@ -1661,8 +1672,10 @@ paths:
           in: query
           schema:
             type: integer
-          required: true
-          description: the number of events
+          required: false
+          description: |
+            Minimum number of events to return. If both `n` and `window`
+            are provided, the API uses whichever returns more events.
 
         - name: radius
           in: query
