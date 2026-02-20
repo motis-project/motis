@@ -88,16 +88,32 @@
 			return;
 		}
 
-		const max = lngLatToStr(expandedBounds.getNorthWest());
-		const min = lngLatToStr(expandedBounds.getSouthEast());
 		const token = ++requestToken;
-		console.debug('[Routes] requesting routes', { min, max, zoom });
 
-		const { data, error } = await routes({ query: { max, min, zoom } });
+		const requestWithBounds = async (requestBounds: maplibregl.LngLatBounds) => {
+			const max = lngLatToStr(requestBounds.getNorthWest());
+			const min = lngLatToStr(requestBounds.getSouthEast());
+			console.debug('[Routes] requesting routes', { min, max, zoom });
+			return { ...(await routes({ query: { max, min, zoom } })), requestBounds };
+		};
+
+		let { data, error, response, requestBounds } = await requestWithBounds(expandedBounds);
+
 		if (token !== requestToken) {
 			return;
 		}
-		if (error) {
+
+		if (error && response?.status === 422) {
+			console.debug(
+				'[Routes] routes request returned 422 for expanded bounds, retrying with map bounds'
+			);
+			({ data, error, response, requestBounds } = await requestWithBounds(mapBounds));
+			if (token !== requestToken) {
+				return;
+			}
+		}
+
+		if (error || !data) {
 			console.error('[Routes] routes request failed', error);
 			return;
 		}
@@ -106,7 +122,7 @@
 		);
 
 		routesData = data;
-		loadedBounds = expandedBounds;
+		loadedBounds = requestBounds;
 		loadedZoom = zoom;
 	};
 
