@@ -312,8 +312,8 @@ TEST(motis, one_to_many) {
           .maxMatchingDistance_ = 250.0,
           .arriveBy_ = true,
           .cyclingSpeed_ = 2.2,
-          .directModes_ = {{api::ModeEnum::BIKE}},
           .postTransitModes_ = {{api::ModeEnum::BIKE}},
+          .directModes_ = {{api::ModeEnum::BIKE}},
           .maxDirectTime_ = 1800});
 
       EXPECT_EQ((std::vector<api::Duration>{{228.0}, {335.0}, {1920.0}}),
