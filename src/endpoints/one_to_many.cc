@@ -250,8 +250,8 @@ api::oneToManyIntermodal_response run_one_to_many_intermodal(
                 query.maxMatchingDistance_,
                 query.arriveBy_ ? osr::direction::kBackward
                                 : osr::direction::kForward,
-                osr_params, pedestrian_profile, elevation_costs,
-                ep.elevations_, false);
+                osr_params, pedestrian_profile, elevation_costs, ep.elevations_,
+                false);
           })
           .value_or(api::oneToManyIntermodal_response{many.size()});
 
