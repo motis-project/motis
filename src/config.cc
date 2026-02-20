@@ -173,6 +173,14 @@ void config::verify_input_files_exist() const {
         }
       }
     }
+
+    if (timetable_->route_shapes_) {
+      if (timetable_->route_shapes_->clasz_) {
+        for (auto const& c : *timetable_->route_shapes_->clasz_) {
+          nigiri::to_clasz(c.first);
+        }
+      }
+    }
   }
 }
 

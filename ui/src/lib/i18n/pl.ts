@@ -158,7 +158,20 @@ const translations: Translations = {
 	rideThroughAllowed: 'Przejazd dozwolony',
 	rideThroughNotAllowed: 'Przejazd niedozwolony',
 	rideEndAllowed: 'Parkowanie dozwolone',
-	rideEndNotAllowed: 'Parkowanie tylko na stacjach'
+	rideEndNotAllowed: 'Parkowanie tylko na stacjach',
+	DEBUG_BUS_ROUTE: 'Trasa autobusu (Debug)',
+	DEBUG_RAILWAY_ROUTE: 'Trasa kolejowa (Debug)',
+	DEBUG_FERRY_ROUTE: 'Trasa promu (Debug)',
+	routes: (n: number) => {
+		switch (n) {
+			case 0:
+				return 'Brak trasy';
+			case 1:
+				return '1 trasa';
+			default:
+				return `${n} trasy`;
+		}
+	}
 };
 
 export default translations;

@@ -48,6 +48,7 @@
 		via = $bindable(),
 		viaMinimumStay = $bindable(),
 		viaLabels = $bindable(),
+		hasDebug = false,
 		additionalComponents
 	}: {
 		useRoutedTransfers: boolean;
@@ -75,6 +76,7 @@
 		via: undefined | Location[];
 		viaMinimumStay: undefined | number[];
 		viaLabels: Record<string, string>;
+		hasDebug: boolean;
 		additionalComponents?: Snippet;
 	} = $props();
 
@@ -124,6 +126,10 @@
 	);
 	let allowStreetRouting = $derived(serverConfig?.hasStreetRouting);
 	let allowRoutedTransfers = $derived(serverConfig?.hasRoutedTransfers);
+
+	let possibleModes = $derived(
+		hasDebug ? prePostDirectModes : prePostDirectModes.filter((m) => !m.startsWith('DEBUG_'))
+	);
 </script>
 
 <Button variant="ghost" onclick={() => (expanded = !expanded)}>
@@ -211,7 +217,7 @@
 				disabled={!allowStreetRouting}
 				bind:modes={preTransitModes}
 				bind:maxTransitTime={maxPreTransitTime}
-				possibleModes={prePostDirectModes}
+				{possibleModes}
 				possibleMaxTransitTime={possiblePrePostDurations}
 				bind:ignoreRentalReturnConstraints={ignorePreTransitRentalReturnConstraints}
 				bind:providerGroups={preTransitProviderGroups}
@@ -223,7 +229,7 @@
 				disabled={!allowStreetRouting}
 				bind:modes={postTransitModes}
 				bind:maxTransitTime={maxPostTransitTime}
-				possibleModes={prePostDirectModes}
+				{possibleModes}
 				possibleMaxTransitTime={possiblePrePostDurations}
 				bind:ignoreRentalReturnConstraints={ignorePostTransitRentalReturnConstraints}
 				bind:providerGroups={postTransitProviderGroups}
@@ -236,7 +242,7 @@
 					disabled={!allowStreetRouting}
 					bind:modes={directModes}
 					bind:maxTransitTime={maxDirectTime}
-					possibleModes={prePostDirectModes}
+					{possibleModes}
 					possibleMaxTransitTime={possibleDirectDurations}
 					bind:ignoreRentalReturnConstraints={ignoreDirectRentalReturnConstraints}
 					bind:providerGroups={directProviderGroups}
