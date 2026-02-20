@@ -129,7 +129,7 @@ TEST(motis, one_to_many) {
         "50.114520;8.673050,"  // Too far from FFM_HAUPT_U
         "50.114773;8.672604"  // Far, near FFM_HAUPT
         "&time=2019-04-30T22:30:00.000Z"
-        "&maxTravelTime=3600"  // TODO To minutes
+        "&maxTravelTime=60"
         "&maxMatchingDistance=250"
         "&maxDirectTime=540"
         "&maxPostTransitTime=420"
@@ -183,7 +183,7 @@ TEST(motis, one_to_many) {
             },
         .time_ = {std::chrono::time_point_cast<std::chrono::seconds>(
             n::parse_time("2019-05-01T01:25:00.000+02:00", "%FT%T%Ez"))},
-        .maxTravelTime_ = 3600,
+        .maxTravelTime_ = 60,
         .maxMatchingDistance_ = 250.0,
         .arriveBy_ = true,
         .directModes_ = {{api::ModeEnum::WALK}},  // TODO Should be default
@@ -228,7 +228,7 @@ TEST(motis, one_to_many) {
             },
         .time_ = {std::chrono::time_point_cast<std::chrono::seconds>(
             n::parse_time("2019-05-01T00:55:00.000+02:00", "%FT%T%Ez"))},
-        .maxTravelTime_ = 3600,
+        .maxTravelTime_ = 60,
         .maxMatchingDistance_ = 250.0,
         .arriveBy_ = false,
         .useRoutedTransfers_ = true,
@@ -258,7 +258,7 @@ TEST(motis, one_to_many) {
         "50.113465;8.678477,"  // Near FFM_HAUPT
         // "50.112519;8.676565"  // FIXME Far, near FFM_HAUPT
         "&time=2019-04-30T23:30:00.000Z"
-        "&maxTravelTime=3600"  // TODO To minutes
+        "&maxTravelTime=60"
         "&maxMatchingDistance=250"
         "&maxDirectTime=540"
         "&maxPostTransitTime=240"
@@ -287,7 +287,7 @@ TEST(motis, one_to_many) {
           "50.107519;8.664775,"  // FFM B  (longer path, due to oneway)
           "50.110828;8.681587"  // PAUL2
           "&time=2019-05-01T10:00:00.00Z"
-          "&maxTravelTime=3600"  // TODO To minutes
+          "&maxTravelTime=60"
           "&maxMatchingDistance=250"
           "&maxDirectTime=3600"
           "&directModes=BIKE"
@@ -308,7 +308,7 @@ TEST(motis, one_to_many) {
           .many_ = {"test_FFM_B", "test_FFM_C", "test_PAUL1"},
           .time_ = {std::chrono::time_point_cast<std::chrono::seconds>(
               n::parse_time("2019-05-01T12:30:00.000+02:00", "%FT%T%Ez"))},
-          .maxTravelTime_ = 3600,
+          .maxTravelTime_ = 60,
           .maxMatchingDistance_ = 250.0,
           .arriveBy_ = true,
           .cyclingSpeed_ = 2.2,
@@ -326,7 +326,7 @@ TEST(motis, one_to_many) {
           .many_ = {"test_FFM_C", "50.107326,8.665237"},  // includes C -> B
           .time_ = {std::chrono::time_point_cast<std::chrono::seconds>(
               n::parse_time("2019-05-01T12:00:00.000+02:00", "%FT%T%Ez"))},
-          .maxTravelTime_ = 1800,
+          .maxTravelTime_ = 30,
           .maxMatchingDistance_ = 250.0,
           .arriveBy_ = false,
           .postTransitModes_ = {{api::ModeEnum::BIKE}}});
@@ -343,7 +343,7 @@ TEST(motis, one_to_many) {
           "50.107519;8.664775,"  // FFM B
           "50.107328;8.664836"  // Long preTransit due to oneway  (C -> B)
           "&time=2019-05-01T10:20:00.00Z"
-          "&maxTravelTime=3600"  // TODO To minutes
+          "&maxTravelTime=60"
           "&maxMatchingDistance=250"
           "&preTransitModes=BIKE"
           "&arriveBy=true"
@@ -366,7 +366,7 @@ TEST(motis, one_to_many) {
           .many_ = many,
           .time_ = {std::chrono::time_point_cast<std::chrono::seconds>(
               n::parse_time("2019-05-01T01:00:00.000+02:00", "%FT%T%Ez"))},
-          .maxTravelTime_ = 1800,
+          .maxTravelTime_ = 30,
           .maxMatchingDistance_ = 250.0,
           .arriveBy_ = false,
           .useRoutedTransfers_ = true,
@@ -392,7 +392,7 @@ TEST(motis, one_to_many) {
               .many_ = many,
               .time_ = {std::chrono::time_point_cast<std::chrono::seconds>(
                   n::parse_time("2019-05-01T01:00:00.000+02:00", "%FT%T%Ez"))},
-              .maxTravelTime_ = 1800,
+              .maxTravelTime_ = 30,
               .maxMatchingDistance_ = 250.0,
               .arriveBy_ = false,
               .useRoutedTransfers_ = true,
@@ -412,7 +412,7 @@ TEST(motis, one_to_many) {
               .many_ = many,
               .time_ = {std::chrono::time_point_cast<std::chrono::seconds>(
                   n::parse_time("2019-05-01T01:00:00.000+02:00", "%FT%T%Ez"))},
-              .maxTravelTime_ = 1800,
+              .maxTravelTime_ = 30,
               .maxMatchingDistance_ = 250.0,
               .arriveBy_ = false,
               .useRoutedTransfers_ = true,

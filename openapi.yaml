@@ -1107,7 +1107,7 @@ paths:
           in: query
           required: false
           description: |
-            The maximum travel time in seconds.
+            The maximum travel time in minutes.
             If not provided, the routing uses the value
             hardcoded in the server which is usually quite high.
 
@@ -1156,9 +1156,9 @@ paths:
           in: query
           required: false
           description: |
-            Optional. Default is 0 seconds.
+            Optional. Default is 0 minutes.
 
-            Minimum transfer time for each transfer in seconds.
+            Minimum transfer time for each transfer in minutes.
           schema:
             type: integer
 
@@ -1166,9 +1166,9 @@ paths:
           in: query
           required: false
           description: |
-            Optional. Default is 0 seconds.
+            Optional. Default is 0 minutes.
 
-            Additional transfer time reserved for each transfer in seconds.
+            Additional transfer time reserved for each transfer in minutes.
           schema:
             type: integer
 
@@ -4213,7 +4213,7 @@ components:
           format: date-time
         maxTravelTime:
           description: |
-            The maximum travel time in seconds.
+            The maximum travel time in minutes.
             If not provided, the routing uses the value
             hardcoded in the server which is usually quite high.
 
@@ -4250,15 +4250,15 @@ components:
           type: integer
         minTransferTime:
           description: |
-            Optional. Default is 0 seconds.
+            Optional. Default is 0 minutes.
 
-            Minimum transfer time for each transfer in seconds.
+            Minimum transfer time for each transfer in minutes.
           type: integer
         additionalTransferTime:
           description: |
-            Optional. Default is 0 seconds.
+            Optional. Default is 0 minutes.
 
-            Additional transfer time reserved for each transfer in seconds.
+            Additional transfer time reserved for each transfer in minutes.
           type: integer
         transferTimeFactor:
           description: |

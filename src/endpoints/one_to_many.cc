@@ -149,9 +149,9 @@ void update_transit_durations(
                            query.additionalTransferTime_ == 0 &&
                            query.transferTimeFactor_ == 1.0),
               .min_transfer_time_ =
-                  n::duration_t{query.minTransferTime_.value_or(0) / 60},
+                  n::duration_t{query.minTransferTime_.value_or(0)},
               .additional_time_ =
-                  n::duration_t{query.additionalTransferTime_.value_or(0) / 60},
+                  n::duration_t{query.additionalTransferTime_.value_or(0)},
               .factor_ =
                   static_cast<float>(query.transferTimeFactor_.value_or(1.0))},
   };
@@ -225,7 +225,9 @@ api::oneToManyIntermodal_response run_one_to_many_intermodal(
   auto const max_travel_time =
       query.maxTravelTime_
           .and_then([](std::int64_t const dur) {
-            return std::optional{std::chrono::seconds{dur}};
+            return std::optional{
+                std::chrono::duration_cast<std::chrono::seconds>(
+                    n::duration_t{dur})};
           })
           .value_or(kInfinityDuration);
   auto const max_matching_distance = query.maxMatchingDistance_.value_or(250.0);
