@@ -5,7 +5,6 @@
 #include <optional>
 
 #include "utl/enumerate.h"
-#include "utl/overloaded.h"
 
 #include "nigiri/common/delta_t.h"
 #include "nigiri/routing/one_to_all.h"
@@ -70,39 +69,40 @@ void update_transit_durations(
     place_t const& one,
     std::vector<place_t> const& many,
     auto const& time,
+    bool const arrive_by,
     std::chrono::seconds const max_travel_time,
+    double const max_matching_distance,
     api::PedestrianProfileEnum const pedestrian_profile,
     api::ElevationCostsEnum const elevation_costs,
     osr_parameters const& osr_params) {
   // TODO Should this always be calculated?
   // Code is similar to One-to-All
-  auto const one_modes = deduplicate(
-      (query.arriveBy_ ? query.postTransitModes_ : query.preTransitModes_)
-          .value_or(std::vector{api::ModeEnum::WALK}));
-  auto const many_modes = deduplicate(
-      (query.arriveBy_ ? query.preTransitModes_ : query.postTransitModes_)
-          .value_or(std::vector{api::ModeEnum::WALK}));
+  auto const one_modes =
+      deduplicate((arrive_by ? query.postTransitModes_ : query.preTransitModes_)
+                      .value_or(std::vector{api::ModeEnum::WALK}));
+  auto const many_modes =
+      deduplicate((arrive_by ? query.preTransitModes_ : query.postTransitModes_)
+                      .value_or(std::vector{api::ModeEnum::WALK}));
   auto const max_prepost_seconds = std::min(
       max_travel_time,
       std::chrono::seconds{ep.config_.limits_.value()
                                .street_routing_max_prepost_transit_seconds_});
   auto const one_max_seconds =
-      std::min(std::chrono::seconds{(query.arriveBy_ ? query.maxPostTransitTime_
-                                                     : query.maxPreTransitTime_)
+      std::min(std::chrono::seconds{(arrive_by ? query.maxPostTransitTime_
+                                               : query.maxPreTransitTime_)
                                         .value_or(900)},
                max_prepost_seconds);
-  auto const many_max_seconds = std::min(
-      std::chrono::seconds{(query.arriveBy_ ? query.maxPreTransitTime_
-                                            : query.maxPostTransitTime_)
-                               .value_or(900)},
-      max_prepost_seconds);
+  auto const many_max_seconds =
+      std::min(std::chrono::seconds{(arrive_by ? query.maxPreTransitTime_
+                                               : query.maxPostTransitTime_)
+                                        .value_or(900)},
+               max_prepost_seconds);
   auto const one_dir =
-      query.arriveBy_ ? osr::direction::kBackward : osr::direction::kForward;
-  auto const unreachable = query.arriveBy_
-                               ? n::kInvalidDelta<n::direction::kBackward>
-                               : n::kInvalidDelta<n::direction::kForward>;
+      arrive_by ? osr::direction::kBackward : osr::direction::kForward;
+  auto const unreachable = arrive_by ? n::kInvalidDelta<n::direction::kBackward>
+                                     : n::kInvalidDelta<n::direction::kForward>;
   auto const delta_to_seconds = [&](n::delta_t const d) -> double {
-    return 60.0 * (query.arriveBy_ ? -1 * d : d);
+    return 60.0 * (arrive_by ? -1 * d : d);
   };
   auto const duration_to_seconds = [](n::duration_t const d) {
     return 60 * d.count();
@@ -123,11 +123,11 @@ void update_transit_durations(
       .start_ = r.get_offsets(nullptr, one, one_dir, one_modes, std::nullopt,
                               std::nullopt, std::nullopt, std::nullopt, false,
                               osr_params, pedestrian_profile, elevation_costs,
-                              one_max_seconds, query.maxMatchingDistance_,
-                              gbfs_rd, prepare_stats),
+                              one_max_seconds, max_matching_distance, gbfs_rd,
+                              prepare_stats),
       .td_start_ = r.get_td_offsets(nullptr, nullptr, one, one_dir, one_modes,
                                     osr_params, pedestrian_profile,
-                                    elevation_costs, query.maxMatchingDistance_,
+                                    elevation_costs, max_matching_distance,
                                     one_max_seconds, time, prepare_stats),
       .max_transfers_ = static_cast<std::uint8_t>(
           query.maxTransfers_.value_or(n::routing::kMaxTransfers)),
@@ -163,7 +163,7 @@ void update_transit_durations(
   // Compute and update durations using transits
 
   auto const state =
-      query.arriveBy_
+      arrive_by
           ? n::routing::one_to_all<n::direction::kBackward>(ep.tt_, nullptr, q)
           : n::routing::one_to_all<n::direction::kForward>(ep.tt_, nullptr, q);
 
@@ -178,18 +178,18 @@ void update_transit_durations(
     auto best = kInfinity;
     auto const offsets = r.get_offsets(
         nullptr, l,
-        query.arriveBy_ ? osr::direction::kForward : osr::direction::kBackward,
+        arrive_by ? osr::direction::kForward : osr::direction::kBackward,
         many_modes, std::nullopt, std::nullopt, std::nullopt, std::nullopt,
         false, osr_params, pedestrian_profile, elevation_costs,
-        many_max_seconds, query.maxMatchingDistance_, gbfs_rd, prepare_stats);
+        many_max_seconds, max_matching_distance, gbfs_rd, prepare_stats);
 
     for (auto const offset : offsets) {
       auto const loc = offset.target();
       if (reachable.test(to_idx(loc))) {
         auto const fastest = n::routing::get_fastest_one_to_all_offsets(
             ep.tt_, state,
-            query.arriveBy_ ? n::direction::kBackward : n::direction::kForward,
-            loc, time, q.max_transfers_);
+            arrive_by ? n::direction::kBackward : n::direction::kForward, loc,
+            time, q.max_transfers_);
         auto const total = delta_to_seconds(fastest.duration_) +
                            duration_to_seconds(offset.duration());
         if (total < best) {
@@ -222,6 +222,14 @@ api::oneToManyIntermodal_response run_one_to_many_intermodal(
 
   auto const time = std::chrono::time_point_cast<std::chrono::minutes>(
       *query.time_.value_or(openapi::now()));
+  auto const max_travel_time =
+      query.maxTravelTime_
+          .and_then([](std::int64_t const dur) {
+            return std::optional{std::chrono::seconds{dur}};
+          })
+          .value_or(kInfinityDuration);
+  auto const max_matching_distance = query.maxMatchingDistance_.value_or(250.0);
+  auto const arrive_by = query.arriveBy_.value_or(false);
 
   auto const pedestrian_profile =
       query.pedestrianProfile_.value_or(api::PedestrianProfileEnum::FOOT);
@@ -242,21 +250,22 @@ api::oneToManyIntermodal_response run_one_to_many_intermodal(
             return one_to_many_direct(
                 *ep.w_, *ep.l_, direct_modes.at(0), to_location(one),
                 utl::to_vec(many, to_location),
-                std::min({query.maxDirectTime_.value_or(query.maxTravelTime_),
-                          query.maxTravelTime_,
-                          static_cast<std::int64_t>(
-                              ep.config_.get_limits()
-                                  .street_routing_max_direct_seconds_)}),
-                query.maxMatchingDistance_,
-                query.arriveBy_ ? osr::direction::kBackward
-                                : osr::direction::kForward,
+                static_cast<double>(std::min(
+                    {query.maxDirectTime_.value_or(max_travel_time.count()),
+                     static_cast<std::int64_t>(max_travel_time.count()),
+                     static_cast<std::int64_t>(
+                         ep.config_.get_limits()
+                             .street_routing_max_direct_seconds_)})),
+                max_matching_distance,
+                arrive_by ? osr::direction::kBackward
+                          : osr::direction::kForward,
                 osr_params, pedestrian_profile, elevation_costs, ep.elevations_,
                 false);
           })
           .value_or(api::oneToManyIntermodal_response{many.size()});
 
-  update_transit_durations(durations, ep, query, one, many, time,
-                           std::chrono::seconds{query.maxTravelTime_},
+  update_transit_durations(durations, ep, query, one, many, time, arrive_by,
+                           max_travel_time, max_matching_distance,
                            pedestrian_profile, elevation_costs, osr_params);
 
   return durations;

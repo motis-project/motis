@@ -1105,7 +1105,7 @@ paths:
             format: date-time
         - name: maxTravelTime
           in: query
-          required: true
+          required: false
           description: |
             The maximum travel time in seconds.
             If not provided, the routing uses the value
@@ -1119,14 +1119,16 @@ paths:
             type: integer
         - name: maxMatchingDistance
           in: query
-          required: true
+          required: false
           description: maximum matching distance in meters to match geo coordinates to the street network
           schema:
             type: number
         - name: arriveBy
           in: query
-          required: true
+          required: false
           description: |
+            Optional. Defaults to false, i.e. one to many search
+
             true = many to one
             false = one to many
           schema:
@@ -4176,9 +4178,6 @@ components:
       required:
         - one
         - many
-        - maxTravelTime
-        - maxMatchingDistance
-        - arriveBy
       properties:
         one:
           description: |
@@ -4228,6 +4227,8 @@ components:
           type: number
         arriveBy:
           description: |
+            Optional. Defaults to false, i.e. one to many search
+
             true = many to one
             false = one to many
           type: boolean
