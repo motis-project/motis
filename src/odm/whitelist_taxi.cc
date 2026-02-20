@@ -246,12 +246,6 @@ bool prima::whitelist_taxi(std::vector<nr::journey>& taxi_journeys,
            "[whitelist taxi] request for {} rides",
            first_mile_taxi_rides.size() + last_mile_taxi_rides.size() +
                direct_taxi_.size());
-    whitelist_requested_first_mile_times_ =
-        collect_requested_times(first_mile_taxi_rides, kFirstMile);
-    whitelist_requested_last_mile_times_ =
-        collect_requested_times(last_mile_taxi_rides, kLastMile);
-    whitelist_requested_direct_times_ =
-        collect_requested_direct_times(direct_taxi_, fixed_);
 
     boost::asio::co_spawn(
         ioc,

@@ -131,10 +131,6 @@ struct prima {
   std::vector<nigiri::location_idx_t> whitelist_first_mile_locations_;
   std::vector<nigiri::location_idx_t> whitelist_last_mile_locations_;
 
-  std::vector<std::vector<int64_t>> whitelist_requested_first_mile_times_;
-  std::vector<std::vector<int64_t>> whitelist_requested_last_mile_times_;
-  std::vector<int64_t> whitelist_requested_direct_times_;
-
   boost::json::object whitelist_response_;
 };
 
