@@ -209,29 +209,6 @@ bool prima::consume_whitelist_taxi_response(
   return true;
 }
 
-std::vector<std::vector<std::int64_t>> collect_requested_times(
-    std::vector<n::routing::start> const& rides, which_mile wm) {
-  auto result = std::vector<std::vector<std::int64_t>>{};
-  utl::equal_ranges_linear(
-      rides, [](auto const& a, auto const& b) { return a.stop_ == b.stop_; },
-      [&](auto&& from_it, auto&& to_it) {
-        result.push_back(utl::to_vec(
-            std::span{from_it, to_it}, [&](n::routing::start const& x) {
-              return to_millis(wm == kFirstMile
-                                   ? x.time_at_stop_ - kODMTransferBuffer
-                                   : x.time_at_stop_ + kODMTransferBuffer);
-            }));
-      });
-  return result;
-}
-
-std::vector<std::int64_t> collect_requested_direct_times(
-    std::vector<direct_ride> const& rides, n::event_type const fixed) {
-  return utl::to_vec(rides, [&](direct_ride const& r) {
-    return to_millis(fixed == n::event_type::kDep ? r.dep_ : r.arr_);
-  });
-}
-
 bool prima::whitelist_taxi(std::vector<nr::journey>& taxi_journeys,
                            n::timetable const& tt) {
   auto first_mile_taxi_rides = std::vector<nr::start>{};
