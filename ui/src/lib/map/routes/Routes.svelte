@@ -101,6 +101,9 @@
 			console.error('[Routes] routes request failed', error);
 			return;
 		}
+		console.debug(
+			`[Routes] received ${data.routes.length} routes, zoomFiltered=${data.zoomFiltered}`
+		);
 
 		routesData = data;
 		loadedBounds = expandedBounds;

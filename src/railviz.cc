@@ -5,6 +5,8 @@
 #include "cista/containers/rtree.h"
 #include "cista/reflection/comparable.h"
 
+#include "net/too_many_exception.h"
+
 #include "utl/enumerate.h"
 #include "utl/get_or_create.h"
 #include "utl/pairwise.h"
@@ -35,7 +37,8 @@
 
 namespace n = nigiri;
 
-constexpr auto const kLimit = 12'000U;
+constexpr auto const kTripsLimit = 12'000U;
+constexpr auto const kRoutesLimit = 7'000U;
 
 using static_rtree = cista::raw::rtree<n::route_idx_t>;
 using rt_rtree = cista::raw::rtree<n::rt_transport_idx_t>;
@@ -239,7 +242,8 @@ void add_rt_transports(n::timetable const& tt,
         n::interval{from.time(n::event_type::kDep),
                     to.time(n::event_type::kArr) + n::i32_minutes{1}};
     if (active.overlaps(time_interval)) {
-      utl::verify(runs.size() < kLimit, "too many trips");
+      utl::verify<net::too_many_exception>(runs.size() < kTripsLimit,
+                                           "too many trips");
       runs.emplace_back(
           stop_pair{.r_ = fr,  // NOLINT(cppcoreguidelines-slicing)
                     .from_ = from.stop_idx_,
@@ -298,7 +302,8 @@ void add_static_transports(n::timetable const& tt,
                                     tt.event_time(t, to, n::event_type::kArr) +
                                         n::unixtime_t::duration{1}}) &&
             is_active(t)) {
-          utl::verify(runs.size() < kLimit, "too many trips");
+          utl::verify<net::too_many_exception>(runs.size() < kTripsLimit,
+                                               "too many trips");
           runs.emplace_back(stop_pair{
               .r_ = n::rt::run{.t_ = t,
                                .stop_range_ = {from, static_cast<n::stop_idx_t>(
@@ -450,6 +455,8 @@ api::routes_response get_routes(tag_lookup const& tags,
 
     for (auto const& r : static_index.static_geo_indices_[c].get_routes(area)) {
       if (should_display(cl, zoom_level, static_index.static_distances_[r])) {
+        utl::verify<net::too_many_exception>(res.routes_.size() < kRoutesLimit,
+                                             "too many routes");
         auto route_segments = std::vector<api::RouteSegment>{};
         auto route_infos = hash_set<route_info>{};
         auto const stops = tt.route_location_seq_[r];
