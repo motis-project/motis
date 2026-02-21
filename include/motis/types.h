@@ -2,6 +2,7 @@
 
 #include <cinttypes>
 #include <memory>
+#include <optional>
 #include <vector>
 
 #include "geo/latlng.h"
@@ -49,7 +50,8 @@ struct elevator {
   }
 
   std::int64_t id_;
-  geo::latlng pos_;
+  std::optional<std::string> id_str_;
+  std::optional<geo::latlng> pos_;
   bool status_;
   std::string desc_;
   std::vector<nigiri::interval<nigiri::unixtime_t>> out_of_service_;

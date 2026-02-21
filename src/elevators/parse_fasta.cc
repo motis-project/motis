@@ -63,8 +63,9 @@ std::optional<elevator> parse_elevator(json::value const& e) {
                         ? e.at("equipmentnumber").to_number<std::int64_t>()
                         : 0U;
     return elevator{id,
-                    {e.at("geocoordY").to_number<double>(),
-                     e.at("geocoordX").to_number<double>()},
+                    std::nullopt,
+                    geo::latlng{e.at("geocoordY").to_number<double>(),
+                                e.at("geocoordX").to_number<double>()},
                     e.at("state").as_string() != "INACTIVE",
                     o.contains("description")
                         ? std::string{o.at("description").as_string()}

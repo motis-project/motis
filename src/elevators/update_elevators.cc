@@ -37,8 +37,11 @@ ptr<elevators> update_elevators(config const& c,
   auto const new_map = to_map(new_e->elevators_);
 
   auto tasks = hash_set<std::pair<n::location_idx_t, osr::direction>>{};
-  auto const add_tasks = [&](geo::latlng const& l) {
-    d.location_rtree_->in_radius(l, kElevatorUpdateRadius,
+  auto const add_tasks = [&](std::optional<geo::latlng> const& pos) {
+    if (!pos.has_value()) {
+      return;
+    }
+    d.location_rtree_->in_radius(*pos, kElevatorUpdateRadius,
                                  [&](n::location_idx_t const l) {
                                    tasks.emplace(l, osr::direction::kForward);
                                    tasks.emplace(l, osr::direction::kBackward);
