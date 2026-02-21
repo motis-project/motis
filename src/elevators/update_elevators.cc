@@ -29,8 +29,8 @@ ptr<elevators> update_elevators(config const& c,
                                 data const& d,
                                 std::string_view body,
                                 n::rt_timetable& new_rtt) {
-  auto new_e = std::make_unique<motis::elevators>(
-      *d.w_, *d.elevator_nodes_, parse_fasta(std::string_view{body}));
+  auto new_e = std::make_unique<elevators>(*d.w_, *d.elevator_nodes_,
+                                           parse_fasta(std::string_view{body}));
 
   auto const& old_e = *d.rt_->e_;
   auto const old_map = to_map(old_e.elevators_);
