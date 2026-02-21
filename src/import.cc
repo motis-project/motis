@@ -31,7 +31,6 @@
 #include "nigiri/clasz.h"
 #include "nigiri/common/parse_date.h"
 #include "nigiri/routing/tb/preprocess.h"
-#include "nigiri/rt/create_rt_timetable.h"
 #include "nigiri/rt/rt_timetable.h"
 #include "nigiri/shapes_storage.h"
 #include "nigiri/timetable.h"
@@ -39,18 +38,16 @@
 
 #include "osr/extract/extract.h"
 #include "osr/lookup.h"
-#include "osr/platforms.h"
 #include "osr/ways.h"
 
 #include "adr/adr.h"
-#include "adr/area_database.h"
+#include "adr/formatter.h"
 #include "adr/reverse.h"
 #include "adr/typeahead.h"
 
 #include "motis/adr_extend_tt.h"
 #include "motis/clog_redirect.h"
 #include "motis/compute_footpaths.h"
-#include "motis/constants.h"
 #include "motis/data.h"
 #include "motis/hashes.h"
 #include "motis/tag_lookup.h"
@@ -243,6 +240,9 @@ data import(config const& c, fs::path const& data_path, bool const write) {
              if (c.reverse_geocoding_) {
                d.load_reverse_geocoder();
              }
+
+             d.tc_ = std::make_unique<adr::cache>(d.t_->strings_.size(), 100U);
+             d.f_ = std::make_unique<adr::formatter>();
            },
            [&]() {
              if (!c.osm_) {
@@ -252,6 +252,7 @@ data import(config const& c, fs::path const& data_path, bool const write) {
              // Same here, need to load base-line version for adr_extend!
              d.t_ = adr::read(data_path / "adr" / "t.bin");
              d.tc_ = std::make_unique<adr::cache>(d.t_->strings_.size(), 100U);
+             d.f_ = std::make_unique<adr::formatter>();
 
              if (c.reverse_geocoding_) {
                d.load_reverse_geocoder();
