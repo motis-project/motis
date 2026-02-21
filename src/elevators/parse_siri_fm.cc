@@ -15,8 +15,9 @@ std::optional<elevator> parse_facility_condition(pugi::xml_node const& fc) {
     return std::nullopt;
   }
 
-  return elevator{0U, std::string{id}, std::nullopt,
-                  std::string_view{status} == "available", "", {}};
+  return elevator{0U,           std::string{id},
+                  std::nullopt, std::string_view{status} == "available",
+                  "",           {}};
 }
 
 vector_map<elevator_idx_t, elevator> parse_siri_fm(std::string_view s) {
