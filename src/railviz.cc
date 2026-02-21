@@ -60,7 +60,7 @@ int min_zoom_level(n::clasz const clasz, float const distance) {
     case n::clasz::kHighSpeed:
     case n::clasz::kLongDistance:
     case n::clasz::kNight: return 4;
-    case n::clasz::kRegionalFast:
+    case n::clasz::kRideSharing:
     case n::clasz::kRegional: return 7;
 
     // regional distance
