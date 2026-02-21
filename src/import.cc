@@ -3,6 +3,7 @@
 #include <fstream>
 #include <map>
 #include <ostream>
+#include <tuple>
 #include <vector>
 
 #include "fmt/ranges.h"
@@ -113,9 +114,19 @@ cista::hash_t hash_file(fs::path const& p) {
     return cista::hash(str);
   } else if (fs::is_directory(p)) {
     auto h = cista::BASE_HASH;
-    // for (auto const& file : fs::directory_iterator{p}) {
-    //   h = cista::hash_combine(h, hash_file(file));
-    // }
+    auto entries = std::vector<std::tuple<std::string, std::uint64_t,
+                                          std::filesystem::file_time_type>>{};
+    for (auto const& entry : fs::recursive_directory_iterator{p}) {
+      auto ec = std::error_code{};
+      entries.emplace_back(fs::relative(entry.path(), p, ec).generic_string(),
+                           entry.is_regular_file(ec) ? entry.file_size(ec) : 0U,
+                           fs::last_write_time(entry.path(), ec));
+    }
+    utl::sort(entries);
+    for (auto const& [rel, size, modified_ts] : entries) {
+      h = cista::hash_combine(h, cista::hash(rel), size,
+                              modified_ts.time_since_epoch().count());
+    }
     return h;
   } else {
     auto const mmap = cista::mmap{str.c_str(), cista::mmap::protection::READ};
