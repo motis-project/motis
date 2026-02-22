@@ -79,9 +79,6 @@ json::value elevators::operator()(json::value const& query) const {
     utl::verify<net::too_many_exception>(matches.size() < kLimit,
                                          "too many elevators");
     auto const& x = e->elevators_[i];
-    if (!x.pos_.has_value()) {
-      return;
-    }
     matches.emplace_back(json::value{
         {"type", "Feature"},
         {"properties",
@@ -90,7 +87,7 @@ json::value elevators::operator()(json::value const& query) const {
           {"desc", x.desc_},
           {"status", (x.status_ ? "ACTIVE" : "INACTIVE")},
           {"outOfService", json::value_from(x.out_of_service_)}}},
-        {"geometry", osr::to_point(osr::point::from_latlng(*x.pos_))}});
+        {"geometry", osr::to_point(osr::point::from_latlng(x.pos_))}});
   });
 
   for (auto const n : l_.find_elevators({min, max})) {
@@ -99,21 +96,20 @@ json::value elevators::operator()(json::value const& query) const {
     auto const pos = w_.get_node_pos(n);
     if (match != elevator_idx_t::invalid()) {
       auto const& x = e->elevators_[match];
-      if (x.pos_.has_value()) {
-        utl::verify<net::too_many_exception>(matches.size() < kLimit,
-                                             "too many elevators");
-        matches.emplace_back(json::value{
-            {"type", "Feature"},
-            {"properties",
-             {{"type", "match"},
-              {"osm_node_id", to_idx(w_.node_to_osm_[n])},
-              {"id", x.id_},
-              {"desc", x.desc_},
-              {"status", x.status_ ? "ACTIVE" : "INACTIVE"},
-              {"outOfService", json::value_from(x.out_of_service_)}}},
-            {"geometry",
-             osr::to_line_string({pos, osr::point::from_latlng(*x.pos_)})}});
-      }
+
+      utl::verify<net::too_many_exception>(matches.size() < kLimit,
+                                           "too many elevators");
+      matches.emplace_back(json::value{
+          {"type", "Feature"},
+          {"properties",
+           {{"type", "match"},
+            {"osm_node_id", to_idx(w_.node_to_osm_[n])},
+            {"id", x.id_},
+            {"desc", x.desc_},
+            {"status", x.status_ ? "ACTIVE" : "INACTIVE"},
+            {"outOfService", json::value_from(x.out_of_service_)}}},
+          {"geometry",
+           osr::to_line_string({pos, osr::point::from_latlng(x.pos_)})}});
     }
   }
 

@@ -51,7 +51,7 @@ struct elevator {
 
   std::int64_t id_;
   std::optional<std::string> id_str_;
-  std::optional<geo::latlng> pos_;
+  geo::latlng pos_;
   bool status_;
   std::string desc_;
   std::vector<nigiri::interval<nigiri::unixtime_t>> out_of_service_;

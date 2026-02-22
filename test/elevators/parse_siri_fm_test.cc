@@ -105,7 +105,6 @@ TEST(motis, parse_siri_fm) {
   EXPECT_FALSE(elevators[elevator_idx_t{6}].status_);
 
   for (auto const& e : elevators) {
-    EXPECT_FALSE(e.pos_.has_value());
     EXPECT_TRUE(e.id_str_.has_value());
     EXPECT_TRUE(e.out_of_service_.empty());
     EXPECT_EQ(1, e.state_changes_.size());

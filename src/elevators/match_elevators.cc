@@ -11,9 +11,7 @@ point_rtree<elevator_idx_t> create_elevator_rtree(
     vector_map<elevator_idx_t, elevator> const& elevators) {
   auto t = point_rtree<elevator_idx_t>{};
   for (auto const [i, e] : utl::enumerate(elevators)) {
-    if (e.pos_.has_value()) {
-      t.add(*e.pos_, elevator_idx_t{i});
-    }
+    t.add(e.pos_, elevator_idx_t{i});
   }
   return t;
 }
@@ -39,10 +37,7 @@ elevator_idx_t match_elevator(
   auto closest = elevator_idx_t::invalid();
   auto closest_dist = std::numeric_limits<double>::max();
   rtree.find(geo::box{pos, 20.0}, [&](elevator_idx_t const e) {
-    if (!elevators[e].pos_.has_value()) {
-      return;
-    }
-    auto const dist = geo::distance(*elevators[e].pos_, pos);
+    auto const dist = geo::distance(elevators[e].pos_, pos);
     if (dist < 20 && dist < closest_dist) {
       closest_dist = dist;
       closest = e;
