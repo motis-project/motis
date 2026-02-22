@@ -155,9 +155,9 @@ n::routing::query meta_router::get_base_query(
     n::interval<n::unixtime_t> const& intvl) const {
   return {
       .start_time_ = intvl,
-      .start_match_mode_ = motis::ep::get_match_mode(start_),
-      .dest_match_mode_ = motis::ep::get_match_mode(dest_),
-      .use_start_footpaths_ = !motis::ep::is_intermodal(start_),
+      .start_match_mode_ = motis::ep::get_match_mode(r_, start_),
+      .dest_match_mode_ = motis::ep::get_match_mode(r_, dest_),
+      .use_start_footpaths_ = !motis::ep::is_intermodal(r_, start_),
       .max_transfers_ = static_cast<std::uint8_t>(
           query_.maxTransfers_.has_value() ? *query_.maxTransfers_
                                            : n::routing::kMaxTransfers),

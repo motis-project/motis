@@ -4,6 +4,7 @@
 
 #include "utl/verify.h"
 
+#include "osr/location.h"
 #include "osr/platforms.h"
 
 #include "nigiri/rt/frun.h"
@@ -70,22 +71,24 @@ osr::location get_location(n::timetable const* tt,
       utl::overloaded{
           [&](osr::location const& l) { return l; },
           [&](tt_location const l) {
-            auto const l_idx = l.l_;
-            switch (to_idx(l_idx)) {
-              case static_cast<n::location_idx_t::value_t>(
-                  n::special_station::kStart):
-                assert(std::holds_alternative<osr::location>(start));
+            auto l_idx = l.l_;
+            if (l_idx == static_cast<n::location_idx_t::value_t>(
+                             n::special_station::kStart)) {
+              if (std::holds_alternative<osr::location>(start)) {
                 return std::get<osr::location>(start);
-              case static_cast<n::location_idx_t::value_t>(
-                  n::special_station::kEnd):
-                assert(std::holds_alternative<osr::location>(dest));
+              }
+              l_idx = std::get<tt_location>(start).l_;
+            } else if (l_idx == static_cast<n::location_idx_t::value_t>(
+                                    n::special_station::kEnd)) {
+              if (std::holds_alternative<osr::location>(dest)) {
                 return std::get<osr::location>(dest);
-              default:
-                utl::verify(tt != nullptr,
-                            "resolving stop coordinates: timetable not set");
-                return osr::location{tt->locations_.coordinates_.at(l_idx),
-                                     get_lvl(w, pl, matches, l_idx)};
+              }
+              l_idx = std::get<tt_location>(dest).l_;
             }
+            utl::verify(tt != nullptr,
+                        "resolving stop coordinates: timetable not set");
+            return osr::location{tt->locations_.coordinates_.at(l_idx),
+                                 get_lvl(w, pl, matches, l_idx)};
           }},
       loc);
 }
@@ -111,58 +114,63 @@ api::Place to_place(n::timetable const* tt,
           [&](tt_location const tt_l) -> api::Place {
             utl::verify(tt && tags, "resolving stops requires timetable");
 
-            auto const l = tt_l.l_;
+            auto l = tt_l.l_;
             if (l == n::get_special_station(n::special_station::kStart)) {
-              return to_place(std::get<osr::location>(start), "START",
-                              fallback_tz);
+              if (std::holds_alternative<osr::location>(start)) {
+                return to_place(std::get<osr::location>(start), "START",
+                                fallback_tz);
+              }
+              l = std::get<tt_location>(start).l_;
             } else if (l == n::get_special_station(n::special_station::kEnd)) {
-              return to_place(std::get<osr::location>(dest), "END",
-                              fallback_tz);
-            } else {
-              auto const get_track = [&](n::location_idx_t const x) {
-                auto const p =
-                    tt->translate(lang, tt->locations_.platform_codes_.at(x));
-                return p.empty() ? std::nullopt : std::optional{std::string{p}};
-              };
-
-              // check if description is available, if not, return nullopt
-              auto const get_description = [&](n::location_idx_t const x) {
-                auto const p =
-                    tt->translate(lang, tt->locations_.descriptions_.at(x));
-                return p.empty() ? std::nullopt : std::optional{std::string{p}};
-              };
-
-              auto const pos = tt->locations_.coordinates_[l];
-              auto const p = tt->locations_.get_root_idx(l);
-              auto const timezone = get_tz(*tt, ae, tz_map, p);
-
-              return {
-                  .name_ = std::string{tt->translate(
-                      lang, tt->locations_.names_.at(p))},
-                  .stopId_ = tags->id(*tt, l),
-                  .parentId_ = p == n::location_idx_t::invalid()
-                                   ? std::nullopt
-                                   : std::optional{tags->id(*tt, p)},
-                  .importance_ = ae == nullptr
-                                     ? std::nullopt
-                                     : std::optional{ae->place_importance_.at(
-                                           ae->location_place_.at(l))},
-                  .lat_ = pos.lat_,
-                  .lon_ = pos.lng_,
-                  .level_ = get_level(w, pl, matches, l),
-                  .tz_ = timezone == nullptr ? fallback_tz
-                                             : std::optional{timezone->name()},
-                  .scheduledTrack_ = get_track(tt_l.scheduled_),
-                  .track_ = get_track(tt_l.l_),
-                  .description_ = get_description(tt_l.scheduled_),
-                  .vertexType_ = api::VertexTypeEnum::TRANSIT,
-                  .modes_ =
-                      ae != nullptr
-                          ? std::optional<std::vector<api::ModeEnum>>{to_modes(
-                                ae->place_clasz_.at(ae->location_place_.at(p)),
-                                5)}
-                          : std::nullopt};
+              if (std::holds_alternative<osr::location>(dest)) {
+                return to_place(std::get<osr::location>(dest), "END",
+                                fallback_tz);
+              }
+              l = std::get<tt_location>(dest).l_;
             }
+            auto const get_track = [&](n::location_idx_t const x) {
+              auto const p =
+                  tt->translate(lang, tt->locations_.platform_codes_.at(x));
+              return p.empty() ? std::nullopt : std::optional{std::string{p}};
+            };
+
+            // check if description is available, if not, return nullopt
+            auto const get_description = [&](n::location_idx_t const x) {
+              auto const p =
+                  tt->translate(lang, tt->locations_.descriptions_.at(x));
+              return p.empty() ? std::nullopt : std::optional{std::string{p}};
+            };
+
+            auto const pos = tt->locations_.coordinates_[l];
+            auto const p = tt->locations_.get_root_idx(l);
+            auto const timezone = get_tz(*tt, ae, tz_map, p);
+
+            return {
+                .name_ = std::string{tt->translate(
+                    lang, tt->locations_.names_.at(p))},
+                .stopId_ = tags->id(*tt, l),
+                .parentId_ = p == n::location_idx_t::invalid()
+                                 ? std::nullopt
+                                 : std::optional{tags->id(*tt, p)},
+                .importance_ = ae == nullptr
+                                   ? std::nullopt
+                                   : std::optional{ae->place_importance_.at(
+                                         ae->location_place_.at(l))},
+                .lat_ = pos.lat_,
+                .lon_ = pos.lng_,
+                .level_ = get_level(w, pl, matches, l),
+                .tz_ = timezone == nullptr ? fallback_tz
+                                           : std::optional{timezone->name()},
+                .scheduledTrack_ = get_track(tt_l.scheduled_),
+                .track_ = get_track(tt_l.l_),
+                .description_ = get_description(tt_l.scheduled_),
+                .vertexType_ = api::VertexTypeEnum::TRANSIT,
+                .modes_ =
+                    ae != nullptr
+                        ? std::optional<std::vector<api::ModeEnum>>{to_modes(
+                              ae->place_clasz_.at(ae->location_place_.at(p)),
+                              5)}
+                        : std::nullopt};
           }},
       l);
 }

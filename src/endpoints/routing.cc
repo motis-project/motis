@@ -25,6 +25,7 @@
 #include "osr/types.h"
 
 #include "nigiri/common/interval.h"
+#include "nigiri/location_match_mode.h"
 #include "nigiri/routing/limits.h"
 #include "nigiri/routing/pareto_set.h"
 #include "nigiri/routing/query.h"
@@ -71,17 +72,28 @@ namespace motis::ep {
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 boost::thread_specific_ptr<osr::bitvec<osr::node_idx_t>> blocked;
 
-bool is_intermodal(place_t const& p) {
-  return std::holds_alternative<osr::location>(p);
+bool osr_loaded(routing const& r) {
+  return r.w_ && r.l_ && r.pl_ && r.tt_ && r.loc_tree_ && r.matches_;
 }
 
-n::routing::location_match_mode get_match_mode(place_t const& p) {
-  return is_intermodal(p) ? n::routing::location_match_mode::kIntermodal
-                          : n::routing::location_match_mode::kEquivalent;
+bool is_intermodal(routing const& r, place_t const&) {
+  return osr_loaded(r);  // use pre/post transit even when start/dest is a stop
+}
+
+n::routing::location_match_mode get_match_mode(routing const& r,
+                                               place_t const& p) {
+  return is_intermodal(r, p) ? n::routing::location_match_mode::kIntermodal
+                             : n::routing::location_match_mode::kEquivalent;
 }
 
 std::vector<n::routing::offset> station_start(n::location_idx_t const l) {
   return {{l, n::duration_t{0U}, 0U}};
+}
+
+osr::location stop_to_osr_location(routing const& r,
+                                   n::location_idx_t const l) {
+  return osr::location{r.tt_->locations_.coordinates_[l],
+                       r.pl_->get_level(*r.w_, (*r.matches_)[l])};
 }
 
 n::routing::td_offsets_t get_td_offsets(
@@ -98,7 +110,7 @@ n::routing::td_offsets_t get_td_offsets(
     std::chrono::seconds const max,
     nigiri::routing::start_time_t const& start_time,
     stats_map_t& stats) {
-  if (!r.w_ || !r.l_ || !r.pl_ || !r.tt_ || !r.loc_tree_ || !r.matches_) {
+  if (!osr_loaded(r)) {
     return {};
   }
 
@@ -162,13 +174,21 @@ n::routing::td_offsets_t routing::get_td_offsets(
     nigiri::routing::start_time_t const& start_time,
     stats_map_t& stats) const {
   return std::visit(
-      utl::overloaded{[&](tt_location) { return n::routing::td_offsets_t{}; },
-                      [&](osr::location const& pos) {
-                        return ::motis::ep::get_td_offsets(
-                            *this, rtt, e, pos, dir, modes, osr_params,
-                            pedestrian_profile, elevation_costs,
-                            max_matching_distance, max, start_time, stats);
-                      }},
+      utl::overloaded{
+          [&](tt_location l) {
+            if (!osr_loaded(*this)) {
+              return n::routing::td_offsets_t{};
+            }
+            return ::motis::ep::get_td_offsets(
+                *this, rtt, e, stop_to_osr_location(*this, l.l_), dir, modes,
+                osr_params, pedestrian_profile, elevation_costs,
+                max_matching_distance, max, start_time, stats);
+          },
+          [&](osr::location const& pos) {
+            return ::motis::ep::get_td_offsets(
+                *this, rtt, e, pos, dir, modes, osr_params, pedestrian_profile,
+                elevation_costs, max_matching_distance, max, start_time, stats);
+          }},
       p);
 }
 
@@ -210,7 +230,7 @@ std::vector<n::routing::offset> get_offsets(
     double const max_matching_distance,
     gbfs::gbfs_routing_data& gbfs_rd,
     stats_map_t& stats) {
-  if (!r.w_ || !r.l_ || !r.pl_ || !r.tt_ || !r.loc_tree_ || !r.matches_) {
+  if (!osr_loaded(r)) {
     return {};
   }
   auto offsets = std::vector<n::routing::offset>{};
@@ -238,11 +258,9 @@ std::vector<n::routing::offset> get_offsets(
     auto const max_dist = get_max_distance(profile, max);
     auto const near_stops =
         get_stops_with_traffic(*r.tt_, rtt, *r.loc_tree_, pos, max_dist);
-    auto const near_stop_locations =
-        utl::to_vec(near_stops, [&](n::location_idx_t const l) {
-          return osr::location{r.tt_->locations_.coordinates_[l],
-                               r.pl_->get_level(*r.w_, (*r.matches_)[l])};
-        });
+    auto const near_stop_locations = utl::to_vec(
+        near_stops,
+        [&](n::location_idx_t const l) { return stop_to_osr_location(r, l); });
 
     auto const route = [&](osr::search_profile const p,
                            osr::sharing_data const* sharing) {
@@ -403,17 +421,29 @@ std::vector<n::routing::offset> routing::get_offsets(
     double const max_matching_distance,
     gbfs::gbfs_routing_data& gbfs_rd,
     stats_map_t& stats) const {
+  auto const do_get_offsets = [&](osr::location const pos) {
+    return ::motis::ep::get_offsets(
+        *this, rtt, pos, dir, elevations_, modes, form_factors,
+        propulsion_types, rental_providers, rental_provider_groups,
+        ignore_rental_return_constraints, osr_params, pedestrian_profile,
+        elevation_costs, max, max_matching_distance, gbfs_rd, stats);
+  };
   return std::visit(
-      utl::overloaded{[&](tt_location const l) { return station_start(l.l_); },
-                      [&](osr::location const& pos) {
-                        return ::motis::ep::get_offsets(
-                            *this, rtt, pos, dir, elevations_, modes,
-                            form_factors, propulsion_types, rental_providers,
-                            rental_provider_groups,
-                            ignore_rental_return_constraints, osr_params,
-                            pedestrian_profile, elevation_costs, max,
-                            max_matching_distance, gbfs_rd, stats);
-                      }},
+      utl::overloaded{
+          [&](tt_location const l) {
+            if (!osr_loaded(*this)) {
+              return station_start(l.l_);
+            }
+            auto offsets = do_get_offsets(stop_to_osr_location(*this, l.l_));
+            for_each_meta(*tt_,
+                          nigiri::routing::location_match_mode::kEquivalent,
+                          l.l_, [&](n::location_idx_t const c) {
+                            offsets.emplace_back(c, n::duration_t{0U}, 0U);
+                          });
+
+            return offsets;
+          },
+          [&](osr::location const& pos) { return do_get_offsets(pos); }},
       p);
 }
 
@@ -810,9 +840,9 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
     auto prepare_stats = std::map<std::string, std::uint64_t>{};
     auto q = n::routing::query{
         .start_time_ = start_time.start_time_,
-        .start_match_mode_ = get_match_mode(start),
-        .dest_match_mode_ = get_match_mode(dest),
-        .use_start_footpaths_ = !is_intermodal(start),
+        .start_match_mode_ = get_match_mode(*this, start),
+        .dest_match_mode_ = get_match_mode(*this, dest),
+        .use_start_footpaths_ = !is_intermodal(*this, start),
         .start_ =
             get_offsets(rtt, start,
                         query.arriveBy_ ? osr::direction::kBackward
