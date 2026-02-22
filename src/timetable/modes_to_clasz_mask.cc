@@ -25,16 +25,14 @@ n::routing::clasz_mask_t to_clasz_mask(std::vector<api::ModeEnum> const& mode) {
         allow(n::clasz::kLongDistance);
         allow(n::clasz::kNight);
         allow(n::clasz::kRegional);
-        allow(n::clasz::kRegionalFast);
         allow(n::clasz::kSuburban);
         allow(n::clasz::kSubway);
         break;
       case api::ModeEnum::HIGHSPEED_RAIL: allow(n::clasz::kHighSpeed); break;
       case api::ModeEnum::LONG_DISTANCE: allow(n::clasz::kLongDistance); break;
       case api::ModeEnum::NIGHT_RAIL: allow(n::clasz::kNight); break;
-      case api::ModeEnum::REGIONAL_FAST_RAIL:
-        allow(n::clasz::kRegionalFast);
-        break;
+      case api::ModeEnum::RIDE_SHARING: allow(n::clasz::kRideSharing); break;
+      case api::ModeEnum::REGIONAL_FAST_RAIL: [[fallthrough]];
       case api::ModeEnum::REGIONAL_RAIL: allow(n::clasz::kRegional); break;
       case api::ModeEnum::SUBURBAN: allow(n::clasz::kSuburban); break;
       case api::ModeEnum::METRO: allow(n::clasz::kSuburban); break;
@@ -49,8 +47,10 @@ n::routing::clasz_mask_t to_clasz_mask(std::vector<api::ModeEnum> const& mode) {
       case api::ModeEnum::BIKE:
       case api::ModeEnum::RENTAL:
       case api::ModeEnum::CAR:
-      case api::ModeEnum::RIDE_SHARING:
       case api::ModeEnum::FLEX:
+      case api::ModeEnum::DEBUG_BUS_ROUTE:
+      case api::ModeEnum::DEBUG_RAILWAY_ROUTE:
+      case api::ModeEnum::DEBUG_FERRY_ROUTE:
       case api::ModeEnum::CAR_DROPOFF: [[fallthrough]];
       case api::ModeEnum::CAR_PARKING: break;
     }

@@ -201,7 +201,7 @@ std::vector<meta_router::routing_result> meta_router::search_interval(
   auto const tasks = utl::to_vec(sub_queries, [&](n::routing::query const& q) {
     auto fn = [&, q = std::move(q)]() mutable {
       auto const timeout = std::chrono::seconds{query_.timeout_.value_or(
-          r_.config_.limits_.value().routing_max_timeout_seconds_)};
+          r_.config_.get_limits().routing_max_timeout_seconds_)};
       auto search_state = n::routing::search_state{};
       auto raptor_state = n::routing::raptor_state{};
       return routing_result{raptor_search(
@@ -330,12 +330,12 @@ api::plan_response meta_router::run() {
   auto const params = get_osr_parameters(query_);
   auto const pre_transit_time = std::min(
       std::chrono::seconds{query_.maxPreTransitTime_},
-      std::chrono::seconds{r_.config_.limits_.value()
-                               .street_routing_max_prepost_transit_seconds_});
+      std::chrono::seconds{
+          r_.config_.get_limits().street_routing_max_prepost_transit_seconds_});
   auto const post_transit_time = std::min(
       std::chrono::seconds{query_.maxPostTransitTime_},
-      std::chrono::seconds{r_.config_.limits_.value()
-                               .street_routing_max_prepost_transit_seconds_});
+      std::chrono::seconds{
+          r_.config_.get_limits().street_routing_max_prepost_transit_seconds_});
   auto const qf = query_factory{
       .base_query_ = get_base_query(context_intvl),
       .start_walk_ = r_.get_offsets(

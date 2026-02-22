@@ -18,8 +18,6 @@
 #include "osr/lookup.h"
 #include "osr/platforms.h"
 #include "osr/routing/profile.h"
-#include "osr/routing/profiles/car.h"
-#include "osr/routing/profiles/foot.h"
 #include "osr/routing/route.h"
 #include "osr/routing/sharing_data.h"
 #include "osr/types.h"
@@ -30,10 +28,6 @@
 #include "nigiri/routing/query.h"
 #include "nigiri/routing/raptor/raptor_state.h"
 #include "nigiri/routing/raptor_search.h"
-#include "nigiri/special_stations.h"
-
-#include "motis/constants.h"
-#include "motis/endpoints/routing.h"
 
 #include "nigiri/routing/raptor/pong.h"
 #include "nigiri/routing/tb/query_engine.h"
@@ -41,7 +35,9 @@
 #include "nigiri/routing/tb/tb_search.h"
 
 #include "motis/config.h"
+#include "motis/constants.h"
 #include "motis/direct_filter.h"
+#include "motis/endpoints/routing.h"
 #include "motis/flex/flex.h"
 #include "motis/flex/flex_output.h"
 #include "motis/gbfs/data.h"
@@ -505,7 +501,11 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
       }
     } else if (m == api::ModeEnum::CAR || m == api::ModeEnum::BIKE ||
                m == api::ModeEnum::CAR_PARKING ||
-               m == api::ModeEnum::CAR_DROPOFF || m == api::ModeEnum::WALK) {
+               m == api::ModeEnum::CAR_DROPOFF ||
+               m == api::ModeEnum::DEBUG_BUS_ROUTE ||
+               m == api::ModeEnum::DEBUG_RAILWAY_ROUTE ||
+               m == api::ModeEnum::DEBUG_FERRY_ROUTE ||
+               m == api::ModeEnum::WALK) {
       route_with_profile(default_output{
           *w_, to_profile(m, pedestrian_profile, elevation_costs)});
     } else if (m == api::ModeEnum::RENTAL && gbfs_rd.has_data()) {
@@ -706,7 +706,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                       : query.ignorePostTransitRentalReturnConstraints_;
   utl::verify<net::too_many_exception>(
       query.searchWindow_ / 60 <
-          config_.limits_.value().plan_max_search_window_minutes_,
+          config_.get_limits().plan_max_search_window_minutes_,
       "maximum searchWindow size exceeded");
 
   auto const max_transfers =
@@ -730,7 +730,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                 osr_params, query.pedestrianProfile_, query.elevationCosts_,
                 std::min(std::chrono::seconds{query.maxDirectTime_},
                          std::chrono::seconds{
-                             config_.limits_.value()
+                             config_.get_limits()
                                  .street_routing_max_direct_seconds_}),
                 query.maxMatchingDistance_, query.fastestDirectFactor_,
                 api_version)
@@ -742,12 +742,12 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
     utl::verify(tt_ != nullptr && tags_ != nullptr,
                 "mode=TRANSIT requires timetable to be loaded");
 
-    auto const max_results = config_.limits_.value().plan_max_results_;
+    auto const max_results = config_.get_limits().plan_max_results_;
     utl::verify<net::too_many_exception>(
         query.numItineraries_ <= max_results,
         "maximum number of minimum itineraries is {}", max_results);
-    auto const max_timeout = std::chrono::seconds{
-        config_.limits_.value().routing_max_timeout_seconds_};
+    auto const max_timeout =
+        std::chrono::seconds{config_.get_limits().routing_max_timeout_seconds_};
     utl::verify<net::too_many_exception>(
         !query.timeout_.has_value() ||
             std::chrono::seconds{*query.timeout_} <= max_timeout,
@@ -799,12 +799,12 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
 
     auto const pre_transit_time = std::min(
         std::chrono::seconds{query.maxPreTransitTime_},
-        std::chrono::seconds{config_.limits_.value()
-                                 .street_routing_max_prepost_transit_seconds_});
+        std::chrono::seconds{
+            config_.get_limits().street_routing_max_prepost_transit_seconds_});
     auto const post_transit_time = std::min(
         std::chrono::seconds{query.maxPostTransitTime_},
-        std::chrono::seconds{config_.limits_.value()
-                                 .street_routing_max_prepost_transit_seconds_});
+        std::chrono::seconds{
+            config_.get_limits().street_routing_max_prepost_transit_seconds_});
 
     UTL_START_TIMING(query_preparation);
     auto prepare_stats = std::map<std::string, std::uint64_t>{};

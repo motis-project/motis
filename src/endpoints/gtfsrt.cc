@@ -187,9 +187,9 @@ net::reply gtfsrt::operator()(net::route_request const& req, bool) const {
   auto const rtt = rt->rtt_.get();
 
   utl::verify<net::too_many_exception>(
-      config_.limits_.value().gtfsrt_expose_max_trip_updates_ != 0 &&
+      config_.get_limits().gtfsrt_expose_max_trip_updates_ != 0 &&
           rtt->n_rt_transports() <
-              config_.limits_.value().gtfsrt_expose_max_trip_updates_,
+              config_.get_limits().gtfsrt_expose_max_trip_updates_,
       "number of trip updates above configured limit");
 
   auto fm = transit_realtime::FeedMessage();
