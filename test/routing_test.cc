@@ -305,43 +305,29 @@ TEST(motis, routing) {
     ioc.run();
   }
 
-  auto const stats =
-      n::rt::gtfsrt_update_msg(*d.tt_, *d.rt_->rtt_, n::source_idx_t{0}, "test",
-                               test::to_feed_msg(
-                                   {test::trip_update{
-                                        .trip_ = {.trip_id_ = "ICE",
-                                                  .start_time_ = {"03:35:00"},
-                                                  .date_ = {"20190501"}},
-                                        .stop_updates_ =
-                                            {{.stop_id_ = "FFM_12",
-                                              .seq_ = std::optional{1U},
-                                              .ev_type_ = n::event_type::kArr,
-                                              .delay_minutes_ = 10,
-                                              .stop_assignment_ = "FFM_12"}}},
-                                    test::alert{.header_ = "Yeah",
-                                                .description_ = "Yeah!!",
-                                                .entities_ =
-                                                    {{.trip_ =
-                                                          {
-                                                              {.trip_id_ =
-                                                                   "ICE",
-                                                               .start_time_ = {"03:35:00"},
-                                                               .date_ = {"20"
-                                                                         "19"
-                                                                         "05"
-                                                                         "0"
-                                                                         "1"}},
-                                                          },
-                                                      .stop_id_ = "DA"}}},
-                                    test::alert{
-                                        .header_ = "Hello",
-                                        .description_ = "World",
-                                        .entities_ =
-                                            {{.trip_ =
-                                                  {{.trip_id_ = "ICE",
-                                                    .start_time_ = {"03:35:00"},
-                                                    .date_ = {"20190501"}}}}}}},
-                                   date::sys_days{2019_y / May / 1} + 9h));
+  auto const stats = n::rt::gtfsrt_update_msg(
+      *d.tt_, *d.rt_->rtt_, n::source_idx_t{0}, "test",
+      test::to_feed_msg(
+          {test::trip_update{.trip_ = {.trip_id_ = "ICE",
+                                       .start_time_ = {"03:35:00"},
+                                       .date_ = {"20190501"}},
+                             .stop_updates_ = {{.stop_id_ = "FFM_12",
+                                                .seq_ = std::optional{1U},
+                                                .ev_type_ = n::event_type::kArr,
+                                                .delay_minutes_ = 10,
+                                                .stop_assignment_ = "FFM_12"}}},
+           test::alert{.header_ = "Yeah",
+                       .description_ = "Yeah!!",
+                       .entities_ = {{.trip_ = {{.trip_id_ = "ICE",
+                                                 .start_time_ = {"03:35:00"},
+                                                 .date_ = {"20190501"}}},
+                                      .stop_id_ = "DA"}}},
+           test::alert{.header_ = "Hello",
+                       .description_ = "World",
+                       .entities_ = {{.trip_ = {{.trip_id_ = "ICE",
+                                                 .start_time_ = {"03:35:00"},
+                                                 .date_ = {"20190501"}}}}}}},
+          date::sys_days{2019_y / May / 1} + 9h));
   EXPECT_EQ(1U, stats.total_entities_success_);
   EXPECT_EQ(2U, stats.alert_total_resolve_success_);
 
