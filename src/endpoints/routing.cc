@@ -505,7 +505,11 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
       }
     } else if (m == api::ModeEnum::CAR || m == api::ModeEnum::BIKE ||
                m == api::ModeEnum::CAR_PARKING ||
-               m == api::ModeEnum::CAR_DROPOFF || m == api::ModeEnum::WALK) {
+               m == api::ModeEnum::CAR_DROPOFF ||
+               m == api::ModeEnum::DEBUG_BUS_ROUTE ||
+               m == api::ModeEnum::DEBUG_RAILWAY_ROUTE ||
+               m == api::ModeEnum::DEBUG_FERRY_ROUTE ||
+               m == api::ModeEnum::WALK) {
       route_with_profile(default_output{
           *w_, to_profile(m, pedestrian_profile, elevation_costs)});
     } else if (m == api::ModeEnum::RENTAL && gbfs_rd.has_data()) {

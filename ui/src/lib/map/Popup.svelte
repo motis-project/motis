@@ -7,7 +7,9 @@
 		class: className,
 		trigger
 	}: {
-		children?: Snippet<[maplibregl.MapMouseEvent, () => void, unknown?]>;
+		children?: Snippet<
+			[maplibregl.MapMouseEvent, () => void, maplibregl.MapGeoJSONFeature[] | undefined]
+		>;
 		class?: string;
 		trigger: 'click' | 'contextmenu';
 	} = $props();
@@ -18,7 +20,7 @@
 	let popupEl = $state<HTMLDivElement>();
 	let popup = $state<maplibregl.Popup>();
 	let event = $state.raw<maplibregl.MapMouseEvent>();
-	let features = $state.raw();
+	let features = $state.raw<maplibregl.MapGeoJSONFeature[]>();
 
 	const close = () => {
 		if (popup) {
@@ -34,7 +36,8 @@
 			}
 			popup = new maplibregl.Popup({
 				anchor: 'top-left',
-				closeButton: false
+				closeButton: false,
+				maxWidth: 'none'
 			});
 			popup.setLngLat(e.lngLat);
 			popup.addTo(ctx.map!);

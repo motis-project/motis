@@ -193,8 +193,8 @@
 		<TableBody>
 			{#each Object.entries(features[0].properties) as [key, value], i (i)}
 				<TableRow>
-					<TableCell>{key}</TableCell>
-					<TableCell>
+					<TableCell class="px-2 py-0">{key}</TableCell>
+					<TableCell class="px-2 py-0">
 						{#if key === 'osm_node_id'}
 							<a
 								href="https://www.openstreetmap.org/node/{value}"
