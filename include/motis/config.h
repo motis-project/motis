@@ -182,9 +182,9 @@ struct config {
 
   struct elevators {
     bool operator==(elevators const&) const = default;
-    std::optional<std::string> url_;
-    std::optional<std::string> init_;
-    std::optional<std::string> osm_mapping_;
+    std::optional<std::string> url_{};
+    std::optional<std::string> init_{};
+    std::optional<std::string> osm_mapping_{};
     unsigned http_timeout_{10};
     std::optional<headers_t> headers_{};
   };
@@ -217,6 +217,7 @@ struct config {
     unsigned street_routing_max_prepost_transit_seconds_{3600U};
     unsigned street_routing_max_direct_seconds_{21600U};
   };
+  limits get_limits() const { return limits_.value_or(limits{}); }
   std::optional<limits> limits_{};
 
   struct logging {

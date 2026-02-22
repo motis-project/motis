@@ -180,7 +180,9 @@ data::data(std::filesystem::path p, config const& c)
               .and_then([](auto const& x) { return x.osm_mapping_; })
               .transform([](std::string const& x) {
                 return std::make_unique<elevator_id_osm_mapping_t>(
-                    parse_elevator_id_osm_mapping(fs::path{x}));
+                    x.starts_with("dhid,diid,osm_kind,osm_id")
+                        ? parse_elevator_id_osm_mapping(std::string_view{x})
+                        : parse_elevator_id_osm_mapping(fs::path{x}));
               })
               .value_or(nullptr);
       rt_->e_ = std::make_unique<motis::elevators>(
@@ -191,12 +193,14 @@ data::data(std::filesystem::path p, config const& c)
         tt.wait();
         auto new_rtt = std::make_unique<n::rt_timetable>(
             n::rt::create_rt_timetable(*tt_, rt_->rtt_->base_day_));
-        rt_->e_ =
-            update_elevators(c, *this,
-                             cista::mmap{c.get_elevators()->init_->c_str(),
-                                         cista::mmap::protection::READ}
-                                 .view(),
-                             *new_rtt);
+        rt_->e_ = update_elevators(
+            c, *this,
+            c.get_elevators()->init_->starts_with("\n")
+                ? std::string_view{*c.get_elevators()->init_}
+                : cista::mmap{c.get_elevators()->init_->c_str(),
+                              cista::mmap::protection::READ}
+                      .view(),
+            *new_rtt);
         rt_->rtt_ = std::move(new_rtt);
       }
     }

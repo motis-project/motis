@@ -24,7 +24,7 @@ api::stops_response stops::operator()(boost::urls::url_view const& url) const {
       max.has_value(), "max not a coordinate: {}request_exception", query.max_);
   auto res = api::stops_response{};
 
-  auto const max_results = config_.limits_.value().stops_max_results_;
+  auto const max_results = config_.get_limits().stops_max_results_;
   loc_rtree_.find({min->pos_, max->pos_}, [&](n::location_idx_t const l) {
     utl::verify<net::too_many_exception>(res.size() < max_results,
                                          "too many items");

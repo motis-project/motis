@@ -29,7 +29,7 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
   metrics_->routing_requests_.Increment();
 
   auto const max_travel_minutes =
-      config_.limits_.value().onetoall_max_travel_minutes_;
+      config_.get_limits().onetoall_max_travel_minutes_;
   auto const query = api::oneToAll_params{url.params()};
   utl::verify<net::too_many_exception>(
       query.maxTravelTime_ <= max_travel_minutes,
@@ -74,7 +74,7 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
       std::min(
           std::chrono::duration_cast<std::chrono::seconds>(max_travel_time),
           std::chrono::seconds{
-              config_.limits_.value()
+              config_.get_limits()
                   .street_routing_max_prepost_transit_seconds_}));
   auto const one_dir =
       query.arriveBy_ ? osr::direction::kBackward : osr::direction::kForward;
@@ -138,7 +138,7 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
     }
   }
 
-  auto const max_results = config_.limits_.value().onetoall_max_results_;
+  auto const max_results = config_.get_limits().onetoall_max_results_;
   utl::verify<net::too_many_exception>(reachable.count() <= max_results,
                                        "too many results: {} > {}",
                                        reachable.count(), max_results);

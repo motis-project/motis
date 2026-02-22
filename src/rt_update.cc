@@ -17,7 +17,6 @@
 #include "nigiri/rt/rt_timetable.h"
 
 #include "motis/config.h"
-#include "motis/constants.h"
 #include "motis/data.h"
 #include "motis/elevators/update_elevators.h"
 #include "motis/http_req.h"
