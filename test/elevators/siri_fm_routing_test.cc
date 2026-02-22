@@ -2,10 +2,6 @@
 
 #include <chrono>
 
-#include "boost/asio/co_spawn.hpp"
-#include "boost/asio/detached.hpp"
-#include "boost/json.hpp"
-
 #ifdef NO_DATA
 #undef NO_DATA
 #endif
@@ -13,18 +9,10 @@
 
 #include "utl/init_from.h"
 
-#include "motis-api/motis-api.h"
 #include "motis/config.h"
 #include "motis/data.h"
-#include "motis/elevators/elevators.h"
-#include "motis/elevators/parse_siri_fm.h"
-#include "motis/elevators/update_elevators.h"
 #include "motis/endpoints/routing.h"
-#include "motis/gbfs/update.h"
 #include "motis/import.h"
-
-#include "./util.h"
-#include "motis/endpoints/update_elevator.h"
 
 namespace json = boost::json;
 using namespace std::string_view_literals;
@@ -151,7 +139,6 @@ TEST(motis, siri_fm_routing) {
         "&pedestrianProfile=WHEELCHAIR"
         "&useRoutedTransfers=true"
         "&timetableView=false");
-    std::cout << json::serialize(json::value_from(res)) << "\n";
     EXPECT_EQ(0U, res.itineraries_.size());
   }
 
