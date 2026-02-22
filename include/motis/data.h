@@ -12,8 +12,8 @@
 #include "osr/types.h"
 
 #include "motis/adr_extend_tt.h"
-#include "motis/compute_footpaths.h"
 #include "motis/config.h"
+#include "motis/elevators/parse_elevator_id_osm_mapping.h"
 #include "motis/fwd.h"
 #include "motis/gbfs/data.h"
 #include "motis/match_platforms.h"
@@ -70,11 +70,11 @@ struct data {
 
   auto cista_members() {
     // !!! Remember to add all new members !!!
-    return std::tie(config_, t_, adr_ext_, f_, tz_, r_, tc_, w_, pl_, l_,
-                    elevations_, tt_, tbd_, tags_, location_rtree_,
-                    elevator_nodes_, shapes_, railviz_static_, matches_,
-                    way_matches_, rt_, gbfs_, odm_bounds_, ride_sharing_bounds_,
-                    flex_areas_, metrics_, auser_);
+    return std::tie(
+        config_, t_, adr_ext_, f_, tz_, r_, tc_, w_, pl_, l_, elevations_, tt_,
+        tbd_, tags_, location_rtree_, elevator_nodes_, elevator_osm_mapping_,
+        shapes_, railviz_static_, matches_, way_matches_, rt_, gbfs_,
+        odm_bounds_, ride_sharing_bounds_, flex_areas_, metrics_, auser_);
   }
 
   std::filesystem::path path_;
@@ -95,6 +95,7 @@ struct data {
   cista::wrapped<tag_lookup> tags_;
   ptr<point_rtree<nigiri::location_idx_t>> location_rtree_;
   ptr<hash_set<osr::node_idx_t>> elevator_nodes_;
+  ptr<elevator_id_osm_mapping_t> elevator_osm_mapping_;
   ptr<nigiri::shapes_storage> shapes_;
   ptr<railviz_static_index> railviz_static_;
   cista::wrapped<vector_map<nigiri::location_idx_t, osr::platform_idx_t>>

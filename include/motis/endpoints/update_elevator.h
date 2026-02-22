@@ -25,6 +25,7 @@ struct update_elevator {
   osr::platforms const& pl_;
   point_rtree<nigiri::location_idx_t> const& loc_rtree_;
   hash_set<osr::node_idx_t> const& elevator_nodes_;
+  elevator_id_osm_mapping_t const* elevator_ids_;
   platform_matches_t const& matches_;
   std::shared_ptr<rt>& rt_;
 };

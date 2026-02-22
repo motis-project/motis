@@ -46,7 +46,8 @@ json::value update_elevator::operator()(json::value const& query) const {
                          tasks.emplace(l, osr::direction::kBackward);
                        });
 
-  auto new_e = elevators{w_, elevator_nodes_, std::move(elevators_copy)};
+  auto new_e =
+      elevators{w_, elevator_ids_, elevator_nodes_, std::move(elevators_copy)};
   auto new_rtt = n::rt::create_rt_timetable(tt_, rtt->base_day_);
   update_rtt_td_footpaths(
       w_, l_, pl_, tt_, loc_rtree_, new_e, matches_, tasks, rtt, new_rtt,
