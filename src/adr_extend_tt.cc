@@ -364,7 +364,7 @@ adr_ext adr_extend_tt(nigiri::timetable const& tt,
     }
 
     auto const place_idx = ret.location_place_[l];
-    for (auto const eq : tt.locations_.equivalences_[l]) {
+    for (auto const eq : get_transitive_equivalences(l)) {
       auto const eq_root = tt.locations_.get_root_idx(eq);
       auto const eq_place_idx = ret.location_place_[eq_root];
       ret.place_importance_[place_idx] += ret.place_importance_[eq_place_idx];
