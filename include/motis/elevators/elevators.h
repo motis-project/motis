@@ -1,7 +1,7 @@
 #pragma once
 
 #include "motis/elevators/match_elevator.h"
-#include "motis/elevators/parse_elevator_id_osm_mappint_rtree.h"
+#include "motis/elevators/parse_elevator_id_osm_mapping.h"
 #include "motis/fwd.h"
 #include "motis/point_rtree.h"
 
