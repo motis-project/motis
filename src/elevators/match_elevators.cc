@@ -56,7 +56,7 @@ osr::bitvec<osr::node_idx_t> get_blocked_elevators(
   auto inactive_mutex = std::mutex{};
 
   auto id_to_elevator = hash_map<std::string, elevator_idx_t>{};
-  for (auto const& [i, e] : utl::enumerate(elevators)) {
+  for (auto const [i, e] : utl::enumerate(elevators)) {
     if (e.id_str_.has_value()) {
       id_to_elevator.emplace(*e.id_str_, elevator_idx_t{i});
     }
