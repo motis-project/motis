@@ -42,13 +42,13 @@ std::optional<osr::search_profile> get_profile(n::clasz const clasz) {
   switch (clasz) {
     case n::clasz::kBus:
     case n::clasz::kCoach:
+    case n::clasz::kRideSharing:
     case n::clasz::kODM: return osr::search_profile::kBus;
     case n::clasz::kTram:
     case n::clasz::kHighSpeed:
     case n::clasz::kLongDistance:
     case n::clasz::kNight:
     case n::clasz::kRegional:
-    case n::clasz::kRegionalFast:
     case n::clasz::kSuburban:
     case n::clasz::kSubway:
     case n::clasz::kFunicular: return osr::search_profile::kRailway;
