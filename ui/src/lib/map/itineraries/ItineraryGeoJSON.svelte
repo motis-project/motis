@@ -4,7 +4,7 @@
 	import type { Itinerary, Mode } from '@motis-project/motis-client';
 	import { getColor } from '$lib/modeStyle';
 	import polyline from '@mapbox/polyline';
-	import { colord } from 'colord';
+	import { getDecorativeColors } from '$lib/map/colors';
 	import { layers } from './itineraryLayers';
 	export const PRECISION = 6;
 
@@ -45,13 +45,14 @@
 					const color = isIndividualTransport(l.mode)
 						? getIndividualModeColor(l.mode)
 						: `${getColor(l)[0]}`;
-					const outlineColor = colord(color).darken(0.2).toHex();
+					const { outlineColor, chevronColor } = getDecorativeColors(color);
 					return l.steps.map((p) => {
 						return {
 							type: 'Feature',
 							properties: {
 								color,
 								outlineColor,
+								chevronColor,
 								fromLevel: p.fromLevel,
 								toLevel: p.toLevel,
 								level: level,
@@ -65,12 +66,13 @@
 					});
 				} else {
 					const color = `${getColor(l)[0]}`;
-					const outlineColor = colord(color).darken(0.2).toHex();
+					const { outlineColor, chevronColor } = getDecorativeColors(color);
 					return {
 						type: 'Feature',
 						properties: {
 							outlineColor,
-							color
+							color,
+							chevronColor
 						},
 						geometry: {
 							type: 'LineString',
@@ -128,6 +130,29 @@
 			'line-width': 1.5,
 			'line-gap-width': 7.5,
 			'line-opacity': 1
+		}}
+	/>
+	<Layer
+		id="path-chevrons-{id}"
+		type="symbol"
+		layout={{
+			'symbol-placement': 'line',
+			'symbol-spacing': 40,
+			'text-field': '›',
+			'text-size': 24,
+			'text-font': ['Noto Sans Bold'],
+			'text-keep-upright': false,
+			'text-allow-overlap': true,
+			'text-rotation-alignment': 'map',
+			'text-offset': [0, -0.1]
+		}}
+		filter={['!', ['has', 'fromLevel']]}
+		paint={{
+			'text-color': selected ? ['get', 'chevronColor'] : theme == 'dark' ? '#999' : '#ddd',
+			'text-opacity': 0.85,
+			'text-halo-color': selected ? ['get', 'outlineColor'] : theme == 'dark' ? '#444' : '#999',
+			'text-halo-width': 0.5,
+			'text-halo-blur': 0.2
 		}}
 	/>
 </GeoJSON>

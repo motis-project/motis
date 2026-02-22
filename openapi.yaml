@@ -1551,7 +1551,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Itinerary' 
+                $ref: '#/components/schemas/Itinerary'
         '422':
           description: Unprocessable Entity
           content:
@@ -2039,6 +2039,91 @@ paths:
                 items:
                   type: number
 
+  /api/experimental/map/routes:
+    get:
+      tags:
+        - map
+      operationId: routes
+      summary: |
+        Given an area frame (box defined by the top-right and bottom-left corners),
+        it returns all routes and their respective shapes that operate within this area.
+        Routes are filtered by zoom level. On low zoom levels, only long distance trains will be shown
+        while on high zoom levels, also metros, buses and trams will be returned.
+      parameters:
+        - name: zoom
+          in: query
+          required: true
+          description: current zoom level
+          schema:
+            type: number
+        - name: min
+          in: query
+          required: true
+          description: latitude,longitude pair of the lower right coordinate
+          schema:
+            type: string
+        - name: max
+          in: query
+          required: true
+          description: latitude,longitude pair of the upper left coordinate
+          schema:
+            type: string
+        - name: language
+          in: query
+          required: false
+          description: |
+            language tags as used in OpenStreetMap / GTFS
+            (usually BCP-47 / ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
+          schema:
+            type: array
+            items:
+              type: string
+          explode: false
+      responses:
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '200':
+          description: a list of routes in the area
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - routes
+                  - zoomFiltered
+                properties:
+                  routes:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RouteInfo'
+                  zoomFiltered:
+                    type: boolean
+                    description: |
+                      Indicates whether some routes were filtered out due to
+                      the zoom level.
+
   /api/v1/rentals:
     get:
       tags:
@@ -2497,6 +2582,9 @@ components:
         - ODM  # Transit | Street
         - RIDE_SHARING  # Transit | Street
         - FLEX
+        - DEBUG_BUS_ROUTE
+        - DEBUG_RAILWAY_ROUTE
+        - DEBUG_FERRY_ROUTE
         # === Transit ===
         - TRANSIT
         - TRAM
@@ -3912,3 +4000,84 @@ components:
         error:
           type: string
           description: error message
+
+    RouteSegment:
+      description: Route segment between two stops to show a route on a map
+      type: object
+      required:
+        - from
+        - to
+        - polyline
+      properties:
+        from:
+          $ref: '#/components/schemas/Place'
+        to:
+          $ref: '#/components/schemas/Place'
+        polyline:
+          $ref: '#/components/schemas/EncodedPolyline'
+
+    RouteColor:
+      type: object
+      required:
+        - color
+        - textColor
+      properties:
+        color:
+          type: string
+        textColor:
+          type: string
+
+    RoutePathSource:
+      type: string
+      enum:
+        - NONE
+        - TIMETABLE
+        - ROUTED
+
+    TransitRouteInfo:
+      type: object
+      required:
+        - id
+        - shortName
+        - longName
+      properties:
+        id:
+          type: string
+        shortName:
+          type: string
+        longName:
+          type: string
+        color:
+          type: string
+        textColor:
+          type: string
+
+    RouteInfo:
+      type: object
+      required:
+        - mode
+        - transitRoutes
+        - numStops
+        - routeIdx
+        - pathSource
+        - segments
+      properties:
+        mode:
+          $ref: '#/components/schemas/Mode'
+          description: Transport mode for this route
+        transitRoutes:
+          type: array
+          items:
+            $ref: '#/components/schemas/TransitRouteInfo'
+        numStops:
+          type: integer
+          description: Number of stops along this route
+        routeIdx:
+          type: integer
+          description: Internal route index for debugging purposes
+        pathSource:
+          $ref: '#/components/schemas/RoutePathSource'
+        segments:
+          type: array
+          items:
+            $ref: '#/components/schemas/RouteSegment'
