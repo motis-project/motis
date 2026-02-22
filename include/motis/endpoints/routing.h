@@ -36,10 +36,6 @@ nigiri::interval<nigiri::unixtime_t> shrink(
     nigiri::interval<nigiri::unixtime_t> search_interval,
     std::vector<nigiri::routing::journey>& journeys);
 
-bool is_intermodal(place_t const&);
-
-nigiri::routing::location_match_mode get_match_mode(place_t const&);
-
 std::vector<nigiri::routing::offset> station_start(nigiri::location_idx_t);
 
 std::vector<nigiri::routing::via_stop> get_via_stops(
@@ -132,5 +128,10 @@ struct routing {
   odm::ride_sharing_bounds const* ride_sharing_bounds_;
   metrics_registry* metrics_;
 };
+
+bool is_intermodal(routing const&, place_t const&);
+
+nigiri::routing::location_match_mode get_match_mode(routing const&,
+                                                    place_t const&);
 
 }  // namespace motis::ep
