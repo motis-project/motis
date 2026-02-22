@@ -184,6 +184,7 @@ struct config {
     bool operator==(elevators const&) const = default;
     std::optional<std::string> url_;
     std::optional<std::string> init_;
+    std::optional<std::string> osm_mapping_;
     unsigned http_timeout_{10};
     std::optional<headers_t> headers_{};
   };

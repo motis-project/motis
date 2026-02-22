@@ -173,8 +173,19 @@ data::data(std::filesystem::path p, config const& c)
     if (c.has_elevators()) {
       street_routing.wait();
 
+      elevator_osm_mapping_ =
+          utl::visit(
+              config_.elevators_,
+              [](std::optional<config::elevators> const& x) { return x; })
+              .and_then([](auto const& x) { return x.osm_mapping_; })
+              .transform([](std::string const& x) {
+                return std::make_unique<elevator_id_osm_mapping_t>(
+                    parse_elevator_id_osm_mapping(fs::path{x}));
+              })
+              .value_or(nullptr);
       rt_->e_ = std::make_unique<motis::elevators>(
-          *w_, *elevator_nodes_, vector_map<elevator_idx_t, elevator>{});
+          *w_, elevator_osm_mapping_.get(), *elevator_nodes_,
+          vector_map<elevator_idx_t, elevator>{});
 
       if (c.get_elevators()->init_) {
         tt.wait();

@@ -9,6 +9,7 @@
 #include "motis/data.h"
 #include "motis/elevators/elevators.h"
 #include "motis/elevators/parse_fasta.h"
+#include "motis/elevators/parse_siri_fm.h"
 #include "motis/update_rtt_td_footpaths.h"
 
 namespace n = nigiri;
@@ -29,9 +30,9 @@ ptr<elevators> update_elevators(config const& c,
                                 data const& d,
                                 std::string_view body,
                                 n::rt_timetable& new_rtt) {
-  auto new_e = std::make_unique<motis::elevators>(
-      *d.w_, *d.elevator_nodes_, parse_fasta(std::string_view{body}));
-
+  auto new_e = std::make_unique<elevators>(
+      *d.w_, d.elevator_osm_mapping_.get(), *d.elevator_nodes_,
+      body.contains("<Siri") ? parse_siri_fm(body) : parse_fasta(body));
   auto const& old_e = *d.rt_->e_;
   auto const old_map = to_map(old_e.elevators_);
   auto const new_map = to_map(new_e->elevators_);

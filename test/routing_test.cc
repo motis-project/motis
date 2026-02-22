@@ -290,7 +290,7 @@ TEST(motis, routing) {
       .geocoding_ = true,
       .reverse_geocoding_ = true};
   auto d = import(c, "test/data", true);
-  d.rt_->e_ = std::make_unique<elevators>(*d.w_, *d.elevator_nodes_,
+  d.rt_->e_ = std::make_unique<elevators>(*d.w_, nullptr, *d.elevator_nodes_,
                                           parse_fasta(kFastaJson));
   d.init_rtt(date::sys_days{2019_y / May / 1});
 
