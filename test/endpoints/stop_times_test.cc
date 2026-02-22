@@ -274,4 +274,71 @@ TEST(motis, stop_times) {
                             "&n=3"),
                  net::bad_request_exception);
   }
+
+  {
+    // window query LATER
+    auto const res = stop_times(
+        "/api/v5/stoptimes?stopId=test_FFM_101"
+        "&time=2019-04-30T23:00:00.000Z"
+        "&arriveBy=true"
+        "&direction=LATER"
+        "&window=1800"
+        "&language=de");
+
+    auto const format_time = [&](auto&& t, char const* fmt = "%F %H:%M") {
+      return date::format(fmt, *t);
+    };
+
+    EXPECT_EQ(2, res.stopTimes_.size());  // n is ignored if window is set
+    for (auto const& stop_time : res.stopTimes_) {
+      auto const arr = format_time(stop_time.place_.arrival_.value());
+      std::cout << "arr: " << arr << std::endl;
+      EXPECT_GE(arr, "2019-04-30 23:00");
+      EXPECT_LE(arr, "2019-04-30 23:30");
+    }
+    EXPECT_FALSE(res.previousPageCursor_.empty());
+    EXPECT_FALSE(res.nextPageCursor_.empty());
+  }
+  {
+    // window query EARLIER
+    auto const res = stop_times(
+        "/api/v5/stoptimes?stopId=test_FFM_101"
+        "&time=2019-04-30T23:15:00.000Z"
+        "&arriveBy=true"
+        "&direction=EARLIER"
+        "&window=1800"
+        "&language=de");
+
+    auto const format_time = [&](auto&& t, char const* fmt = "%F %H:%M") {
+      return date::format(fmt, *t);
+    };
+
+    for (auto const& stop_time : res.stopTimes_) {
+      auto const arr = format_time(stop_time.place_.arrival_.value());
+      std::cout << "arr E: " << arr << std::endl;
+      EXPECT_GE(arr, "2019-04-30 22:45");
+      EXPECT_LE(arr, "2019-04-30 23:15");
+    }
+  }
+  {
+    // window query EARLIER (small window large n)
+    auto const res = stop_times(
+        "/api/v5/stoptimes?stopId=test_FFM_101"
+        "&time=2019-04-30T23:15:00.000Z"
+        "&arriveBy=true"
+        "&direction=LATER"
+        "&window=60"
+        "&n=2"
+        "&language=de");
+
+    auto const format_time = [&](auto&& t, char const* fmt = "%F %H:%M") {
+      return date::format(fmt, *t);
+    };
+
+    EXPECT_GT(res.stopTimes_.size(), 1);
+    for (auto const& stop_time : res.stopTimes_) {
+      auto const arr = format_time(stop_time.place_.arrival_.value());
+      std::cout << "arr E2: " << arr << std::endl;
+    }
+  }
 }
