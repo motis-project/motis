@@ -30,7 +30,8 @@ ptr<elevators> update_elevators(config const& c,
                                 data const& d,
                                 std::string_view body,
                                 n::rt_timetable& new_rtt) {
-  auto new_e = std::make_unique<elevators>(*d.w_, d.elevator_osm_mapping_.get(), *d.elevator_nodes_,
+  auto new_e = std::make_unique<elevators>(
+      *d.w_, d.elevator_osm_mapping_.get(), *d.elevator_nodes_,
       body.contains("<Siri") ? parse_siri_fm(body) : parse_fasta(body));
   auto const& old_e = *d.rt_->e_;
   auto const old_map = to_map(old_e.elevators_);
