@@ -3,6 +3,7 @@
 #include <fstream>
 #include <map>
 #include <ostream>
+#include <tuple>
 #include <vector>
 
 #include "fmt/ranges.h"
@@ -30,7 +31,6 @@
 #include "nigiri/clasz.h"
 #include "nigiri/common/parse_date.h"
 #include "nigiri/routing/tb/preprocess.h"
-#include "nigiri/rt/create_rt_timetable.h"
 #include "nigiri/rt/rt_timetable.h"
 #include "nigiri/shapes_storage.h"
 #include "nigiri/timetable.h"
@@ -38,18 +38,16 @@
 
 #include "osr/extract/extract.h"
 #include "osr/lookup.h"
-#include "osr/platforms.h"
 #include "osr/ways.h"
 
 #include "adr/adr.h"
-#include "adr/area_database.h"
+#include "adr/formatter.h"
 #include "adr/reverse.h"
 #include "adr/typeahead.h"
 
 #include "motis/adr_extend_tt.h"
 #include "motis/clog_redirect.h"
 #include "motis/compute_footpaths.h"
-#include "motis/constants.h"
 #include "motis/data.h"
 #include "motis/hashes.h"
 #include "motis/tag_lookup.h"
@@ -113,9 +111,19 @@ cista::hash_t hash_file(fs::path const& p) {
     return cista::hash(str);
   } else if (fs::is_directory(p)) {
     auto h = cista::BASE_HASH;
-    // for (auto const& file : fs::directory_iterator{p}) {
-    //   h = cista::hash_combine(h, hash_file(file));
-    // }
+    auto entries = std::vector<std::tuple<std::string, std::uint64_t,
+                                          std::filesystem::file_time_type>>{};
+    for (auto const& entry : fs::recursive_directory_iterator{p}) {
+      auto ec = std::error_code{};
+      entries.emplace_back(fs::relative(entry.path(), p, ec).generic_string(),
+                           entry.is_regular_file(ec) ? entry.file_size(ec) : 0U,
+                           fs::last_write_time(entry.path(), ec));
+    }
+    utl::sort(entries);
+    for (auto const& [rel, size, modified_ts] : entries) {
+      h = cista::hash_combine(h, cista::hash(rel), size,
+                              modified_ts.time_since_epoch().count());
+    }
     return h;
   } else {
     auto const mmap = cista::mmap{str.c_str(), cista::mmap::protection::READ};
@@ -232,6 +240,9 @@ data import(config const& c, fs::path const& data_path, bool const write) {
              if (c.reverse_geocoding_) {
                d.load_reverse_geocoder();
              }
+
+             d.tc_ = std::make_unique<adr::cache>(d.t_->strings_.size(), 100U);
+             d.f_ = std::make_unique<adr::formatter>();
            },
            [&]() {
              if (!c.osm_) {
@@ -241,6 +252,7 @@ data import(config const& c, fs::path const& data_path, bool const write) {
              // Same here, need to load base-line version for adr_extend!
              d.t_ = adr::read(data_path / "adr" / "t.bin");
              d.tc_ = std::make_unique<adr::cache>(d.t_->strings_.size(), 100U);
+             d.f_ = std::make_unique<adr::formatter>();
 
              if (c.reverse_geocoding_) {
                d.load_reverse_geocoder();
