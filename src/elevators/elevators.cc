@@ -11,7 +11,7 @@ vector_map<elevator_idx_t, elevator> update_elevator_coordinates(
     vector_map<elevator_idx_t, elevator>&& elevators) {
   if (ids != nullptr) {
     auto id_to_elevator = hash_map<std::string, elevator_idx_t>{};
-    for (auto const& [i, e] : utl::enumerate(elevators)) {
+    for (auto const [i, e] : utl::enumerate(elevators)) {
       if (e.id_str_.has_value()) {
         id_to_elevator.emplace(*e.id_str_, elevator_idx_t{i});
       }
