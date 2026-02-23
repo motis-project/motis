@@ -242,7 +242,8 @@ api::oneToManyIntermodal_response run_one_to_many_intermodal(
   // Get street routing durations
   utl::verify<net::bad_request_exception>(
       !query.directModes_.has_value() || query.directModes_->size() == 1,
-      "Only one direct mode supported. Got {}", query.directModes_->size());
+      "Only one direct mode supported. Got {}",
+      query.directModes_.has_value() ? query.directModes_->size() : 0);
   auto durations =
       query.directModes_
           .transform([&](std::vector<api::ModeEnum> const& direct_modes) {
