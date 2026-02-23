@@ -242,10 +242,6 @@ TEST(motis, itinerary_id_generate_rejects_invalid_single_leg_inputs) {
   EXPECT_ANY_THROW(generate_itinerary_id(invalid));
 
   invalid = original;
-  invalid.legs_.push_back(original.legs_.front());
-  EXPECT_ANY_THROW(generate_itinerary_id(invalid));
-
-  invalid = original;
   invalid.legs_.front().tripId_ = std::nullopt;
   EXPECT_ANY_THROW(generate_itinerary_id(invalid));
 
