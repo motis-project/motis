@@ -155,9 +155,9 @@ n::routing::query meta_router::get_base_query(
     n::interval<n::unixtime_t> const& intvl) const {
   return {
       .start_time_ = intvl,
-      .start_match_mode_ = motis::ep::get_match_mode(start_),
-      .dest_match_mode_ = motis::ep::get_match_mode(dest_),
-      .use_start_footpaths_ = !motis::ep::is_intermodal(start_),
+      .start_match_mode_ = motis::ep::get_match_mode(r_, start_),
+      .dest_match_mode_ = motis::ep::get_match_mode(r_, dest_),
+      .use_start_footpaths_ = !motis::ep::is_intermodal(r_, start_),
       .max_transfers_ = static_cast<std::uint8_t>(
           query_.maxTransfers_.has_value() ? *query_.maxTransfers_
                                            : n::routing::kMaxTransfers),
@@ -201,7 +201,7 @@ std::vector<meta_router::routing_result> meta_router::search_interval(
   auto const tasks = utl::to_vec(sub_queries, [&](n::routing::query const& q) {
     auto fn = [&, q = std::move(q)]() mutable {
       auto const timeout = std::chrono::seconds{query_.timeout_.value_or(
-          r_.config_.limits_.value().routing_max_timeout_seconds_)};
+          r_.config_.get_limits().routing_max_timeout_seconds_)};
       auto search_state = n::routing::search_state{};
       auto raptor_state = n::routing::raptor_state{};
       return routing_result{raptor_search(
@@ -330,12 +330,12 @@ api::plan_response meta_router::run() {
   auto const params = get_osr_parameters(query_);
   auto const pre_transit_time = std::min(
       std::chrono::seconds{query_.maxPreTransitTime_},
-      std::chrono::seconds{r_.config_.limits_.value()
-                               .street_routing_max_prepost_transit_seconds_});
+      std::chrono::seconds{
+          r_.config_.get_limits().street_routing_max_prepost_transit_seconds_});
   auto const post_transit_time = std::min(
       std::chrono::seconds{query_.maxPostTransitTime_},
-      std::chrono::seconds{r_.config_.limits_.value()
-                               .street_routing_max_prepost_transit_seconds_});
+      std::chrono::seconds{
+          r_.config_.get_limits().street_routing_max_prepost_transit_seconds_});
   auto const qf = query_factory{
       .base_query_ = get_base_query(context_intvl),
       .start_walk_ = r_.get_offsets(
@@ -427,7 +427,9 @@ api::plan_response meta_router::run() {
              r_.metrics_->routing_execution_duration_seconds_routing_);
 
   auto const whitelist_start = std::chrono::steady_clock::now();
-  if (p.whitelist_taxi(taxi_journeys, *tt_)) {
+  auto const was_whitelist_response_valid =
+      p.whitelist_taxi(taxi_journeys, *tt_);
+  if (was_whitelist_response_valid) {
     add_direct_odm(p.direct_taxi_, taxi_journeys, from_, to_, query_.arriveBy_,
                    kOdmTransportModeId);
   }
@@ -473,7 +475,6 @@ api::plan_response meta_router::run() {
         to_seconds(taxi_journeys.begin()->arrival_time() -
                    taxi_journeys.begin()->departure_time())));
   }
-
   return {
       .from_ = from_place_,
       .to_ = to_place_,
@@ -542,6 +543,81 @@ api::plan_response meta_router::run() {
                       p.last_mile_ride_sharing_tour_ids_.at(i).view()};
                   break;
                 }
+              }
+            }
+
+            auto const match_times = [&](motis::api::Leg const& leg,
+                                         boost::json::array const& entries)
+                -> std::optional<std::string> {
+              auto const it = std::find_if(
+                  std::begin(entries), std::end(entries),
+                  [&](boost::json::value const& json_entry) {
+                    if (json_entry.is_null()) {
+                      return false;
+                    }
+                    auto const& object_entry = json_entry.as_object();
+                    return to_unix(object_entry.at("pickupTime").as_int64()) ==
+                               leg.startTime_ &&
+                           to_unix(object_entry.at("dropoffTime").as_int64()) ==
+                               leg.endTime_;
+                  });
+
+              if (it != std::end(entries)) {
+                return boost::json::serialize(it->as_object());
+              }
+
+              return std::nullopt;
+            };
+
+            auto const match_location =
+                [&](motis::api::Leg const& leg, boost::json::array const& outer,
+                    std::vector<nigiri::location_idx_t> const& locations,
+                    bool const check_to) -> std::optional<std::string> {
+              auto const& stop_id =
+                  check_to ? leg.to_.stopId_ : leg.from_.stopId_;
+              for (auto const [loc, outer_value] : utl::zip(locations, outer)) {
+                if (stop_id != r_.tags_->id(*tt_, loc)) {
+                  continue;
+                }
+                auto const& inner = outer_value.as_array();
+                if (auto result = match_times(leg, inner)) {
+                  return result;
+                }
+              }
+              return std::nullopt;
+            };
+
+            if (!was_whitelist_response_valid) {
+              return response;
+            }
+            if (response.legs_.size() == 1 &&
+                response.legs_.front().mode_ == api::ModeEnum::ODM) {
+              if (auto const id = match_times(
+                      response.legs_.front(),
+                      p.whitelist_response_.at("direct").as_array());
+                  id.has_value()) {
+                response.legs_.front().tripId_ = std::optional{*id};
+              }
+              return response;
+            }
+            if (!response.legs_.empty() &&
+                response.legs_.front().mode_ == api::ModeEnum::ODM) {
+              if (auto const id = match_location(
+                      response.legs_.front(),
+                      p.whitelist_response_.at("start").as_array(),
+                      p.whitelist_first_mile_locations_, true);
+                  id.has_value()) {
+                response.legs_.front().tripId_ = std::optional{*id};
+              }
+            }
+            if (!response.legs_.empty() &&
+                response.legs_.back().mode_ == api::ModeEnum::ODM) {
+              if (auto const id = match_location(
+                      response.legs_.back(),
+                      p.whitelist_response_.at("target").as_array(),
+                      p.whitelist_last_mile_locations_, false);
+                  id.has_value()) {
+                response.legs_.back().tripId_ = std::optional{*id};
               }
             }
             return response;

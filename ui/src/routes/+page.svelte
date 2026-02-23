@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { X, Palette, Rss, Ban, LocateFixed, TrainFront } from '@lucide/svelte';
+	import { X, Palette, Rss, Ban, LocateFixed, TrainFront, Waypoints } from '@lucide/svelte';
 	import { getStyle } from '$lib/map/style';
 	import Map from '$lib/map/Map.svelte';
 	import Control from '$lib/map/Control.svelte';
@@ -48,6 +48,7 @@
 	import type { DisplayLevel, IsochronesOptions, IsochronesPos } from '$lib/map/IsochronesShared';
 	import IsochronesMask from '$lib/IsochronesMask.svelte';
 	import Rentals from '$lib/map/rentals/Rentals.svelte';
+	import Routes from '$lib/map/routes/Routes.svelte';
 	import {
 		getFormFactors,
 		getPrePostDirectModes,
@@ -77,6 +78,7 @@
 	let dataAttributionLink: string | undefined = $state(undefined);
 	let colorMode = $state<'rt' | 'route' | 'mode' | 'none'>(isSmallScreen ? 'none' : 'rt');
 	let showMap = $state(!isSmallScreen);
+	let showRoutes = $state(false);
 	let lastOneToAllQuery: OneToAllData | undefined = undefined;
 	let lastPlanQuery: PlanData | undefined = undefined;
 	let serverConfig: ServerConfig | undefined = $state();
@@ -665,6 +667,7 @@
 						bind:via
 						bind:viaMinimumStay
 						bind:viaLabels
+						{hasDebug}
 					/>
 				</Card>
 			</Tabs.Content>
@@ -699,6 +702,7 @@
 						bind:preTransitProviderGroups
 						bind:postTransitProviderGroups
 						bind:directProviderGroups
+						{hasDebug}
 					/>
 				</Card>
 			</Tabs.Content>
@@ -836,6 +840,13 @@
 		{#if hasDebug}
 			<Control position="top-right" class="text-right">
 				<Debug {bounds} {level} {zoom} />
+				<Button
+					size="icon"
+					variant={showRoutes ? 'default' : 'outline'}
+					onclick={() => (showRoutes = !showRoutes)}
+				>
+					<Waypoints class="w-5 h-5" />
+				</Button>
 			</Control>
 		{/if}
 
@@ -898,6 +909,9 @@
 						<LocateFixed class="w-5 h-5" />
 					</Button>
 				</Control>
+				{#if showRoutes}
+					<Routes {map} {bounds} {zoom} />
+				{/if}
 				<Rentals {map} {bounds} {zoom} {theme} debug={hasDebug} />
 			{/if}
 

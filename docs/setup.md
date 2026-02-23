@@ -67,7 +67,7 @@ timetable:                          # if not set, no timetable will be loaded
   incremental_rt_update: false      # false = real-time updates are applied to a clean slate, true = no data will be dropped
   max_footpath_length: 15           # maximum footpath length when transitively connecting stops or for routing footpaths if `osr_footpath` is set to true
   max_matching_distance: 25.0       # maximum distance from geolocation to next OSM ways that will be found
-  preprocess_max_matching_distance: 0.0 # max. distance for preprocessing matches from nigiri locations (stops) to OSM ways to speed up querying (set to 0 (default) to disable)
+  preprocess_max_matching_distance: 250.0 # max. distance for preprocessing matches from nigiri locations (stops) to OSM ways to speed up querying (set to 0 (default) to disable)
   datasets:                         # map of tag -> dataset
     ch:                             # the tag will be used as prefix for stop IDs and trip IDs with `_` as divider, so `_` cannot be part of the dataset tag
       path: ch_opentransportdataswiss.gtfs.zip
@@ -339,3 +339,70 @@ following JSON structure:
 If, as above, the two top keys `"Siri"` and `"ServiceDelivery"` are included in
 the JSON response, MOTIS will fail to parse the SIRI Lite feed, throwing
 `[VERIFY FAIL] unable to parse time ""` errors.
+
+## Shapes
+
+To enable shapes support (polylines for trips), `timetable.with_shapes` must
+be set to `true`. This will load shapes that are present in the datasets
+(e.g. GTFS shapes.txt).
+
+It is also possible to compute shapes based on OpenStreetMap data. This
+requires:
+
+- `timetable.with_shapes` set to `true`
+- `osm` data
+- `street_routing` set to `true`
+- `timetable.route_shapes` config:
+
+```yaml
+timetable:
+  # with_shapes must be set to true to enable shapes support, otherwise no shapes will be loaded or computed
+  with_shapes: true
+  route_shapes: # all these options are optional
+    # enable this to compute shapes for routes that don't have shapes in the dataset (default = false)
+    missing_shapes: true
+    # if replace_shapes is enabled, all shapes will be recomputed based on OSM data, even if shapes are already present in the dataset (default = false)
+    replace_shapes: true
+    # routing for specific clasz types can be disabled (default = all enabled)
+    # currently long distance street routing is slow, so in this example
+    # we disable routing shapes for COACH
+    clasz:
+      COACH: false
+    # disable shape computation for routes with more than X stops (default = no limit)
+    max_stops: 100
+    # limit the number of threads used for shape computation (default = number of hardware threads)
+    n_threads: 6
+    # cache and reuse computed shapes for later imports (dataset updates)
+    cache: true
+
+    # for debugging purposes, debug information can be written to files
+    # which can be loaded into the debug ui (see osr project)
+    debug:
+      path: /path/to/debug/directory
+      all: false                  # debug all routes
+      all_with_beelines: false    # or only those that include beelines
+      slow: 10000                 # or only those that take >10.000ms to compute
+      # or specific trips/routes:
+      trips:
+        - "trip_id_1"
+      route_ids:
+        - "route_id_1"
+      route_indices: # these are internal indices (e.g. from debug UI)
+        - 123
+```
+
+### Cache
+
+Routed shapes can be cached to speed up later imports when a timetable dataset
+is updated. If enabled, this will generate an additional cache file. This cache
+file and the routed shapes data are then reused during import.
+
+Note that old routes are never removed from the routed shapes data files, i.e.,
+these files grow with every import (unless there are no new routes, in which
+case the size will stay the same).
+It is therefore recommended to monitor the size of the "routed_shapes_*" files
+in the data directory.
+They can safely be deleted before an import, which will cause all shapes that
+are needed for the current datasets to be routed again.
+
+The cache only applies to routed shapes, not shapes contained in the timetables.

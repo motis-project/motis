@@ -326,6 +326,13 @@ jobs:
           wget -N https://github.com/motis-project/test-data/raw/aachen/aachen.osm.pbf
           wget -N https://github.com/motis-project/test-data/raw/aachen/AVV_GTFS_Masten_mit_SPNV.zip
           ${{ matrix.config.emulator }} ./build/motis config aachen.osm.pbf AVV_GTFS_Masten_mit_SPNV.zip
+          yq -Y -i '.timetable *= {
+              "route_shapes": {
+                "missing_shapes": true,
+                "replace_shapes": true,
+                "clasz": { "COACH": false }
+              }
+          }' config.yml
           ${{ matrix.config.emulator }} ./build/motis import
           ${{ matrix.config.emulator }} ./build/motis generate -n 10
           ${{ matrix.config.emulator }} ./build/motis batch
