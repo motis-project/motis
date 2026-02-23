@@ -137,15 +137,15 @@ TEST(motis, one_to_many) {
         "&arriveBy=false");
 
     EXPECT_EQ((std::vector<api::Duration>{
-                  {282.0},
+                  {281.0},
                   {1080.0},
                   {1140.0},  // Not routed transfer => faster than realistic
                   {1140.0},  // Not routed transfer
                   {2580.0},
                   {2580.0},
-                  {123.0},
-                  {242.0},
-                  {530.0},
+                  {122.0},
+                  {240.0},
+                  {529.0},
                   {},
                   {1260.0},
                   {1440.0},
@@ -192,7 +192,7 @@ TEST(motis, one_to_many) {
 
     EXPECT_EQ((std::vector<api::Duration>{{3180.0},
                                           {840.0},  // Not routed transfer
-                                          {780.0},  // Not routed transfer
+                                          {720.0},  // Not routed transfer
                                           {780.0},
                                           {780.0},
                                           {720.0},
@@ -237,7 +237,7 @@ TEST(motis, one_to_many) {
 
     EXPECT_EQ((std::vector<api::Duration>{{},
                                           {459.0},
-                                          {1620.0},
+                                          {1560.0},
                                           {1680.0},
                                           {397.0},
                                           {1800.0},
@@ -296,7 +296,7 @@ TEST(motis, one_to_many) {
           "&cyclingSpeed=2.4");
 
       EXPECT_EQ((std::vector<api::Duration>{
-                    {229.0},
+                    {228.0},
                     {300.0},  // {321.0},  // Invalid transfer C -> B
                     {1980.0}}),
                 durations);
@@ -305,7 +305,8 @@ TEST(motis, one_to_many) {
     {
       auto const durations = one_to_many_post(api::OneToManyIntermodalParams{
           .one_ = "50.107326,8.665237",
-          .many_ = {"test_FFM_B", "test_FFM_C", "test_PAUL1"},
+          .many_ = {"test_FFM_B", "test_FFM_C", "50.107812,8.664628",
+                    "test_PAUL1"},
           .time_ = {std::chrono::time_point_cast<std::chrono::seconds>(
               n::parse_time("2019-05-01T12:30:00.000+02:00", "%FT%T%Ez"))},
           .maxTravelTime_ = 60,
@@ -316,8 +317,10 @@ TEST(motis, one_to_many) {
           .directModes_ = {{api::ModeEnum::BIKE}},
           .maxDirectTime_ = 1800});
 
-      EXPECT_EQ((std::vector<api::Duration>{{228.0}, {335.0}, {1920.0}}),
-                durations);
+      EXPECT_EQ(
+          (std::vector<api::Duration>{
+              {228.0}, {240.0}, {300.0} /* Without B->C: {335.0} */, {1920.0}}),
+          durations);
     }
     // POST, forward, postTransitModes
     {
@@ -404,7 +407,7 @@ TEST(motis, one_to_many) {
           (std::vector<api::Duration>{
               {720.0},
               {780.0},
-              {960.0},
+              {720.0},
               {960.0},
               {1320.0},  // {}  // FIXME Test location should be unreachable
           }),
@@ -426,7 +429,7 @@ TEST(motis, one_to_many) {
               .pedestrianProfile_ = api::PedestrianProfileEnum::WHEELCHAIR,
               .maxPostTransitTime_ = 360});  // Reachable from S3
       EXPECT_EQ((std::vector<api::Duration>{
-                    {1560.0}, {1620.0}, {1320.0}, {1380.0}, {1680.0}}),
+                    {1260.0}, {1620.0}, {1260.0}, {1380.0}, {1680.0}}),
                 test_durations);
     }
 
