@@ -492,13 +492,6 @@ api::plan_response meta_router::run() {
         to_seconds(taxi_journeys.begin()->arrival_time() -
                    taxi_journeys.begin()->departure_time())));
   }
-
-  fmt::println("Number of taxi journeys in result: {}",
-               std::count_if(begin(taxi_journeys), end(taxi_journeys),
-                             [](auto const& j) {
-                               return uses_odm(j, kOdmTransportModeId);
-                             }));
-
   return {
       .from_ = from_place_,
       .to_ = to_place_,
