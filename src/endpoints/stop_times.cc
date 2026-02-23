@@ -199,9 +199,11 @@ std::vector<n::rt::run> get_events(
     n::unixtime_t const time,
     n::event_type const ev_type,
     n::direction const dir,
-    std::size_t const count,
+    std::size_t const min_count,
+    std::size_t const max_count,
     n::routing::clasz_mask_t const allowed_clasz,
-    bool const with_scheduled_skipped_stops) {
+    bool const with_scheduled_skipped_stops,
+    std::optional<n::duration_t> const max_time_diff) {
   auto iterators = std::vector<std::unique_ptr<ev_iterator>>{};
 
   if (rtt != nullptr) {
@@ -280,11 +282,17 @@ std::vector<n::rt::run> get_events(
           return fwd ? a->time() < b->time() : a->time() > b->time();
         });
     assert(!(*it)->finished());
-    if (evs.size() >= count && (*it)->time() != last_time) {
+    auto const current_time = (*it)->time();
+    if ((!max_time_diff.has_value() ||
+         std::chrono::abs(current_time - time) > *max_time_diff) &&
+        (evs.size() >= min_count && current_time != last_time)) {
       break;
     }
     evs.emplace_back((*it)->get());
-    last_time = (*it)->time();
+    utl::verify<net::too_many_exception>(
+        evs.size() <= max_count,
+        "requesting for more than {} datapoints is not allowed", max_count);
+    last_time = current_time;
     (*it)->increment();
   }
   return evs;
@@ -350,8 +358,14 @@ api::stoptimes_response stop_times::operator()(
   auto const api_version = get_api_version(url);
 
   auto const max_results = config_.limits_.value().stoptimes_max_results_;
-  utl::verify<net::too_many_exception>(
-      query.n_ < max_results, "n={} > {} not allowed", query.n_, max_results);
+  utl::verify<net::bad_request_exception>(
+      query.n_.has_value() || query.window_.has_value(),
+      "neither 'n' nor 'window' is provided");
+  if (query.n_.has_value()) {
+    utl::verify<net::too_many_exception>(*query.n_ <= max_results,
+                                         "n={} > {} not allowed", *query.n_,
+                                         max_results);
+  }
   utl::verify<net::bad_request_exception>(
       query.stopId_.has_value() ||
           (query.center_.has_value() && query.radius_.has_value()),
@@ -436,9 +450,13 @@ api::stoptimes_response stop_times::operator()(
   auto const rtt = rt->rtt_.get();
   auto const ev_type =
       query.arriveBy_ ? n::event_type::kArr : n::event_type::kDep;
+  auto const window = query.window_.transform([](auto const w) {
+    return std::chrono::duration_cast<n::duration_t>(std::chrono::seconds{w});
+  });
   auto events = get_events(locations, tt_, rtt, time, ev_type, dir,
-                           static_cast<std::size_t>(query.n_), allowed_clasz,
-                           query.withScheduledSkippedStops_);
+                           static_cast<std::size_t>(query.n_.value_or(0)),
+                           static_cast<std::size_t>(max_results), allowed_clasz,
+                           query.withScheduledSkippedStops_, window);
 
   auto const to_tuple = [&](n::rt::run const& x) {
     auto const fr_a = n::rt::frun{tt_, rtt, x};

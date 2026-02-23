@@ -65,6 +65,10 @@ api::ModeEnum default_output::get_mode() const {
       return api::ModeEnum::CAR_DROPOFF;
     case osr::search_profile::kBikeSharing: [[fallthrough]];
     case osr::search_profile::kCarSharing: return api::ModeEnum::RENTAL;
+    case osr::search_profile::kBus: return api::ModeEnum::DEBUG_BUS_ROUTE;
+    case osr::search_profile::kRailway:
+      return api::ModeEnum::DEBUG_RAILWAY_ROUTE;
+    case osr::search_profile::kFerry: return api::ModeEnum::DEBUG_FERRY_ROUTE;
   }
 
   return api::ModeEnum::OTHER;

@@ -86,6 +86,28 @@ struct config {
       std::optional<std::string> default_timezone_{};
     };
 
+    struct shapes_debug {
+      bool operator==(shapes_debug const&) const = default;
+      std::filesystem::path path_;
+      std::optional<std::vector<std::string>> trips_{};
+      std::optional<std::vector<std::string>> route_ids_{};
+      std::optional<std::vector<unsigned>> route_indices_{};
+      bool all_{false};
+      bool all_with_beelines_{false};
+      unsigned slow_{0U};
+    };
+
+    struct route_shapes {
+      bool operator==(route_shapes const&) const = default;
+      bool missing_shapes_{false};
+      bool replace_shapes_{false};
+      bool cache_{false};
+      std::optional<std::map<std::string, bool>> clasz_{};
+      unsigned max_stops_{0U};
+      unsigned n_threads_{0U};
+      std::optional<shapes_debug> debug_{};
+    };
+
     bool operator==(timetable const&) const = default;
 
     std::string first_day_{"TODAY"};
@@ -109,6 +131,7 @@ struct config {
     std::optional<std::string> default_timezone_{};
     std::map<std::string, dataset> datasets_{};
     std::optional<std::filesystem::path> assistance_times_{};
+    std::optional<route_shapes> route_shapes_{};
   };
   std::optional<timetable> timetable_{};
 
@@ -182,8 +205,9 @@ struct config {
 
   struct elevators {
     bool operator==(elevators const&) const = default;
-    std::optional<std::string> url_;
-    std::optional<std::string> init_;
+    std::optional<std::string> url_{};
+    std::optional<std::string> init_{};
+    std::optional<std::string> osm_mapping_{};
     unsigned http_timeout_{10};
     std::optional<headers_t> headers_{};
   };

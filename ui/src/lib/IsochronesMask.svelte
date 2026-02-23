@@ -44,7 +44,8 @@
 		options = $bindable(),
 		preTransitProviderGroups = $bindable(),
 		postTransitProviderGroups = $bindable(),
-		directProviderGroups = $bindable()
+		directProviderGroups = $bindable(),
+		hasDebug = false
 	}: {
 		one: Location;
 		maxTravelTime: number;
@@ -69,6 +70,7 @@
 		preTransitProviderGroups: string[];
 		postTransitProviderGroups: string[];
 		directProviderGroups: string[];
+		hasDebug: boolean;
 	} = $props();
 	const minutesToSeconds = (n: number): number => n * 60;
 	const possibleMaxTravelTimes = $derived(
@@ -231,6 +233,7 @@
 			via={undefined}
 			viaMinimumStay={undefined}
 			viaLabels={{}}
+			{hasDebug}
 		/>
 	</div>
 </div>

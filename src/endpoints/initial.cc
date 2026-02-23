@@ -53,11 +53,11 @@ api::initial_response initial::operator()(boost::urls::url_view const&) const {
   }
 
   auto const onetoall_max_travel_minutes =
-      config_.limits_->onetoall_max_travel_minutes_;
+      config_.get_limits().onetoall_max_travel_minutes_;
   auto const street_routing_max_direct_seconds =
-      config_.limits_->street_routing_max_direct_seconds_;
+      config_.get_limits().street_routing_max_direct_seconds_;
   auto const street_routing_max_prepost_transit_seconds =
-      config_.limits_->street_routing_max_prepost_transit_seconds_;
+      config_.get_limits().street_routing_max_prepost_transit_seconds_;
   auto const has_osr_footpath = config_.osr_footpath_;
   auto const has_street_routing = config_.get_street_routing().has_value();
   auto const has_elevation_data_dir =
