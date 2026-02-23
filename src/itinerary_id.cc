@@ -24,6 +24,7 @@
 namespace {
 constexpr auto kItineraryTimeBase = std::chrono::sys_days{
     std::chrono::year{2026} / std::chrono::month{1} / std::chrono::day{1}};
+constexpr auto TimeMUL = 1.0 / 60.0 * 7;
 
 std::int64_t to_epoch_seconds(openapi::date_time_t const& t) {
   auto const sys = static_cast<std::chrono::sys_seconds>(t);
@@ -101,7 +102,7 @@ motis::api::stoptimes_response stoptimes_in_radius(
     geo::latlng const& center,
     std::int64_t sched_start,
     motis::api::ModeEnum mode,
-    int n,
+    int window,
     int radius_m,
     bool arriveBy) {
   std::ostringstream oss;
@@ -112,10 +113,10 @@ motis::api::stoptimes_response stoptimes_in_radius(
   auto const iso = fmt::format("{:%FT%TZ}", t);
 
   auto const query = fmt::format(
-      "?center={},{}&time={}&arriveBy={}&direction=LATER&n={}"
+      "?center={},{}&time={}&arriveBy={}&direction=LATER&window={}"
       "&radius={}&exactRadius=true&fetchStops=true&mode={}",
-      center.lat_, center.lng_, iso, arriveBy ? "true" : "false", n, radius_m,
-      oss.str());
+      center.lat_, center.lng_, iso, arriveBy ? "true" : "false", window,
+      radius_m, oss.str());
 
   return st_ep(boost::urls::url_view{query});
 }
@@ -129,7 +130,7 @@ nigiri::rt::frun make_frun_from_stoptime(motis::tag_lookup const& tags,
   return nigiri::rt::frun{tt, rtt, run};
 }
 
-std::optional<nigiri::stop_idx_t> find_stop_by_location(
+std::optional<nigiri::stop_idx_t> find_stop_by_location_time(
     nigiri::rt::frun const& fr,
     nigiri::location_idx_t const loc,
     openapi::date_time_t const& scheduled_time,
@@ -166,7 +167,7 @@ std::optional<nigiri::stop_idx_t> find_stop_by_place(
     return std::nullopt;
   }
 
-  return find_stop_by_location(fr, *loc, *t, ev_type);
+  return find_stop_by_location_time(fr, *loc, *t, ev_type);
 }
 
 motis::api::Itinerary build_itinerary_from_frun(
@@ -291,7 +292,7 @@ std::string generate_itinerary_id(api::Itinerary const& itin) {
 }
 api::Itinerary reconstruct_itinerary(motis::ep::stop_times const& stoptimes_ep,
                                      std::string const& itin_id) {
-  constexpr auto lookback_t = 3 * 60;
+  constexpr auto lookback_t = 8 * 60;
   // reconstruction. Assuming single leg // TEMP
   auto const root = boost::json::parse(itin_id).as_object();
   auto const& legs = root.at("legs").as_array();
@@ -311,12 +312,12 @@ api::Itinerary reconstruct_itinerary(motis::ep::stop_times const& stoptimes_ep,
           std::chrono::seconds{query_start_sec})};
 
   //
-  auto const from_str =
-      stoptimes_in_radius(stoptimes_ep, lh.from_latlng,
-                          lh.sched_start - lookback_t, lh.mode, 70, 100, false);
+  auto const from_str = stoptimes_in_radius(
+      stoptimes_ep, lh.from_latlng, lh.sched_start - lookback_t, lh.mode,
+      lookback_t * 2, 100, false);
   auto const to_str =
       stoptimes_in_radius(stoptimes_ep, lh.to_latlng, lh.sched_end - lookback_t,
-                          lh.mode, 70, 100, true);
+                          lh.mode, lookback_t * 2, 100, true);
 
   std::vector<id_score> to_cands;
   for (auto const& st : to_str.stopTimes_) {
@@ -324,7 +325,9 @@ api::Itinerary reconstruct_itinerary(motis::ep::stop_times const& stoptimes_ep,
         {st.tripId_,
          -geo::distance(geo::latlng{st.place_.lat_, st.place_.lon_},
                         lh.to_latlng) -
-             std::abs(0),  // MODIFY TO INClUDE TIME PENALTY // TODO
+             TimeMUL * std::abs(lh.sched_end -
+                                to_epoch_seconds(
+                                    st.place_.scheduledArrival_.value())),
          &st.place_});
   }
   std::sort(to_cands.begin(), to_cands.end());
@@ -332,17 +335,22 @@ api::Itinerary reconstruct_itinerary(motis::ep::stop_times const& stoptimes_ep,
   // pick the best frun
   std::optional<std::string_view> best_tripId;
   std::optional<FromTo> best_fromTo;
-  double best_score = -1e18;
+  double best_score = std::numeric_limits<double>::lowest();
 
   for (auto const& from_st : from_str.stopTimes_) {
-    auto it = std::lower_bound(to_cands.begin(), to_cands.end(),
-                               id_score{from_st.tripId_, 0, nullptr});
+    auto it = std::lower_bound(
+        to_cands.begin(), to_cands.end(),
+        id_score{from_st.tripId_, std::numeric_limits<double>::max(), nullptr});
     if (it == to_cands.end() || it->id != from_st.tripId_) {
       continue;
     }
-    double score = it->score - geo::distance(geo::latlng{from_st.place_.lat_,
-                                                         from_st.place_.lon_},
-                                             lh.from_latlng);
+    double score =
+        it->score -
+        geo::distance(geo::latlng{from_st.place_.lat_, from_st.place_.lon_},
+                      lh.from_latlng) -
+        TimeMUL * std::abs(lh.sched_start -
+                           to_epoch_seconds(
+                               from_st.place_.scheduledDeparture_.value()));
     if (score > best_score) {
       best_score = score;
       best_tripId = from_st.tripId_;
