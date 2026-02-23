@@ -306,7 +306,7 @@ adr_ext adr_extend_tt(nigiri::timetable const& tt,
   ret.place_clasz_.resize(place_location.size());
   {
     auto const event_counts = utl::scoped_timer{"guesser event_counts"};
-    for (auto i = n::kNSpecialStations; i != tt.n_locations(); ++i) {
+    for (auto i = n::kNSpecialStations; i < tt.n_locations(); ++i) {
       auto const l = n::location_idx_t{i};
 
       auto transport_counts = std::array<unsigned, n::kNumClasses>{};
@@ -348,6 +348,27 @@ adr_ext adr_extend_tt(nigiri::timetable const& tt,
           ret.place_clasz_[place_idx] |= n::routing::to_mask(c);
         }
       }
+    }
+  }
+
+  // Update counts of meta-stations with the sum of their priorities.
+  // Meta stations have equivalence relations to other stops and are at (0,0)
+  for (auto i = n::kNSpecialStations; i < tt.n_locations(); ++i) {
+    auto const l = n::location_idx_t{i};
+    auto const is_meta =
+        tt.locations_.coordinates_[l] == geo::latlng{} &&
+        tt.locations_.parents_[l] == n::location_idx_t::invalid() &&
+        !tt.locations_.equivalences_[l].empty();
+    if (!is_meta) {
+      continue;
+    }
+
+    auto const place_idx = ret.location_place_[l];
+    for (auto const eq : get_transitive_equivalences(l)) {
+      auto const eq_root = tt.locations_.get_root_idx(eq);
+      auto const eq_place_idx = ret.location_place_[eq_root];
+      ret.place_importance_[place_idx] += ret.place_importance_[eq_place_idx];
+      ret.place_clasz_[place_idx] |= ret.place_clasz_[eq_place_idx];
     }
   }
 

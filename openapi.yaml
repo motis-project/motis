@@ -997,6 +997,17 @@ paths:
             false = one to many
           schema:
             type: boolean
+        - name: withDistance
+          in: query
+          required: false
+          description: |
+            Optional. Default is `false`.
+            If true, the response includes the distance in meters
+            for each path. This requires path reconstruction and
+            is slower than duration-only queries.
+          schema:
+            type: boolean
+            default: false
       responses:
         '200':
           description: |
@@ -1008,6 +1019,54 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Duration'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      tags:
+        - routing
+      summary: |
+        Street routing from one to many places or many to one.
+        The order in the response array corresponds to the order of coordinates of the \`many\` parameter in the body.
+      operationId: oneToManyPost
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OneToManyParams'
+      responses:
+        '200':
+          description: |
+            A list of durations.
+            If no path was found, the object is empty.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Duration'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
   /api/v1/one-to-all:
     get:
@@ -1492,7 +1551,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Itinerary' 
+                $ref: '#/components/schemas/Itinerary'
         '422':
           description: Unprocessable Entity
           content:
@@ -1529,8 +1588,20 @@ paths:
           in: query
           schema:
             type: string
-          required: true
+          required: false
           description: stop id of the stop to retrieve departures/arrivals for
+
+        - name: center
+          in: query
+          schema:
+            type: string
+          required: false
+          description: |
+            Anchor coordinate. Format: latitude,longitude pair.
+            Used as fallback when "stopId" is missing or can't be found.
+            If both are provided and "stopId" resolves, "stopId" is used.
+            If "stopId" does not resolve, "center" is used instead. "radius" is
+            required when querying by "center" (i.e. without a valid "stopId").
 
         - name: time
           in: query
@@ -1572,6 +1643,17 @@ paths:
             in case `EARLIER` is selected and the previous `n`
             arrivals / departures if `LATER` is selected.
 
+        - name: window
+          in: query
+          required: false
+          description: |
+            Optional. Window in seconds around `time`.
+            Limiting the response to those that are at most `window` seconds aways in time.
+            If both `n` and `window` are set, it uses whichever returns more.
+          schema:
+            type: integer
+            minimum: 0
+
         - name: mode
           in: query
           schema:
@@ -1590,8 +1672,10 @@ paths:
           in: query
           schema:
             type: integer
-          required: true
-          description: the number of events
+          required: false
+          description: |
+            Minimum number of events to return. If both `n` and `window`
+            are provided, the API uses whichever returns more events.
 
         - name: radius
           in: query
@@ -1968,6 +2052,91 @@ paths:
                 items:
                   type: number
 
+  /api/experimental/map/routes:
+    get:
+      tags:
+        - map
+      operationId: routes
+      summary: |
+        Given an area frame (box defined by the top-right and bottom-left corners),
+        it returns all routes and their respective shapes that operate within this area.
+        Routes are filtered by zoom level. On low zoom levels, only long distance trains will be shown
+        while on high zoom levels, also metros, buses and trams will be returned.
+      parameters:
+        - name: zoom
+          in: query
+          required: true
+          description: current zoom level
+          schema:
+            type: number
+        - name: min
+          in: query
+          required: true
+          description: latitude,longitude pair of the lower right coordinate
+          schema:
+            type: string
+        - name: max
+          in: query
+          required: true
+          description: latitude,longitude pair of the upper left coordinate
+          schema:
+            type: string
+        - name: language
+          in: query
+          required: false
+          description: |
+            language tags as used in OpenStreetMap / GTFS
+            (usually BCP-47 / ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
+          schema:
+            type: array
+            items:
+              type: string
+          explode: false
+      responses:
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '200':
+          description: a list of routes in the area
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - routes
+                  - zoomFiltered
+                properties:
+                  routes:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RouteInfo'
+                  zoomFiltered:
+                    type: boolean
+                    description: |
+                      Indicates whether some routes were filtered out due to
+                      the zoom level.
+
   /api/v1/rentals:
     get:
       tags:
@@ -2330,6 +2499,9 @@ components:
         duration:
           type: number
           description: duration in seconds if a path was found, otherwise missing
+        distance:
+          type: number
+          description: distance in meters if a path was found and distance computation was requested, otherwise missing
 
     Area:
       description: Administrative area
@@ -2398,11 +2570,11 @@ components:
           - `AIRPLANE`: airline flights
           - `BUS`: short distance buses (does not include `COACH`)
           - `COACH`: long distance buses (does not include `BUS`)
-          - `RAIL`: translates to `HIGHSPEED_RAIL,LONG_DISTANCE,NIGHT_RAIL,REGIONAL_RAIL,REGIONAL_FAST_RAIL,SUBURBAN,SUBWAY`
+          - `RAIL`: translates to `HIGHSPEED_RAIL,LONG_DISTANCE,NIGHT_RAIL,REGIONAL_RAIL,SUBURBAN,SUBWAY`
           - `HIGHSPEED_RAIL`: long distance high speed trains (e.g. TGV)
           - `LONG_DISTANCE`: long distance inter city trains
           - `NIGHT_RAIL`: long distance night trains
-          - `REGIONAL_FAST_RAIL`: regional express routes that skip low traffic stops to be faster
+          - `REGIONAL_FAST_RAIL`: deprecated, `REGIONAL_RAIL` will be used
           - `REGIONAL_RAIL`: regional train
           - `SUBURBAN`: suburban trains (e.g. S-Bahn, RER, Elizabeth Line, ...)
           - `ODM`: demand responsive transport
@@ -2421,8 +2593,11 @@ components:
         - CAR_PARKING
         - CAR_DROPOFF
         - ODM  # Transit | Street
-        - RIDE_SHARING
+        - RIDE_SHARING  # Transit | Street
         - FLEX
+        - DEBUG_BUS_ROUTE
+        - DEBUG_RAILWAY_ROUTE
+        - DEBUG_FERRY_ROUTE
         # === Transit ===
         - TRANSIT
         - TRAM
@@ -3793,6 +3968,14 @@ components:
             true = many to one
             false = one to many
           type: boolean
+        withDistance:
+          description: |
+            Optional. Default is `false`.
+            If true, the response includes the distance in meters
+            for each path. This requires path reconstruction and
+            may be slower than duration-only queries.
+          type: boolean
+          default: false
     ServerConfig:
       Description: server configuration
       type: object
@@ -3830,3 +4013,84 @@ components:
         error:
           type: string
           description: error message
+
+    RouteSegment:
+      description: Route segment between two stops to show a route on a map
+      type: object
+      required:
+        - from
+        - to
+        - polyline
+      properties:
+        from:
+          $ref: '#/components/schemas/Place'
+        to:
+          $ref: '#/components/schemas/Place'
+        polyline:
+          $ref: '#/components/schemas/EncodedPolyline'
+
+    RouteColor:
+      type: object
+      required:
+        - color
+        - textColor
+      properties:
+        color:
+          type: string
+        textColor:
+          type: string
+
+    RoutePathSource:
+      type: string
+      enum:
+        - NONE
+        - TIMETABLE
+        - ROUTED
+
+    TransitRouteInfo:
+      type: object
+      required:
+        - id
+        - shortName
+        - longName
+      properties:
+        id:
+          type: string
+        shortName:
+          type: string
+        longName:
+          type: string
+        color:
+          type: string
+        textColor:
+          type: string
+
+    RouteInfo:
+      type: object
+      required:
+        - mode
+        - transitRoutes
+        - numStops
+        - routeIdx
+        - pathSource
+        - segments
+      properties:
+        mode:
+          $ref: '#/components/schemas/Mode'
+          description: Transport mode for this route
+        transitRoutes:
+          type: array
+          items:
+            $ref: '#/components/schemas/TransitRouteInfo'
+        numStops:
+          type: integer
+          description: Number of stops along this route
+        routeIdx:
+          type: integer
+          description: Internal route index for debugging purposes
+        pathSource:
+          $ref: '#/components/schemas/RoutePathSource'
+        segments:
+          type: array
+          items:
+            $ref: '#/components/schemas/RouteSegment'

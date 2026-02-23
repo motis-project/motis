@@ -96,6 +96,7 @@ json::value elevators::operator()(json::value const& query) const {
     auto const pos = w_.get_node_pos(n);
     if (match != elevator_idx_t::invalid()) {
       auto const& x = e->elevators_[match];
+
       utl::verify<net::too_many_exception>(matches.size() < kLimit,
                                            "too many elevators");
       matches.emplace_back(json::value{

@@ -156,7 +156,20 @@ const translations: Translations = {
 	rideThroughAllowed: 'Минаване е позволено',
 	rideThroughNotAllowed: 'Минаване не е позволено',
 	rideEndAllowed: 'Паркиране е позволено',
-	rideEndNotAllowed: 'Паркиране не е позволено'
+	rideEndNotAllowed: 'Паркиране не е позволено',
+	DEBUG_BUS_ROUTE: 'Маршрут на автобус (Отстраняване на грешки)',
+	DEBUG_RAILWAY_ROUTE: 'Маршрут на влак (Отстраняване на грешки)',
+	DEBUG_FERRY_ROUTE: 'Маршрут на ферибот (Отстраняване на грешки)',
+	routes: (n: number) => {
+		switch (n) {
+			case 0:
+				return 'Без маршрут';
+			case 1:
+				return '1 маршрут';
+			default:
+				return `${n} маршрута`;
+		}
+	}
 };
 
 export default translations;

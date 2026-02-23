@@ -13,7 +13,7 @@ api::ModeEnum to_mode(n::clasz const c, unsigned const api_version) {
     case n::clasz::kLongDistance: return api::ModeEnum::LONG_DISTANCE;
     case n::clasz::kCoach: return api::ModeEnum::COACH;
     case n::clasz::kNight: return api::ModeEnum::NIGHT_RAIL;
-    case n::clasz::kRegionalFast: return api::ModeEnum::REGIONAL_FAST_RAIL;
+    case n::clasz::kRideSharing: return api::ModeEnum::RIDE_SHARING;
     case n::clasz::kRegional: return api::ModeEnum::REGIONAL_RAIL;
     case n::clasz::kSuburban:
       return api_version < 5 ? api::ModeEnum::METRO : api::ModeEnum::SUBURBAN;

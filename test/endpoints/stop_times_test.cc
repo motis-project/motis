@@ -8,6 +8,9 @@
 #include "boost/asio/detached.hpp"
 #include "boost/json.hpp"
 
+#include "net/bad_request_exception.h"
+#include "net/not_found_exception.h"
+
 #ifdef NO_DATA
 #undef NO_DATA
 #endif
@@ -189,6 +192,153 @@ TEST(motis, stop_times) {
     EXPECT_EQ(3, res2.stopTimes_.size());
     for (auto const& stopTime : res2.stopTimes_) {
       EXPECT_FALSE(stopTime.place_.alerts_.has_value());
+    }
+  }
+
+  {
+    // center-only query, radius is required
+    auto const res = stop_times(
+        "/api/v5/stoptimes?center=50.10593,8.66118"
+        "&radius=250"
+        "&time=2019-04-30T23:30:00.000Z"
+        "&arriveBy=true"
+        "&n=3"
+        "&language=de"
+        "&fetchStops=true");
+
+    EXPECT_EQ("center", res.place_.name_);
+    EXPECT_FALSE(res.place_.stopId_.has_value());
+    EXPECT_FALSE(res.stopTimes_.empty());
+  }
+
+  {
+    // invalid stopId without center
+    EXPECT_THROW(stop_times("/api/v5/stoptimes?stopId=test_SOMETHING_RANDOM"
+                            "&time=2019-04-30T23:30:00.000Z"
+                            "&arriveBy=true"
+                            "&n=3"),
+                 net::not_found_exception);
+  }
+
+  {
+    // invalid stopId should fall back to center
+    auto const res = stop_times(
+        "/api/v5/stoptimes?stopId=test_SOMETHING_RANDOM"
+        "&center=50.10593,8.66118"
+        "&radius=250"
+        "&time=2019-04-30T23:30:00.000Z"
+        "&arriveBy=true"
+        "&n=3"
+        "&language=de");
+
+    EXPECT_EQ("center", res.place_.name_);
+    EXPECT_FALSE(res.place_.stopId_.has_value());
+    EXPECT_FALSE(res.stopTimes_.empty());
+  }
+
+  {
+    // stoptimes in radius = r
+    auto const r = 110.0;
+    auto const center = geo::latlng{50.10563, 8.66218};
+    auto const res =
+        stop_times(std::format("/api/v5/stoptimes?center={},{}"
+                               "&radius={}"
+                               "&exactRadius=true"
+                               "&time=2019-04-30T23:30:00.000Z"
+                               "&arriveBy=true"
+                               "&n=200"
+                               "&language=de"
+                               "&fetchStops=true",
+                               center.lat_, center.lng_, r));
+    EXPECT_FALSE(res.stopTimes_.empty());
+    for (auto const& v : res.stopTimes_) {
+      auto const dist =
+          geo::distance(center, geo::latlng{v.place_.lat_, v.place_.lon_});
+      EXPECT_LE(dist, r);
+    }
+  }
+
+  {
+    // neither stopId nor center -> panic
+    EXPECT_THROW(stop_times("/api/v5/stoptimes?time=2019-04-30T23:30:00.000Z"
+                            "&arriveBy=true"
+                            "&n=3"),
+                 net::bad_request_exception);
+  }
+
+  {
+    // center without stopId requires radius
+    EXPECT_THROW(stop_times("/api/v5/stoptimes?center=50.10593,8.66118"
+                            "&time=2019-04-30T23:30:00.000Z"
+                            "&arriveBy=true"
+                            "&n=3"),
+                 net::bad_request_exception);
+  }
+
+  {
+    // window query LATER
+    auto const res = stop_times(
+        "/api/v5/stoptimes?stopId=test_FFM_101"
+        "&time=2019-04-30T23:00:00.000Z"
+        "&arriveBy=true"
+        "&direction=LATER"
+        "&window=1800"
+        "&language=de");
+
+    auto const format_time = [&](auto&& t, char const* fmt = "%F %H:%M") {
+      return date::format(fmt, *t);
+    };
+
+    EXPECT_EQ(2, res.stopTimes_.size());  // n is ignored if window is set
+    for (auto const& stop_time : res.stopTimes_) {
+      auto const arr = format_time(stop_time.place_.arrival_.value());
+      std::cout << "arr: " << arr << std::endl;
+      EXPECT_GE(arr, "2019-04-30 23:00");
+      EXPECT_LE(arr, "2019-04-30 23:30");
+    }
+    EXPECT_FALSE(res.previousPageCursor_.empty());
+    EXPECT_FALSE(res.nextPageCursor_.empty());
+  }
+  {
+    // window query EARLIER
+    auto const res = stop_times(
+        "/api/v5/stoptimes?stopId=test_FFM_101"
+        "&time=2019-04-30T23:15:00.000Z"
+        "&arriveBy=true"
+        "&direction=EARLIER"
+        "&window=1800"
+        "&language=de");
+
+    auto const format_time = [&](auto&& t, char const* fmt = "%F %H:%M") {
+      return date::format(fmt, *t);
+    };
+
+    for (auto const& stop_time : res.stopTimes_) {
+      auto const arr = format_time(stop_time.place_.arrival_.value());
+      std::cout << "arr E: " << arr << std::endl;
+      EXPECT_GE(arr, "2019-04-30 22:45");
+      EXPECT_LE(arr, "2019-04-30 23:15");
+    }
+  }
+  {
+    // window query EARLIER (small window large n)
+    auto const res = stop_times(
+        "/api/v5/stoptimes?stopId=test_FFM_101"
+        "&time=2019-04-30T23:15:00.000Z"
+        "&arriveBy=true"
+        "&direction=LATER"
+        "&window=60"
+        "&n=2"
+        "&language=de");
+
+    auto const format_time = [&](auto&& t, char const* fmt = "%F %H:%M") {
+      return date::format(fmt, *t);
+    };
+
+    EXPECT_GT(res.stopTimes_.size(), 1);
+    for (auto const& stop_time : res.stopTimes_) {
+      auto const arr = format_time(stop_time.place_.arrival_.value());
+      std::cout << "arr E2: " << arr << std::endl;
     }
   }
 }
