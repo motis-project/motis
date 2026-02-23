@@ -119,7 +119,7 @@ void update_transit_durations(
 
   auto q = n::routing::query{
       .start_time_ = time,
-      .start_match_mode_ = get_match_mode(one),
+      .start_match_mode_ = get_match_mode(r, one),
       .start_ = r.get_offsets(nullptr, one, one_dir, one_modes, std::nullopt,
                               std::nullopt, std::nullopt, std::nullopt, false,
                               osr_params, pedestrian_profile, elevation_costs,
