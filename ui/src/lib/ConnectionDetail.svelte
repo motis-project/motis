@@ -322,6 +322,19 @@
 
 				<Alerts alerts={l.alerts} tz={l.from.tz || l.to.tz} variant="full" />
 
+				{#if l.routeUrl}
+					<div class="mt-2 mr-4">
+						<Button
+							variant="secondary"
+							href={l.routeUrl}
+							target="_blank"
+							class="overflow-hidden text-ellipsis whitespace-nowrap w-full px-4 inline-block underline"
+						>
+							{l.routeUrl}
+						</Button>
+					</div>
+				{/if}
+
 				{#if l.loopedCalendarSince}
 					<div class="mt-2 flex items-center text-destructive leading-none">
 						{t.dataExpiredSince}

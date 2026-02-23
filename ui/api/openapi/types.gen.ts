@@ -201,11 +201,11 @@ export type LocationType = 'ADDRESS' | 'PLACE' | 'STOP';
  * - `AIRPLANE`: airline flights
  * - `BUS`: short distance buses (does not include `COACH`)
  * - `COACH`: long distance buses (does not include `BUS`)
- * - `RAIL`: translates to `HIGHSPEED_RAIL,LONG_DISTANCE,NIGHT_RAIL,REGIONAL_RAIL,REGIONAL_FAST_RAIL,SUBURBAN,SUBWAY`
+ * - `RAIL`: translates to `HIGHSPEED_RAIL,LONG_DISTANCE,NIGHT_RAIL,REGIONAL_RAIL,SUBURBAN,SUBWAY`
  * - `HIGHSPEED_RAIL`: long distance high speed trains (e.g. TGV)
  * - `LONG_DISTANCE`: long distance inter city trains
  * - `NIGHT_RAIL`: long distance night trains
- * - `REGIONAL_FAST_RAIL`: regional express routes that skip low traffic stops to be faster
+ * - `REGIONAL_FAST_RAIL`: deprecated, `REGIONAL_RAIL` will be used
  * - `REGIONAL_RAIL`: regional train
  * - `SUBURBAN`: suburban trains (e.g. S-Bahn, RER, Elizabeth Line, ...)
  * - `ODM`: demand responsive transport
@@ -512,6 +512,7 @@ export type StopTime = {
     agencyName: string;
     agencyUrl: string;
     routeId: string;
+    routeUrl?: string;
     directionId: string;
     routeColor?: string;
     routeTextColor?: string;
@@ -1138,6 +1139,7 @@ export type Leg = {
      */
     tripTo?: Place;
     routeId?: string;
+    routeUrl?: string;
     directionId?: string;
     routeColor?: string;
     routeTextColor?: string;
@@ -2429,7 +2431,7 @@ export type TripResponse = (Itinerary);
 export type TripError = (Error);
 
 export type StoptimesData = {
-    query: {
+    query?: {
         /**
          * Optional. Default is `false`.
          *
@@ -2490,9 +2492,11 @@ export type StoptimesData = {
          */
         mode?: Array<Mode>;
         /**
-         * the number of events
+         * Minimum number of events to return. If both `n` and `window`
+         * are provided, the API uses whichever returns more events.
+         *
          */
-        n: number;
+        n?: number;
         /**
          * Use the cursor to go to the next "page" of stop times.
          * Copy the cursor from the last response and keep the original request as is.
@@ -2520,6 +2524,13 @@ export type StoptimesData = {
          *
          */
         time?: string;
+        /**
+         * Optional. Window in seconds around `time`.
+         * Limiting the response to those that are at most `window` seconds aways in time.
+         * If both `n` and `window` are set, it uses whichever returns more.
+         *
+         */
+        window?: number;
         /**
          * Optional. Default is `true`. If set to `false`, alerts are omitted in the metadata of place for all stopTimes.
          */

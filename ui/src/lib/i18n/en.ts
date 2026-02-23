@@ -87,6 +87,7 @@ const translations: Translations = {
 	WALK: 'Walking',
 	BIKE: 'Bike',
 	RENTAL: 'Sharing',
+	RIDE_SHARING: 'Ride sharing',
 	CAR: 'Car',
 	CAR_PARKING: 'Car Parking',
 	CAR_DROPOFF: 'Drop-off (car)',

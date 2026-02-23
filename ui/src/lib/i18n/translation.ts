@@ -100,6 +100,7 @@ export type Translations = {
 	LONG_DISTANCE: string;
 	NIGHT_RAIL: string;
 	REGIONAL_FAST_RAIL: string;
+	RIDE_SHARING: string;
 	REGIONAL_RAIL: string;
 	OTHER: string;
 	routingSegments: {
