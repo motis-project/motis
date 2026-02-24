@@ -32,29 +32,20 @@
 
 	const getDisplayArea = (match: Match | undefined) => {
 		if (match) {
-			const country = match.areas.findIndex((a) => a.adminLevel == 2);
-			const state = match.areas.findIndex((a) => a.adminLevel == 4);
 			const matchedArea = match.areas.find((a) => a.matched);
 			const defaultArea = match.areas.find((a) => a.default);
 			if (matchedArea?.name.match(/^[0-9]*$/)) {
 				matchedArea.name += ' ' + defaultArea?.name;
 			}
-			let area = (matchedArea ?? defaultArea)?.name;
-			if (area == match.name) {
-				area = match.areas[0]!.name;
-			}
 
 			/* eslint-disable-next-line svelte/prefer-svelte-reactivity */
 			const areas = new Set<number>();
-			if (country !== -1) {
-				areas.add(country);
-			}
-			if (state !== -1) {
-				areas.add(state);
-			}
+
 			match.areas.forEach((a, i) => {
-				if (a.matched || a.unique || a.default) {
-					areas.add(i);
+				if (a.matched || a.unique || a.default || a.adminLevel == 2 || a.adminLevel == 4) {
+					if (a.name != match.name) {
+						areas.add(i);
+					}
 				}
 			});
 
