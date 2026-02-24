@@ -3945,7 +3945,6 @@ components:
         - maxMatchingDistance
         - elevationCosts
         - arriveBy
-        - withDistance
       properties:
         one:
           description: geo location as latitude;longitude

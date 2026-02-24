@@ -1717,7 +1717,7 @@ transfer duration in minutes for the car profile
 
 export const OneToManyParamsSchema = {
     type: 'object',
-    required: ['one', 'many', 'mode', 'max', 'maxMatchingDistance', 'elevationCosts', 'arriveBy', 'withDistance'],
+    required: ['one', 'many', 'mode', 'max', 'maxMatchingDistance', 'elevationCosts', 'arriveBy'],
     properties: {
         one: {
             description: 'geo location as latitude;longitude',

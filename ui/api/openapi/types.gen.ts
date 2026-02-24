@@ -1424,7 +1424,7 @@ export type OneToManyParams = {
      * may be slower than duration-only queries.
      *
      */
-    withDistance: boolean;
+    withDistance?: boolean;
 };
 
 export type ServerConfig = {
