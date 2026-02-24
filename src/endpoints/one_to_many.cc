@@ -15,7 +15,6 @@
 #include "motis/endpoints/one_to_many_post.h"
 #include "motis/endpoints/routing.h"
 #include "motis/gbfs/routing_data.h"
-#include "motis/metrics_registry.h"
 #include "motis/osr/mode_to_profile.h"
 #include "motis/timetable/modes_to_clasz_mask.h"
 
@@ -226,7 +225,6 @@ api::oneToManyIntermodal_response run_one_to_many_intermodal(
     Query const& query,
     place_t const& one,
     std::vector<place_t> const& many) {
-  ep.metrics_->routing_requests_.Increment();
 
   auto const time = std::chrono::time_point_cast<std::chrono::minutes>(
       *query.time_.value_or(openapi::now()));
