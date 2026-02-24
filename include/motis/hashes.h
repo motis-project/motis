@@ -14,13 +14,13 @@ constexpr auto const osr_version = []() {
   return meta_entry_t{"osr_bin_ver", 26U};
 };
 constexpr auto const adr_version = []() {
-  return meta_entry_t{"adr_bin_ver", 13U};
+  return meta_entry_t{"adr_bin_ver", 14U};
 };
 constexpr auto const adr_ext_version = []() {
   return meta_entry_t{"adr_ext_bin_ver", 4U};
 };
 constexpr auto const n_version = []() {
-  return meta_entry_t{"nigiri_bin_ver", 31U};
+  return meta_entry_t{"nigiri_bin_ver", 32U};
 };
 constexpr auto const tbd_version = []() {
   return meta_entry_t{"tbd_bin_ver", 1U};
