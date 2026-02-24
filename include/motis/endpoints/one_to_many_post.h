@@ -6,7 +6,6 @@
 
 #include "motis-api/motis-api.h"
 
-#include "motis/config.h"
 #include "motis/data.h"
 #include "motis/fwd.h"
 #include "motis/match_platforms.h"

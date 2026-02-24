@@ -11,6 +11,7 @@
 #include "nigiri/common/delta_t.h"
 #include "nigiri/routing/one_to_all.h"
 
+#include "motis/config.h"
 #include "motis/endpoints/one_to_many_post.h"
 #include "motis/endpoints/routing.h"
 #include "motis/gbfs/routing_data.h"
