@@ -1411,7 +1411,7 @@ export type OneToManyParams = {
      * - `BIKE`
      *
      */
-    elevationCosts: ElevationCosts;
+    elevationCosts?: ElevationCosts;
     /**
      * true = many to one
      * false = one to many

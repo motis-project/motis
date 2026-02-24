@@ -1717,7 +1717,7 @@ transfer duration in minutes for the car profile
 
 export const OneToManyParamsSchema = {
     type: 'object',
-    required: ['one', 'many', 'mode', 'max', 'maxMatchingDistance', 'elevationCosts', 'arriveBy'],
+    required: ['one', 'many', 'mode', 'max', 'maxMatchingDistance', 'arriveBy'],
     properties: {
         one: {
             description: 'geo location as latitude;longitude',
@@ -1777,7 +1777,8 @@ false = one to many
 for each path. This requires path reconstruction and
 may be slower than duration-only queries.
 `,
-            type: 'boolean'
+            type: 'boolean',
+            default: false
         }
     }
 } as const;
