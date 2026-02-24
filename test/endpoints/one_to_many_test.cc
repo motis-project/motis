@@ -1,10 +1,10 @@
 #include "gtest/gtest.h"
 
-#include <chrono>
-
 #ifdef NO_DATA
 #undef NO_DATA
 #endif
+
+#include <chrono>
 
 #include "utl/init_from.h"
 
@@ -88,6 +88,12 @@ service_id,date,exception_type
 S1,20190501,1
 )";
 
+std::chrono::time_point<std::chrono::system_clock, std::chrono::seconds>
+parse_time(std::string_view time) {
+  return std::chrono::time_point_cast<std::chrono::seconds>(
+      n::parse_time(time, "%FT%T%Ez"));
+}
+
 TEST(motis, one_to_many) {
   auto ec = std::error_code{};
   std::filesystem::remove_all("test/data", ec);
@@ -109,7 +115,8 @@ TEST(motis, one_to_many) {
   // GET Request, forward
   {
     auto const durations = one_to_many_get(
-        "/api/experimental/one-to-many-intermodal?one=49.8722439;8.6320624"
+        "/api/experimental/one-to-many-intermodal"
+        "?one=49.8722439;8.6320624"  // Near DA
         "&many="
         "49.87336;8.62926,"  // DA_10
         "50.10593;8.66118,"  // FFM_10
@@ -148,7 +155,7 @@ TEST(motis, one_to_many) {
                   {692.0},
                   {1260.0},
                   {1440.0},
-                  {1500.0},  // FIXME Final footpath > postTransitTime
+                  {1500.0},
                   {2700.0},
                   {2640.0},
                   {2940.0},
@@ -158,7 +165,7 @@ TEST(motis, one_to_many) {
   // POST Request, backward
   {
     auto const durations = one_to_many_post(api::OneToManyIntermodalParams{
-        .one_ = "50.113816,8.679421,0",
+        .one_ = "50.113816,8.679421,0",  // Near FFM_HAUPT
         .many_ =
             {
                 "49.87336,8.62926",  // DA_10
@@ -180,8 +187,7 @@ TEST(motis, one_to_many) {
                 "49.872243,8.632062",  // Near DA
                 "49.875368,8.627596",  // Far, near DA
             },
-        .time_ = {std::chrono::time_point_cast<std::chrono::seconds>(
-            n::parse_time("2019-05-01T01:25:00.000+02:00", "%FT%T%Ez"))},
+        .time_ = parse_time("2019-05-01T01:25:00.000+02:00"),
         .maxTravelTime_ = 60,
         .maxMatchingDistance_ = 250.0,
         .arriveBy_ = true,
@@ -211,11 +217,13 @@ TEST(motis, one_to_many) {
   // POST, forward, routed, short pre-transit
   {
     auto const durations = one_to_many_post(api::OneToManyIntermodalParams{
-        .one_ = "50.106941,8.659617",
+        .one_ = "50.106839,8.659387",  // Near FFM
         .many_ =
             {
                 "test_DA_10",
                 "50.107577,8.6638173",  // de:6412:10:6:1
+                "test_de:6412:10:6:1",
+                "test_FFM_101",
                 "test_FFM_HAUPT_S",
                 "50.11385,8.67912",  // FFM_HAUPT_U
                 "50.105884,8.664241",  // Near FFM
@@ -224,8 +232,7 @@ TEST(motis, one_to_many) {
                 "50.114141,8.677025,-3",  // Near FFM_HAUPT
                 "50.113589,8.679070,-4",  // Near FFM_HAUPT
             },
-        .time_ = {std::chrono::time_point_cast<std::chrono::seconds>(
-            n::parse_time("2019-05-01T00:55:00.000+02:00", "%FT%T%Ez"))},
+        .time_ = parse_time("2019-05-01T00:55:00.000+02:00"),
         .maxTravelTime_ = 60,
         .maxMatchingDistance_ = 250.0,
         .arriveBy_ = false,
@@ -233,10 +240,12 @@ TEST(motis, one_to_many) {
         .maxPreTransitTime_ = 360});  // Too short to reach U4
 
     EXPECT_EQ((std::vector<api::Duration>{{},
-                                          {459.0},
-                                          {1560.0},
-                                          {1680.0},
-                                          {397.0},
+                                          {475.0},
+                                          {360.0},  // Direct connection allowed
+                                          {353.0},  // Valid for pre transit
+                                          {1560.0},  // Must take S3
+                                          {1680.0},  // Must take S3
+                                          {413.0},  // No valid pre transit
                                           {1800.0},
                                           {1740.0},
                                           {1740.0},
@@ -266,8 +275,8 @@ TEST(motis, one_to_many) {
     EXPECT_EQ((std::vector<api::Duration>{
                   {1680.0},
                   {},  // Not reachable from de:6412:10:6:1
-                  {333.0},
-                  {517.0},
+                  {333.0},  // No valid post transit
+                  {517.0},  // Direct connections allowed
                   {771.0}  // Reachable after updating maxDirectTime
               }),
               durations);
@@ -295,7 +304,7 @@ TEST(motis, one_to_many) {
       EXPECT_EQ((std::vector<api::Duration>{
                     {228.0},
                     {300.0},  // {321.0},  // Invalid transfer C -> B
-                    {1980.0}}),
+                    {1980.0}}),  // Must use later trip
                 durations);
     }
     // POST, backward, postTransitModes + direct
@@ -304,8 +313,7 @@ TEST(motis, one_to_many) {
           .one_ = "50.107326,8.665237",
           .many_ = {"test_FFM_B", "test_FFM_C", "50.107812,8.664628",
                     "test_PAUL1"},
-          .time_ = {std::chrono::time_point_cast<std::chrono::seconds>(
-              n::parse_time("2019-05-01T12:30:00.000+02:00", "%FT%T%Ez"))},
+          .time_ = parse_time("2019-05-01T12:30:00.000+02:00"),
           .maxTravelTime_ = 60,
           .maxMatchingDistance_ = 250.0,
           .arriveBy_ = true,
@@ -323,8 +331,7 @@ TEST(motis, one_to_many) {
       auto const durations = one_to_many_post(api::OneToManyIntermodalParams{
           .one_ = "test_PAUL1",
           .many_ = {"test_FFM_C", "50.107326,8.665237"},  // includes C -> B
-          .time_ = {std::chrono::time_point_cast<std::chrono::seconds>(
-              n::parse_time("2019-05-01T12:00:00.000+02:00", "%FT%T%Ez"))},
+          .time_ = parse_time("2019-05-01T12:00:00.000+02:00"),
           .maxTravelTime_ = 30,
           .maxMatchingDistance_ = 250.0,
           .arriveBy_ = false,
@@ -371,15 +378,14 @@ TEST(motis, one_to_many) {
       auto const durations = one_to_many_post(api::OneToManyIntermodalParams{
           .one_ = "49.872710, 8.631168",  // Near DA
           .many_ = {"50.113487, 8.678913"},  // Near FFM_HAUPT
-          .time_ = {std::chrono::time_point_cast<std::chrono::seconds>(
-              n::parse_time("2019-05-01T00:30:00.000+02:00", "%FT%T%Ez"))},
+          .time_ = parse_time("2019-05-01T00:30:00.000+02:00"),
           .additionalTransferTime_ = 17,
           .useRoutedTransfers_ = true});
 
       EXPECT_EQ((std::vector<api::Duration>{{4200.0}}), durations);
     }
   }
-  // Bug: Should not connect final footpath with first or last mile
+  // Bug examples: Should not connect final footpath with first or last mile
   {
     auto const many = std::vector<std::string>{
         "test_FFM_HAUPT_U", "50.11385,8.67912,-4",  // FFM_HAUPT_U
@@ -390,8 +396,7 @@ TEST(motis, one_to_many) {
       auto const durations = one_to_many_post(api::OneToManyIntermodalParams{
           .one_ = "50.108056,8.663177,-2",  // Near de:6412:10:6:1
           .many_ = many,
-          .time_ = {std::chrono::time_point_cast<std::chrono::seconds>(
-              n::parse_time("2019-05-01T01:00:00.000+02:00", "%FT%T%Ez"))},
+          .time_ = parse_time("2019-05-01T01:00:00.000+02:00"),
           .maxTravelTime_ = 30,
           .maxMatchingDistance_ = 250.0,
           .arriveBy_ = false,
@@ -416,8 +421,7 @@ TEST(motis, one_to_many) {
           one_to_many_post(api::OneToManyIntermodalParams{
               .one_ = "50.10739,8.66333,-3",  // Near FFM_101
               .many_ = many,
-              .time_ = {std::chrono::time_point_cast<std::chrono::seconds>(
-                  n::parse_time("2019-05-01T01:00:00.000+02:00", "%FT%T%Ez"))},
+              .time_ = parse_time("2019-05-01T01:00:00.000+02:00"),
               .maxTravelTime_ = 30,
               .maxMatchingDistance_ = 250.0,
               .arriveBy_ = false,
@@ -432,12 +436,12 @@ TEST(motis, one_to_many) {
     {
       // Ensure all arriving stations are reachable
       // Also check that the correct arrival time is used
+      // Should start from FFM_HAUPT_S due to post transit time constraint
       auto const walk_durations =
           one_to_many_post(api::OneToManyIntermodalParams{
               .one_ = "50.107066,8.663604,0",
               .many_ = many,
-              .time_ = {std::chrono::time_point_cast<std::chrono::seconds>(
-                  n::parse_time("2019-05-01T01:00:00.000+02:00", "%FT%T%Ez"))},
+              .time_ = parse_time("2019-05-01T01:00:00.000+02:00"),
               .maxTravelTime_ = 30,
               .maxMatchingDistance_ = 250.0,
               .arriveBy_ = false,
@@ -449,7 +453,7 @@ TEST(motis, one_to_many) {
                     {780.0},
                     {720.0},
                     {780.0},
-                    {960.0},  // FIXME Must start at FFM_HAUPT_S => 1380 | 1500
+                    {960.0},  // FIXME Should start FFM_HAUPT_S => time > 1200
                 }),
                 walk_durations);
     }

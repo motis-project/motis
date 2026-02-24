@@ -27,11 +27,11 @@ namespace motis::ep {
 api::oneToMany_response one_to_many_direct(
     osr::ways const&,
     osr::lookup const&,
-    api::ModeEnum const,
+    api::ModeEnum,
     osr::location const& one,
     std::vector<osr::location> const& many,
-    double const max_direct_time,
-    double const max_matching_distance,
+    double max_direct_time,
+    double max_matching_distance,
     osr::direction,
     osr_parameters const&,
     api::PedestrianProfileEnum,
@@ -68,7 +68,7 @@ template <typename Endpoint, typename Query>
 api::oneToManyIntermodal_response run_one_to_many_intermodal(
     Endpoint const&,
     Query const&,
-    place_t const&,
+    place_t const& one,
     std::vector<place_t> const& many);
 
 struct one_to_many {

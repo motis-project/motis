@@ -6,6 +6,8 @@
 
 #include "utl/enumerate.h"
 
+#include "net/bad_request_exception.h"
+
 #include "nigiri/common/delta_t.h"
 #include "nigiri/routing/one_to_all.h"
 
@@ -15,7 +17,6 @@
 #include "motis/metrics_registry.h"
 #include "motis/osr/mode_to_profile.h"
 #include "motis/timetable/modes_to_clasz_mask.h"
-#include "net/bad_request_exception.h"
 
 namespace motis::ep {
 
@@ -36,7 +37,7 @@ api::oneToMany_response one_to_many_direct(
     api::PedestrianProfileEnum const pedestrian_profile,
     api::ElevationCostsEnum const elevation_costs,
     osr::elevation_storage const* elevations_,
-    bool with_distance) {
+    bool const with_distance) {
   utl::verify(mode == api::ModeEnum::BIKE || mode == api::ModeEnum::CAR ||
                   mode == api::ModeEnum::WALK,
               "mode {} not supported for one-to-many",
@@ -60,9 +61,7 @@ api::oneToMany_response one_to_many_direct(
   });
 }
 
-double delta_to_seconds(n::delta_t const d, bool arrive_by) {
-  return 60.0 * (arrive_by ? -1 * d : d);
-}
+double delta_to_seconds(n::delta_t const d) { return std::abs(60.0 * d); }
 
 double duration_to_seconds(n::duration_t const d) { return 60 * d.count(); }
 
@@ -80,7 +79,6 @@ void update_transit_durations(
     api::PedestrianProfileEnum const pedestrian_profile,
     api::ElevationCostsEnum const elevation_costs,
     osr_parameters const& osr_params) {
-  // TODO Should this always be calculated?
   // Code is similar to One-to-All
   auto const one_modes =
       deduplicate(arrive_by ? query.postTransitModes_ : query.preTransitModes_);
@@ -181,7 +179,7 @@ void update_transit_durations(
             ep.tt_, state,
             arrive_by ? n::direction::kBackward : n::direction::kForward, loc,
             time, q.max_transfers_);
-        auto const total = delta_to_seconds(fastest.duration_, arrive_by) +
+        auto const total = delta_to_seconds(fastest.duration_) +
                            duration_to_seconds(offset.duration());
         if (total < best) {
           best = total;
@@ -273,7 +271,7 @@ template api::oneToManyIntermodal_response run_one_to_many_intermodal<
                                      place_t const&,
                                      std::vector<place_t> const&);
 
-template api::oneToManyIntermodal_response run_one_to_many_intermodal<
+template api::oneToManyIntermodalPost_response run_one_to_many_intermodal<
     one_to_many_intermodal_post,
     api::OneToManyIntermodalParams>(one_to_many_intermodal_post const&,
                                     api::OneToManyIntermodalParams const&,

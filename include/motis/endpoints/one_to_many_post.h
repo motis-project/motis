@@ -23,7 +23,7 @@ struct one_to_many_post {
 };
 
 struct one_to_many_intermodal_post {
-  api::oneToManyIntermodal_response operator()(
+  api::oneToManyIntermodalPost_response operator()(
       api::OneToManyIntermodalParams const&) const;
 
   config const& config_;
