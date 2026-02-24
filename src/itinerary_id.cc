@@ -257,6 +257,8 @@ std::string generate_itinerary_id(api::Itinerary const& itin) {
   auto legs = boost::json::array{};
   legs.reserve(itin.legs_.size());
 
+  int64_t max_sched_t = 0;
+
   for (std::size_t i = 0; i < itin.legs_.size(); ++i) {
     auto const& leg = itin.legs_[i];
 
@@ -273,6 +275,8 @@ std::string generate_itinerary_id(api::Itinerary const& itin) {
                 i);
     auto const sched_start_m = to_itinerary_minutes(sched_start);
     auto const sched_end_m = to_itinerary_minutes(sched_end);
+    max_sched_t = sched_end;
+
     auto const sched_delta_m = sched_end_m - sched_start_m;
     utl::verify(sched_delta_m >= 0, "itinerary id: leg {} sched_delta < 0", i);
 
@@ -292,9 +296,11 @@ std::string generate_itinerary_id(api::Itinerary const& itin) {
 
   auto root = boost::json::object{};
   root["legs"] = std::move(legs);
-  root["duration"] = itin.duration_;
+  //
+  root["journey_start"] = max_sched_t - itin.duration_;
   return boost::json::serialize(root);
 }
+
 api::Itinerary reconstruct_itinerary(motis::ep::stop_times const& stoptimes_ep,
                                      std::string const& itin_id) {
   constexpr auto lookback_t = 8 * 60;
@@ -309,15 +315,9 @@ api::Itinerary reconstruct_itinerary(motis::ep::stop_times const& stoptimes_ep,
     lh_vk.emplace_back(lj.as_object());
   }
 
-  //
-  auto const total_duration = root.at("duration").as_int64();
-  auto const leg_duration = lh_vk.back().sched_end - lh_vk.front().sched_start;
-  auto const query_start_sec =
-      lh_vk.front().sched_start - (total_duration - leg_duration);
-
   auto const journey_start =
       nigiri::unixtime_t{std::chrono::duration_cast<nigiri::i32_minutes>(
-          std::chrono::seconds{query_start_sec})};
+          std::chrono::seconds{root.at("journey_start").as_int64()})};
 
   std::vector<
       std::tuple<nigiri::rt::frun, nigiri::stop_idx_t, nigiri::stop_idx_t>>
