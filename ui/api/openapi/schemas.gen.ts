@@ -1954,7 +1954,7 @@ For example, this can be used to allow only \`SUBURBAN,SUBWAY,TRAM\`.
             explode: false
         },
         preTransitModes: {
-            description: `Optional. Default is \`WALK\`. Does not apply to direct connections (see \`directModes\`).
+            description: `Optional. Default is \`WALK\`. Does not apply to direct connections (see \`directMode\`).
 
 A list of modes that are allowed to be used for the first mile, i.e. from the coordinates to the first transit stop. Example: \`WALK,BIKE_SHARING\`.
 `,
@@ -1966,7 +1966,7 @@ A list of modes that are allowed to be used for the first mile, i.e. from the co
             explode: false
         },
         postTransitModes: {
-            description: `Optional. Default is \`WALK\`. Does not apply to direct connections (see \`directModes\`).
+            description: `Optional. Default is \`WALK\`. Does not apply to direct connections (see \`directMode\`).
 
 A list of modes that are allowed to be used for the last mile, i.e. from the last transit stop to the target coordinates. Example: \`WALK,BIKE_SHARING\`.
 `,
@@ -1980,7 +1980,7 @@ A list of modes that are allowed to be used for the last mile, i.e. from the las
         directMode: {
             description: `Default is \`WALK\` which will compute walking routes as direct connections.
 
-Modes used for direction connections from start to destination without using transit.
+Mode used for direction connections from start to destination without using transit.
 
 Currently supported non-transit modes: \`WALK\`, \`BIKE\`, \`CAR\`
 `,

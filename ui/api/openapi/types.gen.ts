@@ -1577,14 +1577,14 @@ export type OneToManyIntermodalParams = {
      */
     transitModes?: Array<Mode>;
     /**
-     * Optional. Default is `WALK`. Does not apply to direct connections (see `directModes`).
+     * Optional. Default is `WALK`. Does not apply to direct connections (see `directMode`).
      *
      * A list of modes that are allowed to be used for the first mile, i.e. from the coordinates to the first transit stop. Example: `WALK,BIKE_SHARING`.
      *
      */
     preTransitModes?: Array<Mode>;
     /**
-     * Optional. Default is `WALK`. Does not apply to direct connections (see `directModes`).
+     * Optional. Default is `WALK`. Does not apply to direct connections (see `directMode`).
      *
      * A list of modes that are allowed to be used for the last mile, i.e. from the last transit stop to the target coordinates. Example: `WALK,BIKE_SHARING`.
      *
@@ -1593,7 +1593,7 @@ export type OneToManyIntermodalParams = {
     /**
      * Default is `WALK` which will compute walking routes as direct connections.
      *
-     * Modes used for direction connections from start to destination without using transit.
+     * Mode used for direction connections from start to destination without using transit.
      *
      * Currently supported non-transit modes: \`WALK\`, \`BIKE\`, \`CAR\`
      *
@@ -2382,7 +2382,7 @@ export type OneToManyIntermodalData = {
         /**
          * Default is `WALK` which will compute walking routes as direct connections.
          *
-         * Modes used for direction connections from start to destination without using transit.
+         * Mode used for direction connections from start to destination without using transit.
          *
          * Currently supported non-transit modes: \`WALK\`, \`BIKE\`, \`CAR\`
          *
@@ -2496,14 +2496,14 @@ export type OneToManyIntermodalData = {
          */
         pedestrianSpeed?: PedestrianSpeed;
         /**
-         * Optional. Default is `WALK`. Does not apply to direct connections (see `directModes`).
+         * Optional. Default is `WALK`. Does not apply to direct connections (see `directMode`).
          *
          * A list of modes that are allowed to be used for the last mile, i.e. from the last transit stop to the target coordinates. Example: `WALK,BIKE_SHARING`.
          *
          */
         postTransitModes?: Array<Mode>;
         /**
-         * Optional. Default is `WALK`. Does not apply to direct connections (see `directModes`).
+         * Optional. Default is `WALK`. Does not apply to direct connections (see `directMode`).
          *
          * A list of modes that are allowed to be used for the first mile, i.e. from the coordinates to the first transit stop. Example: `WALK,BIKE_SHARING`.
          *
