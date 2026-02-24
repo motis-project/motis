@@ -366,14 +366,18 @@ timetable:
     # routing for specific clasz types can be disabled (default = all enabled)
     # currently long distance street routing is slow, so in this example
     # we disable routing shapes for COACH
+    # (if there are shapes for the disabled clasz types in the dataset, these will still be used)
     clasz:
       COACH: false
     # disable shape computation for routes with more than X stops (default = no limit)
+    # (if there are shapes for routes with more than X stops in the dataset, these will still be used)
     max_stops: 100
     # limit the number of threads used for shape computation (default = number of hardware threads)
     n_threads: 6
     # cache and reuse computed shapes for later imports (dataset updates)
     cache: true
+    # if you want to use cached shapes even if the osm file has changed since the last import, set this to true (default = false)
+    cache_reuse_old_osm_data: false
 
     # for debugging purposes, debug information can be written to files
     # which can be loaded into the debug ui (see osr project)
