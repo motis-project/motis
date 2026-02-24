@@ -1781,6 +1781,261 @@ may be slower than duration-only queries.
     }
 } as const;
 
+export const OneToManyIntermodalParamsSchema = {
+    type: 'object',
+    required: ['one', 'many'],
+    properties: {
+        one: {
+            description: `\`latitude,longitude[,level]\` tuple with
+- latitude and longitude in degrees
+- (optional) level: the OSM level (default: 0)
+
+OR
+
+stop id
+`,
+            type: 'string'
+        },
+        many: {
+            description: `array of:
+
+\`latitude,longitude[,level]\` tuple with
+- latitude and longitude in degrees
+- (optional) level: the OSM level (default: 0)
+
+OR
+
+stop id
+`,
+            type: 'array',
+            items: {
+                type: 'string'
+            },
+            explode: false
+        },
+        time: {
+            description: `Optional. Defaults to the current time.
+
+Departure time ($arriveBy=false) / arrival date ($arriveBy=true),
+`,
+            type: 'string',
+            format: 'date-time'
+        },
+        maxTravelTime: {
+            description: `The maximum travel time in minutes.
+If not provided, the routing uses the value
+hardcoded in the server which is usually quite high.
+
+*Warning*: Use with care. Setting this too low can lead to
+optimal (e.g. the least transfers) journeys not being found.
+If this value is too low to reach the destination at all,
+it can lead to slow routing performance.
+`,
+            type: 'integer'
+        },
+        maxMatchingDistance: {
+            description: 'maximum matching distance in meters to match geo coordinates to the street network',
+            type: 'number',
+            default: 25
+        },
+        arriveBy: {
+            description: `Optional. Defaults to false, i.e. one to many search
+
+true = many to one
+false = one to many
+`,
+            type: 'boolean',
+            default: false
+        },
+        maxTransfers: {
+            description: `The maximum number of allowed transfers (i.e. interchanges between transit legs,
+pre- and postTransit do not count as transfers).
+\`maxTransfers=0\` searches for direct transit connections without any transfers.
+If you want to search only for non-transit connections (\`FOOT\`, \`CAR\`, etc.),
+send an empty \`transitModes\` parameter instead.
+
+If not provided, the routing uses the server-side default value
+which is hardcoded and very high to cover all use cases.
+
+*Warning*: Use with care. Setting this too low can lead to
+optimal (e.g. the fastest) journeys not being found.
+If this value is too low to reach the destination at all,
+it can lead to slow routing performance.
+`,
+            type: 'integer'
+        },
+        minTransferTime: {
+            description: `Optional. Default is 0 minutes.
+
+Minimum transfer time for each transfer in minutes.
+`,
+            type: 'integer',
+            default: 0
+        },
+        additionalTransferTime: {
+            description: `Optional. Default is 0 minutes.
+
+Additional transfer time reserved for each transfer in minutes.
+`,
+            type: 'integer',
+            default: 0
+        },
+        transferTimeFactor: {
+            description: `Optional. Default is 1.0
+
+Factor to multiply minimum required transfer times with.
+Values smaller than 1.0 are not supported.
+`,
+            type: 'number',
+            default: 1
+        },
+        useRoutedTransfers: {
+            description: `Optional. Default is \`false\`.
+
+Whether to use transfers routed on OpenStreetMap data.
+`,
+            type: 'boolean',
+            default: false
+        },
+        pedestrianProfile: {
+            description: `Optional. Default is \`FOOT\`.
+
+Accessibility profile to use for pedestrian routing in transfers
+between transit connections and the first and last mile respectively.
+`,
+            '$ref': '#/components/schemas/PedestrianProfile',
+            default: 'FOOT'
+        },
+        pedestrianSpeed: {
+            description: `Optional
+
+Average speed for pedestrian routing.
+`,
+            '$ref': '#/components/schemas/PedestrianSpeed'
+        },
+        cyclingSpeed: {
+            description: `Optional
+
+Average speed for bike routing.
+`,
+            '$ref': '#/components/schemas/CyclingSpeed'
+        },
+        elevationCosts: {
+            description: `Optional. Default is \`NONE\`.
+
+Set an elevation cost profile, to penalize routes with incline.
+- \`NONE\`: No additional costs for elevations. This is the default behavior
+- \`LOW\`: Add a low cost for increase in elevation and incline along the way. This will prefer routes with less ascent, if small detours are required.
+- \`HIGH\`: Add a high cost for increase in elevation and incline along the way. This will prefer routes with less ascent, if larger detours are required.
+
+As using an elevation costs profile will increase the travel duration,
+routing through steep terrain may exceed the maximal allowed duration,
+causing a location to appear unreachable.
+Increasing the maximum travel time for these segments may resolve this issue.
+
+The profile is used for routing on both the first and last mile.
+
+Elevation cost profiles are currently used by following street modes:
+- \`BIKE\`
+`,
+            '$ref': '#/components/schemas/ElevationCosts',
+            default: 'NONE'
+        },
+        transitModes: {
+            description: `Optional. Default is \`TRANSIT\` which allows all transit modes (no restriction).
+Allowed modes for the transit part. If empty, no transit connections will be computed.
+For example, this can be used to allow only \`SUBURBAN,SUBWAY,TRAM\`.
+`,
+            type: 'array',
+            items: {
+                '$ref': '#/components/schemas/Mode'
+            },
+            default: ['TRANSIT'],
+            explode: false
+        },
+        preTransitModes: {
+            description: `Optional. Default is \`WALK\`. Does not apply to direct connections (see \`directModes\`).
+
+A list of modes that are allowed to be used for the first mile, i.e. from the coordinates to the first transit stop. Example: \`WALK,BIKE_SHARING\`.
+`,
+            type: 'array',
+            items: {
+                '$ref': '#/components/schemas/Mode'
+            },
+            default: ['WALK'],
+            explode: false
+        },
+        postTransitModes: {
+            description: `Optional. Default is \`WALK\`. Does not apply to direct connections (see \`directModes\`).
+
+A list of modes that are allowed to be used for the last mile, i.e. from the last transit stop to the target coordinates. Example: \`WALK,BIKE_SHARING\`.
+`,
+            type: 'array',
+            items: {
+                '$ref': '#/components/schemas/Mode'
+            },
+            default: ['WALK'],
+            explode: false
+        },
+        directModes: {
+            description: `Optional. Default is \`WALK\` which will compute walking routes as direct connections.
+
+Modes used for direction connections from start to destination without using transit.
+
+Only non-transit modes can be used. (currently supported: \`WALK\`, \`BIKE\`, \`CAR\`)
+`,
+            type: 'array',
+            items: {
+                '$ref': '#/components/schemas/Mode'
+            },
+            explode: false
+        },
+        maxPreTransitTime: {
+            description: `Optional. Default is 15min which is \`900\`.
+Maximum time in seconds for the first street leg.
+Is limited by server config variable \`street_routing_max_prepost_transit_seconds\`.
+`,
+            type: 'integer',
+            default: 900,
+            minimum: 0
+        },
+        maxPostTransitTime: {
+            description: `Optional. Default is 15min which is \`900\`.
+Maximum time in seconds for the last street leg.
+Is limited by server config variable \`street_routing_max_prepost_transit_seconds\`.
+`,
+            type: 'integer',
+            default: 900,
+            minimum: 0
+        },
+        maxDirectTime: {
+            description: `Optional. Default is 30min which is \`1800\`.
+Maximum time in seconds for direct connections.
+Is limited by server config variable \`street_routing_max_direct_seconds\`.
+`,
+            type: 'integer',
+            default: 1800,
+            minimum: 0
+        },
+        requireBikeTransport: {
+            description: `Optional. Default is \`false\`.
+
+If set to \`true\`, all used transit trips are required to allow bike carriage.
+`,
+            type: 'boolean',
+            default: false
+        },
+        requireCarTransport: {
+            description: `Optional. Default is \`false\`.
+
+If set to \`true\`, all used transit trips are required to allow car carriage.
+`,
+            type: 'boolean',
+            default: false
+        }
+    }
+} as const;
+
 export const ServerConfigSchema = {
     Description: 'server configuration',
     type: 'object',
