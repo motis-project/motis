@@ -84,7 +84,7 @@ export const trip = <ThrowOnError extends boolean = false>(options: Options<Trip
 /**
  * Get the next N departures or arrivals of a stop sorted by time
  */
-export const stoptimes = <ThrowOnError extends boolean = false>(options: Options<StoptimesData, ThrowOnError>) => {
+export const stoptimes = <ThrowOnError extends boolean = false>(options?: Options<StoptimesData, ThrowOnError>) => {
     return (options?.client ?? client).get<StoptimesResponse, StoptimesError, ThrowOnError>({
         ...options,
         url: '/api/v5/stoptimes'
