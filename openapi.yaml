@@ -1084,6 +1084,7 @@ paths:
           description: geo location as latitude;longitude
           schema:
             type: string
+
         - name: many
           in: query
           required: true
@@ -1093,6 +1094,7 @@ paths:
             items:
               type: string
           explode: false
+
         - name: time
           in: query
           required: false
@@ -1103,6 +1105,7 @@ paths:
           schema:
             type: string
             format: date-time
+
         - name: maxTravelTime
           in: query
           required: false
@@ -1117,6 +1120,7 @@ paths:
             it can lead to slow routing performance.
           schema:
             type: integer
+
         - name: maxMatchingDistance
           in: query
           required: false
@@ -1124,6 +1128,7 @@ paths:
           schema:
             type: number
             default: 25
+
         - name: arriveBy
           in: query
           required: false
@@ -1135,6 +1140,7 @@ paths:
           schema:
             type: boolean
             default: false
+
         - name: maxTransfers
           in: query
           required: false
@@ -1154,6 +1160,7 @@ paths:
             it can lead to slow routing performance.
           schema:
             type: integer
+
         - name: minTransferTime
           in: query
           required: false
@@ -1198,6 +1205,7 @@ paths:
           schema:
             type: boolean
             default: false
+
         - name: pedestrianProfile
           in: query
           required: false
@@ -1334,6 +1342,7 @@ paths:
             type: integer
             default: 900
             minimum: 0
+
         - name: maxDirectTime
           in: query
           required: false
