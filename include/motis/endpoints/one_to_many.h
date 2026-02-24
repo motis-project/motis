@@ -28,6 +28,7 @@
 namespace motis::ep {
 
 api::oneToMany_response one_to_many_direct(
+    config const&,
     osr::ways const&,
     osr::lookup const&,
     api::ModeEnum,
@@ -40,18 +41,15 @@ api::oneToMany_response one_to_many_direct(
     api::PedestrianProfileEnum,
     api::ElevationCostsEnum,
     osr::elevation_storage const*,
-    bool with_distance,
-    unsigned const max_many,
-    unsigned const max_travel_time_limit);
+    bool with_distance);
 
 template <typename Params>
 api::oneToMany_response one_to_many_handle_request(
+    config const& config,
     Params const& query,
-    osr::ways const& w_,
-    osr::lookup const& l_,
-    osr::elevation_storage const* elevations_,
-    unsigned const max_many,
-    unsigned const max_travel_time_limit) {
+    osr::ways const& w,
+    osr::lookup const& l,
+    osr::elevation_storage const* elevations) {
   // required field with default value, not std::optional
   static_assert(std::is_same_v<decltype(query.withDistance_), bool>);
 
@@ -67,11 +65,11 @@ api::oneToMany_response one_to_many_handle_request(
   });
 
   return one_to_many_direct(
-      w_, l_, query.mode_, *one, many, query.max_, query.maxMatchingDistance_,
+      config, w, l, query.mode_, *one, many, query.max_,
+      query.maxMatchingDistance_,
       query.arriveBy_ ? osr::direction::kBackward : osr::direction::kForward,
       get_osr_parameters(query), api::PedestrianProfileEnum::FOOT,
-      query.elevationCosts_, elevations_, query.withDistance_, max_many,
-      max_travel_time_limit);
+      query.elevationCosts_, elevations, query.withDistance_);
 }
 
 template <typename Endpoint, typename Query>

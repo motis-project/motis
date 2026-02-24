@@ -25,6 +25,7 @@ namespace n = nigiri;
 constexpr auto kInfinity = std::numeric_limits<double>::infinity();
 
 api::oneToMany_response one_to_many_direct(
+    config const& config,
     osr::ways const& w,
     osr::lookup const& l,
     api::ModeEnum const mode,
@@ -37,9 +38,10 @@ api::oneToMany_response one_to_many_direct(
     api::PedestrianProfileEnum const pedestrian_profile,
     api::ElevationCostsEnum const elevation_costs,
     osr::elevation_storage const* elevations_,
-    bool const with_distance,
-    unsigned const max_many,
-    unsigned const max_direct_time_limit) {
+    bool const with_distance) {
+  auto const max_many = config.get_limits().onetomany_max_many_;
+  auto const max_direct_time_limit =
+      config.get_limits().street_routing_max_direct_seconds_;
   utl::verify<net::too_many_exception>(
       many.size() <= max_many,
       "number of many locations too high ({} > {}). The server admin can "
@@ -214,11 +216,7 @@ void update_transit_durations(
 api::oneToMany_response one_to_many::operator()(
     boost::urls::url_view const& url) const {
   auto const query = api::oneToMany_params{url.params()};
-  auto const max_many = config_.get_limits().onetomany_max_many_;
-  auto const max_travel_time_limit =
-      config_.get_limits().street_routing_max_direct_seconds_;
-  return one_to_many_handle_request(query, w_, l_, elevations_, max_many,
-                                    max_travel_time_limit);
+  return one_to_many_handle_request(config_, query, w_, l_, elevations_);
 }
 
 template <typename Endpoint, typename Query>
@@ -247,7 +245,7 @@ api::oneToManyIntermodal_response run_one_to_many_intermodal(
     return get_location(&ep.tt_, ep.w_, ep.pl_, ep.matches_, p);
   };
   auto durations = one_to_many_direct(
-      *ep.w_, *ep.l_, query.directMode_, to_location(one),
+      ep.config_, *ep.w_, *ep.l_, query.directMode_, to_location(one),
       utl::to_vec(many, to_location),
       static_cast<double>(std::min(
           {std::max({query.maxDirectTime_, query.maxPreTransitTime_,
@@ -258,8 +256,7 @@ api::oneToManyIntermodal_response run_one_to_many_intermodal(
       query.maxMatchingDistance_,
       query.arriveBy_ ? osr::direction::kBackward : osr::direction::kForward,
       osr_params, query.pedestrianProfile_, query.elevationCosts_,
-      ep.elevations_, false, ep.config_.get_limits().onetomany_max_many_,
-      ep.config_.get_limits().street_routing_max_direct_seconds_);
+      ep.elevations_, false);
 
   update_transit_durations(durations, ep, query, one, many, time,
                            query.arriveBy_, max_travel_time,
