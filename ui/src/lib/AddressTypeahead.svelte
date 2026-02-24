@@ -37,16 +37,15 @@
 			if (matchedArea?.name.match(/^[0-9]*$/)) {
 				matchedArea.name += ' ' + defaultArea?.name;
 			}
-			let area = (matchedArea ?? defaultArea)?.name;
-			if (area == match.name) {
-				area = match.areas[0]!.name;
-			}
 
 			/* eslint-disable-next-line svelte/prefer-svelte-reactivity */
 			const areas = new Set<number>();
+
 			match.areas.forEach((a, i) => {
-				if (a.matched || a.unique || a.default) {
-					areas.add(i);
+				if (a.matched || a.unique || a.default || a.adminLevel == 2 || a.adminLevel == 4) {
+					if (a.name != match.name) {
+						areas.add(i);
+					}
 				}
 			});
 
@@ -93,16 +92,6 @@
 				match
 			};
 		});
-		/* eslint-disable-next-line svelte/prefer-svelte-reactivity */
-		const shown = new Set<string>();
-		items = items.filter((x) => {
-			const entry = x.match?.type + x.label!;
-			if (shown.has(entry)) {
-				return false;
-			}
-			shown.add(entry);
-			return true;
-		});
 	};
 
 	const deserialize = (s: string): Location => {
@@ -142,8 +131,8 @@
 	{@const modeIcon = getModeStyle({ mode } as LegLike)[0]}
 	{@const modeColor = getModeStyle({ mode } as LegLike)[1]}
 	<div
-		class="rounded-full flex items-center justify-center p-1"
 		style="background-color: {modeColor}; fill: white;"
+		class="rounded-full flex items-center justify-center p-1"
 	>
 		<svg class="relative size-4 rounded-full">
 			<use xlink:href={`#${modeIcon}`}></use>
@@ -186,21 +175,23 @@
 						label={item.label}
 					>
 						<div class="flex items-center grow">
-							{#if item.match?.type == 'STOP'}
-								{@render modeCircle(item.match.modes?.length ? item.match.modes![0] : 'BUS')}
-							{:else if item.match?.type == 'ADDRESS'}
-								<House class="size-5" />
-							{:else if item.match?.type == 'PLACE'}
-								{#if !item.match?.category || item.match?.category == 'none'}
-									<Place class="size-5" />
-								{:else}
-									<img
-										src={`icons/categories/${item.match?.category}.svg`}
-										alt={item.match?.category}
-										class="size-5"
-									/>
+							<div class="size-6">
+								{#if item.match?.type == 'STOP'}
+									{@render modeCircle(item.match.modes?.length ? item.match.modes![0] : 'BUS')}
+								{:else if item.match?.type == 'ADDRESS'}
+									<House class="size-5" />
+								{:else if item.match?.type == 'PLACE'}
+									{#if !item.match?.category || item.match?.category == 'none'}
+										<Place class="size-5" />
+									{:else}
+										<img
+											src={`icons/categories/${item.match?.category}.svg`}
+											alt={item.match?.category}
+											class="size-5"
+										/>
+									{/if}
 								{/if}
-							{/if}
+							</div>
 							<div class="flex flex-col ml-4">
 								<span class="font-semibold text-nowrap text-ellipsis overflow-hidden">
 									{item.match?.name}

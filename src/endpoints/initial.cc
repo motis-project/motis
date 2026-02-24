@@ -52,6 +52,7 @@ api::initial_response initial::operator()(boost::urls::url_view const&) const {
     }
   }
 
+  auto const onetomany_max_many = config_.get_limits().onetomany_max_many_;
   auto const onetoall_max_travel_minutes =
       config_.get_limits().onetoall_max_travel_minutes_;
   auto const street_routing_max_direct_seconds =
@@ -71,6 +72,7 @@ api::initial_response initial::operator()(boost::urls::url_view const&) const {
               .hasElevation_ = has_elevation_data_dir,
               .hasRoutedTransfers_ = has_osr_footpath,
               .hasStreetRouting_ = has_street_routing,
+              .maxOneToManySize_ = static_cast<double>(onetomany_max_many),
               .maxOneToAllTravelTimeLimit_ =
                   static_cast<double>(onetoall_max_travel_minutes),
               .maxPrePostTransitTimeLimit_ = static_cast<double>(

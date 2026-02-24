@@ -38,10 +38,11 @@ api::oneToMany_response one_to_many_direct(
     api::ElevationCostsEnum const elevation_costs,
     osr::elevation_storage const* elevations_,
     bool const with_distance) {
-  utl::verify(mode == api::ModeEnum::BIKE || mode == api::ModeEnum::CAR ||
-                  mode == api::ModeEnum::WALK,
-              "mode {} not supported for one-to-many",
-              boost::json::serialize(boost::json::value_from(mode)));
+  utl::verify<net::bad_request_exception>(
+      mode == api::ModeEnum::BIKE || mode == api::ModeEnum::CAR ||
+          mode == api::ModeEnum::WALK,
+      "mode {} not supported for one-to-many",
+      boost::json::serialize(boost::json::value_from(mode)));
 
   auto const profile = to_profile(mode, pedestrian_profile, elevation_costs);
   auto const paths =
@@ -198,7 +199,11 @@ void update_transit_durations(
 api::oneToMany_response one_to_many::operator()(
     boost::urls::url_view const& url) const {
   auto const query = api::oneToMany_params{url.params()};
-  return one_to_many_handle_request(query, w_, l_, elevations_);
+  auto const max_many = config_.get_limits().onetomany_max_many_;
+  auto const max_travel_time_limit =
+      config_.get_limits().street_routing_max_direct_seconds_;
+  return one_to_many_handle_request(query, w_, l_, elevations_, max_many,
+                                    max_travel_time_limit);
 }
 
 template <typename Endpoint, typename Query>

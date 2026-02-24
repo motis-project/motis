@@ -1376,6 +1376,9 @@ export type OneToManyParams = {
     one: string;
     /**
      * geo locations as latitude;longitude,latitude;longitude,...
+     *
+     * The number of accepted locations is limited by server config variable `onetomany_max_many`.
+     *
      */
     many: Array<(string)>;
     /**
@@ -1384,7 +1387,7 @@ export type OneToManyParams = {
      */
     mode: Mode;
     /**
-     * maximum travel time in seconds
+     * maximum travel time in seconds. Is limited by server config variable `street_routing_max_direct_seconds`.
      */
     max: number;
     /**
@@ -1416,13 +1419,12 @@ export type OneToManyParams = {
      */
     arriveBy: boolean;
     /**
-     * Optional. Default is `false`.
      * If true, the response includes the distance in meters
      * for each path. This requires path reconstruction and
      * may be slower than duration-only queries.
      *
      */
-    withDistance?: boolean;
+    withDistance: boolean;
 };
 
 export type OneToManyIntermodalParams = {
@@ -1448,6 +1450,8 @@ export type OneToManyIntermodalParams = {
      *
      * stop id
      *
+     * The number of accepted locations is limited by server config variable `onetomany_max_many`.
+     *
      */
     many: Array<(string)>;
     /**
@@ -1466,6 +1470,8 @@ export type OneToManyIntermodalParams = {
      * optimal (e.g. the least transfers) journeys not being found.
      * If this value is too low to reach the destination at all,
      * it can lead to slow routing performance.
+     *
+     * Is limited by server config variable `street_routing_max_direct_seconds`.
      *
      */
     maxTravelTime?: number;
@@ -1653,9 +1659,14 @@ export type ServerConfig = {
      */
     hasStreetRouting: boolean;
     /**
+     * limit for the number of `many` locations for one-to-many requests
+     *
+     */
+    maxOneToManySize: number;
+    /**
      * limit for maxTravelTime API param in minutes
      */
-    maxOneToAllTravelTimeLimit?: number;
+    maxOneToAllTravelTimeLimit: number;
     /**
      * limit for maxPrePostTransitTime API param in seconds
      */
@@ -2313,10 +2324,13 @@ export type OneToManyData = {
         elevationCosts?: ElevationCosts;
         /**
          * geo locations as latitude;longitude,latitude;longitude,...
+         *
+         * The number of accepted locations is limited by server config variable `onetomany_max_many`.
+         *
          */
         many: Array<(string)>;
         /**
-         * maximum travel time in seconds
+         * maximum travel time in seconds. Is limited by server config variable `street_routing_max_direct_seconds`.
          */
         max: number;
         /**
@@ -2410,6 +2424,9 @@ export type OneToManyIntermodalData = {
         elevationCosts?: ElevationCosts;
         /**
          * geo locations as latitude;longitude,latitude;longitude,...
+         *
+         * The number of accepted locations is limited by server config variable `onetomany_max_many`.
+         *
          */
         many: Array<(string)>;
         /**
@@ -3041,7 +3058,7 @@ export type InitialResponse = ({
      * zoom level
      */
     zoom: number;
-    serverConfig?: ServerConfig;
+    serverConfig: ServerConfig;
 });
 
 export type InitialError = (Error);

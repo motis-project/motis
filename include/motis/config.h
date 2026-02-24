@@ -233,6 +233,7 @@ struct config {
     unsigned plan_max_results_{256U};
     unsigned plan_max_search_window_minutes_{5760U};
     unsigned stops_max_results_{2048U};
+    unsigned onetomany_max_many_{128U};
     unsigned onetoall_max_results_{65535U};
     unsigned onetoall_max_travel_minutes_{90U};
     unsigned routing_max_timeout_seconds_{90U};
