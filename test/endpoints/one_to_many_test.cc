@@ -253,7 +253,7 @@ TEST(motis, one_to_many) {
         "?one=50.11385;8.67912"  // FFM_HAUPT_U
         "&many="
         "50.107577;8.6638173,"  // de:6412:10:6:1
-        // "50.10739;8.66333,"  // FIXME FFM_101
+        "50.10739;8.66333,"  // FFM_101
         "50.11404;8.67824,"  // FFM_HAUPT_S
         "50.113465;8.678477,"  // Near FFM_HAUPT
         // "50.112519;8.676565"  // FIXME Far, near FFM_HAUPT
@@ -264,13 +264,14 @@ TEST(motis, one_to_many) {
         "&maxPostTransitTime=240"
         "&directModes=WALK"
         "&pedestrianProfile=WHEELCHAIR"
+        "&useRoutedTransfers=true"
         "&arriveBy=true");
 
     EXPECT_EQ((std::vector<api::Duration>{
                   {1680.0},
-                  // {},  // Not reachable from de:6412:10:6:1
-                  {281.0},
-                  {404.0},
+                  {},  // Not reachable from de:6412:10:6:1
+                  {333.0},
+                  {517.0},
                   // {}  // Direct path too long
               }),
               durations);
@@ -313,7 +314,7 @@ TEST(motis, one_to_many) {
           .maxMatchingDistance_ = 250.0,
           .arriveBy_ = true,
           .cyclingSpeed_ = 2.2,
-          .postTransitModes_ = {{api::ModeEnum::BIKE}},
+          .postTransitModes_ = {api::ModeEnum::BIKE},
           .directModes_ = {{api::ModeEnum::BIKE}},
           .maxDirectTime_ = 1800});
 
@@ -332,7 +333,7 @@ TEST(motis, one_to_many) {
           .maxTravelTime_ = 30,
           .maxMatchingDistance_ = 250.0,
           .arriveBy_ = false,
-          .postTransitModes_ = {{api::ModeEnum::BIKE}}});
+          .postTransitModes_ = {api::ModeEnum::BIKE}});
 
       EXPECT_EQ((std::vector<api::Duration>{{720.0}, {840.0}}), durations);
     }
@@ -401,15 +402,15 @@ TEST(motis, one_to_many) {
           .arriveBy_ = false,
           .useRoutedTransfers_ = true,
           .pedestrianProfile_ = api::PedestrianProfileEnum::WHEELCHAIR,
-          .maxPostTransitTime_ = 360});  // Too short to reach from U4
+          .maxPostTransitTime_ = 420});  // Too short to reach from U4
 
       EXPECT_EQ(
           (std::vector<api::Duration>{
               {720.0},
               {780.0},
               {720.0},
-              {960.0},
-              {1320.0},  // {}  // FIXME Test location should be unreachable
+              {1020.0},
+              {1380.0},  // {}  // FIXME Test location should be unreachable
           }),
           durations);
     }
@@ -427,9 +428,9 @@ TEST(motis, one_to_many) {
               .arriveBy_ = false,
               .useRoutedTransfers_ = true,
               .pedestrianProfile_ = api::PedestrianProfileEnum::WHEELCHAIR,
-              .maxPostTransitTime_ = 360});  // Reachable from S3
+              .maxPostTransitTime_ = 420});  // Reachable from S3
       EXPECT_EQ((std::vector<api::Duration>{
-                    {1260.0}, {1620.0}, {1260.0}, {1380.0}, {1680.0}}),
+                    {1260.0}, {1620.0}, {1260.0}, {1380.0}, {1740.0}}),
                 test_durations);
     }
 

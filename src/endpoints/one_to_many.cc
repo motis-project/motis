@@ -78,24 +78,20 @@ void update_transit_durations(
   // TODO Should this always be calculated?
   // Code is similar to One-to-All
   auto const one_modes =
-      deduplicate((arrive_by ? query.postTransitModes_ : query.preTransitModes_)
-                      .value_or(std::vector{api::ModeEnum::WALK}));
+      deduplicate(arrive_by ? query.postTransitModes_ : query.preTransitModes_);
   auto const many_modes =
-      deduplicate((arrive_by ? query.preTransitModes_ : query.postTransitModes_)
-                      .value_or(std::vector{api::ModeEnum::WALK}));
+      deduplicate(arrive_by ? query.preTransitModes_ : query.postTransitModes_);
   auto const max_prepost_seconds = std::min(
       max_travel_time,
       std::chrono::seconds{ep.config_.limits_.value()
                                .street_routing_max_prepost_transit_seconds_});
   auto const one_max_seconds =
-      std::min(std::chrono::seconds{(arrive_by ? query.maxPostTransitTime_
-                                               : query.maxPreTransitTime_)
-                                        .value_or(900)},
+      std::min(std::chrono::seconds{arrive_by ? query.maxPostTransitTime_
+                                              : query.maxPreTransitTime_},
                max_prepost_seconds);
   auto const many_max_seconds =
-      std::min(std::chrono::seconds{(arrive_by ? query.maxPreTransitTime_
-                                               : query.maxPostTransitTime_)
-                                        .value_or(900)},
+      std::min(std::chrono::seconds{arrive_by ? query.maxPreTransitTime_
+                                              : query.maxPostTransitTime_},
                max_prepost_seconds);
   auto const one_dir =
       arrive_by ? osr::direction::kBackward : osr::direction::kForward;
@@ -133,27 +129,23 @@ void update_transit_durations(
           query.maxTransfers_.value_or(n::routing::kMaxTransfers)),
       .max_travel_time_ =
           std::chrono::duration_cast<n::duration_t>(max_travel_time),
-      .prf_idx_ = query.useRoutedTransfers_.value_or(false)
+      .prf_idx_ = query.useRoutedTransfers_
                       ? (query.pedestrianProfile_ ==
                                  api::PedestrianProfileEnum::WHEELCHAIR
                              ? n::kWheelchairProfile
                              : n::kFootProfile)
                       : n::kDefaultProfile,
-      .allowed_claszes_ = to_clasz_mask(
-          query.transitModes_.value_or(std::vector{api::ModeEnum::TRANSIT})),
-      .require_bike_transport_ = query.requireBikeTransport_.value_or(false),
-      .require_car_transport_ = query.requireCarTransport_.value_or(false),
+      .allowed_claszes_ = to_clasz_mask(query.transitModes_),
+      .require_bike_transport_ = query.requireBikeTransport_,
+      .require_car_transport_ = query.requireCarTransport_,
       .transfer_time_settings_ =
           n::routing::transfer_time_settings{
               .default_ = (query.minTransferTime_ == 0 &&
                            query.additionalTransferTime_ == 0 &&
                            query.transferTimeFactor_ == 1.0),
-              .min_transfer_time_ =
-                  n::duration_t{query.minTransferTime_.value_or(0)},
-              .additional_time_ =
-                  n::duration_t{query.additionalTransferTime_.value_or(0)},
-              .factor_ =
-                  static_cast<float>(query.transferTimeFactor_.value_or(1.0))},
+              .min_transfer_time_ = n::duration_t{query.minTransferTime_},
+              .additional_time_ = n::duration_t{query.additionalTransferTime_},
+              .factor_ = static_cast<float>(query.transferTimeFactor_)},
   };
 
   if (ep.tt_.locations_.footpaths_out_.at(q.prf_idx_).empty()) {
@@ -230,13 +222,7 @@ api::oneToManyIntermodal_response run_one_to_many_intermodal(
                     n::duration_t{dur})};
           })
           .value_or(nigiri::routing::kMaxTravelTime);
-  auto const max_matching_distance = query.maxMatchingDistance_.value_or(250.0);
-  auto const arrive_by = query.arriveBy_.value_or(false);
 
-  auto const pedestrian_profile =
-      query.pedestrianProfile_.value_or(api::PedestrianProfileEnum::FOOT);
-  auto const elevation_costs =
-      query.elevationCosts_.value_or(api::ElevationCostsEnum::NONE);
   auto const osr_params = get_osr_parameters(query);
 
   // Get street routing durations
@@ -254,22 +240,23 @@ api::oneToManyIntermodal_response run_one_to_many_intermodal(
                 *ep.w_, *ep.l_, direct_modes.at(0), to_location(one),
                 utl::to_vec(many, to_location),
                 static_cast<double>(std::min(
-                    {query.maxDirectTime_.value_or(max_travel_time.count()),
+                    {query.maxDirectTime_,
                      static_cast<std::int64_t>(max_travel_time.count()),
                      static_cast<std::int64_t>(
                          ep.config_.get_limits()
                              .street_routing_max_direct_seconds_)})),
-                max_matching_distance,
-                arrive_by ? osr::direction::kBackward
-                          : osr::direction::kForward,
-                osr_params, pedestrian_profile, elevation_costs, ep.elevations_,
-                false);
+                query.maxMatchingDistance_,
+                query.arriveBy_ ? osr::direction::kBackward
+                                : osr::direction::kForward,
+                osr_params, query.pedestrianProfile_, query.elevationCosts_,
+                ep.elevations_, false);
           })
           .value_or(api::oneToManyIntermodal_response{many.size()});
 
-  update_transit_durations(durations, ep, query, one, many, time, arrive_by,
-                           max_travel_time, max_matching_distance,
-                           pedestrian_profile, elevation_costs, osr_params);
+  update_transit_durations(durations, ep, query, one, many, time,
+                           query.arriveBy_, max_travel_time,
+                           query.maxMatchingDistance_, query.pedestrianProfile_,
+                           query.elevationCosts_, osr_params);
 
   return durations;
 }
