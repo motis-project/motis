@@ -1471,8 +1471,6 @@ export type OneToManyIntermodalParams = {
      * If this value is too low to reach the destination at all,
      * it can lead to slow routing performance.
      *
-     * Is limited by server config variable `street_routing_max_direct_seconds`.
-     *
      */
     maxTravelTime?: number;
     /**

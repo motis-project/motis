@@ -1833,8 +1833,6 @@ hardcoded in the server which is usually quite high.
 optimal (e.g. the least transfers) journeys not being found.
 If this value is too low to reach the destination at all,
 it can lead to slow routing performance.
-
- Is limited by server config variable \`street_routing_max_direct_seconds\`.
 `,
             type: 'integer'
         },

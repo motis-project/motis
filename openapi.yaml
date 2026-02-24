@@ -4437,8 +4437,6 @@ components:
             optimal (e.g. the least transfers) journeys not being found.
             If this value is too low to reach the destination at all,
             it can lead to slow routing performance.
-
-             Is limited by server config variable `street_routing_max_direct_seconds`.
           type: integer
         maxMatchingDistance:
           description: maximum matching distance in meters to match geo coordinates to the street network
