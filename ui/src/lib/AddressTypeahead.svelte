@@ -93,16 +93,6 @@
 				match
 			};
 		});
-		/* eslint-disable-next-line svelte/prefer-svelte-reactivity */
-		const shown = new Set<string>();
-		items = items.filter((x) => {
-			const entry = x.match?.type + x.label!;
-			if (shown.has(entry)) {
-				return false;
-			}
-			shown.add(entry);
-			return true;
-		});
 	};
 
 	const deserialize = (s: string): Location => {
