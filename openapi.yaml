@@ -4332,9 +4332,7 @@ components:
         - mode
         - max
         - maxMatchingDistance
-        - elevationCosts
         - arriveBy
-        - withDistance
       properties:
         one:
           description: geo location as latitude;longitude
@@ -4387,6 +4385,7 @@ components:
             for each path. This requires path reconstruction and
             may be slower than duration-only queries.
           type: boolean
+          default: false
     OneToManyIntermodalParams:
       type: object
       required:
