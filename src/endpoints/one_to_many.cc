@@ -37,7 +37,6 @@ api::oneToMany_response one_to_many_direct(
     api::ElevationCostsEnum const elevation_costs,
     osr::elevation_storage const* elevations_,
     bool with_distance) {
-
   utl::verify(mode == api::ModeEnum::BIKE || mode == api::ModeEnum::CAR ||
                   mode == api::ModeEnum::WALK,
               "mode {} not supported for one-to-many",
@@ -60,6 +59,12 @@ api::oneToMany_response one_to_many_direct(
         .value_or(api::Duration{});
   });
 }
+
+double delta_to_seconds(n::delta_t const d, bool arrive_by) {
+  return 60.0 * (arrive_by ? -1 * d : d);
+}
+
+double duration_to_seconds(n::duration_t const d) { return 60 * d.count(); }
 
 template <typename Endpoint, typename Query>
 void update_transit_durations(
@@ -97,12 +102,6 @@ void update_transit_durations(
       arrive_by ? osr::direction::kBackward : osr::direction::kForward;
   auto const unreachable = arrive_by ? n::kInvalidDelta<n::direction::kBackward>
                                      : n::kInvalidDelta<n::direction::kForward>;
-  auto const delta_to_seconds = [&](n::delta_t const d) -> double {
-    return 60.0 * (arrive_by ? -1 * d : d);
-  };
-  auto const duration_to_seconds = [](n::duration_t const d) {
-    return 60 * d.count();
-  };
 
   auto const r = routing{ep.config_,     ep.w_,   ep.l_,       ep.pl_,
                          ep.elevations_, &ep.tt_, nullptr,     &ep.tags_,
@@ -182,7 +181,7 @@ void update_transit_durations(
             ep.tt_, state,
             arrive_by ? n::direction::kBackward : n::direction::kForward, loc,
             time, q.max_transfers_);
-        auto const total = delta_to_seconds(fastest.duration_) +
+        auto const total = delta_to_seconds(fastest.duration_, arrive_by) +
                            duration_to_seconds(offset.duration());
         if (total < best) {
           best = total;
