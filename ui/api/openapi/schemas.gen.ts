@@ -1977,18 +1977,14 @@ A list of modes that are allowed to be used for the last mile, i.e. from the las
             default: ['WALK'],
             explode: false
         },
-        directModes: {
-            description: `Optional. Default is \`WALK\` which will compute walking routes as direct connections.
+        directMode: {
+            description: `Optional. Default is unset.
 
 Modes used for direction connections from start to destination without using transit.
 
-Only non-transit modes can be used. (currently supported: \`WALK\`, \`BIKE\`, \`CAR\`)
+Currently supported non-transit modes: \`WALK\`, \`BIKE\`, \`CAR\`
 `,
-            type: 'array',
-            items: {
-                '$ref': '#/components/schemas/Mode'
-            },
-            explode: false
+            '$ref': '#/components/schemas/Mode'
         },
         maxPreTransitTime: {
             description: `Optional. Default is 15min which is \`900\`.

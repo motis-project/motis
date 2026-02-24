@@ -226,18 +226,14 @@ api::oneToManyIntermodal_response run_one_to_many_intermodal(
   auto const osr_params = get_osr_parameters(query);
 
   // Get street routing durations
-  utl::verify<net::bad_request_exception>(
-      !query.directModes_.has_value() || query.directModes_->size() == 1,
-      "Only one direct mode supported. Got {}",
-      query.directModes_.has_value() ? query.directModes_->size() : 0);
   auto durations =
-      query.directModes_
-          .transform([&](std::vector<api::ModeEnum> const& direct_modes) {
+      query.directMode_
+          .transform([&](api::ModeEnum const& direct_mode) {
             auto const to_location = [&](place_t const& p) {
               return get_location(&ep.tt_, ep.w_, ep.pl_, ep.matches_, p);
             };
             return one_to_many_direct(
-                *ep.w_, *ep.l_, direct_modes.at(0), to_location(one),
+                *ep.w_, *ep.l_, direct_mode, to_location(one),
                 utl::to_vec(many, to_location),
                 static_cast<double>(std::min(
                     {query.maxDirectTime_,

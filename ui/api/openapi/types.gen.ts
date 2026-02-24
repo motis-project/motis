@@ -1591,14 +1591,14 @@ export type OneToManyIntermodalParams = {
      */
     postTransitModes?: Array<Mode>;
     /**
-     * Optional. Default is `WALK` which will compute walking routes as direct connections.
+     * Optional. Default is unset.
      *
      * Modes used for direction connections from start to destination without using transit.
      *
-     * Only non-transit modes can be used. (currently supported: \`WALK\`, \`BIKE\`, \`CAR\`)
+     * Currently supported non-transit modes: \`WALK\`, \`BIKE\`, \`CAR\`
      *
      */
-    directModes?: Array<Mode>;
+    directMode?: Mode;
     /**
      * Optional. Default is 15min which is `900`.
      * Maximum time in seconds for the first street leg.
@@ -2377,14 +2377,14 @@ export type OneToManyIntermodalData = {
          */
         cyclingSpeed?: CyclingSpeed;
         /**
-         * Optional. Default is `WALK` which will compute walking routes as direct connections.
+         * Optional. Default is unset.
          *
          * Modes used for direction connections from start to destination without using transit.
          *
-         * Only non-transit modes can be used. (currently supported: \`WALK\`, \`BIKE\`, \`CAR\`)
+         * Currently supported non-transit modes: \`WALK\`, \`BIKE\`, \`CAR\`
          *
          */
-        directModes?: Array<Mode>;
+        directMode?: Mode;
         /**
          * Optional. Default is `NONE`.
          *

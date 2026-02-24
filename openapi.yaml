@@ -1299,20 +1299,17 @@ paths:
               - WALK
           explode: false
 
-        - name: directModes
+        - name: directMode
           in: query
           required: false
           description: |
-            Optional. Default is `WALK` which will compute walking routes as direct connections.
+            Optional. Default is unset.
 
             Modes used for direction connections from start to destination without using transit.
 
-            Only non-transit modes can be used. (currently supported: \`WALK\`, \`BIKE\`, \`CAR\`)
+            Currently supported non-transit modes: \`WALK\`, \`BIKE\`, \`CAR\`
           schema:
-            type: array
-            items:
-              $ref: "#/components/schemas/Mode"
-          explode: false
+            $ref: "#/components/schemas/Mode"
 
         - name: maxPreTransitTime
           in: query
@@ -4525,17 +4522,14 @@ components:
           default:
             - WALK
           explode: false
-        directModes:
+        directMode:
           description: |
-            Optional. Default is `WALK` which will compute walking routes as direct connections.
+            Optional. Default is unset.
 
             Modes used for direction connections from start to destination without using transit.
 
-            Only non-transit modes can be used. (currently supported: \`WALK\`, \`BIKE\`, \`CAR\`)
-          type: array
-          items:
-            $ref: "#/components/schemas/Mode"
-          explode: false
+            Currently supported non-transit modes: \`WALK\`, \`BIKE\`, \`CAR\`
+          $ref: "#/components/schemas/Mode"
         maxPreTransitTime:
           description: |
             Optional. Default is 15min which is `900`.

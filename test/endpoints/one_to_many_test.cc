@@ -133,7 +133,7 @@ TEST(motis, one_to_many) {
         "&maxMatchingDistance=250"
         "&maxDirectTime=540"
         "&maxPostTransitTime=420"
-        "&directModes=WALK"
+        "&directMode=WALK"
         "&arriveBy=false");
 
     EXPECT_EQ((std::vector<api::Duration>{
@@ -186,7 +186,7 @@ TEST(motis, one_to_many) {
         .maxTravelTime_ = 60,
         .maxMatchingDistance_ = 250.0,
         .arriveBy_ = true,
-        .directModes_ = {{api::ModeEnum::WALK}},  // TODO Should be default
+        .directMode_ = api::ModeEnum::WALK,
         .maxPreTransitTime_ = 360,
         .maxDirectTime_ = 300});
 
@@ -232,7 +232,7 @@ TEST(motis, one_to_many) {
         .maxMatchingDistance_ = 250.0,
         .arriveBy_ = false,
         .useRoutedTransfers_ = true,
-        .directModes_ = {{api::ModeEnum::WALK}},  // TODO Should be default
+        .directMode_ = api::ModeEnum::WALK,
         .maxPreTransitTime_ = 360});  // Too short to reach U4
 
     EXPECT_EQ((std::vector<api::Duration>{{},
@@ -262,7 +262,7 @@ TEST(motis, one_to_many) {
         "&maxMatchingDistance=250"
         "&maxDirectTime=540"
         "&maxPostTransitTime=240"
-        "&directModes=WALK"
+        "&directMode=WALK"
         "&pedestrianProfile=WHEELCHAIR"
         "&useRoutedTransfers=true"
         "&arriveBy=true");
@@ -291,7 +291,7 @@ TEST(motis, one_to_many) {
           "&maxTravelTime=60"
           "&maxMatchingDistance=250"
           "&maxDirectTime=3600"
-          "&directModes=BIKE"
+          "&directMode=BIKE"
           "&preTransitModes=BIKE"
           "&arriveBy=false"
           "&cyclingSpeed=2.4");
@@ -315,7 +315,7 @@ TEST(motis, one_to_many) {
           .arriveBy_ = true,
           .cyclingSpeed_ = 2.2,
           .postTransitModes_ = {api::ModeEnum::BIKE},
-          .directModes_ = {{api::ModeEnum::BIKE}},
+          .directMode_ = api::ModeEnum::BIKE,
           .maxDirectTime_ = 1800});
 
       EXPECT_EQ(
