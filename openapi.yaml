@@ -1311,13 +1311,14 @@ paths:
           in: query
           required: false
           description: |
-            Optional. Default is unset.
+            Default is `WALK` which will compute walking routes as direct connections.
 
             Modes used for direction connections from start to destination without using transit.
 
             Currently supported non-transit modes: \`WALK\`, \`BIKE\`, \`CAR\`
           schema:
             $ref: "#/components/schemas/Mode"
+            default: WALK
 
         - name: maxPreTransitTime
           in: query
@@ -1349,6 +1350,9 @@ paths:
           description: |
             Optional. Default is 30min which is `1800`.
             Maximum time in seconds for direct connections.
+
+            If a value smaller than either `maxPreTransitTime` or
+            `maxPostTransitTime` is used, their maximum is set instead.
             Is limited by server config variable `street_routing_max_direct_seconds`.
           schema:
             type: integer
@@ -4533,12 +4537,13 @@ components:
           explode: false
         directMode:
           description: |
-            Optional. Default is unset.
+            Default is `WALK` which will compute walking routes as direct connections.
 
             Modes used for direction connections from start to destination without using transit.
 
             Currently supported non-transit modes: \`WALK\`, \`BIKE\`, \`CAR\`
           $ref: "#/components/schemas/Mode"
+          default: WALK
         maxPreTransitTime:
           description: |
             Optional. Default is 15min which is `900`.
@@ -4559,6 +4564,9 @@ components:
           description: |
             Optional. Default is 30min which is `1800`.
             Maximum time in seconds for direct connections.
+
+            If a value smaller than either `maxPreTransitTime` or
+            `maxPostTransitTime` is used, their maximum is set instead.
             Is limited by server config variable `street_routing_max_direct_seconds`.
           type: integer
           default: 1800

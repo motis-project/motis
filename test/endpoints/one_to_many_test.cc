@@ -131,9 +131,8 @@ TEST(motis, one_to_many) {
         "&time=2019-04-30T22:30:00.000Z"
         "&maxTravelTime=60"
         "&maxMatchingDistance=250"
-        "&maxDirectTime=540"
+        "&maxDirectTime=540"  // Updated to maxPreTransitTime == 1500
         "&maxPostTransitTime=420"
-        "&directMode=WALK"
         "&arriveBy=false");
 
     EXPECT_EQ((std::vector<api::Duration>{
@@ -146,7 +145,7 @@ TEST(motis, one_to_many) {
                   {122.0},
                   {240.0},
                   {529.0},
-                  {},
+                  {692.0},
                   {1260.0},
                   {1440.0},
                   {1500.0},  // FIXME Final footpath > postTransitTime
@@ -176,7 +175,7 @@ TEST(motis, one_to_many) {
                 "50.113385,8.678328,-2",  // Close, near FFM_HAUPT, level -2
                 "50.111900,8.675208",  // Far, near FFM_HAUPT
                 "50.106543,8.663474,0",  // Close, near FFM
-                "50.106941,8.659617",  // Too far from de:6412:10:6:1
+                "50.107291,8.660497",  // Too far from de:6412:10:6:1
                 "50.104298,8.660285",  // Far, near FFM
                 "49.872243,8.632062",  // Near DA
                 "49.875368,8.627596",  // Far, near DA
@@ -186,9 +185,8 @@ TEST(motis, one_to_many) {
         .maxTravelTime_ = 60,
         .maxMatchingDistance_ = 250.0,
         .arriveBy_ = true,
-        .directMode_ = api::ModeEnum::WALK,
-        .maxPreTransitTime_ = 360,
-        .maxDirectTime_ = 300});
+        .maxPreTransitTime_ = 300,
+        .maxDirectTime_ = 300});  // Updated to maxPostTransitTime == 1500
 
     EXPECT_EQ((std::vector<api::Duration>{{3180.0},
                                           {840.0},  // Not routed transfer
@@ -202,9 +200,9 @@ TEST(motis, one_to_many) {
                                           {127.0},
                                           {103.0},
                                           {123.0},
-                                          {},
+                                          {355.0},
                                           {900.0},
-                                          {1080.0},
+                                          {1020.0},
                                           {},
                                           {3420.0},
                                           {}}),
@@ -232,7 +230,6 @@ TEST(motis, one_to_many) {
         .maxMatchingDistance_ = 250.0,
         .arriveBy_ = false,
         .useRoutedTransfers_ = true,
-        .directMode_ = api::ModeEnum::WALK,
         .maxPreTransitTime_ = 360});  // Too short to reach U4
 
     EXPECT_EQ((std::vector<api::Duration>{{},
@@ -256,13 +253,12 @@ TEST(motis, one_to_many) {
         "50.10739;8.66333,"  // FFM_101
         "50.11404;8.67824,"  // FFM_HAUPT_S
         "50.113465;8.678477,"  // Near FFM_HAUPT
-        // "50.112519;8.676565"  // FIXME Far, near FFM_HAUPT
+        "50.112519;8.676565"  // Far, near FFM_HAUPT
         "&time=2019-04-30T23:30:00.000Z"
         "&maxTravelTime=60"
         "&maxMatchingDistance=250"
         "&maxDirectTime=540"
         "&maxPostTransitTime=240"
-        "&directMode=WALK"
         "&pedestrianProfile=WHEELCHAIR"
         "&useRoutedTransfers=true"
         "&arriveBy=true");
@@ -272,7 +268,7 @@ TEST(motis, one_to_many) {
                   {},  // Not reachable from de:6412:10:6:1
                   {333.0},
                   {517.0},
-                  // {}  // Direct path too long
+                  {771.0}  // Reachable after updating maxDirectTime
               }),
               durations);
   }
@@ -315,8 +311,7 @@ TEST(motis, one_to_many) {
           .arriveBy_ = true,
           .cyclingSpeed_ = 2.2,
           .postTransitModes_ = {api::ModeEnum::BIKE},
-          .directMode_ = api::ModeEnum::BIKE,
-          .maxDirectTime_ = 1800});
+          .directMode_ = api::ModeEnum::BIKE});
 
       EXPECT_EQ(
           (std::vector<api::Duration>{

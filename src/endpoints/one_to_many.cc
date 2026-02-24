@@ -225,28 +225,22 @@ api::oneToManyIntermodal_response run_one_to_many_intermodal(
   auto const osr_params = get_osr_parameters(query);
 
   // Get street routing durations
-  auto durations =
-      query.directMode_
-          .transform([&](api::ModeEnum const& direct_mode) {
-            auto const to_location = [&](place_t const& p) {
-              return get_location(&ep.tt_, ep.w_, ep.pl_, ep.matches_, p);
-            };
-            return one_to_many_direct(
-                *ep.w_, *ep.l_, direct_mode, to_location(one),
-                utl::to_vec(many, to_location),
-                static_cast<double>(std::min(
-                    {query.maxDirectTime_,
-                     static_cast<std::int64_t>(max_travel_time.count()),
-                     static_cast<std::int64_t>(
-                         ep.config_.get_limits()
-                             .street_routing_max_direct_seconds_)})),
-                query.maxMatchingDistance_,
-                query.arriveBy_ ? osr::direction::kBackward
-                                : osr::direction::kForward,
-                osr_params, query.pedestrianProfile_, query.elevationCosts_,
-                ep.elevations_, false);
-          })
-          .value_or(api::oneToManyIntermodal_response{many.size()});
+  auto const to_location = [&](place_t const& p) {
+    return get_location(&ep.tt_, ep.w_, ep.pl_, ep.matches_, p);
+  };
+  auto durations = one_to_many_direct(
+      *ep.w_, *ep.l_, query.directMode_, to_location(one),
+      utl::to_vec(many, to_location),
+      static_cast<double>(std::min(
+          {std::max({query.maxDirectTime_, query.maxPreTransitTime_,
+                     query.maxPostTransitTime_}),
+           static_cast<std::int64_t>(max_travel_time.count()),
+           static_cast<std::int64_t>(
+               ep.config_.get_limits().street_routing_max_direct_seconds_)})),
+      query.maxMatchingDistance_,
+      query.arriveBy_ ? osr::direction::kBackward : osr::direction::kForward,
+      osr_params, query.pedestrianProfile_, query.elevationCosts_,
+      ep.elevations_, false);
 
   update_transit_durations(durations, ep, query, one, many, time,
                            query.arriveBy_, max_travel_time,
