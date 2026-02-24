@@ -6,7 +6,7 @@
 
 #include "utl/enumerate.h"
 
-#include "net/bad_request_exception.h"
+#include "net/too_many_exception.h"
 
 #include "nigiri/common/delta_t.h"
 #include "nigiri/routing/one_to_all.h"
@@ -37,7 +37,22 @@ api::oneToMany_response one_to_many_direct(
     api::PedestrianProfileEnum const pedestrian_profile,
     api::ElevationCostsEnum const elevation_costs,
     osr::elevation_storage const* elevations_,
-    bool const with_distance) {
+    bool const with_distance,
+    unsigned const max_many,
+    unsigned const max_direct_time_limit) {
+  utl::verify<net::too_many_exception>(
+      many.size() <= max_many,
+      "number of many locations too high ({} > {}). The server admin can "
+      "change this limit in config.yml with 'onetomany_max_many'. "
+      "See documentation for details.",
+      many.size(), max_many);
+  utl::verify<net::too_many_exception>(
+      max_direct_time <= max_direct_time_limit,
+      "maximun travel time too high ({} > {}). The server admin can "
+      "change this limit in config.yml with "
+      "'street_routing_max_direct_seconds'. "
+      "See documentation for details.",
+      max_direct_time, max_direct_time_limit);
   utl::verify<net::bad_request_exception>(
       mode == api::ModeEnum::BIKE || mode == api::ModeEnum::CAR ||
           mode == api::ModeEnum::WALK,
@@ -243,7 +258,8 @@ api::oneToManyIntermodal_response run_one_to_many_intermodal(
       query.maxMatchingDistance_,
       query.arriveBy_ ? osr::direction::kBackward : osr::direction::kForward,
       osr_params, query.pedestrianProfile_, query.elevationCosts_,
-      ep.elevations_, false);
+      ep.elevations_, false, ep.config_.get_limits().onetomany_max_many_,
+      ep.config_.get_limits().street_routing_max_direct_seconds_);
 
   update_transit_durations(durations, ep, query, one, many, time,
                            query.arriveBy_, max_travel_time,

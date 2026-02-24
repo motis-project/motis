@@ -7,7 +7,6 @@
 #include "utl/to_vec.h"
 
 #include "net/bad_request_exception.h"
-#include "net/too_many_exception.h"
 
 #include "nigiri/types.h"
 
@@ -41,7 +40,9 @@ api::oneToMany_response one_to_many_direct(
     api::PedestrianProfileEnum,
     api::ElevationCostsEnum,
     osr::elevation_storage const*,
-    bool with_distance);
+    bool with_distance,
+    unsigned const max_many,
+    unsigned const max_travel_time_limit);
 
 template <typename Params>
 api::oneToMany_response one_to_many_handle_request(
@@ -64,25 +65,13 @@ api::oneToMany_response one_to_many_handle_request(
         y.has_value(), "{} is not a valid geo coordinate", x);
     return *y;
   });
-  utl::verify<net::too_many_exception>(
-      many.size() <= max_many,
-      "number of many locations too high ({} > {}). The server admin can "
-      "change this limit in config.yml with 'onetomany_max_many'. "
-      "See documentation for details.",
-      many.size(), max_many);
-  utl::verify<net::too_many_exception>(
-      query.max_ <= max_travel_time_limit,
-      "maximun travel time too high ({} > {}). The server admin can "
-      "change this limit in config.yml with "
-      "'street_routing_max_direct_seconds'. "
-      "See documentation for details.",
-      query.max_, max_travel_time_limit);
 
   return one_to_many_direct(
       w_, l_, query.mode_, *one, many, query.max_, query.maxMatchingDistance_,
       query.arriveBy_ ? osr::direction::kBackward : osr::direction::kForward,
       get_osr_parameters(query), api::PedestrianProfileEnum::FOOT,
-      query.elevationCosts_, elevations_, query.withDistance_);
+      query.elevationCosts_, elevations_, query.withDistance_, max_many,
+      max_travel_time_limit);
 }
 
 template <typename Endpoint, typename Query>
