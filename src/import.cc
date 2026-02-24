@@ -3,6 +3,7 @@
 #include <fstream>
 #include <map>
 #include <ostream>
+#include <tuple>
 #include <vector>
 
 #include "fmt/ranges.h"
@@ -30,7 +31,6 @@
 #include "nigiri/clasz.h"
 #include "nigiri/common/parse_date.h"
 #include "nigiri/routing/tb/preprocess.h"
-#include "nigiri/rt/create_rt_timetable.h"
 #include "nigiri/rt/rt_timetable.h"
 #include "nigiri/shapes_storage.h"
 #include "nigiri/timetable.h"
@@ -38,20 +38,19 @@
 
 #include "osr/extract/extract.h"
 #include "osr/lookup.h"
-#include "osr/platforms.h"
 #include "osr/ways.h"
 
 #include "adr/adr.h"
-#include "adr/area_database.h"
+#include "adr/formatter.h"
 #include "adr/reverse.h"
 #include "adr/typeahead.h"
 
 #include "motis/adr_extend_tt.h"
 #include "motis/clog_redirect.h"
 #include "motis/compute_footpaths.h"
-#include "motis/constants.h"
 #include "motis/data.h"
 #include "motis/hashes.h"
+#include "motis/route_shapes.h"
 #include "motis/tag_lookup.h"
 #include "motis/tt_location_rtree.h"
 
@@ -113,9 +112,19 @@ cista::hash_t hash_file(fs::path const& p) {
     return cista::hash(str);
   } else if (fs::is_directory(p)) {
     auto h = cista::BASE_HASH;
-    // for (auto const& file : fs::directory_iterator{p}) {
-    //   h = cista::hash_combine(h, hash_file(file));
-    // }
+    auto entries = std::vector<std::tuple<std::string, std::uint64_t,
+                                          std::filesystem::file_time_type>>{};
+    for (auto const& entry : fs::recursive_directory_iterator{p}) {
+      auto ec = std::error_code{};
+      entries.emplace_back(fs::relative(entry.path(), p, ec).generic_string(),
+                           entry.is_regular_file(ec) ? entry.file_size(ec) : 0U,
+                           fs::last_write_time(entry.path(), ec));
+    }
+    utl::sort(entries);
+    for (auto const& [rel, size, modified_ts] : entries) {
+      h = cista::hash_combine(h, cista::hash(rel), size,
+                              modified_ts.time_since_epoch().count());
+    }
     return h;
   } else {
     auto const mmap = cista::mmap{str.c_str(), cista::mmap::protection::READ};
@@ -199,6 +208,31 @@ data import(config const& c, fs::path const& data_path, bool const write) {
     }
   }
 
+  auto const to_clasz_bool_array =
+      [&](bool const default_allowed,
+          std::optional<std::map<std::string, bool>> const& clasz_allowed) {
+        auto a = std::array<bool, n::kNumClasses>{};
+        a.fill(default_allowed);
+        if (clasz_allowed.has_value()) {
+          for (auto const& [clasz, allowed] : *clasz_allowed) {
+            a[static_cast<unsigned>(n::to_clasz(clasz))] = allowed;
+          }
+        }
+        return a;
+      };
+
+  auto const use_shapes_cache = c.timetable_.has_value() &&
+                                c.timetable_->with_shapes_ &&
+                                c.timetable_->route_shapes_.has_value() &&
+                                c.timetable_->route_shapes_->cache_;
+  auto const existing_rs_hashes = read_hashes(data_path, "route_shapes");
+  auto const reuse_shapes_cache =
+      existing_rs_hashes.find("nigiri_bin_ver") != end(existing_rs_hashes) &&
+      existing_rs_hashes.at("nigiri_bin_ver") == n_version().second &&
+      existing_rs_hashes.find("shapes_cache_ver") != end(existing_rs_hashes) &&
+      existing_rs_hashes.at("shapes_cache_ver") ==
+          shapes_cache_version().second;
+
   auto d = data{data_path};
 
   auto osr = task{"osr",
@@ -232,6 +266,9 @@ data import(config const& c, fs::path const& data_path, bool const write) {
              if (c.reverse_geocoding_) {
                d.load_reverse_geocoder();
              }
+
+             d.tc_ = std::make_unique<adr::cache>(d.t_->strings_.size(), 100U);
+             d.f_ = std::make_unique<adr::formatter>();
            },
            [&]() {
              if (!c.osm_) {
@@ -241,6 +278,7 @@ data import(config const& c, fs::path const& data_path, bool const write) {
              // Same here, need to load base-line version for adr_extend!
              d.t_ = adr::read(data_path / "adr" / "t.bin");
              d.tc_ = std::make_unique<adr::cache>(d.t_->strings_.size(), 100U);
+             d.f_ = std::make_unique<adr::formatter>();
 
              if (c.reverse_geocoding_) {
                d.load_reverse_geocoder();
@@ -256,20 +294,6 @@ data import(config const& c, fs::path const& data_path, bool const write) {
       [&]() { return c.timetable_.has_value(); },
       [&]() { return true; },
       [&]() {
-        auto const to_clasz_bool_array =
-            [&](bool const default_allowed,
-                std::optional<std::map<std::string, bool>> const&
-                    clasz_allowed) {
-              auto a = std::array<bool, n::kNumClasses>{};
-              a.fill(default_allowed);
-              if (clasz_allowed.has_value()) {
-                for (auto const& [clasz, allowed] : *clasz_allowed) {
-                  a[static_cast<unsigned>(n::to_clasz(clasz))] = allowed;
-                }
-              }
-              return a;
-            };
-
         auto const& t = *c.timetable_;
 
         auto const first_day =
@@ -288,7 +312,8 @@ data import(config const& c, fs::path const& data_path, bool const write) {
 
         if (t.with_shapes_) {
           d.shapes_ = std::make_unique<n::shapes_storage>(
-              data_path, cista::mmap::protection::WRITE);
+              data_path, cista::mmap::protection::WRITE,
+              use_shapes_cache && reuse_shapes_cache);
         }
 
         d.tags_ = cista::wrapped{cista::raw::make_unique<tag_lookup>()};
@@ -518,6 +543,62 @@ data import(config const& c, fs::path const& data_path, bool const write) {
            {tt_hash, osm_hash, elevation_dir_hash, osr_version(), n_version(),
             matches_version()}};
 
+  auto route_shapes_task = task{
+      "route_shapes",
+      [&]() {
+        return c.timetable_ && c.timetable_->with_shapes_ &&
+               c.timetable_->route_shapes_ &&
+               (c.timetable_->route_shapes_->missing_shapes_ ||
+                c.timetable_->route_shapes_->replace_shapes_) &&
+               c.use_street_routing();
+      },
+      [&]() { return d.tt_ && d.w_ && d.l_; },
+      [&]() {
+        // re-open in write mode
+        d.shapes_ = {};
+        d.shapes_ = std::make_unique<n::shapes_storage>(
+            data_path, cista::mmap::protection::MODIFY, use_shapes_cache);
+
+        auto const shape_cache_path = data_path / "routed_shapes_cache.bin";
+        auto shape_cache = cista::wrapped<shape_cache_t>{};
+        if (use_shapes_cache) {
+          if (fs::exists(shape_cache_path) && reuse_shapes_cache) {
+            std::clog << "loading existing shape cache from "
+                      << shape_cache_path << "\n";
+            shape_cache = cista::read<shape_cache_t>(shape_cache_path);
+          } else {
+            std::clog << "creating new shape cache\n";
+            shape_cache =
+                cista::wrapped{cista::raw::make_unique<shape_cache_t>()};
+          }
+        }
+
+        route_shapes(
+            *d.w_, *d.l_, *d.tt_, *d.shapes_, *c.timetable_->route_shapes_,
+            to_clasz_bool_array(true, c.timetable_->route_shapes_->clasz_),
+            use_shapes_cache ? shape_cache.get() : nullptr);
+
+        if (use_shapes_cache) {
+          cista::write(shape_cache_path, shape_cache);
+        } else if (fs::exists(shape_cache_path)) {
+          fs::remove(shape_cache_path);
+        }
+      },
+      [&]() { d.load_shapes(); },
+      {tt_hash,
+       osm_hash,
+       osr_version(),
+       n_version(),
+       shapes_cache_version(),
+       {"missing_shapes",
+        c.timetable_.value_or(config::timetable{})
+            .route_shapes_.value_or(config::timetable::route_shapes{})
+            .missing_shapes_},
+       {"replace_shapes",
+        c.timetable_.value_or(config::timetable{})
+            .route_shapes_.value_or(config::timetable::route_shapes{})
+            .replace_shapes_}}};
+
   auto tiles = task{
       "tiles",
       [&]() { return c.tiles_.has_value(); },
@@ -569,7 +650,8 @@ data import(config const& c, fs::path const& data_path, bool const write) {
       {tiles_version(), osm_hash, tiles_hash}};
 
   auto tasks = std::vector<task>{
-      tiles, osr, adr, tt, tbd, adr_extend, osr_footpath, matches, flex_areas};
+      tiles,      osr,          adr,     tt,         tbd,
+      adr_extend, osr_footpath, matches, flex_areas, route_shapes_task};
   utl::erase_if(tasks, [&](auto&& t) {
     if (!t.should_run_()) {
       return true;

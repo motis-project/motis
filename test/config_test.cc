@@ -57,7 +57,7 @@ timetable:
   extend_missing_footpaths: false
   max_footpath_length: 15
   max_matching_distance: 25.000000
-  preprocess_max_matching_distance: 0.000000
+  preprocess_max_matching_distance: 250.000000
   datasets:
     de:
       path: delfi.gtfs.zip
@@ -90,6 +90,7 @@ limits:
   plan_max_results: 256
   plan_max_search_window_minutes: 5760
   stops_max_results: 2048
+  onetomany_max_many: 128
   onetoall_max_results: 65535
   onetoall_max_travel_minutes: 90
   routing_max_timeout_seconds: 90

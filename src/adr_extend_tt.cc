@@ -298,7 +298,7 @@ adr_ext adr_extend_tt(nigiri::timetable const& tt,
   ret.place_clasz_.resize(place_location.size());
   {
     auto const event_counts = utl::scoped_timer{"guesser event_counts"};
-    for (auto i = n::kNSpecialStations; i != tt.n_locations(); ++i) {
+    for (auto i = n::kNSpecialStations; i < tt.n_locations(); ++i) {
       auto const l = n::location_idx_t{i};
 
       auto transport_counts = std::array<unsigned, n::kNumClasses>{};
@@ -312,15 +312,15 @@ adr_ext adr_extend_tt(nigiri::timetable const& tt,
       }
 
       constexpr auto const prio =
-          std::array<float, kClaszMax>{/* Air */ 20,
-                                       /* HighSpeed */ 30,
-                                       /* LongDistance */ 25,
-                                       /* Coach */ 22,
-                                       /* Night */ 25,
-                                       /* RegionalFast */ 20,
-                                       /* Regional */ 20,
-                                       /* Suburban */ 15,
-                                       /* Subway */ 12,
+          std::array<float, kClaszMax>{/* Air */ 300,
+                                       /* HighSpeed */ 300,
+                                       /* LongDistance */ 250,
+                                       /* Coach */ 150,
+                                       /* Night */ 250,
+                                       /* RideSharing */ 5,
+                                       /* Regional */ 100,
+                                       /* Suburban */ 80,
+                                       /* Subway */ 80,
                                        /* Tram */ 3,
                                        /* Bus  */ 2,
                                        /* Ship  */ 10,
@@ -340,6 +340,27 @@ adr_ext adr_extend_tt(nigiri::timetable const& tt,
           ret.place_clasz_[place_idx] |= n::routing::to_mask(c);
         }
       }
+    }
+  }
+
+  // Update counts of meta-stations with the sum of their priorities.
+  // Meta stations have equivalence relations to other stops and are at (0,0)
+  for (auto i = n::kNSpecialStations; i < tt.n_locations(); ++i) {
+    auto const l = n::location_idx_t{i};
+    auto const is_meta =
+        tt.locations_.coordinates_[l] == geo::latlng{} &&
+        tt.locations_.parents_[l] == n::location_idx_t::invalid() &&
+        !tt.locations_.equivalences_[l].empty();
+    if (!is_meta) {
+      continue;
+    }
+
+    auto const place_idx = ret.location_place_[l];
+    for (auto const eq : get_transitive_equivalences(l)) {
+      auto const eq_root = tt.locations_.get_root_idx(eq);
+      auto const eq_place_idx = ret.location_place_[eq_root];
+      ret.place_importance_[place_idx] += ret.place_importance_[eq_place_idx];
+      ret.place_clasz_[place_idx] |= ret.place_clasz_[eq_place_idx];
     }
   }
 

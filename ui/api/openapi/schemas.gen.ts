@@ -148,6 +148,10 @@ export const DurationSchema = {
         duration: {
             type: 'number',
             description: 'duration in seconds if a path was found, otherwise missing'
+        },
+        distance: {
+            type: 'number',
+            description: 'distance in meters if a path was found and distance computation was requested, otherwise missing'
         }
     }
 } as const;
@@ -222,11 +226,11 @@ export const ModeSchema = {
   - \`AIRPLANE\`: airline flights
   - \`BUS\`: short distance buses (does not include \`COACH\`)
   - \`COACH\`: long distance buses (does not include \`BUS\`)
-  - \`RAIL\`: translates to \`HIGHSPEED_RAIL,LONG_DISTANCE,NIGHT_RAIL,REGIONAL_RAIL,REGIONAL_FAST_RAIL,SUBURBAN,SUBWAY\`
+  - \`RAIL\`: translates to \`HIGHSPEED_RAIL,LONG_DISTANCE,NIGHT_RAIL,REGIONAL_RAIL,SUBURBAN,SUBWAY\`
   - \`HIGHSPEED_RAIL\`: long distance high speed trains (e.g. TGV)
   - \`LONG_DISTANCE\`: long distance inter city trains
   - \`NIGHT_RAIL\`: long distance night trains
-  - \`REGIONAL_FAST_RAIL\`: regional express routes that skip low traffic stops to be faster
+  - \`REGIONAL_FAST_RAIL\`: deprecated, \`REGIONAL_RAIL\` will be used
   - \`REGIONAL_RAIL\`: regional train
   - \`SUBURBAN\`: suburban trains (e.g. S-Bahn, RER, Elizabeth Line, ...)
   - \`ODM\`: demand responsive transport
@@ -237,7 +241,7 @@ export const ModeSchema = {
   - \`CABLE_CAR\`: deprecated
 `,
     type: 'string',
-    enum: ['WALK', 'BIKE', 'RENTAL', 'CAR', 'CAR_PARKING', 'CAR_DROPOFF', 'ODM', 'RIDE_SHARING', 'FLEX', 'TRANSIT', 'TRAM', 'SUBWAY', 'FERRY', 'AIRPLANE', 'BUS', 'COACH', 'RAIL', 'HIGHSPEED_RAIL', 'LONG_DISTANCE', 'NIGHT_RAIL', 'REGIONAL_FAST_RAIL', 'REGIONAL_RAIL', 'SUBURBAN', 'FUNICULAR', 'AERIAL_LIFT', 'OTHER', 'AREAL_LIFT', 'METRO', 'CABLE_CAR']
+    enum: ['WALK', 'BIKE', 'RENTAL', 'CAR', 'CAR_PARKING', 'CAR_DROPOFF', 'ODM', 'RIDE_SHARING', 'FLEX', 'DEBUG_BUS_ROUTE', 'DEBUG_RAILWAY_ROUTE', 'DEBUG_FERRY_ROUTE', 'TRANSIT', 'TRAM', 'SUBWAY', 'FERRY', 'AIRPLANE', 'BUS', 'COACH', 'RAIL', 'HIGHSPEED_RAIL', 'LONG_DISTANCE', 'NIGHT_RAIL', 'REGIONAL_FAST_RAIL', 'REGIONAL_RAIL', 'SUBURBAN', 'FUNICULAR', 'AERIAL_LIFT', 'OTHER', 'AREAL_LIFT', 'METRO', 'CABLE_CAR']
 } as const;
 
 export const MatchSchema = {
@@ -581,6 +585,9 @@ For non-transit legs, null
             type: 'string'
         },
         routeId: {
+            type: 'string'
+        },
+        routeUrl: {
             type: 'string'
         },
         directionId: {
@@ -1383,6 +1390,9 @@ For non-transit legs, null
         routeId: {
             type: 'string'
         },
+        routeUrl: {
+            type: 'string'
+        },
         directionId: {
             type: 'string'
         },
@@ -1707,14 +1717,17 @@ transfer duration in minutes for the car profile
 
 export const OneToManyParamsSchema = {
     type: 'object',
-    required: ['one', 'many', 'mode', 'max', 'maxMatchingDistance', 'elevationCosts', 'arriveBy'],
+    required: ['one', 'many', 'mode', 'max', 'maxMatchingDistance', 'arriveBy'],
     properties: {
         one: {
             description: 'geo location as latitude;longitude',
             type: 'string'
         },
         many: {
-            description: 'geo locations as latitude;longitude,latitude;longitude,...',
+            description: `geo locations as latitude;longitude,latitude;longitude,...
+
+The number of accepted locations is limited by server config variable \`onetomany_max_many\`.
+`,
             type: 'array',
             items: {
                 type: 'string'
@@ -1727,7 +1740,7 @@ export const OneToManyParamsSchema = {
             '$ref': '#/components/schemas/Mode'
         },
         max: {
-            description: 'maximum travel time in seconds',
+            description: 'maximum travel time in seconds. Is limited by server config variable `street_routing_max_direct_seconds`.',
             type: 'number'
         },
         maxMatchingDistance: {
@@ -1758,6 +1771,14 @@ Elevation cost profiles are currently used by following street modes:
 false = one to many
 `,
             type: 'boolean'
+        },
+        withDistance: {
+            description: `If true, the response includes the distance in meters
+for each path. This requires path reconstruction and
+may be slower than duration-only queries.
+`,
+            type: 'boolean',
+            default: false
         }
     }
 } as const;
@@ -1765,7 +1786,7 @@ false = one to many
 export const ServerConfigSchema = {
     Description: 'server configuration',
     type: 'object',
-    required: ['hasElevation', 'hasRoutedTransfers', 'hasStreetRouting', 'maxTravelTimeLimit', 'maxPrePostTransitTimeLimit', 'maxDirectTimeLimit'],
+    required: ['hasElevation', 'hasRoutedTransfers', 'hasStreetRouting', 'maxOneToManySize', 'maxOneToAllTravelTimeLimit', 'maxPrePostTransitTimeLimit', 'maxDirectTimeLimit'],
     properties: {
         hasElevation: {
             description: 'true if elevation is loaded',
@@ -1778,6 +1799,11 @@ export const ServerConfigSchema = {
         hasStreetRouting: {
             description: 'true if street routing is available',
             type: 'boolean'
+        },
+        maxOneToManySize: {
+            description: `limit for the number of \`many\` locations for one-to-many requests
+`,
+            type: 'number'
         },
         maxOneToAllTravelTimeLimit: {
             description: 'limit for maxTravelTime API param in minutes',
@@ -1801,6 +1827,97 @@ export const ErrorSchema = {
         error: {
             type: 'string',
             description: 'error message'
+        }
+    }
+} as const;
+
+export const RouteSegmentSchema = {
+    description: 'Route segment between two stops to show a route on a map',
+    type: 'object',
+    required: ['from', 'to', 'polyline'],
+    properties: {
+        from: {
+            '$ref': '#/components/schemas/Place'
+        },
+        to: {
+            '$ref': '#/components/schemas/Place'
+        },
+        polyline: {
+            '$ref': '#/components/schemas/EncodedPolyline'
+        }
+    }
+} as const;
+
+export const RouteColorSchema = {
+    type: 'object',
+    required: ['color', 'textColor'],
+    properties: {
+        color: {
+            type: 'string'
+        },
+        textColor: {
+            type: 'string'
+        }
+    }
+} as const;
+
+export const RoutePathSourceSchema = {
+    type: 'string',
+    enum: ['NONE', 'TIMETABLE', 'ROUTED']
+} as const;
+
+export const TransitRouteInfoSchema = {
+    type: 'object',
+    required: ['id', 'shortName', 'longName'],
+    properties: {
+        id: {
+            type: 'string'
+        },
+        shortName: {
+            type: 'string'
+        },
+        longName: {
+            type: 'string'
+        },
+        color: {
+            type: 'string'
+        },
+        textColor: {
+            type: 'string'
+        }
+    }
+} as const;
+
+export const RouteInfoSchema = {
+    type: 'object',
+    required: ['mode', 'transitRoutes', 'numStops', 'routeIdx', 'pathSource', 'segments'],
+    properties: {
+        mode: {
+            '$ref': '#/components/schemas/Mode',
+            description: 'Transport mode for this route'
+        },
+        transitRoutes: {
+            type: 'array',
+            items: {
+                '$ref': '#/components/schemas/TransitRouteInfo'
+            }
+        },
+        numStops: {
+            type: 'integer',
+            description: 'Number of stops along this route'
+        },
+        routeIdx: {
+            type: 'integer',
+            description: 'Internal route index for debugging purposes'
+        },
+        pathSource: {
+            '$ref': '#/components/schemas/RoutePathSource'
+        },
+        segments: {
+            type: 'array',
+            items: {
+                '$ref': '#/components/schemas/RouteSegment'
+            }
         }
     }
 } as const;

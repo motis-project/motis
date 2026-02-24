@@ -130,6 +130,10 @@ export type Duration = {
      * duration in seconds if a path was found, otherwise missing
      */
     duration?: number;
+    /**
+     * distance in meters if a path was found and distance computation was requested, otherwise missing
+     */
+    distance?: number;
 };
 
 /**
@@ -197,11 +201,11 @@ export type LocationType = 'ADDRESS' | 'PLACE' | 'STOP';
  * - `AIRPLANE`: airline flights
  * - `BUS`: short distance buses (does not include `COACH`)
  * - `COACH`: long distance buses (does not include `BUS`)
- * - `RAIL`: translates to `HIGHSPEED_RAIL,LONG_DISTANCE,NIGHT_RAIL,REGIONAL_RAIL,REGIONAL_FAST_RAIL,SUBURBAN,SUBWAY`
+ * - `RAIL`: translates to `HIGHSPEED_RAIL,LONG_DISTANCE,NIGHT_RAIL,REGIONAL_RAIL,SUBURBAN,SUBWAY`
  * - `HIGHSPEED_RAIL`: long distance high speed trains (e.g. TGV)
  * - `LONG_DISTANCE`: long distance inter city trains
  * - `NIGHT_RAIL`: long distance night trains
- * - `REGIONAL_FAST_RAIL`: regional express routes that skip low traffic stops to be faster
+ * - `REGIONAL_FAST_RAIL`: deprecated, `REGIONAL_RAIL` will be used
  * - `REGIONAL_RAIL`: regional train
  * - `SUBURBAN`: suburban trains (e.g. S-Bahn, RER, Elizabeth Line, ...)
  * - `ODM`: demand responsive transport
@@ -212,7 +216,7 @@ export type LocationType = 'ADDRESS' | 'PLACE' | 'STOP';
  * - `CABLE_CAR`: deprecated
  *
  */
-export type Mode = 'WALK' | 'BIKE' | 'RENTAL' | 'CAR' | 'CAR_PARKING' | 'CAR_DROPOFF' | 'ODM' | 'RIDE_SHARING' | 'FLEX' | 'TRANSIT' | 'TRAM' | 'SUBWAY' | 'FERRY' | 'AIRPLANE' | 'BUS' | 'COACH' | 'RAIL' | 'HIGHSPEED_RAIL' | 'LONG_DISTANCE' | 'NIGHT_RAIL' | 'REGIONAL_FAST_RAIL' | 'REGIONAL_RAIL' | 'SUBURBAN' | 'FUNICULAR' | 'AERIAL_LIFT' | 'OTHER' | 'AREAL_LIFT' | 'METRO' | 'CABLE_CAR';
+export type Mode = 'WALK' | 'BIKE' | 'RENTAL' | 'CAR' | 'CAR_PARKING' | 'CAR_DROPOFF' | 'ODM' | 'RIDE_SHARING' | 'FLEX' | 'DEBUG_BUS_ROUTE' | 'DEBUG_RAILWAY_ROUTE' | 'DEBUG_FERRY_ROUTE' | 'TRANSIT' | 'TRAM' | 'SUBWAY' | 'FERRY' | 'AIRPLANE' | 'BUS' | 'COACH' | 'RAIL' | 'HIGHSPEED_RAIL' | 'LONG_DISTANCE' | 'NIGHT_RAIL' | 'REGIONAL_FAST_RAIL' | 'REGIONAL_RAIL' | 'SUBURBAN' | 'FUNICULAR' | 'AERIAL_LIFT' | 'OTHER' | 'AREAL_LIFT' | 'METRO' | 'CABLE_CAR';
 
 /**
  * GeoCoding match
@@ -508,6 +512,7 @@ export type StopTime = {
     agencyName: string;
     agencyUrl: string;
     routeId: string;
+    routeUrl?: string;
     directionId: string;
     routeColor?: string;
     routeTextColor?: string;
@@ -1134,6 +1139,7 @@ export type Leg = {
      */
     tripTo?: Place;
     routeId?: string;
+    routeUrl?: string;
     directionId?: string;
     routeColor?: string;
     routeTextColor?: string;
@@ -1370,6 +1376,9 @@ export type OneToManyParams = {
     one: string;
     /**
      * geo locations as latitude;longitude,latitude;longitude,...
+     *
+     * The number of accepted locations is limited by server config variable `onetomany_max_many`.
+     *
      */
     many: Array<(string)>;
     /**
@@ -1378,7 +1387,7 @@ export type OneToManyParams = {
      */
     mode: Mode;
     /**
-     * maximum travel time in seconds
+     * maximum travel time in seconds. Is limited by server config variable `street_routing_max_direct_seconds`.
      */
     max: number;
     /**
@@ -1402,13 +1411,20 @@ export type OneToManyParams = {
      * - `BIKE`
      *
      */
-    elevationCosts: ElevationCosts;
+    elevationCosts?: ElevationCosts;
     /**
      * true = many to one
      * false = one to many
      *
      */
     arriveBy: boolean;
+    /**
+     * If true, the response includes the distance in meters
+     * for each path. This requires path reconstruction and
+     * may be slower than duration-only queries.
+     *
+     */
+    withDistance?: boolean;
 };
 
 export type ServerConfig = {
@@ -1425,9 +1441,14 @@ export type ServerConfig = {
      */
     hasStreetRouting: boolean;
     /**
+     * limit for the number of `many` locations for one-to-many requests
+     *
+     */
+    maxOneToManySize: number;
+    /**
      * limit for maxTravelTime API param in minutes
      */
-    maxOneToAllTravelTimeLimit?: number;
+    maxOneToAllTravelTimeLimit: number;
     /**
      * limit for maxPrePostTransitTime API param in seconds
      */
@@ -1443,6 +1464,48 @@ export type Error = {
      * error message
      */
     error: string;
+};
+
+/**
+ * Route segment between two stops to show a route on a map
+ */
+export type RouteSegment = {
+    from: Place;
+    to: Place;
+    polyline: EncodedPolyline;
+};
+
+export type RouteColor = {
+    color: string;
+    textColor: string;
+};
+
+export type RoutePathSource = 'NONE' | 'TIMETABLE' | 'ROUTED';
+
+export type TransitRouteInfo = {
+    id: string;
+    shortName: string;
+    longName: string;
+    color?: string;
+    textColor?: string;
+};
+
+export type RouteInfo = {
+    /**
+     * Transport mode for this route
+     */
+    mode: Mode;
+    transitRoutes: Array<TransitRouteInfo>;
+    /**
+     * Number of stops along this route
+     */
+    numStops: number;
+    /**
+     * Internal route index for debugging purposes
+     */
+    routeIdx: number;
+    pathSource: RoutePathSource;
+    segments: Array<RouteSegment>;
 };
 
 export type PlanData = {
@@ -2043,10 +2106,13 @@ export type OneToManyData = {
         elevationCosts?: ElevationCosts;
         /**
          * geo locations as latitude;longitude,latitude;longitude,...
+         *
+         * The number of accepted locations is limited by server config variable `onetomany_max_many`.
+         *
          */
         many: Array<(string)>;
         /**
-         * maximum travel time in seconds
+         * maximum travel time in seconds. Is limited by server config variable `street_routing_max_direct_seconds`.
          */
         max: number;
         /**
@@ -2062,12 +2128,28 @@ export type OneToManyData = {
          * geo location as latitude;longitude
          */
         one: string;
+        /**
+         * Optional. Default is `false`.
+         * If true, the response includes the distance in meters
+         * for each path. This requires path reconstruction and
+         * is slower than duration-only queries.
+         *
+         */
+        withDistance?: boolean;
     };
 };
 
 export type OneToManyResponse = (Array<Duration>);
 
-export type OneToManyError = unknown;
+export type OneToManyError = (Error);
+
+export type OneToManyPostData = {
+    body: OneToManyParams;
+};
+
+export type OneToManyPostResponse = (Array<Duration>);
+
+export type OneToManyPostError = (Error);
 
 export type OneToAllData = {
     query: {
@@ -2359,7 +2441,7 @@ export type TripResponse = (Itinerary);
 export type TripError = (Error);
 
 export type StoptimesData = {
-    query: {
+    query?: {
         /**
          * Optional. Default is `false`.
          *
@@ -2368,6 +2450,15 @@ export type StoptimesData = {
          *
          */
         arriveBy?: boolean;
+        /**
+         * Anchor coordinate. Format: latitude,longitude pair.
+         * Used as fallback when "stopId" is missing or can't be found.
+         * If both are provided and "stopId" resolves, "stopId" is used.
+         * If "stopId" does not resolve, "center" is used instead. "radius" is
+         * required when querying by "center" (i.e. without a valid "stopId").
+         *
+         */
+        center?: string;
         /**
          * This parameter will be ignored in case `pageCursor` is set.
          *
@@ -2411,9 +2502,11 @@ export type StoptimesData = {
          */
         mode?: Array<Mode>;
         /**
-         * the number of events
+         * Minimum number of events to return. If both `n` and `window`
+         * are provided, the API uses whichever returns more events.
+         *
          */
-        n: number;
+        n?: number;
         /**
          * Use the cursor to go to the next "page" of stop times.
          * Copy the cursor from the last response and keep the original request as is.
@@ -2435,12 +2528,19 @@ export type StoptimesData = {
         /**
          * stop id of the stop to retrieve departures/arrivals for
          */
-        stopId: string;
+        stopId?: string;
         /**
          * Optional. Defaults to the current time.
          *
          */
         time?: string;
+        /**
+         * Optional. Window in seconds around `time`.
+         * Limiting the response to those that are at most `window` seconds aways in time.
+         * If both `n` and `window` are set, it uses whichever returns more.
+         *
+         */
+        window?: number;
         /**
          * Optional. Default is `true`. If set to `false`, alerts are omitted in the metadata of place for all stopTimes.
          */
@@ -2525,7 +2625,7 @@ export type InitialResponse = ({
      * zoom level
      */
     zoom: number;
-    serverConfig?: ServerConfig;
+    serverConfig: ServerConfig;
 });
 
 export type InitialError = (Error);
@@ -2569,6 +2669,41 @@ export type LevelsData = {
 export type LevelsResponse = (Array<(number)>);
 
 export type LevelsError = (Error);
+
+export type RoutesData = {
+    query: {
+        /**
+         * language tags as used in OpenStreetMap / GTFS
+         * (usually BCP-47 / ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
+         *
+         */
+        language?: Array<(string)>;
+        /**
+         * latitude,longitude pair of the upper left coordinate
+         */
+        max: string;
+        /**
+         * latitude,longitude pair of the lower right coordinate
+         */
+        min: string;
+        /**
+         * current zoom level
+         */
+        zoom: number;
+    };
+};
+
+export type RoutesResponse = ({
+    routes: Array<RouteInfo>;
+    /**
+     * Indicates whether some routes were filtered out due to
+     * the zoom level.
+     *
+     */
+    zoomFiltered: boolean;
+});
+
+export type RoutesError = (Error);
 
 export type RentalsData = {
     query?: {

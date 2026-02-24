@@ -75,8 +75,8 @@ std::string_view tag_lookup::get_tag(n::source_idx_t const src) const {
   return src == n::source_idx_t::invalid() ? "" : src_to_tag_.at(src).view();
 }
 
-std::string tag_lookup::id(nigiri::timetable const& tt,
-                           nigiri::location_idx_t const l) const {
+std::string tag_lookup::id(n::timetable const& tt,
+                           n::location_idx_t const l) const {
   auto const src = tt.locations_.src_.at(l);
   auto const id = tt.locations_.ids_.at(l).view();
   return src == n::source_idx_t::invalid()
@@ -85,7 +85,7 @@ std::string tag_lookup::id(nigiri::timetable const& tt,
 }
 
 trip_id<std::string> tag_lookup::id_fragments(
-    nigiri::timetable const& tt,
+    n::timetable const& tt,
     n::rt::run_stop s,
     n::event_type const ev_type) const {
   if (s.fr_->is_scheduled()) {
@@ -118,7 +118,7 @@ trip_id<std::string> tag_lookup::id_fragments(
   }
 }
 
-std::string tag_lookup::id(nigiri::timetable const& tt,
+std::string tag_lookup::id(n::timetable const& tt,
                            n::rt::run_stop s,
                            n::event_type const ev_type) const {
   auto const t = id_fragments(tt, s, ev_type);
@@ -133,9 +133,9 @@ std::string tag_lookup::route_id(n::rt::run_stop s,
                      s.get_route_id(ev_type));
 }
 
-std::pair<nigiri::rt::run, nigiri::trip_idx_t> tag_lookup::get_trip(
-    nigiri::timetable const& tt,
-    nigiri::rt_timetable const* rtt,
+std::pair<n::rt::run, n::trip_idx_t> tag_lookup::get_trip(
+    n::timetable const& tt,
+    n::rt_timetable const* rtt,
     std::string_view id) const {
   auto const split = split_trip_id(id);
   auto td = transit_realtime::TripDescriptor{};
@@ -145,17 +145,30 @@ std::pair<nigiri::rt::run, nigiri::trip_idx_t> tag_lookup::get_trip(
   return n::rt::gtfsrt_resolve_run({}, tt, rtt, get_src(split.tag_), td);
 }
 
-nigiri::location_idx_t tag_lookup::get_location(nigiri::timetable const& tt,
-                                                std::string_view s) const {
-  auto const [tag, id] = split_tag_id(s);
-  auto const src = get_src(tag);
-  try {
-    return tt.locations_.location_id_to_idx_.at({{id}, src});
-  } catch (...) {
-    throw utl::fail<net::not_found_exception>(
-        R"(Could not find timetable location "{}", tag="{}", id="{}", src={})",
-        s, tag, id, static_cast<int>(to_idx(src)));
+n::location_idx_t tag_lookup::get_location(n::timetable const& tt,
+                                           std::string_view s) const {
+  if (auto const res = find_location(tt, s); res.has_value()) {
+    return *res;
   }
+  throw utl::fail<net::not_found_exception>(
+      "Could not find timetable location {:?}", s);
+}
+
+std::optional<n::location_idx_t> tag_lookup::find_location(
+    n::timetable const& tt, std::string_view s) const {
+  auto const [tag, id] = split_tag_id(s);
+
+  auto const src = get_src(tag);
+  if (src == n::source_idx_t::invalid()) {
+    return std::nullopt;
+  }
+
+  auto const it = tt.locations_.location_id_to_idx_.find({id, src});
+  if (it == end(tt.locations_.location_id_to_idx_)) {
+    return std::nullopt;
+  }
+
+  return it->second;
 }
 
 void tag_lookup::write(std::filesystem::path const& p) const {
