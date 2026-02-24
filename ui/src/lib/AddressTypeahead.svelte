@@ -195,7 +195,7 @@
 									<Place class="size-5" />
 								{:else}
 									<img
-										src={`icons/${item.match?.category}.svg`}
+										src={`icons/categories/${item.match?.category}.svg`}
 										alt={item.match?.category}
 										class="size-5"
 									/>

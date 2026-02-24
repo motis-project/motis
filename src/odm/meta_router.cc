@@ -427,7 +427,9 @@ api::plan_response meta_router::run() {
              r_.metrics_->routing_execution_duration_seconds_routing_);
 
   auto const whitelist_start = std::chrono::steady_clock::now();
-  if (p.whitelist_taxi(taxi_journeys, *tt_)) {
+  auto const was_whitelist_response_valid =
+      p.whitelist_taxi(taxi_journeys, *tt_);
+  if (was_whitelist_response_valid) {
     add_direct_odm(p.direct_taxi_, taxi_journeys, from_, to_, query_.arriveBy_,
                    kOdmTransportModeId);
   }
@@ -473,7 +475,6 @@ api::plan_response meta_router::run() {
         to_seconds(taxi_journeys.begin()->arrival_time() -
                    taxi_journeys.begin()->departure_time())));
   }
-
   return {
       .from_ = from_place_,
       .to_ = to_place_,
@@ -542,6 +543,81 @@ api::plan_response meta_router::run() {
                       p.last_mile_ride_sharing_tour_ids_.at(i).view()};
                   break;
                 }
+              }
+            }
+
+            auto const match_times = [&](motis::api::Leg const& leg,
+                                         boost::json::array const& entries)
+                -> std::optional<std::string> {
+              auto const it = std::find_if(
+                  std::begin(entries), std::end(entries),
+                  [&](boost::json::value const& json_entry) {
+                    if (json_entry.is_null()) {
+                      return false;
+                    }
+                    auto const& object_entry = json_entry.as_object();
+                    return to_unix(object_entry.at("pickupTime").as_int64()) ==
+                               leg.startTime_ &&
+                           to_unix(object_entry.at("dropoffTime").as_int64()) ==
+                               leg.endTime_;
+                  });
+
+              if (it != std::end(entries)) {
+                return boost::json::serialize(it->as_object());
+              }
+
+              return std::nullopt;
+            };
+
+            auto const match_location =
+                [&](motis::api::Leg const& leg, boost::json::array const& outer,
+                    std::vector<nigiri::location_idx_t> const& locations,
+                    bool const check_to) -> std::optional<std::string> {
+              auto const& stop_id =
+                  check_to ? leg.to_.stopId_ : leg.from_.stopId_;
+              for (auto const [loc, outer_value] : utl::zip(locations, outer)) {
+                if (stop_id != r_.tags_->id(*tt_, loc)) {
+                  continue;
+                }
+                auto const& inner = outer_value.as_array();
+                if (auto result = match_times(leg, inner)) {
+                  return result;
+                }
+              }
+              return std::nullopt;
+            };
+
+            if (!was_whitelist_response_valid) {
+              return response;
+            }
+            if (response.legs_.size() == 1 &&
+                response.legs_.front().mode_ == api::ModeEnum::ODM) {
+              if (auto const id = match_times(
+                      response.legs_.front(),
+                      p.whitelist_response_.at("direct").as_array());
+                  id.has_value()) {
+                response.legs_.front().tripId_ = std::optional{*id};
+              }
+              return response;
+            }
+            if (!response.legs_.empty() &&
+                response.legs_.front().mode_ == api::ModeEnum::ODM) {
+              if (auto const id = match_location(
+                      response.legs_.front(),
+                      p.whitelist_response_.at("start").as_array(),
+                      p.whitelist_first_mile_locations_, true);
+                  id.has_value()) {
+                response.legs_.front().tripId_ = std::optional{*id};
+              }
+            }
+            if (!response.legs_.empty() &&
+                response.legs_.back().mode_ == api::ModeEnum::ODM) {
+              if (auto const id = match_location(
+                      response.legs_.back(),
+                      p.whitelist_response_.at("target").as_array(),
+                      p.whitelist_last_mile_locations_, false);
+                  id.has_value()) {
+                response.legs_.back().tripId_ = std::optional{*id};
               }
             }
             return response;

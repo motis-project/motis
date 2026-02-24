@@ -3273,6 +3273,8 @@ components:
           type: string
         routeId:
           type: string
+        routeUrl:
+          type: string
         directionId:
           type: string
         routeColor:
@@ -3996,6 +3998,8 @@ components:
           description: final stop of this trip (can differ from headsign)
           $ref: '#/components/schemas/Place'
         routeId:
+          type: string
+        routeUrl:
           type: string
         directionId:
           type: string

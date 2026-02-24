@@ -48,7 +48,7 @@ export const possibleTransitModes = [
 	'LONG_DISTANCE',
 	'NIGHT_RAIL',
 	'COACH',
-	'REGIONAL_FAST_RAIL',
+	'RIDE_SHARING',
 	'REGIONAL_RAIL',
 	'SUBURBAN',
 	'SUBWAY',

@@ -226,11 +226,11 @@ export const ModeSchema = {
   - \`AIRPLANE\`: airline flights
   - \`BUS\`: short distance buses (does not include \`COACH\`)
   - \`COACH\`: long distance buses (does not include \`BUS\`)
-  - \`RAIL\`: translates to \`HIGHSPEED_RAIL,LONG_DISTANCE,NIGHT_RAIL,REGIONAL_RAIL,REGIONAL_FAST_RAIL,SUBURBAN,SUBWAY\`
+  - \`RAIL\`: translates to \`HIGHSPEED_RAIL,LONG_DISTANCE,NIGHT_RAIL,REGIONAL_RAIL,SUBURBAN,SUBWAY\`
   - \`HIGHSPEED_RAIL\`: long distance high speed trains (e.g. TGV)
   - \`LONG_DISTANCE\`: long distance inter city trains
   - \`NIGHT_RAIL\`: long distance night trains
-  - \`REGIONAL_FAST_RAIL\`: regional express routes that skip low traffic stops to be faster
+  - \`REGIONAL_FAST_RAIL\`: deprecated, \`REGIONAL_RAIL\` will be used
   - \`REGIONAL_RAIL\`: regional train
   - \`SUBURBAN\`: suburban trains (e.g. S-Bahn, RER, Elizabeth Line, ...)
   - \`ODM\`: demand responsive transport
@@ -585,6 +585,9 @@ For non-transit legs, null
             type: 'string'
         },
         routeId: {
+            type: 'string'
+        },
+        routeUrl: {
             type: 'string'
         },
         directionId: {
@@ -1385,6 +1388,9 @@ For non-transit legs, null
             '$ref': '#/components/schemas/Place'
         },
         routeId: {
+            type: 'string'
+        },
+        routeUrl: {
             type: 'string'
         },
         directionId: {
