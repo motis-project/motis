@@ -1978,13 +1978,14 @@ A list of modes that are allowed to be used for the last mile, i.e. from the las
             explode: false
         },
         directMode: {
-            description: `Optional. Default is unset.
+            description: `Default is \`WALK\` which will compute walking routes as direct connections.
 
 Modes used for direction connections from start to destination without using transit.
 
 Currently supported non-transit modes: \`WALK\`, \`BIKE\`, \`CAR\`
 `,
-            '$ref': '#/components/schemas/Mode'
+            '$ref': '#/components/schemas/Mode',
+            default: 'WALK'
         },
         maxPreTransitTime: {
             description: `Optional. Default is 15min which is \`900\`.
@@ -2007,6 +2008,9 @@ Is limited by server config variable \`street_routing_max_prepost_transit_second
         maxDirectTime: {
             description: `Optional. Default is 30min which is \`1800\`.
 Maximum time in seconds for direct connections.
+
+If a value smaller than either \`maxPreTransitTime\` or
+\`maxPostTransitTime\` is used, their maximum is set instead.
 Is limited by server config variable \`street_routing_max_direct_seconds\`.
 `,
             type: 'integer',

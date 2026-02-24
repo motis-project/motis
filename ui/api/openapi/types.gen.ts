@@ -1591,7 +1591,7 @@ export type OneToManyIntermodalParams = {
      */
     postTransitModes?: Array<Mode>;
     /**
-     * Optional. Default is unset.
+     * Default is `WALK` which will compute walking routes as direct connections.
      *
      * Modes used for direction connections from start to destination without using transit.
      *
@@ -1616,6 +1616,9 @@ export type OneToManyIntermodalParams = {
     /**
      * Optional. Default is 30min which is `1800`.
      * Maximum time in seconds for direct connections.
+     *
+     * If a value smaller than either `maxPreTransitTime` or
+     * `maxPostTransitTime` is used, their maximum is set instead.
      * Is limited by server config variable `street_routing_max_direct_seconds`.
      *
      */
@@ -2377,7 +2380,7 @@ export type OneToManyIntermodalData = {
          */
         cyclingSpeed?: CyclingSpeed;
         /**
-         * Optional. Default is unset.
+         * Default is `WALK` which will compute walking routes as direct connections.
          *
          * Modes used for direction connections from start to destination without using transit.
          *
@@ -2412,6 +2415,9 @@ export type OneToManyIntermodalData = {
         /**
          * Optional. Default is 30min which is `1800`.
          * Maximum time in seconds for direct connections.
+         *
+         * If a value smaller than either `maxPreTransitTime` or
+         * `maxPostTransitTime` is used, their maximum is set instead.
          * Is limited by server config variable `street_routing_max_direct_seconds`.
          *
          */
