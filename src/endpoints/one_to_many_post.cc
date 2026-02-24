@@ -6,7 +6,7 @@ namespace motis::ep {
 
 api::oneToManyPost_response one_to_many_post::operator()(
     api::OneToManyParams const& query) const {
-  auto const max_many = config_.limits_.value().onetomany_max_many_;
+  auto const max_many = config_.get_limits().onetomany_max_many_;
   return one_to_many_handle_request(query, w_, l_, elevations_, max_many);
 }
 

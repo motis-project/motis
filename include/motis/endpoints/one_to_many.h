@@ -24,7 +24,7 @@ api::oneToMany_response one_to_many_handle_request(
     osr::ways const& w_,
     osr::lookup const& l_,
     osr::elevation_storage const* elevations_,
-    unsigned const max_many_) {
+    unsigned const max_many) {
   // required field with default value, not std::optional
   static_assert(std::is_same_v<decltype(query.withDistance_), bool>);
 
@@ -39,11 +39,11 @@ api::oneToMany_response one_to_many_handle_request(
     return *y;
   });
   utl::verify<net::too_many_exception>(
-      many.size() <= max_many_,
+      many.size() <= max_many,
       "number of many locations too high ({} > {}). The server admin can "
       "change this limit in config.yml with 'onetomany_max_many'. "
       "See documentation for details.",
-      many.size(), max_many_);
+      many.size(), max_many);
 
   utl::verify<net::bad_request_exception>(
       query.mode_ == api::ModeEnum::BIKE || query.mode_ == api::ModeEnum::CAR ||
