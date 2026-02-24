@@ -962,7 +962,7 @@ paths:
         - name: max
           in: query
           required: true
-          description: maximum travel time in seconds
+          description: maximum travel time in seconds. Is limited by server config variable `street_routing_max_direct_seconds`.
           schema:
             type: number
         - name: maxMatchingDistance
@@ -3964,7 +3964,7 @@ components:
             routing profile to use (currently supported: \`WALK\`, \`BIKE\`, \`CAR\`)
           $ref: '#/components/schemas/Mode'
         max:
-          description: maximum travel time in seconds
+          description: maximum travel time in seconds. Is limited by server config variable `street_routing_max_direct_seconds`.
           type: number
         maxMatchingDistance:
           description: maximum matching distance in meters to match geo coordinates to the street network

@@ -1740,7 +1740,7 @@ The number of accepted locations is limited by server config variable \`onetoman
             '$ref': '#/components/schemas/Mode'
         },
         max: {
-            description: 'maximum travel time in seconds',
+            description: 'maximum travel time in seconds. Is limited by server config variable `street_routing_max_direct_seconds`.',
             type: 'number'
         },
         maxMatchingDistance: {

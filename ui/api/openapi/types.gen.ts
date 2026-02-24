@@ -1387,7 +1387,7 @@ export type OneToManyParams = {
      */
     mode: Mode;
     /**
-     * maximum travel time in seconds
+     * maximum travel time in seconds. Is limited by server config variable `street_routing_max_direct_seconds`.
      */
     max: number;
     /**
@@ -2112,7 +2112,7 @@ export type OneToManyData = {
          */
         many: Array<(string)>;
         /**
-         * maximum travel time in seconds
+         * maximum travel time in seconds. Is limited by server config variable `street_routing_max_direct_seconds`.
          */
         max: number;
         /**
