@@ -7,9 +7,13 @@
 #include <optional>
 #include <ranges>
 #include <set>
+#include <string_view>
 #include <vector>
 
 #include "boost/stacktrace.hpp"
+
+#include "cista/hashing.h"
+#include "cista/serialization.h"
 
 #include "utl/parallel_for.h"
 #include "utl/progress_tracker.h"
@@ -37,6 +41,74 @@
 namespace n = nigiri;
 
 namespace motis {
+
+std::string_view to_string_view(cista::byte_buf const& data) {
+  return {reinterpret_cast<char const*>(data.data()), data.size()};
+}
+
+struct shape_cache_payload {
+  shape_cache_key key_;
+  shape_cache_entry entry_;
+};
+
+using shape_cache_bucket = cista::offset::vector<shape_cache_payload>;
+
+shape_cache::shape_cache(std::filesystem::path const& path,
+                         mdb_size_t const map_size) {
+  env_.set_mapsize(map_size);
+  env_.set_maxdbs(1);
+  env_.open(path.generic_string().c_str(), lmdb::env_open_flags::NOSUBDIR);
+
+  auto txn = lmdb::txn{env_};
+  txn.dbi_open(lmdb::dbi_flags::CREATE);
+  txn.commit();
+}
+
+std::optional<shape_cache_entry> shape_cache::get(shape_cache_key const& key) {
+  auto txn = lmdb::txn{env_, lmdb::txn_flags::RDONLY};
+  auto dbi = txn.dbi_open();
+  auto const bucket = cista::build_hash(key);
+  auto const value = txn.get(dbi, bucket);
+  if (!value.has_value()) {
+    return std::nullopt;
+  }
+
+  auto const entries =
+      cista::deserialize<shape_cache_bucket, cista::mode::CAST>(*value);
+  for (auto const& payload : *entries) {
+    if (payload.key_ == key) {
+      return payload.entry_;
+    }
+  }
+
+  return std::nullopt;
+}
+
+void shape_cache::put(shape_cache_key const& key,
+                      shape_cache_entry const& entry) {
+  auto txn = lmdb::txn{env_};
+  auto dbi = txn.dbi_open();
+  auto const bucket_key = cista::build_hash(key);
+  auto entries = shape_cache_bucket{};
+
+  if (auto const value = txn.get(dbi, bucket_key); value.has_value()) {
+    entries =
+        *cista::deserialize<shape_cache_bucket, cista::mode::CAST>(*value);
+  }
+
+  if (auto const it = std::find_if(begin(entries), end(entries),
+                                   [&](shape_cache_payload const& payload) {
+                                     return payload.key_ == key;
+                                   });
+      it != end(entries)) {
+    it->entry_ = entry;
+  } else {
+    entries.emplace_back(shape_cache_payload{.key_ = key, .entry_ = entry});
+  }
+
+  txn.put(dbi, bucket_key, to_string_view(cista::serialize(entries)));
+  txn.commit();
+}
 
 std::optional<osr::search_profile> get_profile(n::clasz const clasz) {
   switch (clasz) {
@@ -235,7 +307,7 @@ void route_shapes(osr::ways const& w,
                   n::shapes_storage& shapes,
                   config::timetable::route_shapes const& conf,
                   std::array<bool, n::kNumClasses> const& clasz_enabled,
-                  shape_cache_t* cache) {
+                  shape_cache* cache) {
   fmt::println(std::clog, "computing shapes");
 
   auto const progress_tracker = utl::get_active_progress_tracker();
@@ -285,8 +357,8 @@ void route_shapes(osr::ways const& w,
 
   auto const store_shape =
       [&](n::route_idx_t const r, n::scoped_shape_idx_t const shape_idx,
-          n::vector<n::shape_offset_t> const& offsets,
-          geo::box const& route_bbox, n::vector<geo::box> const& segment_bboxes,
+          auto const& offsets, geo::box const& route_bbox,
+          auto const& segment_bboxes,
           std::vector<osr::location> const& match_points,
           n::interval<n::transport_idx_t> const& transports) {
         shapes.route_bboxes_[r] = route_bbox;
@@ -394,29 +466,28 @@ void route_shapes(osr::ways const& w,
           cache != nullptr
               ? std::optional{shape_cache_key{
                     *profile,
-                    cista::raw::to_vec(match_points,
-                                       [](auto const& mp) { return mp.pos_; })}}
+                    cista::offset::to_vec(
+                        match_points, [](auto const& mp) { return mp.pos_; })}}
               : std::nullopt;
 
       if (cache != nullptr) {
         auto const l = std::scoped_lock{shapes_mutex};
-        if (auto it = cache->find(*cache_key); it != end(*cache)) {
-          auto const& ce = it->second;
+        if (auto const ce = cache->get(*cache_key); ce.has_value()) {
           ++cache_hits;
-          auto const local_shape_idx = n::get_local_shape_idx(ce.shape_idx_);
-          utl::verify(ce.shape_idx_ != n::scoped_shape_idx_t::invalid() &&
-                          n::get_shape_source(ce.shape_idx_) ==
+          auto const local_shape_idx = n::get_local_shape_idx(ce->shape_idx_);
+          utl::verify(ce->shape_idx_ != n::scoped_shape_idx_t::invalid() &&
+                          n::get_shape_source(ce->shape_idx_) ==
                               n::shape_source::kRouted,
                       "[route_shapes] invalid cached shape index: {}",
-                      ce.shape_idx_);
+                      ce->shape_idx_);
           utl::verify(
               local_shape_idx != n::shape_idx_t::invalid() &&
                   static_cast<std::size_t>(to_idx(local_shape_idx)) <
                       shapes.routed_data_.size(),
               "[route_shapes] cache routed shape idx out of bounds: {} >= {}",
               local_shape_idx, shapes.routed_data_.size());
-          store_shape(r, ce.shape_idx_, ce.offsets_, ce.route_bbox_,
-                      ce.segment_bboxes_, match_points, transports);
+          store_shape(r, ce->shape_idx_, ce->offsets_, ce->route_bbox_,
+                      ce->segment_bboxes_, match_points, transports);
           progress_tracker->increment();
           return;
         }
@@ -441,12 +512,13 @@ void route_shapes(osr::ways const& w,
       store_shape(r, shape_idx, rsr.offsets_, rsr.route_bbox_,
                   rsr.segment_bboxes_, match_points, transports);
       if (cache != nullptr) {
-        cache->emplace(*cache_key,
-                       shape_cache_entry{
-                           .shape_idx_ = shape_idx,
-                           .offsets_ = std::move(rsr.offsets_),
-                           .route_bbox_ = rsr.route_bbox_,
-                           .segment_bboxes_ = std::move(rsr.segment_bboxes_)});
+        cache->put(
+            *cache_key,
+            shape_cache_entry{
+                .shape_idx_ = shape_idx,
+                .offsets_ = cista::offset::to_vec(rsr.offsets_),
+                .route_bbox_ = rsr.route_bbox_,
+                .segment_bboxes_ = cista::offset::to_vec(rsr.segment_bboxes_)});
       }
     } catch (std::exception const& e) {
       fmt::println(std::clog,

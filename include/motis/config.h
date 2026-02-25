@@ -103,6 +103,9 @@ struct config {
       bool replace_shapes_{false};
       bool cache_{false};
       bool cache_reuse_old_osm_data_{false};
+      std::size_t cache_db_size_{sizeof(void*) >= 8
+                                     ? 256ULL * 1024ULL * 1024ULL * 1024ULL
+                                     : 256U * 1024U * 1024U};
       std::optional<std::map<std::string, bool>> clasz_{};
       unsigned max_stops_{0U};
       unsigned n_threads_{0U};

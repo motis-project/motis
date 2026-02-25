@@ -568,20 +568,24 @@ data import(config const& c, fs::path const& data_path, bool const write) {
       },
       [&]() { return d.tt_ && d.w_ && d.l_; },
       [&]() {
-        auto const shape_cache_path = data_path / "routed_shapes_cache.bin";
-        auto shape_cache = cista::wrapped<shape_cache_t>{};
+        auto const shape_cache_path = data_path / "routed_shapes_cache.mdb";
+        auto const shape_cache_lock_path =
+            fs::path{shape_cache_path.generic_string() + "-lock"};
+        auto shape_cache = std::unique_ptr<motis::shape_cache>{};
         auto existing_shape_cache = false;
         if (use_shapes_cache) {
           if (reuse_shapes_cache && fs::exists(shape_cache_path)) {
             std::clog << "loading existing shape cache from "
                       << shape_cache_path << "\n";
-            shape_cache = cista::read<shape_cache_t>(shape_cache_path);
             existing_shape_cache = true;
           } else {
             std::clog << "creating new shape cache\n";
-            shape_cache =
-                cista::wrapped{cista::raw::make_unique<shape_cache_t>()};
+            auto ec = std::error_code{};
+            fs::remove(shape_cache_path, ec);
+            fs::remove(shape_cache_lock_path, ec);
           }
+          shape_cache = std::make_unique<motis::shape_cache>(
+              shape_cache_path, c.timetable_->route_shapes_->cache_db_size_);
         }
 
         // re-open in write mode
@@ -593,10 +597,10 @@ data import(config const& c, fs::path const& data_path, bool const write) {
                      *c.timetable_->route_shapes_, route_shapes_clasz_enabled,
                      use_shapes_cache ? shape_cache.get() : nullptr);
 
-        if (use_shapes_cache) {
-          cista::write(shape_cache_path, shape_cache);
-        } else if (fs::exists(shape_cache_path)) {
-          fs::remove(shape_cache_path);
+        if (!use_shapes_cache) {
+          auto ec = std::error_code{};
+          fs::remove(shape_cache_path, ec);
+          fs::remove(shape_cache_lock_path, ec);
         }
       },
       [&]() { d.load_shapes(); },

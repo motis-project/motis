@@ -1,8 +1,12 @@
 #pragma once
 
+#include <filesystem>
 #include <optional>
 
-#include "cista/containers/hash_map.h"
+#include "cista/containers/pair.h"
+#include "cista/containers/vector.h"
+
+#include "lmdb/lmdb.hpp"
 
 #include "geo/box.h"
 
@@ -12,7 +16,6 @@
 
 #include "motis/config.h"
 #include "motis/fwd.h"
-#include "motis/types.h"
 
 namespace motis {
 
@@ -22,15 +25,25 @@ struct shape_cache_entry {
   }
 
   nigiri::scoped_shape_idx_t shape_idx_{nigiri::scoped_shape_idx_t::invalid()};
-  nigiri::vector<nigiri::shape_offset_t> offsets_;
+  cista::offset::vector<nigiri::shape_offset_t> offsets_;
   geo::box route_bbox_;
-  nigiri::vector<geo::box> segment_bboxes_;
+  cista::offset::vector<geo::box> segment_bboxes_;
 };
 
-using shape_cache_key =
-    nigiri::pair<osr::search_profile, nigiri::vector<geo::latlng>>;
+using shape_cache_key = cista::offset::pair<osr::search_profile,
+                                            cista::offset::vector<geo::latlng>>;
 
-using shape_cache_t = cista::raw::hash_map<shape_cache_key, shape_cache_entry>;
+struct shape_cache {
+  explicit shape_cache(std::filesystem::path const&,
+                       mdb_size_t = sizeof(void*) >= 8
+                                        ? 256ULL * 1024ULL * 1024ULL * 1024ULL
+                                        : 256U * 1024U * 1024U);
+
+  std::optional<shape_cache_entry> get(shape_cache_key const&);
+  void put(shape_cache_key const&, shape_cache_entry const&);
+
+  lmdb::env env_;
+};
 
 void route_shapes(osr::ways const&,
                   osr::lookup const&,
@@ -38,6 +51,6 @@ void route_shapes(osr::ways const&,
                   nigiri::shapes_storage&,
                   config::timetable::route_shapes const&,
                   std::array<bool, nigiri::kNumClasses> const&,
-                  shape_cache_t*);
+                  shape_cache*);
 
 }  // namespace motis
