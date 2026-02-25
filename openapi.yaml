@@ -943,7 +943,10 @@ paths:
         - name: many
           in: query
           required: true
-          description: geo locations as latitude;longitude,latitude;longitude,...
+          description: |
+            geo locations as latitude;longitude,latitude;longitude,...
+
+            The number of accepted locations is limited by server config variable `onetomany_max_many`.
           schema:
             type: array
             items:
@@ -959,7 +962,7 @@ paths:
         - name: max
           in: query
           required: true
-          description: maximum travel time in seconds
+          description: maximum travel time in seconds. Is limited by server config variable `street_routing_max_direct_seconds`.
           schema:
             type: number
         - name: maxMatchingDistance
@@ -1025,6 +1028,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '500':
           description: Internal Server Error
           content:
@@ -1057,6 +1066,12 @@ paths:
                   $ref: '#/components/schemas/Duration'
         '400':
           description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Unprocessable Entity
           content:
             application/json:
               schema:
@@ -1919,6 +1934,7 @@ paths:
                   - lat
                   - lon
                   - zoom
+                  - serverConfig
                 properties:
                   lat:
                     description: latitude
@@ -3927,14 +3943,16 @@ components:
         - mode
         - max
         - maxMatchingDistance
-        - elevationCosts
         - arriveBy
       properties:
         one:
           description: geo location as latitude;longitude
           type: string
         many:
-          description: geo locations as latitude;longitude,latitude;longitude,...
+          description: |
+            geo locations as latitude;longitude,latitude;longitude,...
+
+            The number of accepted locations is limited by server config variable `onetomany_max_many`.
           type: array
           items:
             type: string
@@ -3944,7 +3962,7 @@ components:
             routing profile to use (currently supported: \`WALK\`, \`BIKE\`, \`CAR\`)
           $ref: '#/components/schemas/Mode'
         max:
-          description: maximum travel time in seconds
+          description: maximum travel time in seconds. Is limited by server config variable `street_routing_max_direct_seconds`.
           type: number
         maxMatchingDistance:
           description: maximum matching distance in meters to match geo coordinates to the street network
@@ -3974,7 +3992,6 @@ components:
           type: boolean
         withDistance:
           description: |
-            Optional. Default is `false`.
             If true, the response includes the distance in meters
             for each path. This requires path reconstruction and
             may be slower than duration-only queries.
@@ -3987,7 +4004,8 @@ components:
         - hasElevation
         - hasRoutedTransfers
         - hasStreetRouting
-        - maxTravelTimeLimit
+        - maxOneToManySize
+        - maxOneToAllTravelTimeLimit
         - maxPrePostTransitTimeLimit
         - maxDirectTimeLimit
       properties:
@@ -4000,6 +4018,10 @@ components:
         hasStreetRouting:
           description: true if street routing is available
           type: boolean
+        maxOneToManySize:
+          description: |
+            limit for the number of `many` locations for one-to-many requests
+          type: number
         maxOneToAllTravelTimeLimit:
           description: limit for maxTravelTime API param in minutes
           type: number
