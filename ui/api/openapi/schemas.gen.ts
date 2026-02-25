@@ -226,11 +226,11 @@ export const ModeSchema = {
   - \`AIRPLANE\`: airline flights
   - \`BUS\`: short distance buses (does not include \`COACH\`)
   - \`COACH\`: long distance buses (does not include \`BUS\`)
-  - \`RAIL\`: translates to \`HIGHSPEED_RAIL,LONG_DISTANCE,NIGHT_RAIL,REGIONAL_RAIL,REGIONAL_FAST_RAIL,SUBURBAN,SUBWAY\`
+  - \`RAIL\`: translates to \`HIGHSPEED_RAIL,LONG_DISTANCE,NIGHT_RAIL,REGIONAL_RAIL,SUBURBAN,SUBWAY\`
   - \`HIGHSPEED_RAIL\`: long distance high speed trains (e.g. TGV)
   - \`LONG_DISTANCE\`: long distance inter city trains
   - \`NIGHT_RAIL\`: long distance night trains
-  - \`REGIONAL_FAST_RAIL\`: regional express routes that skip low traffic stops to be faster
+  - \`REGIONAL_FAST_RAIL\`: deprecated, \`REGIONAL_RAIL\` will be used
   - \`REGIONAL_RAIL\`: regional train
   - \`SUBURBAN\`: suburban trains (e.g. S-Bahn, RER, Elizabeth Line, ...)
   - \`ODM\`: demand responsive transport
@@ -585,6 +585,9 @@ For non-transit legs, null
             type: 'string'
         },
         routeId: {
+            type: 'string'
+        },
+        routeUrl: {
             type: 'string'
         },
         directionId: {
@@ -1387,6 +1390,9 @@ For non-transit legs, null
         routeId: {
             type: 'string'
         },
+        routeUrl: {
+            type: 'string'
+        },
         directionId: {
             type: 'string'
         },
@@ -1711,14 +1717,17 @@ transfer duration in minutes for the car profile
 
 export const OneToManyParamsSchema = {
     type: 'object',
-    required: ['one', 'many', 'mode', 'max', 'maxMatchingDistance', 'elevationCosts', 'arriveBy'],
+    required: ['one', 'many', 'mode', 'max', 'maxMatchingDistance', 'arriveBy'],
     properties: {
         one: {
             description: 'geo location as latitude;longitude',
             type: 'string'
         },
         many: {
-            description: 'geo locations as latitude;longitude,latitude;longitude,...',
+            description: `geo locations as latitude;longitude,latitude;longitude,...
+
+The number of accepted locations is limited by server config variable \`onetomany_max_many\`.
+`,
             type: 'array',
             items: {
                 type: 'string'
@@ -1731,7 +1740,7 @@ export const OneToManyParamsSchema = {
             '$ref': '#/components/schemas/Mode'
         },
         max: {
-            description: 'maximum travel time in seconds',
+            description: 'maximum travel time in seconds. Is limited by server config variable `street_routing_max_direct_seconds`.',
             type: 'number'
         },
         maxMatchingDistance: {
@@ -1764,8 +1773,7 @@ false = one to many
             type: 'boolean'
         },
         withDistance: {
-            description: `Optional. Default is \`false\`.
-If true, the response includes the distance in meters
+            description: `If true, the response includes the distance in meters
 for each path. This requires path reconstruction and
 may be slower than duration-only queries.
 `,
@@ -1778,7 +1786,7 @@ may be slower than duration-only queries.
 export const ServerConfigSchema = {
     Description: 'server configuration',
     type: 'object',
-    required: ['hasElevation', 'hasRoutedTransfers', 'hasStreetRouting', 'maxTravelTimeLimit', 'maxPrePostTransitTimeLimit', 'maxDirectTimeLimit'],
+    required: ['hasElevation', 'hasRoutedTransfers', 'hasStreetRouting', 'maxOneToManySize', 'maxOneToAllTravelTimeLimit', 'maxPrePostTransitTimeLimit', 'maxDirectTimeLimit'],
     properties: {
         hasElevation: {
             description: 'true if elevation is loaded',
@@ -1791,6 +1799,11 @@ export const ServerConfigSchema = {
         hasStreetRouting: {
             description: 'true if street routing is available',
             type: 'boolean'
+        },
+        maxOneToManySize: {
+            description: `limit for the number of \`many\` locations for one-to-many requests
+`,
+            type: 'number'
         },
         maxOneToAllTravelTimeLimit: {
             description: 'limit for maxTravelTime API param in minutes',
