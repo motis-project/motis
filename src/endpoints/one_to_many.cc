@@ -42,6 +42,7 @@ api::oneToMany_response one_to_many_direct(
   auto const max_many = config.get_limits().onetomany_max_many_;
   auto const max_direct_time_limit =
       config.get_limits().street_routing_max_direct_seconds_;
+
   utl::verify<net::too_many_exception>(
       many.size() <= max_many,
       "number of many locations too high ({} > {}). The server admin can "
@@ -58,8 +59,7 @@ api::oneToMany_response one_to_many_direct(
   utl::verify<net::bad_request_exception>(
       mode == api::ModeEnum::BIKE || mode == api::ModeEnum::CAR ||
           mode == api::ModeEnum::WALK,
-      "mode {} not supported for one-to-many",
-      boost::json::serialize(boost::json::value_from(mode)));
+      "mode {} not supported for one-to-many", fmt::streamed(mode));
 
   auto const profile = to_profile(mode, pedestrian_profile, elevation_costs);
   auto const paths =
@@ -225,17 +225,16 @@ api::oneToManyIntermodal_response run_one_to_many_intermodal(
     Query const& query,
     place_t const& one,
     std::vector<place_t> const& many) {
-
   auto const time = std::chrono::time_point_cast<std::chrono::minutes>(
       *query.time_.value_or(openapi::now()));
+
   auto const max_travel_time =
       query.maxTravelTime_
-          .and_then([](std::int64_t const dur) {
-            return std::optional{
-                std::chrono::duration_cast<std::chrono::seconds>(
-                    n::duration_t{dur})};
+          .transform([](std::int64_t const dur) {
+            using namespace std::chrono;
+            return duration_cast<seconds>(minutes{dur});
           })
-          .value_or(nigiri::routing::kMaxTravelTime);
+          .value_or(n::routing::kMaxTravelTime);
 
   auto const osr_params = get_osr_parameters(query);
 
@@ -268,6 +267,7 @@ api::oneToManyIntermodal_response run_one_to_many_intermodal(
 api::oneToManyIntermodal_response one_to_many_intermodal::operator()(
     boost::urls::url_view const& url) const {
   auto const query = api::oneToManyIntermodal_params{url.params()};
+
   auto const one = parse_location(query.one_, ';');
   utl::verify<net::bad_request_exception>(
       one.has_value(), "{} is not a valid geo coordinate", query.one_);
@@ -278,6 +278,7 @@ api::oneToManyIntermodal_response one_to_many_intermodal::operator()(
         y.has_value(), "{} is not a valid geo coordinate", x);
     return *y;
   });
+
   return run_one_to_many_intermodal(*this, query, *one, many);
 }
 
