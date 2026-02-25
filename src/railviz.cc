@@ -1,6 +1,8 @@
 #include "motis/railviz.h"
 
+#include <algorithm>
 #include <ranges>
+#include <unordered_map>
 
 #include "cista/containers/rtree.h"
 #include "cista/reflection/comparable.h"
@@ -9,6 +11,7 @@
 
 #include "utl/enumerate.h"
 #include "utl/get_or_create.h"
+#include "utl/helpers/algorithm.h"
 #include "utl/pairwise.h"
 #include "utl/to_vec.h"
 #include "utl/verify.h"
@@ -31,6 +34,7 @@
 #include "motis/data.h"
 #include "motis/journey_to_response.h"
 #include "motis/parse_location.h"
+#include "motis/place.h"
 #include "motis/tag_lookup.h"
 #include "motis/timetable/clasz_to_mode.h"
 #include "motis/timetable/time_conv.h"
@@ -38,7 +42,8 @@
 namespace n = nigiri;
 
 constexpr auto const kTripsLimit = 12'000U;
-constexpr auto const kRoutesLimit = 7'000U;
+constexpr auto const kRoutesLimit = 20'000U;
+constexpr auto const kRoutesPolylinesLimit = 20'000U;
 
 using static_rtree = cista::raw::rtree<n::route_idx_t>;
 using rt_rtree = cista::raw::rtree<n::rt_transport_idx_t>;
@@ -445,6 +450,55 @@ api::routes_response get_routes(tag_lookup const& tags,
   auto res = api::routes_response{};
   auto enc = geo::polyline_encoder<6>{};
 
+  auto const add_unique = [](auto& values, auto const& value) {
+    if (utl::find(values, value) == end(values)) {
+      values.emplace_back(value);
+    }
+  };
+
+  auto stop_indexes = std::vector<std::int64_t>{};
+  stop_indexes.resize(tt.locations_.coordinates_.size(), -1);
+  auto const get_stop_index = [&](n::rt::run_stop const& stop) {
+    auto const l = stop.get_location_idx();
+    auto& stop_index = stop_indexes[to_idx(l)];
+    if (stop_index == -1) {
+      auto const parent = tt.locations_.get_root_idx(l);
+      auto const root = tt.locations_.get_root_idx(l);
+      auto const pos = tt.locations_.coordinates_.at(l);
+      stop_index = static_cast<std::int64_t>(res.stops_.size());
+      res.stops_.emplace_back(
+          api::RouteStop{.name_ = std::string{tt.translate(
+                             query.language_, tt.locations_.names_.at(root))},
+                         .stopId_ = tags.id(tt, l),
+                         .parentId_ = parent == n::location_idx_t::invalid()
+                                          ? std::nullopt
+                                          : std::optional{tags.id(tt, parent)},
+                         .lat_ = pos.lat_,
+                         .lon_ = pos.lng_,
+                         .level_ = get_lvl(w, pl, matches, l).to_float()});
+    }
+    return stop_index;
+  };
+
+  auto polyline_indexes = hash_map<std::string, std::int64_t>{};
+  auto const get_polyline_index = [&](std::string points,
+                                      std::int64_t const length) {
+    auto const new_index = static_cast<std::int64_t>(res.polylines_.size());
+    auto const [it, inserted] = polyline_indexes.try_emplace(points, new_index);
+    if (inserted) {
+      utl::verify<net::too_many_exception>(
+          res.polylines_.size() < kRoutesPolylinesLimit, "too many polylines");
+      res.polylines_.emplace_back(api::RoutePolyline{
+          .polyline_ = api::EncodedPolyline{.points_ = std::move(points),
+                                            .precision_ = 6,
+                                            .length_ = length},
+          .colors_ = {},
+          .routeIndexes_ = {}});
+      return new_index;
+    }
+    return it->second;
+  };
+
   for (auto c = int_clasz{0U}; c != n::kNumClasses; ++c) {
     auto const cl = n::clasz{c};
     if (!should_display(cl, zoom_level,
@@ -458,6 +512,7 @@ api::routes_response get_routes(tag_lookup const& tags,
         utl::verify<net::too_many_exception>(res.routes_.size() < kRoutesLimit,
                                              "too many routes");
         auto route_segments = std::vector<api::RouteSegment>{};
+        auto route_polyline_indexes = std::vector<std::int64_t>{};
         auto route_infos = hash_set<route_info>{};
         auto const stops = tt.route_location_seq_[r];
         auto shape_added = false;
@@ -532,18 +587,27 @@ api::routes_response get_routes(tag_lookup const& tags,
             }
 
             route_segments.emplace_back(api::RouteSegment{
-                .from_ = to_place(&tt, &tags, w, pl, matches, ae, tz,
-                                  query.language_, tt_location{fr[0]}),
-                .to_ = to_place(&tt, &tags, w, pl, matches, ae, tz,
-                                query.language_, tt_location{fr[1]}),
-                .polyline_ =
-                    api::EncodedPolyline{.points_ = std::move(enc.buf_),
-                                         .precision_ = 6,
-                                         .length_ = n_points},
-
+                .from_ = get_stop_index(fr[0]),
+                .to_ = get_stop_index(fr[1]),
+                .polyline_ = get_polyline_index(std::move(enc.buf_), n_points),
             });
+            add_unique(route_polyline_indexes, route_segments.back().polyline_);
           }
           shape_added = true;
+        }
+        auto route_colors = std::vector<std::string>{};
+        for (auto const& ri : route_infos) {
+          if (auto const color = to_str(ri.color_.color_); color.has_value()) {
+            add_unique(route_colors, *color);
+          }
+        }
+        auto const route_index = static_cast<std::int64_t>(res.routes_.size());
+        for (auto const polyline_index : route_polyline_indexes) {
+          auto& polyline = res.polylines_[polyline_index];
+          add_unique(polyline.routeIndexes_, route_index);
+          for (auto const& color : route_colors) {
+            add_unique(polyline.colors_, color);
+          }
         }
         res.routes_.emplace_back(api::RouteInfo{
             .mode_ = to_mode(cl, api_version),

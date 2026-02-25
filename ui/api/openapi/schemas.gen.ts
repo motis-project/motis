@@ -1837,13 +1837,67 @@ export const RouteSegmentSchema = {
     required: ['from', 'to', 'polyline'],
     properties: {
         from: {
-            '$ref': '#/components/schemas/Place'
+            type: 'integer',
+            description: 'Index into the top-level route stops array'
         },
         to: {
-            '$ref': '#/components/schemas/Place'
+            type: 'integer',
+            description: 'Index into the top-level route stops array'
         },
         polyline: {
+            type: 'integer',
+            description: 'Index into the top-level route polylines array'
+        }
+    }
+} as const;
+
+export const RouteStopSchema = {
+    description: 'Stop contained in a route',
+    type: 'object',
+    required: ['name', 'lat', 'lon', 'level'],
+    properties: {
+        name: {
+            type: 'string'
+        },
+        stopId: {
+            type: 'string'
+        },
+        parentId: {
+            type: 'string'
+        },
+        lat: {
+            type: 'number'
+        },
+        lon: {
+            type: 'number'
+        },
+        level: {
+            type: 'number'
+        }
+    }
+} as const;
+
+export const RoutePolylineSchema = {
+    description: 'Shared polyline used by one or more route segments',
+    type: 'object',
+    required: ['polyline', 'colors', 'routeIndexes'],
+    properties: {
+        polyline: {
             '$ref': '#/components/schemas/EncodedPolyline'
+        },
+        colors: {
+            type: 'array',
+            description: 'Unique route colors of routes containing this segment',
+            items: {
+                type: 'string'
+            }
+        },
+        routeIndexes: {
+            type: 'array',
+            description: 'Indexes into the top-level routes array for routes containing this segment',
+            items: {
+                type: 'integer'
+            }
         }
     }
 } as const;
