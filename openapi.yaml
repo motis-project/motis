@@ -1409,7 +1409,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/Duration"
+                  $ref: "#/components/schemas/ParetoSet"
         "400":
           description: Bad Request
           content:
@@ -1452,7 +1452,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/Duration"
+                  $ref: "#/components/schemas/ParetoSet"
         "400":
           description: Bad Request
           content:
@@ -2904,9 +2904,45 @@ components:
         duration:
           type: number
           description: duration in seconds if a path was found, otherwise missing
+          minimum: 0.0
+        k:
+          description: |
+            k is the smallest number, for which a journey with the shortest duration and at most k-1 transfers exist. You can think of k as the number of connections used.
+          type: integer
+          minimum: 0
         distance:
           type: number
           description: distance in meters if a path was found and distance computation was requested, otherwise missing
+          minimum: 0.0
+
+    ParetoSet:
+      description: Object containing duration if a path was found or none if no path was found
+      type: object
+      required:
+        - durations
+      properties:
+        durations:
+          description: Pareto set for earliest arrival / latest departure, depending on arriveBy.
+          type: array
+          items:
+            $ref: '#/components/schemas/Duration'
+            # type: object
+            # required:
+            #   - duration
+            #   - k
+            # properties:
+            #   duration:
+            #     description: Total travel duration
+            #     type: number
+            #   k:
+            #     description: |
+            #       k is the smallest number, for which a journey with the shortest duration and at most k-1 transfers exist. You can think of k as the number of connections used.
+            #     type: integer
+            #   distance:
+            #     description: |
+            #       distance in meters if a path was found and distance computation was requested, otherwise missing
+            #       This field is currently only filled for street routed paths
+            #     type: number
 
     Area:
       description: Administrative area
