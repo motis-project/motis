@@ -2,6 +2,7 @@
 #include "gtest/gtest.h"
 
 #include <chrono>
+#include <cstddef>
 
 #include "boost/json.hpp"
 
@@ -73,8 +74,9 @@ TEST(motis, map_routes) {
               .num_days_ = 2,
               .with_shapes_ = true,
               .datasets_ = {{"test", {.path_ = kGTFS}}},
-              .route_shapes_ =
-                  {{.mode_ = config::timetable::route_shapes::mode::all}}},
+              .route_shapes_ = {{.mode_ =
+                                     config::timetable::route_shapes::mode::all,
+                                 .cache_ = false}}},
       .street_routing_ = true};
   auto d = import(c, "test/data", true);
 
@@ -113,8 +115,10 @@ TEST(motis, map_routes) {
     for (auto route_index = 0U; route_index != res.routes_.size();
          ++route_index) {
       for (auto const& segment : res.routes_[route_index].segments_) {
-        EXPECT_THAT(res.polylines_.at(segment.polyline_).routeIndexes_,
-                    Contains(static_cast<std::int64_t>(route_index)));
+        EXPECT_THAT(
+            res.polylines_.at(static_cast<std::size_t>(segment.polyline_))
+                .routeIndexes_,
+            Contains(static_cast<std::int64_t>(route_index)));
       }
     }
   }

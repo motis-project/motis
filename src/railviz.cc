@@ -603,7 +603,8 @@ api::routes_response get_routes(tag_lookup const& tags,
         }
         auto const route_index = static_cast<std::int64_t>(res.routes_.size());
         for (auto const polyline_index : route_polyline_indexes) {
-          auto& polyline = res.polylines_[polyline_index];
+          auto& polyline =
+              res.polylines_[static_cast<std::size_t>(polyline_index)];
           add_unique(polyline.routeIndexes_, route_index);
           for (auto const& color : route_colors) {
             add_unique(polyline.colors_, color);
