@@ -10,10 +10,13 @@
 
 #include "utl/init_from.h"
 
+#include "nigiri/common/parse_time.h"
+
 #include "motis-api/motis-api.h"
 #include "motis/config.h"
 #include "motis/data.h"
 #include "motis/endpoints/map/routes.h"
+#include "motis/endpoints/one_to_many_post.h"
 #include "motis/gbfs/update.h"
 #include "motis/import.h"
 
@@ -35,7 +38,7 @@ stop_id,stop_name,stop_lat,stop_lon
 DA_Bus_1,DA Hbf,49.8724891,8.6281994
 DA_Bus_2,DA Hbf,49.8750407,8.6312172
 DA_Tram_1,DA Hbf,49.8742551,8.6321063
-DA_Tram_2,DA Hbf,49.8731133,8.6313674
+DA_Tram_2,DA Hbf,49.8738738,8.6312965
 DA_Tram_3,DA Hbf,49.872435,8.632164
 
 # routes.txt
@@ -71,6 +74,8 @@ TEST(motis, map_routes) {
           config::timetable{.first_day_ = "2019-05-01",
                             .num_days_ = 2,
                             .with_shapes_ = true,
+                            // set limit to not connect stops Tram_2 and Bus_3
+                            .max_footpath_length_ = 3,
                             .datasets_ = {{"test", {.path_ = kGTFS}}},
                             .route_shapes_ = {{.missing_shapes_ = true,
                                                .replace_shapes_ = true}}},
@@ -105,5 +110,46 @@ TEST(motis, map_routes) {
         "&zoom=14.5");
     EXPECT_EQ(res.routes_.size(), 0U);
     EXPECT_EQ(res.zoomFiltered_, false);
+  }
+  {
+    // One to Many, pareto set
+    auto const one_to_many_post =
+        utl::init_from<ep::one_to_many_intermodal_post>(d).value();
+    auto const start = "49.8724891,8.6281994";  // DA_Bus_1
+    auto const start_time = std::chrono::time_point_cast<std::chrono::seconds>(
+        n::parse_time("2019-05-01T00:58:00.000+02:00", "%FT%T%Ez"));
+    {
+      // Direct + 1 transfer
+      auto const durations = one_to_many_post(
+          api::OneToManyIntermodalParams{.one_ = start,
+                                         .many_ = {"49.8750407,8.6312172"},
+                                         .time_ = start_time,
+                                         .useRoutedTransfers_ = true});
+
+      EXPECT_EQ((std::vector<api::ParetoSet>{
+                    {.durations_ = {{.duration_ = 522.0, .k_ = 0},
+                                    {.duration_ = 900.0, .k_ = 1}}},
+                }),
+                durations);
+    }
+    {
+      // Slow walking speed, direct + 1 + 2 transfers
+      auto const durations = one_to_many_post(api::OneToManyIntermodalParams{
+          .one_ = "49.8724891,8.6281994",
+          .many_ = {"49.8750407,8.6312172",  // DA_Bus_2
+                    "49.872435,8.632164"},  // DA_Tram_3
+          .time_ = start_time,
+          .maxDirectTime_ = 7200,
+          .maxPreTransitTime_ = 300,  // Prevent any pre transit to Tram_x
+          .pedestrianSpeed_ = 0.35});  // Slow speed for Tram_2 -> Tram_3
+
+      EXPECT_EQ((std::vector<api::ParetoSet>{
+                    {.durations_ = {{.duration_ = 2781.0, .k_ = 0},
+                                    {.duration_ = 900.0, .k_ = 1}}},
+                    {.durations_ = {{.duration_ = 4047.0, .k_ = 0},
+                                    {.duration_ = 1620.0, .k_ = 1},
+                                    {.duration_ = 1500.0, .k_ = 2}}}}),
+                durations);
+    }
   }
 }
