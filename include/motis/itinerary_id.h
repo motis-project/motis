@@ -3,12 +3,15 @@
 #include <string>
 #include "motis-api/motis-api.h"
 #include "motis/endpoints/map/stops.h"
+#include "motis/endpoints/routing.h"
 #include "motis/endpoints/stop_times.h"
 
 namespace motis {
 
 std::string generate_itinerary_id(api::Itinerary const&);
 
-api::Itinerary reconstruct_itinerary(ep::stop_times const&, std::string const&);
+api::Itinerary reconstruct_itinerary(ep::stop_times const&,
+                                     motis::ep::routing const&,
+                                     std::string const&);
 
 }  // namespace motis

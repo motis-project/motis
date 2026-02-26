@@ -326,7 +326,8 @@ TEST(motis, itinerary_id_reconstruct_with_changed_stop_ids) {
                                               "test_DA", "2019-05-01T02:00Z");
   auto const stop_times = utl::init_from<ep::stop_times>(target_data).value();
 
-  EXPECT_EQ(expected, reconstruct_itinerary(stop_times, id));
+  auto const routing = utl::init_from<ep::routing>(target_data).value();
+  EXPECT_EQ(expected, reconstruct_itinerary(stop_times, routing, id));
 }
 
 TEST(motis, itinerary_id_reconstruct_with_repeated_stop_in_trip) {
@@ -344,7 +345,8 @@ TEST(motis, itinerary_id_reconstruct_with_repeated_stop_in_trip) {
   auto const id = generate_itinerary_id(original);
   std::cout << "iid: " << id << std::endl;
   auto const stop_times = utl::init_from<ep::stop_times>(data).value();
-  EXPECT_EQ(original, reconstruct_itinerary(stop_times, id));
+  auto const routing = utl::init_from<ep::routing>(data).value();
+  EXPECT_EQ(original, reconstruct_itinerary(stop_times, routing, id));
 }
 
 TEST(motis, itinerary_id_generate_rejects_invalid_single_leg_inputs) {
@@ -430,7 +432,8 @@ TEST(motis,
       "&mode=HIGHSPEED_RAIL");
   EXPECT_GE(to_candidates.stopTimes_.size(), 8U);
 
-  auto const reconstructed = reconstruct_itinerary(stop_times, id);
+  auto const routing = utl::init_from<ep::routing>(target_data).value();
+  auto const reconstructed = reconstruct_itinerary(stop_times, routing, id);
   ASSERT_EQ(1U, reconstructed.legs_.size());
   auto const& reconstructed_leg = reconstructed.legs_.front();
   auto const& original_leg = original.legs_.front();
@@ -466,15 +469,16 @@ TEST(motis, itinerary_id_reconstruct_multi_leg_with_decoys_and_other_stations) {
     return transit_legs;
   };
 
-  // std::cout << "origin itin: " << original << std::endl;
+  std::cout << "origin itin: " << original << std::endl;
   ASSERT_GE(original.legs_.size(), 3U);
   auto const original_transit_legs = extract_transit_legs(original);
   ASSERT_EQ(3U, original_transit_legs.size());
   auto id_input = original;
   id_input.legs_ = original_transit_legs;
 
-  // TEMP; TOOD: INCLUDE OTHER TYPES OF LEGS
-  auto const id = generate_itinerary_id(id_input);
+  // TEMP; TODO: INCLUDE OTHER TYPES OF LEGS
+  // auto const id = generate_itinerary_id(id_input);
+  auto const id = generate_itinerary_id(original);
   std::cout << "multi-leg iid: " << id << std::endl;
 
   auto const target_cfg = make_config(kMultiLegDenseTargetGTFS);
@@ -503,7 +507,8 @@ TEST(motis, itinerary_id_reconstruct_multi_leg_with_decoys_and_other_stations) {
       "&mode=HIGHSPEED_RAIL");
   EXPECT_GE(mid_candidates.stopTimes_.size(), 3U);
 
-  auto const reconstructed = reconstruct_itinerary(stop_times, id);
+  auto const routing = utl::init_from<ep::routing>(target_data).value();
+  auto const reconstructed = reconstruct_itinerary(stop_times, routing, id);
   // std::cout << "rec itin: " << reconstructed << std::endl;
   ASSERT_GE(reconstructed.legs_.size(), 3U);
   auto const reconstructed_transit_legs = extract_transit_legs(reconstructed);

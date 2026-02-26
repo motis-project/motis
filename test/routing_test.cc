@@ -272,6 +272,7 @@ TEST(motis, routing) {
   auto ec = std::error_code{};
   std::filesystem::remove_all("test/data", ec);
 
+  // ki
   auto const c = config{
       .server_ = {{.web_folder_ = "ui/build", .n_threads_ = 1U}},
       .osm_ = {"test/resources/test_case.osm.pbf"},
