@@ -68,12 +68,13 @@ TEST(motis, map_routes) {
   auto const c = config{
       .osm_ = {"test/resources/test_case.osm.pbf"},
       .timetable_ =
-          config::timetable{.first_day_ = "2019-05-01",
-                            .num_days_ = 2,
-                            .with_shapes_ = true,
-                            .datasets_ = {{"test", {.path_ = kGTFS}}},
-                            .route_shapes_ = {{.missing_shapes_ = true,
-                                               .replace_shapes_ = true}}},
+          config::timetable{
+              .first_day_ = "2019-05-01",
+              .num_days_ = 2,
+              .with_shapes_ = true,
+              .datasets_ = {{"test", {.path_ = kGTFS}}},
+              .route_shapes_ =
+                  {{.mode_ = config::timetable::route_shapes::mode::all}}},
       .street_routing_ = true};
   auto d = import(c, "test/data", true);
 
