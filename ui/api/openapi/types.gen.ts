@@ -1485,18 +1485,6 @@ export type RouteSegment = {
 };
 
 /**
- * Stop contained in a route
- */
-export type RouteStop = {
-    name: string;
-    stopId?: string;
-    parentId?: string;
-    lat: number;
-    lon: number;
-    level: number;
-};
-
-/**
  * Shared polyline used by one or more route segments
  */
 export type RoutePolyline = {
@@ -2732,7 +2720,7 @@ export type RoutesData = {
 export type RoutesResponse = ({
     routes: Array<RouteInfo>;
     polylines: Array<RoutePolyline>;
-    stops: Array<RouteStop>;
+    stops: Array<Place>;
     /**
      * Indicates whether some routes were filtered out due to
      * the zoom level.

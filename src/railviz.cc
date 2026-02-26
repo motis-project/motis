@@ -467,15 +467,15 @@ api::routes_response get_routes(tag_lookup const& tags,
       auto const pos = tt.locations_.coordinates_.at(l);
       stop_index = static_cast<std::int64_t>(res.stops_.size());
       res.stops_.emplace_back(
-          api::RouteStop{.name_ = std::string{tt.translate(
-                             query.language_, tt.locations_.names_.at(root))},
-                         .stopId_ = tags.id(tt, l),
-                         .parentId_ = parent == n::location_idx_t::invalid()
-                                          ? std::nullopt
-                                          : std::optional{tags.id(tt, parent)},
-                         .lat_ = pos.lat_,
-                         .lon_ = pos.lng_,
-                         .level_ = get_lvl(w, pl, matches, l).to_float()});
+          api::Place{.name_ = std::string{tt.translate(
+                         query.language_, tt.locations_.names_.at(root))},
+                     .stopId_ = tags.id(tt, l),
+                     .parentId_ = parent == n::location_idx_t::invalid()
+                                      ? std::nullopt
+                                      : std::optional{tags.id(tt, parent)},
+                     .lat_ = pos.lat_,
+                     .lon_ = pos.lng_,
+                     .level_ = get_lvl(w, pl, matches, l).to_float()});
     }
     return stop_index;
   };

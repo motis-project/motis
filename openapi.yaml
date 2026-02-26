@@ -2156,7 +2156,7 @@ paths:
                   stops:
                     type: array
                     items:
-                      $ref: '#/components/schemas/RouteStop'
+                      $ref: '#/components/schemas/Place'
                   zoomFiltered:
                     type: boolean
                     description: |
@@ -4067,28 +4067,6 @@ components:
         polyline:
           type: integer
           description: Index into the top-level route polylines array
-
-    RouteStop:
-      description: Stop contained in a route
-      type: object
-      required:
-        - name
-        - lat
-        - lon
-        - level
-      properties:
-        name:
-          type: string
-        stopId:
-          type: string
-        parentId:
-          type: string
-        lat:
-          type: number
-        lon:
-          type: number
-        level:
-          type: number
 
     RoutePolyline:
       description: Shared polyline used by one or more route segments

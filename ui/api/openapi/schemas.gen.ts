@@ -1851,32 +1851,6 @@ export const RouteSegmentSchema = {
     }
 } as const;
 
-export const RouteStopSchema = {
-    description: 'Stop contained in a route',
-    type: 'object',
-    required: ['name', 'lat', 'lon', 'level'],
-    properties: {
-        name: {
-            type: 'string'
-        },
-        stopId: {
-            type: 'string'
-        },
-        parentId: {
-            type: 'string'
-        },
-        lat: {
-            type: 'number'
-        },
-        lon: {
-            type: 'number'
-        },
-        level: {
-            type: 'number'
-        }
-    }
-} as const;
-
 export const RoutePolylineSchema = {
     description: 'Shared polyline used by one or more route segments',
     type: 'object',
