@@ -10,7 +10,12 @@
 	import type { Position } from 'geojson';
 	import maplibregl from 'maplibre-gl';
 	import type { FeatureCollection, LineString, Point } from 'geojson';
-	import { routes, type Leg, type RouteInfo } from '@motis-project/motis-client';
+	import {
+		routes,
+		type Leg,
+		type RouteInfo,
+		type RoutePolyline
+	} from '@motis-project/motis-client';
 	import { getDecorativeColors } from '$lib/map/colors';
 	import { t } from '$lib/i18n/translation';
 
@@ -51,17 +56,26 @@
 	type RouteFeatureProperties = {
 		color: string;
 		name: string;
-		arrayIdx: number;
+		routeIndexes: string; // comma-separated because MapLibre stringifies properties
 	};
 
 	const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
-	const getRouteDisplayProps = (route: RouteInfo) => {
+	const getRouteDisplayProps = (route: RouteInfo | undefined) => {
+		if (!route) {
+			return { name: '', color: '#000000' };
+		}
 		const shortNames = Array.from(new Set(route.transitRoutes.map((r) => r.shortName)));
 		const name = shortNames.join(', ');
 		const apiColor = route.transitRoutes.find((r) => r.color)?.color;
 		const color = apiColor ? `#${apiColor}` : getRouteColor(name);
 		return { name, color };
+	};
+
+	const getPolylineDisplayProps = (routePolyline: RoutePolyline, routeList: RouteInfo[]) => {
+		const rdp = getRouteDisplayProps(routeList[routePolyline.routeIndexes[0]]);
+		const color = routePolyline.colors.length ? `#${routePolyline.colors[0]}` : rdp.color;
+		return { name: rdp.name, color };
 	};
 
 	const expandBounds = (value: maplibregl.LngLatBounds) => {
@@ -118,7 +132,7 @@
 			return;
 		}
 		console.debug(
-			`[Routes] received ${data.routes.length} routes, zoomFiltered=${data.zoomFiltered}`
+			`[Routes] received ${data.routes.length} routes, ${data.polylines.length} polylines, ${data.stops.length} stops, zoomFiltered=${data.zoomFiltered}`
 		);
 
 		routesData = data;
@@ -133,28 +147,37 @@
 		}
 	});
 
+	let decodedPolylines = $derived.by(() =>
+		routesData
+			? routesData.polylines.map((segment) =>
+					polyline
+						.decode(segment.polyline.points, segment.polyline.precision)
+						.map(([lat, lng]) => [lng, lat] as Position)
+				)
+			: []
+	);
+
 	let routeFeatures = $derived.by((): FeatureCollection<LineString> => {
 		if (!routesData) {
 			return { type: 'FeatureCollection', features: [] };
 		}
+		const data = routesData;
 		return {
 			type: 'FeatureCollection',
-			features: routesData.routes.flatMap((route, arrayIdx) => {
-				const { name, color } = getRouteDisplayProps(route);
-				return route.segments.map((segment) => ({
+			features: data.polylines.map((segment, polylineIdx) => {
+				const pdp = getPolylineDisplayProps(segment, data.routes);
+				return {
 					type: 'Feature',
 					geometry: {
 						type: 'LineString',
-						coordinates: polyline
-							.decode(segment.polyline.points, segment.polyline.precision)
-							.map(([lat, lng]) => [lng, lat] as Position)
+						coordinates: decodedPolylines[polylineIdx] ?? []
 					},
 					properties: {
-						color,
-						name,
-						arrayIdx
+						color: pdp.color,
+						name: pdp.name,
+						routeIndexes: segment.routeIndexes.join(',')
 					}
-				}));
+				};
 			})
 		};
 	});
@@ -175,9 +198,7 @@
 				type: 'Feature',
 				geometry: {
 					type: 'LineString',
-					coordinates: polyline
-						.decode(segment.polyline.points, segment.polyline.precision)
-						.map(([lat, lng]) => [lng, lat] as Position)
+					coordinates: decodedPolylines[segment.polyline] ?? []
 				},
 				properties: {
 					color,
@@ -194,7 +215,8 @@
 		if (!routesData || hoveredArrayIdx === null) {
 			return { type: 'FeatureCollection', features: [] };
 		}
-		const route = routesData.routes[hoveredArrayIdx];
+		const data = routesData;
+		const route = data.routes[hoveredArrayIdx];
 		if (!route) {
 			return { type: 'FeatureCollection', features: [] };
 		}
@@ -206,7 +228,11 @@
 		const { color } = getRouteDisplayProps(route);
 
 		route.segments.forEach((segment) => {
-			[segment.from, segment.to].forEach((stop) => {
+			[segment.from, segment.to].forEach((stopIdx) => {
+				const stop = data.stops[stopIdx];
+				if (!stop) {
+					return;
+				}
 				const stopId = stop.stopId || `${stop.lat},${stop.lon}`;
 				if (!stopMap.has(stopId)) {
 					stopMap.set(stopId, {
@@ -251,18 +277,23 @@
 			return [] as Array<{ route: RouteInfo; arrayIdx: number; color: string }>;
 		}
 		const indexes = new SvelteSet<number>();
-		const colorMap = new SvelteMap<number, string>();
 		for (const feature of features) {
 			const props = feature.properties as RouteFeatureProperties | null;
-			if (props?.arrayIdx !== undefined && props?.color !== undefined) {
-				indexes.add(props.arrayIdx);
-				colorMap.set(props.arrayIdx, props.color);
-			}
+			const routeIndexes = (props?.routeIndexes ?? '').split(',').map((s) => Number.parseInt(s));
+			routeIndexes.forEach((idx) => {
+				if (idx >= 0 && idx < rd.length) {
+					indexes.add(idx);
+				}
+			});
 		}
 		return Array.from(indexes)
 			.map((arrayIdx) => {
 				const route = rd[arrayIdx];
-				return { route, arrayIdx, color: colorMap.get(arrayIdx) };
+				return {
+					route,
+					arrayIdx,
+					color: route ? getRouteDisplayProps(route).color : ''
+				};
 			})
 			.filter(
 				(entry): entry is { route: RouteInfo; arrayIdx: number; color: string } => !!entry.route
