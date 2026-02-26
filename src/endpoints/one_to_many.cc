@@ -202,10 +202,10 @@ api::oneToManyIntermodal_response add_transit_durations(
     // pareto_set.durations_.emplace_back(std::move(direct_durations[i]));
     auto& pareto_set = pareto_sets.emplace_back(api::ParetoSet{});
     auto& durations = pareto_set.durations_;
-        if (direct_durations[i].duration_.has_value()) {
-            direct_durations[i].k_ = 0U;
-            durations.push_back(std::move(direct_durations[i]));
-        }
+    if (direct_durations[i].duration_.has_value()) {
+      direct_durations[i].k_ = 0U;
+      durations.push_back(std::move(direct_durations[i]));
+    }
     auto best = kInfinity;
     auto all_best = kInfinity;
     auto const offsets = r.get_offsets(
@@ -217,7 +217,8 @@ api::oneToManyIntermodal_response add_transit_durations(
 
     // for (auto const k :
     // std::views::iota(std::uint8_t{0U}, q.max_transfers_ + 2U)) {
-    for (auto k = 0U; k < q.max_transfers_ + 2U; ++k) {
+    constexpr auto const kDirectTransitK = 1U;
+    for (auto k = kDirectTransitK; k < q.max_transfers_ + 2U; ++k) {
       for (auto const offset : offsets) {
         auto const loc = offset.target();
         if (reachable.test(to_idx(loc))) {

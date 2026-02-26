@@ -142,24 +142,29 @@ TEST(motis, one_to_many) {
         "&maxPostTransitTime=420"
         "&arriveBy=false");
 
-    EXPECT_EQ((std::vector<api::Duration>{
-                  {281.0},
-                  {1080.0},
-                  {1140.0},  // Not routed transfer => faster than realistic
-                  {1140.0},  // Not routed transfer
-                  {2580.0},
-                  {2580.0},
-                  {122.0},
-                  {240.0},
-                  {529.0},
-                  {692.0},
-                  {1260.0},
-                  {1440.0},
-                  {1500.0},
-                  {2700.0},
-                  {2640.0},
-                  {2940.0},
-                  {}}),
+    EXPECT_EQ((std::vector<api::ParetoSet>{
+                  {.durations_ = {{.duration_ = 281.0, .k_ = 0}}},
+                  {.durations_ = {{.duration_ = 1080.0, .k_ = 1}}},
+                  {.durations_ =
+                       {// Not routed transfer => faster than realistic
+                        {.duration_ = 1140.0, .k_ = 1}}},
+                  {.durations_ =
+                       {// Not routed transfer
+                        {.duration_ = 1140.0, .k_ = 1}}},
+                  {.durations_ = {{.duration_ = 2580.0, .k_ = 2}}},
+                  {.durations_ = {{.duration_ = 2580.0, .k_ = 2}}},
+                  {.durations_ = {{.duration_ = 122.0, .k_ = 0}}},
+                  {.durations_ = {{.duration_ = 240.0, .k_ = 0}}},
+                  {.durations_ = {{.duration_ = 529.0, .k_ = 0}}},
+                  {.durations_ = {{.duration_ = 692.0, .k_ = 0}}},
+                  {.durations_ = {{.duration_ = 1260.0, .k_ = 1}}},
+                  {.durations_ = {{.duration_ = 1440.0, .k_ = 1}}},
+                  {.durations_ = {{.duration_ = 1500.0, .k_ = 1}}},
+                  {.durations_ = {{.duration_ = 2700.0, .k_ = 2}}},
+                  {.durations_ = {{.duration_ = 2640.0, .k_ = 2}}},
+                  {.durations_ = {{.duration_ = 2940.0, .k_ = 2}}},
+                  {.durations_ = {}},
+              }),
               durations);
   }
   // POST Request, backward
@@ -194,25 +199,34 @@ TEST(motis, one_to_many) {
         .maxPreTransitTime_ = 300,
         .maxDirectTime_ = 300});  // Updated to maxPostTransitTime == 1500
 
-    EXPECT_EQ((std::vector<api::Duration>{{3180.0},
-                                          {840.0},  // Not routed transfer
-                                          {720.0},  // Not routed transfer
-                                          {780.0},
-                                          {780.0},
-                                          {720.0},
-                                          {159.0},  // No explicit level
-                                          {160.0},  // Explicit level
-                                          {160.0},
-                                          {127.0},
-                                          {103.0},
-                                          {123.0},
-                                          {355.0},
-                                          {900.0},
-                                          {1020.0},
-                                          {},
-                                          {3420.0},
-                                          {}}),
-              durations);
+    EXPECT_EQ(
+        (std::vector<api::ParetoSet>{
+            {.durations_ = {{.duration_ = 3180.0, .k_ = 2}}},
+            {.durations_ =
+                 {// Not routed transfer
+                  {.duration_ = 840.0, .k_ = 1}}},
+            {.durations_ =
+                 {// Not routed transfer
+                  {.duration_ = 720.0, .k_ = 1}}},
+            {.durations_ = {{.duration_ = 780.0, .k_ = 1}}},
+            {.durations_ = {{.duration_ = 780.0, .k_ = 1}}},
+            {.durations_ = {{.duration_ = 720.0, .k_ = 1}}},
+            {.durations_ =
+                 {// No explicit level
+                  {.duration_ = 159.0, .k_ = 0}}},
+            {.durations_ = {{.duration_ = 160.0, .k_ = 0}}},  // Explicit level
+            {.durations_ = {{.duration_ = 160.0, .k_ = 0}}},
+            {.durations_ = {{.duration_ = 127.0, .k_ = 0}}},
+            {.durations_ = {{.duration_ = 103.0, .k_ = 0}}},
+            {.durations_ = {{.duration_ = 123.0, .k_ = 0}}},
+            {.durations_ = {{.duration_ = 355.0, .k_ = 0}}},
+            {.durations_ = {{.duration_ = 900.0, .k_ = 1}}},
+            {.durations_ = {{.duration_ = 1020.0, .k_ = 1}}},
+            {.durations_ = {}},
+            {.durations_ = {{.duration_ = 3420.0, .k_ = 2}}},
+            {.durations_ = {}},
+        }),
+        durations);
   }
   // POST, forward, routed, short pre-transit
   {
@@ -239,18 +253,27 @@ TEST(motis, one_to_many) {
         .useRoutedTransfers_ = true,
         .maxPreTransitTime_ = 360});  // Too short to reach U4
 
-    EXPECT_EQ((std::vector<api::Duration>{{},
-                                          {475.0},
-                                          {360.0},  // Direct connection allowed
-                                          {353.0},  // Valid for pre transit
-                                          {1560.0},  // Must take S3
-                                          {1680.0},  // Must take S3
-                                          {413.0},  // No valid pre transit
-                                          {1800.0},
-                                          {1740.0},
-                                          {1740.0},
-                                          {1680.0}}),
-              durations);
+    EXPECT_EQ(
+        (std::vector<api::ParetoSet>{
+            {.durations_ = {}},
+            {.durations_ = {{.duration_ = 475.0, .k_ = 0}}},
+            {.durations_ =
+                 {// Direct connection allowed
+                  {.duration_ = 384.0, .k_ = 0}}},
+            {.durations_ =
+                 {// Valid for pre transit
+                  {.duration_ = 353.0, .k_ = 0}}},
+            {.durations_ = {{.duration_ = 1560.0, .k_ = 1}}},  // Must take S3
+            {.durations_ = {{.duration_ = 1680.0, .k_ = 1}}},  // Must take S3
+            {.durations_ =
+                 {// No valid pre transit
+                  {.duration_ = 413.0, .k_ = 0}}},
+            {.durations_ = {{.duration_ = 1800.0, .k_ = 1}}},
+            {.durations_ = {{.duration_ = 1740.0, .k_ = 1}}},
+            {.durations_ = {{.duration_ = 1740.0, .k_ = 1}}},
+            {.durations_ = {{.duration_ = 1680.0, .k_ = 1}}},
+        }),
+        durations);
   }
   // GET, backward, with wheelchair, short post-transit
   {
@@ -272,12 +295,18 @@ TEST(motis, one_to_many) {
         "&useRoutedTransfers=true"
         "&arriveBy=true");
 
-    EXPECT_EQ((std::vector<api::Duration>{
-                  {1680.0},
-                  {},  // Not reachable from de:6412:10:6:1
-                  {333.0},  // No valid post transit
-                  {517.0},  // Direct connections allowed
-                  {771.0}  // Reachable after updating maxDirectTime
+    EXPECT_EQ((std::vector<api::ParetoSet>{
+                  {.durations_ = {{.duration_ = 1680.0, .k_ = 1}}},
+                  {.durations_ = {}},  // Not reachable from de:6412:10:6:1
+                  {.durations_ =
+                       {// No valid post transit
+                        {.duration_ = 333.0, .k_ = 0}}},
+                  {.durations_ =
+                       {// Direct connections allowed
+                        {.duration_ = 517.0, .k_ = 0}}},
+                  {.durations_ =
+                       {// Reachable after updating maxDirectTime
+                        {.duration_ = 771.0, .k_ = 0}}},
               }),
               durations);
   }
@@ -301,10 +330,13 @@ TEST(motis, one_to_many) {
           "&arriveBy=false"
           "&cyclingSpeed=2.4");
 
-      EXPECT_EQ((std::vector<api::Duration>{
-                    {228.0},
-                    {300.0},  // {321.0},  // Invalid transfer C -> B
-                    {1980.0}}),  // Must use later trip
+      EXPECT_EQ((std::vector<api::ParetoSet>{
+                    {.durations_ = {{.duration_ = 228.0, .k_ = 0}}},
+                    {.durations_ = {{.duration_ = 321.0, .k_ = 0}}},
+                    {.durations_ =
+                         {// Must use later trip
+                          {.duration_ = 1980.0, .k_ = 1}}},
+                }),
                 durations);
     }
     // POST, backward, postTransitModes + direct
@@ -321,10 +353,13 @@ TEST(motis, one_to_many) {
           .postTransitModes_ = {api::ModeEnum::BIKE},
           .directMode_ = api::ModeEnum::BIKE});
 
-      EXPECT_EQ(
-          (std::vector<api::Duration>{
-              {228.0}, {240.0}, {300.0} /* Without B->C: {335.0} */, {1920.0}}),
-          durations);
+      EXPECT_EQ((std::vector<api::ParetoSet>{
+                    {.durations_ = {{.duration_ = 228.0, .k_ = 0}}},
+                    {.durations_ = {{.duration_ = 335.0, .k_ = 0}}},
+                    {.durations_ = {{.duration_ = 335.0, .k_ = 0}}},
+                    {.durations_ = {{.duration_ = 1920.0, .k_ = 1}}},
+                }),
+                durations);
     }
     // POST, forward, postTransitModes
     {
@@ -337,7 +372,11 @@ TEST(motis, one_to_many) {
           .arriveBy_ = false,
           .postTransitModes_ = {api::ModeEnum::BIKE}});
 
-      EXPECT_EQ((std::vector<api::Duration>{{720.0}, {840.0}}), durations);
+      EXPECT_EQ((std::vector<api::ParetoSet>{
+                    {.durations_ = {{.duration_ = 720.0, .k_ = 1}}},
+                    {.durations_ = {{.duration_ = 840.0, .k_ = 1}}},
+                }),
+                durations);
     }
     // GET, backward, preTransitModes
     {
@@ -355,7 +394,11 @@ TEST(motis, one_to_many) {
           "&arriveBy=true"
           "&cyclingSpeed=2.4");
 
-      EXPECT_EQ((std::vector<api::Duration>{{1080.0}, {1080.0}, {1260.0}}),
+      EXPECT_EQ((std::vector<api::ParetoSet>{
+                    {.durations_ = {{.duration_ = 1080.0, .k_ = 1}}},
+                    {.durations_ = {{.duration_ = 1080.0, .k_ = 1}}},
+                    {.durations_ = {{.duration_ = 1260.0, .k_ = 1}}},
+                }),
                 durations);
     }
   }
@@ -371,7 +414,10 @@ TEST(motis, one_to_many) {
           "&useRoutedTransfers=true"
           "&minTransferTime=21");
 
-      EXPECT_EQ((std::vector<api::Duration>{{4320.0}}), durations);
+      EXPECT_EQ((std::vector<api::ParetoSet>{
+                    {.durations_ = {{.duration_ = 4320.0, .k_ = 2}}},
+                }),
+                durations);
     }
     // additionalTransferTime
     {
@@ -382,7 +428,10 @@ TEST(motis, one_to_many) {
           .additionalTransferTime_ = 17,
           .useRoutedTransfers_ = true});
 
-      EXPECT_EQ((std::vector<api::Duration>{{4200.0}}), durations);
+      EXPECT_EQ((std::vector<api::ParetoSet>{
+                    {.durations_ = {{.duration_ = 4200.0, .k_ = 2}}},
+                }),
+                durations);
     }
   }
   // Bug examples: Should not connect final footpath with first or last mile
@@ -404,15 +453,15 @@ TEST(motis, one_to_many) {
           .pedestrianProfile_ = api::PedestrianProfileEnum::WHEELCHAIR,
           .maxPostTransitTime_ = 420});  // Too short to reach from U4
 
-      EXPECT_EQ(
-          (std::vector<api::Duration>{
-              {720.0},
-              {780.0},
-              {720.0},
-              {1020.0},
-              {1380.0},  // {}  // FIXME Test location should be unreachable
-          }),
-          durations);
+      EXPECT_EQ((std::vector<api::ParetoSet>{
+                    {.durations_ = {{.duration_ = 720.0, .k_ = 1}}},
+                    {.durations_ = {{.duration_ = 780.0, .k_ = 1}}},
+                    {.durations_ = {{.duration_ = 720.0, .k_ = 1}}},
+                    {.durations_ = {{.duration_ = 1020.0, .k_ = 1}}},
+                    // FIXME Test location should be unreachable
+                    {.durations_ = {{.duration_ = 1380.0, .k_ = 1}}},
+                }),
+                durations);
     }
 
     {
@@ -428,8 +477,13 @@ TEST(motis, one_to_many) {
               .useRoutedTransfers_ = true,
               .pedestrianProfile_ = api::PedestrianProfileEnum::WHEELCHAIR,
               .maxPostTransitTime_ = 420});  // Reachable from S3
-      EXPECT_EQ((std::vector<api::Duration>{
-                    {1260.0}, {1620.0}, {1260.0}, {1380.0}, {1740.0}}),
+      EXPECT_EQ((std::vector<api::ParetoSet>{
+                    {.durations_ = {{.duration_ = 1260.0, .k_ = 1}}},
+                    {.durations_ = {{.duration_ = 1620.0, .k_ = 1}}},
+                    {.durations_ = {{.duration_ = 1260.0, .k_ = 1}}},
+                    {.durations_ = {{.duration_ = 1380.0, .k_ = 1}}},
+                    {.durations_ = {{.duration_ = 1740.0, .k_ = 1}}},
+                }),
                 test_durations);
     }
 
@@ -448,12 +502,13 @@ TEST(motis, one_to_many) {
               .useRoutedTransfers_ = true,
               .pedestrianProfile_ = api::PedestrianProfileEnum::FOOT,
               .maxPostTransitTime_ = 240});  // Only reachable from S3
-      EXPECT_EQ((std::vector<api::Duration>{
-                    {720.0},
-                    {780.0},
-                    {720.0},
-                    {780.0},
-                    {960.0},  // FIXME Should start FFM_HAUPT_S => time > 1200
+      EXPECT_EQ((std::vector<api::ParetoSet>{
+                    {.durations_ = {{.duration_ = 720.0, .k_ = 1}}},
+                    {.durations_ = {{.duration_ = 780.0, .k_ = 1}}},
+                    {.durations_ = {{.duration_ = 720.0, .k_ = 1}}},
+                    {.durations_ = {{.duration_ = 780.0, .k_ = 1}}},
+                    // FIXME Should start FFM_HAUPT_S => time > 1200
+                    {.durations_ = {{.duration_ = 960.0, .k_ = 1}}},
                 }),
                 walk_durations);
     }
