@@ -589,6 +589,9 @@ data import(config const& c, fs::path const& data_path, bool const write) {
         }
 
         // re-open in write mode
+        // this needs to be done in two steps, because the files need to be
+        // closed first, before they can be re-opened in write mode (at least on
+        // Windows)
         d.shapes_ = {};
         d.shapes_ = std::make_unique<n::shapes_storage>(
             data_path, cista::mmap::protection::MODIFY, existing_shape_cache);

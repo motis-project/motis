@@ -109,11 +109,11 @@ TEST(motis, map_routes) {
       }
     }
 
-    for (auto route_index = 0U; route_index != res.routes_.size(); ++route_index) {
+    for (auto route_index = 0U; route_index != res.routes_.size();
+         ++route_index) {
       for (auto const& segment : res.routes_[route_index].segments_) {
-        EXPECT_THAT(
-            res.polylines_.at(segment.polyline_).routeIndexes_,
-            Contains(static_cast<std::int64_t>(route_index)));
+        EXPECT_THAT(res.polylines_.at(segment.polyline_).routeIndexes_,
+                    Contains(static_cast<std::int64_t>(route_index)));
       }
     }
   }
