@@ -561,10 +561,7 @@ data import(config const& c, fs::path const& data_path, bool const write) {
       "route_shapes",
       [&]() {
         return c.timetable_ && c.timetable_->with_shapes_ &&
-               c.timetable_->route_shapes_ &&
-               (c.timetable_->route_shapes_->missing_shapes_ ||
-                c.timetable_->route_shapes_->replace_shapes_) &&
-               c.use_street_routing();
+               c.timetable_->route_shapes_ && c.use_street_routing();
       },
       [&]() { return d.tt_ && d.w_ && d.l_; },
       [&]() {
@@ -613,14 +610,11 @@ data import(config const& c, fs::path const& data_path, bool const write) {
        n_version(),
        routed_shapes_version(),
        route_shapes_clasz_hash,
-       {"missing_shapes",
-        c.timetable_.value_or(config::timetable{})
-            .route_shapes_.value_or(config::timetable::route_shapes{})
-            .missing_shapes_},
-       {"replace_shapes",
-        c.timetable_.value_or(config::timetable{})
-            .route_shapes_.value_or(config::timetable::route_shapes{})
-            .replace_shapes_},
+       {"route_shapes_mode",
+        static_cast<std::uint64_t>(
+            c.timetable_.value_or(config::timetable{})
+                .route_shapes_.value_or(config::timetable::route_shapes{})
+                .mode_)},
        {"cache_reuse_old_osm_data",
         c.timetable_.value_or(config::timetable{})
             .route_shapes_.value_or(config::timetable::route_shapes{})

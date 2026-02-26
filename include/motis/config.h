@@ -98,10 +98,11 @@ struct config {
     };
 
     struct route_shapes {
+      enum class mode { all, missing };
+
       bool operator==(route_shapes const&) const = default;
-      bool missing_shapes_{false};
-      bool replace_shapes_{false};
-      bool cache_{false};
+      mode mode_{mode::all};
+      bool cache_{true};
       bool cache_reuse_old_osm_data_{false};
       std::size_t cache_db_size_{sizeof(void*) >= 8
                                      ? 256ULL * 1024ULL * 1024ULL * 1024ULL

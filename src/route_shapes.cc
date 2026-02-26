@@ -430,7 +430,7 @@ void route_shapes(osr::ways const& w,
 
     auto const transports = tt.route_transport_ranges_[r];
 
-    if (!conf.replace_shapes_) {
+    if (conf.mode_ == config::timetable::route_shapes::mode::missing) {
       auto existing_shapes = true;
       for (auto const transport_idx : transports) {
         auto const frun = n::rt::frun{
