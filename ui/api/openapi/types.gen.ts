@@ -131,9 +131,24 @@ export type Duration = {
      */
     duration?: number;
     /**
+     * k is the smallest number, for which a journey with the shortest duration and at most k-1 transfers exist. You can think of k as the number of connections used.
+     *
+     */
+    k?: number;
+    /**
      * distance in meters if a path was found and distance computation was requested, otherwise missing
      */
     distance?: number;
+};
+
+/**
+ * Object containing duration if a path was found or none if no path was found
+ */
+export type ParetoSet = {
+    /**
+     * Pareto set for earliest arrival / latest departure, depending on arriveBy.
+     */
+    durations: Array<Duration>;
 };
 
 /**
@@ -2570,7 +2585,7 @@ export type OneToManyIntermodalData = {
     };
 };
 
-export type OneToManyIntermodalResponse = (Array<Duration>);
+export type OneToManyIntermodalResponse = (Array<ParetoSet>);
 
 export type OneToManyIntermodalError = (Error);
 
@@ -2578,7 +2593,7 @@ export type OneToManyIntermodalPostData = {
     body: OneToManyIntermodalParams;
 };
 
-export type OneToManyIntermodalPostResponse = (Array<Duration>);
+export type OneToManyIntermodalPostResponse = (Array<ParetoSet>);
 
 export type OneToManyIntermodalPostError = (Error);
 
