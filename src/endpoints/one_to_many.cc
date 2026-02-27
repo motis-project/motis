@@ -23,7 +23,6 @@ namespace motis::ep {
 namespace n = nigiri;
 
 constexpr auto const kInfinity = std::numeric_limits<double>::infinity();
-constexpr auto const kVias = n::via_offset_t{0U};
 
 api::oneToMany_response one_to_many_direct(
     config const& config,
@@ -80,10 +79,7 @@ api::oneToMany_response one_to_many_direct(
   });
 }
 
-double delta_to_seconds(n::delta_t const d) { return std::abs(60.0 * d); }
-
 double duration_to_seconds(n::duration_t const d) { return 60 * d.count(); }
-double minutes_to_seconds(auto const d) { return 60 * d; }
 
 n::day_idx_t make_base(n::timetable const& tt, n::unixtime_t start_time) {
   return n::day_idx_t{std::chrono::duration_cast<date::days>(
@@ -191,57 +187,44 @@ api::oneToManyIntermodal_response add_transit_durations(
   }
 
   auto pareto_sets = std::vector<api::ParetoSet>{};
-  auto const base =
-      ep.tt_.internal_interval_days().from_ +
-      static_cast<int>(to_idx(make_base(ep.tt_, time))) * date::days{1};
-  auto const& round_times = state.template get_round_times<kVias>();
 
+  auto const dir = arrive_by ? n::direction::kBackward : n::direction::kForward;
+  auto totals = n::vector<double>{};
   for (auto const [i, l] : utl::enumerate(many)) {
-    // auto& pareto_set = pareto_sets.emplace_back(api::ParetoSet{
-    //     .durations_ = std::vector{std::move(direct_durations[i])}});
-    // pareto_set.durations_.emplace_back(std::move(direct_durations[i]));
-    auto& pareto_set = pareto_sets.emplace_back(api::ParetoSet{});
-    auto& durations = pareto_set.durations_;
-    if (direct_durations[i].duration_.has_value()) {
-      direct_durations[i].k_ = 0U;
-      durations.push_back(std::move(direct_durations[i]));
-    }
-    auto best = kInfinity;
-    auto all_best = kInfinity;
+    totals.clear();
+    totals.resize(q.max_transfers_, kInfinity);
     auto const offsets = r.get_offsets(
         nullptr, l,
         arrive_by ? osr::direction::kForward : osr::direction::kBackward,
         many_modes, std::nullopt, std::nullopt, std::nullopt, std::nullopt,
         false, osr_params, pedestrian_profile, elevation_costs,
         many_max_seconds, max_matching_distance, gbfs_rd, prepare_stats);
-
-    // for (auto const k :
-    // std::views::iota(std::uint8_t{0U}, q.max_transfers_ + 2U)) {
-    constexpr auto const kDirectTransitK = 1U;
-    for (auto k = kDirectTransitK; k < q.max_transfers_ + 2U; ++k) {
-      for (auto const offset : offsets) {
-        auto const loc = offset.target();
-        if (reachable.test(to_idx(loc))) {
-          if (round_times[k][to_idx(loc)][kVias] != unreachable) {
-            auto const end_time =
-                n::delta_to_unix(base, round_times[k][to_idx(loc)][0]);
-            auto const routing_duration = minutes_to_seconds(std::abs(
-                (end_time - time).count()));  // TODO Pass end_time - time
-            auto const total =
-                routing_duration + duration_to_seconds(offset.duration());
-            if (total < best) {
-              best = total;
-            }
-          }
-        }
-      }
-      if (best < all_best) {
-        durations.push_back({.duration_ = best, .k_ = k});
-        all_best = best;
+    for (auto const offset : offsets) {
+      auto const loc = offset.target();
+      if (reachable.test(to_idx(loc))) {
+        auto const base = duration_to_seconds(offset.duration());
+        n::routing::for_each_one_to_all_round_time(
+            ep.tt_, state, dir, loc, time, q.max_transfers_,
+            [&](std::uint8_t const k, n::duration_t const d) {
+              if (k != std::uint8_t{0U}) {
+                auto const total = base + duration_to_seconds(d);
+                totals[k - 1U] = std::min(totals[k - 1], total);
+              }
+            });
       }
     }
+    auto s = api::ParetoSet{};
+    if (direct_durations[i].duration_.has_value()) {
+      direct_durations[i].k_ = 0U;
+      s.durations_.push_back(std::move(direct_durations[i]));
+    }
+    for (auto const [j, d] : utl::enumerate(totals)) {
+      if (d < kInfinity) {
+        s.durations_.emplace_back(d, j + 1);
+      }
+    }
+    pareto_sets.emplace_back(std::move(s));
   }
-
   return pareto_sets;
 }
 
@@ -287,11 +270,6 @@ api::oneToManyIntermodal_response run_one_to_many_intermodal(
       query.arriveBy_ ? osr::direction::kBackward : osr::direction::kForward,
       osr_params, query.pedestrianProfile_, query.elevationCosts_,
       ep.elevations_, false);
-  // for (auto& duration : durations) {
-  //   if (duration.duration_.has_value()) {
-  //     duration.k_ = 0U;
-  //   }
-  // }
 
   return add_transit_durations(
       std::move(durations), ep, query, one, many, time, query.arriveBy_,
