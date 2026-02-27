@@ -1377,6 +1377,18 @@ paths:
             default: 1800
             minimum: 0
 
+        - name: withDistance
+          in: query
+          required: false
+          description: |
+            Optional. Default is `false`.
+            If true, the response includes the distance in meters
+            for each path. This requires path reconstruction and
+            is slower than duration-only queries.
+          schema:
+            type: boolean
+            default: false
+
         - name: requireBikeTransport
           in: query
           required: false
@@ -4638,6 +4650,13 @@ components:
           type: integer
           default: 1800
           minimum: 0
+        withDistance:
+          description: |
+            If true, the response includes the distance in meters
+            for each path. This requires path reconstruction and
+            may be slower than duration-only queries.
+          type: boolean
+          default: false
         requireBikeTransport:
           description: |
             Optional. Default is `false`.

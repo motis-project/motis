@@ -2050,6 +2050,14 @@ Is limited by server config variable \`street_routing_max_direct_seconds\`.
             default: 1800,
             minimum: 0
         },
+        withDistance: {
+            description: `If true, the response includes the distance in meters
+for each path. This requires path reconstruction and
+may be slower than duration-only queries.
+`,
+            type: 'boolean',
+            default: false
+        },
         requireBikeTransport: {
             description: `Optional. Default is \`false\`.
 

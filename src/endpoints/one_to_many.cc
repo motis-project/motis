@@ -269,7 +269,7 @@ api::oneToManyIntermodal_response run_one_to_many_intermodal(
       query.maxMatchingDistance_,
       query.arriveBy_ ? osr::direction::kBackward : osr::direction::kForward,
       osr_params, query.pedestrianProfile_, query.elevationCosts_,
-      ep.elevations_, false);
+      ep.elevations_, query.withDistance_);
 
   return add_transit_durations(
       std::move(durations), ep, query, one, many, time, query.arriveBy_,

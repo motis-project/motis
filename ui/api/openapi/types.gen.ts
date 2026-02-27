@@ -1649,6 +1649,13 @@ export type OneToManyIntermodalParams = {
      */
     maxDirectTime?: number;
     /**
+     * If true, the response includes the distance in meters
+     * for each path. This requires path reconstruction and
+     * may be slower than duration-only queries.
+     *
+     */
+    withDistance?: boolean;
+    /**
      * Optional. Default is `false`.
      *
      * If set to `true`, all used transit trips are required to allow bike carriage.
@@ -2612,6 +2619,14 @@ export type OneToManyIntermodalData = {
          *
          */
         useRoutedTransfers?: boolean;
+        /**
+         * Optional. Default is `false`.
+         * If true, the response includes the distance in meters
+         * for each path. This requires path reconstruction and
+         * is slower than duration-only queries.
+         *
+         */
+        withDistance?: boolean;
     };
 };
 

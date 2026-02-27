@@ -293,6 +293,7 @@ TEST(motis, one_to_many) {
         "&maxPostTransitTime=240"
         "&pedestrianProfile=WHEELCHAIR"
         "&useRoutedTransfers=true"
+        "&withDistance=true"
         "&arriveBy=true");
 
     EXPECT_EQ((std::vector<api::ParetoSet>{
@@ -300,13 +301,19 @@ TEST(motis, one_to_many) {
                   {.durations_ = {}},  // Not reachable from de:6412:10:6:1
                   {.durations_ =
                        {// No valid post transit
-                        {.duration_ = 333.0, .k_ = 0}}},
+                        {.duration_ = 333.0,
+                         .k_ = 0,
+                         .distance_ = 124.07306979195344}}},
                   {.durations_ =
-                       {// Direct connections allowed
-                        {.duration_ = 517.0, .k_ = 0}}},
+                       {// Direct connection is allowed
+                        {.duration_ = 517.0,
+                         .k_ = 0,
+                         .distance_ = 271.755535494779}}},
                   {.durations_ =
                        {// Reachable after updating maxDirectTime
-                        {.duration_ = 771.0, .k_ = 0}}},
+                        {.duration_ = 771.0,
+                         .k_ = 0,
+                         .distance_ = 475.96670910943755}}},
               }),
               durations);
   }
@@ -351,12 +358,19 @@ TEST(motis, one_to_many) {
           .arriveBy_ = true,
           .cyclingSpeed_ = 2.2,
           .postTransitModes_ = {api::ModeEnum::BIKE},
-          .directMode_ = api::ModeEnum::BIKE});
+          .directMode_ = api::ModeEnum::BIKE,
+          .withDistance_ = true});
 
       EXPECT_EQ((std::vector<api::ParetoSet>{
-                    {.durations_ = {{.duration_ = 228.0, .k_ = 0}}},
-                    {.durations_ = {{.duration_ = 335.0, .k_ = 0}}},
-                    {.durations_ = {{.duration_ = 335.0, .k_ = 0}}},
+                    {.durations_ = {{.duration_ = 228.0,
+                                     .k_ = 0,
+                                     .distance_ = 341.31184727006627}}},
+                    {.durations_ = {{.duration_ = 335.0,
+                                     .k_ = 0,
+                                     .distance_ = 502.09599237420093}}},
+                    {.durations_ = {{.duration_ = 335.0,
+                                     .k_ = 0,
+                                     .distance_ = 502.09599237419206}}},
                     {.durations_ = {{.duration_ = 1920.0, .k_ = 1}}},
                 }),
                 durations);
