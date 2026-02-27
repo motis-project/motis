@@ -360,21 +360,25 @@ timetable:
   # with_shapes must be set to true to enable shapes support, otherwise no shapes will be loaded or computed
   with_shapes: true
   route_shapes: # all these options are optional
-    # enable this to compute shapes for routes that don't have shapes in the dataset (default = false)
-    missing_shapes: true
-    # if replace_shapes is enabled, all shapes will be recomputed based on OSM data, even if shapes are already present in the dataset (default = false)
-    replace_shapes: true
+    # available modes:
+    # - all: route shapes for all routes, replace existing shapes from the timetable
+    # - missing: only compute shapes for those routes that don't have existing shapes from the timetable
+    mode: all
     # routing for specific clasz types can be disabled (default = all enabled)
     # currently long distance street routing is slow, so in this example
     # we disable routing shapes for COACH
+    # (if there are shapes for the disabled clasz types in the dataset, these will still be used)
     clasz:
       COACH: false
     # disable shape computation for routes with more than X stops (default = no limit)
+    # (if there are shapes for routes with more than X stops in the dataset, these will still be used)
     max_stops: 100
     # limit the number of threads used for shape computation (default = number of hardware threads)
     n_threads: 6
     # cache and reuse computed shapes for later imports (dataset updates)
     cache: true
+    # if you want to use cached shapes even if the osm file has changed since the last import, set this to true (default = false)
+    cache_reuse_old_osm_data: false
 
     # for debugging purposes, debug information can be written to files
     # which can be loaded into the debug ui (see osr project)
@@ -401,7 +405,7 @@ file and the routed shapes data are then reused during import.
 Note that old routes are never removed from the routed shapes data files, i.e.,
 these files grow with every import (unless there are no new routes, in which
 case the size will stay the same).
-It is therefore recommended to monitor the size of the "routed_shapes_*" files
+It is therefore recommended to monitor the size of the "routed_shapes\*" files
 in the data directory.
 They can safely be deleted before an import, which will cause all shapes that
 are needed for the current datasets to be routed again.

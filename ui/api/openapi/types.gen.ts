@@ -1701,9 +1701,33 @@ export type Error = {
  * Route segment between two stops to show a route on a map
  */
 export type RouteSegment = {
-    from: Place;
-    to: Place;
+    /**
+     * Index into the top-level route stops array
+     */
+    from: number;
+    /**
+     * Index into the top-level route stops array
+     */
+    to: number;
+    /**
+     * Index into the top-level route polylines array
+     */
+    polyline: number;
+};
+
+/**
+ * Shared polyline used by one or more route segments
+ */
+export type RoutePolyline = {
     polyline: EncodedPolyline;
+    /**
+     * Unique route colors of routes containing this segment
+     */
+    colors: Array<(string)>;
+    /**
+     * Indexes into the top-level routes array for routes containing this segment
+     */
+    routeIndexes: Array<(number)>;
 };
 
 export type RouteColor = {
@@ -3141,6 +3165,8 @@ export type RoutesData = {
 
 export type RoutesResponse = ({
     routes: Array<RouteInfo>;
+    polylines: Array<RoutePolyline>;
+    stops: Array<Place>;
     /**
      * Indicates whether some routes were filtered out due to
      * the zoom level.
