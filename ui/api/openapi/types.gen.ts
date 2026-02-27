@@ -133,6 +133,12 @@ export type Duration = {
     /**
      * k is the smallest number, for which a journey with the shortest duration and at most k-1 transfers exist. You can think of k as the number of connections used.
      *
+     * In more detail:
+     *
+     * k=0: No transit connection, i.e. street routing only
+     * k=1: Direct transit connection
+     * k=2: Connection with 1 transfer
+     *
      */
     k?: number;
     /**
