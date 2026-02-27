@@ -213,17 +213,17 @@ api::oneToManyIntermodal_response add_transit_durations(
             });
       }
     }
-    auto s = api::ParetoSet{};
+    auto durations = std::vector<api::Duration>{};
     if (direct_durations[i].duration_.has_value()) {
       direct_durations[i].k_ = 0U;
-      s.durations_.push_back(std::move(direct_durations[i]));
+      durations.push_back(std::move(direct_durations[i]));
     }
     for (auto const [j, d] : utl::enumerate(totals)) {
       if (d < kInfinity) {
-        s.durations_.emplace_back(d, j + 1);
+        durations.emplace_back(d, j + 1);
       }
     }
-    pareto_sets.emplace_back(std::move(s));
+    pareto_sets.emplace_back(std::move(durations));
   }
   return pareto_sets;
 }
