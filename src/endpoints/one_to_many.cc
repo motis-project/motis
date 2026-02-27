@@ -211,9 +211,11 @@ api::oneToManyIntermodal_response add_transit_durations(
       direct_durations[i].k_ = 0U;
       durations.push_back(std::move(direct_durations[i]));
     }
+    auto max = kInfinity;
     for (auto const [j, d] : utl::enumerate(totals)) {
-      if (d < kInfinity) {
+      if (d < kInfinity && d < max) {
         durations.emplace_back(d, j + 1);
+        max = d;
       }
     }
     pareto_sets.emplace_back(std::move(durations));

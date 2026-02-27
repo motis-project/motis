@@ -547,26 +547,26 @@ TEST(motis, one_to_many) {
       // With routed transfers + distances
       auto const durations = one_to_many_post(api::OneToManyIntermodalParams{
           .one_ = "49.8724891,8.6281994",
-          .many_ = {"49.875273,8.6277435",  // near Tram_1
-                    "49.8750407,8.6312172",  // near Tram_2
-                    "49.87238272317498,8.632456723783946"},  // near Tram_3
+          .many_ = {"49.875345,8.6279307",  // near Tram_1
+                    "49.874995,8.6313925",  // near Tram_2
+                    "49.871561,8.6320181"},  // near Tram_3
           .time_ = parse_time("2019-05-01T00:55:00.000+02:00"),
           .useRoutedTransfers_ = true,
           .withDistance_ = true});
 
       EXPECT_EQ((std::vector<api::ParetoSet>{
-                    {.durations_ = {{.duration_ = 316.0,
+                    {.durations_ = {{.duration_ = 425.0,
                                      .k_ = 0,
-                                     .distance_ = 318.0822423983278},
-                                    {.duration_ = 1980.0, .k_ = 1}}},
-                    {.durations_ = {{.duration_ = 522.0,
+                                     .distance_ = 337.9999990112831},
+                                    {.duration_ = 1320.0, .k_ = 1}}},
+                    {.durations_ = {{.duration_ = 529.0,
                                      .k_ = 0,
-                                     .distance_ = 565.9166480120739},
+                                     .distance_ = 575.0075374115772},
+                                    {.duration_ = 1680.0, .k_ = 1}}},
+                    {.durations_ = {{.duration_ = 939.0,
+                                     .k_ = 0,
+                                     .distance_ = 1068.5881443753221},
                                     {.duration_ = 1740.0, .k_ = 1}}},
-                    {.durations_ = {{.duration_ = 910.0,
-                                     .k_ = 0,
-                                     .distance_ = 103.37157690758},
-                                    {.duration_ = 1560.0, .k_ = 1}}},
                 }),
                 durations);
     }
