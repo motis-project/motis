@@ -47,6 +47,11 @@ PAUL1,Römer/Paulskirche,50.110979,8.682276,0,,
 PAUL2,Römer/Paulskirche,50.110828,8.681587,0,,
 FFM_C,FFM C,50.107812,8.664628,0,,
 FFM_B,FFM B,50.107519,8.664775,0,,
+DA_Bus_1,DA Hbf,49.8724891,8.6281994
+DA_Bus_2,DA Hbf,49.8755778,8.6240518
+DA_Tram_1,DA Hbf,49.875345,8.6279307
+DA_Tram_2,DA Hbf,49.874995,8.6313925
+DA_Tram_3,DA Hbf,49.871561,8.6320181
 
 # routes.txt
 route_id,agency_id,route_short_name,route_long_name,route_desc,route_type
@@ -55,6 +60,8 @@ U4,DB,U4,,,402
 ICE,DB,ICE,,,101
 11_1,DB,11,,,0
 11_2,DB,11,,,0
+B1,DB,B1,,3
+T1,DB,T1,,0
 
 # trips.txt
 route_id,service_id,trip_id,trip_headsign,block_id
@@ -65,6 +72,8 @@ ICE,S1,ICE,,
 11_1,S1,11_1_2,,
 11_2,S1,11_2_1,,
 11_2,S1,11_2_2,,
+B1,S1,B1,Bus 1,
+T1,S1,T1,Tram 1,
 
 # stop_times.txt
 trip_id,arrival_time,departure_time,stop_id,stop_sequence,pickup_type,drop_off_type
@@ -82,6 +91,11 @@ ICE,00:45:00,00:45:00,FFM_10,1,0,0
 11_2_1,12:15:00,12:15:00,PAUL2,1,0,0
 11_2_2,12:20:00,12:20:00,FFM_B,0,0,0
 11_2_2,12:30:00,12:30:00,PAUL2,1,0,0
+B1,01:00:00,01:00:00,DA_Bus_1,1
+B1,01:10:00,01:10:00,DA_Bus_2,2
+T1,01:14:00,01:14:00,DA_Tram_1,1
+T1,01:15:00,01:15:00,DA_Tram_2,2
+T1,01:16:00,01:16:00,DA_Tram_3,3
 
 # calendar_dates.txt
 service_id,date,exception_type
@@ -223,7 +237,7 @@ TEST(motis, one_to_many) {
             {.durations_ = {{.duration_ = 900.0, .k_ = 1}}},
             {.durations_ = {{.duration_ = 1020.0, .k_ = 1}}},
             {.durations_ = {}},
-            {.durations_ = {{.duration_ = 3420.0, .k_ = 2}}},
+            {.durations_ = {{.duration_ = 3360.0, .k_ = 2}}},
             {.durations_ = {}},
         }),
         durations);
@@ -525,6 +539,59 @@ TEST(motis, one_to_many) {
                     {.durations_ = {{.duration_ = 960.0, .k_ = 1}}},
                 }),
                 walk_durations);
+    }
+  }
+  // Pareto sets with many durations
+  {
+    {
+      // With routed transfers + distances
+      auto const durations = one_to_many_post(api::OneToManyIntermodalParams{
+          .one_ = "49.8724891,8.6281994",
+          .many_ = {"49.875273,8.6277435",  // near Tram_1
+                    "49.8750407,8.6312172",  // near Tram_2
+                    "49.87238272317498,8.632456723783946"},  // near Tram_3
+          .time_ = parse_time("2019-05-01T00:55:00.000+02:00"),
+          .useRoutedTransfers_ = true,
+          .withDistance_ = true});
+
+      EXPECT_EQ((std::vector<api::ParetoSet>{
+                    {.durations_ = {{.duration_ = 316.0,
+                                     .k_ = 0,
+                                     .distance_ = 318.0822423983278},
+                                    {.duration_ = 1980.0, .k_ = 1}}},
+                    {.durations_ = {{.duration_ = 522.0,
+                                     .k_ = 0,
+                                     .distance_ = 565.9166480120739},
+                                    {.duration_ = 1740.0, .k_ = 1}}},
+                    {.durations_ = {{.duration_ = 910.0,
+                                     .k_ = 0,
+                                     .distance_ = 103.37157690758},
+                                    {.duration_ = 1560.0, .k_ = 1}}},
+                }),
+                durations);
+    }
+    {
+      // Long walking paths + fast connctions => multiple durations
+      // Currently: Long transfer times, so that transit is faster
+      // After bug fix: Slow walking speed, so that transit is faster
+      // might require moving stops (B1->T1, T1->T2, T2 delete) with paths:
+      // Bus1 -> Tram3, Bus1 -> Bus2 -> Tram3, Bus1 -> Bus2 -> Tram1/2 -> Tram3
+      auto const durations = one_to_many_post(api::OneToManyIntermodalParams{
+          .one_ = "49.8724891,8.6281994",
+          .many_ = {"49.8755778,8.6240518",  // DA_Bus_2
+                    "49.875345,8.6279307",  // DA_Tram_1
+                    "49.871561,8.6320181"},  // DA_Tram_3
+          .time_ = parse_time("2019-05-01T00:55:00.000+02:00"),
+          .maxPreTransitTime_ = 300});  // Prevent any pre transit to Tram_x
+
+      EXPECT_EQ((std::vector<api::ParetoSet>{
+                    {.durations_ = {{.duration_ = 1080.0, .k_ = 1}}},
+                    {.durations_ = {{.duration_ = 425.0, .k_ = 0},
+                                    {.duration_ = 1200.0, .k_ = 1}}},
+                    {.durations_ = {{.duration_ = 939.0, .k_ = 0},
+                                    {.duration_ = 1500.0, .k_ = 1},
+                                    {.duration_ = 1440.0, .k_ = 2}}}}),
+                durations);
     }
   }
 }
