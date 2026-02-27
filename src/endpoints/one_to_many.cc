@@ -81,13 +81,6 @@ api::oneToMany_response one_to_many_direct(
 
 double duration_to_seconds(n::duration_t const d) { return 60 * d.count(); }
 
-n::day_idx_t make_base(n::timetable const& tt, n::unixtime_t start_time) {
-  return n::day_idx_t{std::chrono::duration_cast<date::days>(
-                          std::chrono::round<std::chrono::days>(start_time) -
-                          tt.internal_interval().from_)
-                          .count()};
-}
-
 template <typename Endpoint, typename Query>
 api::oneToManyIntermodal_response add_transit_durations(
     api::oneToMany_response&& direct_durations,
