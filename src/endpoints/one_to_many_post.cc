@@ -1,16 +1,27 @@
 #include "motis/endpoints/one_to_many_post.h"
 
+#include <string_view>
+
+#include "utl/to_vec.h"
+
 #include "motis/endpoints/one_to_many.h"
+#include "motis/place.h"
 
 namespace motis::ep {
 
 api::oneToManyPost_response one_to_many_post::operator()(
     api::OneToManyParams const& query) const {
-  auto const max_many = config_.get_limits().onetomany_max_many_;
-  auto const max_travel_time_limit =
-      config_.get_limits().street_routing_max_direct_seconds_;
-  return one_to_many_handle_request(query, w_, l_, elevations_, max_many,
-                                    max_travel_time_limit);
+  return one_to_many_handle_request(config_, query, w_, l_, elevations_);
+}
+
+api::oneToManyIntermodalPost_response one_to_many_intermodal_post::operator()(
+    api::OneToManyIntermodalParams const& query) const {
+  auto const one = get_place(&tt_, &tags_, query.one_);
+  auto const many =
+      utl::to_vec(query.many_, [&](std::string_view place) -> place_t {
+        return get_place(&tt_, &tags_, place);
+      });
+  return run_one_to_many_intermodal(*this, query, one, many);
 }
 
 }  // namespace motis::ep

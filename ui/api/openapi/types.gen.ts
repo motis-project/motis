@@ -1427,6 +1427,222 @@ export type OneToManyParams = {
     withDistance?: boolean;
 };
 
+export type OneToManyIntermodalParams = {
+    /**
+     * \`latitude,longitude[,level]\` tuple with
+     * - latitude and longitude in degrees
+     * - (optional) level: the OSM level (default: 0)
+     *
+     * OR
+     *
+     * stop id
+     *
+     */
+    one: string;
+    /**
+     * array of:
+     *
+     * \`latitude,longitude[,level]\` tuple with
+     * - latitude and longitude in degrees
+     * - (optional) level: the OSM level (default: 0)
+     *
+     * OR
+     *
+     * stop id
+     *
+     * The number of accepted locations is limited by server config variable `onetomany_max_many`.
+     *
+     */
+    many: Array<(string)>;
+    /**
+     * Optional. Defaults to the current time.
+     *
+     * Departure time ($arriveBy=false) / arrival date ($arriveBy=true),
+     *
+     */
+    time?: string;
+    /**
+     * The maximum travel time in minutes.
+     * If not provided, the routing uses the value
+     * hardcoded in the server which is usually quite high.
+     *
+     * *Warning*: Use with care. Setting this too low can lead to
+     * optimal (e.g. the least transfers) journeys not being found.
+     * If this value is too low to reach the destination at all,
+     * it can lead to slow routing performance.
+     *
+     */
+    maxTravelTime?: number;
+    /**
+     * maximum matching distance in meters to match geo coordinates to the street network
+     */
+    maxMatchingDistance?: number;
+    /**
+     * Optional. Defaults to false, i.e. one to many search
+     *
+     * true = many to one
+     * false = one to many
+     *
+     */
+    arriveBy?: boolean;
+    /**
+     * The maximum number of allowed transfers (i.e. interchanges between transit legs,
+     * pre- and postTransit do not count as transfers).
+     * `maxTransfers=0` searches for direct transit connections without any transfers.
+     * If you want to search only for non-transit connections (`FOOT`, `CAR`, etc.),
+     * send an empty `transitModes` parameter instead.
+     *
+     * If not provided, the routing uses the server-side default value
+     * which is hardcoded and very high to cover all use cases.
+     *
+     * *Warning*: Use with care. Setting this too low can lead to
+     * optimal (e.g. the fastest) journeys not being found.
+     * If this value is too low to reach the destination at all,
+     * it can lead to slow routing performance.
+     *
+     */
+    maxTransfers?: number;
+    /**
+     * Optional. Default is 0 minutes.
+     *
+     * Minimum transfer time for each transfer in minutes.
+     *
+     */
+    minTransferTime?: number;
+    /**
+     * Optional. Default is 0 minutes.
+     *
+     * Additional transfer time reserved for each transfer in minutes.
+     *
+     */
+    additionalTransferTime?: number;
+    /**
+     * Optional. Default is 1.0
+     *
+     * Factor to multiply minimum required transfer times with.
+     * Values smaller than 1.0 are not supported.
+     *
+     */
+    transferTimeFactor?: number;
+    /**
+     * Optional. Default is `false`.
+     *
+     * Whether to use transfers routed on OpenStreetMap data.
+     *
+     */
+    useRoutedTransfers?: boolean;
+    /**
+     * Optional. Default is `FOOT`.
+     *
+     * Accessibility profile to use for pedestrian routing in transfers
+     * between transit connections and the first and last mile respectively.
+     *
+     */
+    pedestrianProfile?: PedestrianProfile;
+    /**
+     * Optional
+     *
+     * Average speed for pedestrian routing.
+     *
+     */
+    pedestrianSpeed?: PedestrianSpeed;
+    /**
+     * Optional
+     *
+     * Average speed for bike routing.
+     *
+     */
+    cyclingSpeed?: CyclingSpeed;
+    /**
+     * Optional. Default is `NONE`.
+     *
+     * Set an elevation cost profile, to penalize routes with incline.
+     * - `NONE`: No additional costs for elevations. This is the default behavior
+     * - `LOW`: Add a low cost for increase in elevation and incline along the way. This will prefer routes with less ascent, if small detours are required.
+     * - `HIGH`: Add a high cost for increase in elevation and incline along the way. This will prefer routes with less ascent, if larger detours are required.
+     *
+     * As using an elevation costs profile will increase the travel duration,
+     * routing through steep terrain may exceed the maximal allowed duration,
+     * causing a location to appear unreachable.
+     * Increasing the maximum travel time for these segments may resolve this issue.
+     *
+     * The profile is used for routing on both the first and last mile.
+     *
+     * Elevation cost profiles are currently used by following street modes:
+     * - `BIKE`
+     *
+     */
+    elevationCosts?: ElevationCosts;
+    /**
+     * Optional. Default is `TRANSIT` which allows all transit modes (no restriction).
+     * Allowed modes for the transit part. If empty, no transit connections will be computed.
+     * For example, this can be used to allow only `SUBURBAN,SUBWAY,TRAM`.
+     *
+     */
+    transitModes?: Array<Mode>;
+    /**
+     * Optional. Default is `WALK`. Does not apply to direct connections (see `directMode`).
+     *
+     * A list of modes that are allowed to be used for the first mile, i.e. from the coordinates to the first transit stop. Example: `WALK,BIKE_SHARING`.
+     *
+     */
+    preTransitModes?: Array<Mode>;
+    /**
+     * Optional. Default is `WALK`. Does not apply to direct connections (see `directMode`).
+     *
+     * A list of modes that are allowed to be used for the last mile, i.e. from the last transit stop to the target coordinates. Example: `WALK,BIKE_SHARING`.
+     *
+     */
+    postTransitModes?: Array<Mode>;
+    /**
+     * Default is `WALK` which will compute walking routes as direct connections.
+     *
+     * Mode used for direction connections from start to destination without using transit.
+     *
+     * Currently supported non-transit modes: \`WALK\`, \`BIKE\`, \`CAR\`
+     *
+     */
+    directMode?: Mode;
+    /**
+     * Optional. Default is 15min which is `900`.
+     * Maximum time in seconds for the first street leg.
+     * Is limited by server config variable `street_routing_max_prepost_transit_seconds`.
+     *
+     */
+    maxPreTransitTime?: number;
+    /**
+     * Optional. Default is 15min which is `900`.
+     * Maximum time in seconds for the last street leg.
+     * Is limited by server config variable `street_routing_max_prepost_transit_seconds`.
+     *
+     */
+    maxPostTransitTime?: number;
+    /**
+     * Optional. Default is 30min which is `1800`.
+     * Maximum time in seconds for direct connections.
+     *
+     * If a value smaller than either `maxPreTransitTime` or
+     * `maxPostTransitTime` is used, their maximum is set instead.
+     * Is limited by server config variable `street_routing_max_direct_seconds`.
+     *
+     */
+    maxDirectTime?: number;
+    /**
+     * Optional. Default is `false`.
+     *
+     * If set to `true`, all used transit trips are required to allow bike carriage.
+     *
+     */
+    requireBikeTransport?: boolean;
+    /**
+     * Optional. Default is `false`.
+     *
+     * If set to `true`, all used transit trips are required to allow car carriage.
+     *
+     */
+    requireCarTransport?: boolean;
+};
+
 export type ServerConfig = {
     /**
      * true if elevation is loaded
@@ -1470,9 +1686,33 @@ export type Error = {
  * Route segment between two stops to show a route on a map
  */
 export type RouteSegment = {
-    from: Place;
-    to: Place;
+    /**
+     * Index into the top-level route stops array
+     */
+    from: number;
+    /**
+     * Index into the top-level route stops array
+     */
+    to: number;
+    /**
+     * Index into the top-level route polylines array
+     */
+    polyline: number;
+};
+
+/**
+ * Shared polyline used by one or more route segments
+ */
+export type RoutePolyline = {
     polyline: EncodedPolyline;
+    /**
+     * Unique route colors of routes containing this segment
+     */
+    colors: Array<(string)>;
+    /**
+     * Indexes into the top-level routes array for routes containing this segment
+     */
+    routeIndexes: Array<(number)>;
 };
 
 export type RouteColor = {
@@ -2151,6 +2391,221 @@ export type OneToManyPostResponse = (Array<Duration>);
 
 export type OneToManyPostError = (Error);
 
+export type OneToManyIntermodalData = {
+    query: {
+        /**
+         * Optional. Default is 0 minutes.
+         *
+         * Additional transfer time reserved for each transfer in minutes.
+         *
+         */
+        additionalTransferTime?: number;
+        /**
+         * Optional. Defaults to false, i.e. one to many search
+         *
+         * true = many to one
+         * false = one to many
+         *
+         */
+        arriveBy?: boolean;
+        /**
+         * Optional
+         *
+         * Average speed for bike routing.
+         *
+         */
+        cyclingSpeed?: CyclingSpeed;
+        /**
+         * Default is `WALK` which will compute walking routes as direct connections.
+         *
+         * Mode used for direction connections from start to destination without using transit.
+         *
+         * Currently supported non-transit modes: \`WALK\`, \`BIKE\`, \`CAR\`
+         *
+         */
+        directMode?: Mode;
+        /**
+         * Optional. Default is `NONE`.
+         *
+         * Set an elevation cost profile, to penalize routes with incline.
+         * - `NONE`: No additional costs for elevations. This is the default behavior
+         * - `LOW`: Add a low cost for increase in elevation and incline along the way. This will prefer routes with less ascent, if small detours are required.
+         * - `HIGH`: Add a high cost for increase in elevation and incline along the way. This will prefer routes with less ascent, if larger detours are required.
+         *
+         * As using an elevation costs profile will increase the travel duration,
+         * routing through steep terrain may exceed the maximal allowed duration,
+         * causing a location to appear unreachable.
+         * Increasing the maximum travel time for these segments may resolve this issue.
+         *
+         * The profile is used for routing on both the first and last mile.
+         *
+         * Elevation cost profiles are currently used by following street modes:
+         * - `BIKE`
+         *
+         */
+        elevationCosts?: ElevationCosts;
+        /**
+         * geo locations as latitude;longitude,latitude;longitude,...
+         *
+         * The number of accepted locations is limited by server config variable `onetomany_max_many`.
+         *
+         */
+        many: Array<(string)>;
+        /**
+         * Optional. Default is 30min which is `1800`.
+         * Maximum time in seconds for direct connections.
+         *
+         * If a value smaller than either `maxPreTransitTime` or
+         * `maxPostTransitTime` is used, their maximum is set instead.
+         * Is limited by server config variable `street_routing_max_direct_seconds`.
+         *
+         */
+        maxDirectTime?: number;
+        /**
+         * maximum matching distance in meters to match geo coordinates to the street network
+         */
+        maxMatchingDistance?: number;
+        /**
+         * Optional. Default is 15min which is `900`.
+         * Maximum time in seconds for the last street leg.
+         * Is limited by server config variable `street_routing_max_prepost_transit_seconds`.
+         *
+         */
+        maxPostTransitTime?: number;
+        /**
+         * Optional. Default is 15min which is `900`.
+         * Maximum time in seconds for the first street leg.
+         * Is limited by server config variable `street_routing_max_prepost_transit_seconds`.
+         *
+         */
+        maxPreTransitTime?: number;
+        /**
+         * The maximum number of allowed transfers (i.e. interchanges between transit legs,
+         * pre- and postTransit do not count as transfers).
+         * `maxTransfers=0` searches for direct transit connections without any transfers.
+         * If you want to search only for non-transit connections (`FOOT`, `CAR`, etc.),
+         * send an empty `transitModes` parameter instead.
+         *
+         * If not provided, the routing uses the server-side default value
+         * which is hardcoded and very high to cover all use cases.
+         *
+         * *Warning*: Use with care. Setting this too low can lead to
+         * optimal (e.g. the fastest) journeys not being found.
+         * If this value is too low to reach the destination at all,
+         * it can lead to slow routing performance.
+         *
+         */
+        maxTransfers?: number;
+        /**
+         * The maximum travel time in minutes.
+         * If not provided, the routing uses the value
+         * hardcoded in the server which is usually quite high.
+         *
+         * *Warning*: Use with care. Setting this too low can lead to
+         * optimal (e.g. the least transfers) journeys not being found.
+         * If this value is too low to reach the destination at all,
+         * it can lead to slow routing performance.
+         *
+         */
+        maxTravelTime?: number;
+        /**
+         * Optional. Default is 0 minutes.
+         *
+         * Minimum transfer time for each transfer in minutes.
+         *
+         */
+        minTransferTime?: number;
+        /**
+         * geo location as latitude;longitude
+         */
+        one: string;
+        /**
+         * Optional. Default is `FOOT`.
+         *
+         * Accessibility profile to use for pedestrian routing in transfers
+         * between transit connections and the first and last mile respectively.
+         *
+         */
+        pedestrianProfile?: PedestrianProfile;
+        /**
+         * Optional
+         *
+         * Average speed for pedestrian routing.
+         *
+         */
+        pedestrianSpeed?: PedestrianSpeed;
+        /**
+         * Optional. Default is `WALK`. Does not apply to direct connections (see `directMode`).
+         *
+         * A list of modes that are allowed to be used for the last mile, i.e. from the last transit stop to the target coordinates. Example: `WALK,BIKE_SHARING`.
+         *
+         */
+        postTransitModes?: Array<Mode>;
+        /**
+         * Optional. Default is `WALK`. Does not apply to direct connections (see `directMode`).
+         *
+         * A list of modes that are allowed to be used for the first mile, i.e. from the coordinates to the first transit stop. Example: `WALK,BIKE_SHARING`.
+         *
+         */
+        preTransitModes?: Array<Mode>;
+        /**
+         * Optional. Default is `false`.
+         *
+         * If set to `true`, all used transit trips are required to allow bike carriage.
+         *
+         */
+        requireBikeTransport?: boolean;
+        /**
+         * Optional. Default is `false`.
+         *
+         * If set to `true`, all used transit trips are required to allow car carriage.
+         *
+         */
+        requireCarTransport?: boolean;
+        /**
+         * Optional. Defaults to the current time.
+         *
+         * Departure time ($arriveBy=false) / arrival date ($arriveBy=true),
+         *
+         */
+        time?: string;
+        /**
+         * Optional. Default is 1.0
+         *
+         * Factor to multiply minimum required transfer times with.
+         * Values smaller than 1.0 are not supported.
+         *
+         */
+        transferTimeFactor?: number;
+        /**
+         * Optional. Default is `TRANSIT` which allows all transit modes (no restriction).
+         * Allowed modes for the transit part. If empty, no transit connections will be computed.
+         * For example, this can be used to allow only `SUBURBAN,SUBWAY,TRAM`.
+         *
+         */
+        transitModes?: Array<Mode>;
+        /**
+         * Optional. Default is `false`.
+         *
+         * Whether to use transfers routed on OpenStreetMap data.
+         *
+         */
+        useRoutedTransfers?: boolean;
+    };
+};
+
+export type OneToManyIntermodalResponse = (Array<Duration>);
+
+export type OneToManyIntermodalError = (Error);
+
+export type OneToManyIntermodalPostData = {
+    body: OneToManyIntermodalParams;
+};
+
+export type OneToManyIntermodalPostResponse = (Array<Duration>);
+
+export type OneToManyIntermodalPostError = (Error);
+
 export type OneToAllData = {
     query: {
         /**
@@ -2695,6 +3150,8 @@ export type RoutesData = {
 
 export type RoutesResponse = ({
     routes: Array<RouteInfo>;
+    polylines: Array<RoutePolyline>;
+    stops: Array<Place>;
     /**
      * Indicates whether some routes were filtered out due to
      * the zoom level.

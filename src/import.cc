@@ -221,17 +221,31 @@ data import(config const& c, fs::path const& data_path, bool const write) {
         return a;
       };
 
+  auto const route_shapes_clasz_enabled = to_clasz_bool_array(
+      true, c.timetable_.value_or(config::timetable{})
+                .route_shapes_.value_or(config::timetable::route_shapes{})
+                .clasz_);
+  auto route_shapes_clasz_hash =
+      std::pair{"route_shapes_clasz"s, cista::BASE_HASH};
+  for (auto const& b : route_shapes_clasz_enabled) {
+    route_shapes_clasz_hash.second =
+        cista::build_seeded_hash(route_shapes_clasz_hash.second, b);
+  }
+
   auto const use_shapes_cache = c.timetable_.has_value() &&
                                 c.timetable_->with_shapes_ &&
                                 c.timetable_->route_shapes_.has_value() &&
                                 c.timetable_->route_shapes_->cache_;
   auto const existing_rs_hashes = read_hashes(data_path, "route_shapes");
   auto const reuse_shapes_cache =
-      existing_rs_hashes.find("nigiri_bin_ver") != end(existing_rs_hashes) &&
-      existing_rs_hashes.at("nigiri_bin_ver") == n_version().second &&
-      existing_rs_hashes.find("shapes_cache_ver") != end(existing_rs_hashes) &&
-      existing_rs_hashes.at("shapes_cache_ver") ==
-          shapes_cache_version().second;
+      (existing_rs_hashes.find("routed_shapes_ver") !=
+           end(existing_rs_hashes) &&
+       existing_rs_hashes.at("routed_shapes_ver") ==
+           routed_shapes_version().second) &&
+      ((c.timetable_.has_value() && c.timetable_->route_shapes_.has_value() &&
+        c.timetable_->route_shapes_->cache_reuse_old_osm_data_) ||
+       (existing_rs_hashes.find(osm_hash.first) != end(existing_rs_hashes) &&
+        existing_rs_hashes.at(osm_hash.first) == osm_hash.second));
 
   auto d = data{data_path};
 
@@ -547,41 +561,46 @@ data import(config const& c, fs::path const& data_path, bool const write) {
       "route_shapes",
       [&]() {
         return c.timetable_ && c.timetable_->with_shapes_ &&
-               c.timetable_->route_shapes_ &&
-               (c.timetable_->route_shapes_->missing_shapes_ ||
-                c.timetable_->route_shapes_->replace_shapes_) &&
-               c.use_street_routing();
+               c.timetable_->route_shapes_ && c.use_street_routing();
       },
       [&]() { return d.tt_ && d.w_ && d.l_; },
       [&]() {
-        // re-open in write mode
-        d.shapes_ = {};
-        d.shapes_ = std::make_unique<n::shapes_storage>(
-            data_path, cista::mmap::protection::MODIFY, use_shapes_cache);
-
-        auto const shape_cache_path = data_path / "routed_shapes_cache.bin";
-        auto shape_cache = cista::wrapped<shape_cache_t>{};
+        auto const shape_cache_path = data_path / "routed_shapes_cache.mdb";
+        auto const shape_cache_lock_path =
+            fs::path{shape_cache_path.generic_string() + "-lock"};
+        auto shape_cache = std::unique_ptr<motis::shape_cache>{};
+        auto existing_shape_cache = false;
         if (use_shapes_cache) {
-          if (fs::exists(shape_cache_path) && reuse_shapes_cache) {
+          if (reuse_shapes_cache && fs::exists(shape_cache_path)) {
             std::clog << "loading existing shape cache from "
                       << shape_cache_path << "\n";
-            shape_cache = cista::read<shape_cache_t>(shape_cache_path);
+            existing_shape_cache = true;
           } else {
             std::clog << "creating new shape cache\n";
-            shape_cache =
-                cista::wrapped{cista::raw::make_unique<shape_cache_t>()};
+            auto ec = std::error_code{};
+            fs::remove(shape_cache_path, ec);
+            fs::remove(shape_cache_lock_path, ec);
           }
+          shape_cache = std::make_unique<motis::shape_cache>(
+              shape_cache_path, c.timetable_->route_shapes_->cache_db_size_);
         }
 
-        route_shapes(
-            *d.w_, *d.l_, *d.tt_, *d.shapes_, *c.timetable_->route_shapes_,
-            to_clasz_bool_array(true, c.timetable_->route_shapes_->clasz_),
-            use_shapes_cache ? shape_cache.get() : nullptr);
+        // re-open in write mode
+        // this needs to be done in two steps, because the files need to be
+        // closed first, before they can be re-opened in write mode (at least on
+        // Windows)
+        d.shapes_ = {};
+        d.shapes_ = std::make_unique<n::shapes_storage>(
+            data_path, cista::mmap::protection::MODIFY, existing_shape_cache);
 
-        if (use_shapes_cache) {
-          cista::write(shape_cache_path, shape_cache);
-        } else if (fs::exists(shape_cache_path)) {
-          fs::remove(shape_cache_path);
+        route_shapes(*d.w_, *d.l_, *d.tt_, *d.shapes_,
+                     *c.timetable_->route_shapes_, route_shapes_clasz_enabled,
+                     use_shapes_cache ? shape_cache.get() : nullptr);
+
+        if (!use_shapes_cache) {
+          auto ec = std::error_code{};
+          fs::remove(shape_cache_path, ec);
+          fs::remove(shape_cache_lock_path, ec);
         }
       },
       [&]() { d.load_shapes(); },
@@ -589,15 +608,17 @@ data import(config const& c, fs::path const& data_path, bool const write) {
        osm_hash,
        osr_version(),
        n_version(),
-       shapes_cache_version(),
-       {"missing_shapes",
+       routed_shapes_version(),
+       route_shapes_clasz_hash,
+       {"route_shapes_mode",
+        static_cast<std::uint64_t>(
+            c.timetable_.value_or(config::timetable{})
+                .route_shapes_.value_or(config::timetable::route_shapes{})
+                .mode_)},
+       {"cache_reuse_old_osm_data",
         c.timetable_.value_or(config::timetable{})
             .route_shapes_.value_or(config::timetable::route_shapes{})
-            .missing_shapes_},
-       {"replace_shapes",
-        c.timetable_.value_or(config::timetable{})
-            .route_shapes_.value_or(config::timetable::route_shapes{})
-            .replace_shapes_}}};
+            .cache_reuse_old_osm_data_}}};
 
   auto tiles = task{
       "tiles",
