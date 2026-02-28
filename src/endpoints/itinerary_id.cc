@@ -14,9 +14,9 @@ api::Itinerary refresh_itinerary::operator()(
     boost::urls::url_view const& url) const {
   auto const query = api::refreshItinerary_params{url.params()};
   static auto const kStaticOnlyRt = std::make_shared<rt>();
-  auto const stop_times_ep = ep::stop_times{
-      config_, w_, pl_, matches_, ae_, tz_, loc_rtree_, tt_, tags_,
-      kStaticOnlyRt};
+  auto const stop_times_ep =
+      ep::stop_times{config_, w_,         pl_, matches_, ae_,
+                     tz_,     loc_rtree_, tt_, tags_,    kStaticOnlyRt};
   try {
     return reconstruct_itinerary(stop_times_ep, query.itineraryId_);
   } catch (std::exception const& e) {
