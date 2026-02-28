@@ -91,11 +91,11 @@ ICE,00:45:00,00:45:00,FFM_10,1,0,0
 11_2_1,12:15:00,12:15:00,PAUL2,1,0,0
 11_2_2,12:20:00,12:20:00,FFM_B,0,0,0
 11_2_2,12:30:00,12:30:00,PAUL2,1,0,0
-B1,01:00:00,01:00:00,DA_Bus_1,1
-B1,01:10:00,01:10:00,DA_Bus_2,2
-T1,01:14:00,01:14:00,DA_Tram_1,1
-T1,01:15:00,01:15:00,DA_Tram_2,2
-T1,01:16:00,01:16:00,DA_Tram_3,3
+B1,00:10:00,00:10:00,DA_Bus_1,1
+B1,00:20:00,00:20:00,DA_Bus_2,2
+T1,00:24:00,00:24:00,DA_Tram_1,1
+T1,00:25:00,00:25:00,DA_Tram_2,2
+T1,00:26:00,00:26:00,DA_Tram_3,3
 
 # calendar_dates.txt
 service_id,date,exception_type
@@ -237,7 +237,7 @@ TEST(motis, one_to_many) {
             {.durations_ = {{.duration_ = 900.0, .k_ = 1}}},
             {.durations_ = {{.duration_ = 1020.0, .k_ = 1}}},
             {.durations_ = {}},
-            {.durations_ = {{.duration_ = 3360.0, .k_ = 2}}},
+            {.durations_ = {{.duration_ = 3360.0, .k_ = 2}}},  // or 3420.0
             {.durations_ = {}},
         }),
         durations);
@@ -549,8 +549,9 @@ TEST(motis, one_to_many) {
           .one_ = "49.8724891,8.6281994",
           .many_ = {"49.875345,8.6279307",  // near Tram_1
                     "49.874995,8.6313925",  // near Tram_2
-                    "49.871561,8.6320181"},  // near Tram_3
-          .time_ = parse_time("2019-05-01T00:55:00.000+02:00"),
+                    "49.871561,8.6320181",  // near Tram_3
+                    "50.111900,8.675208"},  // near FFM_HAUPT
+          .time_ = parse_time("2019-05-01T00:05:00.000+02:00"),
           .useRoutedTransfers_ = true,
           .withDistance_ = true});
 
@@ -567,6 +568,7 @@ TEST(motis, one_to_many) {
                                      .k_ = 0,
                                      .distance_ = 1068.5881443753221},
                                     {.duration_ = 1740.0, .k_ = 1}}},
+                    {.durations_ = {{.duration_ = 4440.0, .k_ = 3}}},
                 }),
                 durations);
     }
@@ -581,7 +583,7 @@ TEST(motis, one_to_many) {
           .many_ = {"49.8755778,8.6240518",  // DA_Bus_2
                     "49.875345,8.6279307",  // DA_Tram_1
                     "49.871561,8.6320181"},  // DA_Tram_3
-          .time_ = parse_time("2019-05-01T00:55:00.000+02:00"),
+          .time_ = parse_time("2019-05-01T00:05:00.000+02:00"),
           .maxPreTransitTime_ = 300});  // Prevent any pre transit to Tram_x
 
       EXPECT_EQ((std::vector<api::ParetoSet>{
