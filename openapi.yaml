@@ -1577,6 +1577,38 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /api/v1/refresh-itinerary:
+    get:
+      tags:
+        - timetable
+      summary: Reconstruct an itinerary from an itinerary ID.
+      operationId: refreshItinerary
+      parameters:
+        - name: itineraryId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: reconstructed itinerary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Itinerary'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
   /api/v5/stoptimes:
     get:
       tags:

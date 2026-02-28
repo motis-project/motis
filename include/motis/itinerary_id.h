@@ -2,8 +2,6 @@
 
 #include <string>
 #include "motis-api/motis-api.h"
-#include "motis/endpoints/map/stops.h"
-#include "motis/endpoints/routing.h"
 #include "motis/endpoints/stop_times.h"
 
 namespace motis {

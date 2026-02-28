@@ -1,22 +1,36 @@
+#include <chrono>
+#include <cstdint>
+#include <filesystem>
+#include <optional>
+#include <string>
+#include <string_view>
+#include <system_error>
+
+#include "boost/json.hpp"
+
+#include "fmt/format.h"
 #include "gtest/gtest.h"
 
 #include "utl/init_from.h"
 
 #include "motis/config.h"
+#include "motis/endpoints/itinerary_id.h"
 #include "motis/endpoints/routing.h"
 #include "motis/import.h"
 #include "motis/itinerary_id.h"
 
-using namespace motis;
+namespace m = motis;
+namespace api = m::api;
+namespace ep = m::ep;
 
 namespace {
-int64_t to_epoch_seconds(openapi::date_time_t const& t) {
+std::int64_t to_epoch_seconds(openapi::date_time_t const& t) {
   return std::chrono::duration_cast<std::chrono::seconds>(
              static_cast<std::chrono::sys_seconds>(t).time_since_epoch())
       .count();
-};
+}
 
-constexpr auto const kSimpleGTFSTemplate = R"(
+constexpr auto kSimpleGtfsTemplate = R"(
 # agency.txt
 agency_id,agency_name,agency_url,agency_timezone
 DB,Deutsche Bahn,https://deutschebahn.com,Europe/Berlin
@@ -44,7 +58,7 @@ service_id,date,exception_type
 S1,20190501,1
 )";
 
-constexpr auto const kLoopGTFS = R"(
+constexpr auto kLoopGtfs = R"(
 # agency.txt
 agency_id,agency_name,agency_url,agency_timezone
 DB,Deutsche Bahn,https://deutschebahn.com,Europe/Berlin
@@ -77,7 +91,7 @@ service_id,date,exception_type
 S1,20190501,1
 )";
 
-constexpr auto const kDenseShiftSourceGTFS = R"(
+constexpr auto kDenseShiftSourceGtfs = R"(
 # agency.txt
 agency_id,agency_name,agency_url,agency_timezone
 DB,Deutsche Bahn,https://deutschebahn.com,Europe/Berlin
@@ -105,7 +119,7 @@ service_id,date,exception_type
 S1,20190501,1
 )";
 
-constexpr auto const kDenseShiftTargetGTFS = R"(
+constexpr auto kDenseShiftTargetGtfs = R"(
 # agency.txt
 agency_id,agency_name,agency_url,agency_timezone
 DB,Deutsche Bahn,https://deutschebahn.com,Europe/Berlin
@@ -163,10 +177,10 @@ service_id,date,exception_type
 S1,20190501,1
 )";
 
-config make_config(std::string const& gtfs) {
-  return config{
+m::config make_config(std::string const& gtfs) {
+  return m::config{
       .timetable_ =
-          config::timetable{
+          m::config::timetable{
               .first_day_ = "2019-05-01",
               .num_days_ = 2,
               .datasets_ = {{"test", {.path_ = gtfs}}},
@@ -174,18 +188,18 @@ config make_config(std::string const& gtfs) {
   };
 }
 
-data import_test_data(config const& c, std::string_view const sub_dir) {
+m::data import_test_data(m::config const& cfg, std::string_view const sub_dir) {
   auto const path = std::filesystem::path{"test/data/itinerary_id"} / sub_dir;
   auto ec = std::error_code{};
   std::filesystem::remove_all(path, ec);
-  return import(c, path.string(), true);
+  return m::import(cfg, path.string(), true);
 }
 
-api::Itinerary route_first_itinerary(data& d,
+api::Itinerary route_first_itinerary(m::data& data,
                                      std::string_view const from_place,
                                      std::string_view const to_place,
                                      std::string_view const time) {
-  auto const routing = utl::init_from<ep::routing>(d).value();
+  auto const routing = utl::init_from<ep::routing>(data).value();
   auto const query = fmt::format(
       "?fromPlace={}&toPlace={}&time={}&timetableView=false"
       "&directModes=WALK,RENTAL",
@@ -197,38 +211,40 @@ api::Itinerary route_first_itinerary(data& d,
 
 TEST(motis, itinerary_id_reconstruct_with_changed_stop_ids) {
   auto const source_cfg = make_config(
-      std::string{fmt::format(kSimpleGTFSTemplate, "DA", "FFM", "DA", "FFM")});
+      std::string{fmt::format(kSimpleGtfsTemplate, "DA", "FFM", "DA", "FFM")});
   auto source_data = import_test_data(source_cfg, "changed_stop_ids_source");
   auto const original = route_first_itinerary(source_data, "test_DA",
                                               "test_FFM", "2019-05-01T02:00Z");
-  auto const id = generate_itinerary_id(original);
+  auto const id = m::generate_itinerary_id(original);
 
   auto const target_cfg = make_config(
-      std::string{fmt::format(kSimpleGTFSTemplate, "FFM", "DA", "FFM", "DA")});
+      std::string{fmt::format(kSimpleGtfsTemplate, "FFM", "DA", "FFM", "DA")});
   auto target_data = import_test_data(target_cfg, "changed_stop_ids_target");
-  auto const expected = route_first_itinerary(target_data, "test_FFM",
-                                              "test_DA", "2019-05-01T02:00Z");
+  auto expected = route_first_itinerary(target_data, "test_FFM", "test_DA",
+                                        "2019-05-01T02:00Z");
+  expected.id_ = id;
   auto const stop_times = utl::init_from<ep::stop_times>(target_data).value();
 
-  EXPECT_EQ(expected, reconstruct_itinerary(stop_times, id));
+  EXPECT_EQ(expected, m::reconstruct_itinerary(stop_times, id));
 }
 
 TEST(motis, itinerary_id_reconstruct_with_repeated_stop_in_trip) {
-  auto const cfg = make_config(kLoopGTFS);
+  auto const cfg = make_config(kLoopGtfs);
   auto data = import_test_data(cfg, "repeated_stop_route");
 
   auto const original =
       route_first_itinerary(data, "test_B", "test_D", "2019-05-01T08:00Z");
   ASSERT_EQ(1U, original.legs_.size());
 
-  auto const id = generate_itinerary_id(original);
+  auto const id = m::generate_itinerary_id(original);
   auto const stop_times = utl::init_from<ep::stop_times>(data).value();
-  EXPECT_EQ(original, reconstruct_itinerary(stop_times, id));
+  std::cout << "ghol: " << original.id_ << std::endl;
+  EXPECT_EQ(original, m::reconstruct_itinerary(stop_times, id));
 }
 
 TEST(motis, itinerary_id_generate_rejects_invalid_single_leg_inputs) {
   auto const cfg = make_config(
-      std::string{fmt::format(kSimpleGTFSTemplate, "DA", "FFM", "DA", "FFM")});
+      std::string{fmt::format(kSimpleGtfsTemplate, "DA", "FFM", "DA", "FFM")});
   auto data = import_test_data(cfg, "invalid_generate_inputs");
   auto const original =
       route_first_itinerary(data, "test_DA", "test_FFM", "2019-05-01T02:00Z");
@@ -236,39 +252,39 @@ TEST(motis, itinerary_id_generate_rejects_invalid_single_leg_inputs) {
 
   auto invalid = original;
   invalid.legs_.clear();
-  EXPECT_ANY_THROW(generate_itinerary_id(invalid));
+  EXPECT_ANY_THROW(m::generate_itinerary_id(invalid));
 
   invalid = original;
   invalid.legs_.front().from_.stopId_ = std::nullopt;
-  EXPECT_ANY_THROW(generate_itinerary_id(invalid));
+  EXPECT_ANY_THROW(m::generate_itinerary_id(invalid));
 
   invalid = original;
   invalid.legs_.front().from_.stopId_ = std::string{};
-  EXPECT_ANY_THROW(generate_itinerary_id(invalid));
+  EXPECT_ANY_THROW(m::generate_itinerary_id(invalid));
 
   invalid = original;
   invalid.legs_.front().to_.stopId_ = std::nullopt;
-  EXPECT_ANY_THROW(generate_itinerary_id(invalid));
+  EXPECT_ANY_THROW(m::generate_itinerary_id(invalid));
 
   invalid = original;
   invalid.legs_.front().to_.stopId_ = std::string{};
-  EXPECT_ANY_THROW(generate_itinerary_id(invalid));
+  EXPECT_ANY_THROW(m::generate_itinerary_id(invalid));
 
   invalid = original;
   invalid.legs_.front().scheduledStartTime_ = {};
-  EXPECT_ANY_THROW(generate_itinerary_id(invalid));
+  EXPECT_ANY_THROW(m::generate_itinerary_id(invalid));
 }
 
 TEST(motis,
      itinerary_id_reconstruct_dense_nearby_with_changed_ids_and_shifted_times) {
-  auto const source_cfg = make_config(kDenseShiftSourceGTFS);
+  auto const source_cfg = make_config(kDenseShiftSourceGtfs);
   auto source_data = import_test_data(source_cfg, "dense_shift_source");
   auto const original = route_first_itinerary(
       source_data, "test_OLD_A", "test_OLD_B", "2019-05-01T02:00Z");
   ASSERT_EQ(1U, original.legs_.size());
-  auto const id = generate_itinerary_id(original);
+  auto const id = m::generate_itinerary_id(original);
 
-  auto const target_cfg = make_config(kDenseShiftTargetGTFS);
+  auto const target_cfg = make_config(kDenseShiftTargetGtfs);
   auto target_data = import_test_data(target_cfg, "dense_shift_target");
   auto const stop_times = utl::init_from<ep::stop_times>(target_data).value();
 
@@ -294,7 +310,7 @@ TEST(motis,
       "&mode=HIGHSPEED_RAIL");
   EXPECT_GE(to_candidates.stopTimes_.size(), 8U);
 
-  auto const reconstructed = reconstruct_itinerary(stop_times, id);
+  auto const reconstructed = m::reconstruct_itinerary(stop_times, id);
   ASSERT_EQ(1U, reconstructed.legs_.size());
   auto const& reconstructed_leg = reconstructed.legs_.front();
   auto const& original_leg = original.legs_.front();

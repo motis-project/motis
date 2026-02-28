@@ -13,6 +13,7 @@
 #include "motis/endpoints/graph.h"
 #include "motis/endpoints/gtfsrt.h"
 #include "motis/endpoints/initial.h"
+#include "motis/endpoints/itinerary_id.h"
 #include "motis/endpoints/levels.h"
 #include "motis/endpoints/map/flex_locations.h"
 #include "motis/endpoints/map/rental.h"
@@ -117,6 +118,7 @@ struct motis_instance {
     GET<ep::one_to_all>("/api/v1/one-to-all", d);
     GET<ep::one_to_many>("/api/v1/one-to-many", d);
     POST<ep::one_to_many_post>("/api/v1/one-to-many", d);
+    GET<ep::refresh_itinerary>("/api/v1/refresh-itinerary", d);
 
     if (!c.requires_rt_timetable_updates()) {
       // Elevator updates are not compatible with RT-updates.

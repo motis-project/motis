@@ -25,6 +25,7 @@
 #include "motis/flex/flex_output.h"
 #include "motis/gbfs/gbfs_output.h"
 #include "motis/gbfs/routing_data.h"
+#include "motis/itinerary_id.h"
 #include "motis/odm/odm.h"
 #include "motis/osr/mode_to_profile.h"
 #include "motis/osr/street_routing.h"
@@ -659,6 +660,11 @@ api::Itinerary journey_to_response(
 
   cleanup_intermodal(itinerary);
 
+  try {
+    itinerary.id_ = generate_itinerary_id(itinerary);
+  } catch (...) {
+    // trycatch will be removed later once the restrictions are softened; TODO
+  }
   return itinerary;
 }
 
