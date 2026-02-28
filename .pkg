@@ -1,6 +1,6 @@
 [nigiri]
-  url=git@github.com:motis-project/nigiri.git
-  branch=master
+  url=git@github.com:MichaelKutzner/nigiri.git
+  branch=one_to_many_round_times
   commit=2cc5fb3f69bf7e6fd015bcee0500f83bf2d19bb4
 [cista]
   url=git@github.com:felixguendling/cista.git
