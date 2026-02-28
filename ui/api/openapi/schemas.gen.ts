@@ -147,11 +147,40 @@ export const DurationSchema = {
     properties: {
         duration: {
             type: 'number',
-            description: 'duration in seconds if a path was found, otherwise missing'
+            description: 'duration in seconds if a path was found, otherwise missing',
+            minimum: 0
+        },
+        k: {
+            description: `k is the smallest number, for which a journey with the shortest duration and at most k-1 transfers exist. You can think of k as the number of connections used.
+
+In more detail:
+
+k=0: No transit connection, i.e. street routing only
+k=1: Direct transit connection
+k=2: Connection with 1 transfer
+`,
+            type: 'integer',
+            minimum: 0
         },
         distance: {
             type: 'number',
-            description: 'distance in meters if a path was found and distance computation was requested, otherwise missing'
+            description: 'distance in meters if a path was found and distance computation was requested, otherwise missing',
+            minimum: 0
+        }
+    }
+} as const;
+
+export const ParetoSetSchema = {
+    description: 'Object containing duration if a path was found or none if no path was found',
+    type: 'object',
+    required: ['durations'],
+    properties: {
+        durations: {
+            description: 'Pareto set for earliest arrival / latest departure, depending on arriveBy.',
+            type: 'array',
+            items: {
+                '$ref': '#/components/schemas/Duration'
+            }
         }
     }
 } as const;
@@ -2020,6 +2049,14 @@ Is limited by server config variable \`street_routing_max_direct_seconds\`.
             type: 'integer',
             default: 1800,
             minimum: 0
+        },
+        withDistance: {
+            description: `If true, the response includes the distance in meters
+for each path. This requires path reconstruction and
+may be slower than duration-only queries.
+`,
+            type: 'boolean',
+            default: false
         },
         requireBikeTransport: {
             description: `Optional. Default is \`false\`.

@@ -131,9 +131,30 @@ export type Duration = {
      */
     duration?: number;
     /**
+     * k is the smallest number, for which a journey with the shortest duration and at most k-1 transfers exist. You can think of k as the number of connections used.
+     *
+     * In more detail:
+     *
+     * k=0: No transit connection, i.e. street routing only
+     * k=1: Direct transit connection
+     * k=2: Connection with 1 transfer
+     *
+     */
+    k?: number;
+    /**
      * distance in meters if a path was found and distance computation was requested, otherwise missing
      */
     distance?: number;
+};
+
+/**
+ * Object containing duration if a path was found or none if no path was found
+ */
+export type ParetoSet = {
+    /**
+     * Pareto set for earliest arrival / latest departure, depending on arriveBy.
+     */
+    durations: Array<Duration>;
 };
 
 /**
@@ -1628,6 +1649,13 @@ export type OneToManyIntermodalParams = {
      */
     maxDirectTime?: number;
     /**
+     * If true, the response includes the distance in meters
+     * for each path. This requires path reconstruction and
+     * may be slower than duration-only queries.
+     *
+     */
+    withDistance?: boolean;
+    /**
      * Optional. Default is `false`.
      *
      * If set to `true`, all used transit trips are required to allow bike carriage.
@@ -2591,10 +2619,18 @@ export type OneToManyIntermodalData = {
          *
          */
         useRoutedTransfers?: boolean;
+        /**
+         * Optional. Default is `false`.
+         * If true, the response includes the distance in meters
+         * for each path. This requires path reconstruction and
+         * is slower than duration-only queries.
+         *
+         */
+        withDistance?: boolean;
     };
 };
 
-export type OneToManyIntermodalResponse = (Array<Duration>);
+export type OneToManyIntermodalResponse = (Array<ParetoSet>);
 
 export type OneToManyIntermodalError = (Error);
 
@@ -2602,7 +2638,7 @@ export type OneToManyIntermodalPostData = {
     body: OneToManyIntermodalParams;
 };
 
-export type OneToManyIntermodalPostResponse = (Array<Duration>);
+export type OneToManyIntermodalPostResponse = (Array<ParetoSet>);
 
 export type OneToManyIntermodalPostError = (Error);
 

@@ -22,7 +22,7 @@ namespace motis::ep {
 
 namespace n = nigiri;
 
-constexpr auto kInfinity = std::numeric_limits<double>::infinity();
+constexpr auto const kInfinity = std::numeric_limits<double>::infinity();
 
 api::oneToMany_response one_to_many_direct(
     config const& config,
@@ -79,13 +79,11 @@ api::oneToMany_response one_to_many_direct(
   });
 }
 
-double delta_to_seconds(n::delta_t const d) { return std::abs(60.0 * d); }
-
 double duration_to_seconds(n::duration_t const d) { return 60 * d.count(); }
 
 template <typename Endpoint, typename Query>
-void update_transit_durations(
-    api::oneToMany_response& durations,
+api::oneToManyIntermodal_response add_transit_durations(
+    api::oneToMany_response&& direct_durations,
     Endpoint const& ep,
     Query const& query,
     place_t const& one,
@@ -181,36 +179,48 @@ void update_transit_durations(
     }
   }
 
+  auto pareto_sets = std::vector<api::ParetoSet>{};
+
+  auto const dir = arrive_by ? n::direction::kBackward : n::direction::kForward;
+  auto totals = n::vector<double>{};
   for (auto const [i, l] : utl::enumerate(many)) {
-    auto best = kInfinity;
+    totals.clear();
+    totals.resize(q.max_transfers_, kInfinity);
     auto const offsets = r.get_offsets(
         nullptr, l,
         arrive_by ? osr::direction::kForward : osr::direction::kBackward,
         many_modes, std::nullopt, std::nullopt, std::nullopt, std::nullopt,
         false, osr_params, pedestrian_profile, elevation_costs,
         many_max_seconds, max_matching_distance, gbfs_rd, prepare_stats);
-
     for (auto const offset : offsets) {
       auto const loc = offset.target();
       if (reachable.test(to_idx(loc))) {
-        auto const fastest = n::routing::get_fastest_one_to_all_offsets(
-            ep.tt_, state,
-            arrive_by ? n::direction::kBackward : n::direction::kForward, loc,
-            time, q.max_transfers_);
-        auto const total = delta_to_seconds(fastest.duration_) +
-                           duration_to_seconds(offset.duration());
-        if (total < best) {
-          best = total;
-        }
+        auto const base = duration_to_seconds(offset.duration());
+        n::routing::for_each_one_to_all_round_time(
+            ep.tt_, state, dir, loc, time, q.max_transfers_,
+            [&](std::uint8_t const k, n::duration_t const d) {
+              if (k != std::uint8_t{0U}) {
+                auto const total = base + duration_to_seconds(d);
+                totals[k - 1U] = std::min(totals[k - 1], total);
+              }
+            });
       }
     }
-
-    if (best < kInfinity && best <= max_travel_time.count() &&
-        (!durations[i].duration_.has_value() ||
-         best < *durations[i].duration_)) {
-      durations[i].duration_ = best;
+    auto durations = std::vector<api::Duration>{};
+    if (direct_durations[i].duration_.has_value()) {
+      direct_durations[i].k_ = 0U;
+      durations.push_back(std::move(direct_durations[i]));
     }
+    auto best = kInfinity;
+    for (auto const [j, d] : utl::enumerate(totals)) {
+      if (d < kInfinity && d < best) {
+        durations.emplace_back(d, j + 1);
+        best = d;
+      }
+    }
+    pareto_sets.emplace_back(std::move(durations));
   }
+  return pareto_sets;
 }
 
 api::oneToMany_response one_to_many::operator()(
@@ -254,14 +264,12 @@ api::oneToManyIntermodal_response run_one_to_many_intermodal(
       query.maxMatchingDistance_,
       query.arriveBy_ ? osr::direction::kBackward : osr::direction::kForward,
       osr_params, query.pedestrianProfile_, query.elevationCosts_,
-      ep.elevations_, false);
+      ep.elevations_, query.withDistance_);
 
-  update_transit_durations(durations, ep, query, one, many, time,
-                           query.arriveBy_, max_travel_time,
-                           query.maxMatchingDistance_, query.pedestrianProfile_,
-                           query.elevationCosts_, osr_params);
-
-  return durations;
+  return add_transit_durations(
+      std::move(durations), ep, query, one, many, time, query.arriveBy_,
+      max_travel_time, query.maxMatchingDistance_, query.pedestrianProfile_,
+      query.elevationCosts_, osr_params);
 }
 
 api::oneToManyIntermodal_response one_to_many_intermodal::operator()(
