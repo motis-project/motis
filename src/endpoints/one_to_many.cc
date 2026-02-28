@@ -70,7 +70,7 @@ api::oneToMany_response one_to_many_direct(
   return utl::to_vec(paths, [&](std::optional<osr::path> const& p) {
     return p
         .transform([&](osr::path const& x) {
-          return api::Duration{.duration_ = static_cast<double>(x.cost_),
+          return api::Duration{.duration_ = x.cost_,
                                .distance_ = with_distance
                                                 ? std::optional{x.dist_}
                                                 : std::nullopt};
@@ -211,11 +211,11 @@ api::oneToManyIntermodal_response add_transit_durations(
       direct_durations[i].k_ = 0U;
       durations.push_back(std::move(direct_durations[i]));
     }
-    auto max = kInfinity;
+    auto best = kInfinity;
     for (auto const [j, d] : utl::enumerate(totals)) {
-      if (d < kInfinity && d < max) {
+      if (d < kInfinity && d < best) {
         durations.emplace_back(d, j + 1);
-        max = d;
+        best = d;
       }
     }
     pareto_sets.emplace_back(std::move(durations));
