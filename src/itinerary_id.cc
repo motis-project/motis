@@ -38,6 +38,14 @@ constexpr auto kItineraryTimeBase = std::chrono::sys_days{
     std::chrono::year{2026} / std::chrono::month{1} / std::chrono::day{1}};
 constexpr auto kTimeMul = 1.0 / 60.0 * 7;
 constexpr auto kExactTripIdMatchAddScore = 50.0;
+constexpr auto kExactStopIdMatchAddScore = 15.0;
+
+double exact_stop_id_match_score(motis::api::Place const& place,
+                                 std::string_view expected_stop_id) {
+  return place.stopId_.has_value() && *place.stopId_ == expected_stop_id
+             ? kExactStopIdMatchAddScore
+             : 0.0;
+}
 
 std::int64_t to_epoch_seconds(openapi::date_time_t const& t) {
   auto const sys = static_cast<std::chrono::sys_seconds>(t);
@@ -333,9 +341,13 @@ api::Itinerary reconstruct_itinerary(motis::ep::stop_times const& stoptimes_ep,
 
     std::vector<id_score> to_cands;
     for (auto const& st : to_str.stopTimes_) {
+      if (!st.place_.scheduledArrival_.has_value()) {
+        continue;
+      }
       to_cands.push_back(
           {st.tripId_,
-           (st.tripId_ == lh.trip_id_ ? kExactTripIdMatchAddScore : 0.0) -
+           (st.tripId_ == lh.trip_id_ ? kExactTripIdMatchAddScore : 0.0) +
+               exact_stop_id_match_score(st.place_, lh.to_stop_id_) -
                geo::distance(geo::latlng{st.place_.lat_, st.place_.lon_},
                              lh.to_latlng_) -
                kTimeMul * std::abs(lh.sched_end_ -
@@ -351,6 +363,9 @@ api::Itinerary reconstruct_itinerary(motis::ep::stop_times const& stoptimes_ep,
     double best_score = std::numeric_limits<double>::lowest();
 
     for (auto const& from_st : from_str.stopTimes_) {
+      if (!from_st.place_.scheduledDeparture_.has_value()) {
+        continue;
+      }
       auto it = std::lower_bound(
           begin(to_cands), end(to_cands),
           id_score{from_st.tripId_, std::numeric_limits<double>::max(),
@@ -359,7 +374,8 @@ api::Itinerary reconstruct_itinerary(motis::ep::stop_times const& stoptimes_ep,
         continue;
       }
       double score =
-          it->score_ -
+          it->score_ +
+          exact_stop_id_match_score(from_st.place_, lh.from_stop_id_) -
           geo::distance(geo::latlng{from_st.place_.lat_, from_st.place_.lon_},
                         lh.from_latlng_) -
           kTimeMul * std::abs(lh.sched_start_ -
