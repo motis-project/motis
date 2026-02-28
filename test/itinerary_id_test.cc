@@ -6,8 +6,6 @@
 #include <string_view>
 #include <system_error>
 
-#include "boost/json.hpp"
-
 #include "fmt/format.h"
 #include "gtest/gtest.h"
 
@@ -238,7 +236,6 @@ TEST(motis, itinerary_id_reconstruct_with_repeated_stop_in_trip) {
 
   auto const id = m::generate_itinerary_id(original);
   auto const stop_times = utl::init_from<ep::stop_times>(data).value();
-  std::cout << "ghol: " << original.id_ << std::endl;
   EXPECT_EQ(original, m::reconstruct_itinerary(stop_times, id));
 }
 
@@ -327,4 +324,28 @@ TEST(motis,
             to_epoch_seconds(reconstructed_leg.scheduledStartTime_));
   EXPECT_EQ(to_epoch_seconds(original_leg.scheduledEndTime_) + 8 * 60,
             to_epoch_seconds(reconstructed_leg.scheduledEndTime_));
+}
+
+TEST(motis, refresh_itinerary_endpoint_reconstructs_itinerary) {
+  auto const source_cfg = make_config(
+      std::string{fmt::format(kSimpleGtfsTemplate, "DA", "FFM", "DA", "FFM")});
+  auto source_data =
+      import_test_data(source_cfg, "refresh_itinerary_endpoint_source");
+  auto const original = route_first_itinerary(source_data, "test_DA",
+                                              "test_FFM", "2019-05-01T02:00Z");
+  auto const id = m::generate_itinerary_id(original);
+
+  auto const target_cfg = make_config(
+      std::string{fmt::format(kSimpleGtfsTemplate, "FFM", "DA", "FFM", "DA")});
+  auto target_data =
+      import_test_data(target_cfg, "refresh_itinerary_endpoint_target");
+  auto expected = route_first_itinerary(target_data, "test_FFM", "test_DA",
+                                        "2019-05-01T02:00Z");
+  expected.id_ = id;
+
+  auto const refresh = utl::init_from<ep::refresh_itinerary>(target_data);
+  auto query = api::refreshItinerary_params{};
+  query.itineraryId_ = id;
+
+  EXPECT_EQ(expected, (*refresh)(query.to_url("?")));
 }

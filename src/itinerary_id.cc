@@ -82,6 +82,9 @@ struct leg_hint {
   explicit leg_hint(boost::json::object const& l) {
     auto const& encoded_coords = l.at("coords").as_string();
     auto const coords = geo::decode_polyline(encoded_coords);
+    utl::verify(coords.size() == 2,
+                "itinerary id: coords must decode to exactly 2 points, got {}",
+                coords.size());
 
     trip_id_ = l.at("trip_id").as_string().c_str();
     from_stop_id_ = l.at("from_id").as_string().c_str();
@@ -200,12 +203,11 @@ motis::api::Itinerary build_itinerary_from_frun(
                     n::routing::journey::run_enter_exit{fr, from_idx, to_idx}});
   }
 
-  auto j =
-      n::routing::journey{.legs_ = legs,
-                          .start_time_ = journey_start,
-                          .dest_time_ = legs.back().arr_time_,
-                          .dest_ = legs.back().to_,
-                          .transfers_ = static_cast<uint8_t>(runs.size() - 1)};
+  auto j = n::routing::journey{.legs_ = legs,
+                               .start_time_ = journey_start,
+                               .dest_time_ = legs.back().arr_time_,
+                               .dest_ = legs.back().to_,
+                               .transfers_ = 0};
 
   auto cache = motis::street_routing_cache_t{};
   auto blocked = osr::bitvec<osr::node_idx_t>{};
@@ -316,11 +318,10 @@ api::Itinerary reconstruct_itinerary(motis::ep::stop_times const& stoptimes_ep,
   auto const journey_start =
       n::unixtime_t{std::chrono::duration_cast<n::i32_minutes>(
           std::chrono::seconds{root.at("journey_start").as_int64()})};
+  auto const rtt = stoptimes_ep.rt_ ? stoptimes_ep.rt_->rtt_.get() : nullptr;
 
   std::vector<std::tuple<n::rt::frun, n::stop_idx_t, n::stop_idx_t>> runs;
 
-  std::optional<std::string_view> prev_to;
-  std::optional<openapi::date_time_t> prev_arr_time;
   {
     auto const& lh = *begin(lh_vk);
     auto const from_str = stoptimes_in_radius(
@@ -373,9 +374,8 @@ api::Itinerary reconstruct_itinerary(motis::ep::stop_times const& stoptimes_ep,
 
     utl::verify(best_trip_id.has_value() && best_from_to.has_value(),
                 "no matching route is found");
-    auto const best_fr =
-        make_frun_from_stoptime(stoptimes_ep.tags_, stoptimes_ep.tt_,
-                                stoptimes_ep.rt_->rtt_.get(), *best_trip_id);
+    auto const best_fr = make_frun_from_stoptime(
+        stoptimes_ep.tags_, stoptimes_ep.tt_, rtt, *best_trip_id);
 
     auto const from_idx =
         find_stop_by_place(best_fr, stoptimes_ep.tags_, *(best_from_to->from_),
@@ -388,13 +388,9 @@ api::Itinerary reconstruct_itinerary(motis::ep::stop_times const& stoptimes_ep,
                 "reconstruct_itinerary: invalid stop order (from >= to)");
 
     runs.push_back({best_fr, *from_idx, *to_idx});
-    prev_to = best_from_to->to_->stopId_;
-    prev_arr_time = best_from_to->to_->arrival_.value();
   }
 
-  auto res = build_itinerary_from_frun(
-      runs, stoptimes_ep,
-      stoptimes_ep.rt_ ? stoptimes_ep.rt_->rtt_.get() : nullptr, journey_start);
+  auto res = build_itinerary_from_frun(runs, stoptimes_ep, rtt, journey_start);
   res.id_ = itin_id;
   return res;
 }

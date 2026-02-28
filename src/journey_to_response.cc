@@ -660,10 +660,8 @@ api::Itinerary journey_to_response(
 
   cleanup_intermodal(itinerary);
 
-  try {
+  if (itinerary.legs_.size() == 1) {
     itinerary.id_ = generate_itinerary_id(itinerary);
-  } catch (...) {
-    // trycatch will be removed later once the restrictions are softened; TODO
   }
   return itinerary;
 }
