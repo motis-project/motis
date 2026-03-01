@@ -231,8 +231,6 @@ adr_ext adr_extend_tt(nigiri::timetable const& tt,
         }
 
         if (tt.get_default_translation(tt.locations_.names_[eq]) == name) {
-          fmt::println(std::clog, "adding to {}: {}  *** name match",
-                       n::loc{tt, l}, n::loc{tt, eq});
           ret.location_place_[eq] = place_idx;
         } else {
           auto const dist = geo::distance(tt.locations_.coordinates_[l],
@@ -245,9 +243,6 @@ adr_ext adr_extend_tt(nigiri::timetable const& tt,
           auto const good = dist < cutoff;
 
           if (good) {
-            fmt::println(std::clog, "adding to {}: {}  *** fuzzy match",
-                         n::loc{tt, l}, n::loc{tt, eq});
-
             ret.location_place_[eq] = place_idx;
 
             auto existing = place_location.back();
@@ -257,9 +252,6 @@ adr_ext adr_extend_tt(nigiri::timetable const& tt,
                 }) == end(existing)) {
               place_location.back().push_back(eq);
             }
-          } else {
-            fmt::println(std::clog, "NO MATCH {}: {}", n::loc{tt, l},
-                         n::loc{tt, eq});
           }
         }
       }

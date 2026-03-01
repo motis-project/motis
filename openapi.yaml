@@ -3989,6 +3989,20 @@ components:
           items:
             $ref: '#/components/schemas/RentalZoneRestrictions'
 
+    Category:
+      type: object
+      required:
+        - id
+        - name
+        - shortName
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        shortName:
+          type: string
+
     Leg:
       type: object
       required:
@@ -4067,6 +4081,8 @@ components:
         tripTo:
           description: final stop of this trip (can differ from headsign)
           $ref: '#/components/schemas/Place'
+        category:
+          $ref: '#/components/schemas/Category'
         routeId:
           type: string
         routeUrl:
