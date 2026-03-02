@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+
 #include "motis-api/motis-api.h"
 #include "motis/endpoints/stop_times.h"
 

@@ -1,6 +1,7 @@
 #include "motis/endpoints/itinerary_id.h"
 
 #include <exception>
+#include <memory>
 #include <string>
 
 #include "net/bad_request_exception.h"
