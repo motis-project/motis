@@ -26,6 +26,7 @@
 #include "nigiri/rt/frun.h"
 
 #include "motis/constants.h"
+#include "motis/data.h"
 #include "motis/gbfs/routing_data.h"
 #include "motis/journey_to_response.h"
 #include "motis/place.h"
@@ -364,7 +365,8 @@ std::string generate_itinerary_id(api::Itinerary const& itin) {
 }
 
 api::Itinerary reconstruct_itinerary(motis::ep::stop_times const& stoptimes_ep,
-                                     std::string const& itin_id) {
+                                     std::string const& itin_id,
+                                     rt const* realtime_ctx) {
   constexpr auto kLookbackSeconds = 8 * 60;
 
   auto const root = boost::json::parse(itin_id).as_object();
@@ -379,7 +381,7 @@ api::Itinerary reconstruct_itinerary(motis::ep::stop_times const& stoptimes_ep,
   auto const journey_start =
       n::unixtime_t{std::chrono::duration_cast<n::i32_minutes>(
           std::chrono::seconds{root.at("journey_start").as_int64()})};
-  auto const rtt = stoptimes_ep.rt_ ? stoptimes_ep.rt_->rtt_.get() : nullptr;
+  auto const rtt = realtime_ctx != nullptr ? realtime_ctx->rtt_.get() : nullptr;
 
   auto runs =
       std::vector<std::tuple<n::rt::frun, n::stop_idx_t, n::stop_idx_t>>{};

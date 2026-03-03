@@ -7,6 +7,7 @@
 #include <system_error>
 
 #include "fmt/format.h"
+
 #include "gtest/gtest.h"
 
 #include "utl/init_from.h"
@@ -17,9 +18,14 @@
 #include "motis/import.h"
 #include "motis/itinerary_id.h"
 
+#include "nigiri/rt/gtfsrt_update.h"
+
+#include "./util.h"
+
 namespace m = motis;
 namespace api = m::api;
 namespace ep = m::ep;
+namespace n = nigiri;
 
 namespace {
 std::int64_t to_epoch_seconds(openapi::date_time_t const& t) {
@@ -223,7 +229,7 @@ TEST(motis, itinerary_id_reconstruct_with_changed_stop_ids) {
   expected.id_ = id;
   auto const stop_times = utl::init_from<ep::stop_times>(target_data).value();
 
-  EXPECT_EQ(expected, m::reconstruct_itinerary(stop_times, id));
+  EXPECT_EQ(expected, m::reconstruct_itinerary(stop_times, id, nullptr));
 }
 
 TEST(motis, itinerary_id_reconstruct_with_repeated_stop_in_trip) {
@@ -236,7 +242,7 @@ TEST(motis, itinerary_id_reconstruct_with_repeated_stop_in_trip) {
 
   auto const id = m::generate_itinerary_id(original);
   auto const stop_times = utl::init_from<ep::stop_times>(data).value();
-  EXPECT_EQ(original, m::reconstruct_itinerary(stop_times, id));
+  EXPECT_EQ(original, m::reconstruct_itinerary(stop_times, id, nullptr));
 }
 
 TEST(motis, itinerary_id_generate_rejects_invalid_single_leg_inputs) {
@@ -307,7 +313,7 @@ TEST(motis,
       "&mode=HIGHSPEED_RAIL");
   EXPECT_GE(to_candidates.stopTimes_.size(), 8U);
 
-  auto const reconstructed = m::reconstruct_itinerary(stop_times, id);
+  auto const reconstructed = m::reconstruct_itinerary(stop_times, id, nullptr);
   ASSERT_EQ(1U, reconstructed.legs_.size());
   auto const& reconstructed_leg = reconstructed.legs_.front();
   auto const& original_leg = original.legs_.front();
@@ -348,4 +354,54 @@ TEST(motis, refresh_itinerary_endpoint_reconstructs_itinerary) {
   query.itineraryId_ = id;
 
   EXPECT_EQ(expected, (*refresh)(query.to_url("?")));
+}
+
+TEST(motis, refresh_itinerary_matches_scheduled_then_applies_realtime) {
+  auto const cfg = make_config(
+      std::string{fmt::format(kSimpleGtfsTemplate, "DA", "FFM", "DA", "FFM")});
+  auto data = import_test_data(cfg, "refresh_itinerary_endpoint_realtime");
+
+  auto const original =
+      route_first_itinerary(data, "test_DA", "test_FFM", "2019-05-01T02:00Z");
+  auto const id = m::generate_itinerary_id(original);
+
+  auto const rt_base_day =
+      date::sys_days{date::year{2019} / date::May / date::day{1}};
+  data.init_rtt(rt_base_day);
+
+  auto const stats = n::rt::gtfsrt_update_msg(
+      *data.tt_, *data.rt_->rtt_, n::source_idx_t{0}, "test",
+      m::test::to_feed_msg(
+          {m::test::trip_update{
+              .trip_ = {.trip_id_ = "ICE",
+                        .start_time_ = "10:35:00",
+                        .date_ = "20190501"},
+              .stop_updates_ = {{.stop_id_ = "DA",
+                                 .seq_ = 0U,
+                                 .ev_type_ = n::event_type::kDep,
+                                 .delay_minutes_ = 20},
+                                {.stop_id_ = "FFM",
+                                 .seq_ = 1U,
+                                 .ev_type_ = n::event_type::kArr,
+                                 .delay_minutes_ = 22}}}},
+          rt_base_day + std::chrono::hours{10}));
+  EXPECT_EQ(1U, stats.total_entities_success_);
+
+  auto const refresh = utl::init_from<ep::refresh_itinerary>(data);
+  auto query = api::refreshItinerary_params{};
+  query.itineraryId_ = id;
+  auto const refreshed = (*refresh)(query.to_url("?"));
+
+  ASSERT_EQ(1U, refreshed.legs_.size());
+  auto const& original_leg = original.legs_.front();
+  auto const& refreshed_leg = refreshed.legs_.front();
+
+  EXPECT_EQ(original_leg.scheduledStartTime_,
+            refreshed_leg.scheduledStartTime_);
+  EXPECT_EQ(original_leg.scheduledEndTime_, refreshed_leg.scheduledEndTime_);
+  EXPECT_EQ(to_epoch_seconds(original_leg.startTime_) + 20 * 60,
+            to_epoch_seconds(refreshed_leg.startTime_));
+  EXPECT_EQ(to_epoch_seconds(original_leg.endTime_) + 22 * 60,
+            to_epoch_seconds(refreshed_leg.endTime_));
+  EXPECT_TRUE(refreshed_leg.realTime_);
 }
