@@ -127,6 +127,16 @@ int generate(int ac, char** av) {
     time_of_day = h % 24U;
   };
 
+  auto const parse_algorithm = [&](std::string_view const s) {
+    if (s.contains("RAPTOR")) {
+      p.algorithm_ = api::algorithmEnum::RAPTOR;
+    } else if (s.contains("PONG")) {
+      p.algorithm_ = api::algorithmEnum::PONG;
+    } else if (s.contains("TB")) {
+      p.algorithm_ = api::algorithmEnum::TB;
+    }
+  };
+
   auto desc = po::options_description{"Options"};
   desc.add_options()  //
       ("help", "Prints this help message")  //
@@ -165,7 +175,9 @@ int generate(int ac, char** av) {
        "emit queries uniformly distributed over the lower bounds (lb) ranks, "
        "lb rank n:  2^n-th stop when sorting all stops by their lb value from "
        "the start (min. rank: 4, max. rank: derived from number of eligible "
-       "stops)");
+       "stops)")  //
+      ("algorithm", po::value<std::string>()->notifier(parse_algorithm),
+       "set the routing algorithm");
   add_data_path_opt(desc, data_path);
   auto vm = parse_opt(ac, av, desc);
 
