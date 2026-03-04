@@ -102,6 +102,7 @@ struct leg_hint {
     from_latlng_ = coords[0];
     to_latlng_ = coords[1];
     mode_ = static_cast<motis::api::ModeEnum>(l.at("mode").as_int64());
+    scheduled_ = l.at("scheduled").as_bool();
   }
 
   std::string trip_id_;
@@ -112,6 +113,7 @@ struct leg_hint {
   geo::latlng from_latlng_;
   geo::latlng to_latlng_;
   motis::api::ModeEnum mode_;
+  bool scheduled_;
 };
 
 motis::api::stoptimes_response stoptimes_in_radius(
@@ -183,6 +185,22 @@ std::optional<n::stop_idx_t> find_stop_by_place(n::rt::frun const& fr,
   }
 
   return find_stop_by_location_time(fr, *loc, *t, ev_type);
+}
+
+std::optional<n::stop_idx_t> find_stop_by_id(n::rt::frun const& fr,
+                                             motis::tag_lookup const& tags,
+                                             std::string_view const stop_id) {
+  auto const loc = tags.find_location(*fr.tt_, stop_id);
+  if (!loc.has_value()) {
+    return std::nullopt;
+  }
+  for (auto i = n::stop_idx_t{0U}; i < fr.size(); ++i) {
+    auto const rs = fr[i];
+    if (rs.get_location_idx() == *loc) {
+      return rs.stop_idx_;
+    }
+  }
+  return std::nullopt;
 }
 
 motis::api::Itinerary build_itinerary_from_frun(
@@ -354,6 +372,7 @@ std::string generate_itinerary_id(api::Itinerary const& itin) {
     leg_obj["sched_start"] = sched_start_m;
     leg_obj["sched_delta"] = sched_delta_m;
     leg_obj["mode"] = static_cast<int>(leg.mode_);
+    leg_obj["scheduled"] = leg.scheduled_;
 
     legs.emplace_back(std::move(leg_obj));
   }
@@ -388,32 +407,62 @@ api::Itinerary reconstruct_itinerary(motis::ep::stop_times const& stoptimes_ep,
 
   {
     auto const& lh = *begin(lh_vk);
-    auto const from_st_res = stoptimes_in_radius(
-        stoptimes_ep, lh.from_latlng_, lh.sched_start_ - kLookbackSeconds,
-        lh.mode_, kLookbackSeconds * 2, 100, false);
-    auto const to_st_res = stoptimes_in_radius(
-        stoptimes_ep, lh.to_latlng_, lh.sched_end_ - kLookbackSeconds, lh.mode_,
-        kLookbackSeconds * 2, 100, true);
+    if (!lh.scheduled_) {
+      utl::verify(
+          rtt != nullptr,
+          "reconstruct_itinerary: realtime data required for additional trips");
+      utl::verify(!lh.trip_id_.empty(),
+                  "reconstruct_itinerary: additional trip requires trip_id");
 
-    auto const [best_trip_id, best_from_to] =
-        calc_best_candidate(from_st_res, to_st_res, lh);
+      auto const fr = make_frun_from_stoptime(
+          stoptimes_ep.tags_, stoptimes_ep.tt_, rtt, lh.trip_id_);
+      utl::verify(fr.valid(),
+                  "reconstruct_itinerary: additional trip not found");
+      utl::verify(!fr.is_scheduled(),
+                  "reconstruct_itinerary: trip_id resolved to scheduled trip "
+                  "while itinerary id expects additional trip");
 
-    utl::verify(best_trip_id.has_value() && best_from_to.has_value(),
-                "no matching route is found");
-    auto const best_fr = make_frun_from_stoptime(
-        stoptimes_ep.tags_, stoptimes_ep.tt_, rtt, *best_trip_id);
+      auto const from_idx =
+          find_stop_by_id(fr, stoptimes_ep.tags_, lh.from_stop_id_);
+      utl::verify(from_idx.has_value(),
+                  "reconstruct_itinerary: additional trip from stop not found");
+      auto const to_idx =
+          find_stop_by_id(fr, stoptimes_ep.tags_, lh.to_stop_id_);
+      utl::verify(to_idx.has_value(),
+                  "reconstruct_itinerary: additional trip to stop not found");
+      utl::verify(*from_idx < *to_idx,
+                  "reconstruct_itinerary: invalid stop order (from >= to)");
 
-    auto const from_idx =
-        find_stop_by_place(best_fr, stoptimes_ep.tags_, *(best_from_to->from_),
-                           n::event_type::kDep);
-    auto const to_idx = find_stop_by_place(
-        best_fr, stoptimes_ep.tags_, *(best_from_to->to_), n::event_type::kArr);
-    utl::verify(from_idx.has_value() && to_idx.has_value(),
-                "reconstruct_itinerary: could not map from/to stop in frun");
-    utl::verify(*from_idx < *to_idx,
-                "reconstruct_itinerary: invalid stop order (from >= to)");
+      runs.emplace_back(fr, *from_idx, *to_idx);
+    } else {
+      auto const from_st_res = stoptimes_in_radius(
+          stoptimes_ep, lh.from_latlng_, lh.sched_start_ - kLookbackSeconds,
+          lh.mode_, kLookbackSeconds * 2, 100, false);
+      auto const to_st_res = stoptimes_in_radius(
+          stoptimes_ep, lh.to_latlng_, lh.sched_end_ - kLookbackSeconds,
+          lh.mode_, kLookbackSeconds * 2, 100, true);
 
-    runs.push_back({best_fr, *from_idx, *to_idx});
+      auto const [best_trip_id, best_from_to] =
+          calc_best_candidate(from_st_res, to_st_res, lh);
+
+      utl::verify(best_trip_id.has_value() && best_from_to.has_value(),
+                  "no matching route is found");
+      auto const best_fr = make_frun_from_stoptime(
+          stoptimes_ep.tags_, stoptimes_ep.tt_, rtt, *best_trip_id);
+
+      auto const from_idx =
+          find_stop_by_place(best_fr, stoptimes_ep.tags_,
+                             *(best_from_to->from_), n::event_type::kDep);
+      auto const to_idx =
+          find_stop_by_place(best_fr, stoptimes_ep.tags_, *(best_from_to->to_),
+                             n::event_type::kArr);
+      utl::verify(from_idx.has_value() && to_idx.has_value(),
+                  "reconstruct_itinerary: could not map from/to stop in frun");
+      utl::verify(*from_idx < *to_idx,
+                  "reconstruct_itinerary: invalid stop order (from >= to)");
+
+      runs.emplace_back(best_fr, *from_idx, *to_idx);
+    }
   }
 
   auto res = build_itinerary_from_frun(runs, stoptimes_ep, rtt, journey_start);
