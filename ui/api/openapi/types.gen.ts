@@ -131,30 +131,55 @@ export type Duration = {
      */
     duration?: number;
     /**
-     * k is the smallest number, for which a journey with the shortest duration and at most k-1 transfers exist. You can think of k as the number of connections used.
-     *
-     * In more detail:
-     *
-     * k=0: No transit connection, i.e. street routing only
-     * k=1: Direct transit connection
-     * k=2: Connection with 1 transfer
-     *
-     */
-    k?: number;
-    /**
      * distance in meters if a path was found and distance computation was requested, otherwise missing
      */
     distance?: number;
 };
 
 /**
- * Object containing duration if a path was found or none if no path was found
+ * Object containing a single element of a ParetoSet
  */
-export type ParetoSet = {
+export type ParetoSetEntry = {
     /**
-     * Pareto set for earliest arrival / latest departure, depending on arriveBy.
+     * duration in seconds for the the best solution using `transfer` transfers
+     *
+     * Notice that the resolution is currently in minutes, because of implementation details
+     *
      */
-    durations: Array<Duration>;
+    duration: number;
+    /**
+     * The minimal number of transfers required to arrive within `duration` seconds
+     *
+     * transfers=0: Direct transit connecion without any transfers
+     * transfers=1: Transit connection with 1 transfer
+     *
+     */
+    transfers: number;
+};
+
+/**
+ * Pareto set of optimal transit solutions
+ */
+export type ParetoSet = Array<ParetoSetEntry>;
+
+/**
+ * Object containing the optimal street and transit durations for One-to-Many routing
+ */
+export type OneToManyIntermodalResponse = {
+    /**
+     * Fastest durations for street routing
+     * The order of the items corresponds to the order of the `many` locations
+     * If no street routed connection is found, the corresponding `Duration` will be empty
+     *
+     */
+    street_durations?: Array<Duration>;
+    /**
+     * Pareto optimal solutions
+     * The order of the items corresponds to the order of the `many` locations
+     * If no connection using transits is found, the corresponding `ParetoSet` field will be empty
+     *
+     */
+    transit_durations?: Array<ParetoSet>;
 };
 
 /**
@@ -2630,7 +2655,7 @@ export type OneToManyIntermodalData = {
     };
 };
 
-export type OneToManyIntermodalResponse = (Array<ParetoSet>);
+export type OneToManyIntermodalResponse2 = (OneToManyIntermodalResponse);
 
 export type OneToManyIntermodalError = (Error);
 
@@ -2638,7 +2663,7 @@ export type OneToManyIntermodalPostData = {
     body: OneToManyIntermodalParams;
 };
 
-export type OneToManyIntermodalPostResponse = (Array<ParetoSet>);
+export type OneToManyIntermodalPostResponse = (OneToManyIntermodalResponse);
 
 export type OneToManyIntermodalPostError = (Error);
 

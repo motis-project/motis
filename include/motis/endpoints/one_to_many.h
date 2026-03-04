@@ -72,7 +72,7 @@ api::oneToMany_response one_to_many_handle_request(
 }
 
 template <typename Endpoint, typename Query>
-api::oneToManyIntermodal_response run_one_to_many_intermodal(
+api::OneToManyIntermodalResponse run_one_to_many_intermodal(
     Endpoint const&,
     Query const&,
     place_t const& one,
@@ -88,7 +88,7 @@ struct one_to_many {
 };
 
 struct one_to_many_intermodal {
-  api::oneToManyIntermodal_response operator()(
+  api::OneToManyIntermodalResponse operator()(
       boost::urls::url_view const&) const;
 
   config const& config_;

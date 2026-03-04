@@ -14,7 +14,7 @@ api::oneToManyPost_response one_to_many_post::operator()(
   return one_to_many_handle_request(config_, query, w_, l_, elevations_);
 }
 
-api::oneToManyIntermodalPost_response one_to_many_intermodal_post::operator()(
+api::OneToManyIntermodalResponse one_to_many_intermodal_post::operator()(
     api::OneToManyIntermodalParams const& query) const {
   auto const one = get_place(&tt_, &tags_, query.one_);
   auto const many =
