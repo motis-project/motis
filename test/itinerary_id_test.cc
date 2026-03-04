@@ -235,14 +235,14 @@ transit_realtime::FeedMessage make_added_trip_update(
   auto* const from_stu = tu->add_stop_time_update();
   from_stu->set_stop_id("DA");
   from_stu->set_stop_sequence(0U);
-  from_stu->mutable_departure()->set_time(
-      m::test::to_unix(msg_time + std::chrono::minutes{2}));
+  from_stu->mutable_departure()->set_time(static_cast<std::int64_t>(
+      m::test::to_unix(msg_time + std::chrono::minutes{2})));
 
   auto* const to_stu = tu->add_stop_time_update();
   to_stu->set_stop_id("FFM");
   to_stu->set_stop_sequence(1U);
-  to_stu->mutable_arrival()->set_time(
-      m::test::to_unix(msg_time + std::chrono::minutes{17}));
+  to_stu->mutable_arrival()->set_time(static_cast<std::int64_t>(
+      m::test::to_unix(msg_time + std::chrono::minutes{17})));
   return msg;
 }
 

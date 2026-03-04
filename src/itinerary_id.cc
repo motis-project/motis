@@ -187,14 +187,16 @@ std::optional<n::stop_idx_t> find_stop_by_place(n::rt::frun const& fr,
   return find_stop_by_location_time(fr, *loc, *t, ev_type);
 }
 
-std::optional<n::stop_idx_t> find_stop_by_id(n::rt::frun const& fr,
-                                             motis::tag_lookup const& tags,
-                                             std::string_view const stop_id) {
+std::optional<n::stop_idx_t> find_stop_by_id(
+    n::rt::frun const& fr,
+    motis::tag_lookup const& tags,
+    std::string_view const stop_id,
+    n::stop_idx_t const min_stop_idx = n::stop_idx_t{0U}) {
   auto const loc = tags.find_location(*fr.tt_, stop_id);
   if (!loc.has_value()) {
     return std::nullopt;
   }
-  for (auto i = n::stop_idx_t{0U}; i < fr.size(); ++i) {
+  for (auto i = min_stop_idx; i < fr.size(); ++i) {
     auto const rs = fr[i];
     if (rs.get_location_idx() == *loc) {
       return rs.stop_idx_;
@@ -427,7 +429,8 @@ api::Itinerary reconstruct_itinerary(motis::ep::stop_times const& stoptimes_ep,
       utl::verify(from_idx.has_value(),
                   "reconstruct_itinerary: additional trip from stop not found");
       auto const to_idx =
-          find_stop_by_id(fr, stoptimes_ep.tags_, lh.to_stop_id_);
+          find_stop_by_id(fr, stoptimes_ep.tags_, lh.to_stop_id_,
+                          static_cast<n::stop_idx_t>(*from_idx + 1U));
       utl::verify(to_idx.has_value(),
                   "reconstruct_itinerary: additional trip to stop not found");
       utl::verify(*from_idx < *to_idx,
