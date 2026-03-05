@@ -226,7 +226,8 @@ std::vector<api::ParetoSet> transit_durations(
 api::oneToMany_response one_to_many::operator()(
     boost::urls::url_view const& url) const {
   auto const query = api::oneToMany_params{url.params()};
-  return one_to_many_handle_request(config_, query, w_, l_, elevations_);
+  return one_to_many_handle_request(config_, query, w_, l_, elevations_,
+                                    metrics_);
 }
 
 template <typename Endpoint, typename Query>
@@ -235,6 +236,7 @@ api::OneToManyIntermodalResponse run_one_to_many_intermodal(
     Query const& query,
     place_t const& one,
     std::vector<place_t> const& many) {
+  ep.metrics_->one_to_many_requests_.Increment();
   auto const time = std::chrono::time_point_cast<std::chrono::minutes>(
       *query.time_.value_or(openapi::now()));
 

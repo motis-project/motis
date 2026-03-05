@@ -21,6 +21,7 @@ struct one_to_many_post {
   osr::ways const& w_;
   osr::lookup const& l_;
   osr::elevation_storage const* elevations_;
+  metrics_registry* metrics_;
 };
 
 struct one_to_many_intermodal_post {
