@@ -47,6 +47,11 @@ PAUL1,Römer/Paulskirche,50.110979,8.682276,0,,
 PAUL2,Römer/Paulskirche,50.110828,8.681587,0,,
 FFM_C,FFM C,50.107812,8.664628,0,,
 FFM_B,FFM B,50.107519,8.664775,0,,
+DA_Bus_1,DA Hbf,49.8724891,8.6281994
+DA_Bus_2,DA Hbf,49.8755778,8.6240518
+DA_Tram_1,DA Hbf,49.875345,8.6279307
+DA_Tram_2,DA Hbf,49.874995,8.6313925
+DA_Tram_3,DA Hbf,49.871561,8.6320181
 
 # routes.txt
 route_id,agency_id,route_short_name,route_long_name,route_desc,route_type
@@ -55,6 +60,8 @@ U4,DB,U4,,,402
 ICE,DB,ICE,,,101
 11_1,DB,11,,,0
 11_2,DB,11,,,0
+B1,DB,B1,,3
+T1,DB,T1,,0
 
 # trips.txt
 route_id,service_id,trip_id,trip_headsign,block_id
@@ -65,6 +72,8 @@ ICE,S1,ICE,,
 11_1,S1,11_1_2,,
 11_2,S1,11_2_1,,
 11_2,S1,11_2_2,,
+B1,S1,B1,Bus 1,
+T1,S1,T1,Tram 1,
 
 # stop_times.txt
 trip_id,arrival_time,departure_time,stop_id,stop_sequence,pickup_type,drop_off_type
@@ -82,6 +91,11 @@ ICE,00:45:00,00:45:00,FFM_10,1,0,0
 11_2_1,12:15:00,12:15:00,PAUL2,1,0,0
 11_2_2,12:20:00,12:20:00,FFM_B,0,0,0
 11_2_2,12:30:00,12:30:00,PAUL2,1,0,0
+B1,00:10:00,00:10:00,DA_Bus_1,1
+B1,00:20:00,00:20:00,DA_Bus_2,2
+T1,00:24:00,00:24:00,DA_Tram_1,1
+T1,00:25:00,00:25:00,DA_Tram_2,2
+T1,00:26:00,00:26:00,DA_Tram_3,3
 
 # calendar_dates.txt
 service_id,date,exception_type
@@ -142,24 +156,45 @@ TEST(motis, one_to_many) {
         "&maxPostTransitTime=420"
         "&arriveBy=false");
 
-    EXPECT_EQ((std::vector<api::Duration>{
-                  {281.0},
-                  {1080.0},
-                  {1140.0},  // Not routed transfer => faster than realistic
-                  {1140.0},  // Not routed transfer
-                  {2580.0},
-                  {2580.0},
-                  {122.0},
-                  {240.0},
-                  {529.0},
-                  {692.0},
-                  {1260.0},
-                  {1440.0},
-                  {1500.0},
-                  {2700.0},
-                  {2640.0},
-                  {2940.0},
-                  {}}),
+    EXPECT_EQ((api::OneToManyIntermodalResponse{
+                  .street_durations_ = {{{.duration_ = 281.0},
+                                         {},
+                                         {},
+                                         {},
+                                         {},
+                                         {},
+                                         {.duration_ = 122.0},
+                                         {.duration_ = 240.0},
+                                         {.duration_ = 529.0},
+                                         {.duration_ = 692.0},
+                                         {},
+                                         {},
+                                         {},
+                                         {},
+                                         {},
+                                         {},
+                                         {}}},
+                  .transit_durations_ = {{
+                      {},
+                      {{.duration_ = 1080.0, .transfers_ = 0}},
+                      {// Not routed transfer => faster than realistic
+                       {.duration_ = 1140.0, .transfers_ = 0}},
+                      {// Not routed transfer
+                       {.duration_ = 1140.0, .transfers_ = 0}},
+                      {{.duration_ = 2580.0, .transfers_ = 1}},
+                      {{.duration_ = 2580.0, .transfers_ = 1}},
+                      {},
+                      {},
+                      {},
+                      {},
+                      {{.duration_ = 1260.0, .transfers_ = 0}},
+                      {{.duration_ = 1440.0, .transfers_ = 0}},
+                      {{.duration_ = 1500.0, .transfers_ = 0}},
+                      {{.duration_ = 2700.0, .transfers_ = 1}},
+                      {{.duration_ = 2640.0, .transfers_ = 1}},
+                      {{.duration_ = 2940.0, .transfers_ = 1}},
+                      {},
+                  }}}),
               durations);
   }
   // POST Request, backward
@@ -194,25 +229,49 @@ TEST(motis, one_to_many) {
         .maxPreTransitTime_ = 300,
         .maxDirectTime_ = 300});  // Updated to maxPostTransitTime == 1500
 
-    EXPECT_EQ((std::vector<api::Duration>{{3180.0},
-                                          {840.0},  // Not routed transfer
-                                          {720.0},  // Not routed transfer
-                                          {780.0},
-                                          {780.0},
-                                          {720.0},
-                                          {159.0},  // No explicit level
-                                          {160.0},  // Explicit level
-                                          {160.0},
-                                          {127.0},
-                                          {103.0},
-                                          {123.0},
-                                          {355.0},
-                                          {900.0},
-                                          {1020.0},
-                                          {},
-                                          {3420.0},
-                                          {}}),
-              durations);
+    EXPECT_EQ(
+        (api::OneToManyIntermodalResponse{
+            .street_durations_ = {{
+                {},
+                {},
+                {},
+                {},
+                {},
+                {},
+                {.duration_ = 159.0},  // No explicit level
+                {.duration_ = 160.0},  // Explicit level
+                {.duration_ = 160.0},
+                {.duration_ = 127.0},
+                {.duration_ = 103.0},
+                {.duration_ = 123.0},
+                {.duration_ = 355.0},
+                {},
+                {},
+                {},
+                {},
+                {},
+            }},
+            .transit_durations_ = {{
+                {{.duration_ = 3180.0, .transfers_ = 1}},
+                {{.duration_ = 840.0, .transfers_ = 0}},  // Not routed transfer
+                {{.duration_ = 720.0, .transfers_ = 0}},  // Not routed transfer
+                {{.duration_ = 780.0, .transfers_ = 0}},
+                {{.duration_ = 780.0, .transfers_ = 0}},
+                {{.duration_ = 720.0, .transfers_ = 0}},
+                {},
+                {},
+                {},
+                {},
+                {},
+                {},
+                {},
+                {{.duration_ = 900.0, .transfers_ = 0}},
+                {{.duration_ = 1020.0, .transfers_ = 0}},
+                {},
+                {{.duration_ = 3360.0, .transfers_ = 1}},  // from DA_10: 3420.0
+                {},
+            }}}),
+        durations);
   }
   // POST, forward, routed, short pre-transit
   {
@@ -239,17 +298,34 @@ TEST(motis, one_to_many) {
         .useRoutedTransfers_ = true,
         .maxPreTransitTime_ = 360});  // Too short to reach U4
 
-    EXPECT_EQ((std::vector<api::Duration>{{},
-                                          {475.0},
-                                          {360.0},  // Direct connection allowed
-                                          {353.0},  // Valid for pre transit
-                                          {1560.0},  // Must take S3
-                                          {1680.0},  // Must take S3
-                                          {413.0},  // No valid pre transit
-                                          {1800.0},
-                                          {1740.0},
-                                          {1740.0},
-                                          {1680.0}}),
+    EXPECT_EQ((api::OneToManyIntermodalResponse{
+                  .street_durations_ = {{
+                      {},
+                      {.duration_ = 475.0},
+                      {.duration_ = 384.0},  // Direct connection allowed
+                      {.duration_ = 353.0},  // Valid for pre transit
+                      {},
+                      {},
+                      {.duration_ = 413.0},
+                      {},
+                      {},
+                      {},
+                      {},
+                  }},
+                  .transit_durations_ = {{
+                      {},
+                      {},
+                      {},
+                      {},
+                      {{.duration_ = 1560.0, .transfers_ = 0}},  // Must take S3
+                      {{.duration_ = 1680.0, .transfers_ = 0}},  // Must take S3
+                      {},
+                      {{.duration_ = 1800.0, .transfers_ = 0}},
+                      {{.duration_ = 1740.0, .transfers_ = 0}},
+                      {{.duration_ = 1740.0, .transfers_ = 0}},
+                      {{.duration_ = 1680.0, .transfers_ = 0}},
+
+                  }}}),
               durations);
   }
   // GET, backward, with wheelchair, short post-transit
@@ -270,15 +346,30 @@ TEST(motis, one_to_many) {
         "&maxPostTransitTime=240"
         "&pedestrianProfile=WHEELCHAIR"
         "&useRoutedTransfers=true"
+        "&withDistance=true"
         "&arriveBy=true");
 
-    EXPECT_EQ((std::vector<api::Duration>{
-                  {1680.0},
-                  {},  // Not reachable from de:6412:10:6:1
-                  {333.0},  // No valid post transit
-                  {517.0},  // Direct connections allowed
-                  {771.0}  // Reachable after updating maxDirectTime
-              }),
+    EXPECT_EQ((api::OneToManyIntermodalResponse{
+                  .street_durations_ = {{
+                      {},
+                      {},
+                      {// No valid post transit
+                       .duration_ = 333.0,
+                       .distance_ = 124.07306979195344},
+                      {// Direct connection is allowed
+                       .duration_ = 517.0,
+                       .distance_ = 271.755535494779},
+                      {// Reachable after updating maxDirectTime
+                       .duration_ = 771.0,
+                       .distance_ = 475.96670910943755},
+                  }},
+                  .transit_durations_ = {{
+                      {{.duration_ = 1680.0, .transfers_ = 0}},
+                      {},  // Not reachable from de:6412:10:6:1
+                      {},
+                      {},
+                      {},
+                  }}}),
               durations);
   }
   // Oneway direction tests
@@ -301,10 +392,18 @@ TEST(motis, one_to_many) {
           "&arriveBy=false"
           "&cyclingSpeed=2.4");
 
-      EXPECT_EQ((std::vector<api::Duration>{
-                    {228.0},
-                    {300.0},  // {321.0},  // Invalid transfer C -> B
-                    {1980.0}}),  // Must use later trip
+      EXPECT_EQ((api::OneToManyIntermodalResponse{
+                    .street_durations_ = {{
+                        {.duration_ = 228.0},
+                        {.duration_ = 321.0},
+                        {},
+                    }},
+                    .transit_durations_ = {{
+                        {},
+                        {},
+                        {// Must use later trip
+                         {.duration_ = 1980.0, .transfers_ = 0}},
+                    }}}),
                 durations);
     }
     // POST, backward, postTransitModes + direct
@@ -319,12 +418,23 @@ TEST(motis, one_to_many) {
           .arriveBy_ = true,
           .cyclingSpeed_ = 2.2,
           .postTransitModes_ = {api::ModeEnum::BIKE},
-          .directMode_ = api::ModeEnum::BIKE});
+          .directMode_ = api::ModeEnum::BIKE,
+          .withDistance_ = true});
 
-      EXPECT_EQ(
-          (std::vector<api::Duration>{
-              {228.0}, {240.0}, {300.0} /* Without B->C: {335.0} */, {1920.0}}),
-          durations);
+      EXPECT_EQ((api::OneToManyIntermodalResponse{
+                    .street_durations_ = {{
+                        {.duration_ = 228.0, .distance_ = 341.31184727006627},
+                        {.duration_ = 335.0, .distance_ = 502.09599237420093},
+                        {.duration_ = 335.0, .distance_ = 502.09599237419206},
+                        {},
+                    }},
+                    .transit_durations_ = {{
+                        {},
+                        {},
+                        {},
+                        {{.duration_ = 1920.0, .transfers_ = 0}},
+                    }}}),
+                durations);
     }
     // POST, forward, postTransitModes
     {
@@ -337,7 +447,13 @@ TEST(motis, one_to_many) {
           .arriveBy_ = false,
           .postTransitModes_ = {api::ModeEnum::BIKE}});
 
-      EXPECT_EQ((std::vector<api::Duration>{{720.0}, {840.0}}), durations);
+      EXPECT_EQ((api::OneToManyIntermodalResponse{
+                    .street_durations_ = std::vector<api::Duration>(2),
+                    .transit_durations_ = {{
+                        {{.duration_ = 720.0, .transfers_ = 0}},
+                        {{.duration_ = 840.0, .transfers_ = 0}},
+                    }}}),
+                durations);
     }
     // GET, backward, preTransitModes
     {
@@ -355,7 +471,13 @@ TEST(motis, one_to_many) {
           "&arriveBy=true"
           "&cyclingSpeed=2.4");
 
-      EXPECT_EQ((std::vector<api::Duration>{{1080.0}, {1080.0}, {1260.0}}),
+      EXPECT_EQ((api::OneToManyIntermodalResponse{
+                    .street_durations_ = std::vector<api::Duration>(3),
+                    .transit_durations_ = {{
+                        {{.duration_ = 1080.0, .transfers_ = 0}},
+                        {{.duration_ = 1080.0, .transfers_ = 0}},
+                        {{.duration_ = 1260.0, .transfers_ = 0}},
+                    }}}),
                 durations);
     }
   }
@@ -371,7 +493,12 @@ TEST(motis, one_to_many) {
           "&useRoutedTransfers=true"
           "&minTransferTime=21");
 
-      EXPECT_EQ((std::vector<api::Duration>{{4320.0}}), durations);
+      EXPECT_EQ((api::OneToManyIntermodalResponse{
+                    .street_durations_ = {{api::Duration{}}},
+                    .transit_durations_ = {{
+                        {{.duration_ = 4320.0, .transfers_ = 1}},
+                    }}}),
+                durations);
     }
     // additionalTransferTime
     {
@@ -382,7 +509,12 @@ TEST(motis, one_to_many) {
           .additionalTransferTime_ = 17,
           .useRoutedTransfers_ = true});
 
-      EXPECT_EQ((std::vector<api::Duration>{{4200.0}}), durations);
+      EXPECT_EQ((api::OneToManyIntermodalResponse{
+                    .street_durations_ = {{api::Duration{}}},
+                    .transit_durations_ = {{
+                        {{.duration_ = 4200.0, .transfers_ = 1}},
+                    }}}),
+                durations);
     }
   }
   // Bug examples: Should not connect final footpath with first or last mile
@@ -404,15 +536,17 @@ TEST(motis, one_to_many) {
           .pedestrianProfile_ = api::PedestrianProfileEnum::WHEELCHAIR,
           .maxPostTransitTime_ = 420});  // Too short to reach from U4
 
-      EXPECT_EQ(
-          (std::vector<api::Duration>{
-              {720.0},
-              {780.0},
-              {720.0},
-              {1020.0},
-              {1380.0},  // {}  // FIXME Test location should be unreachable
-          }),
-          durations);
+      EXPECT_EQ((api::OneToManyIntermodalResponse{
+                    .street_durations_ = std::vector<api::Duration>(5),
+                    .transit_durations_ = {{
+                        {{.duration_ = 720.0, .transfers_ = 0}},
+                        {{.duration_ = 780.0, .transfers_ = 0}},
+                        {{.duration_ = 720.0, .transfers_ = 0}},
+                        {{.duration_ = 1020.0, .transfers_ = 0}},
+                        {// FIXME Test location should be unreachable
+                         {.duration_ = 1380.0, .transfers_ = 0}},
+                    }}}),
+                durations);
     }
 
     {
@@ -428,8 +562,15 @@ TEST(motis, one_to_many) {
               .useRoutedTransfers_ = true,
               .pedestrianProfile_ = api::PedestrianProfileEnum::WHEELCHAIR,
               .maxPostTransitTime_ = 420});  // Reachable from S3
-      EXPECT_EQ((std::vector<api::Duration>{
-                    {1260.0}, {1620.0}, {1260.0}, {1380.0}, {1740.0}}),
+      EXPECT_EQ((api::OneToManyIntermodalResponse{
+                    .street_durations_ = std::vector<api::Duration>(5),
+                    .transit_durations_ = {{
+                        {{.duration_ = 1260.0, .transfers_ = 0}},
+                        {{.duration_ = 1620.0, .transfers_ = 0}},
+                        {{.duration_ = 1260.0, .transfers_ = 0}},
+                        {{.duration_ = 1380.0, .transfers_ = 0}},
+                        {{.duration_ = 1740.0, .transfers_ = 0}},
+                    }}}),
                 test_durations);
     }
 
@@ -448,14 +589,74 @@ TEST(motis, one_to_many) {
               .useRoutedTransfers_ = true,
               .pedestrianProfile_ = api::PedestrianProfileEnum::FOOT,
               .maxPostTransitTime_ = 240});  // Only reachable from S3
-      EXPECT_EQ((std::vector<api::Duration>{
-                    {720.0},
-                    {780.0},
-                    {720.0},
-                    {780.0},
-                    {960.0},  // FIXME Should start FFM_HAUPT_S => time > 1200
-                }),
+      EXPECT_EQ((api::OneToManyIntermodalResponse{
+                    .street_durations_ = std::vector<api::Duration>(5),
+                    .transit_durations_ = {{
+                        {{.duration_ = 720.0, .transfers_ = 0}},
+                        {{.duration_ = 780.0, .transfers_ = 0}},
+                        {{.duration_ = 720.0, .transfers_ = 0}},
+                        {{.duration_ = 780.0, .transfers_ = 0}},
+                        {// FIXME Should start FFM_HAUPT_S => time > 1200
+                         {.duration_ = 960.0, .transfers_ = 0}},
+                    }}}),
                 walk_durations);
+    }
+  }
+  // Pareto sets and routings with multiple durations
+  {
+    {
+      // With routed transfers + distances
+      auto const durations = one_to_many_post(api::OneToManyIntermodalParams{
+          .one_ = "49.8724891,8.6281994",
+          .many_ = {"49.875345,8.6279307",  // near Tram_1
+                    "49.874995,8.6313925",  // near Tram_2
+                    "49.871561,8.6320181",  // near Tram_3
+                    "50.111900,8.675208"},  // near FFM_HAUPT
+          .time_ = parse_time("2019-05-01T00:05:00.000+02:00"),
+          .useRoutedTransfers_ = true,
+          .withDistance_ = true});
+
+      EXPECT_EQ((api::OneToManyIntermodalResponse{
+                    .street_durations_ =
+                        {{{.duration_ = 425.0, .distance_ = 337.9999990112831},
+                          {.duration_ = 529.0, .distance_ = 575.0075374115772},
+                          {.duration_ = 939.0, .distance_ = 1068.5881443753221},
+                          {}}},
+                    .transit_durations_ = {{
+                        {{.duration_ = 1320.0, .transfers_ = 0}},
+                        {{.duration_ = 1680.0, .transfers_ = 0}},
+                        {{.duration_ = 1740.0, .transfers_ = 0}},
+                        {{.duration_ = 4440.0, .transfers_ = 2}},
+                    }}}),
+                durations);
+    }
+    {
+      // Long walking paths + fast connctions => multiple durations
+      // Currently: Long transfer times, so that transit is faster
+      // After bug fix: Slow walking speed, so that transit is faster
+      // might require moving stops (B1->T1, T1->T2, T2 delete) with paths:
+      // Bus1 -> Tram3, Bus1 -> Bus2 -> Tram3, Bus1 -> Bus2 -> Tram1/2 -> Tram3
+      auto const durations = one_to_many_post(api::OneToManyIntermodalParams{
+          .one_ = "49.8724891,8.6281994",
+          .many_ = {"49.8755778,8.6240518",  // DA_Bus_2
+                    "49.875345,8.6279307",  // DA_Tram_1
+                    "49.871561,8.6320181"},  // DA_Tram_3
+          .time_ = parse_time("2019-05-01T00:05:00.000+02:00"),
+          .maxPreTransitTime_ = 300});  // Prevent any pre transit to Tram_x
+
+      EXPECT_EQ((api::OneToManyIntermodalResponse{
+                    .street_durations_ = {{
+                        {},
+                        {.duration_ = 425.0},
+                        {.duration_ = 939.0},
+                    }},
+                    .transit_durations_ = {{
+                        {{.duration_ = 1080.0, .transfers_ = 0}},
+                        {{.duration_ = 1200.0, .transfers_ = 0}},
+                        {{.duration_ = 1500.0, .transfers_ = 0},
+                         {.duration_ = 1440.0, .transfers_ = 1}},
+                    }}}),
+                durations);
     }
   }
 }

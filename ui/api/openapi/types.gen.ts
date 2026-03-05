@@ -137,6 +137,52 @@ export type Duration = {
 };
 
 /**
+ * Object containing a single element of a ParetoSet
+ */
+export type ParetoSetEntry = {
+    /**
+     * duration in seconds for the the best solution using `transfer` transfers
+     *
+     * Notice that the resolution is currently in minutes, because of implementation details
+     *
+     */
+    duration: number;
+    /**
+     * The minimal number of transfers required to arrive within `duration` seconds
+     *
+     * transfers=0: Direct transit connecion without any transfers
+     * transfers=1: Transit connection with 1 transfer
+     *
+     */
+    transfers: number;
+};
+
+/**
+ * Pareto set of optimal transit solutions
+ */
+export type ParetoSet = Array<ParetoSetEntry>;
+
+/**
+ * Object containing the optimal street and transit durations for One-to-Many routing
+ */
+export type OneToManyIntermodalResponse = {
+    /**
+     * Fastest durations for street routing
+     * The order of the items corresponds to the order of the `many` locations
+     * If no street routed connection is found, the corresponding `Duration` will be empty
+     *
+     */
+    street_durations?: Array<Duration>;
+    /**
+     * Pareto optimal solutions
+     * The order of the items corresponds to the order of the `many` locations
+     * If no connection using transits is found, the corresponding `ParetoSet` will be empty
+     *
+     */
+    transit_durations?: Array<ParetoSet>;
+};
+
+/**
  * Administrative area
  */
 export type Area = {
@@ -1628,6 +1674,15 @@ export type OneToManyIntermodalParams = {
      */
     maxDirectTime?: number;
     /**
+     * If true, the response includes the distance in meters
+     * for each path. This requires path reconstruction and
+     * may be slower than duration-only queries.
+     *
+     * `withDistance` is currently limited to street routing.
+     *
+     */
+    withDistance?: boolean;
+    /**
      * Optional. Default is `false`.
      *
      * If set to `true`, all used transit trips are required to allow bike carriage.
@@ -2591,10 +2646,20 @@ export type OneToManyIntermodalData = {
          *
          */
         useRoutedTransfers?: boolean;
+        /**
+         * Optional. Default is `false`.
+         * If true, the response includes the distance in meters
+         * for each path. This requires path reconstruction and
+         * is slower than duration-only queries.
+         *
+         * `withDistance` is currently limited to street routing.
+         *
+         */
+        withDistance?: boolean;
     };
 };
 
-export type OneToManyIntermodalResponse = (Array<Duration>);
+export type OneToManyIntermodalResponse2 = (OneToManyIntermodalResponse);
 
 export type OneToManyIntermodalError = (Error);
 
@@ -2602,7 +2667,7 @@ export type OneToManyIntermodalPostData = {
     body: OneToManyIntermodalParams;
 };
 
-export type OneToManyIntermodalPostResponse = (Array<Duration>);
+export type OneToManyIntermodalPostResponse = (OneToManyIntermodalResponse);
 
 export type OneToManyIntermodalPostError = (Error);
 
