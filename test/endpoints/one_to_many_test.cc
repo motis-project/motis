@@ -494,7 +494,7 @@ TEST(motis, one_to_many) {
           "&minTransferTime=21");
 
       EXPECT_EQ((api::OneToManyIntermodalResponse{
-                    .street_durations_ = {{{}}},
+                    .street_durations_ = {{api::Duration{}}},
                     .transit_durations_ = {{
                         {{.duration_ = 4320.0, .transfers_ = 1}},
                     }}}),
@@ -510,7 +510,7 @@ TEST(motis, one_to_many) {
           .useRoutedTransfers_ = true});
 
       EXPECT_EQ((api::OneToManyIntermodalResponse{
-                    .street_durations_ = {{{}}},
+                    .street_durations_ = {{api::Duration{}}},
                     .transit_durations_ = {{
                         {{.duration_ = 4200.0, .transfers_ = 1}},
                     }}}),
