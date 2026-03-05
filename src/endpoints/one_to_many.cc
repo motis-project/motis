@@ -194,6 +194,7 @@ std::vector<api::ParetoSet> transit_durations(
         many_modes, std::nullopt, std::nullopt, std::nullopt, std::nullopt,
         false, osr_params, pedestrian_profile, elevation_costs,
         many_max_seconds, max_matching_distance, gbfs_rd, prepare_stats);
+
     for (auto const offset : offsets) {
       auto const loc = offset.target();
       if (reachable.test(to_idx(loc))) {
@@ -266,11 +267,10 @@ api::OneToManyIntermodalResponse run_one_to_many_intermodal(
                               : osr::direction::kForward,
               osr_params, query.pedestrianProfile_, query.elevationCosts_,
               ep.elevations_, query.withDistance_),
-          .transit_durations_ =
-              transit_durations(ep, query, one, many, time, query.arriveBy_,
-                                max_travel_time, query.maxMatchingDistance_,
-                                query.pedestrianProfile_, query.elevationCosts_,
-                                osr_params)};
+          .transit_durations_ = transit_durations(
+              ep, query, one, many, time, query.arriveBy_, max_travel_time,
+              query.maxMatchingDistance_, query.pedestrianProfile_,
+              query.elevationCosts_, osr_params)};
 }
 
 api::OneToManyIntermodalResponse one_to_many_intermodal::operator()(
