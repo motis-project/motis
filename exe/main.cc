@@ -41,7 +41,6 @@ int batch(int, char**);
 int compare(int, char**);
 int extract(int, char**);
 int params(int, char**);
-int mixer(int, char**);
 }  // namespace motis
 
 using namespace motis;
@@ -66,7 +65,7 @@ int main(int ac, char** av) {
         "  pb2json    convert GTFS-RT protobuf to JSON\n"
         "  json2pb    convert JSON to GTFS-RT protobuf\n"
         "  shapes     print shape segmentation for trips\n",
-        "  mixer      test the ODM mixer\n", motis_version);
+        motis_version);
     return 0;
   } else if (ac <= 1 || (ac >= 2 && av[1] == "--version"sv)) {
     fmt::println("{}", motis_version);
@@ -87,7 +86,6 @@ int main(int ac, char** av) {
     case cista::hash("params"): return_value = params(ac, av); break;
     case cista::hash("batch"): return_value = batch(ac, av); break;
     case cista::hash("compare"): return_value = compare(ac, av); break;
-    case cista::hash("mixer"): return_value = mixer(ac, av); break;
 
     case cista::hash("config"): {
       auto paths = std::vector<std::string>{};
