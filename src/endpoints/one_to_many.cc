@@ -183,7 +183,7 @@ std::vector<api::ParetoSet> transit_durations(
   auto const dir = arrive_by ? n::direction::kBackward : n::direction::kForward;
   // As we iterate over all offsets first, we need to store all best solutions
   // If we would iterate over k first, we could build the pareto set directly.
-  // However, that would require more work for handling `delta_t`
+  // However, that would require more work for handling internals like `delta_t`
   auto totals = n::vector<double>{};
   for (auto const [i, l] : utl::enumerate(many)) {
     totals.clear();
@@ -211,6 +211,7 @@ std::vector<api::ParetoSet> transit_durations(
     auto entries = api::ParetoSet{};
     auto best = kInfinity;
     for (auto const [t, d] : utl::enumerate(totals)) {
+      // Filter long durations from offsets with many required transfers
       if (d < best) {
         entries.emplace_back(d, t);
         best = d;
@@ -266,7 +267,6 @@ api::OneToManyIntermodalResponse run_one_to_many_intermodal(
               osr_params, query.pedestrianProfile_, query.elevationCosts_,
               ep.elevations_, query.withDistance_),
           .transit_durations_ =
-
               transit_durations(ep, query, one, many, time, query.arriveBy_,
                                 max_travel_time, query.maxMatchingDistance_,
                                 query.pedestrianProfile_, query.elevationCosts_,

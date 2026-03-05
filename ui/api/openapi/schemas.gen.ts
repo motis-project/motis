@@ -208,7 +208,7 @@ If no street routed connection is found, the corresponding \`Duration\` will be 
         transit_durations: {
             description: `Pareto optimal solutions
 The order of the items corresponds to the order of the \`many\` locations
-If no connection using transits is found, the corresponding \`ParetoSet\` field will be empty
+If no connection using transits is found, the corresponding \`ParetoSet\` will be empty
 `,
             type: 'array',
             items: {
@@ -2087,6 +2087,8 @@ Is limited by server config variable \`street_routing_max_direct_seconds\`.
             description: `If true, the response includes the distance in meters
 for each path. This requires path reconstruction and
 may be slower than duration-only queries.
+
+\`withDistance\` is currently limited to street routing.
 `,
             type: 'boolean',
             default: false

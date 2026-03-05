@@ -268,7 +268,7 @@ TEST(motis, one_to_many) {
                 {{.duration_ = 900.0, .transfers_ = 0}},
                 {{.duration_ = 1020.0, .transfers_ = 0}},
                 {},
-                {{.duration_ = 3360.0, .transfers_ = 1}},  // or 3420.0
+                {{.duration_ = 3360.0, .transfers_ = 1}},  // from DA_10: 3420.0
                 {},
             }}}),
         durations);
@@ -306,7 +306,7 @@ TEST(motis, one_to_many) {
                       {.duration_ = 353.0},  // Valid for pre transit
                       {},
                       {},
-                      {.duration_ = 413.0},  // No valid pre transit
+                      {.duration_ = 413.0},
                       {},
                       {},
                       {},
@@ -365,7 +365,7 @@ TEST(motis, one_to_many) {
                   }},
                   .transit_durations_ = {{
                       {{.duration_ = 1680.0, .transfers_ = 0}},
-                      {},  // Not reachable from FFM_101
+                      {},  // Not reachable from de:6412:10:6:1
                       {},
                       {},
                       {},
@@ -481,7 +481,6 @@ TEST(motis, one_to_many) {
                 durations);
     }
   }
-
   // Transfer time settings  (FIXME Times are also added for final footpath)
   {
     // minTransferTime
@@ -603,7 +602,7 @@ TEST(motis, one_to_many) {
                 walk_durations);
     }
   }
-  // Pareto sets with many durations
+  // Pareto sets and routings with multiple durations
   {
     {
       // With routed transfers + distances

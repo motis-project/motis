@@ -176,7 +176,7 @@ export type OneToManyIntermodalResponse = {
     /**
      * Pareto optimal solutions
      * The order of the items corresponds to the order of the `many` locations
-     * If no connection using transits is found, the corresponding `ParetoSet` field will be empty
+     * If no connection using transits is found, the corresponding `ParetoSet` will be empty
      *
      */
     transit_durations?: Array<ParetoSet>;
@@ -1678,6 +1678,8 @@ export type OneToManyIntermodalParams = {
      * for each path. This requires path reconstruction and
      * may be slower than duration-only queries.
      *
+     * `withDistance` is currently limited to street routing.
+     *
      */
     withDistance?: boolean;
     /**
@@ -2649,6 +2651,8 @@ export type OneToManyIntermodalData = {
          * If true, the response includes the distance in meters
          * for each path. This requires path reconstruction and
          * is slower than duration-only queries.
+         *
+         * `withDistance` is currently limited to street routing.
          *
          */
         withDistance?: boolean;
