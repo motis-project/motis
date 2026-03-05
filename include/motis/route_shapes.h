@@ -3,6 +3,8 @@
 #include <filesystem>
 #include <optional>
 
+#include "boost/json/fwd.hpp"
+
 #include "cista/containers/pair.h"
 #include "cista/containers/vector.h"
 
@@ -44,6 +46,11 @@ struct shape_cache {
 
   lmdb::env env_;
 };
+
+boost::json::object route_shape_debug(osr::ways const&,
+                                      osr::lookup const&,
+                                      nigiri::timetable const&,
+                                      nigiri::route_idx_t);
 
 void route_shapes(osr::ways const&,
                   osr::lookup const&,

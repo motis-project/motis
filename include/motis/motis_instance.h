@@ -17,6 +17,7 @@
 #include "motis/endpoints/map/flex_locations.h"
 #include "motis/endpoints/map/rental.h"
 #include "motis/endpoints/map/routes.h"
+#include "motis/endpoints/map/shapes_debug.h"
 #include "motis/endpoints/map/stops.h"
 #include "motis/endpoints/map/trips.h"
 #include "motis/endpoints/matches.h"
@@ -125,6 +126,15 @@ struct motis_instance {
     if (!c.requires_rt_timetable_updates()) {
       // Elevator updates are not compatible with RT-updates.
       POST<ep::update_elevator>("/api/update_elevator", d);
+    }
+
+    if (c.shapes_debug_api_enabled()) {
+      utl::verify(d.w_ != nullptr && d.l_ != nullptr && d.tt_ != nullptr &&
+                      d.tags_ != nullptr,
+                  "data for shapes debug api not loaded");
+      qr_.route("GET", "/api/experimental/shapes-debug/",
+                ep::shapes_debug{c, d.w_.get(), d.l_.get(), d.tt_.get(),
+                                 d.tags_.get()});
     }
 
     if (c.tiles_) {

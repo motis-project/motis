@@ -192,6 +192,11 @@ bool config::requires_rt_timetable_updates() const {
           }));
 }
 
+bool config::shapes_debug_api_enabled() const {
+  return timetable_.has_value() && timetable_->route_shapes_.has_value() &&
+         timetable_->route_shapes_->debug_api_;
+}
+
 bool config::has_gbfs_feeds() const {
   return gbfs_.has_value() && !gbfs_->feeds_.empty();
 }
