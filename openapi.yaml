@@ -3896,7 +3896,7 @@ components:
           description: The number of transfers this trip has.
         id:
           type: string
-          description: TODO
+          description: Opaque itinerary identifier. Pass it as `itineraryId` to `/api/v1/refresh-itinerary` for reconstruction using the new schedule/realtime data.
         legs:
           description: Journey legs
           type: array
