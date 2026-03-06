@@ -28,6 +28,7 @@ struct config {
   void verify_input_files_exist() const;
 
   bool requires_rt_timetable_updates() const;
+  bool shapes_debug_api_enabled() const;
   bool has_gbfs_feeds() const;
   bool has_prima() const;
   bool has_elevators() const;
@@ -110,6 +111,7 @@ struct config {
       std::optional<std::map<std::string, bool>> clasz_{};
       unsigned max_stops_{0U};
       unsigned n_threads_{0U};
+      bool debug_api_{false};
       std::optional<shapes_debug> debug_{};
     };
 

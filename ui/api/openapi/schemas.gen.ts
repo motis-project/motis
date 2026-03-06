@@ -2115,7 +2115,7 @@ If set to \`true\`, all used transit trips are required to allow car carriage.
 export const ServerConfigSchema = {
     Description: 'server configuration',
     type: 'object',
-    required: ['hasElevation', 'hasRoutedTransfers', 'hasStreetRouting', 'maxOneToManySize', 'maxOneToAllTravelTimeLimit', 'maxPrePostTransitTimeLimit', 'maxDirectTimeLimit'],
+    required: ['hasElevation', 'hasRoutedTransfers', 'hasStreetRouting', 'maxOneToManySize', 'maxOneToAllTravelTimeLimit', 'maxPrePostTransitTimeLimit', 'maxDirectTimeLimit', 'shapesDebugEnabled'],
     properties: {
         hasElevation: {
             description: 'true if elevation is loaded',
@@ -2145,6 +2145,10 @@ export const ServerConfigSchema = {
         maxDirectTimeLimit: {
             description: 'limit for maxDirectTime API param in seconds',
             type: 'number'
+        },
+        shapesDebugEnabled: {
+            description: 'true if experimental route shapes debug download API is enabled',
+            type: 'boolean'
         }
     }
 } as const;

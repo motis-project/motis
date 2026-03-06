@@ -1728,6 +1728,10 @@ export type ServerConfig = {
      * limit for maxDirectTime API param in seconds
      */
     maxDirectTimeLimit: number;
+    /**
+     * true if experimental route shapes debug download API is enabled
+     */
+    shapesDebugEnabled: boolean;
 };
 
 export type Error = {

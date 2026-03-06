@@ -75,7 +75,8 @@ api::initial_response initial::operator()(boost::urls::url_view const&) const {
           .maxPrePostTransitTimeLimit_ = static_cast<double>(
               limits.street_routing_max_prepost_transit_seconds_),
           .maxDirectTimeLimit_ =
-              static_cast<double>(limits.street_routing_max_direct_seconds_)}};
+              static_cast<double>(limits.street_routing_max_direct_seconds_),
+          .shapesDebugEnabled_ = config_.shapes_debug_api_enabled()}};
 }
 
 }  // namespace motis::ep

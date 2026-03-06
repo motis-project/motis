@@ -4710,6 +4710,7 @@ components:
         - maxOneToAllTravelTimeLimit
         - maxPrePostTransitTimeLimit
         - maxDirectTimeLimit
+        - shapesDebugEnabled
       properties:
         hasElevation:
           description: true if elevation is loaded
@@ -4733,6 +4734,9 @@ components:
         maxDirectTimeLimit:
           description: limit for maxDirectTime API param in seconds
           type: number
+        shapesDebugEnabled:
+          description: true if experimental route shapes debug download API is enabled
+          type: boolean
     Error:
       type: object
       required:
