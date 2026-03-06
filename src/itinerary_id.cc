@@ -151,10 +151,8 @@ n::rt::frun make_frun_from_stoptime(motis::tag_lookup const& tags,
 std::optional<n::stop_idx_t> find_stop_by_location_time(
     n::rt::frun const& fr,
     n::location_idx_t const loc,
-    openapi::date_time_t const& scheduled_time,
+    int64_t const target_sec,
     n::event_type const ev_type) {
-  auto const target_sec = to_epoch_seconds(scheduled_time);
-
   for (auto i = n::stop_idx_t{0U}; i < fr.size(); ++i) {
     auto const rs = fr[i];
     if (rs.get_location_idx() == loc &&
@@ -184,25 +182,21 @@ std::optional<n::stop_idx_t> find_stop_by_place(n::rt::frun const& fr,
     return std::nullopt;
   }
 
-  return find_stop_by_location_time(fr, *loc, *t, ev_type);
+  return find_stop_by_location_time(fr, *loc, to_epoch_seconds(*t), ev_type);
 }
 
-std::optional<n::stop_idx_t> find_stop_by_id(
+std::optional<n::stop_idx_t> find_stop_by_id_time(
     n::rt::frun const& fr,
     motis::tag_lookup const& tags,
     std::string_view const stop_id,
-    n::stop_idx_t const min_stop_idx = n::stop_idx_t{0U}) {
+    int64_t const target_sec,
+    n::event_type const ev_type) {
   auto const loc = tags.find_location(*fr.tt_, stop_id);
   if (!loc.has_value()) {
     return std::nullopt;
   }
-  for (auto i = min_stop_idx; i < fr.size(); ++i) {
-    auto const rs = fr[i];
-    if (rs.get_location_idx() == *loc) {
-      return rs.stop_idx_;
-    }
-  }
-  return std::nullopt;
+
+  return find_stop_by_location_time(fr, *loc, target_sec, ev_type);
 }
 
 motis::api::Itinerary build_itinerary_from_frun(
@@ -423,14 +417,17 @@ api::Itinerary reconstruct_itinerary(motis::ep::stop_times const& stoptimes_ep,
                 "while itinerary id expects additional trip");
 
     auto const from_idx =
-        find_stop_by_id(fr, stoptimes_ep.tags_, lh.from_stop_id_);
+        find_stop_by_id_time(fr, stoptimes_ep.tags_, lh.from_stop_id_,
+                             lh.sched_start_, n::event_type::kDep);
     utl::verify(from_idx.has_value(),
                 "reconstruct_itinerary: additional trip from stop not found");
+
     auto const to_idx =
-        find_stop_by_id(fr, stoptimes_ep.tags_, lh.to_stop_id_,
-                        static_cast<n::stop_idx_t>(*from_idx + 1U));
+        find_stop_by_id_time(fr, stoptimes_ep.tags_, lh.to_stop_id_,
+                             lh.sched_end_, n::event_type::kArr);
     utl::verify(to_idx.has_value(),
                 "reconstruct_itinerary: additional trip to stop not found");
+
     utl::verify(*from_idx < *to_idx,
                 "reconstruct_itinerary: invalid stop order (from >= to)");
 
