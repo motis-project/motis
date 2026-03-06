@@ -320,7 +320,7 @@
 		if (utf8Match?.[1]) {
 			try {
 				return decodeURIComponent(utf8Match[1]).trim();
-			} catch {}
+			} catch {} // eslint-disable-line
 		}
 
 		const plainMatch = /filename="?([^";]+)"?/i.exec(contentDisposition);
