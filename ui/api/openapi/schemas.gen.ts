@@ -147,11 +147,73 @@ export const DurationSchema = {
     properties: {
         duration: {
             type: 'number',
-            description: 'duration in seconds if a path was found, otherwise missing'
+            description: 'duration in seconds if a path was found, otherwise missing',
+            minimum: 0
         },
         distance: {
             type: 'number',
-            description: 'distance in meters if a path was found and distance computation was requested, otherwise missing'
+            description: 'distance in meters if a path was found and distance computation was requested, otherwise missing',
+            minimum: 0
+        }
+    }
+} as const;
+
+export const ParetoSetEntrySchema = {
+    description: 'Object containing a single element of a ParetoSet',
+    type: 'object',
+    required: ['duration', 'transfers'],
+    properties: {
+        duration: {
+            type: 'number',
+            description: `duration in seconds for the the best solution using \`transfer\` transfers
+
+Notice that the resolution is currently in minutes, because of implementation details
+`,
+            minimum: 0
+        },
+        transfers: {
+            description: `The minimal number of transfers required to arrive within \`duration\` seconds
+
+transfers=0: Direct transit connecion without any transfers
+transfers=1: Transit connection with 1 transfer
+`,
+            type: 'integer',
+            minimum: 0
+        }
+    }
+} as const;
+
+export const ParetoSetSchema = {
+    description: 'Pareto set of optimal transit solutions',
+    type: 'array',
+    items: {
+        '$ref': '#/components/schemas/ParetoSetEntry'
+    }
+} as const;
+
+export const OneToManyIntermodalResponseSchema = {
+    description: 'Object containing the optimal street and transit durations for One-to-Many routing',
+    type: 'object',
+    properties: {
+        street_durations: {
+            description: `Fastest durations for street routing
+The order of the items corresponds to the order of the \`many\` locations
+If no street routed connection is found, the corresponding \`Duration\` will be empty
+`,
+            type: 'array',
+            items: {
+                '$ref': '#/components/schemas/Duration'
+            }
+        },
+        transit_durations: {
+            description: `Pareto optimal solutions
+The order of the items corresponds to the order of the \`many\` locations
+If no connection using transits is found, the corresponding \`ParetoSet\` will be empty
+`,
+            type: 'array',
+            items: {
+                '$ref': '#/components/schemas/ParetoSet'
+            }
         }
     }
 } as const;
@@ -2020,6 +2082,16 @@ Is limited by server config variable \`street_routing_max_direct_seconds\`.
             type: 'integer',
             default: 1800,
             minimum: 0
+        },
+        withDistance: {
+            description: `If true, the response includes the distance in meters
+for each path. This requires path reconstruction and
+may be slower than duration-only queries.
+
+\`withDistance\` is currently limited to street routing.
+`,
+            type: 'boolean',
+            default: false
         },
         requireBikeTransport: {
             description: `Optional. Default is \`false\`.

@@ -22,7 +22,7 @@ namespace motis::ep {
 
 namespace n = nigiri;
 
-constexpr auto kInfinity = std::numeric_limits<double>::infinity();
+constexpr auto const kInfinity = std::numeric_limits<double>::infinity();
 
 api::oneToMany_response one_to_many_direct(
     config const& config,
@@ -79,13 +79,10 @@ api::oneToMany_response one_to_many_direct(
   });
 }
 
-double delta_to_seconds(n::delta_t const d) { return std::abs(60.0 * d); }
-
 double duration_to_seconds(n::duration_t const d) { return 60 * d.count(); }
 
 template <typename Endpoint, typename Query>
-void update_transit_durations(
-    api::oneToMany_response& durations,
+std::vector<api::ParetoSet> transit_durations(
     Endpoint const& ep,
     Query const& query,
     place_t const& one,
@@ -181,8 +178,16 @@ void update_transit_durations(
     }
   }
 
+  auto pareto_sets = std::vector<api::ParetoSet>{};
+
+  auto const dir = arrive_by ? n::direction::kBackward : n::direction::kForward;
+  // As we iterate over all offsets first, we need to store all best solutions
+  // If we would iterate over k first, we could build the pareto set directly.
+  // However, that would require more work for handling internals like `delta_t`
+  auto totals = n::vector<double>{};
   for (auto const [i, l] : utl::enumerate(many)) {
-    auto best = kInfinity;
+    totals.clear();
+    totals.resize(q.max_transfers_, kInfinity);
     auto const offsets = r.get_offsets(
         nullptr, l,
         arrive_by ? osr::direction::kForward : osr::direction::kBackward,
@@ -193,38 +198,45 @@ void update_transit_durations(
     for (auto const offset : offsets) {
       auto const loc = offset.target();
       if (reachable.test(to_idx(loc))) {
-        auto const fastest = n::routing::get_fastest_one_to_all_offsets(
-            ep.tt_, state,
-            arrive_by ? n::direction::kBackward : n::direction::kForward, loc,
-            time, q.max_transfers_);
-        auto const total = delta_to_seconds(fastest.duration_) +
-                           duration_to_seconds(offset.duration());
-        if (total < best) {
-          best = total;
-        }
+        auto const base = duration_to_seconds(offset.duration());
+        n::routing::for_each_one_to_all_round_time(
+            ep.tt_, state, dir, loc, time, q.max_transfers_,
+            [&](std::uint8_t const k, n::duration_t const d) {
+              if (k != std::uint8_t{0U}) {
+                auto const total = base + duration_to_seconds(d);
+                totals[k - 1U] = std::min(totals[k - 1], total);
+              }
+            });
       }
     }
-
-    if (best < kInfinity && best <= max_travel_time.count() &&
-        (!durations[i].duration_.has_value() ||
-         best < *durations[i].duration_)) {
-      durations[i].duration_ = best;
+    auto entries = api::ParetoSet{};
+    auto best = kInfinity;
+    for (auto const [t, d] : utl::enumerate(totals)) {
+      // Filter long durations from offsets with many required transfers
+      if (d < best) {
+        entries.emplace_back(d, t);
+        best = d;
+      }
     }
+    pareto_sets.emplace_back(std::move(entries));
   }
+  return pareto_sets;
 }
 
 api::oneToMany_response one_to_many::operator()(
     boost::urls::url_view const& url) const {
   auto const query = api::oneToMany_params{url.params()};
-  return one_to_many_handle_request(config_, query, w_, l_, elevations_);
+  return one_to_many_handle_request(config_, query, w_, l_, elevations_,
+                                    metrics_);
 }
 
 template <typename Endpoint, typename Query>
-api::oneToManyIntermodal_response run_one_to_many_intermodal(
+api::OneToManyIntermodalResponse run_one_to_many_intermodal(
     Endpoint const& ep,
     Query const& query,
     place_t const& one,
     std::vector<place_t> const& many) {
+  ep.metrics_->one_to_many_requests_.Increment();
   auto const time = std::chrono::time_point_cast<std::chrono::minutes>(
       *query.time_.value_or(openapi::now()));
 
@@ -242,29 +254,28 @@ api::oneToManyIntermodal_response run_one_to_many_intermodal(
   auto const to_location = [&](place_t const& p) {
     return get_location(&ep.tt_, ep.w_, ep.pl_, ep.matches_, p);
   };
-  auto durations = one_to_many_direct(
-      ep.config_, *ep.w_, *ep.l_, query.directMode_, to_location(one),
-      utl::to_vec(many, to_location),
-      static_cast<double>(std::min(
-          {std::max({query.maxDirectTime_, query.maxPreTransitTime_,
-                     query.maxPostTransitTime_}),
-           static_cast<std::int64_t>(max_travel_time.count()),
-           static_cast<std::int64_t>(
-               ep.config_.get_limits().street_routing_max_direct_seconds_)})),
-      query.maxMatchingDistance_,
-      query.arriveBy_ ? osr::direction::kBackward : osr::direction::kForward,
-      osr_params, query.pedestrianProfile_, query.elevationCosts_,
-      ep.elevations_, false);
-
-  update_transit_durations(durations, ep, query, one, many, time,
-                           query.arriveBy_, max_travel_time,
-                           query.maxMatchingDistance_, query.pedestrianProfile_,
-                           query.elevationCosts_, osr_params);
-
-  return durations;
+  return {.street_durations_ = one_to_many_direct(
+              ep.config_, *ep.w_, *ep.l_, query.directMode_, to_location(one),
+              utl::to_vec(many, to_location),
+              static_cast<double>(std::min(
+                  {std::max({query.maxDirectTime_, query.maxPreTransitTime_,
+                             query.maxPostTransitTime_}),
+                   static_cast<std::int64_t>(max_travel_time.count()),
+                   static_cast<std::int64_t>(
+                       ep.config_.get_limits()
+                           .street_routing_max_direct_seconds_)})),
+              query.maxMatchingDistance_,
+              query.arriveBy_ ? osr::direction::kBackward
+                              : osr::direction::kForward,
+              osr_params, query.pedestrianProfile_, query.elevationCosts_,
+              ep.elevations_, query.withDistance_),
+          .transit_durations_ = transit_durations(
+              ep, query, one, many, time, query.arriveBy_, max_travel_time,
+              query.maxMatchingDistance_, query.pedestrianProfile_,
+              query.elevationCosts_, osr_params)};
 }
 
-api::oneToManyIntermodal_response one_to_many_intermodal::operator()(
+api::OneToManyIntermodalResponse one_to_many_intermodal::operator()(
     boost::urls::url_view const& url) const {
   auto const query = api::oneToManyIntermodal_params{url.params()};
 
@@ -282,14 +293,14 @@ api::oneToManyIntermodal_response one_to_many_intermodal::operator()(
   return run_one_to_many_intermodal(*this, query, *one, many);
 }
 
-template api::oneToManyIntermodal_response run_one_to_many_intermodal<
+template api::OneToManyIntermodalResponse run_one_to_many_intermodal<
     one_to_many_intermodal,
     api::oneToManyIntermodal_params>(one_to_many_intermodal const&,
                                      api::oneToManyIntermodal_params const&,
                                      place_t const&,
                                      std::vector<place_t> const&);
 
-template api::oneToManyIntermodalPost_response run_one_to_many_intermodal<
+template api::OneToManyIntermodalResponse run_one_to_many_intermodal<
     one_to_many_intermodal_post,
     api::OneToManyIntermodalParams>(one_to_many_intermodal_post const&,
                                     api::OneToManyIntermodalParams const&,

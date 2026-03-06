@@ -19,6 +19,7 @@
 #include "motis/data.h"
 #include "motis/fwd.h"
 #include "motis/match_platforms.h"
+#include "motis/metrics_registry.h"
 #include "motis/osr/parameters.h"
 #include "motis/parse_location.h"
 #include "motis/place.h"
@@ -48,7 +49,9 @@ api::oneToMany_response one_to_many_handle_request(
     Params const& query,
     osr::ways const& w,
     osr::lookup const& l,
-    osr::elevation_storage const* elevations) {
+    osr::elevation_storage const* elevations,
+    metrics_registry* metrics) {
+  metrics->one_to_many_requests_.Increment();
   // required field with default value, not std::optional
   static_assert(std::is_same_v<decltype(query.withDistance_), bool>);
 
@@ -72,7 +75,7 @@ api::oneToMany_response one_to_many_handle_request(
 }
 
 template <typename Endpoint, typename Query>
-api::oneToManyIntermodal_response run_one_to_many_intermodal(
+api::OneToManyIntermodalResponse run_one_to_many_intermodal(
     Endpoint const&,
     Query const&,
     place_t const& one,
@@ -85,10 +88,11 @@ struct one_to_many {
   osr::ways const& w_;
   osr::lookup const& l_;
   osr::elevation_storage const* elevations_;
+  metrics_registry* metrics_;
 };
 
 struct one_to_many_intermodal {
-  api::oneToManyIntermodal_response operator()(
+  api::OneToManyIntermodalResponse operator()(
       boost::urls::url_view const&) const;
 
   config const& config_;
