@@ -111,7 +111,7 @@ struct config {
       std::optional<std::map<std::string, bool>> clasz_{};
       unsigned max_stops_{0U};
       unsigned n_threads_{0U};
-      bool debug_api_{true};
+      bool debug_api_{false};
       std::optional<shapes_debug> debug_{};
     };
 
