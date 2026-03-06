@@ -660,7 +660,9 @@ api::Itinerary journey_to_response(
 
   cleanup_intermodal(itinerary);
 
-  if (itinerary.legs_.size() == 1) {
+  if (itinerary.legs_.size() == 1 &&
+      itinerary.legs_.front().tripId_.has_value() &&
+      !itinerary.legs_.front().tripId_->empty()) {
     itinerary.id_ = generate_itinerary_id(itinerary);
   }
   return itinerary;
