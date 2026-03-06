@@ -1,7 +1,7 @@
 [nigiri]
   url=git@github.com:MichaelKutzner/nigiri.git
-  branch=one_to_many_round_times
-  commit=2cc5fb3f69bf7e6fd015bcee0500f83bf2d19bb4
+  branch=master
+  commit=31d19da69f0098861668f4b35d63d91ffd90cc35
 [cista]
   url=git@github.com:felixguendling/cista.git
   branch=master
@@ -9,7 +9,7 @@
 [osr]
   url=git@github.com:motis-project/osr.git
   branch=master
-  commit=0c478510932cebf48516f933cc81783388a4ce5e
+  commit=11ac913cfe0606b0441ed5b2235a32d42522f17a
 [utl]
   url=git@github.com:motis-project/utl.git
   branch=master
