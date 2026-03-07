@@ -19,13 +19,8 @@ api::Itinerary refresh_itinerary::operator()(
   auto const stop_times_ep =
       ep::stop_times{config_, w_,         pl_, matches_, ae_,
                      tz_,     loc_rtree_, tt_, tags_,    kStaticOnlyRt};
-  try {
-    auto const query = api::refreshItinerary_params{url.params()};
-    return reconstruct_itinerary(stop_times_ep, query.itineraryId_, rt.get());
-  } catch (std::exception const& e) {
-    throw net::bad_request_exception{std::string{"invalid itineraryId: "} +
-                                     e.what()};
-  }
+  auto const query = api::refreshItinerary_params{url.params()};
+  return reconstruct_itinerary(stop_times_ep, query.itineraryId_, rt.get());
 }
 
 }  // namespace motis::ep

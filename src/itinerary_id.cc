@@ -151,9 +151,9 @@ n::rt::frun make_frun_from_stoptime(motis::tag_lookup const& tags,
 std::optional<n::stop_idx_t> find_stop_by_location_time(
     n::rt::frun const& fr,
     n::location_idx_t const loc,
-    int64_t const target_sec,
+    std::int64_t const target_sec,
     n::event_type const ev_type,
-    int64_t const allowed_deviation_sec = 0) {
+    std::int64_t const allowed_deviation_sec = 0) {
   for (auto i = n::stop_idx_t{0U}; i < fr.size(); ++i) {
     auto const rs = fr[i];
     if (rs.get_location_idx() == loc &&
@@ -191,9 +191,9 @@ std::optional<n::stop_idx_t> find_stop_by_id_time(
     n::rt::frun const& fr,
     motis::tag_lookup const& tags,
     std::string_view const stop_id,
-    int64_t const target_sec,
+    std::int64_t const target_sec,
     n::event_type const ev_type,
-    int64_t const allowed_deviation_sec) {
+    std::int64_t const allowed_deviation_sec) {
   auto const loc = tags.find_location(*fr.tt_, stop_id);
   if (!loc.has_value()) {
     return std::nullopt;
@@ -206,8 +206,7 @@ std::optional<n::stop_idx_t> find_stop_by_id_time(
 motis::api::Itinerary build_itinerary_from_frun(
     std::tuple<n::rt::frun, n::stop_idx_t, n::stop_idx_t> const& run,
     motis::ep::stop_times const& stoptimes_ep,
-    n::rt_timetable const* rtt,
-    n::unixtime_t const journey_start) {
+    n::rt_timetable const* rtt) {
   auto legs = std::vector<n::routing::journey::leg>{};
 
   auto const& [fr, from_idx, to_idx] = run;
@@ -230,7 +229,7 @@ motis::api::Itinerary build_itinerary_from_frun(
   }
 
   auto j = n::routing::journey{.legs_ = legs,
-                               .start_time_ = journey_start,
+                               .start_time_ = legs.front().dep_time_,
                                .dest_time_ = legs.back().arr_time_,
                                .dest_ = legs.back().to_,
                                .transfers_ = 0};
@@ -340,8 +339,6 @@ std::string generate_itinerary_id(api::Itinerary const& itin) {
   auto legs = boost::json::array{};
   legs.reserve(itin.legs_.size());
 
-  auto max_sched_t = std::int64_t{0};
-
   {
     auto const& leg = itin.legs_[0];
 
@@ -358,7 +355,6 @@ std::string generate_itinerary_id(api::Itinerary const& itin) {
                 0);
     auto const sched_start_m = to_itinerary_minutes(sched_start);
     auto const sched_end_m = to_itinerary_minutes(sched_end);
-    max_sched_t = sched_end;
 
     auto const sched_delta_m = sched_end_m - sched_start_m;
 
@@ -379,14 +375,13 @@ std::string generate_itinerary_id(api::Itinerary const& itin) {
 
   auto root = boost::json::object{};
   root["legs"] = std::move(legs);
-  root["journey_start"] = max_sched_t - itin.duration_;
   return boost::json::serialize(root);
 }
 
 api::Itinerary reconstruct_itinerary(motis::ep::stop_times const& stoptimes_ep,
                                      std::string const& itin_id,
                                      rt const* realtime_ctx) {
-  constexpr auto kLookbackSeconds = int64_t{8 * 60};
+  constexpr auto kLookbackSeconds = std::int64_t{8 * 60};
 
   auto const root = boost::json::parse(itin_id).as_object();
   auto const& legs = root.at("legs").as_array();
@@ -397,9 +392,6 @@ api::Itinerary reconstruct_itinerary(motis::ep::stop_times const& stoptimes_ep,
     lh_vk.emplace_back(lj.as_object());
   }
 
-  auto const journey_start =
-      n::unixtime_t{std::chrono::duration_cast<n::i32_minutes>(
-          std::chrono::seconds{root.at("journey_start").as_int64()})};
   auto const rtt = realtime_ctx != nullptr ? realtime_ctx->rtt_.get() : nullptr;
 
   auto runs =
@@ -465,8 +457,7 @@ api::Itinerary reconstruct_itinerary(motis::ep::stop_times const& stoptimes_ep,
     runs.emplace_back(best_fr, *from_idx, *to_idx);
   }
 
-  auto res =
-      build_itinerary_from_frun(runs.front(), stoptimes_ep, rtt, journey_start);
+  auto res = build_itinerary_from_frun(runs.front(), stoptimes_ep, rtt);
   res.id_ = itin_id;
   return res;
 }

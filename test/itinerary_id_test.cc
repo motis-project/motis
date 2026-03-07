@@ -206,7 +206,7 @@ api::Itinerary route_first_itinerary(m::data& data,
                                      std::string_view const time) {
   auto const routing = utl::init_from<ep::routing>(data).value();
   auto const query = fmt::format(
-      "?fromPlace={}&toPlace={}&time={}&timetableView=false"
+      "?fromPlace={}&toPlace={}&time={}&timetableView=true"
       "&directModes=WALK,RENTAL",
       from_place, to_place, time);
   return routing(query).itineraries_.at(0);
