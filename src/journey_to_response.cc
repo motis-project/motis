@@ -25,6 +25,7 @@
 #include "motis/flex/flex_output.h"
 #include "motis/gbfs/gbfs_output.h"
 #include "motis/gbfs/routing_data.h"
+#include "motis/itinerary_id.h"
 #include "motis/odm/odm.h"
 #include "motis/osr/mode_to_profile.h"
 #include "motis/osr/street_routing.h"
@@ -661,6 +662,11 @@ api::Itinerary journey_to_response(
 
   cleanup_intermodal(itinerary);
 
+  if (itinerary.legs_.size() == 1 &&
+      itinerary.legs_.front().tripId_.has_value() &&
+      !itinerary.legs_.front().tripId_->empty()) {
+    itinerary.id_ = generate_itinerary_id(itinerary);
+  }
   return itinerary;
 }
 
