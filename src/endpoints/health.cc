@@ -20,8 +20,18 @@ std::string_view health::operator()(boost::urls::url_view const& url) const {
     return v.name == "nigiri_gtfsrt_last_update_timestamp_seconds";
   });
 
-  if (it != families.end() && (*it).metric[0].gauge.value > 0.0) {
-    return std::string_view{"Running, RT applied"};
+  if (it != families.end()) {
+    auto const& datasets = config_.timetable_->datasets_;
+    auto n_expected = std::count_if(
+        datasets.begin(), datasets.end(),
+        [](auto const& pair) { return pair.second.rt_.has_value(); });
+    auto const& metrics = (*it).metric;
+    auto n_actual = std::count_if(metrics.begin(), metrics.end(),
+                                  [](auto const& m) { return m.gauge.value > 0.0; });
+
+    if (n_actual >= n_expected) {
+      return std::string_view{"Running, RT applied"};
+    }
   }
 
   throw utl::fail<net::bad_request_exception>("Running, RT not applied");
