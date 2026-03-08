@@ -2718,14 +2718,28 @@ paths:
                     items:
                       $ref: '#/components/schemas/RentalZone'
 
-  /api/debug/health:
+  /api/v1/health:
     get:
       operationId: health
       responses:
         '200':
-          description: OK!
-        default:
-          description: Not OK!
+          description: Motis is running and (if available) one cycle of real time updates are applied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '400':
+          description: Real time updates are not applied 
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Motis is not running 
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
           
   /api/debug/transfers:
     get:
