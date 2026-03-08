@@ -1,16 +1,31 @@
 #include "motis/endpoints/health.h"
 
-#include "boost/beast/status.hpp"
+#include <algorithm>
+
+#include "net/bad_request_exception.h"
+
+#include "utl/verify.h"
 
 namespace motis::ep {
 
-net::reply health::operator()(boost::urls::url_view const& req) const {
-  using status = boost::beast::http::status;
+std::string_view health::operator()(boost::urls::url_view const& url) const {
+  utl::verify(metrics_ != nullptr, "Not running");
+  config_.verify();
 
-  return net::web_server::empty_res_t{
-    (metrics_->total_trips_with_realtime_count_.Value() < 1.0) ? status::internal_server_error : status::ok,
-    req.version()
-  };
+  if (!config_.requires_rt_timetable_updates()) {
+    return std::string_view("Running, RT not enabled");
+  }
+
+  auto const& families = metrics_->registry_.Collect();
+  auto it = std::find_if(families.begin(), families.end(), [](auto const& v) {
+    return v.name == "nigiri_gtfsrt_last_update_timestamp_seconds";
+  });
+
+  if (it != families.end() && (*it).metric[0].gauge.value > 0.0) {
+    return std::string_view{"Running, RT applied"};
+  }
+
+  throw utl::fail<net::bad_request_exception>("Running, RT not applied");
 }
 
 }  // namespace motis::ep

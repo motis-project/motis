@@ -12,6 +12,7 @@
 #include "motis/endpoints/elevators.h"
 #include "motis/endpoints/graph.h"
 #include "motis/endpoints/gtfsrt.h"
+#include "motis/endpoints/health.h"
 #include "motis/endpoints/initial.h"
 #include "motis/endpoints/levels.h"
 #include "motis/endpoints/map/flex_locations.h"
@@ -94,7 +95,7 @@ struct motis_instance {
     POST<ep::graph>("/api/graph", d);
     GET<ep::transfers>("/api/debug/transfers", d);
     GET<ep::flex_locations>("/api/debug/flex", d);
-    GET<ep::health>("/api/debug/health", d);
+    GET<ep::health>("/api/v1/health", d);
     GET<ep::levels>("/api/v1/map/levels", d);
     GET<ep::initial>("/api/v1/map/initial", d);
     GET<ep::reverse_geocode>("/api/v1/reverse-geocode", d);
