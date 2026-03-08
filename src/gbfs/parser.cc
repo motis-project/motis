@@ -276,81 +276,87 @@ void load_station_status(gbfs_provider& provider, json::value const& root) {
     auto const& station_obj = s.as_object();
     auto const station_id = get_as_string(station_obj, "station_id");
 
-    auto const station_it = provider.stations_.find(station_id);
-    if (station_it == end(provider.stations_)) {
-      continue;
-    }
+    try {
+      auto const station_it = provider.stations_.find(station_id);
+      if (station_it == end(provider.stations_)) {
+        continue;
+      }
 
-    auto& station = station_it->second;
-    station.status_ = station_status{
-        .num_vehicles_available_ = 0U,
-        .is_renting_ = get_bool(station_obj, "is_renting", true),
-        .is_returning_ = get_bool(station_obj, "is_returning", true)};
+      auto& station = station_it->second;
+      station.status_ = station_status{
+          .num_vehicles_available_ = 0U,
+          .is_renting_ = get_bool(station_obj, "is_renting", true),
+          .is_returning_ = get_bool(station_obj, "is_returning", true)};
 
-    if (station_obj.contains("num_vehicles_available")) {
-      // GBFS 3.x (but some 2.x feeds use this as well)
-      station.status_.num_vehicles_available_ =
-          station_obj.at("num_vehicles_available").to_number<unsigned>();
-    } else if (station_obj.contains("num_bikes_available")) {
-      // GBFS 2.x
-      station.status_.num_vehicles_available_ =
-          station_obj.at("num_bikes_available").to_number<unsigned>();
-    }
+      if (station_obj.contains("num_vehicles_available")) {
+        // GBFS 3.x (but some 2.x feeds use this as well)
+        station.status_.num_vehicles_available_ =
+            station_obj.at("num_vehicles_available").to_number<unsigned>();
+      } else if (station_obj.contains("num_bikes_available")) {
+        // GBFS 2.x
+        station.status_.num_vehicles_available_ =
+            station_obj.at("num_bikes_available").to_number<unsigned>();
+      }
 
-    if (station_obj.contains("vehicle_types_available")) {
-      auto const& vta = station_obj.at("vehicle_types_available").as_array();
-      auto unrestricted_available = 0U;
-      auto any_station_available = 0U;
-      auto roundtrip_available = 0U;
-      for (auto const& vt : vta) {
-        auto const vehicle_type_id =
-            static_cast<std::string>(vt.at("vehicle_type_id").as_string());
-        auto const count = vt.at("count").to_number<unsigned>();
-        if (auto const vt_idx = get_vehicle_type(provider, vehicle_type_id,
-                                                 vehicle_start_type::kStation);
-            vt_idx) {
-          station.status_.vehicle_types_available_[*vt_idx] = count;
-          switch (provider.vehicle_types_[*vt_idx].return_constraint_) {
-            case return_constraint::kFreeFloating:
-              unrestricted_available += count;
-              break;
-            case return_constraint::kAnyStation:
-              any_station_available += count;
-              break;
-            case return_constraint::kRoundtripStation:
-              roundtrip_available += count;
-              break;
+      if (station_obj.contains("vehicle_types_available")) {
+        auto const& vta = station_obj.at("vehicle_types_available").as_array();
+        auto unrestricted_available = 0U;
+        auto any_station_available = 0U;
+        auto roundtrip_available = 0U;
+        for (auto const& vt : vta) {
+          auto const vehicle_type_id =
+              static_cast<std::string>(vt.at("vehicle_type_id").as_string());
+          auto const count = vt.at("count").to_number<unsigned>();
+          if (auto const vt_idx = get_vehicle_type(
+                  provider, vehicle_type_id, vehicle_start_type::kStation);
+              vt_idx) {
+            station.status_.vehicle_types_available_[*vt_idx] = count;
+            switch (provider.vehicle_types_[*vt_idx].return_constraint_) {
+              case return_constraint::kFreeFloating:
+                unrestricted_available += count;
+                break;
+              case return_constraint::kAnyStation:
+                any_station_available += count;
+                break;
+              case return_constraint::kRoundtripStation:
+                roundtrip_available += count;
+                break;
+            }
           }
         }
+        station.status_.num_vehicles_available_ =
+            unrestricted_available + any_station_available + roundtrip_available;
+      } else {
+        if (auto const vt_idx =
+                get_vehicle_type(provider, "", vehicle_start_type::kStation);
+            vt_idx) {
+          station.status_.vehicle_types_available_[*vt_idx] =
+              station.status_.num_vehicles_available_;
+        }
       }
-      station.status_.num_vehicles_available_ =
-          unrestricted_available + any_station_available + roundtrip_available;
-    } else {
-      if (auto const vt_idx =
-              get_vehicle_type(provider, "", vehicle_start_type::kStation);
-          vt_idx) {
-        station.status_.vehicle_types_available_[*vt_idx] =
-            station.status_.num_vehicles_available_;
-      }
-    }
 
-    if (station_obj.contains("vehicle_docks_available")) {
-      for (auto const& vt :
-           station_obj.at("vehicle_docks_available").as_array()) {
-        auto& vto = vt.as_object();
-        if (vto.contains("vehicle_type_ids") && vto.contains("count")) {
-          for (auto const& vti : vto.at("vehicle_type_ids").as_array()) {
-            auto const vehicle_type_id =
-                static_cast<std::string>(vti.as_string());
-            if (auto const vt_idx = get_vehicle_type(
-                    provider, vehicle_type_id, vehicle_start_type::kStation);
-                vt_idx) {
-              station.status_.vehicle_docks_available_[*vt_idx] =
-                  vto.at("count").to_number<unsigned>();
+      if (station_obj.contains("vehicle_docks_available")) {
+        for (auto const& vt :
+             station_obj.at("vehicle_docks_available").as_array()) {
+          auto& vto = vt.as_object();
+          if (vto.contains("vehicle_type_ids") && vto.contains("count")) {
+            for (auto const& vti : vto.at("vehicle_type_ids").as_array()) {
+              auto const vehicle_type_id =
+                  static_cast<std::string>(vti.as_string());
+              if (auto const vt_idx = get_vehicle_type(
+                      provider, vehicle_type_id, vehicle_start_type::kStation);
+                  vt_idx) {
+                station.status_.vehicle_docks_available_[*vt_idx] =
+                    vto.at("count").to_number<unsigned>();
+              }
             }
           }
         }
       }
+    } catch (std::exception const& ex) {
+      std::cerr << "[GBFS] (" << provider.id_
+                << ") error parsing station status " << station_id << ": "
+                << ex.what() << "\n";
     }
   }
 }
