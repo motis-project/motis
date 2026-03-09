@@ -55,15 +55,19 @@ struct shape_cache_payload {
 using shape_cache_bucket = cista::offset::vector<shape_cache_payload>;
 
 shape_cache::shape_cache(std::filesystem::path const& path,
-                         mdb_size_t const map_size) {
+                         mdb_size_t const map_size)
+    : last_sync_{std::chrono::steady_clock::now()} {
   env_.set_mapsize(map_size);
   env_.set_maxdbs(1);
-  env_.open(path.generic_string().c_str(), lmdb::env_open_flags::NOSUBDIR);
+  env_.open(path.generic_string().c_str(),
+            lmdb::env_open_flags::NOSUBDIR | lmdb::env_open_flags::NOSYNC);
 
   auto txn = lmdb::txn{env_};
   txn.dbi_open(lmdb::dbi_flags::CREATE);
   txn.commit();
 }
+
+shape_cache::~shape_cache() { sync(); }
 
 std::optional<shape_cache_entry> shape_cache::get(shape_cache_key const& key) {
   auto txn = lmdb::txn{env_, lmdb::txn_flags::RDONLY};
@@ -109,7 +113,15 @@ void shape_cache::put(shape_cache_key const& key,
 
   txn.put(dbi, bucket_key, to_string_view(cista::serialize(entries)));
   txn.commit();
+
+  auto const now = std::chrono::steady_clock::now();
+  if (now - last_sync_ >= std::chrono::minutes{1}) {
+    sync();
+    last_sync_ = now;
+  }
 }
+
+void shape_cache::sync() { env_.force_sync(); }
 
 std::optional<osr::search_profile> get_profile(n::clasz const clasz) {
   switch (clasz) {
@@ -503,7 +515,6 @@ void route_shapes(osr::ways const& w,
               : std::nullopt;
 
       if (cache != nullptr) {
-        auto const l = std::scoped_lock{shapes_mutex};
         if (auto const ce = cache->get(*cache_key); ce.has_value()) {
           ++cache_hits;
           auto const local_shape_idx = n::get_local_shape_idx(ce->shape_idx_);
@@ -518,6 +529,7 @@ void route_shapes(osr::ways const& w,
                       shapes.routed_data_.size(),
               "[route_shapes] cache routed shape idx out of bounds: {} >= {}",
               local_shape_idx, shapes.routed_data_.size());
+          auto const l = std::scoped_lock{shapes_mutex};
           store_shape(r, ce->shape_idx_, ce->offsets_, ce->route_bbox_,
                       ce->segment_bboxes_, match_points, transports);
           progress_tracker->increment();
@@ -569,6 +581,10 @@ void route_shapes(osr::ways const& w,
   utl::parallel_for_run(
       tt.n_routes(), process_route, utl::noop_progress_update{},
       utl::parallel_error_strategy::QUIT_EXEC, conf.n_threads_);
+
+  if (cache != nullptr) {
+    cache->sync();
+  }
 
   std::clog << "\n** route_shapes [end] **\n"
             << "  routes=" << tt.n_routes() << "\n  trips=" << tt.n_trips()
