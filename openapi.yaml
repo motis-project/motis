@@ -1577,7 +1577,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
-  /api/v1/refresh-itinerary:
+  /api/experimental/refresh-itinerary:
     get:
       tags:
         - timetable
@@ -3896,7 +3896,7 @@ components:
           description: The number of transfers this trip has.
         id:
           type: string
-          description: Opaque itinerary identifier. Pass it as `itineraryId` to `/api/v1/refresh-itinerary` for reconstruction using the new schedule/realtime data.
+          description: Opaque itinerary identifier. Pass it as `itineraryId` to `/api/experimental/refresh-itinerary` for reconstruction using the new schedule/realtime data.
         legs:
           description: Journey legs
           type: array

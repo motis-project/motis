@@ -5,8 +5,6 @@
 #include <memory>
 #include <string>
 
-#include "net/bad_request_exception.h"
-
 #include "motis/endpoints/stop_times.h"
 #include "motis/itinerary_id.h"
 

@@ -118,7 +118,7 @@ struct motis_instance {
     GET<ep::one_to_all>("/api/v1/one-to-all", d);
     GET<ep::one_to_many>("/api/v1/one-to-many", d);
     POST<ep::one_to_many_post>("/api/v1/one-to-many", d);
-    GET<ep::refresh_itinerary>("/api/v1/refresh-itinerary", d);
+    GET<ep::refresh_itinerary>("/api/experimental/refresh-itinerary", d);
 
     if (!c.requires_rt_timetable_updates()) {
       // Elevator updates are not compatible with RT-updates.
