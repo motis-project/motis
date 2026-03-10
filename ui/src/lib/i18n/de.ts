@@ -88,6 +88,7 @@ const translations: Translations = {
 	WALK: 'Zu Fuß',
 	BIKE: 'Fahrrad',
 	RENTAL: 'Sharing',
+	RIDE_SHARING: 'Mitfahrgelegenheit',
 	CAR: 'Auto',
 	CAR_DROPOFF: 'Absetzen (Auto)',
 	CAR_PARKING: 'P+R Park & Ride',

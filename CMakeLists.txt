@@ -140,6 +140,7 @@ target_link_libraries(motislib
     prometheus-cpp::core
     opentelemetry_trace
     opentelemetry_exporter_otlp_http
+    lmdb
     Boost::stacktrace
     "$<${_MOTIS_STACKTRACE_ON}:Boost::stacktrace_from_exception>"
 )

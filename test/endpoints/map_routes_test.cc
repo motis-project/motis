@@ -2,6 +2,7 @@
 #include "gtest/gtest.h"
 
 #include <chrono>
+#include <cstddef>
 
 #include "boost/json.hpp"
 
@@ -68,12 +69,14 @@ TEST(motis, map_routes) {
   auto const c = config{
       .osm_ = {"test/resources/test_case.osm.pbf"},
       .timetable_ =
-          config::timetable{.first_day_ = "2019-05-01",
-                            .num_days_ = 2,
-                            .with_shapes_ = true,
-                            .datasets_ = {{"test", {.path_ = kGTFS}}},
-                            .route_shapes_ = {{.missing_shapes_ = true,
-                                               .replace_shapes_ = true}}},
+          config::timetable{
+              .first_day_ = "2019-05-01",
+              .num_days_ = 2,
+              .with_shapes_ = true,
+              .datasets_ = {{"test", {.path_ = kGTFS}}},
+              .route_shapes_ = {{.mode_ =
+                                     config::timetable::route_shapes::mode::all,
+                                 .cache_ = false}}},
       .street_routing_ = true};
   auto d = import(c, "test/data", true);
 
@@ -94,6 +97,30 @@ TEST(motis, map_routes) {
                                             Eq(api::ModeEnum::TRAM))));
     EXPECT_THAT(res.routes_, Each(Field(&api::RouteInfo::pathSource_,
                                         Eq(api::RoutePathSourceEnum::ROUTED))));
+    EXPECT_FALSE(res.polylines_.empty());
+    EXPECT_FALSE(res.stops_.empty());
+
+    for (auto const& route : res.routes_) {
+      for (auto const& segment : route.segments_) {
+        EXPECT_GE(segment.from_, 0);
+        EXPECT_GE(segment.to_, 0);
+        EXPECT_GE(segment.polyline_, 0);
+        EXPECT_LT(segment.from_, static_cast<std::int64_t>(res.stops_.size()));
+        EXPECT_LT(segment.to_, static_cast<std::int64_t>(res.stops_.size()));
+        EXPECT_LT(segment.polyline_,
+                  static_cast<std::int64_t>(res.polylines_.size()));
+      }
+    }
+
+    for (auto route_index = 0U; route_index != res.routes_.size();
+         ++route_index) {
+      for (auto const& segment : res.routes_[route_index].segments_) {
+        EXPECT_THAT(
+            res.polylines_.at(static_cast<std::size_t>(segment.polyline_))
+                .routeIndexes_,
+            Contains(static_cast<std::int64_t>(route_index)));
+      }
+    }
   }
 
   {

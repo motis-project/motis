@@ -10,7 +10,7 @@ namespace motis::ep {
 struct initial {
   api::initial_response operator()(boost::urls::url_view const&) const;
 
-  nigiri::timetable const& tt_;
+  nigiri::timetable const* tt_;
   config const& config_;
 };
 
