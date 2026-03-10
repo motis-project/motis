@@ -28,6 +28,7 @@ struct config {
   void verify_input_files_exist() const;
 
   bool requires_rt_timetable_updates() const;
+  bool shapes_debug_api_enabled() const;
   bool has_gbfs_feeds() const;
   bool has_prima() const;
   bool has_elevators() const;
@@ -98,13 +99,19 @@ struct config {
     };
 
     struct route_shapes {
+      enum class mode { all, missing };
+
       bool operator==(route_shapes const&) const = default;
-      bool missing_shapes_{false};
-      bool replace_shapes_{false};
-      bool cache_{false};
+      mode mode_{mode::all};
+      bool cache_{true};
+      bool cache_reuse_old_osm_data_{false};
+      std::size_t cache_db_size_{sizeof(void*) >= 8
+                                     ? 256ULL * 1024ULL * 1024ULL * 1024ULL
+                                     : 256U * 1024U * 1024U};
       std::optional<std::map<std::string, bool>> clasz_{};
       unsigned max_stops_{0U};
       unsigned n_threads_{0U};
+      bool debug_api_{false};
       std::optional<shapes_debug> debug_{};
     };
 
@@ -233,6 +240,7 @@ struct config {
     unsigned plan_max_results_{256U};
     unsigned plan_max_search_window_minutes_{5760U};
     unsigned stops_max_results_{2048U};
+    unsigned onetomany_max_many_{128U};
     unsigned onetoall_max_results_{65535U};
     unsigned onetoall_max_travel_minutes_{90U};
     unsigned routing_max_timeout_seconds_{90U};

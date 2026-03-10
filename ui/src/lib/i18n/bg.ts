@@ -87,6 +87,7 @@ const translations: Translations = {
 	WALK: 'Пеша',
 	BIKE: 'Велосипед',
 	RENTAL: 'Нает',
+	RIDE_SHARING: 'Споделено пътуване',
 	CAR: 'Автомобил',
 	CAR_DROPOFF: 'Слизане от автомобила',
 	CAR_PARKING: 'Паркинг (P+R)',

@@ -90,6 +90,7 @@ limits:
   plan_max_results: 256
   plan_max_search_window_minutes: 5760
   stops_max_results: 2048
+  onetomany_max_many: 128
   onetoall_max_results: 65535
   onetoall_max_travel_minutes: 90
   routing_max_timeout_seconds: 90

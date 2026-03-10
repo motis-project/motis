@@ -504,6 +504,8 @@ api::Itinerary journey_to_response(
                           return p;
                         }(),
                     .routeId_ = tags.route_id(enter_stop, n::event_type::kDep),
+                    .routeUrl_ = std::string{enter_stop.route_url(
+                        n::event_type::kDep, lang)},
                     .directionId_ =
                         enter_stop.get_direction_id(n::event_type::kDep) == 0
                             ? "0"

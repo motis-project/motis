@@ -910,7 +910,12 @@
 					</Button>
 				</Control>
 				{#if showRoutes}
-					<Routes {map} {bounds} {zoom} />
+					<Routes
+						{map}
+						{bounds}
+						{zoom}
+						shapesDebugEnabled={serverConfig?.shapesDebugEnabled === true}
+					/>
 				{/if}
 				<Rentals {map} {bounds} {zoom} {theme} debug={hasDebug} />
 			{/if}

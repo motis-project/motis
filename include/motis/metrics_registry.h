@@ -13,6 +13,7 @@ struct metrics_registry {
   ~metrics_registry();
   prometheus::Registry registry_;
   prometheus::Counter& routing_requests_;
+  prometheus::Counter& one_to_many_requests_;
   prometheus::Counter& routing_journeys_found_;
   prometheus::Family<prometheus::Histogram>& routing_odm_journeys_found_;
   prometheus::Histogram& routing_odm_journeys_found_blacklist_;
