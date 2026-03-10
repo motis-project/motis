@@ -34,75 +34,39 @@
 #include "motis/timetable/time_conv.h"
 
 namespace n = nigiri;
+namespace json = boost::json;
 
-namespace {
-constexpr auto kItineraryTimeBase = std::chrono::sys_days{
-    std::chrono::year{2026} / std::chrono::month{1} / std::chrono::day{1}};
+namespace motis {
+
 constexpr auto kTimeMul = 1.0 / 60.0 * 7;
+constexpr auto kSearchRadiusMeters = 100;
 constexpr auto kExactTripIdMatchAddScore = 50.0;
 constexpr auto kExactStopIdMatchAddScore = 15.0;
 
-double exact_stop_id_match_score(motis::api::Place const& place,
+double exact_stop_id_match_score(api::Place const& place,
                                  std::string_view const expected_stop_id) {
   return place.stopId_.has_value() && *place.stopId_ == expected_stop_id
              ? kExactStopIdMatchAddScore
              : 0.0;
 }
 
-std::int64_t to_epoch_seconds(openapi::date_time_t const& t) {
-  auto const sys = static_cast<std::chrono::sys_seconds>(t);
-  return std::chrono::duration_cast<std::chrono::seconds>(
-             sys.time_since_epoch())
-      .count();
-}
-
-std::int64_t to_itinerary_minutes(std::int64_t const epoch_seconds) {
-  return std::chrono::duration_cast<std::chrono::minutes>(
-             std::chrono::seconds{epoch_seconds} -
-             kItineraryTimeBase.time_since_epoch())
-      .count();
-}
-
-std::int64_t to_epoch_seconds_from_itinerary_minutes(
-    std::int64_t const minutes) {
-  return std::chrono::duration_cast<std::chrono::seconds>(
-             (kItineraryTimeBase + std::chrono::minutes{minutes})
-                 .time_since_epoch())
-      .count();
-}
-
-std::string_view require_stop_id(motis::api::Place const& p,
-                                 std::size_t const leg_idx,
-                                 std::string_view const field) {
-  utl::verify(p.stopId_.has_value() && !p.stopId_->empty(),
-              "itinerary id: leg {} missing {}.stopId", leg_idx, field);
-  return *p.stopId_;
-}
-
 struct leg_hint {
-  explicit leg_hint(boost::json::object const& l) {
+  explicit leg_hint(json::object const& l)
+      : trip_id_{l.at("trip_id").as_string()},
+        from_stop_id_{l.at("from_id").as_string()},
+        to_stop_id_{l.at("to_id").as_string()},
+        sched_start_{l.at("sched_start").as_int64()},
+        sched_end_{l.at("sched_end").as_int64()},
+        mode_{json::value_to<api::ModeEnum>(l.at("mode"))},
+        scheduled_{l.at("scheduled").as_bool()} {
     auto const& encoded_coords = l.at("coords").as_string();
     auto const coords = geo::decode_polyline(encoded_coords);
     utl::verify(coords.size() == 2,
                 "itinerary id: coords must decode to exactly 2 points, got {}",
                 coords.size());
 
-    trip_id_ = l.at("trip_id").as_string().c_str();
-    from_stop_id_ = l.at("from_id").as_string().c_str();
-    to_stop_id_ = l.at("to_id").as_string().c_str();
-
-    auto const sched_delta = l.at("sched_delta");
-    auto const sched_start_m = l.at("sched_start").as_int64();
-    auto const sched_delta_m = sched_delta.as_int64();
-    utl::verify(sched_delta_m >= 0, "itinerary id: sched_delta < 0");
-    sched_start_ = to_epoch_seconds_from_itinerary_minutes(sched_start_m);
-    sched_end_ =
-        to_epoch_seconds_from_itinerary_minutes(sched_start_m + sched_delta_m);
-
-    from_latlng_ = coords[0];
-    to_latlng_ = coords[1];
-    mode_ = static_cast<motis::api::ModeEnum>(l.at("mode").as_int64());
-    scheduled_ = l.at("scheduled").as_bool();
+    from_pos_ = coords[0];
+    to_pos_ = coords[1];
   }
 
   std::string trip_id_;
@@ -110,37 +74,42 @@ struct leg_hint {
   std::string to_stop_id_;
   std::int64_t sched_start_;
   std::int64_t sched_end_;
-  geo::latlng from_latlng_;
-  geo::latlng to_latlng_;
-  motis::api::ModeEnum mode_;
+  geo::latlng from_pos_;
+  geo::latlng to_pos_;
+  api::ModeEnum mode_;
   bool scheduled_;
 };
 
-motis::api::stoptimes_response stoptimes_in_radius(
-    motis::ep::stop_times const& st_ep,
-    geo::latlng const& center,
-    std::int64_t const sched_start,
-    motis::api::ModeEnum const mode,
-    std::int64_t const window,
-    int const radius_m,
-    bool const arrive_by) {
-  std::ostringstream oss;
-  oss << mode;
-
-  auto const t =
-      std::chrono::system_clock::time_point{std::chrono::seconds{sched_start}};
-  auto const iso = fmt::format("{:%FT%TZ}", t);
-
-  auto const query = fmt::format(
-      "?center={},{}&time={}&arriveBy={}&direction=LATER&window={}"
-      "&radius={}&exactRadius=true&fetchStops=true&mode={}",
-      center.lat_, center.lng_, iso, arrive_by ? "true" : "false", window,
-      radius_m, oss.str());
-
-  return st_ep(boost::urls::url_view{query});
+std::string get_leg_id(api::Leg const& l) {
+  return json::serialize(json::object{
+      {"trip_id", l.tripId_.value()},
+      {"from_id", l.from_.stopId_.value()},
+      {"to_id", l.to_.stopId_.value()},
+      {"coords", geo::encode_polyline(
+                     {{l.from_.lat_, l.from_.lon_}, {l.to_.lat_, l.to_.lon_}})},
+      {"sched_start", l.scheduledStartTime_.get_unixtime_seconds()},
+      {"sched_end", l.scheduledEndTime_.get_unixtime_seconds()},
+      {"mode", json::value_from(l.mode_)},
+      {"scheduled", l.scheduled_},
+  });
 }
 
-n::rt::frun make_frun_from_stoptime(motis::tag_lookup const& tags,
+api::stoptimes_response get_stop_times_in_radius(ep::stop_times const& st_ep,
+                                                 geo::latlng const& center,
+                                                 std::int64_t const sched_start,
+                                                 api::ModeEnum const mode,
+                                                 std::int64_t const window,
+                                                 int const radius_m,
+                                                 bool const arrive_by) {
+  return st_ep(boost::urls::url_view{fmt::format(
+      "?center={},{}&time={:%FT%TZ}&arriveBy={}&direction=LATER&window={}"
+      "&radius={}&exactRadius=true&fetchStops=true&mode={}",
+      center.lat_, center.lng_,
+      std::chrono::sys_seconds{std::chrono::seconds{sched_start}},
+      arrive_by ? "true" : "false", window, radius_m, fmt::streamed(mode))});
+}
+
+n::rt::frun make_frun_from_stoptime(tag_lookup const& tags,
                                     n::timetable const& tt,
                                     n::rt_timetable const* rtt,
                                     std::string_view const trip_id) {
@@ -157,7 +126,7 @@ std::optional<n::stop_idx_t> find_stop_by_location_time(
   for (auto i = n::stop_idx_t{0U}; i < fr.size(); ++i) {
     auto const rs = fr[i];
     if (rs.get_location_idx() == loc &&
-        std::abs(motis::to_seconds(rs.scheduled_time(ev_type)) - target_sec) <=
+        std::abs(to_seconds(rs.scheduled_time(ev_type)) - target_sec) <=
             allowed_deviation_sec) {
       return rs.stop_idx_;
     }
@@ -166,10 +135,9 @@ std::optional<n::stop_idx_t> find_stop_by_location_time(
 }
 
 std::optional<n::stop_idx_t> find_stop_by_place(n::rt::frun const& fr,
-                                                motis::tag_lookup const& tags,
-                                                motis::api::Place const& p,
+                                                tag_lookup const& tags,
+                                                api::Place const& p,
                                                 n::event_type const ev_type) {
-
   if (!p.stopId_) {
     return std::nullopt;
   }
@@ -184,12 +152,13 @@ std::optional<n::stop_idx_t> find_stop_by_place(n::rt::frun const& fr,
     return std::nullopt;
   }
 
-  return find_stop_by_location_time(fr, *loc, to_epoch_seconds(*t), ev_type);
+  return find_stop_by_location_time(fr, *loc, t.value().get_unixtime_seconds(),
+                                    ev_type);
 }
 
 std::optional<n::stop_idx_t> find_stop_by_id_time(
     n::rt::frun const& fr,
-    motis::tag_lookup const& tags,
+    tag_lookup const& tags,
     std::string_view const stop_id,
     std::int64_t const target_sec,
     n::event_type const ev_type,
@@ -198,45 +167,40 @@ std::optional<n::stop_idx_t> find_stop_by_id_time(
   if (!loc.has_value()) {
     return std::nullopt;
   }
-
   return find_stop_by_location_time(fr, *loc, target_sec, ev_type,
                                     allowed_deviation_sec);
 }
 
-motis::api::Itinerary build_itinerary_from_frun(
+api::Itinerary build_itinerary_from_frun(
     std::tuple<n::rt::frun, n::stop_idx_t, n::stop_idx_t> const& run,
-    motis::ep::stop_times const& stoptimes_ep,
+    ep::stop_times const& stop_times,
+    n::shapes_storage const* shapes,
     n::rt_timetable const* rtt) {
-  auto legs = std::vector<n::routing::journey::leg>{};
-
   auto const& [fr, from_idx, to_idx] = run;
-  utl::verify(
-      fr.stop_range_.contains(from_idx) && fr.stop_range_.contains(to_idx),
-      "build_itinerary_from_frun: stop idx out of range");
+  utl::verify(fr.stop_range_.contains(from_idx), "from_idx={} out of range {}",
+              from_idx, fr.stop_range_);
+  utl::verify(fr.stop_range_.contains(to_idx), "to_idx={} out of range {}",
+              to_idx, fr.stop_range_);
 
-  auto const first_from_rs = n::rt::run_stop{&fr, from_idx};
+  auto const from = n::rt::run_stop{&fr, from_idx};
+  auto const to = n::rt::run_stop{&fr, to_idx};
 
-  {
-    auto const from_rs = n::rt::run_stop{&fr, from_idx};
-    auto const to_rs = n::rt::run_stop{&fr, to_idx};
+  auto const dep = from.time(n::event_type::kDep);
+  auto const arr = to.time(n::event_type::kArr);
 
-    auto const dep = from_rs.time(n::event_type::kDep);
-    auto const arr = to_rs.time(n::event_type::kArr);
+  auto j = n::routing::journey{
+      .legs_ = {{n::direction::kForward, from.get_location_idx(),
+                 to.get_location_idx(), dep, arr,
+                 n::routing::journey::run_enter_exit{fr, from_idx, to_idx}}},
+      .start_time_ = dep,
+      .dest_time_ = arr,
+      .dest_ = to.get_location_idx(),
+      .transfers_ = 0,
+  };
 
-    legs.push_back({n::direction::kForward, from_rs.get_location_idx(),
-                    to_rs.get_location_idx(), dep, arr,
-                    n::routing::journey::run_enter_exit{fr, from_idx, to_idx}});
-  }
-
-  auto j = n::routing::journey{.legs_ = legs,
-                               .start_time_ = legs.front().dep_time_,
-                               .dest_time_ = legs.back().arr_time_,
-                               .dest_ = legs.back().to_,
-                               .transfers_ = 0};
-
-  auto cache = motis::street_routing_cache_t{};
+  auto cache = street_routing_cache_t{};
   auto blocked = osr::bitvec<osr::node_idx_t>{};
-  auto gbfs_rd = motis::gbfs::gbfs_routing_data{};
+  auto gbfs_rd = gbfs::gbfs_routing_data{};
 
   // routing defaults
   constexpr auto join_interlined_legs = true;
@@ -246,20 +210,17 @@ motis::api::Itinerary build_itinerary_from_frun(
   constexpr auto api_version = 0;
 
   return journey_to_response(
-      stoptimes_ep.w_,
-      nullptr,  // osr::lookup **
-      stoptimes_ep.pl_, stoptimes_ep.tt_, stoptimes_ep.tags_, nullptr, nullptr,
-      rtt, stoptimes_ep.matches_, nullptr,
-      nullptr,  // shapes **
-      gbfs_rd, stoptimes_ep.ae_, stoptimes_ep.tz_, j,
-      motis::tt_location{legs.front().from_,
-                         first_from_rs.get_scheduled_location_idx()},
-      motis::tt_location{legs.back().to_}, cache, &blocked, false,
-      motis::osr_parameters{}, motis::api::PedestrianProfileEnum::FOOT,
-      motis::api::ElevationCostsEnum::NONE, join_interlined_legs,
-      detailed_transfers, with_fares, with_scheduled_skipped_stops,
-      stoptimes_ep.config_.timetable_.value().max_matching_distance_,
-      motis::kMaxMatchingDistance, api_version, false, false, std::nullopt);
+      stop_times.w_, nullptr, stop_times.pl_, stop_times.tt_, stop_times.tags_,
+      nullptr, nullptr, rtt, stop_times.matches_, nullptr, shapes, gbfs_rd,
+      stop_times.ae_, stop_times.tz_, j,
+      tt_location{from.get_location_idx(),
+                  n::rt::run_stop{&fr, from_idx}.get_scheduled_location_idx()},
+      tt_location{to.get_location_idx()}, cache, &blocked, false,
+      osr_parameters{}, api::PedestrianProfileEnum::FOOT,
+      api::ElevationCostsEnum::NONE, join_interlined_legs, detailed_transfers,
+      with_fares, with_scheduled_skipped_stops,
+      stop_times.config_.timetable_.value().max_matching_distance_,
+      kMaxMatchingDistance, api_version, false, false, std::nullopt);
 }
 
 struct id_score {
@@ -269,41 +230,42 @@ struct id_score {
 
   std::string_view id_;
   double score_;
-  motis::api::Place const* place_;
+  api::Place const* place_;
 };
 
 struct from_to {
-  motis::api::Place const* from_;
-  motis::api::Place const* to_;
+  api::Place const* from_;
+  api::Place const* to_;
 };
 
 std::tuple<std::optional<std::string_view>, std::optional<from_to>>
-calc_best_candidate(motis::api::stoptimes_response const& from_st_res,
-                    motis::api::stoptimes_response const& to_st_res,
-                    leg_hint const& lh) {
+get_best_candidate(api::stoptimes_response const& from_stop_times,
+                   api::stoptimes_response const& to_stop_times,
+                   leg_hint const& hint) {
   auto to_cands = std::vector<id_score>{};
-  for (auto const& st : to_st_res.stopTimes_) {
+  for (auto const& st : to_stop_times.stopTimes_) {
     if (!st.place_.scheduledArrival_.has_value()) {
       continue;
     }
+
     to_cands.emplace_back(
         st.tripId_,
-        (st.tripId_ == lh.trip_id_ ? kExactTripIdMatchAddScore : 0.0) +
-            exact_stop_id_match_score(st.place_, lh.to_stop_id_) -
+        (st.tripId_ == hint.trip_id_ ? kExactTripIdMatchAddScore : 0.0) +
+            exact_stop_id_match_score(st.place_, hint.to_stop_id_) -
             geo::distance(geo::latlng{st.place_.lat_, st.place_.lon_},
-                          lh.to_latlng_) -
+                          hint.to_pos_) -
             kTimeMul *
-                std::abs(lh.sched_end_ -
-                         to_epoch_seconds(st.place_.scheduledArrival_.value())),
+                std::abs(
+                    hint.sched_end_ -
+                    st.place_.scheduledArrival_.value().get_unixtime_seconds()),
         &st.place_);
   }
-  std::sort(begin(to_cands), end(to_cands));
+  utl::sort(to_cands);
 
   auto best_trip_id = std::optional<std::string_view>{};
   auto best_from_to = std::optional<from_to>{};
   auto best_score = std::numeric_limits<double>::lowest();
-
-  for (auto const& from_st : from_st_res.stopTimes_) {
+  for (auto const& from_st : from_stop_times.stopTimes_) {
     if (!from_st.place_.scheduledDeparture_.has_value()) {
       continue;
     }
@@ -313,14 +275,13 @@ calc_best_candidate(motis::api::stoptimes_response const& from_st_res,
     if (it == end(to_cands) || it->id_ != from_st.tripId_) {
       continue;
     }
-    auto score =
-        it->score_ +
-        exact_stop_id_match_score(from_st.place_, lh.from_stop_id_) -
-        geo::distance(geo::latlng{from_st.place_.lat_, from_st.place_.lon_},
-                      lh.from_latlng_) -
-        kTimeMul * std::abs(lh.sched_start_ -
-                            to_epoch_seconds(
-                                from_st.place_.scheduledDeparture_.value()));
+    auto score = it->score_ +
+                 exact_stop_id_match_score(from_st.place_, hint.from_stop_id_) -
+                 geo::distance({from_st.place_.lat_, from_st.place_.lon_},
+                               hint.from_pos_) -
+                 kTimeMul * std::abs(hint.sched_start_ -
+                                     from_st.place_.scheduledDeparture_.value()
+                                         .get_unixtime_seconds());
     if (score > best_score) {
       best_score = score;
       best_trip_id = from_st.tripId_;
@@ -329,136 +290,79 @@ calc_best_candidate(motis::api::stoptimes_response const& from_st_res,
   }
   return {best_trip_id, best_from_to};
 }
-}  // namespace
 
-namespace motis {
-
-std::string generate_itinerary_id(api::Itinerary const& itin) {
-  utl::verify(itin.legs_.size() == 1, "itin.legs_.size() must be one");
-
-  auto legs = boost::json::array{};
-  legs.reserve(itin.legs_.size());
-
-  {
-    auto const& leg = itin.legs_[0];
-
-    auto const trip_id = leg.tripId_.value_or("");
-    auto const from_id = require_stop_id(leg.from_, 0, "from");
-    auto const to_id = require_stop_id(leg.to_, 0, "to");
-
-    auto const sched_start = to_epoch_seconds(leg.scheduledStartTime_);
-    auto const sched_end = to_epoch_seconds(leg.scheduledEndTime_);
-    utl::verify(sched_start != 0 && sched_end != 0,
-                "itinerary id: leg {} missing scheduled times", 0);
-    utl::verify(sched_end >= sched_start,
-                "itinerary id: leg {} scheduledEndTime < scheduledStartTime",
-                0);
-    auto const sched_start_m = to_itinerary_minutes(sched_start);
-    auto const sched_end_m = to_itinerary_minutes(sched_end);
-
-    auto const sched_delta_m = sched_end_m - sched_start_m;
-
-    auto leg_obj = boost::json::object{};
-    leg_obj["trip_id"] = trip_id;
-    leg_obj["from_id"] = from_id;
-    leg_obj["to_id"] = to_id;
-    leg_obj["coords"] = geo::encode_polyline(
-        geo::polyline{geo::latlng{leg.from_.lat_, leg.from_.lon_},
-                      geo::latlng{leg.to_.lat_, leg.to_.lon_}});
-    leg_obj["sched_start"] = sched_start_m;
-    leg_obj["sched_delta"] = sched_delta_m;
-    leg_obj["mode"] = static_cast<int>(leg.mode_);
-    leg_obj["scheduled"] = leg.scheduled_;
-
-    legs.emplace_back(std::move(leg_obj));
-  }
-
-  auto root = boost::json::object{};
-  root["legs"] = std::move(legs);
-  return boost::json::serialize(root);
-}
-
-api::Itinerary reconstruct_itinerary(motis::ep::stop_times const& stoptimes_ep,
-                                     std::string const& itin_id,
-                                     rt const* realtime_ctx) {
+api::Itinerary reconstruct_itinerary(ep::stop_times const& stop_times_ep,
+                                     nigiri::shapes_storage const* shapes,
+                                     rt const& rt,
+                                     std::string const& id) {
   constexpr auto kLookbackSeconds = std::int64_t{8 * 60};
 
-  auto const root = boost::json::parse(itin_id).as_object();
-  auto const& legs = root.at("legs").as_array();
-  utl::verify(legs.size() == 1, "reconstruct_itinerary: legs.size() must be 1");
+  auto const& lh = leg_hint{json::parse(id).as_object()};
+  auto const get_run =
+      [&]() -> std::tuple<n::rt::frun, n::stop_idx_t, n::stop_idx_t> {
+    if (!lh.scheduled_) {
+      utl::verify(!lh.trip_id_.empty(),
+                  "reconstruct_itinerary: additional trip requires trip_id");
 
-  auto lh_vk = std::vector<leg_hint>{};
-  for (auto const& lj : legs) {
-    lh_vk.emplace_back(lj.as_object());
-  }
+      auto const fr = make_frun_from_stoptime(
+          stop_times_ep.tags_, stop_times_ep.tt_, rt.rtt_.get(), lh.trip_id_);
+      utl::verify(fr.valid(),
+                  "reconstruct_itinerary: additional trip not found");
+      utl::verify(!fr.is_scheduled(),
+                  "reconstruct_itinerary: trip_id resolved to scheduled trip "
+                  "while itinerary id expects additional trip");
 
-  auto const rtt = realtime_ctx != nullptr ? realtime_ctx->rtt_.get() : nullptr;
+      auto const from_idx = find_stop_by_id_time(
+          fr, stop_times_ep.tags_, lh.from_stop_id_, lh.sched_start_,
+          n::event_type::kDep, kLookbackSeconds);
+      utl::verify(from_idx.has_value(),
+                  "reconstruct_itinerary: additional trip from stop not found");
 
-  auto runs =
-      std::vector<std::tuple<n::rt::frun, n::stop_idx_t, n::stop_idx_t>>{};
+      auto const to_idx = find_stop_by_id_time(
+          fr, stop_times_ep.tags_, lh.to_stop_id_, lh.sched_end_,
+          n::event_type::kArr, kLookbackSeconds);
+      utl::verify(to_idx.has_value(),
+                  "reconstruct_itinerary: additional trip to stop not found");
 
-  auto const& lh = *begin(lh_vk);
-  if (!lh.scheduled_) {
-    utl::verify(
-        rtt != nullptr,
-        "reconstruct_itinerary: realtime data required for additional trips");
-    utl::verify(!lh.trip_id_.empty(),
-                "reconstruct_itinerary: additional trip requires trip_id");
+      utl::verify(*from_idx < *to_idx,
+                  "reconstruct_itinerary: invalid stop order (from >= to)");
 
-    auto const fr = make_frun_from_stoptime(stoptimes_ep.tags_,
-                                            stoptimes_ep.tt_, rtt, lh.trip_id_);
-    utl::verify(fr.valid(), "reconstruct_itinerary: additional trip not found");
-    utl::verify(!fr.is_scheduled(),
-                "reconstruct_itinerary: trip_id resolved to scheduled trip "
-                "while itinerary id expects additional trip");
+      return {fr, *from_idx, *to_idx};
+    } else {
+      auto const from_st_res = get_stop_times_in_radius(
+          stop_times_ep, lh.from_pos_, lh.sched_start_ - kLookbackSeconds,
+          lh.mode_, kLookbackSeconds * 2, kSearchRadiusMeters, false);
+      auto const to_st_res = get_stop_times_in_radius(
+          stop_times_ep, lh.to_pos_, lh.sched_end_ - kLookbackSeconds, lh.mode_,
+          kLookbackSeconds * 2, kSearchRadiusMeters, true);
 
-    auto const from_idx = find_stop_by_id_time(
-        fr, stoptimes_ep.tags_, lh.from_stop_id_, lh.sched_start_,
-        n::event_type::kDep, kLookbackSeconds);
-    utl::verify(from_idx.has_value(),
-                "reconstruct_itinerary: additional trip from stop not found");
+      auto const [best_trip_id, best_from_to] =
+          get_best_candidate(from_st_res, to_st_res, lh);
 
-    auto const to_idx = find_stop_by_id_time(
-        fr, stoptimes_ep.tags_, lh.to_stop_id_, lh.sched_end_,
-        n::event_type::kArr, kLookbackSeconds);
-    utl::verify(to_idx.has_value(),
-                "reconstruct_itinerary: additional trip to stop not found");
+      utl::verify(best_trip_id.has_value() && best_from_to.has_value(),
+                  "no matching route is found");
+      auto const best_fr = make_frun_from_stoptime(
+          stop_times_ep.tags_, stop_times_ep.tt_, rt.rtt_.get(), *best_trip_id);
 
-    utl::verify(*from_idx < *to_idx,
-                "reconstruct_itinerary: invalid stop order (from >= to)");
+      auto const from_idx =
+          find_stop_by_place(best_fr, stop_times_ep.tags_,
+                             *(best_from_to->from_), n::event_type::kDep);
+      auto const to_idx =
+          find_stop_by_place(best_fr, stop_times_ep.tags_, *(best_from_to->to_),
+                             n::event_type::kArr);
+      utl::verify(from_idx.has_value() && to_idx.has_value(),
+                  "reconstruct_itinerary: could not map from/to stop in frun");
+      utl::verify(*from_idx < *to_idx,
+                  "reconstruct_itinerary: invalid stop order (from >= to)");
 
-    runs.emplace_back(fr, *from_idx, *to_idx);
-  } else {
-    auto const from_st_res = stoptimes_in_radius(
-        stoptimes_ep, lh.from_latlng_, lh.sched_start_ - kLookbackSeconds,
-        lh.mode_, kLookbackSeconds * 2, 100, false);
-    auto const to_st_res = stoptimes_in_radius(
-        stoptimes_ep, lh.to_latlng_, lh.sched_end_ - kLookbackSeconds, lh.mode_,
-        kLookbackSeconds * 2, 100, true);
+      return {best_fr, *from_idx, *to_idx};
+    }
+  };
 
-    auto const [best_trip_id, best_from_to] =
-        calc_best_candidate(from_st_res, to_st_res, lh);
-
-    utl::verify(best_trip_id.has_value() && best_from_to.has_value(),
-                "no matching route is found");
-    auto const best_fr = make_frun_from_stoptime(
-        stoptimes_ep.tags_, stoptimes_ep.tt_, rtt, *best_trip_id);
-
-    auto const from_idx =
-        find_stop_by_place(best_fr, stoptimes_ep.tags_, *(best_from_to->from_),
-                           n::event_type::kDep);
-    auto const to_idx = find_stop_by_place(
-        best_fr, stoptimes_ep.tags_, *(best_from_to->to_), n::event_type::kArr);
-    utl::verify(from_idx.has_value() && to_idx.has_value(),
-                "reconstruct_itinerary: could not map from/to stop in frun");
-    utl::verify(*from_idx < *to_idx,
-                "reconstruct_itinerary: invalid stop order (from >= to)");
-
-    runs.emplace_back(best_fr, *from_idx, *to_idx);
-  }
-
-  auto res = build_itinerary_from_frun(runs.front(), stoptimes_ep, rtt);
-  res.id_ = itin_id;
+  auto res = build_itinerary_from_frun(get_run(), stop_times_ep, shapes,
+                                       rt.rtt_.get());
+  res.id_ = id;
   return res;
 }
+
 }  // namespace motis

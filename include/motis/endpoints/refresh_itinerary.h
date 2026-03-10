@@ -27,6 +27,7 @@ struct refresh_itinerary {
   nigiri::timetable const& tt_;
   tag_lookup const& tags_;
   std::shared_ptr<rt> const& rt_;
+  nigiri::shapes_storage const* shapes_;
 };
 
 }  // namespace motis::ep

@@ -7,10 +7,11 @@
 
 namespace motis {
 
-std::string generate_itinerary_id(api::Itinerary const&);
+std::string get_leg_id(api::Leg const&);
 
 api::Itinerary reconstruct_itinerary(ep::stop_times const&,
-                                     std::string const&,
-                                     rt const* realtime_ctx);
+                                     nigiri::shapes_storage const*,
+                                     rt const&,
+                                     std::string const& id);
 
 }  // namespace motis
