@@ -35,7 +35,7 @@ constexpr auto const osr_footpath_version = []() {
   return meta_entry_t{"osr_footpath_bin_ver", 3U};
 };
 constexpr auto const routed_shapes_version = []() {
-  return meta_entry_t{"routed_shapes_ver", 8U};
+  return meta_entry_t{"routed_shapes_ver", 9U};
 };
 
 std::string to_str(meta_t const&);
