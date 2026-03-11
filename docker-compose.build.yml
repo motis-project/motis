@@ -1,0 +1,29 @@
+services:
+  motis-build:
+    build:
+      context: .
+      dockerfile: Dockerfile.build
+      args:
+        MOTIS_UID: "${MOTIS_UID:-1000}"
+        MOTIS_GID: "${MOTIS_GID:-1000}"
+    user: "${MOTIS_UID:-1000}:${MOTIS_GID:-1000}"
+    working_dir: /work
+    environment:
+      SSH_AUTH_SOCK: /ssh-agent
+    volumes:
+      - .:/work
+      - ${SSH_AUTH_SOCK:-/tmp/ssh-agent}:/ssh-agent
+      - ${HOME}/.ssh/known_hosts:/home/builder/.ssh/known_hosts:ro
+    command: >
+      bash -lc "mkdir -p /home/builder/.ssh
+      && ssh-keyscan github.com >> /home/builder/.ssh/known_hosts 2>/dev/null || true
+      && cmake -S . -B build/docker-relwithdebinfo -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DNO_BUILDCACHE=ON -DUSE_RES_TZ_DB=OFF -DUSE_SYSTEM_TZ_DB=ON
+      && cmake --build build/docker-relwithdebinfo -- -j$(nproc)"
+
+  motis-image:
+    build:
+      context: .
+      dockerfile: Dockerfile.runtime
+    image: motis:latest
+    depends_on:
+      - motis-build

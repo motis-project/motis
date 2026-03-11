@@ -1,5 +1,8 @@
 /tiles-profiles
 /*build*
+!build.sh
+!docker-compose.build.yml
+!Dockerfile.build
 /.pkg.mutex
 /.clang-tidy
 /.idea

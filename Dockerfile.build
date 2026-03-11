@@ -1,0 +1,37 @@
+FROM ubuntu:24.04
+
+ARG DEBIAN_FRONTEND=noninteractive
+ARG MOTIS_UID=1000
+ARG MOTIS_GID=1000
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    ca-certificates \
+    cmake \
+    curl \
+    git \
+    ninja-build \
+    openssh-client \
+    perl \
+    pkg-config \
+    python3 \
+    unzip \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN if ! getent group "${MOTIS_GID}" >/dev/null; then \
+        groupadd -g "${MOTIS_GID}" builder; \
+    fi \
+    && if ! id -u builder >/dev/null 2>&1; then \
+        if id -u "${MOTIS_UID}" >/dev/null 2>&1; then \
+            useradd -m -u "${MOTIS_UID}" -g "${MOTIS_GID}" -o builder; \
+        else \
+            useradd -m -u "${MOTIS_UID}" -g "${MOTIS_GID}" builder; \
+        fi; \
+    fi
+
+USER builder
+WORKDIR /work
+
+ENV HOME=/home/builder
+ENV CC=gcc
+ENV CXX=g++
