@@ -1,4 +1,1 @@
-docker compose run --rm \                                                                                                                               ─╯
-  -v "$(pwd)/data/osm:/osm:ro" \
-  -v "$(pwd)/data/gtfs:/gtfs:ro" \
-  --entrypoint /motis motis import --config /data/config.yml --data /data
+docker compose run --rm -v "$(pwd)/data/osm:/osm:ro" -v "$(pwd)/data/gtfs:/gtfs:ro" --entrypoint /motis motis import --config /data/config.yml --data /data

@@ -10,3 +10,15 @@ services:
     user: motis
     restart: unless-stopped
     command: ["/motis", "server", "/data"]
+  motis-ui:
+    build:
+      context: ./ui
+    image: motis-ui:latest
+    container_name: motis-ui
+    ports:
+      - "8081:80"
+    environment:
+      - MOTIS_BACKEND_URL=${MOTIS_BACKEND_URL:-http://localhost:8080}
+    depends_on:
+      - motis
+    restart: unless-stopped

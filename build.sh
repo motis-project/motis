@@ -12,8 +12,11 @@ docker compose -f docker-compose.build.yml run --rm motis-build
 # 2. Create runtime image from compiled binary
 docker build --platform linux/amd64 -f Dockerfile.runtime -t motis:latest .
 
-# 3. Run
+# 3. Build UI image
+docker compose build motis-ui
+
+# 4. Run
 docker compose up -d --no-build
 
-# 4. Stop
+# 5. Stop
 docker compose down
