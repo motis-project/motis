@@ -1,3 +1,4 @@
+#include "gmock/gmock-matchers.h"
 #include "gtest/gtest.h"
 
 #ifdef NO_DATA
@@ -24,33 +25,65 @@ using namespace std::chrono_literals;
 
 namespace n = nigiri;
 
-#define COMPARE_ONE_TO_MANY_WITH_ERROR(expected, actual, abs_error)           \
-  /* Compare distances only. Update 'expected' to match actual's distances */ \
-  {                                                                           \
-    auto exp{expected}; /* Bind rvalue */                                     \
-    if (exp.street_durations_.has_value() ==                                  \
-        actual.street_durations_.has_value()) {                               \
-      ASSERT_EQ(exp.street_durations_->size(),                                \
-                actual.street_durations_->size());                            \
-      for (auto [a, b] :                                                      \
-           utl::zip(*exp.street_durations_, *actual.street_durations_)) {     \
-        if (a.distance_ && b.distance_) {                                     \
-          EXPECT_NEAR(*a.distance_, *b.distance_, abs_error);                 \
-          /* Update expected*/                                                \
-          a.distance_ = b.distance_;                                          \
-        } else {                                                              \
-          /* Should both be empty otherwise*/                                 \
-          EXPECT_EQ(a.distance_, b.distance_);                                \
-        }                                                                     \
-      }                                                                       \
-    } else {                                                                  \
-      /* Should both be empty otherwise*/                                     \
-      EXPECT_EQ(exp.street_durations_, actual.street_durations_);             \
-    }                                                                         \
-    /* Compare full objects with updated distances*/                          \
-    EXPECT_EQ(exp, actual);                                                   \
-  }                                                                           \
-  EXPECT_TRUE(true) /* To require ';' after macro */
+MATCHER_P2(OneToManyResultMatcher, result, abs_error, "") {
+  auto equals = true;
+  // Compare street_durations_
+  if (arg.street_durations_.has_value() !=
+      result.street_durations_.has_value()) {
+    *result_listener << "which "
+                     << (arg.street_durations_.has_value() ? "does" : "doesn't")
+                     << " have street_durations_, ";
+    equals = false;
+  } else if (arg.street_durations_.has_value()) {
+    if (!::testing::ExplainMatchResult(
+            ::testing::Eq(result.street_durations_->size()),
+            arg.street_durations_->size(), result_listener)) {
+      *result_listener << "which has "
+                       << static_cast<int>(arg.street_durations_->size() -
+                                           result.street_durations_->size())
+                       << " additional elements for street duration, ";
+      equals = false;
+    } else {
+      for (auto i = 0U; i != result.street_durations_->size(); ++i) {
+        auto const& a = arg.street_durations_->at(i);
+        auto const& b = result.street_durations_->at(i);
+        if (!::testing::ExplainMatchResult(::testing::Eq(b.duration_),
+                                           a.duration_, result_listener)) {
+          *result_listener << " for street_duration_[" << i << "], ";
+          equals = false;
+        } else if (a.distance_.has_value() != b.distance_.has_value()) {
+          *result_listener << "which "
+                           << (a.distance_.has_value() ? "does" : "doesn't")
+                           << " have a distance_ at index " << i << ", ";
+          equals = false;
+        } else if (b.distance_.has_value()) {
+          if (!::testing::ExplainMatchResult(
+                  ::testing::DoubleNear(*b.distance_, abs_error), *a.distance_,
+                  result_listener)) {
+            *result_listener << " for distance_ at index " << i << ", ";
+            equals = false;
+          }
+        }
+      }
+    }
+  }
+  // Compare transit_durations_
+  if (arg.transit_durations_.has_value() !=
+      result.transit_durations_.has_value()) {
+    *result_listener << "which "
+                     << (arg.transit_durations_.has_value() ? "does"
+                                                            : "doesn't")
+                     << " have transit_durations_, ";
+    return false;
+  } else if (result.transit_durations_.has_value() &&
+             !::testing::ExplainMatchResult(
+                 ::testing::ContainerEq(*result.transit_durations_),
+                 *arg.transit_durations_, result_listener)) {
+    *result_listener << " for transit_durations_, ";
+    return false;
+  }
+  return equals;
+}
 
 constexpr auto const kGTFS = R"(
 # agency.txt
@@ -377,29 +410,30 @@ TEST(motis, one_to_many) {
         "&withDistance=true"
         "&arriveBy=true");
 
-    COMPARE_ONE_TO_MANY_WITH_ERROR(
-        (api::OneToManyIntermodalResponse{
-            .street_durations_ = {{
-                {},
-                {},
-                {// No valid post transit
-                 .duration_ = 333.0,
-                 .distance_ = 124.1},
-                {// Direct connection is allowed
-                 .duration_ = 517.0,
-                 .distance_ = 271.8},
-                {// Reachable after updating maxDirectTime
-                 .duration_ = 771.0,
-                 .distance_ = 476.0},
-            }},
-            .transit_durations_ = {{
-                {{.duration_ = 1680.0, .transfers_ = 0}},
-                {},  // Not reachable from de:6412:10:6:1
-                {},
-                {},
-                {},
-            }}}),
-        durations, 0.1);
+    EXPECT_THAT(durations,
+                OneToManyResultMatcher(
+                    api::OneToManyIntermodalResponse{
+                        .street_durations_ = {{
+                            {},
+                            {},
+                            {// No valid post transit
+                             .duration_ = 333.0,
+                             .distance_ = 124.1},
+                            {// Direct connection is allowed
+                             .duration_ = 517.0,
+                             .distance_ = 271.8},
+                            {// Reachable after updating maxDirectTime
+                             .duration_ = 771.0,
+                             .distance_ = 476.0},
+                        }},
+                        .transit_durations_ = {{
+                            {{.duration_ = 1680.0, .transfers_ = 0}},
+                            {},  // Not reachable from de:6412:10:6:1
+                            {},
+                            {},
+                            {},
+                        }}},
+                    10.0));
   }
   // Oneway direction tests
   {
@@ -450,21 +484,22 @@ TEST(motis, one_to_many) {
           .directMode_ = api::ModeEnum::BIKE,
           .withDistance_ = true});
 
-      COMPARE_ONE_TO_MANY_WITH_ERROR(
-          (api::OneToManyIntermodalResponse{
-              .street_durations_ = {{
-                  {.duration_ = 228.0, .distance_ = 341.3},
-                  {.duration_ = 335.0, .distance_ = 502.1},
-                  {.duration_ = 335.0, .distance_ = 502.1},
-                  {},
-              }},
-              .transit_durations_ = {{
-                  {},
-                  {},
-                  {},
-                  {{.duration_ = 1920.0, .transfers_ = 0}},
-              }}}),
-          durations, 0.1);
+      EXPECT_THAT(durations,
+                  OneToManyResultMatcher(
+                      api::OneToManyIntermodalResponse{
+                          .street_durations_ = {{
+                              {.duration_ = 228.0, .distance_ = 341.3},
+                              {.duration_ = 335.0, .distance_ = 502.1},
+                              {.duration_ = 335.0, .distance_ = 502.1},
+                              {},
+                          }},
+                          .transit_durations_ = {{
+                              {},
+                              {},
+                              {},
+                              {{.duration_ = 1920.0, .transfers_ = 0}},
+                          }}},
+                      10.0));
     }
     // POST, forward, postTransitModes
     {
@@ -646,19 +681,21 @@ TEST(motis, one_to_many) {
           .useRoutedTransfers_ = true,
           .withDistance_ = true});
 
-      COMPARE_ONE_TO_MANY_WITH_ERROR(
-          (api::OneToManyIntermodalResponse{
-              .street_durations_ = {{{.duration_ = 425.0, .distance_ = 338.0},
-                                     {.duration_ = 529.0, .distance_ = 575.0},
-                                     {.duration_ = 939.0, .distance_ = 1068.6},
-                                     {}}},
-              .transit_durations_ = {{
-                  {{.duration_ = 1320.0, .transfers_ = 0}},
-                  {{.duration_ = 1680.0, .transfers_ = 0}},
-                  {{.duration_ = 1740.0, .transfers_ = 0}},
-                  {{.duration_ = 4440.0, .transfers_ = 2}},
-              }}}),
-          durations, 0.1);
+      EXPECT_THAT(durations,
+                  OneToManyResultMatcher(
+                      api::OneToManyIntermodalResponse{
+                          .street_durations_ =
+                              {{{.duration_ = 425.0, .distance_ = 338.0},
+                                {.duration_ = 529.0, .distance_ = 575.0},
+                                {.duration_ = 939.0, .distance_ = 1068.6},
+                                {}}},
+                          .transit_durations_ = {{
+                              {{.duration_ = 1320.0, .transfers_ = 0}},
+                              {{.duration_ = 1680.0, .transfers_ = 0}},
+                              {{.duration_ = 1740.0, .transfers_ = 0}},
+                              {{.duration_ = 4440.0, .transfers_ = 2}},
+                          }}},
+                      10.0));
     }
     {
       // Long walking paths + fast connctions => multiple durations
