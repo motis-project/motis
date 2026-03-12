@@ -25,4 +25,5 @@ fasta.json
 config.yaml
 config.yml
 config.ini
-
+.history
+.DS_Store

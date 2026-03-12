@@ -1,13 +1,18 @@
-FROM alpine:3.20
+FROM ubuntu:24.04
 
 # Copy the compiled binary from the build directory
 COPY build/docker-relwithdebinfo/motis /motis
 
-# Create motis user and data directory
-RUN addgroup -S motis && adduser -S motis -G motis && \
-    mkdir /data && \
-    chown motis:motis /data && \
-    chmod +x /motis
+# Runtime dependencies + non-root runtime user
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    tzdata \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd --system motis \
+    && useradd --system --gid motis --no-create-home --shell /usr/sbin/nologin motis \
+    && mkdir /data \
+    && chown motis:motis /data \
+    && chmod +x /motis
 
 EXPOSE 8080
 VOLUME ["/data"]

@@ -158,9 +158,17 @@ add_executable(motis ${motis-files})
 target_compile_features(motis PUBLIC cxx_std_23)
 target_compile_options(motis PRIVATE ${motis-compile-options})
 set_source_files_properties(exe/main.cc PROPERTIES COMPILE_DEFINITIONS MOTIS_VERSION="${motis-git-tag}")
+
+set(motis-tzdb-link "")
+if (TARGET ianatzdb-res)
+    set(motis-tzdb-link ianatzdb-res)
+elseif (TARGET ianatzdb-res-res)
+    set(motis-tzdb-link ianatzdb-res-res)
+endif ()
+
 target_link_libraries(motis
     motislib
-    ianatzdb-res
+    ${motis-tzdb-link}
     pbf_sdf_fonts_res-res
     tiles_server_res-res
     address_formatting_res-res
@@ -179,7 +187,7 @@ configure_file(
 )
 file(GLOB_RECURSE motis-test-files test/*.cc)
 add_executable(motis-test ${motis-test-files})
-target_link_libraries(motis-test motislib gmock web-server ianatzdb-res address_formatting_res-res motis-generated)
+target_link_libraries(motis-test motislib gmock web-server ${motis-tzdb-link} address_formatting_res-res motis-generated)
 target_compile_options(motis-test PRIVATE ${motis-compile-options})
 
 

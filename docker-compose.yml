@@ -1,5 +1,6 @@
 services:
   motis:
+    platform: linux/amd64
     image: motis:latest
     container_name: motis
     ports:

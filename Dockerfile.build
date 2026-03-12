@@ -10,6 +10,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     cmake \
     curl \
     git \
+    libc6-dev \
     ninja-build \
     openssh-client \
     perl \
@@ -17,6 +18,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 \
     unzip \
     && rm -rf /var/lib/apt/lists/*
+
+# Some Ubuntu variants miss the libm.so linker script path expected by
+# generated Ninja deps. Ensure a usable fallback exists.
+RUN if [ ! -e /usr/lib/x86_64-linux-gnu/libm.so ] && [ -e /usr/lib/x86_64-linux-gnu/libm.so.6 ]; then \
+      ln -s /usr/lib/x86_64-linux-gnu/libm.so.6 /usr/lib/x86_64-linux-gnu/libm.so; \
+    fi
 
 RUN if ! getent group "${MOTIS_GID}" >/dev/null; then \
         groupadd -g "${MOTIS_GID}" builder; \

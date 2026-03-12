@@ -37,6 +37,7 @@ docker compose -f docker-compose.build.yml up --build
 ```
 
 After the build completes:
+
 - The binary is available at: `build/docker-relwithdebinfo/motis`
 - The Docker image is available as: `motis:latest`
 
@@ -73,6 +74,9 @@ The server will be available at `http://localhost:8080`. Data is persisted in th
 
 - The build disables `buildcache` by default and uses the system timezone
   database to avoid missing `libcrypto.so.1.1` and embedded tzdb issues.
+- Runtime image compatibility matters: when building in Ubuntu/glibc, do not run
+  the produced binary in Alpine/musl unless you also build a musl-compatible
+  binary.
 - **SSH is optional**: If the `deps/` directory already contains all dependencies,
   the build will work without SSH. SSH is only needed when `pkg` needs to fetch
   or update dependencies.
