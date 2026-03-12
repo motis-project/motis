@@ -24,32 +24,33 @@ using namespace std::chrono_literals;
 
 namespace n = nigiri;
 
-void expect_eq_rounded(api::OneToManyIntermodalResponse&& expected,
-                       api::OneToManyIntermodalResponse const& actual,
-                       double const abs_error = 0.1) {
-  // Compare distances only. Update 'expected' to match actual's distances
-  if (expected.street_durations_.has_value() ==
-      actual.street_durations_.has_value()) {
-    ASSERT_EQ(expected.street_durations_->size(),
-              actual.street_durations_->size());
-    for (auto [a, b] :
-         utl::zip(*expected.street_durations_, *actual.street_durations_)) {
-      if (a.distance_ && b.distance_) {
-        EXPECT_NEAR(*a.distance_, *b.distance_, abs_error);
-        // Update expected
-        a.distance_ = b.distance_;
-      } else {
-        // Should both be empty otherwise
-        EXPECT_EQ(a.distance_, b.distance_);
-      }
-    }
-  } else {
-    // Should both be empty otherwise
-    EXPECT_EQ(expected.street_durations_, actual.street_durations_);
-  }
-  // Compare full objects. Notice that distances have been updated to be equal
-  EXPECT_EQ(expected, actual);
-}
+#define COMPARE_ONE_TO_MANY_WITH_ERROR(expected, actual, abs_error)           \
+  /* Compare distances only. Update 'expected' to match actual's distances */ \
+  {                                                                           \
+    auto exp{expected}; /* Bind rvalue */                                     \
+    if (exp.street_durations_.has_value() ==                                  \
+        actual.street_durations_.has_value()) {                               \
+      ASSERT_EQ(exp.street_durations_->size(),                                \
+                actual.street_durations_->size());                            \
+      for (auto [a, b] :                                                      \
+           utl::zip(*exp.street_durations_, *actual.street_durations_)) {     \
+        if (a.distance_ && b.distance_) {                                     \
+          EXPECT_NEAR(*a.distance_, *b.distance_, abs_error);                 \
+          /* Update expected*/                                                \
+          a.distance_ = b.distance_;                                          \
+        } else {                                                              \
+          /* Should both be empty otherwise*/                                 \
+          EXPECT_EQ(a.distance_, b.distance_);                                \
+        }                                                                     \
+      }                                                                       \
+    } else {                                                                  \
+      /* Should both be empty otherwise*/                                     \
+      EXPECT_EQ(exp.street_durations_, actual.street_durations_);             \
+    }                                                                         \
+    /* Compare full objects with updated distances*/                          \
+    EXPECT_EQ(exp, actual);                                                   \
+  }                                                                           \
+  EXPECT_TRUE(true) /* To require ';' after macro */
 
 constexpr auto const kGTFS = R"(
 # agency.txt
@@ -376,8 +377,8 @@ TEST(motis, one_to_many) {
         "&withDistance=true"
         "&arriveBy=true");
 
-    expect_eq_rounded(
-        api::OneToManyIntermodalResponse{
+    COMPARE_ONE_TO_MANY_WITH_ERROR(
+        (api::OneToManyIntermodalResponse{
             .street_durations_ = {{
                 {},
                 {},
@@ -397,8 +398,8 @@ TEST(motis, one_to_many) {
                 {},
                 {},
                 {},
-            }}},
-        durations);
+            }}}),
+        durations, 0.1);
   }
   // Oneway direction tests
   {
@@ -449,8 +450,8 @@ TEST(motis, one_to_many) {
           .directMode_ = api::ModeEnum::BIKE,
           .withDistance_ = true});
 
-      expect_eq_rounded(
-          api::OneToManyIntermodalResponse{
+      COMPARE_ONE_TO_MANY_WITH_ERROR(
+          (api::OneToManyIntermodalResponse{
               .street_durations_ = {{
                   {.duration_ = 228.0, .distance_ = 341.3},
                   {.duration_ = 335.0, .distance_ = 502.1},
@@ -462,8 +463,8 @@ TEST(motis, one_to_many) {
                   {},
                   {},
                   {{.duration_ = 1920.0, .transfers_ = 0}},
-              }}},
-          durations);
+              }}}),
+          durations, 0.1);
     }
     // POST, forward, postTransitModes
     {
@@ -645,8 +646,8 @@ TEST(motis, one_to_many) {
           .useRoutedTransfers_ = true,
           .withDistance_ = true});
 
-      expect_eq_rounded(
-          api::OneToManyIntermodalResponse{
+      COMPARE_ONE_TO_MANY_WITH_ERROR(
+          (api::OneToManyIntermodalResponse{
               .street_durations_ = {{{.duration_ = 425.0, .distance_ = 338.0},
                                      {.duration_ = 529.0, .distance_ = 575.0},
                                      {.duration_ = 939.0, .distance_ = 1068.6},
@@ -656,8 +657,8 @@ TEST(motis, one_to_many) {
                   {{.duration_ = 1680.0, .transfers_ = 0}},
                   {{.duration_ = 1740.0, .transfers_ = 0}},
                   {{.duration_ = 4440.0, .transfers_ = 2}},
-              }}},
-          durations);
+              }}}),
+          durations, 0.1);
     }
     {
       // Long walking paths + fast connctions => multiple durations
