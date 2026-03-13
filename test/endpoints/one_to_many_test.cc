@@ -353,10 +353,8 @@ TEST(motis, one_to_many) {
     auto const& td = durations.transit_durations_.value();
 
     ASSERT_EQ(5U, sd.size());
-    EXPECT_FALSE(sd.at(0).duration_.has_value());
-    EXPECT_FALSE(sd.at(0).distance_.has_value());
-    EXPECT_FALSE(sd.at(1).duration_.has_value());
-    EXPECT_FALSE(sd.at(1).distance_.has_value());
+    EXPECT_EQ(api::Duration{}, sd.at(0));
+    EXPECT_EQ(api::Duration{}, sd.at(1));
     // Not valid for post transit => unreachable from FFM_101
     EXPECT_DOUBLE_EQ(333.0, sd.at(2).duration_.value());
     EXPECT_NEAR(124.1, sd.at(2).distance_.value(), 0.1);
@@ -434,8 +432,7 @@ TEST(motis, one_to_many) {
       EXPECT_NEAR(502.1, sd.at(1).distance_.value(), 0.1);
       EXPECT_DOUBLE_EQ(335.0, sd.at(2).duration_.value());
       EXPECT_NEAR(502.1, sd.at(2).distance_.value(), 0.1);
-      EXPECT_FALSE(sd.at(3).duration_.has_value());
-      EXPECT_FALSE(sd.at(3).distance_.has_value());
+      EXPECT_EQ(api::Duration{}, sd.at(3));
 
       ASSERT_EQ(4U, td.size());
       EXPECT_TRUE(td.at(0).empty());
@@ -635,8 +632,7 @@ TEST(motis, one_to_many) {
       EXPECT_NEAR(575.0, sd.at(1).distance_.value(), 0.1);
       EXPECT_DOUBLE_EQ(939.0, sd.at(2).duration_.value());
       EXPECT_NEAR(1068.6, sd.at(2).distance_.value(), 0.1);
-      EXPECT_FALSE(sd.at(3).duration_.has_value());
-      EXPECT_FALSE(sd.at(3).distance_.has_value());
+      EXPECT_EQ(api::Duration{}, sd.at(3));
 
       ASSERT_EQ(4U, td.size());
       ASSERT_EQ(1U, td.at(0).size());
