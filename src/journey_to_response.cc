@@ -397,7 +397,7 @@ api::Itinerary journey_to_response(
         });
   };
 
-  for (auto const [_, j_leg] : utl::enumerate(j.legs_)) {
+  for (auto const [j_leg_idx, j_leg] : utl::enumerate(j.legs_)) {
     auto const pred =
         itinerary.legs_.empty() ? nullptr : &itinerary.legs_.back();
     auto const fallback_tz =
@@ -632,6 +632,11 @@ api::Itinerary journey_to_response(
                                            j_leg.dep_time_, j_leg.arr_time_));
             },
             [&](n::routing::offset const x) {
+              if ((j_leg_idx == 0 || j_leg_idx == j.legs_.size() - 1) &&
+                  j_leg.dep_time_ == j_leg.arr_time_) {
+                return;
+              }
+
               auto out = std::unique_ptr<output>{};
               if (flex::mode_id::is_flex(x.transport_mode_id_)) {
                 out = std::make_unique<flex::flex_output>(
