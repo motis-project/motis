@@ -62,8 +62,8 @@ api::Itinerary trip::operator()(boost::urls::url_view const& url) const {
                   from_l.get_scheduled_location_idx()},
       tt_location{to_l.get_location_idx()}, cache, &blocked, false,
       osr_parameters{}, api::PedestrianProfileEnum::FOOT,
-      api::ElevationCostsEnum::NONE, query.joinInterlinedLegs_, true, false,
-      query.withScheduledSkippedStops_,
+      api::ElevationCostsEnum::NONE, query.joinInterlinedLegs_, true,
+      query.detailedLegs_, false, query.withScheduledSkippedStops_,
       config_.timetable_.value().max_matching_distance_, kMaxMatchingDistance,
       api_version, false, false, query.language_);
 }

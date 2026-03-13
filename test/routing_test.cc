@@ -342,6 +342,10 @@ TEST(motis, routing) {
         "&time=2019-05-01T01:25Z"
         "&timetableView=false"
         "&directModes=WALK,RENTAL");
+    ASSERT_FALSE(res.direct_.empty());
+    ASSERT_FALSE(res.direct_.front().legs_.empty());
+    EXPECT_TRUE(res.direct_.front().legs_.front().legGeometry_.has_value());
+    EXPECT_TRUE(res.direct_.front().legs_.front().steps_.has_value());
 
     EXPECT_EQ(
         R"(date=2019-05-01, start=01:25, end=01:36, duration=00:11, transfers=0, legs=[
@@ -352,6 +356,21 @@ TEST(motis, routing) {
     (from=- [track=-, scheduled_track=-, level=0], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 01:25, mode="WALK", trip="-", end=2019-05-01 01:36)
 ])",
         to_str(res.direct_));
+
+    auto const compact_res = routing(
+        "?fromPlace=49.87526849014631,8.62771903392948"
+        "&toPlace=49.87253873915287,8.629724234688751"
+        "&time=2019-05-01T01:25Z"
+        "&timetableView=false"
+        "&directModes=WALK,RENTAL"
+        "&detailedLegs=false");
+    ASSERT_FALSE(compact_res.direct_.empty());
+    for (auto const& itinerary : compact_res.direct_) {
+      for (auto const& leg : itinerary.legs_) {
+        EXPECT_FALSE(leg.legGeometry_.has_value());
+        EXPECT_FALSE(leg.steps_.has_value());
+      }
+    }
   }
 
   // Route with GBFS.
