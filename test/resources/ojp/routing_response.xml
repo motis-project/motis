@@ -1,0 +1,490 @@
+<?xml version="1.0" encoding="utf-8"?>
+<OJP xmlns:siri="http://www.siri.org.uk/siri" xmlns="http://www.vdv.de/ojp" version="2.0">
+  <OJPResponse>
+    <siri:ServiceDelivery>
+      <siri:ResponseTimestamp>NOW</siri:ResponseTimestamp>
+      <siri:ProducerRef>MOTIS</siri:ProducerRef>
+      <siri:ResponseMessageIdentifier>MSG</siri:ResponseMessageIdentifier>
+      <OJPTripDelivery>
+        <siri:ResponseTimestamp>NOW</siri:ResponseTimestamp>
+        <siri:DefaultLanguage>de</siri:DefaultLanguage>
+        <TripResponseContext>
+          <Places>
+            <Place>
+              <StopPlace>
+                <siri:StopPlaceRef>test_DA</siri:StopPlaceRef>
+                <StopPlaceName>
+                  <Text xml:lang="de">DA Hbf</Text>
+                </StopPlaceName>
+              </StopPlace>
+              <Name>
+                <Text xml:lang="de">DA Hbf</Text>
+              </Name>
+              <GeoPosition>
+                <siri:Longitude>8.63085</siri:Longitude>
+                <siri:Latitude>49.8726</siri:Latitude>
+              </GeoPosition>
+            </Place>
+            <Place>
+              <StopPoint>
+                <siri:StopPointRef>test_DA_10</siri:StopPointRef>
+                <StopPointName>
+                  <Text xml:lang="de">DA Hbf</Text>
+                </StopPointName>
+                <ParentRef>test_DA</ParentRef>
+              </StopPoint>
+              <Name>
+                <Text xml:lang="de">DA Hbf</Text>
+              </Name>
+              <GeoPosition>
+                <siri:Longitude>8.62926</siri:Longitude>
+                <siri:Latitude>49.87336</siri:Latitude>
+              </GeoPosition>
+            </Place>
+            <Place>
+              <StopPlace>
+                <siri:StopPlaceRef>test_FFM</siri:StopPlaceRef>
+                <StopPlaceName>
+                  <Text xml:lang="de">FFM Hbf</Text>
+                </StopPlaceName>
+              </StopPlace>
+              <Name>
+                <Text xml:lang="de">FFM Hbf</Text>
+              </Name>
+              <GeoPosition>
+                <siri:Longitude>8.66341</siri:Longitude>
+                <siri:Latitude>50.10701</siri:Latitude>
+              </GeoPosition>
+            </Place>
+            <Place>
+              <StopPoint>
+                <siri:StopPointRef>test_FFM_10</siri:StopPointRef>
+                <StopPointName>
+                  <Text xml:lang="de">FFM Hbf</Text>
+                </StopPointName>
+                <ParentRef>test_FFM</ParentRef>
+              </StopPoint>
+              <Name>
+                <Text xml:lang="de">FFM Hbf</Text>
+              </Name>
+              <GeoPosition>
+                <siri:Longitude>8.66118</siri:Longitude>
+                <siri:Latitude>50.10593</siri:Latitude>
+              </GeoPosition>
+            </Place>
+          </Places>
+        </TripResponseContext>
+        <TripResult>
+          <Id>1</Id>
+          <Trip>
+            <Id>1</Id>
+            <Duration>PT10M</Duration>
+            <StartTime>2019-05-01T00:35:00Z</StartTime>
+            <EndTime>2019-05-01T00:45:00Z</EndTime>
+            <Transfers>0</Transfers>
+            <Distance>2</Distance>
+            <Leg>
+              <Id>1</Id>
+              <Duration>PT10M</Duration>
+              <TimedLeg>
+                <LegBoard>
+                  <siri:StopPointRef>test_DA_10</siri:StopPointRef>
+                  <StopPointName>
+                    <Text xml:lang="de">DA Hbf</Text>
+                  </StopPointName>
+                  <PlannedQuay>
+                    <Text xml:lang="de">10</Text>
+                  </PlannedQuay>
+                  <ServiceDeparture>
+                    <TimetabledTime>2019-05-01T00:35:00Z</TimetabledTime>
+                    <EstimatedTime>2019-05-01T00:35:00Z</EstimatedTime>
+                  </ServiceDeparture>
+                  <Order>1</Order>
+                </LegBoard>
+                <LegAlight>
+                  <siri:StopPointRef>test_FFM_10</siri:StopPointRef>
+                  <StopPointName>
+                    <Text xml:lang="de">FFM Hbf</Text>
+                  </StopPointName>
+                  <PlannedQuay>
+                    <Text xml:lang="de">10</Text>
+                  </PlannedQuay>
+                  <ServiceArrival>
+                    <TimetabledTime>2019-05-01T00:45:00Z</TimetabledTime>
+                    <EstimatedTime>2019-05-01T00:45:00Z</EstimatedTime>
+                  </ServiceArrival>
+                  <Order>2</Order>
+                </LegAlight>
+                <Service>
+                  <OperatingDayRef>20190501</OperatingDayRef>
+                  <JourneyRef>20190501_02:35_test_ICE</JourneyRef>
+                  <LineRef>test_ICE</LineRef>
+                  <DirectionRef>0</DirectionRef>
+                  <siri:OperatorRef>DB</siri:OperatorRef>
+                  <ProductCategory />
+                  <DestinationText>
+                    <Text xml:lang="de">FFM Hbf</Text>
+                  </DestinationText>
+                  <PublishedServiceName>
+                    <Text xml:lang="de">ICE</Text>
+                  </PublishedServiceName>
+                  <Mode>
+                    <PtMode>rail</PtMode>
+                    <siri:RailSubmode>highSpeedRail</siri:RailSubmode>
+                  </Mode>
+                </Service>
+                <LegTrack>
+                  <TrackSection>
+                    <TrackSectionStart>
+                      <siri:StopPointRef>test_DA_10</siri:StopPointRef>
+                      <Name>
+                        <Text xml:lang="de">DA Hbf</Text>
+                      </Name>
+                      <siri:StopPointRef>test_FFM_10</siri:StopPointRef>
+                    </TrackSectionStart>
+                    <TrackSectionEnd>
+                      <Name>
+                        <Text xml:lang="de">FFM Hbf</Text>
+                      </Name>
+                    </TrackSectionEnd>
+                    <LinkProjection></LinkProjection>
+                    <Duration>PT10M</Duration>
+                    <Length>2</Length>
+                  </TrackSection>
+                </LegTrack>
+              </TimedLeg>
+            </Leg>
+          </Trip>
+        </TripResult>
+        <TripResult>
+          <Id>2</Id>
+          <Trip>
+            <Id>2</Id>
+            <Duration>PT10M</Duration>
+            <StartTime>2019-05-01T01:35:00Z</StartTime>
+            <EndTime>2019-05-01T01:45:00Z</EndTime>
+            <Transfers>0</Transfers>
+            <Distance>2</Distance>
+            <Leg>
+              <Id>1</Id>
+              <Duration>PT10M</Duration>
+              <TimedLeg>
+                <LegBoard>
+                  <siri:StopPointRef>test_DA_10</siri:StopPointRef>
+                  <StopPointName>
+                    <Text xml:lang="de">DA Hbf</Text>
+                  </StopPointName>
+                  <PlannedQuay>
+                    <Text xml:lang="de">10</Text>
+                  </PlannedQuay>
+                  <ServiceDeparture>
+                    <TimetabledTime>2019-05-01T01:35:00Z</TimetabledTime>
+                    <EstimatedTime>2019-05-01T01:35:00Z</EstimatedTime>
+                  </ServiceDeparture>
+                  <Order>1</Order>
+                </LegBoard>
+                <LegAlight>
+                  <siri:StopPointRef>test_FFM_10</siri:StopPointRef>
+                  <StopPointName>
+                    <Text xml:lang="de">FFM Hbf</Text>
+                  </StopPointName>
+                  <PlannedQuay>
+                    <Text xml:lang="de">10</Text>
+                  </PlannedQuay>
+                  <ServiceArrival>
+                    <TimetabledTime>2019-05-01T01:45:00Z</TimetabledTime>
+                    <EstimatedTime>2019-05-01T01:45:00Z</EstimatedTime>
+                  </ServiceArrival>
+                  <Order>2</Order>
+                </LegAlight>
+                <Service>
+                  <OperatingDayRef>20190501</OperatingDayRef>
+                  <JourneyRef>20190501_03:35_test_ICE</JourneyRef>
+                  <LineRef>test_ICE</LineRef>
+                  <DirectionRef>0</DirectionRef>
+                  <siri:OperatorRef>DB</siri:OperatorRef>
+                  <ProductCategory />
+                  <DestinationText>
+                    <Text xml:lang="de">FFM Hbf</Text>
+                  </DestinationText>
+                  <PublishedServiceName>
+                    <Text xml:lang="de">ICE</Text>
+                  </PublishedServiceName>
+                  <Mode>
+                    <PtMode>rail</PtMode>
+                    <siri:RailSubmode>highSpeedRail</siri:RailSubmode>
+                  </Mode>
+                </Service>
+                <LegTrack>
+                  <TrackSection>
+                    <TrackSectionStart>
+                      <siri:StopPointRef>test_DA_10</siri:StopPointRef>
+                      <Name>
+                        <Text xml:lang="de">DA Hbf</Text>
+                      </Name>
+                      <siri:StopPointRef>test_FFM_10</siri:StopPointRef>
+                    </TrackSectionStart>
+                    <TrackSectionEnd>
+                      <Name>
+                        <Text xml:lang="de">FFM Hbf</Text>
+                      </Name>
+                    </TrackSectionEnd>
+                    <LinkProjection></LinkProjection>
+                    <Duration>PT10M</Duration>
+                    <Length>2</Length>
+                  </TrackSection>
+                </LegTrack>
+              </TimedLeg>
+            </Leg>
+          </Trip>
+        </TripResult>
+        <TripResult>
+          <Id>3</Id>
+          <Trip>
+            <Id>3</Id>
+            <Duration>PT10M</Duration>
+            <StartTime>2019-05-01T02:35:00Z</StartTime>
+            <EndTime>2019-05-01T02:45:00Z</EndTime>
+            <Transfers>0</Transfers>
+            <Distance>2</Distance>
+            <Leg>
+              <Id>1</Id>
+              <Duration>PT10M</Duration>
+              <TimedLeg>
+                <LegBoard>
+                  <siri:StopPointRef>test_DA_10</siri:StopPointRef>
+                  <StopPointName>
+                    <Text xml:lang="de">DA Hbf</Text>
+                  </StopPointName>
+                  <PlannedQuay>
+                    <Text xml:lang="de">10</Text>
+                  </PlannedQuay>
+                  <ServiceDeparture>
+                    <TimetabledTime>2019-05-01T02:35:00Z</TimetabledTime>
+                    <EstimatedTime>2019-05-01T02:35:00Z</EstimatedTime>
+                  </ServiceDeparture>
+                  <Order>1</Order>
+                </LegBoard>
+                <LegAlight>
+                  <siri:StopPointRef>test_FFM_10</siri:StopPointRef>
+                  <StopPointName>
+                    <Text xml:lang="de">FFM Hbf</Text>
+                  </StopPointName>
+                  <PlannedQuay>
+                    <Text xml:lang="de">10</Text>
+                  </PlannedQuay>
+                  <ServiceArrival>
+                    <TimetabledTime>2019-05-01T02:45:00Z</TimetabledTime>
+                    <EstimatedTime>2019-05-01T02:45:00Z</EstimatedTime>
+                  </ServiceArrival>
+                  <Order>2</Order>
+                </LegAlight>
+                <Service>
+                  <OperatingDayRef>20190501</OperatingDayRef>
+                  <JourneyRef>20190501_04:35_test_ICE</JourneyRef>
+                  <LineRef>test_ICE</LineRef>
+                  <DirectionRef>0</DirectionRef>
+                  <siri:OperatorRef>DB</siri:OperatorRef>
+                  <ProductCategory />
+                  <DestinationText>
+                    <Text xml:lang="de">FFM Hbf</Text>
+                  </DestinationText>
+                  <PublishedServiceName>
+                    <Text xml:lang="de">ICE</Text>
+                  </PublishedServiceName>
+                  <Mode>
+                    <PtMode>rail</PtMode>
+                    <siri:RailSubmode>highSpeedRail</siri:RailSubmode>
+                  </Mode>
+                </Service>
+                <LegTrack>
+                  <TrackSection>
+                    <TrackSectionStart>
+                      <siri:StopPointRef>test_DA_10</siri:StopPointRef>
+                      <Name>
+                        <Text xml:lang="de">DA Hbf</Text>
+                      </Name>
+                      <siri:StopPointRef>test_FFM_10</siri:StopPointRef>
+                    </TrackSectionStart>
+                    <TrackSectionEnd>
+                      <Name>
+                        <Text xml:lang="de">FFM Hbf</Text>
+                      </Name>
+                    </TrackSectionEnd>
+                    <LinkProjection></LinkProjection>
+                    <Duration>PT10M</Duration>
+                    <Length>2</Length>
+                  </TrackSection>
+                </LegTrack>
+              </TimedLeg>
+            </Leg>
+          </Trip>
+        </TripResult>
+        <TripResult>
+          <Id>4</Id>
+          <Trip>
+            <Id>4</Id>
+            <Duration>PT10M</Duration>
+            <StartTime>2019-05-01T03:35:00Z</StartTime>
+            <EndTime>2019-05-01T03:45:00Z</EndTime>
+            <Transfers>0</Transfers>
+            <Distance>2</Distance>
+            <Leg>
+              <Id>1</Id>
+              <Duration>PT10M</Duration>
+              <TimedLeg>
+                <LegBoard>
+                  <siri:StopPointRef>test_DA_10</siri:StopPointRef>
+                  <StopPointName>
+                    <Text xml:lang="de">DA Hbf</Text>
+                  </StopPointName>
+                  <PlannedQuay>
+                    <Text xml:lang="de">10</Text>
+                  </PlannedQuay>
+                  <ServiceDeparture>
+                    <TimetabledTime>2019-05-01T03:35:00Z</TimetabledTime>
+                    <EstimatedTime>2019-05-01T03:35:00Z</EstimatedTime>
+                  </ServiceDeparture>
+                  <Order>1</Order>
+                </LegBoard>
+                <LegAlight>
+                  <siri:StopPointRef>test_FFM_10</siri:StopPointRef>
+                  <StopPointName>
+                    <Text xml:lang="de">FFM Hbf</Text>
+                  </StopPointName>
+                  <PlannedQuay>
+                    <Text xml:lang="de">10</Text>
+                  </PlannedQuay>
+                  <ServiceArrival>
+                    <TimetabledTime>2019-05-01T03:45:00Z</TimetabledTime>
+                    <EstimatedTime>2019-05-01T03:45:00Z</EstimatedTime>
+                  </ServiceArrival>
+                  <Order>2</Order>
+                </LegAlight>
+                <Service>
+                  <OperatingDayRef>20190501</OperatingDayRef>
+                  <JourneyRef>20190501_05:35_test_ICE</JourneyRef>
+                  <LineRef>test_ICE</LineRef>
+                  <DirectionRef>0</DirectionRef>
+                  <siri:OperatorRef>DB</siri:OperatorRef>
+                  <ProductCategory />
+                  <DestinationText>
+                    <Text xml:lang="de">FFM Hbf</Text>
+                  </DestinationText>
+                  <PublishedServiceName>
+                    <Text xml:lang="de">ICE</Text>
+                  </PublishedServiceName>
+                  <Mode>
+                    <PtMode>rail</PtMode>
+                    <siri:RailSubmode>highSpeedRail</siri:RailSubmode>
+                  </Mode>
+                </Service>
+                <LegTrack>
+                  <TrackSection>
+                    <TrackSectionStart>
+                      <siri:StopPointRef>test_DA_10</siri:StopPointRef>
+                      <Name>
+                        <Text xml:lang="de">DA Hbf</Text>
+                      </Name>
+                      <siri:StopPointRef>test_FFM_10</siri:StopPointRef>
+                    </TrackSectionStart>
+                    <TrackSectionEnd>
+                      <Name>
+                        <Text xml:lang="de">FFM Hbf</Text>
+                      </Name>
+                    </TrackSectionEnd>
+                    <LinkProjection></LinkProjection>
+                    <Duration>PT10M</Duration>
+                    <Length>2</Length>
+                  </TrackSection>
+                </LegTrack>
+              </TimedLeg>
+            </Leg>
+          </Trip>
+        </TripResult>
+        <TripResult>
+          <Id>5</Id>
+          <Trip>
+            <Id>5</Id>
+            <Duration>PT10M</Duration>
+            <StartTime>2019-05-01T04:35:00Z</StartTime>
+            <EndTime>2019-05-01T04:45:00Z</EndTime>
+            <Transfers>0</Transfers>
+            <Distance>2</Distance>
+            <Leg>
+              <Id>1</Id>
+              <Duration>PT10M</Duration>
+              <TimedLeg>
+                <LegBoard>
+                  <siri:StopPointRef>test_DA_10</siri:StopPointRef>
+                  <StopPointName>
+                    <Text xml:lang="de">DA Hbf</Text>
+                  </StopPointName>
+                  <PlannedQuay>
+                    <Text xml:lang="de">10</Text>
+                  </PlannedQuay>
+                  <ServiceDeparture>
+                    <TimetabledTime>2019-05-01T04:35:00Z</TimetabledTime>
+                    <EstimatedTime>2019-05-01T04:35:00Z</EstimatedTime>
+                  </ServiceDeparture>
+                  <Order>1</Order>
+                </LegBoard>
+                <LegAlight>
+                  <siri:StopPointRef>test_FFM_10</siri:StopPointRef>
+                  <StopPointName>
+                    <Text xml:lang="de">FFM Hbf</Text>
+                  </StopPointName>
+                  <PlannedQuay>
+                    <Text xml:lang="de">10</Text>
+                  </PlannedQuay>
+                  <ServiceArrival>
+                    <TimetabledTime>2019-05-01T04:45:00Z</TimetabledTime>
+                    <EstimatedTime>2019-05-01T04:45:00Z</EstimatedTime>
+                  </ServiceArrival>
+                  <Order>2</Order>
+                </LegAlight>
+                <Service>
+                  <OperatingDayRef>20190501</OperatingDayRef>
+                  <JourneyRef>20190501_06:35_test_ICE</JourneyRef>
+                  <LineRef>test_ICE</LineRef>
+                  <DirectionRef>0</DirectionRef>
+                  <siri:OperatorRef>DB</siri:OperatorRef>
+                  <ProductCategory />
+                  <DestinationText>
+                    <Text xml:lang="de">FFM Hbf</Text>
+                  </DestinationText>
+                  <PublishedServiceName>
+                    <Text xml:lang="de">ICE</Text>
+                  </PublishedServiceName>
+                  <Mode>
+                    <PtMode>rail</PtMode>
+                    <siri:RailSubmode>highSpeedRail</siri:RailSubmode>
+                  </Mode>
+                </Service>
+                <LegTrack>
+                  <TrackSection>
+                    <TrackSectionStart>
+                      <siri:StopPointRef>test_DA_10</siri:StopPointRef>
+                      <Name>
+                        <Text xml:lang="de">DA Hbf</Text>
+                      </Name>
+                      <siri:StopPointRef>test_FFM_10</siri:StopPointRef>
+                    </TrackSectionStart>
+                    <TrackSectionEnd>
+                      <Name>
+                        <Text xml:lang="de">FFM Hbf</Text>
+                      </Name>
+                    </TrackSectionEnd>
+                    <LinkProjection></LinkProjection>
+                    <Duration>PT10M</Duration>
+                    <Length>2</Length>
+                  </TrackSection>
+                </LegTrack>
+              </TimedLeg>
+            </Leg>
+          </Trip>
+        </TripResult>
+      </OJPTripDelivery>
+    </siri:ServiceDelivery>
+  </OJPResponse>
+</OJP>

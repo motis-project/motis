@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<OJP xmlns="http://www.vdv.de/ojp" xmlns:siri="http://www.siri.org.uk/siri" version="2.0">
+<OJPRequest>
+  <siri:ServiceRequest>
+    <siri:ServiceRequestContext>
+      <siri:Language>de</siri:Language>
+    </siri:ServiceRequestContext>
+    <siri:RequestTimestamp>2026-01-28T07:42:51.310Z</siri:RequestTimestamp>
+    <siri:RequestorRef>OJP_DemoApp_Beta_OJP2.0</siri:RequestorRef>
+    <OJPTripInfoRequest>
+      <siri:RequestTimestamp>2026-01-28T07:42:51.310Z</siri:RequestTimestamp>
+      <JourneyRef>20190501_00:35_test_ICE</JourneyRef>
+      <OperatingDayRef>2019-05-01</OperatingDayRef>
+      <Params>
+        <IncludeCalls>true</IncludeCalls>
+        <IncludeService>true</IncludeService>
+        <IncludeTrackProjection>true</IncludeTrackProjection>
+        <IncludePlacesContext>true</IncludePlacesContext>
+        <IncludeSituationsContext>true</IncludeSituationsContext>
+      </Params>
+    </OJPTripInfoRequest>
+  </siri:ServiceRequest>
+</OJPRequest>
+
+</OJP>

@@ -357,7 +357,7 @@ api::stoptimes_response stop_times::operator()(
   auto const& lang = query.language_;
   auto const api_version = get_api_version(url);
 
-  auto const max_results = config_.limits_.value().stoptimes_max_results_;
+  auto const max_results = config_.get_limits().stoptimes_max_results_;
   utl::verify<net::bad_request_exception>(
       query.n_.has_value() || query.window_.has_value(),
       "neither 'n' nor 'window' is provided");

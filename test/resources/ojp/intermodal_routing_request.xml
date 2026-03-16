@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<OJP xmlns="http://www.vdv.de/ojp" xmlns:siri="http://www.siri.org.uk/siri" version="2.0">
+<OJPRequest>
+  <siri:ServiceRequest>
+    <siri:ServiceRequestContext>
+      <siri:Language>de</siri:Language>
+    </siri:ServiceRequestContext>
+    <siri:RequestTimestamp>2019-05-01T01:15Z</siri:RequestTimestamp>
+    <siri:RequestorRef>OJP_DemoApp_Beta_OJP2.0</siri:RequestorRef>
+    <OJPTripRequest>
+      <siri:RequestTimestamp>2019-05-01T01:15Z</siri:RequestTimestamp>
+      <Origin>
+        <PlaceRef>
+          <GeoPosition>
+            <siri:Longitude>8.6586978</siri:Longitude>
+            <siri:Latitude>50.1040763</siri:Latitude>
+            <Properties />
+          </GeoPosition>
+          <Name>
+            <Text>n/a</Text>
+          </Name>
+        </PlaceRef>
+        <DepArrTime>2019-05-01T01:15Z</DepArrTime>
+      </Origin>
+      <Destination>
+        <PlaceRef>
+          <GeoPosition>
+            <siri:Longitude>8.6767235</siri:Longitude>
+            <siri:Latitude>50.1132737</siri:Latitude>
+            <Properties />
+          </GeoPosition>
+          <Name>
+            <Text>n/a</Text>
+          </Name>
+        </PlaceRef>
+      </Destination>
+      <Params>
+        <NumberOfResults>2</NumberOfResults>
+        <IncludeAllRestrictedLines>true</IncludeAllRestrictedLines>
+        <IncludeTrackSections>true</IncludeTrackSections>
+        <IncludeLegProjection>true</IncludeLegProjection>
+        <IncludeIntermediateStops>true</IncludeIntermediateStops>
+      </Params>
+    </OJPTripRequest>
+  </siri:ServiceRequest>
+</OJPRequest>
+
+</OJP>
