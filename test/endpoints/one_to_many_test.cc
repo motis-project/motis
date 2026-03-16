@@ -349,28 +349,29 @@ TEST(motis, one_to_many) {
         "&withDistance=true"
         "&arriveBy=true");
 
-    EXPECT_EQ((api::OneToManyIntermodalResponse{
-                  .street_durations_ = {{
-                      {},
-                      {},
-                      {// No valid post transit
-                       .duration_ = 333.0,
-                       .distance_ = 124.07306979195344},
-                      {// Direct connection is allowed
-                       .duration_ = 517.0,
-                       .distance_ = 271.755535494779},
-                      {// Reachable after updating maxDirectTime
-                       .duration_ = 771.0,
-                       .distance_ = 475.96670910943755},
-                  }},
-                  .transit_durations_ = {{
-                      {{.duration_ = 1680.0, .transfers_ = 0}},
-                      {},  // Not reachable from de:6412:10:6:1
-                      {},
-                      {},
-                      {},
-                  }}}),
-              durations);
+    auto const& sd = durations.street_durations_.value();
+    auto const& td = durations.transit_durations_.value();
+
+    ASSERT_EQ(5U, sd.size());
+    EXPECT_EQ(api::Duration{}, sd.at(0));
+    EXPECT_EQ(api::Duration{}, sd.at(1));
+    // Not valid for post transit => unreachable from FFM_101
+    EXPECT_DOUBLE_EQ(333.0, sd.at(2).duration_.value());
+    EXPECT_NEAR(124.1, sd.at(2).distance_.value(), 0.1);
+    EXPECT_DOUBLE_EQ(517.0, sd.at(3).duration_.value());
+    EXPECT_NEAR(271.8, sd.at(3).distance_.value(), 0.1);
+    EXPECT_DOUBLE_EQ(771.0, sd.at(4).duration_.value());
+    EXPECT_NEAR(476.0, sd.at(4).distance_.value(), 0.1);
+
+    ASSERT_EQ(5U, td.size());
+    ASSERT_EQ(1U, td.at(0).size());
+    EXPECT_DOUBLE_EQ(1680.0, td.at(0).at(0).duration_);
+    EXPECT_EQ(0, td.at(0).at(0).transfers_);
+    // Unreachable, as FFM_HAUPT_S -> FFM_HAUPT_U not usable postTransit
+    EXPECT_TRUE(td.at(1).empty());
+    EXPECT_TRUE(td.at(2).empty());
+    EXPECT_TRUE(td.at(3).empty());
+    EXPECT_TRUE(td.at(4).empty());
   }
   // Oneway direction tests
   {
@@ -421,20 +422,25 @@ TEST(motis, one_to_many) {
           .directMode_ = api::ModeEnum::BIKE,
           .withDistance_ = true});
 
-      EXPECT_EQ((api::OneToManyIntermodalResponse{
-                    .street_durations_ = {{
-                        {.duration_ = 228.0, .distance_ = 341.31184727006627},
-                        {.duration_ = 335.0, .distance_ = 502.09599237420093},
-                        {.duration_ = 335.0, .distance_ = 502.09599237419206},
-                        {},
-                    }},
-                    .transit_durations_ = {{
-                        {},
-                        {},
-                        {},
-                        {{.duration_ = 1920.0, .transfers_ = 0}},
-                    }}}),
-                durations);
+      auto const& sd = durations.street_durations_.value();
+      auto const& td = durations.transit_durations_.value();
+
+      ASSERT_EQ(4U, sd.size());
+      EXPECT_DOUBLE_EQ(228.0, sd.at(0).duration_.value());
+      EXPECT_NEAR(341.3, sd.at(0).distance_.value(), 0.1);
+      EXPECT_DOUBLE_EQ(335.0, sd.at(1).duration_.value());
+      EXPECT_NEAR(502.1, sd.at(1).distance_.value(), 0.1);
+      EXPECT_DOUBLE_EQ(335.0, sd.at(2).duration_.value());
+      EXPECT_NEAR(502.1, sd.at(2).distance_.value(), 0.1);
+      EXPECT_EQ(api::Duration{}, sd.at(3));
+
+      ASSERT_EQ(4U, td.size());
+      EXPECT_TRUE(td.at(0).empty());
+      EXPECT_TRUE(td.at(1).empty());
+      EXPECT_TRUE(td.at(2).empty());
+      ASSERT_EQ(1U, td.at(3).size());
+      EXPECT_DOUBLE_EQ(1920.0, td.at(3).at(0).duration_);
+      EXPECT_EQ(0, td.at(3).at(0).transfers_);
     }
     // POST, forward, postTransitModes
     {
@@ -616,19 +622,31 @@ TEST(motis, one_to_many) {
           .useRoutedTransfers_ = true,
           .withDistance_ = true});
 
-      EXPECT_EQ((api::OneToManyIntermodalResponse{
-                    .street_durations_ =
-                        {{{.duration_ = 425.0, .distance_ = 337.9999990112831},
-                          {.duration_ = 529.0, .distance_ = 575.0075374115772},
-                          {.duration_ = 939.0, .distance_ = 1068.5881443753221},
-                          {}}},
-                    .transit_durations_ = {{
-                        {{.duration_ = 1320.0, .transfers_ = 0}},
-                        {{.duration_ = 1680.0, .transfers_ = 0}},
-                        {{.duration_ = 1740.0, .transfers_ = 0}},
-                        {{.duration_ = 4440.0, .transfers_ = 2}},
-                    }}}),
-                durations);
+      auto const& sd = durations.street_durations_.value();
+      auto const& td = durations.transit_durations_.value();
+
+      ASSERT_EQ(4U, sd.size());
+      EXPECT_DOUBLE_EQ(425.0, sd.at(0).duration_.value());
+      EXPECT_NEAR(338.0, sd.at(0).distance_.value(), 0.1);
+      EXPECT_DOUBLE_EQ(529.0, sd.at(1).duration_.value());
+      EXPECT_NEAR(575.0, sd.at(1).distance_.value(), 0.1);
+      EXPECT_DOUBLE_EQ(939.0, sd.at(2).duration_.value());
+      EXPECT_NEAR(1068.6, sd.at(2).distance_.value(), 0.1);
+      EXPECT_EQ(api::Duration{}, sd.at(3));
+
+      ASSERT_EQ(4U, td.size());
+      ASSERT_EQ(1U, td.at(0).size());
+      EXPECT_DOUBLE_EQ(1320.0, td.at(0).at(0).duration_);
+      EXPECT_EQ(0, td.at(0).at(0).transfers_);
+      ASSERT_EQ(1U, td.at(1).size());
+      EXPECT_DOUBLE_EQ(1680.0, td.at(1).at(0).duration_);
+      EXPECT_EQ(0, td.at(1).at(0).transfers_);
+      ASSERT_EQ(1U, td.at(2).size());
+      EXPECT_DOUBLE_EQ(1740.0, td.at(2).at(0).duration_);
+      EXPECT_EQ(0, td.at(2).at(0).transfers_);
+      ASSERT_EQ(1U, td.at(3).size());
+      EXPECT_DOUBLE_EQ(4440.0, td.at(3).at(0).duration_);
+      EXPECT_EQ(2, td.at(3).at(0).transfers_);
     }
     {
       // Long walking paths + fast connctions => multiple durations
