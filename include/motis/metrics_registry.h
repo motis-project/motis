@@ -43,7 +43,7 @@ struct metrics_registry {
   prometheus::Family<prometheus::Gauge>& timetable_transports_x_days_count_;
   
   // One dimensional metric, does not need to be family
-  prometheus::Gauge rt_last_update_;
+  prometheus::Gauge& rt_last_update_;
 
 private:
   metrics_registry(prometheus::Histogram::BucketBoundaries event_boundaries,
