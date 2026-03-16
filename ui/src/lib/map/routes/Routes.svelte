@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { SvelteMap, SvelteSet } from 'svelte/reactivity';
+	import { Download, LoaderCircle } from '@lucide/svelte';
 	import { getModeName } from '$lib/getModeName';
 	import { lngLatToStr } from '$lib/lngLatToStr';
 	import GeoJSON from '$lib/map/GeoJSON.svelte';
@@ -18,15 +19,18 @@
 	} from '@motis-project/motis-client';
 	import { getDecorativeColors } from '$lib/map/colors';
 	import { t } from '$lib/i18n/translation';
+	import { client } from '@motis-project/motis-client';
 
 	let {
 		map,
 		bounds,
-		zoom
+		zoom,
+		shapesDebugEnabled = false
 	}: {
 		map: maplibregl.Map | undefined;
 		bounds: maplibregl.LngLatBoundsLike | undefined;
 		zoom: number;
+		shapesDebugEnabled?: boolean;
 	} = $props();
 
 	const FETCH_PADDING_RATIO = 0.5;
@@ -38,6 +42,7 @@
 	let loadedZoom = $state<number | null>(null);
 	let requestToken = 0;
 	let hoveredArrayIdx = $state<number | null>(null);
+	let downloadingRouteIdx = $state<number | null>(null);
 
 	const stringToHash = (str: string) => {
 		let hash = 0;
@@ -300,6 +305,66 @@
 			)
 			.sort((a, b) => a.route.routeIdx - b.route.routeIdx);
 	};
+
+	function getUrlBase(url: string): string {
+		const { origin, pathname } = new URL(url);
+		return origin + pathname.slice(0, pathname.lastIndexOf('/') + 1);
+	}
+
+	const getDownloadFilename = (contentDisposition: string | null, fallback: string): string => {
+		if (!contentDisposition) {
+			return fallback;
+		}
+
+		const utf8Match = /filename\*=UTF-8''([^;]+)/i.exec(contentDisposition);
+		if (utf8Match?.[1]) {
+			try {
+				return decodeURIComponent(utf8Match[1]).trim();
+			} catch {} // eslint-disable-line
+		}
+
+		const plainMatch = /filename="?([^";]+)"?/i.exec(contentDisposition);
+		return plainMatch?.[1]?.trim() || fallback;
+	};
+
+	const downloadRouteDebug = async (routeIdx: number) => {
+		if (downloadingRouteIdx === routeIdx) {
+			return;
+		}
+
+		downloadingRouteIdx = routeIdx;
+		try {
+			const apiBaseUrl = getUrlBase(
+				client.getConfig().baseUrl
+					? client.getConfig().baseUrl + '/'
+					: window.location.origin + window.location.pathname
+			);
+			const response = await fetch(`${apiBaseUrl}api/experimental/shapes-debug/${routeIdx}`);
+			if (!response.ok) {
+				const body = await response.text();
+				throw new Error(body || `HTTP ${response.status}`);
+			}
+
+			const blob = await response.blob();
+			const filename = getDownloadFilename(
+				response.headers.get('content-disposition'),
+				`r_${routeIdx}.json.gz`
+			);
+
+			const objectUrl = URL.createObjectURL(blob);
+			const a = document.createElement('a');
+			a.href = objectUrl;
+			a.download = filename;
+			document.body.appendChild(a);
+			a.click();
+			a.remove();
+			URL.revokeObjectURL(objectUrl);
+		} catch (error) {
+			console.error('[Routes] failed to download shapes debug data', error);
+		} finally {
+			downloadingRouteIdx = null;
+		}
+	};
 </script>
 
 {#snippet routesPopup(
@@ -321,19 +386,22 @@
 		<table class="w-full text-sm border-separate border-spacing-y-1">
 			<thead class="text-xs uppercase text-muted-foreground">
 				<tr>
-					<th class="w-4"></th>
-					<th class="text-left font-medium">Index</th>
-					<th class="text-left font-medium">Mode</th>
-					<th class="text-left font-medium">ID</th>
-					<th class="text-left font-medium">Name</th>
-					<th class="text-left font-medium">Stops</th>
-					<th class="text-left font-medium">Source</th>
+					<th class="w-4 px-1 py-1"></th>
+					<th class="px-1 py-1 text-left font-medium">Index</th>
+					<th class="px-1 py-1 text-left font-medium">Mode</th>
+					<th class="px-1 py-1 text-left font-medium">ID</th>
+					<th class="px-1 py-1 text-left font-medium">Name</th>
+					<th class="px-1 py-1 text-left font-medium">Stops</th>
+					<th class="px-1 py-1 text-left font-medium">Source</th>
+					{#if shapesDebugEnabled}
+						<th class="px-1 py-1 text-left font-medium">Debug Data</th>
+					{/if}
 				</tr>
 			</thead>
 			<tbody>
 				{#each routesAtPoint as entry (entry.arrayIdx)}
 					<tr
-						class="align-top hover:bg-muted"
+						class="group align-middle hover:bg-muted/80"
 						onmouseenter={() => {
 							hoveredArrayIdx = entry.arrayIdx;
 						}}
@@ -341,13 +409,13 @@
 							hoveredArrayIdx = null;
 						}}
 					>
-						<td>
+						<td class="px-1 py-1">
 							<span class="inline-block h-2.5 w-2.5 rounded-full" style="background: {entry.color}"
 							></span>
 						</td>
-						<td class="pr-3">{entry.route.routeIdx}</td>
-						<td class="pr-3">{getRouteModeName(entry.route.mode)}</td>
-						<td class="pr-3 whitespace-nowrap">
+						<td class="px-1 py-1 pr-2">{entry.route.routeIdx}</td>
+						<td class="px-1 py-1 pr-2">{getRouteModeName(entry.route.mode)}</td>
+						<td class="px-1 py-1 pr-2 whitespace-nowrap">
 							{#if entry.route.transitRoutes.length}
 								{#each entry.route.transitRoutes as tr, i (tr.id + i)}
 									{tr.id}{#if i < entry.route.transitRoutes.length - 1}<br />{/if}
@@ -356,7 +424,7 @@
 								<span class="text-muted-foreground">—</span>
 							{/if}
 						</td>
-						<td class="pr-1">
+						<td class="px-1 py-1 pr-1">
 							{#if entry.route.transitRoutes.length}
 								{#each entry.route.transitRoutes as tr, i (tr.id + i)}
 									{tr.shortName}{#if i < entry.route.transitRoutes.length - 1}<br />{/if}
@@ -365,8 +433,30 @@
 								<span class="text-muted-foreground">—</span>
 							{/if}
 						</td>
-						<td class="pr-1">{entry.route.numStops}</td>
-						<td class="pr-3">{entry.route.pathSource}</td>
+						<td class="px-1 py-1 pr-1">{entry.route.numStops}</td>
+						<td class="px-1 py-1 pr-2">{entry.route.pathSource}</td>
+						{#if shapesDebugEnabled}
+							<td class="px-1 py-1">
+								<button
+									type="button"
+									class="inline-flex h-6 min-w-[7.6rem] items-center justify-center gap-1 rounded border border-border/80 bg-background/85 px-2 text-[11px] leading-none text-foreground transition-colors hover:bg-background disabled:cursor-wait disabled:opacity-70"
+									disabled={downloadingRouteIdx === entry.route.routeIdx}
+									aria-busy={downloadingRouteIdx === entry.route.routeIdx}
+									onclick={(event) => {
+										event.stopPropagation();
+										void downloadRouteDebug(entry.route.routeIdx);
+									}}
+								>
+									{#if downloadingRouteIdx === entry.route.routeIdx}
+										<LoaderCircle class="h-3.5 w-3.5 animate-spin" />
+										<span>Generating...</span>
+									{:else}
+										<Download class="h-3.5 w-3.5" />
+										<span>Debug</span>
+									{/if}
+								</button>
+							</td>
+						{/if}
 					</tr>
 				{/each}
 			</tbody>

@@ -1,7 +1,10 @@
 #pragma once
 
+#include <chrono>
 #include <filesystem>
 #include <optional>
+
+#include "boost/json/fwd.hpp"
 
 #include "cista/containers/pair.h"
 #include "cista/containers/vector.h"
@@ -38,12 +41,20 @@ struct shape_cache {
                        mdb_size_t = sizeof(void*) >= 8
                                         ? 256ULL * 1024ULL * 1024ULL * 1024ULL
                                         : 256U * 1024U * 1024U);
+  ~shape_cache();
 
   std::optional<shape_cache_entry> get(shape_cache_key const&);
   void put(shape_cache_key const&, shape_cache_entry const&);
+  void sync();
 
   lmdb::env env_;
+  std::chrono::time_point<std::chrono::steady_clock> last_sync_;
 };
+
+boost::json::object route_shape_debug(osr::ways const&,
+                                      osr::lookup const&,
+                                      nigiri::timetable const&,
+                                      nigiri::route_idx_t);
 
 void route_shapes(osr::ways const&,
                   osr::lookup const&,

@@ -30,6 +30,7 @@
 #include "nigiri/timetable.h"
 
 #include "osr/routing/map_matching.h"
+#include "osr/routing/map_matching_debug.h"
 #include "osr/routing/parameters.h"
 #include "osr/routing/profile.h"
 #include "osr/routing/route.h"
@@ -54,15 +55,19 @@ struct shape_cache_payload {
 using shape_cache_bucket = cista::offset::vector<shape_cache_payload>;
 
 shape_cache::shape_cache(std::filesystem::path const& path,
-                         mdb_size_t const map_size) {
+                         mdb_size_t const map_size)
+    : last_sync_{std::chrono::steady_clock::now()} {
   env_.set_mapsize(map_size);
   env_.set_maxdbs(1);
-  env_.open(path.generic_string().c_str(), lmdb::env_open_flags::NOSUBDIR);
+  env_.open(path.generic_string().c_str(),
+            lmdb::env_open_flags::NOSUBDIR | lmdb::env_open_flags::NOSYNC);
 
   auto txn = lmdb::txn{env_};
   txn.dbi_open(lmdb::dbi_flags::CREATE);
   txn.commit();
 }
+
+shape_cache::~shape_cache() { sync(); }
 
 std::optional<shape_cache_entry> shape_cache::get(shape_cache_key const& key) {
   auto txn = lmdb::txn{env_, lmdb::txn_flags::RDONLY};
@@ -108,7 +113,15 @@ void shape_cache::put(shape_cache_key const& key,
 
   txn.put(dbi, bucket_key, to_string_view(cista::serialize(entries)));
   txn.commit();
+
+  auto const now = std::chrono::steady_clock::now();
+  if (now - last_sync_ >= std::chrono::minutes{1}) {
+    sync();
+    last_sync_ = now;
+  }
 }
+
+void shape_cache::sync() { env_.force_sync(); }
 
 std::optional<osr::search_profile> get_profile(n::clasz const clasz) {
   switch (clasz) {
@@ -158,13 +171,14 @@ route_shape_result route_shape(
   r.segment_bboxes_.reserve(static_cast<decltype(r.segment_bboxes_)::size_type>(
       match_points.size() - 1U));
 
-  auto debug_path_fn = std::function<std::optional<std::filesystem::path>(
-      osr::matched_route const&)>{nullptr};
+  auto debug_fn =
+      std::function<void(osr::matched_route const&,
+                         std::function<boost::json::object()>)>{nullptr};
 
   if (debug_enabled) {
-    debug_path_fn = [&debug, route_idx, clasz,
-                     &tt](osr::matched_route const& res)
-        -> std::optional<std::filesystem::path> {
+    debug_fn = [&debug, route_idx, clasz, &tt](
+                   osr::matched_route const& res,
+                   std::function<boost::json::object()> const& get_debug_json) {
       auto include =
           debug->all_ || (debug->all_with_beelines_ && res.n_beelined_ > 0U);
       auto tags = std::set<std::string>{};
@@ -225,7 +239,8 @@ route_shape_result route_shape(
         }
       }
 
-      if (debug->slow_ != 0U && res.total_duration_.count() > debug->slow_) {
+      auto const total_duration_ms = res.total_duration_.count();
+      if (debug->slow_ != 0U && total_duration_ms > debug->slow_) {
         include = true;
         tags.emplace("slow");
       }
@@ -235,16 +250,15 @@ route_shape_result route_shape(
         for (auto const& tag : tags) {
           fn += fmt::format("_{}", tag);
         }
-        return debug->path_ / fn;
-      } else {
-        return {};
+        auto out_path = debug->path_ / fmt::format("{}.json.gz", fn);
+        osr::write_map_match_debug(get_debug_json(), out_path);
       }
     };
   }
 
   auto const matched_route =
       osr::map_match(w, lookup, profile, profile_params, match_points, nullptr,
-                     nullptr, debug_path_fn);
+                     nullptr, debug_fn);
 
   r.segments_routed_ = matched_route.n_routed_;
   r.segments_beelined_ = matched_route.n_beelined_;
@@ -299,6 +313,36 @@ route_shape_result route_shape(
               "[route_shapes] mismatch: offsets.size()={}, stops.size()={}",
               r.offsets_.size(), match_points.size());
   return r;
+}
+
+boost::json::object route_shape_debug(osr::ways const& w,
+                                      osr::lookup const& lookup,
+                                      n::timetable const& tt,
+                                      n::route_idx_t const route_idx) {
+  utl::verify(route_idx < tt.n_routes(), "invalid route index {}", route_idx);
+
+  auto const clasz = tt.route_clasz_[route_idx];
+  auto const profile = get_profile(clasz);
+  utl::verify(profile.has_value(), "route {} has unsupported class {}",
+              route_idx, to_str(clasz));
+
+  auto const match_points =
+      utl::to_vec(tt.route_location_seq_[route_idx], [&](auto const stop_idx) {
+        auto const loc_idx = n::stop{stop_idx}.location_idx();
+        auto const pos = tt.locations_.coordinates_[loc_idx];
+        return osr::location{pos, osr::kNoLevel};
+      });
+
+  auto debug_json = boost::json::object{};
+  auto const profile_params = osr::get_parameters(*profile);
+  static_cast<void>(osr::map_match(
+      w, lookup, *profile, profile_params, match_points, nullptr, nullptr,
+      [&](osr::matched_route const&,
+          std::function<boost::json::object()> const& get_debug_json) {
+        debug_json = get_debug_json();
+      }));
+
+  return debug_json;
 }
 
 void route_shapes(osr::ways const& w,
@@ -471,7 +515,6 @@ void route_shapes(osr::ways const& w,
               : std::nullopt;
 
       if (cache != nullptr) {
-        auto const l = std::scoped_lock{shapes_mutex};
         if (auto const ce = cache->get(*cache_key); ce.has_value()) {
           ++cache_hits;
           auto const local_shape_idx = n::get_local_shape_idx(ce->shape_idx_);
@@ -486,6 +529,7 @@ void route_shapes(osr::ways const& w,
                       shapes.routed_data_.size(),
               "[route_shapes] cache routed shape idx out of bounds: {} >= {}",
               local_shape_idx, shapes.routed_data_.size());
+          auto const l = std::scoped_lock{shapes_mutex};
           store_shape(r, ce->shape_idx_, ce->offsets_, ce->route_bbox_,
                       ce->segment_bboxes_, match_points, transports);
           progress_tracker->increment();
@@ -537,6 +581,10 @@ void route_shapes(osr::ways const& w,
   utl::parallel_for_run(
       tt.n_routes(), process_route, utl::noop_progress_update{},
       utl::parallel_error_strategy::QUIT_EXEC, conf.n_threads_);
+
+  if (cache != nullptr) {
+    cache->sync();
+  }
 
   std::clog << "\n** route_shapes [end] **\n"
             << "  routes=" << tt.n_routes() << "\n  trips=" << tt.n_trips()

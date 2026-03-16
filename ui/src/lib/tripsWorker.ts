@@ -7,7 +7,6 @@ import { getDelayColor, hexToRgb } from './Color';
 import { getModeStyle, getColor } from './modeStyle';
 
 //MATH
-const ease = (t: number) => t * t * (3 - 2 * t);
 const R = 6371;
 const TO_RAD = Math.PI / 180;
 const TO_DEG = 180 / Math.PI;
@@ -254,7 +253,7 @@ function updateState(data: TransferData, colorMode: string) {
 			const t0 = stamps[curr - 1];
 			const t1 = stamps[curr];
 
-			const r = ease((time - t0) / (t1 - t0));
+			const r = (time - t0) / (t1 - t0);
 
 			const prevIdx = 2 * (curr - 1);
 			const nextIdx = 2 * curr;
