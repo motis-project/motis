@@ -4057,6 +4057,9 @@ components:
         - id
         - name
         - shortName
+      description: |
+        not available for GTFS datasets by default
+        For NeTEx it contains information about the vehicle category, e.g. IC/InterCity
       properties:
         id:
           type: string
