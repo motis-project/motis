@@ -192,12 +192,16 @@ void config::verify_input_files_exist() const {
   }
 }
 
+bool config::requires_rt_feed_updates() const {
+  return utl::any_of(timetable_->datasets_, [](auto&& d) {
+    return d.second.rt_.has_value() && !d.second.rt_->empty();
+  });
+}
+
 bool config::requires_rt_timetable_updates() const {
   return timetable_.has_value() &&
          ((has_elevators() && get_elevators()->url_.has_value()) ||
-          utl::any_of(timetable_->datasets_, [](auto&& d) {
-            return d.second.rt_.has_value() && !d.second.rt_->empty();
-          }));
+          requires_rt_feed_updates());
 }
 
 bool config::shapes_debug_api_enabled() const {

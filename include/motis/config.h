@@ -27,6 +27,7 @@ struct config {
   void verify() const;
   void verify_input_files_exist() const;
 
+  bool requires_rt_feed_updates() const;
   bool requires_rt_timetable_updates() const;
   bool shapes_debug_api_enabled() const;
   bool has_gbfs_feeds() const;
