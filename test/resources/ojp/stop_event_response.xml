@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<OJP xmlns:siri="http://www.siri.org.uk/siri" xmlns="http://www.vdv.de/ojp" version="2.0">
+  <OJPResponse>
+    <siri:ServiceDelivery>
+      <siri:ResponseTimestamp>NOW</siri:ResponseTimestamp>
+      <siri:ProducerRef>MOTIS</siri:ProducerRef>
+      <siri:ResponseMessageIdentifier>MSG</siri:ResponseMessageIdentifier>
+      <OJPStopEventDelivery>
+        <siri:ResponseTimestamp>NOW</siri:ResponseTimestamp>
+        <siri:DefaultLanguage>de</siri:DefaultLanguage>
+        <StopEventResponseContext>
+          <Places />
+          <Situations />
+        </StopEventResponseContext>
+      </OJPStopEventDelivery>
+    </siri:ServiceDelivery>
+  </OJPResponse>
+</OJP>

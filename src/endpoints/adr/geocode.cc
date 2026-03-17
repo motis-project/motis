@@ -26,7 +26,7 @@ namespace motis::ep {
 
 a::guess_context& get_guess_context(a::typeahead const& t, a::cache& cache) {
   auto static ctx = boost::thread_specific_ptr<a::guess_context>{};
-  if (ctx.get() == nullptr) {
+  if (ctx.get() == nullptr || &ctx.get()->cache_ != &cache) {
     ctx.reset(new a::guess_context{cache});
   }
   ctx->resize(t);

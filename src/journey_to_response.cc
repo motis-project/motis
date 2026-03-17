@@ -398,7 +398,7 @@ api::Itinerary journey_to_response(
         });
   };
 
-  for (auto const [_, j_leg] : utl::enumerate(j.legs_)) {
+  for (auto const [j_leg_idx, j_leg] : utl::enumerate(j.legs_)) {
     auto const pred =
         itinerary.legs_.empty() ? nullptr : &itinerary.legs_.back();
     auto const fallback_tz =
@@ -503,6 +503,18 @@ api::Itinerary journey_to_response(
                               last.scheduled_time(n::event_type::kArr);
                           return p;
                         }(),
+                    .category_ =
+                        enter_stop.get_category(n::event_type::kDep)
+                            .transform([&](nigiri::category_idx_t const c) {
+                              auto const& cat = tt.categories_.at(c);
+                              return api::Category{
+                                  .id_ = std::string{tt.strings_.get(cat.id_)},
+                                  .name_ = std::string{tt.translate(lang,
+                                                                    cat.name_)},
+                                  .shortName_ = std::string{tt.translate(
+                                      lang, cat.short_name_)},
+                              };
+                            }),
                     .routeId_ = tags.route_id(enter_stop, n::event_type::kDep),
                     .routeUrl_ = std::string{enter_stop.route_url(
                         n::event_type::kDep, lang)},
@@ -512,10 +524,9 @@ api::Itinerary journey_to_response(
                             : "1",
                     .routeColor_ = to_str(color.color_),
                     .routeTextColor_ = to_str(color.text_color_),
-                    .routeType_ = enter_stop.route_type(n::event_type::kDep)
-                                      .and_then([](n::route_type_t const x) {
-                                        return std::optional{to_idx(x)};
-                                      }),
+                    .routeType_ =
+                        enter_stop.route_type(n::event_type::kDep)
+                            .transform([](auto&& x) { return to_idx(x); }),
                     .agencyName_ =
                         std::string{tt.translate(lang, agency.name_)},
                     .agencyUrl_ = std::string{tt.translate(lang, agency.url_)},
@@ -536,13 +547,10 @@ api::Itinerary journey_to_response(
                         enter_stop.display_name(n::event_type::kDep, lang)}},
                     .cancelled_ = fr.is_cancelled(),
                     .source_ = fmt::to_string(fr.dbg()),
-                    .fareTransferIndex_ = fare_indices.and_then([](auto&& x) {
-                      return std::optional{x.transfer_idx_};
-                    }),
-                    .effectiveFareLegIndex_ =
-                        fare_indices.and_then([](auto&& x) {
-                          return std::optional{x.effective_fare_leg_idx_};
-                        }),
+                    .fareTransferIndex_ = fare_indices.transform(
+                        [](auto&& x) { return x.transfer_idx_; }),
+                    .effectiveFareLegIndex_ = fare_indices.transform(
+                        [](auto&& x) { return x.effective_fare_leg_idx_; }),
                     .alerts_ = get_alerts(fr, std::nullopt, false, lang),
                     .loopedCalendarSince_ =
                         (fr.is_scheduled() &&
@@ -639,6 +647,11 @@ api::Itinerary journey_to_response(
                                            j_leg.dep_time_, j_leg.arr_time_));
             },
             [&](n::routing::offset const x) {
+              if ((j_leg_idx == 0 || j_leg_idx == j.legs_.size() - 1) &&
+                  j_leg.dep_time_ == j_leg.arr_time_) {
+                return;
+              }
+
               auto out = std::unique_ptr<output>{};
               if (flex::mode_id::is_flex(x.transport_mode_id_)) {
                 out = std::make_unique<flex::flex_output>(

@@ -149,7 +149,7 @@ api::Place to_place(n::timetable const* tt,
                 .name_ = std::string{tt->translate(
                     lang, tt->locations_.names_.at(p))},
                 .stopId_ = tags->id(*tt, l),
-                .parentId_ = p == n::location_idx_t::invalid()
+                .parentId_ = p == n::location_idx_t::invalid() || p == l
                                  ? std::nullopt
                                  : std::optional{tags->id(*tt, p)},
                 .importance_ = ae == nullptr

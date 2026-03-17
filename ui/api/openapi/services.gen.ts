@@ -29,7 +29,7 @@ export const oneToMany = <ThrowOnError extends boolean = false>(options: Options
 
 /**
  * Street routing from one to many places or many to one.
- * The order in the response array corresponds to the order of coordinates of the \`many\` parameter in the body.
+ * The order in the response array corresponds to the order of coordinates of the \`many\` parameter in the request body.
  *
  */
 export const oneToManyPost = <ThrowOnError extends boolean = false>(options: Options<OneToManyPostData, ThrowOnError>) => {
@@ -55,7 +55,7 @@ export const oneToManyIntermodal = <ThrowOnError extends boolean = false>(option
 /**
  * One to many routing
  * Computes the minimal duration from one place to many or vice versa.
- * The order in the response array corresponds to the order of coordinates of the \`many\` parameter in the query.
+ * The order in the response array corresponds to the order of coordinates of the \`many\` parameter in the request body.
  *
  */
 export const oneToManyIntermodalPost = <ThrowOnError extends boolean = false>(options: Options<OneToManyIntermodalPostData, ThrowOnError>) => {

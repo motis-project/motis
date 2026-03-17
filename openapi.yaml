@@ -1058,7 +1058,7 @@ paths:
         - routing
       summary: |
         Street routing from one to many places or many to one.
-        The order in the response array corresponds to the order of coordinates of the \`many\` parameter in the body.
+        The order in the response array corresponds to the order of coordinates of the \`many\` parameter in the request body.
       operationId: oneToManyPost
       requestBody:
         required: true
@@ -1459,7 +1459,7 @@ paths:
       summary: |
         One to many routing
         Computes the minimal duration from one place to many or vice versa.
-        The order in the response array corresponds to the order of coordinates of the \`many\` parameter in the query.
+        The order in the response array corresponds to the order of coordinates of the \`many\` parameter in the request body.
       operationId: oneToManyIntermodalPost
       requestBody:
         required: true
@@ -4074,6 +4074,23 @@ components:
           items:
             $ref: '#/components/schemas/RentalZoneRestrictions'
 
+    Category:
+      type: object
+      required:
+        - id
+        - name
+        - shortName
+      description: |
+        not available for GTFS datasets by default
+        For NeTEx it contains information about the vehicle category, e.g. IC/InterCity
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        shortName:
+          type: string
+
     Leg:
       type: object
       required:
@@ -4152,6 +4169,8 @@ components:
         tripTo:
           description: final stop of this trip (can differ from headsign)
           $ref: '#/components/schemas/Place'
+        category:
+          $ref: '#/components/schemas/Category'
         routeId:
           type: string
         routeUrl:
