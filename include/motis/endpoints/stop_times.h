@@ -1,5 +1,8 @@
 #pragma once
 
+#include <vector>
+
+#include "nigiri/rt/run.h"
 #include "nigiri/types.h"
 
 #include "osr/types.h"
@@ -26,5 +29,8 @@ struct stop_times {
   tag_lookup const& tags_;
   std::shared_ptr<rt> const& rt_;
 };
+
+std::vector<nigiri::rt::run> get_stop_times_runs(
+    stop_times const& self, api::stoptimes_params const& query);
 
 }  // namespace motis::ep

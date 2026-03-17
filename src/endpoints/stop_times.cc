@@ -351,13 +351,15 @@ std::vector<api::Place> other_stops_impl(n::rt::frun fr,
   }
 }
 
-api::stoptimes_response stop_times::operator()(
-    boost::urls::url_view const& url) const {
-  auto const query = api::stoptimes_params{url.params()};
-  auto const& lang = query.language_;
-  auto const api_version = get_api_version(url);
+std::vector<n::rt::run> get_stop_times_runs(
+    stop_times const& self,
+    api::stoptimes_params const& query,
+    nigiri::rt_timetable const* rtt,
+    nigiri::event_type const& ev_type,
+    std::optional<nigiri::location_idx_t> const& query_stop,
+    std::optional<osr::location> const& query_center) {
 
-  auto const max_results = config_.get_limits().stoptimes_max_results_;
+  auto const max_results = self.config_.get_limits().stoptimes_max_results_;
   utl::verify<net::bad_request_exception>(
       query.n_.has_value() || query.window_.has_value(),
       "neither 'n' nor 'window' is provided");
@@ -371,16 +373,10 @@ api::stoptimes_response stop_times::operator()(
           (query.center_.has_value() && query.radius_.has_value()),
       "no stop and no center with radius (at least one is required)");
 
-  auto const query_stop = query.stopId_.and_then(
-      [&](std::string const& x) { return tags_.find_location(tt_, x); });
-
-  auto const query_center = query.center_.and_then(
-      [&](std::string const& x) { return parse_location(x); });
-
   auto const center =
       query_stop
           .transform([&](n::location_idx_t const l) {
-            return tt_.locations_.coordinates_[l];
+            return self.tt_.locations_.coordinates_[l];
           })
           .or_else([&]() {
             return query_center.transform(
@@ -416,50 +412,49 @@ api::stoptimes_response stop_times::operator()(
       return;
     }
 
-    auto const l_name = tt_.get_default_translation(tt_.locations_.names_[l]);
-    utl::concat(locations, tt_.locations_.children_[l]);
-    for (auto const& c : tt_.locations_.children_[l]) {
-      utl::concat(locations, tt_.locations_.children_[c]);
+    auto const l_name =
+        self.tt_.get_default_translation(self.tt_.locations_.names_[l]);
+    utl::concat(locations, self.tt_.locations_.children_[l]);
+    for (auto const& c : self.tt_.locations_.children_[l]) {
+      utl::concat(locations, self.tt_.locations_.children_[c]);
     }
 
-    for (auto const eq : tt_.locations_.equivalences_[l]) {
-      if (tt_.get_default_translation(tt_.locations_.names_[eq]) == l_name) {
+    for (auto const eq : self.tt_.locations_.equivalences_[l]) {
+      if (self.tt_.get_default_translation(self.tt_.locations_.names_[eq]) ==
+          l_name) {
         locations.emplace_back(eq);
-        utl::concat(locations, tt_.locations_.children_[eq]);
-        for (auto const& c : tt_.locations_.children_[eq]) {
-          utl::concat(locations, tt_.locations_.children_[c]);
+        utl::concat(locations, self.tt_.locations_.children_[eq]);
+        for (auto const& c : self.tt_.locations_.children_[eq]) {
+          utl::concat(locations, self.tt_.locations_.children_[c]);
         }
       }
     }
   };
 
   if (query_stop.has_value()) {
-    locations.emplace_back(tt_.locations_.get_root_idx(*query_stop));
+    locations.emplace_back(self.tt_.locations_.get_root_idx(*query_stop));
     if (query.radius_) {
-      loc_rtree_.in_radius(*center, static_cast<double>(*query.radius_), add);
+      self.loc_rtree_.in_radius(*center, static_cast<double>(*query.radius_),
+                                add);
     } else {
       add(*query_stop);
     }
   } else {
-    loc_rtree_.in_radius(*center, static_cast<double>(query.radius_.value()),
-                         add);
+    self.loc_rtree_.in_radius(*center,
+                              static_cast<double>(query.radius_.value()), add);
   }
   utl::erase_duplicates(locations);
 
-  auto const rt = std::atomic_load(&rt_);
-  auto const rtt = rt->rtt_.get();
-  auto const ev_type =
-      query.arriveBy_ ? n::event_type::kArr : n::event_type::kDep;
   auto const window = query.window_.transform([](auto const w) {
     return std::chrono::duration_cast<n::duration_t>(std::chrono::seconds{w});
   });
-  auto events = get_events(locations, tt_, rtt, time, ev_type, dir,
+  auto events = get_events(locations, self.tt_, rtt, time, ev_type, dir,
                            static_cast<std::size_t>(query.n_.value_or(0)),
                            static_cast<std::size_t>(max_results), allowed_clasz,
                            query.withScheduledSkippedStops_, window);
 
   auto const to_tuple = [&](n::rt::run const& x) {
-    auto const fr_a = n::rt::frun{tt_, rtt, x};
+    auto const fr_a = n::rt::frun{self.tt_, rtt, x};
     return std::tuple{fr_a[0].time(ev_type), fr_a.is_scheduled()
                                                  ? fr_a[0].get_trip_idx(ev_type)
                                                  : n::trip_idx_t::invalid()};
@@ -472,16 +467,56 @@ api::stoptimes_response stop_times::operator()(
                              return to_tuple(a) == to_tuple(b);
                            }),
                end(events));
+  return events;
+}
+
+std::vector<nigiri::rt::run> get_stop_times_runs(
+    stop_times const& self, api::stoptimes_params const& query) {
+  auto const rt = std::atomic_load(&self.rt_);
+  auto const rtt = rt->rtt_.get();
+  auto const ev_type =
+      query.arriveBy_ ? n::event_type::kArr : n::event_type::kDep;
+  auto const query_stop = query.stopId_.and_then([&](std::string const& x) {
+    return self.tags_.find_location(self.tt_, x);
+  });
+  auto const query_center = query.center_.and_then(
+      [&](std::string const& x) { return parse_location(x); });
+
+  return get_stop_times_runs(self, query, rtt, ev_type, query_stop,
+                             query_center);
+}
+
+api::stoptimes_response stop_times::operator()(
+    boost::urls::url_view const& url) const {
+  auto const& self = *this;
+  auto const query = api::stoptimes_params{url.params()};
+
+  auto const rt = std::atomic_load(&self.rt_);
+  auto const rtt = rt->rtt_.get();
+  auto const ev_type =
+      query.arriveBy_ ? n::event_type::kArr : n::event_type::kDep;
+  auto const api_version = get_api_version(url);
+  auto const& lang = query.language_;
+  auto const query_stop = query.stopId_.and_then([&](std::string const& x) {
+    return self.tags_.find_location(self.tt_, x);
+  });
+  auto const query_center = query.center_.and_then(
+      [&](std::string const& x) { return parse_location(x); });
+
+  auto const events =
+      get_stop_times_runs(self, query, rtt, ev_type, query_stop, query_center);
+
   return {
       .stopTimes_ = utl::to_vec(
           events,
           [&](n::rt::run const r) -> api::StopTime {
-            auto const fr = n::rt::frun{tt_, rtt, r};
+            auto const fr = n::rt::frun{self.tt_, rtt, r};
             auto const s = fr[0];
             auto const& agency = s.get_provider(ev_type);
             auto const run_cancelled = fr.is_cancelled();
-            auto place = to_place(&tt_, &tags_, w_, pl_, matches_, ae_, tz_,
-                                  query.language_, s);
+            auto place =
+                to_place(&self.tt_, &self.tags_, self.w_, self.pl_,
+                         self.matches_, self.ae_, self.tz_, query.language_, s);
             if (query.withAlerts_) {
               place.alerts_ =
                   get_alerts(fr,
@@ -509,7 +544,7 @@ api::stoptimes_response stop_times::operator()(
                      ? !s.out_allowed() && s.get_scheduled_stop().out_allowed()
                      : !s.in_allowed() && s.get_scheduled_stop().in_allowed());
 
-            auto const trip_id = tags_.id(tt_, s, ev_type);
+            auto const trip_id = self.tags_.id(self.tt_, s, ev_type);
 
             auto const other_stops = [&](n::event_type desired_event)
                 -> std::optional<std::vector<api::Place>> {
@@ -517,8 +552,9 @@ api::stoptimes_response stop_times::operator()(
                   !query.fetchStops_.value_or(false)) {
                 return std::nullopt;
               }
-              return other_stops_impl(fr, ev_type, &tt_, tags_, w_, pl_,
-                                      matches_, ae_, tz_, query.language_);
+              return other_stops_impl(fr, ev_type, &self.tt_, self.tags_,
+                                      self.w_, self.pl_, self.matches_,
+                                      self.ae_, self.tz_, query.language_);
             };
 
             return {
@@ -526,15 +562,20 @@ api::stoptimes_response stop_times::operator()(
                 .mode_ = to_mode(s.get_clasz(ev_type), api_version),
                 .realTime_ = r.is_rt(),
                 .headsign_ = std::string{s.direction(lang, ev_type)},
-                .tripFrom_ = to_place(&tt_, &tags_, w_, pl_, matches_, ae_, tz_,
-                                      lang, s.get_first_trip_stop(ev_type)),
-                .tripTo_ = to_place(&tt_, &tags_, w_, pl_, matches_, ae_, tz_,
-                                    lang, s.get_last_trip_stop(ev_type)),
+                .tripFrom_ = to_place(&self.tt_, &self.tags_, self.w_, self.pl_,
+                                      self.matches_, self.ae_, self.tz_, lang,
+                                      s.get_first_trip_stop(ev_type)),
+                .tripTo_ = to_place(&self.tt_, &self.tags_, self.w_, self.pl_,
+                                    self.matches_, self.ae_, self.tz_, lang,
+                                    s.get_last_trip_stop(ev_type)),
                 .agencyId_ =
-                    std::string{tt_.strings_.try_get(agency.id_).value_or("?")},
-                .agencyName_ = std::string{tt_.translate(lang, agency.name_)},
-                .agencyUrl_ = std::string{tt_.translate(lang, agency.url_)},
-                .routeId_ = tags_.route_id(s, ev_type),
+                    std::string{
+                        self.tt_.strings_.try_get(agency.id_).value_or("?")},
+                .agencyName_ =
+                    std::string{self.tt_.translate(lang, agency.name_)},
+                .agencyUrl_ =
+                    std::string{self.tt_.translate(lang, agency.url_)},
+                .routeId_ = self.tags_.route_id(s, ev_type),
                 .routeUrl_ = std::string{s.route_url(ev_type, lang)},
                 .directionId_ = s.get_direction_id(ev_type) == 0 ? "0" : "1",
                 .routeColor_ = to_str(s.get_route_color(ev_type).color_),
@@ -564,7 +605,8 @@ api::stoptimes_response stop_times::operator()(
       .place_ =
           query_stop
               .transform([&](n::location_idx_t const l) {
-                return to_place(&tt_, &tags_, w_, pl_, matches_, ae_, tz_, lang,
+                return to_place(&self.tt_, &self.tags_, self.w_, self.pl_,
+                                self.matches_, self.ae_, self.tz_, lang,
                                 tt_location{l});
               })
               .or_else([&]() {
@@ -574,21 +616,19 @@ api::stoptimes_response stop_times::operator()(
               })
               .value(),
       .previousPageCursor_ =
-          events.empty()
-              ? ""
-              : fmt::format(
-                    "EARLIER|{}",
-                    to_seconds(
-                        n::rt::frun{tt_, rtt, events.front()}[0].time(ev_type) -
-                        std::chrono::minutes{1})),
+          events.empty() ? ""
+                         : fmt::format("EARLIER|{}",
+                                       to_seconds(n::rt::frun{self.tt_, rtt,
+                                                              events.front()}[0]
+                                                      .time(ev_type) -
+                                                  std::chrono::minutes{1})),
       .nextPageCursor_ =
           events.empty()
               ? ""
-              : fmt::format(
-                    "LATER|{}",
-                    to_seconds(
-                        n::rt::frun{tt_, rtt, events.back()}[0].time(ev_type) +
-                        std::chrono::minutes{1}))};
+              : fmt::format("LATER|{}", to_seconds(n::rt::frun{self.tt_, rtt,
+                                                               events.back()}[0]
+                                                       .time(ev_type) +
+                                                   std::chrono::minutes{1}))};
 }
 
 }  // namespace motis::ep
