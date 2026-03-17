@@ -259,6 +259,7 @@ api::Itinerary journey_to_response(
     api::ElevationCostsEnum const elevation_costs,
     bool const join_interlined_legs,
     bool const detailed_transfers,
+    bool const detailed_legs,
     bool const with_fares,
     bool const with_scheduled_skipped_stops,
     double const timetable_max_matching_distance,
@@ -580,13 +581,18 @@ api::Itinerary journey_to_response(
                 leg.to_.vertexType_ = api::VertexTypeEnum::TRANSIT;
                 leg.to_.arrival_ = leg.endTime_;
                 leg.to_.scheduledArrival_ = leg.scheduledEndTime_;
-                auto polyline = geo::polyline{};
-                fr.for_each_shape_point(shapes, common_stops,
-                                        [&](geo::latlng const& pos) {
-                                          polyline.emplace_back(pos);
-                                        });
-                leg.legGeometry_ = api_version == 1 ? to_polyline<7>(polyline)
-                                                    : to_polyline<6>(polyline);
+                if (detailed_legs) {
+                  auto polyline = geo::polyline{};
+                  fr.for_each_shape_point(shapes, common_stops,
+                                          [&](geo::latlng const& pos) {
+                                            polyline.emplace_back(pos);
+                                          });
+                  leg.legGeometry_ = api_version == 1
+                                         ? to_polyline<7>(polyline)
+                                         : to_polyline<6>(polyline);
+                } else {
+                  leg.legGeometry_ = empty_polyline();
+                }
 
                 auto const first =
                     static_cast<n::stop_idx_t>(common_stops.from_ + 1U);
@@ -633,6 +639,7 @@ api::Itinerary journey_to_response(
                                car_transfers ? 250.0
                                              : timetable_max_matching_distance,
                                osr_params, cache, *blocked_mem, api_version,
+                               true,
                                std::chrono::duration_cast<std::chrono::seconds>(
                                    j_leg.arr_time_ - j_leg.dep_time_) +
                                    std::chrono::minutes{10})
@@ -664,7 +671,7 @@ api::Itinerary journey_to_response(
               append(street_routing(
                   *w, *l, e, elevations, lang, from, to, *out, j_leg.dep_time_,
                   j_leg.arr_time_, max_matching_distance, osr_params, cache,
-                  *blocked_mem, api_version,
+                  *blocked_mem, api_version, detailed_legs,
                   std::chrono::duration_cast<std::chrono::seconds>(
                       j_leg.arr_time_ - j_leg.dep_time_) +
                       std::chrono::minutes{5}));
