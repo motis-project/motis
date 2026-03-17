@@ -1,8 +1,8 @@
 #include "motis/gbfs/update.h"
 
+#include <algorithm>
 #include <cassert>
 #include <chrono>
-#include <algorithm>
 #include <filesystem>
 #include <fstream>
 #include <set>
