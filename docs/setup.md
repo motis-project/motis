@@ -375,8 +375,6 @@ timetable:
     n_threads: 6
     # enable debug API endpoint (default = false)
     debug_api: true
-    # cache and reuse computed shapes for later imports (dataset updates)
-    cache: true
     # if you want to use cached shapes even if the osm file has changed since the last import, set this to true (default = false)
     cache_reuse_old_osm_data: false
 

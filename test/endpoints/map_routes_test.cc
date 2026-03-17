@@ -74,9 +74,8 @@ TEST(motis, map_routes) {
               .num_days_ = 2,
               .with_shapes_ = true,
               .datasets_ = {{"test", {.path_ = kGTFS}}},
-              .route_shapes_ = {{.mode_ =
-                                     config::timetable::route_shapes::mode::all,
-                                 .cache_ = false}}},
+              .route_shapes_ =
+                  {{.mode_ = config::timetable::route_shapes::mode::all}}},
       .street_routing_ = true};
   auto d = import(c, "test/data", true);
 

@@ -235,10 +235,6 @@ data import(config const& c, fs::path const& data_path, bool const write) {
   auto const route_shapes_task_enabled =
       c.timetable_ && c.timetable_->with_shapes_ &&
       c.timetable_->route_shapes_ && c.use_street_routing();
-  auto const use_shapes_cache = c.timetable_.has_value() &&
-                                c.timetable_->with_shapes_ &&
-                                c.timetable_->route_shapes_.has_value() &&
-                                c.timetable_->route_shapes_->cache_;
   auto const existing_rs_hashes = read_hashes(data_path, "route_shapes");
   auto const reuse_shapes_cache =
       (existing_rs_hashes.find("routed_shapes_ver") !=
@@ -250,7 +246,7 @@ data import(config const& c, fs::path const& data_path, bool const write) {
        (existing_rs_hashes.find(osm_hash.first) != end(existing_rs_hashes) &&
         existing_rs_hashes.at(osm_hash.first) == osm_hash.second));
   auto const keep_routed_shape_data =
-      !route_shapes_task_enabled || (use_shapes_cache && reuse_shapes_cache);
+      !route_shapes_task_enabled || reuse_shapes_cache;
   auto const shape_cache_path = data_path / "routed_shapes_cache.mdb";
   auto const shape_cache_lock_path =
       fs::path{shape_cache_path.generic_string() + "-lock"};
@@ -258,8 +254,6 @@ data import(config const& c, fs::path const& data_path, bool const write) {
   if (!keep_routed_shape_data) {
     fs::remove(shape_cache_path, ec);
     fs::remove(shape_cache_lock_path, ec);
-    fs::remove(data_path / "routed_shapes_data.bin", ec);
-    fs::remove(data_path / "routed_shapes_idx.bin", ec);
   }
 
   auto d = data{data_path};
@@ -579,29 +573,27 @@ data import(config const& c, fs::path const& data_path, bool const write) {
       [&]() {
         auto shape_cache = std::unique_ptr<motis::shape_cache>{};
         auto existing_shape_cache = false;
-        if (use_shapes_cache) {
-          if (reuse_shapes_cache && fs::exists(shape_cache_path)) {
-            std::clog << "loading existing shape cache from "
-                      << shape_cache_path << "\n";
-            existing_shape_cache = true;
-          } else {
-            std::clog << "creating new shape cache\n";
-          }
-          shape_cache = std::make_unique<motis::shape_cache>(
-              shape_cache_path, c.timetable_->route_shapes_->cache_db_size_);
+        if (reuse_shapes_cache && fs::exists(shape_cache_path)) {
+          std::clog << "loading existing shape cache from " << shape_cache_path
+                    << "\n";
+          existing_shape_cache = true;
+        } else {
+          std::clog << "creating new shape cache\n";
         }
+        shape_cache = std::make_unique<motis::shape_cache>(
+            shape_cache_path, c.timetable_->route_shapes_->cache_db_size_);
 
         // re-open in write mode
         // this needs to be done in two steps, because the files need to be
-        // closed first, before they can be re-opened in write mode (at least on
-        // Windows)
+        // closed first, before they can be re-opened in write mode (at least
+        // on Windows)
         d.shapes_ = {};
         d.shapes_ = std::make_unique<n::shapes_storage>(
             data_path, cista::mmap::protection::MODIFY, existing_shape_cache);
 
         route_shapes(*d.w_, *d.l_, *d.tt_, *d.shapes_,
                      *c.timetable_->route_shapes_, route_shapes_clasz_enabled,
-                     use_shapes_cache ? shape_cache.get() : nullptr);
+                     shape_cache.get());
       },
       [&]() { d.load_shapes(); },
       {tt_hash,
