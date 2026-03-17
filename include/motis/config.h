@@ -27,12 +27,12 @@ struct config {
   void verify() const;
   void verify_input_files_exist() const;
 
-  bool requires_rt_feed_updates() const;
   bool requires_rt_timetable_updates() const;
   bool shapes_debug_api_enabled() const;
   bool has_gbfs_feeds() const;
   bool has_prima() const;
   bool has_elevators() const;
+  bool has_rt_feeds() const;
   bool use_street_routing() const;
 
   bool operator==(config const&) const = default;
