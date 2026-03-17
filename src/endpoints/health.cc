@@ -11,7 +11,7 @@ namespace motis::ep {
 std::string_view health::operator()(boost::urls::url_view const& url) const {
   utl::verify(metrics_ != nullptr, "Not running");
 
-  if (!config_.requires_rt_timetable_updates()) {
+  if (!config_.requires_rt_feed_updates() || !config_.requires_rt_feed_updates()) {
     return std::string_view("Running, RT not enabled");
   }
 
