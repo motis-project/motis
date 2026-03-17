@@ -273,7 +273,7 @@ paths:
             If not set, this parameter inherits the value of `detailedLegs`.
 
             - true: Compute transfer polylines and step instructions.
-            - false: Only return basic information (start time, end time, duration) for transfers.
+            - false: Return empty `legGeometry` and omit `steps` for transfers.
           schema:
             type: boolean
 
@@ -4087,6 +4087,7 @@ components:
         - duration
         - from
         - to
+        - legGeometry
       properties:
         mode:
           $ref: '#/components/schemas/Mode'
@@ -4195,7 +4196,8 @@ components:
         legGeometry:
           description: |
             Encoded geometry of the leg.
-            This field is omitted if the request disables detailed leg output.
+            If detailed leg output is disabled, this is returned as an empty
+            polyline.
           $ref: '#/components/schemas/EncodedPolyline'
         steps:
           description: |

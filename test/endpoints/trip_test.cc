@@ -100,7 +100,7 @@ TEST(motis, trip_stop_naming) {
   auto const res = trip_ep("?tripId=20190501_10%3A00_test_T1");
   ASSERT_EQ(1, res.legs_.size());
   auto const& leg = res.legs_[0];
-  ASSERT_TRUE(leg.legGeometry_.has_value());
+  EXPECT_GT(leg.legGeometry_.length_, 0);
   EXPECT_EQ("Child1A", leg.from_.name_);
   ASSERT_TRUE(leg.intermediateStops_.has_value());
   ASSERT_EQ(1, leg.intermediateStops_->size());
@@ -113,7 +113,8 @@ TEST(motis, trip_stop_naming) {
   auto const compact_res =
       trip_ep("?tripId=20190501_10%3A00_test_T1&detailedLegs=false");
   ASSERT_EQ(1, compact_res.legs_.size());
-  EXPECT_FALSE(compact_res.legs_[0].legGeometry_.has_value());
+  EXPECT_EQ("", compact_res.legs_[0].legGeometry_.points_);
+  EXPECT_EQ(0, compact_res.legs_[0].legGeometry_.length_);
 
   auto const res_de = trip_ep("?tripId=20190501_10%3A00_test_T1&language=de");
   ASSERT_EQ(1, res_de.legs_.size());

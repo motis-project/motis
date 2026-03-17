@@ -582,6 +582,8 @@ api::Itinerary journey_to_response(
                   leg.legGeometry_ = api_version == 1
                                          ? to_polyline<7>(polyline)
                                          : to_polyline<6>(polyline);
+                } else {
+                  leg.legGeometry_ = empty_polyline();
                 }
 
                 auto const first =

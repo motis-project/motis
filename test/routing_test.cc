@@ -344,7 +344,7 @@ TEST(motis, routing) {
         "&directModes=WALK,RENTAL");
     ASSERT_FALSE(res.direct_.empty());
     ASSERT_FALSE(res.direct_.front().legs_.empty());
-    EXPECT_TRUE(res.direct_.front().legs_.front().legGeometry_.has_value());
+    EXPECT_GT(res.direct_.front().legs_.front().legGeometry_.length_, 0);
     EXPECT_TRUE(res.direct_.front().legs_.front().steps_.has_value());
 
     EXPECT_EQ(
@@ -367,7 +367,8 @@ TEST(motis, routing) {
     ASSERT_FALSE(compact_res.direct_.empty());
     for (auto const& itinerary : compact_res.direct_) {
       for (auto const& leg : itinerary.legs_) {
-        EXPECT_FALSE(leg.legGeometry_.has_value());
+        EXPECT_EQ("", leg.legGeometry_.points_);
+        EXPECT_EQ(0, leg.legGeometry_.length_);
         EXPECT_FALSE(leg.steps_.has_value());
       }
     }

@@ -196,7 +196,8 @@ api::Itinerary dummy_itinerary(api::Place const& from,
       .startTime_ = start_time,
       .endTime_ = end_time,
       .scheduledStartTime_ = start_time,
-      .scheduledEndTime_ = end_time});
+      .scheduledEndTime_ = end_time,
+      .legGeometry_ = empty_polyline()});
   leg.from_.pickupType_ = std::nullopt;
   leg.from_.dropoffType_ = std::nullopt;
   leg.to_.pickupType_ = std::nullopt;
@@ -306,7 +307,11 @@ api::Itinerary street_routing(osr::ways const& w,
                              .count(),
             .startTime_ = pred_end_time,
             .endTime_ = is_last_leg && end_time ? *end_time : t,
-            .distance_ = dist});
+            .distance_ = dist,
+            .legGeometry_ = detailed_leg
+                                ? (api_version == 1 ? to_polyline<7>(concat)
+                                                    : to_polyline<6>(concat))
+                                : empty_polyline()});
 
         leg.from_.departure_ = leg.from_.scheduledDeparture_ =
             leg.scheduledStartTime_ = leg.startTime_;
@@ -318,8 +323,6 @@ api::Itinerary street_routing(osr::ways const& w,
         leg.to_.dropoffType_ = std::nullopt;
 
         if (detailed_leg) {
-          leg.legGeometry_ = api_version == 1 ? to_polyline<7>(concat)
-                                              : to_polyline<6>(concat);
           leg.steps_ = get_step_instructions(w, elevations, from, to, range,
                                              api_version);
         }
