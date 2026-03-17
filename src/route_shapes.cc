@@ -111,7 +111,8 @@ void shape_cache::put(shape_cache_key const& key,
     entries.emplace_back(shape_cache_payload{.key_ = key, .entry_ = entry});
   }
 
-  txn.put(dbi, bucket_key, to_string_view(cista::serialize(entries)));
+  auto const serialized = cista::serialize(entries);
+  txn.put(dbi, bucket_key, to_string_view(serialized));
   txn.commit();
 
   auto const now = std::chrono::steady_clock::now();
