@@ -232,11 +232,15 @@ data import(config const& c, fs::path const& data_path, bool const write) {
         cista::build_seeded_hash(route_shapes_clasz_hash.second, b);
   }
 
+  auto const shape_cache_path = data_path / "routed_shapes_cache.mdb";
+  auto const shape_cache_lock_path =
+      fs::path{shape_cache_path.generic_string() + "-lock"};
   auto const route_shapes_task_enabled =
       c.timetable_ && c.timetable_->with_shapes_ &&
       c.timetable_->route_shapes_ && c.use_street_routing();
   auto const existing_rs_hashes = read_hashes(data_path, "route_shapes");
   auto const reuse_shapes_cache =
+      fs::exists(shape_cache_path) &&
       (existing_rs_hashes.find("routed_shapes_ver") !=
            end(existing_rs_hashes) &&
        existing_rs_hashes.at("routed_shapes_ver") ==
@@ -247,9 +251,6 @@ data import(config const& c, fs::path const& data_path, bool const write) {
         existing_rs_hashes.at(osm_hash.first) == osm_hash.second));
   auto const keep_routed_shape_data =
       !route_shapes_task_enabled || reuse_shapes_cache;
-  auto const shape_cache_path = data_path / "routed_shapes_cache.mdb";
-  auto const shape_cache_lock_path =
-      fs::path{shape_cache_path.generic_string() + "-lock"};
 
   if (!keep_routed_shape_data) {
     fs::remove(shape_cache_path, ec);
@@ -572,11 +573,9 @@ data import(config const& c, fs::path const& data_path, bool const write) {
       [&]() { return d.tt_ && d.w_ && d.l_; },
       [&]() {
         auto shape_cache = std::unique_ptr<motis::shape_cache>{};
-        auto existing_shape_cache = false;
-        if (reuse_shapes_cache && fs::exists(shape_cache_path)) {
+        if (reuse_shapes_cache) {
           std::clog << "loading existing shape cache from " << shape_cache_path
                     << "\n";
-          existing_shape_cache = true;
         } else {
           std::clog << "creating new shape cache\n";
         }
@@ -589,7 +588,7 @@ data import(config const& c, fs::path const& data_path, bool const write) {
         // on Windows)
         d.shapes_ = {};
         d.shapes_ = std::make_unique<n::shapes_storage>(
-            data_path, cista::mmap::protection::MODIFY, existing_shape_cache);
+            data_path, cista::mmap::protection::MODIFY, reuse_shapes_cache);
 
         route_shapes(*d.w_, *d.l_, *d.tt_, *d.shapes_,
                      *c.timetable_->route_shapes_, route_shapes_clasz_enabled,
