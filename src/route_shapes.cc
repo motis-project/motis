@@ -1,7 +1,7 @@
 #include "motis/route_shapes.h"
 
-#include <chrono>
 #include <algorithm>
+#include <chrono>
 #include <iostream>
 #include <mutex>
 #include <optional>

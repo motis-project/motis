@@ -1,7 +1,7 @@
 #include "motis/endpoints/routing.h"
 
-#include <cmath>
 #include <algorithm>
+#include <cmath>
 
 #include "boost/thread/tss.hpp"
 

@@ -1,9 +1,9 @@
 #pragma once
 
+#include <algorithm>
 #include <chrono>
 #include <compare>
 #include <cstdint>
-#include <algorithm>
 #include <filesystem>
 #include <map>
 #include <memory>
