@@ -11,12 +11,12 @@ namespace motis::ep {
 net::reply health::operator()(net::route_request const& req, bool) const {
   bool rt_updated = metrics_->last_update_rt_.Value() > 0.0;
   bool gbfs_updated = metrics_->last_update_gbfs_.Value() > 0.0;
-  bool has_elevator_feeds = config_.has_elevators() && config_.get_elevators()->url_.has_value();
+  bool has_elevator_feeds =
+      config_.has_elevators() && config_.get_elevators()->url_.has_value();
 
-  api::HealthResponse content = {
-      .rt_ = rt_updated && config_.has_rt_feeds(),
-      .elevators_ = rt_updated && has_elevator_feeds,
-      .gbfs_ = gbfs_updated};
+  api::HealthResponse content = {.rt_ = rt_updated && config_.has_rt_feeds(),
+                                 .elevators_ = rt_updated && has_elevator_feeds,
+                                 .gbfs_ = gbfs_updated};
 
   if ((!config_.has_gbfs_feeds() || gbfs_updated) &&
       ((!config_.has_rt_feeds() && !has_elevator_feeds) || rt_updated)) {
