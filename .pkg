@@ -70,3 +70,7 @@
   url=git@github.com:motis-project/ctx.git
   branch=master
   commit=9b495bdd798520007a4f1c13e51766a26f10ef10
+[geo]
+  url=git@github.com:motis-project/geo.git
+  branch=master
+  commit=196214199913f0c821513700fff549d84ed5271b
