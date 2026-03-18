@@ -7,6 +7,7 @@
 #include "cista/containers/rtree.h"
 #include "cista/reflection/comparable.h"
 
+#include <net/bad_request_exception.h>
 #include "net/too_many_exception.h"
 
 #include "utl/enumerate.h"
@@ -373,49 +374,63 @@ api::trips_response get_trains(tag_lookup const& tags,
     }
   }
 
-  // Create response.
-  auto enc = geo::polyline_encoder<5>{};
-  return utl::to_vec(runs, [&](stop_pair const& r) -> api::TripSegment {
-    enc.reset();
+  auto const make_response = [&](auto const precision_constant) {
+    constexpr auto kPrecision = decltype(precision_constant)::value;
+    auto enc = geo::polyline_encoder<kPrecision>{};
+    return utl::to_vec(runs, [&](stop_pair const& r) -> api::TripSegment {
+      enc.reset();
 
-    auto const fr = n::rt::frun{tt, rtt, r.r_};
+      auto const fr = n::rt::frun{tt, rtt, r.r_};
 
-    auto const from = fr[r.from_];
-    auto const to = fr[r.to_];
+      auto const from = fr[r.from_];
+      auto const to = fr[r.to_];
 
-    fr.for_each_shape_point(shapes,
-                            {r.from_, static_cast<n::stop_idx_t>(r.to_ + 1U)},
-                            [&](auto&& p) { enc.push(p); });
+      fr.for_each_shape_point(shapes,
+                              {r.from_, static_cast<n::stop_idx_t>(r.to_ + 1U)},
+                              [&](auto&& p) { enc.push_nonzero_diff(p); });
 
-    return {
-        .trips_ = {api::TripInfo{
-            .tripId_ = tags.id(tt, from, n::event_type::kDep),
-            .routeShortName_ =
-                api_version < 4 ? std::optional{std::string{from.display_name(
-                                      n::event_type::kDep, query.language_)}}
-                                : std::nullopt,
-            .displayName_ = api_version >= 4
-                                ? std::optional{std::string{from.display_name(
-                                      n::event_type::kDep, query.language_)}}
-                                : std::nullopt}},
-        .routeColor_ = to_str(from.get_route_color(n::event_type::kDep).color_),
-        .mode_ = to_mode(from.get_clasz(n::event_type::kDep), api_version),
-        .distance_ =
-            fr.is_rt()
-                ? rt_index.rt_distances_[fr.rt_]
-                : static_index
-                      .static_distances_[tt.transport_route_[fr.t_.t_idx_]],
-        .from_ = to_place(&tt, &tags, w, pl, matches, ae, tz, query.language_,
-                          tt_location{from}),
-        .to_ = to_place(&tt, &tags, w, pl, matches, ae, tz, query.language_,
-                        tt_location{to}),
-        .departure_ = from.time(n::event_type::kDep),
-        .arrival_ = to.time(n::event_type::kArr),
-        .scheduledDeparture_ = from.scheduled_time(n::event_type::kDep),
-        .scheduledArrival_ = to.scheduled_time(n::event_type::kArr),
-        .realTime_ = fr.is_rt(),
-        .polyline_ = std::move(enc.buf_)};
-  });
+      return {
+          .trips_ = {api::TripInfo{
+              .tripId_ = tags.id(tt, from, n::event_type::kDep),
+              .routeShortName_ =
+                  api_version < 4 ? std::optional{std::string{from.display_name(
+                                        n::event_type::kDep, query.language_)}}
+                                  : std::nullopt,
+              .displayName_ = api_version >= 4
+                                  ? std::optional{std::string{from.display_name(
+                                        n::event_type::kDep, query.language_)}}
+                                  : std::nullopt}},
+          .routeColor_ =
+              to_str(from.get_route_color(n::event_type::kDep).color_),
+          .mode_ = to_mode(from.get_clasz(n::event_type::kDep), api_version),
+          .distance_ =
+              fr.is_rt()
+                  ? rt_index.rt_distances_[fr.rt_]
+                  : static_index
+                        .static_distances_[tt.transport_route_[fr.t_.t_idx_]],
+          .from_ = to_place(&tt, &tags, w, pl, matches, ae, tz, query.language_,
+                            tt_location{from}),
+          .to_ = to_place(&tt, &tags, w, pl, matches, ae, tz, query.language_,
+                          tt_location{to}),
+          .departure_ = from.time(n::event_type::kDep),
+          .arrival_ = to.time(n::event_type::kArr),
+          .scheduledDeparture_ = from.scheduled_time(n::event_type::kDep),
+          .scheduledArrival_ = to.scheduled_time(n::event_type::kArr),
+          .realTime_ = fr.is_rt(),
+          .polyline_ = std::move(enc.buf_)};
+    });
+  };
+
+  switch (static_cast<int>(query.precision_)) {
+    case 0: return make_response(std::integral_constant<int, 0>{});
+    case 1: return make_response(std::integral_constant<int, 1>{});
+    case 2: return make_response(std::integral_constant<int, 2>{});
+    case 3: return make_response(std::integral_constant<int, 3>{});
+    case 4: return make_response(std::integral_constant<int, 4>{});
+    case 5: return make_response(std::integral_constant<int, 5>{});
+    case 6: return make_response(std::integral_constant<int, 6>{});
+    default: throw utl::fail<net::bad_request_exception>("invalid precision");
+  }
 }
 
 struct route_info {

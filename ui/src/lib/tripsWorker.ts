@@ -1,7 +1,13 @@
 /// <reference lib="webworker" />trips
 import polyline from '@mapbox/polyline';
-import { client, trips, type Mode, type TripSegment } from '@motis-project/motis-client';
-import type { Trip, TransferData, MetaData, Query } from './types';
+import {
+	client,
+	trips,
+	type Mode,
+	type TripsData,
+	type TripSegment
+} from '@motis-project/motis-client';
+import type { Trip, TransferData, MetaData } from './types';
 import type { QuerySerializerOptions } from '@hey-api/client-fetch';
 import { getDelayColor, hexToRgb } from './Color';
 import { getModeStyle, getColor } from './modeStyle';
@@ -49,8 +55,8 @@ let status: number;
 const tripsMap = new Map<string, Trip>();
 const metaDataMap = new Map<string, MetaData>();
 let metadata: MetaData[] = [];
-const fetchData = async (query: Query) => {
-	const { data, response } = await trips({ query });
+const fetchData = async (query: TripsData) => {
+	const { data, response } = await trips(query);
 	status = response.status;
 	if (!data) return;
 
@@ -73,7 +79,7 @@ const fetchData = async (query: Query) => {
 
 	for (const d of data) {
 		const id = d.trips[0].tripId;
-		const processed = processSegment(d);
+		const processed = processSegment(d, query.query.precision || 5);
 
 		if (!tripBuilders.has(id)) {
 			tripBuilders.set(id, {
@@ -151,12 +157,12 @@ const fetchData = async (query: Query) => {
 	});
 	metadata = Array.from(metaDataMap.values());
 };
-const processSegment = (s: TripSegment): Trip => {
+const processSegment = (s: TripSegment, precision: number): Trip => {
 	const departure = new Date(s.departure).getTime();
 	const arrival = new Date(s.arrival).getTime();
 	const totalDuration = arrival - departure;
 
-	const decoded = polyline.decode(s.polyline);
+	const decoded = polyline.decode(s.polyline, precision);
 	const count = decoded.length;
 
 	const path = new Float64Array(count * 2);
@@ -286,7 +292,7 @@ self.onmessage = async (e) => {
 			break;
 		}
 		case 'fetch':
-			await fetchData(e.data.query);
+			await fetchData({ query: e.data.query });
 			postMessage({ type: 'fetch-complete', status });
 			break;
 		case 'update': {
