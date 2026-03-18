@@ -374,9 +374,11 @@ api::trips_response get_trains(tag_lookup const& tags,
     }
   }
 
-  auto const make_response = [&](auto const precision_constant) {
-    constexpr auto kPrecision = decltype(precision_constant)::value;
-    auto enc = geo::polyline_encoder<kPrecision>{};
+  auto const precision = static_cast<std::int8_t>(query.precision_);
+  utl::verify<net::bad_request_exception>(
+      precision >= 0 && precision < 7,
+      "invalid precision for polylines, allowed are [0, 6]");
+  return geo::with_polyline_encoder(precision, [&](auto enc) mutable {
     return utl::to_vec(runs, [&](stop_pair const& r) -> api::TripSegment {
       enc.reset();
 
@@ -419,18 +421,7 @@ api::trips_response get_trains(tag_lookup const& tags,
           .realTime_ = fr.is_rt(),
           .polyline_ = std::move(enc.buf_)};
     });
-  };
-
-  switch (static_cast<int>(query.precision_)) {
-    case 0: return make_response(std::integral_constant<int, 0>{});
-    case 1: return make_response(std::integral_constant<int, 1>{});
-    case 2: return make_response(std::integral_constant<int, 2>{});
-    case 3: return make_response(std::integral_constant<int, 3>{});
-    case 4: return make_response(std::integral_constant<int, 4>{});
-    case 5: return make_response(std::integral_constant<int, 5>{});
-    case 6: return make_response(std::integral_constant<int, 6>{});
-    default: throw utl::fail<net::bad_request_exception>("invalid precision");
-  }
+  });
 }
 
 struct route_info {

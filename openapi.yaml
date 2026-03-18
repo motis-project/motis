@@ -2288,6 +2288,15 @@ paths:
           schema:
             type: string
             format: date-time
+        - name: precision
+          in: query
+          required: false
+          description: "precision of returned polylines. Recommended to set based on zoom: `zoom >= 12 ? 5 : zoom >= 9 ? 4 : 3`"
+          schema:
+            type: number
+            minimum: 0
+            maximum: 6
+            default: 5
         - name: language
           in: query
           required: false
