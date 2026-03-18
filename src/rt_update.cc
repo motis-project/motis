@@ -343,7 +343,7 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
                 std::move(rtt), std::move(elevators), std::move(railviz_rt));
             std::atomic_store(&d.rt_, std::move(new_rt));
 
-            d.metrics_->rt_last_update_.SetToCurrentTime();
+            d.metrics_->last_update_rt_.SetToCurrentTime();
           }
 
           // Schedule next update.

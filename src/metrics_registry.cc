@@ -130,11 +130,12 @@ metrics_registry::metrics_registry(
               .Help("The number of transports x service days in the timetable")
               .Register(registry_)},
 
-      rt_last_update_{prometheus::BuildGauge()
-                          .Name("nigiri_rt_last_update")
-                          .Help("Timestamp of last RT update")
-                          .Register(registry_)
-                          .Add({})} {}
+      last_update_{prometheus::BuildGauge()
+                       .Name("nigiri_rt_last_update")
+                       .Help("Timestamp of last RT, GBFS, Elevator updates")
+                       .Register(registry_)},
+      last_update_rt_{last_update_.Add({{"feed", "rt"}})},
+      last_update_gbfs_{last_update_.Add({{"feed", "gbfs"}})} {}
 
 metrics_registry::~metrics_registry() = default;
 

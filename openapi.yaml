@@ -2868,17 +2868,17 @@ paths:
       operationId: health
       responses:
         '200':
-          description: Motis is running and (if available) one cycle of real time updates are applied
+          description: Shows over which feeds at least one cycle of updates was consumed.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/HealthResponse'
         '400':
-          description: Real time updates are not applied 
+          description: Full first cycle through all configured feeds is not finished. 
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/HealthResponse'
         '500':
           description: Motis is not running 
           content:
@@ -5046,3 +5046,16 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/RouteSegment'
+
+    HealthResponse:
+      type: object
+      properties:
+        rt:
+          type: boolean
+          description: GTFSRT, SIRI Lite, VDV AUS, VDV454 feeds.
+        elevators:
+          type: boolean
+          description: Elevator feeds.
+        gbfs:
+          type: boolean
+          description: GBFS feeds.

@@ -95,7 +95,6 @@ struct motis_instance {
     POST<ep::graph>("/api/graph", d);
     GET<ep::transfers>("/api/debug/transfers", d);
     GET<ep::flex_locations>("/api/debug/flex", d);
-    GET<ep::health>("/api/v1/health", d);
     GET<ep::levels>("/api/v1/map/levels", d);
     GET<ep::initial>("/api/v1/map/initial", d);
     GET<ep::reverse_geocode>("/api/v1/reverse-geocode", d);
@@ -157,6 +156,8 @@ struct motis_instance {
                   .trip_ep_ = utl::init_from<ep::trip>(d),
               });
 
+    qr_.route("GET", "/api/v1/health", ep::health{d.config_, d.metrics_.get()});
+
     qr_.route("GET", "/metrics",
               ep::metrics{d.tt_.get(), d.tags_.get(), d.rt_, d.metrics_.get()});
     qr_.route("GET", "/gtfsrt",
@@ -182,7 +183,8 @@ struct motis_instance {
   void run(data& d, config const& c) {
     if (d.w_ && d.l_ && c.has_gbfs_feeds()) {
       gbfs_ = io_thread{"motis gbfs update", [&](boost::asio::io_context& ioc) {
-                          gbfs::run_gbfs_update(ioc, c, *d.w_, *d.l_, d.gbfs_);
+                          gbfs::run_gbfs_update(ioc, c, *d.w_, *d.l_, d.gbfs_,
+                                                d.metrics_.get());
                         }};
     }
 
