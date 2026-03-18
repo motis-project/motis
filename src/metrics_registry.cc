@@ -1,7 +1,5 @@
 #include "motis/metrics_registry.h"
 
-#include <utility>
-
 #include "prometheus/histogram.h"
 
 namespace motis {
@@ -132,11 +130,11 @@ metrics_registry::metrics_registry(
               .Help("The number of transports x service days in the timetable")
               .Register(registry_)},
 
-      rt_last_update_(prometheus::BuildGauge()
+      rt_last_update_{prometheus::BuildGauge()
                           .Name("nigiri_rt_last_update")
                           .Help("Timestamp of last RT update")
                           .Register(registry_)
-                        .Add({{"protocol", "ALL"}})) {}
+                          .Add({})} {}
 
 metrics_registry::~metrics_registry() = default;
 

@@ -10,9 +10,6 @@
 namespace motis::ep {
 
 struct health {
-  // motis up and running
-  // motis consumed rt data (if enabled)
-
   std::string_view operator()(boost::urls::url_view const&) const;
 
   metrics_registry const* metrics_;

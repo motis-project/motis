@@ -19,7 +19,7 @@ std::string_view health::operator()(boost::urls::url_view const& url) const {
     return std::string_view("Running, RT enabled");
   }
 
-  throw utl::fail<net::bad_request_exception>("Running, RT not applied");
+  throw utl::fail<net::bad_request_exception>("RT not applied");
 }
 
 }  // namespace motis::ep
