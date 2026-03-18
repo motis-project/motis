@@ -2,9 +2,11 @@
 
 #include <vector>
 
+#include "nigiri/rt/rt_timetable.h"
 #include "nigiri/rt/run.h"
 #include "nigiri/types.h"
 
+#include "osr/location.h"
 #include "osr/types.h"
 
 #include "motis-api/motis-api.h"
@@ -18,6 +20,14 @@ namespace motis::ep {
 struct stop_times {
   api::stoptimes_response operator()(boost::urls::url_view const&) const;
 
+  std::vector<nigiri::rt::run> get_runs(api::stoptimes_params const&) const;
+  std::vector<nigiri::rt::run> get_runs(
+      api::stoptimes_params const&,
+      nigiri::rt_timetable const*,
+      nigiri::event_type const&,
+      std::optional<nigiri::location_idx_t> const& query_stop,
+      std::optional<osr::location> const& query_center) const;
+
   config const& config_;
   osr::ways const* w_;
   osr::platforms const* pl_;
@@ -29,8 +39,5 @@ struct stop_times {
   tag_lookup const& tags_;
   std::shared_ptr<rt> const& rt_;
 };
-
-std::vector<nigiri::rt::run> get_stop_times_runs(
-    stop_times const& self, api::stoptimes_params const& query);
 
 }  // namespace motis::ep
