@@ -131,7 +131,7 @@ metrics_registry::metrics_registry(
               .Register(registry_)},
 
       last_update_{prometheus::BuildGauge()
-                       .Name("nigiri_rt_last_update")
+                       .Name("nigiri_last_update")
                        .Help("Timestamp of last RT, GBFS, Elevator updates")
                        .Register(registry_)},
       last_update_rt_{last_update_.Add({{"feed", "rt"}})},

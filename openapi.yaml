@@ -2879,12 +2879,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HealthResponse'
-        '500':
-          description: Motis is not running 
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
           
   /api/debug/transfers:
     get:
