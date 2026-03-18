@@ -4,15 +4,11 @@
 
 #include "net/web_server/responses.h"
 
-#include "utl/verify.h"
-
 #include "motis-api/motis-api.h"
 
 namespace motis::ep {
 
 net::reply health::operator()(net::route_request const& req, bool) const {
-  utl::verify(metrics_ != nullptr, "Not running");
-
   bool rt_updated = metrics_->last_update_rt_.Value() > 0.0;
   bool gbfs_updated = metrics_->last_update_gbfs_.Value() > 0.0;
   bool has_elevator_feeds = config_.has_elevators() && config_.get_elevators()->url_.has_value();
