@@ -1,8 +1,6 @@
 #pragma once
 
-#include <string_view>
-
-#include "boost/url/url_view.hpp"
+#include "net/web_server/query_router.h"
 
 #include "motis/config.h"
 #include "motis/metrics_registry.h"
@@ -10,10 +8,10 @@
 namespace motis::ep {
 
 struct health {
-  std::string_view operator()(boost::urls::url_view const&) const;
+  net::reply operator()(net::route_request const&, bool) const;
 
-  metrics_registry const* metrics_;
   config const& config_;
+  metrics_registry const* metrics_;
 };
 
 }  // namespace motis::ep
