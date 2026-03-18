@@ -1113,6 +1113,17 @@ export type RentalZone = {
     rules: Array<RentalZoneRestrictions>;
 };
 
+/**
+ * not available for GTFS datasets by default
+ * For NeTEx it contains information about the vehicle category, e.g. IC/InterCity
+ *
+ */
+export type Category = {
+    id: string;
+    name: string;
+    shortName: string;
+};
+
 export type Leg = {
     /**
      * Transport mode for this leg
@@ -1184,6 +1195,7 @@ export type Leg = {
      * final stop of this trip (can differ from headsign)
      */
     tripTo?: Place;
+    category?: Category;
     routeId?: string;
     routeUrl?: string;
     directionId?: string;
@@ -1212,10 +1224,17 @@ export type Leg = {
      *
      */
     intermediateStops?: Array<Place>;
+    /**
+     * Encoded geometry of the leg.
+     * If detailed leg output is disabled, this is returned as an empty
+     * polyline.
+     *
+     */
     legGeometry: EncodedPolyline;
     /**
      * A series of turn by turn instructions
      * used for walking, biking and driving.
+     * This field is omitted if the request disables detailed leg output.
      *
      */
     steps?: Array<StepInstruction>;
@@ -1836,8 +1855,18 @@ export type PlanData = {
          */
         cyclingSpeed?: CyclingSpeed;
         /**
+         * Controls if `legGeometry` and `steps` are returned for direct legs,
+         * pre-/post-transit legs and transit legs.
+         *
+         */
+        detailedLegs?: boolean;
+        /**
+         * Controls if transfer polylines and step instructions are returned.
+         *
+         * If not set, this parameter inherits the value of `detailedLegs`.
+         *
          * - true: Compute transfer polylines and step instructions.
-         * - false: Only return basic information (start time, end time, duration) for transfers.
+         * - false: Return empty `legGeometry` and omit `steps` for transfers.
          *
          */
         detailedTransfers?: boolean;
@@ -2934,6 +2963,13 @@ export type GeocodeError = (Error);
 export type TripData = {
     query: {
         /**
+         * Controls if `legGeometry` is returned for transit legs.
+         *
+         * The default value is `true`.
+         *
+         */
+        detailedLegs?: boolean;
+        /**
          * Optional. Default is `true`.
          *
          * Controls if a trip with stay-seated transfers is returned:
@@ -3121,6 +3157,10 @@ export type TripsData = {
          * latitude,longitude pair of the lower right coordinate
          */
         min: string;
+        /**
+         * precision of returned polylines. Recommended to set based on zoom: `zoom >= 12 ? 5 : zoom >= 9 ? 4 : 3`
+         */
+        precision?: number;
         /**
          * start of the time window
          */
