@@ -22,6 +22,8 @@
 #include "geo/box.h"
 #include "geo/latlng.h"
 
+#include "utl/helpers/algorithm.h"
+
 #include "osr/routing/additional_edge.h"
 #include "osr/routing/sharing_data.h"
 #include "osr/types.h"
@@ -170,6 +172,11 @@ struct vehicle_status {
 };
 
 struct rule {
+  bool allows_rental_operation() const {
+    return ride_start_allowed_ || ride_end_allowed_ || ride_through_allowed_ ||
+           station_parking_.value_or(false);
+  }
+
   std::vector<vehicle_type_idx_t> vehicle_type_idxs_{};
   bool ride_start_allowed_{};
   bool ride_end_allowed_{};
@@ -198,6 +205,11 @@ struct zone {
     auto const rect = tg_geom_rect(geom_.get());
     return geo::box{geo::latlng{rect.min.y, rect.min.x},
                     geo::latlng{rect.max.y, rect.max.x}};
+  }
+
+  bool allows_rental_operation() const {
+    return utl::any_of(
+        rules_, [](rule const& r) { return r.allows_rental_operation(); });
   }
 
   std::shared_ptr<tg_geom> geom_;
