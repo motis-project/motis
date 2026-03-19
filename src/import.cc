@@ -239,16 +239,31 @@ data import(config const& c, fs::path const& data_path, bool const write) {
       c.timetable_ && c.timetable_->with_shapes_ &&
       c.timetable_->route_shapes_ && c.use_street_routing();
   auto const existing_rs_hashes = read_hashes(data_path, "route_shapes");
+  auto const route_shapes_reuse_old_osm_data =
+      c.timetable_.value_or(config::timetable{})
+          .route_shapes_.value_or(config::timetable::route_shapes{})
+          .cache_reuse_old_osm_data_;
   auto const reuse_shapes_cache =
+      // cache must exist (handles case where files were deleted manually)
       fs::exists(shape_cache_path) &&
+      // and have the same routed_shapes_ver
       (existing_rs_hashes.find("routed_shapes_ver") !=
            end(existing_rs_hashes) &&
        existing_rs_hashes.at("routed_shapes_ver") ==
            routed_shapes_version().second) &&
-      ((c.timetable_.has_value() && c.timetable_->route_shapes_.has_value() &&
-        c.timetable_->route_shapes_->cache_reuse_old_osm_data_) ||
+      // if route_shapes_reuse_old_osm_data, we can reuse any data
+      // otherwise only if the osm data is the same
+      (route_shapes_reuse_old_osm_data ||
        (existing_rs_hashes.find(osm_hash.first) != end(existing_rs_hashes) &&
-        existing_rs_hashes.at(osm_hash.first) == osm_hash.second));
+        existing_rs_hashes.at(osm_hash.first) == osm_hash.second &&
+        // cache_reuse_old_osm_data flag must be the same or changed from 0->1
+        // otherwise cache may contain old data from previous runs
+        existing_rs_hashes.find("cache_reuse_old_osm_data") !=
+            end(existing_rs_hashes) &&
+        (existing_rs_hashes.at("cache_reuse_old_osm_data") ==
+             static_cast<std::uint64_t>(route_shapes_reuse_old_osm_data) ||
+         existing_rs_hashes.at("cache_reuse_old_osm_data") == 0)));
+
   auto const keep_routed_shape_data =
       !route_shapes_task_enabled || reuse_shapes_cache;
 
