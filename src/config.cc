@@ -123,6 +123,10 @@ void config::verify() const {
               nigiri::routing::kMaxSearchIntervalSize.count());
 
   if (timetable_) {
+    utl::verify(!timetable_->route_shapes_.has_value() ||
+                    (timetable_->with_shapes_ && street_routing),
+                "feature ROUTE_SHAPES requires SHAPES and STREET_ROUTING");
+
     for (auto const& [id, d] : timetable_->datasets_) {
       utl::verify(!id.contains("_"), "dataset identifier may not contain '_'");
       if (d.rt_.has_value()) {

@@ -236,8 +236,9 @@ data import(config const& c, fs::path const& data_path, bool const write) {
   auto const shape_cache_lock_path =
       fs::path{shape_cache_path.generic_string() + "-lock"};
   auto const route_shapes_task_enabled =
-      c.timetable_ && c.timetable_->with_shapes_ &&
-      c.timetable_->route_shapes_ && c.use_street_routing();
+      c.timetable_
+          .transform([](auto&& x) { return x.route_shapes_.has_value(); })
+          .value_or(false);
   auto const existing_rs_hashes = read_hashes(data_path, "route_shapes");
   auto const route_shapes_reuse_old_osm_data =
       c.timetable_.value_or(config::timetable{})
