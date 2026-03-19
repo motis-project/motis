@@ -3158,7 +3158,7 @@ export type TripsData = {
          */
         min: string;
         /**
-         * precision of returned polylines. Recommended to set based on zoom: `zoom >= 12 ? 5 : zoom >= 9 ? 4 : 3`
+         * precision of returned polylines. Recommended to set based on zoom: `zoom >= 11 ? 5 : zoom >= 8 ? 4 : zoom >= 5 ? 3 : 2`
          */
         precision?: number;
         /**

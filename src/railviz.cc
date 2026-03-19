@@ -389,7 +389,7 @@ api::trips_response get_trains(tag_lookup const& tags,
 
       fr.for_each_shape_point(shapes,
                               {r.from_, static_cast<n::stop_idx_t>(r.to_ + 1U)},
-                              [&](auto&& p) { enc.push_nonzero_diff(p); });
+                              [&](auto&& p) { enc.push_nonzero_diff(p, 2); });
 
       return {
           .trips_ = {api::TripInfo{
