@@ -40,8 +40,12 @@ namespace motis {
 
 constexpr auto kTimeMul = 1.0 / 60.0 * 7;
 constexpr auto kSearchRadiusMeters = 100;
+constexpr auto kLookbackSeconds = std::int64_t{8 * 60};
+constexpr auto kNonSchedAllowedDeviationSeconds = std::int64_t{15 * 60};
+
 constexpr auto kExactTripIdMatchAddScore = 50.0;
 constexpr auto kExactStopIdMatchAddScore = 15.0;
+constexpr auto kExactTripNameMatchAddScore = 150.0;
 
 double exact_stop_id_match_score(api::Place const& place,
                                  std::string_view const expected_stop_id) {
@@ -52,7 +56,8 @@ double exact_stop_id_match_score(api::Place const& place,
 
 struct leg_hint {
   explicit leg_hint(json::object const& l)
-      : trip_id_{l.at("trip_id").as_string()},
+      : display_name_{l.at("display_name").as_string()},
+        trip_id_{l.at("trip_id").as_string()},
         from_stop_id_{l.at("from_id").as_string()},
         to_stop_id_{l.at("to_id").as_string()},
         sched_start_{l.at("sched_start").as_int64()},
@@ -69,6 +74,7 @@ struct leg_hint {
     to_pos_ = coords[1];
   }
 
+  std::string display_name_;
   std::string trip_id_;
   std::string from_stop_id_;
   std::string to_stop_id_;
@@ -82,6 +88,7 @@ struct leg_hint {
 
 std::string get_leg_id(api::Leg const& l) {
   return json::serialize(json::object{
+      {"display_name", l.displayName_.value()},
       {"trip_id", l.tripId_.value()},
       {"from_id", l.from_.stopId_.value()},
       {"to_id", l.to_.stopId_.value()},
@@ -276,6 +283,9 @@ get_best_candidate(api::stoptimes_response const& from_stop_times,
       continue;
     }
     auto score = it->score_ +
+                 (from_st.displayName_ == hint.display_name_
+                      ? kExactTripNameMatchAddScore
+                      : 0.0) +
                  exact_stop_id_match_score(from_st.place_, hint.from_stop_id_) -
                  geo::distance({from_st.place_.lat_, from_st.place_.lon_},
                                hint.from_pos_) -
@@ -295,8 +305,6 @@ api::Itinerary reconstruct_itinerary(ep::stop_times const& stop_times_ep,
                                      nigiri::shapes_storage const* shapes,
                                      rt const& rt,
                                      std::string const& id) {
-  constexpr auto kLookbackSeconds = std::int64_t{8 * 60};
-
   auto const& lh = leg_hint{json::parse(id).as_object()};
   auto const get_run =
       [&]() -> std::tuple<n::rt::frun, n::stop_idx_t, n::stop_idx_t> {
@@ -314,13 +322,13 @@ api::Itinerary reconstruct_itinerary(ep::stop_times const& stop_times_ep,
 
       auto const from_idx = find_stop_by_id_time(
           fr, stop_times_ep.tags_, lh.from_stop_id_, lh.sched_start_,
-          n::event_type::kDep, kLookbackSeconds);
+          n::event_type::kDep, kNonSchedAllowedDeviationSeconds);
       utl::verify(from_idx.has_value(),
                   "reconstruct_itinerary: additional trip from stop not found");
 
       auto const to_idx = find_stop_by_id_time(
           fr, stop_times_ep.tags_, lh.to_stop_id_, lh.sched_end_,
-          n::event_type::kArr, kLookbackSeconds);
+          n::event_type::kArr, kNonSchedAllowedDeviationSeconds);
       utl::verify(to_idx.has_value(),
                   "reconstruct_itinerary: additional trip to stop not found");
 
