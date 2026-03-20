@@ -12,6 +12,7 @@ struct initial {
 
   nigiri::timetable const* tt_;
   config const& config_;
+  std::string_view const& motis_version_;
 };
 
 }  // namespace motis::ep

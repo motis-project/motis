@@ -2142,8 +2142,12 @@ If set to \`true\`, all used transit trips are required to allow car carriage.
 export const ServerConfigSchema = {
     Description: 'server configuration',
     type: 'object',
-    required: ['hasElevation', 'hasRoutedTransfers', 'hasStreetRouting', 'maxOneToManySize', 'maxOneToAllTravelTimeLimit', 'maxPrePostTransitTimeLimit', 'maxDirectTimeLimit', 'shapesDebugEnabled'],
+    required: ['motisVersion', 'hasElevation', 'hasRoutedTransfers', 'hasStreetRouting', 'maxOneToManySize', 'maxOneToAllTravelTimeLimit', 'maxPrePostTransitTimeLimit', 'maxDirectTimeLimit', 'shapesDebugEnabled'],
     properties: {
+        motisVersion: {
+            description: 'the version of this MOTIS server',
+            type: 'string'
+        },
         hasElevation: {
             description: 'true if elevation is loaded',
             type: 'boolean'

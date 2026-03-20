@@ -1719,6 +1719,10 @@ export type OneToManyIntermodalParams = {
 
 export type ServerConfig = {
     /**
+     * the version of this MOTIS server
+     */
+    motisVersion: string;
+    /**
      * true if elevation is loaded
      */
     hasElevation: boolean;
