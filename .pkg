@@ -9,7 +9,7 @@
 [osr]
   url=git@github.com:motis-project/osr.git
   branch=master
-  commit=58c9ac7700de54244bd7522e608a605d53dc0a45
+  commit=0e1946ae24ccbebd394ec8a2fc134d39ae016ef3
 [utl]
   url=git@github.com:motis-project/utl.git
   branch=master
@@ -52,8 +52,8 @@
   commit=20c0f298b8ce58de29a790290f44dca7c4ecc364
 [mimalloc]
   url=git@github.com:motis-project/mimalloc.git
-  branch=dev
-  commit=189b0ac416b94848bc0a7702f7e97fe6ebd91829
+  branch=dev3
+  commit=b88ce9c8fd6b7c9208a43bcdb705de9f499dbad4
 [lz4]
   url=git@github.com:motis-project/lz4.git
   branch=dev
