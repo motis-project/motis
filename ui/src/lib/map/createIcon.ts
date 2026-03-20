@@ -63,3 +63,4 @@ export const createStopIcon = (size: number) => {
 
 	return canvas;
 };
+
