@@ -1027,7 +1027,12 @@ net::reply ojp::operator()(net::route_request const& http_req, bool) const {
       auto const lower_right = rect.child("LowerRight");
       utl::verify<net::bad_request_exception>(upper_left && lower_right,
                                               "missing GeoRestriction box");
-
+      auto const restrictions = loc_req.child("Restrictions");
+      auto const zoom_node = restrictions.child("Zoom");
+      utl::verify<net::bad_request_exception>(zoom_node,
+                                              "missing Zoom parameter");
+      auto const zoom = zoom_node.text().as_int();
+      auto const grouped = restrictions.child("Grouped").text().as_bool(false);
       auto url = boost::urls::url{"/api/v1/map/stop"};
       auto params = url.params();
       params.append(
@@ -1041,7 +1046,10 @@ net::reply ojp::operator()(net::route_request const& http_req, bool) const {
                "{},{}", upper_left.child("siri:Latitude").text().as_double(),
                lower_right.child("siri:Longitude").text().as_double())});
       params.append({"language", lang});
-
+      params.append({"zoom", fmt::to_string(zoom)});
+      if (grouped) {
+        params.append({"grouped", "true"});
+      }
       response =
           build_map_stops_response(now_timestamp(), lang, (*stops_ep_)(url));
     } else if (auto const stop_id = loc_req.child("PlaceRef")
