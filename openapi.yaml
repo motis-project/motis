@@ -4759,6 +4759,7 @@ components:
       Description: server configuration
       type: object
       required:
+        - motisVersion
         - hasElevation
         - hasRoutedTransfers
         - hasStreetRouting
@@ -4768,6 +4769,9 @@ components:
         - maxDirectTimeLimit
         - shapesDebugEnabled
       properties:
+        motisVersion:
+          description: the version of this MOTIS server
+          type: string
         hasElevation:
           description: true if elevation is loaded
           type: boolean
