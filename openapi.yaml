@@ -2434,6 +2434,20 @@ paths:
           schema:
             type: string
 
+        - name: grouped
+          in: query
+          required: false
+          description: Optional. Return grouped stops 
+          schema:
+            type: boolean
+
+        - name: zoom
+          in: query
+          required: true
+          description: current zoom level
+          schema:
+            type: number
+
         - name: language
           in: query
           required: false

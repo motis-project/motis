@@ -12,6 +12,7 @@
 	import Control from './map/Control.svelte';
 	import { client } from '@motis-project/motis-client';
 	import type { PickingInfo } from '@deck.gl/core';
+	import { updateOverlayLayers } from './updateOverlay';
 	let {
 		map,
 		overlay,
@@ -166,10 +167,6 @@
 	};
 
 	// UPDATE
-	const updateOverlayLayers = (l: IconLayer) => {
-		layers[0] = l;
-		overlay.setProps({ layers: [...layers] });
-	};
 	$effect(() => {
 		if (!query || isProcessing || canceled) return;
 		untrack(() => {
@@ -210,7 +207,7 @@
 			}
 			const layer = createLayer();
 			if (layer) {
-				updateOverlayLayers(layer);
+				updateOverlayLayers(layer, layers, overlay);
 			}
 			if (canceled) {
 				cancelAnimationFrame(animationId);
@@ -218,13 +215,6 @@
 				animationId = requestAnimationFrame(animate);
 			}
 		};
-		overlay = new MapboxOverlay({
-			interleaved: true
-		});
-	});
-	$effect(() => {
-		if (!map || !overlay) return;
-		map.addControl(overlay);
 	});
 	onDestroy(() => {
 		if (animationId) cancelAnimationFrame(animationId);

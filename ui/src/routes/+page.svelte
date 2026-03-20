@@ -8,8 +8,8 @@
 		TrainFront,
 		Waypoints,
 		MountainSnow,
-		MapPinHouse,
-		MapPin
+		MapPin,
+		MapPinHouse
 	} from '@lucide/svelte';
 	import { getStyle } from '$lib/map/style';
 	import Map from '$lib/map/Map.svelte';
@@ -103,7 +103,7 @@
 	);
 	let dataAttributionLink: string | undefined = $state(undefined);
 	let colorMode = $state<'rt' | 'route' | 'mode' | 'none'>('none');
-	let stopMode = $state<'parent' | 'none'>('none');
+	let stopsMode = $state<'none' | 'grouped' | 'all'>('none');
 	let showMap = $state(!isSmallScreen);
 	let showRoutes = $state(false);
 	let routesOverlaySession = $state(0);
@@ -957,18 +957,22 @@
 					<Button
 						size="icon"
 						onclick={() => {
-							stopMode = (function () {
-								switch (stopMode) {
-									case 'parent':
-										return 'none';
+							stopsMode = (function () {
+								switch (stopsMode) {
 									case 'none':
-										return 'parent';
+										return 'grouped';
+									case 'grouped':
+										return 'all';
+									case 'all':
+										return 'none';
 								}
 							})();
 						}}
 					>
-						{#if stopMode == 'parent'}
+						{#if stopsMode == 'grouped'}
 							<MapPin class="h-[1.2rem] w-[1.2rem]" />
+						{:else if stopsMode == 'all'}
+							<MapPinHouse class="h-[1.2rem] w-[1.2rem]" />
 						{:else}
 							<Ban class="h-[1.2rem] w-[1.2rem]" />
 						{/if}
@@ -990,7 +994,7 @@
 				<Rentals {map} {bounds} {zoom} {theme} debug={hasDebug} />
 			{/if}
 
-			<StopsView {map} {stopMode} {overlay} {layers} {bounds} {zoom} />
+			<StopsView {map} {stopsMode} {overlay} {layers} {bounds} {zoom} />
 			<RailViz {map} {bounds} {zoom} {colorMode} {overlay} {layers} />
 			<Isochrones
 				{map}

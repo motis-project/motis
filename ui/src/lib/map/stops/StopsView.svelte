@@ -8,23 +8,22 @@
 	import { stops } from '@motis-project/motis-client';
 	import { type PickingInfo } from '@deck.gl/core';
 	import { onClickStop } from '$lib/utils';
-	import Control from '../Control.svelte';
-	import { createStopIcon } from '../createIcon';
+	import { updateOverlayLayers } from '$lib/updateOverlay';
 
 	let {
 		map,
 		overlay,
 		layers,
 		zoom,
-		bounds,
-		stopMode
+		stopsMode,
+		bounds
 	}: {
 		map: maplibregl.Map | undefined;
 		overlay: MapboxOverlay;
 		layers: IconLayer[];
 		zoom: number;
+		stopsMode: 'none' | 'all' | 'grouped';
 		bounds: maplibregl.LngLatBoundsLike | undefined;
-		stopMode: 'all' | 'parent' | 'none';
 	} = $props();
 
 	//QUERY
@@ -33,14 +32,17 @@
 		const b = maplibregl.LngLatBounds.convert(bounds);
 		const max = lngLatToStr(b.getNorthWest());
 		const min = lngLatToStr(b.getSouthEast());
+		const grouped = stopsMode == 'grouped';
 		return {
 			min,
-			max
+			max,
+			zoom,
+			grouped
 		};
 	});
 
 	//DATA
-	const STOPS_NUM = 2000;
+	const STOPS_NUM = 2048;
 	const positions = new Float64Array(STOPS_NUM * 2);
 	const stopsData = {
 		length: STOPS_NUM,
@@ -52,11 +54,38 @@
 		track?: string;
 	};
 	const metadata: MetaData[] = [];
-	let status = $state();
 
 	//LAYER
+	const createStopIcon = (size: number) => {
+		const canvas = document.createElement('canvas');
+		canvas.width = size;
+		canvas.height = size;
+		const ctx = canvas.getContext('2d')!;
+		const center = size / 2;
+		const radius = size * 0.4;
+		const border = (2 / 64) * size;
+
+		ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+		ctx.beginPath();
+		ctx.arc(center, center, radius, 0, Math.PI * 2);
+		ctx.fill();
+
+		// Gray border
+		ctx.strokeStyle = 'rgba(120, 120, 120, 1.0)';
+		ctx.lineWidth = border;
+		ctx.stroke();
+
+		// White dot in center
+		ctx.fillStyle = '#ffffff';
+		ctx.beginPath();
+		ctx.arc(center, center, radius * 0.35, 0, Math.PI * 2);
+		ctx.fill();
+
+		return canvas;
+	};
 	const ICON_SIZE = 50;
 	const StopIcon = createStopIcon(ICON_SIZE);
+
 	const IconMapping = {
 		marker: {
 			x: 0,
@@ -68,42 +97,19 @@
 			mask: false
 		}
 	};
-	const createLayer = () => {
-		return new IconLayer({
-			id: 'stops-view-layer',
-			beforeId: 'trips-layer',
-			data: {
-				length: stopsData.length,
-				attributes: {
-					getPosition: { value: positions, size: 2 }
-				}
-			},
-			// @ts-expect-error: canvas element seems to work fine
-			iconAtlas: StopIcon,
-			iconMapping: IconMapping,
-			visible: stopMode !== 'none' && zoom >= 12,
-			getSize: 15,
-			pickable: true,
-			useDevicePixels: false,
-			parameters: { depthTest: false },
-			getIcon: (_) => 'marker',
-			onHover,
-			onClick
-		});
-	};
 
-	//INTERACTION
 	const popup = new maplibregl.Popup({
 		closeButton: false,
-		closeOnClick: true,
-		closeOnMove: true,
+		closeOnClick: false,
 		maxWidth: 'none'
 	});
+
 	const onHover = (info: PickingInfo) => {
 		if (info.picked && info.index != -1) {
 			const data = metadata[info.index];
 			const content = `<strong>${data.name}</strong><br>
-			${data.track ? `<strong>${t.track}: ${data.track}</strong><br>` : ''}`;
+							${data.track ? `<strong>${t.track}: ${data.track}</strong>` : ''}`;
+
 			popup
 				.setLngLat(info.coordinate as LngLatLike)
 				.setHTML(content)
@@ -120,48 +126,64 @@
 		}
 	};
 
+	const createLayer = () => {
+		return new IconLayer({
+			id: 'stops-view-layer',
+			beforeId: 'trips-layer',
+			data: {
+				length: stopsData.length,
+				attributes: {
+					getPosition: { value: positions, size: 2 }
+				}
+			},
+			// @ts-expect-error: canvas element seems to work fine
+			iconAtlas: StopIcon,
+			iconMapping: IconMapping,
+			getSize: 15,
+			pickable: true,
+			visible: stopsMode !== 'none',
+			useDevicePixels: false,
+			parameters: { depthTest: false },
+			getIcon: (_) => 'marker',
+			onHover,
+			onClick
+		});
+	};
+
 	//SETUP
 	onMount(() => {
-		updateOverlayLayers(createLayer());
+		updateOverlayLayers(createLayer(), layers, overlay);
 	});
 
 	//UPDATE
-	const updateOverlayLayers = (l: IconLayer) => {
-		layers[1] = l;
-		overlay.setProps({ layers: [...layers] });
-	};
 	$effect(() => {
-		if (stopMode) {
-			updateOverlayLayers(createLayer());
+		if (stopsMode) {
+			updateOverlayLayers(createLayer(), layers, overlay);
 		}
 	});
 	$effect(() => {
-		if (!query || stopMode == 'none') return;
+		if (!query || stopsMode == 'none') return;
 		untrack(async () => {
-			if (zoom >= 12) {
-				const { data, response } = await stops({ query });
-				status = response.status;
-				if (!data) return;
-				let index = 0;
-				for (let i = 0; i < data.length; ++i) {
-					if (data[i].parentId === data[i].stopId) {
-						metadata[index] = {
-							name: data[i].name,
-							stopId: data[i].stopId,
-							track: data[i].track
-						};
-						positions[2 * index] = data[i].lon;
-						positions[2 * index + 1] = data[i].lat;
-						index++;
-					}
-				}
-				stopsData.length = index;
+			const { data } = await stops({ query });
+			if (!data) {
+				stopsData.length = 0;
+				updateOverlayLayers(createLayer(), layers, overlay);
+				return;
 			}
-			updateOverlayLayers(createLayer());
+
+			let index = 0;
+			for (let i = 0; i < data.length; ++i) {
+				metadata[index] = {
+					name: data[i].name,
+					stopId: data[i].stopId,
+					track: data[i].track
+				};
+				positions[2 * index] = data[i].lon;
+				positions[2 * index + 1] = data[i].lat;
+				index++;
+			}
+			stopsData.length = index;
+			updateOverlayLayers(createLayer(), layers, overlay);
 		});
 	});
 </script>
-
-{#if status && status !== 200}
-	<Control position="bottom-left">stops response status: {status}</Control>
-{/if}
