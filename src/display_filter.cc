@@ -54,4 +54,4 @@ bool should_display(n::clasz const clasz,
   return zoom_level >= min_zoom_level(clasz, distance);
 }
 
-} // namespace motis
+}  // namespace motis
