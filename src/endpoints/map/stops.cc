@@ -5,9 +5,9 @@
 
 #include "tiles/constants.h"
 
-#include "motis/place.h"
 #include "motis/display_filter.h"
 #include "motis/parse_location.h"
+#include "motis/place.h"
 
 using int_clasz = decltype(n::kNumClasses);
 
