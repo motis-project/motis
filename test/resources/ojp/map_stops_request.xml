@@ -27,8 +27,6 @@
         <Type>stop</Type>
         <NumberOfResults>300</NumberOfResults>
         <IncludePtModes>true</IncludePtModes>
-        <Zoom>15</Zoom>
-        <Grouped>false</Grouped>
       </Restrictions>
     </OJPLocationInformationRequest>
   </siri:ServiceRequest>

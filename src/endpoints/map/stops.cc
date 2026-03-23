@@ -1,14 +1,14 @@
 #include "motis/endpoints/map/stops.h"
+#include <limits>
 
 #include "net/bad_request_exception.h"
 #include "net/too_many_exception.h"
 
-#include "osr/geojson.h"
+#include "tiles/constants.h"
 
+#include "motis/place.h"
 #include "motis/display_filter.h"
-#include "motis/journey_to_response.h"
 #include "motis/parse_location.h"
-#include "motis/tag_lookup.h"
 
 using int_clasz = decltype(n::kNumClasses);
 
@@ -18,7 +18,7 @@ api::stops_response stops::operator()(boost::urls::url_view const& url) const {
   auto const query = api::stops_params{url.params()};
   auto const min = parse_location(query.min_);
   auto const max = parse_location(query.max_);
-  auto const zoom = query.zoom_;
+  auto const zoom = query.zoom_.value_or(tiles::kMaxZoomLevel);
   auto const grouped = query.grouped_.value_or(false);
 
   utl::verify<net::bad_request_exception>(
@@ -40,7 +40,7 @@ api::stops_response stops::operator()(boost::urls::url_view const& url) const {
     for (auto c = int_clasz{0U}; c != n::kNumClasses; ++c) {
       auto const cl = n::clasz{c};
       if (nigiri::routing::is_allowed(cl_mask, cl) &&
-          should_display(cl, zoom, std::numeric_limits<float>::infinity())) {
+          should_display(cl, zoom, 0)) {
         should_show = true;
         break;
       }

@@ -2437,14 +2437,14 @@ paths:
         - name: grouped
           in: query
           required: false
-          description: Optional. Return grouped stops 
+          description: Optional. Return grouped stops
           schema:
             type: boolean
 
         - name: zoom
           in: query
-          required: true
-          description: current zoom level
+          required: false
+          description: Optional. Current zoom level
           schema:
             type: number
 

@@ -3227,9 +3227,9 @@ export type StopsData = {
          */
         min: string;
         /**
-         * current zoom level
+         * Optional. Current zoom level
          */
-        zoom: number;
+        zoom?: number;
     };
 };
 
