@@ -1,14 +1,13 @@
 #include "motis/endpoints/map/stops.h"
-#include <limits>
 
 #include "net/bad_request_exception.h"
 #include "net/too_many_exception.h"
 
 #include "tiles/constants.h"
 
+#include "motis/place.h"
 #include "motis/display_filter.h"
 #include "motis/parse_location.h"
-#include "motis/place.h"
 
 using int_clasz = decltype(n::kNumClasses);
 
