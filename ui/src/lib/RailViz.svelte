@@ -39,7 +39,8 @@
 			max,
 			startTime: startTime.toISOString(),
 			endTime: endTime.toISOString(),
-			zoom
+			zoom,
+			precision: zoom >= 11 ? 5 : zoom >= 8 ? 4 : zoom >= 5 ? 3 : 2
 		};
 	});
 

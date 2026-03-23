@@ -10,36 +10,35 @@ KeepEmptyLinesAtTheStartOfBlocks: true
 AllowShortCaseLabelsOnASingleLine: true
 AlwaysBreakTemplateDeclarations: true
 SpacesBeforeTrailingComments: 2
+SortIncludes: true
 IncludeBlocks: Preserve
 BinPackParameters: false
 QualifierAlignment: Right
 IncludeCategories:
-  - Regex: '^<.*\.h>'
+  - Regex: '^<.*>'
     Priority: 1
-  - Regex: '^<c.*'
-    Priority: 2
   - Regex: '^"boost.*'
-    Priority: 3
+    Priority: 2
   - Regex: '^"nigiri/core/common.*'
-    Priority: 4
+    Priority: 3
   - Regex: '^"nigiri/core/schedule.*'
-    Priority: 5
+    Priority: 4
   - Regex: '^"nigiri/core/.*'
-    Priority: 6
+    Priority: 5
   - Regex: '^"nigiri/module/.*'
-    Priority: 7
+    Priority: 6
   - Regex: '^"nigiri/bootstrap/.*'
-    Priority: 8
+    Priority: 7
   - Regex: '^"nigiri/loader/.*'
-    Priority: 9
+    Priority: 8
   - Regex: '^"nigiri/.*'
-    Priority: 10
+    Priority: 9
   - Regex: '^"nigiri/protocol.*'
+    Priority: 10
+  - Regex: '^"./.*'
     Priority: 11
-  - Regex: '^<.*'
-    Priority: 12
   - Regex: '.*'
-    Priority: 13
+    Priority: 12
 ---
 BasedOnStyle: Google
 IndentWidth: 2
@@ -56,29 +55,27 @@ SpacesBeforeTrailingComments: 2
 ColumnLimit: 80
 QualifierAlignment: Right
 IncludeCategories:
-  - Regex: '^<.*\.h>'
+  - Regex: '^<.*>'
     Priority: 1
-  - Regex: '^<c.*'
-    Priority: 2
   - Regex: '^"boost.*'
-    Priority: 3
+    Priority: 2
   - Regex: '^"nigiri/core/common.*'
-    Priority: 4
+    Priority: 3
   - Regex: '^"nigiri/core/schedule.*'
-    Priority: 5
+    Priority: 4
   - Regex: '^"nigiri/core/.*'
-    Priority: 6
+    Priority: 5
   - Regex: '^"nigiri/module/.*'
-    Priority: 7
+    Priority: 6
   - Regex: '^"nigiri/bootstrap/.*'
-    Priority: 8
+    Priority: 7
   - Regex: '^"nigiri/loader/.*'
-    Priority: 9
+    Priority: 8
   - Regex: '^"nigiri/.*'
-    Priority: 10
+    Priority: 9
   - Regex: '^"nigiri/protocol.*'
+    Priority: 10
+  - Regex: '^"./.*'
     Priority: 11
-  - Regex: '^<.*'
-    Priority: 12
   - Regex: '.*'
-    Priority: 13
+    Priority: 12

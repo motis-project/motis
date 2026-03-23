@@ -1,8 +1,8 @@
 #include "motis/gbfs/update.h"
 
+#include <algorithm>
 #include <cassert>
 #include <chrono>
-#include <algorithm>
 #include <filesystem>
 #include <fstream>
 #include <set>
@@ -721,7 +721,9 @@ struct gbfs_update {
           d_->provider_zone_rtree_.remove(zone.bounding_box(), provider.idx_);
         }
         for (auto const& zone : provider.geofencing_zones_.zones_) {
-          d_->provider_zone_rtree_.add(zone.bounding_box(), provider.idx_);
+          if (zone.allows_rental_operation()) {
+            d_->provider_zone_rtree_.add(zone.bounding_box(), provider.idx_);
+          }
         }
       }
     } else {
@@ -736,7 +738,9 @@ struct gbfs_update {
         }
       }
       for (auto const& zone : provider.geofencing_zones_.zones_) {
-        d_->provider_zone_rtree_.add(zone.bounding_box(), provider.idx_);
+        if (zone.allows_rental_operation()) {
+          d_->provider_zone_rtree_.add(zone.bounding_box(), provider.idx_);
+        }
       }
     }
   }

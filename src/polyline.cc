@@ -10,6 +10,10 @@ api::EncodedPolyline to_polyline(geo::polyline const& polyline) {
           static_cast<std::int64_t>(polyline.size())};
 }
 
+api::EncodedPolyline empty_polyline() {
+  return api::EncodedPolyline{.points_ = "", .precision_ = 6, .length_ = 0};
+}
+
 template api::EncodedPolyline to_polyline<5>(geo::polyline const&);
 template api::EncodedPolyline to_polyline<6>(geo::polyline const&);
 template api::EncodedPolyline to_polyline<7>(geo::polyline const&);

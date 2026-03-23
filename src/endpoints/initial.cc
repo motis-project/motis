@@ -62,6 +62,7 @@ api::initial_response initial::operator()(boost::urls::url_view const&) const {
       .lon_ = center.lng_,
       .zoom_ = static_cast<double>(zoom),
       .serverConfig_ = api::ServerConfig{
+          .motisVersion_ = std::string{motis_version_},
           .hasElevation_ = config_.get_street_routing()
                                .transform([](config::street_routing const& x) {
                                  return x.elevation_data_dir_.has_value();

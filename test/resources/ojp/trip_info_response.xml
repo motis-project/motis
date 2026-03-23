@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="utf-8"?>
+<OJP xmlns:siri="http://www.siri.org.uk/siri" xmlns="http://www.vdv.de/ojp" version="2.0">
+  <OJPResponse>
+    <siri:ServiceDelivery>
+      <siri:ResponseTimestamp>NOW</siri:ResponseTimestamp>
+      <siri:ProducerRef>MOTIS</siri:ProducerRef>
+      <siri:ResponseMessageIdentifier>MSG</siri:ResponseMessageIdentifier>
+      <OJPTripInfoDelivery>
+        <siri:ResponseTimestamp>NOW</siri:ResponseTimestamp>
+        <siri:DefaultLanguage>de</siri:DefaultLanguage>
+        <TripInfoResponseContext>
+          <Places>
+            <Place>
+              <StopPlace>
+                <siri:StopPlaceRef>test_DA</siri:StopPlaceRef>
+                <StopPlaceName>
+                  <Text xml:lang="de">DA Hbf</Text>
+                </StopPlaceName>
+              </StopPlace>
+              <Name>
+                <Text xml:lang="de">DA Hbf</Text>
+              </Name>
+              <GeoPosition>
+                <siri:Longitude>8.63085</siri:Longitude>
+                <siri:Latitude>49.8726</siri:Latitude>
+              </GeoPosition>
+            </Place>
+            <Place>
+              <StopPoint>
+                <siri:StopPointRef>test_DA_10</siri:StopPointRef>
+                <StopPointName>
+                  <Text xml:lang="de">DA Hbf</Text>
+                </StopPointName>
+                <ParentRef>test_DA</ParentRef>
+              </StopPoint>
+              <Name>
+                <Text xml:lang="de">DA Hbf</Text>
+              </Name>
+              <GeoPosition>
+                <siri:Longitude>8.62926</siri:Longitude>
+                <siri:Latitude>49.87336</siri:Latitude>
+              </GeoPosition>
+            </Place>
+            <Place>
+              <StopPlace>
+                <siri:StopPlaceRef>test_FFM</siri:StopPlaceRef>
+                <StopPlaceName>
+                  <Text xml:lang="de">FFM Hbf</Text>
+                </StopPlaceName>
+              </StopPlace>
+              <Name>
+                <Text xml:lang="de">FFM Hbf</Text>
+              </Name>
+              <GeoPosition>
+                <siri:Longitude>8.66341</siri:Longitude>
+                <siri:Latitude>50.10701</siri:Latitude>
+              </GeoPosition>
+            </Place>
+            <Place>
+              <StopPoint>
+                <siri:StopPointRef>test_FFM_10</siri:StopPointRef>
+                <StopPointName>
+                  <Text xml:lang="de">FFM Hbf</Text>
+                </StopPointName>
+                <ParentRef>test_FFM</ParentRef>
+              </StopPoint>
+              <Name>
+                <Text xml:lang="de">FFM Hbf</Text>
+              </Name>
+              <GeoPosition>
+                <siri:Longitude>8.66118</siri:Longitude>
+                <siri:Latitude>50.10593</siri:Latitude>
+              </GeoPosition>
+            </Place>
+          </Places>
+          <Situations />
+        </TripInfoResponseContext>
+        <TripInfoResult>
+          <PreviousCall>
+            <siri:StopPointRef>test_DA_10</siri:StopPointRef>
+            <StopPointName>
+              <Text xml:lang="de">DA Hbf</Text>
+            </StopPointName>
+            <PlannedQuay>
+              <Text xml:lang="de">10</Text>
+            </PlannedQuay>
+            <NameSuffix>
+              <Text xml:lang="de">PLATFORM_ACCESS_WITHOUT_ASSISTANCE</Text>
+            </NameSuffix>
+            <ServiceArrival />
+            <ServiceDeparture>
+              <TimetabledTime>2019-04-30T22:35:00Z</TimetabledTime>
+              <EstimatedTime>2019-04-30T22:35:00Z</EstimatedTime>
+            </ServiceDeparture>
+            <Order>1</Order>
+          </PreviousCall>
+          <PreviousCall>
+            <siri:StopPointRef>test_FFM_10</siri:StopPointRef>
+            <StopPointName>
+              <Text xml:lang="de">FFM Hbf</Text>
+            </StopPointName>
+            <PlannedQuay>
+              <Text xml:lang="de">10</Text>
+            </PlannedQuay>
+            <NameSuffix>
+              <Text xml:lang="de">PLATFORM_ACCESS_WITHOUT_ASSISTANCE</Text>
+            </NameSuffix>
+            <ServiceArrival>
+              <TimetabledTime>2019-04-30T22:45:00Z</TimetabledTime>
+              <EstimatedTime>2019-04-30T22:45:00Z</EstimatedTime>
+            </ServiceArrival>
+            <ServiceDeparture />
+            <Order>2</Order>
+          </PreviousCall>
+          <Service>
+            <OperatingDayRef>2019-05-01</OperatingDayRef>
+            <JourneyRef>20190501_00:35_test_ICE</JourneyRef>
+            <PublicCode>ICE</PublicCode>
+            <siri:LineRef>test_ICE</siri:LineRef>
+            <siri:DirectionRef>0</siri:DirectionRef>
+            <Mode>
+              <PtMode>rail</PtMode>
+              <siri:RailSubmode>highSpeedRail</siri:RailSubmode>
+            </Mode>
+            <PublishedServiceName>
+              <Text xml:lang="de">ICE</Text>
+            </PublishedServiceName>
+            <TrainNumber></TrainNumber>
+            <OriginText>
+              <Text xml:lang="de">DA Hbf</Text>
+            </OriginText>
+            <siri:OperatorRef>DB</siri:OperatorRef>
+            <DestinationStopPointRef>test_FFM_10</DestinationStopPointRef>
+            <DestinationText>
+              <Text xml:lang="de">FFM Hbf</Text>
+            </DestinationText>
+          </Service>
+          <JourneyTrack>
+            <TrackSection>
+              <TrackSectionStart>
+                <siri:StopPointRef>test_DA_10</siri:StopPointRef>
+                <Name>
+                  <Text xml:lang="de">DA Hbf</Text>
+                </Name>
+              </TrackSectionStart>
+              <TrackSectionEnd>
+                <siri:StopPointRef>test_FFM_10</siri:StopPointRef>
+                <Name>
+                  <Text xml:lang="de">FFM Hbf</Text>
+                </Name>
+              </TrackSectionEnd>
+              <LinkProjection></LinkProjection>
+              <Duration>PT10M</Duration>
+              <Length>0</Length>
+            </TrackSection>
+          </JourneyTrack>
+        </TripInfoResult>
+      </OJPTripInfoDelivery>
+    </siri:ServiceDelivery>
+  </OJPResponse>
+</OJP>

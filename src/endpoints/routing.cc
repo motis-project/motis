@@ -1,7 +1,7 @@
 #include "motis/endpoints/routing.h"
 
-#include <cmath>
 #include <algorithm>
+#include <cmath>
 
 #include "boost/thread/tss.hpp"
 
@@ -493,6 +493,7 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
     std::chrono::seconds max,
     double const max_matching_distance,
     double const fastest_direct_factor,
+    bool const detailed_legs,
     unsigned const api_version) const {
   if (!w_ || !l_) {
     return {};
@@ -506,7 +507,7 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
         *w_, *l_, e, elevations_, lang, from, to, out,
         arrive_by ? std::nullopt : std::optional{time},
         arrive_by ? std::optional{time} : std::nullopt, max_matching_distance,
-        osr_params, cache, *blocked, api_version, max);
+        osr_params, cache, *blocked, api_version, detailed_legs, max);
     if (itinerary.legs_.empty()) {
       return false;
     }
@@ -745,6 +746,8 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
           ? (*query.maxTransfers_ - (api_version < 3 ? 1 : 0))
           : n::routing::kMaxTransfers;
   auto const osr_params = get_osr_parameters(query);
+  auto const detailed_transfers =
+      query.detailedTransfers_.value_or(query.detailedLegs_);
 
   auto const [start_time, t] = get_start_time(query, tt_);
 
@@ -763,7 +766,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                              config_.get_limits()
                                  .street_routing_max_direct_seconds_}),
                 query.maxMatchingDistance_, query.fastestDirectFactor_,
-                api_version)
+                query.detailedLegs_, api_version)
           : std::pair{std::vector<api::Itinerary>{}, kInfinityDuration};
   UTL_STOP_TIMING(direct);
 
@@ -1013,8 +1016,9 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                   blocked.get(),
                   query.requireCarTransport_ && query.useRoutedTransfers_,
                   osr_params, query.pedestrianProfile_, query.elevationCosts_,
-                  query.joinInterlinedLegs_, query.detailedTransfers_,
-                  query.withFares_, query.withScheduledSkippedStops_,
+                  query.joinInterlinedLegs_, detailed_transfers,
+                  query.detailedLegs_, query.withFares_,
+                  query.withScheduledSkippedStops_,
                   config_.timetable_.value().max_matching_distance_,
                   query.maxMatchingDistance_, api_version,
                   query.ignorePreTransitRentalReturnConstraints_,
