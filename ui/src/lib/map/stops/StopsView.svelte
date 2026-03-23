@@ -133,6 +133,7 @@
 	$effect(() => {
 		if (stopsMode) {
 			updateOverlayLayers(createLayer(), layers, overlay);
+			stopsData.length = 0;
 		}
 	});
 	$effect(() => {
