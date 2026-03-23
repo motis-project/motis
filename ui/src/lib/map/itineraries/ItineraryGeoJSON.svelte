@@ -94,7 +94,7 @@
 				type={layer.type}
 				layout={layer.layout}
 				filter={['all', ['has', 'fromLevel'], layer.filter]}
-				paint={layer.paint}
+				paint={{ ...layer.paint, 'line-color': ['get', 'color'] }}
 			></Layer>
 		{/if}
 	{/each}
