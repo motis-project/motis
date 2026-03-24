@@ -37,7 +37,7 @@
 		return {
 			min,
 			max,
-			zoom,
+			zoom: zoom < 13 ? 9 : zoom,
 			grouped
 		};
 	});
