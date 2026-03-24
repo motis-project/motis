@@ -7,7 +7,6 @@
 #include <algorithm>
 #include <limits>
 #include <optional>
-#include <sstream>
 #include <string_view>
 #include <tuple>
 #include <utility>
@@ -25,6 +24,8 @@
 
 #include "nigiri/rt/frun.h"
 
+#include "net/base64.h"
+
 #include "motis/constants.h"
 #include "motis/data.h"
 #include "motis/gbfs/routing_data.h"
@@ -33,10 +34,14 @@
 #include "motis/tag_lookup.h"
 #include "motis/timetable/time_conv.h"
 
+#include "itinerary_id.pb.h"
+
 namespace n = nigiri;
 namespace json = boost::json;
 
 namespace motis {
+
+using proto_id_t = ::motis::proto::ItineraryId;
 
 constexpr auto kTimeMul = 1.0 / 60.0 * 7;
 constexpr auto kSearchRadiusMeters = 100;
@@ -46,6 +51,13 @@ constexpr auto kNonSchedAllowedDeviationSeconds = std::int64_t{15 * 60};
 constexpr auto kExactTripIdMatchAddScore = 50.0;
 constexpr auto kExactStopIdMatchAddScore = 15.0;
 constexpr auto kExactTripNameMatchAddScore = 150.0;
+
+proto_id_t decode_itinerary_id(std::string const& id) {
+  auto parsed = proto_id_t{};
+  auto const data = net::decode_base64(id);
+  utl::verify(parsed.ParseFromString(data), "Failed to decode itinerary-id");
+  return parsed;
+}
 
 double exact_stop_id_match_score(api::Place const& place,
                                  std::string_view const expected_stop_id) {
@@ -64,14 +76,23 @@ struct leg_hint {
         sched_end_{l.at("sched_end").as_int64()},
         mode_{json::value_to<api::ModeEnum>(l.at("mode"))},
         scheduled_{l.at("scheduled").as_bool()} {
-    auto const& encoded_coords = l.at("coords").as_string();
-    auto const coords = geo::decode_polyline(encoded_coords);
-    utl::verify(coords.size() == 2,
-                "itinerary id: coords must decode to exactly 2 points, got {}",
-                coords.size());
+    decode_coords(l.at("coords").as_string());
+  }
 
-    from_pos_ = coords[0];
-    to_pos_ = coords[1];
+  explicit leg_hint(proto_id_t const& l)
+      : display_name_{l.display_name()},
+        trip_id_{l.trip_id()},
+        from_stop_id_{l.from_id()},
+        to_stop_id_{l.to_id()},
+        sched_start_{l.sched_start()},
+        sched_end_{l.sched_end()},
+        mode_{json::value_to<api::ModeEnum>(json::value{l.mode()})},
+        scheduled_{l.scheduled()} {
+    utl::verify(!display_name_.empty(), "itinerary id: display_name missing");
+    utl::verify(!trip_id_.empty(), "itinerary id: trip_id missing");
+    utl::verify(!from_stop_id_.empty(), "itinerary id: from_id missing");
+    utl::verify(!to_stop_id_.empty(), "itinerary id: to_id missing");
+    decode_coords(l.coords());
   }
 
   std::string display_name_;
@@ -84,21 +105,35 @@ struct leg_hint {
   geo::latlng to_pos_;
   api::ModeEnum mode_;
   bool scheduled_;
+
+private:
+  void decode_coords(std::string_view const encoded_coords) {
+    auto const coords = geo::decode_polyline(encoded_coords);
+    utl::verify(coords.size() == 2,
+                "itinerary id: coords must decode to exactly 2 points, got {}",
+                coords.size());
+
+    from_pos_ = coords[0];
+    to_pos_ = coords[1];
+  }
 };
 
 std::string get_leg_id(api::Leg const& l) {
-  return json::serialize(json::object{
-      {"display_name", l.displayName_.value()},
-      {"trip_id", l.tripId_.value()},
-      {"from_id", l.from_.stopId_.value()},
-      {"to_id", l.to_.stopId_.value()},
-      {"coords", geo::encode_polyline(
-                     {{l.from_.lat_, l.from_.lon_}, {l.to_.lat_, l.to_.lon_}})},
-      {"sched_start", l.scheduledStartTime_.get_unixtime_seconds()},
-      {"sched_end", l.scheduledEndTime_.get_unixtime_seconds()},
-      {"mode", json::value_from(l.mode_)},
-      {"scheduled", l.scheduled_},
-  });
+  auto id = proto_id_t{};
+  id.set_display_name(l.displayName_.value());
+  id.set_trip_id(l.tripId_.value());
+  id.set_from_id(l.from_.stopId_.value());
+  id.set_to_id(l.to_.stopId_.value());
+  id.set_coords(geo::encode_polyline(
+      {{l.from_.lat_, l.from_.lon_}, {l.to_.lat_, l.to_.lon_}}));
+  id.set_sched_start(l.scheduledStartTime_.get_unixtime_seconds());
+  id.set_sched_end(l.scheduledEndTime_.get_unixtime_seconds());
+  id.set_mode(std::string{json::value_from(l.mode_).as_string()});
+  id.set_scheduled(l.scheduled_);
+
+  auto data = std::string{};
+  utl::verify(id.SerializeToString(&data), "failed to serialize itinerary id");
+  return net::encode_base64(data);
 }
 
 api::stoptimes_response get_stop_times_in_radius(ep::stop_times const& st_ep,
@@ -305,7 +340,7 @@ api::Itinerary reconstruct_itinerary(ep::stop_times const& stop_times_ep,
                                      nigiri::shapes_storage const* shapes,
                                      rt const& rt,
                                      std::string const& id) {
-  auto const& lh = leg_hint{json::parse(id).as_object()};
+  auto const lh = leg_hint{decode_itinerary_id(id)};
   auto const get_run =
       [&]() -> std::tuple<n::rt::frun, n::stop_idx_t, n::stop_idx_t> {
     if (!lh.scheduled_) {
