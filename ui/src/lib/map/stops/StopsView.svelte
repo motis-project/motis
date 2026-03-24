@@ -106,7 +106,7 @@
 	const createLayer = () => {
 		return new IconLayer({
 			id: 'stops-view-layer',
-			beforeId: 'road-name-text',
+			beforeId: 'trips-layer',
 			data: {
 				length: stopsData.length,
 				attributes: {
@@ -118,7 +118,7 @@
 			iconAtlas: StopIcon,
 			iconMapping: IconMapping,
 			getSize: 15,
-			pickable: true,
+			pickable: stopsMode !== 'none',
 			colorFormat: 'RGB',
 			visible: stopsMode !== 'none',
 			useDevicePixels: false,
@@ -192,9 +192,6 @@
 				colors[3 * index] = color[0];
 				colors[3 * index + 1] = color[1];
 				colors[3 * index + 2] = color[2];
-				if (color[0] == 0 && color[1] == 0 && color[2] == 0) {
-					console.log(data[i].modes);
-				}
 				index++;
 			}
 			stopsData.length = index;

@@ -186,6 +186,12 @@
 	let metadata: MetaData | undefined = $state();
 
 	onMount(() => {
+		updateOverlayLayers(
+			new IconLayer({ id: 'trips-layer', beforeId: 'road-name-text' }),
+			layers,
+			overlay
+		);
+
 		worker = new Worker(new URL('tripsWorker.ts', import.meta.url), { type: 'module' });
 		worker.postMessage({ type: 'init', baseUrl: client.getConfig().baseUrl });
 		worker.onmessage = (e) => {
