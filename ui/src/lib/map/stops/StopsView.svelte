@@ -106,7 +106,7 @@
 	const createLayer = () => {
 		return new IconLayer({
 			id: 'stops-view-layer',
-			beforeId: 'trips-layer',
+			beforeId: 'road-name-text',
 			data: {
 				length: stopsData.length,
 				attributes: {
@@ -150,6 +150,8 @@
 			case 'REGIONAL_RAIL':
 			case 'RAIL':
 				return hexToRgb('#f44336');
+			case 'ODM':
+				return hexToRgb('#fdb813');
 			default:
 				return hexToRgb('#000000');
 		}
@@ -190,6 +192,9 @@
 				colors[3 * index] = color[0];
 				colors[3 * index + 1] = color[1];
 				colors[3 * index + 2] = color[2];
+				if (color[0] == 0 && color[1] == 0 && color[2] == 0) {
+					console.log(data[i].modes);
+				}
 				index++;
 			}
 			stopsData.length = index;
