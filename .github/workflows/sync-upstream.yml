@@ -1,0 +1,73 @@
+name: Sync upstream
+
+on:
+  schedule:
+    - cron: "0 6 * * 1" # Every Monday at 6am UTC
+  workflow_dispatch: # Manual trigger
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: patches
+          fetch-depth: 0 # Full history for rebase
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Fetch upstream
+        run: |
+          git remote add upstream https://github.com/motis-project/motis.git || true
+          git fetch upstream master
+
+      - name: Check if behind
+        id: check
+        run: |
+          BEHIND=$(git rev-list --count patches..upstream/master)
+          echo "behind=$BEHIND" >> "$GITHUB_OUTPUT"
+          echo "Patches branch is $BEHIND commits behind upstream/master"
+
+      - name: Rebase patches onto upstream
+        if: steps.check.outputs.behind != '0'
+        id: rebase
+        run: |
+          git rebase upstream/master
+        continue-on-error: true
+
+      - name: Push if rebase succeeded
+        if: steps.check.outputs.behind != '0' && steps.rebase.outcome == 'success'
+        run: |
+          git push --force-with-lease origin patches
+          echo "Successfully rebased patches onto upstream/master (${{ steps.check.outputs.behind }} new commits)"
+
+      - name: Open issue if rebase failed
+        if: steps.check.outputs.behind != '0' && steps.rebase.outcome == 'failure'
+        run: |
+          git rebase --abort
+          gh issue create \
+            --title "Upstream sync failed — rebase conflict" \
+            --body "$(cat <<'BODY'
+          Automatic rebase of \`patches\` onto \`upstream/master\` failed due to conflicts.
+
+          **Upstream is ${{ steps.check.outputs.behind }} commits ahead.**
+
+          To resolve manually:
+          ```bash
+          cd motis
+          git fetch upstream
+          git rebase upstream/master patches
+          # resolve conflicts
+          git push --force-with-lease origin patches
+          ```
+          BODY
+          )" \
+            --label "bug"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
