@@ -45,7 +45,7 @@ export const createStopIcon = (size: number) => {
 	const radius = size * 0.4;
 	const border = (2 / 64) * size;
 
-	ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+	ctx.fillStyle = 'rgba(0, 0, 0, 0.9)';
 	ctx.beginPath();
 	ctx.arc(center, center, radius, 0, Math.PI * 2);
 	ctx.fill();

@@ -5,11 +5,12 @@
 	import { IconLayer } from '@deck.gl/layers';
 	import maplibregl, { type LngLatLike } from 'maplibre-gl';
 	import { onMount, untrack } from 'svelte';
-	import { stops } from '@motis-project/motis-client';
+	import { stops, type Mode } from '@motis-project/motis-client';
 	import { type PickingInfo } from '@deck.gl/core';
 	import { onClickStop } from '$lib/utils';
 	import { updateOverlayLayers } from '$lib/updateOverlay';
 	import { createStopIcon } from '../createIcon';
+	import { hexToRgb } from '$lib/Color';
 
 	let {
 		map,
@@ -44,10 +45,12 @@
 
 	//DATA
 	const STOPS_NUM = 2048;
+	const colors = new Uint8Array(STOPS_NUM * 3);
 	const positions = new Float64Array(STOPS_NUM * 2);
 	const stopsData = {
 		length: STOPS_NUM,
-		positions
+		positions,
+		colors
 	};
 	type MetaData = {
 		name: string;
@@ -68,7 +71,7 @@
 			height: ICON_SIZE,
 			anchorX: ICON_SIZE / 2,
 			anchorY: ICON_SIZE / 2,
-			mask: false
+			mask: true
 		}
 	};
 
@@ -107,7 +110,8 @@
 			data: {
 				length: stopsData.length,
 				attributes: {
-					getPosition: { value: positions, size: 2 }
+					getPosition: { value: positions, size: 2 },
+					getColor: { value: colors, size: 3, normalized: true }
 				}
 			},
 			// @ts-expect-error: canvas element seems to work fine
@@ -115,8 +119,10 @@
 			iconMapping: IconMapping,
 			getSize: 15,
 			pickable: true,
+			colorFormat: 'RGB',
 			visible: stopsMode !== 'none',
 			useDevicePixels: false,
+			autoHighlight: true,
 			parameters: { depthTest: false },
 			getIcon: (_) => 'marker',
 			onHover,
@@ -124,6 +130,30 @@
 		});
 	};
 
+	const getModeColor = (m: Mode): [number, number, number, number] => {
+		switch (m) {
+			case 'BUS':
+				return hexToRgb('#ff9800');
+			case 'COACH':
+				return hexToRgb('#9ccc65');
+			case 'TRAM':
+				return hexToRgb('#ebe717');
+			case 'SUBURBAN':
+				return hexToRgb('#4caf50');
+			case 'SUBWAY':
+				return hexToRgb('#3f51b5');
+			case 'HIGHSPEED_RAIL':
+				return hexToRgb('#9c27b0');
+			case 'LONG_DISTANCE':
+				return hexToRgb('#e91e63');
+			case 'REGIONAL_FAST_RAIL':
+			case 'REGIONAL_RAIL':
+			case 'RAIL':
+				return hexToRgb('#f44336');
+			default:
+				return hexToRgb('#000000');
+		}
+	};
 	//SETUP
 	onMount(() => {
 		updateOverlayLayers(createLayer(), layers, overlay);
@@ -153,8 +183,13 @@
 					stopId: data[i].stopId,
 					track: data[i].track
 				};
+				const mode = data[i].modes ? data[i].modes![0] : undefined;
+				const color = mode ? getModeColor(mode) : hexToRgb('#000000');
 				positions[2 * index] = data[i].lon;
 				positions[2 * index + 1] = data[i].lat;
+				colors[3 * index] = color[0];
+				colors[3 * index + 1] = color[1];
+				colors[3 * index + 2] = color[2];
 				index++;
 			}
 			stopsData.length = index;
