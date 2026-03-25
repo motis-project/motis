@@ -41,7 +41,8 @@ namespace json = boost::json;
 
 namespace motis {
 
-using proto_id_t = ::motis::proto::ItineraryId;
+using proto_id_t = ::motis::proto::SingleLegItineraryId;
+using proto_leg_t = ::motis::proto::LegId;
 
 constexpr auto kTimeMul = 1.0 / 60.0 * 7;
 constexpr auto kSearchRadiusMeters = 100;
@@ -57,6 +58,16 @@ proto_id_t decode_itinerary_id(std::string const& id) {
   auto const data = net::decode_base64(id);
   utl::verify(parsed.ParseFromString(data), "Failed to decode itinerary-id");
   return parsed;
+}
+
+n::lang_t lang_from_str(std::string const& lang) {
+  return lang.empty() ? n::lang_t{} : n::lang_t{std::vector<std::string>{lang}};
+}
+
+void encode_lang(proto_id_t& id, n::lang_t const& lang) {
+  if (lang.has_value() && lang->size() > 0) {
+    id.set_lang(lang->front());
+  }
 }
 
 double exact_stop_id_match_score(api::Place const& place,
@@ -79,7 +90,7 @@ struct leg_hint {
     decode_coords(l.at("coords").as_string());
   }
 
-  explicit leg_hint(proto_id_t const& l)
+  explicit leg_hint(proto_leg_t const& l)
       : display_name_{l.display_name()},
         trip_id_{l.trip_id()},
         from_stop_id_{l.from_id()},
@@ -118,8 +129,8 @@ private:
   }
 };
 
-std::string get_leg_id(api::Leg const& l) {
-  auto id = proto_id_t{};
+proto_leg_t get_leg_id_proto(api::Leg const& l) {
+  auto id = proto_leg_t{};
   id.set_display_name(l.displayName_.value());
   id.set_trip_id(l.tripId_.value());
   id.set_from_id(l.from_.stopId_.value());
@@ -130,6 +141,13 @@ std::string get_leg_id(api::Leg const& l) {
   id.set_sched_end(l.scheduledEndTime_.get_unixtime_seconds());
   id.set_mode(std::string{json::value_from(l.mode_).as_string()});
   id.set_scheduled(l.scheduled_);
+  return id;
+}
+
+std::string get_single_leg_id(api::Leg const& l, n::lang_t const& lang) {
+  auto id = proto_id_t{};
+  encode_lang(id, lang);
+  id.mutable_leg()->CopyFrom(get_leg_id_proto(l));
 
   auto data = std::string{};
   utl::verify(id.SerializeToString(&data), "failed to serialize itinerary id");
@@ -142,13 +160,21 @@ api::stoptimes_response get_stop_times_in_radius(ep::stop_times const& st_ep,
                                                  api::ModeEnum const mode,
                                                  std::int64_t const window,
                                                  int const radius_m,
-                                                 bool const arrive_by) {
-  return st_ep(boost::urls::url_view{fmt::format(
-      "?center={},{}&time={:%FT%TZ}&arriveBy={}&direction=LATER&window={}"
-      "&radius={}&exactRadius=true&fetchStops=true&mode={}",
-      center.lat_, center.lng_,
-      std::chrono::sys_seconds{std::chrono::seconds{sched_start}},
-      arrive_by ? "true" : "false", window, radius_m, fmt::streamed(mode))});
+                                                 bool const arrive_by,
+                                                 n::lang_t const& lang) {
+  auto query = api::stoptimes_params{};
+  query.center_ = fmt::format("{},{}", center.lat_, center.lng_);
+  query.time_ = openapi::date_time_t{
+      std::chrono::sys_seconds{std::chrono::seconds{sched_start}}};
+  query.arriveBy_ = arrive_by;
+  query.direction_ = api::directionEnum::LATER;
+  query.window_ = window;
+  query.radius_ = radius_m;
+  query.exactRadius_ = true;
+  query.fetchStops_ = true;
+  query.mode_ = {mode};
+  query.language_ = lang;
+  return st_ep(query.to_url("?"));
 }
 
 n::rt::frun make_frun_from_stoptime(tag_lookup const& tags,
@@ -217,7 +243,8 @@ api::Itinerary build_itinerary_from_frun(
     std::tuple<n::rt::frun, n::stop_idx_t, n::stop_idx_t> const& run,
     ep::stop_times const& stop_times,
     n::shapes_storage const* shapes,
-    n::rt_timetable const* rtt) {
+    n::rt_timetable const* rtt,
+    n::lang_t const& lang) {
   auto const& [fr, from_idx, to_idx] = run;
   utl::verify(fr.stop_range_.contains(from_idx), "from_idx={} out of range {}",
               from_idx, fr.stop_range_);
@@ -262,7 +289,7 @@ api::Itinerary build_itinerary_from_frun(
       api::ElevationCostsEnum::NONE, join_interlined_legs, detailed_transfers,
       with_fares, with_scheduled_skipped_stops,
       stop_times.config_.timetable_.value().max_matching_distance_,
-      kMaxMatchingDistance, api_version, false, false, std::nullopt);
+      kMaxMatchingDistance, api_version, false, false, lang);
 }
 
 struct id_score {
@@ -340,7 +367,11 @@ api::Itinerary reconstruct_itinerary(ep::stop_times const& stop_times_ep,
                                      nigiri::shapes_storage const* shapes,
                                      rt const& rt,
                                      std::string const& id) {
-  auto const lh = leg_hint{decode_itinerary_id(id)};
+  auto const parsed_id = decode_itinerary_id(id);
+  utl::verify(parsed_id.has_leg(),
+              "reconstruct_itinerary: itinerary id is missing leg");
+  auto const lang = lang_from_str(parsed_id.lang());
+  auto const lh = leg_hint{parsed_id.leg()};
   auto const get_run =
       [&]() -> std::tuple<n::rt::frun, n::stop_idx_t, n::stop_idx_t> {
     if (!lh.scheduled_) {
@@ -374,10 +405,10 @@ api::Itinerary reconstruct_itinerary(ep::stop_times const& stop_times_ep,
     } else {
       auto const from_st_res = get_stop_times_in_radius(
           stop_times_ep, lh.from_pos_, lh.sched_start_ - kLookbackSeconds,
-          lh.mode_, kLookbackSeconds * 2, kSearchRadiusMeters, false);
+          lh.mode_, kLookbackSeconds * 2, kSearchRadiusMeters, false, lang);
       auto const to_st_res = get_stop_times_in_radius(
           stop_times_ep, lh.to_pos_, lh.sched_end_ - kLookbackSeconds, lh.mode_,
-          kLookbackSeconds * 2, kSearchRadiusMeters, true);
+          kLookbackSeconds * 2, kSearchRadiusMeters, true, lang);
 
       auto const [best_trip_id, best_from_to] =
           get_best_candidate(from_st_res, to_st_res, lh);
@@ -403,7 +434,7 @@ api::Itinerary reconstruct_itinerary(ep::stop_times const& stop_times_ep,
   };
 
   auto res = build_itinerary_from_frun(get_run(), stop_times_ep, shapes,
-                                       rt.rtt_.get());
+                                       rt.rtt_.get(), lang);
   res.id_ = id;
   return res;
 }

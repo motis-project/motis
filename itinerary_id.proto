@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package motis.proto;
 
-message ItineraryId {
+message LegId {
   string display_name = 1;
   string trip_id = 2;
   string from_id = 3;
@@ -12,4 +12,9 @@ message ItineraryId {
   int64 sched_end = 7;
   string mode = 8;
   bool scheduled = 9;
+}
+
+message SingleLegItineraryId {
+  LegId leg = 1;
+  string lang = 2;
 }

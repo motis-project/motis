@@ -664,7 +664,7 @@ api::Itinerary journey_to_response(
 
   if (itinerary.legs_.size() == 1 &&
       itinerary.legs_.front().tripId_.has_value()) {
-    itinerary.id_ = get_leg_id(itinerary.legs_.at(0));
+    itinerary.id_ = get_single_leg_id(itinerary.legs_.at(0), lang);
   }
 
   return itinerary;

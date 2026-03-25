@@ -28,7 +28,7 @@ namespace fs = std::filesystem;
 namespace n = nigiri;
 
 std::string generate_itinerary_id(api::Itinerary const& x) {
-  return get_leg_id(x.legs_.at(0));
+  return get_single_leg_id(x.legs_.at(0), n::lang_t{});
 }
 
 constexpr auto kSimpleGtfsTemplate = R"(
