@@ -60,6 +60,8 @@
 	import { LEVEL_MIN_ZOOM } from '$lib/constants';
 	import StopGeoJSON from '$lib/map/stops/StopsGeoJSON.svelte';
 	import RailViz from '$lib/RailViz.svelte';
+	import { getDefaultOptions, loadOptions, saveOptions } from '$lib/storage/optionsStorage';
+	import type { SavedOptions } from '$lib/storage/types';
 
 	const urlParams = browser ? new URLSearchParams(window.location.search) : undefined;
 
@@ -210,9 +212,10 @@
 	let center = $state.raw<[number, number]>(
 		savedOptions?.center ?? [2.258882912876089, 48.72559118651327]
 	);
+	/** Set only after an explicit map geolocation (not on page load); drives strong placeBias for search. */
 	let userLocation = $state<[number, number] | undefined>(undefined);
 	const geocodingBiasPlace = $derived(userLocation ?? center);
-	const geocodingBiasPlaceBias = $derived(userLocation ? 5 : undefined);
+	const geocodingBiasPlaceBias = $derived(userLocation !== undefined ? 5 : undefined);
 	let level = $state(savedOptions?.level ?? 0);
 	let zoom = $state(savedOptions?.zoom ?? 15);
 	let bounds = $state<maplibregl.LngLatBoundsLike>();
@@ -242,15 +245,6 @@
 	};
 
 	onMount(async () => {
-		if (browser && navigator.geolocation) {
-			navigator.geolocation.getCurrentPosition(
-				(pos) => {
-					userLocation = [pos.coords.longitude, pos.coords.latitude];
-				},
-				(err) => console.warn('Geolocation error:', err),
-				{ enableHighAccuracy: true }
-			);
-		}
 		initial().then((d) => {
 			if (d.response.headers.has('Link')) {
 				dataAttributionLink = d.response.headers
@@ -767,9 +761,22 @@
 	};
 
 	$effect(() => {
-		if (map) {
-			map.addControl(geolocate);
+		if (!map) {
+			return;
 		}
+		map.addControl(geolocate);
+		const onGeolocate = (e: { coords: { longitude: number; latitude: number } }) => {
+			userLocation = [e.coords.longitude, e.coords.latitude];
+		};
+		const onTrackEnd = () => {
+			userLocation = undefined;
+		};
+		geolocate.on('geolocate', onGeolocate);
+		geolocate.on('trackuserlocationend', onTrackEnd);
+		return () => {
+			geolocate.off('geolocate', onGeolocate);
+			geolocate.off('trackuserlocationend', onTrackEnd);
+		};
 	});
 
 	$effect(() => {

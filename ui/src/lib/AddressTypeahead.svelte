@@ -89,25 +89,40 @@
 			return;
 		}
 
-		const pos = place ? maplibregl.LngLat.convert(place) : undefined;
-		const biasPlace = pos ? { place: `${pos.lat},${pos.lng}` } : {};
-		const isBiasEnabled = placeBias !== undefined;
-		const effectivePlaceBias: number | undefined = isBiasEnabled ? 5 : undefined;
-
+		/*
+		 * Default: same idea as transitous.org SearchBox — only `text` (plus language/mode).
+		 * Send `place` + `placeBias` only after explicit geolocation (parent sets placeBias).
+		 */
 		const baseQuery = {
-			...biasPlace,
 			text: inputValue,
 			language: [language],
 			mode: transitModes
 		};
 
-		const { data: matches, error } = await geocode({
-			query: {
+		let query:
+			| { text: string; language: string[]; mode: Mode[] | undefined; type: LocationType | undefined }
+			| {
+					text: string;
+					language: string[];
+					mode: Mode[] | undefined;
+					place: string;
+					placeBias: number;
+					type: LocationType | undefined;
+			  };
+
+		if (place !== undefined && placeBias !== undefined) {
+			const pos = maplibregl.LngLat.convert(place);
+			query = {
 				...baseQuery,
-				placeBias: effectivePlaceBias,
+				place: `${pos.lat},${pos.lng}`,
+				placeBias,
 				type
-			}
-		});
+			};
+		} else {
+			query = { ...baseQuery, type };
+		}
+
+		const { data: matches, error } = await geocode({ query });
 		if (error) {
 			console.error('TYPEAHEAD ERROR: ', error);
 			return;

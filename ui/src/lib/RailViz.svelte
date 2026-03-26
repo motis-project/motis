@@ -116,6 +116,37 @@
 			mask: true
 		}
 	};
+
+	/**
+	 * Interleaved deck.gl layers require a real `beforeId`. The bundled MOTIS style defines
+	 * `road-name-text`; external styles (Mapbox, MapTiler, OMT, etc.) use other ids.
+	 */
+	const TRIPS_ICON_BEFORE_LAYER_IDS: readonly string[] = [
+		'road-name-text',
+		'transportation_name',
+		'transportation-name',
+		'road-label',
+		'road_major_label',
+		'road-name',
+		'street-name',
+		'street_name',
+		'highway-name-major',
+		'highway-name-minor',
+		'water-name',
+		'water_name',
+		'place_label_city',
+		'place-label',
+		'poi_label'
+	];
+
+	function resolveTripIconBeforeId(mapInstance: maplibregl.Map | undefined): string | undefined {
+		if (!mapInstance?.isStyleLoaded()) return undefined;
+		for (const id of TRIPS_ICON_BEFORE_LAYER_IDS) {
+			if (mapInstance.getLayer(id)) return id;
+		}
+		return undefined;
+	}
+
 	const createLayer = () => {
 		if (!DATA.positions || DATA.positions.byteLength === 0) return;
 		return new IconLayer({
@@ -128,7 +159,7 @@
 					getColor: { value: DATA.colors, size: 3, normalized: true }
 				}
 			},
-			beforeId: 'road-name-text',
+			beforeId: resolveTripIconBeforeId(map),
 			// @ts-expect-error: canvas element seems to work fine
 			iconAtlas: TripIcon,
 			iconMapping: IconMapping,
@@ -201,7 +232,8 @@
 					clickRequested = -1;
 				}
 			}
-			overlay.setProps({ layers: [createLayer()] });
+			const tripLayer = createLayer();
+			overlay.setProps({ layers: tripLayer !== undefined ? [tripLayer] : [] });
 			if (canceled) {
 				cancelAnimationFrame(animationId);
 			} else {
@@ -215,6 +247,21 @@
 	$effect(() => {
 		if (!map || !overlay) return;
 		map.addControl(overlay);
+	});
+	/** deck.gl keeps `beforeId` from the last `setProps`; after a style swap it must be recomputed. */
+	$effect(() => {
+		if (!map || !overlay) return;
+		const resyncTripsLayer = (): void => {
+			const layer = createLayer();
+			overlay.setProps({ layers: layer !== undefined ? [layer] : [] });
+		};
+		map.on('style.load', resyncTripsLayer);
+		if (map.isStyleLoaded()) {
+			queueMicrotask(resyncTripsLayer);
+		}
+		return () => {
+			map.off('style.load', resyncTripsLayer);
+		};
 	});
 	onDestroy(() => {
 		if (animationId) cancelAnimationFrame(animationId);

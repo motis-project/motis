@@ -11,12 +11,7 @@
 	import type { Position } from 'geojson';
 	import maplibregl from 'maplibre-gl';
 	import type { FeatureCollection, LineString, Point } from 'geojson';
-	import {
-		routes,
-		type Leg,
-		type RouteInfo,
-		type RoutePolyline
-	} from '@motis-project/motis-client';
+	import type { Leg, RouteInfo, RoutePolyline, RoutesResponse, RoutesError } from '@motis-project/motis-client';
 	import { getDecorativeColors } from '$lib/map/colors';
 	import { t } from '$lib/i18n/translation';
 	import { client } from '@motis-project/motis-client';
@@ -35,7 +30,7 @@
 
 	const FETCH_PADDING_RATIO = 0.5;
 
-	type RoutesPayload = Awaited<ReturnType<typeof routes>>['data'];
+	type RoutesPayload = RoutesResponse;
 
 	let routesData = $state<RoutesPayload | null>(null);
 	let loadedBounds = $state<maplibregl.LngLatBounds | null>(null);
@@ -113,7 +108,13 @@
 			const max = lngLatToStr(requestBounds.getNorthWest());
 			const min = lngLatToStr(requestBounds.getSouthEast());
 			console.debug('[Routes] requesting routes', { min, max, zoom });
-			return { ...(await routes({ query: { max, min, zoom } })), requestBounds };
+			return {
+				...(await client.get<RoutesResponse, RoutesError>({
+					url: '/api/experimental/map/routes',
+					query: { max, min, zoom }
+				})),
+				requestBounds
+			};
 		};
 
 		let { data, error, response, requestBounds } = await requestWithBounds(expandedBounds);
