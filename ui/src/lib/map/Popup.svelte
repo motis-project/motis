@@ -2,16 +2,31 @@
 	import maplibregl from 'maplibre-gl';
 	import { getContext, onDestroy, type Snippet } from 'svelte';
 
+	type PopupSnapshot = {
+		lngLat: maplibregl.LngLatLike;
+		event: maplibregl.MapMouseEvent;
+		features?: maplibregl.MapGeoJSONFeature[];
+	};
+
+	type PopupController = {
+		open?: (snapshot: PopupSnapshot) => void;
+		close?: () => void;
+		getSnapshot?: () => PopupSnapshot | null;
+		onSnapshotChange?: (snapshot: PopupSnapshot | null) => void;
+	};
+
 	let {
 		children,
 		class: className,
-		trigger
+		trigger,
+		controller
 	}: {
 		children?: Snippet<
 			[maplibregl.MapMouseEvent, () => void, maplibregl.MapGeoJSONFeature[] | undefined]
 		>;
 		class?: string;
 		trigger: 'click' | 'contextmenu';
+		controller?: PopupController;
 	} = $props();
 
 	let ctx: { map: maplibregl.Map | null } = getContext('map'); // from Map component
@@ -22,28 +37,42 @@
 	let event = $state.raw<maplibregl.MapMouseEvent>();
 	let features = $state.raw<maplibregl.MapGeoJSONFeature[]>();
 
-	const close = () => {
-		if (popup) {
-			popup.remove();
-			popup = undefined;
-		}
+	const clearPopupState = () => {
+		popup = undefined;
+		event = undefined;
+		features = undefined;
+		controller?.onSnapshotChange?.(null);
 	};
 
-	const onTrigger = (e: maplibregl.MapLayerMouseEvent) => {
-		if (ctx.map) {
-			if (popup) {
-				popup.remove();
-			}
-			popup = new maplibregl.Popup({
-				anchor: 'top-left',
-				closeButton: false,
-				maxWidth: 'none'
-			});
-			popup.setLngLat(e.lngLat);
-			popup.addTo(ctx.map!);
-			event = e;
-			features = e.features;
+	const openPopup = (snapshot: PopupSnapshot) => {
+		if (!ctx.map) {
+			return;
 		}
+		if (popup) {
+			popup.remove();
+		}
+		const nextPopup = new maplibregl.Popup({
+			anchor: 'top-left',
+			closeButton: false,
+			maxWidth: 'none'
+		});
+		nextPopup.on('close', () => {
+			if (popup === nextPopup) {
+				clearPopupState();
+			}
+		});
+		nextPopup.setLngLat(snapshot.lngLat);
+		nextPopup.addTo(ctx.map);
+		popup = nextPopup;
+		event = snapshot.event;
+		features = snapshot.features;
+		controller?.onSnapshotChange?.(snapshot);
+	};
+
+	const close = () => popup?.remove();
+
+	const onTrigger = (e: maplibregl.MapLayerMouseEvent) => {
+		openPopup({ lngLat: e.lngLat, event: e, features: e.features });
 	};
 
 	const onMouseEnter = () => {
@@ -80,10 +109,27 @@
 		}
 	});
 
+	$effect(() => {
+		if (controller) {
+			controller.open = openPopup;
+			controller.close = close;
+			controller.getSnapshot = () => {
+				if (!popup || !event) {
+					return null;
+				}
+				return {
+					lngLat: popup.getLngLat(),
+					event,
+					features
+				};
+			};
+		}
+	});
+
 	onDestroy(() => {
 		if (popup) {
 			popup.remove();
-			popup = undefined;
+			clearPopupState();
 		}
 		if (ctx.map && initialized) {
 			if (layer) {

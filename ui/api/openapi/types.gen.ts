@@ -2247,6 +2247,14 @@ export type PlanData = {
          */
         preTransitRentalProviders?: Array<(string)>;
         /**
+         * Experimental. Search radius in meters around the `fromPlace` / `toPlace` coordinates.
+         * When set and the place is given as coordinates, all transit stops within
+         * this radius are used as start/end points with zero pre-transit/post-transit time.
+         * Works without OSM/street routing data loaded.
+         *
+         */
+        radius?: number;
+        /**
          * Optional. Default is `false`.
          *
          * If set to `true`, all used transit trips are required to allow bike carriage.
@@ -3274,6 +3282,33 @@ export type RoutesResponse = ({
 });
 
 export type RoutesError = (Error);
+
+export type RouteDetailsData = {
+    query: {
+        /**
+         * language tags as used in OpenStreetMap / GTFS
+         * (usually BCP-47 / ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
+         *
+         */
+        language?: Array<(string)>;
+        /**
+         * Internal route index
+         */
+        routeIdx: number;
+    };
+};
+
+export type RouteDetailsResponse = ({
+    routes: Array<RouteInfo>;
+    polylines: Array<RoutePolyline>;
+    stops: Array<Place>;
+    /**
+     * Always false for this endpoint.
+     */
+    zoomFiltered: boolean;
+});
+
+export type RouteDetailsError = (Error);
 
 export type RentalsData = {
     query?: {
