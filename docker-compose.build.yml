@@ -9,14 +9,45 @@ services:
         MOTIS_GID: "${MOTIS_GID:-1000}"
     user: "${MOTIS_UID:-1000}:${MOTIS_GID:-1000}"
     working_dir: /work
-    environment:
-      SSH_AUTH_SOCK: /ssh-agent
     volumes:
       - .:/work
-      - ${SSH_AUTH_SOCK:-/tmp/ssh-agent}:/ssh-agent
-      - ${HOME}/.ssh/known_hosts:/home/builder/.ssh/known_hosts:ro
+      # Use local nigiri checkout from sibling repository.
+      - ../nigiri:/work/deps/nigiri
     command: >
-      bash -lc "mkdir -p /home/builder/.ssh
-      && (ssh-keyscan github.com >> /home/builder/.ssh/known_hosts 2>/dev/null || true)
-      && cmake --fresh -S . -B build/docker-relwithdebinfo -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DNO_BUILDCACHE=ON -DUSE_RES_TZ_DB=OFF -DUSE_SYSTEM_TZ_DB=ON
+      bash -lc "cmake --fresh -S . -B build/docker-relwithdebinfo -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DNO_BUILDCACHE=ON -DUSE_RES_TZ_DB=OFF -DUSE_SYSTEM_TZ_DB=ON
       && cmake --build build/docker-relwithdebinfo -- -j$(nproc)"
+
+  motis-debug:
+    platform: linux/amd64
+    build:
+      context: .
+      dockerfile: Dockerfile.build
+      args:
+        MOTIS_UID: "${MOTIS_UID:-1000}"
+        MOTIS_GID: "${MOTIS_GID:-1000}"
+    user: "${MOTIS_UID:-1000}:${MOTIS_GID:-1000}"
+    working_dir: /work
+    depends_on:
+      - motis-build
+    ports:
+      - "8080:8080"
+      - "2345:2345"
+    cap_add:
+      - SYS_PTRACE
+    security_opt:
+      - seccomp=unconfined
+    stdin_open: true
+    tty: true
+    volumes:
+      - .:/work
+      # Use local nigiri checkout from sibling repository.
+      - ../nigiri:/work/deps/nigiri
+      # Reuse otp-tools MOTIS inputs/outputs for local debugging.
+      - ../otp-tools/fr-ch/motis/osm:/osm
+      - ../otp-tools/fr-ch/motis/gtfs:/gtfs
+      - ../otp-tools/fr-ch/motis/data:/data
+    command: >
+      bash -lc "if [ ! -x /work/build/docker-relwithdebinfo/motis ]; then
+      echo 'Missing /work/build/docker-relwithdebinfo/motis. Run motis-build first.' >&2; exit 1;
+      fi
+      && gdbserver 0.0.0.0:2345 /work/build/docker-relwithdebinfo/motis server /data/config.yml"

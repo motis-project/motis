@@ -9,6 +9,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     cmake \
     curl \
+    gdb \
+    gdbserver \
     git \
     libc6-dev \
     ninja-build \

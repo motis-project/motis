@@ -70,6 +70,27 @@ The server will be available at `http://localhost:8080`. Data is persisted in th
 
 3. **Stop**: `docker compose down`
 
+## Local Debugging with otp-tools Data
+
+If you keep `motis`, `nigiri`, and `otp-tools` as sibling directories:
+
+- `../nigiri` is mounted into the build container as `/work/deps/nigiri`
+- `../otp-tools/fr-ch/motis/{osm,gtfs,data}` are mounted into the debug container as `/osm`, `/gtfs`, `/data`
+
+This allows you to debug with your local sources and your existing `otp-tools` config/data.
+
+```bash
+# 1) Build binary with local motis + local nigiri
+docker compose -f docker-compose.build.yml run --rm motis-build
+
+# 2) Start MOTIS under gdbserver (uses /data/config.yml from otp-tools)
+docker compose -f docker-compose.build.yml run --rm --service-ports motis-debug
+
+# 3) Attach from host
+gdb build/docker-relwithdebinfo/motis
+(gdb) target remote :2345
+```
+
 ## Notes
 
 - The build disables `buildcache` by default and uses the system timezone
