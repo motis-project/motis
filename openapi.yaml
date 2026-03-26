@@ -2022,6 +2022,36 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+    post:
+      tags:
+        - timetable
+      summary: Reconstruct an itinerary from a protobuf-JSON itinerary identifier.
+      operationId: refreshItineraryPost
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SingleLegItineraryIdProto'
+      responses:
+        '200':
+          description: reconstructed itinerary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Itinerary'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
   /api/v5/stoptimes:
     get:
@@ -4350,6 +4380,53 @@ components:
               type: array
               items:
                 $ref: '#/components/schemas/FareProduct'
+
+    LegIdProto:
+      type: object
+      required:
+        - displayName
+        - tripId
+        - fromId
+        - toId
+        - coords
+        - schedStart
+        - schedEnd
+        - mode
+        - scheduled
+      properties:
+        displayName:
+          type: string
+        tripId:
+          type: string
+        fromId:
+          type: string
+        toId:
+          type: string
+        coords:
+          type: string
+          description: "Encoded polyline with exactly two points: from and to."
+        schedStart:
+          type: integer
+          format: int64
+          description: Scheduled departure time as a Unix timestamp in seconds.
+        schedEnd:
+          type: integer
+          format: int64
+          description: Scheduled arrival time as a Unix timestamp in seconds.
+        mode:
+          $ref: '#/components/schemas/Mode'
+        scheduled:
+          type: boolean
+
+    SingleLegItineraryIdProto:
+      type: object
+      required:
+        - leg
+      properties:
+        leg:
+          $ref: '#/components/schemas/LegIdProto'
+        lang:
+          type: string
 
     Itinerary:
       type: object
