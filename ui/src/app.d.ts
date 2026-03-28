@@ -4,6 +4,14 @@ import type { Itinerary } from '@motis-project/motis-client';
 
 // for information about these interfaces
 declare global {
+	interface Window {
+		/** Injected at container startup (Docker) or left empty in dev (see VITE_*). */
+		__MOTIS_CONFIG__?: {
+			maptilerApiKey?: string;
+			maptilerStyle?: string;
+		};
+	}
+
 	namespace App {
 		// interface Error {}
 		// interface Locals {}

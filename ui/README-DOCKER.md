@@ -35,17 +35,6 @@ cd ui
 
 Le script construit l'image et l'exporte dans un fichier `.tar` pour faciliter le transfert.
 
-## Variables d'environnement (optionnel)
-
-Vous pouvez passer des variables d'environnement au build pour configurer MapTiler :
-
-```bash
-docker build \
-  --build-arg VITE_MAPTILER_API_KEY=votre_cle \
-  --build-arg VITE_MAPTILER_STYLE=openstreetmap \
-  -t motis-ui:latest .
-```
-
 ## Export de l'image
 
 Pour exporter l'image dans un fichier `.tar` (utile pour Portainer) :
@@ -105,15 +94,18 @@ docker run -d \
 
 Nginx proxy automatiquement toutes les requêtes `/api/` et `/tiles/` vers le backend MOTIS, ce qui évite les problèmes CORS. Les headers CORS sont automatiquement ajoutés par nginx.
 
-### Configuration MapTiler
+### Configuration MapTiler (runtime)
 
-Pour MapTiler, les variables doivent être définies au moment du build (via `--build-arg`), car c'est une application statique :
+La clé n’est plus intégrée au bundle : le script d’entrée génère `runtime-config.js` à partir des variables du conteneur. Utilisez `MAPTILER_API_KEY` et `MAPTILER_STYLE` (ou les alias `VITE_MAPTILER_*`).
 
 ```bash
-docker build \
-  --build-arg VITE_MAPTILER_API_KEY=votre_cle \
-  --build-arg VITE_MAPTILER_STYLE=openstreetmap \
-  -t motis-ui:latest .
+docker run -d \
+  --name motis-ui \
+  -p 8080:80 \
+  -e MOTIS_BACKEND_URL=http://votre-serveur-motis:8090 \
+  -e MAPTILER_API_KEY=votre_cle \
+  -e MAPTILER_STYLE=openstreetmap \
+  motis-ui:latest
 ```
 
 ## Dépannage

@@ -26,27 +26,18 @@ if [ ! -f "openapi.yaml" ]; then
     fi
 fi
 
-# Charger les variables d'environnement depuis .env si le fichier existe
-BUILD_ARGS=""
+# Charger .env pour MOTIS_BACKEND_URL et variables runtime MapTiler (compose)
 if [ -f ".env" ]; then
     echo "📋 Chargement des variables d'environnement depuis .env..."
-    # Source le fichier .env et extraire les variables VITE_MAPTILER_*
     set -a
     source .env
     set +a
-    
-    # Construire les arguments --build-arg pour Docker
-    if [ -n "${VITE_MAPTILER_API_KEY:-}" ]; then
-        BUILD_ARGS="${BUILD_ARGS} --build-arg VITE_MAPTILER_API_KEY=${VITE_MAPTILER_API_KEY}"
-    fi
-    if [ -n "${VITE_MAPTILER_STYLE:-}" ]; then
-        BUILD_ARGS="${BUILD_ARGS} --build-arg VITE_MAPTILER_STYLE=${VITE_MAPTILER_STYLE}"
-    fi
 fi
 
-# Construire l'image avec les build args
-echo "🔨 Build args: ${BUILD_ARGS:-aucun}"
-docker build ${BUILD_ARGS} -t "${IMAGE_NAME}:${IMAGE_TAG}" .
+MAPTILER_API_KEY="${MAPTILER_API_KEY:-${VITE_MAPTILER_API_KEY:-}}"
+MAPTILER_STYLE="${MAPTILER_STYLE:-${VITE_MAPTILER_STYLE:-openstreetmap}}"
+
+docker build -t "${IMAGE_NAME}:${IMAGE_TAG}" .
 
 echo "✅ Image construite avec succès"
 
@@ -62,6 +53,8 @@ services:
       - "${COMPOSE_PORT}:80"
     environment:
       - MOTIS_BACKEND_URL=${MOTIS_BACKEND_URL}
+      - MAPTILER_API_KEY=${MAPTILER_API_KEY}
+      - MAPTILER_STYLE=${MAPTILER_STYLE}
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
       interval: 30s

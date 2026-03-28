@@ -1,91 +1,31 @@
+# HTTP: redirect to HTTPS when SSL is available, serve directly otherwise
 server {
     listen 80;
     server_name _;
-    root /usr/share/nginx/html;
-    index index.html;
 
-    # Gzip compression
-    gzip on;
-    gzip_vary on;
-    gzip_min_length 1024;
-    gzip_types text/plain text/css text/xml text/javascript application/x-javascript application/xml+rss application/json application/javascript;
-
-    # Security headers
-    add_header X-Frame-Options "SAMEORIGIN" always;
-    add_header X-Content-Type-Options "nosniff" always;
-    add_header X-XSS-Protection "1; mode=block" always;
-
-    # Proxy API requests to MOTIS backend
-    # Backend URL is injected via environment variable MOTIS_BACKEND_URL
-    # envsubst will replace ${MOTIS_BACKEND_URL} with the actual URL at container startup
-    location /api/ {
-        proxy_pass ${MOTIS_BACKEND_URL};
-        proxy_http_version 1.1;
-        
-        # Preserve original host for backend (use backend's host, not nginx host)
-        proxy_set_header Host $http_host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        
-        # CORS headers - allow all origins (can be restricted if needed)
-        add_header Access-Control-Allow-Origin * always;
-        add_header Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS" always;
-        add_header Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With" always;
-        
-        # Handle preflight requests
-        if ($request_method = OPTIONS) {
-            add_header Access-Control-Allow-Origin * always;
-            add_header Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS" always;
-            add_header Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With" always;
-            add_header Access-Control-Max-Age 1728000;
-            add_header Content-Type "text/plain charset=UTF-8";
-            add_header Content-Length 0;
-            return 204;
-        }
-        
-        # Timeouts
-        proxy_connect_timeout 60s;
-        proxy_send_timeout 60s;
-        proxy_read_timeout 60s;
+    # If SSL certs are mounted, redirect all HTTP to HTTPS.
+    # Otherwise this block is the only server and serves content directly.
+    set $has_ssl 0;
+    if (-f /etc/nginx/ssl/fullchain.pem) {
+        set $has_ssl 1;
+    }
+    if ($has_ssl = 1) {
+        return 301 https://$host$request_uri;
     }
 
-    # Proxy tiles requests to MOTIS backend
-    location /tiles/ {
-        proxy_pass ${MOTIS_BACKEND_URL};
-        proxy_http_version 1.1;
-        
-        # Preserve original host for backend
-        proxy_set_header Host $http_host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        
-        # Cache tiles
-        proxy_cache_valid 200 1h;
-        proxy_cache_valid 404 1m;
-        
-        # Timeouts
-        proxy_connect_timeout 60s;
-        proxy_send_timeout 60s;
-        proxy_read_timeout 60s;
-    }
-
-    # SPA fallback - serve index.html for all routes
-    location / {
-        try_files $uri $uri/ /index.html;
-    }
-
-    # Cache static assets
-    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
-        expires 1y;
-        add_header Cache-Control "public, immutable";
-    }
-
-    # Don't cache HTML files
-    location ~* \.html$ {
-        expires -1;
-        add_header Cache-Control "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0";
-    }
+    include /etc/nginx/snippets/motis-locations.conf;
 }
 
+# HTTPS: only activated when SSL certificates are mounted
+server {
+    listen 443 ssl;
+    server_name _;
+
+    ssl_certificate /etc/nginx/ssl/fullchain.pem;
+    ssl_certificate_key /etc/nginx/ssl/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+    ssl_prefer_server_ciphers on;
+
+    include /etc/nginx/snippets/motis-locations.conf;
+}

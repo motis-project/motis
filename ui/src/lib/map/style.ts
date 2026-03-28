@@ -1,10 +1,33 @@
 import type { StyleSpecification } from 'maplibre-gl';
 
-const MAPTILER_KEY = import.meta.env.VITE_MAPTILER_API_KEY || '';
-const MAPTILER_STYLE_URL = MAPTILER_KEY
-	? `https://api.maptiler.com/maps/openstreetmap/style.json?key=${MAPTILER_KEY}`
-	: '';
-const USE_MAPTILER_STYLE = MAPTILER_KEY !== '';
+function readMaptilerApiKey(): string {
+	const fromRuntime =
+		typeof window !== 'undefined' ? window.__MOTIS_CONFIG__?.maptilerApiKey : undefined;
+	if (fromRuntime !== undefined && fromRuntime !== '') {
+		return fromRuntime;
+	}
+	const fromVite = import.meta.env.VITE_MAPTILER_API_KEY;
+	return typeof fromVite === 'string' ? fromVite : '';
+}
+
+function readMaptilerStyle(): string {
+	const fromRuntime =
+		typeof window !== 'undefined' ? window.__MOTIS_CONFIG__?.maptilerStyle : undefined;
+	if (fromRuntime !== undefined && fromRuntime !== '') {
+		return fromRuntime;
+	}
+	const fromVite = import.meta.env.VITE_MAPTILER_STYLE;
+	return typeof fromVite === 'string' && fromVite !== '' ? fromVite : 'openstreetmap';
+}
+
+function maptilerStyleJsonUrl(): string {
+	const key = readMaptilerApiKey();
+	if (key === '') {
+		return '';
+	}
+	const styleId = readMaptilerStyle();
+	return `https://api.maptiler.com/maps/${encodeURIComponent(styleId)}/style.json?key=${encodeURIComponent(key)}`;
+}
 const colors = {
 	light: {
 		background: '#f8f4f0',
@@ -142,8 +165,9 @@ export const getStyle = (
 	staticBaseUrl: string,
 	apiBaseUrl: string
 ): StyleSpecification | string => {
-	if (USE_MAPTILER_STYLE) {
-		return MAPTILER_STYLE_URL;
+	const maptilerUrl = maptilerStyleJsonUrl();
+	if (maptilerUrl !== '') {
+		return maptilerUrl;
 	}
 	const c = colors[theme];
 	return {

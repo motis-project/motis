@@ -17,7 +17,7 @@
 [adr]
   url=https://github.com/flowride/adr.git
   branch=fix/adr-country-code-fallback
-  commit=b964d1560231f824377b90f34a0c636795fc5d11
+  commit=8674ddd0eda767531ffd1bec7cf7a7557d2b7d32
 [googletest]
   url=git@github.com:motis-project/googletest.git
   branch=master

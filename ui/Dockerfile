@@ -8,14 +8,6 @@ RUN npm install -g pnpm@latest
 # Set working directory
 WORKDIR /app
 
-# Accept build arguments for MapTiler configuration
-ARG VITE_MAPTILER_API_KEY
-ARG VITE_MAPTILER_STYLE
-
-# Set environment variables for Vite build
-ENV VITE_MAPTILER_API_KEY=${VITE_MAPTILER_API_KEY}
-ENV VITE_MAPTILER_STYLE=${VITE_MAPTILER_STYLE}
-
 # Copy workspace configuration files
 COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
 
@@ -50,14 +42,15 @@ RUN pnpm build
 # Stage 2: Production server
 FROM nginx:alpine
 
-# Install gettext for envsubst
-RUN apk add --no-cache gettext
+# gettext: envsubst; jq: safe JSON for runtime-config.js
+RUN apk add --no-cache gettext jq
 
 # Copy built files from builder
 COPY --from=builder /app/build /usr/share/nginx/html
 
-# Copy nginx configuration template
+# Copy nginx configuration template and shared locations snippet
 COPY nginx.conf.template /etc/nginx/templates/default.conf.template
+COPY motis-locations.conf /etc/nginx/snippets/motis-locations.conf.template
 
 # Copy entrypoint script
 COPY docker-entrypoint.sh /docker-entrypoint.sh
@@ -65,9 +58,11 @@ RUN chmod +x /docker-entrypoint.sh
 
 # Set default backend URL as environment variable
 ENV MOTIS_BACKEND_URL=http://localhost:80
+# MapTiler: set at runtime (docker compose / swarm) — see docker-entrypoint.sh
+# MAPTILER_API_KEY, MAPTILER_STYLE (or VITE_MAPTILER_* aliases)
 
-# Expose port 80
-EXPOSE 80
+# Expose port 80 (HTTP) and 443 (HTTPS when SSL certs are mounted)
+EXPOSE 80 443
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
