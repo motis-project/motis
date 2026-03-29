@@ -3,6 +3,7 @@
 #include "adr/guess_context.h"
 #include "adr/reverse.h"
 
+#include "motis/config.h"
 #include "motis/endpoints/adr/filter_conv.h"
 #include "motis/endpoints/adr/suggestions_to_response.h"
 #include "motis/parse_location.h"
@@ -16,7 +17,8 @@ api::reverseGeocode_response reverse_geocode::operator()(
   auto const params = api::reverseGeocode_params{url.params()};
   return suggestions_to_response(
       t_, f_, ae_, tt_, tags_, w_, pl_, matches_, {}, {},
-      r_.lookup(t_, parse_location((params.place_))->pos_, 5U,
+      r_.lookup(t_, parse_location((params.place_))->pos_,
+                config_.get_limits().reverse_geocode_max_results_,
                 to_filter_type(params.type_)));
 }
 
