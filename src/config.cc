@@ -121,12 +121,10 @@ void config::verify() const {
                   nigiri::routing::kMaxSearchIntervalSize.count(),
               "plan_max_search_window_minutes limit cannot be above {}",
               nigiri::routing::kMaxSearchIntervalSize.count());
-  utl::verify(limits_.value().geocode_max_suggestions_ >= 1U &&
-                  limits_.value().geocode_max_suggestions_ <= 256U,
-              "geocode_max_suggestions must be between 1 and 256");
-  utl::verify(limits_.value().reverse_geocode_max_results_ >= 1U &&
-                  limits_.value().reverse_geocode_max_results_ <= 256U,
-              "reverse_geocode_max_results must be between 1 and 256");
+  utl::verify(limits_.value().geocode_max_suggestions_ >= 1U,
+              "geocode_max_suggestions must be >= 1");
+  utl::verify(limits_.value().reverse_geocode_max_results_ >= 1U,
+              "reverse_geocode_max_results must be >= 1");
 
   if (timetable_) {
     utl::verify(!timetable_->route_shapes_.has_value() ||
