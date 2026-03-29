@@ -14,6 +14,7 @@
 #include "adr/adr.h"
 #include "adr/typeahead.h"
 
+#include "motis/config.h"
 #include "motis/endpoints/adr/filter_conv.h"
 #include "motis/endpoints/adr/suggestions_to_response.h"
 #include "motis/parse_location.h"
@@ -79,8 +80,9 @@ api::geocode_response geocode::operator()(
                     }}};
               })
           .value_or(std::function<bool(adr::place_idx_t)>{});
-  auto const token_pos =
-      a::get_suggestions<false>(t_, params.text_, 10U, lang_indices, ctx, place,
+  auto const token_pos = a::get_suggestions<false>(
+      t_, params.text_, config_.get_limits().geocode_max_suggestions_,
+      lang_indices, ctx, place,
                                 static_cast<float>(params.placeBias_),
                                 to_filter_type(params.type_), place_filter);
   return suggestions_to_response(t_, f_, ae_, tt_, tags_, w_, pl_, matches_,
