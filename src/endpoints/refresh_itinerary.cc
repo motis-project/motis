@@ -36,10 +36,10 @@ api::Itinerary refresh_itinerary::operator()(
 }
 
 api::Itinerary refresh_itinerary_post::operator()(
-    boost::json::object const& body) const {
+    api::SingleLegItineraryIdProto const& body) const {
   auto parsed = ::motis::proto::SingleLegItineraryId{};
   auto const status = google::protobuf::util::JsonStringToMessage(
-      boost::json::serialize(body), &parsed);
+      boost::json::serialize(boost::json::value_from(body)), &parsed);
   utl::verify(status.ok(), "Failed to decode itinerary-id JSON: {}",
               status.message());
   auto data = std::string{};
