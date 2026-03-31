@@ -20,7 +20,8 @@ namespace motis::ep {
 struct stop_times {
   api::stoptimes_response operator()(boost::urls::url_view const&) const;
 
-  std::vector<nigiri::rt::run> get_runs(api::stoptimes_params const&) const;
+  std::vector<nigiri::rt::run> get_runs(api::stoptimes_params const&,
+                                        nigiri::rt_timetable const*) const;
   std::vector<nigiri::rt::run> get_runs(
       api::stoptimes_params const&,
       nigiri::rt_timetable const*,

@@ -467,9 +467,7 @@ std::vector<n::rt::run> stop_times::get_runs(
 }
 
 std::vector<nigiri::rt::run> stop_times::get_runs(
-    api::stoptimes_params const& query) const {
-  auto const rt = std::atomic_load(&rt_);
-  auto const rtt = rt->rtt_.get();
+    api::stoptimes_params const& query, nigiri::rt_timetable const* rtt) const {
   auto const ev_type =
       query.arriveBy_ ? n::event_type::kArr : n::event_type::kDep;
   auto const query_stop = query.stopId_.and_then(
