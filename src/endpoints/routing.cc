@@ -980,23 +980,22 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
         break;
         }
     };
-
+    auto merged_journeys = n::pareto_set<n::routing::journey>{};
     switch (query.rtMode_) {
         case api::rtModeEnum::ONLY : routing(true); break;
         case api::rtModeEnum::NONE : routing(false); break;
         case api::rtModeEnum::HYBRID : {
-            auto j_tmp = n::pareto_set<n::routing::journey>{};
 
             routing(false);
             for (auto j : r.journeys_->els_) {
-                j_tmp.add(std::move(j));
+                merged_journeys.add(std::move(j));
             }
 
             routing(true);
             for (auto j : r.journeys_->els_) {
-                j_tmp.add(std::move(j));
+                merged_journeys.add(std::move(j));
             }
-            r.journeys_ = &j_tmp;
+            r.journeys_ = &merged_journeys;
 
             break;
         }
