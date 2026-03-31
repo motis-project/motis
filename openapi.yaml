@@ -859,6 +859,18 @@ paths:
               - PONG
               - TB
             default: PONG
+
+        - name: rtMode
+          in: query
+          required: false
+          description: specifies whether rt data (ONLY), no rt data (NONE) or a hybrid mode (HYBRID) shall be used for routing
+          schema:
+            type: string
+            enum:
+              - ONLY
+              - NONE
+              - HYBRID
+            default: ONLY
       responses:
         '422':
           description: Unprocessable Entity
