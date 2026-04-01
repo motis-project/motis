@@ -1,5 +1,14 @@
 <script lang="ts">
-	import { X, Palette, Rss, Ban, LocateFixed, TrainFront, Waypoints } from '@lucide/svelte';
+	import {
+		X,
+		Palette,
+		Rss,
+		Ban,
+		LocateFixed,
+		TrainFront,
+		Waypoints,
+		MountainSnow
+	} from '@lucide/svelte';
 	import { getStyle } from '$lib/map/style';
 	import Map from '$lib/map/Map.svelte';
 	import Control from '$lib/map/Control.svelte';
@@ -99,6 +108,7 @@
 		document.documentElement.classList.add('dark');
 	}
 
+	let withHillshades = $state(false);
 	let center = $state.raw<[number, number]>([2.258882912876089, 48.72559118651327]);
 	let level = $state(0);
 	let zoom = $state(15);
@@ -112,7 +122,8 @@
 					window.location.origin + window.location.pathname,
 					client.getConfig().baseUrl
 						? client.getConfig().baseUrl + '/'
-						: window.location.origin + window.location.pathname
+						: window.location.origin + window.location.pathname,
+					withHillshades
 				)
 			: undefined
 	);
@@ -849,6 +860,17 @@
 				</Button>
 			</Control>
 		{/if}
+
+		<Control position="top-right" class="text-right">
+			<Debug {bounds} {level} {zoom} />
+			<Button
+				size="icon"
+				variant={withHillshades ? 'default' : 'outline'}
+				onclick={() => (withHillshades = !withHillshades)}
+			>
+				<MountainSnow class="w-5 h-5" />
+			</Button>
+		</Control>
 
 		<LevelSelect {bounds} {zoom} bind:level />
 

@@ -1,4 +1,8 @@
-import type { StyleSpecification } from 'maplibre-gl';
+import type {
+	HillshadeLayerSpecification,
+	RasterDEMSourceSpecification,
+	StyleSpecification
+} from 'maplibre-gl';
 const colors = {
 	light: {
 		background: '#f8f4f0',
@@ -134,9 +138,27 @@ export const getStyle = (
 	theme: 'light' | 'dark',
 	level: number,
 	staticBaseUrl: string,
-	apiBaseUrl: string
+	apiBaseUrl: string,
+	withHillshades: boolean
 ): StyleSpecification => {
 	const c = colors[theme];
+	const hillshadeSources: StyleSpecification['sources'] = withHillshades
+		? {
+				hillshadeSource: {
+					type: 'raster-dem',
+					url: 'https://tiles.mapterhorn.com/tilejson.json'
+				} satisfies RasterDEMSourceSpecification
+			}
+		: {};
+	const hillshadeLayers: HillshadeLayerSpecification[] = withHillshades
+		? [
+				{
+					id: 'hillshade',
+					type: 'hillshade',
+					source: 'hillshadeSource'
+				}
+			]
+		: [];
 	return {
 		version: 8,
 		sources: {
@@ -145,7 +167,8 @@ export const getStyle = (
 				tiles: [getAbsoluteUrl(apiBaseUrl, 'tiles/{z}/{x}/{y}.mvt')],
 				maxzoom: 20,
 				attribution: ''
-			}
+			},
+			...hillshadeSources
 		},
 		glyphs: getAbsoluteUrl(apiBaseUrl, 'tiles/glyphs/{fontstack}/{range}.pbf'),
 		sprite: getAbsoluteUrl(staticBaseUrl, 'sprite_sdf'),
@@ -648,6 +671,7 @@ export const getStyle = (
 					]
 				}
 			},
+			...hillshadeLayers,
 			{
 				id: 'ferry_routes',
 				type: 'line',
