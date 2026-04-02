@@ -783,7 +783,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
 
   if (!query.transitModes_.empty() && fastest_direct > 5min &&
       max_transfers >= 0) {
-    utl::verify(tt_ != nullptr && tags_ != nullptr,
+    utl::verify(tt_ != nullptr && tags_ != nullptr && loc_tree_ != nullptr,
                 "mode=TRANSIT requires timetable to be loaded");
 
     auto const max_results = config_.get_limits().plan_max_results_;
@@ -854,31 +854,23 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
     auto prepare_stats = std::map<std::string, std::uint64_t>{};
 
     auto const get_radius_offsets = [&](place_t const& p) {
-      if (!query.radius_.has_value() || loc_tree_ == nullptr) {
-        return std::vector<n::routing::offset>{};
-      }
       auto const* pos = std::get_if<osr::location>(&p);
       if (pos == nullptr) {
         return std::vector<n::routing::offset>{};
       }
       return radius_offsets(*loc_tree_, pos->pos_, *query.radius_);
     };
-    auto start_r_offsets = get_radius_offsets(start);
-    auto dest_r_offsets = get_radius_offsets(dest);
-    auto const start_has_radius = !start_r_offsets.empty();
-    auto const dest_has_radius = !dest_r_offsets.empty();
 
     auto q = n::routing::query{
         .start_time_ = start_time.start_time_,
-        .start_match_mode_ = start_has_radius
+        .start_match_mode_ = query.radius_.has_value()
                                  ? n::routing::location_match_mode::kIntermodal
                                  : get_match_mode(*this, start),
-        .dest_match_mode_ = dest_has_radius
+        .dest_match_mode_ = query.radius_.has_value()
                                 ? n::routing::location_match_mode::kIntermodal
                                 : get_match_mode(*this, dest),
-        .use_start_footpaths_ =
-            start_has_radius ? false : !is_intermodal(*this, start),
-        .start_ = start_has_radius ? std::move(start_r_offsets)
+        .use_start_footpaths_ = !query.radius_.has_value() && !is_intermodal(*this, start),
+        .start_ = query.radius_.has_value() ? get_radius_offsets(start)
                                    : get_offsets(rtt, start,
                         query.arriveBy_ ? osr::direction::kBackward
                                         : osr::direction::kForward,
@@ -888,8 +880,8 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                         query.pedestrianProfile_, query.elevationCosts_,
                         query.arriveBy_ ? post_transit_time : pre_transit_time,
                         query.maxMatchingDistance_, gbfs_rd, prepare_stats),
-        .destination_ = dest_has_radius
-                             ? std::move(dest_r_offsets)
+        .destination_ = query.radius_.has_value()
+                             ? get_radius_offsets(dest)
                              : get_offsets(rtt, dest,
                                            query.arriveBy_
                                                ? osr::direction::kForward
