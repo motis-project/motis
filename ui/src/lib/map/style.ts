@@ -277,19 +277,6 @@ export const getStyle = (
 				}
 			},
 			{
-				id: 'building-3d',
-				type: 'fill-extrusion',
-				source: 'osm',
-				'source-layer': 'building',
-				minzoom: 14,
-				paint: {
-					'fill-extrusion-base': 10, // [	"get", "render_min_height" ]
-					'fill-extrusion-color': c.building,
-					'fill-extrusion-height': ['get', 'render_height'],
-					'fill-extrusion-opacity': 0.8
-				}
-			},
-			{
 				id: 'indoor-corridor',
 				type: 'fill',
 				source: 'osm',
