@@ -76,7 +76,7 @@ paths:
           description: |
             Search radius in meters around the `fromPlace` / `toPlace` coordinates.
             When set and the place is given as coordinates, all transit stops within
-            this radius are used as start/end points with zero transfer time.
+            this radius are used as start/end points with pre-transit/post-transit time.
             Works without OSM/street routing data loaded.
           schema:
             type: number
