@@ -155,7 +155,10 @@ export const getStyle = (
 				{
 					id: 'hillshade',
 					type: 'hillshade',
-					source: 'hillshadeSource'
+					source: 'hillshadeSource',
+					paint: {
+						'hillshade-exaggeration': 0.33
+					}
 				}
 			]
 		: [];
@@ -271,6 +274,19 @@ export const getStyle = (
 					'fill-color': c.building,
 					'fill-outline-color': c.buildingOutline,
 					'fill-opacity': ['interpolate', ['linear'], ['zoom'], 14, 0, 16, 0.8]
+				}
+			},
+			{
+				id: 'building-3d',
+				type: 'fill-extrusion',
+				source: 'osm',
+				'source-layer': 'building',
+				minzoom: 14,
+				paint: {
+					'fill-extrusion-base': 10, // [	"get", "render_min_height" ]
+					'fill-extrusion-color': c.building,
+					'fill-extrusion-height': ['get', 'render_height'],
+					'fill-extrusion-opacity': 0.8
 				}
 			},
 			{
