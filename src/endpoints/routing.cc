@@ -86,6 +86,17 @@ std::vector<n::routing::offset> station_start(n::location_idx_t const l) {
   return {{l, n::duration_t{0U}, 0U}};
 }
 
+std::vector<n::routing::offset> radius_offsets(
+    point_rtree<n::location_idx_t> const& loc_tree,
+    geo::latlng const& pos,
+    double const radius_meters) {
+  auto offsets = std::vector<n::routing::offset>{};
+  loc_tree.in_radius(pos, radius_meters, [&](n::location_idx_t const l) {
+    offsets.push_back({l, n::duration_t{0U}, 0U});
+  });
+  return offsets;
+}
+
 osr::location stop_to_osr_location(routing const& r,
                                    n::location_idx_t const l) {
   return osr::location{r.tt_->locations_.coordinates_[l],
@@ -772,7 +783,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
 
   if (!query.transitModes_.empty() && fastest_direct > 5min &&
       max_transfers >= 0) {
-    utl::verify(tt_ != nullptr && tags_ != nullptr,
+    utl::verify(tt_ != nullptr && tags_ != nullptr && loc_tree_ != nullptr,
                 "mode=TRANSIT requires timetable to be loaded");
 
     auto const max_results = config_.get_limits().plan_max_results_;
@@ -841,13 +852,25 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
 
     UTL_START_TIMING(query_preparation);
     auto prepare_stats = std::map<std::string, std::uint64_t>{};
+
+    auto const use_radius_start = query.radius_.has_value() &&
+                                  std::holds_alternative<osr::location>(start);
+    auto const use_radius_dest = query.radius_.has_value() &&
+                                 std::holds_alternative<osr::location>(dest);
+
     auto q = n::routing::query{
         .start_time_ = start_time.start_time_,
-        .start_match_mode_ = get_match_mode(*this, start),
-        .dest_match_mode_ = get_match_mode(*this, dest),
-        .use_start_footpaths_ = !is_intermodal(*this, start),
-        .start_ =
-            get_offsets(rtt, start,
+        .start_match_mode_ = use_radius_start
+                                 ? n::routing::location_match_mode::kIntermodal
+                                 : get_match_mode(*this, start),
+        .dest_match_mode_ = use_radius_dest
+                                ? n::routing::location_match_mode::kIntermodal
+                                : get_match_mode(*this, dest),
+        .use_start_footpaths_ = !use_radius_start && !is_intermodal(*this, start),
+        .start_ = use_radius_start ? radius_offsets(*loc_tree_,
+                                   std::get<osr::location>(start).pos_,
+                                   *query.radius_)
+                                   : get_offsets(rtt, start,
                         query.arriveBy_ ? osr::direction::kBackward
                                         : osr::direction::kForward,
                         start_modes, start_form_factors, start_propulsion_types,
@@ -856,16 +879,26 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                         query.pedestrianProfile_, query.elevationCosts_,
                         query.arriveBy_ ? post_transit_time : pre_transit_time,
                         query.maxMatchingDistance_, gbfs_rd, prepare_stats),
-        .destination_ =
-            get_offsets(rtt, dest,
-                        query.arriveBy_ ? osr::direction::kForward
-                                        : osr::direction::kBackward,
-                        dest_modes, dest_form_factors, dest_propulsion_types,
-                        dest_rental_providers, dest_rental_provider_groups,
-                        dest_ignore_return_constraints, osr_params,
-                        query.pedestrianProfile_, query.elevationCosts_,
-                        query.arriveBy_ ? pre_transit_time : post_transit_time,
-                        query.maxMatchingDistance_, gbfs_rd, prepare_stats),
+        .destination_ = use_radius_dest
+                             ? radius_offsets(*loc_tree_,
+                                           std::get<osr::location>(dest).pos_,
+                                           *query.radius_)
+                             : get_offsets(rtt, dest,
+                                           query.arriveBy_
+                                               ? osr::direction::kForward
+                                               : osr::direction::kBackward,
+                                           dest_modes, dest_form_factors,
+                                           dest_propulsion_types,
+                                           dest_rental_providers,
+                                           dest_rental_provider_groups,
+                                           dest_ignore_return_constraints,
+                                           osr_params,
+                                           query.pedestrianProfile_,
+                                           query.elevationCosts_,
+                                           query.arriveBy_ ? pre_transit_time
+                                                           : post_transit_time,
+                                           query.maxMatchingDistance_, gbfs_rd,
+                                           prepare_stats),
         .td_start_ = get_td_offsets(
             rtt, e, start,
             query.arriveBy_ ? osr::direction::kBackward
