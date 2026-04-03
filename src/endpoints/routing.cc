@@ -853,24 +853,23 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
     UTL_START_TIMING(query_preparation);
     auto prepare_stats = std::map<std::string, std::uint64_t>{};
 
-    auto const get_radius_offsets = [&](place_t const& p) {
-      auto const* pos = std::get_if<osr::location>(&p);
-      if (pos == nullptr) {
-        return std::vector<n::routing::offset>{};
-      }
-      return radius_offsets(*loc_tree_, pos->pos_, *query.radius_);
-    };
+    auto const use_radius_start = query.radius_.has_value() &&
+                                  std::get_if<osr::location>(&start) != nullptr;
+    auto const use_radius_dest = query.radius_.has_value() &&
+                                 std::get_if<osr::location>(&dest) != nullptr;
 
     auto q = n::routing::query{
         .start_time_ = start_time.start_time_,
-        .start_match_mode_ = query.radius_.has_value()
+        .start_match_mode_ = use_radius_start
                                  ? n::routing::location_match_mode::kIntermodal
                                  : get_match_mode(*this, start),
-        .dest_match_mode_ = query.radius_.has_value()
+        .dest_match_mode_ = use_radius_dest
                                 ? n::routing::location_match_mode::kIntermodal
                                 : get_match_mode(*this, dest),
-        .use_start_footpaths_ = !query.radius_.has_value() && !is_intermodal(*this, start),
-        .start_ = query.radius_.has_value() ? get_radius_offsets(start)
+        .use_start_footpaths_ = !use_radius_start && !is_intermodal(*this, start),
+        .start_ = use_radius_start ? radius_offsets(*loc_tree_,
+                                   std::get<osr::location>(start).pos_,
+                                   *query.radius_)
                                    : get_offsets(rtt, start,
                         query.arriveBy_ ? osr::direction::kBackward
                                         : osr::direction::kForward,
@@ -880,8 +879,10 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                         query.pedestrianProfile_, query.elevationCosts_,
                         query.arriveBy_ ? post_transit_time : pre_transit_time,
                         query.maxMatchingDistance_, gbfs_rd, prepare_stats),
-        .destination_ = query.radius_.has_value()
-                             ? get_radius_offsets(dest)
+        .destination_ = use_radius_dest
+                             ? radius_offsets(*loc_tree_,
+                                           std::get<osr::location>(dest).pos_,
+                                           *query.radius_)
                              : get_offsets(rtt, dest,
                                            query.arriveBy_
                                                ? osr::direction::kForward

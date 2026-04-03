@@ -642,11 +642,27 @@ TEST(motis, routing) {
   // Route using radius: finds stops within 5km radius from coordinates,
   // no preTransitModes / OSM street routing needed.
   {
-    // fromPlace is ~2km from DA_10,
-    // toPlace is ~2km from FFM_10.
+    // fromPlace is ~2km from DA_10, toPlace is ~2km from FFM_10.
     auto const res = routing(
         "?fromPlace=49.89100,8.62900"
         "&toPlace=50.08800,8.66100"
+        "&time=2019-05-01T01:30Z"
+        "&radius=5000"
+        "&timetableView=false");
+    ASSERT_FALSE(res.itineraries_.empty());
+    EXPECT_TRUE(std::any_of(
+        res.itineraries_.front().legs_.begin(),
+        res.itineraries_.front().legs_.end(), [](auto const& l) {
+          return l.routeShortName_.has_value() && *l.routeShortName_ == "ICE";
+        }));
+  }
+
+  // Route using radius on origin coordinate, station ID as destination.
+  {
+    // fromPlace is ~2km from DA_10, toPlace is the FFM_10 stop directly.
+    auto const res = routing(
+        "?fromPlace=49.89100,8.62900"
+        "&toPlace=test_FFM_10"
         "&time=2019-05-01T01:30Z"
         "&radius=5000"
         "&timetableView=false");
