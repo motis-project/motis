@@ -650,11 +650,9 @@ TEST(motis, routing) {
         "&radius=5000"
         "&timetableView=false");
     ASSERT_FALSE(res.itineraries_.empty());
-    EXPECT_TRUE(std::any_of(
-        res.itineraries_.front().legs_.begin(),
-        res.itineraries_.front().legs_.end(), [](auto const& l) {
-          return l.routeShortName_.has_value() && *l.routeShortName_ == "ICE";
-        }));
+    EXPECT_TRUE(utl::any_of(res.itineraries_.front().legs_, [](auto const& l) {
+      return l.routeShortName_.has_value() && *l.routeShortName_ == "ICE";
+    }));
   }
 
   // Route using radius on origin coordinate, station ID as destination.
@@ -667,10 +665,8 @@ TEST(motis, routing) {
         "&radius=5000"
         "&timetableView=false");
     ASSERT_FALSE(res.itineraries_.empty());
-    EXPECT_TRUE(std::any_of(
-        res.itineraries_.front().legs_.begin(),
-        res.itineraries_.front().legs_.end(), [](auto const& l) {
-          return l.routeShortName_.has_value() && *l.routeShortName_ == "ICE";
-        }));
+    EXPECT_TRUE(utl::any_of(res.itineraries_.front().legs_, [](auto const& l) {
+      return l.routeShortName_.has_value() && *l.routeShortName_ == "ICE";
+    }));
   }
 }

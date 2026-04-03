@@ -854,9 +854,9 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
     auto prepare_stats = std::map<std::string, std::uint64_t>{};
 
     auto const use_radius_start = query.radius_.has_value() &&
-                                  std::get_if<osr::location>(&start) != nullptr;
+                                  std::holds_alternative<osr::location>(start);
     auto const use_radius_dest = query.radius_.has_value() &&
-                                 std::get_if<osr::location>(&dest) != nullptr;
+                                 std::holds_alternative<osr::location>(dest);
 
     auto q = n::routing::query{
         .start_time_ = start_time.start_time_,
