@@ -89,6 +89,10 @@ adr::score_t get_diff(std::string str1,
   normalize(str1);
   normalize(str2);
 
+  if (str1.empty() && str2.empty()) {
+    return 0;
+  }
+
   if (str1.contains("hbf") && str2.contains("hbf")) {
     return 0;
   }
