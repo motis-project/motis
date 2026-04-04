@@ -136,7 +136,7 @@ cista::hash_t hash_file(fs::path const& p) {
   }
 }
 
-data import(config const& c, fs::path const& data_path, bool const write) {
+void import(config const& c, fs::path const& data_path) {
   c.verify_input_files_exist();
 
   auto ec = std::error_code{};
@@ -149,7 +149,7 @@ data import(config const& c, fs::path const& data_path, bool const write) {
     cfg.close();
   }
 
-  clog_redirect::set_enabled(write);
+  clog_redirect::set_enabled(true);
 
   auto tt_hash = std::pair{"timetable"s, cista::BASE_HASH};
   if (c.timetable_.has_value()) {
@@ -398,12 +398,10 @@ data import(config const& c, fs::path const& data_path, bool const write) {
             std::make_unique<point_rtree<nigiri::location_idx_t>>(
                 create_location_rtree(*d.tt_));
 
-        if (write) {
-          d.tt_->write(data_path / "tt.bin");
-          d.tags_->write(data_path / "tags.bin");
-          std::ofstream(data_path / "timetable_metrics.json")
-              << to_str(n::get_metrics(*d.tt_), *d.tt_);
-        }
+        d.tt_->write(data_path / "tt.bin");
+        d.tags_->write(data_path / "tags.bin");
+        std::ofstream(data_path / "timetable_metrics.json")
+            << to_str(n::get_metrics(*d.tt_), *d.tt_);
 
         d.init_rtt();
 
@@ -454,13 +452,11 @@ data import(config const& c, fs::path const& data_path, bool const write) {
              }
              auto const location_extra_place = adr_extend_tt(
                  *d.tt_, area_db.has_value() ? &*area_db : nullptr, *d.t_);
-             if (write) {
-               auto ec = std::error_code{};
-               std::filesystem::create_directories(data_path / "adr", ec);
-               cista::write(data_path / "adr" / "t_ext.bin", *d.t_);
-               cista::write(data_path / "adr" / "location_extra_place.bin",
-                            location_extra_place);
-             }
+             auto ec = std::error_code{};
+             std::filesystem::create_directories(data_path / "adr", ec);
+             cista::write(data_path / "adr" / "t_ext.bin", *d.t_);
+             cista::write(data_path / "adr" / "location_extra_place.bin",
+                          location_extra_place);
              d.r_.reset();
              {
                auto r = adr::reverse{data_path / "adr",
@@ -531,11 +527,9 @@ data import(config const& c, fs::path const& data_path, bool const write) {
             *d.w_, *d.l_, *d.pl_, *d.tt_, d.elevations_.get(),
             c.timetable_->use_osm_stop_coordinates_, profiles);
 
-        if (write) {
-          cista::write(data_path / "elevator_footpath_map.bin",
-                       elevator_footpath_map);
-          d.tt_->write(data_path / "tt_ext.bin");
-        }
+        cista::write(data_path / "elevator_footpath_map.bin",
+                     elevator_footpath_map);
+        d.tt_->write(data_path / "tt_ext.bin");
       },
       [&]() { d.load_tt("tt_ext.bin"); },
       {tt_hash, osm_hash, osr_footpath_settings_hash, osr_version(),
@@ -552,9 +546,7 @@ data import(config const& c, fs::path const& data_path, bool const write) {
         d.matches_ = cista::wrapped<platform_matches_t>{
             cista::raw::make_unique<platform_matches_t>(
                 get_matches(*d.tt_, *d.pl_, *d.w_))};
-        if (write) {
-          cista::write(data_path / "matches.bin", *d.matches_);
-        }
+        cista::write(data_path / "matches.bin", *d.matches_);
         if (c.timetable_.value().preprocess_max_matching_distance_ > 0.0) {
           progress_tracker->status("Prepare Platform Way Matches")
               .out_bounds(30, 100);
@@ -706,7 +698,6 @@ data import(config const& c, fs::path const& data_path, bool const write) {
     tasks.erase(task_it);
   }
 
-  return d;
 }
 
 }  // namespace motis
