@@ -179,7 +179,7 @@ int generate(int ac, char** av) {
   utl::verify(!modes || c.use_street_routing(),
               "intermodal requires street routing");
 
-  auto d = data{data_path, c};
+  auto d = data{data_path};
   utl::verify(d.tt_, "timetable required");
 
   first_day = first_day

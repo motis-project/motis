@@ -137,7 +137,7 @@ int main(int ac, char** av) {
             (return_value = set_log_level(std::move(log_lvl)))) {
           break;
         }
-        return_value = server(data{data_path, c}, c, motis_version);
+        return_value = server(data{data_path}, c, motis_version);
       } catch (std::exception const& e) {
         std::cerr << "unable to start server: " << e.what() << "\n";
         return_value = 1;
@@ -258,7 +258,7 @@ int main(int ac, char** av) {
               return std::string{decoded.begin(), decoded.end()};
             });
 
-        return_value = analyze_shapes(data{data_path, c}, ids) ? 0 : 1;
+        return_value = analyze_shapes(data{data_path}, ids) ? 0 : 1;
       } catch (std::exception const& e) {
         std::cerr << "unable to analyse shapes: " << e.what() << "\n";
         return_value = 1;

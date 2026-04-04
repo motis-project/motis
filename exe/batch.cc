@@ -156,7 +156,7 @@ int batch(int ac, char** av) {
   auto const c = config::read(data_path / "config.yml");
   utl::verify(c.timetable_.has_value(), "timetable required");
 
-  auto d = data{data_path, c};
+  auto d = data{data_path};
   utl::verify(d.tt_, "timetable required");
 
   auto response_time = stats{"response_time", 0U};
