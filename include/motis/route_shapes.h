@@ -58,7 +58,7 @@ boost::json::object route_shape_debug(osr::ways const&,
 
 void route_shapes(osr::ways const&,
                   osr::lookup const&,
-                  nigiri::timetable&,
+                  nigiri::timetable const&,
                   nigiri::shapes_storage&,
                   config::timetable::route_shapes const&,
                   std::array<bool, nigiri::kNumClasses> const&,
