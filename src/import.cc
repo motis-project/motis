@@ -21,6 +21,7 @@
 #include "motis/import/tbd_import.h"
 #include "motis/import/tiles_import.h"
 #include "motis/import/tt_import.h"
+#include "motis/import/way_matches_import.h"
 
 #include "utl/verify.h"
 
@@ -53,17 +54,24 @@ void import(config const& c, fs::path const& data_path) {
   auto adr_extend = adr_extend_import{data_path, c, hashes};
   auto osr_footpath = osr_footpath_import{data_path, c, hashes};
   auto matches = matches_import{data_path, c, hashes};
+  auto way_matches = way_matches_import{data_path, c, hashes};
   auto route_shapes = route_shapes_import{data_path, c, hashes};
 
   tbd.add_dependency({tt});
   adr_extend.add_dependency({adr, tt});
   osr_footpath.add_dependency({osr, tt});
-  matches.add_dependency({osr, tt});
+  if (c.osr_footpath_) {
+    matches.add_dependency({osr_footpath});
+  } else {
+    matches.add_dependency({osr, tt});
+  }
+  way_matches.add_dependency({matches});
   route_shapes.add_dependency({osr, tt});
 
   auto tasks = std::vector<task*>{&tiles,        &osr,     &adr,
                                   &tt,           &tbd,     &adr_extend,
-                                  &osr_footpath, &matches, &route_shapes};
+                                  &osr_footpath, &matches, &way_matches,
+                                  &route_shapes};
   std::erase_if(tasks, [](task* const t) { return !t->is_enabled(); });
   std::erase_if(tasks, [](task* const t) { return t->can_load(); });
 
