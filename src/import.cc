@@ -65,7 +65,24 @@ namespace motis {
 
 struct task {
   friend std::ostream& operator<<(std::ostream& out, task const& t) {
-    return out << t.name_;
+    out << t.name_ << " ";
+    if (t.done_) {
+      out << "done";
+    } else if (utl::all_of(t.dependencies_,
+                           [](task const* t) { return t->done_; })) {
+      out << "ready";
+    } else {
+      out << " waiting for ";
+      auto first = true;
+      for (auto const& dep : t.dependencies_) {
+        if (!first) {
+          out << ", ";
+        }
+        first = false;
+        out << dep->name_;
+      }
+    }
+    return out;
   }
 
   bool ready_for_load(fs::path const& data_path) {
@@ -78,8 +95,6 @@ struct task {
     return existing == hashes_;
   }
 
-  void load() { load_(); }
-
   void run(fs::path const& data_path) {
     auto const pt = utl::activate_progress_tracker(name_);
     auto const redirect = clog_redirect{
@@ -88,14 +103,15 @@ struct task {
     write_hashes(data_path, name_, hashes_);
     pt->out_ = 100;
     pt->status("FINISHED");
+    done_ = true;
   }
 
   std::string name_;
-  std::function<bool()> should_run_;
-  std::function<bool()> ready_;
+  std::vector<task const*> dependencies_;
+  bool should_run_;
   std::function<void()> run_;
-  std::function<void()> load_;
   meta_t hashes_;
+  bool done_{false};
   utl::progress_tracker_ptr pt_{};
 };
 
@@ -276,20 +292,19 @@ void import(config const& c, fs::path const& data_path) {
   auto d = data{data_path};
 
   auto osr = task{"osr",
-                  [&]() { return c.use_street_routing(); },
-                  [&]() { return true; },
+                  {},
+                  c.use_street_routing(),
                   [&]() {
                     osr::extract(true, fs::path{*c.osm_}, data_path / "osr",
                                  elevation_dir);
                     d.load_osr();
                   },
-                  [&]() { d.load_osr(); },
                   {osm_hash, osr_version(), elevation_dir_hash}};
 
   auto adr =
       task{"adr",
-           [&]() { return c.geocoding_ || c.reverse_geocoding_; },
-           []() { return true; },
+           {},
+           c.geocoding_ || c.reverse_geocoding_,
            [&]() {
              if (!c.osm_) {
                return;
@@ -310,20 +325,6 @@ void import(config const& c, fs::path const& data_path) {
              d.tc_ = std::make_unique<adr::cache>(d.t_->strings_.size(), 100U);
              d.f_ = std::make_unique<adr::formatter>();
            },
-           [&]() {
-             if (!c.osm_) {
-               return;
-             }
-
-             // Same here, need to load base-line version for adr_extend!
-             d.t_ = adr::read(data_path / "adr" / "t.bin");
-             d.tc_ = std::make_unique<adr::cache>(d.t_->strings_.size(), 100U);
-             d.f_ = std::make_unique<adr::formatter>();
-
-             if (c.reverse_geocoding_) {
-               d.load_reverse_geocoder();
-             }
-           },
            {osm_hash,
             adr_version(),
             {"geocoding", c.geocoding_},
@@ -331,8 +332,8 @@ void import(config const& c, fs::path const& data_path) {
 
   auto tt = task{
       "tt",
-      [&]() { return c.timetable_.has_value(); },
-      [&]() { return true; },
+      {},
+      c.timetable_.has_value(),
       [&]() {
         auto const& t = *c.timetable_;
 
@@ -412,35 +413,23 @@ void import(config const& c, fs::path const& data_path) {
           d.load_railviz();
         }
       },
-      [&]() {
-        d.load_tt("tt.bin");
-        if (c.timetable_->with_shapes_) {
-          d.load_shapes();
-        }
-        if (c.timetable_->railviz_) {
-          d.load_railviz();
-        }
-      },
       {tt_hash, n_version()}};
 
-  auto tbd = task{
-      "tbd",
-      [&]() { return c.timetable_.has_value() && c.timetable_->tb_; },
-      [&]() { return d.tt_.get() != nullptr; },
-      [&]() {
-        cista::write(data_path / "tbd.bin",
-                     n::routing::tb::preprocess(*d.tt_, n::kDefaultProfile));
-      },
-      [&]() { d.load_tbd(); },
-      {tt_hash, n_version(), tbd_version()}};
+  auto tbd = task{"tbd",
+                  {&tt},
+                  c.timetable_.has_value() && c.timetable_->tb_,
+                  [&]() {
+                    cista::write(
+                        data_path / "tbd.bin",
+                        n::routing::tb::preprocess(*d.tt_, n::kDefaultProfile));
+                  },
+                  {tt_hash, n_version(), tbd_version()}};
 
   auto adr_extend =
       task{"adr_extend",
-           [&]() {
-             return c.timetable_.has_value() &&
-                    (c.geocoding_ || c.reverse_geocoding_);
-           },
-           [&]() { return d.tt_.get() != nullptr; },
+           c.osm_.has_value() ? std::vector<task const*>{&adr}
+                              : std::vector<task const*>{},
+           c.timetable_.has_value() && (c.geocoding_ || c.reverse_geocoding_),
            [&]() {
              auto const area_db = d.t_ ? (std::optional<adr::area_database>{
                                              std::in_place, data_path / "adr",
@@ -472,16 +461,6 @@ void import(config const& c, fs::path const& data_path) {
                d.load_reverse_geocoder();
              }
            },
-           [&]() {
-             d.t_.reset();
-             d.r_.reset();
-             if (c.geocoding_) {
-               d.load_geocoder();
-             }
-             if (c.reverse_geocoding_) {
-               d.load_reverse_geocoder();
-             }
-           },
            {tt_hash,
             osm_hash,
             adr_version(),
@@ -501,8 +480,8 @@ void import(config const& c, fs::path const& data_path) {
   }
   auto osr_footpath = task{
       "osr_footpath",
-      [&]() { return c.osr_footpath_ && c.timetable_; },
-      [&]() { return d.tt_ && d.tags_ && d.w_ && d.l_ && d.pl_; },
+      {&tt, &osr},
+      c.osr_footpath_ && c.timetable_,
       [&]() {
         auto const profiles = std::vector<routed_transfers_settings>{
             {.profile_ = osr::search_profile::kFoot,
@@ -531,14 +510,13 @@ void import(config const& c, fs::path const& data_path) {
                      elevator_footpath_map);
         d.tt_->write(data_path / "tt_ext.bin");
       },
-      [&]() { d.load_tt("tt_ext.bin"); },
       {tt_hash, osm_hash, osr_footpath_settings_hash, osr_version(),
        osr_footpath_version(), n_version()}};
 
   auto matches = task{
       "matches",
-      [&]() { return c.timetable_ && c.use_street_routing(); },
-      [&]() { return d.tt_ && d.w_ && d.pl_ && d.l_; },
+      {&tt, &osr},
+      c.timetable_ && c.use_street_routing(),
       [&]() {
         auto const progress_tracker = utl::get_active_progress_tracker();
         progress_tracker->status("Prepare Platform Matches").out_bounds(0, 30);
@@ -557,28 +535,15 @@ void import(config const& c, fs::path const& data_path) {
                                                  *d.matches_);
         }
       },
-      [&]() {
-        d.load_matches();
-        d.load_way_matches();
-      },
       {tt_hash, osm_hash, osr_version(), n_version(), matches_version(),
        std::pair{"way_matches",
                  cista::build_hash(c.timetable_.value_or(config::timetable{})
                                        .preprocess_max_matching_distance_)}}};
 
-  auto flex_areas =
-      task{"flex_areas",
-           [&]() { return c.timetable_ && c.use_street_routing(); },
-           [&]() { return d.tt_ && d.w_; },
-           [&]() { d.load_flex_areas(); },
-           [&]() { d.load_flex_areas(); },
-           {tt_hash, osm_hash, elevation_dir_hash, osr_version(), n_version(),
-            matches_version()}};
-
   auto route_shapes_task = task{
       "route_shapes",
-      [&]() { return route_shapes_task_enabled; },
-      [&]() { return d.tt_ && d.w_ && d.l_; },
+      {&tt, &osr},
+      route_shapes_task_enabled,
       [&]() {
         auto shape_cache = std::unique_ptr<motis::shape_cache>{};
         if (reuse_shapes_cache) {
@@ -592,8 +557,8 @@ void import(config const& c, fs::path const& data_path) {
 
         // re-open in write mode
         // this needs to be done in two steps, because the files need to be
-        // closed first, before they can be re-opened in write mode (at least
-        // on Windows)
+        // closed first, before they can be re-opened in write mode (at
+        // least on Windows)
         d.shapes_ = {};
         d.shapes_ = std::make_unique<n::shapes_storage>(
             data_path, cista::mmap::protection::MODIFY, reuse_shapes_cache);
@@ -602,7 +567,6 @@ void import(config const& c, fs::path const& data_path) {
                      *c.timetable_->route_shapes_, route_shapes_clasz_enabled,
                      shape_cache.get());
       },
-      [&]() { d.load_shapes(); },
       {tt_hash,
        osm_hash,
        osr_version(),
@@ -621,8 +585,8 @@ void import(config const& c, fs::path const& data_path) {
 
   auto tiles = task{
       "tiles",
-      [&]() { return c.tiles_.has_value(); },
-      [&]() { return true; },
+      {},
+      c.tiles_.has_value(),
       [&]() {
         auto const progress_tracker = utl::get_active_progress_tracker();
 
@@ -666,38 +630,39 @@ void import(config const& c, fs::path const& data_path) {
 
         d.load_tiles();
       },
-      [&]() { d.load_tiles(); },
       {tiles_version(), osm_hash, tiles_hash}};
 
-  auto tasks = std::vector<task>{
-      tiles,      osr,          adr,     tt,         tbd,
-      adr_extend, osr_footpath, matches, flex_areas, route_shapes_task};
-  utl::erase_if(tasks, [&](auto&& t) {
-    if (!t.should_run_()) {
+  auto tasks = std::vector{&tiles,        &osr,     &adr,
+                           &tt,           &tbd,     &adr_extend,
+                           &osr_footpath, &matches, &route_shapes_task};
+  utl::erase_if(tasks, [&](task* t) {
+    if (!t->should_run_) {
       return true;
     }
 
-    if (t.ready_for_load(data_path)) {
-      t.load();
+    if (t->ready_for_load(data_path)) {
+      t->done_ = true;
       return true;
     }
 
     return false;
   });
 
-  for (auto& t : tasks) {
-    t.pt_ = utl::activate_progress_tracker(t.name_);
+  for (auto* t : tasks) {
+    t->pt_ = utl::activate_progress_tracker(t->name_);
   }
 
   while (!tasks.empty()) {
-    auto const task_it =
-        utl::find_if(tasks, [](task const& t) { return t.ready_(); });
-    utl::verify(task_it != end(tasks), "no task to run, remaining tasks: {}",
-                tasks);
-    task_it->run(data_path);
+    auto const task_it = utl::find_if(tasks, [](task const* t) {
+      return utl::all_of(t->dependencies_,
+                         [](task const* t) { return t->done_; });
+    });
+    utl::verify(
+        task_it != end(tasks), "no task to run, remaining tasks: {}",
+        tasks | std::views::transform([](task const* t) { return *t; }));
+    (*task_it)->run(data_path);
     tasks.erase(task_it);
   }
-
 }
 
 }  // namespace motis
