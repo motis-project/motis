@@ -6,13 +6,15 @@
 
 namespace motis {
 
-struct adr_import : public task {
-  adr_import(std::filesystem::path const& data_path,
-             config const&,
-             dataset_hashes const&);
-  ~adr_import() override;
+struct tt_import : public task {
+  tt_import(std::filesystem::path const& data_path,
+            config const&,
+            dataset_hashes const&);
+  ~tt_import() override;
   void run() override;
   bool is_enabled() const override;
+
+  bool keep_routed_shape_data_;
 };
 
 }  // namespace motis

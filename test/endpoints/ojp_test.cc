@@ -86,8 +86,9 @@ TEST(motis, ojp_requests) {
              .street_routing_ = true,
              .osr_footpath_ = true,
              .geocoding_ = true};
-  import(c, "test/data", true);
-  auto d = data{"test/data", c};
+  import(c, "test/data");
+
+  auto d = data{"test/data"};
   d.init_rtt(date::sys_days{2019_y / May / 1});
 
   auto const ojp_ep = ep::ojp{

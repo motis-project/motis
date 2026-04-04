@@ -93,7 +93,9 @@ TEST(motis, trip_stop_naming) {
               .num_days_ = 2,
               .datasets_ = {{"test", {.path_ = kGTFS, .script_ = kScript}}}},
       .street_routing_ = false};
-  auto d = import(c, "test/data", true);
+  import(c, "test/data");
+
+  auto d = data{"test/data"};
 
   auto const trip_ep = utl::init_from<ep::trip>(d).value();
 
@@ -390,7 +392,9 @@ TEST(motis, trip_notice_translations) {
                                    .num_days_ = 2,
                                    .datasets_ = {{"netex", {.path_ = kNetex}}}},
              .street_routing_ = false};
-  auto d = import(c, "test/data", true);
+  import(c, "test/data");
+  auto d = data{"test/data"};
+
   auto const day = date::sys_days{2024_y / December / 15};
   d.init_rtt(day);
   auto& rtt = *d.rt_->rtt_;

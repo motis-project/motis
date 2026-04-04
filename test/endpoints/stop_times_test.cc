@@ -93,7 +93,9 @@ TEST(motis, stop_times) {
                             .first_day_ = "2019-05-01",
                             .num_days_ = 2,
                             .datasets_ = {{"test", {.path_ = kGTFS}}}}};
-  auto d = import(c, "test/data", true);
+
+  import(c, "test/data");
+  auto d = data{"test/data"};
   d.init_rtt(date::sys_days{2019_y / May / 1});
 
   auto const stats =

@@ -40,8 +40,7 @@ struct rt {
 };
 
 struct data {
-  data(std::filesystem::path);
-  data(std::filesystem::path, config const&);
+  explicit data(std::filesystem::path, bool const load = true);
   ~data();
 
   data(data const&) = delete;

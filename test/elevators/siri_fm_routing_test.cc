@@ -124,9 +124,9 @@ TEST(motis, siri_fm_routing) {
              .osr_footpath_ = true,
              .geocoding_ = true,
              .reverse_geocoding_ = true};
-  import(c, "test/data", true);
-
-  auto d = data{"test/data", c};
+  
+  import(c, "test/data");
+  auto d = data{"test/data"};
 
   auto const routing = utl::init_from<ep::routing>(d).value();
 

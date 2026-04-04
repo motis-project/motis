@@ -63,8 +63,8 @@ TEST(motis, stop_group_geocoding) {
                                    .num_days_ = 2,
                                    .datasets_ = {{"test", {.path_ = kGTFS}}}},
              .geocoding_ = true};
-  import(c, "test/data", true);
-  auto d = data{"test/data", c};
+  import(c, "test/data");
+  auto d = data{"test/data"};
 
   auto const geocode = utl::init_from<ep::geocode>(d).value();
 

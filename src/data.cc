@@ -63,15 +63,14 @@ std::ostream& operator<<(std::ostream& out, data const& d) {
              << "\nmatches=" << d.matches_ << "\nrt=" << d.rt_ << "\n";
 }
 
-data::data(std::filesystem::path p)
+data::data(std::filesystem::path p, bool const load)
     : path_{std::move(p)},
       config_{config::read(path_ / "config.yml")},
-      metrics_{std::make_unique<metrics_registry>()} {}
-
-data::data(std::filesystem::path p, config const& c)
-    : path_{std::move(p)},
-      config_{c},
       metrics_{std::make_unique<metrics_registry>()} {
+  if (!load) {
+    return;
+  }
+
   auto const verify_version = [&](bool cond, char const* name, auto&& ver) {
     if (!cond) {
       return;
@@ -90,6 +89,7 @@ data::data(std::filesystem::path p, config const& c)
                 name, existing_ver_it->second, expected_ver, to_str(h));
   };
 
+  auto& c = config_;
   verify_version(c.timetable_.has_value(), "tt", n_version());
   verify_version(c.geocoding_ || c.reverse_geocoding_, "adr", adr_version());
   verify_version(c.use_street_routing(), "osr", osr_version());

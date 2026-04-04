@@ -6,11 +6,11 @@
 
 namespace motis {
 
-struct adr_import : public task {
-  adr_import(std::filesystem::path const& data_path,
-             config const&,
-             dataset_hashes const&);
-  ~adr_import() override;
+struct tiles_import : public task {
+  tiles_import(std::filesystem::path const& data_path,
+               config const&,
+               dataset_hashes const&);
+  ~tiles_import() override;
   void run() override;
   bool is_enabled() const override;
 };
