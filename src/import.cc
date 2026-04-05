@@ -8,6 +8,7 @@
 
 #include "fmt/ranges.h"
 
+#include "cista/free_self_allocated.h"
 #include "cista/io.h"
 
 #include "adr/area_database.h"
@@ -298,36 +299,19 @@ void import(config const& c, fs::path const& data_path) {
                   },
                   {osm_hash, osr_version(), elevation_dir_hash}};
 
-  auto adr =
-      task{"adr",
-           {},
-           c.geocoding_ || c.reverse_geocoding_,
-           [&]() {
-             if (!c.osm_) {
-               return;
-             }
-
-             auto d = data{data_path};
-
-             adr::extract(*c.osm_, data_path / "adr", data_path / "adr");
-
-             // We can't use d.load_geocoder() here because
-             // adr_extend expects the base-line version
-             // without extra timetable information.
-             d.t_ = adr::read(data_path / "adr" / "t.bin");
-             d.tc_ = std::make_unique<adr::cache>(d.t_->strings_.size(), 100U);
-
-             if (c.reverse_geocoding_) {
-               d.load_reverse_geocoder();
-             }
-
-             d.tc_ = std::make_unique<adr::cache>(d.t_->strings_.size(), 100U);
-             d.f_ = std::make_unique<adr::formatter>();
-           },
-           {osm_hash,
-            adr_version(),
-            {"geocoding", c.geocoding_},
-            {"reverse_geocoding", c.reverse_geocoding_}}};
+  auto adr = task{"adr",
+                  {},
+                  c.geocoding_ || c.reverse_geocoding_,
+                  [&]() {
+                    if (!c.osm_) {
+                      return;
+                    }
+                    adr::extract(*c.osm_, data_path / "adr", data_path / "adr");
+                  },
+                  {osm_hash,
+                   adr_version(),
+                   {"geocoding", c.geocoding_},
+                   {"reverse_geocoding", c.reverse_geocoding_}}};
 
   auto tt = task{
       "tt",
@@ -450,6 +434,8 @@ void import(config const& c, fs::path const& data_path) {
           r.build_rtree(*d.t_);
           r.write();
         }
+
+        cista::free_self_allocated(d.t_.get());
       },
       {tt_hash,
        osm_hash,
@@ -503,6 +489,8 @@ void import(config const& c, fs::path const& data_path) {
         cista::write(data_path / "elevator_footpath_map.bin",
                      elevator_footpath_map);
         d.tt_->write(data_path / "tt_ext.bin");
+
+        cista::free_self_allocated(d.tt_.get());
       },
       {tt_hash, osm_hash, osr_footpath_settings_hash, osr_version(),
        osr_footpath_version(), n_version()}};
@@ -518,19 +506,18 @@ void import(config const& c, fs::path const& data_path) {
 
         auto const progress_tracker = utl::get_active_progress_tracker();
         progress_tracker->status("Prepare Platform Matches").out_bounds(0, 30);
+        cista::write(data_path / "matches.bin",
+                     get_matches(*d.tt_, *d.pl_, *d.w_));
 
-        d.matches_ = cista::wrapped<platform_matches_t>{
-            cista::raw::make_unique<platform_matches_t>(
-                get_matches(*d.tt_, *d.pl_, *d.w_))};
-        cista::write(data_path / "matches.bin", *d.matches_);
+        d.load_matches();
         if (c.timetable_.value().preprocess_max_matching_distance_ > 0.0) {
           progress_tracker->status("Prepare Platform Way Matches")
               .out_bounds(30, 100);
-          d.way_matches_ = std::make_unique<way_matches_storage>(
+          way_matches_storage{
               data_path, cista::mmap::protection::WRITE,
-              c.timetable_.value().preprocess_max_matching_distance_);
-          d.way_matches_->preprocess_osr_matches(*d.tt_, *d.pl_, *d.w_, *d.l_,
-                                                 *d.matches_);
+              c.timetable_.value().preprocess_max_matching_distance_}
+              .preprocess_osr_matches(*d.tt_, *d.pl_, *d.w_, *d.l_,
+                                      *d.matches_);
         }
       },
       {tt_hash, osm_hash, osr_version(), n_version(), matches_version(),
@@ -562,12 +549,10 @@ void import(config const& c, fs::path const& data_path) {
         // closed first, before they can be re-opened in write mode (at
         // least on Windows)
         d.shapes_ = {};
-        d.shapes_ = std::make_unique<n::shapes_storage>(
-            data_path, cista::mmap::protection::MODIFY, reuse_shapes_cache);
-
-        route_shapes(*d.w_, *d.l_, *d.tt_, *d.shapes_,
-                     *c.timetable_->route_shapes_, route_shapes_clasz_enabled,
-                     shape_cache.get());
+        auto shapes = n::shapes_storage{
+            data_path, cista::mmap::protection::MODIFY, reuse_shapes_cache};
+        route_shapes(*d.w_, *d.l_, *d.tt_, shapes, *c.timetable_->route_shapes_,
+                     route_shapes_clasz_enabled, shape_cache.get());
       },
       {tt_hash,
        osm_hash,
