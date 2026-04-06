@@ -73,7 +73,7 @@ struct task {
                            [](task const* t) { return t->done_; })) {
       out << "ready";
     } else {
-      out << " waiting for ";
+      out << "waiting for ";
       auto first = true;
       for (auto const& dep : t.dependencies_) {
         if (!first) {
