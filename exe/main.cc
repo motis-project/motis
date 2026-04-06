@@ -56,7 +56,7 @@ int main(int ac, char** av) {
         "Commands:\n"
         "  generate   generate random queries and write them to a file\n"
         "  batch      run queries from a file\n"
-        "  params     update query parameters for a batch file\n",
+        "  params     update query parameters for a batch file\n"
         "  compare    compare results from different batch runs\n"
         "  config     generate a config file from a list of input files\n"
         "  import     prepare input data, creates the data directory\n"
