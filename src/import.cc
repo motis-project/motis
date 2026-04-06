@@ -67,23 +67,28 @@ namespace motis {
 struct task {
   friend std::ostream& operator<<(std::ostream& out, task const& t) {
     out << t.name_ << " ";
-    if (t.done_) {
-      out << "done";
-    } else if (!t.should_run_) {
+    if (!t.should_run_) {
       out << "disabled";
+    } else if (t.done_) {
+      out << "done";
     } else if (utl::all_of(t.dependencies_,
                            [](task const* t) { return t->done_; })) {
       out << "ready";
     } else {
-      out << "waiting for ";
+      out << "waiting for {";
       auto first = true;
       for (auto const& dep : t.dependencies_) {
+        if (dep->done_) {
+          continue;
+        }
+
         if (!first) {
           out << ", ";
         }
         first = false;
         out << dep->name_;
       }
+      out << "}";
     }
     return out;
   }
@@ -644,27 +649,21 @@ void import(config const& c,
         }
       }
     }
-    fmt::println("running tasks: {}",
-                 todo | std::views::transform([](task* t) { return *t; }));
   } else {
     todo.insert(begin(all_tasks), end(all_tasks));
   }
 
   auto tasks = std::vector<task*>{begin(todo), end(todo)};
   utl::erase_if(tasks, [&](task* t) {
-    if (!t->should_run_) {
+    if (!t->should_run_ || t->ready_for_load(data_path)) {
       t->done_ = true;
       return true;
     }
-
-    if (t->ready_for_load(data_path)) {
-      t->done_ = true;
-      return true;
-    }
-
     return false;
   });
 
+  fmt::println("running tasks: {}",
+               tasks | std::views::transform([](task* t) { return *t; }));
   for (auto* t : tasks) {
     t->pt_ = utl::activate_progress_tracker(t->name_);
   }
