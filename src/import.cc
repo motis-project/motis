@@ -67,21 +67,28 @@ namespace motis {
 struct task {
   friend std::ostream& operator<<(std::ostream& out, task const& t) {
     out << t.name_ << " ";
-    if (t.done_) {
+    if (!t.should_run_) {
+      out << "disabled";
+    } else if (t.done_) {
       out << "done";
     } else if (utl::all_of(t.dependencies_,
                            [](task const* t) { return t->done_; })) {
       out << "ready";
     } else {
-      out << "waiting for ";
+      out << "waiting for {";
       auto first = true;
       for (auto const& dep : t.dependencies_) {
+        if (dep->done_) {
+          continue;
+        }
+
         if (!first) {
           out << ", ";
         }
         first = false;
         out << dep->name_;
       }
+      out << "}";
     }
     return out;
   }
@@ -108,7 +115,7 @@ struct task {
   }
 
   std::string name_;
-  std::vector<task const*> dependencies_;
+  std::vector<task*> dependencies_;
   bool should_run_;
   std::function<void()> run_;
   meta_t hashes_;
@@ -153,7 +160,9 @@ cista::hash_t hash_file(fs::path const& p) {
   }
 }
 
-void import(config const& c, fs::path const& data_path) {
+void import(config const& c,
+            fs::path const& data_path,
+            std::optional<std::vector<std::string>> const& task_filter) {
   c.verify_input_files_exist();
 
   auto ec = std::error_code{};
@@ -401,8 +410,7 @@ void import(config const& c, fs::path const& data_path) {
 
   auto adr_extend = task{
       "adr_extend",
-      c.osm_.has_value() ? std::vector<task const*>{&adr}
-                         : std::vector<task const*>{},
+      c.osm_.has_value() ? std::vector<task*>{&adr} : std::vector<task*>{},
       c.timetable_.has_value() && (c.geocoding_ || c.reverse_geocoding_),
       [&]() {
         auto d = data{data_path};
@@ -617,23 +625,45 @@ void import(config const& c, fs::path const& data_path) {
       },
       {tiles_version(), osm_hash, tiles_hash}};
 
-  auto tasks = std::vector{&tiles,        &osr,     &adr,
-                           &tt,           &tbd,     &adr_extend,
-                           &osr_footpath, &matches, &route_shapes_task};
+  auto all_tasks = std::vector{&tiles,        &osr,     &adr,
+                               &tt,           &tbd,     &adr_extend,
+                               &osr_footpath, &matches, &route_shapes_task};
+  auto todo = std::set<task*>{};
+  if (task_filter.has_value()) {
+    auto q = std::vector<task*>{};
+    for (auto const& x : *task_filter) {
+      auto const it =
+          utl::find_if(all_tasks, [&](task* t) { return t->name_ == x; });
+      utl::verify(it != end(all_tasks) && (*it)->should_run_,
+                  "task {} not found or disabled", x);
+      q.push_back(*it);
+    }
+
+    while (!q.empty()) {
+      auto const next = q.back();
+      q.resize(q.size() - 1);
+      todo.insert(next);
+      for (auto const& x : next->dependencies_) {
+        if (!todo.contains(x)) {
+          q.push_back(x);
+        }
+      }
+    }
+  } else {
+    todo.insert(begin(all_tasks), end(all_tasks));
+  }
+
+  auto tasks = std::vector<task*>{begin(todo), end(todo)};
   utl::erase_if(tasks, [&](task* t) {
-    if (!t->should_run_) {
+    if (!t->should_run_ || t->ready_for_load(data_path)) {
       t->done_ = true;
       return true;
     }
-
-    if (t->ready_for_load(data_path)) {
-      t->done_ = true;
-      return true;
-    }
-
     return false;
   });
 
+  fmt::println("running tasks: {}",
+               tasks | std::views::transform([](task* t) { return *t; }));
   for (auto* t : tasks) {
     t->pt_ = utl::activate_progress_tracker(t->name_);
   }
