@@ -149,10 +149,28 @@ int main(int ac, char** av) {
       try {
         auto data_path = fs::path{"data"};
         auto config_path = fs::path{"config.yml"};
+        auto filter_tasks = std::vector<std::string>{};
 
         auto desc = po::options_description{"Import Options"};
         add_data_path_opt(desc, data_path);
         add_config_path_opt(desc, config_path);
+        add_help_opt(desc);
+        desc.add_options()  //
+            ("filter",
+             boost::program_options::value<std::vector<std::string>>(
+                 &filter_tasks)
+                 ->composing(),
+             "Filter tasks and only run selected import tasks. Tasks have to "
+             "be active based on the configuration. Available tasks are:\n"
+             "  - osr (street_routing)\n"
+             "  - adr (geocoding/reverse_geocoding)\n"
+             "  - tt (timetable)\n"
+             "  - tbd (timetable.tb)\n"
+             "  - adr_extend (timetable+geocoding)\n"
+             "  - osr_footpath\n"
+             "  - matches (timetable+street_routing)\n"
+             "  - route_shapes (timetable.route_shapes)\n"
+             "  - tiles\n");
         auto vm = parse_opt(ac, av, desc);
         if (vm.count("help")) {
           std::cout << desc << "\n";
@@ -165,7 +183,9 @@ int main(int ac, char** av) {
           break;
         }
         auto const bars = utl::global_progress_bars{false};
-        import(c, std::move(data_path));
+        import(
+            c, std::move(data_path),
+            filter_tasks.empty() ? std::nullopt : std::optional{filter_tasks});
         return_value = 0;
       } catch (std::exception const& e) {
         fmt::println("unable to import: {}", e.what());
@@ -250,7 +270,7 @@ int main(int ac, char** av) {
         }
         auto const c = config::read(data_path / "config.yml");
         auto const ids = utl::to_vec(
-            vm["trip-id"].as<std::vector<std::string> >(),
+            vm["trip-id"].as<std::vector<std::string>>(),
             [](auto const& trip_id) {
               // Set space_as_plus = true
               auto const opts = boost::urls::encoding_opts{true};
