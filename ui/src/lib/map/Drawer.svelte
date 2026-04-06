@@ -99,7 +99,8 @@
 	{ontouchmove}
 	{ontouchend}
 >
-	<div
+	<button
+		type="button"
 		class="mx-auto my-5 relative before:content-[''] before:absolute before:inset-[-20px] before:inset-x-[-50vw] flex items-center justify-center"
 		onclick={() => {
 			showMap = true;
@@ -119,7 +120,7 @@
 			class:opacity-0={expanded}
 			class:opacity-100={!expanded}
 		></div>
-	</div>
+	</button>
 
 	<div bind:this={container} class:overflow-auto={expanded}>
 		{@render children?.()}
