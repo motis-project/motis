@@ -158,7 +158,7 @@ struct route_shape_result {
 route_shape_result route_shape(
     osr::ways const& w,
     osr::lookup const& lookup,
-    n::timetable& tt,
+    n::timetable const& tt,
     std::vector<osr::location> const& match_points,
     osr::search_profile const profile,
     osr::profile_parameters const& profile_params,
@@ -348,7 +348,7 @@ boost::json::object route_shape_debug(osr::ways const& w,
 
 void route_shapes(osr::ways const& w,
                   osr::lookup const& lookup,
-                  n::timetable& tt,
+                  n::timetable const& tt,
                   n::shapes_storage& shapes,
                   config::timetable::route_shapes const& conf,
                   std::array<bool, n::kNumClasses> const& clasz_enabled,

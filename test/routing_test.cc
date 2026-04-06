@@ -268,6 +268,32 @@ std::string to_str(std::vector<api::Itinerary> const& x) {
   return ss.str();
 }
 
+TEST(motis, routing_osm_only_direct_walk) {
+  auto ec = std::error_code{};
+  std::filesystem::remove_all("test/data_osm_only", ec);
+
+  auto const c =
+      config{.server_ = {{.web_folder_ = "ui/build", .n_threads_ = 1U}},
+             .osm_ = {"test/resources/test_case.osm.pbf"},
+             .street_routing_ = true};
+  import(c, "test/data_osm_only");
+  auto d = data{"test/data_osm_only", c};
+
+  auto const routing = utl::init_from<ep::routing>(d).value();
+  auto const res = routing(
+      "?fromPlace=49.87526849014631,8.62771903392948"
+      "&toPlace=49.87253873915287,8.629724234688751"
+      "&time=2019-05-01T01:25Z"
+      "&timetableView=false"
+      "&transitModes="
+      "&directModes=WALK");
+
+  ASSERT_TRUE(res.itineraries_.empty());
+  ASSERT_EQ(1U, res.direct_.size());
+  ASSERT_EQ(1U, res.direct_.front().legs_.size());
+  EXPECT_EQ(api::ModeEnum::WALK, res.direct_.front().legs_.front().mode_);
+}
+
 TEST(motis, routing) {
   auto ec = std::error_code{};
   std::filesystem::remove_all("test/data", ec);
@@ -289,7 +315,8 @@ TEST(motis, routing) {
       .osr_footpath_ = true,
       .geocoding_ = true,
       .reverse_geocoding_ = true};
-  auto d = import(c, "test/data", true);
+  import(c, "test/data");
+  auto d = data{"test/data", c};
   d.rt_->e_ = std::make_unique<elevators>(*d.w_, nullptr, *d.elevator_nodes_,
                                           parse_fasta(kFastaJson));
   d.init_rtt(date::sys_days{2019_y / May / 1});

@@ -13,6 +13,7 @@
 #include "motis-api/motis-api.h"
 
 #include "motis/config.h"
+#include "motis/data.h"
 #include "motis/endpoints/one_to_many.h"
 #include "motis/endpoints/one_to_many_post.h"
 #include "motis/import.h"
@@ -120,7 +121,8 @@ TEST(motis, one_to_many) {
                                    .datasets_ = {{"test", {.path_ = kGTFS}}}},
              .street_routing_ = true,
              .osr_footpath_ = true};
-  auto d = import(c, "test/data", true);
+  import(c, "test/data");
+  auto d = data{"test/data", c};
 
   auto const one_to_many_get =
       utl::init_from<ep::one_to_many_intermodal>(d).value();
