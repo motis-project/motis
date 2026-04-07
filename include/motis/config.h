@@ -142,6 +142,15 @@ struct config {
   };
   std::optional<timetable> timetable_{};
 
+  struct route_tiles {
+    bool operator==(route_tiles const&) const = default;
+    std::size_t db_size_{sizeof(void*) >= 8
+                             ? 256ULL * 1024ULL * 1024ULL * 1024ULL
+                             : 256U * 1024U * 1024U};
+    std::size_t flush_threshold_{100'000};
+  };
+  std::optional<route_tiles> route_tiles_{};
+
   struct gbfs {
     bool operator==(gbfs const&) const = default;
 

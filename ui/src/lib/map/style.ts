@@ -171,6 +171,12 @@ export const getStyle = (
 				maxzoom: 20,
 				attribution: ''
 			},
+			route_tiles: {
+				type: 'vector',
+				tiles: [getAbsoluteUrl(apiBaseUrl, 'route-tiles/{z}/{x}/{y}.mvt')],
+				maxzoom: 20,
+				attribution: ''
+			},
 			...hillshadeSources
 		},
 		glyphs: getAbsoluteUrl(apiBaseUrl, 'tiles/glyphs/{fontstack}/{range}.pbf'),
@@ -734,6 +740,60 @@ export const getStyle = (
 				paint: {
 					'line-color': c.rail,
 					'line-dasharray': [10, 2]
+				}
+			},
+			{
+				id: 'route_tiles_lines',
+				type: 'line',
+				source: 'route_tiles',
+				'source-layer': 'routes',
+				layout: {
+					'line-cap': 'round',
+					'line-join': 'round'
+				},
+				paint: {
+					'line-color': [
+						'case',
+						['==', ['get', 'beeline'], true],
+						'#ff0000',
+						['coalesce', ['get', 'color'], '#808080']
+					],
+					'line-opacity': [
+						'interpolate',
+						['linear'],
+						['zoom'],
+						7,
+						['case', ['==', ['get', 'beeline'], true], 1, 0.15],
+						10,
+						['case', ['==', ['get', 'beeline'], true], 1, 0.35],
+						13,
+						['case', ['==', ['get', 'beeline'], true], 1, 0.6]
+					],
+					'line-width': [
+						'interpolate',
+						['linear'],
+						['zoom'],
+						7,
+						['case', ['==', ['get', 'beeline'], true], 2.0, 0.5],
+						10,
+						['case', ['==', ['get', 'beeline'], true], 3.0, 1.25],
+						13,
+						['case', ['==', ['get', 'beeline'], true], 4.5, 2.0],
+						16,
+						['case', ['==', ['get', 'beeline'], true], 6.0, 3.0]
+					]
+				}
+			},
+			{
+				id: 'route_tiles_stops',
+				type: 'circle',
+				source: 'route_tiles',
+				'source-layer': 'stops',
+				minzoom: 10,
+				paint: {
+					'circle-color': c.text,
+					'circle-opacity': ['interpolate', ['linear'], ['zoom'], 10, 0.3, 14, 0.85],
+					'circle-radius': ['interpolate', ['linear'], ['zoom'], 10, 0.8, 14, 2.2]
 				}
 			},
 			{

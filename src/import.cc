@@ -52,6 +52,7 @@
 #include "motis/data.h"
 #include "motis/hashes.h"
 #include "motis/route_shapes.h"
+#include "motis/route_tiles.h"
 #include "motis/tag_lookup.h"
 #include "motis/tt_location_rtree.h"
 
@@ -579,6 +580,31 @@ void import(config const& c,
             .route_shapes_.value_or(config::timetable::route_shapes{})
             .cache_reuse_old_osm_data_}}};
 
+  auto route_tiles = task{
+      "route_tiles",
+      {&tt, &route_shapes_task},
+      c.route_tiles_.has_value(),
+      [&]() {
+        auto d = data{data_path};
+        d.load_tt("tt.bin");
+        d.load_shapes();
+        d.load_osr();
+
+        import_route_tiles(c, d, data_path);
+      },
+      {{"route_tiles_cfg", cista::build_hash(c.route_tiles_->db_size_,
+                                             c.route_tiles_->flush_threshold_)},
+       tt_hash,
+       n_version(),
+       routed_shapes_version(),
+       route_tiles_version(),
+       route_shapes_clasz_hash,
+       {"route_shapes_mode",
+        static_cast<std::uint64_t>(
+            c.timetable_.value_or(config::timetable{})
+                .route_shapes_.value_or(config::timetable::route_shapes{})
+                .mode_)}}};
+
   auto tiles = task{
       "tiles",
       {},
@@ -628,7 +654,8 @@ void import(config const& c,
 
   auto all_tasks = std::vector{&tiles,        &osr,     &adr,
                                &tt,           &tbd,     &adr_extend,
-                               &osr_footpath, &matches, &route_shapes_task};
+                               &osr_footpath, &matches, &route_shapes_task,
+                               &route_tiles};
   auto todo = std::set<task*>{};
   if (task_filter.has_value()) {
     auto q = std::vector<task*>{};

@@ -96,6 +96,8 @@ data::data(std::filesystem::path p, config const& c)
   verify_version(c.use_street_routing() && c.timetable_, "matches",
                  matches_version());
   verify_version(c.tiles_.has_value(), "tiles", tiles_version());
+  verify_version(c.route_tiles_.has_value(), "route_tiles",
+                 route_tiles_version());
   verify_version(c.osr_footpath_, "osr_footpath", osr_footpath_version());
 
   rt_ = std::make_shared<rt>();
@@ -212,6 +214,12 @@ data::data(std::filesystem::path p, config const& c)
     }
   });
 
+  auto route_tiles = std::async(std::launch::async, [&]() {
+    if (c.route_tiles_) {
+      load_route_tiles();
+    }
+  });
+
   auto const throw_if_failed = [](char const* context, auto& future) {
     try {
       future.get();
@@ -230,6 +238,7 @@ data::data(std::filesystem::path p, config const& c)
   matches.wait();
   elevators.wait();
   tiles.wait();
+  route_tiles.wait();
 
   throw_if_failed("geocoder", geocoder);
   throw_if_failed("tt", tt);
@@ -237,6 +246,7 @@ data::data(std::filesystem::path p, config const& c)
   throw_if_failed("matches", matches);
   throw_if_failed("elevators", elevators);
   throw_if_failed("tiles", tiles);
+  throw_if_failed("route_tiles", route_tiles);
 
   utl_verify(
       shapes_ == nullptr || tt_ == nullptr ||
@@ -361,6 +371,12 @@ void data::load_tiles() {
   auto const db_size = config_.tiles_.value().db_size_;
   tiles_ = std::make_unique<tiles_data>(
       (path_ / "tiles" / "tiles.mdb").generic_string(), db_size);
+}
+
+void data::load_route_tiles() {
+  auto const db_size = config_.route_tiles_.value().db_size_;
+  route_tiles_ = std::make_unique<tiles_data>(
+      (path_ / "route_tiles" / "route_tiles.mdb").generic_string(), db_size);
 }
 
 void data::load_auser_updater(std::string_view tag,

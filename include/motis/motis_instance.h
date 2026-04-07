@@ -148,6 +148,11 @@ struct motis_instance {
       qr_.route("GET", "/tiles/", ep::tiles{*d.tiles_});
     }
 
+    if (c.route_tiles_) {
+      utl::verify(d.route_tiles_ != nullptr, "route tiles data not loaded");
+      qr_.route("GET", "/route-tiles/", ep::tiles{*d.route_tiles_});
+    }
+
     qr_.route("POST", "/ojp20",
               ep::ojp{
                   .routing_ep_ = utl::init_from<ep::routing>(d),

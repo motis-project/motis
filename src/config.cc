@@ -102,6 +102,8 @@ void config::verify() const {
   auto const street_routing = use_street_routing();
 
   utl::verify(!tiles_ || osm_, "feature TILES requires OpenStreetMap data");
+  utl::verify(!route_tiles_ || (timetable_ && timetable_->with_shapes_),
+              "feature ROUTE_TILES requires TIMETABLE with SHAPES");
   utl::verify(!street_routing || osm_,
               "feature STREET_ROUTING requires OpenStreetMap data");
   utl::verify(!timetable_ || !timetable_->datasets_.empty(),

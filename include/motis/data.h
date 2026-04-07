@@ -63,6 +63,7 @@ struct data {
   void load_way_matches();
   void load_reverse_geocoder();
   void load_tiles();
+  void load_route_tiles();
   void load_auser_updater(std::string_view, config::timetable::dataset const&);
 
   void init_rtt(date::sys_days = std::chrono::time_point_cast<date::days>(
@@ -73,9 +74,9 @@ struct data {
     return std::tie(config_, motis_version_, t_, adr_ext_, f_, tz_, r_, tc_, w_,
                     pl_, l_, elevations_, tt_, tbd_, tags_, location_rtree_,
                     elevator_nodes_, elevator_osm_mapping_, shapes_,
-                    railviz_static_, matches_, way_matches_, rt_, gbfs_,
-                    odm_bounds_, ride_sharing_bounds_, flex_areas_, metrics_,
-                    auser_);
+                    railviz_static_, matches_, way_matches_, tiles_,
+                    route_tiles_, rt_, gbfs_, odm_bounds_, ride_sharing_bounds_,
+                    flex_areas_, metrics_, auser_);
   }
 
   std::filesystem::path path_;
@@ -104,6 +105,7 @@ struct data {
       matches_;
   ptr<way_matches_storage> way_matches_;
   ptr<tiles_data> tiles_;
+  ptr<tiles_data> route_tiles_;
   std::shared_ptr<rt> rt_{std::make_shared<rt>()};
   std::shared_ptr<gbfs::gbfs_data> gbfs_{};
   ptr<odm::bounds> odm_bounds_;
