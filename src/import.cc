@@ -410,7 +410,8 @@ void import(config const& c,
 
   auto adr_extend = task{
       "adr_extend",
-      c.osm_.has_value() ? std::vector<task*>{&adr} : std::vector<task*>{},
+      c.osm_.has_value() ? std::vector<task*>{&adr, &tt}
+                         : std::vector<task*>{&tt},
       c.timetable_.has_value() && (c.geocoding_ || c.reverse_geocoding_),
       [&]() {
         auto d = data{data_path};
