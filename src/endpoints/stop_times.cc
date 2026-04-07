@@ -351,13 +351,14 @@ std::vector<api::Place> other_stops_impl(n::rt::frun fr,
   }
 }
 
-api::stoptimes_response stop_times::operator()(
-    boost::urls::url_view const& url) const {
-  auto const query = api::stoptimes_params{url.params()};
-  auto const& lang = query.language_;
-  auto const api_version = get_api_version(url);
+std::vector<n::rt::run> stop_times::get_runs(
+    api::stoptimes_params const& query,
+    nigiri::rt_timetable const* rtt,
+    nigiri::event_type const& ev_type,
+    std::optional<nigiri::location_idx_t> const& query_stop,
+    std::optional<osr::location> const& query_center) const {
 
-  auto const max_results = config_.limits_.value().stoptimes_max_results_;
+  auto const max_results = config_.get_limits().stoptimes_max_results_;
   utl::verify<net::bad_request_exception>(
       query.n_.has_value() || query.window_.has_value(),
       "neither 'n' nor 'window' is provided");
@@ -370,12 +371,6 @@ api::stoptimes_response stop_times::operator()(
       query.stopId_.has_value() ||
           (query.center_.has_value() && query.radius_.has_value()),
       "no stop and no center with radius (at least one is required)");
-
-  auto const query_stop = query.stopId_.and_then(
-      [&](std::string const& x) { return tags_.find_location(tt_, x); });
-
-  auto const query_center = query.center_.and_then(
-      [&](std::string const& x) { return parse_location(x); });
 
   auto const center =
       query_stop
@@ -446,10 +441,6 @@ api::stoptimes_response stop_times::operator()(
   }
   utl::erase_duplicates(locations);
 
-  auto const rt = std::atomic_load(&rt_);
-  auto const rtt = rt->rtt_.get();
-  auto const ev_type =
-      query.arriveBy_ ? n::event_type::kArr : n::event_type::kDep;
   auto const window = query.window_.transform([](auto const w) {
     return std::chrono::duration_cast<n::duration_t>(std::chrono::seconds{w});
   });
@@ -472,6 +463,39 @@ api::stoptimes_response stop_times::operator()(
                              return to_tuple(a) == to_tuple(b);
                            }),
                end(events));
+  return events;
+}
+
+std::vector<nigiri::rt::run> stop_times::get_runs(
+    api::stoptimes_params const& query, nigiri::rt_timetable const* rtt) const {
+  auto const ev_type =
+      query.arriveBy_ ? n::event_type::kArr : n::event_type::kDep;
+  auto const query_stop = query.stopId_.and_then(
+      [&](std::string const& x) { return tags_.find_location(tt_, x); });
+  auto const query_center = query.center_.and_then(
+      [&](std::string const& x) { return parse_location(x); });
+
+  return this->get_runs(query, rtt, ev_type, query_stop, query_center);
+}
+
+api::stoptimes_response stop_times::operator()(
+    boost::urls::url_view const& url) const {
+  auto const query = api::stoptimes_params{url.params()};
+
+  auto const rt = std::atomic_load(&rt_);
+  auto const rtt = rt->rtt_.get();
+  auto const ev_type =
+      query.arriveBy_ ? n::event_type::kArr : n::event_type::kDep;
+  auto const api_version = get_api_version(url);
+  auto const& lang = query.language_;
+  auto const query_stop = query.stopId_.and_then(
+      [&](std::string const& x) { return tags_.find_location(tt_, x); });
+  auto const query_center = query.center_.and_then(
+      [&](std::string const& x) { return parse_location(x); });
+
+  auto const events =
+      this->get_runs(query, rtt, ev_type, query_stop, query_center);
+
   return {
       .stopTimes_ = utl::to_vec(
           events,
