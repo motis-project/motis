@@ -6,6 +6,7 @@
 #include <optional>
 #include <ranges>
 #include <string_view>
+#include <type_traits>
 
 #include "cista/containers/rtree.h"
 #include "cista/reflection/comparable.h"
@@ -53,7 +54,7 @@ constexpr auto const kRoutesPolylinesLimit = 20'000U;
 using static_rtree = cista::raw::rtree<n::route_idx_t>;
 using rt_rtree = cista::raw::rtree<n::rt_transport_idx_t>;
 
-using int_clasz = decltype(n::kNumClasses);
+using int_clasz = std::underlying_type_t<n::clasz>;
 
 namespace motis {
 
