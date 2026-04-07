@@ -30,6 +30,7 @@
 #include "motis/data.h"
 #include "motis/gbfs/routing_data.h"
 #include "motis/journey_to_response.h"
+#include "motis/parse_location.h"
 #include "motis/place.h"
 #include "motis/tag_lookup.h"
 #include "motis/timetable/time_conv.h"
@@ -154,14 +155,22 @@ std::string get_single_leg_id(api::Leg const& l, n::lang_t const& lang) {
   return net::encode_base64(data);
 }
 
-api::stoptimes_response get_stop_times_in_radius(ep::stop_times const& st_ep,
-                                                 geo::latlng const& center,
-                                                 std::int64_t const sched_start,
-                                                 api::ModeEnum const mode,
-                                                 std::int64_t const window,
-                                                 int const radius_m,
-                                                 bool const arrive_by,
-                                                 n::lang_t const& lang) {
+struct st_candidate {
+  api::Place place_{};
+  std::string tripId_{};
+  std::string displayName_{};
+};
+
+std::vector<st_candidate> get_st_candidates_in_radius(
+    ep::stop_times const& st_ep,
+    nigiri::rt_timetable const* rtt,
+    geo::latlng const& center,
+    std::int64_t const sched_start,
+    api::ModeEnum const mode,
+    std::int64_t const window,
+    int const radius_m,
+    bool const arrive_by,
+    n::lang_t const& lang) {
   auto query = api::stoptimes_params{};
   query.center_ = fmt::format("{},{}", center.lat_, center.lng_);
   query.time_ = openapi::date_time_t{
@@ -171,10 +180,41 @@ api::stoptimes_response get_stop_times_in_radius(ep::stop_times const& st_ep,
   query.window_ = window;
   query.radius_ = radius_m;
   query.exactRadius_ = true;
-  query.fetchStops_ = true;
   query.mode_ = {mode};
   query.language_ = lang;
-  return st_ep(query.to_url("?"));
+
+  auto const ev_type =
+      query.arriveBy_ ? n::event_type::kArr : n::event_type::kDep;
+  auto const query_stop = query.stopId_.and_then([&](std::string const& x) {
+    return st_ep.tags_.find_location(st_ep.tt_, x);
+  });
+  auto const query_center = query.center_.and_then(
+      [&](std::string const& x) { return parse_location(x); });
+
+  auto const events =
+      st_ep.get_runs(query, rtt, ev_type, query_stop, query_center);
+
+  return utl::to_vec(events, [&](n::rt::run const r) -> st_candidate {
+    auto const fr = n::rt::frun{st_ep.tt_, rtt, r};
+    auto const s = fr[0];
+    auto place =
+        to_place(&st_ep.tt_, &st_ep.tags_, st_ep.w_, st_ep.pl_, st_ep.matches_,
+                 st_ep.ae_, st_ep.tz_, query.language_, s);
+    if (fr.stop_range_.from_ != 0U) {
+      place.arrival_ = {s.time(n::event_type::kArr)};
+      place.scheduledArrival_ = {s.scheduled_time(n::event_type::kArr)};
+    }
+    if (fr.stop_range_.from_ != fr.size() - 1U) {
+      place.departure_ = {s.time(n::event_type::kDep)};
+      place.scheduledDeparture_ = {s.scheduled_time(n::event_type::kDep)};
+    }
+
+    auto const trip_id = st_ep.tags_.id(st_ep.tt_, s, ev_type);
+
+    return {.place_ = std::move(place),
+            .tripId_ = trip_id,
+            .displayName_ = std::string{s.display_name(ev_type, lang)}};
+  });
 }
 
 n::rt::frun make_frun_from_stoptime(tag_lookup const& tags,
@@ -308,11 +348,11 @@ struct from_to {
 };
 
 std::tuple<std::optional<std::string_view>, std::optional<from_to>>
-get_best_candidate(api::stoptimes_response const& from_stop_times,
-                   api::stoptimes_response const& to_stop_times,
+get_best_candidate(std::vector<st_candidate> const& from_resp,
+                   std::vector<st_candidate> const& to_resp,
                    leg_hint const& hint) {
   auto to_cands = std::vector<id_score>{};
-  for (auto const& st : to_stop_times.stopTimes_) {
+  for (auto const& st : to_resp) {
     if (!st.place_.scheduledArrival_.has_value()) {
       continue;
     }
@@ -334,7 +374,7 @@ get_best_candidate(api::stoptimes_response const& from_stop_times,
   auto best_trip_id = std::optional<std::string_view>{};
   auto best_from_to = std::optional<from_to>{};
   auto best_score = std::numeric_limits<double>::lowest();
-  for (auto const& from_st : from_stop_times.stopTimes_) {
+  for (auto const& from_st : from_resp) {
     if (!from_st.place_.scheduledDeparture_.has_value()) {
       continue;
     }
@@ -367,6 +407,8 @@ api::Itinerary reconstruct_itinerary(ep::stop_times const& stop_times_ep,
                                      nigiri::shapes_storage const* shapes,
                                      rt const& rt,
                                      std::string const& id) {
+  auto stop_times_rt = std::atomic_load(&stop_times_ep.rt_);
+  auto stop_times_rtt = stop_times_rt->rtt_.get();
   auto const parsed_id = decode_itinerary_id(id);
   utl::verify(parsed_id.has_leg(),
               "reconstruct_itinerary: itinerary id is missing leg");
@@ -403,12 +445,14 @@ api::Itinerary reconstruct_itinerary(ep::stop_times const& stop_times_ep,
 
       return {fr, *from_idx, *to_idx};
     } else {
-      auto const from_st_res = get_stop_times_in_radius(
-          stop_times_ep, lh.from_pos_, lh.sched_start_ - kLookbackSeconds,
-          lh.mode_, kLookbackSeconds * 2, kSearchRadiusMeters, false, lang);
-      auto const to_st_res = get_stop_times_in_radius(
-          stop_times_ep, lh.to_pos_, lh.sched_end_ - kLookbackSeconds, lh.mode_,
-          kLookbackSeconds * 2, kSearchRadiusMeters, true, lang);
+      auto const from_st_res = get_st_candidates_in_radius(
+          stop_times_ep, stop_times_rtt, lh.from_pos_,
+          lh.sched_start_ - kLookbackSeconds, lh.mode_, kLookbackSeconds * 2,
+          kSearchRadiusMeters, false, lang);
+      auto const to_st_res = get_st_candidates_in_radius(
+          stop_times_ep, stop_times_rtt, lh.to_pos_,
+          lh.sched_end_ - kLookbackSeconds, lh.mode_, kLookbackSeconds * 2,
+          kSearchRadiusMeters, true, lang);
 
       auto const [best_trip_id, best_from_to] =
           get_best_candidate(from_st_res, to_st_res, lh);
