@@ -268,6 +268,32 @@ std::string to_str(std::vector<api::Itinerary> const& x) {
   return ss.str();
 }
 
+TEST(motis, routing_osm_only_direct_walk) {
+  auto ec = std::error_code{};
+  std::filesystem::remove_all("test/data_osm_only", ec);
+
+  auto const c =
+      config{.server_ = {{.web_folder_ = "ui/build", .n_threads_ = 1U}},
+             .osm_ = {"test/resources/test_case.osm.pbf"},
+             .street_routing_ = true};
+  import(c, "test/data_osm_only");
+  auto d = data{"test/data_osm_only", c};
+
+  auto const routing = utl::init_from<ep::routing>(d).value();
+  auto const res = routing(
+      "?fromPlace=49.87526849014631,8.62771903392948"
+      "&toPlace=49.87253873915287,8.629724234688751"
+      "&time=2019-05-01T01:25Z"
+      "&timetableView=false"
+      "&transitModes="
+      "&directModes=WALK");
+
+  ASSERT_TRUE(res.itineraries_.empty());
+  ASSERT_EQ(1U, res.direct_.size());
+  ASSERT_EQ(1U, res.direct_.front().legs_.size());
+  EXPECT_EQ(api::ModeEnum::WALK, res.direct_.front().legs_.front().mode_);
+}
+
 TEST(motis, routing) {
   auto ec = std::error_code{};
   std::filesystem::remove_all("test/data", ec);
@@ -289,7 +315,8 @@ TEST(motis, routing) {
       .osr_footpath_ = true,
       .geocoding_ = true,
       .reverse_geocoding_ = true};
-  auto d = import(c, "test/data", true);
+  import(c, "test/data");
+  auto d = data{"test/data", c};
   d.rt_->e_ = std::make_unique<elevators>(*d.w_, nullptr, *d.elevator_nodes_,
                                           parse_fasta(kFastaJson));
   d.init_rtt(date::sys_days{2019_y / May / 1});
@@ -637,5 +664,36 @@ TEST(motis, routing) {
     (from=test_FFM_HAUPT_U [track=-, scheduled_track=-, level=-4], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 02:10, mode="WALK", trip="-", end=2019-05-01 02:15)
 ])",
         to_str(res.itineraries_));
+  }
+
+  // Route using radius: finds stops within 5km radius from coordinates,
+  // no preTransitModes / OSM street routing needed.
+  {
+    // fromPlace is ~2km from DA_10, toPlace is ~2km from FFM_10.
+    auto const res = routing(
+        "?fromPlace=49.89100,8.62900"
+        "&toPlace=50.08800,8.66100"
+        "&time=2019-05-01T01:30Z"
+        "&radius=5000"
+        "&timetableView=false");
+    ASSERT_FALSE(res.itineraries_.empty());
+    EXPECT_TRUE(utl::any_of(res.itineraries_.front().legs_, [](auto const& l) {
+      return l.routeShortName_.has_value() && *l.routeShortName_ == "ICE";
+    }));
+  }
+
+  // Route using radius on origin coordinate, station ID as destination.
+  {
+    // fromPlace is ~2km from DA_10, toPlace is the FFM_10 stop directly.
+    auto const res = routing(
+        "?fromPlace=49.89100,8.62900"
+        "&toPlace=test_FFM_10"
+        "&time=2019-05-01T01:30Z"
+        "&radius=5000"
+        "&timetableView=false");
+    ASSERT_FALSE(res.itineraries_.empty());
+    EXPECT_TRUE(utl::any_of(res.itineraries_.front().legs_, [](auto const& l) {
+      return l.routeShortName_.has_value() && *l.routeShortName_ == "ICE";
+    }));
   }
 }

@@ -83,8 +83,8 @@ S1,20190501,1
 )";
 
 template <>
-data import_test_case<test_case::FFM_for_first_last_mile>() {
-  auto const c =
+test_case_params import_test_case<test_case::FFM_for_first_last_mile>() {
+  auto c =
       config{.osm_ = {"test/resources/test_case.osm.pbf"},
              .timetable_ =
                  config::timetable{.first_day_ = "2019-05-01",
@@ -92,5 +92,6 @@ data import_test_case<test_case::FFM_for_first_last_mile>() {
                                    .datasets_ = {{"test", {.path_ = kGTFS}}}},
              .street_routing_ = true,
              .osr_footpath_ = true};
-  return import_test_case(c, "test/test_case/ffm_for_first_last_mile_data");
+  return import_test_case(std::move(c),
+                          "test/test_case/ffm_for_first_last_mile_data");
 }

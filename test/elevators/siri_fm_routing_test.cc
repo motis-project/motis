@@ -124,7 +124,7 @@ TEST(motis, siri_fm_routing) {
              .osr_footpath_ = true,
              .geocoding_ = true,
              .reverse_geocoding_ = true};
-  import(c, "test/data", true);
+  import(c, "test/data");
 
   auto d = data{"test/data", c};
 

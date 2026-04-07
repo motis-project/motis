@@ -101,8 +101,8 @@ std::vector<api::ParetoSet> transit_durations(
       deduplicate(arrive_by ? query.preTransitModes_ : query.postTransitModes_);
   auto const max_prepost_seconds = std::min(
       max_travel_time,
-      std::chrono::seconds{ep.config_.limits_.value()
-                               .street_routing_max_prepost_transit_seconds_});
+      std::chrono::seconds{
+          ep.config_.get_limits().street_routing_max_prepost_transit_seconds_});
   auto const one_max_seconds =
       std::min(std::chrono::seconds{arrive_by ? query.maxPostTransitTime_
                                               : query.maxPreTransitTime_},

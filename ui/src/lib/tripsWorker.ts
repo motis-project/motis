@@ -79,7 +79,11 @@ const fetchData = async (query: TripsData) => {
 
 	for (const d of data) {
 		const id = d.trips[0].tripId;
-		const processed = processSegment(d, query.query.precision || 5);
+		const precision =
+			'precision' in query.query && typeof query.query.precision === 'number'
+				? query.query.precision
+				: 5;
+		const processed = processSegment(d, precision);
 
 		if (!tripBuilders.has(id)) {
 			tripBuilders.set(id, {

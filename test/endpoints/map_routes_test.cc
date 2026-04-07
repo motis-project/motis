@@ -26,7 +26,7 @@ using namespace testing;
 namespace n = nigiri;
 
 TEST(motis, map_routes) {
-  auto& d = get_test_case<test_case::FFM_simple_transfers>();
+  auto d = get_test_case<test_case::FFM_simple_transfers>();
 
   auto const map_routes = utl::init_from<ep::routes>(d).value();
 
