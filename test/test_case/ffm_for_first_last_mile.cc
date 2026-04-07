@@ -83,8 +83,8 @@ S1,20190501,1
 )";
 
 template <>
-test_case_params import_test_case<test_case::FFM_for_first_last_mile>() {
-  auto c =
+test_case_params const import_test_case<test_case::FFM_for_first_last_mile>() {
+  auto const c =
       config{.osm_ = {"test/resources/test_case.osm.pbf"},
              .timetable_ =
                  config::timetable{.first_day_ = "2019-05-01",

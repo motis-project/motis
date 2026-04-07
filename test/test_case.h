@@ -16,12 +16,12 @@ enum class test_case {
 using test_case_params = std::pair<std::string_view, config>;
 
 template <test_case TestCase>
-test_case_params import_test_case();
+test_case_params const import_test_case();
 
 template <test_case TestCase>
 data get_test_case() {
-  static auto params{import_test_case<TestCase>()};
+  static auto const params{import_test_case<TestCase>()};
   return data{std::get<0>(params), std::get<1>(params)};
 }
 
-test_case_params import_test_case(config&&, std::string_view path);
+test_case_params const import_test_case(config const&&, std::string_view path);

@@ -41,8 +41,8 @@ S1,20190501,1
 )";
 
 template <>
-test_case_params import_test_case<test_case::FFM_simple_transfers>() {
-  auto c = config{
+test_case_params const import_test_case<test_case::FFM_simple_transfers>() {
+  auto const c = config{
       .osm_ = {"test/resources/test_case.osm.pbf"},
       .timetable_ =
           config::timetable{
