@@ -9,21 +9,19 @@ using motis::config;
 using motis::data;
 
 enum class test_case {
-  // TODO Rename based on test
-  FFM_ojp_requests,  // 1
-  FFM_matching_test,
-  FFM_routing_osm_only_direct_walk,  // 1
-  FFM_siri_fm_routing,  // 1
-  FFM_stop_times,  // 1
-  FFM_routing,  // 1
-  FFM_map_routes,  // 1
-  FFM_one_to_many,  // 1
-  FFM_tag_lookup,  // 1
-  FFM_get_way_candidates,  // 1
-  CH_trip_notice_translations,  // 1
-  generated_trip_siri_sx_alerts,  // 1
-  generated_trip_stop_naming,  // 1
-  generated_stop_group_geocoding,  // 1
+  CH_trip_notice_translations,
+  FFM_get_way_candidates,
+  FFM_map_routes,
+  FFM_ojp_requests,
+  FFM_one_to_many,
+  FFM_routing,
+  FFM_routing_osm_only_direct_walk,
+  FFM_siri_fm_routing,
+  FFM_stop_times,
+  FFM_tag_lookup,
+  generated_stop_group_geocoding,
+  generated_trip_siri_sx_alerts,
+  generated_trip_stop_naming,
 };
 
 using test_case_params = std::pair<std::string_view, config>;

@@ -13,10 +13,7 @@
 
 #include "adr/formatter.h"
 
-#include "motis/config.h"
-#include "motis/data.h"
 #include "motis/endpoints/ojp.h"
-#include "motis/import.h"
 
 #include "../test_case.h"
 

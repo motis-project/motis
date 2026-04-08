@@ -4,9 +4,7 @@
 
 #include "nigiri/types.h"
 
-#include "motis/config.h"
 #include "motis/data.h"
-#include "motis/import.h"
 #include "motis/tag_lookup.h"
 
 #include "./test_case.h"
