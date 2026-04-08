@@ -159,6 +159,7 @@ struct st_candidate {
   api::Place place_{};
   std::string tripId_{};
   std::string displayName_{};
+  n::rt::run run_{};
 };
 
 std::vector<st_candidate> get_st_candidates_in_radius(
@@ -213,16 +214,25 @@ std::vector<st_candidate> get_st_candidates_in_radius(
 
     return {.place_ = std::move(place),
             .tripId_ = trip_id,
-            .displayName_ = std::string{s.display_name(ev_type, lang)}};
+            .displayName_ = std::string{s.display_name(ev_type, lang)},
+            .run_ = r};
   });
 }
 
-n::rt::frun make_frun_from_stoptime(tag_lookup const& tags,
-                                    n::timetable const& tt,
-                                    n::rt_timetable const* rtt,
-                                    std::string_view const trip_id) {
+n::rt::frun make_full_frun(n::timetable const& tt,
+                           n::rt_timetable const* rtt,
+                           n::rt::run run) {
+  auto fr = n::rt::frun{tt, rtt, run};
+  fr.stop_range_ = {0U, fr.size()};
+  return fr;
+}
+
+n::rt::frun make_frun_from_trip_id(tag_lookup const& tags,
+                                   n::timetable const& tt,
+                                   n::rt_timetable const* rtt,
+                                   std::string_view const trip_id) {
   auto const [run, _] = tags.get_trip(tt, rtt, trip_id);
-  return n::rt::frun{tt, rtt, run};
+  return make_full_frun(tt, rtt, run);
 }
 
 std::optional<n::stop_idx_t> find_stop_by_location_time(
@@ -240,28 +250,6 @@ std::optional<n::stop_idx_t> find_stop_by_location_time(
     }
   }
   return std::nullopt;
-}
-
-std::optional<n::stop_idx_t> find_stop_by_place(n::rt::frun const& fr,
-                                                tag_lookup const& tags,
-                                                api::Place const& p,
-                                                n::event_type const ev_type) {
-  if (!p.stopId_) {
-    return std::nullopt;
-  }
-  auto const t = (ev_type == n::event_type::kArr ? p.scheduledArrival_
-                                                 : p.scheduledDeparture_);
-  if (!t.has_value()) {
-    return std::nullopt;
-  }
-
-  auto const loc = tags.find_location(*fr.tt_, *p.stopId_);
-  if (!loc.has_value()) {
-    return std::nullopt;
-  }
-
-  return find_stop_by_location_time(fr, *loc, t.value().get_unixtime_seconds(),
-                                    ev_type);
 }
 
 std::optional<n::stop_idx_t> find_stop_by_id_time(
@@ -332,47 +320,43 @@ api::Itinerary build_itinerary_from_frun(
       kMaxMatchingDistance, api_version, false, false, lang);
 }
 
-struct id_score {
-  bool operator<(id_score const& o) const {
-    return id_ < o.id_ || (id_ == o.id_ && score_ > o.score_);
+struct candidate_score {
+  bool operator<(candidate_score const& o) const {
+    return candidate_->tripId_ < o.candidate_->tripId_ ||
+           (candidate_->tripId_ == o.candidate_->tripId_ && score_ > o.score_);
   }
 
-  std::string_view id_;
+  st_candidate const* candidate_;
   double score_;
-  api::Place const* place_;
 };
 
-struct from_to {
-  api::Place const* from_;
-  api::Place const* to_;
+struct from_to_candidate {
+  st_candidate const* from_;
+  st_candidate const* to_;
 };
 
-std::tuple<std::optional<std::string_view>, std::optional<from_to>>
-get_best_candidate(std::vector<st_candidate> const& from_resp,
-                   std::vector<st_candidate> const& to_resp,
-                   leg_hint const& hint) {
-  auto to_cands = std::vector<id_score>{};
+std::optional<from_to_candidate> get_best_candidate(
+    std::vector<st_candidate> const& from_resp,
+    std::vector<st_candidate> const& to_resp,
+    leg_hint const& hint) {
+  auto to_cands = std::vector<candidate_score>{};
   for (auto const& st : to_resp) {
     if (!st.place_.scheduledArrival_.has_value()) {
       continue;
     }
 
     to_cands.emplace_back(
-        st.tripId_,
-        (st.tripId_ == hint.trip_id_ ? kExactTripIdMatchAddScore : 0.0) +
-            exact_stop_id_match_score(st.place_, hint.to_stop_id_) -
-            geo::distance(geo::latlng{st.place_.lat_, st.place_.lon_},
-                          hint.to_pos_) -
-            kTimeMul *
-                std::abs(
-                    hint.sched_end_ -
-                    st.place_.scheduledArrival_.value().get_unixtime_seconds()),
-        &st.place_);
+        &st, (st.tripId_ == hint.trip_id_ ? kExactTripIdMatchAddScore : 0.0) +
+                 exact_stop_id_match_score(st.place_, hint.to_stop_id_) -
+                 geo::distance(geo::latlng{st.place_.lat_, st.place_.lon_},
+                               hint.to_pos_) -
+                 kTimeMul * std::abs(hint.sched_end_ -
+                                     st.place_.scheduledArrival_.value()
+                                         .get_unixtime_seconds()));
   }
   utl::sort(to_cands);
 
-  auto best_trip_id = std::optional<std::string_view>{};
-  auto best_from_to = std::optional<from_to>{};
+  auto best_from_to = std::optional<from_to_candidate>{};
   auto best_score = std::numeric_limits<double>::lowest();
   for (auto const& from_st : from_resp) {
     if (!from_st.place_.scheduledDeparture_.has_value()) {
@@ -380,8 +364,8 @@ get_best_candidate(std::vector<st_candidate> const& from_resp,
     }
     auto it = std::lower_bound(
         begin(to_cands), end(to_cands),
-        id_score{from_st.tripId_, std::numeric_limits<double>::max(), nullptr});
-    if (it == end(to_cands) || it->id_ != from_st.tripId_) {
+        candidate_score{&from_st, std::numeric_limits<double>::max()});
+    if (it == end(to_cands) || it->candidate_->tripId_ != from_st.tripId_) {
       continue;
     }
     auto score = it->score_ +
@@ -396,11 +380,10 @@ get_best_candidate(std::vector<st_candidate> const& from_resp,
                                          .get_unixtime_seconds());
     if (score > best_score) {
       best_score = score;
-      best_trip_id = from_st.tripId_;
-      best_from_to.emplace(&from_st.place_, it->place_);
+      best_from_to.emplace(&from_st, it->candidate_);
     }
   }
-  return {best_trip_id, best_from_to};
+  return best_from_to;
 }
 
 api::Itinerary reconstruct_itinerary(ep::stop_times const& stop_times_ep,
@@ -420,7 +403,7 @@ api::Itinerary reconstruct_itinerary(ep::stop_times const& stop_times_ep,
       utl::verify(!lh.trip_id_.empty(),
                   "reconstruct_itinerary: additional trip requires trip_id");
 
-      auto const fr = make_frun_from_stoptime(
+      auto const fr = make_frun_from_trip_id(
           stop_times_ep.tags_, stop_times_ep.tt_, rt.rtt_.get(), lh.trip_id_);
       utl::verify(fr.valid(),
                   "reconstruct_itinerary: additional trip not found");
@@ -454,26 +437,22 @@ api::Itinerary reconstruct_itinerary(ep::stop_times const& stop_times_ep,
           lh.sched_end_ - kLookbackSeconds, lh.mode_, kLookbackSeconds * 2,
           kSearchRadiusMeters, true, lang);
 
-      auto const [best_trip_id, best_from_to] =
-          get_best_candidate(from_st_res, to_st_res, lh);
+      auto const best_from_to = get_best_candidate(from_st_res, to_st_res, lh);
 
-      utl::verify(best_trip_id.has_value() && best_from_to.has_value(),
-                  "no matching route is found");
-      auto const best_fr = make_frun_from_stoptime(
-          stop_times_ep.tags_, stop_times_ep.tt_, rt.rtt_.get(), *best_trip_id);
+      utl::verify(best_from_to.has_value(), "no matching route is found");
 
-      auto const from_idx =
-          find_stop_by_place(best_fr, stop_times_ep.tags_,
-                             *(best_from_to->from_), n::event_type::kDep);
-      auto const to_idx =
-          find_stop_by_place(best_fr, stop_times_ep.tags_, *(best_from_to->to_),
-                             n::event_type::kArr);
-      utl::verify(from_idx.has_value() && to_idx.has_value(),
-                  "reconstruct_itinerary: could not map from/to stop in frun");
-      utl::verify(*from_idx < *to_idx,
+      // Rebuild with the current RT snapshot
+      auto best_fr = make_full_frun(stop_times_ep.tt_, rt.rtt_.get(),
+                                    best_from_to->from_->run_);
+      auto const from_idx = best_from_to->from_->run_.stop_range_.from_;
+      auto const to_idx = best_from_to->to_->run_.stop_range_.from_;
+      utl::verify(best_fr.stop_range_.contains(from_idx) &&
+                      best_fr.stop_range_.contains(to_idx),
+                  "reconstruct_itinerary: winning stop index out of range");
+      utl::verify(from_idx < to_idx,
                   "reconstruct_itinerary: invalid stop order (from >= to)");
 
-      return {best_fr, *from_idx, *to_idx};
+      return {best_fr, from_idx, to_idx};
     }
   };
 
