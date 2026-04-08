@@ -145,9 +145,8 @@ struct motis_instance {
       qr_.route("GET", "/tiles/", ep::tiles{*d.tiles_});
     }
 
-    qr_.route("GET", "/api/v1/health",
-              ep::health{d.config_, d.metrics_.get()});
-              
+    qr_.route("GET", "/api/v1/health", ep::health{d.config_, d.metrics_.get()});
+
     qr_.route("POST", "/ojp20",
               ep::ojp{
                   .routing_ep_ = utl::init_from<ep::routing>(d),
@@ -182,7 +181,8 @@ struct motis_instance {
   void run(data& d, config const& c) {
     if (d.w_ && d.l_ && c.has_gbfs_feeds()) {
       gbfs_ = io_thread{"motis gbfs update", [&](boost::asio::io_context& ioc) {
-                          gbfs::run_gbfs_update(ioc, c, *d.w_, *d.l_, d.gbfs_, d.metrics_.get());
+                          gbfs::run_gbfs_update(ioc, c, *d.w_, *d.l_, d.gbfs_,
+                                                d.metrics_.get());
                         }};
     }
 
