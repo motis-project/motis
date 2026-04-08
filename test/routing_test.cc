@@ -18,13 +18,11 @@
 #include "nigiri/rt/gtfsrt_update.h"
 
 #include "motis-api/motis-api.h"
-#include "motis/config.h"
 #include "motis/data.h"
 #include "motis/elevators/elevators.h"
 #include "motis/elevators/parse_fasta.h"
 #include "motis/endpoints/routing.h"
 #include "motis/gbfs/update.h"
-#include "motis/import.h"
 
 #include "./util.h"
 
@@ -218,7 +216,7 @@ std::string to_str(std::vector<api::Itinerary> const& x) {
 }
 
 TEST(motis, routing_osm_only_direct_walk) {
-  auto d = get_test_case<test_case::FFM_osm_only>();
+  auto [d, _] = get_test_case<test_case::FFM_routing_osm_only_direct_walk>();
 
   auto const routing = utl::init_from<ep::routing>(d).value();
   auto const res = routing(
@@ -236,7 +234,7 @@ TEST(motis, routing_osm_only_direct_walk) {
 }
 
 TEST(motis, routing) {
-  auto [d, c] = get_test_case2<test_case::FFM_with_gbfs>();
+  auto [d, c] = get_test_case<test_case::FFM_routing>();
   d.rt_->e_ = std::make_unique<elevators>(*d.w_, nullptr, *d.elevator_nodes_,
                                           parse_fasta(kFastaJson));
   d.init_rtt(date::sys_days{2019_y / May / 1});

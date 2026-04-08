@@ -7,10 +7,7 @@
 
 #include "utl/init_from.h"
 
-#include "motis/config.h"
-#include "motis/data.h"
 #include "motis/endpoints/trip.h"
-#include "motis/import.h"
 #include "motis/rt/auser.h"
 #include "motis/tag_lookup.h"
 
@@ -231,7 +228,7 @@ constexpr auto const kSiriSxJsonUpdate = R"({
 })";
 
 TEST(motis, trip_siri_sx_alerts) {
-  auto d = get_test_case<test_case::generated_minimal_bw>();
+  auto [d, _] = get_test_case<test_case::generated_trip_siri_sx_alerts>();
   d.init_rtt(sys_days{2026_y / January / 10});
 
   auto& rtt = *d.rt_->rtt_;

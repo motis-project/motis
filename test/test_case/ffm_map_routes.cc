@@ -41,7 +41,7 @@ S1,20190501,1
 )";
 
 template <>
-test_case_params const import_test_case<test_case::FFM_simple_transfers>() {
+test_case_params const import_test_case<test_case::FFM_map_routes>() {
   auto const c = config{
       .osm_ = {"test/resources/test_case.osm.pbf"},
       .timetable_ =
@@ -54,6 +54,5 @@ test_case_params const import_test_case<test_case::FFM_simple_transfers>() {
                                      config::timetable::route_shapes::mode::all,
                                  .cache_db_size_ = 1024U * 1024U * 5U}}},
       .street_routing_ = true};
-  return import_test_case(std::move(c),
-                          "test/test_case/ffm_simple_transfers_data");
+  return import_test_case(std::move(c), "test/test_case/ffm_map_routes_data");
 }

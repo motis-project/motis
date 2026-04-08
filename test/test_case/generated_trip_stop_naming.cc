@@ -69,7 +69,8 @@ end
 )";
 
 template <>
-test_case_params const import_test_case<test_case::generated_hs>() {
+test_case_params const
+import_test_case<test_case::generated_trip_stop_naming>() {
   auto const c = config{
       .timetable_ =
           config::timetable{
@@ -77,5 +78,6 @@ test_case_params const import_test_case<test_case::generated_hs>() {
               .num_days_ = 2,
               .datasets_ = {{"test", {.path_ = kGTFS, .script_ = kScript}}}},
       .street_routing_ = false};
-  return import_test_case(std::move(c), "test/test_case/generated_hs_data");
+  return import_test_case(std::move(c),
+                          "test/test_case/generated_trip_stop_naming_data");
 }

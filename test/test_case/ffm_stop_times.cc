@@ -51,11 +51,10 @@ S1,20190501,1
 )";
 
 template <>
-test_case_params const import_test_case<test_case::FFM_default_no_map>() {
+test_case_params const import_test_case<test_case::FFM_stop_times>() {
   auto const c = config{.timetable_ = config::timetable{
                             .first_day_ = "2019-05-01",
                             .num_days_ = 2,
                             .datasets_ = {{"test", {.path_ = kGTFS}}}}};
-  return import_test_case(std::move(c),
-                          "test/test_case/ffm_default_no_map_data");
+  return import_test_case(std::move(c), "test/test_case/ffm_stop_times_data");
 }

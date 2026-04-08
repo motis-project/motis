@@ -33,7 +33,7 @@ TEST(motis, get_track) {
 }
 
 TEST(motis, get_way_candidates) {
-  auto d = get_test_case<test_case::FFM_default_with_geocoding>();
+  auto [d, _] = get_test_case<test_case::FFM_get_way_candidates>();
   auto const location_idxs =
       utl::to_vec(utl::enumerate(d.tt_->locations_.src_),
                   [&](std::tuple<size_t, nigiri::source_idx_t> const ll) {

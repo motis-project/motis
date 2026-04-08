@@ -7,10 +7,7 @@
 #include "nigiri/rt/frun.h"
 #include "nigiri/rt/rt_timetable.h"
 
-#include "motis/config.h"
-#include "motis/data.h"
 #include "motis/endpoints/trip.h"
-#include "motis/import.h"
 #include "motis/rt/auser.h"
 #include "motis/tag_lookup.h"
 
@@ -21,7 +18,7 @@ using namespace motis;
 using namespace date;
 
 TEST(motis, trip_stop_naming) {
-  auto d = get_test_case<test_case::generated_hs>();
+  auto [d, _] = get_test_case<test_case::generated_trip_stop_naming>();
 
   auto const trip_ep = utl::init_from<ep::trip>(d).value();
 
@@ -70,7 +67,7 @@ TEST(motis, trip_stop_naming) {
 }
 
 TEST(motis, trip_notice_translations) {
-  auto d = get_test_case<test_case::CH_cable_car_netex>();
+  auto [d, _] = get_test_case<test_case::CH_trip_notice_translations>();
   auto const day = date::sys_days{2024_y / December / 15};
   d.init_rtt(day);
   auto& rtt = *d.rt_->rtt_;

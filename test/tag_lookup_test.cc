@@ -15,7 +15,7 @@ using namespace std::string_view_literals;
 using namespace osr;
 
 TEST(motis, tag_lookup) {
-  auto d = get_test_case<test_case::FFM_tag_lookup>();
+  auto [d, _] = get_test_case<test_case::FFM_tag_lookup>();
   auto const rt = d.rt_;
   auto const rtt = rt->rtt_.get();
   EXPECT_TRUE(

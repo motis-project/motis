@@ -33,7 +33,8 @@ S1,20260110,1
 )";
 
 template <>
-test_case_params const import_test_case<test_case::generated_minimal_bw>() {
+test_case_params const
+import_test_case<test_case::generated_trip_siri_sx_alerts>() {
   auto const c =
       config{.timetable_ =
                  config::timetable{.first_day_ = "2026-01-10",
@@ -41,5 +42,5 @@ test_case_params const import_test_case<test_case::generated_minimal_bw>() {
                                    .datasets_ = {{"test", {.path_ = kGTFS}}}},
              .street_routing_ = false};
   return import_test_case(std::move(c),
-                          "test/test_case/generated_minimal_bw_data");
+                          "test/test_case/generated_trip_siri_sx_alerts_data");
 }

@@ -24,7 +24,7 @@ using namespace motis;
 using namespace date;
 
 TEST(motis, ojp_requests) {
-  auto d = get_test_case<test_case::FFM_default_with_geocoding>();
+  auto [d, _] = get_test_case<test_case::FFM_ojp_requests>();
   d.init_rtt(date::sys_days{2019_y / May / 1});
 
   auto const ojp_ep = ep::ojp{

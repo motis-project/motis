@@ -9,10 +9,7 @@
 
 #include "utl/init_from.h"
 
-#include "motis/config.h"
-#include "motis/data.h"
 #include "motis/endpoints/routing.h"
-#include "motis/import.h"
 
 #include "../test_case.h"
 
@@ -26,7 +23,7 @@ void print_short(std::ostream& out, api::Itinerary const& j);
 std::string to_str(std::vector<api::Itinerary> const& x);
 
 TEST(motis, siri_fm_routing) {
-  auto d = get_test_case<test_case::FFM_with_elevators_siri>();
+  auto [d, _] = get_test_case<test_case::FFM_siri_fm_routing>();
 
   auto const routing = utl::init_from<ep::routing>(d).value();
 

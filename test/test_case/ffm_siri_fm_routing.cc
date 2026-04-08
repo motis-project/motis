@@ -86,7 +86,7 @@ U4,01:05:00,25:01:00,3600
 )"sv;
 
 template <>
-test_case_params const import_test_case<test_case::FFM_with_elevators_siri>() {
+test_case_params const import_test_case<test_case::FFM_siri_fm_routing>() {
   auto const c =
       config{.server_ = {{.web_folder_ = "ui/build", .n_threads_ = 1U}},
              .osm_ = {"test/resources/test_case.osm.pbf"},
@@ -106,5 +106,5 @@ test_case_params const import_test_case<test_case::FFM_with_elevators_siri>() {
              .geocoding_ = true,
              .reverse_geocoding_ = true};
   return import_test_case(std::move(c),
-                          "test/test_case/ffm_with_elevators_siri_data");
+                          "test/test_case/ffm_siri_fm_routing_data");
 }

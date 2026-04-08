@@ -12,7 +12,7 @@
 using namespace motis;
 
 TEST(motis, stop_group_geocoding) {
-  auto d = get_test_case<test_case::generated_stop_group_geocoding>();
+  auto [d, _] = get_test_case<test_case::generated_stop_group_geocoding>();
 
   auto const geocode = utl::init_from<ep::geocode>(d).value();
 

@@ -244,7 +244,8 @@ constexpr auto kNetex = R"(
 )";
 
 template <>
-test_case_params const import_test_case<test_case::CH_cable_car_netex>() {
+test_case_params const
+import_test_case<test_case::CH_trip_notice_translations>() {
   auto const c =
       config{.timetable_ =
                  config::timetable{.first_day_ = "2024-12-15",
@@ -252,5 +253,5 @@ test_case_params const import_test_case<test_case::CH_cable_car_netex>() {
                                    .datasets_ = {{"netex", {.path_ = kNetex}}}},
              .street_routing_ = false};
   return import_test_case(std::move(c),
-                          "test/test_case/CH_cable_car_netex_data");
+                          "test/test_case/CH_trip_notice_translations_data");
 }

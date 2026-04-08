@@ -21,13 +21,11 @@
 #include "nigiri/rt/gtfsrt_update.h"
 
 #include "motis-api/motis-api.h"
-#include "motis/config.h"
 #include "motis/data.h"
 #include "motis/elevators/elevators.h"
 #include "motis/elevators/parse_fasta.h"
 #include "motis/endpoints/routing.h"
 #include "motis/gbfs/update.h"
-#include "motis/import.h"
 
 #include "../test_case.h"
 #include "../util.h"
@@ -41,7 +39,7 @@ using namespace test;
 namespace n = nigiri;
 
 TEST(motis, stop_times) {
-  auto d = get_test_case<test_case::FFM_default_no_map>();
+  auto [d, _] = get_test_case<test_case::FFM_stop_times>();
   d.init_rtt(date::sys_days{2019_y / May / 1});
 
   auto const stats =

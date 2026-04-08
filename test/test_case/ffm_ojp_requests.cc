@@ -1,11 +1,8 @@
 #include "motis/config.h"
 
-#include <string_view>
-
 #include "../test_case.h"
 
 using motis::config;
-using namespace std::string_view_literals;
 
 constexpr auto const kGTFS = R"(
 # agency.txt
@@ -57,26 +54,18 @@ trip_id,start_time,end_time,headway_secs
 S3,01:15:00,25:15:00,3600
 ICE,00:35:00,24:35:00,3600
 U4,01:05:00,25:01:00,3600
-)"sv;
+)";
 
 template <>
-test_case_params const import_test_case<test_case::FFM_with_gbfs>() {
-  auto const c = config{
-      .server_ = {{.web_folder_ = "ui/build", .n_threads_ = 1U}},
-      .osm_ = {"test/resources/test_case.osm.pbf"},
-      .tiles_ = {{.profile_ = "deps/tiles/profile/full.lua",
-                  .db_size_ = 1024U * 1024U * 25U}},
-      .timetable_ =
-          config::timetable{
-              .first_day_ = "2019-05-01",
-              .num_days_ = 2,
-              .use_osm_stop_coordinates_ = true,
-              .extend_missing_footpaths_ = false,
-              .datasets_ = {{"test", {.path_ = std::string{kGTFS}}}}},
-      .gbfs_ = {{.feeds_ = {{"CAB", {.url_ = "./test/resources/gbfs"}}}}},
-      .street_routing_ = true,
-      .osr_footpath_ = true,
-      .geocoding_ = true,
-      .reverse_geocoding_ = true};
-  return import_test_case(std::move(c), "test/test_case/ffm_with_gbfs_data");
+test_case_params const import_test_case<test_case::FFM_ojp_requests>() {
+  auto const c =
+      config{.osm_ = {"test/resources/test_case.osm.pbf"},
+             .timetable_ =
+                 config::timetable{.first_day_ = "2019-05-01",
+                                   .num_days_ = 2,
+                                   .datasets_ = {{"test", {.path_ = kGTFS}}}},
+             .street_routing_ = true,
+             .osr_footpath_ = true,
+             .geocoding_ = true};
+  return import_test_case(std::move(c), "test/test_case/ffm_ojp_requests_data");
 }

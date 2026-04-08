@@ -57,8 +57,7 @@ U4,01:05:00,25:01:00,3600
 )";
 
 template <>
-test_case_params const
-import_test_case<test_case::FFM_default_with_geocoding>() {
+test_case_params const import_test_case<test_case::FFM_get_way_candidates>() {
   auto const c =
       config{.osm_ = {"test/resources/test_case.osm.pbf"},
              .timetable_ =
@@ -69,5 +68,5 @@ import_test_case<test_case::FFM_default_with_geocoding>() {
              .osr_footpath_ = true,
              .geocoding_ = true};
   return import_test_case(std::move(c),
-                          "test/test_case/ffm_default_with_geocoding_data");
+                          "test/test_case/ffm_get_way_candidates_data");
 }
