@@ -58,15 +58,21 @@ U4,01:05:00,25:01:00,3600
 
 template <>
 test_case_params const import_test_case<test_case::FFM_get_way_candidates>() {
-  auto const c =
-      config{.osm_ = {"test/resources/test_case.osm.pbf"},
-             .timetable_ =
-                 config::timetable{.first_day_ = "2019-05-01",
-                                   .num_days_ = 2,
-                                   .datasets_ = {{"test", {.path_ = kGTFS}}}},
-             .street_routing_ = true,
-             .osr_footpath_ = true,
-             .geocoding_ = true};
+  auto const c = motis::config{
+      .server_ = {{.web_folder_ = "ui/build", .n_threads_ = 1U}},
+      .osm_ = {"test/resources/test_case.osm.pbf"},
+      .timetable_ =
+          motis::config::timetable{
+              .first_day_ = "2019-05-01",
+              .num_days_ = 2,
+              .use_osm_stop_coordinates_ = true,
+              .extend_missing_footpaths_ = false,
+              .preprocess_max_matching_distance_ = 250,
+              .datasets_ = {{"test", {.path_ = std::string{kGTFS}}}}},
+      .street_routing_ = true,
+      .osr_footpath_ = true,
+      .geocoding_ = true,
+      .reverse_geocoding_ = true};
   return import_test_case(std::move(c),
                           "test/test_case/ffm_get_way_candidates_data");
 }

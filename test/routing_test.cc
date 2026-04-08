@@ -1,5 +1,4 @@
 #include "gtest/gtest.h"
-#include "test_case.h"
 
 #include <chrono>
 #include <sstream>
@@ -24,6 +23,7 @@
 #include "motis/endpoints/routing.h"
 #include "motis/gbfs/update.h"
 
+#include "./test_case.h"
 #include "./util.h"
 
 namespace json = boost::json;
