@@ -98,9 +98,8 @@ test_case_params const import_test_case<test_case::FFM_siri_fm_routing>() {
                      .num_days_ = 2,
                      .preprocess_max_matching_distance_ = 0.0,
                      .datasets_ = {{"test", {.path_ = std::string{kGTFS}}}}},
-             .elevators_ =
-                 config::elevators{.init_ = std::string{kSiriFm},
-                                   .osm_mapping_ = std::string{kElevatorIdOsm}},
+             .elevators_ = config::elevators{.init_ = std::string{kSiriFm},
+                                             .osm_mapping_ = kElevatorIdOsm},
              .street_routing_ = true,
              .osr_footpath_ = true,
              .geocoding_ = true,

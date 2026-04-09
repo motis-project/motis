@@ -191,7 +191,8 @@ TEST(one_to_many, post_request_backward) {
       durations);
 }
 
-TEST(one_to_many, post_request_forward_with_routed_and_short_pre_transit) {
+TEST(one_to_many,
+     post_request_forward_with_routed_transfers_and_short_pre_transit) {
   auto [d, _] = get_test_case<test_case::FFM_one_to_many>();
 
   auto const durations = one_to_many_post(d)(api::OneToManyIntermodalParams{
