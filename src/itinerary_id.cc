@@ -4,6 +4,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <algorithm>
 #include <limits>
 #include <optional>
@@ -330,6 +331,12 @@ struct candidate_score {
   double score_;
 };
 
+int candidate_score_cmp_ids(candidate_score const& a,
+                            candidate_score const& b) {
+  int cmp = a.candidate_->tripId_.compare(b.candidate_->tripId_);
+  return (cmp > 0) - (cmp < 0);
+}
+
 struct from_to_candidate {
   st_candidate const* from_;
   st_candidate const* to_;
@@ -339,7 +346,26 @@ std::optional<from_to_candidate> get_best_candidate(
     std::vector<st_candidate> const& from_resp,
     std::vector<st_candidate> const& to_resp,
     leg_hint const& hint) {
+  auto from_cands = std::vector<candidate_score>{};
   auto to_cands = std::vector<candidate_score>{};
+  from_cands.reserve(from_resp.size());
+  to_cands.reserve(to_resp.size());
+
+  for (auto const& st : from_resp) {
+    if (!st.place_.scheduledDeparture_.has_value()) {
+      continue;
+    }
+
+    from_cands.emplace_back(
+        &st,
+        (st.displayName_ == hint.display_name_ ? kExactTripNameMatchAddScore
+                                               : 0.0) +
+            exact_stop_id_match_score(st.place_, hint.from_stop_id_) -
+            geo::distance({st.place_.lat_, st.place_.lon_}, hint.from_pos_) -
+            kTimeMul * std::abs(hint.sched_start_ -
+                                st.place_.scheduledDeparture_.value()
+                                    .get_unixtime_seconds()));
+  }
   for (auto const& st : to_resp) {
     if (!st.place_.scheduledArrival_.has_value()) {
       continue;
@@ -354,35 +380,40 @@ std::optional<from_to_candidate> get_best_candidate(
                                      st.place_.scheduledArrival_.value()
                                          .get_unixtime_seconds()));
   }
+
+  utl::sort(from_cands);
   utl::sort(to_cands);
 
   auto best_from_to = std::optional<from_to_candidate>{};
   auto best_score = std::numeric_limits<double>::lowest();
-  for (auto const& from_st : from_resp) {
-    if (!from_st.place_.scheduledDeparture_.has_value()) {
-      continue;
-    }
-    auto it = std::lower_bound(
-        begin(to_cands), end(to_cands),
-        candidate_score{&from_st, std::numeric_limits<double>::max()});
-    if (it == end(to_cands) || it->candidate_->tripId_ != from_st.tripId_) {
-      continue;
-    }
-    auto score = it->score_ +
-                 (from_st.displayName_ == hint.display_name_
-                      ? kExactTripNameMatchAddScore
-                      : 0.0) +
-                 exact_stop_id_match_score(from_st.place_, hint.from_stop_id_) -
-                 geo::distance({from_st.place_.lat_, from_st.place_.lon_},
-                               hint.from_pos_) -
-                 kTimeMul * std::abs(hint.sched_start_ -
-                                     from_st.place_.scheduledDeparture_.value()
-                                         .get_unixtime_seconds());
-    if (score > best_score) {
-      best_score = score;
-      best_from_to.emplace(&from_st, it->candidate_);
+
+  for (auto i_from = 0U, i_to = 0U;
+       i_from < from_cands.size() && i_to < to_cands.size();) {
+
+    switch (candidate_score_cmp_ids(from_cands[i_from], to_cands[i_to])) {
+      case -1: ++i_from; break;
+      case +1: ++i_to; break;
+      case 0:
+        auto score = from_cands[i_from].score_ + to_cands[i_to].score_;
+        if (score > best_score) {
+          best_score = score;
+          best_from_to.emplace(from_cands[i_from].candidate_,
+                               to_cands[i_to].candidate_);
+        }
+        ++i_from;
+        ++i_to;
+        while (i_from < from_cands.size() && i_to < to_cands.size() &&
+               candidate_score_cmp_ids(from_cands[i_from],
+                                       from_cands[i_from - 1]) == 0 &&
+               candidate_score_cmp_ids(from_cands[i_from], to_cands[i_to]) ==
+                   0) {
+          ++i_from;
+          ++i_to;
+        }
+        break;
     }
   }
+
   return best_from_to;
 }
 
