@@ -582,7 +582,7 @@ void import(config const& c,
 
   auto route_tiles = task{
       "route_tiles",
-      {&tt, &route_shapes_task},
+      {&tt, &osr, &route_shapes_task},
       c.route_tiles_.has_value(),
       [&]() {
         auto d = data{data_path};
@@ -595,6 +595,8 @@ void import(config const& c,
       {{"route_tiles_cfg", cista::build_hash(c.route_tiles_->db_size_,
                                              c.route_tiles_->flush_threshold_)},
        tt_hash,
+       osm_hash,
+       osr_version(),
        n_version(),
        routed_shapes_version(),
        route_tiles_version(),

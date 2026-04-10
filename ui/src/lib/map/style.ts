@@ -754,7 +754,7 @@ export const getStyle = (
 				paint: {
 					'line-color': [
 						'case',
-						['==', ['get', 'beeline'], true],
+						['all', ['==', ['get', 'beeline'], true], ['!=', ['get', 'beeline_oob'], true]],
 						'#ff0000',
 						['coalesce', ['get', 'color'], '#808080']
 					],
@@ -763,24 +763,59 @@ export const getStyle = (
 						['linear'],
 						['zoom'],
 						7,
-						['case', ['==', ['get', 'beeline'], true], 1, 0.15],
+						[
+							'case',
+							['all', ['==', ['get', 'beeline'], true], ['!=', ['get', 'beeline_oob'], true]],
+							1,
+							0.15
+						],
 						10,
-						['case', ['==', ['get', 'beeline'], true], 1, 0.35],
+						[
+							'case',
+							['all', ['==', ['get', 'beeline'], true], ['!=', ['get', 'beeline_oob'], true]],
+							1,
+							0.35
+						],
 						13,
-						['case', ['==', ['get', 'beeline'], true], 1, 0.6]
+						[
+							'case',
+							['all', ['==', ['get', 'beeline'], true], ['!=', ['get', 'beeline_oob'], true]],
+							1,
+							0.6
+						]
 					],
 					'line-width': [
 						'interpolate',
 						['linear'],
 						['zoom'],
 						7,
-						['case', ['==', ['get', 'beeline'], true], 2.0, 0.5],
+						[
+							'case',
+							['all', ['==', ['get', 'beeline'], true], ['!=', ['get', 'beeline_oob'], true]],
+							2.0,
+							0.5
+						],
 						10,
-						['case', ['==', ['get', 'beeline'], true], 3.0, 1.25],
+						[
+							'case',
+							['all', ['==', ['get', 'beeline'], true], ['!=', ['get', 'beeline_oob'], true]],
+							3.0,
+							1.25
+						],
 						13,
-						['case', ['==', ['get', 'beeline'], true], 4.5, 2.0],
+						[
+							'case',
+							['all', ['==', ['get', 'beeline'], true], ['!=', ['get', 'beeline_oob'], true]],
+							4.5,
+							2.0
+						],
 						16,
-						['case', ['==', ['get', 'beeline'], true], 6.0, 3.0]
+						[
+							'case',
+							['all', ['==', ['get', 'beeline'], true], ['!=', ['get', 'beeline_oob'], true]],
+							6.0,
+							3.0
+						]
 					]
 				}
 			},

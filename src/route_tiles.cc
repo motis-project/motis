@@ -9,6 +9,7 @@
 #include <optional>
 #include <set>
 #include <string>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -16,7 +17,11 @@
 
 #include "utl/pairwise.h"
 
+#include "geo/box.h"
+#include "geo/polyline.h"
 #include "geo/polyline_format.h"
+
+#include "osr/lookup.h"
 
 #include "tiles/db/clear_database.h"
 #include "tiles/db/feature_inserter_mt.h"
@@ -43,6 +48,8 @@ namespace motis {
 namespace {
 
 using clock_t = std::chrono::steady_clock;
+
+constexpr auto kOobMatchDistance = 500.0;
 
 struct scoped_timing {
   explicit scoped_timing(std::string name)
@@ -134,13 +141,42 @@ std::string hash_color(std::string_view const name) {
                      to_rgb_channel(blue + match));
 }
 
+bool has_nearby_osm_way(osr::ways const& w,
+                        osr::lookup const& l,
+                        geo::latlng const& pos) {
+  auto const approx_distance_lng_degrees =
+      geo::approx_distance_lng_degrees(pos);
+  auto const squared_max_dist = std::pow(kOobMatchDistance, 2);
+  auto found = false;
+
+  l.find(geo::box{pos, kOobMatchDistance}, [&](osr::way_idx_t const way) {
+    auto const [squared_dist, best, segment_idx] =
+        geo::approx_squared_distance_to_polyline<
+            std::tuple<double, geo::latlng, std::size_t>>(
+            pos, w.way_polylines_[way], approx_distance_lng_degrees);
+    static_cast<void>(best);
+    static_cast<void>(segment_idx);
+    found = squared_dist < squared_max_dist;
+    return !found;
+  });
+
+  return found;
+}
+
+bool is_beeline_oob(osr::ways const& w,
+                    osr::lookup const& l,
+                    geo::latlng const& from,
+                    geo::latlng const& to) {
+  return !has_nearby_osm_way(w, l, from) || !has_nearby_osm_way(w, l, to);
+}
+
 }  // namespace
 
 void import_route_tiles(config const& c, data& d, fs::path const& data_path) {
   auto const total_start = clock_t::now();
   utl::verify(c.route_tiles_.has_value(), "route_tiles config missing");
-  utl::verify(d.tt_ && d.tags_ && d.shapes_,
-              "route_tiles requires tt/tags/shapes");
+  utl::verify(d.tt_ && d.tags_ && d.shapes_ && d.w_ && d.l_,
+              "route_tiles requires tt/tags/shapes/osr");
 
   std::clog << "[route_tiles] start\n";
 
@@ -176,6 +212,8 @@ void import_route_tiles(config const& c, data& d, fs::path const& data_path) {
   auto const& tt = *d.tt_;
   auto const& tags = *d.tags_;
   auto const* shapes = d.shapes_.get();
+  auto const& w = *d.w_;
+  auto const& l = *d.l_;
   auto enc = geo::polyline_encoder<6>{};
 
   struct route_polyline_feature {
@@ -184,6 +222,7 @@ void import_route_tiles(config const& c, data& d, fs::path const& data_path) {
     std::string color_{};
     bool color_from_timetable_{false};
     bool beeline_{false};
+    bool beeline_oob_{false};
   };
 
   auto polyline_features = hash_map<std::string, route_polyline_feature>{};
@@ -192,15 +231,18 @@ void import_route_tiles(config const& c, data& d, fs::path const& data_path) {
   auto const add_route_segment =
       [&](std::string const& key, ::tiles::fixed_line line,
           std::set<std::string> const& short_names, std::string const& color,
-          bool const color_from_timetable, bool const beeline) {
+          bool const color_from_timetable, bool const beeline,
+          bool const beeline_oob) {
         auto [it, inserted] = polyline_features.try_emplace(key);
         if (inserted) {
           it->second.line_ = std::move(line);
           it->second.color_ = color;
           it->second.color_from_timetable_ = color_from_timetable;
           it->second.beeline_ = beeline;
+          it->second.beeline_oob_ = beeline_oob;
         } else {
           it->second.beeline_ = it->second.beeline_ || beeline;
+          it->second.beeline_oob_ = it->second.beeline_oob_ || beeline_oob;
         }
         for (auto const& short_name : short_names) {
           it->second.short_names_.insert(short_name);
@@ -273,8 +315,10 @@ void import_route_tiles(config const& c, data& d, fs::path const& data_path) {
             continue;
           }
 
-          stop_locations.insert(fr[0].get_location_idx());
-          stop_locations.insert(fr[1].get_location_idx());
+          auto const from_location = fr[0].get_location_idx();
+          auto const to_location = fr[1].get_location_idx();
+          stop_locations.insert(from_location);
+          stop_locations.insert(to_location);
 
           if (route_short_names.empty()) {
             auto const long_name = std::string{
@@ -288,9 +332,13 @@ void import_route_tiles(config const& c, data& d, fs::path const& data_path) {
           auto const resolved_color =
               route_color.value_or(hash_color(join_comma(route_color_names)));
           auto const is_beeline = line.size() <= 2U;
+          auto const beeline_oob =
+              is_beeline &&
+              is_beeline_oob(w, l, tt.locations_.coordinates_.at(from_location),
+                             tt.locations_.coordinates_.at(to_location));
           add_route_segment(enc.buf_, std::move(line), route_short_names,
-                            resolved_color, route_color.has_value(),
-                            is_beeline);
+                            resolved_color, route_color.has_value(), is_beeline,
+                            beeline_oob);
         }
 
         shape_added = true;
@@ -303,12 +351,18 @@ void import_route_tiles(config const& c, data& d, fs::path const& data_path) {
             << ", stop_points=" << stop_locations.size() << "\n";
 
   auto beeline_segments = std::size_t{0U};
+  auto beeline_oob_segments = std::size_t{0U};
   for (auto const& [_, route_feature] : polyline_features) {
     if (route_feature.beeline_) {
       ++beeline_segments;
     }
+    if (route_feature.beeline_oob_) {
+      ++beeline_oob_segments;
+    }
   }
   std::clog << "[route_tiles] beeline_segments=" << beeline_segments << "\n";
+  std::clog << "[route_tiles] beeline_oob_segments=" << beeline_oob_segments
+            << "\n";
 
   auto feature_id = std::uint64_t{0U};
 
@@ -335,6 +389,8 @@ void import_route_tiles(config const& c, data& d, fs::path const& data_path) {
           ::tiles::encode_bool(route_feature.color_from_timetable_));
       f.meta_.emplace_back("beeline",
                            ::tiles::encode_bool(route_feature.beeline_));
+      f.meta_.emplace_back("beeline_oob",
+                           ::tiles::encode_bool(route_feature.beeline_oob_));
       f.geometry_ = ::tiles::fixed_polyline{{route_feature.line_}};
       feature_inserter.insert(f);
     }
