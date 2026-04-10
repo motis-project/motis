@@ -88,6 +88,7 @@
 	let colorMode = $state<'rt' | 'route' | 'mode' | 'none'>(isSmallScreen ? 'none' : 'rt');
 	let showMap = $state(!isSmallScreen);
 	let showRoutes = $state(false);
+	let routesOverlaySession = $state(0);
 	let lastOneToAllQuery: OneToAllData | undefined = undefined;
 	let lastPlanQuery: PlanData | undefined = undefined;
 	let serverConfig: ServerConfig | undefined = $state();
@@ -98,6 +99,11 @@
 			colorMode = 'none';
 		}
 	});
+
+	const toggleRoutesOverlay = () => {
+		++routesOverlaySession;
+		showRoutes = !showRoutes;
+	};
 
 	let theme: 'light' | 'dark' =
 		(hasDark ? 'dark' : hasLight ? 'light' : undefined) ??
@@ -854,7 +860,7 @@
 				<Button
 					size="icon"
 					variant={showRoutes ? 'default' : 'outline'}
-					onclick={() => (showRoutes = !showRoutes)}
+					onclick={toggleRoutesOverlay}
 				>
 					<Waypoints class="w-5 h-5" />
 				</Button>
@@ -932,12 +938,14 @@
 					</Button>
 				</Control>
 				{#if showRoutes}
-					<Routes
-						{map}
-						{bounds}
-						{zoom}
-						shapesDebugEnabled={serverConfig?.shapesDebugEnabled === true}
-					/>
+					{#key routesOverlaySession}
+						<Routes
+							{map}
+							{bounds}
+							{zoom}
+							shapesDebugEnabled={serverConfig?.shapesDebugEnabled === true}
+						/>
+					{/key}
 				{/if}
 				<Rentals {map} {bounds} {zoom} {theme} debug={hasDebug} />
 			{/if}
