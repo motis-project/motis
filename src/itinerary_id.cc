@@ -4,7 +4,6 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
-#include <cstring>
 #include <algorithm>
 #include <limits>
 #include <optional>
@@ -333,7 +332,7 @@ struct candidate_score {
 
 int candidate_score_cmp_ids(candidate_score const& a,
                             candidate_score const& b) {
-  int cmp = a.candidate_->tripId_.compare(b.candidate_->tripId_);
+  auto cmp = a.candidate_->tripId_.compare(b.candidate_->tripId_);
   return (cmp > 0) - (cmp < 0);
 }
 
