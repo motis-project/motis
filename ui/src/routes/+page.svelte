@@ -9,7 +9,12 @@
 		Waypoints,
 		MountainSnow
 	} from '@lucide/svelte';
-	import { getStyle } from '$lib/map/style';
+	import {
+		getStyle,
+		routeTileParallelLayerIds,
+		routeTileSingleLayerIds,
+		type RouteTileLineMode
+	} from '$lib/map/style';
 	import Map from '$lib/map/Map.svelte';
 	import Control from '$lib/map/Control.svelte';
 	import SearchMask from '$lib/SearchMask.svelte';
@@ -105,6 +110,33 @@
 		showRoutes = !showRoutes;
 	};
 
+	const toggleRouteTileLineMode = () => {
+		routeTileLineMode = routeTileLineMode === 'parallel' ? 'single' : 'parallel';
+	};
+
+	const syncRouteTileLineMode = () => {
+		if (!map || serverConfig?.hasRouteTiles !== true) {
+			return;
+		}
+
+		const singleVisibility = routeTileLineMode === 'single' ? 'visible' : 'none';
+		const parallelVisibility = routeTileLineMode === 'parallel' ? 'visible' : 'none';
+		const setLayerVisibility = (layerId: string, visibility: 'visible' | 'none') => {
+			if (!map?.getLayer(layerId) || map.getLayoutProperty(layerId, 'visibility') === visibility) {
+				return;
+			}
+			map.setLayoutProperty(layerId, 'visibility', visibility);
+		};
+
+		for (const layerId of routeTileSingleLayerIds) {
+			setLayerVisibility(layerId, singleVisibility);
+		}
+
+		for (const layerId of routeTileParallelLayerIds) {
+			setLayerVisibility(layerId, parallelVisibility);
+		}
+	};
+
 	let theme: 'light' | 'dark' =
 		(hasDark ? 'dark' : hasLight ? 'light' : undefined) ??
 		(browser && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
@@ -115,6 +147,7 @@
 	}
 
 	let withHillshades = $state(false);
+	let routeTileLineMode = $state<RouteTileLineMode>('single');
 	let center = $state.raw<[number, number]>([2.258882912876089, 48.72559118651327]);
 	let level = $state(0);
 	let zoom = $state(15);
@@ -135,6 +168,30 @@
 				)
 			: undefined
 	);
+
+	$effect(() => {
+		if (!map || serverConfig?.hasRouteTiles !== true) {
+			return;
+		}
+
+		const currentMap = map;
+
+		const handleStyleData = () => {
+			syncRouteTileLineMode();
+		};
+
+		currentMap.on('styledata', handleStyleData);
+		handleStyleData();
+
+		return () => {
+			currentMap.off('styledata', handleStyleData);
+		};
+	});
+
+	$effect(() => {
+		routeTileLineMode;
+		syncRouteTileLineMode();
+	});
 
 	const geolocate = new maplibregl.GeolocateControl({
 		positionOptions: {
@@ -856,20 +913,7 @@
 		style={showMap ? style : undefined}
 		attribution={false}
 	>
-		{#if hasDebug}
-			<Control position="top-right" class="text-right">
-				<Debug {bounds} {level} {zoom} />
-				<Button
-					size="icon"
-					variant={showRoutes ? 'default' : 'outline'}
-					onclick={toggleRoutesOverlay}
-				>
-					<Waypoints class="w-5 h-5" />
-				</Button>
-			</Control>
-		{/if}
-
-		<Control position="top-right" class="text-right">
+		<Control position="top-right" class="flex items-center justify-end gap-1">
 			<Debug {bounds} {level} {zoom} />
 			<Button
 				size="icon"
@@ -878,6 +922,32 @@
 			>
 				<MountainSnow class="w-5 h-5" />
 			</Button>
+			{#if hasDebug}
+				<Button
+					size="icon"
+					variant={showRoutes ? 'default' : 'outline'}
+					onclick={toggleRoutesOverlay}
+				>
+					<Waypoints class="w-5 h-5" />
+				</Button>
+			{/if}
+			{#if serverConfig?.hasRouteTiles}
+				<Button
+					size="icon"
+					variant={routeTileLineMode === 'parallel' ? 'default' : 'outline'}
+					onclick={toggleRouteTileLineMode}
+					title={routeTileLineMode === 'parallel'
+						? 'Switch route tiles to single-line mode'
+						: 'Switch route tiles to parallel-line mode'}
+					aria-label={routeTileLineMode === 'parallel'
+						? 'Switch route tiles to single-line mode'
+						: 'Switch route tiles to parallel-line mode'}
+				>
+					<span class="text-[10px] font-bold tracking-tight">
+						{routeTileLineMode === 'parallel' ? '||' : '|'}
+					</span>
+				</Button>
+			{/if}
 		</Control>
 
 		<LevelSelect {bounds} {zoom} bind:level />
@@ -907,7 +977,7 @@
 
 		{#if showMap}
 			{#if activeTab != 'isochrones'}
-				<Control position="top-right" class="pb-4 text-right">
+				<Control position="top-right" class="pb-4 flex items-center justify-end gap-1">
 					<Button
 						size="icon"
 						onclick={() => {

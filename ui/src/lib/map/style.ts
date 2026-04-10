@@ -139,6 +139,26 @@ function getAbsoluteUrl(base: string, relative: string): string {
 	return getUrlBase(base) + relative;
 }
 
+export type RouteTileLineMode = 'single' | 'parallel';
+
+export const kMaxRouteTileParallels = 10;
+export const routeTileSingleLayerIds = ['route_tiles_lines', 'route_tiles_names'] as const;
+export const routeTileParallelLineLayerIds = Array.from(
+	{ length: kMaxRouteTileParallels },
+	(_, index) => `route_tiles_lines_${index}`
+);
+export const routeTileParallelNameLayerIds = Array.from(
+	{ length: kMaxRouteTileParallels },
+	(_, routeCountIndex) => {
+		const routeCount = routeCountIndex + 1;
+		return Array.from({ length: routeCount }, (_, index) => `route_tiles_names_${routeCount}_${index}`);
+	}
+).flat();
+export const routeTileParallelLayerIds = [
+	...routeTileParallelLineLayerIds,
+	...routeTileParallelNameLayerIds
+];
+
 export const getStyle = (
 	theme: 'light' | 'dark',
 	level: number,
@@ -149,8 +169,8 @@ export const getStyle = (
 	highlightRouteTileBeelines: boolean
 ): StyleSpecification => {
 	const c = colors[theme];
-	const maxRouteTileParallels = 10;
-	const routeTileParallelMinZoom = 14;
+	const maxRouteTileParallels = kMaxRouteTileParallels;
+	const routeTileLabelMinZoom = 9;
 	const routeTileBeelineHighlight = [
 		'all',
 		['==', ['get', 'beeline'], true],
@@ -178,8 +198,10 @@ export const getStyle = (
 			'interpolate',
 			['linear'],
 			['zoom'],
-			routeTileParallelMinZoom,
-			['*', ['-', index, ['/', ['-', routeTileDisplayedCount, 1], 2]], 4],
+			7,
+			['*', ['-', index, ['/', ['-', routeTileDisplayedCount, 1], 2]], 2],
+			13,
+			['*', ['-', index, ['/', ['-', routeTileDisplayedCount, 1], 2]], 6],
 			18,
 			['*', ['-', index, ['/', ['-', routeTileDisplayedCount, 1], 2]], 10]
 		] as ExpressionSpecification;
@@ -213,158 +235,170 @@ export const getStyle = (
 				} satisfies VectorSourceSpecification
 			}
 		: {};
-	const routeTileParallelLineLayers: LineLayerSpecification[] = hasRouteTiles
-		? Array.from({ length: maxRouteTileParallels }, (_, index) =>
-				({
-					id: `route_tiles_lines_${index}`,
-					type: 'line',
-					source: 'route_tiles',
-					'source-layer': 'routes',
-					minzoom: routeTileParallelMinZoom,
-					filter: [
-						'all',
-						routeTileVisible,
-						['>=', ['coalesce', ['get', 'route_count'], 1], index + 1]
-					],
-					layout: {
-						'line-cap': 'round',
-						'line-join': 'round'
-					},
-					paint: {
-						'line-color': getRouteTileColor(index),
-						'line-opacity': highlightRouteTileBeelines
-							? [
-									'interpolate',
-									['linear'],
-									['zoom'],
-									routeTileParallelMinZoom,
-									['case', routeTileBeelineHighlight, 1, 0.85],
-									18,
-									['case', routeTileBeelineHighlight, 1, 0.95]
-								]
-							: ['interpolate', ['linear'], ['zoom'], routeTileParallelMinZoom, 0.85, 18, 0.95],
-						'line-width': highlightRouteTileBeelines
-							? [
-									'interpolate',
-									['linear'],
-									['zoom'],
-									routeTileParallelMinZoom,
-									['case', routeTileBeelineHighlight, 3.5, 2.25],
-									18,
-									['case', routeTileBeelineHighlight, 5.25, 3.5]
-								]
-							: ['interpolate', ['linear'], ['zoom'], routeTileParallelMinZoom, 2.25, 18, 3.5],
-						'line-offset': getRouteTileOffset(index)
-					}
-				}) satisfies LineLayerSpecification
-			)
-		: [];
-	const routeTileParallelNameLayers: SymbolLayerSpecification[] = hasRouteTiles
-		? Array.from({ length: maxRouteTileParallels }, (_, routeCountIndex) => {
-				const routeCount = routeCountIndex + 1;
-				return Array.from({ length: routeCount }, (_, index) =>
-					({
-						id: `route_tiles_names_${routeCount}_${index}`,
+	const routeTileParallelLineLayers: LineLayerSpecification[] =
+		hasRouteTiles
+			? Array.from(
+					{ length: maxRouteTileParallels },
+					(_, index) =>
+						({
+							id: `route_tiles_lines_${index}`,
+							type: 'line',
+							source: 'route_tiles',
+							'source-layer': 'routes',
+							filter: [
+								'all',
+								routeTileVisible,
+								['>=', ['coalesce', ['get', 'route_count'], 1], index + 1]
+							],
+							layout: {
+								visibility: 'none',
+								'line-cap': 'round',
+								'line-join': 'round'
+							},
+							paint: {
+								'line-color': getRouteTileColor(index),
+								'line-opacity': highlightRouteTileBeelines
+									? [
+											'interpolate',
+											['linear'],
+											['zoom'],
+											7,
+											['case', routeTileBeelineHighlight, 1, 0.85],
+											18,
+											['case', routeTileBeelineHighlight, 1, 0.95]
+										]
+									: ['interpolate', ['linear'], ['zoom'], 7, 0.85, 18, 0.95],
+								'line-width': highlightRouteTileBeelines
+									? [
+											'interpolate',
+											['linear'],
+											['zoom'],
+											7,
+											['case', routeTileBeelineHighlight, 3.5, 2.25],
+											18,
+											['case', routeTileBeelineHighlight, 5.25, 3.5]
+										]
+									: ['interpolate', ['linear'], ['zoom'], 7, 2.25, 18, 3.5],
+								'line-offset': getRouteTileOffset(index)
+							}
+						}) satisfies LineLayerSpecification
+				)
+			: [];
+	const routeTileParallelNameLayers: SymbolLayerSpecification[] =
+		hasRouteTiles
+			? Array.from({ length: maxRouteTileParallels }, (_, routeCountIndex) => {
+					const routeCount = routeCountIndex + 1;
+					return Array.from(
+						{ length: routeCount },
+						(_, index) =>
+							({
+								id: `route_tiles_names_${routeCount}_${index}`,
+								type: 'symbol',
+								source: 'route_tiles',
+								'source-layer': 'routes',
+								minzoom: routeTileLabelMinZoom,
+								filter: ['all', routeTileVisible, ['==', routeTileDisplayedCount, routeCount]],
+								layout: {
+									visibility: 'none',
+									'symbol-placement': 'line',
+									'text-field': [
+										'coalesce',
+										['get', `name_${index}`],
+										['get', 'route_short_names']
+									],
+									'text-font': ['Noto Sans Regular'],
+									'text-size': 12,
+									'text-max-angle': 30,
+									'text-offset': [0, (index - (routeCount - 1) / 2) * 0.75],
+									'text-allow-overlap': false
+								},
+								paint: {
+									'text-color': getRouteTileColor(index),
+									'text-halo-color': c.textHalo,
+									'text-halo-width': 2
+								}
+							}) satisfies SymbolLayerSpecification
+					);
+				}).flat()
+			: [];
+	const routeTileSingleLayers: Array<LineLayerSpecification | SymbolLayerSpecification> =
+		hasRouteTiles
+			? [
+					{
+						id: 'route_tiles_lines',
+						type: 'line',
+						source: 'route_tiles',
+						'source-layer': 'routes',
+						filter: routeTileVisible,
+						layout: {
+							visibility: 'visible',
+							'line-cap': 'round',
+							'line-join': 'round'
+						},
+						paint: {
+							'line-color': highlightRouteTileBeelines
+								? ['case', routeTileBeelineHighlight, '#ff0000', routeTileBaseColor]
+								: routeTileBaseColor,
+							'line-opacity': highlightRouteTileBeelines
+								? [
+										'interpolate',
+										['linear'],
+										['zoom'],
+										7,
+										['case', routeTileBeelineHighlight, 1, 0.15],
+										10,
+										['case', routeTileBeelineHighlight, 1, 0.35],
+										13,
+										['case', routeTileBeelineHighlight, 1, 0.6]
+									]
+								: ['interpolate', ['linear'], ['zoom'], 7, 0.15, 10, 0.35, 13, 0.6],
+							'line-width': highlightRouteTileBeelines
+								? [
+										'interpolate',
+										['linear'],
+										['zoom'],
+										7,
+										['case', routeTileBeelineHighlight, 2.0, 0.5],
+										10,
+										['case', routeTileBeelineHighlight, 3.0, 1.25],
+										13,
+										['case', routeTileBeelineHighlight, 4.5, 2.0],
+										16,
+										['case', routeTileBeelineHighlight, 6.0, 3.0]
+									]
+								: ['interpolate', ['linear'], ['zoom'], 7, 0.5, 10, 1.25, 13, 2.0, 16, 3.0]
+						}
+					} satisfies LineLayerSpecification,
+					{
+						id: 'route_tiles_names',
 						type: 'symbol',
 						source: 'route_tiles',
 						'source-layer': 'routes',
-						minzoom: routeTileParallelMinZoom,
-						filter: ['all', routeTileVisible, ['==', routeTileDisplayedCount, routeCount]],
+						filter: routeTileVisible,
+						minzoom: routeTileLabelMinZoom,
 						layout: {
+							visibility: 'visible',
 							'symbol-placement': 'line',
-							'text-field': ['coalesce', ['get', `name_${index}`], ['get', 'route_short_names']],
+							'text-field': ['get', 'route_short_names'],
 							'text-font': ['Noto Sans Regular'],
 							'text-size': 12,
 							'text-max-angle': 30,
-							'text-offset': [0, (index - (routeCount - 1) / 2) * 0.75],
+							'symbol-sort-key': -100,
 							'text-allow-overlap': false
 						},
 						paint: {
-							'text-color': getRouteTileColor(index),
+							'text-color': c.text,
 							'text-halo-color': c.textHalo,
 							'text-halo-width': 2
 						}
-					}) satisfies SymbolLayerSpecification
-				);
-			}).flat()
-		: [];
+					} satisfies SymbolLayerSpecification
+				]
+			: [];
 	const routeTileLayers: Array<
 		LineLayerSpecification | CircleLayerSpecification | SymbolLayerSpecification
 	> = hasRouteTiles
 		? [
-				{
-					id: 'route_tiles_lines',
-					type: 'line',
-					source: 'route_tiles',
-					'source-layer': 'routes',
-					filter: routeTileVisible,
-					maxzoom: routeTileParallelMinZoom,
-					layout: {
-						'line-cap': 'round',
-						'line-join': 'round'
-					},
-					paint: {
-						'line-color': highlightRouteTileBeelines
-							? [
-									'case',
-									routeTileBeelineHighlight,
-									'#ff0000',
-									routeTileBaseColor
-								]
-							: routeTileBaseColor,
-						'line-opacity': highlightRouteTileBeelines
-							? [
-									'interpolate',
-									['linear'],
-									['zoom'],
-									7,
-									['case', routeTileBeelineHighlight, 1, 0.15],
-									10,
-									['case', routeTileBeelineHighlight, 1, 0.35],
-									13,
-									['case', routeTileBeelineHighlight, 1, 0.6]
-								]
-							: ['interpolate', ['linear'], ['zoom'], 7, 0.15, 10, 0.35, 13, 0.6],
-						'line-width': highlightRouteTileBeelines
-							? [
-									'interpolate',
-									['linear'],
-									['zoom'],
-									7,
-									['case', routeTileBeelineHighlight, 2.0, 0.5],
-									10,
-									['case', routeTileBeelineHighlight, 3.0, 1.25],
-									13,
-									['case', routeTileBeelineHighlight, 4.5, 2.0],
-									16,
-									['case', routeTileBeelineHighlight, 6.0, 3.0]
-								]
-							: ['interpolate', ['linear'], ['zoom'], 7, 0.5, 10, 1.25, 13, 2.0, 16, 3.0]
-					}
-				} satisfies LineLayerSpecification,
-				{
-					id: 'route_tiles_names',
-					type: 'symbol',
-					source: 'route_tiles',
-					'source-layer': 'routes',
-					filter: routeTileVisible,
-					minzoom: 9,
-					maxzoom: routeTileParallelMinZoom,
-					layout: {
-						'symbol-placement': 'line',
-						'text-field': ['get', 'route_short_names'],
-						'text-font': ['Noto Sans Regular'],
-						'text-size': 12,
-						'text-max-angle': 30,
-						'symbol-sort-key': -100,
-						'text-allow-overlap': false
-					},
-					paint: {
-						'text-color': c.text,
-						'text-halo-color': c.textHalo,
-						'text-halo-width': 2
-					}
-				} satisfies SymbolLayerSpecification,
+				...routeTileSingleLayers,
 				...routeTileParallelLineLayers,
 				...routeTileParallelNameLayers,
 				{
