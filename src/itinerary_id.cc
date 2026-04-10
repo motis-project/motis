@@ -156,6 +156,14 @@ std::string get_single_leg_id(api::Leg const& l, n::lang_t const& lang) {
 }
 
 struct st_candidate {
+  friend bool operator==(st_candidate const& a, st_candidate const& b) {
+    return std::tie(a.run_.t_, a.run_.rt_) == std::tie(b.run_.t_, b.run_.rt_);
+  }
+
+  friend bool operator<(st_candidate const& a, st_candidate const& b) {
+    return std::tie(a.run_.t_, a.run_.rt_) < std::tie(b.run_.t_, b.run_.rt_);
+  }
+
   api::Place place_{};
   std::string tripId_{};
   std::string displayName_{};
@@ -215,7 +223,7 @@ std::vector<st_candidate> get_st_candidates_in_radius(
     return {.place_ = std::move(place),
             .tripId_ = trip_id,
             .displayName_ = std::string{s.display_name(ev_type, lang)},
-            .run_ = r};
+            .run_ = fr};
   });
 }
 
@@ -322,18 +330,19 @@ api::Itinerary build_itinerary_from_frun(
 
 struct candidate_score {
   bool operator<(candidate_score const& o) const {
-    return candidate_->tripId_ < o.candidate_->tripId_ ||
-           (candidate_->tripId_ == o.candidate_->tripId_ && score_ > o.score_);
+    return *candidate_ < *o.candidate_ ||
+           (*candidate_ == *o.candidate_ && score_ > o.score_);
   }
 
   st_candidate const* candidate_;
   double score_;
 };
 
-int candidate_score_cmp_ids(candidate_score const& a,
-                            candidate_score const& b) {
-  auto cmp = a.candidate_->tripId_.compare(b.candidate_->tripId_);
-  return (cmp > 0) - (cmp < 0);
+int candidate_cmp(candidate_score const& a, candidate_score const& b) {
+  if (*a.candidate_ == *b.candidate_) {
+    return 0;
+  }
+  return a < b ? -1 : 1;
 }
 
 struct from_to_candidate {
@@ -389,7 +398,7 @@ std::optional<from_to_candidate> get_best_candidate(
   for (auto i_from = 0U, i_to = 0U;
        i_from < from_cands.size() && i_to < to_cands.size();) {
 
-    switch (candidate_score_cmp_ids(from_cands[i_from], to_cands[i_to])) {
+    switch (candidate_cmp(from_cands[i_from], to_cands[i_to])) {
       case -1: ++i_from; break;
       case +1: ++i_to; break;
       case 0:
@@ -402,10 +411,8 @@ std::optional<from_to_candidate> get_best_candidate(
         ++i_from;
         ++i_to;
         while (i_from < from_cands.size() && i_to < to_cands.size() &&
-               candidate_score_cmp_ids(from_cands[i_from],
-                                       from_cands[i_from - 1]) == 0 &&
-               candidate_score_cmp_ids(from_cands[i_from], to_cands[i_to]) ==
-                   0) {
+               candidate_cmp(from_cands[i_from], from_cands[i_from - 1]) == 0 &&
+               candidate_cmp(from_cands[i_from], to_cands[i_to]) == 0) {
           ++i_from;
           ++i_to;
         }
