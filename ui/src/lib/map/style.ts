@@ -4,6 +4,7 @@ import type {
 	HillshadeLayerSpecification,
 	LineLayerSpecification,
 	RasterDEMSourceSpecification,
+	SymbolLayerSpecification,
 	StyleSpecification,
 	VectorSourceSpecification
 } from 'maplibre-gl';
@@ -183,7 +184,9 @@ export const getStyle = (
 				} satisfies VectorSourceSpecification
 			}
 		: {};
-	const routeTileLayers: Array<LineLayerSpecification | CircleLayerSpecification> = hasRouteTiles
+	const routeTileLayers: Array<
+		LineLayerSpecification | CircleLayerSpecification | SymbolLayerSpecification
+	> = hasRouteTiles
 		? [
 				{
 					id: 'route_tiles_lines',
@@ -234,6 +237,28 @@ export const getStyle = (
 							: ['interpolate', ['linear'], ['zoom'], 7, 0.5, 10, 1.25, 13, 2.0, 16, 3.0]
 					}
 				} satisfies LineLayerSpecification,
+				{
+					id: 'route_tiles_names',
+					type: 'symbol',
+					source: 'route_tiles',
+					'source-layer': 'routes',
+					filter: ['!=', ['get', 'clasz'], 'AIR'],
+					minzoom: 9,
+					layout: {
+						'symbol-placement': 'line',
+						'text-field': ['get', 'route_short_names'],
+						'text-font': ['Noto Sans Regular'],
+						'text-size': 12,
+						'text-max-angle': 30,
+						'symbol-sort-key': -100,
+						'text-allow-overlap': false
+					},
+					paint: {
+						'text-color': c.text,
+						'text-halo-color': c.textHalo,
+						'text-halo-width': 2
+					}
+				} satisfies SymbolLayerSpecification,
 				{
 					id: 'route_tiles_stops',
 					type: 'circle',
