@@ -220,6 +220,7 @@ void import_route_tiles(config const& c, data& d, fs::path const& data_path) {
     ::tiles::fixed_line line_{};
     std::set<std::string> short_names_{};
     std::string color_{};
+    std::optional<std::string> clasz_{};
     bool color_from_timetable_{false};
     bool beeline_{false};
     bool beeline_oob_{false};
@@ -231,16 +232,20 @@ void import_route_tiles(config const& c, data& d, fs::path const& data_path) {
   auto const add_route_segment =
       [&](std::string const& key, ::tiles::fixed_line line,
           std::set<std::string> const& short_names, std::string const& color,
-          bool const color_from_timetable, bool const beeline,
-          bool const beeline_oob) {
+          std::string const& clasz, bool const color_from_timetable,
+          bool const beeline, bool const beeline_oob) {
         auto [it, inserted] = polyline_features.try_emplace(key);
         if (inserted) {
           it->second.line_ = std::move(line);
           it->second.color_ = color;
+          it->second.clasz_ = clasz;
           it->second.color_from_timetable_ = color_from_timetable;
           it->second.beeline_ = beeline;
           it->second.beeline_oob_ = beeline_oob;
         } else {
+          if (it->second.clasz_.has_value() && *it->second.clasz_ != clasz) {
+            it->second.clasz_.reset();
+          }
           it->second.beeline_ = it->second.beeline_ || beeline;
           it->second.beeline_oob_ = it->second.beeline_oob_ || beeline_oob;
         }
@@ -260,6 +265,7 @@ void import_route_tiles(config const& c, data& d, fs::path const& data_path) {
       progress_tracker->update_monotonic(route_idx + 1U);
 
       auto const r = n::route_idx_t{route_idx};
+      auto const route_clasz = std::string{to_str(tt.route_clasz_[r])};
       auto const& route_stops = tt.route_location_seq_[r];
       if (route_stops.size() < 2U || tt.route_transport_ranges_[r].empty()) {
         continue;
@@ -337,8 +343,8 @@ void import_route_tiles(config const& c, data& d, fs::path const& data_path) {
               is_beeline_oob(w, l, tt.locations_.coordinates_.at(from_location),
                              tt.locations_.coordinates_.at(to_location));
           add_route_segment(enc.buf_, std::move(line), route_short_names,
-                            resolved_color, route_color.has_value(), is_beeline,
-                            beeline_oob);
+                            resolved_color, route_clasz,
+                            route_color.has_value(), is_beeline, beeline_oob);
         }
 
         shape_added = true;
@@ -384,6 +390,9 @@ void import_route_tiles(config const& c, data& d, fs::path const& data_path) {
           ::tiles::encode_string(join_comma(route_feature.short_names_)));
       f.meta_.emplace_back("color",
                            ::tiles::encode_string(route_feature.color_));
+      f.meta_.emplace_back(
+          "clasz", ::tiles::encode_string(
+                       route_feature.clasz_.value_or(std::string{"MIXED"})));
       f.meta_.emplace_back(
           "color_from_timetable",
           ::tiles::encode_bool(route_feature.color_from_timetable_));

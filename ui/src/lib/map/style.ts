@@ -1,7 +1,11 @@
 import type {
+	CircleLayerSpecification,
+	ExpressionSpecification,
 	HillshadeLayerSpecification,
+	LineLayerSpecification,
 	RasterDEMSourceSpecification,
-	StyleSpecification
+	StyleSpecification,
+	VectorSourceSpecification
 } from 'maplibre-gl';
 const colors = {
 	light: {
@@ -139,9 +143,16 @@ export const getStyle = (
 	level: number,
 	staticBaseUrl: string,
 	apiBaseUrl: string,
-	withHillshades: boolean
+	withHillshades: boolean,
+	hasRouteTiles: boolean,
+	highlightRouteTileBeelines: boolean
 ): StyleSpecification => {
 	const c = colors[theme];
+	const routeTileBeelineHighlight = [
+		'all',
+		['==', ['get', 'beeline'], true],
+		['!=', ['get', 'beeline_oob'], true]
+	] as ExpressionSpecification;
 	const hillshadeSources: StyleSpecification['sources'] = withHillshades
 		? {
 				hillshadeSource: {
@@ -162,6 +173,81 @@ export const getStyle = (
 				}
 			]
 		: [];
+	const routeTileSources: StyleSpecification['sources'] = hasRouteTiles
+		? {
+				route_tiles: {
+					type: 'vector',
+					tiles: [getAbsoluteUrl(apiBaseUrl, 'route-tiles/{z}/{x}/{y}.mvt')],
+					maxzoom: 20,
+					attribution: ''
+				} satisfies VectorSourceSpecification
+			}
+		: {};
+	const routeTileLayers: Array<LineLayerSpecification | CircleLayerSpecification> = hasRouteTiles
+		? [
+				{
+					id: 'route_tiles_lines',
+					type: 'line',
+					source: 'route_tiles',
+					'source-layer': 'routes',
+					filter: ['!=', ['get', 'clasz'], 'AIR'],
+					layout: {
+						'line-cap': 'round',
+						'line-join': 'round'
+					},
+					paint: {
+						'line-color': highlightRouteTileBeelines
+							? [
+									'case',
+									routeTileBeelineHighlight,
+									'#ff0000',
+									['coalesce', ['get', 'color'], '#808080']
+								]
+							: ['coalesce', ['get', 'color'], '#808080'],
+						'line-opacity': highlightRouteTileBeelines
+							? [
+									'interpolate',
+									['linear'],
+									['zoom'],
+									7,
+									['case', routeTileBeelineHighlight, 1, 0.15],
+									10,
+									['case', routeTileBeelineHighlight, 1, 0.35],
+									13,
+									['case', routeTileBeelineHighlight, 1, 0.6]
+								]
+							: ['interpolate', ['linear'], ['zoom'], 7, 0.15, 10, 0.35, 13, 0.6],
+						'line-width': highlightRouteTileBeelines
+							? [
+									'interpolate',
+									['linear'],
+									['zoom'],
+									7,
+									['case', routeTileBeelineHighlight, 2.0, 0.5],
+									10,
+									['case', routeTileBeelineHighlight, 3.0, 1.25],
+									13,
+									['case', routeTileBeelineHighlight, 4.5, 2.0],
+									16,
+									['case', routeTileBeelineHighlight, 6.0, 3.0]
+								]
+							: ['interpolate', ['linear'], ['zoom'], 7, 0.5, 10, 1.25, 13, 2.0, 16, 3.0]
+					}
+				} satisfies LineLayerSpecification,
+				{
+					id: 'route_tiles_stops',
+					type: 'circle',
+					source: 'route_tiles',
+					'source-layer': 'stops',
+					minzoom: 10,
+					paint: {
+						'circle-color': c.text,
+						'circle-opacity': ['interpolate', ['linear'], ['zoom'], 10, 0.3, 14, 0.85],
+						'circle-radius': ['interpolate', ['linear'], ['zoom'], 10, 0.8, 14, 2.2]
+					}
+				} satisfies CircleLayerSpecification
+			]
+		: [];
 	return {
 		version: 8,
 		sources: {
@@ -171,12 +257,7 @@ export const getStyle = (
 				maxzoom: 20,
 				attribution: ''
 			},
-			route_tiles: {
-				type: 'vector',
-				tiles: [getAbsoluteUrl(apiBaseUrl, 'route-tiles/{z}/{x}/{y}.mvt')],
-				maxzoom: 20,
-				attribution: ''
-			},
+			...routeTileSources,
 			...hillshadeSources
 		},
 		glyphs: getAbsoluteUrl(apiBaseUrl, 'tiles/glyphs/{fontstack}/{range}.pbf'),
@@ -742,95 +823,7 @@ export const getStyle = (
 					'line-dasharray': [10, 2]
 				}
 			},
-			{
-				id: 'route_tiles_lines',
-				type: 'line',
-				source: 'route_tiles',
-				'source-layer': 'routes',
-				layout: {
-					'line-cap': 'round',
-					'line-join': 'round'
-				},
-				paint: {
-					'line-color': [
-						'case',
-						['all', ['==', ['get', 'beeline'], true], ['!=', ['get', 'beeline_oob'], true]],
-						'#ff0000',
-						['coalesce', ['get', 'color'], '#808080']
-					],
-					'line-opacity': [
-						'interpolate',
-						['linear'],
-						['zoom'],
-						7,
-						[
-							'case',
-							['all', ['==', ['get', 'beeline'], true], ['!=', ['get', 'beeline_oob'], true]],
-							1,
-							0.15
-						],
-						10,
-						[
-							'case',
-							['all', ['==', ['get', 'beeline'], true], ['!=', ['get', 'beeline_oob'], true]],
-							1,
-							0.35
-						],
-						13,
-						[
-							'case',
-							['all', ['==', ['get', 'beeline'], true], ['!=', ['get', 'beeline_oob'], true]],
-							1,
-							0.6
-						]
-					],
-					'line-width': [
-						'interpolate',
-						['linear'],
-						['zoom'],
-						7,
-						[
-							'case',
-							['all', ['==', ['get', 'beeline'], true], ['!=', ['get', 'beeline_oob'], true]],
-							2.0,
-							0.5
-						],
-						10,
-						[
-							'case',
-							['all', ['==', ['get', 'beeline'], true], ['!=', ['get', 'beeline_oob'], true]],
-							3.0,
-							1.25
-						],
-						13,
-						[
-							'case',
-							['all', ['==', ['get', 'beeline'], true], ['!=', ['get', 'beeline_oob'], true]],
-							4.5,
-							2.0
-						],
-						16,
-						[
-							'case',
-							['all', ['==', ['get', 'beeline'], true], ['!=', ['get', 'beeline_oob'], true]],
-							6.0,
-							3.0
-						]
-					]
-				}
-			},
-			{
-				id: 'route_tiles_stops',
-				type: 'circle',
-				source: 'route_tiles',
-				'source-layer': 'stops',
-				minzoom: 10,
-				paint: {
-					'circle-color': c.text,
-					'circle-opacity': ['interpolate', ['linear'], ['zoom'], 10, 0.3, 14, 0.85],
-					'circle-radius': ['interpolate', ['linear'], ['zoom'], 10, 0.8, 14, 2.2]
-				}
-			},
+			...routeTileLayers,
 			{
 				id: 'road-ref-shield',
 				type: 'symbol',

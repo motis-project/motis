@@ -1717,6 +1717,9 @@ export type OneToManyIntermodalParams = {
     requireCarTransport?: boolean;
 };
 
+/**
+ * server configuration
+ */
 export type ServerConfig = {
     /**
      * the version of this MOTIS server
@@ -1755,6 +1758,10 @@ export type ServerConfig = {
      * true if experimental route shapes debug download API is enabled
      */
     shapesDebugEnabled: boolean;
+    /**
+     * true if route vector tiles are available
+     */
+    hasRouteTiles: boolean;
 };
 
 export type Error = {

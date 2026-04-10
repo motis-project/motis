@@ -129,7 +129,9 @@
 					client.getConfig().baseUrl
 						? client.getConfig().baseUrl + '/'
 						: window.location.origin + window.location.pathname,
-					withHillshades
+					withHillshades,
+					serverConfig?.hasRouteTiles === true,
+					hasDebug
 				)
 			: undefined
 	);

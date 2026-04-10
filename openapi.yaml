@@ -4864,7 +4864,7 @@ components:
           default: false
 
     ServerConfig:
-      Description: server configuration
+      description: server configuration
       type: object
       required:
         - motisVersion
@@ -4876,6 +4876,7 @@ components:
         - maxPrePostTransitTimeLimit
         - maxDirectTimeLimit
         - shapesDebugEnabled
+        - hasRouteTiles
       properties:
         motisVersion:
           description: the version of this MOTIS server
@@ -4904,6 +4905,9 @@ components:
           type: number
         shapesDebugEnabled:
           description: true if experimental route shapes debug download API is enabled
+          type: boolean
+        hasRouteTiles:
+          description: true if route vector tiles are available
           type: boolean
     Error:
       type: object

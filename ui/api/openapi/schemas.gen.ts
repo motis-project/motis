@@ -2140,9 +2140,9 @@ If set to \`true\`, all used transit trips are required to allow car carriage.
 } as const;
 
 export const ServerConfigSchema = {
-    Description: 'server configuration',
+    description: 'server configuration',
     type: 'object',
-    required: ['motisVersion', 'hasElevation', 'hasRoutedTransfers', 'hasStreetRouting', 'maxOneToManySize', 'maxOneToAllTravelTimeLimit', 'maxPrePostTransitTimeLimit', 'maxDirectTimeLimit', 'shapesDebugEnabled'],
+    required: ['motisVersion', 'hasElevation', 'hasRoutedTransfers', 'hasStreetRouting', 'maxOneToManySize', 'maxOneToAllTravelTimeLimit', 'maxPrePostTransitTimeLimit', 'maxDirectTimeLimit', 'shapesDebugEnabled', 'hasRouteTiles'],
     properties: {
         motisVersion: {
             description: 'the version of this MOTIS server',
@@ -2179,6 +2179,10 @@ export const ServerConfigSchema = {
         },
         shapesDebugEnabled: {
             description: 'true if experimental route shapes debug download API is enabled',
+            type: 'boolean'
+        },
+        hasRouteTiles: {
+            description: 'true if route vector tiles are available',
             type: 'boolean'
         }
     }
