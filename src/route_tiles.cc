@@ -1,10 +1,16 @@
 #include "motis/route_tiles.h"
 
+#include <algorithm>
+#include <bit>
 #include <chrono>
+#include <cmath>
+#include <cstdint>
 #include <iostream>
 #include <optional>
 #include <set>
 #include <string>
+#include <utility>
+#include <vector>
 
 #include "fmt/format.h"
 
@@ -54,18 +60,8 @@ struct scoped_timing {
   clock_t::time_point start_;
 };
 
-std::string hash_color(std::string_view const name) {
-  auto h = std::uint32_t{0U};
-  for (auto const c : name) {
-    h = h * 131U + static_cast<std::uint8_t>(c);
-  }
-  auto const r = static_cast<std::uint8_t>(96U + (h & 0x5FU));
-  auto const g = static_cast<std::uint8_t>(96U + ((h >> 8U) & 0x5FU));
-  auto const b = static_cast<std::uint8_t>(96U + ((h >> 16U) & 0x5FU));
-  return fmt::format("#{:02X}{:02X}{:02X}", r, g, b);
-}
-
-std::string join_comma(std::set<std::string> const& values) {
+template <typename Container>
+std::string join_comma(Container const& values) {
   auto result = std::string{};
   for (auto const& value : values) {
     if (!result.empty()) {
@@ -74,6 +70,68 @@ std::string join_comma(std::set<std::string> const& values) {
     result += value;
   }
   return result;
+}
+
+template <typename Container, typename Value>
+void add_unique(Container& values, Value&& value) {
+  if (std::find(begin(values), end(values), value) == end(values)) {
+    values.emplace_back(std::forward<Value>(value));
+  }
+}
+
+std::int32_t string_to_hash(std::string_view const str) {
+  auto hash = std::int32_t{0};
+  for (auto const c : str) {
+    auto const next =
+        static_cast<std::uint32_t>(static_cast<std::uint8_t>(c) +
+                                   ((static_cast<std::int64_t>(hash) << 5U) -
+                                    static_cast<std::int64_t>(hash)));
+    hash = std::bit_cast<std::int32_t>(next);
+  }
+  return hash;
+}
+
+std::uint8_t to_rgb_channel(double const value) {
+  auto const scaled =
+      std::lround(std::clamp(value, 0.0, 1.0) * static_cast<double>(0xFF));
+  return static_cast<std::uint8_t>(scaled);
+}
+
+std::string hash_color(std::string_view const name) {
+  auto const h = std::abs(string_to_hash(name) % 360);
+  auto const hue = static_cast<double>(h) / 60.0;
+  auto const saturation = 0.8;
+  auto const lightness = 0.6;
+  auto const chroma = (1.0 - std::abs((2.0 * lightness) - 1.0)) * saturation;
+  auto const x = chroma * (1.0 - std::abs(std::fmod(hue, 2.0) - 1.0));
+
+  auto red = 0.0;
+  auto green = 0.0;
+  auto blue = 0.0;
+  if (hue < 1.0) {
+    red = chroma;
+    green = x;
+  } else if (hue < 2.0) {
+    red = x;
+    green = chroma;
+  } else if (hue < 3.0) {
+    green = chroma;
+    blue = x;
+  } else if (hue < 4.0) {
+    green = x;
+    blue = chroma;
+  } else if (hue < 5.0) {
+    red = x;
+    blue = chroma;
+  } else {
+    red = chroma;
+    blue = x;
+  }
+
+  auto const match = lightness - (chroma / 2.0);
+  return fmt::format("#{:02X}{:02X}{:02X}", to_rgb_channel(red + match),
+                     to_rgb_channel(green + match),
+                     to_rgb_channel(blue + match));
 }
 
 }  // namespace
@@ -166,6 +224,7 @@ void import_route_tiles(config const& c, data& d, fs::path const& data_path) {
       }
 
       auto route_short_names = std::set<std::string>{};
+      auto route_color_names = std::vector<std::string>{};
       auto route_color = std::optional<std::string>{};
 
       auto shape_added = false;
@@ -184,6 +243,7 @@ void import_route_tiles(config const& c, data& d, fs::path const& data_path) {
           if (from == stop_indices.from_) {
             auto const short_name = std::string{
                 fr[0].route_short_name(n::event_type::kDep, n::lang_t{})};
+            add_unique(route_color_names, short_name);
             if (!short_name.empty()) {
               route_short_names.insert(short_name);
             }
@@ -225,9 +285,8 @@ void import_route_tiles(config const& c, data& d, fs::path const& data_path) {
               route_short_names.insert(fmt::format("route_{}", route_idx));
             }
           }
-          auto const short_names_joined = join_comma(route_short_names);
           auto const resolved_color =
-              route_color.value_or(hash_color(short_names_joined));
+              route_color.value_or(hash_color(join_comma(route_color_names)));
           auto const is_beeline = line.size() <= 2U;
           add_route_segment(enc.buf_, std::move(line), route_short_names,
                             resolved_color, route_color.has_value(),
