@@ -6,6 +6,7 @@
 #include <cmath>
 #include <cstdint>
 #include <iostream>
+#include <map>
 #include <optional>
 #include <set>
 #include <string>
@@ -217,8 +218,13 @@ void import_route_tiles(config const& c, data& d, fs::path const& data_path) {
   auto enc = geo::polyline_encoder<6>{};
 
   struct route_polyline_feature {
+    struct route_display_feature {
+      std::string color_{};
+      bool color_from_timetable_{false};
+    };
+
     ::tiles::fixed_line line_{};
-    std::set<std::string> short_names_{};
+    std::map<std::string, route_display_feature> routes_{};
     std::string color_{};
     std::optional<std::string> clasz_{};
     bool color_from_timetable_{false};
@@ -231,7 +237,7 @@ void import_route_tiles(config const& c, data& d, fs::path const& data_path) {
 
   auto const add_route_segment =
       [&](std::string const& key, ::tiles::fixed_line line,
-          std::set<std::string> const& short_names, std::string const& color,
+          std::set<std::string> const& route_names, std::string const& color,
           std::string const& clasz, bool const color_from_timetable,
           bool const beeline, bool const beeline_oob) {
         auto [it, inserted] = polyline_features.try_emplace(key);
@@ -249,8 +255,10 @@ void import_route_tiles(config const& c, data& d, fs::path const& data_path) {
           it->second.beeline_ = it->second.beeline_ || beeline;
           it->second.beeline_oob_ = it->second.beeline_oob_ || beeline_oob;
         }
-        for (auto const& short_name : short_names) {
-          it->second.short_names_.insert(short_name);
+        for (auto const& route_name : route_names) {
+          it->second.routes_.emplace(
+              route_name, route_polyline_feature::route_display_feature{
+                              color, color_from_timetable});
         }
       };
 
@@ -272,7 +280,6 @@ void import_route_tiles(config const& c, data& d, fs::path const& data_path) {
       }
 
       auto route_short_names = std::set<std::string>{};
-      auto route_color_names = std::vector<std::string>{};
       auto route_color = std::optional<std::string>{};
 
       auto shape_added = false;
@@ -291,7 +298,6 @@ void import_route_tiles(config const& c, data& d, fs::path const& data_path) {
           if (from == stop_indices.from_) {
             auto const short_name = std::string{
                 fr[0].route_short_name(n::event_type::kDep, n::lang_t{})};
-            add_unique(route_color_names, short_name);
             if (!short_name.empty()) {
               route_short_names.insert(short_name);
             }
@@ -336,7 +342,7 @@ void import_route_tiles(config const& c, data& d, fs::path const& data_path) {
             }
           }
           auto const resolved_color =
-              route_color.value_or(hash_color(join_comma(route_color_names)));
+              route_color.value_or(hash_color(join_comma(route_short_names)));
           auto const is_beeline = line.size() <= 2U;
           auto const beeline_oob =
               is_beeline &&
@@ -381,21 +387,40 @@ void import_route_tiles(config const& c, data& d, fs::path const& data_path) {
     for (auto const& [_, route_feature] : polyline_features) {
       progress_tracker->update_monotonic(++route_feature_idx);
 
+      auto route_names = std::vector<std::string>{};
+      route_names.reserve(route_feature.routes_.size());
+      for (auto const& [route_name, _] : route_feature.routes_) {
+        route_names.emplace_back(route_name);
+      }
+
       auto f = ::tiles::feature{};
       f.id_ = feature_id++;
       f.layer_ = routes_layer_id;
       f.zoom_levels_ = {0U, ::tiles::kMaxZoomLevel};
-      f.meta_.emplace_back(
-          "route_short_names",
-          ::tiles::encode_string(join_comma(route_feature.short_names_)));
+      f.meta_.emplace_back("route_short_names",
+                           ::tiles::encode_string(join_comma(route_names)));
       f.meta_.emplace_back("color",
                            ::tiles::encode_string(route_feature.color_));
       f.meta_.emplace_back(
-          "clasz", ::tiles::encode_string(
-                       route_feature.clasz_.value_or(std::string{"MIXED"})));
-      f.meta_.emplace_back(
           "color_from_timetable",
           ::tiles::encode_bool(route_feature.color_from_timetable_));
+      f.meta_.emplace_back("route_count",
+                           ::tiles::encode_integer(static_cast<std::int64_t>(
+                               route_feature.routes_.size())));
+      auto route_variant_idx = 0U;
+      for (auto const& [route_name, route_display] : route_feature.routes_) {
+        f.meta_.emplace_back(fmt::format("name_{}", route_variant_idx),
+                             ::tiles::encode_string(route_name));
+        f.meta_.emplace_back(fmt::format("color_{}", route_variant_idx),
+                             ::tiles::encode_string(route_display.color_));
+        f.meta_.emplace_back(
+            fmt::format("color_from_timetable_{}", route_variant_idx),
+            ::tiles::encode_bool(route_display.color_from_timetable_));
+        ++route_variant_idx;
+      }
+      f.meta_.emplace_back(
+          "clasz", ::tiles::encode_string(
+                       route_feature.clasz_.value_or(std::string{"MIXED"})));
       f.meta_.emplace_back("beeline",
                            ::tiles::encode_bool(route_feature.beeline_));
       f.meta_.emplace_back("beeline_oob",

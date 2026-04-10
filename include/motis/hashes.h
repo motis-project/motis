@@ -38,7 +38,7 @@ constexpr auto const routed_shapes_version = []() {
   return meta_entry_t{"routed_shapes_ver", 10U};
 };
 constexpr auto const route_tiles_version = []() {
-  return meta_entry_t{"route_tiles_bin_ver", 1U};
+  return meta_entry_t{"route_tiles_bin_ver", 2U};
 };
 
 std::string to_str(meta_t const&);
