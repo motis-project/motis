@@ -171,6 +171,43 @@ bool is_beeline_oob(osr::ways const& w,
   return !has_nearby_osm_way(w, l, from) || !has_nearby_osm_way(w, l, to);
 }
 
+bool fixed_xy_less(::tiles::fixed_xy const& lhs, ::tiles::fixed_xy const& rhs) {
+  auto const lhs_pos = ::tiles::fixed_to_latlng(lhs);
+  auto const rhs_pos = ::tiles::fixed_to_latlng(rhs);
+  return std::tie(lhs_pos.lat_, lhs_pos.lng_) <
+         std::tie(rhs_pos.lat_, rhs_pos.lng_);
+}
+
+bool should_reverse_route_segment(::tiles::fixed_line const& line) {
+  for (auto i = std::size_t{0U}; i < line.size(); ++i) {
+    auto const& lhs = line[i];
+    auto const& rhs = line[line.size() - i - 1U];
+    if (fixed_xy_less(lhs, rhs)) {
+      return false;
+    }
+    if (fixed_xy_less(rhs, lhs)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+std::string encode_route_segment(::tiles::fixed_line const& line) {
+  auto enc = geo::polyline_encoder<6>{};
+  for (auto const& point : line) {
+    enc.push(::tiles::fixed_to_latlng(point));
+  }
+  return enc.buf_;
+}
+
+std::pair<std::string, ::tiles::fixed_line> canonicalize_route_segment(
+    ::tiles::fixed_line line) {
+  if (should_reverse_route_segment(line)) {
+    std::reverse(begin(line), end(line));
+  }
+  return {encode_route_segment(line), std::move(line)};
+}
+
 }  // namespace
 
 void import_route_tiles(config const& c, data& d, fs::path const& data_path) {
@@ -215,7 +252,6 @@ void import_route_tiles(config const& c, data& d, fs::path const& data_path) {
   auto const* shapes = d.shapes_.get();
   auto const& w = *d.w_;
   auto const& l = *d.l_;
-  auto enc = geo::polyline_encoder<6>{};
 
   struct route_polyline_feature {
     struct route_display_feature {
@@ -314,12 +350,10 @@ void import_route_tiles(config const& c, data& d, fs::path const& data_path) {
             continue;
           }
 
-          enc.reset();
           auto line = ::tiles::fixed_line{};
           fr.for_each_shape_point(
               shapes, n::interval{n::stop_idx_t{0U}, n::stop_idx_t{2U}},
               [&](auto const& p) {
-                enc.push(p);
                 line.push_back(::tiles::latlng_to_fixed({p.lat_, p.lng_}));
               });
 
@@ -348,8 +382,10 @@ void import_route_tiles(config const& c, data& d, fs::path const& data_path) {
               is_beeline &&
               is_beeline_oob(w, l, tt.locations_.coordinates_.at(from_location),
                              tt.locations_.coordinates_.at(to_location));
-          add_route_segment(enc.buf_, std::move(line), route_short_names,
-                            resolved_color, route_clasz,
+          auto [segment_key, segment_line] =
+              canonicalize_route_segment(std::move(line));
+          add_route_segment(segment_key, std::move(segment_line),
+                            route_short_names, resolved_color, route_clasz,
                             route_color.has_value(), is_beeline, beeline_oob);
         }
 
