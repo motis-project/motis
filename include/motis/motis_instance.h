@@ -97,6 +97,7 @@ struct motis_instance {
     GET<ep::levels>("/api/v1/map/levels", d);
     GET<ep::initial>("/api/v1/map/initial", d);
     GET<ep::reverse_geocode>("/api/v1/reverse-geocode", d);
+    GET<ep::health>("/api/v1/health", d);
     GET<ep::geocode>("/api/v1/geocode", d);
     GET<ep::routing>("/api/v1/plan", d);
     GET<ep::routing>("/api/v2/plan", d);
@@ -144,8 +145,6 @@ struct motis_instance {
       utl::verify(d.tiles_ != nullptr, "tiles data not loaded");
       qr_.route("GET", "/tiles/", ep::tiles{*d.tiles_});
     }
-
-    qr_.route("GET", "/api/v1/health", ep::health{d.config_, d.metrics_.get()});
 
     qr_.route("POST", "/ojp20",
               ep::ojp{
