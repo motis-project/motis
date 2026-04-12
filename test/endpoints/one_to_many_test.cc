@@ -5,6 +5,8 @@
 #endif
 
 #include <chrono>
+#include <optional>
+#include <vector>
 
 #include "utl/init_from.h"
 
@@ -13,6 +15,7 @@
 #include "motis-api/motis-api.h"
 
 #include "motis/config.h"
+#include "motis/data.h"
 #include "motis/endpoints/one_to_many.h"
 #include "motis/endpoints/one_to_many_post.h"
 #include "motis/import.h"
@@ -47,9 +50,9 @@ PAUL1,Römer/Paulskirche,50.110979,8.682276,0,,
 PAUL2,Römer/Paulskirche,50.110828,8.681587,0,,
 FFM_C,FFM C,50.107812,8.664628,0,,
 FFM_B,FFM B,50.107519,8.664775,0,,
-DA_Bus_1,DA Hbf,49.8724891,8.6281994
+DA_Bus_1,DA Hbf,49.8722160,8.6282315
 DA_Bus_2,DA Hbf,49.8755778,8.6240518
-DA_Tram_1,DA Hbf,49.875345,8.6279307
+DA_Tram_1,DA Hbf,49.8752926,8.6277460
 DA_Tram_2,DA Hbf,49.874995,8.6313925
 DA_Tram_3,DA Hbf,49.871561,8.6320181
 
@@ -120,7 +123,8 @@ TEST(motis, one_to_many) {
                                    .datasets_ = {{"test", {.path_ = kGTFS}}}},
              .street_routing_ = true,
              .osr_footpath_ = true};
-  auto d = import(c, "test/data", true);
+  import(c, "test/data");
+  auto d = data{"test/data", c};
 
   auto const one_to_many_get =
       utl::init_from<ep::one_to_many_intermodal>(d).value();
@@ -141,10 +145,10 @@ TEST(motis, one_to_many) {
         "49.872855;8.632008,"  // Near one
         "49.872504;8.628988,"  // Inside DA station
         "49.874399;8.630361,"  // Still reachable, near DA
-        "49.875368;8.627596,"  // Far, near DA
+        "49.875292;8.627746,"  // Far, near DA
         "50.106596;8.663485,"  // Inside FFM station
-        "50.105021;8.663308,"  // Outside FFM station
-        "50.107654;8.669103,"  // Far, near FFM
+        "50.106209;8.668934,"  // Outside FFM station
+        "50.103663;8.663666,"  // Far, not reachable, near FFM
         "50.113494;8.679129,"  // Near FFM_HAUPT_U
         "50.114080;8.677027,"  // Near FFM_HAUPT_S
         "50.114520;8.673050,"  // Too far from FFM_HAUPT_U
@@ -166,7 +170,7 @@ TEST(motis, one_to_many) {
                                          {.duration_ = 122.0},
                                          {.duration_ = 240.0},
                                          {.duration_ = 529.0},
-                                         {.duration_ = 692.0},
+                                         {.duration_ = 582.0},
                                          {},
                                          {},
                                          {},
@@ -188,8 +192,8 @@ TEST(motis, one_to_many) {
                       {},
                       {},
                       {{.duration_ = 1260.0, .transfers_ = 0}},
-                      {{.duration_ = 1440.0, .transfers_ = 0}},
-                      {{.duration_ = 1500.0, .transfers_ = 0}},
+                      {{.duration_ = 1620.0, .transfers_ = 0}},
+                      {},
                       {{.duration_ = 2700.0, .transfers_ = 1}},
                       {{.duration_ = 2640.0, .transfers_ = 1}},
                       {{.duration_ = 2940.0, .transfers_ = 1}},
@@ -217,7 +221,7 @@ TEST(motis, one_to_many) {
                 "50.113385,8.678328,-2",  // Close, near FFM_HAUPT, level -2
                 "50.111900,8.675208",  // Far, near FFM_HAUPT
                 "50.106543,8.663474,0",  // Close, near FFM
-                "50.107291,8.660497",  // Too far from de:6412:10:6:1
+                "50.107361,8.660478",  // Too far from de:6412:10:6:1
                 "50.104298,8.660285",  // Far, near FFM
                 "49.872243,8.632062",  // Near DA
                 "49.875368,8.627596",  // Far, near DA
@@ -276,7 +280,7 @@ TEST(motis, one_to_many) {
   // POST, forward, routed, short pre-transit
   {
     auto const durations = one_to_many_post(api::OneToManyIntermodalParams{
-        .one_ = "50.106839,8.659387",  // Near FFM
+        .one_ = "50.106691,8.659763",  // Near FFM
         .many_ =
             {
                 "test_DA_10",
@@ -285,7 +289,7 @@ TEST(motis, one_to_many) {
                 "test_FFM_101",
                 "test_FFM_HAUPT_S",
                 "50.11385,8.67912",  // FFM_HAUPT_U
-                "50.105884,8.664241",  // Near FFM
+                "50.10590,8.66452",  // Near FFM
                 "50.113291,8.678321,0",  // Near FFM_HAUPT
                 "50.113127,8.678879,-2",  // Near FFM_HAUPT
                 "50.114141,8.677025,-3",  // Near FFM_HAUPT
@@ -301,12 +305,12 @@ TEST(motis, one_to_many) {
     EXPECT_EQ((api::OneToManyIntermodalResponse{
                   .street_durations_ = {{
                       {},
-                      {.duration_ = 475.0},
-                      {.duration_ = 384.0},  // Direct connection allowed
-                      {.duration_ = 353.0},  // Valid for pre transit
+                      {.duration_ = 443.0},
+                      {.duration_ = 370.0},  // Direct connection allowed
+                      {.duration_ = 321.0},  // Valid for pre transit
                       {},
                       {},
-                      {.duration_ = 413.0},
+                      {.duration_ = 403.0},
                       {},
                       {},
                       {},
@@ -613,11 +617,12 @@ TEST(motis, one_to_many) {
     {
       // With routed transfers + distances
       auto const durations = one_to_many_post(api::OneToManyIntermodalParams{
-          .one_ = "49.8724891,8.6281994",
-          .many_ = {"49.875345,8.6279307",  // near Tram_1
-                    "49.874995,8.6313925",  // near Tram_2
-                    "49.871561,8.6320181",  // near Tram_3
-                    "50.111900,8.675208"},  // near FFM_HAUPT
+          .one_ = "49.8722160,8.6282315",  // DA_Bus_1
+          .many_ =
+              {"49.875292,8.6277460",  // near Tram_1, must be south of node
+               "49.874995,8.6313925",  // near Tram_2
+               "49.871561,8.6320181",  // near Tram_3
+               "50.111900,8.675208"},  // near FFM_HAUPT
           .time_ = parse_time("2019-05-01T00:05:00.000+02:00"),
           .useRoutedTransfers_ = true,
           .withDistance_ = true});
@@ -626,12 +631,12 @@ TEST(motis, one_to_many) {
       auto const& td = durations.transit_durations_.value();
 
       ASSERT_EQ(4U, sd.size());
-      EXPECT_DOUBLE_EQ(425.0, sd.at(0).duration_.value());
-      EXPECT_NEAR(338.0, sd.at(0).distance_.value(), 0.1);
-      EXPECT_DOUBLE_EQ(529.0, sd.at(1).duration_.value());
-      EXPECT_NEAR(575.0, sd.at(1).distance_.value(), 0.1);
-      EXPECT_DOUBLE_EQ(939.0, sd.at(2).duration_.value());
-      EXPECT_NEAR(1068.6, sd.at(2).distance_.value(), 0.1);
+      EXPECT_DOUBLE_EQ(344.0, sd.at(0).duration_.value());
+      EXPECT_NEAR(351.9, sd.at(0).distance_.value(), 0.1);
+      EXPECT_DOUBLE_EQ(556.0, sd.at(1).duration_.value());
+      EXPECT_NEAR(607.0, sd.at(1).distance_.value(), 0.1);
+      EXPECT_DOUBLE_EQ(966.0, sd.at(2).duration_.value());
+      EXPECT_NEAR(1100.6, sd.at(2).distance_.value(), 0.1);
       EXPECT_EQ(api::Duration{}, sd.at(3));
 
       ASSERT_EQ(4U, td.size());
@@ -652,29 +657,26 @@ TEST(motis, one_to_many) {
       // Long walking paths + fast connctions => multiple durations
       // Currently: Long transfer times, so that transit is faster
       // After bug fix: Slow walking speed, so that transit is faster
-      // might require moving stops (B1->T1, T1->T2, T2 delete) with paths:
+      // might require moving stops (B2->T1, T1->T2, T2 delete) with paths:
       // Bus1 -> Tram3, Bus1 -> Bus2 -> Tram3, Bus1 -> Bus2 -> Tram1/2 -> Tram3
       auto const durations = one_to_many_post(api::OneToManyIntermodalParams{
-          .one_ = "49.8724891,8.6281994",
+          .one_ = "49.8722160,8.6282315",  // DA_Bus_1
           .many_ = {"49.8755778,8.6240518",  // DA_Bus_2
-                    "49.875345,8.6279307",  // DA_Tram_1
+                    "49.8752926,8.6277460",  // DA_Tram_1
                     "49.871561,8.6320181"},  // DA_Tram_3
           .time_ = parse_time("2019-05-01T00:05:00.000+02:00"),
           .maxPreTransitTime_ = 300});  // Prevent any pre transit to Tram_x
 
-      EXPECT_EQ((api::OneToManyIntermodalResponse{
-                    .street_durations_ = {{
-                        {},
-                        {.duration_ = 425.0},
-                        {.duration_ = 939.0},
-                    }},
-                    .transit_durations_ = {{
-                        {{.duration_ = 1080.0, .transfers_ = 0}},
-                        {{.duration_ = 1200.0, .transfers_ = 0}},
-                        {{.duration_ = 1500.0, .transfers_ = 0},
-                         {.duration_ = 1440.0, .transfers_ = 1}},
-                    }}}),
-                durations);
+      auto const& sd = durations.street_durations_.value();
+      ASSERT_EQ(3U, sd.size());
+      EXPECT_DOUBLE_EQ(966.0, sd.at(2).duration_.value());
+      EXPECT_EQ((std::optional<std::vector<std::vector<api::ParetoSetEntry>>>{{
+                    {{.duration_ = 1080.0, .transfers_ = 0}},
+                    {{.duration_ = 1140.0, .transfers_ = 0}},
+                    {{.duration_ = 1500.0, .transfers_ = 0},
+                     {.duration_ = 1440.0, .transfers_ = 1}},
+                }}),
+                durations.transit_durations_);
     }
   }
 }

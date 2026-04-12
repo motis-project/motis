@@ -266,7 +266,8 @@ TEST(motis, trip_siri_sx_alerts) {
                             .num_days_ = 1,
                             .datasets_ = {{"test", {.path_ = kSiriSxGtfs}}}},
       .street_routing_ = false};
-  auto d = import(c, "test/data", true);
+  import(c, "test/data");
+  auto d = data{"test/data", c};
   d.init_rtt(sys_days{2026_y / January / 10});
 
   auto& rtt = *d.rt_->rtt_;

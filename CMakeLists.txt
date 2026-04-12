@@ -105,6 +105,8 @@ else ()
     set(motis-compile-options
             -Wall
             -Wextra
+            -Wno-array-bounds
+            -Wno-stringop-overread
             -Wno-mismatched-new-delete
             -Wno-maybe-uninitialized)
 endif ()

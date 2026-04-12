@@ -1,5 +1,14 @@
 <script lang="ts">
-	import { X, Palette, Rss, Ban, LocateFixed, TrainFront, Waypoints } from '@lucide/svelte';
+	import {
+		X,
+		Palette,
+		Rss,
+		Ban,
+		LocateFixed,
+		TrainFront,
+		Waypoints,
+		MountainSnow
+	} from '@lucide/svelte';
 	import { getStyle } from '$lib/map/style';
 	import Map from '$lib/map/Map.svelte';
 	import Control from '$lib/map/Control.svelte';
@@ -79,6 +88,7 @@
 	let colorMode = $state<'rt' | 'route' | 'mode' | 'none'>(isSmallScreen ? 'none' : 'rt');
 	let showMap = $state(!isSmallScreen);
 	let showRoutes = $state(false);
+	let routesOverlaySession = $state(0);
 	let lastOneToAllQuery: OneToAllData | undefined = undefined;
 	let lastPlanQuery: PlanData | undefined = undefined;
 	let serverConfig: ServerConfig | undefined = $state();
@@ -90,6 +100,11 @@
 		}
 	});
 
+	const toggleRoutesOverlay = () => {
+		++routesOverlaySession;
+		showRoutes = !showRoutes;
+	};
+
 	let theme: 'light' | 'dark' =
 		(hasDark ? 'dark' : hasLight ? 'light' : undefined) ??
 		(browser && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
@@ -99,6 +114,7 @@
 		document.documentElement.classList.add('dark');
 	}
 
+	let withHillshades = $state(false);
 	let center = $state.raw<[number, number]>([2.258882912876089, 48.72559118651327]);
 	let level = $state(0);
 	let zoom = $state(15);
@@ -112,7 +128,8 @@
 					window.location.origin + window.location.pathname,
 					client.getConfig().baseUrl
 						? client.getConfig().baseUrl + '/'
-						: window.location.origin + window.location.pathname
+						: window.location.origin + window.location.pathname,
+					withHillshades
 				)
 			: undefined
 	);
@@ -843,12 +860,23 @@
 				<Button
 					size="icon"
 					variant={showRoutes ? 'default' : 'outline'}
-					onclick={() => (showRoutes = !showRoutes)}
+					onclick={toggleRoutesOverlay}
 				>
 					<Waypoints class="w-5 h-5" />
 				</Button>
 			</Control>
 		{/if}
+
+		<Control position="top-right" class="text-right">
+			<Debug {bounds} {level} {zoom} />
+			<Button
+				size="icon"
+				variant={withHillshades ? 'default' : 'outline'}
+				onclick={() => (withHillshades = !withHillshades)}
+			>
+				<MountainSnow class="w-5 h-5" />
+			</Button>
+		</Control>
 
 		<LevelSelect {bounds} {zoom} bind:level />
 
@@ -910,12 +938,14 @@
 					</Button>
 				</Control>
 				{#if showRoutes}
-					<Routes
-						{map}
-						{bounds}
-						{zoom}
-						shapesDebugEnabled={serverConfig?.shapesDebugEnabled === true}
-					/>
+					{#key routesOverlaySession}
+						<Routes
+							{map}
+							{bounds}
+							{zoom}
+							shapesDebugEnabled={serverConfig?.shapesDebugEnabled === true}
+						/>
+					{/key}
 				{/if}
 				<Rentals {map} {bounds} {zoom} {theme} debug={hasDebug} />
 			{/if}
