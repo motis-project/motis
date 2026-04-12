@@ -5025,9 +5025,6 @@ components:
         rt:
           type: boolean
           description: GTFSRT, SIRI Lite, VDV AUS, VDV454 feeds.
-        elevators:
-          type: boolean
-          description: Elevator feeds.
         gbfs:
           type: boolean
           description: GBFS feeds.
