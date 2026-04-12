@@ -2841,6 +2841,23 @@ paths:
                     items:
                       $ref: '#/components/schemas/RentalZone'
 
+  /api/v1/health:
+    get:
+      operationId: health
+      responses:
+        '200':
+          description: Shows over which feeds at least one cycle of updates was consumed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '400':
+          description: Full first cycle through all configured feeds is not finished. 
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+          
   /api/debug/transfers:
     get:
       tags:
@@ -5001,3 +5018,13 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/RouteSegment'
+
+    HealthResponse:
+      type: object
+      properties:
+        rt:
+          type: boolean
+          description: GTFSRT, SIRI Lite, VDV AUS, VDV454 feeds.
+        gbfs:
+          type: boolean
+          description: GBFS feeds.
