@@ -13,8 +13,8 @@ health::response_t health::operator()(boost::urls::url_view const&) const {
 
   auto const content =
       api::HealthResponse{.rt_ = rt_updated && config_.has_rt_feeds(),
-                              .elevators_ = rt_updated && has_elevator_feeds,
-                              .gbfs_ = gbfs_updated};
+                          .elevators_ = rt_updated && has_elevator_feeds,
+                          .gbfs_ = gbfs_updated};
 
   if ((!config_.has_gbfs_feeds() || gbfs_updated) &&
       ((!config_.has_rt_feeds() && !has_elevator_feeds) || rt_updated)) {
