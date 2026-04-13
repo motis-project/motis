@@ -32,6 +32,7 @@ struct config {
   bool has_gbfs_feeds() const;
   bool has_prima() const;
   bool has_elevators() const;
+  bool has_rt_feeds() const;
   bool use_street_routing() const;
 
   bool operator==(config const&) const = default;

@@ -25,7 +25,7 @@
 [net]
   url=git@github.com:motis-project/net.git
   branch=master
-  commit=bb00cafad46dd4ea4064b9651d982f31b9853c19
+  commit=0dae471e778e1236cfde5b574d249a9c5129a2e2
 [openapi-cpp]
   url=git@github.com:triptix-tech/openapi-cpp.git
   branch=master
@@ -41,7 +41,7 @@
 [tiles]
   url=git@github.com:motis-project/tiles.git
   branch=master
-  commit=e92dd0ff1def189bd4083393db3769d9434ef25d
+  commit=6bd71d984eb699d7160f5c448bc14d5c57ddb4b7
 [boost]
   url=git@github.com:motis-project/boost.git
   branch=boost-1.89.0
