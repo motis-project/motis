@@ -331,7 +331,8 @@ TEST(motis,
       "&mode=HIGHSPEED_RAIL");
   EXPECT_GE(to_candidates.stopTimes_.size(), 8U);
 
-  auto const reconstructed = reconstruct_itinerary(stop_times, nullptr, {}, id);
+  auto const reconstructed =
+      reconstruct_itinerary(stop_times, nullptr, {}, id, false);
   ASSERT_EQ(1U, reconstructed.legs_.size());
   auto const& reconstructed_leg = reconstructed.legs_.front();
   auto const& original_leg = original.legs_.front();

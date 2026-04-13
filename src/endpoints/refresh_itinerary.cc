@@ -32,14 +32,16 @@ api::Itinerary refresh_itinerary::operator()(
   auto const stop_times_ep = make_scheduled_stop_times(*this);
 
   auto const rt = std::atomic_load(&rt_);
-  return reconstruct_itinerary(stop_times_ep, shapes_, *rt, query.itineraryId_);
+
+  return reconstruct_itinerary(stop_times_ep, shapes_, *rt, query.itineraryId_,
+                               query.requireDisplayName_);
 }
 
 api::Itinerary refresh_itinerary_post::operator()(
-    api::SingleLegItineraryIdProto const& body) const {
-  auto parsed = ::motis::proto::SingleLegItineraryId{};
+    api::RefreshItineraryPostBody const& body) const {
+  auto parsed = ::motis::proto::ItineraryId{};
   auto const status = google::protobuf::util::JsonStringToMessage(
-      boost::json::serialize(boost::json::value_from(body)), &parsed);
+      boost::json::serialize(boost::json::value_from(body.id_)), &parsed);
   utl::verify(status.ok(), "Failed to decode itinerary-id JSON: {}",
               status.message());
   auto data = std::string{};
@@ -50,7 +52,8 @@ api::Itinerary refresh_itinerary_post::operator()(
 
   auto const rt = std::atomic_load(&rt_);
   return reconstruct_itinerary(stop_times_ep, shapes_, *rt,
-                               net::encode_base64(data));
+                               net::encode_base64(data),
+                               body.requireDisplayName_);
 }
 
 }  // namespace motis::ep

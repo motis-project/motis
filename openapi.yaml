@@ -2003,6 +2003,12 @@ paths:
           required: true
           schema:
             type: string
+        - name: requireDisplayName
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: true
       responses:
         '200':
           description: reconstructed itinerary
@@ -2032,7 +2038,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/SingleLegItineraryIdProto'
+              $ref: '#/components/schemas/RefreshItineraryPostBody'
       responses:
         '200':
           description: reconstructed itinerary
@@ -4381,7 +4387,7 @@ components:
               items:
                 $ref: '#/components/schemas/FareProduct'
 
-    LegIdProto:
+    LegId:
       type: object
       required:
         - displayName
@@ -4418,15 +4424,29 @@ components:
         scheduled:
           type: boolean
 
-    SingleLegItineraryIdProto:
+    ItineraryId:
       type: object
       required:
         - leg
+        - lang
       properties:
         leg:
-          $ref: '#/components/schemas/LegIdProto'
+          type: array
+          items:
+            $ref: '#/components/schemas/LegId'
         lang:
           type: string
+
+    RefreshItineraryPostBody:
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          $ref: '#/components/schemas/ItineraryId'
+        requireDisplayName:
+          type: boolean
+          default: true
 
     Itinerary:
       type: object

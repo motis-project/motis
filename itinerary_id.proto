@@ -14,7 +14,7 @@ message LegId {
   bool scheduled = 9;
 }
 
-message SingleLegItineraryId {
-  LegId leg = 1;
+message ItineraryId {
+  repeated LegId leg = 1;
   string lang = 2;
 }

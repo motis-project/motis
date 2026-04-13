@@ -32,7 +32,7 @@ struct refresh_itinerary {
 };
 
 struct refresh_itinerary_post {
-  api::Itinerary operator()(api::SingleLegItineraryIdProto const&) const;
+  api::Itinerary operator()(api::RefreshItineraryPostBody const&) const;
 
   config const& config_;
   osr::ways const* w_;

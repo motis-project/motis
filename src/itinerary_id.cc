@@ -42,7 +42,7 @@ namespace json = boost::json;
 
 namespace motis {
 
-using proto_id_t = ::motis::proto::SingleLegItineraryId;
+using proto_id_t = ::motis::proto::ItineraryId;
 using proto_leg_t = ::motis::proto::LegId;
 
 constexpr auto kTimeMul = 1.0 / 60.0 * 7;
@@ -52,7 +52,6 @@ constexpr auto kNonSchedAllowedDeviationSeconds = std::int64_t{15 * 60};
 
 constexpr auto kExactTripIdMatchAddScore = 50.0;
 constexpr auto kExactStopIdMatchAddScore = 15.0;
-constexpr auto kExactTripNameMatchAddScore = 150.0;
 
 proto_id_t decode_itinerary_id(std::string const& id) {
   auto parsed = proto_id_t{};
@@ -148,7 +147,7 @@ proto_leg_t get_leg_id_proto(api::Leg const& l) {
 std::string get_single_leg_id(api::Leg const& l, n::lang_t const& lang) {
   auto id = proto_id_t{};
   encode_lang(id, lang);
-  id.mutable_leg()->CopyFrom(get_leg_id_proto(l));
+  id.mutable_leg()->Add(get_leg_id_proto(l));
 
   auto data = std::string{};
   utl::verify(id.SerializeToString(&data), "failed to serialize itinerary id");
@@ -353,7 +352,8 @@ struct from_to_candidate {
 std::optional<from_to_candidate> get_best_candidate(
     std::vector<st_candidate> const& from_resp,
     std::vector<st_candidate> const& to_resp,
-    leg_hint const& hint) {
+    leg_hint const& hint,
+    bool const require_display_name) {
   auto from_cands = std::vector<candidate_score>{};
   auto to_cands = std::vector<candidate_score>{};
   from_cands.reserve(from_resp.size());
@@ -364,11 +364,13 @@ std::optional<from_to_candidate> get_best_candidate(
       continue;
     }
 
+    if (require_display_name && hint.display_name_ != st.displayName_) {
+      continue;
+    }
+
     from_cands.emplace_back(
         &st,
-        (st.displayName_ == hint.display_name_ ? kExactTripNameMatchAddScore
-                                               : 0.0) +
-            exact_stop_id_match_score(st.place_, hint.from_stop_id_) -
+        exact_stop_id_match_score(st.place_, hint.from_stop_id_) -
             geo::distance({st.place_.lat_, st.place_.lon_}, hint.from_pos_) -
             kTimeMul * std::abs(hint.sched_start_ -
                                 st.place_.scheduledDeparture_.value()
@@ -426,14 +428,15 @@ std::optional<from_to_candidate> get_best_candidate(
 api::Itinerary reconstruct_itinerary(ep::stop_times const& stop_times_ep,
                                      nigiri::shapes_storage const* shapes,
                                      rt const& rt,
-                                     std::string const& id) {
+                                     std::string const& id,
+                                     bool const require_display_name) {
   auto stop_times_rt = std::atomic_load(&stop_times_ep.rt_);
   auto stop_times_rtt = stop_times_rt->rtt_.get();
   auto const parsed_id = decode_itinerary_id(id);
-  utl::verify(parsed_id.has_leg(),
-              "reconstruct_itinerary: itinerary id is missing leg");
+  utl::verify(parsed_id.leg_size() == 1,
+              "reconstruct_itinerary: itinerary id must have a single leg");
   auto const lang = lang_from_str(parsed_id.lang());
-  auto const lh = leg_hint{parsed_id.leg()};
+  auto const lh = leg_hint{parsed_id.leg(0)};
   auto const get_run =
       [&]() -> std::tuple<n::rt::frun, n::stop_idx_t, n::stop_idx_t> {
     if (!lh.scheduled_) {
@@ -474,7 +477,8 @@ api::Itinerary reconstruct_itinerary(ep::stop_times const& stop_times_ep,
           lh.sched_end_ - kLookbackSeconds, lh.mode_, kLookbackSeconds * 2,
           kSearchRadiusMeters, true, lang);
 
-      auto const best_from_to = get_best_candidate(from_st_res, to_st_res, lh);
+      auto const best_from_to =
+          get_best_candidate(from_st_res, to_st_res, lh, require_display_name);
 
       utl::verify(best_from_to.has_value(), "no matching route is found");
 
