@@ -133,7 +133,7 @@ auto one_to_many_post(data& d) {
 }
 
 TEST(one_to_many, get_request_forward) {
-  auto [d, _] = get_test_case<test_case::FFM_one_to_many>();
+  auto [d, _config] = get_test_case<test_case::FFM_one_to_many>();
 
   auto const durations = one_to_many_get(d)(
       "/api/experimental/one-to-many-intermodal"
@@ -206,7 +206,7 @@ TEST(one_to_many, get_request_forward) {
 }
 
 TEST(one_to_many, post_request_backward) {
-  auto [d, _] = get_test_case<test_case::FFM_one_to_many>();
+  auto [d, _config] = get_test_case<test_case::FFM_one_to_many>();
 
   auto const durations = one_to_many_post(d)(api::OneToManyIntermodalParams{
       .one_ = "50.113816,8.679421,0",  // Near FFM_HAUPT
@@ -285,7 +285,7 @@ TEST(one_to_many, post_request_backward) {
 
 TEST(one_to_many,
      post_request_forward_with_routed_transfers_and_short_pre_transit) {
-  auto [d, _] = get_test_case<test_case::FFM_one_to_many>();
+  auto [d, _config] = get_test_case<test_case::FFM_one_to_many>();
 
   auto const durations = one_to_many_post(d)(api::OneToManyIntermodalParams{
       .one_ = "50.106691,8.659763",  // Near FFM
@@ -342,7 +342,7 @@ TEST(one_to_many,
 }
 
 TEST(one_to_many, get_request_backward_with_wheelchair_and_short_post_transit) {
-  auto [d, _] = get_test_case<test_case::FFM_one_to_many>();
+  auto [d, _config] = get_test_case<test_case::FFM_one_to_many>();
 
   auto const durations = one_to_many_get(d)(
       "/api/experimental/one-to-many-intermodal"
@@ -389,7 +389,7 @@ TEST(one_to_many, get_request_backward_with_wheelchair_and_short_post_transit) {
 }
 
 TEST(one_to_many, oneway_get_forward_for_pre_transit_and_direct_modes) {
-  auto [d, _] = get_test_case<test_case::FFM_one_to_many>();
+  auto [d, _config] = get_test_case<test_case::FFM_one_to_many>();
 
   auto const durations = one_to_many_get(d)(
       "/api/experimental/one-to-many-intermodal"
@@ -423,7 +423,7 @@ TEST(one_to_many, oneway_get_forward_for_pre_transit_and_direct_modes) {
 }
 
 TEST(one_to_many, oneway_post_backward_for_post_transit_and_direct_modes) {
-  auto [d, _] = get_test_case<test_case::FFM_one_to_many>();
+  auto [d, _config] = get_test_case<test_case::FFM_one_to_many>();
 
   auto const durations = one_to_many_post(d)(api::OneToManyIntermodalParams{
       .one_ = "50.107326,8.665237",
@@ -459,7 +459,7 @@ TEST(one_to_many, oneway_post_backward_for_post_transit_and_direct_modes) {
 }
 
 TEST(one_to_many, oneway_post_forward_for_post_transit_modes) {
-  auto [d, _] = get_test_case<test_case::FFM_one_to_many>();
+  auto [d, _config] = get_test_case<test_case::FFM_one_to_many>();
 
   auto const durations = one_to_many_post(d)(api::OneToManyIntermodalParams{
       .one_ = "test_PAUL1",
@@ -480,7 +480,7 @@ TEST(one_to_many, oneway_post_forward_for_post_transit_modes) {
 }
 
 TEST(one_to_many, oneway_get_backward_for_pre_transit_modes) {
-  auto [d, _] = get_test_case<test_case::FFM_one_to_many>();
+  auto [d, _config] = get_test_case<test_case::FFM_one_to_many>();
 
   auto const durations = one_to_many_get(d)(
       "/api/experimental/one-to-many-intermodal"
@@ -507,7 +507,7 @@ TEST(one_to_many, oneway_get_backward_for_pre_transit_modes) {
 }
 
 TEST(one_to_many, transfer_time_settings_min_transfer_time) {
-  auto [d, _] = get_test_case<test_case::FFM_one_to_many>();
+  auto [d, _config] = get_test_case<test_case::FFM_one_to_many>();
 
   auto const durations = one_to_many_get(d)(
       "/api/experimental/one-to-many-intermodal"
@@ -527,7 +527,7 @@ TEST(one_to_many, transfer_time_settings_min_transfer_time) {
 }
 
 TEST(one_to_many, transfer_time_settings_additional_transfer_time) {
-  auto [d, _] = get_test_case<test_case::FFM_one_to_many>();
+  auto [d, _config] = get_test_case<test_case::FFM_one_to_many>();
 
   auto const durations = one_to_many_post(d)(api::OneToManyIntermodalParams{
       .one_ = "49.872710, 8.631168",  // Near DA
@@ -547,7 +547,7 @@ TEST(one_to_many, transfer_time_settings_additional_transfer_time) {
 
 TEST(one_to_many, bug_additional_footpath_for_first_last_mile) {
   // Bug examples: Should not connect final footpath with first or last mile
-  auto [d, _] = get_test_case<test_case::FFM_one_to_many>();
+  auto [d, _config] = get_test_case<test_case::FFM_one_to_many>();
 
   auto const ep = one_to_many_post(d);
   auto const many = std::vector<std::string>{
@@ -633,7 +633,7 @@ TEST(one_to_many, bug_additional_footpath_for_first_last_mile) {
 }
 
 TEST(one_to_many, pareto_sets_with_routed_transfers_and_distances) {
-  auto [d, _] = get_test_case<test_case::FFM_one_to_many>();
+  auto [d, _config] = get_test_case<test_case::FFM_one_to_many>();
 
   auto const durations = one_to_many_post(d)(api::OneToManyIntermodalParams{
       .one_ = "49.8722160,8.6282315",  // DA_Bus_1
@@ -678,7 +678,7 @@ TEST(one_to_many, pareto_sets_with_multiple_entries) {
   // After bug fix: Slow walking speed, so that transit is faster
   // might require moving stops (B2->T1, T1->T2, T2 delete) with paths:
   // Bus1 -> Tram3, Bus1 -> Bus2 -> Tram3, Bus1 -> Bus2 -> Tram1/2 -> Tram3
-  auto [d, _] = get_test_case<test_case::FFM_one_to_many>();
+  auto [d, _config] = get_test_case<test_case::FFM_one_to_many>();
 
   auto const durations = one_to_many_post(d)(api::OneToManyIntermodalParams{
       .one_ = "49.8722160,8.6282315",  // DA_Bus_1
