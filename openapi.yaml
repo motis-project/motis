@@ -1829,6 +1829,17 @@ paths:
             For example, this can be used to allow only `ADDRESS` and `STOP` results.
           schema:
             $ref: '#/components/schemas/LocationType'
+        - name: limit
+          in: query
+          required: false
+          description: |
+            Optional. Number of results to return.
+
+            If omitted, the upper limit from server config is used.
+            Must be <= server config variable `reverse_geocode_max_results`.
+          schema:
+            type: integer
+            minimum: 1
       responses:
         '400':
           description: Bad Request
@@ -1912,6 +1923,17 @@ paths:
           schema:
             type: number
             default: 1
+        - name: limit
+          in: query
+          required: false
+          description: |
+            Optional. Number of suggestions to return.
+            
+            If omitted, the upper limit from server config is used.
+            Must be <= server config variable `geocode_max_suggestions`.
+          schema:
+            type: integer
+            minimum: 1
 
       responses:
         '400':
