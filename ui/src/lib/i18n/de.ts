@@ -105,6 +105,7 @@ const translations: Translations = {
 	LONG_DISTANCE: 'Intercityzug',
 	NIGHT_RAIL: 'Nachtzug',
 	REGIONAL_FAST_RAIL: 'Schnellzug',
+	ODM: 'Bedarfsverkehr',
 	REGIONAL_RAIL: 'Regionalzug',
 	OTHER: 'Andere',
 	routingSegments: {

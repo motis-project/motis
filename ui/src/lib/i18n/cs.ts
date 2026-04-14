@@ -106,6 +106,7 @@ const translations: Translations = {
 	LONG_DISTANCE: 'Dálková železnice',
 	NIGHT_RAIL: 'Noční vlaky',
 	REGIONAL_FAST_RAIL: 'Zrychlená železnice',
+	ODM: 'Mobilita na vyžádání',
 	REGIONAL_RAIL: 'Regionální železnice',
 	OTHER: 'Jiné',
 	routingSegments: {
