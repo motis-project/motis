@@ -70,13 +70,6 @@ void encode_lang(proto_id_t& id, n::lang_t const& lang) {
   }
 }
 
-double exact_stop_id_match_score(api::Place const& place,
-                                 std::string_view const expected_stop_id) {
-  return place.stopId_.has_value() && *place.stopId_ == expected_stop_id
-             ? kExactStopIdMatchAddScore
-             : 0.0;
-}
-
 struct leg_hint {
   explicit leg_hint(json::object const& l)
       : display_name_{l.at("display_name").as_string()},
@@ -163,10 +156,14 @@ struct st_candidate {
     return std::tie(a.run_.t_, a.run_.rt_) < std::tie(b.run_.t_, b.run_.rt_);
   }
 
-  api::Place place_{};
+  std::string stopId_{};
   std::string tripId_{};
   std::string displayName_{};
   n::rt::run run_{};
+  std::optional<openapi::date_time_t> scheduledArrival_{};
+  std::optional<openapi::date_time_t> scheduledDeparture_{};
+  double lat_{};
+  double lon_{};
 };
 
 std::vector<st_candidate> get_st_candidates_in_radius(
@@ -205,24 +202,25 @@ std::vector<st_candidate> get_st_candidates_in_radius(
   return utl::to_vec(events, [&](n::rt::run const r) -> st_candidate {
     auto const fr = n::rt::frun{st_ep.tt_, rtt, r};
     auto const s = fr[0];
-    auto place =
-        to_place(&st_ep.tt_, &st_ep.tags_, st_ep.w_, st_ep.pl_, st_ep.matches_,
-                 st_ep.ae_, st_ep.tz_, query.language_, s);
+    auto const l = s.get_location_idx();
+    auto const pos = s.pos();
+
+    auto res =
+        st_candidate{.stopId_ = st_ep.tags_.id(st_ep.tt_, l),
+                     .tripId_ = st_ep.tags_.id(st_ep.tt_, s, ev_type),
+                     .displayName_ = std::string{s.display_name(ev_type, lang)},
+                     .run_ = fr,
+                     .lat_ = pos.lat_,
+                     .lon_ = pos.lng_};
+
     if (fr.stop_range_.from_ != 0U) {
-      place.arrival_ = {s.time(n::event_type::kArr)};
-      place.scheduledArrival_ = {s.scheduled_time(n::event_type::kArr)};
+      res.scheduledArrival_ = {s.scheduled_time(n::event_type::kArr)};
     }
     if (fr.stop_range_.from_ != fr.size() - 1U) {
-      place.departure_ = {s.time(n::event_type::kDep)};
-      place.scheduledDeparture_ = {s.scheduled_time(n::event_type::kDep)};
+      res.scheduledDeparture_ = {s.scheduled_time(n::event_type::kDep)};
     }
 
-    auto const trip_id = st_ep.tags_.id(st_ep.tt_, s, ev_type);
-
-    return {.place_ = std::move(place),
-            .tripId_ = trip_id,
-            .displayName_ = std::string{s.display_name(ev_type, lang)},
-            .run_ = fr};
+    return res;
   });
 }
 
@@ -360,7 +358,7 @@ std::optional<from_to_candidate> get_best_candidate(
   to_cands.reserve(to_resp.size());
 
   for (auto const& st : from_resp) {
-    if (!st.place_.scheduledDeparture_.has_value()) {
+    if (!st.scheduledDeparture_.has_value()) {
       continue;
     }
 
@@ -370,25 +368,26 @@ std::optional<from_to_candidate> get_best_candidate(
 
     from_cands.emplace_back(
         &st,
-        exact_stop_id_match_score(st.place_, hint.from_stop_id_) -
-            geo::distance({st.place_.lat_, st.place_.lon_}, hint.from_pos_) -
-            kTimeMul * std::abs(hint.sched_start_ -
-                                st.place_.scheduledDeparture_.value()
-                                    .get_unixtime_seconds()));
+        (st.stopId_ == hint.from_stop_id_ ? kExactStopIdMatchAddScore : 0.0) -
+            geo::distance({st.lat_, st.lon_}, hint.from_pos_) -
+            kTimeMul *
+                std::abs(
+                    hint.sched_start_ -
+                    st.scheduledDeparture_.value().get_unixtime_seconds()));
   }
   for (auto const& st : to_resp) {
-    if (!st.place_.scheduledArrival_.has_value()) {
+    if (!st.scheduledArrival_.has_value()) {
       continue;
     }
 
     to_cands.emplace_back(
-        &st, (st.tripId_ == hint.trip_id_ ? kExactTripIdMatchAddScore : 0.0) +
-                 exact_stop_id_match_score(st.place_, hint.to_stop_id_) -
-                 geo::distance(geo::latlng{st.place_.lat_, st.place_.lon_},
-                               hint.to_pos_) -
-                 kTimeMul * std::abs(hint.sched_end_ -
-                                     st.place_.scheduledArrival_.value()
-                                         .get_unixtime_seconds()));
+        &st,
+        (st.tripId_ == hint.trip_id_ ? kExactTripIdMatchAddScore : 0.0) +
+            (st.stopId_ == hint.to_stop_id_ ? kExactStopIdMatchAddScore : 0.0) -
+            geo::distance(geo::latlng{st.lat_, st.lon_}, hint.to_pos_) -
+            kTimeMul *
+                std::abs(hint.sched_end_ -
+                         st.scheduledArrival_.value().get_unixtime_seconds()));
   }
 
   utl::sort(from_cands);
