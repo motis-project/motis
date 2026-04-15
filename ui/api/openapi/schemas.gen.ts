@@ -1367,6 +1367,25 @@ export const RentalZoneSchema = {
     }
 } as const;
 
+export const CategorySchema = {
+    type: 'object',
+    required: ['id', 'name', 'shortName'],
+    description: `not available for GTFS datasets by default
+For NeTEx it contains information about the vehicle category, e.g. IC/InterCity
+`,
+    properties: {
+        id: {
+            type: 'string'
+        },
+        name: {
+            type: 'string'
+        },
+        shortName: {
+            type: 'string'
+        }
+    }
+} as const;
+
 export const LegSchema = {
     type: 'object',
     required: ['mode', 'startTime', 'endTime', 'scheduledStartTime', 'scheduledEndTime', 'realTime', 'scheduled', 'duration', 'from', 'to', 'legGeometry'],
@@ -1449,6 +1468,9 @@ For non-transit legs, null
             description: 'final stop of this trip (can differ from headsign)',
             '$ref': '#/components/schemas/Place'
         },
+        category: {
+            '$ref': '#/components/schemas/Category'
+        },
         routeId: {
             type: 'string'
         },
@@ -1509,11 +1531,16 @@ and the Place where the leg ends. For non-transit legs, null.
             }
         },
         legGeometry: {
+            description: `Encoded geometry of the leg.
+If detailed leg output is disabled, this is returned as an empty
+polyline.
+`,
             '$ref': '#/components/schemas/EncodedPolyline'
         },
         steps: {
             description: `A series of turn by turn instructions
 used for walking, biking and driving.
+This field is omitted if the request disables detailed leg output.
 `,
             type: 'array',
             items: {
@@ -2115,8 +2142,12 @@ If set to \`true\`, all used transit trips are required to allow car carriage.
 export const ServerConfigSchema = {
     Description: 'server configuration',
     type: 'object',
-    required: ['hasElevation', 'hasRoutedTransfers', 'hasStreetRouting', 'maxOneToManySize', 'maxOneToAllTravelTimeLimit', 'maxPrePostTransitTimeLimit', 'maxDirectTimeLimit', 'shapesDebugEnabled'],
+    required: ['motisVersion', 'hasElevation', 'hasRoutedTransfers', 'hasStreetRouting', 'maxOneToManySize', 'maxOneToAllTravelTimeLimit', 'maxPrePostTransitTimeLimit', 'maxDirectTimeLimit', 'shapesDebugEnabled'],
     properties: {
+        motisVersion: {
+            description: 'the version of this MOTIS server',
+            type: 'string'
+        },
         hasElevation: {
             description: 'true if elevation is loaded',
             type: 'boolean'

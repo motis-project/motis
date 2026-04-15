@@ -63,32 +63,27 @@ TEST(motis, stop_group_geocoding) {
                                    .num_days_ = 2,
                                    .datasets_ = {{"test", {.path_ = kGTFS}}}},
              .geocoding_ = true};
-  import(c, "test/data", true);
+  import(c, "test/data");
   auto d = data{"test/data", c};
-
-  std::cout << "TYPEAHEAD: " << d.t_.get() << "\n";
 
   auto const geocode = utl::init_from<ep::geocode>(d).value();
 
   auto const g1 = geocode("/api/v1/geocode?text=Group%201");
-  auto const g1_it = std::find_if(
-      begin(g1), end(g1), [](auto const& m) { return m.id_ == "test_G1"; });
+  auto const g1_it =
+      utl::find_if(g1, [](auto const& m) { return m.id_ == "test_G1"; });
   ASSERT_NE(end(g1), g1_it);
   ASSERT_TRUE(g1_it->modes_.has_value());
-  EXPECT_NE(end(*g1_it->modes_),
-            std::find(begin(*g1_it->modes_), end(*g1_it->modes_),
-                      api::ModeEnum::BUS));
+  EXPECT_NE(end(*g1_it->modes_), utl::find(*g1_it->modes_, api::ModeEnum::BUS));
   ASSERT_TRUE(g1_it->importance_.has_value());
   EXPECT_GT(*g1_it->importance_, 0.0);
 
   auto const g2 = geocode("/api/v1/geocode?text=Group%202");
-  auto const g2_it = std::find_if(
-      begin(g2), end(g2), [](auto const& m) { return m.id_ == "test_G2"; });
+  auto const g2_it =
+      utl::find_if(g2, [](auto const& m) { return m.id_ == "test_G2"; });
   ASSERT_NE(end(g2), g2_it);
   ASSERT_TRUE(g2_it->modes_.has_value());
   EXPECT_NE(end(*g2_it->modes_),
-            std::find(begin(*g2_it->modes_), end(*g2_it->modes_),
-                      api::ModeEnum::TRAM));
+            utl::find(*g2_it->modes_, api::ModeEnum::TRAM));
   ASSERT_TRUE(g2_it->importance_.has_value());
   EXPECT_GT(*g2_it->importance_, 0.0);
 }

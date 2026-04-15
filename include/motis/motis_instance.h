@@ -12,16 +12,19 @@
 #include "motis/endpoints/elevators.h"
 #include "motis/endpoints/graph.h"
 #include "motis/endpoints/gtfsrt.h"
+#include "motis/endpoints/health.h"
 #include "motis/endpoints/initial.h"
 #include "motis/endpoints/levels.h"
 #include "motis/endpoints/map/flex_locations.h"
 #include "motis/endpoints/map/rental.h"
+#include "motis/endpoints/map/route_details.h"
 #include "motis/endpoints/map/routes.h"
 #include "motis/endpoints/map/shapes_debug.h"
 #include "motis/endpoints/map/stops.h"
 #include "motis/endpoints/map/trips.h"
 #include "motis/endpoints/matches.h"
 #include "motis/endpoints/metrics.h"
+#include "motis/endpoints/ojp.h"
 #include "motis/endpoints/one_to_all.h"
 #include "motis/endpoints/one_to_many.h"
 #include "motis/endpoints/one_to_many_post.h"
@@ -80,6 +83,7 @@ struct motis_instance {
                  std::string_view motis_version)
       : qr_{std::forward<Executor>(exec)} {
     qr_.add_header("Server", fmt::format("MOTIS {}", motis_version));
+    d.motis_version_ = motis_version;
     if (c.server_.value_or(config::server{}).data_attribution_link_) {
       qr_.add_header("Link", fmt::format("<{}>; rel=\"license\"",
                                          *c.server_->data_attribution_link_));
@@ -95,6 +99,7 @@ struct motis_instance {
     GET<ep::levels>("/api/v1/map/levels", d);
     GET<ep::initial>("/api/v1/map/initial", d);
     GET<ep::reverse_geocode>("/api/v1/reverse-geocode", d);
+    GET<ep::health>("/api/v1/health", d);
     GET<ep::geocode>("/api/v1/geocode", d);
     GET<ep::routing>("/api/v1/plan", d);
     GET<ep::routing>("/api/v2/plan", d);
@@ -112,6 +117,7 @@ struct motis_instance {
     GET<ep::trips>("/api/v4/map/trips", d);
     GET<ep::trips>("/api/v5/map/trips", d);
     GET<ep::stops>("/api/v1/map/stops", d);
+    GET<ep::route_details>("/api/experimental/map/route-details", d);
     GET<ep::routes>("/api/experimental/map/routes", d);
     GET<ep::rental>("/api/v1/map/rentals", d);
     GET<ep::rental>("/api/v1/rentals", d);
@@ -145,6 +151,15 @@ struct motis_instance {
       qr_.route("GET", "/tiles/", ep::tiles{*d.tiles_});
     }
 
+    qr_.route("POST", "/ojp20",
+              ep::ojp{
+                  .routing_ep_ = utl::init_from<ep::routing>(d),
+                  .geocoding_ep_ = utl::init_from<ep::geocode>(d),
+                  .stops_ep_ = utl::init_from<ep::stops>(d),
+                  .stop_times_ep_ = utl::init_from<ep::stop_times>(d),
+                  .trip_ep_ = utl::init_from<ep::trip>(d),
+              });
+
     qr_.route("GET", "/metrics",
               ep::metrics{d.tt_.get(), d.tags_.get(), d.rt_, d.metrics_.get()});
     qr_.route("GET", "/gtfsrt",
@@ -155,14 +170,14 @@ struct motis_instance {
 
   template <typename T, typename From>
   void GET(std::string target, From& from) {
-    if (auto const x = utl::init_from<T>(from); x.has_value()) {
+    if (auto x = utl::init_from<T>(from); x.has_value()) {
       qr_.get(std::move(target), std::move(*x));
     }
   }
 
   template <typename T, typename From>
   void POST(std::string target, From& from) {
-    if (auto const x = utl::init_from<T>(from); x.has_value()) {
+    if (auto x = utl::init_from<T>(from); x.has_value()) {
       qr_.post(std::move(target), std::move(*x));
     }
   }
@@ -170,7 +185,8 @@ struct motis_instance {
   void run(data& d, config const& c) {
     if (d.w_ && d.l_ && c.has_gbfs_feeds()) {
       gbfs_ = io_thread{"motis gbfs update", [&](boost::asio::io_context& ioc) {
-                          gbfs::run_gbfs_update(ioc, c, *d.w_, *d.l_, d.gbfs_);
+                          gbfs::run_gbfs_update(ioc, c, *d.w_, *d.l_, d.gbfs_,
+                                                d.metrics_.get());
                         }};
     }
 

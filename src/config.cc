@@ -123,6 +123,10 @@ void config::verify() const {
               nigiri::routing::kMaxSearchIntervalSize.count());
 
   if (timetable_) {
+    utl::verify(!timetable_->route_shapes_.has_value() ||
+                    (timetable_->with_shapes_ && street_routing),
+                "feature ROUTE_SHAPES requires SHAPES and STREET_ROUTING");
+
     for (auto const& [id, d] : timetable_->datasets_) {
       utl::verify(!id.contains("_"), "dataset identifier may not contain '_'");
       if (d.rt_.has_value()) {
@@ -187,9 +191,7 @@ void config::verify_input_files_exist() const {
 bool config::requires_rt_timetable_updates() const {
   return timetable_.has_value() &&
          ((has_elevators() && get_elevators()->url_.has_value()) ||
-          utl::any_of(timetable_->datasets_, [](auto&& d) {
-            return d.second.rt_.has_value() && !d.second.rt_->empty();
-          }));
+          has_rt_feeds());
 }
 
 bool config::shapes_debug_api_enabled() const {
@@ -226,6 +228,12 @@ bool config::has_elevators() const {
             return x;
           }},
       elevators_);
+}
+
+bool config::has_rt_feeds() const {
+  return utl::any_of(timetable_->datasets_, [](auto&& d) {
+    return d.second.rt_.has_value() && !d.second.rt_->empty();
+  });
 }
 
 std::optional<config::street_routing> config::get_street_routing() const {

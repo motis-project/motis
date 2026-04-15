@@ -32,10 +32,3 @@ export type MetaData = {
 	departureDelay: number;
 	arrivalDelay: number;
 };
-export type Query = {
-	min: string;
-	max: string;
-	startTime: string;
-	endTime: string;
-	zoom: number;
-};

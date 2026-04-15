@@ -1,7 +1,7 @@
 #include "motis/route_shapes.h"
 
-#include <chrono>
 #include <algorithm>
+#include <chrono>
 #include <iostream>
 #include <mutex>
 #include <optional>
@@ -111,7 +111,8 @@ void shape_cache::put(shape_cache_key const& key,
     entries.emplace_back(shape_cache_payload{.key_ = key, .entry_ = entry});
   }
 
-  txn.put(dbi, bucket_key, to_string_view(cista::serialize(entries)));
+  auto const serialized = cista::serialize(entries);
+  txn.put(dbi, bucket_key, to_string_view(serialized));
   txn.commit();
 
   auto const now = std::chrono::steady_clock::now();
@@ -157,7 +158,7 @@ struct route_shape_result {
 route_shape_result route_shape(
     osr::ways const& w,
     osr::lookup const& lookup,
-    n::timetable& tt,
+    n::timetable const& tt,
     std::vector<osr::location> const& match_points,
     osr::search_profile const profile,
     osr::profile_parameters const& profile_params,
@@ -347,7 +348,7 @@ boost::json::object route_shape_debug(osr::ways const& w,
 
 void route_shapes(osr::ways const& w,
                   osr::lookup const& lookup,
-                  n::timetable& tt,
+                  n::timetable const& tt,
                   n::shapes_storage& shapes,
                   config::timetable::route_shapes const& conf,
                   std::array<bool, n::kNumClasses> const& clasz_enabled,

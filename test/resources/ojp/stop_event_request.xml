@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<OJP xmlns="http://www.vdv.de/ojp" xmlns:siri="http://www.siri.org.uk/siri" version="2.0">
+<OJPRequest>
+  <siri:ServiceRequest>
+    <siri:ServiceRequestContext>
+      <siri:Language>de</siri:Language>
+    </siri:ServiceRequestContext>
+    <siri:RequestTimestamp>2026-01-28T07:38:53.987Z</siri:RequestTimestamp>
+    <siri:RequestorRef>OJP_DemoApp_Beta_OJP2.0</siri:RequestorRef>
+    <OJPStopEventRequest>
+      <siri:RequestTimestamp>2026-01-28T07:38:53.987Z</siri:RequestTimestamp>
+      <Location>
+        <PlaceRef>
+          <siri:StopPointRef>test_DA_3</siri:StopPointRef>
+          <Name>
+            <Text>n/a</Text>
+          </Name>
+        </PlaceRef>
+        <DepArrTime>2026-01-28T06:00:00.000Z</DepArrTime>
+      </Location>
+      <Params>
+        <IncludeAllRestrictedLines>true</IncludeAllRestrictedLines>
+        <NumberOfResults>10</NumberOfResults>
+        <StopEventType>departure</StopEventType>
+        <IncludePreviousCalls>true</IncludePreviousCalls>
+        <IncludeOnwardCalls>true</IncludeOnwardCalls>
+        <UseRealtimeData>explanatory</UseRealtimeData>
+      </Params>
+    </OJPStopEventRequest>
+  </siri:ServiceRequest>
+</OJPRequest>
+
+</OJP>

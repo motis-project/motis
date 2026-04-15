@@ -1113,6 +1113,17 @@ export type RentalZone = {
     rules: Array<RentalZoneRestrictions>;
 };
 
+/**
+ * not available for GTFS datasets by default
+ * For NeTEx it contains information about the vehicle category, e.g. IC/InterCity
+ *
+ */
+export type Category = {
+    id: string;
+    name: string;
+    shortName: string;
+};
+
 export type Leg = {
     /**
      * Transport mode for this leg
@@ -1184,6 +1195,7 @@ export type Leg = {
      * final stop of this trip (can differ from headsign)
      */
     tripTo?: Place;
+    category?: Category;
     routeId?: string;
     routeUrl?: string;
     directionId?: string;
@@ -1212,10 +1224,17 @@ export type Leg = {
      *
      */
     intermediateStops?: Array<Place>;
+    /**
+     * Encoded geometry of the leg.
+     * If detailed leg output is disabled, this is returned as an empty
+     * polyline.
+     *
+     */
     legGeometry: EncodedPolyline;
     /**
      * A series of turn by turn instructions
      * used for walking, biking and driving.
+     * This field is omitted if the request disables detailed leg output.
      *
      */
     steps?: Array<StepInstruction>;
@@ -1700,6 +1719,10 @@ export type OneToManyIntermodalParams = {
 
 export type ServerConfig = {
     /**
+     * the version of this MOTIS server
+     */
+    motisVersion: string;
+    /**
      * true if elevation is loaded
      */
     hasElevation: boolean;
@@ -1836,8 +1859,18 @@ export type PlanData = {
          */
         cyclingSpeed?: CyclingSpeed;
         /**
+         * Controls if `legGeometry` and `steps` are returned for direct legs,
+         * pre-/post-transit legs and transit legs.
+         *
+         */
+        detailedLegs?: boolean;
+        /**
+         * Controls if transfer polylines and step instructions are returned.
+         *
+         * If not set, this parameter inherits the value of `detailedLegs`.
+         *
          * - true: Compute transfer polylines and step instructions.
-         * - false: Only return basic information (start time, end time, duration) for transfers.
+         * - false: Return empty `legGeometry` and omit `steps` for transfers.
          *
          */
         detailedTransfers?: boolean;
@@ -2213,6 +2246,14 @@ export type PlanData = {
          *
          */
         preTransitRentalProviders?: Array<(string)>;
+        /**
+         * Experimental. Search radius in meters around the `fromPlace` / `toPlace` coordinates.
+         * When set and the place is given as coordinates, all transit stops within
+         * this radius are used as start/end points with zero pre-transit/post-transit time.
+         * Works without OSM/street routing data loaded.
+         *
+         */
+        radius?: number;
         /**
          * Optional. Default is `false`.
          *
@@ -2934,6 +2975,13 @@ export type GeocodeError = (Error);
 export type TripData = {
     query: {
         /**
+         * Controls if `legGeometry` is returned for transit legs.
+         *
+         * The default value is `true`.
+         *
+         */
+        detailedLegs?: boolean;
+        /**
          * Optional. Default is `true`.
          *
          * Controls if a trip with stay-seated transfers is returned:
@@ -3122,6 +3170,10 @@ export type TripsData = {
          */
         min: string;
         /**
+         * precision of returned polylines. Recommended to set based on zoom: `zoom >= 11 ? 5 : zoom >= 8 ? 4 : zoom >= 5 ? 3 : 2`
+         */
+        precision?: number;
+        /**
          * start of the time window
          */
         startTime: string;
@@ -3230,6 +3282,33 @@ export type RoutesResponse = ({
 });
 
 export type RoutesError = (Error);
+
+export type RouteDetailsData = {
+    query: {
+        /**
+         * language tags as used in OpenStreetMap / GTFS
+         * (usually BCP-47 / ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
+         *
+         */
+        language?: Array<(string)>;
+        /**
+         * Internal route index
+         */
+        routeIdx: number;
+    };
+};
+
+export type RouteDetailsResponse = ({
+    routes: Array<RouteInfo>;
+    polylines: Array<RoutePolyline>;
+    stops: Array<Place>;
+    /**
+     * Always false for this endpoint.
+     */
+    zoomFiltered: boolean;
+});
+
+export type RouteDetailsError = (Error);
 
 export type RentalsData = {
     query?: {

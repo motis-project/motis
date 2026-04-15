@@ -70,6 +70,18 @@ paths:
           schema:
             type: string
 
+        - name: radius
+          in: query
+          required: false
+          description: |
+            Experimental. Search radius in meters around the `fromPlace` / `toPlace` coordinates.
+            When set and the place is given as coordinates, all transit stops within
+            this radius are used as start/end points with zero pre-transit/post-transit time.
+            Works without OSM/street routing data loaded.
+          schema:
+            type: number
+            format: double
+
         - name: via
           in: query
           required: false
@@ -268,8 +280,21 @@ paths:
           in: query
           required: false
           description: |
+            Controls if transfer polylines and step instructions are returned.
+
+            If not set, this parameter inherits the value of `detailedLegs`.
+
             - true: Compute transfer polylines and step instructions.
-            - false: Only return basic information (start time, end time, duration) for transfers.
+            - false: Return empty `legGeometry` and omit `steps` for transfers.
+          schema:
+            type: boolean
+
+        - name: detailedLegs
+          in: query
+          required: false
+          description: |
+            Controls if `legGeometry` and `steps` are returned for direct legs,
+            pre-/post-transit legs and transit legs.
           schema:
             type: boolean
             default: true
@@ -1045,7 +1070,7 @@ paths:
         - routing
       summary: |
         Street routing from one to many places or many to one.
-        The order in the response array corresponds to the order of coordinates of the \`many\` parameter in the body.
+        The order in the response array corresponds to the order of coordinates of the \`many\` parameter in the request body.
       operationId: oneToManyPost
       requestBody:
         required: true
@@ -1446,7 +1471,7 @@ paths:
       summary: |
         One to many routing
         Computes the minimal duration from one place to many or vice versa.
-        The order in the response array corresponds to the order of coordinates of the \`many\` parameter in the query.
+        The order in the response array corresponds to the order of coordinates of the \`many\` parameter in the request body.
       operationId: oneToManyIntermodalPost
       requestBody:
         required: true
@@ -1936,6 +1961,16 @@ paths:
           schema:
             type: boolean
             default: false
+        - name: detailedLegs
+          in: query
+          required: false
+          description: |
+            Controls if `legGeometry` is returned for transit legs.
+
+            The default value is `true`.
+          schema:
+            type: boolean
+            default: true
         - name: joinInterlinedLegs
           in: query
           description: |
@@ -2333,6 +2368,15 @@ paths:
           schema:
             type: string
             format: date-time
+        - name: precision
+          in: query
+          required: false
+          description: "precision of returned polylines. Recommended to set based on zoom: `zoom >= 11 ? 5 : zoom >= 8 ? 4 : zoom >= 5 ? 3 : 2`"
+          schema:
+            type: number
+            minimum: 0
+            maximum: 6
+            default: 5
         - name: language
           in: query
           required: false
@@ -2630,6 +2674,85 @@ paths:
                       Indicates whether some routes were filtered out due to
                       the zoom level.
 
+  /api/experimental/map/route-details:
+    get:
+      tags:
+        - map
+      operationId: routeDetails
+      summary: |
+        Returns the full data for a single route, including all stops and
+        polyline segments.
+      parameters:
+        - name: routeIdx
+          in: query
+          required: true
+          description: Internal route index
+          schema:
+            type: integer
+        - name: language
+          in: query
+          required: false
+          description: |
+            language tags as used in OpenStreetMap / GTFS
+            (usually BCP-47 / ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
+          schema:
+            type: array
+            items:
+              type: string
+          explode: false
+      responses:
+        "422":
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Server Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "200":
+          description: full data for a single route
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - routes
+                  - polylines
+                  - stops
+                  - zoomFiltered
+                properties:
+                  routes:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/RouteInfo"
+                  polylines:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/RoutePolyline"
+                  stops:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Place"
+                  zoomFiltered:
+                    type: boolean
+                    description: Always false for this endpoint.
+
   /api/v1/rentals:
     get:
       tags:
@@ -2786,6 +2909,23 @@ paths:
                     items:
                       $ref: '#/components/schemas/RentalZone'
 
+  /api/v1/health:
+    get:
+      operationId: health
+      responses:
+        '200':
+          description: Shows over which feeds at least one cycle of updates was consumed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '400':
+          description: Full first cycle through all configured feeds is not finished. 
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+          
   /api/debug/transfers:
     get:
       tags:
@@ -4119,6 +4259,23 @@ components:
           items:
             $ref: '#/components/schemas/RentalZoneRestrictions'
 
+    Category:
+      type: object
+      required:
+        - id
+        - name
+        - shortName
+      description: |
+        not available for GTFS datasets by default
+        For NeTEx it contains information about the vehicle category, e.g. IC/InterCity
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        shortName:
+          type: string
+
     Leg:
       type: object
       required:
@@ -4197,6 +4354,8 @@ components:
         tripTo:
           description: final stop of this trip (can differ from headsign)
           $ref: '#/components/schemas/Place'
+        category:
+          $ref: '#/components/schemas/Category'
         routeId:
           type: string
         routeUrl:
@@ -4239,11 +4398,16 @@ components:
           items:
             $ref: "#/components/schemas/Place"
         legGeometry:
+          description: |
+            Encoded geometry of the leg.
+            If detailed leg output is disabled, this is returned as an empty
+            polyline.
           $ref: '#/components/schemas/EncodedPolyline'
         steps:
           description: |
             A series of turn by turn instructions
             used for walking, biking and driving.
+            This field is omitted if the request disables detailed leg output.
           type: array
           items:
             $ref: '#/components/schemas/StepInstruction'
@@ -4836,6 +5000,7 @@ components:
       Description: server configuration
       type: object
       required:
+        - motisVersion
         - hasElevation
         - hasRoutedTransfers
         - hasStreetRouting
@@ -4845,6 +5010,9 @@ components:
         - maxDirectTimeLimit
         - shapesDebugEnabled
       properties:
+        motisVersion:
+          description: the version of this MOTIS server
+          type: string
         hasElevation:
           description: true if elevation is loaded
           type: boolean
@@ -4983,3 +5151,13 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/RouteSegment'
+
+    HealthResponse:
+      type: object
+      properties:
+        rt:
+          type: boolean
+          description: GTFSRT, SIRI Lite, VDV AUS, VDV454 feeds.
+        gbfs:
+          type: boolean
+          description: GBFS feeds.
