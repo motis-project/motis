@@ -2003,7 +2003,7 @@ paths:
           required: true
           schema:
             type: string
-        - name: requireDisplayName
+        - name: requireDisplayNameMatch
           in: query
           required: false
           schema:
@@ -4444,7 +4444,7 @@ components:
       properties:
         id:
           $ref: '#/components/schemas/ItineraryId'
-        requireDisplayName:
+        requireDisplayNameMatch:
           type: boolean
           default: true
 

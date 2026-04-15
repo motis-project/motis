@@ -351,7 +351,7 @@ std::optional<from_to_candidate> get_best_candidate(
     std::vector<st_candidate> const& from_resp,
     std::vector<st_candidate> const& to_resp,
     leg_hint const& hint,
-    bool const require_display_name) {
+    bool const require_display_name_match) {
   auto from_cands = std::vector<candidate_score>{};
   auto to_cands = std::vector<candidate_score>{};
   from_cands.reserve(from_resp.size());
@@ -362,7 +362,7 @@ std::optional<from_to_candidate> get_best_candidate(
       continue;
     }
 
-    if (require_display_name && hint.display_name_ != st.displayName_) {
+    if (require_display_name_match && hint.display_name_ != st.displayName_) {
       continue;
     }
 
@@ -428,7 +428,7 @@ api::Itinerary reconstruct_itinerary(ep::stop_times const& stop_times_ep,
                                      nigiri::shapes_storage const* shapes,
                                      rt const& rt,
                                      std::string const& id,
-                                     bool const require_display_name) {
+                                     bool const require_display_name_match) {
   auto stop_times_rt = std::atomic_load(&stop_times_ep.rt_);
   auto stop_times_rtt = stop_times_rt->rtt_.get();
   auto const parsed_id = decode_itinerary_id(id);
@@ -476,8 +476,8 @@ api::Itinerary reconstruct_itinerary(ep::stop_times const& stop_times_ep,
           lh.sched_end_ - kLookbackSeconds, lh.mode_, kLookbackSeconds * 2,
           kSearchRadiusMeters, true, lang);
 
-      auto const best_from_to =
-          get_best_candidate(from_st_res, to_st_res, lh, require_display_name);
+      auto const best_from_to = get_best_candidate(from_st_res, to_st_res, lh,
+                                                   require_display_name_match);
 
       utl::verify(best_from_to.has_value(), "no matching route is found");
 

@@ -6,11 +6,15 @@
 #include <string_view>
 #include <system_error>
 
+#include "boost/json.hpp"
+
 #include "fmt/format.h"
 
 #include "gtest/gtest.h"
 
 #include "utl/init_from.h"
+
+#include "geo/polyline_format.h"
 
 #include "motis/config.h"
 #include "motis/endpoints/refresh_itinerary.h"
@@ -29,6 +33,26 @@ namespace n = nigiri;
 
 std::string generate_itinerary_id(api::Itinerary const& x) {
   return get_single_leg_id(x.legs_.at(0), n::lang_t{});
+}
+
+api::RefreshItineraryPostBody make_refresh_itinerary_post_body(
+    api::Itinerary const& itinerary) {
+  auto const& leg = itinerary.legs_.at(0);
+  auto body = api::RefreshItineraryPostBody{};
+  body.id_.leg_.push_back(api::LegId{
+      .displayName_ = leg.displayName_.value(),
+      .tripId_ = leg.tripId_.value(),
+      .fromId_ = leg.from_.stopId_.value(),
+      .toId_ = leg.to_.stopId_.value(),
+      .coords_ = geo::encode_polyline(
+          {{leg.from_.lat_, leg.from_.lon_}, {leg.to_.lat_, leg.to_.lon_}}),
+      .schedStart_ = leg.scheduledStartTime_.get_unixtime_seconds(),
+      .schedEnd_ = leg.scheduledEndTime_.get_unixtime_seconds(),
+      .mode_ = leg.mode_,
+      .scheduled_ = leg.scheduled_,
+  });
+  return boost::json::value_to<api::RefreshItineraryPostBody>(
+      boost::json::value_from(body));
 }
 
 constexpr auto kSimpleGtfsTemplate = R"(
@@ -372,7 +396,12 @@ TEST(motis, refresh_itinerary_endpoint_reconstructs_itinerary) {
   auto query = api::refreshItinerary_params{};
   query.itineraryId_ = id;
 
-  EXPECT_EQ(expected, (*refresh)(query.to_url("?")));
+  auto const get_res = (*refresh)(query.to_url("?"));
+  EXPECT_EQ(expected, get_res);
+
+  auto const refresh_post =
+      utl::init_from<ep::refresh_itinerary_post>(target_data).value();
+  EXPECT_EQ(get_res, refresh_post(make_refresh_itinerary_post_body(original)));
 }
 
 TEST(motis, refresh_itinerary_matches_scheduled_then_applies_realtime) {

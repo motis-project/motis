@@ -13,6 +13,7 @@ api::Itinerary reconstruct_itinerary(ep::stop_times const&,
                                      nigiri::shapes_storage const*,
                                      rt const&,
                                      std::string const& id,
-                                     bool const require_display_name = true);
+                                     bool const require_display_name_match =
+                                         true);
 
 }  // namespace motis

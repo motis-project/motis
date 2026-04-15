@@ -34,7 +34,7 @@ api::Itinerary refresh_itinerary::operator()(
   auto const rt = std::atomic_load(&rt_);
 
   return reconstruct_itinerary(stop_times_ep, shapes_, *rt, query.itineraryId_,
-                               query.requireDisplayName_);
+                               query.requireDisplayNameMatch_);
 }
 
 api::Itinerary refresh_itinerary_post::operator()(
@@ -53,7 +53,7 @@ api::Itinerary refresh_itinerary_post::operator()(
   auto const rt = std::atomic_load(&rt_);
   return reconstruct_itinerary(stop_times_ep, shapes_, *rt,
                                net::encode_base64(data),
-                               body.requireDisplayName_);
+                               body.requireDisplayNameMatch_);
 }
 
 }  // namespace motis::ep
