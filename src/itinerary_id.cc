@@ -306,7 +306,8 @@ api::Itinerary build_itinerary_from_frun(
 
   // routing defaults
   constexpr auto join_interlined_legs = true;
-  constexpr auto detailed_transfers = true;
+  constexpr auto detailed_transfers = false;
+  constexpr auto detailed_legs = true;
   constexpr auto with_fares = false;
   constexpr auto with_scheduled_skipped_stops = false;
   constexpr auto api_version = 0;
@@ -320,7 +321,7 @@ api::Itinerary build_itinerary_from_frun(
       tt_location{to.get_location_idx()}, cache, &blocked, false,
       osr_parameters{}, api::PedestrianProfileEnum::FOOT,
       api::ElevationCostsEnum::NONE, join_interlined_legs, detailed_transfers,
-      with_fares, with_scheduled_skipped_stops,
+      detailed_legs, with_fares, with_scheduled_skipped_stops,
       stop_times.config_.timetable_.value().max_matching_distance_,
       kMaxMatchingDistance, api_version, false, false, lang);
 }

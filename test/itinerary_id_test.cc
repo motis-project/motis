@@ -217,7 +217,8 @@ data import_test_data(config const& cfg, std::string_view const sub_dir) {
   auto const path = fs::path{"test/data/itinerary_id"} / sub_dir;
   auto ec = std::error_code{};
   fs::remove_all(path, ec);
-  return import(cfg, path.string(), true);
+  import(cfg, path);
+  return data{path, cfg};
 }
 
 api::Itinerary route_first_itinerary(data& data,
