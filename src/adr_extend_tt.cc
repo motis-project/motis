@@ -152,8 +152,8 @@ adr::score_t get_diff(std::string str1,
     }
   }
 
-  return static_cast<double>(score) /
-         static_cast<double>(std::max(str1.length(), str2.length()));
+  return static_cast<adr::score_t>(score) /
+         static_cast<adr::score_t>(std::max(str1.length(), str2.length()));
 }
 
 adr_ext adr_extend_tt(nigiri::timetable const& tt,
@@ -375,7 +375,7 @@ adr_ext adr_extend_tt(nigiri::timetable const& tt,
     auto const normalize = utl::scoped_timer{"guesser normalize"};
     auto const max_it = std::max_element(begin(ret.place_importance_),
                                          end(ret.place_importance_));
-    auto const max_importance = std::max(*max_it, 1.F);
+    auto const max_importance = std::max(*max_it, 1.);
     for (auto& i : ret.place_importance_) {
       i /= max_importance;
     }
