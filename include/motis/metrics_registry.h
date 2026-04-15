@@ -41,9 +41,6 @@ struct metrics_registry {
   prometheus::Family<prometheus::Gauge>& timetable_locations_count_;
   prometheus::Family<prometheus::Gauge>& timetable_trips_count_;
   prometheus::Family<prometheus::Gauge>& timetable_transports_x_days_count_;
-  prometheus::Family<prometheus::Gauge>& last_update_;
-  prometheus::Gauge& last_update_rt_;
-  prometheus::Gauge& last_update_gbfs_;
 
 private:
   metrics_registry(prometheus::Histogram::BucketBoundaries event_boundaries,
