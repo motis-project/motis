@@ -458,7 +458,8 @@ void route_shapes(osr::ways const& w,
 
     auto const clasz = tt.route_clasz_[r];
     auto profile = get_profile(clasz);
-    if (!profile || !clasz_enabled[static_cast<std::size_t>(clasz)]) {
+    if (!profile.has_value() ||
+        !clasz_enabled[static_cast<std::size_t>(clasz)]) {
       progress_tracker->increment();
       return;
     }

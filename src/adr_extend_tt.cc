@@ -152,8 +152,8 @@ adr::score_t get_diff(std::string str1,
     }
   }
 
-  return static_cast<float>(score) /
-         static_cast<float>(std::max(str1.length(), str2.length()));
+  return static_cast<double>(score) /
+         static_cast<double>(std::max(str1.length(), str2.length()));
 }
 
 adr_ext adr_extend_tt(nigiri::timetable const& tt,
@@ -316,28 +316,28 @@ adr_ext adr_extend_tt(nigiri::timetable const& tt,
       }
 
       constexpr auto const prio =
-          std::array<float, kClaszMax>{/* Air */ 300,
-                                       /* HighSpeed */ 300,
-                                       /* LongDistance */ 250,
-                                       /* Coach */ 150,
-                                       /* Night */ 250,
-                                       /* RideSharing */ 5,
-                                       /* Regional */ 100,
-                                       /* Suburban */ 80,
-                                       /* Subway */ 80,
-                                       /* Tram */ 3,
-                                       /* Bus  */ 2,
-                                       /* Ship  */ 10,
-                                       /* CableCar */ 5,
-                                       /* Funicular */ 5,
-                                       /* AerialLift */ 5,
-                                       /* Other  */ 1};
+          std::array<double, kClaszMax>{/* Air */ 300,
+                                        /* HighSpeed */ 300,
+                                        /* LongDistance */ 250,
+                                        /* Coach */ 150,
+                                        /* Night */ 250,
+                                        /* RideSharing */ 5,
+                                        /* Regional */ 100,
+                                        /* Suburban */ 80,
+                                        /* Subway */ 80,
+                                        /* Tram */ 3,
+                                        /* Bus  */ 2,
+                                        /* Ship  */ 10,
+                                        /* CableCar */ 5,
+                                        /* Funicular */ 5,
+                                        /* AerialLift */ 5,
+                                        /* Other  */ 1};
       auto const root = tt.locations_.get_root_idx(l);
       auto const place_idx = ret.location_place_[root];
 
       for (auto const [clasz, t_count] : utl::enumerate(transport_counts)) {
         ret.place_importance_[place_idx] +=
-            prio[clasz] * static_cast<float>(t_count);
+            prio[clasz] * static_cast<double>(t_count);
 
         auto const c = n::clasz{static_cast<std::uint8_t>(clasz)};
         if (t_count != 0U) {
