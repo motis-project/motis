@@ -25,6 +25,8 @@ namespace a = adr;
 
 namespace motis::ep {
 
+constexpr auto const kDefaultSuggestions = 10U;
+
 a::guess_context& get_guess_context(a::typeahead const& t, a::cache& cache) {
   auto static ctx = boost::thread_specific_ptr<a::guess_context>{};
   if (ctx.get() == nullptr || &ctx.get()->cache_ != &cache) {
@@ -81,7 +83,7 @@ api::geocode_response geocode::operator()(
               })
           .value_or(std::function<bool(adr::place_idx_t)>{});
   auto const config_limit = config_.get_limits().geocode_max_suggestions_;
-  auto const requested_limit = params.limit_.value_or(config_limit);
+  auto const requested_limit = params.limit_.value_or(kDefaultSuggestions);
   utl::verify<net::bad_request_exception>(requested_limit >= 1,
                                           "limit must be >= 1");
   utl::verify<net::bad_request_exception>(

@@ -1835,7 +1835,7 @@ paths:
           description: |
             Optional. Number of results to return.
 
-            If omitted, the upper limit from server config is used.
+            If omitted, 5 results are returned by default.
             Must be <= server config variable `reverse_geocode_max_results`.
           schema:
             type: integer
@@ -1929,7 +1929,7 @@ paths:
           description: |
             Optional. Number of suggestions to return.
             
-            If omitted, the upper limit from server config is used.
+            If omitted, 10 suggestions are returned by default.
             Must be <= server config variable `geocode_max_suggestions`.
           schema:
             type: integer
