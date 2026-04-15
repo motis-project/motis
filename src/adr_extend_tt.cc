@@ -305,7 +305,7 @@ adr_ext adr_extend_tt(nigiri::timetable const& tt,
     for (auto i = n::kNSpecialStations; i < tt.n_locations(); ++i) {
       auto const l = n::location_idx_t{i};
 
-      auto transport_counts = std::array<unsigned, n::kNumClasses>{};
+      auto transport_counts = std::array<std::uint64_t, n::kNumClasses>{};
       for (auto const& r : tt.location_routes_[l]) {
         auto const clasz =
             static_cast<std::underlying_type_t<n::clasz>>(tt.route_clasz_[r]);
