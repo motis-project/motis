@@ -1,10 +1,10 @@
 #include "motis/itinerary_id.h"
 
+#include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
-#include <algorithm>
 #include <limits>
 #include <optional>
 #include <string_view>
