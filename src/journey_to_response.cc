@@ -559,7 +559,9 @@ api::Itinerary journey_to_response(
                             ? std::optional{tt.src_end_date_[src]}
                             : std::nullopt,
                     .bikesAllowed_ =
-                        enter_stop.bikes_allowed(nigiri::event_type::kDep)});
+                        enter_stop.bikes_allowed(nigiri::event_type::kDep),
+                    .wheelchairAccessible_ = enter_stop.wheelchair_accessible(
+                        nigiri::event_type::kDep)});
 
                 auto const attributes =
                     tt.attribute_combinations_[enter_stop
