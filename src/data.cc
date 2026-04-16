@@ -5,6 +5,7 @@
 
 #include "cista/io.h"
 
+#include "utl/get_or_create.h"
 #include "utl/read_file.h"
 #include "utl/verify.h"
 
@@ -28,6 +29,7 @@
 #include "motis/config.h"
 #include "motis/constants.h"
 #include "motis/elevators/update_elevators.h"
+#include "motis/endpoints/initial.h"
 #include "motis/flex/flex_areas.h"
 #include "motis/hashes.h"
 #include "motis/match_platforms.h"
@@ -38,7 +40,6 @@
 #include "motis/tag_lookup.h"
 #include "motis/tiles_data.h"
 #include "motis/tt_location_rtree.h"
-#include "utl/get_or_create.h"
 
 namespace fs = std::filesystem;
 namespace n = nigiri;
@@ -237,6 +238,8 @@ data::data(std::filesystem::path p, config const& c)
   throw_if_failed("matches", matches);
   throw_if_failed("elevators", elevators);
   throw_if_failed("tiles", tiles);
+
+  initial_response_ = ep::get_initial_response(*this);
 
   utl_verify(
       shapes_ == nullptr || tt_ == nullptr ||

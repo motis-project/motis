@@ -11,6 +11,7 @@
 
 #include "osr/types.h"
 
+#include "motis-api/motis-api.h"
 #include "motis/adr_extend_tt.h"
 #include "motis/config.h"
 #include "motis/elevators/parse_elevator_id_osm_mapping.h"
@@ -70,18 +71,19 @@ struct data {
 
   auto cista_members() {
     // !!! Remember to add all new members !!!
-    return std::tie(config_, motis_version_, t_, adr_ext_, f_, tz_, r_, tc_, w_,
-                    pl_, l_, elevations_, tt_, tbd_, tags_, location_rtree_,
-                    elevator_nodes_, elevator_osm_mapping_, shapes_,
-                    railviz_static_, matches_, way_matches_, rt_, gbfs_,
-                    odm_bounds_, ride_sharing_bounds_, flex_areas_, metrics_,
-                    auser_);
+    return std::tie(config_, motis_version_, initial_response_, t_, adr_ext_,
+                    f_, tz_, r_, tc_, w_, pl_, l_, elevations_, tt_, tbd_,
+                    tags_, location_rtree_, elevator_nodes_,
+                    elevator_osm_mapping_, shapes_, railviz_static_, matches_,
+                    way_matches_, rt_, gbfs_, odm_bounds_, ride_sharing_bounds_,
+                    flex_areas_, metrics_, auser_);
   }
 
   std::filesystem::path path_;
   config config_;
   std::string_view motis_version_;
 
+  api::initial_response initial_response_;
   cista::wrapped<adr::typeahead> t_;
   cista::wrapped<adr_ext> adr_ext_;
   ptr<adr::formatter> f_;

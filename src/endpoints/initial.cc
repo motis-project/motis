@@ -9,11 +9,13 @@
 
 #include "nigiri/timetable.h"
 
+#include "motis/data.h"
+
 namespace n = nigiri;
 
 namespace motis::ep {
 
-api::initial_response initial::operator()(boost::urls::url_view const&) const {
+api::initial_response get_initial_response(data const& d) {
   auto const get_quantiles = [](std::vector<double>&& coords) {
     utl::erase_if(coords, [](auto const c) { return c == 0.; });
     if (coords.empty()) {
@@ -33,11 +35,12 @@ api::initial_response initial::operator()(boost::urls::url_view const&) const {
   auto zoom = 0U;
   auto center = geo::latlng{};
 
-  if (tt_ != nullptr) {
+  auto const tt = d.tt_.get();
+  if (tt != nullptr) {
     auto const [lat_min, lat_max] = get_quantiles(utl::to_vec(
-        tt_->locations_.coordinates_, [](auto const& s) { return s.lat_; }));
+        tt->locations_.coordinates_, [](auto const& s) { return s.lat_; }));
     auto const [lng_min, lng_max] = get_quantiles(utl::to_vec(
-        tt_->locations_.coordinates_, [](auto const& s) { return s.lng_; }));
+        tt->locations_.coordinates_, [](auto const& s) { return s.lng_; }));
 
     auto const fixed0 = tiles::latlng_to_fixed({lat_min, lng_min});
     auto const fixed1 = tiles::latlng_to_fixed({lat_max, lng_max});
@@ -45,31 +48,31 @@ api::initial_response initial::operator()(boost::urls::url_view const&) const {
     center = tiles::fixed_to_latlng(
         {(fixed0.x() + fixed1.x()) / 2, (fixed0.y() + fixed1.y()) / 2});
 
-    auto const d = static_cast<unsigned>(std::max(
+    auto const span = static_cast<unsigned>(std::max(
         std::abs(fixed0.x() - fixed1.x()), std::abs(fixed0.y() - fixed1.y())));
 
     for (; zoom < (tiles::kMaxZoomLevel - 1); ++zoom) {
       if (((tiles::kTileSize * 2ULL) *
-           (1ULL << (tiles::kMaxZoomLevel - (zoom + 1)))) < d) {
+           (1ULL << (tiles::kMaxZoomLevel - (zoom + 1)))) < span) {
         break;
       }
     }
   }
 
-  auto const limits = config_.get_limits();
+  auto const limits = d.config_.get_limits();
   return {
       .lat_ = center.lat_,
       .lon_ = center.lng_,
       .zoom_ = static_cast<double>(zoom),
       .serverConfig_ = api::ServerConfig{
-          .motisVersion_ = std::string{motis_version_},
-          .hasElevation_ = config_.get_street_routing()
+          .motisVersion_ = std::string{d.motis_version_},
+          .hasElevation_ = d.config_.get_street_routing()
                                .transform([](config::street_routing const& x) {
                                  return x.elevation_data_dir_.has_value();
                                })
                                .value_or(false),
-          .hasRoutedTransfers_ = config_.osr_footpath_,
-          .hasStreetRouting_ = config_.get_street_routing().has_value(),
+          .hasRoutedTransfers_ = d.config_.osr_footpath_,
+          .hasStreetRouting_ = d.config_.get_street_routing().has_value(),
           .maxOneToManySize_ = static_cast<double>(limits.onetomany_max_many_),
           .maxOneToAllTravelTimeLimit_ =
               static_cast<double>(limits.onetoall_max_travel_minutes_),
@@ -77,7 +80,11 @@ api::initial_response initial::operator()(boost::urls::url_view const&) const {
               limits.street_routing_max_prepost_transit_seconds_),
           .maxDirectTimeLimit_ =
               static_cast<double>(limits.street_routing_max_direct_seconds_),
-          .shapesDebugEnabled_ = config_.shapes_debug_api_enabled()}};
+          .shapesDebugEnabled_ = d.config_.shapes_debug_api_enabled()}};
+}
+
+api::initial_response initial::operator()(boost::urls::url_view const&) const {
+  return response_;
 }
 
 }  // namespace motis::ep
