@@ -4410,6 +4410,10 @@ components:
           description: |
             Whether bikes can be carried on this leg.
           type: boolean
+        wheelchairAccessible:
+          description: |
+            Whether wheelchairs can be transported on this leg.
+          type: boolean
         alternatives:
           description: |
             Alternative connections that can replace this transit leg.
