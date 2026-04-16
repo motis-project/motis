@@ -32,10 +32,12 @@
 
 	type TranslationKey = keyof typeof t;
 
-	const availableModes = possibleModes.map((value) => ({
-		value,
-		label: t[value as TranslationKey] as string
-	}));
+	const availableModes = $derived(
+		possibleModes.map((value) => ({
+			value,
+			label: t[value as TranslationKey] as string
+		}))
+	);
 
 	type ProviderOption = {
 		id: string;
