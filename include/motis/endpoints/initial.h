@@ -7,12 +7,12 @@
 
 namespace motis::ep {
 
+api::initial_response get_initial_response(data const&);
+
 struct initial {
   api::initial_response operator()(boost::urls::url_view const&) const;
 
-  nigiri::timetable const* tt_;
-  config const& config_;
-  std::string_view const& motis_version_;
+  api::initial_response const& response_;
 };
 
 }  // namespace motis::ep
