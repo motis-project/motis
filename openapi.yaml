@@ -1829,7 +1829,7 @@ paths:
             For example, this can be used to allow only `ADDRESS` and `STOP` results.
           schema:
             $ref: '#/components/schemas/LocationType'
-        - name: limit
+        - name: numResults
           in: query
           required: false
           description: |
@@ -1923,7 +1923,7 @@ paths:
           schema:
             type: number
             default: 1
-        - name: limit
+        - name: numResults
           in: query
           required: false
           description: |

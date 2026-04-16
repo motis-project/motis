@@ -20,7 +20,7 @@ api::reverseGeocode_response reverse_geocode::operator()(
     boost::urls::url_view const& url) const {
   auto const params = api::reverseGeocode_params{url.params()};
   auto const config_limit = config_.get_limits().reverse_geocode_max_results_;
-  auto const requested_limit = params.limit_.value_or(kDefaultResults);
+  auto const requested_limit = params.numResults_.value_or(kDefaultResults);
   utl::verify<net::bad_request_exception>(requested_limit >= 1,
                                           "limit must be >= 1");
   utl::verify<net::bad_request_exception>(

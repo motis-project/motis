@@ -83,7 +83,7 @@ api::geocode_response geocode::operator()(
               })
           .value_or(std::function<bool(adr::place_idx_t)>{});
   auto const config_limit = config_.get_limits().geocode_max_suggestions_;
-  auto const requested_limit = params.limit_.value_or(kDefaultSuggestions);
+  auto const requested_limit = params.numResults_.value_or(kDefaultSuggestions);
   utl::verify<net::bad_request_exception>(requested_limit >= 1,
                                           "limit must be >= 1");
   utl::verify<net::bad_request_exception>(
@@ -91,9 +91,8 @@ api::geocode_response geocode::operator()(
       "limit must be <= geocode_max_suggestions ({})", config_limit);
   auto const token_pos = a::get_suggestions<false>(
       t_, params.text_, static_cast<unsigned>(requested_limit), lang_indices,
-      ctx, place,
-      static_cast<float>(params.placeBias_), to_filter_type(params.type_),
-      place_filter);
+      ctx, place, static_cast<float>(params.placeBias_),
+      to_filter_type(params.type_), place_filter);
   return suggestions_to_response(t_, f_, ae_, tt_, tags_, w_, pl_, matches_,
                                  lang_indices, token_pos, ctx.suggestions_);
 }
