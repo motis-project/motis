@@ -1,11 +1,11 @@
 <script lang="ts">
 	import maplibregl, { type GeoJSONSourceSpecification } from 'maplibre-gl';
-	import GeoJSON from 'geojson';
+	import type { GeoJSON as GeoJson } from 'geojson';
 	import { getContext, onDestroy, setContext, type Snippet } from 'svelte';
 
 	class Props {
 		id!: string;
-		data!: GeoJSON.GeoJSON;
+		data!: GeoJson;
 		lineMetrics?: boolean;
 		children!: Snippet;
 		options?: Omit<GeoJSONSourceSpecification, 'type' | 'data'>;
