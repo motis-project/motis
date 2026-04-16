@@ -246,6 +246,8 @@ struct config {
     unsigned gtfsrt_expose_max_trip_updates_{100U};
     unsigned street_routing_max_prepost_transit_seconds_{3600U};
     unsigned street_routing_max_direct_seconds_{21600U};
+    unsigned geocode_max_suggestions_{10U};
+    unsigned reverse_geocode_max_results_{5U};
   };
   limits get_limits() const { return limits_.value_or(limits{}); }
   std::optional<limits> limits_{};
