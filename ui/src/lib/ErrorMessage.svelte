@@ -41,7 +41,7 @@
 				return SearchX;
 		}
 	};
-	let Icon = $state(getErrorIcon(status ?? 404));
+	const Icon = $derived(getErrorIcon(status ?? 404));
 </script>
 
 <div
