@@ -81,7 +81,9 @@ TEST(motis, routing_slow_direct) {
       .osr_footpath_ = true,
       .geocoding_ = true,
       .reverse_geocoding_ = true};
-  auto d = import(c, "test/data", true);
+
+  import(c, "test/data_osm_only");
+  auto d = data{"test/data_osm_only", c};
 
   auto const routing = utl::init_from<ep::routing>(d).value();
 
@@ -108,7 +110,7 @@ TEST(motis, routing_slow_direct) {
               "20190501_03:35_test_ICE2");
     EXPECT_EQ(
         res.itineraries_.at(1).legs_.at(1).tripId_,
-        "20190501_03:35_test_ICE2");  // this contains an addional footpath
+        "20190501_03:35_test_ICE2");  // this contains an addional 1min footpath
     EXPECT_EQ(res.itineraries_.at(2).legs_.at(1).tripId_,
               "20190501_03:35_test_ICE");
   }
