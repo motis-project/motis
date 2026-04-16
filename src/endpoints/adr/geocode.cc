@@ -90,7 +90,8 @@ api::geocode_response geocode::operator()(
       requested_limit <= config_limit,
       "limit must be <= geocode_max_suggestions ({})", config_limit);
   auto const token_pos = a::get_suggestions<false>(
-      t_, params.text_, requested_limit, lang_indices, ctx, place,
+      t_, params.text_, static_cast<unsigned>(requested_limit), lang_indices,
+      ctx, place,
       static_cast<float>(params.placeBias_), to_filter_type(params.type_),
       place_filter);
   return suggestions_to_response(t_, f_, ae_, tt_, tags_, w_, pl_, matches_,

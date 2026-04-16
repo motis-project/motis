@@ -26,10 +26,10 @@ api::reverseGeocode_response reverse_geocode::operator()(
   utl::verify<net::bad_request_exception>(
       requested_limit <= config_limit,
       "limit must be <= reverse_geocode_max_results ({})", config_limit);
-  auto const result_limit = requested_limit;
   return suggestions_to_response(
       t_, f_, ae_, tt_, tags_, w_, pl_, matches_, {}, {},
-      r_.lookup(t_, parse_location((params.place_))->pos_, result_limit,
+      r_.lookup(t_, parse_location((params.place_))->pos_,
+                static_cast<std::size_t>(requested_limit),
                 to_filter_type(params.type_)));
 }
 
