@@ -165,10 +165,10 @@ U4,DB,U4,,,402
 ICE,DB,ICE,,,101
 
 # trips.txt
-route_id,service_id,trip_id,trip_headsign,block_id
-S3,S1,S3,,
-U4,S1,U4,,
-ICE,S1,ICE,,
+route_id,service_id,trip_id,trip_headsign,block_id,wheelchair_accessible
+S3,S1,S3,,,1
+U4,S1,U4,,,1
+ICE,S1,ICE,,,1
 
 # stop_times.txt
 trip_id,arrival_time,departure_time,stop_id,stop_sequence,pickup_type,drop_off_type
