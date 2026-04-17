@@ -134,10 +134,7 @@
 		}
 	};
 
-	let layer = $state<{ id: null | string }>({ id: null });
-	$effect(() => {
-		layer.id = id;
-	});
+	let layer = $state<{ id: null | string }>({ id });
 	setContext('layer', layer);
 
 	let ctx: { map: maplibregl.Map | null } = getContext('map'); // from Map component

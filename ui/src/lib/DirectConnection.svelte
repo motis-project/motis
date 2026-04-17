@@ -11,11 +11,11 @@
 		d: Itinerary;
 	} & ButtonProps = $props();
 
-	const modeStyles = $derived([
+	const modeStyles = [
 		...new Map(d.legs.map((l) => [JSON.stringify(getModeStyle(l)), getModeStyle(l)])).values()
-	]);
+	];
 
-	const leg = $derived(d.legs.find((leg) => leg.mode !== 'WALK') ?? d.legs[0]!);
+	const leg = d.legs.find((leg) => leg.mode !== 'WALK') ?? d.legs[0]!;
 </script>
 
 <Button variant="child" {...restProps}>

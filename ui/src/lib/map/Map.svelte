@@ -27,7 +27,7 @@
 	} = $props();
 
 	let el: HTMLElement | null = null;
-	let currStyle: maplibregl.StyleSpecification | undefined;
+	let currStyle: maplibregl.StyleSpecification | undefined = style;
 	let ctx = $state<{ map: maplibregl.Map | undefined }>({ map: undefined });
 	setContext('map', ctx);
 
