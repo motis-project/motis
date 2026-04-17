@@ -11,6 +11,7 @@
 	import { updateOverlayLayers } from '$lib/updateOverlay';
 	import { createStopIcon } from '../createIcon';
 	import { hexToRgb } from '$lib/Color';
+	import { getModeStyle } from '$lib/modeStyle';
 
 	let {
 		map,
@@ -56,6 +57,7 @@
 		name: string;
 		stopId?: string;
 		track?: string;
+		modes?: Array<Mode>;
 	};
 	const metadata: MetaData[] = [];
 
@@ -81,19 +83,75 @@
 		maxWidth: 'none'
 	});
 
-	const onHover = (info: PickingInfo) => {
-		if (info.picked && info.index != -1) {
-			const data = metadata[info.index];
-			const content = `<strong>${data.name}</strong><br>
-							${data.track ? `<strong>${t.track}: ${data.track}</strong>` : ''}`;
+	const createModeIcon = (mode: Mode): HTMLElement => {
+		const [icon, bg, fg] = getModeStyle({ mode } as any);
+		const span = Object.assign(document.createElement('span'), {
+			innerHTML: `<svg width="17" height="17" fill="currentColor" stroke="currentColor"><use href="#${icon}"></use></svg><span style="line-height: 1">${mode}</span>`
+		});
+		Object.assign(span.style, {
+			display: 'flex',
+			alignItems: 'center',
+			gap: '4px',
+			background: bg,
+			color: fg,
+			borderRadius: '8px',
+			padding: '4px'
+		});
+		return span;
+	};
 
-			popup
-				.setLngLat(info.coordinate as LngLatLike)
-				.setHTML(content)
-				.addTo(map!);
-		} else {
+	const onHover = (info: PickingInfo) => {
+		if (!info.picked || info.index === -1) {
 			popup.remove();
+			return;
 		}
+		const data = metadata[info.index];
+
+		const root = document.createElement('div');
+		Object.assign(root.style, {
+			display: 'flex',
+			alignItems: 'center',
+			flexDirection: 'column',
+			gap: '6px',
+			marginRight: '-28px'
+		});
+
+		const name = Object.assign(document.createElement('span'), { textContent: data.name });
+		Object.assign(name.style, {
+			fontSize: '14px',
+			fontWeight: '700',
+			lineHeight: '1.2'
+		});
+		root.appendChild(name);
+
+		if (data.track) {
+			const track = document.createElement('span');
+			Object.assign(track.style, {
+				background: 'rgba(0,0,0,0.08)',
+				borderRadius: '6px',
+				padding: '5px',
+				fontSize: '12px',
+				fontWeight: '700'
+			});
+			track.innerHTML = `${t.track}: ${data.track}`;
+			root.appendChild(track);
+		}
+
+		if (data.modes?.length) {
+			const modeRow = document.createElement('div');
+			Object.assign(modeRow.style, {
+				display: 'flex',
+				flexWrap: 'wrap',
+				gap: '4px'
+			});
+			data.modes.forEach((m) => modeRow.appendChild(createModeIcon(m)));
+			root.appendChild(modeRow);
+		}
+
+		popup
+			.setLngLat(info.coordinate as LngLatLike)
+			.setDOMContent(root)
+			.addTo(map!);
 	};
 
 	const onClick = (info: PickingInfo) => {
@@ -130,32 +188,6 @@
 		});
 	};
 
-	const getModeColor = (m: Mode): [number, number, number, number] => {
-		switch (m) {
-			case 'BUS':
-				return hexToRgb('#ff9800');
-			case 'COACH':
-				return hexToRgb('#9ccc65');
-			case 'TRAM':
-				return hexToRgb('#ebe717');
-			case 'SUBURBAN':
-				return hexToRgb('#4caf50');
-			case 'SUBWAY':
-				return hexToRgb('#3f51b5');
-			case 'HIGHSPEED_RAIL':
-				return hexToRgb('#9c27b0');
-			case 'LONG_DISTANCE':
-				return hexToRgb('#e91e63');
-			case 'REGIONAL_FAST_RAIL':
-			case 'REGIONAL_RAIL':
-			case 'RAIL':
-				return hexToRgb('#f44336');
-			case 'ODM':
-				return hexToRgb('#fdb813');
-			default:
-				return hexToRgb('#000000');
-		}
-	};
 	//SETUP
 	onMount(() => {
 		updateOverlayLayers(createLayer(), layers, overlay);
@@ -183,10 +215,11 @@
 				metadata[index] = {
 					name: data[i].name,
 					stopId: data[i].stopId,
-					track: data[i].track
+					track: data[i].track,
+					modes: data[i].modes
 				};
 				const mode = data[i].modes ? data[i].modes![0] : undefined;
-				const color = mode ? getModeColor(mode) : hexToRgb('#000000');
+				const color = mode ? hexToRgb(getModeStyle({ mode } as any)[1]) : hexToRgb('#000000');
 				positions[2 * index] = data[i].lon;
 				positions[2 * index + 1] = data[i].lat;
 				colors[3 * index] = color[0];
