@@ -51,7 +51,6 @@ constexpr auto kLookbackSeconds = std::int64_t{8 * 60};
 constexpr auto kNonSchedAllowedDeviationSeconds = std::int64_t{15 * 60};
 
 constexpr auto kExactTripIdMatchAddScore = 50.0;
-constexpr auto kExactStopIdMatchAddScore = 15.0;
 
 proto_id_t decode_itinerary_id(std::string const& id) {
   auto parsed = proto_id_t{};
@@ -156,14 +155,9 @@ struct st_candidate {
     return std::tie(a.run_.t_, a.run_.rt_) < std::tie(b.run_.t_, b.run_.rt_);
   }
 
-  std::string stopId_{};
-  std::string tripId_{};
-  std::string displayName_{};
-  n::rt::run run_{};
+  n::rt::frun run_;
   std::optional<openapi::date_time_t> scheduledArrival_{};
   std::optional<openapi::date_time_t> scheduledDeparture_{};
-  double lat_{};
-  double lon_{};
 };
 
 std::vector<st_candidate> get_st_candidates_in_radius(
@@ -202,16 +196,8 @@ std::vector<st_candidate> get_st_candidates_in_radius(
   return utl::to_vec(events, [&](n::rt::run const r) -> st_candidate {
     auto const fr = n::rt::frun{st_ep.tt_, rtt, r};
     auto const s = fr[0];
-    auto const l = s.get_location_idx();
-    auto const pos = s.pos();
 
-    auto res =
-        st_candidate{.stopId_ = st_ep.tags_.id(st_ep.tt_, l),
-                     .tripId_ = st_ep.tags_.id(st_ep.tt_, s, ev_type),
-                     .displayName_ = std::string{s.display_name(ev_type, lang)},
-                     .run_ = fr,
-                     .lat_ = pos.lat_,
-                     .lon_ = pos.lng_};
+    auto res = st_candidate{.run_ = fr};
 
     if (fr.stop_range_.from_ != 0U) {
       res.scheduledArrival_ = {s.scheduled_time(n::event_type::kArr)};
@@ -352,40 +338,51 @@ std::optional<from_to_candidate> get_best_candidate(
     std::vector<st_candidate> const& from_resp,
     std::vector<st_candidate> const& to_resp,
     leg_hint const& hint,
-    bool const require_display_name_match) {
+    bool const require_display_name_match,
+    tag_lookup const& tags,
+    n::rt_timetable const* rtt,
+    n::lang_t const& lang) {
+  if (from_resp.empty() || to_resp.empty()) {
+    return std::nullopt;
+  }
+
   auto from_cands = std::vector<candidate_score>{};
   auto to_cands = std::vector<candidate_score>{};
   from_cands.reserve(from_resp.size());
   to_cands.reserve(to_resp.size());
+
+  auto const [hint_trip_run, _] =
+      tags.get_trip(*from_resp.front().run_.tt_, rtt, hint.trip_id_);
 
   for (auto const& st : from_resp) {
     if (!st.scheduledDeparture_.has_value()) {
       continue;
     }
 
-    if (require_display_name_match && hint.display_name_ != st.displayName_) {
+    if (require_display_name_match &&
+        hint.display_name_ !=
+            st.run_[0].display_name(n::event_type::kDep, lang)) {
       continue;
     }
 
     from_cands.emplace_back(
-        &st,
-        (st.stopId_ == hint.from_stop_id_ ? kExactStopIdMatchAddScore : 0.0) -
-            geo::distance({st.lat_, st.lon_}, hint.from_pos_) -
-            kTimeMul *
-                std::abs(
-                    hint.sched_start_ -
-                    st.scheduledDeparture_.value().get_unixtime_seconds()));
+        &st, -geo::distance(st.run_[0].pos(), hint.from_pos_) -
+                 kTimeMul *
+                     std::abs(hint.sched_start_ - st.scheduledDeparture_.value()
+                                                      .get_unixtime_seconds()));
   }
   for (auto const& st : to_resp) {
     if (!st.scheduledArrival_.has_value()) {
       continue;
     }
 
+    auto const same_trip =
+        hint_trip_run.t_.is_valid() && st.run_.t_ == hint_trip_run.t_;
+
     to_cands.emplace_back(
         &st,
-        (st.tripId_ == hint.trip_id_ ? kExactTripIdMatchAddScore : 0.0) +
-            (st.stopId_ == hint.to_stop_id_ ? kExactStopIdMatchAddScore : 0.0) -
-            geo::distance(geo::latlng{st.lat_, st.lon_}, hint.to_pos_) -
+        (same_trip ? kExactTripIdMatchAddScore : 0.0) -
+            geo::distance(st.run_[0].pos(), hint.to_pos_) -
             kTimeMul *
                 std::abs(hint.sched_end_ -
                          st.scheduledArrival_.value().get_unixtime_seconds()));
@@ -477,8 +474,9 @@ api::Itinerary reconstruct_itinerary(ep::stop_times const& stop_times_ep,
           lh.sched_end_ - kLookbackSeconds, lh.mode_, kLookbackSeconds * 2,
           kSearchRadiusMeters, true, lang);
 
-      auto const best_from_to = get_best_candidate(from_st_res, to_st_res, lh,
-                                                   require_display_name_match);
+      auto const best_from_to = get_best_candidate(
+          from_st_res, to_st_res, lh, require_display_name_match,
+          stop_times_ep.tags_, stop_times_rtt, lang);
 
       utl::verify(best_from_to.has_value(), "no matching route is found");
 
