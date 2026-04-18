@@ -12,7 +12,6 @@
 #include "motis/endpoints/elevators.h"
 #include "motis/endpoints/graph.h"
 #include "motis/endpoints/gtfsrt.h"
-#include "motis/endpoints/health.h"
 #include "motis/endpoints/initial.h"
 #include "motis/endpoints/levels.h"
 #include "motis/endpoints/map/flex_locations.h"
@@ -99,7 +98,6 @@ struct motis_instance {
     GET<ep::levels>("/api/v1/map/levels", d);
     GET<ep::initial>("/api/v1/map/initial", d);
     GET<ep::reverse_geocode>("/api/v1/reverse-geocode", d);
-    GET<ep::health>("/api/v1/health", d);
     GET<ep::geocode>("/api/v1/geocode", d);
     GET<ep::routing>("/api/v1/plan", d);
     GET<ep::routing>("/api/v2/plan", d);
@@ -185,8 +183,7 @@ struct motis_instance {
   void run(data& d, config const& c) {
     if (d.w_ && d.l_ && c.has_gbfs_feeds()) {
       gbfs_ = io_thread{"motis gbfs update", [&](boost::asio::io_context& ioc) {
-                          gbfs::run_gbfs_update(ioc, c, *d.w_, *d.l_, d.gbfs_,
-                                                d.metrics_.get());
+                          gbfs::run_gbfs_update(ioc, c, *d.w_, *d.l_, d.gbfs_);
                         }};
     }
 

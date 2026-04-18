@@ -6,7 +6,6 @@
 #include "boost/asio/io_context.hpp"
 
 #include "motis/fwd.h"
-#include "motis/metrics_registry.h"
 
 namespace motis::gbfs {
 
@@ -19,7 +18,6 @@ void run_gbfs_update(boost::asio::io_context&,
                      config const&,
                      osr::ways const&,
                      osr::lookup const&,
-                     std::shared_ptr<gbfs_data>&,
-                     metrics_registry const*);
+                     std::shared_ptr<gbfs_data>&);
 
 }  // namespace motis::gbfs

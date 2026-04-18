@@ -106,6 +106,7 @@ const translations: Translations = {
 	LONG_DISTANCE: 'Kolej dalekobieżna',
 	NIGHT_RAIL: 'Nocne pociągi',
 	REGIONAL_FAST_RAIL: 'Pociąg pospieszny',
+	ODM: 'Transport na żądanie',
 	REGIONAL_RAIL: 'Kolej regionalna',
 	OTHER: 'Inne',
 	routingSegments: {

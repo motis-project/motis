@@ -121,6 +121,10 @@ void config::verify() const {
                   nigiri::routing::kMaxSearchIntervalSize.count(),
               "plan_max_search_window_minutes limit cannot be above {}",
               nigiri::routing::kMaxSearchIntervalSize.count());
+  utl::verify(limits_.value().geocode_max_suggestions_ >= 1U,
+              "geocode_max_suggestions must be >= 1");
+  utl::verify(limits_.value().reverse_geocode_max_results_ >= 1U,
+              "reverse_geocode_max_results must be >= 1");
 
   if (timetable_) {
     utl::verify(!timetable_->route_shapes_.has_value() ||
@@ -191,7 +195,9 @@ void config::verify_input_files_exist() const {
 bool config::requires_rt_timetable_updates() const {
   return timetable_.has_value() &&
          ((has_elevators() && get_elevators()->url_.has_value()) ||
-          has_rt_feeds());
+          utl::any_of(timetable_->datasets_, [](auto&& d) {
+            return d.second.rt_.has_value() && !d.second.rt_->empty();
+          }));
 }
 
 bool config::shapes_debug_api_enabled() const {
@@ -228,12 +234,6 @@ bool config::has_elevators() const {
             return x;
           }},
       elevators_);
-}
-
-bool config::has_rt_feeds() const {
-  return utl::any_of(timetable_->datasets_, [](auto&& d) {
-    return d.second.rt_.has_value() && !d.second.rt_->empty();
-  });
 }
 
 std::optional<config::street_routing> config::get_street_routing() const {

@@ -104,6 +104,7 @@ const translations: Translations = {
 	LONG_DISTANCE: 'Intercity Rail',
 	NIGHT_RAIL: 'Night Rail',
 	REGIONAL_FAST_RAIL: 'Fast Rail',
+	ODM: 'On-Demand Mobility',
 	REGIONAL_RAIL: 'Regional Rail',
 	OTHER: 'Other',
 	RENTAL_BICYCLE: 'Shared bike',

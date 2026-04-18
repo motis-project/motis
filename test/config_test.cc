@@ -97,6 +97,8 @@ limits:
   gtfsrt_expose_max_trip_updates: 100
   street_routing_max_prepost_transit_seconds: 3600
   street_routing_max_direct_seconds: 21600
+  geocode_max_suggestions: 10
+  reverse_geocode_max_results: 5
 osr_footpath: true
 geocoding: true
 reverse_geocoding: false
