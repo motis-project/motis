@@ -415,10 +415,10 @@ api::trips_response get_trains(tag_lookup const& tags,
                   ? rt_index.rt_distances_[fr.rt_]
                   : static_index
                         .static_distances_[tt.transport_route_[fr.t_.t_idx_]],
-          .from_ = to_place(&tt, &tags, w, pl, matches, ae, tz, query.language_,
-                            tt_location{from}),
-          .to_ = to_place(&tt, &tags, w, pl, matches, ae, tz, query.language_,
-                          tt_location{to}),
+          .from_ = patch(to_place(&tt, &tags, w, pl, matches, ae, tz, query.language_,
+                            tt_location{from}), api_version),
+          .to_ = patch(to_place(&tt, &tags, w, pl, matches, ae, tz, query.language_,
+                          tt_location{to}), api_version),
           .departure_ = from.time(n::event_type::kDep),
           .arrival_ = to.time(n::event_type::kArr),
           .scheduledDeparture_ = from.scheduled_time(n::event_type::kDep),
@@ -447,6 +447,7 @@ Response build_routes_response(
     osr::platforms const* pl,
     platform_matches_t const* matches,
     std::vector<n::route_idx_t> const& route_indexes,
+    unsigned const /*api_version*/,
     std::optional<geo::box> const& area,
     std::optional<std::vector<std::string>> const& language) {
   auto res = Response{};
@@ -477,7 +478,7 @@ Response build_routes_response(
                                       : std::optional{tags.id(tt, parent)},
                      .lat_ = pos.lat_,
                      .lon_ = pos.lng_,
-                     .level_ = get_lvl(w, pl, matches, l).to_float()});
+                     .level_ = get_lvl(w, pl, matches, l).to_float()});  // TODO No level change needed?
     }
     return stop_index;
   };
@@ -641,7 +642,7 @@ api::routes_response get_routes(tag_lookup const& tags,
                                 railviz_static_index::impl const& static_index,
                                 railviz_rt_index::impl const&,
                                 api::routes_params const& query,
-                                unsigned const /*api_version*/) {
+                                unsigned const api_version) {
   auto const zoom_level = static_cast<int>(query.zoom_);
   auto const min = parse_location(query.min_);
   auto const max = parse_location(query.max_);
@@ -670,7 +671,7 @@ api::routes_response get_routes(tag_lookup const& tags,
   }
 
   auto res = build_routes_response<api::routes_response>(
-      tags, tt, shapes, w, pl, matches, route_indexes, area, query.language_);
+      tags, tt, shapes, w, pl, matches, route_indexes, api_version, area, query.language_);
   res.zoomFiltered_ = zoom_filtered;
   return res;
 }
@@ -688,7 +689,7 @@ api::routeDetails_response get_route_details(
     railviz_static_index::impl const&,
     railviz_rt_index::impl const&,
     api::routeDetails_params const& query,
-    unsigned const /*api_version*/) {
+    unsigned const api_version) {
   utl::verify<net::bad_request_exception>(
       query.routeIdx_ >= 0 &&
           query.routeIdx_ < static_cast<std::int64_t>(tt.n_routes()),
@@ -698,7 +699,8 @@ api::routeDetails_response get_route_details(
       n::route_idx_t{static_cast<n::route_idx_t::value_t>(query.routeIdx_)};
 
   auto res = build_routes_response<api::routeDetails_response>(
-      tags, tt, shapes, w, pl, matches, {route}, std::nullopt, query.language_);
+      tags, tt, shapes, w, pl, matches, {route}, api_version, std::nullopt,
+      query.language_);
   res.zoomFiltered_ = false;
   return res;
 }

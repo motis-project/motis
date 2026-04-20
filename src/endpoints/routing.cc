@@ -54,6 +54,7 @@
 #include "motis/osr/mode_to_profile.h"
 #include "motis/osr/street_routing.h"
 #include "motis/parse_location.h"
+#include "motis/place.h"
 #include "motis/server.h"
 #include "motis/tag_lookup.h"
 #include "motis/timetable/modes_to_clasz_mask.h"
@@ -1035,8 +1036,8 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
         .debugOutput_ =
             join(std::move(prepare_stats), std::move(query_stats),
                  r.search_stats_.to_map(), std::move(r.algo_stats_)),
-        .from_ = from_p,
-        .to_ = to_p,
+        .from_ = patch(std::move(from_p), api_version),
+        .to_ = patch(std::move(to_p), api_version),
         .direct_ = std::move(direct),
         .itineraries_ = utl::to_vec(
             journeys,

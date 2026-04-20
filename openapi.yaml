@@ -10,6 +10,7 @@ info:
 
     MOTIS 2.x - current, providing:
 
+    * /api/v6/{plan,trip,stoptimes,one-to-all,map/stops,map/trips} no longer set optional level to 0; since MOTIS 2.9.x
     * /api/v5/{plan,trip,stoptimes,map/trips} renamed METRO mode to SUBURBAN, AREAL_LIFT to AERIAL_LIFT; since MOTIS 2.5.0
     * /api/v4/{plan,trip,stoptimes,map/trips} new displayName property, routeShortName only contains actual route short name from source; since MOTIS 2.2.0
     * /api/v3/plan with correct maxTransfers API parameter (transfers actually corresponding to number of changes between transit legs (and not to number of transit legs), i.e. maxTransfers=0 returns direct public transit connections, as expected); since MOTIS 2.0.84 
@@ -35,7 +36,7 @@ servers:
   - url: http://localhost:8080
     description: Local MOTIS server
 paths:
-  /api/v5/plan:
+  /api/v6/plan:
     get:
       tags:
         - routing
@@ -1507,7 +1508,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
-  /api/v1/one-to-all:
+  /api/v6/one-to-all:
     get:
       tags:
         - routing
@@ -1963,7 +1964,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/Match'
 
-  /api/v5/trip:
+  /api/v6/trip:
     get:
       tags:
         - timetable
@@ -2048,7 +2049,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
-  /api/v5/stoptimes:
+  /api/v6/stoptimes:
     get:
       tags:
         - timetable
@@ -2279,7 +2280,7 @@ paths:
                       The next page is a set of stop times AFTER the last stop time in this result.
                     type: string
 
-  /api/v5/map/trips:
+  /api/v6/map/trips:
     get:
       tags:
         - map
@@ -2413,7 +2414,7 @@ paths:
                   serverConfig:
                     $ref: '#/components/schemas/ServerConfig'
 
-  /api/v1/map/stops:
+  /api/v6/map/stops:
     get:
       tags:
         - map
@@ -3373,7 +3374,6 @@ components:
         - name
         - lat
         - lon
-        - level
       properties:
         name:
           description: name of the transit stop / PoI / address
@@ -3394,7 +3394,12 @@ components:
           description: longitude
           type: number
         level:
-          description: level according to OpenStreetMap
+          description: |
+            level according to OpenStreetMap
+            If no level is given, the field will be unset.
+
+            For older versions (v1-v5), this field is mandatory and therefore set to 0.
+            Affects endpoints: plan,trip,stoptimes,one-to-all,map/stops,map/trips
           type: number
         tz:
           description: timezone name (e.g. "Europe/Berlin")

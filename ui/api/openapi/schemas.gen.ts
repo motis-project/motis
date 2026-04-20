@@ -443,7 +443,7 @@ export const PickupDropoffTypeSchema = {
 
 export const PlaceSchema = {
     type: 'object',
-    required: ['name', 'lat', 'lon', 'level'],
+    required: ['name', 'lat', 'lon'],
     properties: {
         name: {
             description: 'name of the transit stop / PoI / address',
@@ -470,7 +470,12 @@ export const PlaceSchema = {
             type: 'number'
         },
         level: {
-            description: 'level according to OpenStreetMap',
+            description: `level according to OpenStreetMap
+If no level is given, the field will be unset.
+
+For older versions (v1-v5), this field is mandatory and therefore set to 0.
+Affects endpoints: plan,trip,stoptimes,one-to-all,map/stops,map/trips
+`,
             type: 'number'
         },
         tz: {

@@ -13,6 +13,8 @@
 #include "motis/get_loc.h"
 #include "motis/match_platforms.h"
 #include "motis/osr/parameters.h"
+#include "motis/place.h"
+#include "motis/server.h"
 #include "motis/tag_lookup.h"
 
 namespace json = boost::json;
@@ -26,6 +28,7 @@ api::transfers_response transfers::operator()(
   auto const rt = std::atomic_load(&rt_);
   auto const e = rt->e_.get();
   auto const l = tags_.get_location(tt_, q.id_);
+  auto const api_version = get_api_version(url);
 
   auto const neighbors =
       loc_rtree_.in_radius(tt_.locations_.coordinates_[l], kMaxDistance);
@@ -94,11 +97,13 @@ api::transfers_response transfers::operator()(
         .vertexType_ = api::VertexTypeEnum::NORMAL};
   };
 
-  return {.place_ = to_place(l),
-          .root_ = to_place(tt_.locations_.get_root_idx(l)),
-          .equivalences_ = utl::to_vec(
-              tt_.locations_.equivalences_[l],
-              [&](n::location_idx_t const eq) { return to_place(eq); }),
+  return {.place_ = patch(to_place(l), api_version),
+          .root_ = patch(to_place(tt_.locations_.get_root_idx(l)), api_version),
+          .equivalences_ = utl::to_vec(tt_.locations_.equivalences_[l],
+                                       [&](n::location_idx_t const eq) {
+                                         return patch(to_place(eq),
+                                                      api_version);
+                                       }),
           .hasFootTransfers_ =
               !tt_.locations_.footpaths_out_[n::kFootProfile].empty(),
           .hasWheelchairTransfers_ =
@@ -106,7 +111,7 @@ api::transfers_response transfers::operator()(
           .hasCarTransfers_ =
               !tt_.locations_.footpaths_out_[n::kCarProfile].empty(),
           .transfers_ = utl::to_vec(footpaths, [&](auto&& e) {
-            e.second.to_ = to_place(e.first);
+            e.second.to_ = patch(to_place(e.first), api_version);
             return e.second;
           })};
 }

@@ -80,4 +80,8 @@ place_t get_place(nigiri::timetable const*,
                   tag_lookup const*,
                   std::string_view user_input);
 
+api::Place patch(api::Place&& pl, unsigned api_version);
+
+api::Place patch(api::Place const& pl, unsigned api_version);
+
 }  // namespace motis
