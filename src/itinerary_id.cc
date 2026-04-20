@@ -59,29 +59,7 @@ proto_id_t decode_itinerary_id(std::string const& id) {
   return parsed;
 }
 
-n::lang_t lang_from_str(std::string const& lang) {
-  return lang.empty() ? n::lang_t{} : n::lang_t{std::vector<std::string>{lang}};
-}
-
-void encode_lang(proto_id_t& id, n::lang_t const& lang) {
-  if (lang.has_value() && lang->size() > 0) {
-    id.set_lang(lang->front());
-  }
-}
-
 struct leg_hint {
-  explicit leg_hint(json::object const& l)
-      : display_name_{l.at("display_name").as_string()},
-        trip_id_{l.at("trip_id").as_string()},
-        from_stop_id_{l.at("from_id").as_string()},
-        to_stop_id_{l.at("to_id").as_string()},
-        sched_start_{l.at("sched_start").as_int64()},
-        sched_end_{l.at("sched_end").as_int64()},
-        mode_{json::value_to<api::ModeEnum>(l.at("mode"))},
-        scheduled_{l.at("scheduled").as_bool()} {
-    decode_coords(l.at("coords").as_string());
-  }
-
   explicit leg_hint(proto_leg_t const& l)
       : display_name_{l.display_name()},
         trip_id_{l.trip_id()},
@@ -121,9 +99,10 @@ private:
   }
 };
 
-proto_leg_t get_leg_id_proto(api::Leg const& l) {
+proto_leg_t get_leg_id_proto(api::Leg const& l,
+                             std::string const& leg_display_name) {
   auto id = proto_leg_t{};
-  id.set_display_name(l.displayName_.value());
+  id.set_display_name(leg_display_name);
   id.set_trip_id(l.tripId_.value());
   id.set_from_id(l.from_.stopId_.value());
   id.set_to_id(l.to_.stopId_.value());
@@ -136,10 +115,10 @@ proto_leg_t get_leg_id_proto(api::Leg const& l) {
   return id;
 }
 
-std::string get_single_leg_id(api::Leg const& l, n::lang_t const& lang) {
+std::string get_single_leg_id(api::Leg const& l,
+                              std::string const& leg_display_name) {
   auto id = proto_id_t{};
-  encode_lang(id, lang);
-  id.mutable_leg()->Add(get_leg_id_proto(l));
+  id.mutable_legs()->Add(get_leg_id_proto(l, leg_display_name));
 
   auto data = std::string{};
   utl::verify(id.SerializeToString(&data), "failed to serialize itinerary id");
@@ -340,8 +319,7 @@ std::optional<from_to_candidate> get_best_candidate(
     leg_hint const& hint,
     bool const require_display_name_match,
     tag_lookup const& tags,
-    n::rt_timetable const* rtt,
-    n::lang_t const& lang) {
+    n::rt_timetable const* rtt) {
   if (from_resp.empty() || to_resp.empty()) {
     return std::nullopt;
   }
@@ -361,7 +339,7 @@ std::optional<from_to_candidate> get_best_candidate(
 
     if (require_display_name_match &&
         hint.display_name_ !=
-            st.run_[0].display_name(n::event_type::kDep, lang)) {
+            st.run_[0].display_name(n::event_type::kDep, n::lang_t{})) {
       continue;
     }
 
@@ -435,10 +413,10 @@ api::Itinerary reconstruct_itinerary(ep::stop_times const& stop_times_ep,
   auto stop_times_rt = std::atomic_load(&stop_times_ep.rt_);
   auto stop_times_rtt = stop_times_rt->rtt_.get();
   auto const parsed_id = decode_itinerary_id(id);
-  utl::verify(parsed_id.leg_size() == 1,
+  utl::verify(parsed_id.legs_size() == 1,
               "reconstruct_itinerary: itinerary id must have a single leg");
-  auto const lang = lang_from_str(parsed_id.lang());
-  auto const lh = leg_hint{parsed_id.leg(0)};
+  auto const lang = n::lang_t{};
+  auto const lh = leg_hint{parsed_id.legs(0)};
   auto const get_run =
       [&]() -> std::tuple<n::rt::frun, n::stop_idx_t, n::stop_idx_t> {
     if (!lh.scheduled_) {
@@ -481,7 +459,7 @@ api::Itinerary reconstruct_itinerary(ep::stop_times const& stop_times_ep,
 
       auto const best_from_to = get_best_candidate(
           from_st_res, to_st_res, lh, require_display_name_match,
-          stop_times_ep.tags_, stop_times_rtt, lang);
+          stop_times_ep.tags_, stop_times_rtt);
 
       utl::verify(best_from_to.has_value(), "no matching route is found");
 

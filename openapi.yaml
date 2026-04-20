@@ -4596,15 +4596,12 @@ components:
     ItineraryId:
       type: object
       required:
-        - leg
-        - lang
+        - legs
       properties:
-        leg:
+        legs:
           type: array
           items:
             $ref: '#/components/schemas/LegId'
-        lang:
-          type: string
 
     RefreshItineraryPostBody:
       type: object

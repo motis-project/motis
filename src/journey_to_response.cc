@@ -399,6 +399,9 @@ api::Itinerary journey_to_response(
         });
   };
 
+  auto default_display_names = std::vector<std::string>{};
+  auto default_display_names_indices = std::vector<int>{};
+
   for (auto const [j_leg_idx, j_leg] : utl::enumerate(j.legs_)) {
     auto const pred =
         itinerary.legs_.empty() ? nullptr : &itinerary.legs_.back();
@@ -462,6 +465,11 @@ api::Itinerary journey_to_response(
                 }();
                 auto const [service_day, _] =
                     enter_stop.get_trip_start(n::event_type::kDep);
+
+                default_display_names.emplace_back(std::string{
+                    enter_stop.display_name(n::event_type::kDep, n::lang_t{})});
+                default_display_names_indices.emplace_back(
+                    itinerary.legs_.size());
 
                 auto& leg = itinerary.legs_.emplace_back(api::Leg{
                     .mode_ = to_mode(enter_stop.get_clasz(n::event_type::kDep),
@@ -684,7 +692,13 @@ api::Itinerary journey_to_response(
 
   if (itinerary.legs_.size() == 1 &&
       itinerary.legs_.front().tripId_.has_value()) {
-    itinerary.id_ = get_single_leg_id(itinerary.legs_.at(0), lang);
+    // temporary for single leg
+    if (default_display_names_indices.size() == 1 &&
+        default_display_names_indices[0] == 0) {
+      itinerary.id_ = get_single_leg_id(
+          itinerary.legs_.at(0),
+          default_display_names.at(default_display_names_indices[0]));
+    }
   }
 
   return itinerary;

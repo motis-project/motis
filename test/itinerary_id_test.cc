@@ -32,14 +32,14 @@ namespace fs = std::filesystem;
 namespace n = nigiri;
 
 std::string generate_itinerary_id(api::Itinerary const& x) {
-  return get_single_leg_id(x.legs_.at(0), n::lang_t{});
+  return get_single_leg_id(x.legs_.at(0), x.legs_[0].displayName_.value());
 }
 
 api::RefreshItineraryPostBody make_refresh_itinerary_post_body(
     api::Itinerary const& itinerary) {
   auto const& leg = itinerary.legs_.at(0);
   auto body = api::RefreshItineraryPostBody{};
-  body.id_.leg_.push_back(api::LegId{
+  body.id_.legs_.push_back(api::LegId{
       .displayName_ = leg.displayName_.value(),
       .tripId_ = leg.tripId_.value(),
       .fromId_ = leg.from_.stopId_.value(),

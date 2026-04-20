@@ -15,6 +15,5 @@ message LegId {
 }
 
 message ItineraryId {
-  repeated LegId leg = 1;
-  string lang = 2;
+  repeated LegId legs = 1;
 }

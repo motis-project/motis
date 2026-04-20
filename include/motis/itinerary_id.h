@@ -7,7 +7,8 @@
 
 namespace motis {
 
-std::string get_single_leg_id(api::Leg const&, nigiri::lang_t const&);
+std::string get_single_leg_id(api::Leg const&,
+                              std::string const& leg_display_name);
 
 api::Itinerary reconstruct_itinerary(
     ep::stop_times const&,
