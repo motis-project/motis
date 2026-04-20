@@ -2480,6 +2480,82 @@ paths:
                 items:
                   $ref: '#/components/schemas/Place'
 
+  /api/v1/stop/routes:
+    get:
+      tags:
+        - timetable
+      summary: Get all routes/lines serving a stop (without time-based queries)
+      operationId: stopRoutes
+      parameters:
+        - name: stopId
+          in: query
+          required: false
+          description: stop ID as returned by /api/v1/geocode or /api/v1/map/stops
+          schema:
+            type: string
+
+        - name: center
+          in: query
+          required: false
+          description: |
+            latitude,longitude pair used as center for a radius search
+            (used when stopId is not provided)
+          schema:
+            type: string
+
+        - name: radius
+          in: query
+          required: false
+          description: search radius in meters around center (default 500)
+          schema:
+            type: integer
+
+        - name: language
+          in: query
+          required: false
+          description: |
+            language tags as used in OpenStreetMap / GTFS
+            (usually BCP-47 / ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
+          schema:
+            type: array
+            items:
+              type: string
+          explode: false
+
+      responses:
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '200':
+          description: array of routes/lines serving the stop(s)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Route'
+
   /api/v1/map/levels:
     get:
       tags:
@@ -2917,6 +2993,39 @@ paths:
 
 components:
   schemas:
+    Route:
+      description: a transit route/line serving a stop
+      type: object
+      required:
+        - routeId
+        - routeShortName
+        - routeLongName
+        - mode
+        - agencyId
+        - agencyName
+        - agencyUrl
+      properties:
+        routeId:
+          type: string
+        routeShortName:
+          type: string
+        routeLongName:
+          type: string
+        mode:
+          $ref: '#/components/schemas/Mode'
+        agencyId:
+          type: string
+        agencyName:
+          type: string
+        agencyUrl:
+          type: string
+        routeColor:
+          type: string
+        routeTextColor:
+          type: string
+        routeType:
+          type: integer
+
     AlertCause:
       description: Cause of this alert.
       type: string
