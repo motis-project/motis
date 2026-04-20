@@ -371,6 +371,11 @@ std::optional<from_to_candidate> get_best_candidate(
                      std::abs(hint.sched_start_ - st.scheduledDeparture_.value()
                                                       .get_unixtime_seconds()));
   }
+
+  if (from_cands.size() == 0) {
+    return std::nullopt;
+  }
+
   for (auto const& st : to_resp) {
     if (!st.scheduledArrival_.has_value()) {
       continue;
