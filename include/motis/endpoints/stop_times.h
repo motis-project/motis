@@ -27,7 +27,8 @@ struct stop_times {
       nigiri::rt_timetable const*,
       nigiri::event_type const&,
       std::optional<nigiri::location_idx_t> const& query_stop,
-      std::optional<osr::location> const& query_center) const;
+      std::optional<osr::location> const& query_center,
+      bool const disable_stoptimes_max_limit = false) const;
 
   config const& config_;
   osr::ways const* w_;

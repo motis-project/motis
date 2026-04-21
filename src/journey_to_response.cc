@@ -400,7 +400,7 @@ api::Itinerary journey_to_response(
   };
 
   auto default_display_names = std::vector<std::string>{};
-  auto default_display_names_indices = std::vector<int>{};
+  auto default_display_names_indices = std::vector<std::size_t>{};
 
   for (auto const [j_leg_idx, j_leg] : utl::enumerate(j.legs_)) {
     auto const pred =

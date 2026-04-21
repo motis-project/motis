@@ -356,9 +356,12 @@ std::vector<n::rt::run> stop_times::get_runs(
     nigiri::rt_timetable const* rtt,
     nigiri::event_type const& ev_type,
     std::optional<nigiri::location_idx_t> const& query_stop,
-    std::optional<osr::location> const& query_center) const {
+    std::optional<osr::location> const& query_center,
+    bool const disable_stoptimes_max_limit) const {
 
-  auto const max_results = config_.get_limits().stoptimes_max_results_;
+  auto const max_results = disable_stoptimes_max_limit
+                               ? 999888777U
+                               : config_.get_limits().stoptimes_max_results_;
   utl::verify<net::bad_request_exception>(
       query.n_.has_value() || query.window_.has_value(),
       "neither 'n' nor 'window' is provided");

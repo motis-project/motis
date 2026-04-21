@@ -47,8 +47,8 @@ using proto_leg_t = ::motis::proto::LegId;
 
 constexpr auto kTimeMul = 1.0 / 60.0 * 7;
 constexpr auto kSearchRadiusMeters = 100;
-constexpr auto kLookbackSeconds = std::int64_t{8 * 60};
-constexpr auto kNonSchedAllowedDeviationSeconds = std::int64_t{15 * 60};
+constexpr auto kLookbackSeconds = std::int64_t{60 * 60};
+constexpr auto kNonSchedAllowedDeviationSeconds = std::int64_t{30 * 60};
 
 constexpr auto kExactTripIdMatchAddScore = 50.0;
 
@@ -170,7 +170,7 @@ std::vector<st_candidate> get_st_candidates_in_radius(
       [&](std::string const& x) { return parse_location(x); });
 
   auto const events =
-      st_ep.get_runs(query, rtt, ev_type, query_stop, query_center);
+      st_ep.get_runs(query, rtt, ev_type, query_stop, query_center, true);
 
   return utl::to_vec(events, [&](n::rt::run const r) -> st_candidate {
     auto const fr = n::rt::frun{st_ep.tt_, rtt, r};
