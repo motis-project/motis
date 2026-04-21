@@ -31,9 +31,9 @@ api::stops_response stops::operator()(boost::urls::url_view const& url) const {
   loc_rtree_.find({min->pos_, max->pos_}, [&](n::location_idx_t const l) {
     utl::verify<net::too_many_exception>(res.size() < max_results,
                                          "too many items");
-    res.emplace_back(patch(to_place(&tt_, &tags_, w_, pl_, matches_, ae_, tz_,
-                                    query.language_, tt_location{l}),
-                           api_version));
+    res.emplace_back(bwc_adjust(to_place(&tt_, &tags_, w_, pl_, matches_, ae_,
+                                         tz_, query.language_, tt_location{l}),
+                                api_version));
   });
   return res;
 }

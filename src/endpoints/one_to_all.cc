@@ -57,8 +57,8 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
   auto const make_place = [&](place_t const& p, n::unixtime_t const t,
                               n::event_type const ev) {
     auto place =
-        patch(to_place(&tt_, &tags_, w_, pl_, matches_, ae_, tz_, {}, p),
-              api_version);
+        bwc_adjust(to_place(&tt_, &tags_, w_, pl_, matches_, ae_, tz_, {}, p),
+                   api_version);
     if (ev == n::event_type::kArr) {
       place.arrival_ = t;
     } else {

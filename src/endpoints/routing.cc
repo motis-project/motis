@@ -1036,8 +1036,8 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
         .debugOutput_ =
             join(std::move(prepare_stats), std::move(query_stats),
                  r.search_stats_.to_map(), std::move(r.algo_stats_)),
-        .from_ = patch(std::move(from_p), api_version),
-        .to_ = patch(std::move(to_p), api_version),
+        .from_ = bwc_adjust(std::move(from_p), api_version),
+        .to_ = bwc_adjust(std::move(to_p), api_version),
         .direct_ = std::move(direct),
         .itineraries_ = utl::to_vec(
             journeys,

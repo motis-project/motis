@@ -310,7 +310,7 @@ std::vector<api::Place> other_stops_impl(n::rt::frun fr,
                                          n::lang_t const& lang,
                                          unsigned const api_version) {
   auto const convert_stop = [&](n::rt::run_stop const& stop) {
-    auto result = patch(to_place(tt, &tags, w, pl, matches, ae, tz, lang, stop),
+    auto result = bwc_adjust(to_place(tt, &tags, w, pl, matches, ae, tz, lang, stop),
                         api_version);
     if (ev_type == n::event_type::kDep ||
         stop.fr_->stop_range_.from_ != stop.stop_idx_) {
@@ -524,16 +524,16 @@ api::stoptimes_response stop_times::operator()(
             };
 
             return {
-                .place_ = patch(std::move(place), api_version),
+                .place_ = bwc_adjust(std::move(place), api_version),
                 .mode_ = to_mode(s.get_clasz(ev_type), api_version),
                 .realTime_ = r.is_rt(),
                 .headsign_ = std::string{s.direction(lang, ev_type)},
                 .tripFrom_ =
-                    patch(to_place(&tt_, &tags_, w_, pl_, matches_, ae_, tz_,
+                    bwc_adjust(to_place(&tt_, &tags_, w_, pl_, matches_, ae_, tz_,
                                    lang, s.get_first_trip_stop(ev_type)),
                           api_version),
                 .tripTo_ =
-                    patch(to_place(&tt_, &tags_, w_, pl_, matches_, ae_, tz_,
+                    bwc_adjust(to_place(&tt_, &tags_, w_, pl_, matches_, ae_, tz_,
                                    lang, s.get_last_trip_stop(ev_type)),
                           api_version),
                 .agencyId_ =
@@ -579,7 +579,7 @@ api::stoptimes_response stop_times::operator()(
                 });
               })
               .transform(
-                  [&](api::Place&& pl) { return patch(pl, api_version); })
+                  [&](api::Place&& pl) { return bwc_adjust(pl, api_version); })
               .value(),
       .previousPageCursor_ =
           events.empty()

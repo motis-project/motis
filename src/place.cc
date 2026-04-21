@@ -221,14 +221,14 @@ place_t get_place(n::timetable const* tt,
   return tt_location{tags->get_location(*tt, input)};
 }
 
-api::Place patch(api::Place&& pl, unsigned const api_version) {
+api::Place bwc_adjust(api::Place&& pl, unsigned const api_version) {
   if (!pl.level_.has_value() && 0 < api_version && api_version < 6) {
     pl.level_ = {0U};
   }
   return pl;
 }
 
-api::Place patch(api::Place const& pl, unsigned const api_version) {
+api::Place bwc_adjust(api::Place const& pl, unsigned const api_version) {
   auto p = pl;
   if (!p.level_.has_value() && 0 < api_version && api_version < 6) {
     p.level_ = {0U};

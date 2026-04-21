@@ -97,12 +97,13 @@ api::transfers_response transfers::operator()(
         .vertexType_ = api::VertexTypeEnum::NORMAL};
   };
 
-  return {.place_ = patch(to_place(l), api_version),
-          .root_ = patch(to_place(tt_.locations_.get_root_idx(l)), api_version),
+  return {.place_ = bwc_adjust(to_place(l), api_version),
+          .root_ =
+              bwc_adjust(to_place(tt_.locations_.get_root_idx(l)), api_version),
           .equivalences_ = utl::to_vec(tt_.locations_.equivalences_[l],
                                        [&](n::location_idx_t const eq) {
-                                         return patch(to_place(eq),
-                                                      api_version);
+                                         return bwc_adjust(to_place(eq),
+                                                           api_version);
                                        }),
           .hasFootTransfers_ =
               !tt_.locations_.footpaths_out_[n::kFootProfile].empty(),
@@ -111,7 +112,7 @@ api::transfers_response transfers::operator()(
           .hasCarTransfers_ =
               !tt_.locations_.footpaths_out_[n::kCarProfile].empty(),
           .transfers_ = utl::to_vec(footpaths, [&](auto&& e) {
-            e.second.to_ = patch(to_place(e.first), api_version);
+            e.second.to_ = bwc_adjust(to_place(e.first), api_version);
             return e.second;
           })};
 }
