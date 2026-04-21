@@ -11,7 +11,7 @@
 	import { updateOverlayLayers } from '$lib/updateOverlay';
 	import { createStopIcon } from '../createIcon';
 	import { hexToRgb } from '$lib/Color';
-	import { getModeStyle } from '$lib/modeStyle';
+	import { getModeStyle, type LegLike } from '$lib/modeStyle';
 
 	let {
 		map,
@@ -104,7 +104,7 @@
 	});
 
 	const createModeIcon = (mode: Mode): HTMLElement => {
-		const [icon, bg, fg] = getModeStyle({ mode } as any);
+		const [icon, bg, fg] = getModeStyle({ mode } as LegLike);
 		const span = Object.assign(document.createElement('span'), {
 			innerHTML: `<svg width="17" height="17" fill="currentColor"><use href="#${icon}"></use></svg>`
 		});
@@ -239,7 +239,7 @@
 					modes: data[i].modes
 				};
 				const mode = data[i].modes ? data[i].modes![0] : undefined;
-				const color = mode ? hexToRgb(getModeStyle({ mode } as any)[1]) : hexToRgb('#000000');
+				const color = mode ? hexToRgb(getModeStyle({ mode } as LegLike)[1]) : hexToRgb('#000000');
 				positions[2 * index] = data[i].lon;
 				positions[2 * index + 1] = data[i].lat;
 				colors[3 * index] = color[0];
