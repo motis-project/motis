@@ -2441,12 +2441,14 @@ paths:
           schema:
             type: boolean
 
-        - name: zoom
+        - name: modes
           in: query
           required: false
-          description: Optional. Current zoom level
+          description: Optional. Stop modes
           schema:
-            type: number
+            type: array
+            items:
+              $ref: '#/components/schemas/Mode'
 
         - name: language
           in: query

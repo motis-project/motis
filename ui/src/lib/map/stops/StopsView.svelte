@@ -36,11 +36,31 @@
 		const max = lngLatToStr(b.getNorthWest());
 		const min = lngLatToStr(b.getSouthEast());
 		const grouped = stopsMode == 'grouped';
+		let modes: Mode[] | undefined = [];
+		if (zoom > 7) {
+			modes.push('HIGHSPEED_RAIL');
+			modes.push('LONG_DISTANCE');
+		}
+		if (zoom > 11) {
+			modes.push('REGIONAL_RAIL');
+			modes.push('ODM');
+		}
+		if (zoom > 13) {
+			modes.push('SUBWAY');
+			modes.push('SUBURBAN');
+		}
+		if (zoom > 15) {
+			modes.push('BUS');
+			modes.push('TRAM');
+		}
+		if (zoom > 17) {
+			modes = undefined;
+		}
 		return {
 			min,
 			max,
-			zoom: zoom < 13 ? 9 : zoom,
-			grouped
+			grouped,
+			modes
 		};
 	});
 
@@ -115,14 +135,6 @@
 			gap: '6px',
 			marginRight: '-28px'
 		});
-
-		const name = Object.assign(document.createElement('span'), { textContent: data.name });
-		Object.assign(name.style, {
-			fontSize: '14px',
-			fontWeight: '700',
-			lineHeight: '1.2'
-		});
-		root.appendChild(name);
 
 		if (data.track) {
 			const track = document.createElement('span');
