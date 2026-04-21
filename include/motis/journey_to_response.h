@@ -67,6 +67,7 @@ api::Itinerary journey_to_response(
     unsigned api_version,
     bool ignore_start_rental_return_constraints,
     bool ignore_dest_rental_return_constraints,
-    std::optional<std::vector<std::string>> const& language);
+    std::optional<std::vector<std::string>> const& language,
+    bool const set_itinerary_id_field = true);
 
 }  // namespace motis

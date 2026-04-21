@@ -242,6 +242,11 @@ api::Itinerary build_itinerary_from_frun(
     ep::stop_times const& stop_times,
     n::shapes_storage const* shapes,
     n::rt_timetable const* rtt,
+    bool const join_interlined_legs,
+    bool const detailed_transfers,
+    bool const detailed_legs,
+    bool const with_fares,
+    bool const with_scheduled_skipped_stops,
     n::lang_t const& lang) {
   auto const& [fr, from_idx, to_idx] = run;
   utl::verify(fr.stop_range_.contains(from_idx), "from_idx={} out of range {}",
@@ -269,12 +274,6 @@ api::Itinerary build_itinerary_from_frun(
   auto blocked = osr::bitvec<osr::node_idx_t>{};
   auto gbfs_rd = gbfs::gbfs_routing_data{};
 
-  // routing defaults
-  constexpr auto join_interlined_legs = true;
-  constexpr auto detailed_transfers = false;
-  constexpr auto detailed_legs = true;
-  constexpr auto with_fares = false;
-  constexpr auto with_scheduled_skipped_stops = false;
   constexpr auto api_version = 0;
 
   return journey_to_response(
@@ -288,7 +287,7 @@ api::Itinerary build_itinerary_from_frun(
       api::ElevationCostsEnum::NONE, join_interlined_legs, detailed_transfers,
       detailed_legs, with_fares, with_scheduled_skipped_stops,
       stop_times.config_.timetable_.value().max_matching_distance_,
-      kMaxMatchingDistance, api_version, false, false, lang);
+      kMaxMatchingDistance, api_version, false, false, lang, false);
 }
 
 struct candidate_score {
@@ -409,13 +408,18 @@ api::Itinerary reconstruct_itinerary(ep::stop_times const& stop_times_ep,
                                      nigiri::shapes_storage const* shapes,
                                      rt const& rt,
                                      std::string const& id,
-                                     bool const require_display_name_match) {
+                                     bool const require_display_name_match,
+                                     bool const join_interlined_legs,
+                                     bool const detailed_transfers,
+                                     bool const detailed_legs,
+                                     bool const with_fares,
+                                     bool const with_scheduled_skipped_stops,
+                                     n::lang_t const& lang) {
   auto stop_times_rt = std::atomic_load(&stop_times_ep.rt_);
   auto stop_times_rtt = stop_times_rt->rtt_.get();
   auto const parsed_id = decode_itinerary_id(id);
   utl::verify(parsed_id.legs_size() == 1,
               "reconstruct_itinerary: itinerary id must have a single leg");
-  auto const lang = n::lang_t{};
   auto const lh = leg_hint{parsed_id.legs(0)};
   auto const get_run =
       [&]() -> std::tuple<n::rt::frun, n::stop_idx_t, n::stop_idx_t> {
@@ -478,8 +482,10 @@ api::Itinerary reconstruct_itinerary(ep::stop_times const& stop_times_ep,
     }
   };
 
-  auto res = build_itinerary_from_frun(get_run(), stop_times_ep, shapes,
-                                       rt.rtt_.get(), lang);
+  auto res = build_itinerary_from_frun(
+      get_run(), stop_times_ep, shapes, rt.rtt_.get(), join_interlined_legs,
+      detailed_transfers, detailed_legs, with_fares,
+      with_scheduled_skipped_stops, lang);
   res.id_ = id;
   return res;
 }

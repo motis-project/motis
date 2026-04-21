@@ -33,8 +33,11 @@ api::Itinerary refresh_itinerary::operator()(
 
   auto const rt = std::atomic_load(&rt_);
 
-  return reconstruct_itinerary(stop_times_ep, shapes_, *rt, query.itineraryId_,
-                               query.requireDisplayNameMatch_);
+  return reconstruct_itinerary(
+      stop_times_ep, shapes_, *rt, query.itineraryId_,
+      query.requireDisplayNameMatch_, query.joinInterlinedLegs_,
+      query.detailedTransfers_, query.detailedLegs_, query.withFares_,
+      query.withScheduledSkippedStops_, query.language_);
 }
 
 api::Itinerary refresh_itinerary_post::operator()(

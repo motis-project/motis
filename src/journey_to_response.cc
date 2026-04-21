@@ -268,7 +268,8 @@ api::Itinerary journey_to_response(
     unsigned const api_version,
     bool const ignore_start_rental_return_constraints,
     bool const ignore_dest_rental_return_constraints,
-    n::lang_t const& lang) {
+    n::lang_t const& lang,
+    bool const set_itinerary_id_field) {
   utl::verify(!j.legs_.empty(), "journey without legs");
 
   auto const fares =
@@ -690,11 +691,15 @@ api::Itinerary journey_to_response(
 
   cleanup_intermodal(itinerary);
 
-  if (itinerary.legs_.size() == 1 &&
-      itinerary.legs_.front().tripId_.has_value()) {
-    // temporary for single leg
-    if (default_display_names_indices.size() == 1 &&
-        default_display_names_indices[0] == 0) {
+  if (set_itinerary_id_field) {
+    if (itinerary.legs_.size() == 1 &&
+        itinerary.legs_.front().tripId_.has_value()) {
+      // temporary for single leg
+      utl::verify(
+          default_display_names_indices.size() == 1 &&
+              default_display_names_indices.at(0) == 0,
+          "default_display_names_indices is set incorrectly for the single "
+          "leg case");
       itinerary.id_ = get_single_leg_id(
           itinerary.legs_.at(0),
           default_display_names.at(default_display_names_indices[0]));
