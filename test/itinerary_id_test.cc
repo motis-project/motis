@@ -32,7 +32,8 @@ namespace fs = std::filesystem;
 namespace n = nigiri;
 
 std::string generate_itinerary_id(api::Itinerary const& x) {
-  return get_single_leg_id(x.legs_.at(0), x.legs_[0].displayName_.value());
+  auto const& leg = x.legs_.at(0);
+  return get_single_leg_id(leg, leg.displayName_.value());
 }
 
 api::RefreshItineraryPostBody make_refresh_itinerary_post_body(
