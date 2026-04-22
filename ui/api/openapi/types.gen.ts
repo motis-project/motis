@@ -2909,6 +2909,14 @@ export type OneToAllError = (Error);
 export type ReverseGeocodeData = {
     query: {
         /**
+         * Optional. Number of results to return.
+         *
+         * If omitted, 5 results are returned by default.
+         * Must be <= server config variable `reverse_geocode_max_results`.
+         *
+         */
+        numResults?: number;
+        /**
          * latitude, longitude in degrees
          */
         place: string;
@@ -2941,6 +2949,14 @@ export type GeocodeData = {
          *
          */
         mode?: Array<Mode>;
+        /**
+         * Optional. Number of suggestions to return.
+         *
+         * If omitted, 10 suggestions are returned by default.
+         * Must be <= server config variable `geocode_max_suggestions`.
+         *
+         */
+        numResults?: number;
         /**
          * Optional. Used for biasing results towards the coordinate.
          *
