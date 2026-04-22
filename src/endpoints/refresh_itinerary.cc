@@ -54,9 +54,11 @@ api::Itinerary refresh_itinerary_post::operator()(
   auto const stop_times_ep = make_scheduled_stop_times(*this);
 
   auto const rt = std::atomic_load(&rt_);
-  return reconstruct_itinerary(stop_times_ep, shapes_, *rt,
-                               net::encode_base64(data),
-                               body.requireDisplayNameMatch_);
+  return reconstruct_itinerary(
+      stop_times_ep, shapes_, *rt, net::encode_base64(data),
+      body.requireDisplayNameMatch_, body.joinInterlinedLegs_,
+      body.detailedTransfers_, body.detailedLegs_, body.withFares_,
+      body.withScheduledSkippedStops_, body.language_);
 }
 
 }  // namespace motis::ep

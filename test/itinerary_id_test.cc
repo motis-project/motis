@@ -225,12 +225,15 @@ data import_test_data(config const& cfg, std::string_view const sub_dir) {
 api::Itinerary route_first_itinerary(data& data,
                                      std::string_view const from_place,
                                      std::string_view const to_place,
-                                     std::string_view const time) {
+                                     std::string_view const time,
+                                     bool const detailed_legs = true,
+                                     bool const detailed_transfers = false) {
   auto const routing = utl::init_from<ep::routing>(data).value();
   auto const query = fmt::format(
       "?fromPlace={}&toPlace={}&time={}&timetableView=true"
-      "&directModes=WALK,RENTAL",
-      from_place, to_place, time);
+      "&directModes=WALK,RENTAL&detailedLegs={}&detailedTransfers={}",
+      from_place, to_place, time, detailed_legs ? "true" : "false",
+      detailed_transfers ? "true" : "false");
   return routing(query).itineraries_.at(0);
 }
 
@@ -391,19 +394,22 @@ TEST(motis, refresh_itinerary_endpoint_reconstructs_itinerary) {
   auto target_data =
       import_test_data(target_cfg, "refresh_itinerary_endpoint_target");
   auto expected = route_first_itinerary(target_data, "test_FFM", "test_DA",
-                                        "2019-05-01T02:00Z");
+                                        "2019-05-01T02:00Z", false);
   expected.id_ = id;
 
   auto const refresh = utl::init_from<ep::refresh_itinerary>(target_data);
   auto query = api::refreshItinerary_params{};
   query.itineraryId_ = id;
+  query.detailedLegs_ = false;
 
   auto const get_res = (*refresh)(query.to_url("?"));
   EXPECT_EQ(expected, get_res);
 
   auto const refresh_post =
       utl::init_from<ep::refresh_itinerary_post>(target_data).value();
-  EXPECT_EQ(get_res, refresh_post(make_refresh_itinerary_post_body(original)));
+  auto body = make_refresh_itinerary_post_body(original);
+  body.detailedLegs_ = false;
+  EXPECT_EQ(get_res, refresh_post(body));
 }
 
 TEST(motis, refresh_itinerary_matches_scheduled_then_applies_realtime) {
