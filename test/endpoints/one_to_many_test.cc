@@ -759,13 +759,21 @@ TEST(one_to_many, street_routing) {
     ASSERT_EQ(plan_durations.direct_.at(0).legs_.size(), 1);
     ASSERT_TRUE(plan_durations.direct_.at(0).legs_.at(0).distance_.has_value());
 
+    // Ensure same duratation
     auto const post_duration =
         one_to_many_post_durations.street_durations_->at(0).duration_.value();
     auto const get_duration = one_to_many_get_durations.at(0).duration_.value();
     auto const plan_duration = plan_durations.direct_.at(0).duration_;
-    // auto const plan_distance =
-    //     plan_durations.direct_.at(0).legs_.at(0).distance_.value();
-    EXPECT_NEAR(post_duration, get_duration, 0.1);
-    EXPECT_NEAR(post_duration, plan_duration, 0.1);
+    EXPECT_DOUBLE_EQ(post_duration, get_duration);
+    EXPECT_DOUBLE_EQ(post_duration, plan_duration);
+    // Ensure same distance
+    auto const post_distance =
+        one_to_many_post_durations.street_durations_->at(0).distance_.value();
+    auto const get_distance = one_to_many_get_durations.at(0).distance_.value();
+    auto const plan_distance =
+        plan_durations.direct_.at(0).legs_.at(0).distance_.value();
+    EXPECT_DOUBLE_EQ(post_distance, get_distance);
+    // Notice: plan_distance is computed from int -> plan <= post < plan + 1
+    EXPECT_NEAR(post_distance, plan_distance + 0.5, 0.5);
   }
 }
