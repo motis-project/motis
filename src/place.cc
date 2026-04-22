@@ -1,6 +1,5 @@
 #include "motis/place.h"
 
-#include <optional>
 #include <variant>
 
 #include "utl/verify.h"

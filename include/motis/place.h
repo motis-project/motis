@@ -1,5 +1,7 @@
 #pragma once
 
+#include <optional>
+
 #include "osr/location.h"
 
 #include "nigiri/types.h"

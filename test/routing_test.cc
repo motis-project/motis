@@ -669,11 +669,11 @@ TEST(motis, routing) {
     (from=test_FFM_HAUPT_U [track=-, scheduled_track=-, level=-4], to=- [track=-, scheduled_track=-, level=-], start=2019-05-01 02:10, mode="WALK", trip="-", end=2019-05-01 02:15)
 ])",
         to_str(res.itineraries_));
-    // Same test but using an older endpoint version; Must set level for v1 to
-    // v5
+    // Same test but using an older endpoint version (v1 - v5)
+    // This test must always set a level
     {
       auto const res2 = routing(
-          "/api/v5/plan"  // Use any older endpoint v1 to v5
+          "/api/v5/plan"  // Specify any older endpoint v1 to v5
           "?fromPlace=49.87263,8.63127"
           "&toPlace=50.11347,8.67664"
           "&time=2019-05-01T01:25Z"

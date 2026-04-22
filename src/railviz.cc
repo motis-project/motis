@@ -477,7 +477,7 @@ Response build_routes_response(
                                       : std::optional{tags.id(tt, parent)},
                      .lat_ = pos.lat_,
                      .lon_ = pos.lng_,
-                     .level_ = get_lvl(w, pl, matches, l).to_float()});  // TODO No level change needed?
+                     .level_ = get_lvl(w, pl, matches, l).to_float()});
     }
     return stop_index;
   };
@@ -698,8 +698,7 @@ api::routeDetails_response get_route_details(
       n::route_idx_t{static_cast<n::route_idx_t::value_t>(query.routeIdx_)};
 
   auto res = build_routes_response<api::routeDetails_response>(
-      tags, tt, shapes, w, pl, matches, {route}, std::nullopt,
-      query.language_);
+      tags, tt, shapes, w, pl, matches, {route}, std::nullopt, query.language_);
   res.zoomFiltered_ = false;
   return res;
 }

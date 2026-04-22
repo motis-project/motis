@@ -310,8 +310,8 @@ std::vector<api::Place> other_stops_impl(n::rt::frun fr,
                                          n::lang_t const& lang,
                                          unsigned const api_version) {
   auto const convert_stop = [&](n::rt::run_stop const& stop) {
-    auto result = bwc_adjust(to_place(tt, &tags, w, pl, matches, ae, tz, lang, stop),
-                        api_version);
+    auto result = bwc_adjust(
+        to_place(tt, &tags, w, pl, matches, ae, tz, lang, stop), api_version);
     if (ev_type == n::event_type::kDep ||
         stop.fr_->stop_range_.from_ != stop.stop_idx_) {
       result.arrival_ = stop.time(n::event_type::kArr);
@@ -520,7 +520,8 @@ api::stoptimes_response stop_times::operator()(
                 return std::nullopt;
               }
               return other_stops_impl(fr, ev_type, &tt_, tags_, w_, pl_,
-                                      matches_, ae_, tz_, query.language_, api_version);
+                                      matches_, ae_, tz_, query.language_,
+                                      api_version);
             };
 
             return {
@@ -528,14 +529,14 @@ api::stoptimes_response stop_times::operator()(
                 .mode_ = to_mode(s.get_clasz(ev_type), api_version),
                 .realTime_ = r.is_rt(),
                 .headsign_ = std::string{s.direction(lang, ev_type)},
-                .tripFrom_ =
-                    bwc_adjust(to_place(&tt_, &tags_, w_, pl_, matches_, ae_, tz_,
-                                   lang, s.get_first_trip_stop(ev_type)),
-                          api_version),
-                .tripTo_ =
-                    bwc_adjust(to_place(&tt_, &tags_, w_, pl_, matches_, ae_, tz_,
-                                   lang, s.get_last_trip_stop(ev_type)),
-                          api_version),
+                .tripFrom_ = bwc_adjust(
+                    to_place(&tt_, &tags_, w_, pl_, matches_, ae_, tz_, lang,
+                             s.get_first_trip_stop(ev_type)),
+                    api_version),
+                .tripTo_ = bwc_adjust(
+                    to_place(&tt_, &tags_, w_, pl_, matches_, ae_, tz_, lang,
+                             s.get_last_trip_stop(ev_type)),
+                    api_version),
                 .agencyId_ =
                     std::string{tt_.strings_.try_get(agency.id_).value_or("?")},
                 .agencyName_ = std::string{tt_.translate(lang, agency.name_)},
@@ -578,8 +579,9 @@ api::stoptimes_response stop_times::operator()(
                   return to_place(loc, "center", std::nullopt);
                 });
               })
-              .transform(
-                  [&](api::Place&& pl) { return bwc_adjust(pl, api_version); })
+              .transform([&](api::Place&& pl) {
+                return bwc_adjust(std::move(pl), api_version);
+              })
               .value(),
       .previousPageCursor_ =
           events.empty()
