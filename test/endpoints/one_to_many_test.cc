@@ -720,12 +720,12 @@ TEST(one_to_many, street_routing) {
               .one_ = "49.8724891,8.6281994",
               .many_ = {"49.874793,8.632167"},
               .time_ = parse_time("2019-05-01T12:00:00.000+02:00"),
-              .directMode_ = api::ModeEnum::WALK,
+              .maxMatchingDistance_ = 25,
+              .arriveBy_ = false,
               .preTransitModes_ = {},
               .postTransitModes_ = {},
-              .arriveBy_ = false,
-              .withDistance_ = true,
-              .maxMatchingDistance_ = 25});
+              .directMode_ = api::ModeEnum::WALK,
+              .withDistance_ = true});
 
       auto const one_to_many_get_durations = one_to_many_v1_get(d)(
           "/api/v1/one-to-many"
@@ -790,12 +790,12 @@ TEST(one_to_many, street_routing) {
               .one_ = "49.8724891,8.6281994,0",
               .many_ = {"49.874793,8.632167"},
               .time_ = parse_time("2019-05-01T12:00:00.000+02:00"),
-              .directMode_ = api::ModeEnum::WALK,
+              .maxMatchingDistance_ = 25,
+              .arriveBy_ = false,
               .preTransitModes_ = {},
               .postTransitModes_ = {},
-              .arriveBy_ = false,
-              .withDistance_ = true,
-              .maxMatchingDistance_ = 25});
+              .directMode_ = api::ModeEnum::WALK,
+              .withDistance_ = true});
 
       auto const one_to_many_get_durations = one_to_many_v1_get(d)(
           "/api/v1/one-to-many"
