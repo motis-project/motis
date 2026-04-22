@@ -103,7 +103,7 @@
 	);
 	let dataAttributionLink: string | undefined = $state(undefined);
 	let colorMode = $state<'rt' | 'route' | 'mode' | 'none'>('none');
-	let stopsMode = $state<'none' | 'grouped' | 'all'>('none');
+	let stopsMode = $state<'grouped' | 'all'>('grouped');
 	let showMap = $state(!isSmallScreen);
 	let showRoutes = $state(false);
 	let routesOverlaySession = $state(0);
@@ -959,12 +959,10 @@
 						onclick={() => {
 							stopsMode = (function () {
 								switch (stopsMode) {
-									case 'none':
-										return 'grouped';
 									case 'grouped':
 										return 'all';
 									case 'all':
-										return 'none';
+										return 'grouped';
 								}
 							})();
 						}}
@@ -973,8 +971,6 @@
 							<MapPin class="h-[1.2rem] w-[1.2rem]" />
 						{:else if stopsMode == 'all'}
 							<MapPinHouse class="h-[1.2rem] w-[1.2rem]" />
-						{:else}
-							<Ban class="h-[1.2rem] w-[1.2rem]" />
 						{/if}
 					</Button>
 					<Button size="icon" onclick={() => getLocation()}>
