@@ -1027,6 +1027,7 @@ net::reply ojp::operator()(net::route_request const& http_req, bool) const {
       auto const lower_right = rect.child("LowerRight");
       utl::verify<net::bad_request_exception>(upper_left && lower_right,
                                               "missing GeoRestriction box");
+
       auto url = boost::urls::url{"/api/v1/map/stop"};
       auto params = url.params();
       params.append(
@@ -1040,6 +1041,7 @@ net::reply ojp::operator()(net::route_request const& http_req, bool) const {
                "{},{}", upper_left.child("siri:Latitude").text().as_double(),
                lower_right.child("siri:Longitude").text().as_double())});
       params.append({"language", lang});
+
       response =
           build_map_stops_response(now_timestamp(), lang, (*stops_ep_)(url));
     } else if (auto const stop_id = loc_req.child("PlaceRef")
