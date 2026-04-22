@@ -727,6 +727,16 @@ export const getStyle = (
 				}
 			},
 			{
+				id: 'aerialway',
+				type: 'line',
+				source: 'osm',
+				'source-layer': 'aerialway',
+				paint: {
+					'line-color': c.rail,
+					'line-dasharray': [10, 2]
+				}
+			},
+			{
 				id: 'road-ref-shield',
 				type: 'symbol',
 				source: 'osm',
