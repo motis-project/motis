@@ -271,7 +271,6 @@ api::Itinerary street_routing(osr::ways const& w,
   auto t =
       std::chrono::time_point_cast<std::chrono::seconds>(deduced_start_time);
   auto pred_place = bwc_adjust(from_place, api_version);
-  // auto pred_place = from_place;
   auto pred_end_time = t;
   utl::equal_ranges_linear(
       path->segments_,
@@ -303,7 +302,6 @@ api::Itinerary street_routing(osr::ways const& w,
                                 : to_mode(lb->mode_)),
             .from_ = pred_place,
             .to_ = is_last_leg ? bwc_adjust(to_place, api_version)
-                               // .to_ = is_last_leg ? to_place
                                : out.get_place(lang, to_node, pred_place.tz_),
             .duration_ = std::chrono::duration_cast<std::chrono::seconds>(
                              t - pred_end_time)
@@ -333,7 +331,6 @@ api::Itinerary street_routing(osr::ways const& w,
         out.annotate_leg(lang, from_node, to_node, leg);
 
         pred_place = bwc_adjust(leg.to_, api_version);
-        // pred_place = leg.to_;
         pred_end_time = t;
       });
 
@@ -343,11 +340,6 @@ api::Itinerary street_routing(osr::ways const& w,
         last.scheduledEndTime_ = *end_time;
     for (auto& leg : itinerary.legs_) {
       leg.duration_ = (leg.endTime_.time_ - leg.startTime_.time_).count();
-      // // Set required 'level_' for older versions
-      // if (api_version < 3) {  // TODO Fix threshold
-      //   leg.from_.level_ = leg.from_.level_.value_or(0U);
-      //   leg.to_.level_ = leg.to_.level_.value_or(0U);
-      // }
     }
   }
 

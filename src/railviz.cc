@@ -447,7 +447,6 @@ Response build_routes_response(
     osr::platforms const* pl,
     platform_matches_t const* matches,
     std::vector<n::route_idx_t> const& route_indexes,
-    unsigned const /*api_version*/,
     std::optional<geo::box> const& area,
     std::optional<std::vector<std::string>> const& language) {
   auto res = Response{};
@@ -642,7 +641,7 @@ api::routes_response get_routes(tag_lookup const& tags,
                                 railviz_static_index::impl const& static_index,
                                 railviz_rt_index::impl const&,
                                 api::routes_params const& query,
-                                unsigned const api_version) {
+                                unsigned const /*api_version*/) {
   auto const zoom_level = static_cast<int>(query.zoom_);
   auto const min = parse_location(query.min_);
   auto const max = parse_location(query.max_);
@@ -671,7 +670,7 @@ api::routes_response get_routes(tag_lookup const& tags,
   }
 
   auto res = build_routes_response<api::routes_response>(
-      tags, tt, shapes, w, pl, matches, route_indexes, api_version, area, query.language_);
+      tags, tt, shapes, w, pl, matches, route_indexes, area, query.language_);
   res.zoomFiltered_ = zoom_filtered;
   return res;
 }
@@ -689,7 +688,7 @@ api::routeDetails_response get_route_details(
     railviz_static_index::impl const&,
     railviz_rt_index::impl const&,
     api::routeDetails_params const& query,
-    unsigned const api_version) {
+    unsigned const /*api_version*/) {
   utl::verify<net::bad_request_exception>(
       query.routeIdx_ >= 0 &&
           query.routeIdx_ < static_cast<std::int64_t>(tt.n_routes()),
@@ -699,7 +698,7 @@ api::routeDetails_response get_route_details(
       n::route_idx_t{static_cast<n::route_idx_t::value_t>(query.routeIdx_)};
 
   auto res = build_routes_response<api::routeDetails_response>(
-      tags, tt, shapes, w, pl, matches, {route}, api_version, std::nullopt,
+      tags, tt, shapes, w, pl, matches, {route}, std::nullopt,
       query.language_);
   res.zoomFiltered_ = false;
   return res;
