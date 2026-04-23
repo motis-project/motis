@@ -42,8 +42,8 @@ namespace json = boost::json;
 
 namespace motis {
 
-using proto_id_t = ::motis::proto::ItineraryId;
-using proto_leg_t = ::motis::proto::LegId;
+using proto_id_t = ::motis::ItineraryId;
+using proto_leg_t = ::motis::LegId;
 
 constexpr auto kTimeMul = 1.0 / 60.0 * 7;
 constexpr auto kSearchRadiusMeters = 100;

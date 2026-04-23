@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package motis.proto;
+package motis;
 
 message LegId {
   string display_name = 1;

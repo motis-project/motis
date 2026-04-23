@@ -42,7 +42,7 @@ api::Itinerary refresh_itinerary::operator()(
 
 api::Itinerary refresh_itinerary_post::operator()(
     api::RefreshItineraryPostBody const& body) const {
-  auto parsed = ::motis::proto::ItineraryId{};
+  auto parsed = ::motis::ItineraryId{};
   auto const status = google::protobuf::util::JsonStringToMessage(
       boost::json::serialize(boost::json::value_from(body.id_)), &parsed);
   utl::verify(status.ok(), "Failed to decode itinerary-id JSON: {}",
