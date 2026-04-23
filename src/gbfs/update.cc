@@ -1119,7 +1119,7 @@ void run_gbfs_update(boost::asio::io_context& ioc,
                      metrics_registry const* metrics) {
   boost::asio::co_spawn(
       ioc,
-      [&]() -> awaitable<void> {
+      [&, metrics]() -> awaitable<void> {
         auto executor = co_await asio::this_coro::executor;
         auto timer = asio::steady_timer{executor};
         auto ec = boost::system::error_code{};
