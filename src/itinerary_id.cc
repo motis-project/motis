@@ -247,7 +247,8 @@ api::Itinerary build_itinerary_from_frun(
     bool const detailed_legs,
     bool const with_fares,
     bool const with_scheduled_skipped_stops,
-    n::lang_t const& lang) {
+    n::lang_t const& lang,
+    unsigned int const api_version) {
   auto const& [fr, from_idx, to_idx] = run;
   utl::verify(fr.stop_range_.contains(from_idx), "from_idx={} out of range {}",
               from_idx, fr.stop_range_);
@@ -273,8 +274,6 @@ api::Itinerary build_itinerary_from_frun(
   auto cache = street_routing_cache_t{};
   auto blocked = osr::bitvec<osr::node_idx_t>{};
   auto gbfs_rd = gbfs::gbfs_routing_data{};
-
-  constexpr auto api_version = 0;
 
   return journey_to_response(
       stop_times.w_, nullptr, stop_times.pl_, stop_times.tt_, stop_times.tags_,
@@ -414,7 +413,8 @@ api::Itinerary reconstruct_itinerary(ep::stop_times const& stop_times_ep,
                                      bool const detailed_legs,
                                      bool const with_fares,
                                      bool const with_scheduled_skipped_stops,
-                                     n::lang_t const& lang) {
+                                     n::lang_t const& lang,
+                                     unsigned int const api_version) {
   auto stop_times_rt = std::atomic_load(&stop_times_ep.rt_);
   auto stop_times_rtt = stop_times_rt->rtt_.get();
   auto const parsed_id = decode_itinerary_id(id);
@@ -485,7 +485,7 @@ api::Itinerary reconstruct_itinerary(ep::stop_times const& stop_times_ep,
   auto res = build_itinerary_from_frun(
       get_run(), stop_times_ep, shapes, rt.rtt_.get(), join_interlined_legs,
       detailed_transfers, detailed_legs, with_fares,
-      with_scheduled_skipped_stops, lang);
+      with_scheduled_skipped_stops, lang, api_version);
   res.id_ = id;
   return res;
 }

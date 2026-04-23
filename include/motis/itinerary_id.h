@@ -21,6 +21,7 @@ api::Itinerary reconstruct_itinerary(
     bool const detailed_legs = true,
     bool const with_fares = false,
     bool const with_scheduled_skipped_stops = false,
-    nigiri::lang_t const& lang = nigiri::lang_t{});
+    nigiri::lang_t const& lang = nigiri::lang_t{},
+    unsigned int const api_version = 5U);
 
 }  // namespace motis
