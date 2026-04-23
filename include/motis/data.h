@@ -66,22 +66,22 @@ struct data {
   void load_tiles();
   void load_auser_updater(std::string_view, config::timetable::dataset const&);
 
+  void init_initial(std::string_view motis_version);
   void init_rtt(date::sys_days = std::chrono::time_point_cast<date::days>(
                     std::chrono::system_clock::now()));
 
   auto cista_members() {
     // !!! Remember to add all new members !!!
-    return std::tie(config_, motis_version_, initial_response_, t_, adr_ext_,
-                    f_, tz_, r_, tc_, w_, pl_, l_, elevations_, tt_, tbd_,
-                    tags_, location_rtree_, elevator_nodes_,
-                    elevator_osm_mapping_, shapes_, railviz_static_, matches_,
-                    way_matches_, rt_, gbfs_, odm_bounds_, ride_sharing_bounds_,
-                    flex_areas_, metrics_, auser_);
+    return std::tie(config_, initial_response_, t_, adr_ext_, f_, tz_, r_, tc_,
+                    w_, pl_, l_, elevations_, tt_, tbd_, tags_, location_rtree_,
+                    elevator_nodes_, elevator_osm_mapping_, shapes_,
+                    railviz_static_, matches_, way_matches_, rt_, gbfs_,
+                    odm_bounds_, ride_sharing_bounds_, flex_areas_, metrics_,
+                    auser_);
   }
 
   std::filesystem::path path_;
   config config_;
-  std::string_view motis_version_;
 
   api::initial_response initial_response_;
   cista::wrapped<adr::typeahead> t_;
