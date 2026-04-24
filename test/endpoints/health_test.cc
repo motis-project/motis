@@ -1,20 +1,13 @@
-#include "gmock/gmock-matchers.h"
 #include "gtest/gtest.h"
 
-#include <boost/asio/detached.hpp>
-#include <boost/asio/steady_timer.hpp>
-#include <boost/asio/this_coro.hpp>
 #include <filesystem>
-#include <iostream>
 #include <system_error>
 
-#include "boost/asio/co_spawn.hpp"
 #include "boost/asio/io_context.hpp"
 #include "boost/beast/http/status.hpp"
 
 #include "utl/init_from.h"
 
-#include "motis-api/motis-api.h"
 #include "motis/config.h"
 #include "motis/data.h"
 #include "motis/endpoints/health.h"
@@ -110,6 +103,8 @@ TEST(motis, health_feeds) {
                           d.metrics_.get());
     ioc.run_one();
 
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
     auto const res = health("api/v1/health");
     EXPECT_EQ(res.first, boost::beast::http::status::bad_request);
     EXPECT_TRUE(res.second.rt_.has_value());
@@ -123,6 +118,8 @@ TEST(motis, health_feeds) {
     auto ioc = boost::asio::io_context{};
     run_rt_update(ioc, c_nofeeds, d);
     ioc.run_one();
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
     auto const res = health("api/v1/health");
     EXPECT_EQ(res.first, boost::beast::http::status::ok);
