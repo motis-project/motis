@@ -82,7 +82,7 @@ struct motis_instance {
                  std::string_view motis_version)
       : qr_{std::forward<Executor>(exec)} {
     qr_.add_header("Server", fmt::format("MOTIS {}", motis_version));
-    d.motis_version_ = motis_version;
+    d.init_initial(motis_version);
     if (c.server_.value_or(config::server{}).data_attribution_link_) {
       qr_.add_header("Link", fmt::format("<{}>; rel=\"license\"",
                                          *c.server_->data_attribution_link_));
