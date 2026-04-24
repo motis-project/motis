@@ -5,6 +5,7 @@
 
 #include "cista/io.h"
 
+#include "utl/get_or_create.h"
 #include "utl/read_file.h"
 #include "utl/verify.h"
 
@@ -28,6 +29,7 @@
 #include "motis/config.h"
 #include "motis/constants.h"
 #include "motis/elevators/update_elevators.h"
+#include "motis/endpoints/initial.h"
 #include "motis/flex/flex_areas.h"
 #include "motis/hashes.h"
 #include "motis/match_platforms.h"
@@ -38,7 +40,6 @@
 #include "motis/tag_lookup.h"
 #include "motis/tiles_data.h"
 #include "motis/tt_location_rtree.h"
-#include "utl/get_or_create.h"
 
 namespace fs = std::filesystem;
 namespace n = nigiri;
@@ -283,6 +284,10 @@ void data::load_flex_areas() {
   utl::verify(tt_ && w_ && l_, "flex areas requires tt={}, w={}, l={}",
               tt_ != nullptr, w_ != nullptr, l_ != nullptr);
   flex_areas_ = std::make_unique<flex::flex_areas>(*tt_, *w_, *l_);
+}
+
+void data::init_initial(std::string_view motis_version) {
+  initial_response_ = ep::get_initial_response(*this, motis_version);
 }
 
 void data::init_rtt(date::sys_days const d) {

@@ -104,6 +104,7 @@ const translations: Translations = {
 	LONG_DISTANCE: 'Междуградски влак',
 	NIGHT_RAIL: 'Нощен влак',
 	REGIONAL_FAST_RAIL: 'Бърз регионален влак',
+	ODM: 'По заявка',
 	REGIONAL_RAIL: 'Регионален влак',
 	OTHER: 'Други',
 	routingSegments: {

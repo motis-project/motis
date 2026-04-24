@@ -14,6 +14,7 @@
 #include "adr/adr.h"
 #include "adr/typeahead.h"
 
+#include "motis/config.h"
 #include "motis/endpoints/adr/filter_conv.h"
 #include "motis/endpoints/adr/suggestions_to_response.h"
 #include "motis/parse_location.h"
@@ -23,6 +24,8 @@ namespace n = nigiri;
 namespace a = adr;
 
 namespace motis::ep {
+
+constexpr auto const kDefaultSuggestions = 10U;
 
 a::guess_context& get_guess_context(a::typeahead const& t, a::cache& cache) {
   auto static ctx = boost::thread_specific_ptr<a::guess_context>{};
@@ -79,10 +82,17 @@ api::geocode_response geocode::operator()(
                     }}};
               })
           .value_or(std::function<bool(adr::place_idx_t)>{});
-  auto const token_pos =
-      a::get_suggestions<false>(t_, params.text_, 10U, lang_indices, ctx, place,
-                                static_cast<float>(params.placeBias_),
-                                to_filter_type(params.type_), place_filter);
+  auto const config_limit = config_.get_limits().geocode_max_suggestions_;
+  auto const requested_limit = params.numResults_.value_or(kDefaultSuggestions);
+  utl::verify<net::bad_request_exception>(requested_limit >= 1,
+                                          "limit must be >= 1");
+  utl::verify<net::bad_request_exception>(
+      requested_limit <= config_limit,
+      "limit must be <= geocode_max_suggestions ({})", config_limit);
+  auto const token_pos = a::get_suggestions<false>(
+      t_, params.text_, static_cast<unsigned>(requested_limit), lang_indices,
+      ctx, place, static_cast<float>(params.placeBias_),
+      to_filter_type(params.type_), place_filter);
   return suggestions_to_response(t_, f_, ae_, tt_, tags_, w_, pl_, matches_,
                                  lang_indices, token_pos, ctx.suggestions_);
 }

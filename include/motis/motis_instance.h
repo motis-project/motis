@@ -82,7 +82,7 @@ struct motis_instance {
                  std::string_view motis_version)
       : qr_{std::forward<Executor>(exec)} {
     qr_.add_header("Server", fmt::format("MOTIS {}", motis_version));
-    d.motis_version_ = motis_version;
+    d.init_initial(motis_version);
     if (c.server_.value_or(config::server{}).data_attribution_link_) {
       qr_.add_header("Link", fmt::format("<{}>; rel=\"license\"",
                                          *c.server_->data_attribution_link_));
@@ -156,6 +156,8 @@ struct motis_instance {
                   .stop_times_ep_ = utl::init_from<ep::stop_times>(d),
                   .trip_ep_ = utl::init_from<ep::trip>(d),
               });
+
+    qr_.route("GET", "/api/v1/health", ep::health{d.config_, d.metrics_.get()});
 
     qr_.route("GET", "/metrics",
               ep::metrics{d.tt_.get(), d.tags_.get(), d.rt_, d.metrics_.get()});
