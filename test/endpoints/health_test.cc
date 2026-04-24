@@ -1,14 +1,17 @@
 #include "gmock/gmock-matchers.h"
 #include "gtest/gtest.h"
 
+#include <boost/asio/detached.hpp>
+#include <boost/asio/steady_timer.hpp>
+#include <boost/asio/this_coro.hpp>
 #include <filesystem>
-#include <gtest/gtest.h>
+#include <iostream>
 #include <system_error>
 
+#include "boost/asio/co_spawn.hpp"
 #include "boost/asio/io_context.hpp"
 #include "boost/beast/http/status.hpp"
 
-#include "motis/rt_update.h"
 #include "utl/init_from.h"
 
 #include "motis-api/motis-api.h"
@@ -16,16 +19,19 @@
 #include "motis/data.h"
 #include "motis/endpoints/health.h"
 #include "motis/gbfs/update.h"
+#include "motis/import.h"
+#include "motis/metrics_registry.h"
+#include "motis/rt_update.h"
 
 using namespace motis;
 using namespace testing;
 
 TEST(motis, health_nofeeds) {
-  auto const c = config{};
+  auto const c =
+      config{.timetable_ = {config::timetable{.datasets_ = {{"test", {}}}}}};
 
-  auto d = data("", c);
-
-  auto const health = utl::init_from<ep::health>(d).value();
+  auto const m = metrics_registry();
+  auto const health = ep::health{.config_ = c, .metrics_ = &m};
 
   // No feeds
   {
@@ -39,16 +45,48 @@ TEST(motis, health_nofeeds) {
   }
 }
 
-TEST(motis, health_feeds) {
-  auto const c =
-      config{.timetable_ = {config::timetable{
-                 .datasets_ = {{"test",
-                                {.path_ = "",
-                                 .clasz_bikes_allowed_ = {{{"", false}}},
-                                 .rt_ = {{{.url_ = ""}}}}}}}},
-             .gbfs_ = {{.feeds_ = {{"test", {.url_ = ""}}}}}};
+constexpr auto const kGTFS = R"(
+# agency.txt
+agency_id,agency_name,agency_url,agency_timezone
+Test,Test,https://example.com,Europe/Berlin
 
-  auto d = data("", c);
+# stops.txt
+stop_id,stop_name,stop_lat,stop_lon
+DA_Bus_1,DA Hbf,49.8724891,8.6281994
+
+# routes.txt
+route_id,agency_id,route_short_name,route_long_name,route_type
+B1,Test,B1,,3
+
+# trips.txt
+route_id,service_id,trip_id,trip_headsign
+B1,S1,B1,Bus 1,
+
+# stop_times.txt
+trip_id,arrival_time,departure_time,stop_id,stop_sequence
+B1,01:00:00,01:00:00,DA_Bus_1,1
+
+# calendar_dates.txt
+service_id,date,exception_type
+S1,20190501,1
+)";
+
+TEST(motis, health_feeds) {
+  auto ec = std::error_code();
+  std::filesystem::remove_all("test/data", ec);
+
+  auto const c = config{
+      .timetable_ = {config::timetable{
+          .first_day_ = "2019-05-01",
+          .num_days_ = 2,
+          .datasets_ = {{"test",
+                         {.path_ = kGTFS,
+                          .clasz_bikes_allowed_ = {{{"LONGDISTANCE", false}}},
+                          .rt_ = {{{.url_ = "https://example.test/rt"}}}}}}}},
+      .gbfs_ = {{.feeds_ = {{"test", {.url_ = "https://example.test/gbfs"}}}}}};
+
+  import(c, "test/data");
+  auto d = data{"test/data", c};
 
   auto const health = utl::init_from<ep::health>(d).value();
 
@@ -62,12 +100,18 @@ TEST(motis, health_feeds) {
     EXPECT_FALSE(res.second.gbfs_.value());
   }
 
+  // Make updates succeed without doing anything
+  auto const c_nofeeds = config{.timetable_ = {{.datasets_ = {{"test", {}}}}}};
+
   // GBFS consumed
   {
     auto ioc = boost::asio::io_context{};
-    gbfs::run_gbfs_update(ioc, c, *d.w_, *d.l_, d.gbfs_, d.metrics_.get());
+    gbfs::run_gbfs_update(ioc, c_nofeeds, *d.w_, *d.l_, d.gbfs_,
+                          d.metrics_.get());
+    ioc.run_one();
+
     auto const res = health("api/v1/health");
-    EXPECT_EQ(res.first, boost::beast::http::status::ok);
+    EXPECT_EQ(res.first, boost::beast::http::status::bad_request);
     EXPECT_TRUE(res.second.rt_.has_value());
     EXPECT_FALSE(res.second.rt_.value());
     EXPECT_TRUE(res.second.gbfs_.has_value());
@@ -77,7 +121,9 @@ TEST(motis, health_feeds) {
   // RT & GBFS consumed
   {
     auto ioc = boost::asio::io_context{};
-    run_rt_update(ioc, c, d);
+    run_rt_update(ioc, c_nofeeds, d);
+    ioc.run_one();
+
     auto const res = health("api/v1/health");
     EXPECT_EQ(res.first, boost::beast::http::status::ok);
     EXPECT_TRUE(res.second.rt_.has_value());
