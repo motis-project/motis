@@ -2,72 +2,70 @@ name: Sync upstream
 
 on:
   schedule:
-    - cron: "0 6 * * 1" # Every Monday at 6am UTC
-  workflow_dispatch: # Manual trigger
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
 
 jobs:
-  sync:
+  check-upstream:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
       issues: write
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: patches
-          fetch-depth: 0 # Full history for rebase
+          ref: master
+          fetch-depth: 0
 
-      - name: Configure git
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-      - name: Fetch upstream
+      - name: Fetch upstream and fork refs
         run: |
           git remote add upstream https://github.com/motis-project/motis.git || true
+          git fetch origin master patches
           git fetch upstream master
 
-      - name: Check if behind
-        id: check
+      - name: Compute divergence
+        id: divergence
         run: |
-          BEHIND=$(git rev-list --count patches..upstream/master)
-          echo "behind=$BEHIND" >> "$GITHUB_OUTPUT"
-          echo "Patches branch is $BEHIND commits behind upstream/master"
+          MASTER_BEHIND=$(git rev-list --count origin/master..upstream/master)
+          MASTER_AHEAD=$(git rev-list --count upstream/master..origin/master)
+          PATCHES_BEHIND=$(git rev-list --count origin/patches..upstream/master)
+          PATCHES_AHEAD=$(git rev-list --count upstream/master..origin/patches)
+          echo "master_behind=$MASTER_BEHIND" >> "$GITHUB_OUTPUT"
+          echo "master_ahead=$MASTER_AHEAD" >> "$GITHUB_OUTPUT"
+          echo "patches_behind=$PATCHES_BEHIND" >> "$GITHUB_OUTPUT"
+          echo "patches_ahead=$PATCHES_AHEAD" >> "$GITHUB_OUTPUT"
 
-      - name: Rebase patches onto upstream
-        if: steps.check.outputs.behind != '0'
-        id: rebase
+      - name: Open or refresh sync issue
+        if: steps.divergence.outputs.master_behind != '0' || steps.divergence.outputs.patches_behind != '0'
         run: |
-          git rebase upstream/master
-        continue-on-error: true
+          BODY=$(cat <<EOF
+          Upstream MOTIS moved ahead of the fork.
 
-      - name: Push if rebase succeeded
-        if: steps.check.outputs.behind != '0' && steps.rebase.outcome == 'success'
-        run: |
-          git push --force-with-lease origin patches
-          echo "Successfully rebased patches onto upstream/master (${{ steps.check.outputs.behind }} new commits)"
+          Current divergence:
+          - \`master\`: behind ${MASTER_BEHIND}, ahead ${MASTER_AHEAD}
+          - \`patches\`: behind ${PATCHES_BEHIND}, ahead ${PATCHES_AHEAD}
 
-      - name: Open issue if rebase failed
-        if: steps.check.outputs.behind != '0' && steps.rebase.outcome == 'failure'
-        run: |
-          git rebase --abort
-          gh issue create \
-            --title "Upstream sync failed — rebase conflict" \
-            --body "$(cat <<'BODY'
-          Automatic rebase of \`patches\` onto \`upstream/master\` failed due to conflicts.
+          Expected maintenance flow:
+          1. Refresh local \`master\` from \`upstream/master\`.
+          2. Rebuild \`patches-next\` from refreshed \`master\`.
+          3. Reapply only the still-required fork patches listed in \`docs/fork-patches.md\`.
+          4. Validate \`patches-next\` before promoting it to \`patches\`.
 
-          **Upstream is ${{ steps.check.outputs.behind }} commits ahead.**
+          Do not auto-rebase \`patches\` onto upstream.
+          EOF
+          )
 
-          To resolve manually:
-          ```bash
-          cd motis
-          git fetch upstream
-          git rebase upstream/master patches
-          # resolve conflicts
-          git push --force-with-lease origin patches
-          ```
-          BODY
-          )" \
-            --label "bug"
+          EXISTING=$(gh issue list --state open --search "Upstream MOTIS sync needed in:title" --json number --jq '.[0].number')
+          if [ -n "$EXISTING" ]; then
+            gh issue edit "$EXISTING" --body "$BODY"
+          else
+            gh issue create \
+              --title "Upstream MOTIS sync needed" \
+              --body "$BODY" \
+              --label "maintenance"
+          fi
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MASTER_BEHIND: ${{ steps.divergence.outputs.master_behind }}
+          MASTER_AHEAD: ${{ steps.divergence.outputs.master_ahead }}
+          PATCHES_BEHIND: ${{ steps.divergence.outputs.patches_behind }}
+          PATCHES_AHEAD: ${{ steps.divergence.outputs.patches_ahead }}
