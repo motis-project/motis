@@ -1,6 +1,9 @@
 #include <chrono>
+#include <cstddef>
 #include <cstdint>
 #include <filesystem>
+#include <iostream>
+#include <iterator>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -203,6 +206,102 @@ service_id,date,exception_type
 S1,20190501,1
 )";
 
+constexpr auto kHeavyBenchmarkSourceGtfs = R"(
+# agency.txt
+agency_id,agency_name,agency_url,agency_timezone
+DB,Deutsche Bahn,https://deutschebahn.com,Europe/Berlin
+
+# stops.txt
+stop_id,stop_name,stop_lat,stop_lon,location_type,parent_station,platform_code
+SRC_A,Source A,49.87260,8.63085,1,,
+SRC_B,Source B,50.10701,8.66341,1,,
+
+# routes.txt
+route_id,agency_id,route_short_name,route_long_name,route_desc,route_type
+ICE_ROUTE,DB,ICE,,,101
+
+# trips.txt
+route_id,service_id,trip_id,trip_headsign,block_id
+ICE_ROUTE,S1,ICE,,
+
+# stop_times.txt
+trip_id,arrival_time,departure_time,stop_id,stop_sequence,pickup_type,drop_off_type
+ICE,10:00:00,10:00:00,SRC_A,0,0,0
+ICE,10:20:00,10:20:00,SRC_B,1,0,0
+
+# calendar_dates.txt
+service_id,date,exception_type
+S1,20190501,1
+)";
+
+std::string make_heavy_target_gtfs(std::size_t const n_decoys) {
+  auto stops = std::string{
+      "\n# stops.txt\n"
+      "stop_id,stop_name,stop_lat,stop_lon,location_type,parent_station,"
+      "platform_code\n"
+      "MATCH_A,Match A,49.87260,8.63085,1,,\n"
+      "MATCH_B,Match B,50.10701,8.66341,1,,\n"};
+  auto trips = std::string{
+      "\n# trips.txt\n"
+      "route_id,service_id,trip_id,trip_headsign,block_id\n"
+      "ICE_ROUTE,S1,ICE,,\n"};
+  auto stop_times = std::string{
+      "\n# stop_times.txt\n"
+      "trip_id,arrival_time,departure_time,stop_id,stop_sequence,pickup_type,"
+      "drop_off_type\n"
+      "ICE,10:05:00,10:05:00,MATCH_A,0,0,0\n"
+      "ICE,10:25:00,10:25:00,MATCH_B,1,0,0\n"};
+
+  for (auto i = std::size_t{0}; i < n_decoys; ++i) {
+    auto const mag_a_lat = static_cast<int>((i * 3U) % 8U) + 2;
+    auto const mag_a_lon = static_cast<int>((i * 5U) % 8U) + 2;
+    auto const mag_b_lat = static_cast<int>((i * 7U) % 8U) + 2;
+    auto const mag_b_lon = static_cast<int>((i * 11U) % 8U) + 2;
+    auto const sign_a_lat = (i & 1U) != 0U ? 1 : -1;
+    auto const sign_a_lon = (i & 2U) != 0U ? 1 : -1;
+    auto const sign_b_lat = (i & 4U) != 0U ? 1 : -1;
+    auto const sign_b_lon = (i & 8U) != 0U ? 1 : -1;
+    auto const lat_off_a = 0.00005 * mag_a_lat * sign_a_lat;
+    auto const lon_off_a = 0.00008 * mag_a_lon * sign_a_lon;
+    auto const lat_off_b = 0.00005 * mag_b_lat * sign_b_lat;
+    auto const lon_off_b = 0.00008 * mag_b_lon * sign_b_lon;
+    auto const rt = static_cast<int>((i * 13U) % 33U);
+    auto const time_off_min = rt < 17 ? (rt - 20) : (rt - 12);
+    auto const dep_total = 10 * 60 + time_off_min;
+    auto const arr_total = dep_total + 20;
+
+    fmt::format_to(std::back_inserter(stops),
+                   "DEC_A_{},DA {},{:.5f},{:.5f},1,,\n"
+                   "DEC_B_{},DB {},{:.5f},{:.5f},1,,\n",
+                   i, i, 49.87260 + lat_off_a, 8.63085 + lon_off_a, i, i,
+                   50.10701 + lat_off_b, 8.66341 + lon_off_b);
+    fmt::format_to(std::back_inserter(trips), "DECOY_ROUTE,S1,DEC_{},,\n", i);
+    fmt::format_to(std::back_inserter(stop_times),
+                   "DEC_{},{:02}:{:02}:00,{:02}:{:02}:00,DEC_A_{},0,0,0\n"
+                   "DEC_{},{:02}:{:02}:00,{:02}:{:02}:00,DEC_B_{},1,0,0\n",
+                   i, dep_total / 60, dep_total % 60, dep_total / 60,
+                   dep_total % 60, i, i, arr_total / 60, arr_total % 60,
+                   arr_total / 60, arr_total % 60, i);
+  }
+
+  return fmt::format(
+      "\n# agency.txt\n"
+      "agency_id,agency_name,agency_url,agency_timezone\n"
+      "DB,Deutsche Bahn,https://deutschebahn.com,Europe/Berlin\n"
+      "{}"
+      "\n# routes.txt\n"
+      "route_id,agency_id,route_short_name,route_long_name,route_desc,"
+      "route_type\n"
+      "ICE_ROUTE,DB,ICE,,,101\n"
+      "DECOY_ROUTE,DB,DECOY,,,101\n"
+      "{}"
+      "{}"
+      "\n# calendar_dates.txt\n"
+      "service_id,date,exception_type\n"
+      "S1,20190501,1\n",
+      stops, trips, stop_times);
+}
+
 config make_config(std::string const& gtfs) {
   return config{
       .timetable_ =
@@ -378,6 +477,44 @@ TEST(motis,
             reconstructed_leg.scheduledStartTime_.get_unixtime_seconds());
   EXPECT_EQ(original_leg.scheduledEndTime_.get_unixtime_seconds() + 8 * 60,
             reconstructed_leg.scheduledEndTime_.get_unixtime_seconds());
+}
+
+TEST(motis, itinerary_id_reconstruct_many_candidates_benchmark) {
+  constexpr auto kNumDecoys = std::size_t{50};
+  constexpr auto kIterations = 30;
+
+  auto const source_cfg = make_config(kHeavyBenchmarkSourceGtfs);
+  auto source_data = import_test_data(source_cfg, "heavy_benchmark_source");
+  auto const original = route_first_itinerary(
+      source_data, "test_SRC_A", "test_SRC_B", "2019-05-01T02:00Z");
+  ASSERT_EQ(1U, original.legs_.size());
+  auto const id = generate_itinerary_id(original);
+
+  auto const target_cfg = make_config(make_heavy_target_gtfs(kNumDecoys));
+  auto target_data = import_test_data(target_cfg, "heavy_benchmark_target");
+  auto const stop_times = utl::init_from<ep::stop_times>(target_data).value();
+
+  auto const original_leg = original.legs_.front();
+  auto const start = std::chrono::steady_clock::now();
+  for (auto i = 0; i < kIterations; ++i) {
+    auto const reconstructed =
+        reconstruct_itinerary(stop_times, nullptr, {}, id, false);
+    ASSERT_EQ(1U, reconstructed.legs_.size());
+    auto const& leg = reconstructed.legs_.front();
+    ASSERT_TRUE(leg.from_.stopId_.has_value());
+    EXPECT_EQ("test_MATCH_A", *leg.from_.stopId_);
+    ASSERT_TRUE(leg.to_.stopId_.has_value());
+    EXPECT_EQ("test_MATCH_B", *leg.to_.stopId_);
+    EXPECT_EQ(original_leg.scheduledStartTime_.get_unixtime_seconds() + 5 * 60,
+              leg.scheduledStartTime_.get_unixtime_seconds());
+  }
+  auto const elapsed = std::chrono::steady_clock::now() - start;
+  auto const per_iter_us =
+      std::chrono::duration_cast<std::chrono::microseconds>(elapsed).count() /
+      kIterations;
+  std::cout << "[BENCHMARK] reconstruct_itinerary with " << kNumDecoys
+            << " decoys: " << per_iter_us << " us/iter (" << kIterations
+            << " iterations)" << std::endl;
 }
 
 TEST(motis, refresh_itinerary_endpoint_reconstructs_itinerary) {
