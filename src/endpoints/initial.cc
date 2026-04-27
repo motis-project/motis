@@ -15,7 +15,8 @@ namespace n = nigiri;
 
 namespace motis::ep {
 
-api::initial_response get_initial_response(data const& d) {
+api::initial_response get_initial_response(data const& d,
+                                           std::string_view motis_version) {
   auto const get_quantiles = [](std::vector<double>&& coords) {
     utl::erase_if(coords, [](auto const c) { return c == 0.; });
     if (coords.empty()) {
@@ -65,7 +66,7 @@ api::initial_response get_initial_response(data const& d) {
       .lon_ = center.lng_,
       .zoom_ = static_cast<double>(zoom),
       .serverConfig_ = api::ServerConfig{
-          .motisVersion_ = std::string{d.motis_version_},
+          .motisVersion_ = std::string{motis_version},
           .hasElevation_ = d.config_.get_street_routing()
                                .transform([](config::street_routing const& x) {
                                  return x.elevation_data_dir_.has_value();
