@@ -157,8 +157,6 @@ struct motis_instance {
                   .trip_ep_ = utl::init_from<ep::trip>(d),
               });
 
-    qr_.route("GET", "/api/v1/health", ep::health{d.config_, d.metrics_.get()});
-
     qr_.route("GET", "/metrics",
               ep::metrics{d.tt_.get(), d.tags_.get(), d.rt_, d.metrics_.get()});
     qr_.route("GET", "/gtfsrt",
