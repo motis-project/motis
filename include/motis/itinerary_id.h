@@ -10,6 +10,11 @@ namespace motis {
 std::string get_single_leg_id(api::Leg const&,
                               std::string const& leg_display_name);
 
+std::string generate_itinerary_id(
+    api::Itinerary const& itin,
+    std::vector<std::string> const& default_display_names,
+    std::vector<std::size_t> const& default_display_names_indices);
+
 api::Itinerary reconstruct_itinerary(
     ep::stop_times const&,
     nigiri::shapes_storage const*,

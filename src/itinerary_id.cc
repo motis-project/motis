@@ -44,6 +44,7 @@ namespace motis {
 
 using proto_id_t = ::motis::ItineraryId;
 using proto_leg_t = ::motis::LegId;
+using resolved_run = std::tuple<n::rt::frun, n::stop_idx_t, n::stop_idx_t>;
 
 constexpr auto kTimeMul = 1.0 / 60.0 * 7;
 constexpr auto kSearchRadiusMeters = 100;
@@ -119,6 +120,28 @@ std::string get_single_leg_id(api::Leg const& l,
                               std::string const& leg_display_name) {
   auto id = proto_id_t{};
   id.mutable_legs()->Add(get_leg_id_proto(l, leg_display_name));
+
+  auto data = std::string{};
+  utl::verify(id.SerializeToString(&data), "failed to serialize itinerary id");
+  return net::encode_base64(data);
+}
+
+std::string generate_itinerary_id(
+    api::Itinerary const& itin,
+    std::vector<std::string> const& default_display_names,
+    std::vector<std::size_t> const& default_display_names_indices) {
+  auto id = proto_id_t{};
+  auto default_name_idx = std::size_t{0};
+  for (auto l_idx = std::size_t{0}; l_idx < itin.legs_.size(); ++l_idx) {
+    auto const& leg = itin.legs_[l_idx];
+    auto display_name =
+        (default_name_idx != default_display_names_indices.size() &&
+         l_idx == default_display_names_indices[default_name_idx])
+            ? default_display_names[default_name_idx++]
+            : leg.displayName_.value_or("");
+    id.mutable_legs()->Add(get_leg_id_proto(leg, display_name));
+  }
+  //
 
   auto data = std::string{};
   utl::verify(id.SerializeToString(&data), "failed to serialize itinerary id");
@@ -237,8 +260,8 @@ std::optional<n::stop_idx_t> find_stop_by_id_time(
                                     allowed_deviation_sec);
 }
 
-api::Itinerary build_itinerary_from_frun(
-    std::tuple<n::rt::frun, n::stop_idx_t, n::stop_idx_t> const& run,
+api::Itinerary build_itinerary_from_runs(
+    std::vector<resolved_run> const& runs,
     ep::stop_times const& stop_times,
     n::shapes_storage const* shapes,
     n::rt_timetable const* rtt,
@@ -249,27 +272,33 @@ api::Itinerary build_itinerary_from_frun(
     bool const with_scheduled_skipped_stops,
     n::lang_t const& lang,
     unsigned int const api_version) {
-  auto const& [fr, from_idx, to_idx] = run;
-  utl::verify(fr.stop_range_.contains(from_idx), "from_idx={} out of range {}",
-              from_idx, fr.stop_range_);
-  utl::verify(fr.stop_range_.contains(to_idx), "to_idx={} out of range {}",
-              to_idx, fr.stop_range_);
+  utl::verify(!runs.empty(), "build_itinerary_from_runs: no runs");
 
-  auto const from = n::rt::run_stop{&fr, from_idx};
-  auto const to = n::rt::run_stop{&fr, to_idx};
+  auto j = n::routing::journey{};
+  j.legs_.reserve(runs.size());
+  for (auto const& [fr, from_idx, to_idx] : runs) {
+    utl::verify(fr.stop_range_.contains(from_idx),
+                "from_idx={} out of range {}", from_idx, fr.stop_range_);
+    utl::verify(fr.stop_range_.contains(to_idx), "to_idx={} out of range {}",
+                to_idx, fr.stop_range_);
+    auto const from = n::rt::run_stop{&fr, from_idx};
+    auto const to = n::rt::run_stop{&fr, to_idx};
+    j.legs_.emplace_back(n::routing::journey::leg{
+        n::direction::kForward, from.get_location_idx(), to.get_location_idx(),
+        from.time(n::event_type::kDep), to.time(n::event_type::kArr),
+        n::routing::journey::run_enter_exit{fr, from_idx, to_idx}});
+  }
+  j.start_time_ = j.legs_.front().dep_time_;
+  j.dest_time_ = j.legs_.back().arr_time_;
+  j.dest_ = j.legs_.back().to_;
+  j.transfers_ = static_cast<std::uint8_t>(runs.size() - 1U);
 
-  auto const dep = from.time(n::event_type::kDep);
-  auto const arr = to.time(n::event_type::kArr);
-
-  auto j = n::routing::journey{
-      .legs_ = {{n::direction::kForward, from.get_location_idx(),
-                 to.get_location_idx(), dep, arr,
-                 n::routing::journey::run_enter_exit{fr, from_idx, to_idx}}},
-      .start_time_ = dep,
-      .dest_time_ = arr,
-      .dest_ = to.get_location_idx(),
-      .transfers_ = 0,
-  };
+  auto const& first_fr = std::get<0>(runs.front());
+  auto const first_from_idx = std::get<1>(runs.front());
+  auto const& last_fr = std::get<0>(runs.back());
+  auto const last_to_idx = std::get<2>(runs.back());
+  auto const first_from = n::rt::run_stop{&first_fr, first_from_idx};
+  auto const last_to = n::rt::run_stop{&last_fr, last_to_idx};
 
   auto cache = street_routing_cache_t{};
   auto blocked = osr::bitvec<osr::node_idx_t>{};
@@ -279,9 +308,9 @@ api::Itinerary build_itinerary_from_frun(
       stop_times.w_, nullptr, stop_times.pl_, stop_times.tt_, stop_times.tags_,
       nullptr, nullptr, rtt, stop_times.matches_, nullptr, shapes, gbfs_rd,
       stop_times.ae_, stop_times.tz_, j,
-      tt_location{from.get_location_idx(),
-                  n::rt::run_stop{&fr, from_idx}.get_scheduled_location_idx()},
-      tt_location{to.get_location_idx()}, cache, &blocked, false,
+      tt_location{first_from.get_location_idx(),
+                  first_from.get_scheduled_location_idx()},
+      tt_location{last_to.get_location_idx()}, cache, &blocked, false,
       osr_parameters{}, api::PedestrianProfileEnum::FOOT,
       api::ElevationCostsEnum::NONE, join_interlined_legs, detailed_transfers,
       detailed_legs, with_fares, with_scheduled_skipped_stops,
@@ -418,11 +447,8 @@ api::Itinerary reconstruct_itinerary(ep::stop_times const& stop_times_ep,
   auto stop_times_rt = std::atomic_load(&stop_times_ep.rt_);
   auto stop_times_rtt = stop_times_rt->rtt_.get();
   auto const parsed_id = decode_itinerary_id(id);
-  utl::verify(parsed_id.legs_size() == 1,
-              "reconstruct_itinerary: itinerary id must have a single leg");
-  auto const lh = leg_hint{parsed_id.legs(0)};
-  auto const get_run =
-      [&]() -> std::tuple<n::rt::frun, n::stop_idx_t, n::stop_idx_t> {
+
+  auto const get_run = [&](leg_hint const& lh) -> resolved_run {
     if (!lh.scheduled_) {
       utl::verify(!lh.trip_id_.empty(),
                   "reconstruct_itinerary: additional trip requires trip_id");
@@ -482,8 +508,14 @@ api::Itinerary reconstruct_itinerary(ep::stop_times const& stop_times_ep,
     }
   };
 
-  auto res = build_itinerary_from_frun(
-      get_run(), stop_times_ep, shapes, rt.rtt_.get(), join_interlined_legs,
+  auto runs = std::vector<resolved_run>{};
+  runs.reserve(parsed_id.legs_size());
+  for (auto l_idx = 0; l_idx < parsed_id.legs_size(); ++l_idx) {
+    runs.emplace_back(get_run(leg_hint{parsed_id.legs(l_idx)}));
+  }
+
+  auto res = build_itinerary_from_runs(
+      runs, stop_times_ep, shapes, rt.rtt_.get(), join_interlined_legs,
       detailed_transfers, detailed_legs, with_fares,
       with_scheduled_skipped_stops, lang, api_version);
   res.id_ = id;
