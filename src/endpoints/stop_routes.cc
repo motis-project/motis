@@ -41,8 +41,7 @@ api::stopRoutes_response stop_routes::operator()(
     auto const root_name =
         tt_.get_default_translation(tt_.locations_.names_[root]);
     for (auto const eq : tt_.locations_.equivalences_[root]) {
-      if (tt_.get_default_translation(tt_.locations_.names_[eq]) ==
-          root_name) {
+      if (tt_.get_default_translation(tt_.locations_.names_[eq]) == root_name) {
         locations.emplace_back(eq);
         for (auto const child : tt_.locations_.children_[eq]) {
           locations.emplace_back(child);
@@ -53,18 +52,17 @@ api::stopRoutes_response stop_routes::operator()(
 
   if (query.stopId_.has_value()) {
     auto const loc = tags_.find_location(tt_, *query.stopId_);
-    utl::verify<net::not_found_exception>(loc.has_value(),
-                                          "stop not found: {}", *query.stopId_);
+    utl::verify<net::not_found_exception>(loc.has_value(), "stop not found: {}",
+                                          *query.stopId_);
     add_with_children(*loc);
   } else {
     auto const center = parse_location(*query.center_);
     utl::verify<net::bad_request_exception>(
         center.has_value(), "invalid center coordinate: {}", *query.center_);
-    auto const radius =
-        static_cast<double>(query.radius_.value_or(500LL));
-    loc_rtree_.in_radius(
-        center->pos_, radius,
-        [&](n::location_idx_t const l) { locations.push_back(l); });
+    auto const radius = static_cast<double>(query.radius_.value_or(500LL));
+    loc_rtree_.in_radius(center->pos_, radius, [&](n::location_idx_t const l) {
+      locations.push_back(l);
+    });
   }
 
   utl::erase_duplicates(locations);
@@ -108,11 +106,10 @@ api::stopRoutes_response stop_routes::operator()(
            .agencyUrl_ = std::string{tt_.translate(lang, agency.url_)},
            .routeColor_ = n::to_str(color.color_),
            .routeTextColor_ = n::to_str(color.text_color_),
-           .routeType_ =
-               rs.route_type(n::event_type::kDep)
-                   .and_then([](n::route_type_t const x) {
-                     return std::optional{to_idx(x)};
-                   })});
+           .routeType_ = rs.route_type(n::event_type::kDep)
+                             .and_then([](n::route_type_t const x) {
+                               return std::optional{to_idx(x)};
+                             })});
     }
   }
 
