@@ -2993,6 +2993,79 @@ paths:
 
 components:
   schemas:
+    Mode:
+      description: |
+        # Street modes
+
+          - `WALK`
+          - `BIKE`
+          - `RENTAL` Experimental. Expect unannounced breaking changes (without version bumps) for all parameters and returned structs.
+          - `CAR`
+          - `CAR_PARKING` Experimental. Expect unannounced breaking changes (without version bumps) for all parameters and returned structs.
+          - `CAR_DROPOFF` Experimental. Expect unannounced breaking changes (without version bumps) for all perameters and returned structs.
+          - `ODM` on-demand taxis from the Prima+ÖV Project
+          - `RIDE_SHARING` ride sharing from the Prima+ÖV Project
+          - `FLEX` flexible transports
+
+        # Transit modes
+
+          - `TRANSIT`: translates to `TRAM,FERRY,AIRPLANE,BUS,COACH,RAIL,ODM,FUNICULAR,AERIAL_LIFT,OTHER`
+          - `TRAM`: trams
+          - `SUBWAY`: subway trains (Paris Metro, London Underground, but also NYC Subway, Hamburger Hochbahn, and other non-underground services)
+          - `FERRY`: ferries
+          - `AIRPLANE`: airline flights
+          - `BUS`: short distance buses (does not include `COACH`)
+          - `COACH`: long distance buses (does not include `BUS`)
+          - `RAIL`: translates to `HIGHSPEED_RAIL,LONG_DISTANCE,NIGHT_RAIL,REGIONAL_RAIL,SUBURBAN,SUBWAY`
+          - `HIGHSPEED_RAIL`: long distance high speed trains (e.g. TGV)
+          - `LONG_DISTANCE`: long distance inter city trains
+          - `NIGHT_RAIL`: long distance night trains
+          - `REGIONAL_FAST_RAIL`: deprecated, `REGIONAL_RAIL` will be used
+          - `REGIONAL_RAIL`: regional train
+          - `SUBURBAN`: suburban trains (e.g. S-Bahn, RER, Elizabeth Line, ...)
+          - `ODM`: demand responsive transport
+          - `FUNICULAR`: Funicular. Any rail system designed for steep inclines.
+          - `AERIAL_LIFT`: Aerial lift, suspended cable car (e.g., gondola lift, aerial tramway). Cable transport where cabins, cars, gondolas or open chairs are suspended by means of one or more cables.
+          - `AREAL_LIFT`: deprecated
+          - `METRO`: deprecated
+          - `CABLE_CAR`: deprecated
+      type: string
+      enum:
+        # === Street ===
+        - WALK
+        - BIKE
+        - RENTAL
+        - CAR
+        - CAR_PARKING
+        - CAR_DROPOFF
+        - ODM  # Transit | Street
+        - RIDE_SHARING  # Transit | Street
+        - FLEX
+        - DEBUG_BUS_ROUTE
+        - DEBUG_RAILWAY_ROUTE
+        - DEBUG_FERRY_ROUTE
+        # === Transit ===
+        - TRANSIT
+        - TRAM
+        - SUBWAY
+        - FERRY
+        - AIRPLANE
+        - BUS
+        - COACH
+        - RAIL
+        - HIGHSPEED_RAIL
+        - LONG_DISTANCE
+        - NIGHT_RAIL
+        - REGIONAL_FAST_RAIL
+        - REGIONAL_RAIL
+        - SUBURBAN
+        - FUNICULAR
+        - AERIAL_LIFT
+        - OTHER
+        - AREAL_LIFT
+        - METRO
+        - CABLE_CAR
+
     Route:
       description: a transit route/line serving a stop
       type: object
@@ -3277,79 +3350,6 @@ components:
         - ADDRESS
         - PLACE
         - STOP
-
-    Mode:
-      description: |
-        # Street modes
-        
-          - `WALK`
-          - `BIKE`
-          - `RENTAL` Experimental. Expect unannounced breaking changes (without version bumps) for all parameters and returned structs.
-          - `CAR`
-          - `CAR_PARKING` Experimental. Expect unannounced breaking changes (without version bumps) for all parameters and returned structs.
-          - `CAR_DROPOFF` Experimental. Expect unannounced breaking changes (without version bumps) for all perameters and returned structs.
-          - `ODM` on-demand taxis from the Prima+ÖV Project
-          - `RIDE_SHARING` ride sharing from the Prima+ÖV Project
-          - `FLEX` flexible transports
-
-        # Transit modes
-
-          - `TRANSIT`: translates to `TRAM,FERRY,AIRPLANE,BUS,COACH,RAIL,ODM,FUNICULAR,AERIAL_LIFT,OTHER`
-          - `TRAM`: trams
-          - `SUBWAY`: subway trains (Paris Metro, London Underground, but also NYC Subway, Hamburger Hochbahn, and other non-underground services)
-          - `FERRY`: ferries
-          - `AIRPLANE`: airline flights
-          - `BUS`: short distance buses (does not include `COACH`)
-          - `COACH`: long distance buses (does not include `BUS`)
-          - `RAIL`: translates to `HIGHSPEED_RAIL,LONG_DISTANCE,NIGHT_RAIL,REGIONAL_RAIL,SUBURBAN,SUBWAY`
-          - `HIGHSPEED_RAIL`: long distance high speed trains (e.g. TGV)
-          - `LONG_DISTANCE`: long distance inter city trains
-          - `NIGHT_RAIL`: long distance night trains
-          - `REGIONAL_FAST_RAIL`: deprecated, `REGIONAL_RAIL` will be used
-          - `REGIONAL_RAIL`: regional train
-          - `SUBURBAN`: suburban trains (e.g. S-Bahn, RER, Elizabeth Line, ...)
-          - `ODM`: demand responsive transport
-          - `FUNICULAR`: Funicular. Any rail system designed for steep inclines.
-          - `AERIAL_LIFT`: Aerial lift, suspended cable car (e.g., gondola lift, aerial tramway). Cable transport where cabins, cars, gondolas or open chairs are suspended by means of one or more cables.
-          - `AREAL_LIFT`: deprecated
-          - `METRO`: deprecated
-          - `CABLE_CAR`: deprecated
-      type: string
-      enum:
-        # === Street ===
-        - WALK
-        - BIKE
-        - RENTAL
-        - CAR
-        - CAR_PARKING
-        - CAR_DROPOFF
-        - ODM  # Transit | Street
-        - RIDE_SHARING  # Transit | Street
-        - FLEX
-        - DEBUG_BUS_ROUTE
-        - DEBUG_RAILWAY_ROUTE
-        - DEBUG_FERRY_ROUTE
-        # === Transit ===
-        - TRANSIT
-        - TRAM
-        - SUBWAY
-        - FERRY
-        - AIRPLANE
-        - BUS
-        - COACH
-        - RAIL
-        - HIGHSPEED_RAIL
-        - LONG_DISTANCE
-        - NIGHT_RAIL
-        - REGIONAL_FAST_RAIL
-        - REGIONAL_RAIL
-        - SUBURBAN
-        - FUNICULAR
-        - AERIAL_LIFT
-        - OTHER
-        - AREAL_LIFT
-        - METRO
-        - CABLE_CAR
 
     Match:
       description: GeoCoding match

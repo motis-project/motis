@@ -62,8 +62,9 @@ api::stopRoutes_response stop_routes::operator()(
         center.has_value(), "invalid center coordinate: {}", *query.center_);
     auto const radius =
         static_cast<double>(query.radius_.value_or(500LL));
-    loc_rtree_.in_radius(center->pos_, radius,
-                         [&](n::location_idx_t const l) { locations.push_back(l); });
+    loc_rtree_.in_radius(
+        center->pos_, radius,
+        [&](n::location_idx_t const l) { locations.push_back(l); });
   }
 
   utl::erase_duplicates(locations);
