@@ -19,7 +19,7 @@ using tz_map_t = vector_map<adr_extra_place_idx_t, date::time_zone const*>;
 struct adr_ext {
   vector_map<nigiri::location_idx_t, adr_extra_place_idx_t> location_place_;
   vector_map<adr_extra_place_idx_t, nigiri::routing::clasz_mask_t> place_clasz_;
-  vector_map<adr_extra_place_idx_t, float> place_importance_;
+  vector_map<adr_extra_place_idx_t, double> place_importance_;
 };
 
 date::time_zone const* get_tz(nigiri::timetable const&,
