@@ -35,8 +35,9 @@ namespace fs = std::filesystem;
 namespace n = nigiri;
 
 std::string generate_itinerary_id(api::Itinerary const& x) {
-  auto const& leg = x.legs_.at(0);
-  return get_single_leg_id(leg, leg.displayName_.value());
+  // auto const& leg = x.legs_.at(0);
+  //  return get_single_leg_id(leg, leg.displayName_.value());
+  return motis::generate_itinerary_id(x, {}, {});
 }
 
 api::RefreshItineraryPostBody make_refresh_itinerary_post_body(
@@ -387,7 +388,8 @@ TEST(motis, itinerary_id_reconstruct_with_changed_stop_ids) {
   expected.id_ = id;
   auto const stop_times = utl::init_from<ep::stop_times>(target_data).value();
 
-  EXPECT_EQ(expected, reconstruct_itinerary(stop_times, nullptr, {}, id));
+  EXPECT_EQ(expected,
+            reconstruct_itinerary(stop_times, nullptr, nullptr, {}, id));
 }
 
 TEST(motis, itinerary_id_reconstruct_with_repeated_stop_in_trip) {
@@ -400,7 +402,8 @@ TEST(motis, itinerary_id_reconstruct_with_repeated_stop_in_trip) {
 
   auto const id = generate_itinerary_id(original);
   auto const stop_times = utl::init_from<ep::stop_times>(data).value();
-  EXPECT_EQ(original, reconstruct_itinerary(stop_times, nullptr, {}, id));
+  EXPECT_EQ(original,
+            reconstruct_itinerary(stop_times, nullptr, nullptr, {}, id));
 }
 
 TEST(motis, itinerary_id_generate_rejects_invalid_single_leg_inputs) {
@@ -460,7 +463,7 @@ TEST(motis,
   EXPECT_GE(to_candidates.stopTimes_.size(), 8U);
 
   auto const reconstructed =
-      reconstruct_itinerary(stop_times, nullptr, {}, id, false);
+      reconstruct_itinerary(stop_times, nullptr, nullptr, {}, id, false);
   ASSERT_EQ(1U, reconstructed.legs_.size());
   auto const& reconstructed_leg = reconstructed.legs_.front();
   auto const& original_leg = original.legs_.front();
@@ -498,7 +501,7 @@ TEST(motis, itinerary_id_reconstruct_many_candidates_benchmark) {
   auto const start = std::chrono::steady_clock::now();
   for (auto i = 0; i < kIterations; ++i) {
     auto const reconstructed =
-        reconstruct_itinerary(stop_times, nullptr, {}, id, false);
+        reconstruct_itinerary(stop_times, nullptr, nullptr, {}, id, false);
     ASSERT_EQ(1U, reconstructed.legs_.size());
     auto const& leg = reconstructed.legs_.front();
     ASSERT_TRUE(leg.from_.stopId_.has_value());

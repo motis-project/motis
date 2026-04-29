@@ -17,6 +17,7 @@ std::string generate_itinerary_id(
 
 api::Itinerary reconstruct_itinerary(
     ep::stop_times const&,
+    osr::lookup const*,
     nigiri::shapes_storage const*,
     rt const&,
     std::string const& id,

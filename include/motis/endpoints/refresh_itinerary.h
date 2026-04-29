@@ -20,6 +20,7 @@ struct refresh_itinerary {
 
   config const& config_;
   osr::ways const* w_;
+  osr::lookup const* l_;
   osr::platforms const* pl_;
   platform_matches_t const* matches_;
   adr_ext const* ae_;
@@ -36,6 +37,7 @@ struct refresh_itinerary_post {
 
   config const& config_;
   osr::ways const* w_;
+  osr::lookup const* l_;
   osr::platforms const* pl_;
   platform_matches_t const* matches_;
   adr_ext const* ae_;

@@ -691,10 +691,7 @@ api::Itinerary journey_to_response(
 
   cleanup_intermodal(itinerary);
 
-  if (set_itinerary_id_field &&
-      std::all_of(begin(itinerary.legs_), end(itinerary.legs_),
-                  [](auto const& l) { return l.tripId_.has_value(); })) {
-    std::cout << "sss " << itinerary.legs_.size() << "\n";
+  if (set_itinerary_id_field) {
     itinerary.id_ = generate_itinerary_id(itinerary, default_display_names,
                                           default_display_names_indices);
   }
