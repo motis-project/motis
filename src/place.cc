@@ -35,7 +35,8 @@ api::Place to_place(osr::location const l,
       .name_ = std::string{name},
       .lat_ = l.pos_.lat_,
       .lon_ = l.pos_.lng_,
-      .level_ = l.lvl_.to_float(),
+      .level_ =
+          l.lvl_.has_level() ? std::optional{l.lvl_.to_float()} : std::nullopt,
       .tz_ = tz,
       .vertexType_ = api::VertexTypeEnum::NORMAL,
   };
@@ -57,7 +58,12 @@ double get_level(osr::ways const* w,
 }
 
 osr::location get_location(api::Place const& p) {
-  return {{p.lat_, p.lon_}, osr::level_t{static_cast<float>(p.level_)}};
+  return {{p.lat_, p.lon_},
+          p.level_
+              .transform([](auto const lvl) {
+                return osr::level_t{static_cast<float>(lvl)};
+              })
+              .value_or(osr::level_t{osr::kNoLevel})};
 }
 
 osr::location get_location(n::timetable const* tt,
@@ -212,6 +218,21 @@ place_t get_place(n::timetable const* tt,
   utl::verify(tt != nullptr && tags != nullptr,
               R"(could not parse location (no timetable loaded): "{}")", input);
   return tt_location{tags->get_location(*tt, input)};
+}
+
+api::Place bwc_adjust(api::Place&& pl, unsigned const api_version) {
+  if (!pl.level_.has_value() && 0 < api_version && api_version < 6) {
+    pl.level_ = {0U};
+  }
+  return pl;
+}
+
+api::Place bwc_adjust(api::Place const& pl, unsigned const api_version) {
+  auto p = pl;
+  if (!p.level_.has_value() && 0 < api_version && api_version < 6) {
+    p.level_ = {0U};
+  }
+  return p;
 }
 
 }  // namespace motis

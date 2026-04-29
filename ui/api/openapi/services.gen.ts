@@ -11,7 +11,7 @@ export const client = createClient(createConfig());
 export const plan = <ThrowOnError extends boolean = false>(options: Options<PlanData, ThrowOnError>) => {
     return (options?.client ?? client).get<PlanResponse, PlanError, ThrowOnError>({
         ...options,
-        url: '/api/v5/plan'
+        url: '/api/v6/plan'
     });
 };
 
@@ -73,7 +73,7 @@ export const oneToManyIntermodalPost = <ThrowOnError extends boolean = false>(op
 export const oneToAll = <ThrowOnError extends boolean = false>(options: Options<OneToAllData, ThrowOnError>) => {
     return (options?.client ?? client).get<OneToAllResponse, OneToAllError, ThrowOnError>({
         ...options,
-        url: '/api/v1/one-to-all'
+        url: '/api/v6/one-to-all'
     });
 };
 
@@ -103,7 +103,7 @@ export const geocode = <ThrowOnError extends boolean = false>(options: Options<G
 export const trip = <ThrowOnError extends boolean = false>(options: Options<TripData, ThrowOnError>) => {
     return (options?.client ?? client).get<TripResponse, TripError, ThrowOnError>({
         ...options,
-        url: '/api/v5/trip'
+        url: '/api/v6/trip'
     });
 };
 
@@ -113,7 +113,7 @@ export const trip = <ThrowOnError extends boolean = false>(options: Options<Trip
 export const stoptimes = <ThrowOnError extends boolean = false>(options?: Options<StoptimesData, ThrowOnError>) => {
     return (options?.client ?? client).get<StoptimesResponse, StoptimesError, ThrowOnError>({
         ...options,
-        url: '/api/v5/stoptimes'
+        url: '/api/v6/stoptimes'
     });
 };
 
@@ -127,7 +127,7 @@ export const stoptimes = <ThrowOnError extends boolean = false>(options?: Option
 export const trips = <ThrowOnError extends boolean = false>(options: Options<TripsData, ThrowOnError>) => {
     return (options?.client ?? client).get<TripsResponse, TripsError, ThrowOnError>({
         ...options,
-        url: '/api/v5/map/trips'
+        url: '/api/v6/map/trips'
     });
 };
 
@@ -147,7 +147,7 @@ export const initial = <ThrowOnError extends boolean = false>(options?: Options<
 export const stops = <ThrowOnError extends boolean = false>(options: Options<StopsData, ThrowOnError>) => {
     return (options?.client ?? client).get<StopsResponse, StopsError, ThrowOnError>({
         ...options,
-        url: '/api/v1/map/stops'
+        url: '/api/v6/map/stops'
     });
 };
 

@@ -179,7 +179,8 @@ api::Itinerary dummy_itinerary(api::Place const& from,
                                api::Place const& to,
                                api::ModeEnum const mode,
                                n::unixtime_t const start_time,
-                               n::unixtime_t const end_time) {
+                               n::unixtime_t const end_time,
+                               unsigned const api_version) {
   auto itinerary = api::Itinerary{
       .duration_ = std::chrono::duration_cast<std::chrono::seconds>(end_time -
                                                                     start_time)
@@ -188,8 +189,8 @@ api::Itinerary dummy_itinerary(api::Place const& from,
       .endTime_ = end_time};
   auto& leg = itinerary.legs_.emplace_back(api::Leg{
       .mode_ = mode,
-      .from_ = from,
-      .to_ = to,
+      .from_ = bwc_adjust(from, api_version),
+      .to_ = bwc_adjust(to, api_version),
       .duration_ = std::chrono::duration_cast<std::chrono::seconds>(end_time -
                                                                     start_time)
                        .count(),
@@ -251,7 +252,7 @@ api::Itinerary street_routing(osr::ways const& w,
       return {};
     }
     return dummy_itinerary(from_place, to_place, out.get_mode(), *start_time,
-                           *end_time);
+                           *end_time, api_version);
   }
 
   auto const deduced_start_time =
@@ -269,7 +270,7 @@ api::Itinerary street_routing(osr::ways const& w,
 
   auto t =
       std::chrono::time_point_cast<std::chrono::seconds>(deduced_start_time);
-  auto pred_place = from_place;
+  auto pred_place = bwc_adjust(from_place, api_version);
   auto pred_end_time = t;
   utl::equal_ranges_linear(
       path->segments_,
@@ -300,7 +301,7 @@ api::Itinerary street_routing(osr::ways const& w,
                                 ? api::ModeEnum::RIDE_SHARING
                                 : to_mode(lb->mode_)),
             .from_ = pred_place,
-            .to_ = is_last_leg ? to_place
+            .to_ = is_last_leg ? bwc_adjust(to_place, api_version)
                                : out.get_place(lang, to_node, pred_place.tz_),
             .duration_ = std::chrono::duration_cast<std::chrono::seconds>(
                              t - pred_end_time)
@@ -329,7 +330,7 @@ api::Itinerary street_routing(osr::ways const& w,
 
         out.annotate_leg(lang, from_node, to_node, leg);
 
-        pred_place = leg.to_;
+        pred_place = bwc_adjust(leg.to_, api_version);
         pred_end_time = t;
       });
 

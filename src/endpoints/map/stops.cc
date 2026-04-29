@@ -7,6 +7,8 @@
 
 #include "motis/journey_to_response.h"
 #include "motis/parse_location.h"
+#include "motis/place.h"
+#include "motis/server.h"
 #include "motis/tag_lookup.h"
 
 namespace json = boost::json;
@@ -18,6 +20,7 @@ api::stops_response stops::operator()(boost::urls::url_view const& url) const {
   auto const query = api::stops_params{url.params()};
   auto const min = parse_location(query.min_);
   auto const max = parse_location(query.max_);
+  auto const api_version = get_api_version(url);
   utl::verify<net::bad_request_exception>(
       min.has_value(), "min not a coordinate: {}", query.min_);
   utl::verify<net::bad_request_exception>(
@@ -28,8 +31,9 @@ api::stops_response stops::operator()(boost::urls::url_view const& url) const {
   loc_rtree_.find({min->pos_, max->pos_}, [&](n::location_idx_t const l) {
     utl::verify<net::too_many_exception>(res.size() < max_results,
                                          "too many items");
-    res.emplace_back(to_place(&tt_, &tags_, w_, pl_, matches_, ae_, tz_,
-                              query.language_, tt_location{l}));
+    res.emplace_back(bwc_adjust(to_place(&tt_, &tags_, w_, pl_, matches_, ae_,
+                                         tz_, query.language_, tt_location{l}),
+                                api_version));
   });
   return res;
 }

@@ -465,8 +465,10 @@ api::Itinerary journey_to_response(
                 auto& leg = itinerary.legs_.emplace_back(api::Leg{
                     .mode_ = to_mode(enter_stop.get_clasz(n::event_type::kDep),
                                      api_version),
-                    .from_ = to_place(enter_stop, n::event_type::kDep),
-                    .to_ = to_place(exit_stop, n::event_type::kArr),
+                    .from_ = bwc_adjust(
+                        to_place(enter_stop, n::event_type::kDep), api_version),
+                    .to_ = bwc_adjust(to_place(exit_stop, n::event_type::kArr),
+                                      api_version),
                     .duration_ =
                         std::chrono::duration_cast<std::chrono::seconds>(
                             exit_stop.time(n::event_type::kArr) -
@@ -487,7 +489,9 @@ api::Itinerary journey_to_response(
                         [&]() {
                           auto const first = exit_stop.get_first_trip_stop(
                               n::event_type::kArr);
-                          auto p = to_place(first, n::event_type::kDep);
+                          auto p =
+                              bwc_adjust(to_place(first, n::event_type::kDep),
+                                         api_version);
                           p.departure_ = first.time(n::event_type::kDep);
                           p.scheduledDeparture_ =
                               first.scheduled_time(n::event_type::kDep);
@@ -497,7 +501,8 @@ api::Itinerary journey_to_response(
                         [&]() {
                           auto const last = enter_stop.get_last_trip_stop(
                               n::event_type::kDep);
-                          auto p = to_place(last, n::event_type::kArr);
+                          auto p = bwc_adjust(
+                              to_place(last, n::event_type::kArr), api_version);
                           p.arrival_ = last.time(n::event_type::kArr);
                           p.scheduledArrival_ =
                               last.scheduled_time(n::event_type::kArr);
@@ -607,8 +612,8 @@ api::Itinerary journey_to_response(
                       !stop.in_allowed() && !stop.out_allowed()) {
                     continue;
                   }
-                  auto& p = leg.intermediateStops_->emplace_back(
-                      to_place(stop, n::event_type::kDep));
+                  auto& p = leg.intermediateStops_->emplace_back(bwc_adjust(
+                      to_place(stop, n::event_type::kDep), api_version));
                   p.departure_ = stop.time(n::event_type::kDep);
                   p.scheduledDeparture_ =
                       stop.scheduled_time(n::event_type::kDep);
@@ -644,7 +649,8 @@ api::Itinerary journey_to_response(
                                    j_leg.arr_time_ - j_leg.dep_time_) +
                                    std::chrono::minutes{10})
                          : dummy_itinerary(from, to, api::ModeEnum::WALK,
-                                           j_leg.dep_time_, j_leg.arr_time_));
+                                           j_leg.dep_time_, j_leg.arr_time_,
+                                           api_version));
             },
             [&](n::routing::offset const x) {
               if ((j_leg_idx == 0 || j_leg_idx == j.legs_.size() - 1) &&

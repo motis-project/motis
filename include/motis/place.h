@@ -1,5 +1,7 @@
 #pragma once
 
+#include <optional>
+
 #include "osr/location.h"
 
 #include "nigiri/types.h"
@@ -79,5 +81,10 @@ osr::location get_location(nigiri::timetable const*,
 place_t get_place(nigiri::timetable const*,
                   tag_lookup const*,
                   std::string_view user_input);
+
+// backward compatibility function for place
+api::Place bwc_adjust(api::Place&& pl, unsigned api_version);
+
+api::Place bwc_adjust(api::Place const& pl, unsigned api_version);
 
 }  // namespace motis

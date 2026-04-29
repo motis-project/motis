@@ -409,8 +409,13 @@ export type Place = {
     lon: number;
     /**
      * level according to OpenStreetMap
+     * If no level is given, the field will be unset.
+     *
+     * For older versions (v1-v5), this field is mandatory and therefore set to 0.
+     * Affected endpoints: plan,trip,stoptimes,one-to-all,map/stops,map/trips
+     *
      */
-    level: number;
+    level?: number;
     /**
      * timezone name (e.g. "Europe/Berlin")
      */
@@ -2909,6 +2914,14 @@ export type OneToAllError = (Error);
 export type ReverseGeocodeData = {
     query: {
         /**
+         * Optional. Number of results to return.
+         *
+         * If omitted, 5 results are returned by default.
+         * Must be <= server config variable `reverse_geocode_max_results`.
+         *
+         */
+        numResults?: number;
+        /**
          * latitude, longitude in degrees
          */
         place: string;
@@ -2941,6 +2954,14 @@ export type GeocodeData = {
          *
          */
         mode?: Array<Mode>;
+        /**
+         * Optional. Number of suggestions to return.
+         *
+         * If omitted, 10 suggestions are returned by default.
+         * Must be <= server config variable `geocode_max_suggestions`.
+         *
+         */
+        numResults?: number;
         /**
          * Optional. Used for biasing results towards the coordinate.
          *

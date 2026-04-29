@@ -493,8 +493,8 @@ api::plan_response meta_router::run() {
                    taxi_journeys.begin()->departure_time())));
   }
   return {
-      .from_ = from_place_,
-      .to_ = to_place_,
+      .from_ = bwc_adjust(from_place_, api_version_),
+      .to_ = bwc_adjust(to_place_, api_version_),
       .direct_ = std::move(direct_),
       .itineraries_ = utl::to_vec(
           taxi_journeys,
