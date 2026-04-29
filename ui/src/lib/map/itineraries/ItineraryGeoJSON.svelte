@@ -94,7 +94,12 @@
 				type={layer.type}
 				layout={layer.layout}
 				filter={['all', ['has', 'fromLevel'], layer.filter]}
-				paint={layer.paint}
+				paint={{
+					...layer.paint,
+					...(layer.id.includes('current') && {
+						'line-color': ['get', layer.id.includes('outline') ? 'outlineColor' : 'color']
+					})
+				}}
 			></Layer>
 		{/if}
 	{/each}

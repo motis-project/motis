@@ -2434,6 +2434,22 @@ paths:
           schema:
             type: string
 
+        - name: grouped
+          in: query
+          required: false
+          description: Optional. Return grouped stops
+          schema:
+            type: boolean
+
+        - name: modes
+          in: query
+          required: false
+          description: Optional. Stop modes
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/Mode'
+
         - name: language
           in: query
           required: false

@@ -7,7 +7,9 @@
 		LocateFixed,
 		TrainFront,
 		Waypoints,
-		MountainSnow
+		MountainSnow,
+		MapPin,
+		MapPinHouse
 	} from '@lucide/svelte';
 	import { getStyle } from '$lib/map/style';
 	import Map from '$lib/map/Map.svelte';
@@ -69,6 +71,9 @@
 	import { LEVEL_MIN_ZOOM } from '$lib/constants';
 	import StopGeoJSON from '$lib/map/stops/StopsGeoJSON.svelte';
 	import RailViz from '$lib/RailViz.svelte';
+	import StopsView from '$lib/map/stops/StopsView.svelte';
+	import { MapboxOverlay } from '@deck.gl/mapbox';
+	import { IconLayer } from '@deck.gl/layers';
 
 	const urlParams = browser ? new URLSearchParams(window.location.search) : undefined;
 
@@ -76,6 +81,18 @@
 	const hasDark: boolean = Boolean(urlParams?.has('dark'));
 	const hasLight: boolean = Boolean(urlParams?.has('light'));
 	const isSmallScreen = browser && window.innerWidth < 768;
+	const layers: IconLayer[] = [
+		new IconLayer({
+			id: 'trips-layer'
+		}),
+		new IconLayer({
+			id: 'stops-view-layer'
+		})
+	];
+	const overlay: MapboxOverlay = new MapboxOverlay({
+		interleaved: true,
+		layers
+	});
 	let activeTab = $derived<'connections' | 'departures' | 'isochrones'>(
 		page.state.activeTab ??
 			(urlParams?.has('one')
@@ -85,7 +102,8 @@
 					: 'connections')
 	);
 	let dataAttributionLink: string | undefined = $state(undefined);
-	let colorMode = $state<'rt' | 'route' | 'mode' | 'none'>(isSmallScreen ? 'none' : 'rt');
+	let colorMode = $state<'rt' | 'route' | 'mode' | 'none'>('none');
+	let stopsMode = $state<'grouped' | 'all'>('grouped');
 	let showMap = $state(!isSmallScreen);
 	let showRoutes = $state(false);
 	let routesOverlaySession = $state(0);
@@ -93,7 +111,6 @@
 	let lastPlanQuery: PlanData | undefined = undefined;
 	let serverConfig: ServerConfig | undefined = $state();
 	let dataLoaded: boolean = $state(false);
-
 	$effect(() => {
 		if (activeTab == 'isochrones') {
 			colorMode = 'none';
@@ -105,6 +122,10 @@
 		showRoutes = !showRoutes;
 	};
 
+	$effect(() => {
+		if (!map) return;
+		map.addControl(overlay);
+	});
 	let theme: 'light' | 'dark' =
 		(hasDark ? 'dark' : hasLight ? 'light' : undefined) ??
 		(browser && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
@@ -559,7 +580,7 @@
 	};
 
 	const flyToLocation = (location: Location) => {
-		map?.flyTo({ center: location.match, zoom: 11 });
+		map?.flyTo({ center: location.match, zoom: 12 });
 	};
 
 	const flyToSelectedItinerary = () => {
@@ -933,6 +954,25 @@
 							<Palette class="h-[1.2rem] w-[1.2rem]" />
 						{/if}
 					</Button>
+					<Button
+						size="icon"
+						onclick={() => {
+							stopsMode = (function () {
+								switch (stopsMode) {
+									case 'grouped':
+										return 'all';
+									case 'all':
+										return 'grouped';
+								}
+							})();
+						}}
+					>
+						{#if stopsMode == 'grouped'}
+							<MapPin class="h-[1.2rem] w-[1.2rem]" />
+						{:else if stopsMode == 'all'}
+							<MapPinHouse class="h-[1.2rem] w-[1.2rem]" />
+						{/if}
+					</Button>
 					<Button size="icon" onclick={() => getLocation()}>
 						<LocateFixed class="w-5 h-5" />
 					</Button>
@@ -950,7 +990,8 @@
 				<Rentals {map} {bounds} {zoom} {theme} debug={hasDebug} />
 			{/if}
 
-			<RailViz {map} {bounds} {zoom} {colorMode} />
+			<StopsView {map} {stopsMode} {overlay} {layers} {bounds} {zoom} />
+			<RailViz {map} {bounds} {zoom} {colorMode} {overlay} {layers} />
 			<Isochrones
 				{map}
 				{bounds}

@@ -2,7 +2,7 @@
 	import { lngLatToStr } from '$lib/lngLatToStr';
 	import { MapboxOverlay } from '@deck.gl/mapbox';
 	import { IconLayer } from '@deck.gl/layers';
-	import { createTripIcon } from '$lib/map/createTripIcon';
+	import { createTripIcon } from '$lib/map/createIcon';
 	import maplibregl from 'maplibre-gl';
 	import { onDestroy, onMount, untrack } from 'svelte';
 	import { formatTime } from './toDateTime';
@@ -12,14 +12,18 @@
 	import Control from './map/Control.svelte';
 	import { client } from '@motis-project/motis-client';
 	import type { PickingInfo } from '@deck.gl/core';
-
+	import { updateOverlayLayers } from './updateOverlay';
 	let {
 		map,
+		overlay,
+		layers,
 		bounds,
 		zoom,
 		colorMode
 	}: {
 		map: maplibregl.Map | undefined;
+		overlay: MapboxOverlay;
+		layers: IconLayer[];
 		bounds: maplibregl.LngLatBoundsLike | undefined;
 		zoom: number;
 		colorMode: 'rt' | 'route' | 'mode' | 'none';
@@ -178,11 +182,16 @@
 
 	//SETUP
 	let status = $state();
-	let overlay: MapboxOverlay;
 	let worker: Worker;
 	let metadata: MetaData | undefined = $state();
 
 	onMount(() => {
+		updateOverlayLayers(
+			new IconLayer({ id: 'trips-layer', beforeId: 'road-name-text' }),
+			layers,
+			overlay
+		);
+
 		worker = new Worker(new URL('tripsWorker.ts', import.meta.url), { type: 'module' });
 		worker.postMessage({ type: 'init', baseUrl: client.getConfig().baseUrl });
 		worker.onmessage = (e) => {
@@ -202,24 +211,19 @@
 					clickRequested = -1;
 				}
 			}
-			overlay.setProps({ layers: [createLayer()] });
+			const layer = createLayer();
+			if (layer) {
+				updateOverlayLayers(layer, layers, overlay);
+			}
 			if (canceled) {
 				cancelAnimationFrame(animationId);
 			} else {
 				animationId = requestAnimationFrame(animate);
 			}
 		};
-		overlay = new MapboxOverlay({
-			interleaved: true
-		});
-	});
-	$effect(() => {
-		if (!map || !overlay) return;
-		map.addControl(overlay);
 	});
 	onDestroy(() => {
 		if (animationId) cancelAnimationFrame(animationId);
-		if (overlay) map?.removeControl(overlay);
 		worker.terminate();
 		popup.remove();
 	});
