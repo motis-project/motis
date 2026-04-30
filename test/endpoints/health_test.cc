@@ -95,17 +95,11 @@ TEST(motis, health_feeds) {
     EXPECT_FALSE(res.second.gbfs_.value());
   }
 
-  // Make updates succeed without doing anything
-  auto const c_nofeeds = config{.timetable_ = {{.datasets_ = {{"test", {}}}}}};
-
   // GBFS consumed
   {
     auto ioc = boost::asio::io_context{};
-    gbfs::run_gbfs_update(ioc, c_nofeeds, *d.w_, *d.l_, d.gbfs_,
-                          d.metrics_.get());
-    ioc.run_one();
-
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    gbfs::run_gbfs_update(ioc, c, *d.w_, *d.l_, d.gbfs_, d.metrics_.get());
+    ioc.run_for(boost::asio::chrono::milliseconds(50));
 
     auto const res = health("api/v1/health");
     EXPECT_EQ(res.first, boost::beast::http::status::bad_request);
@@ -117,11 +111,14 @@ TEST(motis, health_feeds) {
 
   // RT & GBFS consumed
   {
+
+    // Make update succeed without doing anything
+    auto const c_nofeeds =
+        config{.timetable_ = {{.datasets_ = {{"test", {}}}}}};
+
     auto ioc = boost::asio::io_context{};
     run_rt_update(ioc, c_nofeeds, d);
-    ioc.run_one();
-
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    ioc.run_for(boost::asio::chrono::milliseconds(10));
 
     auto const res = health("api/v1/health");
     EXPECT_EQ(res.first, boost::beast::http::status::ok);
