@@ -26,7 +26,6 @@ TEST(motis, health_nofeeds) {
   auto const m = metrics_registry();
   auto const health = ep::health{.config_ = c, .metrics_ = &m};
 
-  // No feeds
   {
     auto const res = health("/api/v1/health");
 
@@ -69,7 +68,6 @@ TEST(motis, health_feeds) {
   std::filesystem::remove_all("test/data", ec);
 
   auto const c = config{
-      .osm_ = {"test/resources/test_case.osm.pbf"},
       .timetable_ = {config::timetable{
           .first_day_ = "2019-05-01",
           .num_days_ = 2,
@@ -77,16 +75,13 @@ TEST(motis, health_feeds) {
                          {.path_ = kGTFS,
                           .clasz_bikes_allowed_ = {{{"LONGDISTANCE", false}}},
                           .rt_ = {{{.url_ = "https://example.test/rt"}}}}}}}},
-      .gbfs_ = {{.feeds_ = {{"test", {.url_ = "https://example.test/gbfs"}}}}},
-      .street_routing_ = true};
+      .gbfs_ = {{.feeds_ = {{"test", {.url_ = "https://example.test/gbfs"}}}}}};
 
-  import(c, "test/data");
-  auto d = data{"test/data", c};
+  auto const m = metrics_registry{};
+  auto const health = ep::health{.config_ = c, .metrics_ = &m};
 
-  auto const health = utl::init_from<ep::health>(d).value();
-
-  // Feeds not consumed
   {
+    // Feeds not consumed
     auto const res = health("api/v1/health");
     EXPECT_EQ(res.first, boost::beast::http::status::bad_request);
     EXPECT_TRUE(res.second.rt_.has_value());
@@ -95,12 +90,9 @@ TEST(motis, health_feeds) {
     EXPECT_FALSE(res.second.gbfs_.value());
   }
 
-  // GBFS consumed
+  m.last_update_gbfs_.SetToCurrentTime();
   {
-    auto ioc = boost::asio::io_context{};
-    gbfs::run_gbfs_update(ioc, c, *d.w_, *d.l_, d.gbfs_, d.metrics_.get());
-    ioc.run_for(boost::asio::chrono::milliseconds(50));
-
+    // GBFS only consumed
     auto const res = health("api/v1/health");
     EXPECT_EQ(res.first, boost::beast::http::status::bad_request);
     EXPECT_TRUE(res.second.rt_.has_value());
@@ -109,17 +101,9 @@ TEST(motis, health_feeds) {
     EXPECT_TRUE(res.second.gbfs_.value());
   }
 
-  // RT & GBFS consumed
+  m.last_update_rt_.SetToCurrentTime();
   {
-
-    // Make update succeed without doing anything
-    auto const c_nofeeds =
-        config{.timetable_ = {{.datasets_ = {{"test", {}}}}}};
-
-    auto ioc = boost::asio::io_context{};
-    run_rt_update(ioc, c_nofeeds, d);
-    ioc.run_for(boost::asio::chrono::milliseconds(10));
-
+    // RT & GBFS consumed
     auto const res = health("api/v1/health");
     EXPECT_EQ(res.first, boost::beast::http::status::ok);
     EXPECT_TRUE(res.second.rt_.has_value());
