@@ -1115,10 +1115,11 @@ void run_gbfs_update(boost::asio::io_context& ioc,
                      config const& c,
                      osr::ways const& w,
                      osr::lookup const& l,
-                     std::shared_ptr<gbfs_data>& data_ptr) {
+                     std::shared_ptr<gbfs_data>& data_ptr,
+                     metrics_registry const* metrics) {
   boost::asio::co_spawn(
       ioc,
-      [&]() -> awaitable<void> {
+      [&, metrics]() -> awaitable<void> {
         auto executor = co_await asio::this_coro::executor;
         auto timer = asio::steady_timer{executor};
         auto ec = boost::system::error_code{};
@@ -1129,6 +1130,8 @@ void run_gbfs_update(boost::asio::io_context& ioc,
           auto const start = std::chrono::steady_clock::now();
 
           co_await update(cc, w, l, data_ptr);
+
+          metrics->last_update_gbfs_.SetToCurrentTime();
 
           // Schedule next update.
           timer.expires_at(start +
