@@ -69,6 +69,7 @@ TEST(motis, health_feeds) {
   std::filesystem::remove_all("test/data", ec);
 
   auto const c = config{
+      .osm_ = {"test/resources/test_case.osm.pbf"},
       .timetable_ = {config::timetable{
           .first_day_ = "2019-05-01",
           .num_days_ = 2,
@@ -76,7 +77,8 @@ TEST(motis, health_feeds) {
                          {.path_ = kGTFS,
                           .clasz_bikes_allowed_ = {{{"LONGDISTANCE", false}}},
                           .rt_ = {{{.url_ = "https://example.test/rt"}}}}}}}},
-      .gbfs_ = {{.feeds_ = {{"test", {.url_ = "https://example.test/gbfs"}}}}}};
+      .gbfs_ = {{.feeds_ = {{"test", {.url_ = "https://example.test/gbfs"}}}}},
+      .street_routing_ = true};
 
   import(c, "test/data");
   auto d = data{"test/data", c};
