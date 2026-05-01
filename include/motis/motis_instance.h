@@ -3,7 +3,6 @@
 
 #include "boost/asio/io_context.hpp"
 
-#include "motis/config.h"
 #include "net/web_server/query_router.h"
 
 #include "utl/set_thread_name.h"
