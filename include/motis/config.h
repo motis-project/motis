@@ -47,6 +47,8 @@ struct config {
   };
   std::optional<server> server_{};
 
+  std::optional<std::string> user_agent_{};
+
   std::optional<std::filesystem::path> osm_{};
 
   struct tiles {

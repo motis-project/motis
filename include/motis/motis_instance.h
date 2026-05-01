@@ -3,6 +3,7 @@
 
 #include "boost/asio/io_context.hpp"
 
+#include "motis/config.h"
 #include "net/web_server/query_router.h"
 
 #include "utl/set_thread_name.h"
@@ -178,13 +179,41 @@ struct motis_instance {
   }
 
   void run(data& d, config const& c) {
+    bool has_user_agent = c.user_agent_.has_value();
+    auto ensure_user_agent = [&](auto& headers) {
+      auto& h = const_cast<std::optional<headers_t>&>(headers);
+      if (!h.has_value()) {
+        h = headers_t{};
+      }
+      if (!h->contains("User-Agent")) {
+        h->insert({"User-Agent", *c.user_agent_});
+      }
+    };
+
     if (d.w_ && d.l_ && c.has_gbfs_feeds()) {
+      if (has_user_agent) {
+        for (auto& [_, feed] : c.gbfs_->feeds_) {
+          auto& headers = feed.headers_;
+          ensure_user_agent(headers);
+        }
+      }
       gbfs_ = io_thread{"motis gbfs update", [&](boost::asio::io_context& ioc) {
                           gbfs::run_gbfs_update(ioc, c, *d.w_, *d.l_, d.gbfs_);
                         }};
     }
 
     if (c.requires_rt_timetable_updates()) {
+      if (has_user_agent) {
+        for (auto& [_, dataset] : c.timetable_->datasets_) {
+          if (dataset.rt_.has_value()) {
+            for (auto& feed : *dataset.rt_) {
+              auto& headers = feed.headers_;
+              ensure_user_agent(headers);
+            }
+          }
+        }
+      }
+
       rt_ = io_thread{"motis rt update", [&](boost::asio::io_context& ioc) {
                         run_rt_update(ioc, c, d);
                       }};
