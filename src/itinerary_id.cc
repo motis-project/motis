@@ -352,16 +352,11 @@ api::Itinerary build_itinerary_from_items(
     unsigned int const api_version) {
   utl::verify(!items.empty(), "build_itinerary_from_items: no items");
 
-  // TODO: check for viability
-  // Re-time walk segments:
-  for (auto i = std::size_t{0}; i < items.size(); ++i) {
+  for (auto i = std::size_t{1}; i < items.size(); ++i) {
     if (auto* w = std::get_if<walk_segment>(&items[i])) {
-      if (i > 0) {
-        w->dep_ = item_arr(items[i - 1]);
-      }
-      if (i + 1 < items.size()) {
-        w->arr_ = item_dep(items[i + 1]);
-      }
+      auto const dur = w->arr_ - w->dep_;
+      w->dep_ = item_arr(items[i - 1]);
+      w->arr_ = w->dep_ + dur;
     }
   }
 

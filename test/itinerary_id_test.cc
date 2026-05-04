@@ -20,6 +20,7 @@
 #include "geo/polyline_format.h"
 
 #include "motis/config.h"
+#include "motis/data.h"
 #include "motis/endpoints/refresh_itinerary.h"
 #include "motis/endpoints/routing.h"
 #include "motis/endpoints/trip.h"
@@ -35,8 +36,6 @@ namespace fs = std::filesystem;
 namespace n = nigiri;
 
 std::string generate_itinerary_id(api::Itinerary const& x) {
-  // auto const& leg = x.legs_.at(0);
-  //  return get_single_leg_id(leg, leg.displayName_.value());
   return motis::generate_itinerary_id(x, {}, {});
 }
 
@@ -631,4 +630,102 @@ TEST(motis, refresh_itinerary_reconstructs_added_trip_by_trip_id_only) {
   EXPECT_EQ(itinerary_id, refreshed.id_);
   ASSERT_TRUE(refreshed.legs_.front().tripId_.has_value());
   EXPECT_EQ(added_trip_id, *refreshed.legs_.front().tripId_);
+}
+
+constexpr auto kMultiHopGtfs = R"(
+# agency.txt
+agency_id,agency_name,agency_url,agency_timezone
+DB,Deutsche Bahn,https://deutschebahn.com,Europe/Berlin
+
+# stops.txt
+stop_id,stop_name,stop_lat,stop_lon,location_type,parent_station,platform_code
+DA,DA Hbf,49.87260,8.63085,1,,
+DA_10,DA Hbf,49.87336,8.62926,0,DA,10
+LANGEN,Langen,49.99359,8.65677,1,,
+FFM,FFM Hbf,50.10701,8.66341,1,,
+FFM_10,FFM Hbf,50.10593,8.66118,0,FFM,10
+FFM_101,FFM Hbf,50.10739,8.66333,0,FFM,101
+FFM_HAUPT,FFM Hauptwache,50.11403,8.67835,1,,
+FFM_HAUPT_S,FFM Hauptwache S,50.11404,8.67824,0,FFM_HAUPT,
+
+# routes.txt
+route_id,agency_id,route_short_name,route_long_name,route_desc,route_type
+RE1,DB,RE1,,,106
+RE2,DB,RE2,,,106
+S3,DB,S3,,,109
+
+# trips.txt
+route_id,service_id,trip_id,trip_headsign,block_id
+RE1,S1,RE1,,
+RE2,S1,RE2,,
+S3,S1,S3,,
+
+# stop_times.txt
+trip_id,arrival_time,departure_time,stop_id,stop_sequence,pickup_type,drop_off_type
+RE1,10:00:00,10:00:00,DA_10,0,0,0
+RE1,10:08:00,10:08:00,LANGEN,1,0,0
+RE2,10:10:00,10:10:00,LANGEN,0,0,0
+RE2,10:25:00,10:25:00,FFM_10,1,0,0
+S3,10:30:00,10:30:00,FFM_101,0,0,0
+S3,10:38:00,10:38:00,FFM_HAUPT_S,1,0,0
+
+# calendar_dates.txt
+service_id,date,exception_type
+S1,20190501,1
+)";
+
+TEST(motis, itinerary_id_reconstruct_multi_leg_with_three_pt_hops) {
+  auto ec = std::error_code{};
+  auto const path = fs::path{"test/data/itinerary_id"} / "multi_leg_three_hops";
+  fs::remove_all(path, ec);
+
+  auto const cfg = config{
+      .osm_ = {"test/resources/test_case.osm.pbf"},
+      .timetable_ =
+          config::timetable{
+              .first_day_ = "2019-05-01",
+              .num_days_ = 2,
+              .datasets_ = {{"test", {.path_ = std::string{kMultiHopGtfs}}}},
+          },
+      .street_routing_ = true,
+      .osr_footpath_ = true,
+  };
+  import(cfg, path);
+  auto d = data{path, cfg};
+
+  auto const routing = utl::init_from<ep::routing>(d).value();
+  auto const res = routing(
+      "/api/v5/plan"
+      "?fromPlace=49.87420,8.62940"
+      "&toPlace=test_FFM_HAUPT_S"
+      "&time=2019-05-01T02:00Z"
+      "&timetableView=true"
+      "&preTransitModes=WALK"
+      "&detailedLegs=true");
+
+  ASSERT_FALSE(res.itineraries_.empty());
+  auto const& original = res.itineraries_.front();
+
+  auto pt_count = std::size_t{0};
+  auto walk_count = std::size_t{0};
+  for (auto const& l : original.legs_) {
+    if (l.mode_ == api::ModeEnum::WALK) {
+      ++walk_count;
+    } else {
+      ++pt_count;
+    }
+  }
+  ASSERT_GE(pt_count, 3U) << "expected at least 3 PT legs, got " << pt_count;
+  ASSERT_GE(walk_count, 3U)
+      << "expected at least 2 walk legs (first-mile + transfers), got "
+      << walk_count;
+  ASSERT_EQ(api::ModeEnum::WALK, original.legs_.front().mode_)
+      << "expected first leg to be a first-mile walk";
+
+  auto const id = generate_itinerary_id(original);
+  auto const stop_times = utl::init_from<ep::stop_times>(d).value();
+  auto const reconstructed = reconstruct_itinerary(
+      stop_times, d.l_.get(), d.shapes_.get(), *d.rt_, id, true, true, true);
+
+  EXPECT_EQ(original, reconstructed);
 }
