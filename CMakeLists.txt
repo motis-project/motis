@@ -115,11 +115,32 @@ endif ()
 # --- OPENAPI ---
 openapi_generate(openapi.yaml motis-api motis::api)
 
+# --- ITINERARY ID PROTOBUF ---
+add_custom_command(
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/generated/itinerary_id/itinerary_id.pb.h
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/generated/itinerary_id/itinerary_id.pb.cc
+    COMMAND ${CMAKE_COMMAND} -E make_directory
+    ${CMAKE_CURRENT_BINARY_DIR}/generated/itinerary_id
+    COMMAND ${CMAKE_CROSSCOMPILING_EMULATOR} $<TARGET_FILE:protoc>
+    --cpp_out=${CMAKE_CURRENT_BINARY_DIR}/generated/itinerary_id
+    --proto_path=${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/itinerary_id.proto
+    DEPENDS protoc
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/itinerary_id.proto
+    COMMENT "Generating itinerary id protocol buffers C++ code"
+)
+add_library(itinerary-id-proto
+    ${CMAKE_CURRENT_BINARY_DIR}/generated/itinerary_id/itinerary_id.pb.cc)
+target_compile_features(itinerary-id-proto PUBLIC cxx_std_23)
+target_link_libraries(itinerary-id-proto protobuf::libprotobuf)
+
 
 # --- LIB ---
 file(GLOB_RECURSE motislib-files src/*.cc)
 add_library(motislib ${motislib-files})
 target_include_directories(motislib PUBLIC include)
+target_include_directories(
+    motislib PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/generated/itinerary_id)
 target_compile_features(motislib PUBLIC cxx_std_23)
 target_compile_options(motislib PRIVATE ${motis-compile-options})
 target_link_libraries(motislib
@@ -129,6 +150,7 @@ target_link_libraries(motislib
     ctx
     boost-json
     motis-api
+    itinerary-id-proto
     reflectcpp
     web-server
     tiles

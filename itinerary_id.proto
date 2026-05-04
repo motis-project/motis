@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package motis;
+
+message LegId {
+  string display_name = 1;
+  string trip_id = 2;
+  string from_id = 3;
+  string to_id = 4;
+  string coords = 5;
+  int64 sched_start = 6;
+  int64 sched_end = 7;
+  string mode = 8;
+  bool scheduled = 9;
+}
+
+message ItineraryId {
+  repeated LegId legs = 1;
+}

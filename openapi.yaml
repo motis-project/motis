@@ -2048,6 +2048,115 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /api/v5/refresh-itinerary:
+    get:
+      tags:
+        - timetable
+      summary: Reconstruct an itinerary from an itinerary ID.
+      operationId: refreshItinerary
+      parameters:
+        - name: itineraryId
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: requireDisplayNameMatch
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: true
+        - name: joinInterlinedLegs
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: true
+        - name: detailedTransfers
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+        - name: detailedLegs
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: true
+        - name: withFares
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+        - name: withScheduledSkippedStops
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+        - name: language
+          in: query
+          required: false
+          description: |
+            language tags as used in OpenStreetMap / GTFS
+            (usually BCP-47 / ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
+          schema:
+            type: array
+            items:
+              type: string
+          explode: false
+      responses:
+        '200':
+          description: reconstructed itinerary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Itinerary'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      tags:
+        - timetable
+      summary: Reconstruct an itinerary from a protobuf-JSON itinerary identifier.
+      operationId: refreshItineraryPost
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshItineraryPostBody'
+      responses:
+        '200':
+          description: reconstructed itinerary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Itinerary'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
   /api/v5/stoptimes:
     get:
       tags:
@@ -4488,6 +4597,86 @@ components:
               items:
                 $ref: '#/components/schemas/FareProduct'
 
+    LegId:
+      type: object
+      required:
+        - displayName
+        - tripId
+        - fromId
+        - toId
+        - coords
+        - schedStart
+        - schedEnd
+        - mode
+        - scheduled
+      properties:
+        displayName:
+          type: string
+        tripId:
+          type: string
+        fromId:
+          type: string
+        toId:
+          type: string
+        coords:
+          type: string
+          description: "Encoded polyline with exactly two points: from and to."
+        schedStart:
+          type: integer
+          format: int64
+          description: Scheduled departure time as a Unix timestamp in seconds.
+        schedEnd:
+          type: integer
+          format: int64
+          description: Scheduled arrival time as a Unix timestamp in seconds.
+        mode:
+          $ref: '#/components/schemas/Mode'
+        scheduled:
+          type: boolean
+
+    ItineraryId:
+      type: object
+      required:
+        - legs
+      properties:
+        legs:
+          type: array
+          items:
+            $ref: '#/components/schemas/LegId'
+
+    RefreshItineraryPostBody:
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          $ref: '#/components/schemas/ItineraryId'
+        requireDisplayNameMatch:
+          type: boolean
+          default: true
+        joinInterlinedLegs:
+          type: boolean
+          default: true
+        detailedTransfers:
+          type: boolean
+          default: false
+        detailedLegs:
+          type: boolean
+          default: true
+        withFares:
+          type: boolean
+          default: false
+        withScheduledSkippedStops:
+          type: boolean
+          default: false
+        language:
+          description: |
+            language tags as used in OpenStreetMap / GTFS
+            (usually BCP-47 / ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
+          type: array
+          items:
+            type: string
+
     Itinerary:
       type: object
       required:
@@ -4495,6 +4684,7 @@ components:
         - startTime
         - endTime
         - transfers
+        - id
         - legs
       properties:
         duration:
@@ -4511,6 +4701,9 @@ components:
         transfers:
           type: integer
           description: The number of transfers this trip has.
+        id:
+          type: string
+          description: Opaque itinerary identifier. Pass it as `itineraryId` to `/api/v5/refresh-itinerary` for reconstruction using the new schedule/realtime data.
         legs:
           description: Journey legs
           type: array

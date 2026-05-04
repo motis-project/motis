@@ -1,0 +1,731 @@
+#include <chrono>
+#include <cstddef>
+#include <cstdint>
+#include <filesystem>
+#include <iostream>
+#include <iterator>
+#include <optional>
+#include <string>
+#include <string_view>
+#include <system_error>
+
+#include "boost/json.hpp"
+
+#include "fmt/format.h"
+
+#include "gtest/gtest.h"
+
+#include "utl/init_from.h"
+
+#include "geo/polyline_format.h"
+
+#include "motis/config.h"
+#include "motis/data.h"
+#include "motis/endpoints/refresh_itinerary.h"
+#include "motis/endpoints/routing.h"
+#include "motis/endpoints/trip.h"
+#include "motis/import.h"
+#include "motis/itinerary_id.h"
+
+#include "nigiri/rt/gtfsrt_update.h"
+
+#include "./util.h"
+
+using namespace motis;
+namespace fs = std::filesystem;
+namespace n = nigiri;
+
+std::string generate_itinerary_id(api::Itinerary const& x) {
+  return motis::generate_itinerary_id(x, {}, {});
+}
+
+api::RefreshItineraryPostBody make_refresh_itinerary_post_body(
+    api::Itinerary const& itinerary) {
+  auto const& leg = itinerary.legs_.at(0);
+  auto body = api::RefreshItineraryPostBody{};
+  body.id_.legs_.push_back(api::LegId{
+      .displayName_ = leg.displayName_.value(),
+      .tripId_ = leg.tripId_.value(),
+      .fromId_ = leg.from_.stopId_.value(),
+      .toId_ = leg.to_.stopId_.value(),
+      .coords_ = geo::encode_polyline(
+          {{leg.from_.lat_, leg.from_.lon_}, {leg.to_.lat_, leg.to_.lon_}}),
+      .schedStart_ = leg.scheduledStartTime_.get_unixtime_seconds(),
+      .schedEnd_ = leg.scheduledEndTime_.get_unixtime_seconds(),
+      .mode_ = leg.mode_,
+      .scheduled_ = leg.scheduled_,
+  });
+  return boost::json::value_to<api::RefreshItineraryPostBody>(
+      boost::json::value_from(body));
+}
+
+constexpr auto kSimpleGtfsTemplate = R"(
+# agency.txt
+agency_id,agency_name,agency_url,agency_timezone
+DB,Deutsche Bahn,https://deutschebahn.com,Europe/Berlin
+
+# stops.txt
+stop_id,stop_name,stop_lat,stop_lon,location_type,parent_station,platform_code
+{},DA Hbf,49.87260,8.63085,1,,
+{},FFM Hbf,50.10701,8.66341,1,,
+
+# routes.txt
+route_id,agency_id,route_short_name,route_long_name,route_desc,route_type
+ICE,DB,ICE,,,101
+
+# trips.txt
+route_id,service_id,trip_id,trip_headsign,block_id
+ICE,S1,ICE,,
+
+# stop_times.txt
+trip_id,arrival_time,departure_time,stop_id,stop_sequence,pickup_type,drop_off_type
+ICE,10:00:00,10:35:00,{},0,0,0
+ICE,11:00:00,11:00:00,{},1,0,0
+
+# calendar_dates.txt
+service_id,date,exception_type
+S1,20190501,1
+)";
+
+constexpr auto kLoopGtfs = R"(
+# agency.txt
+agency_id,agency_name,agency_url,agency_timezone
+DB,Deutsche Bahn,https://deutschebahn.com,Europe/Berlin
+
+# stops.txt
+stop_id,stop_name,stop_lat,stop_lon,location_type,parent_station,platform_code
+A,Stop A,49.00000,8.00000,1,,
+B,Stop B,49.10000,8.10000,1,,
+C,Stop C,49.20000,8.20000,1,,
+D,Stop D,49.30000,8.30000,1,,
+
+# routes.txt
+route_id,agency_id,route_short_name,route_long_name,route_desc,route_type
+LOOP,DB,LOOP,,,101
+
+# trips.txt
+route_id,service_id,trip_id,trip_headsign,block_id
+LOOP,S1,LOOP,,
+
+# stop_times.txt
+trip_id,arrival_time,departure_time,stop_id,stop_sequence,pickup_type,drop_off_type
+LOOP,10:00:00,10:00:00,A,0,0,0
+LOOP,10:15:00,10:15:00,B,1,0,0
+LOOP,10:30:00,10:30:00,C,2,0,0
+LOOP,10:45:00,10:45:00,B,3,0,0
+LOOP,11:03:00,11:04:00,D,4,0,0
+
+# calendar_dates.txt
+service_id,date,exception_type
+S1,20190501,1
+)";
+
+constexpr auto kDenseShiftSourceGtfs = R"(
+# agency.txt
+agency_id,agency_name,agency_url,agency_timezone
+DB,Deutsche Bahn,https://deutschebahn.com,Europe/Berlin
+
+# stops.txt
+stop_id,stop_name,stop_lat,stop_lon,location_type,parent_station,platform_code
+OLD_A,Origin A,49.87260,8.63085,1,,
+OLD_B,Origin B,50.10701,8.66341,1,,
+
+# routes.txt
+route_id,agency_id,route_short_name,route_long_name,route_desc,route_type
+MAIN,DB,MAIN,,,101
+
+# trips.txt
+route_id,service_id,trip_id,trip_headsign,block_id
+MAIN,S1,MAIN,,
+
+# stop_times.txt
+trip_id,arrival_time,departure_time,stop_id,stop_sequence,pickup_type,drop_off_type
+MAIN,10:00:00,10:00:00,OLD_A,0,0,0
+MAIN,10:20:00,10:20:00,OLD_B,1,0,0
+
+# calendar_dates.txt
+service_id,date,exception_type
+S1,20190501,1
+)";
+
+constexpr auto kDenseShiftTargetGtfs = R"(
+# agency.txt
+agency_id,agency_name,agency_url,agency_timezone
+DB,Deutsche Bahn,https://deutschebahn.com,Europe/Berlin
+
+# stops.txt
+stop_id,stop_name,stop_lat,stop_lon,location_type,parent_station,platform_code
+NEW_A,Origin A New,49.87260,8.63085,1,,
+A_N1,From Nearby 1,49.87300,8.63085,1,,
+A_N2,From Nearby 2,49.87220,8.63100,1,,
+A_N3,From Nearby 3,49.87290,8.63140,1,,
+A_N4,From Nearby 4,49.87210,8.63020,1,,
+NEW_B,Origin B New,50.10701,8.66341,1,,
+B_N1,To Nearby 1,50.10735,8.66341,1,,
+B_N2,To Nearby 2,50.10670,8.66395,1,,
+B_N3,To Nearby 3,50.10745,8.66295,1,,
+B_N4,To Nearby 4,50.10660,8.66290,1,,
+
+# routes.txt
+route_id,agency_id,route_short_name,route_long_name,route_desc,route_type
+MATCH_ROUTE,DB,MATCH,,,101
+DECOY_ROUTE,DB,DECOY,,,101
+
+# trips.txt
+route_id,service_id,trip_id,trip_headsign,block_id
+MATCH_ROUTE,S1,MATCH,,
+DECOY_ROUTE,S1,DECOY_1,,
+DECOY_ROUTE,S1,DECOY_2,,
+DECOY_ROUTE,S1,DECOY_3,,
+DECOY_ROUTE,S1,DECOY_4,,
+DECOY_ROUTE,S1,DECOY_5,,
+DECOY_ROUTE,S1,DECOY_6,,
+DECOY_ROUTE,S1,DECOY_7,,
+
+# stop_times.txt
+trip_id,arrival_time,departure_time,stop_id,stop_sequence,pickup_type,drop_off_type
+MATCH,10:08:00,10:08:00,NEW_A,0,0,0
+MATCH,10:28:00,10:28:00,NEW_B,1,0,0
+DECOY_1,10:03:00,10:03:00,A_N1,0,0,0
+DECOY_1,10:23:00,10:23:00,B_N1,1,0,0
+DECOY_2,10:04:00,10:04:00,A_N2,0,0,0
+DECOY_2,10:24:00,10:24:00,B_N2,1,0,0
+DECOY_3,10:05:00,10:05:00,A_N3,0,0,0
+DECOY_3,10:25:00,10:25:00,B_N3,1,0,0
+DECOY_4,10:06:00,10:06:00,A_N4,0,0,0
+DECOY_4,10:26:00,10:26:00,B_N4,1,0,0
+DECOY_5,10:07:00,10:07:00,A_N1,0,0,0
+DECOY_5,10:27:00,10:27:00,B_N3,1,0,0
+DECOY_6,10:09:00,10:09:00,A_N3,0,0,0
+DECOY_6,10:29:00,10:29:00,B_N1,1,0,0
+DECOY_7,10:10:00,10:10:00,A_N2,0,0,0
+DECOY_7,10:30:00,10:30:00,B_N4,1,0,0
+
+# calendar_dates.txt
+service_id,date,exception_type
+S1,20190501,1
+)";
+
+constexpr auto kHeavyBenchmarkSourceGtfs = R"(
+# agency.txt
+agency_id,agency_name,agency_url,agency_timezone
+DB,Deutsche Bahn,https://deutschebahn.com,Europe/Berlin
+
+# stops.txt
+stop_id,stop_name,stop_lat,stop_lon,location_type,parent_station,platform_code
+SRC_A,Source A,49.87260,8.63085,1,,
+SRC_B,Source B,50.10701,8.66341,1,,
+
+# routes.txt
+route_id,agency_id,route_short_name,route_long_name,route_desc,route_type
+ICE_ROUTE,DB,ICE,,,101
+
+# trips.txt
+route_id,service_id,trip_id,trip_headsign,block_id
+ICE_ROUTE,S1,ICE,,
+
+# stop_times.txt
+trip_id,arrival_time,departure_time,stop_id,stop_sequence,pickup_type,drop_off_type
+ICE,10:00:00,10:00:00,SRC_A,0,0,0
+ICE,10:20:00,10:20:00,SRC_B,1,0,0
+
+# calendar_dates.txt
+service_id,date,exception_type
+S1,20190501,1
+)";
+
+std::string make_heavy_target_gtfs(std::size_t const n_decoys) {
+  auto stops = std::string{
+      "\n# stops.txt\n"
+      "stop_id,stop_name,stop_lat,stop_lon,location_type,parent_station,"
+      "platform_code\n"
+      "MATCH_A,Match A,49.87260,8.63085,1,,\n"
+      "MATCH_B,Match B,50.10701,8.66341,1,,\n"};
+  auto trips = std::string{
+      "\n# trips.txt\n"
+      "route_id,service_id,trip_id,trip_headsign,block_id\n"
+      "ICE_ROUTE,S1,ICE,,\n"};
+  auto stop_times = std::string{
+      "\n# stop_times.txt\n"
+      "trip_id,arrival_time,departure_time,stop_id,stop_sequence,pickup_type,"
+      "drop_off_type\n"
+      "ICE,10:05:00,10:05:00,MATCH_A,0,0,0\n"
+      "ICE,10:25:00,10:25:00,MATCH_B,1,0,0\n"};
+
+  for (auto i = std::size_t{0}; i < n_decoys; ++i) {
+    auto const mag_a_lat = static_cast<int>((i * 3U) % 8U) + 2;
+    auto const mag_a_lon = static_cast<int>((i * 5U) % 8U) + 2;
+    auto const mag_b_lat = static_cast<int>((i * 7U) % 8U) + 2;
+    auto const mag_b_lon = static_cast<int>((i * 11U) % 8U) + 2;
+    auto const sign_a_lat = (i & 1U) != 0U ? 1 : -1;
+    auto const sign_a_lon = (i & 2U) != 0U ? 1 : -1;
+    auto const sign_b_lat = (i & 4U) != 0U ? 1 : -1;
+    auto const sign_b_lon = (i & 8U) != 0U ? 1 : -1;
+    auto const lat_off_a = 0.00005 * mag_a_lat * sign_a_lat;
+    auto const lon_off_a = 0.00008 * mag_a_lon * sign_a_lon;
+    auto const lat_off_b = 0.00005 * mag_b_lat * sign_b_lat;
+    auto const lon_off_b = 0.00008 * mag_b_lon * sign_b_lon;
+    auto const rt = static_cast<int>((i * 13U) % 33U);
+    auto const time_off_min = rt < 17 ? (rt - 20) : (rt - 12);
+    auto const dep_total = 10 * 60 + time_off_min;
+    auto const arr_total = dep_total + 20;
+
+    fmt::format_to(std::back_inserter(stops),
+                   "DEC_A_{},DA {},{:.5f},{:.5f},1,,\n"
+                   "DEC_B_{},DB {},{:.5f},{:.5f},1,,\n",
+                   i, i, 49.87260 + lat_off_a, 8.63085 + lon_off_a, i, i,
+                   50.10701 + lat_off_b, 8.66341 + lon_off_b);
+    fmt::format_to(std::back_inserter(trips), "DECOY_ROUTE,S1,DEC_{},,\n", i);
+    fmt::format_to(std::back_inserter(stop_times),
+                   "DEC_{},{:02}:{:02}:00,{:02}:{:02}:00,DEC_A_{},0,0,0\n"
+                   "DEC_{},{:02}:{:02}:00,{:02}:{:02}:00,DEC_B_{},1,0,0\n",
+                   i, dep_total / 60, dep_total % 60, dep_total / 60,
+                   dep_total % 60, i, i, arr_total / 60, arr_total % 60,
+                   arr_total / 60, arr_total % 60, i);
+  }
+
+  return fmt::format(
+      "\n# agency.txt\n"
+      "agency_id,agency_name,agency_url,agency_timezone\n"
+      "DB,Deutsche Bahn,https://deutschebahn.com,Europe/Berlin\n"
+      "{}"
+      "\n# routes.txt\n"
+      "route_id,agency_id,route_short_name,route_long_name,route_desc,"
+      "route_type\n"
+      "ICE_ROUTE,DB,ICE,,,101\n"
+      "DECOY_ROUTE,DB,DECOY,,,101\n"
+      "{}"
+      "{}"
+      "\n# calendar_dates.txt\n"
+      "service_id,date,exception_type\n"
+      "S1,20190501,1\n",
+      stops, trips, stop_times);
+}
+
+config make_config(std::string const& gtfs) {
+  return config{
+      .timetable_ =
+          config::timetable{
+              .first_day_ = "2019-05-01",
+              .num_days_ = 2,
+              .datasets_ = {{"test", {.path_ = gtfs}}},
+          },
+  };
+}
+
+data import_test_data(config const& cfg, std::string_view const sub_dir) {
+  auto const path = fs::path{"test/data/itinerary_id"} / sub_dir;
+  auto ec = std::error_code{};
+  fs::remove_all(path, ec);
+  import(cfg, path);
+  return data{path, cfg};
+}
+
+api::Itinerary route_first_itinerary(data& data,
+                                     std::string_view const from_place,
+                                     std::string_view const to_place,
+                                     std::string_view const time,
+                                     bool const detailed_legs = true,
+                                     bool const detailed_transfers = false) {
+  auto const routing = utl::init_from<ep::routing>(data).value();
+  auto const query = fmt::format(
+      "?fromPlace={}&toPlace={}&time={}&timetableView=true"
+      "&directModes=WALK,RENTAL&detailedLegs={}&detailedTransfers={}",
+      from_place, to_place, time, detailed_legs ? "true" : "false",
+      detailed_transfers ? "true" : "false");
+  return routing(query).itineraries_.at(0);
+}
+
+transit_realtime::FeedMessage make_added_trip_update(
+    date::sys_seconds const msg_time) {
+  auto msg = transit_realtime::FeedMessage{};
+  auto* const hdr = msg.mutable_header();
+  hdr->set_gtfs_realtime_version("2.0");
+  hdr->set_incrementality(
+      transit_realtime::FeedHeader_Incrementality_FULL_DATASET);
+  hdr->set_timestamp(test::to_unix(msg_time));
+
+  auto* const e = msg.add_entity();
+  e->set_id("1");
+  auto* const tu = e->mutable_trip_update();
+  auto* const td = tu->mutable_trip();
+  td->set_trip_id("ADDED_ICE");
+  td->set_route_id("ICE");
+  td->set_start_date("20190501");
+  td->set_start_time("11:00:00");
+  td->set_schedule_relationship(
+      transit_realtime::TripDescriptor_ScheduleRelationship_ADDED);
+
+  auto* const from_stu = tu->add_stop_time_update();
+  from_stu->set_stop_id("DA");
+  from_stu->set_stop_sequence(0U);
+  from_stu->mutable_departure()->set_time(static_cast<std::int64_t>(
+      test::to_unix(msg_time + std::chrono::minutes{2})));
+
+  auto* const to_stu = tu->add_stop_time_update();
+  to_stu->set_stop_id("FFM");
+  to_stu->set_stop_sequence(1U);
+  to_stu->mutable_arrival()->set_time(static_cast<std::int64_t>(
+      test::to_unix(msg_time + std::chrono::minutes{17})));
+
+  return msg;
+}
+
+TEST(motis, itinerary_id_reconstruct_with_changed_stop_ids) {
+  auto const source_cfg = make_config(
+      std::string{fmt::format(kSimpleGtfsTemplate, "DA", "FFM", "DA", "FFM")});
+  auto source_data = import_test_data(source_cfg, "changed_stop_ids_source");
+  auto const original = route_first_itinerary(source_data, "test_DA",
+                                              "test_FFM", "2019-05-01T02:00Z");
+  auto const id = generate_itinerary_id(original);
+
+  auto const target_cfg = make_config(
+      std::string{fmt::format(kSimpleGtfsTemplate, "FFM", "DA", "FFM", "DA")});
+  auto target_data = import_test_data(target_cfg, "changed_stop_ids_target");
+  auto expected = route_first_itinerary(target_data, "test_FFM", "test_DA",
+                                        "2019-05-01T02:00Z");
+  expected.id_ = id;
+  auto const stop_times = utl::init_from<ep::stop_times>(target_data).value();
+
+  EXPECT_EQ(expected,
+            reconstruct_itinerary(stop_times, nullptr, nullptr, {}, id));
+}
+
+TEST(motis, itinerary_id_reconstruct_with_repeated_stop_in_trip) {
+  auto const cfg = make_config(kLoopGtfs);
+  auto data = import_test_data(cfg, "repeated_stop_route");
+
+  auto const original =
+      route_first_itinerary(data, "test_B", "test_D", "2019-05-01T08:00Z");
+  ASSERT_EQ(1U, original.legs_.size());
+
+  auto const id = generate_itinerary_id(original);
+  auto const stop_times = utl::init_from<ep::stop_times>(data).value();
+  EXPECT_EQ(original,
+            reconstruct_itinerary(stop_times, nullptr, nullptr, {}, id));
+}
+
+TEST(motis, itinerary_id_generate_rejects_invalid_single_leg_inputs) {
+  auto const cfg = make_config(
+      std::string{fmt::format(kSimpleGtfsTemplate, "DA", "FFM", "DA", "FFM")});
+  auto data = import_test_data(cfg, "invalid_generate_inputs");
+  auto const original =
+      route_first_itinerary(data, "test_DA", "test_FFM", "2019-05-01T02:00Z");
+  ASSERT_EQ(1U, original.legs_.size());
+
+  auto invalid = original;
+  invalid.legs_.clear();
+  EXPECT_ANY_THROW(generate_itinerary_id(invalid));
+
+  invalid = original;
+  invalid.legs_.front().from_.stopId_ = std::nullopt;
+  EXPECT_ANY_THROW(generate_itinerary_id(invalid));
+
+  invalid = original;
+  invalid.legs_.front().to_.stopId_ = std::nullopt;
+  EXPECT_ANY_THROW(generate_itinerary_id(invalid));
+}
+
+TEST(motis,
+     itinerary_id_reconstruct_dense_nearby_with_changed_ids_and_shifted_times) {
+  auto const source_cfg = make_config(kDenseShiftSourceGtfs);
+  auto source_data = import_test_data(source_cfg, "dense_shift_source");
+  auto const original = route_first_itinerary(
+      source_data, "test_OLD_A", "test_OLD_B", "2019-05-01T02:00Z");
+  ASSERT_EQ(1U, original.legs_.size());
+  auto const id = generate_itinerary_id(original);
+
+  auto const target_cfg = make_config(kDenseShiftTargetGtfs);
+  auto target_data = import_test_data(target_cfg, "dense_shift_target");
+  auto const stop_times = utl::init_from<ep::stop_times>(target_data).value();
+
+  auto const from_candidates = stop_times(
+      "?center=49.87260,8.63085"
+      "&time=2019-05-01T00:00:00.000Z"
+      "&arriveBy=false"
+      "&direction=LATER"
+      "&n=10"
+      "&radius=100"
+      "&exactRadius=true"
+      "&mode=HIGHSPEED_RAIL");
+  EXPECT_GE(from_candidates.stopTimes_.size(), 8U);
+
+  auto const to_candidates = stop_times(
+      "?center=50.10701,8.66341"
+      "&time=2019-05-01T00:00:00.000Z"
+      "&arriveBy=true"
+      "&direction=LATER"
+      "&n=10"
+      "&radius=100"
+      "&exactRadius=true"
+      "&mode=HIGHSPEED_RAIL");
+  EXPECT_GE(to_candidates.stopTimes_.size(), 8U);
+
+  auto const reconstructed =
+      reconstruct_itinerary(stop_times, nullptr, nullptr, {}, id, false);
+  ASSERT_EQ(1U, reconstructed.legs_.size());
+  auto const& reconstructed_leg = reconstructed.legs_.front();
+  auto const& original_leg = original.legs_.front();
+
+  ASSERT_TRUE(reconstructed_leg.from_.stopId_.has_value());
+  ASSERT_TRUE(reconstructed_leg.to_.stopId_.has_value());
+  EXPECT_EQ("test_NEW_A", *reconstructed_leg.from_.stopId_);
+  EXPECT_EQ("test_NEW_B", *reconstructed_leg.to_.stopId_);
+
+  ASSERT_TRUE(reconstructed_leg.tripId_.has_value());
+  EXPECT_NE(std::string::npos, reconstructed_leg.tripId_->find("test_MATCH"));
+
+  EXPECT_EQ(original_leg.scheduledStartTime_.get_unixtime_seconds() + 8 * 60,
+            reconstructed_leg.scheduledStartTime_.get_unixtime_seconds());
+  EXPECT_EQ(original_leg.scheduledEndTime_.get_unixtime_seconds() + 8 * 60,
+            reconstructed_leg.scheduledEndTime_.get_unixtime_seconds());
+}
+
+TEST(motis, itinerary_id_reconstruct_many_candidates_benchmark) {
+  constexpr auto kNumDecoys = std::size_t{50};
+  constexpr auto kIterations = 30;
+
+  auto const source_cfg = make_config(kHeavyBenchmarkSourceGtfs);
+  auto source_data = import_test_data(source_cfg, "heavy_benchmark_source");
+  auto const original = route_first_itinerary(
+      source_data, "test_SRC_A", "test_SRC_B", "2019-05-01T02:00Z");
+  ASSERT_EQ(1U, original.legs_.size());
+  auto const id = generate_itinerary_id(original);
+
+  auto const target_cfg = make_config(make_heavy_target_gtfs(kNumDecoys));
+  auto target_data = import_test_data(target_cfg, "heavy_benchmark_target");
+  auto const stop_times = utl::init_from<ep::stop_times>(target_data).value();
+
+  auto const original_leg = original.legs_.front();
+  auto const start = std::chrono::steady_clock::now();
+  for (auto i = 0; i < kIterations; ++i) {
+    auto const reconstructed =
+        reconstruct_itinerary(stop_times, nullptr, nullptr, {}, id, false);
+    ASSERT_EQ(1U, reconstructed.legs_.size());
+    auto const& leg = reconstructed.legs_.front();
+    ASSERT_TRUE(leg.from_.stopId_.has_value());
+    EXPECT_EQ("test_MATCH_A", *leg.from_.stopId_);
+    ASSERT_TRUE(leg.to_.stopId_.has_value());
+    EXPECT_EQ("test_MATCH_B", *leg.to_.stopId_);
+    EXPECT_EQ(original_leg.scheduledStartTime_.get_unixtime_seconds() + 5 * 60,
+              leg.scheduledStartTime_.get_unixtime_seconds());
+  }
+  auto const elapsed = std::chrono::steady_clock::now() - start;
+  auto const per_iter_us =
+      std::chrono::duration_cast<std::chrono::microseconds>(elapsed).count() /
+      kIterations;
+  std::cout << "[BENCHMARK] reconstruct_itinerary with " << kNumDecoys
+            << " decoys: " << per_iter_us << " us/iter (" << kIterations
+            << " iterations)" << std::endl;
+}
+
+TEST(motis, refresh_itinerary_endpoint_reconstructs_itinerary) {
+  auto const source_cfg = make_config(
+      std::string{fmt::format(kSimpleGtfsTemplate, "DA", "FFM", "DA", "FFM")});
+  auto source_data =
+      import_test_data(source_cfg, "refresh_itinerary_endpoint_source");
+  auto const original = route_first_itinerary(source_data, "test_DA",
+                                              "test_FFM", "2019-05-01T02:00Z");
+  auto const id = generate_itinerary_id(original);
+
+  auto const target_cfg = make_config(
+      std::string{fmt::format(kSimpleGtfsTemplate, "FFM", "DA", "FFM", "DA")});
+  auto target_data =
+      import_test_data(target_cfg, "refresh_itinerary_endpoint_target");
+  auto expected = route_first_itinerary(target_data, "test_FFM", "test_DA",
+                                        "2019-05-01T02:00Z", false);
+  expected.id_ = id;
+
+  auto const refresh = utl::init_from<ep::refresh_itinerary>(target_data);
+  auto query = api::refreshItinerary_params{};
+  query.itineraryId_ = id;
+  query.detailedLegs_ = false;
+
+  auto const get_res = (*refresh)(query.to_url("?"));
+  EXPECT_EQ(expected, get_res);
+
+  auto const refresh_post =
+      utl::init_from<ep::refresh_itinerary_post>(target_data).value();
+  auto body = make_refresh_itinerary_post_body(original);
+  body.detailedLegs_ = false;
+  EXPECT_EQ(get_res, refresh_post(body));
+}
+
+TEST(motis, refresh_itinerary_matches_scheduled_then_applies_realtime) {
+  auto const cfg = make_config(
+      std::string{fmt::format(kSimpleGtfsTemplate, "DA", "FFM", "DA", "FFM")});
+  auto data = import_test_data(cfg, "refresh_itinerary_endpoint_realtime");
+
+  auto const original =
+      route_first_itinerary(data, "test_DA", "test_FFM", "2019-05-01T02:00Z");
+  auto const id = generate_itinerary_id(original);
+
+  auto const rt_base_day =
+      date::sys_days{date::year{2019} / date::May / date::day{1}};
+  data.init_rtt(rt_base_day);
+
+  auto const stats = n::rt::gtfsrt_update_msg(
+      *data.tt_, *data.rt_->rtt_, n::source_idx_t{0}, "test",
+      test::to_feed_msg(
+          {test::trip_update{.trip_ = {.trip_id_ = "ICE",
+                                       .start_time_ = "10:35:00",
+                                       .date_ = "20190501"},
+                             .stop_updates_ = {{.stop_id_ = "DA",
+                                                .seq_ = 0U,
+                                                .ev_type_ = n::event_type::kDep,
+                                                .delay_minutes_ = 20},
+                                               {.stop_id_ = "FFM",
+                                                .seq_ = 1U,
+                                                .ev_type_ = n::event_type::kArr,
+                                                .delay_minutes_ = 22}}}},
+          rt_base_day + std::chrono::hours{10}));
+  EXPECT_EQ(1U, stats.total_entities_success_);
+
+  auto const refresh = utl::init_from<ep::refresh_itinerary>(data);
+  auto query = api::refreshItinerary_params{};
+  query.itineraryId_ = id;
+  auto const refreshed = (*refresh)(query.to_url("?"));
+
+  ASSERT_EQ(1U, refreshed.legs_.size());
+  auto const& original_leg = original.legs_.front();
+  auto const& refreshed_leg = refreshed.legs_.front();
+
+  EXPECT_EQ(original_leg.scheduledStartTime_,
+            refreshed_leg.scheduledStartTime_);
+  EXPECT_EQ(original_leg.scheduledEndTime_, refreshed_leg.scheduledEndTime_);
+  EXPECT_EQ(original_leg.startTime_.get_unixtime_seconds() + 20 * 60,
+            refreshed_leg.startTime_.get_unixtime_seconds());
+  EXPECT_EQ(original_leg.endTime_.get_unixtime_seconds() + 22 * 60,
+            refreshed_leg.endTime_.get_unixtime_seconds());
+  EXPECT_TRUE(refreshed_leg.realTime_);
+}
+
+TEST(motis, refresh_itinerary_reconstructs_added_trip_by_trip_id_only) {
+  auto const cfg = make_config(
+      std::string{fmt::format(kSimpleGtfsTemplate, "DA", "FFM", "DA", "FFM")});
+  auto data = import_test_data(cfg, "refresh_itinerary_added_trip_success");
+
+  auto const rt_base_day =
+      date::sys_days{date::year{2019} / date::May / date::day{1}};
+  data.init_rtt(rt_base_day);
+
+  auto const stats = n::rt::gtfsrt_update_msg(
+      *data.tt_, *data.rt_->rtt_, n::source_idx_t{0}, "test",
+      make_added_trip_update(rt_base_day + std::chrono::hours{9}));
+  EXPECT_EQ(1U, stats.total_entities_success_);
+
+  auto const added_trip_id = std::string{"20190501_09:02_test_ADDED_ICE"};
+  auto const trip = utl::init_from<ep::trip>(data).value();
+  auto trip_query = api::trip_params{};
+  trip_query.tripId_ = added_trip_id;
+  auto const added_itinerary = trip(trip_query.to_url("?"));
+  auto const itinerary_id = generate_itinerary_id(added_itinerary);
+
+  auto const refresh = utl::init_from<ep::refresh_itinerary>(data).value();
+  auto refresh_query = api::refreshItinerary_params{};
+  refresh_query.itineraryId_ = itinerary_id;
+  auto const refreshed = refresh(refresh_query.to_url("?"));
+
+  ASSERT_EQ(1U, refreshed.legs_.size());
+  EXPECT_EQ(itinerary_id, refreshed.id_);
+  ASSERT_TRUE(refreshed.legs_.front().tripId_.has_value());
+  EXPECT_EQ(added_trip_id, *refreshed.legs_.front().tripId_);
+}
+
+constexpr auto kMultiHopGtfs = R"(
+# agency.txt
+agency_id,agency_name,agency_url,agency_timezone
+DB,Deutsche Bahn,https://deutschebahn.com,Europe/Berlin
+
+# stops.txt
+stop_id,stop_name,stop_lat,stop_lon,location_type,parent_station,platform_code
+DA,DA Hbf,49.87260,8.63085,1,,
+DA_10,DA Hbf,49.87336,8.62926,0,DA,10
+LANGEN,Langen,49.99359,8.65677,1,,
+FFM,FFM Hbf,50.10701,8.66341,1,,
+FFM_10,FFM Hbf,50.10593,8.66118,0,FFM,10
+FFM_101,FFM Hbf,50.10739,8.66333,0,FFM,101
+FFM_HAUPT,FFM Hauptwache,50.11403,8.67835,1,,
+FFM_HAUPT_S,FFM Hauptwache S,50.11404,8.67824,0,FFM_HAUPT,
+
+# routes.txt
+route_id,agency_id,route_short_name,route_long_name,route_desc,route_type
+RE1,DB,RE1,,,106
+RE2,DB,RE2,,,106
+S3,DB,S3,,,109
+
+# trips.txt
+route_id,service_id,trip_id,trip_headsign,block_id
+RE1,S1,RE1,,
+RE2,S1,RE2,,
+S3,S1,S3,,
+
+# stop_times.txt
+trip_id,arrival_time,departure_time,stop_id,stop_sequence,pickup_type,drop_off_type
+RE1,10:00:00,10:00:00,DA_10,0,0,0
+RE1,10:08:00,10:08:00,LANGEN,1,0,0
+RE2,10:10:00,10:10:00,LANGEN,0,0,0
+RE2,10:25:00,10:25:00,FFM_10,1,0,0
+S3,10:30:00,10:30:00,FFM_101,0,0,0
+S3,10:38:00,10:38:00,FFM_HAUPT_S,1,0,0
+
+# calendar_dates.txt
+service_id,date,exception_type
+S1,20190501,1
+)";
+
+TEST(motis, itinerary_id_reconstruct_multi_leg_with_three_pt_hops) {
+  auto ec = std::error_code{};
+  auto const path = fs::path{"test/data/itinerary_id"} / "multi_leg_three_hops";
+  fs::remove_all(path, ec);
+
+  auto const cfg = config{
+      .osm_ = {"test/resources/test_case.osm.pbf"},
+      .timetable_ =
+          config::timetable{
+              .first_day_ = "2019-05-01",
+              .num_days_ = 2,
+              .datasets_ = {{"test", {.path_ = std::string{kMultiHopGtfs}}}},
+          },
+      .street_routing_ = true,
+      .osr_footpath_ = true,
+  };
+  import(cfg, path);
+  auto d = data{path, cfg};
+
+  auto const routing = utl::init_from<ep::routing>(d).value();
+  auto const res = routing(
+      "/api/v5/plan"
+      "?fromPlace=49.87420,8.62940"
+      "&toPlace=test_FFM_HAUPT_S"
+      "&time=2019-05-01T02:00Z"
+      "&timetableView=true"
+      "&preTransitModes=WALK"
+      "&detailedLegs=true");
+
+  ASSERT_FALSE(res.itineraries_.empty());
+  auto const& original = res.itineraries_.front();
+
+  auto pt_count = std::size_t{0};
+  auto walk_count = std::size_t{0};
+  for (auto const& l : original.legs_) {
+    if (l.mode_ == api::ModeEnum::WALK) {
+      ++walk_count;
+    } else {
+      ++pt_count;
+    }
+  }
+  ASSERT_GE(pt_count, 3U) << "expected at least 3 PT legs, got " << pt_count;
+  ASSERT_GE(walk_count, 3U)
+      << "expected at least 2 walk legs (first-mile + transfers), got "
+      << walk_count;
+  ASSERT_EQ(api::ModeEnum::WALK, original.legs_.front().mode_)
+      << "expected first leg to be a first-mile walk";
+
+  auto const id = generate_itinerary_id(original);
+  auto const stop_times = utl::init_from<ep::stop_times>(d).value();
+  auto const reconstructed = reconstruct_itinerary(
+      stop_times, d.l_.get(), d.shapes_.get(), *d.rt_, id, true, true, true);
+
+  EXPECT_EQ(original, reconstructed);
+}
