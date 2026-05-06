@@ -179,6 +179,9 @@ struct config {
           group_{};
       std::optional<
           std::variant<std::string, std::map<std::string, std::string>>>
+          name_{};
+      std::optional<
+          std::variant<std::string, std::map<std::string, std::string>>>
           color_{};
       std::optional<ttl> ttl_{};
     };

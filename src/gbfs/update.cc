@@ -315,6 +315,7 @@ struct gbfs_update {
                   .default_return_constraint_ =
                       lookup_default_return_constraint("", id),
                   .config_group_ = lookup_group("", id),
+                  .config_name_ = lookup_name("", id),
                   .config_color_ = lookup_color("", id),
                   .oauth_ = std::move(oauth),
                   .default_ttl_ = default_ttl,
@@ -431,6 +432,9 @@ struct gbfs_update {
           load_system_information);
       if (!sys_info_updated && prev_provider != nullptr) {
         provider.sys_info_ = prev_provider->sys_info_;
+      }
+      if (pf.config_name_) {
+        provider.sys_info_.name_ = *pf.config_name_;
       }
 
       auto const vehicle_types_updated = co_await update(
@@ -807,6 +811,7 @@ struct gbfs_update {
             .default_return_constraint_ =
                 lookup_default_return_constraint(af.id_, combined_id),
             .config_group_ = lookup_group(af.id_, system_id),
+            .config_name_ = lookup_name(af.id_, system_id),
             .config_color_ = lookup_color(af.id_, system_id),
             .oauth_ = af.oauth_,
             .default_ttl_ = af.default_ttl_,
@@ -827,6 +832,7 @@ struct gbfs_update {
             .default_return_constraint_ =
                 lookup_default_return_constraint(af.id_, combined_id),
             .config_group_ = lookup_group(af.id_, system_id),
+            .config_name_ = lookup_name(af.id_, system_id),
             .config_color_ = lookup_color(af.id_, system_id),
             .oauth_ = af.oauth_,
             .default_ttl_ = af.default_ttl_,
@@ -1071,6 +1077,12 @@ struct gbfs_update {
                                           std::string const& system_id) {
     return lookup_mapping(af_id, system_id,
                           [](auto const& cfg) { return cfg.color_; });
+  }
+
+  std::optional<std::string> lookup_name(std::string const& af_id,
+                                         std::string const& system_id) {
+    return lookup_mapping(af_id, system_id,
+                          [](auto const& cfg) { return cfg.name_; });
   }
 
   config::gbfs const& c_;
