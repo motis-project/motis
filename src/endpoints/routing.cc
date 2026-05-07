@@ -2,7 +2,6 @@
 
 #include <algorithm>
 #include <cmath>
-#include <string_view>
 
 #include "boost/thread/tss.hpp"
 
@@ -950,8 +949,8 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                                : std::optional{fastest_direct},
         .fastest_direct_factor_ = query.fastestDirectFactor_,
         .slow_direct_ = query.slowDirect_,
-        .include_coupled_trips_ = query.includeCoupledTrips_,
-        .fastest_slow_direct_factor_ = query.fastestSlowDirectFactor_};
+        .fastest_slow_direct_factor_ = query.fastestSlowDirectFactor_,
+        .include_coupled_trips_ = query.includeCoupledTrips_};
     remove_slower_than_fastest_direct(q);
     UTL_STOP_TIMING(query_preparation);
 
@@ -1033,41 +1032,6 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
 
     direct_filter(direct, journeys);
 
-    auto itineraries = utl::to_vec(
-      journeys, [&, cache = street_routing_cache_t{}](auto&& j) mutable {
-        return journey_to_response(
-          w_, l_, pl_, *tt_, *tags_, fa_, e, rtt, matches_, elevations_,
-          shapes_, gbfs_rd, ae_, tz_, j, start, dest, cache, blocked.get(),
-          query.requireCarTransport_ && query.useRoutedTransfers_,
-          osr_params, query.pedestrianProfile_, query.elevationCosts_,
-          query.joinInterlinedLegs_, detailed_transfers,
-          query.detailedLegs_, query.withFares_,
-          query.withScheduledSkippedStops_,
-          config_.timetable_.value().max_matching_distance_,
-          query.maxMatchingDistance_, api_version,
-          query.ignorePreTransitRentalReturnConstraints_,
-          query.ignorePostTransitRentalReturnConstraints_, query.language_);
-      });
-
-    auto seen_mono_trip =
-      hash_set<std::tuple<std::int64_t, std::int64_t, std::string>>{};
-    auto unique_itineraries = std::vector<api::Itinerary>{};
-    unique_itineraries.reserve(itineraries.size());
-    for (auto& it : itineraries) {
-      if (it.transfers_ != 0 || it.legs_.size() != 1U ||
-        !it.legs_.front().tripId_.has_value()) {
-      unique_itineraries.emplace_back(std::move(it));
-      continue;
-      }
-        auto const key =
-            std::make_tuple(it.startTime_->time_since_epoch().count(),
-                    it.endTime_->time_since_epoch().count(),
-                  *it.legs_.front().tripId_);
-      if (seen_mono_trip.emplace(key).second) {
-      unique_itineraries.emplace_back(std::move(it));
-      }
-    }
-
     return {
         .debugOutput_ =
             join(std::move(prepare_stats), std::move(query_stats),
@@ -1075,7 +1039,24 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
         .from_ = from_p,
         .to_ = to_p,
         .direct_ = std::move(direct),
-      .itineraries_ = std::move(unique_itineraries),
+        .itineraries_ = utl::to_vec(
+            journeys,
+            [&, cache = street_routing_cache_t{}](auto&& j) mutable {
+              return journey_to_response(
+                  w_, l_, pl_, *tt_, *tags_, fa_, e, rtt, matches_, elevations_,
+                  shapes_, gbfs_rd, ae_, tz_, j, start, dest, cache,
+                  blocked.get(),
+                  query.requireCarTransport_ && query.useRoutedTransfers_,
+                  osr_params, query.pedestrianProfile_, query.elevationCosts_,
+                  query.joinInterlinedLegs_, detailed_transfers,
+                  query.detailedLegs_, query.withFares_,
+                  query.withScheduledSkippedStops_,
+                  config_.timetable_.value().max_matching_distance_,
+                  query.maxMatchingDistance_, api_version,
+                  query.ignorePreTransitRentalReturnConstraints_,
+                  query.ignorePostTransitRentalReturnConstraints_,
+                  query.language_);
+            }),
         .previousPageCursor_ =
             fmt::format("EARLIER|{}", to_seconds(search_interval.from_)),
         .nextPageCursor_ =
