@@ -177,6 +177,25 @@ void get_is_unique_stop_name(n::rt::frun const& fr,
   }
 }
 
+n::timetable::ticketing_link get_ticketing_urls(
+    n::timetable const& tt, nigiri::rt::run_stop const& enter_stop) {
+  auto provider_idx = enter_stop.get_provider_idx(n::event_type::kDep);
+  auto route_id_idx = enter_stop.get_route_id_idx(n::event_type::kDep);
+
+  auto ticketing_idx = nigiri::ticketing_link_idx_t::invalid();
+  auto routes_it = tt.ticketing_routes_.find(route_id_idx);
+  if (routes_it != tt.ticketing_routes_.end()) {
+    ticketing_idx = routes_it->second;
+  } else {
+    auto provider_it = tt.ticketing_agencies_.find(provider_idx);
+    if (provider_it != tt.ticketing_agencies_.end()) {
+      ticketing_idx = provider_it->second;
+    }
+  }
+
+  return tt.ticketing_links_[ticketing_idx].front();
+}
+
 api::Itinerary journey_to_response(
     osr::ways const* w,
     osr::lookup const* l,
@@ -451,6 +470,8 @@ api::Itinerary journey_to_response(
                     enter_stop.get_provider(n::event_type::kDep);
                 auto const fare_indices = get_fare_indices(fares, j_leg);
 
+                auto ticket_links = get_ticketing_urls(tt, enter_stop);
+
                 auto const src = [&]() {
                   if (!fr.is_scheduled()) {
                     return n::source_idx_t::invalid();
@@ -570,8 +591,12 @@ api::Itinerary journey_to_response(
                         enter_stop.wheelchair_accessible(
                             nigiri::event_type::kDep)
                             ? api::WheelchairAccessibilityEnum::ACCESSIBLE
-                            : api::WheelchairAccessibilityEnum::
-                                  NOT_ACCESSIBLE});
+                            : api::WheelchairAccessibilityEnum::NOT_ACCESSIBLE,
+                    .ticketUrls_ =
+                        api::TicketUrls{
+                            .web_ = std::string{ticket_links.web_},
+                            .android_ = std::string{ticket_links.android_},
+                            .ios_ = std::string{ticket_links.ios_}}});
 
                 auto const attributes =
                     tt.attribute_combinations_[enter_stop
