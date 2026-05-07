@@ -832,6 +832,18 @@ paths:
             default: 3.0
             minimum: 0
 
+        - name: includeCoupledTrips
+          in: query
+          required: false
+          description: |
+            Optional. If set to true, include itineraries using coupled trips: transports
+            that share a segment with the same departure and arrival times but operate as
+            separate vehicles. Works for direct journeys as well as any leg in
+            multi-segment journeys.
+          schema:
+            type: boolean
+            default: false
+
         - name: withFares
           in: query
           required: false
