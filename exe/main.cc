@@ -129,7 +129,7 @@ int main(int ac, char** av) {
           break;
         }
 
-        auto const c = config::read(data_path / "config.yml");
+        auto c = config::read(data_path / "config.yml");
         if ((return_value = set_log_level(c))) {
           break;
         }

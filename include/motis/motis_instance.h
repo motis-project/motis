@@ -179,23 +179,17 @@ struct motis_instance {
     }
   }
 
-  void run(data& d, config const& c) {
+  void run(data& d, config& c) {
     bool has_user_agent = c.user_agent_.has_value();
-    auto ensure_user_agent = [&](auto& headers) {
-      auto& h = const_cast<std::optional<headers_t>&>(headers);
-      if (!h.has_value()) {
-        h = headers_t{};
-      }
-      if (!h->contains("User-Agent")) {
-        h->insert({"User-Agent", *c.user_agent_});
-      }
+    auto ensure_user_agent = [&](auto& h) {
+      if (!h.has_value()) h = headers_t{};
+      h->try_emplace("User-Agent", *c.user_agent_);
     };
 
     if (d.w_ && d.l_ && c.has_gbfs_feeds()) {
       if (has_user_agent) {
         for (auto& [_, feed] : c.gbfs_->feeds_) {
-          auto& headers = feed.headers_;
-          ensure_user_agent(headers);
+          ensure_user_agent(feed.headers_);
         }
       }
       gbfs_ = io_thread{"motis gbfs update", [&](boost::asio::io_context& ioc) {
@@ -209,8 +203,7 @@ struct motis_instance {
         for (auto& [_, dataset] : c.timetable_->datasets_) {
           if (dataset.rt_.has_value()) {
             for (auto& feed : *dataset.rt_) {
-              auto& headers = feed.headers_;
-              ensure_user_agent(headers);
+              ensure_user_agent(feed.headers_);
             }
           }
         }
