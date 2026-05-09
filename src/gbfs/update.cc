@@ -168,9 +168,8 @@ struct gbfs_update {
           auto const url = boost::urls::url{u};
 
           auto p = proxy{};
-          p.use_tls_ = url.scheme_id() == boost::urls::scheme::https;
           p.host_ = url.host();
-          p.port_ = url.has_port() ? url.port() : (p.use_tls_ ? "443" : "80");
+          p.port_ = url.has_port() ? url.port() : "80";
           return p;
         })} {}
 
