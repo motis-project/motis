@@ -85,7 +85,35 @@ config config::read_simple(std::vector<std::string> const& args) {
 config config::read(std::filesystem::path const& p) {
   auto const file_content = utl::read_file(p.generic_string().c_str());
   utl::verify(file_content.has_value(), "could not read config file at {}", p);
-  return read(*file_content);
+  auto c = read(*file_content);
+
+  bool has_user_agent = c.user_agent_.has_value();
+  auto ensure_user_agent = [&](auto& h) {
+    if (!h.has_value()) {
+      h = headers_t{};
+    }
+    h->try_emplace("User-Agent", *c.user_agent_);
+  };
+
+  if (has_user_agent) {
+    if (c.has_gbfs_feeds()) {
+      for (auto& [_, feed] : c.gbfs_->feeds_) {
+        ensure_user_agent(feed.headers_);
+      }
+    }
+
+    if (c.requires_rt_timetable_updates()) {
+      for (auto& [_, dataset] : c.timetable_->datasets_) {
+        if (dataset.rt_.has_value()) {
+          for (auto& feed : *dataset.rt_) {
+            ensure_user_agent(feed.headers_);
+          }
+        }
+      }
+    }
+  }
+
+  return c;
 }
 
 config config::read(std::string const& s) {
