@@ -26,7 +26,7 @@ namespace fs = std::filesystem;
 
 namespace motis {
 
-int server(data d, config& c, std::string_view const motis_version) {
+int server(data d, config const& c, std::string_view const motis_version) {
   auto scheduler = ctx::scheduler<ctx_data>{};
   auto m = motis_instance{ctx_exec{scheduler.runner_.ios(), scheduler}, d, c,
                           motis_version};

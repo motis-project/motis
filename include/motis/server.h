@@ -9,7 +9,7 @@ namespace motis {
 struct data;
 struct config;
 
-int server(data d, config& c, std::string_view);
+int server(data d, config const& c, std::string_view);
 
 unsigned get_api_version(boost::urls::url_view const&);
 
