@@ -641,19 +641,22 @@ api::Itinerary journey_to_response(
                 std::optional<api::TicketUrls> ticketing_url = std::nullopt;
 
                 if (ticket_links.has_value()) {
-                  ticketing_url = api::TicketUrls{
-                      .web_ = ticket_links->web_.empty()
-                                  ? std::nullopt
-                                  : std::optional{add_url_ticket_params(
-                                        ticket_links->web_)},
-                      .android_ = ticket_links->android_.empty()
+                  switch (ticket_links->type_) {
+                    case n::timetable::ticketing_link_type::kGoogleTransit:
+                      ticketing_url = api::TicketUrls{
+                          .web_ = ticket_links->web_.empty()
                                       ? std::nullopt
                                       : std::optional{add_url_ticket_params(
-                                            ticket_links->android_)},
-                      .ios_ = ticket_links->ios_.empty()
-                                  ? std::nullopt
-                                  : std::optional{add_url_ticket_params(
-                                        ticket_links->ios_)}};
+                                            ticket_links->web_)},
+                          .android_ = ticket_links->android_.empty()
+                                          ? std::nullopt
+                                          : std::optional{add_url_ticket_params(
+                                                ticket_links->android_)},
+                          .ios_ = ticket_links->ios_.empty()
+                                      ? std::nullopt
+                                      : std::optional{add_url_ticket_params(
+                                            ticket_links->ios_)}};
+                  }
                 }
 
                 auto& leg = itinerary.legs_.emplace_back(api::Leg{
