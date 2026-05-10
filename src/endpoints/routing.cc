@@ -1053,8 +1053,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                   query.maxMatchingDistance_, api_version,
                   query.ignorePreTransitRentalReturnConstraints_,
                   query.ignorePostTransitRentalReturnConstraints_,
-                  query.language_,
-                  query.numLegAlternatives_ > 0 ? &q : nullptr,
+                  query.language_, query.numLegAlternatives_ > 0 ? &q : nullptr,
                   static_cast<std::size_t>(query.numLegAlternatives_));
             }),
         .previousPageCursor_ =

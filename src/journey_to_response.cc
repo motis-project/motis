@@ -705,8 +705,7 @@ api::Itinerary journey_to_response(
       }
       auto alternatives = std::vector<std::vector<api::Leg>>{};
       for (auto const& alt : n::routing::get_leg_alternatives(
-               tt, rtt, *leg_alternatives_query, j, i,
-               num_leg_alternatives)) {
+               tt, rtt, *leg_alternatives_query, j, i, num_leg_alternatives)) {
         // Render alternatives without detailed transfer street geometry —
         // the surrounding journey already covers detailed routing, and
         // skipping street_routing for ingress/egress footpaths avoids
