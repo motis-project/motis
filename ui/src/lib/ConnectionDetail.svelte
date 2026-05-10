@@ -322,6 +322,55 @@
 
 				<Alerts alerts={l.alerts} tz={l.from.tz || l.to.tz} variant="full" />
 
+				{#if l.alternatives && l.alternatives.length === 0}
+					<div class="my-2 text-sm text-muted-foreground">no alternatives found</div>
+				{:else if l.alternatives && l.alternatives.length > 0}
+					<details class="my-2">
+						<summary class="text-sm text-muted-foreground cursor-pointer select-none">
+							{l.alternatives.length}
+							{l.alternatives.length === 1 ? 'alternative' : 'alternatives'}
+						</summary>
+						<ul class="mt-2 space-y-2">
+							{#each l.alternatives as alt, ai (ai)}
+								{@const transit = alt[1]}
+								{@const ingress = alt[0]}
+								{@const egress = alt[2]}
+								<li class="flex flex-wrap items-center gap-2 text-sm">
+									{#if ingress.duration}
+										<span class="text-muted-foreground">
+											{formatDurationSec(ingress.duration)}
+											{t.walk}
+										</span>
+										<ArrowRight class="stroke-muted-foreground size-3" />
+									{/if}
+									<Time
+										variant="schedule"
+										timestamp={transit.startTime}
+										timeZone={transit.from.tz}
+										isRealtime={transit.realTime}
+										scheduledTimestamp={transit.scheduledStartTime}
+									/>
+									<Route {onClickTrip} l={transit} />
+									<Time
+										variant="schedule"
+										timestamp={transit.endTime!}
+										timeZone={transit.to.tz}
+										isRealtime={transit.realTime}
+										scheduledTimestamp={transit.scheduledEndTime!}
+									/>
+									{#if egress.duration}
+										<ArrowRight class="stroke-muted-foreground size-3" />
+										<span class="text-muted-foreground">
+											{formatDurationSec(egress.duration)}
+											{t.walk}
+										</span>
+									{/if}
+								</li>
+							{/each}
+						</ul>
+					</details>
+				{/if}
+
 				{#if l.routeUrl}
 					<div class="mt-2 mr-4">
 						<Button

@@ -1267,6 +1267,15 @@ export type Leg = {
      *
      */
     bikesAllowed?: boolean;
+    /**
+     * Alternative connections that can replace this transit leg.
+     * Each alternative is a sequence of exactly 3 legs:
+     * `[ingress footpath, transit, egress footpath]`.
+     * Only populated when the request sets `numLegAlternatives` > 0
+     * (capped to that value).
+     *
+     */
+    alternatives?: Array<Array<Leg>>;
 };
 
 export type RiderCategory = {
@@ -2123,6 +2132,18 @@ export type PlanData = {
          */
         numItineraries?: number;
         /**
+         * Optional. Maximum number of alternatives to return per transit
+         * leg. `0` disables alternatives. When greater than zero, each
+         * transit leg in the response is annotated with up to N
+         * `alternatives`: connections that can replace the leg while still
+         * matching the surrounding journey context (i.e. arriving in time
+         * for the next transit leg / departing after the previous transit
+         * leg's arrival). Each alternative is a 3-leg sequence
+         * `[ingress footpath, transit, egress footpath]`.
+         *
+         */
+        numLegAlternatives?: number;
+        /**
          * Use the cursor to go to the next "page" of itineraries.
          * Copy the cursor from the last response and keep the original request as is.
          * This will enable you to search for itineraries in the next or previous time-window.
@@ -2909,6 +2930,14 @@ export type OneToAllError = (Error);
 export type ReverseGeocodeData = {
     query: {
         /**
+         * Optional. Number of results to return.
+         *
+         * If omitted, 5 results are returned by default.
+         * Must be <= server config variable `reverse_geocode_max_results`.
+         *
+         */
+        numResults?: number;
+        /**
          * latitude, longitude in degrees
          */
         place: string;
@@ -2941,6 +2970,14 @@ export type GeocodeData = {
          *
          */
         mode?: Array<Mode>;
+        /**
+         * Optional. Number of suggestions to return.
+         *
+         * If omitted, 10 suggestions are returned by default.
+         * Must be <= server config variable `geocode_max_suggestions`.
+         *
+         */
+        numResults?: number;
         /**
          * Optional. Used for biasing results towards the coordinate.
          *

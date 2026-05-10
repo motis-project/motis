@@ -92,7 +92,7 @@ TEST(motis, routing_slow_direct) {
         "?fromPlace=49.87336,8.62926"
         "&toPlace=test_FFM_10"
         "&time=2019-05-01T01:30Z"
-        "&slowDirect=false");
+        "&slowDirect=false&numLegAlternatives=3");
     ASSERT_TRUE(res.itineraries_.size() >= 2);
     EXPECT_EQ(res.itineraries_.at(0).legs_.at(1).tripId_,
               "20190501_03:35_test_ICE2");
@@ -104,7 +104,7 @@ TEST(motis, routing_slow_direct) {
         "?fromPlace=49.87336,8.62926"
         "&toPlace=test_FFM_10"
         "&time=2019-05-01T01:30Z"
-        "&slowDirect=true");
+        "&slowDirect=true&numLegAlternatives=3");
     ASSERT_TRUE(res.itineraries_.size() >= 2);
     EXPECT_EQ(res.itineraries_.at(0).legs_.at(1).tripId_,
               "20190501_03:35_test_ICE2");
@@ -121,7 +121,7 @@ TEST(motis, routing_slow_direct) {
         "&time=2019-05-01T01:30Z"
         "&slowDirect=true"
         "&arriveBy=true"
-        "&numItineraries=2&maxItineraries=2");
+        "&numItineraries=2&maxItineraries=2&numLegAlternatives=3");
     ASSERT_TRUE(res.itineraries_.size() >= 2);
     EXPECT_EQ(res.itineraries_.at(0).legs_.at(1).tripId_,
               "20190501_02:35_test_ICE2");
@@ -135,7 +135,7 @@ TEST(motis, routing_slow_direct) {
         "&time=2019-05-01T01:30Z"
         "&slowDirect=true"
         "&numItineraries=2&maxItineraries=2"
-        "&pageCursor=EARLIER%7C1556674200");
+        "&pageCursor=EARLIER%7C1556674200&numLegAlternatives=3");
     ASSERT_TRUE(res.itineraries_.size() >= 2);
     EXPECT_EQ(res.itineraries_.at(0).legs_.at(1).tripId_,
               "20190501_02:35_test_ICE2");
@@ -150,7 +150,7 @@ TEST(motis, routing_slow_direct) {
         "&slowDirect=true"
         "&arriveBy=true"
         "&numItineraries=2&maxItineraries=2"
-        "&pageCursor=LATER%7C1556674200");
+        "&pageCursor=LATER%7C1556674200&numLegAlternatives=3");
     ASSERT_TRUE(res.itineraries_.size() >= 2);
     EXPECT_EQ(res.itineraries_.at(0).legs_.at(1).tripId_,
               "20190501_03:35_test_ICE2");

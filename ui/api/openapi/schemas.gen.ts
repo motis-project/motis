@@ -1581,6 +1581,21 @@ by looping active weekdays, e.g. from calendar.txt in GTFS.
             description: `Whether bikes can be carried on this leg.
 `,
             type: 'boolean'
+        },
+        alternatives: {
+            description: `Alternative connections that can replace this transit leg.
+Each alternative is a sequence of exactly 3 legs:
+\`[ingress footpath, transit, egress footpath]\`.
+Only populated when the request sets \`numLegAlternatives\` > 0
+(capped to that value).
+`,
+            type: 'array',
+            items: {
+                type: 'array',
+                items: {
+                    '$ref': '#/components/schemas/Leg'
+                }
+            }
         }
     }
 } as const;

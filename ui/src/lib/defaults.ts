@@ -9,6 +9,7 @@ export const defaultQuery = {
 	arriveBy: false,
 	timetableView: true,
 	withFares: false,
+	numLegAlternatives: 0,
 	searchWindow: 900,
 	pedestrianProfile: 'FOOT',
 	transitModes: ['TRANSIT'],

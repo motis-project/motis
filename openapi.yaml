@@ -840,6 +840,23 @@ paths:
             type: boolean
             default: false
 
+        - name: numLegAlternatives
+          in: query
+          required: false
+          description: |
+            Optional. Maximum number of alternatives to return per transit
+            leg. `0` disables alternatives. When greater than zero, each
+            transit leg in the response is annotated with up to N
+            `alternatives`: connections that can replace the leg while still
+            matching the surrounding journey context (i.e. arriving in time
+            for the next transit leg / departing after the previous transit
+            leg's arrival). Each alternative is a 3-leg sequence
+            `[ingress footpath, transit, egress footpath]`.
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+
         - name: withScheduledSkippedStops
           in: query
           required: false
@@ -4376,6 +4393,18 @@ components:
           description: |
             Whether bikes can be carried on this leg.
           type: boolean
+        alternatives:
+          description: |
+            Alternative connections that can replace this transit leg.
+            Each alternative is a sequence of exactly 3 legs:
+            `[ingress footpath, transit, egress footpath]`.
+            Only populated when the request sets `numLegAlternatives` > 0
+            (capped to that value).
+          type: array
+          items:
+            type: array
+            items:
+              $ref: '#/components/schemas/Leg'
 
     RiderCategory:
       type: object

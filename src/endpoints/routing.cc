@@ -27,10 +27,9 @@
 #include "nigiri/routing/limits.h"
 #include "nigiri/routing/pareto_set.h"
 #include "nigiri/routing/query.h"
+#include "nigiri/routing/raptor/pong.h"
 #include "nigiri/routing/raptor/raptor_state.h"
 #include "nigiri/routing/raptor_search.h"
-
-#include "nigiri/routing/raptor/pong.h"
 #include "nigiri/routing/tb/query_engine.h"
 #include "nigiri/routing/tb/tb_data.h"
 #include "nigiri/routing/tb/tb_search.h"
@@ -1054,7 +1053,9 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                   query.maxMatchingDistance_, api_version,
                   query.ignorePreTransitRentalReturnConstraints_,
                   query.ignorePostTransitRentalReturnConstraints_,
-                  query.language_);
+                  query.language_,
+                  query.numLegAlternatives_ > 0 ? &q : nullptr,
+                  static_cast<std::size_t>(query.numLegAlternatives_));
             }),
         .previousPageCursor_ =
             fmt::format("EARLIER|{}", to_seconds(search_interval.from_)),
