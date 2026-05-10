@@ -74,3 +74,7 @@
   url=git@github.com:motis-project/geo.git
   branch=master
   commit=4a410791d3a2d77eafae917e0607051bbd4fa659
+[zstd]
+  url=git@github.com:motis-project/zstd.git
+  branch=master
+  commit=bce26304a57dd504ae7ae51f384bf9292d7e3acb
