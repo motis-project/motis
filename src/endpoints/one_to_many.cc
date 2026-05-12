@@ -127,7 +127,9 @@ std::vector<api::ParetoSet> transit_durations(
 
   auto q = n::routing::query{
       .start_time_ = time,
-      .start_match_mode_ = get_match_mode(r, one),
+      .start_match_mode_ = r.is_osr_loaded()
+                               ? n::routing::location_match_mode::kIntermodal
+                               : n::routing::location_match_mode::kEquivalent,
       .start_ = r.get_offsets(nullptr, one, one_dir, one_modes, std::nullopt,
                               std::nullopt, std::nullopt, std::nullopt, false,
                               osr_params, pedestrian_profile, elevation_costs,
