@@ -11,6 +11,8 @@
 
 #include "utl/init_from.h"
 
+#include "nigiri/rt/gtfsrt_update.h"
+
 #include "motis-api/motis-api.h"
 #include "motis/compute_footpaths.h"
 #include "motis/config.h"
@@ -21,11 +23,43 @@
 #include "motis/import.h"
 #include "motis/update_rtt_td_footpaths.h"
 
-using namespace date;
+#include "./util.h"
 
+using namespace date;
+using namespace std::chrono_literals;
 using namespace std::string_view_literals;
 using namespace motis;
 namespace n = nigiri;
+
+namespace {
+
+// Apply a +1 min delay to a single trip on 2019-05-01 by setting an
+// arrival delay at the trip's last stop. The departure of the first
+// stop stays scheduled, the displayed arrival shifts by one minute.
+// `start_time` is required for frequency-expanded trips and ignored
+// for regular trips.
+void apply_one_min_delay(
+    data& d,
+    std::string_view const trip_id,
+    std::string_view const last_stop_id,
+    std::uint32_t const last_stop_seq,
+    std::optional<std::string> start_time = std::nullopt) {
+  auto const stats = n::rt::gtfsrt_update_msg(
+      *d.tt_, *d.rt_->rtt_, n::source_idx_t{0}, "test",
+      test::to_feed_msg(
+          {test::trip_update{
+              .trip_ = {.trip_id_ = std::string{trip_id},
+                        .start_time_ = std::move(start_time),
+                        .date_ = std::string{"20190501"}},
+              .stop_updates_ = {{.stop_id_ = std::string{last_stop_id},
+                                 .seq_ = std::optional{last_stop_seq},
+                                 .ev_type_ = n::event_type::kArr,
+                                 .delay_minutes_ = 1}}}},
+          date::sys_days{2019_y / May / 1} + 9h));
+  EXPECT_EQ(1U, stats.total_entities_success_);
+}
+
+}  // namespace
 
 // Three-leg journey A → B → C → D:
 //   leg 1 (route R1):  T1   09:00 → 09:15  (chosen by router)
@@ -210,6 +244,8 @@ TEST(motis, routing_leg_alternatives_station_to_station_no_osr) {
   auto const c = make_base_config(/*with_osr=*/false);
   import(c, "test/data_leg_alts_no_osr");
   auto d = data{"test/data_leg_alts_no_osr", c};
+  d.init_rtt(date::sys_days{2019_y / May / 1});
+  apply_one_min_delay(d, "T1_E1", "B", 1U);
   auto const routing = utl::init_from<ep::routing>(d).value();
 
   auto const res = routing(
@@ -223,7 +259,7 @@ TEST(motis, routing_leg_alternatives_station_to_station_no_osr) {
   EXPECT_EQ(R"(
 BUS T1_DUP 07:00->07:15
   alt [WALK 07:00->07:00 | BUS T1 07:00->07:15 | WALK 07:15->07:15]
-  alt [WALK 06:30->06:30 | BUS T1_E1 06:30->06:45 | WALK 06:45->06:45]
+  alt [WALK 06:30->06:30 | BUS T1_E1 06:30->06:46 | WALK 06:46->06:46]
   alt [WALK 06:00->06:00 | BUS T1_E2 06:00->06:15 | WALK 06:15->06:15]
 BUS T2_DUP 07:30->08:00
   alt [WALK 07:30->07:30 | BUS T2 07:30->08:00 | WALK 08:00->08:00]
@@ -246,6 +282,8 @@ TEST(motis, routing_leg_alternatives_station_to_station_osr_no_pre_post) {
   auto const c = make_base_config(/*with_osr=*/true);
   import(c, "test/data_leg_alts_osr_no_pre_post");
   auto d = data{"test/data_leg_alts_osr_no_pre_post", c};
+  d.init_rtt(date::sys_days{2019_y / May / 1});
+  apply_one_min_delay(d, "T1_E1", "B", 1U);
   auto const routing = utl::init_from<ep::routing>(d).value();
 
   auto const res = routing(
@@ -264,7 +302,7 @@ TEST(motis, routing_leg_alternatives_station_to_station_osr_no_pre_post) {
   EXPECT_EQ(R"(
 BUS T1_DUP 07:00->07:15
   alt [BUS T1 07:00->07:15 | WALK 07:15->07:15]
-  alt [BUS T1_E1 06:30->06:45 | WALK 06:45->06:45]
+  alt [BUS T1_E1 06:30->06:46 | WALK 06:46->06:46]
   alt [BUS T1_E2 06:00->06:15 | WALK 06:15->06:15]
 BUS T2_DUP 07:30->08:00
   alt [WALK 07:30->07:30 | BUS T2 07:30->08:00 | WALK 08:00->08:00]
@@ -290,6 +328,8 @@ TEST(motis, routing_leg_alternatives_intermodal_bike) {
   auto const c = make_base_config(/*with_osr=*/true);
   import(c, "test/data_leg_alts_intermodal_bike");
   auto d = data{"test/data_leg_alts_intermodal_bike", c};
+  d.init_rtt(date::sys_days{2019_y / May / 1});
+  apply_one_min_delay(d, "T1_E1", "B", 1U);
   auto const routing = utl::init_from<ep::routing>(d).value();
 
   auto const res = routing(
@@ -313,7 +353,7 @@ TEST(motis, routing_leg_alternatives_intermodal_bike) {
   EXPECT_EQ(R"(
 BUS T1_DUP 07:00->07:15
   alt [BIKE 06:58->07:00 | BUS T1 07:00->07:15 | WALK 07:15->07:15]
-  alt [BIKE 06:28->06:30 | BUS T1_E1 06:30->06:45 | WALK 06:45->06:45]
+  alt [BIKE 06:28->06:30 | BUS T1_E1 06:30->06:46 | WALK 06:46->06:46]
   alt [BIKE 05:58->06:00 | BUS T1_E2 06:00->06:15 | WALK 06:15->06:15]
 BUS T2_DUP 07:30->08:00
   alt [WALK 07:30->07:30 | BUS T2 07:30->08:00 | WALK 08:00->08:00]
@@ -470,6 +510,8 @@ TEST(motis, routing_leg_alternatives_block_id_joined) {
   auto const c = make_inline_gtfs_config(kBlockIdGTFS);
   import(c, "test/data_leg_alts_block_joined");
   auto d = data{"test/data_leg_alts_block_joined", c};
+  d.init_rtt(date::sys_days{2019_y / May / 1});
+  apply_one_min_delay(d, "T_ALT_E1", "B", 1U);
   auto const routing = utl::init_from<ep::routing>(d).value();
 
   auto const res = routing(
@@ -483,7 +525,7 @@ TEST(motis, routing_leg_alternatives_block_id_joined) {
   ASSERT_EQ(res.itineraries_.size(), 1U);
   EXPECT_EQ(R"(
 BUS T_PART1 07:00->07:30
-  alt [WALK 06:30->06:30 | BUS T_ALT_E1 06:30->06:45 | WALK 06:45->06:45]
+  alt [WALK 06:30->06:30 | BUS T_ALT_E1 06:30->06:46 | WALK 06:46->06:46]
   alt [WALK 06:00->06:00 | BUS T_ALT_E2 06:00->06:15 | WALK 06:15->06:15]
 BUS T2 07:45->08:15
   alt [WALK 08:15->08:15 | BUS T2_L 08:15->08:45 | WALK 08:45->08:45]
@@ -504,6 +546,8 @@ TEST(motis, routing_leg_alternatives_block_id_unjoined) {
   auto const c = make_inline_gtfs_config(kBlockIdGTFS);
   import(c, "test/data_leg_alts_block_unjoined");
   auto d = data{"test/data_leg_alts_block_unjoined", c};
+  d.init_rtt(date::sys_days{2019_y / May / 1});
+  apply_one_min_delay(d, "T_ALT_E1", "B", 1U);
   auto const routing = utl::init_from<ep::routing>(d).value();
 
   auto const res = routing(
@@ -517,7 +561,7 @@ TEST(motis, routing_leg_alternatives_block_id_unjoined) {
   ASSERT_EQ(res.itineraries_.size(), 1U);
   EXPECT_EQ(R"(
 BUS T_PART1 07:00->07:15
-  alt [WALK 06:30->06:30 | BUS T_ALT_E1 06:30->06:45 | WALK 06:45->06:45]
+  alt [WALK 06:30->06:30 | BUS T_ALT_E1 06:30->06:46 | WALK 06:46->06:46]
   alt [WALK 06:00->06:00 | BUS T_ALT_E2 06:00->06:15 | WALK 06:15->06:15]
 BUS T_PART2 07:15->07:30 [interlined]
   (no alternatives field)
@@ -549,6 +593,8 @@ TEST(motis, routing_leg_alternatives_block_id_interlined_alternatives) {
   auto const c = make_inline_gtfs_config(kBlockIdInterlinedAltsGTFS);
   import(c, "test/data_leg_alts_block_alt_shapes");
   auto d = data{"test/data_leg_alts_block_alt_shapes", c};
+  d.init_rtt(date::sys_days{2019_y / May / 1});
+  apply_one_min_delay(d, "T_SINGLE_DUP", "B", 1U);
   auto const routing = utl::init_from<ep::routing>(d).value();
 
   auto const res = routing(
@@ -563,7 +609,7 @@ TEST(motis, routing_leg_alternatives_block_id_interlined_alternatives) {
   EXPECT_EQ(R"(
 BUS T_SINGLE_DUP_2 07:05->07:35
   alt [WALK 07:00->07:00 | BUS T_DUP_PART1 07:00->07:15 | BUS T_DUP_PART2 07:15->07:30 [interlined] | WALK 07:30->07:30]
-  alt [WALK 07:00->07:00 | BUS T_SINGLE_DUP 07:00->07:30 | WALK 07:30->07:30]
+  alt [WALK 07:00->07:00 | BUS T_SINGLE_DUP 07:00->07:31 | WALK 07:31->07:31]
   alt [WALK 06:55->06:55 | BUS T_PART1 06:55->07:10 | BUS T_PART2 07:10->07:25 [interlined] | WALK 07:25->07:25]
 BUS T2_EARLY 07:40->08:10
   alt [WALK 07:45->07:45 | BUS T2 07:45->08:15 | WALK 08:15->08:15]
@@ -699,6 +745,11 @@ TEST(motis, routing_leg_alternatives_td_footpath_blocked) {
       *elevator_footpath_map, *d.matches_, *d.rt_->rtt_,
       std::chrono::seconds{c.timetable_->max_footpath_length_ * 60});
 
+  // Delay the LOCAL 00:35 ICE alt by 1 min — this is a frequency-
+  // expanded trip instance, so trip_id stays "ICE" and start_time
+  // identifies the specific run.
+  apply_one_min_delay(d, "ICE", "FFM_10", 1U, "00:35:00");
+
   auto const routing = utl::init_from<ep::routing>(d).value();
 
   // === Scenario A: DA → FFM_HAUPT (transfer / rt_timetable td) ===
@@ -718,7 +769,7 @@ TEST(motis, routing_leg_alternatives_td_footpath_blocked) {
   EXPECT_EQ(R"(
 HIGHSPEED_RAIL ICE 00:35->00:45
   alt [WALK 23:28->23:35 | HIGHSPEED_RAIL ICE 23:35->23:45 | WALK 23:45->23:51]
-  alt [WALK 22:28->22:35 | HIGHSPEED_RAIL ICE 22:35->22:45 | WALK 22:45->22:51]
+  alt [WALK 22:28->22:35 | HIGHSPEED_RAIL ICE 22:35->22:46 | WALK 22:46->22:52]
 METRO S3 01:15->01:20
   alt [WALK 01:24->02:15 | METRO S3 02:15->02:20 | WALK 02:20->02:21]
   alt [WALK 01:24->03:15 | METRO S3 03:15->03:20 | WALK 03:20->03:21]
@@ -945,6 +996,125 @@ BUS T1 06:00->06:30
   (no alternatives)
 BUS T2_EARLY 06:45->07:15
   alt [WALK 07:00->07:00 | BUS T2 07:00->07:30 | WALK 07:30->07:30]
+)",
+            to_str(res.itineraries_.front()));
+}
+
+// Three-leg fixture used by `routing_leg_alternatives_rt_filtered`:
+//   leg 1 (R1):    T1        08:00 → B 08:15  (main)
+//                  T1_EARLY  07:30 → B 07:45  (earlier alt — backward iter)
+//   leg 2 (R2):    T2        B 08:30 → C 09:00  (main)
+//                  T2_LATE   B 08:45 → C 09:15  (later alt — forward iter)
+//   leg 3 (R3):    T3        C 09:30 → D 10:00  (main)
+//
+// Without RT both alts surface. Adding RT delays that push their
+// arrival past the next leg's departure makes them infeasible — the
+// `arr <= next_dep` cap (forward) / `arr <= next_dep` skip (backward
+// in direct.cc::route_gen) drops them.
+constexpr auto const kRtFilteredGTFS = R"(
+# agency.txt
+agency_id,agency_name,agency_url,agency_timezone
+DB,Deutsche Bahn,https://deutschebahn.com,Europe/Berlin
+
+# stops.txt
+stop_id,stop_name,stop_lat,stop_lon,location_type,parent_station
+A,Station A,49.87336,8.62926,0,
+B,Station B,49.99359,8.65677,0,
+C,Station C,50.10593,8.66118,0,
+D,Station D,50.11403,8.67835,0,
+
+# routes.txt
+route_id,agency_id,route_short_name,route_long_name,route_desc,route_type
+R1,DB,R1,,,3
+R1_EARLY,DB,R1e,,,3
+R2,DB,R2,,,3
+R2_LATE,DB,R2l,,,3
+R3,DB,R3,,,3
+
+# trips.txt
+route_id,service_id,trip_id,trip_headsign
+R1,S,T1,
+R1_EARLY,S,T1_EARLY,
+R2,S,T2,
+R2_LATE,S,T2_LATE,
+R3,S,T3,
+
+# stop_times.txt
+trip_id,arrival_time,departure_time,stop_id,stop_sequence
+T1,08:00:00,08:00:00,A,0
+T1,08:15:00,08:15:00,B,1
+T1_EARLY,07:30:00,07:30:00,A,0
+T1_EARLY,07:45:00,07:45:00,B,1
+T2,08:30:00,08:30:00,B,0
+T2,09:00:00,09:00:00,C,1
+T2_LATE,08:45:00,08:45:00,B,0
+T2_LATE,09:15:00,09:15:00,C,1
+T3,09:30:00,09:30:00,C,0
+T3,10:00:00,10:00:00,D,1
+
+# calendar_dates.txt
+service_id,date,exception_type
+S,20190501,1
+)"sv;
+
+// Two RT delays on alts that would normally surface, both large
+// enough to push the alt's arrival past the next leg's departure:
+//   - T1_EARLY (alt for leg 1, backward iter): scheduled arr B 07:45
+//     → delayed +50min to 08:35, > T2 dep 08:30 → filtered.
+//   - T2_LATE (alt for leg 2, forward iter): scheduled arr C 09:15
+//     → delayed +20min to 09:35, > T3 dep 09:30 → filtered.
+// The chosen main journey (T1 + T2 + T3) is unaffected by the delays
+// since they only touch the alt trips. Expected: each leg shows
+// "(no alternatives)".
+TEST(motis, routing_leg_alternatives_rt_filtered) {
+  auto ec = std::error_code{};
+  std::filesystem::remove_all("test/data_leg_alts_rt_filtered", ec);
+
+  auto const c = make_inline_gtfs_config(kRtFilteredGTFS);
+  import(c, "test/data_leg_alts_rt_filtered");
+  auto d = data{"test/data_leg_alts_rt_filtered", c};
+  d.init_rtt(date::sys_days{2019_y / May / 1});
+
+  // Apply two delays via a single FeedMessage (one entity each).
+  auto const stats = n::rt::gtfsrt_update_msg(
+      *d.tt_, *d.rt_->rtt_, n::source_idx_t{0}, "test",
+      test::to_feed_msg(
+          {test::trip_update{
+               .trip_ = {.trip_id_ = "T1_EARLY",
+                         .start_time_ = std::nullopt,
+                         .date_ = std::string{"20190501"}},
+               .stop_updates_ = {{.stop_id_ = "B",
+                                  .seq_ = std::optional{1U},
+                                  .ev_type_ = n::event_type::kArr,
+                                  .delay_minutes_ = 50}}},
+           test::trip_update{
+               .trip_ = {.trip_id_ = "T2_LATE",
+                         .start_time_ = std::nullopt,
+                         .date_ = std::string{"20190501"}},
+               .stop_updates_ = {{.stop_id_ = "C",
+                                  .seq_ = std::optional{1U},
+                                  .ev_type_ = n::event_type::kArr,
+                                  .delay_minutes_ = 20}}}},
+          date::sys_days{2019_y / May / 1} + 9h));
+  EXPECT_EQ(2U, stats.total_entities_success_);
+
+  auto const routing = utl::init_from<ep::routing>(d).value();
+
+  auto const res = routing(
+      "?fromPlace=test_A"
+      "&toPlace=test_D"
+      "&time=2019-05-01T05:00Z"
+      "&searchWindow=7200"
+      "&numLegAlternatives=5");
+
+  ASSERT_EQ(res.itineraries_.size(), 1U);
+  EXPECT_EQ(R"(
+BUS T1 06:00->06:15
+  (no alternatives)
+BUS T2 06:30->07:00
+  (no alternatives)
+BUS T3 07:30->08:00
+  (no alternatives)
 )",
             to_str(res.itineraries_.front()));
 }
