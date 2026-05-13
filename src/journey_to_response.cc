@@ -706,22 +706,17 @@ api::Itinerary journey_to_response(
       auto alternatives = std::vector<std::vector<api::Leg>>{};
       for (auto const& alt : n::routing::get_leg_alternatives(
                tt, rtt, *leg_alternatives_query, j, i, num_leg_alternatives)) {
-        // Render alternatives without detailed transfer street geometry —
-        // the surrounding journey already covers detailed routing, and
-        // skipping street_routing for ingress/egress footpaths avoids
-        // expensive recomputation per alternative.
-        auto alt_itinerary = journey_to_response(
+        alternatives.push_back(journey_to_response(
             w, l, pl, tt, tags, fl, e, rtt, matches, elevations, shapes,
             gbfs_rd, ae, tz_map, alt,
             place_t{tt_location{alt.legs_.front().from_}},
             place_t{tt_location{alt.legs_.back().to_}}, cache, blocked_mem,
             car_transfers, osr_params, pedestrian_profile, elevation_costs,
-            join_interlined_legs, /*detailed_transfers=*/false, detailed_legs,
+            join_interlined_legs, detailed_transfers, detailed_legs,
             with_fares, with_scheduled_skipped_stops,
             timetable_max_matching_distance, max_matching_distance, api_version,
             ignore_start_rental_return_constraints,
-            ignore_dest_rental_return_constraints, lang, nullptr);
-        alternatives.push_back(std::move(alt_itinerary.legs_));
+            ignore_dest_rental_return_constraints, lang, nullptr).legs_);
       }
       itinerary.legs_[api_idx].alternatives_ = std::move(alternatives);
     }
