@@ -4603,8 +4603,11 @@ components:
         - displayName
         - tripId
         - fromId
+        - fromLat
+        - fromLon
         - toId
-        - coords
+        - toLat
+        - toLon
         - schedStart
         - schedEnd
         - mode
@@ -4616,11 +4619,24 @@ components:
           type: string
         fromId:
           type: string
+        fromLat:
+          description: latitude of the leg's from endpoint
+          type: number
+          format: double
+        fromLon:
+          description: longitude of the leg's from endpoint
+          type: number
+          format: double
         toId:
           type: string
-        coords:
-          type: string
-          description: "Encoded polyline with exactly two points: from and to."
+        toLat:
+          description: latitude of the leg's to endpoint
+          type: number
+          format: double
+        toLon:
+          description: longitude of the leg's to endpoint
+          type: number
+          format: double
         schedStart:
           type: integer
           format: int64

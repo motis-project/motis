@@ -22,8 +22,6 @@
 #include "utl/overloaded.h"
 #include "utl/verify.h"
 
-#include "geo/polyline_format.h"
-
 #include "nigiri/rt/frun.h"
 #include "nigiri/special_stations.h"
 
@@ -90,7 +88,9 @@ struct leg_hint {
       : display_name_{l.display_name()},
         trip_id_{l.trip_id()},
         from_stop_id_{l.from_id()},
+        from_pos_{l.from_lat(), l.from_lon()},
         to_stop_id_{l.to_id()},
+        to_pos_{l.to_lat(), l.to_lon()},
         sched_start_{l.sched_start()},
         sched_end_{l.sched_end()},
         mode_{json::value_to<api::ModeEnum>(json::value{l.mode()})},
@@ -100,7 +100,6 @@ struct leg_hint {
       utl::verify(!from_stop_id_.empty(), "itinerary id: from_id missing");
       utl::verify(!to_stop_id_.empty(), "itinerary id: to_id missing");
     }
-    decode_coords(l.coords());
   }
 
   bool is_public_transport() const { return !trip_id_.empty(); }
@@ -108,24 +107,13 @@ struct leg_hint {
   std::string display_name_;
   std::string trip_id_;
   std::string from_stop_id_;
+  geo::latlng from_pos_;
   std::string to_stop_id_;
+  geo::latlng to_pos_;
   std::int64_t sched_start_;
   std::int64_t sched_end_;
-  geo::latlng from_pos_;
-  geo::latlng to_pos_;
   api::ModeEnum mode_;
   bool scheduled_;
-
-private:
-  void decode_coords(std::string_view const encoded_coords) {
-    auto const coords = geo::decode_polyline(encoded_coords);
-    utl::verify(coords.size() == 2,
-                "itinerary id: coords must decode to exactly 2 points, got {}",
-                coords.size());
-
-    from_pos_ = coords[0];
-    to_pos_ = coords[1];
-  }
 };
 
 proto_leg_t get_leg_id_proto(api::Leg const& l,
@@ -141,8 +129,10 @@ proto_leg_t get_leg_id_proto(api::Leg const& l,
   id.set_trip_id(l.tripId_.value_or(""));
   id.set_from_id(l.from_.stopId_.value_or(""));
   id.set_to_id(l.to_.stopId_.value_or(""));
-  id.set_coords(geo::encode_polyline(
-      {{l.from_.lat_, l.from_.lon_}, {l.to_.lat_, l.to_.lon_}}));
+  id.set_from_lat(l.from_.lat_);
+  id.set_from_lon(l.from_.lon_);
+  id.set_to_lat(l.to_.lat_);
+  id.set_to_lon(l.to_.lon_);
   id.set_sched_start(l.scheduledStartTime_.get_unixtime_seconds());
   id.set_sched_end(l.scheduledEndTime_.get_unixtime_seconds());
   id.set_mode(std::string{json::value_from(l.mode_).as_string()});

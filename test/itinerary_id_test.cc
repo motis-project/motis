@@ -17,8 +17,6 @@
 
 #include "utl/init_from.h"
 
-#include "geo/polyline_format.h"
-
 #include "motis/config.h"
 #include "motis/data.h"
 #include "motis/endpoints/refresh_itinerary.h"
@@ -47,9 +45,11 @@ api::RefreshItineraryPostBody make_refresh_itinerary_post_body(
       .displayName_ = leg.displayName_.value(),
       .tripId_ = leg.tripId_.value(),
       .fromId_ = leg.from_.stopId_.value(),
+      .fromLat_ = leg.from_.lat_,
+      .fromLon_ = leg.from_.lon_,
       .toId_ = leg.to_.stopId_.value(),
-      .coords_ = geo::encode_polyline(
-          {{leg.from_.lat_, leg.from_.lon_}, {leg.to_.lat_, leg.to_.lon_}}),
+      .toLat_ = leg.to_.lat_,
+      .toLon_ = leg.to_.lon_,
       .schedStart_ = leg.scheduledStartTime_.get_unixtime_seconds(),
       .schedEnd_ = leg.scheduledEndTime_.get_unixtime_seconds(),
       .mode_ = leg.mode_,
