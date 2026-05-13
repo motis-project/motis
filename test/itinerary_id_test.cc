@@ -697,10 +697,11 @@ TEST(motis, itinerary_id_reconstruct_multi_leg_with_three_pt_hops) {
   auto const res = routing(
       "/api/v5/plan"
       "?fromPlace=49.87420,8.62940"
-      "&toPlace=test_FFM_HAUPT_S"
+      "&toPlace=50.11450,8.67900"
       "&time=2019-05-01T02:00Z"
       "&timetableView=true"
       "&preTransitModes=WALK"
+      "&postTransitModes=WALK"
       "&detailedLegs=true");
 
   ASSERT_FALSE(res.itineraries_.empty());
@@ -716,11 +717,13 @@ TEST(motis, itinerary_id_reconstruct_multi_leg_with_three_pt_hops) {
     }
   }
   ASSERT_GE(pt_count, 3U) << "expected at least 3 PT legs, got " << pt_count;
-  ASSERT_GE(walk_count, 3U)
-      << "expected at least 2 walk legs (first-mile + transfers), got "
-      << walk_count;
+  ASSERT_GE(walk_count, 4U) << "expected at least 4 walk legs (first-mile + "
+                               "transfers + last-mile), got "
+                            << walk_count;
   ASSERT_EQ(api::ModeEnum::WALK, original.legs_.front().mode_)
       << "expected first leg to be a first-mile walk";
+  ASSERT_EQ(api::ModeEnum::WALK, original.legs_.back().mode_)
+      << "expected last leg to be a last-mile walk";
 
   auto const id = generate_itinerary_id(original);
   auto const stop_times = utl::init_from<ep::stop_times>(d).value();
