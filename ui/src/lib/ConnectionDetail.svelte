@@ -62,8 +62,7 @@
 		// displayed leg) and merge in the previously displayed one,
 		// keeping the list sorted by the transit leg's start time so
 		// the row order stays stable across swaps.
-		const transitStart = (entry: Leg[]) =>
-			entry.find((l) => l.displayName)?.startTime ?? '';
+		const transitStart = (entry: Leg[]) => entry.find((l) => l.displayName)?.startTime ?? '';
 		const remainingAlts = (target.alternatives ?? []).filter((a) => a !== alt);
 		const newAlternatives = [...remainingAlts, oldEntry].sort((a, b) =>
 			transitStart(a).localeCompare(transitStart(b))
