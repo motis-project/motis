@@ -128,9 +128,9 @@ TEST(motis, routing_slow_direct) {
         "&numLegAlternatives=3");
     ASSERT_TRUE(res.itineraries_.size() >= 2);
     EXPECT_EQ(res.itineraries_.at(0).legs_.at(1).tripId_,
-              "20190501_02:35_test_ICE2");
+              "20190501_01:35_test_ICE2");
     EXPECT_EQ(res.itineraries_.at(1).legs_.at(1).tripId_,
-              "20190501_02:35_test_ICE");
+              "20190501_02:35_test_ICE2");
   }
   {
     auto const res = routing(
@@ -146,7 +146,7 @@ TEST(motis, routing_slow_direct) {
     EXPECT_EQ(res.itineraries_.at(0).legs_.at(1).tripId_,
               "20190501_02:35_test_ICE2");
     EXPECT_EQ(res.itineraries_.at(1).legs_.at(1).tripId_,
-              "20190501_02:35_test_ICE");
+              "20190501_02:35_test_ICE2");
   }
   {
     auto const res = routing(
@@ -163,6 +163,6 @@ TEST(motis, routing_slow_direct) {
     EXPECT_EQ(res.itineraries_.at(0).legs_.at(1).tripId_,
               "20190501_03:35_test_ICE2");
     EXPECT_EQ(res.itineraries_.at(1).legs_.at(1).tripId_,
-              "20190501_03:35_test_ICE");
+              "20190501_04:35_test_ICE2");
   }
 }
