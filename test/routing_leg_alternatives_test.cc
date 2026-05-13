@@ -694,11 +694,10 @@ TEST(motis, routing_leg_alternatives_td_footpath_blocked) {
   // for the wheelchair profile.
   auto const elevator_footpath_map = cista::read<elevator_footpath_map_t>(
       "test/data_leg_alts_td_footpath_blocked/elevator_footpath_map.bin");
-  update_rtt_td_footpaths(*d.w_, *d.l_, *d.pl_, *d.tt_, *d.location_rtree_,
-                          *d.rt_->e_, *elevator_footpath_map, *d.matches_,
-                          *d.rt_->rtt_,
-                          std::chrono::seconds{
-                              c.timetable_->max_footpath_length_ * 60});
+  update_rtt_td_footpaths(
+      *d.w_, *d.l_, *d.pl_, *d.tt_, *d.location_rtree_, *d.rt_->e_,
+      *elevator_footpath_map, *d.matches_, *d.rt_->rtt_,
+      std::chrono::seconds{c.timetable_->max_footpath_length_ * 60});
 
   auto const routing = utl::init_from<ep::routing>(d).value();
 
