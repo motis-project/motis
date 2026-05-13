@@ -767,11 +767,11 @@ TEST(motis, routing_leg_alternatives_td_footpath_blocked) {
   ASSERT_FALSE(res_a.itineraries_.empty());
   EXPECT_EQ(R"(
 HIGHSPEED_RAIL ICE 00:35->00:45
-  alt [WALK 23:28->23:35 | HIGHSPEED_RAIL ICE 23:35->23:45 | WALK 23:45->23:51]
-  alt [WALK 22:28->22:35 | HIGHSPEED_RAIL ICE 22:35->22:46 | WALK 22:46->22:52]
+  alt [HIGHSPEED_RAIL ICE 23:35->23:45 | WALK 23:45->23:51]
+  alt [HIGHSPEED_RAIL ICE 22:35->22:46 | WALK 22:46->22:52]
 METRO S3 01:15->01:20
-  alt [WALK 01:24->02:15 | METRO S3 02:15->02:20 | WALK 02:20->02:21]
-  alt [WALK 01:24->03:15 | METRO S3 03:15->03:20 | WALK 03:20->03:21]
+  alt [WALK 01:24->02:15 | METRO S3 02:15->02:20]
+  alt [WALK 01:24->03:15 | METRO S3 03:15->03:20]
 )",
             to_str(res_a.itineraries_.front()));
 

@@ -19,6 +19,8 @@
 	import { onClickStop, onClickTrip } from '$lib/utils';
 	import { formatDate, formatTime } from './toDateTime';
 	import { getModeLabel } from './map/getModeLabel';
+	import { pushState } from '$app/navigation';
+	import { page } from '$app/state';
 	const {
 		itinerary
 	}: {
@@ -26,7 +28,63 @@
 	} = $props();
 
 	const isRelevantLeg = (l: Leg) => l.duration !== 0 || l.displayName;
-	const lastLeg = $derived(itinerary.legs.findLast(isRelevantLeg));
+
+	let legs = $derived<Leg[]>(itinerary.legs);
+
+	const lastLeg = $derived(legs.findLast(isRelevantLeg));
+
+	const applyAlternative = (target: Leg, alt: Leg[]) => {
+		const idx = legs.indexOf(target);
+		if (idx < 0) {
+			return;
+		}
+		const altTransitIdx = alt.findIndex((al) => al.displayName);
+		if (altTransitIdx < 0) {
+			return;
+		}
+		const altIngress = altTransitIdx > 0 ? alt[altTransitIdx - 1] : undefined;
+		const altEgress = altTransitIdx < alt.length - 1 ? alt[altTransitIdx + 1] : undefined;
+		const replaceIngress = altIngress !== undefined && idx > 0 && !legs[idx - 1].displayName;
+		const replaceEgress =
+			altEgress !== undefined && idx < legs.length - 1 && !legs[idx + 1].displayName;
+		const start = replaceIngress ? idx - 1 : idx;
+		const len = (replaceIngress ? 1 : 0) + 1 + (replaceEgress ? 1 : 0);
+
+		// Currently displayed legs around the target — these become a
+		// new alternative entry so the user can switch back.
+		const oldEntry: Leg[] = [
+			...(replaceIngress ? [legs[idx - 1]] : []),
+			{ ...target, alternatives: undefined },
+			...(replaceEgress ? [legs[idx + 1]] : [])
+		];
+
+		// Drop the picked alt from the alternatives list (it's now the
+		// displayed leg) and merge in the previously displayed one,
+		// keeping the list sorted by the transit leg's start time so
+		// the row order stays stable across swaps.
+		const transitStart = (entry: Leg[]) =>
+			entry.find((l) => l.displayName)?.startTime ?? '';
+		const remainingAlts = (target.alternatives ?? []).filter((a) => a !== alt);
+		const newAlternatives = [...remainingAlts, oldEntry].sort((a, b) =>
+			transitStart(a).localeCompare(transitStart(b))
+		);
+
+		const newTransit: Leg = {
+			...alt[altTransitIdx],
+			alternatives: newAlternatives
+		};
+		const newLegs: Leg[] = [
+			...(replaceIngress ? [altIngress!] : []),
+			newTransit,
+			...(replaceEgress ? [altEgress!] : [])
+		];
+		const updated = [...legs];
+		updated.splice(start, len, ...newLegs);
+		pushState('', {
+			...page.state,
+			selectedItinerary: { ...itinerary, legs: updated }
+		});
+	};
 </script>
 
 {#snippet stopTimes(
@@ -247,12 +305,12 @@
 {/snippet}
 
 <div class="text-lg max-w-full">
-	{#each itinerary.legs as l, i (i)}
-		{@const isLast = i == itinerary.legs.length - 1}
-		{@const isLastPred = i == itinerary.legs.length - 2}
-		{@const pred = i == 0 ? undefined : itinerary.legs[i - 1]}
-		{@const next = isLast ? undefined : itinerary.legs[i + 1]}
-		{@const prevTransitLeg = itinerary.legs.slice(0, i).find((l) => l.tripId)}
+	{#each legs as l, i (i)}
+		{@const isLast = i == legs.length - 1}
+		{@const isLastPred = i == legs.length - 2}
+		{@const pred = i == 0 ? undefined : legs[i - 1]}
+		{@const next = isLast ? undefined : legs[i + 1]}
+		{@const prevTransitLeg = legs.slice(0, i).find((l) => l.tripId)}
 		{#if l.displayName}
 			<div class="w-full flex justify-between items-center space-x-1">
 				<Route {onClickTrip} {l} />
@@ -322,53 +380,24 @@
 
 				<Alerts alerts={l.alerts} tz={l.from.tz || l.to.tz} variant="full" />
 
-				{#if l.alternatives && l.alternatives.length === 0}
-					<div class="my-2 text-sm text-muted-foreground">no alternatives found</div>
-				{:else if l.alternatives && l.alternatives.length > 0}
-					<details class="my-2">
-						<summary class="text-sm text-muted-foreground cursor-pointer select-none">
-							{l.alternatives.length}
-							{l.alternatives.length === 1 ? 'alternative' : 'alternatives'}
-						</summary>
-						<ul class="mt-2 space-y-2">
-							{#each l.alternatives as alt, ai (ai)}
-								{@const transit = alt[1]}
-								{@const ingress = alt[0]}
-								{@const egress = alt[2]}
-								<li class="flex flex-wrap items-center gap-2 text-sm">
-									{#if ingress.duration}
-										<span class="text-muted-foreground">
-											{formatDurationSec(ingress.duration)}
-											{t.walk}
-										</span>
-										<ArrowRight class="stroke-muted-foreground size-3" />
-									{/if}
-									<Time
-										variant="schedule"
-										timestamp={transit.startTime}
-										timeZone={transit.from.tz}
-										isRealtime={transit.realTime}
-										scheduledTimestamp={transit.scheduledStartTime}
-									/>
-									<Route {onClickTrip} l={transit} />
-									<Time
-										variant="schedule"
-										timestamp={transit.endTime!}
-										timeZone={transit.to.tz}
-										isRealtime={transit.realTime}
-										scheduledTimestamp={transit.scheduledEndTime!}
-									/>
-									{#if egress.duration}
-										<ArrowRight class="stroke-muted-foreground size-3" />
-										<span class="text-muted-foreground">
-											{formatDurationSec(egress.duration)}
-											{t.walk}
-										</span>
-									{/if}
-								</li>
-							{/each}
-						</ul>
-					</details>
+				{#if l.alternatives && l.alternatives.length > 0}
+					<div class="my-3 flex gap-2 overflow-hidden pb-1">
+						{#each l.alternatives.slice(0, 3) as alt, ai (ai)}
+							{@const transit = alt[1]}
+							<button
+								type="button"
+								class="flex-none flex flex-col gap-1 rounded-lg border border-border/70 bg-muted/40 hover:bg-muted/70 transition-colors p-2 min-w-fit text-left cursor-pointer"
+								onclick={() => applyAlternative(l, alt)}
+							>
+								<div class="text-xs text-muted-foreground tabular-nums text-center">
+									{formatTime(new Date(transit.startTime), transit.from.tz)}
+									–
+									{formatTime(new Date(transit.endTime!), transit.to.tz)}
+								</div>
+								<Route {onClickTrip} l={transit} compact class="pointer-events-none" />
+							</button>
+						{/each}
+					</div>
 				{/if}
 
 				{#if l.routeUrl}

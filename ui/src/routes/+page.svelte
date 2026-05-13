@@ -364,7 +364,7 @@
 						numItineraries,
 						maxItineraries,
 						withFares: true,
-						numLegAlternatives: 5,
+						numLegAlternatives: 3,
 						slowDirect,
 						fastestDirectFactor: 1.5,
 						pedestrianProfile,
