@@ -38,12 +38,11 @@ namespace {
 // stop stays scheduled, the displayed arrival shifts by one minute.
 // `start_time` is required for frequency-expanded trips and ignored
 // for regular trips.
-void apply_one_min_delay(
-    data& d,
-    std::string_view const trip_id,
-    std::string_view const last_stop_id,
-    std::uint32_t const last_stop_seq,
-    std::optional<std::string> start_time = std::nullopt) {
+void apply_one_min_delay(data& d,
+                         std::string_view const trip_id,
+                         std::string_view const last_stop_id,
+                         std::uint32_t const last_stop_seq,
+                         std::optional<std::string> start_time = std::nullopt) {
   auto const stats = n::rt::gtfsrt_update_msg(
       *d.tt_, *d.rt_->rtt_, n::source_idx_t{0}, "test",
       test::to_feed_msg(
@@ -1079,22 +1078,20 @@ TEST(motis, routing_leg_alternatives_rt_filtered) {
   auto const stats = n::rt::gtfsrt_update_msg(
       *d.tt_, *d.rt_->rtt_, n::source_idx_t{0}, "test",
       test::to_feed_msg(
-          {test::trip_update{
-               .trip_ = {.trip_id_ = "T1_EARLY",
-                         .start_time_ = std::nullopt,
-                         .date_ = std::string{"20190501"}},
-               .stop_updates_ = {{.stop_id_ = "B",
-                                  .seq_ = std::optional{1U},
-                                  .ev_type_ = n::event_type::kArr,
-                                  .delay_minutes_ = 50}}},
-           test::trip_update{
-               .trip_ = {.trip_id_ = "T2_LATE",
-                         .start_time_ = std::nullopt,
-                         .date_ = std::string{"20190501"}},
-               .stop_updates_ = {{.stop_id_ = "C",
-                                  .seq_ = std::optional{1U},
-                                  .ev_type_ = n::event_type::kArr,
-                                  .delay_minutes_ = 20}}}},
+          {test::trip_update{.trip_ = {.trip_id_ = "T1_EARLY",
+                                       .start_time_ = std::nullopt,
+                                       .date_ = std::string{"20190501"}},
+                             .stop_updates_ = {{.stop_id_ = "B",
+                                                .seq_ = std::optional{1U},
+                                                .ev_type_ = n::event_type::kArr,
+                                                .delay_minutes_ = 50}}},
+           test::trip_update{.trip_ = {.trip_id_ = "T2_LATE",
+                                       .start_time_ = std::nullopt,
+                                       .date_ = std::string{"20190501"}},
+                             .stop_updates_ = {{.stop_id_ = "C",
+                                                .seq_ = std::optional{1U},
+                                                .ev_type_ = n::event_type::kArr,
+                                                .delay_minutes_ = 20}}}},
           date::sys_days{2019_y / May / 1} + 9h));
   EXPECT_EQ(2U, stats.total_entities_success_);
 
