@@ -52,6 +52,10 @@ void remove_slower_than_fastest_direct(nigiri::routing::query&);
 struct routing {
   api::plan_response operator()(boost::urls::url_view const&) const;
 
+  bool is_osr_loaded() const {
+    return w_ && l_ && pl_ && tt_ && loc_tree_ && matches_;
+  }
+
   std::vector<nigiri::routing::offset> get_offsets(
       nigiri::rt_timetable const*,
       place_t const&,
@@ -129,10 +133,5 @@ struct routing {
   odm::ride_sharing_bounds const* ride_sharing_bounds_;
   metrics_registry* metrics_;
 };
-
-bool is_intermodal(routing const&, place_t const&);
-
-nigiri::routing::location_match_mode get_match_mode(routing const&,
-                                                    place_t const&);
 
 }  // namespace motis::ep
