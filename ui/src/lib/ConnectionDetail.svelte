@@ -382,7 +382,7 @@
 							{@const transit = alt.find((al) => al.displayName)!}
 							<button
 								type="button"
-								class="flex-none flex flex-col gap-1 rounded-lg border border-border bg-muted/75 hover:bg-muted transition-colors p-2 min-w-fit text-left cursor-pointer"
+								class="flex-none flex flex-col gap-1 rounded-lg border border-border bg-muted hover:brightness-95 dark:hover:brightness-125 transition p-2 min-w-fit text-left cursor-pointer"
 								onclick={() => applyAlternative(l, alt)}
 							>
 								<div class="text-xs text-muted-foreground tabular-nums text-center">
