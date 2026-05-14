@@ -382,7 +382,7 @@
 				{#if l.alternatives && l.alternatives.length > 0}
 					<div class="my-3 flex gap-2 overflow-hidden pb-1">
 						{#each l.alternatives.slice(0, 3) as alt, ai (ai)}
-							{@const transit = alt[1]}
+							{@const transit = alt.find((al) => al.displayName)!}
 							<button
 								type="button"
 								class="flex-none flex flex-col gap-1 rounded-lg border border-border/70 bg-muted/40 hover:bg-muted/70 transition-colors p-2 min-w-fit text-left cursor-pointer"
