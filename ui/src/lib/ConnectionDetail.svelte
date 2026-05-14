@@ -50,18 +50,15 @@
 		const start = replaceIngress ? idx - 1 : idx;
 		const len = (replaceIngress ? 1 : 0) + 1 + (replaceEgress ? 1 : 0);
 
-		// Currently displayed legs around the target — these become a
-		// new alternative entry so the user can switch back.
+		// Make currently displyed connection an alternative
+		// so the user can switch back.
 		const oldEntry: Leg[] = [
 			...(replaceIngress ? [legs[idx - 1]] : []),
 			{ ...target, alternatives: undefined },
 			...(replaceEgress ? [legs[idx + 1]] : [])
 		];
 
-		// Drop the picked alt from the alternatives list (it's now the
-		// displayed leg) and merge in the previously displayed one,
-		// keeping the list sorted by the transit leg's start time so
-		// the row order stays stable across swaps.
+		// Drop picked alternative.
 		const transitStart = (entry: Leg[]) => entry.find((l) => l.displayName)?.startTime ?? '';
 		const remainingAlts = (target.alternatives ?? []).filter((a) => a !== alt);
 		const newAlternatives = [...remainingAlts, oldEntry].sort((a, b) =>
@@ -385,7 +382,7 @@
 							{@const transit = alt.find((al) => al.displayName)!}
 							<button
 								type="button"
-								class="flex-none flex flex-col gap-1 rounded-lg border border-border/70 bg-muted/40 hover:bg-muted/70 transition-colors p-2 min-w-fit text-left cursor-pointer"
+								class="flex-none flex flex-col gap-1 rounded-lg border border-border bg-muted/75 hover:bg-muted transition-colors p-2 min-w-fit text-left cursor-pointer"
 								onclick={() => applyAlternative(l, alt)}
 							>
 								<div class="text-xs text-muted-foreground tabular-nums text-center">
