@@ -129,7 +129,6 @@ metrics_registry::metrics_registry(
               .Name("nigiri_timetable_transports_x_days_count")
               .Help("The number of transports x service days in the timetable")
               .Register(registry_)},
-
       last_update_{prometheus::BuildGauge()
                        .Name("nigiri_last_update")
                        .Help("Timestamp of last RT, GBFS, Elevator updates")
