@@ -377,7 +377,7 @@
 				<Alerts alerts={l.alerts} tz={l.from.tz || l.to.tz} variant="full" />
 
 				{#if l.alternatives && l.alternatives.length > 0}
-					<div class="my-3 flex gap-2 overflow-hidden pb-1">
+					<div class="my-3 flex gap-2 overflow-hidden">
 						{#each l.alternatives.slice(0, 3) as alt, ai (ai)}
 							{@const transit = alt.find((al) => al.displayName)!}
 							<button

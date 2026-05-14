@@ -314,12 +314,9 @@ BUS T3 08:30->09:00
 }
 
 // Intermodal coordinate-to-coordinate query with BIKE pre/post-transit.
-// FIXME: this test is currently expected to FAIL — `get_leg_alternatives`
-// in nigiri rewrites the synthetic ingress/egress legs of every
-// alternative to plain `n::footpath`s, losing the original transport
-// mode. The intermodal-aware ingress of the first transit leg and the
-// egress of the last transit leg should preserve BIKE (matching the
-// surrounding journey), but right now they come back as WALK.
+// The first leg's ingress and the last leg's egress are intermodal
+// offsets that preserve the original transport mode (BIKE) instead of
+// degenerating to a footpath WALK.
 TEST(motis, routing_leg_alternatives_intermodal_bike) {
   auto ec = std::error_code{};
   std::filesystem::remove_all("test/data_leg_alts_intermodal_bike", ec);
@@ -342,13 +339,6 @@ TEST(motis, routing_leg_alternatives_intermodal_bike) {
       "&numLegAlternatives=5");
 
   ASSERT_EQ(res.itineraries_.size(), 1U);
-  // FIXME: the first leg's first alt-leg and the last leg's third
-  // alt-leg are expected to be `BIKE` (matching the surrounding
-  // journey's intermodal pre/post-transit access). The leg-alternative
-  // code currently rewrites every alternative ingress/egress to a
-  // plain footpath, returning `WALK` instead — so this test is
-  // intentionally failing until the rewrite preserves the original
-  // mode on the "open" boundary of first / last legs.
   EXPECT_EQ(R"(
 BUS T1_DUP 07:00->07:15
   alt [BIKE 06:58->07:00 | BUS T1 07:00->07:15 | WALK 07:15->07:15]
@@ -753,10 +743,13 @@ TEST(motis, routing_leg_alternatives_td_footpath_blocked) {
 
   // === Scenario A: DA → FFM_HAUPT (transfer / rt_timetable td) ===
   // The chosen wheelchair journey transfers at FFM via the elevator-
-  // routed td footpath FFM_10 → FFM_101. ICE/S3 alternatives whose
-  // transfer would land in the 01:30–03:30 outage window must NOT
-  // appear, because the rt_timetable's td_footpath at that time has
-  // duration kMaxDuration.
+  // routed td footpath FFM_10 → FFM_101. The S3 02:15 / 03:15 alts
+  // would naively walk through the outage; they still surface but
+  // with the inflated `get_td_duration` walk (start before the
+  // outage and idle on the platform until boarding) — see the
+  // file-level "raptor 1:1" note above. Only alts whose required
+  // walk window is entirely blocked (no pre-outage start time fits)
+  // would be omitted.
   auto const res_a = routing(
       "?fromPlace=test_DA"
       "&toPlace=test_FFM_HAUPT"
