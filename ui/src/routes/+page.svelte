@@ -20,7 +20,6 @@
 		oneToAll,
 		plan,
 		type ElevationCosts,
-		type OneToAllData,
 		type PlanResponse,
 		type Itinerary,
 		type Mode,
@@ -88,7 +87,7 @@
 	let colorMode = $state<'rt' | 'route' | 'mode' | 'none'>(isSmallScreen ? 'none' : 'rt');
 	let showMap = $state(!isSmallScreen);
 	let showRoutes = $state(false);
-	let lastOneToAllQuery: OneToAllData | undefined = undefined;
+	let lastOneToAllQuery: Parameters<typeof oneToAll>[0] | undefined = undefined;
 	let lastPlanQuery: PlanData | undefined = undefined;
 	let serverConfig: ServerConfig | undefined = $state();
 	let dataLoaded: boolean = $state(false);
@@ -420,11 +419,9 @@
 						maxPreTransitTime,
 						maxPostTransitTime,
 						elevationCosts,
-						maxMatchingDistance: pedestrianProfile == 'WHEELCHAIR' ? 8 : 250,
-						ignorePreTransitRentalReturnConstraints,
-						ignorePostTransitRentalReturnConstraints
+						maxMatchingDistance: pedestrianProfile == 'WHEELCHAIR' ? 8 : 250
 					}
-				} as OneToAllData)
+				} satisfies Parameters<typeof oneToAll>[0])
 			: undefined
 	);
 
