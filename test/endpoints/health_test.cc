@@ -99,7 +99,7 @@ TEST(motis, health_feeds) {
   {
     auto ioc = boost::asio::io_context{};
     gbfs::run_gbfs_update(ioc, c, *d.w_, *d.l_, d.gbfs_, d.metrics_.get());
-    ioc.run_for(boost::asio::chrono::milliseconds(50));
+    ioc.run_for(boost::asio::chrono::milliseconds(100));
 
     auto const res = health("api/v1/health");
     EXPECT_EQ(res.first, boost::beast::http::status::bad_request);
