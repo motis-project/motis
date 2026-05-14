@@ -392,7 +392,12 @@
 				<Alerts alerts={l.alerts} tz={l.from.tz || l.to.tz} variant="full" />
 
 				{#if l.alternatives && l.alternatives.length > 0}
-					<div class="my-3 flex gap-2 overflow-hidden">
+					{@const hasPrevTransit = legs.slice(0, i).some((x) => x.displayName)}
+					{@const hasNextTransit = legs.slice(i + 1).some((x) => x.displayName)}
+					<div class="mt-3 mb-1 pl-2 text-xs text-muted-foreground">
+						{!hasPrevTransit && hasNextTransit ? t.earlierAlternatives : t.laterAlternatives}
+					</div>
+					<div class="mb-3 flex gap-2 overflow-hidden">
 						{#each l.alternatives.slice(0, 3) as alt, ai (ai)}
 							{@const transit = alt.find((al) => al.displayName)!}
 							{@const startOffset = dayOffset(transit.startTime, l.startTime, transit.from.tz)}

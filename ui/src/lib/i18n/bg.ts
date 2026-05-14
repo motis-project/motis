@@ -153,6 +153,8 @@ const translations: Translations = {
 	toll: 'Внимание! Платен път.',
 	accessRestriction: 'забранен достъп',
 	continuesAs: 'Продължава като',
+	earlierAlternatives: 'По-ранни алтернативи',
+	laterAlternatives: 'По-късни алтернативи',
 	rent: 'Наем',
 	copyToClipboard: 'Копирай в клипборда',
 	rideThroughAllowed: 'Минаване е позволено',
