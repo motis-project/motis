@@ -33,6 +33,21 @@
 
 	const lastLeg = $derived(legs.findLast(isRelevantLeg));
 
+	const dayOffset = (t: string, ref: string, tz: string | undefined): number => {
+		const fmt = new Intl.DateTimeFormat('en-CA', {
+			timeZone: tz,
+			year: 'numeric',
+			month: '2-digit',
+			day: '2-digit'
+		});
+		const tDay = Date.parse(fmt.format(new Date(t)));
+		const refDay = Date.parse(fmt.format(new Date(ref)));
+		return Math.round((tDay - refDay) / 86400000);
+	};
+
+	const shortWeekday = (t: string, tz: string | undefined): string =>
+		new Intl.DateTimeFormat(language, { weekday: 'long', timeZone: tz }).format(new Date(t));
+
 	const applyAlternative = (target: Leg, alt: Leg[]) => {
 		const idx = legs.indexOf(target);
 		if (idx < 0) {
@@ -380,12 +395,16 @@
 					<div class="my-3 flex gap-2 overflow-hidden">
 						{#each l.alternatives.slice(0, 3) as alt, ai (ai)}
 							{@const transit = alt.find((al) => al.displayName)!}
+							{@const startOffset = dayOffset(transit.startTime, l.startTime, transit.from.tz)}
 							<button
 								type="button"
 								class="flex-none flex flex-col gap-1 rounded-lg border border-border bg-muted hover:brightness-95 dark:hover:brightness-125 transition p-2 min-w-fit text-left cursor-pointer"
 								onclick={() => applyAlternative(l, alt)}
 							>
 								<div class="text-xs text-muted-foreground tabular-nums text-center">
+									{#if startOffset !== 0}
+										{shortWeekday(transit.startTime, transit.from.tz)}
+									{/if}
 									{formatTime(new Date(transit.startTime), transit.from.tz)}
 									–
 									{formatTime(new Date(transit.endTime!), transit.to.tz)}
