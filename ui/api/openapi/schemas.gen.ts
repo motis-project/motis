@@ -1595,8 +1595,8 @@ an interlined chain. Subsequent interlined legs (carrying
 \`interlineWithPreviousLeg=true\`) leave \`alternatives\` unset.
 Alternatives are valid for the whole interlined segment.
 
-An alternative may itself cover an interlined segment — the
-alternative's middle transit then expands into multiple
+An alternative may itself cover an interlined segment:
+the alternative's middle transit then expands into multiple
 interlined legs when \`joinInterlinedLegs=false\`. In that
 case the alternative contains more than 3 legs: ingress
 footpath, followed by N interlined transit legs (the
