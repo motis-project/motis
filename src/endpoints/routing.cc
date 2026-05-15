@@ -1016,6 +1016,15 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
 
     direct_filter(direct, journeys);
 
+    // Leg-alternatives expects q in physical (forward) order: q.start_
+    // = offsets at journey origin, q.destination_ = offsets at journey
+    // destination. raptor stores them swapped for arriveBy queries
+    // (see `start = arriveBy ? to : from` above), so flip them back.
+    auto q_for_alts = q;
+    if (query.arriveBy_) {
+      q_for_alts.flip_dir();
+    }
+
     return {
         .debugOutput_ =
             join(std::move(prepare_stats), std::move(query_stats),
@@ -1039,7 +1048,8 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                   query.maxMatchingDistance_, api_version,
                   query.ignorePreTransitRentalReturnConstraints_,
                   query.ignorePostTransitRentalReturnConstraints_,
-                  query.language_, query.numLegAlternatives_ > 0 ? &q : nullptr,
+                  query.language_,
+                  query.numLegAlternatives_ > 0 ? &q_for_alts : nullptr,
                   static_cast<std::size_t>(query.numLegAlternatives_));
             }),
         .previousPageCursor_ =
