@@ -327,7 +327,7 @@ TEST(motis, routing) {
     boost::asio::co_spawn(
         ioc,
         [&]() -> boost::asio::awaitable<void> {
-          co_await gbfs::update(c, *d.w_, *d.l_, d.gbfs_);
+          co_await gbfs::update(c, *d.w_, *d.l_, d.gbfs_, d.metrics_.get());
         },
         boost::asio::detached);
     ioc.run();
