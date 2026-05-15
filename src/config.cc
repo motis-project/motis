@@ -85,7 +85,15 @@ config config::read_simple(std::vector<std::string> const& args) {
 config config::read(std::filesystem::path const& p) {
   auto const file_content = utl::read_file(p.generic_string().c_str());
   utl::verify(file_content.has_value(), "could not read config file at {}", p);
-  auto c = read(*file_content);
+  return read(*file_content);
+}
+
+config config::read(std::string const& s) {
+  auto c =
+      rfl::yaml::read<config, drop_trailing, rfl::DefaultIfMissing>(s).value();
+  if (!c.limits_.has_value()) {
+    c.limits_.emplace(limits{});
+  }
 
   bool has_user_agent = c.user_agent_.has_value();
   auto ensure_user_agent = [&](auto& h) {
@@ -113,15 +121,6 @@ config config::read(std::filesystem::path const& p) {
     }
   }
 
-  return c;
-}
-
-config config::read(std::string const& s) {
-  auto c =
-      rfl::yaml::read<config, drop_trailing, rfl::DefaultIfMissing>(s).value();
-  if (!c.limits_.has_value()) {
-    c.limits_.emplace(limits{});
-  }
   c.verify();
   return c;
 }
