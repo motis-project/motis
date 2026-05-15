@@ -289,6 +289,7 @@ jobs:
       BUILDCACHE_DIRECT_MODE: true
       BUILDCACHE_MAX_CACHE_SIZE: 26843545600
       BUILDCACHE_LUA_PATH: ${{ github.workspace }}/tools
+      BUILDCACHE_HASH_EXTRA_FILES: ${{ github.workspace }}/tools/ubsan-suppress.txt
       UBSAN_OPTIONS: halt_on_error=1:abort_on_error=1
       ASAN_OPTIONS: alloc_dealloc_mismatch=0
     steps:
