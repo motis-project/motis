@@ -13,7 +13,8 @@ namespace motis::gbfs {
 boost::asio::awaitable<void> update(config const&,
                                     osr::ways const&,
                                     osr::lookup const&,
-                                    std::shared_ptr<gbfs_data>&);
+                                    std::shared_ptr<gbfs_data>&,
+                                    metrics_registry const*);
 
 void run_gbfs_update(boost::asio::io_context&,
                      config const&,

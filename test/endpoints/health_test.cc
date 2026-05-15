@@ -3,6 +3,9 @@
 #include <filesystem>
 #include <system_error>
 
+#include "boost/asio/co_spawn.hpp"
+#include "boost/asio/detached.hpp"
+#include "boost/asio/experimental/awaitable_operators.hpp"
 #include "boost/asio/io_context.hpp"
 #include "boost/beast/http/status.hpp"
 
@@ -98,8 +101,13 @@ TEST(motis, health_feeds) {
   // GBFS consumed
   {
     auto ioc = boost::asio::io_context{};
-    gbfs::run_gbfs_update(ioc, c, *d.w_, *d.l_, d.gbfs_, d.metrics_.get());
-    ioc.run_for(boost::asio::chrono::milliseconds(100));
+    boost::asio::co_spawn(
+        ioc,
+        [&]() -> boost::asio::awaitable<void> {
+          co_await update(c, *d.w_, *d.l_, d.gbfs_, d.metrics_.get());
+        },
+        boost::asio::detached);
+    ioc.run();
 
     auto const res = health("api/v1/health");
     EXPECT_EQ(res.first, boost::beast::http::status::bad_request);
@@ -111,7 +119,6 @@ TEST(motis, health_feeds) {
 
   // RT & GBFS consumed
   {
-
     // Make update succeed without doing anything
     auto const c_nofeeds =
         config{.timetable_ = {{.datasets_ = {{"test", {}}}}}};

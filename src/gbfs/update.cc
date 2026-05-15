@@ -1099,7 +1099,8 @@ struct gbfs_update {
 awaitable<void> update(config const& c,
                        osr::ways const& w,
                        osr::lookup const& l,
-                       std::shared_ptr<gbfs_data>& data_ptr) {
+                       std::shared_ptr<gbfs_data>& data_ptr,
+                       metrics_registry const* metrics) {
   auto const t = utl::scoped_timer{"gbfs::update"};
 
   if (!c.gbfs_.has_value()) {
@@ -1121,6 +1122,7 @@ awaitable<void> update(config const& c,
     }
   }
   data_ptr = d;
+  metrics->last_update_gbfs_.SetToCurrentTime();
 }
 
 void run_gbfs_update(boost::asio::io_context& ioc,
@@ -1141,9 +1143,7 @@ void run_gbfs_update(boost::asio::io_context& ioc,
           // Remember when we started so we can schedule the next update.
           auto const start = std::chrono::steady_clock::now();
 
-          co_await update(cc, w, l, data_ptr);
-
-          metrics->last_update_gbfs_.SetToCurrentTime();
+          co_await update(cc, w, l, data_ptr, metrics);
 
           // Schedule next update.
           timer.expires_at(start +
