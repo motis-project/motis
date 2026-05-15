@@ -94,6 +94,33 @@ config config::read(std::string const& s) {
   if (!c.limits_.has_value()) {
     c.limits_.emplace(limits{});
   }
+
+  bool has_user_agent = c.user_agent_.has_value();
+  auto ensure_user_agent = [&](auto& h) {
+    if (!h.has_value()) {
+      h = headers_t{};
+    }
+    h->try_emplace("User-Agent", *c.user_agent_);
+  };
+
+  if (has_user_agent) {
+    if (c.has_gbfs_feeds()) {
+      for (auto& [_, feed] : c.gbfs_->feeds_) {
+        ensure_user_agent(feed.headers_);
+      }
+    }
+
+    if (c.requires_rt_timetable_updates()) {
+      for (auto& [_, dataset] : c.timetable_->datasets_) {
+        if (dataset.rt_.has_value()) {
+          for (auto& feed : *dataset.rt_) {
+            ensure_user_agent(feed.headers_);
+          }
+        }
+      }
+    }
+  }
+
   c.verify();
   return c;
 }
