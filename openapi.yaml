@@ -3805,6 +3805,12 @@ components:
           type: integer
           description: decline in meters across this path segment
 
+    WheelchairAccessibility:
+      type: string
+      enum:
+        - WHEELCHAIR_SPACE_AVAILABLE
+        - NOT_ACCESSIBLE
+
     RentalFormFactor:
       type: string
       enum:
@@ -4413,7 +4419,7 @@ components:
         wheelchairAccessible:
           description: |
             Whether wheelchairs can be transported on this leg.
-          type: boolean
+          $ref: '#/components/schemas/WheelchairAccessibility'
         alternatives:
           description: |
             Alternative connections that can replace this transit leg.

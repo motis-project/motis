@@ -568,8 +568,13 @@ api::Itinerary journey_to_response(
                             : std::nullopt,
                     .bikesAllowed_ =
                         enter_stop.bikes_allowed(nigiri::event_type::kDep),
-                    .wheelchairAccessible_ = enter_stop.wheelchair_accessible(
-                        nigiri::event_type::kDep)});
+                    .wheelchairAccessible_ =
+                        enter_stop.wheelchair_accessible(
+                            nigiri::event_type::kDep)
+                            ? api::WheelchairAccessibilityEnum::
+                                  WHEELCHAIR_SPACE_AVAILABLE
+                            : api::WheelchairAccessibilityEnum::
+                                  NOT_ACCESSIBLE});
 
                 auto const attributes =
                     tt.attribute_combinations_[enter_stop
