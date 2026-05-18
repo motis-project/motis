@@ -7,7 +7,6 @@
 
 #include <boost/url/url.hpp>
 #include <fmt/chrono.h>
-#include "nigiri/loader/gtfs/stop_seq_number_encoding.h"
 
 #include "utl/enumerate.h"
 #include "utl/overloaded.h"
@@ -15,6 +14,7 @@
 
 #include "geo/polyline_format.h"
 
+#include "nigiri/loader/gtfs/stop_seq_number_encoding.h"
 #include "nigiri/common/split_duration.h"
 #include "nigiri/routing/journey.h"
 #include "nigiri/routing/leg_alternatives.h"
