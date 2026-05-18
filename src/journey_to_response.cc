@@ -617,23 +617,29 @@ api::Itinerary journey_to_response(
                     to = std::to_string(*to_seq);
                   }
 
+                  auto const to_json_array =
+                      [](std::string elem) -> std::string {
+                    boost::json::array array;
+                    array.push_back(boost::json::value{elem});
+                    return boost::json::serialize(array);
+                  };
+
                   ticket_url.params() = {
                       {"service_date",
-                       std::format("[\"{:%Y%m%d}\"]", start_date)},
+                       to_json_array(std::format("{:%Y%m%d}", start_date))},
                       {"ticketing_trip_id",
-                       std::format("[{}]",
-                                   tags.get_trip_id(tt, enter_stop,
-                                                    n::event_type::kDep))},
-                      {"from_ticketing_stop_time_id",
-                       std::format("[\"{}\"]", from)},
-                      {"to_ticketing_stop_time_id",
-                       std::format("[\"{}\"]", to)},
-                      {"boarding_time", std::format("[\"{:%FT%TZ}\"]",
-                                                    enter_stop.scheduled_time(
-                                                        n::event_type::kDep))},
-                      {"arrival_time", std::format("[\"{:%FT%TZ}\"]",
-                                                   exit_stop.scheduled_time(
-                                                       n::event_type::kArr))},
+                       to_json_array(tags.get_trip_id(tt, enter_stop,
+                                                      n::event_type::kDep))},
+                      {"from_ticketing_stop_time_id", to_json_array(from)},
+                      {"to_ticketing_stop_time_id", to_json_array(to)},
+                      {"boarding_time",
+                       to_json_array(std::format(
+                           "{:%FT%TZ}",
+                           enter_stop.scheduled_time(n::event_type::kDep)))},
+                      {"arrival_time",
+                       to_json_array(std::format(
+                           "{:%FT%TZ}",
+                           exit_stop.scheduled_time(n::event_type::kArr)))},
                   };
                   return std::string{ticket_url.buffer()};
                 };
