@@ -475,8 +475,8 @@ api::Itinerary journey_to_response(
                                      api_version),
                     .from_ = bwd_compat_lvl_adjust(
                         to_place(enter_stop, n::event_type::kDep), api_version),
-                    .to_ = bwd_compat_lvl_adjust(to_place(exit_stop, n::event_type::kArr),
-                                      api_version),
+                    .to_ = bwd_compat_lvl_adjust(
+                        to_place(exit_stop, n::event_type::kArr), api_version),
                     .duration_ =
                         std::chrono::duration_cast<std::chrono::seconds>(
                             exit_stop.time(n::event_type::kArr) -
@@ -497,9 +497,9 @@ api::Itinerary journey_to_response(
                         [&]() {
                           auto const first = exit_stop.get_first_trip_stop(
                               n::event_type::kArr);
-                          auto p =
-                              bwd_compat_lvl_adjust(to_place(first, n::event_type::kDep),
-                                         api_version);
+                          auto p = bwd_compat_lvl_adjust(
+                              to_place(first, n::event_type::kDep),
+                              api_version);
                           p.departure_ = first.time(n::event_type::kDep);
                           p.scheduledDeparture_ =
                               first.scheduled_time(n::event_type::kDep);
@@ -620,8 +620,9 @@ api::Itinerary journey_to_response(
                       !stop.in_allowed() && !stop.out_allowed()) {
                     continue;
                   }
-                  auto& p = leg.intermediateStops_->emplace_back(bwd_compat_lvl_adjust(
-                      to_place(stop, n::event_type::kDep), api_version));
+                  auto& p = leg.intermediateStops_->emplace_back(
+                      bwd_compat_lvl_adjust(to_place(stop, n::event_type::kDep),
+                                            api_version));
                   p.departure_ = stop.time(n::event_type::kDep);
                   p.scheduledDeparture_ =
                       stop.scheduled_time(n::event_type::kDep);
