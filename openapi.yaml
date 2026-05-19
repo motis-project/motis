@@ -841,6 +841,23 @@ paths:
             type: boolean
             default: false
 
+        - name: numLegAlternatives
+          in: query
+          required: false
+          description: |
+            Optional. Maximum number of alternatives to return per transit
+            leg. `0` disables alternatives. When greater than zero, each
+            transit leg in the response is annotated with up to N
+            `alternatives`: connections that can replace the leg while still
+            matching the surrounding journey context (i.e. arriving in time
+            for the next transit leg / departing after the previous transit
+            leg's arrival). Each alternative is a 3-leg sequence
+            `[ingress footpath, transit, egress footpath]`.
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+
         - name: withScheduledSkippedStops
           in: query
           required: false
@@ -2864,6 +2881,23 @@ paths:
                     items:
                       $ref: '#/components/schemas/RentalZone'
 
+  /api/v1/health:
+    get:
+      operationId: health
+      responses:
+        '200':
+          description: Shows over which feeds at least one cycle of updates was consumed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '400':
+          description: Full first cycle through all configured feeds is not finished. 
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+          
   /api/debug/transfers:
     get:
       tags:
@@ -4381,6 +4415,32 @@ components:
           description: |
             Whether bikes can be carried on this leg.
           type: boolean
+        alternatives:
+          description: |
+            Alternative connections that can replace this transit leg.
+            Each alternative is normally a sequence of 3 legs:
+            `[ingress footpath, transit, egress footpath]`.
+            Only populated when the request sets `numLegAlternatives` > 0
+            (capped to that value).
+
+            Interlined legs:
+            `alternatives` is populated only on the first (main) leg of
+            an interlined chain. Subsequent interlined legs (carrying
+            `interlineWithPreviousLeg=true`) leave `alternatives` unset.
+            Alternatives are valid for the whole interlined segment.
+
+            An alternative may itself cover an interlined segment:
+            the alternative's middle transit then expands into multiple
+            interlined legs when `joinInterlinedLegs=false`. In that
+            case the alternative contains more than 3 legs: ingress
+            footpath, followed by N interlined transit legs (the
+            secondary ones carrying `interlineWithPreviousLeg=true`),
+            followed by an egress footpath.
+          type: array
+          items:
+            type: array
+            items:
+              $ref: '#/components/schemas/Leg'
 
     RiderCategory:
       type: object
@@ -5028,3 +5088,13 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/RouteSegment'
+
+    HealthResponse:
+      type: object
+      properties:
+        rt:
+          type: boolean
+          description: GTFSRT, SIRI Lite, VDV AUS, VDV454 feeds.
+        gbfs:
+          type: boolean
+          description: GBFS feeds.

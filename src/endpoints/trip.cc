@@ -65,7 +65,7 @@ api::Itinerary trip::operator()(boost::urls::url_view const& url) const {
       api::ElevationCostsEnum::NONE, query.joinInterlinedLegs_, true,
       query.detailedLegs_, false, query.withScheduledSkippedStops_,
       config_.timetable_.value().max_matching_distance_, kMaxMatchingDistance,
-      api_version, false, false, query.language_);
+      api_version, false, false, query.language_, nullptr);
 }
 
 }  // namespace motis::ep

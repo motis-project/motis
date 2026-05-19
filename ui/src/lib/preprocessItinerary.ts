@@ -1,5 +1,6 @@
 import type {
 	Itinerary,
+	Leg,
 	Place,
 	PlanResponse,
 	Error as ApiError
@@ -8,12 +9,12 @@ import type { Location } from '$lib/Location';
 import polyline from '@mapbox/polyline';
 import type { RequestResult } from '@hey-api/client-fetch';
 
-export const joinInterlinedLegs = (it: Itinerary) => {
-	const joinedLegs = [];
-	for (let i = 0; i < it.legs.length; i++) {
-		if (it.legs[i].interlineWithPreviousLeg) {
+export const joinInterlinedLegs = (legs: Leg[]): Leg[] => {
+	const joinedLegs: Leg[] = [];
+	for (let i = 0; i < legs.length; i++) {
+		if (legs[i].interlineWithPreviousLeg) {
 			const pred = joinedLegs[joinedLegs.length - 1];
-			const curr = it.legs[i];
+			const curr = legs[i];
 			pred.intermediateStops!.push({ ...pred.to, switchTo: curr } as Place);
 			pred.to = curr.to;
 			pred.duration += curr.duration;
@@ -33,21 +34,34 @@ export const joinInterlinedLegs = (it: Itinerary) => {
 				length: pred.legGeometry.length + curr.legGeometry.length
 			};
 		} else {
-			joinedLegs.push(it.legs[i]);
+			joinedLegs.push(legs[i]);
 		}
 	}
-	it.legs = joinedLegs;
+	return joinedLegs;
 };
 
 export const preprocessItinerary = (from: Location, to: Location) => {
+	const fixupBoundaries = (legs: Leg[]) => {
+		if (legs.length === 0) return;
+		if (legs[0].from.name === 'START') {
+			legs[0].from.name = from.label!;
+		}
+		if (legs[legs.length - 1].to.name === 'END') {
+			legs[legs.length - 1].to.name = to.label!;
+		}
+	};
+
 	const updateItinerary = (it: Itinerary) => {
-		if (it.legs[0].from.name === 'START') {
-			it.legs[0].from.name = from.label!;
+		fixupBoundaries(it.legs);
+		it.legs = joinInterlinedLegs(it.legs);
+		for (const leg of it.legs) {
+			if (leg.alternatives) {
+				leg.alternatives = leg.alternatives.map((alt) => {
+					fixupBoundaries(alt);
+					return joinInterlinedLegs(alt);
+				});
+			}
 		}
-		if (it.legs[it.legs.length - 1].to.name === 'END') {
-			it.legs[it.legs.length - 1].to.name = to.label!;
-		}
-		joinInterlinedLegs(it);
 	};
 
 	return (r: Awaited<RequestResult<PlanResponse, ApiError, false>>): PlanResponse => {

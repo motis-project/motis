@@ -27,10 +27,9 @@
 #include "nigiri/routing/limits.h"
 #include "nigiri/routing/pareto_set.h"
 #include "nigiri/routing/query.h"
+#include "nigiri/routing/raptor/pong.h"
 #include "nigiri/routing/raptor/raptor_state.h"
 #include "nigiri/routing/raptor_search.h"
-
-#include "nigiri/routing/raptor/pong.h"
 #include "nigiri/routing/tb/query_engine.h"
 #include "nigiri/routing/tb/tb_data.h"
 #include "nigiri/routing/tb/tb_search.h"
@@ -69,20 +68,6 @@ namespace motis::ep {
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 boost::thread_specific_ptr<osr::bitvec<osr::node_idx_t>> blocked;
 
-bool osr_loaded(routing const& r) {
-  return r.w_ && r.l_ && r.pl_ && r.tt_ && r.loc_tree_ && r.matches_;
-}
-
-bool is_intermodal(routing const& r, place_t const&) {
-  return osr_loaded(r);  // use pre/post transit even when start/dest is a stop
-}
-
-n::routing::location_match_mode get_match_mode(routing const& r,
-                                               place_t const& p) {
-  return is_intermodal(r, p) ? n::routing::location_match_mode::kIntermodal
-                             : n::routing::location_match_mode::kEquivalent;
-}
-
 std::vector<n::routing::offset> station_start(n::location_idx_t const l) {
   return {{l, n::duration_t{0U}, 0U}};
 }
@@ -118,7 +103,7 @@ n::routing::td_offsets_t get_td_offsets(
     std::chrono::seconds const max,
     nigiri::routing::start_time_t const& start_time,
     stats_map_t& stats) {
-  if (!osr_loaded(r)) {
+  if (!r.is_osr_loaded()) {
     return {};
   }
 
@@ -184,7 +169,7 @@ n::routing::td_offsets_t routing::get_td_offsets(
   return std::visit(
       utl::overloaded{
           [&](tt_location l) {
-            if (!osr_loaded(*this)) {
+            if (!is_osr_loaded()) {
               return n::routing::td_offsets_t{};
             }
             return ::motis::ep::get_td_offsets(
@@ -238,9 +223,10 @@ std::vector<n::routing::offset> get_offsets(
     double const max_matching_distance,
     gbfs::gbfs_routing_data& gbfs_rd,
     stats_map_t& stats) {
-  if (!osr_loaded(r)) {
+  if (!r.is_osr_loaded()) {
     return {};
   }
+
   auto offsets = std::vector<n::routing::offset>{};
   auto ignore_walk = false;
 
@@ -439,7 +425,7 @@ std::vector<n::routing::offset> routing::get_offsets(
   return std::visit(
       utl::overloaded{
           [&](tt_location const l) {
-            if (!osr_loaded(*this)) {
+            if (!is_osr_loaded()) {
               return station_start(l.l_);
             }
             auto offsets = do_get_offsets(stop_to_osr_location(*this, l.l_));
@@ -686,7 +672,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
   auto const rtt = rt->rtt_.get();
   auto const e = rt->e_.get();
   auto gbfs_rd = gbfs::gbfs_routing_data{w_, l_, gbfs_};
-  if (blocked.get() == nullptr && w_ != nullptr) {
+  if (blocked.get() == nullptr && is_osr_loaded()) {
     blocked.reset(new osr::bitvec<osr::node_idx_t>{w_->n_nodes()});
   }
 
@@ -861,14 +847,13 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
 
     auto q = n::routing::query{
         .start_time_ = start_time.start_time_,
-        .start_match_mode_ = use_radius_start
+        .start_match_mode_ = (use_radius_start || is_osr_loaded())
                                  ? n::routing::location_match_mode::kIntermodal
-                                 : get_match_mode(*this, start),
-        .dest_match_mode_ = use_radius_dest
+                                 : n::routing::location_match_mode::kEquivalent,
+        .dest_match_mode_ = (use_radius_dest || is_osr_loaded())
                                 ? n::routing::location_match_mode::kIntermodal
-                                : get_match_mode(*this, dest),
-        .use_start_footpaths_ =
-            !use_radius_start && !is_intermodal(*this, start),
+                                : n::routing::location_match_mode::kEquivalent,
+        .use_start_footpaths_ = !use_radius_start && !is_osr_loaded(),
         .start_ =
             use_radius_start
                 ? radius_offsets(*loc_tree_,
@@ -1032,6 +1017,15 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
 
     direct_filter(direct, journeys);
 
+    // Leg-alternatives expects q in physical (forward) order: q.start_
+    // = offsets at journey origin, q.destination_ = offsets at journey
+    // destination. raptor stores them swapped for arriveBy queries
+    // (see `start = arriveBy ? to : from` above), so flip them back.
+    auto q_for_alts = q;
+    if (query.arriveBy_) {
+      q_for_alts.flip_dir();
+    }
+
     return {
         .debugOutput_ =
             join(std::move(prepare_stats), std::move(query_stats),
@@ -1055,7 +1049,9 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                   query.maxMatchingDistance_, api_version,
                   query.ignorePreTransitRentalReturnConstraints_,
                   query.ignorePostTransitRentalReturnConstraints_,
-                  query.language_);
+                  query.language_,
+                  query.numLegAlternatives_ > 0 ? &q_for_alts : nullptr,
+                  static_cast<std::size_t>(query.numLegAlternatives_));
             }),
         .previousPageCursor_ =
             fmt::format("EARLIER|{}", to_seconds(search_interval.from_)),

@@ -94,6 +94,33 @@ config config::read(std::string const& s) {
   if (!c.limits_.has_value()) {
     c.limits_.emplace(limits{});
   }
+
+  bool has_user_agent = c.user_agent_.has_value();
+  auto ensure_user_agent = [&](auto& h) {
+    if (!h.has_value()) {
+      h = headers_t{};
+    }
+    h->try_emplace("User-Agent", *c.user_agent_);
+  };
+
+  if (has_user_agent) {
+    if (c.has_gbfs_feeds()) {
+      for (auto& [_, feed] : c.gbfs_->feeds_) {
+        ensure_user_agent(feed.headers_);
+      }
+    }
+
+    if (c.requires_rt_timetable_updates()) {
+      for (auto& [_, dataset] : c.timetable_->datasets_) {
+        if (dataset.rt_.has_value()) {
+          for (auto& feed : *dataset.rt_) {
+            ensure_user_agent(feed.headers_);
+          }
+        }
+      }
+    }
+  }
+
   c.verify();
   return c;
 }
@@ -195,9 +222,7 @@ void config::verify_input_files_exist() const {
 bool config::requires_rt_timetable_updates() const {
   return timetable_.has_value() &&
          ((has_elevators() && get_elevators()->url_.has_value()) ||
-          utl::any_of(timetable_->datasets_, [](auto&& d) {
-            return d.second.rt_.has_value() && !d.second.rt_->empty();
-          }));
+          has_rt_feeds());
 }
 
 bool config::shapes_debug_api_enabled() const {
@@ -234,6 +259,12 @@ bool config::has_elevators() const {
             return x;
           }},
       elevators_);
+}
+
+bool config::has_rt_feeds() const {
+  return utl::any_of(timetable_->datasets_, [](auto&& d) {
+    return d.second.rt_.has_value() && !d.second.rt_->empty();
+  });
 }
 
 std::optional<config::street_routing> config::get_street_routing() const {

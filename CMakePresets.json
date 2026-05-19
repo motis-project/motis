@@ -78,7 +78,7 @@
         "CMAKE_BUILD_TYPE": "Debug",
         "CTX_ASAN": "ON",
         "CMAKE_C_FLAGS": "-fsanitize=address,undefined -fsanitize-ignorelist=${sourceDir}/tools/ubsan-suppress.txt -fno-omit-frame-pointer",
-        "CMAKE_CXX_FLAGS": "-stdlib=libc++ -fsanitize=address,undefined -fno-omit-frame-pointer"
+        "CMAKE_CXX_FLAGS": "-stdlib=libc++ -fsanitize=address,undefined -fno-omit-frame-pointer -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_DEBUG"
       },
       "environment": {
         "PATH": "/opt:/opt/cmake-3.26.3-linux-x86_64/bin:/opt/buildcache/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"

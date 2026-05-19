@@ -429,6 +429,7 @@ struct provider_feed {
   geofencing_restrictions default_restrictions_{};
   std::optional<return_constraint> default_return_constraint_{};
   std::optional<std::string> config_group_{};
+  std::optional<std::string> config_name_{};
   std::optional<std::string> config_color_{};
   std::shared_ptr<oauth_state> oauth_{};
   std::map<std::string, unsigned> default_ttl_{};

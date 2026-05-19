@@ -1586,6 +1586,35 @@ by looping active weekdays, e.g. from calendar.txt in GTFS.
             description: `Whether bikes can be carried on this leg.
 `,
             type: 'boolean'
+        },
+        alternatives: {
+            description: `Alternative connections that can replace this transit leg.
+Each alternative is normally a sequence of 3 legs:
+\`[ingress footpath, transit, egress footpath]\`.
+Only populated when the request sets \`numLegAlternatives\` > 0
+(capped to that value).
+
+Interlined legs:
+\`alternatives\` is populated only on the first (main) leg of
+an interlined chain. Subsequent interlined legs (carrying
+\`interlineWithPreviousLeg=true\`) leave \`alternatives\` unset.
+Alternatives are valid for the whole interlined segment.
+
+An alternative may itself cover an interlined segment:
+the alternative's middle transit then expands into multiple
+interlined legs when \`joinInterlinedLegs=false\`. In that
+case the alternative contains more than 3 legs: ingress
+footpath, followed by N interlined transit legs (the
+secondary ones carrying \`interlineWithPreviousLeg=true\`),
+followed by an egress footpath.
+`,
+            type: 'array',
+            items: {
+                type: 'array',
+                items: {
+                    '$ref': '#/components/schemas/Leg'
+                }
+            }
         }
     }
 } as const;

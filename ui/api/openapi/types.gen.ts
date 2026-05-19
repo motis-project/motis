@@ -1272,6 +1272,29 @@ export type Leg = {
      *
      */
     bikesAllowed?: boolean;
+    /**
+     * Alternative connections that can replace this transit leg.
+     * Each alternative is normally a sequence of 3 legs:
+     * `[ingress footpath, transit, egress footpath]`.
+     * Only populated when the request sets `numLegAlternatives` > 0
+     * (capped to that value).
+     *
+     * Interlined legs:
+     * `alternatives` is populated only on the first (main) leg of
+     * an interlined chain. Subsequent interlined legs (carrying
+     * `interlineWithPreviousLeg=true`) leave `alternatives` unset.
+     * Alternatives are valid for the whole interlined segment.
+     *
+     * An alternative may itself cover an interlined segment:
+     * the alternative's middle transit then expands into multiple
+     * interlined legs when `joinInterlinedLegs=false`. In that
+     * case the alternative contains more than 3 legs: ingress
+     * footpath, followed by N interlined transit legs (the
+     * secondary ones carrying `interlineWithPreviousLeg=true`),
+     * followed by an egress footpath.
+     *
+     */
+    alternatives?: Array<Array<Leg>>;
 };
 
 export type RiderCategory = {
@@ -2127,6 +2150,18 @@ export type PlanData = {
          *
          */
         numItineraries?: number;
+        /**
+         * Optional. Maximum number of alternatives to return per transit
+         * leg. `0` disables alternatives. When greater than zero, each
+         * transit leg in the response is annotated with up to N
+         * `alternatives`: connections that can replace the leg while still
+         * matching the surrounding journey context (i.e. arriving in time
+         * for the next transit leg / departing after the previous transit
+         * leg's arrival). Each alternative is a 3-leg sequence
+         * `[ingress footpath, transit, egress footpath]`.
+         *
+         */
+        numLegAlternatives?: number;
         /**
          * Use the cursor to go to the next "page" of itineraries.
          * Copy the cursor from the last response and keep the original request as is.
