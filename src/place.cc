@@ -63,7 +63,7 @@ osr::location get_location(api::Place const& p) {
               .transform([](auto const lvl) {
                 return osr::level_t{static_cast<float>(lvl)};
               })
-              .value_or(osr::level_t{osr::kNoLevel})};
+              .value_or(osr::kNoLevel)};
 }
 
 osr::location get_location(n::timetable const* tt,
