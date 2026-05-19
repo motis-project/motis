@@ -3808,7 +3808,7 @@ components:
     WheelchairAccessibility:
       type: string
       enum:
-        - WHEELCHAIR_SPACE_AVAILABLE
+        - ACCESSIBLE
         - NOT_ACCESSIBLE
 
     RentalFormFactor:

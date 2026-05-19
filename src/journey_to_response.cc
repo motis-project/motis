@@ -571,8 +571,7 @@ api::Itinerary journey_to_response(
                     .wheelchairAccessible_ =
                         enter_stop.wheelchair_accessible(
                             nigiri::event_type::kDep)
-                            ? api::WheelchairAccessibilityEnum::
-                                  WHEELCHAIR_SPACE_AVAILABLE
+                            ? api::WheelchairAccessibilityEnum::ACCESSIBLE
                             : api::WheelchairAccessibilityEnum::
                                   NOT_ACCESSIBLE});
 
