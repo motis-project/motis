@@ -473,9 +473,9 @@ api::Itinerary journey_to_response(
                 auto& leg = itinerary.legs_.emplace_back(api::Leg{
                     .mode_ = to_mode(enter_stop.get_clasz(n::event_type::kDep),
                                      api_version),
-                    .from_ = bwc_adjust(
+                    .from_ = bwd_compat_lvl_adjust(
                         to_place(enter_stop, n::event_type::kDep), api_version),
-                    .to_ = bwc_adjust(to_place(exit_stop, n::event_type::kArr),
+                    .to_ = bwd_compat_lvl_adjust(to_place(exit_stop, n::event_type::kArr),
                                       api_version),
                     .duration_ =
                         std::chrono::duration_cast<std::chrono::seconds>(
@@ -498,7 +498,7 @@ api::Itinerary journey_to_response(
                           auto const first = exit_stop.get_first_trip_stop(
                               n::event_type::kArr);
                           auto p =
-                              bwc_adjust(to_place(first, n::event_type::kDep),
+                              bwd_compat_lvl_adjust(to_place(first, n::event_type::kDep),
                                          api_version);
                           p.departure_ = first.time(n::event_type::kDep);
                           p.scheduledDeparture_ =
@@ -509,7 +509,7 @@ api::Itinerary journey_to_response(
                         [&]() {
                           auto const last = enter_stop.get_last_trip_stop(
                               n::event_type::kDep);
-                          auto p = bwc_adjust(
+                          auto p = bwd_compat_lvl_adjust(
                               to_place(last, n::event_type::kArr), api_version);
                           p.arrival_ = last.time(n::event_type::kArr);
                           p.scheduledArrival_ =
@@ -620,7 +620,7 @@ api::Itinerary journey_to_response(
                       !stop.in_allowed() && !stop.out_allowed()) {
                     continue;
                   }
-                  auto& p = leg.intermediateStops_->emplace_back(bwc_adjust(
+                  auto& p = leg.intermediateStops_->emplace_back(bwd_compat_lvl_adjust(
                       to_place(stop, n::event_type::kDep), api_version));
                   p.departure_ = stop.time(n::event_type::kDep);
                   p.scheduledDeparture_ =

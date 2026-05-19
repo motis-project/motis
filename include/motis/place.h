@@ -82,8 +82,8 @@ place_t get_place(nigiri::timetable const*,
                   tag_lookup const*,
                   std::string_view user_input);
 
-api::Place bwc_adjust(api::Place&& pl, unsigned api_version);
+api::Place bwd_compat_lvl_adjust(api::Place&& pl, unsigned api_version);
 
-api::Place bwc_adjust(api::Place const& pl, unsigned api_version);
+api::Place bwd_compat_lvl_adjust(api::Place const& pl, unsigned api_version);
 
 }  // namespace motis
