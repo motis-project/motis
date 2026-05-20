@@ -29,3 +29,4 @@ ninja
 - Make sure that the architecture is set to `amd64` (Settings -> `Build, Execution, Deployment` -> `Toolchains`).
 - You might have to allow users to create symbolic links. Open `Local Security Policy` and go to `User Rights Assignment`.
 - You might have to enable `Developer Mode` under `Advanced System Settings`.
+- This guide might be helpful: [MOTIS Windows Dev Setup with Clion Guide](windows-dev-setup-clion-guide.pdf)

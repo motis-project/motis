@@ -1,254 +1,165 @@
 <script lang="ts">
-	import { t } from '$lib/i18n/translation';
-	import { lngLatToStr } from '$lib/lngLatToStr';
-	import { MapboxOverlay } from '@deck.gl/mapbox';
-	import { IconLayer } from '@deck.gl/layers';
-	import maplibregl, { type LngLatLike } from 'maplibre-gl';
-	import { onMount, untrack } from 'svelte';
+	import maplibregl, { type MapGeoJSONFeature } from 'maplibre-gl';
+	import { untrack } from 'svelte';
 	import { stops, type Mode } from '@motis-project/motis-client';
-	import { type PickingInfo } from '@deck.gl/core';
+	import { lngLatToStr } from '$lib/lngLatToStr';
 	import { onClickStop } from '$lib/utils';
-	import { updateOverlayLayers } from '$lib/updateOverlay';
-	import { createStopIcon } from '../createIcon';
-	import { hexToRgb } from '$lib/Color';
-	import { getModeStyle, type LegLike } from '$lib/modeStyle';
+	import GeoJSON from '$lib/map/GeoJSON.svelte';
+	import Layer from '$lib/map/Layer.svelte';
+	import { ensureStopIcons, stopIconId } from './stopIcons';
+	import { colors } from '$lib/map/style';
 
 	let {
 		map,
-		overlay,
-		layers,
 		zoom,
-		stopsMode,
-		bounds
+		bounds,
+		theme
 	}: {
 		map: maplibregl.Map | undefined;
-		overlay: MapboxOverlay;
-		layers: IconLayer[];
 		zoom: number;
-		stopsMode: 'none' | 'all' | 'grouped';
 		bounds: maplibregl.LngLatBoundsLike | undefined;
+		theme: 'light' | 'dark';
 	} = $props();
+
+	// Reuse the base map's label colors so stop names match other map text.
+	const labelColors = $derived({
+		text: colors[theme].text,
+		halo: colors[theme].textHalo
+	});
+
+	// Grouping is enabled while zoomed out and disabled from zoom level 13 on.
+	const GROUPING_MAX_ZOOM = 16;
+
+	// Icon size factor per mode, mirroring the zoom tiers in which the modes
+	// appear: long-distance rail is largest, local modes (tram/bus) smallest.
+	const modeIconScale = (mode: Mode | undefined): number => {
+		switch (mode) {
+			case 'HIGHSPEED_RAIL':
+			case 'NIGHT_RAIL':
+				return 1.0;
+			case 'LONG_DISTANCE':
+			case 'COACH':
+			case 'REGIONAL_FAST_RAIL':
+			case 'REGIONAL_RAIL':
+			case 'RAIL':
+				return 0.9;
+			case 'SUBURBAN':
+				return 0.85;
+			case 'SUBWAY':
+				return 0.8;
+			default:
+				return 0.8;
+		}
+	};
 
 	//QUERY
 	let query = $derived.by(() => {
-		if (!bounds) return null;
+		if (!bounds) {
+			return null;
+		}
 		const b = maplibregl.LngLatBounds.convert(bounds);
 		const max = lngLatToStr(b.getNorthWest());
 		const min = lngLatToStr(b.getSouthEast());
-		const grouped = stopsMode == 'grouped';
+		const grouped = zoom < GROUPING_MAX_ZOOM;
 		let modes: Mode[] | undefined = [];
 		if (zoom > 7) {
-			modes.push('HIGHSPEED_RAIL');
-			modes.push('LONG_DISTANCE');
+			modes.push('AIRPLANE', 'NIGHT_RAIL', 'HIGHSPEED_RAIL', 'LONG_DISTANCE', 'COACH');
 		}
 		if (zoom > 11) {
-			modes.push('REGIONAL_RAIL');
-			modes.push('ODM');
+			modes.push('REGIONAL_RAIL', 'FERRY');
+		}
+		if (zoom > 12) {
+			modes.push('SUBWAY');
 		}
 		if (zoom > 13) {
-			modes.push('SUBWAY');
 			modes.push('SUBURBAN');
 		}
-		if (zoom > 15) {
-			modes.push('BUS');
+		if (zoom > 14) {
 			modes.push('TRAM');
 		}
-		if (zoom > 17) {
-			modes = undefined;
+		if (zoom > 15) {
+			modes.push('BUS', 'FUNICULAR', 'AERIAL_LIFT');
 		}
-		return {
-			min,
-			max,
-			grouped,
-			modes
-		};
+		return { min, max, grouped, modes };
 	});
 
 	//DATA
-	const STOPS_NUM = 2048;
-	const colors = new Uint8Array(STOPS_NUM * 3);
-	const positions = new Float64Array(STOPS_NUM * 2);
-	const stopsData = {
-		length: STOPS_NUM,
-		positions,
-		colors
-	};
-	type MetaData = {
-		name: string;
-		stopId?: string;
-		track?: string;
-		modes?: Array<Mode>;
-	};
-	const metadata: MetaData[] = [];
+	const EMPTY: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] };
+	let data = $state<GeoJSON.FeatureCollection>(EMPTY);
 
-	//LAYER
-	const ICON_SIZE = 50;
-	const StopIcon = createStopIcon(ICON_SIZE);
-
-	const IconMapping = {
-		marker: {
-			x: 0,
-			y: 0,
-			width: ICON_SIZE,
-			height: ICON_SIZE,
-			anchorX: ICON_SIZE / 2,
-			anchorY: ICON_SIZE / 2,
-			mask: true
-		}
-	};
-
-	const popup = new maplibregl.Popup({
-		closeButton: false,
-		closeOnClick: false,
-		maxWidth: 'none'
-	});
-
-	const createModeIcon = (mode: Mode): HTMLElement => {
-		const [icon, bg, fg] = getModeStyle({ mode } as LegLike);
-		const span = Object.assign(document.createElement('span'), {
-			innerHTML: `<svg width="17" height="17" fill="currentColor"><use href="#${icon}"></use></svg>`
-		});
-		Object.assign(span.style, {
-			display: 'flex',
-			alignItems: 'center',
-			gap: '4px',
-			background: bg,
-			color: fg,
-			borderRadius: '8px',
-			padding: '4px'
-		});
-		return span;
-	};
-
-	const onHover = (info: PickingInfo) => {
-		if (!info.picked || info.index === -1) {
-			popup.remove();
+	//HANDLERS
+	const onLayerClick = (e: { features?: MapGeoJSONFeature[] }) => {
+		const props = e.features?.[0]?.properties;
+		if (!props?.stopId) {
 			return;
 		}
-		const data = metadata[info.index];
-
-		const root = document.createElement('div');
-		Object.assign(root.style, {
-			display: 'flex',
-			alignItems: 'center',
-			flexDirection: 'column',
-			gap: '6px',
-			marginRight: '-28px'
-		});
-
-		const name = Object.assign(document.createElement('span'), { textContent: data.name });
-		Object.assign(name.style, {
-			fontSize: '14px',
-			fontWeight: '700',
-			lineHeight: '1.2'
-		});
-		root.appendChild(name);
-
-		if (data.track) {
-			const track = document.createElement('span');
-			Object.assign(track.style, {
-				background: 'rgba(0,0,0,0.08)',
-				borderRadius: '6px',
-				padding: '5px',
-				fontSize: '12px',
-				fontWeight: '700'
-			});
-			track.innerHTML = `${t.track}: ${data.track}`;
-			root.appendChild(track);
-		}
-
-		if (data.modes?.length) {
-			const modeRow = document.createElement('div');
-			Object.assign(modeRow.style, {
-				display: 'flex',
-				flexWrap: 'wrap',
-				gap: '4px'
-			});
-			data.modes.forEach((m) => modeRow.appendChild(createModeIcon(m)));
-			root.appendChild(modeRow);
-		}
-
-		popup
-			.setLngLat(info.coordinate as LngLatLike)
-			.setDOMContent(root)
-			.addTo(map!);
+		onClickStop(props.name, props.stopId, new Date(Date.now()));
 	};
-
-	const onClick = (info: PickingInfo) => {
-		if (info.picked && info.index != -1) {
-			const data = metadata[info.index];
-			onClickStop(data.name, data.stopId!, new Date(Date.now()));
-		}
-	};
-
-	const createLayer = () => {
-		return new IconLayer({
-			id: 'stops-view-layer',
-			beforeId: 'trips-layer',
-			data: {
-				length: stopsData.length,
-				attributes: {
-					getPosition: { value: positions, size: 2 },
-					getColor: { value: colors, size: 3, normalized: true }
-				}
-			},
-			// @ts-expect-error: canvas element seems to work fine
-			iconAtlas: StopIcon,
-			iconMapping: IconMapping,
-			getSize: 15,
-			pickable: stopsMode !== 'none',
-			colorFormat: 'RGB',
-			visible: stopsMode !== 'none',
-			useDevicePixels: false,
-			autoHighlight: true,
-			parameters: { depthTest: false },
-			getIcon: (_) => 'marker',
-			onHover,
-			onClick
-		});
-	};
-
-	//SETUP
-	onMount(() => {
-		updateOverlayLayers(createLayer(), layers, overlay);
-	});
 
 	//UPDATE
 	$effect(() => {
-		if (stopsMode) {
-			updateOverlayLayers(createLayer(), layers, overlay);
-			stopsData.length = 0;
+		if (!query || !map) {
+			data = EMPTY;
+			return;
 		}
-	});
-	$effect(() => {
-		if (!query || stopsMode == 'none') return;
+		const currentMap = map;
 		untrack(async () => {
-			const { data } = await stops({ query });
-			if (!data) {
-				stopsData.length = 0;
-				updateOverlayLayers(createLayer(), layers, overlay);
+			const { data: result } = await stops({ query });
+			if (!result) {
+				data = EMPTY;
 				return;
 			}
 
-			let index = 0;
-			for (let i = 0; i < data.length; ++i) {
-				metadata[index] = {
-					name: data[i].name,
-					stopId: data[i].stopId,
-					track: data[i].track,
-					modes: data[i].modes
-				};
-				const mode = data[i].modes ? data[i].modes![0] : undefined;
-				const color = mode ? hexToRgb(getModeStyle({ mode } as LegLike)[1]) : hexToRgb('#000000');
-				positions[2 * index] = data[i].lon;
-				positions[2 * index + 1] = data[i].lat;
-				colors[3 * index] = color[0];
-				colors[3 * index + 1] = color[1];
-				colors[3 * index + 2] = color[2];
-				index++;
-			}
-			stopsData.length = index;
-			updateOverlayLayers(createLayer(), layers, overlay);
+			const grouped = query.grouped;
+			const features: GeoJSON.Feature[] = result.map((s) => ({
+				type: 'Feature',
+				geometry: { type: 'Point', coordinates: [s.lon, s.lat] },
+				properties: {
+					stopId: s.stopId,
+					name: s.name,
+					track: s.track,
+					label: !grouped && s.track ? s.track : s.name,
+					modes: s.modes ? JSON.stringify(s.modes) : undefined,
+					icon: stopIconId(s.modes?.[0]),
+					iconSize: modeIconScale(s.modes?.[0]) * (grouped ? 1 : 0.85)
+				}
+			}));
+
+			await ensureStopIcons(
+				currentMap,
+				result.flatMap((s) => s.modes ?? [])
+			);
+			data = { type: 'FeatureCollection', features };
 		});
 	});
 </script>
+
+{#if map}
+	<GeoJSON id="stops-view" {data}>
+		<Layer
+			id="stops-view-layer"
+			type="symbol"
+			beforeLayerId=""
+			filter={['all']}
+			layout={{
+				'icon-image': ['get', 'icon'],
+				'icon-size': ['get', 'iconSize'],
+				'symbol-sort-key': ['get', 'iconSize'],
+				'icon-allow-overlap': true,
+				'icon-ignore-placement': true,
+				'text-field': ['get', 'label'],
+				'text-font': ['Noto Sans Regular'],
+				'text-size': 11,
+				'text-offset': [0, 1.1],
+				'text-anchor': 'top',
+				'text-optional': true
+			}}
+			paint={{
+				'text-color': labelColors.text,
+				'text-halo-color': labelColors.halo,
+				'text-halo-width': 1.5
+			}}
+			onclick={onLayerClick}
+		/>
+	</GeoJSON>
+{/if}

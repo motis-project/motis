@@ -150,6 +150,8 @@ export type Translations = {
 	toll: string;
 	accessRestriction: string;
 	continuesAs: string;
+	earlierAlternatives: string;
+	laterAlternatives: string;
 	DEBUG_BUS_ROUTE: string;
 	DEBUG_RAILWAY_ROUTE: string;
 	DEBUG_FERRY_ROUTE: string;

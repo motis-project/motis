@@ -7,9 +7,7 @@
 		LocateFixed,
 		TrainFront,
 		Waypoints,
-		MountainSnow,
-		MapPin,
-		MapPinHouse
+		MountainSnow
 	} from '@lucide/svelte';
 	import { getStyle } from '$lib/map/style';
 	import Map from '$lib/map/Map.svelte';
@@ -22,7 +20,6 @@
 		oneToAll,
 		plan,
 		type ElevationCosts,
-		type OneToAllData,
 		type PlanResponse,
 		type Itinerary,
 		type Mode,
@@ -84,9 +81,6 @@
 	const layers: IconLayer[] = [
 		new IconLayer({
 			id: 'trips-layer'
-		}),
-		new IconLayer({
-			id: 'stops-view-layer'
 		})
 	];
 	const overlay: MapboxOverlay = new MapboxOverlay({
@@ -103,11 +97,9 @@
 	);
 	let dataAttributionLink: string | undefined = $state(undefined);
 	let colorMode = $state<'rt' | 'route' | 'mode' | 'none'>('none');
-	let stopsMode = $state<'grouped' | 'all'>('grouped');
 	let showMap = $state(!isSmallScreen);
 	let showRoutes = $state(false);
-	let routesOverlaySession = $state(0);
-	let lastOneToAllQuery: OneToAllData | undefined = undefined;
+	let lastOneToAllQuery: Parameters<typeof oneToAll>[0] | undefined = undefined;
 	let lastPlanQuery: PlanData | undefined = undefined;
 	let serverConfig: ServerConfig | undefined = $state();
 	let dataLoaded: boolean = $state(false);
@@ -116,11 +108,6 @@
 			colorMode = 'none';
 		}
 	});
-
-	const toggleRoutesOverlay = () => {
-		++routesOverlaySession;
-		showRoutes = !showRoutes;
-	};
 
 	$effect(() => {
 		if (!map) return;
@@ -385,6 +372,7 @@
 						numItineraries,
 						maxItineraries,
 						withFares: true,
+						numLegAlternatives: 3,
 						slowDirect,
 						fastestDirectFactor: 1.5,
 						pedestrianProfile,
@@ -447,11 +435,9 @@
 						maxPreTransitTime,
 						maxPostTransitTime,
 						elevationCosts,
-						maxMatchingDistance: pedestrianProfile == 'WHEELCHAIR' ? 8 : 250,
-						ignorePreTransitRentalReturnConstraints,
-						ignorePostTransitRentalReturnConstraints
+						maxMatchingDistance: pedestrianProfile == 'WHEELCHAIR' ? 8 : 250
 					}
-				} as OneToAllData)
+				} satisfies Parameters<typeof oneToAll>[0])
 			: undefined
 	);
 
@@ -881,7 +867,10 @@
 				<Button
 					size="icon"
 					variant={showRoutes ? 'default' : 'outline'}
-					onclick={toggleRoutesOverlay}
+					aria-label="Toggle routes overlay"
+					onclick={() => {
+						showRoutes = !showRoutes;
+					}}
 				>
 					<Waypoints class="w-5 h-5" />
 				</Button>
@@ -954,43 +943,22 @@
 							<Palette class="h-[1.2rem] w-[1.2rem]" />
 						{/if}
 					</Button>
-					<Button
-						size="icon"
-						onclick={() => {
-							stopsMode = (function () {
-								switch (stopsMode) {
-									case 'grouped':
-										return 'all';
-									case 'all':
-										return 'grouped';
-								}
-							})();
-						}}
-					>
-						{#if stopsMode == 'grouped'}
-							<MapPin class="h-[1.2rem] w-[1.2rem]" />
-						{:else if stopsMode == 'all'}
-							<MapPinHouse class="h-[1.2rem] w-[1.2rem]" />
-						{/if}
-					</Button>
 					<Button size="icon" onclick={() => getLocation()}>
 						<LocateFixed class="w-5 h-5" />
 					</Button>
 				</Control>
 				{#if showRoutes}
-					{#key routesOverlaySession}
-						<Routes
-							{map}
-							{bounds}
-							{zoom}
-							shapesDebugEnabled={serverConfig?.shapesDebugEnabled === true}
-						/>
-					{/key}
+					<Routes
+						{map}
+						{bounds}
+						{zoom}
+						shapesDebugEnabled={serverConfig?.shapesDebugEnabled === true}
+					/>
 				{/if}
 				<Rentals {map} {bounds} {zoom} {theme} debug={hasDebug} />
 			{/if}
 
-			<StopsView {map} {stopsMode} {overlay} {layers} {bounds} {zoom} />
+			<StopsView {map} {bounds} {zoom} {theme} />
 			<RailViz {map} {bounds} {zoom} {colorMode} {overlay} {layers} />
 			<Isochrones
 				{map}

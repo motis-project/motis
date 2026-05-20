@@ -286,7 +286,8 @@ TEST(motis, routing_osm_only_direct_walk) {
       "&time=2019-05-01T01:25Z"
       "&timetableView=false"
       "&transitModes="
-      "&directModes=WALK");
+      "&directModes=WALK"
+      "&numLegAlternatives=3");
 
   ASSERT_TRUE(res.itineraries_.empty());
   ASSERT_EQ(1U, res.direct_.size());
@@ -326,7 +327,7 @@ TEST(motis, routing) {
     boost::asio::co_spawn(
         ioc,
         [&]() -> boost::asio::awaitable<void> {
-          co_await gbfs::update(c, *d.w_, *d.l_, d.gbfs_);
+          co_await gbfs::update(c, *d.w_, *d.l_, d.gbfs_, d.metrics_.get());
         },
         boost::asio::detached);
     ioc.run();
@@ -368,7 +369,8 @@ TEST(motis, routing) {
         "&toPlace=49.87253873915287,8.629724234688751"
         "&time=2019-05-01T01:25Z"
         "&timetableView=false"
-        "&directModes=WALK,RENTAL");
+        "&directModes=WALK,RENTAL"
+        "&numLegAlternatives=3");
     ASSERT_FALSE(res.direct_.empty());
     ASSERT_FALSE(res.direct_.front().legs_.empty());
     EXPECT_GT(res.direct_.front().legs_.front().legGeometry_.length_, 0);
@@ -390,7 +392,8 @@ TEST(motis, routing) {
         "&time=2019-05-01T01:25Z"
         "&timetableView=false"
         "&directModes=WALK,RENTAL"
-        "&detailedLegs=false");
+        "&detailedLegs=false"
+        "&numLegAlternatives=3");
     ASSERT_FALSE(compact_res.direct_.empty());
     for (auto const& itinerary : compact_res.direct_) {
       for (auto const& leg : itinerary.legs_) {
@@ -409,7 +412,8 @@ TEST(motis, routing) {
         "&time=2019-05-01T01:21Z"
         "&timetableView=false"
         "&useRoutedTransfers=true"
-        "&preTransitModes=WALK,RENTAL");
+        "&preTransitModes=WALK,RENTAL"
+        "&numLegAlternatives=3");
 
     EXPECT_EQ(
         R"(date=2019-05-01, start=01:21, end=02:15, duration=00:54, transfers=1, legs=[
@@ -439,7 +443,8 @@ TEST(motis, routing) {
           "&timetableView=false"
           "&pedestrianProfile=WHEELCHAIR"
           "&maxMatchingDistance=8"  // Should match closely for wheelchair
-          "&useRoutedTransfers=true");
+          "&useRoutedTransfers=true"
+          "&numLegAlternatives=3");
 
       EXPECT_EQ(
           R"(date=2019-05-01, start=01:16, end=02:29, duration=01:14, transfers=0, legs=[
@@ -461,7 +466,8 @@ TEST(motis, routing) {
           "&timetableView=false"
           "&pedestrianProfile=WHEELCHAIR"
           "&maxMatchingDistance=8"  // Should match closely for wheelchair
-          "&useRoutedTransfers=true");
+          "&useRoutedTransfers=true"
+          "&numLegAlternatives=3");
 
       EXPECT_EQ(
           R"(date=2019-05-01, start=03:01, end=03:29, duration=02:09, transfers=0, legs=[
@@ -483,7 +489,8 @@ TEST(motis, routing) {
           "&timetableView=false"
           "&pedestrianProfile=WHEELCHAIR"
           "&maxMatchingDistance=8"  // Should match closely for wheelchair
-          "&useRoutedTransfers=true");
+          "&useRoutedTransfers=true"
+          "&numLegAlternatives=3");
 
       EXPECT_EQ(
           R"(date=2019-05-01, start=01:16, end=02:29, duration=01:14, transfers=0, legs=[
@@ -505,7 +512,8 @@ TEST(motis, routing) {
           "&timetableView=false"
           "&pedestrianProfile=WHEELCHAIR"
           "&maxMatchingDistance=8"  // Should match closely for wheelchair
-          "&useRoutedTransfers=true");
+          "&useRoutedTransfers=true"
+          "&numLegAlternatives=3");
 
       EXPECT_EQ(
           R"(date=2019-05-01, start=03:01, end=03:29, duration=00:29, transfers=0, legs=[
@@ -527,7 +535,8 @@ TEST(motis, routing) {
           "&timetableView=false"
           "&pedestrianProfile=WHEELCHAIR"
           "&maxMatchingDistance=8"  // Should match closely for wheelchair
-          "&useRoutedTransfers=true");
+          "&useRoutedTransfers=true"
+          "&numLegAlternatives=3");
 
       EXPECT_EQ(
           R"(date=2019-05-01, start=01:34, end=02:40, duration=01:20, transfers=0, legs=[
@@ -549,7 +558,8 @@ TEST(motis, routing) {
           "&timetableView=false"
           "&pedestrianProfile=WHEELCHAIR"
           "&maxMatchingDistance=8"  // Should match closely for wheelchair
-          "&useRoutedTransfers=true");
+          "&useRoutedTransfers=true"
+          "&numLegAlternatives=3");
 
       EXPECT_EQ(
           R"(date=2019-05-01, start=02:34, end=02:55, duration=00:21, transfers=0, legs=[
@@ -571,7 +581,8 @@ TEST(motis, routing) {
           "&timetableView=false"
           "&pedestrianProfile=WHEELCHAIR"
           "&maxMatchingDistance=8"  // Should match 'toPlace' closely
-          "&useRoutedTransfers=true");
+          "&useRoutedTransfers=true"
+          "&numLegAlternatives=3");
 
       EXPECT_EQ(
           R"(date=2019-05-01, start=01:34, end=02:40, duration=01:10, transfers=0, legs=[
@@ -593,7 +604,8 @@ TEST(motis, routing) {
           "&timetableView=false"
           "&pedestrianProfile=WHEELCHAIR"
           "&maxMatchingDistance=8"  // Should match closely for wheelchair
-          "&useRoutedTransfers=true");
+          "&useRoutedTransfers=true"
+          "&numLegAlternatives=3");
 
       EXPECT_EQ(
           R"(date=2019-05-01, start=02:34, end=02:55, duration=01:15, transfers=0, legs=[
@@ -615,7 +627,8 @@ TEST(motis, routing) {
           "&timetableView=false"
           "&pedestrianProfile=WHEELCHAIR"
           "&maxMatchingDistance=8"  // Should match places closely
-          "&useRoutedTransfers=true");
+          "&useRoutedTransfers=true"
+          "&numLegAlternatives=3");
 
       EXPECT_EQ(
           R"(date=2019-05-01, start=01:15, end=01:32, duration=00:17, transfers=0, legs=[
@@ -633,7 +646,8 @@ TEST(motis, routing) {
         "&time=2019-05-01T01:25Z"
         "&pedestrianProfile=WHEELCHAIR"
         "&useRoutedTransfers=true"
-        "&timetableView=false");
+        "&timetableView=false"
+        "&numLegAlternatives=3");
 
     EXPECT_EQ(
         R"(date=2019-05-01, start=01:29, end=02:29, duration=01:04, transfers=1, legs=[
@@ -653,7 +667,8 @@ TEST(motis, routing) {
         "&toPlace=50.11347,8.67664"
         "&time=2019-05-01T01:25Z"
         "&useRoutedTransfers=true"
-        "&timetableView=false");
+        "&timetableView=false"
+        "&numLegAlternatives=3");
 
     EXPECT_EQ(
         R"(date=2019-05-01, start=01:25, end=02:15, duration=00:50, transfers=1, legs=[
@@ -675,7 +690,8 @@ TEST(motis, routing) {
         "&toPlace=50.08800,8.66100"
         "&time=2019-05-01T01:30Z"
         "&radius=5000"
-        "&timetableView=false");
+        "&timetableView=false"
+        "&numLegAlternatives=3");
     ASSERT_FALSE(res.itineraries_.empty());
     EXPECT_TRUE(utl::any_of(res.itineraries_.front().legs_, [](auto const& l) {
       return l.routeShortName_.has_value() && *l.routeShortName_ == "ICE";
@@ -690,7 +706,8 @@ TEST(motis, routing) {
         "&toPlace=test_FFM_10"
         "&time=2019-05-01T01:30Z"
         "&radius=5000"
-        "&timetableView=false");
+        "&timetableView=false"
+        "&numLegAlternatives=3");
     ASSERT_FALSE(res.itineraries_.empty());
     EXPECT_TRUE(utl::any_of(res.itineraries_.front().legs_, [](auto const& l) {
       return l.routeShortName_.has_value() && *l.routeShortName_ == "ICE";
