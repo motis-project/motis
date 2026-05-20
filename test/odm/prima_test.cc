@@ -61,7 +61,7 @@ TRANSFERS: 0
      FROM: (START, START) [1970-01-01 09:57]
        TO: (END, END) [1970-01-01 12:00]
 leg 0: (START, START) [1970-01-01 09:57] -> (A, A) [1970-01-01 10:55]
-  MUMO (id=10, duration=58)
+  MUMO (id=16, duration=58)
 leg 1: (A, A) [1970-01-01 10:55] -> (A, A) [1970-01-01 11:00]
   FOOTPATH (duration=5)
 leg 2: (A, A) [1970-01-01 11:00] -> (END, END) [1970-01-01 12:00]
@@ -72,7 +72,7 @@ TRANSFERS: 0
      FROM: (START, START) [1970-01-01 09:57]
        TO: (END, END) [1970-01-01 14:46]
 leg 0: (START, START) [1970-01-01 09:57] -> (A, A) [1970-01-01 10:55]
-  MUMO (id=10, duration=58)
+  MUMO (id=16, duration=58)
 leg 1: (A, A) [1970-01-01 10:55] -> (A, A) [1970-01-01 11:00]
   FOOTPATH (duration=5)
 leg 2: (A, A) [1970-01-01 11:00] -> (C, C) [1970-01-01 13:00]
@@ -80,7 +80,7 @@ leg 2: (A, A) [1970-01-01 11:00] -> (C, C) [1970-01-01 13:00]
 leg 3: (C, C) [1970-01-01 13:00] -> (C, C) [1970-01-01 14:07]
   FOOTPATH (duration=67)
 leg 4: (C, C) [1970-01-01 14:07] -> (END, END) [1970-01-01 14:46]
-  MUMO (id=10, duration=39)
+  MUMO (id=16, duration=39)
 
 )";
 

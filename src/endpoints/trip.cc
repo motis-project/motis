@@ -2,6 +2,8 @@
 
 #include <chrono>
 
+#include "net/not_found_exception.h"
+
 #include "nigiri/routing/journey.h"
 #include "nigiri/rt/frun.h"
 #include "nigiri/rt/gtfsrt_resolve_run.h"
@@ -20,15 +22,16 @@ namespace n = nigiri;
 namespace motis::ep {
 
 api::Itinerary trip::operator()(boost::urls::url_view const& url) const {
-  auto const rt = rt_;
+  auto const rt = std::atomic_load(&rt_);
   auto const rtt = rt->rtt_.get();
 
   auto query = api::trip_params{url.params()};
   auto const api_version = get_api_version(url);
 
   auto const [r, _] = tags_.get_trip(tt_, rtt, query.tripId_);
-  utl::verify(r.valid(), "trip not found: tripId={}, tt={}", query.tripId_,
-              tt_.external_interval());
+  utl::verify<net::not_found_exception>(r.valid(),
+                                        "trip not found: tripId={}, tt={}",
+                                        query.tripId_, tt_.external_interval());
 
   auto fr = n::rt::frun{tt_, rtt, r};
   fr.stop_range_.to_ = fr.size();
@@ -59,10 +62,10 @@ api::Itinerary trip::operator()(boost::urls::url_view const& url) const {
                   from_l.get_scheduled_location_idx()},
       tt_location{to_l.get_location_idx()}, cache, &blocked, false,
       osr_parameters{}, api::PedestrianProfileEnum::FOOT,
-      api::ElevationCostsEnum::NONE, query.joinInterlinedLegs_, true, false,
-      query.withScheduledSkippedStops_,
+      api::ElevationCostsEnum::NONE, query.joinInterlinedLegs_, true,
+      query.detailedLegs_, false, query.withScheduledSkippedStops_,
       config_.timetable_.value().max_matching_distance_, kMaxMatchingDistance,
-      api_version, false, false, query.language_);
+      api_version, false, false, query.language_, nullptr);
 }
 
 }  // namespace motis::ep

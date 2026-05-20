@@ -5,3 +5,21 @@
    fun:msync
    fun:_ZN5cista4mmap4syncEv
 }
+{
+   lmdb_uninitialized_write_1
+   Memcheck:Param
+   pwrite64(buf)
+   fun:__libc_pwrite64
+   fun:pwrite
+   fun:mdb_page_flush
+   fun:mdb_txn_commit
+}
+{
+   lmdb_uninitialized_write_2
+   Memcheck:Param
+   writev(vector[0])
+   fun:__writev
+   fun:writev
+   fun:mdb_page_flush
+   fun:mdb_txn_commit
+}

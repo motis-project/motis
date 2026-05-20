@@ -134,19 +134,17 @@
 		}
 	};
 
-	let layer = $state<{ id: null | string }>({ id });
+	let layer = $state<{ id: null | string }>({ id: null });
 	setContext('layer', layer);
 
 	let ctx: { map: maplibregl.Map | null } = getContext('map'); // from Map component
 	let source: { id: string | null } = getContext('source'); // from GeoJSON component
 
 	let initialized = false;
-	/* eslint-disable-next-line @typescript-eslint/ban-ts-comment */
-	// @ts-ignore
-	let currFilter = $state.snapshot(filter);
-	let currLayout = $state.snapshot(layout);
-	let currPaint = $state.snapshot(paint);
-	let currBefore = beforeLayerId;
+	let currFilter: maplibregl.FilterSpecification | undefined;
+	let currLayout: object | undefined;
+	let currPaint: object | undefined;
+	let currBefore: string | undefined;
 
 	let updateLayer = () => {
 		const map = ctx.map;
@@ -181,9 +179,9 @@
 				},
 				before
 			);
-			currFilter = $state.snapshot(filter);
-			currLayout = $state.snapshot(layout);
-			currPaint = $state.snapshot(paint);
+			currFilter = filter;
+			currLayout = layout;
+			currPaint = paint;
 			currBefore = beforeLayerId;
 			layer.id = id;
 			if (beforeLayerId && !before) {
@@ -194,7 +192,7 @@
 		}
 
 		if (currFilter != filter) {
-			currFilter = $state.snapshot(filter);
+			currFilter = filter;
 			map!.setFilter(id, filter);
 		}
 		if (currBefore !== beforeLayerId) {
@@ -230,6 +228,12 @@
 				initialized = true;
 			}
 			processPendingMoves(ctx.map);
+		}
+	});
+
+	$effect(() => {
+		if (initialized) {
+			updateLayer();
 		}
 	});
 

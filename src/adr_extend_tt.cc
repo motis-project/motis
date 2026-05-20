@@ -89,6 +89,10 @@ adr::score_t get_diff(std::string str1,
   normalize(str1);
   normalize(str2);
 
+  if (str1.empty() && str2.empty()) {
+    return 0;
+  }
+
   if (str1.contains("hbf") && str2.contains("hbf")) {
     return 0;
   }
@@ -231,8 +235,6 @@ adr_ext adr_extend_tt(nigiri::timetable const& tt,
         }
 
         if (tt.get_default_translation(tt.locations_.names_[eq]) == name) {
-          fmt::println(std::clog, "adding to {}: {}  *** name match",
-                       n::loc{tt, l}, n::loc{tt, eq});
           ret.location_place_[eq] = place_idx;
         } else {
           auto const dist = geo::distance(tt.locations_.coordinates_[l],
@@ -245,9 +247,6 @@ adr_ext adr_extend_tt(nigiri::timetable const& tt,
           auto const good = dist < cutoff;
 
           if (good) {
-            fmt::println(std::clog, "adding to {}: {}  *** fuzzy match",
-                         n::loc{tt, l}, n::loc{tt, eq});
-
             ret.location_place_[eq] = place_idx;
 
             auto existing = place_location.back();
@@ -257,9 +256,6 @@ adr_ext adr_extend_tt(nigiri::timetable const& tt,
                 }) == end(existing)) {
               place_location.back().push_back(eq);
             }
-          } else {
-            fmt::println(std::clog, "NO MATCH {}: {}", n::loc{tt, l},
-                         n::loc{tt, eq});
           }
         }
       }
@@ -306,7 +302,7 @@ adr_ext adr_extend_tt(nigiri::timetable const& tt,
   ret.place_clasz_.resize(place_location.size());
   {
     auto const event_counts = utl::scoped_timer{"guesser event_counts"};
-    for (auto i = n::kNSpecialStations; i != tt.n_locations(); ++i) {
+    for (auto i = n::kNSpecialStations; i < tt.n_locations(); ++i) {
       auto const l = n::location_idx_t{i};
 
       auto transport_counts = std::array<unsigned, n::kNumClasses>{};
@@ -320,15 +316,15 @@ adr_ext adr_extend_tt(nigiri::timetable const& tt,
       }
 
       constexpr auto const prio =
-          std::array<float, kClaszMax>{/* Air */ 20,
-                                       /* HighSpeed */ 30,
-                                       /* LongDistance */ 25,
-                                       /* Coach */ 22,
-                                       /* Night */ 25,
-                                       /* RegionalFast */ 20,
-                                       /* Regional */ 20,
-                                       /* Suburban */ 15,
-                                       /* Subway */ 12,
+          std::array<float, kClaszMax>{/* Air */ 300,
+                                       /* HighSpeed */ 300,
+                                       /* LongDistance */ 250,
+                                       /* Coach */ 150,
+                                       /* Night */ 250,
+                                       /* RideSharing */ 5,
+                                       /* Regional */ 100,
+                                       /* Suburban */ 80,
+                                       /* Subway */ 80,
                                        /* Tram */ 3,
                                        /* Bus  */ 2,
                                        /* Ship  */ 10,
@@ -348,6 +344,27 @@ adr_ext adr_extend_tt(nigiri::timetable const& tt,
           ret.place_clasz_[place_idx] |= n::routing::to_mask(c);
         }
       }
+    }
+  }
+
+  // Update counts of meta-stations with the sum of their priorities.
+  // Meta stations have equivalence relations to other stops and are at (0,0)
+  for (auto i = n::kNSpecialStations; i < tt.n_locations(); ++i) {
+    auto const l = n::location_idx_t{i};
+    auto const is_meta =
+        tt.locations_.coordinates_[l] == geo::latlng{} &&
+        tt.locations_.parents_[l] == n::location_idx_t::invalid() &&
+        !tt.locations_.equivalences_[l].empty();
+    if (!is_meta) {
+      continue;
+    }
+
+    auto const place_idx = ret.location_place_[l];
+    for (auto const eq : get_transitive_equivalences(l)) {
+      auto const eq_root = tt.locations_.get_root_idx(eq);
+      auto const eq_place_idx = ret.location_place_[eq_root];
+      ret.place_importance_[place_idx] += ret.place_importance_[eq_place_idx];
+      ret.place_clasz_[place_idx] |= ret.place_clasz_[eq_place_idx];
     }
   }
 

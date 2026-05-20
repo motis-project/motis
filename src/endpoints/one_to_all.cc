@@ -5,6 +5,9 @@
 
 #include "utl/verify.h"
 
+#include "net/bad_request_exception.h"
+#include "net/too_many_exception.h"
+
 #include "nigiri/common/delta_t.h"
 #include "nigiri/routing/limits.h"
 #include "nigiri/routing/one_to_all.h"
@@ -26,19 +29,22 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
   metrics_->routing_requests_.Increment();
 
   auto const max_travel_minutes =
-      config_.limits_.value().onetoall_max_travel_minutes_;
+      config_.get_limits().onetoall_max_travel_minutes_;
   auto const query = api::oneToAll_params{url.params()};
-  utl::verify(query.maxTravelTime_ <= max_travel_minutes,
-              "maxTravelTime too large ({} > {}). The server admin can change "
-              "this limit in config.yml with 'onetoall_max_travel_minutes'. "
-              "See documentation for details.",
-              query.maxTravelTime_, max_travel_minutes);
+  utl::verify<net::too_many_exception>(
+      query.maxTravelTime_ <= max_travel_minutes,
+      "maxTravelTime too large ({} > {}). The server admin can change "
+      "this limit in config.yml with 'onetoall_max_travel_minutes'. "
+      "See documentation for details.",
+      query.maxTravelTime_, max_travel_minutes);
   if (query.maxTransfers_.has_value()) {
-    utl::verify(query.maxTransfers_ >= 0U, "maxTransfers < 0: {}",
-                *query.maxTransfers_);
-    utl::verify(query.maxTransfers_ <= n::routing::kMaxTransfers,
-                "maxTransfers > {}: {}", n::routing::kMaxTransfers,
-                *query.maxTransfers_);
+    utl::verify<net::bad_request_exception>(query.maxTransfers_ >= 0U,
+                                            "maxTransfers < 0: {}",
+                                            *query.maxTransfers_);
+    utl::verify<net::too_many_exception>(
+        query.maxTransfers_ <= n::routing::kMaxTransfers,
+        "maxTransfers > {}: {}", n::routing::kMaxTransfers,
+        *query.maxTransfers_);
   }
 
   auto const unreachable = query.arriveBy_
@@ -68,7 +74,7 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
       std::min(
           std::chrono::duration_cast<std::chrono::seconds>(max_travel_time),
           std::chrono::seconds{
-              config_.limits_.value()
+              config_.get_limits()
                   .street_routing_max_prepost_transit_seconds_}));
   auto const one_dir =
       query.arriveBy_ ? osr::direction::kBackward : osr::direction::kForward;
@@ -83,7 +89,9 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
   auto prepare_stats = std::map<std::string, std::uint64_t>{};
   auto q = n::routing::query{
       .start_time_ = time,
-      .start_match_mode_ = get_match_mode(one),
+      .start_match_mode_ = r.is_osr_loaded()
+                               ? n::routing::location_match_mode::kIntermodal
+                               : n::routing::location_match_mode::kEquivalent,
       .start_ = r.get_offsets(
           nullptr, one, one_dir, one_modes, std::nullopt, std::nullopt,
           std::nullopt, std::nullopt, false, osr_params,
@@ -132,9 +140,10 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
     }
   }
 
-  auto const max_results = config_.limits_.value().onetoall_max_results_;
-  utl::verify(reachable.count() <= max_results, "too many results: {} > {}",
-              reachable.count(), max_results);
+  auto const max_results = config_.get_limits().onetoall_max_results_;
+  utl::verify<net::too_many_exception>(reachable.count() <= max_results,
+                                       "too many results: {} > {}",
+                                       reachable.count(), max_results);
 
   auto all = std::vector<api::ReachablePlace>{};
   all.reserve(reachable.count());

@@ -2,14 +2,20 @@ import { circle } from '@turf/circle';
 import { destination } from '@turf/destination';
 import { featureCollection, point } from '@turf/helpers';
 import { union } from '@turf/union';
-import { LngLatBounds } from 'maplibre-gl';
 import {
 	isLess,
 	type DisplayLevel,
 	type Geometry,
 	type IsochronesPos
 } from '$lib/map/IsochronesShared';
-
+type LngLat = {
+	lng: number;
+	lat: number;
+};
+type LngLatBounds = {
+	_ne: LngLat;
+	_sw: LngLat;
+};
 export type UpdateMessage =
 	| { level: 'OVERLAY_RECTS'; data: LngLatBounds[] }
 	| { level: 'OVERLAY_CIRCLES'; data: CircleType[] }
@@ -148,10 +154,10 @@ async function createRects() {
 		const south = destination(center, r, 180, { units: 'kilometers' });
 		const west = destination(center, r, -90, { units: 'kilometers' });
 		return {
-			rect: LngLatBounds.convert([
-				[west.geometry.coordinates[0], south.geometry.coordinates[1]],
-				[east.geometry.coordinates[0], north.geometry.coordinates[1]]
-			]),
+			rect: {
+				_sw: { lng: west.geometry.coordinates[0], lat: south.geometry.coordinates[1] } as LngLat,
+				_ne: { lng: east.geometry.coordinates[0], lat: north.geometry.coordinates[1] } as LngLat
+			} as LngLatBounds,
 			distance: r,
 			data: pos
 		};
@@ -207,11 +213,11 @@ async function createUnion() {
 	if (circles === undefined) {
 		return undefined;
 	}
-	const queue: Geometry[] = await circles.map((c: CircleType) => c);
+	const queue: Geometry[] = circles.map((c: CircleType) => c);
 	while (queue.length > 1) {
 		const a: Geometry = queue.shift()!;
 		const b: Geometry = queue.shift()!;
-		const u: Geometry | null = await union(featureCollection([a, b]));
+		const u: Geometry | null = union(featureCollection([a, b]));
 		if (u) {
 			queue.push(u);
 		}

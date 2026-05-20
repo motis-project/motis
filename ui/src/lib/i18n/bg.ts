@@ -88,6 +88,7 @@ const translations: Translations = {
 	WALK: 'Пеша',
 	BIKE: 'Велосипед',
 	RENTAL: 'Нает',
+	RIDE_SHARING: 'Споделено пътуване',
 	CAR: 'Автомобил',
 	CAR_DROPOFF: 'Слизане от автомобила',
 	CAR_PARKING: 'Паркинг (P+R)',
@@ -104,6 +105,7 @@ const translations: Translations = {
 	LONG_DISTANCE: 'Междуградски влак',
 	NIGHT_RAIL: 'Нощен влак',
 	REGIONAL_FAST_RAIL: 'Бърз регионален влак',
+	ODM: 'По заявка',
 	REGIONAL_RAIL: 'Регионален влак',
 	OTHER: 'Други',
 	routingSegments: {
@@ -156,12 +158,27 @@ const translations: Translations = {
 	toll: 'Внимание! Платен път.',
 	accessRestriction: 'забранен достъп',
 	continuesAs: 'Продължава като',
+	earlierAlternatives: 'По-ранни алтернативи',
+	laterAlternatives: 'По-късни алтернативи',
 	rent: 'Наем',
 	copyToClipboard: 'Копирай в клипборда',
 	rideThroughAllowed: 'Минаване е позволено',
 	rideThroughNotAllowed: 'Минаване не е позволено',
 	rideEndAllowed: 'Паркиране е позволено',
-	rideEndNotAllowed: 'Паркиране не е позволено'
+	rideEndNotAllowed: 'Паркиране не е позволено',
+	DEBUG_BUS_ROUTE: 'Маршрут на автобус (Отстраняване на грешки)',
+	DEBUG_RAILWAY_ROUTE: 'Маршрут на влак (Отстраняване на грешки)',
+	DEBUG_FERRY_ROUTE: 'Маршрут на ферибот (Отстраняване на грешки)',
+	routes: (n: number) => {
+		switch (n) {
+			case 0:
+				return 'Без маршрут';
+			case 1:
+				return '1 маршрут';
+			default:
+				return `${n} маршрута`;
+		}
+	}
 };
 
 export default translations;

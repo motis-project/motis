@@ -89,6 +89,7 @@ const translations: Translations = {
 	WALK: 'Zu Fuß',
 	BIKE: 'Fahrrad',
 	RENTAL: 'Sharing',
+	RIDE_SHARING: 'Mitfahrgelegenheit',
 	CAR: 'Auto',
 	CAR_DROPOFF: 'Absetzen (Auto)',
 	CAR_PARKING: 'P+R Park & Ride',
@@ -105,6 +106,7 @@ const translations: Translations = {
 	LONG_DISTANCE: 'Intercityzug',
 	NIGHT_RAIL: 'Nachtzug',
 	REGIONAL_FAST_RAIL: 'Schnellzug',
+	ODM: 'Bedarfsverkehr',
 	REGIONAL_RAIL: 'Regionalzug',
 	OTHER: 'Andere',
 	routingSegments: {
@@ -153,12 +155,27 @@ const translations: Translations = {
 	toll: 'Achtung! Mautpflichtige Straße.',
 	accessRestriction: 'Kein Zugang',
 	continuesAs: 'Weiter als',
+	earlierAlternatives: 'Frühere Alternativen',
+	laterAlternatives: 'Spätere Alternativen',
 	rent: 'Ausleihen',
 	copyToClipboard: 'In die Zwischenablage kopieren',
 	rideThroughAllowed: 'Durchfahrt erlaubt',
 	rideThroughNotAllowed: 'Durchfahrt verboten',
 	rideEndAllowed: 'Parken erlaubt',
-	rideEndNotAllowed: 'Parken nur an Stationen'
+	rideEndNotAllowed: 'Parken nur an Stationen',
+	DEBUG_BUS_ROUTE: 'Busroute (Debug)',
+	DEBUG_RAILWAY_ROUTE: 'Bahnroute (Debug)',
+	DEBUG_FERRY_ROUTE: 'Fährenroute (Debug)',
+	routes: (n: number) => {
+		switch (n) {
+			case 0:
+				return 'Keine Route';
+			case 1:
+				return '1 Route';
+			default:
+				return `${n} Routen`;
+		}
+	}
 };
 
 export default translations;

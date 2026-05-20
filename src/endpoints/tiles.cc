@@ -12,6 +12,8 @@
 
 #include "pbf_sdf_fonts_res.h"
 
+using namespace std::string_view_literals;
+
 namespace motis::ep {
 
 net::reply tiles::operator()(net::route_request const& req, bool) const {
@@ -19,14 +21,28 @@ net::reply tiles::operator()(net::route_request const& req, bool) const {
   if (url.path().starts_with("/tiles/glyphs")) {
     std::string decoded;
     net::url_decode(url.path(), decoded);
-    auto const mem = pbf_sdf_fonts_res::get_resource(decoded.substr(14));
 
-    auto res = net::web_server::string_res_t{boost::beast::http::status::ok,
-                                             req.version()};
-    res.body() =
-        std::string_view{reinterpret_cast<char const*>(mem.ptr_), mem.size_};
-    res.keep_alive(req.keep_alive());
-    return res;
+    // Rewrite old font name "Noto Sans Display Regular" to "Noto Sans Regular".
+    constexpr auto kDisplay = " Display"sv;
+    auto res_name = decoded.substr(14);
+    if (auto const display_pos = res_name.find(kDisplay);
+        display_pos != std::string::npos) {
+      res_name.erase(display_pos, kDisplay.length());
+    }
+
+    try {
+      auto const mem = pbf_sdf_fonts_res::get_resource(res_name);
+      auto res = net::web_server::string_res_t{boost::beast::http::status::ok,
+                                               req.version()};
+      res.body() =
+          std::string_view{reinterpret_cast<char const*>(mem.ptr_), mem.size_};
+      res.insert(boost::beast::http::field::content_type,
+                 "application/x-protobuf");
+      res.keep_alive(req.keep_alive());
+      return res;
+    } catch (std::out_of_range const&) {
+      throw net::not_found_exception{res_name};
+    }
   }
 
   auto const tile = ::tiles::parse_tile_url(url.path());

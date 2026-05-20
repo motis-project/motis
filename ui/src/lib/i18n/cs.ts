@@ -90,6 +90,7 @@ const translations: Translations = {
 	WALK: 'Chůze',
 	BIKE: 'Kolo',
 	RENTAL: 'Sdílené prostředky',
+	RIDE_SHARING: 'Spolujízda',
 	CAR: 'Auto',
 	CAR_PARKING: 'Auto (využití parkovíšť)',
 	CAR_DROPOFF: 'Auto (pouze zastavení)',
@@ -106,6 +107,7 @@ const translations: Translations = {
 	LONG_DISTANCE: 'Dálková železnice',
 	NIGHT_RAIL: 'Noční vlaky',
 	REGIONAL_FAST_RAIL: 'Zrychlená železnice',
+	ODM: 'Poptávková doprava',
 	REGIONAL_RAIL: 'Regionální železnice',
 	OTHER: 'Jiné',
 	routingSegments: {
@@ -158,12 +160,31 @@ const translations: Translations = {
 	toll: 'Pozor! Průjezd tuto trasou je placený.',
 	accessRestriction: 'Omezený dostup',
 	continuesAs: 'Pokračuje jako',
+	earlierAlternatives: 'Dřívější alternativy',
+	laterAlternatives: 'Pozdější alternativy',
 	rent: 'Půjčit si',
 	copyToClipboard: 'Kopírovat do schránky',
 	rideThroughAllowed: 'Průjezd povolen',
 	rideThroughNotAllowed: 'Průjezd zakázán',
 	rideEndAllowed: 'Parkování povoleno',
-	rideEndNotAllowed: 'Parkování pouze na stanicích'
+	rideEndNotAllowed: 'Parkování pouze na stanicích',
+	DEBUG_BUS_ROUTE: 'Trasa autobusu (Debug)',
+	DEBUG_RAILWAY_ROUTE: 'Trasa vlaku (Debug)',
+	DEBUG_FERRY_ROUTE: 'Trasa trajektu (Debug)',
+	routes: (n: number) => {
+		switch (n) {
+			case 0:
+				return 'Žádná trasa';
+			case 1:
+				return '1 trasa';
+			case 2:
+			case 3:
+			case 4:
+				return `${n} trasy`;
+			default:
+				return `${n} tras`;
+		}
+	}
 };
 
 export default translations;

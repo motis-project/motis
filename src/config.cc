@@ -94,6 +94,33 @@ config config::read(std::string const& s) {
   if (!c.limits_.has_value()) {
     c.limits_.emplace(limits{});
   }
+
+  bool has_user_agent = c.user_agent_.has_value();
+  auto ensure_user_agent = [&](auto& h) {
+    if (!h.has_value()) {
+      h = headers_t{};
+    }
+    h->try_emplace("User-Agent", *c.user_agent_);
+  };
+
+  if (has_user_agent) {
+    if (c.has_gbfs_feeds()) {
+      for (auto& [_, feed] : c.gbfs_->feeds_) {
+        ensure_user_agent(feed.headers_);
+      }
+    }
+
+    if (c.requires_rt_timetable_updates()) {
+      for (auto& [_, dataset] : c.timetable_->datasets_) {
+        if (dataset.rt_.has_value()) {
+          for (auto& feed : *dataset.rt_) {
+            ensure_user_agent(feed.headers_);
+          }
+        }
+      }
+    }
+  }
+
   c.verify();
   return c;
 }
@@ -121,8 +148,16 @@ void config::verify() const {
                   nigiri::routing::kMaxSearchIntervalSize.count(),
               "plan_max_search_window_minutes limit cannot be above {}",
               nigiri::routing::kMaxSearchIntervalSize.count());
+  utl::verify(limits_.value().geocode_max_suggestions_ >= 1U,
+              "geocode_max_suggestions must be >= 1");
+  utl::verify(limits_.value().reverse_geocode_max_results_ >= 1U,
+              "reverse_geocode_max_results must be >= 1");
 
   if (timetable_) {
+    utl::verify(!timetable_->route_shapes_.has_value() ||
+                    (timetable_->with_shapes_ && street_routing),
+                "feature ROUTE_SHAPES requires SHAPES and STREET_ROUTING");
+
     for (auto const& [id, d] : timetable_->datasets_) {
       utl::verify(!id.contains("_"), "dataset identifier may not contain '_'");
       if (d.rt_.has_value()) {
@@ -173,15 +208,26 @@ void config::verify_input_files_exist() const {
         }
       }
     }
+
+    if (timetable_->route_shapes_) {
+      if (timetable_->route_shapes_->clasz_) {
+        for (auto const& c : *timetable_->route_shapes_->clasz_) {
+          nigiri::to_clasz(c.first);
+        }
+      }
+    }
   }
 }
 
 bool config::requires_rt_timetable_updates() const {
   return timetable_.has_value() &&
          ((has_elevators() && get_elevators()->url_.has_value()) ||
-          utl::any_of(timetable_->datasets_, [](auto&& d) {
-            return d.second.rt_.has_value() && !d.second.rt_->empty();
-          }));
+          has_rt_feeds());
+}
+
+bool config::shapes_debug_api_enabled() const {
+  return timetable_.has_value() && timetable_->route_shapes_.has_value() &&
+         timetable_->route_shapes_->debug_api_;
 }
 
 bool config::has_gbfs_feeds() const {
@@ -213,6 +259,12 @@ bool config::has_elevators() const {
             return x;
           }},
       elevators_);
+}
+
+bool config::has_rt_feeds() const {
+  return utl::any_of(timetable_->datasets_, [](auto&& d) {
+    return d.second.rt_.has_value() && !d.second.rt_->empty();
+  });
 }
 
 std::optional<config::street_routing> config::get_street_routing() const {

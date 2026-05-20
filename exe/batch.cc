@@ -150,8 +150,8 @@ int batch(int ac, char** av) {
   auto queries = std::vector<std::string_view>{};
   auto f = cista::mmap{queries_path.generic_string().c_str(),
                        cista::mmap::protection::READ};
-  utl::for_each_token(utl::cstr{f.view()}, '\n',
-                      [&](utl::cstr s) { queries.push_back(s.view()); });
+  utl::for_each_line(utl::cstr{f.view()},
+                     [&](utl::cstr s) { queries.push_back(s.view()); });
 
   auto const c = config::read(data_path / "config.yml");
   utl::verify(c.timetable_.has_value(), "timetable required");

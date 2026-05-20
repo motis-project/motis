@@ -1119,7 +1119,7 @@
 			'text-anchor': 'center',
 			'text-offset': zoomScaledTextOffset,
 			'text-size': zoomScaledTextSizeMedium,
-			'text-font': ['Noto Sans Display Regular']
+			'text-font': ['Noto Sans Regular']
 		}}
 		onmousemove={handleStationMouseMove}
 		onmouseleave={handleStationMouseLeave}
@@ -1160,7 +1160,7 @@
 				'text-anchor': 'center',
 				'text-offset': zoomScaledTextOffset,
 				'text-size': zoomScaledTextSizeSmall,
-				'text-font': ['Noto Sans Display Regular']
+				'text-font': ['Noto Sans Regular']
 			}}
 			paint={{
 				'text-color': '#000'

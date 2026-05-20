@@ -7,11 +7,14 @@
 
 #include "fmt/format.h"
 
+#include "net/bad_request_exception.h"
+
 #include "nigiri/timetable.h"
 
 #include "adr/adr.h"
 #include "adr/typeahead.h"
 
+#include "motis/config.h"
 #include "motis/endpoints/adr/filter_conv.h"
 #include "motis/endpoints/adr/suggestions_to_response.h"
 #include "motis/parse_location.h"
@@ -22,9 +25,11 @@ namespace a = adr;
 
 namespace motis::ep {
 
+constexpr auto const kDefaultSuggestions = 10U;
+
 a::guess_context& get_guess_context(a::typeahead const& t, a::cache& cache) {
   auto static ctx = boost::thread_specific_ptr<a::guess_context>{};
-  if (ctx.get() == nullptr) {
+  if (ctx.get() == nullptr || &ctx.get()->cache_ != &cache) {
     ctx.reset(new a::guess_context{cache});
   }
   ctx->resize(t);
@@ -36,10 +41,11 @@ api::geocode_response geocode::operator()(
   auto const params = api::geocode_params{url.params()};
   auto const place = params.place_.and_then([](std::string const& s) {
     auto const parsed = parse_location(s);
-    utl::verify(parsed.has_value(), "could not parse place {}", s);
+    utl::verify<net::bad_request_exception>(parsed.has_value(),
+                                            "could not parse place {}", s);
     return std::optional{parsed.value().pos_};
   });
-  auto const allowed_modes =
+  auto const required_modes =
       params.mode_.transform([](std::vector<api::ModeEnum> const& modes) {
         return to_clasz_mask(modes);
       });
@@ -56,24 +62,37 @@ api::geocode_response geocode::operator()(
     }
   }
   auto const place_filter =
-      allowed_modes
-          .transform([&](n::routing::clasz_mask_t allowed) {
-            return std::function{[allowed, this](adr::place_idx_t place_idx) {
-              if (t_.place_type_[place_idx] != adr::amenity_category::kExtra) {
-                return true;
-              }
-              auto const i = adr_extra_place_idx_t{
-                  static_cast<adr_extra_place_idx_t::value_t>(place_idx -
-                                                              t_.ext_start_)};
-              auto const available = ae_->place_clasz_[i];
-              return static_cast<bool>(available & allowed);
-            }};
-          })
+      required_modes
+          .and_then(
+              [&](n::routing::clasz_mask_t const required_clasz)
+                  -> std::optional<std::function<bool(adr::place_idx_t)>> {
+                if (required_clasz == 0U) {
+                  return std::nullopt;
+                }
+                return {std::function{
+                    [&, required_clasz](adr::place_idx_t place_idx) {
+                      if (t_.place_type_[place_idx] !=
+                          adr::amenity_category::kExtra) {
+                        return true;
+                      }
+                      auto const i = adr_extra_place_idx_t{
+                          static_cast<adr_extra_place_idx_t::value_t>(
+                              place_idx - t_.ext_start_)};
+                      return (ae_->place_clasz_.at(i) & required_clasz) != 0U;
+                    }}};
+              })
           .value_or(std::function<bool(adr::place_idx_t)>{});
-  auto const token_pos =
-      a::get_suggestions<false>(t_, params.text_, 10U, lang_indices, ctx, place,
-                                static_cast<float>(params.placeBias_),
-                                to_filter_type(params.type_), place_filter);
+  auto const config_limit = config_.get_limits().geocode_max_suggestions_;
+  auto const requested_limit = params.numResults_.value_or(kDefaultSuggestions);
+  utl::verify<net::bad_request_exception>(requested_limit >= 1,
+                                          "limit must be >= 1");
+  utl::verify<net::bad_request_exception>(
+      requested_limit <= config_limit,
+      "limit must be <= geocode_max_suggestions ({})", config_limit);
+  auto const token_pos = a::get_suggestions<false>(
+      t_, params.text_, static_cast<unsigned>(requested_limit), lang_indices,
+      ctx, place, static_cast<float>(params.placeBias_),
+      to_filter_type(params.type_), place_filter);
   return suggestions_to_response(t_, f_, ae_, tt_, tags_, w_, pl_, matches_,
                                  lang_indices, token_pos, ctx.suggestions_);
 }

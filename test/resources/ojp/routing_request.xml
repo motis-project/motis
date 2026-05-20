@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<OJP xmlns="http://www.vdv.de/ojp" xmlns:siri="http://www.siri.org.uk/siri" version="2.0">
+<OJPRequest>
+  <siri:ServiceRequest>
+    <siri:ServiceRequestContext>
+      <siri:Language>de</siri:Language>
+    </siri:ServiceRequestContext>
+    <siri:RequestTimestamp>2019-05-01T00:30:00Z</siri:RequestTimestamp>
+    <siri:RequestorRef>OJP_DemoApp_Beta_OJP2.0</siri:RequestorRef>
+    <OJPTripRequest>
+      <siri:RequestTimestamp>2019-05-01T00:30:00Z</siri:RequestTimestamp>
+      <Origin>
+        <PlaceRef>
+          <StopPlaceRef>test_DA</StopPlaceRef>
+          <Name>
+            <Text>n/a</Text>
+          </Name>
+        </PlaceRef>
+        <DepArrTime>2019-05-01T00:30:00Z</DepArrTime>
+        <IndividualTransportOption />
+      </Origin>
+      <Destination>
+        <PlaceRef>
+          <StopPlaceRef>test_FFM</StopPlaceRef>
+          <Name>
+            <Text>n/a</Text>
+          </Name>
+        </PlaceRef>
+        <IndividualTransportOption />
+      </Destination>
+      <Params>
+        <NumberOfResults>5</NumberOfResults>
+        <IncludeAllRestrictedLines>true</IncludeAllRestrictedLines>
+        <IncludeTrackSections>true</IncludeTrackSections>
+        <IncludeLegProjection>true</IncludeLegProjection>
+        <IncludeTurnDescription>true</IncludeTurnDescription>
+        <IncludeIntermediateStops>true</IncludeIntermediateStops>
+        <UseRealtimeData>explanatory</UseRealtimeData>
+      </Params>
+    </OJPTripRequest>
+  </siri:ServiceRequest>
+</OJPRequest>
+</OJP>

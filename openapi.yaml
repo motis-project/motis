@@ -70,6 +70,18 @@ paths:
           schema:
             type: string
 
+        - name: radius
+          in: query
+          required: false
+          description: |
+            Experimental. Search radius in meters around the `fromPlace` / `toPlace` coordinates.
+            When set and the place is given as coordinates, all transit stops within
+            this radius are used as start/end points with zero pre-transit/post-transit time.
+            Works without OSM/street routing data loaded.
+          schema:
+            type: number
+            format: double
+
         - name: via
           in: query
           required: false
@@ -266,10 +278,23 @@ paths:
 
         - name: detailedTransfers
           in: query
-          required: true
+          required: false
           description: |
+            Controls if transfer polylines and step instructions are returned.
+
+            If not set, this parameter inherits the value of `detailedLegs`.
+
             - true: Compute transfer polylines and step instructions.
-            - false: Only return basic information (start time, end time, duration) for transfers.
+            - false: Return empty `legGeometry` and omit `steps` for transfers.
+          schema:
+            type: boolean
+
+        - name: detailedLegs
+          in: query
+          required: false
+          description: |
+            Controls if `legGeometry` and `steps` are returned for direct legs,
+            pre-/post-transit legs and transit legs.
           schema:
             type: boolean
             default: true
@@ -815,6 +840,23 @@ paths:
             type: boolean
             default: false
 
+        - name: numLegAlternatives
+          in: query
+          required: false
+          description: |
+            Optional. Maximum number of alternatives to return per transit
+            leg. `0` disables alternatives. When greater than zero, each
+            transit leg in the response is annotated with up to N
+            `alternatives`: connections that can replace the leg while still
+            matching the surrounding journey context (i.e. arriving in time
+            for the next transit leg / departing after the previous transit
+            leg's arrival). Each alternative is a 3-leg sequence
+            `[ingress footpath, transit, egress footpath]`.
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+
         - name: withScheduledSkippedStops
           in: query
           required: false
@@ -847,8 +889,26 @@ paths:
               - TB
             default: PONG
       responses:
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '400':
           description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal Server Error
           content:
             application/json:
               schema:
@@ -925,7 +985,10 @@ paths:
         - name: many
           in: query
           required: true
-          description: geo locations as latitude;longitude,latitude;longitude,...
+          description: |
+            geo locations as latitude;longitude,latitude;longitude,...
+
+            The number of accepted locations is limited by server config variable `onetomany_max_many`.
           schema:
             type: array
             items:
@@ -941,7 +1004,7 @@ paths:
         - name: max
           in: query
           required: true
-          description: maximum travel time in seconds
+          description: maximum travel time in seconds. Is limited by server config variable `street_routing_max_direct_seconds`.
           schema:
             type: number
         - name: maxMatchingDistance
@@ -979,6 +1042,17 @@ paths:
             false = one to many
           schema:
             type: boolean
+        - name: withDistance
+          in: query
+          required: false
+          description: |
+            Optional. Default is `false`.
+            If true, the response includes the distance in meters
+            for each path. This requires path reconstruction and
+            is slower than duration-only queries.
+          schema:
+            type: boolean
+            default: false
       responses:
         '200':
           description: |
@@ -990,6 +1064,465 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Duration'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      tags:
+        - routing
+      summary: |
+        Street routing from one to many places or many to one.
+        The order in the response array corresponds to the order of coordinates of the \`many\` parameter in the request body.
+      operationId: oneToManyPost
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OneToManyParams'
+      responses:
+        '200':
+          description: |
+            A list of durations.
+            If no path was found, the object is empty.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Duration'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/experimental/one-to-many-intermodal:
+    get:
+      tags:
+        - routing
+      summary: |
+        One to many routing
+        Computes the minimal duration from one place to many or vice versa.
+        The order in the response array corresponds to the order of coordinates of the \`many\` parameter in the query.
+      operationId: oneToManyIntermodal
+      parameters:
+        - name: one
+          in: query
+          required: true
+          description: geo location as latitude;longitude
+          schema:
+            type: string
+
+        - name: many
+          in: query
+          required: true
+          description: |
+            geo locations as latitude;longitude,latitude;longitude,...
+
+            The number of accepted locations is limited by server config variable `onetomany_max_many`.
+          schema:
+            type: array
+            items:
+              type: string
+          explode: false
+
+        - name: time
+          in: query
+          required: false
+          description: |
+            Optional. Defaults to the current time.
+
+            Departure time ($arriveBy=false) / arrival date ($arriveBy=true),
+          schema:
+            type: string
+            format: date-time
+
+        - name: maxTravelTime
+          in: query
+          required: false
+          description: |
+            The maximum travel time in minutes.
+            If not provided, the routing uses the value
+            hardcoded in the server which is usually quite high.
+
+            *Warning*: Use with care. Setting this too low can lead to
+            optimal (e.g. the least transfers) journeys not being found.
+            If this value is too low to reach the destination at all,
+            it can lead to slow routing performance.
+          schema:
+            type: integer
+
+        - name: maxMatchingDistance
+          in: query
+          required: false
+          description: maximum matching distance in meters to match geo coordinates to the street network
+          schema:
+            type: number
+            default: 25
+
+        - name: arriveBy
+          in: query
+          required: false
+          description: |
+            Optional. Defaults to false, i.e. one to many search
+
+            true = many to one
+            false = one to many
+          schema:
+            type: boolean
+            default: false
+
+        - name: maxTransfers
+          in: query
+          required: false
+          description: |
+            The maximum number of allowed transfers (i.e. interchanges between transit legs,
+            pre- and postTransit do not count as transfers).
+            `maxTransfers=0` searches for direct transit connections without any transfers.
+            If you want to search only for non-transit connections (`FOOT`, `CAR`, etc.),
+            send an empty `transitModes` parameter instead.
+
+            If not provided, the routing uses the server-side default value
+            which is hardcoded and very high to cover all use cases.
+
+            *Warning*: Use with care. Setting this too low can lead to
+            optimal (e.g. the fastest) journeys not being found.
+            If this value is too low to reach the destination at all,
+            it can lead to slow routing performance.
+          schema:
+            type: integer
+
+        - name: minTransferTime
+          in: query
+          required: false
+          description: |
+            Optional. Default is 0 minutes.
+
+            Minimum transfer time for each transfer in minutes.
+          schema:
+            type: integer
+            default: 0
+
+        - name: additionalTransferTime
+          in: query
+          required: false
+          description: |
+            Optional. Default is 0 minutes.
+
+            Additional transfer time reserved for each transfer in minutes.
+          schema:
+            type: integer
+            default: 0
+
+        - name: transferTimeFactor
+          in: query
+          required: false
+          description: |
+            Optional. Default is 1.0
+
+            Factor to multiply minimum required transfer times with.
+            Values smaller than 1.0 are not supported.
+          schema:
+            type: number
+            default: 1.0
+
+        - name: useRoutedTransfers
+          in: query
+          required: false
+          description: |
+            Optional. Default is `false`.
+
+            Whether to use transfers routed on OpenStreetMap data.
+          schema:
+            type: boolean
+            default: false
+
+        - name: pedestrianProfile
+          in: query
+          required: false
+          description: |
+            Optional. Default is `FOOT`.
+
+            Accessibility profile to use for pedestrian routing in transfers
+            between transit connections and the first and last mile respectively.
+          schema:
+            $ref: "#/components/schemas/PedestrianProfile"
+            default: FOOT
+
+        - name: pedestrianSpeed
+          in: query
+          required: false
+          description: |
+            Optional
+
+            Average speed for pedestrian routing.
+          schema:
+            $ref: "#/components/schemas/PedestrianSpeed"
+
+        - name: cyclingSpeed
+          in: query
+          required: false
+          description: |
+            Optional
+
+            Average speed for bike routing.
+          schema:
+            $ref: "#/components/schemas/CyclingSpeed"
+
+        - name: elevationCosts
+          in: query
+          required: false
+          description: |
+            Optional. Default is `NONE`.
+
+            Set an elevation cost profile, to penalize routes with incline.
+            - `NONE`: No additional costs for elevations. This is the default behavior
+            - `LOW`: Add a low cost for increase in elevation and incline along the way. This will prefer routes with less ascent, if small detours are required.
+            - `HIGH`: Add a high cost for increase in elevation and incline along the way. This will prefer routes with less ascent, if larger detours are required.
+
+            As using an elevation costs profile will increase the travel duration,
+            routing through steep terrain may exceed the maximal allowed duration,
+            causing a location to appear unreachable.
+            Increasing the maximum travel time for these segments may resolve this issue.
+
+            The profile is used for routing on both the first and last mile.
+
+            Elevation cost profiles are currently used by following street modes:
+            - `BIKE`
+          schema:
+            $ref: "#/components/schemas/ElevationCosts"
+            default: NONE
+
+        - name: transitModes
+          in: query
+          required: false
+          description: |
+            Optional. Default is `TRANSIT` which allows all transit modes (no restriction).
+            Allowed modes for the transit part. If empty, no transit connections will be computed.
+            For example, this can be used to allow only `SUBURBAN,SUBWAY,TRAM`.
+          schema:
+            type: array
+            items:
+              $ref: "#/components/schemas/Mode"
+            default:
+              - TRANSIT
+          explode: false
+
+        - name: preTransitModes
+          in: query
+          required: false
+          description: |
+            Optional. Default is `WALK`. Does not apply to direct connections (see `directMode`).
+
+            A list of modes that are allowed to be used for the first mile, i.e. from the coordinates to the first transit stop. Example: `WALK,BIKE_SHARING`.
+          schema:
+            type: array
+            items:
+              $ref: "#/components/schemas/Mode"
+            default:
+              - WALK
+          explode: false
+
+        - name: postTransitModes
+          in: query
+          required: false
+          description: |
+            Optional. Default is `WALK`. Does not apply to direct connections (see `directMode`).
+
+            A list of modes that are allowed to be used for the last mile, i.e. from the last transit stop to the target coordinates. Example: `WALK,BIKE_SHARING`.
+          schema:
+            type: array
+            items:
+              $ref: "#/components/schemas/Mode"
+            default:
+              - WALK
+          explode: false
+
+        - name: directMode
+          in: query
+          required: false
+          description: |
+            Default is `WALK` which will compute walking routes as direct connections.
+
+            Mode used for direction connections from start to destination without using transit.
+
+            Currently supported non-transit modes: \`WALK\`, \`BIKE\`, \`CAR\`
+          schema:
+            $ref: "#/components/schemas/Mode"
+            default: WALK
+
+        - name: maxPreTransitTime
+          in: query
+          required: false
+          description: |
+            Optional. Default is 15min which is `900`.
+            Maximum time in seconds for the first street leg.
+            Is limited by server config variable `street_routing_max_prepost_transit_seconds`.
+          schema:
+            type: integer
+            default: 900
+            minimum: 0
+
+        - name: maxPostTransitTime
+          in: query
+          required: false
+          description: |
+            Optional. Default is 15min which is `900`.
+            Maximum time in seconds for the last street leg.
+            Is limited by server config variable `street_routing_max_prepost_transit_seconds`.
+          schema:
+            type: integer
+            default: 900
+            minimum: 0
+
+        - name: maxDirectTime
+          in: query
+          required: false
+          description: |
+            Optional. Default is 30min which is `1800`.
+            Maximum time in seconds for direct connections.
+
+            If a value smaller than either `maxPreTransitTime` or
+            `maxPostTransitTime` is used, their maximum is set instead.
+            Is limited by server config variable `street_routing_max_direct_seconds`.
+          schema:
+            type: integer
+            default: 1800
+            minimum: 0
+
+        - name: withDistance
+          in: query
+          required: false
+          description: |
+            Optional. Default is `false`.
+            If true, the response includes the distance in meters
+            for each path. This requires path reconstruction and
+            is slower than duration-only queries.
+
+            `withDistance` is currently limited to street routing.
+          schema:
+            type: boolean
+            default: false
+
+        - name: requireBikeTransport
+          in: query
+          required: false
+          description: |
+            Optional. Default is `false`.
+
+            If set to `true`, all used transit trips are required to allow bike carriage.
+          schema:
+            type: boolean
+            default: false
+
+        - name: requireCarTransport
+          in: query
+          required: false
+          description: |
+            Optional. Default is `false`.
+
+            If set to `true`, all used transit trips are required to allow car carriage.
+          schema:
+            type: boolean
+            default: false
+
+      responses:
+        "200":
+          description: |
+            A list of durations.
+            If no path was found, the object is empty.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OneToManyIntermodalResponse"
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    post:
+      tags:
+        - routing
+      summary: |
+        One to many routing
+        Computes the minimal duration from one place to many or vice versa.
+        The order in the response array corresponds to the order of coordinates of the \`many\` parameter in the request body.
+      operationId: oneToManyIntermodalPost
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OneToManyIntermodalParams"
+      responses:
+        "200":
+          description: |
+            A list of durations.
+            If no path was found, the object is empty.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OneToManyIntermodalResponse"
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 
   /api/v1/one-to-all:
     get:
@@ -1269,6 +1802,24 @@ paths:
             minimum: 0
 
       responses:
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '400':
           description: Bad Request
           content:
@@ -1307,6 +1858,17 @@ paths:
             For example, this can be used to allow only `ADDRESS` and `STOP` results.
           schema:
             $ref: '#/components/schemas/LocationType'
+        - name: numResults
+          in: query
+          required: false
+          description: |
+            Optional. Number of results to return.
+
+            If omitted, 5 results are returned by default.
+            Must be <= server config variable `reverse_geocode_max_results`.
+          schema:
+            type: integer
+            minimum: 1
       responses:
         '400':
           description: Bad Request
@@ -1390,6 +1952,17 @@ paths:
           schema:
             type: number
             default: 1
+        - name: numResults
+          in: query
+          required: false
+          description: |
+            Optional. Number of suggestions to return.
+            
+            If omitted, 10 suggestions are returned by default.
+            Must be <= server config variable `geocode_max_suggestions`.
+          schema:
+            type: integer
+            minimum: 1
 
       responses:
         '400':
@@ -1427,6 +2000,16 @@ paths:
           schema:
             type: boolean
             default: false
+        - name: detailedLegs
+          in: query
+          required: false
+          description: |
+            Controls if `legGeometry` is returned for transit legs.
+
+            The default value is `true`.
+          schema:
+            type: boolean
+            default: true
         - name: joinInterlinedLegs
           in: query
           description: |
@@ -1451,18 +2034,36 @@ paths:
               type: string
           explode: false
       responses:
-        '400':
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
         '200':
           description: the requested trip as itinerary
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Itinerary'
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
   /api/v5/stoptimes:
     get:
@@ -1475,8 +2076,20 @@ paths:
           in: query
           schema:
             type: string
-          required: true
+          required: false
           description: stop id of the stop to retrieve departures/arrivals for
+
+        - name: center
+          in: query
+          schema:
+            type: string
+          required: false
+          description: |
+            Anchor coordinate. Format: latitude,longitude pair.
+            Used as fallback when "stopId" is missing or can't be found.
+            If both are provided and "stopId" resolves, "stopId" is used.
+            If "stopId" does not resolve, "center" is used instead. "radius" is
+            required when querying by "center" (i.e. without a valid "stopId").
 
         - name: time
           in: query
@@ -1518,6 +2131,17 @@ paths:
             in case `EARLIER` is selected and the previous `n`
             arrivals / departures if `LATER` is selected.
 
+        - name: window
+          in: query
+          required: false
+          description: |
+            Optional. Window in seconds around `time`.
+            Limiting the response to those that are at most `window` seconds aways in time.
+            If both `n` and `window` are set, it uses whichever returns more.
+          schema:
+            type: integer
+            minimum: 0
+
         - name: mode
           in: query
           schema:
@@ -1536,8 +2160,10 @@ paths:
           in: query
           schema:
             type: integer
-          required: true
-          description: the number of events
+          required: false
+          description: |
+            Minimum number of events to return. If both `n` and `window`
+            are provided, the API uses whichever returns more events.
 
         - name: radius
           in: query
@@ -1605,7 +2231,34 @@ paths:
             items:
               type: string
           explode: false
+
+        - name: withAlerts
+          in: query
+          required: false
+          description: Optional. Default is `true`. If set to `false`, alerts are omitted in the metadata of place for all stopTimes.
+          schema:
+            type: boolean
+            default: true
+
       responses:
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '400':
           description: Bad Request
           content:
@@ -1686,6 +2339,15 @@ paths:
           schema:
             type: string
             format: date-time
+        - name: precision
+          in: query
+          required: false
+          description: "precision of returned polylines. Recommended to set based on zoom: `zoom >= 11 ? 5 : zoom >= 8 ? 4 : zoom >= 5 ? 3 : 2`"
+          schema:
+            type: number
+            minimum: 0
+            maximum: 6
+            default: 5
         - name: language
           in: query
           required: false
@@ -1698,8 +2360,26 @@ paths:
               type: string
           explode: false
       responses:
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '400':
           description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server Error
           content:
             application/json:
               schema:
@@ -1736,6 +2416,7 @@ paths:
                   - lat
                   - lon
                   - zoom
+                  - serverConfig
                 properties:
                   lat:
                     description: latitude
@@ -1783,8 +2464,26 @@ paths:
           explode: false
 
       responses:
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '400':
           description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not Found
           content:
             application/json:
               schema:
@@ -1818,8 +2517,26 @@ paths:
           schema:
             type: string
       responses:
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '400':
           description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not Found
           content:
             application/json:
               schema:
@@ -1832,6 +2549,180 @@ paths:
                 type: array
                 items:
                   type: number
+
+  /api/experimental/map/routes:
+    get:
+      tags:
+        - map
+      operationId: routes
+      summary: |
+        Given an area frame (box defined by the top-right and bottom-left corners),
+        it returns all routes and their respective shapes that operate within this area.
+        Routes are filtered by zoom level. On low zoom levels, only long distance trains will be shown
+        while on high zoom levels, also metros, buses and trams will be returned.
+      parameters:
+        - name: zoom
+          in: query
+          required: true
+          description: current zoom level
+          schema:
+            type: number
+        - name: min
+          in: query
+          required: true
+          description: latitude,longitude pair of the lower right coordinate
+          schema:
+            type: string
+        - name: max
+          in: query
+          required: true
+          description: latitude,longitude pair of the upper left coordinate
+          schema:
+            type: string
+        - name: language
+          in: query
+          required: false
+          description: |
+            language tags as used in OpenStreetMap / GTFS
+            (usually BCP-47 / ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
+          schema:
+            type: array
+            items:
+              type: string
+          explode: false
+      responses:
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '200':
+          description: a list of routes in the area
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - routes
+                  - polylines
+                  - stops
+                  - zoomFiltered
+                properties:
+                  routes:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RouteInfo'
+                  polylines:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RoutePolyline'
+                  stops:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Place'
+                  zoomFiltered:
+                    type: boolean
+                    description: |
+                      Indicates whether some routes were filtered out due to
+                      the zoom level.
+
+  /api/experimental/map/route-details:
+    get:
+      tags:
+        - map
+      operationId: routeDetails
+      summary: |
+        Returns the full data for a single route, including all stops and
+        polyline segments.
+      parameters:
+        - name: routeIdx
+          in: query
+          required: true
+          description: Internal route index
+          schema:
+            type: integer
+        - name: language
+          in: query
+          required: false
+          description: |
+            language tags as used in OpenStreetMap / GTFS
+            (usually BCP-47 / ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
+          schema:
+            type: array
+            items:
+              type: string
+          explode: false
+      responses:
+        "422":
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Server Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "200":
+          description: full data for a single route
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - routes
+                  - polylines
+                  - stops
+                  - zoomFiltered
+                properties:
+                  routes:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/RouteInfo"
+                  polylines:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/RoutePolyline"
+                  stops:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Place"
+                  zoomFiltered:
+                    type: boolean
+                    description: Always false for this endpoint.
 
   /api/v1/rentals:
     get:
@@ -1989,6 +2880,23 @@ paths:
                     items:
                       $ref: '#/components/schemas/RentalZone'
 
+  /api/v1/health:
+    get:
+      operationId: health
+      responses:
+        '200':
+          description: Shows over which feeds at least one cycle of updates was consumed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '400':
+          description: Full first cycle through all configured feeds is not finished. 
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+          
   /api/debug/transfers:
     get:
       tags:
@@ -2195,6 +3103,61 @@ components:
         duration:
           type: number
           description: duration in seconds if a path was found, otherwise missing
+          minimum: 0.0
+        distance:
+          type: number
+          description: distance in meters if a path was found and distance computation was requested, otherwise missing
+          minimum: 0.0
+
+    ParetoSetEntry:
+      description: Object containing a single element of a ParetoSet
+      type: object
+      required:
+        - duration
+        - transfers
+      properties:
+        duration:
+          type: number
+          description: |
+            duration in seconds for the the best solution using `transfer` transfers
+
+            Notice that the resolution is currently in minutes, because of implementation details
+          minimum: 0.0
+        transfers:
+          description: |
+            The minimal number of transfers required to arrive within `duration` seconds
+
+            transfers=0: Direct transit connecion without any transfers
+            transfers=1: Transit connection with 1 transfer
+          type: integer
+          minimum: 0
+
+    ParetoSet:
+      description: Pareto set of optimal transit solutions
+      type: array
+      items:
+        $ref: '#/components/schemas/ParetoSetEntry'
+
+    OneToManyIntermodalResponse:
+      description: Object containing the optimal street and transit durations for One-to-Many routing
+      type: object
+      properties:
+        street_durations:
+          description: |
+            Fastest durations for street routing
+            The order of the items corresponds to the order of the `many` locations
+            If no street routed connection is found, the corresponding `Duration` will be empty
+          type: array
+          items:
+            $ref: '#/components/schemas/Duration'
+        transit_durations:
+          description: |
+            Pareto optimal solutions
+            The order of the items corresponds to the order of the `many` locations
+            If no connection using transits is found, the corresponding `ParetoSet` will be empty
+          type: array
+          items:
+            $ref: '#/components/schemas/ParetoSet'
 
     Area:
       description: Administrative area
@@ -2256,23 +3219,23 @@ components:
 
         # Transit modes
 
-          - `TRANSIT`: translates to `RAIL,TRAM,BUS,FERRY,AIRPLANE,COACH,CABLE_CAR,FUNICULAR,AREAL_LIFT,OTHER`
+          - `TRANSIT`: translates to `TRAM,FERRY,AIRPLANE,BUS,COACH,RAIL,ODM,FUNICULAR,AERIAL_LIFT,OTHER`
           - `TRAM`: trams
           - `SUBWAY`: subway trains (Paris Metro, London Underground, but also NYC Subway, Hamburger Hochbahn, and other non-underground services)
           - `FERRY`: ferries
           - `AIRPLANE`: airline flights
           - `BUS`: short distance buses (does not include `COACH`)
           - `COACH`: long distance buses (does not include `BUS`)
-          - `RAIL`: translates to `HIGHSPEED_RAIL,LONG_DISTANCE,NIGHT_RAIL,REGIONAL_RAIL,REGIONAL_FAST_RAIL,SUBURBAN,SUBWAY`
-          - `SUBURBAN`: suburban trains (e.g. S-Bahn, RER, Elizabeth Line, ...)
+          - `RAIL`: translates to `HIGHSPEED_RAIL,LONG_DISTANCE,NIGHT_RAIL,REGIONAL_RAIL,SUBURBAN,SUBWAY`
           - `HIGHSPEED_RAIL`: long distance high speed trains (e.g. TGV)
           - `LONG_DISTANCE`: long distance inter city trains
           - `NIGHT_RAIL`: long distance night trains
-          - `REGIONAL_FAST_RAIL`: regional express routes that skip low traffic stops to be faster
+          - `REGIONAL_FAST_RAIL`: deprecated, `REGIONAL_RAIL` will be used
           - `REGIONAL_RAIL`: regional train
+          - `SUBURBAN`: suburban trains (e.g. S-Bahn, RER, Elizabeth Line, ...)
+          - `ODM`: demand responsive transport
           - `FUNICULAR`: Funicular. Any rail system designed for steep inclines.
           - `AERIAL_LIFT`: Aerial lift, suspended cable car (e.g., gondola lift, aerial tramway). Cable transport where cabins, cars, gondolas or open chairs are suspended by means of one or more cables.
-          - `ODM`: demand responsive transport
           - `AREAL_LIFT`: deprecated
           - `METRO`: deprecated
           - `CABLE_CAR`: deprecated
@@ -2286,15 +3249,17 @@ components:
         - CAR_PARKING
         - CAR_DROPOFF
         - ODM  # Transit | Street
-        - RIDE_SHARING
+        - RIDE_SHARING  # Transit | Street
         - FLEX
+        - DEBUG_BUS_ROUTE
+        - DEBUG_RAILWAY_ROUTE
+        - DEBUG_FERRY_ROUTE
         # === Transit ===
         - TRANSIT
         - TRAM
         - SUBWAY
         - FERRY
         - AIRPLANE
-        - SUBURBAN
         - BUS
         - COACH
         - RAIL
@@ -2303,12 +3268,13 @@ components:
         - NIGHT_RAIL
         - REGIONAL_FAST_RAIL
         - REGIONAL_RAIL
-        - CABLE_CAR
+        - SUBURBAN
         - FUNICULAR
         - AERIAL_LIFT
         - OTHER
         - AREAL_LIFT
         - METRO
+        - CABLE_CAR
 
     Match:
       description: GeoCoding match
@@ -2524,6 +3490,11 @@ components:
           description: Time that on-demand service ends
           type: string
           format: date-time
+        modes:
+          description: available transport modes for stops
+          type: array
+          items:
+            $ref: "#/components/schemas/Mode"
 
     ReachablePlace:
       description: Place reachable by One-to-All
@@ -2568,6 +3539,7 @@ components:
         - mode
         - realTime
         - headsign
+        - tripFrom
         - tripTo
         - agencyId
         - agencyName
@@ -2598,6 +3570,9 @@ components:
             The headsign of the bus or train being used.
             For non-transit legs, null
           type: string
+        tripFrom:
+          description: first stop of this trip
+          $ref: '#/components/schemas/Place'
         tripTo:
           description: final stop of this trip
           $ref: '#/components/schemas/Place'
@@ -2608,6 +3583,8 @@ components:
         agencyUrl:
           type: string
         routeId:
+          type: string
+        routeUrl:
           type: string
         directionId:
           type: string
@@ -3253,6 +4230,23 @@ components:
           items:
             $ref: '#/components/schemas/RentalZoneRestrictions'
 
+    Category:
+      type: object
+      required:
+        - id
+        - name
+        - shortName
+      description: |
+        not available for GTFS datasets by default
+        For NeTEx it contains information about the vehicle category, e.g. IC/InterCity
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        shortName:
+          type: string
+
     Leg:
       type: object
       required:
@@ -3325,10 +4319,17 @@ components:
             For transit legs, the headsign of the bus or train being used.
             For non-transit legs, null
           type: string
+        tripFrom:
+          description: first stop of this trip
+          $ref: '#/components/schemas/Place'
         tripTo:
           description: final stop of this trip (can differ from headsign)
           $ref: '#/components/schemas/Place'
+        category:
+          $ref: '#/components/schemas/Category'
         routeId:
+          type: string
+        routeUrl:
           type: string
         directionId:
           type: string
@@ -3368,11 +4369,16 @@ components:
           items:
             $ref: "#/components/schemas/Place"
         legGeometry:
+          description: |
+            Encoded geometry of the leg.
+            If detailed leg output is disabled, this is returned as an empty
+            polyline.
           $ref: '#/components/schemas/EncodedPolyline'
         steps:
           description: |
             A series of turn by turn instructions
             used for walking, biking and driving.
+            This field is omitted if the request disables detailed leg output.
           type: array
           items:
             $ref: '#/components/schemas/StepInstruction'
@@ -3400,6 +4406,36 @@ components:
             by looping active weekdays, e.g. from calendar.txt in GTFS.
           type: string
           format: date-time
+        bikesAllowed:
+          description: |
+            Whether bikes can be carried on this leg.
+          type: boolean
+        alternatives:
+          description: |
+            Alternative connections that can replace this transit leg.
+            Each alternative is normally a sequence of 3 legs:
+            `[ingress footpath, transit, egress footpath]`.
+            Only populated when the request sets `numLegAlternatives` > 0
+            (capped to that value).
+
+            Interlined legs:
+            `alternatives` is populated only on the first (main) leg of
+            an interlined chain. Subsequent interlined legs (carrying
+            `interlineWithPreviousLeg=true`) leave `alternatives` unset.
+            Alternatives are valid for the whole interlined segment.
+
+            An alternative may itself cover an interlined segment:
+            the alternative's middle transit then expands into multiple
+            interlined legs when `joinInterlinedLegs=false`. In that
+            case the alternative contains more than 3 legs: ingress
+            footpath, followed by N interlined transit legs (the
+            secondary ones carrying `interlineWithPreviousLeg=true`),
+            followed by an egress footpath.
+          type: array
+          items:
+            type: array
+            items:
+              $ref: '#/components/schemas/Leg'
 
     RiderCategory:
       type: object
@@ -3597,14 +4633,16 @@ components:
         - mode
         - max
         - maxMatchingDistance
-        - elevationCosts
         - arriveBy
       properties:
         one:
           description: geo location as latitude;longitude
           type: string
         many:
-          description: geo locations as latitude;longitude,latitude;longitude,...
+          description: |
+            geo locations as latitude;longitude,latitude;longitude,...
+
+            The number of accepted locations is limited by server config variable `onetomany_max_many`.
           type: array
           items:
             type: string
@@ -3614,7 +4652,7 @@ components:
             routing profile to use (currently supported: \`WALK\`, \`BIKE\`, \`CAR\`)
           $ref: '#/components/schemas/Mode'
         max:
-          description: maximum travel time in seconds
+          description: maximum travel time in seconds. Is limited by server config variable `street_routing_max_direct_seconds`.
           type: number
         maxMatchingDistance:
           description: maximum matching distance in meters to match geo coordinates to the street network
@@ -3642,17 +4680,271 @@ components:
             true = many to one
             false = one to many
           type: boolean
+        withDistance:
+          description: |
+            If true, the response includes the distance in meters
+            for each path. This requires path reconstruction and
+            may be slower than duration-only queries.
+          type: boolean
+          default: false
+    OneToManyIntermodalParams:
+      type: object
+      required:
+        - one
+        - many
+      properties:
+        one:
+          description: |
+            \`latitude,longitude[,level]\` tuple with
+            - latitude and longitude in degrees
+            - (optional) level: the OSM level (default: 0)
+
+            OR
+
+            stop id
+          type: string
+        many:
+          description: |
+            array of:
+
+            \`latitude,longitude[,level]\` tuple with
+            - latitude and longitude in degrees
+            - (optional) level: the OSM level (default: 0)
+
+            OR
+
+            stop id
+
+            The number of accepted locations is limited by server config variable `onetomany_max_many`.
+          type: array
+          items:
+            type: string
+          explode: false
+        time:
+          description: |
+            Optional. Defaults to the current time.
+
+            Departure time ($arriveBy=false) / arrival date ($arriveBy=true),
+          type: string
+          format: date-time
+        maxTravelTime:
+          description: |
+            The maximum travel time in minutes.
+            If not provided, the routing uses the value
+            hardcoded in the server which is usually quite high.
+
+            *Warning*: Use with care. Setting this too low can lead to
+            optimal (e.g. the least transfers) journeys not being found.
+            If this value is too low to reach the destination at all,
+            it can lead to slow routing performance.
+          type: integer
+        maxMatchingDistance:
+          description: maximum matching distance in meters to match geo coordinates to the street network
+          type: number
+          default: 25
+        arriveBy:
+          description: |
+            Optional. Defaults to false, i.e. one to many search
+
+            true = many to one
+            false = one to many
+          type: boolean
+          default: false
+        maxTransfers:
+          description: |
+            The maximum number of allowed transfers (i.e. interchanges between transit legs,
+            pre- and postTransit do not count as transfers).
+            `maxTransfers=0` searches for direct transit connections without any transfers.
+            If you want to search only for non-transit connections (`FOOT`, `CAR`, etc.),
+            send an empty `transitModes` parameter instead.
+
+            If not provided, the routing uses the server-side default value
+            which is hardcoded and very high to cover all use cases.
+
+            *Warning*: Use with care. Setting this too low can lead to
+            optimal (e.g. the fastest) journeys not being found.
+            If this value is too low to reach the destination at all,
+            it can lead to slow routing performance.
+          type: integer
+        minTransferTime:
+          description: |
+            Optional. Default is 0 minutes.
+
+            Minimum transfer time for each transfer in minutes.
+          type: integer
+          default: 0
+        additionalTransferTime:
+          description: |
+            Optional. Default is 0 minutes.
+
+            Additional transfer time reserved for each transfer in minutes.
+          type: integer
+          default: 0
+        transferTimeFactor:
+          description: |
+            Optional. Default is 1.0
+
+            Factor to multiply minimum required transfer times with.
+            Values smaller than 1.0 are not supported.
+          type: number
+          default: 1.0
+        useRoutedTransfers:
+          description: |
+            Optional. Default is `false`.
+
+            Whether to use transfers routed on OpenStreetMap data.
+          type: boolean
+          default: false
+        pedestrianProfile:
+          description: |
+            Optional. Default is `FOOT`.
+
+            Accessibility profile to use for pedestrian routing in transfers
+            between transit connections and the first and last mile respectively.
+          $ref: "#/components/schemas/PedestrianProfile"
+          default: FOOT
+        pedestrianSpeed:
+          description: |
+            Optional
+
+            Average speed for pedestrian routing.
+          $ref: "#/components/schemas/PedestrianSpeed"
+        cyclingSpeed:
+          description: |
+            Optional
+
+            Average speed for bike routing.
+          $ref: "#/components/schemas/CyclingSpeed"
+        elevationCosts:
+          description: |
+            Optional. Default is `NONE`.
+
+            Set an elevation cost profile, to penalize routes with incline.
+            - `NONE`: No additional costs for elevations. This is the default behavior
+            - `LOW`: Add a low cost for increase in elevation and incline along the way. This will prefer routes with less ascent, if small detours are required.
+            - `HIGH`: Add a high cost for increase in elevation and incline along the way. This will prefer routes with less ascent, if larger detours are required.
+
+            As using an elevation costs profile will increase the travel duration,
+            routing through steep terrain may exceed the maximal allowed duration,
+            causing a location to appear unreachable.
+            Increasing the maximum travel time for these segments may resolve this issue.
+
+            The profile is used for routing on both the first and last mile.
+
+            Elevation cost profiles are currently used by following street modes:
+            - `BIKE`
+          $ref: "#/components/schemas/ElevationCosts"
+          default: NONE
+        transitModes:
+          description: |
+            Optional. Default is `TRANSIT` which allows all transit modes (no restriction).
+            Allowed modes for the transit part. If empty, no transit connections will be computed.
+            For example, this can be used to allow only `SUBURBAN,SUBWAY,TRAM`.
+          type: array
+          items:
+            $ref: "#/components/schemas/Mode"
+          default:
+            - TRANSIT
+          explode: false
+        preTransitModes:
+          description: |
+            Optional. Default is `WALK`. Does not apply to direct connections (see `directMode`).
+
+            A list of modes that are allowed to be used for the first mile, i.e. from the coordinates to the first transit stop. Example: `WALK,BIKE_SHARING`.
+          type: array
+          items:
+            $ref: "#/components/schemas/Mode"
+          default:
+            - WALK
+          explode: false
+        postTransitModes:
+          description: |
+            Optional. Default is `WALK`. Does not apply to direct connections (see `directMode`).
+
+            A list of modes that are allowed to be used for the last mile, i.e. from the last transit stop to the target coordinates. Example: `WALK,BIKE_SHARING`.
+          type: array
+          items:
+            $ref: "#/components/schemas/Mode"
+          default:
+            - WALK
+          explode: false
+        directMode:
+          description: |
+            Default is `WALK` which will compute walking routes as direct connections.
+
+            Mode used for direction connections from start to destination without using transit.
+
+            Currently supported non-transit modes: \`WALK\`, \`BIKE\`, \`CAR\`
+          $ref: "#/components/schemas/Mode"
+          default: WALK
+        maxPreTransitTime:
+          description: |
+            Optional. Default is 15min which is `900`.
+            Maximum time in seconds for the first street leg.
+            Is limited by server config variable `street_routing_max_prepost_transit_seconds`.
+          type: integer
+          default: 900
+          minimum: 0
+        maxPostTransitTime:
+          description: |
+            Optional. Default is 15min which is `900`.
+            Maximum time in seconds for the last street leg.
+            Is limited by server config variable `street_routing_max_prepost_transit_seconds`.
+          type: integer
+          default: 900
+          minimum: 0
+        maxDirectTime:
+          description: |
+            Optional. Default is 30min which is `1800`.
+            Maximum time in seconds for direct connections.
+
+            If a value smaller than either `maxPreTransitTime` or
+            `maxPostTransitTime` is used, their maximum is set instead.
+            Is limited by server config variable `street_routing_max_direct_seconds`.
+          type: integer
+          default: 1800
+          minimum: 0
+        withDistance:
+          description: |
+            If true, the response includes the distance in meters
+            for each path. This requires path reconstruction and
+            may be slower than duration-only queries.
+
+            `withDistance` is currently limited to street routing.
+          type: boolean
+          default: false
+        requireBikeTransport:
+          description: |
+            Optional. Default is `false`.
+
+            If set to `true`, all used transit trips are required to allow bike carriage.
+          type: boolean
+          default: false
+        requireCarTransport:
+          description: |
+            Optional. Default is `false`.
+
+            If set to `true`, all used transit trips are required to allow car carriage.
+          type: boolean
+          default: false
+
     ServerConfig:
       Description: server configuration
       type: object
       required:
+        - motisVersion
         - hasElevation
         - hasRoutedTransfers
         - hasStreetRouting
-        - maxTravelTimeLimit
+        - maxOneToManySize
+        - maxOneToAllTravelTimeLimit
         - maxPrePostTransitTimeLimit
         - maxDirectTimeLimit
+        - shapesDebugEnabled
       properties:
+        motisVersion:
+          description: the version of this MOTIS server
+          type: string
         hasElevation:
           description: true if elevation is loaded
           type: boolean
@@ -3662,6 +4954,10 @@ components:
         hasStreetRouting:
           description: true if street routing is available
           type: boolean
+        maxOneToManySize:
+          description: |
+            limit for the number of `many` locations for one-to-many requests
+          type: number
         maxOneToAllTravelTimeLimit:
           description: limit for maxTravelTime API param in minutes
           type: number
@@ -3671,8 +4967,129 @@ components:
         maxDirectTimeLimit:
           description: limit for maxDirectTime API param in seconds
           type: number
+        shapesDebugEnabled:
+          description: true if experimental route shapes debug download API is enabled
+          type: boolean
     Error:
       type: object
+      required:
+        - error
       properties:
         error:
           type: string
+          description: error message
+
+    RouteSegment:
+      description: Route segment between two stops to show a route on a map
+      type: object
+      required:
+        - from
+        - to
+        - polyline
+      properties:
+        from:
+          type: integer
+          description: Index into the top-level route stops array
+        to:
+          type: integer
+          description: Index into the top-level route stops array
+        polyline:
+          type: integer
+          description: Index into the top-level route polylines array
+
+    RoutePolyline:
+      description: Shared polyline used by one or more route segments
+      type: object
+      required:
+        - polyline
+        - colors
+        - routeIndexes
+      properties:
+        polyline:
+          $ref: '#/components/schemas/EncodedPolyline'
+        colors:
+          type: array
+          description: Unique route colors of routes containing this segment
+          items:
+            type: string
+        routeIndexes:
+          type: array
+          description: Indexes into the top-level routes array for routes containing this segment
+          items:
+            type: integer
+
+    RouteColor:
+      type: object
+      required:
+        - color
+        - textColor
+      properties:
+        color:
+          type: string
+        textColor:
+          type: string
+
+    RoutePathSource:
+      type: string
+      enum:
+        - NONE
+        - TIMETABLE
+        - ROUTED
+
+    TransitRouteInfo:
+      type: object
+      required:
+        - id
+        - shortName
+        - longName
+      properties:
+        id:
+          type: string
+        shortName:
+          type: string
+        longName:
+          type: string
+        color:
+          type: string
+        textColor:
+          type: string
+
+    RouteInfo:
+      type: object
+      required:
+        - mode
+        - transitRoutes
+        - numStops
+        - routeIdx
+        - pathSource
+        - segments
+      properties:
+        mode:
+          $ref: '#/components/schemas/Mode'
+          description: Transport mode for this route
+        transitRoutes:
+          type: array
+          items:
+            $ref: '#/components/schemas/TransitRouteInfo'
+        numStops:
+          type: integer
+          description: Number of stops along this route
+        routeIdx:
+          type: integer
+          description: Internal route index for debugging purposes
+        pathSource:
+          $ref: '#/components/schemas/RoutePathSource'
+        segments:
+          type: array
+          items:
+            $ref: '#/components/schemas/RouteSegment'
+
+    HealthResponse:
+      type: object
+      properties:
+        rt:
+          type: boolean
+          description: GTFSRT, SIRI Lite, VDV AUS, VDV454 feeds.
+        gbfs:
+          type: boolean
+          description: GBFS feeds.

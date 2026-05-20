@@ -65,6 +65,10 @@ api::ModeEnum default_output::get_mode() const {
       return api::ModeEnum::CAR_DROPOFF;
     case osr::search_profile::kBikeSharing: [[fallthrough]];
     case osr::search_profile::kCarSharing: return api::ModeEnum::RENTAL;
+    case osr::search_profile::kBus: return api::ModeEnum::DEBUG_BUS_ROUTE;
+    case osr::search_profile::kRailway:
+      return api::ModeEnum::DEBUG_RAILWAY_ROUTE;
+    case osr::search_profile::kFerry: return api::ModeEnum::DEBUG_FERRY_ROUTE;
   }
 
   return api::ModeEnum::OTHER;
@@ -192,7 +196,8 @@ api::Itinerary dummy_itinerary(api::Place const& from,
       .startTime_ = start_time,
       .endTime_ = end_time,
       .scheduledStartTime_ = start_time,
-      .scheduledEndTime_ = end_time});
+      .scheduledEndTime_ = end_time,
+      .legGeometry_ = empty_polyline()});
   leg.from_.pickupType_ = std::nullopt;
   leg.from_.dropoffType_ = std::nullopt;
   leg.to_.pickupType_ = std::nullopt;
@@ -217,6 +222,7 @@ api::Itinerary street_routing(osr::ways const& w,
                               street_routing_cache_t& cache,
                               osr::bitvec<osr::node_idx_t>& blocked_mem,
                               unsigned const api_version,
+                              bool const detailed_leg,
                               std::chrono::seconds const max) {
   utl::verify(start_time.has_value() || end_time.has_value(),
               "either start_time or end_time must be set");
@@ -302,10 +308,10 @@ api::Itinerary street_routing(osr::ways const& w,
             .startTime_ = pred_end_time,
             .endTime_ = is_last_leg && end_time ? *end_time : t,
             .distance_ = dist,
-            .legGeometry_ = api_version == 1 ? to_polyline<7>(concat)
-                                             : to_polyline<6>(concat),
-            .steps_ = get_step_instructions(w, elevations, from, to, range,
-                                            api_version)});
+            .legGeometry_ = detailed_leg
+                                ? (api_version == 1 ? to_polyline<7>(concat)
+                                                    : to_polyline<6>(concat))
+                                : empty_polyline()});
 
         leg.from_.departure_ = leg.from_.scheduledDeparture_ =
             leg.scheduledStartTime_ = leg.startTime_;
@@ -315,6 +321,11 @@ api::Itinerary street_routing(osr::ways const& w,
         leg.from_.dropoffType_ = std::nullopt;
         leg.to_.pickupType_ = std::nullopt;
         leg.to_.dropoffType_ = std::nullopt;
+
+        if (detailed_leg) {
+          leg.steps_ = get_step_instructions(w, elevations, from, to, range,
+                                             api_version);
+        }
 
         out.annotate_leg(lang, from_node, to_node, leg);
 

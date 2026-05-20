@@ -13,6 +13,7 @@
 #include "nigiri/types.h"
 
 #include "motis/config.h"
+#include "motis/data.h"
 #include "motis/import.h"
 #include "motis/match_platforms.h"
 #include "motis/osr/parameters.h"
@@ -103,7 +104,8 @@ TEST(motis, get_way_candidates) {
       .osr_footpath_ = true,
       .geocoding_ = true,
       .reverse_geocoding_ = true};
-  auto d = motis::import(c, "test/data", true);
+  motis::import(c, "test/data");
+  auto d = motis::data{"test/data", c};
   auto const location_idxs =
       utl::to_vec(utl::enumerate(d.tt_->locations_.src_),
                   [&](std::tuple<size_t, nigiri::source_idx_t> const ll) {

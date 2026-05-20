@@ -36,10 +36,6 @@ nigiri::interval<nigiri::unixtime_t> shrink(
     nigiri::interval<nigiri::unixtime_t> search_interval,
     std::vector<nigiri::routing::journey>& journeys);
 
-bool is_intermodal(place_t const&);
-
-nigiri::routing::location_match_mode get_match_mode(place_t const&);
-
 std::vector<nigiri::routing::offset> station_start(nigiri::location_idx_t);
 
 std::vector<nigiri::routing::via_stop> get_via_stops(
@@ -55,6 +51,10 @@ void remove_slower_than_fastest_direct(nigiri::routing::query&);
 
 struct routing {
   api::plan_response operator()(boost::urls::url_view const&) const;
+
+  bool is_osr_loaded() const {
+    return w_ && l_ && pl_ && tt_ && loc_tree_ && matches_;
+  }
 
   std::vector<nigiri::routing::offset> get_offsets(
       nigiri::rt_timetable const*,
@@ -109,6 +109,7 @@ struct routing {
       std::chrono::seconds max,
       double max_matching_distance,
       double fastest_direct_factor,
+      bool detailed_legs,
       unsigned api_version) const;
 
   config const& config_;

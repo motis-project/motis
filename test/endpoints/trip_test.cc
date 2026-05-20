@@ -93,13 +93,15 @@ TEST(motis, trip_stop_naming) {
               .num_days_ = 2,
               .datasets_ = {{"test", {.path_ = kGTFS, .script_ = kScript}}}},
       .street_routing_ = false};
-  auto d = import(c, "test/data", true);
+  import(c, "test/data");
+  auto d = data{"test/data", c};
 
   auto const trip_ep = utl::init_from<ep::trip>(d).value();
 
   auto const res = trip_ep("?tripId=20190501_10%3A00_test_T1");
   ASSERT_EQ(1, res.legs_.size());
   auto const& leg = res.legs_[0];
+  EXPECT_GT(leg.legGeometry_.length_, 0);
   EXPECT_EQ("Child1A", leg.from_.name_);
   ASSERT_TRUE(leg.intermediateStops_.has_value());
   ASSERT_EQ(1, leg.intermediateStops_->size());
@@ -108,6 +110,12 @@ TEST(motis, trip_stop_naming) {
   EXPECT_EQ("Parent2 Express", leg.headsign_);
   EXPECT_EQ("EN_SHORT_NAME", leg.routeShortName_);
   EXPECT_EQ("EN-R1", leg.routeLongName_);
+
+  auto const compact_res =
+      trip_ep("?tripId=20190501_10%3A00_test_T1&detailedLegs=false");
+  ASSERT_EQ(1, compact_res.legs_.size());
+  EXPECT_EQ("", compact_res.legs_[0].legGeometry_.points_);
+  EXPECT_EQ(0, compact_res.legs_[0].legGeometry_.length_);
 
   auto const res_de = trip_ep("?tripId=20190501_10%3A00_test_T1&language=de");
   ASSERT_EQ(1, res_de.legs_.size());
@@ -383,7 +391,8 @@ TEST(motis, trip_notice_translations) {
                                    .num_days_ = 2,
                                    .datasets_ = {{"netex", {.path_ = kNetex}}}},
              .street_routing_ = false};
-  auto d = import(c, "test/data", true);
+  import(c, "test/data");
+  auto d = data{"test/data", c};
   auto const day = date::sys_days{2024_y / December / 15};
   d.init_rtt(day);
   auto& rtt = *d.rt_->rtt_;

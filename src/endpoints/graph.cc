@@ -1,5 +1,7 @@
 #include "motis/endpoints/graph.h"
 
+#include "net/too_many_exception.h"
+
 #include "osr/geojson.h"
 #include "osr/routing/profiles/car_sharing.h"
 #include "osr/routing/route.h"
@@ -23,7 +25,7 @@ json::value graph::operator()(json::value const& query) const {
   auto n_ways = 0U;
   l_.find({min, max}, [&](osr::way_idx_t const w) {
     if (++n_ways == kMaxWays) {
-      throw utl::fail("too many ways");
+      throw utl::fail<net::too_many_exception>("too many ways");
     }
 
     if (level == osr::kNoLevel) {

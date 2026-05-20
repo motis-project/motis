@@ -27,25 +27,14 @@
 	const post = async (path: string, req: unknown) => {
 		const response = await fetch(`${baseUrl}${path}`, {
 			method: 'POST',
-			mode: 'cors',
-			headers: {
-				'Access-Control-Allow-Origin': '*',
-				'Content-Type': 'application/json'
-			},
+			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify(req)
 		});
 		return await response.json();
 	};
 
 	const get = async (path: string) => {
-		const response = await fetch(`${baseUrl}${path}`, {
-			method: 'GET',
-			mode: 'cors',
-			headers: {
-				'Access-Control-Allow-Origin': '*',
-				'Content-Type': 'application/json'
-			}
-		});
+		const response = await fetch(`${baseUrl}${path}`);
 		return await response.json();
 	};
 
@@ -193,8 +182,8 @@
 		<TableBody>
 			{#each Object.entries(features[0].properties) as [key, value], i (i)}
 				<TableRow>
-					<TableCell>{key}</TableCell>
-					<TableCell>
+					<TableCell class="px-2 py-0">{key}</TableCell>
+					<TableCell class="px-2 py-0">
 						{#if key === 'osm_node_id'}
 							<a
 								href="https://www.openstreetmap.org/node/{value}"
@@ -548,7 +537,7 @@
 					layout={{
 						'symbol-placement': 'point',
 						'text-field': ['get', 'name'],
-						'text-font': ['Noto Sans Display Regular'],
+						'text-font': ['Noto Sans Regular'],
 						'text-size': 16
 					}}
 					filter={['literal', true]}

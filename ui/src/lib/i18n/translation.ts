@@ -4,7 +4,7 @@ import en from './en';
 import de from './de';
 import fr from './fr';
 import pl from './pl';
-import cz from './cz';
+import cs from './cs';
 
 export type Translations = {
 	ticket: string;
@@ -101,6 +101,8 @@ export type Translations = {
 	LONG_DISTANCE: string;
 	NIGHT_RAIL: string;
 	REGIONAL_FAST_RAIL: string;
+	ODM: string;
+	RIDE_SHARING: string;
 	REGIONAL_RAIL: string;
 	OTHER: string;
 	routingSegments: {
@@ -153,12 +155,18 @@ export type Translations = {
 	toll: string;
 	accessRestriction: string;
 	continuesAs: string;
+	earlierAlternatives: string;
+	laterAlternatives: string;
+	DEBUG_BUS_ROUTE: string;
+	DEBUG_RAILWAY_ROUTE: string;
+	DEBUG_FERRY_ROUTE: string;
 	rent: string;
 	copyToClipboard: string;
 	rideThroughAllowed: string;
 	rideThroughNotAllowed: string;
 	rideEndAllowed: string;
 	rideEndNotAllowed: string;
+	routes: (n: number) => string;
 };
 
 const translations: Map<string, Translations> = new Map(
@@ -168,7 +176,7 @@ const translations: Map<string, Translations> = new Map(
 		en,
 		de,
 		fr,
-		cz
+		cs
 	})
 );
 

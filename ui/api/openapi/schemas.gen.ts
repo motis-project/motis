@@ -147,7 +147,73 @@ export const DurationSchema = {
     properties: {
         duration: {
             type: 'number',
-            description: 'duration in seconds if a path was found, otherwise missing'
+            description: 'duration in seconds if a path was found, otherwise missing',
+            minimum: 0
+        },
+        distance: {
+            type: 'number',
+            description: 'distance in meters if a path was found and distance computation was requested, otherwise missing',
+            minimum: 0
+        }
+    }
+} as const;
+
+export const ParetoSetEntrySchema = {
+    description: 'Object containing a single element of a ParetoSet',
+    type: 'object',
+    required: ['duration', 'transfers'],
+    properties: {
+        duration: {
+            type: 'number',
+            description: `duration in seconds for the the best solution using \`transfer\` transfers
+
+Notice that the resolution is currently in minutes, because of implementation details
+`,
+            minimum: 0
+        },
+        transfers: {
+            description: `The minimal number of transfers required to arrive within \`duration\` seconds
+
+transfers=0: Direct transit connecion without any transfers
+transfers=1: Transit connection with 1 transfer
+`,
+            type: 'integer',
+            minimum: 0
+        }
+    }
+} as const;
+
+export const ParetoSetSchema = {
+    description: 'Pareto set of optimal transit solutions',
+    type: 'array',
+    items: {
+        '$ref': '#/components/schemas/ParetoSetEntry'
+    }
+} as const;
+
+export const OneToManyIntermodalResponseSchema = {
+    description: 'Object containing the optimal street and transit durations for One-to-Many routing',
+    type: 'object',
+    properties: {
+        street_durations: {
+            description: `Fastest durations for street routing
+The order of the items corresponds to the order of the \`many\` locations
+If no street routed connection is found, the corresponding \`Duration\` will be empty
+`,
+            type: 'array',
+            items: {
+                '$ref': '#/components/schemas/Duration'
+            }
+        },
+        transit_durations: {
+            description: `Pareto optimal solutions
+The order of the items corresponds to the order of the \`many\` locations
+If no connection using transits is found, the corresponding \`ParetoSet\` will be empty
+`,
+            type: 'array',
+            items: {
+                '$ref': '#/components/schemas/ParetoSet'
+            }
         }
     }
 } as const;
@@ -215,29 +281,29 @@ export const ModeSchema = {
 
 # Transit modes
 
-  - \`TRANSIT\`: translates to \`RAIL,TRAM,BUS,FERRY,AIRPLANE,COACH,CABLE_CAR,FUNICULAR,AREAL_LIFT,OTHER\`
+  - \`TRANSIT\`: translates to \`TRAM,FERRY,AIRPLANE,BUS,COACH,RAIL,ODM,FUNICULAR,AERIAL_LIFT,OTHER\`
   - \`TRAM\`: trams
   - \`SUBWAY\`: subway trains (Paris Metro, London Underground, but also NYC Subway, Hamburger Hochbahn, and other non-underground services)
   - \`FERRY\`: ferries
   - \`AIRPLANE\`: airline flights
   - \`BUS\`: short distance buses (does not include \`COACH\`)
   - \`COACH\`: long distance buses (does not include \`BUS\`)
-  - \`RAIL\`: translates to \`HIGHSPEED_RAIL,LONG_DISTANCE,NIGHT_RAIL,REGIONAL_RAIL,REGIONAL_FAST_RAIL,SUBURBAN,SUBWAY\`
-  - \`SUBURBAN\`: suburban trains (e.g. S-Bahn, RER, Elizabeth Line, ...)
+  - \`RAIL\`: translates to \`HIGHSPEED_RAIL,LONG_DISTANCE,NIGHT_RAIL,REGIONAL_RAIL,SUBURBAN,SUBWAY\`
   - \`HIGHSPEED_RAIL\`: long distance high speed trains (e.g. TGV)
   - \`LONG_DISTANCE\`: long distance inter city trains
   - \`NIGHT_RAIL\`: long distance night trains
-  - \`REGIONAL_FAST_RAIL\`: regional express routes that skip low traffic stops to be faster
+  - \`REGIONAL_FAST_RAIL\`: deprecated, \`REGIONAL_RAIL\` will be used
   - \`REGIONAL_RAIL\`: regional train
+  - \`SUBURBAN\`: suburban trains (e.g. S-Bahn, RER, Elizabeth Line, ...)
+  - \`ODM\`: demand responsive transport
   - \`FUNICULAR\`: Funicular. Any rail system designed for steep inclines.
   - \`AERIAL_LIFT\`: Aerial lift, suspended cable car (e.g., gondola lift, aerial tramway). Cable transport where cabins, cars, gondolas or open chairs are suspended by means of one or more cables.
-  - \`ODM\`: demand responsive transport
   - \`AREAL_LIFT\`: deprecated
   - \`METRO\`: deprecated
   - \`CABLE_CAR\`: deprecated
 `,
     type: 'string',
-    enum: ['WALK', 'BIKE', 'RENTAL', 'CAR', 'CAR_PARKING', 'CAR_DROPOFF', 'ODM', 'RIDE_SHARING', 'FLEX', 'TRANSIT', 'TRAM', 'SUBWAY', 'FERRY', 'AIRPLANE', 'SUBURBAN', 'BUS', 'COACH', 'RAIL', 'HIGHSPEED_RAIL', 'LONG_DISTANCE', 'NIGHT_RAIL', 'REGIONAL_FAST_RAIL', 'REGIONAL_RAIL', 'CABLE_CAR', 'FUNICULAR', 'AERIAL_LIFT', 'OTHER', 'AREAL_LIFT', 'METRO']
+    enum: ['WALK', 'BIKE', 'RENTAL', 'CAR', 'CAR_PARKING', 'CAR_DROPOFF', 'ODM', 'RIDE_SHARING', 'FLEX', 'DEBUG_BUS_ROUTE', 'DEBUG_RAILWAY_ROUTE', 'DEBUG_FERRY_ROUTE', 'TRANSIT', 'TRAM', 'SUBWAY', 'FERRY', 'AIRPLANE', 'BUS', 'COACH', 'RAIL', 'HIGHSPEED_RAIL', 'LONG_DISTANCE', 'NIGHT_RAIL', 'REGIONAL_FAST_RAIL', 'REGIONAL_RAIL', 'SUBURBAN', 'FUNICULAR', 'AERIAL_LIFT', 'OTHER', 'AREAL_LIFT', 'METRO', 'CABLE_CAR']
 } as const;
 
 export const MatchSchema = {
@@ -484,6 +550,13 @@ Can be missing if neither real-time updates nor the schedule timetable contains 
             description: 'Time that on-demand service ends',
             type: 'string',
             format: 'date-time'
+        },
+        modes: {
+            description: 'available transport modes for stops',
+            type: 'array',
+            items: {
+                '$ref': '#/components/schemas/Mode'
+            }
         }
     }
 } as const;
@@ -536,7 +609,7 @@ export const ReachableSchema = {
 export const StopTimeSchema = {
     description: 'departure or arrival event at a stop',
     type: 'object',
-    required: ['place', 'mode', 'realTime', 'headsign', 'tripTo', 'agencyId', 'agencyName', 'agencyUrl', 'tripId', 'routeId', 'directionId', 'routeShortName', 'routeLongName', 'tripShortName', 'displayName', 'pickupDropoffType', 'cancelled', 'tripCancelled', 'source'],
+    required: ['place', 'mode', 'realTime', 'headsign', 'tripFrom', 'tripTo', 'agencyId', 'agencyName', 'agencyUrl', 'tripId', 'routeId', 'directionId', 'routeShortName', 'routeLongName', 'tripShortName', 'displayName', 'pickupDropoffType', 'cancelled', 'tripCancelled', 'source'],
     properties: {
         place: {
             '$ref': '#/components/schemas/Place',
@@ -556,6 +629,10 @@ For non-transit legs, null
 `,
             type: 'string'
         },
+        tripFrom: {
+            description: 'first stop of this trip',
+            '$ref': '#/components/schemas/Place'
+        },
         tripTo: {
             description: 'final stop of this trip',
             '$ref': '#/components/schemas/Place'
@@ -570,6 +647,9 @@ For non-transit legs, null
             type: 'string'
         },
         routeId: {
+            type: 'string'
+        },
+        routeUrl: {
             type: 'string'
         },
         directionId: {
@@ -1287,6 +1367,25 @@ export const RentalZoneSchema = {
     }
 } as const;
 
+export const CategorySchema = {
+    type: 'object',
+    required: ['id', 'name', 'shortName'],
+    description: `not available for GTFS datasets by default
+For NeTEx it contains information about the vehicle category, e.g. IC/InterCity
+`,
+    properties: {
+        id: {
+            type: 'string'
+        },
+        name: {
+            type: 'string'
+        },
+        shortName: {
+            type: 'string'
+        }
+    }
+} as const;
+
 export const LegSchema = {
     type: 'object',
     required: ['mode', 'startTime', 'endTime', 'scheduledStartTime', 'scheduledEndTime', 'realTime', 'scheduled', 'duration', 'from', 'to', 'legGeometry'],
@@ -1361,11 +1460,21 @@ For non-transit legs, null
 `,
             type: 'string'
         },
+        tripFrom: {
+            description: 'first stop of this trip',
+            '$ref': '#/components/schemas/Place'
+        },
         tripTo: {
             description: 'final stop of this trip (can differ from headsign)',
             '$ref': '#/components/schemas/Place'
         },
+        category: {
+            '$ref': '#/components/schemas/Category'
+        },
         routeId: {
+            type: 'string'
+        },
+        routeUrl: {
             type: 'string'
         },
         directionId: {
@@ -1422,11 +1531,16 @@ and the Place where the leg ends. For non-transit legs, null.
             }
         },
         legGeometry: {
+            description: `Encoded geometry of the leg.
+If detailed leg output is disabled, this is returned as an empty
+polyline.
+`,
             '$ref': '#/components/schemas/EncodedPolyline'
         },
         steps: {
             description: `A series of turn by turn instructions
 used for walking, biking and driving.
+This field is omitted if the request disables detailed leg output.
 `,
             type: 'array',
             items: {
@@ -1462,6 +1576,40 @@ by looping active weekdays, e.g. from calendar.txt in GTFS.
 `,
             type: 'string',
             format: 'date-time'
+        },
+        bikesAllowed: {
+            description: `Whether bikes can be carried on this leg.
+`,
+            type: 'boolean'
+        },
+        alternatives: {
+            description: `Alternative connections that can replace this transit leg.
+Each alternative is normally a sequence of 3 legs:
+\`[ingress footpath, transit, egress footpath]\`.
+Only populated when the request sets \`numLegAlternatives\` > 0
+(capped to that value).
+
+Interlined legs:
+\`alternatives\` is populated only on the first (main) leg of
+an interlined chain. Subsequent interlined legs (carrying
+\`interlineWithPreviousLeg=true\`) leave \`alternatives\` unset.
+Alternatives are valid for the whole interlined segment.
+
+An alternative may itself cover an interlined segment:
+the alternative's middle transit then expands into multiple
+interlined legs when \`joinInterlinedLegs=false\`. In that
+case the alternative contains more than 3 legs: ingress
+footpath, followed by N interlined transit legs (the
+secondary ones carrying \`interlineWithPreviousLeg=true\`),
+followed by an egress footpath.
+`,
+            type: 'array',
+            items: {
+                type: 'array',
+                items: {
+                    '$ref': '#/components/schemas/Leg'
+                }
+            }
         }
     }
 } as const;
@@ -1687,14 +1835,17 @@ transfer duration in minutes for the car profile
 
 export const OneToManyParamsSchema = {
     type: 'object',
-    required: ['one', 'many', 'mode', 'max', 'maxMatchingDistance', 'elevationCosts', 'arriveBy'],
+    required: ['one', 'many', 'mode', 'max', 'maxMatchingDistance', 'arriveBy'],
     properties: {
         one: {
             description: 'geo location as latitude;longitude',
             type: 'string'
         },
         many: {
-            description: 'geo locations as latitude;longitude,latitude;longitude,...',
+            description: `geo locations as latitude;longitude,latitude;longitude,...
+
+The number of accepted locations is limited by server config variable \`onetomany_max_many\`.
+`,
             type: 'array',
             items: {
                 type: 'string'
@@ -1707,7 +1858,7 @@ export const OneToManyParamsSchema = {
             '$ref': '#/components/schemas/Mode'
         },
         max: {
-            description: 'maximum travel time in seconds',
+            description: 'maximum travel time in seconds. Is limited by server config variable `street_routing_max_direct_seconds`.',
             type: 'number'
         },
         maxMatchingDistance: {
@@ -1738,6 +1889,281 @@ Elevation cost profiles are currently used by following street modes:
 false = one to many
 `,
             type: 'boolean'
+        },
+        withDistance: {
+            description: `If true, the response includes the distance in meters
+for each path. This requires path reconstruction and
+may be slower than duration-only queries.
+`,
+            type: 'boolean',
+            default: false
+        }
+    }
+} as const;
+
+export const OneToManyIntermodalParamsSchema = {
+    type: 'object',
+    required: ['one', 'many'],
+    properties: {
+        one: {
+            description: `\`latitude,longitude[,level]\` tuple with
+- latitude and longitude in degrees
+- (optional) level: the OSM level (default: 0)
+
+OR
+
+stop id
+`,
+            type: 'string'
+        },
+        many: {
+            description: `array of:
+
+\`latitude,longitude[,level]\` tuple with
+- latitude and longitude in degrees
+- (optional) level: the OSM level (default: 0)
+
+OR
+
+stop id
+
+The number of accepted locations is limited by server config variable \`onetomany_max_many\`.
+`,
+            type: 'array',
+            items: {
+                type: 'string'
+            },
+            explode: false
+        },
+        time: {
+            description: `Optional. Defaults to the current time.
+
+Departure time ($arriveBy=false) / arrival date ($arriveBy=true),
+`,
+            type: 'string',
+            format: 'date-time'
+        },
+        maxTravelTime: {
+            description: `The maximum travel time in minutes.
+If not provided, the routing uses the value
+hardcoded in the server which is usually quite high.
+
+*Warning*: Use with care. Setting this too low can lead to
+optimal (e.g. the least transfers) journeys not being found.
+If this value is too low to reach the destination at all,
+it can lead to slow routing performance.
+`,
+            type: 'integer'
+        },
+        maxMatchingDistance: {
+            description: 'maximum matching distance in meters to match geo coordinates to the street network',
+            type: 'number',
+            default: 25
+        },
+        arriveBy: {
+            description: `Optional. Defaults to false, i.e. one to many search
+
+true = many to one
+false = one to many
+`,
+            type: 'boolean',
+            default: false
+        },
+        maxTransfers: {
+            description: `The maximum number of allowed transfers (i.e. interchanges between transit legs,
+pre- and postTransit do not count as transfers).
+\`maxTransfers=0\` searches for direct transit connections without any transfers.
+If you want to search only for non-transit connections (\`FOOT\`, \`CAR\`, etc.),
+send an empty \`transitModes\` parameter instead.
+
+If not provided, the routing uses the server-side default value
+which is hardcoded and very high to cover all use cases.
+
+*Warning*: Use with care. Setting this too low can lead to
+optimal (e.g. the fastest) journeys not being found.
+If this value is too low to reach the destination at all,
+it can lead to slow routing performance.
+`,
+            type: 'integer'
+        },
+        minTransferTime: {
+            description: `Optional. Default is 0 minutes.
+
+Minimum transfer time for each transfer in minutes.
+`,
+            type: 'integer',
+            default: 0
+        },
+        additionalTransferTime: {
+            description: `Optional. Default is 0 minutes.
+
+Additional transfer time reserved for each transfer in minutes.
+`,
+            type: 'integer',
+            default: 0
+        },
+        transferTimeFactor: {
+            description: `Optional. Default is 1.0
+
+Factor to multiply minimum required transfer times with.
+Values smaller than 1.0 are not supported.
+`,
+            type: 'number',
+            default: 1
+        },
+        useRoutedTransfers: {
+            description: `Optional. Default is \`false\`.
+
+Whether to use transfers routed on OpenStreetMap data.
+`,
+            type: 'boolean',
+            default: false
+        },
+        pedestrianProfile: {
+            description: `Optional. Default is \`FOOT\`.
+
+Accessibility profile to use for pedestrian routing in transfers
+between transit connections and the first and last mile respectively.
+`,
+            '$ref': '#/components/schemas/PedestrianProfile',
+            default: 'FOOT'
+        },
+        pedestrianSpeed: {
+            description: `Optional
+
+Average speed for pedestrian routing.
+`,
+            '$ref': '#/components/schemas/PedestrianSpeed'
+        },
+        cyclingSpeed: {
+            description: `Optional
+
+Average speed for bike routing.
+`,
+            '$ref': '#/components/schemas/CyclingSpeed'
+        },
+        elevationCosts: {
+            description: `Optional. Default is \`NONE\`.
+
+Set an elevation cost profile, to penalize routes with incline.
+- \`NONE\`: No additional costs for elevations. This is the default behavior
+- \`LOW\`: Add a low cost for increase in elevation and incline along the way. This will prefer routes with less ascent, if small detours are required.
+- \`HIGH\`: Add a high cost for increase in elevation and incline along the way. This will prefer routes with less ascent, if larger detours are required.
+
+As using an elevation costs profile will increase the travel duration,
+routing through steep terrain may exceed the maximal allowed duration,
+causing a location to appear unreachable.
+Increasing the maximum travel time for these segments may resolve this issue.
+
+The profile is used for routing on both the first and last mile.
+
+Elevation cost profiles are currently used by following street modes:
+- \`BIKE\`
+`,
+            '$ref': '#/components/schemas/ElevationCosts',
+            default: 'NONE'
+        },
+        transitModes: {
+            description: `Optional. Default is \`TRANSIT\` which allows all transit modes (no restriction).
+Allowed modes for the transit part. If empty, no transit connections will be computed.
+For example, this can be used to allow only \`SUBURBAN,SUBWAY,TRAM\`.
+`,
+            type: 'array',
+            items: {
+                '$ref': '#/components/schemas/Mode'
+            },
+            default: ['TRANSIT'],
+            explode: false
+        },
+        preTransitModes: {
+            description: `Optional. Default is \`WALK\`. Does not apply to direct connections (see \`directMode\`).
+
+A list of modes that are allowed to be used for the first mile, i.e. from the coordinates to the first transit stop. Example: \`WALK,BIKE_SHARING\`.
+`,
+            type: 'array',
+            items: {
+                '$ref': '#/components/schemas/Mode'
+            },
+            default: ['WALK'],
+            explode: false
+        },
+        postTransitModes: {
+            description: `Optional. Default is \`WALK\`. Does not apply to direct connections (see \`directMode\`).
+
+A list of modes that are allowed to be used for the last mile, i.e. from the last transit stop to the target coordinates. Example: \`WALK,BIKE_SHARING\`.
+`,
+            type: 'array',
+            items: {
+                '$ref': '#/components/schemas/Mode'
+            },
+            default: ['WALK'],
+            explode: false
+        },
+        directMode: {
+            description: `Default is \`WALK\` which will compute walking routes as direct connections.
+
+Mode used for direction connections from start to destination without using transit.
+
+Currently supported non-transit modes: \`WALK\`, \`BIKE\`, \`CAR\`
+`,
+            '$ref': '#/components/schemas/Mode',
+            default: 'WALK'
+        },
+        maxPreTransitTime: {
+            description: `Optional. Default is 15min which is \`900\`.
+Maximum time in seconds for the first street leg.
+Is limited by server config variable \`street_routing_max_prepost_transit_seconds\`.
+`,
+            type: 'integer',
+            default: 900,
+            minimum: 0
+        },
+        maxPostTransitTime: {
+            description: `Optional. Default is 15min which is \`900\`.
+Maximum time in seconds for the last street leg.
+Is limited by server config variable \`street_routing_max_prepost_transit_seconds\`.
+`,
+            type: 'integer',
+            default: 900,
+            minimum: 0
+        },
+        maxDirectTime: {
+            description: `Optional. Default is 30min which is \`1800\`.
+Maximum time in seconds for direct connections.
+
+If a value smaller than either \`maxPreTransitTime\` or
+\`maxPostTransitTime\` is used, their maximum is set instead.
+Is limited by server config variable \`street_routing_max_direct_seconds\`.
+`,
+            type: 'integer',
+            default: 1800,
+            minimum: 0
+        },
+        withDistance: {
+            description: `If true, the response includes the distance in meters
+for each path. This requires path reconstruction and
+may be slower than duration-only queries.
+
+\`withDistance\` is currently limited to street routing.
+`,
+            type: 'boolean',
+            default: false
+        },
+        requireBikeTransport: {
+            description: `Optional. Default is \`false\`.
+
+If set to \`true\`, all used transit trips are required to allow bike carriage.
+`,
+            type: 'boolean',
+            default: false
+        },
+        requireCarTransport: {
+            description: `Optional. Default is \`false\`.
+
+If set to \`true\`, all used transit trips are required to allow car carriage.
+`,
+            type: 'boolean',
+            default: false
         }
     }
 } as const;
@@ -1745,8 +2171,12 @@ false = one to many
 export const ServerConfigSchema = {
     Description: 'server configuration',
     type: 'object',
-    required: ['hasElevation', 'hasRoutedTransfers', 'hasStreetRouting', 'maxTravelTimeLimit', 'maxPrePostTransitTimeLimit', 'maxDirectTimeLimit'],
+    required: ['motisVersion', 'hasElevation', 'hasRoutedTransfers', 'hasStreetRouting', 'maxOneToManySize', 'maxOneToAllTravelTimeLimit', 'maxPrePostTransitTimeLimit', 'maxDirectTimeLimit', 'shapesDebugEnabled'],
     properties: {
+        motisVersion: {
+            description: 'the version of this MOTIS server',
+            type: 'string'
+        },
         hasElevation: {
             description: 'true if elevation is loaded',
             type: 'boolean'
@@ -1759,6 +2189,11 @@ export const ServerConfigSchema = {
             description: 'true if street routing is available',
             type: 'boolean'
         },
+        maxOneToManySize: {
+            description: `limit for the number of \`many\` locations for one-to-many requests
+`,
+            type: 'number'
+        },
         maxOneToAllTravelTimeLimit: {
             description: 'limit for maxTravelTime API param in minutes',
             type: 'number'
@@ -1770,15 +2205,140 @@ export const ServerConfigSchema = {
         maxDirectTimeLimit: {
             description: 'limit for maxDirectTime API param in seconds',
             type: 'number'
+        },
+        shapesDebugEnabled: {
+            description: 'true if experimental route shapes debug download API is enabled',
+            type: 'boolean'
         }
     }
 } as const;
 
 export const ErrorSchema = {
     type: 'object',
+    required: ['error'],
     properties: {
         error: {
+            type: 'string',
+            description: 'error message'
+        }
+    }
+} as const;
+
+export const RouteSegmentSchema = {
+    description: 'Route segment between two stops to show a route on a map',
+    type: 'object',
+    required: ['from', 'to', 'polyline'],
+    properties: {
+        from: {
+            type: 'integer',
+            description: 'Index into the top-level route stops array'
+        },
+        to: {
+            type: 'integer',
+            description: 'Index into the top-level route stops array'
+        },
+        polyline: {
+            type: 'integer',
+            description: 'Index into the top-level route polylines array'
+        }
+    }
+} as const;
+
+export const RoutePolylineSchema = {
+    description: 'Shared polyline used by one or more route segments',
+    type: 'object',
+    required: ['polyline', 'colors', 'routeIndexes'],
+    properties: {
+        polyline: {
+            '$ref': '#/components/schemas/EncodedPolyline'
+        },
+        colors: {
+            type: 'array',
+            description: 'Unique route colors of routes containing this segment',
+            items: {
+                type: 'string'
+            }
+        },
+        routeIndexes: {
+            type: 'array',
+            description: 'Indexes into the top-level routes array for routes containing this segment',
+            items: {
+                type: 'integer'
+            }
+        }
+    }
+} as const;
+
+export const RouteColorSchema = {
+    type: 'object',
+    required: ['color', 'textColor'],
+    properties: {
+        color: {
             type: 'string'
+        },
+        textColor: {
+            type: 'string'
+        }
+    }
+} as const;
+
+export const RoutePathSourceSchema = {
+    type: 'string',
+    enum: ['NONE', 'TIMETABLE', 'ROUTED']
+} as const;
+
+export const TransitRouteInfoSchema = {
+    type: 'object',
+    required: ['id', 'shortName', 'longName'],
+    properties: {
+        id: {
+            type: 'string'
+        },
+        shortName: {
+            type: 'string'
+        },
+        longName: {
+            type: 'string'
+        },
+        color: {
+            type: 'string'
+        },
+        textColor: {
+            type: 'string'
+        }
+    }
+} as const;
+
+export const RouteInfoSchema = {
+    type: 'object',
+    required: ['mode', 'transitRoutes', 'numStops', 'routeIdx', 'pathSource', 'segments'],
+    properties: {
+        mode: {
+            '$ref': '#/components/schemas/Mode',
+            description: 'Transport mode for this route'
+        },
+        transitRoutes: {
+            type: 'array',
+            items: {
+                '$ref': '#/components/schemas/TransitRouteInfo'
+            }
+        },
+        numStops: {
+            type: 'integer',
+            description: 'Number of stops along this route'
+        },
+        routeIdx: {
+            type: 'integer',
+            description: 'Internal route index for debugging purposes'
+        },
+        pathSource: {
+            '$ref': '#/components/schemas/RoutePathSource'
+        },
+        segments: {
+            type: 'array',
+            items: {
+                '$ref': '#/components/schemas/RouteSegment'
+            }
         }
     }
 } as const;

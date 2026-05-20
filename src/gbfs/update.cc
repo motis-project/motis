@@ -1,8 +1,8 @@
 #include "motis/gbfs/update.h"
 
+#include <algorithm>
 #include <cassert>
 #include <chrono>
-#include <algorithm>
 #include <filesystem>
 #include <fstream>
 #include <set>
@@ -35,6 +35,7 @@
 #include "utl/sorted_diff.h"
 #include "utl/timer.h"
 #include "utl/to_vec.h"
+#include "utl/verify.h"
 
 #include "motis/config.h"
 #include "motis/data.h"
@@ -162,7 +163,16 @@ struct gbfs_update {
         l_{l},
         d_{d},
         prev_d_{prev_d},
-        timeout_{c.http_timeout_} {}
+        timeout_{c.http_timeout_},
+        proxy_{c.proxy_.transform([](std::string const& u) {
+          auto const url = boost::urls::url{u};
+
+          auto p = proxy{};
+          p.use_tls_ = url.scheme_id() == boost::urls::scheme::https;
+          p.host_ = url.host();
+          p.port_ = url.has_port() ? url.port() : (p.use_tls_ ? "443" : "80");
+          return p;
+        })} {}
 
   awaitable<void> run() {
     auto executor = co_await asio::this_coro::executor;
@@ -305,6 +315,7 @@ struct gbfs_update {
                   .default_return_constraint_ =
                       lookup_default_return_constraint("", id),
                   .config_group_ = lookup_group("", id),
+                  .config_name_ = lookup_name("", id),
                   .config_color_ = lookup_color("", id),
                   .oauth_ = std::move(oauth),
                   .default_ttl_ = default_ttl,
@@ -421,6 +432,9 @@ struct gbfs_update {
           load_system_information);
       if (!sys_info_updated && prev_provider != nullptr) {
         provider.sys_info_ = prev_provider->sys_info_;
+      }
+      if (pf.config_name_) {
+        provider.sys_info_.name_ = *pf.config_name_;
       }
 
       auto const vehicle_types_updated = co_await update(
@@ -711,7 +725,9 @@ struct gbfs_update {
           d_->provider_zone_rtree_.remove(zone.bounding_box(), provider.idx_);
         }
         for (auto const& zone : provider.geofencing_zones_.zones_) {
-          d_->provider_zone_rtree_.add(zone.bounding_box(), provider.idx_);
+          if (zone.allows_rental_operation()) {
+            d_->provider_zone_rtree_.add(zone.bounding_box(), provider.idx_);
+          }
         }
       }
     } else {
@@ -726,7 +742,9 @@ struct gbfs_update {
         }
       }
       for (auto const& zone : provider.geofencing_zones_.zones_) {
-        d_->provider_zone_rtree_.add(zone.bounding_box(), provider.idx_);
+        if (zone.allows_rental_operation()) {
+          d_->provider_zone_rtree_.add(zone.bounding_box(), provider.idx_);
+        }
       }
     }
   }
@@ -793,6 +811,7 @@ struct gbfs_update {
             .default_return_constraint_ =
                 lookup_default_return_constraint(af.id_, combined_id),
             .config_group_ = lookup_group(af.id_, system_id),
+            .config_name_ = lookup_name(af.id_, system_id),
             .config_color_ = lookup_color(af.id_, system_id),
             .oauth_ = af.oauth_,
             .default_ttl_ = af.default_ttl_,
@@ -813,6 +832,7 @@ struct gbfs_update {
             .default_return_constraint_ =
                 lookup_default_return_constraint(af.id_, combined_id),
             .config_group_ = lookup_group(af.id_, system_id),
+            .config_name_ = lookup_name(af.id_, system_id),
             .config_color_ = lookup_color(af.id_, system_id),
             .oauth_ = af.oauth_,
             .default_ttl_ = af.default_ttl_,
@@ -854,7 +874,7 @@ struct gbfs_update {
       auto headers = base_headers;
       co_await get_oauth_token(oauth, headers);
       auto const res = co_await http_GET(boost::urls::url{url},
-                                         std::move(headers), timeout_);
+                                         std::move(headers), timeout_, proxy_);
       content = get_http_body(res);
       if (res.result_int() != 200) {
         throw std::runtime_error(
@@ -1059,6 +1079,12 @@ struct gbfs_update {
                           [](auto const& cfg) { return cfg.color_; });
   }
 
+  std::optional<std::string> lookup_name(std::string const& af_id,
+                                         std::string const& system_id) {
+    return lookup_mapping(af_id, system_id,
+                          [](auto const& cfg) { return cfg.name_; });
+  }
+
   config::gbfs const& c_;
   osr::ways const& w_;
   osr::lookup const& l_;
@@ -1067,12 +1093,14 @@ struct gbfs_update {
   gbfs_data const* prev_d_;
 
   std::chrono::seconds timeout_;
+  std::optional<proxy> proxy_;
 };
 
 awaitable<void> update(config const& c,
                        osr::ways const& w,
                        osr::lookup const& l,
-                       std::shared_ptr<gbfs_data>& data_ptr) {
+                       std::shared_ptr<gbfs_data>& data_ptr,
+                       metrics_registry const* metrics) {
   auto const t = utl::scoped_timer{"gbfs::update"};
 
   if (!c.gbfs_.has_value()) {
@@ -1094,16 +1122,18 @@ awaitable<void> update(config const& c,
     }
   }
   data_ptr = d;
+  metrics->last_update_gbfs_.SetToCurrentTime();
 }
 
 void run_gbfs_update(boost::asio::io_context& ioc,
                      config const& c,
                      osr::ways const& w,
                      osr::lookup const& l,
-                     std::shared_ptr<gbfs_data>& data_ptr) {
+                     std::shared_ptr<gbfs_data>& data_ptr,
+                     metrics_registry const* metrics) {
   boost::asio::co_spawn(
       ioc,
-      [&]() -> awaitable<void> {
+      [&, metrics]() -> awaitable<void> {
         auto executor = co_await asio::this_coro::executor;
         auto timer = asio::steady_timer{executor};
         auto ec = boost::system::error_code{};
@@ -1113,7 +1143,7 @@ void run_gbfs_update(boost::asio::io_context& ioc,
           // Remember when we started so we can schedule the next update.
           auto const start = std::chrono::steady_clock::now();
 
-          co_await update(cc, w, l, data_ptr);
+          co_await update(cc, w, l, data_ptr, metrics);
 
           // Schedule next update.
           timer.expires_at(start +

@@ -6,3 +6,4 @@ api/**
 src/lib/components/**
 static/sprite*.json
 static/icons/**.svg
+.pnpm-store

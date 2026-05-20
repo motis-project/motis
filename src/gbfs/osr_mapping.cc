@@ -165,13 +165,16 @@ struct osr_mapping {
   std::vector<node_match> get_node_matches(osr::location const& loc) const {
     using footp = osr::bike_sharing::footp;
     using bikep = osr::bike_sharing::bikep;
+    static constexpr auto foot_params = osr::bike_sharing::footp::parameters{};
+    static constexpr auto bike_params = osr::bike_sharing::bikep::parameters{};
+
     auto is_acceptable_node = [&](osr::node_candidate const& n) {
       if (!n.valid() || n.dist_to_node_ > kMaxGbfsMatchingDistance) {
         return false;
       }
       auto const& node_props = w_.r_->node_properties_[n.node_];
-      if (footp::node_cost(node_props) == osr::kInfeasible ||
-          bikep::node_cost(node_props) == osr::kInfeasible) {
+      if (footp::node_cost(foot_params, node_props) == osr::kInfeasible ||
+          bikep::node_cost(bike_params, node_props) == osr::kInfeasible) {
         return false;
       }
       // node needs to have at least one way accessible by foot and one by bike

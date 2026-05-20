@@ -1,5 +1,7 @@
 #include "motis/endpoints/elevators.h"
 
+#include "net/too_many_exception.h"
+
 #include "osr/geojson.h"
 
 #include "boost/json.hpp"
@@ -60,7 +62,7 @@ namespace motis::ep {
 constexpr auto const kLimit = 4096U;
 
 json::value elevators::operator()(json::value const& query) const {
-  auto const rt = rt_;
+  auto const rt = std::atomic_load(&rt_);
   auto const e = rt->e_.get();
 
   auto matches = json::array{};
@@ -74,7 +76,8 @@ json::value elevators::operator()(json::value const& query) const {
   auto const max = geo::latlng{q[3].as_double(), q[2].as_double()};
 
   e->elevators_rtree_.find(geo::box{min, max}, [&](elevator_idx_t const i) {
-    utl::verify(matches.size() < kLimit, "too many elevators");
+    utl::verify<net::too_many_exception>(matches.size() < kLimit,
+                                         "too many elevators");
     auto const& x = e->elevators_[i];
     matches.emplace_back(json::value{
         {"type", "Feature"},
@@ -93,7 +96,9 @@ json::value elevators::operator()(json::value const& query) const {
     auto const pos = w_.get_node_pos(n);
     if (match != elevator_idx_t::invalid()) {
       auto const& x = e->elevators_[match];
-      utl::verify(matches.size() < kLimit, "too many elevators");
+
+      utl::verify<net::too_many_exception>(matches.size() < kLimit,
+                                           "too many elevators");
       matches.emplace_back(json::value{
           {"type", "Feature"},
           {"properties",

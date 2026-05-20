@@ -88,6 +88,7 @@ const translations: Translations = {
 	WALK: 'À pied',
 	BIKE: 'Vélo',
 	RENTAL: 'Loué',
+	RIDE_SHARING: 'Covoiturage',
 	CAR: 'Voiture',
 	CAR_PARKING: 'Garage voiture',
 	CAR_DROPOFF: 'Dépose (voiture)',
@@ -104,6 +105,7 @@ const translations: Translations = {
 	LONG_DISTANCE: 'Train intercité',
 	NIGHT_RAIL: 'Train de nuit',
 	REGIONAL_FAST_RAIL: 'Train express',
+	ODM: 'Transport à la demande',
 	REGIONAL_RAIL: 'Train régional',
 	OTHER: 'Autres',
 	routingSegments: {
@@ -156,12 +158,27 @@ const translations: Translations = {
 	toll: 'Attention ! Route à péage.',
 	accessRestriction: 'Accès restreint',
 	continuesAs: 'Continue comme',
+	earlierAlternatives: 'Alternatives plus tôt',
+	laterAlternatives: 'Alternatives plus tard',
 	rent: 'Louer',
 	copyToClipboard: 'Copier dans le presse-papiers',
 	rideThroughAllowed: 'Passage autorisé',
 	rideThroughNotAllowed: 'Passage non autorisé',
 	rideEndAllowed: 'Stationnement autorisé',
-	rideEndNotAllowed: 'Stationnement uniquement aux stations'
+	rideEndNotAllowed: 'Stationnement uniquement aux stations',
+	DEBUG_BUS_ROUTE: 'Itinéraire de bus (Debug)',
+	DEBUG_RAILWAY_ROUTE: 'Itinéraire ferroviaire (Debug)',
+	DEBUG_FERRY_ROUTE: 'Itinéraire de ferry (Debug)',
+	routes: (n: number) => {
+		switch (n) {
+			case 0:
+				return 'Aucun itinéraire';
+			case 1:
+				return '1 itinéraire';
+			default:
+				return `${n} itinéraires`;
+		}
+	}
 };
 
 export default translations;

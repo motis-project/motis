@@ -140,7 +140,7 @@ void update_all_runs_metrics(nigiri::timetable const& tt,
 net::reply metrics::operator()(net::route_request const& req, bool) const {
   utl::verify(metrics_ != nullptr && tt_ != nullptr && tags_ != nullptr,
               "no metrics initialized");
-  auto const rt = rt_;
+  auto const rt = std::atomic_load(&rt_);
   update_all_runs_metrics(*tt_, rt->rtt_.get(), *tags_, *metrics_);
   metrics_->total_trips_with_realtime_count_.Set(
       static_cast<double>(rt->rtt_->rt_transport_src_.size()));

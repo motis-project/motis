@@ -67,7 +67,7 @@ timetable:                          # if not set, no timetable will be loaded
   incremental_rt_update: false      # false = real-time updates are applied to a clean slate, true = no data will be dropped
   max_footpath_length: 15           # maximum footpath length when transitively connecting stops or for routing footpaths if `osr_footpath` is set to true
   max_matching_distance: 25.0       # maximum distance from geolocation to next OSM ways that will be found
-  preprocess_max_matching_distance: 0.0 # max. distance for preprocessing matches from nigiri locations (stops) to OSM ways to speed up querying (set to 0 (default) to disable)
+  preprocess_max_matching_distance: 250.0 # max. distance for preprocessing matches from nigiri locations (stops) to OSM ways to speed up querying (set to 0 (default) to disable)
   datasets:                         # map of tag -> dataset
     ch:                             # the tag will be used as prefix for stop IDs and trip IDs with `_` as divider, so `_` cannot be part of the dataset tag
       path: ch_opentransportdataswiss.gtfs.zip
@@ -99,6 +99,7 @@ limits:
   stoptimes_max_results: 256      # maximum number of stoptimes results that can be requested
   plan_max_results: 256           # maximum number of plan results that can be requested via numItineraries parameter
   plan_max_search_window_minutes: 5760 # maximum (minutes) for searchWindow parameter (seconds), highest possible value: 21600 (15 days)
+  onetomany_max_many: 128         # maximum accepted number of many locations for one-to-many requests
   onetoall_max_results: 65535     # maximum number of one-to-all results that can be requested
   onetoall_max_travel_minutes: 90 # maximum travel duration for one-to-all query that can be requested
   routing_max_timeout_seconds: 90 # maximum duration a routing query may take
@@ -159,13 +160,16 @@ gbfs:
   http_timeout: 10
 ```
 
-## Provider Groups + Colors
+## Provider Names, Groups + Colors
 
 GBFS providers (feeds) can be grouped into "provider groups". For example, a provider may operate in multiple locations and provide a feed per location.
 To groups these different feeds into a single provider group, specify the same group name for each feed in the configuration.
 
 Feeds that don't have an explicit group setting in the configuration, their group name is derived from the system name. Group names
 may not contain commas. The API supports both provider groups and individual providers.
+
+Provider names are loaded from the feed (`system_information.name`) by default. To override them, set `name`
+for a standalone feed or map `system_id` to name for an aggregated feed.
 
 Provider colors are loaded from the feed (`brand_assets.color`) if available, but can also be set in the configuration
 to override the values contained in the feed or to set colors for feeds that don't include color information.
@@ -177,6 +181,7 @@ gbfs:
   feeds:
     de-CallaBike:
       url: https://api.mobidata-bw.de/sharing/gbfs/v2/callabike/gbfs
+      name: Call a Bike # optional override
       color: "#db0016"
     de-VRNnextbike:
       url: https://gbfs.nextbike.net/maps/gbfs/v2/nextbike_vn/gbfs.json
@@ -210,6 +215,9 @@ gbfs:
         source-nextbike-westbike: nextbike # "source-nextbike-westbike" is the system_id
         source-voi-muenster: VOI
         source-voi-duisburg-oberhausen: VOI
+      name: # optional provider name overrides
+        source-voi-muenster: VOI Münster
+        source-voi-duisburg-oberhausen: VOI Duisburg Oberhausen
       # colors can be specified for individual feeds using the same syntax,
       # but in this example they are defined for the groups below
       #color:
@@ -286,6 +294,125 @@ MOTIS supports multiple protocols for real time feeds. This section shows a list
 | Protocol | `protocol` | Note |
 | ---- | ---- | ---- |
 | GTFS-RT | `gtfsrt` | This is the default, if `protocol` is ommitted. |
-| SIRI (XML) | `siri` | Currently limited to SIRI Lite. Still work in progress. Use with care. |
-| SIRI (JSON) | `siri_json` | Same as `siri`, but expects JSON server responses |
+| SIRI Lite (XML) | `siri` | Currently limited to SIRI Lite ET, FM and SX. Still work in progress. Use with care. |
+| SIRI Lite (JSON) | `siri_json` | Same as `siri`, but expects JSON server responses. See below for expected JSON structure. |
 | VDV AUS / VDV454 | `auser` | Requires [`auser`](https://github.com/motis-project/auser) for subscription handling |
+
+## Supported SIRI Lite services
+
+SIRI feeds are divided into multiple feeds called services (check for instance
+[this](https://en.wikipedia.org/wiki/Service_Interface_for_Real_Time_Information#CEN_SIRI_Functional_Services)
+for a list of all services). Right now MOTIS only supports parsing the
+"Estimated Timetable" (ET), the "Facility Monitoring" (FM) and the "Situation
+Exchange" (SX) SIRI services. You can see examples of such feeds
+[here](https://github.com/SIRI-CEN/SIRI/tree/v2.2/examples).
+
+If you are using the `siri_json` protocol, note that MOTIS expects the
+following JSON structure:
+
+- **Valid** SIRI Lite JSON response:
+
+  ```json
+  {
+    "ResponseTimestamp": "2004-12-17T09:30:46-05:00",
+    "ProducerRef": "KUBRICK",
+    "Status": true,
+    "MoreData": false,
+    "EstimatedTimetableDelivery": [
+      ...
+    ]
+  }
+  ```
+
+- **Invalid** SIRI Lite JSON response:
+
+  ```json
+  {
+    "Siri": {
+      "ServiceDelivery": {
+        "ResponseTimestamp": "2004-12-17T09:30:46-05:00",
+        "ProducerRef": "KUBRICK",
+        "Status": true,
+        "MoreData": false,
+        "EstimatedTimetableDelivery": [
+          ...
+        ]
+      }
+    }
+  }
+  ```
+
+If, as above, the two top keys `"Siri"` and `"ServiceDelivery"` are included in
+the JSON response, MOTIS will fail to parse the SIRI Lite feed, throwing
+`[VERIFY FAIL] unable to parse time ""` errors.
+
+# Shapes
+
+To enable shapes support (polylines for trips), `timetable.with_shapes` must
+be set to `true`. This will load shapes that are present in the datasets
+(e.g. GTFS shapes.txt).
+
+It is also possible to compute shapes based on OpenStreetMap data. This
+requires:
+
+- `timetable.with_shapes` set to `true`
+- `osm` data
+- `street_routing` set to `true`
+- `timetable.route_shapes` config:
+
+```yaml
+timetable:
+  # with_shapes must be set to true to enable shapes support, otherwise no shapes will be loaded or computed
+  with_shapes: true
+  route_shapes: # all these options are optional
+    # available modes:
+    # - all: route shapes for all routes, replace existing shapes from the timetable
+    # - missing: only compute shapes for those routes that don't have existing shapes from the timetable
+    mode: all
+    # routing for specific clasz types can be disabled (default = all enabled)
+    # currently long distance street routing is slow, so in this example
+    # we disable routing shapes for COACH
+    # (if there are shapes for the disabled clasz types in the dataset, these will still be used)
+    clasz:
+      COACH: false
+    # disable shape computation for routes with more than X stops (default = no limit)
+    # (if there are shapes for routes with more than X stops in the dataset, these will still be used)
+    max_stops: 100
+    # limit the number of threads used for shape computation (default = number of hardware threads)
+    n_threads: 6
+    # enable debug API endpoint (default = false)
+    debug_api: true
+    # if you want to use cached shapes even if the osm file has changed since the last import, set this to true (default = false)
+    cache_reuse_old_osm_data: false
+
+    # for debugging purposes, debug information can be written to files
+    # which can be loaded into the debug ui (see osr project)
+    debug:
+      path: /path/to/debug/directory
+      all: false                  # debug all routes
+      all_with_beelines: false    # or only those that include beelines
+      slow: 10000                 # or only those that take >10.000ms to compute
+      # or specific trips/routes:
+      trips:
+        - "trip_id_1"
+      route_ids:
+        - "route_id_1"
+      route_indices: # these are internal indices (e.g. from debug UI)
+        - 123
+```
+
+## Cache
+
+Routed shapes can be cached to speed up later imports when a timetable dataset
+is updated. If enabled, this will generate an additional cache file. This cache
+file and the routed shapes data are then reused during import.
+
+Note that old routes are never removed from the routed shapes data files, i.e.,
+these files grow with every import (unless there are no new routes, in which
+case the size will stay the same).
+It is therefore recommended to monitor the size of the "routed_shapes\*" files
+in the data directory.
+They can safely be deleted before an import, which will cause all shapes that
+are needed for the current datasets to be routed again.
+
+The cache only applies to routed shapes, not shapes contained in the timetables.

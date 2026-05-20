@@ -41,7 +41,6 @@ int batch(int, char**);
 int compare(int, char**);
 int extract(int, char**);
 int params(int, char**);
-int mixer(int, char**);
 }  // namespace motis
 
 using namespace motis;
@@ -57,7 +56,7 @@ int main(int ac, char** av) {
         "Commands:\n"
         "  generate   generate random queries and write them to a file\n"
         "  batch      run queries from a file\n"
-        "  params     update query parameters for a batch file\n",
+        "  params     update query parameters for a batch file\n"
         "  compare    compare results from different batch runs\n"
         "  config     generate a config file from a list of input files\n"
         "  import     prepare input data, creates the data directory\n"
@@ -66,7 +65,7 @@ int main(int ac, char** av) {
         "  pb2json    convert GTFS-RT protobuf to JSON\n"
         "  json2pb    convert JSON to GTFS-RT protobuf\n"
         "  shapes     print shape segmentation for trips\n",
-        "  mixer      test the ODM mixer\n", motis_version);
+        motis_version);
     return 0;
   } else if (ac <= 1 || (ac >= 2 && av[1] == "--version"sv)) {
     fmt::println("{}", motis_version);
@@ -87,7 +86,6 @@ int main(int ac, char** av) {
     case cista::hash("params"): return_value = params(ac, av); break;
     case cista::hash("batch"): return_value = batch(ac, av); break;
     case cista::hash("compare"): return_value = compare(ac, av); break;
-    case cista::hash("mixer"): return_value = mixer(ac, av); break;
 
     case cista::hash("config"): {
       auto paths = std::vector<std::string>{};
@@ -151,10 +149,28 @@ int main(int ac, char** av) {
       try {
         auto data_path = fs::path{"data"};
         auto config_path = fs::path{"config.yml"};
+        auto filter_tasks = std::vector<std::string>{};
 
         auto desc = po::options_description{"Import Options"};
         add_data_path_opt(desc, data_path);
         add_config_path_opt(desc, config_path);
+        add_help_opt(desc);
+        desc.add_options()  //
+            ("filter",
+             boost::program_options::value<std::vector<std::string>>(
+                 &filter_tasks)
+                 ->composing(),
+             "Filter tasks and only run selected import tasks. Tasks have to "
+             "be active based on the configuration. Available tasks are:\n"
+             "  - osr (street_routing)\n"
+             "  - adr (geocoding/reverse_geocoding)\n"
+             "  - tt (timetable)\n"
+             "  - tbd (timetable.tb)\n"
+             "  - adr_extend (timetable+geocoding)\n"
+             "  - osr_footpath\n"
+             "  - matches (timetable+street_routing)\n"
+             "  - route_shapes (timetable.route_shapes)\n"
+             "  - tiles\n");
         auto vm = parse_opt(ac, av, desc);
         if (vm.count("help")) {
           std::cout << desc << "\n";
@@ -167,7 +183,9 @@ int main(int ac, char** av) {
           break;
         }
         auto const bars = utl::global_progress_bars{false};
-        import(c, std::move(data_path));
+        import(
+            c, std::move(data_path),
+            filter_tasks.empty() ? std::nullopt : std::optional{filter_tasks});
         return_value = 0;
       } catch (std::exception const& e) {
         fmt::println("unable to import: {}", e.what());
@@ -252,7 +270,7 @@ int main(int ac, char** av) {
         }
         auto const c = config::read(data_path / "config.yml");
         auto const ids = utl::to_vec(
-            vm["trip-id"].as<std::vector<std::string> >(),
+            vm["trip-id"].as<std::vector<std::string>>(),
             [](auto const& trip_id) {
               // Set space_as_plus = true
               auto const opts = boost::urls::encoding_opts{true};

@@ -5,6 +5,7 @@
 #include "nigiri/types.h"
 
 #include "motis/config.h"
+#include "motis/data.h"
 #include "motis/import.h"
 #include "motis/tag_lookup.h"
 
@@ -68,7 +69,8 @@ TEST(motis, tag_lookup) {
           .first_day_ = "2019-05-01",
           .num_days_ = 2,
           .datasets_ = {{"test", {.path_ = std::string{kGTFS}}}}}};
-  auto d = motis::import(c, "test/data", true);
+  motis::import(c, "test/data");
+  auto d = motis::data{"test/data", c};
   auto const rt = d.rt_;
   auto const rtt = rt->rtt_.get();
   EXPECT_TRUE(

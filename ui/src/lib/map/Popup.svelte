@@ -2,46 +2,77 @@
 	import maplibregl from 'maplibre-gl';
 	import { getContext, onDestroy, type Snippet } from 'svelte';
 
+	type PopupSnapshot = {
+		lngLat: maplibregl.LngLatLike;
+		event: maplibregl.MapMouseEvent;
+		features?: maplibregl.MapGeoJSONFeature[];
+	};
+
+	type PopupController = {
+		open?: (snapshot: PopupSnapshot) => void;
+		close?: () => void;
+		getSnapshot?: () => PopupSnapshot | null;
+		onSnapshotChange?: (snapshot: PopupSnapshot | null) => void;
+	};
+
 	let {
 		children,
 		class: className,
-		trigger
+		trigger,
+		controller
 	}: {
-		children?: Snippet<[maplibregl.MapMouseEvent, () => void, unknown?]>;
+		children?: Snippet<
+			[maplibregl.MapMouseEvent, () => void, maplibregl.MapGeoJSONFeature[] | undefined]
+		>;
 		class?: string;
 		trigger: 'click' | 'contextmenu';
+		controller?: PopupController;
 	} = $props();
 
 	let ctx: { map: maplibregl.Map | null } = getContext('map'); // from Map component
-	let layer: { id: string } | null = getContext('layer'); // from Layer component (optional)
+	let layer: { id: string | null } | null = getContext('layer'); // from Layer component (optional)
 
 	let popupEl = $state<HTMLDivElement>();
 	let popup = $state<maplibregl.Popup>();
 	let event = $state.raw<maplibregl.MapMouseEvent>();
-	let features = $state.raw();
+	let features = $state.raw<maplibregl.MapGeoJSONFeature[]>();
 
-	const close = () => {
-		if (popup) {
-			popup.remove();
-			popup = undefined;
-		}
+	const clearPopupState = () => {
+		popup = undefined;
+		event = undefined;
+		features = undefined;
+		controller?.onSnapshotChange?.(null);
 	};
 
-	const onTrigger = (e: maplibregl.MapMouseEvent) => {
-		if (ctx.map) {
-			if (popup) {
-				popup.remove();
-			}
-			popup = new maplibregl.Popup({
-				anchor: 'top-left',
-				closeButton: false
-			});
-			popup.setLngLat(e.lngLat);
-			popup.addTo(ctx.map!);
-			event = e;
-			// @ts-expect-error features is secret -.-
-			features = e.features;
+	const openPopup = (snapshot: PopupSnapshot) => {
+		if (!ctx.map) {
+			return;
 		}
+		if (popup) {
+			popup.remove();
+		}
+		const nextPopup = new maplibregl.Popup({
+			anchor: 'top-left',
+			closeButton: false,
+			maxWidth: 'none'
+		});
+		nextPopup.on('close', () => {
+			if (popup === nextPopup) {
+				clearPopupState();
+			}
+		});
+		nextPopup.setLngLat(snapshot.lngLat);
+		nextPopup.addTo(ctx.map);
+		popup = nextPopup;
+		event = snapshot.event;
+		features = snapshot.features;
+		controller?.onSnapshotChange?.(snapshot);
+	};
+
+	const close = () => popup?.remove();
+
+	const onTrigger = (e: maplibregl.MapLayerMouseEvent) => {
+		openPopup({ lngLat: e.lngLat, event: e, features: e.features });
 	};
 
 	const onMouseEnter = () => {
@@ -57,18 +88,21 @@
 	};
 
 	let initialized = false;
+	let boundLayerId: string | null = null;
 	$effect(() => {
 		if (ctx.map) {
 			if (!initialized) {
 				if (layer) {
-					ctx.map.on(trigger, layer.id, onTrigger);
-					ctx.map.on('mouseenter', layer.id, onMouseEnter);
-					ctx.map.on('mouseleave', layer.id, onMouseLeave);
+					if (!layer.id) return; // wait until Layer has added itself to the map
+					boundLayerId = layer.id;
+					ctx.map.on(trigger, boundLayerId, onTrigger);
+					ctx.map.on('mouseenter', boundLayerId, onMouseEnter);
+					ctx.map.on('mouseleave', boundLayerId, onMouseLeave);
 				} else {
 					ctx.map.on(trigger, onTrigger);
 				}
+				initialized = true;
 			}
-			initialized = true;
 		}
 	});
 
@@ -78,16 +112,33 @@
 		}
 	});
 
+	$effect(() => {
+		if (controller) {
+			controller.open = openPopup;
+			controller.close = close;
+			controller.getSnapshot = () => {
+				if (!popup || !event) {
+					return null;
+				}
+				return {
+					lngLat: popup.getLngLat(),
+					event,
+					features
+				};
+			};
+		}
+	});
+
 	onDestroy(() => {
 		if (popup) {
 			popup.remove();
-			popup = undefined;
+			clearPopupState();
 		}
 		if (ctx.map && initialized) {
-			if (layer) {
-				ctx.map.off(trigger, layer.id, onTrigger);
-				ctx.map.off('mouseenter', layer.id, onMouseEnter);
-				ctx.map.off('mouseleave', layer.id, onMouseLeave);
+			if (boundLayerId) {
+				ctx.map.off(trigger, boundLayerId, onTrigger);
+				ctx.map.off('mouseenter', boundLayerId, onMouseEnter);
+				ctx.map.off('mouseleave', boundLayerId, onMouseLeave);
 			} else {
 				ctx.map.off(trigger, onTrigger);
 			}

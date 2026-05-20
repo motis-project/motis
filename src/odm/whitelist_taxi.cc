@@ -32,23 +32,52 @@ void extract_taxis(std::vector<nr::journey> const& journeys,
   for (auto const& j : journeys) {
     if (!j.legs_.empty()) {
       if (is_odm_leg(j.legs_.front(), kOdmTransportModeId)) {
-        first_mile_taxi_rides.push_back(
-            {.time_at_start_ = j.legs_.front().dep_time_,
-             .time_at_stop_ = j.legs_.front().arr_time_,
-             .stop_ = j.legs_.front().to_});
+        first_mile_taxi_rides.push_back({
+            .time_at_start_ = j.legs_.front().dep_time_,
+            .time_at_stop_ = j.legs_.front().arr_time_,
+            .stop_ = j.legs_.front().to_,
+        });
       }
     }
+
     if (j.legs_.size() > 1) {
       if (is_odm_leg(j.legs_.back(), kOdmTransportModeId)) {
-        last_mile_taxi_rides.push_back(
-            {.time_at_start_ = j.legs_.back().arr_time_,
-             .time_at_stop_ = j.legs_.back().dep_time_,
-             .stop_ = j.legs_.back().from_});
+        last_mile_taxi_rides.push_back({
+            .time_at_start_ = j.legs_.back().arr_time_,
+            .time_at_stop_ = j.legs_.back().dep_time_,
+            .stop_ = j.legs_.back().from_,
+        });
       }
     }
   }
+
   utl::erase_duplicates(first_mile_taxi_rides, by_stop, std::equal_to<>{});
   utl::erase_duplicates(last_mile_taxi_rides, by_stop, std::equal_to<>{});
+}
+
+void prima::extract_taxis_for_persisting(
+    std::vector<nr::journey> const& journeys) {
+  whitelist_first_mile_locations_.clear();
+  whitelist_last_mile_locations_.clear();
+
+  for (auto const& j : journeys) {
+    if (j.legs_.size() <= 1) {
+      continue;
+    }
+
+    if (is_odm_leg(j.legs_.front(), kOdmTransportModeId)) {
+      whitelist_first_mile_locations_.push_back(j.legs_.front().to_);
+    }
+
+    if (is_odm_leg(j.legs_.back(), kOdmTransportModeId)) {
+      whitelist_last_mile_locations_.push_back(j.legs_.back().from_);
+    }
+  }
+
+  utl::erase_duplicates(whitelist_first_mile_locations_, std::less<>{},
+                        std::equal_to<>{});
+  utl::erase_duplicates(whitelist_last_mile_locations_, std::less<>{},
+                        std::equal_to<>{});
 }
 
 bool prima::consume_whitelist_taxi_response(
@@ -56,7 +85,6 @@ bool prima::consume_whitelist_taxi_response(
     std::vector<nr::journey>& journeys,
     std::vector<nr::start>& first_mile_taxi_rides,
     std::vector<nr::start>& last_mile_taxi_rides) {
-
   auto const update_first_mile = [&](json::array const& update) {
     auto const n_pt_udpates = n_rides_in_response(update);
     if (first_mile_taxi_rides.size() != n_pt_udpates) {
@@ -77,12 +105,13 @@ bool prima::consume_whitelist_taxi_response(
                                            .time_at_stop_ = kInfeasible,
                                            .stop_ = prev_it->stop_});
         } else {
-          first_mile_taxi_rides.push_back(
-              {.time_at_start_ =
-                   to_unix(event.as_object().at("pickupTime").as_int64()),
-               .time_at_stop_ =
-                   to_unix(event.as_object().at("dropoffTime").as_int64()),
-               .stop_ = prev_it->stop_});
+          first_mile_taxi_rides.push_back({
+              .time_at_start_ =
+                  to_unix(event.as_object().at("pickupTime").as_int64()),
+              .time_at_stop_ =
+                  to_unix(event.as_object().at("dropoffTime").as_int64()),
+              .stop_ = prev_it->stop_,
+          });
         }
         ++prev_it;
       }
@@ -108,16 +137,19 @@ bool prima::consume_whitelist_taxi_response(
     for (auto const& stop : update) {
       for (auto const& event : stop.as_array()) {
         if (event.is_null()) {
-          last_mile_taxi_rides.push_back({.time_at_start_ = kInfeasible,
-                                          .time_at_stop_ = kInfeasible,
-                                          .stop_ = prev_it->stop_});
+          last_mile_taxi_rides.push_back({
+              .time_at_start_ = kInfeasible,
+              .time_at_stop_ = kInfeasible,
+              .stop_ = prev_it->stop_,
+          });
         } else {
-          last_mile_taxi_rides.push_back(
-              {.time_at_start_ =
-                   to_unix(event.as_object().at("dropoffTime").as_int64()),
-               .time_at_stop_ =
-                   to_unix(event.as_object().at("pickupTime").as_int64()),
-               .stop_ = prev_it->stop_});
+          last_mile_taxi_rides.push_back({
+              .time_at_start_ =
+                  to_unix(event.as_object().at("dropoffTime").as_int64()),
+              .time_at_stop_ =
+                  to_unix(event.as_object().at("pickupTime").as_int64()),
+              .stop_ = prev_it->stop_,
+          });
         }
         ++prev_it;
       }
@@ -182,6 +214,7 @@ bool prima::whitelist_taxi(std::vector<nr::journey>& taxi_journeys,
   auto first_mile_taxi_rides = std::vector<nr::start>{};
   auto last_mile_taxi_rides = std::vector<nr::start>{};
   extract_taxis(taxi_journeys, first_mile_taxi_rides, last_mile_taxi_rides);
+  extract_taxis_for_persisting(taxi_journeys);
 
   auto whitelist_response = std::optional<std::string>{};
   auto ioc = boost::asio::io_context{};
@@ -190,6 +223,7 @@ bool prima::whitelist_taxi(std::vector<nr::journey>& taxi_journeys,
            "[whitelist taxi] request for {} rides",
            first_mile_taxi_rides.size() + last_mile_taxi_rides.size() +
                direct_taxi_.size());
+
     boost::asio::co_spawn(
         ioc,
         [&]() -> boost::asio::awaitable<void> {
@@ -213,10 +247,14 @@ bool prima::whitelist_taxi(std::vector<nr::journey>& taxi_journeys,
            "[whitelist taxi] failed, discarding taxi journeys");
     return false;
   }
-
-  return consume_whitelist_taxi_response(*whitelist_response, taxi_journeys,
-                                         first_mile_taxi_rides,
-                                         last_mile_taxi_rides);
+  auto const was_whitelist_response_valid = consume_whitelist_taxi_response(
+      *whitelist_response, taxi_journeys, first_mile_taxi_rides,
+      last_mile_taxi_rides);
+  if (!was_whitelist_response_valid) {
+    return false;
+  }
+  whitelist_response_ = json::parse(whitelist_response.value()).as_object();
+  return true;
 }
 
 }  // namespace motis::odm

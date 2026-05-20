@@ -51,7 +51,8 @@
 		viaLabels = $bindable(),
 		pedestrianSpeed = $bindable(),
 		cyclingSpeed = $bindable(),
-		additionalTransferTime = $bindable()
+		additionalTransferTime = $bindable(),
+		hasDebug = false
 	}: {
 		geocodingBiasPlace?: maplibregl.LngLatLike;
 		serverConfig: ServerConfig | undefined;
@@ -85,6 +86,7 @@
 		pedestrianSpeed: PedestrianSpeed;
 		cyclingSpeed: CyclingSpeed;
 		additionalTransferTime: number | undefined;
+		hasDebug: boolean;
 	} = $props();
 
 	let fromItems = $state<Array<Location>>([]);
@@ -202,6 +204,7 @@
 			bind:cyclingSpeed
 			bind:additionalTransferTime
 			bind:pedestrianProfile
+			{hasDebug}
 		/>
 	</div>
 </div>

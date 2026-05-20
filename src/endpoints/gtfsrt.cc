@@ -9,6 +9,8 @@
 
 #include "utl/enumerate.h"
 
+#include "net/too_many_exception.h"
+
 #include "nigiri/loader/gtfs/stop_seq_number_encoding.h"
 #include "nigiri/rt/frun.h"
 #include "nigiri/rt/rt_timetable.h"
@@ -181,13 +183,14 @@ void add_cancelled_transports(n::timetable const& tt,
 
 net::reply gtfsrt::operator()(net::route_request const& req, bool) const {
   utl::verify(tt_ != nullptr && tags_ != nullptr, "no tt initialized");
-  auto const rt = rt_;
+  auto const rt = std::atomic_load(&rt_);
   auto const rtt = rt->rtt_.get();
 
-  utl::verify(config_.limits_.value().gtfsrt_expose_max_trip_updates_ != 0 &&
-                  rtt->n_rt_transports() <
-                      config_.limits_.value().gtfsrt_expose_max_trip_updates_,
-              "number of trip updates above configured limit");
+  utl::verify<net::too_many_exception>(
+      config_.get_limits().gtfsrt_expose_max_trip_updates_ != 0 &&
+          rtt->n_rt_transports() <
+              config_.get_limits().gtfsrt_expose_max_trip_updates_,
+      "number of trip updates above configured limit");
 
   auto fm = transit_realtime::FeedMessage();
   auto fh = fm.mutable_header();

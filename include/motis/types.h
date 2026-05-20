@@ -2,6 +2,7 @@
 
 #include <cinttypes>
 #include <memory>
+#include <optional>
 #include <vector>
 
 #include "geo/latlng.h"
@@ -49,6 +50,7 @@ struct elevator {
   }
 
   std::int64_t id_;
+  std::optional<std::string> id_str_;
   geo::latlng pos_;
   bool status_;
   std::string desc_;

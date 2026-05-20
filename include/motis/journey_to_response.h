@@ -59,6 +59,7 @@ api::Itinerary journey_to_response(
     api::ElevationCostsEnum,
     bool join_interlined_legs,
     bool detailed_transfers,
+    bool detailed_legs,
     bool with_fares,
     bool with_scheduled_skipped_stops,
     double timetable_max_matching_distance,
@@ -66,6 +67,8 @@ api::Itinerary journey_to_response(
     unsigned api_version,
     bool ignore_start_rental_return_constraints,
     bool ignore_dest_rental_return_constraints,
-    std::optional<std::vector<std::string>> const& language);
+    std::optional<std::vector<std::string>> const& language,
+    nigiri::routing::query const* leg_alternatives_query = nullptr,
+    std::size_t num_leg_alternatives = 0U);
 
 }  // namespace motis

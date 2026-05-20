@@ -9,4 +9,6 @@ namespace motis {
 template <std::int64_t Precision>
 api::EncodedPolyline to_polyline(geo::polyline const& polyline);
 
+api::EncodedPolyline empty_polyline();
+
 }  // namespace motis

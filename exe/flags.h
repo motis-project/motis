@@ -14,28 +14,29 @@ inline void add_help_opt(boost::program_options::options_description& desc) {
 
 inline void add_data_path_opt(boost::program_options::options_description& desc,
                               std::filesystem::path& p) {
-  desc.add_options()(
-      "data,d", boost::program_options::value(&p)->default_value(p),
-      "The data path contains all preprocessed data as well as a `config.yml`. "
-      "It will be created by the `motis import` command. After the import has "
-      "finished, `motis server` only needs the `data` folder and can run "
-      "without the input files (such as OpenStreetMap file, GTFS datasets, "
-      "tiles-profiles, etc.)");
+  desc.add_options()  //
+      ("data,d", boost::program_options::value(&p)->default_value(p),
+       "The data path contains all preprocessed data as well as a "
+       "`config.yml`. "
+       "It will be created by the `motis import` command. After the import has "
+       "finished, `motis server` only needs the `data` folder and can run "
+       "without the input files (such as OpenStreetMap file, GTFS datasets, "
+       "tiles-profiles, etc.)");
 }
 
 inline void add_config_path_opt(
     boost::program_options::options_description& desc,
     std::filesystem::path& p) {
-  desc.add_options()(
-      "config,c", boost::program_options::value(&p)->default_value(p),
-      "Configuration YAML file. Legacy INI files are still supported but this "
-      "support will be dropped in the future.");
+  desc.add_options()  //
+      ("config,c", boost::program_options::value(&p)->default_value(p),
+       "Configuration YAML file. Legacy INI files are still supported but this "
+       "support will be dropped in the future.");
 }
 
 inline void add_trip_id_opt(boost::program_options::options_description& desc) {
   desc.add_options()(
       "trip-id,t",
-      boost::program_options::value<std::vector<std::string> >()->composing(),
+      boost::program_options::value<std::vector<std::string>>()->composing(),
       "Add trip-id to analyze.\n"
       "If the trip-id is encoded, it will be decoded automatically.\n"
       "This option can be used multiple times.\n"

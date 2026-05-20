@@ -173,6 +173,14 @@ const toPoint = (p: PointLike): maplibregl.Point => {
 	return Array.isArray(p) ? new maplibregl.Point(p[0], p[1]) : p;
 };
 
+const WEB_MERCATOR_MAX_LATITUDE = 85.051129;
+const clampLngLatToWebMercator = (lng: number, lat: number): [number, number] => {
+	return [
+		Math.min(180, Math.max(-180, lng)),
+		Math.min(WEB_MERCATOR_MAX_LATITUDE, Math.max(-WEB_MERCATOR_MAX_LATITUDE, lat))
+	];
+};
+
 export class ZoneFillLayer implements maplibregl.CustomLayerInterface {
 	id: string;
 	type: 'custom' = 'custom' as const;
@@ -812,7 +820,8 @@ export class ZoneFillLayer implements maplibregl.CustomLayerInterface {
 
 			const mercatorCoords = coords.map((ring) =>
 				ring.map(([lng, lat]) => {
-					const merc = maplibregl.MercatorCoordinate.fromLngLat([lng, lat]);
+					const clamped = clampLngLatToWebMercator(lng, lat);
+					const merc = maplibregl.MercatorCoordinate.fromLngLat(clamped);
 					minX = Math.min(minX, merc.x);
 					minY = Math.min(minY, merc.y);
 					maxX = Math.max(maxX, merc.x);

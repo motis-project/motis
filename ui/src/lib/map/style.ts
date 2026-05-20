@@ -1,4 +1,8 @@
-import type { StyleSpecification } from 'maplibre-gl';
+import type {
+	HillshadeLayerSpecification,
+	RasterDEMSourceSpecification,
+	StyleSpecification
+} from 'maplibre-gl';
 const colors = {
 	light: {
 		background: '#f8f4f0',
@@ -134,9 +138,30 @@ export const getStyle = (
 	theme: 'light' | 'dark',
 	level: number,
 	staticBaseUrl: string,
-	apiBaseUrl: string
+	apiBaseUrl: string,
+	withHillshades: boolean
 ): StyleSpecification => {
 	const c = colors[theme];
+	const hillshadeSources: StyleSpecification['sources'] = withHillshades
+		? {
+				hillshadeSource: {
+					type: 'raster-dem',
+					url: 'https://tiles.mapterhorn.com/tilejson.json'
+				} satisfies RasterDEMSourceSpecification
+			}
+		: {};
+	const hillshadeLayers: HillshadeLayerSpecification[] = withHillshades
+		? [
+				{
+					id: 'hillshade',
+					type: 'hillshade',
+					source: 'hillshadeSource',
+					paint: {
+						'hillshade-exaggeration': 0.33
+					}
+				}
+			]
+		: [];
 	return {
 		version: 8,
 		sources: {
@@ -145,7 +170,8 @@ export const getStyle = (
 				tiles: [getAbsoluteUrl(apiBaseUrl, 'tiles/{z}/{x}/{y}.mvt')],
 				maxzoom: 20,
 				attribution: ''
-			}
+			},
+			...hillshadeSources
 		},
 		glyphs: getAbsoluteUrl(apiBaseUrl, 'tiles/glyphs/{fontstack}/{range}.pbf'),
 		sprite: getAbsoluteUrl(staticBaseUrl, 'sprite_sdf'),
@@ -294,7 +320,7 @@ export const getStyle = (
 				layout: {
 					'symbol-placement': 'point',
 					'text-field': ['get', 'name'],
-					'text-font': ['Noto Sans Display Regular'],
+					'text-font': ['Noto Sans Regular'],
 					'text-size': 12
 				},
 				paint: {
@@ -648,6 +674,7 @@ export const getStyle = (
 					]
 				}
 			},
+			...hillshadeLayers,
 			{
 				id: 'ferry_routes',
 				type: 'line',
@@ -700,6 +727,16 @@ export const getStyle = (
 				}
 			},
 			{
+				id: 'aerialway',
+				type: 'line',
+				source: 'osm',
+				'source-layer': 'aerialway',
+				paint: {
+					'line-color': c.rail,
+					'line-dasharray': [10, 2]
+				}
+			},
+			{
 				id: 'road-ref-shield',
 				type: 'symbol',
 				source: 'osm',
@@ -719,7 +756,7 @@ export const getStyle = (
 				layout: {
 					'symbol-placement': 'line',
 					'text-field': ['get', 'ref'],
-					'text-font': ['Noto Sans Display Regular'],
+					'text-font': ['Noto Sans Regular'],
 					'text-size': ['case', ['==', ['get', 'highway'], 'motorway'], 11, 10],
 					'text-justify': 'center',
 					'text-rotation-alignment': 'viewport',
@@ -743,7 +780,7 @@ export const getStyle = (
 				layout: {
 					'symbol-placement': 'line',
 					'text-field': ['get', 'name'],
-					'text-font': ['Noto Sans Display Regular'],
+					'text-font': ['Noto Sans Regular'],
 					'text-size': 9
 				},
 				paint: {
@@ -761,7 +798,7 @@ export const getStyle = (
 				layout: {
 					// "symbol-sort-key": ["get", "population"],
 					'text-field': ['get', 'name'],
-					'text-font': ['Noto Sans Display Regular'],
+					'text-font': ['Noto Sans Regular'],
 					'text-size': 12
 				},
 				paint: {
@@ -779,7 +816,7 @@ export const getStyle = (
 				layout: {
 					'symbol-sort-key': ['-', ['coalesce', ['get', 'population'], 0]],
 					'text-field': ['get', 'name'],
-					'text-font': ['Noto Sans Display Bold'],
+					'text-font': ['Noto Sans Bold'],
 					'text-size': ['interpolate', ['linear'], ['zoom'], 6, 12, 9, 16]
 				},
 				paint: {
@@ -803,7 +840,7 @@ export const getStyle = (
 				//     "source-layer": "tiles_debug_info",
 				//     "layout": {
 				//       "text-field": ["get", "tile_id"],
-				//       "text-font": ["Noto Sans Display Bold"],
+				//       "text-font": ["Noto Sans Bold"],
 				//       "text-size": 16,
 				//     },
 				//     "paint": {

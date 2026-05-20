@@ -88,6 +88,7 @@ api::Itinerary street_routing(osr::ways const&,
                               street_routing_cache_t&,
                               osr::bitvec<osr::node_idx_t>& blocked_mem,
                               unsigned api_version,
+                              bool detailed_leg = true,
                               std::chrono::seconds max = std::chrono::seconds{
                                   3600});
 

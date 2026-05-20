@@ -13,6 +13,7 @@ struct metrics_registry {
   ~metrics_registry();
   prometheus::Registry registry_;
   prometheus::Counter& routing_requests_;
+  prometheus::Counter& one_to_many_requests_;
   prometheus::Counter& routing_journeys_found_;
   prometheus::Family<prometheus::Histogram>& routing_odm_journeys_found_;
   prometheus::Histogram& routing_odm_journeys_found_blacklist_;
@@ -40,6 +41,9 @@ struct metrics_registry {
   prometheus::Family<prometheus::Gauge>& timetable_locations_count_;
   prometheus::Family<prometheus::Gauge>& timetable_trips_count_;
   prometheus::Family<prometheus::Gauge>& timetable_transports_x_days_count_;
+  prometheus::Family<prometheus::Gauge>& last_update_;
+  prometheus::Gauge& last_update_rt_;
+  prometheus::Gauge& last_update_gbfs_;
 
 private:
   metrics_registry(prometheus::Histogram::BucketBoundaries event_boundaries,

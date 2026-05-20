@@ -112,13 +112,26 @@ double get_match_bonus(Collection&& names,
   }
   if (auto const track = get_track(ref);
       track.has_value() && has_number_match(names, *track)) {
-    bonus += std::max(0.0, 60.0 - size);
+    bonus += std::max(0.0, 20.0 - size);
   }
   if (has_exact_match(names, name)) {
     bonus += std::max(0.0, 15.0 - size);
   }
   if (has_contains_match(names, ref)) {
     bonus += std::max(0.0, 5.0 - size);
+  }
+  return bonus;
+}
+
+template <typename Collection>
+int compare_platform_code(Collection&& names, std::string_view platform_code) {
+  auto first_match = true;
+  auto bonus = 0;
+  for (auto const& x : names) {
+    if (std::string_view{x} == platform_code) {
+      bonus += first_match ? 50 : 15;
+      first_match = false;
+    }
   }
   return bonus;
 }
@@ -226,8 +239,12 @@ osr::platform_idx_t get_match(n::timetable const& tt,
         lvl != osr::kNoLevel && lvl.to_float() != 0.0F ? 5 : 0;
     auto const way_bonus = osr::is_way(pl.platform_ref_[x].front()) ? 20 : 0;
     auto const routes_bonus = get_routes_bonus(tt, l, pl.platform_names_[x]);
+    auto const code_bonus = compare_platform_code(
+        pl.platform_names_[x],
+        tt.get_default_translation(tt.locations_.platform_codes_[l]));
+
     auto const score =
-        dist - match_bonus - way_bonus - lvl_bonus - routes_bonus;
+        dist - match_bonus - way_bonus - lvl_bonus - routes_bonus - code_bonus;
     if (score < best_score) {
       best = x;
       best_score = score;

@@ -53,6 +53,7 @@ if (ICC_LINT)
     include(cmake/clang-tidy.cmake)
 endif ()
 
+set(CMAKE_COMPILE_WARNING_AS_ERROR ON)
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
     set(motis-compile-options
             -Weverything
@@ -90,21 +91,24 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
             -Wno-implicit-int-float-conversion
             -Wno-nrvo
             -Wno-thread-safety-negative
-            -Wno-unused-private-field
-            -Werror)
+            -Wno-unused-private-field)
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
-    set(motis-compile-options -Wall -Wextra -Werror -Wno-unknown-pragmas -Wno-deprecated-declarations)
+    set(motis-compile-options -Wall -Wextra -Wno-unknown-pragmas -Wno-deprecated-declarations)
 elseif (MSVC)
-    set(motis-compile-options /WX /bigobj)
+    set(motis-compile-options
+            /bigobj
+            # clang-21 libc++ seems not to have a special overloaded std::atomic<std::shared_ptr<T>>
+            # check if future version support std::atomic<std::shared_ptr<rt>>
+            /D_SILENCE_CXX20_OLD_SHARED_PTR_ATOMIC_SUPPORT_DEPRECATION_WARNING
+    )
 else ()
     set(motis-compile-options
             -Wall
             -Wextra
+            -Wno-array-bounds
+            -Wno-stringop-overread
             -Wno-mismatched-new-delete
             -Wno-maybe-uninitialized)
-    if (NOT CMAKE_CROSSCOMPILING)
-        set(motis-compile-options ${motis-compile-options} -Werror)
-    endif ()
 endif ()
 
 
@@ -138,6 +142,7 @@ target_link_libraries(motislib
     prometheus-cpp::core
     opentelemetry_trace
     opentelemetry_exporter_otlp_http
+    lmdb
     Boost::stacktrace
     "$<${_MOTIS_STACKTRACE_ON}:Boost::stacktrace_from_exception>"
 )
@@ -176,7 +181,7 @@ configure_file(
 )
 file(GLOB_RECURSE motis-test-files test/*.cc)
 add_executable(motis-test ${motis-test-files})
-target_link_libraries(motis-test motislib gtest web-server ianatzdb-res motis-generated)
+target_link_libraries(motis-test motislib gmock web-server ianatzdb-res address_formatting_res-res motis-generated)
 target_compile_options(motis-test PRIVATE ${motis-compile-options})
 
 

@@ -268,6 +268,33 @@ std::string to_str(std::vector<api::Itinerary> const& x) {
   return ss.str();
 }
 
+TEST(motis, routing_osm_only_direct_walk) {
+  auto ec = std::error_code{};
+  std::filesystem::remove_all("test/data_osm_only", ec);
+
+  auto const c =
+      config{.server_ = {{.web_folder_ = "ui/build", .n_threads_ = 1U}},
+             .osm_ = {"test/resources/test_case.osm.pbf"},
+             .street_routing_ = true};
+  import(c, "test/data_osm_only");
+  auto d = data{"test/data_osm_only", c};
+
+  auto const routing = utl::init_from<ep::routing>(d).value();
+  auto const res = routing(
+      "?fromPlace=49.87526849014631,8.62771903392948"
+      "&toPlace=49.87253873915287,8.629724234688751"
+      "&time=2019-05-01T01:25Z"
+      "&timetableView=false"
+      "&transitModes="
+      "&directModes=WALK"
+      "&numLegAlternatives=3");
+
+  ASSERT_TRUE(res.itineraries_.empty());
+  ASSERT_EQ(1U, res.direct_.size());
+  ASSERT_EQ(1U, res.direct_.front().legs_.size());
+  EXPECT_EQ(api::ModeEnum::WALK, res.direct_.front().legs_.front().mode_);
+}
+
 TEST(motis, routing) {
   auto ec = std::error_code{};
   std::filesystem::remove_all("test/data", ec);
@@ -289,8 +316,9 @@ TEST(motis, routing) {
       .osr_footpath_ = true,
       .geocoding_ = true,
       .reverse_geocoding_ = true};
-  auto d = import(c, "test/data", true);
-  d.rt_->e_ = std::make_unique<elevators>(*d.w_, *d.elevator_nodes_,
+  import(c, "test/data");
+  auto d = data{"test/data", c};
+  d.rt_->e_ = std::make_unique<elevators>(*d.w_, nullptr, *d.elevator_nodes_,
                                           parse_fasta(kFastaJson));
   d.init_rtt(date::sys_days{2019_y / May / 1});
 
@@ -299,49 +327,35 @@ TEST(motis, routing) {
     boost::asio::co_spawn(
         ioc,
         [&]() -> boost::asio::awaitable<void> {
-          co_await gbfs::update(c, *d.w_, *d.l_, d.gbfs_);
+          co_await gbfs::update(c, *d.w_, *d.l_, d.gbfs_, d.metrics_.get());
         },
         boost::asio::detached);
     ioc.run();
   }
 
-  auto const stats =
-      n::rt::gtfsrt_update_msg(*d.tt_, *d.rt_->rtt_, n::source_idx_t{0}, "test",
-                               test::to_feed_msg(
-                                   {test::trip_update{
-                                        .trip_ = {.trip_id_ = "ICE",
-                                                  .start_time_ = {"03:35:00"},
-                                                  .date_ = {"20190501"}},
-                                        .stop_updates_ =
-                                            {{.stop_id_ = "FFM_12",
-                                              .seq_ = std::optional{1U},
-                                              .ev_type_ = n::event_type::kArr,
-                                              .delay_minutes_ = 10,
-                                              .stop_assignment_ = "FFM_12"}}},
-                                    test::alert{.header_ = "Yeah",
-                                                .description_ = "Yeah!!",
-                                                .entities_ =
-                                                    {{.trip_ =
-                                                          {
-                                                              {.trip_id_ =
-                                                                   "ICE",
-                                                               .start_time_ = {"03:35:00"},
-                                                               .date_ = {"20"
-                                                                         "19"
-                                                                         "05"
-                                                                         "0"
-                                                                         "1"}},
-                                                          },
-                                                      .stop_id_ = "DA"}}},
-                                    test::alert{
-                                        .header_ = "Hello",
-                                        .description_ = "World",
-                                        .entities_ =
-                                            {{.trip_ =
-                                                  {{.trip_id_ = "ICE",
-                                                    .start_time_ = {"03:35:00"},
-                                                    .date_ = {"20190501"}}}}}}},
-                                   date::sys_days{2019_y / May / 1} + 9h));
+  auto const stats = n::rt::gtfsrt_update_msg(
+      *d.tt_, *d.rt_->rtt_, n::source_idx_t{0}, "test",
+      test::to_feed_msg(
+          {test::trip_update{.trip_ = {.trip_id_ = "ICE",
+                                       .start_time_ = {"03:35:00"},
+                                       .date_ = {"20190501"}},
+                             .stop_updates_ = {{.stop_id_ = "FFM_12",
+                                                .seq_ = std::optional{1U},
+                                                .ev_type_ = n::event_type::kArr,
+                                                .delay_minutes_ = 10,
+                                                .stop_assignment_ = "FFM_12"}}},
+           test::alert{.header_ = "Yeah",
+                       .description_ = "Yeah!!",
+                       .entities_ = {{.trip_ = {{.trip_id_ = "ICE",
+                                                 .start_time_ = {"03:35:00"},
+                                                 .date_ = {"20190501"}}},
+                                      .stop_id_ = "DA"}}},
+           test::alert{.header_ = "Hello",
+                       .description_ = "World",
+                       .entities_ = {{.trip_ = {{.trip_id_ = "ICE",
+                                                 .start_time_ = {"03:35:00"},
+                                                 .date_ = {"20190501"}}}}}}},
+          date::sys_days{2019_y / May / 1} + 9h));
   EXPECT_EQ(1U, stats.total_entities_success_);
   EXPECT_EQ(2U, stats.alert_total_resolve_success_);
 
@@ -355,7 +369,12 @@ TEST(motis, routing) {
         "&toPlace=49.87253873915287,8.629724234688751"
         "&time=2019-05-01T01:25Z"
         "&timetableView=false"
-        "&directModes=WALK,RENTAL");
+        "&directModes=WALK,RENTAL"
+        "&numLegAlternatives=3");
+    ASSERT_FALSE(res.direct_.empty());
+    ASSERT_FALSE(res.direct_.front().legs_.empty());
+    EXPECT_GT(res.direct_.front().legs_.front().legGeometry_.length_, 0);
+    EXPECT_TRUE(res.direct_.front().legs_.front().steps_.has_value());
 
     EXPECT_EQ(
         R"(date=2019-05-01, start=01:25, end=01:36, duration=00:11, transfers=0, legs=[
@@ -366,6 +385,23 @@ TEST(motis, routing) {
     (from=- [track=-, scheduled_track=-, level=0], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 01:25, mode="WALK", trip="-", end=2019-05-01 01:36)
 ])",
         to_str(res.direct_));
+
+    auto const compact_res = routing(
+        "?fromPlace=49.87526849014631,8.62771903392948"
+        "&toPlace=49.87253873915287,8.629724234688751"
+        "&time=2019-05-01T01:25Z"
+        "&timetableView=false"
+        "&directModes=WALK,RENTAL"
+        "&detailedLegs=false"
+        "&numLegAlternatives=3");
+    ASSERT_FALSE(compact_res.direct_.empty());
+    for (auto const& itinerary : compact_res.direct_) {
+      for (auto const& leg : itinerary.legs_) {
+        EXPECT_EQ("", leg.legGeometry_.points_);
+        EXPECT_EQ(0, leg.legGeometry_.length_);
+        EXPECT_FALSE(leg.steps_.has_value());
+      }
+    }
   }
 
   // Route with GBFS.
@@ -376,12 +412,13 @@ TEST(motis, routing) {
         "&time=2019-05-01T01:21Z"
         "&timetableView=false"
         "&useRoutedTransfers=true"
-        "&preTransitModes=WALK,RENTAL");
+        "&preTransitModes=WALK,RENTAL"
+        "&numLegAlternatives=3");
 
     EXPECT_EQ(
         R"(date=2019-05-01, start=01:21, end=02:15, duration=00:54, transfers=1, legs=[
-    (from=- [track=-, scheduled_track=-, level=0], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 01:21, mode="WALK", trip="-", end=2019-05-01 01:22),
-    (from=- [track=-, scheduled_track=-, level=0], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 01:22, mode="RENTAL", trip="-", end=2019-05-01 01:24),
+    (from=- [track=-, scheduled_track=-, level=0], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 01:21, mode="WALK", trip="-", end=2019-05-01 01:23),
+    (from=- [track=-, scheduled_track=-, level=0], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 01:23, mode="RENTAL", trip="-", end=2019-05-01 01:24),
     (from=- [track=-, scheduled_track=-, level=0], to=test_DA_10 [track=10, scheduled_track=10, level=-1], start=2019-05-01 01:24, mode="WALK", trip="-", end=2019-05-01 01:35),
     (from=test_DA_10 [track=10, scheduled_track=10, level=-1, alerts=["Yeah"]], to=test_FFM_12 [track=12, scheduled_track=10, level=0], start=2019-05-01 01:35, mode="HIGHSPEED_RAIL", trip="ICE", end=2019-05-01 01:55, alerts=["Hello"]),
     (from=test_FFM_12 [track=12, scheduled_track=10, level=0], to=test_de:6412:10:6:1 [track=U4, scheduled_track=U4, level=-2], start=2019-05-01 01:55, mode="WALK", trip="-", end=2019-05-01 02:00),
@@ -406,7 +443,8 @@ TEST(motis, routing) {
           "&timetableView=false"
           "&pedestrianProfile=WHEELCHAIR"
           "&maxMatchingDistance=8"  // Should match closely for wheelchair
-          "&useRoutedTransfers=true");
+          "&useRoutedTransfers=true"
+          "&numLegAlternatives=3");
 
       EXPECT_EQ(
           R"(date=2019-05-01, start=01:16, end=02:29, duration=01:14, transfers=0, legs=[
@@ -428,7 +466,8 @@ TEST(motis, routing) {
           "&timetableView=false"
           "&pedestrianProfile=WHEELCHAIR"
           "&maxMatchingDistance=8"  // Should match closely for wheelchair
-          "&useRoutedTransfers=true");
+          "&useRoutedTransfers=true"
+          "&numLegAlternatives=3");
 
       EXPECT_EQ(
           R"(date=2019-05-01, start=03:01, end=03:29, duration=02:09, transfers=0, legs=[
@@ -450,7 +489,8 @@ TEST(motis, routing) {
           "&timetableView=false"
           "&pedestrianProfile=WHEELCHAIR"
           "&maxMatchingDistance=8"  // Should match closely for wheelchair
-          "&useRoutedTransfers=true");
+          "&useRoutedTransfers=true"
+          "&numLegAlternatives=3");
 
       EXPECT_EQ(
           R"(date=2019-05-01, start=01:16, end=02:29, duration=01:14, transfers=0, legs=[
@@ -472,7 +512,8 @@ TEST(motis, routing) {
           "&timetableView=false"
           "&pedestrianProfile=WHEELCHAIR"
           "&maxMatchingDistance=8"  // Should match closely for wheelchair
-          "&useRoutedTransfers=true");
+          "&useRoutedTransfers=true"
+          "&numLegAlternatives=3");
 
       EXPECT_EQ(
           R"(date=2019-05-01, start=03:01, end=03:29, duration=00:29, transfers=0, legs=[
@@ -494,7 +535,8 @@ TEST(motis, routing) {
           "&timetableView=false"
           "&pedestrianProfile=WHEELCHAIR"
           "&maxMatchingDistance=8"  // Should match closely for wheelchair
-          "&useRoutedTransfers=true");
+          "&useRoutedTransfers=true"
+          "&numLegAlternatives=3");
 
       EXPECT_EQ(
           R"(date=2019-05-01, start=01:34, end=02:40, duration=01:20, transfers=0, legs=[
@@ -516,7 +558,8 @@ TEST(motis, routing) {
           "&timetableView=false"
           "&pedestrianProfile=WHEELCHAIR"
           "&maxMatchingDistance=8"  // Should match closely for wheelchair
-          "&useRoutedTransfers=true");
+          "&useRoutedTransfers=true"
+          "&numLegAlternatives=3");
 
       EXPECT_EQ(
           R"(date=2019-05-01, start=02:34, end=02:55, duration=00:21, transfers=0, legs=[
@@ -538,7 +581,8 @@ TEST(motis, routing) {
           "&timetableView=false"
           "&pedestrianProfile=WHEELCHAIR"
           "&maxMatchingDistance=8"  // Should match 'toPlace' closely
-          "&useRoutedTransfers=true");
+          "&useRoutedTransfers=true"
+          "&numLegAlternatives=3");
 
       EXPECT_EQ(
           R"(date=2019-05-01, start=01:34, end=02:40, duration=01:10, transfers=0, legs=[
@@ -560,7 +604,8 @@ TEST(motis, routing) {
           "&timetableView=false"
           "&pedestrianProfile=WHEELCHAIR"
           "&maxMatchingDistance=8"  // Should match closely for wheelchair
-          "&useRoutedTransfers=true");
+          "&useRoutedTransfers=true"
+          "&numLegAlternatives=3");
 
       EXPECT_EQ(
           R"(date=2019-05-01, start=02:34, end=02:55, duration=01:15, transfers=0, legs=[
@@ -582,7 +627,8 @@ TEST(motis, routing) {
           "&timetableView=false"
           "&pedestrianProfile=WHEELCHAIR"
           "&maxMatchingDistance=8"  // Should match places closely
-          "&useRoutedTransfers=true");
+          "&useRoutedTransfers=true"
+          "&numLegAlternatives=3");
 
       EXPECT_EQ(
           R"(date=2019-05-01, start=01:15, end=01:32, duration=00:17, transfers=0, legs=[
@@ -600,7 +646,8 @@ TEST(motis, routing) {
         "&time=2019-05-01T01:25Z"
         "&pedestrianProfile=WHEELCHAIR"
         "&useRoutedTransfers=true"
-        "&timetableView=false");
+        "&timetableView=false"
+        "&numLegAlternatives=3");
 
     EXPECT_EQ(
         R"(date=2019-05-01, start=01:29, end=02:29, duration=01:04, transfers=1, legs=[
@@ -620,7 +667,8 @@ TEST(motis, routing) {
         "&toPlace=50.11347,8.67664"
         "&time=2019-05-01T01:25Z"
         "&useRoutedTransfers=true"
-        "&timetableView=false");
+        "&timetableView=false"
+        "&numLegAlternatives=3");
 
     EXPECT_EQ(
         R"(date=2019-05-01, start=01:25, end=02:15, duration=00:50, transfers=1, legs=[
@@ -631,5 +679,38 @@ TEST(motis, routing) {
     (from=test_FFM_HAUPT_U [track=-, scheduled_track=-, level=-4], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 02:10, mode="WALK", trip="-", end=2019-05-01 02:15)
 ])",
         to_str(res.itineraries_));
+  }
+
+  // Route using radius: finds stops within 5km radius from coordinates,
+  // no preTransitModes / OSM street routing needed.
+  {
+    // fromPlace is ~2km from DA_10, toPlace is ~2km from FFM_10.
+    auto const res = routing(
+        "?fromPlace=49.89100,8.62900"
+        "&toPlace=50.08800,8.66100"
+        "&time=2019-05-01T01:30Z"
+        "&radius=5000"
+        "&timetableView=false"
+        "&numLegAlternatives=3");
+    ASSERT_FALSE(res.itineraries_.empty());
+    EXPECT_TRUE(utl::any_of(res.itineraries_.front().legs_, [](auto const& l) {
+      return l.routeShortName_.has_value() && *l.routeShortName_ == "ICE";
+    }));
+  }
+
+  // Route using radius on origin coordinate, station ID as destination.
+  {
+    // fromPlace is ~2km from DA_10, toPlace is the FFM_10 stop directly.
+    auto const res = routing(
+        "?fromPlace=49.89100,8.62900"
+        "&toPlace=test_FFM_10"
+        "&time=2019-05-01T01:30Z"
+        "&radius=5000"
+        "&timetableView=false"
+        "&numLegAlternatives=3");
+    ASSERT_FALSE(res.itineraries_.empty());
+    EXPECT_TRUE(utl::any_of(res.itineraries_.front().legs_, [](auto const& l) {
+      return l.routeShortName_.has_value() && *l.routeShortName_ == "ICE";
+    }));
   }
 }

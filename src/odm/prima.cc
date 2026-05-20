@@ -61,7 +61,7 @@ n::duration_t init_direct(std::vector<direct_ride>& rides,
       std::nullopt, std::nullopt, std::nullopt, false, intvl.from_, false,
       get_osr_parameters(query), query.pedestrianProfile_,
       query.elevationCosts_, kODMMaxDuration, query.maxMatchingDistance_,
-      kODMDirectFactor, api_version);
+      kODMDirectFactor, query.detailedLegs_, api_version);
 
   auto const step =
       std::chrono::duration_cast<n::unixtime_t::duration>(kODMDirectPeriod);

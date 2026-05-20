@@ -28,9 +28,11 @@ struct config {
   void verify_input_files_exist() const;
 
   bool requires_rt_timetable_updates() const;
+  bool shapes_debug_api_enabled() const;
   bool has_gbfs_feeds() const;
   bool has_prima() const;
   bool has_elevators() const;
+  bool has_rt_feeds() const;
   bool use_street_routing() const;
 
   bool operator==(config const&) const = default;
@@ -45,6 +47,8 @@ struct config {
     std::optional<std::vector<std::string>> lbs_{};
   };
   std::optional<server> server_{};
+
+  std::optional<std::string> user_agent_{};
 
   std::optional<std::filesystem::path> osm_{};
 
@@ -86,6 +90,33 @@ struct config {
       std::optional<std::string> default_timezone_{};
     };
 
+    struct shapes_debug {
+      bool operator==(shapes_debug const&) const = default;
+      std::filesystem::path path_;
+      std::optional<std::vector<std::string>> trips_{};
+      std::optional<std::vector<std::string>> route_ids_{};
+      std::optional<std::vector<unsigned>> route_indices_{};
+      bool all_{false};
+      bool all_with_beelines_{false};
+      unsigned slow_{0U};
+    };
+
+    struct route_shapes {
+      enum class mode { all, missing };
+
+      bool operator==(route_shapes const&) const = default;
+      mode mode_{mode::all};
+      bool cache_reuse_old_osm_data_{false};
+      std::size_t cache_db_size_{sizeof(void*) >= 8
+                                     ? 256ULL * 1024ULL * 1024ULL * 1024ULL
+                                     : 256U * 1024U * 1024U};
+      std::optional<std::map<std::string, bool>> clasz_{};
+      unsigned max_stops_{0U};
+      unsigned n_threads_{0U};
+      bool debug_api_{false};
+      std::optional<shapes_debug> debug_{};
+    };
+
     bool operator==(timetable const&) const = default;
 
     std::string first_day_{"TODAY"};
@@ -105,10 +136,11 @@ struct config {
     bool extend_missing_footpaths_{false};
     std::uint16_t max_footpath_length_{15};
     double max_matching_distance_{25.0};
-    double preprocess_max_matching_distance_{0.0};
+    double preprocess_max_matching_distance_{250.0};
     std::optional<std::string> default_timezone_{};
     std::map<std::string, dataset> datasets_{};
     std::optional<std::filesystem::path> assistance_times_{};
+    std::optional<route_shapes> route_shapes_{};
   };
   std::optional<timetable> timetable_{};
 
@@ -150,6 +182,9 @@ struct config {
           group_{};
       std::optional<
           std::variant<std::string, std::map<std::string, std::string>>>
+          name_{};
+      std::optional<
+          std::variant<std::string, std::map<std::string, std::string>>>
           color_{};
       std::optional<ttl> ttl_{};
     };
@@ -182,8 +217,9 @@ struct config {
 
   struct elevators {
     bool operator==(elevators const&) const = default;
-    std::optional<std::string> url_;
-    std::optional<std::string> init_;
+    std::optional<std::string> url_{};
+    std::optional<std::string> init_{};
+    std::optional<std::string> osm_mapping_{};
     unsigned http_timeout_{10};
     std::optional<headers_t> headers_{};
   };
@@ -209,13 +245,17 @@ struct config {
     unsigned plan_max_results_{256U};
     unsigned plan_max_search_window_minutes_{5760U};
     unsigned stops_max_results_{2048U};
+    unsigned onetomany_max_many_{128U};
     unsigned onetoall_max_results_{65535U};
     unsigned onetoall_max_travel_minutes_{90U};
     unsigned routing_max_timeout_seconds_{90U};
     unsigned gtfsrt_expose_max_trip_updates_{100U};
     unsigned street_routing_max_prepost_transit_seconds_{3600U};
     unsigned street_routing_max_direct_seconds_{21600U};
+    unsigned geocode_max_suggestions_{10U};
+    unsigned reverse_geocode_max_results_{5U};
   };
+  limits get_limits() const { return limits_.value_or(limits{}); }
   std::optional<limits> limits_{};
 
   struct logging {

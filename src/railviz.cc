@@ -1,11 +1,23 @@
 #include "motis/railviz.h"
 
+#include <algorithm>
+#include <bit>
+#include <cstddef>
+#include <optional>
 #include <ranges>
+#include <string_view>
+#include <type_traits>
 
 #include "cista/containers/rtree.h"
+#include "cista/reflection/comparable.h"
+
+#include "net/bad_request_exception.h"
+#include "net/not_found_exception.h"
+#include "net/too_many_exception.h"
 
 #include "utl/enumerate.h"
 #include "utl/get_or_create.h"
+#include "utl/helpers/algorithm.h"
 #include "utl/pairwise.h"
 #include "utl/to_vec.h"
 #include "utl/verify.h"
@@ -28,18 +40,21 @@
 #include "motis/data.h"
 #include "motis/journey_to_response.h"
 #include "motis/parse_location.h"
+#include "motis/place.h"
 #include "motis/tag_lookup.h"
 #include "motis/timetable/clasz_to_mode.h"
 #include "motis/timetable/time_conv.h"
 
 namespace n = nigiri;
 
-constexpr auto const kLimit = 12'000U;
+constexpr auto const kTripsLimit = 12'000U;
+constexpr auto const kRoutesLimit = 20'000U;
+constexpr auto const kRoutesPolylinesLimit = 20'000U;
 
 using static_rtree = cista::raw::rtree<n::route_idx_t>;
 using rt_rtree = cista::raw::rtree<n::rt_transport_idx_t>;
 
-using int_clasz = decltype(n::kNumClasses);
+using int_clasz = std::underlying_type_t<n::clasz>;
 
 namespace motis {
 
@@ -60,7 +75,7 @@ int min_zoom_level(n::clasz const clasz, float const distance) {
     case n::clasz::kHighSpeed:
     case n::clasz::kLongDistance:
     case n::clasz::kNight: return 4;
-    case n::clasz::kRegionalFast:
+    case n::clasz::kRideSharing:
     case n::clasz::kRegional: return 7;
 
     // regional distance
@@ -238,7 +253,8 @@ void add_rt_transports(n::timetable const& tt,
         n::interval{from.time(n::event_type::kDep),
                     to.time(n::event_type::kArr) + n::i32_minutes{1}};
     if (active.overlaps(time_interval)) {
-      utl::verify(runs.size() < kLimit, "too many trips");
+      utl::verify<net::too_many_exception>(runs.size() < kTripsLimit,
+                                           "too many trips");
       runs.emplace_back(
           stop_pair{.r_ = fr,  // NOLINT(cppcoreguidelines-slicing)
                     .from_ = from.stop_idx_,
@@ -297,7 +313,8 @@ void add_static_transports(n::timetable const& tt,
                                     tt.event_time(t, to, n::event_type::kArr) +
                                         n::unixtime_t::duration{1}}) &&
             is_active(t)) {
-          utl::verify(runs.size() < kLimit, "too many trips");
+          utl::verify<net::too_many_exception>(runs.size() < kTripsLimit,
+                                               "too many trips");
           runs.emplace_back(stop_pair{
               .r_ = n::rt::run{.t_ = t,
                                .stop_range_ = {from, static_cast<n::stop_idx_t>(
@@ -362,49 +379,328 @@ api::trips_response get_trains(tag_lookup const& tags,
     }
   }
 
-  // Create response.
-  auto enc = geo::polyline_encoder<5>{};
-  return utl::to_vec(runs, [&](stop_pair const& r) -> api::TripSegment {
-    enc.reset();
+  auto const precision = static_cast<std::int8_t>(query.precision_);
+  utl::verify<net::bad_request_exception>(
+      precision >= 0 && precision < 7,
+      "invalid precision for polylines, allowed are [0, 6]");
+  return geo::with_polyline_encoder(precision, [&](auto enc) mutable {
+    return utl::to_vec(runs, [&](stop_pair const& r) -> api::TripSegment {
+      enc.reset();
 
-    auto const fr = n::rt::frun{tt, rtt, r.r_};
+      auto const fr = n::rt::frun{tt, rtt, r.r_};
 
-    auto const from = fr[r.from_];
-    auto const to = fr[r.to_];
+      auto const from = fr[r.from_];
+      auto const to = fr[r.to_];
 
-    fr.for_each_shape_point(shapes,
-                            {r.from_, static_cast<n::stop_idx_t>(r.to_ + 1U)},
-                            [&](auto&& p) { enc.push(p); });
+      fr.for_each_shape_point(shapes,
+                              {r.from_, static_cast<n::stop_idx_t>(r.to_ + 1U)},
+                              [&](auto&& p) { enc.push_nonzero_diff(p, 2); });
 
-    return {
-        .trips_ = {api::TripInfo{
-            .tripId_ = tags.id(tt, from, n::event_type::kDep),
-            .routeShortName_ =
-                api_version < 4 ? std::optional{std::string{from.display_name(
-                                      n::event_type::kDep, query.language_)}}
-                                : std::nullopt,
-            .displayName_ = api_version >= 4
-                                ? std::optional{std::string{from.display_name(
-                                      n::event_type::kDep, query.language_)}}
-                                : std::nullopt}},
-        .routeColor_ = to_str(from.get_route_color(n::event_type::kDep).color_),
-        .mode_ = to_mode(from.get_clasz(n::event_type::kDep), api_version),
-        .distance_ =
-            fr.is_rt()
-                ? rt_index.rt_distances_[fr.rt_]
-                : static_index
-                      .static_distances_[tt.transport_route_[fr.t_.t_idx_]],
-        .from_ = to_place(&tt, &tags, w, pl, matches, ae, tz, query.language_,
-                          tt_location{from}),
-        .to_ = to_place(&tt, &tags, w, pl, matches, ae, tz, query.language_,
-                        tt_location{to}),
-        .departure_ = from.time(n::event_type::kDep),
-        .arrival_ = to.time(n::event_type::kArr),
-        .scheduledDeparture_ = from.scheduled_time(n::event_type::kDep),
-        .scheduledArrival_ = to.scheduled_time(n::event_type::kArr),
-        .realTime_ = fr.is_rt(),
-        .polyline_ = std::move(enc.buf_)};
+      return {
+          .trips_ = {api::TripInfo{
+              .tripId_ = tags.id(tt, from, n::event_type::kDep),
+              .routeShortName_ =
+                  api_version < 4 ? std::optional{std::string{from.display_name(
+                                        n::event_type::kDep, query.language_)}}
+                                  : std::nullopt,
+              .displayName_ = api_version >= 4
+                                  ? std::optional{std::string{from.display_name(
+                                        n::event_type::kDep, query.language_)}}
+                                  : std::nullopt}},
+          .routeColor_ =
+              to_str(from.get_route_color(n::event_type::kDep).color_),
+          .mode_ = to_mode(from.get_clasz(n::event_type::kDep), api_version),
+          .distance_ =
+              fr.is_rt()
+                  ? rt_index.rt_distances_[fr.rt_]
+                  : static_index
+                        .static_distances_[tt.transport_route_[fr.t_.t_idx_]],
+          .from_ = to_place(&tt, &tags, w, pl, matches, ae, tz, query.language_,
+                            tt_location{from}),
+          .to_ = to_place(&tt, &tags, w, pl, matches, ae, tz, query.language_,
+                          tt_location{to}),
+          .departure_ = from.time(n::event_type::kDep),
+          .arrival_ = to.time(n::event_type::kArr),
+          .scheduledDeparture_ = from.scheduled_time(n::event_type::kDep),
+          .scheduledArrival_ = to.scheduled_time(n::event_type::kArr),
+          .realTime_ = fr.is_rt(),
+          .polyline_ = std::move(enc.buf_)};
+    });
   });
+}
+
+struct route_info {
+  CISTA_COMPARABLE()
+
+  std::string_view id_;
+  std::string_view short_name_;
+  std::string_view long_name_;
+  nigiri::route_color color_;
+};
+
+template <typename Response>
+Response build_routes_response(
+    tag_lookup const& tags,
+    n::timetable const& tt,
+    n::shapes_storage const* shapes,
+    osr::ways const* w,
+    osr::platforms const* pl,
+    platform_matches_t const* matches,
+    std::vector<n::route_idx_t> const& route_indexes,
+    std::optional<geo::box> const& area,
+    std::optional<std::vector<std::string>> const& language) {
+  auto res = Response{};
+  auto enc = geo::polyline_encoder<6>{};
+
+  auto const add_unique = [](auto& values, auto const& value) {
+    if (utl::find(values, value) == end(values)) {
+      values.emplace_back(value);
+    }
+  };
+
+  auto stop_indexes = std::vector<std::int64_t>{};
+  stop_indexes.resize(tt.locations_.coordinates_.size(), -1);
+  auto const get_stop_index = [&](n::rt::run_stop const& stop) {
+    auto const l = stop.get_location_idx();
+    auto& stop_index = stop_indexes[to_idx(l)];
+    if (stop_index == -1) {
+      auto const parent = tt.locations_.get_root_idx(l);
+      auto const root = tt.locations_.get_root_idx(l);
+      auto const pos = tt.locations_.coordinates_.at(l);
+      stop_index = static_cast<std::int64_t>(res.stops_.size());
+      res.stops_.emplace_back(
+          api::Place{.name_ = std::string{tt.translate(
+                         language, tt.locations_.names_.at(root))},
+                     .stopId_ = tags.id(tt, l),
+                     .parentId_ = parent == n::location_idx_t::invalid()
+                                      ? std::nullopt
+                                      : std::optional{tags.id(tt, parent)},
+                     .lat_ = pos.lat_,
+                     .lon_ = pos.lng_,
+                     .level_ = get_lvl(w, pl, matches, l).to_float()});
+    }
+    return stop_index;
+  };
+
+  auto polyline_indexes = hash_map<std::string, std::int64_t>{};
+  auto const get_polyline_index = [&](std::string points,
+                                      std::int64_t const length) {
+    auto const new_index = static_cast<std::int64_t>(res.polylines_.size());
+    auto const [it, inserted] = polyline_indexes.try_emplace(points, new_index);
+    if (inserted) {
+      utl::verify<net::too_many_exception>(
+          res.polylines_.size() < kRoutesPolylinesLimit, "too many polylines");
+      res.polylines_.emplace_back(api::RoutePolyline{
+          .polyline_ = api::EncodedPolyline{.points_ = std::move(points),
+                                            .precision_ = 6,
+                                            .length_ = length},
+          .colors_ = {},
+          .routeIndexes_ = {}});
+      return new_index;
+    }
+    return it->second;
+  };
+
+  for (auto const r : route_indexes) {
+    utl::verify<net::too_many_exception>(res.routes_.size() < kRoutesLimit,
+                                         "too many routes");
+
+    auto route_segments = std::vector<api::RouteSegment>{};
+    auto route_polyline_indexes = std::vector<std::int64_t>{};
+    auto route_infos = hash_set<route_info>{};
+    auto const stops = tt.route_location_seq_[r];
+    auto shape_added = false;
+
+    auto const get_box = [&](std::size_t segment) {
+      if (shapes != nullptr) {
+        auto const box = shapes->get_bounding_box(r, segment);
+        if (box.has_value()) {
+          return *box;
+        }
+      }
+      // Fallback, if no segment bounding box can be loaded
+      return geo::make_box(
+          {tt.locations_.coordinates_[n::stop{stops[segment]}.location_idx()],
+           tt.locations_
+               .coordinates_[n::stop{stops[segment + 1U]}.location_idx()]});
+    };
+
+    auto path_source = api::RoutePathSourceEnum::NONE;
+    auto const cl = tt.route_clasz_[r];
+
+    for (auto const transport_idx : tt.route_transport_ranges_[r]) {
+      auto const stop_indices = n::interval{
+          n::stop_idx_t{0U}, static_cast<n::stop_idx_t>(stops.size())};
+      for (auto const [from, to] : utl::pairwise(stop_indices)) {
+        enc.reset();
+        auto n_points = 0;
+
+        auto const fr = n::rt::frun{
+            tt, nullptr,
+            n::rt::run{
+                .t_ = n::transport{transport_idx, n::day_idx_t{0}},
+                .stop_range_ =
+                    n::interval{from, static_cast<n::stop_idx_t>(to + 1U)},
+                .rt_ = n::rt_transport_idx_t::invalid()}};
+        if (from == stop_indices.from_) {
+          route_infos.emplace(route_info{
+              .id_ = fr[0].get_route_id(n::event_type::kDep),
+              .short_name_ =
+                  fr[0].route_short_name(n::event_type::kDep, language),
+              .long_name_ =
+                  fr[0].route_long_name(n::event_type::kDep, language),
+              .color_ = fr[0].get_route_color(n::event_type::kDep)});
+        }
+
+        if (shape_added ||
+            (area.has_value() && !get_box(from).overlaps(*area))) {
+          continue;
+        }
+
+        fr.for_each_shape_point(
+            shapes, n::interval{n::stop_idx_t{0U}, n::stop_idx_t{2U}},
+            [&](auto&& p) {
+              enc.push(p);
+              ++n_points;
+            });
+        if (fr.is_scheduled()) {
+          auto const trp_idx = fr.trip_idx();
+          auto const shp_idx = shapes->get_shape_idx(trp_idx);
+          if (shp_idx != n::scoped_shape_idx_t::invalid()) {
+            switch (n::get_shape_source(shp_idx)) {
+              case n::shape_source::kNone:
+                path_source = api::RoutePathSourceEnum::NONE;
+                break;
+              case n::shape_source::kTimetable:
+                path_source = api::RoutePathSourceEnum::TIMETABLE;
+                break;
+              case n::shape_source::kRouted:
+                path_source = api::RoutePathSourceEnum::ROUTED;
+                break;
+            }
+          }
+        }
+
+        route_segments.emplace_back(api::RouteSegment{
+            .from_ = get_stop_index(fr[0]),
+            .to_ = get_stop_index(fr[1]),
+            .polyline_ = get_polyline_index(std::move(enc.buf_), n_points),
+        });
+        add_unique(route_polyline_indexes, route_segments.back().polyline_);
+      }
+      shape_added = true;
+    }
+
+    auto route_colors = std::vector<std::string>{};
+    for (auto const& ri : route_infos) {
+      if (auto const color = to_str(ri.color_.color_); color.has_value()) {
+        add_unique(route_colors, *color);
+      }
+    }
+
+    auto const route_index = static_cast<std::int64_t>(res.routes_.size());
+    for (auto const polyline_index : route_polyline_indexes) {
+      auto& polyline = res.polylines_[static_cast<std::size_t>(polyline_index)];
+      add_unique(polyline.routeIndexes_, route_index);
+      for (auto const& color : route_colors) {
+        add_unique(polyline.colors_, color);
+      }
+    }
+
+    res.routes_.emplace_back(api::RouteInfo{
+        .mode_ = to_mode(cl, 5),
+        .transitRoutes_ =
+            utl::to_vec(route_infos,
+                        [&](auto const& ri) {
+                          return api::TransitRouteInfo{
+                              .id_ = std::string{ri.id_},
+                              .shortName_ = std::string{ri.short_name_},
+                              .longName_ = std::string{ri.long_name_},
+                              .color_ = to_str(ri.color_.color_),
+                              .textColor_ = to_str(ri.color_.text_color_)};
+                        }),
+        .numStops_ = static_cast<std::int64_t>(stops.size()),
+        .routeIdx_ = to_idx(r),
+        .pathSource_ = path_source,
+        .segments_ = std::move(route_segments),
+    });
+  }
+
+  return res;
+}
+
+api::routes_response get_routes(tag_lookup const& tags,
+                                n::timetable const& tt,
+                                n::rt_timetable const*,
+                                n::shapes_storage const* shapes,
+                                osr::ways const* w,
+                                osr::platforms const* pl,
+                                platform_matches_t const* matches,
+                                adr_ext const*,
+                                tz_map_t const*,
+                                railviz_static_index::impl const& static_index,
+                                railviz_rt_index::impl const&,
+                                api::routes_params const& query,
+                                unsigned const /*api_version*/) {
+  auto const zoom_level = static_cast<int>(query.zoom_);
+  auto const min = parse_location(query.min_);
+  auto const max = parse_location(query.max_);
+  utl::verify(min.has_value(), "min not a coordinate: {}", query.min_);
+  utl::verify(max.has_value(), "max not a coordinate: {}", query.max_);
+  auto const area = geo::make_box({min->pos_, max->pos_});
+  auto route_indexes = std::vector<n::route_idx_t>{};
+  auto zoom_filtered = false;
+
+  static_assert(static_cast<int_clasz>(n::clasz::kAir) == 0U);  // skip air
+  for (auto c = int_clasz{1U}; c != n::kNumClasses; ++c) {
+    auto const cl = n::clasz{c};
+    if (!should_display(cl, zoom_level,
+                        std::numeric_limits<float>::infinity())) {
+      zoom_filtered = true;
+      continue;
+    }
+
+    for (auto const& r : static_index.static_geo_indices_[c].get_routes(area)) {
+      if (should_display(cl, zoom_level, static_index.static_distances_[r])) {
+        route_indexes.emplace_back(r);
+      } else {
+        zoom_filtered = true;
+      }
+    }
+  }
+
+  auto res = build_routes_response<api::routes_response>(
+      tags, tt, shapes, w, pl, matches, route_indexes, area, query.language_);
+  res.zoomFiltered_ = zoom_filtered;
+  return res;
+}
+
+api::routeDetails_response get_route_details(
+    tag_lookup const& tags,
+    n::timetable const& tt,
+    n::rt_timetable const*,
+    n::shapes_storage const* shapes,
+    osr::ways const* w,
+    osr::platforms const* pl,
+    platform_matches_t const* matches,
+    adr_ext const*,
+    tz_map_t const*,
+    railviz_static_index::impl const&,
+    railviz_rt_index::impl const&,
+    api::routeDetails_params const& query,
+    unsigned const /*api_version*/) {
+  utl::verify<net::bad_request_exception>(
+      query.routeIdx_ >= 0 &&
+          query.routeIdx_ < static_cast<std::int64_t>(tt.n_routes()),
+      "invalid route index {}", query.routeIdx_);
+
+  auto const route =
+      n::route_idx_t{static_cast<n::route_idx_t::value_t>(query.routeIdx_)};
+
+  auto res = build_routes_response<api::routeDetails_response>(
+      tags, tt, shapes, w, pl, matches, {route}, std::nullopt, query.language_);
+  res.zoomFiltered_ = false;
+  return res;
 }
 
 }  // namespace motis

@@ -1,5 +1,7 @@
 #include "motis/endpoints/matches.h"
 
+#include "net/too_many_exception.h"
+
 #include "osr/geojson.h"
 
 #include "motis/location_routes.h"
@@ -30,23 +32,37 @@ json::value matches::operator()(json::value const& query) const {
   auto matches = json::array{};
 
   pl_.find(min, max, [&](osr::platform_idx_t const p) {
-    utl::verify(matches.size() < kLimit, "too many items");
+    utl::verify<net::too_many_exception>(matches.size() < kLimit,
+                                         "too many items");
 
     auto const center = get_platform_center(pl_, w_, p);
     if (!center.has_value()) {
       return;
     }
+    auto platform_data =
+        json::value{{"type", "platform"},
+                    {"level", pl_.get_level(w_, p).to_float()},
+                    {"platform_names", fmt::format("{}", get_names(pl_, p))}}
+            .as_object();
+    std::visit(utl::overloaded{[&](osr::way_idx_t x) {
+                                 platform_data.emplace(
+                                     "osm_way_id", to_idx(w_.way_osm_idx_[x]));
+                               },
+                               [&](osr::node_idx_t x) {
+                                 platform_data.emplace(
+                                     "osm_node_id", to_idx(w_.node_to_osm_[x]));
+                               }},
+               osr::to_ref(pl_.platform_ref_[p][0]));
+
     matches.emplace_back(json::value{
         {"type", "Feature"},
-        {"properties",
-         {{"type", "platform"},
-          {"level", pl_.get_level(w_, p).to_float()},
-          {"platform_names", fmt::format("{}", get_names(pl_, p))}}},
+        {"properties", platform_data},
         {"geometry", osr::to_point(osr::point::from_latlng(*center))}});
   });
 
   loc_rtree_.find({min, max}, [&](n::location_idx_t const l) {
-    utl::verify(matches.size() < kLimit, "too many items");
+    utl::verify<net::too_many_exception>(matches.size() < kLimit,
+                                         "too many items");
 
     auto const pos = tt_.locations_.coordinates_[l];
     auto const match = get_match(tt_, pl_, w_, l);
@@ -55,6 +71,8 @@ json::value matches::operator()(json::value const& query) const {
             {"name", tt_.get_default_translation(tt_.locations_.names_[l])},
             {"id", tags_.id(tt_, l)},
             {"src", to_idx(tt_.locations_.src_[l])},
+            {"platform_codes",
+             tt_.get_default_translation(tt_.locations_.platform_codes_[l])},
             {"type", "location"},
             {"trips", fmt::format("{}", get_location_routes(tt_, l))}}
             .as_object();

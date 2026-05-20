@@ -2,7 +2,7 @@
 
 # Preamble
 
-Beaware that these rules only apply to MOTIS C++ and are very opinionated.
+Beware that these rules only apply to MOTIS C++ and are very opinionated.
 C++ has a big diversity of programming styles from "C with classes" to "Modern C++".
 A lot of codebases have specific rules that make sense in this specific context
 (e.g. embedded programming, gaming, Google search, etc.) and therefore different
@@ -16,7 +16,7 @@ So in general our goals are:
 
 # Style
 
-- Header names: ***`*.h`**, Implementation names: **`*.cc`**
+- Header names: **`*.h`**, Implementation names: **`*.cc`**
 - Don’t use include guards (`#ifndef #define #endif`), use **`#pragma once`**
 - Consistently use **`struct`** instead of `class`
   - default visibility: public (which is what we need → no getter / setter)
@@ -26,7 +26,7 @@ So in general our goals are:
 - Don't `using namespace std;`
 - Don’t use `NULL` or `0`, use **nullptr** instead
 - Don’t write `const auto&`, write **`auto const&`**
-- Don’t write `const char*`, write **`char const`**
+- Don’t write `const char*`, write **`char const*`**
 
 
 # Case
@@ -60,7 +60,7 @@ struct my_class : public my_parent {
   - Non-standard headers with `"..."` syntax
     - generic to specific = boost libraries, then more and more specific
     - last: project includes
-    - if available: local inclues `"./test_util.h"` from the local folder (only done for tests)
+    - if available: local includes `"./test_util.h"` from the local folder (only done for tests)
 - Do not repeat include files from your own header file
 - Repeat everything else - even it's transitiveley included already through other headers.
   The include might be removed from the header you include which leads broken compilation.
@@ -232,7 +232,7 @@ Use `cista::strong` to define types, that cannot be converted implicitly. Using 
 
 Make everything (variables, loop variables, member functions, etc.) as `const` as possible. This indicates thread-safety (as long as only `const` methods are used) and helps to catch bugs when our mental model doesn't match the reality (the compiler will tell us).
 
-# Initializaiton
+# Initialization
 
 Use [Aggregate Initialization](https://en.cppreference.com/w/cpp/language/aggregate_initialization) if possible. This also applies to member variables. A big advantage is that it doesn't allow implicit type conversions.
 
@@ -242,7 +242,7 @@ Rename long namespace names instead of importing them completely.
 
 ```cpp
 using boost::program_options;  // bad
-namespace po = boost::program_option; // good
+namespace po = boost::program_options; // good
 ```
 
 This way we still know where functions come from when reading code.
@@ -252,7 +252,7 @@ Don't alias or import namespaces in header files.
 
 # AAA-Style
 
-Use [Almost Alway Auto (AAA)](https://herbsutter.com/2013/08/12/gotw-94-solution-aaa-style-almost-always-auto/) style if possible.
+Use [Almost Always Auto (AAA)](https://herbsutter.com/2013/08/12/gotw-94-solution-aaa-style-almost-always-auto/) style if possible.
 
 - Program against interfaces
 - Abstraction
@@ -271,7 +271,7 @@ It takes time to understand a raw for loop:
 for (int i = -1; i <= 9; i += 2) {
   if (i % 2 == 0) { continue; }
   if (i > 5 && i % 2 == 1) { break; }
-  printf(“%s\n”, i/3);
+  printf("%d\n", i/3);
 }
 ```
 
@@ -301,9 +301,9 @@ Alternative (if no function in the standard or `utl` helps):
 # Comparators
 
 Either use
-- Preferred: mark the operate you need `= default;`
+- Preferred: mark the operator you need `= default;`
 - If that doesn't do the job you can check `CISTA_FRIEND_COMPARABLE`
-- If you want to be selective and only compare a subset of member variables: `std::tie(a_, b_) == std::(a_, b_)`
+- If you want to be selective and only compare a subset of member variables: `std::tie(a_, b_) == std::tie(a_, b_)`
 
 # Set/Map vs Vector
 
@@ -318,7 +318,7 @@ Never use `std::unordered_map`. We have better alternatives in all projects (e.g
 
 # Tooling
 
-- Always develop with Address Sanitizer (ASan) and Undefined Behaviour Sanitizer (UBSan) enabled if performance allows it (it's usually worth it to use small data sets to be able to develop with sanitizers enabled!): `CXXFLAGS=-fno-omit-frame-pointer -fsanitizer=address,undefined`.
+- Always develop with Address Sanitizer (ASan) and Undefined Behaviour Sanitizer (UBSan) enabled if performance allows it (it's usually worth it to use small data sets to be able to develop with sanitizers enabled!): `CXXFLAGS=-fno-omit-frame-pointer -fsanitize=address,undefined`.
     - **Notice**: Some checks can cause false positive and should be disabled if necessary (compare `ci.yml`).  
       Example: `ASAN_OPTIONS=alloc_dealloc_mismatch=0`
 - Check your code with `valgrind`.

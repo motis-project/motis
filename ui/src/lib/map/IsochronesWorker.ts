@@ -180,7 +180,7 @@ function createWorker() {
 					const msg: UpdateMessage = event.data;
 					switch (msg.level) {
 						case 'OVERLAY_RECTS':
-							rects = msg.data;
+							rects = msg.data as maplibregl.LngLatBounds[];
 							self.postMessage({
 								method: 'update-display-level',
 								index: dataIndex,

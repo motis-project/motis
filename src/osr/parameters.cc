@@ -112,6 +112,16 @@ osr_parameters get_osr_parameters(api::OneToManyParams const& params) {
   return to_osr_parameters(params);
 }
 
+osr_parameters get_osr_parameters(
+    api::oneToManyIntermodal_params const& params) {
+  return to_osr_parameters(params);
+}
+
+osr_parameters get_osr_parameters(
+    api::OneToManyIntermodalParams const& params) {
+  return to_osr_parameters(params);
+}
+
 osr::profile_parameters to_profile_parameters(osr::search_profile const p,
                                               osr_parameters const& params) {
   // Ensure correct speed is used when using default parameters
@@ -164,6 +174,9 @@ osr::profile_parameters to_profile_parameters(osr::search_profile const p,
       return osr::car_sharing<osr::track_node_tracking>::parameters{
           .car_ = {},
           .foot_ = {.speed_meters_per_second_ = params.pedestrian_speed_}};
+    case osr::search_profile::kBus: return osr::bus::parameters{};
+    case osr::search_profile::kRailway: return osr::railway::parameters{};
+    case osr::search_profile::kFerry: return osr::ferry::parameters{};
   }
   throw utl::fail("{} is not a valid profile", static_cast<std::uint8_t>(p));
 }

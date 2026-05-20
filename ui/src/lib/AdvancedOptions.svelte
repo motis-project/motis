@@ -59,6 +59,7 @@
 		cyclingSpeed = $bindable(),
 		additionalTransferTime = $bindable(),
 		pedestrianProfile = $bindable(),
+		hasDebug = false,
 		additionalComponents
 	}: {
 		useRoutedTransfers: boolean;
@@ -90,6 +91,7 @@
 		pedestrianSpeed: PedestrianSpeed;
 		cyclingSpeed: CyclingSpeed;
 		additionalTransferTime: number | undefined;
+		hasDebug: boolean;
 		additionalComponents?: Snippet;
 		pedestrianProfile: PedestrianProfile;
 	} = $props();
@@ -147,6 +149,10 @@
 	$effect(() => {
 		transferTimeFactor = Math.max(1, defaultQuery.pedestrianSpeed / pedestrianSpeed);
 	});
+
+	let possibleModes = $derived(
+		hasDebug ? prePostDirectModes : prePostDirectModes.filter((m) => !m.startsWith('DEBUG_'))
+	);
 </script>
 
 <Button variant="ghost" onclick={() => (expanded = !expanded)}>
@@ -241,7 +247,7 @@
 				disabled={!allowStreetRouting}
 				bind:modes={preTransitModes}
 				bind:maxTransitTime={maxPreTransitTime}
-				possibleModes={prePostDirectModes}
+				{possibleModes}
 				possibleMaxTransitTime={possiblePrePostDurations}
 				bind:ignoreRentalReturnConstraints={ignorePreTransitRentalReturnConstraints}
 				bind:providerGroups={preTransitProviderGroups}
@@ -253,7 +259,7 @@
 				disabled={!allowStreetRouting}
 				bind:modes={postTransitModes}
 				bind:maxTransitTime={maxPostTransitTime}
-				possibleModes={prePostDirectModes}
+				{possibleModes}
 				possibleMaxTransitTime={possiblePrePostDurations}
 				bind:ignoreRentalReturnConstraints={ignorePostTransitRentalReturnConstraints}
 				bind:providerGroups={postTransitProviderGroups}
@@ -266,7 +272,7 @@
 					disabled={!allowStreetRouting}
 					bind:modes={directModes}
 					bind:maxTransitTime={maxDirectTime}
-					possibleModes={prePostDirectModes}
+					{possibleModes}
 					possibleMaxTransitTime={possibleDirectDurations}
 					bind:ignoreRentalReturnConstraints={ignoreDirectRentalReturnConstraints}
 					bind:providerGroups={directProviderGroups}

@@ -1,8 +1,8 @@
 #include "motis/endpoints/map/rental.h"
 
-#include <cassert>
 #include <algorithm>
 #include <array>
+#include <cassert>
 #include <set>
 #include <utility>
 #include <vector>
