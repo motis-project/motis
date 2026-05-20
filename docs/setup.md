@@ -255,6 +255,7 @@ gbfs:
         token_url: https://example.com/openid-connect/token
         client_id: gbfs
         client_secret: example
+        auth_method: client_secret_basic # default, or client_secret_post
 ```
 
 ## Default Restrictions
