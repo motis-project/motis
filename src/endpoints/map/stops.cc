@@ -5,6 +5,8 @@
 
 #include "motis/parse_location.h"
 #include "motis/place.h"
+#include "motis/server.h"
+#include "motis/tag_lookup.h"
 #include "motis/timetable/clasz_to_mode.h"
 #include "motis/timetable/modes_to_clasz_mask.h"
 
@@ -19,6 +21,7 @@ api::stops_response stops::operator()(boost::urls::url_view const& url) const {
   auto const mask = query.modes_.transform(to_clasz_mask)
                         .value_or(n::routing::all_clasz_allowed());
   auto const grouped = query.grouped_.value_or(false);
+  auto const api_version = get_api_version(url);
 
   utl::verify<net::bad_request_exception>(
       min.has_value(), "min not a coordinate: {}", query.min_);
@@ -39,8 +42,10 @@ api::stops_response stops::operator()(boost::urls::url_view const& url) const {
         return;
       }
 
-      auto p = to_place(&tt_, &tags_, w_, pl_, matches_, ae_, tz_,
-                        query.language_, tt_location{l});
+      auto p = bwd_compat_lvl_adjust(
+          to_place(&tt_, &tags_, w_, pl_, matches_, ae_, tz_, query.language_,
+                   tt_location{l}),
+          api_version);
       p.modes_ = to_modes(location_clasz_mask, 5);
 
       utl::verify<net::too_many_exception>(res.size() < max_results,
@@ -80,8 +85,10 @@ api::stops_response stops::operator()(boost::urls::url_view const& url) const {
       center_lng += tt_.locations_.coordinates_[l].lng_;
     }
 
-    auto p = to_place(&tt_, &tags_, w_, pl_, matches_, ae_, tz_,
-                      query.language_, tt_location{locations.front()});
+    auto p = bwd_compat_lvl_adjust(
+        to_place(&tt_, &tags_, w_, pl_, matches_, ae_, tz_, query.language_,
+                 tt_location{locations.front()}),
+        api_version);
     p.lat_ = center_lat / static_cast<double>(locations.size());
     p.lon_ = center_lng / static_cast<double>(locations.size());
 

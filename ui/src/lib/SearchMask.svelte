@@ -5,11 +5,13 @@
 	import * as RadioGroup from '$lib/components/ui/radio-group';
 	import Button from '$lib/components/ui/button/button.svelte';
 	import { Label } from '$lib/components/ui/label';
-	import type {
-		ElevationCosts,
-		Mode,
-		PedestrianProfile,
-		ServerConfig
+	import {
+		type CyclingSpeed,
+		type PedestrianSpeed,
+		type ElevationCosts,
+		type Mode,
+		type PedestrianProfile,
+		type ServerConfig
 	} from '@motis-project/motis-client';
 	import AddressTypeahead from '$lib/AddressTypeahead.svelte';
 	import AdvancedOptions from '$lib/AdvancedOptions.svelte';
@@ -34,6 +36,7 @@
 		postTransitModes = $bindable(),
 		directModes = $bindable(),
 		elevationCosts = $bindable(),
+		transferTimeFactor = $bindable(),
 		maxPreTransitTime = $bindable(),
 		maxPostTransitTime = $bindable(),
 		maxDirectTime = $bindable(),
@@ -46,6 +49,9 @@
 		via = $bindable(),
 		viaMinimumStay = $bindable(),
 		viaLabels = $bindable(),
+		pedestrianSpeed = $bindable(),
+		cyclingSpeed = $bindable(),
+		additionalTransferTime = $bindable(),
 		hasDebug = false
 	}: {
 		geocodingBiasPlace?: maplibregl.LngLatLike;
@@ -64,6 +70,7 @@
 		postTransitModes: PrePostDirectMode[];
 		directModes: PrePostDirectMode[];
 		elevationCosts: ElevationCosts;
+		transferTimeFactor: number;
 		maxPreTransitTime: number;
 		maxPostTransitTime: number;
 		maxDirectTime: number;
@@ -76,12 +83,14 @@
 		via: undefined | Location[];
 		viaMinimumStay: undefined | number[];
 		viaLabels: Record<string, string>;
+		pedestrianSpeed: PedestrianSpeed;
+		cyclingSpeed: CyclingSpeed;
+		additionalTransferTime: number | undefined;
 		hasDebug: boolean;
 	} = $props();
 
 	let fromItems = $state<Array<Location>>([]);
 	let toItems = $state<Array<Location>>([]);
-
 	const getLocation = () => {
 		if (navigator && navigator.geolocation) {
 			navigator.geolocation.getCurrentPosition(applyPosition, (e) => console.log(e), {
@@ -177,6 +186,7 @@
 			bind:preTransitModes
 			bind:postTransitModes
 			bind:directModes
+			bind:transferTimeFactor
 			bind:maxPreTransitTime
 			bind:maxPostTransitTime
 			bind:maxDirectTime
@@ -190,6 +200,10 @@
 			bind:via
 			bind:viaMinimumStay
 			bind:viaLabels
+			bind:pedestrianSpeed
+			bind:cyclingSpeed
+			bind:additionalTransferTime
+			bind:pedestrianProfile
 			{hasDebug}
 		/>
 	</div>

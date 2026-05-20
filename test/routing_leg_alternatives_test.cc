@@ -736,14 +736,14 @@ agency_id,agency_name,agency_url,agency_timezone
 DB,Deutsche Bahn,https://deutschebahn.com,Europe/Berlin
 
 # stops.txt
-stop_id,stop_name,stop_lat,stop_lon,location_type,parent_station,platform_code
-DA,DA Hbf,49.87260,8.63085,1,,
-DA_10,DA Hbf,49.87336,8.62926,0,DA,10
-FFM,FFM Hbf,50.10701,8.66341,1,,
-FFM_10,FFM Hbf,50.10593,8.66118,0,FFM,10
-FFM_101,FFM Hbf,50.10739,8.66333,0,FFM,101
-FFM_HAUPT,FFM Hauptwache,50.11403,8.67835,1,,
-FFM_HAUPT_S,FFM Hauptwache S,50.11404,8.67824,0,FFM_HAUPT,
+stop_id,stop_name,stop_lat,stop_lon,location_type,parent_station,platform_code,wheelchair_boarding
+DA,DA Hbf,49.87260,8.63085,1,,,1
+DA_10,DA Hbf,49.87336,8.62926,0,DA,10,1
+FFM,FFM Hbf,50.10701,8.66341,1,,,1
+FFM_10,FFM Hbf,50.10593,8.66118,0,FFM,10,1
+FFM_101,FFM Hbf,50.10739,8.66333,0,FFM,101,1
+FFM_HAUPT,FFM Hauptwache,50.11403,8.67835,1,,,1
+FFM_HAUPT_S,FFM Hauptwache S,50.11404,8.67824,0,FFM_HAUPT,,1
 
 # routes.txt
 route_id,agency_id,route_short_name,route_long_name,route_desc,route_type
@@ -751,9 +751,9 @@ ICE,DB,ICE,,,101
 S3,DB,S3,,,109
 
 # trips.txt
-route_id,service_id,trip_id,trip_headsign,block_id
-ICE,S1,ICE,,
-S3,S1,S3,,
+route_id,service_id,trip_id,trip_headsign,block_id,wheelchair_accessible
+ICE,S1,ICE,,,1
+S3,S1,S3,,,1
 
 # stop_times.txt
 trip_id,arrival_time,departure_time,stop_id,stop_sequence,pickup_type,drop_off_type

@@ -75,6 +75,7 @@ export type Translations = {
 	timetableSources: string;
 	tripCancelled: string;
 	stopCancelled: string;
+	addStop: string;
 	inOutDisallowed: string;
 	inDisallowed: string;
 	outDisallowed: string;
@@ -114,6 +115,10 @@ export type Translations = {
 		maxPreTransitTime: string;
 		maxPostTransitTime: string;
 		maxDirectTime: string;
+		additionalTransferTime: string;
+		pedestrianSpeed: string;
+		cyclingSpeed: string;
+		transferTimeFactor: string;
 	};
 	elevationCosts: {
 		NONE: string;

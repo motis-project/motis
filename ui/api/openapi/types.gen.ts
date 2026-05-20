@@ -409,8 +409,13 @@ export type Place = {
     lon: number;
     /**
      * level according to OpenStreetMap
+     * If no level is given, the field will be unset.
+     *
+     * For older versions (v1-v5), this field is mandatory and therefore set to 0.
+     * Affected endpoints: plan, trip, stoptimes, one-to-all, map/stops, map/trips
+     *
      */
-    level: number;
+    level?: number;
     /**
      * timezone name (e.g. "Europe/Berlin")
      */

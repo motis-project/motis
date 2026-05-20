@@ -1,7 +1,7 @@
 [nigiri]
   url=git@github.com:motis-project/nigiri.git
   branch=master
-  commit=95b228d6b52c6e3d1af20c62ee6acf9e396f2d34
+  commit=5b8ced9f6c8dfcc0e6afaca1bcec73393af9318c
 [cista]
   url=git@github.com:felixguendling/cista.git
   branch=master
@@ -65,7 +65,7 @@
 [opentelemetry-cpp]
   url=git@github.com:motis-project/opentelemetry-cpp.git
   branch=main
-  commit=57a4c01aff876e08d9d37a3dec2c9899f0606909
+  commit=352a93d802a88d1a00cd06cf8b442bcd0cc787a6
 [ctx]
   url=git@github.com:motis-project/ctx.git
   branch=master
