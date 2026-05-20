@@ -1,5 +1,13 @@
 <script lang="ts">
-	import { ArrowRight, ArrowUp, ArrowDown, DollarSign, CircleX, Bike, Accessibility } from '@lucide/svelte';
+	import {
+		ArrowRight,
+		ArrowUp,
+		ArrowDown,
+		DollarSign,
+		CircleX,
+		Bike,
+		Accessibility
+	} from '@lucide/svelte';
 	import type {
 		FareProduct,
 		Itinerary,
@@ -394,7 +402,7 @@
 						<Bike class="inline" />
 					{/if}
 
-					{#if l.wheelchairAccessible == "ACCESSIBLE"}
+					{#if l.wheelchairAccessible == 'ACCESSIBLE'}
 						<Accessibility class="inline" />
 					{/if}
 				</div>
