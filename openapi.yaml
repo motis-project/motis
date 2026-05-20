@@ -4722,6 +4722,10 @@ components:
           description: longitude of the leg's from endpoint
           type: number
           format: double
+        fromLevel:
+          description: Optional level (floor) of the leg's from endpoint for indoor routing. If unset, the endpoint has no level. Level 0 is a real level.
+          type: number
+          format: double
         toId:
           type: string
         toLat:
@@ -4730,6 +4734,10 @@ components:
           format: double
         toLon:
           description: longitude of the leg's to endpoint
+          type: number
+          format: double
+        toLevel:
+          description: Optional level (floor) of the leg's to endpoint for indoor routing. If unset, the endpoint has no level. Level 0 is a real level.
           type: number
           format: double
         schedStart:

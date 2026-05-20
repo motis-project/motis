@@ -1780,6 +1780,11 @@ export const LegIdSchema = {
             type: 'number',
             format: 'double'
         },
+        fromLevel: {
+            description: "Optional level (floor) of the leg's from endpoint for indoor routing. If unset, the endpoint has no level. Level 0 is a real level.",
+            type: 'number',
+            format: 'double'
+        },
         toId: {
             type: 'string'
         },
@@ -1790,6 +1795,11 @@ export const LegIdSchema = {
         },
         toLon: {
             description: "longitude of the leg's to endpoint",
+            type: 'number',
+            format: 'double'
+        },
+        toLevel: {
+            description: "Optional level (floor) of the leg's to endpoint for indoor routing. If unset, the endpoint has no level. Level 0 is a real level.",
             type: 'number',
             format: 'double'
         },
@@ -1841,13 +1851,6 @@ export const RefreshItineraryPostBodySchema = {
             default: true
         },
         detailedTransfers: {
-            description: `Controls if transfer polylines and step instructions are returned.
-
-If not set, this parameter inherits the value of \`detailedLegs\`.
-
-- true: Compute transfer polylines and step instructions.
-- false: Return empty \`legGeometry\` and omit \`steps\` for transfers.
-`,
             type: 'boolean'
         },
         detailedLegs: {
@@ -1865,13 +1868,7 @@ If not set, this parameter inherits the value of \`detailedLegs\`.
         numLegAlternatives: {
             type: 'integer',
             default: 0,
-            minimum: 0,
-            description: `Optional. Maximum number of alternatives to return per transit
-leg. \`0\` disables alternatives. When greater than zero, each
-transit leg in the response is annotated with up to N
-\`alternatives\`: connections that can replace the leg while still
-matching the surrounding journey context.
-`
+            minimum: 0
         },
         language: {
             description: `language tags as used in OpenStreetMap / GTFS

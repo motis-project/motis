@@ -1406,6 +1406,10 @@ export type LegId = {
      * longitude of the leg's from endpoint
      */
     fromLon: number;
+    /**
+     * Optional level (floor) of the leg's from endpoint for indoor routing. If unset, the endpoint has no level. Level 0 is a real level.
+     */
+    fromLevel?: number;
     toId: string;
     /**
      * latitude of the leg's to endpoint
@@ -1415,6 +1419,10 @@ export type LegId = {
      * longitude of the leg's to endpoint
      */
     toLon: number;
+    /**
+     * Optional level (floor) of the leg's to endpoint for indoor routing. If unset, the endpoint has no level. Level 0 is a real level.
+     */
+    toLevel?: number;
     /**
      * Scheduled departure time as a Unix timestamp in seconds.
      */
@@ -1435,27 +1443,10 @@ export type RefreshItineraryPostBody = {
     id: ItineraryId;
     requireDisplayNameMatch?: boolean;
     joinInterlinedLegs?: boolean;
-    /**
-     * Controls if transfer polylines and step instructions are returned.
-     *
-     * If not set, this parameter inherits the value of `detailedLegs`.
-     *
-     * - true: Compute transfer polylines and step instructions.
-     * - false: Return empty `legGeometry` and omit `steps` for transfers.
-     *
-     */
     detailedTransfers?: boolean;
     detailedLegs?: boolean;
     withFares?: boolean;
     withScheduledSkippedStops?: boolean;
-    /**
-     * Optional. Maximum number of alternatives to return per transit
-     * leg. `0` disables alternatives. When greater than zero, each
-     * transit leg in the response is annotated with up to N
-     * `alternatives`: connections that can replace the leg while still
-     * matching the surrounding journey context.
-     *
-     */
     numLegAlternatives?: number;
     /**
      * language tags as used in OpenStreetMap / GTFS
@@ -3165,23 +3156,9 @@ export type TripError = (Error);
 export type RefreshItineraryData = {
     query: {
         detailedLegs?: boolean;
-        /**
-         * Controls if transfer polylines and step instructions are returned.
-         *
-         * If not set, this parameter inherits the value of `detailedLegs`.
-         *
-         * - true: Compute transfer polylines and step instructions.
-         * - false: Return empty `legGeometry` and omit `steps` for transfers.
-         *
-         */
         detailedTransfers?: boolean;
         itineraryId: string;
         joinInterlinedLegs?: boolean;
-        /**
-         * language tags as used in OpenStreetMap / GTFS
-         * (usually BCP-47 / ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
-         *
-         */
         language?: Array<(string)>;
         numLegAlternatives?: number;
         requireDisplayNameMatch?: boolean;

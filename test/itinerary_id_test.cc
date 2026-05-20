@@ -8,6 +8,7 @@
 #include <string>
 #include <string_view>
 #include <system_error>
+#include <vector>
 
 #include "boost/json.hpp"
 
@@ -25,7 +26,11 @@
 #include "motis/import.h"
 #include "motis/itinerary_id.h"
 
+#include "net/base64.h"
+
 #include "nigiri/rt/gtfsrt_update.h"
+
+#include "generated/itinerary_id/itinerary_id.pb.h"
 
 #include "./util.h"
 
@@ -35,6 +40,33 @@ namespace n = nigiri;
 
 std::string generate_itinerary_id(api::Itinerary const& x) {
   return motis::generate_itinerary_id(x, {}, {});
+}
+
+TEST(motis, itinerary_id_distinguishes_level_zero_from_no_level) {
+  auto const t0 =
+      openapi::date_time_t{std::chrono::sys_seconds{std::chrono::seconds{0}}};
+  auto itinerary = api::Itinerary{.duration_ = 0,
+                                  .startTime_ = t0,
+                                  .endTime_ = t0,
+                                  .transfers_ = 0};
+  itinerary.legs_.push_back(api::Leg{
+      .mode_ = api::ModeEnum::WALK,
+      .from_ = api::Place{.lat_ = 1.0, .lon_ = 2.0, .level_ = 0.0},
+      .to_ = api::Place{.lat_ = 3.0, .lon_ = 4.0},
+      .duration_ = 0,
+      .startTime_ = t0,
+      .endTime_ = t0,
+      .scheduledStartTime_ = t0,
+      .scheduledEndTime_ = t0,
+      .scheduled_ = true});
+
+  auto parsed = motis::ItineraryId{};
+  ASSERT_TRUE(
+      parsed.ParseFromString(net::decode_base64(generate_itinerary_id(itinerary))));
+  ASSERT_EQ(1, parsed.legs_size());
+  EXPECT_TRUE(parsed.legs(0).has_from_level());
+  EXPECT_EQ(0.0, parsed.legs(0).from_level());
+  EXPECT_FALSE(parsed.legs(0).has_to_level());
 }
 
 api::RefreshItineraryPostBody make_refresh_itinerary_post_body(
@@ -47,9 +79,11 @@ api::RefreshItineraryPostBody make_refresh_itinerary_post_body(
       .fromId_ = leg.from_.stopId_.value(),
       .fromLat_ = leg.from_.lat_,
       .fromLon_ = leg.from_.lon_,
+      .fromLevel_ = leg.from_.level_,
       .toId_ = leg.to_.stopId_.value(),
       .toLat_ = leg.to_.lat_,
       .toLon_ = leg.to_.lon_,
+      .toLevel_ = leg.to_.level_,
       .schedStart_ = leg.scheduledStartTime_.get_unixtime_seconds(),
       .schedEnd_ = leg.scheduledEndTime_.get_unixtime_seconds(),
       .mode_ = leg.mode_,
@@ -695,7 +729,7 @@ TEST(motis, itinerary_id_reconstruct_multi_leg_with_three_pt_hops) {
 
   auto const routing = utl::init_from<ep::routing>(d).value();
   auto const res = routing(
-      "/api/v5/plan"
+      "/api/v6/plan"
       "?fromPlace=49.87420,8.62940"
       "&toPlace=50.11450,8.67900"
       "&time=2019-05-01T02:00Z"
@@ -731,4 +765,82 @@ TEST(motis, itinerary_id_reconstruct_multi_leg_with_three_pt_hops) {
       stop_times, d.l_.get(), d.shapes_.get(), *d.rt_, id, true, true, true);
 
   EXPECT_EQ(original, reconstructed);
+}
+
+TEST(motis, itinerary_id_reconstruct_multi_leg_replaces_unmatched_leg_dummy) {
+  auto ec = std::error_code{};
+  auto const path = fs::path{"test/data/itinerary_id"} / "multi_leg_dummy_leg";
+  fs::remove_all(path, ec);
+
+  auto const cfg = config{
+      .osm_ = {"test/resources/test_case.osm.pbf"},
+      .timetable_ =
+          config::timetable{
+              .first_day_ = "2019-05-01",
+              .num_days_ = 2,
+              .datasets_ = {{"test", {.path_ = std::string{kMultiHopGtfs}}}},
+          },
+      .street_routing_ = true,
+      .osr_footpath_ = true,
+  };
+  import(cfg, path);
+  auto d = data{path, cfg};
+
+  auto const routing = utl::init_from<ep::routing>(d).value();
+  auto const res = routing(
+      "/api/v5/plan"
+      "?fromPlace=49.87420,8.62940"
+      "&toPlace=50.11450,8.67900"
+      "&time=2019-05-01T02:00Z"
+      "&timetableView=true"
+      "&preTransitModes=WALK"
+      "&postTransitModes=WALK"
+      "&detailedLegs=true");
+  ASSERT_FALSE(res.itineraries_.empty());
+
+  auto original = res.itineraries_.front();
+  auto pt_indices = std::vector<std::size_t>{};
+  for (auto i = std::size_t{0}; i < original.legs_.size(); ++i) {
+    if (original.legs_[i].mode_ != api::ModeEnum::WALK) {
+      pt_indices.push_back(i);
+    }
+  }
+  ASSERT_GE(pt_indices.size(), 3U);
+
+  // Make the middle PT leg impossible to reconstruct by moving its endpoints
+  // into the ocean: no stop-time candidates exist within the search radius, so
+  // get_run() fails and the leg must be replaced by a cancelled dummy leg.
+  auto const broken_idx = pt_indices.at(1);
+  auto& broken_leg = original.legs_.at(broken_idx);
+  broken_leg.from_.lat_ = 0.0;
+  broken_leg.from_.lon_ = 0.0;
+  broken_leg.to_.lat_ = 0.0;
+  broken_leg.to_.lon_ = 0.0;
+
+  auto const id = generate_itinerary_id(original);
+  auto const stop_times = utl::init_from<ep::stop_times>(d).value();
+  auto const reconstructed = reconstruct_itinerary(
+      stop_times, d.l_.get(), d.shapes_.get(), *d.rt_, id, true, true, true);
+
+  // Every leg is still present, in order, and the itinerary id is preserved.
+  ASSERT_EQ(original.legs_.size(), reconstructed.legs_.size());
+  EXPECT_EQ(id, reconstructed.id_);
+
+  // The unreconstructable leg became a cancelled dummy carrying an alert with
+  // the failure reason, keeping the original transit mode.
+  auto const& dummy = reconstructed.legs_.at(broken_idx);
+  EXPECT_TRUE(dummy.cancelled_.value_or(false));
+  EXPECT_TRUE(dummy.from_.cancelled_.value_or(false));
+  EXPECT_TRUE(dummy.to_.cancelled_.value_or(false));
+  EXPECT_EQ(original.legs_.at(broken_idx).mode_, dummy.mode_);
+  ASSERT_TRUE(dummy.alerts_.has_value());
+  ASSERT_EQ(1U, dummy.alerts_->size());
+  EXPECT_FALSE(dummy.alerts_->front().headerText_.empty());
+
+  // The surrounding PT legs were reconstructed normally (not cancelled).
+  for (auto const pt_idx : pt_indices) {
+    if (pt_idx != broken_idx) {
+      EXPECT_FALSE(reconstructed.legs_.at(pt_idx).cancelled_.value_or(false));
+    }
+  }
 }
