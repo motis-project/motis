@@ -107,19 +107,26 @@
 			}
 
 			const grouped = query.grouped;
-			const features: GeoJSON.Feature[] = result.map((s) => ({
-				type: 'Feature',
-				geometry: { type: 'Point', coordinates: [s.lon, s.lat] },
-				properties: {
-					stopId: s.stopId,
-					name: s.name,
-					track: s.track,
-					label: !grouped && s.track ? s.track : s.name,
-					modes: s.modes ? JSON.stringify(s.modes) : undefined,
-					icon: stopIconId(s.modes?.[0]),
-					iconSize: modeIconScale(s.modes?.[0]) * (grouped ? 1 : 0.85)
-				}
-			}));
+			const features: GeoJSON.Feature[] = result.map((s) => {
+				// Sort ride-sharing to end of modes (-> use public transport icons)
+				const modes: Mode[] | undefined = s.modes?.includes('RIDE_SHARING')
+					? [...s.modes.filter((mode) => mode !== 'RIDE_SHARING'), 'RIDE_SHARING']
+					: s.modes;
+				const mode = modes?.[0];
+				return {
+					type: 'Feature',
+					geometry: { type: 'Point', coordinates: [s.lon, s.lat] },
+					properties: {
+						stopId: s.stopId,
+						name: s.name,
+						track: s.track,
+						label: !grouped && s.track ? s.track : s.name,
+						modes: modes?.length ? JSON.stringify(modes) : undefined,
+						icon: stopIconId(mode),
+						iconSize: modeIconScale(mode) * (grouped ? 1 : 0.85)
+					}
+				};
+			});
 
 			await ensureStopIcons(
 				currentMap,
