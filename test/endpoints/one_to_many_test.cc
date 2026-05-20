@@ -17,6 +17,7 @@
 #include "motis/config.h"
 #include "motis/endpoints/one_to_many.h"
 #include "motis/endpoints/one_to_many_post.h"
+#include "motis/endpoints/routing.h"
 
 #include "../test_case.h"
 
@@ -130,6 +131,12 @@ auto one_to_many_get(data& d) {
 
 auto one_to_many_post(data& d) {
   return utl::init_from<ep::one_to_many_intermodal_post>(d).value();
+}
+
+auto plan(data& d) { return utl::init_from<ep::routing>(d).value(); }
+
+auto one_to_many_v1_get(data& d) {
+  return utl::init_from<ep::one_to_many>(d).value();
 }
 
 TEST(one_to_many, get_request_forward) {
@@ -699,4 +706,152 @@ TEST(one_to_many, pareto_sets_with_multiple_entries) {
                  {.duration_ = 1440.0, .transfers_ = 1}},
             }}),
             durations.transit_durations_);
+}
+
+TEST(one_to_many, street_routing) {
+  auto [d, _config] = get_test_case<test_case::FFM_one_to_many>();
+
+  // Starting close to a way on floor -1
+  {
+    // Level wildcard
+    {
+      auto const one_to_many_post_durations =
+          one_to_many_post(d)(api::OneToManyIntermodalParams{
+              .one_ = "49.8724891,8.6281994",
+              .many_ = {"49.874793,8.632167"},
+              .time_ = parse_time("2019-05-01T12:00:00.000+02:00"),
+              .maxMatchingDistance_ = 25,
+              .arriveBy_ = false,
+              .preTransitModes_ = {},
+              .postTransitModes_ = {},
+              .directMode_ = api::ModeEnum::WALK,
+              .withDistance_ = true});
+
+      auto const one_to_many_get_durations = one_to_many_v1_get(d)(
+          "/api/v1/one-to-many"
+          "?one=49.8724891;8.6281994"
+          "&many=49.874793;8.632167"
+          "&time=2019-05-01T12:00:00.000%2B02:00"
+          "&mode=WALK"
+          "&max=3600"
+          "&maxMatchingDistance=25"
+          "&arriveBy=false"
+          "&withDistance=true");
+
+      auto const plan_durations = plan(d)(
+          "?fromPlace=49.8724891,8.6281994"
+          "&toPlace=49.874793,8.632167"
+          "&time=2019-05-01T12:00:00.000%2B02:00"
+          "&directMode=WALK"
+          "&preTransitModes="
+          "&postTransitModes="
+          "&maxMatchingDistance=25"
+          "&arriveBy=false");
+
+      ASSERT_TRUE(one_to_many_post_durations.street_durations_.has_value());
+      ASSERT_EQ(one_to_many_post_durations.street_durations_->size(), 1);
+      ASSERT_TRUE(one_to_many_post_durations.street_durations_->at(0)
+                      .duration_.has_value());
+      ASSERT_TRUE(one_to_many_post_durations.street_durations_->at(0)
+                      .distance_.has_value());
+      ASSERT_EQ(one_to_many_get_durations.size(), 1);
+      ASSERT_TRUE(one_to_many_get_durations.at(0).duration_.has_value());
+      ASSERT_TRUE(one_to_many_get_durations.at(0).distance_.has_value());
+      ASSERT_EQ(plan_durations.direct_.size(), 1);
+      ASSERT_EQ(plan_durations.direct_.at(0).legs_.size(), 1);
+      ASSERT_TRUE(
+          plan_durations.direct_.at(0).legs_.at(0).distance_.has_value());
+
+      // Ensure same duratation
+      auto const post_duration =
+          one_to_many_post_durations.street_durations_->at(0).duration_.value();
+      auto const get_duration =
+          one_to_many_get_durations.at(0).duration_.value();
+      auto const plan_duration = plan_durations.direct_.at(0).duration_;
+      EXPECT_NEAR(914.0, post_duration, 0.1);
+      EXPECT_DOUBLE_EQ(post_duration, get_duration);
+      EXPECT_DOUBLE_EQ(post_duration, plan_duration);
+      // Ensure same distance
+      auto const post_distance =
+          one_to_many_post_durations.street_durations_->at(0).distance_.value();
+      auto const get_distance =
+          one_to_many_get_durations.at(0).distance_.value();
+      auto const plan_distance =
+          plan_durations.direct_.at(0).legs_.at(0).distance_.value();
+      EXPECT_NEAR(705.3, post_distance, 0.1);
+      EXPECT_DOUBLE_EQ(post_distance, get_distance);
+      // Notice: plan_distance is computed from int -> plan <= post < plan + 1
+      EXPECT_NEAR(post_distance, plan_distance + 0.5, 0.5);
+    }
+    // Level 0
+    {
+      auto const one_to_many_post_durations =
+          one_to_many_post(d)(api::OneToManyIntermodalParams{
+              .one_ = "49.8724891,8.6281994,0",
+              .many_ = {"49.874793,8.632167"},
+              .time_ = parse_time("2019-05-01T12:00:00.000+02:00"),
+              .maxMatchingDistance_ = 25,
+              .arriveBy_ = false,
+              .preTransitModes_ = {},
+              .postTransitModes_ = {},
+              .directMode_ = api::ModeEnum::WALK,
+              .withDistance_ = true});
+
+      auto const one_to_many_get_durations = one_to_many_v1_get(d)(
+          "/api/v1/one-to-many"
+          "?one=49.8724891;8.6281994;0"
+          "&many=49.874793;8.632167"
+          "&time=2019-05-01T12:00:00.000%2B02:00"
+          "&mode=WALK"
+          "&max=3600"
+          "&maxMatchingDistance=25"
+          "&arriveBy=false"
+          "&withDistance=true");
+
+      auto const plan_durations = plan(d)(
+          "?fromPlace=49.8724891,8.6281994,0"
+          "&toPlace=49.874793,8.632167"
+          "&time=2019-05-01T12:00:00.000%2B02:00"
+          "&directMode=WALK"
+          "&preTransitModes="
+          "&postTransitModes="
+          "&maxMatchingDistance=25"
+          "&arriveBy=false");
+
+      ASSERT_TRUE(one_to_many_post_durations.street_durations_.has_value());
+      ASSERT_EQ(one_to_many_post_durations.street_durations_->size(), 1);
+      ASSERT_TRUE(one_to_many_post_durations.street_durations_->at(0)
+                      .duration_.has_value());
+      ASSERT_TRUE(one_to_many_post_durations.street_durations_->at(0)
+                      .distance_.has_value());
+      ASSERT_EQ(one_to_many_get_durations.size(), 1);
+      ASSERT_TRUE(one_to_many_get_durations.at(0).duration_.has_value());
+      ASSERT_TRUE(one_to_many_get_durations.at(0).distance_.has_value());
+      ASSERT_EQ(plan_durations.direct_.size(), 1);
+      ASSERT_EQ(plan_durations.direct_.at(0).legs_.size(), 1);
+      ASSERT_TRUE(
+          plan_durations.direct_.at(0).legs_.at(0).distance_.has_value());
+
+      // Ensure same duratation
+      auto const post_duration =
+          one_to_many_post_durations.street_durations_->at(0).duration_.value();
+      auto const get_duration =
+          one_to_many_get_durations.at(0).duration_.value();
+      auto const plan_duration = plan_durations.direct_.at(0).duration_;
+      EXPECT_NEAR(712.0, post_duration, 0.1);
+      EXPECT_DOUBLE_EQ(post_duration, get_duration);
+      EXPECT_DOUBLE_EQ(post_duration, plan_duration);
+      // Ensure same distance
+      auto const post_distance =
+          one_to_many_post_durations.street_durations_->at(0).distance_.value();
+      auto const get_distance =
+          one_to_many_get_durations.at(0).distance_.value();
+      auto const plan_distance =
+          plan_durations.direct_.at(0).legs_.at(0).distance_.value();
+      EXPECT_NEAR(684.9, post_distance, 0.1);
+      EXPECT_DOUBLE_EQ(post_distance, get_distance);
+      // Notice: plan_distance is computed from int -> plan <= post < plan + 1
+      EXPECT_NEAR(post_distance, plan_distance + 0.5, 0.5);
+    }
+  }
 }
