@@ -91,6 +91,7 @@
 		{#if !('line-gradient' in layer.paint) && selected}
 			<Layer
 				id={layer.id}
+				beforeLayerId=""
 				type={layer.type}
 				layout={layer.layout}
 				filter={['all', ['has', 'fromLevel'], layer.filter]}
@@ -105,6 +106,7 @@
 	{/each}
 	<Layer
 		id="path-{id}"
+		beforeLayerId=""
 		type="line"
 		layout={{
 			'line-join': 'round',
@@ -124,6 +126,7 @@
 	/>
 	<Layer
 		id="path-outline-{id}"
+		beforeLayerId=""
 		type="line"
 		layout={{
 			'line-join': 'round',
@@ -139,6 +142,7 @@
 	/>
 	<Layer
 		id="path-chevrons-{id}"
+		beforeLayerId=""
 		type="symbol"
 		layout={{
 			'symbol-placement': 'line',
@@ -166,6 +170,7 @@
 		{#if 'line-gradient' in layer.paint && selected}
 			<Layer
 				id="{layer.id}-metrics"
+				beforeLayerId=""
 				type={layer.type}
 				layout={layer.layout}
 				filter={layer.filter}

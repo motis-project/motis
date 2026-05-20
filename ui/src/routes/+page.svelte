@@ -579,7 +579,9 @@
 	});
 
 	$effect(() => {
-		if (!map || activeTab != 'connections' || !baseQuery) return;
+		if (!map || activeTab != 'connections' || !baseQuery) {
+			return;
+		}
 		Promise.all(routingResponses).then((responses) => {
 			if (map) {
 				let it = responses.flatMap((response) => response.itineraries);

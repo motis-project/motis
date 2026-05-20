@@ -121,7 +121,7 @@
 						label: !grouped && s.track ? s.track : s.name,
 						modes: modes?.length ? JSON.stringify(modes) : undefined,
 						icon: stopIconId(mode),
-						iconSize: modeIconScale(mode) * (grouped ? 1 : 0.85)
+						iconSize: modeIconScale(mode) * (grouped ? 1 : 0.85) * (zoom < 10 ? 0.6 : 1)
 					}
 				};
 			});
@@ -133,6 +133,19 @@
 			data = { type: 'FeatureCollection', features };
 		});
 	});
+
+	const text = $derived(
+		zoom >= 14
+			? {
+					'text-field': ['get', 'label'],
+					'text-font': ['Noto Sans Regular'],
+					'text-size': 11,
+					'text-offset': [0, 1.1],
+					'text-anchor': 'top',
+					'text-optional': true
+				}
+			: {}
+	);
 </script>
 
 {#if map}
@@ -148,12 +161,7 @@
 				'symbol-sort-key': ['get', 'iconSize'],
 				'icon-allow-overlap': true,
 				'icon-ignore-placement': true,
-				'text-field': ['get', 'label'],
-				'text-font': ['Noto Sans Regular'],
-				'text-size': 11,
-				'text-offset': [0, 1.1],
-				'text-anchor': 'top',
-				'text-optional': true
+				...text
 			}}
 			paint={{
 				'text-color': labelColors.text,

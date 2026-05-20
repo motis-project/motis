@@ -57,6 +57,7 @@ const translations: Translations = {
 	},
 	sharingProvider: 'Оператор',
 	sharingProviders: 'Оператори',
+	none: 'Няма',
 	returnOnlyAtStations: 'Превозното средство трябва да се върне на станция.',
 	roundtripStationReturnConstraint: 'Превозното средство трябва да се върне на началната станция.',
 	rentalStation: 'Станция',
