@@ -2095,7 +2095,6 @@ paths:
           required: false
           schema:
             type: boolean
-            default: false
         - name: detailedLegs
           in: query
           required: false
@@ -2114,12 +2113,16 @@ paths:
           schema:
             type: boolean
             default: false
+        - name: numLegAlternatives
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
         - name: language
           in: query
           required: false
-          description: |
-            language tags as used in OpenStreetMap / GTFS
-            (usually BCP-47 / ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
           schema:
             type: array
             items:
@@ -4767,7 +4770,6 @@ components:
           default: true
         detailedTransfers:
           type: boolean
-          default: false
         detailedLegs:
           type: boolean
           default: true
@@ -4777,6 +4779,10 @@ components:
         withScheduledSkippedStops:
           type: boolean
           default: false
+        numLegAlternatives:
+          type: integer
+          default: 0
+          minimum: 0
         language:
           description: |
             language tags as used in OpenStreetMap / GTFS

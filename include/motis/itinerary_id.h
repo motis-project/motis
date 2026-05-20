@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <string>
 
 #include "motis-api/motis-api.h"
@@ -28,6 +29,7 @@ api::Itinerary reconstruct_itinerary(
     bool const with_fares = false,
     bool const with_scheduled_skipped_stops = false,
     nigiri::lang_t const& lang = nigiri::lang_t{},
-    unsigned int const api_version = 5U);
+    unsigned int const api_version = 5U,
+    std::size_t num_leg_alternatives = 0U);
 
 }  // namespace motis

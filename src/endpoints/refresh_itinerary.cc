@@ -38,8 +38,10 @@ api::Itinerary refresh_itinerary::operator()(
   return reconstruct_itinerary(
       stop_times_ep, l_, shapes_, *rt, query.itineraryId_,
       query.requireDisplayNameMatch_, query.joinInterlinedLegs_,
-      query.detailedTransfers_, query.detailedLegs_, query.withFares_,
-      query.withScheduledSkippedStops_, query.language_, api_version);
+      query.detailedTransfers_.value_or(query.detailedLegs_),
+      query.detailedLegs_, query.withFares_, query.withScheduledSkippedStops_,
+      query.language_, api_version,
+      static_cast<std::size_t>(query.numLegAlternatives_));
 }
 
 api::Itinerary refresh_itinerary_post::operator()(
@@ -59,8 +61,9 @@ api::Itinerary refresh_itinerary_post::operator()(
   return reconstruct_itinerary(
       stop_times_ep, l_, shapes_, *rt, net::encode_base64(data),
       body.requireDisplayNameMatch_, body.joinInterlinedLegs_,
-      body.detailedTransfers_, body.detailedLegs_, body.withFares_,
-      body.withScheduledSkippedStops_, body.language_, 5U);
+      body.detailedTransfers_.value_or(body.detailedLegs_), body.detailedLegs_,
+      body.withFares_, body.withScheduledSkippedStops_, body.language_, 5U,
+      static_cast<std::size_t>(body.numLegAlternatives_));
 }
 
 }  // namespace motis::ep

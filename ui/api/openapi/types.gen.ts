@@ -240,7 +240,7 @@ export type LocationType = 'ADDRESS' | 'PLACE' | 'STOP';
  *
  * # Transit modes
  *
- * - `TRANSIT`: translates to `TRAM,FERRY,AIRPLANE,BUS,COACH,RAIL,ODM,FUNICULAR,AERIAL_LIFT,OTHER`
+ * - `TRANSIT`: translates to `TRAM,FERRY,AIRPLANE,BUS,COACH,RAIL,ODM,RIDE_SHARING,FUNICULAR,AERIAL_LIFT,OTHER`
  * - `TRAM`: trams
  * - `SUBWAY`: subway trains (Paris Metro, London Underground, but also NYC Subway, Hamburger Hochbahn, and other non-underground services)
  * - `FERRY`: ferries
@@ -255,6 +255,7 @@ export type LocationType = 'ADDRESS' | 'PLACE' | 'STOP';
  * - `REGIONAL_RAIL`: regional train
  * - `SUBURBAN`: suburban trains (e.g. S-Bahn, RER, Elizabeth Line, ...)
  * - `ODM`: demand responsive transport
+ * - `RIDE_SHARING`: ride sharing
  * - `FUNICULAR`: Funicular. Any rail system designed for steep inclines.
  * - `AERIAL_LIFT`: Aerial lift, suspended cable car (e.g., gondola lift, aerial tramway). Cable transport where cabins, cars, gondolas or open chairs are suspended by means of one or more cables.
  * - `AREAL_LIFT`: deprecated
@@ -1393,6 +1394,77 @@ export type FareTransfer = {
     effectiveFareLegProducts: Array<Array<Array<FareProduct>>>;
 };
 
+export type LegId = {
+    displayName: string;
+    tripId: string;
+    fromId: string;
+    /**
+     * latitude of the leg's from endpoint
+     */
+    fromLat: number;
+    /**
+     * longitude of the leg's from endpoint
+     */
+    fromLon: number;
+    toId: string;
+    /**
+     * latitude of the leg's to endpoint
+     */
+    toLat: number;
+    /**
+     * longitude of the leg's to endpoint
+     */
+    toLon: number;
+    /**
+     * Scheduled departure time as a Unix timestamp in seconds.
+     */
+    schedStart: number;
+    /**
+     * Scheduled arrival time as a Unix timestamp in seconds.
+     */
+    schedEnd: number;
+    mode: Mode;
+    scheduled: boolean;
+};
+
+export type ItineraryId = {
+    legs: Array<LegId>;
+};
+
+export type RefreshItineraryPostBody = {
+    id: ItineraryId;
+    requireDisplayNameMatch?: boolean;
+    joinInterlinedLegs?: boolean;
+    /**
+     * Controls if transfer polylines and step instructions are returned.
+     *
+     * If not set, this parameter inherits the value of `detailedLegs`.
+     *
+     * - true: Compute transfer polylines and step instructions.
+     * - false: Return empty `legGeometry` and omit `steps` for transfers.
+     *
+     */
+    detailedTransfers?: boolean;
+    detailedLegs?: boolean;
+    withFares?: boolean;
+    withScheduledSkippedStops?: boolean;
+    /**
+     * Optional. Maximum number of alternatives to return per transit
+     * leg. `0` disables alternatives. When greater than zero, each
+     * transit leg in the response is annotated with up to N
+     * `alternatives`: connections that can replace the leg while still
+     * matching the surrounding journey context.
+     *
+     */
+    numLegAlternatives?: number;
+    /**
+     * language tags as used in OpenStreetMap / GTFS
+     * (usually BCP-47 / ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
+     *
+     */
+    language?: Array<(string)>;
+};
+
 export type Itinerary = {
     /**
      * journey duration in seconds
@@ -1410,6 +1482,10 @@ export type Itinerary = {
      * The number of transfers this trip has.
      */
     transfers: number;
+    /**
+     * Opaque itinerary identifier. Pass it as `itineraryId` to `/api/v6/refresh-itinerary` for reconstruction using the new schedule/realtime data.
+     */
+    id: string;
     /**
      * Journey legs
      */
@@ -3085,6 +3161,46 @@ export type TripData = {
 export type TripResponse = (Itinerary);
 
 export type TripError = (Error);
+
+export type RefreshItineraryData = {
+    query: {
+        detailedLegs?: boolean;
+        /**
+         * Controls if transfer polylines and step instructions are returned.
+         *
+         * If not set, this parameter inherits the value of `detailedLegs`.
+         *
+         * - true: Compute transfer polylines and step instructions.
+         * - false: Return empty `legGeometry` and omit `steps` for transfers.
+         *
+         */
+        detailedTransfers?: boolean;
+        itineraryId: string;
+        joinInterlinedLegs?: boolean;
+        /**
+         * language tags as used in OpenStreetMap / GTFS
+         * (usually BCP-47 / ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
+         *
+         */
+        language?: Array<(string)>;
+        numLegAlternatives?: number;
+        requireDisplayNameMatch?: boolean;
+        withFares?: boolean;
+        withScheduledSkippedStops?: boolean;
+    };
+};
+
+export type RefreshItineraryResponse = (Itinerary);
+
+export type RefreshItineraryError = (Error);
+
+export type RefreshItineraryPostData = {
+    body: RefreshItineraryPostBody;
+};
+
+export type RefreshItineraryPostResponse = (Itinerary);
+
+export type RefreshItineraryPostError = (Error);
 
 export type StoptimesData = {
     query?: {

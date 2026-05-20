@@ -300,7 +300,8 @@ api::Itinerary build_itinerary_from_legs(
     bool const with_fares,
     bool const with_scheduled_skipped_stops,
     n::lang_t const& lang,
-    unsigned int const api_version) {
+    unsigned int const api_version,
+    std::size_t const num_leg_alternatives) {
   utl::verify(!legs.empty(), "build_itinerary_from_legs: no legs");
 
   for (auto i = std::size_t{1}; i < legs.size(); ++i) {
@@ -339,6 +340,25 @@ api::Itinerary build_itinerary_from_legs(
   auto blocked = osr::bitvec<osr::node_idx_t>{};
   auto gbfs_rd = gbfs::gbfs_routing_data{};
 
+  auto const is_transit = [](n::routing::journey::leg const& l) {
+    return std::holds_alternative<n::routing::journey::run_enter_exit>(l.uses_);
+  };
+  auto const first_transit =
+      std::find_if(begin(j.legs_), end(j.legs_), is_transit);
+  auto const last_transit =
+      std::find_if(rbegin(j.legs_), rend(j.legs_), is_transit);
+  auto leg_alternatives_query = std::optional<n::routing::query>{};
+  if (num_leg_alternatives > 0U && first_transit != end(j.legs_) &&
+      last_transit != rend(j.legs_)) {
+    leg_alternatives_query = n::routing::query{
+        .start_time_ = j.start_time_,
+        .start_match_mode_ = n::routing::location_match_mode::kExact,
+        .dest_match_mode_ = n::routing::location_match_mode::kExact,
+        .use_start_footpaths_ = true,
+        .start_ = {{first_transit->from_, n::duration_t{0U}, 0U}},
+        .destination_ = {{last_transit->to_, n::duration_t{0U}, 0U}}};
+  }
+
   return journey_to_response(
       stop_times.w_, l, stop_times.pl_, stop_times.tt_, stop_times.tags_,
       nullptr, nullptr, rtt, stop_times.matches_, nullptr, shapes, gbfs_rd,
@@ -347,7 +367,9 @@ api::Itinerary build_itinerary_from_legs(
       api::ElevationCostsEnum::NONE, join_interlined_legs, detailed_transfers,
       detailed_legs, with_fares, with_scheduled_skipped_stops,
       stop_times.config_.timetable_.value().max_matching_distance_,
-      kMaxMatchingDistance, api_version, false, false, lang, false);
+      kMaxMatchingDistance, api_version, false, false, lang, false,
+      leg_alternatives_query ? &*leg_alternatives_query : nullptr,
+      num_leg_alternatives);
 }
 
 struct candidate_score {
@@ -476,7 +498,8 @@ api::Itinerary reconstruct_itinerary(ep::stop_times const& stop_times_ep,
                                      bool const with_fares,
                                      bool const with_scheduled_skipped_stops,
                                      n::lang_t const& lang,
-                                     unsigned int const api_version) {
+                                     unsigned int const api_version,
+                                     std::size_t const num_leg_alternatives) {
   auto stop_times_rt = std::atomic_load(&stop_times_ep.rt_);
   auto stop_times_rtt = stop_times_rt->rtt_.get();
   auto const parsed_id = decode_itinerary_id(id);
@@ -623,7 +646,7 @@ api::Itinerary reconstruct_itinerary(ep::stop_times const& stop_times_ep,
   auto res = build_itinerary_from_legs(
       legs, start_pos, end_pos, stop_times_ep, l, shapes, rt.rtt_.get(),
       join_interlined_legs, detailed_transfers, detailed_legs, with_fares,
-      with_scheduled_skipped_stops, lang, api_version);
+      with_scheduled_skipped_stops, lang, api_version, num_leg_alternatives);
   res.id_ = id;
   return res;
 }
