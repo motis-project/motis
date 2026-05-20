@@ -2342,3 +2342,17 @@ export const RouteInfoSchema = {
         }
     }
 } as const;
+
+export const HealthResponseSchema = {
+    type: 'object',
+    properties: {
+        rt: {
+            type: 'boolean',
+            description: 'GTFSRT, SIRI Lite, VDV AUS, VDV454 feeds.'
+        },
+        gbfs: {
+            type: 'boolean',
+            description: 'GBFS feeds.'
+        }
+    }
+} as const;
