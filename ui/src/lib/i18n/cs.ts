@@ -59,6 +59,7 @@ const translations: Translations = {
 	},
 	sharingProvider: 'Poskytovatel dat',
 	sharingProviders: 'Poskytovatelé dat',
+	none: 'Žádné',
 	returnOnlyAtStations: 'Vozidlo musí být vráceno na stanici.',
 	roundtripStationReturnConstraint: 'Pojezd musí být vrácen k počáteční stanice',
 	rentalStation: 'Stanice',
@@ -79,6 +80,7 @@ const translations: Translations = {
 	timetableSources: 'Zdroje dát JŘ',
 	tripCancelled: 'Spoj odřeknut',
 	stopCancelled: 'Zastávka bez obsluhy',
+	addStop: 'Přidat zastávku',
 	inOutDisallowed: 'Vstup/výstup není povolen',
 	inDisallowed: 'Vstup není povolen',
 	outDisallowed: 'Výstup není povolen',
@@ -117,7 +119,11 @@ const translations: Translations = {
 		direct: 'Přímé spojení',
 		maxPreTransitTime: 'Max. čas přesunu',
 		maxPostTransitTime: 'Max. čas přesunu',
-		maxDirectTime: 'Max. čas přesunu'
+		maxDirectTime: 'Max. čas přesunu',
+		additionalTransferTime: 'Dodatečný čas přestupu',
+		pedestrianSpeed: 'Rychlost chůze',
+		cyclingSpeed: 'Rychlost cyklisty',
+		transferTimeFactor: 'Faktor času přestupu'
 	},
 	elevationCosts: {
 		NONE: 'Bez odklonů',

@@ -443,7 +443,7 @@ export const PickupDropoffTypeSchema = {
 
 export const PlaceSchema = {
     type: 'object',
-    required: ['name', 'lat', 'lon', 'level'],
+    required: ['name', 'lat', 'lon'],
     properties: {
         name: {
             description: 'name of the transit stop / PoI / address',
@@ -470,7 +470,12 @@ export const PlaceSchema = {
             type: 'number'
         },
         level: {
-            description: 'level according to OpenStreetMap',
+            description: `level according to OpenStreetMap
+If no level is given, the field will be unset.
+
+For older versions (v1-v5), this field is mandatory and therefore set to 0.
+Affected endpoints: plan, trip, stoptimes, one-to-all, map/stops, map/trips
+`,
             type: 'number'
         },
         tz: {
@@ -892,6 +897,11 @@ See: https://wiki.openstreetmap.org/wiki/Conditional_restrictions
             description: 'decline in meters across this path segment'
         }
     }
+} as const;
+
+export const WheelchairAccessibilitySchema = {
+    type: 'string',
+    enum: ['ACCESSIBLE', 'NOT_ACCESSIBLE']
 } as const;
 
 export const RentalFormFactorSchema = {
@@ -1581,6 +1591,11 @@ by looping active weekdays, e.g. from calendar.txt in GTFS.
             description: `Whether bikes can be carried on this leg.
 `,
             type: 'boolean'
+        },
+        wheelchairAccessible: {
+            description: `Whether wheelchairs can be transported on this leg.
+`,
+            '$ref': '#/components/schemas/WheelchairAccessibility'
         },
         alternatives: {
             description: `Alternative connections that can replace this transit leg.
@@ -2339,6 +2354,20 @@ export const RouteInfoSchema = {
             items: {
                 '$ref': '#/components/schemas/RouteSegment'
             }
+        }
+    }
+} as const;
+
+export const HealthResponseSchema = {
+    type: 'object',
+    properties: {
+        rt: {
+            type: 'boolean',
+            description: 'GTFSRT, SIRI Lite, VDV AUS, VDV454 feeds.'
+        },
+        gbfs: {
+            type: 'boolean',
+            description: 'GBFS feeds.'
         }
     }
 } as const;

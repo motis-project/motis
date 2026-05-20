@@ -27,7 +27,9 @@
 		type PlanData,
 		type ReachablePlace,
 		type RentalFormFactor,
-		type ServerConfig
+		type ServerConfig,
+		type CyclingSpeed,
+		type PedestrianSpeed
 	} from '@motis-project/motis-client';
 	import ItineraryList from '$lib/ItineraryList.svelte';
 	import ConnectionDetail from '$lib/ConnectionDetail.svelte';
@@ -68,6 +70,7 @@
 	import { LEVEL_MIN_ZOOM } from '$lib/constants';
 	import StopGeoJSON from '$lib/map/stops/StopsGeoJSON.svelte';
 	import RailViz from '$lib/RailViz.svelte';
+	import StopsView from '$lib/map/stops/StopsView.svelte';
 
 	const urlParams = browser ? new URLSearchParams(window.location.search) : undefined;
 
@@ -84,14 +87,13 @@
 					: 'connections')
 	);
 	let dataAttributionLink: string | undefined = $state(undefined);
-	let colorMode = $state<'rt' | 'route' | 'mode' | 'none'>(isSmallScreen ? 'none' : 'rt');
+	let colorMode = $state<'rt' | 'route' | 'mode' | 'none'>('none');
 	let showMap = $state(!isSmallScreen);
 	let showRoutes = $state(false);
 	let lastOneToAllQuery: Parameters<typeof oneToAll>[0] | undefined = undefined;
 	let lastPlanQuery: PlanData | undefined = undefined;
 	let serverConfig: ServerConfig | undefined = $state();
 	let dataLoaded: boolean = $state(false);
-
 	$effect(() => {
 		if (activeTab == 'isochrones') {
 			colorMode = 'none';
@@ -191,7 +193,6 @@
 	let to = $state<Location>(parseLocation(urlParams?.get('toPlace'), urlParams?.get('toName')));
 	let one = $state<Location>(parseLocation(urlParams?.get('one'), urlParams?.get('oneName')));
 	let stop = $state<Location>();
-
 	let viaParam = getUrlArray('via');
 	let viaLabels = $state(
 		urlParams?.has('viaLabel0')
@@ -209,7 +210,6 @@
 	let viaMinimumStay = $state(
 		urlParams?.has('via') ? getUrlArray('viaMinimumStay').map((s) => parseIntOr(s, 0)) : undefined
 	);
-
 	let time = $state<Date>(new Date(urlParams?.get('time') || Date.now()));
 	let timetableView = $state(urlParams?.get('timetableView') != 'false');
 	let searchWindow = $state(
@@ -239,6 +239,12 @@
 			? urlParams.get('pedestrianProfile')
 			: defaultQuery.pedestrianProfile) as PedestrianProfile
 	);
+	let pedestrianSpeed = $state(
+		parseIntOr(urlParams?.get('pedestrianSpeed'), defaultQuery.pedestrianSpeed)
+	) as PedestrianSpeed;
+	let cyclingSpeed = $state(
+		parseIntOr(urlParams?.get('cyclingSpeed'), defaultQuery.cyclingSpeed)
+	) as CyclingSpeed;
 	let requireBikeTransport = $state(urlParams?.get('requireBikeTransport') == 'true');
 	let requireCarTransport = $state(urlParams?.get('requireCarTransport') == 'true');
 	let transitModes = $state<Mode[]>(
@@ -300,6 +306,12 @@
 			urlParams?.get('maxDirectTime'),
 			Math.min(defaultQuery.maxDirectTime, serverConfig?.maxDirectTimeLimit ?? Infinity)
 		)
+	);
+	let transferTimeFactor = $state(
+		parseIntOr(urlParams?.get('transferTimeFactor'), defaultQuery.transferTimeFactor)
+	);
+	let additionalTransferTime = $state(
+		parseIntOr(urlParams?.get('additionalTransferTime'), defaultQuery.additionalTransferTime)
 	);
 	let ignorePreTransitRentalReturnConstraints = $state(
 		urlParams?.get('ignorePreTransitRentalReturnConstraints') == 'true'
@@ -386,6 +398,10 @@
 						elevationCosts,
 						useRoutedTransfers,
 						maxTransfers: maxTransfers,
+						additionalTransferTime,
+						cyclingSpeed,
+						pedestrianSpeed,
+						transferTimeFactor,
 						maxMatchingDistance: pedestrianProfile == 'WHEELCHAIR' ? 8 : 250,
 						maxPreTransitTime,
 						maxPostTransitTime,
@@ -411,6 +427,10 @@
 						transitModes,
 						maxTransfers,
 						arriveBy,
+						cyclingSpeed,
+						pedestrianSpeed,
+						transferTimeFactor,
+						additionalTransferTime,
 						useRoutedTransfers,
 						pedestrianProfile,
 						requireBikeTransport,
@@ -551,7 +571,7 @@
 	};
 
 	const flyToLocation = (location: Location) => {
-		map?.flyTo({ center: location.match, zoom: 11 });
+		map?.flyTo({ center: location.match, zoom: 12 });
 	};
 
 	const flyToSelectedItinerary = () => {
@@ -579,7 +599,9 @@
 	});
 
 	$effect(() => {
-		if (!map || activeTab != 'connections' || !baseQuery) return;
+		if (!map || activeTab != 'connections' || !baseQuery) {
+			return;
+		}
 		Promise.all(routingResponses).then((responses) => {
 			if (map) {
 				let it = responses.flatMap((response) => response.itineraries);
@@ -676,6 +698,10 @@
 						bind:via
 						bind:viaMinimumStay
 						bind:viaLabels
+						bind:pedestrianSpeed
+						bind:cyclingSpeed
+						bind:additionalTransferTime
+						bind:transferTimeFactor
 						{hasDebug}
 					/>
 				</Card>
@@ -701,6 +727,10 @@
 						bind:maxTransfers
 						bind:preTransitModes
 						bind:postTransitModes
+						bind:additionalTransferTime
+						bind:transferTimeFactor
+						bind:cyclingSpeed
+						bind:pedestrianSpeed
 						bind:maxPreTransitTime
 						bind:maxPostTransitTime
 						bind:arriveBy
@@ -862,17 +892,6 @@
 			</Control>
 		{/if}
 
-		<Control position="top-right" class="text-right">
-			<Debug {bounds} {level} {zoom} />
-			<Button
-				size="icon"
-				variant={withHillshades ? 'default' : 'outline'}
-				onclick={() => (withHillshades = !withHillshades)}
-			>
-				<MountainSnow class="w-5 h-5" />
-			</Button>
-		</Control>
-
 		<LevelSelect {bounds} {zoom} bind:level />
 
 		{#if browser}
@@ -931,6 +950,13 @@
 					<Button size="icon" onclick={() => getLocation()}>
 						<LocateFixed class="w-5 h-5" />
 					</Button>
+					<Button
+						size="icon"
+						variant={withHillshades ? 'default' : 'outline'}
+						onclick={() => (withHillshades = !withHillshades)}
+					>
+						<MountainSnow class="w-5 h-5" />
+					</Button>
 				</Control>
 				{#if showRoutes}
 					<Routes
@@ -940,9 +966,10 @@
 						shapesDebugEnabled={serverConfig?.shapesDebugEnabled === true}
 					/>
 				{/if}
-				<Rentals {map} {bounds} {zoom} {theme} debug={hasDebug} />
+				<Rentals {map} {bounds} {zoom} {theme} {isSmallScreen} debug={hasDebug} />
 			{/if}
 
+			<StopsView {map} {bounds} {zoom} {theme} />
 			<RailViz {map} {bounds} {zoom} {colorMode} />
 			<Isochrones
 				{map}

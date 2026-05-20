@@ -3,7 +3,7 @@ import type {
 	RasterDEMSourceSpecification,
 	StyleSpecification
 } from 'maplibre-gl';
-const colors = {
+export const colors = {
 	light: {
 		background: '#f8f4f0',
 

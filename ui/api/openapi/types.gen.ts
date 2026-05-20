@@ -409,8 +409,13 @@ export type Place = {
     lon: number;
     /**
      * level according to OpenStreetMap
+     * If no level is given, the field will be unset.
+     *
+     * For older versions (v1-v5), this field is mandatory and therefore set to 0.
+     * Affected endpoints: plan, trip, stoptimes, one-to-all, map/stops, map/trips
+     *
      */
-    level: number;
+    level?: number;
     /**
      * timezone name (e.g. "Europe/Berlin")
      */
@@ -740,6 +745,8 @@ export type StepInstruction = {
      */
     elevationDown?: number;
 };
+
+export type WheelchairAccessibility = 'ACCESSIBLE' | 'NOT_ACCESSIBLE';
 
 export type RentalFormFactor = 'BICYCLE' | 'CARGO_BICYCLE' | 'CAR' | 'MOPED' | 'SCOOTER_STANDING' | 'SCOOTER_SEATED' | 'OTHER';
 
@@ -1267,6 +1274,11 @@ export type Leg = {
      *
      */
     bikesAllowed?: boolean;
+    /**
+     * Whether wheelchairs can be transported on this leg.
+     *
+     */
+    wheelchairAccessible?: WheelchairAccessibility;
     /**
      * Alternative connections that can replace this transit leg.
      * Each alternative is normally a sequence of 3 legs:
@@ -1851,6 +1863,17 @@ export type RouteInfo = {
     routeIdx: number;
     pathSource: RoutePathSource;
     segments: Array<RouteSegment>;
+};
+
+export type HealthResponse = {
+    /**
+     * GTFSRT, SIRI Lite, VDV AUS, VDV454 feeds.
+     */
+    rt?: boolean;
+    /**
+     * GBFS feeds.
+     */
+    gbfs?: boolean;
 };
 
 export type PlanData = {
@@ -3260,6 +3283,10 @@ export type InitialError = (Error);
 export type StopsData = {
     query: {
         /**
+         * Optional. Return grouped stops
+         */
+        grouped?: boolean;
+        /**
          * language tags as used in OpenStreetMap / GTFS
          * (usually BCP-47 / ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
          *
@@ -3273,6 +3300,10 @@ export type StopsData = {
          * latitude,longitude pair of the lower right coordinate
          */
         min: string;
+        /**
+         * Optional. Stop modes
+         */
+        modes?: Array<Mode>;
     };
 };
 
@@ -3433,6 +3464,10 @@ export type RentalsResponse = ({
 });
 
 export type RentalsError = (Error);
+
+export type HealthResponse2 = (HealthResponse);
+
+export type HealthError = (HealthResponse);
 
 export type TransfersData = {
     query: {
