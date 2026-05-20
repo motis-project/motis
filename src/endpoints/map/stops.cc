@@ -42,10 +42,10 @@ api::stops_response stops::operator()(boost::urls::url_view const& url) const {
         return;
       }
 
-      auto p = bwd_compat_lvl_adjust(
-          to_place(&tt_, &tags_, w_, pl_, matches_, ae_, tz_, query.language_,
-                   tt_location{l}),
-          api_version);
+      auto p =
+          bwd_compat_lvl_adjust(to_place(&tt_, &tags_, w_, pl_, matches_, ae_,
+                                         tz_, query.language_, tt_location{l}),
+                                api_version);
       p.modes_ = to_modes(location_clasz_mask, 5);
 
       utl::verify<net::too_many_exception>(res.size() < max_results,
