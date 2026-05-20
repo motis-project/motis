@@ -746,6 +746,8 @@ export type StepInstruction = {
     elevationDown?: number;
 };
 
+export type WheelchairAccessibility = 'ACCESSIBLE' | 'NOT_ACCESSIBLE';
+
 export type RentalFormFactor = 'BICYCLE' | 'CARGO_BICYCLE' | 'CAR' | 'MOPED' | 'SCOOTER_STANDING' | 'SCOOTER_SEATED' | 'OTHER';
 
 export type RentalPropulsionType = 'HUMAN' | 'ELECTRIC_ASSIST' | 'ELECTRIC' | 'COMBUSTION' | 'COMBUSTION_DIESEL' | 'HYBRID' | 'PLUG_IN_HYBRID' | 'HYDROGEN_FUEL_CELL';
@@ -1272,6 +1274,11 @@ export type Leg = {
      *
      */
     bikesAllowed?: boolean;
+    /**
+     * Whether wheelchairs can be transported on this leg.
+     *
+     */
+    wheelchairAccessible?: WheelchairAccessibility;
     /**
      * Alternative connections that can replace this transit leg.
      * Each alternative is normally a sequence of 3 legs:
@@ -1856,6 +1863,17 @@ export type RouteInfo = {
     routeIdx: number;
     pathSource: RoutePathSource;
     segments: Array<RouteSegment>;
+};
+
+export type HealthResponse = {
+    /**
+     * GTFSRT, SIRI Lite, VDV AUS, VDV454 feeds.
+     */
+    rt?: boolean;
+    /**
+     * GBFS feeds.
+     */
+    gbfs?: boolean;
 };
 
 export type PlanData = {
@@ -3438,6 +3456,10 @@ export type RentalsResponse = ({
 });
 
 export type RentalsError = (Error);
+
+export type HealthResponse2 = (HealthResponse);
+
+export type HealthError = (HealthResponse);
 
 export type TransfersData = {
     query: {
