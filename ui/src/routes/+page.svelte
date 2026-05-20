@@ -864,16 +864,6 @@
 			</Control>
 		{/if}
 
-		<Control position="top-right" class="text-right">
-			<Button
-				size="icon"
-				variant={withHillshades ? 'default' : 'outline'}
-				onclick={() => (withHillshades = !withHillshades)}
-			>
-				<MountainSnow class="w-5 h-5" />
-			</Button>
-		</Control>
-
 		<LevelSelect {bounds} {zoom} bind:level />
 
 		{#if browser}
@@ -931,6 +921,13 @@
 					</Button>
 					<Button size="icon" onclick={() => getLocation()}>
 						<LocateFixed class="w-5 h-5" />
+					</Button>
+					<Button
+						size="icon"
+						variant={withHillshades ? 'default' : 'outline'}
+						onclick={() => (withHillshades = !withHillshades)}
+					>
+						<MountainSnow class="w-5 h-5" />
 					</Button>
 				</Control>
 				{#if showRoutes}
