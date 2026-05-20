@@ -20,7 +20,6 @@
 		oneToAll,
 		plan,
 		type ElevationCosts,
-		type OneToAllData,
 		type PlanResponse,
 		type Itinerary,
 		type Mode,
@@ -88,8 +87,7 @@
 	let colorMode = $state<'rt' | 'route' | 'mode' | 'none'>(isSmallScreen ? 'none' : 'rt');
 	let showMap = $state(!isSmallScreen);
 	let showRoutes = $state(false);
-	let routesOverlaySession = $state(0);
-	let lastOneToAllQuery: OneToAllData | undefined = undefined;
+	let lastOneToAllQuery: Parameters<typeof oneToAll>[0] | undefined = undefined;
 	let lastPlanQuery: PlanData | undefined = undefined;
 	let serverConfig: ServerConfig | undefined = $state();
 	let dataLoaded: boolean = $state(false);
@@ -99,11 +97,6 @@
 			colorMode = 'none';
 		}
 	});
-
-	const toggleRoutesOverlay = () => {
-		++routesOverlaySession;
-		showRoutes = !showRoutes;
-	};
 
 	let theme: 'light' | 'dark' =
 		(hasDark ? 'dark' : hasLight ? 'light' : undefined) ??
@@ -364,6 +357,7 @@
 						numItineraries,
 						maxItineraries,
 						withFares: true,
+						numLegAlternatives: 3,
 						slowDirect,
 						fastestDirectFactor: 1.5,
 						pedestrianProfile,
@@ -426,11 +420,9 @@
 						maxPreTransitTime,
 						maxPostTransitTime,
 						elevationCosts,
-						maxMatchingDistance: pedestrianProfile == 'WHEELCHAIR' ? 8 : 250,
-						ignorePreTransitRentalReturnConstraints,
-						ignorePostTransitRentalReturnConstraints
+						maxMatchingDistance: pedestrianProfile == 'WHEELCHAIR' ? 8 : 250
 					}
-				} as OneToAllData)
+				} satisfies Parameters<typeof oneToAll>[0])
 			: undefined
 	);
 
@@ -860,7 +852,10 @@
 				<Button
 					size="icon"
 					variant={showRoutes ? 'default' : 'outline'}
-					onclick={toggleRoutesOverlay}
+					aria-label="Toggle routes overlay"
+					onclick={() => {
+						showRoutes = !showRoutes;
+					}}
 				>
 					<Waypoints class="w-5 h-5" />
 				</Button>
@@ -938,14 +933,12 @@
 					</Button>
 				</Control>
 				{#if showRoutes}
-					{#key routesOverlaySession}
-						<Routes
-							{map}
-							{bounds}
-							{zoom}
-							shapesDebugEnabled={serverConfig?.shapesDebugEnabled === true}
-						/>
-					{/key}
+					<Routes
+						{map}
+						{bounds}
+						{zoom}
+						shapesDebugEnabled={serverConfig?.shapesDebugEnabled === true}
+					/>
 				{/if}
 				<Rentals {map} {bounds} {zoom} {theme} debug={hasDebug} />
 			{/if}

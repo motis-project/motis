@@ -32,6 +32,7 @@ struct config {
   bool has_gbfs_feeds() const;
   bool has_prima() const;
   bool has_elevators() const;
+  bool has_rt_feeds() const;
   bool use_street_routing() const;
 
   bool operator==(config const&) const = default;
@@ -46,6 +47,8 @@ struct config {
     std::optional<std::vector<std::string>> lbs_{};
   };
   std::optional<server> server_{};
+
+  std::optional<std::string> user_agent_{};
 
   std::optional<std::filesystem::path> osm_{};
 
@@ -177,6 +180,9 @@ struct config {
       std::optional<
           std::variant<std::string, std::map<std::string, std::string>>>
           group_{};
+      std::optional<
+          std::variant<std::string, std::map<std::string, std::string>>>
+          name_{};
       std::optional<
           std::variant<std::string, std::map<std::string, std::string>>>
           color_{};

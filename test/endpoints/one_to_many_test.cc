@@ -67,16 +67,16 @@ B1,DB,B1,,3
 T1,DB,T1,,0
 
 # trips.txt
-route_id,service_id,trip_id,trip_headsign,block_id
-S3,S1,S3,,block_1
-U4,S1,U4,,block_1
-ICE,S1,ICE,,
-11_1,S1,11_1_1,,
-11_1,S1,11_1_2,,
-11_2,S1,11_2_1,,
-11_2,S1,11_2_2,,
-B1,S1,B1,Bus 1,
-T1,S1,T1,Tram 1,
+route_id,service_id,trip_id,trip_headsign,block_id,wheelchair_accessible
+S3,S1,S3,,block_1,1
+U4,S1,U4,,block_1,1
+ICE,S1,ICE,,,1
+11_1,S1,11_1_1,,,1
+11_1,S1,11_1_2,,,1
+11_2,S1,11_2_1,,,1
+11_2,S1,11_2_2,,,1
+B1,S1,B1,Bus 1,,1
+T1,S1,T1,Tram 1,,1
 
 # stop_times.txt
 trip_id,arrival_time,departure_time,stop_id,stop_sequence,pickup_type,drop_off_type

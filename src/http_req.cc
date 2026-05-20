@@ -58,11 +58,10 @@ asio::awaitable<http_response> req_tls(
     std::optional<std::string> const& body,
     std::chrono::seconds const timeout,
     std::optional<proxy> const& proxy) {
-  auto ssl_ctx = ssl::context{ssl::context::tlsv12_client};
+  auto ssl_ctx = ssl::context{ssl::context::tls_client};
   ssl_ctx.set_default_verify_paths();
   ssl_ctx.set_verify_mode(ssl::verify_none);
   ssl_ctx.set_options(ssl::context::default_workarounds |
-                      ssl::context::no_sslv2 | ssl::context::no_sslv3 |
                       ssl::context::single_dh_use);
 
   auto executor = co_await asio::this_coro::executor;

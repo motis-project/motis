@@ -239,8 +239,6 @@ data::data(std::filesystem::path p, config const& c)
   throw_if_failed("elevators", elevators);
   throw_if_failed("tiles", tiles);
 
-  initial_response_ = ep::get_initial_response(*this);
-
   utl_verify(
       shapes_ == nullptr || tt_ == nullptr ||
           (tt_->n_routes() == shapes_->route_bboxes_.size() &&
@@ -286,6 +284,10 @@ void data::load_flex_areas() {
   utl::verify(tt_ && w_ && l_, "flex areas requires tt={}, w={}, l={}",
               tt_ != nullptr, w_ != nullptr, l_ != nullptr);
   flex_areas_ = std::make_unique<flex::flex_areas>(*tt_, *w_, *l_);
+}
+
+void data::init_initial(std::string_view motis_version) {
+  initial_response_ = ep::get_initial_response(*this, motis_version);
 }
 
 void data::init_rtt(date::sys_days const d) {
