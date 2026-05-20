@@ -20,17 +20,13 @@ api::stops_response stops::operator()(boost::urls::url_view const& url) const {
                         .value_or(n::routing::all_clasz_allowed());
   auto const grouped = query.grouped_.value_or(false);
 
-  auto any_allowed = [](auto const& mask, auto const& cs) -> bool {
-    return (mask & cs) != 0;
-  };
-
   utl::verify<net::bad_request_exception>(
       min.has_value(), "min not a coordinate: {}", query.min_);
   utl::verify<net::bad_request_exception>(
       max.has_value(), "max not a coordinate: {}", query.max_);
 
-  auto res = api::stops_response{};
   auto const max_results = config_.get_limits().stops_max_results_;
+  auto res = api::stops_response{};
 
   // --- Ungrouped ---
   if (!grouped) {
@@ -69,7 +65,7 @@ api::stops_response stops::operator()(boost::urls::url_view const& url) const {
     }
     auto const place_idx = ae_->location_place_[l];
     auto const clasz = ae_->place_clasz_[place_idx];
-    if (any_allowed(mask, clasz)) {
+    if ((mask & clasz) != 0U) {
       seen_places[place_idx].push_back(l);
     }
   });
