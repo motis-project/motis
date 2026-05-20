@@ -70,6 +70,7 @@
 	import { LEVEL_MIN_ZOOM } from '$lib/constants';
 	import StopGeoJSON from '$lib/map/stops/StopsGeoJSON.svelte';
 	import RailViz from '$lib/RailViz.svelte';
+	import StopsView from '$lib/map/stops/StopsView.svelte';
 
 	const urlParams = browser ? new URLSearchParams(window.location.search) : undefined;
 
@@ -86,14 +87,13 @@
 					: 'connections')
 	);
 	let dataAttributionLink: string | undefined = $state(undefined);
-	let colorMode = $state<'rt' | 'route' | 'mode' | 'none'>(isSmallScreen ? 'none' : 'rt');
+	let colorMode = $state<'rt' | 'route' | 'mode' | 'none'>('none');
 	let showMap = $state(!isSmallScreen);
 	let showRoutes = $state(false);
 	let lastOneToAllQuery: Parameters<typeof oneToAll>[0] | undefined = undefined;
 	let lastPlanQuery: PlanData | undefined = undefined;
 	let serverConfig: ServerConfig | undefined = $state();
 	let dataLoaded: boolean = $state(false);
-
 	$effect(() => {
 		if (activeTab == 'isochrones') {
 			colorMode = 'none';
@@ -571,7 +571,7 @@
 	};
 
 	const flyToLocation = (location: Location) => {
-		map?.flyTo({ center: location.match, zoom: 11 });
+		map?.flyTo({ center: location.match, zoom: 12 });
 	};
 
 	const flyToSelectedItinerary = () => {
@@ -599,7 +599,9 @@
 	});
 
 	$effect(() => {
-		if (!map || activeTab != 'connections' || !baseQuery) return;
+		if (!map || activeTab != 'connections' || !baseQuery) {
+			return;
+		}
 		Promise.all(routingResponses).then((responses) => {
 			if (map) {
 				let it = responses.flatMap((response) => response.itineraries);
@@ -890,17 +892,6 @@
 			</Control>
 		{/if}
 
-		<Control position="top-right" class="text-right">
-			<Debug {bounds} {level} {zoom} />
-			<Button
-				size="icon"
-				variant={withHillshades ? 'default' : 'outline'}
-				onclick={() => (withHillshades = !withHillshades)}
-			>
-				<MountainSnow class="w-5 h-5" />
-			</Button>
-		</Control>
-
 		<LevelSelect {bounds} {zoom} bind:level />
 
 		{#if browser}
@@ -959,6 +950,13 @@
 					<Button size="icon" onclick={() => getLocation()}>
 						<LocateFixed class="w-5 h-5" />
 					</Button>
+					<Button
+						size="icon"
+						variant={withHillshades ? 'default' : 'outline'}
+						onclick={() => (withHillshades = !withHillshades)}
+					>
+						<MountainSnow class="w-5 h-5" />
+					</Button>
 				</Control>
 				{#if showRoutes}
 					<Routes
@@ -968,9 +966,10 @@
 						shapesDebugEnabled={serverConfig?.shapesDebugEnabled === true}
 					/>
 				{/if}
-				<Rentals {map} {bounds} {zoom} {theme} debug={hasDebug} />
+				<Rentals {map} {bounds} {zoom} {theme} {isSmallScreen} debug={hasDebug} />
 			{/if}
 
+			<StopsView {map} {bounds} {zoom} {theme} />
 			<RailViz {map} {bounds} {zoom} {colorMode} />
 			<Isochrones
 				{map}

@@ -57,6 +57,7 @@ const translations: Translations = {
 	},
 	sharingProvider: 'Provider',
 	sharingProviders: 'Providers',
+	none: 'None',
 	returnOnlyAtStations: 'The vehicle must be returned at a station.',
 	roundtripStationReturnConstraint: 'The vehicle must be returned to the departure station.',
 	rentalStation: 'Station',

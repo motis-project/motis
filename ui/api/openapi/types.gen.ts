@@ -3283,6 +3283,10 @@ export type InitialError = (Error);
 export type StopsData = {
     query: {
         /**
+         * Optional. Return grouped stops
+         */
+        grouped?: boolean;
+        /**
          * language tags as used in OpenStreetMap / GTFS
          * (usually BCP-47 / ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
          *
@@ -3296,6 +3300,10 @@ export type StopsData = {
          * latitude,longitude pair of the lower right coordinate
          */
         min: string;
+        /**
+         * Optional. Stop modes
+         */
+        modes?: Array<Mode>;
     };
 };
 

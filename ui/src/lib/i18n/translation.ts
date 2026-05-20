@@ -54,6 +54,7 @@ export type Translations = {
 	tripIntermediateStops: (n: number) => string;
 	sharingProvider: string;
 	sharingProviders: string;
+	none: string;
 	returnOnlyAtStations: string;
 	roundtripStationReturnConstraint: string;
 	rentalStation: string;
