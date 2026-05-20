@@ -85,7 +85,7 @@
 					: 'connections')
 	);
 	let dataAttributionLink: string | undefined = $state(undefined);
-	let colorMode = $state<'rt' | 'route' | 'mode' | 'none'>(isSmallScreen ? 'none' : 'rt');
+	let colorMode = $state<'rt' | 'route' | 'mode' | 'none'>('none');
 	let showMap = $state(!isSmallScreen);
 	let showRoutes = $state(false);
 	let lastOneToAllQuery: Parameters<typeof oneToAll>[0] | undefined = undefined;
@@ -863,7 +863,6 @@
 		{/if}
 
 		<Control position="top-right" class="text-right">
-			<Debug {bounds} {level} {zoom} />
 			<Button
 				size="icon"
 				variant={withHillshades ? 'default' : 'outline'}

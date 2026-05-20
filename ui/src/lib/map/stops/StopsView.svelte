@@ -58,11 +58,9 @@
 		const min = lngLatToStr(b.getSouthEast());
 		const grouped = zoom < GROUPING_MAX_ZOOM;
 		let modes: Mode[] | undefined = [];
-		if (zoom > 7) {
-			modes.push('AIRPLANE', 'NIGHT_RAIL', 'HIGHSPEED_RAIL', 'LONG_DISTANCE', 'COACH');
-		}
+		modes.push('AIRPLANE', 'NIGHT_RAIL', 'HIGHSPEED_RAIL', 'LONG_DISTANCE');
 		if (zoom > 11) {
-			modes.push('REGIONAL_RAIL', 'FERRY');
+			modes.push('COACH', 'REGIONAL_RAIL', 'FERRY');
 		}
 		if (zoom > 12) {
 			modes.push('SUBWAY');
