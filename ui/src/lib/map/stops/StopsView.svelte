@@ -21,17 +21,13 @@
 		theme: 'light' | 'dark';
 	} = $props();
 
-	// Reuse the base map's label colors so stop names match other map text.
 	const labelColors = $derived({
 		text: colors[theme].text,
 		halo: colors[theme].textHalo
 	});
 
-	// Grouping is enabled while zoomed out and disabled from zoom level 13 on.
 	const GROUPING_MAX_ZOOM = 16;
 
-	// Icon size factor per mode, mirroring the zoom tiers in which the modes
-	// appear: long-distance rail is largest, local modes (tram/bus) smallest.
 	const modeIconScale = (mode: Mode | undefined): number => {
 		switch (mode) {
 			case 'HIGHSPEED_RAIL':
@@ -52,7 +48,7 @@
 		}
 	};
 
-	//QUERY
+	// QUERY
 	let query = $derived.by(() => {
 		if (!bounds) {
 			return null;
@@ -83,11 +79,11 @@
 		return { min, max, grouped, modes };
 	});
 
-	//DATA
+	// DATA
 	const EMPTY: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] };
 	let data = $state<GeoJSON.FeatureCollection>(EMPTY);
 
-	//HANDLERS
+	// HANDLERS
 	const onLayerClick = (e: { features?: MapGeoJSONFeature[] }) => {
 		const props = e.features?.[0]?.properties;
 		if (!props?.stopId) {
@@ -96,7 +92,7 @@
 		onClickStop(props.name, props.stopId, new Date(Date.now()));
 	};
 
-	//UPDATE
+	// UPDATE
 	$effect(() => {
 		if (!query || !map) {
 			data = EMPTY;
