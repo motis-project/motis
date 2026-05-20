@@ -59,12 +59,14 @@
 		bounds,
 		zoom,
 		theme,
+		isSmallScreen,
 		debug = false
 	}: {
 		map: maplibregl.Map | undefined;
 		bounds: maplibregl.LngLatBoundsLike | undefined;
 		zoom: number;
 		theme: 'light' | 'dark';
+		isSmallScreen: boolean;
 		debug?: boolean;
 	} = $props();
 
@@ -1188,7 +1190,7 @@
 {/each}
 
 {#if providerGroupOptions.length > 0}
-	<Control position="top-right" class="mb-5">
+	<Control position={isSmallScreen ? 'top-left' : 'bottom-right'} class="mb-5">
 		<Select.Root
 			type="single"
 			value={displayFilter ? filterValue(displayFilter) : ''}

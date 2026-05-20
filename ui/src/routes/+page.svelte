@@ -941,7 +941,7 @@
 						shapesDebugEnabled={serverConfig?.shapesDebugEnabled === true}
 					/>
 				{/if}
-				<Rentals {map} {bounds} {zoom} {theme} debug={hasDebug} />
+				<Rentals {map} {bounds} {zoom} {theme} {isSmallScreen} debug={hasDebug} />
 			{/if}
 
 			<StopsView {map} {bounds} {zoom} {theme} />
