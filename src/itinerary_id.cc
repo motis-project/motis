@@ -305,8 +305,15 @@ api::Itinerary build_itinerary_from_legs(
 
   for (auto i = std::size_t{1}; i < legs.size(); ++i) {
     auto& leg = legs[i];
-    if (is_walk_leg(leg)) {
-      auto const dur = leg.arr_time_ - leg.dep_time_;
+    if (!is_walk_leg(leg)) {
+      continue;
+    }
+    auto const dur = leg.arr_time_ - leg.dep_time_;
+    if (dur == n::duration_t{0} &&
+        std::holds_alternative<n::footpath>(leg.uses_) && i + 1 < legs.size()) {
+      leg.dep_time_ = legs[i + 1].dep_time_;
+      leg.arr_time_ = legs[i + 1].dep_time_;
+    } else {
       leg.dep_time_ = legs[i - 1].arr_time_;
       leg.arr_time_ = leg.dep_time_ + dur;
     }

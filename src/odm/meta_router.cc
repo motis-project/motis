@@ -522,7 +522,7 @@ api::plan_response meta_router::run() {
                 query_.maxMatchingDistance_, api_version_,
                 query_.ignorePreTransitRentalReturnConstraints_,
                 query_.ignorePostTransitRentalReturnConstraints_,
-                query_.language_, nullptr);
+                query_.language_);
 
             if (response.legs_.front().mode_ == api::ModeEnum::RIDE_SHARING &&
                 response.legs_.size() == 1) {

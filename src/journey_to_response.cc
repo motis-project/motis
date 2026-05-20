@@ -744,7 +744,7 @@ api::Itinerary journey_to_response(
                 with_scheduled_skipped_stops, timetable_max_matching_distance,
                 max_matching_distance, api_version,
                 ignore_start_rental_return_constraints,
-                ignore_dest_rental_return_constraints, lang, nullptr)
+                ignore_dest_rental_return_constraints, lang, false)
                 .legs_);
       }
       itinerary.legs_[api_idx].alternatives_ = std::move(alternatives);
