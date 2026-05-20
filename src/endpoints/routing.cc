@@ -496,8 +496,8 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
   if (!w_ || !l_) {
     return {};
   }
-  if (ep::blocked.get() == nullptr) {
-    ep::blocked.reset(new osr::bitvec<osr::node_idx_t>{w_->n_nodes()});
+  if (blocked.get() == nullptr) {
+    blocked.reset(new osr::bitvec<osr::node_idx_t>{w_->n_nodes()});
   }
 
   auto fastest_direct = kInfinityDuration;
