@@ -5,6 +5,7 @@ const translations: Translations = {
 	ticketOptions: 'Fahrscheinoptionen',
 	includedInTicket: 'Im Fahrschein enthalten',
 	journeyDetails: 'Verbindungsdetails',
+	refreshItinerary: 'Verbindung aktualisieren',
 	transfers: 'Umstiege',
 	walk: 'Fußweg',
 	bike: 'Fahrrad',

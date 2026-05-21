@@ -5,6 +5,7 @@ const translations: Translations = {
 	ticketOptions: 'Опции за билет',
 	includedInTicket: 'Включено в билета',
 	journeyDetails: 'Детайли за пътуването',
+	refreshItinerary: 'Обнови пътуването',
 	transfers: 'прекачвания',
 	walk: 'Пеша',
 	bike: 'Велосипед',
