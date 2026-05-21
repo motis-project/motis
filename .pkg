@@ -15,9 +15,9 @@
   branch=master
   commit=d9930c90e440df761c8c4916c36072de9dd00f49
 [adr]
-  url=git@github.com:triptix-tech/adr.git
-  branch=master
-  commit=64ff88efc22622a79d38c7a7e101d4a86e906a1e
+  url=git@github.com:Kiarash-Parvizi/adr.git
+  branch=multi-filter-type
+  commit=30c37403aeb695988b4ad67e3dcee59c8ffb7d17
 [googletest]
   url=git@github.com:motis-project/googletest.git
   branch=master
