@@ -29,6 +29,8 @@
 
 #include "fmt/format.h"
 
+#include "net/base64.h"
+
 #include "utl/enumerate.h"
 #include "utl/helpers/algorithm.h"
 #include "utl/overloaded.h"
@@ -915,18 +917,29 @@ struct gbfs_update {
     }
     try {
       auto const opt = boost::urls::encoding_opts(true);
-      auto const body = fmt::format(
-          "grant_type=client_credentials&client_id={}&client_secret={}",
-          boost::urls::encode(oauth->settings_.client_id_,
-                              boost::urls::unreserved_chars, opt),
-          boost::urls::encode(oauth->settings_.client_secret_,
-                              boost::urls::unreserved_chars, opt));
+      auto const client_id = boost::urls::encode(
+          oauth->settings_.client_id_, boost::urls::unreserved_chars, opt);
+      auto const client_secret = boost::urls::encode(
+          oauth->settings_.client_secret_, boost::urls::unreserved_chars, opt);
+      auto body = std::string{"grant_type=client_credentials"};
       auto oauth_headers = oauth->settings_.headers_.value_or(headers_t{});
       oauth_headers["Content-Type"] = "application/x-www-form-urlencoded";
 
+      switch (oauth->settings_.auth_method_) {
+        case config::gbfs::oauth_settings::auth_method::client_secret_basic:
+          oauth_headers["Authorization"] =
+              fmt::format("Basic {}", net::encode_base64(fmt::format(
+                                          "{}:{}", client_id, client_secret)));
+          break;
+        case config::gbfs::oauth_settings::auth_method::client_secret_post:
+          body += fmt::format("&client_id={}&client_secret={}", client_id,
+                              client_secret);
+          break;
+      }
+
       auto const res =
           co_await http_POST(boost::urls::url{oauth->settings_.token_url_},
-                             std::move(oauth_headers), body, timeout_);
+                             std::move(oauth_headers), body, timeout_, proxy_);
       auto const res_body = get_http_body(res);
       auto const res_json = json::parse(res_body);
       auto const& j = res_json.as_object();

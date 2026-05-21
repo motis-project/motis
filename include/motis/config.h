@@ -164,10 +164,13 @@ struct config {
     };
 
     struct oauth_settings {
+      enum struct auth_method { client_secret_basic, client_secret_post };
+
       bool operator==(oauth_settings const&) const = default;
       std::string token_url_;
       std::string client_id_;
       std::string client_secret_;
+      auth_method auth_method_{auth_method::client_secret_basic};
       std::optional<headers_t> headers_{};
       std::optional<unsigned> expires_in_;
     };
