@@ -939,7 +939,7 @@ struct gbfs_update {
 
       auto const res =
           co_await http_POST(boost::urls::url{oauth->settings_.token_url_},
-                             std::move(oauth_headers), body, timeout_);
+                             std::move(oauth_headers), body, timeout_, proxy_);
       auto const res_body = get_http_body(res);
       auto const res_json = json::parse(res_body);
       auto const& j = res_json.as_object();
