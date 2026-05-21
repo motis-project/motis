@@ -243,6 +243,10 @@ std::optional<n::timetable::ticketing_link> get_ticketing_urls(
     n::timetable const& tt,
     n::rt::run_stop const& enter_stop,
     n::rt::run_stop const& exit_stop) {
+  if (!enter_stop.fr_->is_scheduled()) {
+    return std::nullopt;
+  }
+
   if (tt.trip_ticketing_unavailable_.contains(
           enter_stop.get_trip_idx(n::event_type::kDep))) {
     return std::nullopt;
@@ -559,6 +563,9 @@ api::Itinerary journey_to_response(
 
                 auto add_url_ticket_params =
                     [&](std::string_view url) -> std::string {
+                  utl::verify(enter_stop.fr_->is_scheduled(),
+                              "Checked in get_ticketing_urls");
+
                   boost::url ticket_url = boost::urls::parse_uri(url).value();
 
                   auto const start_date = floor<std::chrono::days>(
