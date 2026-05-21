@@ -191,7 +191,9 @@ const translations: Translations = {
 			default:
 				return `${n} Routen`;
 		}
-	}
+	},
+	tickets: 'Tickets',
+	moreInformation: 'Mehr Informationen'
 };
 
 export default translations;

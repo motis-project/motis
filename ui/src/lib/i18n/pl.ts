@@ -196,7 +196,9 @@ const translations: Translations = {
 			default:
 				return `${n} trasy`;
 		}
-	}
+	},
+	tickets: 'Bilety',
+	moreInformation: 'Więcej informacji'
 };
 
 export default translations;

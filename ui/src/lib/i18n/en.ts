@@ -196,7 +196,7 @@ const translations: Translations = {
 		}
 	},
 	tickets: 'Tickets',
-	routeDetails: 'More Information'
+	routeInformation: 'More Information'
 };
 
 export default translations;

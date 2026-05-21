@@ -485,7 +485,7 @@
 								class="overflow-hidden text-ellipsis whitespace-nowrap px-4 inline-block"
 							>
 								<ExternalLink class="inline" />
-								{t.routeDetails}
+								{t.routeInformation}
 							</Button>
 						{/if}
 						{#if l.ticketUrls && l.ticketUrls.web}
