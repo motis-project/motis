@@ -467,6 +467,16 @@
 					</div>
 				{/if}
 
+				<div class="m-4">
+					{#if l.bikesAllowed}
+						<Bike class="inline" />
+					{/if}
+
+					{#if l.wheelchairAccessible == 'ACCESSIBLE'}
+						<Accessibility class="inline" />
+					{/if}
+				</div>
+
 				{#if l.routeUrl || l.ticketUrls.web || (l.agencyUrl && l.agencyName)}
 					<div class="mt-2 mr-4">
 						{#if l.routeUrl}
