@@ -1819,7 +1819,7 @@ export const LegIdSchema = {
             format: 'double'
         },
         fromLevel: {
-            description: "Optional level (floor) of the leg's from endpoint for indoor routing.",
+            description: "Optional level (floor) of the leg's from endpoint for indoor routing. If unset, the endpoint has no level. Level 0 is a real level.",
             type: 'number',
             format: 'double'
         },
@@ -1838,7 +1838,7 @@ export const LegIdSchema = {
             format: 'double'
         },
         toLevel: {
-            description: "Optional level (floor) of the leg's to endpoint for indoor routing.",
+            description: "Optional level (floor) of the leg's to endpoint for indoor routing. If unset, the endpoint has no level. Level 0 is a real level.",
             type: 'number',
             format: 'double'
         },
@@ -1945,9 +1945,7 @@ export const ItinerarySchema = {
         },
         id: {
             type: 'string',
-            description: `Experimental (format might change). Opaque itinerary identifier.
-Pass it as \`itineraryId\` to \`refresh-itinerary\` endpoint for reconstruction using the new schedule/realtime data.
-`
+            description: 'Opaque itinerary identifier. Pass it as `itineraryId` to `/api/v6/refresh-itinerary` for reconstruction using the new schedule/realtime data.'
         },
         legs: {
             description: 'Journey legs',
