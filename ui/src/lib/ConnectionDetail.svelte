@@ -398,16 +398,6 @@
 					</span>
 				</div>
 
-				<div class="ml-4 mt-4">
-					{#if l.bikesAllowed}
-						<Bike class="inline" />
-					{/if}
-
-					{#if l.wheelchairAccessible == 'ACCESSIBLE'}
-						<Accessibility class="inline" />
-					{/if}
-				</div>
-
 				<Alerts alerts={l.alerts} tz={l.from.tz || l.to.tz} variant="full" />
 
 				{#if l.alternatives && l.alternatives.length > 0}
@@ -438,6 +428,16 @@
 						{/each}
 					</div>
 				{/if}
+
+				<div class="m-4">
+					{#if l.bikesAllowed}
+						<Bike class="inline" />
+					{/if}
+
+					{#if l.wheelchairAccessible == 'ACCESSIBLE'}
+						<Accessibility class="inline" />
+					{/if}
+				</div>
 
 				{#if l.routeUrl || l.ticketUrls.web || (l.agencyUrl && l.agencyName)}
 					<div class="mt-2 mr-4">
