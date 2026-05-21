@@ -20,6 +20,7 @@
 #include "fmt/chrono.h"
 #include "fmt/format.h"
 
+#include "utl/concat.h"
 #include "utl/helpers/algorithm.h"
 #include "utl/verify.h"
 
@@ -731,7 +732,7 @@ api::Itinerary reconstruct_itinerary(ep::stop_times const& stop_times_ep,
     }
   }
 
-  // Fully reconstructable journey: keep the original single-pass behaviour.
+  // Fully reconstructable journey: reconstruct single pass
   if (!any_dummy) {
     auto legs = std::vector<n::routing::journey::leg>{};
     legs.reserve(slots.size());
@@ -763,9 +764,7 @@ api::Itinerary reconstruct_itinerary(ep::stop_times const& stop_times_ep,
         is_last ? end_pos : std::nullopt, stop_times_ep, l, shapes,
         rt.rtt_.get(), join_interlined_legs, detailed_transfers, detailed_legs,
         with_fares, with_scheduled_skipped_stops, lang, num_leg_alternatives);
-    for (auto& leg : seg_itinerary.legs_) {
-      out_legs.emplace_back(std::move(leg));
-    }
+    utl::concat(out_legs, seg_itinerary.legs_);
     segment.clear();
     first_segment = false;
   };

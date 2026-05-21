@@ -2071,6 +2071,10 @@ paths:
       tags:
         - timetable
       summary: Reconstruct an itinerary from an itinerary ID.
+      description: |
+        Experimental (API might change without prior notice and without API version bump).
+        Only supports walking at start/end or station-to-station itineraries.
+        API options mirror those of the `plan` endpoint.
       operationId: refreshItinerary
       parameters:
         - name: itineraryId
@@ -2151,6 +2155,10 @@ paths:
       tags:
         - timetable
       summary: Reconstruct an itinerary from a protobuf-JSON itinerary identifier.
+      description: |
+        Experimental (API might change without prior notice and without API version bump).
+        Only supports walking at start/end or station-to-station itineraries.
+        API options mirror those of the `plan` endpoint.
       operationId: refreshItineraryPost
       requestBody:
         required: true

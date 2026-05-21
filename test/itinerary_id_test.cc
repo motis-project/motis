@@ -45,24 +45,22 @@ std::string generate_itinerary_id(api::Itinerary const& x) {
 TEST(motis, itinerary_id_distinguishes_level_zero_from_no_level) {
   auto const t0 =
       openapi::date_time_t{std::chrono::sys_seconds{std::chrono::seconds{0}}};
-  auto itinerary = api::Itinerary{.duration_ = 0,
-                                  .startTime_ = t0,
-                                  .endTime_ = t0,
-                                  .transfers_ = 0};
-  itinerary.legs_.push_back(api::Leg{
-      .mode_ = api::ModeEnum::WALK,
-      .from_ = api::Place{.lat_ = 1.0, .lon_ = 2.0, .level_ = 0.0},
-      .to_ = api::Place{.lat_ = 3.0, .lon_ = 4.0},
-      .duration_ = 0,
-      .startTime_ = t0,
-      .endTime_ = t0,
-      .scheduledStartTime_ = t0,
-      .scheduledEndTime_ = t0,
-      .scheduled_ = true});
+  auto itinerary = api::Itinerary{
+      .duration_ = 0, .startTime_ = t0, .endTime_ = t0, .transfers_ = 0};
+  itinerary.legs_.push_back(
+      api::Leg{.mode_ = api::ModeEnum::WALK,
+               .from_ = api::Place{.lat_ = 1.0, .lon_ = 2.0, .level_ = 0.0},
+               .to_ = api::Place{.lat_ = 3.0, .lon_ = 4.0},
+               .duration_ = 0,
+               .startTime_ = t0,
+               .endTime_ = t0,
+               .scheduledStartTime_ = t0,
+               .scheduledEndTime_ = t0,
+               .scheduled_ = true});
 
   auto parsed = motis::ItineraryId{};
-  ASSERT_TRUE(
-      parsed.ParseFromString(net::decode_base64(generate_itinerary_id(itinerary))));
+  ASSERT_TRUE(parsed.ParseFromString(
+      net::decode_base64(generate_itinerary_id(itinerary))));
   ASSERT_EQ(1, parsed.legs_size());
   EXPECT_TRUE(parsed.legs(0).has_from_level());
   EXPECT_EQ(0.0, parsed.legs(0).from_level());
