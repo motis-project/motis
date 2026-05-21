@@ -1132,6 +1132,12 @@ export type Category = {
     shortName: string;
 };
 
+export type TicketUrls = {
+    web?: string;
+    android?: string;
+    ios?: string;
+};
+
 export type Leg = {
     /**
      * Transport mode for this leg
@@ -1280,6 +1286,11 @@ export type Leg = {
      *
      */
     wheelchairAccessible?: WheelchairAccessibility;
+    /**
+     * Ticket booking links for different platforms
+     *
+     */
+    ticketUrls?: TicketUrls;
     /**
      * Alternative connections that can replace this transit leg.
      * Each alternative is normally a sequence of 3 legs:

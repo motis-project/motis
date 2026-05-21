@@ -439,7 +439,7 @@
 					{/if}
 				</div>
 
-				{#if l.routeUrl || l.ticketUrls.web || (l.agencyUrl && l.agencyName)}
+				{#if l.routeUrl || (l.ticketUrls && l.ticketUrls.web) || (l.agencyUrl && l.agencyName)}
 					<div class="mt-2 mr-4">
 						{#if l.routeUrl}
 							<Button

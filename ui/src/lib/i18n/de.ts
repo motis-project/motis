@@ -179,7 +179,7 @@ const translations: Translations = {
 		}
 	},
 	tickets: 'Tickets',
-	moreInformation: 'Mehr Informationen'
+	routeInformation: 'Mehr Informationen'
 };
 
 export default translations;

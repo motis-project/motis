@@ -184,7 +184,7 @@ const translations: Translations = {
 		}
 	},
 	tickets: 'Bilety',
-	moreInformation: 'Więcej informacji'
+	routeInformation: 'Więcej informacji'
 };
 
 export default translations;
