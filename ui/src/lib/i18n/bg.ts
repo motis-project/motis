@@ -180,7 +180,9 @@ const translations: Translations = {
 			default:
 				return `${n} маршрута`;
 		}
-	}
+	},
+	tickets: 'Билети',
+	routeInformation: 'Допълнителна информация'
 };
 
 export default translations;
