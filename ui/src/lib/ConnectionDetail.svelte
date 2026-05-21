@@ -465,7 +465,7 @@
 					</div>
 				{/if}
 
-				{#if l.routeUrl || l.ticketUrls.web}
+				{#if l.routeUrl || l.ticketUrls.web || (l.agencyUrl && l.agencyName)}
 					<div class="mt-2 mr-4">
 						{#if l.routeUrl}
 							<Button
