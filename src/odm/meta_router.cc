@@ -153,9 +153,13 @@ n::routing::query meta_router::get_base_query(
     n::interval<n::unixtime_t> const& intvl) const {
   return {
       .start_time_ = intvl,
-      .start_match_mode_ = motis::ep::get_match_mode(r_, start_),
-      .dest_match_mode_ = motis::ep::get_match_mode(r_, dest_),
-      .use_start_footpaths_ = !motis::ep::is_intermodal(r_, start_),
+      .start_match_mode_ = r_.is_osr_loaded()
+                               ? n::routing::location_match_mode::kIntermodal
+                               : n::routing::location_match_mode::kEquivalent,
+      .dest_match_mode_ = r_.is_osr_loaded()
+                              ? n::routing::location_match_mode::kIntermodal
+                              : n::routing::location_match_mode::kEquivalent,
+      .use_start_footpaths_ = !r_.is_osr_loaded(),
       .max_transfers_ = static_cast<std::uint8_t>(
           query_.maxTransfers_.has_value() ? *query_.maxTransfers_
                                            : n::routing::kMaxTransfers),
@@ -493,8 +497,8 @@ api::plan_response meta_router::run() {
                    taxi_journeys.begin()->departure_time())));
   }
   return {
-      .from_ = from_place_,
-      .to_ = to_place_,
+      .from_ = bwd_compat_lvl_adjust(from_place_, api_version_),
+      .to_ = bwd_compat_lvl_adjust(to_place_, api_version_),
       .direct_ = std::move(direct_),
       .itineraries_ = utl::to_vec(
           taxi_journeys,

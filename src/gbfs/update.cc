@@ -29,6 +29,8 @@
 
 #include "fmt/format.h"
 
+#include "net/base64.h"
+
 #include "utl/enumerate.h"
 #include "utl/helpers/algorithm.h"
 #include "utl/overloaded.h"
@@ -315,6 +317,7 @@ struct gbfs_update {
                   .default_return_constraint_ =
                       lookup_default_return_constraint("", id),
                   .config_group_ = lookup_group("", id),
+                  .config_name_ = lookup_name("", id),
                   .config_color_ = lookup_color("", id),
                   .oauth_ = std::move(oauth),
                   .default_ttl_ = default_ttl,
@@ -431,6 +434,9 @@ struct gbfs_update {
           load_system_information);
       if (!sys_info_updated && prev_provider != nullptr) {
         provider.sys_info_ = prev_provider->sys_info_;
+      }
+      if (pf.config_name_) {
+        provider.sys_info_.name_ = *pf.config_name_;
       }
 
       auto const vehicle_types_updated = co_await update(
@@ -807,6 +813,7 @@ struct gbfs_update {
             .default_return_constraint_ =
                 lookup_default_return_constraint(af.id_, combined_id),
             .config_group_ = lookup_group(af.id_, system_id),
+            .config_name_ = lookup_name(af.id_, system_id),
             .config_color_ = lookup_color(af.id_, system_id),
             .oauth_ = af.oauth_,
             .default_ttl_ = af.default_ttl_,
@@ -827,6 +834,7 @@ struct gbfs_update {
             .default_return_constraint_ =
                 lookup_default_return_constraint(af.id_, combined_id),
             .config_group_ = lookup_group(af.id_, system_id),
+            .config_name_ = lookup_name(af.id_, system_id),
             .config_color_ = lookup_color(af.id_, system_id),
             .oauth_ = af.oauth_,
             .default_ttl_ = af.default_ttl_,
@@ -909,18 +917,29 @@ struct gbfs_update {
     }
     try {
       auto const opt = boost::urls::encoding_opts(true);
-      auto const body = fmt::format(
-          "grant_type=client_credentials&client_id={}&client_secret={}",
-          boost::urls::encode(oauth->settings_.client_id_,
-                              boost::urls::unreserved_chars, opt),
-          boost::urls::encode(oauth->settings_.client_secret_,
-                              boost::urls::unreserved_chars, opt));
+      auto const client_id = boost::urls::encode(
+          oauth->settings_.client_id_, boost::urls::unreserved_chars, opt);
+      auto const client_secret = boost::urls::encode(
+          oauth->settings_.client_secret_, boost::urls::unreserved_chars, opt);
+      auto body = std::string{"grant_type=client_credentials"};
       auto oauth_headers = oauth->settings_.headers_.value_or(headers_t{});
       oauth_headers["Content-Type"] = "application/x-www-form-urlencoded";
 
+      switch (oauth->settings_.auth_method_) {
+        case config::gbfs::oauth_settings::auth_method::client_secret_basic:
+          oauth_headers["Authorization"] =
+              fmt::format("Basic {}", net::encode_base64(fmt::format(
+                                          "{}:{}", client_id, client_secret)));
+          break;
+        case config::gbfs::oauth_settings::auth_method::client_secret_post:
+          body += fmt::format("&client_id={}&client_secret={}", client_id,
+                              client_secret);
+          break;
+      }
+
       auto const res =
           co_await http_POST(boost::urls::url{oauth->settings_.token_url_},
-                             std::move(oauth_headers), body, timeout_);
+                             std::move(oauth_headers), body, timeout_, proxy_);
       auto const res_body = get_http_body(res);
       auto const res_json = json::parse(res_body);
       auto const& j = res_json.as_object();
@@ -1073,6 +1092,12 @@ struct gbfs_update {
                           [](auto const& cfg) { return cfg.color_; });
   }
 
+  std::optional<std::string> lookup_name(std::string const& af_id,
+                                         std::string const& system_id) {
+    return lookup_mapping(af_id, system_id,
+                          [](auto const& cfg) { return cfg.name_; });
+  }
+
   config::gbfs const& c_;
   osr::ways const& w_;
   osr::lookup const& l_;
@@ -1087,7 +1112,8 @@ struct gbfs_update {
 awaitable<void> update(config const& c,
                        osr::ways const& w,
                        osr::lookup const& l,
-                       std::shared_ptr<gbfs_data>& data_ptr) {
+                       std::shared_ptr<gbfs_data>& data_ptr,
+                       metrics_registry const* metrics) {
   auto const t = utl::scoped_timer{"gbfs::update"};
 
   if (!c.gbfs_.has_value()) {
@@ -1109,16 +1135,18 @@ awaitable<void> update(config const& c,
     }
   }
   data_ptr = d;
+  metrics->last_update_gbfs_.SetToCurrentTime();
 }
 
 void run_gbfs_update(boost::asio::io_context& ioc,
                      config const& c,
                      osr::ways const& w,
                      osr::lookup const& l,
-                     std::shared_ptr<gbfs_data>& data_ptr) {
+                     std::shared_ptr<gbfs_data>& data_ptr,
+                     metrics_registry const* metrics) {
   boost::asio::co_spawn(
       ioc,
-      [&]() -> awaitable<void> {
+      [&, metrics]() -> awaitable<void> {
         auto executor = co_await asio::this_coro::executor;
         auto timer = asio::steady_timer{executor};
         auto ec = boost::system::error_code{};
@@ -1128,7 +1156,7 @@ void run_gbfs_update(boost::asio::io_context& ioc,
           // Remember when we started so we can schedule the next update.
           auto const start = std::chrono::steady_clock::now();
 
-          co_await update(cc, w, l, data_ptr);
+          co_await update(cc, w, l, data_ptr, metrics);
 
           // Schedule next update.
           timer.expires_at(start +

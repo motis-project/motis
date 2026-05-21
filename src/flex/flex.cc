@@ -1,5 +1,6 @@
 #include "motis/flex/flex.h"
 
+#include <optional>
 #include <ranges>
 
 #include "utl/concat.h"
@@ -350,14 +351,13 @@ void add_flex_td_offsets(osr::ways const& w,
                                              ? iv_at_to_stop << duration
                                              : iv_at_to_stop >> duration;
 
-            auto& offsets = ret[l];
-            if (offsets.empty()) {
-              offsets.emplace_back(n::unixtime_t{n::i32_minutes{0U}},
+            if (iv_at_from_stop.from_ < iv_at_from_stop.to_ &&
+                duration < n::footpath::kMaxDuration) {
+              auto& offsets = ret[l];
+              offsets.emplace_back(iv_at_from_stop.from_, duration, id.to_id());
+              offsets.emplace_back(iv_at_from_stop.to_,
                                    n::footpath::kMaxDuration, id.to_id());
             }
-            offsets.emplace_back(iv_at_from_stop.from_, duration, id.to_id());
-            offsets.emplace_back(iv_at_from_stop.to_, n::footpath::kMaxDuration,
-                                 id.to_id());
           }
         }
       }
@@ -375,13 +375,6 @@ void add_flex_td_offsets(osr::ways const& w,
                                               tt.flex_area_name_[a]);
                                         }})),
         UTL_GET_TIMING_MS(routing_timer));
-  }
-
-  for (auto& [_, offsets] : ret) {
-    utl::sort(offsets, [](n::routing::td_offset const& a,
-                          n::routing::td_offset const& b) {
-      return a.valid_from_ < b.valid_from_;
-    });
   }
 }
 

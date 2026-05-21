@@ -481,7 +481,7 @@ export const PickupDropoffTypeSchema = {
 
 export const PlaceSchema = {
     type: 'object',
-    required: ['name', 'lat', 'lon', 'level'],
+    required: ['name', 'lat', 'lon'],
     properties: {
         name: {
             description: 'name of the transit stop / PoI / address',
@@ -508,7 +508,12 @@ export const PlaceSchema = {
             type: 'number'
         },
         level: {
-            description: 'level according to OpenStreetMap',
+            description: `level according to OpenStreetMap
+If no level is given, the field will be unset.
+
+For older versions (v1-v5), this field is mandatory and therefore set to 0.
+Affected endpoints: plan, trip, stoptimes, one-to-all, map/stops, map/trips
+`,
             type: 'number'
         },
         tz: {
@@ -930,6 +935,11 @@ See: https://wiki.openstreetmap.org/wiki/Conditional_restrictions
             description: 'decline in meters across this path segment'
         }
     }
+} as const;
+
+export const WheelchairAccessibilitySchema = {
+    type: 'string',
+    enum: ['ACCESSIBLE', 'NOT_ACCESSIBLE']
 } as const;
 
 export const RentalFormFactorSchema = {
@@ -1619,6 +1629,40 @@ by looping active weekdays, e.g. from calendar.txt in GTFS.
             description: `Whether bikes can be carried on this leg.
 `,
             type: 'boolean'
+        },
+        wheelchairAccessible: {
+            description: `Whether wheelchairs can be transported on this leg.
+`,
+            '$ref': '#/components/schemas/WheelchairAccessibility'
+        },
+        alternatives: {
+            description: `Alternative connections that can replace this transit leg.
+Each alternative is normally a sequence of 3 legs:
+\`[ingress footpath, transit, egress footpath]\`.
+Only populated when the request sets \`numLegAlternatives\` > 0
+(capped to that value).
+
+Interlined legs:
+\`alternatives\` is populated only on the first (main) leg of
+an interlined chain. Subsequent interlined legs (carrying
+\`interlineWithPreviousLeg=true\`) leave \`alternatives\` unset.
+Alternatives are valid for the whole interlined segment.
+
+An alternative may itself cover an interlined segment:
+the alternative's middle transit then expands into multiple
+interlined legs when \`joinInterlinedLegs=false\`. In that
+case the alternative contains more than 3 legs: ingress
+footpath, followed by N interlined transit legs (the
+secondary ones carrying \`interlineWithPreviousLeg=true\`),
+followed by an egress footpath.
+`,
+            type: 'array',
+            items: {
+                type: 'array',
+                items: {
+                    '$ref': '#/components/schemas/Leg'
+                }
+            }
         }
     }
 } as const;
@@ -1750,9 +1794,134 @@ and the inner array as OR (you can choose which ticket to buy)
     }
 } as const;
 
+export const LegIdSchema = {
+    type: 'object',
+    required: ['displayName', 'tripId', 'fromId', 'fromLat', 'fromLon', 'toId', 'toLat', 'toLon', 'schedStart', 'schedEnd', 'mode', 'scheduled'],
+    properties: {
+        displayName: {
+            type: 'string'
+        },
+        tripId: {
+            type: 'string'
+        },
+        fromId: {
+            type: 'string'
+        },
+        fromLat: {
+            description: "latitude of the leg's from endpoint",
+            type: 'number',
+            format: 'double'
+        },
+        fromLon: {
+            description: "longitude of the leg's from endpoint",
+            type: 'number',
+            format: 'double'
+        },
+        fromLevel: {
+            description: "Optional level (floor) of the leg's from endpoint for indoor routing. If unset, the endpoint has no level. Level 0 is a real level.",
+            type: 'number',
+            format: 'double'
+        },
+        toId: {
+            type: 'string'
+        },
+        toLat: {
+            description: "latitude of the leg's to endpoint",
+            type: 'number',
+            format: 'double'
+        },
+        toLon: {
+            description: "longitude of the leg's to endpoint",
+            type: 'number',
+            format: 'double'
+        },
+        toLevel: {
+            description: "Optional level (floor) of the leg's to endpoint for indoor routing. If unset, the endpoint has no level. Level 0 is a real level.",
+            type: 'number',
+            format: 'double'
+        },
+        schedStart: {
+            type: 'integer',
+            format: 'int64',
+            description: 'Scheduled departure time as a Unix timestamp in seconds.'
+        },
+        schedEnd: {
+            type: 'integer',
+            format: 'int64',
+            description: 'Scheduled arrival time as a Unix timestamp in seconds.'
+        },
+        mode: {
+            '$ref': '#/components/schemas/Mode'
+        },
+        scheduled: {
+            type: 'boolean'
+        }
+    }
+} as const;
+
+export const ItineraryIdSchema = {
+    type: 'object',
+    required: ['legs'],
+    properties: {
+        legs: {
+            type: 'array',
+            items: {
+                '$ref': '#/components/schemas/LegId'
+            }
+        }
+    }
+} as const;
+
+export const RefreshItineraryPostBodySchema = {
+    type: 'object',
+    required: ['id'],
+    properties: {
+        id: {
+            '$ref': '#/components/schemas/ItineraryId'
+        },
+        requireDisplayNameMatch: {
+            type: 'boolean',
+            default: true
+        },
+        joinInterlinedLegs: {
+            type: 'boolean',
+            default: true
+        },
+        detailedTransfers: {
+            type: 'boolean'
+        },
+        detailedLegs: {
+            type: 'boolean',
+            default: true
+        },
+        withFares: {
+            type: 'boolean',
+            default: false
+        },
+        withScheduledSkippedStops: {
+            type: 'boolean',
+            default: false
+        },
+        numLegAlternatives: {
+            type: 'integer',
+            default: 0,
+            minimum: 0
+        },
+        language: {
+            description: `language tags as used in OpenStreetMap / GTFS
+(usually BCP-47 / ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
+`,
+            type: 'array',
+            items: {
+                type: 'string'
+            }
+        }
+    }
+} as const;
+
 export const ItinerarySchema = {
     type: 'object',
-    required: ['duration', 'startTime', 'endTime', 'transfers', 'legs'],
+    required: ['duration', 'startTime', 'endTime', 'transfers', 'id', 'legs'],
     properties: {
         duration: {
             description: 'journey duration in seconds',
@@ -1771,6 +1940,10 @@ export const ItinerarySchema = {
         transfers: {
             type: 'integer',
             description: 'The number of transfers this trip has.'
+        },
+        id: {
+            type: 'string',
+            description: 'Opaque itinerary identifier. Pass it as `itineraryId` to `/api/v6/refresh-itinerary` for reconstruction using the new schedule/realtime data.'
         },
         legs: {
             description: 'Journey legs',
@@ -2348,6 +2521,20 @@ export const RouteInfoSchema = {
             items: {
                 '$ref': '#/components/schemas/RouteSegment'
             }
+        }
+    }
+} as const;
+
+export const HealthResponseSchema = {
+    type: 'object',
+    properties: {
+        rt: {
+            type: 'boolean',
+            description: 'GTFSRT, SIRI Lite, VDV AUS, VDV454 feeds.'
+        },
+        gbfs: {
+            type: 'boolean',
+            description: 'GBFS feeds.'
         }
     }
 } as const;

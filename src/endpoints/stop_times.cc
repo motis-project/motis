@@ -307,9 +307,11 @@ std::vector<api::Place> other_stops_impl(n::rt::frun fr,
                                          platform_matches_t const* matches,
                                          adr_ext const* ae,
                                          tz_map_t const* tz,
-                                         n::lang_t const& lang) {
+                                         n::lang_t const& lang,
+                                         unsigned const api_version) {
   auto const convert_stop = [&](n::rt::run_stop const& stop) {
-    auto result = to_place(tt, &tags, w, pl, matches, ae, tz, lang, stop);
+    auto result = bwd_compat_lvl_adjust(
+        to_place(tt, &tags, w, pl, matches, ae, tz, lang, stop), api_version);
     if (ev_type == n::event_type::kDep ||
         stop.fr_->stop_range_.from_ != stop.stop_idx_) {
       result.arrival_ = stop.time(n::event_type::kArr);
@@ -351,13 +353,17 @@ std::vector<api::Place> other_stops_impl(n::rt::frun fr,
   }
 }
 
-api::stoptimes_response stop_times::operator()(
-    boost::urls::url_view const& url) const {
-  auto const query = api::stoptimes_params{url.params()};
-  auto const& lang = query.language_;
-  auto const api_version = get_api_version(url);
+std::vector<n::rt::run> stop_times::get_runs(
+    api::stoptimes_params const& query,
+    nigiri::rt_timetable const* rtt,
+    nigiri::event_type const& ev_type,
+    std::optional<nigiri::location_idx_t> const& query_stop,
+    std::optional<osr::location> const& query_center,
+    bool const disable_stoptimes_max_limit) const {
 
-  auto const max_results = config_.get_limits().stoptimes_max_results_;
+  auto const max_results = disable_stoptimes_max_limit
+                               ? 999888777U
+                               : config_.get_limits().stoptimes_max_results_;
   utl::verify<net::bad_request_exception>(
       query.n_.has_value() || query.window_.has_value(),
       "neither 'n' nor 'window' is provided");
@@ -370,12 +376,6 @@ api::stoptimes_response stop_times::operator()(
       query.stopId_.has_value() ||
           (query.center_.has_value() && query.radius_.has_value()),
       "no stop and no center with radius (at least one is required)");
-
-  auto const query_stop = query.stopId_.and_then(
-      [&](std::string const& x) { return tags_.find_location(tt_, x); });
-
-  auto const query_center = query.center_.and_then(
-      [&](std::string const& x) { return parse_location(x); });
 
   auto const center =
       query_stop
@@ -446,10 +446,6 @@ api::stoptimes_response stop_times::operator()(
   }
   utl::erase_duplicates(locations);
 
-  auto const rt = std::atomic_load(&rt_);
-  auto const rtt = rt->rtt_.get();
-  auto const ev_type =
-      query.arriveBy_ ? n::event_type::kArr : n::event_type::kDep;
   auto const window = query.window_.transform([](auto const w) {
     return std::chrono::duration_cast<n::duration_t>(std::chrono::seconds{w});
   });
@@ -472,6 +468,39 @@ api::stoptimes_response stop_times::operator()(
                              return to_tuple(a) == to_tuple(b);
                            }),
                end(events));
+  return events;
+}
+
+std::vector<nigiri::rt::run> stop_times::get_runs(
+    api::stoptimes_params const& query, nigiri::rt_timetable const* rtt) const {
+  auto const ev_type =
+      query.arriveBy_ ? n::event_type::kArr : n::event_type::kDep;
+  auto const query_stop = query.stopId_.and_then(
+      [&](std::string const& x) { return tags_.find_location(tt_, x); });
+  auto const query_center = query.center_.and_then(
+      [&](std::string const& x) { return parse_location(x); });
+
+  return this->get_runs(query, rtt, ev_type, query_stop, query_center);
+}
+
+api::stoptimes_response stop_times::operator()(
+    boost::urls::url_view const& url) const {
+  auto const query = api::stoptimes_params{url.params()};
+
+  auto const rt = std::atomic_load(&rt_);
+  auto const rtt = rt->rtt_.get();
+  auto const ev_type =
+      query.arriveBy_ ? n::event_type::kArr : n::event_type::kDep;
+  auto const api_version = get_api_version(url);
+  auto const& lang = query.language_;
+  auto const query_stop = query.stopId_.and_then(
+      [&](std::string const& x) { return tags_.find_location(tt_, x); });
+  auto const query_center = query.center_.and_then(
+      [&](std::string const& x) { return parse_location(x); });
+
+  auto const events =
+      this->get_runs(query, rtt, ev_type, query_stop, query_center);
+
   return {
       .stopTimes_ = utl::to_vec(
           events,
@@ -518,18 +547,23 @@ api::stoptimes_response stop_times::operator()(
                 return std::nullopt;
               }
               return other_stops_impl(fr, ev_type, &tt_, tags_, w_, pl_,
-                                      matches_, ae_, tz_, query.language_);
+                                      matches_, ae_, tz_, query.language_,
+                                      api_version);
             };
 
             return {
-                .place_ = std::move(place),
+                .place_ = bwd_compat_lvl_adjust(std::move(place), api_version),
                 .mode_ = to_mode(s.get_clasz(ev_type), api_version),
                 .realTime_ = r.is_rt(),
                 .headsign_ = std::string{s.direction(lang, ev_type)},
-                .tripFrom_ = to_place(&tt_, &tags_, w_, pl_, matches_, ae_, tz_,
-                                      lang, s.get_first_trip_stop(ev_type)),
-                .tripTo_ = to_place(&tt_, &tags_, w_, pl_, matches_, ae_, tz_,
-                                    lang, s.get_last_trip_stop(ev_type)),
+                .tripFrom_ = bwd_compat_lvl_adjust(
+                    to_place(&tt_, &tags_, w_, pl_, matches_, ae_, tz_, lang,
+                             s.get_first_trip_stop(ev_type)),
+                    api_version),
+                .tripTo_ = bwd_compat_lvl_adjust(
+                    to_place(&tt_, &tags_, w_, pl_, matches_, ae_, tz_, lang,
+                             s.get_last_trip_stop(ev_type)),
+                    api_version),
                 .agencyId_ =
                     std::string{tt_.strings_.try_get(agency.id_).value_or("?")},
                 .agencyName_ = std::string{tt_.translate(lang, agency.name_)},
@@ -571,6 +605,9 @@ api::stoptimes_response stop_times::operator()(
                 return query_center.transform([](osr::location const& loc) {
                   return to_place(loc, "center", std::nullopt);
                 });
+              })
+              .transform([&](api::Place&& pl) {
+                return bwd_compat_lvl_adjust(std::move(pl), api_version);
               })
               .value(),
       .previousPageCursor_ =

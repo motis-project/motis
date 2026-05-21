@@ -5,6 +5,7 @@ const translations: Translations = {
 	ticketOptions: 'Fahrscheinoptionen',
 	includedInTicket: 'Im Fahrschein enthalten',
 	journeyDetails: 'Verbindungsdetails',
+	refreshItinerary: 'Verbindung aktualisieren',
 	transfers: 'Umstiege',
 	walk: 'Fußweg',
 	bike: 'Fahrrad',
@@ -57,6 +58,7 @@ const translations: Translations = {
 	},
 	sharingProvider: 'Anbieter',
 	sharingProviders: 'Anbieter',
+	none: 'Keine',
 	returnOnlyAtStations: 'Das Fahrzeug muss an einer Station zurückgegeben werden.',
 	roundtripStationReturnConstraint:
 		'Das Fahrzeug muss wieder an der Abfahrtsstation abgestellt werden.',
@@ -78,6 +80,7 @@ const translations: Translations = {
 	timetableSources: 'Fahrplandatenquellen',
 	tripCancelled: 'Fahrt entfällt',
 	stopCancelled: 'Halt entfällt',
+	addStop: 'Haltestelle hinzufügen',
 	inOutDisallowed: 'Ein-/Ausstieg nicht möglich',
 	inDisallowed: 'Einstieg nicht möglich',
 	outDisallowed: 'Ausstieg nicht möglich',
@@ -116,7 +119,11 @@ const translations: Translations = {
 		direct: 'Direktverbindung',
 		maxPreTransitTime: 'Max. Vorlaufzeit',
 		maxPostTransitTime: 'Max. Nachlaufzeit',
-		maxDirectTime: 'Max. Direktzeit'
+		maxDirectTime: 'Max. Direktzeit',
+		additionalTransferTime: 'Zusätzliche Umstiegszeit',
+		pedestrianSpeed: 'Fußgängergeschwindigkeit',
+		cyclingSpeed: 'Fahrradgeschwindigkeit',
+		transferTimeFactor: 'Umstiegszeitfaktor'
 	},
 	elevationCosts: { NONE: 'Keine Umwege', LOW: 'Kleine Umwege', HIGH: 'Große Umwege' },
 	isochrones: {
@@ -150,6 +157,8 @@ const translations: Translations = {
 	toll: 'Achtung! Mautpflichtige Straße.',
 	accessRestriction: 'Kein Zugang',
 	continuesAs: 'Weiter als',
+	earlierAlternatives: 'Frühere Alternativen',
+	laterAlternatives: 'Spätere Alternativen',
 	rent: 'Ausleihen',
 	copyToClipboard: 'In die Zwischenablage kopieren',
 	rideThroughAllowed: 'Durchfahrt erlaubt',

@@ -425,8 +425,13 @@ export type Place = {
     lon: number;
     /**
      * level according to OpenStreetMap
+     * If no level is given, the field will be unset.
+     *
+     * For older versions (v1-v5), this field is mandatory and therefore set to 0.
+     * Affected endpoints: plan, trip, stoptimes, one-to-all, map/stops, map/trips
+     *
      */
-    level: number;
+    level?: number;
     /**
      * timezone name (e.g. "Europe/Berlin")
      */
@@ -756,6 +761,8 @@ export type StepInstruction = {
      */
     elevationDown?: number;
 };
+
+export type WheelchairAccessibility = 'ACCESSIBLE' | 'NOT_ACCESSIBLE';
 
 export type RentalFormFactor = 'BICYCLE' | 'CARGO_BICYCLE' | 'CAR' | 'MOPED' | 'SCOOTER_STANDING' | 'SCOOTER_SEATED' | 'OTHER';
 
@@ -1283,6 +1290,34 @@ export type Leg = {
      *
      */
     bikesAllowed?: boolean;
+    /**
+     * Whether wheelchairs can be transported on this leg.
+     *
+     */
+    wheelchairAccessible?: WheelchairAccessibility;
+    /**
+     * Alternative connections that can replace this transit leg.
+     * Each alternative is normally a sequence of 3 legs:
+     * `[ingress footpath, transit, egress footpath]`.
+     * Only populated when the request sets `numLegAlternatives` > 0
+     * (capped to that value).
+     *
+     * Interlined legs:
+     * `alternatives` is populated only on the first (main) leg of
+     * an interlined chain. Subsequent interlined legs (carrying
+     * `interlineWithPreviousLeg=true`) leave `alternatives` unset.
+     * Alternatives are valid for the whole interlined segment.
+     *
+     * An alternative may itself cover an interlined segment:
+     * the alternative's middle transit then expands into multiple
+     * interlined legs when `joinInterlinedLegs=false`. In that
+     * case the alternative contains more than 3 legs: ingress
+     * footpath, followed by N interlined transit legs (the
+     * secondary ones carrying `interlineWithPreviousLeg=true`),
+     * followed by an egress footpath.
+     *
+     */
+    alternatives?: Array<Array<Leg>>;
 };
 
 export type RiderCategory = {
@@ -1374,6 +1409,68 @@ export type FareTransfer = {
     effectiveFareLegProducts: Array<Array<Array<FareProduct>>>;
 };
 
+export type LegId = {
+    displayName: string;
+    tripId: string;
+    fromId: string;
+    /**
+     * latitude of the leg's from endpoint
+     */
+    fromLat: number;
+    /**
+     * longitude of the leg's from endpoint
+     */
+    fromLon: number;
+    /**
+     * Optional level (floor) of the leg's from endpoint for indoor routing. If unset, the endpoint has no level. Level 0 is a real level.
+     */
+    fromLevel?: number;
+    toId: string;
+    /**
+     * latitude of the leg's to endpoint
+     */
+    toLat: number;
+    /**
+     * longitude of the leg's to endpoint
+     */
+    toLon: number;
+    /**
+     * Optional level (floor) of the leg's to endpoint for indoor routing. If unset, the endpoint has no level. Level 0 is a real level.
+     */
+    toLevel?: number;
+    /**
+     * Scheduled departure time as a Unix timestamp in seconds.
+     */
+    schedStart: number;
+    /**
+     * Scheduled arrival time as a Unix timestamp in seconds.
+     */
+    schedEnd: number;
+    mode: Mode;
+    scheduled: boolean;
+};
+
+export type ItineraryId = {
+    legs: Array<LegId>;
+};
+
+export type RefreshItineraryPostBody = {
+    id: ItineraryId;
+    requireDisplayNameMatch?: boolean;
+    joinInterlinedLegs?: boolean;
+    detailedTransfers?: boolean;
+    detailedLegs?: boolean;
+    withFares?: boolean;
+    withScheduledSkippedStops?: boolean;
+    numLegAlternatives?: number;
+    /**
+     * language tags as used in OpenStreetMap / GTFS
+     * (usually BCP-47 / ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
+     *
+     */
+    language?: Array<(string)>;
+};
+
 export type Itinerary = {
     /**
      * journey duration in seconds
@@ -1391,6 +1488,10 @@ export type Itinerary = {
      * The number of transfers this trip has.
      */
     transfers: number;
+    /**
+     * Opaque itinerary identifier. Pass it as `itineraryId` to `/api/v6/refresh-itinerary` for reconstruction using the new schedule/realtime data.
+     */
+    id: string;
     /**
      * Journey legs
      */
@@ -1846,6 +1947,17 @@ export type RouteInfo = {
     segments: Array<RouteSegment>;
 };
 
+export type HealthResponse = {
+    /**
+     * GTFSRT, SIRI Lite, VDV AUS, VDV454 feeds.
+     */
+    rt?: boolean;
+    /**
+     * GBFS feeds.
+     */
+    gbfs?: boolean;
+};
+
 export type PlanData = {
     query: {
         /**
@@ -2138,6 +2250,18 @@ export type PlanData = {
          *
          */
         numItineraries?: number;
+        /**
+         * Optional. Maximum number of alternatives to return per transit
+         * leg. `0` disables alternatives. When greater than zero, each
+         * transit leg in the response is annotated with up to N
+         * `alternatives`: connections that can replace the leg while still
+         * matching the surrounding journey context (i.e. arriving in time
+         * for the next transit leg / departing after the previous transit
+         * leg's arrival). Each alternative is a 3-leg sequence
+         * `[ingress footpath, transit, egress footpath]`.
+         *
+         */
+        numLegAlternatives?: number;
         /**
          * Use the cursor to go to the next "page" of itineraries.
          * Copy the cursor from the last response and keep the original request as is.
@@ -3044,6 +3168,32 @@ export type TripResponse = (Itinerary);
 
 export type TripError = (Error);
 
+export type RefreshItineraryData = {
+    query: {
+        detailedLegs?: boolean;
+        detailedTransfers?: boolean;
+        itineraryId: string;
+        joinInterlinedLegs?: boolean;
+        language?: Array<(string)>;
+        numLegAlternatives?: number;
+        requireDisplayNameMatch?: boolean;
+        withFares?: boolean;
+        withScheduledSkippedStops?: boolean;
+    };
+};
+
+export type RefreshItineraryResponse = (Itinerary);
+
+export type RefreshItineraryError = (Error);
+
+export type RefreshItineraryPostData = {
+    body: RefreshItineraryPostBody;
+};
+
+export type RefreshItineraryPostResponse = (Itinerary);
+
+export type RefreshItineraryPostError = (Error);
+
 export type StoptimesData = {
     query?: {
         /**
@@ -3241,6 +3391,10 @@ export type InitialError = (Error);
 export type StopsData = {
     query: {
         /**
+         * Optional. Return grouped stops
+         */
+        grouped?: boolean;
+        /**
          * language tags as used in OpenStreetMap / GTFS
          * (usually BCP-47 / ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
          *
@@ -3254,6 +3408,10 @@ export type StopsData = {
          * latitude,longitude pair of the lower right coordinate
          */
         min: string;
+        /**
+         * Optional. Stop modes
+         */
+        modes?: Array<Mode>;
     };
 };
 
@@ -3443,6 +3601,10 @@ export type RentalsResponse = ({
 });
 
 export type RentalsError = (Error);
+
+export type HealthResponse2 = (HealthResponse);
+
+export type HealthError = (HealthResponse);
 
 export type TransfersData = {
     query: {

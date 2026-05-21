@@ -10,6 +10,7 @@ info:
 
     MOTIS 2.x - current, providing:
 
+    * /api/v6/{plan,trip,stoptimes,one-to-all,map/stops,map/trips} no longer set optional level to 0; since MOTIS 2.9.x
     * /api/v5/{plan,trip,stoptimes,map/trips} renamed METRO mode to SUBURBAN, AREAL_LIFT to AERIAL_LIFT; since MOTIS 2.5.0
     * /api/v4/{plan,trip,stoptimes,map/trips} new displayName property, routeShortName only contains actual route short name from source; since MOTIS 2.2.0
     * /api/v3/plan with correct maxTransfers API parameter (transfers actually corresponding to number of changes between transit legs (and not to number of transit legs), i.e. maxTransfers=0 returns direct public transit connections, as expected); since MOTIS 2.0.84 
@@ -35,7 +36,7 @@ servers:
   - url: http://localhost:8080
     description: Local MOTIS server
 paths:
-  /api/v5/plan:
+  /api/v6/plan:
     get:
       tags:
         - routing
@@ -840,6 +841,23 @@ paths:
             type: boolean
             default: false
 
+        - name: numLegAlternatives
+          in: query
+          required: false
+          description: |
+            Optional. Maximum number of alternatives to return per transit
+            leg. `0` disables alternatives. When greater than zero, each
+            transit leg in the response is annotated with up to N
+            `alternatives`: connections that can replace the leg while still
+            matching the surrounding journey context (i.e. arriving in time
+            for the next transit leg / departing after the previous transit
+            leg's arrival). Each alternative is a 3-leg sequence
+            `[ingress footpath, transit, egress footpath]`.
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+
         - name: withScheduledSkippedStops
           in: query
           required: false
@@ -1507,7 +1525,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
-  /api/v1/one-to-all:
+  /api/v6/one-to-all:
     get:
       tags:
         - routing
@@ -1963,7 +1981,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/Match'
 
-  /api/v5/trip:
+  /api/v6/trip:
     get:
       tags:
         - timetable
@@ -2048,7 +2066,127 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
-  /api/v5/stoptimes:
+  /api/v6/refresh-itinerary:
+    get:
+      tags:
+        - timetable
+      summary: Reconstruct an itinerary from an itinerary ID.
+      description: |
+        Experimental (API might change without prior notice and without API version bump).
+        Only supports walking at start/end or station-to-station itineraries.
+        API options mirror those of the `plan` endpoint.
+      operationId: refreshItinerary
+      parameters:
+        - name: itineraryId
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: requireDisplayNameMatch
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: true
+        - name: joinInterlinedLegs
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: true
+        - name: detailedTransfers
+          in: query
+          required: false
+          schema:
+            type: boolean
+        - name: detailedLegs
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: true
+        - name: withFares
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+        - name: withScheduledSkippedStops
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+        - name: numLegAlternatives
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+        - name: language
+          in: query
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+          explode: false
+      responses:
+        '200':
+          description: reconstructed itinerary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Itinerary'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      tags:
+        - timetable
+      summary: Reconstruct an itinerary from a protobuf-JSON itinerary identifier.
+      description: |
+        Experimental (API might change without prior notice and without API version bump).
+        Only supports walking at start/end or station-to-station itineraries.
+        API options mirror those of the `plan` endpoint.
+      operationId: refreshItineraryPost
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshItineraryPostBody'
+      responses:
+        '200':
+          description: reconstructed itinerary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Itinerary'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v6/stoptimes:
     get:
       tags:
         - timetable
@@ -2279,7 +2417,7 @@ paths:
                       The next page is a set of stop times AFTER the last stop time in this result.
                     type: string
 
-  /api/v5/map/trips:
+  /api/v6/map/trips:
     get:
       tags:
         - map
@@ -2413,7 +2551,7 @@ paths:
                   serverConfig:
                     $ref: '#/components/schemas/ServerConfig'
 
-  /api/v1/map/stops:
+  /api/v6/map/stops:
     get:
       tags:
         - map
@@ -2433,6 +2571,22 @@ paths:
           description: latitude,longitude pair of the upper left coordinate
           schema:
             type: string
+
+        - name: grouped
+          in: query
+          required: false
+          description: Optional. Return grouped stops
+          schema:
+            type: boolean
+
+        - name: modes
+          in: query
+          required: false
+          description: Optional. Stop modes
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/Mode'
 
         - name: language
           in: query
@@ -2939,6 +3093,23 @@ paths:
                     items:
                       $ref: '#/components/schemas/RentalZone'
 
+  /api/v1/health:
+    get:
+      operationId: health
+      responses:
+        '200':
+          description: Shows over which feeds at least one cycle of updates was consumed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '400':
+          description: Full first cycle through all configured feeds is not finished. 
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+          
   /api/debug/transfers:
     get:
       tags:
@@ -3482,7 +3653,6 @@ components:
         - name
         - lat
         - lon
-        - level
       properties:
         name:
           description: name of the transit stop / PoI / address
@@ -3503,7 +3673,12 @@ components:
           description: longitude
           type: number
         level:
-          description: level according to OpenStreetMap
+          description: |
+            level according to OpenStreetMap
+            If no level is given, the field will be unset.
+
+            For older versions (v1-v5), this field is mandatory and therefore set to 0.
+            Affected endpoints: plan, trip, stoptimes, one-to-all, map/stops, map/trips
           type: number
         tz:
           description: timezone name (e.g. "Europe/Berlin")
@@ -3879,6 +4054,12 @@ components:
         elevationDown:
           type: integer
           description: decline in meters across this path segment
+
+    WheelchairAccessibility:
+      type: string
+      enum:
+        - ACCESSIBLE
+        - NOT_ACCESSIBLE
 
     RentalFormFactor:
       type: string
@@ -4485,6 +4666,36 @@ components:
           description: |
             Whether bikes can be carried on this leg.
           type: boolean
+        wheelchairAccessible:
+          description: |
+            Whether wheelchairs can be transported on this leg.
+          $ref: '#/components/schemas/WheelchairAccessibility'
+        alternatives:
+          description: |
+            Alternative connections that can replace this transit leg.
+            Each alternative is normally a sequence of 3 legs:
+            `[ingress footpath, transit, egress footpath]`.
+            Only populated when the request sets `numLegAlternatives` > 0
+            (capped to that value).
+
+            Interlined legs:
+            `alternatives` is populated only on the first (main) leg of
+            an interlined chain. Subsequent interlined legs (carrying
+            `interlineWithPreviousLeg=true`) leave `alternatives` unset.
+            Alternatives are valid for the whole interlined segment.
+
+            An alternative may itself cover an interlined segment:
+            the alternative's middle transit then expands into multiple
+            interlined legs when `joinInterlinedLegs=false`. In that
+            case the alternative contains more than 3 legs: ingress
+            footpath, followed by N interlined transit legs (the
+            secondary ones carrying `interlineWithPreviousLeg=true`),
+            followed by an egress footpath.
+          type: array
+          items:
+            type: array
+            items:
+              $ref: '#/components/schemas/Leg'
 
     RiderCategory:
       type: object
@@ -4597,6 +4808,115 @@ components:
               items:
                 $ref: '#/components/schemas/FareProduct'
 
+    LegId:
+      type: object
+      required:
+        - displayName
+        - tripId
+        - fromId
+        - fromLat
+        - fromLon
+        - toId
+        - toLat
+        - toLon
+        - schedStart
+        - schedEnd
+        - mode
+        - scheduled
+      properties:
+        displayName:
+          type: string
+        tripId:
+          type: string
+        fromId:
+          description: from stop stopId
+          type: string
+        fromLat:
+          description: latitude of the leg's from endpoint
+          type: number
+          format: double
+        fromLon:
+          description: longitude of the leg's from endpoint
+          type: number
+          format: double
+        fromLevel:
+          description: Optional level (floor) of the leg's from endpoint for indoor routing.
+          type: number
+          format: double
+        toId:
+          description: to stop stopId
+          type: string
+        toLat:
+          description: latitude of the leg's to endpoint
+          type: number
+          format: double
+        toLon:
+          description: longitude of the leg's to endpoint
+          type: number
+          format: double
+        toLevel:
+          description: Optional level (floor) of the leg's to endpoint for indoor routing.
+          type: number
+          format: double
+        schedStart:
+          type: integer
+          format: int64
+          description: Scheduled departure time as a Unix timestamp in seconds.
+        schedEnd:
+          type: integer
+          format: int64
+          description: Scheduled arrival time as a Unix timestamp in seconds.
+        mode:
+          $ref: '#/components/schemas/Mode'
+        scheduled:
+          type: boolean
+
+    ItineraryId:
+      type: object
+      required:
+        - legs
+      properties:
+        legs:
+          type: array
+          items:
+            $ref: '#/components/schemas/LegId'
+
+    RefreshItineraryPostBody:
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          $ref: '#/components/schemas/ItineraryId'
+        requireDisplayNameMatch:
+          type: boolean
+          default: true
+        joinInterlinedLegs:
+          type: boolean
+          default: true
+        detailedTransfers:
+          type: boolean
+        detailedLegs:
+          type: boolean
+          default: true
+        withFares:
+          type: boolean
+          default: false
+        withScheduledSkippedStops:
+          type: boolean
+          default: false
+        numLegAlternatives:
+          type: integer
+          default: 0
+          minimum: 0
+        language:
+          description: |
+            language tags as used in OpenStreetMap / GTFS
+            (usually BCP-47 / ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
+          type: array
+          items:
+            type: string
+
     Itinerary:
       type: object
       required:
@@ -4604,6 +4924,7 @@ components:
         - startTime
         - endTime
         - transfers
+        - id
         - legs
       properties:
         duration:
@@ -4620,6 +4941,11 @@ components:
         transfers:
           type: integer
           description: The number of transfers this trip has.
+        id:
+          type: string
+          description: |
+            Experimental (format might change). Opaque itinerary identifier.
+            Pass it as `itineraryId` to `refresh-itinerary` endpoint for reconstruction using the new schedule/realtime data.
         legs:
           description: Journey legs
           type: array
@@ -5132,3 +5458,13 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/RouteSegment'
+
+    HealthResponse:
+      type: object
+      properties:
+        rt:
+          type: boolean
+          description: GTFSRT, SIRI Lite, VDV AUS, VDV454 feeds.
+        gbfs:
+          type: boolean
+          description: GBFS feeds.

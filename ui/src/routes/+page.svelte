@@ -7,7 +7,8 @@
 		LocateFixed,
 		TrainFront,
 		Waypoints,
-		MountainSnow
+		MountainSnow,
+		RefreshCw
 	} from '@lucide/svelte';
 	import { getStyle } from '$lib/map/style';
 	import Map from '$lib/map/Map.svelte';
@@ -20,7 +21,6 @@
 		oneToAll,
 		plan,
 		type ElevationCosts,
-		type OneToAllData,
 		type PlanResponse,
 		type Itinerary,
 		type Mode,
@@ -28,7 +28,10 @@
 		type PlanData,
 		type ReachablePlace,
 		type RentalFormFactor,
-		type ServerConfig
+		type ServerConfig,
+		type CyclingSpeed,
+		type PedestrianSpeed,
+		refreshItinerary
 	} from '@motis-project/motis-client';
 	import ItineraryList from '$lib/ItineraryList.svelte';
 	import ConnectionDetail from '$lib/ConnectionDetail.svelte';
@@ -46,10 +49,10 @@
 	import { client } from '@motis-project/motis-client';
 	import StopTimes from '$lib/StopTimes.svelte';
 	import { onMount, tick, untrack } from 'svelte';
-	import { t } from '$lib/i18n/translation';
-	import { pushState } from '$app/navigation';
+	import { language, t } from '$lib/i18n/translation';
+	import { pushState, replaceState } from '$app/navigation';
 	import { page } from '$app/state';
-	import { preprocessItinerary } from '$lib/preprocessItinerary';
+	import { joinInterlinedLegs, preprocessItinerary } from '$lib/preprocessItinerary';
 	import * as Tabs from '$lib/components/ui/tabs';
 	import DeparturesMask from '$lib/DeparturesMask.svelte';
 	import Isochrones from '$lib/map/Isochrones.svelte';
@@ -69,6 +72,7 @@
 	import { LEVEL_MIN_ZOOM } from '$lib/constants';
 	import StopGeoJSON from '$lib/map/stops/StopsGeoJSON.svelte';
 	import RailViz from '$lib/RailViz.svelte';
+	import StopsView from '$lib/map/stops/StopsView.svelte';
 
 	const urlParams = browser ? new URLSearchParams(window.location.search) : undefined;
 
@@ -85,25 +89,18 @@
 					: 'connections')
 	);
 	let dataAttributionLink: string | undefined = $state(undefined);
-	let colorMode = $state<'rt' | 'route' | 'mode' | 'none'>(isSmallScreen ? 'none' : 'rt');
+	let colorMode = $state<'rt' | 'route' | 'mode' | 'none'>('none');
 	let showMap = $state(!isSmallScreen);
 	let showRoutes = $state(false);
-	let routesOverlaySession = $state(0);
-	let lastOneToAllQuery: OneToAllData | undefined = undefined;
+	let lastOneToAllQuery: Parameters<typeof oneToAll>[0] | undefined = undefined;
 	let lastPlanQuery: PlanData | undefined = undefined;
 	let serverConfig: ServerConfig | undefined = $state();
 	let dataLoaded: boolean = $state(false);
-
 	$effect(() => {
 		if (activeTab == 'isochrones') {
 			colorMode = 'none';
 		}
 	});
-
-	const toggleRoutesOverlay = () => {
-		++routesOverlaySession;
-		showRoutes = !showRoutes;
-	};
 
 	let theme: 'light' | 'dark' =
 		(hasDark ? 'dark' : hasLight ? 'light' : undefined) ??
@@ -164,6 +161,75 @@
 		applyPageStateFromURL();
 	});
 
+	// Drops undefined values so they don't end up as the string "undefined" in the URL.
+	const definedOnly = <T extends Record<string, unknown>>(obj: T): T =>
+		Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined)) as T;
+
+	// Navigate to the connection detail of an itinerary. Reflects the itinerary ID
+	// and all parameters used to reconstruct (refresh) it in the URL query string
+	// so that the view can be restored / shared via the URL.
+	const onSelectItinerary = (itinerary: Itinerary, replace: boolean = false) => {
+		pushStateWithQueryString(
+			itinerary.id
+				? {
+						itineraryId: itinerary.id,
+						joinInterlinedLegs: false,
+						detailedLegs: true,
+						detailedTransfers: true,
+						withFares: true,
+						numLegAlternatives: 3,
+						language: [language]
+					}
+				: {},
+			{
+				selectedItinerary: itinerary,
+				scrollY: undefined,
+				selectedStop: replace ? undefined : page.state.selectedStop,
+				tripId: replace ? undefined : page.state.tripId,
+				activeTab: 'connections'
+			},
+			replace
+		);
+	};
+
+	// Reconstruct an itinerary from an itinerary ID using the refresh parameters
+	// found in the current URL, then show it in the connection detail view.
+	const onShowItineraryId = async (itineraryId: string, replace: boolean = false) => {
+		const boolParam = (key: string): boolean | undefined => {
+			const v = urlParams?.get(key);
+			return v == null ? undefined : v === 'true'; // absent = undefined
+		};
+		const query = definedOnly({
+			itineraryId,
+			requireDisplayNameMatch: boolParam('requireDisplayNameMatch'),
+			joinInterlinedLegs: boolParam('joinInterlinedLegs'),
+			detailedTransfers: boolParam('detailedTransfers'),
+			detailedLegs: boolParam('detailedLegs'),
+			withFares: boolParam('withFares'),
+			withScheduledSkippedStops: boolParam('withScheduledSkippedStops'),
+			numLegAlternatives: parseIntOr(urlParams?.get('numLegAlternatives'), undefined),
+			language: getUrlArray('language', [language])
+		});
+
+		const { data: itinerary, error } = await refreshItinerary({ query });
+		if (error) {
+			console.log(error);
+			alert(String((error as Record<string, unknown>).error?.toString() ?? error));
+			return;
+		}
+		itinerary!.legs = joinInterlinedLegs(itinerary!.legs);
+		pushStateWithQueryString(
+			query,
+			{
+				selectedItinerary: itinerary,
+				selectedStop: replace ? undefined : page.state.selectedStop,
+				tripId: replace ? undefined : page.state.tripId,
+				activeTab: 'connections'
+			},
+			replace
+		);
+	};
+
 	const applyPageStateFromURL = () => {
 		if (browser && urlParams) {
 			const tripId = urlParams.get('tripId');
@@ -175,6 +241,11 @@
 			if (stopId !== null) {
 				const time = urlParams.has('time') ? new Date(urlParams.get('time')!) : new Date();
 				onClickStop('', stopId, time, urlParams.get('stopArriveBy') == 'true', true);
+			}
+
+			const itineraryId = urlParams.get('itineraryId');
+			if (itineraryId !== null) {
+				onShowItineraryId(itineraryId, true);
 			}
 		}
 	};
@@ -198,7 +269,6 @@
 	let to = $state<Location>(parseLocation(urlParams?.get('toPlace'), urlParams?.get('toName')));
 	let one = $state<Location>(parseLocation(urlParams?.get('one'), urlParams?.get('oneName')));
 	let stop = $state<Location>();
-
 	let viaParam = getUrlArray('via');
 	let viaLabels = $state(
 		urlParams?.has('viaLabel0')
@@ -216,7 +286,6 @@
 	let viaMinimumStay = $state(
 		urlParams?.has('via') ? getUrlArray('viaMinimumStay').map((s) => parseIntOr(s, 0)) : undefined
 	);
-
 	let time = $state<Date>(new Date(urlParams?.get('time') || Date.now()));
 	let timetableView = $state(urlParams?.get('timetableView') != 'false');
 	let searchWindow = $state(
@@ -246,6 +315,12 @@
 			? urlParams.get('pedestrianProfile')
 			: defaultQuery.pedestrianProfile) as PedestrianProfile
 	);
+	let pedestrianSpeed = $state(
+		parseIntOr(urlParams?.get('pedestrianSpeed'), defaultQuery.pedestrianSpeed)
+	) as PedestrianSpeed;
+	let cyclingSpeed = $state(
+		parseIntOr(urlParams?.get('cyclingSpeed'), defaultQuery.cyclingSpeed)
+	) as CyclingSpeed;
 	let requireBikeTransport = $state(urlParams?.get('requireBikeTransport') == 'true');
 	let requireCarTransport = $state(urlParams?.get('requireCarTransport') == 'true');
 	let transitModes = $state<Mode[]>(
@@ -308,6 +383,12 @@
 			Math.min(defaultQuery.maxDirectTime, serverConfig?.maxDirectTimeLimit ?? Infinity)
 		)
 	);
+	let transferTimeFactor = $state(
+		parseIntOr(urlParams?.get('transferTimeFactor'), defaultQuery.transferTimeFactor)
+	);
+	let additionalTransferTime = $state(
+		parseIntOr(urlParams?.get('additionalTransferTime'), defaultQuery.additionalTransferTime)
+	);
 	let ignorePreTransitRentalReturnConstraints = $state(
 		urlParams?.get('ignorePreTransitRentalReturnConstraints') == 'true'
 	);
@@ -364,6 +445,7 @@
 						numItineraries,
 						maxItineraries,
 						withFares: true,
+						numLegAlternatives: 3,
 						slowDirect,
 						fastestDirectFactor: 1.5,
 						pedestrianProfile,
@@ -392,6 +474,10 @@
 						elevationCosts,
 						useRoutedTransfers,
 						maxTransfers: maxTransfers,
+						additionalTransferTime,
+						cyclingSpeed,
+						pedestrianSpeed,
+						transferTimeFactor,
 						maxMatchingDistance: pedestrianProfile == 'WHEELCHAIR' ? 8 : 250,
 						maxPreTransitTime,
 						maxPostTransitTime,
@@ -417,6 +503,10 @@
 						transitModes,
 						maxTransfers,
 						arriveBy,
+						cyclingSpeed,
+						pedestrianSpeed,
+						transferTimeFactor,
+						additionalTransferTime,
 						useRoutedTransfers,
 						pedestrianProfile,
 						requireBikeTransport,
@@ -426,11 +516,9 @@
 						maxPreTransitTime,
 						maxPostTransitTime,
 						elevationCosts,
-						maxMatchingDistance: pedestrianProfile == 'WHEELCHAIR' ? 8 : 250,
-						ignorePreTransitRentalReturnConstraints,
-						ignorePostTransitRentalReturnConstraints
+						maxMatchingDistance: pedestrianProfile == 'WHEELCHAIR' ? 8 : 250
 					}
-				} as OneToAllData)
+				} satisfies Parameters<typeof oneToAll>[0])
 			: undefined
 	);
 
@@ -438,6 +526,48 @@
 	let baseResponse = $state<Promise<PlanResponse>>();
 	let routingResponses = $state<Array<Promise<PlanResponse>>>([]);
 	let stopNameFromResponse = $state<string>('');
+	let refreshingItinerary = $state(false);
+
+	const refreshSelectedItinerary = async () => {
+		const itineraryId = page.state.selectedItinerary?.id;
+		if (!itineraryId || refreshingItinerary) {
+			return;
+		}
+
+		refreshingItinerary = true;
+		try {
+			const { data: refreshed, error } = await refreshItinerary({
+				query: {
+					itineraryId,
+					joinInterlinedLegs: false,
+					detailedLegs: true,
+					detailedTransfers: true,
+					withFares: true,
+					numLegAlternatives: 3,
+					language: [language]
+				}
+			});
+
+			if (error) {
+				console.log(error);
+				alert(String((error as Record<string, unknown>).error?.toString() ?? error));
+				return;
+			}
+			if (refreshed && page.state.selectedItinerary?.id === itineraryId) {
+				refreshed.legs = joinInterlinedLegs(refreshed.legs);
+				replaceState('', {
+					...page.state,
+					selectedItinerary: refreshed
+				});
+			}
+		} catch (e) {
+			console.log(e);
+			alert(String(e));
+		} finally {
+			refreshingItinerary = false;
+		}
+	};
+
 	$effect(() => {
 		if (baseQuery && baseQuery != lastPlanQuery && activeTab == 'connections') {
 			lastPlanQuery = baseQuery;
@@ -559,7 +689,7 @@
 	};
 
 	const flyToLocation = (location: Location) => {
-		map?.flyTo({ center: location.match, zoom: 11 });
+		map?.flyTo({ center: location.match, zoom: 12 });
 	};
 
 	const flyToSelectedItinerary = () => {
@@ -587,7 +717,9 @@
 	});
 
 	$effect(() => {
-		if (!map || activeTab != 'connections' || !baseQuery) return;
+		if (!map || activeTab != 'connections' || !baseQuery) {
+			return;
+		}
 		Promise.all(routingResponses).then((responses) => {
 			if (map) {
 				let it = responses.flatMap((response) => response.itineraries);
@@ -684,6 +816,10 @@
 						bind:via
 						bind:viaMinimumStay
 						bind:viaLabels
+						bind:pedestrianSpeed
+						bind:cyclingSpeed
+						bind:additionalTransferTime
+						bind:transferTimeFactor
 						{hasDebug}
 					/>
 				</Card>
@@ -709,6 +845,10 @@
 						bind:maxTransfers
 						bind:preTransitModes
 						bind:postTransitModes
+						bind:additionalTransferTime
+						bind:transferTimeFactor
+						bind:cyclingSpeed
+						bind:pedestrianSpeed
 						bind:maxPreTransitTime
 						bind:maxPostTransitTime
 						bind:arriveBy
@@ -738,11 +878,7 @@
 					{routingResponses}
 					{baseQuery}
 					selectItinerary={(selectedItinerary) => {
-						pushState('', {
-							selectedItinerary: selectedItinerary,
-							scrollY: undefined,
-							activeTab: 'connections'
-						});
+						onSelectItinerary(selectedItinerary);
 					}}
 					updateStartDest={preprocessItinerary(from, to)}
 				/>
@@ -757,10 +893,7 @@
 							id="{rI}-{i}"
 							selected={false}
 							selectItinerary={() => {
-								pushState('', {
-									selectedItinerary: it,
-									activeTab: 'connections'
-								});
+								onSelectItinerary(it);
 							}}
 							{level}
 							{theme}
@@ -776,14 +909,27 @@
 			<Card class="w-[520px] bg-background rounded-lg  flex flex-col mb-2">
 				<div class="w-full flex justify-between items-center shadow-md pl-1 mb-1">
 					<h2 class="ml-2 text-base font-semibold">{t.journeyDetails}</h2>
-					<Button
-						variant="ghost"
-						onclick={() => {
-							history.back();
-						}}
-					>
-						<X />
-					</Button>
+					<div class="flex items-center">
+						<Button
+							variant="ghost"
+							size="icon"
+							title={t.refreshItinerary}
+							aria-label={t.refreshItinerary}
+							disabled={refreshingItinerary || !page.state.selectedItinerary.id}
+							onclick={refreshSelectedItinerary}
+						>
+							<RefreshCw class={refreshingItinerary ? 'animate-spin' : ''} />
+						</Button>
+						<Button
+							variant="ghost"
+							size="icon"
+							onclick={() => {
+								history.back();
+							}}
+						>
+							<X />
+						</Button>
+					</div>
 				</div>
 				<div
 					class={'p-2 md:p-4 overflow-y-auto overflow-x-hidden min-h-0 ' +
@@ -860,23 +1006,15 @@
 				<Button
 					size="icon"
 					variant={showRoutes ? 'default' : 'outline'}
-					onclick={toggleRoutesOverlay}
+					aria-label="Toggle routes overlay"
+					onclick={() => {
+						showRoutes = !showRoutes;
+					}}
 				>
 					<Waypoints class="w-5 h-5" />
 				</Button>
 			</Control>
 		{/if}
-
-		<Control position="top-right" class="text-right">
-			<Debug {bounds} {level} {zoom} />
-			<Button
-				size="icon"
-				variant={withHillshades ? 'default' : 'outline'}
-				onclick={() => (withHillshades = !withHillshades)}
-			>
-				<MountainSnow class="w-5 h-5" />
-			</Button>
-		</Control>
 
 		<LevelSelect {bounds} {zoom} bind:level />
 
@@ -936,20 +1074,26 @@
 					<Button size="icon" onclick={() => getLocation()}>
 						<LocateFixed class="w-5 h-5" />
 					</Button>
+					<Button
+						size="icon"
+						variant={withHillshades ? 'default' : 'outline'}
+						onclick={() => (withHillshades = !withHillshades)}
+					>
+						<MountainSnow class="w-5 h-5" />
+					</Button>
 				</Control>
 				{#if showRoutes}
-					{#key routesOverlaySession}
-						<Routes
-							{map}
-							{bounds}
-							{zoom}
-							shapesDebugEnabled={serverConfig?.shapesDebugEnabled === true}
-						/>
-					{/key}
+					<Routes
+						{map}
+						{bounds}
+						{zoom}
+						shapesDebugEnabled={serverConfig?.shapesDebugEnabled === true}
+					/>
 				{/if}
-				<Rentals {map} {bounds} {zoom} {theme} debug={hasDebug} />
+				<Rentals {map} {bounds} {zoom} {theme} {isSmallScreen} debug={hasDebug} />
 			{/if}
 
+			<StopsView {map} {bounds} {zoom} {theme} />
 			<RailViz {map} {bounds} {zoom} {colorMode} />
 			<Isochrones
 				{map}

@@ -24,7 +24,8 @@
 		getIconDimensions,
 		type IconType
 	} from '$lib/map/rentals/assets';
-	import { cn } from '$lib/utils';
+	import * as Select from '$lib/components/ui/select';
+	import { t } from '$lib/i18n/translation';
 	import polyline from '@mapbox/polyline';
 	import maplibregl from 'maplibre-gl';
 	import type { GeoJSONSource, MapLayerMouseEvent } from 'maplibre-gl';
@@ -58,12 +59,14 @@
 		bounds,
 		zoom,
 		theme,
+		isSmallScreen,
 		debug = false
 	}: {
 		map: maplibregl.Map | undefined;
 		bounds: maplibregl.LngLatBoundsLike | undefined;
 		zoom: number;
 		theme: 'light' | 'dark';
+		isSmallScreen: boolean;
 		debug?: boolean;
 	} = $props();
 
@@ -186,9 +189,7 @@
 	const isSameFilter = (a: DisplayFilter | null, b: DisplayFilter | null) =>
 		a?.providerGroupId === b?.providerGroupId && a?.formFactor === b?.formFactor;
 
-	const toggleFilter = (option: DisplayFilter) => {
-		displayFilter = isSameFilter(displayFilter, option) ? null : option;
-	};
+	const filterValue = (option: DisplayFilter) => `${option.providerGroupId}::${option.formFactor}`;
 
 	const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
@@ -1189,35 +1190,47 @@
 {/each}
 
 {#if providerGroupOptions.length > 0}
-	<Control position="top-right" class="mb-5">
-		<div class="flex flex-col items-end space-y-2">
-			{#each providerGroupOptions as option (`${option.providerGroupId}::${option.formFactor}`)}
-				{@const active = isSameFilter(displayFilter, option)}
-				<button
-					type="button"
-					title={`${option.providerGroupName} (${formFactorAssets[option.formFactor].label})`}
-					class={cn(
-						'inline-flex max-w-72 items-center gap-2 rounded-md border-2 px-3 py-1.5 text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500',
-						active
-							? 'border-blue-600 bg-accent text-accent-foreground'
-							: 'border-muted bg-popover text-foreground hover:bg-accent hover:text-accent-foreground'
-					)}
-					onclick={() => toggleFilter(option)}
-					aria-pressed={active}
-				>
-					<span class="truncate">{option.providerGroupName}</span>
-					<span class="flex items-center gap-1 text-xs font-medium">
+	<Control position={isSmallScreen ? 'top-left' : 'bottom-right'} class="mb-5">
+		<Select.Root
+			type="single"
+			value={displayFilter ? filterValue(displayFilter) : ''}
+			onValueChange={(v) => {
+				displayFilter = providerGroupOptions.find((o) => filterValue(o) === v) ?? null;
+			}}
+		>
+			<Select.Trigger class="w-56 bg-popover">
+				{#if displayFilter}
+					<div class="flex min-w-0 items-center gap-2">
 						<svg
-							class="h-4 w-4 fill-current"
+							class="h-4 w-4 shrink-0 fill-current"
 							aria-hidden="true"
-							focusable="false"
-							style={`color: ${option.color}`}
+							style={`color: ${displayFilter.color}`}
 						>
-							<use href={`#${formFactorAssets[option.formFactor].svg}`} />
+							<use href={`#${formFactorAssets[displayFilter.formFactor].svg}`} />
 						</svg>
-					</span>
-				</button>
-			{/each}
-		</div>
+						<span class="truncate">{displayFilter.providerGroupName}</span>
+					</div>
+				{:else}
+					<span class="text-muted-foreground">{t.sharingProviders}</span>
+				{/if}
+			</Select.Trigger>
+			<Select.Content align="end">
+				<Select.Item value="" label={t.none}>{t.none}</Select.Item>
+				{#each providerGroupOptions as option (filterValue(option))}
+					<Select.Item value={filterValue(option)} label={option.providerGroupName}>
+						<span class="flex items-center gap-2">
+							<svg
+								class="h-4 w-4 shrink-0 fill-current"
+								aria-hidden="true"
+								style={`color: ${option.color}`}
+							>
+								<use href={`#${formFactorAssets[option.formFactor].svg}`} />
+							</svg>
+							<span class="truncate">{option.providerGroupName}</span>
+						</span>
+					</Select.Item>
+				{/each}
+			</Select.Content>
+		</Select.Root>
 	</Control>
 {/if}

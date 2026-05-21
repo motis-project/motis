@@ -11,6 +11,7 @@ export type Translations = {
 	ticketOptions: string;
 	includedInTicket: string;
 	journeyDetails: string;
+	refreshItinerary: string;
 	transfers: string;
 	walk: string;
 	bike: string;
@@ -54,6 +55,7 @@ export type Translations = {
 	tripIntermediateStops: (n: number) => string;
 	sharingProvider: string;
 	sharingProviders: string;
+	none: string;
 	returnOnlyAtStations: string;
 	roundtripStationReturnConstraint: string;
 	rentalStation: string;
@@ -74,6 +76,7 @@ export type Translations = {
 	timetableSources: string;
 	tripCancelled: string;
 	stopCancelled: string;
+	addStop: string;
 	inOutDisallowed: string;
 	inDisallowed: string;
 	outDisallowed: string;
@@ -113,6 +116,10 @@ export type Translations = {
 		maxPreTransitTime: string;
 		maxPostTransitTime: string;
 		maxDirectTime: string;
+		additionalTransferTime: string;
+		pedestrianSpeed: string;
+		cyclingSpeed: string;
+		transferTimeFactor: string;
 	};
 	elevationCosts: {
 		NONE: string;
@@ -150,6 +157,8 @@ export type Translations = {
 	toll: string;
 	accessRestriction: string;
 	continuesAs: string;
+	earlierAlternatives: string;
+	laterAlternatives: string;
 	DEBUG_BUS_ROUTE: string;
 	DEBUG_RAILWAY_ROUTE: string;
 	DEBUG_FERRY_ROUTE: string;

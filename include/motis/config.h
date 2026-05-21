@@ -32,6 +32,7 @@ struct config {
   bool has_gbfs_feeds() const;
   bool has_prima() const;
   bool has_elevators() const;
+  bool has_rt_feeds() const;
   bool use_street_routing() const;
 
   bool operator==(config const&) const = default;
@@ -46,6 +47,8 @@ struct config {
     std::optional<std::vector<std::string>> lbs_{};
   };
   std::optional<server> server_{};
+
+  std::optional<std::string> user_agent_{};
 
   std::optional<std::filesystem::path> osm_{};
 
@@ -161,10 +164,13 @@ struct config {
     };
 
     struct oauth_settings {
+      enum struct auth_method { client_secret_basic, client_secret_post };
+
       bool operator==(oauth_settings const&) const = default;
       std::string token_url_;
       std::string client_id_;
       std::string client_secret_;
+      auth_method auth_method_{auth_method::client_secret_basic};
       std::optional<headers_t> headers_{};
       std::optional<unsigned> expires_in_;
     };
@@ -177,6 +183,9 @@ struct config {
       std::optional<
           std::variant<std::string, std::map<std::string, std::string>>>
           group_{};
+      std::optional<
+          std::variant<std::string, std::map<std::string, std::string>>>
+          name_{};
       std::optional<
           std::variant<std::string, std::map<std::string, std::string>>>
           color_{};
@@ -238,7 +247,7 @@ struct config {
     unsigned stoptimes_max_results_{256U};
     unsigned plan_max_results_{256U};
     unsigned plan_max_search_window_minutes_{5760U};
-    unsigned stops_max_results_{2048U};
+    unsigned stops_max_results_{8192U};
     unsigned onetomany_max_many_{128U};
     unsigned onetoall_max_results_{65535U};
     unsigned onetoall_max_travel_minutes_{90U};

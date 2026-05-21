@@ -70,6 +70,7 @@
 	<Layer
 		id="stops"
 		type="circle"
+		beforeLayerId="towns"
 		layout={{}}
 		filter={['all']}
 		paint={{
@@ -92,6 +93,7 @@
 	<Layer
 		id="intermediate-stops-name"
 		type="symbol"
+		beforeLayerId="towns"
 		layout={{
 			'text-field': ['get', 'name'],
 			'text-font': ['Noto Sans Regular'],

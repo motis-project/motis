@@ -160,13 +160,16 @@ gbfs:
   http_timeout: 10
 ```
 
-## Provider Groups + Colors
+## Provider Names, Groups + Colors
 
 GBFS providers (feeds) can be grouped into "provider groups". For example, a provider may operate in multiple locations and provide a feed per location.
 To groups these different feeds into a single provider group, specify the same group name for each feed in the configuration.
 
 Feeds that don't have an explicit group setting in the configuration, their group name is derived from the system name. Group names
 may not contain commas. The API supports both provider groups and individual providers.
+
+Provider names are loaded from the feed (`system_information.name`) by default. To override them, set `name`
+for a standalone feed or map `system_id` to name for an aggregated feed.
 
 Provider colors are loaded from the feed (`brand_assets.color`) if available, but can also be set in the configuration
 to override the values contained in the feed or to set colors for feeds that don't include color information.
@@ -178,6 +181,7 @@ gbfs:
   feeds:
     de-CallaBike:
       url: https://api.mobidata-bw.de/sharing/gbfs/v2/callabike/gbfs
+      name: Call a Bike # optional override
       color: "#db0016"
     de-VRNnextbike:
       url: https://gbfs.nextbike.net/maps/gbfs/v2/nextbike_vn/gbfs.json
@@ -211,6 +215,9 @@ gbfs:
         source-nextbike-westbike: nextbike # "source-nextbike-westbike" is the system_id
         source-voi-muenster: VOI
         source-voi-duisburg-oberhausen: VOI
+      name: # optional provider name overrides
+        source-voi-muenster: VOI Münster
+        source-voi-duisburg-oberhausen: VOI Duisburg Oberhausen
       # colors can be specified for individual feeds using the same syntax,
       # but in this example they are defined for the groups below
       #color:
@@ -248,6 +255,7 @@ gbfs:
         token_url: https://example.com/openid-connect/token
         client_id: gbfs
         client_secret: example
+        auth_method: client_secret_basic # default, or client_secret_post
 ```
 
 ## Default Restrictions

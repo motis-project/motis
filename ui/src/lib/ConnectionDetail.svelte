@@ -1,5 +1,13 @@
 <script lang="ts">
-	import { ArrowRight, ArrowUp, ArrowDown, DollarSign, CircleX } from '@lucide/svelte';
+	import {
+		ArrowRight,
+		ArrowUp,
+		ArrowDown,
+		DollarSign,
+		CircleX,
+		Bike,
+		Accessibility
+	} from '@lucide/svelte';
 	import type {
 		FareProduct,
 		Itinerary,
@@ -19,6 +27,8 @@
 	import { onClickStop, onClickTrip } from '$lib/utils';
 	import { formatDate, formatTime } from './toDateTime';
 	import { getModeLabel } from './map/getModeLabel';
+	import { pushState } from '$app/navigation';
+	import { page } from '$app/state';
 	const {
 		itinerary
 	}: {
@@ -26,7 +36,74 @@
 	} = $props();
 
 	const isRelevantLeg = (l: Leg) => l.duration !== 0 || l.displayName;
-	const lastLeg = $derived(itinerary.legs.findLast(isRelevantLeg));
+
+	let legs = $derived<Leg[]>(itinerary.legs);
+
+	const lastLeg = $derived(legs.findLast(isRelevantLeg));
+
+	const dayOffset = (t: string, ref: string, tz: string | undefined): number => {
+		const fmt = new Intl.DateTimeFormat('en-CA', {
+			timeZone: tz,
+			year: 'numeric',
+			month: '2-digit',
+			day: '2-digit'
+		});
+		const tDay = Date.parse(fmt.format(new Date(t)));
+		const refDay = Date.parse(fmt.format(new Date(ref)));
+		return Math.round((tDay - refDay) / 86400000);
+	};
+
+	const shortWeekday = (t: string, tz: string | undefined): string =>
+		new Intl.DateTimeFormat(language, { weekday: 'long', timeZone: tz }).format(new Date(t));
+
+	const applyAlternative = (target: Leg, alt: Leg[]) => {
+		const idx = legs.indexOf(target);
+		if (idx < 0) {
+			return;
+		}
+		const altTransitIdx = alt.findIndex((al) => al.displayName);
+		if (altTransitIdx < 0) {
+			return;
+		}
+		const altIngress = altTransitIdx > 0 ? alt[altTransitIdx - 1] : undefined;
+		const altEgress = altTransitIdx < alt.length - 1 ? alt[altTransitIdx + 1] : undefined;
+		const replaceIngress = altIngress !== undefined && idx > 0 && !legs[idx - 1].displayName;
+		const replaceEgress =
+			altEgress !== undefined && idx < legs.length - 1 && !legs[idx + 1].displayName;
+		const start = replaceIngress ? idx - 1 : idx;
+		const len = (replaceIngress ? 1 : 0) + 1 + (replaceEgress ? 1 : 0);
+
+		// Make currently displyed connection an alternative
+		// so the user can switch back.
+		const oldEntry: Leg[] = [
+			...(replaceIngress ? [legs[idx - 1]] : []),
+			{ ...target, alternatives: undefined },
+			...(replaceEgress ? [legs[idx + 1]] : [])
+		];
+
+		// Drop picked alternative.
+		const transitStart = (entry: Leg[]) => entry.find((l) => l.displayName)?.startTime ?? '';
+		const remainingAlts = (target.alternatives ?? []).filter((a) => a !== alt);
+		const newAlternatives = [...remainingAlts, oldEntry].sort((a, b) =>
+			transitStart(a).localeCompare(transitStart(b))
+		);
+
+		const newTransit: Leg = {
+			...alt[altTransitIdx],
+			alternatives: newAlternatives
+		};
+		const newLegs: Leg[] = [
+			...(replaceIngress ? [altIngress!] : []),
+			newTransit,
+			...(replaceEgress ? [altEgress!] : [])
+		];
+		const updated = [...legs];
+		updated.splice(start, len, ...newLegs);
+		pushState('', {
+			...page.state,
+			selectedItinerary: { ...itinerary, legs: updated }
+		});
+	};
 </script>
 
 {#snippet stopTimes(
@@ -247,12 +324,12 @@
 {/snippet}
 
 <div class="text-lg max-w-full">
-	{#each itinerary.legs as l, i (i)}
-		{@const isLast = i == itinerary.legs.length - 1}
-		{@const isLastPred = i == itinerary.legs.length - 2}
-		{@const pred = i == 0 ? undefined : itinerary.legs[i - 1]}
-		{@const next = isLast ? undefined : itinerary.legs[i + 1]}
-		{@const prevTransitLeg = itinerary.legs.slice(0, i).find((l) => l.tripId)}
+	{#each legs as l, i (i)}
+		{@const isLast = i == legs.length - 1}
+		{@const isLastPred = i == legs.length - 2}
+		{@const pred = i == 0 ? undefined : legs[i - 1]}
+		{@const next = isLast ? undefined : legs[i + 1]}
+		{@const prevTransitLeg = legs.slice(0, i).find((l) => l.tripId)}
 		{#if l.displayName}
 			<div class="w-full flex justify-between items-center space-x-1">
 				<Route {onClickTrip} {l} />
@@ -320,7 +397,46 @@
 					</span>
 				</div>
 
+				<div class="ml-4 mt-4">
+					{#if l.bikesAllowed}
+						<Bike class="inline" />
+					{/if}
+
+					{#if l.wheelchairAccessible == 'ACCESSIBLE'}
+						<Accessibility class="inline" />
+					{/if}
+				</div>
+
 				<Alerts alerts={l.alerts} tz={l.from.tz || l.to.tz} variant="full" />
+
+				{#if l.alternatives && l.alternatives.length > 0}
+					{@const hasPrevTransit = legs.slice(0, i).some((x) => x.displayName)}
+					{@const hasNextTransit = legs.slice(i + 1).some((x) => x.displayName)}
+					<div class="mt-3 mb-1 pl-2 text-xs text-muted-foreground">
+						{!hasPrevTransit && hasNextTransit ? t.earlierAlternatives : t.laterAlternatives}
+					</div>
+					<div class="mb-3 flex gap-2 overflow-hidden">
+						{#each l.alternatives.slice(0, 3) as alt, ai (ai)}
+							{@const transit = alt.find((al) => al.displayName)!}
+							{@const startOffset = dayOffset(transit.startTime, l.startTime, transit.from.tz)}
+							<button
+								type="button"
+								class="flex-none flex flex-col gap-1 rounded-lg border border-border bg-muted hover:brightness-95 dark:hover:brightness-125 transition p-2 min-w-fit text-left cursor-pointer"
+								onclick={() => applyAlternative(l, alt)}
+							>
+								<div class="text-xs text-muted-foreground tabular-nums text-center">
+									{#if startOffset !== 0}
+										{shortWeekday(transit.startTime, transit.from.tz)}
+									{/if}
+									{formatTime(new Date(transit.startTime), transit.from.tz)}
+									–
+									{formatTime(new Date(transit.endTime!), transit.to.tz)}
+								</div>
+								<Route {onClickTrip} l={transit} compact class="pointer-events-none" />
+							</button>
+						{/each}
+					</div>
+				{/if}
 
 				{#if l.routeUrl}
 					<div class="mt-2 mr-4">
