@@ -2724,6 +2724,43 @@ paths:
                     type: boolean
                     description: Always false for this endpoint.
 
+  /api/v1/map/vehicles:
+    get:
+      tags:
+        - map
+      operationId: vehicles
+      summary: Get public-transit vehicle positions for a map section
+      description: |
+        Returns the latest GTFS Realtime VehiclePosition facts inside the
+        requested viewport. The endpoint is intentionally viewport-bounded and
+        does not expose unbounded feed-wide vehicle search.
+      parameters:
+        - name: min
+          in: query
+          required: true
+          description: latitude,longitude pair of one viewport corner
+          schema:
+            type: string
+        - name: max
+          in: query
+          required: true
+          description: latitude,longitude pair of the opposite viewport corner
+          schema:
+            type: string
+      responses:
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '200':
+          description: Vehicle positions in the requested map section
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VehiclePositionsResponse'
+
   /api/v1/rentals:
     get:
       tags:
@@ -4191,6 +4228,91 @@ components:
         rentalUriWeb:
           type: string
           description: Rental URI for web (deep link to the specific vehicle)
+
+    TransitVehicleDescriptor:
+      type: object
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+        licensePlate:
+          type: string
+
+    TransitVehicleTripDescriptor:
+      type: object
+      properties:
+        tripId:
+          type: string
+        startDate:
+          type: string
+        startTime:
+          type: string
+        routeId:
+          type: string
+        directionId:
+          type: integer
+          format: int64
+
+    ReportedVehiclePosition:
+      type: object
+      required:
+        - lat
+        - lon
+      properties:
+        lat:
+          description: latitude
+          type: number
+        lon:
+          description: longitude
+          type: number
+        bearing:
+          description: Bearing in degrees.
+          type: number
+        speedMps:
+          description: Speed in meters per second.
+          type: number
+
+    VehiclePosition:
+      type: object
+      required:
+        - feedId
+        - entityId
+        - vehicle
+        - trip
+        - reportedPosition
+        - ingestedTime
+      properties:
+        feedId:
+          type: string
+          description: Realtime feed identity for this vehicle position.
+        entityId:
+          type: string
+          description: GTFS Realtime FeedEntity id.
+        vehicle:
+          $ref: '#/components/schemas/TransitVehicleDescriptor'
+        trip:
+          $ref: '#/components/schemas/TransitVehicleTripDescriptor'
+        reportedPosition:
+          $ref: '#/components/schemas/ReportedVehiclePosition'
+        reportedTime:
+          type: integer
+          format: int64
+          description: VehiclePosition timestamp from the realtime feed as Unix seconds.
+        ingestedTime:
+          type: integer
+          format: int64
+          description: Server ingest timestamp as Unix seconds.
+
+    VehiclePositionsResponse:
+      type: object
+      required:
+        - vehicles
+      properties:
+        vehicles:
+          type: array
+          items:
+            $ref: '#/components/schemas/VehiclePosition'
 
     RentalZone:
       type: object

@@ -46,12 +46,24 @@ namespace n = nigiri;
 
 namespace motis {
 
-rt::rt() = default;
+rt::rt()
+    : vehicle_positions_{
+          std::make_unique<vehicle_positions::vehicle_position_store>()} {}
 
 rt::rt(ptr<nigiri::rt_timetable>&& rtt,
        ptr<elevators>&& e,
        ptr<railviz_rt_index>&& railviz)
-    : rtt_{std::move(rtt)}, railviz_rt_{std::move(railviz)}, e_{std::move(e)} {}
+    : rt{std::move(rtt), std::move(e), std::move(railviz),
+         std::make_unique<vehicle_positions::vehicle_position_store>()} {}
+
+rt::rt(ptr<nigiri::rt_timetable>&& rtt,
+       ptr<elevators>&& e,
+       ptr<railviz_rt_index>&& railviz,
+       ptr<vehicle_positions::vehicle_position_store>&& vehicle_positions)
+    : rtt_{std::move(rtt)},
+      railviz_rt_{std::move(railviz)},
+      e_{std::move(e)},
+      vehicle_positions_{std::move(vehicle_positions)} {}
 
 rt::~rt() = default;
 

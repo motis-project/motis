@@ -22,6 +22,7 @@
 #include "motis/endpoints/map/shapes_debug.h"
 #include "motis/endpoints/map/stops.h"
 #include "motis/endpoints/map/trips.h"
+#include "motis/endpoints/map/vehicles.h"
 #include "motis/endpoints/matches.h"
 #include "motis/endpoints/metrics.h"
 #include "motis/endpoints/ojp.h"
@@ -115,6 +116,7 @@ struct motis_instance {
     GET<ep::trips>("/api/v1/map/trips", d);
     GET<ep::trips>("/api/v4/map/trips", d);
     GET<ep::trips>("/api/v5/map/trips", d);
+    GET<ep::vehicles>("/api/v1/map/vehicles", d);
     GET<ep::stops>("/api/v1/map/stops", d);
     GET<ep::route_details>("/api/experimental/map/route-details", d);
     GET<ep::routes>("/api/experimental/map/routes", d);

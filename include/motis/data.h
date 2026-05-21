@@ -19,6 +19,7 @@
 #include "motis/gbfs/data.h"
 #include "motis/match_platforms.h"
 #include "motis/rt/auser.h"
+#include "motis/rt/vehicle_position.h"
 #include "motis/types.h"
 
 namespace motis {
@@ -34,10 +35,15 @@ using ptr = std::unique_ptr<T>;
 struct rt {
   rt();
   rt(ptr<nigiri::rt_timetable>&&, ptr<elevators>&&, ptr<railviz_rt_index>&&);
+  rt(ptr<nigiri::rt_timetable>&&,
+     ptr<elevators>&&,
+     ptr<railviz_rt_index>&&,
+     ptr<vehicle_positions::vehicle_position_store>&&);
   ~rt();
   ptr<nigiri::rt_timetable> rtt_;
   ptr<railviz_rt_index> railviz_rt_;
   ptr<elevators> e_;
+  ptr<vehicle_positions::vehicle_position_store> vehicle_positions_;
 };
 
 struct data {

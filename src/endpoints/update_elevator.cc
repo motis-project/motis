@@ -56,7 +56,11 @@ json::value update_elevator::operator()(json::value const& query) const {
   auto new_rt = std::make_shared<rt>(
       std::make_unique<n::rt_timetable>(std::move(new_rtt)),
       std::make_unique<elevators>(std::move(new_e)),
-      std::move(rt_copy->railviz_rt_));
+      std::move(rt_copy->railviz_rt_),
+      std::make_unique<vehicle_positions::vehicle_position_store>(
+          rt_copy->vehicle_positions_ != nullptr
+              ? *rt_copy->vehicle_positions_
+              : vehicle_positions::vehicle_position_store{}));
   std::atomic_store(&rt_, std::move(new_rt));
 
   return json::string{{"success", true}};
