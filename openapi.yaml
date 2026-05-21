@@ -3104,6 +3104,7 @@ components:
         - CONSTRUCTION
         - POLICE_ACTIVITY
         - MEDICAL_EMERGENCY
+        - SPECIAL_EVENT
 
     AlertEffect:
       description: The effect of this problem on the affected entity.
