@@ -191,6 +191,8 @@ export type Translations = {
 		arrivalsAt: (stop: string) => string;
 		isochronesFrom: (place: string) => string;
 	};
+	tickets: string;
+	routeInformation: string;
 };
 
 const translations: Map<string, Translations> = new Map(
