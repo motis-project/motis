@@ -1,11 +1,9 @@
 #include "motis/flex/flex.h"
 
-#include <algorithm>
 #include <optional>
 #include <ranges>
 
 #include "utl/concat.h"
-#include "utl/erase_if.h"
 
 #include "osr/lookup.h"
 #include "osr/routing/parameters.h"
@@ -24,69 +22,6 @@
 namespace n = nigiri;
 
 namespace motis::flex {
-
-std::vector<n::routing::td_offset> normalize_flex_td_offsets(
-    std::vector<flex_td_candidate> candidates) {
-  utl::erase_if(candidates, [](flex_td_candidate const& c) {
-    return c.valid_to_ <= c.valid_from_ ||
-           c.duration_ >= n::footpath::kMaxDuration;
-  });
-
-  if (candidates.empty()) {
-    return {};
-  }
-
-  auto breakpoints = std::vector<n::unixtime_t>{};
-  breakpoints.reserve(candidates.size() * 2U);
-  for (auto const& c : candidates) {
-    breakpoints.emplace_back(c.valid_from_);
-    breakpoints.emplace_back(c.valid_to_);
-  }
-  utl::sort(breakpoints);
-  breakpoints.erase(std::unique(begin(breakpoints), end(breakpoints)),
-                    end(breakpoints));
-
-  auto ret = std::vector<n::routing::td_offset>{};
-  auto const inactive_mode = n::transport_mode_id_t{0U};
-  auto const is_same_state = [](n::routing::td_offset const& a,
-                                n::routing::td_offset const& b) {
-    if (a.duration_ == n::footpath::kMaxDuration &&
-        b.duration_ == n::footpath::kMaxDuration) {
-      return true;
-    }
-    return a.duration_ == b.duration_ &&
-           a.transport_mode_id_ == b.transport_mode_id_;
-  };
-  auto const append_state = [&](n::routing::td_offset const& state) {
-    if (!ret.empty() && is_same_state(ret.back(), state)) {
-      return;
-    }
-    ret.emplace_back(state);
-  };
-
-  auto const zero = n::unixtime_t{n::i32_minutes{0U}};
-  if (breakpoints.front() > zero) {
-    append_state({zero, n::footpath::kMaxDuration, inactive_mode});
-  }
-
-  for (auto const t : breakpoints) {
-    auto best = std::optional<flex_td_candidate>{};
-    for (auto const& c : candidates) {
-      if (c.valid_from_ <= t && t < c.valid_to_ &&
-          (!best.has_value() || c.duration_ < best->duration_)) {
-        best = c;
-      }
-    }
-
-    append_state(best.has_value()
-                     ? n::routing::td_offset{t, best->duration_,
-                                             best->transport_mode_id_}
-                     : n::routing::td_offset{t, n::footpath::kMaxDuration,
-                                             inactive_mode});
-  }
-
-  return ret;
-}
 
 osr::sharing_data prepare_sharing_data(n::timetable const& tt,
                                        osr::ways const& w,
@@ -366,9 +301,6 @@ void add_flex_td_offsets(osr::ways const& w,
   stats.emplace(fmt::format("prepare_{}_FLEX_lookup", to_str(dir)),
                 UTL_GET_TIMING_MS(flex_lookup_timer));
 
-  auto candidates =
-      hash_map<n::location_idx_t, std::vector<flex_td_candidate>>{};
-
   for (auto const& [stop_seq, transports] : routings) {
     UTL_START_TIMING(routing_timer);
 
@@ -419,9 +351,13 @@ void add_flex_td_offsets(osr::ways const& w,
                                              ? iv_at_to_stop << duration
                                              : iv_at_to_stop >> duration;
 
-            candidates[l].emplace_back(flex_td_candidate{iv_at_from_stop.from_,
-                                                         iv_at_from_stop.to_,
-                                                         duration, id.to_id()});
+            if (iv_at_from_stop.from_ < iv_at_from_stop.to_ &&
+                duration < n::footpath::kMaxDuration) {
+              auto& offsets = ret[l];
+              offsets.emplace_back(iv_at_from_stop.from_, duration, id.to_id());
+              offsets.emplace_back(iv_at_from_stop.to_,
+                                   n::footpath::kMaxDuration, id.to_id());
+            }
           }
         }
       }
@@ -439,23 +375,6 @@ void add_flex_td_offsets(osr::ways const& w,
                                               tt.flex_area_name_[a]);
                                         }})),
         UTL_GET_TIMING_MS(routing_timer));
-  }
-
-  for (auto& [l, flex_candidates] : candidates) {
-    auto flex_offsets = normalize_flex_td_offsets(std::move(flex_candidates));
-    if (flex_offsets.empty()) {
-      continue;
-    }
-
-    auto& offsets = ret[l];
-    offsets.insert(end(offsets), begin(flex_offsets), end(flex_offsets));
-  }
-
-  for (auto& [_, offsets] : ret) {
-    utl::sort(offsets, [](n::routing::td_offset const& a,
-                          n::routing::td_offset const& b) {
-      return a.valid_from_ < b.valid_from_;
-    });
   }
 }
 

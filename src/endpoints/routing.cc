@@ -55,6 +55,7 @@
 #include "motis/parse_location.h"
 #include "motis/server.h"
 #include "motis/tag_lookup.h"
+#include "motis/td_offsets.h"
 #include "motis/timetable/modes_to_clasz_mask.h"
 #include "motis/timetable/time_conv.h"
 #include "motis/update_rtt_td_footpaths.h"
@@ -138,15 +139,19 @@ n::routing::td_offsets_t get_td_offsets(
           return a.target_ == b.target_;
         },
         [&](auto&& from, auto&& to) {
-          ret.emplace(from->target_,
-                      utl::to_vec(from, to, [&](n::td_footpath const fp) {
-                        return n::routing::td_offset{
-                            .valid_from_ = fp.valid_from_,
-                            .duration_ = fp.duration_,
-                            .transport_mode_id_ =
-                                static_cast<n::transport_mode_id_t>(profile)};
-                      }));
+          auto& offsets = ret[from->target_];
+          for (auto it = from; it != to; ++it) {
+            offsets.push_back(n::routing::td_offset{
+                .valid_from_ = it->valid_from_,
+                .duration_ = it->duration_,
+                .transport_mode_id_ =
+                    static_cast<n::transport_mode_id_t>(profile)});
+          }
         });
+  }
+
+  for (auto& [l, location_offsets] : ret) {
+    normalize_td_offsets(location_offsets);
   }
 
   return ret;

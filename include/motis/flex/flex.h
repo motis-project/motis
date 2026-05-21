@@ -17,16 +17,6 @@ using flex_routings_t =
     hash_map<std::pair<nigiri::flex_stop_seq_idx_t, nigiri::stop_idx_t>,
              std::vector<mode_id>>;
 
-struct flex_td_candidate {
-  nigiri::unixtime_t valid_from_;
-  nigiri::unixtime_t valid_to_;
-  nigiri::duration_t duration_;
-  nigiri::transport_mode_id_t transport_mode_id_;
-};
-
-std::vector<nigiri::routing::td_offset> normalize_flex_td_offsets(
-    std::vector<flex_td_candidate>);
-
 osr::sharing_data prepare_sharing_data(nigiri::timetable const&,
                                        osr::ways const&,
                                        osr::lookup const&,
