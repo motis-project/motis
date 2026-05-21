@@ -78,38 +78,54 @@ api::stopRoutes_response stop_routes::operator()(
         continue;
       }
 
-      auto const t_idx = range.from_;
-      auto const fr = n::rt::frun{
-          tt_, nullptr,
-          n::rt::run{.t_ = n::transport{t_idx, first_day},
-                     .stop_range_ = {n::stop_idx_t{0}, n::stop_idx_t{1}}}};
-      auto const rs = fr[0];
+      // A single route_idx_t (same stop sequence) can contain transports with
+      // different route_id_idx_t values (same stop sequence, different GTFS
+      // route). Deduplicate within the route by route_id_idx_t before building
+      // the frun; the outer `seen` set handles cross-route deduplication.
+      auto seen_rid = n::hash_set<n::route_id_idx_t>{};
+      for (auto t_idx = range.from_; t_idx != range.to_; ++t_idx) {
+        auto const& sections = tt_.transport_to_trip_section_[t_idx];
+        if (sections.empty()) {
+          continue;
+        }
+        auto const trip = tt_.merged_trips_[sections.front()].front();
+        auto const rid_idx = tt_.trip_route_id_[trip];
+        if (!seen_rid.emplace(rid_idx).second) {
+          continue;
+        }
 
-      auto const route_id = tags_.route_id(rs, n::event_type::kDep);
-      if (!seen.emplace(route_id).second) {
-        continue;
+        auto const fr = n::rt::frun{
+            tt_, nullptr,
+            n::rt::run{.t_ = n::transport{t_idx, first_day},
+                       .stop_range_ = {n::stop_idx_t{0}, n::stop_idx_t{1}}}};
+        auto const rs = fr[0];
+
+        auto const route_id = tags_.route_id(rs, n::event_type::kDep);
+        if (!seen.emplace(route_id).second) {
+          continue;
+        }
+
+        auto const& agency = rs.get_provider(n::event_type::kDep);
+        auto const color = rs.get_route_color(n::event_type::kDep);
+
+        result.push_back(
+            {.routeId_ = route_id,
+             .routeShortName_ =
+                 std::string{rs.route_short_name(n::event_type::kDep, lang)},
+             .routeLongName_ =
+                 std::string{rs.route_long_name(n::event_type::kDep, lang)},
+             .mode_ = to_mode(rs.get_clasz(n::event_type::kDep), 5U),
+             .agencyId_ =
+                 std::string{tt_.strings_.try_get(agency.id_).value_or("?")},
+             .agencyName_ = std::string{tt_.translate(lang, agency.name_)},
+             .agencyUrl_ = std::string{tt_.translate(lang, agency.url_)},
+             .routeColor_ = n::to_str(color.color_),
+             .routeTextColor_ = n::to_str(color.text_color_),
+             .routeType_ = rs.route_type(n::event_type::kDep)
+                               .and_then([](n::route_type_t const x) {
+                                 return std::optional{to_idx(x)};
+                               })});
       }
-
-      auto const& agency = rs.get_provider(n::event_type::kDep);
-      auto const color = rs.get_route_color(n::event_type::kDep);
-
-      result.push_back(
-          {.routeId_ = route_id,
-           .routeShortName_ =
-               std::string{rs.route_short_name(n::event_type::kDep, lang)},
-           .routeLongName_ =
-               std::string{rs.route_long_name(n::event_type::kDep, lang)},
-           .mode_ = to_mode(rs.get_clasz(n::event_type::kDep), 5U),
-           .agencyId_ =
-               std::string{tt_.strings_.try_get(agency.id_).value_or("?")},
-           .agencyName_ = std::string{tt_.translate(lang, agency.name_)},
-           .agencyUrl_ = std::string{tt_.translate(lang, agency.url_)},
-           .routeColor_ = n::to_str(color.color_),
-           .routeTextColor_ = n::to_str(color.text_color_),
-           .routeType_ = rs.route_type(n::event_type::kDep)
-                             .and_then([](n::route_type_t const x) {
-                               return std::optional{to_idx(x)};
-                             })});
     }
   }
 

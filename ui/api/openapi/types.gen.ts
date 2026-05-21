@@ -1412,6 +1412,9 @@ export type FareTransfer = {
 export type LegId = {
     displayName: string;
     tripId: string;
+    /**
+     * from stop stopId
+     */
     fromId: string;
     /**
      * latitude of the leg's from endpoint
@@ -1422,9 +1425,12 @@ export type LegId = {
      */
     fromLon: number;
     /**
-     * Optional level (floor) of the leg's from endpoint for indoor routing. If unset, the endpoint has no level. Level 0 is a real level.
+     * Optional level (floor) of the leg's from endpoint for indoor routing.
      */
     fromLevel?: number;
+    /**
+     * to stop stopId
+     */
     toId: string;
     /**
      * latitude of the leg's to endpoint
@@ -1435,7 +1441,7 @@ export type LegId = {
      */
     toLon: number;
     /**
-     * Optional level (floor) of the leg's to endpoint for indoor routing. If unset, the endpoint has no level. Level 0 is a real level.
+     * Optional level (floor) of the leg's to endpoint for indoor routing.
      */
     toLevel?: number;
     /**
@@ -1489,7 +1495,9 @@ export type Itinerary = {
      */
     transfers: number;
     /**
-     * Opaque itinerary identifier. Pass it as `itineraryId` to `/api/v6/refresh-itinerary` for reconstruction using the new schedule/realtime data.
+     * Experimental (format might change). Opaque itinerary identifier.
+     * Pass it as `itineraryId` to `refresh-itinerary` endpoint for reconstruction using the new schedule/realtime data.
+     *
      */
     id: string;
     /**
