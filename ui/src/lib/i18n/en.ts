@@ -204,7 +204,7 @@ const translations: Translations = {
 		isochronesFrom: (place) => `Isochrones from ${place}`
 	},
 	tickets: 'Tickets',
-	routeDetails: 'More Information'
+	routeInformation: 'More Information'
 };
 
 export default translations;
