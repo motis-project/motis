@@ -4721,6 +4721,7 @@ components:
         tripId:
           type: string
         fromId:
+          description: from stop stopId
           type: string
         fromLat:
           description: latitude of the leg's from endpoint
@@ -4731,10 +4732,11 @@ components:
           type: number
           format: double
         fromLevel:
-          description: Optional level (floor) of the leg's from endpoint for indoor routing. If unset, the endpoint has no level. Level 0 is a real level.
+          description: Optional level (floor) of the leg's from endpoint for indoor routing.
           type: number
           format: double
         toId:
+          description: to stop stopId
           type: string
         toLat:
           description: latitude of the leg's to endpoint
@@ -4745,7 +4747,7 @@ components:
           type: number
           format: double
         toLevel:
-          description: Optional level (floor) of the leg's to endpoint for indoor routing. If unset, the endpoint has no level. Level 0 is a real level.
+          description: Optional level (floor) of the leg's to endpoint for indoor routing.
           type: number
           format: double
         schedStart:
@@ -4833,7 +4835,9 @@ components:
           description: The number of transfers this trip has.
         id:
           type: string
-          description: Opaque itinerary identifier. Pass it as `itineraryId` to `/api/v6/refresh-itinerary` for reconstruction using the new schedule/realtime data.
+          description: |
+            Experimental (format might change). Opaque itinerary identifier.
+            Pass it as `itineraryId` to `refresh-itinerary` endpoint for reconstruction using the new schedule/realtime data.
         legs:
           description: Journey legs
           type: array
