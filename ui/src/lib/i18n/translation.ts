@@ -11,6 +11,7 @@ export type Translations = {
 	ticketOptions: string;
 	includedInTicket: string;
 	journeyDetails: string;
+	refreshItinerary: string;
 	transfers: string;
 	walk: string;
 	bike: string;

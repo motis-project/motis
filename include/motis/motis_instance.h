@@ -30,6 +30,7 @@
 #include "motis/endpoints/one_to_many_post.h"
 #include "motis/endpoints/osr_routing.h"
 #include "motis/endpoints/platforms.h"
+#include "motis/endpoints/refresh_itinerary.h"
 #include "motis/endpoints/routing.h"
 #include "motis/endpoints/stop_times.h"
 #include "motis/endpoints/tiles.h"
@@ -129,11 +130,13 @@ struct motis_instance {
     GET<ep::one_to_all>("/api/v1/one-to-all", d);
     GET<ep::one_to_all>("/api/v6/one-to-all", d);
     GET<ep::one_to_many>("/api/v1/one-to-many", d);
+    GET<ep::refresh_itinerary>("/api/v6/refresh-itinerary", d);
     GET<ep::one_to_many_intermodal>("/api/experimental/one-to-many-intermodal",
                                     d);
     POST<ep::one_to_many_intermodal_post>(
         "/api/experimental/one-to-many-intermodal", d);
     POST<ep::one_to_many_post>("/api/v1/one-to-many", d);
+    POST<ep::refresh_itinerary_post>("/api/v6/refresh-itinerary", d);
 
     if (!c.requires_rt_timetable_updates()) {
       // Elevator updates are not compatible with RT-updates.

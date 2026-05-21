@@ -27,6 +27,7 @@
 #include "motis/flex/flex_output.h"
 #include "motis/gbfs/gbfs_output.h"
 #include "motis/gbfs/routing_data.h"
+#include "motis/itinerary_id.h"
 #include "motis/odm/odm.h"
 #include "motis/osr/mode_to_profile.h"
 #include "motis/osr/street_routing.h"
@@ -270,6 +271,7 @@ api::Itinerary journey_to_response(
     bool const ignore_start_rental_return_constraints,
     bool const ignore_dest_rental_return_constraints,
     n::lang_t const& lang,
+    bool const set_itinerary_id_field,
     n::routing::query const* leg_alternatives_query,
     std::size_t const num_leg_alternatives) {
   utl::verify(!j.legs_.empty(), "journey without legs");
@@ -402,6 +404,9 @@ api::Itinerary journey_to_response(
         });
   };
 
+  auto default_display_names = std::vector<std::string>{};
+  auto default_display_names_indices = std::vector<std::size_t>{};
+
   auto j_leg_to_first_api_leg = std::vector<std::size_t>(
       j.legs_.size(), std::numeric_limits<std::size_t>::max());
 
@@ -469,6 +474,11 @@ api::Itinerary journey_to_response(
                 }();
                 auto const [service_day, _] =
                     enter_stop.get_trip_start(n::event_type::kDep);
+
+                default_display_names.emplace_back(std::string{
+                    enter_stop.display_name(n::event_type::kDep, n::lang_t{})});
+                default_display_names_indices.emplace_back(
+                    itinerary.legs_.size());
 
                 auto& leg = itinerary.legs_.emplace_back(api::Leg{
                     .mode_ = to_mode(enter_stop.get_clasz(n::event_type::kDep),
@@ -706,6 +716,11 @@ api::Itinerary journey_to_response(
 
   cleanup_intermodal(itinerary);
 
+  if (set_itinerary_id_field) {
+    itinerary.id_ = generate_itinerary_id(itinerary, default_display_names,
+                                          default_display_names_indices);
+  }
+
   if (leg_alternatives_query != nullptr && num_leg_alternatives > 0U) {
     for (auto i = std::size_t{0}; i != j.legs_.size(); ++i) {
       if (!std::holds_alternative<n::routing::journey::run_enter_exit>(
@@ -736,7 +751,7 @@ api::Itinerary journey_to_response(
                 with_scheduled_skipped_stops, timetable_max_matching_distance,
                 max_matching_distance, api_version,
                 ignore_start_rental_return_constraints,
-                ignore_dest_rental_return_constraints, lang, nullptr)
+                ignore_dest_rental_return_constraints, lang, false)
                 .legs_);
       }
       itinerary.legs_[api_idx].alternatives_ = std::move(alternatives);

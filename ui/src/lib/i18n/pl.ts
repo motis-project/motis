@@ -5,6 +5,7 @@ const translations: Translations = {
 	ticketOptions: 'Opcje biletu',
 	includedInTicket: 'Zawarte w ramach biletu',
 	journeyDetails: 'Szczegóły podróży',
+	refreshItinerary: 'Odśwież podróż',
 	transfers: 'przesiadki',
 	walk: 'Pieszo',
 	bike: 'Rower',

@@ -2066,6 +2066,126 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /api/v6/refresh-itinerary:
+    get:
+      tags:
+        - timetable
+      summary: Reconstruct an itinerary from an itinerary ID.
+      description: |
+        Experimental (API might change without prior notice and without API version bump).
+        Only supports walking at start/end or station-to-station itineraries.
+        API options mirror those of the `plan` endpoint.
+      operationId: refreshItinerary
+      parameters:
+        - name: itineraryId
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: requireDisplayNameMatch
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: true
+        - name: joinInterlinedLegs
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: true
+        - name: detailedTransfers
+          in: query
+          required: false
+          schema:
+            type: boolean
+        - name: detailedLegs
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: true
+        - name: withFares
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+        - name: withScheduledSkippedStops
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+        - name: numLegAlternatives
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+        - name: language
+          in: query
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+          explode: false
+      responses:
+        '200':
+          description: reconstructed itinerary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Itinerary'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      tags:
+        - timetable
+      summary: Reconstruct an itinerary from a protobuf-JSON itinerary identifier.
+      description: |
+        Experimental (API might change without prior notice and without API version bump).
+        Only supports walking at start/end or station-to-station itineraries.
+        API options mirror those of the `plan` endpoint.
+      operationId: refreshItineraryPost
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshItineraryPostBody'
+      responses:
+        '200':
+          description: reconstructed itinerary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Itinerary'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
   /api/v6/stoptimes:
     get:
       tags:
@@ -4580,6 +4700,115 @@ components:
               items:
                 $ref: '#/components/schemas/FareProduct'
 
+    LegId:
+      type: object
+      required:
+        - displayName
+        - tripId
+        - fromId
+        - fromLat
+        - fromLon
+        - toId
+        - toLat
+        - toLon
+        - schedStart
+        - schedEnd
+        - mode
+        - scheduled
+      properties:
+        displayName:
+          type: string
+        tripId:
+          type: string
+        fromId:
+          description: from stop stopId
+          type: string
+        fromLat:
+          description: latitude of the leg's from endpoint
+          type: number
+          format: double
+        fromLon:
+          description: longitude of the leg's from endpoint
+          type: number
+          format: double
+        fromLevel:
+          description: Optional level (floor) of the leg's from endpoint for indoor routing.
+          type: number
+          format: double
+        toId:
+          description: to stop stopId
+          type: string
+        toLat:
+          description: latitude of the leg's to endpoint
+          type: number
+          format: double
+        toLon:
+          description: longitude of the leg's to endpoint
+          type: number
+          format: double
+        toLevel:
+          description: Optional level (floor) of the leg's to endpoint for indoor routing.
+          type: number
+          format: double
+        schedStart:
+          type: integer
+          format: int64
+          description: Scheduled departure time as a Unix timestamp in seconds.
+        schedEnd:
+          type: integer
+          format: int64
+          description: Scheduled arrival time as a Unix timestamp in seconds.
+        mode:
+          $ref: '#/components/schemas/Mode'
+        scheduled:
+          type: boolean
+
+    ItineraryId:
+      type: object
+      required:
+        - legs
+      properties:
+        legs:
+          type: array
+          items:
+            $ref: '#/components/schemas/LegId'
+
+    RefreshItineraryPostBody:
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          $ref: '#/components/schemas/ItineraryId'
+        requireDisplayNameMatch:
+          type: boolean
+          default: true
+        joinInterlinedLegs:
+          type: boolean
+          default: true
+        detailedTransfers:
+          type: boolean
+        detailedLegs:
+          type: boolean
+          default: true
+        withFares:
+          type: boolean
+          default: false
+        withScheduledSkippedStops:
+          type: boolean
+          default: false
+        numLegAlternatives:
+          type: integer
+          default: 0
+          minimum: 0
+        language:
+          description: |
+            language tags as used in OpenStreetMap / GTFS
+            (usually BCP-47 / ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
+          type: array
+          items:
+            type: string
+
     Itinerary:
       type: object
       required:
@@ -4587,6 +4816,7 @@ components:
         - startTime
         - endTime
         - transfers
+        - id
         - legs
       properties:
         duration:
@@ -4603,6 +4833,11 @@ components:
         transfers:
           type: integer
           description: The number of transfers this trip has.
+        id:
+          type: string
+          description: |
+            Experimental (format might change). Opaque itinerary identifier.
+            Pass it as `itineraryId` to `refresh-itinerary` endpoint for reconstruction using the new schedule/realtime data.
         legs:
           description: Journey legs
           type: array

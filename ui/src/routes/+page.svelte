@@ -7,7 +7,8 @@
 		LocateFixed,
 		TrainFront,
 		Waypoints,
-		MountainSnow
+		MountainSnow,
+		RefreshCw
 	} from '@lucide/svelte';
 	import { getStyle } from '$lib/map/style';
 	import Map from '$lib/map/Map.svelte';
@@ -29,7 +30,8 @@
 		type RentalFormFactor,
 		type ServerConfig,
 		type CyclingSpeed,
-		type PedestrianSpeed
+		type PedestrianSpeed,
+		refreshItinerary
 	} from '@motis-project/motis-client';
 	import ItineraryList from '$lib/ItineraryList.svelte';
 	import ConnectionDetail from '$lib/ConnectionDetail.svelte';
@@ -47,10 +49,10 @@
 	import { client } from '@motis-project/motis-client';
 	import StopTimes from '$lib/StopTimes.svelte';
 	import { onMount, tick, untrack } from 'svelte';
-	import { t } from '$lib/i18n/translation';
-	import { pushState } from '$app/navigation';
+	import { language, t } from '$lib/i18n/translation';
+	import { pushState, replaceState } from '$app/navigation';
 	import { page } from '$app/state';
-	import { preprocessItinerary } from '$lib/preprocessItinerary';
+	import { joinInterlinedLegs, preprocessItinerary } from '$lib/preprocessItinerary';
 	import * as Tabs from '$lib/components/ui/tabs';
 	import DeparturesMask from '$lib/DeparturesMask.svelte';
 	import Isochrones from '$lib/map/Isochrones.svelte';
@@ -159,6 +161,75 @@
 		applyPageStateFromURL();
 	});
 
+	// Drops undefined values so they don't end up as the string "undefined" in the URL.
+	const definedOnly = <T extends Record<string, unknown>>(obj: T): T =>
+		Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined)) as T;
+
+	// Navigate to the connection detail of an itinerary. Reflects the itinerary ID
+	// and all parameters used to reconstruct (refresh) it in the URL query string
+	// so that the view can be restored / shared via the URL.
+	const onSelectItinerary = (itinerary: Itinerary, replace: boolean = false) => {
+		pushStateWithQueryString(
+			itinerary.id
+				? {
+						itineraryId: itinerary.id,
+						joinInterlinedLegs: false,
+						detailedLegs: true,
+						detailedTransfers: true,
+						withFares: true,
+						numLegAlternatives: 3,
+						language: [language]
+					}
+				: {},
+			{
+				selectedItinerary: itinerary,
+				scrollY: undefined,
+				selectedStop: replace ? undefined : page.state.selectedStop,
+				tripId: replace ? undefined : page.state.tripId,
+				activeTab: 'connections'
+			},
+			replace
+		);
+	};
+
+	// Reconstruct an itinerary from an itinerary ID using the refresh parameters
+	// found in the current URL, then show it in the connection detail view.
+	const onShowItineraryId = async (itineraryId: string, replace: boolean = false) => {
+		const boolParam = (key: string): boolean | undefined => {
+			const v = urlParams?.get(key);
+			return v == null ? undefined : v === 'true'; // absent = undefined
+		};
+		const query = definedOnly({
+			itineraryId,
+			requireDisplayNameMatch: boolParam('requireDisplayNameMatch'),
+			joinInterlinedLegs: boolParam('joinInterlinedLegs'),
+			detailedTransfers: boolParam('detailedTransfers'),
+			detailedLegs: boolParam('detailedLegs'),
+			withFares: boolParam('withFares'),
+			withScheduledSkippedStops: boolParam('withScheduledSkippedStops'),
+			numLegAlternatives: parseIntOr(urlParams?.get('numLegAlternatives'), undefined),
+			language: getUrlArray('language', [language])
+		});
+
+		const { data: itinerary, error } = await refreshItinerary({ query });
+		if (error) {
+			console.log(error);
+			alert(String((error as Record<string, unknown>).error?.toString() ?? error));
+			return;
+		}
+		itinerary!.legs = joinInterlinedLegs(itinerary!.legs);
+		pushStateWithQueryString(
+			query,
+			{
+				selectedItinerary: itinerary,
+				selectedStop: replace ? undefined : page.state.selectedStop,
+				tripId: replace ? undefined : page.state.tripId,
+				activeTab: 'connections'
+			},
+			replace
+		);
+	};
+
 	const applyPageStateFromURL = () => {
 		if (browser && urlParams) {
 			const tripId = urlParams.get('tripId');
@@ -170,6 +241,11 @@
 			if (stopId !== null) {
 				const time = urlParams.has('time') ? new Date(urlParams.get('time')!) : new Date();
 				onClickStop('', stopId, time, urlParams.get('stopArriveBy') == 'true', true);
+			}
+
+			const itineraryId = urlParams.get('itineraryId');
+			if (itineraryId !== null) {
+				onShowItineraryId(itineraryId, true);
 			}
 		}
 	};
@@ -450,6 +526,48 @@
 	let baseResponse = $state<Promise<PlanResponse>>();
 	let routingResponses = $state<Array<Promise<PlanResponse>>>([]);
 	let stopNameFromResponse = $state<string>('');
+	let refreshingItinerary = $state(false);
+
+	const refreshSelectedItinerary = async () => {
+		const itineraryId = page.state.selectedItinerary?.id;
+		if (!itineraryId || refreshingItinerary) {
+			return;
+		}
+
+		refreshingItinerary = true;
+		try {
+			const { data: refreshed, error } = await refreshItinerary({
+				query: {
+					itineraryId,
+					joinInterlinedLegs: false,
+					detailedLegs: true,
+					detailedTransfers: true,
+					withFares: true,
+					numLegAlternatives: 3,
+					language: [language]
+				}
+			});
+
+			if (error) {
+				console.log(error);
+				alert(String((error as Record<string, unknown>).error?.toString() ?? error));
+				return;
+			}
+			if (refreshed && page.state.selectedItinerary?.id === itineraryId) {
+				refreshed.legs = joinInterlinedLegs(refreshed.legs);
+				replaceState('', {
+					...page.state,
+					selectedItinerary: refreshed
+				});
+			}
+		} catch (e) {
+			console.log(e);
+			alert(String(e));
+		} finally {
+			refreshingItinerary = false;
+		}
+	};
+
 	$effect(() => {
 		if (baseQuery && baseQuery != lastPlanQuery && activeTab == 'connections') {
 			lastPlanQuery = baseQuery;
@@ -760,11 +878,7 @@
 					{routingResponses}
 					{baseQuery}
 					selectItinerary={(selectedItinerary) => {
-						pushState('', {
-							selectedItinerary: selectedItinerary,
-							scrollY: undefined,
-							activeTab: 'connections'
-						});
+						onSelectItinerary(selectedItinerary);
 					}}
 					updateStartDest={preprocessItinerary(from, to)}
 				/>
@@ -779,10 +893,7 @@
 							id="{rI}-{i}"
 							selected={false}
 							selectItinerary={() => {
-								pushState('', {
-									selectedItinerary: it,
-									activeTab: 'connections'
-								});
+								onSelectItinerary(it);
 							}}
 							{level}
 							{theme}
@@ -798,14 +909,27 @@
 			<Card class="w-[520px] bg-background rounded-lg  flex flex-col mb-2">
 				<div class="w-full flex justify-between items-center shadow-md pl-1 mb-1">
 					<h2 class="ml-2 text-base font-semibold">{t.journeyDetails}</h2>
-					<Button
-						variant="ghost"
-						onclick={() => {
-							history.back();
-						}}
-					>
-						<X />
-					</Button>
+					<div class="flex items-center">
+						<Button
+							variant="ghost"
+							size="icon"
+							title={t.refreshItinerary}
+							aria-label={t.refreshItinerary}
+							disabled={refreshingItinerary || !page.state.selectedItinerary.id}
+							onclick={refreshSelectedItinerary}
+						>
+							<RefreshCw class={refreshingItinerary ? 'animate-spin' : ''} />
+						</Button>
+						<Button
+							variant="ghost"
+							size="icon"
+							onclick={() => {
+								history.back();
+							}}
+						>
+							<X />
+						</Button>
+					</div>
 				</div>
 				<div
 					class={'p-2 md:p-4 overflow-y-auto overflow-x-hidden min-h-0 ' +
