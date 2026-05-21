@@ -169,6 +169,8 @@ export type Translations = {
 	rideEndAllowed: string;
 	rideEndNotAllowed: string;
 	routes: (n: number) => string;
+	tickets: string;
+	routeInformation: string;
 };
 
 const translations: Map<string, Translations> = new Map(

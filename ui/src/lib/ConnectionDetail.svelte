@@ -6,7 +6,8 @@
 		DollarSign,
 		CircleX,
 		Bike,
-		Accessibility
+		Accessibility,
+		ExternalLink
 	} from '@lucide/svelte';
 	import type {
 		FareProduct,
@@ -438,16 +439,41 @@
 					</div>
 				{/if}
 
-				{#if l.routeUrl}
+				{#if l.routeUrl || l.ticketUrls.web}
 					<div class="mt-2 mr-4">
-						<Button
-							variant="secondary"
-							href={l.routeUrl}
-							target="_blank"
-							class="overflow-hidden text-ellipsis whitespace-nowrap w-full px-4 inline-block underline"
-						>
-							{l.routeUrl}
-						</Button>
+						{#if l.routeUrl}
+							<Button
+								variant="secondary"
+								href={l.routeUrl}
+								target="_blank"
+								class="overflow-hidden text-ellipsis whitespace-nowrap px-4 inline-block"
+							>
+								<ExternalLink class="inline" />
+								{t.routeDetails}
+							</Button>
+						{/if}
+						{#if l.ticketUrls.web}
+							<Button
+								variant="secondary"
+								href={l.ticketUrls.web}
+								target="_blank"
+								class="overflow-hidden text-ellipsis whitespace-nowrap px-4 inline-block"
+							>
+								<ExternalLink class="inline" />
+								{t.tickets}
+							</Button>
+						{/if}
+						{#if l.agencyUrl && l.agencyName}
+							<Button
+								variant="secondary"
+								href={l.agencyUrl}
+								target="_blank"
+								class="overflow-hidden text-ellipsis whitespace-nowrap px-4 inline-block"
+							>
+								<ExternalLink class="inline" />
+								{l.agencyName}
+							</Button>
+						{/if}
 					</div>
 				{/if}
 
