@@ -452,7 +452,7 @@
 								{t.routeDetails}
 							</Button>
 						{/if}
-						{#if l.ticketUrls.web}
+						{#if l.ticketUrls && l.ticketUrls.web}
 							<Button
 								variant="secondary"
 								href={l.ticketUrls.web}
