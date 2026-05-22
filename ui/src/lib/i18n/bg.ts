@@ -69,7 +69,7 @@ const translations: Translations = {
 	defaultSelectedModes: 'Всички видове транспорт',
 	defaultSelectedProviders: 'Всички превозвачи',
 	selectElevationCosts: 'Избягвай стръмни наклони.',
-	wheelchair: 'инвалидна количка',
+	wheelchair: 'Само безбариеpни връзки',
 	useRoutedTransfers: 'Използвай посочените прекачвания',
 	bikeRental: 'наемане на велосипед',
 	requireBikeTransport: 'Превоз на велосипед',

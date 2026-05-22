@@ -71,7 +71,7 @@ const translations: Translations = {
 	defaultSelectedProviders: 'Alle Anbieter',
 	selectElevationCosts: 'Steile Steigungen vermeiden.',
 	useRoutedTransfers: 'Geroutete Umstiege verwenden',
-	wheelchair: 'Barrierefreie Umstiege',
+	wheelchair: 'Nur rollstuhlgerechte Verbindungen',
 	bikeRental: 'Sharing-Fahrzeuge berücksichtigen',
 	requireBikeTransport: 'Fahrradmitnahme',
 	requireCarTransport: 'Automitnahme',

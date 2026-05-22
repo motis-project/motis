@@ -71,7 +71,7 @@ const translations: Translations = {
 	defaultSelectedModes: 'Všechny dopravní prostředky',
 	defaultSelectedProviders: 'Všichni poskytovatelé',
 	selectElevationCosts: 'Bez prudkého stoupání.',
-	wheelchair: 'Bezbariérové přestupy',
+	wheelchair: 'Pouze bezbariérová spojení',
 	useRoutedTransfers: 'Počítej trasu pro přestupy',
 	bikeRental: 'Povol použití sdílených vozidel',
 	requireBikeTransport: 'Přeprava kola',
