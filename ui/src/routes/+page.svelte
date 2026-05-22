@@ -709,7 +709,7 @@
 	};
 
 	const flyToLocation = (location: Location) => {
-		map?.flyTo({ center: location.match, zoom: 12 });
+		map?.flyTo({ center: location.match, zoom: 18 });
 	};
 
 	const flyToSelectedItinerary = () => {
