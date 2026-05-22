@@ -240,7 +240,14 @@ void get_is_unique_stop_name(n::rt::frun const& fr,
   }
 }
 
-std::optional<n::timetable::ticketing_link> get_ticketing_urls(
+struct ticketing_links_view {
+  n::timetable::ticketing_link_type type_;
+  std::string_view web_;
+  std::string_view android_;
+  std::string_view ios_;
+};
+
+std::optional<ticketing_links_view> get_ticketing_urls(
     n::timetable const& tt,
     n::rt::run_stop const& enter_stop,
     n::rt::run_stop const& exit_stop) {
@@ -278,7 +285,11 @@ std::optional<n::timetable::ticketing_link> get_ticketing_urls(
     return std::nullopt;
   }
 
-  return tt.ticketing_links_[ticketing_idx].front();
+  return ticketing_links_view{
+      .type_ = tt.ticketing_links_.type_[ticketing_idx],
+      .web_ = tt.ticketing_links_.web_[ticketing_idx].view(),
+      .android_ = tt.ticketing_links_.andoid_[ticketing_idx].view(),
+      .ios_ = tt.ticketing_links_.ios_[ticketing_idx].view()};
 }
 
 api::Itinerary journey_to_response(
