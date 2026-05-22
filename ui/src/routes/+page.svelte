@@ -73,6 +73,7 @@
 	import StopGeoJSON from '$lib/map/stops/StopsGeoJSON.svelte';
 	import RailViz from '$lib/RailViz.svelte';
 	import StopsView from '$lib/map/stops/StopsView.svelte';
+	import { formatDate } from '$lib/toDateTime';
 
 	const urlParams = browser ? new URLSearchParams(window.location.search) : undefined;
 
@@ -928,7 +929,15 @@
 		<Control class="min-h-0 md:mb-2 md:flex">
 			<Card class="w-[520px] bg-background rounded-lg  flex flex-col mb-2">
 				<div class="w-full flex justify-between items-center shadow-md pl-1 mb-1">
-					<h2 class="ml-2 text-base font-semibold">{t.journeyDetails}</h2>
+					<div class="ml-2 flex items-baseline gap-2">
+						<h2 class="text-base font-semibold">{t.journeyDetails}</h2>
+						{#if page.state.selectedItinerary.legs.length > 0}
+							{@const firstLeg = page.state.selectedItinerary.legs[0]}
+							<span class="text-sm text-muted-foreground">
+								{formatDate(new Date(firstLeg.startTime), firstLeg.from.tz)}
+							</span>
+						{/if}
+					</div>
 					<div class="flex items-center">
 						<Button
 							variant="ghost"
