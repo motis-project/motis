@@ -1586,6 +1586,9 @@ For non-transit legs, null
         agencyUrl: {
             type: 'string'
         },
+        agencyFareUrl: {
+            type: 'string'
+        },
         agencyId: {
             type: 'string'
         },

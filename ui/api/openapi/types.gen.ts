@@ -1260,6 +1260,7 @@ export type Leg = {
     routeType?: number;
     agencyName?: string;
     agencyUrl?: string;
+    agencyFareUrl?: string;
     agencyId?: string;
     tripId?: string;
     routeShortName?: string;

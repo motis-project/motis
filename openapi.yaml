@@ -4925,6 +4925,8 @@ components:
           type: string
         agencyUrl:
           type: string
+        agencyFareUrl:
+          type: string
         agencyId:
           type: string
         tripId:
