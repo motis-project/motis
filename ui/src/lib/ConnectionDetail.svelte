@@ -104,6 +104,10 @@
 			selectedItinerary: { ...itinerary, legs: updated }
 		});
 	};
+
+	const normalize = (str: string) => {
+		return str.replace(/[()[\]]/g, '');
+	};
 </script>
 
 {#snippet stopTimes(
@@ -387,7 +391,7 @@
 									)}
 							>
 								{l.headsign}
-								{#if !l.headsign || !l.tripTo.name.startsWith(l.headsign)}
+								{#if !l.headsign || !normalize(l.headsign).includes(normalize(l.tripTo.name))}
 									<br />({l.tripTo.name})
 								{/if}
 							</Button>
