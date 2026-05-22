@@ -452,10 +452,10 @@
 								{t.routeInformation}
 							</Button>
 						{/if}
-						{#if l.ticketUrls && l.ticketUrls.web}
+						{#if (l.ticketUrls && l.ticketUrls.web) || l.agencyFareUrl}
 							<Button
 								variant="secondary"
-								href={l.ticketUrls.web}
+								href={(l.ticketUrls && l.ticketUrls.web) || l.agencyFareUrl}
 								target="_blank"
 								class="overflow-hidden text-ellipsis whitespace-nowrap px-4 inline-block"
 							>

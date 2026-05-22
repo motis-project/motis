@@ -3,7 +3,7 @@
 export const AlertCauseSchema = {
     description: 'Cause of this alert.',
     type: 'string',
-    enum: ['UNKNOWN_CAUSE', 'OTHER_CAUSE', 'TECHNICAL_PROBLEM', 'STRIKE', 'DEMONSTRATION', 'ACCIDENT', 'HOLIDAY', 'WEATHER', 'MAINTENANCE', 'CONSTRUCTION', 'POLICE_ACTIVITY', 'MEDICAL_EMERGENCY']
+    enum: ['UNKNOWN_CAUSE', 'OTHER_CAUSE', 'TECHNICAL_PROBLEM', 'STRIKE', 'DEMONSTRATION', 'ACCIDENT', 'HOLIDAY', 'WEATHER', 'MAINTENANCE', 'CONSTRUCTION', 'POLICE_ACTIVITY', 'MEDICAL_EMERGENCY', 'SPECIAL_EVENT']
 } as const;
 
 export const AlertEffectSchema = {
@@ -1519,6 +1519,9 @@ For non-transit legs, null
             type: 'string'
         },
         agencyUrl: {
+            type: 'string'
+        },
+        agencyFareUrl: {
             type: 'string'
         },
         agencyId: {
