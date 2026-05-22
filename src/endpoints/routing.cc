@@ -254,7 +254,7 @@ std::vector<n::routing::offset> get_offsets(
       profile = osr::search_profile::kCarSharing;
     }
 
-    auto const max_dist = get_max_distance(profile, max);
+    auto const max_dist = get_max_distance(profile, osr_params, max);
     auto const near_stops =
         get_stops_with_traffic(*r.tt_, rtt, *r.loc_tree_, pos, max_dist);
     auto const near_stop_locations = utl::to_vec(
@@ -282,7 +282,7 @@ std::vector<n::routing::offset> get_offsets(
 
       auto const max_dist_to_departure =
           dir == osr::direction::kForward
-              ? get_max_distance(osr::search_profile::kFoot, max)
+              ? get_max_distance(osr::search_profile::kFoot, osr_params, max)
               : max_dist;
       auto providers = hash_set<gbfs_provider_idx_t>{};
       gbfs_rd.data_->provider_rtree_.in_radius(
@@ -549,7 +549,8 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
     } else if (m == api::ModeEnum::RENTAL && gbfs_rd.has_data()) {
       // use foot because this is always forward search and we need to walk to
       // the station/vehicle
-      auto const max_dist = get_max_distance(osr::search_profile::kFoot, max);
+      auto const max_dist =
+          get_max_distance(osr::search_profile::kFoot, osr_params, max);
       auto providers = hash_set<gbfs_provider_idx_t>{};
       auto routed = 0U;
       gbfs_rd.data_->provider_rtree_.in_radius(

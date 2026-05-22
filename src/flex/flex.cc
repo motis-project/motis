@@ -279,7 +279,8 @@ void add_flex_td_offsets(osr::ways const& w,
                          std::map<std::string, std::uint64_t>& stats) {
   UTL_START_TIMING(flex_lookup_timer);
 
-  auto const max_dist = get_max_distance(osr::search_profile::kCarSharing, max);
+  auto const max_dist =
+      get_max_distance(osr::search_profile::kCarSharing, osr_params, max);
   auto const near_stops = loc_rtree.in_radius(pos.pos_, max_dist);
   auto const near_stop_locations =
       utl::to_vec(near_stops, [&](n::location_idx_t const l) {
