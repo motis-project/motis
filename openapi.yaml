@@ -2080,7 +2080,9 @@ paths:
       description: |
         Experimental (API might change without prior notice and without API version bump).
         Only supports walking at start/end or station-to-station itineraries.
-        API options mirror those of the `plan` endpoint.
+
+        All parameters mirror those of the `plan` endpoint - see the `plan`
+        endpoint for their descriptions.
       operationId: refreshItinerary
       parameters:
         - name: itineraryId
@@ -2130,6 +2132,40 @@ paths:
             type: integer
             default: 0
             minimum: 0
+        - name: transitModes
+          in: query
+          required: false
+          schema:
+            default:
+              - TRANSIT
+            type: array
+            items:
+              $ref: '#/components/schemas/Mode'
+          explode: false
+        - name: pedestrianProfile
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/PedestrianProfile'
+            default: FOOT
+        - name: useRoutedTransfers
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+        - name: requireBikeTransport
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+        - name: requireCarTransport
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
         - name: language
           in: query
           required: false
@@ -2164,7 +2200,9 @@ paths:
       description: |
         Experimental (API might change without prior notice and without API version bump).
         Only supports walking at start/end or station-to-station itineraries.
-        API options mirror those of the `plan` endpoint.
+
+        All `RefreshItineraryPostBody` fields mirror the parameters of the
+        `plan` endpoint - see the `plan` endpoint for their descriptions.
       operationId: refreshItineraryPost
       requestBody:
         required: true
@@ -4781,6 +4819,10 @@ components:
             $ref: '#/components/schemas/LegId'
 
     RefreshItineraryPostBody:
+      description: |
+        Body for the `refreshItineraryPost` endpoint. All fields mirror the
+        parameters of the `plan` endpoint - see the `plan` endpoint for their
+        descriptions.
       type: object
       required:
         - id
@@ -4808,10 +4850,25 @@ components:
           type: integer
           default: 0
           minimum: 0
+        transitModes:
+          type: array
+          items:
+            $ref: '#/components/schemas/Mode'
+          default:
+            - TRANSIT
+        pedestrianProfile:
+          $ref: '#/components/schemas/PedestrianProfile'
+          default: FOOT
+        useRoutedTransfers:
+          type: boolean
+          default: false
+        requireBikeTransport:
+          type: boolean
+          default: false
+        requireCarTransport:
+          type: boolean
+          default: false
         language:
-          description: |
-            language tags as used in OpenStreetMap / GTFS
-            (usually BCP-47 / ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
           type: array
           items:
             type: string
