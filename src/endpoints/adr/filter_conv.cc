@@ -5,15 +5,23 @@ namespace a = adr;
 namespace motis {
 
 adr::filter_type to_filter_type(
-    std::optional<motis::api::LocationTypeEnum> const& f) {
-  if (f.has_value()) {
-    switch (*f) {
-      case api::LocationTypeEnum::ADDRESS: return a::filter_type::kAddress;
-      case api::LocationTypeEnum::PLACE: return a::filter_type::kPlace;
-      case api::LocationTypeEnum::STOP: return a::filter_type::kExtra;
+    std::optional<std::vector<motis::api::LocationTypeEnum>> const& f) {
+  if (!f.has_value() || f->empty()) {
+    return a::filter_type::kNone;
+  }
+  auto result = a::filter_type::kNone;
+  for (auto const t : *f) {
+    switch (t) {
+      case api::LocationTypeEnum::ADDRESS:
+        result |= a::filter_type::kAddress;
+        break;
+      case api::LocationTypeEnum::PLACE:
+        result |= a::filter_type::kPlace;
+        break;
+      case api::LocationTypeEnum::STOP: result |= a::filter_type::kExtra; break;
     }
   }
-  return a::filter_type::kNone;
+  return result;
 }
 
 }  // namespace motis

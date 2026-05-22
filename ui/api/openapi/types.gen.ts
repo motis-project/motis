@@ -3056,11 +3056,11 @@ export type ReverseGeocodeData = {
         /**
          * Optional. Default is all types.
          *
-         * Only return results of the given type.
+         * Only return results of the given types.
          * For example, this can be used to allow only `ADDRESS` and `STOP` results.
          *
          */
-        type?: LocationType;
+        type?: Array<LocationType>;
     };
 };
 
@@ -3113,7 +3113,7 @@ export type GeocodeData = {
          * For example, this can be used to allow only `ADDRESS` and `STOP` results.
          *
          */
-        type?: LocationType;
+        type?: Array<LocationType>;
     };
 };
 
