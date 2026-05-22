@@ -178,7 +178,8 @@
 						detailedTransfers: true,
 						withFares: true,
 						numLegAlternatives: 3,
-						language: [language]
+						language: [language],
+						...refreshLegAlternativeParams
 					}
 				: {},
 			{
@@ -199,6 +200,7 @@
 			const v = urlParams?.get(key);
 			return v == null ? undefined : v === 'true'; // absent = undefined
 		};
+		const transitModesUrl = getUrlArray('transitModes');
 		const query = definedOnly({
 			itineraryId,
 			requireDisplayNameMatch: boolParam('requireDisplayNameMatch'),
@@ -208,7 +210,14 @@
 			withFares: boolParam('withFares'),
 			withScheduledSkippedStops: boolParam('withScheduledSkippedStops'),
 			numLegAlternatives: parseIntOr(urlParams?.get('numLegAlternatives'), undefined),
-			language: getUrlArray('language', [language])
+			language: getUrlArray('language', [language]),
+			transitModes: transitModesUrl.length ? (transitModesUrl as Mode[]) : undefined,
+			pedestrianProfile: (urlParams?.get('pedestrianProfile') ?? undefined) as
+				| PedestrianProfile
+				| undefined,
+			useRoutedTransfers: boolParam('useRoutedTransfers'),
+			requireBikeTransport: boolParam('requireBikeTransport'),
+			requireCarTransport: boolParam('requireCarTransport')
 		});
 
 		const { data: itinerary, error } = await refreshItinerary({ query });
@@ -493,6 +502,16 @@
 			: undefined
 	);
 
+	let refreshLegAlternativeParams = $derived({
+		transitModes: (transitModes.length == possibleTransitModes.length
+			? defaultQuery.transitModes
+			: transitModes) as Mode[],
+		pedestrianProfile,
+		useRoutedTransfers,
+		requireBikeTransport,
+		requireCarTransport
+	});
+
 	let isochronesQuery = $derived(
 		one?.match
 			? ({
@@ -544,7 +563,8 @@
 					detailedTransfers: true,
 					withFares: true,
 					numLegAlternatives: 3,
-					language: [language]
+					language: [language],
+					...refreshLegAlternativeParams
 				}
 			});
 
