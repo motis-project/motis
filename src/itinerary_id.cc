@@ -459,6 +459,11 @@ api::Itinerary build_itinerary_from_legs(
       }
     }
 
+    auto const safe_prf_idx =
+        stop_times.tt_.locations_.footpaths_out_.at(prf_idx).empty()
+            ? n::profile_idx_t{0U}
+            : prf_idx;
+
     leg_alternatives_query =
         n::routing::query{.start_time_ = j.start_time_,
                           .start_match_mode_ = endpoint_match_mode,
@@ -466,7 +471,7 @@ api::Itinerary build_itinerary_from_legs(
                           .use_start_footpaths_ = !osr_loaded,
                           .start_ = std::move(start_),
                           .destination_ = std::move(destination_),
-                          .prf_idx_ = prf_idx,
+                          .prf_idx_ = safe_prf_idx,
                           .allowed_claszes_ = allowed_claszes,
                           .require_bike_transport_ = require_bike_transport,
                           .require_car_transport_ = require_car_transport};
