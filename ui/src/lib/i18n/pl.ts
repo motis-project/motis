@@ -182,7 +182,9 @@ const translations: Translations = {
 			default:
 				return `${n} trasy`;
 		}
-	}
+	},
+	tickets: 'Bilety',
+	routeInformation: 'Więcej informacji'
 };
 
 export default translations;

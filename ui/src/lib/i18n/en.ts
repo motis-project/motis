@@ -180,7 +180,9 @@ const translations: Translations = {
 			default:
 				return `${n} routes`;
 		}
-	}
+	},
+	tickets: 'Tickets',
+	routeInformation: 'More Information'
 };
 
 export default translations;

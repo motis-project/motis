@@ -3,7 +3,7 @@
 /**
  * Cause of this alert.
  */
-export type AlertCause = 'UNKNOWN_CAUSE' | 'OTHER_CAUSE' | 'TECHNICAL_PROBLEM' | 'STRIKE' | 'DEMONSTRATION' | 'ACCIDENT' | 'HOLIDAY' | 'WEATHER' | 'MAINTENANCE' | 'CONSTRUCTION' | 'POLICE_ACTIVITY' | 'MEDICAL_EMERGENCY';
+export type AlertCause = 'UNKNOWN_CAUSE' | 'OTHER_CAUSE' | 'TECHNICAL_PROBLEM' | 'STRIKE' | 'DEMONSTRATION' | 'ACCIDENT' | 'HOLIDAY' | 'WEATHER' | 'MAINTENANCE' | 'CONSTRUCTION' | 'POLICE_ACTIVITY' | 'MEDICAL_EMERGENCY' | 'SPECIAL_EVENT';
 
 /**
  * The effect of this problem on the affected entity.
@@ -1132,6 +1132,12 @@ export type Category = {
     shortName: string;
 };
 
+export type TicketUrls = {
+    web?: string;
+    android?: string;
+    ios?: string;
+};
+
 export type Leg = {
     /**
      * Transport mode for this leg
@@ -1212,6 +1218,7 @@ export type Leg = {
     routeType?: number;
     agencyName?: string;
     agencyUrl?: string;
+    agencyFareUrl?: string;
     agencyId?: string;
     tripId?: string;
     routeShortName?: string;
@@ -1280,6 +1287,11 @@ export type Leg = {
      *
      */
     wheelchairAccessible?: WheelchairAccessibility;
+    /**
+     * Ticket booking links for different platforms
+     *
+     */
+    ticketUrls?: TicketUrls;
     /**
      * Alternative connections that can replace this transit leg.
      * Each alternative is normally a sequence of 3 legs:
