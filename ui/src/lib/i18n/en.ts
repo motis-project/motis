@@ -70,7 +70,7 @@ const translations: Translations = {
 	defaultSelectedProviders: 'All providers',
 	selectElevationCosts: 'Avoid steep incline.',
 	useRoutedTransfers: 'Use routed transfers',
-	wheelchair: 'Accessible transfers',
+	wheelchair: 'Only wheelchair accessible connections',
 	bikeRental: 'Allow usage of sharing vehicles',
 	requireBikeTransport: 'Bike carriage',
 	requireCarTransport: 'Car carriage',

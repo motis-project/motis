@@ -71,7 +71,7 @@ const translations: Translations = {
 	defaultSelectedModes: 'Wszystkie środki transportu',
 	defaultSelectedProviders: 'Wszyscy dostawcy',
 	selectElevationCosts: 'Unikaj stromych nachyleń.',
-	wheelchair: 'Bezbarierowe przesiadki',
+	wheelchair: 'Tylko połączenia bez barier',
 	useRoutedTransfers: 'Wyznacz trasy dla przesiadek',
 	bikeRental: 'Użyj pojazdów współdzielonych',
 	requireBikeTransport: 'Przewóz roweru',
