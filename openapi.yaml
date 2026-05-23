@@ -3093,11 +3093,9 @@ paths:
         - name: radiuses
           in: query
           required: false
-          description: Radius constraint for each location
+          description: Radius constraint
           schema:
-            type: array
-            items:
-              type: number
+            type: number
       responses:
         '200':
           content:

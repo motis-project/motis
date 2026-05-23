@@ -48,8 +48,7 @@ api::NearestResponse nearest::operator()(
 
   auto const candidates = osr::with_profile(profile, [&]<typename P>(P&&) {
     constexpr auto kDefaultRadius = 100U;
-    auto const r = param.radiuses_;
-    auto const max_dist = r && !r->empty() ? (*r)[0] : kDefaultRadius;
+    auto const max_dist = param.radiuses_.value_or(kDefaultRadius);
     return l_.match<P>(
         std::get<typename P::parameters>(osr::get_parameters(profile)),
         coords[0], false, osr::direction::kForward, max_dist, nullptr);
