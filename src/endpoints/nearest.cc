@@ -46,6 +46,10 @@ api::NearestResponse nearest::operator()(
   api::NearestResponse res;
   api::nearest_params param{url.params()};
 
+  if (param.number_ < 1) {
+    return {.code_ = "InvalidValue"};
+  }
+
   auto const candidates = osr::with_profile(profile, [&]<typename P>(P&&) {
     constexpr auto kDefaultRadius = 100U;
     auto const max_dist = param.radiuses_.value_or(kDefaultRadius);
@@ -54,7 +58,8 @@ api::NearestResponse nearest::operator()(
         coords[0], false, osr::direction::kForward, max_dist, nullptr);
   });
 
-  for (auto i = 0U; i < candidates.size(); ++i) {
+  auto const n = std::min(static_cast<std::size_t>(param.number_), candidates.size());
+  for (auto i = 0U; i < n; ++i) {
     auto const c = candidates[i];
     auto const loc = c.closest_point_on_way_;
     auto const id = w_.way_names_[c.way_];
