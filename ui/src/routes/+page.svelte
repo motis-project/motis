@@ -94,10 +94,10 @@
 	type ColorMode = 'rt' | 'route' | 'mode' | 'none';
 	let colorMode = $state<ColorMode>('none');
 	const colorModeOptions: { value: ColorMode; label: string; icon: typeof Ban }[] = [
-		{ value: 'none', label: 'No Trips', icon: Ban },
-		{ value: 'rt', label: 'Realtime Delay', icon: Rss },
-		{ value: 'route', label: 'Route Color', icon: Palette },
-		{ value: 'mode', label: 'Transport Mode', icon: TrainFront }
+		{ value: 'none', label: t.colorMode.none, icon: Ban },
+		{ value: 'rt', label: t.colorMode.rt, icon: Rss },
+		{ value: 'route', label: t.colorMode.route, icon: Palette },
+		{ value: 'mode', label: t.colorMode.mode, icon: TrainFront }
 	];
 	let showMap = $state(!isSmallScreen);
 	let showRoutes = $state(false);
