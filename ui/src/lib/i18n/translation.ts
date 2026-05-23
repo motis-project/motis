@@ -168,6 +168,12 @@ export type Translations = {
 	rideThroughNotAllowed: string;
 	rideEndAllowed: string;
 	rideEndNotAllowed: string;
+	colorMode: {
+		none: string;
+		rt: string;
+		route: string;
+		mode: string;
+	};
 	routes: (n: number) => string;
 };
 

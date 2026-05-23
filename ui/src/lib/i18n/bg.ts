@@ -171,6 +171,12 @@ const translations: Translations = {
 	DEBUG_BUS_ROUTE: 'Маршрут на автобус (Отстраняване на грешки)',
 	DEBUG_RAILWAY_ROUTE: 'Маршрут на влак (Отстраняване на грешки)',
 	DEBUG_FERRY_ROUTE: 'Маршрут на ферибот (Отстраняване на грешки)',
+	colorMode: {
+		none: 'No Trips',
+		rt: 'Realtime Delay',
+		route: 'Line Color',
+		mode: 'Transport Mode'
+	},
 	routes: (n: number) => {
 		switch (n) {
 			case 0:
