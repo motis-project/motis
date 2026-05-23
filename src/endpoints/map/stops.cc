@@ -3,6 +3,9 @@
 #include "net/bad_request_exception.h"
 #include "net/too_many_exception.h"
 
+#include "adr/typeahead.h"
+
+#include "motis/adr_extend_tt.h"
 #include "motis/parse_location.h"
 #include "motis/place.h"
 #include "motis/server.h"
@@ -56,46 +59,43 @@ api::stops_response stops::operator()(boost::urls::url_view const& url) const {
   }
 
   // --- Grouped ---
-  if (ae_ == nullptr) {
+  if (ae_ == nullptr || t_ == nullptr) {
     throw net::bad_request_exception(
         "grouped stops requires geocoding data (adr_extend)");
   }
 
-  // Group all matching locations by their place.
-  auto seen_places =
-      hash_map<adr_extra_place_idx_t, std::vector<n::location_idx_t>>{};
-  loc_rtree_.find({min->pos_, max->pos_}, [&](n::location_idx_t const l) {
-    if (tt_.location_routes_[l].empty()) {
-      return;  // Skip locations not served by any route.
-    }
-    auto const place_idx = ae_->location_place_[l];
-    auto const clasz = ae_->place_clasz_[place_idx];
-    if ((mask & clasz) != 0U) {
-      seen_places[place_idx].push_back(l);
-    }
-  });
+  // Query the place rtree for all places in the bounding box.
+  auto const box = geo::box{min->pos_, max->pos_};
+  ae_->place_rtree_.search(
+      box.min_.lnglat_float(), box.max_.lnglat_float(),
+      [&](auto const& pos, auto const& /*max*/,
+          adr_extra_place_idx_t const extra_place_idx) {
+        auto const clasz = ae_->place_clasz_[extra_place_idx];
+        if ((mask & clasz) == 0U) {
+          return true;
+        }
 
-  // Generate one place per group, using the center coordinate
-  // and the union of all modes of the grouped locations.
-  for (auto const& [_, locations] : seen_places) {
-    auto center_lat = 0.0;
-    auto center_lng = 0.0;
-    for (auto const l : locations) {
-      center_lat += tt_.locations_.coordinates_[l].lat_;
-      center_lng += tt_.locations_.coordinates_[l].lng_;
-    }
+        auto const adr_place_idx = adr::place_idx_t{
+            t_->ext_start_ + cista::to_idx(extra_place_idx)};
+        auto const osm_ids = t_->place_osm_ids_[adr_place_idx];
+        if (osm_ids.empty()) {
+          return true;
+        }
+        auto const representative = n::location_idx_t{
+            static_cast<cista::base_t<n::location_idx_t>>(osm_ids.front())};
 
-    auto p = bwd_compat_lvl_adjust(
-        to_place(&tt_, &tags_, w_, pl_, matches_, ae_, tz_, query.language_,
-                 tt_location{locations.front()}),
-        api_version);
-    p.lat_ = center_lat / static_cast<double>(locations.size());
-    p.lon_ = center_lng / static_cast<double>(locations.size());
+        auto p = bwd_compat_lvl_adjust(
+            to_place(&tt_, &tags_, w_, pl_, matches_, ae_, tz_, query.language_,
+                     tt_location{representative}),
+            api_version);
+        p.lat_ = pos[1];
+        p.lon_ = pos[0];
 
-    utl::verify<net::too_many_exception>(res.size() < max_results,
-                                         "too many stops");
-    res.emplace_back(std::move(p));
-  }
+        utl::verify<net::too_many_exception>(res.size() < max_results,
+                                             "too many stops");
+        res.emplace_back(std::move(p));
+        return true;
+      });
 
   return res;
 }

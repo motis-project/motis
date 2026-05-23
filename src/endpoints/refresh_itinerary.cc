@@ -65,9 +65,9 @@ ep::routing make_routing(Endpoint const& ep) {
 template <typename Endpoint>
 ep::stop_times make_scheduled_stop_times(Endpoint const& ep) {
   static auto const static_rt = std::make_shared<rt>();
-  return ep::stop_times{ep.config_, ep.w_,    ep.pl_,       ep.matches_,
-                        ep.ae_,     ep.tz_,   ep.loc_tree_, ep.tt_,
-                        ep.tags_,   static_rt};
+  return ep::stop_times{ep.config_, ep.w_,        ep.pl_,   ep.matches_,
+                        ep.t_,      ep.ae_,       ep.tz_,   ep.loc_tree_,
+                        ep.tt_,     ep.tags_,     static_rt};
 }
 
 api::Itinerary refresh_itinerary::operator()(

@@ -33,6 +33,7 @@ struct refresh_itinerary {
   std::shared_ptr<rt> const& rt_;
   nigiri::shapes_storage const* shapes_;
   std::shared_ptr<gbfs::gbfs_data> const& gbfs_;
+  adr::typeahead const* t_;
   adr_ext const* ae_;
   tz_map_t const* tz_;
   odm::bounds const* odm_bounds_;
@@ -58,6 +59,7 @@ struct refresh_itinerary_post {
   std::shared_ptr<rt> const& rt_;
   nigiri::shapes_storage const* shapes_;
   std::shared_ptr<gbfs::gbfs_data> const& gbfs_;
+  adr::typeahead const* t_;
   adr_ext const* ae_;
   tz_map_t const* tz_;
   odm::bounds const* odm_bounds_;

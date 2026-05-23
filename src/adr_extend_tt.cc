@@ -398,6 +398,7 @@ adr_ext adr_extend_tt(nigiri::timetable const& tt,
     t.area_sets_.emplace_back(areas);
   }
 
+  auto extra_place_idx = adr_extra_place_idx_t{0U};
   for (auto const [prio, locations] :
        utl::zip(ret.place_importance_, place_location)) {
     auto const place_idx = a::place_idx_t{t.place_names_.size()};
@@ -420,31 +421,32 @@ adr_ext adr_extend_tt(nigiri::timetable const& tt,
           add_names(c);
         }
       }
-
-      auto const is_null_island = [](geo::latlng const& pos) {
-        return pos.lat() < 3.0 && pos.lng() < 3.0;
-      };
-      auto pos = tt.locations_.coordinates_[l];
-      if (is_null_island(pos)) {
-        for (auto const c : tt.locations_.children_[l]) {
-          if (!is_null_island(tt.locations_.coordinates_[c])) {
-            pos = tt.locations_.coordinates_[c];
-            break;
-          }
-        }
-      }
     }
 
-    auto const pos =
-        a::coordinates::from_latlng(tt.locations_.coordinates_[locations[0]]);
+    auto const is_null_island = [](geo::latlng const& p) {
+      return p.lat_ < 3.0 && p.lng_ < 3.0;
+    };
+    auto center_lat = 0.0;
+    auto center_lng = 0.0;
+    auto n_centered = 0U;
+    for (auto const l : locations) {
+      auto const c = tt.locations_.coordinates_[l];
+      if (is_null_island(c)) {
+        continue;
+      }
+      center_lat += c.lat_;
+      center_lng += c.lng_;
+      ++n_centered;
+    }
+    auto const center =
+        n_centered == 0U
+            ? tt.locations_.coordinates_[locations[0]]
+            : geo::latlng{center_lat / static_cast<double>(n_centered),
+                          center_lng / static_cast<double>(n_centered)};
+    auto const pos = a::coordinates::from_latlng(center);
 
-    fmt::println(std::clog, "names: {}, stops={}, prio={}",
-                 names | std::views::transform([&](auto&& n) {
-                   return t.strings_[n.first].view();
-                 }),
-                 locations | std::views::transform(
-                                 [&](auto&& l) { return n::loc{tt, l}; }),
-                 prio);
+    auto const rtree_coord = center.lnglat_float();
+    ret.place_rtree_.insert(rtree_coord, rtree_coord, extra_place_idx);
 
     t.place_type_.emplace_back(a::amenity_category::kExtra);
     t.place_names_.emplace_back(
@@ -469,6 +471,8 @@ adr_ext adr_extend_tt(nigiri::timetable const& tt,
             return set_idx;
           }));
     }
+
+    ++extra_place_idx;
   }
 
   t.build_ngram_index();
