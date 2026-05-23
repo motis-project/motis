@@ -21,6 +21,7 @@
 #include "adr/score.h"
 #include "adr/typeahead.h"
 
+#include "motis/timetable/clasz_to_mode.h"
 #include "motis/types.h"
 
 namespace a = adr;
@@ -269,23 +270,6 @@ adr_ext adr_extend_tt(nigiri::timetable const& tt,
             ret.location_place_[tt.locations_.get_root_idx(l)];
       }
     }
-
-    // Sort each place's locations by importance (highest clasz first).
-    auto loc_clasz = std::vector<n::clasz>(
-        static_cast<std::size_t>(tt.n_locations()),
-        n::clasz{static_cast<std::uint8_t>(n::kNumClasses)});
-    for (auto l = n::location_idx_t{0U}; l != tt.n_locations(); ++l) {
-      auto const root = tt.locations_.get_root_idx(l);
-      for (auto const r : tt.location_routes_[l]) {
-        loc_clasz[to_idx(root)] =
-            std::min(loc_clasz[to_idx(root)], tt.route_clasz_[r]);
-      }
-    }
-    for (auto place : place_location) {
-      utl::sort(place, [&](auto const a, auto const b) {
-        return loc_clasz[to_idx(a)] < loc_clasz[to_idx(b)];
-      });
-    }
   }
 
   for (auto const [i, place] : utl::enumerate(ret.location_place_)) {
@@ -318,6 +302,8 @@ adr_ext adr_extend_tt(nigiri::timetable const& tt,
   // Compute importance = transport count weighted by clasz.
   ret.place_importance_.resize(place_location.size());
   ret.place_clasz_.resize(place_location.size());
+  auto most_important = vector_map<adr_extra_place_idx_t, n::location_idx_t>{};
+  most_important.resize(place_location.size(), n::location_idx_t::invalid());
   {
     auto const event_counts = utl::scoped_timer{"guesser event_counts"};
     for (auto i = n::kNSpecialStations; i < tt.n_locations(); ++i) {
@@ -359,7 +345,16 @@ adr_ext adr_extend_tt(nigiri::timetable const& tt,
 
         auto const c = n::clasz{static_cast<std::uint8_t>(clasz)};
         if (t_count != 0U) {
-          ret.place_clasz_[place_idx] |= n::routing::to_mask(c);
+          auto const curr_mask = n::routing::to_mask(c);
+          auto const old_min = cista::trailing_zeros(
+              static_cast<unsigned>(ret.place_clasz_[place_idx]));
+          auto const new_min = cista::trailing_zeros(
+              static_cast<unsigned>(ret.place_clasz_[place_idx] | curr_mask));
+          if (most_important[place_idx] == n::location_idx_t::invalid() ||
+              new_min < old_min) {
+            most_important[place_idx] = root;
+          }
+          ret.place_clasz_[place_idx] |= curr_mask;
         }
       }
     }
@@ -417,8 +412,19 @@ adr_ext adr_extend_tt(nigiri::timetable const& tt,
   }
 
   auto extra_place_idx = adr_extra_place_idx_t{0U};
-  for (auto const [prio, locations] :
-       utl::zip(ret.place_importance_, place_location)) {
+  for (auto const [prio, locations, representative] :
+       utl::zip(ret.place_importance_, place_location, most_important)) {
+    auto const repr_name =
+        representative != n::location_idx_t::invalid()
+            ? tt.get_default_translation(tt.locations_.names_[representative])
+            : std::string_view{};
+    utl::sort(
+        locations, [&](n::location_idx_t const a, n::location_idx_t const b) {
+          auto const an = tt.get_default_translation(tt.locations_.names_[a]);
+          auto const bn = tt.get_default_translation(tt.locations_.names_[b]);
+          return (an != repr_name) < (bn != repr_name);
+        });
+
     auto const place_idx = a::place_idx_t{t.place_names_.size()};
 
     auto names = std::vector<std::pair<a::string_idx_t, a::language_idx_t>>{};
@@ -441,29 +447,38 @@ adr_ext adr_extend_tt(nigiri::timetable const& tt,
       }
     }
 
-    auto const is_null_island = [](geo::latlng const& p) {
-      return p.lat_ < 3.0 && p.lng_ < 3.0;
-    };
-    auto center_lat = 0.0;
-    auto center_lng = 0.0;
-    auto n_centered = 0U;
-    for (auto const l : locations) {
-      auto const c = tt.locations_.coordinates_[l];
-      if (is_null_island(c)) {
-        continue;
+    auto const get_modes = [&](n::location_idx_t const l) {
+      auto modes = n::routing::clasz_mask_t{};
+      if (l != n::location_idx_t::invalid()) {
+        for (auto const r : tt.location_routes_[l]) {
+          modes |= n::routing::to_mask(tt.route_clasz_[r]);
+        }
       }
-      center_lat += c.lat_;
-      center_lng += c.lng_;
-      ++n_centered;
-    }
-    auto const center =
-        n_centered == 0U
-            ? tt.locations_.coordinates_[locations[0]]
-            : geo::latlng{center_lat / static_cast<double>(n_centered),
-                          center_lng / static_cast<double>(n_centered)};
-    auto const pos = a::coordinates::from_latlng(center);
+      return modes;
+    };
+    fmt::println(
+        std::clog, "representative={}, modes={}, names: {}, stops={}, prio={}",
+        n::loc{tt, representative},
+        to_modes(get_modes(representative), 5) |
+            std::views::transform(
+                [](auto const& x) { return fmt::streamed(x); }),
+        names | std::views::transform(
+                    [&](auto&& n) { return t.strings_[n.first].view(); }),
+        locations | std::views::transform([&](auto&& l) {
+          return std::pair{n::loc{tt, l},
+                           to_modes(get_modes(l), 5) |
+                               std::views::transform([](auto const& x) {
+                                 return fmt::streamed(x);
+                               })};
+        }),
+        prio);
 
-    auto const rtree_coord = center.lnglat_float();
+    auto const pos_loc = representative != n::location_idx_t::invalid()
+                             ? representative
+                             : locations[0];
+    auto const pos =
+        a::coordinates::from_latlng(tt.locations_.coordinates_[pos_loc]);
+    auto const rtree_coord = pos.as_latlng().lnglat_float();
     ret.place_rtree_.insert(rtree_coord, rtree_coord, extra_place_idx);
 
     t.place_type_.emplace_back(a::amenity_category::kExtra);
