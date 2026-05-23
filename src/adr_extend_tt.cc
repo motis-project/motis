@@ -275,9 +275,10 @@ adr_ext adr_extend_tt(nigiri::timetable const& tt,
         static_cast<std::size_t>(tt.n_locations()),
         n::clasz{static_cast<std::uint8_t>(n::kNumClasses)});
     for (auto l = n::location_idx_t{0U}; l != tt.n_locations(); ++l) {
+      auto const root = tt.locations_.get_root_idx(l);
       for (auto const r : tt.location_routes_[l]) {
-        loc_clasz[to_idx(l)] =
-            std::min(loc_clasz[to_idx(l)], tt.route_clasz_[r]);
+        loc_clasz[to_idx(root)] =
+            std::min(loc_clasz[to_idx(root)], tt.route_clasz_[r]);
       }
     }
     for (auto place : place_location) {
