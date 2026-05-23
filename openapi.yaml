@@ -3090,6 +3090,14 @@ paths:
             type: integer
             default: 1
 
+        - name: radiuses
+          in: query
+          required: false
+          description: Radius constraint for each location
+          schema:
+            type: array
+            items:
+              type: number
       responses:
         '200':
           content:

@@ -6,7 +6,7 @@
 
 namespace motis::ep {
 
-inline std::vector<osr::location> parse_locations(std::string_view c) {
+inline std::vector<osr::location> parse_array(std::string_view c) {
   auto parse = [&](auto const c) {
     double lat, lon;
     auto const sep = c.find(',');
@@ -35,9 +35,9 @@ api::NearestResponse nearest::operator()(
   std::advance(it, 2);
 
   auto const profile = osr::to_profile(*it++);
-  auto const coords = parse_locations(*it++);
+  auto const coords = parse_array(*it++);
 
-  if (coords.empty()) {
+  if (coords.size() != 1) {
     return {.code_ = "InvalidUrl"};
   }
 
@@ -47,10 +47,12 @@ api::NearestResponse nearest::operator()(
   api::nearest_params param{url.params()};
 
   auto const candidates = osr::with_profile(profile, [&]<typename P>(P&&) {
-    constexpr auto kMaxDistance = 100U;
+    constexpr auto kDefaultRadius = 100U;
+    auto const r = param.radiuses_;
+    auto const max_dist = r && !r->empty() ? (*r)[0] : kDefaultRadius;
     return l_.match<P>(
         std::get<typename P::parameters>(osr::get_parameters(profile)),
-        coords[0], false, osr::direction::kForward, kMaxDistance, nullptr);
+        coords[0], false, osr::direction::kForward, max_dist, nullptr);
   });
 
   for (auto i = 0U; i < candidates.size(); ++i) {
