@@ -25,6 +25,7 @@
 	import { getModeName } from '$lib/getModeName';
 	import { language, t } from '$lib/i18n/translation';
 	import { onClickStop, onClickTrip } from '$lib/utils';
+	import { normalizedContains } from '$lib/normalizedContains';
 	import { formatDate, formatTime } from './toDateTime';
 	import { getModeLabel } from './map/getModeLabel';
 	import { pushState } from '$app/navigation';
@@ -105,9 +106,6 @@
 		});
 	};
 
-	const normalize = (str: string) => {
-		return str.replace(/[()[\]]/g, '');
-	};
 </script>
 
 {#snippet stopTimes(
@@ -391,7 +389,7 @@
 									)}
 							>
 								{l.headsign}
-								{#if !l.headsign || !normalize(l.headsign).includes(normalize(l.tripTo.name))}
+								{#if !l.headsign || !normalizedContains(l.headsign, l.tripTo.name)}
 									<br />({l.tripTo.name})
 								{/if}
 							</Button>
