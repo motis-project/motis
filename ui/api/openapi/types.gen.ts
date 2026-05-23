@@ -1957,6 +1957,27 @@ export type HealthResponse = {
     gbfs?: boolean;
 };
 
+export type Waypoint = {
+    /**
+     * name Name of the street the coordinate snapped to
+     */
+    name?: string;
+    /**
+     * longitude, latitude pair of the snapped coordinate
+     */
+    location?: Array<(number)>;
+    /**
+     * The distance of the snapped point from the original
+     */
+    distance?: number;
+};
+
+export type NearestResponse = {
+    code: string;
+    message?: string;
+    waypoints: Array<Waypoint>;
+};
+
 export type PlanData = {
     query: {
         /**
@@ -3580,6 +3601,19 @@ export type RentalsError = (Error);
 export type HealthResponse2 = (HealthResponse);
 
 export type HealthError = (HealthResponse);
+
+export type NearestData = {
+    query?: {
+        /**
+         * Number of nearest segments that should be returned.
+         */
+        number?: number;
+    };
+};
+
+export type NearestResponse2 = (NearestResponse);
+
+export type NearestError = unknown;
 
 export type TransfersData = {
     query: {

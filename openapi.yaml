@@ -3077,7 +3077,26 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HealthResponse'
-          
+
+  /nearest/v1/{profile}/{coordinates}:
+    get:
+      operationId: nearest
+      parameters:
+        - name: number
+          in: query
+          required: false
+          description: Number of nearest segments that should be returned.
+          schema:
+            type: integer
+            default: 1
+
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NearestResponse'
+
   /api/debug/transfers:
     get:
       tags:
@@ -5424,3 +5443,33 @@ components:
         gbfs:
           type: boolean
           description: GBFS feeds.
+
+    Waypoint:
+      type: object
+      properties:
+        name:
+          type: string
+          description: name Name of the street the coordinate snapped to
+        location:
+          type: array
+          items:
+            type: number
+          description: longitude, latitude pair of the snapped coordinate
+        distance:
+          type: number
+          description: The distance of the snapped point from the original
+
+    NearestResponse:
+      type: object
+      required:
+        - code
+        - waypoints
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        waypoints:
+          type: array
+          items:
+            $ref: '#/components/schemas/Waypoint'

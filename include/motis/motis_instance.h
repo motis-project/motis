@@ -3,6 +3,7 @@
 
 #include "boost/asio/io_context.hpp"
 
+#include "endpoints/nearest.h"
 #include "net/web_server/query_router.h"
 
 #include "utl/set_thread_name.h"
@@ -94,6 +95,7 @@ struct motis_instance {
     POST<ep::osr_routing>("/api/route", d);
     POST<ep::platforms>("/api/platforms", d);
     POST<ep::graph>("/api/graph", d);
+    GET<ep::nearest>("/nearest/v1", d);
     GET<ep::transfers>("/api/debug/transfers", d);
     GET<ep::flex_locations>("/api/debug/flex", d);
     GET<ep::levels>("/api/v1/map/levels", d);
