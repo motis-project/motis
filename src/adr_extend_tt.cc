@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "utl/get_or_create.h"
+#include "utl/helpers/algorithm.h"
 #include "utl/parallel_for.h"
 #include "utl/timer.h"
 #include "utl/to_vec.h"
@@ -267,6 +268,22 @@ adr_ext adr_extend_tt(nigiri::timetable const& tt,
         ret.location_place_[l] =
             ret.location_place_[tt.locations_.get_root_idx(l)];
       }
+    }
+
+    // Sort each place's locations by importance (highest clasz first).
+    auto loc_clasz = std::vector<n::clasz>(
+        static_cast<std::size_t>(tt.n_locations()),
+        n::clasz{static_cast<std::uint8_t>(n::kNumClasses)});
+    for (auto l = n::location_idx_t{0U}; l != tt.n_locations(); ++l) {
+      for (auto const r : tt.location_routes_[l]) {
+        loc_clasz[to_idx(l)] =
+            std::min(loc_clasz[to_idx(l)], tt.route_clasz_[r]);
+      }
+    }
+    for (auto place : place_location) {
+      utl::sort(place, [&](auto const a, auto const b) {
+        return loc_clasz[to_idx(a)] < loc_clasz[to_idx(b)];
+      });
     }
   }
 
