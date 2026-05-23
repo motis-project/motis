@@ -105,7 +105,6 @@
 			selectedItinerary: { ...itinerary, legs: updated }
 		});
 	};
-
 </script>
 
 {#snippet stopTimes(

@@ -75,8 +75,8 @@ api::stops_response stops::operator()(boost::urls::url_view const& url) const {
           return true;
         }
 
-        auto const adr_place_idx = adr::place_idx_t{
-            t_->ext_start_ + cista::to_idx(extra_place_idx)};
+        auto const adr_place_idx =
+            adr::place_idx_t{t_->ext_start_ + cista::to_idx(extra_place_idx)};
         auto const osm_ids = t_->place_osm_ids_[adr_place_idx];
         if (osm_ids.empty()) {
           return true;
