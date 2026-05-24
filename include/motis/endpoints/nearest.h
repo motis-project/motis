@@ -1,9 +1,8 @@
 #pragma once
 
-#include "boost/json/value.hpp"
-
 #include "motis-api/motis-api.h"
 #include "motis/config.h"
+
 #include "osr/lookup.h"
 #include "osr/ways.h"
 

@@ -1,27 +1,30 @@
 #include "motis/endpoints/nearest.h"
 
-#include "osr/routing/map_matching.h"
-#include "osr/routing/parameters.h"
+#include "motis/parse_location.h"
+
 #include "osr/routing/with_profile.h"
 
 namespace motis::ep {
 
-inline std::vector<osr::location> parse_array(std::string_view c) {
-  auto parse = [&](auto const c) {
-    double lat, lon;
-    auto const sep = c.find(',');
-    std::from_chars(c.data(), c.data() + sep, lon);
-    std::from_chars(c.data() + sep + 1, c.data() + c.size(), lat);
-    return osr::location{{lat, lon}, osr::kNoLevel};
+inline std::optional<std::vector<osr::location>> parse_locations(
+    std::string_view c) {
+  auto parse = [](std::string_view s) -> std::optional<osr::location> {
+    auto l = parse_location(s, ',');
+    if (!l) return std::nullopt;
+    return osr::location{{l->pos_.lng(), l->pos_.lat()}, l->lvl_};
   };
 
   std::vector<osr::location> locs;
   size_t it;
   while ((it = c.find(';')) != std::string_view::npos) {
-    locs.emplace_back(parse(c.substr(0, it)));
+    auto l = parse(c.substr(0, it));
+    if (!l) return std::nullopt;
+    locs.emplace_back(*l);
     c.remove_prefix(it + 1);
   }
-  locs.emplace_back(parse(c));
+  auto l = parse(c);
+  if (!l) return std::nullopt;
+  locs.emplace_back(*l);
   return locs;
 }
 
@@ -35,30 +38,30 @@ api::NearestResponse nearest::operator()(
   std::advance(it, 2);
 
   auto const profile = osr::to_profile(*it++);
-  auto const coords = parse_array(*it++);
+  auto const coords = parse_locations(*it++);
 
-  if (coords.size() != 1) {
-    return {.code_ = "InvalidUrl"};
+  if (!coords || (*coords).empty()) {
+    return {.code_ = "InvalidQuery"};
   }
 
-  auto const from = coords[0];
-
-  api::NearestResponse res;
   api::nearest_params param{url.params()};
 
   if (param.number_ < 1) {
     return {.code_ = "InvalidValue"};
   }
 
+  api::NearestResponse res;
+  auto const from = (*coords)[0];
   auto const candidates = osr::with_profile(profile, [&]<typename P>(P&&) {
     constexpr auto kDefaultRadius = 100U;
     auto const max_dist = param.radiuses_.value_or(kDefaultRadius);
     return l_.match<P>(
-        std::get<typename P::parameters>(osr::get_parameters(profile)),
-        coords[0], false, osr::direction::kForward, max_dist, nullptr);
+        std::get<typename P::parameters>(osr::get_parameters(profile)), from,
+        false, osr::direction::kForward, max_dist, nullptr);
   });
 
-  auto const n = std::min(static_cast<std::size_t>(param.number_), candidates.size());
+  auto const n =
+      std::min(static_cast<std::size_t>(param.number_), candidates.size());
   for (auto i = 0U; i < n; ++i) {
     auto const c = candidates[i];
     auto const loc = c.closest_point_on_way_;
@@ -69,6 +72,7 @@ api::NearestResponse nearest::operator()(
     }
     wp.distance_ = geo::distance(loc, from.pos_);
     wp.location_ = {loc.lng(), loc.lat()};
+    res.waypoints_.emplace_back(wp);
   }
 
   res.code_ = "OK";
