@@ -3,7 +3,6 @@
 
 #include "boost/asio/io_context.hpp"
 
-#include "endpoints/nearest.h"
 #include "net/web_server/query_router.h"
 
 #include "utl/set_thread_name.h"
@@ -25,6 +24,7 @@
 #include "motis/endpoints/map/trips.h"
 #include "motis/endpoints/matches.h"
 #include "motis/endpoints/metrics.h"
+#include "motis/endpoints/nearest.h"
 #include "motis/endpoints/ojp.h"
 #include "motis/endpoints/one_to_all.h"
 #include "motis/endpoints/one_to_many.h"
