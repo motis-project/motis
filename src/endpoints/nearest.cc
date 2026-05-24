@@ -20,7 +20,7 @@ api::NearestResponse nearest::operator()(
     }
     std::advance(it, 2);
     params.profile_ = (*it++);
-    params.coordinate_ = (*it++);
+    params.coordinates_ = (*it++);
     return params;
   };
 
@@ -37,7 +37,7 @@ api::NearestResponse nearest::operator()(
     throw net::bad_request_exception("invalid profile");
   }
 
-  coord = parse_location(*params->coordinate_);
+  coord = parse_location(*params->coordinates_);
   utl::verify<net::bad_request_exception>(coord.has_value(),
                                           "invalid coordinates");
   utl::verify<net::bad_request_exception>(params->number_ >= 1,

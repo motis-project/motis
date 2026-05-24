@@ -3603,13 +3603,15 @@ export type HealthResponse2 = (HealthResponse);
 export type HealthError = (HealthResponse);
 
 export type NearestData = {
+    path?: {
+        coordinates?: string;
+        profile?: string;
+    };
     query?: {
-        coordinate?: string;
         /**
          * Number of nearest segments that should be returned.
          */
         number?: number;
-        profile?: string;
         /**
          * Radius constraint
          */

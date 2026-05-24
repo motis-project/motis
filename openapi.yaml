@@ -3083,13 +3083,13 @@ paths:
       operationId: nearest
       parameters:
         - name: profile
-          in: query
+          in: path
           required: false
           schema:
             type: string
 
-        - name: coordinate
-          in: query
+        - name: coordinates
+          in: path
           required: false
           schema:
             type: string
@@ -3110,6 +3110,7 @@ paths:
             type: number
       responses:
         '200':
+          description: Returns the nearest road segment(s) for the provided coordinates.
           content:
             application/json:
               schema:
