@@ -2,6 +2,7 @@
 
 #include "gtest/gtest.h"
 
+#include <cstddef>
 #include "motis/endpoints/nearest.h"
 
 #include "geo/latlng.h"
@@ -16,8 +17,8 @@
 
 static std::string query(osr::search_profile const p,
                          osr::location const loc,
-                         int const n,
-                         int const r) {
+                         std::size_t const n,
+                         std::size_t const r) {
   return fmt::format("/nearest/v1/{}/{},{}?number={}&radiuses={}",
                      osr::to_str(p), loc.pos_.lng(), loc.pos_.lat(), n, r);
 }
@@ -33,8 +34,8 @@ TEST(motis, nearest_endpoint_profiles) {
   auto const ep = motis::ep::nearest{*d.w_, *d.l_, c};
 
   auto const loc = osr::location{{49.87260, 8.63085}, osr::kNoLevel};
-  auto const radius = 100;
-  auto const number = 100;
+  auto const radius = 100U;
+  auto const number = 100U;
 
   for (auto i = 0U; i <= static_cast<uint8_t>(osr::search_profile::kFerry);
        ++i) {
@@ -57,13 +58,13 @@ TEST(motis, nearest_endpoint_profiles) {
       auto const size = std::min(static_cast<std::size_t>(n), expected.size());
       ASSERT_EQ(res.waypoints_.size(), size);
 
-      for (auto i = 0U; i < size; ++i) {
-        EXPECT_EQ((*res.waypoints_[i].location_)[0],
-                  expected[i].closest_point_on_way_.lng());
-        EXPECT_EQ((*res.waypoints_[i].location_)[1],
-                  expected[i].closest_point_on_way_.lat());
-        EXPECT_EQ(res.waypoints_[i].distance_,
-                  geo::distance(expected[i].closest_point_on_way_, loc.pos_));
+      for (auto j = 0U; j < size; ++j) {
+        EXPECT_EQ((*res.waypoints_[j].location_)[0],
+                  expected[j].closest_point_on_way_.lng());
+        EXPECT_EQ((*res.waypoints_[j].location_)[1],
+                  expected[j].closest_point_on_way_.lat());
+        EXPECT_EQ(res.waypoints_[j].distance_,
+                  geo::distance(expected[j].closest_point_on_way_, loc.pos_));
       }
     }
   }
