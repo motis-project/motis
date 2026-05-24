@@ -162,6 +162,7 @@ const translations: Translations = {
 	continuesAs: 'Continue comme',
 	earlierAlternatives: 'Alternatives plus tôt',
 	laterAlternatives: 'Alternatives plus tard',
+	differentStops: 'Arrêts différents',
 	rent: 'Louer',
 	copyToClipboard: 'Copier dans le presse-papiers',
 	rideThroughAllowed: 'Passage autorisé',

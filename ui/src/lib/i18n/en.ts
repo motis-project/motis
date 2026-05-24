@@ -162,6 +162,7 @@ const translations: Translations = {
 	continuesAs: 'Continues as',
 	earlierAlternatives: 'Earlier alternatives',
 	laterAlternatives: 'Later alternatives',
+	differentStops: 'Different stops',
 	rent: 'Rent',
 	copyToClipboard: 'Copy to clipboard',
 	rideThroughAllowed: 'Riding through allowed',

@@ -164,6 +164,7 @@ const translations: Translations = {
 	continuesAs: 'Pokračuje jako',
 	earlierAlternatives: 'Dřívější alternativy',
 	laterAlternatives: 'Pozdější alternativy',
+	differentStops: 'Jiné zastávky',
 	rent: 'Půjčit si',
 	copyToClipboard: 'Kopírovat do schránky',
 	rideThroughAllowed: 'Průjezd povolen',

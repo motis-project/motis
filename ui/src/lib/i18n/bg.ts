@@ -162,6 +162,7 @@ const translations: Translations = {
 	continuesAs: 'Продължава като',
 	earlierAlternatives: 'По-ранни алтернативи',
 	laterAlternatives: 'По-късни алтернативи',
+	differentStops: 'Различни спирки',
 	rent: 'Наем',
 	copyToClipboard: 'Копирай в клипборда',
 	rideThroughAllowed: 'Минаване е позволено',

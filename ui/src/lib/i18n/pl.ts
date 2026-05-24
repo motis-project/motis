@@ -164,6 +164,7 @@ const translations: Translations = {
 	continuesAs: 'Kontynuuje jako',
 	earlierAlternatives: 'Wcześniejsze alternatywy',
 	laterAlternatives: 'Późniejsze alternatywy',
+	differentStops: 'Inne przystanki',
 	rent: 'Wypożycz',
 	copyToClipboard: 'Kopiuj do schowka',
 	rideThroughAllowed: 'Przejazd dozwolony',
