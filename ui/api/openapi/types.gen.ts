@@ -3608,6 +3608,10 @@ export type NearestData = {
          * Number of nearest segments that should be returned.
          */
         number?: number;
+        /**
+         * Radius constraint
+         */
+        radiuses?: number;
     };
 };
 
