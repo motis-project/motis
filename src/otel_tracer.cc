@@ -15,29 +15,6 @@
 
 namespace motis {
 
-void init_opentelemetry(config::otlp const& opts) {
-  auto resource_attributes = opentelemetry::sdk::resource::ResourceAttributes{
-      {"service.name", "motis"},
-      {
-          "service.version" /* TODO add version*/
-      }};
-  auto resource =
-      opentelemetry::sdk::resource::Resource::Create(resource_attributes);
-
-  opentelemetry::context::RuntimeContext::SetRuntimeContextStorage(
-      std::make_shared<otel_runtime_context_storage>());
-
-  if (opts.otlp_http_) {
-    init_opentelemetry_tracer(resource, opts);
-  }
-
-  // What is this used for exactly?
-  opentelemetry::context::propagation::GlobalTextMapPropagator::
-      SetGlobalPropagator(
-          std::make_shared<
-              opentelemetry::trace::propagation::HttpTraceContext>());
-}
-
 void init_opentelemetry_tracer(
     opentelemetry::sdk::resource::Resource const& resource,
     config::otlp const& c) {
@@ -46,7 +23,7 @@ void init_opentelemetry_tracer(
   // create otlp opts from config - or pass otlp opts directly
 
   auto const opts = opentelemetry::exporter::otlp::OtlpHttpExporterOptions {
-    .url = c.otlp_url
+    .url = c.url_
   }
 
   auto exporter = std::unique_ptr<opentelemetry::sdk::trace::SpanExporter>(
@@ -63,6 +40,27 @@ void init_opentelemetry_tracer(
   auto provider = nostd::shared_ptr<opentelemetry::sdk::trace::TracerProvider>(
       std::move(procesor), resource, std::move(sampler));
   opentelemtry::trace::provider::SetTracerProvider(provider);
+}
+
+void init_opentelemetry(config::otlp const& c,
+                        std::string_view const motis_version) {
+  auto resource_attributes = opentelemetry::sdk::resource::ResourceAttributes{
+      {"service.name", "motis"}, {"service.version", motis_version}};
+  auto resource =
+      opentelemetry::sdk::resource::Resource::Create(resource_attributes);
+
+  opentelemetry::context::RuntimeContext::SetRuntimeContextStorage(
+      std::make_shared<otel_runtime_context_storage>());
+
+  if (c.http_) {
+    init_opentelemetry_tracer(resource, c);
+  }
+
+  // What is this used for exactly?
+  opentelemetry::context::propagation::GlobalTextMapPropagator::
+      SetGlobalPropagator(
+          std::make_shared<
+              opentelemetry::trace::propagation::HttpTraceContext>());
 }
 
 }  // namespace motis

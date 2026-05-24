@@ -259,7 +259,8 @@ struct config {
   std::optional<limits> limits_{};
 
   struct otlp {
-    std::string otlp_url{"http://localhost:4318"};
+    std::string url_{"http://localhost:4318"};
+    bool http_{true};
   };
   std::variant<bool, std::optional<otlp>> otlp_{false};
 

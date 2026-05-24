@@ -7,6 +7,6 @@
 
 namespace motis {
 
-void init_opentelemetry(config::otlp const&);
+void init_opentelemetry(config::otlp const&, std::string_view const);
 
 }  // namespace motis
