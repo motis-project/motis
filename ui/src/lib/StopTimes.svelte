@@ -180,7 +180,7 @@
 		{/each}
 		{#if !r.stopTimes.length}
 			<div class="col-span-full w-full flex items-center justify-center">
-				<ErrorMessage message={t.noItinerariesFound} status={404} />
+				<ErrorMessage message={t.noItinerariesFound} status={204} />
 			</div>
 		{/if}
 
