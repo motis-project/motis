@@ -18,7 +18,7 @@
 		</div>
 	{/if}
 	{#if options.status == 'EMPTY'}
-		<ErrorMessage message={t.isochrones.noData} status={404} />
+		<ErrorMessage message={t.isochrones.noData} status={204} />
 	{/if}
 	{#if options.status == 'FAILED'}
 		<ErrorMessage message={options.errorMessage!} status={options.errorCode} />
