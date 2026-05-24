@@ -170,6 +170,7 @@ export type Translations = {
 	rideEndNotAllowed: string;
 	colorMode: {
 		none: string;
+		stops: string;
 		rt: string;
 		route: string;
 		mode: string;

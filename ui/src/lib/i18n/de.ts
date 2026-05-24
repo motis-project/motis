@@ -169,10 +169,11 @@ const translations: Translations = {
 	DEBUG_RAILWAY_ROUTE: 'Bahnroute (Debug)',
 	DEBUG_FERRY_ROUTE: 'Fährenroute (Debug)',
 	colorMode: {
-		none: 'Keine Fahrten',
-		rt: 'Echtzeitverspätung',
-		route: 'Linienfarbe',
-		mode: 'Verkehrsmittel'
+		none: 'Nichts',
+		stops: 'Haltestellen',
+		rt: 'Fahrten nach Echtzeit',
+		route: 'Fahrten nach Linie',
+		mode: 'Fahrten nach Verkehrsmittel'
 	},
 	routes: (n: number) => {
 		switch (n) {

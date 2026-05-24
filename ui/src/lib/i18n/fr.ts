@@ -172,10 +172,11 @@ const translations: Translations = {
 	DEBUG_RAILWAY_ROUTE: 'Itinéraire ferroviaire (Debug)',
 	DEBUG_FERRY_ROUTE: 'Itinéraire de ferry (Debug)',
 	colorMode: {
-		none: 'Parcours',
-		rt: 'Retards en temps réel',
-		route: 'Couleur de la ligne',
-		mode: 'Mode de transport'
+		none: 'Aucun',
+		stops: 'Arrêts',
+		rt: 'Trajets par temps réel',
+		route: 'Trajets par ligne',
+		mode: 'Trajets par mode'
 	},
 	routes: (n: number) => {
 		switch (n) {

@@ -790,6 +790,12 @@ export const getStyle = (
 				}
 			},
 			{
+				id: 'stops-anchor',
+				type: 'background',
+				layout: { visibility: 'none' },
+				paint: {}
+			},
+			{
 				id: 'towns',
 				type: 'symbol',
 				source: 'osm',
@@ -848,6 +854,12 @@ export const getStyle = (
 				//       "text-halo-color": "white",
 				//       "text-color": "hsl(0, 0%, 20%)"
 				//     }
+			},
+			{
+				id: 'itinerary-anchor',
+				type: 'background',
+				layout: { visibility: 'none' },
+				paint: {}
 			}
 		]
 	};

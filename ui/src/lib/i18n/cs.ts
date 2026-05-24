@@ -174,10 +174,11 @@ const translations: Translations = {
 	DEBUG_RAILWAY_ROUTE: 'Trasa vlaku (Debug)',
 	DEBUG_FERRY_ROUTE: 'Trasa trajektu (Debug)',
 	colorMode: {
-		none: 'No Trips',
-		rt: 'Realtime Delay',
-		route: 'Line Color',
-		mode: 'Transport Mode'
+		none: 'Žádné',
+		stops: 'Zastávky',
+		rt: 'Spoje podle zpoždění',
+		route: 'Spoje podle linky',
+		mode: 'Spoje podle dopravního prostředku'
 	},
 	routes: (n: number) => {
 		switch (n) {

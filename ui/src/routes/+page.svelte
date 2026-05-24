@@ -5,6 +5,7 @@
 		Rss,
 		Ban,
 		LocateFixed,
+		MapPin,
 		TrainFront,
 		Waypoints,
 		MountainSnow,
@@ -91,12 +92,13 @@
 					: 'connections')
 	);
 	let dataAttributionLink: string | undefined = $state(undefined);
-	type ColorMode = 'rt' | 'route' | 'mode' | 'none';
-	let colorMode = $state<ColorMode>('none');
+	type ColorMode = 'none' | 'stops' | 'rt' | 'route' | 'mode';
+	let colorMode = $state<ColorMode>('stops');
 	const colorModeOptions: { value: ColorMode; label: string; icon: typeof Ban }[] = [
 		{ value: 'none', label: t.colorMode.none, icon: Ban },
-		{ value: 'rt', label: t.colorMode.rt, icon: Rss },
+		{ value: 'stops', label: t.colorMode.stops, icon: MapPin },
 		{ value: 'route', label: t.colorMode.route, icon: Palette },
+		{ value: 'rt', label: t.colorMode.rt, icon: Rss },
 		{ value: 'mode', label: t.colorMode.mode, icon: TrainFront }
 	];
 	let showMap = $state(!isSmallScreen);
@@ -1124,8 +1126,17 @@
 				<Rentals {map} {bounds} {zoom} {theme} {isSmallScreen} debug={hasDebug} />
 			{/if}
 
-			<StopsView {map} {bounds} {zoom} {theme} />
-			<RailViz {map} {bounds} {zoom} {colorMode} />
+			{#if colorMode === 'stops'}
+				<StopsView {map} {bounds} {zoom} {theme} />
+			{/if}
+			<RailViz
+				{map}
+				{bounds}
+				{zoom}
+				colorMode={colorMode === 'rt' || colorMode === 'route' || colorMode === 'mode'
+					? colorMode
+					: 'none'}
+			/>
 			<Isochrones
 				{map}
 				{bounds}

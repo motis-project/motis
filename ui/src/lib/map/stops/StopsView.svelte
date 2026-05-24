@@ -140,7 +140,7 @@
 		<Layer
 			id="stops-view-layer"
 			type="symbol"
-			beforeLayerId="towns"
+			beforeLayerId="stops-anchor"
 			filter={['all']}
 			layout={{
 				'icon-image': ['get', 'icon'],
