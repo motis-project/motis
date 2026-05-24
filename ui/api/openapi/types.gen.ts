@@ -3604,10 +3604,12 @@ export type HealthError = (HealthResponse);
 
 export type NearestData = {
     query?: {
+        coordinate?: string;
         /**
          * Number of nearest segments that should be returned.
          */
         number?: number;
+        profile?: string;
         /**
          * Radius constraint
          */

@@ -4,64 +4,63 @@
 
 #include "osr/routing/with_profile.h"
 
+#include "net/bad_request_exception.h"
+
 namespace motis::ep {
-
-inline std::optional<std::vector<osr::location>> parse_locations(
-    std::string_view c) {
-  auto parse = [](std::string_view s) -> std::optional<osr::location> {
-    auto l = parse_location(s, ',');
-    if (!l) return std::nullopt;
-    return osr::location{{l->pos_.lng(), l->pos_.lat()}, l->lvl_};
-  };
-
-  std::vector<osr::location> locs;
-  size_t it;
-  while ((it = c.find(';')) != std::string_view::npos) {
-    auto l = parse(c.substr(0, it));
-    if (!l) return std::nullopt;
-    locs.emplace_back(*l);
-    c.remove_prefix(it + 1);
-  }
-  auto l = parse(c);
-  if (!l) return std::nullopt;
-  locs.emplace_back(*l);
-  return locs;
-}
 
 api::NearestResponse nearest::operator()(
     boost::urls::url_view const& url) const {
-  auto segs = url.segments();
-  auto it = segs.begin();
-  if (segs.size() < 4) {
-    return {.code_ = "InvalidUrl"};
+
+  auto parse_params = [&](auto const s,
+                          auto const p) -> std::optional<api::nearest_params> {
+    api::nearest_params params{p};
+    auto it = s.begin();
+    if (s.size() < 4) {
+      return std::nullopt;
+    }
+    std::advance(it, 2);
+    params.profile_ = (*it++);
+    params.coordinate_ = (*it++);
+    return params;
+  };
+
+  auto const params = parse_params(url.segments(), url.params());
+  utl::verify<net::bad_request_exception>(params.has_value(),
+                                          "invalid path segments");
+
+  std::optional<osr::search_profile> profile{};
+  std::optional<osr::location> coord{};
+
+  try {
+    profile = osr::to_profile(*params->profile_);
+  } catch (...) {
+    throw net::bad_request_exception("invalid profile");
   }
-  std::advance(it, 2);
 
-  auto const profile = osr::to_profile(*it++);
-  auto const coords = parse_locations(*it++);
+  coord = parse_location(*params->coordinate_);
+  utl::verify<net::bad_request_exception>(coord.has_value(),
+                                          "invalid coordinates");
+  utl::verify<net::bad_request_exception>(params->number_ >= 1,
+                                          "invalid number");
 
-  if (!coords || (*coords).empty()) {
-    return {.code_ = "InvalidQuery"};
-  }
-
-  api::nearest_params param{url.params()};
-
-  if (param.number_ < 1) {
-    return {.code_ = "InvalidValue"};
-  }
-
+  std::swap(coord->pos_.lat_, coord->pos_.lng_);
   api::NearestResponse res;
-  auto const from = (*coords)[0];
-  auto const candidates = osr::with_profile(profile, [&]<typename P>(P&&) {
+  auto const from = coord.value();
+  auto const candidates = osr::with_profile(*profile, [&]<typename P>(P&&) {
     constexpr auto kDefaultRadius = 100U;
-    auto const max_dist = param.radiuses_.value_or(kDefaultRadius);
+    auto const max_dist = params->radiuses_.value_or(kDefaultRadius);
     return l_.match<P>(
-        std::get<typename P::parameters>(osr::get_parameters(profile)), from,
+        std::get<typename P::parameters>(osr::get_parameters(*profile)), from,
         false, osr::direction::kForward, max_dist, nullptr);
   });
 
+  if (candidates.empty()) {
+    res.code_ = "NoSegment";
+    return res;
+  }
+
   auto const n =
-      std::min(static_cast<std::size_t>(param.number_), candidates.size());
+      std::min(static_cast<std::size_t>(params->number_), candidates.size());
   for (auto i = 0U; i < n; ++i) {
     auto const c = candidates[i];
     auto const loc = c.closest_point_on_way_;

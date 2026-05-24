@@ -1,18 +1,8 @@
-#include "boost/url/url_view.hpp"
-
-#include "gtest/gtest.h"
-
-#include <cstddef>
 #include "motis/endpoints/nearest.h"
-
-#include "geo/latlng.h"
-
-#include "motis/config.h"
+#include <net/bad_request_exception.h>
+#include "gtest/gtest.h"
 #include "motis/data.h"
 #include "motis/import.h"
-
-#include "osr/routing/parameters.h"
-#include "osr/routing/profile.h"
 #include "osr/routing/with_profile.h"
 
 static std::string query(osr::search_profile const p,
@@ -26,13 +16,11 @@ static std::string query(osr::search_profile const p,
 TEST(motis, nearest_endpoint_profiles) {
   auto ec = std::error_code{};
   std::filesystem::remove_all("test/data", ec);
-
   auto const c = motis::config{.osm_ = {"test/resources/test_case.osm.pbf"},
                                .street_routing_ = true};
   motis::import(c, "test/data");
   auto d = motis::data{"test/data", c};
   auto const ep = motis::ep::nearest{*d.w_, *d.l_, c};
-
   auto const loc = osr::location{{49.87260, 8.63085}, osr::kNoLevel};
   auto const radius = 100U;
   auto const number = 100U;
@@ -43,21 +31,17 @@ TEST(motis, nearest_endpoint_profiles) {
     for (auto n = 1U; n <= number; ++n) {
       auto const q = query(profile, loc, n, radius);
       auto const res = ep(boost::urls::url_view{q});
-
       auto const expected = osr::with_profile(profile, [&]<typename P>(P&&) {
         return d.l_->match<P>(
             std::get<typename P::parameters>(osr::get_parameters(profile)), loc,
             false, osr::direction::kForward, radius, nullptr);
       });
-
       if (res.code_ == "NoSegment") {
         EXPECT_TRUE(expected.empty());
         continue;
       }
-
       auto const size = std::min(static_cast<std::size_t>(n), expected.size());
       ASSERT_EQ(res.waypoints_.size(), size);
-
       for (auto j = 0U; j < size; ++j) {
         EXPECT_EQ((*res.waypoints_[j].location_)[0],
                   expected[j].closest_point_on_way_.lng());
@@ -73,20 +57,24 @@ TEST(motis, nearest_endpoint_profiles) {
 TEST(motis, nearest_endpoint_invalid) {
   auto ec = std::error_code{};
   std::filesystem::remove_all("test/data", ec);
-
   auto const c = motis::config{.osm_ = {"test/resources/test_case.osm.pbf"},
                                .street_routing_ = true};
   motis::import(c, "test/data");
   auto d = motis::data{"test/data", c};
   auto const ep = motis::ep::nearest{*d.w_, *d.l_, c};
 
-  EXPECT_EQ(ep(boost::urls::url_view{"/nearest/v1/foot"}).code_, "InvalidUrl");
+  // too few segments
+  EXPECT_THROW(ep(boost::urls::url_view{"/nearest/v1/foot"}),
+               net::bad_request_exception);
 
-  EXPECT_EQ(ep(boost::urls::url_view{"/nearest/v1/foot/abc,def"}).code_,
-            "InvalidQuery");
+  // invalid coordinates
+  EXPECT_THROW(ep(boost::urls::url_view{"/nearest/v1/foot/abc,def"}),
+               net::bad_request_exception);
 
+  // number < 1
   auto const bad_number =
       query(osr::search_profile::kFoot,
             osr::location{{49.8731904, 8.6221451}, osr::kNoLevel}, 0, 100);
-  EXPECT_EQ(ep(boost::urls::url_view{bad_number}).code_, "InvalidValue");
+  EXPECT_THROW(ep(boost::urls::url_view{bad_number}),
+               net::bad_request_exception);
 }

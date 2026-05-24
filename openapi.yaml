@@ -3082,6 +3082,18 @@ paths:
     get:
       operationId: nearest
       parameters:
+        - name: profile
+          in: query
+          required: false
+          schema:
+            type: string
+
+        - name: coordinate
+          in: query
+          required: false
+          schema:
+            type: string
+
         - name: number
           in: query
           required: false
