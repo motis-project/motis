@@ -414,6 +414,12 @@ adr_ext adr_extend_tt(nigiri::timetable const& tt,
             : std::string_view{};
     utl::sort(
         locations, [&](n::location_idx_t const a, n::location_idx_t const b) {
+          if (a == representative) {
+            return true;
+          }
+          if (b == representative) {
+            return false;
+          }
           auto const an = tt.get_default_translation(tt.locations_.names_[a]);
           auto const bn = tt.get_default_translation(tt.locations_.names_[b]);
           return (an != repr_name) < (bn != repr_name);
