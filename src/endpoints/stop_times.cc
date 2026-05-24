@@ -363,7 +363,6 @@ std::vector<n::rt::run> stop_times::get_runs(
     std::optional<nigiri::location_idx_t> const& query_stop,
     std::optional<osr::location> const& query_center,
     bool const disable_stoptimes_max_limit) const {
-
   auto const max_results = disable_stoptimes_max_limit
                                ? 999888777U
                                : config_.get_limits().stoptimes_max_results_;

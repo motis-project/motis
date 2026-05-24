@@ -42,8 +42,6 @@
 		time: queryTime.toISOString(),
 		arriveBy,
 		n: 10,
-		exactRadius: false,
-		radius: 200,
 		language: [language]
 	});
 	/* eslint-disable svelte/prefer-writable-derived */

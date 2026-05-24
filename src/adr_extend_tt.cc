@@ -63,7 +63,7 @@ void normalize(std::string& x) {
   x = adr::normalize(x);
 
   auto const removals = std::initializer_list<std::string_view>{
-      "tief", "oben",    "gleis", "platform", "gl",
+      "tief", "oben",    "gleis", "platform", "gl",   "gare de",
       "gare", "bahnhof", "bhf",   "strasse",  "gasse"};
   for (auto const r : removals) {
     auto const pos = x.find(r);
@@ -238,6 +238,7 @@ adr_ext adr_extend_tt(nigiri::timetable const& tt,
 
         if (tt.get_default_translation(tt.locations_.names_[eq]) == name) {
           ret.location_place_[eq] = place_idx;
+          place_location.back().push_back(eq);
         } else {
           auto const dist = geo::distance(tt.locations_.coordinates_[l],
                                           tt.locations_.coordinates_[eq]);
@@ -250,14 +251,7 @@ adr_ext adr_extend_tt(nigiri::timetable const& tt,
 
           if (good) {
             ret.location_place_[eq] = place_idx;
-
-            auto existing = place_location.back();
-            if (utl::find_if(existing, [&](n::location_idx_t const x) {
-                  return tt.get_default_translation(tt.locations_.names_[x]) ==
-                         tt.get_default_translation(tt.locations_.names_[eq]);
-                }) == end(existing)) {
-              place_location.back().push_back(eq);
-            }
+            place_location.back().push_back(eq);
           }
         }
       }
