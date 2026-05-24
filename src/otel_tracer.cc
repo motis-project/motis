@@ -40,10 +40,14 @@ void init_opentelemetry(config::otlp const& opts) {
 
 void init_opentelemetry_tracer(
     opentelemetry::sdk::resource::Resource const& resource,
-    config::otlp const&) {
+    config::otlp const& c) {
 
   // TODO
   // create otlp opts from config - or pass otlp opts directly
+
+  auto const opts = opentelemetry::exporter::otlp::OtlpHttpExporterOptions {
+    .url = c.otlp_url
+  }
 
   auto exporter = std::unique_ptr<opentelemetry::sdk::trace::SpanExporter>(
       new opentelemetry::exporter::otlp::OtlpHttpExporter(opts));

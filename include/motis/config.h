@@ -258,6 +258,11 @@ struct config {
   limits get_limits() const { return limits_.value_or(limits{}); }
   std::optional<limits> limits_{};
 
+  struct otlp {
+    std::string otlp_url{"http://localhost:4318"};
+  };
+  otlp otlp_{};
+
   struct logging {
     bool operator==(logging const&) const = default;
     std::optional<std::string> log_level_{};
