@@ -261,7 +261,7 @@ struct config {
   struct otlp {
     std::string otlp_url{"http://localhost:4318"};
   };
-  otlp otlp_{};
+  std::variant<bool, std::optional<otlp>> otlp_{false};
 
   struct logging {
     bool operator==(logging const&) const = default;

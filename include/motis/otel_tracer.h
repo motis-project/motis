@@ -9,7 +9,4 @@ namespace motis {
 
 void init_opentelemetry(config::otlp const&);
 
-void init_opentelemetry_tracer_http(
-    opentelemetry::sdk::resource::Resource const&, config::otlp const&);
-
 }  // namespace motis
