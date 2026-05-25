@@ -45,19 +45,19 @@ agency_id,agency_name,agency_url,agency_timezone
 DB,Deutsche Bahn,https://deutschebahn.com,Europe/Berlin
 
 # stops.txt
-stop_id,stop_name,stop_lat,stop_lon,location_type,parent_station,platform_code
-DA,DA Hbf,49.87260,8.63085,1,,
-DA_3,DA Hbf,49.87355,8.63003,0,DA,3
-DA_10,DA Hbf,49.87336,8.62926,0,DA,10
-FFM,FFM Hbf,50.10701,8.66341,1,,
-FFM_101,FFM Hbf,50.10739,8.66333,0,FFM,101
-FFM_10,FFM Hbf,50.10593,8.66118,0,FFM,10
-FFM_12,FFM Hbf,50.10658,8.66178,0,FFM,12
-de:6412:10:6:1,FFM Hbf U-Bahn,50.107577,8.6638173,0,,U4
-LANGEN,Langen,49.99359,8.65677,1,,1
-FFM_HAUPT,FFM Hauptwache,50.11403,8.67835,1,,
-FFM_HAUPT_U,Hauptwache U1/U2/U3/U8,50.11385,8.67912,0,FFM_HAUPT,
-FFM_HAUPT_S,FFM Hauptwache S,50.11404,8.67824,0,FFM_HAUPT,
+stop_id,stop_name,stop_lat,stop_lon,location_type,parent_station,platform_code,stop_code
+DA,DA Hbf,49.87260,8.63085,1,,,
+DA_3,DA Hbf,49.87355,8.63003,0,DA,3,
+DA_10,DA Hbf,49.87336,8.62926,0,DA,10,DA-10-CODE
+FFM,FFM Hbf,50.10701,8.66341,1,,,
+FFM_101,FFM Hbf,50.10739,8.66333,0,FFM,101,
+FFM_10,FFM Hbf,50.10593,8.66118,0,FFM,10,
+FFM_12,FFM Hbf,50.10658,8.66178,0,FFM,12,
+de:6412:10:6:1,FFM Hbf U-Bahn,50.107577,8.6638173,0,,U4,
+LANGEN,Langen,49.99359,8.65677,1,,1,
+FFM_HAUPT,FFM Hauptwache,50.11403,8.67835,1,,,
+FFM_HAUPT_U,Hauptwache U1/U2/U3/U8,50.11385,8.67912,0,FFM_HAUPT,,
+FFM_HAUPT_S,FFM Hauptwache S,50.11404,8.67824,0,FFM_HAUPT,,
 
 # routes.txt
 route_id,agency_id,route_short_name,route_long_name,route_desc,route_type
@@ -152,6 +152,8 @@ TEST(motis, stop_times) {
     EXPECT_EQ(api::ModeEnum::HIGHSPEED_RAIL, ice.mode_);
     EXPECT_EQ("20190501_00:35_test_ICE", ice.tripId_);
     EXPECT_EQ("test_DA_10", ice.tripFrom_.stopId_);
+    EXPECT_EQ("DA-10-CODE", ice.tripFrom_.stopCode_);
+    EXPECT_FALSE(ice.tripTo_.stopCode_.has_value());
     EXPECT_EQ("test_FFM_12", ice.tripTo_.stopId_);
     EXPECT_EQ("ICE", ice.displayName_);
     EXPECT_EQ("FFM Hbf", ice.headsign_);
