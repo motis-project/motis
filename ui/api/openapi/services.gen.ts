@@ -256,7 +256,7 @@ export const health = <ThrowOnError extends boolean = false>(options?: Options<u
     });
 };
 
-export const nearest = <ThrowOnError extends boolean = false>(options?: Options<NearestData, ThrowOnError>) => {
+export const nearest = <ThrowOnError extends boolean = false>(options: Options<NearestData, ThrowOnError>) => {
     return (options?.client ?? client).get<NearestResponse2, NearestError, ThrowOnError>({
         ...options,
         url: '/nearest/v1/{profile}/{coordinates}'

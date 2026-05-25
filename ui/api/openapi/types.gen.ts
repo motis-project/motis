@@ -3603,9 +3603,9 @@ export type HealthResponse2 = (HealthResponse);
 export type HealthError = (HealthResponse);
 
 export type NearestData = {
-    path?: {
-        coordinates?: string;
-        profile?: string;
+    path: {
+        coordinates: string;
+        profile: string;
     };
     query?: {
         /**

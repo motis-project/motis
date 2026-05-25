@@ -3084,13 +3084,13 @@ paths:
       parameters:
         - name: profile
           in: path
-          required: false
+          required: true
           schema:
             type: string
 
         - name: coordinates
           in: path
-          required: false
+          required: true
           schema:
             type: string
 

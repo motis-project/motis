@@ -1,9 +1,14 @@
 #include "motis/endpoints/nearest.h"
-#include <net/bad_request_exception.h>
 #include "gtest/gtest.h"
+
 #include "motis/data.h"
 #include "motis/import.h"
+
 #include "osr/routing/with_profile.h"
+
+#include "net/bad_request_exception.h"
+
+#include "openapi/bad_request_exception.h"
 
 static std::string query(osr::search_profile const p,
                          osr::location const loc,
@@ -65,7 +70,7 @@ TEST(motis, nearest_endpoint_invalid) {
 
   // too few segments
   EXPECT_THROW(ep(boost::urls::url_view{"/nearest/v1/foot"}),
-               net::bad_request_exception);
+               openapi::bad_request_exception);
 
   // invalid coordinates
   EXPECT_THROW(ep(boost::urls::url_view{"/nearest/v1/foot/abc,def"}),
