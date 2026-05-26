@@ -9,7 +9,7 @@
 
 namespace motis {
 
-double get_max_distance(osr::profile_parameters const&, std::chrono::seconds);
+constexpr double get_max_distance(osr::profile_parameters const&, std::chrono::seconds);
 
 double get_max_distance(osr::search_profile, std::chrono::seconds);
 

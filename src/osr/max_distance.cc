@@ -1,80 +1,83 @@
 #include "motis/osr/max_distance.h"
 
+#include <chrono>
+#include <concepts>
 #include <utility>
 #include <variant>
 
-#include "utl/overloaded.h"
+#include "osr/routing/profiles/car.h"
+#include "osr/routing/profiles/car_parking.h"
 
 namespace motis {
 
-double get_max_distance(osr::profile_parameters const& osr_params,
-                        std::chrono::seconds const t) {
+// Cannot use utl::overloaded instead
+template <class... Ts>
+struct overloaded : Ts... {
+  using Ts::operator()...;
+};
+
+template <typename T>
+concept HasSpeed = osr::ProfileParameters<T> && requires(T t) {
+  { t.speed_meters_per_second_ };
+};
+
+template <typename T>
+concept IsCarProfileParameters =
+    osr::ProfileParameters<T> && !HasSpeed<T> && requires {
+      std::same_as<T, osr::car::parameters> ||
+          std::same_as<T, osr::car_parking<true, true>::parameters> ||
+          std::same_as<T, osr::car_parking<true, false>::parameters> ||
+          std::same_as<T, osr::car_parking<false, true>::parameters> ||
+          std::same_as<T, osr::car_parking<false, false>::parameters>;
+    };
+
+constexpr double get_max_distance(osr::profile_parameters const& osr_params,
+                                  std::chrono::seconds const t) {
   auto seconds = static_cast<double>(t.count());
   return seconds *
          std::visit(
-             utl::overloaded{
-                 [](osr::foot<false, osr::noop_tracking>::parameters const&
-                        params) -> double {
+             overloaded{
+                 []<HasSpeed Params>(Params const& params) -> double {
                    return params.speed_meters_per_second_;
                  },
-                 [](osr::foot<true, osr::noop_tracking>::parameters const&
-                        params) -> double {
-                   return params.speed_meters_per_second_;
-                 },
-                 [](osr::foot<false, osr::elevator_tracking>::parameters const&
-                        params) -> double {
-                   return params.speed_meters_per_second_;
-                 },
-                 [](osr::foot<true, osr::elevator_tracking>::parameters const&
-                        params) -> double {
-                   return params.speed_meters_per_second_;
-                 },
-                 [](osr::bike<osr::bike_costing::kSafe,
-                              osr::kElevationNoCost>::parameters const& params)
-                     -> double { return params.speed_meters_per_second_; },
-                 [](osr::bike<osr::bike_costing::kFast,
-                              osr::kElevationNoCost>::parameters const& params)
-                     -> double { return params.speed_meters_per_second_; },
-                 [](osr::bike<osr::bike_costing::kSafe,
-                              osr::kElevationLowCost>::parameters const& params)
-                     -> double { return params.speed_meters_per_second_; },
-                 [](osr::bike<osr::bike_costing::kSafe,
-                              osr::kElevationHighCost>::parameters const&
-                        params) -> double {
-                   return params.speed_meters_per_second_;
-                 },
-                 []([[maybe_unused]] osr::car::parameters const& params)
-                     -> double { return osr_parameters::kCarSpeed; },
-                 []([[maybe_unused]] osr::car_parking<
-                     false, false>::parameters const& params) -> double {
+                 []<IsCarProfileParameters Params>(Params const&) -> double {
                    return osr_parameters::kCarSpeed;
                  },
-                 []([[maybe_unused]] osr::car_parking<
-                     true, false>::parameters const& params) -> double {
-                   return osr_parameters::kCarSpeed;
+                 [](osr::bus::parameters const&) -> double {
+                   return osr_parameters::kBusSpeed;
                  },
-                 []([[maybe_unused]] osr::car_parking<
-                     false, true>::parameters const& params) -> double {
-                   return osr_parameters::kCarSpeed;
+                 [](osr::railway::parameters const&) -> double {
+                   return osr_parameters::kRailwaySpeed;
                  },
-                 []([[maybe_unused]] osr::car_parking<
-                     true, true>::parameters const& params) -> double {
-                   return osr_parameters::kCarSpeed;
+                 [](osr::ferry::parameters const&) -> double {
+                   return osr_parameters::kFerrySpeed;
                  },
-                 [](osr::bike_sharing::parameters const& params) -> double {
-                   return params.bike_.speed_meters_per_second_;
-                 },
-                 []([[maybe_unused]] osr::car_sharing<
-                     osr::track_node_tracking>::parameters const& params)
-                     -> double { return osr_parameters::kCarSpeed; },
-                 []([[maybe_unused]] osr::bus::parameters const& params)
-                     -> double { return osr_parameters::kBusSpeed; },
-                 []([[maybe_unused]] osr::railway::parameters const& params)
-                     -> double { return osr_parameters::kRailwaySpeed; },
-                 []([[maybe_unused]] osr::ferry::parameters const& params)
-                     -> double { return osr_parameters::kFerrySpeed; }},
+             },
              osr_params);
 }
+
+static_assert(get_max_distance(osr::foot<true>::parameters{2.1f},
+                               std::chrono::seconds(1)) == 2.1f);
+static_assert(
+    get_max_distance(
+        osr::bike<osr::bike_costing::kFast, osr::kElevationNoCost>::parameters{
+            7.2f},
+        std::chrono::seconds(2)) == 14.4f);
+static_assert(get_max_distance(osr::car::parameters{},
+                               std::chrono::seconds(3)) ==
+              3 * osr_parameters::kCarSpeed);
+static_assert(get_max_distance(osr::car_parking<false, true>::parameters{},
+                               std::chrono::seconds(4)) ==
+              4 * osr_parameters::kCarSpeed);
+static_assert(get_max_distance(osr::bus::parameters{},
+                               std::chrono::seconds(8)) ==
+              8 * osr_parameters::kBusSpeed);
+static_assert(get_max_distance(osr::railway::parameters{},
+                               std::chrono::seconds(16)) ==
+              16 * osr_parameters::kRailwaySpeed);
+static_assert(get_max_distance(osr::ferry::parameters{},
+                               std::chrono::seconds(32)) ==
+              32 * osr_parameters::kFerrySpeed);
 
 double get_max_distance(osr::search_profile const profile,
                         std::chrono::seconds const t) {
