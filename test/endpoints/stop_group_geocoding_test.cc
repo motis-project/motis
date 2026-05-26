@@ -86,4 +86,27 @@ TEST(motis, stop_group_geocoding) {
             utl::find(*g2_it->modes_, api::ModeEnum::TRAM));
   ASSERT_TRUE(g2_it->importance_.has_value());
   EXPECT_GT(*g2_it->importance_, 0.0);
+
+  // Multi-type
+  auto const has_g1 = [](api::geocode_response const& res) {
+    return utl::find_if(res, [](auto const& m) {
+             return m.id_ == "test_G1";
+           }) != end(res);
+  };
+
+  EXPECT_TRUE(has_g1(geocode("/api/v1/geocode?text=Group%201&type=STOP")));
+
+  EXPECT_FALSE(has_g1(geocode("/api/v1/geocode?text=Group%201&type=ADDRESS")));
+
+  auto const addr_stop =
+      geocode("/api/v1/geocode?text=Group%201&type=ADDRESS,STOP");
+  EXPECT_TRUE(has_g1(addr_stop));
+  for (auto const& m : addr_stop) {
+    EXPECT_TRUE(m.type_ == api::LocationTypeEnum::ADDRESS ||
+                m.type_ == api::LocationTypeEnum::STOP)
+        << "unexpected type in ADDRESS,STOP result";
+  }
+
+  EXPECT_FALSE(
+      has_g1(geocode("/api/v1/geocode?text=Group%201&type=ADDRESS,PLACE")));
 }

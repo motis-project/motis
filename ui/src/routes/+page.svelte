@@ -5,6 +5,7 @@
 		Rss,
 		Ban,
 		LocateFixed,
+		MapPin,
 		TrainFront,
 		Waypoints,
 		MountainSnow,
@@ -54,6 +55,7 @@
 	import { page } from '$app/state';
 	import { joinInterlinedLegs, preprocessItinerary } from '$lib/preprocessItinerary';
 	import * as Tabs from '$lib/components/ui/tabs';
+	import * as Select from '$lib/components/ui/select';
 	import DeparturesMask from '$lib/DeparturesMask.svelte';
 	import Isochrones from '$lib/map/Isochrones.svelte';
 	import IsochronesInfo from '$lib/IsochronesInfo.svelte';
@@ -73,6 +75,7 @@
 	import StopGeoJSON from '$lib/map/stops/StopsGeoJSON.svelte';
 	import RailViz from '$lib/RailViz.svelte';
 	import StopsView from '$lib/map/stops/StopsView.svelte';
+	import { formatDate } from '$lib/toDateTime';
 
 	const urlParams = browser ? new URLSearchParams(window.location.search) : undefined;
 
@@ -89,7 +92,15 @@
 					: 'connections')
 	);
 	let dataAttributionLink: string | undefined = $state(undefined);
-	let colorMode = $state<'rt' | 'route' | 'mode' | 'none'>('none');
+	type ColorMode = 'none' | 'stops' | 'rt' | 'route' | 'mode';
+	let colorMode = $state<ColorMode>('stops');
+	const colorModeOptions: { value: ColorMode; label: string; icon: typeof Ban }[] = [
+		{ value: 'none', label: t.colorMode.none, icon: Ban },
+		{ value: 'stops', label: t.colorMode.stops, icon: MapPin },
+		{ value: 'route', label: t.colorMode.route, icon: Palette },
+		{ value: 'rt', label: t.colorMode.rt, icon: Rss },
+		{ value: 'mode', label: t.colorMode.mode, icon: TrainFront }
+	];
 	let showMap = $state(!isSmallScreen);
 	let showRoutes = $state(false);
 	let lastOneToAllQuery: Parameters<typeof oneToAll>[0] | undefined = undefined;
@@ -178,7 +189,8 @@
 						detailedTransfers: true,
 						withFares: true,
 						numLegAlternatives: 3,
-						language: [language]
+						language: [language],
+						...refreshLegAlternativeParams
 					}
 				: {},
 			{
@@ -199,6 +211,7 @@
 			const v = urlParams?.get(key);
 			return v == null ? undefined : v === 'true'; // absent = undefined
 		};
+		const transitModesUrl = getUrlArray('transitModes');
 		const query = definedOnly({
 			itineraryId,
 			requireDisplayNameMatch: boolParam('requireDisplayNameMatch'),
@@ -208,7 +221,14 @@
 			withFares: boolParam('withFares'),
 			withScheduledSkippedStops: boolParam('withScheduledSkippedStops'),
 			numLegAlternatives: parseIntOr(urlParams?.get('numLegAlternatives'), undefined),
-			language: getUrlArray('language', [language])
+			language: getUrlArray('language', [language]),
+			transitModes: transitModesUrl.length ? (transitModesUrl as Mode[]) : undefined,
+			pedestrianProfile: (urlParams?.get('pedestrianProfile') ?? undefined) as
+				| PedestrianProfile
+				| undefined,
+			useRoutedTransfers: boolParam('useRoutedTransfers'),
+			requireBikeTransport: boolParam('requireBikeTransport'),
+			requireCarTransport: boolParam('requireCarTransport')
 		});
 
 		const { data: itinerary, error } = await refreshItinerary({ query });
@@ -493,6 +513,16 @@
 			: undefined
 	);
 
+	let refreshLegAlternativeParams = $derived({
+		transitModes: (transitModes.length == possibleTransitModes.length
+			? defaultQuery.transitModes
+			: transitModes) as Mode[],
+		pedestrianProfile,
+		useRoutedTransfers,
+		requireBikeTransport,
+		requireCarTransport
+	});
+
 	let isochronesQuery = $derived(
 		one?.match
 			? ({
@@ -544,7 +574,8 @@
 					detailedTransfers: true,
 					withFares: true,
 					numLegAlternatives: 3,
-					language: [language]
+					language: [language],
+					...refreshLegAlternativeParams
 				}
 			});
 
@@ -689,7 +720,7 @@
 	};
 
 	const flyToLocation = (location: Location) => {
-		map?.flyTo({ center: location.match, zoom: 12 });
+		map?.flyTo({ center: location.match, zoom: 18 });
 	};
 
 	const flyToSelectedItinerary = () => {
@@ -908,7 +939,15 @@
 		<Control class="min-h-0 md:mb-2 md:flex">
 			<Card class="w-[520px] bg-background rounded-lg  flex flex-col mb-2">
 				<div class="w-full flex justify-between items-center shadow-md pl-1 mb-1">
-					<h2 class="ml-2 text-base font-semibold">{t.journeyDetails}</h2>
+					<div class="ml-2 flex items-baseline gap-2">
+						<h2 class="text-base font-semibold">{t.journeyDetails}</h2>
+						{#if page.state.selectedItinerary.legs.length > 0}
+							{@const firstLeg = page.state.selectedItinerary.legs[0]}
+							<span class="text-sm text-muted-foreground">
+								{formatDate(new Date(firstLeg.startTime), firstLeg.from.tz)}
+							</span>
+						{/if}
+					</div>
 					<div class="flex items-center">
 						<Button
 							variant="ghost"
@@ -1043,34 +1082,28 @@
 
 		{#if showMap}
 			{#if activeTab != 'isochrones'}
-				<Control position="top-right" class="pb-4 text-right">
-					<Button
-						size="icon"
-						onclick={() => {
-							colorMode = (function () {
-								switch (colorMode) {
-									case 'rt':
-										return 'route';
-									case 'route':
-										return 'mode';
-									case 'mode':
-										return 'none';
-									case 'none':
-										return 'rt';
-								}
-							})();
-						}}
-					>
-						{#if colorMode == 'rt'}
-							<Rss class="h-[1.2rem] w-[1.2rem]" />
-						{:else if colorMode == 'mode'}
-							<TrainFront class="h-[1.2rem] w-[1.2rem]" />
-						{:else if colorMode == 'none'}
-							<Ban class="h-[1.2rem] w-[1.2rem]" />
-						{:else}
-							<Palette class="h-[1.2rem] w-[1.2rem]" />
-						{/if}
-					</Button>
+				<Control position="top-right" class="w-fit float-right">
+					{@const selectedColorMode = colorModeOptions.find((o) => o.value == colorMode)}
+					<Select.Root type="single" bind:value={colorMode} items={colorModeOptions}>
+						<Select.Trigger class="bg-background w-40 gap-2">
+							{#if selectedColorMode}
+								{@const Icon = selectedColorMode.icon}
+								<Icon class="h-[1.2rem] w-[1.2rem]" />
+								<span class="grow text-left">{selectedColorMode.label}</span>
+							{/if}
+						</Select.Trigger>
+						<Select.Content align="end">
+							{#each colorModeOptions as option (option.value)}
+								{@const Icon = option.icon}
+								<Select.Item value={option.value} label={option.label} class="gap-2">
+									<Icon class="h-[1.2rem] w-[1.2rem]" />
+									{option.label}
+								</Select.Item>
+							{/each}
+						</Select.Content>
+					</Select.Root>
+				</Control>
+				<Control position="top-right" class="w-fit float-right pb-4">
 					<Button size="icon" onclick={() => getLocation()}>
 						<LocateFixed class="w-5 h-5" />
 					</Button>
@@ -1093,8 +1126,17 @@
 				<Rentals {map} {bounds} {zoom} {theme} {isSmallScreen} debug={hasDebug} />
 			{/if}
 
-			<StopsView {map} {bounds} {zoom} {theme} />
-			<RailViz {map} {bounds} {zoom} {colorMode} />
+			{#if colorMode === 'stops'}
+				<StopsView {map} {bounds} {zoom} {theme} />
+			{/if}
+			<RailViz
+				{map}
+				{bounds}
+				{zoom}
+				colorMode={colorMode === 'rt' || colorMode === 'route' || colorMode === 'mode'
+					? colorMode
+					: 'none'}
+			/>
 			<Isochrones
 				{map}
 				{bounds}

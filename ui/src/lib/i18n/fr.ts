@@ -69,7 +69,7 @@ const translations: Translations = {
 	defaultSelectedModes: 'Tous les transports en commun',
 	defaultSelectedProviders: 'Tous les fournisseurs',
 	selectElevationCosts: 'Évitez les pentes abruptes.', // TODO Online translated
-	wheelchair: 'Correspondances accessibles',
+	wheelchair: 'Correspondances accessibles uniquement',
 	useRoutedTransfers: 'Utiliser les correspondances routées',
 	bikeRental: 'Utiliser véhicules partagés',
 	requireBikeTransport: 'Transport vélo',
@@ -162,6 +162,7 @@ const translations: Translations = {
 	continuesAs: 'Continue comme',
 	earlierAlternatives: 'Alternatives plus tôt',
 	laterAlternatives: 'Alternatives plus tard',
+	differentStops: 'Arrêts différents',
 	rent: 'Louer',
 	copyToClipboard: 'Copier dans le presse-papiers',
 	rideThroughAllowed: 'Passage autorisé',
@@ -171,6 +172,13 @@ const translations: Translations = {
 	DEBUG_BUS_ROUTE: 'Itinéraire de bus (Debug)',
 	DEBUG_RAILWAY_ROUTE: 'Itinéraire ferroviaire (Debug)',
 	DEBUG_FERRY_ROUTE: 'Itinéraire de ferry (Debug)',
+	colorMode: {
+		none: 'Aucun',
+		stops: 'Arrêts',
+		rt: 'Trajets par temps réel',
+		route: 'Trajets par ligne',
+		mode: 'Trajets par mode'
+	},
 	routes: (n: number) => {
 		switch (n) {
 			case 0:

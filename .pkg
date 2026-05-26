@@ -1,7 +1,7 @@
 [nigiri]
   url=git@github.com:motis-project/nigiri.git
   branch=master
-  commit=5b8ced9f6c8dfcc0e6afaca1bcec73393af9318c
+  commit=796ccd4232d8f4fdaf1cbd59280b4ff20c9f604a
 [cista]
   url=git@github.com:felixguendling/cista.git
   branch=master
@@ -17,7 +17,7 @@
 [adr]
   url=git@github.com:triptix-tech/adr.git
   branch=master
-  commit=64ff88efc22622a79d38c7a7e101d4a86e906a1e
+  commit=de66c7dd13f63189b9132fa7f4bb1e24d236bf79
 [googletest]
   url=git@github.com:motis-project/googletest.git
   branch=master

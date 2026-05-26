@@ -81,7 +81,7 @@ export const RouteSchema = {
 export const AlertCauseSchema = {
     description: 'Cause of this alert.',
     type: 'string',
-    enum: ['UNKNOWN_CAUSE', 'OTHER_CAUSE', 'TECHNICAL_PROBLEM', 'STRIKE', 'DEMONSTRATION', 'ACCIDENT', 'HOLIDAY', 'WEATHER', 'MAINTENANCE', 'CONSTRUCTION', 'POLICE_ACTIVITY', 'MEDICAL_EMERGENCY']
+    enum: ['UNKNOWN_CAUSE', 'OTHER_CAUSE', 'TECHNICAL_PROBLEM', 'STRIKE', 'DEMONSTRATION', 'ACCIDENT', 'HOLIDAY', 'WEATHER', 'MAINTENANCE', 'CONSTRUCTION', 'POLICE_ACTIVITY', 'MEDICAL_EMERGENCY', 'SPECIAL_EVENT']
 } as const;
 
 export const AlertEffectSchema = {
@@ -1819,7 +1819,7 @@ export const LegIdSchema = {
             format: 'double'
         },
         fromLevel: {
-            description: "Optional level (floor) of the leg's from endpoint for indoor routing. If unset, the endpoint has no level. Level 0 is a real level.",
+            description: "Optional level (floor) of the leg's from endpoint for indoor routing.",
             type: 'number',
             format: 'double'
         },
@@ -1838,7 +1838,7 @@ export const LegIdSchema = {
             format: 'double'
         },
         toLevel: {
-            description: "Optional level (floor) of the leg's to endpoint for indoor routing. If unset, the endpoint has no level. Level 0 is a real level.",
+            description: "Optional level (floor) of the leg's to endpoint for indoor routing.",
             type: 'number',
             format: 'double'
         },
@@ -1875,6 +1875,10 @@ export const ItineraryIdSchema = {
 } as const;
 
 export const RefreshItineraryPostBodySchema = {
+    description: `Body for the \`refreshItineraryPost\` endpoint. All fields mirror the
+parameters of the \`plan\` endpoint - see the \`plan\` endpoint for their
+descriptions.
+`,
     type: 'object',
     required: ['id'],
     properties: {
@@ -1909,10 +1913,30 @@ export const RefreshItineraryPostBodySchema = {
             default: 0,
             minimum: 0
         },
+        transitModes: {
+            type: 'array',
+            items: {
+                '$ref': '#/components/schemas/Mode'
+            },
+            default: ['TRANSIT']
+        },
+        pedestrianProfile: {
+            '$ref': '#/components/schemas/PedestrianProfile',
+            default: 'FOOT'
+        },
+        useRoutedTransfers: {
+            type: 'boolean',
+            default: false
+        },
+        requireBikeTransport: {
+            type: 'boolean',
+            default: false
+        },
+        requireCarTransport: {
+            type: 'boolean',
+            default: false
+        },
         language: {
-            description: `language tags as used in OpenStreetMap / GTFS
-(usually BCP-47 / ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
-`,
             type: 'array',
             items: {
                 type: 'string'
@@ -1945,7 +1969,9 @@ export const ItinerarySchema = {
         },
         id: {
             type: 'string',
-            description: 'Opaque itinerary identifier. Pass it as `itineraryId` to `/api/v6/refresh-itinerary` for reconstruction using the new schedule/realtime data.'
+            description: `Experimental (format might change). Opaque itinerary identifier.
+Pass it as \`itineraryId\` to \`refresh-itinerary\` endpoint for reconstruction using the new schedule/realtime data.
+`
         },
         legs: {
             description: 'Journey legs',

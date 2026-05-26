@@ -71,7 +71,7 @@ const translations: Translations = {
 	defaultSelectedProviders: 'Alle Anbieter',
 	selectElevationCosts: 'Steile Steigungen vermeiden.',
 	useRoutedTransfers: 'Geroutete Umstiege verwenden',
-	wheelchair: 'Barrierefreie Umstiege',
+	wheelchair: 'Nur rollstuhlgerechte Verbindungen',
 	bikeRental: 'Sharing-Fahrzeuge berücksichtigen',
 	requireBikeTransport: 'Fahrradmitnahme',
 	requireCarTransport: 'Automitnahme',
@@ -159,6 +159,7 @@ const translations: Translations = {
 	continuesAs: 'Weiter als',
 	earlierAlternatives: 'Frühere Alternativen',
 	laterAlternatives: 'Spätere Alternativen',
+	differentStops: 'Andere Haltestellen',
 	rent: 'Ausleihen',
 	copyToClipboard: 'In die Zwischenablage kopieren',
 	rideThroughAllowed: 'Durchfahrt erlaubt',
@@ -168,6 +169,13 @@ const translations: Translations = {
 	DEBUG_BUS_ROUTE: 'Busroute (Debug)',
 	DEBUG_RAILWAY_ROUTE: 'Bahnroute (Debug)',
 	DEBUG_FERRY_ROUTE: 'Fährenroute (Debug)',
+	colorMode: {
+		none: 'Nichts',
+		stops: 'Haltestellen',
+		rt: 'Fahrten nach Echtzeit',
+		route: 'Fahrten nach Linie',
+		mode: 'Fahrten nach Verkehrsmittel'
+	},
 	routes: (n: number) => {
 		switch (n) {
 			case 0:

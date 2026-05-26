@@ -79,7 +79,7 @@
 				text: inputValue,
 				language: [language],
 				mode: transitModes,
-				type
+				type: type ? [type] : undefined
 			}
 		});
 		if (error) {

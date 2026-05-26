@@ -59,19 +59,19 @@
 		const grouped = zoom < GROUPING_MAX_ZOOM;
 		let modes: Mode[] | undefined = [];
 		modes.push('AIRPLANE', 'NIGHT_RAIL', 'HIGHSPEED_RAIL', 'LONG_DISTANCE');
+		if (zoom > 9) {
+			modes.push('COACH');
+		}
 		if (zoom > 11) {
-			modes.push('COACH', 'REGIONAL_RAIL', 'FERRY');
+			modes.push('REGIONAL_RAIL', 'SUBURBAN', 'FERRY');
 		}
 		if (zoom > 12) {
 			modes.push('SUBWAY');
 		}
 		if (zoom > 13) {
-			modes.push('SUBURBAN');
-		}
-		if (zoom > 14) {
 			modes.push('TRAM');
 		}
-		if (zoom > 15) {
+		if (zoom > 14) {
 			modes.push('BUS', 'FUNICULAR', 'AERIAL_LIFT');
 		}
 		return { min, max, grouped, modes };
@@ -140,7 +140,7 @@
 		<Layer
 			id="stops-view-layer"
 			type="symbol"
-			beforeLayerId="towns"
+			beforeLayerId="stops-anchor"
 			filter={['all']}
 			layout={{
 				'icon-image': ['get', 'icon'],

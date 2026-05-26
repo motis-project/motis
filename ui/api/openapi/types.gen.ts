@@ -58,7 +58,7 @@ export type Route = {
 /**
  * Cause of this alert.
  */
-export type AlertCause = 'UNKNOWN_CAUSE' | 'OTHER_CAUSE' | 'TECHNICAL_PROBLEM' | 'STRIKE' | 'DEMONSTRATION' | 'ACCIDENT' | 'HOLIDAY' | 'WEATHER' | 'MAINTENANCE' | 'CONSTRUCTION' | 'POLICE_ACTIVITY' | 'MEDICAL_EMERGENCY';
+export type AlertCause = 'UNKNOWN_CAUSE' | 'OTHER_CAUSE' | 'TECHNICAL_PROBLEM' | 'STRIKE' | 'DEMONSTRATION' | 'ACCIDENT' | 'HOLIDAY' | 'WEATHER' | 'MAINTENANCE' | 'CONSTRUCTION' | 'POLICE_ACTIVITY' | 'MEDICAL_EMERGENCY' | 'SPECIAL_EVENT';
 
 /**
  * The effect of this problem on the affected entity.
@@ -1412,6 +1412,9 @@ export type FareTransfer = {
 export type LegId = {
     displayName: string;
     tripId: string;
+    /**
+     * from stop stopId
+     */
     fromId: string;
     /**
      * latitude of the leg's from endpoint
@@ -1422,9 +1425,12 @@ export type LegId = {
      */
     fromLon: number;
     /**
-     * Optional level (floor) of the leg's from endpoint for indoor routing. If unset, the endpoint has no level. Level 0 is a real level.
+     * Optional level (floor) of the leg's from endpoint for indoor routing.
      */
     fromLevel?: number;
+    /**
+     * to stop stopId
+     */
     toId: string;
     /**
      * latitude of the leg's to endpoint
@@ -1435,7 +1441,7 @@ export type LegId = {
      */
     toLon: number;
     /**
-     * Optional level (floor) of the leg's to endpoint for indoor routing. If unset, the endpoint has no level. Level 0 is a real level.
+     * Optional level (floor) of the leg's to endpoint for indoor routing.
      */
     toLevel?: number;
     /**
@@ -1454,6 +1460,12 @@ export type ItineraryId = {
     legs: Array<LegId>;
 };
 
+/**
+ * Body for the `refreshItineraryPost` endpoint. All fields mirror the
+ * parameters of the `plan` endpoint - see the `plan` endpoint for their
+ * descriptions.
+ *
+ */
 export type RefreshItineraryPostBody = {
     id: ItineraryId;
     requireDisplayNameMatch?: boolean;
@@ -1463,11 +1475,11 @@ export type RefreshItineraryPostBody = {
     withFares?: boolean;
     withScheduledSkippedStops?: boolean;
     numLegAlternatives?: number;
-    /**
-     * language tags as used in OpenStreetMap / GTFS
-     * (usually BCP-47 / ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
-     *
-     */
+    transitModes?: Array<Mode>;
+    pedestrianProfile?: PedestrianProfile;
+    useRoutedTransfers?: boolean;
+    requireBikeTransport?: boolean;
+    requireCarTransport?: boolean;
     language?: Array<(string)>;
 };
 
@@ -1489,7 +1501,9 @@ export type Itinerary = {
      */
     transfers: number;
     /**
-     * Opaque itinerary identifier. Pass it as `itineraryId` to `/api/v6/refresh-itinerary` for reconstruction using the new schedule/realtime data.
+     * Experimental (format might change). Opaque itinerary identifier.
+     * Pass it as `itineraryId` to `refresh-itinerary` endpoint for reconstruction using the new schedule/realtime data.
+     *
      */
     id: string;
     /**
@@ -3063,11 +3077,11 @@ export type ReverseGeocodeData = {
         /**
          * Optional. Default is all types.
          *
-         * Only return results of the given type.
+         * Only return results matching one of the given types.
          * For example, this can be used to allow only `ADDRESS` and `STOP` results.
          *
          */
-        type?: LocationType;
+        type?: Array<LocationType>;
     };
 };
 
@@ -3116,11 +3130,11 @@ export type GeocodeData = {
         /**
          * Optional. Default is all types.
          *
-         * Only return results of the given types.
+         * Only return results matching one of the given types.
          * For example, this can be used to allow only `ADDRESS` and `STOP` results.
          *
          */
-        type?: LocationType;
+        type?: Array<LocationType>;
     };
 };
 
@@ -3176,7 +3190,12 @@ export type RefreshItineraryData = {
         joinInterlinedLegs?: boolean;
         language?: Array<(string)>;
         numLegAlternatives?: number;
+        pedestrianProfile?: PedestrianProfile;
+        requireBikeTransport?: boolean;
+        requireCarTransport?: boolean;
         requireDisplayNameMatch?: boolean;
+        transitModes?: Array<Mode>;
+        useRoutedTransfers?: boolean;
         withFares?: boolean;
         withScheduledSkippedStops?: boolean;
     };

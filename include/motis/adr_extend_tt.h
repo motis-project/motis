@@ -1,5 +1,7 @@
 #pragma once
 
+#include "cista/containers/rtree.h"
+
 #include "date/tz.h"
 
 #include "nigiri/routing/clasz_mask.h"
@@ -20,6 +22,7 @@ struct adr_ext {
   vector_map<nigiri::location_idx_t, adr_extra_place_idx_t> location_place_;
   vector_map<adr_extra_place_idx_t, nigiri::routing::clasz_mask_t> place_clasz_;
   vector_map<adr_extra_place_idx_t, float> place_importance_;
+  cista::raw::rtree<adr_extra_place_idx_t> place_rtree_;
 };
 
 date::time_zone const* get_tz(nigiri::timetable const&,

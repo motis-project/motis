@@ -33,9 +33,12 @@
 
 #include "motis/constants.h"
 #include "motis/data.h"
+#include "motis/endpoints/routing.h"
+#include "motis/endpoints/stop_times.h"
 #include "motis/gbfs/routing_data.h"
 #include "motis/journey_to_response.h"
 #include "motis/osr/mode_to_profile.h"
+#include "motis/osr/parameters.h"
 #include "motis/parse_location.h"
 #include "motis/place.h"
 #include "motis/tag_lookup.h"
@@ -349,13 +352,29 @@ place_t endpoint_place(n::routing::journey::leg const& leg,
   return tt_location{loc};
 }
 
+// Allows alternatives to use different access/egress stops than the original.
+// TODO: currently only supports 15min walking, nothing else
+std::vector<n::routing::offset> get_access_offsets(ep::routing const& routing,
+                                                   n::rt_timetable const* rtt,
+                                                   osr::location const& pos,
+                                                   osr::direction const dir) {
+  constexpr auto kLegAltOffsetMaxDuration = std::chrono::minutes{15};
+  auto stats = ep::stats_map_t{};
+  auto gbfs_rd = gbfs::gbfs_routing_data{};
+  return routing.get_offsets(
+      rtt, place_t{pos}, dir, {api::ModeEnum::WALK}, std::nullopt, std::nullopt,
+      std::nullopt, std::nullopt, false, osr_parameters{},
+      api::PedestrianProfileEnum::FOOT, api::ElevationCostsEnum::NONE,
+      std::chrono::seconds{kLegAltOffsetMaxDuration}, kMaxMatchingDistance,
+      gbfs_rd, stats);
+}
+
 api::Itinerary build_itinerary_from_legs(
     std::vector<n::routing::journey::leg>& legs,
     std::optional<osr::location> const& start_pos,
     std::optional<osr::location> const& end_pos,
+    ep::routing const& routing,
     ep::stop_times const& stop_times,
-    osr::lookup const* l,
-    n::shapes_storage const* shapes,
     n::rt_timetable const* rtt,
     bool const join_interlined_legs,
     bool const detailed_transfers,
@@ -363,7 +382,11 @@ api::Itinerary build_itinerary_from_legs(
     bool const with_fares,
     bool const with_scheduled_skipped_stops,
     n::lang_t const& lang,
-    std::size_t const num_leg_alternatives) {
+    std::size_t const num_leg_alternatives,
+    n::routing::clasz_mask_t const allowed_claszes,
+    bool const require_bike_transport,
+    bool const require_car_transport,
+    n::profile_idx_t const prf_idx) {
   utl::verify(!legs.empty(), "build_itinerary_from_legs: no legs");
 
   for (auto i = std::size_t{1}; i < legs.size(); ++i) {
@@ -411,22 +434,57 @@ api::Itinerary build_itinerary_from_legs(
   auto leg_alternatives_query = std::optional<n::routing::query>{};
   if (num_leg_alternatives > 0U && first_transit != end(j.legs_) &&
       last_transit != rend(j.legs_)) {
-    leg_alternatives_query = n::routing::query{
-        .start_time_ = j.start_time_,
-        .start_match_mode_ = n::routing::location_match_mode::kExact,
-        .dest_match_mode_ = n::routing::location_match_mode::kExact,
-        .use_start_footpaths_ = true,
-        .start_ = {{first_transit->from_, n::duration_t{0U}, 0U}},
-        .destination_ = {{last_transit->to_, n::duration_t{0U}, 0U}}};
+    auto const osr_loaded = routing.l_ != nullptr;
+    auto const endpoint_match_mode =
+        osr_loaded ? n::routing::location_match_mode::kIntermodal
+                   : n::routing::location_match_mode::kEquivalent;
+
+    auto start_ = std::vector<n::routing::offset>{
+        {first_transit->from_, n::duration_t{0U}, 0U}};
+    auto destination_ = std::vector<n::routing::offset>{
+        {last_transit->to_, n::duration_t{0U}, 0U}};
+    auto const can_route_offsets = routing.is_osr_loaded();
+    if (can_route_offsets && start_pos.has_value()) {
+      auto o = get_access_offsets(routing, rtt, *start_pos,
+                                  osr::direction::kForward);
+      if (!o.empty()) {
+        start_ = std::move(o);
+      }
+    }
+    if (can_route_offsets && end_pos.has_value()) {
+      auto o =
+          get_access_offsets(routing, rtt, *end_pos, osr::direction::kBackward);
+      if (!o.empty()) {
+        destination_ = std::move(o);
+      }
+    }
+
+    auto const safe_prf_idx =
+        stop_times.tt_.locations_.footpaths_out_.at(prf_idx).empty()
+            ? n::profile_idx_t{0U}
+            : prf_idx;
+
+    leg_alternatives_query =
+        n::routing::query{.start_time_ = j.start_time_,
+                          .start_match_mode_ = endpoint_match_mode,
+                          .dest_match_mode_ = endpoint_match_mode,
+                          .use_start_footpaths_ = !osr_loaded,
+                          .start_ = std::move(start_),
+                          .destination_ = std::move(destination_),
+                          .prf_idx_ = safe_prf_idx,
+                          .allowed_claszes_ = allowed_claszes,
+                          .require_bike_transport_ = require_bike_transport,
+                          .require_car_transport_ = require_car_transport};
   }
 
   return journey_to_response(
-      stop_times.w_, l, stop_times.pl_, stop_times.tt_, stop_times.tags_,
-      nullptr, nullptr, rtt, stop_times.matches_, nullptr, shapes, gbfs_rd,
-      stop_times.ae_, stop_times.tz_, j, start_place, end_place, cache,
-      &blocked, false, osr_parameters{}, api::PedestrianProfileEnum::FOOT,
-      api::ElevationCostsEnum::NONE, join_interlined_legs, detailed_transfers,
-      detailed_legs, with_fares, with_scheduled_skipped_stops,
+      stop_times.w_, routing.l_, stop_times.pl_, stop_times.tt_,
+      stop_times.tags_, nullptr, nullptr, rtt, stop_times.matches_, nullptr,
+      routing.shapes_, gbfs_rd, stop_times.ae_, stop_times.tz_, j, start_place,
+      end_place, cache, &blocked, false, osr_parameters{},
+      api::PedestrianProfileEnum::FOOT, api::ElevationCostsEnum::NONE,
+      join_interlined_legs, detailed_transfers, detailed_legs, with_fares,
+      with_scheduled_skipped_stops,
       stop_times.config_.timetable_.value().max_matching_distance_,
       kMaxMatchingDistance, 6U, false, false, lang, false,
       leg_alternatives_query ? &*leg_alternatives_query : nullptr,
@@ -549,19 +607,23 @@ std::optional<from_to_candidate> get_best_candidate(
   return best_from_to;
 }
 
-api::Itinerary reconstruct_itinerary(ep::stop_times const& stop_times_ep,
-                                     osr::lookup const* l,
-                                     nigiri::shapes_storage const* shapes,
-                                     rt const& rt,
-                                     std::string const& id,
-                                     bool const require_display_name_match,
-                                     bool const join_interlined_legs,
-                                     bool const detailed_transfers,
-                                     bool const detailed_legs,
-                                     bool const with_fares,
-                                     bool const with_scheduled_skipped_stops,
-                                     n::lang_t const& lang,
-                                     std::size_t const num_leg_alternatives) {
+api::Itinerary reconstruct_itinerary(
+    ep::routing const& routing,
+    ep::stop_times const& stop_times_ep,
+    rt const& rt,
+    std::string const& id,
+    bool const require_display_name_match,
+    bool const join_interlined_legs,
+    bool const detailed_transfers,
+    bool const detailed_legs,
+    bool const with_fares,
+    bool const with_scheduled_skipped_stops,
+    n::lang_t const& lang,
+    std::size_t const num_leg_alternatives,
+    n::routing::clasz_mask_t const allowed_claszes,
+    bool const require_bike_transport,
+    bool const require_car_transport,
+    n::profile_idx_t const prf_idx) {
   auto stop_times_rt = std::atomic_load(&stop_times_ep.rt_);
   auto stop_times_rtt = stop_times_rt->rtt_.get();
   auto const parsed_id = decode_itinerary_id(id);
@@ -740,9 +802,11 @@ api::Itinerary reconstruct_itinerary(ep::stop_times const& stop_times_ep,
       legs.emplace_back(std::move(std::get<n::routing::journey::leg>(slot)));
     }
     auto res = build_itinerary_from_legs(
-        legs, start_pos, end_pos, stop_times_ep, l, shapes, rt.rtt_.get(),
+        legs, start_pos, end_pos, routing, stop_times_ep, rt.rtt_.get(),
         join_interlined_legs, detailed_transfers, detailed_legs, with_fares,
-        with_scheduled_skipped_stops, lang, num_leg_alternatives);
+        with_scheduled_skipped_stops, lang, num_leg_alternatives,
+        allowed_claszes, require_bike_transport, require_car_transport,
+        prf_idx);
     res.id_ = id;
     return res;
   }
@@ -761,9 +825,11 @@ api::Itinerary reconstruct_itinerary(ep::stop_times const& stop_times_ep,
     pt_leg_count += utl::count_if(segment, is_transit_leg);
     auto seg_itinerary = build_itinerary_from_legs(
         segment, first_segment ? start_pos : std::nullopt,
-        is_last ? end_pos : std::nullopt, stop_times_ep, l, shapes,
-        rt.rtt_.get(), join_interlined_legs, detailed_transfers, detailed_legs,
-        with_fares, with_scheduled_skipped_stops, lang, num_leg_alternatives);
+        is_last ? end_pos : std::nullopt, routing, stop_times_ep, rt.rtt_.get(),
+        join_interlined_legs, detailed_transfers, detailed_legs, with_fares,
+        with_scheduled_skipped_stops, lang, num_leg_alternatives,
+        allowed_claszes, require_bike_transport, require_car_transport,
+        prf_idx);
     utl::concat(out_legs, seg_itinerary.legs_);
     segment.clear();
     first_segment = false;

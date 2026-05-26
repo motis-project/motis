@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <optional>
 #include <string_view>
 #include <vector>
@@ -305,7 +306,8 @@ void load_station_status(gbfs_provider& provider, json::value const& root) {
       for (auto const& vt : vta) {
         auto const vehicle_type_id =
             static_cast<std::string>(vt.at("vehicle_type_id").as_string());
-        auto const count = vt.at("count").to_number<unsigned>();
+        auto const count =
+            static_cast<unsigned>(std::max(0, vt.at("count").to_number<int>()));
         if (auto const vt_idx = get_vehicle_type(provider, vehicle_type_id,
                                                  vehicle_start_type::kStation);
             vt_idx) {
@@ -346,7 +348,8 @@ void load_station_status(gbfs_provider& provider, json::value const& root) {
                     provider, vehicle_type_id, vehicle_start_type::kStation);
                 vt_idx) {
               station.status_.vehicle_docks_available_[*vt_idx] =
-                  vto.at("count").to_number<unsigned>();
+                  static_cast<unsigned>(
+                      std::max(0, vto.at("count").to_number<int>()));
             }
           }
         }

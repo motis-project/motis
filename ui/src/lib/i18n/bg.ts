@@ -69,7 +69,7 @@ const translations: Translations = {
 	defaultSelectedModes: 'Всички видове транспорт',
 	defaultSelectedProviders: 'Всички превозвачи',
 	selectElevationCosts: 'Избягвай стръмни наклони.',
-	wheelchair: 'инвалидна количка',
+	wheelchair: 'Само безбариеpни връзки',
 	useRoutedTransfers: 'Използвай посочените прекачвания',
 	bikeRental: 'наемане на велосипед',
 	requireBikeTransport: 'Превоз на велосипед',
@@ -162,6 +162,7 @@ const translations: Translations = {
 	continuesAs: 'Продължава като',
 	earlierAlternatives: 'По-ранни алтернативи',
 	laterAlternatives: 'По-късни алтернативи',
+	differentStops: 'Различни спирки',
 	rent: 'Наем',
 	copyToClipboard: 'Копирай в клипборда',
 	rideThroughAllowed: 'Минаване е позволено',
@@ -171,6 +172,13 @@ const translations: Translations = {
 	DEBUG_BUS_ROUTE: 'Маршрут на автобус (Отстраняване на грешки)',
 	DEBUG_RAILWAY_ROUTE: 'Маршрут на влак (Отстраняване на грешки)',
 	DEBUG_FERRY_ROUTE: 'Маршрут на ферибот (Отстраняване на грешки)',
+	colorMode: {
+		none: 'None',
+		stops: 'Stops',
+		rt: 'Trips by Realtime',
+		route: 'Trips by Route',
+		mode: 'Trips by Mode'
+	},
 	routes: (n: number) => {
 		switch (n) {
 			case 0:

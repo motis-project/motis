@@ -144,23 +144,23 @@ agency_id,agency_name,agency_url,agency_timezone
 DB,Deutsche Bahn,https://deutschebahn.com,Europe/Berlin
 
 # stops.txt
-stop_id,stop_name,stop_lat,stop_lon,location_type,parent_station,platform_code,wheelchair_boarding
-DA,DA Hbf,49.87260,8.63085,1,,,1
-DA_3,DA Hbf,49.87355,8.63003,0,DA,3,1
-DA_10,DA Hbf,49.87336,8.62926,0,DA,10,1
-FFM,FFM Hbf,50.10701,8.66341,1,,,1
-FFM_101,FFM Hbf,50.10739,8.66333,0,FFM,101,1
-FFM_10,FFM Hbf,50.10593,8.66118,0,FFM,10,1
-FFM_12,FFM Hbf,50.10658,8.66178,0,FFM,12,1
-de:6412:10:6:1,FFM Hbf U-Bahn,50.107577,8.6638173,0,FFM,U4,1
-LANGEN,Langen,49.99359,8.65677,1,,1,1
-FFM_HAUPT,FFM Hauptwache,50.11403,8.67835,1,,,1
-FFM_HAUPT_U,Hauptwache U1/U2/U3/U8,50.11385,8.67912,0,FFM_HAUPT,,1
-FFM_HAUPT_S,FFM Hauptwache S,50.11404,8.67824,0,FFM_HAUPT,,1
-WCH_A,Wheelchair Start,1.0,1.0,0,,,1
-WCH_B1,Wheelchair accessible intermediate,5.0,0.0,0,,,1
-WCH_B2,Wheelchair inaccessible intermediate,0.0,5.0,0,,,2
-WCH_C,Wheelchair destination,10.0,10.0,0,,,1
+stop_id,stop_name,stop_lat,stop_lon,location_type,parent_station,platform_code,wheelchair_boarding,stop_code
+DA,DA Hbf,49.87260,8.63085,1,,,1,
+DA_3,DA Hbf,49.87355,8.63003,0,DA,3,1,
+DA_10,DA Hbf,49.87336,8.62926,0,DA,10,1,DA-10-CODE
+FFM,FFM Hbf,50.10701,8.66341,1,,,1,
+FFM_101,FFM Hbf,50.10739,8.66333,0,FFM,101,1,
+FFM_10,FFM Hbf,50.10593,8.66118,0,FFM,10,1,
+FFM_12,FFM Hbf,50.10658,8.66178,0,FFM,12,1,
+de:6412:10:6:1,FFM Hbf U-Bahn,50.107577,8.6638173,0,FFM,U4,1,
+LANGEN,Langen,49.99359,8.65677,1,,1,1,
+FFM_HAUPT,FFM Hauptwache,50.11403,8.67835,1,,,1,
+FFM_HAUPT_U,Hauptwache U1/U2/U3/U8,50.11385,8.67912,0,FFM_HAUPT,,1,
+FFM_HAUPT_S,FFM Hauptwache S,50.11404,8.67824,0,FFM_HAUPT,,1,
+WCH_A,Wheelchair Start,1.0,1.0,0,,,1,
+WCH_B1,Wheelchair accessible intermediate,5.0,0.0,0,,,1,
+WCH_B2,Wheelchair inaccessible intermediate,0.0,5.0,0,,,2,
+WCH_C,Wheelchair destination,10.0,10.0,0,,,1,
 
 # routes.txt
 route_id,agency_id,route_short_name,route_long_name,route_desc,route_type
@@ -456,6 +456,11 @@ TEST(motis, routing) {
     (from=test_FFM_HAUPT_U [track=-, scheduled_track=-, level=-4], to=- [track=-, scheduled_track=-, level=-], start=2019-05-01 02:10, mode="WALK", trip="-", end=2019-05-01 02:15)
 ])",
         to_str(res.itineraries_));
+
+    // Verify stop_code propagation from GTFS through API.
+    auto const& ice_leg = res.itineraries_.at(0).legs_.at(3);
+    EXPECT_EQ("DA-10-CODE", ice_leg.from_.stopCode_);
+    EXPECT_FALSE(ice_leg.to_.stopCode_.has_value());
   }
 
   // Routing with temporary blocked paths due to elevator being out of service

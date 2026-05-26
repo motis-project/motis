@@ -19,6 +19,9 @@
 #include "nigiri/timetable.h"
 #include "nigiri/types.h"
 
+#include "adr/typeahead.h"
+
+#include "motis/adr_extend_tt.h"
 #include "motis/data.h"
 #include "motis/journey_to_response.h"
 #include "motis/parse_location.h"
@@ -360,7 +363,6 @@ std::vector<n::rt::run> stop_times::get_runs(
     std::optional<nigiri::location_idx_t> const& query_stop,
     std::optional<osr::location> const& query_center,
     bool const disable_stoptimes_max_limit) const {
-
   auto const max_results = disable_stoptimes_max_limit
                                ? 999888777U
                                : config_.get_limits().stoptimes_max_results_;
@@ -410,25 +412,41 @@ std::vector<n::rt::run> stop_times::get_runs(
           .count())));
 
   auto locations = std::vector<n::location_idx_t>{};
+  auto const add_with_children = [&](n::location_idx_t const x) {
+    utl::concat(locations, tt_.locations_.children_[x]);
+    for (auto const& c : tt_.locations_.children_[x]) {
+      utl::concat(locations, tt_.locations_.children_[c]);
+    }
+  };
   auto const add = [&](n::location_idx_t const l) {
     if (query.exactRadius_) {
       locations.emplace_back(l);
       return;
     }
 
-    auto const l_name = tt_.get_default_translation(tt_.locations_.names_[l]);
-    utl::concat(locations, tt_.locations_.children_[l]);
-    for (auto const& c : tt_.locations_.children_[l]) {
-      utl::concat(locations, tt_.locations_.children_[c]);
+    add_with_children(l);
+
+    if (t_ != nullptr && ae_ != nullptr &&
+        ae_->location_place_[l] != adr_extra_place_idx_t::invalid()) {
+      auto const place_idx = adr::place_idx_t{
+          t_->ext_start_ + cista::to_idx(ae_->location_place_[l])};
+      for (auto const id : t_->place_osm_ids_[place_idx]) {
+        auto const eq = n::location_idx_t{
+            static_cast<cista::base_t<n::location_idx_t>>(id)};
+        if (eq == l) {
+          continue;
+        }
+        locations.emplace_back(eq);
+        add_with_children(eq);
+      }
+      return;
     }
 
+    auto const l_name = tt_.get_default_translation(tt_.locations_.names_[l]);
     for (auto const eq : tt_.locations_.equivalences_[l]) {
       if (tt_.get_default_translation(tt_.locations_.names_[eq]) == l_name) {
         locations.emplace_back(eq);
-        utl::concat(locations, tt_.locations_.children_[eq]);
-        for (auto const& c : tt_.locations_.children_[eq]) {
-          utl::concat(locations, tt_.locations_.children_[c]);
-        }
+        add_with_children(eq);
       }
     }
   };

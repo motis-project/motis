@@ -109,6 +109,12 @@ export const trip = <ThrowOnError extends boolean = false>(options: Options<Trip
 
 /**
  * Reconstruct an itinerary from an itinerary ID.
+ * Experimental (API might change without prior notice and without API version bump).
+ * Only supports walking at start/end or station-to-station itineraries.
+ *
+ * All parameters mirror those of the `plan` endpoint - see the `plan`
+ * endpoint for their descriptions.
+ *
  */
 export const refreshItinerary = <ThrowOnError extends boolean = false>(options: Options<RefreshItineraryData, ThrowOnError>) => {
     return (options?.client ?? client).get<RefreshItineraryResponse, RefreshItineraryError, ThrowOnError>({
@@ -119,6 +125,12 @@ export const refreshItinerary = <ThrowOnError extends boolean = false>(options: 
 
 /**
  * Reconstruct an itinerary from a protobuf-JSON itinerary identifier.
+ * Experimental (API might change without prior notice and without API version bump).
+ * Only supports walking at start/end or station-to-station itineraries.
+ *
+ * All `RefreshItineraryPostBody` fields mirror the parameters of the
+ * `plan` endpoint - see the `plan` endpoint for their descriptions.
+ *
  */
 export const refreshItineraryPost = <ThrowOnError extends boolean = false>(options: Options<RefreshItineraryPostData, ThrowOnError>) => {
     return (options?.client ?? client).post<RefreshItineraryPostResponse, RefreshItineraryPostError, ThrowOnError>({
