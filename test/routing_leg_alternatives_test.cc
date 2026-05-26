@@ -249,15 +249,15 @@ TEST(motis, routing_leg_alternatives_station_to_station_no_osr) {
 
   auto const expected = R"(
 BUS T1_DUP A 07:00->B 07:15
-  alt [WALK A 07:00->A 07:00 | BUS T1 A 07:00->B 07:15 | WALK B 07:15->B 07:15]
-  alt [WALK A 06:30->A 06:30 | BUS T1_E1 A 06:30->B 06:46 | WALK B 06:46->B 06:46]
-  alt [WALK A 06:00->A 06:00 | BUS T1_E2 A 06:00->B 06:15 | WALK B 06:15->B 06:15]
+  alt [WALK A 07:00->A 07:00 | BUS T1 A 07:00->B 07:15 | WALK B 07:15->B 07:17]
+  alt [WALK A 06:30->A 06:30 | BUS T1_E1 A 06:30->B 06:46 | WALK B 06:46->B 06:48]
+  alt [WALK A 06:00->A 06:00 | BUS T1_E2 A 06:00->B 06:15 | WALK B 06:15->B 06:17]
 BUS T2_DUP B 07:30->C 08:00
-  alt [WALK B 07:30->B 07:30 | BUS T2 B 07:30->C 08:00 | WALK C 08:00->C 08:00]
-  alt [WALK B 07:45->B 07:45 | BUS T2_LATE B 07:45->C 08:15 | WALK C 08:15->C 08:15]
+  alt [WALK B 07:28->B 07:30 | BUS T2 B 07:30->C 08:00 | WALK C 08:00->C 08:02]
+  alt [WALK B 07:43->B 07:45 | BUS T2_LATE B 07:45->C 08:15 | WALK C 08:15->C 08:17]
 BUS T3 C 08:30->D 09:00
-  alt [WALK C 09:00->C 09:00 | BUS T3_L1 C 09:00->D 09:30 | WALK D 09:30->D 09:30]
-  alt [WALK C 09:30->C 09:30 | BUS T3_L2 C 09:30->D 10:00 | WALK D 10:00->D 10:00]
+  alt [WALK C 08:58->C 09:00 | BUS T3_L1 C 09:00->D 09:30 | WALK D 09:30->D 09:30]
+  alt [WALK C 09:28->C 09:30 | BUS T3_L2 C 09:30->D 10:00 | WALK D 10:00->D 10:00]
 )";
   {  // Forward search: time = main journey's departure (T1_DUP 07:00).
     auto const res = routing(
@@ -303,15 +303,15 @@ TEST(motis, routing_leg_alternatives_station_to_station_osr_no_pre_post) {
   // are dropped by `drop_at_boundary`. Inner-boundary footpaths stay.
   auto const expected = R"(
 BUS T1_DUP A 07:00->B 07:15
-  alt [BUS T1 A 07:00->B 07:15 | WALK B 07:15->B 07:15]
-  alt [BUS T1_E1 A 06:30->B 06:46 | WALK B 06:46->B 06:46]
-  alt [BUS T1_E2 A 06:00->B 06:15 | WALK B 06:15->B 06:15]
+  alt [BUS T1 A 07:00->B 07:15 | WALK B 07:15->B 07:17]
+  alt [BUS T1_E1 A 06:30->B 06:46 | WALK B 06:46->B 06:48]
+  alt [BUS T1_E2 A 06:00->B 06:15 | WALK B 06:15->B 06:17]
 BUS T2_DUP B 07:30->C 08:00
-  alt [WALK B 07:30->B 07:30 | BUS T2 B 07:30->C 08:00 | WALK C 08:00->C 08:00]
-  alt [WALK B 07:45->B 07:45 | BUS T2_LATE B 07:45->C 08:15 | WALK C 08:15->C 08:15]
+  alt [WALK B 07:28->B 07:30 | BUS T2 B 07:30->C 08:00 | WALK C 08:00->C 08:02]
+  alt [WALK B 07:43->B 07:45 | BUS T2_LATE B 07:45->C 08:15 | WALK C 08:15->C 08:17]
 BUS T3 C 08:30->D 09:00
-  alt [WALK C 09:00->C 09:00 | BUS T3_L1 C 09:00->D 09:30]
-  alt [WALK C 09:30->C 09:30 | BUS T3_L2 C 09:30->D 10:00]
+  alt [WALK C 08:58->C 09:00 | BUS T3_L1 C 09:00->D 09:30]
+  alt [WALK C 09:28->C 09:30 | BUS T3_L2 C 09:30->D 10:00]
 )";
   {  // Forward search.
     auto const res = routing(
@@ -357,15 +357,15 @@ TEST(motis, routing_leg_alternatives_intermodal_bike) {
 
   auto const expected = R"(
 BUS T1_DUP A 07:00->B 07:15
-  alt [BIKE START 06:58->A 07:00 | BUS T1 A 07:00->B 07:15 | WALK B 07:15->B 07:15]
-  alt [BIKE START 06:28->A 06:30 | BUS T1_E1 A 06:30->B 06:46 | WALK B 06:46->B 06:46]
-  alt [BIKE START 05:58->A 06:00 | BUS T1_E2 A 06:00->B 06:15 | WALK B 06:15->B 06:15]
+  alt [BIKE START 06:58->A 07:00 | BUS T1 A 07:00->B 07:15 | WALK B 07:15->B 07:17]
+  alt [BIKE START 06:28->A 06:30 | BUS T1_E1 A 06:30->B 06:46 | WALK B 06:46->B 06:48]
+  alt [BIKE START 05:58->A 06:00 | BUS T1_E2 A 06:00->B 06:15 | WALK B 06:15->B 06:17]
 BUS T2_DUP B 07:30->C 08:00
-  alt [WALK B 07:30->B 07:30 | BUS T2 B 07:30->C 08:00 | WALK C 08:00->C 08:00]
-  alt [WALK B 07:45->B 07:45 | BUS T2_LATE B 07:45->C 08:15 | WALK C 08:15->C 08:15]
+  alt [WALK B 07:28->B 07:30 | BUS T2 B 07:30->C 08:00 | WALK C 08:00->C 08:02]
+  alt [WALK B 07:43->B 07:45 | BUS T2_LATE B 07:45->C 08:15 | WALK C 08:15->C 08:17]
 BUS T3 C 08:30->D 09:00
-  alt [WALK C 09:00->C 09:00 | BUS T3_L1 C 09:00->D 09:30 | BIKE D 09:30->END 09:32]
-  alt [WALK C 09:30->C 09:30 | BUS T3_L2 C 09:30->D 10:00 | BIKE D 10:00->END 10:02]
+  alt [WALK C 08:58->C 09:00 | BUS T3_L1 C 09:00->D 09:30 | BIKE D 09:30->END 09:32]
+  alt [WALK C 09:28->C 09:30 | BUS T3_L2 C 09:30->D 10:00 | BIKE D 10:00->END 10:02]
 )";
   {  // Forward search.
     auto const res = routing(
@@ -547,10 +547,10 @@ TEST(motis, routing_leg_alternatives_block_id_joined) {
 
   auto const expected = R"(
 BUS T_PART1 A 07:00->B 07:30
-  alt [WALK A 06:30->A 06:30 | BUS T_ALT_E1 A 06:30->B 06:46 | WALK B 06:46->B 06:46]
-  alt [WALK A 06:00->A 06:00 | BUS T_ALT_E2 A 06:00->B 06:15 | WALK B 06:15->B 06:15]
+  alt [WALK A 06:30->A 06:30 | BUS T_ALT_E1 A 06:30->B 06:46 | WALK B 06:46->B 06:48]
+  alt [WALK A 06:00->A 06:00 | BUS T_ALT_E2 A 06:00->B 06:15 | WALK B 06:15->B 06:17]
 BUS T2 B 07:45->D 08:15
-  alt [WALK B 08:15->B 08:15 | BUS T2_L B 08:15->D 08:45 | WALK D 08:45->D 08:45]
+  alt [WALK B 08:13->B 08:15 | BUS T2_L B 08:15->D 08:45 | WALK D 08:45->D 08:45]
 )";
   {  // Forward search.
     auto const res = routing(
@@ -596,12 +596,12 @@ TEST(motis, routing_leg_alternatives_block_id_unjoined) {
 
   auto const expected = R"(
 BUS T_PART1 A 07:00->MID 07:15
-  alt [WALK A 06:30->A 06:30 | BUS T_ALT_E1 A 06:30->B 06:46 | WALK B 06:46->B 06:46]
-  alt [WALK A 06:00->A 06:00 | BUS T_ALT_E2 A 06:00->B 06:15 | WALK B 06:15->B 06:15]
+  alt [WALK A 06:30->A 06:30 | BUS T_ALT_E1 A 06:30->B 06:46 | WALK B 06:46->B 06:48]
+  alt [WALK A 06:00->A 06:00 | BUS T_ALT_E2 A 06:00->B 06:15 | WALK B 06:15->B 06:17]
 BUS T_PART2 MID 07:15->B 07:30 [interlined]
   (no alternatives field)
 BUS T2 B 07:45->D 08:15
-  alt [WALK B 08:15->B 08:15 | BUS T2_L B 08:15->D 08:45 | WALK D 08:45->D 08:45]
+  alt [WALK B 08:13->B 08:15 | BUS T2_L B 08:15->D 08:45 | WALK D 08:45->D 08:45]
 )";
   {  // Forward search.
     auto const res = routing(
@@ -656,11 +656,11 @@ TEST(motis, routing_leg_alternatives_block_id_interlined_alternatives) {
 
   auto const expected = R"(
 BUS T_SINGLE_DUP_2 A 07:05->B 07:35
-  alt [WALK A 07:00->A 07:00 | BUS T_DUP_PART1 A 07:00->MID 07:15 | BUS T_DUP_PART2 MID 07:15->B 07:30 [interlined] | WALK B 07:30->B 07:30]
-  alt [WALK A 07:00->A 07:00 | BUS T_SINGLE_DUP A 07:00->B 07:31 | WALK B 07:31->B 07:31]
-  alt [WALK A 06:55->A 06:55 | BUS T_PART1 A 06:55->MID 07:10 | BUS T_PART2 MID 07:10->B 07:25 [interlined] | WALK B 07:25->B 07:25]
+  alt [WALK A 07:00->A 07:00 | BUS T_DUP_PART1 A 07:00->MID 07:15 | BUS T_DUP_PART2 MID 07:15->B 07:30 [interlined] | WALK B 07:30->B 07:32]
+  alt [WALK A 07:00->A 07:00 | BUS T_SINGLE_DUP A 07:00->B 07:31 | WALK B 07:31->B 07:33]
+  alt [WALK A 06:55->A 06:55 | BUS T_PART1 A 06:55->MID 07:10 | BUS T_PART2 MID 07:10->B 07:25 [interlined] | WALK B 07:25->B 07:27]
 BUS T2_EARLY B 07:40->D 08:10
-  alt [WALK B 07:45->B 07:45 | BUS T2 B 07:45->D 08:15 | WALK D 08:15->D 08:15]
+  alt [WALK B 07:43->B 07:45 | BUS T2 B 07:45->D 08:15 | WALK D 08:15->D 08:15]
 )";
   {  // Forward search.
     auto const res = routing(
@@ -942,7 +942,7 @@ TEST(motis, routing_leg_alternatives_no_enter_excluded) {
   // boarding at A) and T1_NOEXIT (no alighting at B) must not appear.
   auto const expected = R"(
 BUS T1 A 06:00->B 06:30
-  alt [WALK A 05:00->A 05:00 | BUS T1_EARLY A 05:00->B 05:30 | WALK B 05:30->B 05:30]
+  alt [WALK A 05:00->A 05:00 | BUS T1_EARLY A 05:00->B 05:30 | WALK B 05:30->B 05:32]
 BUS T2 B 07:00->C 07:30
   (no alternatives)
 )";
@@ -986,7 +986,7 @@ TEST(motis, routing_leg_alternatives_no_exit_excluded) {
   // trip.
   auto const expected = R"(
 BUS T1 A 06:00->B 06:30
-  alt [WALK A 05:00->A 05:00 | BUS T1_EARLY A 05:00->B 05:30 | WALK B 05:30->B 05:30]
+  alt [WALK A 05:00->A 05:00 | BUS T1_EARLY A 05:00->B 05:30 | WALK B 05:30->B 05:32]
 BUS T2 B 07:00->C 07:30
   (no alternatives)
 )";
@@ -1234,6 +1234,102 @@ BUS T3 C 07:30->D 08:00
         "?fromPlace=test_A"
         "&toPlace=test_D"
         "&time=2019-05-01T08:00Z"
+        "&searchWindow=7200"
+        "&arriveBy=true"
+        "&numLegAlternatives=5");
+    ASSERT_EQ(res.itineraries_.size(), 1U);
+    EXPECT_EQ(expected, to_str(res.itineraries_.front()));
+  }
+}
+
+// Two-leg journey A -> B -> C exercising per-stop transfer_time set via
+// `transfers.txt` self-entries (from=to). Two alternatives compete for
+// the second leg:
+//   * T2_BLOCKED departs B 08:20, only 5 min after T1's 08:15 arrival.
+//     B's 15-min transfer_time means the boarding walk would have to
+//     start at 08:05 (< 08:15 prev_arr), so it is pruned.
+//   * T2_OK departs B 08:35 — 20 min after T1's arrival — clears the
+//     transfer time and shows up with a 15-min boarding walk.
+// C is the journey boundary; its 10-min self-transfer entry must NOT
+// pad T2_OK's alighting walk.
+constexpr auto const kTransferTimeGTFS = R"(
+# agency.txt
+agency_id,agency_name,agency_url,agency_timezone
+DB,Deutsche Bahn,https://deutschebahn.com,Europe/Berlin
+
+# stops.txt
+stop_id,stop_name,stop_lat,stop_lon,location_type,parent_station
+A,A,49.87336,8.62926,0,
+B,B,49.99359,8.65677,0,
+C,C,50.10593,8.66118,0,
+
+# routes.txt
+route_id,agency_id,route_short_name,route_long_name,route_desc,route_type
+R1,DB,R1,,,3
+R2,DB,R2,,,3
+
+# trips.txt
+route_id,service_id,trip_id,trip_headsign
+R1,S,T1,
+R2,S,T2_BLOCKED,
+R2,S,T2,
+R2,S,T2_OK,
+
+# stop_times.txt
+trip_id,arrival_time,departure_time,stop_id,stop_sequence
+T1,08:00:00,08:00:00,A,0
+T1,08:15:00,08:15:00,B,1
+T2_BLOCKED,08:20:00,08:20:00,B,0
+T2_BLOCKED,08:50:00,08:50:00,C,1
+T2,08:30:00,08:30:00,B,0
+T2,09:00:00,09:00:00,C,1
+T2_OK,08:35:00,08:35:00,B,0
+T2_OK,09:05:00,09:05:00,C,1
+
+# transfers.txt
+from_stop_id,to_stop_id,transfer_type,min_transfer_time
+B,B,2,900
+C,C,2,600
+
+# calendar_dates.txt
+service_id,date,exception_type
+S,20190501,1
+)"sv;
+
+TEST(motis, routing_leg_alternatives_transfer_time) {
+  auto ec = std::error_code{};
+  std::filesystem::remove_all("test/data_leg_alts_transfer_time", ec);
+
+  auto const c = make_inline_gtfs_config(kTransferTimeGTFS);
+  import(c, "test/data_leg_alts_transfer_time");
+  auto d = data{"test/data_leg_alts_transfer_time", c};
+  auto const routing = utl::init_from<ep::routing>(d).value();
+
+  // T2_OK's boarding walk shows the 15-min trip-to-trip transfer at B
+  // (06:20 -> 06:35). Its alighting walk at C is a journey boundary,
+  // so C's 10-min transfer_time is NOT applied (07:05 -> 07:05).
+  // T2_BLOCKED does not appear.
+  auto const expected = R"(
+BUS T1 A 06:00->B 06:15
+  (no alternatives)
+BUS T2 B 06:30->C 07:00
+  alt [WALK B 06:20->B 06:35 | BUS T2_OK B 06:35->C 07:05 | WALK C 07:05->C 07:05]
+)";
+  {  // Forward search.
+    auto const res = routing(
+        "?fromPlace=test_A"
+        "&toPlace=test_C"
+        "&time=2019-05-01T05:00Z"
+        "&searchWindow=7200"
+        "&numLegAlternatives=5");
+    ASSERT_EQ(res.itineraries_.size(), 1U);
+    EXPECT_EQ(expected, to_str(res.itineraries_.front()));
+  }
+  {  // Backward search: time = main journey's arrival (T2 07:00).
+    auto const res = routing(
+        "?fromPlace=test_A"
+        "&toPlace=test_C"
+        "&time=2019-05-01T07:00Z"
         "&searchWindow=7200"
         "&arriveBy=true"
         "&numLegAlternatives=5");

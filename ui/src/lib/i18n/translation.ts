@@ -159,6 +159,7 @@ export type Translations = {
 	continuesAs: string;
 	earlierAlternatives: string;
 	laterAlternatives: string;
+	differentStops: string;
 	DEBUG_BUS_ROUTE: string;
 	DEBUG_RAILWAY_ROUTE: string;
 	DEBUG_FERRY_ROUTE: string;
@@ -168,6 +169,13 @@ export type Translations = {
 	rideThroughNotAllowed: string;
 	rideEndAllowed: string;
 	rideEndNotAllowed: string;
+	colorMode: {
+		none: string;
+		stops: string;
+		rt: string;
+		route: string;
+		mode: string;
+	};
 	routes: (n: number) => string;
 };
 

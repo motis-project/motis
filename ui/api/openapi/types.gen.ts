@@ -1445,6 +1445,12 @@ export type ItineraryId = {
     legs: Array<LegId>;
 };
 
+/**
+ * Body for the `refreshItineraryPost` endpoint. All fields mirror the
+ * parameters of the `plan` endpoint - see the `plan` endpoint for their
+ * descriptions.
+ *
+ */
 export type RefreshItineraryPostBody = {
     id: ItineraryId;
     requireDisplayNameMatch?: boolean;
@@ -1454,11 +1460,11 @@ export type RefreshItineraryPostBody = {
     withFares?: boolean;
     withScheduledSkippedStops?: boolean;
     numLegAlternatives?: number;
-    /**
-     * language tags as used in OpenStreetMap / GTFS
-     * (usually BCP-47 / ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
-     *
-     */
+    transitModes?: Array<Mode>;
+    pedestrianProfile?: PedestrianProfile;
+    useRoutedTransfers?: boolean;
+    requireBikeTransport?: boolean;
+    requireCarTransport?: boolean;
     language?: Array<(string)>;
 };
 
@@ -3056,11 +3062,11 @@ export type ReverseGeocodeData = {
         /**
          * Optional. Default is all types.
          *
-         * Only return results of the given type.
+         * Only return results matching one of the given types.
          * For example, this can be used to allow only `ADDRESS` and `STOP` results.
          *
          */
-        type?: LocationType;
+        type?: Array<LocationType>;
     };
 };
 
@@ -3109,11 +3115,11 @@ export type GeocodeData = {
         /**
          * Optional. Default is all types.
          *
-         * Only return results of the given types.
+         * Only return results matching one of the given types.
          * For example, this can be used to allow only `ADDRESS` and `STOP` results.
          *
          */
-        type?: LocationType;
+        type?: Array<LocationType>;
     };
 };
 
@@ -3169,7 +3175,12 @@ export type RefreshItineraryData = {
         joinInterlinedLegs?: boolean;
         language?: Array<(string)>;
         numLegAlternatives?: number;
+        pedestrianProfile?: PedestrianProfile;
+        requireBikeTransport?: boolean;
+        requireCarTransport?: boolean;
         requireDisplayNameMatch?: boolean;
+        transitModes?: Array<Mode>;
+        useRoutedTransfers?: boolean;
         withFares?: boolean;
         withScheduledSkippedStops?: boolean;
     };

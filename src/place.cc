@@ -140,6 +140,12 @@ api::Place to_place(n::timetable const* tt,
               return p.empty() ? std::nullopt : std::optional{std::string{p}};
             };
 
+            auto const get_stop_code = [&](n::location_idx_t const x) {
+              auto const p =
+                  tt->translate(lang, tt->locations_.stop_codes_.at(x));
+              return p.empty() ? std::nullopt : std::optional{std::string{p}};
+            };
+
             // check if description is available, if not, return nullopt
             auto const get_description = [&](n::location_idx_t const x) {
               auto const p =
@@ -169,6 +175,7 @@ api::Place to_place(n::timetable const* tt,
                                            : std::optional{timezone->name()},
                 .scheduledTrack_ = get_track(tt_l.scheduled_),
                 .track_ = get_track(tt_l.l_),
+                .stopCode_ = get_stop_code(tt_l.scheduled_),
                 .description_ = get_description(tt_l.scheduled_),
                 .vertexType_ = api::VertexTypeEnum::TRANSIT,
                 .modes_ =

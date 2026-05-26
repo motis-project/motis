@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
@@ -16,12 +17,14 @@
 
 #include "gtest/gtest.h"
 
+#include "utl/helpers/algorithm.h"
 #include "utl/init_from.h"
 
 #include "motis/config.h"
 #include "motis/data.h"
 #include "motis/endpoints/refresh_itinerary.h"
 #include "motis/endpoints/routing.h"
+#include "motis/endpoints/stop_times.h"
 #include "motis/endpoints/trip.h"
 #include "motis/import.h"
 #include "motis/itinerary_id.h"
@@ -418,9 +421,9 @@ TEST(motis, itinerary_id_reconstruct_with_changed_stop_ids) {
                                         "2019-05-01T02:00Z");
   expected.id_ = id;
   auto const stop_times = utl::init_from<ep::stop_times>(target_data).value();
+  auto const routing = utl::init_from<ep::routing>(target_data).value();
 
-  EXPECT_EQ(expected,
-            reconstruct_itinerary(stop_times, nullptr, nullptr, {}, id));
+  EXPECT_EQ(expected, reconstruct_itinerary(routing, stop_times, {}, id));
 }
 
 TEST(motis, itinerary_id_reconstruct_with_repeated_stop_in_trip) {
@@ -433,8 +436,8 @@ TEST(motis, itinerary_id_reconstruct_with_repeated_stop_in_trip) {
 
   auto const id = generate_itinerary_id(original);
   auto const stop_times = utl::init_from<ep::stop_times>(data).value();
-  EXPECT_EQ(original,
-            reconstruct_itinerary(stop_times, nullptr, nullptr, {}, id));
+  auto const routing = utl::init_from<ep::routing>(data).value();
+  EXPECT_EQ(original, reconstruct_itinerary(routing, stop_times, {}, id));
 }
 
 TEST(motis, itinerary_id_generate_rejects_invalid_single_leg_inputs) {
@@ -470,6 +473,7 @@ TEST(motis,
   auto const target_cfg = make_config(kDenseShiftTargetGtfs);
   auto target_data = import_test_data(target_cfg, "dense_shift_target");
   auto const stop_times = utl::init_from<ep::stop_times>(target_data).value();
+  auto const routing = utl::init_from<ep::routing>(target_data).value();
 
   auto const from_candidates = stop_times(
       "?center=49.87260,8.63085"
@@ -494,7 +498,7 @@ TEST(motis,
   EXPECT_GE(to_candidates.stopTimes_.size(), 8U);
 
   auto const reconstructed =
-      reconstruct_itinerary(stop_times, nullptr, nullptr, {}, id, false);
+      reconstruct_itinerary(routing, stop_times, {}, id, false);
   ASSERT_EQ(1U, reconstructed.legs_.size());
   auto const& reconstructed_leg = reconstructed.legs_.front();
   auto const& original_leg = original.legs_.front();
@@ -527,12 +531,13 @@ TEST(motis, itinerary_id_reconstruct_many_candidates_benchmark) {
   auto const target_cfg = make_config(make_heavy_target_gtfs(kNumDecoys));
   auto target_data = import_test_data(target_cfg, "heavy_benchmark_target");
   auto const stop_times = utl::init_from<ep::stop_times>(target_data).value();
+  auto const routing = utl::init_from<ep::routing>(target_data).value();
 
   auto const original_leg = original.legs_.front();
   auto const start = std::chrono::steady_clock::now();
   for (auto i = 0; i < kIterations; ++i) {
     auto const reconstructed =
-        reconstruct_itinerary(stop_times, nullptr, nullptr, {}, id, false);
+        reconstruct_itinerary(routing, stop_times, {}, id, false);
     ASSERT_EQ(1U, reconstructed.legs_.size());
     auto const& leg = reconstructed.legs_.front();
     ASSERT_TRUE(leg.from_.stopId_.has_value());
@@ -759,8 +764,8 @@ TEST(motis, itinerary_id_reconstruct_multi_leg_with_three_pt_hops) {
 
   auto const id = generate_itinerary_id(original);
   auto const stop_times = utl::init_from<ep::stop_times>(d).value();
-  auto const reconstructed = reconstruct_itinerary(
-      stop_times, d.l_.get(), d.shapes_.get(), *d.rt_, id, true, true, true);
+  auto const reconstructed =
+      reconstruct_itinerary(routing, stop_times, *d.rt_, id, true, true, true);
 
   EXPECT_EQ(original, reconstructed);
 }
@@ -817,8 +822,8 @@ TEST(motis, itinerary_id_reconstruct_multi_leg_replaces_unmatched_leg_dummy) {
 
   auto const id = generate_itinerary_id(original);
   auto const stop_times = utl::init_from<ep::stop_times>(d).value();
-  auto const reconstructed = reconstruct_itinerary(
-      stop_times, d.l_.get(), d.shapes_.get(), *d.rt_, id, true, true, true);
+  auto const reconstructed =
+      reconstruct_itinerary(routing, stop_times, *d.rt_, id, true, true, true);
 
   // Every leg is still present, in order, and the itinerary id is preserved.
   ASSERT_EQ(original.legs_.size(), reconstructed.legs_.size());
@@ -840,5 +845,576 @@ TEST(motis, itinerary_id_reconstruct_multi_leg_replaces_unmatched_leg_dummy) {
     if (pt_idx != broken_idx) {
       EXPECT_FALSE(reconstructed.legs_.at(pt_idx).cancelled_.value_or(false));
     }
+  }
+}
+
+// ===========================================================================
+// Leg-alternative constraint propagation through the refresh endpoint.
+//
+// The `plan` endpoint restricts the leg alternatives it computes by the same
+// constraints as the main search (transit modes, bike/car carriage, wheelchair
+// accessibility - see `sections_violate_constraints` in nigiri's `direct.cc`).
+// When the same itinerary is refreshed, the refresh endpoint must reproduce
+// exactly those alternatives, so the constraints have to be forwarded to the
+// leg-alternatives query as well.
+//
+// Each fixture below offers, next to the main trip, two later alternatives:
+// one that satisfies the constraint and one that violates it. The violating
+// alternative departs earlier than the satisfying one, so it would be picked
+// first if the constraint were not applied.
+// ===========================================================================
+
+// First transit leg of the itinerary (the leg that carries `alternatives`).
+api::Leg const& first_transit_leg(api::Itinerary const& it) {
+  auto const leg = utl::find_if(
+      it.legs_, [](api::Leg const& l) { return l.tripId_.has_value(); });
+  utl::verify(leg != end(it.legs_), "itinerary has no transit leg");
+  return *leg;
+}
+
+// All transit legs of an itinerary, in order.
+std::vector<api::Leg const*> transit_legs(api::Itinerary const& it) {
+  auto legs = std::vector<api::Leg const*>{};
+  for (auto const& l : it.legs_) {
+    if (l.tripId_.has_value()) {
+      legs.push_back(&l);
+    }
+  }
+  return legs;
+}
+
+// Sorted trip ids of every transit leg across a leg's computed alternatives.
+std::vector<std::string> alt_transit_trip_ids(api::Leg const& leg) {
+  auto ids = std::vector<std::string>{};
+  if (leg.alternatives_.has_value()) {
+    for (auto const& alt : *leg.alternatives_) {
+      for (auto const& al : alt) {
+        if (al.tripId_.has_value() && !al.tripId_->empty()) {
+          ids.push_back(*al.tripId_);
+        }
+      }
+    }
+  }
+  std::sort(begin(ids), end(ids));
+  return ids;
+}
+
+// True if any leg of any computed alternative is a transit leg whose trip id
+// contains `needle` (trip ids are prefixed by the importer, hence substring).
+bool any_alt_trip_contains(api::Leg const& leg, std::string_view const needle) {
+  if (!leg.alternatives_.has_value()) {
+    return false;
+  }
+  for (auto const& alt : *leg.alternatives_) {
+    for (auto const& al : alt) {
+      if (al.tripId_.has_value() &&
+          al.tripId_->find(needle) != std::string::npos) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+constexpr auto kLegAltTransitModesGtfs = R"(
+# agency.txt
+agency_id,agency_name,agency_url,agency_timezone
+DB,Deutsche Bahn,https://deutschebahn.com,Europe/Berlin
+
+# stops.txt
+stop_id,stop_name,stop_lat,stop_lon,location_type,parent_station
+A,A,49.80000,8.60000,0,
+B,B,50.20000,8.70000,0,
+
+# routes.txt
+route_id,agency_id,route_short_name,route_long_name,route_desc,route_type
+REG_MAIN_R,DB,RM,,,106
+BUS_ALT_R,DB,BA,,,3
+REG_ALT_R,DB,RA,,,106
+
+# trips.txt
+route_id,service_id,trip_id,trip_headsign
+REG_MAIN_R,S1,REG_MAIN,
+BUS_ALT_R,S1,BUS_ALT,
+REG_ALT_R,S1,REG_ALT,
+
+# stop_times.txt
+trip_id,arrival_time,departure_time,stop_id,stop_sequence
+REG_MAIN,09:00:00,09:00:00,A,0
+REG_MAIN,10:00:00,10:00:00,B,1
+BUS_ALT,09:30:00,09:30:00,A,0
+BUS_ALT,10:30:00,10:30:00,B,1
+REG_ALT,10:00:00,10:00:00,A,0
+REG_ALT,11:00:00,11:00:00,B,1
+
+# calendar_dates.txt
+service_id,date,exception_type
+S1,20190501,1
+)";
+
+constexpr auto kLegAltBikeGtfs = R"(
+# agency.txt
+agency_id,agency_name,agency_url,agency_timezone
+DB,Deutsche Bahn,https://deutschebahn.com,Europe/Berlin
+
+# stops.txt
+stop_id,stop_name,stop_lat,stop_lon,location_type,parent_station
+A,A,49.80000,8.60000,0,
+B,B,50.20000,8.70000,0,
+
+# routes.txt
+route_id,agency_id,route_short_name,route_long_name,route_desc,route_type
+BIKE_MAIN_R,DB,BM,,,106
+BIKE_NO_R,DB,BN,,,106
+BIKE_YES_R,DB,BY,,,106
+
+# trips.txt
+route_id,service_id,trip_id,trip_headsign,bikes_allowed
+BIKE_MAIN_R,S1,BIKE_MAIN,,1
+BIKE_NO_R,S1,BIKE_NO,,2
+BIKE_YES_R,S1,BIKE_YES,,1
+
+# stop_times.txt
+trip_id,arrival_time,departure_time,stop_id,stop_sequence
+BIKE_MAIN,09:00:00,09:00:00,A,0
+BIKE_MAIN,10:00:00,10:00:00,B,1
+BIKE_NO,09:30:00,09:30:00,A,0
+BIKE_NO,10:30:00,10:30:00,B,1
+BIKE_YES,10:00:00,10:00:00,A,0
+BIKE_YES,11:00:00,11:00:00,B,1
+
+# calendar_dates.txt
+service_id,date,exception_type
+S1,20190501,1
+)";
+
+constexpr auto kLegAltCarGtfs = R"(
+# agency.txt
+agency_id,agency_name,agency_url,agency_timezone
+DB,Deutsche Bahn,https://deutschebahn.com,Europe/Berlin
+
+# stops.txt
+stop_id,stop_name,stop_lat,stop_lon,location_type,parent_station
+A,A,49.80000,8.60000,0,
+B,B,50.20000,8.70000,0,
+
+# routes.txt
+route_id,agency_id,route_short_name,route_long_name,route_desc,route_type
+CAR_MAIN_R,DB,CM,,,106
+CAR_NO_R,DB,CN,,,106
+CAR_YES_R,DB,CY,,,106
+
+# trips.txt
+route_id,service_id,trip_id,trip_headsign,cars_allowed
+CAR_MAIN_R,S1,CAR_MAIN,,1
+CAR_NO_R,S1,CAR_NO,,2
+CAR_YES_R,S1,CAR_YES,,1
+
+# stop_times.txt
+trip_id,arrival_time,departure_time,stop_id,stop_sequence
+CAR_MAIN,09:00:00,09:00:00,A,0
+CAR_MAIN,10:00:00,10:00:00,B,1
+CAR_NO,09:30:00,09:30:00,A,0
+CAR_NO,10:30:00,10:30:00,B,1
+CAR_YES,10:00:00,10:00:00,A,0
+CAR_YES,11:00:00,11:00:00,B,1
+
+# calendar_dates.txt
+service_id,date,exception_type
+S1,20190501,1
+)";
+
+// `pedestrianProfile=WHEELCHAIR` only changes leg alternatives when the
+// timetable actually has a (non-empty) wheelchair footpath profile - otherwise
+// the `plan` endpoint silently falls back to the default profile. `A`/`B`
+// carry the actual route; `FP`/`FP_1`/`FP_2` are an unrelated parent station
+// whose two platforms (placed on `test_case.osm.pbf`) make OSR generate a
+// wheelchair footpath, keeping the wheelchair profile non-empty.
+constexpr auto kLegAltWheelchairGtfs = R"(
+# agency.txt
+agency_id,agency_name,agency_url,agency_timezone
+DB,Deutsche Bahn,https://deutschebahn.com,Europe/Berlin
+
+# stops.txt
+stop_id,stop_name,stop_lat,stop_lon,location_type,parent_station
+A,A,50.10701,8.66341,0,
+B,B,50.11403,8.67835,0,
+FP,Footpath Station,49.87260,8.63085,1,
+FP_1,Footpath Platform 1,49.87260,8.63085,0,FP
+FP_2,Footpath Platform 2,49.87336,8.62926,0,FP
+
+# routes.txt
+route_id,agency_id,route_short_name,route_long_name,route_desc,route_type
+WC_MAIN_R,DB,WM,,,106
+WC_NO_R,DB,WN,,,106
+WC_YES_R,DB,WY,,,106
+FP_R,DB,FP,,,106
+
+# trips.txt
+route_id,service_id,trip_id,trip_headsign,wheelchair_accessible
+WC_MAIN_R,S1,WC_MAIN,,1
+WC_NO_R,S1,WC_NO,,2
+WC_YES_R,S1,WC_YES,,1
+FP_R,S1,FP_TRIP,,1
+
+# stop_times.txt
+trip_id,arrival_time,departure_time,stop_id,stop_sequence
+WC_MAIN,09:00:00,09:00:00,A,0
+WC_MAIN,10:00:00,10:00:00,B,1
+WC_NO,09:30:00,09:30:00,A,0
+WC_NO,10:30:00,10:30:00,B,1
+WC_YES,10:00:00,10:00:00,A,0
+WC_YES,11:00:00,11:00:00,B,1
+FP_TRIP,07:00:00,07:00:00,FP_1,0
+FP_TRIP,07:30:00,07:30:00,FP_2,1
+
+# calendar_dates.txt
+service_id,date,exception_type
+S1,20190501,1
+)";
+
+// Three-transit-leg journey A -> B -> C -> D. The middle leg B -> C has a
+// transit leg both before and after it, so its alternatives are computed with
+// exact endpoint matching (`prev_it->to_` / `next_it->from_`) regardless of
+// the query's endpoint match mode - this fixture exercises that path through
+// the refresh endpoint. `L2_REG` arrives one minute before `L3` departs, so
+// it is a valid leg alternative but cannot itself form the main journey.
+constexpr auto kLegAltIntermediateGtfs = R"(
+# agency.txt
+agency_id,agency_name,agency_url,agency_timezone
+DB,Deutsche Bahn,https://deutschebahn.com,Europe/Berlin
+
+# stops.txt
+stop_id,stop_name,stop_lat,stop_lon,location_type,parent_station
+A,A,49.80000,8.60000,0,
+B,B,49.90000,8.62000,0,
+C,C,50.00000,8.64000,0,
+D,D,50.20000,8.70000,0,
+
+# routes.txt
+route_id,agency_id,route_short_name,route_long_name,route_desc,route_type
+L1_R,DB,L1,,,106
+L2_MAIN_R,DB,L2M,,,106
+L2_BUS_R,DB,L2B,,,3
+L2_REG_R,DB,L2R,,,106
+L3_R,DB,L3,,,106
+
+# trips.txt
+route_id,service_id,trip_id,trip_headsign
+L1_R,S1,L1,
+L2_MAIN_R,S1,L2_MAIN,
+L2_BUS_R,S1,L2_BUS,
+L2_REG_R,S1,L2_REG,
+L3_R,S1,L3,
+
+# stop_times.txt
+trip_id,arrival_time,departure_time,stop_id,stop_sequence
+L1,09:00:00,09:00:00,A,0
+L1,09:15:00,09:15:00,B,1
+L2_MAIN,09:30:00,09:30:00,B,0
+L2_MAIN,10:00:00,10:00:00,C,1
+L2_BUS,09:45:00,09:45:00,B,0
+L2_BUS,10:15:00,10:15:00,C,1
+L2_REG,10:00:00,10:00:00,B,0
+L2_REG,10:43:00,10:43:00,C,1
+L3,10:45:00,10:45:00,C,0
+L3,11:15:00,11:15:00,D,1
+
+# calendar_dates.txt
+service_id,date,exception_type
+S1,20190501,1
+)";
+
+// Intermodal journey with two competing access points. `START` can walk to
+// stop `A` (trip `AC`) or stop `B` (trip `BD`); `DEST` can be reached from `C`
+// or `D`. The plan computes leg alternatives over both access stops, so the
+// `AC` leg gets `BD` as an alternative even though it boards / alights at
+// entirely different stops. The refresh endpoint must re-derive those access
+// offsets from the `START`/`DEST` coordinates to reproduce this.
+// `A`/`B`/`C`/`D` lie on `test/resources/test_case.osm.pbf`.
+constexpr auto kLegAltIntermodalGtfs = R"(
+# agency.txt
+agency_id,agency_name,agency_url,agency_timezone
+DB,Deutsche Bahn,https://deutschebahn.com,Europe/Berlin
+
+# stops.txt
+stop_id,stop_name,stop_lat,stop_lon,location_type,parent_station
+A,A,49.87336,8.62926,0,
+B,B,49.87260,8.63085,0,
+C,C,50.10593,8.66118,0,
+D,D,50.10739,8.66333,0,
+
+# routes.txt
+route_id,agency_id,route_short_name,route_long_name,route_desc,route_type
+AC_R,DB,AC,,,106
+BD_R,DB,BD,,,106
+
+# trips.txt
+route_id,service_id,trip_id,trip_headsign
+AC_R,S1,AC,
+BD_R,S1,BD,
+
+# stop_times.txt
+trip_id,arrival_time,departure_time,stop_id,stop_sequence
+AC,09:00:00,09:00:00,A,0
+AC,10:00:00,10:00:00,C,1
+BD,09:30:00,09:30:00,B,0
+BD,10:30:00,10:30:00,D,1
+
+# calendar_dates.txt
+service_id,date,exception_type
+S1,20190501,1
+)";
+
+// Intermodal access offsets: the refresh endpoint must re-derive the set of
+// reachable access stops from the START / DEST coordinates so that a leg
+// alternative may board / alight at a different stop than the chosen journey.
+TEST(motis, itinerary_id_refresh_leg_alternatives_intermodal_offsets) {
+  auto ec = std::error_code{};
+  auto const path =
+      fs::path{"test/data/itinerary_id"} / "leg_alt_intermodal_offsets";
+  fs::remove_all(path, ec);
+
+  auto const cfg = config{
+      .osm_ = {"test/resources/test_case.osm.pbf"},
+      .timetable_ =
+          config::timetable{
+              .first_day_ = "2019-05-01",
+              .num_days_ = 2,
+              .datasets_ = {{"test",
+                             {.path_ = std::string{kLegAltIntermodalGtfs}}}},
+          },
+      .street_routing_ = true,
+  };
+  import(cfg, path);
+  auto d = data{path, cfg};
+
+  auto const routing = utl::init_from<ep::routing>(d).value();
+  auto const plan = routing(
+      "?fromPlace=49.87298,8.63006&toPlace=50.10666,8.66225"
+      "&time=2019-05-01T05:00Z&searchWindow=14400&detailedLegs=true"
+      "&numLegAlternatives=5");
+  ASSERT_FALSE(plan.itineraries_.empty());
+  auto const& plan_itin = plan.itineraries_.front();
+  auto const& plan_leg = first_transit_leg(plan_itin);
+  ASSERT_TRUE(plan_leg.alternatives_.has_value());
+  ASSERT_FALSE(plan_leg.alternatives_->empty());
+  // The chosen leg is `AC`; the plan offers `BD` (different access stops) as
+  // an alternative because both are reachable from the START/DEST coordinates.
+  EXPECT_TRUE(any_alt_trip_contains(plan_leg, "BD"));
+
+  auto query = api::refreshItinerary_params{};
+  query.itineraryId_ = generate_itinerary_id(plan_itin);
+  query.numLegAlternatives_ = 5;
+  auto const refresh = utl::init_from<ep::refresh_itinerary>(d).value();
+  auto const refreshed = refresh(query.to_url("?"));
+  auto const& refresh_leg = first_transit_leg(refreshed);
+
+  // Re-derived access offsets let the refresh endpoint reproduce the `BD`
+  // alternative that boards / alights at different stops than the journey.
+  EXPECT_TRUE(any_alt_trip_contains(refresh_leg, "BD"));
+  // Compare the alternative trips: the surrounding access-walk legs may differ
+  // by sub-minute rounding, but the set of alternative transit trips must not.
+  EXPECT_EQ(alt_transit_trip_ids(plan_leg), alt_transit_trip_ids(refresh_leg));
+}
+
+// transitModes: the alternative bus departs before the alternative regional
+// train, so without the constraint the bus would be the first alternative.
+TEST(motis, itinerary_id_refresh_leg_alternatives_respect_transit_modes) {
+  auto const cfg = make_config(kLegAltTransitModesGtfs);
+  auto d = import_test_data(cfg, "leg_alt_transit_modes");
+
+  auto const routing = utl::init_from<ep::routing>(d).value();
+  auto const plan = routing(
+      "?fromPlace=test_A&toPlace=test_B"
+      "&time=2019-05-01T05:00Z&searchWindow=7200&detailedLegs=true"
+      "&transitModes=REGIONAL_RAIL&numLegAlternatives=5");
+  ASSERT_FALSE(plan.itineraries_.empty());
+  auto const& plan_itin = plan.itineraries_.front();
+  auto const& plan_leg = first_transit_leg(plan_itin);
+  ASSERT_TRUE(plan_leg.alternatives_.has_value());
+  ASSERT_FALSE(plan_leg.alternatives_->empty());
+  EXPECT_TRUE(any_alt_trip_contains(plan_leg, "REG_ALT"));
+  EXPECT_FALSE(any_alt_trip_contains(plan_leg, "BUS_ALT"));
+
+  auto query = api::refreshItinerary_params{};
+  query.itineraryId_ = generate_itinerary_id(plan_itin);
+  query.numLegAlternatives_ = 5;
+  query.transitModes_ = {api::ModeEnum::REGIONAL_RAIL};
+  auto const refresh = utl::init_from<ep::refresh_itinerary>(d).value();
+  auto const refreshed = refresh(query.to_url("?"));
+  auto const& refresh_leg = first_transit_leg(refreshed);
+
+  // The refreshed alternatives must match the plan response exactly: only the
+  // regional train, never the (earlier-departing) bus.
+  EXPECT_TRUE(any_alt_trip_contains(refresh_leg, "REG_ALT"));
+  EXPECT_FALSE(any_alt_trip_contains(refresh_leg, "BUS_ALT"));
+  // With the leg-alternatives query mirroring the `plan` endpoint's endpoint
+  // match mode, the refreshed alternatives match the plan response exactly.
+  EXPECT_EQ(plan_leg.alternatives_, refresh_leg.alternatives_);
+}
+
+// requireBikeTransport: the alternative without bike carriage departs first.
+TEST(motis, itinerary_id_refresh_leg_alternatives_respect_require_bike) {
+  auto const cfg = make_config(kLegAltBikeGtfs);
+  auto d = import_test_data(cfg, "leg_alt_require_bike");
+
+  auto const routing = utl::init_from<ep::routing>(d).value();
+  auto const plan = routing(
+      "?fromPlace=test_A&toPlace=test_B"
+      "&time=2019-05-01T05:00Z&searchWindow=7200&detailedLegs=true"
+      "&requireBikeTransport=true&numLegAlternatives=5");
+  ASSERT_FALSE(plan.itineraries_.empty());
+  auto const& plan_itin = plan.itineraries_.front();
+  auto const& plan_leg = first_transit_leg(plan_itin);
+  ASSERT_TRUE(plan_leg.alternatives_.has_value());
+  ASSERT_FALSE(plan_leg.alternatives_->empty());
+  EXPECT_TRUE(any_alt_trip_contains(plan_leg, "BIKE_YES"));
+  EXPECT_FALSE(any_alt_trip_contains(plan_leg, "BIKE_NO"));
+
+  auto query = api::refreshItinerary_params{};
+  query.itineraryId_ = generate_itinerary_id(plan_itin);
+  query.numLegAlternatives_ = 5;
+  query.requireBikeTransport_ = true;
+  auto const refresh = utl::init_from<ep::refresh_itinerary>(d).value();
+  auto const refreshed = refresh(query.to_url("?"));
+  auto const& refresh_leg = first_transit_leg(refreshed);
+
+  EXPECT_TRUE(any_alt_trip_contains(refresh_leg, "BIKE_YES"));
+  EXPECT_FALSE(any_alt_trip_contains(refresh_leg, "BIKE_NO"));
+  // With the leg-alternatives query mirroring the `plan` endpoint's endpoint
+  // match mode, the refreshed alternatives match the plan response exactly.
+  EXPECT_EQ(plan_leg.alternatives_, refresh_leg.alternatives_);
+}
+
+// requireCarTransport: the alternative without car carriage departs first.
+TEST(motis, itinerary_id_refresh_leg_alternatives_respect_require_car) {
+  auto const cfg = make_config(kLegAltCarGtfs);
+  auto d = import_test_data(cfg, "leg_alt_require_car");
+
+  auto const routing = utl::init_from<ep::routing>(d).value();
+  auto const plan = routing(
+      "?fromPlace=test_A&toPlace=test_B"
+      "&time=2019-05-01T05:00Z&searchWindow=7200&detailedLegs=true"
+      "&requireCarTransport=true&numLegAlternatives=5");
+  ASSERT_FALSE(plan.itineraries_.empty());
+  auto const& plan_itin = plan.itineraries_.front();
+  auto const& plan_leg = first_transit_leg(plan_itin);
+  ASSERT_TRUE(plan_leg.alternatives_.has_value());
+  ASSERT_FALSE(plan_leg.alternatives_->empty());
+  EXPECT_TRUE(any_alt_trip_contains(plan_leg, "CAR_YES"));
+  EXPECT_FALSE(any_alt_trip_contains(plan_leg, "CAR_NO"));
+
+  auto query = api::refreshItinerary_params{};
+  query.itineraryId_ = generate_itinerary_id(plan_itin);
+  query.numLegAlternatives_ = 5;
+  query.requireCarTransport_ = true;
+  auto const refresh = utl::init_from<ep::refresh_itinerary>(d).value();
+  auto const refreshed = refresh(query.to_url("?"));
+  auto const& refresh_leg = first_transit_leg(refreshed);
+
+  EXPECT_TRUE(any_alt_trip_contains(refresh_leg, "CAR_YES"));
+  EXPECT_FALSE(any_alt_trip_contains(refresh_leg, "CAR_NO"));
+  // With the leg-alternatives query mirroring the `plan` endpoint's endpoint
+  // match mode, the refreshed alternatives match the plan response exactly.
+  EXPECT_EQ(plan_leg.alternatives_, refresh_leg.alternatives_);
+}
+
+// pedestrianProfile=WHEELCHAIR: the wheelchair-inaccessible alternative
+// departs first. Needs OSR so the wheelchair footpath profile is non-empty.
+TEST(motis, itinerary_id_refresh_leg_alternatives_respect_wheelchair) {
+  auto ec = std::error_code{};
+  auto const path = fs::path{"test/data/itinerary_id"} / "leg_alt_wheelchair";
+  fs::remove_all(path, ec);
+
+  auto const cfg = config{
+      .osm_ = {"test/resources/test_case.osm.pbf"},
+      .timetable_ =
+          config::timetable{
+              .first_day_ = "2019-05-01",
+              .num_days_ = 2,
+              .datasets_ = {{"test",
+                             {.path_ = std::string{kLegAltWheelchairGtfs}}}},
+          },
+      .street_routing_ = true,
+      .osr_footpath_ = true,
+  };
+  import(cfg, path);
+  auto d = data{path, cfg};
+
+  auto const routing = utl::init_from<ep::routing>(d).value();
+  auto const plan = routing(
+      "?fromPlace=test_A&toPlace=test_B"
+      "&time=2019-05-01T05:00Z&searchWindow=7200&detailedLegs=true"
+      "&pedestrianProfile=WHEELCHAIR&useRoutedTransfers=true"
+      "&numLegAlternatives=5");
+  ASSERT_FALSE(plan.itineraries_.empty());
+  auto const& plan_itin = plan.itineraries_.front();
+  auto const& plan_leg = first_transit_leg(plan_itin);
+  ASSERT_TRUE(plan_leg.alternatives_.has_value());
+  ASSERT_FALSE(plan_leg.alternatives_->empty());
+  EXPECT_TRUE(any_alt_trip_contains(plan_leg, "WC_YES"));
+  EXPECT_FALSE(any_alt_trip_contains(plan_leg, "WC_NO"));
+
+  auto query = api::refreshItinerary_params{};
+  query.itineraryId_ = generate_itinerary_id(plan_itin);
+  query.numLegAlternatives_ = 5;
+  query.pedestrianProfile_ = api::PedestrianProfileEnum::WHEELCHAIR;
+  query.useRoutedTransfers_ = true;
+  auto const refresh = utl::init_from<ep::refresh_itinerary>(d).value();
+  auto const refreshed = refresh(query.to_url("?"));
+  auto const& refresh_leg = first_transit_leg(refreshed);
+
+  EXPECT_TRUE(any_alt_trip_contains(refresh_leg, "WC_YES"));
+  EXPECT_FALSE(any_alt_trip_contains(refresh_leg, "WC_NO"));
+  // With the leg-alternatives query mirroring the `plan` endpoint's endpoint
+  // match mode, the refreshed alternatives match the plan response exactly.
+  EXPECT_EQ(plan_leg.alternatives_, refresh_leg.alternatives_);
+}
+
+// Intermediate leg: the alternatives of the middle transit leg of an
+// A -> B -> C -> D journey are computed with exact endpoint matching (the
+// surrounding transit legs pin both endpoints). Verifies the refresh endpoint
+// reproduces the plan response for that path, too.
+TEST(motis, itinerary_id_refresh_leg_alternatives_intermediate_leg) {
+  auto const cfg = make_config(kLegAltIntermediateGtfs);
+  auto d = import_test_data(cfg, "leg_alt_intermediate");
+
+  auto const routing = utl::init_from<ep::routing>(d).value();
+  auto const plan = routing(
+      "?fromPlace=test_A&toPlace=test_D"
+      "&time=2019-05-01T05:00Z&searchWindow=7200&detailedLegs=true"
+      "&transitModes=REGIONAL_RAIL&numLegAlternatives=5");
+  ASSERT_FALSE(plan.itineraries_.empty());
+  auto const& plan_itin = plan.itineraries_.front();
+  auto const plan_transit = transit_legs(plan_itin);
+  ASSERT_EQ(3U, plan_transit.size());
+
+  // Middle leg: a transit leg both before (L1) and after (L3) -> exact
+  // endpoint matching. Plan already drops the bus alternative.
+  auto const& plan_mid = *plan_transit[1];
+  ASSERT_TRUE(plan_mid.alternatives_.has_value());
+  ASSERT_FALSE(plan_mid.alternatives_->empty());
+  EXPECT_TRUE(any_alt_trip_contains(plan_mid, "L2_REG"));
+  EXPECT_FALSE(any_alt_trip_contains(plan_mid, "L2_BUS"));
+
+  auto query = api::refreshItinerary_params{};
+  query.itineraryId_ = generate_itinerary_id(plan_itin);
+  query.numLegAlternatives_ = 5;
+  query.transitModes_ = {api::ModeEnum::REGIONAL_RAIL};
+  auto const refresh = utl::init_from<ep::refresh_itinerary>(d).value();
+  auto const refreshed = refresh(query.to_url("?"));
+  auto const refresh_transit = transit_legs(refreshed);
+  ASSERT_EQ(3U, refresh_transit.size());
+
+  auto const& refresh_mid = *refresh_transit[1];
+  EXPECT_TRUE(any_alt_trip_contains(refresh_mid, "L2_REG"));
+  EXPECT_FALSE(any_alt_trip_contains(refresh_mid, "L2_BUS"));
+
+  // Every transit leg's alternatives match the plan response - including the
+  // intermediate leg, whose endpoints are matched exactly.
+  for (auto i = std::size_t{0}; i != 3U; ++i) {
+    EXPECT_EQ(plan_transit[i]->alternatives_,
+              refresh_transit[i]->alternatives_);
   }
 }

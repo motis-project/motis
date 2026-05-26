@@ -71,7 +71,7 @@ const translations: Translations = {
 	defaultSelectedModes: 'Všechny dopravní prostředky',
 	defaultSelectedProviders: 'Všichni poskytovatelé',
 	selectElevationCosts: 'Bez prudkého stoupání.',
-	wheelchair: 'Bezbariérové přestupy',
+	wheelchair: 'Pouze bezbariérová spojení',
 	useRoutedTransfers: 'Počítej trasu pro přestupy',
 	bikeRental: 'Povol použití sdílených vozidel',
 	requireBikeTransport: 'Přeprava kola',
@@ -164,6 +164,7 @@ const translations: Translations = {
 	continuesAs: 'Pokračuje jako',
 	earlierAlternatives: 'Dřívější alternativy',
 	laterAlternatives: 'Pozdější alternativy',
+	differentStops: 'Jiné zastávky',
 	rent: 'Půjčit si',
 	copyToClipboard: 'Kopírovat do schránky',
 	rideThroughAllowed: 'Průjezd povolen',
@@ -173,6 +174,13 @@ const translations: Translations = {
 	DEBUG_BUS_ROUTE: 'Trasa autobusu (Debug)',
 	DEBUG_RAILWAY_ROUTE: 'Trasa vlaku (Debug)',
 	DEBUG_FERRY_ROUTE: 'Trasa trajektu (Debug)',
+	colorMode: {
+		none: 'Žádné',
+		stops: 'Zastávky',
+		rt: 'Spoje podle zpoždění',
+		route: 'Spoje podle linky',
+		mode: 'Spoje podle dopravního prostředku'
+	},
 	routes: (n: number) => {
 		switch (n) {
 			case 0:
