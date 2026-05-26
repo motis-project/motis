@@ -139,8 +139,8 @@ int main(int ac, char** av) {
           break;
         }
 
-        if (c.otlp_ && c.otlp_.has_value()) {
-          init_opentelemetry(c.otlp_);
+        if (c.otlp_.has_value()) {
+          init_opentelemetry(*c.otlp_, motis_version);
         }
 
         return_value = server(data{data_path, c}, c, motis_version);

@@ -5,41 +5,47 @@
 
 #include "opentelemetry/context/propagation/global_propagator.h"
 #include "opentelemetry/context/runtime_context.h"
-#include "opentelemetry/exporters/otlp_http_exporter.h"
+#include "opentelemetry/exporters/otlp/otlp_http_exporter.h"
+#include "opentelemetry/exporters/otlp/otlp_http_exporter_factory.h"
 #include "opentelemetry/sdk/trace/exporter.h"
 #include "opentelemetry/sdk/trace/processor.h"
 #include "opentelemetry/sdk/trace/samplers/always_on.h"
+#include "opentelemetry/sdk/trace/samplers/always_on_factory.h"
 #include "opentelemetry/sdk/trace/simple_processor.h"
+#include "opentelemetry/sdk/trace/simple_processor_factory.h"
+#include "opentelemetry/sdk/trace/tracer_provider.h"
+#include "opentelemetry/sdk/trace/tracer_provider_factory.h"
 #include "opentelemetry/trace/propagation/http_trace_context.h"
-#include "opentelemetry/trace/tracer_provider.h"
+#include "opentelemetry/trace/provider.h"
 
 namespace motis {
 
 void init_opentelemetry_tracer(
     opentelemetry::sdk::resource::Resource const& resource,
     config::otlp const& c) {
+  namespace sdktrace = opentelemetry::sdk::trace;
 
   // TODO
   // create otlp opts from config - or pass otlp opts directly
 
-  auto const opts = opentelemetry::exporter::otlp::OtlpHttpExporterOptions {
-    .url = c.url_
-  }
+  auto opts = opentelemetry::exporter::otlp::OtlpHttpExporterOptions{};
+  opts.url = c.url_;
 
-  auto exporter = std::unique_ptr<opentelemetry::sdk::trace::SpanExporter>(
-      new opentelemetry::exporter::otlp::OtlpHttpExporter(opts));
+  auto exporter =
+      opentelemetry::exporter::otlp::OtlpHttpExporterFactory::Create(opts);
 
-  auto procesor = std::unique_ptr<opentelemtry::sdk::trace::SpanProcessor>(
-      new opentelemetry::sdk::trace::SimpleSpanProcessor(std::move(exporter)));
+  auto processor =
+      opentelemetry::sdk::trace::SimpleSpanProcessorFactory::Create(
+          std::move(exporter));
 
-  auto sampler = std::unique_ptr<opentelemetry::sdk::trace::AlwaysOnSampler>(
-      new opentelemetry::sdk::trace::AlwaysOnSampler);
+  auto sampler = opentelemetry::sdk::trace::AlwaysOnSamplerFactory::Create();
 
   // When e.g. net gets named Tracer does this is created as child to this
   // provider?
-  auto provider = nostd::shared_ptr<opentelemetry::sdk::trace::TracerProvider>(
-      std::move(procesor), resource, std::move(sampler));
-  opentelemtry::trace::provider::SetTracerProvider(provider);
+  auto provider =
+      std::shared_ptr{opentelemetry::sdk::trace::TracerProviderFactory::Create(
+          std::move(processor), resource, std::move(sampler))};
+  opentelemetry::trace::Provider::SetTracerProvider(provider);
 }
 
 void init_opentelemetry(config::otlp const& c,
@@ -56,7 +62,6 @@ void init_opentelemetry(config::otlp const& c,
     init_opentelemetry_tracer(resource, c);
   }
 
-  // What is this used for exactly?
   opentelemetry::context::propagation::GlobalTextMapPropagator::
       SetGlobalPropagator(
           std::make_shared<

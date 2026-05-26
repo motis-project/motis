@@ -259,10 +259,11 @@ struct config {
   std::optional<limits> limits_{};
 
   struct otlp {
+    bool operator==(otlp const&) const = default;
     std::string url_{"http://localhost:4318"};
     bool http_{true};
   };
-  std::variant<bool, std::optional<otlp>> otlp_{false};
+  std::optional<otlp> otlp_{};
 
   struct logging {
     bool operator==(logging const&) const = default;
