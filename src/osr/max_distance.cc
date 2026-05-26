@@ -5,8 +5,12 @@
 #include <utility>
 #include <variant>
 
+#include "osr/routing/profiles/bike.h"
 #include "osr/routing/profiles/car.h"
 #include "osr/routing/profiles/car_parking.h"
+#include "osr/routing/profiles/ferry.h"
+#include "osr/routing/profiles/foot.h"
+#include "osr/routing/profiles/railway.h"
 
 namespace motis {
 
