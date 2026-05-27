@@ -139,7 +139,7 @@ int main(int ac, char** av) {
           break;
         }
 
-        if (c.otlp_.has_value()) {
+        if (c.use_otlp()) {
           init_opentelemetry(*c.otlp_, motis_version);
         }
 

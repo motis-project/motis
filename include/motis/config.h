@@ -34,6 +34,7 @@ struct config {
   bool has_elevators() const;
   bool has_rt_feeds() const;
   bool use_street_routing() const;
+  bool use_otlp() const;
 
   bool operator==(config const&) const = default;
 
@@ -260,8 +261,25 @@ struct config {
 
   struct otlp {
     bool operator==(otlp const&) const = default;
-    std::string url_{"http://localhost:4318"};
-    bool http_{true};
+    struct http {
+      bool operator==(http const&) const = default;
+      std::string url_{"http://localhost:4318"};
+      std::string content_type_{"json"};
+      bool use_json_name_{false};
+    };
+    std::optional<http> http_{};
+
+    // struct grpc {
+    //   bool operator==(grpc const&) const = default;
+    //   std::string url_{"http://localhost:4317"};
+    //   bool use_ssl_credentials_{false};
+    //   std::string ssl_credentials_cacert_path_{""};
+    //   std::string ssl_credentials_cacert_{""};
+    // };
+    // std::optional<grpc> grpc_{};
+
+    unsigned timeout_{10U};
+    headers_t headers_{};
   };
   std::optional<otlp> otlp_{};
 

@@ -1,10 +1,12 @@
 #include "motis/otel_tracer.h"
 
+#include <chrono>
 #include <memory>
 #include <utility>
 
 #include "opentelemetry/context/propagation/global_propagator.h"
 #include "opentelemetry/context/runtime_context.h"
+#include "opentelemetry/exporters/otlp/otlp_http.h"
 #include "opentelemetry/exporters/otlp/otlp_http_exporter.h"
 #include "opentelemetry/exporters/otlp/otlp_http_exporter_factory.h"
 #include "opentelemetry/sdk/trace/exporter.h"
@@ -17,19 +19,31 @@
 #include "opentelemetry/sdk/trace/tracer_provider_factory.h"
 #include "opentelemetry/trace/propagation/http_trace_context.h"
 #include "opentelemetry/trace/provider.h"
+#include "utl/verify.h"
 
 namespace motis {
 
 void init_opentelemetry_tracer(
     opentelemetry::sdk::resource::Resource const& resource,
     config::otlp const& c) {
-  namespace sdktrace = opentelemetry::sdk::trace;
 
-  // TODO
-  // create otlp opts from config - or pass otlp opts directly
-
+  auto const& http_opts = c.http_.value();
   auto opts = opentelemetry::exporter::otlp::OtlpHttpExporterOptions{};
-  opts.url = c.url_;
+  opts.url = http_opts.url_;
+  if (http_opts.content_type_ == "json") {
+    opts.content_type =
+        opentelemetry::exporter::otlp::HttpRequestContentType::kJson;
+  } else if (http_opts.content_type_ == "binary") {
+    opts.content_type =
+        opentelemetry::exporter::otlp::HttpRequestContentType::kBinary;
+  } else {
+    utl::fail("Invalid OTLP content type {}", http_opts.content_type_);
+  }
+  opts.use_json_name = http_opts.use_json_name_;
+  opts.timeout = std::chrono::seconds(c.timeout_);
+  for (auto [key, value] : c.headers_) {
+    opts.http_headers.insert({key, value});
+  }
 
   auto exporter =
       opentelemetry::exporter::otlp::OtlpHttpExporterFactory::Create(opts);
@@ -40,8 +54,6 @@ void init_opentelemetry_tracer(
 
   auto sampler = opentelemetry::sdk::trace::AlwaysOnSamplerFactory::Create();
 
-  // When e.g. net gets named Tracer does this is created as child to this
-  // provider?
   auto provider =
       std::shared_ptr{opentelemetry::sdk::trace::TracerProviderFactory::Create(
           std::move(processor), resource, std::move(sampler))};
