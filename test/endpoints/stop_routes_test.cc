@@ -16,9 +16,10 @@ namespace n = nigiri;
 // Routes:
 //   R1: A -> B -> C            (regular)
 //   R2: B -> C -> D            (regular, shares B->C with R1)
-//   R3: A -> B -> C            (same stop sequence as R1: tests same-seq/diff-route-id fix)
-//   RP: X -> Y  (block_id=blk) (block-merged: tests correct stop position)
-//   RQ: Y -> Z  (block_id=blk) (block-merged: continues from RP)
+//   R3: A -> B -> C            (same stop sequence as R1: tests
+//   same-seq/diff-route-id fix) RP: X -> Y  (block_id=blk) (block-merged: tests
+//   correct stop position) RQ: Y -> Z  (block_id=blk) (block-merged: continues
+//   from RP)
 constexpr auto const kGTFS = R"(
 # agency.txt
 agency_id,agency_name,agency_url,agency_timezone
@@ -75,11 +76,10 @@ TEST(motis, stop_routes) {
   auto ec = std::error_code{};
   std::filesystem::remove_all("test/data/stop_routes", ec);
 
-  auto const c =
-      config{.timetable_ = config::timetable{
-                 .first_day_ = "2019-05-01",
-                 .num_days_ = 2,
-                 .datasets_ = {{"test", {.path_ = kGTFS}}}}};
+  auto const c = config{.timetable_ = config::timetable{
+                            .first_day_ = "2019-05-01",
+                            .num_days_ = 2,
+                            .datasets_ = {{"test", {.path_ = kGTFS}}}}};
   import(c, "test/data/stop_routes");
   auto d = data{"test/data/stop_routes", c};
 
@@ -87,7 +87,8 @@ TEST(motis, stop_routes) {
 
   auto const route_ids_at = [&](char const* stop_id) {
     auto ids = std::set<std::string>{};
-    for (auto const& r : ep(std::string{"/api/v1/stop/routes?stopId="} + stop_id)) {
+    for (auto const& r :
+         ep(std::string{"/api/v1/stop/routes?stopId="} + stop_id)) {
       ids.insert(r.routeId_);
     }
     return ids;
@@ -118,7 +119,8 @@ TEST(motis, stop_routes) {
 
   // Stop X (first stop of merged transport): route is RP
   EXPECT_EQ((std::set<std::string>{"test_RP"}), route_ids_at("test_X"))
-      << "fix: block-merged transport must use correct stop position (not stop 0)";
+      << "fix: block-merged transport must use correct stop position (not stop "
+         "0)";
 
   // Stop Z (last stop of merged transport): route is RQ
   EXPECT_EQ((std::set<std::string>{"test_RQ"}), route_ids_at("test_Z"))

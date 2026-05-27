@@ -96,15 +96,14 @@ api::stopRoutes_response stop_routes::operator()(
         }
 
         auto const ev = (stop_pos + 1U == n_stops) ? n::event_type::kArr
-                                                    : n::event_type::kDep;
+                                                   : n::event_type::kDep;
         auto seen_rid = n::hash_set<n::route_id_idx_t>{};
         for (auto t_idx = range.from_; t_idx != range.to_; ++t_idx) {
           auto const fr = n::rt::frun{
               tt_, nullptr,
-              n::rt::run{
-                  .t_ = n::transport{t_idx, first_day},
-                  .stop_range_ = {stop_pos,
-                                  static_cast<n::stop_idx_t>(stop_pos + 1U)}}};
+              n::rt::run{.t_ = n::transport{t_idx, first_day},
+                         .stop_range_ = {stop_pos, static_cast<n::stop_idx_t>(
+                                                       stop_pos + 1U)}}};
           auto const rs = fr[0];
           auto const [route_ids, rid_idx] = rs.get_route(ev);
           if (route_ids == nullptr || !seen_rid.emplace(rid_idx).second) {
@@ -121,10 +120,8 @@ api::stopRoutes_response stop_routes::operator()(
 
           result.push_back(
               {.routeId_ = route_id,
-               .routeShortName_ =
-                   std::string{rs.route_short_name(ev, lang)},
-               .routeLongName_ =
-                   std::string{rs.route_long_name(ev, lang)},
+               .routeShortName_ = std::string{rs.route_short_name(ev, lang)},
+               .routeLongName_ = std::string{rs.route_long_name(ev, lang)},
                .mode_ = to_mode(rs.get_clasz(ev), 5U),
                .agencyId_ =
                    std::string{tt_.strings_.try_get(agency.id_).value_or("?")},
@@ -132,10 +129,10 @@ api::stopRoutes_response stop_routes::operator()(
                .agencyUrl_ = std::string{tt_.translate(lang, agency.url_)},
                .routeColor_ = n::to_str(color.color_),
                .routeTextColor_ = n::to_str(color.text_color_),
-               .routeType_ = rs.route_type(ev)
-                                 .and_then([](n::route_type_t const x) {
-                                   return std::optional{to_idx(x)};
-                                 })});
+               .routeType_ =
+                   rs.route_type(ev).and_then([](n::route_type_t const x) {
+                     return std::optional{to_idx(x)};
+                   })});
         }
       }
     }
