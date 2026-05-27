@@ -39,7 +39,8 @@ flex_routings_t get_flex_routings(nigiri::timetable const&,
                                   nigiri::routing::start_time_t,
                                   geo::latlng const&,
                                   osr::direction,
-                                  std::chrono::seconds max);
+                                  std::chrono::seconds max,
+                                  osr_parameters const&);
 
 void add_flex_td_offsets(osr::ways const&,
                          osr::lookup const&,
