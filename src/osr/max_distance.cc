@@ -5,6 +5,7 @@
 #include <utility>
 #include <variant>
 
+#include "osr/routing/parameters.h"
 #include "osr/routing/profiles/bike.h"
 #include "osr/routing/profiles/bike_sharing.h"
 #include "osr/routing/profiles/car.h"
@@ -16,6 +17,8 @@
 #include "osr/routing/tracking.h"
 
 namespace motis {
+
+namespace {
 
 // Cannot use utl::overloaded instead
 template <class... Ts>
@@ -29,49 +32,59 @@ concept HasSpeed = osr::ProfileParameters<T> && requires(T t) {
 };
 
 template <typename T>
-concept IsCarProfileParameters =
-    osr::ProfileParameters<T> && !HasSpeed<T> && requires {
-      requires std::same_as<T, osr::car::parameters> ||
-                   std::same_as<T, osr::car_parking<true, true>::parameters> ||
-                   std::same_as<T, osr::car_parking<true, false>::parameters> ||
-                   std::same_as<T, osr::car_parking<false, true>::parameters> ||
-                   std::same_as<T,
-                                osr::car_parking<false, false>::parameters> ||
-                   std::same_as<
-                       T, osr::car_sharing<osr::noop_tracking>::parameters> ||
-                   std::same_as<T, osr::car_sharing<
-                                       osr::elevator_tracking>::parameters> ||
-                   std::same_as<T, osr::car_sharing<
-                                       osr::track_node_tracking>::parameters>;
-    };
+struct is_car_profile : std::false_type {};
 
-constexpr double get_max_distance(osr::profile_parameters const& osr_params,
+template <>
+struct is_car_profile<osr::car> : std::true_type {};
+
+template <bool A, bool B>
+struct is_car_profile<osr::car_parking<A, B>> : std::true_type {};
+
+template <typename A>
+struct is_car_profile<osr::car_sharing<A>> : std::true_type {};
+
+template <typename T>
+concept IsCarProfile = is_car_profile<typename T::profile_t>::value;
+
+constexpr double get_max_distance(osr::profile_parameters const& p,
                                   std::chrono::seconds const t) {
-  auto seconds = static_cast<double>(t.count());
-  return seconds *
-         std::visit(
-             overloaded{
-                 []<HasSpeed Params>(Params const& params) -> double {
-                   return params.speed_meters_per_second_;
-                 },
-                 [](osr::bike_sharing::parameters const& params) -> double {
-                   return params.bike_.speed_meters_per_second_;
-                 },
-                 []<IsCarProfileParameters Params>(Params const&) -> double {
-                   return osr_parameters::kCarSpeed;
-                 },
-                 [](osr::bus::parameters const&) -> double {
-                   return osr_parameters::kBusSpeed;
-                 },
-                 [](osr::railway::parameters const&) -> double {
-                   return osr_parameters::kRailwaySpeed;
-                 },
-                 [](osr::ferry::parameters const&) -> double {
-                   return osr_parameters::kFerrySpeed;
-                 },
-             },
-             osr_params);
+  return static_cast<double>(t.count()) *
+         std::visit(overloaded{
+                        []<HasSpeed P>(P const& params) {
+                          return params.speed_meters_per_second_;
+                        },
+                        []<IsCarProfile P>(P const&) {
+                          return osr_parameters::kCarSpeed;
+                        },
+                        [](osr::bike_sharing::parameters const& params) {
+                          return params.bike_.speed_meters_per_second_;
+                        },
+                        [](osr::bus::parameters const&) {
+                          return osr_parameters::kBusSpeed;
+                        },
+                        [](osr::railway::parameters const&) {
+                          return osr_parameters::kRailwaySpeed;
+                        },
+                        [](osr::ferry::parameters const&) {
+                          return osr_parameters::kFerrySpeed;
+                        },
+                    },
+                    p);
 }
+
+}  // namespace
+
+double get_max_distance(osr::search_profile const profile,
+                        osr_parameters const& osr_params,
+                        std::chrono::seconds const t) {
+  return get_max_distance(to_profile_parameters(profile, osr_params), t);
+}
+
+}  // namespace motis
+
+// TESTS
+
+using namespace motis;
 
 static_assert(get_max_distance(osr::foot<true>::parameters{2.1F},
                                std::chrono::seconds(1)) == 2.1F);
@@ -100,41 +113,3 @@ static_assert(get_max_distance(osr::railway::parameters{},
 static_assert(get_max_distance(osr::ferry::parameters{},
                                std::chrono::seconds(32)) ==
               32 * osr_parameters::kFerrySpeed);
-
-double get_max_distance(osr::search_profile const profile,
-                        std::chrono::seconds const t) {
-  auto seconds = static_cast<double>(t.count());
-  switch (profile) {
-    case osr::search_profile::kWheelchair:
-      return seconds * osr_parameters::kWheelchairSpeed;
-    case osr::search_profile::kFoot:
-      return seconds * osr_parameters::kFootSpeed;
-    case osr::search_profile::kBikeSharing: [[fallthrough]];
-    case osr::search_profile::kBikeElevationLow: [[fallthrough]];
-    case osr::search_profile::kBikeElevationHigh: [[fallthrough]];
-    case osr::search_profile::kBikeFast: [[fallthrough]];
-    case osr::search_profile::kBike:
-      return seconds * osr_parameters::kBikeSpeed;
-    case osr::search_profile::kCar: [[fallthrough]];
-    case osr::search_profile::kCarDropOff: [[fallthrough]];
-    case osr::search_profile::kCarDropOffWheelchair: [[fallthrough]];
-    case osr::search_profile::kCarSharing: [[fallthrough]];
-    case osr::search_profile::kCarParking: [[fallthrough]];
-    case osr::search_profile::kCarParkingWheelchair:
-      return seconds * osr_parameters::kCarSpeed;
-    case osr::search_profile::kBus: return seconds * osr_parameters::kBusSpeed;
-    case osr::search_profile::kRailway:
-      return seconds * osr_parameters::kRailwaySpeed;
-    case osr::search_profile::kFerry:
-      return seconds * osr_parameters::kFerrySpeed;
-  }
-  std::unreachable();
-}
-
-double get_max_distance(osr::search_profile const profile,
-                        osr_parameters const& osr_params,
-                        std::chrono::seconds const t) {
-  return get_max_distance(to_profile_parameters(profile, osr_params), t);
-}
-
-}  // namespace motis

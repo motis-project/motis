@@ -124,14 +124,14 @@ elevator_footpath_map_t compute_footpaths(
             return;
           }
 
-          loc_rtree.in_radius(
-              tt.locations_.coordinates_[l],
-              get_max_distance(mode.profile_, mode.max_duration_),
-              [&](n::location_idx_t const x) {
-                if (x != l && is_candidate(x)) {
-                  s.neighbors_.emplace_back(x);
-                }
-              });
+          loc_rtree.in_radius(tt.locations_.coordinates_[l],
+                              get_max_distance(mode.profile_, osr_parameters{},
+                                               mode.max_duration_),
+                              [&](n::location_idx_t const x) {
+                                if (x != l && is_candidate(x)) {
+                                  s.neighbors_.emplace_back(x);
+                                }
+                              });
 
           auto const results = osr::route(
               to_profile_parameters(mode.profile_, {}), w, lookup,

@@ -532,7 +532,7 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
       utl::verify(tt_ && tags_ && fa_, "FLEX requires timetable");
       auto const routings = flex::get_flex_routings(
           *tt_, *loc_tree_, time, get_location(from).pos_,
-          osr::direction::kForward, max);
+          osr::direction::kForward, max, osr_params);
       for (auto const& [_, ids] : routings) {
         route_with_profile(flex::flex_output{*w_, *l_, pl_, matches_, ae_, tz_,
                                              *tags_, *tt_, *fa_, ids.front()});
