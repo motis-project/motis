@@ -6,11 +6,14 @@
 #include <variant>
 
 #include "osr/routing/profiles/bike.h"
+#include "osr/routing/profiles/bike_sharing.h"
 #include "osr/routing/profiles/car.h"
 #include "osr/routing/profiles/car_parking.h"
+#include "osr/routing/profiles/car_sharing.h"
 #include "osr/routing/profiles/ferry.h"
 #include "osr/routing/profiles/foot.h"
 #include "osr/routing/profiles/railway.h"
+#include "osr/routing/tracking.h"
 
 namespace motis {
 
@@ -28,11 +31,18 @@ concept HasSpeed = osr::ProfileParameters<T> && requires(T t) {
 template <typename T>
 concept IsCarProfileParameters =
     osr::ProfileParameters<T> && !HasSpeed<T> && requires {
-      std::same_as<T, osr::car::parameters> ||
-          std::same_as<T, osr::car_parking<true, true>::parameters> ||
-          std::same_as<T, osr::car_parking<true, false>::parameters> ||
-          std::same_as<T, osr::car_parking<false, true>::parameters> ||
-          std::same_as<T, osr::car_parking<false, false>::parameters>;
+      requires std::same_as<T, osr::car::parameters> ||
+                   std::same_as<T, osr::car_parking<true, true>::parameters> ||
+                   std::same_as<T, osr::car_parking<true, false>::parameters> ||
+                   std::same_as<T, osr::car_parking<false, true>::parameters> ||
+                   std::same_as<T,
+                                osr::car_parking<false, false>::parameters> ||
+                   std::same_as<
+                       T, osr::car_sharing<osr::noop_tracking>::parameters> ||
+                   std::same_as<T, osr::car_sharing<
+                                       osr::elevator_tracking>::parameters> ||
+                   std::same_as<T, osr::car_sharing<
+                                       osr::track_node_tracking>::parameters>;
     };
 
 constexpr double get_max_distance(osr::profile_parameters const& osr_params,
@@ -43,6 +53,9 @@ constexpr double get_max_distance(osr::profile_parameters const& osr_params,
              overloaded{
                  []<HasSpeed Params>(Params const& params) -> double {
                    return params.speed_meters_per_second_;
+                 },
+                 [](osr::bike_sharing::parameters const& params) -> double {
+                   return params.bike_.speed_meters_per_second_;
                  },
                  []<IsCarProfileParameters Params>(Params const&) -> double {
                    return osr_parameters::kCarSpeed;
@@ -67,6 +80,11 @@ static_assert(
         osr::bike<osr::bike_costing::kFast, osr::kElevationNoCost>::parameters{
             7.2f},
         std::chrono::seconds(2)) == 14.4f);
+static_assert(get_max_distance(
+                  osr::bike_sharing::parameters{
+                      osr::bike_sharing::bikep::parameters{8.0},
+                      osr::bike_sharing::footp::parameters{1.6}},
+                  std::chrono::seconds(5)) == 40.0);
 static_assert(get_max_distance(osr::car::parameters{},
                                std::chrono::seconds(3)) ==
               3 * osr_parameters::kCarSpeed);
