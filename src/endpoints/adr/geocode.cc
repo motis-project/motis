@@ -24,15 +24,15 @@
 #include "geo/latlng.h"
 
 #include "motis/config.h"
-#include "motis/gbfs/lru_cache.h"
-#include "motis/point_rtree.h"
 #include "motis/endpoints/adr/filter_conv.h"
 #include "motis/endpoints/adr/suggestions_to_response.h"
+#include "motis/gbfs/lru_cache.h"
 #include "motis/journey_to_response.h"
 #include "motis/parse_location.h"
+#include "motis/point_rtree.h"
 #include "motis/tag_lookup.h"
-#include "motis/timetable/modes_to_clasz_mask.h"
 #include "motis/timetable/clasz_to_mode.h"
+#include "motis/timetable/modes_to_clasz_mask.h"
 
 namespace n = nigiri;
 namespace a = adr;
@@ -86,9 +86,8 @@ size_t levenshtein_distance(std::string_view s1, std::string_view s2) {
 }
 
 constexpr std::array<std::string_view, 15> kStopWords = {
-    "gare", "chemin", "rue", "de", "la", "le", "les", "du", "des", 
-    "station", "stop", "via", "str", "strasse", "bahnhof"
-};
+    "gare", "chemin",  "rue",  "de",  "la",  "le",      "les",    "du",
+    "des",  "station", "stop", "via", "str", "strasse", "bahnhof"};
 
 bool is_stop_word(std::string_view word) {
   for (auto const& sw : kStopWords) {
@@ -97,7 +96,8 @@ bool is_stop_word(std::string_view word) {
   return false;
 }
 
-std::vector<std::string> get_words(std::string const& s, bool filter_stopwords = false) {
+std::vector<std::string> get_words(std::string const& s,
+                                   bool filter_stopwords = false) {
   std::vector<std::string> words;
   std::string current;
   for (char c : s) {
@@ -118,32 +118,31 @@ std::vector<std::string> get_words(std::string const& s, bool filter_stopwords =
   return words;
 }
 
-double compute_match_score(
-    std::string const& norm_name,
-    std::vector<std::string> const& stop_words,
-    std::string const& norm_query,
-    std::vector<std::string> const& query_words) {
-  
+double compute_match_score(std::string const& norm_name,
+                           std::vector<std::string> const& stop_words,
+                           std::string const& norm_query,
+                           std::vector<std::string> const& query_words) {
+
   if (query_words.empty()) {
     return 0.0;
   }
-  
+
   // 1. Exact full match
   if (norm_name == norm_query) {
     return 1000.0;
   }
-  
+
   // 2. Word matches
   double score = 0.0;
   size_t matched_words = 0;
-  
+
   for (size_t qw_idx = 0; qw_idx < query_words.size(); ++qw_idx) {
     auto const& qw = query_words[qw_idx];
     bool word_matched = false;
-    
+
     for (size_t sw_idx = 0; sw_idx < stop_words.size(); ++sw_idx) {
       auto const& sw = stop_words[sw_idx];
-      
+
       if (sw == qw) {
         // Exact word match
         score += 10.0;
@@ -172,21 +171,21 @@ double compute_match_score(
         }
       }
     }
-    
+
     if (word_matched) {
       ++matched_words;
     }
   }
-  
+
   // If we matched no query words at all, then score is 0
   if (matched_words == 0) {
     return 0.0;
   }
-  
+
   // 3. Completeness bonus (if all query words are matched)
   if (matched_words == query_words.size()) {
     score += 50.0;
-    
+
     // Extra bonus if the stop name starts with the normalized query
     if (norm_name.starts_with(norm_query)) {
       score += 30.0;
@@ -195,14 +194,14 @@ double compute_match_score(
     // Penalty for incomplete match
     score *= (static_cast<double>(matched_words) / query_words.size());
   }
-  
+
   return score;
 }
 
 api::geocode_response geocode::operator()(
     boost::urls::url_view const& url) const {
   auto const params = api::geocode_params{url.params()};
-  
+
   // Parse place coordinate
   auto const place = params.place_.and_then([](std::string const& s) {
     auto const parsed = parse_location(s);
@@ -210,14 +209,14 @@ api::geocode_response geocode::operator()(
                                             "could not parse place {}", s);
     return std::optional{parsed.value().pos_};
   });
-  
+
   // Get required clasz mask for transit modes filtering
   auto const required_modes =
       params.mode_.transform([](std::vector<api::ModeEnum> const& modes) {
         return to_clasz_mask(modes);
       });
   auto const required_clasz = required_modes.value_or(0U);
-  
+
   // Limits
   auto const config_limit = config_.get_limits().geocode_max_suggestions_;
   auto const requested_limit = params.numResults_.value_or(kDefaultSuggestions);
@@ -236,23 +235,26 @@ api::geocode_response geocode::operator()(
     for (auto const t : *params.type_) {
       if (t == api::LocationTypeEnum::STOP) {
         search_stops = true;
-      } else if (t == api::LocationTypeEnum::ADDRESS || t == api::LocationTypeEnum::PLACE) {
+      } else if (t == api::LocationTypeEnum::ADDRESS ||
+                 t == api::LocationTypeEnum::PLACE) {
         search_addresses_places = true;
       }
     }
   }
 
   // LRU Caching for Typeahead
-  static motis::gbfs::lru_cache<std::string, std::vector<api::Match>> typeahead_cache_{1000};
-  
-  std::string cache_key = fmt::format("{}|{}|{}|{}|{}|{}", 
-      params.text_, 
-      requested_limit,
-      place.has_value() ? fmt::format("{:.4f},{:.4f}", place->lat_, place->lng_) : "",
-      params.placeBias_,
-      required_clasz,
-      params.language_.has_value() && !params.language_->empty() ? fmt::format("{}", params.language_->front()) : "");
-      
+  static motis::gbfs::lru_cache<std::string, std::vector<api::Match>>
+      typeahead_cache_{1000};
+
+  std::string cache_key = fmt::format(
+      "{}|{}|{}|{}|{}|{}", params.text_, requested_limit,
+      place.has_value() ? fmt::format("{:.4f},{:.4f}", place->lat_, place->lng_)
+                        : "",
+      params.placeBias_, required_clasz,
+      params.language_.has_value() && !params.language_->empty()
+          ? fmt::format("{}", params.language_->front())
+          : "");
+
   if (params.type_.has_value()) {
     for (auto const t : *params.type_) {
       cache_key += fmt::format("|{}", static_cast<int>(t));
@@ -270,9 +272,11 @@ api::geocode_response geocode::operator()(
   if (search_stops && tt_ != nullptr) {
     // Prepare query details
     std::string const norm_query = clean_and_normalize(params.text_);
-    std::vector<std::string> const all_query_words = get_words(norm_query, false);
+    std::vector<std::string> const all_query_words =
+        get_words(norm_query, false);
     std::vector<std::string> filtered_query_words = get_words(norm_query, true);
-    std::vector<std::string> const& query_words = filtered_query_words.empty() ? all_query_words : filtered_query_words;
+    std::vector<std::string> const& query_words =
+        filtered_query_words.empty() ? all_query_words : filtered_query_words;
 
     if (!query_words.empty()) {
       double const place_bias = params.placeBias_;
@@ -286,12 +290,13 @@ api::geocode_response geocode::operator()(
         // Get stop details
         std::string const stop_name = std::string{
             tt_->get_default_translation(tt_->locations_.names_[l])};
-        
+
         // Match query against stop name
         std::string const norm_name = clean_and_normalize(stop_name);
         std::vector<std::string> const stop_words = get_words(norm_name, false);
 
-        double const text_score = compute_match_score(norm_name, stop_words, norm_query, query_words);
+        double const text_score =
+            compute_match_score(norm_name, stop_words, norm_query, query_words);
         if (text_score <= 0.0) {
           return;
         }
@@ -325,7 +330,7 @@ api::geocode_response geocode::operator()(
         // Calculate final score with distance bias and importance
         double const importance_val = importance.value_or(0.0);
         double boost = 1.0;
-        
+
         geo::latlng const stop_pos = tt_->locations_.coordinates_[l];
         if (place.has_value() && stop_pos != geo::latlng{}) {
           double const distance_km = geo::distance(stop_pos, *place) / 1000.0;
@@ -341,7 +346,7 @@ api::geocode_response geocode::operator()(
 
         // Populate premium stop metadata (level, areas, country)
         double const level = get_level(w_, pl_, matches_, l);
-        
+
         std::string id;
         if (tags_ != nullptr) {
           id = tags_->id(*tt_, l);
@@ -353,7 +358,8 @@ api::geocode_response geocode::operator()(
         if (ae_ != nullptr) {
           auto const p_idx = ae_->location_place_.at(l);
           if (p_idx != adr_extra_place_idx_t::invalid()) {
-            auto const t_place_idx = adr::place_idx_t{t_.ext_start_ + to_idx(p_idx)};
+            auto const t_place_idx =
+                adr::place_idx_t{t_.ext_start_ + to_idx(p_idx)};
             if (t_place_idx < t_.place_areas_.size()) {
               auto const area_set_idx = t_.place_areas_[t_place_idx];
               if (area_set_idx < t_.area_sets_.size()) {
@@ -365,14 +371,14 @@ api::geocode_response geocode::operator()(
                     continue;
                   }
                   auto const area_name =
-                      t_.strings_[t_.area_names_[a][adr::kDefaultLangIdx]].view();
+                      t_.strings_[t_.area_names_[a][adr::kDefaultLangIdx]]
+                          .view();
                   api_areas.emplace_back(api::Area{
                       .name_ = std::string{area_name},
                       .adminLevel_ = static_cast<double>(to_idx(admin_lvl)),
                       .matched_ = false,
                       .unique_ = false,
-                      .default_ = false
-                  });
+                      .default_ = false});
                 }
               }
             }
@@ -383,41 +389,40 @@ api::geocode_response geocode::operator()(
         for (auto const& qw : query_words) {
           auto pos = norm_query.find(qw);
           if (pos != std::string::npos) {
-            tokens.push_back({static_cast<double>(pos), static_cast<double>(qw.size())});
+            tokens.push_back(
+                {static_cast<double>(pos), static_cast<double>(qw.size())});
           }
         }
 
-        results.emplace_back(api::Match{
-            .type_ = api::LocationTypeEnum::STOP,
-            .category_ = std::nullopt,
-            .tokens_ = std::move(tokens),
-            .name_ = stop_name,
-            .id_ = std::move(id),
-            .lat_ = stop_pos.lat_,
-            .lon_ = stop_pos.lng_,
-            .level_ = level,
-            .street_ = std::nullopt,
-            .houseNumber_ = std::nullopt,
-            .country_ = std::nullopt,
-            .zip_ = std::nullopt,
-            .tz_ = std::nullopt,
-            .areas_ = std::move(api_areas),
-            .score_ = final_score,
-            .modes_ = std::move(modes),
-            .importance_ = importance
-        });
+        results.emplace_back(api::Match{.type_ = api::LocationTypeEnum::STOP,
+                                        .category_ = std::nullopt,
+                                        .tokens_ = std::move(tokens),
+                                        .name_ = stop_name,
+                                        .id_ = std::move(id),
+                                        .lat_ = stop_pos.lat_,
+                                        .lon_ = stop_pos.lng_,
+                                        .level_ = level,
+                                        .street_ = std::nullopt,
+                                        .houseNumber_ = std::nullopt,
+                                        .country_ = std::nullopt,
+                                        .zip_ = std::nullopt,
+                                        .tz_ = std::nullopt,
+                                        .areas_ = std::move(api_areas),
+                                        .score_ = final_score,
+                                        .modes_ = std::move(modes),
+                                        .importance_ = importance});
       };
 
       bool enough_local_results = false;
       if (place.has_value() && location_rtree_ != nullptr) {
-        location_rtree_->in_radius(*place, 50000.0, [&](nigiri::location_idx_t const l) {
-          process_stop(l);
-        });
+        location_rtree_->in_radius(
+            *place, 50000.0,
+            [&](nigiri::location_idx_t const l) { process_stop(l); });
         if (results.size() >= static_cast<size_t>(requested_limit)) {
           enough_local_results = true;
         }
-      } 
-      
+      }
+
       if (!enough_local_results) {
         results.clear();
         for (auto i = n::kNSpecialStations; i < tt_->n_locations(); ++i) {
@@ -430,7 +435,7 @@ api::geocode_response geocode::operator()(
   // 2. Fallback/Delegate to adr for ADDRESS and PLACE
   if (search_addresses_places) {
     auto& ctx = get_guess_context(t_, cache_);
-    
+
     // Set up languages
     auto lang_indices = basic_string<a::language_idx_t>{{a::kDefaultLang}};
     if (params.language_.has_value()) {
@@ -446,24 +451,26 @@ api::geocode_response geocode::operator()(
     auto const adr_type = params.type_.transform([](auto const& types) {
       auto res = std::vector<api::LocationTypeEnum>{};
       for (auto const t : types) {
-        if (t == api::LocationTypeEnum::ADDRESS || t == api::LocationTypeEnum::PLACE) {
+        if (t == api::LocationTypeEnum::ADDRESS ||
+            t == api::LocationTypeEnum::PLACE) {
           res.push_back(t);
         }
       }
       return res;
     });
-    auto const filter = params.type_.has_value()
-                            ? to_filter_type(adr_type)
-                            : (adr::filter_type::kAddress | adr::filter_type::kPlace);
+    auto const filter =
+        params.type_.has_value()
+            ? to_filter_type(adr_type)
+            : (adr::filter_type::kAddress | adr::filter_type::kPlace);
 
     auto const token_pos = a::get_suggestions<false>(
         t_, params.text_, static_cast<unsigned>(requested_limit), lang_indices,
-        ctx, place, static_cast<float>(params.placeBias_),
-        filter, std::function<bool(adr::place_idx_t)>{});
+        ctx, place, static_cast<float>(params.placeBias_), filter,
+        std::function<bool(adr::place_idx_t)>{});
 
-    auto adr_response = suggestions_to_response(
-        t_, f_, ae_, tt_, tags_, w_, pl_, matches_,
-        lang_indices, token_pos, ctx.suggestions_);
+    auto adr_response =
+        suggestions_to_response(t_, f_, ae_, tt_, tags_, w_, pl_, matches_,
+                                lang_indices, token_pos, ctx.suggestions_);
 
     for (auto& match : adr_response) {
       results.push_back(std::move(match));
@@ -471,16 +478,19 @@ api::geocode_response geocode::operator()(
   }
 
   // 3. COMBINE, SORT, LIMIT, AND RETURN
-  std::sort(results.begin(), results.end(), [](api::Match const& a, api::Match const& b) {
-    return a.score_ > b.score_;
-  });
+  std::sort(results.begin(), results.end(),
+            [](api::Match const& a, api::Match const& b) {
+              return a.score_ > b.score_;
+            });
 
   if (results.size() > static_cast<size_t>(requested_limit)) {
     results.resize(static_cast<size_t>(requested_limit));
   }
 
-  auto const final_results = std::make_shared<std::vector<api::Match>>(std::move(results));
-  typeahead_cache_.try_add_or_update(cache_key, [&]() { return final_results; });
+  auto const final_results =
+      std::make_shared<std::vector<api::Match>>(std::move(results));
+  typeahead_cache_.try_add_or_update(cache_key,
+                                     [&]() { return final_results; });
 
   return *final_results;
 }

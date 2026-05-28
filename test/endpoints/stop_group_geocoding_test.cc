@@ -145,12 +145,12 @@ TB,10:30:00,10:30:00,PL_BAC,2,0,0
 TB,11:00:00,11:00:00,LAU_BEL,3,0,0
 )";
 
-  auto const c =
-      config{.timetable_ =
-                 config::timetable{.first_day_ = "2020-01-01",
-                                   .num_days_ = 2,
-                                   .datasets_ = {{"testbias", {.path_ = kGTFSBias}}}},
-             .geocoding_ = true};
+  auto const c = config{
+      .timetable_ =
+          config::timetable{.first_day_ = "2020-01-01",
+                            .num_days_ = 2,
+                            .datasets_ = {{"testbias", {.path_ = kGTFSBias}}}},
+      .geocoding_ = true};
   import(c, "test/data_bias");
   auto d = data{"test/data_bias", c};
 
@@ -158,7 +158,8 @@ TB,11:00:00,11:00:00,LAU_BEL,3,0,0
 
   // Test 1: Query Geneva Bel Air with Geneva proximity bias
   {
-    auto const res = geocode("/api/v1/geocode?text=Bel%20Air&place=46.204,6.143");
+    auto const res =
+        geocode("/api/v1/geocode?text=Bel%20Air&place=46.204,6.143");
     ASSERT_GE(res.size(), 2U);
     EXPECT_EQ("testbias_GVA_BEL", res[0].id_);
     EXPECT_EQ("testbias_LAU_BEL", res[1].id_);
@@ -166,7 +167,8 @@ TB,11:00:00,11:00:00,LAU_BEL,3,0,0
 
   // Test 2: Query Lausanne Bel Air with Lausanne proximity bias
   {
-    auto const res = geocode("/api/v1/geocode?text=Bel%20Air&place=46.521,6.632");
+    auto const res =
+        geocode("/api/v1/geocode?text=Bel%20Air&place=46.521,6.632");
     ASSERT_GE(res.size(), 2U);
     EXPECT_EQ("testbias_LAU_BEL", res[0].id_);
     EXPECT_EQ("testbias_GVA_BEL", res[1].id_);
@@ -179,4 +181,3 @@ TB,11:00:00,11:00:00,LAU_BEL,3,0,0
     EXPECT_EQ("testbias_PL_BAC", res[0].id_);
   }
 }
-
