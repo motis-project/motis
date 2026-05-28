@@ -89,6 +89,7 @@ void cleanup_opentelemetry_tracer() {
   if (auto const provider = opentelemetry::trace::Provider::GetTracerProvider();
       provider) {
     provider->ForceFlush();
+    provider->reset();
   }
 
   auto const none = std::shared_ptr<opentelemetry::trace::NoopTracerProvider>();
