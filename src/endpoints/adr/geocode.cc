@@ -96,6 +96,16 @@ bool is_stop_word(std::string_view word) {
   return false;
 }
 
+std::string expand_abbreviation(std::string_view word) {
+  if (word == "st") return "saint";
+  if (word == "ste") return "sainte";
+  if (word == "pl") return "place";
+  if (word == "av") return "avenue";
+  if (word == "ch") return "chemin";
+  if (word == "bd" || word == "blvd") return "boulevard";
+  return std::string{word};
+}
+
 std::vector<std::string> get_words(std::string const& s,
                                    bool filter_stopwords = false) {
   std::vector<std::string> words;
@@ -105,14 +115,14 @@ std::vector<std::string> get_words(std::string const& s,
       current.push_back(c);
     } else if (!current.empty()) {
       if (!filter_stopwords || !is_stop_word(current)) {
-        words.push_back(current);
+        words.push_back(expand_abbreviation(current));
       }
       current.clear();
     }
   }
   if (!current.empty()) {
     if (!filter_stopwords || !is_stop_word(current)) {
-      words.push_back(current);
+      words.push_back(expand_abbreviation(current));
     }
   }
   return words;
