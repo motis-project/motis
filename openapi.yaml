@@ -2265,6 +2265,21 @@ paths:
             type: string
             format: date-time
 
+        - name: eventType
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - DEPARTURES
+              - ARRIVALS
+              - BOTH
+          description: |
+            Optional. If provided, takes precedence over `arriveBy`.
+            - `DEPARTURES`: returns only departures (equivalent to arriveBy=false).
+            - `ARRIVALS`: returns only arrivals (equivalent to arriveBy=true).
+            - `BOTH`: returns both arrivals and departures.
+
         - name: arriveBy
           in: query
           required: false
