@@ -110,3 +110,73 @@ TEST(motis, stop_group_geocoding) {
   EXPECT_FALSE(
       has_g1(geocode("/api/v1/geocode?text=Group%201&type=ADDRESS,PLACE")));
 }
+
+TEST(motis, geocoder_distance_bias_and_fuzzy) {
+  auto ec = std::error_code{};
+  std::filesystem::remove_all("test/data_bias", ec);
+
+  constexpr auto const kGTFSBias = R"(
+# agency.txt
+agency_id,agency_name,agency_url,agency_timezone
+DB,Deutsche Bahn,https://deutschebahn.com,Europe/Berlin
+
+# stops.txt
+stop_id,stop_name,stop_desc,stop_lat,stop_lon,stop_url,location_type,parent_station
+GVA_BEL,"Genève, Bel Air",,46.204391,6.143162,,0,
+LAU_BEL,"Lausanne, Bel Air",,46.521826,6.632273,,0,
+PL_BAC,"Petit-Lancy, Chemin du Bac",,46.191410,6.112340,,0,
+
+# calendar_dates.txt
+service_id,date,exception_type
+S1,20200101,1
+
+# routes.txt
+route_id,agency_id,route_short_name,route_long_name,route_desc,route_type
+RB,DB,RB,,,3
+
+# trips.txt
+route_id,service_id,trip_id,trip_headsign,block_id
+RB,S1,TB,RB,
+
+# stop_times.txt
+trip_id,arrival_time,departure_time,stop_id,stop_sequence,pickup_type,drop_off_type
+TB,10:00:00,10:00:00,GVA_BEL,1,0,0
+TB,10:30:00,10:30:00,PL_BAC,2,0,0
+TB,11:00:00,11:00:00,LAU_BEL,3,0,0
+)";
+
+  auto const c =
+      config{.timetable_ =
+                 config::timetable{.first_day_ = "2020-01-01",
+                                   .num_days_ = 2,
+                                   .datasets_ = {{"testbias", {.path_ = kGTFSBias}}}},
+             .geocoding_ = true};
+  import(c, "test/data_bias");
+  auto d = data{"test/data_bias", c};
+
+  auto const geocode = utl::init_from<ep::geocode>(d).value();
+
+  // Test 1: Query Geneva Bel Air with Geneva proximity bias
+  {
+    auto const res = geocode("/api/v1/geocode?text=Bel%20Air&place=46.204,6.143");
+    ASSERT_GE(res.size(), 2U);
+    EXPECT_EQ("testbias_GVA_BEL", res[0].id_);
+    EXPECT_EQ("testbias_LAU_BEL", res[1].id_);
+  }
+
+  // Test 2: Query Lausanne Bel Air with Lausanne proximity bias
+  {
+    auto const res = geocode("/api/v1/geocode?text=Bel%20Air&place=46.521,6.632");
+    ASSERT_GE(res.size(), 2U);
+    EXPECT_EQ("testbias_LAU_BEL", res[0].id_);
+    EXPECT_EQ("testbias_GVA_BEL", res[1].id_);
+  }
+
+  // Test 3: Substring / keyword fuzzy matching
+  {
+    auto const res = geocode("/api/v1/geocode?text=Chemin%20Bac");
+    ASSERT_GE(res.size(), 1U);
+    EXPECT_EQ("testbias_PL_BAC", res[0].id_);
+  }
+}
+

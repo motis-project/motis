@@ -76,7 +76,7 @@ private:
   api::plan_params const& query_;
   std::vector<api::ModeEnum> const& pre_transit_modes_;
   std::vector<api::ModeEnum> const& post_transit_modes_;
-  std::vector<api::ModeEnum> const& direct_modes_;
+  [[maybe_unused]] std::vector<api::ModeEnum> const& direct_modes_;
   std::variant<osr::location, tt_location> const& from_;
   std::variant<osr::location, tt_location> const& to_;
   api::Place const& from_place_;

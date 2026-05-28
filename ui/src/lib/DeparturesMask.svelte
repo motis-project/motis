@@ -5,9 +5,11 @@
 	import { onClickStop } from '$lib/utils';
 
 	let {
-		time = $bindable()
+		time = $bindable(),
+		geocodingBiasPlace
 	}: {
 		time: Date;
+		geocodingBiasPlace?: maplibregl.LngLatLike;
 	} = $props();
 
 	let from = $state<Location>() as Location;
@@ -16,6 +18,7 @@
 
 <div id="searchmask-container" class="flex flex-col space-y-4 p-4 relative">
 	<AddressTypeahead
+		place={geocodingBiasPlace}
 		name="from"
 		placeholder={t.from}
 		bind:selected={from}

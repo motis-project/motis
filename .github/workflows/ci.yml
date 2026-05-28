@@ -267,7 +267,7 @@ jobs:
           asset_content_type: application/x-tar
 
   linux:
-    runs-on: [ self-hosted, linux, x64, '${{ matrix.config.preset }}' ]
+    runs-on: ubuntu-latest
     container:
       image: ghcr.io/motis-project/docker-cpp-build
       volumes:

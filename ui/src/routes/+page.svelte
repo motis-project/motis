@@ -857,7 +857,7 @@
 			</Tabs.Content>
 			<Tabs.Content value="departures">
 				<Card class="overflow-y-auto overflow-x-hidden bg-background rounded-lg">
-					<DeparturesMask bind:time />
+					<DeparturesMask bind:time geocodingBiasPlace={center} />
 				</Card>
 			</Tabs.Content>
 			<Tabs.Content value="isochrones">
