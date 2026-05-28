@@ -102,7 +102,15 @@ std::string expand_abbreviation(std::string_view word) {
   if (word == "pl") return "place";
   if (word == "av") return "avenue";
   if (word == "ch") return "chemin";
-  if (word == "bd" || word == "blvd") return "boulevard";
+  if (word == "bd" || word == "blvd" || word == "bvd") return "boulevard";
+  if (word == "rte") return "route";
+  if (word == "mt") return "mont";
+  if (word == "pt") return "pont";
+  if (word == "dr") return "docteur";
+  if (word == "hop") return "hopital";
+  if (word == "sq") return "square";
+  if (word == "imp") return "impasse";
+  if (word == "all") return "allee";
   return std::string{word};
 }
 
@@ -114,15 +122,17 @@ std::vector<std::string> get_words(std::string const& s,
     if (std::isalnum(static_cast<unsigned char>(c))) {
       current.push_back(c);
     } else if (!current.empty()) {
-      if (!filter_stopwords || !is_stop_word(current)) {
-        words.push_back(expand_abbreviation(current));
+      std::string expanded = expand_abbreviation(current);
+      if (!filter_stopwords || !is_stop_word(expanded)) {
+        words.push_back(std::move(expanded));
       }
       current.clear();
     }
   }
   if (!current.empty()) {
-    if (!filter_stopwords || !is_stop_word(current)) {
-      words.push_back(expand_abbreviation(current));
+    std::string expanded = expand_abbreviation(current);
+    if (!filter_stopwords || !is_stop_word(expanded)) {
+      words.push_back(std::move(expanded));
     }
   }
   return words;
