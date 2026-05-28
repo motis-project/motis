@@ -3,13 +3,14 @@
 	import { type Location } from '$lib/Location';
 	import { t } from '$lib/i18n/translation';
 	import { onClickStop } from '$lib/utils';
+	import type { LngLatLike } from 'maplibre-gl';
 
 	let {
 		time = $bindable(),
 		geocodingBiasPlace
 	}: {
 		time: Date;
-		geocodingBiasPlace?: maplibregl.LngLatLike;
+		geocodingBiasPlace?: LngLatLike;
 	} = $props();
 
 	let from = $state<Location>() as Location;
