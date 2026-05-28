@@ -4,11 +4,15 @@
 #include <memory>
 #include <utility>
 
+#include "opentelemetry/nostd/shared_ptr.h"
+#include "utl/verify.h"
+
 #include "opentelemetry/context/propagation/global_propagator.h"
 #include "opentelemetry/context/runtime_context.h"
 #include "opentelemetry/exporters/otlp/otlp_http.h"
 #include "opentelemetry/exporters/otlp/otlp_http_exporter.h"
 #include "opentelemetry/exporters/otlp/otlp_http_exporter_factory.h"
+#include "opentelemetry/sdk/resource/resource.h"
 #include "opentelemetry/sdk/trace/exporter.h"
 #include "opentelemetry/sdk/trace/processor.h"
 #include "opentelemetry/sdk/trace/samplers/always_on.h"
@@ -19,7 +23,8 @@
 #include "opentelemetry/sdk/trace/tracer_provider_factory.h"
 #include "opentelemetry/trace/propagation/http_trace_context.h"
 #include "opentelemetry/trace/provider.h"
-#include "utl/verify.h"
+
+#include "motis/otel_runtime_context.h"
 
 namespace motis {
 
@@ -78,6 +83,16 @@ void init_opentelemetry(config::otlp const& c,
       SetGlobalPropagator(
           std::make_shared<
               opentelemetry::trace::propagation::HttpTraceContext>());
+}
+
+void cleanup_opentelemetry_tracer() {
+  if (auto const provider = opentelemetry::trace::Provider::GetTracerProvider();
+      provider) {
+    provider->ForceFlush();
+  }
+
+  auto const none = std::shared_ptr<opentelemetry::trace::NoopTracerProvider>();
+  opentelemetry::trace::Provider::SetTracerProvider(none);
 }
 
 }  // namespace motis

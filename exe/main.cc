@@ -299,6 +299,7 @@ int main(int ac, char** av) {
       break;
   }
 
+  cleanup_opentelemetry_tracer();
   google::protobuf::ShutdownProtobufLibrary();
   return return_value;
 }
