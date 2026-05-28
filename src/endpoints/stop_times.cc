@@ -64,6 +64,7 @@ struct static_ev_iterator : public ev_iterator {
                      ? to_idx(tt.day_idx(tt_.date_range_.to_))
                      : to_idx(tt.day_idx(tt_.date_range_.from_) - 1U)},
         size_{tt_.route_transport_ranges_[r].size()},
+        num_stops_{tt_.route_location_seq_[r].size()},
         i_{0},
         r_{r},
         stop_idx_{stop_idx},
@@ -100,7 +101,7 @@ struct static_ev_iterator : public ev_iterator {
 
   n::unixtime_t time() const override {
     if (!ev_type_.has_value()) {
-      return stop_idx_ == size_ - 1U
+      return stop_idx_ == num_stops_ - 1U
                  ? tt_.event_time(t(), stop_idx_, n::event_type::kArr)
                  : tt_.event_time(t(), stop_idx_, n::event_type::kDep);
     }
@@ -136,9 +137,8 @@ private:
     auto const idx = dir_ == n::direction::kForward ? i_ : size_ - i_ - 1;
     auto const t = tt_.route_transport_ranges_[r_][idx];
     auto const e_type =
-        ev_type_.value_or(stop_idx_ == tt_.route_location_seq_[r_].size() - 1U
-                              ? n::event_type::kArr
-                              : n::event_type::kDep);
+        ev_type_.value_or(stop_idx_ == num_stops_ - 1U ? n::event_type::kArr
+                                                       : n::event_type::kDep);
     auto const day_offset = tt_.event_mam(r_, t, stop_idx_, e_type).days();
     return n::transport{tt_.route_transport_ranges_[r_][idx],
                         n::day_idx_t{to_idx(day_) - day_offset}};
@@ -148,6 +148,7 @@ private:
   n::rt_timetable const* rtt_;
   n::day_idx_t day_, end_day_;
   std::uint32_t size_;
+  std::size_t num_stops_;
   std::uint32_t i_;
   n::route_idx_t r_;
   n::stop_idx_t stop_idx_;
