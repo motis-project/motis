@@ -82,13 +82,12 @@ api::geocode_response geocode::operator()(
                     }}};
               })
           .value_or(std::function<bool(adr::place_idx_t)>{});
-  auto const config_limit = config_.get_limits().geocode_max_suggestions_;
-  auto const requested_limit = params.numResults_.value_or(kDefaultSuggestions);
+  auto const config_limit =
+      static_cast<std::int64_t>(config_.get_limits().geocode_max_suggestions_);
+  auto const requested_limit =
+      std::min(params.numResults_.value_or(kDefaultSuggestions), config_limit);
   utl::verify<net::bad_request_exception>(requested_limit >= 1,
                                           "limit must be >= 1");
-  utl::verify<net::bad_request_exception>(
-      requested_limit <= config_limit,
-      "limit must be <= geocode_max_suggestions ({})", config_limit);
   auto const token_pos = a::get_suggestions<false>(
       t_, params.text_, static_cast<unsigned>(requested_limit), lang_indices,
       ctx, place, static_cast<float>(params.placeBias_),

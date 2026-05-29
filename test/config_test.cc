@@ -86,7 +86,7 @@ timetable:
 elevators: false
 street_routing: true
 limits:
-  stoptimes_max_results: 256
+  stoptimes_max_results: 1024
   plan_max_results: 256
   plan_max_search_window_minutes: 5760
   stops_max_results: 8192
@@ -97,8 +97,8 @@ limits:
   gtfsrt_expose_max_trip_updates: 100
   street_routing_max_prepost_transit_seconds: 3600
   street_routing_max_direct_seconds: 21600
-  geocode_max_suggestions: 10
-  reverse_geocode_max_results: 5
+  geocode_max_suggestions: 512
+  reverse_geocode_max_results: 512
 osr_footpath: true
 geocoding: true
 reverse_geocoding: false
