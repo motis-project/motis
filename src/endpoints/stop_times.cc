@@ -413,6 +413,7 @@ std::vector<n::rt::run> stop_times::get_runs(
 
   auto locations = std::vector<n::location_idx_t>{};
   auto const add_with_children = [&](n::location_idx_t const x) {
+    locations.emplace_back(x);
     utl::concat(locations, tt_.locations_.children_[x]);
     for (auto const& c : tt_.locations_.children_[x]) {
       utl::concat(locations, tt_.locations_.children_[c]);
@@ -436,7 +437,6 @@ std::vector<n::rt::run> stop_times::get_runs(
         if (eq == l) {
           continue;
         }
-        locations.emplace_back(eq);
         add_with_children(eq);
       }
       return;
@@ -445,7 +445,6 @@ std::vector<n::rt::run> stop_times::get_runs(
     auto const l_name = tt_.get_default_translation(tt_.locations_.names_[l]);
     for (auto const eq : tt_.locations_.equivalences_[l]) {
       if (tt_.get_default_translation(tt_.locations_.names_[eq]) == l_name) {
-        locations.emplace_back(eq);
         add_with_children(eq);
       }
     }
