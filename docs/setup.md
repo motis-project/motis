@@ -96,9 +96,10 @@ gbfs:
 street_routing:                   # enable street routing (default = false; Using boolean values true/false is supported for backward compatibility)
   elevation_data_dir: srtm/       # folder which contains elevation data, e.g. SRTMGL1 data tiles in HGT format
 limits:
-  stoptimes_max_results: 256      # maximum number of stoptimes results that can be requested
+  stoptimes_max_results: 1024     # maximum number of stoptimes results that can be requested
   plan_max_results: 256           # maximum number of plan results that can be requested via numItineraries parameter
   plan_max_search_window_minutes: 5760 # maximum (minutes) for searchWindow parameter (seconds), highest possible value: 21600 (15 days)
+  stops_max_results: 8192         # maximum number of stops returned in /map/stops
   onetomany_max_many: 128         # maximum accepted number of many locations for one-to-many requests
   onetoall_max_results: 65535     # maximum number of one-to-all results that can be requested
   onetoall_max_travel_minutes: 90 # maximum travel duration for one-to-all query that can be requested
@@ -106,6 +107,8 @@ limits:
   gtfsrt_expose_max_trip_updates: 100 # how many trip updates are allowed to be exposed via the gtfsrt endpoint
   street_routing_max_prepost_transit_seconds: 3600 # limit for maxPre/PostTransitTime API params, see below
   street_routing_max_direct_seconds: 21600 # limit for maxDirectTime API param, high values can lead to long-running, RAM-hungry queries 
+  geocode_max_suggestions: 512    # maximum requestable results for /geocode
+  reverse_geocode_max_results: 512 # maximum requestable results for /reverse-geocode
 logging:
   log_level: debug                # log-level (default = debug; Supported log-levels: error, info, debug)
 osr_footpath: true                # enable routing footpaths instead of using transfers from timetable datasets

@@ -244,7 +244,7 @@ struct config {
 
   struct limits {
     bool operator==(limits const&) const = default;
-    unsigned stoptimes_max_results_{256U};
+    unsigned stoptimes_max_results_{1024U};
     unsigned plan_max_results_{256U};
     unsigned plan_max_search_window_minutes_{5760U};
     unsigned stops_max_results_{8192U};
@@ -255,8 +255,8 @@ struct config {
     unsigned gtfsrt_expose_max_trip_updates_{100U};
     unsigned street_routing_max_prepost_transit_seconds_{3600U};
     unsigned street_routing_max_direct_seconds_{21600U};
-    unsigned geocode_max_suggestions_{10U};
-    unsigned reverse_geocode_max_results_{5U};
+    unsigned geocode_max_suggestions_{512U};
+    unsigned reverse_geocode_max_results_{512U};
   };
   limits get_limits() const { return limits_.value_or(limits{}); }
   std::optional<limits> limits_{};
