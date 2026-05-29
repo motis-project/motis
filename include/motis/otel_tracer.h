@@ -1,7 +1,6 @@
 #pragma once
 
 #include "opentelemetry/trace/provider.h"
-#include "opentelemetry/trace/scope.h"
 #include "opentelemetry/trace/span.h"
 #include "opentelemetry/trace/tracer.h"
 
