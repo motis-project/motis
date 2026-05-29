@@ -854,6 +854,13 @@ METRO S3 FFM Hbf 01:15->FFM Hauptwache 01:20
             to_str(res_a.itineraries_.front()));
 
   // === Scenario B: coord → coord inside FFM (intermodal td_start_) ===
+  // Single transit leg: leg-alternatives are bounded by the leg's own
+  // departure (02:15) rather than the (query-dependent) journey start, so the
+  // access td-footpath is searched from 02:15 — while the elevator is out.
+  // Unlike scenario A's S3 leg (bounded by its preceding ICE's arrival), the
+  // platform is unreachable here, so no alternative surfaces. The old
+  // journey-start bound (01:16) only found one by starting the walk before the
+  // outage and idling ~2h on the platform.
   auto const res_b = routing(
       "?fromPlace=50.1040763,8.6586978"  // near FFM_101
       "&toPlace=50.1132737,8.6767235"  // near FFM_HAUPT_S
@@ -866,7 +873,7 @@ METRO S3 FFM Hbf 01:15->FFM Hauptwache 01:20
   ASSERT_FALSE(res_b.itineraries_.empty());
   EXPECT_EQ(R"(
 METRO S3 FFM Hbf 02:15->FFM Hauptwache 02:20
-  alt [WALK START 01:16->FFM Hbf 03:15 | METRO S3 FFM Hbf 03:15->FFM Hauptwache 03:20 | WALK FFM Hauptwache 03:20->END 03:29]
+  (no alternatives)
 )",
             to_str(res_b.itineraries_.front()));
 }

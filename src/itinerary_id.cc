@@ -23,7 +23,9 @@
 #include "utl/concat.h"
 #include "utl/helpers/algorithm.h"
 #include "utl/verify.h"
+#include "utl/visit.h"
 
+#include "nigiri/routing/journey.h"
 #include "nigiri/rt/frun.h"
 #include "nigiri/special_stations.h"
 
@@ -42,6 +44,7 @@
 #include "motis/parse_location.h"
 #include "motis/place.h"
 #include "motis/tag_lookup.h"
+#include "motis/timetable/clasz_to_mode.h"
 #include "motis/timetable/time_conv.h"
 
 #include "itinerary_id.pb.h"
@@ -53,6 +56,8 @@ namespace motis {
 
 using proto_id_t = ItineraryId;
 using proto_leg_t = LegId;
+
+constexpr auto kItineraryIdApiVersion = 5U;
 
 constexpr auto kTimeMul = 1.0 / 60.0 * 7;
 constexpr auto kSearchRadiusMeters = 100;
@@ -95,13 +100,7 @@ struct leg_hint {
         sched_start_{l.sched_start()},
         sched_end_{l.sched_end()},
         mode_{json::value_to<api::ModeEnum>(json::value{l.mode()})},
-        scheduled_{l.scheduled()} {
-    if (!trip_id_.empty()) {
-      utl::verify(!display_name_.empty(), "itinerary id: display_name missing");
-      utl::verify(!from_stop_id_.empty(), "itinerary id: from_id missing");
-      utl::verify(!to_stop_id_.empty(), "itinerary id: to_id missing");
-    }
-  }
+        scheduled_{l.scheduled()} {}
 
   bool is_public_transport() const { return !trip_id_.empty(); }
 
@@ -157,62 +156,85 @@ api::Leg make_dummy_leg(leg_hint const& lh, std::string error) {
   };
 }
 
-proto_leg_t get_leg_id_proto(api::Leg const& l,
-                             std::string const& leg_display_name) {
-  if (l.tripId_.has_value()) {
-    utl::verify(l.from_.stopId_.has_value(),
+proto_leg_t make_leg_id(std::string const& display_name,
+                        std::optional<std::string> const& trip_id,
+                        api::Place const& from,
+                        api::Place const& to,
+                        openapi::date_time_t const sched_start,
+                        openapi::date_time_t const sched_end,
+                        api::ModeEnum const mode,
+                        bool const scheduled) {
+  if (trip_id.has_value()) {
+    utl::verify(from.stopId_.has_value(),
                 "itinerary id: PT leg missing 'from' stopId");
-    utl::verify(l.to_.stopId_.has_value(),
+    utl::verify(to.stopId_.has_value(),
                 "itinerary id: PT leg missing 'to' stopId");
   }
   auto id = proto_leg_t{};
-  id.set_display_name(leg_display_name);
-  id.set_trip_id(l.tripId_.value_or(""));
-  id.set_from_id(l.from_.stopId_.value_or(""));
-  id.set_to_id(l.to_.stopId_.value_or(""));
-  id.set_from_lat(l.from_.lat_);
-  id.set_from_lon(l.from_.lon_);
-  id.set_to_lat(l.to_.lat_);
-  id.set_to_lon(l.to_.lon_);
-  if (l.from_.level_.has_value()) {
-    id.set_from_level(*l.from_.level_);
+  id.set_display_name(display_name);
+  id.set_trip_id(trip_id.value_or(""));
+  id.set_from_id(from.stopId_.value_or(""));
+  id.set_to_id(to.stopId_.value_or(""));
+  id.set_from_lat(from.lat_);
+  id.set_from_lon(from.lon_);
+  id.set_to_lat(to.lat_);
+  id.set_to_lon(to.lon_);
+  if (from.level_.has_value()) {
+    id.set_from_level(*from.level_);
   }
-  if (l.to_.level_.has_value()) {
-    id.set_to_level(*l.to_.level_);
+  if (to.level_.has_value()) {
+    id.set_to_level(*to.level_);
   }
-  id.set_sched_start(l.scheduledStartTime_.get_unixtime_seconds());
-  id.set_sched_end(l.scheduledEndTime_.get_unixtime_seconds());
-  id.set_mode(std::string{json::value_from(l.mode_).as_string()});
-  id.set_scheduled(l.scheduled_);
+  id.set_sched_start(sched_start.get_unixtime_seconds());
+  id.set_sched_end(sched_end.get_unixtime_seconds());
+  id.set_mode(std::string{json::value_from(mode).as_string()});
+  id.set_scheduled(scheduled);
   return id;
 }
 
-std::string get_single_leg_id(api::Leg const& l,
-                              std::string const& leg_display_name) {
-  auto id = proto_id_t{};
-  id.mutable_legs()->Add(get_leg_id_proto(l, leg_display_name));
+std::string generate_itinerary_id(n::routing::journey const& j,
+                                  tag_lookup const& tags,
+                                  n::timetable const& tt,
+                                  n::rt_timetable const* rtt,
+                                  osr::ways const* w,
+                                  osr::platforms const* pl,
+                                  platform_matches_t const* matches,
+                                  adr_ext const* ae,
+                                  tz_map_t const* tz_map,
+                                  place_t const& start,
+                                  place_t const& dest) {
+  utl::verify(!j.legs_.empty(), "generate_itinerary_id expects at least 1 leg");
 
-  auto data = std::string{};
-  utl::verify(id.SerializeToString(&data), "failed to serialize itinerary id");
-  return net::encode_base64(data);
-}
-
-std::string generate_itinerary_id(
-    api::Itinerary const& itin,
-    std::vector<std::string> const& default_display_names,
-    std::vector<std::size_t> const& default_display_names_indices) {
-  utl::verify(itin.legs_.size() != 0,
-              "generate_itinerary_id expects at least 1 leg");
   auto id = proto_id_t{};
-  auto default_name_idx = std::size_t{0};
-  for (auto l_idx = std::size_t{0}; l_idx < itin.legs_.size(); ++l_idx) {
-    auto const& leg = itin.legs_[l_idx];
-    auto display_name =
-        (default_name_idx != default_display_names_indices.size() &&
-         l_idx == default_display_names_indices.at(default_name_idx))
-            ? default_display_names.at(default_name_idx++)
-            : leg.displayName_.value_or("");
-    id.mutable_legs()->Add(get_leg_id_proto(leg, display_name));
+
+  auto const place = [&](auto const& loc) {
+    return to_place(&tt, &tags, w, pl, matches, ae, tz_map, n::lang_t{}, loc,
+                    start, dest);
+  };
+  auto const make_non_pt_leg = [&](n::routing::journey::leg const& jl) {
+    return make_leg_id("", std::nullopt, place(tt_location{jl.from_}),
+                       place(tt_location{jl.to_}), jl.dep_time_, jl.arr_time_,
+                       api::ModeEnum::WALK, true);
+  };
+
+  for (auto const& jl : j.legs_) {
+    id.mutable_legs()->Add(utl::visit(
+        jl.uses_,
+        [&](n::routing::journey::run_enter_exit const& rex) {
+          auto const fr = n::rt::frun{tt, rtt, rex.r_};
+          auto const enter = fr[rex.stop_range_.from_];
+          auto const exit = fr[rex.stop_range_.to_ - 1U];
+          return make_leg_id(
+              std::string{enter.display_name(n::event_type::kDep, n::lang_t{})},
+              tags.id(tt, enter, n::event_type::kDep), place(enter),
+              place(exit), enter.scheduled_time(n::event_type::kDep),
+              exit.scheduled_time(n::event_type::kArr),
+              to_mode(enter.get_clasz(n::event_type::kDep),
+                      kItineraryIdApiVersion),
+              fr.is_scheduled());
+        },
+        [&](n::routing::offset const&) { return make_non_pt_leg(jl); },
+        [&](n::footpath const&) { return make_non_pt_leg(jl); }));
   }
 
   auto data = std::string{};

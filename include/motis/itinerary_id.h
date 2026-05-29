@@ -7,7 +7,13 @@
 #include "nigiri/types.h"
 
 #include "motis-api/motis-api.h"
+#include "motis/adr_extend_tt.h"
 #include "motis/fwd.h"
+#include "motis/place.h"
+
+namespace nigiri::routing {
+struct journey;
+}  // namespace nigiri::routing
 
 namespace motis {
 
@@ -16,13 +22,17 @@ struct routing;
 struct stop_times;
 }  // namespace ep
 
-std::string get_single_leg_id(api::Leg const&,
-                              std::string const& leg_display_name);
-
-std::string generate_itinerary_id(
-    api::Itinerary const& itin,
-    std::vector<std::string> const& default_display_names,
-    std::vector<std::size_t> const& default_display_names_indices);
+std::string generate_itinerary_id(nigiri::routing::journey const&,
+                                  tag_lookup const&,
+                                  nigiri::timetable const&,
+                                  nigiri::rt_timetable const*,
+                                  osr::ways const*,
+                                  osr::platforms const*,
+                                  platform_matches_t const*,
+                                  adr_ext const*,
+                                  tz_map_t const*,
+                                  place_t const& start,
+                                  place_t const& dest);
 
 api::Itinerary reconstruct_itinerary(
     ep::routing const&,

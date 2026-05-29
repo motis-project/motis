@@ -28,10 +28,15 @@
 #include "motis/endpoints/trip.h"
 #include "motis/import.h"
 #include "motis/itinerary_id.h"
+#include "motis/tag_lookup.h"
 
 #include "net/base64.h"
 
+#include "osr/location.h"
+
+#include "nigiri/routing/journey.h"
 #include "nigiri/rt/gtfsrt_update.h"
+#include "nigiri/special_stations.h"
 
 #include "generated/itinerary_id/itinerary_id.pb.h"
 
@@ -41,29 +46,33 @@ using namespace motis;
 namespace fs = std::filesystem;
 namespace n = nigiri;
 
-std::string generate_itinerary_id(api::Itinerary const& x) {
-  return motis::generate_itinerary_id(x, {}, {});
-}
-
 TEST(motis, itinerary_id_distinguishes_level_zero_from_no_level) {
-  auto const t0 =
-      openapi::date_time_t{std::chrono::sys_seconds{std::chrono::seconds{0}}};
-  auto itinerary = api::Itinerary{
-      .duration_ = 0, .startTime_ = t0, .endTime_ = t0, .transfers_ = 0};
-  itinerary.legs_.push_back(
-      api::Leg{.mode_ = api::ModeEnum::WALK,
-               .from_ = api::Place{.lat_ = 1.0, .lon_ = 2.0, .level_ = 0.0},
-               .to_ = api::Place{.lat_ = 3.0, .lon_ = 4.0},
-               .duration_ = 0,
-               .startTime_ = t0,
-               .endTime_ = t0,
-               .scheduledStartTime_ = t0,
-               .scheduledEndTime_ = t0,
-               .scheduled_ = true});
+  // A non-PT (offset) leg from a level-0 start to a no-level destination must
+  // encode from_level=0 distinctly from an absent to_level. The endpoint levels
+  // come from the start/dest osr::locations; the START/END resolution in
+  // to_place doesn't touch the timetable, so a default tt/tags suffice.
+  auto tt = n::timetable{};
+  auto tags = tag_lookup{};
+
+  auto const dep = n::unixtime_t{};
+  auto const arr = dep + std::chrono::minutes{1};
+  auto j = n::routing::journey{};
+  j.legs_.push_back(n::routing::journey::leg{
+      n::direction::kForward,
+      n::get_special_station(n::special_station::kStart),
+      n::get_special_station(n::special_station::kEnd), dep, arr,
+      n::routing::offset{n::get_special_station(n::special_station::kEnd),
+                         n::duration_t{1}, n::transport_mode_id_t{0}}});
+
+  auto const start =
+      place_t{osr::location{geo::latlng{1.0, 2.0}, osr::level_t{0.F}}};
+  auto const dest =
+      place_t{osr::location{geo::latlng{3.0, 4.0}, osr::kNoLevel}};
 
   auto parsed = motis::ItineraryId{};
-  ASSERT_TRUE(parsed.ParseFromString(
-      net::decode_base64(generate_itinerary_id(itinerary))));
+  ASSERT_TRUE(parsed.ParseFromString(net::decode_base64(generate_itinerary_id(
+      j, tags, tt, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, start,
+      dest))));
   ASSERT_EQ(1, parsed.legs_size());
   EXPECT_TRUE(parsed.legs(0).has_from_level());
   EXPECT_EQ(0.0, parsed.legs(0).from_level());
@@ -412,7 +421,7 @@ TEST(motis, itinerary_id_reconstruct_with_changed_stop_ids) {
   auto source_data = import_test_data(source_cfg, "changed_stop_ids_source");
   auto const original = route_first_itinerary(source_data, "test_DA",
                                               "test_FFM", "2019-05-01T02:00Z");
-  auto const id = generate_itinerary_id(original);
+  auto const& id = original.id_;
 
   auto const target_cfg = make_config(
       std::string{fmt::format(kSimpleGtfsTemplate, "FFM", "DA", "FFM", "DA")});
@@ -434,31 +443,27 @@ TEST(motis, itinerary_id_reconstruct_with_repeated_stop_in_trip) {
       route_first_itinerary(data, "test_B", "test_D", "2019-05-01T08:00Z");
   ASSERT_EQ(1U, original.legs_.size());
 
-  auto const id = generate_itinerary_id(original);
+  auto const& id = original.id_;
   auto const stop_times = utl::init_from<ep::stop_times>(data).value();
   auto const routing = utl::init_from<ep::routing>(data).value();
   EXPECT_EQ(original, reconstruct_itinerary(routing, stop_times, {}, id));
 }
 
-TEST(motis, itinerary_id_generate_rejects_invalid_single_leg_inputs) {
+// The production id is generated from the nigiri journey (not the api legs).
+// Verify that this id round-trips through reconstruction.
+TEST(motis, itinerary_id_reconstruct_from_production_journey_id) {
   auto const cfg = make_config(
       std::string{fmt::format(kSimpleGtfsTemplate, "DA", "FFM", "DA", "FFM")});
-  auto data = import_test_data(cfg, "invalid_generate_inputs");
+  auto data = import_test_data(cfg, "production_journey_id");
+
   auto const original =
       route_first_itinerary(data, "test_DA", "test_FFM", "2019-05-01T02:00Z");
-  ASSERT_EQ(1U, original.legs_.size());
+  ASSERT_FALSE(original.id_.empty());
 
-  auto invalid = original;
-  invalid.legs_.clear();
-  EXPECT_ANY_THROW(generate_itinerary_id(invalid));
-
-  invalid = original;
-  invalid.legs_.front().from_.stopId_ = std::nullopt;
-  EXPECT_ANY_THROW(generate_itinerary_id(invalid));
-
-  invalid = original;
-  invalid.legs_.front().to_.stopId_ = std::nullopt;
-  EXPECT_ANY_THROW(generate_itinerary_id(invalid));
+  auto const stop_times = utl::init_from<ep::stop_times>(data).value();
+  auto const routing = utl::init_from<ep::routing>(data).value();
+  EXPECT_EQ(original,
+            reconstruct_itinerary(routing, stop_times, {}, original.id_));
 }
 
 TEST(motis,
@@ -468,7 +473,7 @@ TEST(motis,
   auto const original = route_first_itinerary(
       source_data, "test_OLD_A", "test_OLD_B", "2019-05-01T02:00Z");
   ASSERT_EQ(1U, original.legs_.size());
-  auto const id = generate_itinerary_id(original);
+  auto const& id = original.id_;
 
   auto const target_cfg = make_config(kDenseShiftTargetGtfs);
   auto target_data = import_test_data(target_cfg, "dense_shift_target");
@@ -526,7 +531,7 @@ TEST(motis, itinerary_id_reconstruct_many_candidates_benchmark) {
   auto const original = route_first_itinerary(
       source_data, "test_SRC_A", "test_SRC_B", "2019-05-01T02:00Z");
   ASSERT_EQ(1U, original.legs_.size());
-  auto const id = generate_itinerary_id(original);
+  auto const& id = original.id_;
 
   auto const target_cfg = make_config(make_heavy_target_gtfs(kNumDecoys));
   auto target_data = import_test_data(target_cfg, "heavy_benchmark_target");
@@ -563,7 +568,7 @@ TEST(motis, refresh_itinerary_endpoint_reconstructs_itinerary) {
       import_test_data(source_cfg, "refresh_itinerary_endpoint_source");
   auto const original = route_first_itinerary(source_data, "test_DA",
                                               "test_FFM", "2019-05-01T02:00Z");
-  auto const id = generate_itinerary_id(original);
+  auto const& id = original.id_;
 
   auto const target_cfg = make_config(
       std::string{fmt::format(kSimpleGtfsTemplate, "FFM", "DA", "FFM", "DA")});
@@ -595,7 +600,7 @@ TEST(motis, refresh_itinerary_matches_scheduled_then_applies_realtime) {
 
   auto const original =
       route_first_itinerary(data, "test_DA", "test_FFM", "2019-05-01T02:00Z");
-  auto const id = generate_itinerary_id(original);
+  auto const& id = original.id_;
 
   auto const rt_base_day =
       date::sys_days{date::year{2019} / date::May / date::day{1}};
@@ -656,7 +661,7 @@ TEST(motis, refresh_itinerary_reconstructs_added_trip_by_trip_id_only) {
   auto trip_query = api::trip_params{};
   trip_query.tripId_ = added_trip_id;
   auto const added_itinerary = trip(trip_query.to_url("?"));
-  auto const itinerary_id = generate_itinerary_id(added_itinerary);
+  auto const& itinerary_id = added_itinerary.id_;
 
   auto const refresh = utl::init_from<ep::refresh_itinerary>(data).value();
   auto refresh_query = api::refreshItinerary_params{};
@@ -762,7 +767,7 @@ TEST(motis, itinerary_id_reconstruct_multi_leg_with_three_pt_hops) {
   ASSERT_EQ(api::ModeEnum::WALK, original.legs_.back().mode_)
       << "expected last leg to be a last-mile walk";
 
-  auto const id = generate_itinerary_id(original);
+  auto const& id = original.id_;
   auto const stop_times = utl::init_from<ep::stop_times>(d).value();
   auto const reconstructed =
       reconstruct_itinerary(routing, stop_times, *d.rt_, id, true, true, true);
@@ -801,7 +806,7 @@ TEST(motis, itinerary_id_reconstruct_multi_leg_replaces_unmatched_leg_dummy) {
       "&detailedLegs=true");
   ASSERT_FALSE(res.itineraries_.empty());
 
-  auto original = res.itineraries_.front();
+  auto const original = res.itineraries_.front();
   auto pt_indices = std::vector<std::size_t>{};
   for (auto i = std::size_t{0}; i < original.legs_.size(); ++i) {
     if (original.legs_[i].mode_ != api::ModeEnum::WALK) {
@@ -812,15 +817,30 @@ TEST(motis, itinerary_id_reconstruct_multi_leg_replaces_unmatched_leg_dummy) {
 
   // Make the middle PT leg impossible to reconstruct by moving its endpoints
   // into the ocean: no stop-time candidates exist within the search radius, so
-  // get_run() fails and the leg must be replaced by a cancelled dummy leg.
+  // get_run() fails and the leg must be replaced by a cancelled dummy leg. The
+  // broken coordinates are injected into the decoded production id (matched by
+  // trip id), since the api leg itself is no longer an id-encoding entry point.
   auto const broken_idx = pt_indices.at(1);
-  auto& broken_leg = original.legs_.at(broken_idx);
-  broken_leg.from_.lat_ = 0.0;
-  broken_leg.from_.lon_ = 0.0;
-  broken_leg.to_.lat_ = 0.0;
-  broken_leg.to_.lon_ = 0.0;
+  ASSERT_TRUE(original.legs_.at(broken_idx).tripId_.has_value());
+  auto const& broken_trip_id = *original.legs_.at(broken_idx).tripId_;
 
-  auto const id = generate_itinerary_id(original);
+  auto proto = motis::ItineraryId{};
+  ASSERT_TRUE(proto.ParseFromString(net::decode_base64(original.id_)));
+  auto broken_found = false;
+  for (auto i = 0; i < proto.legs_size(); ++i) {
+    if (proto.legs(i).trip_id() == broken_trip_id) {
+      auto* const l = proto.mutable_legs(i);
+      l->set_from_lat(0.0);
+      l->set_from_lon(0.0);
+      l->set_to_lat(0.0);
+      l->set_to_lon(0.0);
+      broken_found = true;
+    }
+  }
+  ASSERT_TRUE(broken_found);
+  auto proto_data = std::string{};
+  ASSERT_TRUE(proto.SerializeToString(&proto_data));
+  auto const id = net::encode_base64(proto_data);
   auto const stop_times = utl::init_from<ep::stop_times>(d).value();
   auto const reconstructed =
       reconstruct_itinerary(routing, stop_times, *d.rt_, id, true, true, true);
@@ -1204,7 +1224,7 @@ TEST(motis, itinerary_id_refresh_leg_alternatives_intermodal_offsets) {
   EXPECT_TRUE(any_alt_trip_contains(plan_leg, "BD"));
 
   auto query = api::refreshItinerary_params{};
-  query.itineraryId_ = generate_itinerary_id(plan_itin);
+  query.itineraryId_ = plan_itin.id_;
   query.numLegAlternatives_ = 5;
   auto const refresh = utl::init_from<ep::refresh_itinerary>(d).value();
   auto const refreshed = refresh(query.to_url("?"));
@@ -1238,7 +1258,7 @@ TEST(motis, itinerary_id_refresh_leg_alternatives_respect_transit_modes) {
   EXPECT_FALSE(any_alt_trip_contains(plan_leg, "BUS_ALT"));
 
   auto query = api::refreshItinerary_params{};
-  query.itineraryId_ = generate_itinerary_id(plan_itin);
+  query.itineraryId_ = plan_itin.id_;
   query.numLegAlternatives_ = 5;
   query.transitModes_ = {api::ModeEnum::REGIONAL_RAIL};
   auto const refresh = utl::init_from<ep::refresh_itinerary>(d).value();
@@ -1273,7 +1293,7 @@ TEST(motis, itinerary_id_refresh_leg_alternatives_respect_require_bike) {
   EXPECT_FALSE(any_alt_trip_contains(plan_leg, "BIKE_NO"));
 
   auto query = api::refreshItinerary_params{};
-  query.itineraryId_ = generate_itinerary_id(plan_itin);
+  query.itineraryId_ = plan_itin.id_;
   query.numLegAlternatives_ = 5;
   query.requireBikeTransport_ = true;
   auto const refresh = utl::init_from<ep::refresh_itinerary>(d).value();
@@ -1306,7 +1326,7 @@ TEST(motis, itinerary_id_refresh_leg_alternatives_respect_require_car) {
   EXPECT_FALSE(any_alt_trip_contains(plan_leg, "CAR_NO"));
 
   auto query = api::refreshItinerary_params{};
-  query.itineraryId_ = generate_itinerary_id(plan_itin);
+  query.itineraryId_ = plan_itin.id_;
   query.numLegAlternatives_ = 5;
   query.requireCarTransport_ = true;
   auto const refresh = utl::init_from<ep::refresh_itinerary>(d).value();
@@ -1357,7 +1377,7 @@ TEST(motis, itinerary_id_refresh_leg_alternatives_respect_wheelchair) {
   EXPECT_FALSE(any_alt_trip_contains(plan_leg, "WC_NO"));
 
   auto query = api::refreshItinerary_params{};
-  query.itineraryId_ = generate_itinerary_id(plan_itin);
+  query.itineraryId_ = plan_itin.id_;
   query.numLegAlternatives_ = 5;
   query.pedestrianProfile_ = api::PedestrianProfileEnum::WHEELCHAIR;
   query.useRoutedTransfers_ = true;
@@ -1399,7 +1419,7 @@ TEST(motis, itinerary_id_refresh_leg_alternatives_intermediate_leg) {
   EXPECT_FALSE(any_alt_trip_contains(plan_mid, "L2_BUS"));
 
   auto query = api::refreshItinerary_params{};
-  query.itineraryId_ = generate_itinerary_id(plan_itin);
+  query.itineraryId_ = plan_itin.id_;
   query.numLegAlternatives_ = 5;
   query.transitModes_ = {api::ModeEnum::REGIONAL_RAIL};
   auto const refresh = utl::init_from<ep::refresh_itinerary>(d).value();
