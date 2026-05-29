@@ -269,15 +269,6 @@ struct config {
     };
     std::optional<http> http_{};
 
-    struct grpc {
-      bool operator==(grpc const&) const = default;
-      std::string url_{"http://localhost:4317"};
-      bool use_ssl_credentials_{false};
-      std::string ssl_credentials_cacert_path_{""};
-      std::string ssl_credentials_cacert_{""};
-    };
-    std::optional<grpc> grpc_{};
-
     unsigned timeout_{10U};
     headers_t headers_{};
   };
