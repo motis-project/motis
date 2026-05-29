@@ -71,7 +71,7 @@ void init_opentelemetry(config::otlp const& c,
   opentelemetry::context::RuntimeContext::SetRuntimeContextStorage(
       std::make_shared<otel_runtime_context_storage>());
 
-  if (c.http_) {
+  if (c.http_.has_value()) {
     init_opentelemetry_tracer(resource, c);
   }
 
@@ -82,8 +82,10 @@ void init_opentelemetry(config::otlp const& c,
 }
 
 void cleanup_opentelemetry_tracer() {
-  provider_->ForceFlush();
-  provider_.reset();
+  if (provider_) {
+    provider_->ForceFlush();
+    provider_.reset();
+  }
 
   auto const none = std::shared_ptr<opentelemetry::trace::NoopTracerProvider>();
   opentelemetry::trace::Provider::SetTracerProvider(none);
