@@ -21,6 +21,8 @@
 
 namespace motis {
 
+static std::shared_ptr<opentelemetry::sdk::trace::TracerProvider> provider_;
+
 void init_opentelemetry_tracer(
     opentelemetry::sdk::resource::Resource const& resource,
     config::otlp const& c) {
@@ -56,6 +58,7 @@ void init_opentelemetry_tracer(
       std::shared_ptr{opentelemetry::sdk::trace::TracerProviderFactory::Create(
           std::move(processor), resource, std::move(sampler))};
   opentelemetry::trace::Provider::SetTracerProvider(provider);
+  provider_ = provider;
 }
 
 void init_opentelemetry(config::otlp const& c,
@@ -79,11 +82,8 @@ void init_opentelemetry(config::otlp const& c,
 }
 
 void cleanup_opentelemetry_tracer() {
-  if (auto const provider = opentelemetry::trace::Provider::GetTracerProvider();
-      provider) {
-    provider->ForceFlush();
-    provider->reset();
-  }
+  provider_->ForceFlush();
+  provider_.reset();
 
   auto const none = std::shared_ptr<opentelemetry::trace::NoopTracerProvider>();
   opentelemetry::trace::Provider::SetTracerProvider(none);
