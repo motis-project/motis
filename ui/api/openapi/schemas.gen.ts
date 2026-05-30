@@ -545,8 +545,15 @@ Affected endpoints: plan, trip, stoptimes, one-to-all, map/stops, map/trips
             type: 'string'
         },
         track: {
-            description: `The current track/platform information, updated with real-time updates if available. 
+            description: `The current track/platform information, updated with real-time updates if available.
 Can be missing if neither real-time updates nor the schedule timetable contains track information.
+`,
+            type: 'string'
+        },
+        stopCode: {
+            description: `Short, abbreviated identifier of the stop intended for users
+(e.g. printed on signage, used in SMS / passenger info systems).
+Comes from the GTFS \`stop_code\` field.
 `,
             type: 'string'
         },

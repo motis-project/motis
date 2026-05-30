@@ -160,7 +160,8 @@ flex_routings_t get_flex_routings(
     n::routing::start_time_t const start_time,
     geo::latlng const& pos,
     osr::direction const dir,
-    std::chrono::seconds const max) {
+    std::chrono::seconds const max,
+    osr_parameters const& osr_params) {
   auto routings = flex_routings_t{};
 
   // Traffic days helpers.
@@ -205,8 +206,8 @@ flex_routings_t get_flex_routings(
       }
     }
   };
-  auto const box =
-      geo::box{pos, get_max_distance(osr::search_profile::kFoot, max)};
+  auto const box = geo::box{
+      pos, get_max_distance(osr::search_profile::kFoot, osr_params, max)};
   tt.flex_area_rtree_.search(box.min_.lnglat_float(), box.max_.lnglat_float(),
                              [&](auto&&, auto&&, n::flex_area_idx_t const a) {
                                add_area_flex_transports(a);
@@ -215,13 +216,14 @@ flex_routings_t get_flex_routings(
 
   // Collect location group transports.
   auto location_groups = hash_set<n::location_group_idx_t>{};
-  loc_rtree.in_radius(pos, get_max_distance(osr::search_profile::kFoot, max),
-                      [&](n::location_idx_t const l) {
-                        for (auto const lg : tt.location_location_groups_[l]) {
-                          location_groups.emplace(lg);
-                        }
-                        return true;
-                      });
+  loc_rtree.in_radius(
+      pos, get_max_distance(osr::search_profile::kFoot, osr_params, max),
+      [&](n::location_idx_t const l) {
+        for (auto const lg : tt.location_location_groups_[l]) {
+          location_groups.emplace(lg);
+        }
+        return true;
+      });
   for (auto const& lg : location_groups) {
     for (auto const t : tt.location_group_transports_[lg]) {
       if (!is_active(t)) {
@@ -279,7 +281,8 @@ void add_flex_td_offsets(osr::ways const& w,
                          std::map<std::string, std::uint64_t>& stats) {
   UTL_START_TIMING(flex_lookup_timer);
 
-  auto const max_dist = get_max_distance(osr::search_profile::kCarSharing, max);
+  auto const max_dist =
+      get_max_distance(osr::search_profile::kCarSharing, osr_params, max);
   auto const near_stops = loc_rtree.in_radius(pos.pos_, max_dist);
   auto const near_stop_locations =
       utl::to_vec(near_stops, [&](n::location_idx_t const l) {
@@ -295,8 +298,8 @@ void add_flex_td_offsets(osr::ways const& w,
       lookup, way_matches, osr::search_profile::kCarSharing, near_stops,
       near_stop_locations, dir, max_matching_distance);
 
-  auto const routings =
-      get_flex_routings(tt, loc_rtree, start_time, pos.pos_, dir, max);
+  auto const routings = get_flex_routings(tt, loc_rtree, start_time, pos.pos_,
+                                          dir, max, osr_params);
 
   stats.emplace(fmt::format("prepare_{}_FLEX_lookup", to_str(dir)),
                 UTL_GET_TIMING_MS(flex_lookup_timer));

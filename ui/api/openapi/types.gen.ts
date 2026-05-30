@@ -463,6 +463,13 @@ export type Place = {
      */
     track?: string;
     /**
+     * Short, abbreviated identifier of the stop intended for users
+     * (e.g. printed on signage, used in SMS / passenger info systems).
+     * Comes from the GTFS `stop_code` field.
+     *
+     */
+    stopCode?: string;
+    /**
      * description of the location that provides more detailed information
      */
     description?: string;
