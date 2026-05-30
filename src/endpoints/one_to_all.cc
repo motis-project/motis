@@ -98,8 +98,7 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
                                ? n::routing::location_match_mode::kIntermodal
                                : n::routing::location_match_mode::kEquivalent,
       .start_ = r.get_offsets(
-          nullptr, one, one_dir, one_modes, std::nullopt, std::nullopt,
-          std::nullopt, std::nullopt, false, osr_params,
+          nullptr, one, one_dir, one_modes, rental_options{}, osr_params,
           query.pedestrianProfile_, query.elevationCosts_, one_max_time,
           query.maxMatchingDistance_, gbfs_rd, prepare_stats),
       .td_start_ = r.get_td_offsets(

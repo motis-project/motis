@@ -215,12 +215,7 @@ std::vector<n::routing::offset> get_offsets(
     osr::direction const dir,
     osr::elevation_storage const* elevations,
     std::vector<api::ModeEnum> const& modes,
-    std::optional<std::vector<api::RentalFormFactorEnum>> const& form_factors,
-    std::optional<std::vector<api::RentalPropulsionTypeEnum>> const&
-        propulsion_types,
-    std::optional<std::vector<std::string>> const& rental_providers,
-    std::optional<std::vector<std::string>> const& rental_provider_groups,
-    bool const ignore_rental_return_constraints,
+    rental_options const& ro,
     osr_parameters const& osr_params,
     api::PedestrianProfileEnum const pedestrian_profile,
     api::ElevationCostsEnum const elevation_costs,
@@ -231,6 +226,12 @@ std::vector<n::routing::offset> get_offsets(
   if (!r.is_osr_loaded()) {
     return {};
   }
+
+  auto const& form_factors = ro.form_factors_;
+  auto const& propulsion_types = ro.propulsion_types_;
+  auto const& rental_providers = ro.providers_;
+  auto const& rental_provider_groups = ro.provider_groups_;
+  auto const ignore_rental_return_constraints = ro.ignore_return_constraints_;
 
   auto offsets = std::vector<n::routing::offset>{};
   auto ignore_walk = false;
@@ -407,12 +408,7 @@ std::vector<n::routing::offset> routing::get_offsets(
     place_t const& p,
     osr::direction const dir,
     std::vector<api::ModeEnum> const& modes,
-    std::optional<std::vector<api::RentalFormFactorEnum>> const& form_factors,
-    std::optional<std::vector<api::RentalPropulsionTypeEnum>> const&
-        propulsion_types,
-    std::optional<std::vector<std::string>> const& rental_providers,
-    std::optional<std::vector<std::string>> const& rental_provider_groups,
-    bool const ignore_rental_return_constraints,
+    rental_options const& ro,
     osr_parameters const& osr_params,
     api::PedestrianProfileEnum const pedestrian_profile,
     api::ElevationCostsEnum const elevation_costs,
@@ -421,11 +417,10 @@ std::vector<n::routing::offset> routing::get_offsets(
     gbfs::gbfs_routing_data& gbfs_rd,
     stats_map_t& stats) const {
   auto const do_get_offsets = [&](osr::location const pos) {
-    return ::motis::ep::get_offsets(
-        *this, rtt, pos, dir, elevations_, modes, form_factors,
-        propulsion_types, rental_providers, rental_provider_groups,
-        ignore_rental_return_constraints, osr_params, pedestrian_profile,
-        elevation_costs, max, max_matching_distance, gbfs_rd, stats);
+    return ::motis::ep::get_offsets(*this, rtt, pos, dir, elevations_, modes,
+                                    ro, osr_params, pedestrian_profile,
+                                    elevation_costs, max, max_matching_distance,
+                                    gbfs_rd, stats);
   };
   return std::visit(
       utl::overloaded{
@@ -873,10 +868,13 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                       rtt, start,
                       query.arriveBy_ ? osr::direction::kBackward
                                       : osr::direction::kForward,
-                      start_modes, start_form_factors, start_propulsion_types,
-                      start_rental_providers, start_rental_provider_groups,
-                      start_ignore_return_constraints, osr_params,
-                      query.pedestrianProfile_, query.elevationCosts_,
+                      start_modes,
+                      rental_options{start_form_factors, start_propulsion_types,
+                                     start_rental_providers,
+                                     start_rental_provider_groups,
+                                     start_ignore_return_constraints},
+                      osr_params, query.pedestrianProfile_,
+                      query.elevationCosts_,
                       query.arriveBy_ ? post_transit_time : pre_transit_time,
                       query.maxMatchingDistance_, gbfs_rd, prepare_stats),
         .destination_ =
@@ -887,10 +885,13 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                       rtt, dest,
                       query.arriveBy_ ? osr::direction::kForward
                                       : osr::direction::kBackward,
-                      dest_modes, dest_form_factors, dest_propulsion_types,
-                      dest_rental_providers, dest_rental_provider_groups,
-                      dest_ignore_return_constraints, osr_params,
-                      query.pedestrianProfile_, query.elevationCosts_,
+                      dest_modes,
+                      rental_options{dest_form_factors, dest_propulsion_types,
+                                     dest_rental_providers,
+                                     dest_rental_provider_groups,
+                                     dest_ignore_return_constraints},
+                      osr_params, query.pedestrianProfile_,
+                      query.elevationCosts_,
                       query.arriveBy_ ? pre_transit_time : post_transit_time,
                       query.maxMatchingDistance_, gbfs_rd, prepare_stats),
         .td_start_ = get_td_offsets(
@@ -1028,12 +1029,9 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
 
     direct_filter(direct, journeys);
 
-    // Leg-alternatives expects q in physical (forward) order: q.start_
-    // = offsets at journey origin, q.destination_ = offsets at journey
-    // destination. raptor stores them swapped for arriveBy queries
-    // (see `start = arriveBy ? to : from` above), so flip them back.
     auto q_for_alts = q;
     if (query.arriveBy_) {
+      // Leg alternatives query should always be forward.
       q_for_alts.flip_dir();
     }
 

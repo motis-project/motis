@@ -22,6 +22,8 @@
 
 namespace motis {
 
+api::ModeEnum to_mode(osr::search_profile);
+
 double get_level(osr::ways const*,
                  osr::platforms const*,
                  platform_matches_t const*,

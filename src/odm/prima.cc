@@ -111,8 +111,7 @@ void init_pt(std::vector<n::routing::offset>& offsets,
              n::routing::location_match_mode location_match_mode,
              std::chrono::seconds const max) {
   auto stats = std::map<std::string, std::uint64_t>{};
-  offsets = r.get_offsets(rtt, l, dir, {api::ModeEnum::CAR}, std::nullopt,
-                          std::nullopt, std::nullopt, std::nullopt, false,
+  offsets = r.get_offsets(rtt, l, dir, {api::ModeEnum::CAR}, rental_options{},
                           get_osr_parameters(query), query.pedestrianProfile_,
                           query.elevationCosts_, max,
                           query.maxMatchingDistance_, gbfs_rd, stats);
