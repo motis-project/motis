@@ -1920,16 +1920,101 @@ constexpr auto const kElevatorsActive = R"__([
    "type":"ELEVATOR"}
 ])__";
 
+// The journey runs 00:35-01:20 Europe/Berlin on 2019-05-01, i.e.
+// 22:35-23:20 UTC on 2019-04-30, so the out-of-service window must start on
+// 2019-04-30 to actually cover it.
 constexpr auto const kElevatorsBlocked = R"__([
   {"description":"FFM HBF Gleis 101/102","equipmentnumber":1010,
    "geocoordX":8.6628995,"geocoordY":50.1072933,"state":"INACTIVE",
    "type":"ELEVATOR",
-   "outOfService":[["2019-05-01T00:00:00Z","2019-05-02T00:00:00Z"]]},
+   "outOfService":[["2019-04-30T00:00:00Z","2019-05-02T00:00:00Z"]]},
   {"description":"DA HBF Gleis 9/10","equipmentnumber":910,
    "geocoordX":8.6293117,"geocoordY":49.8725263,"state":"INACTIVE",
    "type":"ELEVATOR",
-   "outOfService":[["2019-05-01T00:00:00Z","2019-05-02T00:00:00Z"]]}
+   "outOfService":[["2019-04-30T00:00:00Z","2019-05-02T00:00:00Z"]]}
 ])__";
+
+// FFM Gleis 101/102 out of service only for a short window that covers the
+// FFM_10 arrival (00:45 Berlin = 22:45 UTC) but reopens well before the S3
+// departure (01:15 Berlin = 23:15 UTC). The wheelchair transfer is still
+// feasible — it just has to wait on the platform for the elevator to return.
+constexpr auto const kElevatorsFfmShortOutage = R"__([
+  {"description":"FFM HBF Gleis 101/102","equipmentnumber":1010,
+   "geocoordX":8.6628995,"geocoordY":50.1072933,"state":"INACTIVE",
+   "type":"ELEVATOR",
+   "outOfService":[["2019-04-30T22:30:00Z","2019-04-30T23:00:00Z"]]},
+  {"description":"DA HBF Gleis 9/10","equipmentnumber":910,
+   "geocoordX":8.6293117,"geocoordY":49.8725263,"state":"ACTIVE",
+   "type":"ELEVATOR"}
+])__";
+
+// Minimal wheelchair GTFS whose platforms (DA_10, FFM_10, FFM_101,
+// FFM_HAUPT_S) are placed on the OSM platform nodes reached via the modelled
+// elevators (`use_osm_stop_coordinates_` + `extend_missing_footpaths_=false`
+// so footpaths are OSR-routed through the elevator rather than auto-generated
+// direct walks). Without this an out-of-service elevator wouldn't change the
+// routed access/transfer at all. GTFS times are Europe/Berlin, so the ICE
+// 00:35 departure is 22:35 UTC on 2019-04-30 (matching the query window).
+constexpr auto const kElevatorGTFS = R"(
+# agency.txt
+agency_id,agency_name,agency_url,agency_timezone
+DB,Deutsche Bahn,https://deutschebahn.com,Europe/Berlin
+
+# stops.txt
+stop_id,stop_name,stop_lat,stop_lon,location_type,parent_station,platform_code,wheelchair_boarding
+DA,DA Hbf,49.87260,8.63085,1,,,1
+DA_10,DA Hbf,49.87336,8.62926,0,DA,10,1
+FFM,FFM Hbf,50.10701,8.66341,1,,,1
+FFM_10,FFM Hbf,50.10593,8.66118,0,FFM,10,1
+FFM_101,FFM Hbf,50.10739,8.66333,0,FFM,101,1
+FFM_HAUPT,FFM Hauptwache,50.11403,8.67835,1,,,1
+FFM_HAUPT_S,FFM Hauptwache S,50.11404,8.67824,0,FFM_HAUPT,,1
+
+# routes.txt
+route_id,agency_id,route_short_name,route_long_name,route_desc,route_type
+ICE,DB,ICE,,,101
+S3,DB,S3,,,109
+
+# trips.txt
+route_id,service_id,trip_id,trip_headsign,block_id,wheelchair_accessible
+ICE,S1,ICE,,,1
+S3,S1,S3,,,1
+
+# stop_times.txt
+trip_id,arrival_time,departure_time,stop_id,stop_sequence,pickup_type,drop_off_type
+ICE,00:35:00,00:35:00,DA_10,0,0,0
+ICE,00:45:00,00:45:00,FFM_10,1,0,0
+S3,01:15:00,01:15:00,FFM_101,1,0,0
+S3,01:20:00,01:20:00,FFM_HAUPT_S,2,0,0
+
+# calendar_dates.txt
+service_id,date,exception_type
+S1,20190501,1
+)";
+
+// Local import for the elevator tests: the shared FFM_one_to_many fixture
+// models stops at GTFS coordinates with auto-generated footpaths, so blocking
+// an elevator doesn't change routing there. This config routes wheelchair
+// access/transfers through the OSM elevators instead.
+std::pair<data, config> import_elevator_test_case() {
+  auto c = config{
+      .osm_ = {"test/resources/test_case.osm.pbf"},
+      .timetable_ =
+          config::timetable{.first_day_ = "2019-05-01",
+                            .num_days_ = 2,
+                            .use_osm_stop_coordinates_ = true,
+                            .extend_missing_footpaths_ = false,
+                            .datasets_ = {{"test",
+                                           {.path_ = std::string{
+                                                kElevatorGTFS}}}}},
+      .street_routing_ = true,
+      .osr_footpath_ = true};
+  auto ec = std::error_code{};
+  fs::remove_all("test/data_itinerary_elevator", ec);
+  import(c, "test/data_itinerary_elevator");
+  auto d = data{"test/data_itinerary_elevator", c};
+  return {std::move(d), std::move(c)};
+}
 
 // Offset case: a wheelchair first-mile (coord → DA Hbf Gleis 10 platform)
 // computed by plan when the DA-HBF Gleis 9/10 elevator is in service is
@@ -1940,7 +2025,7 @@ constexpr auto const kElevatorsBlocked = R"__([
 // access-route is now infeasible / much longer. The EXPECT below fails
 // today, demonstrating the bug.
 TEST(motis, itinerary_id_refresh_offset_blocked_by_elevator) {
-  auto [d, cfg] = get_test_case<test_case::FFM_one_to_many>();
+  auto [d, cfg] = import_elevator_test_case();
   d.init_rtt(date::sys_days{date::year{2019} / date::May / 1});
   d.rt_->e_ = std::make_unique<elevators>(*d.w_, nullptr, *d.elevator_nodes_,
                                           parse_fasta(std::string_view{
@@ -1976,19 +2061,18 @@ TEST(motis, itinerary_id_refresh_offset_blocked_by_elevator) {
   query.pedestrianProfile_ = api::PedestrianProfileEnum::WHEELCHAIR;
   query.useRoutedTransfers_ = true;
   query.detailedLegs_ = true;
+  query.maxMatchingDistance_ = 8.0;  // wheelchair matching, as the UI sends
   auto const refresh = utl::init_from<ep::refresh_itinerary>(d).value();
   auto const refreshed = refresh(query.to_url("?"));
 
-  // With the elevator now out of service, the wheelchair access route from
-  // the same coord to DA_10 either takes a much longer detour OR is no
-  // longer reachable before the first PT departure. Either way the access
-  // leg's endTime should NOT equal the planned one. Today reconstruction
-  // replays the stored scheduled duration, so they match — the test fails.
-  EXPECT_GT(refreshed.legs_.front().endTime_.get_unixtime_seconds(),
-            original.legs_.front().endTime_.get_unixtime_seconds())
-      << "first-mile access should be extended when the DA-HBF Gleis 9/10 "
-         "elevator is out of service, but reconstruction replayed the "
-         "stored duration — bug demonstrated";
+  // With the DA-HBF Gleis 9/10 elevator out of service the wheelchair platform
+  // (DA_10, level -1) is no longer reachable from the street, so the first-mile
+  // access can't be routed. Reconstruction must surface that as a cancelled
+  // leg rather than silently replaying the stored (now-impossible) walk.
+  ASSERT_EQ(api::ModeEnum::WALK, refreshed.legs_.front().mode_);
+  EXPECT_EQ(true, refreshed.legs_.front().cancelled_.value_or(false))
+      << "first-mile access should be cancelled when the DA-HBF Gleis 9/10 "
+         "elevator is out of service and the platform is unreachable";
 }
 
 // Transfer case: a wheelchair transfer between two PT legs at FFM Hbf
@@ -2002,7 +2086,7 @@ TEST(motis, itinerary_id_refresh_offset_blocked_by_elevator) {
 // refreshed transfer matches plan and no overlap is reported — the test
 // fails, demonstrating the bug.
 TEST(motis, itinerary_id_refresh_transfer_blocked_by_elevator) {
-  auto [d, cfg] = get_test_case<test_case::FFM_one_to_many>();
+  auto [d, cfg] = import_elevator_test_case();
   d.rt_->e_ = std::make_unique<elevators>(*d.w_, nullptr, *d.elevator_nodes_,
                                           parse_fasta(std::string_view{
                                               kElevatorsActive}));
@@ -2053,19 +2137,147 @@ TEST(motis, itinerary_id_refresh_transfer_blocked_by_elevator) {
   ASSERT_GT(refreshed.legs_.size(), original_transfer_idx + 1U);
 
   auto const& refreshed_transfer = refreshed.legs_[original_transfer_idx];
-  auto const& refreshed_next_pt = refreshed.legs_[original_transfer_idx + 1U];
 
-  // With the elevator blocked, the wheelchair walk through the platform
-  // becomes infeasible by the next PT departure. Reconstruction should
-  // either extend the transfer (so refreshed_transfer.endTime > next PT
-  // startTime → overlap) or otherwise mark it as broken. Today the
-  // refreshed transfer keeps the stored duration and lands exactly at
-  // next PT startTime, so this fails — bug demonstrated.
-  EXPECT_GT(refreshed_transfer.endTime_.get_unixtime_seconds(),
-            refreshed_next_pt.startTime_.get_unixtime_seconds())
-      << "wheelchair transfer should overlap with the next PT leg when the "
-         "FFM-HBF Gleis 101/102 elevator is out of service, but the stored "
-         "scheduled duration was replayed unchanged — bug demonstrated";
+  // With the FFM-HBF Gleis 101/102 elevator out of service the wheelchair
+  // transfer FFM_10 -> FFM_101 can no longer be routed (the platform is only
+  // reachable via that elevator). Reconstruction must mark the transfer
+  // cancelled instead of replaying the stored walk duration.
+  EXPECT_EQ(api::ModeEnum::WALK, refreshed_transfer.mode_);
+  EXPECT_EQ(true, refreshed_transfer.cancelled_.value_or(false))
+      << "wheelchair transfer FFM_10 -> FFM_101 should be cancelled when the "
+         "FFM-HBF Gleis 101/102 elevator is out of service";
+}
+
+// DA-HBF Gleis 9/10 out only for a short window covering the ~22:26-22:35 UTC
+// wheelchair access. The platform is still reachable by leaving earlier and
+// waiting for the elevator to return, so the first-mile access must stay
+// feasible (not cancelled): it leaves earlier and lasts longer, but still
+// boards the same train.
+constexpr auto const kElevatorsDaShortOutage = R"__([
+  {"description":"DA HBF Gleis 9/10","equipmentnumber":910,
+   "geocoordX":8.6293117,"geocoordY":49.8725263,"state":"INACTIVE",
+   "type":"ELEVATOR",
+   "outOfService":[["2019-04-30T22:20:00Z","2019-04-30T22:33:00Z"]]}
+])__";
+
+TEST(motis, itinerary_id_refresh_access_extended_by_elevator_wait) {
+  auto [d, cfg] = import_elevator_test_case();
+  d.rt_->e_ = std::make_unique<elevators>(*d.w_, nullptr, *d.elevator_nodes_,
+                                          parse_fasta(std::string_view{
+                                              kElevatorsActive}));
+  d.init_rtt(date::sys_days{date::year{2019} / date::May / 1});
+
+  auto const routing = utl::init_from<ep::routing>(d).value();
+  auto const plan = routing(
+      "/api/v6/plan"
+      "?fromPlace=49.87420,8.62940"
+      "&toPlace=50.10701,8.66341"
+      "&time=2019-04-30T22:00Z"
+      "&timetableView=true"
+      "&pedestrianProfile=WHEELCHAIR"
+      "&useRoutedTransfers=true"
+      "&detailedLegs=true");
+  ASSERT_FALSE(plan.itineraries_.empty());
+  auto const& original = plan.itineraries_.front();
+  ASSERT_EQ(api::ModeEnum::WALK, original.legs_.front().mode_);
+  auto const original_access_dur = original.legs_.front().duration_;
+  auto const original_access_start =
+      original.legs_.front().startTime_.get_unixtime_seconds();
+  auto const original_access_end =
+      original.legs_.front().endTime_.get_unixtime_seconds();
+
+  auto new_rtt =
+      std::make_unique<nigiri::rt_timetable>(nigiri::rt_timetable{*d.rt_->rtt_});
+  d.rt_->e_ = update_elevators(cfg, d, kElevatorsDaShortOutage, *new_rtt);
+  d.rt_->rtt_ = std::move(new_rtt);
+
+  auto query = api::refreshItinerary_params{};
+  query.itineraryId_ = original.id_;
+  query.pedestrianProfile_ = api::PedestrianProfileEnum::WHEELCHAIR;
+  query.useRoutedTransfers_ = true;
+  query.detailedLegs_ = true;
+  // Wheelchair clients (e.g. the web UI) request the tight matching distance
+  // the rt_timetable's td-footpaths were precomputed with; the loose generic
+  // default would snap the platform to a node that doesn't need the elevator.
+  query.maxMatchingDistance_ = 8.0;
+  auto const refresh = utl::init_from<ep::refresh_itinerary>(d).value();
+  auto const refreshed = refresh(query.to_url("?"));
+  auto const& access = refreshed.legs_.front();
+
+  EXPECT_EQ(api::ModeEnum::WALK, access.mode_);
+  EXPECT_NE(true, access.cancelled_.value_or(false))
+      << "access should remain feasible while the elevator is only briefly out";
+  EXPECT_GT(access.duration_, original_access_dur)
+      << "the elevator outage should extend the access by the platform wait";
+  EXPECT_LT(access.startTime_.get_unixtime_seconds(), original_access_start)
+      << "the access should start earlier to beat the outage";
+  EXPECT_EQ(original_access_end, access.endTime_.get_unixtime_seconds())
+      << "the access should still board the same train";
+}
+
+// Counterpart to the broken-transfer test: the FFM-HBF Gleis 101/102 elevator
+// is out only briefly, so the wheelchair transfer FFM_10 -> FFM_101 still
+// works — it just has to wait on the platform for the elevator to return,
+// which lengthens the transfer (td "wait + walk"). Reconstruction must keep
+// the connection (not cancel it), reflect the waiting time, and still make the
+// next PT departure.
+TEST(motis, itinerary_id_refresh_transfer_extended_by_elevator_wait) {
+  auto [d, cfg] = import_elevator_test_case();
+  d.rt_->e_ = std::make_unique<elevators>(*d.w_, nullptr, *d.elevator_nodes_,
+                                          parse_fasta(std::string_view{
+                                              kElevatorsActive}));
+  d.init_rtt(date::sys_days{date::year{2019} / date::May / 1});
+
+  auto const routing = utl::init_from<ep::routing>(d).value();
+  auto const plan = routing(
+      "/api/v6/plan"
+      "?fromPlace=49.87420,8.62940"
+      "&toPlace=50.11450,8.67900"
+      "&time=2019-04-30T22:00Z"
+      "&timetableView=true"
+      "&pedestrianProfile=WHEELCHAIR"
+      "&useRoutedTransfers=true"
+      "&detailedTransfers=true"
+      "&detailedLegs=true");
+  ASSERT_FALSE(plan.itineraries_.empty());
+  auto const& original = plan.itineraries_.front();
+  auto const transfer_it = utl::find_if(original.legs_, [](api::Leg const& l) {
+    return l.mode_ == api::ModeEnum::WALK &&
+           l.from_.stopId_.value_or("") == "test_FFM_10" &&
+           l.to_.stopId_.value_or("") == "test_FFM_101";
+  });
+  ASSERT_NE(transfer_it, end(original.legs_));
+  auto const idx = static_cast<std::size_t>(transfer_it - begin(original.legs_));
+  auto const original_duration = transfer_it->duration_;
+
+  // Take the FFM elevator out only for [22:30, 23:00) UTC (covers the 22:45
+  // FFM_10 arrival, reopens before the 23:15 S3 departure).
+  auto new_rtt =
+      std::make_unique<nigiri::rt_timetable>(nigiri::rt_timetable{*d.rt_->rtt_});
+  d.rt_->e_ = update_elevators(cfg, d, kElevatorsFfmShortOutage, *new_rtt);
+  d.rt_->rtt_ = std::move(new_rtt);
+
+  auto query = api::refreshItinerary_params{};
+  query.itineraryId_ = original.id_;
+  query.pedestrianProfile_ = api::PedestrianProfileEnum::WHEELCHAIR;
+  query.useRoutedTransfers_ = true;
+  query.detailedTransfers_ = true;
+  query.detailedLegs_ = true;
+  auto const refresh = utl::init_from<ep::refresh_itinerary>(d).value();
+  auto const refreshed = refresh(query.to_url("?"));
+  ASSERT_GT(refreshed.legs_.size(), idx + 1U);
+  auto const& transfer = refreshed.legs_[idx];
+  auto const& next_pt = refreshed.legs_[idx + 1U];
+
+  EXPECT_EQ(api::ModeEnum::WALK, transfer.mode_);
+  EXPECT_NE(true, transfer.cancelled_.value_or(false))
+      << "transfer should remain feasible while the elevator is only briefly "
+         "out of service";
+  EXPECT_GT(transfer.duration_, original_duration)
+      << "the elevator outage should extend the transfer by the platform wait";
+  EXPECT_LE(transfer.endTime_.get_unixtime_seconds(),
+            next_pt.startTime_.get_unixtime_seconds())
+      << "the extended transfer must still make the next PT departure";
 }
 
 // Intermediate leg: the alternatives of the middle transit leg of an
