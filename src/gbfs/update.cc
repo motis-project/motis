@@ -16,8 +16,6 @@
 #include "boost/asio/detached.hpp"
 #include "boost/asio/experimental/awaitable_operators.hpp"
 #include "boost/asio/experimental/parallel_group.hpp"
-#include "boost/asio/redirect_error.hpp"
-#include "boost/asio/steady_timer.hpp"
 #include "boost/stacktrace.hpp"
 
 #include "boost/json.hpp"
@@ -43,6 +41,7 @@
 #include "motis/data.h"
 #include "motis/gbfs/data.h"
 #include "motis/http_req.h"
+#include "motis/repeat.h"
 
 #include "motis/gbfs/compression.h"
 #include "motis/gbfs/osr_mapping.h"
@@ -1147,26 +1146,10 @@ void run_gbfs_update(boost::asio::io_context& ioc,
   boost::asio::co_spawn(
       ioc,
       [&, metrics]() -> awaitable<void> {
-        auto executor = co_await asio::this_coro::executor;
-        auto timer = asio::steady_timer{executor};
-        auto ec = boost::system::error_code{};
         auto cc = c;
-
-        while (true) {
-          // Remember when we started so we can schedule the next update.
-          auto const start = std::chrono::steady_clock::now();
-
-          co_await update(cc, w, l, data_ptr, metrics);
-
-          // Schedule next update.
-          timer.expires_at(start +
-                           std::chrono::seconds{cc.gbfs_->update_interval_});
-          co_await timer.async_wait(
-              asio::redirect_error(asio::use_awaitable, ec));
-          if (ec == asio::error::operation_aborted) {
-            co_return;
-          }
-        }
+        co_await repeat(std::chrono::seconds{cc.gbfs_->update_interval_},
+                        "gbfs update",
+                        [&] { return update(cc, w, l, data_ptr, metrics); });
       },
       boost::asio::detached);
 }
