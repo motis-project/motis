@@ -256,7 +256,7 @@ std::vector<st_candidate> get_st_candidates_in_radius(
   query.mode_ = {mode};
   query.language_ = lang;
 
-  auto const ev_type =
+  auto const base_ev_type =
       query.arriveBy_ ? n::event_type::kArr : n::event_type::kDep;
   auto const query_stop = query.stopId_.and_then([&](std::string const& x) {
     return st_ep.tags_.find_location(st_ep.tt_, x);
@@ -265,7 +265,7 @@ std::vector<st_candidate> get_st_candidates_in_radius(
       [&](std::string const& x) { return parse_location(x); });
 
   auto const events =
-      st_ep.get_runs(query, rtt, ev_type, query_stop, query_center, true);
+      st_ep.get_runs(query, rtt, base_ev_type, false, query_stop, query_center, true);
 
   return utl::to_vec(events, [&](n::rt::run const r) -> st_candidate {
     auto const fr = n::rt::frun{st_ep.tt_, rtt, r};
