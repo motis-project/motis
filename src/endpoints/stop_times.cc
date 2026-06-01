@@ -541,11 +541,8 @@ api::stoptimes_response stop_times::operator()(
 
   auto const rt = std::atomic_load(&rt_);
   auto const rtt = rt->rtt_.get();
-  auto const is_arr = query.eventType_
-                          ? (*query.eventType_ == api::eventTypeEnum::ARRIVALS)
-                          : query.arriveBy_;
-  auto const is_both =
-      query.eventType_ && *query.eventType_ == api::eventTypeEnum::BOTH;
+  auto const is_both = query.both_;
+  auto const is_arr = query.arriveBy_;
   auto const base_ev_type = is_arr ? n::event_type::kArr : n::event_type::kDep;
   auto const api_version = get_api_version(url);
   auto const& lang = query.language_;
