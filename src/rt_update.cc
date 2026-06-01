@@ -198,10 +198,10 @@ awaitable<void> update_rt(config const& c,
                             ret = auser.consume_update(body, *rtt, true);
                           } catch (std::exception const& e) {
                             a.metrics_.updates_error_.Increment();
-                            n::log(n::log_lvl::error, "motis.rt",
-                                   "VDV AUS FETCH ERROR: tag={}, "
-                                   "url={}, error={}",
-                                   a.tag_, a.ep_.url_, e.what());
+                            n::log(
+                                n::log_lvl::error, "motis.rt",
+                                "VDV AUS FETCH ERROR: tag={}, url={}, error={}",
+                                a.tag_, a.ep_.url_, e.what());
                             ret =
                                 nigiri::rt::vdv_aus::statistics{.error_ = true};
                           }
@@ -239,8 +239,7 @@ awaitable<void> update_rt(config const& c,
                 } catch (std::exception const& e) {
                   g.metrics_.updates_error_.Increment();
                   n::log(n::log_lvl::error, "motis.rt",
-                         "GTFS-RT update failed: tag={}, url={}, "
-                         "error={}",
+                         "GTFS-RT update failed: tag={}, url={}, error={}",
                          g.tag_, g.ep_.url_, e.what());
                 }
               },
@@ -256,15 +255,13 @@ awaitable<void> update_rt(config const& c,
 
                   n::log(
                       n::log_lvl::info, "motis.rt",
-                      "VDV AUS update stats for tag={}, "
-                      "url={}:\n{}",
-                      a.tag_, a.ep_.url_,
+                      "VDV AUS update stats for tag={}, url={}:\n{}", a.tag_,
+                      a.ep_.url_,
                       fmt::streamed(std::get<n::rt::vdv_aus::statistics>(s)));
                 } catch (std::exception const& e) {
                   a.metrics_.updates_error_.Increment();
                   n::log(n::log_lvl::error, "motis.rt",
-                         "VDV AUS update failed: tag={}, url={}, "
-                         "error={}",
+                         "VDV AUS update failed: tag={}, url={}, error={}",
                          a.tag_, a.ep_.url_, e.what());
                 }
               }},
@@ -277,7 +274,7 @@ awaitable<void> update_rt(config const& c,
 
   // Update real-time timetable shared pointer.
   auto railviz_rt = std::make_unique<railviz_rt_index>(*d.tt_, *rtt);
-  auto elevators = decltype(d.rt_->e_){};
+  auto elevators = std::unique_ptr<motis::elevators>{};
   if (c.has_elevators() && c.get_elevators()->url_) {
     try {
       elevators = co_await update_elevators(c, d, *rtt);
