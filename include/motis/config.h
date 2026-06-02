@@ -190,6 +190,8 @@ struct config {
       std::optional<
           std::variant<std::string, std::map<std::string, std::string>>>
           color_{};
+      std::optional<std::variant<bool, std::map<std::string, bool>>>
+          ignore_geofencing_{};
       std::optional<ttl> ttl_{};
     };
 

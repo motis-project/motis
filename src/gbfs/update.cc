@@ -318,6 +318,7 @@ struct gbfs_update {
                   .config_group_ = lookup_group("", id),
                   .config_name_ = lookup_name("", id),
                   .config_color_ = lookup_color("", id),
+                  .ignore_geofencing_ = lookup_ignore_geofencing("", id),
                   .oauth_ = std::move(oauth),
                   .default_ttl_ = default_ttl,
                   .overwrite_ttl_ = overwrite_ttl}))
@@ -469,12 +470,14 @@ struct gbfs_update {
         provider.vehicle_status_ = prev_provider->vehicle_status_;
       }
 
-      geofencing_updated =
-          co_await update("geofencing_zones", file_infos->geofencing_zones_fi_,
-                          load_geofencing_zones, vehicle_types_updated);
-      if ((!geofencing_updated && !vehicle_types_updated) &&
-          prev_provider != nullptr) {
-        provider.geofencing_zones_ = prev_provider->geofencing_zones_;
+      if (!pf.ignore_geofencing_) {
+        geofencing_updated = co_await update(
+            "geofencing_zones", file_infos->geofencing_zones_fi_,
+            load_geofencing_zones, vehicle_types_updated);
+        if ((!geofencing_updated && !vehicle_types_updated) &&
+            prev_provider != nullptr) {
+          provider.geofencing_zones_ = prev_provider->geofencing_zones_;
+        }
       }
 
       if (prev_provider != nullptr) {
@@ -814,6 +817,7 @@ struct gbfs_update {
             .config_group_ = lookup_group(af.id_, system_id),
             .config_name_ = lookup_name(af.id_, system_id),
             .config_color_ = lookup_color(af.id_, system_id),
+            .ignore_geofencing_ = lookup_ignore_geofencing(af.id_, system_id),
             .oauth_ = af.oauth_,
             .default_ttl_ = af.default_ttl_,
             .overwrite_ttl_ = af.overwrite_ttl_});
@@ -835,6 +839,7 @@ struct gbfs_update {
             .config_group_ = lookup_group(af.id_, system_id),
             .config_name_ = lookup_name(af.id_, system_id),
             .config_color_ = lookup_color(af.id_, system_id),
+            .ignore_geofencing_ = lookup_ignore_geofencing(af.id_, system_id),
             .oauth_ = af.oauth_,
             .default_ttl_ = af.default_ttl_,
             .overwrite_ttl_ = af.overwrite_ttl_});
@@ -1055,20 +1060,19 @@ struct gbfs_update {
     }
   }
 
-  template <typename Getter>
-  std::optional<std::string> lookup_mapping(std::string const& af_id,
-                                            std::string const& system_id,
-                                            Getter getter) {
+  template <typename T, typename Getter>
+  std::optional<T> lookup_mapping(std::string const& af_id,
+                                  std::string const& system_id,
+                                  Getter getter) {
     auto const& af_config = c_.feeds_.at(af_id.empty() ? system_id : af_id);
     auto const& opt = getter(af_config);
     if (opt.has_value()) {
       return std::visit(
           utl::overloaded{
-              [&](std::string const& s) -> std::optional<std::string> {
-                return std::optional{s};
+              [&](T const& value) -> std::optional<T> {
+                return std::optional{value};
               },
-              [&](std::map<std::string, std::string> const& m)
-                  -> std::optional<std::string> {
+              [&](std::map<std::string, T> const& m) -> std::optional<T> {
                 if (auto const it = m.find(system_id); it != end(m)) {
                   return std::optional{it->second};
                 }
@@ -1081,20 +1085,28 @@ struct gbfs_update {
 
   std::optional<std::string> lookup_group(std::string const& af_id,
                                           std::string const& system_id) {
-    return lookup_mapping(af_id, system_id,
-                          [](auto const& cfg) { return cfg.group_; });
+    return lookup_mapping<std::string>(
+        af_id, system_id, [](auto const& cfg) { return cfg.group_; });
   }
 
   std::optional<std::string> lookup_color(std::string const& af_id,
                                           std::string const& system_id) {
-    return lookup_mapping(af_id, system_id,
-                          [](auto const& cfg) { return cfg.color_; });
+    return lookup_mapping<std::string>(
+        af_id, system_id, [](auto const& cfg) { return cfg.color_; });
   }
 
   std::optional<std::string> lookup_name(std::string const& af_id,
                                          std::string const& system_id) {
-    return lookup_mapping(af_id, system_id,
-                          [](auto const& cfg) { return cfg.name_; });
+    return lookup_mapping<std::string>(
+        af_id, system_id, [](auto const& cfg) { return cfg.name_; });
+  }
+
+  bool lookup_ignore_geofencing(std::string const& af_id,
+                                std::string const& system_id) {
+    return lookup_mapping<bool>(
+               af_id, system_id,
+               [](auto const& cfg) { return cfg.ignore_geofencing_; })
+        .value_or(false);
   }
 
   config::gbfs const& c_;
