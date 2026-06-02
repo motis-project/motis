@@ -145,9 +145,7 @@ meta_router::meta_router(ep::routing const& r,
                           : query_.ignorePostTransitRentalReturnConstraints_},
       dest_ignore_rental_return_constraints_{
           query.arriveBy_ ? query_.ignorePostTransitRentalReturnConstraints_
-                          : query_.ignorePreTransitRentalReturnConstraints_} {
-  (void)direct_modes_;
-}
+                          : query_.ignorePreTransitRentalReturnConstraints_} {}
 
 meta_router::~meta_router() = default;
 
