@@ -16,8 +16,6 @@
 #include "boost/asio/detached.hpp"
 #include "boost/asio/experimental/awaitable_operators.hpp"
 #include "boost/asio/experimental/parallel_group.hpp"
-#include "boost/asio/redirect_error.hpp"
-#include "boost/asio/steady_timer.hpp"
 #include "boost/stacktrace.hpp"
 
 #include "boost/json.hpp"
@@ -43,6 +41,7 @@
 #include "motis/data.h"
 #include "motis/gbfs/data.h"
 #include "motis/http_req.h"
+#include "motis/repeat.h"
 
 #include "motis/gbfs/compression.h"
 #include "motis/gbfs/osr_mapping.h"
@@ -319,6 +318,7 @@ struct gbfs_update {
                   .config_group_ = lookup_group("", id),
                   .config_name_ = lookup_name("", id),
                   .config_color_ = lookup_color("", id),
+                  .ignore_geofencing_ = lookup_ignore_geofencing("", id),
                   .oauth_ = std::move(oauth),
                   .default_ttl_ = default_ttl,
                   .overwrite_ttl_ = overwrite_ttl}))
@@ -470,12 +470,14 @@ struct gbfs_update {
         provider.vehicle_status_ = prev_provider->vehicle_status_;
       }
 
-      geofencing_updated =
-          co_await update("geofencing_zones", file_infos->geofencing_zones_fi_,
-                          load_geofencing_zones, vehicle_types_updated);
-      if ((!geofencing_updated && !vehicle_types_updated) &&
-          prev_provider != nullptr) {
-        provider.geofencing_zones_ = prev_provider->geofencing_zones_;
+      if (!pf.ignore_geofencing_) {
+        geofencing_updated = co_await update(
+            "geofencing_zones", file_infos->geofencing_zones_fi_,
+            load_geofencing_zones, vehicle_types_updated);
+        if ((!geofencing_updated && !vehicle_types_updated) &&
+            prev_provider != nullptr) {
+          provider.geofencing_zones_ = prev_provider->geofencing_zones_;
+        }
       }
 
       if (prev_provider != nullptr) {
@@ -815,6 +817,7 @@ struct gbfs_update {
             .config_group_ = lookup_group(af.id_, system_id),
             .config_name_ = lookup_name(af.id_, system_id),
             .config_color_ = lookup_color(af.id_, system_id),
+            .ignore_geofencing_ = lookup_ignore_geofencing(af.id_, system_id),
             .oauth_ = af.oauth_,
             .default_ttl_ = af.default_ttl_,
             .overwrite_ttl_ = af.overwrite_ttl_});
@@ -836,6 +839,7 @@ struct gbfs_update {
             .config_group_ = lookup_group(af.id_, system_id),
             .config_name_ = lookup_name(af.id_, system_id),
             .config_color_ = lookup_color(af.id_, system_id),
+            .ignore_geofencing_ = lookup_ignore_geofencing(af.id_, system_id),
             .oauth_ = af.oauth_,
             .default_ttl_ = af.default_ttl_,
             .overwrite_ttl_ = af.overwrite_ttl_});
@@ -1056,20 +1060,19 @@ struct gbfs_update {
     }
   }
 
-  template <typename Getter>
-  std::optional<std::string> lookup_mapping(std::string const& af_id,
-                                            std::string const& system_id,
-                                            Getter getter) {
+  template <typename T, typename Getter>
+  std::optional<T> lookup_mapping(std::string const& af_id,
+                                  std::string const& system_id,
+                                  Getter getter) {
     auto const& af_config = c_.feeds_.at(af_id.empty() ? system_id : af_id);
     auto const& opt = getter(af_config);
     if (opt.has_value()) {
       return std::visit(
           utl::overloaded{
-              [&](std::string const& s) -> std::optional<std::string> {
-                return std::optional{s};
+              [&](T const& value) -> std::optional<T> {
+                return std::optional{value};
               },
-              [&](std::map<std::string, std::string> const& m)
-                  -> std::optional<std::string> {
+              [&](std::map<std::string, T> const& m) -> std::optional<T> {
                 if (auto const it = m.find(system_id); it != end(m)) {
                   return std::optional{it->second};
                 }
@@ -1082,20 +1085,28 @@ struct gbfs_update {
 
   std::optional<std::string> lookup_group(std::string const& af_id,
                                           std::string const& system_id) {
-    return lookup_mapping(af_id, system_id,
-                          [](auto const& cfg) { return cfg.group_; });
+    return lookup_mapping<std::string>(
+        af_id, system_id, [](auto const& cfg) { return cfg.group_; });
   }
 
   std::optional<std::string> lookup_color(std::string const& af_id,
                                           std::string const& system_id) {
-    return lookup_mapping(af_id, system_id,
-                          [](auto const& cfg) { return cfg.color_; });
+    return lookup_mapping<std::string>(
+        af_id, system_id, [](auto const& cfg) { return cfg.color_; });
   }
 
   std::optional<std::string> lookup_name(std::string const& af_id,
                                          std::string const& system_id) {
-    return lookup_mapping(af_id, system_id,
-                          [](auto const& cfg) { return cfg.name_; });
+    return lookup_mapping<std::string>(
+        af_id, system_id, [](auto const& cfg) { return cfg.name_; });
+  }
+
+  bool lookup_ignore_geofencing(std::string const& af_id,
+                                std::string const& system_id) {
+    return lookup_mapping<bool>(
+               af_id, system_id,
+               [](auto const& cfg) { return cfg.ignore_geofencing_; })
+        .value_or(false);
   }
 
   config::gbfs const& c_;
@@ -1147,26 +1158,10 @@ void run_gbfs_update(boost::asio::io_context& ioc,
   boost::asio::co_spawn(
       ioc,
       [&, metrics]() -> awaitable<void> {
-        auto executor = co_await asio::this_coro::executor;
-        auto timer = asio::steady_timer{executor};
-        auto ec = boost::system::error_code{};
         auto cc = c;
-
-        while (true) {
-          // Remember when we started so we can schedule the next update.
-          auto const start = std::chrono::steady_clock::now();
-
-          co_await update(cc, w, l, data_ptr, metrics);
-
-          // Schedule next update.
-          timer.expires_at(start +
-                           std::chrono::seconds{cc.gbfs_->update_interval_});
-          co_await timer.async_wait(
-              asio::redirect_error(asio::use_awaitable, ec));
-          if (ec == asio::error::operation_aborted) {
-            co_return;
-          }
-        }
+        co_await repeat(std::chrono::seconds{cc.gbfs_->update_interval_},
+                        "gbfs update",
+                        [&] { return update(cc, w, l, data_ptr, metrics); });
       },
       boost::asio::detached);
 }
