@@ -14,9 +14,9 @@ using namespace std::chrono_literals;
 
 struct trip_descriptor {
   std::string trip_id_;
-  std::optional<std::string> start_time_;
-  std::optional<std::string> date_;
-  std::optional<std::string> route_id_;
+  std::optional<std::string> start_time_{};
+  std::optional<std::string> date_{};
+  std::optional<std::string> route_id_{};
 };
 
 struct trip_update {
