@@ -71,8 +71,8 @@ transit_realtime::FeedMessage to_feed_msg(
                 }
                 if (stop_upd.time_.has_value()) {
                   auto const t = to_unix(*stop_upd.time_);
-                  upd->mutable_arrival()->set_time(t);
-                  upd->mutable_departure()->set_time(t);
+                  upd->mutable_arrival()->set_time(static_cast<signed>(t));
+                  upd->mutable_departure()->set_time(static_cast<signed>(t));
                 }
                 if (stop_upd.skip_) {
                   upd->set_schedule_relationship(
