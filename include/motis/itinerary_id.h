@@ -14,6 +14,7 @@
 #include "motis/fwd.h"
 #include "motis/osr/parameters.h"
 #include "motis/place.h"
+#include "motis/rental_options.h"
 
 namespace nigiri::routing {
 struct journey;

@@ -19,6 +19,7 @@
 #include "motis/match_platforms.h"
 #include "motis/osr/parameters.h"
 #include "motis/place.h"
+#include "motis/rental_options.h"
 
 namespace motis::ep {
 
