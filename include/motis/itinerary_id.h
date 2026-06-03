@@ -37,6 +37,8 @@ struct first_last_mile_options {
   std::chrono::seconds max_post_transit_;
   rental_options pre_transit_;
   rental_options post_transit_;
+  std::vector<api::ModeEnum> pre_transit_modes_;
+  std::vector<api::ModeEnum> post_transit_modes_;
 };
 
 first_last_mile_options make_first_last_mile_options(

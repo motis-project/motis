@@ -2142,6 +2142,34 @@ paths:
             items:
               $ref: '#/components/schemas/Mode'
           explode: false
+        - name: preTransitModes
+          in: query
+          required: false
+          description: |
+            Optional. Default is `WALK`. Modes allowed for the first (access)
+            mile when reconstructing leg alternatives. Should match the
+            `preTransitModes` of the original `plan` request.
+          schema:
+            default:
+              - WALK
+            type: array
+            items:
+              $ref: '#/components/schemas/Mode'
+          explode: false
+        - name: postTransitModes
+          in: query
+          required: false
+          description: |
+            Optional. Default is `WALK`. Modes allowed for the last (egress)
+            mile when reconstructing leg alternatives. Should match the
+            `postTransitModes` of the original `plan` request.
+          schema:
+            default:
+              - WALK
+            type: array
+            items:
+              $ref: '#/components/schemas/Mode'
+          explode: false
         - name: pedestrianProfile
           in: query
           required: false

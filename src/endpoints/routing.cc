@@ -1059,8 +1059,11 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                   query.ignorePreTransitRentalReturnConstraints_,
                   query.ignorePostTransitRentalReturnConstraints_,
                   query.language_, true,
-                  query.numLegAlternatives_ > 0 ? &q_for_alts : nullptr,
-                  static_cast<std::size_t>(query.numLegAlternatives_));
+                  query.numLegAlternatives_ > 0
+                      ? alternatives_context{query_alternatives{
+                            q_for_alts,
+                            static_cast<std::size_t>(query.numLegAlternatives_)}}
+                      : alternatives_context{});
             }),
         .previousPageCursor_ =
             fmt::format("EARLIER|{}", to_seconds(search_interval.from_)),

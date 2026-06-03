@@ -1587,6 +1587,98 @@ TEST(motis, itinerary_id_refresh_leg_alternatives_intermodal_offsets) {
   EXPECT_EQ(alt_transit_trip_ids(plan_leg), alt_transit_trip_ids(refresh_leg));
 }
 
+constexpr auto kLegAltFirstAccessGtfs = R"(
+# agency.txt
+agency_id,agency_name,agency_url,agency_timezone
+DB,Deutsche Bahn,https://deutschebahn.com,Europe/Berlin
+
+# stops.txt
+stop_id,stop_name,stop_lat,stop_lon,location_type,parent_station
+A,A,49.87336,8.62926,0,
+B,B,49.87260,8.63085,0,
+C,C,49.99000,8.65000,0,
+D,D,50.10739,8.66333,0,
+
+# routes.txt
+route_id,agency_id,route_short_name,route_long_name,route_desc,route_type
+AC_R,DB,AC,,,106
+BC_R,DB,BC,,,106
+CD_R,DB,CD,,,106
+
+# trips.txt
+route_id,service_id,trip_id,trip_headsign
+AC_R,S1,AC,
+BC_R,S1,BC,
+CD_R,S1,CD,
+
+# stop_times.txt
+trip_id,arrival_time,departure_time,stop_id,stop_sequence
+AC,09:00:00,09:00:00,A,0
+AC,09:30:00,09:30:00,C,1
+BC,09:05:00,09:05:00,B,0
+BC,09:35:00,09:35:00,C,1
+CD,10:00:00,10:00:00,C,0
+CD,10:30:00,10:30:00,D,1
+
+# calendar_dates.txt
+service_id,date,exception_type
+S1,20190501,1
+)";
+
+// First leg of a MULTI-leg journey with two competing access stops: the chosen
+// journey boards at B (BC -> CD), but A is also reachable from START, so the
+// first leg offers the `AC` alternative -- which boards at a different stop AND
+// departs *earlier* than the chosen `BC`. `plan` passes the whole journey to
+// `get_leg_alternatives`, so the first leg (a successor exists) uses the
+// "earlier arrivals" branch and finds `AC`. The refresh endpoint reconstructs
+// legs one at a time, so it must hand `get_leg_alternatives` the surrounding
+// transit context to reproduce the same alternative set (otherwise it only
+// sees "later departures" and drops the earlier `AC`).
+TEST(motis, itinerary_id_refresh_leg_alternatives_first_leg_other_access) {
+  auto ec = std::error_code{};
+  auto const path =
+      fs::path{"test/data/itinerary_id"} / "leg_alt_first_access";
+  fs::remove_all(path, ec);
+
+  auto const cfg = config{
+      .osm_ = {"test/resources/test_case.osm.pbf"},
+      .timetable_ =
+          config::timetable{
+              .first_day_ = "2019-05-01",
+              .num_days_ = 2,
+              .datasets_ = {{"test",
+                             {.path_ = std::string{kLegAltFirstAccessGtfs}}}},
+          },
+      .street_routing_ = true,
+  };
+  import(cfg, path);
+  auto d = data{path, cfg};
+
+  auto const routing = utl::init_from<ep::routing>(d).value();
+  auto const plan = routing(
+      "?fromPlace=49.87298,8.63006&toPlace=50.10720,8.66320"
+      "&time=2019-05-01T05:00Z&searchWindow=14400&detailedLegs=true"
+      "&numLegAlternatives=5");
+  ASSERT_FALSE(plan.itineraries_.empty());
+  auto const& plan_itin = plan.itineraries_.front();
+  auto const& plan_leg = first_transit_leg(plan_itin);
+  ASSERT_TRUE(plan_leg.alternatives_.has_value());
+  EXPECT_TRUE(any_alt_trip_contains(plan_leg, "AC"))
+      << "plan should offer the earlier AC alternative that boards at a "
+         "different stop";
+
+  auto query = api::refreshItinerary_params{};
+  query.itineraryId_ = plan_itin.id_;
+  query.numLegAlternatives_ = 5;
+  auto const refresh = utl::init_from<ep::refresh_itinerary>(d).value();
+  auto const refreshed = refresh(query.to_url("?"));
+  auto const& refresh_leg = first_transit_leg(refreshed);
+
+  EXPECT_TRUE(any_alt_trip_contains(refresh_leg, "AC"))
+      << "refresh must reproduce the earlier, different-access-stop alternative";
+  EXPECT_EQ(alt_transit_trip_ids(plan_leg), alt_transit_trip_ids(refresh_leg));
+}
+
 // transitModes: the alternative bus departs before the alternative regional
 // train, so without the constraint the bus would be the first alternative.
 TEST(motis, itinerary_id_refresh_leg_alternatives_respect_transit_modes) {
@@ -1823,11 +1915,10 @@ S1,20190501,1
 )";
 
 // Partial-journey leg-alternatives: when a PT leg fails to reconstruct and
-// becomes a dummy, the surviving segments must compute alternatives as if the
-// dummy were a real adjacent transit leg (kExact pinning + use_start_footpaths_
-// on the dummy side, mirroring `make_alternative_query`). Without that, the
-// segment-internal first transit gets `has_prev=false` and the alt query falls
-// back to single-stop kIntermodal, losing footpath-equivalent alternatives.
+// becomes a dummy, a surviving adjacent transit leg cannot bound its
+// leg-alternatives query against the dummy side (the surrounding transit
+// context is incomplete), so it produces no alternatives -- even though the
+// full plan (where the dummy leg exists as a real transit leg) does offer them.
 TEST(motis,
      itinerary_id_refresh_leg_alternatives_partial_journey_overreach) {
   auto const make_partial_cfg = [](std::string const& gtfs) {
@@ -1896,15 +1987,15 @@ TEST(motis,
   ASSERT_NE(refresh_local2_it, end(refresh_pt_legs));
   auto const& refresh_local2 = **refresh_local2_it;
 
-  // If the partial-journey alt query worked the same as plan, the two alt
-  // sets would match. This assertion is expected to FAIL today, demonstrating
-  // the over-extension: refresh's LOCAL2 alts include LOCAL2_ALT (reached via
-  // `kIntermodal` osr-extension from MID), which plan does not consider
-  // because plan pins LOCAL2's alts at PT1.to_=MID with `kExact` via
-  // `make_alternative_query`.
-  EXPECT_EQ(alt_transit_trip_ids(plan_local2),
-            alt_transit_trip_ids(refresh_local2))
-      << "partial-journey alt set diverges from plan — bug demonstrated";
+  // LOCAL2's previous transit leg (ICE1) failed to reconstruct and became a
+  // dummy. Because a leg adjacent to a dummy cannot bound its alternatives
+  // query against the missing transit context, the reconstructed LOCAL2 leg
+  // produces no alternatives -- even though the plan (where ICE1 is a real
+  // leg) does offer LOCAL2_ALT.
+  EXPECT_FALSE(alt_transit_trip_ids(plan_local2).empty())
+      << "plan should offer LOCAL2_ALT as an alternative";
+  EXPECT_TRUE(alt_transit_trip_ids(refresh_local2).empty())
+      << "a leg adjacent to a dummy must not compute alternatives";
 }
 
 // Elevator-blocked footpath: shared fasta states reused by the two tests

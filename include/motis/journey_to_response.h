@@ -2,6 +2,7 @@
 
 #include <string_view>
 #include <variant>
+#include <vector>
 
 #include "nigiri/routing/journey.h"
 #include "nigiri/rt/frun.h"
@@ -34,6 +35,18 @@ std::optional<std::vector<api::Alert>> get_alerts(
     std::optional<std::pair<nigiri::rt::run_stop, nigiri::event_type>> const&,
     bool fuzzy_stop,
     std::optional<std::vector<std::string>> const& language);
+
+struct query_alternatives {
+  nigiri::routing::query const& query;
+  std::size_t num_alternatives;
+};
+using alternatives_context = std::variant<
+    // no alternatives
+    std::monostate,
+    // compute alternatives from the query+journey context
+    query_alternatives,
+    // precomputed
+    std::vector<nigiri::routing::journey>>;
 
 api::Itinerary journey_to_response(
     osr::ways const*,
@@ -71,7 +84,6 @@ api::Itinerary journey_to_response(
     bool ignore_dest_rental_return_constraints,
     std::optional<std::vector<std::string>> const& language,
     bool const set_itinerary_id_field = true,
-    nigiri::routing::query const* leg_alternatives_query = nullptr,
-    std::size_t num_leg_alternatives = 0U);
+    alternatives_context const& alternatives = {});
 
 }  // namespace motis

@@ -271,8 +271,7 @@ api::Itinerary journey_to_response(
     bool const ignore_dest_rental_return_constraints,
     n::lang_t const& lang,
     bool const set_itinerary_id_field,
-    n::routing::query const* leg_alternatives_query,
-    std::size_t const num_leg_alternatives) {
+    alternatives_context const& alternatives) {
   auto const itinerary_start_time = j_in.legs_.front().dep_time_;
   auto const itinerary_end_time = j_in.legs_.back().arr_time_;
   auto j = j_in;
@@ -416,34 +415,38 @@ api::Itinerary journey_to_response(
         });
   };
 
+  auto const render_alternatives =
+      [&](std::vector<n::routing::journey> const& alt_journeys) {
+        return utl::to_vec(alt_journeys, [&](n::routing::journey const& alt) {
+          auto const& alt_from_loc = alt.legs_.front().from_;
+          auto const& alt_to_loc = alt.legs_.back().to_;
+          return journey_to_response(
+                     w, l, pl, tt, tags, fl, e, rtt, matches, elevations,
+                     shapes, gbfs_rd, ae, tz_map, alt,
+                     n::is_special(alt_from_loc)
+                         ? start
+                         : place_t{tt_location{alt_from_loc}},
+                     n::is_special(alt_to_loc)
+                         ? dest
+                         : place_t{tt_location{alt_to_loc}},
+                     cache, blocked_mem, car_transfers, osr_params,
+                     pedestrian_profile, elevation_costs, join_interlined_legs,
+                     detailed_transfers, detailed_legs, with_fares,
+                     with_scheduled_skipped_stops,
+                     timetable_max_matching_distance, max_matching_distance,
+                     api_version, ignore_start_rental_return_constraints,
+                     ignore_dest_rental_return_constraints, lang, false)
+              .legs_;
+        });
+      };
+
   auto const attach_alternatives = [&](api::Leg& leg,
                                        std::size_t const j_leg_idx) {
-    if (leg_alternatives_query == nullptr || num_leg_alternatives == 0U) {
-      return;
-    }
-    auto alternatives = std::vector<std::vector<api::Leg>>{};
-    for (auto const& alt :
-         n::routing::get_leg_alternatives(tt, rtt, *leg_alternatives_query, j,
-                                          j_leg_idx, num_leg_alternatives)) {
-      auto const& alt_from_loc = alt.legs_.front().from_;
-      auto const& alt_to_loc = alt.legs_.back().to_;
-      alternatives.push_back(
-          journey_to_response(
-              w, l, pl, tt, tags, fl, e, rtt, matches, elevations, shapes,
-              gbfs_rd, ae, tz_map, alt,
-              n::is_special(alt_from_loc) ? start
-                                          : place_t{tt_location{alt_from_loc}},
-              n::is_special(alt_to_loc) ? dest
-                                        : place_t{tt_location{alt_to_loc}},
-              cache, blocked_mem, car_transfers, osr_params, pedestrian_profile,
-              elevation_costs, join_interlined_legs, detailed_transfers,
-              detailed_legs, with_fares, with_scheduled_skipped_stops,
-              timetable_max_matching_distance, max_matching_distance,
-              api_version, ignore_start_rental_return_constraints,
-              ignore_dest_rental_return_constraints, lang, false)
-              .legs_);
-    }
-    leg.alternatives_ = std::move(alternatives);
+    leg.alternatives_ = utl::visit(
+        alternatives, render_alternatives, [&](query_alternatives const& a) {
+          return render_alternatives(n::routing::get_leg_alternatives(
+              tt, rtt, a.query, j, j_leg_idx, a.num_alternatives));
+        });
   };
 
   for (auto const [j_leg_idx, j_leg] : utl::enumerate(j.legs_)) {
