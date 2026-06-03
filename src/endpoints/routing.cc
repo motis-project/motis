@@ -1061,8 +1061,8 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                   query.language_, true,
                   query.numLegAlternatives_ > 0
                       ? alternatives_context{query_alternatives{
-                            q_for_alts,
-                            static_cast<std::size_t>(query.numLegAlternatives_)}}
+                            q_for_alts, static_cast<std::size_t>(
+                                            query.numLegAlternatives_)}}
                       : alternatives_context{});
             }),
         .previousPageCursor_ =

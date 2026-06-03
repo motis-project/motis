@@ -78,9 +78,9 @@ TEST(motis, itinerary_id_distinguishes_level_zero_from_no_level) {
       place_t{osr::location{geo::latlng{3.0, 4.0}, osr::kNoLevel}};
 
   auto parsed = motis::ItineraryId{};
-  ASSERT_TRUE(parsed.ParseFromString(net::decode_base64(generate_itinerary_id(
-      j, tags, tt, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, start,
-      dest))));
+  ASSERT_TRUE(parsed.ParseFromString(net::decode_base64(
+      generate_itinerary_id(j, tags, tt, nullptr, nullptr, nullptr, nullptr,
+                            nullptr, nullptr, start, dest))));
   ASSERT_EQ(1, parsed.legs_size());
   EXPECT_TRUE(parsed.legs(0).has_from_level());
   EXPECT_EQ(0.0, parsed.legs(0).from_level());
@@ -1636,8 +1636,7 @@ S1,20190501,1
 // sees "later departures" and drops the earlier `AC`).
 TEST(motis, itinerary_id_refresh_leg_alternatives_first_leg_other_access) {
   auto ec = std::error_code{};
-  auto const path =
-      fs::path{"test/data/itinerary_id"} / "leg_alt_first_access";
+  auto const path = fs::path{"test/data/itinerary_id"} / "leg_alt_first_access";
   fs::remove_all(path, ec);
 
   auto const cfg = config{
@@ -1675,7 +1674,8 @@ TEST(motis, itinerary_id_refresh_leg_alternatives_first_leg_other_access) {
   auto const& refresh_leg = first_transit_leg(refreshed);
 
   EXPECT_TRUE(any_alt_trip_contains(refresh_leg, "AC"))
-      << "refresh must reproduce the earlier, different-access-stop alternative";
+      << "refresh must reproduce the earlier, different-access-stop "
+         "alternative";
   EXPECT_EQ(alt_transit_trip_ids(plan_leg), alt_transit_trip_ids(refresh_leg));
 }
 
@@ -1919,8 +1919,7 @@ S1,20190501,1
 // leg-alternatives query against the dummy side (the surrounding transit
 // context is incomplete), so it produces no alternatives -- even though the
 // full plan (where the dummy leg exists as a real transit leg) does offer them.
-TEST(motis,
-     itinerary_id_refresh_leg_alternatives_partial_journey_overreach) {
+TEST(motis, itinerary_id_refresh_leg_alternatives_partial_journey_overreach) {
   auto const make_partial_cfg = [](std::string const& gtfs) {
     return config{
         .osm_ = {"test/resources/test_case.osm.pbf"},
@@ -1963,8 +1962,7 @@ TEST(motis,
   ASSERT_FALSE(plan.itineraries_.empty());
   auto const& plan_itin = plan.itineraries_.front();
   auto const plan_pt_legs = transit_legs(plan_itin);
-  ASSERT_EQ(2U, plan_pt_legs.size())
-      << "expected ICE1 + LOCAL2 in source plan";
+  ASSERT_EQ(2U, plan_pt_legs.size()) << "expected ICE1 + LOCAL2 in source plan";
   auto const& plan_local2 = *plan_pt_legs[1];
 
   // Reconstruct the same id in target (no ICE1) — ICE1 becomes a dummy and
@@ -1979,10 +1977,10 @@ TEST(motis,
   auto const refresh_pt_legs = transit_legs(refreshed);
   ASSERT_FALSE(refresh_pt_legs.empty());
   // Find LOCAL2 (the reconstructed-from-segment PT leg) in refreshed output.
-  auto const refresh_local2_it = utl::find_if(
-      refresh_pt_legs, [](api::Leg const* l) {
-        return l->tripId_.has_value() && l->tripId_->find("LOCAL2") !=
-                                             std::string::npos;
+  auto const refresh_local2_it =
+      utl::find_if(refresh_pt_legs, [](api::Leg const* l) {
+        return l->tripId_.has_value() &&
+               l->tripId_->find("LOCAL2") != std::string::npos;
       });
   ASSERT_NE(refresh_local2_it, end(refresh_pt_legs));
   auto const& refresh_local2 = **refresh_local2_it;
@@ -2091,13 +2089,12 @@ std::pair<data, config> import_elevator_test_case() {
   auto c = config{
       .osm_ = {"test/resources/test_case.osm.pbf"},
       .timetable_ =
-          config::timetable{.first_day_ = "2019-05-01",
-                            .num_days_ = 2,
-                            .use_osm_stop_coordinates_ = true,
-                            .extend_missing_footpaths_ = false,
-                            .datasets_ = {{"test",
-                                           {.path_ = std::string{
-                                                kElevatorGTFS}}}}},
+          config::timetable{
+              .first_day_ = "2019-05-01",
+              .num_days_ = 2,
+              .use_osm_stop_coordinates_ = true,
+              .extend_missing_footpaths_ = false,
+              .datasets_ = {{"test", {.path_ = std::string{kElevatorGTFS}}}}},
       .street_routing_ = true,
       .osr_footpath_ = true};
   auto ec = std::error_code{};
@@ -2118,9 +2115,9 @@ std::pair<data, config> import_elevator_test_case() {
 TEST(motis, itinerary_id_refresh_offset_blocked_by_elevator) {
   auto [d, cfg] = import_elevator_test_case();
   d.init_rtt(date::sys_days{date::year{2019} / date::May / 1});
-  d.rt_->e_ = std::make_unique<elevators>(*d.w_, nullptr, *d.elevator_nodes_,
-                                          parse_fasta(std::string_view{
-                                              kElevatorsActive}));
+  d.rt_->e_ = std::make_unique<elevators>(
+      *d.w_, nullptr, *d.elevator_nodes_,
+      parse_fasta(std::string_view{kElevatorsActive}));
 
   auto const routing = utl::init_from<ep::routing>(d).value();
   auto const plan = routing(
@@ -2142,8 +2139,8 @@ TEST(motis, itinerary_id_refresh_offset_blocked_by_elevator) {
   // Block the DA-HBF Gleis 9/10 elevator covering the journey window.
   // update_elevators reads from `d.rt_->rtt_` and writes to its `new_rtt`
   // argument, so clone first.
-  auto new_rtt =
-      std::make_unique<nigiri::rt_timetable>(nigiri::rt_timetable{*d.rt_->rtt_});
+  auto new_rtt = std::make_unique<nigiri::rt_timetable>(
+      nigiri::rt_timetable{*d.rt_->rtt_});
   d.rt_->e_ = update_elevators(cfg, d, kElevatorsBlocked, *new_rtt);
   d.rt_->rtt_ = std::move(new_rtt);
 
@@ -2178,9 +2175,9 @@ TEST(motis, itinerary_id_refresh_offset_blocked_by_elevator) {
 // fails, demonstrating the bug.
 TEST(motis, itinerary_id_refresh_transfer_blocked_by_elevator) {
   auto [d, cfg] = import_elevator_test_case();
-  d.rt_->e_ = std::make_unique<elevators>(*d.w_, nullptr, *d.elevator_nodes_,
-                                          parse_fasta(std::string_view{
-                                              kElevatorsActive}));
+  d.rt_->e_ = std::make_unique<elevators>(
+      *d.w_, nullptr, *d.elevator_nodes_,
+      parse_fasta(std::string_view{kElevatorsActive}));
   d.init_rtt(date::sys_days{date::year{2019} / date::May / 1});
 
   auto const routing = utl::init_from<ep::routing>(d).value();
@@ -2199,12 +2196,11 @@ TEST(motis, itinerary_id_refresh_transfer_blocked_by_elevator) {
   auto const& original = plan.itineraries_.front();
 
   // Locate the FFM_10 → FFM_101 transfer leg (a WALK after the ICE).
-  auto const transfer_it =
-      utl::find_if(original.legs_, [](api::Leg const& l) {
-        return l.mode_ == api::ModeEnum::WALK &&
-               l.from_.stopId_.value_or("") == "test_FFM_10" &&
-               l.to_.stopId_.value_or("") == "test_FFM_101";
-      });
+  auto const transfer_it = utl::find_if(original.legs_, [](api::Leg const& l) {
+    return l.mode_ == api::ModeEnum::WALK &&
+           l.from_.stopId_.value_or("") == "test_FFM_10" &&
+           l.to_.stopId_.value_or("") == "test_FFM_101";
+  });
   ASSERT_NE(transfer_it, end(original.legs_))
       << "plan does not transfer through FFM_10 → FFM_101";
   auto const original_transfer_idx =
@@ -2212,8 +2208,8 @@ TEST(motis, itinerary_id_refresh_transfer_blocked_by_elevator) {
 
   // Block the FFM-HBF Gleis 101/102 elevator. See offset test for the
   // rationale behind cloning the rtt before calling update_elevators.
-  auto new_rtt =
-      std::make_unique<nigiri::rt_timetable>(nigiri::rt_timetable{*d.rt_->rtt_});
+  auto new_rtt = std::make_unique<nigiri::rt_timetable>(
+      nigiri::rt_timetable{*d.rt_->rtt_});
   d.rt_->e_ = update_elevators(cfg, d, kElevatorsBlocked, *new_rtt);
   d.rt_->rtt_ = std::move(new_rtt);
 
@@ -2253,9 +2249,9 @@ constexpr auto const kElevatorsDaShortOutage = R"__([
 
 TEST(motis, itinerary_id_refresh_access_extended_by_elevator_wait) {
   auto [d, cfg] = import_elevator_test_case();
-  d.rt_->e_ = std::make_unique<elevators>(*d.w_, nullptr, *d.elevator_nodes_,
-                                          parse_fasta(std::string_view{
-                                              kElevatorsActive}));
+  d.rt_->e_ = std::make_unique<elevators>(
+      *d.w_, nullptr, *d.elevator_nodes_,
+      parse_fasta(std::string_view{kElevatorsActive}));
   d.init_rtt(date::sys_days{date::year{2019} / date::May / 1});
 
   auto const routing = utl::init_from<ep::routing>(d).value();
@@ -2277,8 +2273,8 @@ TEST(motis, itinerary_id_refresh_access_extended_by_elevator_wait) {
   auto const original_access_end =
       original.legs_.front().endTime_.get_unixtime_seconds();
 
-  auto new_rtt =
-      std::make_unique<nigiri::rt_timetable>(nigiri::rt_timetable{*d.rt_->rtt_});
+  auto new_rtt = std::make_unique<nigiri::rt_timetable>(
+      nigiri::rt_timetable{*d.rt_->rtt_});
   d.rt_->e_ = update_elevators(cfg, d, kElevatorsDaShortOutage, *new_rtt);
   d.rt_->rtt_ = std::move(new_rtt);
 
@@ -2314,9 +2310,9 @@ TEST(motis, itinerary_id_refresh_access_extended_by_elevator_wait) {
 // next PT departure.
 TEST(motis, itinerary_id_refresh_transfer_extended_by_elevator_wait) {
   auto [d, cfg] = import_elevator_test_case();
-  d.rt_->e_ = std::make_unique<elevators>(*d.w_, nullptr, *d.elevator_nodes_,
-                                          parse_fasta(std::string_view{
-                                              kElevatorsActive}));
+  d.rt_->e_ = std::make_unique<elevators>(
+      *d.w_, nullptr, *d.elevator_nodes_,
+      parse_fasta(std::string_view{kElevatorsActive}));
   d.init_rtt(date::sys_days{date::year{2019} / date::May / 1});
 
   auto const routing = utl::init_from<ep::routing>(d).value();
@@ -2338,13 +2334,14 @@ TEST(motis, itinerary_id_refresh_transfer_extended_by_elevator_wait) {
            l.to_.stopId_.value_or("") == "test_FFM_101";
   });
   ASSERT_NE(transfer_it, end(original.legs_));
-  auto const idx = static_cast<std::size_t>(transfer_it - begin(original.legs_));
+  auto const idx =
+      static_cast<std::size_t>(transfer_it - begin(original.legs_));
   auto const original_duration = transfer_it->duration_;
 
   // Take the FFM elevator out only for [22:30, 23:00) UTC (covers the 22:45
   // FFM_10 arrival, reopens before the 23:15 S3 departure).
-  auto new_rtt =
-      std::make_unique<nigiri::rt_timetable>(nigiri::rt_timetable{*d.rt_->rtt_});
+  auto new_rtt = std::make_unique<nigiri::rt_timetable>(
+      nigiri::rt_timetable{*d.rt_->rtt_});
   d.rt_->e_ = update_elevators(cfg, d, kElevatorsFfmShortOutage, *new_rtt);
   d.rt_->rtt_ = std::move(new_rtt);
 
