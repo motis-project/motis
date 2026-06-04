@@ -3090,6 +3090,14 @@ export type GeocodeData = {
          */
         language?: Array<(string)>;
         /**
+         * latitude,longitude pair of the upper left coordinate
+         */
+        max?: string;
+        /**
+         * latitude,longitude pair of the lower right coordinate
+         */
+        min?: string;
+        /**
          * Optional. Filter stops by available transport modes.
          * Defaults to applying no filter.
          *
