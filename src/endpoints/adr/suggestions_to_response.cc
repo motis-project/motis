@@ -1,15 +1,14 @@
 #include "motis/endpoints/adr/suggestions_to_response.h"
 
-#include "geo/box.h"
 #include "utl/for_each_bit_set.h"
 #include "utl/helpers/algorithm.h"
 #include "utl/overloaded.h"
 #include "utl/to_vec.h"
 #include "utl/visit.h"
 
-#include "nigiri/timetable.h"
-
 #include "adr/typeahead.h"
+
+#include "nigiri/timetable.h"
 
 #include "motis/journey_to_response.h"
 #include "motis/tag_lookup.h"
