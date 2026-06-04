@@ -56,7 +56,6 @@
 #include "motis/transport_mode_ids.h"
 
 #include "itinerary_id.pb.h"
-#include "motis/odm/prima.h"
 
 namespace n = nigiri;
 namespace json = boost::json;
@@ -101,11 +100,9 @@ struct leg_hint {
       : display_name_{l.display_name()},
         trip_id_{l.trip_id()},
         from_stop_id_{l.from_id()},
-        from_pos_{l.from_lat(), l.from_lon()},
-        from_level_{proto_to_level(l, true)},
+        from_loc_{{l.from_lat(), l.from_lon()}, proto_to_level(l, true)},
         to_stop_id_{l.to_id()},
-        to_pos_{l.to_lat(), l.to_lon()},
-        to_level_{proto_to_level(l, false)},
+        to_loc_{{l.to_lat(), l.to_lon()}, proto_to_level(l, false)},
         sched_start_{l.sched_start()},
         sched_end_{l.sched_end()},
         mode_{json::value_to<api::ModeEnum>(json::value{l.mode()})},
@@ -116,11 +113,9 @@ struct leg_hint {
   std::string display_name_;
   std::string trip_id_;
   std::string from_stop_id_;
-  geo::latlng from_pos_;
-  osr::level_t from_level_;
+  osr::location from_loc_;
   std::string to_stop_id_;
-  geo::latlng to_pos_;
-  osr::level_t to_level_;
+  osr::location to_loc_;
   std::int64_t sched_start_;
   std::int64_t sched_end_;
   api::ModeEnum mode_;
@@ -138,16 +133,16 @@ api::Leg make_dummy_leg(leg_hint const& lh, std::string error) {
   return api::Leg{
       .mode_ = lh.mode_,
       .from_ = {.stopId_ = lh.from_stop_id_,
-                .lat_ = lh.from_pos_.lat_,
-                .lon_ = lh.from_pos_.lng_,
-                .level_ = level_to_api(lh.from_level_),
+                .lat_ = lh.from_loc_.pos_.lat_,
+                .lon_ = lh.from_loc_.pos_.lng_,
+                .level_ = level_to_api(lh.from_loc_.lvl_),
                 .departure_ = start,
                 .scheduledDeparture_ = start,
                 .cancelled_ = true},
       .to_ = {.stopId_ = lh.to_stop_id_,
-              .lat_ = lh.to_pos_.lat_,
-              .lon_ = lh.to_pos_.lng_,
-              .level_ = level_to_api(lh.to_level_),
+              .lat_ = lh.to_loc_.pos_.lat_,
+              .lon_ = lh.to_loc_.pos_.lng_,
+              .level_ = level_to_api(lh.to_loc_.lvl_),
               .arrival_ = end,
               .scheduledArrival_ = end,
               .cancelled_ = true},
@@ -431,7 +426,7 @@ std::optional<from_to_candidate> get_best_candidate(
 
     from_cands.emplace_back(
         &st,
-        -geo::distance(st.run_[0].pos(), hint.from_pos_) -
+        -geo::distance(st.run_[0].pos(), hint.from_loc_.pos_) -
             kTimeMul *
                 std::abs(
                     hint.sched_start_ -
@@ -453,7 +448,7 @@ std::optional<from_to_candidate> get_best_candidate(
     to_cands.emplace_back(
         &st,
         (same_trip ? kExactTripIdMatchAddScore : 0.0) -
-            geo::distance(st.run_[0].pos(), hint.to_pos_) -
+            geo::distance(st.run_[0].pos(), hint.to_loc_.pos_) -
             kTimeMul *
                 std::abs(hint.sched_end_ -
                          st.scheduled_arrival_.value().get_unixtime_seconds()));
@@ -579,11 +574,11 @@ std::expected<n::routing::journey::leg, std::string> reconstruct_pt_leg(
     return make_pt_leg(fr, *from_idx, *to_idx);
   } else {
     auto const from_st_res = get_st_candidates_in_radius(
-        stop_times_ep, lh.from_pos_, lh.sched_start_ - kLookbackSeconds,
+        stop_times_ep, lh.from_loc_.pos_, lh.sched_start_ - kLookbackSeconds,
         lh.mode_, kLookbackSeconds * 2, kSearchRadiusMeters, false, lang);
     auto const to_st_res = get_st_candidates_in_radius(
-        stop_times_ep, lh.to_pos_, lh.sched_end_ - kLookbackSeconds, lh.mode_,
-        kLookbackSeconds * 2, kSearchRadiusMeters, true, lang);
+        stop_times_ep, lh.to_loc_.pos_, lh.sched_end_ - kLookbackSeconds,
+        lh.mode_, kLookbackSeconds * 2, kSearchRadiusMeters, true, lang);
 
     auto const best_from_to =
         get_best_candidate(from_st_res, to_st_res, lh,
@@ -620,7 +615,7 @@ n::unixtime_t sched_to_unix(std::int64_t const s) {
 }
 
 // Verifies the decoded itinerary-id legs match the expected shape:
-//   [first-mile offset] TRANSIT [, TRANSFER, TRANSIT]... [last-mile offset]
+// [first-mile offset] TRANSIT [, TRANSFER, TRANSIT]... [last-mile offset]
 template <typename Leg>
 void verify_leg_structure(std::vector<Leg> const& legs) {
   utl::verify(!legs.empty(), "itinerary id: empty leg structure");
@@ -683,6 +678,10 @@ api::Itinerary reconstruct_itinerary(
     n::routing::td_offsets_t td_offsets_{};
   };
 
+  auto const non_dummy_match_mode =
+      routing.is_osr_loaded() ? n::routing::location_match_mode::kIntermodal
+                              : n::routing::location_match_mode::kEquivalent;
+
   auto const safe_prf_idx =
       stop_times_ep.tt_.locations_.footpaths_out_.at(prf_idx).empty()
           ? n::profile_idx_t{0U}
@@ -710,8 +709,7 @@ api::Itinerary reconstruct_itinerary(
     if (!routing.is_osr_loaded()) {
       return std::vector<n::routing::offset>{};
     }
-    auto const pos = is_start ? osr::location{h.from_pos_, h.from_level_}
-                              : osr::location{h.to_pos_, h.to_level_};
+    auto const& pos = is_start ? h.from_loc_ : h.to_loc_;
     return routing.get_offsets(
         rt.rtt_.get(), place_t{pos}, dir, modes,
         is_start ? flm.pre_transit_ : flm.post_transit_, flm.osr_params_,
@@ -727,8 +725,7 @@ api::Itinerary reconstruct_itinerary(
     if (!routing.is_osr_loaded()) {
       return n::routing::td_offsets_t{};
     }
-    auto const pos = is_start ? osr::location{h.from_pos_, h.from_level_}
-                              : osr::location{h.to_pos_, h.to_level_};
+    auto const& pos = is_start ? h.from_loc_ : h.to_loc_;
     return routing.get_td_offsets(
         rt.rtt_.get(), rt.e_.get(), place_t{pos}, dir, modes, flm.osr_params_,
         flm.pedestrian_profile_, flm.elevation_costs_,
@@ -737,15 +734,10 @@ api::Itinerary reconstruct_itinerary(
         stats);
   };
 
-  auto const non_dummy_match_mode =
-      routing.is_osr_loaded() ? n::routing::location_match_mode::kIntermodal
-                              : n::routing::location_match_mode::kEquivalent;
-
   auto const reconstruct = [&](n::routing::journey::leg const& l,
                                place_t const& from_place,
                                place_t const& to_place,
-                               alternatives_context const& alternatives = {})
-      -> std::vector<api::Leg> {
+                               alternatives_context const& alternatives = {}) {
     return journey_to_response(
                stop_times_ep.w_, routing.l_, stop_times_ep.pl_,
                stop_times_ep.tt_, stop_times_ep.tags_, routing.fa_, rt.e_.get(),
@@ -774,11 +766,8 @@ api::Itinerary reconstruct_itinerary(
     auto const is_first = i == 0U;
     auto const loc = is_first ? l.to_ : l.from_;
     if (loc == n::location_idx_t::invalid()) {
-      // The adjacent transit leg failed to reconstruct (dummy), so its
-      // boarding/alighting stop is unknown and we can't route the offset.
-      return {make_dummy_leg(h,
-                             "reconstruct_itinerary: adjacent transit leg "
-                             "could not be reconstructed")};
+      return {
+          make_dummy_leg(h, "adjacent transit leg couldn't be reconstructed")};
     }
 
     auto const time = is_first ? l.arr_ : l.dep_;
@@ -788,15 +777,13 @@ api::Itinerary reconstruct_itinerary(
         n::routing::lookup_offset(loc, time, side, l.offsets_, l.td_offsets_);
 
     if (!offset.has_value()) {
-      return {make_dummy_leg(h, "reconstruct_itinerary: no offset found")};
+      return {make_dummy_leg(h, "no offset found")};
     }
 
     auto const start_place =
-        is_first ? place_t{osr::location{h.from_pos_, h.from_level_}}
-                 : place_t{tt_location{loc}};
-    auto const end_place = is_first
-                               ? place_t{tt_location{loc}}
-                               : place_t{osr::location{h.to_pos_, h.to_level_}};
+        is_first ? place_t{h.from_loc_} : place_t{tt_location{loc}};
+    auto const end_place =
+        is_first ? place_t{tt_location{loc}} : place_t{h.to_loc_};
     return reconstruct(*offset, start_place, end_place);
   };
 
@@ -804,11 +791,8 @@ api::Itinerary reconstruct_itinerary(
     auto const& h = l.input_;
     if (l.from_ == n::location_idx_t::invalid() ||
         l.to_ == n::location_idx_t::invalid()) {
-      // A surrounding transit leg failed to reconstruct (dummy), so the
-      // transfer endpoints are unknown and we can't look up the footpath.
-      return {make_dummy_leg(h,
-                             "reconstruct_itinerary: adjacent transit leg "
-                             "could not be reconstructed")};
+      return {
+          make_dummy_leg(h, "adjacent transit leg couldn't be reconstructed")};
     }
 
     auto q = n::routing::query{};
@@ -851,19 +835,12 @@ api::Itinerary reconstruct_itinerary(
         has_next_transit ? legs[i + 2U].from_ : n::location_idx_t::invalid());
 
     if (!has_prev_transit) {
-      // The match mode mirrors the `plan` endpoint (kIntermodal with OSR).
       q.start_match_mode_ = non_dummy_match_mode;
       q.use_start_footpaths_ = !routing.is_osr_loaded();
       if (!is_transit(legs.front())) {
-        // Leading first-mile offset leg: reuse its already-routed offsets (a
-        // request whose pre-transit modes disagree with the offset leg's mode
-        // would be inconsistent with the itinerary being refreshed).
         q.start_ = legs.front().offsets_;
         q.td_start_ = legs.front().td_offsets_;
       } else if (routing.is_osr_loaded()) {
-        // Station origin (no first-mile offset leg): recompute access offsets
-        // from the boarding stop with the request's pre-transit modes, plus the
-        // stop and its equivalents at zero duration (mirrors `plan`).
         auto offsets =
             get_offsets(legs[i].input_, /*is_start=*/true,
                         osr::direction::kBackward, flm.pre_transit_modes_);
@@ -876,16 +853,13 @@ api::Itinerary reconstruct_itinerary(
         q.start_ = {{jl.from_, n::duration_t{0U}, 0U}};
       }
     }
+
     if (!has_next_transit) {
       q.dest_match_mode_ = non_dummy_match_mode;
       if (!is_transit(legs.back())) {
-        // Trailing last-mile offset leg: reuse its already-routed offsets.
         q.destination_ = legs.back().offsets_;
         q.td_dest_ = legs.back().td_offsets_;
       } else if (routing.is_osr_loaded()) {
-        // Station destination (no last-mile offset leg): recompute egress
-        // offsets from the alighting stop with the request's post-transit
-        // modes, plus the stop and its equivalents at zero duration.
         auto offsets =
             get_offsets(legs[i].input_, /*is_start=*/false,
                         osr::direction::kForward, flm.post_transit_modes_);
@@ -904,9 +878,9 @@ api::Itinerary reconstruct_itinerary(
     auto const next_dep =
         has_next_transit ? legs[i + 2U].transit_->dep_time_ : jl.arr_time_;
 
+    // First transit leg with a successor:
+    // Search backward from the next leg's departure.
     if (!has_prev_transit && has_next_transit) {
-      // First transit leg with a successor:
-      // Search backward from the next leg's departure.
       return n::routing::get_leg_alternatives(
           stop_times_ep.tt_, rt.rtt_.get(), q, n::direction::kBackward,
           next_dep, std::nullopt, original, num_leg_alternatives);
@@ -928,9 +902,7 @@ api::Itinerary reconstruct_itinerary(
                           [](auto const& x) { return leg{leg_hint{x}}; });
   verify_leg_structure(legs);
 
-  // Route first/last mile offsets (of an offset leg) for offset reconstruction
-  // and leg-alternatives. A first/last *transit* leg with no offset leg gets
-  // its boundary offsets recomputed on demand in `leg_alternatives`.
+  // === Compute first/last mile offsets. ===
   if (!is_transit(legs.front())) {
     auto const& h = legs.front().input_;
     legs.front().offsets_ =
@@ -1036,8 +1008,7 @@ api::Itinerary reconstruct_itinerary(
   for (auto& l : legs) {
     utl::concat(itinerary.legs_, l.output_);
   }
-  utl::verify(!itinerary.legs_.empty(),
-              "reconstruct_itinerary: no legs reconstructed");
+  utl::verify(!itinerary.legs_.empty(), "no legs reconstructed");
 
   // === Propagate timezone. ===
   auto fallback_tz = std::optional<std::string>{};
