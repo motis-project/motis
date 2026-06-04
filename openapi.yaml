@@ -1965,7 +1965,6 @@ paths:
           required: false
           description: |
             Optional. Number of suggestions to return.
-
             If omitted, 10 suggestions are returned by default.
             Must be <= server config variable `geocode_max_suggestions`.
           schema:

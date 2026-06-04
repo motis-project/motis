@@ -2,11 +2,10 @@
 
 #include "boost/thread/tss.hpp"
 
-#include "osr/location.h"
+#include "fmt/format.h"
+
 #include "utl/for_each_bit_set.h"
 #include "utl/to_vec.h"
-
-#include "fmt/format.h"
 
 #include "net/bad_request_exception.h"
 
