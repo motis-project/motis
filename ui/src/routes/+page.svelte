@@ -11,6 +11,7 @@
 		MountainSnow,
 		RefreshCw
 	} from '@lucide/svelte';
+	import { MediaQuery } from 'svelte/reactivity';
 	import { getStyle } from '$lib/map/style';
 	import Map from '$lib/map/Map.svelte';
 	import Control from '$lib/map/Control.svelte';
@@ -82,7 +83,7 @@
 	const hasDebug: boolean = Boolean(urlParams?.has('debug'));
 	const hasDark: boolean = Boolean(urlParams?.has('dark'));
 	const hasLight: boolean = Boolean(urlParams?.has('light'));
-	const isSmallScreen = browser && window.innerWidth < 768;
+	const isSmallScreen = new MediaQuery('(max-width: 768px)');
 	let activeTab = $derived<'connections' | 'departures' | 'isochrones'>(
 		page.state.activeTab ??
 			(urlParams?.has('one')
@@ -101,12 +102,17 @@
 		{ value: 'rt', label: t.colorMode.rt, icon: Rss },
 		{ value: 'mode', label: t.colorMode.mode, icon: TrainFront }
 	];
-	let showMap = $state(!isSmallScreen);
+	let showMap = $state(!isSmallScreen.current);
 	let showRoutes = $state(false);
 	let lastOneToAllQuery: Parameters<typeof oneToAll>[0] | undefined = undefined;
 	let lastPlanQuery: PlanData | undefined = undefined;
 	let serverConfig: ServerConfig | undefined = $state();
 	let dataLoaded: boolean = $state(false);
+	$effect(() => {
+		if (!isSmallScreen.current) {
+			showMap = true;
+		}
+	});
 	$effect(() => {
 		if (activeTab == 'isochrones') {
 			colorMode = 'none';
@@ -712,8 +718,8 @@
 				padding: {
 					top: 96,
 					right: 96,
-					bottom: isSmallScreen ? window.innerHeight * 0.3 : 96,
-					left: isSmallScreen ? 96 : 640
+					bottom: isSmallScreen.current ? window.innerHeight * 0.3 : 96,
+					left: isSmallScreen.current ? 96 : 640
 				}
 			})
 		});
@@ -900,7 +906,7 @@
 	{#if activeTab == 'connections' && routingResponses.length !== 0 && !page.state.selectedItinerary}
 		<Control class="min-h-0 md:flex md:flex-col md:mb-2} ">
 			<Card
-				class="scrollable w-[520px] h-full md:h-[70vh] {isSmallScreen
+				class="scrollable w-[520px] h-full md:h-[70vh] {isSmallScreen.current
 					? 'border-0 shadow-none'
 					: ''} overflow-x-hidden bg-background rounded-lg mb-2"
 			>
@@ -1058,7 +1064,7 @@
 		<LevelSelect {bounds} {zoom} bind:level />
 
 		{#if browser}
-			{#if isSmallScreen}
+			{#if isSmallScreen.current}
 				<Drawer class="relative z-10 h-full mt-3 flex flex-col" bind:showMap>
 					{@render resultContent()}
 				</Drawer>
@@ -1069,7 +1075,7 @@
 			{/if}
 		{/if}
 
-		<div class="maplibregl-ctrl-{isSmallScreen ? 'top-left' : 'bottom-right'}">
+		<div class="maplibregl-ctrl-{isSmallScreen.current ? 'top-left' : 'bottom-right'}">
 			<div class="maplibregl-ctrl maplibregl-ctrl-attrib">
 				<div class="maplibregl-ctrl-attrib-inner">
 					&copy; <a href="http://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>
@@ -1123,7 +1129,14 @@
 						shapesDebugEnabled={serverConfig?.shapesDebugEnabled === true}
 					/>
 				{/if}
-				<Rentals {map} {bounds} {zoom} {theme} {isSmallScreen} debug={hasDebug} />
+				<Rentals
+					{map}
+					{bounds}
+					{zoom}
+					{theme}
+					isSmallScreen={isSmallScreen.current}
+					debug={hasDebug}
+				/>
 			{/if}
 
 			{#if colorMode === 'stops'}
