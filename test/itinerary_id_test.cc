@@ -55,10 +55,6 @@ namespace fs = std::filesystem;
 namespace n = nigiri;
 
 TEST(motis, itinerary_id_distinguishes_level_zero_from_no_level) {
-  // A non-PT (offset) leg from a level-0 start to a no-level destination must
-  // encode from_level=0 distinctly from an absent to_level. The endpoint levels
-  // come from the start/dest osr::locations; the START/END resolution in
-  // to_place doesn't touch the timetable, so a default tt/tags suffice.
   auto tt = n::timetable{};
   auto tags = tag_lookup{};
 
@@ -771,11 +767,17 @@ void run_flex_first_mile_test(std::string_view const sub_dir,
   // Query before the ICE departure with timetableView so the same-day flex
   // service is used (a query at the PT departure would force the access to
   // start earlier than the query and roll the journey onto the next day).
-  auto const res = routing(fmt::format(
-      "/api/v6/plan?fromPlace=49.87420,8.62940&toPlace=50.10593,8.66118"
-      "&time={}T05:00Z&timetableView=true&searchWindow=10800"
-      "&preTransitModes=FLEX&postTransitModes=WALK&detailedLegs=true",
-      day));
+  auto const res =
+      routing(fmt::format("/api/v6/plan"
+                          "?fromPlace=49.87420,8.62940"
+                          "&toPlace=50.10593,8.66118"
+                          "&time={}T05:00Z"
+                          "&timetableView=true"
+                          "&searchWindow=10800"
+                          "&preTransitModes=FLEX"
+                          "&postTransitModes=WALK"
+                          "&detailedLegs=true",
+                          day));
   ASSERT_FALSE(res.itineraries_.empty());
   auto const& original = res.itineraries_.front();
 
@@ -1164,11 +1166,7 @@ TEST(motis, itinerary_id_reconstruct_multi_leg_replaces_unmatched_leg_dummy) {
   }
   ASSERT_GE(pt_indices.size(), 3U);
 
-  // Make the middle PT leg impossible to reconstruct by moving its endpoints
-  // into the ocean: no stop-time candidates exist within the search radius, so
-  // get_run() fails and the leg must be replaced by a cancelled dummy leg. The
-  // broken coordinates are injected into the decoded production id (matched by
-  // trip id), since the api leg itself is no longer an id-encoding entry point.
+  // Make the middle PT leg impossible to reconstruct.
   auto const broken_idx = pt_indices.at(1);
   ASSERT_TRUE(original.legs_.at(broken_idx).tripId_.has_value());
   auto const& broken_trip_id = *original.legs_.at(broken_idx).tripId_;
@@ -1217,21 +1215,41 @@ TEST(motis, itinerary_id_reconstruct_multi_leg_replaces_unmatched_leg_dummy) {
   }
 }
 
-// ===========================================================================
-// Leg-alternative constraint propagation through the refresh endpoint.
-//
-// The `plan` endpoint restricts the leg alternatives it computes by the same
-// constraints as the main search (transit modes, bike/car carriage, wheelchair
-// accessibility - see `sections_violate_constraints` in nigiri's `direct.cc`).
-// When the same itinerary is refreshed, the refresh endpoint must reproduce
-// exactly those alternatives, so the constraints have to be forwarded to the
-// leg-alternatives query as well.
-//
-// Each fixture below offers, next to the main trip, two later alternatives:
-// one that satisfies the constraint and one that violates it. The violating
-// alternative departs earlier than the satisfying one, so it would be picked
-// first if the constraint were not applied.
-// ===========================================================================
+constexpr auto kLegAltTransitModesGtfs = R"(
+# agency.txt
+agency_id,agency_name,agency_url,agency_timezone
+DB,Deutsche Bahn,https://deutschebahn.com,Europe/Berlin
+
+# stops.txt
+stop_id,stop_name,stop_lat,stop_lon,location_type,parent_station
+A,A,49.80000,8.60000,0,
+B,B,50.20000,8.70000,0,
+
+# routes.txt
+route_id,agency_id,route_short_name,route_long_name,route_desc,route_type
+REG_MAIN_R,DB,RM,,,106
+BUS_ALT_R,DB,BA,,,3
+REG_ALT_R,DB,RA,,,106
+
+# trips.txt
+route_id,service_id,trip_id,trip_headsign
+REG_MAIN_R,S1,REG_MAIN,
+BUS_ALT_R,S1,BUS_ALT,
+REG_ALT_R,S1,REG_ALT,
+
+# stop_times.txt
+trip_id,arrival_time,departure_time,stop_id,stop_sequence
+REG_MAIN,09:00:00,09:00:00,A,0
+REG_MAIN,10:00:00,10:00:00,B,1
+BUS_ALT,09:30:00,09:30:00,A,0
+BUS_ALT,10:30:00,10:30:00,B,1
+REG_ALT,10:00:00,10:00:00,A,0
+REG_ALT,11:00:00,11:00:00,B,1
+
+# calendar_dates.txt
+service_id,date,exception_type
+S1,20190501,1
+)";
 
 // First transit leg of the itinerary (the leg that carries `alternatives`).
 api::Leg const& first_transit_leg(api::Itinerary const& it) {
@@ -1284,42 +1302,6 @@ bool any_alt_trip_contains(api::Leg const& leg, std::string_view const needle) {
   }
   return false;
 }
-
-constexpr auto kLegAltTransitModesGtfs = R"(
-# agency.txt
-agency_id,agency_name,agency_url,agency_timezone
-DB,Deutsche Bahn,https://deutschebahn.com,Europe/Berlin
-
-# stops.txt
-stop_id,stop_name,stop_lat,stop_lon,location_type,parent_station
-A,A,49.80000,8.60000,0,
-B,B,50.20000,8.70000,0,
-
-# routes.txt
-route_id,agency_id,route_short_name,route_long_name,route_desc,route_type
-REG_MAIN_R,DB,RM,,,106
-BUS_ALT_R,DB,BA,,,3
-REG_ALT_R,DB,RA,,,106
-
-# trips.txt
-route_id,service_id,trip_id,trip_headsign
-REG_MAIN_R,S1,REG_MAIN,
-BUS_ALT_R,S1,BUS_ALT,
-REG_ALT_R,S1,REG_ALT,
-
-# stop_times.txt
-trip_id,arrival_time,departure_time,stop_id,stop_sequence
-REG_MAIN,09:00:00,09:00:00,A,0
-REG_MAIN,10:00:00,10:00:00,B,1
-BUS_ALT,09:30:00,09:30:00,A,0
-BUS_ALT,10:30:00,10:30:00,B,1
-REG_ALT,10:00:00,10:00:00,A,0
-REG_ALT,11:00:00,11:00:00,B,1
-
-# calendar_dates.txt
-service_id,date,exception_type
-S1,20190501,1
-)";
 
 constexpr auto kLegAltBikeGtfs = R"(
 # agency.txt
@@ -1985,21 +1967,12 @@ TEST(motis, itinerary_id_refresh_leg_alternatives_partial_journey_overreach) {
   ASSERT_NE(refresh_local2_it, end(refresh_pt_legs));
   auto const& refresh_local2 = **refresh_local2_it;
 
-  // LOCAL2's previous transit leg (ICE1) failed to reconstruct and became a
-  // dummy. Because a leg adjacent to a dummy cannot bound its alternatives
-  // query against the missing transit context, the reconstructed LOCAL2 leg
-  // produces no alternatives -- even though the plan (where ICE1 is a real
-  // leg) does offer LOCAL2_ALT.
   EXPECT_FALSE(alt_transit_trip_ids(plan_local2).empty())
       << "plan should offer LOCAL2_ALT as an alternative";
   EXPECT_TRUE(alt_transit_trip_ids(refresh_local2).empty())
       << "a leg adjacent to a dummy must not compute alternatives";
 }
 
-// Elevator-blocked footpath: shared fasta states reused by the two tests
-// below. Active = no out-of-service window; blocked = the FFM-HBF Gleis
-// 101/102 elevator + the DA-HBF Gleis 9/10 elevator are out of service for
-// the whole plan/refresh window.
 constexpr auto const kElevatorsActive = R"__([
   {"description":"FFM HBF Gleis 101/102","equipmentnumber":1010,
    "geocoordX":8.6628995,"geocoordY":50.1072933,"state":"ACTIVE",
@@ -2009,9 +1982,6 @@ constexpr auto const kElevatorsActive = R"__([
    "type":"ELEVATOR"}
 ])__";
 
-// The journey runs 00:35-01:20 Europe/Berlin on 2019-05-01, i.e.
-// 22:35-23:20 UTC on 2019-04-30, so the out-of-service window must start on
-// 2019-04-30 to actually cover it.
 constexpr auto const kElevatorsBlocked = R"__([
   {"description":"FFM HBF Gleis 101/102","equipmentnumber":1010,
    "geocoordX":8.6628995,"geocoordY":50.1072933,"state":"INACTIVE",
@@ -2023,10 +1993,6 @@ constexpr auto const kElevatorsBlocked = R"__([
    "outOfService":[["2019-04-30T00:00:00Z","2019-05-02T00:00:00Z"]]}
 ])__";
 
-// FFM Gleis 101/102 out of service only for a short window that covers the
-// FFM_10 arrival (00:45 Berlin = 22:45 UTC) but reopens well before the S3
-// departure (01:15 Berlin = 23:15 UTC). The wheelchair transfer is still
-// feasible — it just has to wait on the platform for the elevator to return.
 constexpr auto const kElevatorsFfmShortOutage = R"__([
   {"description":"FFM HBF Gleis 101/102","equipmentnumber":1010,
    "geocoordX":8.6628995,"geocoordY":50.1072933,"state":"INACTIVE",
@@ -2037,13 +2003,6 @@ constexpr auto const kElevatorsFfmShortOutage = R"__([
    "type":"ELEVATOR"}
 ])__";
 
-// Minimal wheelchair GTFS whose platforms (DA_10, FFM_10, FFM_101,
-// FFM_HAUPT_S) are placed on the OSM platform nodes reached via the modelled
-// elevators (`use_osm_stop_coordinates_` + `extend_missing_footpaths_=false`
-// so footpaths are OSR-routed through the elevator rather than auto-generated
-// direct walks). Without this an out-of-service elevator wouldn't change the
-// routed access/transfer at all. GTFS times are Europe/Berlin, so the ICE
-// 00:35 departure is 22:35 UTC on 2019-04-30 (matching the query window).
 constexpr auto const kElevatorGTFS = R"(
 # agency.txt
 agency_id,agency_name,agency_url,agency_timezone
@@ -2081,12 +2040,8 @@ service_id,date,exception_type
 S1,20190501,1
 )";
 
-// Local import for the elevator tests: the shared FFM_one_to_many fixture
-// models stops at GTFS coordinates with auto-generated footpaths, so blocking
-// an elevator doesn't change routing there. This config routes wheelchair
-// access/transfers through the OSM elevators instead.
-std::pair<data, config> import_elevator_test_case() {
-  auto c = config{
+data& get_elevator_test_case() {
+  static auto c = config{
       .osm_ = {"test/resources/test_case.osm.pbf"},
       .timetable_ =
           config::timetable{
@@ -2097,23 +2052,17 @@ std::pair<data, config> import_elevator_test_case() {
               .datasets_ = {{"test", {.path_ = std::string{kElevatorGTFS}}}}},
       .street_routing_ = true,
       .osr_footpath_ = true};
-  auto ec = std::error_code{};
-  fs::remove_all("test/data_itinerary_elevator", ec);
-  import(c, "test/data_itinerary_elevator");
-  auto d = data{"test/data_itinerary_elevator", c};
-  return {std::move(d), std::move(c)};
+  static auto d = []() {
+    auto ec = std::error_code{};
+    fs::remove_all("test/data_itinerary_elevator", ec);
+    import(c, "test/data_itinerary_elevator");
+    return data{"test/data_itinerary_elevator", c};
+  }();
+  return d;
 }
 
-// Offset case: a wheelchair first-mile (coord → DA Hbf Gleis 10 platform)
-// computed by plan when the DA-HBF Gleis 9/10 elevator is in service is
-// rebuilt by refresh after the elevator goes out of service. Reconstruction
-// rebuilds the access offset with its STORED scheduled duration and only
-// re-routes via `get_offsets` (static); it never consults the rtt's
-// td-footpaths, so the refreshed offset matches plan even though the real
-// access-route is now infeasible / much longer. The EXPECT below fails
-// today, demonstrating the bug.
 TEST(motis, itinerary_id_refresh_offset_blocked_by_elevator) {
-  auto [d, cfg] = import_elevator_test_case();
+  auto& d = get_elevator_test_case();
   d.init_rtt(date::sys_days{date::year{2019} / date::May / 1});
   d.rt_->e_ = std::make_unique<elevators>(
       *d.w_, nullptr, *d.elevator_nodes_,
@@ -2136,12 +2085,9 @@ TEST(motis, itinerary_id_refresh_offset_blocked_by_elevator) {
   ASSERT_EQ(api::ModeEnum::WALK, original.legs_.front().mode_)
       << "expected first leg to be a wheelchair walk";
 
-  // Block the DA-HBF Gleis 9/10 elevator covering the journey window.
-  // update_elevators reads from `d.rt_->rtt_` and writes to its `new_rtt`
-  // argument, so clone first.
   auto new_rtt = std::make_unique<nigiri::rt_timetable>(
       nigiri::rt_timetable{*d.rt_->rtt_});
-  d.rt_->e_ = update_elevators(cfg, d, kElevatorsBlocked, *new_rtt);
+  d.rt_->e_ = update_elevators(d.config_, d, kElevatorsBlocked, *new_rtt);
   d.rt_->rtt_ = std::move(new_rtt);
 
   auto query = api::refreshItinerary_params{};
@@ -2149,32 +2095,18 @@ TEST(motis, itinerary_id_refresh_offset_blocked_by_elevator) {
   query.pedestrianProfile_ = api::PedestrianProfileEnum::WHEELCHAIR;
   query.useRoutedTransfers_ = true;
   query.detailedLegs_ = true;
-  query.maxMatchingDistance_ = 8.0;  // wheelchair matching, as the UI sends
+  query.maxMatchingDistance_ = 8.0;  // wheelchair requires lower matching dist
   auto const refresh = utl::init_from<ep::refresh_itinerary>(d).value();
   auto const refreshed = refresh(query.to_url("?"));
 
-  // With the DA-HBF Gleis 9/10 elevator out of service the wheelchair platform
-  // (DA_10, level -1) is no longer reachable from the street, so the first-mile
-  // access can't be routed. Reconstruction must surface that as a cancelled
-  // leg rather than silently replaying the stored (now-impossible) walk.
   ASSERT_EQ(api::ModeEnum::WALK, refreshed.legs_.front().mode_);
   EXPECT_EQ(true, refreshed.legs_.front().cancelled_.value_or(false))
       << "first-mile access should be cancelled when the DA-HBF Gleis 9/10 "
          "elevator is out of service and the platform is unreachable";
 }
 
-// Transfer case: a wheelchair transfer between two PT legs at FFM Hbf
-// (ICE arrives at FFM_10 platform 10; S3 departs from FFM_101 platform
-// 101/102) routed through the FFM-HBF Gleis 101/102 elevator. Plan finds
-// the journey while the elevator is ACTIVE; refresh after the elevator goes
-// out of service should reflect that the wheelchair transfer is no longer
-// feasible — its endTime should overrun the next PT departure (or its
-// duration should grow). Reconstruction uses the stored scheduled duration
-// for the transfer footpath without consulting rtt's td-footpaths, so the
-// refreshed transfer matches plan and no overlap is reported — the test
-// fails, demonstrating the bug.
 TEST(motis, itinerary_id_refresh_transfer_blocked_by_elevator) {
-  auto [d, cfg] = import_elevator_test_case();
+  auto& d = get_elevator_test_case();
   d.rt_->e_ = std::make_unique<elevators>(
       *d.w_, nullptr, *d.elevator_nodes_,
       parse_fasta(std::string_view{kElevatorsActive}));
@@ -2206,11 +2138,10 @@ TEST(motis, itinerary_id_refresh_transfer_blocked_by_elevator) {
   auto const original_transfer_idx =
       static_cast<std::size_t>(transfer_it - begin(original.legs_));
 
-  // Block the FFM-HBF Gleis 101/102 elevator. See offset test for the
-  // rationale behind cloning the rtt before calling update_elevators.
+  // Block the FFM-HBF Gleis 101/102 elevator.
   auto new_rtt = std::make_unique<nigiri::rt_timetable>(
       nigiri::rt_timetable{*d.rt_->rtt_});
-  d.rt_->e_ = update_elevators(cfg, d, kElevatorsBlocked, *new_rtt);
+  d.rt_->e_ = update_elevators(d.config_, d, kElevatorsBlocked, *new_rtt);
   d.rt_->rtt_ = std::move(new_rtt);
 
   auto query = api::refreshItinerary_params{};
@@ -2225,30 +2156,14 @@ TEST(motis, itinerary_id_refresh_transfer_blocked_by_elevator) {
 
   auto const& refreshed_transfer = refreshed.legs_[original_transfer_idx];
 
-  // With the FFM-HBF Gleis 101/102 elevator out of service the wheelchair
-  // transfer FFM_10 -> FFM_101 can no longer be routed (the platform is only
-  // reachable via that elevator). Reconstruction must mark the transfer
-  // cancelled instead of replaying the stored walk duration.
   EXPECT_EQ(api::ModeEnum::WALK, refreshed_transfer.mode_);
   EXPECT_EQ(true, refreshed_transfer.cancelled_.value_or(false))
       << "wheelchair transfer FFM_10 -> FFM_101 should be cancelled when the "
          "FFM-HBF Gleis 101/102 elevator is out of service";
 }
 
-// DA-HBF Gleis 9/10 out only for a short window covering the ~22:26-22:35 UTC
-// wheelchair access. The platform is still reachable by leaving earlier and
-// waiting for the elevator to return, so the first-mile access must stay
-// feasible (not cancelled): it leaves earlier and lasts longer, but still
-// boards the same train.
-constexpr auto const kElevatorsDaShortOutage = R"__([
-  {"description":"DA HBF Gleis 9/10","equipmentnumber":910,
-   "geocoordX":8.6293117,"geocoordY":49.8725263,"state":"INACTIVE",
-   "type":"ELEVATOR",
-   "outOfService":[["2019-04-30T22:20:00Z","2019-04-30T22:33:00Z"]]}
-])__";
-
 TEST(motis, itinerary_id_refresh_access_extended_by_elevator_wait) {
-  auto [d, cfg] = import_elevator_test_case();
+  auto& d = get_elevator_test_case();
   d.rt_->e_ = std::make_unique<elevators>(
       *d.w_, nullptr, *d.elevator_nodes_,
       parse_fasta(std::string_view{kElevatorsActive}));
@@ -2275,7 +2190,13 @@ TEST(motis, itinerary_id_refresh_access_extended_by_elevator_wait) {
 
   auto new_rtt = std::make_unique<nigiri::rt_timetable>(
       nigiri::rt_timetable{*d.rt_->rtt_});
-  d.rt_->e_ = update_elevators(cfg, d, kElevatorsDaShortOutage, *new_rtt);
+  d.rt_->e_ = update_elevators(d.config_, d, R"__([
+  {"description":"DA HBF Gleis 9/10","equipmentnumber":910,
+   "geocoordX":8.6293117,"geocoordY":49.8725263,"state":"INACTIVE",
+   "type":"ELEVATOR",
+   "outOfService":[["2019-04-30T22:20:00Z","2019-04-30T22:33:00Z"]]}
+])__",
+                               *new_rtt);
   d.rt_->rtt_ = std::move(new_rtt);
 
   auto query = api::refreshItinerary_params{};
@@ -2283,9 +2204,6 @@ TEST(motis, itinerary_id_refresh_access_extended_by_elevator_wait) {
   query.pedestrianProfile_ = api::PedestrianProfileEnum::WHEELCHAIR;
   query.useRoutedTransfers_ = true;
   query.detailedLegs_ = true;
-  // Wheelchair clients (e.g. the web UI) request the tight matching distance
-  // the rt_timetable's td-footpaths were precomputed with; the loose generic
-  // default would snap the platform to a node that doesn't need the elevator.
   query.maxMatchingDistance_ = 8.0;
   auto const refresh = utl::init_from<ep::refresh_itinerary>(d).value();
   auto const refreshed = refresh(query.to_url("?"));
@@ -2302,14 +2220,8 @@ TEST(motis, itinerary_id_refresh_access_extended_by_elevator_wait) {
       << "the access should still board the same train";
 }
 
-// Counterpart to the broken-transfer test: the FFM-HBF Gleis 101/102 elevator
-// is out only briefly, so the wheelchair transfer FFM_10 -> FFM_101 still
-// works — it just has to wait on the platform for the elevator to return,
-// which lengthens the transfer (td "wait + walk"). Reconstruction must keep
-// the connection (not cancel it), reflect the waiting time, and still make the
-// next PT departure.
 TEST(motis, itinerary_id_refresh_transfer_extended_by_elevator_wait) {
-  auto [d, cfg] = import_elevator_test_case();
+  auto& d = get_elevator_test_case();
   d.rt_->e_ = std::make_unique<elevators>(
       *d.w_, nullptr, *d.elevator_nodes_,
       parse_fasta(std::string_view{kElevatorsActive}));
@@ -2342,7 +2254,8 @@ TEST(motis, itinerary_id_refresh_transfer_extended_by_elevator_wait) {
   // FFM_10 arrival, reopens before the 23:15 S3 departure).
   auto new_rtt = std::make_unique<nigiri::rt_timetable>(
       nigiri::rt_timetable{*d.rt_->rtt_});
-  d.rt_->e_ = update_elevators(cfg, d, kElevatorsFfmShortOutage, *new_rtt);
+  d.rt_->e_ =
+      update_elevators(d.config_, d, kElevatorsFfmShortOutage, *new_rtt);
   d.rt_->rtt_ = std::move(new_rtt);
 
   auto query = api::refreshItinerary_params{};
@@ -2368,10 +2281,6 @@ TEST(motis, itinerary_id_refresh_transfer_extended_by_elevator_wait) {
       << "the extended transfer must still make the next PT departure";
 }
 
-// Intermediate leg: the alternatives of the middle transit leg of an
-// A -> B -> C -> D journey are computed with exact endpoint matching (the
-// surrounding transit legs pin both endpoints). Verifies the refresh endpoint
-// reproduces the plan response for that path, too.
 TEST(motis, itinerary_id_refresh_leg_alternatives_intermediate_leg) {
   auto const cfg = make_config(kLegAltIntermediateGtfs);
   auto d = import_test_data(cfg, "leg_alt_intermediate");

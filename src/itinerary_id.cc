@@ -155,8 +155,7 @@ api::Leg make_dummy_leg(leg_hint const& lh, std::string error) {
       .scheduled_ = lh.scheduled_,
       .displayName_ = lh.display_name_,
       .cancelled_ = true,
-      .alerts_ =
-          std::vector<api::Alert>{api::Alert{.headerText_ = std::move(error)}},
+      .alerts_ = {{api::Alert{.headerText_ = std::move(error)}}},
   };
 }
 
