@@ -37,6 +37,7 @@
 
 #include "osr/location.h"
 
+#include "net/bad_request_exception.h"
 #include "net/base64.h"
 
 #include "motis/constants.h"
@@ -77,7 +78,8 @@ constexpr auto kExactTripIdMatchAddScore = 50.0;
 proto_id_t decode_itinerary_id(std::string const& id) {
   auto parsed = proto_id_t{};
   auto const data = net::decode_base64(id);
-  utl::verify(parsed.ParseFromString(data), "Failed to decode itinerary-id");
+  utl::verify<net::bad_request_exception>(parsed.ParseFromString(data),
+                                          "Failed to decode itinerary-id");
   return parsed;
 }
 
@@ -617,15 +619,16 @@ n::unixtime_t sched_to_unix(std::int64_t const s) {
 // [first-mile offset] TRANSIT [, TRANSFER, TRANSIT]... [last-mile offset]
 template <typename Leg>
 void verify_leg_structure(std::vector<Leg> const& legs) {
-  utl::verify(!legs.empty(), "itinerary id: empty leg structure");
-  utl::verify(
+  utl::verify<net::bad_request_exception>(!legs.empty(),
+                                          "itinerary id: empty leg structure");
+  utl::verify<net::bad_request_exception>(
       utl::any_of(legs,
                   [](auto&& l) { return l.input_.is_public_transport(); }),
       "itinerary id: no transit leg found");
 
   for (auto i = std::size_t{0U}; i != legs.size(); ++i) {
     auto const is_transit = legs[i].input_.is_public_transport();
-    utl::verify(
+    utl::verify<net::bad_request_exception>(
         i == 0U || is_transit != legs[i - 1U].input_.is_public_transport(),
         "itinerary id: invalid leg structure (two consecutive {} legs)",
         is_transit ? "transit" : "non-transit");
@@ -1010,7 +1013,8 @@ api::Itinerary reconstruct_itinerary(
   for (auto& l : legs) {
     utl::concat(itinerary.legs_, l.output_);
   }
-  utl::verify(!itinerary.legs_.empty(), "no legs reconstructed");
+  utl::verify<net::bad_request_exception>(!itinerary.legs_.empty(),
+                                          "no legs reconstructed");
 
   // === Propagate timezone. ===
   auto fallback_tz = std::optional<std::string>{};
