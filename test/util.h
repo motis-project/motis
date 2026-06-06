@@ -14,8 +14,9 @@ using namespace std::chrono_literals;
 
 struct trip_descriptor {
   std::string trip_id_;
-  std::optional<std::string> start_time_;
-  std::optional<std::string> date_;
+  std::optional<std::string> start_time_{};
+  std::optional<std::string> date_{};
+  std::optional<std::string> route_id_{};
 };
 
 struct trip_update {
@@ -26,11 +27,13 @@ struct trip_update {
     std::int32_t delay_minutes_{0U};
     bool skip_{false};
     std::optional<std::string> stop_assignment_{std::nullopt};
+    std::optional<date::sys_seconds> time_{std::nullopt};
   };
 
   trip_descriptor trip_;
   std::vector<stop_time_update> stop_updates_{};
   bool cancelled_{false};
+  bool added_{false};
 };
 
 struct alert {

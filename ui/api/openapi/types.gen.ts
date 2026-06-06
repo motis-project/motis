@@ -1453,26 +1453,13 @@ export type ItineraryId = {
 };
 
 /**
- * Body for the `refreshItineraryPost` endpoint. All fields mirror the
- * parameters of the `plan` endpoint - see the `plan` endpoint for their
- * descriptions.
+ * Body for the `refreshItineraryPost` endpoint. Carries only the
+ * structured itinerary identifier; all routing parameters are passed as
+ * query parameters (same as the `refreshItinerary` GET endpoint).
  *
  */
 export type RefreshItineraryPostBody = {
     id: ItineraryId;
-    requireDisplayNameMatch?: boolean;
-    joinInterlinedLegs?: boolean;
-    detailedTransfers?: boolean;
-    detailedLegs?: boolean;
-    withFares?: boolean;
-    withScheduledSkippedStops?: boolean;
-    numLegAlternatives?: number;
-    transitModes?: Array<Mode>;
-    pedestrianProfile?: PedestrianProfile;
-    useRoutedTransfers?: boolean;
-    requireBikeTransport?: boolean;
-    requireCarTransport?: boolean;
-    language?: Array<(string)>;
 };
 
 export type Itinerary = {
@@ -3176,13 +3163,91 @@ export type TripError = (Error);
 
 export type RefreshItineraryData = {
     query: {
+        /**
+         * Average speed for bike routing on the first/last mile.
+         */
+        cyclingSpeed?: CyclingSpeed;
         detailedLegs?: boolean;
         detailedTransfers?: boolean;
+        /**
+         * Elevation cost profile for first/last-mile street routing.
+         */
+        elevationCosts?: ElevationCosts;
+        /**
+         * Ignore rental return constraints on the last (egress) leg.
+         */
+        ignorePostTransitRentalReturnConstraints?: boolean;
+        /**
+         * Ignore rental return constraints on the first (access) leg.
+         */
+        ignorePreTransitRentalReturnConstraints?: boolean;
         itineraryId: string;
         joinInterlinedLegs?: boolean;
         language?: Array<(string)>;
+        /**
+         * Maximum matching distance in meters to the street network.
+         */
+        maxMatchingDistance?: number;
+        /**
+         * Maximum time in seconds for the last (egress) street leg.
+         */
+        maxPostTransitTime?: number;
+        /**
+         * Maximum time in seconds for the first (access) street leg.
+         */
+        maxPreTransitTime?: number;
         numLegAlternatives?: number;
         pedestrianProfile?: PedestrianProfile;
+        /**
+         * Average speed for pedestrian routing on the first/last mile.
+         */
+        pedestrianSpeed?: PedestrianSpeed;
+        /**
+         * Optional. Default is `WALK`. Modes allowed for the last (egress)
+         * mile when reconstructing leg alternatives. Should match the
+         * `postTransitModes` of the original `plan` request.
+         *
+         */
+        postTransitModes?: Array<Mode>;
+        /**
+         * Allowed rental form factors for the last (egress) leg.
+         */
+        postTransitRentalFormFactors?: Array<RentalFormFactor>;
+        /**
+         * Allowed rental propulsion types for the last (egress) leg.
+         */
+        postTransitRentalPropulsionTypes?: Array<RentalPropulsionType>;
+        /**
+         * Allowed rental provider groups for the last (egress) leg.
+         */
+        postTransitRentalProviderGroups?: Array<(string)>;
+        /**
+         * Allowed rental providers for the last (egress) leg.
+         */
+        postTransitRentalProviders?: Array<(string)>;
+        /**
+         * Optional. Default is `WALK`. Modes allowed for the first (access)
+         * mile when reconstructing leg alternatives. Should match the
+         * `preTransitModes` of the original `plan` request.
+         *
+         */
+        preTransitModes?: Array<Mode>;
+        /**
+         * Allowed rental form factors for the first (access) leg.
+         */
+        preTransitRentalFormFactors?: Array<RentalFormFactor>;
+        /**
+         * Allowed rental propulsion types for the first (access) leg.
+         */
+        preTransitRentalPropulsionTypes?: Array<RentalPropulsionType>;
+        /**
+         * Allowed rental provider groups for the first (access) leg.
+         */
+        preTransitRentalProviderGroups?: Array<(string)>;
+        /**
+         * Allowed rental providers for the first (access) leg.
+         */
+        preTransitRentalProviders?: Array<(string)>;
         requireBikeTransport?: boolean;
         requireCarTransport?: boolean;
         requireDisplayNameMatch?: boolean;

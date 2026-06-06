@@ -23,6 +23,8 @@ struct osr_parameters {
 
 osr_parameters get_osr_parameters(api::plan_params const&);
 
+osr_parameters get_osr_parameters(api::refreshItinerary_params const&);
+
 osr_parameters get_osr_parameters(api::oneToAll_params const&);
 
 osr_parameters get_osr_parameters(api::oneToMany_params const&);

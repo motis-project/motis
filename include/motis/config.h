@@ -135,6 +135,7 @@ struct config {
     bool use_osm_stop_coordinates_{false};
     bool extend_missing_footpaths_{false};
     std::uint16_t max_footpath_length_{15};
+    std::uint16_t default_transfer_time_{2};
     double max_matching_distance_{25.0};
     double preprocess_max_matching_distance_{250.0};
     std::optional<std::string> default_timezone_{};
@@ -189,6 +190,8 @@ struct config {
       std::optional<
           std::variant<std::string, std::map<std::string, std::string>>>
           color_{};
+      std::optional<std::variant<bool, std::map<std::string, bool>>>
+          ignore_geofencing_{};
       std::optional<ttl> ttl_{};
     };
 
@@ -244,7 +247,7 @@ struct config {
 
   struct limits {
     bool operator==(limits const&) const = default;
-    unsigned stoptimes_max_results_{256U};
+    unsigned stoptimes_max_results_{1024U};
     unsigned plan_max_results_{256U};
     unsigned plan_max_search_window_minutes_{5760U};
     unsigned stops_max_results_{8192U};
@@ -255,8 +258,8 @@ struct config {
     unsigned gtfsrt_expose_max_trip_updates_{100U};
     unsigned street_routing_max_prepost_transit_seconds_{3600U};
     unsigned street_routing_max_direct_seconds_{21600U};
-    unsigned geocode_max_suggestions_{10U};
-    unsigned reverse_geocode_max_results_{5U};
+    unsigned geocode_max_suggestions_{512U};
+    unsigned reverse_geocode_max_results_{512U};
   };
   limits get_limits() const { return limits_.value_or(limits{}); }
   std::optional<limits> limits_{};
