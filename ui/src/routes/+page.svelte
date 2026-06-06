@@ -54,7 +54,7 @@
 	import { language, t } from '$lib/i18n/translation';
 	import { pushState, replaceState } from '$app/navigation';
 	import { page } from '$app/state';
-	import { joinInterlinedLegs, preprocessItinerary } from '$lib/preprocessItinerary';
+	import { preprocessItinerary, updateItinerary } from '$lib/preprocessItinerary';
 	import * as Tabs from '$lib/components/ui/tabs';
 	import * as Select from '$lib/components/ui/select';
 	import DeparturesMask from '$lib/DeparturesMask.svelte';
@@ -217,6 +217,10 @@
 			const v = urlParams?.get(key);
 			return v == null ? undefined : v === 'true'; // absent = undefined
 		};
+		const arrParam = (key: string): string[] | undefined => {
+			const a = getUrlArray(key);
+			return a.length ? a : undefined; // absent = undefined
+		};
 		const transitModesUrl = getUrlArray('transitModes');
 		const query = definedOnly({
 			itineraryId,
@@ -234,7 +238,27 @@
 				| undefined,
 			useRoutedTransfers: boolParam('useRoutedTransfers'),
 			requireBikeTransport: boolParam('requireBikeTransport'),
-			requireCarTransport: boolParam('requireCarTransport')
+			requireCarTransport: boolParam('requireCarTransport'),
+			preTransitModes: arrParam('preTransitModes') as Mode[] | undefined,
+			postTransitModes: arrParam('postTransitModes') as Mode[] | undefined,
+			preTransitRentalFormFactors: arrParam('preTransitRentalFormFactors') as
+				| RentalFormFactor[]
+				| undefined,
+			postTransitRentalFormFactors: arrParam('postTransitRentalFormFactors') as
+				| RentalFormFactor[]
+				| undefined,
+			preTransitRentalProviderGroups: arrParam('preTransitRentalProviderGroups'),
+			postTransitRentalProviderGroups: arrParam('postTransitRentalProviderGroups'),
+			ignorePreTransitRentalReturnConstraints: boolParam('ignorePreTransitRentalReturnConstraints'),
+			ignorePostTransitRentalReturnConstraints: boolParam(
+				'ignorePostTransitRentalReturnConstraints'
+			),
+			elevationCosts: (urlParams?.get('elevationCosts') ?? undefined) as ElevationCosts | undefined,
+			cyclingSpeed: parseIntOr(urlParams?.get('cyclingSpeed'), undefined),
+			pedestrianSpeed: parseIntOr(urlParams?.get('pedestrianSpeed'), undefined),
+			maxMatchingDistance: parseIntOr(urlParams?.get('maxMatchingDistance'), undefined),
+			maxPreTransitTime: parseIntOr(urlParams?.get('maxPreTransitTime'), undefined),
+			maxPostTransitTime: parseIntOr(urlParams?.get('maxPostTransitTime'), undefined)
 		});
 
 		const { data: itinerary, error } = await refreshItinerary({ query });
@@ -243,7 +267,7 @@
 			alert(String((error as Record<string, unknown>).error?.toString() ?? error));
 			return;
 		}
-		itinerary!.legs = joinInterlinedLegs(itinerary!.legs);
+		updateItinerary(itinerary!, from, to);
 		pushStateWithQueryString(
 			query,
 			{
@@ -526,7 +550,27 @@
 		pedestrianProfile,
 		useRoutedTransfers,
 		requireBikeTransport,
-		requireCarTransport
+		requireCarTransport,
+		preTransitModes: prePostModesToModes(preTransitModes),
+		postTransitModes: prePostModesToModes(postTransitModes),
+		preTransitRentalFormFactors: getFormFactors(preTransitModes),
+		postTransitRentalFormFactors: getFormFactors(postTransitModes),
+		preTransitRentalProviderGroups: providerGroupsForQuery(
+			preTransitModes,
+			preTransitProviderGroups
+		),
+		postTransitRentalProviderGroups: providerGroupsForQuery(
+			postTransitModes,
+			postTransitProviderGroups
+		),
+		ignorePreTransitRentalReturnConstraints,
+		ignorePostTransitRentalReturnConstraints,
+		elevationCosts,
+		cyclingSpeed,
+		pedestrianSpeed,
+		maxMatchingDistance: pedestrianProfile == 'WHEELCHAIR' ? 8 : 250,
+		maxPreTransitTime,
+		maxPostTransitTime
 	});
 
 	let isochronesQuery = $derived(
@@ -591,7 +635,7 @@
 				return;
 			}
 			if (refreshed && page.state.selectedItinerary?.id === itineraryId) {
-				refreshed.legs = joinInterlinedLegs(refreshed.legs);
+				updateItinerary(refreshed, from, to);
 				replaceState('', {
 					...page.state,
 					selectedItinerary: refreshed

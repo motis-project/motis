@@ -8,6 +8,7 @@
 #include <expected>
 #include <limits>
 #include <optional>
+#include <ranges>
 #include <string_view>
 #include <tuple>
 #include <utility>
@@ -21,20 +22,29 @@
 #include "fmt/format.h"
 
 #include "utl/concat.h"
+#include "utl/enumerate.h"
 #include "utl/helpers/algorithm.h"
 #include "utl/verify.h"
+#include "utl/visit.h"
 
+#include "nigiri/for_each_meta.h"
+#include "nigiri/routing/direct.h"
+#include "nigiri/routing/journey.h"
+#include "nigiri/routing/leg_alternatives.h"
 #include "nigiri/rt/frun.h"
 #include "nigiri/special_stations.h"
+#include "nigiri/td_footpath.h"
 
 #include "osr/location.h"
 
+#include "net/bad_request_exception.h"
 #include "net/base64.h"
 
 #include "motis/constants.h"
 #include "motis/data.h"
 #include "motis/endpoints/routing.h"
 #include "motis/endpoints/stop_times.h"
+#include "motis/flex/mode_id.h"
 #include "motis/gbfs/routing_data.h"
 #include "motis/journey_to_response.h"
 #include "motis/osr/mode_to_profile.h"
@@ -42,7 +52,9 @@
 #include "motis/parse_location.h"
 #include "motis/place.h"
 #include "motis/tag_lookup.h"
+#include "motis/timetable/clasz_to_mode.h"
 #include "motis/timetable/time_conv.h"
+#include "motis/transport_mode_ids.h"
 
 #include "itinerary_id.pb.h"
 
@@ -54,6 +66,8 @@ namespace motis {
 using proto_id_t = ItineraryId;
 using proto_leg_t = LegId;
 
+constexpr auto kItineraryIdApiVersion = 5U;
+
 constexpr auto kTimeMul = 1.0 / 60.0 * 7;
 constexpr auto kSearchRadiusMeters = 100;
 constexpr auto kLookbackSeconds = std::int64_t{60 * 60};
@@ -64,7 +78,8 @@ constexpr auto kExactTripIdMatchAddScore = 50.0;
 proto_id_t decode_itinerary_id(std::string const& id) {
   auto parsed = proto_id_t{};
   auto const data = net::decode_base64(id);
-  utl::verify(parsed.ParseFromString(data), "Failed to decode itinerary-id");
+  utl::verify<net::bad_request_exception>(parsed.ParseFromString(data),
+                                          "Failed to decode itinerary-id");
   return parsed;
 }
 
@@ -87,32 +102,22 @@ struct leg_hint {
       : display_name_{l.display_name()},
         trip_id_{l.trip_id()},
         from_stop_id_{l.from_id()},
-        from_pos_{l.from_lat(), l.from_lon()},
-        from_level_{proto_to_level(l, true)},
+        from_loc_{{l.from_lat(), l.from_lon()}, proto_to_level(l, true)},
         to_stop_id_{l.to_id()},
-        to_pos_{l.to_lat(), l.to_lon()},
-        to_level_{proto_to_level(l, false)},
+        to_loc_{{l.to_lat(), l.to_lon()}, proto_to_level(l, false)},
         sched_start_{l.sched_start()},
         sched_end_{l.sched_end()},
         mode_{json::value_to<api::ModeEnum>(json::value{l.mode()})},
-        scheduled_{l.scheduled()} {
-    if (!trip_id_.empty()) {
-      utl::verify(!display_name_.empty(), "itinerary id: display_name missing");
-      utl::verify(!from_stop_id_.empty(), "itinerary id: from_id missing");
-      utl::verify(!to_stop_id_.empty(), "itinerary id: to_id missing");
-    }
-  }
+        scheduled_{l.scheduled()} {}
 
   bool is_public_transport() const { return !trip_id_.empty(); }
 
   std::string display_name_;
   std::string trip_id_;
   std::string from_stop_id_;
-  geo::latlng from_pos_;
-  osr::level_t from_level_;
+  osr::location from_loc_;
   std::string to_stop_id_;
-  geo::latlng to_pos_;
-  osr::level_t to_level_;
+  osr::location to_loc_;
   std::int64_t sched_start_;
   std::int64_t sched_end_;
   api::ModeEnum mode_;
@@ -130,16 +135,16 @@ api::Leg make_dummy_leg(leg_hint const& lh, std::string error) {
   return api::Leg{
       .mode_ = lh.mode_,
       .from_ = {.stopId_ = lh.from_stop_id_,
-                .lat_ = lh.from_pos_.lat_,
-                .lon_ = lh.from_pos_.lng_,
-                .level_ = level_to_api(lh.from_level_),
+                .lat_ = lh.from_loc_.pos_.lat_,
+                .lon_ = lh.from_loc_.pos_.lng_,
+                .level_ = level_to_api(lh.from_loc_.lvl_),
                 .departure_ = start,
                 .scheduledDeparture_ = start,
                 .cancelled_ = true},
       .to_ = {.stopId_ = lh.to_stop_id_,
-              .lat_ = lh.to_pos_.lat_,
-              .lon_ = lh.to_pos_.lng_,
-              .level_ = level_to_api(lh.to_level_),
+              .lat_ = lh.to_loc_.pos_.lat_,
+              .lon_ = lh.to_loc_.pos_.lng_,
+              .level_ = level_to_api(lh.to_loc_.lvl_),
               .arrival_ = end,
               .scheduledArrival_ = end,
               .cancelled_ = true},
@@ -152,67 +157,101 @@ api::Leg make_dummy_leg(leg_hint const& lh, std::string error) {
       .scheduled_ = lh.scheduled_,
       .displayName_ = lh.display_name_,
       .cancelled_ = true,
-      .alerts_ =
-          std::vector<api::Alert>{api::Alert{.headerText_ = std::move(error)}},
+      .alerts_ = {{api::Alert{.headerText_ = std::move(error)}}},
   };
 }
 
-proto_leg_t get_leg_id_proto(api::Leg const& l,
-                             std::string const& leg_display_name) {
-  if (l.tripId_.has_value()) {
-    utl::verify(l.from_.stopId_.has_value(),
+proto_leg_t make_leg_id(std::string const& display_name,
+                        std::optional<std::string> const& trip_id,
+                        api::Place const& from,
+                        api::Place const& to,
+                        openapi::date_time_t const sched_start,
+                        openapi::date_time_t const sched_end,
+                        api::ModeEnum const mode,
+                        bool const scheduled) {
+  if (trip_id.has_value()) {
+    utl::verify(from.stopId_.has_value(),
                 "itinerary id: PT leg missing 'from' stopId");
-    utl::verify(l.to_.stopId_.has_value(),
+    utl::verify(to.stopId_.has_value(),
                 "itinerary id: PT leg missing 'to' stopId");
   }
   auto id = proto_leg_t{};
-  id.set_display_name(leg_display_name);
-  id.set_trip_id(l.tripId_.value_or(""));
-  id.set_from_id(l.from_.stopId_.value_or(""));
-  id.set_to_id(l.to_.stopId_.value_or(""));
-  id.set_from_lat(l.from_.lat_);
-  id.set_from_lon(l.from_.lon_);
-  id.set_to_lat(l.to_.lat_);
-  id.set_to_lon(l.to_.lon_);
-  if (l.from_.level_.has_value()) {
-    id.set_from_level(*l.from_.level_);
+  id.set_display_name(display_name);
+  id.set_trip_id(trip_id.value_or(""));
+  id.set_from_id(from.stopId_.value_or(""));
+  id.set_to_id(to.stopId_.value_or(""));
+  id.set_from_lat(from.lat_);
+  id.set_from_lon(from.lon_);
+  id.set_to_lat(to.lat_);
+  id.set_to_lon(to.lon_);
+  if (from.level_.has_value()) {
+    id.set_from_level(*from.level_);
   }
-  if (l.to_.level_.has_value()) {
-    id.set_to_level(*l.to_.level_);
+  if (to.level_.has_value()) {
+    id.set_to_level(*to.level_);
   }
-  id.set_sched_start(l.scheduledStartTime_.get_unixtime_seconds());
-  id.set_sched_end(l.scheduledEndTime_.get_unixtime_seconds());
-  id.set_mode(std::string{json::value_from(l.mode_).as_string()});
-  id.set_scheduled(l.scheduled_);
+  id.set_sched_start(sched_start.get_unixtime_seconds());
+  id.set_sched_end(sched_end.get_unixtime_seconds());
+  id.set_mode(std::string{json::value_from(mode).as_string()});
+  id.set_scheduled(scheduled);
   return id;
 }
 
-std::string get_single_leg_id(api::Leg const& l,
-                              std::string const& leg_display_name) {
-  auto id = proto_id_t{};
-  id.mutable_legs()->Add(get_leg_id_proto(l, leg_display_name));
+std::string generate_itinerary_id(n::routing::journey const& j,
+                                  tag_lookup const& tags,
+                                  n::timetable const& tt,
+                                  n::rt_timetable const* rtt,
+                                  osr::ways const* w,
+                                  osr::platforms const* pl,
+                                  platform_matches_t const* matches,
+                                  adr_ext const* ae,
+                                  tz_map_t const* tz_map,
+                                  place_t const& start,
+                                  place_t const& dest) {
+  utl::verify(!j.legs_.empty(), "generate_itinerary_id expects at least 1 leg");
 
-  auto data = std::string{};
-  utl::verify(id.SerializeToString(&data), "failed to serialize itinerary id");
-  return net::encode_base64(data);
-}
-
-std::string generate_itinerary_id(
-    api::Itinerary const& itin,
-    std::vector<std::string> const& default_display_names,
-    std::vector<std::size_t> const& default_display_names_indices) {
-  utl::verify(itin.legs_.size() != 0,
-              "generate_itinerary_id expects at least 1 leg");
   auto id = proto_id_t{};
-  auto default_name_idx = std::size_t{0};
-  for (auto l_idx = std::size_t{0}; l_idx < itin.legs_.size(); ++l_idx) {
-    auto const& leg = itin.legs_[l_idx];
-    auto display_name =
-        (default_name_idx != default_display_names_indices.size() &&
-         l_idx == default_display_names_indices.at(default_name_idx))
-            ? default_display_names.at(default_name_idx++)
-            : leg.displayName_.value_or("");
-    id.mutable_legs()->Add(get_leg_id_proto(leg, display_name));
+
+  auto const place = [&](auto const& loc) {
+    return to_place(&tt, &tags, w, pl, matches, ae, tz_map, n::lang_t{}, loc,
+                    start, dest);
+  };
+  auto const make_non_pt_leg = [&](n::routing::journey::leg const& jl,
+                                   api::ModeEnum const mode) {
+    return make_leg_id("", std::nullopt, place(tt_location{jl.from_}),
+                       place(tt_location{jl.to_}), jl.dep_time_, jl.arr_time_,
+                       mode, true);
+  };
+
+  for (auto const& jl : j.legs_) {
+    id.mutable_legs()->Add(utl::visit(
+        jl.uses_,
+        [&](n::routing::journey::run_enter_exit const& rex) {
+          auto const fr = n::rt::frun{tt, rtt, rex.r_};
+          auto const enter = fr[rex.stop_range_.from_];
+          auto const exit = fr[rex.stop_range_.to_ - 1U];
+          return make_leg_id(
+              std::string{enter.display_name(n::event_type::kDep, n::lang_t{})},
+              tags.id(tt, enter, n::event_type::kDep), place(enter),
+              place(exit), enter.scheduled_time(n::event_type::kDep),
+              exit.scheduled_time(n::event_type::kArr),
+              to_mode(enter.get_clasz(n::event_type::kDep),
+                      kItineraryIdApiVersion),
+              fr.is_scheduled());
+        },
+        [&](n::routing::offset const& o) {
+          auto const id = o.type();
+          auto const mode =  // input mode for routing
+              flex::mode_id::is_flex(id)
+                  ? api::ModeEnum::FLEX
+                  : (id >= kGbfsTransportModeIdOffset
+                         ? api::ModeEnum::RENTAL
+                         : to_mode(static_cast<osr::search_profile>(id)));
+          return make_non_pt_leg(jl, mode);
+        },
+        [&](n::footpath const&) {
+          return make_non_pt_leg(jl, api::ModeEnum::WALK);
+        }));
   }
 
   auto data = std::string{};
@@ -236,7 +275,6 @@ struct st_candidate {
 
 std::vector<st_candidate> get_st_candidates_in_radius(
     ep::stop_times const& st_ep,
-    nigiri::rt_timetable const* rtt,
     geo::latlng const& center,
     std::int64_t const sched_start,
     api::ModeEnum const mode,
@@ -265,10 +303,10 @@ std::vector<st_candidate> get_st_candidates_in_radius(
       [&](std::string const& x) { return parse_location(x); });
 
   auto const events =
-      st_ep.get_runs(query, rtt, ev_type, query_stop, query_center, true);
+      st_ep.get_runs(query, nullptr, ev_type, query_stop, query_center, true);
 
   return utl::to_vec(events, [&](n::rt::run const r) -> st_candidate {
-    auto const fr = n::rt::frun{st_ep.tt_, rtt, r};
+    auto const fr = n::rt::frun{st_ep.tt_, nullptr, r};
     auto const s = fr[0];
 
     auto res = st_candidate{.run_ = fr};
@@ -336,161 +374,6 @@ constexpr auto kWalkTransportModeId = static_cast<n::transport_mode_id_t>(
     static_cast<std::underlying_type_t<osr::search_profile>>(
         osr::search_profile::kFoot));
 
-bool is_transit_leg(n::routing::journey::leg const& leg) {
-  return std::holds_alternative<n::routing::journey::run_enter_exit>(leg.uses_);
-}
-
-place_t endpoint_place(n::routing::journey::leg const& leg,
-                       bool const from,
-                       std::optional<osr::location> const& pos) {
-  auto const loc = from ? leg.from_ : leg.to_;
-  auto const special =
-      from ? n::special_station::kStart : n::special_station::kEnd;
-  if (loc == n::get_special_station(special) && pos.has_value()) {
-    return *pos;
-  }
-  return tt_location{loc};
-}
-
-// Allows alternatives to use different access/egress stops than the original.
-// TODO: currently only supports 15min walking, nothing else
-std::vector<n::routing::offset> get_access_offsets(ep::routing const& routing,
-                                                   n::rt_timetable const* rtt,
-                                                   osr::location const& pos,
-                                                   osr::direction const dir) {
-  constexpr auto kLegAltOffsetMaxDuration = std::chrono::minutes{15};
-  auto stats = ep::stats_map_t{};
-  auto gbfs_rd = gbfs::gbfs_routing_data{};
-  return routing.get_offsets(
-      rtt, place_t{pos}, dir, {api::ModeEnum::WALK}, std::nullopt, std::nullopt,
-      std::nullopt, std::nullopt, false, osr_parameters{},
-      api::PedestrianProfileEnum::FOOT, api::ElevationCostsEnum::NONE,
-      std::chrono::seconds{kLegAltOffsetMaxDuration}, kMaxMatchingDistance,
-      gbfs_rd, stats);
-}
-
-api::Itinerary build_itinerary_from_legs(
-    std::vector<n::routing::journey::leg>& legs,
-    std::optional<osr::location> const& start_pos,
-    std::optional<osr::location> const& end_pos,
-    ep::routing const& routing,
-    ep::stop_times const& stop_times,
-    n::rt_timetable const* rtt,
-    bool const join_interlined_legs,
-    bool const detailed_transfers,
-    bool const detailed_legs,
-    bool const with_fares,
-    bool const with_scheduled_skipped_stops,
-    n::lang_t const& lang,
-    std::size_t const num_leg_alternatives,
-    n::routing::clasz_mask_t const allowed_claszes,
-    bool const require_bike_transport,
-    bool const require_car_transport,
-    n::profile_idx_t const prf_idx) {
-  utl::verify(!legs.empty(), "build_itinerary_from_legs: no legs");
-
-  for (auto i = std::size_t{1}; i < legs.size(); ++i) {
-    auto& leg = legs[i];
-    if (is_transit_leg(leg)) {
-      continue;
-    }
-    auto const dur = leg.arr_time_ - leg.dep_time_;
-    if (dur == n::duration_t{0} &&
-        std::holds_alternative<n::footpath>(leg.uses_) && i + 1 < legs.size()) {
-      leg.dep_time_ = legs[i + 1].dep_time_;
-      leg.arr_time_ = legs[i + 1].dep_time_;
-    } else {
-      leg.dep_time_ = legs[i - 1].arr_time_;
-      leg.arr_time_ = leg.dep_time_ + dur;
-    }
-  }
-
-  auto const pt_count =
-      static_cast<std::size_t>(utl::count_if(legs, is_transit_leg));
-
-  auto j = n::routing::journey{};
-  j.start_time_ = legs.front().dep_time_;
-  j.dest_time_ = legs.back().arr_time_;
-  j.dest_ = legs.back().to_;
-  j.transfers_ =
-      pt_count == 0 ? std::uint8_t{0} : static_cast<std::uint8_t>(pt_count - 1);
-
-  auto const start_place = endpoint_place(legs.front(), true, start_pos);
-  auto const end_place = endpoint_place(legs.back(), false, end_pos);
-
-  j.legs_ = std::move(legs);
-
-  auto cache = street_routing_cache_t{};
-  auto blocked = osr::bitvec<osr::node_idx_t>{};
-  auto gbfs_rd = gbfs::gbfs_routing_data{};
-
-  auto const is_transit = [](n::routing::journey::leg const& l) {
-    return std::holds_alternative<n::routing::journey::run_enter_exit>(l.uses_);
-  };
-  auto const first_transit =
-      std::find_if(begin(j.legs_), end(j.legs_), is_transit);
-  auto const last_transit =
-      std::find_if(rbegin(j.legs_), rend(j.legs_), is_transit);
-  auto leg_alternatives_query = std::optional<n::routing::query>{};
-  if (num_leg_alternatives > 0U && first_transit != end(j.legs_) &&
-      last_transit != rend(j.legs_)) {
-    auto const osr_loaded = routing.l_ != nullptr;
-    auto const endpoint_match_mode =
-        osr_loaded ? n::routing::location_match_mode::kIntermodal
-                   : n::routing::location_match_mode::kEquivalent;
-
-    auto start_ = std::vector<n::routing::offset>{
-        {first_transit->from_, n::duration_t{0U}, 0U}};
-    auto destination_ = std::vector<n::routing::offset>{
-        {last_transit->to_, n::duration_t{0U}, 0U}};
-    auto const can_route_offsets = routing.is_osr_loaded();
-    if (can_route_offsets && start_pos.has_value()) {
-      auto o = get_access_offsets(routing, rtt, *start_pos,
-                                  osr::direction::kForward);
-      if (!o.empty()) {
-        start_ = std::move(o);
-      }
-    }
-    if (can_route_offsets && end_pos.has_value()) {
-      auto o =
-          get_access_offsets(routing, rtt, *end_pos, osr::direction::kBackward);
-      if (!o.empty()) {
-        destination_ = std::move(o);
-      }
-    }
-
-    auto const safe_prf_idx =
-        stop_times.tt_.locations_.footpaths_out_.at(prf_idx).empty()
-            ? n::profile_idx_t{0U}
-            : prf_idx;
-
-    leg_alternatives_query =
-        n::routing::query{.start_time_ = j.start_time_,
-                          .start_match_mode_ = endpoint_match_mode,
-                          .dest_match_mode_ = endpoint_match_mode,
-                          .use_start_footpaths_ = !osr_loaded,
-                          .start_ = std::move(start_),
-                          .destination_ = std::move(destination_),
-                          .prf_idx_ = safe_prf_idx,
-                          .allowed_claszes_ = allowed_claszes,
-                          .require_bike_transport_ = require_bike_transport,
-                          .require_car_transport_ = require_car_transport};
-  }
-
-  return journey_to_response(
-      stop_times.w_, routing.l_, stop_times.pl_, stop_times.tt_,
-      stop_times.tags_, nullptr, nullptr, rtt, stop_times.matches_, nullptr,
-      routing.shapes_, gbfs_rd, stop_times.ae_, stop_times.tz_, j, start_place,
-      end_place, cache, &blocked, false, osr_parameters{},
-      api::PedestrianProfileEnum::FOOT, api::ElevationCostsEnum::NONE,
-      join_interlined_legs, detailed_transfers, detailed_legs, with_fares,
-      with_scheduled_skipped_stops,
-      stop_times.config_.timetable_.value().max_matching_distance_,
-      kMaxMatchingDistance, 6U, false, false, lang, false,
-      leg_alternatives_query ? &*leg_alternatives_query : nullptr,
-      num_leg_alternatives);
-}
-
 struct candidate_score {
   bool operator<(candidate_score const& o) const {
     return *candidate_ < *o.candidate_ ||
@@ -518,8 +401,7 @@ std::optional<from_to_candidate> get_best_candidate(
     std::vector<st_candidate> const& to_resp,
     leg_hint const& hint,
     bool const require_display_name_match,
-    tag_lookup const& tags,
-    n::rt_timetable const* rtt) {
+    tag_lookup const& tags) {
   if (from_resp.empty() || to_resp.empty()) {
     return std::nullopt;
   }
@@ -530,7 +412,7 @@ std::optional<from_to_candidate> get_best_candidate(
   to_cands.reserve(to_resp.size());
 
   auto const [hint_trip_run, _] =
-      tags.get_trip(*from_resp.front().run_.tt_, rtt, hint.trip_id_);
+      tags.get_trip(*from_resp.front().run_.tt_, nullptr, hint.trip_id_);
 
   for (auto const& st : from_resp) {
     if (!st.scheduled_departure_.has_value()) {
@@ -545,7 +427,7 @@ std::optional<from_to_candidate> get_best_candidate(
 
     from_cands.emplace_back(
         &st,
-        -geo::distance(st.run_[0].pos(), hint.from_pos_) -
+        -geo::distance(st.run_[0].pos(), hint.from_loc_.pos_) -
             kTimeMul *
                 std::abs(
                     hint.sched_start_ -
@@ -567,7 +449,7 @@ std::optional<from_to_candidate> get_best_candidate(
     to_cands.emplace_back(
         &st,
         (same_trip ? kExactTripIdMatchAddScore : 0.0) -
-            geo::distance(st.run_[0].pos(), hint.to_pos_) -
+            geo::distance(st.run_[0].pos(), hint.to_loc_.pos_) -
             kTimeMul *
                 std::abs(hint.sched_end_ -
                          st.scheduled_arrival_.value().get_unixtime_seconds()));
@@ -581,7 +463,6 @@ std::optional<from_to_candidate> get_best_candidate(
 
   for (auto i_from = 0U, i_to = 0U;
        i_from < from_cands.size() && i_to < to_cands.size();) {
-
     switch (candidate_cmp(from_cands[i_from], to_cands[i_to])) {
       case -1: ++i_from; break;
       case +1: ++i_to; break;
@@ -607,257 +488,589 @@ std::optional<from_to_candidate> get_best_candidate(
   return best_from_to;
 }
 
+first_last_mile_options make_first_last_mile_options(
+    api::refreshItinerary_params const& q) {
+  return first_last_mile_options{
+      .pedestrian_profile_ = q.pedestrianProfile_,
+      .elevation_costs_ = q.elevationCosts_,
+      .osr_params_ = get_osr_parameters(q),
+      .max_matching_distance_ = q.maxMatchingDistance_,
+      .max_pre_transit_ = std::chrono::seconds{q.maxPreTransitTime_},
+      .max_post_transit_ = std::chrono::seconds{q.maxPostTransitTime_},
+      .pre_transit_ = {.form_factors_ = q.preTransitRentalFormFactors_,
+                       .propulsion_types_ = q.preTransitRentalPropulsionTypes_,
+                       .providers_ = q.preTransitRentalProviders_,
+                       .provider_groups_ = q.preTransitRentalProviderGroups_,
+                       .ignore_return_constraints_ =
+                           q.ignorePreTransitRentalReturnConstraints_},
+      .post_transit_ = {.form_factors_ = q.postTransitRentalFormFactors_,
+                        .propulsion_types_ =
+                            q.postTransitRentalPropulsionTypes_,
+                        .providers_ = q.postTransitRentalProviders_,
+                        .provider_groups_ = q.postTransitRentalProviderGroups_,
+                        .ignore_return_constraints_ =
+                            q.ignorePostTransitRentalReturnConstraints_},
+      .pre_transit_modes_ = q.preTransitModes_,
+      .post_transit_modes_ = q.postTransitModes_};
+}
+
+n::routing::journey::leg make_pt_leg(n::rt::frun const& fr,
+                                     n::stop_idx_t const from,
+                                     n::stop_idx_t const to) {
+  auto const rs_from = n::rt::run_stop{&fr, from};
+  auto const rs_to = n::rt::run_stop{&fr, to};
+  return n::routing::journey::leg{
+      n::direction::kForward,
+      rs_from.get_location_idx(),
+      rs_to.get_location_idx(),
+      rs_from.time(n::event_type::kDep),
+      rs_to.time(n::event_type::kArr),
+      n::routing::journey::run_enter_exit{fr, from, to}};
+}
+
+std::expected<n::routing::journey::leg, std::string> reconstruct_pt_leg(
+    leg_hint const& lh,
+    ep::stop_times const& stop_times_ep,
+    n::rt_timetable const* rtt,
+    n::lang_t const& lang,
+    bool const require_display_name_match) {
+  auto const fail = [](std::string_view const msg) {
+    return std::unexpected{std::string{msg}};
+  };
+
+  if (!lh.scheduled_) {
+    if (lh.trip_id_.empty()) {
+      return fail("reconstruct_itinerary: additional trip requires trip_id");
+    }
+
+    auto const fr = make_frun_from_trip_id(stop_times_ep.tags_,
+                                           stop_times_ep.tt_, rtt, lh.trip_id_);
+    if (!fr.valid()) {
+      return fail("reconstruct_itinerary: additional trip not found");
+    }
+    if (fr.is_scheduled()) {
+      return fail(
+          "reconstruct_itinerary: trip_id resolved to scheduled trip while "
+          "itinerary id expects additional trip");
+    }
+
+    auto const from_idx = find_stop_by_id_time(
+        fr, stop_times_ep.tags_, lh.from_stop_id_, lh.sched_start_,
+        n::event_type::kDep, kNonSchedAllowedDeviationSeconds);
+    if (!from_idx.has_value()) {
+      return fail("reconstruct_itinerary: additional trip from stop not found");
+    }
+
+    auto const to_idx = find_stop_by_id_time(
+        fr, stop_times_ep.tags_, lh.to_stop_id_, lh.sched_end_,
+        n::event_type::kArr, kNonSchedAllowedDeviationSeconds);
+    if (!to_idx.has_value()) {
+      return fail("reconstruct_itinerary: additional trip to stop not found");
+    }
+
+    if (*from_idx >= *to_idx) {
+      return fail("reconstruct_itinerary: invalid stop order (from >= to)");
+    }
+
+    return make_pt_leg(fr, *from_idx, *to_idx);
+  } else {
+    auto const from_st_res = get_st_candidates_in_radius(
+        stop_times_ep, lh.from_loc_.pos_, lh.sched_start_ - kLookbackSeconds,
+        lh.mode_, kLookbackSeconds * 2, kSearchRadiusMeters, false, lang);
+    auto const to_st_res = get_st_candidates_in_radius(
+        stop_times_ep, lh.to_loc_.pos_, lh.sched_end_ - kLookbackSeconds,
+        lh.mode_, kLookbackSeconds * 2, kSearchRadiusMeters, true, lang);
+
+    auto const best_from_to =
+        get_best_candidate(from_st_res, to_st_res, lh,
+                           require_display_name_match, stop_times_ep.tags_);
+
+    if (!best_from_to.has_value()) {
+      return fail("no matching route is found");
+    }
+
+    // Rebuild with the current RT snapshot
+    auto const best_fr =
+        make_full_frun(stop_times_ep.tt_, rtt, best_from_to->from_->run_);
+    auto const from_idx = best_from_to->from_->run_.stop_range_.from_;
+    auto const to_idx = best_from_to->to_->run_.stop_range_.from_;
+    if (!best_fr.stop_range_.contains(from_idx) ||
+        !best_fr.stop_range_.contains(to_idx)) {
+      return fail("reconstruct_itinerary: winning stop index out of range");
+    }
+    if (from_idx >= to_idx) {
+      return fail("reconstruct_itinerary: invalid stop order (from >= to)");
+    }
+
+    return make_pt_leg(best_fr, from_idx, to_idx);
+  }
+}
+
+n::unixtime_t to_unix(openapi::date_time_t const& x) {
+  return std::chrono::time_point_cast<n::i32_minutes>(x.time_);
+}
+
+n::unixtime_t sched_to_unix(std::int64_t const s) {
+  return n::unixtime_t{std::chrono::duration_cast<n::unixtime_t::duration>(
+      std::chrono::seconds{s})};
+}
+
+// Verifies the decoded itinerary-id legs match the expected shape:
+// [first-mile offset] TRANSIT [, TRANSFER, TRANSIT]... [last-mile offset]
+template <typename Leg>
+void verify_leg_structure(std::vector<Leg> const& legs) {
+  utl::verify<net::bad_request_exception>(!legs.empty(),
+                                          "itinerary id: empty leg structure");
+  utl::verify<net::bad_request_exception>(
+      utl::any_of(legs,
+                  [](auto&& l) { return l.input_.is_public_transport(); }),
+      "itinerary id: no transit leg found");
+
+  for (auto i = std::size_t{0U}; i != legs.size(); ++i) {
+    auto const is_transit = legs[i].input_.is_public_transport();
+    utl::verify<net::bad_request_exception>(
+        i == 0U || is_transit != legs[i - 1U].input_.is_public_transport(),
+        "itinerary id: invalid leg structure (two consecutive {} legs)",
+        is_transit ? "transit" : "non-transit");
+  }
+}
+
 api::Itinerary reconstruct_itinerary(
     ep::routing const& routing,
     ep::stop_times const& stop_times_ep,
     rt const& rt,
-    std::string const& id,
+    std::string const& id_buf,
     bool const require_display_name_match,
     bool const join_interlined_legs,
     bool const detailed_transfers,
     bool const detailed_legs,
-    bool const with_fares,
     bool const with_scheduled_skipped_stops,
     n::lang_t const& lang,
     std::size_t const num_leg_alternatives,
     n::routing::clasz_mask_t const allowed_claszes,
     bool const require_bike_transport,
     bool const require_car_transport,
-    n::profile_idx_t const prf_idx) {
-  auto stop_times_rt = std::atomic_load(&stop_times_ep.rt_);
-  auto stop_times_rtt = stop_times_rt->rtt_.get();
-  auto const parsed_id = decode_itinerary_id(id);
+    n::profile_idx_t const prf_idx,
+    first_last_mile_options const& flm) {
+  struct leg {
+    leg_hint input_;
 
-  auto const make_pt_leg = [](n::rt::frun const& fr, n::stop_idx_t const from,
-                              n::stop_idx_t const to) {
-    auto const rs_from = n::rt::run_stop{&fr, from};
-    auto const rs_to = n::rt::run_stop{&fr, to};
-    return n::routing::journey::leg{
-        n::direction::kForward,
-        rs_from.get_location_idx(),
-        rs_to.get_location_idx(),
-        rs_from.time(n::event_type::kDep),
-        rs_to.time(n::event_type::kArr),
-        n::routing::journey::run_enter_exit{fr, from, to}};
+    // Resolved leg(s):
+    // might be multiple, e.g. for RENTAL, FLEX, TRANSIT with interlining
+    std::vector<api::Leg> output_{};
+
+    // For transit legs: the reconstructed journey leg (run + times), used both
+    // to render the leg and as the prev/next context for a neighbour's leg
+    // alternatives. Empty if reconstruction failed (-> dummy leg).
+    std::optional<n::routing::journey::leg> transit_{};
+
+    // Resolved endpoint locations. Transit legs take these from `transit_`;
+    // offset/transfer legs inherit them from the adjacent transit leg.
+    n::location_idx_t from_{n::location_idx_t::invalid()};
+    n::location_idx_t to_{n::location_idx_t::invalid()};
+
+    // For transfer/offset legs: adjusted times so
+    // - first: arr aligns with dep of following transit leg
+    // - rest: dep aligns with arr of previous transit leg
+    n::unixtime_t dep_{}, arr_{};
+
+    // For offset legs:
+    // all offsets for alternative lookup
+    std::vector<n::routing::offset> offsets_{};
+    n::routing::td_offsets_t td_offsets_{};
   };
 
-  auto const get_run = [&](leg_hint const& lh)
-      -> std::expected<n::routing::journey::leg, std::string> {
-    auto const fail = [](std::string_view const msg) {
-      return std::unexpected{std::string{msg}};
+  auto const non_dummy_match_mode =
+      routing.is_osr_loaded() ? n::routing::location_match_mode::kIntermodal
+                              : n::routing::location_match_mode::kEquivalent;
+
+  auto const safe_prf_idx =
+      stop_times_ep.tt_.locations_.footpaths_out_.at(prf_idx).empty()
+          ? n::profile_idx_t{0U}
+          : prf_idx;
+
+  auto stats = ep::stats_map_t{};
+  auto gbfs_rd = gbfs::gbfs_routing_data{routing.w_, routing.l_, routing.gbfs_};
+  auto cache = street_routing_cache_t{};
+
+  // needed to mark blocked elevator nodes in street routing
+  auto blocked = osr::bitvec<osr::node_idx_t>{};
+  if (routing.is_osr_loaded()) {
+    blocked.resize(stop_times_ep.w_->n_nodes());
+  }
+
+  // === Helpers ===
+  auto const is_transit = [](leg const& l) {
+    return !l.input_.trip_id_.empty();
+  };
+  auto const failed = [](leg const& l) { return !l.transit_.has_value(); };
+
+  auto const get_offsets = [&](leg_hint const& h, bool const is_start,
+                               osr::direction const dir,
+                               std::vector<api::ModeEnum> const& modes) {
+    if (!routing.is_osr_loaded()) {
+      return std::vector<n::routing::offset>{};
+    }
+    auto const& pos = is_start ? h.from_loc_ : h.to_loc_;
+    return routing.get_offsets(
+        rt.rtt_.get(), place_t{pos}, dir, modes,
+        is_start ? flm.pre_transit_ : flm.post_transit_, flm.osr_params_,
+        flm.pedestrian_profile_, flm.elevation_costs_,
+        is_start ? flm.max_pre_transit_ : flm.max_post_transit_,
+        flm.max_matching_distance_, gbfs_rd, stats);
+  };
+
+  auto const get_td_offsets = [&](leg_hint const& h, bool const is_start,
+                                  osr::direction const dir,
+                                  n::unixtime_t const anchor_time,
+                                  std::vector<api::ModeEnum> const& modes) {
+    if (!routing.is_osr_loaded()) {
+      return n::routing::td_offsets_t{};
+    }
+    auto const& pos = is_start ? h.from_loc_ : h.to_loc_;
+    return routing.get_td_offsets(
+        rt.rtt_.get(), rt.e_.get(), place_t{pos}, dir, modes, flm.osr_params_,
+        flm.pedestrian_profile_, flm.elevation_costs_,
+        flm.max_matching_distance_,
+        is_start ? flm.max_pre_transit_ : flm.max_post_transit_, anchor_time,
+        stats);
+  };
+
+  auto const reconstruct = [&](n::routing::journey::leg const& l,
+                               place_t const& from_place,
+                               place_t const& to_place,
+                               alternatives_context const& alternatives = {}) {
+    return journey_to_response(
+               stop_times_ep.w_, routing.l_, stop_times_ep.pl_,
+               stop_times_ep.tt_, stop_times_ep.tags_, routing.fa_, rt.e_.get(),
+               rt.rtt_.get(), stop_times_ep.matches_, routing.elevations_,
+               routing.shapes_, gbfs_rd, stop_times_ep.ae_, stop_times_ep.tz_,
+               {.legs_ = {l},
+                .start_time_ = l.dep_time_,
+                .dest_time_ = l.arr_time_,
+                .dest_ = l.to_,
+                .transfers_ = 0},
+               from_place, to_place, cache, &blocked, prf_idx == n::kCarProfile,
+               flm.osr_params_, flm.pedestrian_profile_, flm.elevation_costs_,
+               join_interlined_legs, detailed_transfers, detailed_legs,
+               /*with_fares=*/false, with_scheduled_skipped_stops,
+               stop_times_ep.config_.timetable_.value().max_matching_distance_,
+               flm.max_matching_distance_, 6U, false, false, lang,
+               /*set_itinerary_id_field=*/false, alternatives)
+        .legs_;
+  };
+
+  auto const reconstruct_offset =
+      [&](std::vector<leg> const& legs,
+          std::size_t const i) -> std::vector<api::Leg> {
+    auto const& l = legs[i];
+    auto const& h = l.input_;
+    auto const is_first = i == 0U;
+    auto const loc = is_first ? l.to_ : l.from_;
+    if (loc == n::location_idx_t::invalid()) {
+      return {
+          make_dummy_leg(h, "adjacent transit leg couldn't be reconstructed")};
+    }
+
+    auto const time = is_first ? l.arr_ : l.dep_;
+    auto const side =
+        is_first ? n::routing::side::kBoarding : n::routing::side::kAlighting;
+    auto const offset =
+        n::routing::lookup_offset(loc, time, side, l.offsets_, l.td_offsets_);
+
+    if (!offset.has_value()) {
+      return {make_dummy_leg(h, "no offset found")};
+    }
+
+    auto const start_place =
+        is_first ? place_t{h.from_loc_} : place_t{tt_location{loc}};
+    auto const end_place =
+        is_first ? place_t{tt_location{loc}} : place_t{h.to_loc_};
+    return reconstruct(*offset, start_place, end_place);
+  };
+
+  auto const reconstruct_transfer = [&](leg const& l) -> std::vector<api::Leg> {
+    auto const& h = l.input_;
+    if (l.from_ == n::location_idx_t::invalid() ||
+        l.to_ == n::location_idx_t::invalid()) {
+      return {
+          make_dummy_leg(h, "adjacent transit leg couldn't be reconstructed")};
+    }
+
+    auto q = n::routing::query{};
+    q.prf_idx_ = safe_prf_idx;
+    auto const offs = std::vector<n::routing::offset>{
+        {(l.to_), n::duration_t{0}, kWalkTransportModeId}};
+
+    auto const fp_leg = n::routing::lookup_footpath(
+        l.from_, l.dep_, n::routing::side::kAlighting, stop_times_ep.tt_,
+        rt.rtt_.get(), q, offs, n::routing::location_match_mode::kExact,
+        /*use_footpaths=*/true);
+    if (!fp_leg.has_value()) {
+      return {make_dummy_leg(h, "reconstruct_itinerary: no transfer footpath")};
+    }
+    return reconstruct(*fp_leg, tt_location{(l.from_)}, tt_location{(l.to_)});
+  };
+
+  auto const get_leg_alternatives = [&](std::vector<leg> const& legs,
+                                        std::size_t const i,
+                                        bool const has_prev_transit,
+                                        bool const has_next_transit) {
+    auto const& jl = *legs[i].transit_;
+
+    auto const add_equivalents = [&](std::vector<n::routing::offset>& offsets,
+                                     n::location_idx_t const l) {
+      n::routing::for_each_meta(
+          stop_times_ep.tt_, n::routing::location_match_mode::kEquivalent, l,
+          [&](n::location_idx_t const c) {
+            offsets.emplace_back(c, n::duration_t{0U}, 0U);
+          });
     };
 
-    if (!lh.scheduled_) {
-      if (lh.trip_id_.empty()) {
-        return fail("reconstruct_itinerary: additional trip requires trip_id");
-      }
+    auto q = n::routing::make_alternative_query(
+        stop_times_ep.tt_, rt.rtt_.get(),
+        n::routing::query{.prf_idx_ = safe_prf_idx,
+                          .allowed_claszes_ = allowed_claszes,
+                          .require_bike_transport_ = require_bike_transport,
+                          .require_car_transport_ = require_car_transport},
+        has_prev_transit ? legs[i - 2U].to_ : n::location_idx_t::invalid(),
+        has_next_transit ? legs[i + 2U].from_ : n::location_idx_t::invalid());
 
-      auto const fr = make_frun_from_trip_id(
-          stop_times_ep.tags_, stop_times_ep.tt_, rt.rtt_.get(), lh.trip_id_);
-      if (!fr.valid()) {
-        return fail("reconstruct_itinerary: additional trip not found");
+    if (!has_prev_transit) {
+      q.start_match_mode_ = non_dummy_match_mode;
+      q.use_start_footpaths_ = !routing.is_osr_loaded();
+      if (routing.is_osr_loaded()) {
+        auto offsets =
+            get_offsets(legs.front().input_, /*is_start=*/true,
+                        osr::direction::kBackward, flm.pre_transit_modes_);
+        if (is_transit(legs.front())) {
+          add_equivalents(offsets, jl.from_);
+        }
+        q.start_ = std::move(offsets);
+        q.td_start_ = get_td_offsets(
+            legs.front().input_, /*is_start=*/true, osr::direction::kBackward,
+            sched_to_unix(legs[i].input_.sched_start_), flm.pre_transit_modes_);
+      } else {
+        q.start_ = {{jl.from_, n::duration_t{0U}, 0U}};
       }
-      if (fr.is_scheduled()) {
-        return fail(
-            "reconstruct_itinerary: trip_id resolved to scheduled trip while "
-            "itinerary id expects additional trip");
-      }
-
-      auto const from_idx = find_stop_by_id_time(
-          fr, stop_times_ep.tags_, lh.from_stop_id_, lh.sched_start_,
-          n::event_type::kDep, kNonSchedAllowedDeviationSeconds);
-      if (!from_idx.has_value()) {
-        return fail(
-            "reconstruct_itinerary: additional trip from stop not found");
-      }
-
-      auto const to_idx = find_stop_by_id_time(
-          fr, stop_times_ep.tags_, lh.to_stop_id_, lh.sched_end_,
-          n::event_type::kArr, kNonSchedAllowedDeviationSeconds);
-      if (!to_idx.has_value()) {
-        return fail("reconstruct_itinerary: additional trip to stop not found");
-      }
-
-      if (*from_idx >= *to_idx) {
-        return fail("reconstruct_itinerary: invalid stop order (from >= to)");
-      }
-
-      return make_pt_leg(fr, *from_idx, *to_idx);
-    } else {
-      auto const from_st_res = get_st_candidates_in_radius(
-          stop_times_ep, stop_times_rtt, lh.from_pos_,
-          lh.sched_start_ - kLookbackSeconds, lh.mode_, kLookbackSeconds * 2,
-          kSearchRadiusMeters, false, lang);
-      auto const to_st_res = get_st_candidates_in_radius(
-          stop_times_ep, stop_times_rtt, lh.to_pos_,
-          lh.sched_end_ - kLookbackSeconds, lh.mode_, kLookbackSeconds * 2,
-          kSearchRadiusMeters, true, lang);
-
-      auto const best_from_to = get_best_candidate(
-          from_st_res, to_st_res, lh, require_display_name_match,
-          stop_times_ep.tags_, stop_times_rtt);
-
-      if (!best_from_to.has_value()) {
-        return fail("no matching route is found");
-      }
-
-      // Rebuild with the current RT snapshot
-      auto const best_fr = make_full_frun(stop_times_ep.tt_, rt.rtt_.get(),
-                                          best_from_to->from_->run_);
-      auto const from_idx = best_from_to->from_->run_.stop_range_.from_;
-      auto const to_idx = best_from_to->to_->run_.stop_range_.from_;
-      if (!best_fr.stop_range_.contains(from_idx) ||
-          !best_fr.stop_range_.contains(to_idx)) {
-        return fail("reconstruct_itinerary: winning stop index out of range");
-      }
-      if (from_idx >= to_idx) {
-        return fail("reconstruct_itinerary: invalid stop order (from >= to)");
-      }
-
-      return make_pt_leg(best_fr, from_idx, to_idx);
     }
+
+    if (!has_next_transit) {
+      q.dest_match_mode_ = non_dummy_match_mode;
+      if (routing.is_osr_loaded()) {
+        auto offsets =
+            get_offsets(legs.back().input_, /*is_start=*/false,
+                        osr::direction::kForward, flm.post_transit_modes_);
+        if (is_transit(legs.back())) {
+          add_equivalents(offsets, jl.to_);
+        }
+        q.destination_ = std::move(offsets);
+        q.td_dest_ = get_td_offsets(
+            legs.back().input_, /*is_start=*/false, osr::direction::kForward,
+            sched_to_unix(legs[i].input_.sched_end_), flm.post_transit_modes_);
+      } else {
+        q.destination_ = {{jl.to_, n::duration_t{0U}, 0U}};
+      }
+    }
+
+    auto const& original =
+        std::get<n::routing::journey::run_enter_exit>(jl.uses_);
+    auto const next_dep =
+        has_next_transit ? legs[i + 2U].transit_->dep_time_ : jl.arr_time_;
+
+    // First transit leg with a successor:
+    // Search backward from the next leg's departure.
+    if (!has_prev_transit && has_next_transit) {
+      return n::routing::get_leg_alternatives(
+          stop_times_ep.tt_, rt.rtt_.get(), q, n::direction::kBackward,
+          next_dep, std::nullopt, original, num_leg_alternatives);
+    }
+
+    // Intermediate / single / last transit leg:
+    // Search forward from the previous leg's arrival (or this leg's departure),
+    // bounded by the next departure when a successor exists.
+    auto const prev_arr =
+        has_prev_transit ? legs[i - 2U].transit_->arr_time_ : jl.dep_time_;
+    return n::routing::get_leg_alternatives(
+        stop_times_ep.tt_, rt.rtt_.get(), q, n::direction::kForward, prev_arr,
+        has_next_transit ? std::optional{next_dep} : std::nullopt, original,
+        num_leg_alternatives);
   };
 
-  auto const n_legs = parsed_id.legs_size();
-  auto start_pos = std::optional<osr::location>{};
-  auto end_pos = std::optional<osr::location>{};
+  // === Decode & verify ===
+  auto legs = utl::to_vec(decode_itinerary_id(id_buf).legs(),
+                          [](auto const& x) { return leg{leg_hint{x}}; });
+  verify_leg_structure(legs);
 
-  auto slots = std::vector<std::variant<n::routing::journey::leg, api::Leg>>{};
-  slots.reserve(static_cast<std::size_t>(n_legs));
-  auto any_dummy = false;
+  // === Compute first/last mile offsets. ===
+  if (!is_transit(legs.front())) {
+    auto const& h = legs.front().input_;
+    legs.front().offsets_ =
+        get_offsets(h, /*is_start=*/true, osr::direction::kBackward, {h.mode_});
+    legs.front().td_offsets_ =
+        get_td_offsets(h, /*is_start=*/true, osr::direction::kBackward,
+                       sched_to_unix(h.sched_end_), {h.mode_});
+  }
+  if (!is_transit(legs.back())) {
+    auto const& h = legs.back().input_;
+    legs.back().offsets_ =
+        get_offsets(h, /*is_start=*/false, osr::direction::kForward, {h.mode_});
+    legs.back().td_offsets_ =
+        get_td_offsets(h, /*is_start=*/false, osr::direction::kForward,
+                       sched_to_unix(h.sched_start_), {h.mode_});
+  }
 
-  for (auto l_idx = 0; l_idx < n_legs; ++l_idx) {
-    auto const lh = leg_hint{parsed_id.legs(l_idx)};
-    if (lh.is_public_transport()) {
-      auto run = get_run(lh);
-      if (run.has_value()) {
-        slots.emplace_back(std::move(*run));
-      } else {
-        slots.emplace_back(make_dummy_leg(lh, std::move(run.error())));
-        any_dummy = true;
-      }
+  // ===  Reconstruct transit legs first. ===
+  auto transit_err = std::vector<std::string>(legs.size());
+  for (auto i = std::size_t{0}; i < legs.size(); ++i) {
+    if (!is_transit(legs[i])) {
+      continue;
+    }
+    auto pt = reconstruct_pt_leg(legs[i].input_, stop_times_ep, rt.rtt_.get(),
+                                 lang, require_display_name_match);
+    if (pt.has_value()) {
+      legs[i].from_ = pt->from_;
+      legs[i].to_ = pt->to_;
+      legs[i].transit_ = std::move(*pt);
+    } else {
+      transit_err[i] = std::move(pt.error());
+    }
+  }
+
+  // === Offset/transfer legs inherit from/to from adjacent transit legs. ===
+  for (auto i = std::size_t{0}; i < legs.size(); ++i) {
+    if (is_transit(legs[i])) {
+      continue;
+    }
+    if (i > 0U) {
+      legs[i].from_ = legs[i - 1U].to_;
+    }
+    if (i + 1U < legs.size()) {
+      legs[i].to_ = legs[i + 1U].from_;
+    }
+  }
+
+  // === Transit legs: Journey to response + leg alternatives. ===
+  auto const origin_place = is_transit(legs.front())
+                                ? place_t{tt_location{legs.front().from_}}
+                                : place_t{legs.front().input_.from_loc_};
+  auto const dest_place = is_transit(legs.back())
+                              ? place_t{tt_location{legs.back().to_}}
+                              : place_t{legs.back().input_.to_loc_};
+  for (auto const [i, leg] : utl::enumerate(legs)) {
+    if (!is_transit(leg)) {
       continue;
     }
 
-    auto from_loc = n::location_idx_t::invalid();
-    auto to_loc = n::location_idx_t::invalid();
-
-    if (lh.from_stop_id_.empty()) {
-      utl::verify(l_idx == 0,
-                  "reconstruct_itinerary: non-PT leg without from_id is only "
-                  "valid as the first leg (first-mile)");
-      from_loc = n::get_special_station(n::special_station::kStart);
-      start_pos = osr::location{lh.from_pos_, lh.from_level_};
-    } else {
-      auto const f = stop_times_ep.tags_.find_location(stop_times_ep.tt_,
-                                                       lh.from_stop_id_);
-      utl::verify(f.has_value(),
-                  "reconstruct_itinerary: non-PT leg from stop not found");
-      from_loc = *f;
+    if (failed(leg)) {
+      leg.output_ = {make_dummy_leg(leg.input_, transit_err[i])};
+      continue;
     }
 
-    if (lh.to_stop_id_.empty()) {
-      utl::verify(l_idx == n_legs - 1,
-                  "reconstruct_itinerary: non-PT leg without to_id is only "
-                  "valid as the last leg (last-mile)");
-      to_loc = n::get_special_station(n::special_station::kEnd);
-      end_pos = osr::location{lh.to_pos_, lh.to_level_};
-    } else {
-      auto const t =
-          stop_times_ep.tags_.find_location(stop_times_ep.tt_, lh.to_stop_id_);
-      utl::verify(t.has_value(),
-                  "reconstruct_itinerary: non-PT leg to stop not found");
-      to_loc = *t;
-    }
+    auto const has_prev_transit = i >= 2U;
+    auto const has_next_transit = i + 2U < legs.size();
+    auto const prev_ok = !has_prev_transit || !failed(legs[i - 2U]);
+    auto const next_ok = !has_next_transit || !failed(legs[i + 2U]);
+    auto const alternatives =
+        (num_leg_alternatives > 0U && prev_ok && next_ok)
+            ? get_leg_alternatives(legs, i, has_prev_transit, has_next_transit)
+            : alternatives_context{};
 
-    auto const dep =
-        n::unixtime_t{std::chrono::duration_cast<n::unixtime_t::duration>(
-            std::chrono::seconds{lh.sched_start_})};
-    auto const arr =
-        n::unixtime_t{std::chrono::duration_cast<n::unixtime_t::duration>(
-            std::chrono::seconds{lh.sched_end_})};
-    auto const dur = std::max(
-        n::duration_t{0}, std::chrono::duration_cast<n::duration_t>(arr - dep));
+    auto const& jl = *leg.transit_;
+    leg.output_ = reconstruct(jl, origin_place, dest_place, alternatives);
+  }
 
-    auto const is_offset =
-        from_loc == n::get_special_station(n::special_station::kStart) ||
-        to_loc == n::get_special_station(n::special_station::kEnd);
+  // === Anchor non-transit leg times to the adjacent transit legs. ===
 
-    if (is_offset) {
-      slots.emplace_back(n::routing::journey::leg{
-          n::direction::kForward, from_loc, to_loc, dep, arr,
-          n::routing::offset{to_loc, dur, kWalkTransportModeId}});
-    } else {
-      slots.emplace_back(n::routing::journey::leg{n::direction::kForward,
-                                                  from_loc, to_loc, dep, arr,
-                                                  n::footpath{to_loc, dur}});
+  // First -> propagate backward from following transit leg.
+  if (!is_transit(legs.front())) {
+    auto const duration = legs[0].arr_ - legs[0].dep_;
+    legs[0].arr_ = to_unix(legs.at(1).output_.front().startTime_);
+    legs[0].dep_ = legs[0].arr_ - duration;
+  }
+
+  // Other -> propagate forward from previous transit leg.
+  for (auto i = 1U; i < legs.size(); ++i) {
+    if (!is_transit(legs[i])) {
+      auto const duration = legs[i].arr_ - legs[i].dep_;
+      legs[i].dep_ = to_unix(legs[i - 1].output_.back().endTime_);
+      legs[i].arr_ = legs[i].dep_ + duration;
     }
   }
 
-  // Fully reconstructable journey: reconstruct single pass
-  if (!any_dummy) {
-    auto legs = std::vector<n::routing::journey::leg>{};
-    legs.reserve(slots.size());
-    for (auto& slot : slots) {
-      legs.emplace_back(std::move(std::get<n::routing::journey::leg>(slot)));
+  // Resolve non-transit legs.
+  for (auto i = std::size_t{0}; i < legs.size(); ++i) {
+    if (is_transit(legs[i])) {
+      continue;
     }
-    auto res = build_itinerary_from_legs(
-        legs, start_pos, end_pos, routing, stop_times_ep, rt.rtt_.get(),
-        join_interlined_legs, detailed_transfers, detailed_legs, with_fares,
-        with_scheduled_skipped_stops, lang, num_leg_alternatives,
-        allowed_claszes, require_bike_transport, require_car_transport,
-        prf_idx);
-    res.id_ = id;
-    return res;
+    legs[i].output_ = (i == 0U || i == legs.size() - 1U)
+                          ? reconstruct_offset(legs, i)
+                          : reconstruct_transfer(legs[i]);
   }
 
-  // Partially reconstructable journey:
-  // reconstruct consecutive segments and stitch them together.
-  auto out_legs = std::vector<api::Leg>{};
-  auto pt_leg_count = std::int64_t{0};
-  auto segment = std::vector<n::routing::journey::leg>{};
-  auto first_segment = true;
+  // === Assemble itinerary. ===
+  auto itinerary = api::Itinerary{};
+  for (auto& l : legs) {
+    utl::concat(itinerary.legs_, l.output_);
+  }
+  utl::verify<net::bad_request_exception>(!itinerary.legs_.empty(),
+                                          "no legs reconstructed");
 
-  auto const flush_segment = [&](bool const is_last) {
-    if (segment.empty()) {
-      return;
+  // === Propagate timezone. ===
+  auto fallback_tz = std::optional<std::string>{};
+  for (auto const& l : itinerary.legs_) {
+    if (l.from_.tz_.has_value()) {
+      fallback_tz = l.from_.tz_;
+      break;
     }
-    pt_leg_count += utl::count_if(segment, is_transit_leg);
-    auto seg_itinerary = build_itinerary_from_legs(
-        segment, first_segment ? start_pos : std::nullopt,
-        is_last ? end_pos : std::nullopt, routing, stop_times_ep, rt.rtt_.get(),
-        join_interlined_legs, detailed_transfers, detailed_legs, with_fares,
-        with_scheduled_skipped_stops, lang, num_leg_alternatives,
-        allowed_claszes, require_bike_transport, require_car_transport,
-        prf_idx);
-    utl::concat(out_legs, seg_itinerary.legs_);
-    segment.clear();
-    first_segment = false;
-  };
-
-  for (auto& slot : slots) {
-    if (std::holds_alternative<n::routing::journey::leg>(slot)) {
-      segment.emplace_back(std::move(std::get<n::routing::journey::leg>(slot)));
-    } else {
-      flush_segment(false);
-      out_legs.emplace_back(std::move(std::get<api::Leg>(slot)));
-      ++pt_leg_count;
+    if (l.to_.tz_.has_value()) {
+      fallback_tz = l.to_.tz_;
+      break;
     }
   }
-  flush_segment(true);
+  if (fallback_tz.has_value()) {
+    for (auto& l : itinerary.legs_) {
+      if (!l.from_.tz_.has_value()) {
+        l.from_.tz_ = fallback_tz;
+      }
+      if (!l.to_.tz_.has_value()) {
+        l.to_.tz_ = fallback_tz;
+      }
+    }
+  }
 
-  utl::verify(!out_legs.empty(),
-              "reconstruct_itinerary: no legs reconstructed");
+  // === Propagate cancelled + arrival time. ===
+  for (auto i = std::size_t{1}; i < itinerary.legs_.size(); ++i) {
+    if (itinerary.legs_[i].tripId_.has_value()) {
+      continue;
+    }
 
-  auto res = api::Itinerary{};
-  res.startTime_ = out_legs.front().startTime_;
-  res.endTime_ = out_legs.back().endTime_;
-  res.duration_ = res.endTime_.get_unixtime_seconds() -
-                  res.startTime_.get_unixtime_seconds();
-  res.transfers_ = std::max(std::int64_t{0}, pt_leg_count - 1);
-  res.id_ = id;
-  res.legs_ = std::move(out_legs);
-  return res;
+    auto const& prev_to = itinerary.legs_[i - 1].to_;
+    auto& curr_from = itinerary.legs_[i].from_;
+    if (!curr_from.arrival_.has_value() && prev_to.arrival_.has_value()) {
+      curr_from.arrival_ = prev_to.arrival_;
+    }
+    if (!curr_from.scheduledArrival_.has_value() &&
+        prev_to.scheduledArrival_.has_value()) {
+      curr_from.scheduledArrival_ = prev_to.scheduledArrival_;
+    }
+    if (!curr_from.cancelled_.has_value() && prev_to.cancelled_.has_value()) {
+      curr_from.cancelled_ = prev_to.cancelled_;
+    }
+  }
+
+  // === Set meta data. ===
+  itinerary.startTime_ = itinerary.legs_.front().startTime_;
+  itinerary.endTime_ = itinerary.legs_.back().endTime_;
+  itinerary.duration_ = itinerary.endTime_.get_unixtime_seconds() -
+                        itinerary.startTime_.get_unixtime_seconds();
+  auto const pt_count = utl::count_if(
+      itinerary.legs_, [](api::Leg const& l) { return l.tripId_.has_value(); });
+  itinerary.transfers_ =
+      std::max(std::int64_t{0}, static_cast<std::int64_t>(pt_count) - 1);
+  itinerary.id_ = id_buf;
+
+  return itinerary;
 }
 
 }  // namespace motis

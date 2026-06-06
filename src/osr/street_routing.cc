@@ -180,7 +180,8 @@ api::Itinerary dummy_itinerary(api::Place const& from,
                                api::ModeEnum const mode,
                                n::unixtime_t const start_time,
                                n::unixtime_t const end_time,
-                               unsigned const api_version) {
+                               unsigned const api_version,
+                               bool const cancelled) {
   auto itinerary = api::Itinerary{
       .duration_ = std::chrono::duration_cast<std::chrono::seconds>(end_time -
                                                                     start_time)
@@ -198,6 +199,7 @@ api::Itinerary dummy_itinerary(api::Place const& from,
       .endTime_ = end_time,
       .scheduledStartTime_ = start_time,
       .scheduledEndTime_ = end_time,
+      .cancelled_ = cancelled,
       .legGeometry_ = empty_polyline()});
   leg.from_.pickupType_ = std::nullopt;
   leg.from_.dropoffType_ = std::nullopt;
@@ -205,6 +207,10 @@ api::Itinerary dummy_itinerary(api::Place const& from,
   leg.to_.dropoffType_ = std::nullopt;
   leg.from_.departure_ = leg.from_.scheduledDeparture_ = leg.startTime_;
   leg.to_.arrival_ = leg.to_.scheduledArrival_ = leg.endTime_;
+  if (cancelled) {
+    leg.from_.cancelled_ = true;
+    leg.to_.cancelled_ = true;
+  }
   return itinerary;
 }
 
@@ -251,8 +257,11 @@ api::Itinerary street_routing(osr::ways const& w,
     if (!start_time.has_value() || !end_time.has_value()) {
       return {};
     }
+    // No street path between the endpoints (e.g. the only wheelchair
+    // connection is an out-of-service elevator) -> emit a cancelled leg so the
+    // broken access/transfer is visible in the journey.
     return dummy_itinerary(from_place, to_place, out.get_mode(), *start_time,
-                           *end_time, api_version);
+                           *end_time, api_version, /*cancelled=*/true);
   }
 
   auto const deduced_start_time =
