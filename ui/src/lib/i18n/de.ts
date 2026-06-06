@@ -157,6 +157,8 @@ const translations: Translations = {
 	FUNICULAR: 'Standseilbahn',
 	AERIAL_LIFT: 'Luftseilbahn',
 	toll: 'Achtung! Mautpflichtige Straße.',
+	bikesAllowed: 'Bikes allowed',
+	wheelchairAccessible: 'Wheelchair accessible',
 	accessRestriction: 'Kein Zugang',
 	continuesAs: 'Weiter als',
 	earlierAlternatives: 'Frühere Alternativen',

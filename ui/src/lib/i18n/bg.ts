@@ -160,6 +160,8 @@ const translations: Translations = {
 	FUNICULAR: 'Фуникулер',
 	AERIAL_LIFT: 'Въздушен лифт',
 	toll: 'Внимание! Платен път.',
+	bikesAllowed: 'Bikes allowed',
+	wheelchairAccessible: 'Wheelchair accessible',
 	accessRestriction: 'забранен достъп',
 	continuesAs: 'Продължава като',
 	earlierAlternatives: 'По-ранни алтернативи',

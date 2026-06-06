@@ -410,11 +410,15 @@
 
 				<div class="ml-4 mt-4">
 					{#if l.bikesAllowed}
-						<Bike class="inline" />
+						<div title={t.bikesAllowed} class="inline">
+							<Bike aria-label={t.bikesAllowed} class="inline" />
+						</div>
 					{/if}
 
 					{#if l.wheelchairAccessible == 'ACCESSIBLE'}
-						<Accessibility class="inline" />
+						<div title={t.wheelchairAccessible} class="inline">
+							<Accessibility aria-label={t.wheelchairAccessible} class="inline" />
+						</div>
 					{/if}
 				</div>
 

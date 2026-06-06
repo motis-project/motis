@@ -162,6 +162,8 @@ const translations: Translations = {
 	FUNICULAR: 'Lanová dráha',
 	AERIAL_LIFT: 'Lanová dráha',
 	toll: 'Pozor! Průjezd tuto trasou je placený.',
+	bikesAllowed: 'Bikes allowed',
+	wheelchairAccessible: 'Wheelchair accessible',
 	accessRestriction: 'Omezený dostup',
 	continuesAs: 'Pokračuje jako',
 	earlierAlternatives: 'Dřívější alternativy',

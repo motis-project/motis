@@ -157,6 +157,8 @@ export type Translations = {
 	FUNICULAR: string;
 	AERIAL_LIFT: string;
 	toll: string;
+	bikesAllowed: string;
+	wheelchairAccessible: string;
 	accessRestriction: string;
 	continuesAs: string;
 	earlierAlternatives: string;

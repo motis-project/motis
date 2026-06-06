@@ -160,6 +160,8 @@ const translations: Translations = {
 	FUNICULAR: 'Funiculaire',
 	AERIAL_LIFT: 'Remontée mécanique',
 	toll: 'Attention ! Route à péage.',
+	bikesAllowed: 'Bikes allowed',
+	wheelchairAccessible: 'Wheelchair accessible',
 	accessRestriction: 'Accès restreint',
 	continuesAs: 'Continue comme',
 	earlierAlternatives: 'Alternatives plus tôt',

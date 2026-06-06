@@ -160,6 +160,8 @@ const translations: Translations = {
 	},
 	incline: 'Incline',
 	toll: 'Warning! A fee must be paid to use this route.',
+	bikesAllowed: 'Bikes allowed',
+	wheelchairAccessible: 'Wheelchair accessible',
 	accessRestriction: 'No access',
 	continuesAs: 'Continues as',
 	earlierAlternatives: 'Earlier alternatives',

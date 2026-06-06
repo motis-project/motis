@@ -162,6 +162,8 @@ const translations: Translations = {
 	FUNICULAR: 'Kolej linowo-terenowa',
 	AERIAL_LIFT: 'Wyciąg krzesełkowy',
 	toll: 'Uwaga! Za przejazd tą trasą pobierana jest opłata.',
+	bikesAllowed: 'Bikes allowed',
+	wheelchairAccessible: 'Wheelchair accessible',
 	accessRestriction: 'Ograniczony dostęp',
 	continuesAs: 'Kontynuuje jako',
 	earlierAlternatives: 'Wcześniejsze alternatywy',
