@@ -25,6 +25,8 @@ const translations: Translations = {
 	hydrogenFuelCell: 'Vodíkový palivový článek',
 	from: 'Z',
 	to: 'Do',
+	myLocation: 'My location',
+	reverseDirections: 'Reverse directions',
 	viaStop: 'Mezizastávka',
 	viaStops: 'Mezizastávky',
 	addViaStop: 'Přidat mezizastávku',
@@ -181,6 +183,8 @@ const translations: Translations = {
 		route: 'Spoje podle linky',
 		mode: 'Spoje podle dopravního prostředku'
 	},
+	showMyLocation: 'Show my location',
+	toggleHillshades: 'Toggle hillshades overlay',
 	routes: (n: number) => {
 		switch (n) {
 			case 0:

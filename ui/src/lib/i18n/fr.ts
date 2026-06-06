@@ -24,6 +24,8 @@ const translations: Translations = {
 	hydrogenFuelCell: 'Pile à combustible hydrogène',
 	from: 'De',
 	to: 'À',
+	myLocation: 'My location',
+	reverseDirections: 'Reverse directions',
 	viaStop: 'Arrêt intermédiaire',
 	viaStops: 'Arrêts intermédiaires',
 	addViaStop: 'Ajouter un arrêt intermédiaire',
@@ -179,6 +181,8 @@ const translations: Translations = {
 		route: 'Trajets par ligne',
 		mode: 'Trajets par mode'
 	},
+	showMyLocation: 'Show my location',
+	toggleHillshades: 'Toggle hillshades overlay',
 	routes: (n: number) => {
 		switch (n) {
 			case 0:

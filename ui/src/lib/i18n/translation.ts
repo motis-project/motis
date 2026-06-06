@@ -39,6 +39,8 @@ export type Translations = {
 	position: string;
 	arrival: string;
 	departure: string;
+	myLocation: string;
+	reverseDirections: string;
 	duration: string;
 	later: string;
 	earlier: string;
@@ -176,6 +178,8 @@ export type Translations = {
 		route: string;
 		mode: string;
 	};
+	showMyLocation: string;
+	toggleHillshades: string;
 	routes: (n: number) => string;
 };
 

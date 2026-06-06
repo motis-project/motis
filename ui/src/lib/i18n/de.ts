@@ -25,6 +25,8 @@ const translations: Translations = {
 	hydrogenFuelCell: 'Wasserstoff-Brennstoffzelle',
 	from: 'Von',
 	to: 'Nach',
+	myLocation: 'My location',
+	reverseDirections: 'Reverse directions',
 	viaStop: 'Zwischenhalt',
 	viaStops: 'Zwischenhalte',
 	addViaStop: 'Zwischenhalt hinzufügen',
@@ -176,6 +178,8 @@ const translations: Translations = {
 		route: 'Fahrten nach Linie',
 		mode: 'Fahrten nach Verkehrsmittel'
 	},
+	showMyLocation: 'Show my location',
+	toggleHillshades: 'Toggle hillshades overlay',
 	routes: (n: number) => {
 		switch (n) {
 			case 0:
