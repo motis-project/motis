@@ -27,8 +27,6 @@ struct routing;
 struct stop_times;
 }  // namespace ep
 
-// Mode comes from itinerary id itself.
-// The rest is contained in the URL parameters.
 struct first_last_mile_options {
   api::PedestrianProfileEnum pedestrian_profile_;
   api::ElevationCostsEnum elevation_costs_;
