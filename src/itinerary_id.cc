@@ -836,17 +836,16 @@ api::Itinerary reconstruct_itinerary(
     if (!has_prev_transit) {
       q.start_match_mode_ = non_dummy_match_mode;
       q.use_start_footpaths_ = !routing.is_osr_loaded();
-      if (!is_transit(legs.front())) {
-        q.start_ = legs.front().offsets_;
-        q.td_start_ = legs.front().td_offsets_;
-      } else if (routing.is_osr_loaded()) {
+      if (routing.is_osr_loaded()) {
         auto offsets =
-            get_offsets(legs[i].input_, /*is_start=*/true,
+            get_offsets(legs.front().input_, /*is_start=*/true,
                         osr::direction::kBackward, flm.pre_transit_modes_);
-        add_equivalents(offsets, jl.from_);
+        if (is_transit(legs.front())) {
+          add_equivalents(offsets, jl.from_);
+        }
         q.start_ = std::move(offsets);
         q.td_start_ = get_td_offsets(
-            legs[i].input_, /*is_start=*/true, osr::direction::kBackward,
+            legs.front().input_, /*is_start=*/true, osr::direction::kBackward,
             sched_to_unix(legs[i].input_.sched_start_), flm.pre_transit_modes_);
       } else {
         q.start_ = {{jl.from_, n::duration_t{0U}, 0U}};
@@ -855,17 +854,16 @@ api::Itinerary reconstruct_itinerary(
 
     if (!has_next_transit) {
       q.dest_match_mode_ = non_dummy_match_mode;
-      if (!is_transit(legs.back())) {
-        q.destination_ = legs.back().offsets_;
-        q.td_dest_ = legs.back().td_offsets_;
-      } else if (routing.is_osr_loaded()) {
+      if (routing.is_osr_loaded()) {
         auto offsets =
-            get_offsets(legs[i].input_, /*is_start=*/false,
+            get_offsets(legs.back().input_, /*is_start=*/false,
                         osr::direction::kForward, flm.post_transit_modes_);
-        add_equivalents(offsets, jl.to_);
+        if (is_transit(legs.back())) {
+          add_equivalents(offsets, jl.to_);
+        }
         q.destination_ = std::move(offsets);
         q.td_dest_ = get_td_offsets(
-            legs[i].input_, /*is_start=*/false, osr::direction::kForward,
+            legs.back().input_, /*is_start=*/false, osr::direction::kForward,
             sched_to_unix(legs[i].input_.sched_end_), flm.post_transit_modes_);
       } else {
         q.destination_ = {{jl.to_, n::duration_t{0U}, 0U}};
@@ -950,6 +948,12 @@ api::Itinerary reconstruct_itinerary(
   }
 
   // === Transit legs: Journey to response + leg alternatives. ===
+  auto const origin_place = is_transit(legs.front())
+                                ? place_t{tt_location{legs.front().from_}}
+                                : place_t{legs.front().input_.from_loc_};
+  auto const dest_place = is_transit(legs.back())
+                              ? place_t{tt_location{legs.back().to_}}
+                              : place_t{legs.back().input_.to_loc_};
   for (auto const [i, leg] : utl::enumerate(legs)) {
     if (!is_transit(leg)) {
       continue;
@@ -970,8 +974,7 @@ api::Itinerary reconstruct_itinerary(
             : alternatives_context{};
 
     auto const& jl = *leg.transit_;
-    leg.output_ = reconstruct(jl, tt_location{jl.from_}, tt_location{jl.to_},
-                              alternatives);
+    leg.output_ = reconstruct(jl, origin_place, dest_place, alternatives);
   }
 
   // === Anchor non-transit leg times to the adjacent transit legs. ===

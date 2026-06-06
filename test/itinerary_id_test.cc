@@ -705,6 +705,7 @@ FLEXG,DB,FlexGroup,,,715
 # trips.txt
 route_id,service_id,trip_id,trip_headsign,block_id
 ICE,S_ALL,ICE,,
+ICE,S_ALL,ICE_LATE,,
 FLEXA,S_AREA,FLEX_AREA,,
 FLEXG,S_GROUP,FLEX_GROUP,,
 
@@ -716,6 +717,8 @@ BR,1,0,86400
 trip_id,arrival_time,departure_time,stop_id,location_group_id,location_id,stop_sequence,start_pickup_drop_off_window,end_pickup_drop_off_window,pickup_booking_rule_id,drop_off_booking_rule_id,pickup_type,drop_off_type
 ICE,10:00:00,10:00:00,DA_10,,,0,,,,,0,0
 ICE,11:00:00,11:00:00,FFM_10,,,1,,,,,0,0
+ICE_LATE,11:00:00,11:00:00,DA_10,,,0,,,,,0,0
+ICE_LATE,12:00:00,12:00:00,FFM_10,,,1,,,,,0,0
 FLEX_AREA,,,,,da_flex,0,00:00:00,24:00:00,BR,BR,2,2
 FLEX_AREA,,,,,da_flex,1,00:00:00,24:00:00,BR,BR,2,2
 FLEX_GROUP,,,,da_group,,0,00:00:00,24:00:00,BR,BR,2,2
@@ -767,6 +770,9 @@ void run_flex_first_mile_test(std::string_view const sub_dir,
   // Query before the ICE departure with timetableView so the same-day flex
   // service is used (a query at the PT departure would force the access to
   // start earlier than the query and roll the journey onto the next day).
+  // `numLegAlternatives` so the boarding leg also gets earlier/later departures
+  // as leg alternatives -- each of those must reproduce the FLEX first mile
+  // too, not just the main leg.
   auto const res =
       routing(fmt::format("/api/v6/plan"
                           "?fromPlace=49.87420,8.62940"
@@ -776,6 +782,7 @@ void run_flex_first_mile_test(std::string_view const sub_dir,
                           "&searchWindow=10800"
                           "&preTransitModes=FLEX"
                           "&postTransitModes=WALK"
+                          "&numLegAlternatives=3"
                           "&detailedLegs=true",
                           day));
   ASSERT_FALSE(res.itineraries_.empty());
@@ -787,11 +794,32 @@ void run_flex_first_mile_test(std::string_view const sub_dir,
   ASSERT_GE(proto.legs_size(), 1);
   EXPECT_EQ("FLEX", proto.legs(0).mode());
 
+  // Sanity: the boarding leg has alternatives in the plan, so the round-trip
+  // comparison below is meaningful.
+  auto const boarding_it = utl::find_if(
+      original.legs_, [](api::Leg const& l) { return l.tripId_.has_value(); });
+  ASSERT_NE(boarding_it, end(original.legs_));
+  auto const& boarding = *boarding_it;
+  ASSERT_TRUE(boarding.alternatives_.has_value());
+  ASSERT_FALSE(boarding.alternatives_->empty());
+
   // Reconstruction re-routes the flex access via get_td_offsets and renders it
-  // with the flex areas, reproducing the original itinerary.
+  // with the flex areas, reproducing the original itinerary -- including the
+  // leg alternatives. The id only encodes the chosen first-mile mode, so the
+  // access modes must be supplied (preTransitModes=FLEX) for the alternatives'
+  // boundary offsets to be recomputed as flex (not a bare boarding-stop walk).
+  auto refresh_q = api::refreshItinerary_params{};
+  refresh_q.preTransitModes_ = {api::ModeEnum::FLEX};
   auto const stop_times = utl::init_from<ep::stop_times>(d).value();
   auto const reconstructed = reconstruct_itinerary(
-      routing, stop_times, *d.rt_, original.id_, true, true, true);
+      routing, stop_times, *d.rt_, original.id_,
+      /*require_display_name_match=*/true, /*join_interlined_legs=*/true,
+      /*detailed_transfers=*/true, /*detailed_legs=*/true,
+      /*with_scheduled_skipped_stops=*/false, n::lang_t{},
+      /*num_leg_alternatives=*/3U, n::routing::all_clasz_allowed(),
+      /*require_bike_transport=*/false, /*require_car_transport=*/false,
+      /*prf_idx=*/n::profile_idx_t{0U},
+      make_first_last_mile_options(refresh_q));
   EXPECT_EQ(original, reconstructed);
 }
 
