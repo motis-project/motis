@@ -163,7 +163,13 @@
 						{/if}
 					</div>
 					{#if p.track && !hidePlatform}
-						<span class="text-nowrap px-2 border rounded-xl ml-1 mr-4">
+						{@const fullName =
+							(getModeLabel(mode) == 'Track' ? t.track : t.platform) + ' ' + p.track}
+						<span
+							class="text-nowrap px-2 border rounded-xl ml-1 mr-4"
+							title={fullName}
+							aria-label={fullName}
+						>
 							{getModeLabel(mode) == 'Track' ? t.trackAbr : t.platformAbr}
 							{p.track}
 						</span>
