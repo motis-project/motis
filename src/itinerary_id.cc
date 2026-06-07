@@ -887,10 +887,17 @@ api::Itinerary reconstruct_itinerary(
     }
 
     // Intermediate / single / last transit leg:
-    // Search forward from the previous leg's arrival (or this leg's departure),
-    // bounded by the next departure when a successor exists.
+    // Search forward from the previous leg's arrival, or - when there is no
+    // previous transit - from the journey's origin departure. The latter must
+    // account for first-mile access time (shift this leg's departure back by
+    // the original access duration), otherwise the search starts too late and
+    // misses alternatives that depart as early as the original journey - the
+    // plan endpoint anchors at `j.legs_.front().dep_time_` for the same reason.
     auto const prev_arr =
-        has_prev_transit ? legs[i - 2U].transit_->arr_time_ : jl.dep_time_;
+        has_prev_transit
+            ? legs[i - 2U].transit_->arr_time_
+            : jl.dep_time_ - (sched_to_unix(legs[i].input_.sched_start_) -
+                              sched_to_unix(legs.front().input_.sched_start_));
     return n::routing::get_leg_alternatives(
         stop_times_ep.tt_, rt.rtt_.get(), q, n::direction::kForward, prev_arr,
         has_next_transit ? std::optional{next_dep} : std::nullopt, original,
@@ -1016,26 +1023,25 @@ api::Itinerary reconstruct_itinerary(
   utl::verify<net::bad_request_exception>(!itinerary.legs_.empty(),
                                           "no legs reconstructed");
 
-  // === Propagate timezone. ===
-  auto fallback_tz = std::optional<std::string>{};
-  for (auto const& l : itinerary.legs_) {
-    if (l.from_.tz_.has_value()) {
-      fallback_tz = l.from_.tz_;
-      break;
-    }
-    if (l.to_.tz_.has_value()) {
-      fallback_tz = l.to_.tz_;
-      break;
-    }
-  }
-  if (fallback_tz.has_value()) {
+  // === Propagate timezone from the nearest transit stop. ===
+  // Coordinate boundaries (START / END / mumo transfer points) carry no
+  // timezone of their own. Fill them from the closest leg that has one:
+  // forward first (so e.g. the last mile inherits the last transit stop's tz),
+  // then backward for any remaining leading gaps (so the first mile inherits
+  // the first transit stop's tz). Using a single global fallback would wrongly
+  // propagate the first mile's timezone to the last mile in cross-timezone
+  // journeys.
+  {
+    auto last = std::optional<std::string>{};
     for (auto& l : itinerary.legs_) {
-      if (!l.from_.tz_.has_value()) {
-        l.from_.tz_ = fallback_tz;
-      }
-      if (!l.to_.tz_.has_value()) {
-        l.to_.tz_ = fallback_tz;
-      }
+      l.from_.tz_.has_value() ? (last = l.from_.tz_) : (l.from_.tz_ = last);
+      l.to_.tz_.has_value() ? (last = l.to_.tz_) : (l.to_.tz_ = last);
+    }
+    last.reset();
+    for (auto i = itinerary.legs_.size(); i-- > 0U;) {
+      auto& l = itinerary.legs_[i];
+      l.to_.tz_.has_value() ? (last = l.to_.tz_) : (l.to_.tz_ = last);
+      l.from_.tz_.has_value() ? (last = l.from_.tz_) : (l.from_.tz_ = last);
     }
   }
 
