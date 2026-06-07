@@ -269,18 +269,12 @@
 			alert(String((error as Record<string, unknown>).error?.toString() ?? error));
 			return;
 		}
-		const fromName = urlParams?.get('fromName');
-		const toName = urlParams?.get('toName');
-		updateItinerary(
-			itinerary!,
-			fromName ? { label: fromName } : from,
-			toName ? { label: toName } : to
-		);
+		updateItinerary(itinerary!, from, to);
 		pushStateWithQueryString(
 			definedOnly({
 				...query,
-				fromName: fromName ?? undefined,
-				toName: toName ?? undefined
+				fromName: from.label || undefined,
+				toName: to.label || undefined
 			}),
 			{
 				selectedItinerary: itinerary,

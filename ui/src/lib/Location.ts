@@ -53,7 +53,7 @@ export const parseLocation = (
 	name?: string | null | undefined
 ): Location => {
 	if (!place || place.trim() === '') {
-		return { label: '', match: undefined };
+		return { label: name ?? '', match: undefined };
 	}
 
 	const coord = parseCoordinatesToLocation(place);
