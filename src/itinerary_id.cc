@@ -853,9 +853,9 @@ api::Itinerary reconstruct_itinerary(
           add_equivalents(offsets, jl.from_);
         }
         q.start_ = std::move(offsets);
-        q.td_start_ = get_td_offsets(
-            legs.front().input_, /*is_start=*/true,
-            sched_to_unix(legs[i].input_.sched_start_), flm.pre_transit_modes_);
+        q.td_start_ = get_td_offsets(legs.front().input_, /*is_start=*/true,
+                                     sched_to_unix(legs[i].input_.sched_start_),
+                                     flm.pre_transit_modes_);
       } else {
         q.start_ = {{jl.from_, n::duration_t{0U}, 0U}};
       }
@@ -870,9 +870,9 @@ api::Itinerary reconstruct_itinerary(
           add_equivalents(offsets, jl.to_);
         }
         q.destination_ = std::move(offsets);
-        q.td_dest_ = get_td_offsets(
-            legs.back().input_, /*is_start=*/false,
-            sched_to_unix(legs[i].input_.sched_end_), flm.post_transit_modes_);
+        q.td_dest_ = get_td_offsets(legs.back().input_, /*is_start=*/false,
+                                    sched_to_unix(legs[i].input_.sched_end_),
+                                    flm.post_transit_modes_);
       } else {
         q.destination_ = {{jl.to_, n::duration_t{0U}, 0U}};
       }
