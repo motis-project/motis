@@ -188,8 +188,10 @@
 	const onSelectItinerary = (itinerary: Itinerary, replace: boolean = false) => {
 		pushStateWithQueryString(
 			itinerary.id
-				? {
+				? definedOnly({
 						itineraryId: itinerary.id,
+						fromName: from.label || undefined,
+						toName: to.label || undefined,
 						joinInterlinedLegs: false,
 						detailedLegs: true,
 						detailedTransfers: true,
@@ -197,7 +199,7 @@
 						numLegAlternatives: 3,
 						language: [language],
 						...refreshLegAlternativeParams
-					}
+					})
 				: {},
 			{
 				selectedItinerary: itinerary,
@@ -267,9 +269,19 @@
 			alert(String((error as Record<string, unknown>).error?.toString() ?? error));
 			return;
 		}
-		updateItinerary(itinerary!, from, to);
+		const fromName = urlParams?.get('fromName');
+		const toName = urlParams?.get('toName');
+		updateItinerary(
+			itinerary!,
+			fromName ? { label: fromName } : from,
+			toName ? { label: toName } : to
+		);
 		pushStateWithQueryString(
-			query,
+			definedOnly({
+				...query,
+				fromName: fromName ?? undefined,
+				toName: toName ?? undefined
+			}),
 			{
 				selectedItinerary: itinerary,
 				selectedStop: replace ? undefined : page.state.selectedStop,
