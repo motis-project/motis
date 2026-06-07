@@ -705,13 +705,19 @@ api::Itinerary reconstruct_itinerary(
   };
   auto const failed = [](leg const& l) { return !l.transit_.has_value(); };
 
+  // For a (forward) journey the access offsets are routed forward from the
+  // origin (start side) and backward from the destination (egress side) - same
+  // convention as the plan endpoint. This matters for direction-sensitive modes
+  // (e.g. CAR / one-way streets); using the wrong direction yields different
+  // offsets than the plan and thus different legs / alternatives.
   auto const get_offsets = [&](leg_hint const& h, bool const is_start,
-                               osr::direction const dir,
                                std::vector<api::ModeEnum> const& modes) {
     if (!routing.is_osr_loaded()) {
       return std::vector<n::routing::offset>{};
     }
     auto const& pos = is_start ? h.from_loc_ : h.to_loc_;
+    auto const dir =
+        is_start ? osr::direction::kForward : osr::direction::kBackward;
     return routing.get_offsets(
         rt.rtt_.get(), place_t{pos}, dir, modes,
         is_start ? flm.pre_transit_ : flm.post_transit_, flm.osr_params_,
@@ -721,13 +727,14 @@ api::Itinerary reconstruct_itinerary(
   };
 
   auto const get_td_offsets = [&](leg_hint const& h, bool const is_start,
-                                  osr::direction const dir,
                                   n::unixtime_t const anchor_time,
                                   std::vector<api::ModeEnum> const& modes) {
     if (!routing.is_osr_loaded()) {
       return n::routing::td_offsets_t{};
     }
     auto const& pos = is_start ? h.from_loc_ : h.to_loc_;
+    auto const dir =
+        is_start ? osr::direction::kForward : osr::direction::kBackward;
     return routing.get_td_offsets(
         rt.rtt_.get(), rt.e_.get(), place_t{pos}, dir, modes, flm.osr_params_,
         flm.pedestrian_profile_, flm.elevation_costs_,
@@ -840,15 +847,14 @@ api::Itinerary reconstruct_itinerary(
       q.start_match_mode_ = non_dummy_match_mode;
       q.use_start_footpaths_ = !routing.is_osr_loaded();
       if (routing.is_osr_loaded()) {
-        auto offsets =
-            get_offsets(legs.front().input_, /*is_start=*/true,
-                        osr::direction::kBackward, flm.pre_transit_modes_);
+        auto offsets = get_offsets(legs.front().input_, /*is_start=*/true,
+                                   flm.pre_transit_modes_);
         if (is_transit(legs.front())) {
           add_equivalents(offsets, jl.from_);
         }
         q.start_ = std::move(offsets);
         q.td_start_ = get_td_offsets(
-            legs.front().input_, /*is_start=*/true, osr::direction::kBackward,
+            legs.front().input_, /*is_start=*/true,
             sched_to_unix(legs[i].input_.sched_start_), flm.pre_transit_modes_);
       } else {
         q.start_ = {{jl.from_, n::duration_t{0U}, 0U}};
@@ -858,15 +864,14 @@ api::Itinerary reconstruct_itinerary(
     if (!has_next_transit) {
       q.dest_match_mode_ = non_dummy_match_mode;
       if (routing.is_osr_loaded()) {
-        auto offsets =
-            get_offsets(legs.back().input_, /*is_start=*/false,
-                        osr::direction::kForward, flm.post_transit_modes_);
+        auto offsets = get_offsets(legs.back().input_, /*is_start=*/false,
+                                   flm.post_transit_modes_);
         if (is_transit(legs.back())) {
           add_equivalents(offsets, jl.to_);
         }
         q.destination_ = std::move(offsets);
         q.td_dest_ = get_td_offsets(
-            legs.back().input_, /*is_start=*/false, osr::direction::kForward,
+            legs.back().input_, /*is_start=*/false,
             sched_to_unix(legs[i].input_.sched_end_), flm.post_transit_modes_);
       } else {
         q.destination_ = {{jl.to_, n::duration_t{0U}, 0U}};
@@ -912,19 +917,15 @@ api::Itinerary reconstruct_itinerary(
   // === Compute first/last mile offsets. ===
   if (!is_transit(legs.front())) {
     auto const& h = legs.front().input_;
-    legs.front().offsets_ =
-        get_offsets(h, /*is_start=*/true, osr::direction::kBackward, {h.mode_});
-    legs.front().td_offsets_ =
-        get_td_offsets(h, /*is_start=*/true, osr::direction::kBackward,
-                       sched_to_unix(h.sched_end_), {h.mode_});
+    legs.front().offsets_ = get_offsets(h, /*is_start=*/true, {h.mode_});
+    legs.front().td_offsets_ = get_td_offsets(
+        h, /*is_start=*/true, sched_to_unix(h.sched_end_), {h.mode_});
   }
   if (!is_transit(legs.back())) {
     auto const& h = legs.back().input_;
-    legs.back().offsets_ =
-        get_offsets(h, /*is_start=*/false, osr::direction::kForward, {h.mode_});
-    legs.back().td_offsets_ =
-        get_td_offsets(h, /*is_start=*/false, osr::direction::kForward,
-                       sched_to_unix(h.sched_start_), {h.mode_});
+    legs.back().offsets_ = get_offsets(h, /*is_start=*/false, {h.mode_});
+    legs.back().td_offsets_ = get_td_offsets(
+        h, /*is_start=*/false, sched_to_unix(h.sched_start_), {h.mode_});
   }
 
   // ===  Reconstruct transit legs first. ===
