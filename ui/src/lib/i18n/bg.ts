@@ -183,6 +183,7 @@ const translations: Translations = {
 		route: 'Timetable: Line Colors',
 		mode: 'Timetable: Transport Modes'
 	},
+	resetToNorth: 'Reset to north',
 	showMyLocation: 'Show my location',
 	toggleHillshades: 'Toggle hillshades overlay',
 	routes: (n: number) => {

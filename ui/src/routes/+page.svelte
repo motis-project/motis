@@ -9,6 +9,7 @@
 		TrainFront,
 		Waypoints,
 		MountainSnow,
+		Compass,
 		RefreshCw
 	} from '@lucide/svelte';
 	import { MediaQuery } from 'svelte/reactivity';
@@ -135,6 +136,7 @@
 	let level = $state(0);
 	let zoom = $state(15);
 	let bounds = $state<maplibregl.LngLatBoundsLike>();
+	let bearing = $state(0);
 	let map = $state<maplibregl.Map>();
 	let style = $derived(
 		browser
@@ -1141,6 +1143,7 @@
 		bind:bounds
 		bind:zoom
 		bind:center
+		bind:bearing
 		class={cn('h-dvh pt-2 overflow-clip', theme)}
 		style={showMap ? style : undefined}
 		attribution={false}
@@ -1213,6 +1216,14 @@
 					</Select.Root>
 				</Control>
 				<Control position="top-right" class="w-fit float-right pb-4">
+					<Button
+						class={bearing === 0 ? 'hidden' : null}
+						size="icon"
+						title={t.resetToNorth}
+						onclick={() => map.resetNorth()}
+					>
+						<Compass class="w-5 h-5" />
+					</Button>
 					<Button size="icon" title={t.showMyLocation} onclick={() => getLocation()}>
 						<LocateFixed class="w-5 h-5" />
 					</Button>
