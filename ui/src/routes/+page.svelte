@@ -27,6 +27,7 @@
 		type Itinerary,
 		type Mode,
 		type PedestrianProfile,
+		type Place,
 		type PlanData,
 		type ReachablePlace,
 		type RentalFormFactor,
@@ -270,6 +271,34 @@
 			return;
 		}
 		updateItinerary(itinerary!, from, to);
+
+		// Populate the search mask (from / to / time) from the reconstructed
+		// connection so that editing it (e.g. changing the time) triggers a new
+		// plan search via baseQuery, just like a regular search would.
+		const legs = itinerary!.legs;
+		if (legs.length > 0) {
+			const placeToLocation = (p: Place): Location => ({
+				label: p.name,
+				match: {
+					lat: p.lat,
+					lon: p.lon,
+					level: p.level ?? 0,
+					id: p.stopId ?? '',
+					areas: [],
+					type: p.stopId ? 'STOP' : 'PLACE',
+					name: p.name,
+					tokens: [],
+					score: 0
+				}
+			});
+			from = placeToLocation(legs[0].from);
+			to = placeToLocation(legs[legs.length - 1].to);
+			time = new Date(arriveBy ? itinerary!.endTime : itinerary!.startTime);
+
+			// Suppress the initial auto-search.
+			lastPlanQuery = baseQuery;
+		}
+
 		pushStateWithQueryString(
 			definedOnly({
 				...query,
