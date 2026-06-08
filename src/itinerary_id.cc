@@ -75,11 +75,45 @@ constexpr auto kNonSchedAllowedDeviationSeconds = std::int64_t{30 * 60};
 
 constexpr auto kExactTripIdMatchAddScore = 50.0;
 
+// Backward compatibility: itinerary-ids minted by older releases (<= 2.10.x)
+// encoded block / interlined continuations (the vehicle continues as a new trip
+// at a shared stop) as multiple ADJACENT transit legs. The current format and
+// reconstruction represent an interlined ride as a SINGLE transit leg (the run
+// spans the block), so merge runs of consecutive transit legs into one, keeping
+// the entered trip and spanning from the first leg's origin to the last leg's
+// destination.
+void join_interlined(proto_id_t& id) {
+  auto const is_transit = [](proto_leg_t const& l) {
+    return !l.trip_id().empty();
+  };
+
+  auto out = proto_id_t{};
+  for (auto i = 0; i < id.legs_size(); ++i) {
+    auto const& cur = id.legs(i);
+    if (out.legs_size() > 0 && is_transit(out.legs(out.legs_size() - 1)) &&
+        is_transit(cur)) {
+      // Interlined continuation: extend the previous transit leg to cur's exit.
+      auto* const prev = out.mutable_legs(out.legs_size() - 1);
+      prev->set_to_id(cur.to_id());
+      prev->set_to_lat(cur.to_lat());
+      prev->set_to_lon(cur.to_lon());
+      cur.has_to_level() ? prev->set_to_level(cur.to_level())
+                         : prev->clear_to_level();
+      prev->set_sched_end(cur.sched_end());
+      prev->set_scheduled(prev->scheduled() && cur.scheduled());
+    } else {
+      *out.add_legs() = cur;
+    }
+  }
+  id = std::move(out);
+}
+
 proto_id_t decode_itinerary_id(std::string const& id) {
   auto parsed = proto_id_t{};
   auto const data = net::decode_base64(id);
   utl::verify<net::bad_request_exception>(parsed.ParseFromString(data),
                                           "Failed to decode itinerary-id");
+  join_interlined(parsed);
   return parsed;
 }
 
@@ -894,15 +928,30 @@ api::Itinerary reconstruct_itinerary(
     // Intermediate / single / last transit leg:
     // Search forward from the previous leg's arrival, or - when there is no
     // previous transit - from the journey's origin departure. The latter must
-    // account for first-mile access time (shift this leg's departure back by
-    // the original access duration), otherwise the search starts too late and
-    // misses alternatives that depart as early as the original journey - the
-    // plan endpoint anchors at `j.legs_.front().dep_time_` for the same reason.
-    auto const prev_arr =
-        has_prev_transit
-            ? legs[i - 2U].transit_->arr_time_
-            : jl.dep_time_ - (sched_to_unix(legs[i].input_.sched_start_) -
-                              sched_to_unix(legs.front().input_.sched_start_));
+    // account for first-mile access time, otherwise the search starts too late
+    // and misses alternatives that depart as early as the original journey (the
+    // plan endpoint anchors at `j.legs_.front().dep_time_` for the same reason).
+    // Derive the origin departure from this leg's (real-time) departure minus
+    // the actual first-mile access duration, looked up against the current
+    // offsets / td-offsets so that time-dependent footpaths (e.g. an elevator
+    // that changed state since the id was minted) are honoured. Fall back to the
+    // scheduled access span encoded in the id when no access offset is found.
+    auto const prev_arr = [&]() -> n::unixtime_t {
+      if (has_prev_transit) {
+        return legs[i - 2U].transit_->arr_time_;
+      }
+      if (!is_transit(legs.front())) {
+        if (auto const access = n::routing::lookup_offset(
+                jl.from_, jl.dep_time_, n::routing::side::kBoarding,
+                legs.front().offsets_, legs.front().td_offsets_);
+            access.has_value()) {
+          return access->dep_time_;
+        }
+        return jl.dep_time_ - (sched_to_unix(legs[i].input_.sched_start_) -
+                               sched_to_unix(legs.front().input_.sched_start_));
+      }
+      return jl.dep_time_;
+    }();
     return n::routing::get_leg_alternatives(
         stop_times_ep.tt_, rt.rtt_.get(), q, n::direction::kForward, prev_arr,
         has_next_transit ? std::optional{next_dep} : std::nullopt, original,
