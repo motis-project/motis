@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Minimal one-way car network for the refresh CAR-egress direction test.
+
+  Two DISCONNECTED street components (so there is no walk path between the
+  boarding and the destination - the transit leg is the only way to get from A
+  to the egress area, which forces the journey to use it):
+
+  Boarding component:
+    A (node 4) to A2 (node 5)   short residential stub (lets stop A match a way)
+
+  Egress component:
+    S (node 1) to D (node 2)    ONE-WAY (oneway=yes), short and direct
+    D (node 2) to X (node 3)    two-way
+    X (node 3) to S (node 1)    two-way
+
+  Travelling S -> D is short (direct one-way); D -> S is long (detour via X).
+  The egress offset for the alighting stop S to the destination D must use the
+  S -> D direction (short). Computing it in the wrong direction (D -> S) gives
+  the long detour.
+-->
+<osm version="0.6" generator="motis-test">
+  <node id="1" lat="50.0000000" lon="8.0000000" version="1"/>  <!-- S: alight -->
+  <node id="2" lat="50.0030000" lon="8.0000000" version="1"/>  <!-- D: dest -->
+  <node id="3" lat="50.0015000" lon="8.0060000" version="1"/>  <!-- X: detour -->
+  <node id="4" lat="49.9000000" lon="8.0000000" version="1"/>  <!-- A: board -->
+  <node id="5" lat="49.9000000" lon="8.0010000" version="1"/>  <!-- A2: stub -->
+
+  <way id="101" version="1">
+    <nd ref="1"/>
+    <nd ref="2"/>
+    <tag k="highway" v="residential"/>
+    <tag k="oneway" v="yes"/>
+  </way>
+  <way id="102" version="1">
+    <nd ref="2"/>
+    <nd ref="3"/>
+    <tag k="highway" v="residential"/>
+  </way>
+  <way id="103" version="1">
+    <nd ref="3"/>
+    <nd ref="1"/>
+    <tag k="highway" v="residential"/>
+  </way>
+  <way id="104" version="1">
+    <nd ref="4"/>
+    <nd ref="5"/>
+    <tag k="highway" v="residential"/>
+  </way>
+</osm>
