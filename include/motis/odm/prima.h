@@ -22,7 +22,7 @@ namespace motis::odm {
 constexpr auto kODMDirectPeriod = std::chrono::seconds{300};
 constexpr auto kODMDirectFactor = 1.0;
 constexpr auto kODMOffsetMinImprovement = std::chrono::seconds{60};
-constexpr auto kODMMaxDuration = std::chrono::seconds{3600};
+constexpr auto kODMMaxDuration = std::chrono::seconds{7200};
 constexpr auto kBlacklistPath = "/api/blacklist";
 constexpr auto kWhitelistPath = "/api/whitelist";
 constexpr auto kRidesharingPath = "/api/whitelistRideShare";
