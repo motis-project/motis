@@ -25,6 +25,8 @@ const translations: Translations = {
 	hydrogenFuelCell: 'Водородна горивна клетка',
 	from: 'От',
 	to: 'До',
+	myLocation: 'My location',
+	reverseDirections: 'Reverse directions',
 	viaStop: 'Междинна спирка',
 	viaStops: 'Междинни спирки',
 	addViaStop: 'Добави междинна спирка',
@@ -158,6 +160,8 @@ const translations: Translations = {
 	FUNICULAR: 'Фуникулер',
 	AERIAL_LIFT: 'Въздушен лифт',
 	toll: 'Внимание! Платен път.',
+	bikesAllowed: 'Bikes allowed',
+	wheelchairAccessible: 'Wheelchair accessible',
 	accessRestriction: 'забранен достъп',
 	continuesAs: 'Продължава като',
 	earlierAlternatives: 'По-ранни алтернативи',
@@ -179,6 +183,8 @@ const translations: Translations = {
 		route: 'Trips by Route',
 		mode: 'Trips by Mode'
 	},
+	showMyLocation: 'Show my location',
+	toggleHillshades: 'Toggle hillshades overlay',
 	routes: (n: number) => {
 		switch (n) {
 			case 0:

@@ -1189,11 +1189,12 @@
 					</Select.Root>
 				</Control>
 				<Control position="top-right" class="w-fit float-right pb-4">
-					<Button size="icon" onclick={() => getLocation()}>
+					<Button size="icon" title={t.showMyLocation} onclick={() => getLocation()}>
 						<LocateFixed class="w-5 h-5" />
 					</Button>
 					<Button
 						size="icon"
+						title={t.toggleHillshades}
 						variant={withHillshades ? 'default' : 'outline'}
 						onclick={() => (withHillshades = !withHillshades)}
 					>
