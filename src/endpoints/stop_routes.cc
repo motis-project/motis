@@ -10,6 +10,7 @@
 #include "nigiri/timetable.h"
 #include "nigiri/types.h"
 
+#include "motis/collect_locations.h"
 #include "motis/parse_location.h"
 #include "motis/tag_lookup.h"
 #include "motis/timetable/clasz_to_mode.h"
@@ -29,40 +30,22 @@ api::stopRoutes_response stop_routes::operator()(
 
   auto locations = std::vector<n::location_idx_t>{};
 
-  auto const add_with_children = [&](n::location_idx_t const l) {
-    auto const root = tt_.locations_.get_root_idx(l);
-    locations.emplace_back(root);
-    for (auto const child : tt_.locations_.children_[root]) {
-      locations.emplace_back(child);
-      for (auto const grandchild : tt_.locations_.children_[child]) {
-        locations.emplace_back(grandchild);
-      }
-    }
-    auto const root_name =
-        tt_.get_default_translation(tt_.locations_.names_[root]);
-    for (auto const eq : tt_.locations_.equivalences_[root]) {
-      if (tt_.get_default_translation(tt_.locations_.names_[eq]) == root_name) {
-        locations.emplace_back(eq);
-        for (auto const child : tt_.locations_.children_[eq]) {
-          locations.emplace_back(child);
-        }
-      }
-    }
+  auto const add = [&](n::location_idx_t const l) {
+    add_location(tt_, t_, ae_, locations, l);
   };
 
   if (query.stopId_.has_value()) {
     auto const loc = tags_.find_location(tt_, *query.stopId_);
     utl::verify<net::not_found_exception>(loc.has_value(), "stop not found: {}",
                                           *query.stopId_);
-    add_with_children(*loc);
+    locations.emplace_back(tt_.locations_.get_root_idx(*loc));
+    add(*loc);
   } else {
     auto const center = parse_location(*query.center_);
     utl::verify<net::bad_request_exception>(
         center.has_value(), "invalid center coordinate: {}", *query.center_);
     auto const radius = static_cast<double>(query.radius_.value_or(500LL));
-    loc_rtree_.in_radius(center->pos_, radius, [&](n::location_idx_t const l) {
-      locations.push_back(l);
-    });
+    loc_rtree_.in_radius(center->pos_, radius, add);
   }
 
   utl::erase_duplicates(locations);
