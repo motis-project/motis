@@ -866,6 +866,22 @@ paths:
             type: boolean
             default: false
 
+        - name: useRealtime
+          in: query
+          required: false
+          description: |
+            Optional. Default is `true`.
+
+            If `true`, the realtime timetable (delays, cancellations,
+            added/changed trips) is used for routing.
+
+            If `false`, routing uses the scheduled timetable only: delays,
+            cancellations and added/changed trips are ignored, so connections
+            reflect the planned schedule.
+          schema:
+            type: boolean
+            default: true
+
         - name: language
           in: query
           required: false
@@ -2384,6 +2400,22 @@ paths:
           schema:
             type: boolean
             default: false
+
+        - name: useRealtime
+          in: query
+          required: false
+          description: |
+            Optional. Default is `true`.
+
+            If `true`, realtime data (delays, cancellations) is used: stop times
+            are returned and sorted by their realtime time.
+
+            If `false`, only scheduled data is used: stop times are returned and
+            sorted by their planned time, and no realtime information is
+            annotated.
+          schema:
+            type: boolean
+            default: true
 
         - name: language
           in: query
