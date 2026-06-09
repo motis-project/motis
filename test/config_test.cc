@@ -56,6 +56,7 @@ timetable:
   use_osm_stop_coordinates: false
   extend_missing_footpaths: false
   max_footpath_length: 15
+  default_transfer_time: 2
   max_matching_distance: 25.000000
   preprocess_max_matching_distance: 250.000000
   datasets:

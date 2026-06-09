@@ -25,6 +25,8 @@ const translations: Translations = {
 	hydrogenFuelCell: 'Hydrogen fuel cell',
 	from: 'From',
 	to: 'To',
+	myLocation: 'My location',
+	reverseDirections: 'Reverse directions',
 	viaStop: 'Via stop',
 	viaStops: 'Via stops',
 	addViaStop: 'Add via stop',
@@ -158,6 +160,8 @@ const translations: Translations = {
 	},
 	incline: 'Incline',
 	toll: 'Warning! A fee must be paid to use this route.',
+	bikesAllowed: 'Bikes allowed',
+	wheelchairAccessible: 'Wheelchair accessible',
 	accessRestriction: 'No access',
 	continuesAs: 'Continues as',
 	earlierAlternatives: 'Earlier alternatives',
@@ -179,6 +183,8 @@ const translations: Translations = {
 		route: 'Trips by Route',
 		mode: 'Trips by Mode'
 	},
+	showMyLocation: 'Show my location',
+	toggleHillshades: 'Toggle hillshades overlay',
 	routes: (n: number) => {
 		switch (n) {
 			case 0:

@@ -2142,6 +2142,34 @@ paths:
             items:
               $ref: '#/components/schemas/Mode'
           explode: false
+        - name: preTransitModes
+          in: query
+          required: false
+          description: |
+            Optional. Default is `WALK`. Modes allowed for the first (access)
+            mile when reconstructing leg alternatives. Should match the
+            `preTransitModes` of the original `plan` request.
+          schema:
+            default:
+              - WALK
+            type: array
+            items:
+              $ref: '#/components/schemas/Mode'
+          explode: false
+        - name: postTransitModes
+          in: query
+          required: false
+          description: |
+            Optional. Default is `WALK`. Modes allowed for the last (egress)
+            mile when reconstructing leg alternatives. Should match the
+            `postTransitModes` of the original `plan` request.
+          schema:
+            default:
+              - WALK
+            type: array
+            items:
+              $ref: '#/components/schemas/Mode'
+          explode: false
         - name: pedestrianProfile
           in: query
           required: false
@@ -2174,6 +2202,134 @@ paths:
             items:
               type: string
           explode: false
+        - name: pedestrianSpeed
+          in: query
+          required: false
+          description: Average speed for pedestrian routing on the first/last mile.
+          schema:
+            $ref: '#/components/schemas/PedestrianSpeed'
+        - name: cyclingSpeed
+          in: query
+          required: false
+          description: Average speed for bike routing on the first/last mile.
+          schema:
+            $ref: '#/components/schemas/CyclingSpeed'
+        - name: elevationCosts
+          in: query
+          required: false
+          description: Elevation cost profile for first/last-mile street routing.
+          schema:
+            $ref: '#/components/schemas/ElevationCosts'
+            default: NONE
+        - name: maxMatchingDistance
+          in: query
+          required: false
+          description: Maximum matching distance in meters to the street network.
+          schema:
+            type: number
+            default: 25
+        - name: maxPreTransitTime
+          in: query
+          required: false
+          description: Maximum time in seconds for the first (access) street leg.
+          schema:
+            type: integer
+            default: 900
+            minimum: 0
+        - name: maxPostTransitTime
+          in: query
+          required: false
+          description: Maximum time in seconds for the last (egress) street leg.
+          schema:
+            type: integer
+            default: 900
+            minimum: 0
+        - name: preTransitRentalFormFactors
+          in: query
+          required: false
+          description: Allowed rental form factors for the first (access) leg.
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/RentalFormFactor'
+          explode: false
+        - name: postTransitRentalFormFactors
+          in: query
+          required: false
+          description: Allowed rental form factors for the last (egress) leg.
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/RentalFormFactor'
+          explode: false
+        - name: preTransitRentalPropulsionTypes
+          in: query
+          required: false
+          description: Allowed rental propulsion types for the first (access) leg.
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/RentalPropulsionType'
+          explode: false
+        - name: postTransitRentalPropulsionTypes
+          in: query
+          required: false
+          description: Allowed rental propulsion types for the last (egress) leg.
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/RentalPropulsionType'
+          explode: false
+        - name: preTransitRentalProviders
+          in: query
+          required: false
+          description: Allowed rental providers for the first (access) leg.
+          schema:
+            type: array
+            items:
+              type: string
+          explode: false
+        - name: postTransitRentalProviders
+          in: query
+          required: false
+          description: Allowed rental providers for the last (egress) leg.
+          schema:
+            type: array
+            items:
+              type: string
+          explode: false
+        - name: preTransitRentalProviderGroups
+          in: query
+          required: false
+          description: Allowed rental provider groups for the first (access) leg.
+          schema:
+            type: array
+            items:
+              type: string
+          explode: false
+        - name: postTransitRentalProviderGroups
+          in: query
+          required: false
+          description: Allowed rental provider groups for the last (egress) leg.
+          schema:
+            type: array
+            items:
+              type: string
+          explode: false
+        - name: ignorePreTransitRentalReturnConstraints
+          in: query
+          required: false
+          description: Ignore rental return constraints on the first (access) leg.
+          schema:
+            type: boolean
+            default: false
+        - name: ignorePostTransitRentalReturnConstraints
+          in: query
+          required: false
+          description: Ignore rental return constraints on the last (egress) leg.
+          schema:
+            type: boolean
+            default: false
       responses:
         '200':
           description: reconstructed itinerary
@@ -2264,6 +2420,15 @@ paths:
           schema:
             type: string
             format: date-time
+
+        - name: both
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+          description: |
+            Optional. Default is `false`. If set to `true`, returns both arrivals and departures, ignoring `arriveBy`.
 
         - name: arriveBy
           in: query
@@ -4934,58 +5099,15 @@ components:
 
     RefreshItineraryPostBody:
       description: |
-        Body for the `refreshItineraryPost` endpoint. All fields mirror the
-        parameters of the `plan` endpoint - see the `plan` endpoint for their
-        descriptions.
+        Body for the `refreshItineraryPost` endpoint. Carries only the
+        structured itinerary identifier; all routing parameters are passed as
+        query parameters (same as the `refreshItinerary` GET endpoint).
       type: object
       required:
         - id
       properties:
         id:
           $ref: '#/components/schemas/ItineraryId'
-        requireDisplayNameMatch:
-          type: boolean
-          default: true
-        joinInterlinedLegs:
-          type: boolean
-          default: true
-        detailedTransfers:
-          type: boolean
-        detailedLegs:
-          type: boolean
-          default: true
-        withFares:
-          type: boolean
-          default: false
-        withScheduledSkippedStops:
-          type: boolean
-          default: false
-        numLegAlternatives:
-          type: integer
-          default: 0
-          minimum: 0
-        transitModes:
-          type: array
-          items:
-            $ref: '#/components/schemas/Mode'
-          default:
-            - TRANSIT
-        pedestrianProfile:
-          $ref: '#/components/schemas/PedestrianProfile'
-          default: FOOT
-        useRoutedTransfers:
-          type: boolean
-          default: false
-        requireBikeTransport:
-          type: boolean
-          default: false
-        requireCarTransport:
-          type: boolean
-          default: false
-        language:
-          type: array
-          items:
-            type: string
 
     Itinerary:
       type: object

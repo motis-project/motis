@@ -11,6 +11,9 @@
 #include <system_error>
 #include <vector>
 
+#include "boost/asio/co_spawn.hpp"
+#include "boost/asio/detached.hpp"
+#include "boost/asio/io_context.hpp"
 #include "boost/json.hpp"
 
 #include "fmt/format.h"
@@ -22,48 +25,58 @@
 
 #include "motis/config.h"
 #include "motis/data.h"
+#include "motis/elevators/elevators.h"
+#include "motis/elevators/parse_fasta.h"
+#include "motis/elevators/update_elevators.h"
 #include "motis/endpoints/refresh_itinerary.h"
 #include "motis/endpoints/routing.h"
 #include "motis/endpoints/stop_times.h"
 #include "motis/endpoints/trip.h"
+#include "motis/gbfs/update.h"
 #include "motis/import.h"
 #include "motis/itinerary_id.h"
+#include "motis/tag_lookup.h"
 
 #include "net/base64.h"
 
+#include "osr/location.h"
+
+#include "nigiri/routing/journey.h"
 #include "nigiri/rt/gtfsrt_update.h"
+#include "nigiri/special_stations.h"
 
 #include "generated/itinerary_id/itinerary_id.pb.h"
 
+#include "./test_case.h"
 #include "./util.h"
 
 using namespace motis;
 namespace fs = std::filesystem;
 namespace n = nigiri;
 
-std::string generate_itinerary_id(api::Itinerary const& x) {
-  return motis::generate_itinerary_id(x, {}, {});
-}
-
 TEST(motis, itinerary_id_distinguishes_level_zero_from_no_level) {
-  auto const t0 =
-      openapi::date_time_t{std::chrono::sys_seconds{std::chrono::seconds{0}}};
-  auto itinerary = api::Itinerary{
-      .duration_ = 0, .startTime_ = t0, .endTime_ = t0, .transfers_ = 0};
-  itinerary.legs_.push_back(
-      api::Leg{.mode_ = api::ModeEnum::WALK,
-               .from_ = api::Place{.lat_ = 1.0, .lon_ = 2.0, .level_ = 0.0},
-               .to_ = api::Place{.lat_ = 3.0, .lon_ = 4.0},
-               .duration_ = 0,
-               .startTime_ = t0,
-               .endTime_ = t0,
-               .scheduledStartTime_ = t0,
-               .scheduledEndTime_ = t0,
-               .scheduled_ = true});
+  auto tt = n::timetable{};
+  auto tags = tag_lookup{};
+
+  auto const dep = n::unixtime_t{};
+  auto const arr = dep + std::chrono::minutes{1};
+  auto j = n::routing::journey{};
+  j.legs_.push_back(n::routing::journey::leg{
+      n::direction::kForward,
+      n::get_special_station(n::special_station::kStart),
+      n::get_special_station(n::special_station::kEnd), dep, arr,
+      n::routing::offset{n::get_special_station(n::special_station::kEnd),
+                         n::duration_t{1}, n::transport_mode_id_t{0}}});
+
+  auto const start =
+      place_t{osr::location{geo::latlng{1.0, 2.0}, osr::level_t{0.F}}};
+  auto const dest =
+      place_t{osr::location{geo::latlng{3.0, 4.0}, osr::kNoLevel}};
 
   auto parsed = motis::ItineraryId{};
-  ASSERT_TRUE(parsed.ParseFromString(
-      net::decode_base64(generate_itinerary_id(itinerary))));
+  ASSERT_TRUE(parsed.ParseFromString(net::decode_base64(
+      generate_itinerary_id(j, tags, tt, nullptr, nullptr, nullptr, nullptr,
+                            nullptr, nullptr, start, dest))));
   ASSERT_EQ(1, parsed.legs_size());
   EXPECT_TRUE(parsed.legs(0).has_from_level());
   EXPECT_EQ(0.0, parsed.legs(0).from_level());
@@ -412,7 +425,7 @@ TEST(motis, itinerary_id_reconstruct_with_changed_stop_ids) {
   auto source_data = import_test_data(source_cfg, "changed_stop_ids_source");
   auto const original = route_first_itinerary(source_data, "test_DA",
                                               "test_FFM", "2019-05-01T02:00Z");
-  auto const id = generate_itinerary_id(original);
+  auto const& id = original.id_;
 
   auto const target_cfg = make_config(
       std::string{fmt::format(kSimpleGtfsTemplate, "FFM", "DA", "FFM", "DA")});
@@ -434,31 +447,27 @@ TEST(motis, itinerary_id_reconstruct_with_repeated_stop_in_trip) {
       route_first_itinerary(data, "test_B", "test_D", "2019-05-01T08:00Z");
   ASSERT_EQ(1U, original.legs_.size());
 
-  auto const id = generate_itinerary_id(original);
+  auto const& id = original.id_;
   auto const stop_times = utl::init_from<ep::stop_times>(data).value();
   auto const routing = utl::init_from<ep::routing>(data).value();
   EXPECT_EQ(original, reconstruct_itinerary(routing, stop_times, {}, id));
 }
 
-TEST(motis, itinerary_id_generate_rejects_invalid_single_leg_inputs) {
+// The production id is generated from the nigiri journey (not the api legs).
+// Verify that this id round-trips through reconstruction.
+TEST(motis, itinerary_id_reconstruct_from_production_journey_id) {
   auto const cfg = make_config(
       std::string{fmt::format(kSimpleGtfsTemplate, "DA", "FFM", "DA", "FFM")});
-  auto data = import_test_data(cfg, "invalid_generate_inputs");
+  auto data = import_test_data(cfg, "production_journey_id");
+
   auto const original =
       route_first_itinerary(data, "test_DA", "test_FFM", "2019-05-01T02:00Z");
-  ASSERT_EQ(1U, original.legs_.size());
+  ASSERT_FALSE(original.id_.empty());
 
-  auto invalid = original;
-  invalid.legs_.clear();
-  EXPECT_ANY_THROW(generate_itinerary_id(invalid));
-
-  invalid = original;
-  invalid.legs_.front().from_.stopId_ = std::nullopt;
-  EXPECT_ANY_THROW(generate_itinerary_id(invalid));
-
-  invalid = original;
-  invalid.legs_.front().to_.stopId_ = std::nullopt;
-  EXPECT_ANY_THROW(generate_itinerary_id(invalid));
+  auto const stop_times = utl::init_from<ep::stop_times>(data).value();
+  auto const routing = utl::init_from<ep::routing>(data).value();
+  EXPECT_EQ(original,
+            reconstruct_itinerary(routing, stop_times, {}, original.id_));
 }
 
 TEST(motis,
@@ -468,7 +477,7 @@ TEST(motis,
   auto const original = route_first_itinerary(
       source_data, "test_OLD_A", "test_OLD_B", "2019-05-01T02:00Z");
   ASSERT_EQ(1U, original.legs_.size());
-  auto const id = generate_itinerary_id(original);
+  auto const& id = original.id_;
 
   auto const target_cfg = make_config(kDenseShiftTargetGtfs);
   auto target_data = import_test_data(target_cfg, "dense_shift_target");
@@ -526,7 +535,7 @@ TEST(motis, itinerary_id_reconstruct_many_candidates_benchmark) {
   auto const original = route_first_itinerary(
       source_data, "test_SRC_A", "test_SRC_B", "2019-05-01T02:00Z");
   ASSERT_EQ(1U, original.legs_.size());
-  auto const id = generate_itinerary_id(original);
+  auto const& id = original.id_;
 
   auto const target_cfg = make_config(make_heavy_target_gtfs(kNumDecoys));
   auto target_data = import_test_data(target_cfg, "heavy_benchmark_target");
@@ -563,7 +572,7 @@ TEST(motis, refresh_itinerary_endpoint_reconstructs_itinerary) {
       import_test_data(source_cfg, "refresh_itinerary_endpoint_source");
   auto const original = route_first_itinerary(source_data, "test_DA",
                                               "test_FFM", "2019-05-01T02:00Z");
-  auto const id = generate_itinerary_id(original);
+  auto const& id = original.id_;
 
   auto const target_cfg = make_config(
       std::string{fmt::format(kSimpleGtfsTemplate, "FFM", "DA", "FFM", "DA")});
@@ -583,9 +592,10 @@ TEST(motis, refresh_itinerary_endpoint_reconstructs_itinerary) {
 
   auto const refresh_post =
       utl::init_from<ep::refresh_itinerary_post>(target_data).value();
-  auto body = make_refresh_itinerary_post_body(original);
-  body.detailedLegs_ = false;
-  EXPECT_EQ(get_res, refresh_post(body));
+  auto const body = make_refresh_itinerary_post_body(original);
+  // Routing params (detailedLegs=false) are query params on the POST url; the
+  // body carries only the id.
+  EXPECT_EQ(get_res, refresh_post(query.to_url("?"), body));
 }
 
 TEST(motis, refresh_itinerary_matches_scheduled_then_applies_realtime) {
@@ -595,7 +605,7 @@ TEST(motis, refresh_itinerary_matches_scheduled_then_applies_realtime) {
 
   auto const original =
       route_first_itinerary(data, "test_DA", "test_FFM", "2019-05-01T02:00Z");
-  auto const id = generate_itinerary_id(original);
+  auto const& id = original.id_;
 
   auto const rt_base_day =
       date::sys_days{date::year{2019} / date::May / date::day{1}};
@@ -656,7 +666,7 @@ TEST(motis, refresh_itinerary_reconstructs_added_trip_by_trip_id_only) {
   auto trip_query = api::trip_params{};
   trip_query.tripId_ = added_trip_id;
   auto const added_itinerary = trip(trip_query.to_url("?"));
-  auto const itinerary_id = generate_itinerary_id(added_itinerary);
+  auto const& itinerary_id = added_itinerary.id_;
 
   auto const refresh = utl::init_from<ep::refresh_itinerary>(data).value();
   auto refresh_query = api::refreshItinerary_params{};
@@ -667,6 +677,158 @@ TEST(motis, refresh_itinerary_reconstructs_added_trip_by_trip_id_only) {
   EXPECT_EQ(itinerary_id, refreshed.id_);
   ASSERT_TRUE(refreshed.legs_.front().tripId_.has_value());
   EXPECT_EQ(added_trip_id, *refreshed.legs_.front().tripId_);
+}
+
+// GTFS-Flex dataset: a geojson area ("da_flex", service day 2019-05-01) and a
+// location group ("da_group", service day 2019-05-02), both used as a flex
+// first mile to board the ICE at DA_10 -> FFM_10. Same timetable, different
+// service days select the area- vs group-based flex.
+constexpr auto kFlexGtfs = R"(
+# agency.txt
+agency_id,agency_name,agency_url,agency_timezone
+DB,Deutsche Bahn,https://deutschebahn.com,Europe/Berlin
+
+# stops.txt
+stop_id,stop_name,stop_lat,stop_lon,location_type,parent_station,platform_code
+DA,DA Hbf,49.87260,8.63085,1,,
+DA_10,DA Hbf,49.87336,8.62926,0,DA,10
+DA_FLEX,DA Flex Pickup,49.87420,8.62940,0,,
+FFM,FFM Hbf,50.10701,8.66341,1,,
+FFM_10,FFM Hbf,50.10593,8.66118,0,FFM,10
+
+# routes.txt
+route_id,agency_id,route_short_name,route_long_name,route_desc,route_type
+ICE,DB,ICE,,,101
+FLEXA,DB,FlexArea,,,715
+FLEXG,DB,FlexGroup,,,715
+
+# trips.txt
+route_id,service_id,trip_id,trip_headsign,block_id
+ICE,S_ALL,ICE,,
+ICE,S_ALL,ICE_LATE,,
+FLEXA,S_AREA,FLEX_AREA,,
+FLEXG,S_GROUP,FLEX_GROUP,,
+
+# booking_rules.txt
+booking_rule_id,booking_type,prior_notice_duration_min,prior_notice_duration_max
+BR,1,0,86400
+
+# stop_times.txt
+trip_id,arrival_time,departure_time,stop_id,location_group_id,location_id,stop_sequence,start_pickup_drop_off_window,end_pickup_drop_off_window,pickup_booking_rule_id,drop_off_booking_rule_id,pickup_type,drop_off_type
+ICE,10:00:00,10:00:00,DA_10,,,0,,,,,0,0
+ICE,11:00:00,11:00:00,FFM_10,,,1,,,,,0,0
+ICE_LATE,11:00:00,11:00:00,DA_10,,,0,,,,,0,0
+ICE_LATE,12:00:00,12:00:00,FFM_10,,,1,,,,,0,0
+FLEX_AREA,,,,,da_flex,0,00:00:00,24:00:00,BR,BR,2,2
+FLEX_AREA,,,,,da_flex,1,00:00:00,24:00:00,BR,BR,2,2
+FLEX_GROUP,,,,da_group,,0,00:00:00,24:00:00,BR,BR,2,2
+FLEX_GROUP,,,,da_group,,1,00:00:00,24:00:00,BR,BR,2,2
+
+# calendar.txt
+service_id,monday,tuesday,wednesday,thursday,friday,saturday,sunday,start_date,end_date
+S_ALL,1,1,1,1,1,1,1,20190501,20190503
+S_AREA,1,1,1,1,1,1,1,20190501,20190501
+S_GROUP,1,1,1,1,1,1,1,20190502,20190502
+
+# locations.geojson
+{"type":"FeatureCollection","features":[{"id":"da_flex","type":"Feature","geometry":{"type":"Polygon","coordinates":[[[8.620,49.865],[8.640,49.865],[8.640,49.880],[8.620,49.880],[8.620,49.865]]]},"properties":{"stop_name":"DA Flex Area"}}]}
+
+# location_groups.txt
+location_group_id,location_group_name
+da_group,DA Flex Group
+
+# location_group_stops.txt
+location_group_id,stop_id
+da_group,DA_FLEX
+da_group,DA_10
+)";
+
+// Plans a FLEX first mile to board the ICE on `day` (area on 2019-05-01,
+// location group on 2019-05-02), asserts the id encodes the access as a single
+// FLEX leg, and that reconstruction re-routes it (round-trips) via the
+// time-dependent flex offsets.
+void run_flex_first_mile_test(std::string_view const sub_dir,
+                              std::string_view const day) {
+  auto ec = std::error_code{};
+  auto const path = fs::path{"test/data/itinerary_id"} / sub_dir;
+  fs::remove_all(path, ec);
+  auto const cfg = config{
+      .osm_ = {"test/resources/test_case.osm.pbf"},
+      .timetable_ =
+          config::timetable{
+              .first_day_ = "2019-05-01",
+              .num_days_ = 3,
+              .datasets_ = {{"test", {.path_ = std::string{kFlexGtfs}}}},
+          },
+      .street_routing_ = true,
+      .osr_footpath_ = true,
+  };
+  import(cfg, path);
+  auto d = data{path, cfg};
+  auto const routing = utl::init_from<ep::routing>(d).value();
+
+  // Query before the ICE departure with timetableView so the same-day flex
+  // service is used (a query at the PT departure would force the access to
+  // start earlier than the query and roll the journey onto the next day).
+  // `numLegAlternatives` so the boarding leg also gets earlier/later departures
+  // as leg alternatives -- each of those must reproduce the FLEX first mile
+  // too, not just the main leg.
+  auto const res =
+      routing(fmt::format("/api/v6/plan"
+                          "?fromPlace=49.87420,8.62940"
+                          "&toPlace=50.10593,8.66118"
+                          "&time={}T05:00Z"
+                          "&timetableView=true"
+                          "&searchWindow=10800"
+                          "&preTransitModes=FLEX"
+                          "&postTransitModes=WALK"
+                          "&numLegAlternatives=3"
+                          "&detailedLegs=true",
+                          day));
+  ASSERT_FALSE(res.itineraries_.empty());
+  auto const& original = res.itineraries_.front();
+
+  // The flex access is one journey offset leg, encoded as a single FLEX leg.
+  auto proto = motis::ItineraryId{};
+  ASSERT_TRUE(proto.ParseFromString(net::decode_base64(original.id_)));
+  ASSERT_GE(proto.legs_size(), 1);
+  EXPECT_EQ("FLEX", proto.legs(0).mode());
+
+  // Sanity: the boarding leg has alternatives in the plan, so the round-trip
+  // comparison below is meaningful.
+  auto const boarding_it = utl::find_if(
+      original.legs_, [](api::Leg const& l) { return l.tripId_.has_value(); });
+  ASSERT_NE(boarding_it, end(original.legs_));
+  auto const& boarding = *boarding_it;
+  ASSERT_TRUE(boarding.alternatives_.has_value());
+  ASSERT_FALSE(boarding.alternatives_->empty());
+
+  // Reconstruction re-routes the flex access via get_td_offsets and renders it
+  // with the flex areas, reproducing the original itinerary -- including the
+  // leg alternatives. The id only encodes the chosen first-mile mode, so the
+  // access modes must be supplied (preTransitModes=FLEX) for the alternatives'
+  // boundary offsets to be recomputed as flex (not a bare boarding-stop walk).
+  auto refresh_q = api::refreshItinerary_params{};
+  refresh_q.preTransitModes_ = {api::ModeEnum::FLEX};
+  auto const stop_times = utl::init_from<ep::stop_times>(d).value();
+  auto const reconstructed = reconstruct_itinerary(
+      routing, stop_times, *d.rt_, original.id_,
+      /*require_display_name_match=*/true, /*join_interlined_legs=*/true,
+      /*detailed_transfers=*/true, /*detailed_legs=*/true,
+      /*with_scheduled_skipped_stops=*/false, n::lang_t{},
+      /*num_leg_alternatives=*/3U, n::routing::all_clasz_allowed(),
+      /*require_bike_transport=*/false, /*require_car_transport=*/false,
+      /*prf_idx=*/n::profile_idx_t{0U},
+      make_first_last_mile_options(refresh_q));
+  EXPECT_EQ(original, reconstructed);
+}
+
+TEST(motis, itinerary_id_reconstruct_flex_area_first_mile) {
+  run_flex_first_mile_test("flex_area", "2019-05-01");
+}
+
+TEST(motis, itinerary_id_reconstruct_flex_location_group_first_mile) {
+  run_flex_first_mile_test("flex_group", "2019-05-02");
 }
 
 constexpr auto kMultiHopGtfs = R"(
@@ -762,12 +924,234 @@ TEST(motis, itinerary_id_reconstruct_multi_leg_with_three_pt_hops) {
   ASSERT_EQ(api::ModeEnum::WALK, original.legs_.back().mode_)
       << "expected last leg to be a last-mile walk";
 
-  auto const id = generate_itinerary_id(original);
+  auto const& id = original.id_;
   auto const stop_times = utl::init_from<ep::stop_times>(d).value();
   auto const reconstructed =
       reconstruct_itinerary(routing, stop_times, *d.rt_, id, true, true, true);
 
   EXPECT_EQ(original, reconstructed);
+}
+
+// Two car-carrying trains (cars_allowed=1) meeting at an interchange where the
+// alighting and boarding stops are distinct stations a short drive apart. With
+// requireCarTransport + useRoutedTransfers the transfer between the two trains
+// is routed with the CAR profile (Autoverlad / car-ferry scenario), so the
+// itinerary contains a CAR transfer leg between the two PT legs.
+constexpr auto kCarTransferGtfs = R"(
+# agency.txt
+agency_id,agency_name,agency_url,agency_timezone
+DB,Deutsche Bahn,https://deutschebahn.com,Europe/Berlin
+
+# stops.txt
+stop_id,stop_name,stop_lat,stop_lon,location_type,parent_station,platform_code
+ORIG,Origin,49.87336,8.62926,1,,
+FERRY_N,Ferry North,50.10593,8.66118,1,,
+FERRY_S,Ferry South,50.10739,8.66333,1,,
+DEST,Destination,50.11404,8.67824,1,,
+
+# routes.txt
+route_id,agency_id,route_short_name,route_long_name,route_desc,route_type
+CT1_R,DB,CT1,,,106
+CT2_R,DB,CT2,,,106
+
+# trips.txt
+route_id,service_id,trip_id,trip_headsign,cars_allowed
+CT1_R,S1,CT1,,1
+CT2_R,S1,CT2,,1
+
+# stop_times.txt
+trip_id,arrival_time,departure_time,stop_id,stop_sequence
+CT1,10:00:00,10:00:00,ORIG,0
+CT1,10:30:00,10:30:00,FERRY_S,1
+CT2,10:45:00,10:45:00,FERRY_N,0
+CT2,11:00:00,11:00:00,DEST,1
+
+# calendar_dates.txt
+service_id,date,exception_type
+S1,20190501,1
+)";
+
+TEST(motis, itinerary_id_reconstruct_car_transfer) {
+  auto ec = std::error_code{};
+  auto const path = fs::path{"test/data/itinerary_id"} / "car_transfer";
+  fs::remove_all(path, ec);
+
+  auto const cfg = config{
+      .osm_ = {"test/resources/test_case.osm.pbf"},
+      .timetable_ =
+          config::timetable{
+              .first_day_ = "2019-05-01",
+              .num_days_ = 2,
+              .datasets_ = {{"test", {.path_ = std::string{kCarTransferGtfs}}}},
+          },
+      .street_routing_ = true,
+      .osr_footpath_ = true,
+  };
+  import(cfg, path);
+  auto d = data{path, cfg};
+
+  auto const routing = utl::init_from<ep::routing>(d).value();
+  auto const plan = routing(
+      "/api/v6/plan"
+      "?fromPlace=49.87420,8.62940"
+      "&toPlace=50.11450,8.67900"
+      "&time=2019-05-01T02:00Z"
+      "&timetableView=true"
+      "&requireCarTransport=true"
+      "&useRoutedTransfers=true"
+      "&preTransitModes=WALK"
+      "&postTransitModes=WALK"
+      "&detailedTransfers=true"
+      "&detailedLegs=true");
+
+  ASSERT_FALSE(plan.itineraries_.empty());
+  auto const& original = plan.itineraries_.front();
+
+  auto const pt_legs = utl::count_if(
+      original.legs_, [](api::Leg const& l) { return l.tripId_.has_value(); });
+  ASSERT_EQ(2, pt_legs) << "expected the two car trains as PT legs";
+  auto const car_transfers =
+      utl::count_if(original.legs_, [](api::Leg const& l) {
+        return !l.tripId_.has_value() && l.mode_ == api::ModeEnum::CAR;
+      });
+  ASSERT_GE(car_transfers, 1)
+      << "expected a CAR transfer between the two car trains";
+
+  auto query = api::refreshItinerary_params{};
+  query.itineraryId_ = original.id_;
+  query.requireCarTransport_ = true;
+  query.useRoutedTransfers_ = true;
+  query.detailedTransfers_ = true;
+  query.detailedLegs_ = true;
+  auto const refresh = utl::init_from<ep::refresh_itinerary>(d).value();
+  auto const refreshed = refresh(query.to_url("?"));
+
+  EXPECT_EQ(original, refreshed);
+}
+
+// First/last mile with a non-walking access mode (BIKE) must be encoded in the
+// id and re-routed on reconstruction (rather than replayed as a fixed walk).
+TEST(motis, itinerary_id_reconstruct_bike_first_last_mile) {
+  auto ec = std::error_code{};
+  auto const path = fs::path{"test/data/itinerary_id"} / "bike_first_last_mile";
+  fs::remove_all(path, ec);
+
+  auto const cfg = config{
+      .osm_ = {"test/resources/test_case.osm.pbf"},
+      .timetable_ =
+          config::timetable{
+              .first_day_ = "2019-05-01",
+              .num_days_ = 2,
+              .datasets_ = {{"test", {.path_ = std::string{kMultiHopGtfs}}}},
+          },
+      .street_routing_ = true,
+      .osr_footpath_ = true,
+  };
+  import(cfg, path);
+  auto d = data{path, cfg};
+
+  auto const routing = utl::init_from<ep::routing>(d).value();
+  auto const res = routing(
+      "/api/v6/plan"
+      "?fromPlace=49.87420,8.62940"
+      "&toPlace=50.11450,8.67900"
+      "&time=2019-05-01T02:00Z"
+      "&timetableView=true"
+      "&preTransitModes=BIKE"
+      "&postTransitModes=BIKE"
+      "&detailedLegs=true");
+  ASSERT_FALSE(res.itineraries_.empty());
+  auto const& original = res.itineraries_.front();
+  ASSERT_EQ(api::ModeEnum::BIKE, original.legs_.front().mode_)
+      << "expected a BIKE first mile";
+  ASSERT_EQ(api::ModeEnum::BIKE, original.legs_.back().mode_)
+      << "expected a BIKE last mile";
+
+  // The id encodes the access/egress mode (BIKE), not WALK.
+  auto proto = motis::ItineraryId{};
+  ASSERT_TRUE(proto.ParseFromString(net::decode_base64(original.id_)));
+  ASSERT_GE(proto.legs_size(), 2);
+  EXPECT_EQ("BIKE", proto.legs(0).mode());
+  EXPECT_EQ("BIKE", proto.legs(proto.legs_size() - 1).mode());
+
+  // Reconstruction re-routes the first/last mile by BIKE (mode taken from the
+  // id); the default first/last-mile options (15-min limits, default speeds)
+  // suffice here.
+  auto const stop_times = utl::init_from<ep::stop_times>(d).value();
+  auto const reconstructed = reconstruct_itinerary(
+      routing, stop_times, *d.rt_, original.id_, true, true, true);
+  ASSERT_FALSE(reconstructed.legs_.empty());
+  EXPECT_EQ(api::ModeEnum::BIKE, reconstructed.legs_.front().mode_);
+  EXPECT_EQ(api::ModeEnum::BIKE, reconstructed.legs_.back().mode_);
+}
+
+// Shared-mobility (gbfs) first mile renders as WALK -> RENTAL -> WALK from a
+// single journey offset leg. The id stores one access leg with mode RENTAL,
+// and reconstruction re-routes it via gbfs (re-expanding to multiple legs).
+TEST(motis, itinerary_id_reconstruct_rental_first_mile) {
+  auto ec = std::error_code{};
+  auto const path = fs::path{"test/data/itinerary_id"} / "rental_first_mile";
+  fs::remove_all(path, ec);
+
+  auto const cfg = config{
+      .osm_ = {"test/resources/test_case.osm.pbf"},
+      .timetable_ =
+          config::timetable{
+              .first_day_ = "2019-05-01",
+              .num_days_ = 2,
+              .datasets_ = {{"test", {.path_ = std::string{kMultiHopGtfs}}}},
+          },
+      .gbfs_ = {{.feeds_ = {{"CAB", {.url_ = "./test/resources/gbfs"}}}}},
+      .street_routing_ = true,
+      .osr_footpath_ = true,
+  };
+  import(cfg, path);
+  auto d = data{path, cfg};
+
+  // Load the gbfs feed (otherwise no rental vehicles are available).
+  {
+    auto ioc = boost::asio::io_context{};
+    boost::asio::co_spawn(
+        ioc,
+        [&]() -> boost::asio::awaitable<void> {
+          co_await gbfs::update(cfg, *d.w_, *d.l_, d.gbfs_, d.metrics_.get());
+        },
+        boost::asio::detached);
+    ioc.run();
+  }
+
+  auto const routing = utl::init_from<ep::routing>(d).value();
+  // Start right at the shared bike (from free_bike_status.json).
+  auto const res = routing(
+      "/api/v6/plan"
+      "?fromPlace=49.875308,8.6276673"
+      "&toPlace=50.11450,8.67900"
+      "&time=2019-05-01T02:00Z"
+      "&timetableView=true"
+      "&preTransitModes=RENTAL"
+      "&postTransitModes=WALK"
+      "&detailedLegs=true");
+  ASSERT_FALSE(res.itineraries_.empty());
+  auto const& original = res.itineraries_.front();
+
+  auto const has_rental = [](api::Itinerary const& i) {
+    return utl::any_of(i.legs_, [](api::Leg const& l) {
+      return l.mode_ == api::ModeEnum::RENTAL;
+    });
+  };
+  ASSERT_TRUE(has_rental(original)) << "expected a RENTAL first mile";
+
+  // The id encodes a single access leg with mode RENTAL (not the multiple
+  // rendered WALK/RENTAL/WALK legs).
+  auto proto = motis::ItineraryId{};
+  ASSERT_TRUE(proto.ParseFromString(net::decode_base64(original.id_)));
+  EXPECT_EQ("RENTAL", proto.legs(0).mode());
+
+  auto const stop_times = utl::init_from<ep::stop_times>(d).value();
+  auto const reconstructed = reconstruct_itinerary(
+      routing, stop_times, *d.rt_, original.id_, true, true, true);
+  EXPECT_TRUE(has_rental(reconstructed))
+      << "reconstruction must re-route the RENTAL access (WALK/RENTAL/WALK)";
 }
 
 TEST(motis, itinerary_id_reconstruct_multi_leg_replaces_unmatched_leg_dummy) {
@@ -801,7 +1185,7 @@ TEST(motis, itinerary_id_reconstruct_multi_leg_replaces_unmatched_leg_dummy) {
       "&detailedLegs=true");
   ASSERT_FALSE(res.itineraries_.empty());
 
-  auto original = res.itineraries_.front();
+  auto const original = res.itineraries_.front();
   auto pt_indices = std::vector<std::size_t>{};
   for (auto i = std::size_t{0}; i < original.legs_.size(); ++i) {
     if (original.legs_[i].mode_ != api::ModeEnum::WALK) {
@@ -810,17 +1194,28 @@ TEST(motis, itinerary_id_reconstruct_multi_leg_replaces_unmatched_leg_dummy) {
   }
   ASSERT_GE(pt_indices.size(), 3U);
 
-  // Make the middle PT leg impossible to reconstruct by moving its endpoints
-  // into the ocean: no stop-time candidates exist within the search radius, so
-  // get_run() fails and the leg must be replaced by a cancelled dummy leg.
+  // Make the middle PT leg impossible to reconstruct.
   auto const broken_idx = pt_indices.at(1);
-  auto& broken_leg = original.legs_.at(broken_idx);
-  broken_leg.from_.lat_ = 0.0;
-  broken_leg.from_.lon_ = 0.0;
-  broken_leg.to_.lat_ = 0.0;
-  broken_leg.to_.lon_ = 0.0;
+  ASSERT_TRUE(original.legs_.at(broken_idx).tripId_.has_value());
+  auto const& broken_trip_id = *original.legs_.at(broken_idx).tripId_;
 
-  auto const id = generate_itinerary_id(original);
+  auto proto = motis::ItineraryId{};
+  ASSERT_TRUE(proto.ParseFromString(net::decode_base64(original.id_)));
+  auto broken_found = false;
+  for (auto i = 0; i < proto.legs_size(); ++i) {
+    if (proto.legs(i).trip_id() == broken_trip_id) {
+      auto* const l = proto.mutable_legs(i);
+      l->set_from_lat(0.0);
+      l->set_from_lon(0.0);
+      l->set_to_lat(0.0);
+      l->set_to_lon(0.0);
+      broken_found = true;
+    }
+  }
+  ASSERT_TRUE(broken_found);
+  auto proto_data = std::string{};
+  ASSERT_TRUE(proto.SerializeToString(&proto_data));
+  auto const id = net::encode_base64(proto_data);
   auto const stop_times = utl::init_from<ep::stop_times>(d).value();
   auto const reconstructed =
       reconstruct_itinerary(routing, stop_times, *d.rt_, id, true, true, true);
@@ -848,21 +1243,41 @@ TEST(motis, itinerary_id_reconstruct_multi_leg_replaces_unmatched_leg_dummy) {
   }
 }
 
-// ===========================================================================
-// Leg-alternative constraint propagation through the refresh endpoint.
-//
-// The `plan` endpoint restricts the leg alternatives it computes by the same
-// constraints as the main search (transit modes, bike/car carriage, wheelchair
-// accessibility - see `sections_violate_constraints` in nigiri's `direct.cc`).
-// When the same itinerary is refreshed, the refresh endpoint must reproduce
-// exactly those alternatives, so the constraints have to be forwarded to the
-// leg-alternatives query as well.
-//
-// Each fixture below offers, next to the main trip, two later alternatives:
-// one that satisfies the constraint and one that violates it. The violating
-// alternative departs earlier than the satisfying one, so it would be picked
-// first if the constraint were not applied.
-// ===========================================================================
+constexpr auto kLegAltTransitModesGtfs = R"(
+# agency.txt
+agency_id,agency_name,agency_url,agency_timezone
+DB,Deutsche Bahn,https://deutschebahn.com,Europe/Berlin
+
+# stops.txt
+stop_id,stop_name,stop_lat,stop_lon,location_type,parent_station
+A,A,49.80000,8.60000,0,
+B,B,50.20000,8.70000,0,
+
+# routes.txt
+route_id,agency_id,route_short_name,route_long_name,route_desc,route_type
+REG_MAIN_R,DB,RM,,,106
+BUS_ALT_R,DB,BA,,,3
+REG_ALT_R,DB,RA,,,106
+
+# trips.txt
+route_id,service_id,trip_id,trip_headsign
+REG_MAIN_R,S1,REG_MAIN,
+BUS_ALT_R,S1,BUS_ALT,
+REG_ALT_R,S1,REG_ALT,
+
+# stop_times.txt
+trip_id,arrival_time,departure_time,stop_id,stop_sequence
+REG_MAIN,09:00:00,09:00:00,A,0
+REG_MAIN,10:00:00,10:00:00,B,1
+BUS_ALT,09:30:00,09:30:00,A,0
+BUS_ALT,10:30:00,10:30:00,B,1
+REG_ALT,10:00:00,10:00:00,A,0
+REG_ALT,11:00:00,11:00:00,B,1
+
+# calendar_dates.txt
+service_id,date,exception_type
+S1,20190501,1
+)";
 
 // First transit leg of the itinerary (the leg that carries `alternatives`).
 api::Leg const& first_transit_leg(api::Itinerary const& it) {
@@ -915,42 +1330,6 @@ bool any_alt_trip_contains(api::Leg const& leg, std::string_view const needle) {
   }
   return false;
 }
-
-constexpr auto kLegAltTransitModesGtfs = R"(
-# agency.txt
-agency_id,agency_name,agency_url,agency_timezone
-DB,Deutsche Bahn,https://deutschebahn.com,Europe/Berlin
-
-# stops.txt
-stop_id,stop_name,stop_lat,stop_lon,location_type,parent_station
-A,A,49.80000,8.60000,0,
-B,B,50.20000,8.70000,0,
-
-# routes.txt
-route_id,agency_id,route_short_name,route_long_name,route_desc,route_type
-REG_MAIN_R,DB,RM,,,106
-BUS_ALT_R,DB,BA,,,3
-REG_ALT_R,DB,RA,,,106
-
-# trips.txt
-route_id,service_id,trip_id,trip_headsign
-REG_MAIN_R,S1,REG_MAIN,
-BUS_ALT_R,S1,BUS_ALT,
-REG_ALT_R,S1,REG_ALT,
-
-# stop_times.txt
-trip_id,arrival_time,departure_time,stop_id,stop_sequence
-REG_MAIN,09:00:00,09:00:00,A,0
-REG_MAIN,10:00:00,10:00:00,B,1
-BUS_ALT,09:30:00,09:30:00,A,0
-BUS_ALT,10:30:00,10:30:00,B,1
-REG_ALT,10:00:00,10:00:00,A,0
-REG_ALT,11:00:00,11:00:00,B,1
-
-# calendar_dates.txt
-service_id,date,exception_type
-S1,20190501,1
-)";
 
 constexpr auto kLegAltBikeGtfs = R"(
 # agency.txt
@@ -1204,7 +1583,7 @@ TEST(motis, itinerary_id_refresh_leg_alternatives_intermodal_offsets) {
   EXPECT_TRUE(any_alt_trip_contains(plan_leg, "BD"));
 
   auto query = api::refreshItinerary_params{};
-  query.itineraryId_ = generate_itinerary_id(plan_itin);
+  query.itineraryId_ = plan_itin.id_;
   query.numLegAlternatives_ = 5;
   auto const refresh = utl::init_from<ep::refresh_itinerary>(d).value();
   auto const refreshed = refresh(query.to_url("?"));
@@ -1215,6 +1594,98 @@ TEST(motis, itinerary_id_refresh_leg_alternatives_intermodal_offsets) {
   EXPECT_TRUE(any_alt_trip_contains(refresh_leg, "BD"));
   // Compare the alternative trips: the surrounding access-walk legs may differ
   // by sub-minute rounding, but the set of alternative transit trips must not.
+  EXPECT_EQ(alt_transit_trip_ids(plan_leg), alt_transit_trip_ids(refresh_leg));
+}
+
+constexpr auto kLegAltFirstAccessGtfs = R"(
+# agency.txt
+agency_id,agency_name,agency_url,agency_timezone
+DB,Deutsche Bahn,https://deutschebahn.com,Europe/Berlin
+
+# stops.txt
+stop_id,stop_name,stop_lat,stop_lon,location_type,parent_station
+A,A,49.87336,8.62926,0,
+B,B,49.87260,8.63085,0,
+C,C,49.99000,8.65000,0,
+D,D,50.10739,8.66333,0,
+
+# routes.txt
+route_id,agency_id,route_short_name,route_long_name,route_desc,route_type
+AC_R,DB,AC,,,106
+BC_R,DB,BC,,,106
+CD_R,DB,CD,,,106
+
+# trips.txt
+route_id,service_id,trip_id,trip_headsign
+AC_R,S1,AC,
+BC_R,S1,BC,
+CD_R,S1,CD,
+
+# stop_times.txt
+trip_id,arrival_time,departure_time,stop_id,stop_sequence
+AC,09:00:00,09:00:00,A,0
+AC,09:30:00,09:30:00,C,1
+BC,09:05:00,09:05:00,B,0
+BC,09:35:00,09:35:00,C,1
+CD,10:00:00,10:00:00,C,0
+CD,10:30:00,10:30:00,D,1
+
+# calendar_dates.txt
+service_id,date,exception_type
+S1,20190501,1
+)";
+
+// First leg of a MULTI-leg journey with two competing access stops: the chosen
+// journey boards at B (BC -> CD), but A is also reachable from START, so the
+// first leg offers the `AC` alternative -- which boards at a different stop AND
+// departs *earlier* than the chosen `BC`. `plan` passes the whole journey to
+// `get_leg_alternatives`, so the first leg (a successor exists) uses the
+// "earlier arrivals" branch and finds `AC`. The refresh endpoint reconstructs
+// legs one at a time, so it must hand `get_leg_alternatives` the surrounding
+// transit context to reproduce the same alternative set (otherwise it only
+// sees "later departures" and drops the earlier `AC`).
+TEST(motis, itinerary_id_refresh_leg_alternatives_first_leg_other_access) {
+  auto ec = std::error_code{};
+  auto const path = fs::path{"test/data/itinerary_id"} / "leg_alt_first_access";
+  fs::remove_all(path, ec);
+
+  auto const cfg = config{
+      .osm_ = {"test/resources/test_case.osm.pbf"},
+      .timetable_ =
+          config::timetable{
+              .first_day_ = "2019-05-01",
+              .num_days_ = 2,
+              .datasets_ = {{"test",
+                             {.path_ = std::string{kLegAltFirstAccessGtfs}}}},
+          },
+      .street_routing_ = true,
+  };
+  import(cfg, path);
+  auto d = data{path, cfg};
+
+  auto const routing = utl::init_from<ep::routing>(d).value();
+  auto const plan = routing(
+      "?fromPlace=49.87298,8.63006&toPlace=50.10720,8.66320"
+      "&time=2019-05-01T05:00Z&searchWindow=14400&detailedLegs=true"
+      "&numLegAlternatives=5");
+  ASSERT_FALSE(plan.itineraries_.empty());
+  auto const& plan_itin = plan.itineraries_.front();
+  auto const& plan_leg = first_transit_leg(plan_itin);
+  ASSERT_TRUE(plan_leg.alternatives_.has_value());
+  EXPECT_TRUE(any_alt_trip_contains(plan_leg, "AC"))
+      << "plan should offer the earlier AC alternative that boards at a "
+         "different stop";
+
+  auto query = api::refreshItinerary_params{};
+  query.itineraryId_ = plan_itin.id_;
+  query.numLegAlternatives_ = 5;
+  auto const refresh = utl::init_from<ep::refresh_itinerary>(d).value();
+  auto const refreshed = refresh(query.to_url("?"));
+  auto const& refresh_leg = first_transit_leg(refreshed);
+
+  EXPECT_TRUE(any_alt_trip_contains(refresh_leg, "AC"))
+      << "refresh must reproduce the earlier, different-access-stop "
+         "alternative";
   EXPECT_EQ(alt_transit_trip_ids(plan_leg), alt_transit_trip_ids(refresh_leg));
 }
 
@@ -1238,7 +1709,7 @@ TEST(motis, itinerary_id_refresh_leg_alternatives_respect_transit_modes) {
   EXPECT_FALSE(any_alt_trip_contains(plan_leg, "BUS_ALT"));
 
   auto query = api::refreshItinerary_params{};
-  query.itineraryId_ = generate_itinerary_id(plan_itin);
+  query.itineraryId_ = plan_itin.id_;
   query.numLegAlternatives_ = 5;
   query.transitModes_ = {api::ModeEnum::REGIONAL_RAIL};
   auto const refresh = utl::init_from<ep::refresh_itinerary>(d).value();
@@ -1273,7 +1744,7 @@ TEST(motis, itinerary_id_refresh_leg_alternatives_respect_require_bike) {
   EXPECT_FALSE(any_alt_trip_contains(plan_leg, "BIKE_NO"));
 
   auto query = api::refreshItinerary_params{};
-  query.itineraryId_ = generate_itinerary_id(plan_itin);
+  query.itineraryId_ = plan_itin.id_;
   query.numLegAlternatives_ = 5;
   query.requireBikeTransport_ = true;
   auto const refresh = utl::init_from<ep::refresh_itinerary>(d).value();
@@ -1306,7 +1777,7 @@ TEST(motis, itinerary_id_refresh_leg_alternatives_respect_require_car) {
   EXPECT_FALSE(any_alt_trip_contains(plan_leg, "CAR_NO"));
 
   auto query = api::refreshItinerary_params{};
-  query.itineraryId_ = generate_itinerary_id(plan_itin);
+  query.itineraryId_ = plan_itin.id_;
   query.numLegAlternatives_ = 5;
   query.requireCarTransport_ = true;
   auto const refresh = utl::init_from<ep::refresh_itinerary>(d).value();
@@ -1357,7 +1828,7 @@ TEST(motis, itinerary_id_refresh_leg_alternatives_respect_wheelchair) {
   EXPECT_FALSE(any_alt_trip_contains(plan_leg, "WC_NO"));
 
   auto query = api::refreshItinerary_params{};
-  query.itineraryId_ = generate_itinerary_id(plan_itin);
+  query.itineraryId_ = plan_itin.id_;
   query.numLegAlternatives_ = 5;
   query.pedestrianProfile_ = api::PedestrianProfileEnum::WHEELCHAIR;
   query.useRoutedTransfers_ = true;
@@ -1372,10 +1843,472 @@ TEST(motis, itinerary_id_refresh_leg_alternatives_respect_wheelchair) {
   EXPECT_EQ(plan_leg.alternatives_, refresh_leg.alternatives_);
 }
 
-// Intermediate leg: the alternatives of the middle transit leg of an
-// A -> B -> C -> D journey are computed with exact endpoint matching (the
-// surrounding transit legs pin both endpoints). Verifies the refresh endpoint
-// reproduces the plan response for that path, too.
+// Partial-journey leg-alternatives: demonstrates that when a PT leg fails to
+// reconstruct and becomes a dummy, the surviving segments compute alternatives
+// without the surrounding dummy context. nigiri's get_leg_alternatives only
+// sees the segment's journey, so the segment-internal first transit gets
+// `has_prev=false` and the alt-query falls back to `q.start_` with
+// `kIntermodal` instead of being pinned to the dummy's alighting stop with
+// `kExact` (the way plan would). For a stop right next to the alighting one,
+// `kIntermodal` over-extends via osr and surfaces an alternative that plan
+// does NOT consider — the assertion comparing alt sets exposes the divergence.
+constexpr auto kPartialAltSrcGtfs = R"(
+# agency.txt
+agency_id,agency_name,agency_url,agency_timezone
+DB,Deutsche Bahn,https://deutschebahn.com,Europe/Berlin
+
+# stops.txt
+stop_id,stop_name,stop_lat,stop_lon,location_type,parent_station,platform_code
+ORIG,Origin,49.87336,8.62926,1,,
+MID,Mid Hub,50.10593,8.66118,1,,
+MID_ALT,Mid Alt,50.10739,8.66333,1,,
+DEST,Destination,50.11404,8.67824,1,,
+
+# routes.txt
+route_id,agency_id,route_short_name,route_long_name,route_desc,route_type
+R_ICE,DB,ICE1,,,106
+R_L2,DB,L2,,,109
+R_L2_ALT,DB,L2A,,,109
+
+# trips.txt
+route_id,service_id,trip_id,trip_headsign
+R_ICE,S1,ICE1,
+R_L2,S1,LOCAL2,
+R_L2_ALT,S1,LOCAL2_ALT,
+
+# stop_times.txt
+trip_id,arrival_time,departure_time,stop_id,stop_sequence
+ICE1,10:00:00,10:00:00,ORIG,0
+ICE1,10:30:00,10:30:00,MID,1
+LOCAL2,10:35:00,10:35:00,MID,0
+LOCAL2,10:50:00,10:50:00,DEST,1
+LOCAL2_ALT,10:40:00,10:40:00,MID_ALT,0
+LOCAL2_ALT,10:55:00,10:55:00,DEST,1
+
+# calendar_dates.txt
+service_id,date,exception_type
+S1,20190501,1
+)";
+
+constexpr auto kPartialAltTargetGtfs = R"(
+# agency.txt
+agency_id,agency_name,agency_url,agency_timezone
+DB,Deutsche Bahn,https://deutschebahn.com,Europe/Berlin
+
+# stops.txt
+stop_id,stop_name,stop_lat,stop_lon,location_type,parent_station,platform_code
+ORIG,Origin,49.87336,8.62926,1,,
+MID,Mid Hub,50.10593,8.66118,1,,
+MID_ALT,Mid Alt,50.10739,8.66333,1,,
+DEST,Destination,50.11404,8.67824,1,,
+
+# routes.txt
+route_id,agency_id,route_short_name,route_long_name,route_desc,route_type
+R_L2,DB,L2,,,109
+R_L2_ALT,DB,L2A,,,109
+
+# trips.txt
+route_id,service_id,trip_id,trip_headsign
+R_L2,S1,LOCAL2,
+R_L2_ALT,S1,LOCAL2_ALT,
+
+# stop_times.txt
+trip_id,arrival_time,departure_time,stop_id,stop_sequence
+LOCAL2,10:35:00,10:35:00,MID,0
+LOCAL2,10:50:00,10:50:00,DEST,1
+LOCAL2_ALT,10:40:00,10:40:00,MID_ALT,0
+LOCAL2_ALT,10:55:00,10:55:00,DEST,1
+
+# calendar_dates.txt
+service_id,date,exception_type
+S1,20190501,1
+)";
+
+// Partial-journey leg-alternatives: when a PT leg fails to reconstruct and
+// becomes a dummy, a surviving adjacent transit leg cannot bound its
+// leg-alternatives query against the dummy side (the surrounding transit
+// context is incomplete), so it produces no alternatives -- even though the
+// full plan (where the dummy leg exists as a real transit leg) does offer them.
+TEST(motis, itinerary_id_refresh_leg_alternatives_partial_journey_overreach) {
+  auto const make_partial_cfg = [](std::string const& gtfs) {
+    return config{
+        .osm_ = {"test/resources/test_case.osm.pbf"},
+        .timetable_ =
+            config::timetable{
+                .first_day_ = "2019-05-01",
+                .num_days_ = 2,
+                .datasets_ = {{"test", {.path_ = gtfs}}},
+            },
+        .street_routing_ = true,
+        .osr_footpath_ = true,
+    };
+  };
+
+  auto ec = std::error_code{};
+  auto const src_path = fs::path{"test/data/itinerary_id"} / "partial_alt_src";
+  auto const tgt_path =
+      fs::path{"test/data/itinerary_id"} / "partial_alt_target";
+  fs::remove_all(src_path, ec);
+  fs::remove_all(tgt_path, ec);
+
+  auto const src_cfg = make_partial_cfg(std::string{kPartialAltSrcGtfs});
+  auto const tgt_cfg = make_partial_cfg(std::string{kPartialAltTargetGtfs});
+  import(src_cfg, src_path);
+  import(tgt_cfg, tgt_path);
+  auto src_data = data{src_path, src_cfg};
+  auto tgt_data = data{tgt_path, tgt_cfg};
+
+  // Plan in source (where ICE1 exists) — yields journey with ICE1 → LOCAL2.
+  auto const src_routing = utl::init_from<ep::routing>(src_data).value();
+  auto const plan = src_routing(
+      "/api/v6/plan"
+      "?fromPlace=49.87420,8.62940"
+      "&toPlace=50.11450,8.67900"
+      "&time=2019-05-01T02:00Z"
+      "&timetableView=true"
+      "&useRoutedTransfers=true"
+      "&numLegAlternatives=5"
+      "&detailedLegs=true");
+  ASSERT_FALSE(plan.itineraries_.empty());
+  auto const& plan_itin = plan.itineraries_.front();
+  auto const plan_pt_legs = transit_legs(plan_itin);
+  ASSERT_EQ(2U, plan_pt_legs.size()) << "expected ICE1 + LOCAL2 in source plan";
+  auto const& plan_local2 = *plan_pt_legs[1];
+
+  // Reconstruct the same id in target (no ICE1) — ICE1 becomes a dummy and
+  // LOCAL2 is reconstructed inside a partial-journey segment.
+  auto query = api::refreshItinerary_params{};
+  query.itineraryId_ = plan_itin.id_;
+  query.numLegAlternatives_ = 5;
+  query.useRoutedTransfers_ = true;
+  auto const tgt_refresh =
+      utl::init_from<ep::refresh_itinerary>(tgt_data).value();
+  auto const refreshed = tgt_refresh(query.to_url("?"));
+  auto const refresh_pt_legs = transit_legs(refreshed);
+  ASSERT_FALSE(refresh_pt_legs.empty());
+  // Find LOCAL2 (the reconstructed-from-segment PT leg) in refreshed output.
+  auto const refresh_local2_it =
+      utl::find_if(refresh_pt_legs, [](api::Leg const* l) {
+        return l->tripId_.has_value() &&
+               l->tripId_->find("LOCAL2") != std::string::npos;
+      });
+  ASSERT_NE(refresh_local2_it, end(refresh_pt_legs));
+  auto const& refresh_local2 = **refresh_local2_it;
+
+  EXPECT_FALSE(alt_transit_trip_ids(plan_local2).empty())
+      << "plan should offer LOCAL2_ALT as an alternative";
+  EXPECT_TRUE(alt_transit_trip_ids(refresh_local2).empty())
+      << "a leg adjacent to a dummy must not compute alternatives";
+}
+
+constexpr auto const kElevatorsActive = R"__([
+  {"description":"FFM HBF Gleis 101/102","equipmentnumber":1010,
+   "geocoordX":8.6628995,"geocoordY":50.1072933,"state":"ACTIVE",
+   "type":"ELEVATOR"},
+  {"description":"DA HBF Gleis 9/10","equipmentnumber":910,
+   "geocoordX":8.6293117,"geocoordY":49.8725263,"state":"ACTIVE",
+   "type":"ELEVATOR"}
+])__";
+
+constexpr auto const kElevatorsBlocked = R"__([
+  {"description":"FFM HBF Gleis 101/102","equipmentnumber":1010,
+   "geocoordX":8.6628995,"geocoordY":50.1072933,"state":"INACTIVE",
+   "type":"ELEVATOR",
+   "outOfService":[["2019-04-30T00:00:00Z","2019-05-02T00:00:00Z"]]},
+  {"description":"DA HBF Gleis 9/10","equipmentnumber":910,
+   "geocoordX":8.6293117,"geocoordY":49.8725263,"state":"INACTIVE",
+   "type":"ELEVATOR",
+   "outOfService":[["2019-04-30T00:00:00Z","2019-05-02T00:00:00Z"]]}
+])__";
+
+constexpr auto const kElevatorsFfmShortOutage = R"__([
+  {"description":"FFM HBF Gleis 101/102","equipmentnumber":1010,
+   "geocoordX":8.6628995,"geocoordY":50.1072933,"state":"INACTIVE",
+   "type":"ELEVATOR",
+   "outOfService":[["2019-04-30T22:30:00Z","2019-04-30T23:00:00Z"]]},
+  {"description":"DA HBF Gleis 9/10","equipmentnumber":910,
+   "geocoordX":8.6293117,"geocoordY":49.8725263,"state":"ACTIVE",
+   "type":"ELEVATOR"}
+])__";
+
+constexpr auto const kElevatorGTFS = R"(
+# agency.txt
+agency_id,agency_name,agency_url,agency_timezone
+DB,Deutsche Bahn,https://deutschebahn.com,Europe/Berlin
+
+# stops.txt
+stop_id,stop_name,stop_lat,stop_lon,location_type,parent_station,platform_code,wheelchair_boarding
+DA,DA Hbf,49.87260,8.63085,1,,,1
+DA_10,DA Hbf,49.87336,8.62926,0,DA,10,1
+FFM,FFM Hbf,50.10701,8.66341,1,,,1
+FFM_10,FFM Hbf,50.10593,8.66118,0,FFM,10,1
+FFM_101,FFM Hbf,50.10739,8.66333,0,FFM,101,1
+FFM_HAUPT,FFM Hauptwache,50.11403,8.67835,1,,,1
+FFM_HAUPT_S,FFM Hauptwache S,50.11404,8.67824,0,FFM_HAUPT,,1
+
+# routes.txt
+route_id,agency_id,route_short_name,route_long_name,route_desc,route_type
+ICE,DB,ICE,,,101
+S3,DB,S3,,,109
+
+# trips.txt
+route_id,service_id,trip_id,trip_headsign,block_id,wheelchair_accessible
+ICE,S1,ICE,,,1
+S3,S1,S3,,,1
+
+# stop_times.txt
+trip_id,arrival_time,departure_time,stop_id,stop_sequence,pickup_type,drop_off_type
+ICE,00:35:00,00:35:00,DA_10,0,0,0
+ICE,00:45:00,00:45:00,FFM_10,1,0,0
+S3,01:15:00,01:15:00,FFM_101,1,0,0
+S3,01:20:00,01:20:00,FFM_HAUPT_S,2,0,0
+
+# calendar_dates.txt
+service_id,date,exception_type
+S1,20190501,1
+)";
+
+data& get_elevator_test_case() {
+  static auto c = config{
+      .osm_ = {"test/resources/test_case.osm.pbf"},
+      .timetable_ =
+          config::timetable{
+              .first_day_ = "2019-05-01",
+              .num_days_ = 2,
+              .use_osm_stop_coordinates_ = true,
+              .extend_missing_footpaths_ = false,
+              .datasets_ = {{"test", {.path_ = std::string{kElevatorGTFS}}}}},
+      .street_routing_ = true,
+      .osr_footpath_ = true};
+  static auto d = []() {
+    auto ec = std::error_code{};
+    fs::remove_all("test/data_itinerary_elevator", ec);
+    import(c, "test/data_itinerary_elevator");
+    return data{"test/data_itinerary_elevator", c};
+  }();
+  return d;
+}
+
+TEST(motis, itinerary_id_refresh_offset_blocked_by_elevator) {
+  auto& d = get_elevator_test_case();
+  d.init_rtt(date::sys_days{date::year{2019} / date::May / 1});
+  d.rt_->e_ = std::make_unique<elevators>(
+      *d.w_, nullptr, *d.elevator_nodes_,
+      parse_fasta(std::string_view{kElevatorsActive}));
+
+  auto const routing = utl::init_from<ep::routing>(d).value();
+  auto const plan = routing(
+      "/api/v6/plan"
+      "?fromPlace=49.87420,8.62940"
+      "&toPlace=50.10701,8.66341"
+      "&time=2019-04-30T22:00Z"
+      "&timetableView=true"
+      "&pedestrianProfile=WHEELCHAIR"
+      "&useRoutedTransfers=true"
+      "&detailedLegs=true");
+  ASSERT_FALSE(plan.itineraries_.empty())
+      << "expected a plan with wheelchair access via DA Hbf";
+  auto const& original = plan.itineraries_.front();
+  ASSERT_FALSE(original.legs_.empty());
+  ASSERT_EQ(api::ModeEnum::WALK, original.legs_.front().mode_)
+      << "expected first leg to be a wheelchair walk";
+
+  auto new_rtt = std::make_unique<nigiri::rt_timetable>(
+      nigiri::rt_timetable{*d.rt_->rtt_});
+  d.rt_->e_ = update_elevators(d.config_, d, kElevatorsBlocked, *new_rtt);
+  d.rt_->rtt_ = std::move(new_rtt);
+
+  auto query = api::refreshItinerary_params{};
+  query.itineraryId_ = original.id_;
+  query.pedestrianProfile_ = api::PedestrianProfileEnum::WHEELCHAIR;
+  query.useRoutedTransfers_ = true;
+  query.detailedLegs_ = true;
+  query.maxMatchingDistance_ = 8.0;  // wheelchair requires lower matching dist
+  auto const refresh = utl::init_from<ep::refresh_itinerary>(d).value();
+  auto const refreshed = refresh(query.to_url("?"));
+
+  ASSERT_EQ(api::ModeEnum::WALK, refreshed.legs_.front().mode_);
+  EXPECT_EQ(true, refreshed.legs_.front().cancelled_.value_or(false))
+      << "first-mile access should be cancelled when the DA-HBF Gleis 9/10 "
+         "elevator is out of service and the platform is unreachable";
+}
+
+TEST(motis, itinerary_id_refresh_transfer_blocked_by_elevator) {
+  auto& d = get_elevator_test_case();
+  d.rt_->e_ = std::make_unique<elevators>(
+      *d.w_, nullptr, *d.elevator_nodes_,
+      parse_fasta(std::string_view{kElevatorsActive}));
+  d.init_rtt(date::sys_days{date::year{2019} / date::May / 1});
+
+  auto const routing = utl::init_from<ep::routing>(d).value();
+  auto const plan = routing(
+      "/api/v6/plan"
+      "?fromPlace=49.87420,8.62940"
+      "&toPlace=50.11450,8.67900"
+      "&time=2019-04-30T22:00Z"
+      "&timetableView=true"
+      "&pedestrianProfile=WHEELCHAIR"
+      "&useRoutedTransfers=true"
+      "&detailedTransfers=true"
+      "&detailedLegs=true");
+  ASSERT_FALSE(plan.itineraries_.empty())
+      << "expected a wheelchair plan transferring at FFM Hbf";
+  auto const& original = plan.itineraries_.front();
+
+  // Locate the FFM_10 → FFM_101 transfer leg (a WALK after the ICE).
+  auto const transfer_it = utl::find_if(original.legs_, [](api::Leg const& l) {
+    return l.mode_ == api::ModeEnum::WALK &&
+           l.from_.stopId_.value_or("") == "test_FFM_10" &&
+           l.to_.stopId_.value_or("") == "test_FFM_101";
+  });
+  ASSERT_NE(transfer_it, end(original.legs_))
+      << "plan does not transfer through FFM_10 → FFM_101";
+  auto const original_transfer_idx =
+      static_cast<std::size_t>(transfer_it - begin(original.legs_));
+
+  // Block the FFM-HBF Gleis 101/102 elevator.
+  auto new_rtt = std::make_unique<nigiri::rt_timetable>(
+      nigiri::rt_timetable{*d.rt_->rtt_});
+  d.rt_->e_ = update_elevators(d.config_, d, kElevatorsBlocked, *new_rtt);
+  d.rt_->rtt_ = std::move(new_rtt);
+
+  auto query = api::refreshItinerary_params{};
+  query.itineraryId_ = original.id_;
+  query.pedestrianProfile_ = api::PedestrianProfileEnum::WHEELCHAIR;
+  query.useRoutedTransfers_ = true;
+  query.detailedTransfers_ = true;
+  query.detailedLegs_ = true;
+  auto const refresh = utl::init_from<ep::refresh_itinerary>(d).value();
+  auto const refreshed = refresh(query.to_url("?"));
+  ASSERT_GT(refreshed.legs_.size(), original_transfer_idx + 1U);
+
+  auto const& refreshed_transfer = refreshed.legs_[original_transfer_idx];
+
+  EXPECT_EQ(api::ModeEnum::WALK, refreshed_transfer.mode_);
+  EXPECT_EQ(true, refreshed_transfer.cancelled_.value_or(false))
+      << "wheelchair transfer FFM_10 -> FFM_101 should be cancelled when the "
+         "FFM-HBF Gleis 101/102 elevator is out of service";
+}
+
+TEST(motis, itinerary_id_refresh_access_extended_by_elevator_wait) {
+  auto& d = get_elevator_test_case();
+  d.rt_->e_ = std::make_unique<elevators>(
+      *d.w_, nullptr, *d.elevator_nodes_,
+      parse_fasta(std::string_view{kElevatorsActive}));
+  d.init_rtt(date::sys_days{date::year{2019} / date::May / 1});
+
+  auto const routing = utl::init_from<ep::routing>(d).value();
+  auto const plan = routing(
+      "/api/v6/plan"
+      "?fromPlace=49.87420,8.62940"
+      "&toPlace=50.10701,8.66341"
+      "&time=2019-04-30T22:00Z"
+      "&timetableView=true"
+      "&pedestrianProfile=WHEELCHAIR"
+      "&useRoutedTransfers=true"
+      "&detailedLegs=true");
+  ASSERT_FALSE(plan.itineraries_.empty());
+  auto const& original = plan.itineraries_.front();
+  ASSERT_EQ(api::ModeEnum::WALK, original.legs_.front().mode_);
+  auto const original_access_dur = original.legs_.front().duration_;
+  auto const original_access_start =
+      original.legs_.front().startTime_.get_unixtime_seconds();
+  auto const original_access_end =
+      original.legs_.front().endTime_.get_unixtime_seconds();
+
+  auto new_rtt = std::make_unique<nigiri::rt_timetable>(
+      nigiri::rt_timetable{*d.rt_->rtt_});
+  d.rt_->e_ = update_elevators(d.config_, d, R"__([
+  {"description":"DA HBF Gleis 9/10","equipmentnumber":910,
+   "geocoordX":8.6293117,"geocoordY":49.8725263,"state":"INACTIVE",
+   "type":"ELEVATOR",
+   "outOfService":[["2019-04-30T22:20:00Z","2019-04-30T22:33:00Z"]]}
+])__",
+                               *new_rtt);
+  d.rt_->rtt_ = std::move(new_rtt);
+
+  auto query = api::refreshItinerary_params{};
+  query.itineraryId_ = original.id_;
+  query.pedestrianProfile_ = api::PedestrianProfileEnum::WHEELCHAIR;
+  query.useRoutedTransfers_ = true;
+  query.detailedLegs_ = true;
+  query.maxMatchingDistance_ = 8.0;
+  auto const refresh = utl::init_from<ep::refresh_itinerary>(d).value();
+  auto const refreshed = refresh(query.to_url("?"));
+  auto const& access = refreshed.legs_.front();
+
+  EXPECT_EQ(api::ModeEnum::WALK, access.mode_);
+  EXPECT_NE(true, access.cancelled_.value_or(false))
+      << "access should remain feasible while the elevator is only briefly out";
+  EXPECT_GT(access.duration_, original_access_dur)
+      << "the elevator outage should extend the access by the platform wait";
+  EXPECT_LT(access.startTime_.get_unixtime_seconds(), original_access_start)
+      << "the access should start earlier to beat the outage";
+  EXPECT_EQ(original_access_end, access.endTime_.get_unixtime_seconds())
+      << "the access should still board the same train";
+}
+
+TEST(motis, itinerary_id_refresh_transfer_extended_by_elevator_wait) {
+  auto& d = get_elevator_test_case();
+  d.rt_->e_ = std::make_unique<elevators>(
+      *d.w_, nullptr, *d.elevator_nodes_,
+      parse_fasta(std::string_view{kElevatorsActive}));
+  d.init_rtt(date::sys_days{date::year{2019} / date::May / 1});
+
+  auto const routing = utl::init_from<ep::routing>(d).value();
+  auto const plan = routing(
+      "/api/v6/plan"
+      "?fromPlace=49.87420,8.62940"
+      "&toPlace=50.11450,8.67900"
+      "&time=2019-04-30T22:00Z"
+      "&timetableView=true"
+      "&pedestrianProfile=WHEELCHAIR"
+      "&useRoutedTransfers=true"
+      "&detailedTransfers=true"
+      "&detailedLegs=true");
+  ASSERT_FALSE(plan.itineraries_.empty());
+  auto const& original = plan.itineraries_.front();
+  auto const transfer_it = utl::find_if(original.legs_, [](api::Leg const& l) {
+    return l.mode_ == api::ModeEnum::WALK &&
+           l.from_.stopId_.value_or("") == "test_FFM_10" &&
+           l.to_.stopId_.value_or("") == "test_FFM_101";
+  });
+  ASSERT_NE(transfer_it, end(original.legs_));
+  auto const idx =
+      static_cast<std::size_t>(transfer_it - begin(original.legs_));
+  auto const original_duration = transfer_it->duration_;
+
+  // Take the FFM elevator out only for [22:30, 23:00) UTC (covers the 22:45
+  // FFM_10 arrival, reopens before the 23:15 S3 departure).
+  auto new_rtt = std::make_unique<nigiri::rt_timetable>(
+      nigiri::rt_timetable{*d.rt_->rtt_});
+  d.rt_->e_ =
+      update_elevators(d.config_, d, kElevatorsFfmShortOutage, *new_rtt);
+  d.rt_->rtt_ = std::move(new_rtt);
+
+  auto query = api::refreshItinerary_params{};
+  query.itineraryId_ = original.id_;
+  query.pedestrianProfile_ = api::PedestrianProfileEnum::WHEELCHAIR;
+  query.useRoutedTransfers_ = true;
+  query.detailedTransfers_ = true;
+  query.detailedLegs_ = true;
+  auto const refresh = utl::init_from<ep::refresh_itinerary>(d).value();
+  auto const refreshed = refresh(query.to_url("?"));
+  ASSERT_GT(refreshed.legs_.size(), idx + 1U);
+  auto const& transfer = refreshed.legs_[idx];
+  auto const& next_pt = refreshed.legs_[idx + 1U];
+
+  EXPECT_EQ(api::ModeEnum::WALK, transfer.mode_);
+  EXPECT_NE(true, transfer.cancelled_.value_or(false))
+      << "transfer should remain feasible while the elevator is only briefly "
+         "out of service";
+  EXPECT_GT(transfer.duration_, original_duration)
+      << "the elevator outage should extend the transfer by the platform wait";
+  EXPECT_LE(transfer.endTime_.get_unixtime_seconds(),
+            next_pt.startTime_.get_unixtime_seconds())
+      << "the extended transfer must still make the next PT departure";
+}
+
 TEST(motis, itinerary_id_refresh_leg_alternatives_intermediate_leg) {
   auto const cfg = make_config(kLegAltIntermediateGtfs);
   auto d = import_test_data(cfg, "leg_alt_intermediate");
@@ -1399,7 +2332,7 @@ TEST(motis, itinerary_id_refresh_leg_alternatives_intermediate_leg) {
   EXPECT_FALSE(any_alt_trip_contains(plan_mid, "L2_BUS"));
 
   auto query = api::refreshItinerary_params{};
-  query.itineraryId_ = generate_itinerary_id(plan_itin);
+  query.itineraryId_ = plan_itin.id_;
   query.numLegAlternatives_ = 5;
   query.transitModes_ = {api::ModeEnum::REGIONAL_RAIL};
   auto const refresh = utl::init_from<ep::refresh_itinerary>(d).value();

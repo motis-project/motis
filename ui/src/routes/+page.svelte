@@ -11,6 +11,7 @@
 		MountainSnow,
 		RefreshCw
 	} from '@lucide/svelte';
+	import { MediaQuery } from 'svelte/reactivity';
 	import { getStyle } from '$lib/map/style';
 	import Map from '$lib/map/Map.svelte';
 	import Control from '$lib/map/Control.svelte';
@@ -26,6 +27,7 @@
 		type Itinerary,
 		type Mode,
 		type PedestrianProfile,
+		type Place,
 		type PlanData,
 		type ReachablePlace,
 		type RentalFormFactor,
@@ -53,7 +55,7 @@
 	import { language, t } from '$lib/i18n/translation';
 	import { pushState, replaceState } from '$app/navigation';
 	import { page } from '$app/state';
-	import { joinInterlinedLegs, preprocessItinerary } from '$lib/preprocessItinerary';
+	import { preprocessItinerary, updateItinerary } from '$lib/preprocessItinerary';
 	import * as Tabs from '$lib/components/ui/tabs';
 	import * as Select from '$lib/components/ui/select';
 	import DeparturesMask from '$lib/DeparturesMask.svelte';
@@ -82,7 +84,7 @@
 	const hasDebug: boolean = Boolean(urlParams?.has('debug'));
 	const hasDark: boolean = Boolean(urlParams?.has('dark'));
 	const hasLight: boolean = Boolean(urlParams?.has('light'));
-	const isSmallScreen = browser && window.innerWidth < 768;
+	const isSmallScreen = new MediaQuery('(max-width: 768px)');
 	let activeTab = $derived<'connections' | 'departures' | 'isochrones'>(
 		page.state.activeTab ??
 			(urlParams?.has('one')
@@ -101,12 +103,17 @@
 		{ value: 'rt', label: t.colorMode.rt, icon: Rss },
 		{ value: 'mode', label: t.colorMode.mode, icon: TrainFront }
 	];
-	let showMap = $state(!isSmallScreen);
+	let showMap = $state(!isSmallScreen.current);
 	let showRoutes = $state(false);
 	let lastOneToAllQuery: Parameters<typeof oneToAll>[0] | undefined = undefined;
 	let lastPlanQuery: PlanData | undefined = undefined;
 	let serverConfig: ServerConfig | undefined = $state();
 	let dataLoaded: boolean = $state(false);
+	$effect(() => {
+		if (!isSmallScreen.current) {
+			showMap = true;
+		}
+	});
 	$effect(() => {
 		if (activeTab == 'isochrones') {
 			colorMode = 'none';
@@ -182,8 +189,10 @@
 	const onSelectItinerary = (itinerary: Itinerary, replace: boolean = false) => {
 		pushStateWithQueryString(
 			itinerary.id
-				? {
+				? definedOnly({
 						itineraryId: itinerary.id,
+						fromName: from.label || undefined,
+						toName: to.label || undefined,
 						joinInterlinedLegs: false,
 						detailedLegs: true,
 						detailedTransfers: true,
@@ -191,7 +200,7 @@
 						numLegAlternatives: 3,
 						language: [language],
 						...refreshLegAlternativeParams
-					}
+					})
 				: {},
 			{
 				selectedItinerary: itinerary,
@@ -211,6 +220,10 @@
 			const v = urlParams?.get(key);
 			return v == null ? undefined : v === 'true'; // absent = undefined
 		};
+		const arrParam = (key: string): string[] | undefined => {
+			const a = getUrlArray(key);
+			return a.length ? a : undefined; // absent = undefined
+		};
 		const transitModesUrl = getUrlArray('transitModes');
 		const query = definedOnly({
 			itineraryId,
@@ -228,7 +241,27 @@
 				| undefined,
 			useRoutedTransfers: boolParam('useRoutedTransfers'),
 			requireBikeTransport: boolParam('requireBikeTransport'),
-			requireCarTransport: boolParam('requireCarTransport')
+			requireCarTransport: boolParam('requireCarTransport'),
+			preTransitModes: arrParam('preTransitModes') as Mode[] | undefined,
+			postTransitModes: arrParam('postTransitModes') as Mode[] | undefined,
+			preTransitRentalFormFactors: arrParam('preTransitRentalFormFactors') as
+				| RentalFormFactor[]
+				| undefined,
+			postTransitRentalFormFactors: arrParam('postTransitRentalFormFactors') as
+				| RentalFormFactor[]
+				| undefined,
+			preTransitRentalProviderGroups: arrParam('preTransitRentalProviderGroups'),
+			postTransitRentalProviderGroups: arrParam('postTransitRentalProviderGroups'),
+			ignorePreTransitRentalReturnConstraints: boolParam('ignorePreTransitRentalReturnConstraints'),
+			ignorePostTransitRentalReturnConstraints: boolParam(
+				'ignorePostTransitRentalReturnConstraints'
+			),
+			elevationCosts: (urlParams?.get('elevationCosts') ?? undefined) as ElevationCosts | undefined,
+			cyclingSpeed: parseIntOr(urlParams?.get('cyclingSpeed'), undefined),
+			pedestrianSpeed: parseIntOr(urlParams?.get('pedestrianSpeed'), undefined),
+			maxMatchingDistance: parseIntOr(urlParams?.get('maxMatchingDistance'), undefined),
+			maxPreTransitTime: parseIntOr(urlParams?.get('maxPreTransitTime'), undefined),
+			maxPostTransitTime: parseIntOr(urlParams?.get('maxPostTransitTime'), undefined)
 		});
 
 		const { data: itinerary, error } = await refreshItinerary({ query });
@@ -237,9 +270,41 @@
 			alert(String((error as Record<string, unknown>).error?.toString() ?? error));
 			return;
 		}
-		itinerary!.legs = joinInterlinedLegs(itinerary!.legs);
+		updateItinerary(itinerary!, from, to);
+
+		// Populate the search mask (from / to / time) from the reconstructed
+		// connection so that editing it (e.g. changing the time) triggers a new
+		// plan search via baseQuery, just like a regular search would.
+		const legs = itinerary!.legs;
+		if (legs.length > 0) {
+			const placeToLocation = (p: Place): Location => ({
+				label: p.name,
+				match: {
+					lat: p.lat,
+					lon: p.lon,
+					level: p.level ?? 0,
+					id: p.stopId ?? '',
+					areas: [],
+					type: p.stopId ? 'STOP' : 'PLACE',
+					name: p.name,
+					tokens: [],
+					score: 0
+				}
+			});
+			from = placeToLocation(legs[0].from);
+			to = placeToLocation(legs[legs.length - 1].to);
+			time = new Date(arriveBy ? itinerary!.endTime : itinerary!.startTime);
+
+			// Suppress the initial auto-search.
+			lastPlanQuery = baseQuery;
+		}
+
 		pushStateWithQueryString(
-			query,
+			definedOnly({
+				...query,
+				fromName: from.label || undefined,
+				toName: to.label || undefined
+			}),
 			{
 				selectedItinerary: itinerary,
 				selectedStop: replace ? undefined : page.state.selectedStop,
@@ -520,7 +585,27 @@
 		pedestrianProfile,
 		useRoutedTransfers,
 		requireBikeTransport,
-		requireCarTransport
+		requireCarTransport,
+		preTransitModes: prePostModesToModes(preTransitModes),
+		postTransitModes: prePostModesToModes(postTransitModes),
+		preTransitRentalFormFactors: getFormFactors(preTransitModes),
+		postTransitRentalFormFactors: getFormFactors(postTransitModes),
+		preTransitRentalProviderGroups: providerGroupsForQuery(
+			preTransitModes,
+			preTransitProviderGroups
+		),
+		postTransitRentalProviderGroups: providerGroupsForQuery(
+			postTransitModes,
+			postTransitProviderGroups
+		),
+		ignorePreTransitRentalReturnConstraints,
+		ignorePostTransitRentalReturnConstraints,
+		elevationCosts,
+		cyclingSpeed,
+		pedestrianSpeed,
+		maxMatchingDistance: pedestrianProfile == 'WHEELCHAIR' ? 8 : 250,
+		maxPreTransitTime,
+		maxPostTransitTime
 	});
 
 	let isochronesQuery = $derived(
@@ -585,7 +670,7 @@
 				return;
 			}
 			if (refreshed && page.state.selectedItinerary?.id === itineraryId) {
-				refreshed.legs = joinInterlinedLegs(refreshed.legs);
+				updateItinerary(refreshed, from, to);
 				replaceState('', {
 					...page.state,
 					selectedItinerary: refreshed
@@ -712,8 +797,8 @@
 				padding: {
 					top: 96,
 					right: 96,
-					bottom: isSmallScreen ? window.innerHeight * 0.3 : 96,
-					left: isSmallScreen ? 96 : 640
+					bottom: isSmallScreen.current ? window.innerHeight * 0.3 : 96,
+					left: isSmallScreen.current ? 96 : 640
 				}
 			})
 		});
@@ -900,7 +985,7 @@
 	{#if activeTab == 'connections' && routingResponses.length !== 0 && !page.state.selectedItinerary}
 		<Control class="min-h-0 md:flex md:flex-col md:mb-2} ">
 			<Card
-				class="scrollable w-[520px] h-full md:h-[70vh] {isSmallScreen
+				class="scrollable w-[520px] h-full md:h-[70vh] {isSmallScreen.current
 					? 'border-0 shadow-none'
 					: ''} overflow-x-hidden bg-background rounded-lg mb-2"
 			>
@@ -1058,7 +1143,7 @@
 		<LevelSelect {bounds} {zoom} bind:level />
 
 		{#if browser}
-			{#if isSmallScreen}
+			{#if isSmallScreen.current}
 				<Drawer class="relative z-10 h-full mt-3 flex flex-col" bind:showMap>
 					{@render resultContent()}
 				</Drawer>
@@ -1069,7 +1154,7 @@
 			{/if}
 		{/if}
 
-		<div class="maplibregl-ctrl-{isSmallScreen ? 'top-left' : 'bottom-right'}">
+		<div class="maplibregl-ctrl-{isSmallScreen.current ? 'top-left' : 'bottom-right'}">
 			<div class="maplibregl-ctrl maplibregl-ctrl-attrib">
 				<div class="maplibregl-ctrl-attrib-inner">
 					&copy; <a href="http://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>
@@ -1104,11 +1189,12 @@
 					</Select.Root>
 				</Control>
 				<Control position="top-right" class="w-fit float-right pb-4">
-					<Button size="icon" onclick={() => getLocation()}>
+					<Button size="icon" title={t.showMyLocation} onclick={() => getLocation()}>
 						<LocateFixed class="w-5 h-5" />
 					</Button>
 					<Button
 						size="icon"
+						title={t.toggleHillshades}
 						variant={withHillshades ? 'default' : 'outline'}
 						onclick={() => (withHillshades = !withHillshades)}
 					>
@@ -1123,7 +1209,14 @@
 						shapesDebugEnabled={serverConfig?.shapesDebugEnabled === true}
 					/>
 				{/if}
-				<Rentals {map} {bounds} {zoom} {theme} {isSmallScreen} debug={hasDebug} />
+				<Rentals
+					{map}
+					{bounds}
+					{zoom}
+					{theme}
+					isSmallScreen={isSmallScreen.current}
+					debug={hasDebug}
+				/>
 			{/if}
 
 			{#if colorMode === 'stops'}

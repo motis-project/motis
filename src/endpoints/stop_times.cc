@@ -55,7 +55,7 @@ struct static_ev_iterator : public ev_iterator {
                      n::route_idx_t const r,
                      n::stop_idx_t const stop_idx,
                      n::unixtime_t const start,
-                     n::event_type const ev_type,
+                     std::optional<n::event_type> const ev_type,
                      n::direction const dir)
       : tt_{tt},
         rtt_{rtt},
@@ -64,6 +64,7 @@ struct static_ev_iterator : public ev_iterator {
                      ? to_idx(tt.day_idx(tt_.date_range_.to_))
                      : to_idx(tt.day_idx(tt_.date_range_.from_) - 1U)},
         size_{tt_.route_transport_ranges_[r].size()},
+        num_stops_{tt_.route_location_seq_[r].size()},
         i_{0},
         r_{r},
         stop_idx_{stop_idx},
@@ -99,7 +100,12 @@ struct static_ev_iterator : public ev_iterator {
   bool finished() const override { return day_ == end_day_; }
 
   n::unixtime_t time() const override {
-    return tt_.event_time(t(), stop_idx_, ev_type_);
+    if (!ev_type_.has_value()) {
+      return stop_idx_ == num_stops_ - 1U
+                 ? tt_.event_time(t(), stop_idx_, n::event_type::kArr)
+                 : tt_.event_time(t(), stop_idx_, n::event_type::kDep);
+    }
+    return tt_.event_time(t(), stop_idx_, *ev_type_);
   }
 
   n::rt::run get() const override {
@@ -130,7 +136,10 @@ private:
   n::transport t() const {
     auto const idx = dir_ == n::direction::kForward ? i_ : size_ - i_ - 1;
     auto const t = tt_.route_transport_ranges_[r_][idx];
-    auto const day_offset = tt_.event_mam(r_, t, stop_idx_, ev_type_).days();
+    auto const e_type =
+        ev_type_.value_or(stop_idx_ == num_stops_ - 1U ? n::event_type::kArr
+                                                       : n::event_type::kDep);
+    auto const day_offset = tt_.event_mam(r_, t, stop_idx_, e_type).days();
     return n::transport{tt_.route_transport_ranges_[r_][idx],
                         n::day_idx_t{to_idx(day_) - day_offset}};
   }
@@ -139,10 +148,11 @@ private:
   n::rt_timetable const* rtt_;
   n::day_idx_t day_, end_day_;
   std::uint32_t size_;
+  std::size_t num_stops_;
   std::uint32_t i_;
   n::route_idx_t r_;
   n::stop_idx_t stop_idx_;
-  n::event_type ev_type_;
+  std::optional<n::event_type> ev_type_;
   n::direction dir_;
 };
 
@@ -151,7 +161,7 @@ struct rt_ev_iterator : public ev_iterator {
                  n::rt_transport_idx_t const rt_t,
                  n::stop_idx_t const stop_idx,
                  n::unixtime_t const start,
-                 n::event_type const ev_type,
+                 std::optional<n::event_type> const ev_type,
                  n::direction const dir,
                  n::routing::clasz_mask_t const allowed_clasz)
       : rtt_{rtt},
@@ -162,7 +172,8 @@ struct rt_ev_iterator : public ev_iterator {
             !n::routing::is_allowed(
                 allowed_clasz, rtt.rt_transport_section_clasz_[rt_t].at(0)) ||
             (dir == n::direction::kForward ? time() < start : time() > start)} {
-    assert((ev_type == n::event_type::kDep &&
+    assert(!ev_type.has_value() ||
+           (ev_type == n::event_type::kDep &&
             stop_idx_ < rtt_.rt_transport_location_seq_[rt_t].size() - 1U) ||
            (ev_type == n::event_type::kArr && stop_idx_ > 0U));
   }
@@ -177,7 +188,13 @@ struct rt_ev_iterator : public ev_iterator {
   bool finished() const override { return finished_; }
 
   n::unixtime_t time() const override {
-    return rtt_.unix_event_time(rt_t_, stop_idx_, ev_type_);
+    if (!ev_type_.has_value()) {
+      auto const size = rtt_.rt_transport_location_seq_[rt_t_].size();
+      return stop_idx_ == size - 1U
+                 ? rtt_.unix_event_time(rt_t_, stop_idx_, n::event_type::kArr)
+                 : rtt_.unix_event_time(rt_t_, stop_idx_, n::event_type::kDep);
+    }
+    return rtt_.unix_event_time(rt_t_, stop_idx_, *ev_type_);
   }
 
   n::rt::run get() const override {
@@ -191,7 +208,7 @@ struct rt_ev_iterator : public ev_iterator {
   n::rt_timetable const& rtt_;
   n::stop_idx_t stop_idx_;
   n::rt_transport_idx_t rt_t_;
-  n::event_type ev_type_;
+  std::optional<n::event_type> ev_type_;
   bool finished_{false};
 };
 
@@ -200,7 +217,7 @@ std::vector<n::rt::run> get_events(
     n::timetable const& tt,
     n::rt_timetable const* rtt,
     n::unixtime_t const time,
-    n::event_type const ev_type,
+    std::optional<n::event_type> const ev_type,
     n::direction const dir,
     std::size_t const min_count,
     std::size_t const max_count,
@@ -215,7 +232,8 @@ std::vector<n::rt::run> get_events(
         auto const location_seq = rtt->rt_transport_location_seq_[rt_t];
         for (auto const [stop_idx, s] : utl::enumerate(location_seq)) {
           if (n::stop{s}.location_idx() == x &&
-              ((ev_type == n::event_type::kDep &&
+              (!ev_type.has_value() ||
+               (ev_type == n::event_type::kDep &&
                 stop_idx != location_seq.size() - 1U) ||
                (ev_type == n::event_type::kArr && stop_idx != 0U))) {
             if (!with_scheduled_skipped_stops) {
@@ -227,12 +245,19 @@ std::vector<n::rt::run> get_events(
                                                                  1U)},
                       .rt_ = rt_t}};
               auto const frs = fr[0];
-              if ((ev_type == n::event_type::kDep &&
-                   !frs.get_scheduled_stop().in_allowed() &&
-                   !frs.in_allowed()) ||
-                  (ev_type == n::event_type::kArr &&
-                   !frs.get_scheduled_stop().out_allowed() &&
-                   !frs.out_allowed())) {
+              if (!ev_type.has_value()) {
+                if (!frs.get_scheduled_stop().in_allowed() &&
+                    !frs.in_allowed() &&
+                    !frs.get_scheduled_stop().out_allowed() &&
+                    !frs.out_allowed()) {
+                  continue;
+                }
+              } else if ((ev_type == n::event_type::kDep &&
+                          !frs.get_scheduled_stop().in_allowed() &&
+                          !frs.in_allowed()) ||
+                         (ev_type == n::event_type::kArr &&
+                          !frs.get_scheduled_stop().out_allowed() &&
+                          !frs.out_allowed())) {
                 continue;
               }
             }
@@ -254,11 +279,16 @@ std::vector<n::rt::run> get_events(
       auto const location_seq = tt.route_location_seq_[r];
       for (auto const [stop_idx, s] : utl::enumerate(location_seq)) {
         if (n::stop{s}.location_idx() == x &&
-            ((ev_type == n::event_type::kDep &&
-              stop_idx != location_seq.size() - 1U &&
-              (with_scheduled_skipped_stops || n::stop{s}.in_allowed())) ||
-             (ev_type == n::event_type::kArr && stop_idx != 0U &&
-              (with_scheduled_skipped_stops || n::stop{s}.out_allowed()))) &&
+            (!ev_type.has_value()
+                 ? (with_scheduled_skipped_stops || n::stop{s}.in_allowed() ||
+                    n::stop{s}.out_allowed())
+                 : ((ev_type == n::event_type::kDep &&
+                     stop_idx != location_seq.size() - 1U &&
+                     (with_scheduled_skipped_stops ||
+                      n::stop{s}.in_allowed())) ||
+                    (ev_type == n::event_type::kArr && stop_idx != 0U &&
+                     (with_scheduled_skipped_stops ||
+                      n::stop{s}.out_allowed())))) &&
             seen.emplace(r, static_cast<n::stop_idx_t>(stop_idx)).second) {
           iterators.emplace_back(std::make_unique<static_ev_iterator>(
               tt, rtt, r, static_cast<n::stop_idx_t>(stop_idx), time, ev_type,
@@ -359,7 +389,7 @@ std::vector<api::Place> other_stops_impl(n::rt::frun fr,
 std::vector<n::rt::run> stop_times::get_runs(
     api::stoptimes_params const& query,
     nigiri::rt_timetable const* rtt,
-    nigiri::event_type const& ev_type,
+    std::optional<nigiri::event_type> const& ev_type,
     std::optional<nigiri::location_idx_t> const& query_stop,
     std::optional<osr::location> const& query_center,
     bool const disable_stoptimes_max_limit) const {
@@ -473,9 +503,13 @@ std::vector<n::rt::run> stop_times::get_runs(
 
   auto const to_tuple = [&](n::rt::run const& x) {
     auto const fr_a = n::rt::frun{tt_, rtt, x};
-    return std::tuple{fr_a[0].time(ev_type), fr_a.is_scheduled()
-                                                 ? fr_a[0].get_trip_idx(ev_type)
-                                                 : n::trip_idx_t::invalid()};
+    auto const s = fr_a[0];
+    auto const e_type = ev_type.value_or(
+        fr_a.stop_range_.from_ == fr_a.size() - 1U ? n::event_type::kArr
+                                                   : n::event_type::kDep);
+    return std::tuple{s.time(e_type), fr_a.is_scheduled()
+                                          ? s.get_trip_idx(e_type)
+                                          : n::trip_idx_t::invalid()};
   };
   utl::sort(events, [&](n::rt::run const& a, n::rt::run const& b) {
     return to_tuple(a) < to_tuple(b);
@@ -506,8 +540,9 @@ api::stoptimes_response stop_times::operator()(
 
   auto const rt = std::atomic_load(&rt_);
   auto const rtt = rt->rtt_.get();
-  auto const ev_type =
-      query.arriveBy_ ? n::event_type::kArr : n::event_type::kDep;
+  auto const is_both = query.both_;
+  auto const is_arr = query.arriveBy_;
+  auto const base_ev_type = is_arr ? n::event_type::kArr : n::event_type::kDep;
   auto const api_version = get_api_version(url);
   auto const& lang = query.language_;
   auto const query_stop = query.stopId_.and_then(
@@ -515,8 +550,18 @@ api::stoptimes_response stop_times::operator()(
   auto const query_center = query.center_.and_then(
       [&](std::string const& x) { return parse_location(x); });
 
-  auto const events =
-      this->get_runs(query, rtt, ev_type, query_stop, query_center);
+  auto const events = this->get_runs(
+      query, rtt, is_both ? std::nullopt : std::optional{base_ev_type},
+      query_stop, query_center);
+
+  auto const get_time = [&](n::rt::run const& r) {
+    auto const fr = n::rt::frun{tt_, rtt, r};
+    auto const e_type =
+        is_both ? (fr.stop_range_.from_ == fr.size() - 1U ? n::event_type::kArr
+                                                          : n::event_type::kDep)
+                : base_ev_type;
+    return fr[0].time(e_type);
+  };
 
   return {
       .stopTimes_ = utl::to_vec(
@@ -524,6 +569,11 @@ api::stoptimes_response stop_times::operator()(
           [&](n::rt::run const r) -> api::StopTime {
             auto const fr = n::rt::frun{tt_, rtt, r};
             auto const s = fr[0];
+            auto const ev_type = is_both
+                                     ? (fr.stop_range_.from_ == fr.size() - 1U
+                                            ? n::event_type::kArr
+                                            : n::event_type::kDep)
+                                     : base_ev_type;
             auto const& agency = s.get_provider(ev_type);
             auto const run_cancelled = fr.is_cancelled();
             auto place = to_place(&tt_, &tags_, w_, pl_, matches_, ae_, tz_,
@@ -630,19 +680,13 @@ api::stoptimes_response stop_times::operator()(
       .previousPageCursor_ =
           events.empty()
               ? ""
-              : fmt::format(
-                    "EARLIER|{}",
-                    to_seconds(
-                        n::rt::frun{tt_, rtt, events.front()}[0].time(ev_type) -
-                        std::chrono::minutes{1})),
+              : fmt::format("EARLIER|{}", to_seconds(get_time(events.front()) -
+                                                     std::chrono::minutes{1})),
       .nextPageCursor_ =
           events.empty()
               ? ""
-              : fmt::format(
-                    "LATER|{}",
-                    to_seconds(
-                        n::rt::frun{tt_, rtt, events.back()}[0].time(ev_type) +
-                        std::chrono::minutes{1}))};
+              : fmt::format("LATER|{}", to_seconds(get_time(events.back()) +
+                                                   std::chrono::minutes{1}))};
 }
 
 }  // namespace motis::ep

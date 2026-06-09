@@ -1882,72 +1882,15 @@ export const ItineraryIdSchema = {
 } as const;
 
 export const RefreshItineraryPostBodySchema = {
-    description: `Body for the \`refreshItineraryPost\` endpoint. All fields mirror the
-parameters of the \`plan\` endpoint - see the \`plan\` endpoint for their
-descriptions.
+    description: `Body for the \`refreshItineraryPost\` endpoint. Carries only the
+structured itinerary identifier; all routing parameters are passed as
+query parameters (same as the \`refreshItinerary\` GET endpoint).
 `,
     type: 'object',
     required: ['id'],
     properties: {
         id: {
             '$ref': '#/components/schemas/ItineraryId'
-        },
-        requireDisplayNameMatch: {
-            type: 'boolean',
-            default: true
-        },
-        joinInterlinedLegs: {
-            type: 'boolean',
-            default: true
-        },
-        detailedTransfers: {
-            type: 'boolean'
-        },
-        detailedLegs: {
-            type: 'boolean',
-            default: true
-        },
-        withFares: {
-            type: 'boolean',
-            default: false
-        },
-        withScheduledSkippedStops: {
-            type: 'boolean',
-            default: false
-        },
-        numLegAlternatives: {
-            type: 'integer',
-            default: 0,
-            minimum: 0
-        },
-        transitModes: {
-            type: 'array',
-            items: {
-                '$ref': '#/components/schemas/Mode'
-            },
-            default: ['TRANSIT']
-        },
-        pedestrianProfile: {
-            '$ref': '#/components/schemas/PedestrianProfile',
-            default: 'FOOT'
-        },
-        useRoutedTransfers: {
-            type: 'boolean',
-            default: false
-        },
-        requireBikeTransport: {
-            type: 'boolean',
-            default: false
-        },
-        requireCarTransport: {
-            type: 'boolean',
-            default: false
-        },
-        language: {
-            type: 'array',
-            items: {
-                type: 'string'
-            }
         }
     }
 } as const;
