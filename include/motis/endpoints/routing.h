@@ -19,6 +19,7 @@
 #include "motis/match_platforms.h"
 #include "motis/osr/parameters.h"
 #include "motis/place.h"
+#include "motis/rental_options.h"
 
 namespace motis::ep {
 
@@ -61,11 +62,7 @@ struct routing {
       place_t const&,
       osr::direction,
       std::vector<api::ModeEnum> const&,
-      std::optional<std::vector<api::RentalFormFactorEnum>> const&,
-      std::optional<std::vector<api::RentalPropulsionTypeEnum>> const&,
-      std::optional<std::vector<std::string>> const& rental_providers,
-      std::optional<std::vector<std::string>> const& rental_provider_groups,
-      bool ignore_rental_return_constraints,
+      rental_options const&,
       osr_parameters const&,
       api::PedestrianProfileEnum,
       api::ElevationCostsEnum,

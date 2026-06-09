@@ -139,7 +139,15 @@
 					<div class="flex justify-between">
 						<Route class="text-ellipsis mb-2" l={stopTime} {onClickTrip} />
 						{#if stopTime.place.track}
-							<span class="text-nowrap ml-3 h-fit px-1 text-base border font-semibold rounded-lg">
+							{@const fullName =
+								(getModeLabel(stopTime.mode) == 'Track' ? t.track : t.platform) +
+								' ' +
+								stopTime.place.track}
+							<span
+								class="text-nowrap ml-3 h-fit px-1 text-base border font-semibold rounded-lg"
+								title={fullName}
+								aria-label={fullName}
+							>
 								{getModeLabel(stopTime.mode) == 'Track' ? t.trackAbr : t.platformAbr}
 								{stopTime.place.track}
 							</span>

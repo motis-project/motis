@@ -25,6 +25,8 @@ const translations: Translations = {
 	hydrogenFuelCell: 'Ogniwo paliwowe na wodór',
 	from: 'Z',
 	to: 'Do',
+	myLocation: 'My location',
+	reverseDirections: 'Reverse directions',
 	viaStop: 'Przystanek pośredni',
 	viaStops: 'Przystanki pośrednie',
 	addViaStop: 'Dodaj przystanek pośredni',
@@ -160,6 +162,8 @@ const translations: Translations = {
 	FUNICULAR: 'Kolej linowo-terenowa',
 	AERIAL_LIFT: 'Wyciąg krzesełkowy',
 	toll: 'Uwaga! Za przejazd tą trasą pobierana jest opłata.',
+	bikesAllowed: 'Bikes allowed',
+	wheelchairAccessible: 'Wheelchair accessible',
 	accessRestriction: 'Ograniczony dostęp',
 	continuesAs: 'Kontynuuje jako',
 	earlierAlternatives: 'Wcześniejsze alternatywy',
@@ -181,6 +185,8 @@ const translations: Translations = {
 		route: 'Trips by Route',
 		mode: 'Trips by Mode'
 	},
+	showMyLocation: 'Show my location',
+	toggleHillshades: 'Toggle hillshades overlay',
 	routes: (n: number) => {
 		switch (n) {
 			case 0:

@@ -79,17 +79,23 @@ api::Itinerary refresh_itinerary::operator()(
       make_routing(*this), stop_times_ep, *rt, query.itineraryId_,
       query.requireDisplayNameMatch_, query.joinInterlinedLegs_,
       query.detailedTransfers_.value_or(query.detailedLegs_),
-      query.detailedLegs_, query.withFares_, query.withScheduledSkippedStops_,
-      query.language_, static_cast<std::size_t>(query.numLegAlternatives_),
+      query.detailedLegs_, query.withScheduledSkippedStops_, query.language_,
+      static_cast<std::size_t>(query.numLegAlternatives_),
       to_clasz_mask(query.transitModes_), query.requireBikeTransport_,
       query.requireCarTransport_,
       leg_alternatives_prf_idx(query.useRoutedTransfers_,
                                query.requireCarTransport_,
-                               query.pedestrianProfile_));
+                               query.pedestrianProfile_),
+      make_first_last_mile_options(query));
 }
 
 api::Itinerary refresh_itinerary_post::operator()(
+    boost::urls::url_view const& url,
     api::RefreshItineraryPostBody const& body) const {
+  // Routing params come from the query string; the body carries only the id.
+  auto const query =
+      api::refreshItinerary_params{url.params(), /*allow_missing*/ true};
+
   auto parsed = ::motis::ItineraryId{};
   auto const status = google::protobuf::util::JsonStringToMessage(
       boost::json::serialize(boost::json::value_from(body.id_)), &parsed);
@@ -102,16 +108,17 @@ api::Itinerary refresh_itinerary_post::operator()(
   auto const rt = std::atomic_load(&rt_);
   return reconstruct_itinerary(
       make_routing(*this), make_scheduled_stop_times(*this), *rt,
-      net::encode_base64(data), body.requireDisplayNameMatch_,
-      body.joinInterlinedLegs_,
-      body.detailedTransfers_.value_or(body.detailedLegs_), body.detailedLegs_,
-      body.withFares_, body.withScheduledSkippedStops_, body.language_,
-      static_cast<std::size_t>(body.numLegAlternatives_),
-      to_clasz_mask(body.transitModes_), body.requireBikeTransport_,
-      body.requireCarTransport_,
-      leg_alternatives_prf_idx(body.useRoutedTransfers_,
-                               body.requireCarTransport_,
-                               body.pedestrianProfile_));
+      net::encode_base64(data), query.requireDisplayNameMatch_,
+      query.joinInterlinedLegs_,
+      query.detailedTransfers_.value_or(query.detailedLegs_),
+      query.detailedLegs_, query.withScheduledSkippedStops_, query.language_,
+      static_cast<std::size_t>(query.numLegAlternatives_),
+      to_clasz_mask(query.transitModes_), query.requireBikeTransport_,
+      query.requireCarTransport_,
+      leg_alternatives_prf_idx(query.useRoutedTransfers_,
+                               query.requireCarTransport_,
+                               query.pedestrianProfile_),
+      make_first_last_mile_options(query));
 }
 
 }  // namespace motis::ep
