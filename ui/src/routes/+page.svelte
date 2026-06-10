@@ -344,6 +344,15 @@
 		}
 	}
 
+	function parseFloatOr<T>(s: string | null | undefined, d: T): T | number {
+		if (s) {
+			const v = parseFloat(s);
+			return isNaN(v) ? d : v;
+		} else {
+			return d;
+		}
+	}
+
 	let fromMarker = $state<maplibregl.Marker>();
 	let toMarker = $state<maplibregl.Marker>();
 	let oneMarker = $state<maplibregl.Marker>();
@@ -483,6 +492,34 @@
 	let ignoreDirectRentalReturnConstraints = $state(
 		urlParams?.get('ignoreDirectRentalReturnConstraints') == 'true'
 	);
+	let vehicleHeight = $state<number>(
+		parseFloatOr(urlParams?.get('vehicleHeight'), defaultQuery.vehicleHeight)
+	);
+	let vehicleWidth = $state<number>(
+		parseFloatOr(urlParams?.get('vehicleWidth'), defaultQuery.vehicleWidth)
+	);
+	let vehicleLength = $state<number>(
+		parseFloatOr(urlParams?.get('vehicleLength'), defaultQuery.vehicleLength)
+	);
+	let vehicleWeight = $state<number>(
+		parseFloatOr(urlParams?.get('vehicleWeight'), defaultQuery.vehicleWeight)
+	);
+	let vehicleHazmat = $state(urlParams?.get('vehicleHazmat') == 'true');
+	let vehicleHazmatWater = $state(urlParams?.get('vehicleHazmatWater') == 'true');
+	let vehicleAxleCount = $state<number>(
+		parseIntOr(urlParams?.get('vehicleAxleCount'), defaultQuery.vehicleAxleCount)
+	);
+	let vehicleAxleLoad = $state<number>(
+		parseFloatOr(urlParams?.get('vehicleAxleLoad'), defaultQuery.vehicleAxleLoad)
+	);
+	let vehicleTrailer = $state(
+		urlParams?.get('vehicleTrailer') === null
+			? defaultQuery.vehicleTrailer
+			: urlParams?.get('vehicleTrailer') == 'true'
+	);
+	let vehicleTopSpeed = $state<number>(
+		parseIntOr(urlParams?.get('vehicleTopSpeed'), defaultQuery.vehicleTopSpeed)
+	);
 	let slowDirect = $state(urlParams?.get('slowDirect') == 'true');
 
 	let isochronesData = $state<IsochronesPos[]>([]);
@@ -516,6 +553,9 @@
 		}
 		return Array.from(new Set(groups));
 	};
+
+	const includeHgvOptions = (...modeGroups: Array<PrePostDirectMode[] | undefined>) =>
+		modeGroups.some((modes) => modes?.includes('HGV'));
 
 	let baseQuery = $derived(
 		from.match && to.match
@@ -570,6 +610,20 @@
 						ignorePreTransitRentalReturnConstraints,
 						ignorePostTransitRentalReturnConstraints,
 						ignoreDirectRentalReturnConstraints,
+						...(includeHgvOptions(preTransitModes, postTransitModes, directModes)
+							? {
+									vehicleHeight,
+									vehicleWidth,
+									vehicleLength,
+									vehicleWeight,
+									vehicleHazmat,
+									vehicleHazmatWater,
+									vehicleAxleCount,
+									vehicleAxleLoad,
+									vehicleTrailer,
+									vehicleTopSpeed
+								}
+							: {}),
 						algorithm,
 						via: via ? via.map((v) => v.match?.id) : undefined,
 						viaMinimumStay
@@ -631,7 +685,23 @@
 						maxPreTransitTime,
 						maxPostTransitTime,
 						elevationCosts,
-						maxMatchingDistance: pedestrianProfile == 'WHEELCHAIR' ? 8 : 250
+						maxMatchingDistance: pedestrianProfile == 'WHEELCHAIR' ? 8 : 250,
+						ignorePreTransitRentalReturnConstraints,
+						ignorePostTransitRentalReturnConstraints,
+						...(includeHgvOptions(preTransitModes, postTransitModes)
+							? {
+									vehicleHeight,
+									vehicleWidth,
+									vehicleLength,
+									vehicleWeight,
+									vehicleHazmat,
+									vehicleHazmatWater,
+									vehicleAxleCount,
+									vehicleAxleLoad,
+									vehicleTrailer,
+									vehicleTopSpeed
+								}
+							: {})
 					}
 				} satisfies Parameters<typeof oneToAll>[0])
 			: undefined
@@ -883,9 +953,8 @@
 		</Button>
 	{/if}
 {/snippet}
-
 {#snippet resultContent()}
-	<Control>
+	<Control class="min-h-0 shrink-0 overflow-hidden">
 		<Tabs.Root
 			bind:value={
 				() => activeTab,
@@ -894,15 +963,15 @@
 					pushState('', { activeTab: v });
 				}
 			}
-			class="max-w-full w-[520px] overflow-y-auto"
+			class="flex h-full min-h-0 max-h-[97dvh] max-w-full w-[520px] flex-col overflow-hidden"
 		>
-			<Tabs.List class="grid grid-cols-3">
+			<Tabs.List class="grid shrink-0 grid-cols-3">
 				<Tabs.Trigger value="connections">{t.connections}</Tabs.Trigger>
 				<Tabs.Trigger value="departures">{t.departures}</Tabs.Trigger>
 				<Tabs.Trigger value="isochrones">{t.isochrones.title}</Tabs.Trigger>
 			</Tabs.List>
-			<Tabs.Content value="connections">
-				<Card class="overflow-y-auto overflow-x-hidden bg-background rounded-lg">
+			<Tabs.Content value="connections" class="min-h-0 overflow-hidden">
+				<Card class="max-h-[calc(97dvh-2.5rem)] overflow-hidden bg-background rounded-lg">
 					<SearchMask
 						geocodingBiasPlace={center}
 						{serverConfig}
@@ -929,6 +998,16 @@
 						bind:preTransitProviderGroups
 						bind:postTransitProviderGroups
 						bind:directProviderGroups
+						bind:vehicleHeight
+						bind:vehicleWidth
+						bind:vehicleLength
+						bind:vehicleWeight
+						bind:vehicleHazmat
+						bind:vehicleHazmatWater
+						bind:vehicleAxleCount
+						bind:vehicleAxleLoad
+						bind:vehicleTrailer
+						bind:vehicleTopSpeed
 						bind:via
 						bind:viaMinimumStay
 						bind:viaLabels
@@ -940,13 +1019,15 @@
 					/>
 				</Card>
 			</Tabs.Content>
-			<Tabs.Content value="departures">
-				<Card class="overflow-y-auto overflow-x-hidden bg-background rounded-lg">
+			<Tabs.Content value="departures" class="min-h-0 overflow-hidden">
+				<Card
+					class="max-h-[calc(97dvh-2.5rem)] overflow-y-auto overflow-x-hidden bg-background rounded-lg"
+				>
 					<DeparturesMask bind:time />
 				</Card>
 			</Tabs.Content>
-			<Tabs.Content value="isochrones">
-				<Card class="overflow-y-auto overflow-x-hidden bg-background rounded-lg">
+			<Tabs.Content value="isochrones" class="min-h-0 overflow-hidden">
+				<Card class="max-h-[calc(97dvh-2.5rem)] overflow-hidden bg-background rounded-lg">
 					<IsochronesMask
 						bind:one
 						{serverConfig}
@@ -975,6 +1056,16 @@
 						bind:preTransitProviderGroups
 						bind:postTransitProviderGroups
 						bind:directProviderGroups
+						bind:vehicleHeight
+						bind:vehicleWidth
+						bind:vehicleLength
+						bind:vehicleWeight
+						bind:vehicleHazmat
+						bind:vehicleHazmatWater
+						bind:vehicleAxleCount
+						bind:vehicleAxleLoad
+						bind:vehicleTrailer
+						bind:vehicleTopSpeed
 						{hasDebug}
 					/>
 				</Card>

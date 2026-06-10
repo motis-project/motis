@@ -62,7 +62,7 @@ ICE2,00:35:00,24:35:00,3600
 
 TEST(motis, routing_slow_direct) {
   auto ec = std::error_code{};
-  std::filesystem::remove_all("test/data", ec);
+  std::filesystem::remove_all("test/data_osm_only", ec);
 
   auto const c = config{
       .server_ = {{.web_folder_ = "ui/build", .n_threads_ = 1U}},

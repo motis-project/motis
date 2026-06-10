@@ -51,6 +51,16 @@
 		preTransitProviderGroups = $bindable(),
 		postTransitProviderGroups = $bindable(),
 		directProviderGroups = $bindable(),
+		vehicleHeight = $bindable(),
+		vehicleWidth = $bindable(),
+		vehicleLength = $bindable(),
+		vehicleWeight = $bindable(),
+		vehicleHazmat = $bindable(),
+		vehicleHazmatWater = $bindable(),
+		vehicleAxleCount = $bindable(),
+		vehicleAxleLoad = $bindable(),
+		vehicleTrailer = $bindable(),
+		vehicleTopSpeed = $bindable(),
 		hasDebug = false
 	}: {
 		one: Location;
@@ -80,6 +90,16 @@
 		preTransitProviderGroups: string[];
 		postTransitProviderGroups: string[];
 		directProviderGroups: string[];
+		vehicleHeight: number;
+		vehicleWidth: number;
+		vehicleLength: number;
+		vehicleWeight: number;
+		vehicleHazmat: boolean;
+		vehicleHazmatWater: boolean;
+		vehicleAxleCount: number;
+		vehicleAxleLoad: number;
+		vehicleTrailer: boolean;
+		vehicleTopSpeed: number;
 		hasDebug: boolean;
 	} = $props();
 	const minutesToSeconds = (n: number): number => n * 60;
@@ -165,7 +185,10 @@
 	</div>
 {/snippet}
 
-<div id="isochrones-searchmask-container" class="flex flex-col space-y-4 p-4 relative">
+<div
+	id="isochrones-searchmask-container"
+	class="flex max-h-full min-h-0 flex-col space-y-4 overflow-hidden p-4 relative"
+>
 	<AddressTypeahead
 		place={geocodingBiasPlace}
 		name="one"
@@ -181,7 +204,7 @@
 	>
 		<LocateFixed class="w-5 h-5" />
 	</Button>
-	<div class="flex flex-row gap-2 flex-wrap">
+	<div class="flex min-h-0 flex-row gap-2 flex-wrap">
 		<DateInput bind:value={time} />
 		<RadioGroup.Root
 			class="flex"
@@ -245,6 +268,16 @@
 			bind:preTransitProviderGroups
 			bind:postTransitProviderGroups
 			bind:directProviderGroups
+			bind:vehicleHeight
+			bind:vehicleWidth
+			bind:vehicleLength
+			bind:vehicleWeight
+			bind:vehicleHazmat
+			bind:vehicleHazmatWater
+			bind:vehicleAxleCount
+			bind:vehicleAxleLoad
+			bind:vehicleTrailer
+			bind:vehicleTopSpeed
 			via={undefined}
 			viaMinimumStay={undefined}
 			viaLabels={{}}
