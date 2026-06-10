@@ -273,7 +273,7 @@ export const ModeSchema = {
   - \`BIKE\`
   - \`RENTAL\` Experimental. Expect unannounced breaking changes (without version bumps) for all parameters and returned structs.
   - \`CAR\`
-  - \`HGV\`
+  - \`HGV\` Heavy goods vehicles (only supported for direct connections)
   - \`CAR_PARKING\` Experimental. Expect unannounced breaking changes (without version bumps) for all parameters and returned structs.
   - \`CAR_DROPOFF\` Experimental. Expect unannounced breaking changes (without version bumps) for all perameters and returned structs.
   - \`ODM\` on-demand taxis from the Prima+ÖV Project
