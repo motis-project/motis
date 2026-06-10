@@ -3,6 +3,7 @@
 #include "utl/init_from.h"
 
 #include "motis/endpoints/initial.h"
+#include "motis/import.h"
 
 #include "../test_case.h"
 
@@ -25,4 +26,24 @@ TEST(initial, server_config) {
   EXPECT_TRUE(config.hasStreetRouting_);
   EXPECT_FALSE(config.hasElevation_);
   EXPECT_FALSE(config.shapesDebugEnabled_);
+}
+
+TEST(initial, osm_only_fallback) {
+  auto ec = std::error_code{};
+  std::filesystem::remove_all("test/data_osm_only_initial", ec);
+
+  auto const c = config{.osm_ = {"test/resources/test_case.osm.pbf"},
+                        .street_routing_ = true};
+  import(c, "test/data_osm_only_initial");
+
+  auto d = data{"test/data_osm_only_initial", c};
+  d.init_initial("v1.2.3-test");
+  auto const ep = utl::init_from<motis::ep::initial>(d).value();
+
+  auto const res = ep("");
+
+  EXPECT_NE(0.0, res.lat_);
+  EXPECT_NE(0.0, res.lon_);
+  EXPECT_GT(res.zoom_, 0.0);
+  EXPECT_TRUE(res.serverConfig_.hasStreetRouting_);
 }
