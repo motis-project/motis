@@ -674,7 +674,9 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
       query.maxItineraries_.value_or(0), query.numItineraries_);
 
   auto const rt = std::atomic_load(&rt_);
-  auto const rtt = query.useRealtime_ ? rt->rtt_.get() : nullptr;
+  auto const rtt = query.realtimeMode_ == api::RealtimeModeEnum::OFF
+                       ? nullptr
+                       : rt->rtt_.get();
   auto const e = rt->e_.get();
   auto gbfs_rd = gbfs::gbfs_routing_data{w_, l_, gbfs_};
   if (blocked.get() == nullptr && is_osr_loaded()) {

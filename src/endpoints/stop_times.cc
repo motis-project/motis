@@ -539,7 +539,9 @@ api::stoptimes_response stop_times::operator()(
   auto const query = api::stoptimes_params{url.params()};
 
   auto const rt = std::atomic_load(&rt_);
-  auto const rtt = query.useRealtime_ ? rt->rtt_.get() : nullptr;
+  auto const rtt = query.realtimeMode_ == api::RealtimeModeEnum::OFF
+                       ? nullptr
+                       : rt->rtt_.get();
   auto const is_both = query.both_;
   auto const is_arr = query.arriveBy_;
   auto const base_ev_type = is_arr ? n::event_type::kArr : n::event_type::kDep;
