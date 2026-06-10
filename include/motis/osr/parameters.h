@@ -2,10 +2,9 @@
 
 #include <cstdint>
 
+#include "motis-api/motis-api.h"
 #include "osr/routing/parameters.h"
 #include "osr/routing/profile.h"
-
-#include "motis-api/motis-api.h"
 
 namespace motis {
 
@@ -28,19 +27,19 @@ struct osr_parameters {
   constexpr static auto const kHgvTrailer = true;
   constexpr static auto const kHgvTopSpeedKmh = std::uint8_t{80U};
 
-  float const pedestrian_speed_{kFootSpeed};
-  float const cycling_speed_{kBikeSpeed};
-  bool const use_wheelchair_{false};
-  float const hgv_height_meters_{kHgvHeightMeters};
-  float const hgv_width_meters_{kHgvWidthMeters};
-  float const hgv_length_meters_{kHgvLengthMeters};
-  float const hgv_weight_tons_{kHgvWeightTons};
-  bool const hgv_hazmat_{kHgvHazmat};
-  bool const hgv_hazmat_water_{kHgvHazmatWater};
-  std::uint8_t const hgv_axle_count_{kHgvAxleCount};
-  float const hgv_axle_load_tons_{kHgvAxleLoadTons};
-  bool const hgv_trailer_{kHgvTrailer};
-  std::uint8_t const hgv_top_speed_km_h_{kHgvTopSpeedKmh};
+  float pedestrian_speed_{kFootSpeed};
+  float cycling_speed_{kBikeSpeed};
+  bool use_wheelchair_{false};
+  float hgv_height_meters_{kHgvHeightMeters};
+  float hgv_width_meters_{kHgvWidthMeters};
+  float hgv_length_meters_{kHgvLengthMeters};
+  float hgv_weight_tons_{kHgvWeightTons};
+  bool hgv_hazmat_{kHgvHazmat};
+  bool hgv_hazmat_water_{kHgvHazmatWater};
+  std::uint8_t hgv_axle_count_{kHgvAxleCount};
+  float hgv_axle_load_tons_{kHgvAxleLoadTons};
+  bool hgv_trailer_{kHgvTrailer};
+  std::uint8_t hgv_top_speed_km_h_{kHgvTopSpeedKmh};
 };
 
 osr_parameters get_osr_parameters(api::plan_params const&);
