@@ -354,6 +354,15 @@ export type Match = {
 export type ElevationCosts = 'NONE' | 'LOW' | 'HIGH';
 
 /**
+ * Controls whether realtime data (delays, cancellations, added/changed trips) is used.
+ *
+ * - `REALTIME`: use realtime data.
+ * - `OFF`: use the scheduled timetable only.
+ *
+ */
+export type RealtimeMode = 'OFF' | 'REALTIME';
+
+/**
  * Different accessibility profiles for pedestrians.
  */
 export type PedestrianProfile = 'FOOT' | 'WHEELCHAIR';
@@ -2388,6 +2397,16 @@ export type PlanData = {
          */
         radius?: number;
         /**
+         * Optional. Default is `REALTIME`.
+         *
+         * Controls whether realtime data is used for routing.
+         * - `REALTIME`: the realtime timetable (delays, cancellations,
+         * added/changed trips) is used and reflected in the response.
+         * - `OFF`: only the scheduled timetable is used.
+         *
+         */
+        realtimeMode?: RealtimeMode;
+        /**
          * Optional. Default is `false`.
          *
          * If set to `true`, all used transit trips are required to allow bike carriage.
@@ -3281,11 +3300,18 @@ export type StoptimesData = {
          */
         arriveBy?: boolean;
         /**
+         * Optional. Default is `false`. If set to `true`, returns both arrivals and departures, ignoring `arriveBy`.
+         *
+         */
+        both?: boolean;
+        /**
          * Anchor coordinate. Format: latitude,longitude pair.
-         * Used as fallback when "stopId" is missing or can't be found.
-         * If both are provided and "stopId" resolves, "stopId" is used.
-         * If "stopId" does not resolve, "center" is used instead. "radius" is
-         * required when querying by "center" (i.e. without a valid "stopId").
+         * Used as fallback when `stopId` is missing or can't be found.
+         * If both are provided and `stopId` resolves, `stopId` is used.
+         * If `stopId` does not resolve, `center` is used instead. `radius` is
+         * required when querying by "center" (i.e. without a valid `stopId`).
+         * This can be used to hedge against changing `stopId`s.
+         * Use with a small `radius` and `exactRadius=false` to still only return the original stop and stops that MOTIS considers equivalent (parent/children or due to similar name, even outside the radius).
          *
          */
         center?: string;
@@ -3306,7 +3332,8 @@ export type StoptimesData = {
          * Optional. Default is `false`.
          *
          * If set to `true`, only stations that are phyiscally in the radius are considered.
-         * If set to `false`, additionally to the stations in the radius, equivalences with the same name and children are considered.
+         * If set to `false`, additionally to the stations in the radius, equivalences with a similar name and children are considered.
+         * Use `exactRadius=true` with `radius=0` if you really only want to get events for the given `stopId` (platform or bay) and nothing from stops considered equivalent.
          *
          */
         exactRadius?: boolean;
@@ -3348,13 +3375,24 @@ export type StoptimesData = {
          * Optional. Radius in meters.
          *
          * Default is that only stop times of the parent of the stop itself
-         * and all stops with the same name (+ their child stops) are returned.
+         * and all stops with a similar name (+ their child stops) are returned.
          *
          * If set, all stops at parent stations and their child stops in the specified radius
          * are returned.
          *
          */
         radius?: number;
+        /**
+         * Optional. Default is `REALTIME`.
+         *
+         * Controls whether realtime data is used.
+         * - `REALTIME`: realtime data (delays, cancellations) is used
+         * stop times are returned and sorted by their realtime time.
+         * - `OFF`: only scheduled data is used; stop times are returned and
+         * sorted by their planned time, with no realtime annotation.
+         *
+         */
+        realtimeMode?: RealtimeMode;
         /**
          * stop id of the stop to retrieve departures/arrivals for
          */

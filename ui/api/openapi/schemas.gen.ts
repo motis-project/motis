@@ -409,6 +409,16 @@ Using a elevation cost profile will prefer routes with a smaller incline and sma
     enum: ['NONE', 'LOW', 'HIGH']
 } as const;
 
+export const RealtimeModeSchema = {
+    description: `Controls whether realtime data (delays, cancellations, added/changed trips) is used.
+
+- \`REALTIME\`: use realtime data.
+- \`OFF\`: use the scheduled timetable only.
+`,
+    type: 'string',
+    enum: ['OFF', 'REALTIME']
+} as const;
+
 export const PedestrianProfileSchema = {
     description: 'Different accessibility profiles for pedestrians.',
     type: 'string',
