@@ -2860,26 +2860,10 @@ paths:
       parameters:
         - name: stopId
           in: query
-          required: false
+          required: true
           description: stop ID as returned by /api/v1/geocode or /api/v1/map/stops
           schema:
             type: string
-
-        - name: center
-          in: query
-          required: false
-          description: |
-            latitude,longitude pair used as center for a radius search
-            (used when stopId is not provided)
-          schema:
-            type: string
-
-        - name: radius
-          in: query
-          required: false
-          description: search radius in meters around center (default 500)
-          schema:
-            type: integer
 
         - name: language
           in: query

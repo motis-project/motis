@@ -15,7 +15,6 @@
 
 #include "motis/collect_locations.h"
 #include "motis/data.h"
-#include "motis/parse_location.h"
 #include "motis/place.h"
 #include "motis/tag_lookup.h"
 #include "motis/timetable/clasz_to_mode.h"
@@ -29,31 +28,18 @@ api::stopInfo_response stop::operator()(
   auto const query = api::stopInfo_params{url.params()};
   auto const& lang = query.language_;
 
-  utl::verify<net::bad_request_exception>(
-      query.stopId_.has_value() || query.center_.has_value(),
-      "either stopId or center must be provided");
-
   auto locations = std::vector<n::location_idx_t>{};
-  auto query_loc = std::optional<n::location_idx_t>{};
 
   auto const add = [&](n::location_idx_t const l) {
     add_location(tt_, t_, ae_, locations, l);
   };
 
-  if (query.stopId_.has_value()) {
-    auto const loc = tags_.find_location(tt_, *query.stopId_);
-    utl::verify<net::not_found_exception>(loc.has_value(), "stop not found: {}",
-                                          *query.stopId_);
-    query_loc = *loc;
-    locations.emplace_back(tt_.locations_.get_root_idx(*loc));
-    add(*loc);
-  } else {
-    auto const center = parse_location(*query.center_);
-    utl::verify<net::bad_request_exception>(
-        center.has_value(), "invalid center coordinate: {}", *query.center_);
-    auto const radius = static_cast<double>(query.radius_.value_or(500LL));
-    loc_rtree_.in_radius(center->pos_, radius, add);
-  }
+  auto const loc = tags_.find_location(tt_, query.stopId_);
+  utl::verify<net::not_found_exception>(loc.has_value(), "stop not found: {}",
+                                        query.stopId_);
+  auto const query_loc = *loc;
+  locations.emplace_back(tt_.locations_.get_root_idx(*loc));
+  add(*loc);
 
   utl::erase_duplicates(locations);
 
@@ -134,16 +120,11 @@ api::stopInfo_response stop::operator()(
            (a.routeShortName_ == b.routeShortName_ && a.routeId_ < b.routeId_);
   });
 
-  if (query_loc.has_value()) {
-    result.place_ = to_place(&tt_, &tags_, w_, pl_, matches_, ae_, tz_, lang,
-                             tt_location{*query_loc});
-  } else {
-    auto const center = parse_location(*query.center_);
-    result.place_ = to_place(*center, "center", std::nullopt);
-  }
+  result.place_ = to_place(&tt_, &tags_, w_, pl_, matches_, ae_, tz_, lang,
+                           tt_location{query_loc});
 
   auto const* rtt = rt_->rtt_.get();
-  if (query.withAlerts_ && rtt != nullptr && query_loc.has_value()) {
+  if (query.withAlerts_ && rtt != nullptr) {
     auto const& al = rtt->alerts_;
     auto seen_alerts = n::hash_set<n::alert_idx_t>{};
     auto alerts = std::vector<api::Alert>{};
@@ -200,10 +181,10 @@ api::stopInfo_response stop::operator()(
                get_translation(al.description_text_[a]).value_or("")});
     };
 
-    for (auto const a : al.location_[*query_loc]) {
+    for (auto const a : al.location_[query_loc]) {
       add_alert(a);
     }
-    auto const parent = tt_.locations_.parents_[*query_loc];
+    auto const parent = tt_.locations_.parents_[query_loc];
     if (parent != n::location_idx_t::invalid()) {
       for (auto const a : al.location_[parent]) {
         add_alert(a);
