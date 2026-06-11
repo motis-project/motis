@@ -2421,11 +2421,12 @@ paths:
           required: false
           description: |
             Anchor coordinate. Format: latitude,longitude pair.
-            Used as fallback when "stopId" is missing or can't be found.
-            If both are provided and "stopId" resolves, "stopId" is used.
-            If "stopId" does not resolve, "center" is used instead. "radius" is
-            required when querying by "center" (i.e. without a valid "stopId").
-
+            Used as fallback when `stopId` is missing or can't be found.
+            If both are provided and `stopId` resolves, `stopId` is used.
+            If `stopId` does not resolve, `center` is used instead. `radius` is
+            required when querying by "center" (i.e. without a valid `stopId`).
+            This can be used to hedge against changing `stopId`s.
+            Use with a small `radius` and `exactRadius=false` to still only return the original stop and stops that MOTIS considers equivalent (parent/children or due to similar name, even outside the radius).
         - name: time
           in: query
           required: false
@@ -2434,15 +2435,6 @@ paths:
           schema:
             type: string
             format: date-time
-
-        - name: both
-          in: query
-          required: false
-          schema:
-            type: boolean
-            default: false
-          description: |
-            Optional. Default is `false`. If set to `true`, returns both arrivals and departures, ignoring `arriveBy`.
 
         - name: arriveBy
           in: query
@@ -2455,6 +2447,15 @@ paths:
             
               - `arriveBy=true`: the parameters `date` and `time` refer to the arrival time
               - `arriveBy=false`: the parameters `date` and `time` refer to the departure time
+
+        - name: both
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+          description: |
+            Optional. Default is `false`. If set to `true`, returns both arrivals and departures, ignoring `arriveBy`.
 
         - name: direction
           in: query
@@ -2518,7 +2519,7 @@ paths:
             Optional. Radius in meters.
             
             Default is that only stop times of the parent of the stop itself
-            and all stops with the same name (+ their child stops) are returned.
+            and all stops with a similar name (+ their child stops) are returned.
             
             If set, all stops at parent stations and their child stops in the specified radius
             are returned.
@@ -2533,8 +2534,8 @@ paths:
             Optional. Default is `false`.
             
             If set to `true`, only stations that are phyiscally in the radius are considered.
-            If set to `false`, additionally to the stations in the radius, equivalences with the same name and children are considered.
-
+            If set to `false`, additionally to the stations in the radius, equivalences with a similar name and children are considered.
+            Use `exactRadius=true` with `radius=0` if you really only want to get events for the given `stopId` (platform or bay) and nothing from stops considered equivalent.
         - name: fetchStops
           in: query
           schema:
