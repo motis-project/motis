@@ -179,11 +179,11 @@ const translations: Translations = {
 	DEBUG_RAILWAY_ROUTE: 'Trasa vlaku (Debug)',
 	DEBUG_FERRY_ROUTE: 'Trasa trajektu (Debug)',
 	colorMode: {
-		none: 'Žádné',
-		stops: 'Zastávky',
-		rt: 'Spoje podle zpoždění',
-		route: 'Spoje podle linky',
-		mode: 'Spoje podle dopravního prostředku'
+		none: 'No Map Visualization',
+		stops: 'Stops',
+		rt: 'Timetable: Delays',
+		route: 'Timetable: Line Colors',
+		mode: 'Timetable: Transport Modes'
 	},
 	showMyLocation: 'Show my location',
 	toggleHillshades: 'Toggle hillshades overlay',

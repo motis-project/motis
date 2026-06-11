@@ -70,7 +70,7 @@ const translations: Translations = {
 	selectTransitModes: 'Sélectionner les modes de transport en commun',
 	defaultSelectedModes: 'Tous les transports en commun',
 	defaultSelectedProviders: 'Tous les fournisseurs',
-	selectElevationCosts: 'Évitez les pentes abruptes.', // TODO Online translated
+	selectElevationCosts: 'Éviter les pentes.',
 	wheelchair: 'Correspondances accessibles uniquement',
 	useRoutedTransfers: 'Utiliser les correspondances routées',
 	bikeRental: 'Utiliser véhicules partagés',
@@ -177,11 +177,11 @@ const translations: Translations = {
 	DEBUG_RAILWAY_ROUTE: 'Itinéraire ferroviaire (Debug)',
 	DEBUG_FERRY_ROUTE: 'Itinéraire de ferry (Debug)',
 	colorMode: {
-		none: 'Aucun',
-		stops: 'Arrêts',
-		rt: 'Trajets par temps réel',
-		route: 'Trajets par ligne',
-		mode: 'Trajets par mode'
+		none: "Pas d'affichage sur la carte",
+		stops: 'Stations',
+		rt: 'Horaires : retards',
+		route: 'Horaires : couleurs des lignes',
+		mode: 'Horaires : modes de transport'
 	},
 	showMyLocation: 'Show my location',
 	toggleHillshades: 'Toggle hillshades overlay',

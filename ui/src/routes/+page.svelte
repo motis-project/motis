@@ -100,8 +100,8 @@
 		{ value: 'none', label: t.colorMode.none, icon: Ban },
 		{ value: 'stops', label: t.colorMode.stops, icon: MapPin },
 		{ value: 'route', label: t.colorMode.route, icon: Palette },
-		{ value: 'rt', label: t.colorMode.rt, icon: Rss },
-		{ value: 'mode', label: t.colorMode.mode, icon: TrainFront }
+		{ value: 'mode', label: t.colorMode.mode, icon: TrainFront },
+		{ value: 'rt', label: t.colorMode.rt, icon: Rss }
 	];
 	let showMap = $state(!isSmallScreen.current);
 	let showRoutes = $state(false);
