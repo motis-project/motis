@@ -124,6 +124,7 @@ TEST(motis, get_way_candidates) {
       case search_profile::kFoot: [[fallthrough]];
       case search_profile::kWheelchair: [[fallthrough]];
       case search_profile::kCar: [[fallthrough]];
+      case search_profile::kHgv: [[fallthrough]];
       case search_profile::kBike: [[fallthrough]];
       case search_profile::kCarSharing: [[fallthrough]];
       case search_profile::kBikeSharing:
@@ -133,9 +134,10 @@ TEST(motis, get_way_candidates) {
   };
 
   for (auto profile :
-       {osr::search_profile::kCar, osr::search_profile::kCarSharing,
-        osr::search_profile::kFoot, osr::search_profile::kWheelchair,
-        osr::search_profile::kBike, osr::search_profile::kBikeSharing}) {
+       {osr::search_profile::kCar, osr::search_profile::kHgv,
+        osr::search_profile::kCarSharing, osr::search_profile::kFoot,
+        osr::search_profile::kWheelchair, osr::search_profile::kBike,
+        osr::search_profile::kBikeSharing}) {
     auto const with_preprocessing = motis::get_reverse_platform_way_matches(
         *d.l_, &*d.way_matches_, profile, location_idxs, locs,
         osr::direction::kForward, 250);

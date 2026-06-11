@@ -58,7 +58,7 @@ api::oneToMany_response one_to_many_direct(
       max_direct_time, max_direct_time_limit);
   utl::verify<net::bad_request_exception>(
       mode == api::ModeEnum::BIKE || mode == api::ModeEnum::CAR ||
-          mode == api::ModeEnum::WALK,
+          mode == api::ModeEnum::HGV || mode == api::ModeEnum::WALK,
       "mode {} not supported for one-to-many", fmt::streamed(mode));
 
   auto const profile = to_profile(mode, pedestrian_profile, elevation_costs);
