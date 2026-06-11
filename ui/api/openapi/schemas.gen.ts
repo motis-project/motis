@@ -2479,3 +2479,43 @@ export const HealthResponseSchema = {
         }
     }
 } as const;
+
+export const WaypointSchema = {
+    type: 'object',
+    properties: {
+        name: {
+            type: 'string',
+            description: 'name Name of the street the coordinate snapped to'
+        },
+        location: {
+            type: 'array',
+            items: {
+                type: 'number'
+            },
+            description: 'longitude, latitude pair of the snapped coordinate'
+        },
+        distance: {
+            type: 'number',
+            description: 'The distance of the snapped point from the original'
+        }
+    }
+} as const;
+
+export const NearestResponseSchema = {
+    type: 'object',
+    required: ['code', 'waypoints'],
+    properties: {
+        code: {
+            type: 'string'
+        },
+        message: {
+            type: 'string'
+        },
+        waypoints: {
+            type: 'array',
+            items: {
+                '$ref': '#/components/schemas/Waypoint'
+            }
+        }
+    }
+} as const;
