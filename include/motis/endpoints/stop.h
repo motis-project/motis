@@ -5,14 +5,15 @@
 #include "nigiri/types.h"
 
 #include "motis-api/motis-api.h"
+#include "motis/data.h"
 #include "motis/fwd.h"
 #include "motis/match_platforms.h"
 #include "motis/point_rtree.h"
 
 namespace motis::ep {
 
-struct stop_routes {
-  api::stopRoutes_response operator()(boost::urls::url_view const&) const;
+struct stop {
+  api::stopInfo_response operator()(boost::urls::url_view const&) const;
 
   config const& config_;
   osr::ways const* w_;
@@ -24,6 +25,7 @@ struct stop_routes {
   point_rtree<nigiri::location_idx_t> const& loc_rtree_;
   tag_lookup const& tags_;
   nigiri::timetable const& tt_;
+  std::shared_ptr<rt> const& rt_;
 };
 
 }  // namespace motis::ep

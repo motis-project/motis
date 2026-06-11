@@ -3296,6 +3296,11 @@ export type StoptimesData = {
          */
         arriveBy?: boolean;
         /**
+         * Optional. Default is `false`. If set to `true`, returns both arrivals and departures, ignoring `arriveBy`.
+         *
+         */
+        both?: boolean;
+        /**
          * Anchor coordinate. Format: latitude,longitude pair.
          * Used as fallback when "stopId" is missing or can't be found.
          * If both are provided and "stopId" resolves, "stopId" is used.
@@ -3503,6 +3508,10 @@ export type StopsData = {
          * Optional. Stop modes
          */
         modes?: Array<Mode>;
+        /**
+         * include active alerts for the stop
+         */
+        withAlerts?: boolean;
     };
 };
 
@@ -3510,7 +3519,7 @@ export type StopsResponse = (Array<Place>);
 
 export type StopsError = (Error);
 
-export type StopRoutesData = {
+export type StopInfoData = {
     query?: {
         /**
          * latitude,longitude pair used as center for a radius search
@@ -3532,12 +3541,25 @@ export type StopRoutesData = {
          * stop ID as returned by /api/v1/geocode or /api/v1/map/stops
          */
         stopId?: string;
+        /**
+         * include active alerts for the stop
+         */
+        withAlerts?: boolean;
     };
 };
 
-export type StopRoutesResponse = (Array<Route>);
+export type StopInfoResponse = ({
+    /**
+     * metadata of the requested stop
+     */
+    place: Place;
+    /**
+     * list of routes serving the stop(s)
+     */
+    routes: Array<Route>;
+});
 
-export type StopRoutesError = (Error);
+export type StopInfoError = (Error);
 
 export type LevelsData = {
     query: {

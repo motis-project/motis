@@ -2809,6 +2809,14 @@ paths:
               type: string
           explode: false
 
+        - name: withAlerts
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: true
+          description: include active alerts for the stop
+
       responses:
         '422':
           description: Unprocessable Entity
@@ -2843,12 +2851,12 @@ paths:
                 items:
                   $ref: '#/components/schemas/Place'
 
-  /api/v1/stop/routes:
+  /api/v1/stop:
     get:
       tags:
         - timetable
       summary: Get all routes/lines serving a stop (without time-based queries)
-      operationId: stopRoutes
+      operationId: stopInfo
       parameters:
         - name: stopId
           in: query
@@ -2885,6 +2893,14 @@ paths:
               type: string
           explode: false
 
+        - name: withAlerts
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: true
+          description: include active alerts for the stop
+
       responses:
         '422':
           description: Unprocessable Entity
@@ -2911,13 +2927,23 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '200':
-          description: array of routes/lines serving the stop(s)
+          description: stop information including routes/lines serving the stop(s)
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Route'
+                type: object
+                required:
+                  - place
+                  - routes
+                properties:
+                  place:
+                    description: metadata of the requested stop
+                    $ref: '#/components/schemas/Place'
+                  routes:
+                    description: list of routes serving the stop(s)
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Route'
 
   /api/v1/map/levels:
     get:

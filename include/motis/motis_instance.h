@@ -32,7 +32,7 @@
 #include "motis/endpoints/platforms.h"
 #include "motis/endpoints/refresh_itinerary.h"
 #include "motis/endpoints/routing.h"
-#include "motis/endpoints/stop_routes.h"
+#include "motis/endpoints/stop.h"
 #include "motis/endpoints/stop_times.h"
 #include "motis/endpoints/tiles.h"
 #include "motis/endpoints/transfers.h"
@@ -107,12 +107,12 @@ struct motis_instance {
     GET<ep::routing>("/api/v3/plan", d);
     GET<ep::routing>("/api/v4/plan", d);
     GET<ep::routing>("/api/v5/plan", d);
-    GET<ep::stop_routes>("/api/v1/stop/routes", d);
     GET<ep::routing>("/api/v6/plan", d);
     GET<ep::stop_times>("/api/v1/stoptimes", d);
     GET<ep::stop_times>("/api/v4/stoptimes", d);
     GET<ep::stop_times>("/api/v5/stoptimes", d);
     GET<ep::stop_times>("/api/v6/stoptimes", d);
+    GET<ep::stop>("/api/v1/stop", d);
     GET<ep::trip>("/api/v1/trip", d);
     GET<ep::trip>("/api/v2/trip", d);
     GET<ep::trip>("/api/v4/trip", d);

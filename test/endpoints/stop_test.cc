@@ -1,4 +1,4 @@
-#include "motis/endpoints/stop_routes.h"
+#include "motis/endpoints/stop.h"
 #include "gtest/gtest.h"
 
 #include <set>
@@ -72,23 +72,23 @@ service_id,date,exception_type
 S1,20190501,1
 )";
 
-TEST(motis, stop_routes) {
+TEST(motis, stop) {
   auto ec = std::error_code{};
-  std::filesystem::remove_all("test/data/stop_routes", ec);
+  std::filesystem::remove_all("test/data/stop", ec);
 
   auto const c = config{.timetable_ = config::timetable{
                             .first_day_ = "2019-05-01",
                             .num_days_ = 2,
                             .datasets_ = {{"test", {.path_ = kGTFS}}}}};
-  import(c, "test/data/stop_routes");
-  auto d = data{"test/data/stop_routes", c};
+  import(c, "test/data/stop");
+  auto d = data{"test/data/stop", c};
 
-  auto const ep = utl::init_from<ep::stop_routes>(d).value();
+  auto const ep = utl::init_from<ep::stop>(d).value();
 
   auto const route_ids_at = [&](char const* stop_id) {
     auto ids = std::set<std::string>{};
     for (auto const& r :
-         ep(std::string{"/api/v1/stop/routes?stopId="} + stop_id)) {
+         ep(std::string{"/api/v1/stop?stopId="} + stop_id).routes_) {
       ids.insert(r.routeId_);
     }
     return ids;
@@ -126,4 +126,8 @@ TEST(motis, stop_routes) {
   EXPECT_EQ((std::set<std::string>{"test_RQ"}), route_ids_at("test_Z"))
       << "fix: last stop of block-merged transport must use kArr to avoid "
          "out-of-bounds section access";
+
+  // place_ must be filled for a stopId query
+  auto const resp = ep("/api/v1/stop?stopId=test_A");
+  EXPECT_FALSE(resp.place_.name_.empty());
 }
