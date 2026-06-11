@@ -866,6 +866,20 @@ paths:
             type: boolean
             default: false
 
+        - name: realtimeMode
+          in: query
+          required: false
+          description: |
+            Optional. Default is `REALTIME`.
+
+            Controls whether realtime data is used for routing.
+            - `REALTIME`: the realtime timetable (delays, cancellations,
+              added/changed trips) is used and reflected in the response.
+            - `OFF`: only the scheduled timetable is used.
+          schema:
+            $ref: '#/components/schemas/RealtimeMode'
+            default: REALTIME
+
         - name: language
           in: query
           required: false
@@ -2550,6 +2564,21 @@ paths:
             type: boolean
             default: false
 
+        - name: realtimeMode
+          in: query
+          required: false
+          description: |
+            Optional. Default is `REALTIME`.
+
+            Controls whether realtime data is used.
+            - `REALTIME`: realtime data (delays, cancellations) is used
+              stop times are returned and sorted by their realtime time.
+            - `OFF`: only scheduled data is used; stop times are returned and
+              sorted by their planned time, with no realtime annotation.
+          schema:
+            $ref: '#/components/schemas/RealtimeMode'
+            default: REALTIME
+
         - name: language
           in: query
           required: false
@@ -3713,6 +3742,17 @@ components:
         - NONE
         - LOW
         - HIGH
+
+    RealtimeMode:
+      description: |
+        Controls whether realtime data (delays, cancellations, added/changed trips) is used.
+
+        - `REALTIME`: use realtime data.
+        - `OFF`: use the scheduled timetable only.
+      type: string
+      enum:
+        - OFF
+        - REALTIME
 
     PedestrianProfile:
       description: Different accessibility profiles for pedestrians.
