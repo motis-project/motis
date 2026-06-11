@@ -145,8 +145,8 @@ const translations: Translations = {
 		information: 'Informationen',
 		more: 'mehr'
 	},
-	RENTAL_BICYCLE: 'Fahrradverleih',
-	RENTAL_CARGO_BICYCLE: 'Lastenradverleih',
+	RENTAL_BICYCLE: 'Fahrrad Sharing',
+	RENTAL_CARGO_BICYCLE: 'Lastenrad Sharing',
 	RENTAL_CAR: 'Car Sharing',
 	RENTAL_MOPED: 'Moped Sharing',
 	RENTAL_SCOOTER_STANDING: 'Scooter Sharing',
@@ -174,11 +174,11 @@ const translations: Translations = {
 	DEBUG_RAILWAY_ROUTE: 'Bahnroute (Debug)',
 	DEBUG_FERRY_ROUTE: 'Fährenroute (Debug)',
 	colorMode: {
-		none: 'Nichts',
+		none: 'Keine Kartendarstellung',
 		stops: 'Haltestellen',
-		rt: 'Fahrten nach Echtzeit',
-		route: 'Fahrten nach Fahrplan',
-		mode: 'Fahrten nach Verkehrsmittel'
+		rt: 'Fahrplan: Verspätung',
+		route: 'Fahrplan: Linienfarben',
+		mode: 'Fahrplan: Verkehrsmittel'
 	},
 	showMyLocation: 'Meinen Standort anzeigen',
 	toggleHillshades: 'Schummerung ein/aus',
