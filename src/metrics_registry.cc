@@ -134,7 +134,12 @@ metrics_registry::metrics_registry(
                        .Help("Timestamp of last RT, GBFS, Elevator updates")
                        .Register(registry_)},
       last_update_rt_{last_update_.Add({{"feed", "rt"}})},
-      last_update_gbfs_{last_update_.Add({{"feed", "gbfs"}})} {}
+      last_update_gbfs_{last_update_.Add({{"feed", "gbfs"}})},
+      gbfs_last_update_timestamp_seconds_{
+          prometheus::BuildGauge()
+              .Name("gbfs_last_update_timestamp_seconds")
+              .Help("Timestamp of last successful GBFS update per provider")
+              .Register(registry_)} {}
 
 metrics_registry::~metrics_registry() = default;
 

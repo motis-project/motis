@@ -158,8 +158,10 @@ struct gbfs_update {
               osr::ways const& w,
               osr::lookup const& l,
               gbfs_data* d,
-              gbfs_data const* prev_d)
-      : c_{c},
+              gbfs_data const* prev_d,
+              metrics_registry const* metrics)
+      : metrics_{metrics},
+        c_{c},
         w_{w},
         l_{l},
         d_{d},
@@ -522,6 +524,10 @@ struct gbfs_update {
       data_changed = vehicle_types_updated || stations_updated ||
                      station_status_updated || vehicle_status_updated ||
                      geofencing_updated;
+
+      metrics_->gbfs_last_update_timestamp_seconds_
+          .Add({{"provider_id", pf.id_}})
+          .SetToCurrentTime();
     } catch (std::exception const& ex) {
       std::cerr << "[GBFS] error processing feed " << pf.id_ << " (" << pf.url_
                 << "): " << ex.what() << "\n";
@@ -847,6 +853,10 @@ struct gbfs_update {
     }
 
     af.feeds_ = std::move(feeds);
+
+    metrics_->gbfs_last_update_timestamp_seconds_.Add({{"provider_id", af.id_}})
+        .SetToCurrentTime();
+
     co_await update_aggregated_feed_provider_feeds(af);
   }
 
@@ -1109,6 +1119,8 @@ struct gbfs_update {
         .value_or(false);
   }
 
+  metrics_registry const* metrics_{};
+
   config::gbfs const& c_;
   osr::ways const& w_;
   osr::lookup const& l_;
@@ -1134,7 +1146,7 @@ awaitable<void> update(config const& c,
   auto const prev_d = data_ptr;
   auto const d = std::make_shared<gbfs_data>(c.gbfs_->cache_size_);
 
-  auto update = gbfs_update{*c.gbfs_, w, l, d.get(), prev_d.get()};
+  auto update = gbfs_update{*c.gbfs_, w, l, d.get(), prev_d.get(), metrics};
   try {
     co_await update.run();
   } catch (std::exception const& e) {

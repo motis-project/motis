@@ -44,6 +44,7 @@ struct metrics_registry {
   prometheus::Family<prometheus::Gauge>& last_update_;
   prometheus::Gauge& last_update_rt_;
   prometheus::Gauge& last_update_gbfs_;
+  prometheus::Family<prometheus::Gauge>& gbfs_last_update_timestamp_seconds_;
 
 private:
   metrics_registry(prometheus::Histogram::BucketBoundaries event_boundaries,
