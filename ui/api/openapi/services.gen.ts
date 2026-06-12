@@ -186,10 +186,10 @@ export const stops = <ThrowOnError extends boolean = false>(options: Options<Sto
 /**
  * Get all routes/lines serving a stop (without time-based queries)
  */
-export const stopInfo = <ThrowOnError extends boolean = false>(options: Options<StopInfoData, ThrowOnError>) => {
+export const stopInfo = <ThrowOnError extends boolean = false>(options?: Options<StopInfoData, ThrowOnError>) => {
     return (options?.client ?? client).get<StopInfoResponse, StopInfoError, ThrowOnError>({
         ...options,
-        url: '/api/v1/stop'
+        url: '/api/v6/stop'
     });
 };
 

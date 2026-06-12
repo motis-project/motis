@@ -88,7 +88,7 @@ TEST(motis, stop) {
   auto const route_ids_at = [&](char const* stop_id) {
     auto ids = std::set<std::string>{};
     for (auto const& r :
-         ep(std::string{"/api/v1/stop?stopId="} + stop_id).routes_) {
+         ep(std::string{"/api/v6/stop?stopId="} + stop_id).routes_) {
       ids.insert(r.routeId_);
     }
     return ids;
@@ -128,6 +128,6 @@ TEST(motis, stop) {
          "out-of-bounds section access";
 
   // place_ must be filled for a stopId query
-  auto const resp = ep("/api/v1/stop?stopId=test_A");
+  auto const resp = ep("/api/v6/stop?stopId=test_A");
   EXPECT_FALSE(resp.place_.name_.empty());
 }

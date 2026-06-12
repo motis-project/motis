@@ -3520,7 +3520,13 @@ export type StopsResponse = (Array<Place>);
 export type StopsError = (Error);
 
 export type StopInfoData = {
-    query: {
+    query?: {
+        /**
+         * latitude,longitude pair used as center for a radius search
+         * (used when stopId is not provided or not found)
+         *
+         */
+        center?: string;
         /**
          * language tags as used in OpenStreetMap / GTFS
          * (usually BCP-47 / ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
@@ -3528,9 +3534,13 @@ export type StopInfoData = {
          */
         language?: Array<(string)>;
         /**
+         * search radius in meters around center (default 500)
+         */
+        radius?: number;
+        /**
          * stop ID as returned by /api/v1/geocode or /api/v1/map/stops
          */
-        stopId: string;
+        stopId?: string;
         /**
          * include active alerts for the stop
          */
