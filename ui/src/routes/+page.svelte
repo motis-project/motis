@@ -532,7 +532,7 @@
 						withFares: true,
 						numLegAlternatives: 3,
 						slowDirect,
-						fastestDirectFactor: 1.5,
+						fastestDirectFactor: 10,
 						pedestrianProfile,
 						joinInterlinedLegs: false,
 						transitModes:
