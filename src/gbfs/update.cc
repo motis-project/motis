@@ -61,6 +61,7 @@ struct gbfs_file {
   json::value json_;
   cista::hash_t hash_{};
   std::chrono::system_clock::time_point next_refresh_;
+  std::optional<std::chrono::system_clock::time_point> last_updated_{};
 };
 
 std::string read_file(std::filesystem::path const& path) {
@@ -346,6 +347,7 @@ struct gbfs_update {
         prev_provider = prev_d_->providers_[it->second].get();
         if (prev_provider != nullptr) {
           provider.file_infos_ = prev_provider->file_infos_;
+          provider.last_updated_ = prev_provider->last_updated_;
         }
       }
     }
@@ -421,6 +423,10 @@ struct gbfs_update {
           auto file = co_await fetch_file(name, file_infos->urls_.at(name),
                                           pf.headers_, pf.oauth_, pf.dir_,
                                           pf.default_ttl_, pf.overwrite_ttl_);
+          if (file.last_updated_.has_value() &&
+              *file.last_updated_ > provider.last_updated_) {
+            provider.last_updated_ = *file.last_updated_;
+          }
           auto const hash_changed = file.hash_ != fi.hash_;
           auto j_root = file.json_.as_object();
           fi.expiry_ = file.next_refresh_;
@@ -528,6 +534,11 @@ struct gbfs_update {
       metrics_->gbfs_last_update_timestamp_seconds_
           .Add({{"provider_id", pf.id_}})
           .SetToCurrentTime();
+
+      metrics_->gbfs_feed_timestamp_seconds_.Add({{"tag", pf.id_}})
+          .Set(std::chrono::duration_cast<std::chrono::duration<double>>(
+                   provider.last_updated_.time_since_epoch())
+                   .count());
     } catch (std::exception const& ex) {
       std::cerr << "[GBFS] error processing feed " << pf.id_ << " (" << pf.url_
                 << "): " << ex.what() << "\n";
@@ -550,6 +561,7 @@ struct gbfs_update {
         provider.geofencing_zones_ = prev_provider->geofencing_zones_;
         provider.has_vehicles_to_rent_ = prev_provider->has_vehicles_to_rent_;
         provider.bbox_ = prev_provider->bbox_;
+        provider.last_updated_ = prev_provider->last_updated_;
       }
     }
 
@@ -901,9 +913,14 @@ struct gbfs_update {
     auto j_root = j.as_object();
     auto const next_refresh = get_expiry(j_root, std::chrono::seconds{0},
                                          default_ttl, overwrite_ttl, name);
+    auto last_updated = std::optional<std::chrono::system_clock::time_point>{};
+    if (auto const it = j_root.find("last_updated"); it != j_root.end()) {
+      last_updated = parse_timestamp(it->value());
+    }
     co_return gbfs_file{.json_ = std::move(j),
                         .hash_ = hash_gbfs_data(content),
-                        .next_refresh_ = next_refresh};
+                        .next_refresh_ = next_refresh,
+                        .last_updated_ = last_updated};
   }
 
   awaitable<void> get_oauth_token(std::shared_ptr<oauth_state> const& oauth,

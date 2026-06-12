@@ -1,7 +1,11 @@
 #include <algorithm>
+#include <chrono>
 #include <optional>
+#include <sstream>
 #include <string_view>
 #include <vector>
+
+#include "date/date.h"
 
 #include "motis/gbfs/parser.h"
 
@@ -14,6 +18,37 @@
 namespace json = boost::json;
 
 namespace motis::gbfs {
+
+std::optional<std::chrono::system_clock::time_point> parse_timestamp(
+    json::value const& val) {
+  if (val.is_int64()) {
+    return std::chrono::system_clock::time_point{
+        std::chrono::seconds{val.to_number<std::int64_t>()}};
+  }
+  if (val.is_uint64()) {
+    return std::chrono::system_clock::time_point{std::chrono::seconds{
+        static_cast<std::int64_t>(val.to_number<std::uint64_t>())}};
+  }
+  if (val.is_string()) {
+    auto const s = std::string{val.as_string()};
+    auto tp = std::chrono::system_clock::time_point{};
+    auto iss = std::istringstream{s};
+    if (iss >> date::parse("%FT%T%Ez", tp); !iss.fail()) {
+      return tp;
+    }
+    iss.clear();
+    iss.str(s);
+    if (iss >> date::parse("%FT%T%z", tp); !iss.fail()) {
+      return tp;
+    }
+    iss.clear();
+    iss.str(s);
+    if (iss >> date::parse("%FT%T", tp); !iss.fail()) {
+      return tp;
+    }
+  }
+  return std::nullopt;
+}
 
 gbfs_version get_version(json::value const& root) {
   auto const& root_obj = root.as_object();

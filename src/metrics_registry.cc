@@ -139,6 +139,11 @@ metrics_registry::metrics_registry(
           prometheus::BuildGauge()
               .Name("gbfs_last_update_timestamp_seconds")
               .Help("Timestamp of last successful GBFS update per provider")
+              .Register(registry_)},
+      gbfs_feed_timestamp_seconds_{
+          prometheus::BuildGauge()
+              .Name("gbfs_feed_timestamp_seconds")
+              .Help("Timestamp from the last_updated field of the GBFS feed")
               .Register(registry_)} {}
 
 metrics_registry::~metrics_registry() = default;

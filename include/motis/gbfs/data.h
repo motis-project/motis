@@ -398,6 +398,7 @@ struct gbfs_provider {
   vector_map<gbfs_products_idx_t, provider_products> products_;
   bool has_vehicles_to_rent_{};
   geo::box bbox_{};
+  std::chrono::system_clock::time_point last_updated_{};
 
   std::optional<std::string> color_{};
 };

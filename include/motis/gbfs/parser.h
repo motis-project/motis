@@ -1,5 +1,7 @@
 #pragma once
 
+#include <chrono>
+#include <optional>
 #include <string>
 
 #include "boost/json.hpp"
@@ -11,6 +13,9 @@ namespace motis::gbfs {
 
 hash_map<std::string, std::string> parse_discovery(
     boost::json::value const& root);
+
+std::optional<std::chrono::system_clock::time_point> parse_timestamp(
+    boost::json::value const& val);
 
 std::optional<return_constraint> parse_return_constraint(std::string_view s);
 
