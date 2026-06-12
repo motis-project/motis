@@ -14,7 +14,15 @@
 		type Error as ApiError
 	} from '@motis-project/motis-client';
 	import Time from '$lib/Time.svelte';
-	import { LoaderCircle, Rabbit, Snail, Repeat, Footprints, ShieldOff, Shield } from '@lucide/svelte';
+	import {
+		LoaderCircle,
+		Rabbit,
+		Snail,
+		Repeat,
+		Footprints,
+		ShieldOff,
+		Shield
+	} from '@lucide/svelte';
 	import { t } from '$lib/i18n/translation';
 	import DirectConnection from '$lib/DirectConnection.svelte';
 	import type { RequestResult } from '@hey-api/client-fetch';
