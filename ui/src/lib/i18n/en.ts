@@ -194,7 +194,12 @@ const translations: Translations = {
 			default:
 				return `${n} routes`;
 		}
-	}
+	},
+	fastest: 'fastest',
+	slowest: 'slowest',
+	fewestTransfers: 'fewest transfers',
+	shortTransfer: 'short transfer time',
+	longTransfers: 'long transfer times'
 };
 
 export default translations;
