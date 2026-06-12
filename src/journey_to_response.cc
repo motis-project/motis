@@ -64,6 +64,14 @@ api::ModeEnum to_mode(osr::search_profile const m) {
   std::unreachable();
 }
 
+api::ModeEnum to_mode(n::transport_mode_id_t const id) {
+  return flex::mode_id::is_flex(id)
+             ? api::ModeEnum::FLEX
+             : (id >= kGbfsTransportModeIdOffset
+                    ? api::ModeEnum::RENTAL
+                    : to_mode(static_cast<osr::search_profile>(id)));
+}
+
 void cleanup_intermodal(api::Itinerary& i) {
   if (i.legs_.front().from_.name_ == "END") {
     i.legs_.front().from_.name_ = "START";
