@@ -23,6 +23,8 @@
 
 namespace motis {
 
+api::ModeEnum to_mode(nigiri::transport_mode_id_t);
+
 api::ModeEnum to_mode(osr::search_profile);
 
 double get_level(osr::ways const*,
