@@ -33,6 +33,19 @@
 		updateStartDest: (r: Awaited<RequestResult<PlanResponse, ApiError, false>>) => PlanResponse;
 	} = $props();
 
+	let minTransfers = $state(Number.MAX_SAFE_INTEGER);
+	let minDuration = $state(Number.MAX_SAFE_INTEGER);
+	$effect(() => {
+		routingResponses.forEach(routingResponse => {
+			return  routingResponse.then(planResponse => {
+				planResponse.itineraries.forEach(itinerary => {
+					minTransfers = Math.min(minTransfers, itinerary.transfers);
+					minDuration = Math.min(minDuration, itinerary.duration);
+				})
+			});
+		});
+	});
+
 	const throwOnError = (promise: RequestResult<PlanResponse, PlanError, false>) =>
 		promise.then((res) => {
 			if (res.error) {
@@ -145,6 +158,9 @@
 											</div>
 											<div class="text-center text-nowrap">
 												{it.transfers}
+												{#if it.transfers == minTransfers}
+													<br>minTransfers
+												{/if}
 											</div>
 										</div>
 										<Separator orientation="vertical" />
@@ -154,6 +170,9 @@
 											</div>
 											<div class="text-center text-nowrap">
 												{formatDurationSec(it.duration)}
+												{#if it.duration == minDuration}
+													<br>fastest
+												{/if}
 											</div>
 										</div>
 									</div>
