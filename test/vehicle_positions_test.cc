@@ -1,19 +1,69 @@
 #include "gmock/gmock-matchers.h"
 #include "gtest/gtest.h"
 
+#include <filesystem>
+#include <fstream>
+#include <string>
+
+#include "boost/asio/io_context.hpp"
+
+#ifdef NO_DATA
+#undef NO_DATA
+#endif
 #include "gtfsrt/gtfs-realtime.pb.h"
 
 #include "net/bad_request_exception.h"
 #include "openapi/bad_request_exception.h"
 
+#include "motis/config.h"
 #include "motis/data.h"
 #include "motis/endpoints/map/vehicles.h"
+#include "motis/import.h"
 #include "motis/rt/vehicle_position.h"
+#include "motis/rt_update.h"
 
 using namespace motis::vehicle_positions;
 using namespace testing;
 
 namespace {
+
+namespace fs = std::filesystem;
+
+constexpr auto const kGTFS = R"(
+# agency.txt
+agency_id,agency_name,agency_url,agency_timezone
+Test,Test,https://example.com,Europe/Berlin
+
+# stops.txt
+stop_id,stop_name,stop_lat,stop_lon
+stop-1,Stop 1,50.061,19.938
+
+# routes.txt
+route_id,agency_id,route_short_name,route_long_name,route_type
+route-1,Test,1,,3
+
+# trips.txt
+route_id,service_id,trip_id,trip_headsign
+route-1,S1,trip-1,Destination
+
+# stop_times.txt
+trip_id,arrival_time,departure_time,stop_id,stop_sequence
+trip-1,01:00:00,01:00:00,stop-1,1
+
+# calendar_dates.txt
+service_id,date,exception_type
+S1,20260521,1
+)";
+
+struct cwd_guard {
+  explicit cwd_guard(fs::path cwd) : old_cwd_{fs::current_path()} {
+    fs::current_path(std::move(cwd));
+  }
+
+  ~cwd_guard() { fs::current_path(old_cwd_); }
+
+  fs::path old_cwd_;
+};
 
 transit_realtime::FeedMessage feed_with_vehicle(
     double const lat = 50.061,
@@ -166,4 +216,51 @@ TEST(motis_vehicle_positions, endpoint_returns_viewport_payload) {
   EXPECT_EQ(res.vehicles_.front().stopId_, "stop");
   EXPECT_EQ(res.vehicles_.front().currentStatus_, "IN_TRANSIT_TO");
   EXPECT_EQ(res.vehicles_.front().occupancyStatus_, "NO_DATA_AVAILABLE");
+}
+
+TEST(motis_vehicle_positions, rt_update_consumes_vehicle_only_gtfsrt_feed) {
+  auto const test_dir = fs::absolute("test/data/vehicle-only-rt-update");
+  auto ec = std::error_code{};
+  fs::remove_all(test_dir, ec);
+  fs::create_directories(test_dir);
+  auto cwd = cwd_guard{test_dir};
+
+  auto const c = motis::config{
+      .timetable_ = {motis::config::timetable{
+          .first_day_ = "2026-05-21",
+          .num_days_ = 2,
+          .update_interval_ = 3600,
+          .canned_rt_ = true,
+          .datasets_ = {{"test",
+                         {.path_ = kGTFS,
+                          .rt_ = {{{.url_ =
+                                         "https://example.test/"
+                                         "vehicle_positions"}}}}}}}}};
+
+  motis::import(c, "data");
+  auto d = motis::data{"data", c};
+
+  fs::create_directory("dump_rt");
+  auto const feed = feed_with_vehicle();
+  auto dump = std::ofstream{"dump_rt/test-https___example_test_"
+                            "vehicle_positions",
+                            std::ios::binary};
+  ASSERT_TRUE(dump.good());
+  auto const bytes = feed.SerializeAsString();
+  dump.write(bytes.data(), static_cast<std::streamsize>(bytes.size()));
+  dump.close();
+
+  auto ioc = boost::asio::io_context{};
+  motis::run_rt_update(ioc, c, d);
+  ioc.run_for(std::chrono::milliseconds{100});
+
+  auto const snapshot =
+      d.rt_->vehicle_positions_->snapshot(vehicle_viewport{
+          .min_ = geo::latlng{50.0, 19.8},
+          .max_ = geo::latlng{50.2, 20.1}});
+
+  ASSERT_THAT(snapshot, SizeIs(1));
+  EXPECT_EQ(snapshot.front().entity_id_, "entity-1");
+  EXPECT_EQ(snapshot.front().trip_.trip_id_, "trip-1");
+  EXPECT_EQ(snapshot.front().stop_id_, "stop-1");
 }
