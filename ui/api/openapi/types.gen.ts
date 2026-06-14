@@ -1081,6 +1081,101 @@ export type RentalVehicle = {
     rentalUriWeb?: string;
 };
 
+export type TransitVehicleRouteInfo = {
+    id: string;
+    shortName: string;
+    longName: string;
+    color?: string;
+    textColor?: string;
+};
+
+export type VehicleShapeSource = 'NONE' | 'TIMETABLE' | 'ROUTED';
+
+export type TransitVehicleDescriptor = {
+    id?: string;
+    label?: string;
+    licensePlate?: string;
+    wheelchairAccessible?: string;
+};
+
+export type TransitVehicleTripDescriptor = {
+    tripId?: string;
+    startDate?: string;
+    startTime?: string;
+    routeId?: string;
+    /**
+     * Passenger-facing trip headsign resolved from the static timetable when available.
+     */
+    headsign?: string;
+    directionId?: number;
+    scheduleRelationship?: string;
+};
+
+export type ReportedVehiclePosition = {
+    /**
+     * latitude
+     */
+    lat: number;
+    /**
+     * longitude
+     */
+    lon: number;
+    /**
+     * Bearing in degrees.
+     */
+    bearing?: number;
+    /**
+     * Speed in meters per second.
+     */
+    speedMps?: number;
+};
+
+export type VehiclePosition = {
+    /**
+     * Realtime feed identity for this vehicle position.
+     */
+    feedId: string;
+    /**
+     * GTFS Realtime FeedEntity id.
+     */
+    entityId: string;
+    vehicle: TransitVehicleDescriptor;
+    trip: TransitVehicleTripDescriptor;
+    /**
+     * Passenger-facing route metadata for marker labels and colors when resolvable.
+     */
+    route?: TransitVehicleRouteInfo;
+    reportedPosition: ReportedVehiclePosition;
+    /**
+     * Transit mode for this vehicle when resolvable.
+     */
+    mode?: Mode;
+    /**
+     * Encoded trip or route shape for map animation when resolvable.
+     */
+    shape?: EncodedPolyline;
+    /**
+     * Source of the returned shape.
+     */
+    shapeSource?: VehicleShapeSource;
+    currentStopSequence?: number;
+    stopId?: string;
+    currentStatus?: string;
+    occupancyStatus?: string;
+    /**
+     * VehiclePosition timestamp from the realtime feed as Unix seconds.
+     */
+    reportedTime?: number;
+    /**
+     * Server ingest timestamp as Unix seconds.
+     */
+    ingestedTime: number;
+};
+
+export type VehiclePositionsResponse = {
+    vehicles: Array<VehiclePosition>;
+};
+
 export type RentalZone = {
     /**
      * Unique identifier of the rental provider
@@ -1851,6 +1946,17 @@ export type RouteInfo = {
     routeIdx: number;
     pathSource: RoutePathSource;
     segments: Array<RouteSegment>;
+};
+
+export type HealthResponse = {
+    /**
+     * GTFSRT, SIRI Lite, VDV AUS, VDV454 feeds.
+     */
+    rt?: boolean;
+    /**
+     * GBFS feeds.
+     */
+    gbfs?: boolean;
 };
 
 export type PlanData = {
@@ -3361,6 +3467,29 @@ export type RouteDetailsResponse = ({
 
 export type RouteDetailsError = (Error);
 
+export type VehiclesData = {
+    query: {
+        /**
+         * language tags as used in OpenStreetMap / GTFS
+         * (usually BCP-47 / ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
+         *
+         */
+        language?: Array<(string)>;
+        /**
+         * latitude,longitude pair of the opposite viewport corner
+         */
+        max: string;
+        /**
+         * latitude,longitude pair of one viewport corner
+         */
+        min: string;
+    };
+};
+
+export type VehiclesResponse = (VehiclePositionsResponse);
+
+export type VehiclesError = (Error);
+
 export type RentalsData = {
     query?: {
         /**
@@ -3433,6 +3562,10 @@ export type RentalsResponse = ({
 });
 
 export type RentalsError = (Error);
+
+export type HealthResponse2 = (HealthResponse);
+
+export type HealthError = (HealthResponse);
 
 export type TransfersData = {
     query: {

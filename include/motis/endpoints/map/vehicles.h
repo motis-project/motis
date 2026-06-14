@@ -14,6 +14,7 @@ struct vehicles {
 
   tag_lookup const* tags_{nullptr};
   nigiri::timetable const* tt_{nullptr};
+  nigiri::shapes_storage const* shapes_{nullptr};
   std::shared_ptr<rt> const& rt_;
 };
 

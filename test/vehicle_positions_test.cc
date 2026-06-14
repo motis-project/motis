@@ -37,6 +37,7 @@ Test,Test,https://example.com,Europe/Berlin
 # stops.txt
 stop_id,stop_name,stop_lat,stop_lon
 stop-1,Stop 1,50.061,19.938
+stop-2,Stop 2,50.071,19.948
 
 # routes.txt
 route_id,agency_id,route_short_name,route_long_name,route_type
@@ -49,6 +50,7 @@ route-1,S1,trip-1,Destination
 # stop_times.txt
 trip_id,arrival_time,departure_time,stop_id,stop_sequence
 trip-1,01:00:00,01:00:00,stop-1,1
+trip-1,01:05:00,01:05:00,stop-2,2
 
 # calendar_dates.txt
 service_id,date,exception_type
@@ -67,7 +69,8 @@ struct cwd_guard {
 
 transit_realtime::FeedMessage feed_with_vehicle(
     double const lat = 50.061,
-    double const lon = 19.938) {
+    double const lon = 19.938,
+    std::string const& route_id = "route-1") {
   auto msg = transit_realtime::FeedMessage{};
   msg.mutable_header()->set_gtfs_realtime_version("2.0");
   msg.mutable_header()->set_incrementality(
@@ -85,7 +88,7 @@ transit_realtime::FeedMessage feed_with_vehicle(
   vehicle->mutable_trip()->set_trip_id("trip-1");
   vehicle->mutable_trip()->set_start_date("20260521");
   vehicle->mutable_trip()->set_start_time("12:34:00");
-  vehicle->mutable_trip()->set_route_id("route-1");
+  vehicle->mutable_trip()->set_route_id(route_id);
   vehicle->mutable_trip()->set_direction_id(1);
   vehicle->mutable_trip()->set_schedule_relationship(
       transit_realtime::TripDescriptor_ScheduleRelationship_SCHEDULED);
@@ -241,7 +244,7 @@ TEST(motis_vehicle_positions, rt_update_consumes_vehicle_only_gtfsrt_feed) {
   auto d = motis::data{"data", c};
 
   fs::create_directory("dump_rt");
-  auto const feed = feed_with_vehicle();
+  auto const feed = feed_with_vehicle(50.061, 19.938, "prefix-route-1");
   auto dump = std::ofstream{"dump_rt/test-https___example_test_"
                             "vehicle_positions",
                             std::ios::binary};
@@ -263,4 +266,21 @@ TEST(motis_vehicle_positions, rt_update_consumes_vehicle_only_gtfsrt_feed) {
   EXPECT_EQ(snapshot.front().entity_id_, "entity-1");
   EXPECT_EQ(snapshot.front().trip_.trip_id_, "trip-1");
   EXPECT_EQ(snapshot.front().stop_id_, "stop-1");
+
+  auto endpoint = motis::ep::vehicles{.tags_ = d.tags_.get(),
+                                      .tt_ = d.tt_.get(),
+                                      .shapes_ = d.shapes_.get(),
+                                      .rt_ = d.rt_};
+  auto const res =
+      endpoint("/api/v1/map/vehicles?min=50.0,19.8&max=50.2,20.1");
+
+  ASSERT_THAT(res.vehicles_, SizeIs(1));
+  ASSERT_TRUE(res.vehicles_.front().route_.has_value());
+  EXPECT_EQ(res.vehicles_.front().route_->shortName_, "1");
+  EXPECT_EQ(res.vehicles_.front().trip_.routeId_, "prefix-route-1");
+  EXPECT_EQ(res.vehicles_.front().route_->id_, "prefix-route-1");
+  ASSERT_TRUE(res.vehicles_.front().mode_.has_value());
+  EXPECT_EQ(res.vehicles_.front().mode_, motis::api::ModeEnum::BUS);
+  ASSERT_TRUE(res.vehicles_.front().shape_.has_value());
+  EXPECT_GT(res.vehicles_.front().shape_->length_, 0);
 }

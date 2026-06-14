@@ -4240,6 +4240,31 @@ components:
           type: string
           description: Rental URI for web (deep link to the specific vehicle)
 
+    TransitVehicleRouteInfo:
+      type: object
+      required:
+        - id
+        - shortName
+        - longName
+      properties:
+        id:
+          type: string
+        shortName:
+          type: string
+        longName:
+          type: string
+        color:
+          type: string
+        textColor:
+          type: string
+
+    VehicleShapeSource:
+      type: string
+      enum:
+        - NONE
+        - TIMETABLE
+        - ROUTED
+
     TransitVehicleDescriptor:
       type: object
       properties:
@@ -4311,8 +4336,20 @@ components:
           $ref: '#/components/schemas/TransitVehicleDescriptor'
         trip:
           $ref: '#/components/schemas/TransitVehicleTripDescriptor'
+        route:
+          $ref: '#/components/schemas/TransitVehicleRouteInfo'
+          description: Passenger-facing route metadata for marker labels and colors when resolvable.
         reportedPosition:
           $ref: '#/components/schemas/ReportedVehiclePosition'
+        mode:
+          $ref: '#/components/schemas/Mode'
+          description: Transit mode for this vehicle when resolvable.
+        shape:
+          $ref: '#/components/schemas/EncodedPolyline'
+          description: Encoded trip or route shape for map animation when resolvable.
+        shapeSource:
+          $ref: '#/components/schemas/VehicleShapeSource'
+          description: Source of the returned shape.
         currentStopSequence:
           type: integer
           format: int64

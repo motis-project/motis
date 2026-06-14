@@ -1324,6 +1324,179 @@ export const RentalVehicleSchema = {
     }
 } as const;
 
+export const TransitVehicleRouteInfoSchema = {
+    type: 'object',
+    required: ['id', 'shortName', 'longName'],
+    properties: {
+        id: {
+            type: 'string'
+        },
+        shortName: {
+            type: 'string'
+        },
+        longName: {
+            type: 'string'
+        },
+        color: {
+            type: 'string'
+        },
+        textColor: {
+            type: 'string'
+        }
+    }
+} as const;
+
+export const VehicleShapeSourceSchema = {
+    type: 'string',
+    enum: ['NONE', 'TIMETABLE', 'ROUTED']
+} as const;
+
+export const TransitVehicleDescriptorSchema = {
+    type: 'object',
+    properties: {
+        id: {
+            type: 'string'
+        },
+        label: {
+            type: 'string'
+        },
+        licensePlate: {
+            type: 'string'
+        },
+        wheelchairAccessible: {
+            type: 'string'
+        }
+    }
+} as const;
+
+export const TransitVehicleTripDescriptorSchema = {
+    type: 'object',
+    properties: {
+        tripId: {
+            type: 'string'
+        },
+        startDate: {
+            type: 'string'
+        },
+        startTime: {
+            type: 'string'
+        },
+        routeId: {
+            type: 'string'
+        },
+        headsign: {
+            type: 'string',
+            description: 'Passenger-facing trip headsign resolved from the static timetable when available.'
+        },
+        directionId: {
+            type: 'integer',
+            format: 'int64'
+        },
+        scheduleRelationship: {
+            type: 'string'
+        }
+    }
+} as const;
+
+export const ReportedVehiclePositionSchema = {
+    type: 'object',
+    required: ['lat', 'lon'],
+    properties: {
+        lat: {
+            description: 'latitude',
+            type: 'number'
+        },
+        lon: {
+            description: 'longitude',
+            type: 'number'
+        },
+        bearing: {
+            description: 'Bearing in degrees.',
+            type: 'number'
+        },
+        speedMps: {
+            description: 'Speed in meters per second.',
+            type: 'number'
+        }
+    }
+} as const;
+
+export const VehiclePositionSchema = {
+    type: 'object',
+    required: ['feedId', 'entityId', 'vehicle', 'trip', 'reportedPosition', 'ingestedTime'],
+    properties: {
+        feedId: {
+            type: 'string',
+            description: 'Realtime feed identity for this vehicle position.'
+        },
+        entityId: {
+            type: 'string',
+            description: 'GTFS Realtime FeedEntity id.'
+        },
+        vehicle: {
+            '$ref': '#/components/schemas/TransitVehicleDescriptor'
+        },
+        trip: {
+            '$ref': '#/components/schemas/TransitVehicleTripDescriptor'
+        },
+        route: {
+            '$ref': '#/components/schemas/TransitVehicleRouteInfo',
+            description: 'Passenger-facing route metadata for marker labels and colors when resolvable.'
+        },
+        reportedPosition: {
+            '$ref': '#/components/schemas/ReportedVehiclePosition'
+        },
+        mode: {
+            '$ref': '#/components/schemas/Mode',
+            description: 'Transit mode for this vehicle when resolvable.'
+        },
+        shape: {
+            '$ref': '#/components/schemas/EncodedPolyline',
+            description: 'Encoded trip or route shape for map animation when resolvable.'
+        },
+        shapeSource: {
+            '$ref': '#/components/schemas/VehicleShapeSource',
+            description: 'Source of the returned shape.'
+        },
+        currentStopSequence: {
+            type: 'integer',
+            format: 'int64'
+        },
+        stopId: {
+            type: 'string'
+        },
+        currentStatus: {
+            type: 'string'
+        },
+        occupancyStatus: {
+            type: 'string'
+        },
+        reportedTime: {
+            type: 'integer',
+            format: 'int64',
+            description: 'VehiclePosition timestamp from the realtime feed as Unix seconds.'
+        },
+        ingestedTime: {
+            type: 'integer',
+            format: 'int64',
+            description: 'Server ingest timestamp as Unix seconds.'
+        }
+    }
+} as const;
+
+export const VehiclePositionsResponseSchema = {
+    type: 'object',
+    required: ['vehicles'],
+    properties: {
+        vehicles: {
+            type: 'array',
+            items: {
+                '$ref': '#/components/schemas/VehiclePosition'
+            }
+        }
+    }
+} as const;
+
 export const RentalZoneSchema = {
     type: 'object',
     required: ['providerId', 'providerGroupId', 'z', 'bbox', 'area', 'rules'],
@@ -2339,6 +2512,20 @@ export const RouteInfoSchema = {
             items: {
                 '$ref': '#/components/schemas/RouteSegment'
             }
+        }
+    }
+} as const;
+
+export const HealthResponseSchema = {
+    type: 'object',
+    properties: {
+        rt: {
+            type: 'boolean',
+            description: 'GTFSRT, SIRI Lite, VDV AUS, VDV454 feeds.'
+        },
+        gbfs: {
+            type: 'boolean',
+            description: 'GBFS feeds.'
         }
     }
 } as const;
