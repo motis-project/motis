@@ -18,7 +18,7 @@ struct vehicle_descriptor {
   std::optional<std::string> id_;
   std::optional<std::string> label_;
   std::optional<std::string> license_plate_;
-  std::optional<std::int32_t> wheelchair_accessible_;
+  std::optional<std::string> wheelchair_accessible_;
 };
 
 struct trip_descriptor {
@@ -27,7 +27,7 @@ struct trip_descriptor {
   std::optional<std::string> start_time_;
   std::optional<std::string> route_id_;
   std::optional<std::uint32_t> direction_id_;
-  std::optional<std::int32_t> schedule_relationship_;
+  std::optional<std::string> schedule_relationship_;
 };
 
 struct reported_position {
@@ -42,6 +42,10 @@ struct vehicle_position {
   vehicle_descriptor vehicle_;
   trip_descriptor trip_;
   reported_position reported_position_;
+  std::optional<std::uint32_t> current_stop_sequence_;
+  std::optional<std::string> stop_id_;
+  std::optional<std::string> current_status_;
+  std::optional<std::string> occupancy_status_;
   std::optional<std::int64_t> reported_time_;
   std::int64_t ingested_time_{};
 };

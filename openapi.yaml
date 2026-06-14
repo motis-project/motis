@@ -2747,6 +2747,17 @@ paths:
           description: latitude,longitude pair of the opposite viewport corner
           schema:
             type: string
+        - name: language
+          in: query
+          required: false
+          description: |
+            language tags as used in OpenStreetMap / GTFS
+            (usually BCP-47 / ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
+          schema:
+            type: array
+            items:
+              type: string
+          explode: false
       responses:
         '400':
           description: Bad Request
@@ -4238,6 +4249,8 @@ components:
           type: string
         licensePlate:
           type: string
+        wheelchairAccessible:
+          type: string
 
     TransitVehicleTripDescriptor:
       type: object
@@ -4250,9 +4263,14 @@ components:
           type: string
         routeId:
           type: string
+        headsign:
+          type: string
+          description: Passenger-facing trip headsign resolved from the static timetable when available.
         directionId:
           type: integer
           format: int64
+        scheduleRelationship:
+          type: string
 
     ReportedVehiclePosition:
       type: object
@@ -4295,6 +4313,15 @@ components:
           $ref: '#/components/schemas/TransitVehicleTripDescriptor'
         reportedPosition:
           $ref: '#/components/schemas/ReportedVehiclePosition'
+        currentStopSequence:
+          type: integer
+          format: int64
+        stopId:
+          type: string
+        currentStatus:
+          type: string
+        occupancyStatus:
+          type: string
         reportedTime:
           type: integer
           format: int64

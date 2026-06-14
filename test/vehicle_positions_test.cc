@@ -29,15 +29,26 @@ transit_realtime::FeedMessage feed_with_vehicle(
   vehicle->mutable_vehicle()->set_id("veh-1");
   vehicle->mutable_vehicle()->set_label("Vehicle 1");
   vehicle->mutable_vehicle()->set_license_plate("KR 12345");
+  vehicle->mutable_vehicle()->set_wheelchair_accessible(
+      transit_realtime::
+          VehicleDescriptor_WheelchairAccessible_WHEELCHAIR_ACCESSIBLE);
   vehicle->mutable_trip()->set_trip_id("trip-1");
   vehicle->mutable_trip()->set_start_date("20260521");
   vehicle->mutable_trip()->set_start_time("12:34:00");
   vehicle->mutable_trip()->set_route_id("route-1");
   vehicle->mutable_trip()->set_direction_id(1);
+  vehicle->mutable_trip()->set_schedule_relationship(
+      transit_realtime::TripDescriptor_ScheduleRelationship_SCHEDULED);
   vehicle->mutable_position()->set_latitude(lat);
   vehicle->mutable_position()->set_longitude(lon);
   vehicle->mutable_position()->set_bearing(90.0F);
   vehicle->mutable_position()->set_speed(7.5F);
+  vehicle->set_current_stop_sequence(23);
+  vehicle->set_stop_id("stop-1");
+  vehicle->set_current_status(
+      transit_realtime::VehiclePosition_VehicleStopStatus_STOPPED_AT);
+  vehicle->set_occupancy_status(
+      transit_realtime::VehiclePosition_OccupancyStatus_MANY_SEATS_AVAILABLE);
   vehicle->set_timestamp(1789992000);
   return msg;
 }
@@ -50,6 +61,10 @@ vehicle_position position(std::string feed_id,
       .feed_id_ = std::move(feed_id),
       .entity_id_ = std::move(entity_id),
       .reported_position_ = {.pos_ = geo::latlng{lat, lon}},
+      .current_stop_sequence_ = 7U,
+      .stop_id_ = "stop",
+      .current_status_ = "IN_TRANSIT_TO",
+      .occupancy_status_ = "NO_DATA_AVAILABLE",
       .ingested_time_ = 1};
 }
 
@@ -66,17 +81,23 @@ TEST(motis_vehicle_positions, parses_gtfsrt_vehicle_position_fields) {
   EXPECT_EQ(vehicle.vehicle_.id_, "veh-1");
   EXPECT_EQ(vehicle.vehicle_.label_, "Vehicle 1");
   EXPECT_EQ(vehicle.vehicle_.license_plate_, "KR 12345");
+  EXPECT_EQ(vehicle.vehicle_.wheelchair_accessible_, "WHEELCHAIR_ACCESSIBLE");
   EXPECT_EQ(vehicle.trip_.trip_id_, "trip-1");
   EXPECT_EQ(vehicle.trip_.start_date_, "20260521");
   EXPECT_EQ(vehicle.trip_.start_time_, "12:34:00");
   EXPECT_EQ(vehicle.trip_.route_id_, "route-1");
   EXPECT_EQ(vehicle.trip_.direction_id_, 1U);
+  EXPECT_EQ(vehicle.trip_.schedule_relationship_, "SCHEDULED");
   EXPECT_NEAR(vehicle.reported_position_.pos_.lat_, 50.061, 0.000001);
   EXPECT_NEAR(vehicle.reported_position_.pos_.lng_, 19.938, 0.000001);
   ASSERT_TRUE(vehicle.reported_position_.bearing_.has_value());
   EXPECT_DOUBLE_EQ(*vehicle.reported_position_.bearing_, 90.0);
   ASSERT_TRUE(vehicle.reported_position_.speed_mps_.has_value());
   EXPECT_DOUBLE_EQ(*vehicle.reported_position_.speed_mps_, 7.5);
+  EXPECT_EQ(vehicle.current_stop_sequence_, 23U);
+  EXPECT_EQ(vehicle.stop_id_, "stop-1");
+  EXPECT_EQ(vehicle.current_status_, "STOPPED_AT");
+  EXPECT_EQ(vehicle.occupancy_status_, "MANY_SEATS_AVAILABLE");
   EXPECT_EQ(vehicle.reported_time_, 1789992000);
   EXPECT_EQ(vehicle.ingested_time_, 1789992010);
 }
@@ -141,4 +162,8 @@ TEST(motis_vehicle_positions, endpoint_returns_viewport_payload) {
   EXPECT_EQ(res.vehicles_.front().entityId_, "inside");
   EXPECT_DOUBLE_EQ(res.vehicles_.front().reportedPosition_.lat_, 50.061);
   EXPECT_DOUBLE_EQ(res.vehicles_.front().reportedPosition_.lon_, 19.938);
+  EXPECT_EQ(res.vehicles_.front().currentStopSequence_, 7);
+  EXPECT_EQ(res.vehicles_.front().stopId_, "stop");
+  EXPECT_EQ(res.vehicles_.front().currentStatus_, "IN_TRANSIT_TO");
+  EXPECT_EQ(res.vehicles_.front().occupancyStatus_, "NO_DATA_AVAILABLE");
 }

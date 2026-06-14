@@ -24,6 +24,10 @@ std::optional<std::string> present_string(std::string const& s) {
   return s.empty() ? std::nullopt : std::optional{s};
 }
 
+std::optional<std::string> present_enum_name(std::string const& name) {
+  return name.empty() ? std::nullopt : std::optional{name};
+}
+
 }  // namespace
 
 bool vehicle_viewport::contains(geo::latlng const& pos) const {
@@ -67,6 +71,24 @@ std::vector<vehicle_position> parse_gtfsrt_vehicle_positions(
                                                 ? std::optional<double>{
                                                       gtfs_pos.speed()}
                                                 : std::nullopt},
+        .current_stop_sequence_ =
+            gtfs_vehicle.has_current_stop_sequence()
+                ? std::optional<std::uint32_t>{
+                      gtfs_vehicle.current_stop_sequence()}
+                : std::nullopt,
+        .stop_id_ = present_string(gtfs_vehicle.stop_id()),
+        .current_status_ =
+            gtfs_vehicle.has_current_status()
+                ? present_enum_name(
+                      gtfsrt::VehiclePosition_VehicleStopStatus_Name(
+                          gtfs_vehicle.current_status()))
+                : std::nullopt,
+        .occupancy_status_ =
+            gtfs_vehicle.has_occupancy_status()
+                ? present_enum_name(
+                      gtfsrt::VehiclePosition_OccupancyStatus_Name(
+                          gtfs_vehicle.occupancy_status()))
+                : std::nullopt,
         .reported_time_ = gtfs_vehicle.has_timestamp()
                               ? std::optional<std::int64_t>{
                                     static_cast<std::int64_t>(
@@ -82,7 +104,8 @@ std::vector<vehicle_position> parse_gtfsrt_vehicle_positions(
           present_string(descriptor.license_plate());
       if (descriptor.has_wheelchair_accessible()) {
         vehicle.vehicle_.wheelchair_accessible_ =
-            descriptor.wheelchair_accessible();
+            gtfsrt::VehicleDescriptor_WheelchairAccessible_Name(
+                descriptor.wheelchair_accessible());
       }
     }
 
@@ -96,7 +119,9 @@ std::vector<vehicle_position> parse_gtfsrt_vehicle_positions(
         vehicle.trip_.direction_id_ = trip.direction_id();
       }
       if (trip.has_schedule_relationship()) {
-        vehicle.trip_.schedule_relationship_ = trip.schedule_relationship();
+        vehicle.trip_.schedule_relationship_ =
+            gtfsrt::TripDescriptor_ScheduleRelationship_Name(
+                trip.schedule_relationship());
       }
     }
 
