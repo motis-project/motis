@@ -4282,6 +4282,9 @@ components:
       properties:
         tripId:
           type: string
+        scheduledTripId:
+          type: string
+          description: Resolved MOTIS trip id for the static/realtime run when the vehicle can be matched to the timetable.
         startDate:
           type: string
         startTime:

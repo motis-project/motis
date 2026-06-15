@@ -367,6 +367,7 @@ std::optional<api::EncodedPolyline> encode_route_stop_shape(
 }
 
 struct vehicle_details {
+  std::optional<std::string> scheduled_trip_id_;
   std::optional<std::string> headsign_;
   std::optional<api::TransitVehicleRouteInfo> route_;
   std::optional<api::ModeEnum> mode_;
@@ -387,6 +388,8 @@ vehicle_details resolve_details(tag_lookup const* tags,
 
   if (auto fr = resolve_run(*tags, *tt, rtt, v); fr.has_value()) {
     auto const first = (*fr)[0];
+    details.scheduled_trip_id_ =
+        tags->id(*tt, first, n::event_type::kDep);
     details.headsign_ =
         std::string{first.direction(lang, n::event_type::kDep)};
     details.route_ = to_route_info(first, lang);
@@ -400,6 +403,8 @@ vehicle_details resolve_details(tag_lookup const* tags,
     if (auto fr = resolve_static_trip_run_by_id(*tags, *tt, v);
         fr.has_value()) {
       auto const first = (*fr)[0];
+      details.scheduled_trip_id_ =
+          tags->id(*tt, first, n::event_type::kDep);
       details.headsign_ =
           std::string{first.direction(lang, n::event_type::kDep)};
       details.route_ = to_route_info(first, lang);
@@ -454,6 +459,7 @@ api::VehiclePosition to_api(
       .trip_ =
           api::TransitVehicleTripDescriptor{
               .tripId_ = vehicle.trip_.trip_id_,
+              .scheduledTripId_ = std::move(details.scheduled_trip_id_),
               .startDate_ = vehicle.trip_.start_date_,
               .startTime_ = vehicle.trip_.start_time_,
               .routeId_ = vehicle.trip_.route_id_,
