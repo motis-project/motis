@@ -94,6 +94,43 @@ std::optional<n::rt::frun> resolve_run(
   }
 }
 
+std::optional<n::trip_idx_t> find_static_trip(
+    n::timetable const& tt,
+    n::source_idx_t const src,
+    std::string_view const trip_id) {
+  for (auto const& [id_idx, trip_idx] : tt.trip_id_to_idx_) {
+    if (tt.trip_id_src_[id_idx] == src &&
+        tt.trip_id_strings_[id_idx].view() == trip_id) {
+      return trip_idx;
+    }
+  }
+  return std::nullopt;
+}
+
+std::optional<n::rt::frun> resolve_static_trip_run_by_id(
+    tag_lookup const& tags,
+    n::timetable const& tt,
+    vehicle_positions::vehicle_position const& vehicle) {
+  if (!vehicle.trip_.trip_id_.has_value()) {
+    return std::nullopt;
+  }
+  auto const src = tags.get_src(feed_tag(vehicle.feed_id_));
+  if (src == n::source_idx_t::invalid()) {
+    return std::nullopt;
+  }
+  auto const trip = find_static_trip(tt, src, *vehicle.trip_.trip_id_);
+  if (!trip.has_value() || tt.trip_transport_ranges_[*trip].empty()) {
+    return std::nullopt;
+  }
+
+  auto const [transport, stop_range] = tt.trip_transport_ranges_[*trip].front();
+  return n::rt::frun{
+      tt, nullptr,
+      n::rt::run{.t_ = n::transport{transport, n::day_idx_t{0U}},
+                 .stop_range_ = stop_range,
+                 .rt_ = n::rt_transport_idx_t::invalid()}};
+}
+
 api::TransitVehicleRouteInfo to_route_info(n::rt::run_stop const& s,
                                            n::lang_t const& lang) {
   auto const color = s.get_route_color(n::event_type::kDep);
@@ -357,6 +394,20 @@ vehicle_details resolve_details(tag_lookup const* tags,
     details.shape_ = encode_shape(*fr, shapes);
     if (details.shape_.has_value()) {
       details.shape_source_ = shape_source(*fr, shapes);
+    }
+  }
+  if (!details.route_.has_value()) {
+    if (auto fr = resolve_static_trip_run_by_id(*tags, *tt, v);
+        fr.has_value()) {
+      auto const first = (*fr)[0];
+      details.headsign_ =
+          std::string{first.direction(lang, n::event_type::kDep)};
+      details.route_ = to_route_info(first, lang);
+      details.mode_ = to_mode(first.get_clasz(n::event_type::kDep), 5);
+      details.shape_ = encode_shape(*fr, shapes);
+      if (details.shape_.has_value()) {
+        details.shape_source_ = shape_source(*fr, shapes);
+      }
     }
   }
 

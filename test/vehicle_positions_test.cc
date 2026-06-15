@@ -278,7 +278,7 @@ TEST(motis_vehicle_positions, rt_update_consumes_vehicle_only_gtfsrt_feed) {
   ASSERT_TRUE(res.vehicles_.front().route_.has_value());
   EXPECT_EQ(res.vehicles_.front().route_->shortName_, "1");
   EXPECT_EQ(res.vehicles_.front().trip_.routeId_, "prefix-route-1");
-  EXPECT_EQ(res.vehicles_.front().route_->id_, "prefix-route-1");
+  EXPECT_EQ(res.vehicles_.front().route_->id_, "route-1");
   ASSERT_TRUE(res.vehicles_.front().mode_.has_value());
   EXPECT_EQ(res.vehicles_.front().mode_, motis::api::ModeEnum::BUS);
   ASSERT_TRUE(res.vehicles_.front().shape_.has_value());
