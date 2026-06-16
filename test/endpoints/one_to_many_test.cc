@@ -300,9 +300,7 @@ TEST(one_to_many,
           {
               "test_DA_10",
               "50.107577,8.6638173",  // de:6412:10:6:1
-              "test_de:6412:10:6:1",
-              "test_FFM_101",
-              "test_FFM_HAUPT_S",
+              "test_de:6412:10:6:1", "test_FFM_101", "test_FFM_HAUPT_S",
               "50.11385,8.67912",  // FFM_HAUPT_U
               "50.10590,8.66452",  // Near FFM
               "50.113291,8.678321,0",  // Near FFM_HAUPT
@@ -649,6 +647,7 @@ TEST(one_to_many, pareto_sets_with_routed_transfers_and_distances) {
                 "49.871561,8.6320181",  // near Tram_3
                 "50.111900,8.675208"},  // near FFM_HAUPT
       .time_ = parse_time("2019-05-01T00:05:00.000+02:00"),
+      .maxMatchingDistance_ = 25,
       .useRoutedTransfers_ = true,
       .withDistance_ = true});
 
@@ -693,6 +692,7 @@ TEST(one_to_many, pareto_sets_with_multiple_entries) {
                 "49.8752926,8.6277460",  // DA_Tram_1
                 "49.871561,8.6320181"},  // DA_Tram_3
       .time_ = parse_time("2019-05-01T00:05:00.000+02:00"),
+      .maxMatchingDistance_ = 25,
       .maxPreTransitTime_ = 300});  // Prevent any pre transit to Tram_x
 
   // We only care about duration to DA_Tram_3, everything else is for debugging
