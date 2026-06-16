@@ -300,7 +300,9 @@ TEST(one_to_many,
           {
               "test_DA_10",
               "50.107577,8.6638173",  // de:6412:10:6:1
-              "test_de:6412:10:6:1", "test_FFM_101", "test_FFM_HAUPT_S",
+              "test_de:6412:10:6:1",
+              "test_FFM_101",
+              "test_FFM_HAUPT_S",
               "50.11385,8.67912",  // FFM_HAUPT_U
               "50.10590,8.66452",  // Near FFM
               "50.113291,8.678321,0",  // Near FFM_HAUPT
