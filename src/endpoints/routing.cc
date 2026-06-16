@@ -296,17 +296,17 @@ std::vector<n::routing::offset> get_offsets(
 
       auto candidate_products = hash_set<gbfs::gbfs_products_ref>{};
       gbfs_rd.data_->car_products_rtree_.in_radius(
-          pos.pos_, car_radius, [&](auto const r) {
-            candidate_products.insert(gbfs::from_ref_idx(r));
+          pos.pos_, car_radius, [&](auto const ref) {
+            candidate_products.insert(gbfs::from_ref_idx(ref));
           });
       gbfs_rd.data_->bike_products_rtree_.in_radius(
-          pos.pos_, bike_radius, [&](auto const r) {
-            candidate_products.insert(gbfs::from_ref_idx(r));
+          pos.pos_, bike_radius, [&](auto const ref) {
+            candidate_products.insert(gbfs::from_ref_idx(ref));
           });
 
       auto providers = hash_set<gbfs_provider_idx_t>{};
-      for (auto const& r : candidate_products) {
-        providers.insert(r.provider_);
+      for (auto const& cp : candidate_products) {
+        providers.insert(cp.provider_);
       }
 
       for (auto const& pi : providers) {
@@ -579,8 +579,8 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
             candidate_products.insert(gbfs::from_ref_idx(r));
           });
       auto providers = hash_set<gbfs_provider_idx_t>{};
-      for (auto const& r : candidate_products) {
-        providers.insert(r.provider_);
+      for (auto const& cp : candidate_products) {
+        providers.insert(cp.provider_);
       }
       auto routed = 0U;
       for (auto const& pi : providers) {
