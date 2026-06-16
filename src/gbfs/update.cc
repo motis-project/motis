@@ -193,24 +193,8 @@ struct gbfs_update {
                                            .color_ = group.color_});
       }
 
-      auto awaitables = utl::to_vec(c_.feeds_, [&](auto const& f) {
-        auto const& id = f.first;
-        auto const& feed = f.second;
-        auto const dir =
-            feed.url_.starts_with("http:") || feed.url_.starts_with("https:")
-                ? std::nullopt
-                : std::optional<std::filesystem::path>{feed.url_};
-
-        return boost::asio::co_spawn(
-            executor,
-            [this, id, feed, dir]() -> awaitable<void> {
-              co_await init_feed(id, feed, dir);
-            },
-            asio::deferred);
-      });
-
-      co_await asio::experimental::make_parallel_group(awaitables)
-          .async_wait(asio::experimental::wait_for_all(), asio::use_awaitable);
+      co_await init_config_feeds(
+          utl::to_vec(c_.feeds_, [](auto const& f) { return f.first; }));
     } else {
       // update run: copy over data from previous state and update feeds
       // where necessary
@@ -261,13 +245,66 @@ struct gbfs_update {
             .async_wait(asio::experimental::wait_for_all(),
                         asio::use_awaitable);
       }
+
+      co_await init_missing_config_feeds();
     }
+  }
+
+  void ensure_gbfs_metrics(std::string const& id) {
+    metrics_->gbfs_last_update_timestamp_seconds_.Add({{"provider_id", id}});
+    metrics_->gbfs_feed_timestamp_seconds_.Add({{"provider_id", id}});
+  }
+
+  bool is_config_feed_initialized(std::string const& id) const {
+    return utl::any_of(*d_->standalone_feeds_,
+                       [&](auto const& pf) { return pf->id_ == id; }) ||
+           utl::any_of(*d_->aggregated_feeds_,
+                       [&](auto const& af) { return af->id_ == id; });
+  }
+
+  awaitable<void> init_missing_config_feeds() {
+    auto ids = std::vector<std::string>{};
+    for (auto const& [id, _] : c_.feeds_) {
+      if (!is_config_feed_initialized(id)) {
+        ids.emplace_back(id);
+      }
+    }
+
+    co_return co_await init_config_feeds(std::move(ids));
+  }
+
+  awaitable<void> init_config_feeds(std::vector<std::string> ids) {
+    if (ids.empty()) {
+      co_return;
+    }
+
+    auto executor = co_await asio::this_coro::executor;
+    co_await asio::experimental::make_parallel_group(
+        utl::to_vec(ids,
+                    [&](auto const& id) {
+                      auto const& feed = c_.feeds_.at(id);
+                      auto const dir =
+                          feed.url_.starts_with("http:") ||
+                                  feed.url_.starts_with("https:")
+                              ? std::nullopt
+                              : std::optional<std::filesystem::path>{feed.url_};
+
+                      return boost::asio::co_spawn(
+                          executor,
+                          [this, id, feed, dir]() -> awaitable<void> {
+                            co_await init_feed(id, feed, dir);
+                          },
+                          asio::deferred);
+                    }))
+        .async_wait(asio::experimental::wait_for_all(), asio::use_awaitable);
   }
 
   awaitable<void> init_feed(std::string const& id,
                             config::gbfs::feed const& config,
                             std::optional<std::filesystem::path> const& dir) {
     // initialization of a (standalone or aggregated) feed from the config
+    ensure_gbfs_metrics(id);
+
     try {
       auto const headers = config.headers_.value_or(headers_t{});
       auto oauth = std::shared_ptr<oauth_state>{};
@@ -337,6 +374,7 @@ struct gbfs_update {
   awaitable<void> update_provider_feed(
       provider_feed const& pf,
       std::optional<gbfs_file> discovery = std::nullopt) {
+    ensure_gbfs_metrics(pf.id_);
     auto& provider = add_provider(pf);
 
     // check if exists in old data - if so, reuse existing file infos
@@ -535,7 +573,7 @@ struct gbfs_update {
           .Add({{"provider_id", pf.id_}})
           .SetToCurrentTime();
 
-      metrics_->gbfs_feed_timestamp_seconds_.Add({{"tag", pf.id_}})
+      metrics_->gbfs_feed_timestamp_seconds_.Add({{"provider_id", pf.id_}})
           .Set(std::chrono::duration_cast<std::chrono::duration<double>>(
                    provider.last_updated_.time_since_epoch())
                    .count());
@@ -779,20 +817,19 @@ struct gbfs_update {
       boost::json::object const& root,
       std::map<std::string, unsigned> const& default_ttl = {},
       std::map<std::string, unsigned> const& overwrite_ttl = {}) {
-    auto af =
-        d_->aggregated_feeds_
-            ->emplace_back(std::make_unique<aggregated_feed>(aggregated_feed{
-                .id_ = prefix,
-                .url_ = url,
-                .headers_ = headers,
-                .expiry_ = get_expiry(root, std::chrono::hours{1}, default_ttl,
-                                      overwrite_ttl, "manifest"),
-                .oauth_ = std::move(oauth),
-                .default_ttl_ = default_ttl,
-                .overwrite_ttl_ = overwrite_ttl}))
-            .get();
+    auto af = aggregated_feed{
+        .id_ = prefix,
+        .url_ = url,
+        .headers_ = headers,
+        .expiry_ = get_expiry(root, std::chrono::hours{1}, default_ttl,
+                              overwrite_ttl, "manifest"),
+        .oauth_ = std::move(oauth),
+        .default_ttl_ = default_ttl,
+        .overwrite_ttl_ = overwrite_ttl};
 
-    co_return co_await process_aggregated_feed(*af, root);
+    co_await process_aggregated_feed(af, root);
+    d_->aggregated_feeds_->emplace_back(
+        std::make_unique<aggregated_feed>(std::move(af)));
   }
 
   awaitable<void> update_aggregated_feed(aggregated_feed& af) {
