@@ -53,10 +53,6 @@ asio::awaitable<http_response> req_no_tls(
 
   co_await stream.async_connect(results);
 
-  if (proxy && proxy->use_connect_) {
-    co_await http_CONNECT(stream, url, proxy);
-  }
-
   co_return co_await req(std::move(stream), url, headers, body);
 }
 
@@ -144,9 +140,7 @@ asio::awaitable<http::response<http::dynamic_body>> http_GET(
   auto n_redirects = 0U;
   auto next_url = url;
   while (n_redirects < 3U) {
-    auto const use_tls =
-        proxy ? proxy->use_tls_
-              : next_url.scheme_id() == boost::urls::scheme::https;
+    auto const use_tls = next_url.scheme_id() == boost::urls::scheme::https;
     auto const res = co_await (
         use_tls ? req_tls(next_url, headers, std::nullopt, timeout, proxy)
                 : req_no_tls(next_url, headers, std::nullopt, timeout, proxy));
@@ -172,9 +166,7 @@ asio::awaitable<http::response<http::dynamic_body>> http_POST(
   auto n_redirects = 0U;
   auto next_url = url;
   while (n_redirects < 3U) {
-    auto const use_tls =
-        proxy ? proxy->use_tls_
-              : next_url.scheme_id() == boost::urls::scheme::https;
+    auto const use_tls = next_url.scheme_id() == boost::urls::scheme::https;
     auto const res = co_await (
         use_tls ? req_tls(next_url, headers, body, timeout, proxy)
                 : req_no_tls(next_url, headers, body, timeout, proxy));

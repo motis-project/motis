@@ -1,7 +1,9 @@
 #pragma once
 
+#include <boost/beast/core/stream_traits.hpp>
 #include <chrono>
 #include <map>
+#include <print>
 #include <string>
 
 #include "boost/asio/awaitable.hpp"
@@ -49,6 +51,7 @@ boost::asio::awaitable<void> http_CONNECT(Stream& stream,
   if (!proxy) {
     co_return;
   }
+  std::println("making a connect request");
   auto const target = std::string(url.host()) + ":" +
                       (url.has_port() ? std::string(url.port()) : "443");
 
@@ -56,11 +59,11 @@ boost::asio::awaitable<void> http_CONNECT(Stream& stream,
   req.set(http::field::host, target);
   beast::flat_buffer buf;
 
-  co_await http::async_write(stream.next_layer(), req);
+  co_await http::async_write(beast::get_lowest_layer(stream), req);
 
   http::response_parser<http::empty_body> res;
   res.skip(true);
-  co_await http::async_read_header(stream.next_layer(), buf, res);
+  co_await http::async_read_header(beast::get_lowest_layer(stream), buf, res);
 
   if (res.get().result() != http::status::ok) {
     throw utl::fail("CONNECT failed: target={}, status={}", target,
