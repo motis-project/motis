@@ -182,7 +182,6 @@ void get_is_unique_stop_name(n::rt::frun const& fr,
 }
 
 struct ticketing_links_view {
-  n::timetable::ticketing_link_type type_;
   std::string_view web_;
   std::string_view android_;
   std::string_view ios_;
@@ -190,20 +189,21 @@ struct ticketing_links_view {
 
 std::optional<ticketing_links_view> get_ticketing_urls(
     n::timetable const& tt,
+    n::source_idx_t src,
     n::rt::run_stop const& enter_stop,
     n::rt::run_stop const& exit_stop) {
   if (!enter_stop.fr_->is_scheduled()) {
     return std::nullopt;
   }
 
-  if (tt.trip_ticketing_unavailable_.contains(
+  if (tt.trip_ticketing_unavailable_.test(
           enter_stop.get_trip_idx(n::event_type::kDep))) {
     return std::nullopt;
   }
 
-  if (tt.location_ticketing_unavailable_.contains(
+  if (tt.locations_.ticketing_unavailable_.test(
           enter_stop.get_stop().location_idx()) ||
-      tt.location_ticketing_unavailable_.contains(
+      tt.locations_.ticketing_unavailable_.test(
           exit_stop.get_stop().location_idx())) {
     return std::nullopt;
   }
@@ -211,14 +211,15 @@ std::optional<ticketing_links_view> get_ticketing_urls(
   auto const provider_idx = enter_stop.get_provider_idx(n::event_type::kDep);
   auto const route_id_idx = enter_stop.get_route_id_idx(n::event_type::kDep);
 
-  auto ticketing_idx = nigiri::ticketing_link_idx_t::invalid();
-  auto routes_it = tt.ticketing_routes_.find(route_id_idx);
-  if (routes_it != tt.ticketing_routes_.end()) {
-    ticketing_idx = routes_it->second;
+  auto ticketing_idx = n::ticketing_link_idx_t::invalid();
+  auto const route_ticket_link =
+      tt.route_ids_[src].route_id_ticketing_link_[route_id_idx];
+  if (route_ticket_link != n::ticketing_link_idx_t::invalid()) {
+    ticketing_idx = route_ticket_link;
   } else {
-    auto provider_it = tt.ticketing_agencies_.find(provider_idx);
-    if (provider_it != tt.ticketing_agencies_.end()) {
-      ticketing_idx = provider_it->second;
+    auto provider = tt.providers_[provider_idx];
+    if (provider.ticketing_link_ != n::ticketing_link_idx_t::invalid()) {
+      ticketing_idx = provider.ticketing_link_;
     }
   }
 
@@ -227,7 +228,6 @@ std::optional<ticketing_links_view> get_ticketing_urls(
   }
 
   return ticketing_links_view{
-      .type_ = tt.ticketing_links_.type_[ticketing_idx],
       .web_ = tt.ticketing_links_.web_[ticketing_idx].view(),
       .android_ = tt.ticketing_links_.andoid_[ticketing_idx].view(),
       .ios_ = tt.ticketing_links_.ios_[ticketing_idx].view()};
@@ -507,9 +507,6 @@ api::Itinerary journey_to_response(
                     enter_stop.get_provider(n::event_type::kDep);
                 auto const fare_indices = get_fare_indices(fares, j_leg);
 
-                auto ticket_links =
-                    get_ticketing_urls(tt, enter_stop, exit_stop);
-
                 auto const src = [&]() {
                   if (!fr.is_scheduled()) {
                     return n::source_idx_t::invalid();
@@ -519,6 +516,10 @@ api::Itinerary journey_to_response(
                   auto const id_idx = tt.trip_ids_[trip].front();
                   return tt.trip_id_src_[id_idx];
                 }();
+
+                auto ticket_links =
+                    get_ticketing_urls(tt, src, enter_stop, exit_stop);
+
                 auto const [service_day, _] =
                     enter_stop.get_trip_start(n::event_type::kDep);
 
@@ -624,22 +625,19 @@ api::Itinerary journey_to_response(
                 std::optional<api::TicketUrls> ticketing_url = std::nullopt;
 
                 if (ticket_links.has_value()) {
-                  switch (ticket_links->type_) {
-                    case n::timetable::ticketing_link_type::kGoogleTransit:
-                      ticketing_url = api::TicketUrls{
-                          .web_ = ticket_links->web_.empty()
+                  ticketing_url = api::TicketUrls{
+                      .web_ = ticket_links->web_.empty()
+                                  ? std::nullopt
+                                  : std::optional{add_url_ticket_params(
+                                        ticket_links->web_)},
+                      .android_ = ticket_links->android_.empty()
                                       ? std::nullopt
                                       : std::optional{add_url_ticket_params(
-                                            ticket_links->web_)},
-                          .android_ = ticket_links->android_.empty()
-                                          ? std::nullopt
-                                          : std::optional{add_url_ticket_params(
-                                                ticket_links->android_)},
-                          .ios_ = ticket_links->ios_.empty()
-                                      ? std::nullopt
-                                      : std::optional{add_url_ticket_params(
-                                            ticket_links->ios_)}};
-                  }
+                                            ticket_links->android_)},
+                      .ios_ = ticket_links->ios_.empty()
+                                  ? std::nullopt
+                                  : std::optional{add_url_ticket_params(
+                                        ticket_links->ios_)}};
                 }
 
                 auto& leg = itinerary.legs_.emplace_back(api::Leg{
