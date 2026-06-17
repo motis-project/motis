@@ -1,7 +1,7 @@
 [nigiri]
   url=git@github.com:jbruechert/nigiri.git
   branch=master
-  commit=19d8bfe02fd089f9025ea87190ff7d46572b29d2
+  commit=6985ccfa896088eca3fc965e8e4592a22ce1483e
 [cista]
   url=git@github.com:felixguendling/cista.git
   branch=master
