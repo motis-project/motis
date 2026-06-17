@@ -88,7 +88,7 @@ api::geocode_response geocode::operator()(
       std::min(params.numResults_.value_or(kDefaultSuggestions), config_limit);
   utl::verify<net::bad_request_exception>(requested_limit >= 1,
                                           "limit must be >= 1");
-  std::optional<geo::box> bbox;
+  auto bbox = std::optional<geo::box>{};
   if (params.max_ && params.min_) {
     auto const min = parse_location(*params.min_);
     utl::verify<net::bad_request_exception>(
@@ -96,8 +96,7 @@ api::geocode_response geocode::operator()(
     auto const max = parse_location(*params.max_);
     utl::verify<net::bad_request_exception>(
         max.has_value(), "could not parse max {}", *params.max_);
-    bbox->max_ = max.value().pos_;
-    bbox->min_ = min.value().pos_;
+    bbox = geo::box{min->pos_, max->pos_};
   }
   auto const token_pos = a::get_suggestions<false>(
       t_, params.text_, static_cast<unsigned>(requested_limit), lang_indices,
