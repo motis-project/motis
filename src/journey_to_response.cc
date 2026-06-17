@@ -641,16 +641,16 @@ api::Itinerary journey_to_response(
                     return boost::json::serialize(array);
                   };
 
-                  auto trip_ticketing_identifier_it =
-                      tt.trip_ticketing_identifier_.find(
-                          enter_stop.get_trip_idx(n::event_type::kDep));
+                  auto trip_ticketing_identifier_bucket =
+                      tt.trip_ticketing_identifier_[enter_stop.get_trip_idx(
+                          n::event_type::kDep)];
 
                   auto const trip_id = std::string{
-                      trip_ticketing_identifier_it ==
-                              std::end(tt.trip_ticketing_identifier_)
+                      trip_ticketing_identifier_bucket.empty()
                           ? tags.get_trip_id(tt, enter_stop,
                                              n::event_type::kDep)
-                          : (*trip_ticketing_identifier_it).second};
+                          : (tt.strings_.get(
+                                trip_ticketing_identifier_bucket.front()))};
 
                   ticket_url.params() = {
                       {"service_date",
