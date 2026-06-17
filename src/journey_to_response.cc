@@ -583,33 +583,31 @@ api::Itinerary journey_to_response(
                   auto const start_date = floor<std::chrono::days>(
                       enter_stop.scheduled_time(n::event_type::kDep));
 
-                  auto const from_provider_it =
-                      tt.location_ticketing_identifier_.find(
-                          enter_stop.get_provider_idx(n::event_type::kDep));
+                  auto const location_ticketing_id = [&](n::rt::run_stop stop)
+                      -> std::optional<std::string_view> {
+                    auto const provider_ids =
+                        tt.location_ticketing_identifier_[stop.get_stop()
+                                                              .location_idx()];
 
-                  auto const to_provider_it =
-                      tt.location_ticketing_identifier_.find(
-                          exit_stop.get_provider_idx(n::event_type::kArr));
+                    auto const provider_idx =
+                        exit_stop.get_provider_idx(n::event_type::kArr);
 
-                  std::optional<std::string> from_id = std::nullopt;
-                  if (from_provider_it !=
-                      std::end(tt.location_ticketing_identifier_)) {
-                    auto from_id_it = from_provider_it->second.find(
-                        enter_stop.get_stop().location_idx());
-                    if (from_id_it != std::end(from_provider_it->second)) {
-                      from_id = {std::string{from_id_it->second.view()}};
+                    auto const it = std::ranges::find_if(
+                        provider_ids, [&](auto const& provider_id) {
+                          auto const [provider, id] = provider_id;
+                          return provider == provider_idx;
+                        });
+
+                    if (it != provider_ids.end()) {
+                      return tt.strings_.get(it->second);
+                    } else {
+                      return std::nullopt;
                     }
-                  }
+                  };
 
-                  std::optional<std::string> to_id = std::nullopt;
-                  if (to_provider_it !=
-                      std::end(tt.location_ticketing_identifier_)) {
-                    auto to_id_it = to_provider_it->second.find(
-                        exit_stop.get_stop().location_idx());
-                    if (to_id_it != std::end(to_provider_it->second)) {
-                      to_id = {std::string{to_id_it->second.view()}};
-                    }
-                  }
+                  auto const from_id = location_ticketing_id(enter_stop);
+
+                  auto const to_id = location_ticketing_id(exit_stop);
 
                   auto seq_nums = nigiri::loader::gtfs::stop_seq_number_range{
                       {tt.trip_stop_seq_numbers_[enter_stop.get_trip_idx(
@@ -618,7 +616,7 @@ api::Itinerary journey_to_response(
 
                   std::string from;
                   if (from_id.has_value()) {
-                    from = *from_id;
+                    from = std::string{*from_id};
                   } else {
                     auto from_seq = seq_nums.begin() +
                                     enter_stop.section_idx(n::event_type::kDep);
@@ -628,7 +626,7 @@ api::Itinerary journey_to_response(
 
                   std::string to;
                   if (to_id.has_value()) {
-                    to = *to_id;
+                    to = std::string{*to_id};
                   } else {
                     auto to_seq = seq_nums.begin() +
                                   exit_stop.section_idx(n::event_type::kArr);
