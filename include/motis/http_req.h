@@ -24,6 +24,8 @@ using http_response = http::response<boost::beast::http::dynamic_body>;
 constexpr auto const kBodySizeLimit = 512U * 1024U * 1024U;  // 512 M
 
 struct proxy {
+  bool use_tls_;
+  bool use_connect_;
   std::string host_, port_;
 };
 
@@ -44,7 +46,9 @@ template <typename Stream>
 boost::asio::awaitable<void> http_CONNECT(Stream& stream,
                                           boost::urls::url const& url,
                                           std::optional<proxy> const& proxy) {
-  if (!proxy) co_return;
+  if (!proxy) {
+    co_return;
+  }
   auto const target = std::string(url.host()) + ":" +
                       (url.has_port() ? std::string(url.port()) : "443");
 
