@@ -1,6 +1,5 @@
 #pragma once
 
-#include <boost/beast/core/stream_traits.hpp>
 #include <chrono>
 #include <map>
 #include <string>

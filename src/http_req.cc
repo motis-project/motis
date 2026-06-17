@@ -52,7 +52,6 @@ asio::awaitable<http_response> req_no_tls(
   stream.expires_after(timeout);
 
   co_await stream.async_connect(results);
-
   co_return co_await req(std::move(stream), url, headers, body);
 }
 
