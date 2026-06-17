@@ -3,7 +3,6 @@
 #include <boost/beast/core/stream_traits.hpp>
 #include <chrono>
 #include <map>
-#include <print>
 #include <string>
 
 #include "boost/asio/awaitable.hpp"
@@ -51,7 +50,6 @@ boost::asio::awaitable<void> http_CONNECT(Stream& stream,
   if (!proxy) {
     co_return;
   }
-  std::println("making a connect request");
   auto const target = std::string(url.host()) + ":" +
                       (url.has_port() ? std::string(url.port()) : "443");
 
