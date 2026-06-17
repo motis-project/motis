@@ -95,6 +95,7 @@ private:
   nigiri::timetable const* tt_;
   std::shared_ptr<rt> const rt_;
   nigiri::rt_timetable const* rtt_;
+  nigiri::rt_timetable const* annotation_rtt_;
   motis::elevators const* e_;
   gbfs::gbfs_routing_data gbfs_rd_;
   std::variant<osr::location, tt_location> const& start_;

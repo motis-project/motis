@@ -109,8 +109,13 @@ meta_router::meta_router(ep::routing const& r,
       api_version_{api_version},
       tt_{r_.tt_},
       rt_{r.rt_},
-      rtt_{query.realtimeMode_ == api::RealtimeModeEnum::OFF ? nullptr
-                                                             : rt_->rtt_.get()},
+      rtt_{(query.realtimeMode_ == api::RealtimeModeEnum::OFF ||
+            query.realtimeMode_ == api::RealtimeModeEnum::INFOS)
+               ? nullptr
+               : rt_->rtt_.get()},
+      annotation_rtt_{query.realtimeMode_ == api::RealtimeModeEnum::OFF
+                          ? nullptr
+                          : rt_->rtt_.get()},
       e_{rt_->e_.get()},
       gbfs_rd_{r.w_, r.l_, r.gbfs_},
       start_{query_.arriveBy_ ? to_ : from_},
@@ -513,9 +518,10 @@ api::plan_response meta_router::run() {
             auto const detailed_transfers =
                 query_.detailedTransfers_.value_or(query_.detailedLegs_);
             auto response = journey_to_response(
-                r_.w_, r_.l_, r_.pl_, *tt_, *r_.tags_, r_.fa_, e_, rtt_,
-                r_.matches_, r_.elevations_, r_.shapes_, gbfs_rd_, r_.ae_,
-                r_.tz_, j, start_, dest_, cache, ep::blocked.get(),
+                r_.w_, r_.l_, r_.pl_, *tt_, *r_.tags_, r_.fa_, e_,
+                annotation_rtt_, r_.matches_, r_.elevations_, r_.shapes_,
+                gbfs_rd_, r_.ae_, r_.tz_, j, start_, dest_, cache,
+                ep::blocked.get(),
                 query_.requireCarTransport_ && query_.useRoutedTransfers_,
                 params, query_.pedestrianProfile_, query_.elevationCosts_,
                 query_.joinInterlinedLegs_, detailed_transfers,
