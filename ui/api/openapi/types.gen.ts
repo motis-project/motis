@@ -3508,10 +3508,6 @@ export type StopsData = {
          * Optional. Stop modes
          */
         modes?: Array<Mode>;
-        /**
-         * include active alerts for the stop
-         */
-        withAlerts?: boolean;
     };
 };
 
@@ -3523,10 +3519,19 @@ export type StopInfoData = {
     query?: {
         /**
          * latitude,longitude pair used as center for a radius search
-         * (used when stopId is not provided or not found)
+         * (used when stopId is not provided; required together with radius
+         * if stopId is not given)
          *
          */
         center?: string;
+        /**
+         * Optional. Default is `false`.
+         *
+         * If set to `true`, only stations that are physically in the radius are considered.
+         * If set to `false`, additionally to the stations in the radius, equivalences with the same name and children are considered.
+         *
+         */
+        exactRadius?: boolean;
         /**
          * language tags as used in OpenStreetMap / GTFS
          * (usually BCP-47 / ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
@@ -3534,17 +3539,20 @@ export type StopInfoData = {
          */
         language?: Array<(string)>;
         /**
-         * search radius in meters around center (default 500)
+         * Optional. Radius in meters.
+         *
+         * Default is that only routes of the parent of the stop itself
+         * and all stops with the same name (+ their child stops) are returned.
+         *
+         * If set, all stops at parent stations and their child stops in the
+         * specified radius are returned. Required if stopId is not given.
+         *
          */
         radius?: number;
         /**
          * stop ID as returned by /api/v1/geocode or /api/v1/map/stops
          */
         stopId?: string;
-        /**
-         * include active alerts for the stop
-         */
-        withAlerts?: boolean;
     };
 };
 

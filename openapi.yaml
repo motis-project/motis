@@ -2809,14 +2809,6 @@ paths:
               type: string
           explode: false
 
-        - name: withAlerts
-          in: query
-          required: false
-          schema:
-            type: boolean
-            default: true
-          description: include active alerts for the stop
-
       responses:
         '422':
           description: Unprocessable Entity
@@ -2870,16 +2862,36 @@ paths:
           required: false
           description: |
             latitude,longitude pair used as center for a radius search
-            (used when stopId is not provided or not found)
+            (used when stopId is not provided; required together with radius
+            if stopId is not given)
           schema:
             type: string
 
         - name: radius
           in: query
-          required: false
-          description: search radius in meters around center (default 500)
           schema:
             type: integer
+          required: false
+          description: |
+            Optional. Radius in meters.
+
+            Default is that only routes of the parent of the stop itself
+            and all stops with the same name (+ their child stops) are returned.
+
+            If set, all stops at parent stations and their child stops in the
+            specified radius are returned. Required if stopId is not given.
+
+        - name: exactRadius
+          in: query
+          schema:
+            type: boolean
+            default: false
+          required: false
+          description: |
+            Optional. Default is `false`.
+
+            If set to `true`, only stations that are physically in the radius are considered.
+            If set to `false`, additionally to the stations in the radius, equivalences with the same name and children are considered.
 
         - name: language
           in: query
@@ -2892,14 +2904,6 @@ paths:
             items:
               type: string
           explode: false
-
-        - name: withAlerts
-          in: query
-          required: false
-          schema:
-            type: boolean
-            default: true
-          description: include active alerts for the stop
 
       responses:
         '422':
