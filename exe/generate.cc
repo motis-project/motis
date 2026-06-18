@@ -31,6 +31,12 @@ namespace motis {
 
 constexpr auto const kMinRank = 16UL;
 
+constexpr auto kEuropeBounds = R"({
+  "type": "Polygon",
+  "coordinates":
+    [[ [ -11, 72 ], [ -11, 36 ], [ 32, 36 ], [ 32, 72 ], [ -11, 72 ] ]]
+})";
+
 static std::atomic_uint32_t seed{0U};
 
 std::uint32_t rand_in(std::uint32_t const from, std::uint32_t const to) {
@@ -80,7 +86,7 @@ int generate(int ac, char** av) {
   auto use_car = false;
   auto use_odm = false;
   auto lb_rank = true;
-  auto bounds_str = std::string{};
+  tg_geom* bounds{nullptr};
   auto p = api::plan_params{};
 
   auto const parse_date = [](std::string_view const s) {
@@ -128,6 +134,15 @@ int generate(int ac, char** av) {
     time_of_day = h % 24U;
   };
 
+  auto const parse_bounds = [&](std::string_view const s) {
+    bounds = s == "europe" ? tg_parse_geojson(kEuropeBounds)
+                           : tg_parse_geojsonn(s.data(), s.size());
+    if (char const* err = tg_geom_error(bounds)) {
+      tg_geom_free(bounds);
+      throw utl::fail("unable to parse bounds GeoJSON: {}", err);
+    }
+  };
+
   auto desc = po::options_description{"Options"};
   desc.add_options()  //
       ("help", "Prints this help message")  //
@@ -167,7 +182,7 @@ int generate(int ac, char** av) {
        "lb rank n:  2^n-th stop when sorting all stops by their lb value from "
        "the start (min. rank: 4, max. rank: derived from number of eligible "
        "stops)")  //
-      ("bounds,b", po::value<std::string>(&bounds_str),
+      ("bounds,b", po::value<std::string>()->notifier(parse_bounds),
        "randomize locations within bounds, format: GeoJSON"
        "(shorthand for Europe \"-b europe\")");
   add_data_path_opt(desc, data_path);
@@ -203,8 +218,8 @@ int generate(int ac, char** av) {
   fmt::println("date range: [{}, {}], tt={}", *first_day, *last_day,
                d.tt_->external_interval());
 
-  auto const use_bounds = auto const use_odm_bounds =
-      modes && use_odm && d.odm_bounds_ != nullptr;
+  auto const use_bounds = ;
+  auto const use_odm_bounds = modes && use_odm && d.odm_bounds_ != nullptr;
   auto node_rtree = point_rtree<osr::node_idx_t>{};
   if (modes) {
     if (modes->empty()) {
