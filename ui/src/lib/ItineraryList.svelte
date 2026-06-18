@@ -121,37 +121,37 @@
 {/snippet}
 
 {#snippet itineraryTags(it: Itinerary)}
-	<div class="flex w-full pb-2 gap-2 overflow-x-scroll">
+	<div class="flex flex-wrap pb-2 gap-1 whitespace-nowrap">
 		<span
-			class="inline-flex items-center rounded-md bg-gray-50 px-2 py-1 text-xs font-medium text-gray-600 inset-ring inset-ring-gray-500/10"
+			class="flex w-fit rounded-full bg-gray-50 px-2 py-1 text-xs font-medium text-gray-600 ring-1 ring-gray-300 ring-inset"
 			><Footprints class="size-4 mr-1" />{walkingTime(it)} min</span
 		>
 		{#if it.duration == minDuration}
 			<span
-				class="inline-flex items-center rounded-md bg-gray-50 px-2 py-1 text-xs font-medium text-gray-600 inset-ring inset-ring-gray-500/10"
+				class="flex w-fit rounded-full bg-gray-50 px-2 py-1 text-xs font-medium text-gray-600 ring-1 ring-gray-300 ring-inset"
 				><Rabbit class="size-4 mr-1" />{t.fastest}</span
 			>
 		{:else if it.duration == maxDuration}
 			<span
-				class="inline-flex items-center rounded-md bg-gray-50 px-2 py-1 text-xs font-medium text-gray-600 inset-ring inset-ring-gray-500/10"
+				class="flex w-fit rounded-full bg-gray-50 px-2 py-1 text-xs font-medium text-gray-600 ring-1 ring-gray-300 ring-inset"
 				><Snail class="size-4 mr-1" />{t.slowest}</span
 			>
 		{/if}
 		{#if it.transfers == minTransfers}
 			<span
-				class="inline-flex items-center rounded-md bg-gray-50 px-2 py-1 text-xs font-medium text-gray-600 inset-ring inset-ring-gray-500/10"
+				class="flex w-fit rounded-full bg-gray-50 px-2 py-1 text-xs font-medium text-gray-600 ring-1 ring-gray-300 ring-inset"
 				><Repeat class="size-4 mr-1" />{t.fewestTransfers}</span
 			>
 		{/if}
 		{#if hasShortTransfer(it)}
 			<span
-				class="inline-flex items-center rounded-md bg-gray-50 px-2 py-1 text-xs font-medium text-gray-600 inset-ring inset-ring-gray-500/10"
+				class="flex w-fit rounded-full bg-gray-50 px-2 py-1 text-xs font-medium text-gray-600 ring-1 ring-gray-300 ring-inset"
 				><ShieldOff class="size-4 mr-1" />{t.shortTransfer}</span
 			>
 		{/if}
 		{#if hasLongTransfers(it)}
 			<span
-				class="inline-flex items-center rounded-md bg-gray-50 px-2 py-1 text-xs font-medium text-gray-600 inset-ring inset-ring-gray-500/10"
+				class="flex w-fit rounded-full bg-gray-50 px-2 py-1 text-xs font-medium text-gray-600 ring-1 ring-gray-300 ring-inset"
 				><Shield class="size-4 mr-1" />{t.longTransfers}</span
 			>
 		{/if}
