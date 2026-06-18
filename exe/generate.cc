@@ -80,6 +80,7 @@ int generate(int ac, char** av) {
   auto use_car = false;
   auto use_odm = false;
   auto lb_rank = true;
+  auto bounds_str = std::string{};
   auto p = api::plan_params{};
 
   auto const parse_date = [](std::string_view const s) {
@@ -165,7 +166,10 @@ int generate(int ac, char** av) {
        "emit queries uniformly distributed over the lower bounds (lb) ranks, "
        "lb rank n:  2^n-th stop when sorting all stops by their lb value from "
        "the start (min. rank: 4, max. rank: derived from number of eligible "
-       "stops)");
+       "stops)")  //
+      ("bounds,b", po::value<std::string>(&bounds_str),
+       "randomize locations within bounds, format: GeoJSON"
+       "(shorthand for Europe \"-b europe\")");
   add_data_path_opt(desc, data_path);
   auto vm = parse_opt(ac, av, desc);
 
@@ -199,7 +203,8 @@ int generate(int ac, char** av) {
   fmt::println("date range: [{}, {}], tt={}", *first_day, *last_day,
                d.tt_->external_interval());
 
-  auto const use_odm_bounds = modes && use_odm && d.odm_bounds_ != nullptr;
+  auto const use_bounds = auto const use_odm_bounds =
+      modes && use_odm && d.odm_bounds_ != nullptr;
   auto node_rtree = point_rtree<osr::node_idx_t>{};
   if (modes) {
     if (modes->empty()) {
@@ -261,6 +266,7 @@ int generate(int ac, char** av) {
   auto stops = std::vector<n::location_idx_t>{};
   for (auto i = 0U; i != d.tt_->n_locations(); ++i) {
     auto const l = n::location_idx_t{i};
+
     if (use_odm_bounds &&
         !d.odm_bounds_->contains(d.tt_->locations_.coordinates_[l])) {
       continue;
