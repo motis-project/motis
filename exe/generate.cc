@@ -187,7 +187,7 @@ int generate(int ac, char** av) {
        po::value<std::uint32_t>()->notifier(
            [&](std::uint32_t const r) { geo_rank = r; }),
        "emit queries with geo-rank r, i.e., the target is the 2^r-th stop from "
-       "the source in terms of geographical distance, overrides lb")  //
+       "the source in terms of geographical distance, overrides lb_rank")  //
       ("bounds,b", po::value<std::string>()->notifier(parse_bounds),
        "randomize locations within bounds, format: GeoJSON"
        "(shorthand for Europe \"-b europe\")");
@@ -312,20 +312,20 @@ int generate(int ac, char** av) {
   }
 
   auto geo_rank_index = 0U;
+  auto geo_distance = std::unordered_map<n::location_idx_t, double>{};
+  auto ss = std::optional<n::routing::search_state>{};
+  auto rs = std::optional<n::routing::raptor_state>{};
   if (geo_rank) {
-    fmt::println("geo-rank = {}", *geo_rank);
+    fmt::println("from and to pairings by geo-rank = {}", *geo_rank);
     geo_rank_index = static_cast<std::uint32_t>(std::pow(2, *geo_rank));
     if (geo_rank_index > stops.size() - 1U) {
       fmt::println("geo-rank index exceeds number of stops: {} > {}",
                    geo_rank_index, stops.size() - 1U);
       return -1;
     }
+    geo_distance.reserve(stops.size());
     lb_rank = false;
-  }
-
-  auto ss = std::optional<n::routing::search_state>{};
-  auto rs = std::optional<n::routing::raptor_state>{};
-  if (lb_rank) {
+  } else if (lb_rank) {
     ss = n::routing::search_state{};
     rs = n::routing::raptor_state{};
     fmt::println("from and to pairings by lower bounds rank");
@@ -375,11 +375,13 @@ int generate(int ac, char** av) {
         });
         to_place = get_place(stops[r]);
       } else if (geo_rank) {
+        for (auto const s : stops) {
+          geo_distance[s] =
+              geo::distance(d.tt_->locations_.coordinates_[from_stop],
+                            d.tt_->locations_.coordinates_[s]);
+        }
         utl::sort(stops, [&](auto const& a, auto const& b) {
-          return geo::distance(d.tt_->locations_.coordinates_[from_stop],
-                               d.tt_->locations_.coordinates_[a]) <
-                 geo::distance(d.tt_->locations_.coordinates_[from_stop],
-                               d.tt_->locations_.coordinates_[b]);
+          return geo_distance[a] < geo_distance[b];
         });
         to_place = get_place(stops[geo_rank_index]);
       } else {
