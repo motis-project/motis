@@ -1973,17 +1973,31 @@ paths:
           schema:
             type: number
             default: 1
+
         - name: numResults
           in: query
           required: false
           description: |
             Optional. Number of suggestions to return.
-            
             If omitted, 10 suggestions are returned by default.
             Must be <= server config variable `geocode_max_suggestions`.
           schema:
             type: integer
             minimum: 1
+
+        - name: min
+          in: query
+          required: false
+          description: latitude,longitude pair of the lower right coordinate of the bounding box containing all results
+          schema:
+            type: string
+
+        - name: max
+          in: query
+          required: false
+          description: latitude,longitude pair of the upper left coordinate of the bounding box containing all results
+          schema:
+            type: string
 
       responses:
         '400':
