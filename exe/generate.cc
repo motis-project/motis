@@ -86,6 +86,7 @@ int generate(int ac, char** av) {
   auto use_car = false;
   auto use_odm = false;
   auto lb_rank = true;
+  auto geo_rank = std::optional<std::uint32_t>{};
   tg_geom* bounds{nullptr};
   auto p = api::plan_params{};
 
@@ -182,6 +183,11 @@ int generate(int ac, char** av) {
        "lb rank n:  2^n-th stop when sorting all stops by their lb value from "
        "the start (min. rank: 4, max. rank: derived from number of eligible "
        "stops)")  //
+      ("geo_rank",
+       po::value<std::uint32_t>()->notifier(
+           [&](std::uint32_t const r) { geo_rank = r; }),
+       "emit queries with geo-rank r, i.e., the target is the 2^r-th stop from "
+       "the source in terms of geographical distance")  //
       ("bounds,b", po::value<std::string>()->notifier(parse_bounds),
        "randomize locations within bounds, format: GeoJSON"
        "(shorthand for Europe \"-b europe\")");
@@ -301,6 +307,22 @@ int generate(int ac, char** av) {
     stops.emplace_back(l);
   }
 
+  if (bounds != nullptr) {
+    fmt::println("in bounds: {}/{} stops", stops.size(), d.tt_->n_locations());
+  }
+
+  auto geo_rank_index = 0U;
+  if (geo_rank) {
+    fmt::println("geo-rank = {}", *geo_rank);
+    geo_rank_index = static_cast<std::uint32_t>(std::pow(2, *geo_rank));
+    if (geo_rank_index > stops.size() - 1U) {
+      fmt::println("geo-rank index exceeds number of stops: {} > {}",
+                   geo_rank_index, stops.size() - 1U);
+      return -1;
+    }
+    lb_rank = false;
+  }
+
   auto ss = std::optional<n::routing::search_state>{};
   auto rs = std::optional<n::routing::raptor_state>{};
   if (lb_rank) {
@@ -352,6 +374,14 @@ int generate(int ac, char** av) {
                  ss->travel_time_lower_bound_[to_idx(b)];
         });
         to_place = get_place(stops[r]);
+      } else if (geo_rank) {
+        utl::sort(stops, [&](auto const& a, auto const& b) {
+          return geo::distance(d.tt_->locations_.coordinates_[from_stop],
+                               d.tt_->locations_.coordinates_[a]) <
+                 geo::distance(d.tt_->locations_.coordinates_[from_stop],
+                               d.tt_->locations_.coordinates_[b]);
+        });
+        to_place = get_place(stops[geo_rank_index]);
       } else {
         to_place = get_place(random_stop(*d.tt_, stops));
       }
