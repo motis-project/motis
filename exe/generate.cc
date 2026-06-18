@@ -86,7 +86,7 @@ int generate(int ac, char** av) {
   auto use_car = false;
   auto use_odm = false;
   auto lb_rank = true;
-  auto geo_rank = std::optional<std::uint32_t>{};
+  auto geo_rank = std::optional<std::uint64_t>{};
   tg_geom* bounds{nullptr};
   auto p = api::plan_params{};
 
@@ -184,8 +184,8 @@ int generate(int ac, char** av) {
        "the start (min. rank: 4, max. rank: derived from number of eligible "
        "stops)")  //
       ("geo_rank",
-       po::value<std::uint32_t>()->notifier(
-           [&](std::uint32_t const r) { geo_rank = r; }),
+       po::value<std::uint64_t>()->notifier(
+           [&](std::uint64_t const r) { geo_rank = r; }),
        "emit queries with geo-rank r, i.e., the target is the 2^r-th stop from "
        "the source in terms of geographical distance, overrides lb_rank")  //
       ("bounds,b", po::value<std::string>()->notifier(parse_bounds),
@@ -311,13 +311,13 @@ int generate(int ac, char** av) {
     fmt::println("in bounds: {}/{} stops", stops.size(), d.tt_->n_locations());
   }
 
-  auto geo_rank_index = 0U;
+  auto geo_rank_index = 0UL;
   auto geo_distance = std::unordered_map<n::location_idx_t, double>{};
   auto ss = std::optional<n::routing::search_state>{};
   auto rs = std::optional<n::routing::raptor_state>{};
   if (geo_rank) {
     fmt::println("from and to pairings by geo-rank = {}", *geo_rank);
-    geo_rank_index = static_cast<std::uint32_t>(std::pow(2, *geo_rank));
+    geo_rank_index = 1UL << *geo_rank;
     if (geo_rank_index > stops.size() - 1U) {
       fmt::println("geo-rank index exceeds number of stops: {} > {}",
                    geo_rank_index, stops.size() - 1U);
