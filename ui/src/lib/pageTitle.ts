@@ -19,9 +19,7 @@ export const getPageTitle = (state: PageTitleState, translations: Translations):
 	if (state.activeTab === 'departures' && state.selectedStop) {
 		const stopName = state.stopName || state.selectedStop.name;
 		if (stopName) {
-			return state.stopArriveBy
-				? pageTitle.arrivalsAt(stopName)
-				: pageTitle.departuresAt(stopName);
+			return state.stopArriveBy ? pageTitle.arrivalsAt(stopName) : pageTitle.departuresAt(stopName);
 		}
 	}
 
