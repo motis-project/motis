@@ -187,7 +187,7 @@ int generate(int ac, char** av) {
        po::value<std::uint32_t>()->notifier(
            [&](std::uint32_t const r) { geo_rank = r; }),
        "emit queries with geo-rank r, i.e., the target is the 2^r-th stop from "
-       "the source in terms of geographical distance")  //
+       "the source in terms of geographical distance, overrides lb")  //
       ("bounds,b", po::value<std::string>()->notifier(parse_bounds),
        "randomize locations within bounds, format: GeoJSON"
        "(shorthand for Europe \"-b europe\")");
