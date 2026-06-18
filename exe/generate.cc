@@ -218,7 +218,17 @@ int generate(int ac, char** av) {
   fmt::println("date range: [{}, {}], tt={}", *first_day, *last_day,
                d.tt_->external_interval());
 
-  auto const use_bounds = ;
+  auto const in_bounds = [&](auto const& pos) {
+    if (bounds == nullptr) {
+      return true;
+    }
+
+    auto const point = tg_geom_new_point(tg_point{pos.lng(), pos.lat()});
+    auto const result = tg_geom_within(point, bounds);
+    tg_geom_free(point);
+    return result;
+  };
+
   auto const use_odm_bounds = modes && use_odm && d.odm_bounds_ != nullptr;
   auto node_rtree = point_rtree<osr::node_idx_t>{};
   if (modes) {
@@ -265,12 +275,13 @@ int generate(int ac, char** av) {
                                 ((use_car || use_odm) && can_car(node)));
     };
 
-    auto const in_bounds = [&](auto const& pos) {
+    auto const in_odm_bounds = [&](auto const& pos) {
       return !use_odm_bounds || d.odm_bounds_->contains(pos);
     };
 
     for (auto i = osr::node_idx_t{0U}; i < d.w_->n_nodes(); ++i) {
-      if (mode_match(i) && in_bounds(d.w_->get_node_pos(i))) {
+      if (mode_match(i) && in_bounds(d.w_->get_node_pos(i)) &&
+          in_odm_bounds(d.w_->get_node_pos(i))) {
         node_rtree.add(d.w_->get_node_pos(i), i);
       }
     }
@@ -282,8 +293,9 @@ int generate(int ac, char** av) {
   for (auto i = 0U; i != d.tt_->n_locations(); ++i) {
     auto const l = n::location_idx_t{i};
 
-    if (use_odm_bounds &&
-        !d.odm_bounds_->contains(d.tt_->locations_.coordinates_[l])) {
+    if (!in_bounds(d.tt_->locations_.coordinates_[l]) ||
+        (use_odm_bounds &&
+         !d.odm_bounds_->contains(d.tt_->locations_.coordinates_[l]))) {
       continue;
     }
     stops.emplace_back(l);
