@@ -194,6 +194,13 @@ const translations: Translations = {
 			default:
 				return `${n} routes`;
 		}
+	},
+	pageTitle: {
+		default: 'MOTIS',
+		fromTo: (from, to) => `${from} to ${to}`,
+		departuresAt: (stop) => `Departures in ${stop}`,
+		arrivalsAt: (stop) => `Arrivals in ${stop}`,
+		isochronesFrom: (place) => `Isochrones from ${place}`
 	}
 };
 
