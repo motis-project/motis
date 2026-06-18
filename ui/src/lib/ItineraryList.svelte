@@ -53,11 +53,12 @@
 	};
 
 	const isTransitLeg = (l: Leg) => !!l.displayName;
+
 	const hasShortTransfer = (it: Itinerary) => {
 		return it.legs.some((leg, i) => {
 			return (
 				isTransitLeg(leg) &&
-				i + 2 != it.legs.length &&
+				i + 2 < it.legs.length &&
 				isTransitLeg(it.legs[i + 2]) &&
 				Math.round(
 					(new Date(it.legs[i + 2].startTime).getTime() - new Date(leg.endTime).getTime()) / 60000
@@ -69,7 +70,7 @@
 	const hasLongTransfers = (it: Itinerary) => {
 		return it.legs.every((leg, i) => {
 			return (
-				!(isTransitLeg(leg) && i + 2 != it.legs.length && isTransitLeg(it.legs[i + 2])) ||
+				!(isTransitLeg(leg) && i + 2 < it.legs.length && isTransitLeg(it.legs[i + 2])) ||
 				Math.round(
 					(new Date(it.legs[i + 2].startTime).getTime() - new Date(leg.endTime).getTime()) / 60000
 				) > 15
@@ -120,7 +121,7 @@
 {/snippet}
 
 {#snippet itineraryTags(it: Itinerary)}
-	<div class="flex w-full pb-2 gap-2">
+	<div class="flex w-full pb-2 gap-2 overflow-x-scroll">
 		<span
 			class="inline-flex items-center rounded-md bg-gray-50 px-2 py-1 text-xs font-medium text-gray-600 inset-ring inset-ring-gray-500/10"
 			><Footprints class="size-4 mr-1" />{walkingTime(it)} min</span
