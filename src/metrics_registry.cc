@@ -137,22 +137,27 @@ metrics_registry::metrics_registry(
       last_update_gbfs_{last_update_.Add({{"feed", "gbfs"}})},
       gbfs_last_update_timestamp_seconds_{
           prometheus::BuildGauge()
-              .Name("gbfs_last_update_timestamp_seconds")
+              .Name("motis_gbfs_last_update_timestamp_seconds")
               .Help("Timestamp of last successful GBFS update per provider")
               .Register(registry_)},
       gbfs_feed_timestamp_seconds_{
           prometheus::BuildGauge()
-              .Name("gbfs_feed_timestamp_seconds")
+              .Name("motis_gbfs_feed_timestamp_seconds")
               .Help("Timestamp from the last_updated field of the GBFS feed")
+              .Register(registry_)},
+      gbfs_vehicle_count_{
+          prometheus::BuildGauge()
+              .Name("motis_gbfs_vehicle_count")
+              .Help("Current number of GBFS vehicles known to MOTIS")
               .Register(registry_)},
       gbfs_fetch_errors_total_{
           prometheus::BuildCounter()
-              .Name("gbfs_fetch_errors_total")
+              .Name("motis_gbfs_fetch_errors_total")
               .Help("Number of GBFS file fetch or file-level parse errors")
               .Register(registry_)},
       gbfs_skipped_entries_total_{
           prometheus::BuildCounter()
-              .Name("gbfs_skipped_entries_total")
+              .Name("motis_gbfs_skipped_entries_total")
               .Help("Number of malformed GBFS entries skipped while parsing")
               .Register(registry_)} {}
 

@@ -1,6 +1,7 @@
 #include "motis/gbfs/update.h"
 
 #include <algorithm>
+#include <array>
 #include <cassert>
 #include <chrono>
 #include <cstdint>
@@ -45,6 +46,7 @@
 #include "motis/repeat.h"
 
 #include "motis/gbfs/compression.h"
+#include "motis/gbfs/mode.h"
 #include "motis/gbfs/osr_mapping.h"
 #include "motis/gbfs/parser.h"
 #include "motis/gbfs/partition.h"
@@ -284,6 +286,69 @@ struct gbfs_update {
     add_skipped_entries(id, "geofencing_zones",
                         provider.skipped_geofencing_zones_ +
                             provider.skipped_geofencing_rules_);
+  }
+
+  static constexpr auto kFormFactorCount =
+      static_cast<std::size_t>(vehicle_form_factor::kOther) + 1U;
+
+  vehicle_form_factor get_form_factor(gbfs_provider const& provider,
+                                      vehicle_type_idx_t const vt) const {
+    if (vt == vehicle_type_idx_t::invalid() ||
+        cista::to_idx(vt) >= provider.vehicle_types_.size()) {
+      return vehicle_form_factor::kOther;
+    }
+    return provider.vehicle_types_.at(vt).form_factor_;
+  }
+
+  void set_vehicle_count(std::string const& provider_id,
+                         std::string const& provider_group_id,
+                         vehicle_form_factor const ff,
+                         std::uint64_t const count) {
+    metrics_->gbfs_vehicle_count_
+        .Add({{"provider_id", provider_id},
+              {"provider_group_id", provider_group_id},
+              {"form_factor",
+               static_cast<std::string>(
+                   json::value_from(to_api_form_factor(ff)).as_string())}})
+        .Set(static_cast<double>(count));
+  }
+
+  void reset_vehicle_count(gbfs_provider const& provider) {
+    for (auto i = 0U; i != kFormFactorCount; ++i) {
+      auto const ff = static_cast<vehicle_form_factor>(i);
+      set_vehicle_count(provider.id_, provider.group_id_, ff, 0U);
+    }
+  }
+
+  void update_vehicle_count(gbfs_provider const& provider,
+                            gbfs_provider const* prev_provider) {
+    if (prev_provider != nullptr &&
+        (prev_provider->id_ != provider.id_ ||
+         prev_provider->group_id_ != provider.group_id_)) {
+      reset_vehicle_count(*prev_provider);
+    }
+
+    auto counts = std::array<std::uint64_t, kFormFactorCount>{};
+    auto has_station_counts = false;
+    for (auto const& station : provider.stations_ | std::views::values) {
+      for (auto const& [vt, count] : station.status_.vehicle_types_available_) {
+        has_station_counts = true;
+        counts[static_cast<std::size_t>(get_form_factor(provider, vt))] +=
+            count;
+      }
+    }
+    for (auto const& vehicle : provider.vehicle_status_) {
+      if (has_station_counts && !vehicle.station_id_.empty()) {
+        continue;
+      }
+      ++counts[static_cast<std::size_t>(
+          get_form_factor(provider, vehicle.vehicle_type_idx_))];
+    }
+
+    for (auto i = 0U; i != kFormFactorCount; ++i) {
+      set_vehicle_count(provider.id_, provider.group_id_,
+                        static_cast<vehicle_form_factor>(i), counts[i]);
+    }
   }
 
   bool is_config_feed_initialized(std::string const& id) const {
@@ -593,6 +658,8 @@ struct gbfs_update {
       } else {
         it->second.providers_.push_back(provider.idx_);
       }
+
+      update_vehicle_count(provider, prev_provider);
 
       if (stations_updated || vehicle_status_updated) {
         for (auto const& st : provider.stations_ | std::views::values) {
