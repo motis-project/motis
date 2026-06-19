@@ -38,12 +38,6 @@
 
 namespace motis::gbfs {
 
-enum class gbfs_version : std::uint8_t {
-  k1 = 0,
-  k2 = 1,
-  k3 = 2,
-};
-
 using vehicle_type_idx_t =
     cista::strong<std::uint16_t, struct vehicle_type_idx_>;
 
@@ -219,7 +213,6 @@ struct zone {
 };
 
 struct geofencing_zones {
-  gbfs_version version_{};
   std::vector<zone> zones_;
   std::vector<rule> global_rules_;
 
@@ -401,6 +394,13 @@ struct gbfs_provider {
   std::chrono::system_clock::time_point last_updated_{};
 
   std::optional<std::string> color_{};
+
+  std::uint64_t skipped_station_infos_{};
+  std::uint64_t skipped_station_status_{};
+  std::uint64_t skipped_vehicle_types_{};
+  std::uint64_t skipped_vehicle_status_{};
+  std::uint64_t skipped_geofencing_zones_{};
+  std::uint64_t skipped_geofencing_rules_{};
 };
 
 struct gbfs_group {

@@ -46,6 +46,8 @@ struct metrics_registry {
   prometheus::Gauge& last_update_gbfs_;
   prometheus::Family<prometheus::Gauge>& gbfs_last_update_timestamp_seconds_;
   prometheus::Family<prometheus::Gauge>& gbfs_feed_timestamp_seconds_;
+  prometheus::Family<prometheus::Counter>& gbfs_fetch_errors_total_;
+  prometheus::Family<prometheus::Counter>& gbfs_skipped_entries_total_;
 
 private:
   metrics_registry(prometheus::Histogram::BucketBoundaries event_boundaries,

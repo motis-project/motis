@@ -144,6 +144,16 @@ metrics_registry::metrics_registry(
           prometheus::BuildGauge()
               .Name("gbfs_feed_timestamp_seconds")
               .Help("Timestamp from the last_updated field of the GBFS feed")
+              .Register(registry_)},
+      gbfs_fetch_errors_total_{
+          prometheus::BuildCounter()
+              .Name("gbfs_fetch_errors_total")
+              .Help("Number of GBFS file fetch or file-level parse errors")
+              .Register(registry_)},
+      gbfs_skipped_entries_total_{
+          prometheus::BuildCounter()
+              .Name("gbfs_skipped_entries_total")
+              .Help("Number of malformed GBFS entries skipped while parsing")
               .Register(registry_)} {}
 
 metrics_registry::~metrics_registry() = default;

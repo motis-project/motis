@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cassert>
 #include <chrono>
+#include <cstdint>
 #include <filesystem>
 #include <fstream>
 #include <set>
@@ -139,11 +140,12 @@ std::chrono::system_clock::time_point get_expiry(
     return now + std::chrono::seconds{it->second};
   }
   if (root.contains("data")) {
-    auto const& data = root.at("data").as_object();
-    if (data.contains("ttl")) {
-      auto const ttl = data.at("ttl").to_number<int>();
-      if (ttl > 0) {
-        return now + std::chrono::seconds{ttl};
+    auto const& data_val = root.at("data");
+    if (data_val.is_object() && data_val.as_object().contains("ttl")) {
+      auto const& ttl_val = data_val.as_object().at("ttl");
+      if (auto const ttl = as_double(ttl_val);
+          ttl.has_value() && static_cast<int>(*ttl) > 0) {
+        return now + std::chrono::seconds{static_cast<int>(*ttl)};
       }
     }
   }
@@ -253,6 +255,35 @@ struct gbfs_update {
   void ensure_gbfs_metrics(std::string const& id) {
     metrics_->gbfs_last_update_timestamp_seconds_.Add({{"provider_id", id}});
     metrics_->gbfs_feed_timestamp_seconds_.Add({{"provider_id", id}});
+  }
+
+  void inc_fetch_error(std::string const& id, std::string_view const file) {
+    metrics_->gbfs_fetch_errors_total_
+        .Add({{"provider_id", id}, {"file", std::string{file}}})
+        .Increment();
+  }
+
+  void add_skipped_entries(std::string const& id,
+                           std::string_view const file,
+                           std::uint64_t const count) {
+    if (count == 0U) {
+      return;
+    }
+    metrics_->gbfs_skipped_entries_total_
+        .Add({{"provider_id", id}, {"file", std::string{file}}})
+        .Increment(static_cast<double>(count));
+  }
+
+  void add_skipped_entries(std::string const& id,
+                           gbfs_provider const& provider) {
+    add_skipped_entries(id, "station_information",
+                        provider.skipped_station_infos_);
+    add_skipped_entries(id, "station_status", provider.skipped_station_status_);
+    add_skipped_entries(id, "vehicle_types", provider.skipped_vehicle_types_);
+    add_skipped_entries(id, "vehicle_status", provider.skipped_vehicle_status_);
+    add_skipped_entries(id, "geofencing_zones",
+                        provider.skipped_geofencing_zones_ +
+                            provider.skipped_geofencing_rules_);
   }
 
   bool is_config_feed_initialized(std::string const& id) const {
@@ -366,6 +397,7 @@ struct gbfs_update {
 
       co_return co_await update_provider_feed(*saf, std::move(discovery));
     } catch (std::exception const& ex) {
+      inc_fetch_error(id, "gbfs");
       std::cerr << "[GBFS] error initializing feed " << id << " ("
                 << config.url_ << "): " << ex.what() << "\n";
     }
@@ -446,7 +478,9 @@ struct gbfs_update {
                                 pf.dir_, pf.default_ttl_, pf.overwrite_ttl_);
       }
       if (discovery) {
-        file_infos->urls_ = parse_discovery(discovery->json_);
+        auto urls = parse_discovery(discovery->json_);
+        utl::verify(!urls.empty(), "GBFS discovery contains no file URLs");
+        file_infos->urls_ = std::move(urls);
         file_infos->urls_fi_.expiry_ = discovery->next_refresh_;
         file_infos->urls_fi_.hash_ = discovery->hash_;
       }
@@ -458,19 +492,25 @@ struct gbfs_update {
           co_return false;
         }
         if (force || needs_refresh(fi)) {
-          auto file = co_await fetch_file(name, file_infos->urls_.at(name),
-                                          pf.headers_, pf.oauth_, pf.dir_,
-                                          pf.default_ttl_, pf.overwrite_ttl_);
-          if (file.last_updated_.has_value() &&
-              *file.last_updated_ > provider.last_updated_) {
-            provider.last_updated_ = *file.last_updated_;
+          try {
+            auto file = co_await fetch_file(name, file_infos->urls_.at(name),
+                                            pf.headers_, pf.oauth_, pf.dir_,
+                                            pf.default_ttl_, pf.overwrite_ttl_);
+            auto const hash_changed = file.hash_ != fi.hash_;
+            fn(provider, file.json_);
+            if (file.last_updated_.has_value() &&
+                *file.last_updated_ > provider.last_updated_) {
+              provider.last_updated_ = *file.last_updated_;
+            }
+            fi.expiry_ = file.next_refresh_;
+            fi.hash_ = file.hash_;
+            co_return hash_changed;
+          } catch (std::exception const& ex) {
+            inc_fetch_error(pf.id_, name);
+            std::cerr << "[GBFS] error processing " << name << " for feed "
+                      << pf.id_ << " (" << file_infos->urls_.at(name)
+                      << "): " << ex.what() << "\n";
           }
-          auto const hash_changed = file.hash_ != fi.hash_;
-          auto j_root = file.json_.as_object();
-          fi.expiry_ = file.next_refresh_;
-          fi.hash_ = file.hash_;
-          fn(provider, file.json_);
-          co_return hash_changed;
         }
         co_return false;
       };
@@ -578,6 +618,7 @@ struct gbfs_update {
                    provider.last_updated_.time_since_epoch())
                    .count());
     } catch (std::exception const& ex) {
+      inc_fetch_error(pf.id_, "gbfs");
       std::cerr << "[GBFS] error processing feed " << pf.id_ << " (" << pf.url_
                 << "): " << ex.what() << "\n";
       if (!std::string_view{ex.what()}.starts_with("HTTP ")) {
@@ -602,6 +643,8 @@ struct gbfs_update {
         provider.last_updated_ = prev_provider->last_updated_;
       }
     }
+
+    add_skipped_entries(pf.id_, provider);
 
     if (data_changed) {
       try {
@@ -833,73 +876,117 @@ struct gbfs_update {
   }
 
   awaitable<void> update_aggregated_feed(aggregated_feed& af) {
-    if (af.needs_update()) {
-      auto const file =
-          co_await fetch_file("manifest", af.url_, af.headers_, af.oauth_,
-                              std::nullopt, af.default_ttl_, af.overwrite_ttl_);
-      co_await process_aggregated_feed(af, file.json_.as_object());
-    } else {
-      co_await update_aggregated_feed_provider_feeds(af);
+    try {
+      if (af.needs_update()) {
+        auto const file = co_await fetch_file(
+            "manifest", af.url_, af.headers_, af.oauth_, std::nullopt,
+            af.default_ttl_, af.overwrite_ttl_);
+        co_await process_aggregated_feed(af, file.json_.as_object());
+      } else {
+        co_await update_aggregated_feed_provider_feeds(af);
+      }
+    } catch (std::exception const& ex) {
+      inc_fetch_error(af.id_, "manifest");
+      std::cerr << "[GBFS] error processing aggregated feed " << af.id_ << " ("
+                << af.url_ << "): " << ex.what() << "\n";
     }
   }
 
   awaitable<void> process_aggregated_feed(aggregated_feed& af,
                                           boost::json::object const& root) {
     auto feeds = std::vector<provider_feed>{};
-    if (root.contains("data") &&
-        root.at("data").as_object().contains("datasets")) {
+    auto skipped_entries = 0U;
+
+    if (root.contains("data") && root.at("data").is_object() &&
+        root.at("data").as_object().contains("datasets") &&
+        root.at("data").as_object().at("datasets").is_array()) {
       // GBFS 3.x manifest.json
       for (auto const& dataset : root.at("data").at("datasets").as_array()) {
-        auto const system_id =
-            static_cast<std::string>(dataset.at("system_id").as_string());
-        auto const combined_id = fmt::format("{}:{}", af.id_, system_id);
+        try {
+          if (!dataset.is_object()) {
+            ++skipped_entries;
+            continue;
+          }
+          auto const& dataset_obj = dataset.as_object();
+          auto const system_id = optional_str(dataset_obj, "system_id");
+          auto const versions_it = dataset_obj.find("versions");
+          if (system_id.empty() || versions_it == dataset_obj.end() ||
+              !versions_it->value().is_array() ||
+              versions_it->value().as_array().empty()) {
+            ++skipped_entries;
+            continue;
+          }
 
-        auto const& versions = dataset.at("versions").as_array();
-        if (versions.empty()) {
-          continue;
+          // versions array must be sorted by increasing version number
+          auto const& latest_version =
+              versions_it->value().as_array().back().as_object();
+          auto const url = optional_str(latest_version, "url");
+          if (url.empty()) {
+            ++skipped_entries;
+            continue;
+          }
+          auto const combined_id = fmt::format("{}:{}", af.id_, system_id);
+          feeds.emplace_back(provider_feed{
+              .id_ = combined_id,
+              .url_ = url,
+              .headers_ = af.headers_,
+              .default_restrictions_ =
+                  lookup_default_restrictions(af.id_, combined_id),
+              .default_return_constraint_ =
+                  lookup_default_return_constraint(af.id_, combined_id),
+              .config_group_ = lookup_group(af.id_, system_id),
+              .config_name_ = lookup_name(af.id_, system_id),
+              .config_color_ = lookup_color(af.id_, system_id),
+              .ignore_geofencing_ = lookup_ignore_geofencing(af.id_, system_id),
+              .oauth_ = af.oauth_,
+              .default_ttl_ = af.default_ttl_,
+              .overwrite_ttl_ = af.overwrite_ttl_});
+        } catch (std::exception const& ex) {
+          ++skipped_entries;
+          std::cerr << "[GBFS] (" << af.id_
+                    << ") invalid manifest dataset: " << ex.what() << "\n";
         }
-        // versions array must be sorted by increasing version number
-        auto const& latest_version = versions.back().as_object();
-        feeds.emplace_back(provider_feed{
-            .id_ = combined_id,
-            .url_ =
-                static_cast<std::string>(latest_version.at("url").as_string()),
-            .headers_ = af.headers_,
-            .default_restrictions_ =
-                lookup_default_restrictions(af.id_, combined_id),
-            .default_return_constraint_ =
-                lookup_default_return_constraint(af.id_, combined_id),
-            .config_group_ = lookup_group(af.id_, system_id),
-            .config_name_ = lookup_name(af.id_, system_id),
-            .config_color_ = lookup_color(af.id_, system_id),
-            .ignore_geofencing_ = lookup_ignore_geofencing(af.id_, system_id),
-            .oauth_ = af.oauth_,
-            .default_ttl_ = af.default_ttl_,
-            .overwrite_ttl_ = af.overwrite_ttl_});
       }
-    } else if (root.contains("systems")) {
+    } else if (root.contains("systems") && root.at("systems").is_array()) {
       // Lamassu 2.3 format
       for (auto const& system : root.at("systems").as_array()) {
-        auto const system_id =
-            static_cast<std::string>(system.at("id").as_string());
-        auto const combined_id = fmt::format("{}:{}", af.id_, system_id);
-        feeds.emplace_back(provider_feed{
-            .id_ = combined_id,
-            .url_ = static_cast<std::string>(system.at("url").as_string()),
-            .headers_ = af.headers_,
-            .default_restrictions_ =
-                lookup_default_restrictions(af.id_, combined_id),
-            .default_return_constraint_ =
-                lookup_default_return_constraint(af.id_, combined_id),
-            .config_group_ = lookup_group(af.id_, system_id),
-            .config_name_ = lookup_name(af.id_, system_id),
-            .config_color_ = lookup_color(af.id_, system_id),
-            .ignore_geofencing_ = lookup_ignore_geofencing(af.id_, system_id),
-            .oauth_ = af.oauth_,
-            .default_ttl_ = af.default_ttl_,
-            .overwrite_ttl_ = af.overwrite_ttl_});
+        try {
+          if (!system.is_object()) {
+            ++skipped_entries;
+            continue;
+          }
+          auto const& system_obj = system.as_object();
+          auto const system_id = optional_str(system_obj, "id");
+          auto const url = optional_str(system_obj, "url");
+          if (system_id.empty() || url.empty()) {
+            ++skipped_entries;
+            continue;
+          }
+          auto const combined_id = fmt::format("{}:{}", af.id_, system_id);
+          feeds.emplace_back(provider_feed{
+              .id_ = combined_id,
+              .url_ = url,
+              .headers_ = af.headers_,
+              .default_restrictions_ =
+                  lookup_default_restrictions(af.id_, combined_id),
+              .default_return_constraint_ =
+                  lookup_default_return_constraint(af.id_, combined_id),
+              .config_group_ = lookup_group(af.id_, system_id),
+              .config_name_ = lookup_name(af.id_, system_id),
+              .config_color_ = lookup_color(af.id_, system_id),
+              .ignore_geofencing_ = lookup_ignore_geofencing(af.id_, system_id),
+              .oauth_ = af.oauth_,
+              .default_ttl_ = af.default_ttl_,
+              .overwrite_ttl_ = af.overwrite_ttl_});
+        } catch (std::exception const& ex) {
+          ++skipped_entries;
+          std::cerr << "[GBFS] (" << af.id_
+                    << ") invalid Lamassu system: " << ex.what() << "\n";
+        }
       }
     }
+
+    add_skipped_entries(af.id_, "manifest", skipped_entries);
 
     af.feeds_ = std::move(feeds);
 
