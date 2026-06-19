@@ -203,6 +203,7 @@ int batch(int ac, char** av) {
 
   auto const pt = utl::activate_progress_tracker("batch");
   pt->in_high(queries.size());
+  auto const start_batch = std::chrono::steady_clock::now();
   if (n_threads > 1U) {
     utl::parallel_ordered_collect_threadlocal<state>(
         queries.size(), compute_response,
@@ -219,6 +220,8 @@ int batch(int ac, char** av) {
       pt->increment();
     }
   }
+  fmt::println("Processed {} queries in {:%T}", queries.size(),
+               std::chrono::steady_clock::now() - start_batch);
 
   auto cat = category{};
   cat.name_ = "response_time";
