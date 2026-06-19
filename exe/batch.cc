@@ -203,14 +203,25 @@ int batch(int ac, char** av) {
 
   auto const pt = utl::activate_progress_tracker("batch");
   pt->in_high(queries.size());
-  utl::parallel_ordered_collect_threadlocal<state>(
-      queries.size(), compute_response,
-      [&](std::size_t const id,
-          std::pair<std::uint64_t, std::string> const& s) {
-        response_time.add(id, s.first);
-        out << s.second << "\n";
-      },
-      pt->update_fn(), utl::parallel_error_strategy::QUIT_EXEC, n_threads);
+  auto const start_batch = std::chrono::steady_clock::now();
+  if (n_threads > 1U) {
+    utl::parallel_ordered_collect_threadlocal<state>(
+        queries.size(), compute_response,
+        [&](std::size_t const id,
+            std::pair<std::uint64_t, std::string> const& s) {
+          response_time.add(id, s.first);
+          out << s.second << "\n";
+        },
+        pt->update_fn(), utl::parallel_error_strategy::QUIT_EXEC, n_threads);
+  } else {
+    auto s = state{};
+    for (auto i = 0U; i != queries.size(); ++i) {
+      compute_response(s, i);
+      pt->increment();
+    }
+  }
+  fmt::println("Processed {} queries in {:%T}", queries.size(),
+               std::chrono::steady_clock::now() - start_batch);
 
   auto cat = category{};
   cat.name_ = "response_time";
