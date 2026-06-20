@@ -879,6 +879,8 @@ paths:
               is annotated with realtime data.
             - `FULL`: searches on both the scheduled and the realtime timetable and
               merges the results. All results are realtime-annotated.
+            - `HYBRID`: like `FULL`, but only runs the realtime search when a
+              scheduled connection is broken under realtime.
             - `OFF`: only the scheduled timetable is used.
           schema:
             $ref: '#/components/schemas/RealtimeMode'
@@ -2581,6 +2583,7 @@ paths:
             - `INFOS`: stop times are returned, windowed and sorted by their
               planned time, but each stop time is annotated with realtime data.
             - `FULL`: behaves like `REALTIME` here.
+            - `HYBRID`: behaves like `REALTIME` here.
             - `OFF`: only scheduled data is used; stop times are returned and
               sorted by their planned time, with no realtime annotation.
           schema:
@@ -3897,6 +3900,7 @@ components:
         - `INFOS`: route, sort and window on the scheduled timetable only, but still
           annotate the response with realtime data.
         - `FULL`: search on both the scheduled and the realtime timetable and merge the results.
+        - `HYBRID`: search on rt only if itineraries found in scheduled are broken according to the realtime info.
         - `OFF`: use the scheduled timetable only, with no realtime annotation.
       type: string
       enum:
@@ -3904,6 +3908,7 @@ components:
         - INFOS
         - REALTIME
         - FULL
+        - HYBRID
 
     PedestrianProfile:
       description: Different accessibility profiles for pedestrians.
