@@ -901,6 +901,8 @@ paths:
             enum:
               - RAPTOR
               - PONG
+              - GPU_PONG
+              - GPU_RAPTOR
               - TB
             default: PONG
       responses:
