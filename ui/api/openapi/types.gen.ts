@@ -1987,7 +1987,7 @@ export type PlanData = {
         /**
          * algorithm to use
          */
-        algorithm?: 'RAPTOR' | 'PONG' | 'TB';
+        algorithm?: 'RAPTOR' | 'PONG' | 'GPU_PONG' | 'GPU_RAPTOR' | 'TB';
         /**
          * Optional. Default is `false`.
          *
@@ -3111,11 +3111,11 @@ export type GeocodeData = {
          */
         language?: Array<(string)>;
         /**
-         * latitude,longitude pair of the upper left coordinate
+         * latitude,longitude pair of the upper left coordinate of the bounding box containing all results
          */
         max?: string;
         /**
-         * latitude,longitude pair of the lower right coordinate
+         * latitude,longitude pair of the lower right coordinate of the bounding box containing all results
          */
         min?: string;
         /**
@@ -3126,7 +3126,6 @@ export type GeocodeData = {
         mode?: Array<Mode>;
         /**
          * Optional. Number of suggestions to return.
-         *
          * If omitted, 10 suggestions are returned by default.
          * Must be <= server config variable `geocode_max_suggestions`.
          *

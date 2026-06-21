@@ -1001,13 +1001,17 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
     // ctx-based pooling is a later step). Shared by GPU_PONG and GPU_RAPTOR.
     auto const run_on_gpu = [&](bool const use_pong) -> bool {
       static std::mutex gpu_mutex;
-      static std::optional<n::routing::gpu::gpu_timetable> gpu_tt;
-      static std::optional<n::routing::gpu::gpu_raptor_state> gpu_state;
+      // Intentionally leaked (raw owning pointers, never deleted): their
+      // destructors call cudaFree, which at process exit runs *after* the CUDA
+      // driver has begun unloading -> cudaErrorCudartUnloading -> terminate.
+      // Leaking is the standard workaround; the OS reclaims the memory.
+      static n::routing::gpu::gpu_timetable* gpu_tt = nullptr;
+      static n::routing::gpu::gpu_raptor_state* gpu_state = nullptr;
       try {
         auto const lock = std::lock_guard{gpu_mutex};
-        if (!gpu_tt.has_value()) {
-          gpu_tt.emplace(*tt_);
-          gpu_state.emplace(*gpu_tt);
+        if (gpu_tt == nullptr) {
+          gpu_tt = new n::routing::gpu::gpu_timetable{*tt_};
+          gpu_state = new n::routing::gpu::gpu_raptor_state{*gpu_tt};
         }
         auto const dir =
             query.arriveBy_ ? n::direction::kBackward : n::direction::kForward;
