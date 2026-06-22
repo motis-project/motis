@@ -153,7 +153,8 @@
 		positionOptions: {
 			enableHighAccuracy: true
 		},
-		showAccuracyCircle: false
+		showAccuracyCircle: false,
+		trackUserLocation: true
 	});
 
 	const getLocation = () => {
