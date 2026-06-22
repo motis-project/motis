@@ -1,8 +1,14 @@
 #include "motis/endpoints/map/vehicles.h"
 
 #include <chrono>
+#include <iostream>
+#include <string>
+#include <vector>
 
 #include "date/date.h"
+
+#include "fmt/core.h"
+#include "fmt/ranges.h"
 
 #include "geo/polyline_format.h"
 
@@ -375,6 +381,72 @@ struct vehicle_details {
   std::optional<api::VehicleShapeSourceEnum> shape_source_;
 };
 
+std::string_view optional_value(std::optional<std::string> const& value) {
+  return value.has_value() ? std::string_view{*value} : std::string_view{"-"};
+}
+
+bool is_display_resolved(vehicle_details const& details) {
+  return details.route_.has_value() && details.mode_.has_value() &&
+         details.shape_.has_value();
+}
+
+struct unresolved_vehicle_stats {
+  void record_filtered(vehicle_positions::vehicle_position const& vehicle,
+                       vehicle_details const& details) {
+    ++filtered_;
+    record_missing(details);
+    if (examples_.size() < 5U) {
+      examples_.emplace_back(fmt::format(
+          "feed={} entity={} trip={} route={} vehicle={}", vehicle.feed_id_,
+          vehicle.entity_id_, optional_value(vehicle.trip_.trip_id_),
+          optional_value(vehicle.trip_.route_id_),
+          optional_value(vehicle.vehicle_.id_)));
+    }
+  }
+
+  void record_returned(vehicle_details const& details) {
+    record_missing(details);
+  }
+
+  void log(std::size_t const snapshot_size,
+           std::size_t const returned_size) const {
+    if (filtered_ == 0U && missing_scheduled_trip_id_ == 0U) {
+      return;
+    }
+
+    fmt::println(
+        std::clog,
+        "[map.vehicles] snapshot={} returned={} filtered_unresolved={} "
+        "missing_route={} missing_mode={} missing_shape={} "
+        "missing_scheduled_trip_id={} examples=[{}]",
+        snapshot_size, returned_size, filtered_, missing_route_, missing_mode_,
+        missing_shape_, missing_scheduled_trip_id_, fmt::join(examples_, "; "));
+  }
+
+  std::size_t filtered_{0U};
+  std::size_t missing_route_{0U};
+  std::size_t missing_mode_{0U};
+  std::size_t missing_shape_{0U};
+  std::size_t missing_scheduled_trip_id_{0U};
+  std::vector<std::string> examples_;
+
+private:
+  void record_missing(vehicle_details const& details) {
+    if (!details.route_.has_value()) {
+      ++missing_route_;
+    }
+    if (!details.mode_.has_value()) {
+      ++missing_mode_;
+    }
+    if (!details.shape_.has_value()) {
+      ++missing_shape_;
+    }
+    if (!details.scheduled_trip_id_.has_value()) {
+      ++missing_scheduled_trip_id_;
+    }
+  }
+};
+
 vehicle_details resolve_details(tag_lookup const* tags,
                                 n::timetable const* tt,
                                 n::rt_timetable const* rtt,
@@ -505,12 +577,20 @@ api::VehiclePositionsResponse vehicles::operator()(
 
   auto const snapshot = rt->vehicle_positions_->snapshot(
       vehicle_positions::vehicle_viewport{.min_ = min->pos_, .max_ = max->pos_});
+  auto unresolved = unresolved_vehicle_stats{};
   res.vehicles_.reserve(snapshot.size());
   for (auto const& vehicle : snapshot) {
-    res.vehicles_.emplace_back(
-        to_api(vehicle, resolve_details(tags_, tt_, rtt, shapes_, vehicle,
-                                        query.language_)));
+    auto details = resolve_details(tags_, tt_, rtt, shapes_, vehicle,
+                                   query.language_);
+    if (!is_display_resolved(details)) {
+      unresolved.record_filtered(vehicle, details);
+      continue;
+    }
+
+    unresolved.record_returned(details);
+    res.vehicles_.emplace_back(to_api(vehicle, std::move(details)));
   }
+  unresolved.log(snapshot.size(), res.vehicles_.size());
   return res;
 }
 
