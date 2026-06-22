@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <iterator>
+#include <tuple>
 
 #include "boost/thread/tss.hpp"
 
@@ -1085,6 +1086,11 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                       std::make_move_iterator(begin(other.journeys_)),
                       std::make_move_iterator(end(other.journeys_)));
       utl::erase_duplicates(journeys);
+      std::sort(begin(journeys), end(journeys),
+                [](auto const& a, auto const& b) {
+                  return std::tuple{a.start_time_, a.dest_time_, a.transfers_} <
+                         std::tuple{b.start_time_, b.dest_time_, b.transfers_};
+                });
       search_interval = {std::min(search_interval.from_, other.interval_.from_),
                          std::max(search_interval.to_, other.interval_.to_)};
     };
