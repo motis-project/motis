@@ -453,6 +453,8 @@ void load_station_status(gbfs_provider& provider, json::value const& root) {
               roundtrip_available += count;
               break;
           }
+        } else {
+          ++provider.skipped_station_status_;
         }
       }
       if (has_typed_availability) {
@@ -719,6 +721,9 @@ rule parse_rule(gbfs_provider& provider, json::value const& r) {
         free_floating_vt_it != end(provider.vehicle_types_map_)) {
       vehicle_type_idxs.emplace_back(free_floating_vt_it->second);
     }
+  }
+  if (!vehicle_type_ids.empty() && vehicle_type_idxs.empty()) {
+    vehicle_type_idxs.emplace_back(vehicle_type_idx_t::invalid());
   }
 
   auto const ride_allowed = get_bool(rule_obj, "ride_allowed", true);
