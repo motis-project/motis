@@ -358,7 +358,7 @@ TEST(motis, stop_times) {
   }
 
   {
-    // realtimeMode=INFOS:
+    // realtimeMode=REALTIME_ANNOTATION_ONLY:
     auto const res = stop_times(
         "/api/v5/stoptimes?stopId=test_FFM_10"
         "&time=2019-04-30T23:30:00.000Z"
@@ -366,7 +366,7 @@ TEST(motis, stop_times) {
         "&n=3"
         "&language=de"
         "&fetchStops=true"
-        "&realtimeMode=INFOS");
+        "&realtimeMode=REALTIME_ANNOTATION_ONLY");
 
     auto const& ice = res.stopTimes_[0];
     EXPECT_EQ("20190501_00:35_test_ICE", ice.tripId_);
