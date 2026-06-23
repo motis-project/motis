@@ -23,6 +23,7 @@
 #include "osr/types.h"
 
 #include "nigiri/common/interval.h"
+#include "nigiri/for_each_meta.h"
 #include "nigiri/location_match_mode.h"
 #include "nigiri/routing/limits.h"
 #include "nigiri/routing/pareto_set.h"
@@ -33,6 +34,7 @@
 #include "nigiri/routing/tb/query_engine.h"
 #include "nigiri/routing/tb/tb_data.h"
 #include "nigiri/routing/tb/tb_search.h"
+#include "nigiri/types.h"
 
 #include "motis/config.h"
 #include "motis/constants.h"
@@ -219,7 +221,7 @@ std::vector<n::routing::offset> get_offsets(
     osr_parameters const& osr_params,
     api::PedestrianProfileEnum const pedestrian_profile,
     api::ElevationCostsEnum const elevation_costs,
-    std::chrono::seconds const max,
+    std::chrono::seconds max,
     double const max_matching_distance,
     gbfs::gbfs_routing_data& gbfs_rd,
     stats_map_t& stats) {
@@ -255,9 +257,24 @@ std::vector<n::routing::offset> get_offsets(
       profile = osr::search_profile::kCarSharing;
     }
 
-    auto const max_dist = get_max_distance(profile, osr_params, max);
-    auto const near_stops =
-        get_stops_with_traffic(*r.tt_, rtt, *r.loc_tree_, pos, max_dist);
+    auto max_dist = get_max_distance(profile, osr_params, max);
+
+    constexpr unsigned const N = 5U;
+    constexpr unsigned const FACTOR = 2U;
+    constexpr unsigned const MAX_ITER = 5U;
+
+    auto near_stops = std::vector<n::location_idx_t>{};
+    for (unsigned i = 0U; i < MAX_ITER; ++i) {
+      near_stops.append_range(
+          get_stops_with_traffic(*r.tt_, rtt, *r.loc_tree_, pos, max_dist));
+
+      if (near_stops.size() >= N * FACTOR) {
+        break;
+      }
+
+      max_dist *= max_dist;
+      max *= max;
+    }
     auto const near_stop_locations = utl::to_vec(
         near_stops,
         [&](n::location_idx_t const l) { return stop_to_osr_location(r, l); });
@@ -275,6 +292,8 @@ std::vector<n::routing::offset> get_offsets(
                         static_cast<osr::cost_t>(max.count()), dir, nullptr,
                         sharing, elevations);
     };
+
+    auto mode_offsets = std::vector<n::routing::offset>{};
 
     if (osr::is_rental_profile(profile)) {
       if (!gbfs_rd.has_data()) {
@@ -320,10 +339,10 @@ std::vector<n::routing::offset> get_offsets(
           ignore_walk = true;
           for (auto const [p, l] : utl::zip(paths, near_stops)) {
             if (p.has_value()) {
-              offsets.emplace_back(l,
-                                   n::duration_t{static_cast<unsigned>(
-                                       std::ceil(p->cost_ / 60.0))},
-                                   gbfs_rd.get_transport_mode(prod_ref));
+              mode_offsets.emplace_back(l,
+                                        n::duration_t{static_cast<unsigned>(
+                                            std::ceil(p->cost_ / 60.0))},
+                                        gbfs_rd.get_transport_mode(prod_ref));
             }
           }
         }
@@ -337,13 +356,19 @@ std::vector<n::routing::offset> get_offsets(
       auto const paths = route(profile, nullptr);
       for (auto const [p, l] : utl::zip(paths, near_stops)) {
         if (p.has_value()) {
-          offsets.emplace_back(
+          mode_offsets.emplace_back(
               l,
               n::duration_t{static_cast<unsigned>(std::ceil(p->cost_ / 60.0))},
               static_cast<n::transport_mode_id_t>(profile));
         }
       }
     }
+
+    utl::sort(mode_offsets, [&](auto const& a, auto const& b) {
+      // return trip or location based?
+      return a.duration_ < b.duration_;
+    });
+    offsets.append_range(mode_offsets | std::views::take(N));
 
     stats.emplace(fmt::format("prepare_{}_{}", to_str(dir), fmt::streamed(m)),
                   UTL_GET_TIMING_MS(timer));
