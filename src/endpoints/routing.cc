@@ -11,6 +11,7 @@
 #include "prometheus/counter.h"
 #include "prometheus/histogram.h"
 
+#include "utl/concat.h"
 #include "utl/erase_duplicates.h"
 #include "utl/helpers/algorithm.h"
 #include "utl/timing.h"
@@ -221,7 +222,7 @@ std::vector<n::routing::offset> get_offsets(
     osr_parameters const& osr_params,
     api::PedestrianProfileEnum const pedestrian_profile,
     api::ElevationCostsEnum const elevation_costs,
-    std::chrono::seconds max,
+    std::chrono::seconds const max,
     double const max_matching_distance,
     gbfs::gbfs_routing_data& gbfs_rd,
     stats_map_t& stats) {
@@ -257,23 +258,25 @@ std::vector<n::routing::offset> get_offsets(
       profile = osr::search_profile::kCarSharing;
     }
 
-    auto max_dist = get_max_distance(profile, osr_params, max);
+    auto const max_dist = get_max_distance(profile, osr_params, max);
 
     constexpr unsigned const N = 5U;
     constexpr unsigned const FACTOR = 2U;
     constexpr unsigned const MAX_ITER = 5U;
 
     auto near_stops = std::vector<n::location_idx_t>{};
+    auto expanded_dist = max_dist;
+    auto expanded_time = max;
     for (unsigned i = 0U; i < MAX_ITER; ++i) {
-      near_stops.append_range(
-          get_stops_with_traffic(*r.tt_, rtt, *r.loc_tree_, pos, max_dist));
+      utl::concat(near_stops, get_stops_with_traffic(*r.tt_, rtt, *r.loc_tree_,
+                                                     pos, expanded_dist));
 
       if (near_stops.size() >= N * FACTOR) {
         break;
       }
 
-      max_dist *= max_dist;
-      max *= max;
+      expanded_dist *= max_dist;
+      expanded_time *= max.count();
     }
     auto const near_stop_locations = utl::to_vec(
         near_stops,
@@ -289,8 +292,8 @@ std::vector<n::routing::offset> get_offsets(
           max_matching_distance);
       return osr::route(params, *r.w_, *r.l_, p, pos, near_stop_locations,
                         pos_match, near_stop_matches,
-                        static_cast<osr::cost_t>(max.count()), dir, nullptr,
-                        sharing, elevations);
+                        static_cast<osr::cost_t>(expanded_time.count()), dir,
+                        nullptr, sharing, elevations);
     };
 
     auto mode_offsets = std::vector<n::routing::offset>{};
@@ -302,8 +305,9 @@ std::vector<n::routing::offset> get_offsets(
 
       auto const max_dist_to_departure =
           dir == osr::direction::kForward
-              ? get_max_distance(osr::search_profile::kFoot, osr_params, max)
-              : max_dist;
+              ? get_max_distance(osr::search_profile::kFoot, osr_params,
+                                 expanded_time)
+              : expanded_dist;
       auto providers = hash_set<gbfs_provider_idx_t>{};
       gbfs_rd.data_->provider_rtree_.in_radius(
           pos.pos_, max_dist_to_departure,
@@ -368,7 +372,7 @@ std::vector<n::routing::offset> get_offsets(
       // return trip or location based?
       return a.duration_ < b.duration_;
     });
-    offsets.append_range(mode_offsets | std::views::take(N));
+    utl::concat(offsets, mode_offsets | std::views::take(N));
 
     stats.emplace(fmt::format("prepare_{}_{}", to_str(dir), fmt::streamed(m)),
                   UTL_GET_TIMING_MS(timer));
