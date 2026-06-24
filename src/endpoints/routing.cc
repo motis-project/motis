@@ -225,7 +225,9 @@ std::vector<n::routing::offset> get_offsets(
     std::chrono::seconds const max,
     double const max_matching_distance,
     gbfs::gbfs_routing_data& gbfs_rd,
-    stats_map_t& stats) {
+    stats_map_t& stats,
+    unsigned const min_near_stations,
+    unsigned const max_bbox_increases) {
   if (!r.is_osr_loaded()) {
     return {};
   }
@@ -260,18 +262,16 @@ std::vector<n::routing::offset> get_offsets(
 
     auto const max_dist = get_max_distance(profile, osr_params, max);
 
-    constexpr unsigned const N = 5U;
     constexpr unsigned const FACTOR = 2U;
-    constexpr unsigned const MAX_ITER = 5U;
 
     auto near_stops = std::vector<n::location_idx_t>{};
     auto expanded_dist = max_dist;
     auto expanded_time = max;
-    for (unsigned i = 0U; i < MAX_ITER; ++i) {
+    for (unsigned i = 0U; i < max_bbox_increases; ++i) {
       utl::concat(near_stops, get_stops_with_traffic(*r.tt_, rtt, *r.loc_tree_,
                                                      pos, expanded_dist));
 
-      if (near_stops.size() >= N * FACTOR) {
+      if (near_stops.size() >= min_near_stations * FACTOR) {
         break;
       }
 
@@ -372,7 +372,7 @@ std::vector<n::routing::offset> get_offsets(
       // return trip or location based?
       return a.duration_ < b.duration_;
     });
-    utl::concat(offsets, mode_offsets | std::views::take(N));
+    utl::concat(offsets, mode_offsets | std::views::take(min_near_stations));
 
     stats.emplace(fmt::format("prepare_{}_{}", to_str(dir), fmt::streamed(m)),
                   UTL_GET_TIMING_MS(timer));
@@ -444,12 +444,15 @@ std::vector<n::routing::offset> routing::get_offsets(
     std::chrono::seconds const max,
     double const max_matching_distance,
     gbfs::gbfs_routing_data& gbfs_rd,
-    stats_map_t& stats) const {
+    stats_map_t& stats,
+    unsigned const min_near_stations,
+    unsigned const max_bbox_increases) const {
   auto const do_get_offsets = [&](osr::location const pos) {
-    return ::motis::ep::get_offsets(*this, rtt, pos, dir, elevations_, modes,
-                                    ro, osr_params, pedestrian_profile,
-                                    elevation_costs, max, max_matching_distance,
-                                    gbfs_rd, stats);
+    return ::motis::ep::get_offsets(
+        *this, rtt, pos, dir, elevations_, modes, ro, osr_params,
+        pedestrian_profile, elevation_costs, max, max_matching_distance,
+        gbfs_rd, stats, min_near_stations,
+        (min_near_stations == 0U) ? 0U : max_bbox_increases);
   };
   return std::visit(
       utl::overloaded{
