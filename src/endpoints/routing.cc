@@ -911,7 +911,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                       query.elevationCosts_,
                       query.arriveBy_ ? post_transit_time : pre_transit_time,
                       query.maxMatchingDistance_, gbfs_rd, prepare_stats,
-                      query.minNearStations_),
+                      static_cast<unsigned>(query.minNearStations_)),
         .destination_ =
             use_radius_dest
                 ? radius_offsets(*loc_tree_, std::get<osr::location>(dest).pos_,
@@ -929,7 +929,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                       query.elevationCosts_,
                       query.arriveBy_ ? pre_transit_time : post_transit_time,
                       query.maxMatchingDistance_, gbfs_rd, prepare_stats,
-                      query.minNearStations_),
+                      static_cast<unsigned>(query.minNearStations_)),
         .td_start_ = get_td_offsets(
             rtt, e, start,
             query.arriveBy_ ? osr::direction::kBackward
