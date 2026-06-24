@@ -207,9 +207,8 @@ int generate(int ac, char** av) {
   auto d = data{data_path, c};
   utl::verify(d.tt_, "timetable required");
 
-  fmt::println(
-      "Timetable ---\n n_locations: {}\nn_routes: {}\nn_trips: {}\n---",
-      d.tt_->n_locations(), d.tt_->n_routes(), d.tt_->n_trips());
+  fmt::println("Timetable ---\nn_locations: {}\nn_routes: {}\nn_trips: {}\n---",
+               d.tt_->n_locations(), d.tt_->n_routes(), d.tt_->n_trips());
 
   first_day = first_day
                   ? d.tt_->date_range_.clamp(*first_day)
