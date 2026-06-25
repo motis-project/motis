@@ -14,7 +14,7 @@ export type PageTitleState = {
 	selectedItinerary?: Itinerary;
 };
 
-const locationLabel = (location: Location): string => location.label || location.match?.name || '';
+const locationLabel = (location: Location): string => location.match?.name || location.label || '';
 
 export const getPageTitle = (state: PageTitleState, translations: Translations): string => {
 	const { pageTitle } = translations;
