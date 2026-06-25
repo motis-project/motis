@@ -2,6 +2,8 @@
 
 #include <algorithm>
 #include <cmath>
+#include <iterator>
+#include <utility>
 
 #include "boost/thread/tss.hpp"
 
@@ -11,7 +13,6 @@
 #include "prometheus/counter.h"
 #include "prometheus/histogram.h"
 
-#include "utl/concat.h"
 #include "utl/erase_duplicates.h"
 #include "utl/helpers/algorithm.h"
 #include "utl/timing.h"
@@ -260,23 +261,29 @@ std::vector<n::routing::offset> get_offsets(
       profile = osr::search_profile::kCarSharing;
     }
 
-    auto const max_dist = get_max_distance(profile, osr_params, max);
-
     constexpr unsigned const FACTOR = 2U;
 
     auto near_stops = std::vector<n::location_idx_t>{};
-    auto expanded_dist = max_dist;
+    auto expanded_dist = get_max_distance(profile, osr_params, max);
     auto expanded_time = max;
+    auto prev_distance = 0U;
     for (unsigned i = 0U; i < max_bbox_increases; ++i) {
-      utl::concat(near_stops, get_stops_with_traffic(*r.tt_, rtt, *r.loc_tree_,
-                                                     pos, expanded_dist));
+      auto const stops =
+          get_stops_with_traffic(*r.tt_, rtt, *r.loc_tree_, pos, expanded_dist);
+      std::copy_if(stops.begin(), stops.end(), std::back_inserter(near_stops),
+                   [&](auto const& l) {
+                     return geo::distance(pos.pos_,
+                                          r.tt_->locations_.coordinates_[l]) >
+                            prev_distance;
+                   });
 
       if (near_stops.size() >= min_near_stations * FACTOR) {
         break;
       }
 
-      expanded_dist *= max_dist;
-      expanded_time *= max.count();
+      prev_distance = expanded_dist;
+      expanded_dist *= 2;
+      expanded_time *= 2;
     }
     auto const near_stop_locations = utl::to_vec(
         near_stops,
@@ -290,6 +297,7 @@ std::vector<n::routing::offset> get_offsets(
       auto const near_stop_matches = get_reverse_platform_way_matches(
           *r.l_, r.way_matches_, p, near_stops, near_stop_locations, dir,
           max_matching_distance);
+
       return osr::route(params, *r.w_, *r.l_, p, pos, near_stop_locations,
                         pos_match, near_stop_matches,
                         static_cast<osr::cost_t>(expanded_time.count()), dir,
@@ -355,7 +363,6 @@ std::vector<n::routing::offset> get_offsets(
                                   fmt::streamed(m), provider->id_),
                       UTL_GET_TIMING_MS(provider_timer));
       }
-
     } else {
       auto const paths = route(profile, nullptr);
       for (auto const [p, l] : utl::zip(paths, near_stops)) {
@@ -368,11 +375,18 @@ std::vector<n::routing::offset> get_offsets(
       }
     }
 
-    utl::sort(mode_offsets, [&](auto const& a, auto const& b) {
-      // return trip or location based?
+    utl::sort(mode_offsets, [](auto const& a, auto const& b) {
       return a.duration_ < b.duration_;
     });
-    utl::concat(offsets, mode_offsets | std::views::take(min_near_stations));
+    auto N = min_near_stations;
+    for (auto const& a : mode_offsets) {
+      if (a.duration_.count() * 60 < max.count() + 60 || N > 0) {
+        --N;
+        offsets.push_back(a);
+      } else {
+        break;
+      }
+    }
 
     stats.emplace(fmt::format("prepare_{}_{}", to_str(dir), fmt::streamed(m)),
                   UTL_GET_TIMING_MS(timer));
