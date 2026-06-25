@@ -674,9 +674,16 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
       query.maxItineraries_.value_or(0), query.numItineraries_);
 
   auto const rt = std::atomic_load(&rt_);
-  auto const rtt = query.realtimeMode_ == api::RealtimeModeEnum::OFF
-                       ? nullptr
-                       : rt->rtt_.get();
+  // `rtt` is used for routing/sorting/windowing:
+  auto const rtt =
+      (query.realtimeMode_ == api::RealtimeModeEnum::OFF ||
+       query.realtimeMode_ == api::RealtimeModeEnum::REALTIME_ANNOTATION_ONLY)
+          ? nullptr
+          : rt->rtt_.get();
+  // `annotation_rtt` is used to annotate the response with realtime data:
+  auto const annotation_rtt = query.realtimeMode_ == api::RealtimeModeEnum::OFF
+                                  ? nullptr
+                                  : rt->rtt_.get();
   auto const e = rt->e_.get();
   auto gbfs_rd = gbfs::gbfs_routing_data{w_, l_, gbfs_};
   if (blocked.get() == nullptr && is_osr_loaded()) {
@@ -1048,9 +1055,9 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
             journeys,
             [&, cache = street_routing_cache_t{}](auto&& j) mutable {
               return journey_to_response(
-                  w_, l_, pl_, *tt_, *tags_, fa_, e, rtt, matches_, elevations_,
-                  shapes_, gbfs_rd, ae_, tz_, j, start, dest, cache,
-                  blocked.get(),
+                  w_, l_, pl_, *tt_, *tags_, fa_, e, annotation_rtt, matches_,
+                  elevations_, shapes_, gbfs_rd, ae_, tz_, j, start, dest,
+                  cache, blocked.get(),
                   query.requireCarTransport_ && query.useRoutedTransfers_,
                   osr_params, query.pedestrianProfile_, query.elevationCosts_,
                   query.joinInterlinedLegs_, detailed_transfers,
