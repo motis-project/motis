@@ -78,6 +78,7 @@
 	import RailViz from '$lib/RailViz.svelte';
 	import StopsView from '$lib/map/stops/StopsView.svelte';
 	import { formatDate } from '$lib/toDateTime';
+	import { getPageTitle } from '$lib/pageTitle';
 
 	const urlParams = browser ? new URLSearchParams(window.location.search) : undefined;
 
@@ -643,6 +644,20 @@
 	let routingResponses = $state<Array<Promise<PlanResponse>>>([]);
 	let stopNameFromResponse = $state<string>('');
 	let refreshingItinerary = $state(false);
+	let pageTitle = $derived(
+		getPageTitle(
+			{
+				activeTab,
+				from,
+				to,
+				one,
+				selectedStop: page.state.selectedStop,
+				stopArriveBy: page.state.stopArriveBy,
+				stopName: stopNameFromResponse || page.state.selectedStop?.name
+			},
+			t
+		)
+	);
 
 	const refreshSelectedItinerary = async () => {
 		const itineraryId = page.state.selectedItinerary?.id;
@@ -848,6 +863,10 @@
 	});
 	type CloseFn = () => void;
 </script>
+
+<svelte:head>
+	<title>{pageTitle}</title>
+</svelte:head>
 
 {#snippet contextMenu(e: maplibregl.MapMouseEvent, close: CloseFn)}
 	{#if activeTab == 'connections'}
