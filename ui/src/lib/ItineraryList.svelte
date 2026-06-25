@@ -14,7 +14,15 @@
 		type Error as ApiError
 	} from '@motis-project/motis-client';
 	import Time from '$lib/Time.svelte';
-	import { LoaderCircle } from '@lucide/svelte';
+	import {
+		LoaderCircle,
+		Rabbit,
+		Snail,
+		Repeat,
+		Footprints,
+		ShieldOff,
+		Shield
+	} from '@lucide/svelte';
 	import { t } from '$lib/i18n/translation';
 	import DirectConnection from '$lib/DirectConnection.svelte';
 	import type { RequestResult } from '@hey-api/client-fetch';
@@ -32,6 +40,60 @@
 		selectItinerary: (it: Itinerary) => void;
 		updateStartDest: (r: Awaited<RequestResult<PlanResponse, ApiError, false>>) => PlanResponse;
 	} = $props();
+
+	const walkingTime = (it: Itinerary) => {
+		return Math.round(
+			it.legs
+				.filter((leg) => {
+					return leg.mode == 'WALK';
+				})
+				.map((leg) => leg.duration)
+				.reduce((acc, num) => acc + num, 0) / 60
+		);
+	};
+
+	const isTransitLeg = (l: Leg) => !!l.displayName;
+
+	const hasShortTransfer = (it: Itinerary) => {
+		return it.legs.some((leg, i) => {
+			return (
+				isTransitLeg(leg) &&
+				i + 2 < it.legs.length &&
+				isTransitLeg(it.legs[i + 2]) &&
+				Math.round(
+					(new Date(it.legs[i + 2].startTime).getTime() - new Date(leg.endTime).getTime()) / 60000
+				) < 5
+			);
+		});
+	};
+
+	const hasLongTransfers = (it: Itinerary) => {
+		return it.legs.every((leg, i) => {
+			return (
+				!(isTransitLeg(leg) && i + 2 < it.legs.length && isTransitLeg(it.legs[i + 2])) ||
+				Math.round(
+					(new Date(it.legs[i + 2].startTime).getTime() - new Date(leg.endTime).getTime()) / 60000
+				) > 15
+			);
+		});
+	};
+
+	let minTransfers = $state(Number.MAX_SAFE_INTEGER);
+	let minDuration = $state(Number.MAX_SAFE_INTEGER);
+	let maxDuration = $state(Number.MIN_SAFE_INTEGER);
+	let minWalkingTime = $state(Number.MAX_SAFE_INTEGER);
+	$effect(() => {
+		routingResponses.forEach((routingResponse) => {
+			return routingResponse.then((planResponse) => {
+				planResponse.itineraries.forEach((itinerary) => {
+					minTransfers = Math.min(minTransfers, itinerary.transfers);
+					minDuration = Math.min(minDuration, itinerary.duration);
+					maxDuration = Math.max(maxDuration, itinerary.duration);
+					minWalkingTime = Math.min(minWalkingTime, walkingTime(itinerary));
+				});
+			});
+		});
+	});
 
 	const throwOnError = (promise: RequestResult<PlanResponse, PlanError, false>) =>
 		promise.then((res) => {
@@ -54,6 +116,44 @@
 			{l.displayName}
 		{:else}
 			{formatDurationSec(l.duration)}
+		{/if}
+	</div>
+{/snippet}
+
+{#snippet itineraryTags(it: Itinerary)}
+	<div class="flex flex-wrap pb-2 gap-1 whitespace-nowrap">
+		<span
+			class="flex w-fit rounded-full bg-gray-50 px-2 py-1 text-xs font-medium text-gray-600 ring-1 ring-gray-300 ring-inset"
+			><Footprints class="size-4 mr-1" />{walkingTime(it)} min</span
+		>
+		{#if it.duration == minDuration}
+			<span
+				class="flex w-fit rounded-full bg-gray-50 px-2 py-1 text-xs font-medium text-gray-600 ring-1 ring-gray-300 ring-inset"
+				><Rabbit class="size-4 mr-1" />{t.fastest}</span
+			>
+		{:else if it.duration == maxDuration}
+			<span
+				class="flex w-fit rounded-full bg-gray-50 px-2 py-1 text-xs font-medium text-gray-600 ring-1 ring-gray-300 ring-inset"
+				><Snail class="size-4 mr-1" />{t.slowest}</span
+			>
+		{/if}
+		{#if it.transfers == minTransfers}
+			<span
+				class="flex w-fit rounded-full bg-gray-50 px-2 py-1 text-xs font-medium text-gray-600 ring-1 ring-gray-300 ring-inset"
+				><Repeat class="size-4 mr-1" />{t.fewestTransfers}</span
+			>
+		{/if}
+		{#if hasShortTransfer(it)}
+			<span
+				class="flex w-fit rounded-full bg-gray-50 px-2 py-1 text-xs font-medium text-gray-600 ring-1 ring-gray-300 ring-inset"
+				><ShieldOff class="size-4 mr-1" />{t.shortTransfer}</span
+			>
+		{/if}
+		{#if hasLongTransfers(it)}
+			<span
+				class="flex w-fit rounded-full bg-gray-50 px-2 py-1 text-xs font-medium text-gray-600 ring-1 ring-gray-300 ring-inset"
+				><Shield class="size-4 mr-1" />{t.longTransfers}</span
+			>
 		{/if}
 	</div>
 {/snippet}
@@ -114,6 +214,7 @@
 								}}
 							>
 								<Card class="p-4">
+									{@render itineraryTags(it)}
 									<div class="text-base flex justify-around items-start space-x-1 w-full">
 										<div class="overflow-hidden basis-1/4 h-full flex flex-col">
 											<div class="text-xs font-bold uppercase text-slate-400">{t.departure}</div>

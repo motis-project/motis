@@ -191,7 +191,12 @@ const translations: Translations = {
 			default:
 				return `${n} Routen`;
 		}
-	}
+	},
+	fastest: 'schnellste',
+	slowest: 'langsamste',
+	fewestTransfers: 'wenigste Umstiege',
+	shortTransfer: 'kurze Umstiegszeit',
+	longTransfers: 'lange Umstiegszeiten'
 };
 
 export default translations;
