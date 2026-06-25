@@ -183,6 +183,8 @@ export type Translations = {
 	showMyLocation: string;
 	toggleHillshades: string;
 	routes: (n: number) => string;
+	tickets: string;
+	routeInformation: string;
 };
 
 const translations: Map<string, Translations> = new Map(

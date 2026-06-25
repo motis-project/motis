@@ -200,7 +200,9 @@ const translations: Translations = {
 			default:
 				return `${n} tras`;
 		}
-	}
+	},
+	tickets: 'Vstupenky',
+	routeInformation: 'Další informace'
 };
 
 export default translations;
