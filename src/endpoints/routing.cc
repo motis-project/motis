@@ -2,8 +2,6 @@
 
 #include <algorithm>
 #include <cmath>
-#include <iterator>
-#include <tuple>
 
 #include "boost/thread/tss.hpp"
 
@@ -664,36 +662,6 @@ std::vector<api::ModeEnum> deduplicate(std::vector<api::ModeEnum> m) {
   return m;
 };
 
-bool is_broken_under_rt(n::routing::journey const& j,
-                        n::timetable const& tt,
-                        n::rt_timetable const* rtt) {
-  if (rtt == nullptr) {
-    return false;
-  }
-  auto ready = j.departure_time();
-  for (auto const& leg : j.legs_) {
-    if (auto const* ree =
-            std::get_if<n::routing::journey::run_enter_exit>(&leg.uses_)) {
-      auto const fr = n::rt::frun{tt, rtt, ree->r_};
-      if (fr.is_cancelled()) {
-        return true;
-      }
-      auto const enter = fr[ree->stop_range_.from_];
-      auto const exit = fr[ree->stop_range_.to_ - 1U];
-      if (enter.is_cancelled() || exit.is_cancelled()) {
-        return true;
-      }
-      if (ready > enter.time(n::event_type::kDep)) {
-        return true;
-      }
-      ready = exit.time(n::event_type::kArr);
-    } else {
-      ready += (leg.arr_time_ - leg.dep_time_);
-    }
-  }
-  return false;
-}
-
 api::plan_response routing::operator()(boost::urls::url_view const& url) const {
   metrics_->routing_requests_.Increment();
 
@@ -1076,34 +1044,17 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
               std::move(r.algo_stats_)};
     };
 
-    auto const hybrid = query.realtimeMode_ == api::RealtimeModeEnum::HYBRID;
-    auto primary = run_search(hybrid ? nullptr : rtt);
+    auto primary = run_search(rtt);
     auto journeys = std::move(primary.journeys_);
     auto search_interval = primary.interval_;
-
-    auto const merge_realtime_pass = [&](search_output&& other) {
-      journeys.insert(end(journeys),
-                      std::make_move_iterator(begin(other.journeys_)),
-                      std::make_move_iterator(end(other.journeys_)));
-      utl::erase_duplicates(journeys);
-      std::sort(begin(journeys), end(journeys),
-                [](auto const& a, auto const& b) {
-                  return std::tuple{a.start_time_, a.dest_time_, a.transfers_} <
-                         std::tuple{b.start_time_, b.dest_time_, b.transfers_};
-                });
-      search_interval = {std::min(search_interval.from_, other.interval_.from_),
-                         std::max(search_interval.to_, other.interval_.to_)};
-    };
-
     if (query.realtimeMode_ == api::RealtimeModeEnum::FULL) {
-      merge_realtime_pass(run_search(nullptr));
-    } else if (hybrid) {
-      auto const broken = utl::any_of(journeys, [&](auto const& j) {
-        return is_broken_under_rt(j, *tt_, rtt);
-      });
-      if (broken) {
-        merge_realtime_pass(run_search(rtt));
-      }
+      auto scheduled = run_search(nullptr);
+      journeys.insert(end(journeys), begin(scheduled.journeys_),
+                      end(scheduled.journeys_));
+      utl::erase_duplicates(journeys);
+      search_interval = {
+          std::min(search_interval.from_, scheduled.interval_.from_),
+          std::max(search_interval.to_, scheduled.interval_.to_)};
     }
 
     if (query.maxItineraries_.has_value()) {
