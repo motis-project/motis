@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <tuple>
 
 #include "boost/thread/tss.hpp"
 
@@ -977,6 +978,20 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
       stats_map_t algo_stats_;
     };
 
+    auto const finalize = [&](n::routing::routing_result& r) -> search_output {
+      metrics_->routing_journeys_found_.Increment(
+          static_cast<double>(r.journeys_->size()));
+      metrics_->routing_execution_duration_seconds_total_.Observe(
+          static_cast<double>(r.search_stats_.execute_time_.count()) / 1000.0);
+      if (!r.journeys_->empty()) {
+        metrics_->routing_journey_duration_seconds_.Observe(static_cast<double>(
+            to_seconds(r.journeys_->begin()->arrival_time() -
+                       r.journeys_->begin()->departure_time())));
+      }
+      return {r.journeys_->els_, r.interval_, r.search_stats_.to_map(),
+              std::move(r.algo_stats_)};
+    };
+
     auto const run_search =
         [&](n::rt_timetable const* search_rtt) -> search_output {
       auto r = n::routing::routing_result{};
@@ -1028,33 +1043,42 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
         }
         break;
       }
+      return finalize(r);
+    };
 
-      metrics_->routing_journeys_found_.Increment(
-          static_cast<double>(r.journeys_->size()));
-      metrics_->routing_execution_duration_seconds_total_.Observe(
-          static_cast<double>(r.search_stats_.execute_time_.count()) / 1000.0);
-
-      if (!r.journeys_->empty()) {
-        metrics_->routing_journey_duration_seconds_.Observe(static_cast<double>(
-            to_seconds(r.journeys_->begin()->arrival_time() -
-                       r.journeys_->begin()->departure_time())));
-      }
-
-      return {r.journeys_->els_, r.interval_, r.search_stats_.to_map(),
-              std::move(r.algo_stats_)};
+    auto const run_pinned_search =
+        [&](n::rt_timetable const* search_rtt,
+            n::interval<n::unixtime_t> const& itv) -> search_output {
+      auto pinned_q = q;
+      pinned_q.start_time_ = itv;
+      pinned_q.extend_interval_earlier_ = false;
+      pinned_q.extend_interval_later_ = false;
+      auto r = n::routing::routing_result{};
+      auto search_state = n::routing::search_state{};
+      auto raptor_state = n::routing::raptor_state{};
+      r = n::routing::raptor_search(
+          *tt_, search_rtt, search_state, raptor_state, std::move(pinned_q),
+          query.arriveBy_ ? n::direction::kBackward : n::direction::kForward,
+          query.timeout_.has_value() ? std::chrono::seconds{*query.timeout_}
+                                     : max_timeout);
+      return finalize(r);
     };
 
     auto primary = run_search(rtt);
     auto journeys = std::move(primary.journeys_);
     auto search_interval = primary.interval_;
     if (query.realtimeMode_ == api::RealtimeModeEnum::FULL) {
-      auto scheduled = run_search(nullptr);
+      auto const scheduled = query.timetableView_
+                                 ? run_pinned_search(nullptr, search_interval)
+                                 : run_search(nullptr);
       journeys.insert(end(journeys), begin(scheduled.journeys_),
                       end(scheduled.journeys_));
       utl::erase_duplicates(journeys);
-      search_interval = {
-          std::min(search_interval.from_, scheduled.interval_.from_),
-          std::max(search_interval.to_, scheduled.interval_.to_)};
+      std::sort(begin(journeys), end(journeys),
+                [](n::routing::journey const& a, n::routing::journey const& b) {
+                  return std::tuple{a.start_time_, a.dest_time_, a.transfers_} <
+                         std::tuple{b.start_time_, b.dest_time_, b.transfers_};
+                });
     }
 
     if (query.maxItineraries_.has_value()) {
