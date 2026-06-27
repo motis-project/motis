@@ -6,9 +6,9 @@
 #include "utl/to_vec.h"
 #include "utl/visit.h"
 
-#include "nigiri/timetable.h"
-
 #include "adr/typeahead.h"
+
+#include "nigiri/timetable.h"
 
 #include "motis/journey_to_response.h"
 #include "motis/tag_lookup.h"

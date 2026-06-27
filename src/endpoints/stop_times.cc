@@ -507,10 +507,11 @@ api::stoptimes_response stop_times::operator()(
 
   auto const rt = std::atomic_load(&rt_);
   // `rtt` is used to select, window and sort the runs:
-  auto const rtt = (query.realtimeMode_ == api::RealtimeModeEnum::OFF ||
-                    query.realtimeMode_ == api::RealtimeModeEnum::INFOS)
-                       ? nullptr
-                       : rt->rtt_.get();
+  auto const rtt =
+      (query.realtimeMode_ == api::RealtimeModeEnum::OFF ||
+       query.realtimeMode_ == api::RealtimeModeEnum::REALTIME_ANNOTATION_ONLY)
+          ? nullptr
+          : rt->rtt_.get();
   // `annotation_rtt` is used to annotate each stop time with realtime data:
   auto const annotation_rtt = query.realtimeMode_ == api::RealtimeModeEnum::OFF
                                   ? nullptr

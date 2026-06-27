@@ -110,7 +110,8 @@ meta_router::meta_router(ep::routing const& r,
       tt_{r_.tt_},
       rt_{r.rt_},
       rtt_{(query.realtimeMode_ == api::RealtimeModeEnum::OFF ||
-            query.realtimeMode_ == api::RealtimeModeEnum::INFOS)
+            query.realtimeMode_ ==
+                api::RealtimeModeEnum::REALTIME_ANNOTATION_ONLY)
                ? nullptr
                : rt_->rtt_.get()},
       annotation_rtt_{query.realtimeMode_ == api::RealtimeModeEnum::OFF

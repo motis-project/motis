@@ -875,8 +875,8 @@ paths:
             Controls whether realtime data is used for routing.
             - `REALTIME`: the realtime timetable (delays, cancellations,
               added/changed trips) is used and reflected in the response.
-            - `INFOS`: routing uses the scheduled timetable only, but the response
-              is annotated with realtime data.
+            - `REALTIME_ANNOTATION_ONLY`: routing uses the scheduled timetable
+              only, but the response is annotated with realtime data.
             - `FULL`: searches on both the scheduled and the realtime timetable and
               merges the results. All results are realtime-annotated.
             - `OFF`: only the scheduled timetable is used.
@@ -1977,17 +1977,31 @@ paths:
           schema:
             type: number
             default: 1
+
         - name: numResults
           in: query
           required: false
           description: |
             Optional. Number of suggestions to return.
-            
             If omitted, 10 suggestions are returned by default.
             Must be <= server config variable `geocode_max_suggestions`.
           schema:
             type: integer
             minimum: 1
+
+        - name: min
+          in: query
+          required: false
+          description: latitude,longitude pair of the lower right coordinate of the bounding box containing all results
+          schema:
+            type: string
+
+        - name: max
+          in: query
+          required: false
+          description: latitude,longitude pair of the upper left coordinate of the bounding box containing all results
+          schema:
+            type: string
 
       responses:
         '400':
@@ -2578,8 +2592,9 @@ paths:
             Controls whether realtime data is used.
             - `REALTIME`: realtime data (delays, cancellations) is used
               stop times are returned and sorted by their realtime time.
-            - `INFOS`: stop times are returned, windowed and sorted by their
-              planned time, but each stop time is annotated with realtime data.
+            - `REALTIME_ANNOTATION_ONLY`: stop times are returned, windowed and
+              sorted by their planned time, but each stop time is annotated with
+              realtime data.
             - `FULL`: behaves like `REALTIME` here.
             - `OFF`: only scheduled data is used; stop times are returned and
               sorted by their planned time, with no realtime annotation.
@@ -3456,7 +3471,7 @@ components:
 
         # Transit modes
 
-          - `TRANSIT`: translates to `TRAM,FERRY,AIRPLANE,BUS,COACH,RAIL,ODM,FUNICULAR,AERIAL_LIFT,OTHER`
+          - `TRANSIT`: translates to `TRAM,FERRY,AIRPLANE,BUS,COACH,RAIL,ODM,RIDE_SHARING,FUNICULAR,AERIAL_LIFT,OTHER`
           - `TRAM`: trams
           - `SUBWAY`: subway trains (Paris Metro, London Underground, but also NYC Subway, Hamburger Hochbahn, and other non-underground services)
           - `FERRY`: ferries
@@ -3471,6 +3486,7 @@ components:
           - `REGIONAL_RAIL`: regional train
           - `SUBURBAN`: suburban trains (e.g. S-Bahn, RER, Elizabeth Line, ...)
           - `ODM`: demand responsive transport
+          - `RIDE_SHARING`: ride sharing
           - `FUNICULAR`: Funicular. Any rail system designed for steep inclines.
           - `AERIAL_LIFT`: Aerial lift, suspended cable car (e.g., gondola lift, aerial tramway). Cable transport where cabins, cars, gondolas or open chairs are suspended by means of one or more cables.
           - `AREAL_LIFT`: deprecated
@@ -3894,14 +3910,14 @@ components:
         Controls whether realtime data (delays, cancellations, added/changed trips) is used.
 
         - `REALTIME`: use realtime data for routing/sorting.
-        - `INFOS`: route, sort and window on the scheduled timetable only, but still
-          annotate the response with realtime data.
+        - `REALTIME_ANNOTATION_ONLY`: route, sort and window on the scheduled
+          timetable only, but still annotate the response with realtime data.
         - `FULL`: search on both the scheduled and the realtime timetable and merge the results.
         - `OFF`: use the scheduled timetable only, with no realtime annotation.
       type: string
       enum:
         - OFF
-        - INFOS
+        - REALTIME_ANNOTATION_ONLY
         - REALTIME
         - FULL
 
