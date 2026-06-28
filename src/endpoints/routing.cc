@@ -825,7 +825,6 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                               query,
                               pre_transit_modes,
                               post_transit_modes,
-                              direct_modes,
                               from,
                               to,
                               from_p,
