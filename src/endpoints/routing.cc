@@ -1,6 +1,7 @@
 #include "motis/endpoints/routing.h"
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <iterator>
 #include <utility>
@@ -15,6 +16,7 @@
 
 #include "utl/erase_duplicates.h"
 #include "utl/helpers/algorithm.h"
+#include "utl/logging.h"
 #include "utl/timing.h"
 
 #include "osr/lookup.h"
@@ -227,8 +229,7 @@ std::vector<n::routing::offset> get_offsets(
     double const max_matching_distance,
     gbfs::gbfs_routing_data& gbfs_rd,
     stats_map_t& stats,
-    unsigned const min_near_stations,
-    unsigned const max_bbox_increases) {
+    unsigned const min_near_stations) {
   if (!r.is_osr_loaded()) {
     return {};
   }
@@ -266,13 +267,15 @@ std::vector<n::routing::offset> get_offsets(
     auto near_stops = std::vector<n::location_idx_t>{};
     auto expanded_dist = get_max_distance(profile, osr_params, max);
     auto expanded_time = max;
-    for (unsigned i = 0U; i < max_bbox_increases; ++i) {
+
+    auto const max_beeline_seconds = std::max(
+        max, std::chrono::seconds{
+                 r.config_.limits_->street_routing_max_near_stops_seconds});
+
+    while (expanded_time <= max_beeline_seconds &&
+           near_stops.size() < min_near_stations * kBeelineNearStationsFactor) {
       near_stops =
           get_stops_with_traffic(*r.tt_, rtt, *r.loc_tree_, pos, expanded_dist);
-
-      if (near_stops.size() >= min_near_stations * kBeelineNearStationsFactor) {
-        break;
-      }
 
       expanded_dist *= 2;
       expanded_time *= 2;
@@ -449,14 +452,12 @@ std::vector<n::routing::offset> routing::get_offsets(
     double const max_matching_distance,
     gbfs::gbfs_routing_data& gbfs_rd,
     stats_map_t& stats,
-    unsigned const min_near_stations,
-    unsigned const max_bbox_increases) const {
+    unsigned const min_near_stations) const {
   auto const do_get_offsets = [&](osr::location const pos) {
-    return ::motis::ep::get_offsets(
-        *this, rtt, pos, dir, elevations_, modes, ro, osr_params,
-        pedestrian_profile, elevation_costs, max, max_matching_distance,
-        gbfs_rd, stats, min_near_stations,
-        (min_near_stations == 0U) ? 0U : max_bbox_increases);
+    return ::motis::ep::get_offsets(*this, rtt, pos, dir, elevations_, modes,
+                                    ro, osr_params, pedestrian_profile,
+                                    elevation_costs, max, max_matching_distance,
+                                    gbfs_rd, stats, min_near_stations);
   };
   return std::visit(
       utl::overloaded{

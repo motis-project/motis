@@ -258,6 +258,7 @@ struct config {
     unsigned gtfsrt_expose_max_trip_updates_{100U};
     unsigned street_routing_max_prepost_transit_seconds_{3600U};
     unsigned street_routing_max_direct_seconds_{21600U};
+    unsigned street_routing_max_near_stops_seconds{3600U};
     unsigned geocode_max_suggestions_{512U};
     unsigned reverse_geocode_max_results_{512U};
   };

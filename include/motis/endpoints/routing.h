@@ -70,8 +70,7 @@ struct routing {
       double max_matching_distance,
       gbfs::gbfs_routing_data&,
       stats_map_t& stats,
-      unsigned const min_near_stations = 0U,
-      unsigned const max_bbox_increases = 5U) const;
+      unsigned const min_near_stations = 0U) const;
 
   nigiri::hash_map<nigiri::location_idx_t,
                    std::vector<nigiri::routing::td_offset>>
