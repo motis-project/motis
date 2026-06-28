@@ -269,8 +269,9 @@ std::vector<n::routing::offset> get_offsets(
     auto expanded_time = max;
 
     auto const max_beeline_seconds = std::max(
-        max, std::chrono::seconds{
-                 r.config_.limits_->street_routing_max_near_stops_seconds});
+        max,
+        std::chrono::seconds{
+            r.config_.get_limits().street_routing_max_near_stops_seconds_});
 
     while (expanded_time <= max_beeline_seconds &&
            near_stops.size() < min_near_stations * kBeelineNearStationsFactor) {
