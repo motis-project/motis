@@ -261,27 +261,19 @@ std::vector<n::routing::offset> get_offsets(
       profile = osr::search_profile::kCarSharing;
     }
 
-    constexpr unsigned const FACTOR = 2U;
+    constexpr unsigned const kBeelineNearStationsFactor = 4U;
 
     auto near_stops = std::vector<n::location_idx_t>{};
     auto expanded_dist = get_max_distance(profile, osr_params, max);
     auto expanded_time = max;
-    auto prev_distance = 0U;
     for (unsigned i = 0U; i < max_bbox_increases; ++i) {
-      auto const stops =
+      near_stops =
           get_stops_with_traffic(*r.tt_, rtt, *r.loc_tree_, pos, expanded_dist);
-      std::copy_if(stops.begin(), stops.end(), std::back_inserter(near_stops),
-                   [&](auto const& l) {
-                     return geo::distance(pos.pos_,
-                                          r.tt_->locations_.coordinates_[l]) >
-                            prev_distance;
-                   });
 
-      if (near_stops.size() >= min_near_stations * FACTOR) {
+      if (near_stops.size() >= min_near_stations * kBeelineNearStationsFactor) {
         break;
       }
 
-      prev_distance = expanded_dist;
       expanded_dist *= 2;
       expanded_time *= 2;
     }
@@ -378,15 +370,13 @@ std::vector<n::routing::offset> get_offsets(
     utl::sort(mode_offsets, [](auto const& a, auto const& b) {
       return a.duration_ < b.duration_;
     });
-    auto N = min_near_stations;
-    for (auto const& a : mode_offsets) {
-      if (a.duration_.count() * 60 < max.count() + 60 || N > 0) {
-        --N;
-        offsets.push_back(a);
-      } else {
-        break;
-      }
-    }
+    auto const it = utl::find_if(mode_offsets, [&](auto const& a) {
+      return a.duration_.count() * 60 > max.count() + 60;
+    });
+    auto const n_found = std::max(
+        static_cast<unsigned>(std::distance(mode_offsets.begin(), it)) + 1U,
+        min_near_stations);
+    offsets.append_range(mode_offsets | std::views::take(n_found));
 
     stats.emplace(fmt::format("prepare_{}_{}", to_str(dir), fmt::streamed(m)),
                   UTL_GET_TIMING_MS(timer));
