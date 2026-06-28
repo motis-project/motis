@@ -272,15 +272,20 @@ std::vector<n::routing::offset> get_offsets(
         max,
         std::chrono::seconds{
             r.config_.get_limits().street_routing_max_near_stops_seconds_});
+    auto const max_beeline_meters =
+        get_max_distance(profile, osr_params, max_beeline_seconds);
 
-    while (expanded_time <= max_beeline_seconds &&
+    while (expanded_time < max_beeline_seconds &&
            near_stops.size() < min_near_stations * kBeelineNearStationsFactor) {
+
       near_stops =
           get_stops_with_traffic(*r.tt_, rtt, *r.loc_tree_, pos, expanded_dist);
 
-      expanded_dist *= 2;
+      expanded_dist = std::min(expanded_dist * 2, max_beeline_meters);
       expanded_time *= 2;
     }
+    expanded_time = std::min(expanded_time, max_beeline_seconds);
+
     auto const near_stop_locations = utl::to_vec(
         near_stops,
         [&](n::location_idx_t const l) { return stop_to_osr_location(r, l); });
