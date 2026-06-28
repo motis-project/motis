@@ -1069,7 +1069,9 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
     auto journeys = std::move(primary.journeys_);
     auto search_interval = primary.interval_;
     if (query.realtimeMode_ == api::RealtimeModeEnum::FULL) {
-      auto const scheduled = query.timetableView_
+      auto const interval_search =
+          std::holds_alternative<n::interval<n::unixtime_t>>(q.start_time_);
+      auto const scheduled = interval_search
                                  ? run_pinned_search(nullptr, search_interval)
                                  : run_search(nullptr);
       journeys.insert(end(journeys), begin(scheduled.journeys_),
@@ -1077,8 +1079,8 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
       utl::erase_duplicates(journeys);
       std::sort(begin(journeys), end(journeys),
                 [](n::routing::journey const& a, n::routing::journey const& b) {
-                  return std::tuple{a.start_time_, a.dest_time_, a.transfers_} <
-                         std::tuple{b.start_time_, b.dest_time_, b.transfers_};
+                  return std::tuple{a.start_time_, a.transfers_} <
+                         std::tuple{b.start_time_, b.transfers_};
                 });
     }
 
