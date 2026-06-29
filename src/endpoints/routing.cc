@@ -8,6 +8,7 @@
 
 #include "boost/thread/tss.hpp"
 
+#include "motis/types.h"
 #include "net/bad_request_exception.h"
 #include "net/too_many_exception.h"
 
@@ -265,6 +266,7 @@ std::vector<n::routing::offset> get_offsets(
     constexpr unsigned const kBeelineNearStationsFactor = 4U;
 
     auto near_stops = std::vector<n::location_idx_t>{};
+    auto near_routes = hash_set<nigiri::route_idx_t>{};
     auto expanded_dist = get_max_distance(profile, osr_params, max);
     auto expanded_time = max;
 
@@ -278,8 +280,8 @@ std::vector<n::routing::offset> get_offsets(
     while (expanded_time < max_beeline_seconds &&
            near_stops.size() < min_near_stations * kBeelineNearStationsFactor) {
 
-      near_stops =
-          get_stops_with_traffic(*r.tt_, rtt, *r.loc_tree_, pos, expanded_dist);
+      near_stops = get_stops_with_unique_routes(*r.tt_, rtt, *r.loc_tree_, pos,
+                                                expanded_dist, near_routes);
 
       expanded_dist = std::min(expanded_dist * 2, max_beeline_meters);
       expanded_time *= 2;
