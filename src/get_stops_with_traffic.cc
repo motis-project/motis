@@ -42,10 +42,11 @@ std::vector<nigiri::location_idx_t> get_stops_with_unique_routes(
     hash_set<nigiri::route_idx_t>& unique_routes) {
   auto ret = std::vector<n::location_idx_t>{};
   rtree.in_radius(pos.pos_, distance, [&](n::location_idx_t const l) {
-    if (rtt == nullptr || rtt->location_rt_transports_[l].empty()) {
+    if (tt.location_routes_[l].empty() &&
+        (rtt == nullptr || rtt->location_rt_transports_[l].empty())) {
       return;
     }
-    if (utl::none_of(tt.location_routes_[l], [&](auto const& route) {
+    if (!utl::any_of(tt.location_routes_[l], [&](auto const& route) {
           return !unique_routes.contains(route);
         })) {
       return;
