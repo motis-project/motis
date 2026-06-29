@@ -404,6 +404,17 @@ n::interval<n::unixtime_t> shrink(bool const keep_late,
   return search_interval;
 }
 
+bool same_connection(n::routing::journey const& a,
+                     n::routing::journey const& b) {
+  return a.legs_.size() == b.legs_.size() &&
+         std::equal(begin(a.legs_), end(a.legs_), begin(b.legs_),
+                    [](n::routing::journey::leg const& x,
+                       n::routing::journey::leg const& y) {
+                      return x.from_ == y.from_ && x.to_ == y.to_ &&
+                             x.uses_ == y.uses_;
+                    });
+}
+
 std::vector<n::routing::offset> routing::get_offsets(
     n::rt_timetable const* rtt,
     place_t const& p,
@@ -978,22 +989,27 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
       stats_map_t algo_stats_;
     };
 
-    auto const finalize = [&](n::routing::routing_result& r) -> search_output {
-      metrics_->routing_journeys_found_.Increment(
-          static_cast<double>(r.journeys_->size()));
-      metrics_->routing_execution_duration_seconds_total_.Observe(
-          static_cast<double>(r.search_stats_.execute_time_.count()) / 1000.0);
-      if (!r.journeys_->empty()) {
-        metrics_->routing_journey_duration_seconds_.Observe(static_cast<double>(
-            to_seconds(r.journeys_->begin()->arrival_time() -
-                       r.journeys_->begin()->departure_time())));
+    auto const finalize = [&](n::routing::routing_result& r,
+                              bool const record_metrics) -> search_output {
+      if (record_metrics) {
+        metrics_->routing_journeys_found_.Increment(
+            static_cast<double>(r.journeys_->size()));
+        metrics_->routing_execution_duration_seconds_total_.Observe(
+            static_cast<double>(r.search_stats_.execute_time_.count()) /
+            1000.0);
+        if (!r.journeys_->empty()) {
+          metrics_->routing_journey_duration_seconds_.Observe(
+              static_cast<double>(
+                  to_seconds(r.journeys_->begin()->arrival_time() -
+                             r.journeys_->begin()->departure_time())));
+        }
       }
       return {r.journeys_->els_, r.interval_, r.search_stats_.to_map(),
               std::move(r.algo_stats_)};
     };
 
-    auto const run_search =
-        [&](n::rt_timetable const* search_rtt) -> search_output {
+    auto const run_search = [&](n::rt_timetable const* search_rtt,
+                                bool const record_metrics) -> search_output {
       auto r = n::routing::routing_result{};
       auto algorithm = query.algorithm_;
       auto search_state = n::routing::search_state{};
@@ -1043,7 +1059,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
         }
         break;
       }
-      return finalize(r);
+      return finalize(r, record_metrics);
     };
 
     auto const run_pinned_search =
@@ -1061,20 +1077,29 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
           query.arriveBy_ ? n::direction::kBackward : n::direction::kForward,
           query.timeout_.has_value() ? std::chrono::seconds{*query.timeout_}
                                      : max_timeout);
-      return finalize(r);
+      return finalize(r, false);
     };
 
-    auto primary = run_search(rtt);
+    auto primary = run_search(rtt, true);
     auto journeys = std::move(primary.journeys_);
     auto search_interval = primary.interval_;
     if (query.realtimeMode_ == api::RealtimeModeEnum::FULL) {
       auto const interval_search =
           std::holds_alternative<n::interval<n::unixtime_t>>(q.start_time_);
-      auto const scheduled = interval_search
-                                 ? run_pinned_search(nullptr, search_interval)
-                                 : run_search(nullptr);
-      journeys.insert(end(journeys), begin(scheduled.journeys_),
-                      end(scheduled.journeys_));
+      auto scheduled = interval_search
+                           ? run_pinned_search(nullptr, search_interval)
+                           : run_search(nullptr, false);
+      auto const n_rt = journeys.size();
+      for (auto& sj : scheduled.journeys_) {
+        auto const covered_by_rt =
+            std::any_of(begin(journeys), begin(journeys) + n_rt,
+                        [&](n::routing::journey const& rj) {
+                          return same_connection(sj, rj);
+                        });
+        if (!covered_by_rt) {
+          journeys.push_back(std::move(sj));
+        }
+      }
       utl::erase_duplicates(journeys);
       std::sort(begin(journeys), end(journeys),
                 [](n::routing::journey const& a, n::routing::journey const& b) {
