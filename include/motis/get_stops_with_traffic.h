@@ -22,6 +22,5 @@ std::vector<nigiri::location_idx_t> get_stops_with_unique_routes(
     nigiri::rt_timetable const*,
     point_rtree<nigiri::location_idx_t> const&,
     osr::location const&,
-    double const,
-    hash_set<nigiri::route_idx_t>&);
+    double const);
 }  // namespace motis

@@ -266,7 +266,6 @@ std::vector<n::routing::offset> get_offsets(
     constexpr unsigned const kBeelineNearStationsFactor = 4U;
 
     auto near_stops = std::vector<n::location_idx_t>{};
-    auto near_routes = hash_set<nigiri::route_idx_t>{};
     auto expanded_dist = get_max_distance(profile, osr_params, max);
     auto expanded_time = max;
 
@@ -277,11 +276,11 @@ std::vector<n::routing::offset> get_offsets(
     auto const max_beeline_meters =
         get_max_distance(profile, osr_params, max_beeline_seconds);
 
-    while (expanded_time < max_beeline_seconds &&
+    while (expanded_time <= max_beeline_seconds &&
            near_stops.size() < min_near_stations * kBeelineNearStationsFactor) {
 
       near_stops = get_stops_with_unique_routes(*r.tt_, rtt, *r.loc_tree_, pos,
-                                                expanded_dist, near_routes);
+                                                expanded_dist);
 
       expanded_dist = std::min(expanded_dist * 2, max_beeline_meters);
       expanded_time *= 2;
@@ -381,13 +380,16 @@ std::vector<n::routing::offset> get_offsets(
     utl::sort(mode_offsets, [](auto const& a, auto const& b) {
       return a.duration_ < b.duration_;
     });
-    auto const it = utl::find_if(mode_offsets, [&](auto const& a) {
-      return a.duration_.count() * 60 > max.count() + 60;
-    });
-    auto const n_found = std::max(
-        static_cast<unsigned>(std::distance(mode_offsets.begin(), it)) + 1U,
-        min_near_stations);
-    offsets.append_range(mode_offsets | std::views::take(n_found));
+
+    auto n_found = 0U;
+    for (auto const& o : mode_offsets) {
+      if (n_found++ >= min_near_stations &&
+          o.duration_.count() * 60 > max.count() + 60) {
+        break;
+      }
+
+      offsets.push_back(o);
+    }
 
     stats.emplace(fmt::format("prepare_{}_{}", to_str(dir), fmt::streamed(m)),
                   UTL_GET_TIMING_MS(timer));

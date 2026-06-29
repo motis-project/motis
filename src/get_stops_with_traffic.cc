@@ -38,9 +38,9 @@ std::vector<nigiri::location_idx_t> get_stops_with_unique_routes(
     n::rt_timetable const* rtt,
     point_rtree<n::location_idx_t> const& rtree,
     osr::location const& pos,
-    double const distance,
-    hash_set<nigiri::route_idx_t>& unique_routes) {
+    double const distance) {
   auto ret = std::vector<n::location_idx_t>{};
+  auto unique_routes = hash_set<nigiri::route_idx_t>{};
   rtree.in_radius(pos.pos_, distance, [&](n::location_idx_t const l) {
     if (tt.location_routes_[l].empty() &&
         (rtt == nullptr || rtt->location_rt_transports_[l].empty())) {
