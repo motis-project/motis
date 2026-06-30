@@ -271,29 +271,22 @@ std::vector<n::routing::offset> get_offsets(
             r.config_.get_limits().street_routing_max_near_stops_seconds_});
     auto const max_beeline_meters =
         get_max_distance(profile, osr_params, max_beeline_seconds);
-    auto near_stops = std::vector<n::location_idx_t>{};
 
     auto expanded_time = max;
     auto expanded_dist = get_max_distance(profile, osr_params, expanded_time);
-    auto const default_radius_stops =
-        get_stops_with_traffic(*r.tt_, rtt, *r.loc_tree_, pos, expanded_dist);
 
+    auto near_stops =
+        get_stops_with_traffic(*r.tt_, rtt, *r.loc_tree_, pos, expanded_dist);
     while (expanded_time * 2 <= max_beeline_seconds &&
-           near_stops.size() + default_radius_stops.size() <
-               min_near_stations * kBeelineNearStationsFactor) {
+           near_stops.size() < min_near_stations * kBeelineNearStationsFactor) {
 
       expanded_dist = std::min(expanded_dist * 2, max_beeline_meters);
       expanded_time *= 2;
 
-      near_stops = get_stops_with_unique_routes(*r.tt_, rtt, *r.loc_tree_, pos,
-                                                expanded_dist);
+      near_stops =
+          get_stops_with_traffic(*r.tt_, rtt, *r.loc_tree_, pos, expanded_dist);
     }
     expanded_time = std::min(expanded_time, max_beeline_seconds);
-
-    std::copy_if(begin(default_radius_stops), end(default_radius_stops),
-                 std::back_inserter(near_stops), [&](auto const& l) {
-                   return utl::find(near_stops, l) == end(near_stops);
-                 });
 
     auto const near_stop_locations = utl::to_vec(
         near_stops,
