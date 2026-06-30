@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <tuple>
 
 #include "boost/thread/tss.hpp"
 
@@ -401,6 +402,17 @@ n::interval<n::unixtime_t> shrink(bool const keep_late,
   }
 
   return search_interval;
+}
+
+bool same_connection(n::routing::journey const& a,
+                     n::routing::journey const& b) {
+  return a.legs_.size() == b.legs_.size() &&
+         std::equal(begin(a.legs_), end(a.legs_), begin(b.legs_),
+                    [](n::routing::journey::leg const& x,
+                       n::routing::journey::leg const& y) {
+                      return x.from_ == y.from_ && x.to_ == y.to_ &&
+                             x.uses_ == y.uses_;
+                    });
 }
 
 std::vector<n::routing::offset> routing::get_offsets(
@@ -970,69 +982,151 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                     {"n_td_start_offsets", q.td_start_.size()},
                     {"n_td_dest_offsets", q.td_dest_.size()}};
 
-    auto r = n::routing::routing_result{};
-    auto algorithm = query.algorithm_;
-    auto search_state = n::routing::search_state{};
-    while (true) {
-      if (algorithm == api::algorithmEnum::PONG && query.timetableView_ &&
-          // arriveBy |  extend_later | PONG applicable
-          // ---------+---------------+---------------------
-          // FALSE    |  FALSE        | FALSE    => rRAPTOR
-          // FALSE    |  TRUE         | TRUE     => PONG
-          // TRUE     |  FALSE        | TRUE     => PONG
-          // TRUE     |  TRUE         | FALSE    => rRAPTOR
-          query.arriveBy_ != start_time.extend_interval_later_ &&
-          q.via_stops_.empty()) {
-        try {
+    struct search_output {
+      std::vector<n::routing::journey> journeys_;
+      n::interval<n::unixtime_t> interval_;
+      stats_map_t search_stats_;
+      stats_map_t algo_stats_;
+    };
+
+    auto const finalize = [&](n::routing::routing_result& r,
+                              bool const record_metrics) -> search_output {
+      if (record_metrics) {
+        metrics_->routing_journeys_found_.Increment(
+            static_cast<double>(r.journeys_->size()));
+        metrics_->routing_execution_duration_seconds_total_.Observe(
+            static_cast<double>(r.search_stats_.execute_time_.count()) /
+            1000.0);
+        if (!r.journeys_->empty()) {
+          metrics_->routing_journey_duration_seconds_.Observe(
+              static_cast<double>(
+                  to_seconds(r.journeys_->begin()->arrival_time() -
+                             r.journeys_->begin()->departure_time())));
+        }
+      }
+      return {r.journeys_->els_, r.interval_, r.search_stats_.to_map(),
+              std::move(r.algo_stats_)};
+    };
+
+    auto const run_search = [&](n::rt_timetable const* search_rtt,
+                                bool const record_metrics) -> search_output {
+      auto r = n::routing::routing_result{};
+      auto algorithm = query.algorithm_;
+      auto search_state = n::routing::search_state{};
+      while (true) {
+        if (algorithm == api::algorithmEnum::PONG && query.timetableView_ &&
+            // arriveBy |  extend_later | PONG applicable
+            // ---------+---------------+---------------------
+            // FALSE    |  FALSE        | FALSE    => rRAPTOR
+            // FALSE    |  TRUE         | TRUE     => PONG
+            // TRUE     |  FALSE        | TRUE     => PONG
+            // TRUE     |  TRUE         | FALSE    => rRAPTOR
+            query.arriveBy_ != start_time.extend_interval_later_ &&
+            q.via_stops_.empty()) {
+          try {
+            auto raptor_state = n::routing::raptor_state{};
+            r = n::routing::pong_search(
+                *tt_, search_rtt, search_state, raptor_state, q,
+                query.arriveBy_ ? n::direction::kBackward
+                                : n::direction::kForward,
+                query.timeout_.has_value()
+                    ? std::chrono::seconds{*query.timeout_}
+                    : max_timeout);
+          } catch (std::exception const& e) {
+            std::cout << "PONG EXCEPTION: " << e.what() << "\n";
+            algorithm = api::algorithmEnum::RAPTOR;
+            continue;
+          }
+        } else if (algorithm == api::algorithmEnum::RAPTOR || tbd_ == nullptr ||
+                   (search_rtt != nullptr &&
+                    search_rtt->n_rt_transports() != 0U) ||
+                   query.arriveBy_ || q.prf_idx_ != tbd_->prf_idx_ ||
+                   q.allowed_claszes_ != n::routing::all_clasz_allowed() ||
+                   !q.td_start_.empty() || !q.td_dest_.empty() ||
+                   !q.transfer_time_settings_.default_ ||
+                   !q.via_stops_.empty() || q.require_bike_transport_ ||
+                   q.require_car_transport_) {
           auto raptor_state = n::routing::raptor_state{};
-          r = n::routing::pong_search(
-              *tt_, rtt, search_state, raptor_state, q,
+          r = n::routing::raptor_search(
+              *tt_, search_rtt, search_state, raptor_state, q,
               query.arriveBy_ ? n::direction::kBackward
                               : n::direction::kForward,
               query.timeout_.has_value() ? std::chrono::seconds{*query.timeout_}
                                          : max_timeout);
-        } catch (std::exception const& e) {
-          std::cout << "PONG EXCEPTION: " << e.what() << "\n";
-          algorithm = api::algorithmEnum::RAPTOR;
-          continue;
+        } else {
+          auto tb_state = n::routing::tb::query_state{*tt_, *tbd_};
+          r = n::routing::tb::tb_search(*tt_, search_state, tb_state, q);
         }
-      } else if (algorithm == api::algorithmEnum::RAPTOR || tbd_ == nullptr ||
-                 (rtt != nullptr && rtt->n_rt_transports() != 0U) ||
-                 query.arriveBy_ || q.prf_idx_ != tbd_->prf_idx_ ||
-                 q.allowed_claszes_ != n::routing::all_clasz_allowed() ||
-                 !q.td_start_.empty() || !q.td_dest_.empty() ||
-                 !q.transfer_time_settings_.default_ || !q.via_stops_.empty() ||
-                 q.require_bike_transport_ || q.require_car_transport_) {
-        auto raptor_state = n::routing::raptor_state{};
-        r = n::routing::raptor_search(
-            *tt_, rtt, search_state, raptor_state, q,
-            query.arriveBy_ ? n::direction::kBackward : n::direction::kForward,
-            query.timeout_.has_value() ? std::chrono::seconds{*query.timeout_}
-                                       : max_timeout);
-      } else {
-        auto tb_state = n::routing::tb::query_state{*tt_, *tbd_};
-        r = n::routing::tb::tb_search(*tt_, search_state, tb_state, q);
+        break;
       }
-      break;
+      return finalize(r, record_metrics);
+    };
+
+    auto const run_pinned_search =
+        [&](n::rt_timetable const* search_rtt,
+            n::interval<n::unixtime_t> const& itv) -> search_output {
+      auto pinned_q = q;
+      pinned_q.start_time_ = itv;
+      pinned_q.extend_interval_earlier_ = false;
+      pinned_q.extend_interval_later_ = false;
+      auto r = n::routing::routing_result{};
+      auto search_state = n::routing::search_state{};
+      auto raptor_state = n::routing::raptor_state{};
+      r = n::routing::raptor_search(
+          *tt_, search_rtt, search_state, raptor_state, std::move(pinned_q),
+          query.arriveBy_ ? n::direction::kBackward : n::direction::kForward,
+          query.timeout_.has_value() ? std::chrono::seconds{*query.timeout_}
+                                     : max_timeout);
+      return finalize(r, true);
+    };
+
+    auto const full = query.realtimeMode_ == api::RealtimeModeEnum::FULL;
+    auto const interval_search =
+        std::holds_alternative<n::interval<n::unixtime_t>>(q.start_time_);
+
+    auto scheduled = search_output{};
+    if (full && interval_search) {
+      scheduled = run_search(nullptr, false);
     }
 
-    metrics_->routing_journeys_found_.Increment(
-        static_cast<double>(r.journeys_->size()));
-    metrics_->routing_execution_duration_seconds_total_.Observe(
-        static_cast<double>(r.search_stats_.execute_time_.count()) / 1000.0);
+    auto primary = (full && interval_search)
+                       ? run_pinned_search(rtt, scheduled.interval_)
+                       : run_search(rtt, true);
+    auto journeys = std::move(primary.journeys_);
+    auto search_interval =
+        (full && interval_search) ? scheduled.interval_ : primary.interval_;
 
-    if (!r.journeys_->empty()) {
-      metrics_->routing_journey_duration_seconds_.Observe(static_cast<double>(
-          to_seconds(r.journeys_->begin()->arrival_time() -
-                     r.journeys_->begin()->departure_time())));
+    if (full && !interval_search) {
+      scheduled = run_search(nullptr, false);
+      search_interval = {
+          std::min(search_interval.from_, scheduled.interval_.from_),
+          std::max(search_interval.to_, scheduled.interval_.to_)};
     }
 
-    auto journeys = r.journeys_->els_;
-    auto search_interval = r.interval_;
+    if (full) {
+      auto const n_rt = journeys.size();
+      for (auto& sj : scheduled.journeys_) {
+        auto const covered_by_rt =
+            std::any_of(begin(journeys),
+                        begin(journeys) + static_cast<std::ptrdiff_t>(n_rt),
+                        [&](n::routing::journey const& rj) {
+                          return same_connection(sj, rj);
+                        });
+        if (!covered_by_rt) {
+          journeys.push_back(std::move(sj));
+        }
+      }
+      std::sort(begin(journeys), end(journeys),
+                [](n::routing::journey const& a, n::routing::journey const& b) {
+                  return std::tuple{a.start_time_, a.dest_time_, a.transfers_} <
+                         std::tuple{b.start_time_, b.dest_time_, b.transfers_};
+                });
+    }
+
     if (query.maxItineraries_.has_value()) {
       search_interval = shrink(start_time.extend_interval_earlier_,
                                static_cast<std::size_t>(*query.maxItineraries_),
-                               r.interval_, journeys);
+                               search_interval, journeys);
     }
 
     direct_filter(direct, journeys);
@@ -1044,9 +1138,9 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
     }
 
     return {
-        .debugOutput_ =
-            join(std::move(prepare_stats), std::move(query_stats),
-                 r.search_stats_.to_map(), std::move(r.algo_stats_)),
+        .debugOutput_ = join(std::move(prepare_stats), std::move(query_stats),
+                             std::move(primary.search_stats_),
+                             std::move(primary.algo_stats_)),
         .from_ = bwd_compat_lvl_adjust(std::move(from_p), api_version),
         .to_ = bwd_compat_lvl_adjust(std::move(to_p), api_version),
         .direct_ = std::move(direct),
