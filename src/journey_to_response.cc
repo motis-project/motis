@@ -35,6 +35,7 @@
 #include "motis/tag_lookup.h"
 #include "motis/timetable/clasz_to_mode.h"
 #include "motis/timetable/time_conv.h"
+#include "motis/to_alert.h"
 #include "motis/transport_mode_ids.h"
 
 namespace n = nigiri;
@@ -112,76 +113,8 @@ std::optional<std::vector<api::Alert>> get_alerts(
   auto const& tt = *fr.tt_;
   auto const* rtt = fr.rtt_;
 
-  auto const to_time_range =
-      [&](n::interval<n::unixtime_t> const x) -> api::TimeRange {
-    return {x.from_, x.to_};
-  };
-  auto const to_cause = [](n::alert_cause const x) {
-    return api::AlertCauseEnum{static_cast<int>(x)};
-  };
-  auto const to_effect = [](n::alert_effect const x) {
-    return api::AlertEffectEnum{static_cast<int>(x)};
-  };
-  auto const convert_to_str = [](std::string_view s) {
-    return std::optional{std::string{s}};
-  };
-  auto const to_alert = [&](n::alert_idx_t const x) -> api::Alert {
-    auto const& a = rtt->alerts_;
-    auto const get_translation =
-        [&](auto const& translations) -> std::optional<std::string> {
-      if (translations.empty()) {
-        return std::nullopt;
-      } else if (!language.has_value()) {
-        return a.strings_.try_get(translations.front().text_)
-            .and_then(convert_to_str);
-      } else {
-        for (auto const& req_lang : *language) {
-          auto const it = utl::find_if(
-              translations, [&](n::alert_translation const translation) {
-                auto const translation_lang =
-                    a.strings_.try_get(translation.language_);
-                return translation_lang.has_value() &&
-                       translation_lang->starts_with(req_lang);
-              });
-          if (it == end(translations)) {
-            continue;
-          }
-          return a.strings_.try_get(it->text_).and_then(convert_to_str);
-        }
-        return a.strings_.try_get(translations.front().text_)
-            .and_then(convert_to_str);
-      }
-    };
-    return {
-        .communicationPeriod_ =
-            a.communication_period_[x].empty()
-                ? std::nullopt
-                : std::optional{utl::to_vec(a.communication_period_[x],
-                                            to_time_range)},
-        .impactPeriod_ = a.impact_period_[x].empty()
-                             ? std::nullopt
-                             : std::optional{utl::to_vec(a.impact_period_[x],
-                                                         to_time_range)},
-        .cause_ = to_cause(a.cause_[x]),
-        .causeDetail_ = get_translation(a.cause_detail_[x]),
-        .effect_ = to_effect(a.effect_[x]),
-        .effectDetail_ = get_translation(a.effect_detail_[x]),
-        .url_ = get_translation(a.url_[x]),
-        .headerText_ = get_translation(a.header_text_[x]).value_or(""),
-        .descriptionText_ =
-            get_translation(a.description_text_[x]).value_or(""),
-        .ttsHeaderText_ = get_translation(a.tts_header_text_[x]),
-        .ttsDescriptionText_ = get_translation(a.tts_description_text_[x]),
-        .imageUrl_ = a.image_[x].empty()
-                         ? std::nullopt
-                         : a.strings_.try_get(a.image_[x].front().url_)
-                               .and_then(convert_to_str),
-        .imageMediaType_ =
-            a.image_[x].empty()
-                ? std::nullopt
-                : a.strings_.try_get(a.image_[x].front().media_type_)
-                      .and_then(convert_to_str),
-        .imageAlternativeText_ = get_translation(a.image_alternative_text_[x])};
+  auto const call_to_alert = [&](n::alert_idx_t const x) -> api::Alert {
+    return to_alert(rtt->alerts_, x, language);
   };
 
   auto const x =
@@ -198,7 +131,7 @@ std::optional<std::vector<api::Alert>> get_alerts(
     auto const src = tt.trip_id_src_[t];
     for (auto const& a :
          rtt->alerts_.get_alerts(tt, src, x, fr.rt_, l, fuzzy_stop)) {
-      alerts.emplace_back(to_alert(a));
+      alerts.emplace_back(call_to_alert(a));
     }
   }
 
