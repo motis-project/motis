@@ -1077,18 +1077,33 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
           query.arriveBy_ ? n::direction::kBackward : n::direction::kForward,
           query.timeout_.has_value() ? std::chrono::seconds{*query.timeout_}
                                      : max_timeout);
-      return finalize(r, false);
+      return finalize(r, true);
     };
 
-    auto primary = run_search(rtt, true);
+    auto const full = query.realtimeMode_ == api::RealtimeModeEnum::FULL;
+    auto const interval_search =
+        std::holds_alternative<n::interval<n::unixtime_t>>(q.start_time_);
+
+    auto scheduled = search_output{};
+    if (full && interval_search) {
+      scheduled = run_search(nullptr, false);
+    }
+
+    auto primary = (full && interval_search)
+                       ? run_pinned_search(rtt, scheduled.interval_)
+                       : run_search(rtt, true);
     auto journeys = std::move(primary.journeys_);
-    auto search_interval = primary.interval_;
-    if (query.realtimeMode_ == api::RealtimeModeEnum::FULL) {
-      auto const interval_search =
-          std::holds_alternative<n::interval<n::unixtime_t>>(q.start_time_);
-      auto scheduled = interval_search
-                           ? run_pinned_search(nullptr, search_interval)
-                           : run_search(nullptr, false);
+    auto search_interval =
+        (full && interval_search) ? scheduled.interval_ : primary.interval_;
+
+    if (full && !interval_search) {
+      scheduled = run_search(nullptr, false);
+      search_interval = {
+          std::min(search_interval.from_, scheduled.interval_.from_),
+          std::max(search_interval.to_, scheduled.interval_.to_)};
+    }
+
+    if (full) {
       auto const n_rt = journeys.size();
       for (auto& sj : scheduled.journeys_) {
         auto const covered_by_rt =
@@ -1100,11 +1115,10 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
           journeys.push_back(std::move(sj));
         }
       }
-      utl::erase_duplicates(journeys);
       std::sort(begin(journeys), end(journeys),
                 [](n::routing::journey const& a, n::routing::journey const& b) {
-                  return std::tuple{a.start_time_, a.transfers_} <
-                         std::tuple{b.start_time_, b.transfers_};
+                  return std::tuple{a.start_time_, a.dest_time_, a.transfers_} <
+                         std::tuple{b.start_time_, b.dest_time_, b.transfers_};
                 });
     }
 
