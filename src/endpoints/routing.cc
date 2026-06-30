@@ -1107,7 +1107,8 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
       auto const n_rt = journeys.size();
       for (auto& sj : scheduled.journeys_) {
         auto const covered_by_rt =
-            std::any_of(begin(journeys), begin(journeys) + n_rt,
+            std::any_of(begin(journeys),
+                        begin(journeys) + static_cast<std::ptrdiff_t>(n_rt),
                         [&](n::routing::journey const& rj) {
                           return same_connection(sj, rj);
                         });
