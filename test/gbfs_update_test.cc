@@ -394,12 +394,6 @@ void run_update(config const& c, std::shared_ptr<gbfs_data>& gbfs) {
   ioc.run();
 }
 
-gbfs_provider const& provider(gbfs_data const& data,
-                              std::string const& id = "test") {
-  auto const idx = data.provider_by_id_.at(id);
-  return *data.providers_.at(idx);
-}
-
 provider_routing_data const& routing_data_for(gbfs_data& gbfs,
                                               gbfs_provider const& p) {
   auto& d = street_data();
@@ -450,7 +444,7 @@ TEST(motis, gbfs_update_initial_file_feed_creates_provider_state) {
 
   ASSERT_NE(nullptr, gbfs);
   ASSERT_EQ(1U, gbfs->providers_.size());
-  auto const& p = provider(*gbfs);
+  auto const& p = *gbfs->providers_.at(gbfs->provider_by_id_.at("test"));
 
   EXPECT_EQ("test", p.id_);
   EXPECT_EQ("test-system", p.sys_info_.id_);
@@ -476,13 +470,16 @@ TEST(motis, gbfs_update_reuses_provider_and_applies_status_update) {
   auto gbfs = std::shared_ptr<gbfs_data>{};
   auto const c = make_gbfs_config(dir);
   run_update(c, gbfs);
-  auto const first_provider_idx = provider(*gbfs).idx_;
-  auto const first_vehicle_type_count = provider(*gbfs).vehicle_types_.size();
+  auto const first_provider_idx =
+      gbfs->providers_.at(gbfs->provider_by_id_.at("test"))->idx_;
+  auto const first_vehicle_type_count =
+      gbfs->providers_.at(gbfs->provider_by_id_.at("test"))
+          ->vehicle_types_.size();
 
   write_station_status(dir, 7U);
   run_update(c, gbfs);
 
-  auto const& p = provider(*gbfs);
+  auto const& p = *gbfs->providers_.at(gbfs->provider_by_id_.at("test"));
   EXPECT_TRUE(first_provider_idx == p.idx_);
   EXPECT_EQ(first_vehicle_type_count, p.vehicle_types_.size());
   EXPECT_EQ(
@@ -498,12 +495,14 @@ TEST(motis, gbfs_update_updates_free_floating_vehicles_on_second_run) {
   auto gbfs = std::shared_ptr<gbfs_data>{};
   auto const c = make_gbfs_config(dir);
   run_update(c, gbfs);
-  ASSERT_EQ("vehicle-1", provider(*gbfs).vehicle_status_.front().id_);
+  ASSERT_EQ("vehicle-1", gbfs->providers_.at(gbfs->provider_by_id_.at("test"))
+                             ->vehicle_status_.front()
+                             .id_);
 
   write_free_bike_status(dir, "vehicle-2", 49.8755, 8.6280);
   run_update(c, gbfs);
 
-  auto const& p = provider(*gbfs);
+  auto const& p = *gbfs->providers_.at(gbfs->provider_by_id_.at("test"));
   ASSERT_EQ(1U, p.vehicle_status_.size());
   EXPECT_EQ("vehicle-2", p.vehicle_status_.front().id_);
   EXPECT_DOUBLE_EQ(49.8755, p.vehicle_status_.front().pos_.lat_);
@@ -518,7 +517,8 @@ TEST(motis, gbfs_update_ignores_timestamp_only_changes_for_routing_cache) {
   auto gbfs = std::shared_ptr<gbfs_data>{};
   auto const c = make_gbfs_config(dir);
   run_update(c, gbfs);
-  auto const provider_idx = provider(*gbfs).idx_;
+  auto const provider_idx =
+      gbfs->providers_.at(gbfs->provider_by_id_.at("test"))->idx_;
   auto const first_cached = gbfs->cache_.get(provider_idx);
   ASSERT_NE(nullptr, first_cached);
 
@@ -533,8 +533,8 @@ TEST(motis, gbfs_update_ignores_timestamp_only_changes_for_routing_cache) {
   auto const third_cached = gbfs->cache_.get(provider_idx);
   ASSERT_NE(nullptr, third_cached);
   EXPECT_NE(first_cached.get(), third_cached.get());
-  EXPECT_EQ(8U, provider(*gbfs)
-                    .stations_.at(std::string{kStation1})
+  EXPECT_EQ(8U, gbfs->providers_.at(gbfs->provider_by_id_.at("test"))
+                    ->stations_.at(std::string{kStation1})
                     .status_.num_vehicles_available_);
 }
 
@@ -550,8 +550,8 @@ TEST(motis, gbfs_update_ttl_controls_refresh_behavior) {
     write_station_status(dir, 9U, false, kBikeType, 41U, 3600U);
     run_update(c, gbfs);
 
-    EXPECT_EQ(3U, provider(*gbfs)
-                      .stations_.at(std::string{kStation1})
+    EXPECT_EQ(3U, gbfs->providers_.at(gbfs->provider_by_id_.at("test"))
+                      ->stations_.at(std::string{kStation1})
                       .status_.num_vehicles_available_);
   }
 
@@ -566,8 +566,8 @@ TEST(motis, gbfs_update_ttl_controls_refresh_behavior) {
     write_station_status(dir, 9U, false, kBikeType, 41U, 0U);
     run_update(c, gbfs);
 
-    EXPECT_EQ(9U, provider(*gbfs)
-                      .stations_.at(std::string{kStation1})
+    EXPECT_EQ(9U, gbfs->providers_.at(gbfs->provider_by_id_.at("test"))
+                      ->stations_.at(std::string{kStation1})
                       .status_.num_vehicles_available_);
   }
 }
@@ -585,7 +585,7 @@ TEST(motis, gbfs_update_station_move_updates_provider_rtree) {
   auto const c = make_gbfs_config(dir);
   run_update(c, gbfs);
 
-  auto const idx = provider(*gbfs).idx_;
+  auto const idx = gbfs->providers_.at(gbfs->provider_by_id_.at("test"))->idx_;
   auto const old_pos = geo::latlng{49.871651, 8.631084};
   auto const new_pos = geo::latlng{49.875309, 8.627667};
   EXPECT_TRUE(rtree_contains(*gbfs, old_pos, idx));
@@ -605,12 +605,13 @@ TEST(motis, gbfs_update_retains_previous_provider_on_malformed_refresh) {
   auto gbfs = std::shared_ptr<gbfs_data>{};
   auto const c = make_gbfs_config(dir);
   run_update(c, gbfs);
-  ASSERT_EQ(1U, provider(*gbfs).vehicle_status_.size());
+  ASSERT_EQ(1U, gbfs->providers_.at(gbfs->provider_by_id_.at("test"))
+                    ->vehicle_status_.size());
 
   write_file(dir / "station_information.json", R"({"data": {"stations": )");
   run_update(c, gbfs);
 
-  auto const& p = provider(*gbfs);
+  auto const& p = *gbfs->providers_.at(gbfs->provider_by_id_.at("test"));
   ASSERT_EQ(1U, p.stations_.size());
   EXPECT_TRUE(p.stations_.contains(std::string{kStation1}));
   ASSERT_EQ(1U, p.vehicle_status_.size());
@@ -624,12 +625,13 @@ TEST(motis, gbfs_update_discovery_removes_stale_vehicle_feed_data) {
   auto gbfs = std::shared_ptr<gbfs_data>{};
   auto const c = make_gbfs_config(dir);
   run_update(c, gbfs);
-  ASSERT_EQ(1U, provider(*gbfs).vehicle_status_.size());
+  ASSERT_EQ(1U, gbfs->providers_.at(gbfs->provider_by_id_.at("test"))
+                    ->vehicle_status_.size());
 
   write_discovery(dir, "");
   run_update(c, gbfs);
 
-  auto const& p = provider(*gbfs);
+  auto const& p = *gbfs->providers_.at(gbfs->provider_by_id_.at("test"));
   EXPECT_TRUE(p.vehicle_status_.empty());
   EXPECT_EQ(0U, count_additional_vehicle_nodes(routing_data_for(*gbfs, p)));
 }
@@ -641,7 +643,8 @@ TEST(motis, gbfs_update_recomputes_dependents_when_vehicle_types_change) {
   auto gbfs = std::shared_ptr<gbfs_data>{};
   auto const c = make_gbfs_config(dir);
   run_update(c, gbfs);
-  EXPECT_EQ(1U, provider(*gbfs).vehicle_types_.size());
+  EXPECT_EQ(1U, gbfs->providers_.at(gbfs->provider_by_id_.at("test"))
+                    ->vehicle_types_.size());
 
   write_vehicle_types(dir, true);
   write_station_status(dir, 4U, false, kScooterType);
@@ -649,7 +652,7 @@ TEST(motis, gbfs_update_recomputes_dependents_when_vehicle_types_change) {
                          kScooterType);
   run_update(c, gbfs);
 
-  auto const& p = provider(*gbfs);
+  auto const& p = *gbfs->providers_.at(gbfs->provider_by_id_.at("test"));
   ASSERT_EQ(2U, p.vehicle_types_.size());
   ASSERT_EQ(2U, p.products_.size());
   ASSERT_EQ(1U, p.vehicle_status_.size());
@@ -671,7 +674,7 @@ TEST(motis, gbfs_update_handles_inconsistent_references) {
   auto gbfs = std::shared_ptr<gbfs_data>{};
   run_update(make_gbfs_config(dir), gbfs);
 
-  auto const& p = provider(*gbfs);
+  auto const& p = *gbfs->providers_.at(gbfs->provider_by_id_.at("test"));
   ASSERT_EQ(1U, p.stations_.size());
   EXPECT_EQ(
       5U,
@@ -694,7 +697,7 @@ TEST(motis, gbfs_update_uses_station_coordinates_for_docked_vehicle_status) {
   auto gbfs = std::shared_ptr<gbfs_data>{};
   run_update(make_gbfs_config(dir), gbfs);
 
-  auto const& p = provider(*gbfs);
+  auto const& p = *gbfs->providers_.at(gbfs->provider_by_id_.at("test"));
   ASSERT_EQ(1U, p.vehicle_status_.size());
   EXPECT_DOUBLE_EQ(p.stations_.at(std::string{kStation1}).info_.pos_.lat_,
                    p.vehicle_status_.front().pos_.lat_);
@@ -710,7 +713,7 @@ TEST(motis, gbfs_update_geofence_can_suppress_free_floating_start_node) {
   auto gbfs = std::shared_ptr<gbfs_data>{};
   run_update(make_gbfs_config(dir), gbfs);
 
-  auto const& p = provider(*gbfs);
+  auto const& p = *gbfs->providers_.at(gbfs->provider_by_id_.at("test"));
   ASSERT_EQ(1U, p.vehicle_status_.size());
   EXPECT_EQ(0U, count_additional_vehicle_nodes(routing_data_for(*gbfs, p)));
 }
@@ -723,7 +726,7 @@ TEST(motis, gbfs_update_global_geofencing_rules) {
   auto gbfs = std::shared_ptr<gbfs_data>{};
   run_update(make_gbfs_config(dir), gbfs);
 
-  auto const& p = provider(*gbfs);
+  auto const& p = *gbfs->providers_.at(gbfs->provider_by_id_.at("test"));
   auto const prod_rd = gbfs->get_products_routing_data(
       *street_data().w_, *street_data().l_,
       gbfs_products_ref{p.idx_, gbfs_products_idx_t{0}});
@@ -744,7 +747,7 @@ TEST(motis, gbfs_update_station_area_marks_base_nodes_return_allowed) {
   auto gbfs = std::shared_ptr<gbfs_data>{};
   run_update(make_gbfs_config(dir), gbfs);
 
-  auto const& p = provider(*gbfs);
+  auto const& p = *gbfs->providers_.at(gbfs->provider_by_id_.at("test"));
   auto const prod_rd = gbfs->get_products_routing_data(
       *street_data().w_, *street_data().l_,
       gbfs_products_ref{p.idx_, gbfs_products_idx_t{0}});
@@ -799,7 +802,8 @@ TEST(motis, gbfs_update_supports_local_gbfs_manifest_provider_dirs) {
   ASSERT_EQ(1U, gbfs->aggregated_feeds_->size());
   ASSERT_EQ(1U, gbfs->providers_.size());
   ASSERT_TRUE(gbfs->provider_by_id_.contains("agg:provider-a"));
-  auto const& p = provider(*gbfs, "agg:provider-a");
+  auto const& p =
+      *gbfs->providers_.at(gbfs->provider_by_id_.at("agg:provider-a"));
   EXPECT_EQ("agg:provider-a", p.id_);
   ASSERT_EQ(1U, p.stations_.size());
   EXPECT_EQ("Test Bikes", p.sys_info_.name_);
@@ -818,7 +822,9 @@ TEST(motis, gbfs_update_local_manifest_update_adds_and_removes_providers) {
 
   auto const provider_a_idx = gbfs->provider_by_id_.at("agg:provider-a");
   ASSERT_NE(nullptr, gbfs->providers_.at(provider_a_idx));
-  EXPECT_EQ("agg:provider-a", provider(*gbfs, "agg:provider-a").id_);
+  EXPECT_EQ(
+      "agg:provider-a",
+      gbfs->providers_.at(gbfs->provider_by_id_.at("agg:provider-a"))->id_);
 
   write_manifest(dir, {"provider-b"});
   run_update(c, gbfs);
@@ -829,7 +835,9 @@ TEST(motis, gbfs_update_local_manifest_update_adds_and_removes_providers) {
   auto const provider_b_idx = gbfs->provider_by_id_.at("agg:provider-b");
   ASSERT_NE(nullptr, gbfs->providers_.at(provider_b_idx));
   EXPECT_FALSE(provider_a_idx == provider_b_idx);
-  EXPECT_EQ("Provider B", provider(*gbfs, "agg:provider-b").sys_info_.name_);
+  EXPECT_EQ("Provider B",
+            gbfs->providers_.at(gbfs->provider_by_id_.at("agg:provider-b"))
+                ->sys_info_.name_);
 }
 
 TEST(motis, gbfs_update_supports_lamassu_systems_manifest) {
@@ -855,7 +863,8 @@ TEST(motis, gbfs_update_supports_lamassu_systems_manifest) {
   ASSERT_EQ(1U, gbfs->aggregated_feeds_->size());
   ASSERT_EQ(1U, gbfs->providers_.size());
   ASSERT_TRUE(gbfs->provider_by_id_.contains("agg:system-a"));
-  auto const& p = provider(*gbfs, "agg:system-a");
+  auto const& p =
+      *gbfs->providers_.at(gbfs->provider_by_id_.at("agg:system-a"));
   EXPECT_EQ("agg:system-a", p.id_);
   ASSERT_EQ(1U, p.stations_.size());
   EXPECT_EQ("Test Bikes", p.sys_info_.name_);
@@ -887,7 +896,7 @@ TEST(motis, gbfs_update_handles_v1_feed_without_vehicle_types) {
   run_update(make_gbfs_config(dir), gbfs);
 
   ASSERT_EQ(1U, gbfs->providers_.size());
-  auto const& p = provider(*gbfs);
+  auto const& p = *gbfs->providers_.at(gbfs->provider_by_id_.at("test"));
   ASSERT_EQ(1U, p.stations_.size());
   EXPECT_EQ(
       3U,
