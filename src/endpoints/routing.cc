@@ -1043,36 +1043,40 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
       q_for_alts.flip_dir();
     }
 
+    auto fares_time = std::chrono::nanoseconds{0};
+    auto itineraries = utl::to_vec(
+        journeys, [&, cache = street_routing_cache_t{}](auto&& j) mutable {
+          return journey_to_response(
+              w_, l_, pl_, *tt_, *tags_, fa_, e, annotation_rtt, matches_,
+              elevations_, shapes_, gbfs_rd, ae_, tz_, j, start, dest, cache,
+              blocked.get(),
+              query.requireCarTransport_ && query.useRoutedTransfers_,
+              osr_params, query.pedestrianProfile_, query.elevationCosts_,
+              query.joinInterlinedLegs_, detailed_transfers,
+              query.detailedLegs_, query.withFares_,
+              query.withScheduledSkippedStops_,
+              config_.timetable_.value().max_matching_distance_,
+              query.maxMatchingDistance_, api_version,
+              query.ignorePreTransitRentalReturnConstraints_,
+              query.ignorePostTransitRentalReturnConstraints_, query.language_,
+              true,
+              query.numLegAlternatives_ > 0
+                  ? alternatives_context{query_alternatives{
+                        q_for_alts,
+                        static_cast<std::size_t>(query.numLegAlternatives_)}}
+                  : alternatives_context{},
+              &fares_time);
+        });
+
     return {
-        .debugOutput_ =
-            join(std::move(prepare_stats), std::move(query_stats),
-                 r.search_stats_.to_map(), std::move(r.algo_stats_)),
+        .debugOutput_ = join(std::move(prepare_stats), std::move(query_stats),
+                             r.search_stats_.to_map(), std::move(r.algo_stats_),
+                             stats_map_t{{"fares", static_cast<std::uint64_t>(
+                                                       fares_time.count())}}),
         .from_ = bwd_compat_lvl_adjust(std::move(from_p), api_version),
         .to_ = bwd_compat_lvl_adjust(std::move(to_p), api_version),
         .direct_ = std::move(direct),
-        .itineraries_ = utl::to_vec(
-            journeys,
-            [&, cache = street_routing_cache_t{}](auto&& j) mutable {
-              return journey_to_response(
-                  w_, l_, pl_, *tt_, *tags_, fa_, e, annotation_rtt, matches_,
-                  elevations_, shapes_, gbfs_rd, ae_, tz_, j, start, dest,
-                  cache, blocked.get(),
-                  query.requireCarTransport_ && query.useRoutedTransfers_,
-                  osr_params, query.pedestrianProfile_, query.elevationCosts_,
-                  query.joinInterlinedLegs_, detailed_transfers,
-                  query.detailedLegs_, query.withFares_,
-                  query.withScheduledSkippedStops_,
-                  config_.timetable_.value().max_matching_distance_,
-                  query.maxMatchingDistance_, api_version,
-                  query.ignorePreTransitRentalReturnConstraints_,
-                  query.ignorePostTransitRentalReturnConstraints_,
-                  query.language_, true,
-                  query.numLegAlternatives_ > 0
-                      ? alternatives_context{query_alternatives{
-                            q_for_alts, static_cast<std::size_t>(
-                                            query.numLegAlternatives_)}}
-                      : alternatives_context{});
-            }),
+        .itineraries_ = std::move(itineraries),
         .previousPageCursor_ =
             fmt::format("EARLIER|{}", to_seconds(search_interval.from_)),
         .nextPageCursor_ =
