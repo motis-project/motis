@@ -1,5 +1,6 @@
 #pragma once
 
+#include <chrono>
 #include <string_view>
 #include <variant>
 #include <vector>
@@ -84,6 +85,7 @@ api::Itinerary journey_to_response(
     bool ignore_dest_rental_return_constraints,
     std::optional<std::vector<std::string>> const& language,
     bool const set_itinerary_id_field = true,
-    alternatives_context const& alternatives = {});
+    alternatives_context const& alternatives = {},
+    std::chrono::nanoseconds* fares_time = nullptr);
 
 }  // namespace motis
