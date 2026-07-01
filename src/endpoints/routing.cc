@@ -981,8 +981,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
           // FALSE    |  TRUE         | TRUE     => PONG
           // TRUE     |  FALSE        | TRUE     => PONG
           // TRUE     |  TRUE         | FALSE    => rRAPTOR
-          query.arriveBy_ != start_time.extend_interval_later_ &&
-          q.via_stops_.empty()) {
+          query.arriveBy_ != start_time.extend_interval_later_) {
         try {
           auto raptor_state = n::routing::raptor_state{};
           r = n::routing::pong_search(
