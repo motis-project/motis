@@ -125,6 +125,7 @@
         "NIGIRI_CUDA": "ON",
         "CMAKE_C_COMPILER": "gcc-13",
         "CMAKE_CXX_COMPILER": "g++-13",
+        "CMAKE_CUDA_COMPILER": "/usr/local/cuda/bin/nvcc",
         "CMAKE_CUDA_HOST_COMPILER": "g++-12"
       }
     },
