@@ -203,12 +203,12 @@ paths:
           in: query
           required: false
           description: |
-            Optional. Default is 25 meters.
+            Optional. Default is 250 meters.
             
             Maximum matching distance in meters to match geo coordinates to the street network.
           schema:
             type: number
-            default: 25
+            default: 250
 
         - name: pedestrianProfile
           in: query
@@ -1204,7 +1204,7 @@ paths:
           description: maximum matching distance in meters to match geo coordinates to the street network
           schema:
             type: number
-            default: 25
+            default: 250
 
         - name: arriveBy
           in: query
@@ -1648,12 +1648,12 @@ paths:
           in: query
           required: false
           description: |
-            Optional. Default is 25 meters.
+            Optional. Default is 250 meters.
 
             Maximum matching distance in meters to match geo coordinates to the street network.
           schema:
             type: number
-            default: 25
+            default: 250
 
         - name: useRoutedTransfers
           in: query
@@ -2257,7 +2257,7 @@ paths:
           description: Maximum matching distance in meters to the street network.
           schema:
             type: number
-            default: 25
+            default: 250
         - name: maxPreTransitTime
           in: query
           required: false
@@ -5402,7 +5402,7 @@ components:
         maxMatchingDistance:
           description: maximum matching distance in meters to match geo coordinates to the street network
           type: number
-          default: 25
+          default: 250
         arriveBy:
           description: |
             Optional. Defaults to false, i.e. one to many search
