@@ -1,9 +1,12 @@
 #include "motis/get_stops_with_traffic.h"
 
 #include "osr/location.h"
+#include "utl/helpers/algorithm.h"
+#include "utl/pipes/for_each.h"
 
 #include "nigiri/rt/rt_timetable.h"
 #include "nigiri/timetable.h"
+#include "nigiri/types.h"
 
 namespace n = nigiri;
 
