@@ -779,12 +779,12 @@ paths:
           in: query
           required: false
           description: |
-            Optional. Experimental. Default is `1.0`.
+            Optional. Experimental. Default is `10`.
             Factor with which the duration of the fastest direct non-public-transit connection is multiplied.
             Values > 1.0 allow transit connections that are slower than the fastest direct non-public-transit connection to be found.
           schema:
             type: number
-            default: 1.0
+            default: 10
             minimum: 0
 
         - name: timeout
