@@ -2100,7 +2100,7 @@ export type PlanData = {
          */
         elevationCosts?: ElevationCosts;
         /**
-         * Optional. Experimental. Default is `1.0`.
+         * Optional. Experimental. Default is `10`.
          * Factor with which the duration of the fastest direct non-public-transit connection is multiplied.
          * Values > 1.0 allow transit connections that are slower than the fastest direct non-public-transit connection to be found.
          *
