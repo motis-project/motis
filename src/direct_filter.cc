@@ -16,8 +16,13 @@ void direct_filter(std::vector<api::Itinerary> const& direct,
                    std::vector<n::routing::journey>& journeys) {
   auto const get_direct_duration = [&](auto const transport_mode_id) {
     auto const m = to_mode(transport_mode_id);
-    auto const i = utl::find_if(
-        direct, [&](auto const& d) { return d.legs_.front().mode_ == m; });
+    auto const i = utl::find_if(direct, [&](auto const& d) {
+      auto const leg_with_actual_mode =
+          d.legs_.size() > 1 && d.legs_.front().mode_ == api::ModeEnum::WALK
+              ? 1
+              : 0;
+      return d.legs_.at(leg_with_actual_mode).mode_ == m;
+    });
     return i != end(direct)
                ? n::duration_t{std::chrono::round<std::chrono::minutes>(
                      std::chrono::seconds{i->duration_})}
