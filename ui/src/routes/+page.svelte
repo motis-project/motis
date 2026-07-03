@@ -653,7 +653,8 @@
 				one,
 				selectedStop: page.state.selectedStop,
 				stopArriveBy: page.state.stopArriveBy,
-				stopName: stopNameFromResponse || page.state.selectedStop?.name
+				stopName: stopNameFromResponse || page.state.selectedStop?.name,
+				selectedItinerary: page.state.selectedItinerary
 			},
 			t
 		)
