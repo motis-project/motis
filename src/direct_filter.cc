@@ -19,8 +19,8 @@ void direct_filter(std::vector<api::Itinerary> const& direct,
     auto const i = utl::find_if(direct, [&](auto const& d) {
       auto const leg_with_actual_mode =
           d.legs_.size() > 1 && d.legs_.front().mode_ == api::ModeEnum::WALK
-              ? 1
-              : 0;
+              ? 1U
+              : 0U;
       return d.legs_.at(leg_with_actual_mode).mode_ == m;
     });
     return i != end(direct)
