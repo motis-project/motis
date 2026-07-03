@@ -997,8 +997,8 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
     auto const gpu_g_nobikecar =
         !q.require_bike_transport_ && !q.require_car_transport_;
     auto const gpu_g_novia = q.via_stops_.empty();
-    auto const gpu_supported =
-        gpu_g_clasz && gpu_g_td && gpu_g_tts && gpu_g_nobikecar && gpu_g_novia;
+    auto const gpu_g_profile = q.prf_idx_ == 0U;
+    auto const gpu_supported = n::routing::gpu::gpu_supported(q);
 #if defined(NIGIRI_CUDA)
     // one persistent GPU timetable + state, built lazily from *tt_; the mutex
     // serializes so only one query uses the GPU at a time. Shared by GPU_PONG
@@ -1105,7 +1105,8 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                     {"gpu_g_td", gpu_g_td},
                     {"gpu_g_tts", gpu_g_tts},
                     {"gpu_g_nobikecar", gpu_g_nobikecar},
-                    {"gpu_g_novia", gpu_g_novia}};
+                    {"gpu_g_novia", gpu_g_novia},
+                    {"gpu_g_profile", gpu_g_profile}};
 
     metrics_->routing_journeys_found_.Increment(
         static_cast<double>(r.journeys_->size()));
