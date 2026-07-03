@@ -11,7 +11,7 @@ export default defineConfig({
 			'/mapterhorn/': {
 				changeOrigin: true,
 				target: 'https://tiles.mapterhorn.com',
-				rewrite: (path) => path.replace(/^\/mapterhorn/, ''),
+				rewrite: (path) => path.replace(/^\/mapterhorn/, '')
 			}
 		}
 	},
