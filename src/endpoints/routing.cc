@@ -36,7 +36,6 @@
 #include "nigiri/routing/tb/query_engine.h"
 #include "nigiri/routing/tb/tb_data.h"
 #include "nigiri/routing/tb/tb_search.h"
-
 #if defined(NIGIRI_CUDA)
 #include "nigiri/routing/gpu/raptor.h"
 #endif
@@ -980,16 +979,8 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
     auto r = n::routing::routing_result{};
     auto algorithm = query.algorithm_;
     auto search_state = n::routing::search_state{};
-    // GPU pong/raptor support station-to-station AND intermodal first/last mile
-    // (validated against the CPU: raptor+pong x station+intermodal, 0 misses).
-    // Still unsupported (falls back to the CPU equivalent): vias, real-time, td
-    // offsets (GBFS/flex), custom profile/claszes/transfer-times, or bike/car
-    // ON transit. Per-guard flags are exposed in the debug output so it's
-    // visible why a query did/didn't run on the GPU. GPU real-time is
-    // unimplemented (gpu_raptor<Rt=true> is a stub), so we run the GPU search
-    // against the SCHEDULED timetable only (pass rtt=nullptr -> Rt=false, the
-    // benchmark-validated path).
-    auto const gpu_g_rt = (rtt == nullptr || rtt->n_rt_transports() == 0U);
+#if defined(NIGIRI_CUDA)
+    auto gpu_used = false;
     auto const gpu_g_clasz =
         q.allowed_claszes_ == n::routing::all_clasz_allowed();
     auto const gpu_g_td = q.td_start_.empty() && q.td_dest_.empty();
@@ -999,32 +990,18 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
     auto const gpu_g_novia = q.via_stops_.empty();
     auto const gpu_g_profile = q.prf_idx_ == 0U;
     auto const gpu_supported = n::routing::gpu::gpu_supported(q);
-#if defined(NIGIRI_CUDA)
-    // one persistent GPU timetable + state, built lazily from *tt_; the mutex
-    // serializes so only one query uses the GPU at a time. Shared by GPU_PONG
-    // and GPU_RAPTOR.
     auto const run_on_gpu = [&](bool const use_pong) -> bool {
-      static std::mutex gpu_mutex;
-      // Intentionally leaked (raw owning pointers, never deleted): their
-      // destructors call cudaFree, which at process exit runs *after* the CUDA
-      // driver has begun unloading -> cudaErrorCudartUnloading -> terminate.
-      static n::routing::gpu::gpu_timetable* gpu_tt = nullptr;
-      static n::routing::gpu::gpu_raptor_state* gpu_state = nullptr;
       try {
-        auto const lock = std::lock_guard{gpu_mutex};
-        if (gpu_tt == nullptr) {
-          gpu_tt = new n::routing::gpu::gpu_timetable{*tt_};
-          gpu_state = new n::routing::gpu::gpu_raptor_state{*gpu_tt};
-        }
+        auto const lease = gpu_pool_->acquire();
         auto const dir =
             query.arriveBy_ ? n::direction::kBackward : n::direction::kForward;
         auto const timeout = query.timeout_.has_value()
                                  ? std::chrono::seconds{*query.timeout_}
                                  : max_timeout;
-        r = use_pong ? n::routing::pong_search(*tt_, nullptr, search_state,
-                                               *gpu_state, q, dir, timeout)
-                     : n::routing::raptor_search(*tt_, nullptr, search_state,
-                                                 *gpu_state, q, dir, timeout);
+        r = use_pong ? n::routing::pong_search(*tt_, rtt, search_state,
+                                               lease.state_, q, dir, timeout)
+                     : n::routing::raptor_search(*tt_, rtt, search_state,
+                                                 lease.state_, q, dir, timeout);
         return true;
       } catch (std::exception const& e) {
         std::cout << "GPU EXCEPTION: " << e.what() << "\n";
@@ -1032,36 +1009,26 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
       }
     };
 #endif
+    // arriveBy |  extend_later | PONG applicable
+    // ---------+---------------+---------------------
+    // FALSE    |  FALSE        | FALSE    => rRAPTOR
+    // FALSE    |  TRUE         | TRUE     => PONG
+    // TRUE     |  FALSE        | TRUE     => PONG
+    // TRUE     |  TRUE         | FALSE    => rRAPTOR
+    auto const pong_applicable =
+        query.timetableView_ &&
+        query.arriveBy_ != start_time.extend_interval_later_;
     while (true) {
-      if (algorithm == api::algorithmEnum::GPU_PONG) {
 #if defined(NIGIRI_CUDA)
-        if (gpu_supported && query.timetableView_ &&
-            query.arriveBy_ != start_time.extend_interval_later_ &&
-            run_on_gpu(/*use_pong=*/true)) {
-          break;
-        }
+      if (algorithm != api::algorithmEnum::TB && gpu_supported &&
+          run_on_gpu(/*use_pong=*/pong_applicable &&
+                     algorithm == api::algorithmEnum::PONG)) {
+        gpu_used = true;
+        break;
+      }
 #endif
-        // 2nd best: GPU rRAPTOR (still on GPU) if the query fits it, which then
-        // falls back to CPU rRAPTOR if not.
-        algorithm = api::algorithmEnum::GPU_RAPTOR;
-        continue;
-      } else if (algorithm == api::algorithmEnum::GPU_RAPTOR) {
-#if defined(NIGIRI_CUDA)
-        if (gpu_supported && run_on_gpu(/*use_pong=*/false)) {
-          break;
-        }
-#endif
-        algorithm = api::algorithmEnum::RAPTOR;  // 2nd best: CPU rRAPTOR
-        continue;
-      } else if (algorithm == api::algorithmEnum::PONG &&
-                 query.timetableView_ &&
-                 // arriveBy |  extend_later | PONG applicable
-                 // ---------+---------------+---------------------
-                 // FALSE    |  FALSE        | FALSE    => rRAPTOR
-                 // FALSE    |  TRUE         | TRUE     => PONG
-                 // TRUE     |  FALSE        | TRUE     => PONG
-                 // TRUE     |  TRUE         | FALSE    => rRAPTOR
-                 query.arriveBy_ != start_time.extend_interval_later_) {
+
+      if (algorithm == api::algorithmEnum::PONG && pong_applicable) {
         try {
           auto raptor_state = n::routing::raptor_state{};
           r = n::routing::pong_search(
@@ -1095,18 +1062,20 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
       break;
     }
 
-    // record the algorithm that actually ran (after any fallbacks), encoded as
-    // the algorithmEnum integer value, plus the GPU applicability guards.
-    auto const algo_stats =
-        stats_map_t{{"algorithm", static_cast<std::uint64_t>(algorithm)},
-                    {"gpu_supported", gpu_supported},
-                    {"gpu_g_rt", gpu_g_rt},
-                    {"gpu_g_clasz", gpu_g_clasz},
-                    {"gpu_g_td", gpu_g_td},
-                    {"gpu_g_tts", gpu_g_tts},
-                    {"gpu_g_nobikecar", gpu_g_nobikecar},
-                    {"gpu_g_novia", gpu_g_novia},
-                    {"gpu_g_profile", gpu_g_profile}};
+    // record the algorithm that actually ran (after any fallbacks)
+    auto const algo_stats = stats_map_t{
+        {"algorithm", static_cast<std::uint64_t>(algorithm)},
+#if defined(NIGIRI_CUDA)
+        {"gpu_used", gpu_used},
+        {"gpu_supported", gpu_supported},
+        {"gpu_g_clasz", gpu_g_clasz},
+        {"gpu_g_td", gpu_g_td},
+        {"gpu_g_tts", gpu_g_tts},
+        {"gpu_g_nobikecar", gpu_g_nobikecar},
+        {"gpu_g_novia", gpu_g_novia},
+        {"gpu_g_profile", gpu_g_profile},
+#endif
+    };
 
     metrics_->routing_journeys_found_.Increment(
         static_cast<double>(r.journeys_->size()));
