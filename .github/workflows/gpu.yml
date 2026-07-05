@@ -41,12 +41,13 @@ jobs:
           cmake --build --preset cpu  --target motis
           ./build/cuda/buildcache/bin/buildcache -s
 
+      # runs in deps/nigiri -> run before "Save dep"
+      - name: nigiri-test
+        run: ./build/cuda/deps/nigiri/nigiri-test
+
       - name: Save deps
         if: always()
         run: mv deps ~
-
-      - name: nigiri-test
-        run: ./build/cuda/deps/nigiri/nigiri-test
 
       - name: Import Germany
         run: |
@@ -58,14 +59,14 @@ jobs:
           cd "$HOME/ci-data/eu"
           "$GITHUB_WORKSPACE/build/cpu/motis" import -c config_europe.yml -d data
 
-      - name: Validate Germany (station + intermodal, clasz)
+      - name: Validate Germany (station + intermodal, clasz, routed footpaths)
         run: |
           python3 tools/validate.py ./build/cpu/motis ./build/cuda/motis \
             --data "$HOME/ci-data/ger/data" --name germany --date 2026-07-05 \
-            --intermodal --exclude-transit-modes HIGHSPEED_RAIL --n 100
+            --intermodal --routed-footpaths --exclude-transit-modes HIGHSPEED_RAIL --n 100
 
-      - name: Validate Europe (station, clasz, realtime)
+      - name: Validate Europe (station, clasz, realtime, routed footpaths)
         run: |
           python3 tools/validate.py ./build/cpu/motis ./build/cuda/motis \
             --data "$HOME/ci-data/eu/data" --name europe --date 2026-07-05 \
-            --rt-dir "$HOME/ci-data/eu" --exclude-transit-modes COACH --n 100
+            --rt-dir "$HOME/ci-data/eu" --routed-footpaths --exclude-transit-modes COACH --n 100

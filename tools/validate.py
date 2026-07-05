@@ -63,15 +63,18 @@ def suffix(case):
         s += "&arriveBy=true"
     if case["clasz"]:
         s += "&transitModes=" + case["clasz"]
+    if case["routed"]:
+        s += "&useRoutedTransfers=true"  # prf_idx 1 = osr-routed foot footpaths
     return s
 
 
-def build_cases(bases, restricted, rt):
+def build_cases(bases, restricted, rt, routed):
     cases = []
 
-    def add(label, base, algorithm="PONG", arrive_by=False, clasz=None, rt=False):
+    def add(label, base, algorithm="PONG", arrive_by=False, clasz=None,
+            rt=False, routed=False):
         cases.append(dict(label=label, base=base, algorithm=algorithm,
-                          arrive_by=arrive_by, clasz=clasz, rt=rt))
+                          arrive_by=arrive_by, clasz=clasz, rt=rt, routed=routed))
 
     for qt in bases:
         for algo in ("PONG", "RAPTOR"):
@@ -80,6 +83,10 @@ def build_cases(bases, restricted, rt):
         if restricted:
             add("%s-pong-fwd-clasz" % qt, qt, clasz=restricted)
             add("%s-pong-bwd-clasz" % qt, qt, arrive_by=True, clasz=restricted)
+        if routed:
+            add("%s-pong-fwd-routed" % qt, qt, routed=True)
+            add("%s-pong-bwd-routed" % qt, qt, arrive_by=True, routed=True)
+            add("%s-raptor-fwd-routed" % qt, qt, algorithm="RAPTOR", routed=True)
     if rt:
         add("station-pong-fwd-rt", "station", rt=True)
         add("station-pong-bwd-rt", "station", arrive_by=True, rt=True)
@@ -98,6 +105,9 @@ def main():
     ap.add_argument("--name", default="dataset")
     ap.add_argument("--rt-dir", help="dir containing dump_rt/ (enables --rt cases)")
     ap.add_argument("--intermodal", action="store_true", help="also test -m WALK queries")
+    ap.add_argument("--routed-footpaths", action="store_true",
+                    help="also test useRoutedTransfers=true (osr-routed foot profile); "
+                         "requires osr_footpath: true in the imported data")
     ap.add_argument("--exclude-transit-modes",
                     help="API transit modes dropped for the clasz-filter cases, "
                          "comma-separated (e.g. COACH or HIGHSPEED_RAIL,COACH)")
@@ -115,7 +125,7 @@ def main():
     bases = {"station": generate(bins[0], data, a.n, a.date, work, walk=False)}
     if a.intermodal:
         bases["intermodal"] = generate(bins[0], data, a.n, a.date, work, walk=True)
-    cases = build_cases(bases, restricted, rt_dir is not None)
+    cases = build_cases(bases, restricted, rt_dir is not None, a.routed_footpaths)
 
     results = []
     for rt in (False, True):
