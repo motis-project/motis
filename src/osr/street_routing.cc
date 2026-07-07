@@ -140,10 +140,9 @@ std::vector<api::StepInstruction> get_step_instructions(
         .distance_ = static_cast<double>(s.dist_),
         .fromLevel_ = s.from_level_.to_float(),
         .toLevel_ = s.to_level_.to_float(),
-        .osmWay_ = s.way_ == osr::way_idx_t ::invalid()
-                       ? std::nullopt
-                       : std::optional{static_cast<std::int64_t>(
-                             to_idx(w.way_osm_idx_[s.way_]))},
+        .osmWay_ = w.get_osm_way(s.way_),
+        .fromOsmNode_ = w.get_osm_node(s.from_),
+        .toOsmNode_ = w.get_osm_node(s.to_),
         .polyline_ = api_version == 1 ? to_polyline<7>(s.polyline_)
                                       : to_polyline<6>(s.polyline_),
         .streetName_ = way_name == osr::string_idx_t::invalid()
