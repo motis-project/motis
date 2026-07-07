@@ -307,6 +307,43 @@ void write_geofencing_global_no_return(fs::path const& dir) {
   })");
 }
 
+void write_geofencing_unknown_type_ref(fs::path const& dir) {
+  write_file(dir / "geofencing_zones.json", R"({
+    "last_updated": 60,
+    "ttl": 0,
+    "version": "3.0",
+    "data": {
+      "geofencing_zones": {
+        "type": "FeatureCollection",
+        "features": [
+          {
+            "type": "Feature",
+            "properties": {
+              "name": "Unknown Type Zone",
+              "rules": [
+                {
+                  "vehicle_type_ids": ["unknown-type"],
+                  "ride_allowed": false
+                }
+              ]
+            },
+            "geometry": {
+              "type": "MultiPolygon",
+              "coordinates": [[[
+                [8.62, 49.87],
+                [8.64, 49.87],
+                [8.64, 49.88],
+                [8.62, 49.88],
+                [8.62, 49.87]
+              ]]]
+            }
+          }
+        ]
+      }
+    }
+  })");
+}
+
 void write_default_feed(fs::path const& dir) {
   write_discovery(dir);
   write_system_information(dir);
@@ -868,6 +905,19 @@ TEST(motis, gbfs_update_supports_lamassu_systems_manifest) {
   EXPECT_EQ("agg:system-a", p.id_);
   ASSERT_EQ(1U, p.stations_.size());
   EXPECT_EQ("Test Bikes", p.sys_info_.name_);
+}
+
+TEST(motis, gbfs_update_geofencing_unknown_type_ref) {
+  auto const dir = make_temp_dir("unknown-type-geofence");
+  write_default_feed(dir);
+  write_geofencing_unknown_type_ref(dir);
+
+  auto gbfs = std::shared_ptr<gbfs_data>{};
+  run_update(make_gbfs_config(dir), gbfs);
+
+  auto const& p = *gbfs->providers_.at(gbfs->provider_by_id_.at("test"));
+  EXPECT_TRUE(p.has_vehicles_to_rent_);
+  EXPECT_FALSE(p.products_.empty());
 }
 
 TEST(motis, gbfs_update_handles_v1_feed_without_vehicle_types) {
