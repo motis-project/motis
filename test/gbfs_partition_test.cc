@@ -120,16 +120,11 @@ TEST(motis, gbfs_partition_ignores_only_out_of_range) {
 }
 
 TEST(motis, gbfs_partition_ignores_invalid_vehicle_type_idx) {
-  auto p = partition<vehicle_type_idx_t>{
-      vehicle_type_idx_t{3}};
+  auto p = partition<vehicle_type_idx_t>{vehicle_type_idx_t{3}};
 
-  p.refine(std::array{
-      vehicle_type_idx_t{0},
-      vehicle_type_idx_t::invalid()});
+  p.refine(std::array{vehicle_type_idx_t{0}, vehicle_type_idx_t::invalid()});
 
-  auto const expected =
-      std::vector<std::vector<vehicle_type_idx_t>>{{vehicle_type_idx_t{0}},
-                                                    {vehicle_type_idx_t{1},
-                                                     vehicle_type_idx_t{2}}};
+  auto const expected = std::vector<std::vector<vehicle_type_idx_t>>{
+      {vehicle_type_idx_t{0}}, {vehicle_type_idx_t{1}, vehicle_type_idx_t{2}}};
   EXPECT_TRUE(compare_partitions(p.get_sets(), expected));
 }
