@@ -763,6 +763,18 @@ paths:
             default: 900
             minimum: 0
 
+        - name: minNearStations
+          in: query
+          required: false
+          description: |
+            Optional. Default is `1`.
+            Minimum number of stations to route from / to. Increase
+            `maxPostTransitTime` / `maxPreTransitTime` if less stops are found. Pass `0` to disable.
+          schema:
+            type: integer
+            default: 1
+            minimum: 0
+
         - name: maxDirectTime
           in: query
           required: false

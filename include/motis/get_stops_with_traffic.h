@@ -4,6 +4,7 @@
 
 #include "motis/fwd.h"
 #include "motis/point_rtree.h"
+#include "motis/types.h"
 
 namespace motis {
 
@@ -15,5 +16,4 @@ std::vector<nigiri::location_idx_t> get_stops_with_traffic(
     double const distance,
     nigiri::location_idx_t const not_equal_to =
         nigiri::location_idx_t::invalid());
-
 }  // namespace motis

@@ -1,10 +1,14 @@
 #include "motis/endpoints/routing.h"
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
+#include <iterator>
+#include <utility>
 
 #include "boost/thread/tss.hpp"
 
+#include "motis/types.h"
 #include "net/bad_request_exception.h"
 #include "net/too_many_exception.h"
 
@@ -13,6 +17,7 @@
 
 #include "utl/erase_duplicates.h"
 #include "utl/helpers/algorithm.h"
+#include "utl/logging.h"
 #include "utl/timing.h"
 
 #include "osr/lookup.h"
@@ -23,6 +28,7 @@
 #include "osr/types.h"
 
 #include "nigiri/common/interval.h"
+#include "nigiri/for_each_meta.h"
 #include "nigiri/location_match_mode.h"
 #include "nigiri/routing/limits.h"
 #include "nigiri/routing/pareto_set.h"
@@ -33,6 +39,7 @@
 #include "nigiri/routing/tb/query_engine.h"
 #include "nigiri/routing/tb/tb_data.h"
 #include "nigiri/routing/tb/tb_search.h"
+#include "nigiri/types.h"
 
 #include "motis/config.h"
 #include "motis/constants.h"
@@ -222,7 +229,8 @@ std::vector<n::routing::offset> get_offsets(
     std::chrono::seconds const max,
     double const max_matching_distance,
     gbfs::gbfs_routing_data& gbfs_rd,
-    stats_map_t& stats) {
+    stats_map_t& stats,
+    unsigned const min_near_stations) {
   if (!r.is_osr_loaded()) {
     return {};
   }
@@ -255,9 +263,31 @@ std::vector<n::routing::offset> get_offsets(
       profile = osr::search_profile::kCarSharing;
     }
 
-    auto const max_dist = get_max_distance(profile, osr_params, max);
-    auto const near_stops =
-        get_stops_with_traffic(*r.tt_, rtt, *r.loc_tree_, pos, max_dist);
+    constexpr unsigned const kBeelineNearStationsFactor = 4U;
+
+    auto const max_beeline_seconds = std::max(
+        max,
+        std::chrono::seconds{
+            r.config_.get_limits().street_routing_max_near_stops_seconds_});
+    auto const max_beeline_meters =
+        get_max_distance(profile, osr_params, max_beeline_seconds);
+
+    auto expanded_time = max;
+    auto expanded_dist = get_max_distance(profile, osr_params, expanded_time);
+
+    auto near_stops =
+        get_stops_with_traffic(*r.tt_, rtt, *r.loc_tree_, pos, expanded_dist);
+    while (expanded_time * 2 <= max_beeline_seconds &&
+           near_stops.size() < min_near_stations * kBeelineNearStationsFactor) {
+
+      expanded_dist = std::min(expanded_dist * 2, max_beeline_meters);
+      expanded_time *= 2;
+
+      near_stops =
+          get_stops_with_traffic(*r.tt_, rtt, *r.loc_tree_, pos, expanded_dist);
+    }
+    expanded_time = std::min(expanded_time, max_beeline_seconds);
+
     auto const near_stop_locations = utl::to_vec(
         near_stops,
         [&](n::location_idx_t const l) { return stop_to_osr_location(r, l); });
@@ -270,11 +300,14 @@ std::vector<n::routing::offset> get_offsets(
       auto const near_stop_matches = get_reverse_platform_way_matches(
           *r.l_, r.way_matches_, p, near_stops, near_stop_locations, dir,
           max_matching_distance);
+
       return osr::route(params, *r.w_, *r.l_, p, pos, near_stop_locations,
                         pos_match, near_stop_matches,
-                        static_cast<osr::cost_t>(max.count()), dir, nullptr,
-                        sharing, elevations);
+                        static_cast<osr::cost_t>(expanded_time.count()), dir,
+                        nullptr, sharing, elevations);
     };
+
+    auto mode_offsets = std::vector<n::routing::offset>{};
 
     if (osr::is_rental_profile(profile)) {
       if (!gbfs_rd.has_data()) {
@@ -283,8 +316,9 @@ std::vector<n::routing::offset> get_offsets(
 
       auto const max_dist_to_departure =
           dir == osr::direction::kForward
-              ? get_max_distance(osr::search_profile::kFoot, osr_params, max)
-              : max_dist;
+              ? get_max_distance(osr::search_profile::kFoot, osr_params,
+                                 expanded_time)
+              : expanded_dist;
       auto providers = hash_set<gbfs_provider_idx_t>{};
       gbfs_rd.data_->provider_rtree_.in_radius(
           pos.pos_, max_dist_to_departure,
@@ -320,10 +354,10 @@ std::vector<n::routing::offset> get_offsets(
           ignore_walk = true;
           for (auto const [p, l] : utl::zip(paths, near_stops)) {
             if (p.has_value()) {
-              offsets.emplace_back(l,
-                                   n::duration_t{static_cast<unsigned>(
-                                       std::ceil(p->cost_ / 60.0))},
-                                   gbfs_rd.get_transport_mode(prod_ref));
+              mode_offsets.emplace_back(l,
+                                        n::duration_t{static_cast<unsigned>(
+                                            std::ceil(p->cost_ / 60.0))},
+                                        gbfs_rd.get_transport_mode(prod_ref));
             }
           }
         }
@@ -332,17 +366,30 @@ std::vector<n::routing::offset> get_offsets(
                                   fmt::streamed(m), provider->id_),
                       UTL_GET_TIMING_MS(provider_timer));
       }
-
     } else {
       auto const paths = route(profile, nullptr);
       for (auto const [p, l] : utl::zip(paths, near_stops)) {
         if (p.has_value()) {
-          offsets.emplace_back(
+          mode_offsets.emplace_back(
               l,
               n::duration_t{static_cast<unsigned>(std::ceil(p->cost_ / 60.0))},
               static_cast<n::transport_mode_id_t>(profile));
         }
       }
+    }
+
+    utl::sort(mode_offsets, [](auto const& a, auto const& b) {
+      return a.duration_ < b.duration_;
+    });
+
+    auto n_found = 0U;
+    for (auto const& o : mode_offsets) {
+      if (n_found++ >= min_near_stations &&
+          o.duration_.count() * 60 > max.count() + 60) {
+        break;
+      }
+
+      offsets.push_back(o);
     }
 
     stats.emplace(fmt::format("prepare_{}_{}", to_str(dir), fmt::streamed(m)),
@@ -415,12 +462,13 @@ std::vector<n::routing::offset> routing::get_offsets(
     std::chrono::seconds const max,
     double const max_matching_distance,
     gbfs::gbfs_routing_data& gbfs_rd,
-    stats_map_t& stats) const {
+    stats_map_t& stats,
+    unsigned const min_near_stations) const {
   auto const do_get_offsets = [&](osr::location const pos) {
     return ::motis::ep::get_offsets(*this, rtt, pos, dir, elevations_, modes,
                                     ro, osr_params, pedestrian_profile,
                                     elevation_costs, max, max_matching_distance,
-                                    gbfs_rd, stats);
+                                    gbfs_rd, stats, min_near_stations);
   };
   return std::visit(
       utl::overloaded{
@@ -884,7 +932,8 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                       osr_params, query.pedestrianProfile_,
                       query.elevationCosts_,
                       query.arriveBy_ ? post_transit_time : pre_transit_time,
-                      query.maxMatchingDistance_, gbfs_rd, prepare_stats),
+                      query.maxMatchingDistance_, gbfs_rd, prepare_stats,
+                      static_cast<unsigned>(query.minNearStations_)),
         .destination_ =
             use_radius_dest
                 ? radius_offsets(*loc_tree_, std::get<osr::location>(dest).pos_,
@@ -901,7 +950,8 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                       osr_params, query.pedestrianProfile_,
                       query.elevationCosts_,
                       query.arriveBy_ ? pre_transit_time : post_transit_time,
-                      query.maxMatchingDistance_, gbfs_rd, prepare_stats),
+                      query.maxMatchingDistance_, gbfs_rd, prepare_stats,
+                      static_cast<unsigned>(query.minNearStations_)),
         .td_start_ = get_td_offsets(
             rtt, e, start,
             query.arriveBy_ ? osr::direction::kBackward
