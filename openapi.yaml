@@ -897,13 +897,29 @@ paths:
         - name: algorithm
           in: query
           required: false
-          description: algorithm to use
+          description: |
+            algorithm to use
+
+            - `RAPTOR`: interval search based on the RAPTOR algorithm
+            - `MCRAPTOR`: like `RAPTOR` but based on the McRAPTOR algorithm
+            - `PONG`: RAPTOR-based ping-pong search
+            - `PONG_MCRAPTOR`: like `PONG` but based on the McRAPTOR algorithm
+            - `MCRAPTOR_COST`: `MCRAPTOR` with an OTP-style generalized cost
+              (transit time + weighted walking + boarding penalties) as an
+              additional pareto criterion
+            - `PONG_MCRAPTOR_COST`: `PONG_MCRAPTOR` with the generalized cost
+              as an additional pareto criterion
+            - `TB`: trip-based routing
           schema:
             type: string
             enum:
               - RAPTOR
+              - MCRAPTOR
               - PONG
+              - PONG_MCRAPTOR
               - TB
+              - MCRAPTOR_COST
+              - PONG_MCRAPTOR_COST
             default: PONG
       responses:
         '422':

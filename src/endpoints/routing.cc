@@ -27,6 +27,7 @@
 #include "nigiri/routing/limits.h"
 #include "nigiri/routing/pareto_set.h"
 #include "nigiri/routing/query.h"
+#include "nigiri/routing/raptor/mcraptor.h"
 #include "nigiri/routing/raptor/pong.h"
 #include "nigiri/routing/raptor/raptor_state.h"
 #include "nigiri/routing/raptor_search.h"
@@ -973,41 +974,95 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
     auto r = n::routing::routing_result{};
     auto algorithm = query.algorithm_;
     auto search_state = n::routing::search_state{};
+    auto const search_dir =
+        query.arriveBy_ ? n::direction::kBackward : n::direction::kForward;
+    auto const timeout = query.timeout_.has_value()
+                             ? std::chrono::seconds{*query.timeout_}
+                             : max_timeout;
+    if (!n::routing::mcraptor_supported(q, rtt)) {
+      if (algorithm == api::algorithmEnum::MCRAPTOR ||
+          algorithm == api::algorithmEnum::MCRAPTOR_COST) {
+        algorithm = api::algorithmEnum::RAPTOR;
+      } else if (algorithm == api::algorithmEnum::PONG_MCRAPTOR ||
+                 algorithm == api::algorithmEnum::PONG_MCRAPTOR_COST) {
+        algorithm = api::algorithmEnum::PONG;
+      }
+    }
+    auto const use_mcraptor = [&]() {
+      return algorithm == api::algorithmEnum::MCRAPTOR ||
+             algorithm == api::algorithmEnum::PONG_MCRAPTOR;
+    };
+    auto const use_mcraptor_cost = [&]() {
+      return algorithm == api::algorithmEnum::MCRAPTOR_COST ||
+             algorithm == api::algorithmEnum::PONG_MCRAPTOR_COST;
+    };
     while (true) {
-      if (algorithm == api::algorithmEnum::PONG && query.timetableView_ &&
+      if ((algorithm == api::algorithmEnum::PONG ||
+           algorithm == api::algorithmEnum::PONG_MCRAPTOR ||
+           algorithm == api::algorithmEnum::PONG_MCRAPTOR_COST) &&
+          query.timetableView_ &&
           // arriveBy |  extend_later | PONG applicable
           // ---------+---------------+---------------------
-          // FALSE    |  FALSE        | FALSE    => rRAPTOR
+          // FALSE    |  FALSE        | FALSE    => rRAPTOR / rMcRAPTOR
           // FALSE    |  TRUE         | TRUE     => PONG
           // TRUE     |  FALSE        | TRUE     => PONG
-          // TRUE     |  TRUE         | FALSE    => rRAPTOR
+          // TRUE     |  TRUE         | FALSE    => rRAPTOR / rMcRAPTOR
           query.arriveBy_ != start_time.extend_interval_later_) {
         try {
-          auto raptor_state = n::routing::raptor_state{};
-          r = n::routing::pong_search(
-              *tt_, rtt, search_state, raptor_state, q,
-              query.arriveBy_ ? n::direction::kBackward
-                              : n::direction::kForward,
-              query.timeout_.has_value() ? std::chrono::seconds{*query.timeout_}
-                                         : max_timeout);
+          if (use_mcraptor_cost()) {
+            static thread_local auto mcraptor_cost_state =
+                n::routing::mcraptor_cost_state{};
+            r = n::routing::pong_search(*tt_, rtt, search_state,
+                                        mcraptor_cost_state, q, search_dir,
+                                        timeout);
+          } else if (use_mcraptor()) {
+            // thread_local: the mcraptor state is large (scalar round times
+            // + bag layers + label arena) - reuse it instead of paying the
+            // allocation on every request
+            static thread_local auto mcraptor_state =
+                n::routing::mcraptor_state{};
+            r = n::routing::pong_search(*tt_, rtt, search_state, mcraptor_state,
+                                        q, search_dir, timeout);
+          } else {
+            auto raptor_state = n::routing::raptor_state{};
+            r = n::routing::pong_search(*tt_, rtt, search_state, raptor_state,
+                                        q, search_dir, timeout);
+          }
         } catch (std::exception const& e) {
           std::cout << "PONG EXCEPTION: " << e.what() << "\n";
-          algorithm = api::algorithmEnum::RAPTOR;
+          algorithm = algorithm == api::algorithmEnum::PONG_MCRAPTOR_COST
+                          ? api::algorithmEnum::MCRAPTOR_COST
+                      : algorithm == api::algorithmEnum::PONG_MCRAPTOR
+                          ? api::algorithmEnum::MCRAPTOR
+                          : api::algorithmEnum::RAPTOR;
           continue;
         }
-      } else if (algorithm == api::algorithmEnum::RAPTOR || tbd_ == nullptr ||
+      } else if (algorithm == api::algorithmEnum::RAPTOR ||
+                 algorithm == api::algorithmEnum::MCRAPTOR ||
+                 algorithm == api::algorithmEnum::MCRAPTOR_COST ||
+                 tbd_ == nullptr ||
                  (rtt != nullptr && rtt->n_rt_transports() != 0U) ||
                  query.arriveBy_ || q.prf_idx_ != tbd_->prf_idx_ ||
                  q.allowed_claszes_ != n::routing::all_clasz_allowed() ||
                  !q.td_start_.empty() || !q.td_dest_.empty() ||
                  !q.transfer_time_settings_.default_ || !q.via_stops_.empty() ||
                  q.require_bike_transport_ || q.require_car_transport_) {
-        auto raptor_state = n::routing::raptor_state{};
-        r = n::routing::raptor_search(
-            *tt_, rtt, search_state, raptor_state, q,
-            query.arriveBy_ ? n::direction::kBackward : n::direction::kForward,
-            query.timeout_.has_value() ? std::chrono::seconds{*query.timeout_}
-                                       : max_timeout);
+        if (use_mcraptor_cost()) {
+          static thread_local auto mcraptor_cost_state =
+              n::routing::mcraptor_cost_state{};
+          r = n::routing::raptor_search(*tt_, rtt, search_state,
+                                        mcraptor_cost_state, q, search_dir,
+                                        timeout);
+        } else if (use_mcraptor()) {
+          static thread_local auto mcraptor_state =
+              n::routing::mcraptor_state{};
+          r = n::routing::raptor_search(*tt_, rtt, search_state, mcraptor_state,
+                                        q, search_dir, timeout);
+        } else {
+          auto raptor_state = n::routing::raptor_state{};
+          r = n::routing::raptor_search(*tt_, rtt, search_state, raptor_state,
+                                        q, search_dir, timeout);
+        }
       } else {
         auto tb_state = n::routing::tb::query_state{*tt_, *tbd_};
         r = n::routing::tb::tb_search(*tt_, search_state, tb_state, q);
@@ -1071,7 +1126,11 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
         .debugOutput_ = join(std::move(prepare_stats), std::move(query_stats),
                              r.search_stats_.to_map(), std::move(r.algo_stats_),
                              stats_map_t{{"fares", static_cast<std::uint64_t>(
-                                                       fares_time.count())}}),
+                                                       fares_time.count())},
+                                         // records the algorithm that actually
+                                         // ran (after any fallbacks)
+                                         {"algorithm", static_cast<std::uint64_t>(
+                                                           algorithm)}}),
         .from_ = bwd_compat_lvl_adjust(std::move(from_p), api_version),
         .to_ = bwd_compat_lvl_adjust(std::move(to_p), api_version),
         .direct_ = std::move(direct),

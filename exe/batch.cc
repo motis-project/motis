@@ -130,11 +130,14 @@ int batch(int ac, char** av) {
   auto queries_path = fs::path{"queries.txt"};
   auto responses_path = fs::path{"responses.txt"};
   auto mt = true;
+  auto n_threads = 0U;
 
   auto desc = po::options_description{"Options"};
   desc.add_options()  //
       ("help", "Prints this help message")  //
       ("multithreading,mt", po::value(&mt)->default_value(mt))  //
+      ("threads,t", po::value(&n_threads)->default_value(n_threads),
+       "number of threads (0 = hardware concurrency)")  //
       ("queries,q", po::value(&queries_path)->default_value(queries_path),
        "queries file")  //
       ("responses,r", po::value(&responses_path)->default_value(responses_path),
@@ -208,7 +211,7 @@ int batch(int ac, char** av) {
           response_time.add(id, s.first);
           out << s.second << "\n";
         },
-        pt->update_fn());
+        pt->update_fn(), utl::parallel_error_strategy::QUIT_EXEC, n_threads);
   } else {
     auto s = state{};
     for (auto i = 0U; i != queries.size(); ++i) {
