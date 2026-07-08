@@ -198,19 +198,31 @@ def main():
     excluded = set(a.exclude_transit_modes.split(",")) if a.exclude_transit_modes else set()
     restricted = ",".join(m for m in ALL_MODES if m not in excluded) if excluded else None
 
-    bases = {"station": generate(bins[0], data, a.n, a.date, work)}
+    # CI captures a pipe, not a TTY -> Python block-buffers stdout and nothing
+    # shows until exit. Line-buffer so progress is visible live.
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(line_buffering=True)
+
+    print("== %s ==" % a.name)
+    labels = bin_labels(bins)
+
+    bases = {}
+    print("generating station queries (n=%d)..." % a.n)
+    bases["station"] = generate(bins[0], data, a.n, a.date, work)
     if a.intermodal:
+        print("generating intermodal queries (n=%d)..." % a.n)
         bases["intermodal"] = generate(bins[0], data, a.n, a.date, work, modes="WALK")
     if a.flex:
+        print("generating flex queries (n=%d)..." % a.n)
         bases["flex"] = generate(bins[0], data, a.n, a.date, work, modes="WALK,FLEX")
     cases = build_cases(bases, restricted, rt_dir is not None, a.routed_footpaths,
                         a.wheelchair, a.bike, a.car)
 
-    labels = bin_labels(bins)
     results = []
     lat = []  # (case_label, per-binary [execute_time ms] lists)
     wall = [0.0] * len(bins)  # total batch wall time per binary
     n_queries = 0  # total queries run per binary (same file for all)
+    fails = 0
     for rt in (False, True):
         # FILTER CASES
         group = [c for c in cases if c["rt"] == rt]
@@ -228,15 +240,18 @@ def main():
                 offsets += len(qlines)
         n_queries += offsets
 
-        # RUN BATCH
+        # RUN BATCH (the long pole: each cold-loads tt+osr, then routes)
         outs = []
         for i, b in enumerate(bins):
             o = "%s.%d" % (combined, i)
+            print("[rt=%d] batching %d queries on %s..." %
+                  (rt, offsets, labels[i]))
             wall[i] += batch(b, data, combined, o, rt_dir if rt else None)
+            print("[rt=%d]   %s done in %.0fs" % (rt, labels[i], wall[i]))
             with open(o) as f:
                 outs.append(f.read().splitlines())
 
-        # COMPARE REF VS ALL
+        # COMPARE REF VS ALL (print each verdict as it completes)
         for label, qlines, start, count in spans:
             responses = [o[start:start + count] for o in outs]
             lat.append((label, [exec_times(r) for r in responses]))
@@ -245,21 +260,19 @@ def main():
                               for i, r in enumerate(responses)
                               if any('"gpu_used":0' in ln for ln in r)), None)
             if not compare(bins[0], qlines, responses, work, label):
-                results.append((label, False, "mismatch (motis compare)"))
+                ok, detail = False, "mismatch (motis compare)"
             elif fell_back is not None:
-                results.append((label, False, "bin%d fell back to CPU on %d/%d queries"
-                                % (fell_back[0], fell_back[1], count)))
+                ok, detail = False, ("bin%d fell back to CPU on %d/%d queries"
+                                     % (fell_back[0], fell_back[1], count))
             else:
-                results.append((label, True, "%d ok, gpu_used=%d" % (count, gpu)))
+                ok, detail = True, "%d ok, gpu_used=%d" % (count, gpu)
+            results.append((label, ok, detail))
+            fails += 0 if ok else 1
+            print("%s %-34s %s" % ("PASS" if ok else "FAIL", label, detail))
 
     if not results:
         sys.exit("validate: no cases ran -- nothing validated")
 
-    print("== %s ==" % a.name)
-    fails = 0
-    for label, ok, detail in results:
-        print("%s %-34s %s" % ("PASS" if ok else "FAIL", label, detail))
-        fails += 0 if ok else 1
     print("%s: %d passed, %d failed" % (a.name, len(results) - fails, fails))
 
     print_tables(a.name, labels, lat, wall, n_queries)
