@@ -94,9 +94,7 @@ void upload_gpu_rtt([[maybe_unused]] data const& d,
   try {
     rtt.gpu_rtt_.ptr_ = n::routing::gpu::make_gpu_rtt(*d.tt_, rtt);
   } catch (std::exception const& e) {
-    n::log(n::log_lvl::error, "motis.rt",
-           "GPU rt timetable upload failed (GPU realtime routing disabled "
-           "for this snapshot): {}",
+    n::log(n::log_lvl::error, "motis.rt", "GPU rt timetable upload failed: {}",
            e.what());
     rtt.gpu_rtt_.ptr_.reset();
   }
@@ -323,7 +321,6 @@ awaitable<void> update_rt(config const& c,
 
   // Update lbs.
   rtt->update_lbs(*d.tt_);
-  upload_gpu_rtt(d, *rtt);
 
   // Update real-time timetable shared pointer.
   auto railviz_rt = std::make_unique<railviz_rt_index>(*d.tt_, *rtt);
@@ -340,6 +337,8 @@ awaitable<void> update_rt(config const& c,
   } else {
     elevators = std::move(d.rt_->e_);
   }
+
+  upload_gpu_rtt(d, *rtt);
   auto new_rt = std::make_shared<rt>(std::move(rtt), std::move(elevators),
                                      std::move(railviz_rt));
   std::atomic_store(&d.rt_, std::move(new_rt));
