@@ -279,27 +279,49 @@ def main():
     sys.exit(1 if fails else 0)
 
 
+def emit_table(headers, rows, right):
+    # aligned (padded) markdown: readable as plain text in a CI log AND valid
+    # markdown. `right` = set of column indices to right-align (numbers).
+    w = [len(h) for h in headers]
+    for r in rows:
+        for i, c in enumerate(r):
+            w[i] = max(w[i], len(c))
+    def line(cells):
+        return "| " + " | ".join(
+            (c.rjust(w[i]) if i in right else c.ljust(w[i]))
+            for i, c in enumerate(cells)) + " |"
+    sep = [("-" * (w[i] - 1) + ":") if i in right else ("-" * w[i])
+           for i in range(len(headers))]
+    print(line(headers))
+    print("| " + " | ".join(sep) + " |")
+    for r in rows:
+        print(line(r))
+
+
 def print_tables(name, labels, lat, wall, n_queries):
     # Throughput (aggregate over all cases; motis batch parallelizes queries)
     print("\n### %s throughput (whole batch)\n" % name)
-    print("| engine | queries | wall_s | q/s |")
-    print("|---|--:|--:|--:|")
-    for lbl, w in zip(labels, wall):
-        qs = (n_queries / w) if w > 0 else 0.0
-        print("| %s | %d | %.1f | %.2f |" % (lbl, n_queries, w, qs))
+    emit_table(
+        ["engine", "queries", "wall_s", "q/s"],
+        [[lbl, str(n_queries), "%.1f" % w,
+          "%.2f" % (n_queries / w if w > 0 else 0.0)]
+         for lbl, w in zip(labels, wall)],
+        right={1, 2, 3})
 
     # Per-query routing-time latency (execute_time, ms) per case + engine
     print("\n### %s per-query latency (execute_time, ms)\n" % name)
-    print("| case | engine | avg | q50 | q75 | q90 | q99 | max |")
-    print("|---|---|--:|--:|--:|--:|--:|--:|")
+    rows = []
     for label, per_bin in lat:
         for lbl, vals in zip(labels, per_bin):
             if not vals:
                 continue
             avg = sum(vals) / len(vals)
-            print("| %s | %s | %.0f | %.0f | %.0f | %.0f | %.0f | %.0f |" %
-                  (label, lbl, avg, pct(vals, 0.5), pct(vals, 0.75),
-                   pct(vals, 0.9), pct(vals, 0.99), max(vals)))
+            rows.append([label, lbl] +
+                        ["%.0f" % v for v in (avg, pct(vals, 0.5),
+                                              pct(vals, 0.75), pct(vals, 0.9),
+                                              pct(vals, 0.99), max(vals))])
+    emit_table(["case", "engine", "avg", "q50", "q75", "q90", "q99", "max"],
+               rows, right={2, 3, 4, 5, 6, 7})
 
 
 if __name__ == "__main__":
