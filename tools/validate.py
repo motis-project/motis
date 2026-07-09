@@ -108,18 +108,22 @@ def suffix(case):
         s += "&requireBikeTransport=true"  # bike carriage on all transit legs
     if case["car"]:
         s += "&requireCarTransport=true"  # car carriage on all transit legs
+    if case["tts"]:
+        # non-default transfer time settings: additional + max(min, dur*factor)
+        s += "&minTransferTime=10&transferTimeFactor=1.5&additionalTransferTime=3"
     return s
 
 
-def build_cases(bases, restricted, rt, routed, wheelchair, bike, car):
+def build_cases(bases, restricted, rt, routed, wheelchair, bike, car, tts):
     cases = []
 
     def add(label, base, algorithm="PONG", arrive_by=False, clasz=None,
-            rt=False, routed=False, wheelchair=False, bike=False, car=False):
+            rt=False, routed=False, wheelchair=False, bike=False, car=False,
+            tts=False):
         cases.append(dict(label=label, base=base, algorithm=algorithm,
                           arrive_by=arrive_by, clasz=clasz, rt=rt,
                           routed=routed, wheelchair=wheelchair, bike=bike,
-                          car=car))
+                          car=car, tts=tts))
 
     for qt in bases:
         if qt == "flex":
@@ -149,6 +153,10 @@ def build_cases(bases, restricted, rt, routed, wheelchair, bike, car):
         if car:
             add("%s-pong-fwd-car" % qt, qt, car=True)
             add("%s-pong-bwd-car" % qt, qt, arrive_by=True, car=True)
+        if tts:
+            add("%s-pong-fwd-tts" % qt, qt, tts=True)
+            add("%s-pong-bwd-tts" % qt, qt, arrive_by=True, tts=True)
+            add("%s-raptor-fwd-tts" % qt, qt, algorithm="RAPTOR", tts=True)
     if rt:
         add("station-pong-fwd-rt", "station", rt=True)
         add("station-pong-bwd-rt", "station", arrive_by=True, rt=True)
@@ -158,6 +166,8 @@ def build_cases(bases, restricted, rt, routed, wheelchair, bike, car):
             add("station-pong-bwd-clasz-rt", "station", arrive_by=True, clasz=restricted, rt=True)
         if wheelchair:
             add("station-pong-fwd-wheelchair-rt", "station", wheelchair=True, rt=True)
+        if tts:
+            add("station-pong-fwd-tts-rt", "station", tts=True, rt=True)
     return cases
 
 
@@ -184,6 +194,9 @@ def main():
     ap.add_argument("--car", action="store_true",
                     help="also test requireCarTransport=true (car carriage "
                          "route/section filters)")
+    ap.add_argument("--tts", action="store_true",
+                    help="also test non-default transfer time settings "
+                         "(minTransferTime/transferTimeFactor/additionalTransferTime)")
     ap.add_argument("--exclude-transit-modes",
                     help="API transit modes dropped for the clasz-filter cases, "
                          "comma-separated (e.g. COACH or HIGHSPEED_RAIL,COACH)")
@@ -216,7 +229,7 @@ def main():
         print("generating flex queries (n=%d)..." % a.n)
         bases["flex"] = generate(bins[0], data, a.n, a.date, work, modes="WALK,FLEX")
     cases = build_cases(bases, restricted, rt_dir is not None, a.routed_footpaths,
-                        a.wheelchair, a.bike, a.car)
+                        a.wheelchair, a.bike, a.car, a.tts)
 
     results = []
     lat = []  # (case_label, per-binary [execute_time ms] lists)

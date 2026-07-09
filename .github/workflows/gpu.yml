@@ -62,18 +62,19 @@ jobs:
           cd "$HOME/ci-data/eu"
           "$GITHUB_WORKSPACE/build/cpu/motis" import -c config_europe.yml -d data
 
-      - name: Validate Germany (station + intermodal, clasz, routed footpaths, wheelchair, bike, car)
+      # no --car: no dataset with cars_allowed data staged right now
+      - name: Validate Germany (station + intermodal, clasz, routed footpaths, wheelchair, bike, tts)
         run: |
           python3 tools/validate.py ./build/cpu/motis ./build/cuda/motis \
             --data "$HOME/ci-data/ger/data" --name germany --date 2026-07-05 \
-            --intermodal --routed-footpaths --wheelchair --bike --car \
+            --intermodal --routed-footpaths --wheelchair --bike --tts \
             --exclude-transit-modes HIGHSPEED_RAIL --n 100
 
-      - name: Validate Europe (station, clasz, realtime, routed footpaths, flex, bike, car)
+      - name: Validate Europe (station, clasz, realtime, routed footpaths, flex, bike, tts)
         run: |
           python3 tools/validate.py ./build/cpu/motis ./build/cuda/motis \
             --data "$HOME/ci-data/eu/data" --name europe --date 2026-07-05 \
-            --rt-dir "$HOME/ci-data/eu" --routed-footpaths --flex --bike --car \
+            --rt-dir "$HOME/ci-data/eu" --routed-footpaths --flex --bike --tts \
             --exclude-transit-modes COACH --n 100
 
       - name: Save build
