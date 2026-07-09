@@ -298,7 +298,7 @@ api::Itinerary journey_to_response(
   };
 
   auto itinerary = api::Itinerary{
-      .duration_ = to_seconds(j.arrival_time() - j.departure_time()),
+      .duration_ = to_seconds(itinerary_end_time - itinerary_start_time),
       .startTime_ = itinerary_start_time,
       .endTime_ = itinerary_end_time,
       .transfers_ = std::max(
