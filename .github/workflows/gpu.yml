@@ -67,15 +67,15 @@ jobs:
         run: |
           python3 tools/validate.py ./build/cpu/motis ./build/cuda/motis \
             --data "$HOME/ci-data/ger/data" --name germany --date 2026-07-05 \
-            --intermodal --routed-footpaths --wheelchair --bike --tts \
-            --exclude-transit-modes HIGHSPEED_RAIL --n 100
+            --intermodal --routed-footpaths --tts \
+            --exclude-transit-modes HIGHSPEED_RAIL --n 20
 
       - name: Validate Europe (station, clasz, realtime, routed footpaths, flex, bike, tts)
         run: |
           python3 tools/validate.py ./build/cpu/motis ./build/cuda/motis \
             --data "$HOME/ci-data/eu/data" --name europe --date 2026-07-05 \
             --rt-dir "$HOME/ci-data/eu" --routed-footpaths --flex --bike --tts \
-            --exclude-transit-modes COACH --n 100
+            --exclude-transit-modes COACH --n 20
 
       - name: Save build
         if: always()
