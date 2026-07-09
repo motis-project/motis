@@ -129,6 +129,9 @@ struct routing {
   odm::bounds const* odm_bounds_;
   odm::ride_sharing_bounds const* ride_sharing_bounds_;
   metrics_registry* metrics_;
+#if defined(NIGIRI_CUDA)
+  gpu_search_pool* gpu_pool_{nullptr};
+#endif
 };
 
 }  // namespace motis::ep

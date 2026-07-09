@@ -11,10 +11,15 @@
 
 #include "utl/read_file.h"
 #include "utl/timer.h"
+#include "utl/verify.h"
 
 #include "nigiri/rt/create_rt_timetable.h"
 #include "nigiri/rt/gtfsrt_update.h"
 #include "nigiri/rt/rt_timetable.h"
+
+#if defined(NIGIRI_CUDA)
+#include "nigiri/routing/gpu/raptor.h"
+#endif
 
 #include "motis/config.h"
 #include "motis/data.h"
@@ -80,6 +85,98 @@ struct auser_endpoint {
 
 using endpoints_t = std::vector<std::variant<gtfs_rt_endpoint, auser_endpoint>>;
 
+using stats_t = std::variant<n::rt::statistics, n::rt::vdv_aus::statistics>;
+
+void upload_gpu_rtt([[maybe_unused]] data const& d,
+                    [[maybe_unused]] n::rt_timetable& rtt) {
+#if defined(NIGIRI_CUDA)
+  utl::verify(d.gpu_tt_ != nullptr, "upload_gpu_rtt: gpu timetable missing");
+  try {
+    rtt.gpu_rtt_.ptr_ = n::routing::gpu::make_gpu_rtt(*d.tt_, rtt);
+  } catch (std::exception const& e) {
+    n::log(n::log_lvl::error, "motis.rt", "GPU rt timetable upload failed: {}",
+           e.what());
+    rtt.gpu_rtt_.ptr_.reset();
+  }
+#endif
+}
+
+endpoints_t make_endpoints(config const& c, data& d) {
+  auto endpoints = endpoints_t{};
+  auto const metric_families = rt_metric_families{d.metrics_->registry_};
+  for (auto const& [tag, dataset] : c.timetable_->datasets_) {
+    if (dataset.rt_.has_value()) {
+      auto const src = d.tags_->get_src(tag);
+      for (auto const& ep : *dataset.rt_) {
+        switch (ep.protocol_) {
+          case config::timetable::dataset::rt::protocol::gtfsrt:
+            endpoints.push_back(gtfs_rt_endpoint{
+                ep, src, tag, gtfsrt_metrics{tag, metric_families}});
+            break;
+          case config::timetable::dataset::rt::protocol::siri_json:
+          case config::timetable::dataset::rt::protocol::siri: [[fallthrough]];
+          case config::timetable::dataset::rt::protocol::auser:
+            endpoints.push_back(auser_endpoint{
+                ep, src, tag, vdvaus_metrics{tag, metric_families}});
+            break;
+        }
+      }
+    }
+  }
+  return endpoints;
+}
+
+// Applies the dumped rt bodies (dump_rt/) of all endpoints synchronously.
+void apply_canned(data& d, endpoints_t const& endpoints, n::rt_timetable& rtt) {
+  fmt::println("WARNING: READING CANNED RT");
+
+  auto const stats = utl::to_vec(endpoints, [&](auto&& ep) -> stats_t {
+    try {
+      return utl::visit(
+          ep,
+          [&](gtfs_rt_endpoint const& g) -> stats_t {
+            auto const path = get_dump_path(g);
+            auto const body = utl::read_file(path.c_str());
+            if (body.has_value()) {
+              return n::rt::gtfsrt_update_buf(*d.tt_, rtt, g.src_, g.tag_,
+                                              *body);
+            } else {
+              return n::rt::statistics{.parser_error_ = true};
+            }
+          },
+          [&](auser_endpoint const& a) -> stats_t {
+            auto const path = get_dump_path(a);
+            auto& auser = d.auser_->at(a.ep_.url_);
+            auto const body = utl::read_file(path.c_str());
+            if (body.has_value()) {
+              return auser.consume_update(*body, rtt);
+            } else {
+              return n::rt::vdv_aus::statistics{.error_ = true};
+            }
+          });
+    } catch (std::exception const& e) {
+      std::cout << "EXCEPTION: " << e.what() << "\n";
+      return n::rt::statistics{.parser_error_ = true};
+    }
+  });
+
+  for (auto const [s, ep] : utl::zip(stats, endpoints)) {
+    utl::visit(
+        ep,
+        [&](gtfs_rt_endpoint const& g) {
+          n::log(n::log_lvl::info, "motis.rt",
+                 "GTFS-RT update stats for tag={}, url={}: {}", g.tag_,
+                 g.ep_.url_, fmt::streamed(std::get<n::rt::statistics>(s)));
+        },
+        [&](auser_endpoint const& a) {
+          n::log(n::log_lvl::info, "motis.rt",
+                 "VDV AUS update stats for tag={}, url={}:\n{}", a.tag_,
+                 a.ep_.url_,
+                 fmt::streamed(std::get<n::rt::vdv_aus::statistics>(s)));
+        });
+  }
+}
+
 awaitable<void> update_rt(config const& c,
                           data& d,
                           bool const dump_rt,
@@ -96,55 +193,8 @@ awaitable<void> update_rt(config const& c,
   // Schedule updates for each real-time endpoint.
   auto const timeout = std::chrono::seconds{c.timetable_->http_timeout_};
 
-  using stats_t = std::variant<n::rt::statistics, n::rt::vdv_aus::statistics>;
   if (c.timetable_->canned_rt_) {
-    fmt::println("WARNING: READING CANNED RT");
-
-    auto const stats = utl::to_vec(endpoints, [&](auto&& ep) -> stats_t {
-      try {
-        return utl::visit(
-            ep,
-            [&](gtfs_rt_endpoint const& g) -> stats_t {
-              auto const path = get_dump_path(g);
-              auto const body = utl::read_file(path.c_str());
-              if (body.has_value()) {
-                return n::rt::gtfsrt_update_buf(*d.tt_, *rtt, g.src_, g.tag_,
-                                                *body);
-              } else {
-                return n::rt::statistics{.parser_error_ = true};
-              }
-            },
-            [&](auser_endpoint const& a) -> stats_t {
-              auto const path = get_dump_path(a);
-              auto& auser = d.auser_->at(a.ep_.url_);
-              auto const body = utl::read_file(path.c_str());
-              if (body.has_value()) {
-                return auser.consume_update(*body, *rtt);
-              } else {
-                return n::rt::vdv_aus::statistics{.error_ = true};
-              }
-            });
-      } catch (std::exception const& e) {
-        std::cout << "EXCEPTION: " << e.what() << "\n";
-        return n::rt::statistics{.parser_error_ = true};
-      }
-    });
-
-    for (auto const [s, ep] : utl::zip(stats, endpoints)) {
-      utl::visit(
-          ep,
-          [&](gtfs_rt_endpoint const& g) {
-            n::log(n::log_lvl::info, "motis.rt",
-                   "GTFS-RT update stats for tag={}, url={}: {}", g.tag_,
-                   g.ep_.url_, fmt::streamed(std::get<n::rt::statistics>(s)));
-          },
-          [&](auser_endpoint const& a) {
-            n::log(n::log_lvl::info, "motis.rt",
-                   "VDV AUS update stats for tag={}, url={}:\n{}", a.tag_,
-                   a.ep_.url_,
-                   fmt::streamed(std::get<n::rt::vdv_aus::statistics>(s)));
-          });
-    }
+    apply_canned(d, endpoints, *rtt);
   } else if (!endpoints.empty()) {
     auto awaitables = utl::to_vec(
         endpoints,
@@ -287,11 +337,29 @@ awaitable<void> update_rt(config const& c,
   } else {
     elevators = std::move(d.rt_->e_);
   }
+
+  upload_gpu_rtt(d, *rtt);
   auto new_rt = std::make_shared<rt>(std::move(rtt), std::move(elevators),
                                      std::move(railviz_rt));
   std::atomic_store(&d.rt_, std::move(new_rt));
 
   d.metrics_->last_update_rt_.SetToCurrentTime();
+}
+
+void apply_canned_rt_update(config const& c, data& d) {
+  auto const endpoints = make_endpoints(c, d);
+  auto const today = std::chrono::time_point_cast<date::days>(
+      std::chrono::system_clock::now());
+  auto rtt = std::make_unique<n::rt_timetable>(
+      n::rt::create_rt_timetable(*d.tt_, today));
+  apply_canned(d, endpoints, *rtt);
+  rtt->update_lbs(*d.tt_);
+  upload_gpu_rtt(d, *rtt);
+
+  auto railviz_rt = std::make_unique<railviz_rt_index>(*d.tt_, *rtt);
+  auto new_rt = std::make_shared<rt>(std::move(rtt), std::move(d.rt_->e_),
+                                     std::move(railviz_rt));
+  std::atomic_store(&d.rt_, std::move(new_rt));
 }
 
 void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
@@ -305,33 +373,7 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
 
         auto executor = co_await asio::this_coro::executor;
 
-        auto const endpoints = [&]() {
-          auto endpoints =
-              std::vector<std::variant<gtfs_rt_endpoint, auser_endpoint>>{};
-          auto const metric_families =
-              rt_metric_families{d.metrics_->registry_};
-          for (auto const& [tag, dataset] : c.timetable_->datasets_) {
-            if (dataset.rt_.has_value()) {
-              auto const src = d.tags_->get_src(tag);
-              for (auto const& ep : *dataset.rt_) {
-                switch (ep.protocol_) {
-                  case config::timetable::dataset::rt::protocol::gtfsrt:
-                    endpoints.push_back(gtfs_rt_endpoint{
-                        ep, src, tag, gtfsrt_metrics{tag, metric_families}});
-                    break;
-                  case config::timetable::dataset::rt::protocol::siri_json:
-                  case config::timetable::dataset::rt::protocol::siri:
-                    [[fallthrough]];
-                  case config::timetable::dataset::rt::protocol::auser:
-                    endpoints.push_back(auser_endpoint{
-                        ep, src, tag, vdvaus_metrics{tag, metric_families}});
-                    break;
-                }
-              }
-            }
-          }
-          return endpoints;
-        }();
+        auto const endpoints = make_endpoints(c, d);
 
         co_await repeat(std::chrono::seconds{c.timetable_->update_interval_},
                         "rt update",
