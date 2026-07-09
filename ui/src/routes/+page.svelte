@@ -123,14 +123,18 @@
 		}
 	});
 
-	let theme: 'light' | 'dark' =
-		(hasDark ? 'dark' : hasLight ? 'light' : undefined) ??
-		(browser && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
-			? 'dark'
-			: 'light');
-	if (theme === 'dark') {
-		document.documentElement.classList.add('dark');
-	}
+	let theme: 'light' | 'dark' = $derived.by(() => {
+		if (hasDark) return 'dark';
+		if (hasLight) return 'light';
+		return new MediaQuery('(prefers-color-scheme: dark)').current ? 'dark' : 'light';
+	});
+	$effect(() => {
+		if (theme === 'dark') {
+			document.documentElement.classList.add('dark');
+		} else {
+			document.documentElement.classList.remove('dark');
+		}
+	});
 
 	let withHillshades = $state(false);
 	let center = $state.raw<[number, number]>([2.258882912876089, 48.72559118651327]);
