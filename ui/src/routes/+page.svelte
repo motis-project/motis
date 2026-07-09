@@ -1220,7 +1220,7 @@
 						class={bearing === 0 ? 'hidden' : null}
 						size="icon"
 						title={t.resetToNorth}
-						onclick={() => map.resetNorth()}
+						onclick={() => map!.resetNorth()}
 					>
 						<Compass class="w-5 h-5" />
 					</Button>
