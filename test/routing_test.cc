@@ -404,7 +404,23 @@ TEST(motis, routing) {
     ASSERT_FALSE(res.direct_.empty());
     ASSERT_FALSE(res.direct_.front().legs_.empty());
     EXPECT_GT(res.direct_.front().legs_.front().legGeometry_.length_, 0);
-    EXPECT_TRUE(res.direct_.front().legs_.front().steps_.has_value());
+
+    ASSERT_TRUE(res.direct_.front().legs_.front().steps_.has_value());
+    auto const& steps = *res.direct_.front().legs_.front().steps_;
+    ASSERT_GE(steps.size(), 2);
+
+    // additional edge
+    EXPECT_FALSE(steps[0].osmWay_.has_value());
+    EXPECT_FALSE(steps[0].fromOsmNode_.has_value());
+    EXPECT_TRUE(steps[0].toOsmNode_.has_value());
+    EXPECT_EQ(2624559589, steps[0].toOsmNode_);
+
+    EXPECT_TRUE(steps[1].osmWay_.has_value());
+    EXPECT_TRUE(steps[1].fromOsmNode_.has_value());
+    EXPECT_TRUE(steps[1].toOsmNode_.has_value());
+    EXPECT_EQ(150003465, steps[1].osmWay_);
+    EXPECT_EQ(2624559589, steps[1].fromOsmNode_);
+    EXPECT_EQ(533673, steps[1].toOsmNode_);
 
     EXPECT_EQ(
         R"(date=2019-05-01, start=01:25, end=01:36, duration=00:11, transfers=0, legs=[

@@ -907,7 +907,15 @@ export const StepInstructionSchema = {
             type: 'number'
         },
         osmWay: {
-            description: 'OpenStreetMap way index',
+            description: 'OpenStreetMap way ID',
+            type: 'integer'
+        },
+        fromOsmNode: {
+            description: 'OpenStreetMap node ID where this segment starts',
+            type: 'integer'
+        },
+        toOsmNode: {
+            description: 'OpenStreetMap node ID where this segment ends',
             type: 'integer'
         },
         polyline: {
