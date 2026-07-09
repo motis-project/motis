@@ -203,12 +203,12 @@ paths:
           in: query
           required: false
           description: |
-            Optional. Default is 25 meters.
+            Optional. Default is 250 meters.
             
             Maximum matching distance in meters to match geo coordinates to the street network.
           schema:
             type: number
-            default: 25
+            default: 250
 
         - name: pedestrianProfile
           in: query
@@ -779,12 +779,12 @@ paths:
           in: query
           required: false
           description: |
-            Optional. Experimental. Default is `1.0`.
+            Optional. Experimental. Default is `10`.
             Factor with which the duration of the fastest direct non-public-transit connection is multiplied.
             Values > 1.0 allow transit connections that are slower than the fastest direct non-public-transit connection to be found.
           schema:
             type: number
-            default: 1.0
+            default: 10
             minimum: 0
 
         - name: timeout
@@ -1204,7 +1204,7 @@ paths:
           description: maximum matching distance in meters to match geo coordinates to the street network
           schema:
             type: number
-            default: 25
+            default: 250
 
         - name: arriveBy
           in: query
@@ -1648,12 +1648,12 @@ paths:
           in: query
           required: false
           description: |
-            Optional. Default is 25 meters.
+            Optional. Default is 250 meters.
 
             Maximum matching distance in meters to match geo coordinates to the street network.
           schema:
             type: number
-            default: 25
+            default: 250
 
         - name: useRoutedTransfers
           in: query
@@ -2257,7 +2257,7 @@ paths:
           description: Maximum matching distance in meters to the street network.
           schema:
             type: number
-            default: 25
+            default: 250
         - name: maxPreTransitTime
           in: query
           required: false
@@ -4327,7 +4327,13 @@ components:
           description: level where this segment starts, based on OpenStreetMap data
           type: number
         osmWay:
-          description: OpenStreetMap way index
+          description: OpenStreetMap way ID
+          type: integer
+        fromOsmNode:
+          description: OpenStreetMap node ID where this segment starts
+          type: integer
+        toOsmNode:
+          description: OpenStreetMap node ID where this segment ends
           type: integer
         polyline:
           $ref: '#/components/schemas/EncodedPolyline'
@@ -5402,7 +5408,7 @@ components:
         maxMatchingDistance:
           description: maximum matching distance in meters to match geo coordinates to the street network
           type: number
-          default: 25
+          default: 250
         arriveBy:
           description: |
             Optional. Defaults to false, i.e. one to many search

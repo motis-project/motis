@@ -534,7 +534,7 @@
 						withFares: true,
 						numLegAlternatives: 3,
 						slowDirect,
-						fastestDirectFactor: 1.5,
+						fastestDirectFactor: 10,
 						pedestrianProfile,
 						joinInterlinedLegs: false,
 						transitModes:
@@ -653,7 +653,8 @@
 				one,
 				selectedStop: page.state.selectedStop,
 				stopArriveBy: page.state.stopArriveBy,
-				stopName: stopNameFromResponse || page.state.selectedStop?.name
+				stopName: stopNameFromResponse || page.state.selectedStop?.name,
+				selectedItinerary: page.state.selectedItinerary
 			},
 			t
 		)
@@ -1178,6 +1179,9 @@
 			<div class="maplibregl-ctrl maplibregl-ctrl-attrib">
 				<div class="maplibregl-ctrl-attrib-inner">
 					&copy; <a href="http://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>
+					{#if withHillshades}
+						| <a href="https://mapterhorn.com/attribution" target="_blank">Mapterhorn</a>
+					{/if}
 					{#if dataAttributionLink}
 						| <a href={dataAttributionLink} target="_blank">{t.timetableSources}</a>
 					{/if}
