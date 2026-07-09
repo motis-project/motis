@@ -282,15 +282,15 @@ int generate(int ac, char** av) {
   if (use_flex) {
     for (auto i = 0U; i != d.tt_->flex_area_locations_.size(); ++i) {
       auto const a = n::flex_area_idx_t{i};
-      auto const stops = d.tt_->flex_area_locations_[a];
-      for (auto const l : stops) {
+      auto const area_stops = d.tt_->flex_area_locations_[a];
+      for (auto const l : area_stops) {
         flex_seeds.emplace_back(d.tt_->locations_.coordinates_[l], l);
       }
       auto const& bbox = d.tt_->flex_area_bbox_[a];
       flex_seeds.emplace_back(  // use flex area center
           geo::latlng{(bbox.min_.lat_ + bbox.max_.lat_) / 2.0,
                       (bbox.min_.lng_ + bbox.max_.lng_) / 2.0},
-          stops.empty() ? n::location_idx_t::invalid() : stops[0]);
+          area_stops.empty() ? n::location_idx_t::invalid() : area_stops[0]);
     }
     utl::verify(!flex_seeds.empty(), "no flex areas in timetable");
     fmt::println("flex: {} areas, {} seeds (stops + area centers)",

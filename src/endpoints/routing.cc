@@ -991,9 +991,8 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
     auto const gpu_g_profile =
         q.prf_idx_ == 0U ||
         (q.prf_idx_ == n::kFootProfile &&
-         (rtt == nullptr ||
-          (!rtt->has_td_footpaths_out_[q.prf_idx_].any() &&
-           !rtt->has_td_footpaths_in_[q.prf_idx_].any())));
+         (rtt == nullptr || (!rtt->has_td_footpaths_out_[q.prf_idx_].any() &&
+                             !rtt->has_td_footpaths_in_[q.prf_idx_].any())));
     auto const gpu_supported = n::routing::gpu::gpu_supported(q, rtt);
     auto const run_on_gpu = [&](bool const use_pong) -> bool {
       try {
