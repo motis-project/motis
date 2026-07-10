@@ -1,9 +1,11 @@
 #include "motis/qa.h"
 
-#include "absl/strings/str_format.h"
+#include <cmath>
 
 namespace motis::qa {
 
+constexpr auto kMaxRating = std::numeric_limits<double>::max();
+constexpr auto kMinRating = std::numeric_limits<double>::min();
 constexpr auto p = double{30.0};
 constexpr auto q = double{0.1};
 
@@ -92,21 +94,21 @@ double set_improvement(
 }
 
 double rate(
-    std::vector<api::Itinerary> const& ref,
-    std::vector<api::Itinerary> const& uut,
+    std::vector<api::Itinerary> const& a,
+    std::vector<api::Itinerary> const& b,
     std::vector<std::function<double(api::Itinerary const&)>> const& criteria) {
-  if (ref.empty() && uut.empty()) {
-    return double{0.0};
+  if (a.empty() && b.empty()) {
+    return 0.0;
   }
-  if (ref.empty()) {
-    return kMaxRating;
-  }
-  if (uut.empty()) {
+  if (a.empty()) {
     return kMinRating;
   }
+  if (b.empty()) {
+    return kMaxRating;
+  }
 
-  auto const LR = set_improvement(ref, uut, criteria);
-  auto const RL = set_improvement(uut, ref, criteria);
+  auto const LR = set_improvement(a, b, criteria);
+  auto const RL = set_improvement(b, a, criteria);
   return LR - RL;
 }
 
