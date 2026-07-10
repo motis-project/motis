@@ -674,9 +674,16 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
       query.maxItineraries_.value_or(0), query.numItineraries_);
 
   auto const rt = std::atomic_load(&rt_);
-  auto const rtt = query.realtimeMode_ == api::RealtimeModeEnum::OFF
-                       ? nullptr
-                       : rt->rtt_.get();
+  // `rtt` is used for routing/sorting/windowing:
+  auto const rtt =
+      (query.realtimeMode_ == api::RealtimeModeEnum::OFF ||
+       query.realtimeMode_ == api::RealtimeModeEnum::REALTIME_ANNOTATION_ONLY)
+          ? nullptr
+          : rt->rtt_.get();
+  // `annotation_rtt` is used to annotate the response with realtime data:
+  auto const annotation_rtt = query.realtimeMode_ == api::RealtimeModeEnum::OFF
+                                  ? nullptr
+                                  : rt->rtt_.get();
   auto const e = rt->e_.get();
   auto gbfs_rd = gbfs::gbfs_routing_data{w_, l_, gbfs_};
   if (blocked.get() == nullptr && is_osr_loaded()) {
@@ -817,7 +824,6 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                               query,
                               pre_transit_modes,
                               post_transit_modes,
-                              direct_modes,
                               from,
                               to,
                               from_p,
@@ -975,8 +981,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
           // FALSE    |  TRUE         | TRUE     => PONG
           // TRUE     |  FALSE        | TRUE     => PONG
           // TRUE     |  TRUE         | FALSE    => rRAPTOR
-          query.arriveBy_ != start_time.extend_interval_later_ &&
-          q.via_stops_.empty()) {
+          query.arriveBy_ != start_time.extend_interval_later_) {
         try {
           auto raptor_state = n::routing::raptor_state{};
           r = n::routing::pong_search(
@@ -1037,36 +1042,40 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
       q_for_alts.flip_dir();
     }
 
+    auto fares_time = std::chrono::nanoseconds{0};
+    auto itineraries = utl::to_vec(
+        journeys, [&, cache = street_routing_cache_t{}](auto&& j) mutable {
+          return journey_to_response(
+              w_, l_, pl_, *tt_, *tags_, fa_, e, annotation_rtt, matches_,
+              elevations_, shapes_, gbfs_rd, ae_, tz_, j, start, dest, cache,
+              blocked.get(),
+              query.requireCarTransport_ && query.useRoutedTransfers_,
+              osr_params, query.pedestrianProfile_, query.elevationCosts_,
+              query.joinInterlinedLegs_, detailed_transfers,
+              query.detailedLegs_, query.withFares_,
+              query.withScheduledSkippedStops_,
+              config_.timetable_.value().max_matching_distance_,
+              query.maxMatchingDistance_, api_version,
+              query.ignorePreTransitRentalReturnConstraints_,
+              query.ignorePostTransitRentalReturnConstraints_, query.language_,
+              true,
+              query.numLegAlternatives_ > 0
+                  ? alternatives_context{query_alternatives{
+                        q_for_alts,
+                        static_cast<std::size_t>(query.numLegAlternatives_)}}
+                  : alternatives_context{},
+              &fares_time);
+        });
+
     return {
-        .debugOutput_ =
-            join(std::move(prepare_stats), std::move(query_stats),
-                 r.search_stats_.to_map(), std::move(r.algo_stats_)),
+        .debugOutput_ = join(std::move(prepare_stats), std::move(query_stats),
+                             r.search_stats_.to_map(), std::move(r.algo_stats_),
+                             stats_map_t{{"fares", static_cast<std::uint64_t>(
+                                                       fares_time.count())}}),
         .from_ = bwd_compat_lvl_adjust(std::move(from_p), api_version),
         .to_ = bwd_compat_lvl_adjust(std::move(to_p), api_version),
         .direct_ = std::move(direct),
-        .itineraries_ = utl::to_vec(
-            journeys,
-            [&, cache = street_routing_cache_t{}](auto&& j) mutable {
-              return journey_to_response(
-                  w_, l_, pl_, *tt_, *tags_, fa_, e, rtt, matches_, elevations_,
-                  shapes_, gbfs_rd, ae_, tz_, j, start, dest, cache,
-                  blocked.get(),
-                  query.requireCarTransport_ && query.useRoutedTransfers_,
-                  osr_params, query.pedestrianProfile_, query.elevationCosts_,
-                  query.joinInterlinedLegs_, detailed_transfers,
-                  query.detailedLegs_, query.withFares_,
-                  query.withScheduledSkippedStops_,
-                  config_.timetable_.value().max_matching_distance_,
-                  query.maxMatchingDistance_, api_version,
-                  query.ignorePreTransitRentalReturnConstraints_,
-                  query.ignorePostTransitRentalReturnConstraints_,
-                  query.language_, true,
-                  query.numLegAlternatives_ > 0
-                      ? alternatives_context{query_alternatives{
-                            q_for_alts, static_cast<std::size_t>(
-                                            query.numLegAlternatives_)}}
-                      : alternatives_context{});
-            }),
+        .itineraries_ = std::move(itineraries),
         .previousPageCursor_ =
             fmt::format("EARLIER|{}", to_seconds(search_interval.from_)),
         .nextPageCursor_ =

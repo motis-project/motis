@@ -200,6 +200,13 @@ const translations: Translations = {
 			default:
 				return `${n} tras`;
 		}
+	},
+	pageTitle: {
+		default: 'MOTIS',
+		fromTo: (from, to) => `${from} do ${to}`,
+		departuresAt: (stop) => `Odjezdy ze ${stop}`,
+		arrivalsAt: (stop) => `Příjezdy do ${stop}`,
+		isochronesFrom: (place) => `Izochrony z ${place}`
 	}
 };
 
