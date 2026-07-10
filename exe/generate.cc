@@ -7,6 +7,7 @@
 #include "boost/url/url.hpp"
 
 #include "nigiri/common/interval.h"
+#include "nigiri/flex.h"
 #include "nigiri/routing/raptor/debug.h"
 #include "nigiri/routing/search.h"
 #include "nigiri/timetable.h"
@@ -85,6 +86,7 @@ int generate(int ac, char** av) {
   auto use_bike = false;
   auto use_car = false;
   auto use_odm = false;
+  auto use_flex = false;
   auto lb_rank = true;
   auto geo_rank = std::optional<std::uint64_t>{};
   tg_geom* bounds{nullptr};
@@ -128,6 +130,10 @@ int generate(int ac, char** av) {
     if (s.contains("RIDE_SHARING")) {
       modes->emplace_back(api::ModeEnum::RIDE_SHARING);
       use_odm = true;
+    }
+    if (s.contains("FLEX")) {
+      modes->emplace_back(api::ModeEnum::FLEX);
+      use_flex = true;
     }
   };
 
@@ -316,6 +322,29 @@ int generate(int ac, char** av) {
 
   auto geo_rank_index = 0UL;
   auto geo_distance = std::unordered_map<n::location_idx_t, double>{};
+  struct flex_seed {
+    geo::latlng from_;
+    n::location_idx_t rank_stop_;
+  };
+  auto flex_seeds = std::vector<flex_seed>{};
+  if (use_flex) {
+    for (auto i = 0U; i != d.tt_->flex_area_locations_.size(); ++i) {
+      auto const a = n::flex_area_idx_t{i};
+      auto const area_stops = d.tt_->flex_area_locations_[a];
+      for (auto const l : area_stops) {
+        flex_seeds.emplace_back(d.tt_->locations_.coordinates_[l], l);
+      }
+      auto const& bbox = d.tt_->flex_area_bbox_[a];
+      flex_seeds.emplace_back(  // use flex area center
+          geo::latlng{(bbox.min_.lat_ + bbox.max_.lat_) / 2.0,
+                      (bbox.min_.lng_ + bbox.max_.lng_) / 2.0},
+          area_stops.empty() ? n::location_idx_t::invalid() : area_stops[0]);
+    }
+    utl::verify(!flex_seeds.empty(), "no flex areas in timetable");
+    fmt::println("flex: {} areas, {} seeds (stops + area centers)",
+                 d.tt_->flex_area_locations_.size(), flex_seeds.size());
+  }
+
   auto ss = std::optional<n::routing::search_state>{};
   auto rs = std::optional<n::routing::raptor_state>{};
   if (geo_rank) {
@@ -357,13 +386,21 @@ int generate(int ac, char** av) {
     auto to_place = std::optional<std::string>{};
 
     for (auto x = 0U; x != 1000U; ++x) {
-      auto const from_stop = random_stop(*d.tt_, stops);
-      from_place = get_place(from_stop);
-      if (!from_place) {
-        continue;
+      // stop used to lb-rank the destination (invalid -> random destination)
+      auto rank_stop = n::location_idx_t::invalid();
+      if (use_flex) {
+        auto const seed = rand_in(flex_seeds);
+        from_place = fmt::format("{},{}", seed.from_.lat_, seed.from_.lng_);
+        rank_stop = seed.rank_stop_;
+      } else {
+        rank_stop = random_stop(*d.tt_, stops);
+        from_place = get_place(rank_stop);
+        if (!from_place) {
+          continue;
+        }
       }
 
-      if (lb_rank) {
+      if (lb_rank && rank_stop != n::location_idx_t::invalid()) {
         auto const s = n::routing::search<
             n::direction::kBackward,
             n::routing::raptor<n::direction::kBackward, false, 0,
@@ -371,7 +408,7 @@ int generate(int ac, char** av) {
             *d.tt_, nullptr, *ss, *rs,
             nigiri::routing::query{
                 .start_time_ = d.tt_->date_range_.from_,
-                .destination_ = {{from_stop, n::duration_t{0U}, 0}}}};
+                .destination_ = {{rank_stop, n::duration_t{0U}, 0}}}};
         utl::sort(stops, [&](auto const& a, auto const& b) {
           return ss->travel_time_lower_bound_[to_idx(a)] <
                  ss->travel_time_lower_bound_[to_idx(b)];

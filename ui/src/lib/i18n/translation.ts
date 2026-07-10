@@ -180,6 +180,7 @@ export type Translations = {
 		route: string;
 		mode: string;
 	};
+	resetToNorth: string;
 	showMyLocation: string;
 	toggleHillshades: string;
 	routes: (n: number) => string;
