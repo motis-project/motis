@@ -67,11 +67,19 @@ api::ModeEnum to_mode(osr::search_profile const m) {
 }
 
 api::ModeEnum to_mode(n::transport_mode_id_t const id) {
-  return flex::mode_id::is_flex(id)
-             ? api::ModeEnum::FLEX
-             : (id >= kGbfsTransportModeIdOffset
-                    ? api::ModeEnum::RENTAL
-                    : to_mode(static_cast<osr::search_profile>(id)));
+  if (id == kOdmTransportModeId) {
+    return api::ModeEnum::ODM;
+  }
+  if (id == kRideSharingTransportModeId) {
+    return api::ModeEnum::RIDE_SHARING;
+  }
+  if (flex::mode_id::is_flex(id)) {
+    return api::ModeEnum::FLEX;
+  }
+  if (id >= kGbfsTransportModeIdOffset) {
+    return api::ModeEnum::RENTAL;
+  }
+  return to_mode(static_cast<osr::search_profile>(id));
 }
 
 void cleanup_intermodal(api::Itinerary& i) {
