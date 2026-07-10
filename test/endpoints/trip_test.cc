@@ -71,7 +71,7 @@ stop_times,stop_headsign,fr,Vers Parent Deux,T1,1,
 # ticketing_deep_links.txt
 ticketing_deep_link_id,web_url,android_intent_uri,ios_universal_link_url
 link-1,https://example.com,https://example.com,https://example.com
-link-2,https://motis-project/ticket,https://motis-project/ticket,https://motis-project/ticket
+link-2,https://motis-project.de/ticket,https://motis-project.de/ticket,https://motis-project.de/ticket
 
 # ticketing_identifiers.txt
 ticketing_stop_id,stop_id,agency_id
@@ -121,14 +121,6 @@ TEST(motis, trip_stop_naming) {
   EXPECT_EQ("Parent2 Express", leg.headsign_);
   EXPECT_EQ("EN_SHORT_NAME", leg.routeShortName_);
   EXPECT_EQ("EN-R1", leg.routeLongName_);
-  ASSERT_TRUE(leg.ticketUrls_.has_value());
-  EXPECT_EQ(
-      "https://motis-project/"
-      "ticket?service_date=%5B%2220190501%22%5D&ticketing_trip_id=%5B%22T1%22%"
-      "5D&from_ticketing_stop_time_id=%5B%22ticket-stop-1%22%5D&to_ticketing_"
-      "stop_time_id=%5B%22ticket-stop-3%22%5D&boarding_time=%5B%222019-05-"
-      "01T08:00:00Z%22%5D&arrival_time=%5B%222019-05-01T09:00:00Z%22%5D",
-      leg.ticketUrls_->web_);
 
   auto const compact_res =
       trip_ep("?tripId=20190501_10%3A00_test_T1&detailedLegs=false");
@@ -181,7 +173,7 @@ TEST(motis, trip_ticketing) {
   auto const& leg = res.legs_[0];
   ASSERT_TRUE(leg.ticketUrls_.has_value());
   EXPECT_EQ(
-      "https://motis-project/"
+      "https://motis-project.de/"
       "ticket?service_date=%5B%2220190501%22%5D&ticketing_trip_id=%5B%22T1%22%"
       "5D&from_ticketing_stop_time_id=%5B%22ticket-stop-1%22%5D&to_ticketing_"
       "stop_time_id=%5B%22ticket-stop-3%22%5D&boarding_time=%5B%222019-05-"
