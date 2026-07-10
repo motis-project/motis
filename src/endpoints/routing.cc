@@ -281,16 +281,16 @@ std::vector<n::routing::offset> get_offsets(
         return;
       }
 
-      auto const foot_dist =
+      auto const foot_radius =
           get_max_distance(osr::search_profile::kFoot, osr_params, max);
       auto const car_radius =
           dir == osr::direction::kForward
-              ? foot_dist
+              ? foot_radius
               : get_max_distance(osr::search_profile::kCarSharing, osr_params,
                                  max);
       auto const bike_radius =
           dir == osr::direction::kForward
-              ? foot_dist
+              ? foot_radius
               : get_max_distance(osr::search_profile::kBikeSharing, osr_params,
                                  max);
 
