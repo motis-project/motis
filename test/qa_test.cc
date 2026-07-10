@@ -1,15 +1,17 @@
 #include "gtest/gtest.h"
 
-#include "motis/qa/qa.h"
+#include "motis/qa.h"
+
+using namespace motis;
 
 TEST(qa, test0) {
-  auto a = pareto_set<journey>{};
-  auto b = pareto_set<journey>{};
+  auto a = std::vector<api::Itinerary>{};
+  auto b = std::vector<api::Itinerary>{};
 
-  EXPECT_DOUBLE_EQ(0.0, qa::rate(a, b));
-  EXPECT_DOUBLE_EQ(0.0, qa::rate(b, a));
+  EXPECT_DOUBLE_EQ(0.0, qa::rate_classic(a, b));
+  EXPECT_DOUBLE_EQ(0.0, qa::rate_classic(b, a));
 
-  a.add({.start_time_ = unixtime_t{sys_days{2024_y / June / 10} + 10_hours},
+  a.emplace_back({.startTime_ = unixtime_t{sys_days{2024_y / June / 10} + 10_hours},
          .dest_time_ = unixtime_t{sys_days{2024_y / June / 10} + 12_hours},
          .transfers_ = 0U});
 
