@@ -39,12 +39,16 @@ R2,DB,R2,R2,,109
 # trips.txt
 route_id,service_id,trip_id,trip_headsign,block_id
 R1,S1,T1,Parent2 Express,
+R2,S1,T2,Parent2 Local,
 
 # stop_times.txt
 trip_id,arrival_time,departure_time,stop_id,stop_sequence,pickup_type,drop_off_type,stop_headsign
 T1,10:00:00,10:00:00,Child1A,1,0,0,Origin
 T1,10:10:00,10:10:00,Child1B,2,0,0,Midway
 T1,11:00:00,11:00:00,Child2,3,0,0,Destination
+T2,12:00:00,12:00:00,Child1A,1,0,0,Origin
+T2,12:10:00,12:10:00,Child1B,2,0,0,Midway
+T2,13:00:00,13:00:00,Child2,3,0,0,Destination
 
 # calendar_dates.txt
 service_id,date,exception_type
@@ -75,7 +79,6 @@ link-2,https://motis-project.de/ticket,https://motis-project.de/ticket,https://m
 
 # ticketing_identifiers.txt
 ticketing_stop_id,stop_id,agency_id
-ticket-stop-1,Child1A,DB
 ticket-stop-2,Child1B,DB
 ticket-stop-3,Child2,DB
 )";
@@ -168,6 +171,7 @@ TEST(motis, trip_ticketing) {
 
   auto const trip_ep = utl::init_from<ep::trip>(d).value();
 
+  // Route booking link
   auto const res = trip_ep("?tripId=20190501_10%3A00_test_T1");
   ASSERT_EQ(1, res.legs_.size());
   auto const& leg = res.legs_[0];
@@ -175,10 +179,23 @@ TEST(motis, trip_ticketing) {
   EXPECT_EQ(
       "https://motis-project.de/"
       "ticket?service_date=%5B%2220190501%22%5D&ticketing_trip_id=%5B%22T1%22%"
-      "5D&from_ticketing_stop_time_id=%5B%22ticket-stop-1%22%5D&to_ticketing_"
-      "stop_time_id=%5B%22ticket-stop-3%22%5D&boarding_time=%5B%222019-05-"
-      "01T08:00:00Z%22%5D&arrival_time=%5B%222019-05-01T09:00:00Z%22%5D",
+      "5D&from_ticketing_stop_time_id=%5B%221%22%5D&to_ticketing_stop_time_id=%"
+      "5B%22ticket-stop-3%22%5D&boarding_time=%5B%222019-05-01T08:00:00Z%22%5D&"
+      "arrival_time=%5B%222019-05-01T09:00:00Z%22%5D",
       leg.ticketUrls_->web_);
+
+  // Agency booking link
+  auto const res2 = trip_ep("?tripId=20190501_12%3A00_test_T2");
+  ASSERT_EQ(1, res2.legs_.size());
+  auto const& leg2 = res2.legs_[0];
+  ASSERT_TRUE(leg2.ticketUrls_.has_value());
+  EXPECT_EQ(
+      "https://"
+      "example.com?service_date=%5B%2220190501%22%5D&ticketing_trip_id=%5B%"
+      "22T2%22%5D&from_ticketing_stop_time_id=%5B%221%22%5D&to_ticketing_stop_"
+      "time_id=%5B%22ticket-stop-3%22%5D&boarding_time=%5B%222019-05-01T10:00:"
+      "00Z%22%5D&arrival_time=%5B%222019-05-01T11:00:00Z%22%5D",
+      leg2.ticketUrls_->web_);
 }
 
 constexpr auto kNetex = R"(
