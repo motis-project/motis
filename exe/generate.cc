@@ -414,10 +414,10 @@ int generate(int ac, char** av) {
                  ss->travel_time_lower_bound_[to_idx(b)];
         });
         to_place = get_place(stops[r]);
-      } else if (geo_rank) {
+      } else if (geo_rank && rank_stop != n::location_idx_t::invalid()) {
         for (auto const s : stops) {
           geo_distance[s] =
-              geo::distance(d.tt_->locations_.coordinates_[from_stop],
+              geo::distance(d.tt_->locations_.coordinates_[rank_stop],
                             d.tt_->locations_.coordinates_[s]);
         }
         utl::sort(stops, [&](auto const& a, auto const& b) {
