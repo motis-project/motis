@@ -1,0 +1,82 @@
+name: GPU Validation
+
+on:
+  push:
+    branches: [ master, gouda ]
+  pull_request:
+    branches: [ master ]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  gpu-validate:
+    runs-on: [ self-hosted, linux, x64, gpu ]
+    env:
+      DEBIAN_FRONTEND: noninteractive
+      BUILDCACHE_COMPRESS: true
+      BUILDCACHE_DIRECT_MODE: true
+      BUILDCACHE_ACCURACY: SLOPPY
+      BUILDCACHE_MAX_CACHE_SIZE: 5368709120
+      CUDACXX: /usr/local/cuda/bin/nvcc
+      CLICOLOR_FORCE: 1
+      LD_LIBRARY_PATH: /usr/local/cuda/lib64
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get deps
+        run: mkdir -p ~/deps && mv ~/deps .
+
+      - name: Get build
+        run: mkdir -p ~/build && mv ~/build .
+
+      - name: Configure
+        run: |
+          cmake --preset cuda
+          cmake --preset cpu
+
+      - name: Build
+        run: |
+          ./build/cuda/buildcache/bin/buildcache -z
+          cmake --build --preset cuda --target motis nigiri-test
+          cmake --build --preset cpu  --target motis
+          ./build/cuda/buildcache/bin/buildcache -s
+
+      # runs in deps/nigiri -> run before "Save dep"
+      - name: nigiri-test
+        run: ./build/cuda/deps/nigiri/nigiri-test
+
+      - name: Save deps
+        if: always()
+        run: mv deps ~
+
+      - name: Import Germany
+        run: |
+          cd "$HOME/ci-data/ger"
+          "$GITHUB_WORKSPACE/build/cpu/motis" import -c config_de.yml -d data
+
+      - name: Import Europe
+        run: |
+          cd "$HOME/ci-data/eu"
+          "$GITHUB_WORKSPACE/build/cpu/motis" import -c config_europe.yml -d data
+
+      # no --car: no dataset with cars_allowed data staged right now
+      - name: Validate Germany (station + intermodal, clasz, routed footpaths, wheelchair, bike, tts)
+        run: |
+          python3 tools/validate.py ./build/cpu/motis ./build/cuda/motis \
+            --data "$HOME/ci-data/ger/data" --name germany --date 2026-07-05 \
+            --intermodal --routed-footpaths --tts \
+            --exclude-transit-modes HIGHSPEED_RAIL --n 20
+
+      - name: Validate Europe (station, clasz, realtime, routed footpaths, flex, bike, tts)
+        run: |
+          python3 tools/validate.py ./build/cpu/motis ./build/cuda/motis \
+            --data "$HOME/ci-data/eu/data" --name europe --date 2026-07-05 \
+            --rt-dir "$HOME/ci-data/eu" --routed-footpaths --flex --bike --tts \
+            --exclude-transit-modes COACH --n 20
+
+      - name: Save build
+        if: always()
+        run: mv build ~

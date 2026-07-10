@@ -183,6 +183,7 @@ const translations: Translations = {
 		route: 'Horaires : couleurs des lignes',
 		mode: 'Horaires : modes de transport'
 	},
+	resetToNorth: 'Reset to north',
 	showMyLocation: 'Show my location',
 	toggleHillshades: 'Toggle hillshades overlay',
 	routes: (n: number) => {

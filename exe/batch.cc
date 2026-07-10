@@ -10,6 +10,7 @@
 #include "motis/config.h"
 #include "motis/data.h"
 #include "motis/motis_instance.h"
+#include "motis/rt_update.h"
 
 #include "./flags.h"
 
@@ -130,6 +131,7 @@ int batch(int ac, char** av) {
   auto queries_path = fs::path{"queries.txt"};
   auto responses_path = fs::path{"responses.txt"};
   auto mt = true;
+  auto rt = false;
 
   auto desc = po::options_description{"Options"};
   desc.add_options()  //
@@ -138,7 +140,11 @@ int batch(int ac, char** av) {
       ("queries,q", po::value(&queries_path)->default_value(queries_path),
        "queries file")  //
       ("responses,r", po::value(&responses_path)->default_value(responses_path),
-       "response file");
+       "response file")  //
+      ("rt", po::bool_switch(&rt),
+       "apply a canned rt update (dump_rt/ in the working directory, written "
+       "by a server run with an existing dump_rt directory) before running "
+       "the queries");
   add_data_path_opt(desc, data_path);
 
   auto vm = parse_opt(ac, av, desc);
@@ -158,6 +164,10 @@ int batch(int ac, char** av) {
 
   auto d = data{data_path, c};
   utl::verify(d.tt_, "timetable required");
+
+  if (rt) {
+    apply_canned_rt_update(c, d);
+  }
 
   auto response_time = stats{"response_time", 0U};
 

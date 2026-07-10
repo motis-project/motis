@@ -1,6 +1,9 @@
 #pragma once
 
+#include <condition_variable>
 #include <memory>
+#include <mutex>
+#include <vector>
 
 #include "cista/memory_holder.h"
 
@@ -30,6 +33,29 @@ struct point_rtree;
 
 template <typename T>
 using ptr = std::unique_ptr<T>;
+
+#if defined(NIGIRI_CUDA)
+struct gpu_search_pool {
+  struct lease {
+    lease(gpu_search_pool&, nigiri::routing::gpu::gpu_raptor_state&);
+    ~lease();
+    lease(lease const&) = delete;
+    lease& operator=(lease const&) = delete;
+    gpu_search_pool& pool_;
+    nigiri::routing::gpu::gpu_raptor_state& state_;
+  };
+
+  gpu_search_pool(nigiri::routing::gpu::gpu_timetable const&, unsigned n);
+  ~gpu_search_pool();
+
+  lease acquire();
+
+  std::mutex mutex_;
+  std::condition_variable cv_;
+  std::vector<std::unique_ptr<nigiri::routing::gpu::gpu_raptor_state>> states_;
+  std::vector<nigiri::routing::gpu::gpu_raptor_state*> free_;
+};
+#endif
 
 struct rt {
   rt();
@@ -77,7 +103,12 @@ struct data {
                     elevator_nodes_, elevator_osm_mapping_, shapes_,
                     railviz_static_, matches_, way_matches_, rt_, gbfs_,
                     odm_bounds_, ride_sharing_bounds_, flex_areas_, metrics_,
-                    auser_);
+                    auser_
+#if defined(NIGIRI_CUDA)
+                    ,
+                    gpu_tt_, gpu_pool_
+#endif
+    );
   }
 
   std::filesystem::path path_;
@@ -113,6 +144,10 @@ struct data {
   ptr<flex::flex_areas> flex_areas_;
   ptr<metrics_registry> metrics_;
   ptr<std::map<std::string, auser>> auser_;
+#if defined(NIGIRI_CUDA)
+  ptr<nigiri::routing::gpu::gpu_timetable> gpu_tt_;
+  ptr<gpu_search_pool> gpu_pool_;
+#endif
 };
 
 }  // namespace motis
