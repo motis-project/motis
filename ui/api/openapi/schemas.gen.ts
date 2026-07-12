@@ -1462,6 +1462,21 @@ For NeTEx it contains information about the vehicle category, e.g. IC/InterCity
     }
 } as const;
 
+export const TicketUrlsSchema = {
+    type: 'object',
+    properties: {
+        web: {
+            type: 'string'
+        },
+        android: {
+            type: 'string'
+        },
+        ios: {
+            type: 'string'
+        }
+    }
+} as const;
+
 export const LegSchema = {
     type: 'object',
     required: ['mode', 'startTime', 'endTime', 'scheduledStartTime', 'scheduledEndTime', 'realTime', 'scheduled', 'duration', 'from', 'to', 'legGeometry'],
@@ -1571,6 +1586,9 @@ For non-transit legs, null
         agencyUrl: {
             type: 'string'
         },
+        agencyFareUrl: {
+            type: 'string'
+        },
         agencyId: {
             type: 'string'
         },
@@ -1662,6 +1680,11 @@ by looping active weekdays, e.g. from calendar.txt in GTFS.
             description: `Whether wheelchairs can be transported on this leg.
 `,
             '$ref': '#/components/schemas/WheelchairAccessibility'
+        },
+        ticketUrls: {
+            '$ref': '#/components/schemas/TicketUrls',
+            description: `Ticket booking links for different platforms
+`
         },
         alternatives: {
             description: `Alternative connections that can replace this transit leg.

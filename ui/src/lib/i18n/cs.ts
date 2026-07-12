@@ -208,7 +208,9 @@ const translations: Translations = {
 		departuresAt: (stop) => `Odjezdy ze ${stop}`,
 		arrivalsAt: (stop) => `Příjezdy do ${stop}`,
 		isochronesFrom: (place) => `Izochrony z ${place}`
-	}
+	},
+	tickets: 'Vstupenky',
+	routeInformation: 'Další informace'
 };
 
 export default translations;

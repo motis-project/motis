@@ -202,7 +202,9 @@ const translations: Translations = {
 		departuresAt: (stop) => `Departures in ${stop}`,
 		arrivalsAt: (stop) => `Arrivals in ${stop}`,
 		isochronesFrom: (place) => `Isochrones from ${place}`
-	}
+	},
+	tickets: 'Tickets',
+	routeInformation: 'More Information'
 };
 
 export default translations;

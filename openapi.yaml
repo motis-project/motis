@@ -4819,6 +4819,16 @@ components:
         shortName:
           type: string
 
+    TicketUrls:
+      type: object
+      properties:
+        web:
+          type: string
+        android:
+          type: string
+        ios:
+          type: string
+
     Leg:
       type: object
       required:
@@ -4915,6 +4925,8 @@ components:
           type: string
         agencyUrl:
           type: string
+        agencyFareUrl:
+          type: string
         agencyId:
           type: string
         tripId:
@@ -4986,6 +4998,10 @@ components:
           description: |
             Whether wheelchairs can be transported on this leg.
           $ref: '#/components/schemas/WheelchairAccessibility'
+        ticketUrls:
+          $ref: '#/components/schemas/TicketUrls'
+          description: |
+            Ticket booking links for different platforms
         alternatives:
           description: |
             Alternative connections that can replace this transit leg.

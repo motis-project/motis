@@ -1,17 +1,26 @@
 #include "motis/journey_to_response.h"
 
+#include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <iostream>
 #include <span>
 #include <variant>
 
+#include "boost/url/url.hpp"
+
+#include "fmt/chrono.h"
+
 #include "utl/enumerate.h"
+#include "utl/helpers/algorithm.h"
 #include "utl/overloaded.h"
 #include "utl/visit.h"
 
+#include "adr/typeahead.h"
+
 #include "geo/polyline_format.h"
 
+#include "nigiri/loader/gtfs/stop_seq_number_encoding.h"
 #include "nigiri/common/split_duration.h"
 #include "nigiri/routing/journey.h"
 #include "nigiri/routing/leg_alternatives.h"
@@ -21,7 +30,6 @@
 #include "nigiri/special_stations.h"
 #include "nigiri/types.h"
 
-#include "adr/typeahead.h"
 #include "motis-api/motis-api.h"
 #include "motis/constants.h"
 #include "motis/flex/flex_output.h"
@@ -183,6 +191,134 @@ void get_is_unique_stop_name(n::rt::frun const& fr,
       it->second = false;
     }
   }
+}
+
+std::optional<api::TicketUrls> get_ticketing_urls(
+    n::timetable const& tt,
+    n::source_idx_t src,
+    tag_lookup const& tags,
+    n::rt::run_stop const& enter_stop,
+    n::rt::run_stop const& exit_stop) {
+  if (!enter_stop.fr_->is_scheduled()) {
+    return std::nullopt;
+  }
+
+  if (tt.trip_ticketing_unavailable_.test(
+          enter_stop.get_trip_idx(n::event_type::kDep))) {
+    return std::nullopt;
+  }
+
+  if (tt.locations_.ticketing_unavailable_.test(
+          enter_stop.get_stop().location_idx()) ||
+      tt.locations_.ticketing_unavailable_.test(
+          exit_stop.get_stop().location_idx())) {
+    return std::nullopt;
+  }
+
+  auto const provider_idx = enter_stop.get_provider_idx(n::event_type::kDep);
+  auto const route_id_idx = enter_stop.get_route_id_idx(n::event_type::kDep);
+
+  auto ticketing_idx = n::ticketing_link_idx_t::invalid();
+  auto const route_ticket_link =
+      tt.route_ids_[src].route_id_ticketing_link_[route_id_idx];
+  if (route_ticket_link != n::ticketing_link_idx_t::invalid()) {
+    ticketing_idx = route_ticket_link;
+  } else {
+    auto provider = tt.providers_[provider_idx];
+    if (provider.ticketing_link_ != n::ticketing_link_idx_t::invalid()) {
+      ticketing_idx = provider.ticketing_link_;
+    }
+  }
+
+  if (ticketing_idx == n::ticketing_link_idx_t::invalid()) {
+    return std::nullopt;
+  }
+
+  auto const add_url_ticket_params = [&](std::string_view url) -> std::string {
+    auto const service_date =
+        tags.id_fragments(tt, enter_stop, n::event_type::kDep).start_date_;
+
+    auto const location_ticketing_id =
+        [&](n::rt::run_stop stop) -> std::optional<std::string_view> {
+      auto const provider_ids =
+          tt.location_ticketing_identifier_[stop.get_stop().location_idx()];
+      auto const provider_idx = exit_stop.get_provider_idx(n::event_type::kArr);
+
+      auto const it = std::lower_bound(
+          provider_ids.begin(), provider_ids.end(), provider_idx,
+          [](auto const& a, n::provider_idx_t const p) { return a.first < p; });
+
+      if (it != provider_ids.end() && it->first == provider_idx) {
+        return tt.strings_.get(it->second);
+      } else {
+        return std::nullopt;
+      }
+    };
+
+    auto const from_id = location_ticketing_id(enter_stop);
+    auto const to_id = location_ticketing_id(exit_stop);
+
+    auto seq_nums = nigiri::loader::gtfs::stop_seq_number_range{
+        {tt.trip_stop_seq_numbers_[enter_stop.get_trip_idx(
+            n::event_type::kDep)]},
+        static_cast<nigiri::stop_idx_t>(enter_stop.fr_->stop_range_.size())};
+
+    auto const from =
+        from_id.has_value()
+            ? std::string{*from_id}
+            : std::to_string(*(seq_nums.begin() +
+                               enter_stop.section_idx(n::event_type::kDep)));
+
+    auto const to =
+        to_id.has_value()
+            ? std::string{*to_id}
+            : std::to_string(*(seq_nums.begin() +
+                               exit_stop.section_idx(n::event_type::kArr)));
+
+    auto const to_json_array = [](std::string elem) -> std::string {
+      auto array = boost::json::array{};
+      array.push_back(boost::json::value{elem});
+      return boost::json::serialize(array);
+    };
+
+    auto trip_ticketing_identifier_bucket =
+        tt.trip_ticketing_identifier_[enter_stop.get_trip_idx(
+            n::event_type::kDep)];
+    auto const trip_id = std::string{
+        trip_ticketing_identifier_bucket.empty()
+            ? tags.get_trip_id(tt, enter_stop, n::event_type::kDep)
+            : (tt.strings_.get(trip_ticketing_identifier_bucket.front()))};
+
+    return std::string{
+        (boost::url{boost::urls::parse_uri(url).value()}.params() =
+             {
+                 {"service_date", to_json_array(service_date)},
+                 {"ticketing_trip_id", to_json_array(trip_id)},
+                 {"from_ticketing_stop_time_id", to_json_array(from)},
+                 {"to_ticketing_stop_time_id", to_json_array(to)},
+                 {"boarding_time",
+                  to_json_array(std::format(
+                      "{:%FT%T+00:00}",
+                      enter_stop.scheduled_time(n::event_type::kDep)))},
+                 {"arrival_time",
+                  to_json_array(std::format(
+                      "{:%FT%T+00:00}",
+                      exit_stop.scheduled_time(n::event_type::kArr)))},
+             })
+            .url()
+            .buffer()};
+  };
+
+  auto const make =
+      [&](std::string_view const link) -> std::optional<std::string> {
+    return link.empty() ? std::nullopt
+                        : std::optional{add_url_ticket_params(link)};
+  };
+
+  return api::TicketUrls{
+      .web_ = make(tt.ticketing_links_.web_[ticketing_idx].view()),
+      .android_ = make(tt.ticketing_links_.andoid_[ticketing_idx].view()),
+      .ios_ = make(tt.ticketing_links_.ios_[ticketing_idx].view())};
 }
 
 api::Itinerary journey_to_response(
@@ -468,6 +604,7 @@ api::Itinerary journey_to_response(
                   auto const id_idx = tt.trip_ids_[trip].front();
                   return tt.trip_id_src_[id_idx];
                 }();
+
                 auto const [service_day, _] =
                     enter_stop.get_trip_start(n::event_type::kDep);
 
@@ -544,6 +681,8 @@ api::Itinerary journey_to_response(
                     .agencyName_ =
                         std::string{tt.translate(lang, agency.name_)},
                     .agencyUrl_ = std::string{tt.translate(lang, agency.url_)},
+                    .agencyFareUrl_ =
+                        std::string{tt.translate(lang, agency.fare_url_)},
                     .agencyId_ =
                         std::string{
                             tt.strings_.try_get(agency.id_).value_or("?")},
@@ -578,8 +717,9 @@ api::Itinerary journey_to_response(
                         enter_stop.wheelchair_accessible(
                             nigiri::event_type::kDep)
                             ? api::WheelchairAccessibilityEnum::ACCESSIBLE
-                            : api::WheelchairAccessibilityEnum::
-                                  NOT_ACCESSIBLE});
+                            : api::WheelchairAccessibilityEnum::NOT_ACCESSIBLE,
+                    .ticketUrls_ = get_ticketing_urls(tt, src, tags, enter_stop,
+                                                      exit_stop)});
 
                 auto const attributes =
                     tt.attribute_combinations_[enter_stop
