@@ -24,6 +24,7 @@
 	import { generateTimes } from './generateTimes';
 
 	let {
+		advancedOptionsOpen = $bindable(),
 		one = $bindable(),
 		maxTravelTime = $bindable(),
 		serverConfig,
@@ -53,6 +54,7 @@
 		directProviderGroups = $bindable(),
 		hasDebug = false
 	}: {
+		advancedOptionsOpen: boolean;
 		one: Location;
 		maxTravelTime: number;
 		serverConfig: ServerConfig | undefined;
@@ -214,6 +216,7 @@
 			</Label>
 		</RadioGroup.Root>
 		<AdvancedOptions
+			bind:advancedOptionsOpen
 			bind:useRoutedTransfers
 			{serverConfig}
 			bind:wheelchair={
