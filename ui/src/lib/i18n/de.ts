@@ -180,6 +180,7 @@ const translations: Translations = {
 		route: 'Fahrplan: Linienfarben',
 		mode: 'Fahrplan: Verkehrsmittel'
 	},
+	resetToNorth: 'Reset to north',
 	showMyLocation: 'Meinen Standort anzeigen',
 	toggleHillshades: 'Schummerung ein/aus',
 	routes: (n: number) => {
@@ -191,6 +192,13 @@ const translations: Translations = {
 			default:
 				return `${n} Routen`;
 		}
+	},
+	pageTitle: {
+		default: 'MOTIS',
+		fromTo: (from, to) => `${from} nach ${to}`,
+		departuresAt: (stop) => `Abfahrten in ${stop}`,
+		arrivalsAt: (stop) => `Ankünfte in ${stop}`,
+		isochronesFrom: (place) => `Isochronen von ${place}`
 	}
 };
 

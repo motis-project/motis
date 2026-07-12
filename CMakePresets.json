@@ -116,6 +116,32 @@
       }
     },
     {
+      "name": "cuda",
+      "displayName": "Linux CUDA RelWithDebInfo",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/cuda",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "NIGIRI_CUDA": "ON",
+        "CMAKE_C_COMPILER": "gcc-13",
+        "CMAKE_CXX_COMPILER": "g++-13",
+        "CMAKE_CUDA_COMPILER": "/usr/local/cuda/bin/nvcc",
+        "CMAKE_CUDA_HOST_COMPILER": "g++-12"
+      }
+    },
+    {
+      "name": "cpu",
+      "displayName": "Linux CPU RelWithDebInfo (NIGIRI_CUDA=Off)",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/cpu",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "NIGIRI_CUDA": "OFF",
+        "CMAKE_C_COMPILER": "gcc-13",
+        "CMAKE_CXX_COMPILER": "g++-13"
+      }
+    },
+    {
       "name": "clang-tidy",
       "displayName": "Clang Tidy",
       "generator": "Ninja",
@@ -150,6 +176,14 @@
     {
       "name": "linux-arm64-release",
       "configurePreset": "linux-arm64-release"
+    },
+    {
+      "name": "cuda",
+      "configurePreset": "cuda"
+    },
+    {
+      "name": "cpu",
+      "configurePreset": "cpu"
     },
     {
       "name": "clang-tidy",

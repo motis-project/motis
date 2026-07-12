@@ -1,5 +1,6 @@
 #include "motis/journey_to_response.h"
 
+#include <chrono>
 #include <cmath>
 #include <iostream>
 #include <span>
@@ -63,6 +64,22 @@ api::ModeEnum to_mode(osr::search_profile const m) {
     case osr::search_profile::kFerry: return api::ModeEnum::DEBUG_FERRY_ROUTE;
   }
   std::unreachable();
+}
+
+api::ModeEnum to_mode(n::transport_mode_id_t const id) {
+  if (id == kOdmTransportModeId) {
+    return api::ModeEnum::ODM;
+  }
+  if (id == kRideSharingTransportModeId) {
+    return api::ModeEnum::RIDE_SHARING;
+  }
+  if (flex::mode_id::is_flex(id)) {
+    return api::ModeEnum::FLEX;
+  }
+  if (id >= kGbfsTransportModeIdOffset) {
+    return api::ModeEnum::RENTAL;
+  }
+  return to_mode(static_cast<osr::search_profile>(id));
 }
 
 void cleanup_intermodal(api::Itinerary& i) {
@@ -204,7 +221,8 @@ api::Itinerary journey_to_response(
     bool const ignore_dest_rental_return_constraints,
     n::lang_t const& lang,
     bool const set_itinerary_id_field,
-    alternatives_context const& alternatives) {
+    alternatives_context const& alternatives,
+    std::chrono::nanoseconds* fares_time) {
   auto const itinerary_start_time = j_in.legs_.front().dep_time_;
   auto const itinerary_end_time = j_in.legs_.back().arr_time_;
   auto j = j_in;
@@ -220,8 +238,15 @@ api::Itinerary journey_to_response(
   }
   utl::verify(!j_in.legs_.empty(), "journey without legs");
 
-  auto const fares =
-      with_fares ? std::optional{n::get_fares(tt, rtt, j)} : std::nullopt;
+  auto fares = std::optional<std::vector<n::fare_transfer>>{};
+  if (with_fares) {
+    auto const fares_start = std::chrono::steady_clock::now();
+    fares = n::get_fares(tt, rtt, j);
+    if (fares_time != nullptr) {
+      *fares_time += std::chrono::duration_cast<std::chrono::nanoseconds>(
+          std::chrono::steady_clock::now() - fares_start);
+    }
+  }
   auto const to_fare_media_type =
       [](n::fares::fare_media::fare_media_type const t) {
         using fare_media_type = n::fares::fare_media::fare_media_type;
@@ -289,7 +314,7 @@ api::Itinerary journey_to_response(
   };
 
   auto itinerary = api::Itinerary{
-      .duration_ = to_seconds(j.arrival_time() - j.departure_time()),
+      .duration_ = to_seconds(itinerary_end_time - itinerary_start_time),
       .startTime_ = itinerary_start_time,
       .endTime_ = itinerary_end_time,
       .transfers_ = std::max(

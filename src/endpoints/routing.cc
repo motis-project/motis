@@ -2,6 +2,9 @@
 
 #include <algorithm>
 #include <cmath>
+#include <mutex>
+#include <optional>
+#include <variant>
 
 #include "boost/thread/tss.hpp"
 
@@ -33,6 +36,9 @@
 #include "nigiri/routing/tb/query_engine.h"
 #include "nigiri/routing/tb/tb_data.h"
 #include "nigiri/routing/tb/tb_search.h"
+#if defined(NIGIRI_CUDA)
+#include "nigiri/routing/gpu/raptor.h"
+#endif
 
 #include "motis/config.h"
 #include "motis/constants.h"
@@ -674,9 +680,16 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
       query.maxItineraries_.value_or(0), query.numItineraries_);
 
   auto const rt = std::atomic_load(&rt_);
-  auto const rtt = query.realtimeMode_ == api::RealtimeModeEnum::OFF
-                       ? nullptr
-                       : rt->rtt_.get();
+  // `rtt` is used for routing/sorting/windowing:
+  auto const rtt =
+      (query.realtimeMode_ == api::RealtimeModeEnum::OFF ||
+       query.realtimeMode_ == api::RealtimeModeEnum::REALTIME_ANNOTATION_ONLY)
+          ? nullptr
+          : rt->rtt_.get();
+  // `annotation_rtt` is used to annotate the response with realtime data:
+  auto const annotation_rtt = query.realtimeMode_ == api::RealtimeModeEnum::OFF
+                                  ? nullptr
+                                  : rt->rtt_.get();
   auto const e = rt->e_.get();
   auto gbfs_rd = gbfs::gbfs_routing_data{w_, l_, gbfs_};
   if (blocked.get() == nullptr && is_osr_loaded()) {
@@ -817,7 +830,6 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                               query,
                               pre_transit_modes,
                               post_transit_modes,
-                              direct_modes,
                               from,
                               to,
                               from_p,
@@ -967,16 +979,60 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
     auto r = n::routing::routing_result{};
     auto algorithm = query.algorithm_;
     auto search_state = n::routing::search_state{};
+#if defined(NIGIRI_CUDA)
+    auto gpu_used = false;
+    auto const gpu_g_clasz =
+        q.allowed_claszes_ == n::routing::all_clasz_allowed();
+    auto const gpu_g_td = q.td_start_.empty() && q.td_dest_.empty();
+    auto const gpu_g_tts = q.transfer_time_settings_.default_;
+    auto const gpu_g_nobikecar =
+        !q.require_bike_transport_ && !q.require_car_transport_;
+    auto const gpu_g_novia = q.via_stops_.empty();
+    auto const gpu_g_profile =
+        q.prf_idx_ == 0U ||
+        (q.prf_idx_ == n::kFootProfile &&
+         (rtt == nullptr || (!rtt->has_td_footpaths_out_[q.prf_idx_].any() &&
+                             !rtt->has_td_footpaths_in_[q.prf_idx_].any())));
+    auto const gpu_supported = n::routing::gpu::gpu_supported(q, rtt);
+    auto const run_on_gpu = [&](bool const use_pong) -> bool {
+      try {
+        auto const lease = gpu_pool_->acquire();
+        auto const dir =
+            query.arriveBy_ ? n::direction::kBackward : n::direction::kForward;
+        auto const timeout = query.timeout_.has_value()
+                                 ? std::chrono::seconds{*query.timeout_}
+                                 : max_timeout;
+        r = use_pong ? n::routing::pong_search(*tt_, rtt, search_state,
+                                               lease.state_, q, dir, timeout)
+                     : n::routing::raptor_search(*tt_, rtt, search_state,
+                                                 lease.state_, q, dir, timeout);
+        return true;
+      } catch (std::exception const& e) {
+        std::cout << "GPU EXCEPTION: " << e.what() << "\n";
+        return false;
+      }
+    };
+#endif
+    // arriveBy |  extend_later | PONG applicable
+    // ---------+---------------+---------------------
+    // FALSE    |  FALSE        | FALSE    => rRAPTOR
+    // FALSE    |  TRUE         | TRUE     => PONG
+    // TRUE     |  FALSE        | TRUE     => PONG
+    // TRUE     |  TRUE         | FALSE    => rRAPTOR
+    auto const pong_applicable =
+        query.timetableView_ &&
+        query.arriveBy_ != start_time.extend_interval_later_;
     while (true) {
-      if (algorithm == api::algorithmEnum::PONG && query.timetableView_ &&
-          // arriveBy |  extend_later | PONG applicable
-          // ---------+---------------+---------------------
-          // FALSE    |  FALSE        | FALSE    => rRAPTOR
-          // FALSE    |  TRUE         | TRUE     => PONG
-          // TRUE     |  FALSE        | TRUE     => PONG
-          // TRUE     |  TRUE         | FALSE    => rRAPTOR
-          query.arriveBy_ != start_time.extend_interval_later_ &&
-          q.via_stops_.empty()) {
+#if defined(NIGIRI_CUDA)
+      if (algorithm != api::algorithmEnum::TB && gpu_supported &&
+          run_on_gpu(/*use_pong=*/pong_applicable &&
+                     algorithm == api::algorithmEnum::PONG)) {
+        gpu_used = true;
+        break;
+      }
+#endif
+
+      if (algorithm == api::algorithmEnum::PONG && pong_applicable) {
         try {
           auto raptor_state = n::routing::raptor_state{};
           r = n::routing::pong_search(
@@ -1010,6 +1066,21 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
       break;
     }
 
+    // record the algorithm that actually ran (after any fallbacks)
+    auto const algo_stats = stats_map_t{
+        {"algorithm", static_cast<std::uint64_t>(algorithm)},
+#if defined(NIGIRI_CUDA)
+        {"gpu_used", gpu_used},
+        {"gpu_supported", gpu_supported},
+        {"gpu_g_clasz", gpu_g_clasz},
+        {"gpu_g_td", gpu_g_td},
+        {"gpu_g_tts", gpu_g_tts},
+        {"gpu_g_nobikecar", gpu_g_nobikecar},
+        {"gpu_g_novia", gpu_g_novia},
+        {"gpu_g_profile", gpu_g_profile},
+#endif
+    };
+
     metrics_->routing_journeys_found_.Increment(
         static_cast<double>(r.journeys_->size()));
     metrics_->routing_execution_duration_seconds_total_.Observe(
@@ -1037,36 +1108,41 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
       q_for_alts.flip_dir();
     }
 
+    auto fares_time = std::chrono::nanoseconds{0};
+    auto itineraries = utl::to_vec(
+        journeys, [&, cache = street_routing_cache_t{}](auto&& j) mutable {
+          return journey_to_response(
+              w_, l_, pl_, *tt_, *tags_, fa_, e, annotation_rtt, matches_,
+              elevations_, shapes_, gbfs_rd, ae_, tz_, j, start, dest, cache,
+              blocked.get(),
+              query.requireCarTransport_ && query.useRoutedTransfers_,
+              osr_params, query.pedestrianProfile_, query.elevationCosts_,
+              query.joinInterlinedLegs_, detailed_transfers,
+              query.detailedLegs_, query.withFares_,
+              query.withScheduledSkippedStops_,
+              config_.timetable_.value().max_matching_distance_,
+              query.maxMatchingDistance_, api_version,
+              query.ignorePreTransitRentalReturnConstraints_,
+              query.ignorePostTransitRentalReturnConstraints_, query.language_,
+              true,
+              query.numLegAlternatives_ > 0
+                  ? alternatives_context{query_alternatives{
+                        q_for_alts,
+                        static_cast<std::size_t>(query.numLegAlternatives_)}}
+                  : alternatives_context{},
+              &fares_time);
+        });
+
     return {
         .debugOutput_ =
-            join(std::move(prepare_stats), std::move(query_stats),
-                 r.search_stats_.to_map(), std::move(r.algo_stats_)),
+            join(std::move(prepare_stats), std::move(query_stats), algo_stats,
+                 r.search_stats_.to_map(), std::move(r.algo_stats_),
+                 stats_map_t{{"fares",
+                              static_cast<std::uint64_t>(fares_time.count())}}),
         .from_ = bwd_compat_lvl_adjust(std::move(from_p), api_version),
         .to_ = bwd_compat_lvl_adjust(std::move(to_p), api_version),
         .direct_ = std::move(direct),
-        .itineraries_ = utl::to_vec(
-            journeys,
-            [&, cache = street_routing_cache_t{}](auto&& j) mutable {
-              return journey_to_response(
-                  w_, l_, pl_, *tt_, *tags_, fa_, e, rtt, matches_, elevations_,
-                  shapes_, gbfs_rd, ae_, tz_, j, start, dest, cache,
-                  blocked.get(),
-                  query.requireCarTransport_ && query.useRoutedTransfers_,
-                  osr_params, query.pedestrianProfile_, query.elevationCosts_,
-                  query.joinInterlinedLegs_, detailed_transfers,
-                  query.detailedLegs_, query.withFares_,
-                  query.withScheduledSkippedStops_,
-                  config_.timetable_.value().max_matching_distance_,
-                  query.maxMatchingDistance_, api_version,
-                  query.ignorePreTransitRentalReturnConstraints_,
-                  query.ignorePostTransitRentalReturnConstraints_,
-                  query.language_, true,
-                  query.numLegAlternatives_ > 0
-                      ? alternatives_context{query_alternatives{
-                            q_for_alts, static_cast<std::size_t>(
-                                            query.numLegAlternatives_)}}
-                      : alternatives_context{});
-            }),
+        .itineraries_ = std::move(itineraries),
         .previousPageCursor_ =
             fmt::format("EARLIER|{}", to_seconds(search_interval.from_)),
         .nextPageCursor_ =

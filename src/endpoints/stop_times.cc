@@ -359,7 +359,7 @@ std::vector<api::Place> other_stops_impl(n::rt::frun fr,
     return result;
   };
 
-  auto const orig_location = fr[fr.first_valid()].get_location_idx();
+  auto const orig_location = fr[0].get_location_idx();
   if (ev_type == nigiri::event_type::kDep) {
     ++fr.stop_range_.from_;
     fr.stop_range_.to_ = fr.size();
@@ -369,8 +369,7 @@ std::vector<api::Place> other_stops_impl(n::rt::frun fr,
           return orig_location == stop.get_location_idx();
         });
     auto result = utl::to_vec(fr.begin(), it, convert_stop);
-    utl::verify<net::bad_request_exception>(!result.empty(),
-                                            "Departure is last stop in trip");
+    utl::verify(!result.empty(), "Departure is last stop in trip");
     return result;
   } else {
     fr.stop_range_.from_ = 0;
@@ -381,8 +380,7 @@ std::vector<api::Place> other_stops_impl(n::rt::frun fr,
           return orig_location == stop.get_location_idx();
         });
     auto result = utl::to_vec(it.base(), fr.end(), convert_stop);
-    utl::verify<net::bad_request_exception>(!result.empty(),
-                                            "Arrival is first stop in trip");
+    utl::verify(!result.empty(), "Arrival is first stop in trip");
     return result;
   }
 }
@@ -506,9 +504,16 @@ api::stoptimes_response stop_times::operator()(
   auto const query = api::stoptimes_params{url.params()};
 
   auto const rt = std::atomic_load(&rt_);
-  auto const rtt = query.realtimeMode_ == api::RealtimeModeEnum::OFF
-                       ? nullptr
-                       : rt->rtt_.get();
+  // `rtt` is used to select, window and sort the runs:
+  auto const rtt =
+      (query.realtimeMode_ == api::RealtimeModeEnum::OFF ||
+       query.realtimeMode_ == api::RealtimeModeEnum::REALTIME_ANNOTATION_ONLY)
+          ? nullptr
+          : rt->rtt_.get();
+  // `annotation_rtt` is used to annotate each stop time with realtime data:
+  auto const annotation_rtt = query.realtimeMode_ == api::RealtimeModeEnum::OFF
+                                  ? nullptr
+                                  : rt->rtt_.get();
   auto const is_both = query.both_;
   auto const is_arr = query.arriveBy_;
   auto const base_ev_type = is_arr ? n::event_type::kArr : n::event_type::kDep;
@@ -536,7 +541,7 @@ api::stoptimes_response stop_times::operator()(
       .stopTimes_ = utl::to_vec(
           events,
           [&](n::rt::run const r) -> api::StopTime {
-            auto const fr = n::rt::frun{tt_, rtt, r};
+            auto const fr = n::rt::frun{tt_, annotation_rtt, r};
             auto const s = fr[0];
             auto const ev_type = is_both
                                      ? (fr.stop_range_.from_ == fr.size() - 1U
@@ -590,7 +595,7 @@ api::stoptimes_response stop_times::operator()(
             return {
                 .place_ = bwd_compat_lvl_adjust(std::move(place), api_version),
                 .mode_ = to_mode(s.get_clasz(ev_type), api_version),
-                .realTime_ = r.is_rt(),
+                .realTime_ = fr.is_rt(),
                 .headsign_ = std::string{s.direction(lang, ev_type)},
                 .tripFrom_ = bwd_compat_lvl_adjust(
                     to_place(&tt_, &tags_, w_, pl_, matches_, ae_, tz_, lang,

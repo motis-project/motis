@@ -34,8 +34,9 @@ net::reply tiles::operator()(net::route_request const& req, bool) const {
       auto const mem = pbf_sdf_fonts_res::get_resource(res_name);
       auto res = net::web_server::string_res_t{boost::beast::http::status::ok,
                                                req.version()};
-      res.body() =
-          std::string_view{reinterpret_cast<char const*>(mem.ptr_), mem.size_};
+      net::set_response_body(
+          res, req,
+          std::string_view{reinterpret_cast<char const*>(mem.ptr_), mem.size_});
       res.insert(boost::beast::http::field::content_type,
                  "application/x-protobuf");
       res.keep_alive(req.keep_alive());
