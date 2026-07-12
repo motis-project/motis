@@ -159,6 +159,65 @@ std::chrono::system_clock::time_point get_expiry(
   return now + def;
 }
 
+vector_map<vehicle_type_idx_t, gbfs_products_idx_t>
+build_vehicle_type_to_product(gbfs_provider const& provider) {
+  auto m = vector_map<vehicle_type_idx_t, gbfs_products_idx_t>{};
+  m.resize(provider.vehicle_types_.size(), gbfs_products_idx_t::invalid());
+  for (auto const& prod : provider.products_) {
+    for (auto const vt : prod.vehicle_types_) {
+      m[vt] = prod.idx_;
+    }
+  }
+  return m;
+}
+
+gbfs_products_idx_t product_of_vehicle(
+    gbfs_provider const& provider,
+    vector_map<vehicle_type_idx_t, gbfs_products_idx_t> const& vt_to_product,
+    vehicle_status const& vs) {
+  if (provider.vehicle_types_.empty()) {
+    return gbfs_products_idx_t{0};
+  }
+  if (vs.vehicle_type_idx_ == vehicle_type_idx_t::invalid() ||
+      to_idx(vs.vehicle_type_idx_) >= vt_to_product.size()) {
+    return gbfs_products_idx_t::invalid();
+  }
+  return vt_to_product[vs.vehicle_type_idx_];
+}
+
+bool same_partition(gbfs_provider const& a, gbfs_provider const& b) {
+  if (a.products_.size() != b.products_.size()) {
+    return false;
+  }
+  for (auto i = gbfs_products_idx_t{0}; i != a.products_.size(); ++i) {
+    if (a.products_[i].vehicle_types_ != b.products_[i].vehicle_types_ ||
+        a.products_[i].form_factor_ != b.products_[i].form_factor_) {
+      return false;
+    }
+  }
+  return true;
+}
+
+bool station_relevant_for_product(station const& st,
+                                  provider_products const& prod) {
+  auto is_renting =
+      st.status_.is_renting_ && st.status_.num_vehicles_available_ > 0;
+  if (is_renting && !st.status_.vehicle_types_available_.empty()) {
+    is_renting =
+        utl::any_of(st.status_.vehicle_types_available_, [&](auto const& vt) {
+          return vt.second != 0 && prod.includes_vehicle_type(vt.first);
+        });
+  }
+  auto is_returning = st.status_.is_returning_;
+  if (is_returning && !st.status_.vehicle_docks_available_.empty()) {
+    is_returning =
+        utl::any_of(st.status_.vehicle_docks_available_, [&](auto const& vt) {
+          return vt.second != 0 && prod.includes_vehicle_type(vt.first);
+        });
+  }
+  return is_renting || is_returning;
+}
+
 struct gbfs_update {
   gbfs_update(config::gbfs const& c,
               osr::ways const& w,
@@ -210,7 +269,8 @@ struct gbfs_update {
       // removed its entry is set to a nullptr. new providers may be added.
       d_->providers_.resize(prev_d_->providers_.size());
       d_->provider_by_id_ = prev_d_->provider_by_id_;
-      d_->provider_rtree_ = prev_d_->provider_rtree_;
+      d_->car_products_rtree_ = prev_d_->car_products_rtree_;
+      d_->bike_products_rtree_ = prev_d_->bike_products_rtree_;
       d_->provider_zone_rtree_ = prev_d_->provider_zone_rtree_;
       d_->cache_ = prev_d_->cache_;
 
@@ -534,6 +594,9 @@ struct gbfs_update {
     auto& file_infos = provider.file_infos_;
     auto data_changed = false;
     auto geofencing_updated = false;
+    auto stations_updated = false;
+    auto station_status_updated = false;
+    auto vehicle_status_updated = false;
 
     try {
       if (!discovery && needs_refresh(provider.file_infos_->urls_fi_)) {
@@ -597,7 +660,7 @@ struct gbfs_update {
         provider.temp_vehicle_types_ = prev_provider->temp_vehicle_types_;
       }
 
-      auto const stations_updated = co_await update(
+      stations_updated = co_await update(
           "station_information", file_infos->station_information_fi_,
           load_station_information, vehicle_types_updated);
       if ((!stations_updated && !vehicle_types_updated) &&
@@ -605,11 +668,11 @@ struct gbfs_update {
         provider.stations_ = prev_provider->stations_;
       }
 
-      auto const station_status_updated = co_await update(
+      station_status_updated = co_await update(
           "station_status", file_infos->station_status_fi_, load_station_status,
           stations_updated || vehicle_types_updated);
 
-      auto const vehicle_status_updated =
+      vehicle_status_updated =
           co_await update("vehicle_status", file_infos->vehicle_status_fi_,
                           load_vehicle_status, vehicle_types_updated)  // 3.x
           || co_await update("free_bike_status", file_infos->vehicle_status_fi_,
@@ -728,7 +791,9 @@ struct gbfs_update {
             provider.products_,
             [](auto const& prod) { return prod.has_vehicles_to_rent_; });
 
-        update_rtree(provider, prev_provider, geofencing_updated);
+        update_rtree(provider, prev_provider, stations_updated,
+                     station_status_updated, vehicle_status_updated,
+                     geofencing_updated);
 
         d_->cache_.try_add_or_update(provider.idx_, [&]() {
           return compute_provider_routing_data(w_, l_, provider);
@@ -841,63 +906,105 @@ struct gbfs_update {
     }
   }
 
+  point_rtree<gbfs_products_ref_idx_t>& product_rtree(
+      gbfs_provider const& provider, gbfs_products_idx_t const prod_idx) {
+    return provider.products_[prod_idx].form_factor_ ==
+                   vehicle_form_factor::kCar
+               ? d_->car_products_rtree_
+               : d_->bike_products_rtree_;
+  }
+
+  void mod_vehicle(
+      gbfs_provider const& provider,
+      vector_map<vehicle_type_idx_t, gbfs_products_idx_t> const& vt_to_product,
+      vehicle_status const& vs,
+      bool const add) {
+    if (!vs.station_id_.empty()) {
+      return;
+    }
+    auto const prod_idx = product_of_vehicle(provider, vt_to_product, vs);
+    if (prod_idx == gbfs_products_idx_t::invalid()) {
+      return;
+    }
+    auto const ref = to_ref_idx(gbfs_products_ref{provider.idx_, prod_idx});
+    if (add) {
+      product_rtree(provider, prod_idx).add(vs.pos_, ref);
+    } else {
+      product_rtree(provider, prod_idx).remove(vs.pos_, ref);
+    }
+  }
+
+  void mod_station(gbfs_provider const& provider,
+                   station const& st,
+                   bool const add) {
+    for (auto const& prod : provider.products_) {
+      if (!station_relevant_for_product(st, prod)) {
+        continue;
+      }
+      auto const ref = to_ref_idx(gbfs_products_ref{provider.idx_, prod.idx_});
+      if (add) {
+        product_rtree(provider, prod.idx_).add(st.info_.pos_, ref);
+      } else {
+        product_rtree(provider, prod.idx_).remove(st.info_.pos_, ref);
+      }
+    }
+  }
+
   void update_rtree(gbfs_provider const& provider,
                     gbfs_provider const* prev_provider,
+                    bool const stations_changed,
+                    bool const station_status_changed,
+                    bool const vehicle_status_changed,
                     bool const zones_changed) {
-    auto added_stations = 0U;
-    auto added_vehicles = 0U;
-    auto removed_stations = 0U;
-    auto removed_vehicles = 0U;
-    auto moved_stations = 0U;
-    auto moved_vehicles = 0U;
+    auto const partition_stable =
+        prev_provider != nullptr && same_partition(*prev_provider, provider);
 
-    if (prev_provider != nullptr) {
-      using ST = std::pair<std::string, station>;
-      utl::sorted_diff(
-          prev_provider->stations_, provider.stations_,
-          [](ST const& a, ST const& b) { return a.first < b.first; },
-          [](ST const& a, ST const& b) {
-            return a.second.info_.pos_ == b.second.info_.pos_;
-          },
-          utl::overloaded{
-              [&](utl::op const o, ST const& s) {
-                if (o == utl::op::kAdd) {
-                  d_->provider_rtree_.add(s.second.info_.pos_, provider.idx_);
-                  ++added_stations;
-                } else {  // del
-                  d_->provider_rtree_.remove(s.second.info_.pos_,
-                                             provider.idx_);
-                  ++removed_stations;
-                }
-              },
-              [&](ST const& a, ST const& b) {
-                d_->provider_rtree_.remove(a.second.info_.pos_, provider.idx_);
-                d_->provider_rtree_.add(b.second.info_.pos_, provider.idx_);
-                ++moved_stations;
-              }});
+    auto const vt_to_product = build_vehicle_type_to_product(provider);
+
+    if (!partition_stable) {
+      if (prev_provider != nullptr) {
+        auto const prev_vt_to_product =
+            build_vehicle_type_to_product(*prev_provider);
+        for (auto const& vs : prev_provider->vehicle_status_) {
+          mod_vehicle(*prev_provider, prev_vt_to_product, vs, false);
+        }
+      }
+      for (auto const& vs : provider.vehicle_status_) {
+        mod_vehicle(provider, vt_to_product, vs, true);
+      }
+    } else if (vehicle_status_changed) {
       utl::sorted_diff(
           prev_provider->vehicle_status_, provider.vehicle_status_,
           [](vehicle_status const& a, vehicle_status const& b) {
             return a.id_ < b.id_;
           },
           [](vehicle_status const& a, vehicle_status const& b) {
-            return a.pos_ == b.pos_;
+            return a.pos_ == b.pos_ &&
+                   a.station_id_.empty() == b.station_id_.empty() &&
+                   a.vehicle_type_idx_ == b.vehicle_type_idx_;
           },
           utl::overloaded{
               [&](utl::op const o, vehicle_status const& v) {
-                if (o == utl::op::kAdd) {
-                  d_->provider_rtree_.add(v.pos_, provider.idx_);
-                  ++added_vehicles;
-                } else {  // del
-                  d_->provider_rtree_.remove(v.pos_, provider.idx_);
-                  ++removed_vehicles;
-                }
+                mod_vehicle(provider, vt_to_product, v, o == utl::op::kAdd);
               },
               [&](vehicle_status const& a, vehicle_status const& b) {
-                d_->provider_rtree_.remove(a.pos_, provider.idx_);
-                d_->provider_rtree_.add(b.pos_, provider.idx_);
-                ++moved_vehicles;
+                mod_vehicle(provider, vt_to_product, a, false);
+                mod_vehicle(provider, vt_to_product, b, true);
               }});
+    }
+
+    if (!partition_stable || stations_changed || station_status_changed) {
+      if (prev_provider != nullptr) {
+        for (auto const& st : prev_provider->stations_ | std::views::values) {
+          mod_station(*prev_provider, st, false);
+        }
+      }
+      for (auto const& st : provider.stations_ | std::views::values) {
+        mod_station(provider, st, true);
+      }
+    }
+
+    if (prev_provider != nullptr) {
       if (zones_changed) {
         for (auto const& zone : prev_provider->geofencing_zones_.zones_) {
           d_->provider_zone_rtree_.remove(zone.bounding_box(), provider.idx_);
@@ -909,16 +1016,6 @@ struct gbfs_update {
         }
       }
     } else {
-      for (auto const& station : provider.stations_) {
-        d_->provider_rtree_.add(station.second.info_.pos_, provider.idx_);
-        ++added_stations;
-      }
-      for (auto const& vehicle : provider.vehicle_status_) {
-        if (vehicle.station_id_.empty()) {
-          d_->provider_rtree_.add(vehicle.pos_, provider.idx_);
-          ++added_vehicles;
-        }
-      }
       for (auto const& zone : provider.geofencing_zones_.zones_) {
         if (zone.allows_rental_operation()) {
           d_->provider_zone_rtree_.add(zone.bounding_box(), provider.idx_);

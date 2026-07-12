@@ -370,6 +370,23 @@ struct gbfs_products_ref {
   gbfs_products_idx_t products_{gbfs_products_idx_t::invalid()};
 };
 
+// Packed (provider, products)
+using gbfs_products_ref_idx_t =
+    cista::strong<std::uint32_t, struct gbfs_products_ref_idx_>;
+
+inline gbfs_products_ref_idx_t to_ref_idx(gbfs_products_ref const r) {
+  return gbfs_products_ref_idx_t{
+      (static_cast<std::uint32_t>(to_idx(r.provider_)) << 16U) |
+      static_cast<std::uint32_t>(to_idx(r.products_))};
+}
+
+inline gbfs_products_ref from_ref_idx(gbfs_products_ref_idx_t const v) {
+  auto const x = to_idx(v);
+  return gbfs_products_ref{
+      gbfs_provider_idx_t{static_cast<std::uint16_t>(x >> 16U)},
+      gbfs_products_idx_t{static_cast<std::uint16_t>(x & 0xFFFFU)}};
+}
+
 struct gbfs_provider {
   std::string id_;  // from config
   gbfs_provider_idx_t idx_{gbfs_provider_idx_t::invalid()};
@@ -472,7 +489,8 @@ struct gbfs_data {
 
   vector_map<gbfs_provider_idx_t, std::unique_ptr<gbfs_provider>> providers_{};
   hash_map<std::string, gbfs_provider_idx_t> provider_by_id_{};
-  point_rtree<gbfs_provider_idx_t> provider_rtree_{};
+  point_rtree<gbfs_products_ref_idx_t> car_products_rtree_{};
+  point_rtree<gbfs_products_ref_idx_t> bike_products_rtree_{};
   box_rtree<gbfs_provider_idx_t> provider_zone_rtree_{};
 
   hash_map<std::string, gbfs_group> groups_{};
