@@ -987,6 +987,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
       n::interval<n::unixtime_t> interval_;
       stats_map_t search_stats_;
       stats_map_t algo_stats_;
+      bool used_pong_{false};
     };
 
     auto const finalize = [&](n::routing::routing_result& r,
@@ -1013,6 +1014,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
       auto r = n::routing::routing_result{};
       auto algorithm = query.algorithm_;
       auto search_state = n::routing::search_state{};
+      auto used_pong = false;
       while (true) {
         if (algorithm == api::algorithmEnum::PONG && query.timetableView_ &&
             // arriveBy |  extend_later | PONG applicable
@@ -1032,6 +1034,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                 query.timeout_.has_value()
                     ? std::chrono::seconds{*query.timeout_}
                     : max_timeout);
+            used_pong = true;
           } catch (std::exception const& e) {
             std::cout << "PONG EXCEPTION: " << e.what() << "\n";
             algorithm = api::algorithmEnum::RAPTOR;
@@ -1059,51 +1062,57 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
         }
         break;
       }
-      return finalize(r, record_metrics);
-    };
-
-    auto const run_pinned_search =
-        [&](n::rt_timetable const* search_rtt,
-            n::interval<n::unixtime_t> const& itv) -> search_output {
-      auto pinned_q = q;
-      pinned_q.start_time_ = itv;
-      pinned_q.extend_interval_earlier_ = false;
-      pinned_q.extend_interval_later_ = false;
-      auto r = n::routing::routing_result{};
-      auto search_state = n::routing::search_state{};
-      auto raptor_state = n::routing::raptor_state{};
-      r = n::routing::raptor_search(
-          *tt_, search_rtt, search_state, raptor_state, std::move(pinned_q),
-          query.arriveBy_ ? n::direction::kBackward : n::direction::kForward,
-          query.timeout_.has_value() ? std::chrono::seconds{*query.timeout_}
-                                     : max_timeout);
-      return finalize(r, true);
+      auto out = finalize(r, record_metrics);
+      out.used_pong_ = used_pong;
+      return out;
     };
 
     auto const full = query.realtimeMode_ == api::RealtimeModeEnum::FULL;
     auto const interval_search =
         std::holds_alternative<n::interval<n::unixtime_t>>(q.start_time_);
 
-    auto scheduled = search_output{};
-    if (full && interval_search) {
-      scheduled = run_search(nullptr, false);
-    }
-
-    auto primary = (full && interval_search)
-                       ? run_pinned_search(rtt, scheduled.interval_)
-                       : run_search(rtt, true);
+    auto primary = run_search(rtt, true);
     auto journeys = std::move(primary.journeys_);
-    auto search_interval =
-        (full && interval_search) ? scheduled.interval_ : primary.interval_;
-
-    if (full && !interval_search) {
-      scheduled = run_search(nullptr, false);
-      search_interval = {
-          std::min(search_interval.from_, scheduled.interval_.from_),
-          std::max(search_interval.to_, scheduled.interval_.to_)};
-    }
+    auto search_interval = primary.interval_;
 
     if (full) {
+      auto scheduled = run_search(nullptr, false);
+
+      auto const effective_interval = [&](search_output const& r) {
+        auto itv = r.interval_;
+        auto const out_of_content =
+            (r.used_pong_ && r.journeys_.size() < q.min_connection_count_) ||
+            (r.journeys_.empty() && itv.size() == n::duration_t{0});
+        if (out_of_content) {
+          constexpr auto const kOutOfContentCoverage = n::duration_t{48 * 60};
+          if (q.extend_interval_later_) {
+            itv.to_ =
+                tt_->external_interval().clamp(itv.to_ + kOutOfContentCoverage);
+          }
+          if (q.extend_interval_earlier_) {
+            itv.from_ = tt_->external_interval().clamp(itv.from_ -
+                                                       kOutOfContentCoverage);
+          }
+        }
+        return itv;
+      };
+
+      auto const rt_itv = effective_interval(primary);
+      auto const sched_itv = effective_interval(scheduled);
+      search_interval = {std::max(rt_itv.from_, sched_itv.from_),
+                         std::min(rt_itv.to_, sched_itv.to_)};
+      if (search_interval.to_ < search_interval.from_) {
+        search_interval.to_ = search_interval.from_;
+      }
+
+      if (interval_search) {
+        auto const outside = [&](n::routing::journey const& j) {
+          return !search_interval.contains(j.start_time_);
+        };
+        utl::erase_if(journeys, outside);
+        utl::erase_if(scheduled.journeys_, outside);
+      }
+
       auto const n_rt = journeys.size();
       for (auto& sj : scheduled.journeys_) {
         auto const covered_by_rt =
