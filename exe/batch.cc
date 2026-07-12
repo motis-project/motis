@@ -130,13 +130,13 @@ int batch(int ac, char** av) {
   auto data_path = fs::path{"data"};
   auto queries_path = fs::path{"queries.txt"};
   auto responses_path = fs::path{"responses.txt"};
-  auto mt = true;
+  auto n_threads = std::thread::hardware_concurrency();
   auto rt = false;
 
   auto desc = po::options_description{"Options"};
   desc.add_options()  //
       ("help", "Prints this help message")  //
-      ("multithreading,mt", po::value(&mt)->default_value(mt))  //
+      ("n_threads,nt", po::value(&n_threads)->default_value(n_threads))  //
       ("queries,q", po::value(&queries_path)->default_value(queries_path),
        "queries file")  //
       ("responses,r", po::value(&responses_path)->default_value(responses_path),
@@ -164,6 +164,9 @@ int batch(int ac, char** av) {
 
   auto d = data{data_path, c};
   utl::verify(d.tt_, "timetable required");
+
+  fmt::println("hardware_concurrency = {}, using {} threads",
+               std::thread::hardware_concurrency(), n_threads);
 
   if (rt) {
     apply_canned_rt_update(c, d);
@@ -210,22 +213,17 @@ int batch(int ac, char** av) {
 
   auto const pt = utl::activate_progress_tracker("batch");
   pt->in_high(queries.size());
-  if (mt) {
-    utl::parallel_ordered_collect_threadlocal<state>(
-        queries.size(), compute_response,
-        [&](std::size_t const id,
-            std::pair<std::uint64_t, std::string> const& s) {
-          response_time.add(id, s.first);
-          out << s.second << "\n";
-        },
-        pt->update_fn());
-  } else {
-    auto s = state{};
-    for (auto i = 0U; i != queries.size(); ++i) {
-      compute_response(s, i);
-      pt->increment();
-    }
-  }
+  auto const start_batch = std::chrono::steady_clock::now();
+  utl::parallel_ordered_collect_threadlocal<state>(
+      queries.size(), compute_response,
+      [&](std::size_t const id,
+          std::pair<std::uint64_t, std::string> const& s) {
+        response_time.add(id, s.first);
+        out << s.second << "\n";
+      },
+      pt->update_fn(), utl::parallel_error_strategy::QUIT_EXEC, n_threads);
+  fmt::println("Processed {} queries in {:%T}", queries.size(),
+               std::chrono::steady_clock::now() - start_batch);
 
   auto cat = category{};
   cat.name_ = "response_time";
