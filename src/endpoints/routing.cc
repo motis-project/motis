@@ -2,6 +2,9 @@
 
 #include <algorithm>
 #include <cmath>
+#include <mutex>
+#include <optional>
+#include <variant>
 
 #include "boost/thread/tss.hpp"
 
@@ -33,6 +36,9 @@
 #include "nigiri/routing/tb/query_engine.h"
 #include "nigiri/routing/tb/tb_data.h"
 #include "nigiri/routing/tb/tb_search.h"
+#if defined(NIGIRI_CUDA)
+#include "nigiri/routing/gpu/raptor.h"
+#endif
 
 #include "motis/config.h"
 #include "motis/constants.h"
@@ -281,14 +287,33 @@ std::vector<n::routing::offset> get_offsets(
         return;
       }
 
-      auto const max_dist_to_departure =
+      auto const foot_radius =
+          get_max_distance(osr::search_profile::kFoot, osr_params, max);
+      auto const car_radius =
           dir == osr::direction::kForward
-              ? get_max_distance(osr::search_profile::kFoot, osr_params, max)
-              : max_dist;
+              ? foot_radius
+              : get_max_distance(osr::search_profile::kCarSharing, osr_params,
+                                 max);
+      auto const bike_radius =
+          dir == osr::direction::kForward
+              ? foot_radius
+              : get_max_distance(osr::search_profile::kBikeSharing, osr_params,
+                                 max);
+
+      auto candidate_products = hash_set<gbfs::gbfs_products_ref>{};
+      gbfs_rd.data_->car_products_rtree_.in_radius(
+          pos.pos_, car_radius, [&](auto const ref) {
+            candidate_products.insert(gbfs::from_ref_idx(ref));
+          });
+      gbfs_rd.data_->bike_products_rtree_.in_radius(
+          pos.pos_, bike_radius, [&](auto const ref) {
+            candidate_products.insert(gbfs::from_ref_idx(ref));
+          });
+
       auto providers = hash_set<gbfs_provider_idx_t>{};
-      gbfs_rd.data_->provider_rtree_.in_radius(
-          pos.pos_, max_dist_to_departure,
-          [&](auto const pi) { providers.insert(pi); });
+      for (auto const& cp : candidate_products) {
+        providers.insert(cp.provider_);
+      }
 
       for (auto const& pi : providers) {
         UTL_START_TIMING(provider_timer);
@@ -300,6 +325,10 @@ std::vector<n::routing::offset> get_offsets(
         }
         auto provider_rd = std::shared_ptr<gbfs::provider_routing_data>{};
         for (auto const& prod : provider->products_) {
+          if (!candidate_products.contains(
+                  gbfs::gbfs_products_ref{pi, prod.idx_})) {
+            continue;
+          }
           if ((prod.return_constraint_ ==
                    gbfs::return_constraint::kRoundtripStation &&
                !ignore_rental_return_constraints) ||
@@ -546,11 +575,20 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
       // the station/vehicle
       auto const max_dist =
           get_max_distance(osr::search_profile::kFoot, osr_params, max);
+      auto candidate_products = hash_set<gbfs::gbfs_products_ref>{};
+      gbfs_rd.data_->car_products_rtree_.in_radius(
+          {from.lat_, from.lon_}, max_dist, [&](auto const r) {
+            candidate_products.insert(gbfs::from_ref_idx(r));
+          });
+      gbfs_rd.data_->bike_products_rtree_.in_radius(
+          {from.lat_, from.lon_}, max_dist, [&](auto const r) {
+            candidate_products.insert(gbfs::from_ref_idx(r));
+          });
       auto providers = hash_set<gbfs_provider_idx_t>{};
+      for (auto const& cp : candidate_products) {
+        providers.insert(cp.provider_);
+      }
       auto routed = 0U;
-      gbfs_rd.data_->provider_rtree_.in_radius(
-          {from.lat_, from.lon_}, max_dist,
-          [&](auto const pi) { providers.insert(pi); });
       for (auto const& pi : providers) {
         auto const& provider = gbfs_rd.data_->providers_.at(pi);
         if (!include_rental_provider(rental_providers, rental_provider_groups,
@@ -558,6 +596,10 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
           continue;
         }
         for (auto const& prod : provider->products_) {
+          if (!candidate_products.contains(
+                  gbfs::gbfs_products_ref{pi, prod.idx_})) {
+            continue;
+          }
           if (!gbfs::products_match(prod, form_factors, propulsion_types)) {
             continue;
           }
@@ -973,15 +1015,60 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
     auto r = n::routing::routing_result{};
     auto algorithm = query.algorithm_;
     auto search_state = n::routing::search_state{};
+#if defined(NIGIRI_CUDA)
+    auto gpu_used = false;
+    auto const gpu_g_clasz =
+        q.allowed_claszes_ == n::routing::all_clasz_allowed();
+    auto const gpu_g_td = q.td_start_.empty() && q.td_dest_.empty();
+    auto const gpu_g_tts = q.transfer_time_settings_.default_;
+    auto const gpu_g_nobikecar =
+        !q.require_bike_transport_ && !q.require_car_transport_;
+    auto const gpu_g_novia = q.via_stops_.empty();
+    auto const gpu_g_profile =
+        q.prf_idx_ == 0U ||
+        (q.prf_idx_ == n::kFootProfile &&
+         (rtt == nullptr || (!rtt->has_td_footpaths_out_[q.prf_idx_].any() &&
+                             !rtt->has_td_footpaths_in_[q.prf_idx_].any())));
+    auto const gpu_supported = n::routing::gpu::gpu_supported(q, rtt);
+    auto const run_on_gpu = [&](bool const use_pong) -> bool {
+      try {
+        auto const lease = gpu_pool_->acquire();
+        auto const dir =
+            query.arriveBy_ ? n::direction::kBackward : n::direction::kForward;
+        auto const timeout = query.timeout_.has_value()
+                                 ? std::chrono::seconds{*query.timeout_}
+                                 : max_timeout;
+        r = use_pong ? n::routing::pong_search(*tt_, rtt, search_state,
+                                               lease.state_, q, dir, timeout)
+                     : n::routing::raptor_search(*tt_, rtt, search_state,
+                                                 lease.state_, q, dir, timeout);
+        return true;
+      } catch (std::exception const& e) {
+        std::cout << "GPU EXCEPTION: " << e.what() << "\n";
+        return false;
+      }
+    };
+#endif
+    // arriveBy |  extend_later | PONG applicable
+    // ---------+---------------+---------------------
+    // FALSE    |  FALSE        | FALSE    => rRAPTOR
+    // FALSE    |  TRUE         | TRUE     => PONG
+    // TRUE     |  FALSE        | TRUE     => PONG
+    // TRUE     |  TRUE         | FALSE    => rRAPTOR
+    auto const pong_applicable =
+        query.timetableView_ &&
+        query.arriveBy_ != start_time.extend_interval_later_;
     while (true) {
-      if (algorithm == api::algorithmEnum::PONG && query.timetableView_ &&
-          // arriveBy |  extend_later | PONG applicable
-          // ---------+---------------+---------------------
-          // FALSE    |  FALSE        | FALSE    => rRAPTOR
-          // FALSE    |  TRUE         | TRUE     => PONG
-          // TRUE     |  FALSE        | TRUE     => PONG
-          // TRUE     |  TRUE         | FALSE    => rRAPTOR
-          query.arriveBy_ != start_time.extend_interval_later_) {
+#if defined(NIGIRI_CUDA)
+      if (algorithm != api::algorithmEnum::TB && gpu_supported &&
+          run_on_gpu(/*use_pong=*/pong_applicable &&
+                     algorithm == api::algorithmEnum::PONG)) {
+        gpu_used = true;
+        break;
+      }
+#endif
+
+      if (algorithm == api::algorithmEnum::PONG && pong_applicable) {
         try {
           auto raptor_state = n::routing::raptor_state{};
           r = n::routing::pong_search(
@@ -1014,6 +1101,21 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
       }
       break;
     }
+
+    // record the algorithm that actually ran (after any fallbacks)
+    auto const algo_stats = stats_map_t{
+        {"algorithm", static_cast<std::uint64_t>(algorithm)},
+#if defined(NIGIRI_CUDA)
+        {"gpu_used", gpu_used},
+        {"gpu_supported", gpu_supported},
+        {"gpu_g_clasz", gpu_g_clasz},
+        {"gpu_g_td", gpu_g_td},
+        {"gpu_g_tts", gpu_g_tts},
+        {"gpu_g_nobikecar", gpu_g_nobikecar},
+        {"gpu_g_novia", gpu_g_novia},
+        {"gpu_g_profile", gpu_g_profile},
+#endif
+    };
 
     metrics_->routing_journeys_found_.Increment(
         static_cast<double>(r.journeys_->size()));
@@ -1068,10 +1170,11 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
         });
 
     return {
-        .debugOutput_ = join(std::move(prepare_stats), std::move(query_stats),
-                             r.search_stats_.to_map(), std::move(r.algo_stats_),
-                             stats_map_t{{"fares", static_cast<std::uint64_t>(
-                                                       fares_time.count())}}),
+        .debugOutput_ =
+            join(std::move(prepare_stats), std::move(query_stats), algo_stats,
+                 r.search_stats_.to_map(), std::move(r.algo_stats_),
+                 stats_map_t{{"fares",
+                              static_cast<std::uint64_t>(fares_time.count())}}),
         .from_ = bwd_compat_lvl_adjust(std::move(from_p), api_version),
         .to_ = bwd_compat_lvl_adjust(std::move(to_p), api_version),
         .direct_ = std::move(direct),

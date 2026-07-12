@@ -4,6 +4,11 @@
 
 #include "nigiri/rt/create_rt_timetable.h"
 
+#if defined(NIGIRI_CUDA)
+#include "nigiri/logging.h"
+#include "nigiri/routing/gpu/raptor.h"
+#endif
+
 #include "motis/constants.h"
 #include "motis/elevators/elevators.h"
 #include "motis/elevators/parse_fasta.h"
@@ -52,6 +57,16 @@ json::value update_elevator::operator()(json::value const& query) const {
   update_rtt_td_footpaths(
       w_, l_, pl_, tt_, loc_rtree_, new_e, matches_, tasks, rtt, new_rtt,
       std::chrono::seconds{c_.timetable_.value().max_footpath_length_ * 60});
+
+#if defined(NIGIRI_CUDA)
+  try {
+    new_rtt.gpu_rtt_.ptr_ = n::routing::gpu::make_gpu_rtt(tt_, new_rtt);
+  } catch (std::exception const& ex) {
+    n::log(n::log_lvl::error, "motis.elevators",
+           "GPU rt timetable upload failed: {}", ex.what());
+    new_rtt.gpu_rtt_.ptr_.reset();
+  }
+#endif
 
   auto new_rt = std::make_shared<rt>(
       std::make_unique<n::rt_timetable>(std::move(new_rtt)),

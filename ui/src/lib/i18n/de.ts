@@ -180,6 +180,7 @@ const translations: Translations = {
 		route: 'Fahrplan: Linienfarben',
 		mode: 'Fahrplan: Verkehrsmittel'
 	},
+	resetToNorth: 'Reset to north',
 	showMyLocation: 'Meinen Standort anzeigen',
 	toggleHillshades: 'Schummerung ein/aus',
 	routes: (n: number) => {

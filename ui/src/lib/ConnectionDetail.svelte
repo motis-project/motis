@@ -94,7 +94,9 @@
 		const transitStart = (entry: Leg[]) => entry.find(isTransitLeg)?.startTime ?? '';
 		const remainingAlts = (target.alternatives ?? []).filter((a) => a !== alt);
 		const newAlternatives = [...remainingAlts, oldEntry].sort((a, b) =>
-			transitStart(a).localeCompare(transitStart(b))
+			!hasPrevTransit && hasNextTransit
+				? transitStart(b).localeCompare(transitStart(a))
+				: transitStart(a).localeCompare(transitStart(b))
 		);
 
 		const newTransit: Leg = {

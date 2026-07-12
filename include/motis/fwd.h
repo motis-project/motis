@@ -38,6 +38,11 @@ namespace tb {
 struct tb_data;
 }
 
+namespace gpu {
+struct gpu_timetable;
+struct gpu_raptor_state;
+}  // namespace gpu
+
 }  // namespace routing
 
 }  // namespace nigiri

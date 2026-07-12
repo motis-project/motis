@@ -734,9 +734,17 @@ export type StepInstruction = {
      */
     toLevel: number;
     /**
-     * OpenStreetMap way index
+     * OpenStreetMap way ID
      */
     osmWay?: number;
+    /**
+     * OpenStreetMap node ID where this segment starts
+     */
+    fromOsmNode?: number;
+    /**
+     * OpenStreetMap node ID where this segment ends
+     */
+    toOsmNode?: number;
     polyline: EncodedPolyline;
     /**
      * The name of the street.
@@ -1990,7 +1998,7 @@ export type PlanData = {
         /**
          * algorithm to use
          */
-        algorithm?: 'RAPTOR' | 'PONG' | 'TB';
+        algorithm?: 'RAPTOR' | 'PONG' | 'GPU_PONG' | 'GPU_RAPTOR' | 'TB';
         /**
          * Optional. Default is `false`.
          *
