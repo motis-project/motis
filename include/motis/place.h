@@ -66,7 +66,8 @@ api::Place to_place(nigiri::timetable const*,
                     nigiri::lang_t const&,
                     nigiri::rt::run_stop const&,
                     place_t start = osr::location{},
-                    place_t dest = osr::location{});
+                    place_t dest = osr::location{},
+                    nigiri::event_type ev_type = nigiri::event_type::kDep);
 
 osr::location get_location(api::Place const&);
 
