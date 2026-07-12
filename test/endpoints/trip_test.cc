@@ -180,8 +180,9 @@ TEST(motis, trip_ticketing) {
       "https://motis-project.de/"
       "ticket?service_date=%5B%2220190501%22%5D&ticketing_trip_id=%5B%22T1%22%"
       "5D&from_ticketing_stop_time_id=%5B%221%22%5D&to_ticketing_stop_time_id=%"
-      "5B%22ticket-stop-3%22%5D&boarding_time=%5B%222019-05-01T08:00:00Z%22%5D&"
-      "arrival_time=%5B%222019-05-01T09:00:00Z%22%5D",
+      "5B%22ticket-stop-3%22%5D&boarding_time=%5B%222019-05-01T08:00:00%2B00:"
+      "00%"
+      "22%5D&arrival_time=%5B%222019-05-01T09:00:00%2B00:00%22%5D",
       leg.ticketUrls_->web_);
 
   // Agency booking link
@@ -194,7 +195,7 @@ TEST(motis, trip_ticketing) {
       "example.com?service_date=%5B%2220190501%22%5D&ticketing_trip_id=%5B%"
       "22T2%22%5D&from_ticketing_stop_time_id=%5B%221%22%5D&to_ticketing_stop_"
       "time_id=%5B%22ticket-stop-3%22%5D&boarding_time=%5B%222019-05-01T10:00:"
-      "00Z%22%5D&arrival_time=%5B%222019-05-01T11:00:00Z%22%5D",
+      "00%2B00:00%22%5D&arrival_time=%5B%222019-05-01T11:00:00%2B00:00%22%5D",
       leg2.ticketUrls_->web_);
 }
 
