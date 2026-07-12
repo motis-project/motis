@@ -22,17 +22,13 @@ struct journey;
 
 namespace motis {
 
-class ItineraryId;  // generated protobuf message (itinerary_id.pb.h)
+class ItineraryId;  // protobuf
 
 namespace ep {
 struct routing;
 struct stop_times;
 }  // namespace ep
 
-// Decodes a base64 itinerary-id into its protobuf form, normalizing it for
-// backward compatibility (e.g. joining block / interlined transit legs that
-// older releases encoded as multiple adjacent legs). Throws
-// net::bad_request_exception on undecodable input.
 ItineraryId decode_itinerary_id(std::string const& base64_id);
 
 struct first_last_mile_options {
