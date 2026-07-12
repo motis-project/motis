@@ -453,9 +453,11 @@ bool rtree_contains(gbfs_data const& gbfs,
                     gbfs_provider_idx_t const idx,
                     double const radius = 5.0) {
   auto found = false;
-  gbfs.provider_rtree_.in_radius(pos, radius, [&](gbfs_provider_idx_t const x) {
-    found = found || x == idx;
-  });
+  auto const check = [&](gbfs_products_ref_idx_t const r) {
+    found = found || from_ref_idx(r).provider_ == idx;
+  };
+  gbfs.car_products_rtree_.in_radius(pos, radius, check);
+  gbfs.bike_products_rtree_.in_radius(pos, radius, check);
   return found;
 }
 

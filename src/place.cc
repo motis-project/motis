@@ -205,8 +205,6 @@ api::Place to_place(n::timetable const* tt,
       s.stop_idx_ == 0 ? n::event_type::kDep : n::event_type::kArr);
   auto p = to_place(tt, tags, w, pl, matches, ae, tz_map, lang, tt_location{s},
                     start, dest, "", fallback_tz);
-  // Real-time track override (e.g. from a SIRI update) takes precedence over
-  // the scheduled platform code.
   p.track_ = s.get_track_override(ev_type)
                  .transform([](std::string_view t) { return std::string{t}; })
                  .or_else([&]() { return p.track_; });

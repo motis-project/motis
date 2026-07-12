@@ -2351,3 +2351,509 @@ TEST(motis, itinerary_id_refresh_leg_alternatives_intermediate_leg) {
               refresh_transit[i]->alternatives_);
   }
 }
+
+// Cross-timezone journey with first/last mile WALK access. The first transit
+// runs in Europe/Berlin, the second in Europe/Vienna. The first-mile START and
+// the last-mile END are bare coordinates and carry no timezone of their own, so
+// they must inherit from the *nearest* transit stop: START -> Europe/Berlin,
+// END -> Europe/Vienna. Regression test for the refresh timezone propagation
+// that previously applied the *first* timezone found to every gap, leaking the
+// origin timezone onto the destination's last mile.
+constexpr auto kCrossTzGtfs = R"(
+# agency.txt
+agency_id,agency_name,agency_url,agency_timezone
+DB,Deutsche Bahn,https://deutschebahn.com,Europe/Berlin
+OEBB,OEBB,https://oebb.at,Europe/Vienna
+
+# stops.txt
+stop_id,stop_name,stop_lat,stop_lon,location_type,parent_station
+A,A,49.87336,8.62926,0,
+B,B,49.99359,8.65677,0,
+C,C,50.10739,8.66333,0,
+
+# routes.txt
+route_id,agency_id,route_short_name,route_long_name,route_desc,route_type
+DE_R,DB,DE,,,3
+AT_R,OEBB,AT,,,3
+
+# trips.txt
+route_id,service_id,trip_id,trip_headsign
+DE_R,S1,DE_TRIP,
+AT_R,S1,AT_TRIP,
+
+# stop_times.txt
+trip_id,arrival_time,departure_time,stop_id,stop_sequence
+DE_TRIP,09:00:00,09:00:00,A,0
+DE_TRIP,09:30:00,09:30:00,B,1
+AT_TRIP,09:40:00,09:40:00,B,0
+AT_TRIP,10:10:00,10:10:00,C,1
+
+# calendar_dates.txt
+service_id,date,exception_type
+S1,20190501,1
+)";
+
+TEST(motis, itinerary_id_refresh_timezone_propagation) {
+  auto ec = std::error_code{};
+  auto const path = fs::path{"test/data/itinerary_id"} / "cross_tz";
+  fs::remove_all(path, ec);
+
+  auto const cfg = config{
+      .osm_ = {"test/resources/test_case.osm.pbf"},
+      .timetable_ =
+          config::timetable{
+              .first_day_ = "2019-05-01",
+              .num_days_ = 2,
+              .datasets_ = {{"test", {.path_ = std::string{kCrossTzGtfs}}}},
+          },
+      .street_routing_ = true,
+  };
+  import(cfg, path);
+  auto d = data{path, cfg};
+
+  auto const routing = utl::init_from<ep::routing>(d).value();
+  auto const plan = routing(
+      "?fromPlace=49.87298,8.63006&toPlace=50.10720,8.66320"
+      "&time=2019-05-01T06:00Z&searchWindow=7200&detailedLegs=true");
+  ASSERT_FALSE(plan.itineraries_.empty());
+  auto const& plan_itin = plan.itineraries_.front();
+  ASSERT_GE(plan_itin.legs_.size(), 2U);
+
+  auto query = api::refreshItinerary_params{};
+  query.itineraryId_ = plan_itin.id_;
+  auto const refresh = utl::init_from<ep::refresh_itinerary>(d).value();
+  auto const refreshed = refresh(query.to_url("?"));
+  ASSERT_GE(refreshed.legs_.size(), 2U);
+
+  // START (first mile, before the Berlin transit) -> Europe/Berlin.
+  EXPECT_EQ(std::optional{std::string{"Europe/Berlin"}},
+            refreshed.legs_.front().from_.tz_);
+  // END (last mile, after the Vienna transit) -> Europe/Vienna, NOT the
+  // origin's Europe/Berlin.
+  EXPECT_EQ(std::optional{std::string{"Europe/Vienna"}},
+            refreshed.legs_.back().to_.tz_);
+
+  // The refresh timezones match what the plan endpoint produced.
+  EXPECT_EQ(plan_itin.legs_.front().from_.tz_,
+            refreshed.legs_.front().from_.tz_);
+  EXPECT_EQ(plan_itin.legs_.back().to_.tz_, refreshed.legs_.back().to_.tz_);
+}
+
+// Single transit leg (no previous, no next transit) reached via a first-mile
+// WALK. A parallel route departs at the SAME time as the chosen trip. The plan
+// offers it as an alternative. The refresh endpoint must too - which requires
+// anchoring the alternatives search at the journey's ORIGIN departure (incl.
+// first-mile access time), not at the transit leg's departure. Anchoring at the
+// transit departure starts the forward search one access-walk too late, so it
+// misses the same-time `MAIN_ALT` and only finds the later `LATE`.
+constexpr auto kFirstMileAnchorGtfs = R"(
+# agency.txt
+agency_id,agency_name,agency_url,agency_timezone
+DB,Deutsche Bahn,https://deutschebahn.com,Europe/Berlin
+
+# stops.txt
+stop_id,stop_name,stop_lat,stop_lon,location_type,parent_station
+A,A,49.87336,8.62926,0,
+Z,Z,50.10739,8.66333,0,
+
+# routes.txt
+route_id,agency_id,route_short_name,route_long_name,route_desc,route_type
+MAIN_R,DB,MAIN,,,3
+MAIN_ALT_R,DB,MALT,,,3
+LATE_R,DB,LATE,,,3
+
+# trips.txt
+route_id,service_id,trip_id,trip_headsign
+MAIN_R,S1,MAIN,
+MAIN_ALT_R,S1,MAIN_ALT,
+LATE_R,S1,LATE,
+
+# stop_times.txt
+trip_id,arrival_time,departure_time,stop_id,stop_sequence
+MAIN,09:30:00,09:30:00,A,0
+MAIN,10:00:00,10:00:00,Z,1
+MAIN_ALT,09:30:00,09:30:00,A,0
+MAIN_ALT,10:00:00,10:00:00,Z,1
+LATE,09:45:00,09:45:00,A,0
+LATE,10:15:00,10:15:00,Z,1
+
+# calendar_dates.txt
+service_id,date,exception_type
+S1,20190501,1
+)";
+
+TEST(motis, itinerary_id_refresh_leg_alternatives_first_mile_anchor) {
+  auto ec = std::error_code{};
+  auto const path = fs::path{"test/data/itinerary_id"} / "first_mile_anchor";
+  fs::remove_all(path, ec);
+
+  auto const cfg = config{
+      .osm_ = {"test/resources/test_case.osm.pbf"},
+      .timetable_ =
+          config::timetable{
+              .first_day_ = "2019-05-01",
+              .num_days_ = 2,
+              .datasets_ = {{"test",
+                             {.path_ = std::string{kFirstMileAnchorGtfs}}}},
+          },
+      .street_routing_ = true,
+  };
+  import(cfg, path);
+  auto d = data{path, cfg};
+
+  auto const routing = utl::init_from<ep::routing>(d).value();
+  auto const plan = routing(
+      "?fromPlace=49.87298,8.63006&toPlace=50.10720,8.66320"
+      "&time=2019-05-01T07:00Z&searchWindow=7200&detailedLegs=true"
+      "&numLegAlternatives=5");
+  ASSERT_FALSE(plan.itineraries_.empty());
+  auto const& plan_itin = plan.itineraries_.front();
+  auto const& plan_leg = first_transit_leg(plan_itin);
+  ASSERT_TRUE(plan_leg.alternatives_.has_value());
+
+  // True if any alternative has a transit leg departing at the same time as the
+  // chosen leg - i.e. an alternative reachable as early as the original
+  // journey.
+  auto const has_same_time_alt = [](api::Leg const& leg) {
+    return leg.alternatives_.has_value() &&
+           utl::any_of(*leg.alternatives_, [&](auto const& alt) {
+             return utl::any_of(alt, [&](api::Leg const& al) {
+               return al.tripId_.has_value() && !al.tripId_->empty() &&
+                      *al.startTime_ == *leg.startTime_;
+             });
+           });
+  };
+
+  // The plan offers the same-departure-time parallel trip as an alternative.
+  EXPECT_TRUE(has_same_time_alt(plan_leg));
+
+  auto query = api::refreshItinerary_params{};
+  query.itineraryId_ = plan_itin.id_;
+  query.numLegAlternatives_ = 5;
+  auto const refresh = utl::init_from<ep::refresh_itinerary>(d).value();
+  auto const refreshed = refresh(query.to_url("?"));
+  auto const& refresh_leg = first_transit_leg(refreshed);
+
+  // The refresh must reproduce the same-time alternative; anchoring at the
+  // transit departure (instead of the origin departure) starts the search one
+  // access-walk too late and drops it.
+  EXPECT_TRUE(has_same_time_alt(refresh_leg))
+      << "refresh must include the same-time alternative reachable as early as "
+         "the original journey";
+  EXPECT_EQ(alt_transit_trip_ids(plan_leg), alt_transit_trip_ids(refresh_leg));
+}
+
+// Transit + CAR last mile over a ONE-WAY street network (test/resources/
+// oneway_car.osm): the alighting stop S reaches the destination D via a short
+// one-way street (S -> D), while D -> S requires a long detour. The
+// post-transit (egress) CAR offset must therefore be routed *backward from the
+// destination* (giving the short S -> D duration), exactly as the plan endpoint
+// does. Routing it forward (D -> S) yields the long detour, so the refreshed
+// last-mile CAR leg would diverge from the plan's. Regression test for the
+// flipped offset direction - this DOES fail when the direction is reverted.
+constexpr auto kCarEgressGtfs = R"(
+# agency.txt
+agency_id,agency_name,agency_url,agency_timezone
+DB,Deutsche Bahn,https://deutschebahn.com,Europe/Berlin
+
+# stops.txt
+stop_id,stop_name,stop_lat,stop_lon,location_type,parent_station
+A,A,49.90000,8.00000,0,
+S,S,50.00000,8.00000,0,
+
+# routes.txt
+route_id,agency_id,route_short_name,route_long_name,route_desc,route_type
+MAIN_R,DB,MAIN,,,106
+
+# trips.txt
+route_id,service_id,trip_id,trip_headsign,cars_allowed
+MAIN_R,S1,MAIN,,1
+
+# stop_times.txt
+trip_id,arrival_time,departure_time,stop_id,stop_sequence
+MAIN,09:30:00,09:30:00,A,0
+MAIN,09:40:00,09:40:00,S,1
+
+# calendar_dates.txt
+service_id,date,exception_type
+S1,20190501,1
+)";
+
+TEST(motis, itinerary_id_refresh_car_egress_direction) {
+  auto ec = std::error_code{};
+  auto const path = fs::path{"test/data/itinerary_id"} / "car_egress_dir";
+  fs::remove_all(path, ec);
+
+  auto const cfg = config{
+      .osm_ = {"test/resources/oneway_car.osm"},
+      .timetable_ =
+          config::timetable{
+              .first_day_ = "2019-05-01",
+              .num_days_ = 2,
+              .datasets_ = {{"test", {.path_ = std::string{kCarEgressGtfs}}}},
+          },
+      .street_routing_ = true,
+  };
+  import(cfg, path);
+  auto d = data{path, cfg};
+
+  auto const routing = utl::init_from<ep::routing>(d).value();
+  // Board at stop A, ride to S, then CAR to the destination D (50.0030,8.0).
+  // A is on a disconnected street stub, so transit is the only way into the
+  // egress area (no competing straight-line walk).
+  auto const plan = routing(
+      "?fromPlace=test_A&toPlace=50.00300,8.00000"
+      "&time=2019-05-01T07:00Z&searchWindow=7200&detailedLegs=true"
+      "&postTransitModes=CAR&maxPostTransitTime=3600");
+  ASSERT_FALSE(plan.itineraries_.empty());
+  auto const& plan_itin = plan.itineraries_.front();
+  ASSERT_EQ(api::ModeEnum::CAR, plan_itin.legs_.back().mode_)
+      << "expected a CAR last mile";
+
+  auto query = api::refreshItinerary_params{};
+  query.itineraryId_ = plan_itin.id_;
+  query.postTransitModes_ = {api::ModeEnum::CAR};
+  query.maxPostTransitTime_ = 3600;
+  auto const refresh = utl::init_from<ep::refresh_itinerary>(d).value();
+  auto const refreshed = refresh(query.to_url("?"));
+  ASSERT_EQ(api::ModeEnum::CAR, refreshed.legs_.back().mode_);
+
+  // The refreshed CAR egress (routed backward from the destination, i.e. the
+  // short one-way S -> D) matches the plan's. The flipped (forward) direction
+  // would pick the long D -> S detour and give a different duration.
+  EXPECT_EQ(plan_itin.legs_.back().duration_, refreshed.legs_.back().duration_);
+}
+
+// First-mile access via the DA Hbf Gleis 9/10 elevator (wheelchair), single
+// transit leg, with a parallel same-time alternative trip. The id is generated
+// while the elevator is ACTIVE (short first-mile access). At refresh the
+// elevator has a *temporary* outage covering the boarding window, which
+// inflates the first-mile access ("leave before the outage, wait on the
+// platform") rather than cancelling it. The alternatives search must anchor at
+// the journey's origin departure computed from this *current* (inflated) access
+// - looked up via td-offsets - not from the short access span encoded in the
+// id. Otherwise the search starts too late and drops the same-time `ICE_ALT`.
+constexpr auto const kTdAnchorGtfs = R"(
+# agency.txt
+agency_id,agency_name,agency_url,agency_timezone
+DB,Deutsche Bahn,https://deutschebahn.com,Europe/Berlin
+
+# stops.txt
+stop_id,stop_name,stop_lat,stop_lon,location_type,parent_station,platform_code,wheelchair_boarding
+DA,DA Hbf,49.87260,8.63085,1,,,1
+DA_10,DA Hbf,49.87336,8.62926,0,DA,10,1
+FFM,FFM Hbf,50.10701,8.66341,1,,,1
+FFM_10,FFM Hbf,50.10593,8.66118,0,FFM,10,1
+
+# routes.txt
+route_id,agency_id,route_short_name,route_long_name,route_desc,route_type
+ICE_R,DB,ICE,,,101
+ICE_ALT_R,DB,ICEA,,,101
+ICE_LATE_R,DB,ICEL,,,101
+
+# trips.txt
+route_id,service_id,trip_id,trip_headsign,wheelchair_accessible
+ICE_R,S1,ICE,,1
+ICE_ALT_R,S1,ICE_ALT,,1
+ICE_LATE_R,S1,ICE_LATE,,1
+
+# stop_times.txt
+trip_id,arrival_time,departure_time,stop_id,stop_sequence
+ICE,00:35:00,00:35:00,DA_10,0
+ICE,00:45:00,00:45:00,FFM_10,1
+ICE_ALT,00:35:00,00:35:00,DA_10,0
+ICE_ALT,00:45:00,00:45:00,FFM_10,1
+ICE_LATE,00:55:00,00:55:00,DA_10,0
+ICE_LATE,01:05:00,01:05:00,FFM_10,1
+
+# calendar_dates.txt
+service_id,date,exception_type
+S1,20190501,1
+)";
+
+constexpr auto const kElevatorsDaShortOutage = R"__([
+  {"description":"FFM HBF Gleis 101/102","equipmentnumber":1010,
+   "geocoordX":8.6628995,"geocoordY":50.1072933,"state":"ACTIVE",
+   "type":"ELEVATOR"},
+  {"description":"DA HBF Gleis 9/10","equipmentnumber":910,
+   "geocoordX":8.6293117,"geocoordY":49.8725263,"state":"INACTIVE",
+   "type":"ELEVATOR",
+   "outOfService":[["2019-04-30T22:20:00Z","2019-04-30T22:50:00Z"]]}
+])__";
+
+TEST(motis, itinerary_id_refresh_first_mile_td_anchor) {
+  auto ec = std::error_code{};
+  auto const path = fs::path{"test/data/itinerary_id"} / "first_mile_td_anchor";
+  fs::remove_all(path, ec);
+
+  auto const cfg = config{
+      .osm_ = {"test/resources/test_case.osm.pbf"},
+      .timetable_ =
+          config::timetable{
+              .first_day_ = "2019-05-01",
+              .num_days_ = 2,
+              .use_osm_stop_coordinates_ = true,
+              .extend_missing_footpaths_ = false,
+              .datasets_ = {{"test", {.path_ = std::string{kTdAnchorGtfs}}}}},
+      .street_routing_ = true,
+      .osr_footpath_ = true};
+  import(cfg, path);
+  auto d = data{path, cfg};
+  d.init_rtt(date::sys_days{date::year{2019} / date::May / 1});
+  d.rt_->e_ = std::make_unique<elevators>(
+      *d.w_, nullptr, *d.elevator_nodes_,
+      parse_fasta(std::string_view{kElevatorsActive}));
+
+  auto const routing = utl::init_from<ep::routing>(d).value();
+  // While the elevator is active the first-mile access is a short wheelchair
+  // walk; the id therefore encodes a short access span.
+  auto const plan = routing(
+      "?fromPlace=49.87420,8.62940&toPlace=50.10593,8.66118"
+      "&time=2019-04-30T22:00Z&searchWindow=7200&timetableView=true"
+      "&pedestrianProfile=WHEELCHAIR&useRoutedTransfers=true"
+      "&maxMatchingDistance=8&detailedLegs=true&numLegAlternatives=5");
+  ASSERT_FALSE(plan.itineraries_.empty());
+  auto const& original = plan.itineraries_.front();
+  ASSERT_EQ(api::ModeEnum::WALK, original.legs_.front().mode_)
+      << "expected a wheelchair first-mile walk";
+
+  // Take the DA Hbf Gleis 9/10 elevator out only for [22:20, 22:50) UTC: it
+  // covers the 22:35 boarding but reopens later, so the first-mile access is
+  // inflated ("leave before the outage and wait on the platform"), not
+  // cancelled.
+  auto new_rtt = std::make_unique<nigiri::rt_timetable>(
+      nigiri::rt_timetable{*d.rt_->rtt_});
+  d.rt_->e_ = update_elevators(d.config_, d, kElevatorsDaShortOutage, *new_rtt);
+  d.rt_->rtt_ = std::move(new_rtt);
+
+  auto query = api::refreshItinerary_params{};
+  query.itineraryId_ = original.id_;
+  query.pedestrianProfile_ = api::PedestrianProfileEnum::WHEELCHAIR;
+  query.useRoutedTransfers_ = true;
+  query.maxMatchingDistance_ = 8.0;
+  query.numLegAlternatives_ = 5;
+  auto const refresh = utl::init_from<ep::refresh_itinerary>(d).value();
+  auto const refreshed = refresh(query.to_url("?"));
+  auto const& refresh_leg = first_transit_leg(refreshed);
+
+  // Sanity: the temporary outage inflated the first-mile access well beyond the
+  // ~2 min active-elevator walk.
+  EXPECT_GT(refreshed.legs_.front().duration_, 600)
+      << "DA elevator outage should inflate the first-mile access";
+
+  // The same-time alternative is only found when the alternatives search
+  // anchors at the journey's CURRENT (inflated) origin departure - looked up
+  // via the current td-offsets - rather than the short access span encoded in
+  // the id. Anchoring at the id's span starts the search too late and drops it.
+  auto const has_same_time_alt = [](api::Leg const& leg) {
+    return leg.alternatives_.has_value() &&
+           utl::any_of(*leg.alternatives_, [&](auto const& alt) {
+             return utl::any_of(alt, [&](api::Leg const& al) {
+               return al.tripId_.has_value() && !al.tripId_->empty() &&
+                      *al.startTime_ == *leg.startTime_;
+             });
+           });
+  };
+  EXPECT_TRUE(has_same_time_alt(refresh_leg))
+      << "refresh must include the same-time alternative reachable as early as "
+         "the original journey given the inflated first-mile access";
+}
+
+// MOTIS <= 2.10.x encoded block / interlined transit continuations (the vehicle
+// continues as a new trip at a shared stop) as two ADJACENT transit legs, with
+// no transfer leg between them. The current reconstruction requires strictly
+// alternating offset / transit / transfer legs, so those ids were rejected with
+// HTTP 400 ("two consecutive transit legs"). `decode_itinerary_id` now joins
+// such interlined legs into a single transit leg (as the current format does),
+// keeping old ids decodable. Regression test for a real 2.10.2 id: a 20-leg
+// FI -> SE -> NO -> DE -> FR -> ES journey whose two `1A` bus legs (legs 3 & 4)
+// share stop `fi-fintraffic_313413` and vehicle block `1001080207`.
+constexpr auto const kLegacyBlockItineraryId =
+    R"(ClUhWGw40VMVTkApEnHO44vxOEAyFGZpLWZpbnRyYWZmaWNfMzU3MzcyOTeTb7a5FU5AQfW)"
+    R"(fNT/+7jhASKSQltEGUPSVltEGWgRXQUxLcQAAAAAAAAAACqoBCgNPQjESLjIwMjYwNjA3Xz)"
+    R"(E4OjE1X2ZpLWZpbnRyYWZmaWNfMTI1NzVfMjQ1MzU1LjQ4MzIaFGZpLWZpbnRyYWZmaWNfM)"
+    R"(zU3MzcyITeTb7a5FU5AKfWfNT/+7jhAMhRmaS1maW50cmFmZmljXzMxMjgwNjmfyJOkazpO)"
+    R"(QEE9sOO/QEQ2QEj0lZbRBlDYzZbRBloDQlVTYAFpAAAAAAAAAABxAAAAAAAAAAAKdBoUZmk)"
+    R"(tZmludHJhZmZpY18zMTI4MDYhn8iTpGs6TkApPbDjv0BENkAyFGZpLWZpbnRyYWZmaWNfMz)"
+    R"(EyNTE1OW40gLdAOk5AQWBY/nxbRDZASMDQltEGULDSltEGWgRXQUxLaQAAAAAAAAAAcQAAA)"
+    R"(AAAAAAACrIBCgIxQRI3MjAyNjA2MDdfMjA6MDdfZmktZmludHJhZmZpY18xMDAwM18wMDAx)"
+    R"(MzA3M19fMTAwMTA4MDIwNxoUZmktZmludHJhZmZpY18zMTI1MTUhbjSAt0A6TkApYFj+fFt)"
+    R"(ENkAyFGZpLWZpbnRyYWZmaWNfMzEzNDEzOUbOwp52Ok5AQUasxacARDZASLDSltEGUOzSlt)"
+    R"(EGWgNCVVNgAWkAAAAAAAAAAHEAAAAAAAAAAAqyAQoCMUESNzIwMjYwNjA3XzIwOjI1X2ZpL)"
+    R"(WZpbnRyYWZmaWNfMTAwMDNfMDAwMTMwNTZfXzEwMDEwODAyMDcaFGZpLWZpbnRyYWZmaWNf)"
+    R"(MzEzNDEzIUbOwp52Ok5AKUasxacARDZAMhRmaS1maW50cmFmZmljXzMxNDA0NTmrlQm/1Dd)"
+    R"(OQEFMVdriGjs2QEjs0pbRBlDw2ZbRBloDQlVTYAFpAAAAAAAAAABxAAAAAAAAAAAKdBoUZm)"
+    R"(ktZmludHJhZmZpY18zMTQwNDUhq5UJv9Q3TkApTFXa4ho7NkAyFGZpLWZpbnRyYWZmaWNfM)"
+    R"(zc5OTI2OXNoke18N05AQX/7OnDOODZASIzeltEGUPTgltEGWgRXQUxLaQAAAAAAAAAAcQAA)"
+    R"(AAAAAAAACtEBCg9UdXJrdS1TdG9ja2hvbG0SRzIwMjYwNjA3XzIwOjU1X2ZpLWZpbnRyYWZ)"
+    R"(maWNfMTAxODRfZGM3Y2YxZDAtMWM1My00NThkLThkNDktNzc1NTEwZjBmOGM1GhRmaS1maW)"
+    R"(50cmFmZmljXzM3OTkyNiFzaJHtfDdOQCl/+zpwzjg2QDIUZmktZmludHJhZmZpY18zNzk5M)"
+    R"(jc5/yH99nWoTUBBmggbnl4ZMkBI9OCW0QZQyIqZ0QZaBUZFUlJZYAFpAAAAAAAAAABxAAAA)"
+    R"(AAAAAAAKdhoUZmktZmludHJhZmZpY18zNzk5Mjch/yH99nWoTUApmggbnl4ZMkAyFnNlLVR)"
+    R"(yYWZpa2xhYl83NDAwNDYxNDE5PzVeukmoTUBBC89LxcYYMkBIoI+Z0QZQzJGZ0QZaBFdBTE)"
+    R"(tpAAAAAAAAAABxAAAAAAAAAAAKqQEKAjUzEioyMDI2MDYwOF8wNjo0Ml9zZS1UcmFmaWtsY)"
+    R"(WJfMjI3NTAwNTMwMDMyNDMaFnNlLVRyYWZpa2xhYl83NDAwNDYxNDEhPzVeukmoTUApC89L)"
+    R"(xcYYMkAyFnNlLVRyYWZpa2xhYl83NDAwNDYwODM5t9RBXg+qTUBBf/EMGvoPMkBIzJGZ0QZ)"
+    R"(Q2JeZ0QZaA0JVU2ABaQAAAAAAAAAAcQAAAAAAAAAACnoaFnNlLVRyYWZpa2xhYl83NDAwND)"
+    R"(YwODMht9RBXg+qTUApf/EMGvoPMkAyGG5vLUVudHVyX05TUjpRdWF5OjEwMDM5MDk0ngjiP)"
+    R"(KpNQEHWjXdHxg4yQEj89JnRBlCg+JnRBloEV0FMS2kAAAAAAAAAAHEAAAAAAAAAAArcAQoC)"
+    R"(SUMSTzIwMjYwNjA4XzEwOjI0X25vLUVudHVyX1NOVDpTZXJ2aWNlSm91cm5leTo3NTUzYjZ)"
+    R"(kYy0zMGVhLTVkYjYtYTUyMC0wY2YzYTlkMWY1NTcaGG5vLUVudHVyX05TUjpRdWF5OjEwMD)"
+    R"(M5MCE0ngjiPKpNQCnWjXdHxg4yQDIYbm8tRW50dXJfTlNSOlF1YXk6MTExMTAwOZYjZCDPx)"
+    R"(kpAQVjIXBlUAyRASKD4mdEGUIy9nNEGWg1MT05HX0RJU1RBTkNFYAFpAAAAAAAAAABxAAAA)"
+    R"(AAAA8L8KexoYbm8tRW50dXJfTlNSOlF1YXk6MTExMTAwIZYjZCDPxkpAKVjIXBlUAyRAMhd)"
+    R"(kZS1ERUxGSV9kZTowMjAwMDoxMDk1MDmSsdr8v8ZKQEGcGJKTiQMkQEjE+Z3RBlDw+53RBl)"
+    R"(oEV0FMS2kAAAAAAADwv3EAAAAAAADwvwq2AQoHSUNFIDU3MxIiMjAyNjA2MDlfMDQ6NDRfZ)"
+    R"(GUtREVMRklfMzIyNTIzMjUyNBoXZGUtREVMRklfZGU6MDIwMDA6MTA5NTAhkrHa/L/GSkAp)"
+    R"(nBiSk4kDJEAyGmRlLURFTEZJX2RlOjA4MjIyOjI0MTc6NTo1OX46HjNQvUhAQVgiUP2D8CB)"
+    R"(ASPD7ndEGUMyOn9EGWg5ISUdIU1BFRURfUkFJTGABaQAAAAAAAPC/cQAAAAAAAAAACpABGh)"
+    R"(pkZS1ERUxGSV9kZTowODIyMjoyNDE3OjU6NSF+Oh4zUL1IQClYIlD9g/AgQDIqZnItaG9yY)"
+    R"(WlyZXMtc25jZl9TdG9wUG9pbnQ6T0NFSUNFLTgwMTQwMDg3OejZrPpcvUhAQTlnRGlv8CBA)"
+    R"(SKCToNEGUJiUoNEGWgRXQUxLaQAAAAAAAAAAcQAAAAAAAAAACroCCgQ2NzFBEoYBMjAyNjA)"
+    R"(2MDlfMTQ6MDJfZnItaG9yYWlyZXMtc25jZl9PQ0VTTjk1ODBGMTE4N19GOklDRTpGUjpMaW)"
+    R"(5lOjo4ODRBNjYyQS05Q0M5LTQxMzMtOTRBNS04OEI0QUU1MjA2RkQ6OjgwMTEwNjg0Ojg3N)"
+    R"(zUxMDA4OjEzOjIxNTE6MjAyNjA2MjEaKmZyLWhvcmFpcmVzLXNuY2ZfU3RvcFBvaW50Ok9D)"
+    R"(RUlDRS04MDE0MDA4NyHo2az6XL1IQCk5Z0Rpb/AgQDIqZnItaG9yYWlyZXMtc25jZl9TdG9)"
+    R"(wUG9pbnQ6T0NFSUNFLTg3MzE4OTY0OedvQiEC9kVAQUHV6NUAJRNASJiUoNEGULzLodEGWg)"
+    R"(1SRUdJT05BTF9SQUlMYAFpAAAAAAAAAABxAAAAAAAA8D8KmgEaKmZyLWhvcmFpcmVzLXNuY)"
+    R"(2ZfU3RvcFBvaW50Ok9DRUlDRS04NzMxODk2NCHnb0IhAvZFQClB1ejVACUTQDIkZnItaG9y)"
+    R"(YWlyZXMtYXZlLWVzcGFnbmUtZnJhbmNlXzg3ODE0IedvQiEC9kVAQSsWvymsJBNASJSLpNE)"
+    R"(GUIyMpNEGWgRXQUxLaQAAAAAAAPA/cQAAAAAAAPA/CugBCgdBVkUgSU5UEj4yMDI2MDYxMF)"
+    R"(8wODowMV9mci1ob3JhaXJlcy1hdmUtZXNwYWduZS1mcmFuY2VfMDk3MzAxMjAyNi0wNi0wO)"
+    R"(RokZnItaG9yYWlyZXMtYXZlLWVzcGFnbmUtZnJhbmNlXzg3ODE0IedvQiEC9kVAKSsWvyms)"
+    R"(JBNAMiRmci1ob3JhaXJlcy1hdmUtZXNwYWduZS1mcmFuY2VfNjAwMDA5o+TVOQY0REBBMh0)"
+    R"(6Pe+GDcBIjIyk0QZQmOSl0QZaDVJFR0lPTkFMX1JBSUxgAWkAAAAAAADwP3EAAAAAAAAAAA)"
+    R"(qJARokZnItaG9yYWlyZXMtYXZlLWVzcGFnbmUtZnJhbmNlXzYwMDAwIaPk1TkGNERAKTIdO)"
+    R"(j3vhg3AMhllcy1DZXJjYW7DrWFzLVJlbmZlXzE4MDAwOSPzyB8MNERAQRCyLJj4gw3ASJjk)"
+    R"(pdEGUJDlpdEGWgRXQUxLaQAAAAAAAAAAcQAAAAAAAAAACr4BCgJDMxIvMjAyNjA2MTBfMTU)"
+    R"(6MzBfZXMtQ2VyY2Fuw61hcy1SZW5mZV8xMDU4WDc4MDY3QzMaGWVzLUNlcmNhbsOtYXMtUm)"
+    R"(VuZmVfMTgwMDAhI/PIHww0REApELIsmPiDDcAyGWVzLUNlcmNhbsOtYXMtUmVuZmVfMTgxM)"
+    R"(DE5O2h23Vs1REBBSP1QxH2fDcBIzOWl0QZQxOal0QZaDVJFR0lPTkFMX1JBSUxgAWkAAAAA)"
+    R"(AAAAAHEAAAAAAAAAAApaGhllcy1DZXJjYW7DrWFzLVJlbmZlXzE4MTAxITtodt1bNURAKUj)"
+    R"(9UMR9nw3AOd7H0RxZNURAQXwOLEfIoA3ASMTmpdEGUIDnpdEGWgRXQUxLaQAAAAAAAAAA)";
+
+TEST(motis, itinerary_id_decode_legacy_block_transfer) {
+  auto const decoded = decode_itinerary_id(kLegacyBlockItineraryId);
+  ASSERT_GT(decoded.legs_size(), 0);
+
+  // After normalization no two consecutive transit legs remain, so
+  // verify_leg_structure (and thus the reconstruction) accepts the id instead
+  // of rejecting it as "two consecutive transit legs".
+  for (auto i = 1; i < decoded.legs_size(); ++i) {
+    auto const prev_transit = !decoded.legs(i - 1).trip_id().empty();
+    auto const cur_transit = !decoded.legs(i).trip_id().empty();
+    EXPECT_FALSE(prev_transit && cur_transit)
+        << "consecutive transit legs at index " << (i - 1) << "/" << i;
+  }
+
+  // The two `1A` block legs were joined into one: 20 legs -> 19.
+  ASSERT_EQ(19, decoded.legs_size());
+
+  // The merged leg (index 3: WALK, 1A bus, WALK, [merged 1A]) keeps the entered
+  // trip and spans from the first leg's origin to the last leg's destination.
+  auto const& merged = decoded.legs(3);
+  EXPECT_EQ("fi-fintraffic_312515", merged.from_id());
+  EXPECT_EQ("fi-fintraffic_314045", merged.to_id());
+  EXPECT_EQ("20260607_20:07_fi-fintraffic_10003_00013073__1001080207",
+            merged.trip_id());
+}
