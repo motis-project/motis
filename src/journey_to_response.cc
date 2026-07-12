@@ -426,7 +426,7 @@ api::Itinerary journey_to_response(
     auto const to_place = [&](n::rt::run_stop const& s,
                               n::event_type const ev_type) {
       auto p = ::motis::to_place(&tt, &tags, w, pl, matches, ae, tz_map, lang,
-                                 s, start, dest);
+                                 s, start, dest, ev_type);
       p.alerts_ = get_alerts(*s.fr_, std::pair{s, ev_type}, false, lang);
       if (auto const it = is_unique.find(s.get_location_idx());
           it != end(is_unique) && !it->second) {
