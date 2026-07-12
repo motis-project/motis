@@ -215,7 +215,12 @@ function indoorLayers(level: number, c: (typeof colors)['light']): LayerSpecific
 			source: 'osm',
 			'source-layer': 'indoor',
 			minzoom: 17,
-			filter: ['all', ['==', 'indoor', 'elevator'], ['<=', 'from_level', level], ['>=', 'to_level', level]],
+			filter: [
+				'all',
+				['==', 'indoor', 'elevator'],
+				['<=', 'from_level', level],
+				['>=', 'to_level', level]
+			],
 			paint: { 'circle-color': c.elevatorOutline, 'circle-radius': 13 }
 		},
 		{
@@ -224,7 +229,12 @@ function indoorLayers(level: number, c: (typeof colors)['light']): LayerSpecific
 			source: 'osm',
 			'source-layer': 'indoor',
 			minzoom: 17,
-			filter: ['all', ['==', 'indoor', 'elevator'], ['<=', 'from_level', level], ['>=', 'to_level', level]],
+			filter: [
+				'all',
+				['==', 'indoor', 'elevator'],
+				['<=', 'from_level', level],
+				['>=', 'to_level', level]
+			],
 			paint: { 'circle-color': c.elevator, 'circle-radius': 11 }
 		},
 		{
@@ -233,7 +243,12 @@ function indoorLayers(level: number, c: (typeof colors)['light']): LayerSpecific
 			source: 'osm',
 			'source-layer': 'indoor',
 			minzoom: 17,
-			filter: ['all', ['==', 'indoor', 'elevator'], ['<=', 'from_level', level], ['>=', 'to_level', level]],
+			filter: [
+				'all',
+				['==', 'indoor', 'elevator'],
+				['<=', 'from_level', level],
+				['>=', 'to_level', level]
+			],
 			layout: { 'icon-image': 'elevator', 'icon-size': 0.85 }
 		},
 		// indoor room labels
@@ -297,7 +312,14 @@ export const getStyle = (
 			}
 		: {};
 	const hillshadeLayers: HillshadeLayerSpecification[] = withHillshades
-		? [{ id: 'hillshade', type: 'hillshade', source: 'hillshadeSource', paint: { 'hillshade-exaggeration': 0.33 } }]
+		? [
+				{
+					id: 'hillshade',
+					type: 'hillshade',
+					source: 'hillshadeSource',
+					paint: { 'hillshade-exaggeration': 0.33 }
+				}
+			]
 		: [];
 
 	// Insert hillshade above the base land/water fills but below streets.
