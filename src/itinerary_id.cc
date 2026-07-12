@@ -1048,13 +1048,6 @@ api::Itinerary reconstruct_itinerary(
                                           "no legs reconstructed");
 
   // === Propagate timezone from the nearest transit stop. ===
-  // Coordinate boundaries (START / END / mumo transfer points) carry no
-  // timezone of their own. Fill them from the closest leg that has one:
-  // forward first (so e.g. the last mile inherits the last transit stop's tz),
-  // then backward for any remaining leading gaps (so the first mile inherits
-  // the first transit stop's tz). Using a single global fallback would wrongly
-  // propagate the first mile's timezone to the last mile in cross-timezone
-  // journeys.
   {
     auto last = std::optional<std::string>{};
     for (auto& l : itinerary.legs_) {
