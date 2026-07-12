@@ -284,7 +284,6 @@ std::optional<api::TicketUrls> get_ticketing_urls(
     auto trip_ticketing_identifier_bucket =
         tt.trip_ticketing_identifier_[enter_stop.get_trip_idx(
             n::event_type::kDep)];
-
     auto const trip_id = std::string{
         trip_ticketing_identifier_bucket.empty()
             ? tags.get_trip_id(tt, enter_stop, n::event_type::kDep)
@@ -606,9 +605,6 @@ api::Itinerary journey_to_response(
                   return tt.trip_id_src_[id_idx];
                 }();
 
-                auto const ticketing_url =
-                    get_ticketing_urls(tt, src, tags, enter_stop, exit_stop);
-
                 auto const [service_day, _] =
                     enter_stop.get_trip_start(n::event_type::kDep);
 
@@ -722,7 +718,8 @@ api::Itinerary journey_to_response(
                             nigiri::event_type::kDep)
                             ? api::WheelchairAccessibilityEnum::ACCESSIBLE
                             : api::WheelchairAccessibilityEnum::NOT_ACCESSIBLE,
-                    .ticketUrls_ = ticketing_url});
+                    .ticketUrls_ = get_ticketing_urls(tt, src, tags, enter_stop,
+                                                      exit_stop)});
 
                 auto const attributes =
                     tt.attribute_combinations_[enter_stop
