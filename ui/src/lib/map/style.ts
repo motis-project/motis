@@ -177,7 +177,7 @@ export const getStyle = (
 			},
 			...hillshadeSources
 		},
-		glyphs: getAbsoluteUrl(apiBaseUrl, 'tiles/glyphs/{fontstack}/{range}.pbf'),
+		glyphs: getAbsoluteUrl(staticBaseUrl, 'glyphs/{fontstack}/{range}.pbf'),
 		sprite: getAbsoluteUrl(staticBaseUrl, 'sprite_sdf'),
 		layers: [
 			{

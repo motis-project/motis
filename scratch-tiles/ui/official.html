@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"><title>Shortbread — VersaTiles Colorful (official style) · MOTIS</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<style>html,body,#map{margin:0;height:100%}
+#info{position:absolute;top:10px;left:10px;z-index:1;background:rgba(255,255,255,.9);
+padding:6px 10px;border-radius:6px;font:12px system-ui,sans-serif;box-shadow:0 1px 4px rgba(0,0,0,.2)}</style>
+</head><body>
+<div id="map"></div><div id="info">VersaTiles Colorful (official Shortbread style) · MOTIS local tiles</div>
+<script>
+const map=new maplibregl.Map({container:"map",style:location.origin+"/colorful.json",
+  center:[6.0839,50.7753],zoom:14});
+map.addControl(new maplibregl.NavigationControl());
+map.on("error",e=>console.warn("maplibre:",e && e.error && e.error.message));
+</script>
+</body></html>
