@@ -1998,7 +1998,7 @@ export type PlanData = {
         /**
          * algorithm to use
          */
-        algorithm?: 'RAPTOR' | 'PONG' | 'GPU_PONG' | 'GPU_RAPTOR' | 'TB';
+        algorithm?: 'RAPTOR' | 'PONG' | 'TB';
         /**
          * Optional. Default is `false`.
          *

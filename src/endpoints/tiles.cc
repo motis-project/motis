@@ -10,11 +10,6 @@
 
 namespace motis::ep {
 
-// Note: map font glyphs (SDF PBFs) are no longer served from here. They are
-// shipped as static assets in the UI web folder (ui/static/glyphs/...) and
-// referenced via the style's `glyphs` URL, together with the sprites. This
-// endpoint only serves the actual vector tiles, which are the only genuinely
-// server-side (data-derived) part of the map.
 net::reply tiles::operator()(net::route_request const& req, bool) const {
   auto const url = boost::url_view{req.target()};
 
