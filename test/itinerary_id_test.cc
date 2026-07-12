@@ -2512,7 +2512,8 @@ TEST(motis, itinerary_id_refresh_leg_alternatives_first_mile_anchor) {
   ASSERT_TRUE(plan_leg.alternatives_.has_value());
 
   // True if any alternative has a transit leg departing at the same time as the
-  // chosen leg - i.e. an alternative reachable as early as the original journey.
+  // chosen leg - i.e. an alternative reachable as early as the original
+  // journey.
   auto const has_same_time_alt = [](api::Leg const& leg) {
     return leg.alternatives_.has_value() &&
            utl::any_of(*leg.alternatives_, [&](auto const& alt) {
@@ -2544,12 +2545,12 @@ TEST(motis, itinerary_id_refresh_leg_alternatives_first_mile_anchor) {
 
 // Transit + CAR last mile over a ONE-WAY street network (test/resources/
 // oneway_car.osm): the alighting stop S reaches the destination D via a short
-// one-way street (S -> D), while D -> S requires a long detour. The post-transit
-// (egress) CAR offset must therefore be routed *backward from the destination*
-// (giving the short S -> D duration), exactly as the plan endpoint does. Routing
-// it forward (D -> S) yields the long detour, so the refreshed last-mile CAR leg
-// would diverge from the plan's. Regression test for the flipped offset
-// direction - this DOES fail when the direction is reverted.
+// one-way street (S -> D), while D -> S requires a long detour. The
+// post-transit (egress) CAR offset must therefore be routed *backward from the
+// destination* (giving the short S -> D duration), exactly as the plan endpoint
+// does. Routing it forward (D -> S) yields the long detour, so the refreshed
+// last-mile CAR leg would diverge from the plan's. Regression test for the
+// flipped offset direction - this DOES fail when the direction is reverted.
 constexpr auto kCarEgressGtfs = R"(
 # agency.txt
 agency_id,agency_name,agency_url,agency_timezone
@@ -2626,12 +2627,12 @@ TEST(motis, itinerary_id_refresh_car_egress_direction) {
 // First-mile access via the DA Hbf Gleis 9/10 elevator (wheelchair), single
 // transit leg, with a parallel same-time alternative trip. The id is generated
 // while the elevator is ACTIVE (short first-mile access). At refresh the
-// elevator has a *temporary* outage covering the boarding window, which inflates
-// the first-mile access ("leave before the outage, wait on the platform") rather
-// than cancelling it. The alternatives search must anchor at the journey's
-// origin departure computed from this *current* (inflated) access - looked up
-// via td-offsets - not from the short access span encoded in the id. Otherwise
-// the search starts too late and drops the same-time `ICE_ALT`.
+// elevator has a *temporary* outage covering the boarding window, which
+// inflates the first-mile access ("leave before the outage, wait on the
+// platform") rather than cancelling it. The alternatives search must anchor at
+// the journey's origin departure computed from this *current* (inflated) access
+// - looked up via td-offsets - not from the short access span encoded in the
+// id. Otherwise the search starts too late and drops the same-time `ICE_ALT`.
 constexpr auto const kTdAnchorGtfs = R"(
 # agency.txt
 agency_id,agency_name,agency_url,agency_timezone
@@ -2740,10 +2741,10 @@ TEST(motis, itinerary_id_refresh_first_mile_td_anchor) {
   EXPECT_GT(refreshed.legs_.front().duration_, 600)
       << "DA elevator outage should inflate the first-mile access";
 
-  // The same-time alternative is only found when the alternatives search anchors
-  // at the journey's CURRENT (inflated) origin departure - looked up via the
-  // current td-offsets - rather than the short access span encoded in the id.
-  // Anchoring at the id's span starts the search too late and drops it.
+  // The same-time alternative is only found when the alternatives search
+  // anchors at the journey's CURRENT (inflated) origin departure - looked up
+  // via the current td-offsets - rather than the short access span encoded in
+  // the id. Anchoring at the id's span starts the search too late and drops it.
   auto const has_same_time_alt = [](api::Leg const& leg) {
     return leg.alternatives_.has_value() &&
            utl::any_of(*leg.alternatives_, [&](auto const& alt) {
@@ -2768,7 +2769,75 @@ TEST(motis, itinerary_id_refresh_first_mile_td_anchor) {
 // FI -> SE -> NO -> DE -> FR -> ES journey whose two `1A` bus legs (legs 3 & 4)
 // share stop `fi-fintraffic_313413` and vehicle block `1001080207`.
 constexpr auto const kLegacyBlockItineraryId =
-    "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";
+    "ClUhWGw40VMVTkApEnHO44vxOEAyFGZpLWZpbnRyYWZmaWNfMzU3MzcyOTeTb7a5FU5AQfWfNT"
+    "/+"
+    "7jhASKSQltEGUPSVltEGWgRXQUxLcQAAAAAAAAAACqoBCgNPQjESLjIwMjYwNjA3XzE4OjE1X2"
+    "ZpLWZpbnRyYWZmaWNfMTI1NzVfMjQ1MzU1LjQ4MzIaFGZpLWZpbnRyYWZmaWNfMzU3MzcyITeT"
+    "b7a5FU5AKfWfNT/+7jhAMhRmaS1maW50cmFmZmljXzMxMjgwNjmfyJOkazpOQEE9sOO/"
+    "QEQ2QEj0lZbRBlDYzZbRBloDQlVTYAFpAAAAAAAAAABxAAAAAAAAAAAKdBoUZmktZmludHJhZm"
+    "ZpY18zMTI4MDYhn8iTpGs6TkApPbDjv0BENkAyFGZpLWZpbnRyYWZmaWNfMzEyNTE1OW40gLdA"
+    "Ok5AQWBY/"
+    "nxbRDZASMDQltEGULDSltEGWgRXQUxLaQAAAAAAAAAAcQAAAAAAAAAACrIBCgIxQRI3MjAyNjA"
+    "2MDdfMjA6MDdfZmktZmludHJhZmZpY18xMDAwM18wMDAxMzA3M19fMTAwMTA4MDIwNxoUZmktZ"
+    "mludHJhZmZpY18zMTI1MTUhbjSAt0A6TkApYFj+"
+    "fFtENkAyFGZpLWZpbnRyYWZmaWNfMzEzNDEzOUbOwp52Ok5AQUasxacARDZASLDSltEGUOzSlt"
+    "EGWgNCVVNgAWkAAAAAAAAAAHEAAAAAAAAAAAqyAQoCMUESNzIwMjYwNjA3XzIwOjI1X2ZpLWZp"
+    "bnRyYWZmaWNfMTAwMDNfMDAwMTMwNTZfXzEwMDEwODAyMDcaFGZpLWZpbnRyYWZmaWNfMzEzND"
+    "EzIUbOwp52Ok5AKUasxacARDZAMhRmaS1maW50cmFmZmljXzMxNDA0NTmrlQm/"
+    "1DdOQEFMVdriGjs2QEjs0pbRBlDw2ZbRBloDQlVTYAFpAAAAAAAAAABxAAAAAAAAAAAKdBoUZm"
+    "ktZmludHJhZmZpY18zMTQwNDUhq5UJv9Q3TkApTFXa4ho7NkAyFGZpLWZpbnRyYWZmaWNfMzc5"
+    "OTI2OXNoke18N05AQX/"
+    "7OnDOODZASIzeltEGUPTgltEGWgRXQUxLaQAAAAAAAAAAcQAAAAAAAAAACtEBCg9UdXJrdS1Td"
+    "G9ja2hvbG0SRzIwMjYwNjA3XzIwOjU1X2ZpLWZpbnRyYWZmaWNfMTAxODRfZGM3Y2YxZDAtMWM"
+    "1My00NThkLThkNDktNzc1NTEwZjBmOGM1GhRmaS1maW50cmFmZmljXzM3OTkyNiFzaJHtfDdOQ"
+    "Cl/+zpwzjg2QDIUZmktZmludHJhZmZpY18zNzk5Mjc5/"
+    "yH99nWoTUBBmggbnl4ZMkBI9OCW0QZQyIqZ0QZaBUZFUlJZYAFpAAAAAAAAAABxAAAAAAAAAAA"
+    "KdhoUZmktZmludHJhZmZpY18zNzk5Mjch/"
+    "yH99nWoTUApmggbnl4ZMkAyFnNlLVRyYWZpa2xhYl83NDAwNDYxNDE5PzVeukmoTUBBC89LxcY"
+    "YMkBIoI+"
+    "Z0QZQzJGZ0QZaBFdBTEtpAAAAAAAAAABxAAAAAAAAAAAKqQEKAjUzEioyMDI2MDYwOF8wNjo0M"
+    "l9zZS1UcmFmaWtsYWJfMjI3NTAwNTMwMDMyNDMaFnNlLVRyYWZpa2xhYl83NDAwNDYxNDEhPzV"
+    "eukmoTUApC89LxcYYMkAyFnNlLVRyYWZpa2xhYl83NDAwNDYwODM5t9RBXg+qTUBBf/"
+    "EMGvoPMkBIzJGZ0QZQ2JeZ0QZaA0JVU2ABaQAAAAAAAAAAcQAAAAAAAAAACnoaFnNlLVRyYWZp"
+    "a2xhYl83NDAwNDYwODMht9RBXg+qTUApf/"
+    "EMGvoPMkAyGG5vLUVudHVyX05TUjpRdWF5OjEwMDM5MDk0ngjiPKpNQEHWjXdHxg4yQEj89JnR"
+    "BlCg+"
+    "JnRBloEV0FMS2kAAAAAAAAAAHEAAAAAAAAAAArcAQoCSUMSTzIwMjYwNjA4XzEwOjI0X25vLUV"
+    "udHVyX1NOVDpTZXJ2aWNlSm91cm5leTo3NTUzYjZkYy0zMGVhLTVkYjYtYTUyMC0wY2YzYTlkM"
+    "WY1NTcaGG5vLUVudHVyX05TUjpRdWF5OjEwMDM5MCE0ngjiPKpNQCnWjXdHxg4yQDIYbm8tRW5"
+    "0dXJfTlNSOlF1YXk6MTExMTAwOZYjZCDPxkpAQVjIXBlUAyRASKD4mdEGUIy9nNEGWg1MT05HX"
+    "0RJU1RBTkNFYAFpAAAAAAAAAABxAAAAAAAA8L8KexoYbm8tRW50dXJfTlNSOlF1YXk6MTExMTA"
+    "wIZYjZCDPxkpAKVjIXBlUAyRAMhdkZS1ERUxGSV9kZTowMjAwMDoxMDk1MDmSsdr8v8ZKQEGcG"
+    "JKTiQMkQEjE+Z3RBlDw+"
+    "53RBloEV0FMS2kAAAAAAADwv3EAAAAAAADwvwq2AQoHSUNFIDU3MxIiMjAyNjA2MDlfMDQ6NDR"
+    "fZGUtREVMRklfMzIyNTIzMjUyNBoXZGUtREVMRklfZGU6MDIwMDA6MTA5NTAhkrHa/L/"
+    "GSkApnBiSk4kDJEAyGmRlLURFTEZJX2RlOjA4MjIyOjI0MTc6NTo1OX46HjNQvUhAQVgiUP2D8"
+    "CBASPD7ndEGUMyOn9EGWg5ISUdIU1BFRURfUkFJTGABaQAAAAAAAPC/"
+    "cQAAAAAAAAAACpABGhpkZS1ERUxGSV9kZTowODIyMjoyNDE3OjU6NSF+Oh4zUL1IQClYIlD9g/"
+    "AgQDIqZnItaG9yYWlyZXMtc25jZl9TdG9wUG9pbnQ6T0NFSUNFLTgwMTQwMDg3OejZrPpcvUhA"
+    "QTlnRGlv8CBASKCToNEGUJiUoNEGWgRXQUxLaQAAAAAAAAAAcQAAAAAAAAAACroCCgQ2NzFBEo"
+    "YBMjAyNjA2MDlfMTQ6MDJfZnItaG9yYWlyZXMtc25jZl9PQ0VTTjk1ODBGMTE4N19GOklDRTpG"
+    "UjpMaW5lOjo4ODRBNjYyQS05Q0M5LTQxMzMtOTRBNS04OEI0QUU1MjA2RkQ6OjgwMTEwNjg0Oj"
+    "g3NzUxMDA4OjEzOjIxNTE6MjAyNjA2MjEaKmZyLWhvcmFpcmVzLXNuY2ZfU3RvcFBvaW50Ok9D"
+    "RUlDRS04MDE0MDA4NyHo2az6XL1IQCk5Z0Rpb/"
+    "AgQDIqZnItaG9yYWlyZXMtc25jZl9TdG9wUG9pbnQ6T0NFSUNFLTg3MzE4OTY0OedvQiEC9kVA"
+    "QUHV6NUAJRNASJiUoNEGULzLodEGWg1SRUdJT05BTF9SQUlMYAFpAAAAAAAAAABxAAAAAAAA8D"
+    "8KmgEaKmZyLWhvcmFpcmVzLXNuY2ZfU3RvcFBvaW50Ok9DRUlDRS04NzMxODk2NCHnb0IhAvZF"
+    "QClB1ejVACUTQDIkZnItaG9yYWlyZXMtYXZlLWVzcGFnbmUtZnJhbmNlXzg3ODE0IedvQiEC9k"
+    "VAQSsWvymsJBNASJSLpNEGUIyMpNEGWgRXQUxLaQAAAAAAAPA/cQAAAAAAAPA/"
+    "CugBCgdBVkUgSU5UEj4yMDI2MDYxMF8wODowMV9mci1ob3JhaXJlcy1hdmUtZXNwYWduZS1mcm"
+    "FuY2VfMDk3MzAxMjAyNi0wNi0wORokZnItaG9yYWlyZXMtYXZlLWVzcGFnbmUtZnJhbmNlXzg3"
+    "ODE0IedvQiEC9kVAKSsWvymsJBNAMiRmci1ob3JhaXJlcy1hdmUtZXNwYWduZS1mcmFuY2VfNj"
+    "AwMDA5o+TVOQY0REBBMh06Pe+"
+    "GDcBIjIyk0QZQmOSl0QZaDVJFR0lPTkFMX1JBSUxgAWkAAAAAAADwP3EAAAAAAAAAAAqJARokZ"
+    "nItaG9yYWlyZXMtYXZlLWVzcGFnbmUtZnJhbmNlXzYwMDAwIaPk1TkGNERAKTIdOj3vhg3AMhl"
+    "lcy1DZXJjYW7DrWFzLVJlbmZlXzE4MDAwOSPzyB8MNERAQRCyLJj4gw3ASJjkpdEGUJDlpdEGW"
+    "gRXQUxLaQAAAAAAAAAAcQAAAAAAAAAACr4BCgJDMxIvMjAyNjA2MTBfMTU6MzBfZXMtQ2VyY2F"
+    "uw61hcy1SZW5mZV8xMDU4WDc4MDY3QzMaGWVzLUNlcmNhbsOtYXMtUmVuZmVfMTgwMDAhI/"
+    "PIHww0REApELIsmPiDDcAyGWVzLUNlcmNhbsOtYXMtUmVuZmVfMTgxMDE5O2h23Vs1REBBSP1Q"
+    "xH2fDcBIzOWl0QZQxOal0QZaDVJFR0lPTkFMX1JBSUxgAWkAAAAAAAAAAHEAAAAAAAAAAApaGh"
+    "llcy1DZXJjYW7DrWFzLVJlbmZlXzE4MTAxITtodt1bNURAKUj9UMR9nw3AOd7H0RxZNURAQXwO"
+    "LEfIoA3ASMTmpdEGUIDnpdEGWgRXQUxLaQAAAAAAAAAA";
 
 TEST(motis, itinerary_id_decode_legacy_block_transfer) {
   auto const decoded = decode_itinerary_id(kLegacyBlockItineraryId);

@@ -925,12 +925,13 @@ api::Itinerary reconstruct_itinerary(
     // previous transit - from the journey's origin departure. The latter must
     // account for first-mile access time, otherwise the search starts too late
     // and misses alternatives that depart as early as the original journey (the
-    // plan endpoint anchors at `j.legs_.front().dep_time_` for the same reason).
-    // Derive the origin departure from this leg's (real-time) departure minus
-    // the actual first-mile access duration, looked up against the current
-    // offsets / td-offsets so that time-dependent footpaths (e.g. an elevator
-    // that changed state since the id was minted) are honoured. Fall back to the
-    // scheduled access span encoded in the id when no access offset is found.
+    // plan endpoint anchors at `j.legs_.front().dep_time_` for the same
+    // reason). Derive the origin departure from this leg's (real-time)
+    // departure minus the actual first-mile access duration, looked up against
+    // the current offsets / td-offsets so that time-dependent footpaths (e.g.
+    // an elevator that changed state since the id was minted) are honoured.
+    // Fall back to the scheduled access span encoded in the id when no access
+    // offset is found.
     auto const prev_arr = [&]() -> n::unixtime_t {
       if (has_prev_transit) {
         return legs[i - 2U].transit_->arr_time_;
