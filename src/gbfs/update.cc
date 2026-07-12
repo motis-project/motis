@@ -78,6 +78,10 @@ bool needs_refresh(file_info const& fi) {
   return fi.needs_update(std::chrono::system_clock::now());
 }
 
+bool is_http_url(std::string_view const url) {
+  return url.starts_with("http:") || url.starts_with("https:");
+}
+
 // try to hash only the value of the "data" key to ignore fields like
 // "last_updated"
 cista::hash_t hash_gbfs_data(std::string_view const json) {
@@ -141,14 +145,11 @@ std::chrono::system_clock::time_point get_expiry(
       it != end(overwrite_ttl)) {
     return now + std::chrono::seconds{it->second};
   }
-  if (root.contains("data")) {
-    auto const& data_val = root.at("data");
-    if (data_val.is_object() && data_val.as_object().contains("ttl")) {
-      auto const& ttl_val = data_val.as_object().at("ttl");
-      if (auto const ttl = as_double(ttl_val);
-          ttl.has_value() && static_cast<int>(*ttl) > 0) {
-        return now + std::chrono::seconds{static_cast<int>(*ttl)};
-      }
+  if (root.contains("ttl")) {
+    auto const& ttl_val = root.at("ttl");
+    if (auto const ttl = as_double(ttl_val);
+        ttl.has_value() && static_cast<int>(*ttl) > 0) {
+      return now + std::chrono::seconds{static_cast<int>(*ttl)};
     }
   }
   if (auto const it = default_ttl.find(std::string{name});
@@ -323,8 +324,7 @@ struct gbfs_update {
   void update_vehicle_count(gbfs_provider const& provider,
                             gbfs_provider const* prev_provider) {
     if (prev_provider != nullptr &&
-        (prev_provider->id_ != provider.id_ ||
-         prev_provider->group_id_ != provider.group_id_)) {
+        prev_provider->group_id_ != provider.group_id_) {
       reset_vehicle_count(*prev_provider);
     }
 
@@ -380,8 +380,7 @@ struct gbfs_update {
                     [&](auto const& id) {
                       auto const& feed = c_.feeds_.at(id);
                       auto const dir =
-                          feed.url_.starts_with("http:") ||
-                                  feed.url_.starts_with("https:")
+                          is_http_url(feed.url_)
                               ? std::nullopt
                               : std::optional<std::filesystem::path>{feed.url_};
 
@@ -436,7 +435,7 @@ struct gbfs_update {
            root.at("data").as_object().contains("datasets")) ||
           root.contains("systems")) {
         // file is not an individual feed, but a manifest.json / Lamassu file
-        co_return co_await init_aggregated_feed(id, config.url_, headers,
+        co_return co_await init_aggregated_feed(id, config.url_, headers, dir,
                                                 std::move(oauth), root,
                                                 default_ttl, overwrite_ttl);
       }
@@ -616,9 +615,18 @@ struct gbfs_update {
           || co_await update("free_bike_status", file_infos->vehicle_status_fi_,
                              load_vehicle_status,
                              vehicle_types_updated);  // 1.x / 2.x
+      auto const has_vehicle_status_feed =
+          file_infos->urls_.contains("vehicle_status") ||
+          file_infos->urls_.contains("free_bike_status");
+      auto vehicle_status_removed = false;
       if ((!vehicle_status_updated && !vehicle_types_updated) &&
           prev_provider != nullptr) {
-        provider.vehicle_status_ = prev_provider->vehicle_status_;
+        if (has_vehicle_status_feed) {
+          provider.vehicle_status_ = prev_provider->vehicle_status_;
+        } else {
+          provider.vehicle_status_.clear();
+          vehicle_status_removed = !prev_provider->vehicle_status_.empty();
+        }
       }
 
       if (!pf.ignore_geofencing_) {
@@ -674,7 +682,7 @@ struct gbfs_update {
 
       data_changed = vehicle_types_updated || stations_updated ||
                      station_status_updated || vehicle_status_updated ||
-                     geofencing_updated;
+                     vehicle_status_removed || geofencing_updated;
 
       metrics_->gbfs_last_update_timestamp_seconds_
           .Add({{"provider_id", pf.id_}})
@@ -923,6 +931,7 @@ struct gbfs_update {
       std::string const& prefix,
       std::string const& url,
       headers_t const& headers,
+      std::optional<std::filesystem::path> const& dir,
       std::shared_ptr<oauth_state>&& oauth,
       boost::json::object const& root,
       std::map<std::string, unsigned> const& default_ttl = {},
@@ -931,6 +940,7 @@ struct gbfs_update {
         .id_ = prefix,
         .url_ = url,
         .headers_ = headers,
+        .dir_ = dir,
         .expiry_ = get_expiry(root, std::chrono::hours{1}, default_ttl,
                               overwrite_ttl, "manifest"),
         .oauth_ = std::move(oauth),
@@ -945,9 +955,9 @@ struct gbfs_update {
   awaitable<void> update_aggregated_feed(aggregated_feed& af) {
     try {
       if (af.needs_update()) {
-        auto const file = co_await fetch_file(
-            "manifest", af.url_, af.headers_, af.oauth_, std::nullopt,
-            af.default_ttl_, af.overwrite_ttl_);
+        auto const file =
+            co_await fetch_file("manifest", af.url_, af.headers_, af.oauth_,
+                                af.dir_, af.default_ttl_, af.overwrite_ttl_);
         co_await process_aggregated_feed(af, file.json_.as_object());
       } else {
         co_await update_aggregated_feed_provider_feeds(af);
@@ -963,6 +973,16 @@ struct gbfs_update {
                                           boost::json::object const& root) {
     auto feeds = std::vector<provider_feed>{};
     auto skipped_entries = 0U;
+    auto const resolve_dir = [&](std::string const& url) {
+      if (is_http_url(url)) {
+        return std::optional<std::filesystem::path>{};
+      }
+      auto const p = std::filesystem::path{url};
+      if (!af.dir_.has_value() || p.is_absolute()) {
+        return std::optional<std::filesystem::path>{p};
+      }
+      return std::optional<std::filesystem::path>{*af.dir_ / p};
+    };
 
     if (root.contains("data") && root.at("data").is_object() &&
         root.at("data").as_object().contains("datasets") &&
@@ -997,6 +1017,7 @@ struct gbfs_update {
               .id_ = combined_id,
               .url_ = url,
               .headers_ = af.headers_,
+              .dir_ = resolve_dir(url),
               .default_restrictions_ =
                   lookup_default_restrictions(af.id_, combined_id),
               .default_return_constraint_ =
@@ -1034,6 +1055,7 @@ struct gbfs_update {
               .id_ = combined_id,
               .url_ = url,
               .headers_ = af.headers_,
+              .dir_ = resolve_dir(url),
               .default_restrictions_ =
                   lookup_default_restrictions(af.id_, combined_id),
               .default_return_constraint_ =

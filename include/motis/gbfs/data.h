@@ -373,7 +373,7 @@ struct gbfs_products_ref {
 struct gbfs_provider {
   std::string id_;  // from config
   gbfs_provider_idx_t idx_{gbfs_provider_idx_t::invalid()};
-  std::string group_id_;
+  std::string group_id_{};
 
   std::shared_ptr<provider_file_infos> file_infos_{};
 
@@ -383,12 +383,12 @@ struct gbfs_provider {
   hash_map<std::pair<std::string, vehicle_start_type>, vehicle_type_idx_t>
       vehicle_types_map_{};
   hash_map<std::string, temp_vehicle_type> temp_vehicle_types_{};
-  std::vector<vehicle_status> vehicle_status_;
+  std::vector<vehicle_status> vehicle_status_{};
   geofencing_zones geofencing_zones_{};
   geofencing_restrictions default_restrictions_{};
   std::optional<return_constraint> default_return_constraint_{};
 
-  vector_map<gbfs_products_idx_t, provider_products> products_;
+  vector_map<gbfs_products_idx_t, provider_products> products_{};
   bool has_vehicles_to_rent_{};
   geo::box bbox_{};
   std::chrono::system_clock::time_point last_updated_{};
@@ -451,6 +451,7 @@ struct aggregated_feed {
   std::string id_;
   std::string url_;
   headers_t headers_{};
+  std::optional<std::filesystem::path> dir_{};
   std::optional<std::chrono::system_clock::time_point> expiry_{};
   std::vector<provider_feed> feeds_{};
   std::shared_ptr<oauth_state> oauth_{};
