@@ -25,6 +25,8 @@ const translations: Translations = {
 	hydrogenFuelCell: 'Ogniwo paliwowe na wodór',
 	from: 'Z',
 	to: 'Do',
+	myLocation: 'My location',
+	reverseDirections: 'Reverse directions',
 	viaStop: 'Przystanek pośredni',
 	viaStops: 'Przystanki pośrednie',
 	addViaStop: 'Dodaj przystanek pośredni',
@@ -160,6 +162,8 @@ const translations: Translations = {
 	FUNICULAR: 'Kolej linowo-terenowa',
 	AERIAL_LIFT: 'Wyciąg krzesełkowy',
 	toll: 'Uwaga! Za przejazd tą trasą pobierana jest opłata.',
+	bikesAllowed: 'Bikes allowed',
+	wheelchairAccessible: 'Wheelchair accessible',
 	accessRestriction: 'Ograniczony dostęp',
 	continuesAs: 'Kontynuuje jako',
 	earlierAlternatives: 'Wcześniejsze alternatywy',
@@ -175,12 +179,15 @@ const translations: Translations = {
 	DEBUG_RAILWAY_ROUTE: 'Trasa kolejowa (Debug)',
 	DEBUG_FERRY_ROUTE: 'Trasa promu (Debug)',
 	colorMode: {
-		none: 'None',
+		none: 'No Map Visualization',
 		stops: 'Stops',
-		rt: 'Trips by Realtime',
-		route: 'Trips by Route',
-		mode: 'Trips by Mode'
+		rt: 'Timetable: Delays',
+		route: 'Timetable: Line Colors',
+		mode: 'Timetable: Transport Modes'
 	},
+	resetToNorth: 'Reset to north',
+	showMyLocation: 'Show my location',
+	toggleHillshades: 'Toggle hillshades overlay',
 	routes: (n: number) => {
 		switch (n) {
 			case 0:
@@ -190,6 +197,13 @@ const translations: Translations = {
 			default:
 				return `${n} trasy`;
 		}
+	},
+	pageTitle: {
+		default: 'MOTIS',
+		fromTo: (from, to) => `${from} do ${to}`,
+		departuresAt: (stop) => `Odjazdy z ${stop}`,
+		arrivalsAt: (stop) => `Przyjazdy do ${stop}`,
+		isochronesFrom: (place) => `Izochrony z ${place}`
 	}
 };
 

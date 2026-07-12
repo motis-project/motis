@@ -138,12 +138,15 @@ void update_all_runs_metrics(nigiri::timetable const& tt,
 }
 
 net::reply metrics::operator()(net::route_request const& req, bool) const {
-  utl::verify(metrics_ != nullptr && tt_ != nullptr && tags_ != nullptr,
-              "no metrics initialized");
+  utl::verify(metrics_ != nullptr, "no metrics initialized");
   auto const rt = std::atomic_load(&rt_);
-  update_all_runs_metrics(*tt_, rt->rtt_.get(), *tags_, *metrics_);
-  metrics_->total_trips_with_realtime_count_.Set(
-      static_cast<double>(rt->rtt_->rt_transport_src_.size()));
+  if (tt_ != nullptr && tags_ != nullptr) {
+    update_all_runs_metrics(*tt_, rt->rtt_.get(), *tags_, *metrics_);
+  }
+  if (rt != nullptr && rt->rtt_ != nullptr) {
+    metrics_->total_trips_with_realtime_count_.Set(
+        static_cast<double>(rt->rtt_->rt_transport_src_.size()));
+  }
   auto res = net::web_server::string_res_t{boost::beast::http::status::ok,
                                            req.version()};
   res.insert(boost::beast::http::field::content_type,

@@ -25,6 +25,8 @@ const translations: Translations = {
 	hydrogenFuelCell: 'Vodíkový palivový článek',
 	from: 'Z',
 	to: 'Do',
+	myLocation: 'My location',
+	reverseDirections: 'Reverse directions',
 	viaStop: 'Mezizastávka',
 	viaStops: 'Mezizastávky',
 	addViaStop: 'Přidat mezizastávku',
@@ -160,6 +162,8 @@ const translations: Translations = {
 	FUNICULAR: 'Lanová dráha',
 	AERIAL_LIFT: 'Lanová dráha',
 	toll: 'Pozor! Průjezd tuto trasou je placený.',
+	bikesAllowed: 'Bikes allowed',
+	wheelchairAccessible: 'Wheelchair accessible',
 	accessRestriction: 'Omezený dostup',
 	continuesAs: 'Pokračuje jako',
 	earlierAlternatives: 'Dřívější alternativy',
@@ -175,12 +179,15 @@ const translations: Translations = {
 	DEBUG_RAILWAY_ROUTE: 'Trasa vlaku (Debug)',
 	DEBUG_FERRY_ROUTE: 'Trasa trajektu (Debug)',
 	colorMode: {
-		none: 'Žádné',
-		stops: 'Zastávky',
-		rt: 'Spoje podle zpoždění',
-		route: 'Spoje podle linky',
-		mode: 'Spoje podle dopravního prostředku'
+		none: 'No Map Visualization',
+		stops: 'Stops',
+		rt: 'Timetable: Delays',
+		route: 'Timetable: Line Colors',
+		mode: 'Timetable: Transport Modes'
 	},
+	resetToNorth: 'Reset to north',
+	showMyLocation: 'Show my location',
+	toggleHillshades: 'Toggle hillshades overlay',
 	routes: (n: number) => {
 		switch (n) {
 			case 0:
@@ -194,6 +201,13 @@ const translations: Translations = {
 			default:
 				return `${n} tras`;
 		}
+	},
+	pageTitle: {
+		default: 'MOTIS',
+		fromTo: (from, to) => `${from} do ${to}`,
+		departuresAt: (stop) => `Odjezdy ze ${stop}`,
+		arrivalsAt: (stop) => `Příjezdy do ${stop}`,
+		isochronesFrom: (place) => `Izochrony z ${place}`
 	}
 };
 

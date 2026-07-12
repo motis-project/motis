@@ -34,8 +34,9 @@ net::reply tiles::operator()(net::route_request const& req, bool) const {
       auto const mem = pbf_sdf_fonts_res::get_resource(res_name);
       auto res = net::web_server::string_res_t{boost::beast::http::status::ok,
                                                req.version()};
-      res.body() =
-          std::string_view{reinterpret_cast<char const*>(mem.ptr_), mem.size_};
+      net::set_response_body(
+          res, req,
+          std::string_view{reinterpret_cast<char const*>(mem.ptr_), mem.size_});
       res.insert(boost::beast::http::field::content_type,
                  "application/x-protobuf");
       res.keep_alive(req.keep_alive());
@@ -43,6 +44,12 @@ net::reply tiles::operator()(net::route_request const& req, bool) const {
     } catch (std::out_of_range const&) {
       throw net::not_found_exception{res_name};
     }
+  }
+
+  if (req[boost::beast::http::field::accept_encoding].find("gzip") ==
+      std::string_view::npos) {
+    return net::web_server::empty_res_t{
+        boost::beast::http::status::not_implemented, req.version()};
   }
 
   auto const tile = ::tiles::parse_tile_url(url.path());
@@ -60,7 +67,7 @@ net::reply tiles::operator()(net::route_request const& req, bool) const {
                                            req.version()};
   res.insert(boost::beast::http::field::content_type,
              "application/vnd.mapbox-vector-tile");
-  res.insert(boost::beast::http::field::content_encoding, "deflate");
+  res.insert(boost::beast::http::field::content_encoding, "gzip");
   res.body() = rendered_tile.value_or("");
   res.keep_alive(req.keep_alive());
   return res;

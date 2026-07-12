@@ -275,12 +275,7 @@ std::string generate_itinerary_id(n::routing::journey const& j,
         },
         [&](n::routing::offset const& o) {
           auto const id = o.type();
-          auto const mode =  // input mode for routing
-              flex::mode_id::is_flex(id)
-                  ? api::ModeEnum::FLEX
-                  : (id >= kGbfsTransportModeIdOffset
-                         ? api::ModeEnum::RENTAL
-                         : to_mode(static_cast<osr::search_profile>(id)));
+          auto const mode = to_mode(id);
           return make_non_pt_leg(jl, mode);
         },
         [&](n::footpath const&) {

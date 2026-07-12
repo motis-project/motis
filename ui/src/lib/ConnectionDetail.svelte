@@ -94,7 +94,9 @@
 		const transitStart = (entry: Leg[]) => entry.find(isTransitLeg)?.startTime ?? '';
 		const remainingAlts = (target.alternatives ?? []).filter((a) => a !== alt);
 		const newAlternatives = [...remainingAlts, oldEntry].sort((a, b) =>
-			transitStart(a).localeCompare(transitStart(b))
+			!hasPrevTransit && hasNextTransit
+				? transitStart(b).localeCompare(transitStart(a))
+				: transitStart(a).localeCompare(transitStart(b))
 		);
 
 		const newTransit: Leg = {
@@ -163,7 +165,13 @@
 						{/if}
 					</div>
 					{#if p.track && !hidePlatform}
-						<span class="text-nowrap px-2 border rounded-xl ml-1 mr-4">
+						{@const fullName =
+							(getModeLabel(mode) == 'Track' ? t.track : t.platform) + ' ' + p.track}
+						<span
+							class="text-nowrap px-2 border rounded-xl ml-1 mr-4"
+							title={fullName}
+							aria-label={fullName}
+						>
 							{getModeLabel(mode) == 'Track' ? t.trackAbr : t.platformAbr}
 							{p.track}
 						</span>
@@ -404,11 +412,15 @@
 
 				<div class="ml-4 mt-4">
 					{#if l.bikesAllowed}
-						<Bike class="inline" />
+						<div title={t.bikesAllowed} class="inline">
+							<Bike aria-label={t.bikesAllowed} class="inline" />
+						</div>
 					{/if}
 
 					{#if l.wheelchairAccessible == 'ACCESSIBLE'}
-						<Accessibility class="inline" />
+						<div title={t.wheelchairAccessible} class="inline">
+							<Accessibility aria-label={t.wheelchairAccessible} class="inline" />
+						</div>
 					{/if}
 				</div>
 

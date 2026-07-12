@@ -25,6 +25,8 @@ const translations: Translations = {
 	hydrogenFuelCell: 'Hydrogen fuel cell',
 	from: 'From',
 	to: 'To',
+	myLocation: 'My location',
+	reverseDirections: 'Reverse directions',
 	viaStop: 'Via stop',
 	viaStops: 'Via stops',
 	addViaStop: 'Add via stop',
@@ -158,6 +160,8 @@ const translations: Translations = {
 	},
 	incline: 'Incline',
 	toll: 'Warning! A fee must be paid to use this route.',
+	bikesAllowed: 'Bikes allowed',
+	wheelchairAccessible: 'Wheelchair accessible',
 	accessRestriction: 'No access',
 	continuesAs: 'Continues as',
 	earlierAlternatives: 'Earlier alternatives',
@@ -173,12 +177,15 @@ const translations: Translations = {
 	DEBUG_RAILWAY_ROUTE: 'Railway Route (Debug)',
 	DEBUG_FERRY_ROUTE: 'Ferry Route (Debug)',
 	colorMode: {
-		none: 'None',
+		none: 'No Map Visualization',
 		stops: 'Stops',
-		rt: 'Trips by Realtime',
-		route: 'Trips by Route',
-		mode: 'Trips by Mode'
+		rt: 'Timetable: Delays',
+		route: 'Timetable: Line Colors',
+		mode: 'Timetable: Transport Modes'
 	},
+	resetToNorth: 'Reset to north',
+	showMyLocation: 'Show my location',
+	toggleHillshades: 'Toggle hillshades overlay',
 	routes: (n: number) => {
 		switch (n) {
 			case 0:
@@ -188,6 +195,13 @@ const translations: Translations = {
 			default:
 				return `${n} routes`;
 		}
+	},
+	pageTitle: {
+		default: 'MOTIS',
+		fromTo: (from, to) => `${from} to ${to}`,
+		departuresAt: (stop) => `Departures in ${stop}`,
+		arrivalsAt: (stop) => `Arrivals in ${stop}`,
+		isochronesFrom: (place) => `Isochrones from ${place}`
 	}
 };
 

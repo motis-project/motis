@@ -22,4 +22,6 @@ fasta.json
 config.yaml
 config.yml
 config.ini
-
+/working
+/.cache
+.pnpm*

@@ -2,10 +2,10 @@
 
 #include "boost/thread/tss.hpp"
 
+#include "fmt/format.h"
+
 #include "utl/for_each_bit_set.h"
 #include "utl/to_vec.h"
-
-#include "fmt/format.h"
 
 #include "net/bad_request_exception.h"
 
@@ -88,10 +88,21 @@ api::geocode_response geocode::operator()(
       std::min(params.numResults_.value_or(kDefaultSuggestions), config_limit);
   utl::verify<net::bad_request_exception>(requested_limit >= 1,
                                           "limit must be >= 1");
+  auto bbox = std::optional<geo::box>{};
+  if (params.max_ && params.min_) {
+    auto const min = parse_location(*params.min_);
+    utl::verify<net::bad_request_exception>(
+        min.has_value(), "could not parse min {}", *params.min_);
+    auto const max = parse_location(*params.max_);
+    utl::verify<net::bad_request_exception>(
+        max.has_value(), "could not parse max {}", *params.max_);
+    bbox = geo::box{min->pos_, max->pos_};
+  }
   auto const token_pos = a::get_suggestions<false>(
       t_, params.text_, static_cast<unsigned>(requested_limit), lang_indices,
       ctx, place, static_cast<float>(params.placeBias_),
-      to_filter_type(params.type_), place_filter);
+      to_filter_type(params.type_), place_filter, bbox);
+
   return suggestions_to_response(t_, f_, ae_, tt_, tags_, w_, pl_, matches_,
                                  lang_indices, token_pos, ctx.suggestions_);
 }

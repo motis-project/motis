@@ -24,6 +24,8 @@ const translations: Translations = {
 	hydrogenFuelCell: 'Pile à combustible hydrogène',
 	from: 'De',
 	to: 'À',
+	myLocation: 'My location',
+	reverseDirections: 'Reverse directions',
 	viaStop: 'Arrêt intermédiaire',
 	viaStops: 'Arrêts intermédiaires',
 	addViaStop: 'Ajouter un arrêt intermédiaire',
@@ -68,7 +70,7 @@ const translations: Translations = {
 	selectTransitModes: 'Sélectionner les modes de transport en commun',
 	defaultSelectedModes: 'Tous les transports en commun',
 	defaultSelectedProviders: 'Tous les fournisseurs',
-	selectElevationCosts: 'Évitez les pentes abruptes.', // TODO Online translated
+	selectElevationCosts: 'Éviter les pentes.',
 	wheelchair: 'Correspondances accessibles uniquement',
 	useRoutedTransfers: 'Utiliser les correspondances routées',
 	bikeRental: 'Utiliser véhicules partagés',
@@ -158,6 +160,8 @@ const translations: Translations = {
 	FUNICULAR: 'Funiculaire',
 	AERIAL_LIFT: 'Remontée mécanique',
 	toll: 'Attention ! Route à péage.',
+	bikesAllowed: 'Bikes allowed',
+	wheelchairAccessible: 'Wheelchair accessible',
 	accessRestriction: 'Accès restreint',
 	continuesAs: 'Continue comme',
 	earlierAlternatives: 'Alternatives plus tôt',
@@ -173,12 +177,15 @@ const translations: Translations = {
 	DEBUG_RAILWAY_ROUTE: 'Itinéraire ferroviaire (Debug)',
 	DEBUG_FERRY_ROUTE: 'Itinéraire de ferry (Debug)',
 	colorMode: {
-		none: 'Aucun',
-		stops: 'Arrêts',
-		rt: 'Trajets par temps réel',
-		route: 'Trajets par ligne',
-		mode: 'Trajets par mode'
+		none: "Pas d'affichage sur la carte",
+		stops: 'Stations',
+		rt: 'Horaires : retards',
+		route: 'Horaires : couleurs des lignes',
+		mode: 'Horaires : modes de transport'
 	},
+	resetToNorth: 'Reset to north',
+	showMyLocation: 'Show my location',
+	toggleHillshades: 'Toggle hillshades overlay',
 	routes: (n: number) => {
 		switch (n) {
 			case 0:
@@ -188,6 +195,13 @@ const translations: Translations = {
 			default:
 				return `${n} itinéraires`;
 		}
+	},
+	pageTitle: {
+		default: 'MOTIS',
+		fromTo: (from, to) => `${from} à ${to}`,
+		departuresAt: (stop) => `Départs à ${stop}`,
+		arrivalsAt: (stop) => `Arrivées à ${stop}`,
+		isochronesFrom: (place) => `Isochrones depuis ${place}`
 	}
 };
 

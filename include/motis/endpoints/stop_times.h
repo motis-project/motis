@@ -25,7 +25,7 @@ struct stop_times {
   std::vector<nigiri::rt::run> get_runs(
       api::stoptimes_params const&,
       nigiri::rt_timetable const*,
-      nigiri::event_type const&,
+      std::optional<nigiri::event_type> const&,
       std::optional<nigiri::location_idx_t> const& query_stop,
       std::optional<osr::location> const& query_center,
       bool const disable_stoptimes_max_limit = false) const;
