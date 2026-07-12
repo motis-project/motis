@@ -75,13 +75,7 @@ constexpr auto kNonSchedAllowedDeviationSeconds = std::int64_t{30 * 60};
 
 constexpr auto kExactTripIdMatchAddScore = 50.0;
 
-// Backward compatibility: itinerary-ids minted by older releases (<= 2.10.x)
-// encoded block / interlined continuations (the vehicle continues as a new trip
-// at a shared stop) as multiple ADJACENT transit legs. The current format and
-// reconstruction represent an interlined ride as a SINGLE transit leg (the run
-// spans the block), so merge runs of consecutive transit legs into one, keeping
-// the entered trip and spanning from the first leg's origin to the last leg's
-// destination.
+// Backward compatibility
 void join_interlined(proto_id_t& id) {
   auto const is_transit = [](proto_leg_t const& l) {
     return !l.trip_id().empty();
@@ -734,11 +728,6 @@ api::Itinerary reconstruct_itinerary(
   };
   auto const failed = [](leg const& l) { return !l.transit_.has_value(); };
 
-  // For a (forward) journey the access offsets are routed forward from the
-  // origin (start side) and backward from the destination (egress side) - same
-  // convention as the plan endpoint. This matters for direction-sensitive modes
-  // (e.g. CAR / one-way streets); using the wrong direction yields different
-  // offsets than the plan and thus different legs / alternatives.
   auto const get_offsets = [&](leg_hint const& h, bool const is_start,
                                std::vector<api::ModeEnum> const& modes) {
     if (!routing.is_osr_loaded()) {
@@ -921,17 +910,6 @@ api::Itinerary reconstruct_itinerary(
     }
 
     // Intermediate / single / last transit leg:
-    // Search forward from the previous leg's arrival, or - when there is no
-    // previous transit - from the journey's origin departure. The latter must
-    // account for first-mile access time, otherwise the search starts too late
-    // and misses alternatives that depart as early as the original journey (the
-    // plan endpoint anchors at `j.legs_.front().dep_time_` for the same
-    // reason). Derive the origin departure from this leg's (real-time)
-    // departure minus the actual first-mile access duration, looked up against
-    // the current offsets / td-offsets so that time-dependent footpaths (e.g.
-    // an elevator that changed state since the id was minted) are honoured.
-    // Fall back to the scheduled access span encoded in the id when no access
-    // offset is found.
     auto const prev_arr = [&]() -> n::unixtime_t {
       if (has_prev_transit) {
         return legs[i - 2U].transit_->arr_time_;
