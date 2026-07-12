@@ -34,7 +34,8 @@
 		type ServerConfig,
 		type CyclingSpeed,
 		type PedestrianSpeed,
-		refreshItinerary
+		refreshItinerary,
+		type Match
 	} from '@motis-project/motis-client';
 	import ItineraryList from '$lib/ItineraryList.svelte';
 	import ConnectionDetail from '$lib/ConnectionDetail.svelte';
@@ -344,6 +345,8 @@
 		}
 	}
 
+	let advancedOptionsOpen = $state<boolean>(false);
+	let isochronesAdvancedOptionsOpen = $state<boolean>(false);
 	let fromMarker = $state<maplibregl.Marker>();
 	let toMarker = $state<maplibregl.Marker>();
 	let oneMarker = $state<maplibregl.Marker>();
@@ -518,7 +521,7 @@
 	};
 
 	let baseQuery = $derived(
-		from.match && to.match
+		from.match && to.match && !advancedOptionsOpen
 			? ({
 					query: omitDefaults({
 						time: time.toISOString(),
@@ -609,7 +612,7 @@
 	});
 
 	let isochronesQuery = $derived(
-		one?.match
+		one?.match && !isochronesAdvancedOptionsOpen
 			? ({
 					query: {
 						one: toPlaceString(one),
@@ -804,7 +807,12 @@
 		});
 	};
 
+	let lastFlownTo: Match | undefined = undefined;
 	const flyToLocation = (location: Location) => {
+		if (location.match == lastFlownTo) {
+			return;
+		}
+		lastFlownTo = location.match;
 		map?.flyTo({ center: location.match, zoom: 18 });
 	};
 
@@ -906,6 +914,7 @@
 					<SearchMask
 						geocodingBiasPlace={center}
 						{serverConfig}
+						bind:advancedOptionsOpen
 						bind:from
 						bind:to
 						bind:time
@@ -948,6 +957,7 @@
 			<Tabs.Content value="isochrones">
 				<Card class="overflow-y-auto overflow-x-hidden bg-background rounded-lg">
 					<IsochronesMask
+						bind:advancedOptionsOpen={isochronesAdvancedOptionsOpen}
 						bind:one
 						{serverConfig}
 						bind:maxTravelTime

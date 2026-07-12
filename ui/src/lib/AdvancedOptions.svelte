@@ -1,12 +1,9 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import { MediaQuery } from 'svelte/reactivity';
-	import Button from '$lib/components/ui/button/button.svelte';
 	import { buttonVariants } from '$lib/components/ui/button';
 	import * as Dialog from '$lib/components/ui/dialog';
 	import { t } from '$lib/i18n/translation';
 	import * as Select from '$lib/components/ui/select';
-	import { ChevronUp, ChevronDown } from '@lucide/svelte';
 	import { Switch } from './components/ui/switch';
 	import type {
 		CyclingSpeed,
@@ -32,6 +29,7 @@
 	import ViaStopOptions from './ViaStopOptions.svelte';
 	import Slider from './components/ui/slider/Slider.svelte';
 	let {
+		advancedOptionsOpen = $bindable(false),
 		useRoutedTransfers = $bindable(),
 		serverConfig,
 		wheelchair = $bindable(),
@@ -65,6 +63,7 @@
 		hasDebug = false,
 		additionalComponents
 	}: {
+		advancedOptionsOpen: boolean;
 		useRoutedTransfers: boolean;
 		serverConfig: ServerConfig | undefined;
 		wheelchair: boolean;
@@ -139,7 +138,6 @@
 		{ value: 'LOW' as ElevationCosts, label: t.elevationCosts.LOW },
 		{ value: 'HIGH' as ElevationCosts, label: t.elevationCosts.HIGH }
 	];
-	let expanded = $state<boolean>(false);
 	let allowElevationCosts = $derived(
 		serverConfig?.hasElevation &&
 			(requireBikeTransport ||
@@ -156,8 +154,6 @@
 	let possibleModes = $derived(
 		hasDebug ? prePostDirectModes : prePostDirectModes.filter((m) => !m.startsWith('DEBUG_'))
 	);
-
-	const isSmallScreen = new MediaQuery('(max-width: 768px)');
 </script>
 
 {#snippet optionsContent()}
@@ -316,33 +312,16 @@
 	{/if}
 {/snippet}
 
-{#if isSmallScreen.current}
-	<Dialog.Root>
-		<Dialog.Trigger class={buttonVariants({ variant: 'ghost' })}>
-			{t.advancedSearchOptions}
-		</Dialog.Trigger>
-		<Dialog.Content class="flex max-h-[90vh] max-w-2xl flex-col">
-			<Dialog.Header>
-				<Dialog.Title>{t.advancedSearchOptions}</Dialog.Title>
-			</Dialog.Header>
-			<div class="space-y-4 overflow-y-auto pr-2">
-				{@render optionsContent()}
-			</div>
-		</Dialog.Content>
-	</Dialog.Root>
-{:else}
-	<Button variant="ghost" onclick={() => (expanded = !expanded)}>
+<Dialog.Root bind:open={advancedOptionsOpen}>
+	<Dialog.Trigger class={buttonVariants({ variant: 'ghost' })}>
 		{t.advancedSearchOptions}
-		{#if expanded}
-			<ChevronUp class="size-[18px]" />
-		{:else}
-			<ChevronDown class="size-[18px]" />
-		{/if}
-	</Button>
-
-	{#if expanded}
-		<div class="w-full space-y-4">
+	</Dialog.Trigger>
+	<Dialog.Content class="flex max-h-[90vh] max-w-2xl flex-col">
+		<Dialog.Header>
+			<Dialog.Title>{t.advancedSearchOptions}</Dialog.Title>
+		</Dialog.Header>
+		<div class="space-y-4 overflow-y-auto p-2">
 			{@render optionsContent()}
 		</div>
-	{/if}
-{/if}
+	</Dialog.Content>
+</Dialog.Root>
