@@ -4,6 +4,7 @@
 #include <cmath>
 #include <mutex>
 #include <optional>
+#include <string_view>
 #include <tuple>
 #include <variant>
 
@@ -1180,17 +1181,20 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
         std::holds_alternative<n::interval<n::unixtime_t>>(q.start_time_);
 
     auto primary = run_search(rtt, true);
-    auto journeys = std::move(primary.journeys_);
     auto search_interval = primary.interval_;
+    auto full_stats = stats_map_t{};
 
     if (full) {
       auto scheduled = run_search(nullptr, false);
 
-      auto const effective_interval = [&](search_output const& r) {
+      auto const effective_interval = [&](search_output const& r,
+                                          std::string_view tag) {
         auto itv = r.interval_;
         auto const out_of_content =
             (r.used_pong_ && r.journeys_.size() < q.min_connection_count_) ||
             (r.journeys_.empty() && itv.size() == n::duration_t{0});
+        full_stats.emplace(fmt::format("full_{}_out_of_content", tag),
+                           out_of_content);
         if (out_of_content) {
           constexpr auto const kOutOfContentCoverage = n::duration_t{48 * 60};
           if (q.extend_interval_later_) {
@@ -1205,8 +1209,8 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
         return itv;
       };
 
-      auto const rt_itv = effective_interval(primary);
-      auto const sched_itv = effective_interval(scheduled);
+      auto const rt_itv = effective_interval(primary, "rt");
+      auto const sched_itv = effective_interval(scheduled, "sched");
       search_interval = {std::max(rt_itv.from_, sched_itv.from_),
                          std::min(rt_itv.to_, sched_itv.to_)};
       if (search_interval.to_ < search_interval.from_) {
@@ -1217,28 +1221,35 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
         auto const outside = [&](n::routing::journey const& j) {
           return !search_interval.contains(j.start_time_);
         };
-        utl::erase_if(journeys, outside);
+        utl::erase_if(primary.journeys_, outside);
         utl::erase_if(scheduled.journeys_, outside);
       }
 
-      auto const n_rt = journeys.size();
+      auto const n_rt = primary.journeys_.size();
       for (auto& sj : scheduled.journeys_) {
-        auto const covered_by_rt =
-            std::any_of(begin(journeys),
-                        begin(journeys) + static_cast<std::ptrdiff_t>(n_rt),
-                        [&](n::routing::journey const& rj) {
-                          return same_connection(sj, rj);
-                        });
+        auto const covered_by_rt = std::any_of(
+            begin(primary.journeys_),
+            begin(primary.journeys_) + static_cast<std::ptrdiff_t>(n_rt),
+            [&](n::routing::journey const& rj) {
+              return same_connection(sj, rj);
+            });
         if (!covered_by_rt) {
-          journeys.push_back(std::move(sj));
+          primary.journeys_.push_back(std::move(sj));
         }
       }
-      std::sort(begin(journeys), end(journeys),
+      std::sort(begin(primary.journeys_), end(primary.journeys_),
                 [](n::routing::journey const& a, n::routing::journey const& b) {
                   return std::tuple{a.start_time_, a.dest_time_, a.transfers_} <
                          std::tuple{b.start_time_, b.dest_time_, b.transfers_};
                 });
+
+      for (auto const& [k, v] : join(std::move(scheduled.search_stats_),
+                                     std::move(scheduled.algo_stats_))) {
+        full_stats.emplace(fmt::format("sched_{}", k), v);
+      }
     }
+
+    auto journeys = std::move(primary.journeys_);
 
     if (query.maxItineraries_.has_value()) {
       search_interval = shrink(start_time.extend_interval_earlier_,
@@ -1280,11 +1291,12 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
         });
 
     return {
-        .debugOutput_ = join(
-            std::move(prepare_stats), std::move(query_stats),
-            std::move(primary.search_stats_), std::move(primary.algo_stats_),
-            stats_map_t{
-                {"fares", static_cast<std::uint64_t>(fares_time.count())}}),
+        .debugOutput_ =
+            join(std::move(prepare_stats), std::move(query_stats),
+                 std::move(primary.search_stats_),
+                 std::move(primary.algo_stats_), std::move(full_stats),
+                 stats_map_t{{"fares",
+                              static_cast<std::uint64_t>(fares_time.count())}}),
         .from_ = bwd_compat_lvl_adjust(std::move(from_p), api_version),
         .to_ = bwd_compat_lvl_adjust(std::move(to_p), api_version),
         .direct_ = std::move(direct),
