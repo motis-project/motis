@@ -15,7 +15,7 @@
  *
  * # Transit modes
  *
- * - `TRANSIT`: translates to `TRAM,FERRY,AIRPLANE,BUS,COACH,RAIL,ODM,FUNICULAR,AERIAL_LIFT,OTHER`
+ * - `TRANSIT`: translates to `TRAM,FERRY,AIRPLANE,BUS,COACH,RAIL,ODM,RIDE_SHARING,FUNICULAR,AERIAL_LIFT,OTHER`
  * - `TRAM`: trams
  * - `SUBWAY`: subway trains (Paris Metro, London Underground, but also NYC Subway, Hamburger Hochbahn, and other non-underground services)
  * - `FERRY`: ferries
@@ -30,6 +30,7 @@
  * - `REGIONAL_RAIL`: regional train
  * - `SUBURBAN`: suburban trains (e.g. S-Bahn, RER, Elizabeth Line, ...)
  * - `ODM`: demand responsive transport
+ * - `RIDE_SHARING`: ride sharing
  * - `FUNICULAR`: Funicular. Any rail system designed for steep inclines.
  * - `AERIAL_LIFT`: Aerial lift, suspended cable car (e.g., gondola lift, aerial tramway). Cable transport where cabins, cars, gondolas or open chairs are suspended by means of one or more cables.
  * - `AREAL_LIFT`: deprecated
@@ -371,11 +372,13 @@ export type ElevationCosts = 'NONE' | 'LOW' | 'HIGH';
 /**
  * Controls whether realtime data (delays, cancellations, added/changed trips) is used.
  *
- * - `REALTIME`: use realtime data.
- * - `OFF`: use the scheduled timetable only.
+ * - `REALTIME`: use realtime data for routing/sorting.
+ * - `REALTIME_ANNOTATION_ONLY`: route, sort and window on the scheduled
+ * timetable only, but still annotate the response with realtime data.
+ * - `OFF`: use the scheduled timetable only, with no realtime annotation.
  *
  */
-export type RealtimeMode = 'OFF' | 'REALTIME';
+export type RealtimeMode = 'OFF' | 'REALTIME_ANNOTATION_ONLY' | 'REALTIME';
 
 /**
  * Different accessibility profiles for pedestrians.
@@ -731,9 +734,17 @@ export type StepInstruction = {
      */
     toLevel: number;
     /**
-     * OpenStreetMap way index
+     * OpenStreetMap way ID
      */
     osmWay?: number;
+    /**
+     * OpenStreetMap node ID where this segment starts
+     */
+    fromOsmNode?: number;
+    /**
+     * OpenStreetMap node ID where this segment ends
+     */
+    toOsmNode?: number;
     polyline: EncodedPolyline;
     /**
      * The name of the street.
@@ -1163,6 +1174,12 @@ export type Category = {
     shortName: string;
 };
 
+export type TicketUrls = {
+    web?: string;
+    android?: string;
+    ios?: string;
+};
+
 export type Leg = {
     /**
      * Transport mode for this leg
@@ -1243,6 +1260,7 @@ export type Leg = {
     routeType?: number;
     agencyName?: string;
     agencyUrl?: string;
+    agencyFareUrl?: string;
     agencyId?: string;
     tripId?: string;
     routeShortName?: string;
@@ -1311,6 +1329,11 @@ export type Leg = {
      *
      */
     wheelchairAccessible?: WheelchairAccessibility;
+    /**
+     * Ticket booking links for different platforms
+     *
+     */
+    ticketUrls?: TicketUrls;
     /**
      * Alternative connections that can replace this transit leg.
      * Each alternative is normally a sequence of 3 legs:
@@ -2100,7 +2123,7 @@ export type PlanData = {
          */
         elevationCosts?: ElevationCosts;
         /**
-         * Optional. Experimental. Default is `1.0`.
+         * Optional. Experimental. Default is `10`.
          * Factor with which the duration of the fastest direct non-public-transit connection is multiplied.
          * Values > 1.0 allow transit connections that are slower than the fastest direct non-public-transit connection to be found.
          *
@@ -2201,7 +2224,7 @@ export type PlanData = {
          */
         maxItineraries?: number;
         /**
-         * Optional. Default is 25 meters.
+         * Optional. Default is 250 meters.
          *
          * Maximum matching distance in meters to match geo coordinates to the street network.
          *
@@ -2417,6 +2440,8 @@ export type PlanData = {
          * Controls whether realtime data is used for routing.
          * - `REALTIME`: the realtime timetable (delays, cancellations,
          * added/changed trips) is used and reflected in the response.
+         * - `REALTIME_ANNOTATION_ONLY`: routing uses the scheduled timetable
+         * only, but the response is annotated with realtime data.
          * - `OFF`: only the scheduled timetable is used.
          *
          */
@@ -2926,7 +2951,7 @@ export type OneToAllData = {
          */
         elevationCosts?: ElevationCosts;
         /**
-         * Optional. Default is 25 meters.
+         * Optional. Default is 250 meters.
          *
          * Maximum matching distance in meters to match geo coordinates to the street network.
          *
@@ -3111,11 +3136,11 @@ export type GeocodeData = {
          */
         language?: Array<(string)>;
         /**
-         * latitude,longitude pair of the upper left coordinate
+         * latitude,longitude pair of the upper left coordinate of the bounding box containing all results
          */
         max?: string;
         /**
-         * latitude,longitude pair of the lower right coordinate
+         * latitude,longitude pair of the lower right coordinate of the bounding box containing all results
          */
         min?: string;
         /**
@@ -3126,7 +3151,6 @@ export type GeocodeData = {
         mode?: Array<Mode>;
         /**
          * Optional. Number of suggestions to return.
-         *
          * If omitted, 10 suggestions are returned by default.
          * Must be <= server config variable `geocode_max_suggestions`.
          *
@@ -3411,6 +3435,9 @@ export type StoptimesData = {
          * Controls whether realtime data is used.
          * - `REALTIME`: realtime data (delays, cancellations) is used
          * stop times are returned and sorted by their realtime time.
+         * - `REALTIME_ANNOTATION_ONLY`: stop times are returned, windowed and
+         * sorted by their planned time, but each stop time is annotated with
+         * realtime data.
          * - `OFF`: only scheduled data is used; stop times are returned and
          * sorted by their planned time, with no realtime annotation.
          *

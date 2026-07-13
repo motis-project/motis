@@ -359,7 +359,7 @@ std::vector<api::Place> other_stops_impl(n::rt::frun fr,
     return result;
   };
 
-  auto const orig_location = fr[fr.first_valid()].get_location_idx();
+  auto const orig_location = fr[0].get_location_idx();
   if (ev_type == nigiri::event_type::kDep) {
     ++fr.stop_range_.from_;
     fr.stop_range_.to_ = fr.size();
@@ -369,8 +369,7 @@ std::vector<api::Place> other_stops_impl(n::rt::frun fr,
           return orig_location == stop.get_location_idx();
         });
     auto result = utl::to_vec(fr.begin(), it, convert_stop);
-    utl::verify<net::bad_request_exception>(!result.empty(),
-                                            "Departure is last stop in trip");
+    utl::verify(!result.empty(), "Departure is last stop in trip");
     return result;
   } else {
     fr.stop_range_.from_ = 0;
@@ -381,8 +380,7 @@ std::vector<api::Place> other_stops_impl(n::rt::frun fr,
           return orig_location == stop.get_location_idx();
         });
     auto result = utl::to_vec(it.base(), fr.end(), convert_stop);
-    utl::verify<net::bad_request_exception>(!result.empty(),
-                                            "Arrival is first stop in trip");
+    utl::verify(!result.empty(), "Arrival is first stop in trip");
     return result;
   }
 }

@@ -180,6 +180,7 @@ export type Translations = {
 		route: string;
 		mode: string;
 	};
+	resetToNorth: string;
 	showMyLocation: string;
 	toggleHillshades: string;
 	routes: (n: number) => string;
@@ -190,6 +191,8 @@ export type Translations = {
 		arrivalsAt: (stop: string) => string;
 		isochronesFrom: (place: string) => string;
 	};
+	tickets: string;
+	routeInformation: string;
 };
 
 const translations: Map<string, Translations> = new Map(

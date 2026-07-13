@@ -15,7 +15,7 @@ export const ModeSchema = {
 
 # Transit modes
 
-  - \`TRANSIT\`: translates to \`TRAM,FERRY,AIRPLANE,BUS,COACH,RAIL,ODM,FUNICULAR,AERIAL_LIFT,OTHER\`
+  - \`TRANSIT\`: translates to \`TRAM,FERRY,AIRPLANE,BUS,COACH,RAIL,ODM,RIDE_SHARING,FUNICULAR,AERIAL_LIFT,OTHER\`
   - \`TRAM\`: trams
   - \`SUBWAY\`: subway trains (Paris Metro, London Underground, but also NYC Subway, Hamburger Hochbahn, and other non-underground services)
   - \`FERRY\`: ferries
@@ -30,6 +30,7 @@ export const ModeSchema = {
   - \`REGIONAL_RAIL\`: regional train
   - \`SUBURBAN\`: suburban trains (e.g. S-Bahn, RER, Elizabeth Line, ...)
   - \`ODM\`: demand responsive transport
+  - \`RIDE_SHARING\`: ride sharing
   - \`FUNICULAR\`: Funicular. Any rail system designed for steep inclines.
   - \`AERIAL_LIFT\`: Aerial lift, suspended cable car (e.g., gondola lift, aerial tramway). Cable transport where cabins, cars, gondolas or open chairs are suspended by means of one or more cables.
   - \`AREAL_LIFT\`: deprecated
@@ -449,11 +450,13 @@ Using a elevation cost profile will prefer routes with a smaller incline and sma
 export const RealtimeModeSchema = {
     description: `Controls whether realtime data (delays, cancellations, added/changed trips) is used.
 
-- \`REALTIME\`: use realtime data.
-- \`OFF\`: use the scheduled timetable only.
+- \`REALTIME\`: use realtime data for routing/sorting.
+- \`REALTIME_ANNOTATION_ONLY\`: route, sort and window on the scheduled
+  timetable only, but still annotate the response with realtime data.
+- \`OFF\`: use the scheduled timetable only, with no realtime annotation.
 `,
     type: 'string',
-    enum: ['OFF', 'REALTIME']
+    enum: ['OFF', 'REALTIME_ANNOTATION_ONLY', 'REALTIME']
 } as const;
 
 export const PedestrianProfileSchema = {
@@ -904,7 +907,15 @@ export const StepInstructionSchema = {
             type: 'number'
         },
         osmWay: {
-            description: 'OpenStreetMap way index',
+            description: 'OpenStreetMap way ID',
+            type: 'integer'
+        },
+        fromOsmNode: {
+            description: 'OpenStreetMap node ID where this segment starts',
+            type: 'integer'
+        },
+        toOsmNode: {
+            description: 'OpenStreetMap node ID where this segment ends',
             type: 'integer'
         },
         polyline: {
@@ -1451,6 +1462,21 @@ For NeTEx it contains information about the vehicle category, e.g. IC/InterCity
     }
 } as const;
 
+export const TicketUrlsSchema = {
+    type: 'object',
+    properties: {
+        web: {
+            type: 'string'
+        },
+        android: {
+            type: 'string'
+        },
+        ios: {
+            type: 'string'
+        }
+    }
+} as const;
+
 export const LegSchema = {
     type: 'object',
     required: ['mode', 'startTime', 'endTime', 'scheduledStartTime', 'scheduledEndTime', 'realTime', 'scheduled', 'duration', 'from', 'to', 'legGeometry'],
@@ -1560,6 +1586,9 @@ For non-transit legs, null
         agencyUrl: {
             type: 'string'
         },
+        agencyFareUrl: {
+            type: 'string'
+        },
         agencyId: {
             type: 'string'
         },
@@ -1651,6 +1680,11 @@ by looping active weekdays, e.g. from calendar.txt in GTFS.
             description: `Whether wheelchairs can be transported on this leg.
 `,
             '$ref': '#/components/schemas/WheelchairAccessibility'
+        },
+        ticketUrls: {
+            '$ref': '#/components/schemas/TicketUrls',
+            description: `Ticket booking links for different platforms
+`
         },
         alternatives: {
             description: `Alternative connections that can replace this transit leg.
@@ -2128,7 +2162,7 @@ it can lead to slow routing performance.
         maxMatchingDistance: {
             description: 'maximum matching distance in meters to match geo coordinates to the street network',
             type: 'number',
-            default: 25
+            default: 250
         },
         arriveBy: {
             description: `Optional. Defaults to false, i.e. one to many search

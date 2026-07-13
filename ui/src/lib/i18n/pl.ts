@@ -185,6 +185,7 @@ const translations: Translations = {
 		route: 'Timetable: Line Colors',
 		mode: 'Timetable: Transport Modes'
 	},
+	resetToNorth: 'Reset to north',
 	showMyLocation: 'Show my location',
 	toggleHillshades: 'Toggle hillshades overlay',
 	routes: (n: number) => {
@@ -203,7 +204,9 @@ const translations: Translations = {
 		departuresAt: (stop) => `Odjazdy z ${stop}`,
 		arrivalsAt: (stop) => `Przyjazdy do ${stop}`,
 		isochronesFrom: (place) => `Izochrony z ${place}`
-	}
+	},
+	tickets: 'Bilety',
+	routeInformation: 'Więcej informacji'
 };
 
 export default translations;

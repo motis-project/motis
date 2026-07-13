@@ -7,6 +7,7 @@
 #include "boost/url/url.hpp"
 
 #include "nigiri/common/interval.h"
+#include "nigiri/flex.h"
 #include "nigiri/routing/raptor/debug.h"
 #include "nigiri/routing/search.h"
 #include "nigiri/timetable.h"
@@ -30,6 +31,12 @@ namespace po = boost::program_options;
 namespace motis {
 
 constexpr auto const kMinRank = 16UL;
+
+constexpr auto kEuropeBounds = R"({
+  "type": "Polygon",
+  "coordinates":
+    [[ [ -11, 72 ], [ -11, 36 ], [ 32, 36 ], [ 32, 72 ], [ -11, 72 ] ]]
+})";
 
 static std::atomic_uint32_t seed{0U};
 
@@ -79,7 +86,10 @@ int generate(int ac, char** av) {
   auto use_bike = false;
   auto use_car = false;
   auto use_odm = false;
+  auto use_flex = false;
   auto lb_rank = true;
+  auto geo_rank = std::optional<std::uint64_t>{};
+  tg_geom* bounds{nullptr};
   auto p = api::plan_params{};
 
   auto const parse_date = [](std::string_view const s) {
@@ -121,10 +131,23 @@ int generate(int ac, char** av) {
       modes->emplace_back(api::ModeEnum::RIDE_SHARING);
       use_odm = true;
     }
+    if (s.contains("FLEX")) {
+      modes->emplace_back(api::ModeEnum::FLEX);
+      use_flex = true;
+    }
   };
 
   auto const parse_time_of_day = [&](std::uint32_t const h) {
     time_of_day = h % 24U;
+  };
+
+  auto const parse_bounds = [&](std::string_view const s) {
+    bounds = s == "europe" ? tg_parse_geojson(kEuropeBounds)
+                           : tg_parse_geojsonn(s.data(), s.size());
+    if (char const* err = tg_geom_error(bounds)) {
+      tg_geom_free(bounds);
+      throw utl::fail("unable to parse bounds GeoJSON: {}", err);
+    }
   };
 
   auto desc = po::options_description{"Options"};
@@ -165,7 +188,15 @@ int generate(int ac, char** av) {
        "emit queries uniformly distributed over the lower bounds (lb) ranks, "
        "lb rank n:  2^n-th stop when sorting all stops by their lb value from "
        "the start (min. rank: 4, max. rank: derived from number of eligible "
-       "stops)");
+       "stops)")  //
+      ("geo_rank",
+       po::value<std::uint64_t>()->notifier(
+           [&](std::uint64_t const r) { geo_rank = r; }),
+       "emit queries with geo-rank r, i.e., the target is the 2^r-th stop from "
+       "the source in terms of geographical distance, overrides lb_rank")  //
+      ("bounds,b", po::value<std::string>()->notifier(parse_bounds),
+       "randomize locations within bounds, format: GeoJSON"
+       "(shorthand for Europe \"-b europe\")");
   add_data_path_opt(desc, data_path);
   auto vm = parse_opt(ac, av, desc);
 
@@ -181,6 +212,9 @@ int generate(int ac, char** av) {
 
   auto d = data{data_path, c};
   utl::verify(d.tt_, "timetable required");
+
+  fmt::println("Timetable ---\nn_locations: {}\nn_routes: {}\nn_trips: {}\n---",
+               d.tt_->n_locations(), d.tt_->n_routes(), d.tt_->n_trips());
 
   first_day = first_day
                   ? d.tt_->date_range_.clamp(*first_day)
@@ -198,6 +232,17 @@ int generate(int ac, char** av) {
   }
   fmt::println("date range: [{}, {}], tt={}", *first_day, *last_day,
                d.tt_->external_interval());
+
+  auto const in_bounds = [&](auto const& pos) {
+    if (bounds == nullptr) {
+      return true;
+    }
+
+    auto const point = tg_geom_new_point(tg_point{pos.lng(), pos.lat()});
+    auto const result = tg_geom_within(point, bounds);
+    tg_geom_free(point);
+    return result;
+  };
 
   auto const use_odm_bounds = modes && use_odm && d.odm_bounds_ != nullptr;
   auto node_rtree = point_rtree<osr::node_idx_t>{};
@@ -245,12 +290,13 @@ int generate(int ac, char** av) {
                                 ((use_car || use_odm) && can_car(node)));
     };
 
-    auto const in_bounds = [&](auto const& pos) {
+    auto const in_odm_bounds = [&](auto const& pos) {
       return !use_odm_bounds || d.odm_bounds_->contains(pos);
     };
 
     for (auto i = osr::node_idx_t{0U}; i < d.w_->n_nodes(); ++i) {
-      if (mode_match(i) && in_bounds(d.w_->get_node_pos(i))) {
+      if (mode_match(i) && in_bounds(d.w_->get_node_pos(i)) &&
+          in_odm_bounds(d.w_->get_node_pos(i))) {
         node_rtree.add(d.w_->get_node_pos(i), i);
       }
     }
@@ -261,16 +307,57 @@ int generate(int ac, char** av) {
   auto stops = std::vector<n::location_idx_t>{};
   for (auto i = 0U; i != d.tt_->n_locations(); ++i) {
     auto const l = n::location_idx_t{i};
-    if (use_odm_bounds &&
-        !d.odm_bounds_->contains(d.tt_->locations_.coordinates_[l])) {
+
+    if (!in_bounds(d.tt_->locations_.coordinates_[l]) ||
+        (use_odm_bounds &&
+         !d.odm_bounds_->contains(d.tt_->locations_.coordinates_[l]))) {
       continue;
     }
     stops.emplace_back(l);
   }
 
+  if (bounds != nullptr) {
+    fmt::println("in bounds: {}/{} stops", stops.size(), d.tt_->n_locations());
+  }
+
+  auto geo_rank_index = 0UL;
+  auto geo_distance = std::unordered_map<n::location_idx_t, double>{};
+  struct flex_seed {
+    geo::latlng from_;
+    n::location_idx_t rank_stop_;
+  };
+  auto flex_seeds = std::vector<flex_seed>{};
+  if (use_flex) {
+    for (auto i = 0U; i != d.tt_->flex_area_locations_.size(); ++i) {
+      auto const a = n::flex_area_idx_t{i};
+      auto const area_stops = d.tt_->flex_area_locations_[a];
+      for (auto const l : area_stops) {
+        flex_seeds.emplace_back(d.tt_->locations_.coordinates_[l], l);
+      }
+      auto const& bbox = d.tt_->flex_area_bbox_[a];
+      flex_seeds.emplace_back(  // use flex area center
+          geo::latlng{(bbox.min_.lat_ + bbox.max_.lat_) / 2.0,
+                      (bbox.min_.lng_ + bbox.max_.lng_) / 2.0},
+          area_stops.empty() ? n::location_idx_t::invalid() : area_stops[0]);
+    }
+    utl::verify(!flex_seeds.empty(), "no flex areas in timetable");
+    fmt::println("flex: {} areas, {} seeds (stops + area centers)",
+                 d.tt_->flex_area_locations_.size(), flex_seeds.size());
+  }
+
   auto ss = std::optional<n::routing::search_state>{};
   auto rs = std::optional<n::routing::raptor_state>{};
-  if (lb_rank) {
+  if (geo_rank) {
+    fmt::println("from and to pairings by geo-rank = {}", *geo_rank);
+    geo_rank_index = 1UL << *geo_rank;
+    if (geo_rank_index > stops.size() - 1U) {
+      fmt::println("geo-rank index exceeds number of stops: {} > {}",
+                   geo_rank_index, stops.size() - 1U);
+      return -1;
+    }
+    geo_distance.reserve(stops.size());
+    lb_rank = false;
+  } else if (lb_rank) {
     ss = n::routing::search_state{};
     rs = n::routing::raptor_state{};
     fmt::println("from and to pairings by lower bounds rank");
@@ -299,13 +386,21 @@ int generate(int ac, char** av) {
     auto to_place = std::optional<std::string>{};
 
     for (auto x = 0U; x != 1000U; ++x) {
-      auto const from_stop = random_stop(*d.tt_, stops);
-      from_place = get_place(from_stop);
-      if (!from_place) {
-        continue;
+      // stop used to lb-rank the destination (invalid -> random destination)
+      auto rank_stop = n::location_idx_t::invalid();
+      if (use_flex) {
+        auto const seed = rand_in(flex_seeds);
+        from_place = fmt::format("{},{}", seed.from_.lat_, seed.from_.lng_);
+        rank_stop = seed.rank_stop_;
+      } else {
+        rank_stop = random_stop(*d.tt_, stops);
+        from_place = get_place(rank_stop);
+        if (!from_place) {
+          continue;
+        }
       }
 
-      if (lb_rank) {
+      if (lb_rank && rank_stop != n::location_idx_t::invalid()) {
         auto const s = n::routing::search<
             n::direction::kBackward,
             n::routing::raptor<n::direction::kBackward, false, 0,
@@ -313,12 +408,22 @@ int generate(int ac, char** av) {
             *d.tt_, nullptr, *ss, *rs,
             nigiri::routing::query{
                 .start_time_ = d.tt_->date_range_.from_,
-                .destination_ = {{from_stop, n::duration_t{0U}, 0}}}};
+                .destination_ = {{rank_stop, n::duration_t{0U}, 0}}}};
         utl::sort(stops, [&](auto const& a, auto const& b) {
           return ss->travel_time_lower_bound_[to_idx(a)] <
                  ss->travel_time_lower_bound_[to_idx(b)];
         });
         to_place = get_place(stops[r]);
+      } else if (geo_rank && rank_stop != n::location_idx_t::invalid()) {
+        for (auto const s : stops) {
+          geo_distance[s] =
+              geo::distance(d.tt_->locations_.coordinates_[rank_stop],
+                            d.tt_->locations_.coordinates_[s]);
+        }
+        utl::sort(stops, [&](auto const& a, auto const& b) {
+          return geo_distance[a] < geo_distance[b];
+        });
+        to_place = get_place(stops[geo_rank_index]);
       } else {
         to_place = get_place(random_stop(*d.tt_, stops));
       }

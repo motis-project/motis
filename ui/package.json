@@ -4,8 +4,9 @@
 	"private": true,
 	"scripts": {
 		"prepare": "svelte-kit sync",
-		"dev": "vite dev",
-		"build": "vite build",
+		"provision:map-assets": "node scripts/provision-map-assets.mjs",
+		"dev": "pnpm run provision:map-assets && vite dev",
+		"build": "pnpm run provision:map-assets && vite build",
 		"preview": "vite preview",
 		"test": "pnpm run test:integration && pnpm run test:unit",
 		"check": "svelte-check --tsconfig ./tsconfig.json",

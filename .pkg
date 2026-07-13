@@ -1,7 +1,7 @@
 [nigiri]
   url=git@github.com:motis-project/nigiri.git
   branch=master
-  commit=cbac689fc124e4f7f0bfd6d0f8de7cc3913f3d9e
+  commit=73ee556511b568f59b6a7c29a6330d86e9eede2a
 [cista]
   url=git@github.com:felixguendling/cista.git
   branch=master
@@ -9,7 +9,7 @@
 [osr]
   url=git@github.com:motis-project/osr.git
   branch=master
-  commit=c4f1cc8dd5e20eb740db43e7149780e6353651c8
+  commit=e58c08c8d71bf0ad98bab77e39c30aa58fe16aea
 [utl]
   url=git@github.com:motis-project/utl.git
   branch=master
@@ -41,7 +41,7 @@
 [tiles]
   url=git@github.com:motis-project/tiles.git
   branch=master
-  commit=6bd71d984eb699d7160f5c448bc14d5c57ddb4b7
+  commit=2a20abde6a6c4bc58654285a0a46ed6bc63df6b1
 [boost]
   url=git@github.com:motis-project/boost.git
   branch=boost-1.89.0
@@ -65,7 +65,7 @@
 [opentelemetry-cpp]
   url=git@github.com:motis-project/opentelemetry-cpp.git
   branch=main
-  commit=352a93d802a88d1a00cd06cf8b442bcd0cc787a6
+  commit=f2240dc890f3bf68fe6fa5a80450e93aab09578e
 [ctx]
   url=git@github.com:motis-project/ctx.git
   branch=master

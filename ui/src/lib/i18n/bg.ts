@@ -183,6 +183,7 @@ const translations: Translations = {
 		route: 'Timetable: Line Colors',
 		mode: 'Timetable: Transport Modes'
 	},
+	resetToNorth: 'Reset to north',
 	showMyLocation: 'Show my location',
 	toggleHillshades: 'Toggle hillshades overlay',
 	routes: (n: number) => {
@@ -201,7 +202,9 @@ const translations: Translations = {
 		departuresAt: (stop) => `Заминавания от ${stop}`,
 		arrivalsAt: (stop) => `Пристигания в ${stop}`,
 		isochronesFrom: (place) => `Достъпен периметър от ${place}`
-	}
+	},
+	tickets: 'Билети',
+	routeInformation: 'Допълнителна информация'
 };
 
 export default translations;

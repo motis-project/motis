@@ -180,6 +180,7 @@ const translations: Translations = {
 		route: 'Fahrplan: Linienfarben',
 		mode: 'Fahrplan: Verkehrsmittel'
 	},
+	resetToNorth: 'Reset to north',
 	showMyLocation: 'Meinen Standort anzeigen',
 	toggleHillshades: 'Schummerung ein/aus',
 	routes: (n: number) => {
@@ -198,7 +199,9 @@ const translations: Translations = {
 		departuresAt: (stop) => `Abfahrten in ${stop}`,
 		arrivalsAt: (stop) => `Ankünfte in ${stop}`,
 		isochronesFrom: (place) => `Isochronen von ${place}`
-	}
+	},
+	tickets: 'Tickets',
+	routeInformation: 'Mehr Informationen'
 };
 
 export default translations;
