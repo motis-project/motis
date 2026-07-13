@@ -101,7 +101,7 @@ paths:
           required: false
           description: |
             Optional. If not set, the default is `0,0` - no stay required.
-            
+
             For each `via` stop a minimum stay duration in minutes.
             
             The value `0` signals that it's allowed to stay in the same trip.
@@ -203,12 +203,12 @@ paths:
           in: query
           required: false
           description: |
-            Optional. Default is 25 meters.
+            Optional. Default is 250 meters.
             
             Maximum matching distance in meters to match geo coordinates to the street network.
           schema:
             type: number
-            default: 25
+            default: 250
 
         - name: pedestrianProfile
           in: query
@@ -768,7 +768,7 @@ paths:
             default: false
           description: |
             Optional. Default is `false`.
-            
+
               - `arriveBy=true`: the parameters `date` and `time` refer to the arrival time
               - `arriveBy=false`: the parameters `date` and `time` refer to the departure time
 
@@ -849,12 +849,12 @@ paths:
           in: query
           required: false
           description: |
-            Optional. Experimental. Default is `1.0`.
+            Optional. Experimental. Default is `10`.
             Factor with which the duration of the fastest direct non-public-transit connection is multiplied.
             Values > 1.0 allow transit connections that are slower than the fastest direct non-public-transit connection to be found.
           schema:
             type: number
-            default: 1.0
+            default: 10
             minimum: 0
 
         - name: timeout
@@ -935,6 +935,22 @@ paths:
           schema:
             type: boolean
             default: false
+
+        - name: realtimeMode
+          in: query
+          required: false
+          description: |
+            Optional. Default is `REALTIME`.
+
+            Controls whether realtime data is used for routing.
+            - `REALTIME`: the realtime timetable (delays, cancellations,
+              added/changed trips) is used and reflected in the response.
+            - `REALTIME_ANNOTATION_ONLY`: routing uses the scheduled timetable
+              only, but the response is annotated with realtime data.
+            - `OFF`: only the scheduled timetable is used.
+          schema:
+            $ref: '#/components/schemas/RealtimeMode'
+            default: REALTIME
 
         - name: language
           in: query
@@ -1308,7 +1324,7 @@ paths:
           description: maximum matching distance in meters to match geo coordinates to the street network
           schema:
             type: number
-            default: 25
+            default: 250
 
         - name: arriveBy
           in: query
@@ -1812,12 +1828,12 @@ paths:
           in: query
           required: false
           description: |
-            Optional. Default is 25 meters.
+            Optional. Default is 250 meters.
 
             Maximum matching distance in meters to match geo coordinates to the street network.
           schema:
             type: number
-            default: 25
+            default: 250
 
         - name: useRoutedTransfers
           in: query
@@ -2199,17 +2215,31 @@ paths:
           schema:
             type: number
             default: 1
+
         - name: numResults
           in: query
           required: false
           description: |
             Optional. Number of suggestions to return.
-            
             If omitted, 10 suggestions are returned by default.
             Must be <= server config variable `geocode_max_suggestions`.
           schema:
             type: integer
             minimum: 1
+
+        - name: min
+          in: query
+          required: false
+          description: latitude,longitude pair of the lower right coordinate of the bounding box containing all results
+          schema:
+            type: string
+
+        - name: max
+          in: query
+          required: false
+          description: latitude,longitude pair of the upper left coordinate of the bounding box containing all results
+          schema:
+            type: string
 
       responses:
         '400':
@@ -2467,7 +2497,7 @@ paths:
           description: Maximum matching distance in meters to the street network.
           schema:
             type: number
-            default: 25
+            default: 250
         - name: maxPreTransitTime
           in: query
           required: false
@@ -2647,11 +2677,12 @@ paths:
           required: false
           description: |
             Anchor coordinate. Format: latitude,longitude pair.
-            Used as fallback when "stopId" is missing or can't be found.
-            If both are provided and "stopId" resolves, "stopId" is used.
-            If "stopId" does not resolve, "center" is used instead. "radius" is
-            required when querying by "center" (i.e. without a valid "stopId").
-
+            Used as fallback when `stopId` is missing or can't be found.
+            If both are provided and `stopId` resolves, `stopId` is used.
+            If `stopId` does not resolve, `center` is used instead. `radius` is
+            required when querying by "center" (i.e. without a valid `stopId`).
+            This can be used to hedge against changing `stopId`s.
+            Use with a small `radius` and `exactRadius=false` to still only return the original stop and stops that MOTIS considers equivalent (parent/children or due to similar name, even outside the radius).
         - name: time
           in: query
           required: false
@@ -2661,15 +2692,6 @@ paths:
             type: string
             format: date-time
 
-        - name: both
-          in: query
-          required: false
-          schema:
-            type: boolean
-            default: false
-          description: |
-            Optional. Default is `false`. If set to `true`, returns both arrivals and departures, ignoring `arriveBy`.
-
         - name: arriveBy
           in: query
           required: false
@@ -2678,9 +2700,18 @@ paths:
             default: false
           description: |
             Optional. Default is `false`.
-            
+
               - `arriveBy=true`: the parameters `date` and `time` refer to the arrival time
               - `arriveBy=false`: the parameters `date` and `time` refer to the departure time
+
+        - name: both
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+          description: |
+            Optional. Default is `false`. If set to `true`, returns both arrivals and departures, ignoring `arriveBy`.
 
         - name: direction
           in: query
@@ -2744,7 +2775,7 @@ paths:
             Optional. Radius in meters.
             
             Default is that only stop times of the parent of the stop itself
-            and all stops with the same name (+ their child stops) are returned.
+            and all stops with a similar name (+ their child stops) are returned.
             
             If set, all stops at parent stations and their child stops in the specified radius
             are returned.
@@ -2759,8 +2790,8 @@ paths:
             Optional. Default is `false`.
             
             If set to `true`, only stations that are phyiscally in the radius are considered.
-            If set to `false`, additionally to the stations in the radius, equivalences with the same name and children are considered.
-
+            If set to `false`, additionally to the stations in the radius, equivalences with a similar name and children are considered.
+            Use `exactRadius=true` with `radius=0` if you really only want to get events for the given `stopId` (platform or bay) and nothing from stops considered equivalent.
         - name: fetchStops
           in: query
           schema:
@@ -2789,6 +2820,24 @@ paths:
           schema:
             type: boolean
             default: false
+
+        - name: realtimeMode
+          in: query
+          required: false
+          description: |
+            Optional. Default is `REALTIME`.
+
+            Controls whether realtime data is used.
+            - `REALTIME`: realtime data (delays, cancellations) is used
+              stop times are returned and sorted by their realtime time.
+            - `REALTIME_ANNOTATION_ONLY`: stop times are returned, windowed and
+              sorted by their planned time, but each stop time is annotated with
+              realtime data.
+            - `OFF`: only scheduled data is used; stop times are returned and
+              sorted by their planned time, with no realtime annotation.
+          schema:
+            $ref: '#/components/schemas/RealtimeMode'
+            default: REALTIME
 
         - name: language
           in: query
@@ -3082,6 +3131,112 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Place'
+
+  /api/v6/stop:
+    get:
+      tags:
+        - timetable
+      summary: Get all routes/lines serving a stop (without time-based queries)
+      operationId: stopInfo
+      parameters:
+        - name: stopId
+          in: query
+          required: false
+          description: stop ID as returned by /api/v1/geocode or /api/v1/map/stops
+          schema:
+            type: string
+
+        - name: center
+          in: query
+          required: false
+          description: |
+            latitude,longitude pair used as center for a radius search
+            (used when stopId is not provided; required together with radius
+            if stopId is not given)
+          schema:
+            type: string
+
+        - name: radius
+          in: query
+          schema:
+            type: integer
+          required: false
+          description: |
+            Optional. Radius in meters.
+
+            Default is that only routes of the parent of the stop itself
+            and all stops with the same name (+ their child stops) are returned.
+
+            If set, all stops at parent stations and their child stops in the
+            specified radius are returned. Required if stopId is not given.
+
+        - name: exactRadius
+          in: query
+          schema:
+            type: boolean
+            default: false
+          required: false
+          description: |
+            Optional. Default is `false`.
+
+            If set to `true`, only stations that are physically in the radius are considered.
+            If set to `false`, additionally to the stations in the radius, equivalences with the same name and children are considered.
+
+        - name: language
+          in: query
+          required: false
+          description: |
+            language tags as used in OpenStreetMap / GTFS
+            (usually BCP-47 / ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
+          schema:
+            type: array
+            items:
+              type: string
+          explode: false
+
+      responses:
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '200':
+          description: stop information including routes/lines serving the stop(s)
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - place
+                  - routes
+                properties:
+                  place:
+                    description: metadata of the requested stop
+                    $ref: '#/components/schemas/Place'
+                  routes:
+                    description: list of routes serving the stop(s)
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Route'
 
   /api/v1/map/levels:
     get:
@@ -3537,6 +3692,115 @@ paths:
 
 components:
   schemas:
+    Mode:
+      description: |
+        # Street modes
+
+          - `WALK`
+          - `BIKE`
+          - `RENTAL` Experimental. Expect unannounced breaking changes (without version bumps) for all parameters and returned structs.
+          - `CAR`
+          - `HGV` Heavy goods vehicles (only supported for direct connections)
+          - `CAR_PARKING` Experimental. Expect unannounced breaking changes (without version bumps) for all parameters and returned structs.
+          - `CAR_DROPOFF` Experimental. Expect unannounced breaking changes (without version bumps) for all perameters and returned structs.
+          - `ODM` on-demand taxis from the Prima+ÖV Project
+          - `RIDE_SHARING` ride sharing from the Prima+ÖV Project
+          - `FLEX` flexible transports
+
+        # Transit modes
+
+          - `TRANSIT`: translates to `TRAM,FERRY,AIRPLANE,BUS,COACH,RAIL,ODM,RIDE_SHARING,FUNICULAR,AERIAL_LIFT,OTHER`
+          - `TRAM`: trams
+          - `SUBWAY`: subway trains (Paris Metro, London Underground, but also NYC Subway, Hamburger Hochbahn, and other non-underground services)
+          - `FERRY`: ferries
+          - `AIRPLANE`: airline flights
+          - `BUS`: short distance buses (does not include `COACH`)
+          - `COACH`: long distance buses (does not include `BUS`)
+          - `RAIL`: translates to `HIGHSPEED_RAIL,LONG_DISTANCE,NIGHT_RAIL,REGIONAL_RAIL,SUBURBAN,SUBWAY`
+          - `HIGHSPEED_RAIL`: long distance high speed trains (e.g. TGV)
+          - `LONG_DISTANCE`: long distance inter city trains
+          - `NIGHT_RAIL`: long distance night trains
+          - `REGIONAL_FAST_RAIL`: deprecated, `REGIONAL_RAIL` will be used
+          - `REGIONAL_RAIL`: regional train
+          - `SUBURBAN`: suburban trains (e.g. S-Bahn, RER, Elizabeth Line, ...)
+          - `ODM`: demand responsive transport
+          - `RIDE_SHARING`: ride sharing
+          - `FUNICULAR`: Funicular. Any rail system designed for steep inclines.
+          - `AERIAL_LIFT`: Aerial lift, suspended cable car (e.g., gondola lift, aerial tramway). Cable transport where cabins, cars, gondolas or open chairs are suspended by means of one or more cables.
+          - `AREAL_LIFT`: deprecated
+          - `METRO`: deprecated
+          - `CABLE_CAR`: deprecated
+      type: string
+      enum:
+        # === Street ===
+        - WALK
+        - BIKE
+        - RENTAL
+        - CAR
+        - HGV
+        - CAR_PARKING
+        - CAR_DROPOFF
+        - ODM  # Transit | Street
+        - RIDE_SHARING  # Transit | Street
+        - FLEX
+        - DEBUG_BUS_ROUTE
+        - DEBUG_RAILWAY_ROUTE
+        - DEBUG_FERRY_ROUTE
+        # === Transit ===
+        - TRANSIT
+        - TRAM
+        - SUBWAY
+        - FERRY
+        - AIRPLANE
+        - BUS
+        - COACH
+        - RAIL
+        - HIGHSPEED_RAIL
+        - LONG_DISTANCE
+        - NIGHT_RAIL
+        - REGIONAL_FAST_RAIL
+        - REGIONAL_RAIL
+        - SUBURBAN
+        - FUNICULAR
+        - AERIAL_LIFT
+        - OTHER
+        - AREAL_LIFT
+        - METRO
+        - CABLE_CAR
+
+    Route:
+      description: a transit route/line serving a stop
+      type: object
+      required:
+        - routeId
+        - routeShortName
+        - routeLongName
+        - mode
+        - agencyId
+        - agencyName
+        - agencyUrl
+      properties:
+        routeId:
+          type: string
+        routeShortName:
+          type: string
+        routeLongName:
+          type: string
+        mode:
+          $ref: '#/components/schemas/Mode'
+        agencyId:
+          type: string
+        agencyName:
+          type: string
+        agencyUrl:
+          type: string
+        routeColor:
+          type: string
+        routeTextColor:
+          type: string
+        routeType:
+          type: integer
+
     AlertCause:
       description: Cause of this alert.
       type: string
@@ -3790,82 +4054,6 @@ components:
         - PLACE
         - STOP
 
-    Mode:
-      description: |
-        # Street modes
-        
-          - `WALK`
-          - `BIKE`
-          - `RENTAL` Experimental. Expect unannounced breaking changes (without version bumps) for all parameters and returned structs.
-          - `CAR`
-          - `HGV` Heavy goods vehicles (only supported for direct connections)
-          - `CAR_PARKING` Experimental. Expect unannounced breaking changes (without version bumps) for all parameters and returned structs.
-          - `CAR_DROPOFF` Experimental. Expect unannounced breaking changes (without version bumps) for all perameters and returned structs.
-          - `ODM` on-demand taxis from the Prima+ÖV Project
-          - `RIDE_SHARING` ride sharing from the Prima+ÖV Project
-          - `FLEX` flexible transports
-
-        # Transit modes
-
-          - `TRANSIT`: translates to `TRAM,FERRY,AIRPLANE,BUS,COACH,RAIL,ODM,RIDE_SHARING,FUNICULAR,AERIAL_LIFT,OTHER`
-          - `TRAM`: trams
-          - `SUBWAY`: subway trains (Paris Metro, London Underground, but also NYC Subway, Hamburger Hochbahn, and other non-underground services)
-          - `FERRY`: ferries
-          - `AIRPLANE`: airline flights
-          - `BUS`: short distance buses (does not include `COACH`)
-          - `COACH`: long distance buses (does not include `BUS`)
-          - `RAIL`: translates to `HIGHSPEED_RAIL,LONG_DISTANCE,NIGHT_RAIL,REGIONAL_RAIL,SUBURBAN,SUBWAY`
-          - `HIGHSPEED_RAIL`: long distance high speed trains (e.g. TGV)
-          - `LONG_DISTANCE`: long distance inter city trains
-          - `NIGHT_RAIL`: long distance night trains
-          - `REGIONAL_FAST_RAIL`: deprecated, `REGIONAL_RAIL` will be used
-          - `REGIONAL_RAIL`: regional train
-          - `SUBURBAN`: suburban trains (e.g. S-Bahn, RER, Elizabeth Line, ...)
-          - `ODM`: demand responsive transport
-          - `RIDE_SHARING`: ride sharing
-          - `FUNICULAR`: Funicular. Any rail system designed for steep inclines.
-          - `AERIAL_LIFT`: Aerial lift, suspended cable car (e.g., gondola lift, aerial tramway). Cable transport where cabins, cars, gondolas or open chairs are suspended by means of one or more cables.
-          - `AREAL_LIFT`: deprecated
-          - `METRO`: deprecated
-          - `CABLE_CAR`: deprecated
-      type: string
-      enum:
-        # === Street ===
-        - WALK
-        - BIKE
-        - RENTAL
-        - CAR
-        - HGV
-        - CAR_PARKING
-        - CAR_DROPOFF
-        - ODM  # Transit | Street
-        - RIDE_SHARING  # Transit | Street
-        - FLEX
-        - DEBUG_BUS_ROUTE
-        - DEBUG_RAILWAY_ROUTE
-        - DEBUG_FERRY_ROUTE
-        # === Transit ===
-        - TRANSIT
-        - TRAM
-        - SUBWAY
-        - FERRY
-        - AIRPLANE
-        - BUS
-        - COACH
-        - RAIL
-        - HIGHSPEED_RAIL
-        - LONG_DISTANCE
-        - NIGHT_RAIL
-        - REGIONAL_FAST_RAIL
-        - REGIONAL_RAIL
-        - SUBURBAN
-        - FUNICULAR
-        - AERIAL_LIFT
-        - OTHER
-        - AREAL_LIFT
-        - METRO
-        - CABLE_CAR
-
     Match:
       description: GeoCoding match
       type: object
@@ -3955,6 +4143,20 @@ components:
         - NONE
         - LOW
         - HIGH
+
+    RealtimeMode:
+      description: |
+        Controls whether realtime data (delays, cancellations, added/changed trips) is used.
+
+        - `REALTIME`: use realtime data for routing/sorting.
+        - `REALTIME_ANNOTATION_ONLY`: route, sort and window on the scheduled
+          timetable only, but still annotate the response with realtime data.
+        - `OFF`: use the scheduled timetable only, with no realtime annotation.
+      type: string
+      enum:
+        - OFF
+        - REALTIME_ANNOTATION_ONLY
+        - REALTIME
 
     PedestrianProfile:
       description: Different accessibility profiles for pedestrians.
@@ -4407,7 +4609,13 @@ components:
           description: level where this segment starts, based on OpenStreetMap data
           type: number
         osmWay:
-          description: OpenStreetMap way index
+          description: OpenStreetMap way ID
+          type: integer
+        fromOsmNode:
+          description: OpenStreetMap node ID where this segment starts
+          type: integer
+        toOsmNode:
+          description: OpenStreetMap node ID where this segment ends
           type: integer
         polyline:
           $ref: '#/components/schemas/EncodedPolyline'
@@ -4893,6 +5101,16 @@ components:
         shortName:
           type: string
 
+    TicketUrls:
+      type: object
+      properties:
+        web:
+          type: string
+        android:
+          type: string
+        ios:
+          type: string
+
     Leg:
       type: object
       required:
@@ -4989,6 +5207,8 @@ components:
           type: string
         agencyUrl:
           type: string
+        agencyFareUrl:
+          type: string
         agencyId:
           type: string
         tripId:
@@ -5060,6 +5280,10 @@ components:
           description: |
             Whether wheelchairs can be transported on this leg.
           $ref: '#/components/schemas/WheelchairAccessibility'
+        ticketUrls:
+          $ref: '#/components/schemas/TicketUrls'
+          description: |
+            Ticket booking links for different platforms
         alternatives:
           description: |
             Alternative connections that can replace this transit leg.
@@ -5482,7 +5706,7 @@ components:
         maxMatchingDistance:
           description: maximum matching distance in meters to match geo coordinates to the street network
           type: number
-          default: 25
+          default: 250
         arriveBy:
           description: |
             Optional. Defaults to false, i.e. one to many search

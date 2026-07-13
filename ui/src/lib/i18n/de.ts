@@ -25,8 +25,8 @@ const translations: Translations = {
 	hydrogenFuelCell: 'Wasserstoff-Brennstoffzelle',
 	from: 'Von',
 	to: 'Nach',
-	myLocation: 'My location',
-	reverseDirections: 'Reverse directions',
+	myLocation: 'Mein Standort',
+	reverseDirections: 'Richtung umdrehen',
 	viaStop: 'Zwischenhalt',
 	viaStops: 'Zwischenhalte',
 	addViaStop: 'Zwischenhalt hinzufügen',
@@ -157,7 +157,7 @@ const translations: Translations = {
 		information: 'Informationen',
 		more: 'mehr'
 	},
-	RENTAL_BICYCLE: 'Bikesharing',
+	RENTAL_BICYCLE: 'Fahrrad Sharing',
 	RENTAL_CARGO_BICYCLE: 'Lastenrad Sharing',
 	RENTAL_CAR: 'Car Sharing',
 	RENTAL_MOPED: 'Moped Sharing',
@@ -168,9 +168,9 @@ const translations: Translations = {
 	CABLE_CAR: 'Seilbahn',
 	FUNICULAR: 'Standseilbahn',
 	AERIAL_LIFT: 'Luftseilbahn',
-	toll: 'Achtung! Mautpflichtige Straße.',
-	bikesAllowed: 'Bikes allowed',
-	wheelchairAccessible: 'Wheelchair accessible',
+	toll: 'Achtung: Mautpflichtige Straße!',
+	bikesAllowed: 'Fahrräder erlaubt',
+	wheelchairAccessible: 'Rollstuhlgerecht',
 	accessRestriction: 'Kein Zugang',
 	continuesAs: 'Weiter als',
 	earlierAlternatives: 'Frühere Alternativen',
@@ -186,14 +186,15 @@ const translations: Translations = {
 	DEBUG_RAILWAY_ROUTE: 'Bahnroute (Debug)',
 	DEBUG_FERRY_ROUTE: 'Fährenroute (Debug)',
 	colorMode: {
-		none: 'Nichts',
+		none: 'Keine Kartendarstellung',
 		stops: 'Haltestellen',
-		rt: 'Fahrten nach Echtzeit',
-		route: 'Fahrten nach Linie',
-		mode: 'Fahrten nach Verkehrsmittel'
+		rt: 'Fahrplan: Verspätung',
+		route: 'Fahrplan: Linienfarben',
+		mode: 'Fahrplan: Verkehrsmittel'
 	},
-	showMyLocation: 'Show my location',
-	toggleHillshades: 'Toggle hillshades overlay',
+	resetToNorth: 'Reset to north',
+	showMyLocation: 'Meinen Standort anzeigen',
+	toggleHillshades: 'Schummerung ein/aus',
 	routes: (n: number) => {
 		switch (n) {
 			case 0:
@@ -203,7 +204,16 @@ const translations: Translations = {
 			default:
 				return `${n} Routen`;
 		}
-	}
+	},
+	pageTitle: {
+		default: 'MOTIS',
+		fromTo: (from, to) => `${from} nach ${to}`,
+		departuresAt: (stop) => `Abfahrten in ${stop}`,
+		arrivalsAt: (stop) => `Ankünfte in ${stop}`,
+		isochronesFrom: (place) => `Isochronen von ${place}`
+	},
+	tickets: 'Tickets',
+	routeInformation: 'Mehr Informationen'
 };
 
 export default translations;

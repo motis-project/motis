@@ -9,6 +9,7 @@
 		TrainFront,
 		Waypoints,
 		MountainSnow,
+		Compass,
 		RefreshCw
 	} from '@lucide/svelte';
 	import { MediaQuery } from 'svelte/reactivity';
@@ -34,7 +35,8 @@
 		type ServerConfig,
 		type CyclingSpeed,
 		type PedestrianSpeed,
-		refreshItinerary
+		refreshItinerary,
+		type Match
 	} from '@motis-project/motis-client';
 	import ItineraryList from '$lib/ItineraryList.svelte';
 	import ConnectionDetail from '$lib/ConnectionDetail.svelte';
@@ -78,6 +80,7 @@
 	import RailViz from '$lib/RailViz.svelte';
 	import StopsView from '$lib/map/stops/StopsView.svelte';
 	import { formatDate } from '$lib/toDateTime';
+	import { getPageTitle } from '$lib/pageTitle';
 
 	const urlParams = browser ? new URLSearchParams(window.location.search) : undefined;
 
@@ -100,8 +103,8 @@
 		{ value: 'none', label: t.colorMode.none, icon: Ban },
 		{ value: 'stops', label: t.colorMode.stops, icon: MapPin },
 		{ value: 'route', label: t.colorMode.route, icon: Palette },
-		{ value: 'rt', label: t.colorMode.rt, icon: Rss },
-		{ value: 'mode', label: t.colorMode.mode, icon: TrainFront }
+		{ value: 'mode', label: t.colorMode.mode, icon: TrainFront },
+		{ value: 'rt', label: t.colorMode.rt, icon: Rss }
 	];
 	let showMap = $state(!isSmallScreen.current);
 	let showRoutes = $state(false);
@@ -134,6 +137,7 @@
 	let level = $state(0);
 	let zoom = $state(15);
 	let bounds = $state<maplibregl.LngLatBoundsLike>();
+	let bearing = $state(0);
 	let map = $state<maplibregl.Map>();
 	let style = $derived(
 		browser
@@ -153,7 +157,8 @@
 		positionOptions: {
 			enableHighAccuracy: true
 		},
-		showAccuracyCircle: false
+		showAccuracyCircle: false,
+		trackUserLocation: true
 	});
 
 	const getLocation = () => {
@@ -353,6 +358,8 @@
 		}
 	}
 
+	let advancedOptionsOpen = $state<boolean>(false);
+	let isochronesAdvancedOptionsOpen = $state<boolean>(false);
 	let fromMarker = $state<maplibregl.Marker>();
 	let toMarker = $state<maplibregl.Marker>();
 	let oneMarker = $state<maplibregl.Marker>();
@@ -399,7 +406,7 @@
 	);
 	let arriveBy = $state<boolean>(urlParams?.get('arriveBy') == 'true');
 	let algorithm = $state<PlanData['query']['algorithm']>(
-		(urlParams?.get('algorithm') ?? defaultQuery.algorithm) as PlanData['query']['algorithm']
+		(urlParams?.get('algorithm') ?? 'PONG') as PlanData['query']['algorithm']
 	);
 	let useRoutedTransfers = $state(
 		urlParams?.get('useRoutedTransfers') == 'true' || defaultQuery.useRoutedTransfers
@@ -558,7 +565,7 @@
 		modeGroups.some((modes) => modes?.includes('HGV'));
 
 	let baseQuery = $derived(
-		from.match && to.match
+		from.match && to.match && !advancedOptionsOpen
 			? ({
 					query: omitDefaults({
 						time: time.toISOString(),
@@ -572,7 +579,7 @@
 						withFares: true,
 						numLegAlternatives: 3,
 						slowDirect,
-						fastestDirectFactor: 1.5,
+						fastestDirectFactor: 10,
 						pedestrianProfile,
 						joinInterlinedLegs: false,
 						transitModes:
@@ -663,7 +670,7 @@
 	});
 
 	let isochronesQuery = $derived(
-		one?.match
+		one?.match && !isochronesAdvancedOptionsOpen
 			? ({
 					query: {
 						one: toPlaceString(one),
@@ -712,6 +719,21 @@
 	let routingResponses = $state<Array<Promise<PlanResponse>>>([]);
 	let stopNameFromResponse = $state<string>('');
 	let refreshingItinerary = $state(false);
+	let pageTitle = $derived(
+		getPageTitle(
+			{
+				activeTab,
+				from,
+				to,
+				one,
+				selectedStop: page.state.selectedStop,
+				stopArriveBy: page.state.stopArriveBy,
+				stopName: stopNameFromResponse || page.state.selectedStop?.name,
+				selectedItinerary: page.state.selectedItinerary
+			},
+			t
+		)
+	);
 
 	const refreshSelectedItinerary = async () => {
 		const itineraryId = page.state.selectedItinerary?.id;
@@ -874,7 +896,12 @@
 		});
 	};
 
+	let lastFlownTo: Match | undefined = undefined;
 	const flyToLocation = (location: Location) => {
+		if (location.match == lastFlownTo) {
+			return;
+		}
+		lastFlownTo = location.match;
 		map?.flyTo({ center: location.match, zoom: 18 });
 	};
 
@@ -917,6 +944,10 @@
 	});
 	type CloseFn = () => void;
 </script>
+
+<svelte:head>
+	<title>{pageTitle}</title>
+</svelte:head>
 
 {#snippet contextMenu(e: maplibregl.MapMouseEvent, close: CloseFn)}
 	{#if activeTab == 'connections'}
@@ -975,6 +1006,7 @@
 					<SearchMask
 						geocodingBiasPlace={center}
 						{serverConfig}
+						bind:advancedOptionsOpen
 						bind:from
 						bind:to
 						bind:time
@@ -1029,6 +1061,7 @@
 			<Tabs.Content value="isochrones" class="min-h-0 overflow-hidden">
 				<Card class="max-h-[calc(97dvh-2.5rem)] overflow-hidden bg-background rounded-lg">
 					<IsochronesMask
+						bind:advancedOptionsOpen={isochronesAdvancedOptionsOpen}
 						bind:one
 						{serverConfig}
 						bind:maxTravelTime
@@ -1211,6 +1244,7 @@
 		bind:bounds
 		bind:zoom
 		bind:center
+		bind:bearing
 		class={cn('h-dvh pt-2 overflow-clip', theme)}
 		style={showMap ? style : undefined}
 		attribution={false}
@@ -1249,6 +1283,9 @@
 			<div class="maplibregl-ctrl maplibregl-ctrl-attrib">
 				<div class="maplibregl-ctrl-attrib-inner">
 					&copy; <a href="http://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>
+					{#if withHillshades}
+						| <a href="https://mapterhorn.com/attribution" target="_blank">Mapterhorn</a>
+					{/if}
 					{#if dataAttributionLink}
 						| <a href={dataAttributionLink} target="_blank">{t.timetableSources}</a>
 					{/if}
@@ -1280,6 +1317,14 @@
 					</Select.Root>
 				</Control>
 				<Control position="top-right" class="w-fit float-right pb-4">
+					<Button
+						class={bearing === 0 ? 'hidden' : null}
+						size="icon"
+						title={t.resetToNorth}
+						onclick={() => map!.resetNorth()}
+					>
+						<Compass class="w-5 h-5" />
+					</Button>
 					<Button size="icon" title={t.showMyLocation} onclick={() => getLocation()}>
 						<LocateFixed class="w-5 h-5" />
 					</Button>

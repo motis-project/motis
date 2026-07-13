@@ -191,12 +191,13 @@ const translations: Translations = {
 	DEBUG_RAILWAY_ROUTE: 'Trasa kolejowa (Debug)',
 	DEBUG_FERRY_ROUTE: 'Trasa promu (Debug)',
 	colorMode: {
-		none: 'None',
+		none: 'No Map Visualization',
 		stops: 'Stops',
-		rt: 'Trips by Realtime',
-		route: 'Trips by Route',
-		mode: 'Trips by Mode'
+		rt: 'Timetable: Delays',
+		route: 'Timetable: Line Colors',
+		mode: 'Timetable: Transport Modes'
 	},
+	resetToNorth: 'Reset to north',
 	showMyLocation: 'Show my location',
 	toggleHillshades: 'Toggle hillshades overlay',
 	routes: (n: number) => {
@@ -208,7 +209,16 @@ const translations: Translations = {
 			default:
 				return `${n} trasy`;
 		}
-	}
+	},
+	pageTitle: {
+		default: 'MOTIS',
+		fromTo: (from, to) => `${from} do ${to}`,
+		departuresAt: (stop) => `Odjazdy z ${stop}`,
+		arrivalsAt: (stop) => `Przyjazdy do ${stop}`,
+		isochronesFrom: (place) => `Izochrony z ${place}`
+	},
+	tickets: 'Bilety',
+	routeInformation: 'Więcej informacji'
 };
 
 export default translations;

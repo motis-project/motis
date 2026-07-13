@@ -132,6 +132,10 @@ TEST(motis, stop_times) {
   auto const stop_times = utl::init_from<ep::stop_times>(d).value();
   EXPECT_EQ(d.rt_->rtt_.get(), stop_times.rt_->rtt_.get());
 
+  auto const format_time = [](auto&& t, char const* fmt = "%F %H:%M") {
+    return date::format(fmt, *t);
+  };
+
   {
     auto const res = stop_times(
         "/api/v5/stoptimes?stopId=test_FFM_10"
@@ -140,10 +144,6 @@ TEST(motis, stop_times) {
         "&n=3"
         "&language=de"
         "&fetchStops=true");
-
-    auto const format_time = [&](auto&& t, char const* fmt = "%F %H:%M") {
-      return date::format(fmt, *t);
-    };
 
     EXPECT_EQ("test_FFM_10", res.place_.stopId_);
     EXPECT_EQ(3, res.stopTimes_.size());
@@ -288,10 +288,6 @@ TEST(motis, stop_times) {
         "&window=1800"
         "&language=de");
 
-    auto const format_time = [&](auto&& t, char const* fmt = "%F %H:%M") {
-      return date::format(fmt, *t);
-    };
-
     EXPECT_EQ(2, res.stopTimes_.size());  // n is ignored if window is set
     for (auto const& stop_time : res.stopTimes_) {
       auto const arr = format_time(stop_time.place_.arrival_.value());
@@ -312,10 +308,6 @@ TEST(motis, stop_times) {
         "&window=1800"
         "&language=de");
 
-    auto const format_time = [&](auto&& t, char const* fmt = "%F %H:%M") {
-      return date::format(fmt, *t);
-    };
-
     for (auto const& stop_time : res.stopTimes_) {
       auto const arr = format_time(stop_time.place_.arrival_.value());
       std::cout << "arr E: " << arr << std::endl;
@@ -334,14 +326,56 @@ TEST(motis, stop_times) {
         "&n=2"
         "&language=de");
 
-    auto const format_time = [&](auto&& t, char const* fmt = "%F %H:%M") {
-      return date::format(fmt, *t);
-    };
-
     EXPECT_GT(res.stopTimes_.size(), 1);
     for (auto const& stop_time : res.stopTimes_) {
       auto const arr = format_time(stop_time.place_.arrival_.value());
       std::cout << "arr E2: " << arr << std::endl;
     }
+  }
+
+  {
+    // realtimeMode=OFF:
+    auto const res = stop_times(
+        "/api/v5/stoptimes?stopId=test_FFM_10"
+        "&time=2019-04-30T23:30:00.000Z"
+        "&arriveBy=true"
+        "&n=3"
+        "&language=de"
+        "&fetchStops=true"
+        "&realtimeMode=OFF");
+
+    auto const& ice = res.stopTimes_[0];
+    EXPECT_EQ("20190501_00:35_test_ICE", ice.tripId_);
+    // No realtime:
+    EXPECT_EQ("test_FFM_10", ice.tripTo_.stopId_);
+    EXPECT_EQ(false, ice.realTime_);
+    EXPECT_EQ("2019-04-30 22:45", format_time(ice.place_.arrival_.value()));
+    EXPECT_EQ("2019-04-30 22:45",
+              format_time(ice.place_.scheduledArrival_.value()));
+    // No realtime alerts either
+    EXPECT_FALSE(ice.place_.alerts_.has_value() &&
+                 !ice.place_.alerts_->empty());
+  }
+
+  {
+    // realtimeMode=REALTIME_ANNOTATION_ONLY:
+    auto const res = stop_times(
+        "/api/v5/stoptimes?stopId=test_FFM_10"
+        "&time=2019-04-30T23:30:00.000Z"
+        "&arriveBy=true"
+        "&n=3"
+        "&language=de"
+        "&fetchStops=true"
+        "&realtimeMode=REALTIME_ANNOTATION_ONLY");
+
+    auto const& ice = res.stopTimes_[0];
+    EXPECT_EQ("20190501_00:35_test_ICE", ice.tripId_);
+    // Annotated with realtime:
+    EXPECT_EQ(true, ice.realTime_);
+    EXPECT_EQ("2019-04-30 22:55", format_time(ice.place_.arrival_.value()));
+    EXPECT_EQ("2019-04-30 22:45",
+              format_time(ice.place_.scheduledArrival_.value()));
+    // Realtime alert is annotated too
+    EXPECT_EQ(1, ice.place_.alerts_->size());
   }
 }

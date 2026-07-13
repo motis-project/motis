@@ -51,7 +51,7 @@ export const defaultQuery = {
 	maxDirectTime: 1800,
 	pedestrianSpeed: 1.2,
 	cyclingSpeed: 4.2,
-	fastestDirectFactor: 1.0,
+	fastestDirectFactor: 10,
 	additionalTransferTime: undefined,
 	transferTimeFactor: 1,
 	numItineraries: 5,

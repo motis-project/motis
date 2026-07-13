@@ -181,16 +181,16 @@ struct osr_mapping {
       return utl::any_of(w_.r_->node_ways_[n.node_],
                          [&](auto const way_idx) {
                            return footp::way_cost(
-                                      foot_params, *w_.r_, way_idx,
-                                      w_.r_->way_properties_[way_idx],
+                                      foot_params, *w_.r_, w_.timezones_,
+                                      way_idx, w_.r_->way_properties_[way_idx],
                                       osr::direction::kForward, 0U,
                                       std::nullopt, osr::duration_t{0},
                                       osr::direction::kForward)
                                       .cost_ != osr::kInfeasible;
                          }) &&
              utl::any_of(w_.r_->node_ways_[n.node_], [&](auto const way_idx) {
-               return bikep::way_cost(bike_params, *w_.r_, way_idx,
-                                      w_.r_->way_properties_[way_idx],
+               return bikep::way_cost(bike_params, *w_.r_, w_.timezones_,
+                                      way_idx, w_.r_->way_properties_[way_idx],
                                       osr::direction::kForward, 0U,
                                       std::nullopt, osr::duration_t{0},
                                       osr::direction::kForward)

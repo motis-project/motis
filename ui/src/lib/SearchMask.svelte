@@ -22,6 +22,7 @@
 	let {
 		geocodingBiasPlace,
 		serverConfig,
+		advancedOptionsOpen = $bindable(),
 		from = $bindable(),
 		to = $bindable(),
 		time = $bindable(),
@@ -66,6 +67,7 @@
 	}: {
 		geocodingBiasPlace?: maplibregl.LngLatLike;
 		serverConfig: ServerConfig | undefined;
+		advancedOptionsOpen: boolean;
 		from: Location;
 		to: Location;
 		time: Date;
@@ -198,6 +200,7 @@
 		</RadioGroup.Root>
 		<AdvancedOptions
 			{serverConfig}
+			bind:advancedOptionsOpen
 			bind:useRoutedTransfers
 			bind:wheelchair={
 				() => pedestrianProfile === 'WHEELCHAIR',

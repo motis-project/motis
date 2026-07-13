@@ -7,7 +7,8 @@
 		CircleX,
 		TriangleAlert,
 		Bike,
-		Accessibility
+		Accessibility,
+		ExternalLink
 	} from '@lucide/svelte';
 	import type {
 		FareProduct,
@@ -94,7 +95,9 @@
 		const transitStart = (entry: Leg[]) => entry.find(isTransitLeg)?.startTime ?? '';
 		const remainingAlts = (target.alternatives ?? []).filter((a) => a !== alt);
 		const newAlternatives = [...remainingAlts, oldEntry].sort((a, b) =>
-			transitStart(a).localeCompare(transitStart(b))
+			!hasPrevTransit && hasNextTransit
+				? transitStart(b).localeCompare(transitStart(a))
+				: transitStart(a).localeCompare(transitStart(b))
 		);
 
 		const newTransit: Leg = {
@@ -464,16 +467,51 @@
 					</div>
 				{/if}
 
-				{#if l.routeUrl}
+				<div class="m-4">
+					{#if l.bikesAllowed}
+						<Bike class="inline" />
+					{/if}
+
+					{#if l.wheelchairAccessible == 'ACCESSIBLE'}
+						<Accessibility class="inline" />
+					{/if}
+				</div>
+
+				{#if l.routeUrl || (l.ticketUrls && l.ticketUrls.web) || (l.agencyUrl && l.agencyName)}
 					<div class="mt-2 mr-4">
-						<Button
-							variant="secondary"
-							href={l.routeUrl}
-							target="_blank"
-							class="overflow-hidden text-ellipsis whitespace-nowrap w-full px-4 inline-block underline"
-						>
-							{l.routeUrl}
-						</Button>
+						{#if l.routeUrl}
+							<Button
+								variant="secondary"
+								href={l.routeUrl}
+								target="_blank"
+								class="overflow-hidden text-ellipsis whitespace-nowrap px-4 inline-block"
+							>
+								<ExternalLink class="inline" />
+								{t.routeInformation}
+							</Button>
+						{/if}
+						{#if (l.ticketUrls && l.ticketUrls.web) || l.agencyFareUrl}
+							<Button
+								variant="secondary"
+								href={(l.ticketUrls && l.ticketUrls.web) || l.agencyFareUrl}
+								target="_blank"
+								class="overflow-hidden text-ellipsis whitespace-nowrap px-4 inline-block"
+							>
+								<ExternalLink class="inline" />
+								{t.tickets}
+							</Button>
+						{/if}
+						{#if l.agencyUrl && l.agencyName}
+							<Button
+								variant="secondary"
+								href={l.agencyUrl}
+								target="_blank"
+								class="overflow-hidden text-ellipsis whitespace-nowrap px-4 inline-block"
+							>
+								<ExternalLink class="inline" />
+								{l.agencyName}
+							</Button>
+						{/if}
 					</div>
 				{/if}
 

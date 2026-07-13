@@ -649,6 +649,7 @@ TEST(one_to_many, pareto_sets_with_routed_transfers_and_distances) {
                 "49.871561,8.6320181",  // near Tram_3
                 "50.111900,8.675208"},  // near FFM_HAUPT
       .time_ = parse_time("2019-05-01T00:05:00.000+02:00"),
+      .maxMatchingDistance_ = 25,
       .useRoutedTransfers_ = true,
       .withDistance_ = true});
 
@@ -693,6 +694,7 @@ TEST(one_to_many, pareto_sets_with_multiple_entries) {
                 "49.8752926,8.6277460",  // DA_Tram_1
                 "49.871561,8.6320181"},  // DA_Tram_3
       .time_ = parse_time("2019-05-01T00:05:00.000+02:00"),
+      .maxMatchingDistance_ = 25,
       .maxPreTransitTime_ = 300});  // Prevent any pre transit to Tram_x
 
   // We only care about duration to DA_Tram_3, everything else is for debugging

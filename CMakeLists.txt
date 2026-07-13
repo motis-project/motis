@@ -156,7 +156,6 @@ target_link_libraries(motislib
     reflectcpp
     web-server
     tiles
-    pbf_sdf_fonts_res
     ssl
     crypto
     tg
@@ -187,8 +186,6 @@ set_source_files_properties(exe/main.cc PROPERTIES COMPILE_DEFINITIONS MOTIS_VER
 target_link_libraries(motis
     motislib
     ianatzdb-res
-    tzbounds_timezones-res
-    pbf_sdf_fonts_res-res
     tiles_server_res-res
     address_formatting_res-res
 )
@@ -211,7 +208,6 @@ target_link_libraries(motis-test
     gmock
     web-server
     ianatzdb-res
-    tzbounds_timezones-res
     address_formatting_res-res
     motis-generated)
 target_compile_options(motis-test PRIVATE ${motis-compile-options})

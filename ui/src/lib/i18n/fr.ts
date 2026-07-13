@@ -70,7 +70,7 @@ const translations: Translations = {
 	selectTransitModes: 'Sélectionner les modes de transport en commun',
 	defaultSelectedModes: 'Tous les transports en commun',
 	defaultSelectedProviders: 'Tous les fournisseurs',
-	selectElevationCosts: 'Évitez les pentes abruptes.', // TODO Online translated
+	selectElevationCosts: 'Éviter les pentes.',
 	wheelchair: 'Correspondances accessibles uniquement',
 	hgvRoutingOptions: 'Options poids lourd',
 	vehicleHeight: 'Hauteur du véhicule (m)',
@@ -189,12 +189,13 @@ const translations: Translations = {
 	DEBUG_RAILWAY_ROUTE: 'Itinéraire ferroviaire (Debug)',
 	DEBUG_FERRY_ROUTE: 'Itinéraire de ferry (Debug)',
 	colorMode: {
-		none: 'Aucun',
-		stops: 'Arrêts',
-		rt: 'Trajets par temps réel',
-		route: 'Trajets par ligne',
-		mode: 'Trajets par mode'
+		none: "Pas d'affichage sur la carte",
+		stops: 'Stations',
+		rt: 'Horaires : retards',
+		route: 'Horaires : couleurs des lignes',
+		mode: 'Horaires : modes de transport'
 	},
+	resetToNorth: 'Reset to north',
 	showMyLocation: 'Show my location',
 	toggleHillshades: 'Toggle hillshades overlay',
 	routes: (n: number) => {
@@ -206,7 +207,16 @@ const translations: Translations = {
 			default:
 				return `${n} itinéraires`;
 		}
-	}
+	},
+	pageTitle: {
+		default: 'MOTIS',
+		fromTo: (from, to) => `${from} à ${to}`,
+		departuresAt: (stop) => `Départs à ${stop}`,
+		arrivalsAt: (stop) => `Arrivées à ${stop}`,
+		isochronesFrom: (place) => `Isochrones depuis ${place}`
+	},
+	tickets: 'Billets',
+	routeInformation: "Plus d'informations"
 };
 
 export default translations;

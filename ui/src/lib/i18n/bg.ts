@@ -189,12 +189,13 @@ const translations: Translations = {
 	DEBUG_RAILWAY_ROUTE: 'Маршрут на влак (Отстраняване на грешки)',
 	DEBUG_FERRY_ROUTE: 'Маршрут на ферибот (Отстраняване на грешки)',
 	colorMode: {
-		none: 'None',
+		none: 'No Map Visualization',
 		stops: 'Stops',
-		rt: 'Trips by Realtime',
-		route: 'Trips by Route',
-		mode: 'Trips by Mode'
+		rt: 'Timetable: Delays',
+		route: 'Timetable: Line Colors',
+		mode: 'Timetable: Transport Modes'
 	},
+	resetToNorth: 'Reset to north',
 	showMyLocation: 'Show my location',
 	toggleHillshades: 'Toggle hillshades overlay',
 	routes: (n: number) => {
@@ -206,7 +207,16 @@ const translations: Translations = {
 			default:
 				return `${n} маршрута`;
 		}
-	}
+	},
+	pageTitle: {
+		default: 'MOTIS',
+		fromTo: (from, to) => `${from} до ${to}`,
+		departuresAt: (stop) => `Заминавания от ${stop}`,
+		arrivalsAt: (stop) => `Пристигания в ${stop}`,
+		isochronesFrom: (place) => `Достъпен периметър от ${place}`
+	},
+	tickets: 'Билети',
+	routeInformation: 'Допълнителна информация'
 };
 
 export default translations;

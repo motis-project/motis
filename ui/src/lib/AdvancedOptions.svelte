@@ -1,9 +1,9 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import Button from '$lib/components/ui/button/button.svelte';
+	import { buttonVariants } from '$lib/components/ui/button';
+	import * as Dialog from '$lib/components/ui/dialog';
 	import { t } from '$lib/i18n/translation';
 	import * as Select from '$lib/components/ui/select';
-	import { ChevronUp, ChevronDown } from '@lucide/svelte';
 	import { Switch } from './components/ui/switch';
 	import type {
 		CyclingSpeed,
@@ -29,6 +29,7 @@
 	import ViaStopOptions from './ViaStopOptions.svelte';
 	import Slider from './components/ui/slider/Slider.svelte';
 	let {
+		advancedOptionsOpen = $bindable(false),
 		useRoutedTransfers = $bindable(),
 		serverConfig,
 		wheelchair = $bindable(),
@@ -72,6 +73,7 @@
 		hasDebug = false,
 		additionalComponents
 	}: {
+		advancedOptionsOpen: boolean;
 		useRoutedTransfers: boolean;
 		serverConfig: ServerConfig | undefined;
 		wheelchair: boolean;
@@ -156,7 +158,6 @@
 		{ value: 'LOW' as ElevationCosts, label: t.elevationCosts.LOW },
 		{ value: 'HIGH' as ElevationCosts, label: t.elevationCosts.HIGH }
 	];
-	let expanded = $state<boolean>(false);
 	let allowElevationCosts = $derived(
 		serverConfig?.hasElevation &&
 			(requireBikeTransport ||
@@ -183,169 +184,120 @@
 		'flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50';
 </script>
 
-<Button variant="ghost" onclick={() => (expanded = !expanded)}>
-	{t.advancedSearchOptions}
-	{#if expanded}
-		<ChevronUp class="size-[18px]" />
-	{:else}
-		<ChevronDown class="size-[18px]" />
-	{/if}
-</Button>
+{#snippet optionsContent()}
+	<TransitModeSelect bind:transitModes />
 
-{#if expanded}
-	<div
-		class="w-full min-h-0 space-y-4 max-h-[calc(100dvh-18rem)] overflow-y-auto overscroll-contain pr-1"
-	>
-		<TransitModeSelect bind:transitModes />
+	<div class="space-y-2">
+		<div class="grid grid-cols-2">
+			<Switch
+				bind:checked={useRoutedTransfers}
+				disabled={!allowRoutedTransfers}
+				label={t.useRoutedTransfers}
+				id="useRoutedTransfers"
+				onCheckedChange={(checked) => {
+					if (wheelchair && !checked) {
+						wheelchair = false;
+					}
+				}}
+			/>
 
-		<div class="space-y-2">
-			<div class="grid grid-cols-2">
-				<Switch
-					bind:checked={useRoutedTransfers}
-					disabled={!allowRoutedTransfers}
-					label={t.useRoutedTransfers}
-					id="useRoutedTransfers"
-					onCheckedChange={(checked) => {
-						if (wheelchair && !checked) {
-							wheelchair = false;
-						}
-					}}
-				/>
+			<Switch
+				bind:checked={wheelchair}
+				disabled={!allowRoutedTransfers}
+				label={t.wheelchair}
+				id="wheelchair"
+				onCheckedChange={(checked) => {
+					if (checked && !useRoutedTransfers) {
+						useRoutedTransfers = true;
+					}
+				}}
+			/>
+			<Switch
+				bind:checked={requireBikeTransport}
+				label={t.requireBikeTransport}
+				onCheckedChange={setModes('BIKE')}
+				id="requireBikeTransport"
+			/>
+			<Switch
+				bind:checked={requireCarTransport}
+				disabled={!allowRoutedTransfers}
+				label={t.requireCarTransport}
+				id="requireCarTransport"
+				onCheckedChange={(checked) => {
+					if (checked && !useRoutedTransfers && allowRoutedTransfers) {
+						useRoutedTransfers = true;
+					}
+					setModes('CAR')(checked);
+				}}
+			/>
+		</div>
+		<ViaStopOptions bind:via bind:viaMinimumStay bind:viaLabels />
 
-				<Switch
-					bind:checked={wheelchair}
-					disabled={!allowRoutedTransfers}
-					label={t.wheelchair}
-					id="wheelchair"
-					onCheckedChange={(checked) => {
-						if (checked && !useRoutedTransfers) {
-							useRoutedTransfers = true;
-						}
-					}}
-				/>
-				<Switch
-					bind:checked={requireBikeTransport}
-					label={t.requireBikeTransport}
-					onCheckedChange={setModes('BIKE')}
-					id="requireBikeTransport"
-				/>
-				<Switch
-					bind:checked={requireCarTransport}
-					disabled={!allowRoutedTransfers}
-					label={t.requireCarTransport}
-					id="requireCarTransport"
-					onCheckedChange={(checked) => {
-						if (checked && !useRoutedTransfers && allowRoutedTransfers) {
-							useRoutedTransfers = true;
-						}
-						setModes('CAR')(checked);
-					}}
-				/>
-			</div>
-			<ViaStopOptions bind:via bind:viaMinimumStay bind:viaLabels />
-
-			<div
-				class="grid grid-cols-4
+		<div
+			class="grid grid-cols-4
 				items-center gap-x-4 gap-y-2"
-			>
-				<div class="text-sm">
-					{t.routingSegments.maxTransfers}
-				</div>
-				<NumberSelect bind:value={maxTransfers} possibleValues={possibleMaxTransfers} />
-				{#if maxTravelTime !== undefined}
-					<div class="text-sm">
-						{t.routingSegments.maxTravelTime}
-					</div>
-					<NumberSelect
-						bind:value={maxTravelTime}
-						possibleValues={possibleMaxTravelTimes}
-						labelFormatter={formatDurationSec}
-					/>
-				{/if}
-				<div class="text-sm">{t.routingSegments.additionalTransferTime}</div>
-				<input
-					type="number"
-					min="0"
-					bind:value={additionalTransferTime}
-					placeholder={t.duration + ' (min)'}
-					class="text-sm border w-full h-full pl-1 text-center rounded-md"
-				/>
-			</div>
-			<!-- First mile -->
-			<StreetModes
-				label={t.routingSegments.firstMile}
-				disabled={!allowStreetRouting}
-				bind:modes={preTransitModes}
-				bind:maxTransitTime={maxPreTransitTime}
-				{possibleModes}
-				possibleMaxTransitTime={possiblePrePostDurations}
-				bind:ignoreRentalReturnConstraints={ignorePreTransitRentalReturnConstraints}
-				bind:providerGroups={preTransitProviderGroups}
-			></StreetModes>
-
-			<!-- Last mile -->
-			<StreetModes
-				label={t.routingSegments.lastMile}
-				disabled={!allowStreetRouting}
-				bind:modes={postTransitModes}
-				bind:maxTransitTime={maxPostTransitTime}
-				{possibleModes}
-				possibleMaxTransitTime={possiblePrePostDurations}
-				bind:ignoreRentalReturnConstraints={ignorePostTransitRentalReturnConstraints}
-				bind:providerGroups={postTransitProviderGroups}
-			></StreetModes>
-
-			<!-- Direct -->
-			{#if directModes !== undefined && maxDirectTime !== undefined && ignoreDirectRentalReturnConstraints !== undefined}
-				<StreetModes
-					label={t.routingSegments.direct}
-					disabled={!allowStreetRouting}
-					bind:modes={directModes}
-					bind:maxTransitTime={maxDirectTime}
-					{possibleModes}
-					possibleMaxTransitTime={possibleDirectDurations}
-					bind:ignoreRentalReturnConstraints={ignoreDirectRentalReturnConstraints}
-					bind:providerGroups={directProviderGroups}
-				></StreetModes>
-			{/if}
-
-			<div class="grid grid-cols-[1fr_2fr_1fr] text-sm items-center gap-2">
-				<span>{t.routingSegments.pedestrianSpeed}</span>
-				<Slider
-					min={pedestrianProfile == 'FOOT' ? 0.8 : 0.5}
-					step={0.1}
-					max={pedestrianProfile == 'FOOT' ? 3 : 1.6}
-					bind:value={pedestrianSpeed}
-				/>
-				<div>{(pedestrianSpeed * 3.6).toFixed(1)} km/h</div>
-				<span>{t.routingSegments.cyclingSpeed}</span>
-				<Slider min={2.7} max={7} step={0.1} disabled={!hasBikeMode} bind:value={cyclingSpeed} />
-				<div>{(cyclingSpeed * 3.6).toFixed(1)} km/h</div>
-			</div>
-		</div>
-
-		<!-- Elevation Costs -->
-		<div class="grid grid-cols-2 items-center">
+		>
 			<div class="text-sm">
-				{t.selectElevationCosts}
+				{t.routingSegments.maxTransfers}
 			</div>
-			<Select.Root
-				disabled={!allowElevationCosts || !allowStreetRouting}
-				type="single"
-				bind:value={elevationCosts}
-			>
-				<Select.Trigger aria-label={t.selectElevationCosts}>
-					{t.elevationCosts[elevationCosts]}
-				</Select.Trigger>
-				<Select.Content sideOffset={10}>
-					{#each possibleElevationCosts as costs, i (i + costs.value)}
-						<Select.Item value={costs.value} label={costs.label}>
-							{costs.label}
-						</Select.Item>
-					{/each}
-				</Select.Content>
-			</Select.Root>
+			<NumberSelect bind:value={maxTransfers} possibleValues={possibleMaxTransfers} />
+			{#if maxTravelTime !== undefined}
+				<div class="text-sm">
+					{t.routingSegments.maxTravelTime}
+				</div>
+				<NumberSelect
+					bind:value={maxTravelTime}
+					possibleValues={possibleMaxTravelTimes}
+					labelFormatter={formatDurationSec}
+				/>
+			{/if}
+			<div class="text-sm">{t.routingSegments.additionalTransferTime}</div>
+			<input
+				type="number"
+				min="0"
+				bind:value={additionalTransferTime}
+				placeholder={t.duration + ' (min)'}
+				class="text-sm border w-full h-full pl-1 text-center rounded-md"
+			/>
 		</div>
+		<!-- First mile -->
+		<StreetModes
+			label={t.routingSegments.firstMile}
+			disabled={!allowStreetRouting}
+			bind:modes={preTransitModes}
+			bind:maxTransitTime={maxPreTransitTime}
+			{possibleModes}
+			possibleMaxTransitTime={possiblePrePostDurations}
+			bind:ignoreRentalReturnConstraints={ignorePreTransitRentalReturnConstraints}
+			bind:providerGroups={preTransitProviderGroups}
+		></StreetModes>
+
+		<!-- Last mile -->
+		<StreetModes
+			label={t.routingSegments.lastMile}
+			disabled={!allowStreetRouting}
+			bind:modes={postTransitModes}
+			bind:maxTransitTime={maxPostTransitTime}
+			{possibleModes}
+			possibleMaxTransitTime={possiblePrePostDurations}
+			bind:ignoreRentalReturnConstraints={ignorePostTransitRentalReturnConstraints}
+			bind:providerGroups={postTransitProviderGroups}
+		></StreetModes>
+
+		<!-- Direct -->
+		{#if directModes !== undefined && maxDirectTime !== undefined && ignoreDirectRentalReturnConstraints !== undefined}
+			<StreetModes
+				label={t.routingSegments.direct}
+				disabled={!allowStreetRouting}
+				bind:modes={directModes}
+				bind:maxTransitTime={maxDirectTime}
+				{possibleModes}
+				possibleMaxTransitTime={possibleDirectDurations}
+				bind:ignoreRentalReturnConstraints={ignoreDirectRentalReturnConstraints}
+				bind:providerGroups={directProviderGroups}
+			></StreetModes>
+		{/if}
+
 		{#if showHgvOptions}
 			<div class="space-y-2">
 				<div class="text-sm font-medium">{t.hgvRoutingOptions}</div>
@@ -450,8 +402,59 @@
 				/>
 			</div>
 		{/if}
-		{#if additionalComponents}
-			{@render additionalComponents()}
-		{/if}
+
+		<div class="grid grid-cols-[1fr_2fr_1fr] text-sm items-center gap-2">
+			<span>{t.routingSegments.pedestrianSpeed}</span>
+			<Slider
+				min={pedestrianProfile == 'FOOT' ? 0.8 : 0.5}
+				step={0.1}
+				max={pedestrianProfile == 'FOOT' ? 3 : 1.6}
+				bind:value={pedestrianSpeed}
+			/>
+			<div>{(pedestrianSpeed * 3.6).toFixed(1)} km/h</div>
+			<span>{t.routingSegments.cyclingSpeed}</span>
+			<Slider min={2.7} max={7} step={0.1} disabled={!hasBikeMode} bind:value={cyclingSpeed} />
+			<div>{(cyclingSpeed * 3.6).toFixed(1)} km/h</div>
+		</div>
 	</div>
-{/if}
+
+	<!-- Elevation Costs -->
+	<div class="grid grid-cols-2 items-center">
+		<div class="text-sm">
+			{t.selectElevationCosts}
+		</div>
+		<Select.Root
+			disabled={!allowElevationCosts || !allowStreetRouting}
+			type="single"
+			bind:value={elevationCosts}
+		>
+			<Select.Trigger aria-label={t.selectElevationCosts}>
+				{t.elevationCosts[elevationCosts]}
+			</Select.Trigger>
+			<Select.Content sideOffset={10}>
+				{#each possibleElevationCosts as costs, i (i + costs.value)}
+					<Select.Item value={costs.value} label={costs.label}>
+						{costs.label}
+					</Select.Item>
+				{/each}
+			</Select.Content>
+		</Select.Root>
+	</div>
+	{#if additionalComponents}
+		{@render additionalComponents()}
+	{/if}
+{/snippet}
+
+<Dialog.Root bind:open={advancedOptionsOpen}>
+	<Dialog.Trigger class={buttonVariants({ variant: 'ghost' })}>
+		{t.advancedSearchOptions}
+	</Dialog.Trigger>
+	<Dialog.Content class="flex max-h-[90vh] max-w-2xl flex-col">
+		<Dialog.Header>
+			<Dialog.Title>{t.advancedSearchOptions}</Dialog.Title>
+		</Dialog.Header>
+		<div class="space-y-4 overflow-y-auto p-2">
+			{@render optionsContent()}
+		</div>
+	</Dialog.Content>
+</Dialog.Root>
