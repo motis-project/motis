@@ -55,12 +55,6 @@ double transfers(api::Itinerary const& i) {
   return static_cast<double>(i.transfers_) * Weight;
 }
 
-} // namespace criteria
-
-inline double rate_classic(std::vector<api::Itinerary> const& a,
-            std::vector<api::Itinerary> const& b) {
-  static auto const criteria = std::vector<criterion_t>{criterion::start_time<1.0>, criterion::end_time<1.0>, criterion::transfers<30.0>};
-  return rate(a,b, criteria);
-}
+}  // namespace criterion
 
 }  // namespace motis::qa
