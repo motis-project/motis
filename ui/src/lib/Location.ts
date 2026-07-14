@@ -53,7 +53,7 @@ export const parseLocation = (
 	name?: string | null | undefined
 ): Location => {
 	if (!place || place.trim() === '') {
-		return { label: '', match: undefined };
+		return { label: name ?? '', match: undefined };
 	}
 
 	const coord = parseCoordinatesToLocation(place);
@@ -64,6 +64,10 @@ export const parseLocation = (
 		}
 		return coord;
 	}
+	return parseIDToLocation(place, name);
+};
+
+export const parseIDToLocation = (place: string, name?: string | undefined | null): Location => {
 	return {
 		label: name || '',
 		match: {

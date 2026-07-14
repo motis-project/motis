@@ -19,6 +19,7 @@
 #include "motis/match_platforms.h"
 #include "motis/osr/parameters.h"
 #include "motis/place.h"
+#include "motis/rental_options.h"
 
 namespace motis::ep {
 
@@ -52,16 +53,16 @@ void remove_slower_than_fastest_direct(nigiri::routing::query&);
 struct routing {
   api::plan_response operator()(boost::urls::url_view const&) const;
 
+  bool is_osr_loaded() const {
+    return w_ && l_ && pl_ && tt_ && loc_tree_ && matches_;
+  }
+
   std::vector<nigiri::routing::offset> get_offsets(
       nigiri::rt_timetable const*,
       place_t const&,
       osr::direction,
       std::vector<api::ModeEnum> const&,
-      std::optional<std::vector<api::RentalFormFactorEnum>> const&,
-      std::optional<std::vector<api::RentalPropulsionTypeEnum>> const&,
-      std::optional<std::vector<std::string>> const& rental_providers,
-      std::optional<std::vector<std::string>> const& rental_provider_groups,
-      bool ignore_rental_return_constraints,
+      rental_options const&,
       osr_parameters const&,
       api::PedestrianProfileEnum,
       api::ElevationCostsEnum,
@@ -128,11 +129,9 @@ struct routing {
   odm::bounds const* odm_bounds_;
   odm::ride_sharing_bounds const* ride_sharing_bounds_;
   metrics_registry* metrics_;
+#if defined(NIGIRI_CUDA)
+  gpu_search_pool* gpu_pool_{nullptr};
+#endif
 };
-
-bool is_intermodal(routing const&, place_t const&);
-
-nigiri::routing::location_match_mode get_match_mode(routing const&,
-                                                    place_t const&);
 
 }  // namespace motis::ep

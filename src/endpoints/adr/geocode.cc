@@ -2,10 +2,10 @@
 
 #include "boost/thread/tss.hpp"
 
+#include "fmt/format.h"
+
 #include "utl/for_each_bit_set.h"
 #include "utl/to_vec.h"
-
-#include "fmt/format.h"
 
 #include "net/bad_request_exception.h"
 
@@ -82,17 +82,27 @@ api::geocode_response geocode::operator()(
                     }}};
               })
           .value_or(std::function<bool(adr::place_idx_t)>{});
-  auto const config_limit = config_.get_limits().geocode_max_suggestions_;
-  auto const requested_limit = params.numResults_.value_or(kDefaultSuggestions);
+  auto const config_limit =
+      static_cast<std::int64_t>(config_.get_limits().geocode_max_suggestions_);
+  auto const requested_limit =
+      std::min(params.numResults_.value_or(kDefaultSuggestions), config_limit);
   utl::verify<net::bad_request_exception>(requested_limit >= 1,
                                           "limit must be >= 1");
-  utl::verify<net::bad_request_exception>(
-      requested_limit <= config_limit,
-      "limit must be <= geocode_max_suggestions ({})", config_limit);
+  auto bbox = std::optional<geo::box>{};
+  if (params.max_ && params.min_) {
+    auto const min = parse_location(*params.min_);
+    utl::verify<net::bad_request_exception>(
+        min.has_value(), "could not parse min {}", *params.min_);
+    auto const max = parse_location(*params.max_);
+    utl::verify<net::bad_request_exception>(
+        max.has_value(), "could not parse max {}", *params.max_);
+    bbox = geo::box{min->pos_, max->pos_};
+  }
   auto const token_pos = a::get_suggestions<false>(
       t_, params.text_, static_cast<unsigned>(requested_limit), lang_indices,
       ctx, place, static_cast<float>(params.placeBias_),
-      to_filter_type(params.type_), place_filter);
+      to_filter_type(params.type_), place_filter, bbox);
+
   return suggestions_to_response(t_, f_, ae_, tt_, tags_, w_, pl_, matches_,
                                  lang_indices, token_pos, ctx.suggestions_);
 }

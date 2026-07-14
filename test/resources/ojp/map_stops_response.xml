@@ -11,52 +11,6 @@
         <PlaceResult>
           <Place>
             <StopPlace>
-              <StopPlaceRef>test_DA</StopPlaceRef>
-              <StopPlaceName>
-                <Text xml:lang="de">DA Hbf</Text>
-              </StopPlaceName>
-            </StopPlace>
-            <Name>
-              <Text xml:lang="de">DA Hbf</Text>
-            </Name>
-            <GeoPosition>
-              <siri:Longitude>8.63085</siri:Longitude>
-              <siri:Latitude>49.8726</siri:Latitude>
-            </GeoPosition>
-            <Mode>
-              <PtMode>rail</PtMode>
-              <siri:RailSubmode>highSpeedRail</siri:RailSubmode>
-            </Mode>
-          </Place>
-          <Complete>true</Complete>
-          <Probability>1</Probability>
-        </PlaceResult>
-        <PlaceResult>
-          <Place>
-            <StopPlace>
-              <StopPlaceRef>test_DA_3</StopPlaceRef>
-              <StopPlaceName>
-                <Text xml:lang="de">DA Hbf</Text>
-              </StopPlaceName>
-            </StopPlace>
-            <Name>
-              <Text xml:lang="de">DA Hbf</Text>
-            </Name>
-            <GeoPosition>
-              <siri:Longitude>8.63003</siri:Longitude>
-              <siri:Latitude>49.87355</siri:Latitude>
-            </GeoPosition>
-            <Mode>
-              <PtMode>rail</PtMode>
-              <siri:RailSubmode>highSpeedRail</siri:RailSubmode>
-            </Mode>
-          </Place>
-          <Complete>true</Complete>
-          <Probability>1</Probability>
-        </PlaceResult>
-        <PlaceResult>
-          <Place>
-            <StopPlace>
               <StopPlaceRef>test_DA_10</StopPlaceRef>
               <StopPlaceName>
                 <Text xml:lang="de">DA Hbf</Text>

@@ -11,6 +11,10 @@ struct osr_parameters {
   constexpr static auto const kFootSpeed = 1.2F;
   constexpr static auto const kWheelchairSpeed = 0.8F;
   constexpr static auto const kBikeSpeed = 4.2F;
+  constexpr static auto const kCarSpeed = 28.0F;
+  constexpr static auto const kBusSpeed = 28.0F;
+  constexpr static auto const kRailwaySpeed = 28.0F;
+  constexpr static auto const kFerrySpeed = 28.0F;
 
   float const pedestrian_speed_{kFootSpeed};
   float const cycling_speed_{kBikeSpeed};
@@ -18,6 +22,8 @@ struct osr_parameters {
 };
 
 osr_parameters get_osr_parameters(api::plan_params const&);
+
+osr_parameters get_osr_parameters(api::refreshItinerary_params const&);
 
 osr_parameters get_osr_parameters(api::oneToAll_params const&);
 

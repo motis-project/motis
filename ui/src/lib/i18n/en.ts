@@ -5,6 +5,7 @@ const translations: Translations = {
 	ticketOptions: 'Ticket Options',
 	includedInTicket: 'Included in ticket',
 	journeyDetails: 'Journey Details',
+	refreshItinerary: 'Refresh journey',
 	transfers: 'transfers',
 	walk: 'Walk',
 	bike: 'Bike',
@@ -24,6 +25,8 @@ const translations: Translations = {
 	hydrogenFuelCell: 'Hydrogen fuel cell',
 	from: 'From',
 	to: 'To',
+	myLocation: 'My location',
+	reverseDirections: 'Reverse directions',
 	viaStop: 'Via stop',
 	viaStops: 'Via stops',
 	addViaStop: 'Add via stop',
@@ -57,6 +60,7 @@ const translations: Translations = {
 	},
 	sharingProvider: 'Provider',
 	sharingProviders: 'Providers',
+	none: 'None',
 	returnOnlyAtStations: 'The vehicle must be returned at a station.',
 	roundtripStationReturnConstraint: 'The vehicle must be returned to the departure station.',
 	rentalStation: 'Station',
@@ -68,7 +72,7 @@ const translations: Translations = {
 	defaultSelectedProviders: 'All providers',
 	selectElevationCosts: 'Avoid steep incline.',
 	useRoutedTransfers: 'Use routed transfers',
-	wheelchair: 'Accessible transfers',
+	wheelchair: 'Only wheelchair accessible connections',
 	bikeRental: 'Allow usage of sharing vehicles',
 	requireBikeTransport: 'Bike carriage',
 	requireCarTransport: 'Car carriage',
@@ -76,6 +80,7 @@ const translations: Translations = {
 	default: 'Default',
 	timetableSources: 'Timetable sources',
 	tripCancelled: 'Trip cancelled',
+	addStop: 'Add Stop',
 	stopCancelled: 'Stop cancelled',
 	inOutDisallowed: 'Entry/exit not possible',
 	inDisallowed: 'Entry not possible',
@@ -125,7 +130,11 @@ const translations: Translations = {
 		direct: 'Direct connection',
 		maxPreTransitTime: 'Max. pre-transit time',
 		maxPostTransitTime: 'Max. post-transit time',
-		maxDirectTime: 'Max. direct time'
+		maxDirectTime: 'Max. direct time',
+		additionalTransferTime: 'Additional transfer time',
+		pedestrianSpeed: 'Pedestrian speed',
+		cyclingSpeed: 'Cycling speed',
+		transferTimeFactor: 'Transfer time factor'
 	},
 	elevationCosts: {
 		NONE: 'No detours',
@@ -151,8 +160,13 @@ const translations: Translations = {
 	},
 	incline: 'Incline',
 	toll: 'Warning! A fee must be paid to use this route.',
+	bikesAllowed: 'Bikes allowed',
+	wheelchairAccessible: 'Wheelchair accessible',
 	accessRestriction: 'No access',
 	continuesAs: 'Continues as',
+	earlierAlternatives: 'Earlier alternatives',
+	laterAlternatives: 'Later alternatives',
+	differentStops: 'Different stops',
 	rent: 'Rent',
 	copyToClipboard: 'Copy to clipboard',
 	rideThroughAllowed: 'Riding through allowed',
@@ -162,6 +176,16 @@ const translations: Translations = {
 	DEBUG_BUS_ROUTE: 'Bus Route (Debug)',
 	DEBUG_RAILWAY_ROUTE: 'Railway Route (Debug)',
 	DEBUG_FERRY_ROUTE: 'Ferry Route (Debug)',
+	colorMode: {
+		none: 'No Map Visualization',
+		stops: 'Stops',
+		rt: 'Timetable: Delays',
+		route: 'Timetable: Line Colors',
+		mode: 'Timetable: Transport Modes'
+	},
+	resetToNorth: 'Reset to north',
+	showMyLocation: 'Show my location',
+	toggleHillshades: 'Toggle hillshades overlay',
 	routes: (n: number) => {
 		switch (n) {
 			case 0:
@@ -171,7 +195,16 @@ const translations: Translations = {
 			default:
 				return `${n} routes`;
 		}
-	}
+	},
+	pageTitle: {
+		default: 'MOTIS',
+		fromTo: (from, to) => `${from} to ${to}`,
+		departuresAt: (stop) => `Departures in ${stop}`,
+		arrivalsAt: (stop) => `Arrivals in ${stop}`,
+		isochronesFrom: (place) => `Isochrones from ${place}`
+	},
+	tickets: 'Tickets',
+	routeInformation: 'More Information'
 };
 
 export default translations;

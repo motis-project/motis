@@ -12,6 +12,7 @@
 #include "motis/endpoints/elevators.h"
 #include "motis/endpoints/graph.h"
 #include "motis/endpoints/gtfsrt.h"
+#include "motis/endpoints/health.h"
 #include "motis/endpoints/initial.h"
 #include "motis/endpoints/levels.h"
 #include "motis/endpoints/map/flex_locations.h"
@@ -29,7 +30,9 @@
 #include "motis/endpoints/one_to_many_post.h"
 #include "motis/endpoints/osr_routing.h"
 #include "motis/endpoints/platforms.h"
+#include "motis/endpoints/refresh_itinerary.h"
 #include "motis/endpoints/routing.h"
+#include "motis/endpoints/stop.h"
 #include "motis/endpoints/stop_times.h"
 #include "motis/endpoints/tiles.h"
 #include "motis/endpoints/transfers.h"
@@ -97,35 +100,45 @@ struct motis_instance {
     GET<ep::levels>("/api/v1/map/levels", d);
     GET<ep::initial>("/api/v1/map/initial", d);
     GET<ep::reverse_geocode>("/api/v1/reverse-geocode", d);
+    GET<ep::health>("/api/v1/health", d);
     GET<ep::geocode>("/api/v1/geocode", d);
     GET<ep::routing>("/api/v1/plan", d);
     GET<ep::routing>("/api/v2/plan", d);
     GET<ep::routing>("/api/v3/plan", d);
     GET<ep::routing>("/api/v4/plan", d);
     GET<ep::routing>("/api/v5/plan", d);
+    GET<ep::routing>("/api/v6/plan", d);
     GET<ep::stop_times>("/api/v1/stoptimes", d);
     GET<ep::stop_times>("/api/v4/stoptimes", d);
     GET<ep::stop_times>("/api/v5/stoptimes", d);
+    GET<ep::stop_times>("/api/v6/stoptimes", d);
+    GET<ep::stop>("/api/v6/stop", d);
     GET<ep::trip>("/api/v1/trip", d);
     GET<ep::trip>("/api/v2/trip", d);
     GET<ep::trip>("/api/v4/trip", d);
     GET<ep::trip>("/api/v5/trip", d);
+    GET<ep::trip>("/api/v6/trip", d);
     GET<ep::trips>("/api/v1/map/trips", d);
     GET<ep::trips>("/api/v4/map/trips", d);
     GET<ep::trips>("/api/v5/map/trips", d);
+    GET<ep::trips>("/api/v6/map/trips", d);
     GET<ep::stops>("/api/v1/map/stops", d);
+    GET<ep::stops>("/api/v6/map/stops", d);
     GET<ep::route_details>("/api/experimental/map/route-details", d);
     GET<ep::routes>("/api/experimental/map/routes", d);
     GET<ep::rental>("/api/v1/map/rentals", d);
     GET<ep::rental>("/api/v1/rentals", d);
     GET<ep::one_to_all>("/api/experimental/one-to-all", d);
     GET<ep::one_to_all>("/api/v1/one-to-all", d);
+    GET<ep::one_to_all>("/api/v6/one-to-all", d);
     GET<ep::one_to_many>("/api/v1/one-to-many", d);
+    GET<ep::refresh_itinerary>("/api/v6/refresh-itinerary", d);
     GET<ep::one_to_many_intermodal>("/api/experimental/one-to-many-intermodal",
                                     d);
     POST<ep::one_to_many_intermodal_post>(
         "/api/experimental/one-to-many-intermodal", d);
     POST<ep::one_to_many_post>("/api/v1/one-to-many", d);
+    POST<ep::refresh_itinerary_post>("/api/v6/refresh-itinerary", d);
 
     if (!c.requires_rt_timetable_updates()) {
       // Elevator updates are not compatible with RT-updates.
@@ -180,7 +193,8 @@ struct motis_instance {
   void run(data& d, config const& c) {
     if (d.w_ && d.l_ && c.has_gbfs_feeds()) {
       gbfs_ = io_thread{"motis gbfs update", [&](boost::asio::io_context& ioc) {
-                          gbfs::run_gbfs_update(ioc, c, *d.w_, *d.l_, d.gbfs_);
+                          gbfs::run_gbfs_update(ioc, c, *d.w_, *d.l_, d.gbfs_,
+                                                d.metrics_.get());
                         }};
     }
 

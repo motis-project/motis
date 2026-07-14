@@ -1,12 +1,6 @@
 /// <reference lib="webworker" />trips
 import polyline from '@mapbox/polyline';
-import {
-	client,
-	trips,
-	type Mode,
-	type TripsData,
-	type TripSegment
-} from '@motis-project/motis-client';
+import { client, trips, type Mode, type TripSegment } from '@motis-project/motis-client';
 import type { Trip, TransferData, MetaData } from './types';
 import type { QuerySerializerOptions } from '@hey-api/client-fetch';
 import { getDelayColor, hexToRgb } from './Color';
@@ -55,7 +49,7 @@ let status: number;
 const tripsMap = new Map<string, Trip>();
 const metaDataMap = new Map<string, MetaData>();
 let metadata: MetaData[] = [];
-const fetchData = async (query: TripsData) => {
+const fetchData = async (query: Parameters<typeof trips>[0]) => {
 	const { data, response } = await trips(query);
 	status = response.status;
 	if (!data) return;

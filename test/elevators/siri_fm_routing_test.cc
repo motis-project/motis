@@ -138,7 +138,8 @@ TEST(motis, siri_fm_routing) {
         "&time=2019-05-01T01:25Z"
         "&pedestrianProfile=WHEELCHAIR"
         "&useRoutedTransfers=true"
-        "&timetableView=false");
+        "&timetableView=false"
+        "&numLegAlternatives=3");
     EXPECT_EQ(0U, res.itineraries_.size());
   }
 
@@ -149,7 +150,8 @@ TEST(motis, siri_fm_routing) {
         "&toPlace=50.11347,8.67664"
         "&time=2019-05-01T01:25Z"
         "&useRoutedTransfers=true"
-        "&timetableView=false");
+        "&timetableView=false"
+        "&numLegAlternatives=3");
     EXPECT_EQ(1U, res.itineraries_.size());
   }
 }

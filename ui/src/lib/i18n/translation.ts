@@ -11,6 +11,7 @@ export type Translations = {
 	ticketOptions: string;
 	includedInTicket: string;
 	journeyDetails: string;
+	refreshItinerary: string;
 	transfers: string;
 	walk: string;
 	bike: string;
@@ -38,6 +39,8 @@ export type Translations = {
 	position: string;
 	arrival: string;
 	departure: string;
+	myLocation: string;
+	reverseDirections: string;
 	duration: string;
 	later: string;
 	earlier: string;
@@ -54,6 +57,7 @@ export type Translations = {
 	tripIntermediateStops: (n: number) => string;
 	sharingProvider: string;
 	sharingProviders: string;
+	none: string;
 	returnOnlyAtStations: string;
 	roundtripStationReturnConstraint: string;
 	rentalStation: string;
@@ -74,6 +78,7 @@ export type Translations = {
 	timetableSources: string;
 	tripCancelled: string;
 	stopCancelled: string;
+	addStop: string;
 	inOutDisallowed: string;
 	inDisallowed: string;
 	outDisallowed: string;
@@ -113,6 +118,10 @@ export type Translations = {
 		maxPreTransitTime: string;
 		maxPostTransitTime: string;
 		maxDirectTime: string;
+		additionalTransferTime: string;
+		pedestrianSpeed: string;
+		cyclingSpeed: string;
+		transferTimeFactor: string;
 	};
 	elevationCosts: {
 		NONE: string;
@@ -148,8 +157,13 @@ export type Translations = {
 	FUNICULAR: string;
 	AERIAL_LIFT: string;
 	toll: string;
+	bikesAllowed: string;
+	wheelchairAccessible: string;
 	accessRestriction: string;
 	continuesAs: string;
+	earlierAlternatives: string;
+	laterAlternatives: string;
+	differentStops: string;
 	DEBUG_BUS_ROUTE: string;
 	DEBUG_RAILWAY_ROUTE: string;
 	DEBUG_FERRY_ROUTE: string;
@@ -159,7 +173,26 @@ export type Translations = {
 	rideThroughNotAllowed: string;
 	rideEndAllowed: string;
 	rideEndNotAllowed: string;
+	colorMode: {
+		none: string;
+		stops: string;
+		rt: string;
+		route: string;
+		mode: string;
+	};
+	resetToNorth: string;
+	showMyLocation: string;
+	toggleHillshades: string;
 	routes: (n: number) => string;
+	pageTitle: {
+		default: string;
+		fromTo: (from: string, to: string) => string;
+		departuresAt: (stop: string) => string;
+		arrivalsAt: (stop: string) => string;
+		isochronesFrom: (place: string) => string;
+	};
+	tickets: string;
+	routeInformation: string;
 };
 
 const translations: Map<string, Translations> = new Map(

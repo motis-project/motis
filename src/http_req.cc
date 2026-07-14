@@ -1,9 +1,11 @@
 #include "motis/http_req.h"
 
 #include "boost/asio/awaitable.hpp"
+#include "boost/asio/cancel_after.hpp"
 #include "boost/asio/co_spawn.hpp"
 #include "boost/asio/io_context.hpp"
 #include "boost/asio/ssl.hpp"
+#include "boost/asio/use_awaitable.hpp"
 #include "boost/beast/core.hpp"
 #include "boost/beast/http.hpp"
 #include "boost/beast/http/dynamic_body.hpp"
@@ -44,7 +46,8 @@ asio::awaitable<http_response> req_no_tls(
   auto const host = proxy ? proxy->host_ : url.host();
   auto const port =
       proxy ? proxy->port_ : std::string{url.has_port() ? url.port() : "80"};
-  auto const results = co_await resolver.async_resolve(host, port);
+  auto const results = co_await resolver.async_resolve(
+      host, port, asio::cancel_after(timeout, asio::use_awaitable));
 
   stream.expires_after(timeout);
 
@@ -58,11 +61,10 @@ asio::awaitable<http_response> req_tls(
     std::optional<std::string> const& body,
     std::chrono::seconds const timeout,
     std::optional<proxy> const& proxy) {
-  auto ssl_ctx = ssl::context{ssl::context::tlsv12_client};
+  auto ssl_ctx = ssl::context{ssl::context::tls_client};
   ssl_ctx.set_default_verify_paths();
   ssl_ctx.set_verify_mode(ssl::verify_none);
   ssl_ctx.set_options(ssl::context::default_workarounds |
-                      ssl::context::no_sslv2 | ssl::context::no_sslv3 |
                       ssl::context::single_dh_use);
 
   auto executor = co_await asio::this_coro::executor;
@@ -79,7 +81,8 @@ asio::awaitable<http_response> req_tls(
         {static_cast<int>(::ERR_get_error()), asio::error::get_ssl_category()}};
   }
 
-  auto const results = co_await resolver.async_resolve(host, port);
+  auto const results = co_await resolver.async_resolve(
+      host, port, asio::cancel_after(timeout, asio::use_awaitable));
 
   stream.next_layer().expires_after(timeout);
 

@@ -27,25 +27,14 @@
 	const post = async (path: string, req: unknown) => {
 		const response = await fetch(`${baseUrl}${path}`, {
 			method: 'POST',
-			mode: 'cors',
-			headers: {
-				'Access-Control-Allow-Origin': '*',
-				'Content-Type': 'application/json'
-			},
+			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify(req)
 		});
 		return await response.json();
 	};
 
 	const get = async (path: string) => {
-		const response = await fetch(`${baseUrl}${path}`, {
-			method: 'GET',
-			mode: 'cors',
-			headers: {
-				'Access-Control-Allow-Origin': '*',
-				'Content-Type': 'application/json'
-			}
-		});
+		const response = await fetch(`${baseUrl}${path}`);
 		return await response.json();
 	};
 

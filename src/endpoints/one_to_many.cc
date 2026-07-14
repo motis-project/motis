@@ -127,12 +127,13 @@ std::vector<api::ParetoSet> transit_durations(
 
   auto q = n::routing::query{
       .start_time_ = time,
-      .start_match_mode_ = get_match_mode(r, one),
-      .start_ = r.get_offsets(nullptr, one, one_dir, one_modes, std::nullopt,
-                              std::nullopt, std::nullopt, std::nullopt, false,
-                              osr_params, pedestrian_profile, elevation_costs,
-                              one_max_seconds, max_matching_distance, gbfs_rd,
-                              prepare_stats),
+      .start_match_mode_ = r.is_osr_loaded()
+                               ? n::routing::location_match_mode::kIntermodal
+                               : n::routing::location_match_mode::kEquivalent,
+      .start_ = r.get_offsets(nullptr, one, one_dir, one_modes,
+                              rental_options{}, osr_params, pedestrian_profile,
+                              elevation_costs, one_max_seconds,
+                              max_matching_distance, gbfs_rd, prepare_stats),
       .td_start_ = r.get_td_offsets(nullptr, nullptr, one, one_dir, one_modes,
                                     osr_params, pedestrian_profile,
                                     elevation_costs, max_matching_distance,
@@ -191,9 +192,9 @@ std::vector<api::ParetoSet> transit_durations(
     auto const offsets = r.get_offsets(
         nullptr, l,
         arrive_by ? osr::direction::kForward : osr::direction::kBackward,
-        many_modes, std::nullopt, std::nullopt, std::nullopt, std::nullopt,
-        false, osr_params, pedestrian_profile, elevation_costs,
-        many_max_seconds, max_matching_distance, gbfs_rd, prepare_stats);
+        many_modes, rental_options{}, osr_params, pedestrian_profile,
+        elevation_costs, many_max_seconds, max_matching_distance, gbfs_rd,
+        prepare_stats);
 
     for (auto const offset : offsets) {
       auto const loc = offset.target();

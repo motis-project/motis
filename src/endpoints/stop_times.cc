@@ -19,6 +19,10 @@
 #include "nigiri/timetable.h"
 #include "nigiri/types.h"
 
+#include "adr/typeahead.h"
+
+#include "motis/adr_extend_tt.h"
+#include "motis/collect_locations.h"
 #include "motis/data.h"
 #include "motis/journey_to_response.h"
 #include "motis/parse_location.h"
@@ -52,7 +56,7 @@ struct static_ev_iterator : public ev_iterator {
                      n::route_idx_t const r,
                      n::stop_idx_t const stop_idx,
                      n::unixtime_t const start,
-                     n::event_type const ev_type,
+                     std::optional<n::event_type> const ev_type,
                      n::direction const dir)
       : tt_{tt},
         rtt_{rtt},
@@ -61,6 +65,7 @@ struct static_ev_iterator : public ev_iterator {
                      ? to_idx(tt.day_idx(tt_.date_range_.to_))
                      : to_idx(tt.day_idx(tt_.date_range_.from_) - 1U)},
         size_{tt_.route_transport_ranges_[r].size()},
+        num_stops_{tt_.route_location_seq_[r].size()},
         i_{0},
         r_{r},
         stop_idx_{stop_idx},
@@ -96,7 +101,12 @@ struct static_ev_iterator : public ev_iterator {
   bool finished() const override { return day_ == end_day_; }
 
   n::unixtime_t time() const override {
-    return tt_.event_time(t(), stop_idx_, ev_type_);
+    if (!ev_type_.has_value()) {
+      return stop_idx_ == num_stops_ - 1U
+                 ? tt_.event_time(t(), stop_idx_, n::event_type::kArr)
+                 : tt_.event_time(t(), stop_idx_, n::event_type::kDep);
+    }
+    return tt_.event_time(t(), stop_idx_, *ev_type_);
   }
 
   n::rt::run get() const override {
@@ -127,7 +137,10 @@ private:
   n::transport t() const {
     auto const idx = dir_ == n::direction::kForward ? i_ : size_ - i_ - 1;
     auto const t = tt_.route_transport_ranges_[r_][idx];
-    auto const day_offset = tt_.event_mam(r_, t, stop_idx_, ev_type_).days();
+    auto const e_type =
+        ev_type_.value_or(stop_idx_ == num_stops_ - 1U ? n::event_type::kArr
+                                                       : n::event_type::kDep);
+    auto const day_offset = tt_.event_mam(r_, t, stop_idx_, e_type).days();
     return n::transport{tt_.route_transport_ranges_[r_][idx],
                         n::day_idx_t{to_idx(day_) - day_offset}};
   }
@@ -136,10 +149,11 @@ private:
   n::rt_timetable const* rtt_;
   n::day_idx_t day_, end_day_;
   std::uint32_t size_;
+  std::size_t num_stops_;
   std::uint32_t i_;
   n::route_idx_t r_;
   n::stop_idx_t stop_idx_;
-  n::event_type ev_type_;
+  std::optional<n::event_type> ev_type_;
   n::direction dir_;
 };
 
@@ -148,7 +162,7 @@ struct rt_ev_iterator : public ev_iterator {
                  n::rt_transport_idx_t const rt_t,
                  n::stop_idx_t const stop_idx,
                  n::unixtime_t const start,
-                 n::event_type const ev_type,
+                 std::optional<n::event_type> const ev_type,
                  n::direction const dir,
                  n::routing::clasz_mask_t const allowed_clasz)
       : rtt_{rtt},
@@ -159,7 +173,8 @@ struct rt_ev_iterator : public ev_iterator {
             !n::routing::is_allowed(
                 allowed_clasz, rtt.rt_transport_section_clasz_[rt_t].at(0)) ||
             (dir == n::direction::kForward ? time() < start : time() > start)} {
-    assert((ev_type == n::event_type::kDep &&
+    assert(!ev_type.has_value() ||
+           (ev_type == n::event_type::kDep &&
             stop_idx_ < rtt_.rt_transport_location_seq_[rt_t].size() - 1U) ||
            (ev_type == n::event_type::kArr && stop_idx_ > 0U));
   }
@@ -174,7 +189,13 @@ struct rt_ev_iterator : public ev_iterator {
   bool finished() const override { return finished_; }
 
   n::unixtime_t time() const override {
-    return rtt_.unix_event_time(rt_t_, stop_idx_, ev_type_);
+    if (!ev_type_.has_value()) {
+      auto const size = rtt_.rt_transport_location_seq_[rt_t_].size();
+      return stop_idx_ == size - 1U
+                 ? rtt_.unix_event_time(rt_t_, stop_idx_, n::event_type::kArr)
+                 : rtt_.unix_event_time(rt_t_, stop_idx_, n::event_type::kDep);
+    }
+    return rtt_.unix_event_time(rt_t_, stop_idx_, *ev_type_);
   }
 
   n::rt::run get() const override {
@@ -188,7 +209,7 @@ struct rt_ev_iterator : public ev_iterator {
   n::rt_timetable const& rtt_;
   n::stop_idx_t stop_idx_;
   n::rt_transport_idx_t rt_t_;
-  n::event_type ev_type_;
+  std::optional<n::event_type> ev_type_;
   bool finished_{false};
 };
 
@@ -197,7 +218,7 @@ std::vector<n::rt::run> get_events(
     n::timetable const& tt,
     n::rt_timetable const* rtt,
     n::unixtime_t const time,
-    n::event_type const ev_type,
+    std::optional<n::event_type> const ev_type,
     n::direction const dir,
     std::size_t const min_count,
     std::size_t const max_count,
@@ -212,7 +233,8 @@ std::vector<n::rt::run> get_events(
         auto const location_seq = rtt->rt_transport_location_seq_[rt_t];
         for (auto const [stop_idx, s] : utl::enumerate(location_seq)) {
           if (n::stop{s}.location_idx() == x &&
-              ((ev_type == n::event_type::kDep &&
+              (!ev_type.has_value() ||
+               (ev_type == n::event_type::kDep &&
                 stop_idx != location_seq.size() - 1U) ||
                (ev_type == n::event_type::kArr && stop_idx != 0U))) {
             if (!with_scheduled_skipped_stops) {
@@ -224,12 +246,19 @@ std::vector<n::rt::run> get_events(
                                                                  1U)},
                       .rt_ = rt_t}};
               auto const frs = fr[0];
-              if ((ev_type == n::event_type::kDep &&
-                   !frs.get_scheduled_stop().in_allowed() &&
-                   !frs.in_allowed()) ||
-                  (ev_type == n::event_type::kArr &&
-                   !frs.get_scheduled_stop().out_allowed() &&
-                   !frs.out_allowed())) {
+              if (!ev_type.has_value()) {
+                if (!frs.get_scheduled_stop().in_allowed() &&
+                    !frs.in_allowed() &&
+                    !frs.get_scheduled_stop().out_allowed() &&
+                    !frs.out_allowed()) {
+                  continue;
+                }
+              } else if ((ev_type == n::event_type::kDep &&
+                          !frs.get_scheduled_stop().in_allowed() &&
+                          !frs.in_allowed()) ||
+                         (ev_type == n::event_type::kArr &&
+                          !frs.get_scheduled_stop().out_allowed() &&
+                          !frs.out_allowed())) {
                 continue;
               }
             }
@@ -251,11 +280,16 @@ std::vector<n::rt::run> get_events(
       auto const location_seq = tt.route_location_seq_[r];
       for (auto const [stop_idx, s] : utl::enumerate(location_seq)) {
         if (n::stop{s}.location_idx() == x &&
-            ((ev_type == n::event_type::kDep &&
-              stop_idx != location_seq.size() - 1U &&
-              (with_scheduled_skipped_stops || n::stop{s}.in_allowed())) ||
-             (ev_type == n::event_type::kArr && stop_idx != 0U &&
-              (with_scheduled_skipped_stops || n::stop{s}.out_allowed()))) &&
+            (!ev_type.has_value()
+                 ? (with_scheduled_skipped_stops || n::stop{s}.in_allowed() ||
+                    n::stop{s}.out_allowed())
+                 : ((ev_type == n::event_type::kDep &&
+                     stop_idx != location_seq.size() - 1U &&
+                     (with_scheduled_skipped_stops ||
+                      n::stop{s}.in_allowed())) ||
+                    (ev_type == n::event_type::kArr && stop_idx != 0U &&
+                     (with_scheduled_skipped_stops ||
+                      n::stop{s}.out_allowed())))) &&
             seen.emplace(r, static_cast<n::stop_idx_t>(stop_idx)).second) {
           iterators.emplace_back(std::make_unique<static_ev_iterator>(
               tt, rtt, r, static_cast<n::stop_idx_t>(stop_idx), time, ev_type,
@@ -307,9 +341,11 @@ std::vector<api::Place> other_stops_impl(n::rt::frun fr,
                                          platform_matches_t const* matches,
                                          adr_ext const* ae,
                                          tz_map_t const* tz,
-                                         n::lang_t const& lang) {
+                                         n::lang_t const& lang,
+                                         unsigned const api_version) {
   auto const convert_stop = [&](n::rt::run_stop const& stop) {
-    auto result = to_place(tt, &tags, w, pl, matches, ae, tz, lang, stop);
+    auto result = bwd_compat_lvl_adjust(
+        to_place(tt, &tags, w, pl, matches, ae, tz, lang, stop), api_version);
     if (ev_type == n::event_type::kDep ||
         stop.fr_->stop_range_.from_ != stop.stop_idx_) {
       result.arrival_ = stop.time(n::event_type::kArr);
@@ -323,7 +359,7 @@ std::vector<api::Place> other_stops_impl(n::rt::frun fr,
     return result;
   };
 
-  auto const orig_location = fr[fr.first_valid()].get_location_idx();
+  auto const orig_location = fr[0].get_location_idx();
   if (ev_type == nigiri::event_type::kDep) {
     ++fr.stop_range_.from_;
     fr.stop_range_.to_ = fr.size();
@@ -333,8 +369,7 @@ std::vector<api::Place> other_stops_impl(n::rt::frun fr,
           return orig_location == stop.get_location_idx();
         });
     auto result = utl::to_vec(fr.begin(), it, convert_stop);
-    utl::verify<net::bad_request_exception>(!result.empty(),
-                                            "Departure is last stop in trip");
+    utl::verify(!result.empty(), "Departure is last stop in trip");
     return result;
   } else {
     fr.stop_range_.from_ = 0;
@@ -345,19 +380,21 @@ std::vector<api::Place> other_stops_impl(n::rt::frun fr,
           return orig_location == stop.get_location_idx();
         });
     auto result = utl::to_vec(it.base(), fr.end(), convert_stop);
-    utl::verify<net::bad_request_exception>(!result.empty(),
-                                            "Arrival is first stop in trip");
+    utl::verify(!result.empty(), "Arrival is first stop in trip");
     return result;
   }
 }
 
-api::stoptimes_response stop_times::operator()(
-    boost::urls::url_view const& url) const {
-  auto const query = api::stoptimes_params{url.params()};
-  auto const& lang = query.language_;
-  auto const api_version = get_api_version(url);
-
-  auto const max_results = config_.get_limits().stoptimes_max_results_;
+std::vector<n::rt::run> stop_times::get_runs(
+    api::stoptimes_params const& query,
+    nigiri::rt_timetable const* rtt,
+    std::optional<nigiri::event_type> const& ev_type,
+    std::optional<nigiri::location_idx_t> const& query_stop,
+    std::optional<osr::location> const& query_center,
+    bool const disable_stoptimes_max_limit) const {
+  auto const max_results = disable_stoptimes_max_limit
+                               ? 999888777U
+                               : config_.get_limits().stoptimes_max_results_;
   utl::verify<net::bad_request_exception>(
       query.n_.has_value() || query.window_.has_value(),
       "neither 'n' nor 'window' is provided");
@@ -370,12 +407,6 @@ api::stoptimes_response stop_times::operator()(
       query.stopId_.has_value() ||
           (query.center_.has_value() && query.radius_.has_value()),
       "no stop and no center with radius (at least one is required)");
-
-  auto const query_stop = query.stopId_.and_then(
-      [&](std::string const& x) { return tags_.find_location(tt_, x); });
-
-  auto const query_center = query.center_.and_then(
-      [&](std::string const& x) { return parse_location(x); });
 
   auto const center =
       query_stop
@@ -411,26 +442,7 @@ api::stoptimes_response stop_times::operator()(
 
   auto locations = std::vector<n::location_idx_t>{};
   auto const add = [&](n::location_idx_t const l) {
-    if (query.exactRadius_) {
-      locations.emplace_back(l);
-      return;
-    }
-
-    auto const l_name = tt_.get_default_translation(tt_.locations_.names_[l]);
-    utl::concat(locations, tt_.locations_.children_[l]);
-    for (auto const& c : tt_.locations_.children_[l]) {
-      utl::concat(locations, tt_.locations_.children_[c]);
-    }
-
-    for (auto const eq : tt_.locations_.equivalences_[l]) {
-      if (tt_.get_default_translation(tt_.locations_.names_[eq]) == l_name) {
-        locations.emplace_back(eq);
-        utl::concat(locations, tt_.locations_.children_[eq]);
-        for (auto const& c : tt_.locations_.children_[eq]) {
-          utl::concat(locations, tt_.locations_.children_[c]);
-        }
-      }
-    }
+    add_location(tt_, t_, ae_, locations, l, query.exactRadius_);
   };
 
   if (query_stop.has_value()) {
@@ -446,10 +458,6 @@ api::stoptimes_response stop_times::operator()(
   }
   utl::erase_duplicates(locations);
 
-  auto const rt = std::atomic_load(&rt_);
-  auto const rtt = rt->rtt_.get();
-  auto const ev_type =
-      query.arriveBy_ ? n::event_type::kArr : n::event_type::kDep;
   auto const window = query.window_.transform([](auto const w) {
     return std::chrono::duration_cast<n::duration_t>(std::chrono::seconds{w});
   });
@@ -460,9 +468,13 @@ api::stoptimes_response stop_times::operator()(
 
   auto const to_tuple = [&](n::rt::run const& x) {
     auto const fr_a = n::rt::frun{tt_, rtt, x};
-    return std::tuple{fr_a[0].time(ev_type), fr_a.is_scheduled()
-                                                 ? fr_a[0].get_trip_idx(ev_type)
-                                                 : n::trip_idx_t::invalid()};
+    auto const s = fr_a[0];
+    auto const e_type = ev_type.value_or(
+        fr_a.stop_range_.from_ == fr_a.size() - 1U ? n::event_type::kArr
+                                                   : n::event_type::kDep);
+    return std::tuple{s.time(e_type), fr_a.is_scheduled()
+                                          ? s.get_trip_idx(e_type)
+                                          : n::trip_idx_t::invalid()};
   };
   utl::sort(events, [&](n::rt::run const& a, n::rt::run const& b) {
     return to_tuple(a) < to_tuple(b);
@@ -472,12 +484,70 @@ api::stoptimes_response stop_times::operator()(
                              return to_tuple(a) == to_tuple(b);
                            }),
                end(events));
+  return events;
+}
+
+std::vector<nigiri::rt::run> stop_times::get_runs(
+    api::stoptimes_params const& query, nigiri::rt_timetable const* rtt) const {
+  auto const ev_type =
+      query.arriveBy_ ? n::event_type::kArr : n::event_type::kDep;
+  auto const query_stop = query.stopId_.and_then(
+      [&](std::string const& x) { return tags_.find_location(tt_, x); });
+  auto const query_center = query.center_.and_then(
+      [&](std::string const& x) { return parse_location(x); });
+
+  return this->get_runs(query, rtt, ev_type, query_stop, query_center);
+}
+
+api::stoptimes_response stop_times::operator()(
+    boost::urls::url_view const& url) const {
+  auto const query = api::stoptimes_params{url.params()};
+
+  auto const rt = std::atomic_load(&rt_);
+  // `rtt` is used to select, window and sort the runs:
+  auto const rtt =
+      (query.realtimeMode_ == api::RealtimeModeEnum::OFF ||
+       query.realtimeMode_ == api::RealtimeModeEnum::REALTIME_ANNOTATION_ONLY)
+          ? nullptr
+          : rt->rtt_.get();
+  // `annotation_rtt` is used to annotate each stop time with realtime data:
+  auto const annotation_rtt = query.realtimeMode_ == api::RealtimeModeEnum::OFF
+                                  ? nullptr
+                                  : rt->rtt_.get();
+  auto const is_both = query.both_;
+  auto const is_arr = query.arriveBy_;
+  auto const base_ev_type = is_arr ? n::event_type::kArr : n::event_type::kDep;
+  auto const api_version = get_api_version(url);
+  auto const& lang = query.language_;
+  auto const query_stop = query.stopId_.and_then(
+      [&](std::string const& x) { return tags_.find_location(tt_, x); });
+  auto const query_center = query.center_.and_then(
+      [&](std::string const& x) { return parse_location(x); });
+
+  auto const events = this->get_runs(
+      query, rtt, is_both ? std::nullopt : std::optional{base_ev_type},
+      query_stop, query_center);
+
+  auto const get_time = [&](n::rt::run const& r) {
+    auto const fr = n::rt::frun{tt_, rtt, r};
+    auto const e_type =
+        is_both ? (fr.stop_range_.from_ == fr.size() - 1U ? n::event_type::kArr
+                                                          : n::event_type::kDep)
+                : base_ev_type;
+    return fr[0].time(e_type);
+  };
+
   return {
       .stopTimes_ = utl::to_vec(
           events,
           [&](n::rt::run const r) -> api::StopTime {
-            auto const fr = n::rt::frun{tt_, rtt, r};
+            auto const fr = n::rt::frun{tt_, annotation_rtt, r};
             auto const s = fr[0];
+            auto const ev_type = is_both
+                                     ? (fr.stop_range_.from_ == fr.size() - 1U
+                                            ? n::event_type::kArr
+                                            : n::event_type::kDep)
+                                     : base_ev_type;
             auto const& agency = s.get_provider(ev_type);
             auto const run_cancelled = fr.is_cancelled();
             auto place = to_place(&tt_, &tags_, w_, pl_, matches_, ae_, tz_,
@@ -518,18 +588,23 @@ api::stoptimes_response stop_times::operator()(
                 return std::nullopt;
               }
               return other_stops_impl(fr, ev_type, &tt_, tags_, w_, pl_,
-                                      matches_, ae_, tz_, query.language_);
+                                      matches_, ae_, tz_, query.language_,
+                                      api_version);
             };
 
             return {
-                .place_ = std::move(place),
+                .place_ = bwd_compat_lvl_adjust(std::move(place), api_version),
                 .mode_ = to_mode(s.get_clasz(ev_type), api_version),
-                .realTime_ = r.is_rt(),
+                .realTime_ = fr.is_rt(),
                 .headsign_ = std::string{s.direction(lang, ev_type)},
-                .tripFrom_ = to_place(&tt_, &tags_, w_, pl_, matches_, ae_, tz_,
-                                      lang, s.get_first_trip_stop(ev_type)),
-                .tripTo_ = to_place(&tt_, &tags_, w_, pl_, matches_, ae_, tz_,
-                                    lang, s.get_last_trip_stop(ev_type)),
+                .tripFrom_ = bwd_compat_lvl_adjust(
+                    to_place(&tt_, &tags_, w_, pl_, matches_, ae_, tz_, lang,
+                             s.get_first_trip_stop(ev_type)),
+                    api_version),
+                .tripTo_ = bwd_compat_lvl_adjust(
+                    to_place(&tt_, &tags_, w_, pl_, matches_, ae_, tz_, lang,
+                             s.get_last_trip_stop(ev_type)),
+                    api_version),
                 .agencyId_ =
                     std::string{tt_.strings_.try_get(agency.id_).value_or("?")},
                 .agencyName_ = std::string{tt_.translate(lang, agency.name_)},
@@ -572,23 +647,20 @@ api::stoptimes_response stop_times::operator()(
                   return to_place(loc, "center", std::nullopt);
                 });
               })
+              .transform([&](api::Place&& pl) {
+                return bwd_compat_lvl_adjust(std::move(pl), api_version);
+              })
               .value(),
       .previousPageCursor_ =
           events.empty()
               ? ""
-              : fmt::format(
-                    "EARLIER|{}",
-                    to_seconds(
-                        n::rt::frun{tt_, rtt, events.front()}[0].time(ev_type) -
-                        std::chrono::minutes{1})),
+              : fmt::format("EARLIER|{}", to_seconds(get_time(events.front()) -
+                                                     std::chrono::minutes{1})),
       .nextPageCursor_ =
           events.empty()
               ? ""
-              : fmt::format(
-                    "LATER|{}",
-                    to_seconds(
-                        n::rt::frun{tt_, rtt, events.back()}[0].time(ev_type) +
-                        std::chrono::minutes{1}))};
+              : fmt::format("LATER|{}", to_seconds(get_time(events.back()) +
+                                                   std::chrono::minutes{1}))};
 }
 
 }  // namespace motis::ep

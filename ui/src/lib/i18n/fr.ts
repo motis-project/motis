@@ -5,6 +5,7 @@ const translations: Translations = {
 	ticketOptions: 'Options de billet',
 	includedInTicket: 'Inclus dans le billet',
 	journeyDetails: 'Détails du voyage',
+	refreshItinerary: 'Actualiser le voyage',
 	walk: 'à pied',
 	bike: 'Vélo',
 	cargoBike: 'Vélo Cargo',
@@ -23,6 +24,8 @@ const translations: Translations = {
 	hydrogenFuelCell: 'Pile à combustible hydrogène',
 	from: 'De',
 	to: 'À',
+	myLocation: 'My location',
+	reverseDirections: 'Reverse directions',
 	viaStop: 'Arrêt intermédiaire',
 	viaStops: 'Arrêts intermédiaires',
 	addViaStop: 'Ajouter un arrêt intermédiaire',
@@ -56,6 +59,7 @@ const translations: Translations = {
 	},
 	sharingProvider: 'Fournisseur',
 	sharingProviders: 'Fournisseurs',
+	none: 'Aucun',
 	transfers: 'correspondances',
 	returnOnlyAtStations: 'Le véhicule doit être retourné à une station.',
 	roundtripStationReturnConstraint: 'Le véhicule doit être retourné à la station de départ.',
@@ -66,8 +70,8 @@ const translations: Translations = {
 	selectTransitModes: 'Sélectionner les modes de transport en commun',
 	defaultSelectedModes: 'Tous les transports en commun',
 	defaultSelectedProviders: 'Tous les fournisseurs',
-	selectElevationCosts: 'Évitez les pentes abruptes.', // TODO Online translated
-	wheelchair: 'Correspondances accessibles',
+	selectElevationCosts: 'Éviter les pentes.',
+	wheelchair: 'Correspondances accessibles uniquement',
 	useRoutedTransfers: 'Utiliser les correspondances routées',
 	bikeRental: 'Utiliser véhicules partagés',
 	requireBikeTransport: 'Transport vélo',
@@ -77,6 +81,7 @@ const translations: Translations = {
 	timetableSources: 'Sources des horaires',
 	tripCancelled: 'Voyage annulé',
 	stopCancelled: 'Arrêt supprimé',
+	addStop: 'Ajouter un arrêt',
 	inOutDisallowed: 'Impossible de monter/descendre',
 	inDisallowed: 'Impossible de monter',
 	outDisallowed: 'Impossible de descendre',
@@ -115,7 +120,11 @@ const translations: Translations = {
 		direct: 'Connexion directe',
 		maxPreTransitTime: 'Durée max. avant transit',
 		maxPostTransitTime: 'Durée max. après transit',
-		maxDirectTime: 'Durée max. directe'
+		maxDirectTime: 'Durée max. directe',
+		additionalTransferTime: 'Durée de correspondance supplémentaire',
+		pedestrianSpeed: 'Vitesse piéton',
+		cyclingSpeed: 'Vitesse vélo',
+		transferTimeFactor: 'Facteur de durée de transfert'
 	},
 	elevationCosts: {
 		NONE: 'Pas de détours',
@@ -151,8 +160,13 @@ const translations: Translations = {
 	FUNICULAR: 'Funiculaire',
 	AERIAL_LIFT: 'Remontée mécanique',
 	toll: 'Attention ! Route à péage.',
+	bikesAllowed: 'Bikes allowed',
+	wheelchairAccessible: 'Wheelchair accessible',
 	accessRestriction: 'Accès restreint',
 	continuesAs: 'Continue comme',
+	earlierAlternatives: 'Alternatives plus tôt',
+	laterAlternatives: 'Alternatives plus tard',
+	differentStops: 'Arrêts différents',
 	rent: 'Louer',
 	copyToClipboard: 'Copier dans le presse-papiers',
 	rideThroughAllowed: 'Passage autorisé',
@@ -162,6 +176,16 @@ const translations: Translations = {
 	DEBUG_BUS_ROUTE: 'Itinéraire de bus (Debug)',
 	DEBUG_RAILWAY_ROUTE: 'Itinéraire ferroviaire (Debug)',
 	DEBUG_FERRY_ROUTE: 'Itinéraire de ferry (Debug)',
+	colorMode: {
+		none: "Pas d'affichage sur la carte",
+		stops: 'Stations',
+		rt: 'Horaires : retards',
+		route: 'Horaires : couleurs des lignes',
+		mode: 'Horaires : modes de transport'
+	},
+	resetToNorth: 'Reset to north',
+	showMyLocation: 'Show my location',
+	toggleHillshades: 'Toggle hillshades overlay',
 	routes: (n: number) => {
 		switch (n) {
 			case 0:
@@ -171,7 +195,16 @@ const translations: Translations = {
 			default:
 				return `${n} itinéraires`;
 		}
-	}
+	},
+	pageTitle: {
+		default: 'MOTIS',
+		fromTo: (from, to) => `${from} à ${to}`,
+		departuresAt: (stop) => `Départs à ${stop}`,
+		arrivalsAt: (stop) => `Arrivées à ${stop}`,
+		isochronesFrom: (place) => `Isochrones depuis ${place}`
+	},
+	tickets: 'Billets',
+	routeInformation: "Plus d'informations"
 };
 
 export default translations;

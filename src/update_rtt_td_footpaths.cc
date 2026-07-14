@@ -102,7 +102,8 @@ std::vector<n::td_footpath> get_td_footpaths(
     set_blocked(e_nodes, states, blocked_mem);
 
     auto const neighbors = get_stops_with_traffic(
-        tt, rtt, loc_rtree, start, get_max_distance(profile, max), start_l);
+        tt, rtt, loc_rtree, start, get_max_distance(profile, osr_params, max),
+        start_l);
     auto const results = osr::route(
         to_profile_parameters(profile, osr_params), w, l, profile, start,
         utl::to_vec(neighbors,

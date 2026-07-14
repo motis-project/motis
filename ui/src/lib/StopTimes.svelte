@@ -12,6 +12,7 @@
 	import { language, t } from '$lib/i18n/translation';
 	import type { RequestResult } from '@hey-api/client-fetch';
 	import { onClickStop, onClickTrip } from '$lib/utils';
+	import { normalizedContains } from '$lib/normalizedContains';
 	import { getModeLabel } from './map/getModeLabel';
 	import { posToLocation } from './Location';
 	import type { Location } from './Location';
@@ -41,8 +42,6 @@
 		time: queryTime.toISOString(),
 		arriveBy,
 		n: 10,
-		exactRadius: false,
-		radius: 200,
 		language: [language]
 	});
 	/* eslint-disable svelte/prefer-writable-derived */
@@ -140,7 +139,15 @@
 					<div class="flex justify-between">
 						<Route class="text-ellipsis mb-2" l={stopTime} {onClickTrip} />
 						{#if stopTime.place.track}
-							<span class="text-nowrap ml-3 h-fit px-1 text-base border font-semibold rounded-lg">
+							{@const fullName =
+								(getModeLabel(stopTime.mode) == 'Track' ? t.track : t.platform) +
+								' ' +
+								stopTime.place.track}
+							<span
+								class="text-nowrap ml-3 h-fit px-1 text-base border font-semibold rounded-lg"
+								title={fullName}
+								aria-label={fullName}
+							>
 								{getModeLabel(stopTime.mode) == 'Track' ? t.trackAbr : t.platformAbr}
 								{stopTime.place.track}
 							</span>
@@ -153,7 +160,7 @@
 								{stopTime.headsign}
 								{#if !stopTime.headsign}
 									{stopTime.tripTo.name}
-								{:else if !stopTime.tripTo.name.startsWith(stopTime.headsign)}
+								{:else if !normalizedContains(stopTime.headsign, stopTime.tripTo.name)}
 									<span class="stroke-muted-foreground">({stopTime.tripTo.name})</span>
 								{/if}
 							</span>
@@ -179,7 +186,7 @@
 		{/each}
 		{#if !r.stopTimes.length}
 			<div class="col-span-full w-full flex items-center justify-center">
-				<ErrorMessage message={t.noItinerariesFound} status={404} />
+				<ErrorMessage message={t.noItinerariesFound} status={204} />
 			</div>
 		{/if}
 

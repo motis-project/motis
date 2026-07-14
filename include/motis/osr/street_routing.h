@@ -71,7 +71,9 @@ api::Itinerary dummy_itinerary(api::Place const& from,
                                api::Place const& to,
                                api::ModeEnum,
                                nigiri::unixtime_t const start_time,
-                               nigiri::unixtime_t const end_time);
+                               nigiri::unixtime_t const end_time,
+                               unsigned const api_version,
+                               bool cancelled = false);
 
 api::Itinerary street_routing(osr::ways const&,
                               osr::lookup const&,

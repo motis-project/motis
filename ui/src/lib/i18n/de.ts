@@ -5,6 +5,7 @@ const translations: Translations = {
 	ticketOptions: 'Fahrscheinoptionen',
 	includedInTicket: 'Im Fahrschein enthalten',
 	journeyDetails: 'Verbindungsdetails',
+	refreshItinerary: 'Verbindung aktualisieren',
 	transfers: 'Umstiege',
 	walk: 'Fußweg',
 	bike: 'Fahrrad',
@@ -24,6 +25,8 @@ const translations: Translations = {
 	hydrogenFuelCell: 'Wasserstoff-Brennstoffzelle',
 	from: 'Von',
 	to: 'Nach',
+	myLocation: 'Mein Standort',
+	reverseDirections: 'Richtung umdrehen',
 	viaStop: 'Zwischenhalt',
 	viaStops: 'Zwischenhalte',
 	addViaStop: 'Zwischenhalt hinzufügen',
@@ -57,6 +60,7 @@ const translations: Translations = {
 	},
 	sharingProvider: 'Anbieter',
 	sharingProviders: 'Anbieter',
+	none: 'Keine',
 	returnOnlyAtStations: 'Das Fahrzeug muss an einer Station zurückgegeben werden.',
 	roundtripStationReturnConstraint:
 		'Das Fahrzeug muss wieder an der Abfahrtsstation abgestellt werden.',
@@ -69,7 +73,7 @@ const translations: Translations = {
 	defaultSelectedProviders: 'Alle Anbieter',
 	selectElevationCosts: 'Steile Steigungen vermeiden.',
 	useRoutedTransfers: 'Geroutete Umstiege verwenden',
-	wheelchair: 'Barrierefreie Umstiege',
+	wheelchair: 'Nur rollstuhlgerechte Verbindungen',
 	bikeRental: 'Sharing-Fahrzeuge berücksichtigen',
 	requireBikeTransport: 'Fahrradmitnahme',
 	requireCarTransport: 'Automitnahme',
@@ -78,6 +82,7 @@ const translations: Translations = {
 	timetableSources: 'Fahrplandatenquellen',
 	tripCancelled: 'Fahrt entfällt',
 	stopCancelled: 'Halt entfällt',
+	addStop: 'Haltestelle hinzufügen',
 	inOutDisallowed: 'Ein-/Ausstieg nicht möglich',
 	inDisallowed: 'Einstieg nicht möglich',
 	outDisallowed: 'Ausstieg nicht möglich',
@@ -116,7 +121,11 @@ const translations: Translations = {
 		direct: 'Direktverbindung',
 		maxPreTransitTime: 'Max. Vorlaufzeit',
 		maxPostTransitTime: 'Max. Nachlaufzeit',
-		maxDirectTime: 'Max. Direktzeit'
+		maxDirectTime: 'Max. Direktzeit',
+		additionalTransferTime: 'Zusätzliche Umstiegszeit',
+		pedestrianSpeed: 'Fußgängergeschwindigkeit',
+		cyclingSpeed: 'Fahrradgeschwindigkeit',
+		transferTimeFactor: 'Umstiegszeitfaktor'
 	},
 	elevationCosts: { NONE: 'Keine Umwege', LOW: 'Kleine Umwege', HIGH: 'Große Umwege' },
 	isochrones: {
@@ -136,7 +145,7 @@ const translations: Translations = {
 		information: 'Informationen',
 		more: 'mehr'
 	},
-	RENTAL_BICYCLE: 'Bikesharing',
+	RENTAL_BICYCLE: 'Fahrrad Sharing',
 	RENTAL_CARGO_BICYCLE: 'Lastenrad Sharing',
 	RENTAL_CAR: 'Car Sharing',
 	RENTAL_MOPED: 'Moped Sharing',
@@ -147,9 +156,14 @@ const translations: Translations = {
 	CABLE_CAR: 'Seilbahn',
 	FUNICULAR: 'Standseilbahn',
 	AERIAL_LIFT: 'Luftseilbahn',
-	toll: 'Achtung! Mautpflichtige Straße.',
+	toll: 'Achtung: Mautpflichtige Straße!',
+	bikesAllowed: 'Fahrräder erlaubt',
+	wheelchairAccessible: 'Rollstuhlgerecht',
 	accessRestriction: 'Kein Zugang',
 	continuesAs: 'Weiter als',
+	earlierAlternatives: 'Frühere Alternativen',
+	laterAlternatives: 'Spätere Alternativen',
+	differentStops: 'Andere Haltestellen',
 	rent: 'Ausleihen',
 	copyToClipboard: 'In die Zwischenablage kopieren',
 	rideThroughAllowed: 'Durchfahrt erlaubt',
@@ -159,6 +173,16 @@ const translations: Translations = {
 	DEBUG_BUS_ROUTE: 'Busroute (Debug)',
 	DEBUG_RAILWAY_ROUTE: 'Bahnroute (Debug)',
 	DEBUG_FERRY_ROUTE: 'Fährenroute (Debug)',
+	colorMode: {
+		none: 'Keine Kartendarstellung',
+		stops: 'Haltestellen',
+		rt: 'Fahrplan: Verspätung',
+		route: 'Fahrplan: Linienfarben',
+		mode: 'Fahrplan: Verkehrsmittel'
+	},
+	resetToNorth: 'Reset to north',
+	showMyLocation: 'Meinen Standort anzeigen',
+	toggleHillshades: 'Schummerung ein/aus',
 	routes: (n: number) => {
 		switch (n) {
 			case 0:
@@ -168,7 +192,16 @@ const translations: Translations = {
 			default:
 				return `${n} Routen`;
 		}
-	}
+	},
+	pageTitle: {
+		default: 'MOTIS',
+		fromTo: (from, to) => `${from} nach ${to}`,
+		departuresAt: (stop) => `Abfahrten in ${stop}`,
+		arrivalsAt: (stop) => `Ankünfte in ${stop}`,
+		isochronesFrom: (place) => `Isochronen von ${place}`
+	},
+	tickets: 'Tickets',
+	routeInformation: 'Mehr Informationen'
 };
 
 export default translations;

@@ -67,6 +67,7 @@ timetable:                          # if not set, no timetable will be loaded
   incremental_rt_update: false      # false = real-time updates are applied to a clean slate, true = no data will be dropped
   max_footpath_length: 15           # maximum footpath length when transitively connecting stops or for routing footpaths if `osr_footpath` is set to true
   max_matching_distance: 25.0       # maximum distance from geolocation to next OSM ways that will be found
+  default_transfer_time: 2          # default transfer time applied when no transfer is found from datasets
   preprocess_max_matching_distance: 250.0 # max. distance for preprocessing matches from nigiri locations (stops) to OSM ways to speed up querying (set to 0 (default) to disable)
   datasets:                         # map of tag -> dataset
     ch:                             # the tag will be used as prefix for stop IDs and trip IDs with `_` as divider, so `_` cannot be part of the dataset tag
@@ -96,9 +97,10 @@ gbfs:
 street_routing:                   # enable street routing (default = false; Using boolean values true/false is supported for backward compatibility)
   elevation_data_dir: srtm/       # folder which contains elevation data, e.g. SRTMGL1 data tiles in HGT format
 limits:
-  stoptimes_max_results: 256      # maximum number of stoptimes results that can be requested
+  stoptimes_max_results: 1024     # maximum number of stoptimes results that can be requested
   plan_max_results: 256           # maximum number of plan results that can be requested via numItineraries parameter
   plan_max_search_window_minutes: 5760 # maximum (minutes) for searchWindow parameter (seconds), highest possible value: 21600 (15 days)
+  stops_max_results: 8192         # maximum number of stops returned in /map/stops
   onetomany_max_many: 128         # maximum accepted number of many locations for one-to-many requests
   onetoall_max_results: 65535     # maximum number of one-to-all results that can be requested
   onetoall_max_travel_minutes: 90 # maximum travel duration for one-to-all query that can be requested
@@ -106,6 +108,8 @@ limits:
   gtfsrt_expose_max_trip_updates: 100 # how many trip updates are allowed to be exposed via the gtfsrt endpoint
   street_routing_max_prepost_transit_seconds: 3600 # limit for maxPre/PostTransitTime API params, see below
   street_routing_max_direct_seconds: 21600 # limit for maxDirectTime API param, high values can lead to long-running, RAM-hungry queries 
+  geocode_max_suggestions: 512    # maximum requestable results for /geocode
+  reverse_geocode_max_results: 512 # maximum requestable results for /reverse-geocode
 logging:
   log_level: debug                # log-level (default = debug; Supported log-levels: error, info, debug)
 osr_footpath: true                # enable routing footpaths instead of using transfers from timetable datasets
@@ -160,13 +164,16 @@ gbfs:
   http_timeout: 10
 ```
 
-## Provider Groups + Colors
+## Provider Names, Groups + Colors
 
 GBFS providers (feeds) can be grouped into "provider groups". For example, a provider may operate in multiple locations and provide a feed per location.
 To groups these different feeds into a single provider group, specify the same group name for each feed in the configuration.
 
 Feeds that don't have an explicit group setting in the configuration, their group name is derived from the system name. Group names
 may not contain commas. The API supports both provider groups and individual providers.
+
+Provider names are loaded from the feed (`system_information.name`) by default. To override them, set `name`
+for a standalone feed or map `system_id` to name for an aggregated feed.
 
 Provider colors are loaded from the feed (`brand_assets.color`) if available, but can also be set in the configuration
 to override the values contained in the feed or to set colors for feeds that don't include color information.
@@ -178,6 +185,7 @@ gbfs:
   feeds:
     de-CallaBike:
       url: https://api.mobidata-bw.de/sharing/gbfs/v2/callabike/gbfs
+      name: Call a Bike # optional override
       color: "#db0016"
     de-VRNnextbike:
       url: https://gbfs.nextbike.net/maps/gbfs/v2/nextbike_vn/gbfs.json
@@ -211,6 +219,9 @@ gbfs:
         source-nextbike-westbike: nextbike # "source-nextbike-westbike" is the system_id
         source-voi-muenster: VOI
         source-voi-duisburg-oberhausen: VOI
+      name: # optional provider name overrides
+        source-voi-muenster: VOI Münster
+        source-voi-duisburg-oberhausen: VOI Duisburg Oberhausen
       # colors can be specified for individual feeds using the same syntax,
       # but in this example they are defined for the groups below
       #color:
@@ -248,6 +259,7 @@ gbfs:
         token_url: https://example.com/openid-connect/token
         client_id: gbfs
         client_secret: example
+        auth_method: client_secret_basic # default, or client_secret_post
 ```
 
 ## Default Restrictions

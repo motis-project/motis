@@ -22,4 +22,9 @@ fasta.json
 config.yaml
 config.yml
 config.ini
+/working
+/.cache
+.pnpm*
 
+# local tiles/shortbread test scratch area (osm extract, tiles db, viewers)
+/scratch-tiles/

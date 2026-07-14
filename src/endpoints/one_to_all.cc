@@ -19,6 +19,7 @@
 #include "motis/gbfs/routing_data.h"
 #include "motis/metrics_registry.h"
 #include "motis/place.h"
+#include "motis/server.h"
 #include "motis/timetable/modes_to_clasz_mask.h"
 
 namespace motis::ep {
@@ -27,6 +28,8 @@ namespace n = nigiri;
 
 api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
   metrics_->routing_requests_.Increment();
+
+  auto const api_version = get_api_version(url);
 
   auto const max_travel_minutes =
       config_.get_limits().onetoall_max_travel_minutes_;
@@ -53,7 +56,9 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
 
   auto const make_place = [&](place_t const& p, n::unixtime_t const t,
                               n::event_type const ev) {
-    auto place = to_place(&tt_, &tags_, w_, pl_, matches_, ae_, tz_, {}, p);
+    auto place = bwd_compat_lvl_adjust(
+        to_place(&tt_, &tags_, w_, pl_, matches_, ae_, tz_, {}, p),
+        api_version);
     if (ev == n::event_type::kArr) {
       place.arrival_ = t;
     } else {
@@ -89,10 +94,11 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
   auto prepare_stats = std::map<std::string, std::uint64_t>{};
   auto q = n::routing::query{
       .start_time_ = time,
-      .start_match_mode_ = get_match_mode(r, one),
+      .start_match_mode_ = r.is_osr_loaded()
+                               ? n::routing::location_match_mode::kIntermodal
+                               : n::routing::location_match_mode::kEquivalent,
       .start_ = r.get_offsets(
-          nullptr, one, one_dir, one_modes, std::nullopt, std::nullopt,
-          std::nullopt, std::nullopt, false, osr_params,
+          nullptr, one, one_dir, one_modes, rental_options{}, osr_params,
           query.pedestrianProfile_, query.elevationCosts_, one_max_time,
           query.maxMatchingDistance_, gbfs_rd, prepare_stats),
       .td_start_ = r.get_td_offsets(

@@ -197,7 +197,8 @@ void import(config const& c,
         h, t.first_day_, t.num_days_, t.with_shapes_, t.adjust_footpaths_,
         t.merge_dupes_intra_src_, t.merge_dupes_inter_src_,
         t.link_stop_distance_, t.update_interval_, t.incremental_rt_update_,
-        t.max_footpath_length_, t.default_timezone_, t.assistance_times_);
+        t.max_footpath_length_, t.default_transfer_time_, t.default_timezone_,
+        t.assistance_times_);
   }
 
   auto osm_hash = std::pair{"osm"s, cista::BASE_HASH};
@@ -364,6 +365,9 @@ void import(config const& c,
                       tag,
                       dc.path_,
                       {.link_stop_distance_ = t.link_stop_distance_,
+                       .default_transfer_time_ =
+                           n::duration_t{static_cast<std::int16_t>(
+                               t.default_transfer_time_)},
                        .default_tz_ = dc.default_timezone_.value_or(
                            t.default_timezone_.value_or("")),
                        .bikes_allowed_default_ = to_clasz_bool_array(

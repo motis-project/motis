@@ -35,7 +35,8 @@ api::Place to_place(osr::location const l,
       .name_ = std::string{name},
       .lat_ = l.pos_.lat_,
       .lon_ = l.pos_.lng_,
-      .level_ = l.lvl_.to_float(),
+      .level_ =
+          l.lvl_.has_level() ? std::optional{l.lvl_.to_float()} : std::nullopt,
       .tz_ = tz,
       .vertexType_ = api::VertexTypeEnum::NORMAL,
   };
@@ -57,7 +58,12 @@ double get_level(osr::ways const* w,
 }
 
 osr::location get_location(api::Place const& p) {
-  return {{p.lat_, p.lon_}, osr::level_t{static_cast<float>(p.level_)}};
+  return {{p.lat_, p.lon_},
+          p.level_
+              .transform([](auto const lvl) {
+                return osr::level_t{static_cast<float>(lvl)};
+              })
+              .value_or(osr::kNoLevel)};
 }
 
 osr::location get_location(n::timetable const* tt,
@@ -134,6 +140,12 @@ api::Place to_place(n::timetable const* tt,
               return p.empty() ? std::nullopt : std::optional{std::string{p}};
             };
 
+            auto const get_stop_code = [&](n::location_idx_t const x) {
+              auto const p =
+                  tt->translate(lang, tt->locations_.stop_codes_.at(x));
+              return p.empty() ? std::nullopt : std::optional{std::string{p}};
+            };
+
             // check if description is available, if not, return nullopt
             auto const get_description = [&](n::location_idx_t const x) {
               auto const p =
@@ -163,6 +175,7 @@ api::Place to_place(n::timetable const* tt,
                                            : std::optional{timezone->name()},
                 .scheduledTrack_ = get_track(tt_l.scheduled_),
                 .track_ = get_track(tt_l.l_),
+                .stopCode_ = get_stop_code(tt_l.scheduled_),
                 .description_ = get_description(tt_l.scheduled_),
                 .vertexType_ = api::VertexTypeEnum::TRANSIT,
                 .modes_ =
@@ -185,12 +198,16 @@ api::Place to_place(n::timetable const* tt,
                     n::lang_t const& lang,
                     n::rt::run_stop const& s,
                     place_t const start,
-                    place_t const dest) {
+                    place_t const dest,
+                    n::event_type const ev_type) {
   auto const run_cancelled = s.fr_->is_cancelled();
   auto const fallback_tz = s.get_tz_name(
       s.stop_idx_ == 0 ? n::event_type::kDep : n::event_type::kArr);
   auto p = to_place(tt, tags, w, pl, matches, ae, tz_map, lang, tt_location{s},
                     start, dest, "", fallback_tz);
+  p.track_ = s.get_track_override(ev_type)
+                 .transform([](std::string_view t) { return std::string{t}; })
+                 .or_else([&]() { return p.track_; });
   p.pickupType_ = !run_cancelled && s.in_allowed()
                       ? api::PickupDropoffTypeEnum::NORMAL
                       : api::PickupDropoffTypeEnum::NOT_ALLOWED;
@@ -212,6 +229,22 @@ place_t get_place(n::timetable const* tt,
   utl::verify(tt != nullptr && tags != nullptr,
               R"(could not parse location (no timetable loaded): "{}")", input);
   return tt_location{tags->get_location(*tt, input)};
+}
+
+api::Place bwd_compat_lvl_adjust(api::Place&& pl, unsigned const api_version) {
+  if (!pl.level_.has_value() && 0 < api_version && api_version < 6) {
+    pl.level_ = {0U};
+  }
+  return pl;
+}
+
+api::Place bwd_compat_lvl_adjust(api::Place const& pl,
+                                 unsigned const api_version) {
+  auto p = pl;
+  if (!p.level_.has_value() && 0 < api_version && api_version < 6) {
+    p.level_ = {0U};
+  }
+  return p;
 }
 
 }  // namespace motis

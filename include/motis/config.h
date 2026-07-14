@@ -32,6 +32,7 @@ struct config {
   bool has_gbfs_feeds() const;
   bool has_prima() const;
   bool has_elevators() const;
+  bool has_rt_feeds() const;
   bool use_street_routing() const;
 
   bool operator==(config const&) const = default;
@@ -42,10 +43,13 @@ struct config {
     std::string port_{"8080"};
     std::string web_folder_{"ui"};
     unsigned n_threads_{0U};
+    unsigned gpu_states_{2U};
     std::optional<std::string> data_attribution_link_{};
     std::optional<std::vector<std::string>> lbs_{};
   };
   std::optional<server> server_{};
+
+  std::optional<std::string> user_agent_{};
 
   std::optional<std::filesystem::path> osm_{};
 
@@ -132,6 +136,7 @@ struct config {
     bool use_osm_stop_coordinates_{false};
     bool extend_missing_footpaths_{false};
     std::uint16_t max_footpath_length_{15};
+    std::uint16_t default_transfer_time_{2};
     double max_matching_distance_{25.0};
     double preprocess_max_matching_distance_{250.0};
     std::optional<std::string> default_timezone_{};
@@ -161,10 +166,13 @@ struct config {
     };
 
     struct oauth_settings {
+      enum struct auth_method { client_secret_basic, client_secret_post };
+
       bool operator==(oauth_settings const&) const = default;
       std::string token_url_;
       std::string client_id_;
       std::string client_secret_;
+      auth_method auth_method_{auth_method::client_secret_basic};
       std::optional<headers_t> headers_{};
       std::optional<unsigned> expires_in_;
     };
@@ -179,7 +187,12 @@ struct config {
           group_{};
       std::optional<
           std::variant<std::string, std::map<std::string, std::string>>>
+          name_{};
+      std::optional<
+          std::variant<std::string, std::map<std::string, std::string>>>
           color_{};
+      std::optional<std::variant<bool, std::map<std::string, bool>>>
+          ignore_geofencing_{};
       std::optional<ttl> ttl_{};
     };
 
@@ -235,10 +248,10 @@ struct config {
 
   struct limits {
     bool operator==(limits const&) const = default;
-    unsigned stoptimes_max_results_{256U};
+    unsigned stoptimes_max_results_{1024U};
     unsigned plan_max_results_{256U};
     unsigned plan_max_search_window_minutes_{5760U};
-    unsigned stops_max_results_{2048U};
+    unsigned stops_max_results_{8192U};
     unsigned onetomany_max_many_{128U};
     unsigned onetoall_max_results_{65535U};
     unsigned onetoall_max_travel_minutes_{90U};
@@ -246,8 +259,8 @@ struct config {
     unsigned gtfsrt_expose_max_trip_updates_{100U};
     unsigned street_routing_max_prepost_transit_seconds_{3600U};
     unsigned street_routing_max_direct_seconds_{21600U};
-    unsigned geocode_max_suggestions_{10U};
-    unsigned reverse_geocode_max_results_{5U};
+    unsigned geocode_max_suggestions_{512U};
+    unsigned reverse_geocode_max_results_{512U};
   };
   limits get_limits() const { return limits_.value_or(limits{}); }
   std::optional<limits> limits_{};

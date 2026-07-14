@@ -7,6 +7,8 @@
 	import Button from '$lib/components/ui/button/button.svelte';
 	import { Label } from '$lib/components/ui/label';
 	import {
+		type PedestrianSpeed,
+		type CyclingSpeed,
 		type ElevationCosts,
 		type PedestrianProfile,
 		type ServerConfig
@@ -22,6 +24,7 @@
 	import { generateTimes } from './generateTimes';
 
 	let {
+		advancedOptionsOpen = $bindable(),
 		one = $bindable(),
 		maxTravelTime = $bindable(),
 		serverConfig,
@@ -35,6 +38,10 @@
 		maxTransfers = $bindable(),
 		preTransitModes = $bindable(),
 		postTransitModes = $bindable(),
+		additionalTransferTime = $bindable(),
+		transferTimeFactor = $bindable(),
+		cyclingSpeed = $bindable(),
+		pedestrianSpeed = $bindable(),
 		maxPreTransitTime = $bindable(),
 		maxPostTransitTime = $bindable(),
 		arriveBy = $bindable(),
@@ -47,6 +54,7 @@
 		directProviderGroups = $bindable(),
 		hasDebug = false
 	}: {
+		advancedOptionsOpen: boolean;
 		one: Location;
 		maxTravelTime: number;
 		serverConfig: ServerConfig | undefined;
@@ -60,6 +68,10 @@
 		maxTransfers: number;
 		preTransitModes: PrePostDirectMode[];
 		postTransitModes: PrePostDirectMode[];
+		additionalTransferTime: number | undefined;
+		transferTimeFactor: number;
+		cyclingSpeed: CyclingSpeed;
+		pedestrianSpeed: PedestrianSpeed;
 		maxPreTransitTime: number;
 		maxPostTransitTime: number;
 		arriveBy: boolean;
@@ -204,6 +216,7 @@
 			</Label>
 		</RadioGroup.Root>
 		<AdvancedOptions
+			bind:advancedOptionsOpen
 			bind:useRoutedTransfers
 			{serverConfig}
 			bind:wheelchair={
@@ -215,6 +228,11 @@
 			bind:transitModes
 			bind:maxTransfers
 			bind:maxTravelTime
+			bind:additionalTransferTime
+			bind:cyclingSpeed
+			bind:pedestrianProfile
+			bind:pedestrianSpeed
+			bind:transferTimeFactor
 			{possibleMaxTravelTimes}
 			bind:preTransitModes
 			bind:postTransitModes

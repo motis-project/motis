@@ -140,10 +140,9 @@ std::vector<api::StepInstruction> get_step_instructions(
         .distance_ = static_cast<double>(s.dist_),
         .fromLevel_ = s.from_level_.to_float(),
         .toLevel_ = s.to_level_.to_float(),
-        .osmWay_ = s.way_ == osr::way_idx_t ::invalid()
-                       ? std::nullopt
-                       : std::optional{static_cast<std::int64_t>(
-                             to_idx(w.way_osm_idx_[s.way_]))},
+        .osmWay_ = w.get_osm_way(s.way_),
+        .fromOsmNode_ = w.get_osm_node(s.from_),
+        .toOsmNode_ = w.get_osm_node(s.to_),
         .polyline_ = api_version == 1 ? to_polyline<7>(s.polyline_)
                                       : to_polyline<6>(s.polyline_),
         .streetName_ = way_name == osr::string_idx_t::invalid()
@@ -179,7 +178,9 @@ api::Itinerary dummy_itinerary(api::Place const& from,
                                api::Place const& to,
                                api::ModeEnum const mode,
                                n::unixtime_t const start_time,
-                               n::unixtime_t const end_time) {
+                               n::unixtime_t const end_time,
+                               unsigned const api_version,
+                               bool const cancelled) {
   auto itinerary = api::Itinerary{
       .duration_ = std::chrono::duration_cast<std::chrono::seconds>(end_time -
                                                                     start_time)
@@ -188,8 +189,8 @@ api::Itinerary dummy_itinerary(api::Place const& from,
       .endTime_ = end_time};
   auto& leg = itinerary.legs_.emplace_back(api::Leg{
       .mode_ = mode,
-      .from_ = from,
-      .to_ = to,
+      .from_ = bwd_compat_lvl_adjust(from, api_version),
+      .to_ = bwd_compat_lvl_adjust(to, api_version),
       .duration_ = std::chrono::duration_cast<std::chrono::seconds>(end_time -
                                                                     start_time)
                        .count(),
@@ -197,6 +198,7 @@ api::Itinerary dummy_itinerary(api::Place const& from,
       .endTime_ = end_time,
       .scheduledStartTime_ = start_time,
       .scheduledEndTime_ = end_time,
+      .cancelled_ = cancelled,
       .legGeometry_ = empty_polyline()});
   leg.from_.pickupType_ = std::nullopt;
   leg.from_.dropoffType_ = std::nullopt;
@@ -204,6 +206,10 @@ api::Itinerary dummy_itinerary(api::Place const& from,
   leg.to_.dropoffType_ = std::nullopt;
   leg.from_.departure_ = leg.from_.scheduledDeparture_ = leg.startTime_;
   leg.to_.arrival_ = leg.to_.scheduledArrival_ = leg.endTime_;
+  if (cancelled) {
+    leg.from_.cancelled_ = true;
+    leg.to_.cancelled_ = true;
+  }
   return itinerary;
 }
 
@@ -250,8 +256,11 @@ api::Itinerary street_routing(osr::ways const& w,
     if (!start_time.has_value() || !end_time.has_value()) {
       return {};
     }
+    // No street path between the endpoints (e.g. the only wheelchair
+    // connection is an out-of-service elevator) -> emit a cancelled leg so the
+    // broken access/transfer is visible in the journey.
     return dummy_itinerary(from_place, to_place, out.get_mode(), *start_time,
-                           *end_time);
+                           *end_time, api_version, /*cancelled=*/true);
   }
 
   auto const deduced_start_time =
@@ -269,7 +278,7 @@ api::Itinerary street_routing(osr::ways const& w,
 
   auto t =
       std::chrono::time_point_cast<std::chrono::seconds>(deduced_start_time);
-  auto pred_place = from_place;
+  auto pred_place = bwd_compat_lvl_adjust(from_place, api_version);
   auto pred_end_time = t;
   utl::equal_ranges_linear(
       path->segments_,
@@ -300,7 +309,7 @@ api::Itinerary street_routing(osr::ways const& w,
                                 ? api::ModeEnum::RIDE_SHARING
                                 : to_mode(lb->mode_)),
             .from_ = pred_place,
-            .to_ = is_last_leg ? to_place
+            .to_ = is_last_leg ? bwd_compat_lvl_adjust(to_place, api_version)
                                : out.get_place(lang, to_node, pred_place.tz_),
             .duration_ = std::chrono::duration_cast<std::chrono::seconds>(
                              t - pred_end_time)
@@ -329,7 +338,7 @@ api::Itinerary street_routing(osr::ways const& w,
 
         out.annotate_leg(lang, from_node, to_node, leg);
 
-        pred_place = leg.to_;
+        pred_place = bwd_compat_lvl_adjust(leg.to_, api_version);
         pred_end_time = t;
       });
 

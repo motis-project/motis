@@ -73,7 +73,6 @@ meta_router::meta_router(ep::routing const& r,
                          api::plan_params const& query,
                          std::vector<api::ModeEnum> const& pre_transit_modes,
                          std::vector<api::ModeEnum> const& post_transit_modes,
-                         std::vector<api::ModeEnum> const& direct_modes,
                          std::variant<osr::location, tt_location> const& from,
                          std::variant<osr::location, tt_location> const& to,
                          api::Place const& from_p,
@@ -92,7 +91,6 @@ meta_router::meta_router(ep::routing const& r,
       query_{query},
       pre_transit_modes_{pre_transit_modes},
       post_transit_modes_{post_transit_modes},
-      direct_modes_{direct_modes},
       from_{from},
       to_{to},
       from_place_{from_p},
@@ -109,7 +107,14 @@ meta_router::meta_router(ep::routing const& r,
       api_version_{api_version},
       tt_{r_.tt_},
       rt_{r.rt_},
-      rtt_{rt_->rtt_.get()},
+      rtt_{(query.realtimeMode_ == api::RealtimeModeEnum::OFF ||
+            query.realtimeMode_ ==
+                api::RealtimeModeEnum::REALTIME_ANNOTATION_ONLY)
+               ? nullptr
+               : rt_->rtt_.get()},
+      annotation_rtt_{query.realtimeMode_ == api::RealtimeModeEnum::OFF
+                          ? nullptr
+                          : rt_->rtt_.get()},
       e_{rt_->e_.get()},
       gbfs_rd_{r.w_, r.l_, r.gbfs_},
       start_{query_.arriveBy_ ? to_ : from_},
@@ -153,9 +158,13 @@ n::routing::query meta_router::get_base_query(
     n::interval<n::unixtime_t> const& intvl) const {
   return {
       .start_time_ = intvl,
-      .start_match_mode_ = motis::ep::get_match_mode(r_, start_),
-      .dest_match_mode_ = motis::ep::get_match_mode(r_, dest_),
-      .use_start_footpaths_ = !motis::ep::is_intermodal(r_, start_),
+      .start_match_mode_ = r_.is_osr_loaded()
+                               ? n::routing::location_match_mode::kIntermodal
+                               : n::routing::location_match_mode::kEquivalent,
+      .dest_match_mode_ = r_.is_osr_loaded()
+                              ? n::routing::location_match_mode::kIntermodal
+                              : n::routing::location_match_mode::kEquivalent,
+      .use_start_footpaths_ = !r_.is_osr_loaded(),
       .max_transfers_ = static_cast<std::uint8_t>(
           query_.maxTransfers_.has_value() ? *query_.maxTransfers_
                                            : n::routing::kMaxTransfers),
@@ -365,20 +374,22 @@ api::plan_response meta_router::run() {
           rtt_, start_,
           query_.arriveBy_ ? osr::direction::kBackward
                            : osr::direction::kForward,
-          start_modes_, start_form_factors_, start_propulsion_types_,
-          start_rental_providers_, start_rental_provider_groups_,
-          start_ignore_rental_return_constraints_, params,
-          query_.pedestrianProfile_, query_.elevationCosts_,
+          start_modes_,
+          rental_options{start_form_factors_, start_propulsion_types_,
+                         start_rental_providers_, start_rental_provider_groups_,
+                         start_ignore_rental_return_constraints_},
+          params, query_.pedestrianProfile_, query_.elevationCosts_,
           query_.arriveBy_ ? post_transit_time : pre_transit_time,
           query_.maxMatchingDistance_, gbfs_rd_, prepare_stats),
       .dest_walk_ = r_.get_offsets(
           rtt_, dest_,
           query_.arriveBy_ ? osr::direction::kForward
                            : osr::direction::kBackward,
-          dest_modes_, dest_form_factors_, dest_propulsion_types_,
-          dest_rental_providers_, dest_rental_provider_groups_,
-          dest_ignore_rental_return_constraints_, params,
-          query_.pedestrianProfile_, query_.elevationCosts_,
+          dest_modes_,
+          rental_options{dest_form_factors_, dest_propulsion_types_,
+                         dest_rental_providers_, dest_rental_provider_groups_,
+                         dest_ignore_rental_return_constraints_},
+          params, query_.pedestrianProfile_, query_.elevationCosts_,
           query_.arriveBy_ ? pre_transit_time : post_transit_time,
           query_.maxMatchingDistance_, gbfs_rd_, prepare_stats),
       .td_start_walk_ = r_.get_td_offsets(
@@ -493,8 +504,8 @@ api::plan_response meta_router::run() {
                    taxi_journeys.begin()->departure_time())));
   }
   return {
-      .from_ = from_place_,
-      .to_ = to_place_,
+      .from_ = bwd_compat_lvl_adjust(from_place_, api_version_),
+      .to_ = bwd_compat_lvl_adjust(to_place_, api_version_),
       .direct_ = std::move(direct_),
       .itineraries_ = utl::to_vec(
           taxi_journeys,
@@ -506,9 +517,10 @@ api::plan_response meta_router::run() {
             auto const detailed_transfers =
                 query_.detailedTransfers_.value_or(query_.detailedLegs_);
             auto response = journey_to_response(
-                r_.w_, r_.l_, r_.pl_, *tt_, *r_.tags_, r_.fa_, e_, rtt_,
-                r_.matches_, r_.elevations_, r_.shapes_, gbfs_rd_, r_.ae_,
-                r_.tz_, j, start_, dest_, cache, ep::blocked.get(),
+                r_.w_, r_.l_, r_.pl_, *tt_, *r_.tags_, r_.fa_, e_,
+                annotation_rtt_, r_.matches_, r_.elevations_, r_.shapes_,
+                gbfs_rd_, r_.ae_, r_.tz_, j, start_, dest_, cache,
+                ep::blocked.get(),
                 query_.requireCarTransport_ && query_.useRoutedTransfers_,
                 params, query_.pedestrianProfile_, query_.elevationCosts_,
                 query_.joinInterlinedLegs_, detailed_transfers,

@@ -5,11 +5,13 @@
 	import * as RadioGroup from '$lib/components/ui/radio-group';
 	import Button from '$lib/components/ui/button/button.svelte';
 	import { Label } from '$lib/components/ui/label';
-	import type {
-		ElevationCosts,
-		Mode,
-		PedestrianProfile,
-		ServerConfig
+	import {
+		type CyclingSpeed,
+		type PedestrianSpeed,
+		type ElevationCosts,
+		type Mode,
+		type PedestrianProfile,
+		type ServerConfig
 	} from '@motis-project/motis-client';
 	import AddressTypeahead from '$lib/AddressTypeahead.svelte';
 	import AdvancedOptions from '$lib/AdvancedOptions.svelte';
@@ -20,6 +22,7 @@
 	let {
 		geocodingBiasPlace,
 		serverConfig,
+		advancedOptionsOpen = $bindable(),
 		from = $bindable(),
 		to = $bindable(),
 		time = $bindable(),
@@ -34,6 +37,7 @@
 		postTransitModes = $bindable(),
 		directModes = $bindable(),
 		elevationCosts = $bindable(),
+		transferTimeFactor = $bindable(),
 		maxPreTransitTime = $bindable(),
 		maxPostTransitTime = $bindable(),
 		maxDirectTime = $bindable(),
@@ -46,10 +50,14 @@
 		via = $bindable(),
 		viaMinimumStay = $bindable(),
 		viaLabels = $bindable(),
+		pedestrianSpeed = $bindable(),
+		cyclingSpeed = $bindable(),
+		additionalTransferTime = $bindable(),
 		hasDebug = false
 	}: {
 		geocodingBiasPlace?: maplibregl.LngLatLike;
 		serverConfig: ServerConfig | undefined;
+		advancedOptionsOpen: boolean;
 		from: Location;
 		to: Location;
 		time: Date;
@@ -64,6 +72,7 @@
 		postTransitModes: PrePostDirectMode[];
 		directModes: PrePostDirectMode[];
 		elevationCosts: ElevationCosts;
+		transferTimeFactor: number;
 		maxPreTransitTime: number;
 		maxPostTransitTime: number;
 		maxDirectTime: number;
@@ -76,12 +85,14 @@
 		via: undefined | Location[];
 		viaMinimumStay: undefined | number[];
 		viaLabels: Record<string, string>;
+		pedestrianSpeed: PedestrianSpeed;
+		cyclingSpeed: CyclingSpeed;
+		additionalTransferTime: number | undefined;
 		hasDebug: boolean;
 	} = $props();
 
 	let fromItems = $state<Array<Location>>([]);
 	let toItems = $state<Array<Location>>([]);
-
 	const getLocation = () => {
 		if (navigator && navigator.geolocation) {
 			navigator.geolocation.getCurrentPosition(applyPosition, (e) => console.log(e), {
@@ -114,6 +125,7 @@
 	/>
 	<Button
 		variant="ghost"
+		title={t.myLocation}
 		class="absolute z-10 right-4 top-0"
 		size="icon"
 		onclick={() => getLocation()}
@@ -123,6 +135,7 @@
 	<Button
 		class="absolute z-10 right-14 top-6"
 		variant="outline"
+		title={t.reverseDirections}
 		size="icon"
 		onclick={() => {
 			const tmp = to;
@@ -164,6 +177,7 @@
 		</RadioGroup.Root>
 		<AdvancedOptions
 			{serverConfig}
+			bind:advancedOptionsOpen
 			bind:useRoutedTransfers
 			bind:wheelchair={
 				() => pedestrianProfile === 'WHEELCHAIR',
@@ -177,6 +191,7 @@
 			bind:preTransitModes
 			bind:postTransitModes
 			bind:directModes
+			bind:transferTimeFactor
 			bind:maxPreTransitTime
 			bind:maxPostTransitTime
 			bind:maxDirectTime
@@ -190,6 +205,10 @@
 			bind:via
 			bind:viaMinimumStay
 			bind:viaLabels
+			bind:pedestrianSpeed
+			bind:cyclingSpeed
+			bind:additionalTransferTime
+			bind:pedestrianProfile
 			{hasDebug}
 		/>
 	</div>

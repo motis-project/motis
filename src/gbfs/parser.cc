@@ -1,12 +1,19 @@
+#include <algorithm>
+#include <chrono>
+#include <cstdlib>
 #include <optional>
+#include <sstream>
 #include <string_view>
 #include <vector>
+
+#include "date/date.h"
 
 #include "motis/gbfs/parser.h"
 
 #include "cista/hash.h"
 
 #include "utl/helpers/algorithm.h"
+#include "utl/parser/arg_parser.h"
 #include "utl/raii.h"
 #include "utl/to_vec.h"
 
@@ -14,31 +21,99 @@ namespace json = boost::json;
 
 namespace motis::gbfs {
 
-gbfs_version get_version(json::value const& root) {
-  auto const& root_obj = root.as_object();
-  if (!root_obj.contains("version")) {
-    // 1.0 doesn't have the version key
-    return gbfs_version::k1;
+std::optional<std::string> as_string(json::value const& v) {
+  if (v.is_string()) {
+    return static_cast<std::string>(v.as_string());
+  } else if (v.is_int64()) {
+    return std::to_string(v.as_int64());
+  } else if (v.is_uint64()) {
+    return std::to_string(v.as_uint64());
+  } else if (v.is_double()) {
+    return std::to_string(v.as_double());
   }
-  auto const version =
-      static_cast<std::string_view>(root.at("version").as_string());
-  if (version.starts_with("1.")) {
-    return gbfs_version::k1;
-  } else if (version.starts_with("2.")) {
-    return gbfs_version::k2;
-  } else if (version.starts_with("3.")) {
-    return gbfs_version::k3;
-  } else {
-    throw utl::fail("unsupported GBFS version: {}", version);
+  return std::nullopt;
+}
+
+std::optional<double> as_double(json::value const& v) {
+  if (v.is_double()) {
+    return v.as_double();
+  } else if (v.is_int64()) {
+    return static_cast<double>(v.as_int64());
+  } else if (v.is_uint64()) {
+    return static_cast<double>(v.as_uint64());
+  } else if (v.is_string()) {
+    auto const s = std::string{v.as_string()};
+    auto c = utl::cstr{s.c_str(), s.size()};
+    auto d = double{};
+    if (utl::parse_fp(c, d) && c.len == 0) {
+      return d;
+    }
   }
+  return std::nullopt;
+}
+
+std::optional<unsigned> as_count(json::value const& v) {
+  if (auto const d = as_double(v); d) {
+    return static_cast<unsigned>(std::max(0.0, *d));
+  }
+  return std::nullopt;
+}
+
+std::optional<std::chrono::system_clock::time_point> parse_timestamp(
+    json::value const& val) {
+  if (val.is_int64()) {
+    return std::chrono::system_clock::time_point{
+        std::chrono::seconds{val.to_number<std::int64_t>()}};
+  }
+  if (val.is_uint64()) {
+    return std::chrono::system_clock::time_point{std::chrono::seconds{
+        static_cast<std::int64_t>(val.to_number<std::uint64_t>())}};
+  }
+  if (val.is_string()) {
+    auto const s = std::string{val.as_string()};
+    auto* end = static_cast<char*>(nullptr);
+    auto const ts = std::strtoll(s.c_str(), &end, 10);
+    if (end != s.c_str() && *end == '\0') {
+      return std::chrono::system_clock::time_point{std::chrono::seconds{ts}};
+    }
+
+    auto tp = std::chrono::system_clock::time_point{};
+    auto iss = std::istringstream{s};
+    if (iss >> date::parse("%FT%T%Ez", tp); !iss.fail()) {
+      return tp;
+    }
+    iss.clear();
+    iss.str(s);
+    if (iss >> date::parse("%FT%T%z", tp); !iss.fail()) {
+      return tp;
+    }
+    iss.clear();
+    iss.str(s);
+    if (iss >> date::parse("%FT%T", tp); !iss.fail()) {
+      return tp;
+    }
+  }
+  return std::nullopt;
+}
+
+std::string optional_str(json::object const& obj, std::string_view key) {
+  auto const it = obj.find(key);
+  if (it == obj.end()) {
+    return "";
+  }
+  return as_string(it->value()).value_or("");
 }
 
 std::string get_localized_string(json::value const& v) {
   if (v.is_array()) {
-    auto const& arr = v.as_array();
-    if (!arr.empty()) {
-      return static_cast<std::string>(
-          arr[0].as_object().at("text").as_string());
+    for (auto const& entry : v.as_array()) {
+      if (!entry.is_object()) {
+        continue;
+      }
+      auto const text = optional_str(entry.as_object(), "text");
+      if (!text.empty()) {
+        return text;
+      }
     }
     return "";
   } else if (v.is_string()) {
@@ -48,23 +123,6 @@ std::string get_localized_string(json::value const& v) {
   }
 }
 
-std::string get_as_string(json::object const& obj, std::string_view const key) {
-  auto const val = obj.at(key);
-  if (val.is_string()) {
-    return static_cast<std::string>(val.as_string());
-  } else if (val.is_int64()) {
-    return std::to_string(val.as_int64());
-  } else if (val.is_uint64()) {
-    return std::to_string(val.as_uint64());
-  } else {
-    return json::serialize(val);
-  }
-}
-
-std::string optional_str(json::object const& obj, std::string_view key) {
-  return obj.contains(key) ? get_as_string(obj, key) : "";
-}
-
 std::string optional_localized_str(json::object const& obj,
                                    std::string_view key) {
   return obj.contains(key) ? get_localized_string(obj.at(key)) : "";
@@ -72,17 +130,27 @@ std::string optional_localized_str(json::object const& obj,
 
 bool get_bool(json::object const& obj,
               std::string_view const key,
-              std::optional<bool> const def = std::nullopt) {
-  if (!obj.contains(key) && def.has_value()) {
-    return *def;
+              bool const def) {
+  auto const it = obj.find(key);
+  if (it == obj.end()) {
+    return def;
   }
-  auto const val = obj.at(key);
+  auto const& val = it->value();
   if (val.is_bool()) {
     return val.as_bool();
   } else if (val.is_number()) {
     return val.to_number<int>() == 1;
+  } else if (val.is_string()) {
+    auto const s = std::string_view{val.as_string()};
+    if (s == "true" || s == "1" || s == "yes") {
+      return true;
+    }
+    if (s == "false" || s == "0" || s == "no") {
+      return false;
+    }
+    return def;
   } else {
-    return *def;
+    return def;
   }
 }
 
@@ -109,7 +177,11 @@ tg_geom* parse_multipolygon(json::object const& json) {
       auto points = utl::to_vec(j_ring.as_array(), [&](auto const& j_pt) {
         auto const& j_pt_arr = j_pt.as_array();
         utl::verify(j_pt_arr.size() >= 2, "invalid point in polygon ring");
-        return tg_point{j_pt_arr[0].as_double(), j_pt_arr[1].as_double()};
+        auto const x = as_double(j_pt_arr[0]);
+        auto const y = as_double(j_pt_arr[1]);
+        utl::verify(x.has_value() && y.has_value(),
+                    "invalid point in polygon ring");
+        return tg_point{*x, *y};
       });
       utl::verify(points.size() > 2, "empty ring in polygon");
       // handle invalid polygons that don't have closed rings
@@ -143,16 +215,39 @@ hash_map<std::string, std::string> parse_discovery(json::value const& root) {
   if (data.empty()) {
     return urls;
   }
-  auto const& feeds =
-      data.contains("feeds")
-          ? data.at("feeds").as_array()
-          : data.begin()->value().as_object().at("feeds").as_array();
 
-  for (auto const& feed : feeds) {
-    auto const& name =
-        static_cast<std::string>(feed.as_object().at("name").as_string());
-    auto const& url =
-        static_cast<std::string>(feed.as_object().at("url").as_string());
+  auto const* feeds = static_cast<json::array const*>(nullptr);
+  if (auto const it = data.find("feeds");
+      it != data.end() && it->value().is_array()) {
+    feeds = &it->value().as_array();
+  } else {
+    for (auto const& [_, lang] : data) {
+      if (!lang.is_object()) {
+        continue;
+      }
+      auto const& lang_obj = lang.as_object();
+      if (auto const feeds_it = lang_obj.find("feeds");
+          feeds_it != lang_obj.end() && feeds_it->value().is_array()) {
+        feeds = &feeds_it->value().as_array();
+        break;
+      }
+    }
+  }
+
+  if (feeds == nullptr) {
+    return urls;
+  }
+
+  for (auto const& feed : *feeds) {
+    if (!feed.is_object()) {
+      continue;
+    }
+    auto const& feed_obj = feed.as_object();
+    auto const name = optional_str(feed_obj, "name");
+    auto const url = optional_str(feed_obj, "url");
+    if (name.empty() || url.empty()) {
+      continue;
+    }
     urls[name] = url;
   }
   return urls;
@@ -161,8 +256,9 @@ hash_map<std::string, std::string> parse_discovery(json::value const& root) {
 rental_uris parse_rental_uris(json::object const& parent) {
   auto uris = rental_uris{};
 
-  if (parent.contains("rental_uris")) {
-    auto const& o = parent.at("rental_uris").as_object();
+  if (auto const it = parent.find("rental_uris");
+      it != parent.end() && it->value().is_object()) {
+    auto const& o = it->value().as_object();
     uris.android_ = optional_str(o, "android");
     uris.ios_ = optional_str(o, "ios");
     uris.web_ = optional_str(o, "web");
@@ -216,15 +312,22 @@ void load_system_information(gbfs_provider& provider, json::value const& root) {
   auto const& data = root.at("data").as_object();
 
   auto& si = provider.sys_info_;
-  si.id_ = static_cast<std::string>(data.at("system_id").as_string());
-  si.name_ = get_localized_string(data.at("name"));
+  si.id_ = optional_str(data, "system_id");
+  if (si.id_.empty()) {
+    si.id_ = provider.id_;
+  }
+  si.name_ = optional_localized_str(data, "name");
+  if (si.name_.empty()) {
+    si.name_ = provider.id_;
+  }
   si.name_short_ = optional_localized_str(data, "name_short");
   si.operator_ = optional_localized_str(data, "operator");
   si.url_ = optional_str(data, "url");
   si.purchase_url_ = optional_str(data, "purchase_url");
   si.mail_ = optional_str(data, "email");
-  if (data.contains("brand_assets")) {
-    auto const& ba = data.at("brand_assets").as_object();
+  if (auto const it = data.find("brand_assets");
+      it != data.end() && it->value().is_object()) {
+    auto const& ba = it->value().as_object();
     si.color_ = optional_str(ba, "color");
   } else {
     si.color_ = "";
@@ -233,51 +336,67 @@ void load_system_information(gbfs_provider& provider, json::value const& root) {
 
 void load_station_information(gbfs_provider& provider,
                               json::value const& root) {
+  auto const& stations_arr = root.at("data").at("stations").as_array();
+
   provider.stations_.clear();
 
-  auto const& stations_arr = root.at("data").at("stations").as_array();
   for (auto const& s : stations_arr) {
-    auto const& station_obj = s.as_object();
-    auto const station_id = get_as_string(station_obj, "station_id");
-    try {
-      auto const name = get_localized_string(station_obj.at("name"));
-      auto const lat = station_obj.at("lat").as_double();
-      auto const lon = station_obj.at("lon").as_double();
-
-      tg_geom* area = nullptr;
-      if (station_obj.contains("station_area")) {
-        try {
-          area = parse_multipolygon(station_obj.at("station_area").as_object());
-        } catch (std::exception const& ex) {
-          std::cerr << "[GBFS] (" << provider.id_
-                    << ") invalid station_area: " << ex.what() << "\n";
-        }
-      }
-
-      provider.stations_[station_id] = station{
-          .info_ = {.id_ = station_id,
-                    .name_ = name,
-                    .pos_ = geo::latlng{lat, lon},
-                    .address_ = optional_str(station_obj, "address"),
-                    .cross_street_ = optional_str(station_obj, "cross_street"),
-                    .rental_uris_ = parse_rental_uris(station_obj),
-                    .station_area_ =
-                        std::shared_ptr<tg_geom>(area, tg_geom_deleter{})}};
-    } catch (std::exception const& ex) {
-      std::cerr << "[GBFS] (" << provider.id_ << ") error parsing station "
-                << station_id << ": " << ex.what() << "\n";
+    if (!s.is_object()) {
+      ++provider.skipped_station_infos_;
+      continue;
     }
+    auto const& station_obj = s.as_object();
+    auto const station_id = optional_str(station_obj, "station_id");
+    auto const lat = station_obj.contains("lat")
+                         ? as_double(station_obj.at("lat"))
+                         : std::nullopt;
+    auto const lon = station_obj.contains("lon")
+                         ? as_double(station_obj.at("lon"))
+                         : std::nullopt;
+    if (station_id.empty() || !lat || !lon) {
+      ++provider.skipped_station_infos_;
+      continue;
+    }
+
+    auto const name = optional_localized_str(station_obj, "name");
+
+    tg_geom* area = nullptr;
+    if (auto const it = station_obj.find("station_area");
+        it != station_obj.end() && it->value().is_object()) {
+      try {
+        area = parse_multipolygon(it->value().as_object());
+      } catch (std::exception const& ex) {
+        std::cerr << "[GBFS] (" << provider.id_
+                  << ") invalid station_area: " << ex.what() << "\n";
+      }
+    }
+
+    provider.stations_[station_id] = station{
+        .info_ = {.id_ = station_id,
+                  .name_ = name,
+                  .pos_ = geo::latlng{*lat, *lon},
+                  .address_ = optional_str(station_obj, "address"),
+                  .cross_street_ = optional_str(station_obj, "cross_street"),
+                  .rental_uris_ = parse_rental_uris(station_obj),
+                  .station_area_ =
+                      std::shared_ptr<tg_geom>(area, tg_geom_deleter{})}};
   }
 }
 
 void load_station_status(gbfs_provider& provider, json::value const& root) {
   auto const& stations_arr = root.at("data").at("stations").as_array();
+
   for (auto const& s : stations_arr) {
+    if (!s.is_object()) {
+      ++provider.skipped_station_status_;
+      continue;
+    }
     auto const& station_obj = s.as_object();
-    auto const station_id = get_as_string(station_obj, "station_id");
+    auto const station_id = optional_str(station_obj, "station_id");
 
     auto const station_it = provider.stations_.find(station_id);
     if (station_it == end(provider.stations_)) {
+      ++provider.skipped_station_status_;
       continue;
     }
 
@@ -290,25 +409,38 @@ void load_station_status(gbfs_provider& provider, json::value const& root) {
     if (station_obj.contains("num_vehicles_available")) {
       // GBFS 3.x (but some 2.x feeds use this as well)
       station.status_.num_vehicles_available_ =
-          station_obj.at("num_vehicles_available").to_number<unsigned>();
+          as_count(station_obj.at("num_vehicles_available")).value_or(0U);
     } else if (station_obj.contains("num_bikes_available")) {
       // GBFS 2.x
       station.status_.num_vehicles_available_ =
-          station_obj.at("num_bikes_available").to_number<unsigned>();
+          as_count(station_obj.at("num_bikes_available")).value_or(0U);
     }
 
-    if (station_obj.contains("vehicle_types_available")) {
-      auto const& vta = station_obj.at("vehicle_types_available").as_array();
+    if (auto const it = station_obj.find("vehicle_types_available");
+        it != station_obj.end() && it->value().is_array()) {
+      auto const& vta = it->value().as_array();
       auto unrestricted_available = 0U;
       auto any_station_available = 0U;
       auto roundtrip_available = 0U;
+      auto has_typed_availability = false;
       for (auto const& vt : vta) {
-        auto const vehicle_type_id =
-            static_cast<std::string>(vt.at("vehicle_type_id").as_string());
-        auto const count = vt.at("count").to_number<unsigned>();
+        if (!vt.is_object()) {
+          ++provider.skipped_station_status_;
+          continue;
+        }
+        auto const& vt_obj = vt.as_object();
+        auto const vehicle_type_id = optional_str(vt_obj, "vehicle_type_id");
+        if (vehicle_type_id.empty()) {
+          ++provider.skipped_station_status_;
+          continue;
+        }
+        auto const count = vt_obj.contains("count")
+                               ? as_count(vt_obj.at("count")).value_or(0U)
+                               : 0U;
         if (auto const vt_idx = get_vehicle_type(provider, vehicle_type_id,
                                                  vehicle_start_type::kStation);
             vt_idx) {
+          has_typed_availability = true;
           station.status_.vehicle_types_available_[*vt_idx] = count;
           switch (provider.vehicle_types_[*vt_idx].return_constraint_) {
             case return_constraint::kFreeFloating:
@@ -321,10 +453,15 @@ void load_station_status(gbfs_provider& provider, json::value const& root) {
               roundtrip_available += count;
               break;
           }
+        } else {
+          ++provider.skipped_station_status_;
         }
       }
-      station.status_.num_vehicles_available_ =
-          unrestricted_available + any_station_available + roundtrip_available;
+      if (has_typed_availability) {
+        station.status_.num_vehicles_available_ = unrestricted_available +
+                                                  any_station_available +
+                                                  roundtrip_available;
+      }
     } else {
       if (auto const vt_idx =
               get_vehicle_type(provider, "", vehicle_start_type::kStation);
@@ -334,20 +471,30 @@ void load_station_status(gbfs_provider& provider, json::value const& root) {
       }
     }
 
-    if (station_obj.contains("vehicle_docks_available")) {
-      for (auto const& vt :
-           station_obj.at("vehicle_docks_available").as_array()) {
-        auto& vto = vt.as_object();
-        if (vto.contains("vehicle_type_ids") && vto.contains("count")) {
-          for (auto const& vti : vto.at("vehicle_type_ids").as_array()) {
-            auto const vehicle_type_id =
-                static_cast<std::string>(vti.as_string());
-            if (auto const vt_idx = get_vehicle_type(
-                    provider, vehicle_type_id, vehicle_start_type::kStation);
-                vt_idx) {
-              station.status_.vehicle_docks_available_[*vt_idx] =
-                  vto.at("count").to_number<unsigned>();
-            }
+    if (auto const it = station_obj.find("vehicle_docks_available");
+        it != station_obj.end() && it->value().is_array()) {
+      for (auto const& vt : it->value().as_array()) {
+        if (!vt.is_object()) {
+          ++provider.skipped_station_status_;
+          continue;
+        }
+        auto const& vto = vt.as_object();
+        if (!vto.contains("vehicle_type_ids") || !vto.contains("count") ||
+            !vto.at("vehicle_type_ids").is_array()) {
+          ++provider.skipped_station_status_;
+          continue;
+        }
+        auto const count = as_count(vto.at("count")).value_or(0U);
+        for (auto const& vti : vto.at("vehicle_type_ids").as_array()) {
+          auto const vehicle_type_id = as_string(vti).value_or("");
+          if (vehicle_type_id.empty()) {
+            ++provider.skipped_station_status_;
+            continue;
+          }
+          if (auto const vt_idx = get_vehicle_type(
+                  provider, vehicle_type_id, vehicle_start_type::kStation);
+              vt_idx) {
+            station.status_.vehicle_docks_available_[*vt_idx] = count;
           }
         }
       }
@@ -406,24 +553,35 @@ std::optional<return_constraint> parse_return_constraint(
 std::optional<return_constraint> parse_return_constraint(
     json::object const& vt) {
   if (vt.contains("return_constraint")) {
-    return parse_return_constraint(vt.at("return_constraint").as_string());
+    return parse_return_constraint(optional_str(vt, "return_constraint"));
   }
   return {};
 }
 
 void load_vehicle_types(gbfs_provider& provider, json::value const& root) {
+  auto const& vehicle_types = root.at("data").at("vehicle_types").as_array();
+
   provider.vehicle_types_.clear();
   provider.vehicle_types_map_.clear();
   provider.temp_vehicle_types_.clear();
-  for (auto const& v : root.at("data").at("vehicle_types").as_array()) {
-    auto const id =
-        static_cast<std::string>(v.at("vehicle_type_id").as_string());
-    auto const name = optional_localized_str(v.as_object(), "name");
-    auto const rc = parse_return_constraint(v.as_object());
+
+  for (auto const& v : vehicle_types) {
+    if (!v.is_object()) {
+      ++provider.skipped_vehicle_types_;
+      continue;
+    }
+    auto const& vt_obj = v.as_object();
+    auto const id = optional_str(vt_obj, "vehicle_type_id");
+    if (id.empty()) {
+      ++provider.skipped_vehicle_types_;
+      continue;
+    }
+    auto const name = optional_localized_str(vt_obj, "name");
+    auto const rc = parse_return_constraint(vt_obj);
     auto const form_factor =
-        parse_form_factor(optional_str(v.as_object(), "form_factor"));
+        parse_form_factor(optional_str(vt_obj, "form_factor"));
     auto const propulsion_type =
-        parse_propulsion_type(optional_str(v.as_object(), "propulsion_type"));
+        parse_propulsion_type(optional_str(vt_obj, "propulsion_type"));
     if (rc) {
       auto const idx = vehicle_type_idx_t{provider.vehicle_types_.size()};
       provider.vehicle_types_.emplace_back(
@@ -449,39 +607,56 @@ void load_vehicle_types(gbfs_provider& provider, json::value const& root) {
 }
 
 void load_vehicle_status(gbfs_provider& provider, json::value const& root) {
+  auto const& data = root.at("data").as_object();
+  auto const get_array = [&](std::string_view const key) {
+    auto const it = data.find(key);
+    return it != data.end() && it->value().is_array() ? &it->value().as_array()
+                                                      : nullptr;
+  };
+  auto const* vehicles_arr = get_array("vehicles");
+  vehicles_arr = vehicles_arr != nullptr ? vehicles_arr : get_array("bikes");
+  utl::verify(vehicles_arr != nullptr, "missing vehicles/bikes array");
+
   provider.vehicle_status_.clear();
 
-  auto const version = get_version(root);
-  auto const& vehicles_arr =
-      root.at("data")
-          .at(version == gbfs_version::k3 ? "vehicles" : "bikes")
-          .as_array();
-  for (auto const& v : vehicles_arr) {
+  for (auto const& v : *vehicles_arr) {
+    if (!v.is_object()) {
+      ++provider.skipped_vehicle_status_;
+      continue;
+    }
     auto const& vehicle_obj = v.as_object();
 
     auto pos = geo::latlng{};
     if (vehicle_obj.contains("lat") && vehicle_obj.contains("lon")) {
-      auto const lat = vehicle_obj.at("lat");
-      auto const lon = vehicle_obj.at("lon");
-      if (!lat.is_double() || !lon.is_double()) {
+      auto const lat = as_double(vehicle_obj.at("lat"));
+      auto const lon = as_double(vehicle_obj.at("lon"));
+      if (!lat || !lon) {
+        ++provider.skipped_vehicle_status_;
         continue;
       }
-      pos = geo::latlng{vehicle_obj.at("lat").as_double(),
-                        vehicle_obj.at("lon").as_double()};
+      pos = geo::latlng{*lat, *lon};
     } else if (vehicle_obj.contains("station_id")) {
-      auto const station_id = get_as_string(vehicle_obj, "station_id");
+      auto const station_id = optional_str(vehicle_obj, "station_id");
       if (auto const it = provider.stations_.find(station_id);
           it != end(provider.stations_)) {
         pos = it->second.info_.pos_;
       } else {
+        ++provider.skipped_vehicle_status_;
         continue;
       }
     } else {
+      ++provider.skipped_vehicle_status_;
       continue;
     }
 
-    auto const id = get_as_string(
-        vehicle_obj, version == gbfs_version::k3 ? "vehicle_id" : "bike_id");
+    auto id = optional_str(vehicle_obj, "vehicle_id");
+    if (id.empty()) {
+      id = optional_str(vehicle_obj, "bike_id");
+    }
+    if (id.empty()) {
+      ++provider.skipped_vehicle_status_;
+      continue;
+    }
 
     auto const type_id = optional_str(vehicle_obj, "vehicle_type_id");
     auto type_idx = vehicle_type_idx_t::invalid();
@@ -506,64 +681,109 @@ void load_vehicle_status(gbfs_provider& provider, json::value const& root) {
   utl::sort(provider.vehicle_status_);
 }
 
-rule parse_rule(gbfs_provider& provider,
-                gbfs_version const version,
-                json::value const& r) {
-  auto const vti_key =
-      version == gbfs_version::k2 ? "vehicle_type_id" : "vehicle_type_ids";
+rule parse_rule(gbfs_provider& provider, json::value const& r) {
   auto const& rule_obj = r.as_object();
 
   auto vehicle_type_idxs = std::vector<vehicle_type_idx_t>{};
-  if (rule_obj.contains(vti_key)) {
-    for (auto const& vt : rule_obj.at(vti_key).as_array()) {
-      auto const vt_id = static_cast<std::string>(vt.as_string());
-      if (auto const it = provider.vehicle_types_map_.find(
-              {vt_id, vehicle_start_type::kStation});
-          it != end(provider.vehicle_types_map_)) {
-        vehicle_type_idxs.emplace_back(it->second);
+  auto const parse_vehicle_type_ids = [](json::value const& val) {
+    auto vehicle_type_ids = std::vector<std::string>{};
+    if (val.is_array()) {
+      for (auto const& vt : val.as_array()) {
+        if (auto const vt_id = as_string(vt); vt_id) {
+          vehicle_type_ids.emplace_back(*vt_id);
+        }
       }
-      if (auto const it = provider.vehicle_types_map_.find(
-              {vt_id, vehicle_start_type::kFreeFloating});
-          it != end(provider.vehicle_types_map_)) {
-        vehicle_type_idxs.emplace_back(it->second);
-      }
+    } else if (auto const vt_id = as_string(val); vt_id) {
+      vehicle_type_ids.emplace_back(*vt_id);
+    }
+    return vehicle_type_ids;
+  };
+
+  auto vehicle_type_ids = std::vector<std::string>{};
+  if (auto const it = rule_obj.find("vehicle_type_ids"); it != rule_obj.end()) {
+    vehicle_type_ids = parse_vehicle_type_ids(it->value());
+  }
+  if (vehicle_type_ids.empty()) {
+    if (auto const it = rule_obj.find("vehicle_type_id");
+        it != rule_obj.end()) {
+      vehicle_type_ids = parse_vehicle_type_ids(it->value());
     }
   }
 
+  for (auto const& vt_id : vehicle_type_ids) {
+    if (auto const station_vt_it = provider.vehicle_types_map_.find(
+            {vt_id, vehicle_start_type::kStation});
+        station_vt_it != end(provider.vehicle_types_map_)) {
+      vehicle_type_idxs.emplace_back(station_vt_it->second);
+    }
+    if (auto const free_floating_vt_it = provider.vehicle_types_map_.find(
+            {vt_id, vehicle_start_type::kFreeFloating});
+        free_floating_vt_it != end(provider.vehicle_types_map_)) {
+      vehicle_type_idxs.emplace_back(free_floating_vt_it->second);
+    }
+  }
+  if (!vehicle_type_ids.empty() && vehicle_type_idxs.empty()) {
+    vehicle_type_idxs.emplace_back(vehicle_type_idx_t::invalid());
+  }
+
+  auto const ride_allowed = get_bool(rule_obj, "ride_allowed", true);
   return rule{
       .vehicle_type_idxs_ = std::move(vehicle_type_idxs),
-      .ride_start_allowed_ = version == gbfs_version::k2
-                                 ? rule_obj.at("ride_allowed").as_bool()
-                                 : rule_obj.at("ride_start_allowed").as_bool(),
-      .ride_end_allowed_ = version == gbfs_version::k2
-                               ? rule_obj.at("ride_allowed").as_bool()
-                               : rule_obj.at("ride_end_allowed").as_bool(),
-      .ride_through_allowed_ = rule_obj.at("ride_through_allowed").as_bool(),
+      .ride_start_allowed_ =
+          get_bool(rule_obj, "ride_start_allowed", ride_allowed),
+      .ride_end_allowed_ = get_bool(rule_obj, "ride_end_allowed", ride_allowed),
+      .ride_through_allowed_ =
+          get_bool(rule_obj, "ride_through_allowed", ride_allowed),
       .station_parking_ =
           rule_obj.contains("station_parking")
-              ? std::optional{rule_obj.at("station_parking").as_bool()}
+              ? std::optional{get_bool(rule_obj, "station_parking", false)}
               : std::nullopt};
 }
 
 void load_geofencing_zones(gbfs_provider& provider, json::value const& root) {
-  auto const version = get_version(root);
-
-  auto const& zones_obj = root.at("data").at("geofencing_zones").as_object();
-  utl::verify(zones_obj.at("type") == "FeatureCollection",
-              "invalid geofencing_zones");
+  auto const& data = root.at("data").as_object();
+  auto const it = data.find("geofencing_zones");
+  utl::verify(it != data.end() && it->value().is_object(),
+              "missing geofencing_zones object");
+  auto const& zones_obj = it->value().as_object();
+  utl::verify(optional_str(zones_obj, "type") == "FeatureCollection",
+              "geofencing_zones is not a FeatureCollection");
 
   auto zones = std::vector<zone>{};
-  auto const zones_arr = zones_obj.at("features").as_array();
+  auto const features_it = zones_obj.find("features");
+  utl::verify(features_it != zones_obj.end() && features_it->value().is_array(),
+              "missing geofencing_zones features array");
+  auto const zones_arr = features_it->value().as_array();
   zones.reserve(zones_arr.size());
   for (auto const& z : zones_arr) {
     try {
-      auto const& props = z.at("properties").as_object();
-      if (!props.contains("rules") || !props.at("rules").is_array()) {
+      if (!z.is_object()) {
+        ++provider.skipped_geofencing_zones_;
         continue;
       }
-      auto rules = utl::to_vec(
-          props.at("rules").as_array(),
-          [&](auto const& r) { return parse_rule(provider, version, r); });
+      auto const& props = z.at("properties").as_object();
+      if (!props.contains("rules") || !props.at("rules").is_array()) {
+        ++provider.skipped_geofencing_zones_;
+        continue;
+      }
+      auto rules = std::vector<rule>{};
+      for (auto const& r : props.at("rules").as_array()) {
+        try {
+          if (r.is_object()) {
+            rules.emplace_back(parse_rule(provider, r));
+          } else {
+            ++provider.skipped_geofencing_rules_;
+          }
+        } catch (std::exception const& ex) {
+          ++provider.skipped_geofencing_rules_;
+          std::cerr << "[GBFS] (" << provider.id_
+                    << ") invalid geofencing rule: " << ex.what() << "\n";
+        }
+      }
+      if (rules.empty()) {
+        ++provider.skipped_geofencing_zones_;
+        continue;
+      }
 
       auto* geom = parse_multipolygon(z.at("geometry").as_object());
 
@@ -571,21 +791,31 @@ void load_geofencing_zones(gbfs_provider& provider, json::value const& root) {
 
       zones.emplace_back(geom, std::move(rules), std::move(name));
     } catch (std::exception const& ex) {
+      ++provider.skipped_geofencing_zones_;
       std::cerr << "[GBFS] (" << provider.id_
                 << ") invalid geofencing zone: " << ex.what() << "\n";
     }
   }
 
   //  required in 3.0, but some feeds don't have it
-  auto global_rules =
-      root.at("data").as_object().contains("global_rules") &&
-              root.at("data").at("global_rules").is_array()
-          ? utl::to_vec(
-                root.at("data").at("global_rules").as_array(),
-                [&](auto const& r) { return parse_rule(provider, version, r); })
-          : std::vector<rule>{};
+  auto global_rules = std::vector<rule>{};
+  if (auto const global_rules_it = data.find("global_rules");
+      global_rules_it != data.end() && global_rules_it->value().is_array()) {
+    for (auto const& r : global_rules_it->value().as_array()) {
+      try {
+        if (r.is_object()) {
+          global_rules.emplace_back(parse_rule(provider, r));
+        } else {
+          ++provider.skipped_geofencing_rules_;
+        }
+      } catch (std::exception const& ex) {
+        ++provider.skipped_geofencing_rules_;
+        std::cerr << "[GBFS] (" << provider.id_
+                  << ") invalid global geofencing rule: " << ex.what() << "\n";
+      }
+    }
+  }
 
-  provider.geofencing_zones_.version_ = version;
   provider.geofencing_zones_.zones_ = std::move(zones);
   provider.geofencing_zones_.global_rules_ = std::move(global_rules);
 }

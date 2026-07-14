@@ -104,7 +104,7 @@ export const onClickTrip = async (tripId: string, replace: boolean = false) => {
 		alert(String((error as Record<string, unknown>).error?.toString() ?? error));
 		return;
 	}
-	joinInterlinedLegs(itinerary!);
+	itinerary!.legs = joinInterlinedLegs(itinerary!.legs);
 	pushStateWithQueryString(
 		{ tripId },
 		{

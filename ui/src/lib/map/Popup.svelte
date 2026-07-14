@@ -30,7 +30,7 @@
 	} = $props();
 
 	let ctx: { map: maplibregl.Map | null } = getContext('map'); // from Map component
-	let layer: { id: string } | null = getContext('layer'); // from Layer component (optional)
+	let layer: { id: string | null } | null = getContext('layer'); // from Layer component (optional)
 
 	let popupEl = $state<HTMLDivElement>();
 	let popup = $state<maplibregl.Popup>();
@@ -88,18 +88,21 @@
 	};
 
 	let initialized = false;
+	let boundLayerId: string | null = null;
 	$effect(() => {
 		if (ctx.map) {
 			if (!initialized) {
 				if (layer) {
-					ctx.map.on(trigger, layer.id, onTrigger);
-					ctx.map.on('mouseenter', layer.id, onMouseEnter);
-					ctx.map.on('mouseleave', layer.id, onMouseLeave);
+					if (!layer.id) return; // wait until Layer has added itself to the map
+					boundLayerId = layer.id;
+					ctx.map.on(trigger, boundLayerId, onTrigger);
+					ctx.map.on('mouseenter', boundLayerId, onMouseEnter);
+					ctx.map.on('mouseleave', boundLayerId, onMouseLeave);
 				} else {
 					ctx.map.on(trigger, onTrigger);
 				}
+				initialized = true;
 			}
-			initialized = true;
 		}
 	});
 
@@ -132,10 +135,10 @@
 			clearPopupState();
 		}
 		if (ctx.map && initialized) {
-			if (layer) {
-				ctx.map.off(trigger, layer.id, onTrigger);
-				ctx.map.off('mouseenter', layer.id, onMouseEnter);
-				ctx.map.off('mouseleave', layer.id, onMouseLeave);
+			if (boundLayerId) {
+				ctx.map.off(trigger, boundLayerId, onTrigger);
+				ctx.map.off('mouseenter', boundLayerId, onMouseEnter);
+				ctx.map.off('mouseleave', boundLayerId, onMouseLeave);
 			} else {
 				ctx.map.off(trigger, onTrigger);
 			}

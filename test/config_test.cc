@@ -56,6 +56,7 @@ timetable:
   use_osm_stop_coordinates: false
   extend_missing_footpaths: false
   max_footpath_length: 15
+  default_transfer_time: 2
   max_matching_distance: 25.000000
   preprocess_max_matching_distance: 250.000000
   datasets:
@@ -86,10 +87,10 @@ timetable:
 elevators: false
 street_routing: true
 limits:
-  stoptimes_max_results: 256
+  stoptimes_max_results: 1024
   plan_max_results: 256
   plan_max_search_window_minutes: 5760
-  stops_max_results: 2048
+  stops_max_results: 8192
   onetomany_max_many: 128
   onetoall_max_results: 65535
   onetoall_max_travel_minutes: 90
@@ -97,8 +98,8 @@ limits:
   gtfsrt_expose_max_trip_updates: 100
   street_routing_max_prepost_transit_seconds: 3600
   street_routing_max_direct_seconds: 21600
-  geocode_max_suggestions: 10
-  reverse_geocode_max_results: 5
+  geocode_max_suggestions: 512
+  reverse_geocode_max_results: 512
 osr_footpath: true
 geocoding: true
 reverse_geocoding: false
