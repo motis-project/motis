@@ -14,21 +14,6 @@ constexpr auto kMinRating = std::numeric_limits<double>::min();
 
 using criterion_t = std::function<double(api::Itinerary const&)>;
 
-double improvement(
-    api::Itinerary const&,
-    api::Itinerary const&,
-    std::vector<criterion_t> const&);
-
-double min_improvement(
-    api::Itinerary const*,
-    std::vector<api::Itinerary const*> const&,
-    std::vector<criterion_t> const&);
-
-double set_improvement(
-    std::vector<api::Itinerary> const&,
-    std::vector<api::Itinerary> const&,
-    std::vector<criterion_t> const&);
-
 double rate(std::vector<api::Itinerary> const&,
             std::vector<api::Itinerary> const&,
             std::vector<criterion_t> const&);
