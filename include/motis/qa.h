@@ -37,12 +37,17 @@ namespace criterion {
 
 template <double Weight>
 double start_time(api::Itinerary const& i) {
-  return static_cast<double>(-i.startTime_.get_unixtime_seconds()) * Weight;
+  return static_cast<double>(-std::chrono::round<std::chrono::minutes>(
+                                  i.startTime_.time_.time_since_epoch())
+                                  .count()) *
+         Weight;
 }
 
 template <double Weight>
 double end_time(api::Itinerary const& i) {
-  return static_cast<double>(i.endTime_.get_unixtime_seconds()) * Weight;
+  return static_cast<double>(std::chrono::round<std::chrono::minutes>(
+                                  i.endTime_.time_.time_since_epoch())
+                                  .count()) * Weight;
 }
 
 template <double Weight>
