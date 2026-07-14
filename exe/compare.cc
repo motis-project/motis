@@ -23,6 +23,7 @@
 #include "utl/verify.h"
 
 #include "motis-api/motis-api.h"
+#include "motis/qa.h"
 #include "motis/types.h"
 
 #include "./flags.h"
@@ -112,6 +113,13 @@ int compare(int ac, char** av) {
         std::cout << " [INCOMPLETE!!]";
       }
       std::cout << "\n";
+      std::cout << "qa::rate: "
+                << qa::rate(uut, ref,
+                            std::vector<qa::criterion_t>{
+                                qa::criterion::start_time<1.0>,
+                                qa::criterion::end_time<1.0>,
+                                qa::criterion::transfers<30.0>})
+                << "\n";
       utl::sorted_diff(
           ref, uut,
           [&](api::Itinerary const& a, api::Itinerary const& b) {
