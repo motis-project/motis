@@ -78,3 +78,7 @@
   url=git@github.com:motis-project/zstd.git
   branch=master
   commit=bce26304a57dd504ae7ae51f384bf9292d7e3acb
+[oneTBB]
+  url=git@github.com:motis-project/oneTBB.git
+  branch=master
+  commit=cda5d37ce8303c58ac506259387e75de4ffcf26b
