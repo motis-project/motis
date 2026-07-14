@@ -4,10 +4,8 @@
 
 namespace motis::qa {
 
-constexpr auto kMaxRating = std::numeric_limits<double>::max();
-constexpr auto kMinRating = std::numeric_limits<double>::min();
-constexpr auto p = double{30.0};
-constexpr auto q = double{0.1};
+constexpr auto kP = double{30.0};
+constexpr auto kQ = double{0.1};
 
 double improvement(
     api::Itinerary const& a,
@@ -32,7 +30,7 @@ double improvement(
   }
 
   return std::log2(std::pow(impr, 2) / dist) *
-         (std::atan(p * (dist - q)) + std::numbers::pi / 2.0);
+         (std::atan(kP * (dist - kQ)) + std::numbers::pi / 2.0);
 }
 
 double min_improvement(

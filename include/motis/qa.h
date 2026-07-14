@@ -9,6 +9,9 @@
 
 namespace motis::qa {
 
+constexpr auto kMaxRating = std::numeric_limits<double>::max();
+constexpr auto kMinRating = std::numeric_limits<double>::min();
+
 using criterion_t = std::function<double(api::Itinerary const&)>;
 
 double improvement(
