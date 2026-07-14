@@ -92,22 +92,21 @@ double set_improvement(
 }
 
 double rate(
-    std::vector<api::Itinerary> const& a,
-    std::vector<api::Itinerary> const& b,
+    std::vector<api::Itinerary> const& cmp,
+    std::vector<api::Itinerary> const& ref,
     std::vector<std::function<double(api::Itinerary const&)>> const& criteria) {
-  if (a.empty() && b.empty()) {
+  if (cmp.empty() && ref.empty()) {
     return 0.0;
   }
-  if (a.empty()) {
+  if (cmp.empty()) {
     return kMinRating;
   }
-  if (b.empty()) {
+  if (ref.empty()) {
     return kMaxRating;
   }
 
-  auto const LR = set_improvement(a, b, criteria);
-  auto const RL = set_improvement(b, a, criteria);
-  return LR - RL;
+  return set_improvement(cmp, ref, criteria) -
+         set_improvement(ref, cmp, criteria);
 }
 
 }  // namespace motis::qa
