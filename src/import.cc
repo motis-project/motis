@@ -20,7 +20,6 @@
 #include "tiles/db/clear_database.h"
 #include "tiles/db/feature_pack.h"
 #include "tiles/db/feature_shard.h"
-#include "tiles/db/feature_pack.h"
 #include "tiles/db/pack_file.h"
 #include "tiles/db/prepare_tiles.h"
 #include "tiles/db/tile_database.h"
