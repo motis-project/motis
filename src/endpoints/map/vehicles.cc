@@ -1,14 +1,16 @@
 #include "motis/endpoints/map/vehicles.h"
 
+#include <algorithm>
 #include <chrono>
-#include <iostream>
 #include <string>
+#include <tuple>
 #include <vector>
 
 #include "date/date.h"
 
+#include "cista/hash.h"
+
 #include "fmt/core.h"
-#include "fmt/ranges.h"
 
 #include "geo/polyline_format.h"
 
@@ -104,13 +106,32 @@ std::optional<n::trip_idx_t> find_static_trip(
     n::timetable const& tt,
     n::source_idx_t const src,
     std::string_view const trip_id) {
-  for (auto const& [id_idx, trip_idx] : tt.trip_id_to_idx_) {
-    if (tt.trip_id_src_[id_idx] == src &&
-        tt.trip_id_strings_[id_idx].view() == trip_id) {
-      return trip_idx;
-    }
+  auto const it = std::lower_bound(
+      begin(tt.trip_id_to_idx_), end(tt.trip_id_to_idx_), trip_id,
+      [&](n::pair<n::trip_id_idx_t, n::trip_idx_t> const& entry,
+          std::string_view const id) {
+        return std::tuple{tt.trip_id_src_[entry.first],
+                          tt.trip_id_strings_[entry.first].view()} <
+               std::tuple{src, id};
+      });
+  if (it != end(tt.trip_id_to_idx_) && tt.trip_id_src_[it->first] == src &&
+      tt.trip_id_strings_[it->first].view() == trip_id) {
+    return it->second;
   }
   return std::nullopt;
+}
+
+std::optional<n::rt::frun> static_trip_run(n::timetable const& tt,
+                                           n::trip_idx_t const trip) {
+  if (tt.trip_transport_ranges_[trip].empty()) {
+    return std::nullopt;
+  }
+  auto const [transport, stop_range] = tt.trip_transport_ranges_[trip].front();
+  return n::rt::frun{
+      tt, nullptr,
+      n::rt::run{.t_ = n::transport{transport, n::day_idx_t{0U}},
+                 .stop_range_ = stop_range,
+                 .rt_ = n::rt_transport_idx_t::invalid()}};
 }
 
 std::optional<n::rt::frun> resolve_static_trip_run_by_id(
@@ -125,16 +146,11 @@ std::optional<n::rt::frun> resolve_static_trip_run_by_id(
     return std::nullopt;
   }
   auto const trip = find_static_trip(tt, src, *vehicle.trip_.trip_id_);
-  if (!trip.has_value() || tt.trip_transport_ranges_[*trip].empty()) {
+  if (!trip.has_value()) {
     return std::nullopt;
   }
 
-  auto const [transport, stop_range] = tt.trip_transport_ranges_[*trip].front();
-  return n::rt::frun{
-      tt, nullptr,
-      n::rt::run{.t_ = n::transport{transport, n::day_idx_t{0U}},
-                 .stop_range_ = stop_range,
-                 .rt_ = n::rt_transport_idx_t::invalid()}};
+  return static_trip_run(tt, *trip);
 }
 
 api::TransitVehicleRouteInfo to_route_info(n::rt::run_stop const& s,
@@ -173,13 +189,6 @@ std::optional<n::route_id_idx_t> find_route_id(
     }
   }
   return best;
-}
-
-bool route_id_matches(std::string_view const realtime_route_id,
-                      std::string_view const static_route_id) {
-  return realtime_route_id == static_route_id ||
-         (static_route_id.size() < realtime_route_id.size() &&
-          realtime_route_id.ends_with(static_route_id));
 }
 
 std::optional<api::TransitVehicleRouteInfo> resolve_route_info_by_id(
@@ -231,87 +240,6 @@ std::optional<api::ModeEnum> resolve_mode_by_route_id(
                  5);
 }
 
-std::optional<n::rt::frun> resolve_route_shape_run_by_id(
-    tag_lookup const& tags,
-    n::timetable const& tt,
-    vehicle_positions::vehicle_position const& vehicle) {
-  if (!vehicle.trip_.route_id_.has_value()) {
-    return std::nullopt;
-  }
-  auto const src = tags.get_src(feed_tag(vehicle.feed_id_));
-  if (src == n::source_idx_t::invalid() || src >= tt.route_ids_.size()) {
-    return std::nullopt;
-  }
-  auto const& routes = tt.route_ids_[src];
-  auto const route_id = find_route_id(routes, *vehicle.trip_.route_id_);
-  if (!route_id.has_value()) {
-    return std::nullopt;
-  }
-
-  auto const trip = routes.route_id_trips_[*route_id].front();
-  if (tt.trip_transport_ranges_[trip].empty()) {
-    return std::nullopt;
-  }
-
-  auto const transport = tt.trip_transport_ranges_[trip].front().first;
-  auto const route = tt.transport_route_[transport];
-  return n::rt::frun{
-      tt, nullptr,
-      n::rt::run{
-          .t_ = n::transport{transport, n::day_idx_t{0U}},
-          .stop_range_ =
-              n::interval{n::stop_idx_t{0U},
-                          static_cast<n::stop_idx_t>(
-                              tt.route_location_seq_[route].size())},
-          .rt_ = n::rt_transport_idx_t::invalid()}};
-}
-
-std::optional<n::route_idx_t> resolve_static_route_by_id(
-    tag_lookup const& tags,
-    n::timetable const& tt,
-    vehicle_positions::vehicle_position const& vehicle) {
-  if (!vehicle.trip_.route_id_.has_value()) {
-    return std::nullopt;
-  }
-  auto const src = tags.get_src(feed_tag(vehicle.feed_id_));
-  if (src == n::source_idx_t::invalid() || src >= tt.route_ids_.size()) {
-    return std::nullopt;
-  }
-  auto const& routes = tt.route_ids_[src];
-  auto const route_id = find_route_id(routes, *vehicle.trip_.route_id_);
-  if (!route_id.has_value() || routes.route_id_trips_[*route_id].empty()) {
-    return std::nullopt;
-  }
-
-  if (!routes.route_id_trips_[*route_id].empty()) {
-    auto const trip = routes.route_id_trips_[*route_id].front();
-    if (!tt.trip_transport_ranges_[trip].empty()) {
-      return tt.transport_route_[tt.trip_transport_ranges_[trip].front().first];
-    }
-  }
-
-  for (auto i = std::uint32_t{0U}; i < tt.n_routes(); ++i) {
-    auto const route = n::route_idx_t{i};
-    if (tt.route_transport_ranges_[route].empty()) {
-      continue;
-    }
-    auto const transport = tt.route_transport_ranges_[route].from_;
-    auto const fr = n::rt::frun{
-        tt, nullptr,
-        n::rt::run{
-            .t_ = n::transport{transport, n::day_idx_t{0U}},
-            .stop_range_ = n::interval{n::stop_idx_t{0U}, n::stop_idx_t{2U}},
-            .rt_ = n::rt_transport_idx_t::invalid()}};
-    if (fr.size() >= 1U &&
-        route_id_matches(*vehicle.trip_.route_id_,
-                         fr[0].get_route_id(n::event_type::kDep))) {
-      return route;
-    }
-  }
-
-  return std::nullopt;
-}
-
 api::VehicleShapeSourceEnum shape_source(n::rt::frun const& fr,
                                          n::shapes_storage const* shapes) {
   if (!fr.is_scheduled() || shapes == nullptr) {
@@ -353,99 +281,36 @@ std::optional<api::EncodedPolyline> encode_shape(
       .points_ = std::move(enc.buf_), .precision_ = 6, .length_ = n_points};
 }
 
-std::optional<api::EncodedPolyline> encode_route_stop_shape(
-    n::timetable const& tt,
-    n::route_idx_t const route) {
-  auto const stops = tt.route_location_seq_[route];
-  if (stops.size() < 2U) {
-    return std::nullopt;
-  }
-
-  auto enc = geo::polyline_encoder<6>{};
-  auto n_points = std::int64_t{0};
-  for (auto const stop : stops) {
-    enc.push_nonzero_diff(
-        tt.locations_.coordinates_[n::stop{stop}.location_idx()], 2);
-    ++n_points;
-  }
-  return api::EncodedPolyline{
-      .points_ = std::move(enc.buf_), .precision_ = 6, .length_ = n_points};
-}
-
 struct vehicle_details {
   std::optional<std::string> scheduled_trip_id_;
   std::optional<std::string> headsign_;
   std::optional<api::TransitVehicleRouteInfo> route_;
   std::optional<api::ModeEnum> mode_;
   std::optional<api::EncodedPolyline> shape_;
+  std::optional<std::string> shape_id_;
   std::optional<api::VehicleShapeSourceEnum> shape_source_;
 };
 
-std::string_view optional_value(std::optional<std::string> const& value) {
-  return value.has_value() ? std::string_view{*value} : std::string_view{"-"};
+void apply_trip_run_details(vehicle_details& details,
+                            tag_lookup const& tags,
+                            n::timetable const& tt,
+                            n::rt::frun const& fr,
+                            n::shapes_storage const* shapes,
+                            n::lang_t const& lang) {
+  auto const first = fr[0];
+  details.scheduled_trip_id_ = tags.id(tt, first, n::event_type::kDep);
+  details.headsign_ = std::string{first.direction(lang, n::event_type::kDep)};
+  details.route_ = to_route_info(first, lang);
+  details.mode_ = to_mode(first.get_clasz(n::event_type::kDep), 5);
+  details.shape_ = encode_shape(fr, shapes);
+  if (details.shape_.has_value()) {
+    auto const hash = cista::hash_combine(
+        cista::hash(details.shape_->points_), details.shape_->precision_,
+        details.shape_->length_);
+    details.shape_id_ = fmt::format("vehicle-shape-{:016x}", hash);
+    details.shape_source_ = shape_source(fr, shapes);
+  }
 }
-
-bool is_display_resolved(vehicle_details const& details) {
-  return details.route_.has_value() && details.mode_.has_value() &&
-         details.shape_.has_value();
-}
-
-struct unresolved_vehicle_stats {
-  void record_filtered(vehicle_positions::vehicle_position const& vehicle,
-                       vehicle_details const& details) {
-    ++filtered_;
-    record_missing(details);
-    if (examples_.size() < 5U) {
-      examples_.emplace_back(fmt::format(
-          "feed={} entity={} trip={} route={} vehicle={}", vehicle.feed_id_,
-          vehicle.entity_id_, optional_value(vehicle.trip_.trip_id_),
-          optional_value(vehicle.trip_.route_id_),
-          optional_value(vehicle.vehicle_.id_)));
-    }
-  }
-
-  void record_returned(vehicle_details const& details) {
-    record_missing(details);
-  }
-
-  void log(std::size_t const snapshot_size,
-           std::size_t const returned_size) const {
-    if (filtered_ == 0U && missing_scheduled_trip_id_ == 0U) {
-      return;
-    }
-
-    fmt::println(
-        std::clog,
-        "[map.vehicles] snapshot={} returned={} filtered_unresolved={} "
-        "missing_route={} missing_mode={} missing_shape={} "
-        "missing_scheduled_trip_id={} examples=[{}]",
-        snapshot_size, returned_size, filtered_, missing_route_, missing_mode_,
-        missing_shape_, missing_scheduled_trip_id_, fmt::join(examples_, "; "));
-  }
-
-  std::size_t filtered_{0U};
-  std::size_t missing_route_{0U};
-  std::size_t missing_mode_{0U};
-  std::size_t missing_shape_{0U};
-  std::size_t missing_scheduled_trip_id_{0U};
-  std::vector<std::string> examples_;
-
-private:
-  void record_missing(vehicle_details const& details) {
-    if (!details.route_.has_value()) {
-      ++missing_route_;
-    }
-    if (!details.mode_.has_value()) {
-      ++missing_mode_;
-    }
-    if (!details.shape_.has_value()) {
-      ++missing_shape_;
-    }
-    if (!details.scheduled_trip_id_.has_value()) {
-      ++missing_scheduled_trip_id_;
-    }
-  }
-};
 
 vehicle_details resolve_details(tag_lookup const* tags,
                                 n::timetable const* tt,
@@ -459,65 +324,27 @@ vehicle_details resolve_details(tag_lookup const* tags,
   }
 
   if (auto fr = resolve_run(*tags, *tt, rtt, v); fr.has_value()) {
-    auto const first = (*fr)[0];
-    details.scheduled_trip_id_ =
-        tags->id(*tt, first, n::event_type::kDep);
-    details.headsign_ =
-        std::string{first.direction(lang, n::event_type::kDep)};
-    details.route_ = to_route_info(first, lang);
-    details.mode_ = to_mode(first.get_clasz(n::event_type::kDep), 5);
-    details.shape_ = encode_shape(*fr, shapes);
-    if (details.shape_.has_value()) {
-      details.shape_source_ = shape_source(*fr, shapes);
-    }
+    apply_trip_run_details(details, *tags, *tt, *fr, shapes, lang);
   }
   if (!details.route_.has_value()) {
     if (auto fr = resolve_static_trip_run_by_id(*tags, *tt, v);
         fr.has_value()) {
-      auto const first = (*fr)[0];
-      details.scheduled_trip_id_ =
-          tags->id(*tt, first, n::event_type::kDep);
-      details.headsign_ =
-          std::string{first.direction(lang, n::event_type::kDep)};
-      details.route_ = to_route_info(first, lang);
-      details.mode_ = to_mode(first.get_clasz(n::event_type::kDep), 5);
-      details.shape_ = encode_shape(*fr, shapes);
-      if (details.shape_.has_value()) {
-        details.shape_source_ = shape_source(*fr, shapes);
-      }
+      apply_trip_run_details(details, *tags, *tt, *fr, shapes, lang);
     }
   }
-
   if (!details.route_.has_value()) {
     details.route_ = resolve_route_info_by_id(*tags, *tt, v, lang);
   }
   if (!details.mode_.has_value()) {
     details.mode_ = resolve_mode_by_route_id(*tags, *tt, v);
   }
-  if (!details.shape_.has_value()) {
-    if (auto fr = resolve_route_shape_run_by_id(*tags, *tt, v);
-        fr.has_value()) {
-      details.shape_ = encode_shape(*fr, shapes);
-      if (details.shape_.has_value()) {
-        details.shape_source_ = shape_source(*fr, shapes);
-      }
-    }
-  }
-  if (!details.shape_.has_value()) {
-    if (auto route = resolve_static_route_by_id(*tags, *tt, v);
-        route.has_value()) {
-      details.shape_ = encode_route_stop_shape(*tt, *route);
-      if (details.shape_.has_value()) {
-        details.shape_source_ = api::VehicleShapeSourceEnum::NONE;
-      }
-    }
-  }
   return details;
 }
 
 api::VehiclePosition to_api(
     vehicle_positions::vehicle_position const& vehicle,
-    vehicle_details details) {
+    vehicle_details details,
+    bool const include_shapes) {
   return api::VehiclePosition{
       .feedId_ = vehicle.feed_id_,
       .entityId_ = vehicle.entity_id_,
@@ -546,7 +373,8 @@ api::VehiclePosition to_api(
               .bearing_ = vehicle.reported_position_.bearing_,
               .speedMps_ = vehicle.reported_position_.speed_mps_},
       .mode_ = std::move(details.mode_),
-      .shape_ = std::move(details.shape_),
+      .shape_ = include_shapes ? std::move(details.shape_) : std::nullopt,
+      .shapeId_ = std::move(details.shape_id_),
       .shapeSource_ = std::move(details.shape_source_),
       .currentStopSequence_ = to_i64(vehicle.current_stop_sequence_),
       .stopId_ = vehicle.stop_id_,
@@ -575,22 +403,25 @@ api::VehiclePositionsResponse vehicles::operator()(
     return res;
   }
 
+  auto const update_interval =
+      config_.timetable_.has_value()
+          ? std::chrono::seconds{config_.timetable_->update_interval_}
+          : std::chrono::seconds{60};
+  auto const max_age = std::max(std::chrono::seconds{60}, 3 * update_interval);
+  auto const min_ingested_time =
+      std::chrono::duration_cast<std::chrono::seconds>(
+          std::chrono::system_clock::now().time_since_epoch() - max_age)
+          .count();
   auto const snapshot = rt->vehicle_positions_->snapshot(
-      vehicle_positions::vehicle_viewport{.min_ = min->pos_, .max_ = max->pos_});
-  auto unresolved = unresolved_vehicle_stats{};
+      vehicle_positions::vehicle_viewport{.min_ = min->pos_, .max_ = max->pos_},
+      min_ingested_time);
   res.vehicles_.reserve(snapshot.size());
   for (auto const& vehicle : snapshot) {
     auto details = resolve_details(tags_, tt_, rtt, shapes_, vehicle,
                                    query.language_);
-    if (!is_display_resolved(details)) {
-      unresolved.record_filtered(vehicle, details);
-      continue;
-    }
-
-    unresolved.record_returned(details);
-    res.vehicles_.emplace_back(to_api(vehicle, std::move(details)));
+    res.vehicles_.emplace_back(
+        to_api(vehicle, std::move(details), query.includeShapes_));
   }
-  unresolved.log(snapshot.size(), res.vehicles_.size());
   return res;
 }
 

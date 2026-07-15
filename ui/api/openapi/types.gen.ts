@@ -1100,6 +1100,10 @@ export type TransitVehicleDescriptor = {
 
 export type TransitVehicleTripDescriptor = {
     tripId?: string;
+    /**
+     * Resolved MOTIS trip id for the static/realtime run when the vehicle can be matched to the timetable.
+     */
+    scheduledTripId?: string;
     startDate?: string;
     startTime?: string;
     routeId?: string;
@@ -1154,6 +1158,10 @@ export type VehiclePosition = {
      * Encoded trip or route shape for map animation when resolvable.
      */
     shape?: EncodedPolyline;
+    /**
+     * Stable identifier for caching the encoded shape across position polls.
+     */
+    shapeId?: string;
     /**
      * Source of the returned shape.
      */
@@ -3469,6 +3477,12 @@ export type RouteDetailsError = (Error);
 
 export type VehiclesData = {
     query: {
+        /**
+         * Include encoded shape geometry in each vehicle. Set this to false
+         * after caching shapes by shapeId to keep frequent position polls small.
+         *
+         */
+        includeShapes?: boolean;
         /**
          * language tags as used in OpenStreetMap / GTFS
          * (usually BCP-47 / ISO 639-1, or ISO 639-2 if there's no ISO 639-1)

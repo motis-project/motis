@@ -3,6 +3,7 @@
 
 #include <filesystem>
 #include <fstream>
+#include <optional>
 #include <string>
 
 #include "boost/asio/io_context.hpp"
@@ -28,6 +29,12 @@ using namespace testing;
 namespace {
 
 namespace fs = std::filesystem;
+
+std::int64_t unix_now() {
+  return std::chrono::duration_cast<std::chrono::seconds>(
+             std::chrono::system_clock::now().time_since_epoch())
+      .count();
+}
 
 constexpr auto const kGTFS = R"(
 # agency.txt
@@ -70,7 +77,8 @@ struct cwd_guard {
 transit_realtime::FeedMessage feed_with_vehicle(
     double const lat = 50.061,
     double const lon = 19.938,
-    std::string const& route_id = "route-1") {
+    std::string const& route_id = "route-1",
+    std::string const& trip_id = "trip-1") {
   auto msg = transit_realtime::FeedMessage{};
   msg.mutable_header()->set_gtfs_realtime_version("2.0");
   msg.mutable_header()->set_incrementality(
@@ -85,7 +93,7 @@ transit_realtime::FeedMessage feed_with_vehicle(
   vehicle->mutable_vehicle()->set_wheelchair_accessible(
       transit_realtime::
           VehicleDescriptor_WheelchairAccessible_WHEELCHAIR_ACCESSIBLE);
-  vehicle->mutable_trip()->set_trip_id("trip-1");
+  vehicle->mutable_trip()->set_trip_id(trip_id);
   vehicle->mutable_trip()->set_start_date("20260521");
   vehicle->mutable_trip()->set_start_time("12:34:00");
   vehicle->mutable_trip()->set_route_id(route_id);
@@ -109,16 +117,22 @@ transit_realtime::FeedMessage feed_with_vehicle(
 vehicle_position position(std::string feed_id,
                           std::string entity_id,
                           double const lat,
-                          double const lon) {
+                          double const lon,
+                          std::int64_t const ingested_time = 1) {
   return vehicle_position{
       .feed_id_ = std::move(feed_id),
       .entity_id_ = std::move(entity_id),
-      .reported_position_ = {.pos_ = geo::latlng{lat, lon}},
+      .vehicle_ = {},
+      .trip_ = {},
+      .reported_position_ = {.pos_ = geo::latlng{lat, lon},
+                             .bearing_ = std::nullopt,
+                             .speed_mps_ = std::nullopt},
       .current_stop_sequence_ = 7U,
       .stop_id_ = "stop",
       .current_status_ = "IN_TRANSIT_TO",
       .occupancy_status_ = "NO_DATA_AVAILABLE",
-      .ingested_time_ = 1};
+      .reported_time_ = std::nullopt,
+      .ingested_time_ = ingested_time};
 }
 
 }  // namespace
@@ -179,6 +193,28 @@ TEST(motis_vehicle_positions, replaces_only_the_selected_feed) {
                           Field(&vehicle_position::entity_id_, Eq("kept"))));
 }
 
+TEST(motis_vehicle_positions, differential_update_upserts_and_deletes) {
+  auto store = vehicle_position_store{};
+  store.replace_feed("feed",
+                     {position("feed", "replace", 50.0, 19.9),
+                      position("feed", "delete", 50.1, 19.9),
+                      position("feed", "keep", 50.2, 19.9)});
+
+  store.update_feed("feed", {position("feed", "replace", 50.3, 19.9)},
+                    {"delete"});
+
+  auto const snapshot = store.snapshot(
+      vehicle_viewport{.min_ = geo::latlng{49.9, 19.8},
+                       .max_ = geo::latlng{50.4, 20.0}});
+  EXPECT_THAT(snapshot,
+              ElementsAre(Field(&vehicle_position::entity_id_, Eq("keep")),
+                          AllOf(Field(&vehicle_position::entity_id_,
+                                      Eq("replace")),
+                                Field(&vehicle_position::reported_position_,
+                                      Field(&reported_position::pos_,
+                                            Eq(geo::latlng{50.3, 19.9}))))));
+}
+
 TEST(motis_vehicle_positions, snapshots_only_viewport_matches) {
   auto store = vehicle_position_store{};
   store.replace_feed("feed",
@@ -193,19 +229,39 @@ TEST(motis_vehicle_positions, snapshots_only_viewport_matches) {
   EXPECT_EQ(snapshot.front().entity_id_, "inside");
 }
 
+TEST(motis_vehicle_positions, snapshots_exclude_stale_positions) {
+  auto store = vehicle_position_store{};
+  store.replace_feed("feed",
+                     {position("feed", "stale", 50.061, 19.938, 10),
+                      position("feed", "fresh", 50.071, 19.948, 20)});
+
+  auto const snapshot = store.snapshot(
+      vehicle_viewport{.min_ = geo::latlng{50.0, 19.8},
+                       .max_ = geo::latlng{50.2, 20.1}},
+      15);
+
+  ASSERT_THAT(snapshot, SizeIs(1));
+  EXPECT_EQ(snapshot.front().entity_id_, "fresh");
+}
+
 TEST(motis_vehicle_positions, endpoint_requires_viewport) {
+  auto const c = motis::config{};
   auto rt = std::make_shared<motis::rt>();
-  auto endpoint = motis::ep::vehicles{.rt_ = rt};
+  auto endpoint = motis::ep::vehicles{.config_ = c, .rt_ = rt};
 
   EXPECT_THROW(endpoint("/api/v1/map/vehicles"), openapi::bad_request_exception);
 }
 
 TEST(motis_vehicle_positions, endpoint_returns_viewport_payload) {
+  auto const c = motis::config{
+      .timetable_ = {motis::config::timetable{.update_interval_ = 15}}};
   auto rt = std::make_shared<motis::rt>();
   rt->vehicle_positions_->replace_feed(
-      "feed", {position("feed", "inside", 50.061, 19.938),
-               position("feed", "outside", 51.0, 19.938)});
-  auto endpoint = motis::ep::vehicles{.rt_ = rt};
+      "feed", {position("feed", "inside", 50.061, 19.938, unix_now()),
+               position("feed", "outside", 51.0, 19.938, unix_now()),
+               position("feed", "stale", 50.071, 19.948,
+                        unix_now() - 61)});
+  auto endpoint = motis::ep::vehicles{.config_ = c, .rt_ = rt};
 
   auto const res =
       endpoint("/api/v1/map/vehicles?min=50.0,19.8&max=50.2,20.1");
@@ -270,6 +326,7 @@ TEST(motis_vehicle_positions, rt_update_consumes_vehicle_only_gtfsrt_feed) {
   auto endpoint = motis::ep::vehicles{.tags_ = d.tags_.get(),
                                       .tt_ = d.tt_.get(),
                                       .shapes_ = d.shapes_.get(),
+                                      .config_ = c,
                                       .rt_ = d.rt_};
   auto const res =
       endpoint("/api/v1/map/vehicles?min=50.0,19.8&max=50.2,20.1");
@@ -287,4 +344,61 @@ TEST(motis_vehicle_positions, rt_update_consumes_vehicle_only_gtfsrt_feed) {
   EXPECT_EQ(res.vehicles_.front().mode_, motis::api::ModeEnum::BUS);
   ASSERT_TRUE(res.vehicles_.front().shape_.has_value());
   EXPECT_GT(res.vehicles_.front().shape_->length_, 0);
+  ASSERT_TRUE(res.vehicles_.front().shapeId_.has_value());
+
+  auto const without_shapes = endpoint(
+      "/api/v1/map/vehicles?min=50.0,19.8&max=50.2,20.1&includeShapes=false");
+  ASSERT_THAT(without_shapes.vehicles_, SizeIs(1));
+  EXPECT_FALSE(without_shapes.vehicles_.front().shape_.has_value());
+  EXPECT_EQ(without_shapes.vehicles_.front().shapeId_,
+            res.vehicles_.front().shapeId_);
+
+  auto route_only_rt = std::make_shared<motis::rt>();
+  auto route_only = position("test:manual", "route-only", 50.061, 19.938,
+                             unix_now());
+  route_only.trip_.route_id_ = "route-1";
+  route_only.trip_.direction_id_ = 1U;
+  route_only_rt->vehicle_positions_->replace_feed("test:manual",
+                                                   {route_only});
+  auto route_only_endpoint = motis::ep::vehicles{.tags_ = d.tags_.get(),
+                                                 .tt_ = d.tt_.get(),
+                                                 .shapes_ = d.shapes_.get(),
+                                                 .config_ = c,
+                                                 .rt_ = route_only_rt};
+  auto const route_only_res = route_only_endpoint(
+      "/api/v1/map/vehicles?min=50.0,19.8&max=50.2,20.1");
+  ASSERT_THAT(route_only_res.vehicles_, SizeIs(1));
+  EXPECT_TRUE(route_only_res.vehicles_.front().route_.has_value());
+  EXPECT_TRUE(route_only_res.vehicles_.front().mode_.has_value());
+  EXPECT_FALSE(route_only_res.vehicles_.front().trip_.headsign_.has_value());
+  EXPECT_FALSE(route_only_res.vehicles_.front().shape_.has_value());
+  EXPECT_FALSE(route_only_res.vehicles_.front().shapeId_.has_value());
+
+  auto differential = feed_with_vehicle(50.071, 19.948);
+  differential.mutable_header()->set_incrementality(
+      transit_realtime::FeedHeader_Incrementality_DIFFERENTIAL);
+  differential.mutable_entity(0)->set_id("entity-2");
+  differential.mutable_entity(0)->mutable_vehicle()->mutable_vehicle()->set_id(
+      "veh-2");
+  auto differential_dump =
+      std::ofstream{"dump_rt/test-https___example_test_vehicle_positions",
+                    std::ios::binary | std::ios::trunc};
+  ASSERT_TRUE(differential_dump.good());
+  auto const differential_bytes = differential.SerializeAsString();
+  differential_dump.write(
+      differential_bytes.data(),
+      static_cast<std::streamsize>(differential_bytes.size()));
+  differential_dump.close();
+
+  auto differential_ioc = boost::asio::io_context{};
+  motis::run_rt_update(differential_ioc, c, d);
+  differential_ioc.run_for(std::chrono::milliseconds{100});
+  auto const differential_snapshot =
+      d.rt_->vehicle_positions_->snapshot(vehicle_viewport{
+          .min_ = geo::latlng{50.0, 19.8},
+          .max_ = geo::latlng{50.2, 20.1}});
+  EXPECT_THAT(
+      differential_snapshot,
+      ElementsAre(Field(&vehicle_position::entity_id_, Eq("entity-1")),
+                  Field(&vehicle_position::entity_id_, Eq("entity-2"))));
 }

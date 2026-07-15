@@ -2733,7 +2733,10 @@ paths:
       description: |
         Returns the latest GTFS Realtime VehiclePosition facts inside the
         requested viewport. The endpoint is intentionally viewport-bounded and
-        does not expose unbounded feed-wide vehicle search.
+        does not expose unbounded feed-wide vehicle search. Timetable enrichment
+        is optional: unresolved positions are still returned without route,
+        destination, mode, or shape. Positions older than the server's realtime
+        freshness window are omitted.
       parameters:
         - name: min
           in: query
@@ -2758,6 +2761,15 @@ paths:
             items:
               type: string
           explode: false
+        - name: includeShapes
+          in: query
+          required: false
+          description: |
+            Include encoded shape geometry in each vehicle. Set this to false
+            after caching shapes by shapeId to keep frequent position polls small.
+          schema:
+            type: boolean
+            default: true
       responses:
         '400':
           description: Bad Request
@@ -4350,6 +4362,9 @@ components:
         shape:
           $ref: '#/components/schemas/EncodedPolyline'
           description: Encoded trip or route shape for map animation when resolvable.
+        shapeId:
+          type: string
+          description: Stable identifier for caching the encoded shape across position polls.
         shapeSource:
           $ref: '#/components/schemas/VehicleShapeSource'
           description: Source of the returned shape.

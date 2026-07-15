@@ -1375,6 +1375,10 @@ export const TransitVehicleTripDescriptorSchema = {
         tripId: {
             type: 'string'
         },
+        scheduledTripId: {
+            type: 'string',
+            description: 'Resolved MOTIS trip id for the static/realtime run when the vehicle can be matched to the timetable.'
+        },
         startDate: {
             type: 'string'
         },
@@ -1453,6 +1457,10 @@ export const VehiclePositionSchema = {
         shape: {
             '$ref': '#/components/schemas/EncodedPolyline',
             description: 'Encoded trip or route shape for map animation when resolvable.'
+        },
+        shapeId: {
+            type: 'string',
+            description: 'Stable identifier for caching the encoded shape across position polls.'
         },
         shapeSource: {
             '$ref': '#/components/schemas/VehicleShapeSource',

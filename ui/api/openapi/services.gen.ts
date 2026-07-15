@@ -191,7 +191,10 @@ export const routeDetails = <ThrowOnError extends boolean = false>(options: Opti
  * Get public-transit vehicle positions for a map section
  * Returns the latest GTFS Realtime VehiclePosition facts inside the
  * requested viewport. The endpoint is intentionally viewport-bounded and
- * does not expose unbounded feed-wide vehicle search.
+ * does not expose unbounded feed-wide vehicle search. Timetable enrichment
+ * is optional: unresolved positions are still returned without route,
+ * destination, mode, or shape. Positions older than the server's realtime
+ * freshness window are omitted.
  *
  */
 export const vehicles = <ThrowOnError extends boolean = false>(options: Options<VehiclesData, ThrowOnError>) => {
