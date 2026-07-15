@@ -301,25 +301,25 @@ export const getStyle = (
 
 	const hillshadeSources: StyleSpecification['sources'] = withHillshades
 		? {
-			hillshadeSource: {
-				type: 'raster-dem',
-				tiles: ['./mapterhorn/{z}/{x}/{y}.webp'],
-				attribution: "<a href='https://mapterhorn.com/attribution'>© Mapterhorn</a>",
-				bounds: [-180, -85.0511287, 180, 85.0511287],
-				encoding: 'terrarium',
-				tileSize: 512
-			} satisfies RasterDEMSourceSpecification
-		}
+				hillshadeSource: {
+					type: 'raster-dem',
+					tiles: ['./mapterhorn/{z}/{x}/{y}.webp'],
+					attribution: "<a href='https://mapterhorn.com/attribution'>© Mapterhorn</a>",
+					bounds: [-180, -85.0511287, 180, 85.0511287],
+					encoding: 'terrarium',
+					tileSize: 512
+				} satisfies RasterDEMSourceSpecification
+			}
 		: {};
 	const hillshadeLayers: HillshadeLayerSpecification[] = withHillshades
 		? [
-			{
-				id: 'hillshade',
-				type: 'hillshade',
-				source: 'hillshadeSource',
-				paint: { 'hillshade-exaggeration': 0.33 }
-			}
-		]
+				{
+					id: 'hillshade',
+					type: 'hillshade',
+					source: 'hillshadeSource',
+					paint: { 'hillshade-exaggeration': 0.33 }
+				}
+			]
 		: [];
 
 	// Insert hillshade above the base land/water fills but below streets.
