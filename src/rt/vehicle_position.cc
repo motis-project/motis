@@ -46,7 +46,8 @@ std::vector<vehicle_position> parse_gtfsrt_vehicle_positions(
   auto positions = std::vector<vehicle_position>{};
 
   for (auto const& entity : msg.entity()) {
-    if (!entity.has_vehicle() || !entity.vehicle().has_position()) {
+    if ((entity.has_is_deleted() && entity.is_deleted()) ||
+        !entity.has_vehicle() || !entity.vehicle().has_position()) {
       continue;
     }
 
@@ -160,11 +161,39 @@ void vehicle_position_store::replace_feed(
   });
 }
 
+void vehicle_position_store::update_feed(
+    std::string feed_id,
+    std::vector<vehicle_position> positions,
+    std::vector<std::string> const& deleted_entity_ids) {
+  std::erase_if(positions_, [&](vehicle_position const& existing) {
+    if (existing.feed_id_ != feed_id) {
+      return false;
+    }
+    auto const deleted = std::ranges::find(deleted_entity_ids,
+                                           existing.entity_id_) !=
+                         end(deleted_entity_ids);
+    auto const replaced = std::ranges::find(positions, existing.entity_id_,
+                                            &vehicle_position::entity_id_) !=
+                          end(positions);
+    return deleted || replaced;
+  });
+  for (auto& pos : positions) {
+    pos.feed_id_ = feed_id;
+  }
+  positions_.insert(end(positions_), begin(positions), end(positions));
+  std::ranges::sort(positions_, {}, [](vehicle_position const& x) {
+    return std::pair{x.feed_id_, x.entity_id_};
+  });
+}
+
 std::vector<vehicle_position> vehicle_position_store::snapshot(
-    vehicle_viewport const& viewport) const {
+    vehicle_viewport const& viewport,
+    std::optional<std::int64_t> const min_ingested_time) const {
   auto result = std::vector<vehicle_position>{};
   for (auto const& pos : positions_) {
-    if (viewport.contains(pos.reported_position_.pos_)) {
+    if ((!min_ingested_time.has_value() ||
+         pos.ingested_time_ >= *min_ingested_time) &&
+        viewport.contains(pos.reported_position_.pos_)) {
       result.emplace_back(pos);
     }
   }

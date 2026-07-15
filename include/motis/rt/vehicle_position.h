@@ -69,9 +69,13 @@ std::vector<vehicle_position> parse_gtfsrt_vehicle_positions(
 
 struct vehicle_position_store {
   void replace_feed(std::string feed_id, std::vector<vehicle_position>);
+  void update_feed(std::string feed_id,
+                   std::vector<vehicle_position>,
+                   std::vector<std::string> const& deleted_entity_ids);
 
   [[nodiscard]] std::vector<vehicle_position> snapshot(
-      vehicle_viewport const&) const;
+      vehicle_viewport const&,
+      std::optional<std::int64_t> min_ingested_time = std::nullopt) const;
 
   [[nodiscard]] bool empty() const;
 
