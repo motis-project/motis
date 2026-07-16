@@ -44,6 +44,6 @@ TEST(initial, osm_only_fallback) {
 
   EXPECT_NEAR(49.9943077, res.lat_, 1e-6);
   EXPECT_NEAR(8.6573986, res.lon_, 1e-6);
-  EXPECT_GT(res.zoom_, 0.0);
+  EXPECT_EQ(10.0, res.zoom_);
   EXPECT_TRUE(res.serverConfig_.hasStreetRouting_);
 }
