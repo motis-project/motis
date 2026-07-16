@@ -12,6 +12,7 @@
 #include "nigiri/routing/search.h"
 #include "nigiri/timetable.h"
 
+#include "utl/parallel_for.h"
 #include "utl/progress_tracker.h"
 
 #include "motis-api/motis-api.h"
@@ -30,7 +31,7 @@ namespace po = boost::program_options;
 
 namespace motis {
 
-constexpr auto const kMinRank = 16UL;
+constexpr auto kMinRank = 16UL;
 
 constexpr auto kEuropeBounds = R"({
   "type": "Polygon",
@@ -90,7 +91,7 @@ int generate(int ac, char** av) {
   auto lb_rank = true;
   auto geo_rank = std::optional<std::uint64_t>{};
   tg_geom* bounds{nullptr};
-  auto p = api::plan_params{};
+  auto master_params = api::plan_params{};
 
   auto const parse_date = [](std::string_view const s) {
     std::stringstream in;
@@ -174,15 +175,15 @@ int generate(int ac, char** av) {
        "intermodal queries")  //
       ("max_travel_time",
        po::value<std::int64_t>()->notifier(
-           [&](auto const v) { p.maxTravelTime_ = v; }),
+           [&](auto const v) { master_params.maxTravelTime_ = v; }),
        "sets maximum travel time of the queries")  //
       ("max_matching_distance",
-       po::value(&p.maxMatchingDistance_)
-           ->default_value(p.maxMatchingDistance_),
+       po::value(&master_params.maxMatchingDistance_)
+           ->default_value(master_params.maxMatchingDistance_),
        "sets the maximum matching distance of the queries")  //
       ("fastest_direct_factor",
-       po::value(&p.fastestDirectFactor_)
-           ->default_value(p.fastestDirectFactor_),
+       po::value(&master_params.fastestDirectFactor_)
+           ->default_value(master_params.fastestDirectFactor_),
        "sets fastest direct factor of the queries")  //
       ("lb_rank", po::value(&lb_rank)->default_value(lb_rank),
        "emit queries uniformly distributed over the lower bounds (lb) ranks, "
@@ -259,9 +260,9 @@ int generate(int ac, char** av) {
     }
     std::cout << "\n";
 
-    p.directModes_ = *modes;
-    p.preTransitModes_ = *modes;
-    p.postTransitModes_ = *modes;
+    master_params.directModes_ = *modes;
+    master_params.preTransitModes_ = *modes;
+    master_params.postTransitModes_ = *modes;
 
     auto const mode_match = [&](auto const node) {
       auto const can_walk = [&](auto const x) {
@@ -304,162 +305,194 @@ int generate(int ac, char** av) {
     fmt::println("station-to-station");
   }
 
-  auto stops = std::vector<n::location_idx_t>{};
-  for (auto i = 0U; i != d.tt_->n_locations(); ++i) {
-    auto const l = n::location_idx_t{i};
+  auto const master_stops = [&] {
+    auto v = std::vector<n::location_idx_t>{};
+    for (auto i = 0U; i != d.tt_->n_locations(); ++i) {
+      auto const l = n::location_idx_t{i};
 
-    if (!in_bounds(d.tt_->locations_.coordinates_[l]) ||
-        (use_odm_bounds &&
-         !d.odm_bounds_->contains(d.tt_->locations_.coordinates_[l]))) {
-      continue;
+      if (!in_bounds(d.tt_->locations_.coordinates_[l]) ||
+          (use_odm_bounds &&
+           !d.odm_bounds_->contains(d.tt_->locations_.coordinates_[l]))) {
+        continue;
+      }
+      v.emplace_back(l);
     }
-    stops.emplace_back(l);
-  }
+    return v;
+  }();
 
   if (bounds != nullptr) {
-    fmt::println("in bounds: {}/{} stops", stops.size(), d.tt_->n_locations());
+    fmt::println("in bounds: {}/{} stops", master_stops.size(),
+                 d.tt_->n_locations());
   }
 
-  auto geo_rank_index = 0UL;
-  auto geo_distance = std::unordered_map<n::location_idx_t, double>{};
   struct flex_seed {
     geo::latlng from_;
     n::location_idx_t rank_stop_;
   };
-  auto flex_seeds = std::vector<flex_seed>{};
-  if (use_flex) {
-    for (auto i = 0U; i != d.tt_->flex_area_locations_.size(); ++i) {
-      auto const a = n::flex_area_idx_t{i};
-      auto const area_stops = d.tt_->flex_area_locations_[a];
-      for (auto const l : area_stops) {
-        flex_seeds.emplace_back(d.tt_->locations_.coordinates_[l], l);
+  auto const flex_seeds = [&] {
+    auto v = std::vector<flex_seed>{};
+    if (use_flex) {
+      for (auto i = 0U; i != d.tt_->flex_area_locations_.size(); ++i) {
+        auto const a = n::flex_area_idx_t{i};
+        auto const area_stops = d.tt_->flex_area_locations_[a];
+        for (auto const l : area_stops) {
+          v.emplace_back(d.tt_->locations_.coordinates_[l], l);
+        }
+        auto const& bbox = d.tt_->flex_area_bbox_[a];
+        v.emplace_back(  // use flex area center
+            geo::latlng{(bbox.min_.lat_ + bbox.max_.lat_) / 2.0,
+                        (bbox.min_.lng_ + bbox.max_.lng_) / 2.0},
+            area_stops.empty() ? n::location_idx_t::invalid() : area_stops[0]);
       }
-      auto const& bbox = d.tt_->flex_area_bbox_[a];
-      flex_seeds.emplace_back(  // use flex area center
-          geo::latlng{(bbox.min_.lat_ + bbox.max_.lat_) / 2.0,
-                      (bbox.min_.lng_ + bbox.max_.lng_) / 2.0},
-          area_stops.empty() ? n::location_idx_t::invalid() : area_stops[0]);
+      utl::verify(!v.empty(), "no flex areas in timetable");
+      fmt::println("flex: {} areas, {} seeds (stops + area centers)",
+                   d.tt_->flex_area_locations_.size(), v.size());
     }
-    utl::verify(!flex_seeds.empty(), "no flex areas in timetable");
-    fmt::println("flex: {} areas, {} seeds (stops + area centers)",
-                 d.tt_->flex_area_locations_.size(), flex_seeds.size());
-  }
+    return v;
+  }();
 
-  auto ss = std::optional<n::routing::search_state>{};
-  auto rs = std::optional<n::routing::raptor_state>{};
+  auto const ranks = [&] {
+    auto ret = std::vector(n, 0U);
+    for (auto [i, r] = std::tuple{0U, kMinRank}; i != n;
+         ++i, r = r * 2U < master_stops.size() ? r * 2U : kMinRank) {
+      ret[i] = r;
+    }
+    return ret;
+  }();
+
+  auto geo_rank_index = 0UL;
   if (geo_rank) {
     fmt::println("from and to pairings by geo-rank = {}", *geo_rank);
     geo_rank_index = 1UL << *geo_rank;
-    if (geo_rank_index > stops.size() - 1U) {
+    if (geo_rank_index > master_stops.size() - 1U) {
       fmt::println("geo-rank index exceeds number of stops: {} > {}",
-                   geo_rank_index, stops.size() - 1U);
+                   geo_rank_index, master_stops.size() - 1U);
       return -1;
     }
-    geo_distance.reserve(stops.size());
     lb_rank = false;
   } else if (lb_rank) {
-    ss = n::routing::search_state{};
-    rs = n::routing::raptor_state{};
     fmt::println("from and to pairings by lower bounds rank");
   } else {
     fmt::println("from and to uniformly at random");
   }
 
-  auto const get_place =
-      [&](n::location_idx_t const l) -> std::optional<std::string> {
-    if (!modes) {
-      return d.tags_->id(*d.tt_, l);
-    }
+  auto t = utl::scoped_timer{"generate queries"};
+  auto out = std::ofstream{"queries.txt"};
+  auto const progress_tracker =
+      utl::activate_progress_tracker(fmt::format("generating {} queries", n));
+  progress_tracker->in_high(n);
+  auto const silencer = utl::global_progress_bars{false};
+  auto mutex = std::mutex{};
+  utl::parallel_for(
+      ranks,
+      [&](auto const r) {
+        thread_local auto p = master_params;
+        thread_local auto stops = master_stops;
+        thread_local auto ss = std::optional<n::routing::search_state>{};
+        thread_local auto rs = std::optional<n::routing::raptor_state>{};
+        thread_local auto geo_distance =
+            std::unordered_map<n::location_idx_t, double>{};
 
-    auto const nodes =
-        node_rtree.in_radius(d.tt_->locations_.coordinates_[l], max_dist);
-    if (nodes.empty()) {
-      return std::nullopt;
-    }
-
-    auto const pos = d.w_->get_node_pos(rand_in(nodes));
-    return fmt::format("{},{}", pos.lat(), pos.lng());
-  };
-
-  auto const random_from_to = [&](auto const r) {
-    auto from_place = std::optional<std::string>{};
-    auto to_place = std::optional<std::string>{};
-
-    for (auto x = 0U; x != 1000U; ++x) {
-      // stop used to lb-rank the destination (invalid -> random destination)
-      auto rank_stop = n::location_idx_t::invalid();
-      if (use_flex) {
-        auto const seed = rand_in(flex_seeds);
-        from_place = fmt::format("{},{}", seed.from_.lat_, seed.from_.lng_);
-        rank_stop = seed.rank_stop_;
-      } else {
-        rank_stop = random_stop(*d.tt_, stops);
-        from_place = get_place(rank_stop);
-        if (!from_place) {
-          continue;
+        if (geo_rank) {
+          geo_distance.reserve(master_stops.size());
+        } else if (lb_rank) {
+          if (!ss) {
+            ss = n::routing::search_state{};
+          }
+          if (!rs) {
+            rs = n::routing::raptor_state{};
+          }
         }
-      }
 
-      if (lb_rank && rank_stop != n::location_idx_t::invalid()) {
-        auto const s = n::routing::search<
-            n::direction::kBackward,
-            n::routing::raptor<n::direction::kBackward, false, 0,
-                               n::routing::search_mode::kOneToAll>>{
-            *d.tt_, nullptr, *ss, *rs,
-            nigiri::routing::query{
-                .start_time_ = d.tt_->date_range_.from_,
-                .destination_ = {{rank_stop, n::duration_t{0U}, 0}}}};
-        utl::sort(stops, [&](auto const& a, auto const& b) {
-          return ss->travel_time_lower_bound_[to_idx(a)] <
-                 ss->travel_time_lower_bound_[to_idx(b)];
-        });
-        to_place = get_place(stops[r]);
-      } else if (geo_rank && rank_stop != n::location_idx_t::invalid()) {
-        for (auto const s : stops) {
-          geo_distance[s] =
-              geo::distance(d.tt_->locations_.coordinates_[rank_stop],
-                            d.tt_->locations_.coordinates_[s]);
-        }
-        utl::sort(stops, [&](auto const& a, auto const& b) {
-          return geo_distance[a] < geo_distance[b];
-        });
-        to_place = get_place(stops[geo_rank_index]);
-      } else {
-        to_place = get_place(random_stop(*d.tt_, stops));
-      }
-      if (to_place) {
-        break;
-      }
-    }
+        auto const get_place =
+            [&](n::location_idx_t const l) -> std::optional<std::string> {
+          if (!modes) {
+            return d.tags_->id(*d.tt_, l);
+          }
 
-    p.fromPlace_ = *from_place;
-    p.toPlace_ = *to_place;
-  };
+          auto const nodes =
+              node_rtree.in_radius(d.tt_->locations_.coordinates_[l], max_dist);
+          if (nodes.empty()) {
+            return std::nullopt;
+          }
 
-  auto const random_time = [&]() {
-    using namespace std::chrono_literals;
-    p.time_ =
-        *first_day +
-        rand_in(0U,
-                static_cast<std::uint32_t>((*last_day - *first_day).count())) *
-            date::days{1U} +
-        (time_of_day ? *time_of_day : rand_in(6U, 18U)) * 1h;
-  };
+          auto const pos = d.w_->get_node_pos(rand_in(nodes));
+          return fmt::format("{},{}", pos.lat(), pos.lng());
+        };
 
-  {
-    auto out = std::ofstream{"queries.txt"};
-    auto const progress_tracker =
-        utl::activate_progress_tracker(fmt::format("generating {} queries", n));
-    progress_tracker->in_high(n);
-    auto const silencer = utl::global_progress_bars{false};
-    for (auto [i, r] = std::tuple{0U, kMinRank}; i != n;
-         ++i, r = r * 2U < stops.size() ? r * 2U : kMinRank) {
-      random_from_to(r);
-      random_time();
-      out << p.to_url("/api/v1/plan") << "\n";
-      progress_tracker->increment();
-    }
-  }
+        auto const random_from_to = [&] {
+          auto from_place = std::optional<std::string>{};
+          auto to_place = std::optional<std::string>{};
+
+          for (auto x = 0U; x != 1000U; ++x) {
+            // stop used to lb-rank the destination (invalid -> random
+            // destination)
+            auto rank_stop = n::location_idx_t::invalid();
+            if (use_flex) {
+              auto const seed = rand_in(flex_seeds);
+              from_place =
+                  fmt::format("{},{}", seed.from_.lat_, seed.from_.lng_);
+              rank_stop = seed.rank_stop_;
+            } else {
+              rank_stop = random_stop(*d.tt_, stops);
+              from_place = get_place(rank_stop);
+              if (!from_place) {
+                continue;
+              }
+            }
+
+            if (lb_rank && rank_stop != n::location_idx_t::invalid()) {
+              auto const s = n::routing::search<
+                  n::direction::kBackward,
+                  n::routing::raptor<n::direction::kBackward, false, 0,
+                                     n::routing::search_mode::kOneToAll>>{
+                  *d.tt_, nullptr, *ss, *rs,
+                  nigiri::routing::query{
+                      .start_time_ = d.tt_->date_range_.from_,
+                      .destination_ = {{rank_stop, n::duration_t{0U}, 0}}}};
+              utl::sort(stops, [&](auto const& a, auto const& b) {
+                return ss->travel_time_lower_bound_[to_idx(a)] <
+                       ss->travel_time_lower_bound_[to_idx(b)];
+              });
+              to_place = get_place(stops[r]);
+            } else if (geo_rank && rank_stop != n::location_idx_t::invalid()) {
+              for (auto const s : stops) {
+                geo_distance[s] =
+                    geo::distance(d.tt_->locations_.coordinates_[rank_stop],
+                                  d.tt_->locations_.coordinates_[s]);
+              }
+              utl::sort(stops, [&](auto const& a, auto const& b) {
+                return geo_distance[a] < geo_distance[b];
+              });
+              to_place = get_place(stops[geo_rank_index]);
+            } else {
+              to_place = get_place(random_stop(*d.tt_, stops));
+            }
+            if (to_place) {
+              break;
+            }
+          }
+
+          p.fromPlace_ = *from_place;
+          p.toPlace_ = *to_place;
+        };
+
+        auto const random_time = [&] {
+          using namespace std::chrono_literals;
+          p.time_ = *first_day +
+                    rand_in(0U, static_cast<std::uint32_t>(
+                                    (*last_day - *first_day).count())) *
+                        date::days{1U} +
+                    (time_of_day ? *time_of_day : rand_in(6U, 18U)) * 1h;
+        };
+
+        random_from_to();
+        random_time();
+
+        auto guard = std::lock_guard{mutex};
+        out << p.to_url("/api/v1/plan") << "\n";
+      },
+      progress_tracker->update_fn());
 
   return 0;
 }
