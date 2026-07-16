@@ -9,7 +9,7 @@
 [osr]
   url=git@github.com:motis-project/osr.git
   branch=master
-  commit=2f0da2d9fb8ed2af820ca317ba24b816b1c814a8
+  commit=a0ef56fadee682b37b8b01db1b64347f53f3d4c6
 [utl]
   url=git@github.com:motis-project/utl.git
   branch=master
@@ -41,7 +41,7 @@
 [tiles]
   url=git@github.com:motis-project/tiles.git
   branch=master
-  commit=b5453c338c18d1f3e5875ad361867dd53dcfbf62
+  commit=94852e2a3fadf9c403b44fdd460f8ec18b51951e
 [boost]
   url=git@github.com:motis-project/boost.git
   branch=boost-1.89.0
@@ -74,11 +74,3 @@
   url=git@github.com:motis-project/geo.git
   branch=master
   commit=4a410791d3a2d77eafae917e0607051bbd4fa659
-[zstd]
-  url=git@github.com:motis-project/zstd.git
-  branch=master
-  commit=bce26304a57dd504ae7ae51f384bf9292d7e3acb
-[oneTBB]
-  url=git@github.com:motis-project/oneTBB.git
-  branch=master
-  commit=cda5d37ce8303c58ac506259387e75de4ffcf26b
