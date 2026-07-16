@@ -7,6 +7,7 @@ export const ModeSchema = {
   - \`BIKE\`
   - \`RENTAL\` Experimental. Expect unannounced breaking changes (without version bumps) for all parameters and returned structs.
   - \`CAR\`
+  - \`HGV\` Heavy goods vehicles (only supported for direct connections)
   - \`CAR_PARKING\` Experimental. Expect unannounced breaking changes (without version bumps) for all parameters and returned structs.
   - \`CAR_DROPOFF\` Experimental. Expect unannounced breaking changes (without version bumps) for all perameters and returned structs.
   - \`ODM\` on-demand taxis from the Prima+ÖV Project
@@ -38,7 +39,7 @@ export const ModeSchema = {
   - \`CABLE_CAR\`: deprecated
 `,
     type: 'string',
-    enum: ['WALK', 'BIKE', 'RENTAL', 'CAR', 'CAR_PARKING', 'CAR_DROPOFF', 'ODM', 'RIDE_SHARING', 'FLEX', 'DEBUG_BUS_ROUTE', 'DEBUG_RAILWAY_ROUTE', 'DEBUG_FERRY_ROUTE', 'TRANSIT', 'TRAM', 'SUBWAY', 'FERRY', 'AIRPLANE', 'BUS', 'COACH', 'RAIL', 'HIGHSPEED_RAIL', 'LONG_DISTANCE', 'NIGHT_RAIL', 'REGIONAL_FAST_RAIL', 'REGIONAL_RAIL', 'SUBURBAN', 'FUNICULAR', 'AERIAL_LIFT', 'OTHER', 'AREAL_LIFT', 'METRO', 'CABLE_CAR']
+    enum: ['WALK', 'BIKE', 'RENTAL', 'CAR', 'HGV', 'CAR_PARKING', 'CAR_DROPOFF', 'ODM', 'RIDE_SHARING', 'FLEX', 'DEBUG_BUS_ROUTE', 'DEBUG_RAILWAY_ROUTE', 'DEBUG_FERRY_ROUTE', 'TRANSIT', 'TRAM', 'SUBWAY', 'FERRY', 'AIRPLANE', 'BUS', 'COACH', 'RAIL', 'HIGHSPEED_RAIL', 'LONG_DISTANCE', 'NIGHT_RAIL', 'REGIONAL_FAST_RAIL', 'REGIONAL_RAIL', 'SUBURBAN', 'FUNICULAR', 'AERIAL_LIFT', 'OTHER', 'AREAL_LIFT', 'METRO', 'CABLE_CAR']
 } as const;
 
 export const RouteSchema = {
@@ -473,6 +474,61 @@ export const PedestrianSpeedSchema = {
 export const CyclingSpeedSchema = {
     description: 'Average speed for bike routing in meters per second',
     type: 'number'
+} as const;
+
+export const VehicleHeightSchema = {
+    description: 'Vehicle height for HGV routing in meters',
+    type: 'number'
+} as const;
+
+export const VehicleWidthSchema = {
+    description: 'Vehicle width for HGV routing in meters',
+    type: 'number'
+} as const;
+
+export const VehicleLengthSchema = {
+    description: 'Vehicle length for HGV routing in meters',
+    type: 'number'
+} as const;
+
+export const VehicleWeightSchema = {
+    description: 'Vehicle gross weight for HGV routing in tons',
+    type: 'number'
+} as const;
+
+export const VehicleHazmatSchema = {
+    description: 'Whether the vehicle carries hazardous materials for HGV routing',
+    type: 'boolean'
+} as const;
+
+export const VehicleHazmatWaterSchema = {
+    description: 'Whether the vehicle carries hazardous materials dangerous to water for HGV routing',
+    type: 'boolean'
+} as const;
+
+export const VehicleAxleCountSchema = {
+    description: 'Axle count for HGV routing',
+    type: 'integer'
+} as const;
+
+export const VehicleAxleLoadSchema = {
+    description: 'Maximum axle load for HGV routing in tons',
+    type: 'number'
+} as const;
+
+export const VehicleTrailerSchema = {
+    description: 'Whether the vehicle has a trailer for HGV routing',
+    type: 'boolean'
+} as const;
+
+export const VehicleTopSpeedSchema = {
+    description: 'Vehicle top speed for HGV routing in km/h',
+    type: 'integer'
+} as const;
+
+export const VehicleLezAccessSchema = {
+    description: 'Whether the vehicle is allowed to use low-emission zones for HGV routing',
+    type: 'boolean'
 } as const;
 
 export const VertexTypeSchema = {
@@ -2245,6 +2301,39 @@ Average speed for pedestrian routing.
 Average speed for bike routing.
 `,
             '$ref': '#/components/schemas/CyclingSpeed'
+        },
+        vehicleHeight: {
+            '$ref': '#/components/schemas/VehicleHeight'
+        },
+        vehicleWidth: {
+            '$ref': '#/components/schemas/VehicleWidth'
+        },
+        vehicleLength: {
+            '$ref': '#/components/schemas/VehicleLength'
+        },
+        vehicleWeight: {
+            '$ref': '#/components/schemas/VehicleWeight'
+        },
+        vehicleHazmat: {
+            '$ref': '#/components/schemas/VehicleHazmat'
+        },
+        vehicleHazmatWater: {
+            '$ref': '#/components/schemas/VehicleHazmatWater'
+        },
+        vehicleAxleCount: {
+            '$ref': '#/components/schemas/VehicleAxleCount'
+        },
+        vehicleAxleLoad: {
+            '$ref': '#/components/schemas/VehicleAxleLoad'
+        },
+        vehicleTrailer: {
+            '$ref': '#/components/schemas/VehicleTrailer'
+        },
+        vehicleTopSpeed: {
+            '$ref': '#/components/schemas/VehicleTopSpeed'
+        },
+        vehicleLezAccess: {
+            '$ref': '#/components/schemas/VehicleLezAccess'
         },
         elevationCosts: {
             description: `Optional. Default is \`NONE\`.

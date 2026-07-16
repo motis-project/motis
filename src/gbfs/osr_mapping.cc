@@ -173,23 +173,28 @@ struct osr_mapping {
         return false;
       }
       auto const& node_props = w_.r_->node_properties_[n.node_];
-      if (footp::node_cost(foot_params, node_props) == osr::kInfeasible ||
-          bikep::node_cost(bike_params, node_props) == osr::kInfeasible) {
+      if (footp::node_cost(foot_params, node_props).cost_ == osr::kInfeasible ||
+          bikep::node_cost(bike_params, node_props).cost_ == osr::kInfeasible) {
         return false;
       }
       // node needs to have at least one way accessible by foot and one by bike
       return utl::any_of(w_.r_->node_ways_[n.node_],
                          [&](auto const way_idx) {
                            return footp::way_cost(
-                                      footp::parameters{},
-                                      w_.r_->way_properties_[way_idx],
-                                      osr::direction::kForward,
-                                      0U) != osr::kInfeasible;
+                                      foot_params, *w_.r_, w_.timezones_,
+                                      way_idx, w_.r_->way_properties_[way_idx],
+                                      osr::direction::kForward, 0U,
+                                      std::nullopt, osr::duration_t{0},
+                                      osr::direction::kForward)
+                                      .cost_ != osr::kInfeasible;
                          }) &&
              utl::any_of(w_.r_->node_ways_[n.node_], [&](auto const way_idx) {
-               return bikep::way_cost(
-                          bikep::parameters{}, w_.r_->way_properties_[way_idx],
-                          osr::direction::kForward, 0U) != osr::kInfeasible;
+               return bikep::way_cost(bike_params, *w_.r_, w_.timezones_,
+                                      way_idx, w_.r_->way_properties_[way_idx],
+                                      osr::direction::kForward, 0U,
+                                      std::nullopt, osr::duration_t{0},
+                                      osr::direction::kForward)
+                          .cost_ != osr::kInfeasible;
              });
     };
 
