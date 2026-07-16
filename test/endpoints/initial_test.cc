@@ -42,8 +42,8 @@ TEST(initial, osm_only_fallback) {
 
   auto const res = ep("");
 
-  EXPECT_NE(0.0, res.lat_);
-  EXPECT_NE(0.0, res.lon_);
+  EXPECT_NEAR(49.9943077, res.lat_, 1e-6);
+  EXPECT_NEAR(8.6573986, res.lon_, 1e-6);
   EXPECT_GT(res.zoom_, 0.0);
   EXPECT_TRUE(res.serverConfig_.hasStreetRouting_);
 }

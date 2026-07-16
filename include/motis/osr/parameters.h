@@ -2,9 +2,10 @@
 
 #include <cstdint>
 
-#include "motis-api/motis-api.h"
 #include "osr/routing/parameters.h"
 #include "osr/routing/profile.h"
+
+#include "motis-api/motis-api.h"
 
 namespace motis {
 

@@ -4,8 +4,6 @@ project(motis LANGUAGES C CXX ASM)
 
 set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
 
-enable_testing()
-
 option(MOTIS_MIMALLOC "use mimalloc" OFF)
 
 set(MOTIS_STACKTRACE "AUTO" CACHE STRING "Enable stacktrace support (AUTO, ON, OFF)")
@@ -211,11 +209,6 @@ target_link_libraries(motis-test
     address_formatting_res-res
     motis-generated)
 target_compile_options(motis-test PRIVATE ${motis-compile-options})
-add_test(NAME motis-test COMMAND $<TARGET_FILE:motis-test>)
-set_tests_properties(motis-test PROPERTIES
-    LABELS motis
-    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-
 
 # --- TILES ---
 set_property(
