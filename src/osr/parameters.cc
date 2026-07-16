@@ -274,6 +274,21 @@ std::uint8_t hgv_top_speed(T const& params)
 }
 
 template <typename T>
+bool hgv_low_emission_zone_access(T const&) {
+  return osr_parameters::kHgvLowEmissionZoneAccess;
+}
+
+template <typename T>
+bool hgv_low_emission_zone_access(T const& params)
+  requires requires(T const& x) {
+    { x.vehicleLezAccess_ } -> std::same_as<std::optional<bool> const&>;
+  }
+{
+  return params.vehicleLezAccess_.value_or(
+      osr_parameters::kHgvLowEmissionZoneAccess);
+}
+
+template <typename T>
 osr_parameters to_osr_parameters(T const& params) {
   return {
       .pedestrian_speed_ = pedestrian_speed(params),
@@ -289,6 +304,7 @@ osr_parameters to_osr_parameters(T const& params) {
       .hgv_axle_load_tons_ = hgv_axle_load(params),
       .hgv_trailer_ = hgv_trailer(params),
       .hgv_top_speed_km_h_ = hgv_top_speed(params),
+      .hgv_low_emission_zone_access_ = hgv_low_emission_zone_access(params),
   };
 }
 
@@ -375,7 +391,8 @@ osr::profile_parameters to_profile_parameters(osr::search_profile const p,
           .axle_count_ = params.hgv_axle_count_,
           .axle_load_100kg_ = tons_to_100kg(params.hgv_axle_load_tons_),
           .trailer_ = params.hgv_trailer_,
-          .top_speed_km_h_ = params.hgv_top_speed_km_h_};
+          .top_speed_km_h_ = params.hgv_top_speed_km_h_,
+          .low_emission_zone_access_ = params.hgv_low_emission_zone_access_};
     case osr::search_profile::kCarDropOff:
       return osr::car_parking<false, false>::parameters{
           .car_ = {},

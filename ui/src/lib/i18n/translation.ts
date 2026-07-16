@@ -79,6 +79,7 @@ export type Translations = {
 	vehicleHazmat: string;
 	vehicleHazmatWater: string;
 	vehicleTrailer: string;
+	vehicleLezAccess: string;
 	wheelchair: string;
 	useRoutedTransfers: string;
 	bikeRental: string;

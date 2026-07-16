@@ -26,6 +26,7 @@ struct osr_parameters {
   constexpr static auto const kHgvAxleLoadTons = 11.5F;
   constexpr static auto const kHgvTrailer = true;
   constexpr static auto const kHgvTopSpeedKmh = std::uint8_t{80U};
+  constexpr static auto const kHgvLowEmissionZoneAccess = true;
 
   float pedestrian_speed_{kFootSpeed};
   float cycling_speed_{kBikeSpeed};
@@ -40,6 +41,7 @@ struct osr_parameters {
   float hgv_axle_load_tons_{kHgvAxleLoadTons};
   bool hgv_trailer_{kHgvTrailer};
   std::uint8_t hgv_top_speed_km_h_{kHgvTopSpeedKmh};
+  bool hgv_low_emission_zone_access_{kHgvLowEmissionZoneAccess};
 };
 
 osr_parameters get_osr_parameters(api::plan_params const&);

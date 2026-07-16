@@ -63,6 +63,7 @@
 		vehicleAxleLoad = $bindable(),
 		vehicleTrailer = $bindable(),
 		vehicleTopSpeed = $bindable(),
+		vehicleLezAccess = $bindable(),
 		via = $bindable(),
 		viaMinimumStay = $bindable(),
 		viaLabels = $bindable(),
@@ -107,6 +108,7 @@
 		vehicleAxleLoad: number;
 		vehicleTrailer: boolean;
 		vehicleTopSpeed: number;
+		vehicleLezAccess: boolean;
 		via: undefined | Location[];
 		viaMinimumStay: undefined | number[];
 		viaLabels: Record<string, string>;
@@ -399,6 +401,12 @@
 					bind:checked={vehicleTrailer}
 					label={t.vehicleTrailer}
 					id="vehicleTrailer"
+				/>
+				<Switch
+					disabled={!allowStreetRouting}
+					bind:checked={vehicleLezAccess}
+					label={t.vehicleLezAccess}
+					id="vehicleLezAccess"
 				/>
 			</div>
 		{/if}

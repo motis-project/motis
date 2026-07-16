@@ -447,6 +447,11 @@ export type VehicleTrailer = boolean;
 export type VehicleTopSpeed = number;
 
 /**
+ * Whether the vehicle is allowed to use low-emission zones for HGV routing
+ */
+export type VehicleLezAccess = boolean;
+
+/**
  * - `NORMAL` - latitude / longitude coordinate or address
  * - `BIKESHARE` - bike sharing station
  * - `TRANSIT` - transit stop
@@ -1836,6 +1841,7 @@ export type OneToManyIntermodalParams = {
     vehicleAxleLoad?: VehicleAxleLoad;
     vehicleTrailer?: VehicleTrailer;
     vehicleTopSpeed?: VehicleTopSpeed;
+    vehicleLezAccess?: VehicleLezAccess;
     /**
      * Optional. Default is `NONE`.
      *
@@ -2625,6 +2631,10 @@ export type PlanData = {
          */
         vehicleLength?: VehicleLength;
         /**
+         * Whether the vehicle is allowed to use low-emission zones for `HGV` street routing.
+         */
+        vehicleLezAccess?: VehicleLezAccess;
+        /**
          * Vehicle top speed in km/h used for `HGV` street routing.
          */
         vehicleTopSpeed?: VehicleTopSpeed;
@@ -2767,6 +2777,7 @@ export type OneToManyData = {
         vehicleHazmatWater?: VehicleHazmatWater;
         vehicleHeight?: VehicleHeight;
         vehicleLength?: VehicleLength;
+        vehicleLezAccess?: VehicleLezAccess;
         vehicleTopSpeed?: VehicleTopSpeed;
         vehicleTrailer?: VehicleTrailer;
         vehicleWeight?: VehicleWeight;
@@ -3000,6 +3011,7 @@ export type OneToManyIntermodalData = {
         vehicleHazmatWater?: VehicleHazmatWater;
         vehicleHeight?: VehicleHeight;
         vehicleLength?: VehicleLength;
+        vehicleLezAccess?: VehicleLezAccess;
         vehicleTopSpeed?: VehicleTopSpeed;
         vehicleTrailer?: VehicleTrailer;
         vehicleWeight?: VehicleWeight;
@@ -3218,6 +3230,7 @@ export type OneToAllData = {
         vehicleHazmatWater?: VehicleHazmatWater;
         vehicleHeight?: VehicleHeight;
         vehicleLength?: VehicleLength;
+        vehicleLezAccess?: VehicleLezAccess;
         vehicleTopSpeed?: VehicleTopSpeed;
         vehicleTrailer?: VehicleTrailer;
         vehicleWeight?: VehicleWeight;

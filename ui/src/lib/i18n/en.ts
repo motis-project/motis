@@ -82,6 +82,7 @@ const translations: Translations = {
 	vehicleHazmat: 'Hazardous materials',
 	vehicleHazmatWater: 'Hazardous to water',
 	vehicleTrailer: 'Has trailer',
+	vehicleLezAccess: 'Low-emission zone access',
 	useRoutedTransfers: 'Use routed transfers',
 	wheelchair: 'Only wheelchair accessible connections',
 	bikeRental: 'Allow usage of sharing vehicles',

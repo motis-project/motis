@@ -57,6 +57,7 @@
 		vehicleAxleLoad = $bindable(),
 		vehicleTrailer = $bindable(),
 		vehicleTopSpeed = $bindable(),
+		vehicleLezAccess = $bindable(),
 		via = $bindable(),
 		viaMinimumStay = $bindable(),
 		viaLabels = $bindable(),
@@ -102,6 +103,7 @@
 		vehicleAxleLoad: number;
 		vehicleTrailer: boolean;
 		vehicleTopSpeed: number;
+		vehicleLezAccess: boolean;
 		via: undefined | Location[];
 		viaMinimumStay: undefined | number[];
 		viaLabels: Record<string, string>;
@@ -235,6 +237,7 @@
 			bind:vehicleAxleLoad
 			bind:vehicleTrailer
 			bind:vehicleTopSpeed
+			bind:vehicleLezAccess
 			bind:via
 			bind:viaMinimumStay
 			bind:viaLabels

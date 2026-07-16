@@ -85,6 +85,7 @@ const translations: Translations = {
 	vehicleHazmat: 'Materiały niebezpieczne',
 	vehicleHazmatWater: 'Niebezpieczne dla wody',
 	vehicleTrailer: 'Z przyczepą',
+	vehicleLezAccess: 'Dostęp do stref niskiej emisji',
 	useRoutedTransfers: 'Wyznacz trasy dla przesiadek',
 	bikeRental: 'Użyj pojazdów współdzielonych',
 	requireBikeTransport: 'Przewóz roweru',

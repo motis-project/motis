@@ -85,6 +85,7 @@ const translations: Translations = {
 	vehicleHazmat: 'Nebezpečný náklad',
 	vehicleHazmatWater: 'Nebezpečný pro vodu',
 	vehicleTrailer: 'S přívěsem',
+	vehicleLezAccess: 'Vjezd do nízkoemisních zón',
 	useRoutedTransfers: 'Počítej trasu pro přestupy',
 	bikeRental: 'Povol použití sdílených vozidel',
 	requireBikeTransport: 'Přeprava kola',

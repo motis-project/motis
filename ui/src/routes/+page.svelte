@@ -527,6 +527,11 @@
 	let vehicleTopSpeed = $state<number>(
 		parseIntOr(urlParams?.get('vehicleTopSpeed'), defaultQuery.vehicleTopSpeed)
 	);
+	let vehicleLezAccess = $state(
+		urlParams?.get('vehicleLezAccess') === null
+			? defaultQuery.vehicleLezAccess
+			: urlParams?.get('vehicleLezAccess') == 'true'
+	);
 	let slowDirect = $state(urlParams?.get('slowDirect') == 'true');
 
 	let isochronesData = $state<IsochronesPos[]>([]);
@@ -628,7 +633,8 @@
 									vehicleAxleCount,
 									vehicleAxleLoad,
 									vehicleTrailer,
-									vehicleTopSpeed
+									vehicleTopSpeed,
+									vehicleLezAccess
 								}
 							: {}),
 						algorithm,
@@ -706,7 +712,8 @@
 									vehicleAxleCount,
 									vehicleAxleLoad,
 									vehicleTrailer,
-									vehicleTopSpeed
+									vehicleTopSpeed,
+									vehicleLezAccess
 								}
 							: {})
 					}
@@ -1040,6 +1047,7 @@
 						bind:vehicleAxleLoad
 						bind:vehicleTrailer
 						bind:vehicleTopSpeed
+						bind:vehicleLezAccess
 						bind:via
 						bind:viaMinimumStay
 						bind:viaLabels
@@ -1099,6 +1107,7 @@
 						bind:vehicleAxleLoad
 						bind:vehicleTrailer
 						bind:vehicleTopSpeed
+						bind:vehicleLezAccess
 						{hasDebug}
 					/>
 				</Card>

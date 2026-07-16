@@ -62,6 +62,7 @@
 		vehicleAxleLoad = $bindable(),
 		vehicleTrailer = $bindable(),
 		vehicleTopSpeed = $bindable(),
+		vehicleLezAccess = $bindable(),
 		hasDebug = false
 	}: {
 		advancedOptionsOpen: boolean;
@@ -102,6 +103,7 @@
 		vehicleAxleLoad: number;
 		vehicleTrailer: boolean;
 		vehicleTopSpeed: number;
+		vehicleLezAccess: boolean;
 		hasDebug: boolean;
 	} = $props();
 	const minutesToSeconds = (n: number): number => n * 60;
@@ -281,6 +283,7 @@
 			bind:vehicleAxleLoad
 			bind:vehicleTrailer
 			bind:vehicleTopSpeed
+			bind:vehicleLezAccess
 			via={undefined}
 			viaMinimumStay={undefined}
 			viaLabels={{}}

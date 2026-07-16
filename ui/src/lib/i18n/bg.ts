@@ -83,6 +83,7 @@ const translations: Translations = {
 	vehicleHazmat: 'Опасни товари',
 	vehicleHazmatWater: 'Опасни за водата товари',
 	vehicleTrailer: 'С ремарке',
+	vehicleLezAccess: 'Достъп до нискоемисионни зони',
 	useRoutedTransfers: 'Използвай посочените прекачвания',
 	bikeRental: 'наемане на велосипед',
 	requireBikeTransport: 'Превоз на велосипед',

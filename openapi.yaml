@@ -312,6 +312,13 @@ paths:
           schema:
             $ref: "#/components/schemas/VehicleTopSpeed"
 
+        - name: vehicleLezAccess
+          in: query
+          required: false
+          description: Whether the vehicle is allowed to use low-emission zones for `HGV` street routing.
+          schema:
+            $ref: "#/components/schemas/VehicleLezAccess"
+
         - name: elevationCosts
           in: query
           required: false
@@ -1150,6 +1157,11 @@ paths:
           required: false
           schema:
             $ref: "#/components/schemas/VehicleTopSpeed"
+        - name: vehicleLezAccess
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/VehicleLezAccess"
         - name: elevationCosts
           in: query
           required: false
@@ -1494,6 +1506,12 @@ paths:
           required: false
           schema:
             $ref: "#/components/schemas/VehicleTopSpeed"
+
+        - name: vehicleLezAccess
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/VehicleLezAccess"
 
         - name: elevationCosts
           in: query
@@ -1936,6 +1954,12 @@ paths:
           required: false
           schema:
             $ref: "#/components/schemas/VehicleTopSpeed"
+
+        - name: vehicleLezAccess
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/VehicleLezAccess"
 
         - name: elevationCosts
           in: query
@@ -4213,6 +4237,10 @@ components:
       description: Vehicle top speed for HGV routing in km/h
       type: integer
 
+    VehicleLezAccess:
+      description: Whether the vehicle is allowed to use low-emission zones for HGV routing
+      type: boolean
+
     VertexType:
       type: string
       description: |
@@ -5800,6 +5828,8 @@ components:
           $ref: "#/components/schemas/VehicleTrailer"
         vehicleTopSpeed:
           $ref: "#/components/schemas/VehicleTopSpeed"
+        vehicleLezAccess:
+          $ref: "#/components/schemas/VehicleLezAccess"
         elevationCosts:
           description: |
             Optional. Default is `NONE`.

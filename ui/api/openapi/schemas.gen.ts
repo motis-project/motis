@@ -526,6 +526,11 @@ export const VehicleTopSpeedSchema = {
     type: 'integer'
 } as const;
 
+export const VehicleLezAccessSchema = {
+    description: 'Whether the vehicle is allowed to use low-emission zones for HGV routing',
+    type: 'boolean'
+} as const;
+
 export const VertexTypeSchema = {
     type: 'string',
     description: `- \`NORMAL\` - latitude / longitude coordinate or address
@@ -2326,6 +2331,9 @@ Average speed for bike routing.
         },
         vehicleTopSpeed: {
             '$ref': '#/components/schemas/VehicleTopSpeed'
+        },
+        vehicleLezAccess: {
+            '$ref': '#/components/schemas/VehicleLezAccess'
         },
         elevationCosts: {
             description: `Optional. Default is \`NONE\`.

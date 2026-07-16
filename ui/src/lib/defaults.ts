@@ -41,6 +41,7 @@ export const defaultQuery = {
 	vehicleAxleLoad: 11.5,
 	vehicleTrailer: true,
 	vehicleTopSpeed: 80,
+	vehicleLezAccess: true,
 	useRoutedTransfers: false,
 	joinInterlinedLegs: true,
 	maxMatchingDistance: 25,

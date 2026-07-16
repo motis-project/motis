@@ -83,6 +83,7 @@ const translations: Translations = {
 	vehicleHazmat: 'Gefahrgut',
 	vehicleHazmatWater: 'Wassergefährdendes Gefahrgut',
 	vehicleTrailer: 'Mit Anhänger',
+	vehicleLezAccess: 'Zufahrt zu Umweltzonen',
 	useRoutedTransfers: 'Geroutete Umstiege verwenden',
 	wheelchair: 'Nur rollstuhlgerechte Verbindungen',
 	bikeRental: 'Sharing-Fahrzeuge berücksichtigen',
