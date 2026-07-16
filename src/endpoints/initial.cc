@@ -17,8 +17,8 @@ namespace n = nigiri;
 
 namespace motis::ep {
 
-std::pair<geo::latlng, unsigned> get_center_and_zoom(
-    geo::latlng const& min, geo::latlng const& max) {
+std::pair<geo::latlng, unsigned> get_center_and_zoom(geo::latlng const& min,
+                                                     geo::latlng const& max) {
   auto const fixed0 = tiles::latlng_to_fixed(min);
   auto const fixed1 = tiles::latlng_to_fixed(max);
 
@@ -90,8 +90,8 @@ api::initial_response get_initial_response(data const& d,
     auto const [lng_min, lng_max] = get_quantiles(utl::to_vec(
         tt->locations_.coordinates_, [](auto const& s) { return s.lng_; }));
 
-    std::tie(center, zoom) = get_center_and_zoom({lat_min, lng_min},
-                                                 {lat_max, lng_max});
+    std::tie(center, zoom) =
+        get_center_and_zoom({lat_min, lng_min}, {lat_max, lng_max});
   } else if (auto const osr_center_zoom = get_osr_center_and_zoom(d);
              osr_center_zoom.has_value()) {
     std::tie(center, zoom) = *osr_center_zoom;
