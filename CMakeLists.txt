@@ -107,6 +107,7 @@ else ()
             -Wextra
             -Wno-array-bounds
             -Wno-stringop-overread
+            -Wno-stringop-overflow
             -Wno-mismatched-new-delete
             -Wno-maybe-uninitialized
             -Wno-deprecated-declarations)
