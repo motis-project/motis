@@ -108,7 +108,8 @@ else ()
             -Wno-array-bounds
             -Wno-stringop-overread
             -Wno-mismatched-new-delete
-            -Wno-maybe-uninitialized)
+            -Wno-maybe-uninitialized
+            -Wno-deprecated-declarations)
 endif ()
 
 
