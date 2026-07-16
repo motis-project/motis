@@ -123,10 +123,10 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "RelWithDebInfo",
         "NIGIRI_CUDA": "ON",
-        "CMAKE_C_COMPILER": "gcc-13",
-        "CMAKE_CXX_COMPILER": "g++-13",
+        "CMAKE_C_COMPILER": "gcc-15",
+        "CMAKE_CXX_COMPILER": "g++-15",
         "CMAKE_CUDA_COMPILER": "/usr/local/cuda/bin/nvcc",
-        "CMAKE_CUDA_HOST_COMPILER": "g++-12"
+        "CMAKE_CUDA_HOST_COMPILER": "g++-15"
       }
     },
     {
@@ -137,8 +137,8 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "RelWithDebInfo",
         "NIGIRI_CUDA": "OFF",
-        "CMAKE_C_COMPILER": "gcc-13",
-        "CMAKE_CXX_COMPILER": "g++-13"
+        "CMAKE_C_COMPILER": "gcc-15",
+        "CMAKE_CXX_COMPILER": "g++-15"
       }
     },
     {

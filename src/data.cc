@@ -21,6 +21,7 @@
 #include "osr/platforms.h"
 #include "osr/ways.h"
 
+#include "nigiri/logging.h"
 #include "nigiri/routing/tb/tb_data.h"
 #include "nigiri/rt/create_rt_timetable.h"
 #include "nigiri/rt/rt_timetable.h"
@@ -307,8 +308,13 @@ data::data(std::filesystem::path p, config const& c)
     gpu_pool_ = std::make_unique<gpu_search_pool>(
         *gpu_tt_, c.server_ ? c.server_->gpu_states_ : 2U);
     if (rt_->rtt_ != nullptr) {
-      rt_->rtt_->gpu_rtt_.ptr_ =
-          n::routing::gpu::make_gpu_rtt(*tt_, *rt_->rtt_);
+      try {
+        rt_->rtt_->gpu_rtt_.ptr_ =
+            n::routing::gpu::make_gpu_rtt(*tt_, *rt_->rtt_);
+      } catch (std::exception const& e) {
+        n::log(n::log_lvl::error, "motis.data",
+               "GPU rt timetable upload failed: {}", e.what());
+      }
     }
   }
 #endif
