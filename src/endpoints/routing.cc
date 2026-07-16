@@ -561,8 +561,8 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
         route_with_profile(flex::flex_output{*w_, *l_, pl_, matches_, ae_, tz_,
                                              *tags_, *tt_, *fa_, ids.front()});
       }
-    } else if (m == api::ModeEnum::CAR || m == api::ModeEnum::BIKE ||
-               m == api::ModeEnum::CAR_PARKING ||
+    } else if (m == api::ModeEnum::CAR || m == api::ModeEnum::HGV ||
+               m == api::ModeEnum::BIKE || m == api::ModeEnum::CAR_PARKING ||
                m == api::ModeEnum::CAR_DROPOFF ||
                m == api::ModeEnum::DEBUG_BUS_ROUTE ||
                m == api::ModeEnum::DEBUG_RAILWAY_ROUTE ||

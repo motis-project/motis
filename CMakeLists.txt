@@ -201,9 +201,14 @@ configure_file(
 )
 file(GLOB_RECURSE motis-test-files test/*.cc)
 add_executable(motis-test ${motis-test-files})
-target_link_libraries(motis-test motislib gmock web-server ianatzdb-res address_formatting_res-res motis-generated)
+target_link_libraries(motis-test
+    motislib
+    gmock
+    web-server
+    ianatzdb-res
+    address_formatting_res-res
+    motis-generated)
 target_compile_options(motis-test PRIVATE ${motis-compile-options})
-
 
 # --- TILES ---
 set_property(
