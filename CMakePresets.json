@@ -92,7 +92,8 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
         "CMAKE_EXE_LINKER_FLAGS": "-B/opt/mold",
-        "CTX_VALGRIND": "ON"
+        "CTX_VALGRIND": "ON",
+        "BOOST_VALGRIND": "ON"
       },
       "environment": {
         "PATH": "/opt:/opt/cmake-3.26.3-linux-x86_64/bin:/opt/buildcache/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
