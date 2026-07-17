@@ -176,31 +176,31 @@
 	</Button>
 	<div class="flex min-h-0 flex-row gap-2 flex-wrap">
 		<div class="flex flex-col">
-		<DateInput bind:value={time} class="border-b-0 py-0" />
-		<RadioGroup.Root
-			class="flex gap-0"
-			bind:value={() => (arriveBy ? 'arrival' : 'departure'), (v) => (arriveBy = v === 'arrival')}
-		>
-			<Label
-				for="departure"
-				class="flex grow justify-center items-center border-input rounded-bl-md px-2 py-1 bg-accent text-gray-500 hover:bg-blue-100 [&:has([data-state=checked])]:bg-blue-600 [&:has([data-state=checked])]:text-white hover:cursor-pointer"
+			<DateInput bind:value={time} class="border-b-0 py-0" />
+			<RadioGroup.Root
+				class="flex gap-0"
+				bind:value={() => (arriveBy ? 'arrival' : 'departure'), (v) => (arriveBy = v === 'arrival')}
 			>
-				<RadioGroup.Item
-					value="departure"
-					id="departure"
-					class="sr-only"
-					aria-label={t.departure}
-				/>
-				<span>{t.departure}</span>
-			</Label>
-			<Label
-				for="arrival"
-				class="flex grow justify-center items-center border-input rounded-br-md px-2 py-1 bg-accent text-gray-500 hover:bg-blue-100 [&:has([data-state=checked])]:bg-blue-600 [&:has([data-state=checked])]:text-white hover:cursor-pointer"
-			>
-				<RadioGroup.Item value="arrival" id="arrival" class="sr-only" aria-label={t.arrival} />
-				<span>{t.arrival}</span>
-			</Label>
-		</RadioGroup.Root>
+				<Label
+					for="departure"
+					class="flex grow justify-center items-center border-input rounded-bl-md px-2 py-1 bg-accent text-gray-500 hover:bg-blue-100 [&:has([data-state=checked])]:bg-blue-600 [&:has([data-state=checked])]:text-white hover:cursor-pointer"
+				>
+					<RadioGroup.Item
+						value="departure"
+						id="departure"
+						class="sr-only"
+						aria-label={t.departure}
+					/>
+					<span>{t.departure}</span>
+				</Label>
+				<Label
+					for="arrival"
+					class="flex grow justify-center items-center border-input rounded-br-md px-2 py-1 bg-accent text-gray-500 hover:bg-blue-100 [&:has([data-state=checked])]:bg-blue-600 [&:has([data-state=checked])]:text-white hover:cursor-pointer"
+				>
+					<RadioGroup.Item value="arrival" id="arrival" class="sr-only" aria-label={t.arrival} />
+					<span>{t.arrival}</span>
+				</Label>
+			</RadioGroup.Root>
 		</div>
 		<AdvancedOptions
 			{serverConfig}
@@ -250,11 +250,10 @@
 			{hasDebug}
 		/>
 		<Button
-				class="flex grow bg-blue-600 text-white hover:bg-blue-400"
-				variant="default"
-				title={t.search}
-				onclick={() => {
-		}}
+			class="flex grow bg-blue-600 text-white hover:bg-blue-400"
+			variant="default"
+			title={t.search}
+			onclick={() => {}}
 		>
 			{t.search}
 		</Button>
