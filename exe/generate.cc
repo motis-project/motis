@@ -31,7 +31,7 @@ namespace po = boost::program_options;
 
 namespace motis {
 
-constexpr auto kMinRank = 16UL;
+constexpr auto kMinRank = 16U;
 
 constexpr auto kEuropeBounds = R"({
   "type": "Polygon",
@@ -352,7 +352,7 @@ int generate(int ac, char** av) {
   }();
 
   auto const ranks = [&] {
-    auto ret = std::vector(n, 0UL);
+    auto ret = std::vector(n, 0U);
     for (auto [i, r] = std::tuple{0U, kMinRank}; i != n;
          ++i, r = r * 2U < master_stops.size() ? r * 2U : kMinRank) {
       ret[i] = r;
