@@ -55,6 +55,8 @@ export const colors = {
 		footway: 'rgb(252, 251, 250)',
 		footwayOutline: 'rgb(206, 202, 199)',
 		footpath: 'rgb(150, 150, 150)',
+		cycleway: 'rgb(100, 145, 205)',
+		unclassified: 'rgb(232, 230, 227)',
 		steps: '#ff4524',
 
 		elevatorOutline: '#808080',
@@ -128,7 +130,9 @@ export const colors = {
 
 		footway: 'rgb(30, 30, 30)',
 		footwayOutline: 'rgb(62, 62, 62)',
-		footpath: 'rgb(138, 138, 138)',
+		footpath: 'rgb(80, 80, 80)',
+		cycleway: 'rgb(110, 150, 205)',
+		unclassified: 'rgb(50, 50, 50)',
 		steps: '#70504b',
 
 		elevatorOutline: '#808080',
@@ -498,16 +502,7 @@ export const getStyle = (
 							['get', 'kind'],
 							[
 								'literal',
-								[
-									'footway',
-									'track',
-									'steps',
-									'cycleway',
-									'path',
-									'unclassified',
-									'service',
-									'pedestrian'
-								]
+								['footway', 'track', 'steps', 'cycleway', 'path', 'unclassified', 'pedestrian']
 							]
 						]
 					],
@@ -551,7 +546,7 @@ export const getStyle = (
 								3,
 								'tertiary',
 								1.75,
-								'residential',
+								['residential', 'service'],
 								1.5,
 								0.75
 							]
@@ -575,7 +570,7 @@ export const getStyle = (
 				type: 'line',
 				source: 'osm',
 				'source-layer': 'streets',
-				filter: ['==', 'kind', 'residential'],
+				filter: ['in', 'kind', 'residential', 'service'],
 				layout: {
 					'line-cap': 'round'
 				},
@@ -714,16 +709,7 @@ export const getStyle = (
 							['get', 'kind'],
 							[
 								'literal',
-								[
-									'footway',
-									'track',
-									'steps',
-									'cycleway',
-									'path',
-									'unclassified',
-									'service',
-									'pedestrian'
-								]
+								['footway', 'track', 'steps', 'cycleway', 'path', 'unclassified', 'pedestrian']
 							]
 						]
 					],
@@ -757,7 +743,7 @@ export const getStyle = (
 						c.primarySecondary,
 						'tertiary',
 						c.linkTertiary,
-						'residential',
+						['residential', 'service'],
 						c.residential,
 						c.road
 					],
@@ -789,7 +775,7 @@ export const getStyle = (
 								2.5,
 								'tertiary',
 								1.75,
-								'residential',
+								['residential', 'service'],
 								1.5,
 								0.75
 							]
@@ -1337,19 +1323,16 @@ export const getStyle = (
 					]
 				}
 			},
-			// minor ways like in VersaTiles (solid body over a slightly wider casing)
-			// but with a neutral grey palette instead of violet and fading in from
-			// z14 instead of z15. footway/path/track are NOT part of this: track is
-			// drawn as a street above, footway/path get the dashed footpath layer
-			// below.
+			// unclassified as a plain borderless line, slightly grey vs the white
+			// residential roads
 			{
-				id: 'footway-outline',
+				id: 'unclassified',
 				type: 'line',
 				source: 'osm',
 				'source-layer': 'streets',
 				filter: [
 					'all',
-					['in', 'kind', 'cycleway', 'unclassified', 'service'],
+					['==', 'kind', 'unclassified'],
 					level === 0 ? ['any', ['!has', 'level'], ['==', 'level', level]] : ['==', 'level', level]
 				],
 				layout: {
@@ -1357,67 +1340,32 @@ export const getStyle = (
 				},
 				minzoom: 14,
 				paint: {
-					'line-color': c.footwayOutline,
-					// +2px vs the VersaTiles stops -> a 1-1.5px visible border per side
+					'line-color': c.unclassified,
 					'line-width': [
 						'interpolate',
 						['linear'],
 						['zoom'],
 						14,
-						0,
-						15,
-						3,
-						16,
-						6,
-						18,
-						8,
-						19,
-						13,
-						20,
-						23
-					]
-				}
-			},
-			{
-				id: 'footway',
-				type: 'line',
-				source: 'osm',
-				'source-layer': 'streets',
-				filter: [
-					'all',
-					['in', 'kind', 'cycleway', 'unclassified', 'service'],
-					level === 0 ? ['any', ['!has', 'level'], ['==', 'level', level]] : ['==', 'level', level]
-				],
-				layout: {
-					'line-cap': 'round'
-				},
-				minzoom: 14,
-				paint: {
-					'line-color': c.footway,
-					'line-width': [
-						'interpolate',
-						['linear'],
-						['zoom'],
-						14,
-						0,
-						15,
 						2,
-						16,
+						15,
 						4,
-						18,
+						16,
 						6,
-						19,
+						18,
 						10,
+						19,
+						16,
 						20,
-						20
+						24
 					]
 				}
 			},
 			// footpaths (highway=footway/path) and pedestrian streets as thin grey
-			// dashed lines. Staggered like the VersaTiles ladder but earlier:
-			// pedestrian fades in z12-13, walking paths (footway, path) follow at
-			// z13-14. (pedestrian lines are only in the tiles from z13, so they
-			// join at z13 at full opacity.)
+			// dashed lines; cycleways get the same treatment in blue. Staggered like
+			// the VersaTiles ladder but earlier: pedestrian fades in z12-13, walking
+			// paths (footway, path) and cycleways follow at z13-14. (pedestrian
+			// lines are only in the tiles from z13, so they join at z13 at full
+			// opacity.)
 			{
 				id: 'footpath',
 				type: 'line',
@@ -1425,12 +1373,12 @@ export const getStyle = (
 				'source-layer': 'streets',
 				filter: [
 					'all',
-					['in', 'kind', 'footway', 'path', 'pedestrian'],
+					['in', 'kind', 'footway', 'path', 'pedestrian', 'cycleway'],
 					level === 0 ? ['any', ['!has', 'level'], ['==', 'level', level]] : ['==', 'level', level]
 				],
 				minzoom: 12,
 				paint: {
-					'line-color': c.footpath,
+					'line-color': ['match', ['get', 'kind'], 'cycleway', c.cycleway, c.footpath],
 					'line-dasharray': [2, 1],
 					'line-opacity': [
 						'interpolate',
