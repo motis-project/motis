@@ -54,9 +54,8 @@ export const colors = {
 
 		footway: 'rgb(252, 251, 250)',
 		footwayOutline: 'rgb(206, 202, 199)',
-		footpath: 'rgb(150, 150, 150)',
+		footpath: 'rgb(160, 160, 160)',
 		cycleway: 'rgb(100, 145, 205)',
-		unclassified: 'rgb(232, 230, 227)',
 		steps: '#ff4524',
 
 		elevatorOutline: '#808080',
@@ -132,7 +131,6 @@ export const colors = {
 		footwayOutline: 'rgb(62, 62, 62)',
 		footpath: 'rgb(80, 80, 80)',
 		cycleway: 'rgb(110, 150, 205)',
-		unclassified: 'rgb(50, 50, 50)',
 		steps: '#70504b',
 
 		elevatorOutline: '#808080',
@@ -502,7 +500,16 @@ export const getStyle = (
 							['get', 'kind'],
 							[
 								'literal',
-								['footway', 'track', 'steps', 'cycleway', 'path', 'unclassified', 'pedestrian']
+								[
+									'footway',
+									'track',
+									'steps',
+									'cycleway',
+									'path',
+									'unclassified',
+									'service',
+									'pedestrian'
+								]
 							]
 						]
 					],
@@ -546,7 +553,7 @@ export const getStyle = (
 								3,
 								'tertiary',
 								1.75,
-								['residential', 'service'],
+								'residential',
 								1.5,
 								0.75
 							]
@@ -570,7 +577,7 @@ export const getStyle = (
 				type: 'line',
 				source: 'osm',
 				'source-layer': 'streets',
-				filter: ['in', 'kind', 'residential', 'service'],
+				filter: ['==', 'kind', 'residential'],
 				layout: {
 					'line-cap': 'round'
 				},
@@ -692,15 +699,15 @@ export const getStyle = (
 				layout: {
 					'line-cap': 'round'
 				},
-				// unlike the shield layer, no ['has', 'ref'] here: the color does not
-				// depend on the road having a ref. Rails and the dashed minor kinds
-				// (drawn by the footway/stairs layers) are excluded instead.
-				// Links appear from z12 (motorway) / z13 (rest) like in VersaTiles.
+				// like the old release: only roads with a ref get the full-width
+				// opaque body here; everything else is carried by the faint back
+				// layers (thin at overview zooms) and the minor-way layers.
 				// minzoom 6: rail comes first, motorway/trunk one zoom later (only
 				// those two kinds exist below z6 in the tiles).
 				minzoom: 6,
 				filter: [
 					'all',
+					['has', 'ref'],
 					['==', ['get', 'rail'], false],
 					[
 						'!',
@@ -709,7 +716,16 @@ export const getStyle = (
 							['get', 'kind'],
 							[
 								'literal',
-								['footway', 'track', 'steps', 'cycleway', 'path', 'unclassified', 'pedestrian']
+								[
+									'footway',
+									'track',
+									'steps',
+									'cycleway',
+									'path',
+									'unclassified',
+									'service',
+									'pedestrian'
+								]
 							]
 						]
 					],
@@ -743,7 +759,7 @@ export const getStyle = (
 						c.primarySecondary,
 						'tertiary',
 						c.linkTertiary,
-						['residential', 'service'],
+						'residential',
 						c.residential,
 						c.road
 					],
@@ -775,7 +791,7 @@ export const getStyle = (
 								2.5,
 								'tertiary',
 								1.75,
-								['residential', 'service'],
+								'residential',
 								1.5,
 								0.75
 							]
@@ -1167,7 +1183,8 @@ export const getStyle = (
 				type: 'line',
 				source: 'osm',
 				'source-layer': 'streets',
-				minzoom: 13,
+				// like the old release (rail=secondary): visible from z10 at ~1px
+				minzoom: 10,
 				filter: [
 					'all',
 					['in', ['get', 'kind'], ['literal', ['tram', 'narrow_gauge', 'monorail', 'funicular']]],
@@ -1182,7 +1199,21 @@ export const getStyle = (
 				],
 				paint: {
 					'line-color': c.railOutline,
-					'line-width': ['interpolate', ['linear'], ['zoom'], 13, 0, 16, 1, 17, 2, 18, 3, 20, 5]
+					'line-width': [
+						'interpolate',
+						['linear'],
+						['zoom'],
+						10,
+						1.15,
+						16,
+						1.15,
+						17,
+						2,
+						18,
+						3,
+						20,
+						5
+					]
 				}
 			},
 			{
@@ -1248,7 +1279,7 @@ export const getStyle = (
 			},
 			// tracks as a small solid street like VersaTiles street-track (white body
 			// over a grey casing, VersaTiles width curve from z14) but fading in at
-			// z12-13 already to match the earlier staging of the other minor ways
+			// z12-13 already so field and forest ways show up early
 			{
 				id: 'track-outline',
 				type: 'line',
@@ -1323,41 +1354,45 @@ export const getStyle = (
 					]
 				}
 			},
-			// unclassified as a plain borderless line, slightly grey vs the white
-			// residential roads
+			// unclassified/service like in the old release: a thin solid body over a
+			// slightly wider casing, only from z15
 			{
-				id: 'unclassified',
+				id: 'footway-outline',
 				type: 'line',
 				source: 'osm',
 				'source-layer': 'streets',
 				filter: [
 					'all',
-					['==', 'kind', 'unclassified'],
+					['in', 'kind', 'unclassified', 'service'],
 					level === 0 ? ['any', ['!has', 'level'], ['==', 'level', level]] : ['==', 'level', level]
 				],
 				layout: {
 					'line-cap': 'round'
 				},
-				minzoom: 14,
+				minzoom: 15,
 				paint: {
-					'line-color': c.unclassified,
-					'line-width': [
-						'interpolate',
-						['linear'],
-						['zoom'],
-						14,
-						2,
-						15,
-						4,
-						16,
-						6,
-						18,
-						10,
-						19,
-						16,
-						20,
-						24
-					]
+					'line-color': c.footwayOutline,
+					// +2px vs the VersaTiles stops -> a 1-1.5px visible border per side
+					'line-width': ['interpolate', ['linear'], ['zoom'], 15, 0, 16, 6, 18, 8, 19, 13, 20, 23]
+				}
+			},
+			{
+				id: 'footway',
+				type: 'line',
+				source: 'osm',
+				'source-layer': 'streets',
+				filter: [
+					'all',
+					['in', 'kind', 'unclassified', 'service'],
+					level === 0 ? ['any', ['!has', 'level'], ['==', 'level', level]] : ['==', 'level', level]
+				],
+				layout: {
+					'line-cap': 'round'
+				},
+				minzoom: 15,
+				paint: {
+					'line-color': c.footway,
+					'line-width': ['interpolate', ['linear'], ['zoom'], 15, 0, 16, 4, 18, 6, 19, 10, 20, 20]
 				}
 			},
 			// footpaths (highway=footway/path) and pedestrian streets as thin grey
