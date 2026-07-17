@@ -41,7 +41,7 @@
 [tiles]
   url=git@github.com:motis-project/tiles.git
   branch=master
-  commit=fe3e6400a43df5801ce4cc9874d8f5756f85ded5
+  commit=f94499b4defcb807156743b9bb2fc047394b9fab
 [boost]
   url=git@github.com:motis-project/boost.git
   branch=boost-1.89.0
