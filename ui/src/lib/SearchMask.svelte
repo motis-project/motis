@@ -250,7 +250,7 @@
 			{hasDebug}
 		/>
 		<Button
-			class="flex grow bg-blue-600 text-white hover:bg-blue-400"
+			class="flex grow bg-blue-600 hover:!bg-blue-700 text-white font-bold"
 			variant="default"
 			title={t.search}
 			onclick={() => {}}
