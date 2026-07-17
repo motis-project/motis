@@ -54,6 +54,7 @@ export const colors = {
 
 		footway: 'rgb(252, 251, 250)',
 		footwayOutline: 'rgb(206, 202, 199)',
+		footpath: 'rgb(150, 150, 150)',
 		steps: '#ff4524',
 
 		elevatorOutline: '#808080',
@@ -127,6 +128,7 @@ export const colors = {
 
 		footway: 'rgb(30, 30, 30)',
 		footwayOutline: 'rgb(62, 62, 62)',
+		footpath: 'rgb(138, 138, 138)',
 		steps: '#70504b',
 
 		elevatorOutline: '#808080',
@@ -467,318 +469,6 @@ export const getStyle = (
 					'fill-translate': [-2, -2]
 				}
 			},
-			{
-				id: 'indoor-corridor',
-				type: 'fill',
-				source: 'osm',
-				'source-layer': 'indoor',
-				filter: ['all', ['==', 'indoor', 'corridor'], ['==', 'level', level]],
-				paint: {
-					'fill-color': c.indoorCorridor,
-					'fill-opacity': 0.8
-				}
-			},
-			{
-				id: 'indoor',
-				type: 'fill',
-				source: 'osm',
-				'source-layer': 'indoor',
-				filter: ['all', ['!in', 'indoor', 'corridor', 'wall', 'elevator'], ['==', 'level', level]],
-				paint: {
-					'fill-color': c.indoor,
-					'fill-opacity': 0.8
-				}
-			},
-			{
-				id: 'indoor-outline',
-				type: 'line',
-				source: 'osm',
-				'source-layer': 'indoor',
-				filter: ['all', ['!in', 'indoor', 'corridor', 'wall', 'elevator'], ['==', 'level', level]],
-				minzoom: 17,
-				paint: {
-					'line-color': c.indoorOutline,
-					'line-width': 2
-				}
-			},
-			{
-				id: 'indoor-names',
-				type: 'symbol',
-				source: 'osm',
-				'source-layer': 'indoor',
-				minzoom: 17,
-				filter: ['any', ['!has', 'level'], ['==', 'level', level]],
-				layout: {
-					'symbol-placement': 'point',
-					'text-field': ['get', 'name'],
-					'text-font': ['Noto Sans Regular'],
-					'text-size': 12
-				},
-				paint: {
-					'text-color': c.indoorText,
-					'text-halo-color': c.textHalo,
-					'text-halo-width': 2,
-					'text-halo-blur': 1
-				}
-			},
-			{
-				id: 'landuse-public-transport',
-				type: 'fill',
-				source: 'osm',
-				'source-layer': 'land',
-				filter: [
-					'all',
-					['==', 'kind', 'public_transport'],
-					['any', ['!has', 'level'], ['==', 'level', level]]
-				],
-				paint: {
-					'fill-color': c.publicTransport
-				}
-			},
-			// footways like in VersaTiles (solid body over a slightly wider casing,
-			// fading in from z15) but with a neutral grey palette instead of violet
-			{
-				id: 'footway-outline',
-				type: 'line',
-				source: 'osm',
-				'source-layer': 'streets',
-				filter: [
-					'all',
-					['in', 'kind', 'footway', 'track', 'cycleway', 'path', 'unclassified', 'service'],
-					level === 0 ? ['any', ['!has', 'level'], ['==', 'level', level]] : ['==', 'level', level]
-				],
-				layout: {
-					'line-cap': 'round'
-				},
-				minzoom: 15,
-				paint: {
-					'line-color': c.footwayOutline,
-					// +2px vs the VersaTiles stops -> a 1-1.5px visible border per side
-					'line-width': ['interpolate', ['linear'], ['zoom'], 15, 0, 16, 6, 18, 8, 19, 13, 20, 23]
-				}
-			},
-			{
-				id: 'footway',
-				type: 'line',
-				source: 'osm',
-				'source-layer': 'streets',
-				filter: [
-					'all',
-					['in', 'kind', 'footway', 'track', 'cycleway', 'path', 'unclassified', 'service'],
-					level === 0 ? ['any', ['!has', 'level'], ['==', 'level', level]] : ['==', 'level', level]
-				],
-				layout: {
-					'line-cap': 'round'
-				},
-				minzoom: 15,
-				paint: {
-					'line-color': c.footway,
-					'line-width': ['interpolate', ['linear'], ['zoom'], 15, 0, 16, 4, 18, 6, 19, 10, 20, 20]
-				}
-			},
-			// steps as a footway-colored ribbon like in VersaTiles; the stairs-*
-			// layers below draw the rungs on top from z17
-			{
-				id: 'steps-outline',
-				type: 'line',
-				source: 'osm',
-				'source-layer': 'streets',
-				minzoom: 15,
-				filter: [
-					'all',
-					['==', 'kind', 'steps'],
-					level === 0
-						? [
-								'any',
-								['!has', 'from_level'],
-								['any', ['==', 'from_level', level], ['==', 'to_level', level]]
-							]
-						: ['any', ['==', 'from_level', level], ['==', 'to_level', level]]
-				],
-				layout: {
-					'line-cap': 'round'
-				},
-				paint: {
-					'line-color': c.footwayOutline,
-					'line-width': ['interpolate', ['linear'], ['zoom'], 15, 0, 16, 6, 18, 8, 19, 13, 20, 23]
-				}
-			},
-			{
-				id: 'steps',
-				type: 'line',
-				source: 'osm',
-				'source-layer': 'streets',
-				minzoom: 15,
-				filter: [
-					'all',
-					['==', 'kind', 'steps'],
-					level === 0
-						? [
-								'any',
-								['!has', 'from_level'],
-								['any', ['==', 'from_level', level], ['==', 'to_level', level]]
-							]
-						: ['any', ['==', 'from_level', level], ['==', 'to_level', level]]
-				],
-				layout: {
-					'line-cap': 'round'
-				},
-				paint: {
-					'line-color': c.footway,
-					'line-width': ['interpolate', ['linear'], ['zoom'], 15, 0, 16, 4, 18, 6, 19, 10, 20, 20]
-				}
-			},
-			{
-				id: 'stairs-ground',
-				type: 'line',
-				source: 'osm',
-				'source-layer': 'streets',
-				minzoom: 17,
-				filter: [
-					'all',
-					['==', 'kind', 'steps'],
-					level === 0
-						? [
-								'any',
-								['!has', 'from_level'],
-								['any', ['==', 'from_level', level], ['==', 'to_level', level]]
-							]
-						: ['any', ['==', 'from_level', level], ['==', 'to_level', level]]
-				],
-				paint: {
-					'line-color': '#ddddddff',
-					'line-width': [
-						'interpolate',
-						['exponential', 2],
-						['zoom'],
-						10,
-						['*', 4, ['^', 2, -6]],
-						24,
-						['*', 4, ['^', 2, 8]]
-					]
-				}
-			},
-			{
-				id: 'stairs-steps',
-				type: 'line',
-				source: 'osm',
-				'source-layer': 'streets',
-				minzoom: 17,
-				filter: [
-					'all',
-					['==', 'kind', 'steps'],
-					level === 0
-						? [
-								'any',
-								['!has', 'from_level'],
-								['any', ['==', 'from_level', level], ['==', 'to_level', level]]
-							]
-						: ['any', ['==', 'from_level', level], ['==', 'to_level', level]]
-				],
-				paint: {
-					'line-color': '#bfbfbf',
-					'line-dasharray': ['literal', [0.01, 0.1]],
-					'line-width': [
-						'interpolate',
-						['exponential', 2],
-						['zoom'],
-						10,
-						['*', 4, ['^', 2, -6]],
-						24,
-						['*', 4, ['^', 2, 8]]
-					]
-				}
-			},
-			{
-				id: 'stairs-rail',
-				type: 'line',
-				source: 'osm',
-				'source-layer': 'streets',
-				minzoom: 17,
-				filter: [
-					'all',
-					['==', 'kind', 'steps'],
-					level === 0
-						? [
-								'any',
-								['!has', 'from_level'],
-								['any', ['==', 'from_level', level], ['==', 'to_level', level]]
-							]
-						: ['any', ['==', 'from_level', level], ['==', 'to_level', level]]
-				],
-				paint: {
-					'line-color': '#808080',
-					'line-width': [
-						'interpolate',
-						['exponential', 2],
-						['zoom'],
-						10,
-						['*', 0.25, ['^', 2, -6]],
-						24,
-						['*', 0.25, ['^', 2, 8]]
-					],
-					'line-gap-width': [
-						'interpolate',
-						['exponential', 2],
-						['zoom'],
-						10,
-						['*', 4, ['^', 2, -6]],
-						24,
-						['*', 4, ['^', 2, 8]]
-					]
-				}
-			},
-			{
-				id: 'indoor-elevator-outline',
-				type: 'circle',
-				source: 'osm',
-				'source-layer': 'indoor',
-				minzoom: 17,
-				filter: [
-					'all',
-					['==', 'indoor', 'elevator'],
-					['<=', 'from_level', level],
-					['>=', 'to_level', level]
-				],
-				paint: {
-					'circle-color': c.elevatorOutline,
-					'circle-radius': 16
-				}
-			},
-			{
-				id: 'indoor-elevator',
-				type: 'circle',
-				source: 'osm',
-				'source-layer': 'indoor',
-				minzoom: 17,
-				filter: [
-					'all',
-					['==', 'indoor', 'elevator'],
-					['<=', 'from_level', level],
-					['>=', 'to_level', level]
-				],
-				paint: {
-					'circle-color': c.elevator,
-					'circle-radius': 14
-				}
-			},
-			{
-				id: 'indoor-elevator-icon',
-				type: 'symbol',
-				source: 'osm',
-				'source-layer': 'indoor',
-				minzoom: 17,
-				filter: [
-					'all',
-					['==', 'indoor', 'elevator'],
-					['<=', 'from_level', level],
-					['>=', 'to_level', level]
-				],
-				layout: {
-					'icon-image': 'elevator',
-					'icon-size': 0.9
-				}
-			},
 			// bridge decks (man_made=bridge areas) like in VersaTiles
 			{
 				id: 'bridge-area',
@@ -808,7 +498,16 @@ export const getStyle = (
 							['get', 'kind'],
 							[
 								'literal',
-								['footway', 'track', 'steps', 'cycleway', 'path', 'unclassified', 'service']
+								[
+									'footway',
+									'track',
+									'steps',
+									'cycleway',
+									'path',
+									'unclassified',
+									'service',
+									'pedestrian'
+								]
 							]
 						]
 					],
@@ -901,7 +600,9 @@ export const getStyle = (
 				source: 'osm',
 				'source-layer': 'streets',
 				// link zoom gating like VersaTiles: motorway_link from z12, other
-				// links from z13 (the tiles carry them from z9)
+				// links from z13 (the tiles carry them from z9).
+				// minzoom 6 like the road layer: rail first, motorways one zoom later.
+				minzoom: 6,
 				filter: [
 					'all',
 					['==', ['get', 'rail'], false],
@@ -998,8 +699,11 @@ export const getStyle = (
 				},
 				// unlike the shield layer, no ['has', 'ref'] here: the color does not
 				// depend on the road having a ref. Rails and the dashed minor kinds
-				// (drawn by the footway/stairs layers) are excluded instead. Links
-				// appear from z12 (motorway) / z13 (rest) like in VersaTiles.
+				// (drawn by the footway/stairs layers) are excluded instead.
+				// Links appear from z12 (motorway) / z13 (rest) like in VersaTiles.
+				// minzoom 6: rail comes first, motorway/trunk one zoom later (only
+				// those two kinds exist below z6 in the tiles).
+				minzoom: 6,
 				filter: [
 					'all',
 					['==', ['get', 'rail'], false],
@@ -1010,7 +714,16 @@ export const getStyle = (
 							['get', 'kind'],
 							[
 								'literal',
-								['footway', 'track', 'cycleway', 'path', 'steps', 'unclassified', 'service']
+								[
+									'footway',
+									'track',
+									'steps',
+									'cycleway',
+									'path',
+									'unclassified',
+									'service',
+									'pedestrian'
+								]
 							]
 						]
 					],
@@ -1220,7 +933,9 @@ export const getStyle = (
 				source: 'osm',
 				'source-layer': 'streets',
 				// wider and much earlier than VersaTiles (minzoom 8, 1px until z15)
-				// so the main rail network already stands out at country level
+				// so the main rail network already stands out at country level.
+				// Fully visible from z5 — one zoom before motorways (their layers
+				// have minzoom 6).
 				minzoom: 5,
 				filter: [
 					'all',
@@ -1236,30 +951,8 @@ export const getStyle = (
 				],
 				paint: {
 					'line-color': c.railOutline,
-					'line-width': [
-						'interpolate',
-						['linear'],
-						['zoom'],
-						5,
-						1.2,
-						8,
-						1.6,
-						13,
-						2,
-						15,
-						2.5,
-						20,
-						14
-					],
-					'line-opacity': [
-						'interpolate',
-						['linear'],
-						['zoom'],
-						5,
-						0,
-						6,
-						['case', ['==', ['get', 'tunnel'], true], 0.3, 1]
-					]
+					'line-width': ['interpolate', ['linear'], ['zoom'], 5, 1.5, 8, 2, 13, 2.4, 15, 3, 20, 14],
+					'line-opacity': ['case', ['==', ['get', 'tunnel'], true], 0.3, 1]
 				}
 			},
 			{
@@ -1514,6 +1207,466 @@ export const getStyle = (
 				paint: {
 					'line-color': c.rail,
 					'line-dasharray': [10, 2]
+				}
+			},
+			// Indoor overlay: the level-filtered station interior (z17+, plus the
+			// platform areas). Drawn on top of the base map so that tracks and roads
+			// cannot cut through rooms, platforms, stairs, elevators or their labels.
+			{
+				id: 'landuse-public-transport',
+				type: 'fill',
+				source: 'osm',
+				'source-layer': 'land',
+				filter: [
+					'all',
+					['==', 'kind', 'public_transport'],
+					['any', ['!has', 'level'], ['==', 'level', level]]
+				],
+				paint: {
+					'fill-color': c.publicTransport
+				}
+			},
+			{
+				id: 'indoor-corridor',
+				type: 'fill',
+				source: 'osm',
+				'source-layer': 'indoor',
+				filter: ['all', ['==', 'indoor', 'corridor'], ['==', 'level', level]],
+				paint: {
+					'fill-color': c.indoorCorridor,
+					'fill-opacity': 0.8
+				}
+			},
+			{
+				id: 'indoor',
+				type: 'fill',
+				source: 'osm',
+				'source-layer': 'indoor',
+				filter: ['all', ['!in', 'indoor', 'corridor', 'wall', 'elevator'], ['==', 'level', level]],
+				paint: {
+					'fill-color': c.indoor,
+					'fill-opacity': 0.8
+				}
+			},
+			{
+				id: 'indoor-outline',
+				type: 'line',
+				source: 'osm',
+				'source-layer': 'indoor',
+				filter: ['all', ['!in', 'indoor', 'corridor', 'wall', 'elevator'], ['==', 'level', level]],
+				minzoom: 17,
+				paint: {
+					'line-color': c.indoorOutline,
+					'line-width': 2
+				}
+			},
+			// tracks as a small solid street like VersaTiles street-track (white body
+			// over a grey casing, VersaTiles width curve from z14) but fading in at
+			// z12-13 already to match the earlier staging of the other minor ways
+			{
+				id: 'track-outline',
+				type: 'line',
+				source: 'osm',
+				'source-layer': 'streets',
+				filter: [
+					'all',
+					['==', 'kind', 'track'],
+					level === 0 ? ['any', ['!has', 'level'], ['==', 'level', level]] : ['==', 'level', level]
+				],
+				layout: {
+					'line-cap': 'round'
+				},
+				minzoom: 12,
+				paint: {
+					'line-color': c.footwayOutline,
+					'line-width': [
+						'interpolate',
+						['linear'],
+						['zoom'],
+						12,
+						0,
+						13,
+						1.5,
+						14,
+						2,
+						16,
+						4,
+						18,
+						18,
+						19,
+						48,
+						20,
+						96
+					]
+				}
+			},
+			{
+				id: 'track',
+				type: 'line',
+				source: 'osm',
+				'source-layer': 'streets',
+				filter: [
+					'all',
+					['==', 'kind', 'track'],
+					level === 0 ? ['any', ['!has', 'level'], ['==', 'level', level]] : ['==', 'level', level]
+				],
+				layout: {
+					'line-cap': 'round'
+				},
+				minzoom: 12,
+				paint: {
+					'line-color': c.footway,
+					'line-width': [
+						'interpolate',
+						['linear'],
+						['zoom'],
+						12,
+						0,
+						13,
+						0.75,
+						14,
+						1,
+						16,
+						3,
+						18,
+						16,
+						19,
+						44,
+						20,
+						88
+					]
+				}
+			},
+			// minor ways like in VersaTiles (solid body over a slightly wider casing)
+			// but with a neutral grey palette instead of violet and fading in from
+			// z14 instead of z15. footway/path/track are NOT part of this: track is
+			// drawn as a street above, footway/path get the dashed footpath layer
+			// below.
+			{
+				id: 'footway-outline',
+				type: 'line',
+				source: 'osm',
+				'source-layer': 'streets',
+				filter: [
+					'all',
+					['in', 'kind', 'cycleway', 'unclassified', 'service'],
+					level === 0 ? ['any', ['!has', 'level'], ['==', 'level', level]] : ['==', 'level', level]
+				],
+				layout: {
+					'line-cap': 'round'
+				},
+				minzoom: 14,
+				paint: {
+					'line-color': c.footwayOutline,
+					// +2px vs the VersaTiles stops -> a 1-1.5px visible border per side
+					'line-width': [
+						'interpolate',
+						['linear'],
+						['zoom'],
+						14,
+						0,
+						15,
+						3,
+						16,
+						6,
+						18,
+						8,
+						19,
+						13,
+						20,
+						23
+					]
+				}
+			},
+			{
+				id: 'footway',
+				type: 'line',
+				source: 'osm',
+				'source-layer': 'streets',
+				filter: [
+					'all',
+					['in', 'kind', 'cycleway', 'unclassified', 'service'],
+					level === 0 ? ['any', ['!has', 'level'], ['==', 'level', level]] : ['==', 'level', level]
+				],
+				layout: {
+					'line-cap': 'round'
+				},
+				minzoom: 14,
+				paint: {
+					'line-color': c.footway,
+					'line-width': [
+						'interpolate',
+						['linear'],
+						['zoom'],
+						14,
+						0,
+						15,
+						2,
+						16,
+						4,
+						18,
+						6,
+						19,
+						10,
+						20,
+						20
+					]
+				}
+			},
+			// footpaths (highway=footway/path) and pedestrian streets as thin grey
+			// dashed lines. Staggered like the VersaTiles ladder but earlier:
+			// pedestrian fades in z12-13, walking paths (footway, path) follow at
+			// z13-14. (pedestrian lines are only in the tiles from z13, so they
+			// join at z13 at full opacity.)
+			{
+				id: 'footpath',
+				type: 'line',
+				source: 'osm',
+				'source-layer': 'streets',
+				filter: [
+					'all',
+					['in', 'kind', 'footway', 'path', 'pedestrian'],
+					level === 0 ? ['any', ['!has', 'level'], ['==', 'level', level]] : ['==', 'level', level]
+				],
+				minzoom: 12,
+				paint: {
+					'line-color': c.footpath,
+					'line-dasharray': [2, 1],
+					'line-opacity': [
+						'interpolate',
+						['linear'],
+						['zoom'],
+						12,
+						0,
+						13,
+						['match', ['get', 'kind'], ['pedestrian'], 1, 0],
+						14,
+						1
+					],
+					'line-width': ['interpolate', ['linear'], ['zoom'], 12, 0.3, 14, 0.6, 17, 1.8]
+				}
+			},
+			// steps as a footway-colored ribbon like in VersaTiles; the stairs-*
+			// layers below draw the rungs on top from z17
+			{
+				id: 'steps-outline',
+				type: 'line',
+				source: 'osm',
+				'source-layer': 'streets',
+				minzoom: 15,
+				filter: [
+					'all',
+					['==', 'kind', 'steps'],
+					level === 0
+						? [
+								'any',
+								['!has', 'from_level'],
+								['any', ['==', 'from_level', level], ['==', 'to_level', level]]
+							]
+						: ['any', ['==', 'from_level', level], ['==', 'to_level', level]]
+				],
+				layout: {
+					'line-cap': 'round'
+				},
+				paint: {
+					'line-color': c.footwayOutline,
+					'line-width': ['interpolate', ['linear'], ['zoom'], 15, 0, 16, 6, 18, 8, 19, 13, 20, 23]
+				}
+			},
+			{
+				id: 'steps',
+				type: 'line',
+				source: 'osm',
+				'source-layer': 'streets',
+				minzoom: 15,
+				filter: [
+					'all',
+					['==', 'kind', 'steps'],
+					level === 0
+						? [
+								'any',
+								['!has', 'from_level'],
+								['any', ['==', 'from_level', level], ['==', 'to_level', level]]
+							]
+						: ['any', ['==', 'from_level', level], ['==', 'to_level', level]]
+				],
+				layout: {
+					'line-cap': 'round'
+				},
+				paint: {
+					'line-color': c.footway,
+					'line-width': ['interpolate', ['linear'], ['zoom'], 15, 0, 16, 4, 18, 6, 19, 10, 20, 20]
+				}
+			},
+			{
+				id: 'stairs-ground',
+				type: 'line',
+				source: 'osm',
+				'source-layer': 'streets',
+				minzoom: 17,
+				filter: [
+					'all',
+					['==', 'kind', 'steps'],
+					level === 0
+						? [
+								'any',
+								['!has', 'from_level'],
+								['any', ['==', 'from_level', level], ['==', 'to_level', level]]
+							]
+						: ['any', ['==', 'from_level', level], ['==', 'to_level', level]]
+				],
+				paint: {
+					'line-color': '#ddddddff',
+					'line-width': [
+						'interpolate',
+						['exponential', 2],
+						['zoom'],
+						10,
+						['*', 4, ['^', 2, -6]],
+						24,
+						['*', 4, ['^', 2, 8]]
+					]
+				}
+			},
+			{
+				id: 'stairs-steps',
+				type: 'line',
+				source: 'osm',
+				'source-layer': 'streets',
+				minzoom: 17,
+				filter: [
+					'all',
+					['==', 'kind', 'steps'],
+					level === 0
+						? [
+								'any',
+								['!has', 'from_level'],
+								['any', ['==', 'from_level', level], ['==', 'to_level', level]]
+							]
+						: ['any', ['==', 'from_level', level], ['==', 'to_level', level]]
+				],
+				paint: {
+					'line-color': '#bfbfbf',
+					'line-dasharray': ['literal', [0.01, 0.1]],
+					'line-width': [
+						'interpolate',
+						['exponential', 2],
+						['zoom'],
+						10,
+						['*', 4, ['^', 2, -6]],
+						24,
+						['*', 4, ['^', 2, 8]]
+					]
+				}
+			},
+			{
+				id: 'stairs-rail',
+				type: 'line',
+				source: 'osm',
+				'source-layer': 'streets',
+				minzoom: 17,
+				filter: [
+					'all',
+					['==', 'kind', 'steps'],
+					level === 0
+						? [
+								'any',
+								['!has', 'from_level'],
+								['any', ['==', 'from_level', level], ['==', 'to_level', level]]
+							]
+						: ['any', ['==', 'from_level', level], ['==', 'to_level', level]]
+				],
+				paint: {
+					'line-color': '#808080',
+					'line-width': [
+						'interpolate',
+						['exponential', 2],
+						['zoom'],
+						10,
+						['*', 0.25, ['^', 2, -6]],
+						24,
+						['*', 0.25, ['^', 2, 8]]
+					],
+					'line-gap-width': [
+						'interpolate',
+						['exponential', 2],
+						['zoom'],
+						10,
+						['*', 4, ['^', 2, -6]],
+						24,
+						['*', 4, ['^', 2, 8]]
+					]
+				}
+			},
+			{
+				id: 'indoor-elevator-outline',
+				type: 'circle',
+				source: 'osm',
+				'source-layer': 'indoor',
+				minzoom: 17,
+				filter: [
+					'all',
+					['==', 'indoor', 'elevator'],
+					['<=', 'from_level', level],
+					['>=', 'to_level', level]
+				],
+				paint: {
+					'circle-color': c.elevatorOutline,
+					'circle-radius': 16
+				}
+			},
+			{
+				id: 'indoor-elevator',
+				type: 'circle',
+				source: 'osm',
+				'source-layer': 'indoor',
+				minzoom: 17,
+				filter: [
+					'all',
+					['==', 'indoor', 'elevator'],
+					['<=', 'from_level', level],
+					['>=', 'to_level', level]
+				],
+				paint: {
+					'circle-color': c.elevator,
+					'circle-radius': 14
+				}
+			},
+			{
+				id: 'indoor-elevator-icon',
+				type: 'symbol',
+				source: 'osm',
+				'source-layer': 'indoor',
+				minzoom: 17,
+				filter: [
+					'all',
+					['==', 'indoor', 'elevator'],
+					['<=', 'from_level', level],
+					['>=', 'to_level', level]
+				],
+				layout: {
+					'icon-image': 'elevator',
+					'icon-size': 0.9
+				}
+			},
+			{
+				id: 'indoor-names',
+				type: 'symbol',
+				source: 'osm',
+				'source-layer': 'indoor',
+				minzoom: 17,
+				filter: ['any', ['!has', 'level'], ['==', 'level', level]],
+				layout: {
+					'symbol-placement': 'point',
+					'text-field': ['get', 'name'],
+					'text-font': ['Noto Sans Regular'],
+					'text-size': 12
+				},
+				paint: {
+					'text-color': c.indoorText,
+					'text-halo-color': c.textHalo,
+					'text-halo-width': 2,
+					'text-halo-blur': 1
 				}
 			},
 			{
