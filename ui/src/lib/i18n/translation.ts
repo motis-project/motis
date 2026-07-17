@@ -7,6 +7,7 @@ import pl from './pl';
 import cs from './cs';
 
 export type Translations = {
+	search: string;
 	ticket: string;
 	ticketOptions: string;
 	includedInTicket: string;

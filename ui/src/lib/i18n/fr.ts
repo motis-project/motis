@@ -1,6 +1,7 @@
 import type { Translations } from './translation';
 
 const translations: Translations = {
+	search: 'Rechercher',
 	ticket: 'Billet',
 	ticketOptions: 'Options de billet',
 	includedInTicket: 'Inclus dans le billet',
