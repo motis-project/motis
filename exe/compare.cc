@@ -188,6 +188,9 @@ int compare(int ac, char** av) {
             nfo.responses_[i] = std::move(res);
           }
         } catch (...) {
+          fmt::println(
+              "[WARNING] query_id: {}, response: {}, could not parse: {}",
+              query_id, responses_paths[i], *r);
         }
       } else {
         break;
