@@ -56,6 +56,7 @@ export const colors = {
 		footwayOutline: 'rgb(206, 202, 199)',
 		footpath: 'rgb(160, 160, 160)',
 		cycleway: 'rgb(100, 145, 205)',
+		unclassified: 'rgb(232, 230, 227)',
 		steps: '#ff4524',
 
 		elevatorOutline: '#808080',
@@ -131,6 +132,7 @@ export const colors = {
 		footwayOutline: 'rgb(62, 62, 62)',
 		footpath: 'rgb(80, 80, 80)',
 		cycleway: 'rgb(110, 150, 205)',
+		unclassified: 'rgb(50, 50, 50)',
 		steps: '#70504b',
 
 		elevatorOutline: '#808080',
@@ -1350,8 +1352,8 @@ export const getStyle = (
 					]
 				}
 			},
-			// unclassified/service like in the old release: a thin solid body over a
-			// slightly wider casing, only from z15
+			// service like in the old release: a thin solid body over a slightly
+			// wider casing, only from z15
 			{
 				id: 'footway-outline',
 				type: 'line',
@@ -1359,7 +1361,7 @@ export const getStyle = (
 				'source-layer': 'streets',
 				filter: [
 					'all',
-					['in', 'kind', 'unclassified', 'service'],
+					['==', 'kind', 'service'],
 					level === 0 ? ['any', ['!has', 'level'], ['==', 'level', level]] : ['==', 'level', level]
 				],
 				layout: {
@@ -1379,7 +1381,7 @@ export const getStyle = (
 				'source-layer': 'streets',
 				filter: [
 					'all',
-					['in', 'kind', 'unclassified', 'service'],
+					['==', 'kind', 'service'],
 					level === 0 ? ['any', ['!has', 'level'], ['==', 'level', level]] : ['==', 'level', level]
 				],
 				layout: {
@@ -1389,6 +1391,43 @@ export const getStyle = (
 				paint: {
 					'line-color': c.footway,
 					'line-width': ['interpolate', ['linear'], ['zoom'], 15, 0, 16, 4, 18, 6, 19, 10, 20, 20]
+				}
+			},
+			// unclassified as a plain borderless line, slightly grey vs the white
+			// residential roads
+			{
+				id: 'unclassified',
+				type: 'line',
+				source: 'osm',
+				'source-layer': 'streets',
+				filter: [
+					'all',
+					['==', 'kind', 'unclassified'],
+					level === 0 ? ['any', ['!has', 'level'], ['==', 'level', level]] : ['==', 'level', level]
+				],
+				layout: {
+					'line-cap': 'round'
+				},
+				minzoom: 14,
+				paint: {
+					'line-color': c.unclassified,
+					'line-width': [
+						'interpolate',
+						['linear'],
+						['zoom'],
+						14,
+						2,
+						15,
+						4,
+						16,
+						6,
+						18,
+						10,
+						19,
+						16,
+						20,
+						24
+					]
 				}
 			},
 			// footpaths (highway=footway/path) and pedestrian streets as thin grey
