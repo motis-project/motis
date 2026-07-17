@@ -561,8 +561,8 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
         route_with_profile(flex::flex_output{*w_, *l_, pl_, matches_, ae_, tz_,
                                              *tags_, *tt_, *fa_, ids.front()});
       }
-    } else if (m == api::ModeEnum::CAR || m == api::ModeEnum::BIKE ||
-               m == api::ModeEnum::CAR_PARKING ||
+    } else if (m == api::ModeEnum::CAR || m == api::ModeEnum::HGV ||
+               m == api::ModeEnum::BIKE || m == api::ModeEnum::CAR_PARKING ||
                m == api::ModeEnum::CAR_DROPOFF ||
                m == api::ModeEnum::DEBUG_BUS_ROUTE ||
                m == api::ModeEnum::DEBUG_RAILWAY_ROUTE ||
@@ -1017,18 +1017,6 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
     auto search_state = n::routing::search_state{};
 #if defined(NIGIRI_CUDA)
     auto gpu_used = false;
-    auto const gpu_g_clasz =
-        q.allowed_claszes_ == n::routing::all_clasz_allowed();
-    auto const gpu_g_td = q.td_start_.empty() && q.td_dest_.empty();
-    auto const gpu_g_tts = q.transfer_time_settings_.default_;
-    auto const gpu_g_nobikecar =
-        !q.require_bike_transport_ && !q.require_car_transport_;
-    auto const gpu_g_novia = q.via_stops_.empty();
-    auto const gpu_g_profile =
-        q.prf_idx_ == 0U ||
-        (q.prf_idx_ == n::kFootProfile &&
-         (rtt == nullptr || (!rtt->has_td_footpaths_out_[q.prf_idx_].any() &&
-                             !rtt->has_td_footpaths_in_[q.prf_idx_].any())));
     auto const gpu_supported = n::routing::gpu::gpu_supported(q, rtt);
     auto const run_on_gpu = [&](bool const use_pong) -> bool {
       try {
@@ -1108,12 +1096,6 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
 #if defined(NIGIRI_CUDA)
         {"gpu_used", gpu_used},
         {"gpu_supported", gpu_supported},
-        {"gpu_g_clasz", gpu_g_clasz},
-        {"gpu_g_td", gpu_g_td},
-        {"gpu_g_tts", gpu_g_tts},
-        {"gpu_g_nobikecar", gpu_g_nobikecar},
-        {"gpu_g_novia", gpu_g_novia},
-        {"gpu_g_profile", gpu_g_profile},
 #endif
     };
 

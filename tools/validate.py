@@ -77,7 +77,7 @@ def compare(motis, qlines, responses, work, label):
     qf = os.path.join(work, label + ".q")
     with open(qf, "w") as f:
         f.write("\n".join(qlines) + "\n")
-        
+
     # Write responses.
     files = []
     for i, resp in enumerate(responses):
@@ -85,7 +85,7 @@ def compare(motis, qlines, responses, work, label):
         with open(rf, "w") as f:
             f.write("\n".join(resp) + "\n")
         files.append(rf)
-        
+
     # Run compare for reference vs all.
     return all(subprocess.run([motis, "compare", "-q", qf, "-r", files[0], f],
                               stdout=subprocess.DEVNULL,
