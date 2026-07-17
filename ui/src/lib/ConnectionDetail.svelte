@@ -411,20 +411,6 @@
 					</span>
 				</div>
 
-				<div class="ml-4 mt-4">
-					{#if l.bikesAllowed}
-						<div title={t.bikesAllowed} class="inline">
-							<Bike aria-label={t.bikesAllowed} class="inline" />
-						</div>
-					{/if}
-
-					{#if l.wheelchairAccessible == 'ACCESSIBLE'}
-						<div title={t.wheelchairAccessible} class="inline">
-							<Accessibility aria-label={t.wheelchairAccessible} class="inline" />
-						</div>
-					{/if}
-				</div>
-
 				<Alerts alerts={l.alerts} tz={l.from.tz || l.to.tz} variant="full" />
 
 				{#if l.alternatives && l.alternatives.length > 0}
@@ -469,11 +455,15 @@
 
 				<div class="m-4">
 					{#if l.bikesAllowed}
-						<Bike class="inline" />
+						<div title={t.bikesAllowed} class="inline">
+							<Bike aria-label={t.bikesAllowed} class="inline" />
+						</div>
 					{/if}
 
 					{#if l.wheelchairAccessible == 'ACCESSIBLE'}
-						<Accessibility class="inline" />
+						<div title={t.wheelchairAccessible} class="inline">
+							<Accessibility aria-label={t.wheelchairAccessible} class="inline" />
+						</div>
 					{/if}
 				</div>
 
