@@ -54,6 +54,8 @@ export const colors = {
 
 		footway: 'rgb(252, 251, 250)',
 		footwayOutline: 'rgb(206, 202, 199)',
+		track: '#c0aa77',
+		livingStreet: 'rgb(248, 245, 244)',
 		footpath: 'rgb(160, 160, 160)',
 		cycleway: 'rgb(100, 145, 205)',
 		unclassified: 'rgb(232, 230, 227)',
@@ -130,6 +132,8 @@ export const colors = {
 
 		footway: 'rgb(30, 30, 30)',
 		footwayOutline: 'rgb(62, 62, 62)',
+		track: '#483d24',
+		livingStreet: 'rgb(46, 46, 46)',
 		footpath: 'rgb(80, 80, 80)',
 		cycleway: 'rgb(110, 150, 205)',
 		unclassified: 'rgb(50, 50, 50)',
@@ -598,6 +602,124 @@ export const getStyle = (
 					]
 				}
 			},
+			// minor ways (track / living street / service / unclassified) drawn here,
+			// below the bigger streets (primary etc.): the big-road bodies paint over
+			// them at junctions, while unclassified sits on top of track / living
+			// street / service
+			// tracks as a thin, grey plain line (no casing), fading in at z12-13
+			// already so field and forest ways show up early
+			{
+				id: 'track',
+				type: 'line',
+				source: 'osm',
+				'source-layer': 'streets',
+				filter: [
+					'all',
+					['==', 'kind', 'track'],
+					level === 0 ? ['any', ['!has', 'level'], ['==', 'level', level]] : ['==', 'level', level]
+				],
+				layout: {
+					'line-cap': 'round'
+				},
+				minzoom: 12,
+				paint: {
+					'line-color': c.track,
+					'line-width': [
+						'interpolate',
+						['linear'],
+						['zoom'],
+						12,
+						0,
+						13,
+						0.9,
+						16,
+						1.5,
+						18,
+						3,
+						19,
+						4,
+						20,
+						6
+					]
+				}
+			},
+			// living street: a plain solid body like the old service look, no casing
+			{
+				id: 'living-street',
+				type: 'line',
+				source: 'osm',
+				'source-layer': 'streets',
+				filter: [
+					'all',
+					['==', 'kind', 'living_street'],
+					level === 0 ? ['any', ['!has', 'level'], ['==', 'level', level]] : ['==', 'level', level]
+				],
+				layout: {
+					'line-cap': 'round'
+				},
+				minzoom: 15,
+				paint: {
+					'line-color': c.livingStreet,
+					'line-width': ['interpolate', ['linear'], ['zoom'], 15, 0, 16, 4, 18, 6, 19, 10, 20, 20]
+				}
+			},
+			// service as a plain solid line (no casing), thinner than living street
+			{
+				id: 'footway',
+				type: 'line',
+				source: 'osm',
+				'source-layer': 'streets',
+				filter: [
+					'all',
+					['==', 'kind', 'service'],
+					level === 0 ? ['any', ['!has', 'level'], ['==', 'level', level]] : ['==', 'level', level]
+				],
+				layout: {
+					'line-cap': 'round'
+				},
+				minzoom: 15,
+				paint: {
+					'line-color': c.footway,
+					'line-width': ['interpolate', ['linear'], ['zoom'], 15, 0, 16, 2.5, 18, 4, 19, 6, 20, 12]
+				}
+			},
+			// unclassified as a plain borderless line, slightly grey vs the white
+			// residential roads
+			{
+				id: 'unclassified',
+				type: 'line',
+				source: 'osm',
+				'source-layer': 'streets',
+				filter: [
+					'all',
+					['==', 'kind', 'unclassified'],
+					level === 0 ? ['any', ['!has', 'level'], ['==', 'level', level]] : ['==', 'level', level]
+				],
+				layout: {
+					'line-cap': 'round'
+				},
+				minzoom: 14,
+				paint: {
+					'line-color': c.unclassified,
+					'line-width': [
+						'interpolate',
+						['linear'],
+						['zoom'],
+						14,
+						2,
+						15,
+						4,
+						16,
+						6,
+						18,
+						10,
+						19,
+						16,
+						20,
+						24
+					]
+				}
+			},
 			{
 				id: 'road_back_non_residential',
 				type: 'line',
@@ -625,7 +747,8 @@ export const getStyle = (
 									'path',
 									'unclassified',
 									'residential',
-									'service'
+									'service',
+									'living_street'
 								]
 							]
 						]
@@ -1279,157 +1402,6 @@ export const getStyle = (
 					'line-width': 2
 				}
 			},
-			// tracks as a small solid street like VersaTiles street-track (white body
-			// over a grey casing, VersaTiles width curve from z14) but fading in at
-			// z12-13 already so field and forest ways show up early
-			{
-				id: 'track-outline',
-				type: 'line',
-				source: 'osm',
-				'source-layer': 'streets',
-				filter: [
-					'all',
-					['==', 'kind', 'track'],
-					level === 0 ? ['any', ['!has', 'level'], ['==', 'level', level]] : ['==', 'level', level]
-				],
-				layout: {
-					'line-cap': 'round'
-				},
-				minzoom: 12,
-				paint: {
-					'line-color': c.footwayOutline,
-					'line-width': [
-						'interpolate',
-						['linear'],
-						['zoom'],
-						12,
-						0,
-						13,
-						2,
-						16,
-						4,
-						18,
-						18,
-						19,
-						48,
-						20,
-						96
-					]
-				}
-			},
-			{
-				id: 'track',
-				type: 'line',
-				source: 'osm',
-				'source-layer': 'streets',
-				filter: [
-					'all',
-					['==', 'kind', 'track'],
-					level === 0 ? ['any', ['!has', 'level'], ['==', 'level', level]] : ['==', 'level', level]
-				],
-				layout: {
-					'line-cap': 'round'
-				},
-				minzoom: 12,
-				paint: {
-					'line-color': c.footway,
-					'line-width': [
-						'interpolate',
-						['linear'],
-						['zoom'],
-						12,
-						0,
-						13,
-						1.0,
-						16,
-						3,
-						18,
-						16,
-						19,
-						44,
-						20,
-						88
-					]
-				}
-			},
-			// service like in the old release: a thin solid body over a slightly
-			// wider casing, only from z15
-			{
-				id: 'footway-outline',
-				type: 'line',
-				source: 'osm',
-				'source-layer': 'streets',
-				filter: [
-					'all',
-					['==', 'kind', 'service'],
-					level === 0 ? ['any', ['!has', 'level'], ['==', 'level', level]] : ['==', 'level', level]
-				],
-				layout: {
-					'line-cap': 'round'
-				},
-				minzoom: 15,
-				paint: {
-					'line-color': c.footwayOutline,
-					// +2px vs the VersaTiles stops -> a 1-1.5px visible border per side
-					'line-width': ['interpolate', ['linear'], ['zoom'], 15, 0, 16, 6, 18, 8, 19, 13, 20, 23]
-				}
-			},
-			{
-				id: 'footway',
-				type: 'line',
-				source: 'osm',
-				'source-layer': 'streets',
-				filter: [
-					'all',
-					['==', 'kind', 'service'],
-					level === 0 ? ['any', ['!has', 'level'], ['==', 'level', level]] : ['==', 'level', level]
-				],
-				layout: {
-					'line-cap': 'round'
-				},
-				minzoom: 15,
-				paint: {
-					'line-color': c.footway,
-					'line-width': ['interpolate', ['linear'], ['zoom'], 15, 0, 16, 4, 18, 6, 19, 10, 20, 20]
-				}
-			},
-			// unclassified as a plain borderless line, slightly grey vs the white
-			// residential roads
-			{
-				id: 'unclassified',
-				type: 'line',
-				source: 'osm',
-				'source-layer': 'streets',
-				filter: [
-					'all',
-					['==', 'kind', 'unclassified'],
-					level === 0 ? ['any', ['!has', 'level'], ['==', 'level', level]] : ['==', 'level', level]
-				],
-				layout: {
-					'line-cap': 'round'
-				},
-				minzoom: 14,
-				paint: {
-					'line-color': c.unclassified,
-					'line-width': [
-						'interpolate',
-						['linear'],
-						['zoom'],
-						14,
-						2,
-						15,
-						4,
-						16,
-						6,
-						18,
-						10,
-						19,
-						16,
-						20,
-						24
-					]
-				}
-			},
 			// footpaths (highway=footway/path) and pedestrian streets as thin grey
 			// dashed lines; cycleways get the same treatment in blue. Staggered like
 			// the VersaTiles ladder but earlier: pedestrian fades in z12-13, walking
@@ -1464,14 +1436,15 @@ export const getStyle = (
 					'line-width': ['interpolate', ['linear'], ['zoom'], 12, 0.3, 14, 0.6, 17, 1.8]
 				}
 			},
-			// steps as a footway-colored ribbon like in VersaTiles; the stairs-*
-			// layers below draw the rungs on top from z17
+			// steps when zoomed out: a thin grey dashed line like normal pedestrian
+			// paths, handed off to the ribbon + rung detail below as that fades in
+			// around z15-16
 			{
-				id: 'steps-outline',
+				id: 'steps-line',
 				type: 'line',
 				source: 'osm',
 				'source-layer': 'streets',
-				minzoom: 15,
+				minzoom: 12,
 				filter: [
 					'all',
 					['==', 'kind', 'steps'],
@@ -1483,20 +1456,21 @@ export const getStyle = (
 							]
 						: ['any', ['==', 'from_level', level], ['==', 'to_level', level]]
 				],
-				layout: {
-					'line-cap': 'round'
-				},
 				paint: {
-					'line-color': c.footwayOutline,
-					'line-width': ['interpolate', ['linear'], ['zoom'], 15, 0, 16, 6, 18, 8, 19, 13, 20, 23]
+					'line-color': c.footpath,
+					'line-dasharray': [2, 1],
+					'line-opacity': ['interpolate', ['linear'], ['zoom'], 12, 0, 13, 1, 14, 0],
+					'line-width': ['interpolate', ['linear'], ['zoom'], 12, 0.3, 13, 0.6, 14, 0.9]
 				}
 			},
+			// steps like the original OSM style: a footway-colored line with short
+			// perpendicular tread rungs and no casing / outline
 			{
 				id: 'steps',
 				type: 'line',
 				source: 'osm',
 				'source-layer': 'streets',
-				minzoom: 15,
+				minzoom: 14,
 				filter: [
 					'all',
 					['==', 'kind', 'steps'],
@@ -1509,111 +1483,12 @@ export const getStyle = (
 						: ['any', ['==', 'from_level', level], ['==', 'to_level', level]]
 				],
 				layout: {
-					'line-cap': 'round'
+					'line-cap': 'butt'
 				},
 				paint: {
-					'line-color': c.footway,
-					'line-width': ['interpolate', ['linear'], ['zoom'], 15, 0, 16, 4, 18, 6, 19, 10, 20, 20]
-				}
-			},
-			{
-				id: 'stairs-ground',
-				type: 'line',
-				source: 'osm',
-				'source-layer': 'streets',
-				minzoom: 17,
-				filter: [
-					'all',
-					['==', 'kind', 'steps'],
-					level === 0
-						? [
-								'any',
-								['!has', 'from_level'],
-								['any', ['==', 'from_level', level], ['==', 'to_level', level]]
-							]
-						: ['any', ['==', 'from_level', level], ['==', 'to_level', level]]
-				],
-				paint: {
-					'line-color': '#ddddddff',
-					'line-width': [
-						'interpolate',
-						['exponential', 2],
-						['zoom'],
-						10,
-						['*', 4, ['^', 2, -6]],
-						24,
-						['*', 4, ['^', 2, 8]]
-					]
-				}
-			},
-			{
-				id: 'stairs-steps',
-				type: 'line',
-				source: 'osm',
-				'source-layer': 'streets',
-				minzoom: 17,
-				filter: [
-					'all',
-					['==', 'kind', 'steps'],
-					level === 0
-						? [
-								'any',
-								['!has', 'from_level'],
-								['any', ['==', 'from_level', level], ['==', 'to_level', level]]
-							]
-						: ['any', ['==', 'from_level', level], ['==', 'to_level', level]]
-				],
-				paint: {
-					'line-color': '#bfbfbf',
-					'line-dasharray': ['literal', [0.01, 0.1]],
-					'line-width': [
-						'interpolate',
-						['exponential', 2],
-						['zoom'],
-						10,
-						['*', 4, ['^', 2, -6]],
-						24,
-						['*', 4, ['^', 2, 8]]
-					]
-				}
-			},
-			{
-				id: 'stairs-rail',
-				type: 'line',
-				source: 'osm',
-				'source-layer': 'streets',
-				minzoom: 17,
-				filter: [
-					'all',
-					['==', 'kind', 'steps'],
-					level === 0
-						? [
-								'any',
-								['!has', 'from_level'],
-								['any', ['==', 'from_level', level], ['==', 'to_level', level]]
-							]
-						: ['any', ['==', 'from_level', level], ['==', 'to_level', level]]
-				],
-				paint: {
-					'line-color': '#808080',
-					'line-width': [
-						'interpolate',
-						['exponential', 2],
-						['zoom'],
-						10,
-						['*', 0.25, ['^', 2, -6]],
-						24,
-						['*', 0.25, ['^', 2, 8]]
-					],
-					'line-gap-width': [
-						'interpolate',
-						['exponential', 2],
-						['zoom'],
-						10,
-						['*', 4, ['^', 2, -6]],
-						24,
-						['*', 4, ['^', 2, 8]]
-					]
+					'line-color': c.footpath,
+					'line-dasharray': [0.4, 0.3],
+					'line-width': ['interpolate', ['linear'], ['zoom'], 14, 2, 16, 4.5, 18, 7.5, 20, 13]
 				}
 			},
 			{
