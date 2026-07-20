@@ -10,6 +10,7 @@ api::ModeEnum to_mode(osr::mode const m) {
     case osr::mode::kWheelchair: return api::ModeEnum::WALK;
     case osr::mode::kBike: return api::ModeEnum::BIKE;
     case osr::mode::kCar: return api::ModeEnum::CAR;
+    case osr::mode::kHgv: return api::ModeEnum::HGV;
     case osr::mode::kRailway: return api::ModeEnum::DEBUG_RAILWAY_ROUTE;
     case osr::mode::kFerry: return api::ModeEnum::DEBUG_FERRY_ROUTE;
   }
@@ -38,6 +39,7 @@ osr::search_profile to_profile(
     case api::ModeEnum::ODM: [[fallthrough]];
     case api::ModeEnum::RIDE_SHARING: [[fallthrough]];
     case api::ModeEnum::CAR: return osr::search_profile::kCar;
+    case api::ModeEnum::HGV: return osr::search_profile::kHgv;
     case api::ModeEnum::CAR_DROPOFF:
       return wheelchair ? osr::search_profile::kCarDropOffWheelchair
                         : osr::search_profile::kCarDropOff;

@@ -7,6 +7,7 @@
  * - `BIKE`
  * - `RENTAL` Experimental. Expect unannounced breaking changes (without version bumps) for all parameters and returned structs.
  * - `CAR`
+ * - `HGV` Heavy goods vehicles (only supported for direct connections)
  * - `CAR_PARKING` Experimental. Expect unannounced breaking changes (without version bumps) for all parameters and returned structs.
  * - `CAR_DROPOFF` Experimental. Expect unannounced breaking changes (without version bumps) for all perameters and returned structs.
  * - `ODM` on-demand taxis from the Prima+ÖV Project
@@ -38,7 +39,7 @@
  * - `CABLE_CAR`: deprecated
  *
  */
-export type Mode = 'WALK' | 'BIKE' | 'RENTAL' | 'CAR' | 'CAR_PARKING' | 'CAR_DROPOFF' | 'ODM' | 'RIDE_SHARING' | 'FLEX' | 'DEBUG_BUS_ROUTE' | 'DEBUG_RAILWAY_ROUTE' | 'DEBUG_FERRY_ROUTE' | 'TRANSIT' | 'TRAM' | 'SUBWAY' | 'FERRY' | 'AIRPLANE' | 'BUS' | 'COACH' | 'RAIL' | 'HIGHSPEED_RAIL' | 'LONG_DISTANCE' | 'NIGHT_RAIL' | 'REGIONAL_FAST_RAIL' | 'REGIONAL_RAIL' | 'SUBURBAN' | 'FUNICULAR' | 'AERIAL_LIFT' | 'OTHER' | 'AREAL_LIFT' | 'METRO' | 'CABLE_CAR';
+export type Mode = 'WALK' | 'BIKE' | 'RENTAL' | 'CAR' | 'HGV' | 'CAR_PARKING' | 'CAR_DROPOFF' | 'ODM' | 'RIDE_SHARING' | 'FLEX' | 'DEBUG_BUS_ROUTE' | 'DEBUG_RAILWAY_ROUTE' | 'DEBUG_FERRY_ROUTE' | 'TRANSIT' | 'TRAM' | 'SUBWAY' | 'FERRY' | 'AIRPLANE' | 'BUS' | 'COACH' | 'RAIL' | 'HIGHSPEED_RAIL' | 'LONG_DISTANCE' | 'NIGHT_RAIL' | 'REGIONAL_FAST_RAIL' | 'REGIONAL_RAIL' | 'SUBURBAN' | 'FUNICULAR' | 'AERIAL_LIFT' | 'OTHER' | 'AREAL_LIFT' | 'METRO' | 'CABLE_CAR';
 
 /**
  * a transit route/line serving a stop
@@ -394,6 +395,61 @@ export type PedestrianSpeed = number;
  * Average speed for bike routing in meters per second
  */
 export type CyclingSpeed = number;
+
+/**
+ * Vehicle height for HGV routing in meters
+ */
+export type VehicleHeight = number;
+
+/**
+ * Vehicle width for HGV routing in meters
+ */
+export type VehicleWidth = number;
+
+/**
+ * Vehicle length for HGV routing in meters
+ */
+export type VehicleLength = number;
+
+/**
+ * Vehicle gross weight for HGV routing in tons
+ */
+export type VehicleWeight = number;
+
+/**
+ * Whether the vehicle carries hazardous materials for HGV routing
+ */
+export type VehicleHazmat = boolean;
+
+/**
+ * Whether the vehicle carries hazardous materials dangerous to water for HGV routing
+ */
+export type VehicleHazmatWater = boolean;
+
+/**
+ * Axle count for HGV routing
+ */
+export type VehicleAxleCount = number;
+
+/**
+ * Maximum axle load for HGV routing in tons
+ */
+export type VehicleAxleLoad = number;
+
+/**
+ * Whether the vehicle has a trailer for HGV routing
+ */
+export type VehicleTrailer = boolean;
+
+/**
+ * Vehicle top speed for HGV routing in km/h
+ */
+export type VehicleTopSpeed = number;
+
+/**
+ * Whether the vehicle is allowed to use low-emission zones for HGV routing
+ */
+export type VehicleLezAccess = boolean;
 
 /**
  * - `NORMAL` - latitude / longitude coordinate or address
@@ -1775,6 +1831,17 @@ export type OneToManyIntermodalParams = {
      *
      */
     cyclingSpeed?: CyclingSpeed;
+    vehicleHeight?: VehicleHeight;
+    vehicleWidth?: VehicleWidth;
+    vehicleLength?: VehicleLength;
+    vehicleWeight?: VehicleWeight;
+    vehicleHazmat?: VehicleHazmat;
+    vehicleHazmatWater?: VehicleHazmatWater;
+    vehicleAxleCount?: VehicleAxleCount;
+    vehicleAxleLoad?: VehicleAxleLoad;
+    vehicleTrailer?: VehicleTrailer;
+    vehicleTopSpeed?: VehicleTopSpeed;
+    vehicleLezAccess?: VehicleLezAccess;
     /**
      * Optional. Default is `NONE`.
      *
@@ -2056,7 +2123,7 @@ export type PlanData = {
          *
          * Note: the output `direct` array will stay empty if the input param `maxDirectTime` makes any direct trip impossible.
          *
-         * Only non-transit modes such as `WALK`, `BIKE`, `CAR`, `BIKE_SHARING`, etc. can be used.
+         * Only non-transit modes such as `WALK`, `BIKE`, `CAR`, `HGV`, `BIKE_SHARING`, etc. can be used.
          *
          */
         directModes?: Array<Mode>;
@@ -2540,6 +2607,50 @@ export type PlanData = {
          */
         useRoutedTransfers?: boolean;
         /**
+         * Axle count used for `HGV` street routing.
+         */
+        vehicleAxleCount?: VehicleAxleCount;
+        /**
+         * Maximum axle load in tons used for `HGV` street routing.
+         */
+        vehicleAxleLoad?: VehicleAxleLoad;
+        /**
+         * Whether the vehicle carries hazardous materials for `HGV` street routing.
+         */
+        vehicleHazmat?: VehicleHazmat;
+        /**
+         * Whether the vehicle carries hazardous materials dangerous to water for `HGV` street routing.
+         */
+        vehicleHazmatWater?: VehicleHazmatWater;
+        /**
+         * Vehicle height in meters used for `HGV` street routing.
+         */
+        vehicleHeight?: VehicleHeight;
+        /**
+         * Vehicle length in meters used for `HGV` street routing.
+         */
+        vehicleLength?: VehicleLength;
+        /**
+         * Whether the vehicle is allowed to use low-emission zones for `HGV` street routing.
+         */
+        vehicleLezAccess?: VehicleLezAccess;
+        /**
+         * Vehicle top speed in km/h used for `HGV` street routing.
+         */
+        vehicleTopSpeed?: VehicleTopSpeed;
+        /**
+         * Whether the vehicle has a trailer for `HGV` street routing.
+         */
+        vehicleTrailer?: VehicleTrailer;
+        /**
+         * Vehicle gross weight in tons used for `HGV` street routing.
+         */
+        vehicleWeight?: VehicleWeight;
+        /**
+         * Vehicle width in meters used for `HGV` street routing.
+         */
+        vehicleWidth?: VehicleWidth;
+        /**
          * List of via stops to visit (only stop IDs, no coordinates allowed for now).
          * Also see the optional parameter `viaMinimumStay` to set a set a minimum stay duration for each via stop.
          *
@@ -2660,6 +2771,17 @@ export type OneToManyData = {
          * geo location as latitude;longitude
          */
         one: string;
+        vehicleAxleCount?: VehicleAxleCount;
+        vehicleAxleLoad?: VehicleAxleLoad;
+        vehicleHazmat?: VehicleHazmat;
+        vehicleHazmatWater?: VehicleHazmatWater;
+        vehicleHeight?: VehicleHeight;
+        vehicleLength?: VehicleLength;
+        vehicleLezAccess?: VehicleLezAccess;
+        vehicleTopSpeed?: VehicleTopSpeed;
+        vehicleTrailer?: VehicleTrailer;
+        vehicleWeight?: VehicleWeight;
+        vehicleWidth?: VehicleWidth;
         /**
          * Optional. Default is `false`.
          * If true, the response includes the distance in meters
@@ -2883,6 +3005,17 @@ export type OneToManyIntermodalData = {
          *
          */
         useRoutedTransfers?: boolean;
+        vehicleAxleCount?: VehicleAxleCount;
+        vehicleAxleLoad?: VehicleAxleLoad;
+        vehicleHazmat?: VehicleHazmat;
+        vehicleHazmatWater?: VehicleHazmatWater;
+        vehicleHeight?: VehicleHeight;
+        vehicleLength?: VehicleLength;
+        vehicleLezAccess?: VehicleLezAccess;
+        vehicleTopSpeed?: VehicleTopSpeed;
+        vehicleTrailer?: VehicleTrailer;
+        vehicleWeight?: VehicleWeight;
+        vehicleWidth?: VehicleWidth;
         /**
          * Optional. Default is `false`.
          * If true, the response includes the distance in meters
@@ -3091,6 +3224,17 @@ export type OneToAllData = {
          *
          */
         useRoutedTransfers?: boolean;
+        vehicleAxleCount?: VehicleAxleCount;
+        vehicleAxleLoad?: VehicleAxleLoad;
+        vehicleHazmat?: VehicleHazmat;
+        vehicleHazmatWater?: VehicleHazmatWater;
+        vehicleHeight?: VehicleHeight;
+        vehicleLength?: VehicleLength;
+        vehicleLezAccess?: VehicleLezAccess;
+        vehicleTopSpeed?: VehicleTopSpeed;
+        vehicleTrailer?: VehicleTrailer;
+        vehicleWeight?: VehicleWeight;
+        vehicleWidth?: VehicleWidth;
     };
 };
 

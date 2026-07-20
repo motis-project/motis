@@ -44,7 +44,7 @@
 	import ItineraryGeoJson from '$lib/map/itineraries/ItineraryGeoJSON.svelte';
 	import maplibregl from 'maplibre-gl';
 	import { browser } from '$app/environment';
-	import { cn, getUrlArray, onClickStop, onClickTrip, pushStateWithQueryString } from '$lib/utils';
+	import { getUrlArray, onClickStop, onClickTrip, pushStateWithQueryString } from '$lib/utils';
 	import Debug from '$lib/Debug.svelte';
 	import Marker from '$lib/map/Marker.svelte';
 	import Popup from '$lib/map/Popup.svelte';
@@ -123,14 +123,18 @@
 		}
 	});
 
-	let theme: 'light' | 'dark' =
-		(hasDark ? 'dark' : hasLight ? 'light' : undefined) ??
-		(browser && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
-			? 'dark'
-			: 'light');
-	if (theme === 'dark') {
-		document.documentElement.classList.add('dark');
-	}
+	let theme: 'light' | 'dark' = $derived.by(() => {
+		if (hasDark) return 'dark';
+		if (hasLight) return 'light';
+		return new MediaQuery('(prefers-color-scheme: dark)').current ? 'dark' : 'light';
+	});
+	$effect(() => {
+		if (theme === 'dark') {
+			document.documentElement.classList.add('dark');
+		} else {
+			document.documentElement.classList.remove('dark');
+		}
+	});
 
 	let withHillshades = $state(false);
 	let center = $state.raw<[number, number]>([2.258882912876089, 48.72559118651327]);
@@ -349,6 +353,15 @@
 		}
 	}
 
+	function parseFloatOr<T>(s: string | null | undefined, d: T): T | number {
+		if (s) {
+			const v = parseFloat(s);
+			return isNaN(v) ? d : v;
+		} else {
+			return d;
+		}
+	}
+
 	let advancedOptionsOpen = $state<boolean>(false);
 	let isochronesAdvancedOptionsOpen = $state<boolean>(false);
 	let fromMarker = $state<maplibregl.Marker>();
@@ -490,6 +503,39 @@
 	let ignoreDirectRentalReturnConstraints = $state(
 		urlParams?.get('ignoreDirectRentalReturnConstraints') == 'true'
 	);
+	let vehicleHeight = $state<number>(
+		parseFloatOr(urlParams?.get('vehicleHeight'), defaultQuery.vehicleHeight)
+	);
+	let vehicleWidth = $state<number>(
+		parseFloatOr(urlParams?.get('vehicleWidth'), defaultQuery.vehicleWidth)
+	);
+	let vehicleLength = $state<number>(
+		parseFloatOr(urlParams?.get('vehicleLength'), defaultQuery.vehicleLength)
+	);
+	let vehicleWeight = $state<number>(
+		parseFloatOr(urlParams?.get('vehicleWeight'), defaultQuery.vehicleWeight)
+	);
+	let vehicleHazmat = $state(urlParams?.get('vehicleHazmat') == 'true');
+	let vehicleHazmatWater = $state(urlParams?.get('vehicleHazmatWater') == 'true');
+	let vehicleAxleCount = $state<number>(
+		parseIntOr(urlParams?.get('vehicleAxleCount'), defaultQuery.vehicleAxleCount)
+	);
+	let vehicleAxleLoad = $state<number>(
+		parseFloatOr(urlParams?.get('vehicleAxleLoad'), defaultQuery.vehicleAxleLoad)
+	);
+	let vehicleTrailer = $state(
+		urlParams?.get('vehicleTrailer') === null
+			? defaultQuery.vehicleTrailer
+			: urlParams?.get('vehicleTrailer') == 'true'
+	);
+	let vehicleTopSpeed = $state<number>(
+		parseIntOr(urlParams?.get('vehicleTopSpeed'), defaultQuery.vehicleTopSpeed)
+	);
+	let vehicleLezAccess = $state(
+		urlParams?.get('vehicleLezAccess') === null
+			? defaultQuery.vehicleLezAccess
+			: urlParams?.get('vehicleLezAccess') == 'true'
+	);
 	let slowDirect = $state(urlParams?.get('slowDirect') == 'true');
 
 	let isochronesData = $state<IsochronesPos[]>([]);
@@ -523,6 +569,9 @@
 		}
 		return Array.from(new Set(groups));
 	};
+
+	const includeHgvOptions = (...modeGroups: Array<PrePostDirectMode[] | undefined>) =>
+		modeGroups.some((modes) => modes?.includes('HGV'));
 
 	let baseQuery = $derived(
 		from.match && to.match && !advancedOptionsOpen
@@ -577,6 +626,21 @@
 						ignorePreTransitRentalReturnConstraints,
 						ignorePostTransitRentalReturnConstraints,
 						ignoreDirectRentalReturnConstraints,
+						...(includeHgvOptions(preTransitModes, postTransitModes, directModes)
+							? {
+									vehicleHeight,
+									vehicleWidth,
+									vehicleLength,
+									vehicleWeight,
+									vehicleHazmat,
+									vehicleHazmatWater,
+									vehicleAxleCount,
+									vehicleAxleLoad,
+									vehicleTrailer,
+									vehicleTopSpeed,
+									vehicleLezAccess
+								}
+							: {}),
 						algorithm,
 						via: via ? via.map((v) => v.match?.id) : undefined,
 						viaMinimumStay
@@ -638,7 +702,24 @@
 						maxPreTransitTime,
 						maxPostTransitTime,
 						elevationCosts,
-						maxMatchingDistance: pedestrianProfile == 'WHEELCHAIR' ? 8 : 250
+						maxMatchingDistance: pedestrianProfile == 'WHEELCHAIR' ? 8 : 250,
+						ignorePreTransitRentalReturnConstraints,
+						ignorePostTransitRentalReturnConstraints,
+						...(includeHgvOptions(preTransitModes, postTransitModes)
+							? {
+									vehicleHeight,
+									vehicleWidth,
+									vehicleLength,
+									vehicleWeight,
+									vehicleHazmat,
+									vehicleHazmatWater,
+									vehicleAxleCount,
+									vehicleAxleLoad,
+									vehicleTrailer,
+									vehicleTopSpeed,
+									vehicleLezAccess
+								}
+							: {})
 					}
 				} satisfies Parameters<typeof oneToAll>[0])
 			: undefined
@@ -914,9 +995,8 @@
 		</Button>
 	{/if}
 {/snippet}
-
 {#snippet resultContent()}
-	<Control>
+	<Control class="min-h-0 shrink-0 overflow-hidden">
 		<Tabs.Root
 			bind:value={
 				() => activeTab,
@@ -925,15 +1005,15 @@
 					pushState('', { activeTab: v });
 				}
 			}
-			class="max-w-full w-[520px] overflow-y-auto"
+			class="flex h-full min-h-0 max-h-[97dvh] max-w-full w-[520px] flex-col overflow-hidden"
 		>
-			<Tabs.List class="grid grid-cols-3">
+			<Tabs.List class="grid shrink-0 grid-cols-3">
 				<Tabs.Trigger value="connections">{t.connections}</Tabs.Trigger>
 				<Tabs.Trigger value="departures">{t.departures}</Tabs.Trigger>
 				<Tabs.Trigger value="isochrones">{t.isochrones.title}</Tabs.Trigger>
 			</Tabs.List>
-			<Tabs.Content value="connections">
-				<Card class="overflow-y-auto overflow-x-hidden bg-background rounded-lg">
+			<Tabs.Content value="connections" class="min-h-0 overflow-hidden">
+				<Card class="max-h-[calc(97dvh-2.5rem)] overflow-hidden bg-background rounded-lg">
 					<SearchMask
 						geocodingBiasPlace={center}
 						{serverConfig}
@@ -961,6 +1041,17 @@
 						bind:preTransitProviderGroups
 						bind:postTransitProviderGroups
 						bind:directProviderGroups
+						bind:vehicleHeight
+						bind:vehicleWidth
+						bind:vehicleLength
+						bind:vehicleWeight
+						bind:vehicleHazmat
+						bind:vehicleHazmatWater
+						bind:vehicleAxleCount
+						bind:vehicleAxleLoad
+						bind:vehicleTrailer
+						bind:vehicleTopSpeed
+						bind:vehicleLezAccess
 						bind:via
 						bind:viaMinimumStay
 						bind:viaLabels
@@ -972,13 +1063,15 @@
 					/>
 				</Card>
 			</Tabs.Content>
-			<Tabs.Content value="departures">
-				<Card class="overflow-y-auto overflow-x-hidden bg-background rounded-lg">
+			<Tabs.Content value="departures" class="min-h-0 overflow-hidden">
+				<Card
+					class="max-h-[calc(97dvh-2.5rem)] overflow-y-auto overflow-x-hidden bg-background rounded-lg"
+				>
 					<DeparturesMask bind:time />
 				</Card>
 			</Tabs.Content>
-			<Tabs.Content value="isochrones">
-				<Card class="overflow-y-auto overflow-x-hidden bg-background rounded-lg">
+			<Tabs.Content value="isochrones" class="min-h-0 overflow-hidden">
+				<Card class="max-h-[calc(97dvh-2.5rem)] overflow-hidden bg-background rounded-lg">
 					<IsochronesMask
 						bind:advancedOptionsOpen={isochronesAdvancedOptionsOpen}
 						bind:one
@@ -1008,6 +1101,17 @@
 						bind:preTransitProviderGroups
 						bind:postTransitProviderGroups
 						bind:directProviderGroups
+						bind:vehicleHeight
+						bind:vehicleWidth
+						bind:vehicleLength
+						bind:vehicleWeight
+						bind:vehicleHazmat
+						bind:vehicleHazmatWater
+						bind:vehicleAxleCount
+						bind:vehicleAxleLoad
+						bind:vehicleTrailer
+						bind:vehicleTopSpeed
+						bind:vehicleLezAccess
 						{hasDebug}
 					/>
 				</Card>
@@ -1154,7 +1258,7 @@
 		bind:zoom
 		bind:center
 		bind:bearing
-		class={cn('h-dvh pt-2 overflow-clip', theme)}
+		class="h-dvh pt-2 overflow-clip"
 		style={showMap ? style : undefined}
 		attribution={false}
 	>
