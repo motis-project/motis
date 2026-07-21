@@ -2585,7 +2585,7 @@ TEST(motis, itinerary_id_refresh_car_egress_direction) {
   fs::remove_all(path, ec);
 
   auto const cfg = config{
-      .osm_ = {"test/resources/oneway_car.osm"},
+      .osm_ = {"test/resources/oneway_car.osm.pbf"},
       .timetable_ =
           config::timetable{
               .first_day_ = "2019-05-01",
