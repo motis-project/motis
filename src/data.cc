@@ -311,9 +311,11 @@ data::data(std::filesystem::path p, config const& c)
       try {
         rt_->rtt_->gpu_rtt_.ptr_ =
             n::routing::gpu::make_gpu_rtt(*tt_, *rt_->rtt_);
+        metrics_->gpu_rt_timetable_.Set(1);
       } catch (std::exception const& e) {
         n::log(n::log_lvl::error, "motis.data",
                "GPU rt timetable upload failed: {}", e.what());
+        metrics_->gpu_rt_timetable_.Set(0);
       }
     }
   }

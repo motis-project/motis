@@ -31,8 +31,10 @@ def generate(motis, data, n, date, work, modes=None):
     return lines
 
 
-def batch(motis, data, qfile, out, rt_dir):
+def batch(motis, data, qfile, out, rt_dir, n_threads=None):
     cmd = [motis, "batch", "-d", data, "-q", qfile, "-r", out]
+    if n_threads:
+        cmd += ["--n_threads", str(n_threads)]
     if rt_dir:
         cmd.append("--rt")  # applies dump_rt/ from cwd
     t0 = time.perf_counter()
@@ -201,6 +203,9 @@ def main():
                     help="API transit modes dropped for the clasz-filter cases, "
                          "comma-separated (e.g. COACH or HIGHSPEED_RAIL,COACH)")
     ap.add_argument("--n", type=int, default=100)
+    ap.add_argument("--n_threads", type=int,
+                    help="'motis batch' worker threads (default: hardware "
+                         "concurrency); lower it if the batch runs out of RAM")
     ap.add_argument("--date", required=True, help="pinned query day (must match the rt dump)")
     a = ap.parse_args()
 
@@ -259,7 +264,8 @@ def main():
             o = "%s.%d" % (combined, i)
             print("[rt=%d] batching %d queries on %s..." %
                   (rt, offsets, labels[i]))
-            wall[i] += batch(b, data, combined, o, rt_dir if rt else None)
+            wall[i] += batch(b, data, combined, o, rt_dir if rt else None,
+                             a.n_threads)
             print("[rt=%d]   %s done in %.0fs" % (rt, labels[i], wall[i]))
             with open(o) as f:
                 outs.append(f.read().splitlines())

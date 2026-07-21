@@ -271,10 +271,8 @@ void add_static_transports(n::timetable const& tt,
                            n::shapes_storage const* shapes_data,
                            std::vector<stop_pair>& runs) {
   auto const is_active = [&](n::transport const t) -> bool {
-    return (rtt == nullptr
-                ? tt.bitfields_[tt.transport_traffic_days_[t.t_idx_]]
-                : rtt->bitfields_[rtt->transport_traffic_days_[t.t_idx_]])
-        .test(to_idx(t.day_));
+    return rtt == nullptr ? tt.is_transport_active(t.t_idx_, t.day_)
+                          : rtt->is_transport_active(t.t_idx_, t.day_);
   };
 
   auto const seq = tt.route_location_seq_[r];
