@@ -83,10 +83,8 @@ void update_all_runs_metrics(nigiri::timetable const& tt,
 
   for (auto r = nigiri::route_idx_t{0}; r < tt.n_routes(); ++r) {
     auto const is_active = [&](n::transport const t) -> bool {
-      return (rtt == nullptr
-                  ? tt.bitfields_[tt.transport_traffic_days_[t.t_idx_]]
-                  : rtt->bitfields_[rtt->transport_traffic_days_[t.t_idx_]])
-          .test(to_idx(t.day_));
+      return rtt == nullptr ? tt.is_transport_active(t.t_idx_, t.day_)
+                            : rtt->is_transport_active(t.t_idx_, t.day_);
     };
 
     auto const seq = tt.route_location_seq_[r];
