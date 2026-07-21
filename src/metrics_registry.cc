@@ -159,7 +159,14 @@ metrics_registry::metrics_registry(
           prometheus::BuildCounter()
               .Name("motis_gbfs_skipped_entries_total")
               .Help("Number of malformed GBFS entries skipped while parsing")
-              .Register(registry_)} {}
+              .Register(registry_)},
+      gpu_rt_timetable_{
+          prometheus::BuildGauge()
+              .Name("motis_gpu_rt_timetable")
+              .Help("1 if the current RT timetable is uploaded to the GPU, 0 "
+                    "if the upload failed (routing falls back to the CPU)")
+              .Register(registry_)
+              .Add({})} {}
 
 metrics_registry::~metrics_registry() = default;
 
