@@ -1218,8 +1218,11 @@ struct gbfs_update {
       std::map<std::string, unsigned> const& default_ttl = {},
       std::map<std::string, unsigned> const& overwrite_ttl = {}) {
     auto content = std::string{};
+    auto source = std::string{url};
     if (dir.has_value()) {
-      content = read_file(*dir / fmt::format("{}.json", name));
+      auto const path = *dir / fmt::format("{}.json", name);
+      source = path.string();
+      content = read_file(path);
     } else {
       auto headers = base_headers;
       co_await get_oauth_token(oauth, headers);
@@ -1231,7 +1234,14 @@ struct gbfs_update {
             fmt::format("HTTP {} fetching {}", res.result_int(), url));
       }
     }
-    auto j = json::parse(content);
+    auto j = [&]() {
+      try {
+        return json::parse(content);
+      } catch (std::exception const& ex) {
+        throw std::runtime_error(
+            fmt::format("error parsing {}: {}", source, ex.what()));
+      }
+    }();
     auto j_root = j.as_object();
     auto const next_refresh = get_expiry(j_root, std::chrono::seconds{0},
                                          default_ttl, overwrite_ttl, name);
