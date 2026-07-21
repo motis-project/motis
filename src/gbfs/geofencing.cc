@@ -1,4 +1,4 @@
-#include "motis/gbfs/data.h"
+#include "motis/gbfs/geofencing.h"
 
 #include "utl/helpers/algorithm.h"
 
@@ -25,6 +25,35 @@ bool multipoly_contains_point(tg_geom const* geom, geo::latlng const& pos) {
     }
   }
   return false;
+}
+
+geofencing_restrictions get_default_restrictions(
+    gbfs_provider const& provider, provider_products const& prod) {
+  auto restrictions = provider.default_restrictions_;
+  for (auto const& r : provider.geofencing_zones_.global_rules_) {
+    if (!applies(r.vehicle_type_idxs_, prod.vehicle_types_)) {
+      continue;
+    }
+    restrictions.ride_start_allowed_ = r.ride_start_allowed_;
+    restrictions.ride_end_allowed_ = r.ride_end_allowed_;
+    restrictions.ride_through_allowed_ = r.ride_through_allowed_;
+    restrictions.station_parking_ = r.station_parking_;
+    break;
+  }
+  return restrictions;
+}
+
+bool vehicle_is_rentable(gbfs_provider const& provider,
+                         provider_products const& prod,
+                         vehicle_status const& vehicle) {
+  if (vehicle.is_disabled_ || vehicle.is_reserved_ ||
+      !prod.includes_vehicle_type(vehicle.vehicle_type_idx_)) {
+    return false;
+  }
+  auto const restrictions = provider.geofencing_zones_.get_restrictions(
+      vehicle.pos_, vehicle.vehicle_type_idx_,
+      get_default_restrictions(provider, prod));
+  return restrictions.ride_start_allowed_ && restrictions.ride_through_allowed_;
 }
 
 geofencing_restrictions geofencing_zones::get_restrictions(

@@ -46,6 +46,7 @@
 #include "motis/repeat.h"
 
 #include "motis/gbfs/compression.h"
+#include "motis/gbfs/geofencing.h"
 #include "motis/gbfs/mode.h"
 #include "motis/gbfs/osr_mapping.h"
 #include "motis/gbfs/parser.h"
@@ -824,8 +825,8 @@ struct gbfs_update {
                         return st.second.status_.is_renting_ &&
                                st.second.status_.num_vehicles_available_ > 0;
                       }) ||
-          utl::any_of(provider.vehicle_status_, [](auto const& vs) {
-            return !vs.is_disabled_ && !vs.is_reserved_;
+          utl::any_of(provider.vehicle_status_, [&](auto const& vs) {
+            return vehicle_is_rentable(provider, prod, vs);
           });
     } else {
       auto part = partition{vehicle_type_idx_t{provider.vehicle_types_.size()}};
@@ -904,8 +905,7 @@ struct gbfs_update {
                                  st.second.status_.num_vehicles_available_ > 0;
                         }) ||
             utl::any_of(provider.vehicle_status_, [&](auto const& vs) {
-              return !vs.is_disabled_ && !vs.is_reserved_ &&
-                     prod.includes_vehicle_type(vs.vehicle_type_idx_);
+              return vehicle_is_rentable(provider, prod, vs);
             });
       }
     }
@@ -929,6 +929,10 @@ struct gbfs_update {
     }
     auto const prod_idx = product_of_vehicle(provider, vt_to_product, vs);
     if (prod_idx == gbfs_products_idx_t::invalid()) {
+      return;
+    }
+    auto const& prod = provider.products_[prod_idx];
+    if (!vehicle_is_rentable(provider, prod, vs)) {
       return;
     }
     auto const ref = to_ref_idx(gbfs_products_ref{provider.idx_, prod_idx});
@@ -966,7 +970,7 @@ struct gbfs_update {
 
     auto const vt_to_product = build_vehicle_type_to_product(provider);
 
-    if (!partition_stable) {
+    if (!partition_stable || zones_changed) {
       if (prev_provider != nullptr) {
         auto const prev_vt_to_product =
             build_vehicle_type_to_product(*prev_provider);
@@ -986,7 +990,9 @@ struct gbfs_update {
           [](vehicle_status const& a, vehicle_status const& b) {
             return a.pos_ == b.pos_ &&
                    a.station_id_.empty() == b.station_id_.empty() &&
-                   a.vehicle_type_idx_ == b.vehicle_type_idx_;
+                   a.vehicle_type_idx_ == b.vehicle_type_idx_ &&
+                   a.is_reserved_ == b.is_reserved_ &&
+                   a.is_disabled_ == b.is_disabled_;
           },
           utl::overloaded{
               [&](utl::op const o, vehicle_status const& v) {
