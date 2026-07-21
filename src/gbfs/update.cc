@@ -488,8 +488,13 @@ struct gbfs_update {
           merge_ttl_map(config.ttl_.value_or(config::gbfs::ttl{}).overwrite_,
                         c_.ttl_.value_or(config::gbfs::ttl{}).overwrite_);
 
-      auto discovery = co_await fetch_file("gbfs", config.url_, headers, oauth,
-                                           dir, default_ttl, overwrite_ttl);
+      auto const discovery_name =
+          dir.has_value() && std::filesystem::exists(*dir / "manifest.json")
+              ? "manifest"
+              : "gbfs";
+      auto discovery =
+          co_await fetch_file(discovery_name, config.url_, headers, oauth, dir,
+                              default_ttl, overwrite_ttl);
       auto const& root = discovery.json_.as_object();
       if ((root.contains("data") &&
            root.at("data").as_object().contains("datasets")) ||
@@ -1070,15 +1075,16 @@ struct gbfs_update {
                                           boost::json::object const& root) {
     auto feeds = std::vector<provider_feed>{};
     auto skipped_entries = 0U;
-    auto const resolve_dir = [&](std::string const& url) {
+    auto const resolve_dir = [&](std::string const& url,
+                                 std::string const& system_id) {
+      if (af.dir_.has_value()) {
+        return std::optional<std::filesystem::path>{*af.dir_ / system_id};
+      }
       if (is_http_url(url)) {
         return std::optional<std::filesystem::path>{};
       }
       auto const p = std::filesystem::path{url};
-      if (!af.dir_.has_value() || p.is_absolute()) {
-        return std::optional<std::filesystem::path>{p};
-      }
-      return std::optional<std::filesystem::path>{*af.dir_ / p};
+      return std::optional<std::filesystem::path>{p};
     };
 
     if (root.contains("data") && root.at("data").is_object() &&
@@ -1114,7 +1120,7 @@ struct gbfs_update {
               .id_ = combined_id,
               .url_ = url,
               .headers_ = af.headers_,
-              .dir_ = resolve_dir(url),
+              .dir_ = resolve_dir(url, system_id),
               .default_restrictions_ =
                   lookup_default_restrictions(af.id_, combined_id),
               .default_return_constraint_ =
@@ -1152,7 +1158,7 @@ struct gbfs_update {
               .id_ = combined_id,
               .url_ = url,
               .headers_ = af.headers_,
-              .dir_ = resolve_dir(url),
+              .dir_ = resolve_dir(url, system_id),
               .default_restrictions_ =
                   lookup_default_restrictions(af.id_, combined_id),
               .default_return_constraint_ =
