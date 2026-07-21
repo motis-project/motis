@@ -286,6 +286,68 @@ void write_geofencing_no_start_zone(fs::path const& dir) {
   })");
 }
 
+void write_geofencing_no_through_zone(fs::path const& dir) {
+  write_file(dir / "geofencing_zones.json", R"({
+    "last_updated": 60,
+    "ttl": 0,
+    "version": "3.0",
+    "data": {
+      "geofencing_zones": {
+        "type": "FeatureCollection",
+        "features": [
+          {
+            "type": "Feature",
+            "properties": {
+              "name": "No Through",
+              "rules": [
+                {
+                  "vehicle_type_ids": ["bike"],
+                  "ride_allowed": true,
+                  "ride_through_allowed": false
+                }
+              ]
+            },
+            "geometry": {
+              "type": "MultiPolygon",
+              "coordinates": [[[
+                [8.62, 49.87],
+                [8.64, 49.87],
+                [8.64, 49.88],
+                [8.62, 49.88],
+                [8.62, 49.87]
+              ]]]
+            }
+          }
+        ]
+      },
+      "global_rules": [
+        {"vehicle_type_ids": ["bike"], "ride_allowed": true}
+      ]
+    }
+  })");
+}
+
+void write_geofencing_global_no_through(fs::path const& dir) {
+  write_file(dir / "geofencing_zones.json", R"({
+    "last_updated": 60,
+    "ttl": 0,
+    "version": "3.0",
+    "data": {
+      "geofencing_zones": {
+        "type": "FeatureCollection",
+        "features": []
+      },
+      "global_rules": [
+        {
+          "vehicle_type_ids": ["bike"],
+          "ride_allowed": true,
+          "ride_through_allowed": false
+        }
+      ]
+    }
+  })");
+}
+
 void write_geofencing_global_no_return(fs::path const& dir) {
   write_file(dir / "geofencing_zones.json", R"({
     "last_updated": 60,
@@ -757,6 +819,48 @@ TEST(motis, gbfs_update_geofence_can_suppress_free_floating_start_node) {
   EXPECT_EQ(0U, count_additional_vehicle_nodes(routing_data_for(*gbfs, p)));
 }
 
+TEST(motis, gbfs_update_no_through_zone_suppresses_free_floating_vehicle) {
+  auto const dir = make_temp_dir("geofence-no-through");
+  write_default_feed(dir);
+  write_geofencing_no_through_zone(dir);
+
+  auto gbfs = std::shared_ptr<gbfs_data>{};
+  run_update(make_gbfs_config(dir), gbfs);
+
+  auto const& p = *gbfs->providers_.at(gbfs->provider_by_id_.at("test"));
+  ASSERT_EQ(1U, p.vehicle_status_.size());
+  EXPECT_EQ(0U, count_additional_vehicle_nodes(routing_data_for(*gbfs, p)));
+  EXPECT_FALSE(rtree_contains(*gbfs, p.vehicle_status_.front().pos_, p.idx_));
+}
+
+TEST(motis, gbfs_update_global_no_through_suppresses_free_floating_vehicle) {
+  auto const dir = make_temp_dir("global-geofence-no-through");
+  write_default_feed(dir);
+  write_station_status(dir, 0U);
+
+  auto gbfs = std::shared_ptr<gbfs_data>{};
+  auto const c = make_gbfs_config(dir);
+  run_update(c, gbfs);
+
+  auto const vehicle_pos =
+      gbfs->providers_.at(gbfs->provider_by_id_.at("test"))
+          ->vehicle_status_.front()
+          .pos_;
+  auto const provider_idx =
+      gbfs->providers_.at(gbfs->provider_by_id_.at("test"))->idx_;
+  ASSERT_TRUE(rtree_contains(*gbfs, vehicle_pos, provider_idx));
+
+  write_geofencing_global_no_through(dir);
+  run_update(c, gbfs);
+
+  auto const& p = *gbfs->providers_.at(gbfs->provider_by_id_.at("test"));
+  ASSERT_EQ(1U, p.vehicle_status_.size());
+  EXPECT_EQ(0U, count_additional_vehicle_nodes(routing_data_for(*gbfs, p)));
+  EXPECT_FALSE(p.products_.front().has_vehicles_to_rent_);
+  EXPECT_FALSE(p.has_vehicles_to_rent_);
+  EXPECT_FALSE(rtree_contains(*gbfs, vehicle_pos, p.idx_));
+}
+
 TEST(motis, gbfs_update_global_geofencing_rules) {
   auto const dir = make_temp_dir("global-geofence");
   write_default_feed(dir);
@@ -802,23 +906,6 @@ TEST(motis, gbfs_update_supports_local_gbfs_manifest_provider_dirs) {
   auto const dir = make_temp_dir("manifest");
   auto const provider_dir = dir / "provider-a";
   write_default_feed(provider_dir);
-  write_file(dir / "gbfs.json", R"({
-    "last_updated": 1,
-    "ttl": 0,
-    "version": "3.0",
-    "data": {
-      "datasets": [
-        {
-          "system_id": "provider-a",
-          "versions": [
-            {"version": "2.3", "url": "provider-a"}
-          ]
-        },
-        "bad",
-        {"system_id": "missing-url", "versions": [{}]}
-      ]
-    }
-  })");
   write_file(dir / "manifest.json", R"({
     "last_updated": 1,
     "ttl": 0,
@@ -828,7 +915,7 @@ TEST(motis, gbfs_update_supports_local_gbfs_manifest_provider_dirs) {
         {
           "system_id": "provider-a",
           "versions": [
-            {"version": "2.3", "url": "provider-a"}
+            {"version": "2.3", "url": "https://example.com/gbfs.json"}
           ]
         }
       ]

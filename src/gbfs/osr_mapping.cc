@@ -62,22 +62,10 @@ struct osr_mapping {
     }
 
     for (auto [prod, rd] : utl::zip(provider_.products_, products_data_)) {
-      auto default_restrictions = provider_.default_restrictions_;
+      auto default_restrictions = get_default_restrictions(provider_, prod);
       rd.start_allowed_ = make_loc_bitvec();
       rd.end_allowed_ = make_loc_bitvec();
       rd.through_allowed_ = make_loc_bitvec();
-
-      // global rules
-      for (auto const& r : provider_.geofencing_zones_.global_rules_) {
-        if (!applies(r.vehicle_type_idxs_, prod.vehicle_types_)) {
-          continue;
-        }
-        default_restrictions.ride_start_allowed_ = r.ride_start_allowed_;
-        default_restrictions.ride_end_allowed_ = r.ride_end_allowed_;
-        default_restrictions.ride_through_allowed_ = r.ride_through_allowed_;
-        default_restrictions.station_parking_ = r.station_parking_;
-        break;
-      }
 
       if ((prod.return_constraint_ == return_constraint::kAnyStation ||
            prod.return_constraint_ == return_constraint::kRoundtripStation) &&
@@ -311,14 +299,7 @@ struct osr_mapping {
     for (auto [prod, rd] : utl::zip(provider_.products_, products_data_)) {
       for (auto const [vehicle_idx, vs] :
            utl::enumerate(provider_.vehicle_status_)) {
-        if (vs.is_disabled_ || vs.is_reserved_ ||
-            !prod.includes_vehicle_type(vs.vehicle_type_idx_)) {
-          continue;
-        }
-
-        auto const restrictions = provider_.geofencing_zones_.get_restrictions(
-            vs.pos_, vs.vehicle_type_idx_, geofencing_restrictions{});
-        if (!restrictions.ride_start_allowed_) {
+        if (!vehicle_is_rentable(provider_, prod, vs)) {
           continue;
         }
 
