@@ -72,4 +72,4 @@ jobs:
           python3 tools/validate.py ./build/cpu/motis ./build/cuda/motis \
             --data "$HOME/ci-data/eu/data" --name europe --date 2026-07-05 \
             --rt-dir "$HOME/ci-data/eu" --routed-footpaths --flex --bike --tts \
-            --exclude-transit-modes COACH --n 20
+            --exclude-transit-modes COACH --n 20 --batch-threads 8
