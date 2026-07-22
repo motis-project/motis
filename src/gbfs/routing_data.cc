@@ -17,12 +17,17 @@
 namespace motis::gbfs {
 
 std::shared_ptr<provider_routing_data> compute_provider_routing_data(
-    osr::ways const& w, osr::lookup const& l, gbfs_provider const& provider) {
+    osr::ways const& w,
+    osr::lookup const& l,
+    gbfs_provider const& provider,
+    provider_routing_data const* previous_state) {
   auto timer = utl::scoped_timer{
       fmt::format("compute routing data for gbfs provider {}", provider.id_)};
   auto prd = std::make_shared<provider_routing_data>();
 
-  map_data(w, l, provider, *prd);
+  map_data(w, l, provider, *prd, previous_state);
+
+  prd->nonce_ = provider.nonce_;
 
   return prd;
 }

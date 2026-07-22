@@ -41,7 +41,10 @@ struct gbfs_routing_data {
 };
 
 std::shared_ptr<provider_routing_data> compute_provider_routing_data(
-    osr::ways const&, osr::lookup const&, gbfs_provider const&);
+    osr::ways const&,
+    osr::lookup const&,
+    gbfs_provider const&,
+    provider_routing_data const* = nullptr);
 
 std::shared_ptr<provider_routing_data> get_provider_routing_data(
     osr::ways const&, osr::lookup const&, gbfs_data&, gbfs_provider const&);
