@@ -606,8 +606,8 @@ export const getStyle = (
 			// below the bigger streets (primary etc.): the big-road bodies paint over
 			// them at junctions, while unclassified sits on top of track / living
 			// street / service
-			// tracks as a thin, grey plain line (no casing), fading in at z12-13
-			// already so field and forest ways show up early
+			// tracks as a thin, grey plain line (no casing), fading in at z13-14
+			// so field and forest ways show up early
 			{
 				id: 'track',
 				type: 'line',
@@ -621,16 +621,16 @@ export const getStyle = (
 				layout: {
 					'line-cap': 'round'
 				},
-				minzoom: 12,
+				minzoom: 13,
 				paint: {
 					'line-color': c.track,
 					'line-width': [
 						'interpolate',
 						['linear'],
 						['zoom'],
-						12,
-						0,
 						13,
+						0,
+						14,
 						0.9,
 						16,
 						1.5,
@@ -663,7 +663,8 @@ export const getStyle = (
 					'line-width': ['interpolate', ['linear'], ['zoom'], 15, 0, 16, 4, 18, 6, 19, 10, 20, 20]
 				}
 			},
-			// service as a plain solid line (no casing), thinner than living street
+			// service as a plain solid line (no casing), thinner than living street,
+			// fading in at z13-14 like tracks and footpaths
 			{
 				id: 'footway',
 				type: 'line',
@@ -677,10 +678,26 @@ export const getStyle = (
 				layout: {
 					'line-cap': 'round'
 				},
-				minzoom: 15,
+				minzoom: 13,
 				paint: {
 					'line-color': c.footway,
-					'line-width': ['interpolate', ['linear'], ['zoom'], 15, 0, 16, 2.5, 18, 4, 19, 6, 20, 12]
+					'line-width': [
+						'interpolate',
+						['linear'],
+						['zoom'],
+						13,
+						0,
+						14,
+						1,
+						16,
+						2.5,
+						18,
+						4,
+						19,
+						6,
+						20,
+						12
+					]
 				}
 			},
 			// unclassified as a plain borderless line, slightly grey vs the white
