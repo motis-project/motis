@@ -162,17 +162,19 @@ struct osr_mapping {
     };
 
     auto const* osr_r = w_.r_.get();
+    auto bb = geo::box{};
     for (auto const& z : provider_.geofencing_zones_.zones_) {
-      l_.find(z.bounding_box(), [&](osr::way_idx_t const way) {
-        for (auto const n : osr_r->way_nodes_[way]) {
-          if (done.test(n)) {
-            continue;
-          }
-          done.set(n, true);
-          handle_point(n, w_.get_node_pos(n).as_latlng());
-        }
-      });
+      bb.extend(z.bounding_box());
     }
+    l_.find(bb, [&](osr::way_idx_t const way) {
+      for (auto const n : osr_r->way_nodes_[way]) {
+        if (done.test(n)) {
+          continue;
+        }
+        done.set(n, true);
+        handle_point(n, w_.get_node_pos(n).as_latlng());
+      }
+    });
   }
 
   std::vector<node_match> get_node_matches(osr::location const& loc) const {
