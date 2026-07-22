@@ -119,38 +119,37 @@ struct osr_mapping {
     zone_indices.reserve(provider_.geofencing_zones_.zones_.size());
     auto const handle_point = [&](osr::node_idx_t const n,
                                   geo::latlng const& pos) {
+      // zones have to be checked in the order they are defined
+      zone_indices.clear();
+      zone_rtree.find(pos, [&](std::size_t const zone_idx) {
+        auto const& z = provider_.geofencing_zones_.zones_[zone_idx];
+        if (multipoly_contains_point(z.geom_.get(), pos)) {
+          zone_indices.push_back(zone_idx);
+        }
+      });
+      utl::sort(zone_indices);
+
       for (auto [prod, rd] : utl::zip(provider_.products_, products_data_)) {
         auto start_allowed = std::optional<bool>{};
         auto end_allowed = std::optional<bool>{};
         auto through_allowed = std::optional<bool>{};
         auto station_parking = rd.station_parking_;
-
-        // zones have to be checked in the order they are defined
-        zone_indices.clear();
-        zone_rtree.find(pos, [&](std::size_t const zone_idx) {
-          zone_indices.push_back(zone_idx);
-        });
-        utl::sort(zone_indices);
-
         for (auto const zone_idx : zone_indices) {
           auto const& z = provider_.geofencing_zones_.zones_[zone_idx];
-          // check if pos is inside the zone multipolygon
-          if (multipoly_contains_point(z.geom_.get(), pos)) {
-            for (auto const& r : z.rules_) {
-              if (!applies(r.vehicle_type_idxs_, prod.vehicle_types_)) {
-                continue;
-              }
-              if (r.station_parking_.has_value()) {
-                station_parking = r.station_parking_.value();
-              }
-              start_allowed = r.ride_start_allowed_;
-              end_allowed = r.ride_end_allowed_ && !station_parking;
-              through_allowed = r.ride_through_allowed_;
-              break;
+          for (auto const& r : z.rules_) {
+            if (!applies(r.vehicle_type_idxs_, prod.vehicle_types_)) {
+              continue;
             }
-            if (start_allowed.has_value()) {
-              break;  // for now
+            if (r.station_parking_.has_value()) {
+              station_parking = r.station_parking_.value();
             }
+            start_allowed = r.ride_start_allowed_;
+            end_allowed = r.ride_end_allowed_ && !station_parking;
+            through_allowed = r.ride_through_allowed_;
+            break;
+          }
+          if (start_allowed.has_value()) {
+            break;  // for now
           }
         }
         if (end_allowed.has_value()) {
