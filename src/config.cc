@@ -289,4 +289,8 @@ bool config::use_street_routing() const {
       street_routing_);
 }
 
+bool config::use_otlp() const {
+  return otlp_.has_value() && otlp_->http_.has_value();
+}
+
 }  // namespace motis

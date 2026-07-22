@@ -19,6 +19,7 @@
 #include "motis/data.h"
 #include "motis/import.h"
 #include "motis/logging.h"
+#include "motis/otel_tracer.h"
 #include "motis/server.h"
 
 #include "./flags.h"
@@ -137,6 +138,11 @@ int main(int ac, char** av) {
             (return_value = set_log_level(std::move(log_lvl)))) {
           break;
         }
+
+        if (c.use_otlp()) {
+          init_opentelemetry(*c.otlp_, motis_version);
+        }
+
         return_value = server(data{data_path, c}, c, motis_version);
       } catch (std::exception const& e) {
         std::cerr << "unable to start server: " << e.what() << "\n";
@@ -293,6 +299,7 @@ int main(int ac, char** av) {
       break;
   }
 
+  cleanup_opentelemetry_tracer();
   google::protobuf::ShutdownProtobufLibrary();
   return return_value;
 }

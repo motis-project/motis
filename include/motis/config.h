@@ -34,6 +34,7 @@ struct config {
   bool has_elevators() const;
   bool has_rt_feeds() const;
   bool use_street_routing() const;
+  bool use_otlp() const;
 
   bool operator==(config const&) const = default;
 
@@ -264,6 +265,21 @@ struct config {
   };
   limits get_limits() const { return limits_.value_or(limits{}); }
   std::optional<limits> limits_{};
+
+  struct otlp {
+    bool operator==(otlp const&) const = default;
+    struct http {
+      bool operator==(http const&) const = default;
+      std::string url_{"http://localhost:4318"};
+      std::string content_type_{"json"};
+      bool use_json_name_{false};
+    };
+    std::optional<http> http_{};
+
+    unsigned timeout_{10U};
+    headers_t headers_{};
+  };
+  std::optional<otlp> otlp_{};
 
   struct logging {
     bool operator==(logging const&) const = default;
