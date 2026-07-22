@@ -166,8 +166,8 @@ void add_cancelled_transports(n::timetable const& tt,
         auto const is_cancelled =
             tt.bitfields_[tt.transport_traffic_days_[t.t_idx_]].test(
                 to_idx(t.day_)) &&
-            !rtt.bitfields_[rtt.transport_traffic_days_[t.t_idx_]].test(
-                to_idx(t.day_));
+            !rtt.traffic_days(rtt.transport_traffic_days_[t.t_idx_])
+                 .test(to_idx(t.day_));
         if (!is_cancelled) {
           continue;
         }
