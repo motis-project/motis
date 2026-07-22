@@ -28,6 +28,7 @@
 	import { generateTimes } from './generateTimes';
 	import ViaStopOptions from './ViaStopOptions.svelte';
 	import Slider from './components/ui/slider/Slider.svelte';
+	import { Settings } from '@lucide/svelte';
 	let {
 		advancedOptionsOpen = $bindable(false),
 		useRoutedTransfers = $bindable(),
@@ -454,8 +455,8 @@
 {/snippet}
 
 <Dialog.Root bind:open={advancedOptionsOpen}>
-	<Dialog.Trigger class={buttonVariants({ variant: 'ghost' })}>
-		{t.advancedSearchOptions}
+	<Dialog.Trigger class={buttonVariants({ variant: 'outline' })} title={t.advancedSearchOptions}>
+		<Settings />
 	</Dialog.Trigger>
 	<Dialog.Content class="flex max-h-[90vh] max-w-2xl flex-col">
 		<Dialog.Header>

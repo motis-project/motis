@@ -177,12 +177,12 @@
 	<div class="flex min-h-0 flex-row gap-2 flex-wrap">
 		<DateInput bind:value={time} />
 		<RadioGroup.Root
-			class="flex"
+			class="flex gap-0 grow"
 			bind:value={() => (arriveBy ? 'arrival' : 'departure'), (v) => (arriveBy = v === 'arrival')}
 		>
 			<Label
 				for="departure"
-				class="flex items-center rounded-md border-2 border-muted bg-popover p-1 px-2 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-blue-600 hover:cursor-pointer"
+				class="flex grow justify-center items-center border-input rounded-l-md px-2 py-1 bg-accent text-gray-500 hover:bg-blue-100 [&:has([data-state=checked])]:bg-blue-600 [&:has([data-state=checked])]:text-white hover:cursor-pointer"
 			>
 				<RadioGroup.Item
 					value="departure"
@@ -194,7 +194,7 @@
 			</Label>
 			<Label
 				for="arrival"
-				class="flex items-center rounded-md border-2 border-muted bg-popover p-1 px-2 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-blue-600 hover:cursor-pointer"
+				class="flex grow justify-center items-center border-input rounded-r-md px-2 py-1 bg-accent text-gray-500 hover:bg-blue-100 [&:has([data-state=checked])]:bg-blue-600 [&:has([data-state=checked])]:text-white hover:cursor-pointer"
 			>
 				<RadioGroup.Item value="arrival" id="arrival" class="sr-only" aria-label={t.arrival} />
 				<span>{t.arrival}</span>
@@ -247,5 +247,13 @@
 			bind:pedestrianProfile
 			{hasDebug}
 		/>
+		<Button
+			class="flex grow bg-blue-600 hover:!bg-blue-700 text-white font-bold"
+			variant="default"
+			title={t.search}
+			onclick={() => {}}
+		>
+			{t.search}
+		</Button>
 	</div>
 </div>
