@@ -347,12 +347,12 @@ paths:
           in: query
           required: false
           description: |
-            Optional. Default is `false`.
+            Optional. Default is `true`.
             
             Whether to use transfers routed on OpenStreetMap data.
           schema:
             type: boolean
-            default: false
+            default: true
 
         - name: detailedTransfers
           in: query
@@ -3656,12 +3656,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/HealthResponse'
         '400':
-          description: Full first cycle through all configured feeds is not finished. 
+          description: Full first cycle through all configured feeds is not finished.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/HealthResponse'
-          
+
   /api/debug/transfers:
     get:
       tags:
