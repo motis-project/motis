@@ -4,6 +4,7 @@
 #include <cmath>
 #include <mutex>
 #include <optional>
+#include <string_view>
 #include <variant>
 
 #include "boost/thread/tss.hpp"
@@ -48,6 +49,7 @@
 #include "motis/flex/flex_output.h"
 #include "motis/gbfs/data.h"
 #include "motis/gbfs/gbfs_output.h"
+#include "motis/gbfs/geofencing.h"
 #include "motis/gbfs/mode.h"
 #include "motis/gbfs/osr_profile.h"
 #include "motis/get_stops_with_traffic.h"
@@ -269,17 +271,59 @@ std::vector<n::routing::offset> get_offsets(
         [&](n::location_idx_t const l) { return stop_to_osr_location(r, l); });
 
     auto const route = [&](osr::search_profile const p,
-                           osr::sharing_data const* sharing) {
+                           osr::sharing_data const* sharing,
+                           gbfs::gbfs_provider const* provider = nullptr,
+                           gbfs::provider_products const* product = nullptr,
+                           std::string const& timing_prefix = {}) {
+      auto const add_timing = [&](std::string_view const name,
+                                  auto const duration) {
+        if (!timing_prefix.empty()) {
+          stats.emplace(fmt::format("{}_{}", timing_prefix, name),
+                        static_cast<std::uint64_t>(duration));
+        }
+      };
+
+      UTL_START_TIMING(profile_parameters_timer);
       auto const params = to_profile_parameters(p, osr_params);
-      auto const pos_match = r.l_->match(params, pos, false, dir,
-                                         max_matching_distance, nullptr, p);
+      add_timing("profile_parameters",
+                 UTL_GET_TIMING_MS(profile_parameters_timer));
+
+      UTL_START_TIMING(endpoint_restrictions_timer);
+      auto const exact_at_pos =
+          provider != nullptr && product != nullptr &&
+          dir == osr::direction::kBackward &&
+          gbfs::allows_free_floating_return_at(
+              *provider, *product, pos.pos_, ignore_rental_return_constraints);
+      auto exact_at_stops = std::vector<std::uint8_t>(near_stops.size());
+      if (provider != nullptr && product != nullptr &&
+          dir == osr::direction::kForward) {
+        for (auto const [i, stop] : utl::enumerate(near_stop_locations)) {
+          exact_at_stops[i] = gbfs::allows_free_floating_return_at(
+              *provider, *product, stop.pos_, ignore_rental_return_constraints);
+        }
+      }
+      add_timing("endpoint_restrictions",
+                 UTL_GET_TIMING_MS(endpoint_restrictions_timer));
+
+      UTL_START_TIMING(match_position_timer);
+      auto const pos_match =
+          r.l_->match_endpoint(params, pos, false, dir, max_matching_distance,
+                               nullptr, p, exact_at_pos);
+      add_timing("match_position", UTL_GET_TIMING_MS(match_position_timer));
+
+      UTL_START_TIMING(match_stops_timer);
       auto const near_stop_matches = get_reverse_platform_way_matches(
           *r.l_, r.way_matches_, p, near_stops, near_stop_locations, dir,
-          max_matching_distance);
-      return osr::route(params, *r.w_, *r.l_, p, pos, near_stop_locations,
-                        pos_match, near_stop_matches,
-                        static_cast<osr::cost_t>(max.count()), dir, nullptr,
-                        sharing, elevations);
+          max_matching_distance, exact_at_stops);
+      add_timing("match_stops", UTL_GET_TIMING_MS(match_stops_timer));
+
+      UTL_START_TIMING(osr_route_timer);
+      auto paths = osr::route(params, *r.w_, *r.l_, p, pos, near_stop_locations,
+                              pos_match, near_stop_matches,
+                              static_cast<osr::cost_t>(max.count()), dir,
+                              nullptr, sharing, elevations);
+      add_timing("osr_route", UTL_GET_TIMING_MS(osr_route_timer));
+      return paths;
     };
 
     if (osr::is_rental_profile(profile)) {
@@ -335,17 +379,40 @@ std::vector<n::routing::offset> get_offsets(
               !gbfs::products_match(prod, form_factors, propulsion_types)) {
             continue;
           }
+
+          auto const product_timing_prefix =
+              fmt::format("prepare_{}_{}_{}_product_{}", to_str(dir),
+                          fmt::streamed(m), provider->id_, to_idx(prod.idx_));
+          UTL_START_TIMING(product_timer);
+
           if (!provider_rd) {
+            UTL_START_TIMING(provider_routing_data_timer);
             provider_rd = gbfs_rd.get_provider_routing_data(*provider);
+            stats.emplace(
+                fmt::format("prepare_{}_{}_{}_provider_routing_data",
+                            to_str(dir), fmt::streamed(m), provider->id_),
+                UTL_GET_TIMING_MS(provider_routing_data_timer));
           }
           auto const prod_ref = gbfs::gbfs_products_ref{pi, prod.idx_};
+
+          UTL_START_TIMING(product_routing_data_timer);
           auto* prod_rd =
               gbfs_rd.get_products_routing_data(*provider, prod.idx_);
+          stats.emplace(
+              fmt::format("{}_product_routing_data", product_timing_prefix),
+              UTL_GET_TIMING_MS(product_routing_data_timer));
+
+          UTL_START_TIMING(sharing_data_timer);
           auto const sharing = prod_rd->get_sharing_data(
               r.w_->n_nodes(), ignore_rental_return_constraints);
+          stats.emplace(fmt::format("{}_sharing_data", product_timing_prefix),
+                        UTL_GET_TIMING_MS(sharing_data_timer));
 
           auto const paths =
-              route(gbfs::get_osr_profile(prod.form_factor_), &sharing);
+              route(gbfs::get_osr_profile(prod.form_factor_), &sharing,
+                    provider.get(), &prod, product_timing_prefix);
+
+          UTL_START_TIMING(offsets_timer);
           ignore_walk = true;
           for (auto const [p, l] : utl::zip(paths, near_stops)) {
             if (p.has_value()) {
@@ -355,6 +422,10 @@ std::vector<n::routing::offset> get_offsets(
                                    gbfs_rd.get_transport_mode(prod_ref));
             }
           }
+          stats.emplace(fmt::format("{}_offsets", product_timing_prefix),
+                        UTL_GET_TIMING_MS(offsets_timer));
+          stats.emplace(product_timing_prefix,
+                        UTL_GET_TIMING_MS(product_timer));
         }
 
         stats.emplace(fmt::format("prepare_{}_{}_{}", to_str(dir),

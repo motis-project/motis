@@ -62,18 +62,11 @@ struct osr_mapping {
     }
 
     for (auto [prod, rd] : utl::zip(provider_.products_, products_data_)) {
-      auto default_restrictions = get_default_restrictions(provider_, prod);
+      auto const default_restrictions =
+          get_default_restrictions(provider_, prod);
       rd.start_allowed_ = make_loc_bitvec();
       rd.end_allowed_ = make_loc_bitvec();
       rd.through_allowed_ = make_loc_bitvec();
-
-      if ((prod.return_constraint_ == return_constraint::kAnyStation ||
-           prod.return_constraint_ == return_constraint::kRoundtripStation) &&
-          (prod.known_return_constraint_ ||
-           provider_.geofencing_zones_.zones_.empty()) &&
-          !default_restrictions.station_parking_.has_value()) {
-        default_restrictions.station_parking_ = true;
-      }
 
       if (default_restrictions.ride_end_allowed_ &&
           !default_restrictions.station_parking_.value_or(false)) {

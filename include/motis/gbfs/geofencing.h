@@ -20,4 +20,16 @@ bool vehicle_is_rentable(gbfs_provider const&,
                          provider_products const&,
                          vehicle_status const&);
 
+geofencing_restrictions get_default_restrictions(gbfs_provider const&,
+                                                 provider_products const&);
+
+geofencing_restrictions get_restrictions(gbfs_provider const&,
+                                         provider_products const&,
+                                         geo::latlng const&);
+
+bool allows_free_floating_return_at(gbfs_provider const&,
+                                    provider_products const&,
+                                    geo::latlng const&,
+                                    bool ignore_return_constraints = false);
+
 }  // namespace motis::gbfs
