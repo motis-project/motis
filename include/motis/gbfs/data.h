@@ -206,6 +206,12 @@ struct zone {
         rules_, [](rule const& r) { return r.allows_rental_operation(); });
   }
 
+  bool is_global() const {
+    auto const bb = bounding_box();
+    return bb.max_.lat() >= 90 && bb.max_.lng() >= 180 &&
+           bb.min_.lat() <= -90 && bb.min_.lng() <= -180;
+  }
+
   std::shared_ptr<tg_geom> geom_;
   std::vector<rule> rules_;
   bool clockwise_{true};

@@ -81,14 +81,26 @@ struct osr_mapping {
       return bv;
     };
 
+    auto global_rules = std::vector<rule>{};
     auto zone_rtree = box_rtree<std::size_t>{};
+    auto zone_bb = geo::box{};
     for (auto const [i, z] :
          utl::enumerate(provider_.geofencing_zones_.zones_)) {
       zone_rtree.add(z.bounding_box(), i);
+      if (!z.is_global() || provider_.geofencing_zones_.zones_.size() == 1) {
+        zone_bb.extend(z.bounding_box());
+      } else {
+        global_rules.insert(global_rules.begin(), z.rules_.begin(),
+                            z.rules_.end());
+      }
     }
+    global_rules.insert(global_rules.end(),
+                        provider_.geofencing_zones_.global_rules_.begin(),
+                        provider_.geofencing_zones_.global_rules_.end());
 
     for (auto [prod, rd] : utl::zip(provider_.products_, products_data_)) {
-      auto default_restrictions = get_default_restrictions(provider_, prod);
+      auto default_restrictions =
+          get_default_restrictions(provider_, prod, global_rules);
       rd.start_allowed_ = make_loc_bitvec();
       rd.end_allowed_ = make_loc_bitvec();
       rd.through_allowed_ = make_loc_bitvec();
@@ -162,11 +174,7 @@ struct osr_mapping {
     };
 
     auto const* osr_r = w_.r_.get();
-    auto bb = geo::box{};
-    for (auto const& z : provider_.geofencing_zones_.zones_) {
-      bb.extend(z.bounding_box());
-    }
-    l_.find(bb, [&](osr::way_idx_t const way) {
+    l_.find(zone_bb, [&](osr::way_idx_t const way) {
       for (auto const n : osr_r->way_nodes_[way]) {
         if (done.test(n)) {
           continue;
