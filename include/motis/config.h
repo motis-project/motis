@@ -210,6 +210,7 @@ struct config {
     unsigned http_timeout_{30};
     unsigned cache_size_{50};
     std::optional<std::string> proxy_{};
+    std::optional<bool> use_connect_{false};
     std::optional<ttl> ttl_{};
   };
   std::optional<gbfs> gbfs_{};

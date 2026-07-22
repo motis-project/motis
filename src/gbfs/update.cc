@@ -233,12 +233,13 @@ struct gbfs_update {
         d_{d},
         prev_d_{prev_d},
         timeout_{c.http_timeout_},
-        proxy_{c.proxy_.transform([](std::string const& u) {
+        proxy_{c.proxy_.transform([&](std::string const& u) {
           auto const url = boost::urls::url{u};
 
           auto p = proxy{};
           p.use_tls_ = url.scheme_id() == boost::urls::scheme::https;
           p.host_ = url.host();
+          p.use_connect_ = c.use_connect_.value_or(false);
           p.port_ = url.has_port() ? url.port() : (p.use_tls_ ? "443" : "80");
           return p;
         })} {}
