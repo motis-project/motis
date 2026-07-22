@@ -62,22 +62,10 @@ struct osr_mapping {
     }
 
     for (auto [prod, rd] : utl::zip(provider_.products_, products_data_)) {
-      auto default_restrictions = provider_.default_restrictions_;
+      auto default_restrictions = get_default_restrictions(provider_, prod);
       rd.start_allowed_ = make_loc_bitvec();
       rd.end_allowed_ = make_loc_bitvec();
       rd.through_allowed_ = make_loc_bitvec();
-
-      // global rules
-      for (auto const& r : provider_.geofencing_zones_.global_rules_) {
-        if (!applies(r.vehicle_type_idxs_, prod.vehicle_types_)) {
-          continue;
-        }
-        default_restrictions.ride_start_allowed_ = r.ride_start_allowed_;
-        default_restrictions.ride_end_allowed_ = r.ride_end_allowed_;
-        default_restrictions.ride_through_allowed_ = r.ride_through_allowed_;
-        default_restrictions.station_parking_ = r.station_parking_;
-        break;
-      }
 
       if ((prod.return_constraint_ == return_constraint::kAnyStation ||
            prod.return_constraint_ == return_constraint::kRoundtripStation) &&
@@ -173,23 +161,28 @@ struct osr_mapping {
         return false;
       }
       auto const& node_props = w_.r_->node_properties_[n.node_];
-      if (footp::node_cost(foot_params, node_props) == osr::kInfeasible ||
-          bikep::node_cost(bike_params, node_props) == osr::kInfeasible) {
+      if (footp::node_cost(foot_params, node_props).cost_ == osr::kInfeasible ||
+          bikep::node_cost(bike_params, node_props).cost_ == osr::kInfeasible) {
         return false;
       }
       // node needs to have at least one way accessible by foot and one by bike
       return utl::any_of(w_.r_->node_ways_[n.node_],
                          [&](auto const way_idx) {
                            return footp::way_cost(
-                                      footp::parameters{},
-                                      w_.r_->way_properties_[way_idx],
-                                      osr::direction::kForward,
-                                      0U) != osr::kInfeasible;
+                                      foot_params, *w_.r_, w_.timezones_,
+                                      way_idx, w_.r_->way_properties_[way_idx],
+                                      osr::direction::kForward, 0U,
+                                      std::nullopt, osr::duration_t{0},
+                                      osr::direction::kForward)
+                                      .cost_ != osr::kInfeasible;
                          }) &&
              utl::any_of(w_.r_->node_ways_[n.node_], [&](auto const way_idx) {
-               return bikep::way_cost(
-                          bikep::parameters{}, w_.r_->way_properties_[way_idx],
-                          osr::direction::kForward, 0U) != osr::kInfeasible;
+               return bikep::way_cost(bike_params, *w_.r_, w_.timezones_,
+                                      way_idx, w_.r_->way_properties_[way_idx],
+                                      osr::direction::kForward, 0U,
+                                      std::nullopt, osr::duration_t{0},
+                                      osr::direction::kForward)
+                          .cost_ != osr::kInfeasible;
              });
     };
 
@@ -306,14 +299,7 @@ struct osr_mapping {
     for (auto [prod, rd] : utl::zip(provider_.products_, products_data_)) {
       for (auto const [vehicle_idx, vs] :
            utl::enumerate(provider_.vehicle_status_)) {
-        if (vs.is_disabled_ || vs.is_reserved_ ||
-            !prod.includes_vehicle_type(vs.vehicle_type_idx_)) {
-          continue;
-        }
-
-        auto const restrictions = provider_.geofencing_zones_.get_restrictions(
-            vs.pos_, vs.vehicle_type_idx_, geofencing_restrictions{});
-        if (!restrictions.ride_start_allowed_) {
+        if (!vehicle_is_rentable(provider_, prod, vs)) {
           continue;
         }
 

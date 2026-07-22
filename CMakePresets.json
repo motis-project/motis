@@ -92,7 +92,8 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
         "CMAKE_EXE_LINKER_FLAGS": "-B/opt/mold",
-        "CTX_VALGRIND": "ON"
+        "CTX_VALGRIND": "ON",
+        "BOOST_VALGRIND": "ON"
       },
       "environment": {
         "PATH": "/opt:/opt/cmake-3.26.3-linux-x86_64/bin:/opt/buildcache/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
@@ -123,10 +124,10 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "RelWithDebInfo",
         "NIGIRI_CUDA": "ON",
-        "CMAKE_C_COMPILER": "gcc-13",
-        "CMAKE_CXX_COMPILER": "g++-13",
+        "CMAKE_C_COMPILER": "gcc-15",
+        "CMAKE_CXX_COMPILER": "g++-15",
         "CMAKE_CUDA_COMPILER": "/usr/local/cuda/bin/nvcc",
-        "CMAKE_CUDA_HOST_COMPILER": "g++-12"
+        "CMAKE_CUDA_HOST_COMPILER": "g++-15"
       }
     },
     {
@@ -137,8 +138,8 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "RelWithDebInfo",
         "NIGIRI_CUDA": "OFF",
-        "CMAKE_C_COMPILER": "gcc-13",
-        "CMAKE_CXX_COMPILER": "g++-13"
+        "CMAKE_C_COMPILER": "gcc-15",
+        "CMAKE_CXX_COMPILER": "g++-15"
       }
     },
     {

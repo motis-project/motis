@@ -29,9 +29,6 @@ jobs:
       - name: Get deps
         run: mkdir -p ~/deps && mv ~/deps .
 
-      - name: Get build
-        run: mkdir -p ~/build && mv ~/build .
-
       - name: Configure
         run: |
           cmake --preset cuda
@@ -75,8 +72,4 @@ jobs:
           python3 tools/validate.py ./build/cpu/motis ./build/cuda/motis \
             --data "$HOME/ci-data/eu/data" --name europe --date 2026-07-05 \
             --rt-dir "$HOME/ci-data/eu" --routed-footpaths --flex --bike --tts \
-            --exclude-transit-modes COACH --n 20
-
-      - name: Save build
-        if: always()
-        run: mv build ~
+            --exclude-transit-modes COACH --n 20 --n_threads 8

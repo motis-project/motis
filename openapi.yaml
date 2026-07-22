@@ -101,7 +101,7 @@ paths:
           required: false
           description: |
             Optional. If not set, the default is `0,0` - no stay required.
-            
+
             For each `via` stop a minimum stay duration in minutes.
             
             The value `0` signals that it's allowed to stay in the same trip.
@@ -242,6 +242,83 @@ paths:
           schema:
             $ref: '#/components/schemas/CyclingSpeed'
 
+        - name: vehicleHeight
+          in: query
+          required: false
+          description: Vehicle height in meters used for `HGV` street routing.
+          schema:
+            $ref: "#/components/schemas/VehicleHeight"
+
+        - name: vehicleWidth
+          in: query
+          required: false
+          description: Vehicle width in meters used for `HGV` street routing.
+          schema:
+            $ref: "#/components/schemas/VehicleWidth"
+
+        - name: vehicleLength
+          in: query
+          required: false
+          description: Vehicle length in meters used for `HGV` street routing.
+          schema:
+            $ref: "#/components/schemas/VehicleLength"
+
+        - name: vehicleWeight
+          in: query
+          required: false
+          description: Vehicle gross weight in tons used for `HGV` street routing.
+          schema:
+            $ref: "#/components/schemas/VehicleWeight"
+
+        - name: vehicleHazmat
+          in: query
+          required: false
+          description: Whether the vehicle carries hazardous materials for `HGV` street routing.
+          schema:
+            $ref: "#/components/schemas/VehicleHazmat"
+
+        - name: vehicleHazmatWater
+          in: query
+          required: false
+          description: Whether the vehicle carries hazardous materials dangerous to water for `HGV` street routing.
+          schema:
+            $ref: "#/components/schemas/VehicleHazmatWater"
+
+        - name: vehicleAxleCount
+          in: query
+          required: false
+          description: Axle count used for `HGV` street routing.
+          schema:
+            $ref: "#/components/schemas/VehicleAxleCount"
+
+        - name: vehicleAxleLoad
+          in: query
+          required: false
+          description: Maximum axle load in tons used for `HGV` street routing.
+          schema:
+            $ref: "#/components/schemas/VehicleAxleLoad"
+
+        - name: vehicleTrailer
+          in: query
+          required: false
+          description: Whether the vehicle has a trailer for `HGV` street routing.
+          schema:
+            $ref: "#/components/schemas/VehicleTrailer"
+
+        - name: vehicleTopSpeed
+          in: query
+          required: false
+          description: Vehicle top speed in km/h used for `HGV` street routing.
+          schema:
+            $ref: "#/components/schemas/VehicleTopSpeed"
+
+        - name: vehicleLezAccess
+          in: query
+          required: false
+          description: Whether the vehicle is allowed to use low-emission zones for `HGV` street routing.
+          schema:
+            $ref: "#/components/schemas/VehicleLezAccess"
+
         - name: elevationCosts
           in: query
           required: false
@@ -344,8 +421,8 @@ paths:
             To prevent this, it's possible to send two separate requests (one with only `transitModes` and one with only `directModes`).
 
             Note: the output `direct` array will stay empty if the input param `maxDirectTime` makes any direct trip impossible.
-            
-            Only non-transit modes such as `WALK`, `BIKE`, `CAR`, `BIKE_SHARING`, etc. can be used.
+
+            Only non-transit modes such as `WALK`, `BIKE`, `CAR`, `HGV`, `BIKE_SHARING`, etc. can be used.
           schema:
             default:
               - WALK
@@ -698,7 +775,7 @@ paths:
             default: false
           description: |
             Optional. Default is `false`.
-            
+
               - `arriveBy=true`: the parameters `date` and `time` refer to the arrival time
               - `arriveBy=false`: the parameters `date` and `time` refer to the departure time
 
@@ -1030,6 +1107,61 @@ paths:
           description: maximum matching distance in meters to match geo coordinates to the street network
           schema:
             type: number
+        - name: vehicleHeight
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/VehicleHeight"
+        - name: vehicleWidth
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/VehicleWidth"
+        - name: vehicleLength
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/VehicleLength"
+        - name: vehicleWeight
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/VehicleWeight"
+        - name: vehicleHazmat
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/VehicleHazmat"
+        - name: vehicleHazmatWater
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/VehicleHazmatWater"
+        - name: vehicleAxleCount
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/VehicleAxleCount"
+        - name: vehicleAxleLoad
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/VehicleAxleLoad"
+        - name: vehicleTrailer
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/VehicleTrailer"
+        - name: vehicleTopSpeed
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/VehicleTopSpeed"
+        - name: vehicleLezAccess
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/VehicleLezAccess"
         - name: elevationCosts
           in: query
           required: false
@@ -1314,6 +1446,72 @@ paths:
             Average speed for bike routing.
           schema:
             $ref: "#/components/schemas/CyclingSpeed"
+
+        - name: vehicleHeight
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/VehicleHeight"
+
+        - name: vehicleWidth
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/VehicleWidth"
+
+        - name: vehicleLength
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/VehicleLength"
+
+        - name: vehicleWeight
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/VehicleWeight"
+
+        - name: vehicleHazmat
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/VehicleHazmat"
+
+        - name: vehicleHazmatWater
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/VehicleHazmatWater"
+
+        - name: vehicleAxleCount
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/VehicleAxleCount"
+
+        - name: vehicleAxleLoad
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/VehicleAxleLoad"
+
+        - name: vehicleTrailer
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/VehicleTrailer"
+
+        - name: vehicleTopSpeed
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/VehicleTopSpeed"
+
+        - name: vehicleLezAccess
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/VehicleLezAccess"
 
         - name: elevationCosts
           in: query
@@ -1696,6 +1894,72 @@ paths:
             Average speed for bike routing.
           schema:
             $ref: '#/components/schemas/CyclingSpeed'
+
+        - name: vehicleHeight
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/VehicleHeight"
+
+        - name: vehicleWidth
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/VehicleWidth"
+
+        - name: vehicleLength
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/VehicleLength"
+
+        - name: vehicleWeight
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/VehicleWeight"
+
+        - name: vehicleHazmat
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/VehicleHazmat"
+
+        - name: vehicleHazmatWater
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/VehicleHazmatWater"
+
+        - name: vehicleAxleCount
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/VehicleAxleCount"
+
+        - name: vehicleAxleLoad
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/VehicleAxleLoad"
+
+        - name: vehicleTrailer
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/VehicleTrailer"
+
+        - name: vehicleTopSpeed
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/VehicleTopSpeed"
+
+        - name: vehicleLezAccess
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/VehicleLezAccess"
 
         - name: elevationCosts
           in: query
@@ -2460,7 +2724,7 @@ paths:
             default: false
           description: |
             Optional. Default is `false`.
-            
+
               - `arriveBy=true`: the parameters `date` and `time` refer to the arrival time
               - `arriveBy=false`: the parameters `date` and `time` refer to the departure time
 
@@ -3460,6 +3724,7 @@ components:
           - `BIKE`
           - `RENTAL` Experimental. Expect unannounced breaking changes (without version bumps) for all parameters and returned structs.
           - `CAR`
+          - `HGV` Heavy goods vehicles (only supported for direct connections)
           - `CAR_PARKING` Experimental. Expect unannounced breaking changes (without version bumps) for all parameters and returned structs.
           - `CAR_DROPOFF` Experimental. Expect unannounced breaking changes (without version bumps) for all perameters and returned structs.
           - `ODM` on-demand taxis from the Prima+ÖV Project
@@ -3496,6 +3761,7 @@ components:
         - BIKE
         - RENTAL
         - CAR
+        - HGV
         - CAR_PARKING
         - CAR_DROPOFF
         - ODM  # Transit | Street
@@ -3930,6 +4196,50 @@ components:
     CyclingSpeed:
       description: Average speed for bike routing in meters per second
       type: number
+
+    VehicleHeight:
+      description: Vehicle height for HGV routing in meters
+      type: number
+
+    VehicleWidth:
+      description: Vehicle width for HGV routing in meters
+      type: number
+
+    VehicleLength:
+      description: Vehicle length for HGV routing in meters
+      type: number
+
+    VehicleWeight:
+      description: Vehicle gross weight for HGV routing in tons
+      type: number
+
+    VehicleHazmat:
+      description: Whether the vehicle carries hazardous materials for HGV routing
+      type: boolean
+
+    VehicleHazmatWater:
+      description: Whether the vehicle carries hazardous materials dangerous to water for HGV routing
+      type: boolean
+
+    VehicleAxleCount:
+      description: Axle count for HGV routing
+      type: integer
+
+    VehicleAxleLoad:
+      description: Maximum axle load for HGV routing in tons
+      type: number
+
+    VehicleTrailer:
+      description: Whether the vehicle has a trailer for HGV routing
+      type: boolean
+
+    VehicleTopSpeed:
+      description: Vehicle top speed for HGV routing in km/h
+      type: integer
+
+    VehicleLezAccess:
+      description: Whether the vehicle is allowed to use low-emission zones for HGV routing
+      type: boolean
 
     VertexType:
       type: string
@@ -5498,6 +5808,28 @@ components:
 
             Average speed for bike routing.
           $ref: "#/components/schemas/CyclingSpeed"
+        vehicleHeight:
+          $ref: "#/components/schemas/VehicleHeight"
+        vehicleWidth:
+          $ref: "#/components/schemas/VehicleWidth"
+        vehicleLength:
+          $ref: "#/components/schemas/VehicleLength"
+        vehicleWeight:
+          $ref: "#/components/schemas/VehicleWeight"
+        vehicleHazmat:
+          $ref: "#/components/schemas/VehicleHazmat"
+        vehicleHazmatWater:
+          $ref: "#/components/schemas/VehicleHazmatWater"
+        vehicleAxleCount:
+          $ref: "#/components/schemas/VehicleAxleCount"
+        vehicleAxleLoad:
+          $ref: "#/components/schemas/VehicleAxleLoad"
+        vehicleTrailer:
+          $ref: "#/components/schemas/VehicleTrailer"
+        vehicleTopSpeed:
+          $ref: "#/components/schemas/VehicleTopSpeed"
+        vehicleLezAccess:
+          $ref: "#/components/schemas/VehicleLezAccess"
         elevationCosts:
           description: |
             Optional. Default is `NONE`.

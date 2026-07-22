@@ -46,6 +46,7 @@
 #include "motis/repeat.h"
 
 #include "motis/gbfs/compression.h"
+#include "motis/gbfs/geofencing.h"
 #include "motis/gbfs/mode.h"
 #include "motis/gbfs/osr_mapping.h"
 #include "motis/gbfs/parser.h"
@@ -488,8 +489,13 @@ struct gbfs_update {
           merge_ttl_map(config.ttl_.value_or(config::gbfs::ttl{}).overwrite_,
                         c_.ttl_.value_or(config::gbfs::ttl{}).overwrite_);
 
-      auto discovery = co_await fetch_file("gbfs", config.url_, headers, oauth,
-                                           dir, default_ttl, overwrite_ttl);
+      auto const discovery_name =
+          dir.has_value() && std::filesystem::exists(*dir / "manifest.json")
+              ? "manifest"
+              : "gbfs";
+      auto discovery =
+          co_await fetch_file(discovery_name, config.url_, headers, oauth, dir,
+                              default_ttl, overwrite_ttl);
       auto const& root = discovery.json_.as_object();
       if ((root.contains("data") &&
            root.at("data").as_object().contains("datasets")) ||
@@ -819,8 +825,8 @@ struct gbfs_update {
                         return st.second.status_.is_renting_ &&
                                st.second.status_.num_vehicles_available_ > 0;
                       }) ||
-          utl::any_of(provider.vehicle_status_, [](auto const& vs) {
-            return !vs.is_disabled_ && !vs.is_reserved_;
+          utl::any_of(provider.vehicle_status_, [&](auto const& vs) {
+            return vehicle_is_rentable(provider, prod, vs);
           });
     } else {
       auto part = partition{vehicle_type_idx_t{provider.vehicle_types_.size()}};
@@ -899,8 +905,7 @@ struct gbfs_update {
                                  st.second.status_.num_vehicles_available_ > 0;
                         }) ||
             utl::any_of(provider.vehicle_status_, [&](auto const& vs) {
-              return !vs.is_disabled_ && !vs.is_reserved_ &&
-                     prod.includes_vehicle_type(vs.vehicle_type_idx_);
+              return vehicle_is_rentable(provider, prod, vs);
             });
       }
     }
@@ -924,6 +929,10 @@ struct gbfs_update {
     }
     auto const prod_idx = product_of_vehicle(provider, vt_to_product, vs);
     if (prod_idx == gbfs_products_idx_t::invalid()) {
+      return;
+    }
+    auto const& prod = provider.products_[prod_idx];
+    if (!vehicle_is_rentable(provider, prod, vs)) {
       return;
     }
     auto const ref = to_ref_idx(gbfs_products_ref{provider.idx_, prod_idx});
@@ -961,7 +970,7 @@ struct gbfs_update {
 
     auto const vt_to_product = build_vehicle_type_to_product(provider);
 
-    if (!partition_stable) {
+    if (!partition_stable || zones_changed) {
       if (prev_provider != nullptr) {
         auto const prev_vt_to_product =
             build_vehicle_type_to_product(*prev_provider);
@@ -981,7 +990,9 @@ struct gbfs_update {
           [](vehicle_status const& a, vehicle_status const& b) {
             return a.pos_ == b.pos_ &&
                    a.station_id_.empty() == b.station_id_.empty() &&
-                   a.vehicle_type_idx_ == b.vehicle_type_idx_;
+                   a.vehicle_type_idx_ == b.vehicle_type_idx_ &&
+                   a.is_reserved_ == b.is_reserved_ &&
+                   a.is_disabled_ == b.is_disabled_;
           },
           utl::overloaded{
               [&](utl::op const o, vehicle_status const& v) {
@@ -1070,15 +1081,16 @@ struct gbfs_update {
                                           boost::json::object const& root) {
     auto feeds = std::vector<provider_feed>{};
     auto skipped_entries = 0U;
-    auto const resolve_dir = [&](std::string const& url) {
+    auto const resolve_dir = [&](std::string const& url,
+                                 std::string const& system_id) {
+      if (af.dir_.has_value()) {
+        return std::optional<std::filesystem::path>{*af.dir_ / system_id};
+      }
       if (is_http_url(url)) {
         return std::optional<std::filesystem::path>{};
       }
       auto const p = std::filesystem::path{url};
-      if (!af.dir_.has_value() || p.is_absolute()) {
-        return std::optional<std::filesystem::path>{p};
-      }
-      return std::optional<std::filesystem::path>{*af.dir_ / p};
+      return std::optional<std::filesystem::path>{p};
     };
 
     if (root.contains("data") && root.at("data").is_object() &&
@@ -1114,7 +1126,7 @@ struct gbfs_update {
               .id_ = combined_id,
               .url_ = url,
               .headers_ = af.headers_,
-              .dir_ = resolve_dir(url),
+              .dir_ = resolve_dir(url, system_id),
               .default_restrictions_ =
                   lookup_default_restrictions(af.id_, combined_id),
               .default_return_constraint_ =
@@ -1152,7 +1164,7 @@ struct gbfs_update {
               .id_ = combined_id,
               .url_ = url,
               .headers_ = af.headers_,
-              .dir_ = resolve_dir(url),
+              .dir_ = resolve_dir(url, system_id),
               .default_restrictions_ =
                   lookup_default_restrictions(af.id_, combined_id),
               .default_return_constraint_ =
@@ -1206,8 +1218,11 @@ struct gbfs_update {
       std::map<std::string, unsigned> const& default_ttl = {},
       std::map<std::string, unsigned> const& overwrite_ttl = {}) {
     auto content = std::string{};
+    auto source = std::string{url};
     if (dir.has_value()) {
-      content = read_file(*dir / fmt::format("{}.json", name));
+      auto const path = *dir / fmt::format("{}.json", name);
+      source = path.string();
+      content = read_file(path);
     } else {
       auto headers = base_headers;
       co_await get_oauth_token(oauth, headers);
@@ -1219,7 +1234,14 @@ struct gbfs_update {
             fmt::format("HTTP {} fetching {}", res.result_int(), url));
       }
     }
-    auto j = json::parse(content);
+    auto j = [&]() {
+      try {
+        return json::parse(content);
+      } catch (std::exception const& ex) {
+        throw std::runtime_error(
+            fmt::format("error parsing {}: {}", source, ex.what()));
+      }
+    }();
     auto j_root = j.as_object();
     auto const next_refresh = get_expiry(j_root, std::chrono::seconds{0},
                                          default_ttl, overwrite_ttl, name);

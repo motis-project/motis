@@ -57,6 +57,7 @@ api::ModeEnum default_output::get_mode() const {
     case osr::search_profile::kBikeElevationLow: [[fallthrough]];
     case osr::search_profile::kBikeElevationHigh: return api::ModeEnum::BIKE;
     case osr::search_profile::kCar: return api::ModeEnum::CAR;
+    case osr::search_profile::kHgv: return api::ModeEnum::HGV;
     case osr::search_profile::kCarParking: [[fallthrough]];
     case osr::search_profile::kCarParkingWheelchair:
       return api::ModeEnum::CAR_PARKING;
@@ -89,6 +90,7 @@ api::Place default_output::get_place(
 
 bool default_output::is_time_dependent() const {
   return profile_ == osr::search_profile::kWheelchair ||
+         profile_ == osr::search_profile::kHgv ||
          profile_ == osr::search_profile::kCarParkingWheelchair ||
          profile_ == osr::search_profile::kCarDropOffWheelchair;
 }
@@ -234,22 +236,34 @@ api::Itinerary street_routing(osr::ways const& w,
               "either start_time or end_time must be set");
   auto const bound_time =
       start_time.or_else([&]() { return end_time; }).value();
+  auto const osr_dir = end_time.has_value() && !start_time.has_value()
+                           ? osr::direction::kBackward
+                           : osr::direction::kForward;
+  auto const to_osr_time = [](n::unixtime_t const t) {
+    return osr::routing_time_t{
+        std::chrono::duration_cast<std::chrono::seconds>(t.time_since_epoch())};
+  };
+  auto const osr_start_time =
+      start_time.has_value() != end_time.has_value()
+          ? std::optional<osr::routing_time_t>{to_osr_time(bound_time)}
+          : std::optional<osr::routing_time_t>{};
   auto const from = get_location(from_place);
   auto const to = get_location(to_place);
   auto const s = e ? get_states_at(w, l, *e, bound_time, from.pos_)
                    : std::optional{std::pair<nodes_t, states_t>{}};
   auto const cache_key = street_routing_cache_key_t{
       from, to, out.get_cache_key(),
-      out.is_time_dependent() ? bound_time : n::unixtime_t{n::i32_minutes{0}}};
+      out.is_time_dependent() ? bound_time : n::unixtime_t{n::i32_minutes{0}},
+      out.is_time_dependent() ? osr_dir : osr::direction::kForward};
   auto const path = utl::get_or_create(cache, cache_key, [&]() {
     auto const& [e_nodes, e_states] = *s;
     auto const profile = out.get_profile();
     return osr::route(
         to_profile_parameters(profile, osr_params), w, l, profile, from, to,
-        static_cast<osr::cost_t>(max.count()), osr::direction::kForward,
-        max_matching_distance,
+        static_cast<osr::cost_t>(max.count()), osr_dir, max_matching_distance,
         s ? &set_blocked(e_nodes, e_states, blocked_mem) : nullptr,
-        out.get_sharing_data(), elevations, osr::routing_algorithm::kAStarBi);
+        out.get_sharing_data(), elevations, osr::routing_algorithm::kAStarBi,
+        osr_start_time);
   });
 
   if (!path.has_value()) {
@@ -264,16 +278,18 @@ api::Itinerary street_routing(osr::ways const& w,
   }
 
   auto const deduced_start_time =
-      start_time ? *start_time : *end_time - std::chrono::seconds{path->cost_};
+      start_time ? *start_time
+                 : *end_time - std::chrono::seconds{path->duration_.count()};
   auto itinerary = api::Itinerary{
       .duration_ = start_time && end_time
                        ? std::chrono::duration_cast<std::chrono::seconds>(
                              *end_time - *start_time)
                              .count()
-                       : path->cost_,
+                       : path->duration_.count(),
       .startTime_ = deduced_start_time,
       .endTime_ = end_time ? *end_time
-                           : *start_time + std::chrono::seconds{path->cost_},
+                           : *start_time +
+                                 std::chrono::seconds{path->duration_.count()},
       .transfers_ = 0};
 
   auto t =
@@ -297,7 +313,7 @@ api::Itinerary street_routing(osr::ways const& w,
         for (auto const& p : range) {
           utl::concat(concat, p.polyline_);
           if (p.cost_ != osr::kInfeasible) {
-            t += std::chrono::seconds{p.cost_};
+            t += std::chrono::seconds{p.duration_.count()};
             dist += p.dist_;
           }
         }

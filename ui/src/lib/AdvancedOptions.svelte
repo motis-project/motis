@@ -53,6 +53,17 @@
 		preTransitProviderGroups = $bindable(),
 		postTransitProviderGroups = $bindable(),
 		directProviderGroups = $bindable(),
+		vehicleHeight = $bindable(),
+		vehicleWidth = $bindable(),
+		vehicleLength = $bindable(),
+		vehicleWeight = $bindable(),
+		vehicleHazmat = $bindable(),
+		vehicleHazmatWater = $bindable(),
+		vehicleAxleCount = $bindable(),
+		vehicleAxleLoad = $bindable(),
+		vehicleTrailer = $bindable(),
+		vehicleTopSpeed = $bindable(),
+		vehicleLezAccess = $bindable(),
 		via = $bindable(),
 		viaMinimumStay = $bindable(),
 		viaLabels = $bindable(),
@@ -87,6 +98,17 @@
 		preTransitProviderGroups: string[];
 		postTransitProviderGroups: string[];
 		directProviderGroups: string[];
+		vehicleHeight: number;
+		vehicleWidth: number;
+		vehicleLength: number;
+		vehicleWeight: number;
+		vehicleHazmat: boolean;
+		vehicleHazmatWater: boolean;
+		vehicleAxleCount: number;
+		vehicleAxleLoad: number;
+		vehicleTrailer: boolean;
+		vehicleTopSpeed: number;
+		vehicleLezAccess: boolean;
 		via: undefined | Location[];
 		viaMinimumStay: undefined | number[];
 		viaLabels: Record<string, string>;
@@ -150,10 +172,18 @@
 	$effect(() => {
 		transferTimeFactor = Math.max(1, defaultQuery.pedestrianSpeed / pedestrianSpeed);
 	});
+	let showHgvOptions = $derived(
+		preTransitModes.includes('HGV') ||
+			postTransitModes.includes('HGV') ||
+			directModes?.includes('HGV')
+	);
 
 	let possibleModes = $derived(
 		hasDebug ? prePostDirectModes : prePostDirectModes.filter((m) => !m.startsWith('DEBUG_'))
 	);
+
+	const inputClass =
+		'flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50';
 </script>
 
 {#snippet optionsContent()}
@@ -268,6 +298,117 @@
 				bind:ignoreRentalReturnConstraints={ignoreDirectRentalReturnConstraints}
 				bind:providerGroups={directProviderGroups}
 			></StreetModes>
+		{/if}
+
+		{#if showHgvOptions}
+			<div class="space-y-2">
+				<div class="text-sm font-medium">{t.hgvRoutingOptions}</div>
+				<div class="grid grid-cols-2 items-center gap-2">
+					<div class="text-sm">{t.vehicleHeight}</div>
+					<input
+						class={inputClass}
+						disabled={!allowStreetRouting}
+						type="number"
+						min="0"
+						step="0.01"
+						bind:value={vehicleHeight}
+					/>
+
+					<div class="text-sm">{t.vehicleWidth}</div>
+					<input
+						class={inputClass}
+						disabled={!allowStreetRouting}
+						type="number"
+						min="0"
+						step="0.01"
+						bind:value={vehicleWidth}
+					/>
+
+					<div class="text-sm">{t.vehicleLength}</div>
+					<input
+						class={inputClass}
+						disabled={!allowStreetRouting}
+						type="number"
+						min="0"
+						step="0.01"
+						bind:value={vehicleLength}
+					/>
+
+					<div class="text-sm">{t.vehicleWeight}</div>
+					<input
+						class={inputClass}
+						disabled={!allowStreetRouting}
+						type="number"
+						min="0"
+						step="0.01"
+						bind:value={vehicleWeight}
+					/>
+
+					<div class="text-sm">{t.vehicleTopSpeed}</div>
+					<input
+						class={inputClass}
+						disabled={!allowStreetRouting}
+						type="number"
+						min="0"
+						step="1"
+						bind:value={vehicleTopSpeed}
+					/>
+
+					<div class="text-sm">{t.vehicleAxleCount}</div>
+					<input
+						class={inputClass}
+						disabled={!allowStreetRouting}
+						type="number"
+						min="1"
+						step="1"
+						bind:value={vehicleAxleCount}
+					/>
+
+					<div class="text-sm">{t.vehicleAxleLoad}</div>
+					<input
+						class={inputClass}
+						disabled={!allowStreetRouting}
+						type="number"
+						min="0"
+						step="0.01"
+						bind:value={vehicleAxleLoad}
+					/>
+				</div>
+				<Switch
+					disabled={!allowStreetRouting}
+					bind:checked={vehicleHazmat}
+					label={t.vehicleHazmat}
+					id="vehicleHazmat"
+					onCheckedChange={(checked) => {
+						if (!checked) {
+							vehicleHazmatWater = false;
+						}
+					}}
+				/>
+				<Switch
+					disabled={!allowStreetRouting}
+					bind:checked={vehicleHazmatWater}
+					label={t.vehicleHazmatWater}
+					id="vehicleHazmatWater"
+					onCheckedChange={(checked) => {
+						if (checked) {
+							vehicleHazmat = true;
+						}
+					}}
+				/>
+				<Switch
+					disabled={!allowStreetRouting}
+					bind:checked={vehicleTrailer}
+					label={t.vehicleTrailer}
+					id="vehicleTrailer"
+				/>
+				<Switch
+					disabled={!allowStreetRouting}
+					bind:checked={vehicleLezAccess}
+					label={t.vehicleLezAccess}
+					id="vehicleLezAccess"
+				/>
+			</div>
 		{/if}
 
 		<div class="grid grid-cols-[1fr_2fr_1fr] text-sm items-center gap-2">
