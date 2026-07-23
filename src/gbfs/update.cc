@@ -600,14 +600,9 @@ struct gbfs_update {
     auto& file_infos = provider.file_infos_;
     auto data_changed = false;
     auto geofencing_updated = false;
-    auto vehicle_types_updated = false;
     auto stations_updated = false;
     auto station_status_updated = false;
     auto vehicle_status_updated = false;
-
-    if (prev_provider != nullptr) {
-      provider.nonce_ = prev_provider->nonce_ + 1;
-    }
 
     try {
       if (!discovery && needs_refresh(provider.file_infos_->urls_fi_)) {
@@ -663,7 +658,7 @@ struct gbfs_update {
         provider.sys_info_.name_ = *pf.config_name_;
       }
 
-      vehicle_types_updated = co_await update(
+      auto const vehicle_types_updated = co_await update(
           "vehicle_types", file_infos->vehicle_types_fi_, load_vehicle_types);
       if (!vehicle_types_updated && prev_provider != nullptr) {
         provider.vehicle_types_ = prev_provider->vehicle_types_;
@@ -790,7 +785,6 @@ struct gbfs_update {
         provider.has_vehicles_to_rent_ = prev_provider->has_vehicles_to_rent_;
         provider.bbox_ = prev_provider->bbox_;
         provider.last_updated_ = prev_provider->last_updated_;
-        provider.nonce_ = prev_provider->nonce_;
       }
     }
 
@@ -807,24 +801,8 @@ struct gbfs_update {
                      station_status_updated, vehicle_status_updated,
                      geofencing_updated);
 
-        auto const contains_station_areas =
-            prev_provider != nullptr &&
-            utl::any_of(prev_provider->stations_,
-                        [&](std::pair<std::string, station> const& s) {
-                          return s.second.info_.station_area_ != nullptr;
-                        });
-        auto const previous_state = vehicle_types_updated || stations_updated ||
-                                            geofencing_updated ||
-                                            contains_station_areas
-                                        ? nullptr
-                                        : d_->cache_.get(provider.idx_);
-        auto const previous_state_applicable =
-            previous_state != nullptr && prev_provider != nullptr &&
-            previous_state->nonce_ == prev_provider->nonce_;
         d_->cache_.try_add_or_update(provider.idx_, [&]() {
-          return compute_provider_routing_data(
-              w_, l_, provider,
-              previous_state_applicable ? previous_state.get() : nullptr);
+          return compute_provider_routing_data(w_, l_, provider);
         });
       } catch (std::exception const& ex) {
         std::cerr << "[GBFS] error updating provider " << pf.id_ << ": "
@@ -834,7 +812,6 @@ struct gbfs_update {
       // data not changed, copy previously computed products
       provider.products_ = prev_provider->products_;
       provider.has_vehicles_to_rent_ = prev_provider->has_vehicles_to_rent_;
-      provider.nonce_ = prev_provider->nonce_;
     }
   }
 

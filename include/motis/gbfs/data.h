@@ -346,7 +346,6 @@ struct provider_routing_data
   }
 
   std::vector<compressed_routing_data> products_;
-  std::uint64_t nonce_;
 };
 
 struct provider_products {
@@ -425,8 +424,6 @@ struct gbfs_provider {
   std::uint64_t skipped_vehicle_status_{};
   std::uint64_t skipped_geofencing_zones_{};
   std::uint64_t skipped_geofencing_rules_{};
-
-  std::uint64_t nonce_{};
 };
 
 struct gbfs_group {

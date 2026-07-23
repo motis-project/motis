@@ -46,32 +46,6 @@ struct osr_mapping {
     products_data_.resize(provider.products_.size());
   }
 
-  void copy_geofencing_zones(provider_routing_data const* previous_state) {
-    auto timer = utl::scoped_timer{fmt::format(
-        "copy geofencing data for gbfs provider {}", provider_.id_)};
-
-    auto const osm_size =
-        static_cast<typename osr::bitvec<osr::node_idx_t>::size_type>(
-            w_.n_nodes());
-    auto const new_size =
-        static_cast<typename osr::bitvec<osr::node_idx_t>::size_type>(
-            w_.n_nodes() + provider_.stations_.size() +
-            provider_.vehicle_status_.size());
-
-    for (auto [prod, rd] : utl::zip(provider_.products_, products_data_)) {
-      auto const prev_rd = previous_state->get_products_routing_data(prod.idx_);
-      rd.start_allowed_ = prev_rd->start_allowed_;
-      rd.start_allowed_.resize(osm_size);
-      rd.start_allowed_.resize(new_size);
-      rd.end_allowed_ = prev_rd->end_allowed_;
-      rd.end_allowed_.resize(osm_size);
-      rd.end_allowed_.resize(new_size);
-      rd.through_allowed_ = prev_rd->through_allowed_;
-      rd.through_allowed_.resize(osm_size);
-      rd.through_allowed_.resize(new_size);
-    }
-  }
-
   void map_geofencing_zones() {
     auto const make_loc_bitvec = [&]() {
       auto bv = osr::bitvec<osr::node_idx_t>{};
@@ -393,14 +367,9 @@ struct osr_mapping {
 void map_data(osr::ways const& w,
               osr::lookup const& l,
               gbfs_provider const& provider,
-              provider_routing_data& prd,
-              provider_routing_data const* previous_state) {
+              provider_routing_data& prd) {
   auto mapping = osr_mapping{w, l, provider};
-  if (previous_state == nullptr) {
-    mapping.map_geofencing_zones();
-  } else {
-    mapping.copy_geofencing_zones(previous_state);
-  }
+  mapping.map_geofencing_zones();
   mapping.map_stations();
   mapping.map_vehicles();
 
