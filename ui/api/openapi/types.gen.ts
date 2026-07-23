@@ -376,10 +376,11 @@ export type ElevationCosts = 'NONE' | 'LOW' | 'HIGH';
  * - `REALTIME`: use realtime data for routing/sorting.
  * - `REALTIME_ANNOTATION_ONLY`: route, sort and window on the scheduled
  * timetable only, but still annotate the response with realtime data.
+ * - `FULL`: search on both the scheduled and the realtime timetable and merge the results.
  * - `OFF`: use the scheduled timetable only, with no realtime annotation.
  *
  */
-export type RealtimeMode = 'OFF' | 'REALTIME_ANNOTATION_ONLY' | 'REALTIME';
+export type RealtimeMode = 'OFF' | 'REALTIME_ANNOTATION_ONLY' | 'REALTIME' | 'FULL';
 
 /**
  * Different accessibility profiles for pedestrians.
@@ -2509,6 +2510,8 @@ export type PlanData = {
          * added/changed trips) is used and reflected in the response.
          * - `REALTIME_ANNOTATION_ONLY`: routing uses the scheduled timetable
          * only, but the response is annotated with realtime data.
+         * - `FULL`: searches on both the scheduled and the realtime timetable and
+         * merges the results. All results are realtime-annotated.
          * - `OFF`: only the scheduled timetable is used.
          *
          */
@@ -3582,6 +3585,7 @@ export type StoptimesData = {
          * - `REALTIME_ANNOTATION_ONLY`: stop times are returned, windowed and
          * sorted by their planned time, but each stop time is annotated with
          * realtime data.
+         * - `FULL`: behaves like `REALTIME` here.
          * - `OFF`: only scheduled data is used; stop times are returned and
          * sorted by their planned time, with no realtime annotation.
          *

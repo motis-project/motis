@@ -4,6 +4,8 @@
 #include <cmath>
 #include <mutex>
 #include <optional>
+#include <string_view>
+#include <tuple>
 #include <variant>
 
 #include "boost/thread/tss.hpp"
@@ -430,6 +432,17 @@ n::interval<n::unixtime_t> shrink(bool const keep_late,
   }
 
   return search_interval;
+}
+
+bool same_connection(n::routing::journey const& a,
+                     n::routing::journey const& b) {
+  return a.legs_.size() == b.legs_.size() &&
+         std::equal(begin(a.legs_), end(a.legs_), begin(b.legs_),
+                    [](n::routing::journey::leg const& x,
+                       n::routing::journey::leg const& y) {
+                      return x.from_ == y.from_ && x.to_ == y.to_ &&
+                             x.uses_ == y.uses_;
+                    });
 }
 
 std::vector<n::routing::offset> routing::get_offsets(
@@ -1012,31 +1025,33 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                     {"n_td_start_offsets", q.td_start_.size()},
                     {"n_td_dest_offsets", q.td_dest_.size()}};
 
-    auto r = n::routing::routing_result{};
-    auto algorithm = query.algorithm_;
-    auto search_state = n::routing::search_state{};
-#if defined(NIGIRI_CUDA)
-    auto gpu_used = false;
-    auto const gpu_supported = n::routing::gpu::gpu_supported(q, rtt);
-    auto const run_on_gpu = [&](bool const use_pong) -> bool {
-      try {
-        auto const lease = gpu_pool_->acquire();
-        auto const dir =
-            query.arriveBy_ ? n::direction::kBackward : n::direction::kForward;
-        auto const timeout = query.timeout_.has_value()
-                                 ? std::chrono::seconds{*query.timeout_}
-                                 : max_timeout;
-        r = use_pong ? n::routing::pong_search(*tt_, rtt, search_state,
-                                               lease.state_, q, dir, timeout)
-                     : n::routing::raptor_search(*tt_, rtt, search_state,
-                                                 lease.state_, q, dir, timeout);
-        return true;
-      } catch (std::exception const& e) {
-        std::cout << "GPU EXCEPTION: " << e.what() << "\n";
-        return false;
-      }
+    struct search_output {
+      std::vector<n::routing::journey> journeys_;
+      n::interval<n::unixtime_t> interval_;
+      stats_map_t search_stats_;
+      stats_map_t algo_stats_;
+      bool used_pong_{false};
     };
-#endif
+
+    auto const finalize = [&](n::routing::routing_result& r,
+                              bool const record_metrics) -> search_output {
+      if (record_metrics) {
+        metrics_->routing_journeys_found_.Increment(
+            static_cast<double>(r.journeys_->size()));
+        metrics_->routing_execution_duration_seconds_total_.Observe(
+            static_cast<double>(r.search_stats_.execute_time_.count()) /
+            1000.0);
+        if (!r.journeys_->empty()) {
+          metrics_->routing_journey_duration_seconds_.Observe(
+              static_cast<double>(
+                  to_seconds(r.journeys_->begin()->arrival_time() -
+                             r.journeys_->begin()->departure_time())));
+        }
+      }
+      return {r.journeys_->els_, r.interval_, r.search_stats_.to_map(),
+              std::move(r.algo_stats_)};
+    };
+
     // arriveBy |  extend_later | PONG applicable
     // ---------+---------------+---------------------
     // FALSE    |  FALSE        | FALSE    => rRAPTOR
@@ -1046,76 +1061,181 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
     auto const pong_applicable =
         query.timetableView_ &&
         query.arriveBy_ != start_time.extend_interval_later_;
-    while (true) {
+
+    auto const run_search = [&](n::rt_timetable const* search_rtt,
+                                bool const record_metrics) -> search_output {
+      auto r = n::routing::routing_result{};
+      auto algorithm = query.algorithm_;
+      auto search_state = n::routing::search_state{};
+      auto used_pong = false;
 #if defined(NIGIRI_CUDA)
-      if (algorithm != api::algorithmEnum::TB && gpu_supported &&
-          run_on_gpu(/*use_pong=*/pong_applicable &&
-                     algorithm == api::algorithmEnum::PONG)) {
-        gpu_used = true;
-        break;
-      }
+      auto gpu_used = false;
+      auto const gpu_supported = n::routing::gpu::gpu_supported(q, search_rtt);
+      auto const run_on_gpu = [&](bool const use_pong) -> bool {
+        try {
+          auto const lease = gpu_pool_->acquire();
+          auto const dir = query.arriveBy_ ? n::direction::kBackward
+                                           : n::direction::kForward;
+          auto const timeout = query.timeout_.has_value()
+                                   ? std::chrono::seconds{*query.timeout_}
+                                   : max_timeout;
+          r = use_pong
+                  ? n::routing::pong_search(*tt_, search_rtt, search_state,
+                                            lease.state_, q, dir, timeout)
+                  : n::routing::raptor_search(*tt_, search_rtt, search_state,
+                                              lease.state_, q, dir, timeout);
+          return true;
+        } catch (std::exception const& e) {
+          std::cout << "GPU EXCEPTION: " << e.what() << "\n";
+          return false;
+        }
+      };
+#endif
+      while (true) {
+#if defined(NIGIRI_CUDA)
+        auto const gpu_use_pong =
+            pong_applicable && algorithm == api::algorithmEnum::PONG;
+        if (algorithm != api::algorithmEnum::TB && gpu_supported &&
+            run_on_gpu(/*use_pong=*/gpu_use_pong)) {
+          gpu_used = true;
+          used_pong = gpu_use_pong;
+          break;
+        }
 #endif
 
-      if (algorithm == api::algorithmEnum::PONG && pong_applicable) {
-        try {
+        if (algorithm == api::algorithmEnum::PONG && pong_applicable) {
+          try {
+            auto raptor_state = n::routing::raptor_state{};
+            r = n::routing::pong_search(
+                *tt_, search_rtt, search_state, raptor_state, q,
+                query.arriveBy_ ? n::direction::kBackward
+                                : n::direction::kForward,
+                query.timeout_.has_value()
+                    ? std::chrono::seconds{*query.timeout_}
+                    : max_timeout);
+            used_pong = true;
+          } catch (std::exception const& e) {
+            std::cout << "PONG EXCEPTION: " << e.what() << "\n";
+            algorithm = api::algorithmEnum::RAPTOR;
+            continue;
+          }
+        } else if (algorithm == api::algorithmEnum::RAPTOR || tbd_ == nullptr ||
+                   (search_rtt != nullptr &&
+                    search_rtt->n_rt_transports() != 0U) ||
+                   query.arriveBy_ || q.prf_idx_ != tbd_->prf_idx_ ||
+                   q.allowed_claszes_ != n::routing::all_clasz_allowed() ||
+                   !q.td_start_.empty() || !q.td_dest_.empty() ||
+                   !q.transfer_time_settings_.default_ ||
+                   !q.via_stops_.empty() || q.require_bike_transport_ ||
+                   q.require_car_transport_) {
           auto raptor_state = n::routing::raptor_state{};
-          r = n::routing::pong_search(
-              *tt_, rtt, search_state, raptor_state, q,
+          r = n::routing::raptor_search(
+              *tt_, search_rtt, search_state, raptor_state, q,
               query.arriveBy_ ? n::direction::kBackward
                               : n::direction::kForward,
               query.timeout_.has_value() ? std::chrono::seconds{*query.timeout_}
                                          : max_timeout);
-        } catch (std::exception const& e) {
-          std::cout << "PONG EXCEPTION: " << e.what() << "\n";
-          algorithm = api::algorithmEnum::RAPTOR;
-          continue;
+        } else {
+          auto tb_state = n::routing::tb::query_state{*tt_, *tbd_};
+          r = n::routing::tb::tb_search(*tt_, search_state, tb_state, q);
         }
-      } else if (algorithm == api::algorithmEnum::RAPTOR || tbd_ == nullptr ||
-                 (rtt != nullptr && rtt->n_rt_transports() != 0U) ||
-                 query.arriveBy_ || q.prf_idx_ != tbd_->prf_idx_ ||
-                 q.allowed_claszes_ != n::routing::all_clasz_allowed() ||
-                 !q.td_start_.empty() || !q.td_dest_.empty() ||
-                 !q.transfer_time_settings_.default_ || !q.via_stops_.empty() ||
-                 q.require_bike_transport_ || q.require_car_transport_) {
-        auto raptor_state = n::routing::raptor_state{};
-        r = n::routing::raptor_search(
-            *tt_, rtt, search_state, raptor_state, q,
-            query.arriveBy_ ? n::direction::kBackward : n::direction::kForward,
-            query.timeout_.has_value() ? std::chrono::seconds{*query.timeout_}
-                                       : max_timeout);
-      } else {
-        auto tb_state = n::routing::tb::query_state{*tt_, *tbd_};
-        r = n::routing::tb::tb_search(*tt_, search_state, tb_state, q);
+        break;
       }
-      break;
-    }
 
-    // record the algorithm that actually ran (after any fallbacks)
-    auto const algo_stats = stats_map_t{
-        {"algorithm", static_cast<std::uint64_t>(algorithm)},
+      // record the algorithm that actually ran (after any fallbacks)
+      auto const algo_stats = stats_map_t{
+          {"algorithm", static_cast<std::uint64_t>(algorithm)},
 #if defined(NIGIRI_CUDA)
-        {"gpu_used", gpu_used},
-        {"gpu_supported", gpu_supported},
+          {"gpu_used", gpu_used},
+          {"gpu_supported", gpu_supported},
 #endif
+      };
+
+      auto out = finalize(r, record_metrics);
+      out.used_pong_ = used_pong;
+      out.algo_stats_ = join(algo_stats, std::move(out.algo_stats_));
+      return out;
     };
 
-    metrics_->routing_journeys_found_.Increment(
-        static_cast<double>(r.journeys_->size()));
-    metrics_->routing_execution_duration_seconds_total_.Observe(
-        static_cast<double>(r.search_stats_.execute_time_.count()) / 1000.0);
+    auto const full = query.realtimeMode_ == api::RealtimeModeEnum::FULL;
+    auto const interval_search =
+        std::holds_alternative<n::interval<n::unixtime_t>>(q.start_time_);
 
-    if (!r.journeys_->empty()) {
-      metrics_->routing_journey_duration_seconds_.Observe(static_cast<double>(
-          to_seconds(r.journeys_->begin()->arrival_time() -
-                     r.journeys_->begin()->departure_time())));
+    auto primary = run_search(rtt, true);
+    auto search_interval = primary.interval_;
+    auto full_stats = stats_map_t{};
+
+    if (full) {
+      auto scheduled = run_search(nullptr, false);
+
+      auto const effective_interval = [&](search_output const& r,
+                                          std::string_view tag) {
+        auto itv = r.interval_;
+        auto const out_of_content =
+            (r.used_pong_ && r.journeys_.size() < q.min_connection_count_) ||
+            (r.journeys_.empty() && itv.size() == n::duration_t{0});
+        full_stats.emplace(fmt::format("full_{}_out_of_content", tag),
+                           out_of_content);
+        if (out_of_content) {
+          constexpr auto const kOutOfContentCoverage = n::duration_t{48 * 60};
+          if (q.extend_interval_later_) {
+            itv.to_ =
+                tt_->external_interval().clamp(itv.to_ + kOutOfContentCoverage);
+          }
+          if (q.extend_interval_earlier_) {
+            itv.from_ = tt_->external_interval().clamp(itv.from_ -
+                                                       kOutOfContentCoverage);
+          }
+        }
+        return itv;
+      };
+
+      auto const rt_itv = effective_interval(primary, "rt");
+      auto const sched_itv = effective_interval(scheduled, "sched");
+      search_interval = {std::max(rt_itv.from_, sched_itv.from_),
+                         std::min(rt_itv.to_, sched_itv.to_)};
+      if (search_interval.to_ < search_interval.from_) {
+        search_interval.to_ = search_interval.from_;
+      }
+
+      if (interval_search) {
+        auto const outside = [&](n::routing::journey const& j) {
+          return !search_interval.contains(j.start_time_);
+        };
+        utl::erase_if(primary.journeys_, outside);
+        utl::erase_if(scheduled.journeys_, outside);
+      }
+
+      auto const n_rt = primary.journeys_.size();
+      for (auto& sj : scheduled.journeys_) {
+        auto const covered_by_rt = std::any_of(
+            begin(primary.journeys_),
+            begin(primary.journeys_) + static_cast<std::ptrdiff_t>(n_rt),
+            [&](n::routing::journey const& rj) {
+              return same_connection(sj, rj);
+            });
+        if (!covered_by_rt) {
+          primary.journeys_.push_back(std::move(sj));
+        }
+      }
+      std::sort(begin(primary.journeys_), end(primary.journeys_),
+                [](n::routing::journey const& a, n::routing::journey const& b) {
+                  return std::tuple{a.start_time_, a.dest_time_, a.transfers_} <
+                         std::tuple{b.start_time_, b.dest_time_, b.transfers_};
+                });
+
+      for (auto const& [k, v] : join(std::move(scheduled.search_stats_),
+                                     std::move(scheduled.algo_stats_))) {
+        full_stats.emplace(fmt::format("sched_{}", k), v);
+      }
     }
 
-    auto journeys = r.journeys_->els_;
-    auto search_interval = r.interval_;
+    auto journeys = std::move(primary.journeys_);
+
     if (query.maxItineraries_.has_value()) {
       search_interval = shrink(start_time.extend_interval_earlier_,
                                static_cast<std::size_t>(*query.maxItineraries_),
-                               r.interval_, journeys);
+                               search_interval, journeys);
     }
 
     direct_filter(direct, journeys);
@@ -1153,8 +1273,9 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
 
     return {
         .debugOutput_ =
-            join(std::move(prepare_stats), std::move(query_stats), algo_stats,
-                 r.search_stats_.to_map(), std::move(r.algo_stats_),
+            join(std::move(prepare_stats), std::move(query_stats),
+                 std::move(primary.search_stats_),
+                 std::move(primary.algo_stats_), std::move(full_stats),
                  stats_map_t{{"fares",
                               static_cast<std::uint64_t>(fares_time.count())}}),
         .from_ = bwd_compat_lvl_adjust(std::move(from_p), api_version),
