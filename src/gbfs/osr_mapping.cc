@@ -57,13 +57,10 @@ struct osr_mapping {
 
     auto global_rules = std::vector<rule>{};
     auto zone_rtree = box_rtree<std::size_t>{};
-    auto zone_bb = geo::box{};
     for (auto const [i, z] :
          utl::enumerate(provider_.geofencing_zones_.zones_)) {
       zone_rtree.add(z.bounding_box(), i);
-      if (!z.is_global() || provider_.geofencing_zones_.zones_.size() == 1) {
-        zone_bb.extend(z.bounding_box());
-      } else {
+      if (z.is_global() && provider_.geofencing_zones_.zones_.size() != 1) {
         global_rules.insert(global_rules.begin(), z.rules_.begin(),
                             z.rules_.end());
       }
@@ -113,6 +110,9 @@ struct osr_mapping {
           zone_indices.push_back(zone_idx);
         }
       });
+      if (zone_indices.empty()) {
+        return;
+      }
       utl::sort(zone_indices);
 
       for (auto [prod, rd] : utl::zip(provider_.products_, products_data_)) {
@@ -148,15 +148,22 @@ struct osr_mapping {
     };
 
     auto const* osr_r = w_.r_.get();
-    l_.find(zone_bb, [&](osr::way_idx_t const way) {
-      for (auto const n : osr_r->way_nodes_[way]) {
-        if (done.test(n)) {
-          continue;
-        }
-        done.set(n, true);
-        handle_point(n, w_.get_node_pos(n).as_latlng());
+    for (auto const& z : provider_.geofencing_zones_.zones_) {
+      if (z.is_global() && provider_.geofencing_zones_.zones_.size() != 1) {
+        continue;
       }
-    });
+      multipoly_split_bboxes(z.geom_.get(), [&](geo::box const& bb) {
+        l_.find(bb, [&](osr::way_idx_t const way) {
+          for (auto const n : osr_r->way_nodes_[way]) {
+            if (done.test(n)) {
+              continue;
+            }
+            done.set(n, true);
+            handle_point(n, w_.get_node_pos(n).as_latlng());
+          }
+        });
+      });
+    }
   }
 
   std::vector<node_match> get_node_matches(osr::location const& loc) const {
