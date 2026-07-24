@@ -390,6 +390,7 @@ std::vector<n::routing::offset> get_offsets(
     handle_mode(m);
   }
 
+  utl::sort(offsets);
   return offsets;
 }
 
