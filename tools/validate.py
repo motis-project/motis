@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 
 import argparse
+import atexit
 import json
 import os
+import shutil
+import signal
 import subprocess
 import sys
-import tempfile
 import time
 
 ALL_MODES = ["AIRPLANE", "HIGHSPEED_RAIL", "LONG_DISTANCE", "COACH",
@@ -212,7 +214,14 @@ def main():
     bins = [os.path.abspath(b) for b in a.binaries]
     data = os.path.abspath(a.data)
     rt_dir = os.path.abspath(a.rt_dir) if a.rt_dir else None
-    work = tempfile.mkdtemp(prefix="validate-%s-" % a.name)
+
+    # Working directory setup + teardown
+    work = os.path.abspath("validate")
+    shutil.rmtree(work, True)
+    os.makedirs(work)
+    signal.signal(signal.SIGTERM, lambda *_: sys.exit(143))
+    atexit.register(shutil.rmtree, work, True)
+
     excluded = set(a.exclude_transit_modes.split(",")) if a.exclude_transit_modes else set()
     restricted = ",".join(m for m in ALL_MODES if m not in excluded) if excluded else None
 
