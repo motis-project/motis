@@ -28,9 +28,11 @@ bool multipoly_contains_point(tg_geom const* geom, geo::latlng const& pos) {
 }
 
 geofencing_restrictions get_default_restrictions(
-    gbfs_provider const& provider, provider_products const& prod) {
+    gbfs_provider const& provider,
+    provider_products const& prod,
+    std::vector<rule> const& global_rules) {
   auto restrictions = provider.default_restrictions_;
-  for (auto const& r : provider.geofencing_zones_.global_rules_) {
+  for (auto const& r : global_rules) {
     if (!applies(r.vehicle_type_idxs_, prod.vehicle_types_)) {
       continue;
     }
@@ -52,7 +54,8 @@ bool vehicle_is_rentable(gbfs_provider const& provider,
   }
   auto const restrictions = provider.geofencing_zones_.get_restrictions(
       vehicle.pos_, vehicle.vehicle_type_idx_,
-      get_default_restrictions(provider, prod));
+      get_default_restrictions(provider, prod,
+                               provider.geofencing_zones_.global_rules_));
   return restrictions.ride_start_allowed_ && restrictions.ride_through_allowed_;
 }
 
