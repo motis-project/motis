@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 
 import argparse
+import atexit
 import json
 import os
+import shutil
+import signal
 import subprocess
 import sys
-import tempfile
 import time
 
 ALL_MODES = ["AIRPLANE", "HIGHSPEED_RAIL", "LONG_DISTANCE", "COACH",
@@ -159,17 +161,17 @@ def build_cases(bases, restricted, rt, routed, wheelchair, bike, car, tts):
             add("%s-pong-fwd-tts" % qt, qt, tts=True)
             add("%s-pong-bwd-tts" % qt, qt, arrive_by=True, tts=True)
             add("%s-raptor-fwd-tts" % qt, qt, algorithm="RAPTOR", tts=True)
-    if rt:
-        add("station-pong-fwd-rt", "station", rt=True)
-        add("station-pong-bwd-rt", "station", arrive_by=True, rt=True)
-        add("station-raptor-fwd-rt", "station", algorithm="RAPTOR", rt=True)
+    if rt and "intermodal" in bases:
+        add("intermodal-pong-fwd-rt", "intermodal", rt=True)
+        add("intermodal-pong-bwd-rt", "intermodal", arrive_by=True, rt=True)
+        add("intermodal-raptor-fwd-rt", "intermodal", algorithm="RAPTOR", rt=True)
         if restricted:
-            add("station-pong-fwd-clasz-rt", "station", clasz=restricted, rt=True)
-            add("station-pong-bwd-clasz-rt", "station", arrive_by=True, clasz=restricted, rt=True)
+            add("intermodal-pong-fwd-clasz-rt", "intermodal", clasz=restricted, rt=True)
+            add("intermodal-pong-bwd-clasz-rt", "intermodal", arrive_by=True, clasz=restricted, rt=True)
         if wheelchair:
-            add("station-pong-fwd-wheelchair-rt", "station", wheelchair=True, rt=True)
+            add("intermodal-pong-fwd-wheelchair-rt", "intermodal", wheelchair=True, rt=True)
         if tts:
-            add("station-pong-fwd-tts-rt", "station", tts=True, rt=True)
+            add("intermodal-pong-fwd-tts-rt", "intermodal", tts=True, rt=True)
     return cases
 
 
@@ -180,7 +182,13 @@ def main():
     ap.add_argument("--data", required=True, help="imported data dir (tt + osr)")
     ap.add_argument("--name", default="dataset")
     ap.add_argument("--rt-dir", help="dir containing dump_rt/ (enables --rt cases)")
-    ap.add_argument("--intermodal", action="store_true", help="also test -m WALK queries")
+    ap.add_argument("--station", action="store_true",
+                    help="test stop-id queries (with street routing these fall "
+                         "back to the stop coordinate + equivalences, so "
+                         "--intermodal usually covers them)")
+    ap.add_argument("--intermodal", action="store_true",
+                    help="test -m WALK queries (coordinate endpoints + street "
+                         "routing offsets)")
     ap.add_argument("--routed-footpaths", action="store_true",
                     help="also test useRoutedTransfers=true (osr-routed foot profile); "
                          "requires osr_footpath: true in the imported data")
@@ -188,7 +196,7 @@ def main():
                     help="also test pedestrianProfile=WHEELCHAIR (prf_idx 2, stop "
                          "accessibility, td footpaths); requires osr_footpath: true")
     ap.add_argument("--flex", action="store_true",
-                    help="also test -m WALK,FLEX queries seeded inside flex areas "
+                    help="test -m WALK,FLEX queries seeded inside flex areas "
                          "(td_start_/td_dest_ offsets); requires flex feeds + osr")
     ap.add_argument("--bike", action="store_true",
                     help="also test requireBikeTransport=true (bike carriage "
@@ -206,13 +214,22 @@ def main():
     ap.add_argument("--n_threads", type=int,
                     help="'motis batch' worker threads (default: hardware "
                          "concurrency); lower it if the batch runs out of RAM")
-    ap.add_argument("--date", required=True, help="pinned query day (must match the rt dump)")
+    ap.add_argument("--date", required=True,
+                    help="pinned query day; pick the heaviest day class (e.g. "
+                         "a Friday) and capture the rt dump on that same day")
     a = ap.parse_args()
 
     bins = [os.path.abspath(b) for b in a.binaries]
     data = os.path.abspath(a.data)
     rt_dir = os.path.abspath(a.rt_dir) if a.rt_dir else None
-    work = tempfile.mkdtemp(prefix="validate-%s-" % a.name)
+
+    # Working directory setup + teardown
+    work = os.path.abspath("validate")
+    shutil.rmtree(work, True)
+    os.makedirs(work)
+    signal.signal(signal.SIGTERM, lambda *_: sys.exit(143))
+    atexit.register(shutil.rmtree, work, True)
+
     excluded = set(a.exclude_transit_modes.split(",")) if a.exclude_transit_modes else set()
     restricted = ",".join(m for m in ALL_MODES if m not in excluded) if excluded else None
 
@@ -225,14 +242,18 @@ def main():
     labels = bin_labels(bins)
 
     bases = {}
-    print("generating station queries (n=%d)..." % a.n)
-    bases["station"] = generate(bins[0], data, a.n, a.date, work)
+    if a.station:
+        print("generating station queries (n=%d)..." % a.n)
+        bases["station"] = generate(bins[0], data, a.n, a.date, work)
     if a.intermodal:
         print("generating intermodal queries (n=%d)..." % a.n)
         bases["intermodal"] = generate(bins[0], data, a.n, a.date, work, modes="WALK")
     if a.flex:
         print("generating flex queries (n=%d)..." % a.n)
         bases["flex"] = generate(bins[0], data, a.n, a.date, work, modes="WALK,FLEX")
+    if not bases:
+        sys.exit("validate: no query bases selected "
+                 "(specify at least one of --station / --intermodal / --flex)")
     cases = build_cases(bases, restricted, rt_dir is not None, a.routed_footpaths,
                         a.wheelchair, a.bike, a.car, a.tts)
 
@@ -295,6 +316,7 @@ def main():
     print("%s: %d passed, %d failed" % (a.name, len(results) - fails, fails))
 
     print_tables(a.name, labels, lat, wall, n_queries)
+
     sys.exit(1 if fails else 0)
 
 
