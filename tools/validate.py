@@ -217,9 +217,6 @@ def main():
     ap.add_argument("--date", required=True,
                     help="pinned query day; pick the heaviest day class (e.g. "
                          "a Friday) and capture the rt dump on that same day")
-    ap.add_argument("--stats-out",
-                    help="write per-case latency stats as JSON (for CI "
-                         "regression checks, see check_latency_regression.py)")
     a = ap.parse_args()
 
     bins = [os.path.abspath(b) for b in a.binaries]
@@ -319,21 +316,6 @@ def main():
     print("%s: %d passed, %d failed" % (a.name, len(results) - fails, fails))
 
     print_tables(a.name, labels, lat, wall, n_queries)
-
-    if a.stats_out:
-        def summary(ts):
-            return {"n": len(ts),
-                    "avg": sum(ts) / len(ts) if ts else 0.0,
-                    "q50": pct(ts, 0.5),
-                    "q90": pct(ts, 0.9),
-                    "q99": pct(ts, 0.99)
-                    } if ts else {"n": 0}
-        with open(a.stats_out, "w") as f:
-            json.dump({"name": a.name, "date": a.date, "n": a.n,
-                       "engines": labels, "n_queries": n_queries,
-                       "wall_s": dict(zip(labels, wall)),
-                       "cases": {label: dict(zip(labels, map(summary, series)))
-                                 for label, series in lat}}, f, indent=1)
 
     sys.exit(1 if fails else 0)
 
