@@ -41,7 +41,6 @@ jobs:
           cmake --build --preset cpu  --target motis
           ./build/cuda/buildcache/bin/buildcache -s
 
-      # runs in deps/nigiri -> run before "Save dep"
       - name: nigiri-test
         run: ./build/cuda/deps/nigiri/nigiri-test
 
@@ -59,17 +58,44 @@ jobs:
           cd "$HOME/ci-data/eu"
           "$GITHUB_WORKSPACE/build/cpu/motis" import -c config_europe.yml -d data
 
-      # no --car: no dataset with cars_allowed data staged right now
-      - name: Validate Germany (station + intermodal, clasz, routed footpaths, wheelchair, bike, tts)
+      - name: Import Switzerland
         run: |
-          python3 tools/validate.py ./build/cpu/motis ./build/cuda/motis \
-            --data "$HOME/ci-data/ger/data" --name germany --date 2026-07-05 \
-            --intermodal --routed-footpaths --tts \
-            --exclude-transit-modes HIGHSPEED_RAIL --n 20
+          cd "$HOME/ci-data/ch"
+          "$GITHUB_WORKSPACE/build/cpu/motis" import -c config_ch.yml -d data
 
-      - name: Validate Europe (station, clasz, realtime, routed footpaths, flex, bike, tts)
+      - name: Validate Germany
         run: |
           python3 tools/validate.py ./build/cpu/motis ./build/cuda/motis \
-            --data "$HOME/ci-data/eu/data" --name europe --date 2026-07-05 \
-            --rt-dir "$HOME/ci-data/eu" --routed-footpaths --flex --bike --tts \
-            --exclude-transit-modes COACH --n 20 --n_threads 8
+            --data "$HOME/ci-data/ger/data" \
+            --name germany \
+            --date 2026-07-10 \
+            --intermodal \
+            --routed-footpaths \
+            --tts \
+            --exclude-transit-modes HIGHSPEED_RAIL \
+            --n 20
+
+      - name: Validate Europe
+        run: |
+          python3 tools/validate.py ./build/cpu/motis ./build/cuda/motis \
+            --data "$HOME/ci-data/eu/data" \
+            --name europe \
+            --date 2026-07-24 \
+            --rt-dir "$HOME/ci-data/eu" \
+            --intermodal \
+            --routed-footpaths \
+            --flex \
+            --bike \
+            --tts \
+            --exclude-transit-modes COACH \
+            --n 20 \
+            --n_threads 8
+
+      - name: Validate Switzerland ODM
+        run: |
+          python3 tools/validate.py ./build/cpu/motis ./build/cuda/motis \
+            --data "$HOME/ci-data/ch/data" \
+            --name switzerland \
+            --date 2026-07-06 \
+            --flex \
+            --n 1000
