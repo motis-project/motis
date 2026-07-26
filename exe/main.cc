@@ -41,6 +41,7 @@ int batch(int, char**);
 int compare(int, char**);
 int extract(int, char**);
 int params(int, char**);
+int bench_offsets(int, char**);
 }  // namespace motis
 
 using namespace motis;
@@ -64,7 +65,8 @@ int main(int ac, char** av) {
         "  extract    trips from a Itinerary to GTFS timetable\n"
         "  pb2json    convert GTFS-RT protobuf to JSON\n"
         "  json2pb    convert JSON to GTFS-RT protobuf\n"
-        "  shapes     print shape segmentation for trips\n",
+        "  shapes     print shape segmentation for trips\n"
+        "  bench-offsets  benchmark 1:N street routing for offsets\n",
         motis_version);
     return 0;
   } else if (ac <= 1 || (ac >= 2 && av[1] == "--version"sv)) {
@@ -86,6 +88,9 @@ int main(int ac, char** av) {
     case cista::hash("params"): return_value = params(ac, av); break;
     case cista::hash("batch"): return_value = batch(ac, av); break;
     case cista::hash("compare"): return_value = compare(ac, av); break;
+    case cista::hash("bench-offsets"):
+      return_value = bench_offsets(ac, av);
+      break;
 
     case cista::hash("config"): {
       auto paths = std::vector<std::string>{};

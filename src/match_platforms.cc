@@ -301,7 +301,7 @@ void way_matches_storage::preprocess_osr_matches(
       pt->update_fn());
 }
 
-std::vector<osr::match_t> get_reverse_platform_way_matches(
+osr::match_result get_reverse_platform_way_matches(
     osr::lookup const& lookup,
     way_matches_storage const* way_matches,
     osr::search_profile const p,
@@ -312,19 +312,17 @@ std::vector<osr::match_t> get_reverse_platform_way_matches(
   auto const use_raw_matches =
       way_matches && !way_matches->matches_.empty() &&
       way_matches->max_matching_distance_ >= max_matching_distance;
-  return utl::to_vec(
-      utl::zip(locations, osr_locations),
-      [&](std::tuple<n::location_idx_t, osr::location> const ll) {
-        auto const& [l, query] = ll;
-        auto raw_matches =
-            std::optional<std::span<osr::raw_way_candidate const>>{};
-        if (use_raw_matches) {
-          auto const& m = way_matches->matches_[l];
-          raw_matches = {m.begin(), m.end()};
-        }
-        return lookup.match(to_profile_parameters(p, {}), query, true, dir,
-                            max_matching_distance, nullptr, p, raw_matches);
-      });
+  auto result = osr::match_result{};
+  for (auto const [l, query] : utl::zip(locations, osr_locations)) {
+    auto raw_matches = std::span<osr::raw_way_candidate const>{};
+    if (use_raw_matches) {
+      auto const& m = way_matches->matches_[l];
+      raw_matches = {m.begin(), m.end()};
+    }
+    lookup.match(to_profile_parameters(p, {}), query, true, dir,
+                 max_matching_distance, nullptr, p, raw_matches, result);
+  }
+  return result;
 };
 
 }  // namespace motis

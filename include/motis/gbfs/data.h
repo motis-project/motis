@@ -450,6 +450,8 @@ struct provider_feed {
   std::string url_;
   headers_t headers_{};
   std::optional<std::filesystem::path> dir_{};
+  // Set when the fetched bodies should be written out (dump_gbfs/).
+  std::optional<std::filesystem::path> dump_dir_{};
   geofencing_restrictions default_restrictions_{};
   std::optional<return_constraint> default_return_constraint_{};
   std::optional<std::string> config_group_{};
@@ -475,6 +477,8 @@ struct aggregated_feed {
   std::string url_;
   headers_t headers_{};
   std::optional<std::filesystem::path> dir_{};
+  // Set when the fetched bodies should be written out (dump_gbfs/).
+  std::optional<std::filesystem::path> dump_dir_{};
   std::optional<std::chrono::system_clock::time_point> expiry_{};
   std::vector<provider_feed> feeds_{};
   std::shared_ptr<oauth_state> oauth_{};

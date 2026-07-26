@@ -206,6 +206,10 @@ struct config {
     std::map<std::string, feed> feeds_{};
     std::map<std::string, group> groups_{};
     std::map<std::string, restrictions> default_restrictions_{};
+    // Read the feeds from `dump_gbfs/<feed_id>/` instead of fetching them,
+    // and never refresh. Counterpart of `timetable.canned_rt`; the dump is
+    // written by running a server with a `dump_gbfs/` directory present.
+    bool canned_gbfs_{false};
     unsigned update_interval_{60};
     unsigned http_timeout_{30};
     unsigned cache_size_{50};
