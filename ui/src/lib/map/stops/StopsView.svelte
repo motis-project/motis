@@ -8,16 +8,19 @@
 	import Layer from '$lib/map/Layer.svelte';
 	import { ensureStopIcons, stopIconId } from './stopIcons';
 	import { colors } from '$lib/map/style';
+	import { LEVEL_MIN_ZOOM } from '$lib/constants';
 
 	let {
 		map,
 		zoom,
 		bounds,
+		level,
 		theme
 	}: {
 		map: maplibregl.Map | undefined;
 		zoom: number;
 		bounds: maplibregl.LngLatBoundsLike | undefined;
+		level: number;
 		theme: 'light' | 'dark';
 	} = $props();
 
@@ -27,6 +30,20 @@
 	});
 
 	const GROUPING_MAX_ZOOM = 16;
+
+	// Once the level selector is active (zoom > LEVEL_MIN_ZOOM), only stops on the
+	// selected level are shown. Stops without level information count as level 0.
+	// Fractional levels (e.g. 0.5) are shown on both adjacent levels.
+	const stopLevel: maplibregl.ExpressionSpecification = [
+		'coalesce',
+		['to-number', ['get', 'level']],
+		0
+	];
+	const levelFilter = $derived<maplibregl.FilterSpecification>(
+		zoom > LEVEL_MIN_ZOOM
+			? ['any', ['==', ['ceil', stopLevel], level], ['==', ['floor', stopLevel], level]]
+			: ['all']
+	);
 
 	const modeIconScale = (mode: Mode | undefined): number => {
 		switch (mode) {
@@ -87,7 +104,14 @@
 		if (!props?.stopId) {
 			return;
 		}
-		onClickStop(props.name, props.stopId, new Date(Date.now()));
+		onClickStop(
+			props.name,
+			props.stopId,
+			new Date(Date.now()),
+			false,
+			false,
+			props.exactRadius === true
+		);
 	};
 
 	// UPDATE
@@ -118,6 +142,10 @@
 						stopId: s.stopId,
 						name: s.name,
 						track: s.track,
+						level: s.level ?? 0,
+						// Ungrouped stops represent one specific platform / bay / bus stop:
+						// clicking them shows the departures of exactly this stop.
+						exactRadius: !grouped,
 						label: !grouped && s.track ? s.track : s.name,
 						modes: modes?.length ? JSON.stringify(modes) : undefined,
 						icon: stopIconId(mode),
@@ -141,7 +169,7 @@
 			id="stops-view-layer"
 			type="symbol"
 			beforeLayerId="stops-anchor"
-			filter={['all']}
+			filter={levelFilter}
 			layout={{
 				'icon-image': ['get', 'icon'],
 				'icon-size': ['get', 'iconSize'],
