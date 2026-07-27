@@ -143,20 +143,19 @@ TEST(motis, get_way_candidates) {
     auto const with_preprocessing = motis::get_reverse_platform_way_matches(
         *d.l_, &*d.way_matches_, profile, location_idxs, locs,
         osr::direction::kForward, 250);
-    auto const without_preprocessing = utl::to_vec(
-        utl::zip(location_idxs, locs),
-        [&](std::tuple<nigiri::location_idx_t, osr::location> const ll) {
-          auto const& [l, query] = ll;
-          return d.l_->match(motis::to_profile_parameters(profile, {}), query,
-                             true, osr::direction::kForward, 250, nullptr,
-                             profile);
-        });
+    auto without_preprocessing = osr::match_result{};
+    for (auto const& query : locs) {
+      d.l_->match(motis::to_profile_parameters(profile, {}), query, true,
+                  osr::direction::kForward, 250, nullptr, profile, {},
+                  without_preprocessing);
+    }
 
     ASSERT_EQ(with_preprocessing.size(), without_preprocessing.size());
     for (auto i = 0U; i != without_preprocessing.size(); ++i) {
       auto const with = with_preprocessing[osr::match_idx_t{i}];
+      auto const without = without_preprocessing[osr::match_idx_t{i}];
       auto const& l = locs[i];
-      ASSERT_EQ(with.size(), without_preprocessing[i].size());
+      ASSERT_EQ(with.size(), without.size());
 
       // both representations sorted by way index so they line up
       auto with_order = std::vector<std::size_t>(with.size());
@@ -164,20 +163,20 @@ TEST(motis, get_way_candidates) {
       utl::sort(with_order, [&](std::size_t const a, std::size_t const b) {
         return with.way_[a] < with.way_[b];
       });
-      auto sorted_without = without_preprocessing[i];
-      utl::sort(sorted_without,
-                [](way_candidate const& a, way_candidate const& b) {
-                  return a.way_ < b.way_;
-                });
+      auto without_order = std::vector<std::size_t>(without.size());
+      std::iota(begin(without_order), end(without_order), std::size_t{0U});
+      utl::sort(without_order, [&](std::size_t const a, std::size_t const b) {
+        return without.way_[a] < without.way_[b];
+      });
 
       for (auto j = 0U; j != with_order.size(); ++j) {
         auto const wi = with_order[j];
-        auto const& b = sorted_without[j];
-        ASSERT_FLOAT_EQ(with.dist_to_way_[wi], b.dist_to_way_);
-        ASSERT_EQ(with.way_[wi], b.way_);
+        auto const bi = without_order[j];
+        ASSERT_FLOAT_EQ(with.dist_to_way_[wi], without.dist_to_way_[bi]);
+        ASSERT_EQ(with.way_[wi], without.way_[bi]);
         for (auto const& [anc, bnc] :
-             {std::tuple{osr::candidate_left(with, wi), b.left_},
-              std::tuple{osr::candidate_right(with, wi), b.right_}}) {
+             {std::tuple{with.left(wi), without.left(bi)},
+              std::tuple{with.right(wi), without.right(bi)}}) {
           ASSERT_EQ(anc.node_, bnc.node_);
           if (anc.valid()) {
             EXPECT_FLOAT_EQ(anc.dist_to_node_, bnc.dist_to_node_);
@@ -188,7 +187,8 @@ TEST(motis, get_way_candidates) {
             // it has to agree even though neither caches it any more.
             EXPECT_EQ(
                 get_path(profile, with.way_[wi], anc.node_, anc.way_dir_, l),
-                get_path(profile, b.way_, bnc.node_, bnc.way_dir_, l));
+                get_path(profile, without.way_[bi], bnc.node_, bnc.way_dir_,
+                         l));
           }
         }
       }
@@ -220,14 +220,15 @@ TEST(motis, get_way_candidates) {
           osr::location{{49.8731904, 8.6221451}, level_t{}};
       auto const raw = d.l_->get_raw_match(remote_station, dist);
       auto const params = motis::to_profile_parameters(profile, {});
-      auto const with =
-          d.l_->match(params, remote_station, true, osr::direction::kForward,
-                      dist, nullptr, profile, raw);
-      auto const without =
-          d.l_->match(params, remote_station, true, osr::direction::kForward,
-                      dist, nullptr, profile);
+      auto with = osr::match_result{};
+      d.l_->match(params, remote_station, true, osr::direction::kForward, dist,
+                  nullptr, profile, raw, with);
+      auto without = osr::match_result{};
+      d.l_->match(params, remote_station, true, osr::direction::kForward, dist,
+                  nullptr, profile, {}, without);
       EXPECT_NE(0, raw.size());
-      EXPECT_EQ(with.size(), without.size());
+      EXPECT_EQ(with[osr::match_idx_t{0U}].size(),
+                without[osr::match_idx_t{0U}].size());
     }
   }
 }
