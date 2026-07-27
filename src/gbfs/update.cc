@@ -479,32 +479,31 @@ struct gbfs_update {
 
     auto executor = co_await asio::this_coro::executor;
     co_await asio::experimental::make_parallel_group(
-        utl::to_vec(
-            ids,
-            [&](auto const& id) {
-              auto const& feed = c_.feeds_.at(id);
-              auto dir = is_http_url(feed.url_)
-                             ? std::nullopt
-                             : std::optional<std::filesystem::path>{feed.url_};
-              // Canned replay: read the dump instead of fetching.
-              if (c_.canned_gbfs_) {
-                dir = gbfs_dump_root() / id;
-              }
+        utl::to_vec(ids,
+                    [&](auto const& id) {
+                      auto const& feed = c_.feeds_.at(id);
+                      auto dir =
+                          is_http_url(feed.url_)
+                              ? std::nullopt
+                              : std::optional<std::filesystem::path>{feed.url_};
+                      // Canned replay: read the dump instead of fetching.
+                      if (c_.canned_gbfs_) {
+                        dir = gbfs_dump_root() / id;
+                      }
 
-              return boost::asio::co_spawn(
-                  executor,
-                  [this, id, feed, dir]() -> awaitable<void> {
-                    co_await init_feed(id, feed, dir);
-                  },
-                  asio::deferred);
-            }))
+                      return boost::asio::co_spawn(
+                          executor,
+                          [this, id, feed, dir]() -> awaitable<void> {
+                            co_await init_feed(id, feed, dir);
+                          },
+                          asio::deferred);
+                    }))
         .async_wait(asio::experimental::wait_for_all(), asio::use_awaitable);
   }
 
-  awaitable<void> init_feed(
-      std::string const& id,
-      config::gbfs::feed const& config,
-      std::optional<std::filesystem::path> const& dir) {
+  awaitable<void> init_feed(std::string const& id,
+                            config::gbfs::feed const& config,
+                            std::optional<std::filesystem::path> const& dir) {
     // initialization of a (standalone or aggregated) feed from the config
     ensure_gbfs_metrics(id);
 
@@ -541,16 +540,16 @@ struct gbfs_update {
               ? "manifest"
               : "gbfs";
       auto discovery =
-          co_await fetch_file(discovery_name, config.url_, headers, oauth, dir,
-                              default_ttl, overwrite_ttl, id);
+          co_await fetch_file(discovery_name, config.url_, headers, oauth, id,
+                              dir, default_ttl, overwrite_ttl);
       auto const& root = discovery.json_.as_object();
       if ((root.contains("data") &&
            root.at("data").as_object().contains("datasets")) ||
           root.contains("systems")) {
         // file is not an individual feed, but a manifest.json / Lamassu file
-        co_return co_await init_aggregated_feed(
-            id, config.url_, headers, dir, std::move(oauth), root, default_ttl,
-            overwrite_ttl);
+        co_return co_await init_aggregated_feed(id, config.url_, headers, dir,
+                                                std::move(oauth), root,
+                                                default_ttl, overwrite_ttl);
       }
 
       auto saf =
@@ -653,9 +652,9 @@ struct gbfs_update {
 
     try {
       if (!discovery && needs_refresh(provider.file_infos_->urls_fi_)) {
-        discovery = co_await fetch_file("gbfs", pf.url_, pf.headers_, pf.oauth_,
-                                        pf.dir_, pf.default_ttl_,
-                                        pf.overwrite_ttl_, pf.id_);
+        discovery =
+            co_await fetch_file("gbfs", pf.url_, pf.headers_, pf.oauth_, pf.id_,
+                                pf.dir_, pf.default_ttl_, pf.overwrite_ttl_);
       }
       if (discovery) {
         auto urls = parse_discovery(discovery->json_);
@@ -675,7 +674,7 @@ struct gbfs_update {
           try {
             auto file = co_await fetch_file(
                 name, file_infos->urls_.at(name), pf.headers_, pf.oauth_,
-                pf.dir_, pf.default_ttl_, pf.overwrite_ttl_, pf.id_);
+                pf.id_, pf.dir_, pf.default_ttl_, pf.overwrite_ttl_);
             auto const hash_changed = file.hash_ != fi.hash_;
             fn(provider, file.json_);
             if (file.last_updated_.has_value() &&
@@ -1111,8 +1110,8 @@ struct gbfs_update {
     try {
       if (af.needs_update()) {
         auto const file = co_await fetch_file(
-            "manifest", af.url_, af.headers_, af.oauth_, af.dir_,
-            af.default_ttl_, af.overwrite_ttl_, af.id_);
+            "manifest", af.url_, af.headers_, af.oauth_, af.id_, af.dir_,
+            af.default_ttl_, af.overwrite_ttl_);
         co_await process_aggregated_feed(af, file.json_.as_object());
       } else {
         co_await update_aggregated_feed_provider_feeds(af);
@@ -1261,10 +1260,10 @@ struct gbfs_update {
       std::string_view const url,
       headers_t const& base_headers,
       std::shared_ptr<oauth_state> const& oauth,
+      std::string_view const feed_id,
       std::optional<std::filesystem::path> const& dir = std::nullopt,
       std::map<std::string, unsigned> const& default_ttl = {},
-      std::map<std::string, unsigned> const& overwrite_ttl = {},
-      std::string_view const feed_id = {}) {
+      std::map<std::string, unsigned> const& overwrite_ttl = {}) {
     auto content = std::string{};
     auto source = std::string{url};
     if (dir.has_value()) {
@@ -1281,7 +1280,7 @@ struct gbfs_update {
         throw std::runtime_error(
             fmt::format("HTTP {} fetching {}", res.result_int(), url));
       }
-      if (gbfs_dump_enabled() && !feed_id.empty()) {
+      if (gbfs_dump_enabled()) {
         write_dump(gbfs_dump_dir(feed_id), name, content);
       }
     }

@@ -9,8 +9,8 @@
 
 #include "motis/config.h"
 #include "motis/data.h"
-#include "motis/motis_instance.h"
 #include "motis/gbfs/update.h"
+#include "motis/motis_instance.h"
 #include "motis/rt_update.h"
 
 #include "./flags.h"
