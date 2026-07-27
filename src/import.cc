@@ -462,8 +462,7 @@ void import(config const& c,
       meta_entry_t{"osr_footpath_settings", cista::BASE_HASH};
   if (c.timetable_) {
     auto& h = osr_footpath_settings_hash.second;
-    h = cista::hash_combine(h, c.timetable_->use_osm_stop_coordinates_,
-                            c.timetable_->extend_missing_footpaths_,
+    h = cista::hash_combine(h, c.timetable_->extend_missing_footpaths_,
                             c.timetable_->max_matching_distance_,
                             c.timetable_->max_footpath_length_);
   }
@@ -496,8 +495,7 @@ void import(config const& c,
                });
              }}};
         auto const elevator_footpath_map = compute_footpaths(
-            *d.w_, *d.l_, *d.pl_, *d.tt_, d.elevations_.get(),
-            c.timetable_->use_osm_stop_coordinates_, profiles);
+            *d.w_, *d.l_, *d.pl_, *d.tt_, d.elevations_.get(), profiles);
 
         cista::write(data_path / "elevator_footpath_map.bin",
                      elevator_footpath_map);

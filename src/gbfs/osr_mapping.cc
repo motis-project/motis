@@ -29,13 +29,8 @@
 namespace motis::gbfs {
 
 struct node_match {
-  osr::way_candidate const& way() const { return wc_; }
-  osr::node_candidate const& node() const {
-    return left_ ? wc_.left_ : wc_.right_;
-  }
-
-  osr::way_candidate wc_;
-  bool left_{};
+  osr::way_idx_t way_{osr::way_idx_t::invalid()};
+  osr::candidate_node node_{};
 };
 
 struct osr_mapping {
@@ -172,7 +167,7 @@ struct osr_mapping {
     static constexpr auto foot_params = osr::bike_sharing::footp::parameters{};
     static constexpr auto bike_params = osr::bike_sharing::bikep::parameters{};
 
-    auto is_acceptable_node = [&](osr::node_candidate const& n) {
+    auto is_acceptable_node = [&](osr::candidate_node const& n) {
       if (!n.valid() || n.dist_to_node_ > kMaxGbfsMatchingDistance) {
         return false;
       }
@@ -202,25 +197,26 @@ struct osr_mapping {
              });
     };
 
-    auto const matches = l_.match<footp>(footp::parameters{}, loc, false,
-                                         osr::direction::kForward,
-                                         kMaxGbfsMatchingDistance, nullptr);
+    auto matches = osr::match_result{};
+    l_.complete_match<footp>(footp::parameters{}, loc, false,
+                             osr::direction::kForward, kMaxGbfsMatchingDistance,
+                             nullptr, std::nullopt, {}, matches);
+    auto const m = matches[osr::match_idx_t{0U}];
     auto node_matches = std::vector<node_match>{};
-    for (auto const& m : matches) {
-      if (is_acceptable_node(m.left_)) {
-        node_matches.emplace_back(node_match{m, true});
-      }
-      if (is_acceptable_node(m.right_)) {
-        node_matches.emplace_back(node_match{m, false});
+    for (auto j = std::size_t{0U}; j != m.size(); ++j) {
+      for (auto const& nc : {m.left(j), m.right(j)}) {
+        if (is_acceptable_node(nc)) {
+          node_matches.emplace_back(node_match{m.way_[j], nc});
+        }
       }
     }
     utl::sort(node_matches, [](auto const& a, auto const& b) {
-      return a.node().dist_to_node_ < b.node().dist_to_node_;
+      return a.node_.dist_to_node_ < b.node_.dist_to_node_;
     });
 
     auto connected_components = hash_set<osr::component_idx_t>{};
     for (auto it = node_matches.begin(); it != node_matches.end();) {
-      auto const component = w_.r_->way_component_[it->way().way_];
+      auto const component = w_.r_->way_component_[it->way_];
       if (!connected_components.insert(component).second) {
         it = node_matches.erase(it);
       } else {
@@ -291,7 +287,7 @@ struct osr_mapping {
           }
         }
         for (auto const& m : matches) {
-          auto const& node = m.node();
+          auto const& node = m.node_;
           auto const edge_to_an = osr::additional_edge{
               additional_node_id,
               static_cast<osr::distance_t>(node.dist_to_node_)};
@@ -331,7 +327,7 @@ struct osr_mapping {
         rd.start_allowed_.set(additional_node_id, true);
 
         for (auto const& m : matches) {
-          auto const& nc = m.node();
+          auto const& nc = m.node_;
           auto const edge_to_an = osr::additional_edge{
               additional_node_id,
               static_cast<osr::distance_t>(nc.dist_to_node_)};

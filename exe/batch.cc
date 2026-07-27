@@ -9,6 +9,7 @@
 
 #include "motis/config.h"
 #include "motis/data.h"
+#include "motis/gbfs/update.h"
 #include "motis/motis_instance.h"
 #include "motis/rt_update.h"
 
@@ -171,6 +172,7 @@ int batch(int ac, char** av) {
   if (rt) {
     apply_canned_rt_update(c, d);
   }
+  gbfs::apply_canned_gbfs_update(c, d);
 
   auto response_time = stats{"response_time", 0U};
 
