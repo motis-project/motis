@@ -172,8 +172,6 @@ int batch(int ac, char** av) {
   if (rt) {
     apply_canned_rt_update(c, d);
   }
-  // Rental routing needs GBFS data; without this, RENTAL modes silently
-  // produce no offsets in batch runs.
   gbfs::apply_canned_gbfs_update(c, d);
 
   auto response_time = stats{"response_time", 0U};

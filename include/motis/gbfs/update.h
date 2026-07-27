@@ -16,9 +16,6 @@ boost::asio::awaitable<void> update(config const&,
                                     std::shared_ptr<gbfs_data>&,
                                     metrics_registry const*);
 
-// Loads the feeds once, synchronously, from a `dump_gbfs/` dump
-// (`gbfs.canned_gbfs: true`). Counterpart of `apply_canned_rt_update()`, for
-// batch runs that need reproducible rental routing.
 void apply_canned_gbfs_update(config const&, data&);
 
 void run_gbfs_update(boost::asio::io_context&,

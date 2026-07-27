@@ -83,11 +83,6 @@ bool is_http_url(std::string_view const url) {
   return url.starts_with("http:") || url.starts_with("https:");
 }
 
-// Dumping is enabled by creating a `dump_gbfs` directory next to the process,
-// exactly like `dump_rt` for GTFS-RT. Every fetched body is written to
-// `dump_gbfs/<feed_id>[/<system_id>]/<name>.json`, which is the layout the
-// directory-based reader (`fetch_file()` with `dir`) expects, so a dump can be
-// replayed with `gbfs.canned_gbfs: true`.
 bool gbfs_dump_enabled() {
   static auto const enabled = std::filesystem::is_directory("dump_gbfs");
   return enabled;
@@ -95,8 +90,6 @@ bool gbfs_dump_enabled() {
 
 std::filesystem::path gbfs_dump_root() { return {"dump_gbfs"}; }
 
-// `dump_gbfs/<feed id>/`, with sub-feeds ("<manifest id>:<system id>") nested
-// so the layout matches what the directory reader expects.
 std::filesystem::path gbfs_dump_dir(std::string_view const feed_id) {
   auto dir = gbfs_dump_root();
   for (auto pos = std::size_t{0U}; pos <= feed_id.size();) {
