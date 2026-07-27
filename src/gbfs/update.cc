@@ -95,6 +95,22 @@ bool gbfs_dump_enabled() {
 
 std::filesystem::path gbfs_dump_root() { return {"dump_gbfs"}; }
 
+// `dump_gbfs/<feed id>/`, with sub-feeds ("<manifest id>:<system id>") nested
+// so the layout matches what the directory reader expects.
+std::filesystem::path gbfs_dump_dir(std::string_view const feed_id) {
+  auto dir = gbfs_dump_root();
+  for (auto pos = std::size_t{0U}; pos <= feed_id.size();) {
+    auto const colon = feed_id.find(':', pos);
+    auto const end = colon == std::string_view::npos ? feed_id.size() : colon;
+    dir /= feed_id.substr(pos, end - pos);
+    if (colon == std::string_view::npos) {
+      break;
+    }
+    pos = colon + 1U;
+  }
+  return dir;
+}
+
 void write_dump(std::filesystem::path const& dir,
                 std::string_view const name,
                 std::string_view const content) {
@@ -474,16 +490,11 @@ struct gbfs_update {
               if (c_.canned_gbfs_) {
                 dir = gbfs_dump_root() / id;
               }
-              auto const dump_dir =
-                  gbfs_dump_enabled() && !dir.has_value()
-                      ? std::optional<std::filesystem::path>{gbfs_dump_root() /
-                                                             id}
-                      : std::nullopt;
 
               return boost::asio::co_spawn(
                   executor,
-                  [this, id, feed, dir, dump_dir]() -> awaitable<void> {
-                    co_await init_feed(id, feed, dir, dump_dir);
+                  [this, id, feed, dir]() -> awaitable<void> {
+                    co_await init_feed(id, feed, dir);
                   },
                   asio::deferred);
             }))
@@ -493,8 +504,7 @@ struct gbfs_update {
   awaitable<void> init_feed(
       std::string const& id,
       config::gbfs::feed const& config,
-      std::optional<std::filesystem::path> const& dir,
-      std::optional<std::filesystem::path> const& dump_dir = std::nullopt) {
+      std::optional<std::filesystem::path> const& dir) {
     // initialization of a (standalone or aggregated) feed from the config
     ensure_gbfs_metrics(id);
 
@@ -532,15 +542,15 @@ struct gbfs_update {
               : "gbfs";
       auto discovery =
           co_await fetch_file(discovery_name, config.url_, headers, oauth, dir,
-                              default_ttl, overwrite_ttl, dump_dir);
+                              default_ttl, overwrite_ttl, id);
       auto const& root = discovery.json_.as_object();
       if ((root.contains("data") &&
            root.at("data").as_object().contains("datasets")) ||
           root.contains("systems")) {
         // file is not an individual feed, but a manifest.json / Lamassu file
         co_return co_await init_aggregated_feed(
-            id, config.url_, headers, dir, std::move(oauth), root, dump_dir,
-            default_ttl, overwrite_ttl);
+            id, config.url_, headers, dir, std::move(oauth), root, default_ttl,
+            overwrite_ttl);
       }
 
       auto saf =
@@ -550,7 +560,6 @@ struct gbfs_update {
                   .url_ = config.url_,
                   .headers_ = headers,
                   .dir_ = dir,
-                  .dump_dir_ = dump_dir,
                   .default_restrictions_ = lookup_default_restrictions("", id),
                   .default_return_constraint_ =
                       lookup_default_return_constraint("", id),
@@ -646,7 +655,7 @@ struct gbfs_update {
       if (!discovery && needs_refresh(provider.file_infos_->urls_fi_)) {
         discovery = co_await fetch_file("gbfs", pf.url_, pf.headers_, pf.oauth_,
                                         pf.dir_, pf.default_ttl_,
-                                        pf.overwrite_ttl_, pf.dump_dir_);
+                                        pf.overwrite_ttl_, pf.id_);
       }
       if (discovery) {
         auto urls = parse_discovery(discovery->json_);
@@ -666,7 +675,7 @@ struct gbfs_update {
           try {
             auto file = co_await fetch_file(
                 name, file_infos->urls_.at(name), pf.headers_, pf.oauth_,
-                pf.dir_, pf.default_ttl_, pf.overwrite_ttl_, pf.dump_dir_);
+                pf.dir_, pf.default_ttl_, pf.overwrite_ttl_, pf.id_);
             auto const hash_changed = file.hash_ != fi.hash_;
             fn(provider, file.json_);
             if (file.last_updated_.has_value() &&
@@ -1080,7 +1089,6 @@ struct gbfs_update {
       std::optional<std::filesystem::path> const& dir,
       std::shared_ptr<oauth_state>&& oauth,
       boost::json::object const& root,
-      std::optional<std::filesystem::path> const& dump_dir = std::nullopt,
       std::map<std::string, unsigned> const& default_ttl = {},
       std::map<std::string, unsigned> const& overwrite_ttl = {}) {
     auto af = aggregated_feed{
@@ -1088,7 +1096,6 @@ struct gbfs_update {
         .url_ = url,
         .headers_ = headers,
         .dir_ = dir,
-        .dump_dir_ = dump_dir,
         .expiry_ = get_expiry(root, std::chrono::hours{1}, default_ttl,
                               overwrite_ttl, "manifest"),
         .oauth_ = std::move(oauth),
@@ -1105,7 +1112,7 @@ struct gbfs_update {
       if (af.needs_update()) {
         auto const file = co_await fetch_file(
             "manifest", af.url_, af.headers_, af.oauth_, af.dir_,
-            af.default_ttl_, af.overwrite_ttl_, af.dump_dir_);
+            af.default_ttl_, af.overwrite_ttl_, af.id_);
         co_await process_aggregated_feed(af, file.json_.as_object());
       } else {
         co_await update_aggregated_feed_provider_feeds(af);
@@ -1121,12 +1128,6 @@ struct gbfs_update {
                                           boost::json::object const& root) {
     auto feeds = std::vector<provider_feed>{};
     auto skipped_entries = 0U;
-    auto const resolve_dump_dir = [&](std::string const& system_id) {
-      return af.dump_dir_.has_value()
-                 ? std::optional<std::filesystem::path>{*af.dump_dir_ /
-                                                        system_id}
-                 : std::nullopt;
-    };
     auto const resolve_dir = [&](std::string const& url,
                                  std::string const& system_id) {
       if (af.dir_.has_value()) {
@@ -1173,7 +1174,6 @@ struct gbfs_update {
               .url_ = url,
               .headers_ = af.headers_,
               .dir_ = resolve_dir(url, system_id),
-              .dump_dir_ = resolve_dump_dir(system_id),
               .default_restrictions_ =
                   lookup_default_restrictions(af.id_, combined_id),
               .default_return_constraint_ =
@@ -1212,7 +1212,6 @@ struct gbfs_update {
               .url_ = url,
               .headers_ = af.headers_,
               .dir_ = resolve_dir(url, system_id),
-              .dump_dir_ = resolve_dump_dir(system_id),
               .default_restrictions_ =
                   lookup_default_restrictions(af.id_, combined_id),
               .default_return_constraint_ =
@@ -1265,7 +1264,7 @@ struct gbfs_update {
       std::optional<std::filesystem::path> const& dir = std::nullopt,
       std::map<std::string, unsigned> const& default_ttl = {},
       std::map<std::string, unsigned> const& overwrite_ttl = {},
-      std::optional<std::filesystem::path> const& dump_dir = std::nullopt) {
+      std::string_view const feed_id = {}) {
     auto content = std::string{};
     auto source = std::string{url};
     if (dir.has_value()) {
@@ -1282,8 +1281,8 @@ struct gbfs_update {
         throw std::runtime_error(
             fmt::format("HTTP {} fetching {}", res.result_int(), url));
       }
-      if (dump_dir.has_value()) {
-        write_dump(*dump_dir, name, content);
+      if (gbfs_dump_enabled() && !feed_id.empty()) {
+        write_dump(gbfs_dump_dir(feed_id), name, content);
       }
     }
     auto j = [&]() {
