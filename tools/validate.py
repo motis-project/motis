@@ -20,11 +20,13 @@ def run(cmd, cwd=None):
                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
-def generate(motis, data, n, date, work, modes=None):
+def generate(motis, data, n, date, work, modes=None, bounds=None):
     cmd = [motis, "generate", "-d", data, "-n", str(n), "--lb_rank", "0",
            "--first_day", date, "--last_day", date]
     if modes:
         cmd += ["-m", modes]
+    if bounds:
+        cmd += ["-b", bounds]
     run(cmd, cwd=work)  # deterministic: seeded counter + fixed date
     with open(os.path.join(work, "queries.txt")) as f:
         lines = [ln.rstrip("\n") for ln in f if ln.strip()]
@@ -33,14 +35,16 @@ def generate(motis, data, n, date, work, modes=None):
     return lines
 
 
-def batch(motis, data, qfile, out, rt_dir, n_threads=None):
+def batch(motis, data, qfile, out, rt_dir, gbfs_dir=None, n_threads=None):
     cmd = [motis, "batch", "-d", data, "-q", qfile, "-r", out]
     if n_threads:
         cmd += ["--n_threads", str(n_threads)]
     if rt_dir:
         cmd.append("--rt")  # applies dump_rt/ from cwd
     t0 = time.perf_counter()
-    run(cmd, cwd=rt_dir)
+    # Both dump_rt/ and dump_gbfs/ are resolved relative to the working
+    # directory, so a run needing both wants them side by side in one dir.
+    run(cmd, cwd=gbfs_dir or rt_dir)
     return time.perf_counter() - t0  # wall time (whole batch, all cases)
 
 
@@ -112,22 +116,29 @@ def suffix(case):
         s += "&requireBikeTransport=true"  # bike carriage on all transit legs
     if case["car"]:
         s += "&requireCarTransport=true"  # car carriage on all transit legs
+    if case["rental"]:
+        # GBFS first/last mile (bike_sharing profile). Needs a gbfs section in
+        # the config; with canned_gbfs the feeds come from dump_gbfs/.
+        s += ("&preTransitModes=WALK,RENTAL&postTransitModes=WALK,RENTAL"
+              "&preTransitRentalFormFactors=BICYCLE,SCOOTER_STANDING"
+              "&postTransitRentalFormFactors=BICYCLE,SCOOTER_STANDING")
     if case["tts"]:
         # non-default transfer time settings: additional + max(min, dur*factor)
         s += "&minTransferTime=10&transferTimeFactor=1.5&additionalTransferTime=3"
     return s
 
 
-def build_cases(bases, restricted, rt, routed, wheelchair, bike, car, tts):
+def build_cases(bases, restricted, rt, routed, wheelchair, bike, car, tts,
+                rental=False):
     cases = []
 
     def add(label, base, algorithm="PONG", arrive_by=False, clasz=None,
             rt=False, routed=False, wheelchair=False, bike=False, car=False,
-            tts=False):
+            tts=False, rental=False):
         cases.append(dict(label=label, base=base, algorithm=algorithm,
                           arrive_by=arrive_by, clasz=clasz, rt=rt,
                           routed=routed, wheelchair=wheelchair, bike=bike,
-                          car=car, tts=tts))
+                          car=car, tts=tts, rental=rental))
 
     for qt in bases:
         if qt == "flex":
@@ -157,6 +168,11 @@ def build_cases(bases, restricted, rt, routed, wheelchair, bike, car, tts):
         if car:
             add("%s-pong-fwd-car" % qt, qt, car=True)
             add("%s-pong-bwd-car" % qt, qt, arrive_by=True, car=True)
+        if rental:
+            add("%s-pong-fwd-rental" % qt, qt, rental=True)
+            add("%s-pong-bwd-rental" % qt, qt, arrive_by=True, rental=True)
+            add("%s-raptor-fwd-rental" % qt, qt, algorithm="RAPTOR",
+                rental=True)
         if tts:
             add("%s-pong-fwd-tts" % qt, qt, tts=True)
             add("%s-pong-bwd-tts" % qt, qt, arrive_by=True, tts=True)
@@ -172,6 +188,11 @@ def build_cases(bases, restricted, rt, routed, wheelchair, bike, car, tts):
             add("intermodal-pong-fwd-wheelchair-rt", "intermodal", wheelchair=True, rt=True)
         if tts:
             add("intermodal-pong-fwd-tts-rt", "intermodal", tts=True, rt=True)
+        if rental:
+            add("intermodal-pong-fwd-rental-rt", "intermodal", rental=True,
+                rt=True)
+            add("intermodal-pong-bwd-rental-rt", "intermodal", arrive_by=True,
+                rental=True, rt=True)
     return cases
 
 
@@ -182,6 +203,13 @@ def main():
     ap.add_argument("--data", required=True, help="imported data dir (tt + osr)")
     ap.add_argument("--name", default="dataset")
     ap.add_argument("--rt-dir", help="dir containing dump_rt/ (enables --rt cases)")
+    ap.add_argument("--bounds",
+                    help="restrict generated query endpoints to a GeoJSON area "
+                         "(passed to 'motis generate -b'); \"europe\" is a "
+                         "built-in shorthand")
+    ap.add_argument("--gbfs-dir",
+                    help="dir containing dump_gbfs/ (required by --rental; the "
+                         "data config must set gbfs.canned_gbfs)")
     ap.add_argument("--station", action="store_true",
                     help="test stop-id queries (with street routing these fall "
                          "back to the stop coordinate + equivalences, so "
@@ -204,6 +232,11 @@ def main():
     ap.add_argument("--car", action="store_true",
                     help="also test requireCarTransport=true (car carriage "
                          "route/section filters)")
+    ap.add_argument("--rental", action="store_true",
+                    help="also test preTransitModes/postTransitModes=WALK,RENTAL "
+                         "(GBFS bike_sharing first/last mile); requires a gbfs "
+                         "section in the data config, e.g. canned_gbfs with a "
+                         "dump_gbfs/ next to the working directory")
     ap.add_argument("--tts", action="store_true",
                     help="also test non-default transfer time settings "
                          "(minTransferTime/transferTimeFactor/additionalTransferTime)")
@@ -222,6 +255,9 @@ def main():
     bins = [os.path.abspath(b) for b in a.binaries]
     data = os.path.abspath(a.data)
     rt_dir = os.path.abspath(a.rt_dir) if a.rt_dir else None
+    gbfs_dir = os.path.abspath(a.gbfs_dir) if a.gbfs_dir else None
+    if a.rental and gbfs_dir is None:
+        sys.exit("validate: --rental needs --gbfs-dir (dir containing dump_gbfs/)")
 
     # Working directory setup + teardown
     work = os.path.abspath("validate")
@@ -244,32 +280,37 @@ def main():
     bases = {}
     if a.station:
         print("generating station queries (n=%d)..." % a.n)
-        bases["station"] = generate(bins[0], data, a.n, a.date, work)
+        bases["station"] = generate(bins[0], data, a.n, a.date, work,
+                                    bounds=a.bounds)
     if a.intermodal:
         print("generating intermodal queries (n=%d)..." % a.n)
-        bases["intermodal"] = generate(bins[0], data, a.n, a.date, work, modes="WALK")
+        bases["intermodal"] = generate(bins[0], data, a.n, a.date, work,
+                                       modes="WALK", bounds=a.bounds)
     if a.flex:
         print("generating flex queries (n=%d)..." % a.n)
-        bases["flex"] = generate(bins[0], data, a.n, a.date, work, modes="WALK,FLEX")
+        bases["flex"] = generate(bins[0], data, a.n, a.date, work,
+                                       modes="WALK,FLEX", bounds=a.bounds)
     if not bases:
         sys.exit("validate: no query bases selected "
                  "(specify at least one of --station / --intermodal / --flex)")
     cases = build_cases(bases, restricted, rt_dir is not None, a.routed_footpaths,
-                        a.wheelchair, a.bike, a.car, a.tts)
+                        a.wheelchair, a.bike, a.car, a.tts, a.rental)
 
     results = []
     lat = []  # (case_label, per-binary [execute_time ms] lists)
     wall = [0.0] * len(bins)  # total batch wall time per binary
     n_queries = 0  # total queries run per binary (same file for all)
     fails = 0
-    for rt in (False, True):
+    for rt, rental in ((False, False), (False, True), (True, False),
+                       (True, True)):
         # FILTER CASES
-        group = [c for c in cases if c["rt"] == rt]
+        group = [c for c in cases
+                 if c["rt"] == rt and c["rental"] == rental]
         if not group:
             continue
 
         # WRITE QUERIES BATCH
-        combined = os.path.join(work, "rt%d.q" % rt)
+        combined = os.path.join(work, "rt%d_rental%d.q" % (rt, rental))
         spans, offsets = [], 0
         with open(combined, "w") as out:
             for c in group:
@@ -283,11 +324,12 @@ def main():
         outs = []
         for i, b in enumerate(bins):
             o = "%s.%d" % (combined, i)
-            print("[rt=%d] batching %d queries on %s..." %
-                  (rt, offsets, labels[i]))
+            print("[rt=%d rental=%d] batching %d queries on %s..." %
+                  (rt, rental, offsets, labels[i]))
             wall[i] += batch(b, data, combined, o, rt_dir if rt else None,
-                             a.n_threads)
-            print("[rt=%d]   %s done in %.0fs" % (rt, labels[i], wall[i]))
+                             gbfs_dir if rental else None, a.n_threads)
+            print("[rt=%d rental=%d]   %s done in %.0fs" %
+                  (rt, rental, labels[i], wall[i]))
             with open(o) as f:
                 outs.append(f.read().splitlines())
 
