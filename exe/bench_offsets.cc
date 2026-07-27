@@ -117,16 +117,17 @@ int bench_offsets(int ac, char** av) {
         });
 
     // Matching is shared by all variants and therefore not measured.
-    auto const pos_match = d.l_->match(params, pos, false, dir,
-                                       max_matching_distance, nullptr, profile);
+    auto pos_match = osr::match_result{};
+    d.l_->match(params, pos, false, dir, max_matching_distance, nullptr,
+                profile, {}, pos_match);
     auto const near_stop_matches = get_reverse_platform_way_matches(
         *d.l_, d.way_matches_.get(), profile, near_stops, near_stop_locations,
         dir, max_matching_distance);
 
     auto const start = std::chrono::steady_clock::now();
     auto const paths = osr::route(
-        params, *d.w_, *d.l_, profile, pos, near_stop_locations, pos_match,
-        near_stop_matches, static_cast<osr::cost_t>(max.count()), dir, nullptr,
+        params, *d.w_, *d.l_, profile, pos, near_stop_locations,
+        pos_match[osr::match_idx_t{0U}], near_stop_matches, static_cast<osr::cost_t>(max.count()), dir, nullptr,
         nullptr, d.elevations_.get());
     auto const t = std::chrono::steady_clock::now() - start;
 

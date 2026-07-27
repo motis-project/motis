@@ -98,7 +98,6 @@ TEST(motis, get_way_candidates) {
           motis::config::timetable{
               .first_day_ = "2019-05-01",
               .num_days_ = 2,
-              .use_osm_stop_coordinates_ = true,
               .extend_missing_footpaths_ = false,
               .preprocess_max_matching_distance_ = 250,
               .datasets_ = {{"test", {.path_ = std::string{kGTFS}}}}},
@@ -166,10 +165,10 @@ TEST(motis, get_way_candidates) {
         return with.way_[a] < with.way_[b];
       });
       auto sorted_without = without_preprocessing[i];
-      utl::sort(sorted_without, [](way_candidate const& a,
-                                   way_candidate const& b) {
-        return a.way_ < b.way_;
-      });
+      utl::sort(sorted_without,
+                [](way_candidate const& a, way_candidate const& b) {
+                  return a.way_ < b.way_;
+                });
 
       for (auto j = 0U; j != with_order.size(); ++j) {
         auto const wi = with_order[j];
@@ -187,9 +186,9 @@ TEST(motis, get_way_candidates) {
             EXPECT_EQ(anc.way_dir_, bnc.way_dir_);
             // Geometry is recomputed on demand for both representations, so
             // it has to agree even though neither caches it any more.
-            EXPECT_EQ(get_path(profile, with.way_[wi], anc.node_, anc.way_dir_,
-                               l),
-                      get_path(profile, b.way_, bnc.node_, bnc.way_dir_, l));
+            EXPECT_EQ(
+                get_path(profile, with.way_[wi], anc.node_, anc.way_dir_, l),
+                get_path(profile, b.way_, bnc.node_, bnc.way_dir_, l));
           }
         }
       }

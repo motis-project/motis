@@ -2075,7 +2075,6 @@ data& get_elevator_test_case() {
           config::timetable{
               .first_day_ = "2019-05-01",
               .num_days_ = 2,
-              .use_osm_stop_coordinates_ = true,
               .extend_missing_footpaths_ = false,
               .datasets_ = {{"test", {.path_ = std::string{kElevatorGTFS}}}}},
       .street_routing_ = true,
@@ -2692,7 +2691,6 @@ TEST(motis, itinerary_id_refresh_first_mile_td_anchor) {
           config::timetable{
               .first_day_ = "2019-05-01",
               .num_days_ = 2,
-              .use_osm_stop_coordinates_ = true,
               .extend_missing_footpaths_ = false,
               .datasets_ = {{"test", {.path_ = std::string{kTdAnchorGtfs}}}}},
       .street_routing_ = true,

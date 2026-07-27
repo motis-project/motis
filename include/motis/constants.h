@@ -13,9 +13,6 @@ constexpr auto const kMaxWheelchairMatchingDistance = 8.0;
 // max distance from gbfs vehicle/station to way segment [meters]
 constexpr auto const kMaxGbfsMatchingDistance = 100.0;
 
-// distance between location in timetable and OSM platform coordinate [meters]
-constexpr auto const kMaxAdjust = 200;
-
 // multiplier for transfer times
 constexpr auto const kTransferTimeMultiplier = 1.5F;
 

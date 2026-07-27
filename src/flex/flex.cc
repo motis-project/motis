@@ -291,9 +291,9 @@ void add_flex_td_offsets(osr::ways const& w,
 
   auto const params =
       to_profile_parameters(osr::search_profile::kCarSharing, osr_params);
-  auto const pos_match =
-      lookup.match(params, pos, false, dir, max_matching_distance, nullptr,
-                   osr::search_profile::kCarSharing);
+  auto pos_match = osr::match_result{};
+  lookup.match(params, pos, false, dir, max_matching_distance, nullptr,
+               osr::search_profile::kCarSharing, {}, pos_match);
   auto const near_stop_matches = get_reverse_platform_way_matches(
       lookup, way_matches, osr::search_profile::kCarSharing, near_stops,
       near_stop_locations, dir, max_matching_distance);
@@ -312,9 +312,9 @@ void add_flex_td_offsets(osr::ways const& w,
 
     auto const paths =
         osr::route(params, w, lookup, osr::search_profile::kCarSharing, pos,
-                   near_stop_locations, pos_match, near_stop_matches,
-                   static_cast<osr::cost_t>(max.count()), dir, nullptr,
-                   &sharing_data, nullptr);
+                   near_stop_locations, pos_match[osr::match_idx_t{0U}],
+                   near_stop_matches, static_cast<osr::cost_t>(max.count()),
+                   dir, nullptr, &sharing_data, nullptr);
     auto const day_idx_iv = get_relevant_days(tt, start_time);
     for (auto const id : transports) {
       auto const t = id.get_flex_transport();
