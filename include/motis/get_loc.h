@@ -15,8 +15,6 @@ inline osr::location get_loc(
     osr::platforms const& pl,
     vector_map<nigiri::location_idx_t, osr::platform_idx_t> const& matches,
     nigiri::location_idx_t const l) {
-  // The platform match only contributes the level - the stop keeps its
-  // timetable coordinates.
   auto const lvl = matches[l] == osr::platform_idx_t::invalid()
                        ? osr::level_t{0.F}
                        : pl.get_level(w, matches[l]);
