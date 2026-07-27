@@ -42,11 +42,9 @@ jobs:
       - name: Build
         run: |
           ./build/cuda/buildcache/bin/buildcache -z
+          cmake --build --preset cuda-sanitizer --target motis -j 12 # try not to OOM
           cmake --build --preset cuda --target motis nigiri-test
           cmake --build --preset cpu  --target motis
-          # Sanitizer compiles need several GB per translation unit, so the
-          # default (one job per core) can exhaust RAM on the runner.
-          cmake --build --preset cuda-sanitizer --target motis -j 8
           ./build/cuda/buildcache/bin/buildcache -s
 
       - name: nigiri-test
