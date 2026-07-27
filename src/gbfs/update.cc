@@ -1562,15 +1562,9 @@ awaitable<void> update(config const& c,
 }
 
 void apply_canned_gbfs_update(config const& c, data& d) {
-  // Runs one synchronous update pass when replaying a dump, or when a
-  // `dump_gbfs/` directory exists (then the feeds are fetched and written out,
-  // like `dump_rt/`). Otherwise batch stays offline.
-  if (!c.gbfs_.has_value() || d.w_ == nullptr || d.l_ == nullptr ||
-      (!c.gbfs_->canned_gbfs_ && !gbfs_dump_enabled())) {
+  if (!c.gbfs_.has_value() || !c.gbfs_->canned_gbfs_ || d.w_ == nullptr ||
+      d.l_ == nullptr) {
     return;
-  }
-  if (gbfs_dump_enabled() && !c.gbfs_->canned_gbfs_) {
-    fmt::println("WARNING: DUMPING TO dump_gbfs\n");
   }
   auto ioc = boost::asio::io_context{};
   boost::asio::co_spawn(
