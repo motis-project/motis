@@ -4,6 +4,7 @@ import argparse
 import atexit
 import json
 import os
+import shlex
 import shutil
 import signal
 import subprocess
@@ -15,9 +16,23 @@ ALL_MODES = ["AIRPLANE", "HIGHSPEED_RAIL", "LONG_DISTANCE", "COACH",
              "SUBWAY", "TRAM", "BUS", "FERRY", "ODM", "FUNICULAR",
              "AERIAL_LIFT", "OTHER"]
 
+# Sanitizer reports use the same non-zero exit codes as a normal failure, so
+# they are recognized by their output.
+SANITIZER_MARKERS = ("AddressSanitizer", "UndefinedBehaviorSanitizer",
+                     "LeakSanitizer", "ThreadSanitizer", "runtime error:",
+                     "COMPUTE-SANITIZER")
+
 def run(cmd, cwd=None):
-    subprocess.run(cmd, cwd=cwd, check=True,
-                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    # Both streams are kept and echoed on failure: for a sanitizer build the
+    # report is the whole point, and discarding it would leave only an exit
+    # code. ASan and UBSan write to stderr, compute-sanitizer to stdout.
+    p = subprocess.run(cmd, cwd=cwd, stdout=subprocess.PIPE,
+                       stderr=subprocess.PIPE)
+    if p.returncode != 0:
+        for stream in (p.stdout, p.stderr):
+            sys.stderr.write(stream.decode("utf-8", "replace"))
+        sys.exit("validate: '%s' failed with exit code %d"
+                 % (" ".join(cmd), p.returncode))
 
 
 def generate(motis, data, n, date, work, modes=None, bounds=None):
@@ -35,8 +50,10 @@ def generate(motis, data, n, date, work, modes=None, bounds=None):
     return lines
 
 
-def batch(motis, data, qfile, out, rt_dir, gbfs_dir=None, n_threads=None):
-    cmd = [motis, "batch", "-d", data, "-q", qfile, "-r", out]
+def batch(motis, data, qfile, out, rt_dir, gbfs_dir=None, n_threads=None,
+          launcher=None):
+    cmd = list(launcher or []) + [motis, "batch", "-d", data, "-q", qfile,
+                                  "-r", out]
     if n_threads:
         cmd += ["--n_threads", str(n_threads)]
     if rt_dir:
@@ -51,6 +68,36 @@ def batch(motis, data, qfile, out, rt_dir, gbfs_dir=None, n_threads=None):
 def pct(vals, p):
     s = sorted(vals)
     return s[min(len(s) - 1, int(p * len(s)))]
+
+
+def gpu_fallbacks(lines):
+    n = 0
+    for ln in lines:
+        if '"gpu_used"' not in ln:
+            continue
+        try:
+            v = json.loads(ln).get("debugOutput", {}).get("gpu_used")
+        except (ValueError, AttributeError):
+            continue
+        if v is not None and not v:
+            n += 1
+    return n
+
+
+def dummy_legs(lines):
+    out = []
+    for idx, ln in enumerate(lines):
+        if '"cancelled":true' not in ln.replace(" ", ""):
+            continue
+        try:
+            r = json.loads(ln)
+        except ValueError:
+            continue
+        for itin in (r.get("itineraries") or []) + (r.get("direct") or []):
+            for leg in itin.get("legs") or []:
+                if leg.get("cancelled") and "tripId" not in leg:
+                    out.append((idx, leg.get("mode", "?")))
+    return out
 
 
 def exec_times(lines):
@@ -95,10 +142,20 @@ def compare(motis, qlines, responses, work, label):
         files.append(rf)
 
     # Run compare for reference vs all.
-    return all(subprocess.run([motis, "compare", "-q", qf, "-r", files[0], f],
-                              stdout=subprocess.DEVNULL,
-                              stderr=subprocess.DEVNULL).returncode == 0
-               for f in files[1:])
+    ok = True
+    for f in files[1:]:
+        p = subprocess.run([motis, "compare", "-q", qf, "-r", files[0], f],
+                           stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+        err = p.stderr.decode("utf-8", "replace")
+        # 'compare' reports differing results with a non-zero exit code, and so
+        # does a sanitizer that fires inside it. Tell the two apart, otherwise a
+        # crash is reported as "results differ" and its report is lost.
+        if p.returncode < 0 or any(m in err for m in SANITIZER_MARKERS):
+            sys.stderr.write(err)
+            sys.exit("validate: 'motis compare' died with exit code %d instead "
+                     "of comparing (see the report above)" % p.returncode)
+        ok = ok and p.returncode == 0
+    return ok
 
 
 def suffix(case):
@@ -121,15 +178,17 @@ def suffix(case):
         # the config; with canned_gbfs the feeds come from dump_gbfs/.
         s += ("&preTransitModes=WALK,RENTAL&postTransitModes=WALK,RENTAL"
               "&preTransitRentalFormFactors=BICYCLE,SCOOTER_STANDING"
-              "&postTransitRentalFormFactors=BICYCLE,SCOOTER_STANDING")
+              "&postTransitRentalFormFactors=BICYCLE,SCOOTER_STANDING"
+              # direct rental is a separate code path from the pre/post offsets
+              "&directModes=WALK,RENTAL"
+              "&directRentalFormFactors=BICYCLE,SCOOTER_STANDING")
     if case["tts"]:
         # non-default transfer time settings: additional + max(min, dur*factor)
         s += "&minTransferTime=10&transferTimeFactor=1.5&additionalTransferTime=3"
     return s
 
 
-def build_cases(bases, restricted, rt, routed, wheelchair, bike, car, tts,
-                rental=False):
+def build_cases(bases, restricted, rt, routed, wheelchair, bike, car, tts):
     cases = []
 
     def add(label, base, algorithm="PONG", arrive_by=False, clasz=None,
@@ -142,11 +201,17 @@ def build_cases(bases, restricted, rt, routed, wheelchair, bike, car, tts,
 
     for qt in bases:
         if qt == "flex":
-            # flex first/last mile -> td_start_/td_dest_ (in-loop td egress)
-            add("flex-pong-fwd", qt)
-            add("flex-pong-bwd", qt, arrive_by=True)
-            add("flex-raptor-fwd", qt, algorithm="RAPTOR")
-            add("flex-raptor-bwd", qt, algorithm="RAPTOR", arrive_by=True)
+            for algo in ("PONG", "RAPTOR"):
+                lbl = "flex-%s%s" % (algo.lower(), "-rt" if rt else "")
+                add("%s-fwd" % lbl, qt, algorithm=algo, rt=rt)
+                add("%s-bwd" % lbl, qt, algorithm=algo, arrive_by=True, rt=rt)
+            continue
+        if qt == "rental":
+            for algo in ("PONG", "RAPTOR"):
+                lbl = "rental-%s%s" % (algo.lower(), "-rt" if rt else "")
+                add("%s-fwd" % lbl, qt, algorithm=algo, rental=True, rt=rt)
+                add("%s-bwd" % lbl, qt, algorithm=algo, arrive_by=True,
+                    rental=True, rt=rt)
             continue
         for algo in ("PONG", "RAPTOR"):
             add("%s-%s-fwd" % (qt, algo.lower()), qt, algorithm=algo)
@@ -168,11 +233,6 @@ def build_cases(bases, restricted, rt, routed, wheelchair, bike, car, tts,
         if car:
             add("%s-pong-fwd-car" % qt, qt, car=True)
             add("%s-pong-bwd-car" % qt, qt, arrive_by=True, car=True)
-        if rental:
-            add("%s-pong-fwd-rental" % qt, qt, rental=True)
-            add("%s-pong-bwd-rental" % qt, qt, arrive_by=True, rental=True)
-            add("%s-raptor-fwd-rental" % qt, qt, algorithm="RAPTOR",
-                rental=True)
         if tts:
             add("%s-pong-fwd-tts" % qt, qt, tts=True)
             add("%s-pong-bwd-tts" % qt, qt, arrive_by=True, tts=True)
@@ -188,11 +248,6 @@ def build_cases(bases, restricted, rt, routed, wheelchair, bike, car, tts,
             add("intermodal-pong-fwd-wheelchair-rt", "intermodal", wheelchair=True, rt=True)
         if tts:
             add("intermodal-pong-fwd-tts-rt", "intermodal", tts=True, rt=True)
-        if rental:
-            add("intermodal-pong-fwd-rental-rt", "intermodal", rental=True,
-                rt=True)
-            add("intermodal-pong-bwd-rental-rt", "intermodal", arrive_by=True,
-                rental=True, rt=True)
     return cases
 
 
@@ -233,16 +288,20 @@ def main():
                     help="also test requireCarTransport=true (car carriage "
                          "route/section filters)")
     ap.add_argument("--rental", action="store_true",
-                    help="also test preTransitModes/postTransitModes=WALK,RENTAL "
-                         "(GBFS bike_sharing first/last mile); requires a gbfs "
-                         "section in the data config, e.g. canned_gbfs with a "
-                         "dump_gbfs/ next to the working directory")
+                    help="own query base testing RENTAL pre/post transit and "
+                         "direct (GBFS bike_sharing); no plain intermodal cases "
+                         "are added. Requires a gbfs section in the data config, "
+                         "e.g. canned_gbfs with a dump_gbfs/ next to the working "
+                         "directory")
     ap.add_argument("--tts", action="store_true",
                     help="also test non-default transfer time settings "
                          "(minTransferTime/transferTimeFactor/additionalTransferTime)")
     ap.add_argument("--exclude-transit-modes",
                     help="API transit modes dropped for the clasz-filter cases, "
                          "comma-separated (e.g. COACH or HIGHSPEED_RAIL,COACH)")
+    ap.add_argument("--launcher",
+                    help="command prefixing 'motis batch' (e.g. "
+                         "'compute-sanitizer --tool memcheck --error-exitcode 1')")
     ap.add_argument("--n", type=int, default=100)
     ap.add_argument("--n_threads", type=int,
                     help="'motis batch' worker threads (default: hardware "
@@ -253,14 +312,15 @@ def main():
     a = ap.parse_args()
 
     bins = [os.path.abspath(b) for b in a.binaries]
+    launcher = shlex.split(a.launcher) if a.launcher else None
     data = os.path.abspath(a.data)
     rt_dir = os.path.abspath(a.rt_dir) if a.rt_dir else None
     gbfs_dir = os.path.abspath(a.gbfs_dir) if a.gbfs_dir else None
     if a.rental and gbfs_dir is None:
         sys.exit("validate: --rental needs --gbfs-dir (dir containing dump_gbfs/)")
 
-    # Working directory setup + teardown
-    work = os.path.abspath("validate")
+    # One folder per PID -> don't interfere with parallel runs.
+    work = os.path.abspath("validate-%d" % os.getpid())
     shutil.rmtree(work, True)
     os.makedirs(work)
     signal.signal(signal.SIGTERM, lambda *_: sys.exit(143))
@@ -269,8 +329,7 @@ def main():
     excluded = set(a.exclude_transit_modes.split(",")) if a.exclude_transit_modes else set()
     restricted = ",".join(m for m in ALL_MODES if m not in excluded) if excluded else None
 
-    # CI captures a pipe, not a TTY -> Python block-buffers stdout and nothing
-    # shows until exit. Line-buffer so progress is visible live.
+    # Make progress is visible live.
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(line_buffering=True)
 
@@ -290,11 +349,15 @@ def main():
         print("generating flex queries (n=%d)..." % a.n)
         bases["flex"] = generate(bins[0], data, a.n, a.date, work,
                                        modes="WALK,FLEX", bounds=a.bounds)
+    if a.rental:
+        print("generating rental queries (n=%d)..." % a.n)
+        bases["rental"] = generate(bins[0], data, a.n, a.date, work,
+                                   modes="WALK", bounds=a.bounds)
     if not bases:
-        sys.exit("validate: no query bases selected "
-                 "(specify at least one of --station / --intermodal / --flex)")
+        sys.exit("validate: no query bases selected (specify at least one of "
+                 "--station / --intermodal / --flex / --rental)")
     cases = build_cases(bases, restricted, rt_dir is not None, a.routed_footpaths,
-                        a.wheelchair, a.bike, a.car, a.tts, a.rental)
+                        a.wheelchair, a.bike, a.car, a.tts)
 
     results = []
     lat = []  # (case_label, per-binary [execute_time ms] lists)
@@ -327,11 +390,34 @@ def main():
             print("[rt=%d rental=%d] batching %d queries on %s..." %
                   (rt, rental, offsets, labels[i]))
             wall[i] += batch(b, data, combined, o, rt_dir if rt else None,
-                             gbfs_dir if rental else None, a.n_threads)
+                             gbfs_dir if rental else None, a.n_threads,
+                             launcher)
             print("[rt=%d rental=%d]   %s done in %.0fs" %
                   (rt, rental, labels[i], wall[i]))
             with open(o) as f:
                 outs.append(f.read().splitlines())
+
+            # Check GPU -> CPU fallbacks
+            # CUDA code throws error, e.g. cudaMalloc failed
+            # -> exception
+            # -> CPU takes over (gpu_used: 0)
+            n_cpu = gpu_fallbacks(outs[-1])
+            if n_cpu:
+                sys.exit("validate: %s routed %d queries on the CPU although it "
+                         "is a CUDA build. With a sanitizer build this usually "
+                         "means ASAN_OPTIONS is missing protect_shadow_gap=0."
+                         % (labels[i], n_cpu))
+
+            # Unroutable first/last mile: the journey is still returned, just
+            # with a dummy leg, so only an explicit check catches it.
+            dummies = dummy_legs(outs[-1])
+            if dummies:
+                modes = sorted({m for _, m in dummies})
+                sys.exit("validate: %s returned %d dummy leg(s) (modes: %s) - "
+                         "street routing found no path for an access, egress or "
+                         "transfer leg. First failing response: query %d."
+                         % (labels[i], len(dummies), ", ".join(modes),
+                            dummies[0][0] + 1))
 
         # COMPARE REF VS ALL (print each verdict as it completes)
         for label, qlines, start, count in spans:
