@@ -463,30 +463,30 @@ struct gbfs_update {
 
     auto executor = co_await asio::this_coro::executor;
     co_await asio::experimental::make_parallel_group(
-        utl::to_vec(ids,
-                    [&](auto const& id) {
-                      auto const& feed = c_.feeds_.at(id);
-                      auto dir =
-                          is_http_url(feed.url_)
-                              ? std::nullopt
-                              : std::optional<std::filesystem::path>{feed.url_};
-                      // Canned replay: read the dump instead of fetching.
-                      if (c_.canned_gbfs_) {
-                        dir = gbfs_dump_root() / id;
-                      }
-                      auto const dump_dir =
-                          gbfs_dump_enabled() && !dir.has_value()
-                              ? std::optional<std::filesystem::path>{
-                                    gbfs_dump_root() / id}
-                              : std::nullopt;
+        utl::to_vec(
+            ids,
+            [&](auto const& id) {
+              auto const& feed = c_.feeds_.at(id);
+              auto dir = is_http_url(feed.url_)
+                             ? std::nullopt
+                             : std::optional<std::filesystem::path>{feed.url_};
+              // Canned replay: read the dump instead of fetching.
+              if (c_.canned_gbfs_) {
+                dir = gbfs_dump_root() / id;
+              }
+              auto const dump_dir =
+                  gbfs_dump_enabled() && !dir.has_value()
+                      ? std::optional<std::filesystem::path>{gbfs_dump_root() /
+                                                             id}
+                      : std::nullopt;
 
-                      return boost::asio::co_spawn(
-                          executor,
-                          [this, id, feed, dir, dump_dir]() -> awaitable<void> {
-                            co_await init_feed(id, feed, dir, dump_dir);
-                          },
-                          asio::deferred);
-                    }))
+              return boost::asio::co_spawn(
+                  executor,
+                  [this, id, feed, dir, dump_dir]() -> awaitable<void> {
+                    co_await init_feed(id, feed, dir, dump_dir);
+                  },
+                  asio::deferred);
+            }))
         .async_wait(asio::experimental::wait_for_all(), asio::use_awaitable);
   }
 
@@ -644,10 +644,9 @@ struct gbfs_update {
 
     try {
       if (!discovery && needs_refresh(provider.file_infos_->urls_fi_)) {
-        discovery =
-            co_await fetch_file("gbfs", pf.url_, pf.headers_, pf.oauth_,
-                                pf.dir_, pf.default_ttl_, pf.overwrite_ttl_,
-                                pf.dump_dir_);
+        discovery = co_await fetch_file("gbfs", pf.url_, pf.headers_, pf.oauth_,
+                                        pf.dir_, pf.default_ttl_,
+                                        pf.overwrite_ttl_, pf.dump_dir_);
       }
       if (discovery) {
         auto urls = parse_discovery(discovery->json_);
@@ -1104,10 +1103,9 @@ struct gbfs_update {
   awaitable<void> update_aggregated_feed(aggregated_feed& af) {
     try {
       if (af.needs_update()) {
-        auto const file =
-            co_await fetch_file("manifest", af.url_, af.headers_, af.oauth_,
-                                af.dir_, af.default_ttl_, af.overwrite_ttl_,
-                                af.dump_dir_);
+        auto const file = co_await fetch_file(
+            "manifest", af.url_, af.headers_, af.oauth_, af.dir_,
+            af.default_ttl_, af.overwrite_ttl_, af.dump_dir_);
         co_await process_aggregated_feed(af, file.json_.as_object());
       } else {
         co_await update_aggregated_feed_provider_feeds(af);
