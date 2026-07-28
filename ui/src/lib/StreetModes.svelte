@@ -22,7 +22,7 @@
 		providerGroups = $bindable()
 	}: {
 		label: string;
-		ariaLabel: string,
+		ariaLabel: string;
 		disabled?: boolean;
 		modes: PrePostDirectMode[];
 		maxTransitTime: number;
@@ -143,10 +143,7 @@
 		type="single"
 		bind:value={() => maxTransitTime.toString(), (v) => (maxTransitTime = parseInt(v))}
 	>
-		<Select.Trigger
-			class="flex items-center w-full overflow-hidden"
-			aria-label={ariaLabel}
-		>
+		<Select.Trigger class="flex items-center w-full overflow-hidden" aria-label={ariaLabel}>
 			{formatDurationSec(maxTransitTime)}
 		</Select.Trigger>
 		<Select.Content sideOffset={10}>

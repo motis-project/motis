@@ -265,7 +265,7 @@
 		<!-- First mile -->
 		<StreetModes
 			label={t.routingSegments.firstMile}
-            ariaLabel={t.routingSegments.maxPreTransitTime}
+			ariaLabel={t.routingSegments.maxPreTransitTime}
 			disabled={!allowStreetRouting}
 			bind:modes={preTransitModes}
 			bind:maxTransitTime={maxPreTransitTime}
@@ -278,7 +278,7 @@
 		<!-- Last mile -->
 		<StreetModes
 			label={t.routingSegments.lastMile}
-            ariaLabel={t.routingSegments.maxPostTransitTime}
+			ariaLabel={t.routingSegments.maxPostTransitTime}
 			disabled={!allowStreetRouting}
 			bind:modes={postTransitModes}
 			bind:maxTransitTime={maxPostTransitTime}
@@ -292,7 +292,7 @@
 		{#if directModes !== undefined && maxDirectTime !== undefined && ignoreDirectRentalReturnConstraints !== undefined}
 			<StreetModes
 				label={t.routingSegments.direct}
-                ariaLabel={t.routingSegments.maxDirectTime}
+				ariaLabel={t.routingSegments.maxDirectTime}
 				disabled={!allowStreetRouting}
 				bind:modes={directModes}
 				bind:maxTransitTime={maxDirectTime}
