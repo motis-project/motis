@@ -384,7 +384,7 @@ int generate(int ac, char** av) {
   auto const silencer = utl::global_progress_bars{false};
   auto mutex = std::mutex{};
   struct state {
-    api::plan_params p_;
+    api::plan_params p_{};
     std::vector<n::location_idx_t> stops_;
     n::routing::search_state ss_;
     n::routing::raptor_state rs_;
@@ -393,10 +393,9 @@ int generate(int ac, char** av) {
   utl::parallel_for_run_threadlocal<state>(ranks.size(), [&](state& s,
                                                              auto const i) {
     auto const r = ranks[i];
-
-    if (geo_rank) {
-      s.geo_distance_.reserve(master_stops.size());
-    }
+    s.p_ = master_params;
+    s.stops_ = master_stops;
+    s.geo_distance_.reserve(master_stops.size());
 
     auto const get_place =
         [&](n::location_idx_t const l) -> std::optional<std::string> {
