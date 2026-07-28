@@ -198,10 +198,16 @@ def suffix(case):
 def build_cases(bases, restricted, rt, routed, wheelchair, bike, car, tts):
     cases = []
 
+    # With a --rt-dir, every case runs on the realtime timetable: it holds the
+    # same trips as the static one plus the updates, so a second non-rt pass
+    # would just re-run the same queries against a subset of the data. The
+    # Rt=false raptor instantiation stays covered by the runs without --rt-dir.
+    sfx = "-rt" if rt else ""
+
     def add(label, base, algorithm="PONG", arrive_by=False, clasz=None,
-            rt=False, routed=False, wheelchair=False, bike=False, car=False,
+            routed=False, wheelchair=False, bike=False, car=False,
             tts=False, rental=False):
-        cases.append(dict(label=label, base=base, algorithm=algorithm,
+        cases.append(dict(label=label + sfx, base=base, algorithm=algorithm,
                           arrive_by=arrive_by, clasz=clasz, rt=rt,
                           routed=routed, wheelchair=wheelchair, bike=bike,
                           car=car, tts=tts, rental=rental))
@@ -209,16 +215,16 @@ def build_cases(bases, restricted, rt, routed, wheelchair, bike, car, tts):
     for qt in bases:
         if qt == "flex":
             for algo in ("PONG", "RAPTOR"):
-                lbl = "flex-%s%s" % (algo.lower(), "-rt" if rt else "")
-                add("%s-fwd" % lbl, qt, algorithm=algo, rt=rt)
-                add("%s-bwd" % lbl, qt, algorithm=algo, arrive_by=True, rt=rt)
+                add("flex-%s-fwd" % algo.lower(), qt, algorithm=algo)
+                add("flex-%s-bwd" % algo.lower(), qt, algorithm=algo,
+                    arrive_by=True)
             continue
         if qt == "rental":
             for algo in ("PONG", "RAPTOR"):
-                lbl = "rental-%s%s" % (algo.lower(), "-rt" if rt else "")
-                add("%s-fwd" % lbl, qt, algorithm=algo, rental=True, rt=rt)
-                add("%s-bwd" % lbl, qt, algorithm=algo, arrive_by=True,
-                    rental=True, rt=rt)
+                add("rental-%s-fwd" % algo.lower(), qt, algorithm=algo,
+                    rental=True)
+                add("rental-%s-bwd" % algo.lower(), qt, algorithm=algo,
+                    arrive_by=True, rental=True)
             continue
         for algo in ("PONG", "RAPTOR"):
             add("%s-%s-fwd" % (qt, algo.lower()), qt, algorithm=algo)
@@ -244,17 +250,6 @@ def build_cases(bases, restricted, rt, routed, wheelchair, bike, car, tts):
             add("%s-pong-fwd-tts" % qt, qt, tts=True)
             add("%s-pong-bwd-tts" % qt, qt, arrive_by=True, tts=True)
             add("%s-raptor-fwd-tts" % qt, qt, algorithm="RAPTOR", tts=True)
-    if rt and "intermodal" in bases:
-        add("intermodal-pong-fwd-rt", "intermodal", rt=True)
-        add("intermodal-pong-bwd-rt", "intermodal", arrive_by=True, rt=True)
-        add("intermodal-raptor-fwd-rt", "intermodal", algorithm="RAPTOR", rt=True)
-        if restricted:
-            add("intermodal-pong-fwd-clasz-rt", "intermodal", clasz=restricted, rt=True)
-            add("intermodal-pong-bwd-clasz-rt", "intermodal", arrive_by=True, clasz=restricted, rt=True)
-        if wheelchair:
-            add("intermodal-pong-fwd-wheelchair-rt", "intermodal", wheelchair=True, rt=True)
-        if tts:
-            add("intermodal-pong-fwd-tts-rt", "intermodal", tts=True, rt=True)
     return cases
 
 
