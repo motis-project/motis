@@ -16,6 +16,7 @@
 
 #include "motis-api/motis-api.h"
 #include "motis/config.h"
+#include "motis/constants.h"
 #include "motis/data.h"
 #include "motis/endpoints/routing.h"
 #include "motis/odm/bounds.h"
@@ -456,7 +457,7 @@ int generate(int ac, char** av) {
          ++i, r = r * 2U < stops.size() ? r * 2U : kMinRank) {
       random_from_to(r);
       random_time();
-      out << p.to_url("/api/v1/plan") << "\n";
+      out << p.to_url(kPlanPath) << "\n";
       progress_tracker->increment();
     }
   }
