@@ -22,10 +22,14 @@ struct journey;
 
 namespace motis {
 
+class ItineraryId;  // protobuf
+
 namespace ep {
 struct routing;
 struct stop_times;
 }  // namespace ep
+
+ItineraryId decode_itinerary_id(std::string const& base64_id);
 
 struct first_last_mile_options {
   api::PedestrianProfileEnum pedestrian_profile_;

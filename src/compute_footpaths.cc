@@ -32,7 +32,6 @@ elevator_footpath_map_t compute_footpaths(
     osr::platforms const& pl,
     nigiri::timetable& tt,
     osr::elevation_storage const* elevations,
-    bool const update_coordinates,
     std::vector<routed_transfers_settings> const& settings) {
   fmt::println(std::clog, "creating matches");
   auto const matches = get_matches(tt, pl, w);
@@ -41,14 +40,6 @@ elevator_footpath_map_t compute_footpaths(
   auto const loc_rtree = [&]() {
     auto t = point_rtree<n::location_idx_t>{};
     for (auto i = n::location_idx_t{0U}; i != tt.n_locations(); ++i) {
-      if (update_coordinates && matches[i] != osr::platform_idx_t::invalid()) {
-        auto const center = get_platform_center(pl, w, matches[i]);
-        if (center.has_value() &&
-            geo::distance(*center, tt.locations_.coordinates_[i]) <
-                kMaxAdjust) {
-          tt.locations_.coordinates_[i] = *center;
-        }
-      }
       t.add(tt.locations_.coordinates_[i], i);
     }
     return t;
@@ -74,16 +65,16 @@ elevator_footpath_map_t compute_footpaths(
     std::vector<n::footpath> missing_;
     std::vector<n::location_idx_t> neighbors_;
     std::vector<osr::location> neighbors_loc_;
-    std::vector<osr::match_t> neighbor_candidates_;
+    osr::match_result neighbor_candidates_;
   };
 
   auto n_done = 0U;
-  auto candidates = vector_map<n::location_idx_t, osr::match_t>{};
+  // One flat SoA store for all locations; bucket index == location index.
+  auto candidates = osr::match_result{};
+
   auto transfers = n::vector_map<n::location_idx_t, std::vector<n::footpath>>(
       tt.n_locations());
   for (auto const& mode : settings) {
-    candidates.clear();
-    candidates.resize(tt.n_locations());
     for (auto& fps : transfers) {
       fps.clear();
     }
@@ -97,19 +88,29 @@ elevator_footpath_map_t compute_footpaths(
           fmt::format("matching timetable locations for profile={}",
                       to_str(mode.profile_))};
 
-      utl::parallel_for_run(tt.n_locations(), [&](std::size_t const x) {
-        pt->update_monotonic(n_done + x);
-
-        auto const l =
-            n::location_idx_t{static_cast<n::location_idx_t::value_t>(x)};
-        if (!is_candidate(l)) {
-          return;
-        }
-        candidates[l] = lookup.match(
-            to_profile_parameters(mode.profile_, {}),
-            get_loc(tt, w, pl, matches, l), false, osr::direction::kForward,
-            mode.max_matching_distance_, nullptr, mode.profile_);
-      });
+      candidates.clear();
+      utl::parallel_ordered_collect_threadlocal<osr::match_result>(
+          tt.n_locations(),
+          [&](osr::match_result& tmp, std::size_t const x) {
+            auto const l =
+                n::location_idx_t{static_cast<n::location_idx_t::value_t>(x)};
+            tmp.clear();
+            if (is_candidate(l)) {
+              lookup.match(to_profile_parameters(mode.profile_, {}),
+                           get_loc(tt, w, pl, matches, l), false,
+                           osr::direction::kForward,
+                           mode.max_matching_distance_, nullptr, mode.profile_,
+                           std::span<osr::raw_way_candidate const>{}, tmp);
+            } else {
+              tmp.start(osr::kNoLevel);
+              tmp.finish();
+            }
+            return tmp;
+          },
+          [&](std::size_t, osr::match_result&& m) {
+            candidates.append(m, osr::match_idx_t{0U});
+          },
+          pt->update_fn());
 
       n_done += tt.n_locations();
     }
@@ -140,10 +141,15 @@ elevator_footpath_map_t compute_footpaths(
                                 [&](n::location_idx_t const x) {
                                   return get_loc(tt, w, pl, matches, x);
                                 }),
-              candidates[l],
-              utl::transform_to(
-                  s.neighbors_, s.neighbor_candidates_,
-                  [&](n::location_idx_t const x) { return candidates[x]; }),
+              candidates[osr::match_idx_t{to_idx(l)}],
+              [&]() -> osr::match_result const& {
+                s.neighbor_candidates_.clear();
+                for (auto const x : s.neighbors_) {
+                  s.neighbor_candidates_.append(candidates,
+                                                osr::match_idx_t{to_idx(x)});
+                }
+                return s.neighbor_candidates_;
+              }(),
               static_cast<osr::cost_t>(mode.max_duration_.count()),
               osr::direction::kForward, nullptr, nullptr, elevations,
               [](osr::path const& p) { return p.uses_elevator_; });

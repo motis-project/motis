@@ -32,6 +32,9 @@ struct tag_lookup {
                  nigiri::rt::run_stop,
                  nigiri::event_type) const;
   std::string route_id(nigiri::rt::run_stop, nigiri::event_type) const;
+  std::string get_trip_id(nigiri::timetable const&,
+                          nigiri::rt::run_stop,
+                          nigiri::event_type) const;
 
   trip_id<std::string> id_fragments(nigiri::timetable const&,
                                     nigiri::rt::run_stop,

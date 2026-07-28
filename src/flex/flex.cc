@@ -75,12 +75,14 @@ osr::sharing_data prepare_sharing_data(n::timetable const& tt,
     auto const pos = get_location(&tt, &w, pl, pl_matches, tt_location{l});
     auto const l_additional_node_idx = next_add_node_idx++;
 
-    auto const matches = lookup.match<osr::foot<false>>(
+    auto matches = osr::match_result{};
+    lookup.complete_match<osr::foot<false>>(
         osr::foot<false>::parameters{}, pos, false, osr::direction::kForward,
-        kMaxGbfsMatchingDistance, nullptr);
+        kMaxGbfsMatchingDistance, nullptr, std::nullopt, {}, matches);
 
-    for (auto const& m : matches) {
-      auto const handle_node = [&](osr::node_candidate const& node) {
+    auto const m = matches[osr::match_idx_t{0U}];
+    for (auto j = std::size_t{0U}; j != m.size(); ++j) {
+      auto const handle_node = [&](osr::candidate_node const& node) {
         if (!node.valid() || node.dist_to_node_ > kMaxGbfsMatchingDistance) {
           return;
         }
@@ -101,8 +103,8 @@ osr::sharing_data prepare_sharing_data(n::timetable const& tt,
         }
       };
 
-      handle_node(m.left_);
-      handle_node(m.right_);
+      handle_node(m.left(j));
+      handle_node(m.right(j));
     }
 
     return l_additional_node_idx;
@@ -291,9 +293,9 @@ void add_flex_td_offsets(osr::ways const& w,
 
   auto const params =
       to_profile_parameters(osr::search_profile::kCarSharing, osr_params);
-  auto const pos_match =
-      lookup.match(params, pos, false, dir, max_matching_distance, nullptr,
-                   osr::search_profile::kCarSharing);
+  auto pos_match = osr::match_result{};
+  lookup.match(params, pos, false, dir, max_matching_distance, nullptr,
+               osr::search_profile::kCarSharing, {}, pos_match);
   auto const near_stop_matches = get_reverse_platform_way_matches(
       lookup, way_matches, osr::search_profile::kCarSharing, near_stops,
       near_stop_locations, dir, max_matching_distance);
@@ -312,9 +314,9 @@ void add_flex_td_offsets(osr::ways const& w,
 
     auto const paths =
         osr::route(params, w, lookup, osr::search_profile::kCarSharing, pos,
-                   near_stop_locations, pos_match, near_stop_matches,
-                   static_cast<osr::cost_t>(max.count()), dir, nullptr,
-                   &sharing_data, nullptr);
+                   near_stop_locations, pos_match[osr::match_idx_t{0U}],
+                   near_stop_matches, static_cast<osr::cost_t>(max.count()),
+                   dir, nullptr, &sharing_data, nullptr);
     auto const day_idx_iv = get_relevant_days(tt, start_time);
     for (auto const id : transports) {
       auto const t = id.get_flex_transport();

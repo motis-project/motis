@@ -46,6 +46,7 @@
 #include "motis/repeat.h"
 
 #include "motis/gbfs/compression.h"
+#include "motis/gbfs/geofencing.h"
 #include "motis/gbfs/mode.h"
 #include "motis/gbfs/osr_mapping.h"
 #include "motis/gbfs/parser.h"
@@ -76,6 +77,45 @@ std::string read_file(std::filesystem::path const& path) {
 
 bool needs_refresh(file_info const& fi) {
   return fi.needs_update(std::chrono::system_clock::now());
+}
+
+bool is_http_url(std::string_view const url) {
+  return url.starts_with("http:") || url.starts_with("https:");
+}
+
+bool gbfs_dump_enabled() {
+  static auto const enabled = std::filesystem::is_directory("dump_gbfs");
+  return enabled;
+}
+
+std::filesystem::path gbfs_dump_root() { return {"dump_gbfs"}; }
+
+std::filesystem::path gbfs_dump_dir(std::string_view const feed_id) {
+  auto dir = gbfs_dump_root();
+  for (auto pos = std::size_t{0U}; pos <= feed_id.size();) {
+    auto const colon = feed_id.find(':', pos);
+    auto const end = colon == std::string_view::npos ? feed_id.size() : colon;
+    dir /= feed_id.substr(pos, end - pos);
+    if (colon == std::string_view::npos) {
+      break;
+    }
+    pos = colon + 1U;
+  }
+  return dir;
+}
+
+void write_dump(std::filesystem::path const& dir,
+                std::string_view const name,
+                std::string_view const content) {
+  auto ec = std::error_code{};
+  std::filesystem::create_directories(dir, ec);
+  if (ec) {
+    std::cerr << "[GBFS] could not create dump dir " << dir << ": "
+              << ec.message() << "\n";
+    return;
+  }
+  auto os = std::ofstream{dir / fmt::format("{}.json", name)};
+  os.write(content.data(), static_cast<std::streamsize>(content.size()));
 }
 
 // try to hash only the value of the "data" key to ignore fields like
@@ -141,14 +181,11 @@ std::chrono::system_clock::time_point get_expiry(
       it != end(overwrite_ttl)) {
     return now + std::chrono::seconds{it->second};
   }
-  if (root.contains("data")) {
-    auto const& data_val = root.at("data");
-    if (data_val.is_object() && data_val.as_object().contains("ttl")) {
-      auto const& ttl_val = data_val.as_object().at("ttl");
-      if (auto const ttl = as_double(ttl_val);
-          ttl.has_value() && static_cast<int>(*ttl) > 0) {
-        return now + std::chrono::seconds{static_cast<int>(*ttl)};
-      }
+  if (root.contains("ttl")) {
+    auto const& ttl_val = root.at("ttl");
+    if (auto const ttl = as_double(ttl_val);
+        ttl.has_value() && static_cast<int>(*ttl) > 0) {
+      return now + std::chrono::seconds{static_cast<int>(*ttl)};
     }
   }
   if (auto const it = default_ttl.find(std::string{name});
@@ -156,6 +193,65 @@ std::chrono::system_clock::time_point get_expiry(
     return now + std::chrono::seconds{it->second};
   }
   return now + def;
+}
+
+vector_map<vehicle_type_idx_t, gbfs_products_idx_t>
+build_vehicle_type_to_product(gbfs_provider const& provider) {
+  auto m = vector_map<vehicle_type_idx_t, gbfs_products_idx_t>{};
+  m.resize(provider.vehicle_types_.size(), gbfs_products_idx_t::invalid());
+  for (auto const& prod : provider.products_) {
+    for (auto const vt : prod.vehicle_types_) {
+      m[vt] = prod.idx_;
+    }
+  }
+  return m;
+}
+
+gbfs_products_idx_t product_of_vehicle(
+    gbfs_provider const& provider,
+    vector_map<vehicle_type_idx_t, gbfs_products_idx_t> const& vt_to_product,
+    vehicle_status const& vs) {
+  if (provider.vehicle_types_.empty()) {
+    return gbfs_products_idx_t{0};
+  }
+  if (vs.vehicle_type_idx_ == vehicle_type_idx_t::invalid() ||
+      to_idx(vs.vehicle_type_idx_) >= vt_to_product.size()) {
+    return gbfs_products_idx_t::invalid();
+  }
+  return vt_to_product[vs.vehicle_type_idx_];
+}
+
+bool same_partition(gbfs_provider const& a, gbfs_provider const& b) {
+  if (a.products_.size() != b.products_.size()) {
+    return false;
+  }
+  for (auto i = gbfs_products_idx_t{0}; i != a.products_.size(); ++i) {
+    if (a.products_[i].vehicle_types_ != b.products_[i].vehicle_types_ ||
+        a.products_[i].form_factor_ != b.products_[i].form_factor_) {
+      return false;
+    }
+  }
+  return true;
+}
+
+bool station_relevant_for_product(station const& st,
+                                  provider_products const& prod) {
+  auto is_renting =
+      st.status_.is_renting_ && st.status_.num_vehicles_available_ > 0;
+  if (is_renting && !st.status_.vehicle_types_available_.empty()) {
+    is_renting =
+        utl::any_of(st.status_.vehicle_types_available_, [&](auto const& vt) {
+          return vt.second != 0 && prod.includes_vehicle_type(vt.first);
+        });
+  }
+  auto is_returning = st.status_.is_returning_;
+  if (is_returning && !st.status_.vehicle_docks_available_.empty()) {
+    is_returning =
+        utl::any_of(st.status_.vehicle_docks_available_, [&](auto const& vt) {
+          return vt.second != 0 && prod.includes_vehicle_type(vt.first);
+        });
+  }
+  return is_renting || is_returning;
 }
 
 struct gbfs_update {
@@ -209,7 +305,8 @@ struct gbfs_update {
       // removed its entry is set to a nullptr. new providers may be added.
       d_->providers_.resize(prev_d_->providers_.size());
       d_->provider_by_id_ = prev_d_->provider_by_id_;
-      d_->provider_rtree_ = prev_d_->provider_rtree_;
+      d_->car_products_rtree_ = prev_d_->car_products_rtree_;
+      d_->bike_products_rtree_ = prev_d_->bike_products_rtree_;
       d_->provider_zone_rtree_ = prev_d_->provider_zone_rtree_;
       d_->cache_ = prev_d_->cache_;
 
@@ -323,8 +420,7 @@ struct gbfs_update {
   void update_vehicle_count(gbfs_provider const& provider,
                             gbfs_provider const* prev_provider) {
     if (prev_provider != nullptr &&
-        (prev_provider->id_ != provider.id_ ||
-         prev_provider->group_id_ != provider.group_id_)) {
+        prev_provider->group_id_ != provider.group_id_) {
       reset_vehicle_count(*prev_provider);
     }
 
@@ -379,11 +475,14 @@ struct gbfs_update {
         utl::to_vec(ids,
                     [&](auto const& id) {
                       auto const& feed = c_.feeds_.at(id);
-                      auto const dir =
-                          feed.url_.starts_with("http:") ||
-                                  feed.url_.starts_with("https:")
+                      auto dir =
+                          is_http_url(feed.url_)
                               ? std::nullopt
                               : std::optional<std::filesystem::path>{feed.url_};
+                      // Canned replay: read the dump instead of fetching.
+                      if (c_.canned_gbfs_) {
+                        dir = gbfs_dump_root() / id;
+                      }
 
                       return boost::asio::co_spawn(
                           executor,
@@ -429,14 +528,19 @@ struct gbfs_update {
           merge_ttl_map(config.ttl_.value_or(config::gbfs::ttl{}).overwrite_,
                         c_.ttl_.value_or(config::gbfs::ttl{}).overwrite_);
 
-      auto discovery = co_await fetch_file("gbfs", config.url_, headers, oauth,
-                                           dir, default_ttl, overwrite_ttl);
+      auto const discovery_name =
+          dir.has_value() && std::filesystem::exists(*dir / "manifest.json")
+              ? "manifest"
+              : "gbfs";
+      auto discovery =
+          co_await fetch_file(discovery_name, config.url_, headers, oauth, id,
+                              dir, default_ttl, overwrite_ttl);
       auto const& root = discovery.json_.as_object();
       if ((root.contains("data") &&
            root.at("data").as_object().contains("datasets")) ||
           root.contains("systems")) {
         // file is not an individual feed, but a manifest.json / Lamassu file
-        co_return co_await init_aggregated_feed(id, config.url_, headers,
+        co_return co_await init_aggregated_feed(id, config.url_, headers, dir,
                                                 std::move(oauth), root,
                                                 default_ttl, overwrite_ttl);
       }
@@ -535,11 +639,14 @@ struct gbfs_update {
     auto& file_infos = provider.file_infos_;
     auto data_changed = false;
     auto geofencing_updated = false;
+    auto stations_updated = false;
+    auto station_status_updated = false;
+    auto vehicle_status_updated = false;
 
     try {
       if (!discovery && needs_refresh(provider.file_infos_->urls_fi_)) {
         discovery =
-            co_await fetch_file("gbfs", pf.url_, pf.headers_, pf.oauth_,
+            co_await fetch_file("gbfs", pf.url_, pf.headers_, pf.oauth_, pf.id_,
                                 pf.dir_, pf.default_ttl_, pf.overwrite_ttl_);
       }
       if (discovery) {
@@ -558,9 +665,9 @@ struct gbfs_update {
         }
         if (force || needs_refresh(fi)) {
           try {
-            auto file = co_await fetch_file(name, file_infos->urls_.at(name),
-                                            pf.headers_, pf.oauth_, pf.dir_,
-                                            pf.default_ttl_, pf.overwrite_ttl_);
+            auto file = co_await fetch_file(
+                name, file_infos->urls_.at(name), pf.headers_, pf.oauth_,
+                pf.id_, pf.dir_, pf.default_ttl_, pf.overwrite_ttl_);
             auto const hash_changed = file.hash_ != fi.hash_;
             fn(provider, file.json_);
             if (file.last_updated_.has_value() &&
@@ -598,7 +705,7 @@ struct gbfs_update {
         provider.temp_vehicle_types_ = prev_provider->temp_vehicle_types_;
       }
 
-      auto const stations_updated = co_await update(
+      stations_updated = co_await update(
           "station_information", file_infos->station_information_fi_,
           load_station_information, vehicle_types_updated);
       if ((!stations_updated && !vehicle_types_updated) &&
@@ -606,19 +713,28 @@ struct gbfs_update {
         provider.stations_ = prev_provider->stations_;
       }
 
-      auto const station_status_updated = co_await update(
+      station_status_updated = co_await update(
           "station_status", file_infos->station_status_fi_, load_station_status,
           stations_updated || vehicle_types_updated);
 
-      auto const vehicle_status_updated =
+      vehicle_status_updated =
           co_await update("vehicle_status", file_infos->vehicle_status_fi_,
                           load_vehicle_status, vehicle_types_updated)  // 3.x
           || co_await update("free_bike_status", file_infos->vehicle_status_fi_,
                              load_vehicle_status,
                              vehicle_types_updated);  // 1.x / 2.x
+      auto const has_vehicle_status_feed =
+          file_infos->urls_.contains("vehicle_status") ||
+          file_infos->urls_.contains("free_bike_status");
+      auto vehicle_status_removed = false;
       if ((!vehicle_status_updated && !vehicle_types_updated) &&
           prev_provider != nullptr) {
-        provider.vehicle_status_ = prev_provider->vehicle_status_;
+        if (has_vehicle_status_feed) {
+          provider.vehicle_status_ = prev_provider->vehicle_status_;
+        } else {
+          provider.vehicle_status_.clear();
+          vehicle_status_removed = !prev_provider->vehicle_status_.empty();
+        }
       }
 
       if (!pf.ignore_geofencing_) {
@@ -674,7 +790,7 @@ struct gbfs_update {
 
       data_changed = vehicle_types_updated || stations_updated ||
                      station_status_updated || vehicle_status_updated ||
-                     geofencing_updated;
+                     vehicle_status_removed || geofencing_updated;
 
       metrics_->gbfs_last_update_timestamp_seconds_
           .Add({{"provider_id", pf.id_}})
@@ -720,7 +836,9 @@ struct gbfs_update {
             provider.products_,
             [](auto const& prod) { return prod.has_vehicles_to_rent_; });
 
-        update_rtree(provider, prev_provider, geofencing_updated);
+        update_rtree(provider, prev_provider, stations_updated,
+                     station_status_updated, vehicle_status_updated,
+                     geofencing_updated);
 
         d_->cache_.try_add_or_update(provider.idx_, [&]() {
           return compute_provider_routing_data(w_, l_, provider);
@@ -746,8 +864,8 @@ struct gbfs_update {
                         return st.second.status_.is_renting_ &&
                                st.second.status_.num_vehicles_available_ > 0;
                       }) ||
-          utl::any_of(provider.vehicle_status_, [](auto const& vs) {
-            return !vs.is_disabled_ && !vs.is_reserved_;
+          utl::any_of(provider.vehicle_status_, [&](auto const& vs) {
+            return vehicle_is_rentable(provider, prod, vs);
           });
     } else {
       auto part = partition{vehicle_type_idx_t{provider.vehicle_types_.size()}};
@@ -826,70 +944,117 @@ struct gbfs_update {
                                  st.second.status_.num_vehicles_available_ > 0;
                         }) ||
             utl::any_of(provider.vehicle_status_, [&](auto const& vs) {
-              return !vs.is_disabled_ && !vs.is_reserved_ &&
-                     prod.includes_vehicle_type(vs.vehicle_type_idx_);
+              return vehicle_is_rentable(provider, prod, vs);
             });
+      }
+    }
+  }
+
+  point_rtree<gbfs_products_ref_idx_t>& product_rtree(
+      gbfs_provider const& provider, gbfs_products_idx_t const prod_idx) {
+    return provider.products_[prod_idx].form_factor_ ==
+                   vehicle_form_factor::kCar
+               ? d_->car_products_rtree_
+               : d_->bike_products_rtree_;
+  }
+
+  void mod_vehicle(
+      gbfs_provider const& provider,
+      vector_map<vehicle_type_idx_t, gbfs_products_idx_t> const& vt_to_product,
+      vehicle_status const& vs,
+      bool const add) {
+    if (!vs.station_id_.empty()) {
+      return;
+    }
+    auto const prod_idx = product_of_vehicle(provider, vt_to_product, vs);
+    if (prod_idx == gbfs_products_idx_t::invalid()) {
+      return;
+    }
+    auto const& prod = provider.products_[prod_idx];
+    if (!vehicle_is_rentable(provider, prod, vs)) {
+      return;
+    }
+    auto const ref = to_ref_idx(gbfs_products_ref{provider.idx_, prod_idx});
+    if (add) {
+      product_rtree(provider, prod_idx).add(vs.pos_, ref);
+    } else {
+      product_rtree(provider, prod_idx).remove(vs.pos_, ref);
+    }
+  }
+
+  void mod_station(gbfs_provider const& provider,
+                   station const& st,
+                   bool const add) {
+    for (auto const& prod : provider.products_) {
+      if (!station_relevant_for_product(st, prod)) {
+        continue;
+      }
+      auto const ref = to_ref_idx(gbfs_products_ref{provider.idx_, prod.idx_});
+      if (add) {
+        product_rtree(provider, prod.idx_).add(st.info_.pos_, ref);
+      } else {
+        product_rtree(provider, prod.idx_).remove(st.info_.pos_, ref);
       }
     }
   }
 
   void update_rtree(gbfs_provider const& provider,
                     gbfs_provider const* prev_provider,
+                    bool const stations_changed,
+                    bool const station_status_changed,
+                    bool const vehicle_status_changed,
                     bool const zones_changed) {
-    auto added_stations = 0U;
-    auto added_vehicles = 0U;
-    auto removed_stations = 0U;
-    auto removed_vehicles = 0U;
-    auto moved_stations = 0U;
-    auto moved_vehicles = 0U;
+    auto const partition_stable =
+        prev_provider != nullptr && same_partition(*prev_provider, provider);
 
-    if (prev_provider != nullptr) {
-      using ST = std::pair<std::string, station>;
-      utl::sorted_diff(
-          prev_provider->stations_, provider.stations_,
-          [](ST const& a, ST const& b) { return a.first < b.first; },
-          [](ST const& a, ST const& b) {
-            return a.second.info_.pos_ == b.second.info_.pos_;
-          },
-          utl::overloaded{
-              [&](utl::op const o, ST const& s) {
-                if (o == utl::op::kAdd) {
-                  d_->provider_rtree_.add(s.second.info_.pos_, provider.idx_);
-                  ++added_stations;
-                } else {  // del
-                  d_->provider_rtree_.remove(s.second.info_.pos_,
-                                             provider.idx_);
-                  ++removed_stations;
-                }
-              },
-              [&](ST const& a, ST const& b) {
-                d_->provider_rtree_.remove(a.second.info_.pos_, provider.idx_);
-                d_->provider_rtree_.add(b.second.info_.pos_, provider.idx_);
-                ++moved_stations;
-              }});
+    auto const vt_to_product = build_vehicle_type_to_product(provider);
+
+    if (!partition_stable || zones_changed) {
+      if (prev_provider != nullptr) {
+        auto const prev_vt_to_product =
+            build_vehicle_type_to_product(*prev_provider);
+        for (auto const& vs : prev_provider->vehicle_status_) {
+          mod_vehicle(*prev_provider, prev_vt_to_product, vs, false);
+        }
+      }
+      for (auto const& vs : provider.vehicle_status_) {
+        mod_vehicle(provider, vt_to_product, vs, true);
+      }
+    } else if (vehicle_status_changed) {
       utl::sorted_diff(
           prev_provider->vehicle_status_, provider.vehicle_status_,
           [](vehicle_status const& a, vehicle_status const& b) {
             return a.id_ < b.id_;
           },
           [](vehicle_status const& a, vehicle_status const& b) {
-            return a.pos_ == b.pos_;
+            return a.pos_ == b.pos_ &&
+                   a.station_id_.empty() == b.station_id_.empty() &&
+                   a.vehicle_type_idx_ == b.vehicle_type_idx_ &&
+                   a.is_reserved_ == b.is_reserved_ &&
+                   a.is_disabled_ == b.is_disabled_;
           },
           utl::overloaded{
               [&](utl::op const o, vehicle_status const& v) {
-                if (o == utl::op::kAdd) {
-                  d_->provider_rtree_.add(v.pos_, provider.idx_);
-                  ++added_vehicles;
-                } else {  // del
-                  d_->provider_rtree_.remove(v.pos_, provider.idx_);
-                  ++removed_vehicles;
-                }
+                mod_vehicle(provider, vt_to_product, v, o == utl::op::kAdd);
               },
               [&](vehicle_status const& a, vehicle_status const& b) {
-                d_->provider_rtree_.remove(a.pos_, provider.idx_);
-                d_->provider_rtree_.add(b.pos_, provider.idx_);
-                ++moved_vehicles;
+                mod_vehicle(provider, vt_to_product, a, false);
+                mod_vehicle(provider, vt_to_product, b, true);
               }});
+    }
+
+    if (!partition_stable || stations_changed || station_status_changed) {
+      if (prev_provider != nullptr) {
+        for (auto const& st : prev_provider->stations_ | std::views::values) {
+          mod_station(*prev_provider, st, false);
+        }
+      }
+      for (auto const& st : provider.stations_ | std::views::values) {
+        mod_station(provider, st, true);
+      }
+    }
+
+    if (prev_provider != nullptr) {
       if (zones_changed) {
         for (auto const& zone : prev_provider->geofencing_zones_.zones_) {
           d_->provider_zone_rtree_.remove(zone.bounding_box(), provider.idx_);
@@ -901,16 +1066,6 @@ struct gbfs_update {
         }
       }
     } else {
-      for (auto const& station : provider.stations_) {
-        d_->provider_rtree_.add(station.second.info_.pos_, provider.idx_);
-        ++added_stations;
-      }
-      for (auto const& vehicle : provider.vehicle_status_) {
-        if (vehicle.station_id_.empty()) {
-          d_->provider_rtree_.add(vehicle.pos_, provider.idx_);
-          ++added_vehicles;
-        }
-      }
       for (auto const& zone : provider.geofencing_zones_.zones_) {
         if (zone.allows_rental_operation()) {
           d_->provider_zone_rtree_.add(zone.bounding_box(), provider.idx_);
@@ -923,6 +1078,7 @@ struct gbfs_update {
       std::string const& prefix,
       std::string const& url,
       headers_t const& headers,
+      std::optional<std::filesystem::path> const& dir,
       std::shared_ptr<oauth_state>&& oauth,
       boost::json::object const& root,
       std::map<std::string, unsigned> const& default_ttl = {},
@@ -931,6 +1087,7 @@ struct gbfs_update {
         .id_ = prefix,
         .url_ = url,
         .headers_ = headers,
+        .dir_ = dir,
         .expiry_ = get_expiry(root, std::chrono::hours{1}, default_ttl,
                               overwrite_ttl, "manifest"),
         .oauth_ = std::move(oauth),
@@ -946,7 +1103,7 @@ struct gbfs_update {
     try {
       if (af.needs_update()) {
         auto const file = co_await fetch_file(
-            "manifest", af.url_, af.headers_, af.oauth_, std::nullopt,
+            "manifest", af.url_, af.headers_, af.oauth_, af.id_, af.dir_,
             af.default_ttl_, af.overwrite_ttl_);
         co_await process_aggregated_feed(af, file.json_.as_object());
       } else {
@@ -963,6 +1120,17 @@ struct gbfs_update {
                                           boost::json::object const& root) {
     auto feeds = std::vector<provider_feed>{};
     auto skipped_entries = 0U;
+    auto const resolve_dir = [&](std::string const& url,
+                                 std::string const& system_id) {
+      if (af.dir_.has_value()) {
+        return std::optional<std::filesystem::path>{*af.dir_ / system_id};
+      }
+      if (is_http_url(url)) {
+        return std::optional<std::filesystem::path>{};
+      }
+      auto const p = std::filesystem::path{url};
+      return std::optional<std::filesystem::path>{p};
+    };
 
     if (root.contains("data") && root.at("data").is_object() &&
         root.at("data").as_object().contains("datasets") &&
@@ -997,6 +1165,7 @@ struct gbfs_update {
               .id_ = combined_id,
               .url_ = url,
               .headers_ = af.headers_,
+              .dir_ = resolve_dir(url, system_id),
               .default_restrictions_ =
                   lookup_default_restrictions(af.id_, combined_id),
               .default_return_constraint_ =
@@ -1034,6 +1203,7 @@ struct gbfs_update {
               .id_ = combined_id,
               .url_ = url,
               .headers_ = af.headers_,
+              .dir_ = resolve_dir(url, system_id),
               .default_restrictions_ =
                   lookup_default_restrictions(af.id_, combined_id),
               .default_return_constraint_ =
@@ -1083,12 +1253,16 @@ struct gbfs_update {
       std::string_view const url,
       headers_t const& base_headers,
       std::shared_ptr<oauth_state> const& oauth,
+      std::string_view const feed_id,
       std::optional<std::filesystem::path> const& dir = std::nullopt,
       std::map<std::string, unsigned> const& default_ttl = {},
       std::map<std::string, unsigned> const& overwrite_ttl = {}) {
     auto content = std::string{};
+    auto source = std::string{url};
     if (dir.has_value()) {
-      content = read_file(*dir / fmt::format("{}.json", name));
+      auto const path = *dir / fmt::format("{}.json", name);
+      source = path.string();
+      content = read_file(path);
     } else {
       auto headers = base_headers;
       co_await get_oauth_token(oauth, headers);
@@ -1099,8 +1273,18 @@ struct gbfs_update {
         throw std::runtime_error(
             fmt::format("HTTP {} fetching {}", res.result_int(), url));
       }
+      if (gbfs_dump_enabled()) {
+        write_dump(gbfs_dump_dir(feed_id), name, content);
+      }
     }
-    auto j = json::parse(content);
+    auto j = [&]() {
+      try {
+        return json::parse(content);
+      } catch (std::exception const& ex) {
+        throw std::runtime_error(
+            fmt::format("error parsing {}: {}", source, ex.what()));
+      }
+    }();
     auto j_root = j.as_object();
     auto const next_refresh = get_expiry(j_root, std::chrono::seconds{0},
                                          default_ttl, overwrite_ttl, name);
@@ -1367,6 +1551,21 @@ awaitable<void> update(config const& c,
   }
   data_ptr = d;
   metrics->last_update_gbfs_.SetToCurrentTime();
+}
+
+void apply_canned_gbfs_update(config const& c, data& d) {
+  if (!c.gbfs_.has_value() || !c.gbfs_->canned_gbfs_ || d.w_ == nullptr ||
+      d.l_ == nullptr) {
+    return;
+  }
+  auto ioc = boost::asio::io_context{};
+  boost::asio::co_spawn(
+      ioc,
+      [&]() -> awaitable<void> {
+        co_await update(c, *d.w_, *d.l_, d.gbfs_, d.metrics_.get());
+      },
+      boost::asio::detached);
+  ioc.run();
 }
 
 void run_gbfs_update(boost::asio::io_context& ioc,

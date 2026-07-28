@@ -271,13 +271,14 @@ std::vector<n::routing::offset> get_offsets(
     auto const route = [&](osr::search_profile const p,
                            osr::sharing_data const* sharing) {
       auto const params = to_profile_parameters(p, osr_params);
-      auto const pos_match = r.l_->match(params, pos, false, dir,
-                                         max_matching_distance, nullptr, p);
+      auto pos_match = osr::match_result{};
+      r.l_->match(params, pos, false, dir, max_matching_distance, nullptr, p,
+                  {}, pos_match);
       auto const near_stop_matches = get_reverse_platform_way_matches(
           *r.l_, r.way_matches_, p, near_stops, near_stop_locations, dir,
           max_matching_distance);
       return osr::route(params, *r.w_, *r.l_, p, pos, near_stop_locations,
-                        pos_match, near_stop_matches,
+                        pos_match[osr::match_idx_t{0U}], near_stop_matches,
                         static_cast<osr::cost_t>(max.count()), dir, nullptr,
                         sharing, elevations);
     };
@@ -287,14 +288,33 @@ std::vector<n::routing::offset> get_offsets(
         return;
       }
 
-      auto const max_dist_to_departure =
+      auto const foot_radius =
+          get_max_distance(osr::search_profile::kFoot, osr_params, max);
+      auto const car_radius =
           dir == osr::direction::kForward
-              ? get_max_distance(osr::search_profile::kFoot, osr_params, max)
-              : max_dist;
+              ? foot_radius
+              : get_max_distance(osr::search_profile::kCarSharing, osr_params,
+                                 max);
+      auto const bike_radius =
+          dir == osr::direction::kForward
+              ? foot_radius
+              : get_max_distance(osr::search_profile::kBikeSharing, osr_params,
+                                 max);
+
+      auto candidate_products = hash_set<gbfs::gbfs_products_ref>{};
+      gbfs_rd.data_->car_products_rtree_.in_radius(
+          pos.pos_, car_radius, [&](auto const ref) {
+            candidate_products.insert(gbfs::from_ref_idx(ref));
+          });
+      gbfs_rd.data_->bike_products_rtree_.in_radius(
+          pos.pos_, bike_radius, [&](auto const ref) {
+            candidate_products.insert(gbfs::from_ref_idx(ref));
+          });
+
       auto providers = hash_set<gbfs_provider_idx_t>{};
-      gbfs_rd.data_->provider_rtree_.in_radius(
-          pos.pos_, max_dist_to_departure,
-          [&](auto const pi) { providers.insert(pi); });
+      for (auto const& cp : candidate_products) {
+        providers.insert(cp.provider_);
+      }
 
       for (auto const& pi : providers) {
         UTL_START_TIMING(provider_timer);
@@ -306,6 +326,10 @@ std::vector<n::routing::offset> get_offsets(
         }
         auto provider_rd = std::shared_ptr<gbfs::provider_routing_data>{};
         for (auto const& prod : provider->products_) {
+          if (!candidate_products.contains(
+                  gbfs::gbfs_products_ref{pi, prod.idx_})) {
+            continue;
+          }
           if ((prod.return_constraint_ ==
                    gbfs::return_constraint::kRoundtripStation &&
                !ignore_rental_return_constraints) ||
@@ -538,8 +562,8 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
         route_with_profile(flex::flex_output{*w_, *l_, pl_, matches_, ae_, tz_,
                                              *tags_, *tt_, *fa_, ids.front()});
       }
-    } else if (m == api::ModeEnum::CAR || m == api::ModeEnum::BIKE ||
-               m == api::ModeEnum::CAR_PARKING ||
+    } else if (m == api::ModeEnum::CAR || m == api::ModeEnum::HGV ||
+               m == api::ModeEnum::BIKE || m == api::ModeEnum::CAR_PARKING ||
                m == api::ModeEnum::CAR_DROPOFF ||
                m == api::ModeEnum::DEBUG_BUS_ROUTE ||
                m == api::ModeEnum::DEBUG_RAILWAY_ROUTE ||
@@ -552,11 +576,20 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
       // the station/vehicle
       auto const max_dist =
           get_max_distance(osr::search_profile::kFoot, osr_params, max);
+      auto candidate_products = hash_set<gbfs::gbfs_products_ref>{};
+      gbfs_rd.data_->car_products_rtree_.in_radius(
+          {from.lat_, from.lon_}, max_dist, [&](auto const r) {
+            candidate_products.insert(gbfs::from_ref_idx(r));
+          });
+      gbfs_rd.data_->bike_products_rtree_.in_radius(
+          {from.lat_, from.lon_}, max_dist, [&](auto const r) {
+            candidate_products.insert(gbfs::from_ref_idx(r));
+          });
       auto providers = hash_set<gbfs_provider_idx_t>{};
+      for (auto const& cp : candidate_products) {
+        providers.insert(cp.provider_);
+      }
       auto routed = 0U;
-      gbfs_rd.data_->provider_rtree_.in_radius(
-          {from.lat_, from.lon_}, max_dist,
-          [&](auto const pi) { providers.insert(pi); });
       for (auto const& pi : providers) {
         auto const& provider = gbfs_rd.data_->providers_.at(pi);
         if (!include_rental_provider(rental_providers, rental_provider_groups,
@@ -564,6 +597,10 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
           continue;
         }
         for (auto const& prod : provider->products_) {
+          if (!candidate_products.contains(
+                  gbfs::gbfs_products_ref{pi, prod.idx_})) {
+            continue;
+          }
           if (!gbfs::products_match(prod, form_factors, propulsion_types)) {
             continue;
           }
@@ -981,18 +1018,6 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
     auto search_state = n::routing::search_state{};
 #if defined(NIGIRI_CUDA)
     auto gpu_used = false;
-    auto const gpu_g_clasz =
-        q.allowed_claszes_ == n::routing::all_clasz_allowed();
-    auto const gpu_g_td = q.td_start_.empty() && q.td_dest_.empty();
-    auto const gpu_g_tts = q.transfer_time_settings_.default_;
-    auto const gpu_g_nobikecar =
-        !q.require_bike_transport_ && !q.require_car_transport_;
-    auto const gpu_g_novia = q.via_stops_.empty();
-    auto const gpu_g_profile =
-        q.prf_idx_ == 0U ||
-        (q.prf_idx_ == n::kFootProfile &&
-         (rtt == nullptr || (!rtt->has_td_footpaths_out_[q.prf_idx_].any() &&
-                             !rtt->has_td_footpaths_in_[q.prf_idx_].any())));
     auto const gpu_supported = n::routing::gpu::gpu_supported(q, rtt);
     auto const run_on_gpu = [&](bool const use_pong) -> bool {
       try {
@@ -1072,12 +1097,6 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
 #if defined(NIGIRI_CUDA)
         {"gpu_used", gpu_used},
         {"gpu_supported", gpu_supported},
-        {"gpu_g_clasz", gpu_g_clasz},
-        {"gpu_g_td", gpu_g_td},
-        {"gpu_g_tts", gpu_g_tts},
-        {"gpu_g_nobikecar", gpu_g_nobikecar},
-        {"gpu_g_novia", gpu_g_novia},
-        {"gpu_g_profile", gpu_g_profile},
 #endif
     };
 

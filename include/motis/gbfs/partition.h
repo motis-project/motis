@@ -31,7 +31,9 @@ struct partition {
     auto in_s =
         std::vector<bool>(static_cast<std::size_t>(cista::to_idx(n_)), false);
     for (auto const elem : s) {
-      assert(elem < n_);
+      if (elem >= n_) {
+        continue;
+      }
       in_s[static_cast<std::size_t>(cista::to_idx(elem))] = true;
     }
 

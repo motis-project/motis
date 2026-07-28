@@ -71,6 +71,18 @@ const translations: Translations = {
 	defaultSelectedModes: 'All transit modes',
 	defaultSelectedProviders: 'All providers',
 	selectElevationCosts: 'Avoid steep incline.',
+	hgvRoutingOptions: 'HGV options',
+	vehicleHeight: 'Vehicle height (m)',
+	vehicleWidth: 'Vehicle width (m)',
+	vehicleLength: 'Vehicle length (m)',
+	vehicleWeight: 'Vehicle weight (t)',
+	vehicleTopSpeed: 'Top speed (km/h)',
+	vehicleAxleCount: 'Axle count',
+	vehicleAxleLoad: 'Axle load (t)',
+	vehicleHazmat: 'Hazardous materials',
+	vehicleHazmatWater: 'Hazardous to water',
+	vehicleTrailer: 'Has trailer',
+	vehicleLezAccess: 'Low-emission zone access',
 	useRoutedTransfers: 'Use routed transfers',
 	wheelchair: 'Only wheelchair accessible connections',
 	bikeRental: 'Allow usage of sharing vehicles',
@@ -94,6 +106,7 @@ const translations: Translations = {
 	RENTAL: 'Sharing',
 	RIDE_SHARING: 'Ride sharing',
 	CAR: 'Car',
+	HGV: 'HGV',
 	CAR_PARKING: 'Car Parking',
 	CAR_DROPOFF: 'Drop-off (car)',
 	TRANSIT: 'Transit',
@@ -202,7 +215,9 @@ const translations: Translations = {
 		departuresAt: (stop) => `Departures in ${stop}`,
 		arrivalsAt: (stop) => `Arrivals in ${stop}`,
 		isochronesFrom: (place) => `Isochrones from ${place}`
-	}
+	},
+	tickets: 'Tickets',
+	routeInformation: 'More Information'
 };
 
 export default translations;

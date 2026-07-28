@@ -13,6 +13,7 @@
 #include "osr/routing/profiles/car_sharing.h"
 #include "osr/routing/profiles/ferry.h"
 #include "osr/routing/profiles/foot.h"
+#include "osr/routing/profiles/hgv.h"
 #include "osr/routing/profiles/railway.h"
 #include "osr/routing/tracking.h"
 
@@ -59,6 +60,10 @@ constexpr double get_max_distance(osr::profile_parameters const& p,
                         [](osr::bike_sharing::parameters const& params) {
                           return params.bike_.speed_meters_per_second_;
                         },
+                        [](osr::hgv::parameters const& params) {
+                          return static_cast<float>(params.top_speed_km_h_) /
+                                 3.6F;
+                        },
                         [](osr::bus::parameters const&) {
                           return osr_parameters::kBusSpeed;
                         },
@@ -104,6 +109,8 @@ static_assert(get_max_distance(osr::car::parameters{},
 static_assert(get_max_distance(osr::car_parking<false, true>::parameters{},
                                std::chrono::seconds(4)) ==
               4 * osr_parameters::kCarSpeed);
+static_assert(get_max_distance(osr::hgv::parameters{.top_speed_km_h_ = 72U},
+                               std::chrono::seconds(5)) == 100.0);
 static_assert(get_max_distance(osr::bus::parameters{},
                                std::chrono::seconds(8)) ==
               8 * osr_parameters::kBusSpeed);

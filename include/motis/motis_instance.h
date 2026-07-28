@@ -23,6 +23,7 @@
 #include "motis/endpoints/map/stops.h"
 #include "motis/endpoints/map/trips.h"
 #include "motis/endpoints/matches.h"
+#include "motis/endpoints/mcp.h"
 #include "motis/endpoints/metrics.h"
 #include "motis/endpoints/ojp.h"
 #include "motis/endpoints/one_to_all.h"
@@ -167,6 +168,12 @@ struct motis_instance {
                   .stop_times_ep_ = utl::init_from<ep::stop_times>(d),
                   .trip_ep_ = utl::init_from<ep::trip>(d),
               });
+
+    auto mcp = ep::mcp{.routing_ep_ = utl::init_from<ep::routing>(d),
+                       .geocoding_ep_ = utl::init_from<ep::geocode>(d),
+                       .motis_version_ = std::string{motis_version}};
+    qr_.route("GET", "/api/mcp", mcp);  // answered with 405 (no SSE stream)
+    qr_.route("POST", "/api/mcp", std::move(mcp));
 
     qr_.route("GET", "/metrics",
               ep::metrics{d.tt_.get(), d.tags_.get(), d.rt_, d.metrics_.get()});

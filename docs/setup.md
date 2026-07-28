@@ -160,8 +160,25 @@ gbfs:
     # GBFS manifest / Lamassu feed:
     mobidata-bw:
       url: https://api.mobidata-bw.de/sharing/gbfs/v3/manifest.json
-  update_interval: 300
-  http_timeout: 10
+  ttl:
+    # static information - always only refresh every 6h
+    overwrite:
+      gbfs: 21600
+      manifest: 21600
+      system_information: 21600
+      vehicle_types: 21600
+      station_information: 21600
+      geofencing_zones: 21600
+
+    # dynamic information - 3min
+    default:
+      station_status: 180
+      vehicle_status: 180
+      free_bike_status: 180
+  update_interval: 60
+  http_timeout: 30
+  cache_size: 50 # cache state of n most recently used providers, speeding up queries, slowing down updates
+  proxy: # HTTP proxy used for all GBFS requests
 ```
 
 ## Provider Names, Groups + Colors

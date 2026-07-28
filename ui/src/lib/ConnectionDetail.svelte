@@ -7,7 +7,8 @@
 		CircleX,
 		TriangleAlert,
 		Bike,
-		Accessibility
+		Accessibility,
+		ExternalLink
 	} from '@lucide/svelte';
 	import type {
 		FareProduct,
@@ -410,20 +411,6 @@
 					</span>
 				</div>
 
-				<div class="ml-4 mt-4">
-					{#if l.bikesAllowed}
-						<div title={t.bikesAllowed} class="inline">
-							<Bike aria-label={t.bikesAllowed} class="inline" />
-						</div>
-					{/if}
-
-					{#if l.wheelchairAccessible == 'ACCESSIBLE'}
-						<div title={t.wheelchairAccessible} class="inline">
-							<Accessibility aria-label={t.wheelchairAccessible} class="inline" />
-						</div>
-					{/if}
-				</div>
-
 				<Alerts alerts={l.alerts} tz={l.from.tz || l.to.tz} variant="full" />
 
 				{#if l.alternatives && l.alternatives.length > 0}
@@ -466,16 +453,55 @@
 					</div>
 				{/if}
 
-				{#if l.routeUrl}
+				<div class="m-4">
+					{#if l.bikesAllowed}
+						<div title={t.bikesAllowed} class="inline">
+							<Bike aria-label={t.bikesAllowed} class="inline" />
+						</div>
+					{/if}
+
+					{#if l.wheelchairAccessible == 'ACCESSIBLE'}
+						<div title={t.wheelchairAccessible} class="inline">
+							<Accessibility aria-label={t.wheelchairAccessible} class="inline" />
+						</div>
+					{/if}
+				</div>
+
+				{#if l.routeUrl || (l.ticketUrls && l.ticketUrls.web) || (l.agencyUrl && l.agencyName)}
 					<div class="mt-2 mr-4">
-						<Button
-							variant="secondary"
-							href={l.routeUrl}
-							target="_blank"
-							class="overflow-hidden text-ellipsis whitespace-nowrap w-full px-4 inline-block underline"
-						>
-							{l.routeUrl}
-						</Button>
+						{#if l.routeUrl}
+							<Button
+								variant="secondary"
+								href={l.routeUrl}
+								target="_blank"
+								class="overflow-hidden text-ellipsis whitespace-nowrap px-4 inline-block"
+							>
+								<ExternalLink class="inline" />
+								{t.routeInformation}
+							</Button>
+						{/if}
+						{#if (l.ticketUrls && l.ticketUrls.web) || l.agencyFareUrl}
+							<Button
+								variant="secondary"
+								href={(l.ticketUrls && l.ticketUrls.web) || l.agencyFareUrl}
+								target="_blank"
+								class="overflow-hidden text-ellipsis whitespace-nowrap px-4 inline-block"
+							>
+								<ExternalLink class="inline" />
+								{t.tickets}
+							</Button>
+						{/if}
+						{#if l.agencyUrl && l.agencyName}
+							<Button
+								variant="secondary"
+								href={l.agencyUrl}
+								target="_blank"
+								class="overflow-hidden text-ellipsis whitespace-nowrap px-4 inline-block"
+							>
+								<ExternalLink class="inline" />
+								{l.agencyName}
+							</Button>
+						{/if}
 					</div>
 				{/if}
 

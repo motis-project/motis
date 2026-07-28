@@ -133,6 +133,13 @@ std::string tag_lookup::route_id(n::rt::run_stop s,
                      s.get_route_id(ev_type));
 }
 
+std::string tag_lookup::get_trip_id(nigiri::timetable const& tt,
+                                    nigiri::rt::run_stop s,
+                                    nigiri::event_type const ev_type) const {
+  auto const t = id_fragments(tt, s, ev_type);
+  return t.trip_id_;
+}
+
 std::pair<n::rt::run, n::trip_idx_t> tag_lookup::get_trip(
     n::timetable const& tt,
     n::rt_timetable const* rtt,

@@ -12,6 +12,7 @@ declare global {
 			selectedItinerary?: Itinerary;
 			selectedStop?: { name: string; stopId: string; time: Date };
 			stopArriveBy?: boolean;
+			exactRadius?: boolean;
 			tripId?: string;
 			activeTab?: 'connections' | 'departures' | 'isochrones';
 			scrollY?: number;

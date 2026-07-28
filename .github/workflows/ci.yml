@@ -48,6 +48,12 @@ jobs:
         working-directory: ui
         run: pnpm -r build
 
+      - name: Check generated OpenAPI client is up to date
+        run: |
+          git config --global --add safe.directory `pwd`
+          git status --porcelain
+          git status --porcelain | xargs -I {} -0 test -z \"{}\"
+
       - name: Code Lint
         working-directory: ui
         run: pnpm run lint

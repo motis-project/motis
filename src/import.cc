@@ -18,8 +18,8 @@
 #include "utl/to_vec.h"
 
 #include "tiles/db/clear_database.h"
-#include "tiles/db/feature_inserter_mt.h"
 #include "tiles/db/feature_pack.h"
+#include "tiles/db/feature_shard.h"
 #include "tiles/db/pack_file.h"
 #include "tiles/db/prepare_tiles.h"
 #include "tiles/db/tile_database.h"
@@ -462,8 +462,7 @@ void import(config const& c,
       meta_entry_t{"osr_footpath_settings", cista::BASE_HASH};
   if (c.timetable_) {
     auto& h = osr_footpath_settings_hash.second;
-    h = cista::hash_combine(h, c.timetable_->use_osm_stop_coordinates_,
-                            c.timetable_->extend_missing_footpaths_,
+    h = cista::hash_combine(h, c.timetable_->extend_missing_footpaths_,
                             c.timetable_->max_matching_distance_,
                             c.timetable_->max_footpath_length_);
   }
@@ -496,8 +495,7 @@ void import(config const& c,
                });
              }}};
         auto const elevator_footpath_map = compute_footpaths(
-            *d.w_, *d.l_, *d.pl_, *d.tt_, d.elevations_.get(),
-            c.timetable_->use_osm_stop_coordinates_, profiles);
+            *d.w_, *d.l_, *d.pl_, *d.tt_, d.elevations_.get(), profiles);
 
         cista::write(data_path / "elevator_footpath_map.bin",
                      elevator_footpath_map);
@@ -606,23 +604,24 @@ void import(config const& c,
         ::tiles::pack_handle pack_handle{path.c_str()};
 
         {
-          ::tiles::feature_inserter_mt inserter{
-              ::tiles::dbi_handle{db_handle, db_handle.features_dbi_opener()},
-              pack_handle};
+          auto pool = ::tiles::shard_pool{dir};
 
           if (c.tiles_->coastline_.has_value()) {
             progress_tracker->status("Load Coastlines").out_bounds(0, 20);
-            ::tiles::load_coastlines(db_handle, inserter,
+            ::tiles::load_coastlines(db_handle, pool.acquire(),
                                      c.tiles_->coastline_->generic_string());
           }
 
           progress_tracker->status("Load Features").out_bounds(20, 70);
-          ::tiles::load_osm(db_handle, inserter, c.osm_->generic_string(),
+          ::tiles::load_osm(db_handle, pool, c.osm_->generic_string(),
                             c.tiles_->profile_.generic_string(),
                             dir.generic_string(), c.tiles_->flush_threshold_);
+
+          progress_tracker->status("Merge Shards").out_bounds(70, 80);
+          ::tiles::merge_shards(pool, db_handle, pack_handle);
         }
 
-        progress_tracker->status("Pack Features").out_bounds(70, 90);
+        progress_tracker->status("Pack Features").out_bounds(80, 90);
         ::tiles::pack_features(db_handle, pack_handle);
 
         progress_tracker->status("Prepare Tiles").out_bounds(90, 100);
