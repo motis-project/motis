@@ -334,7 +334,14 @@
 			const stopId = urlParams.get('stopId');
 			if (stopId !== null) {
 				const time = urlParams.has('time') ? new Date(urlParams.get('time')!) : new Date();
-				onClickStop('', stopId, time, urlParams.get('stopArriveBy') == 'true', true);
+				onClickStop(
+					'',
+					stopId,
+					time,
+					urlParams.get('stopArriveBy') == 'true',
+					true,
+					urlParams.get('exactRadius') == 'true'
+				);
 			}
 
 			const itineraryId = urlParams.get('itineraryId');
@@ -1237,6 +1244,7 @@
 						bind:stopMarker
 						bind:stopNameFromResponse
 						arriveBy={page.state.stopArriveBy}
+						exactRadius={page.state.exactRadius}
 					/>
 				</div>
 			</Card>
@@ -1369,7 +1377,7 @@
 			{/if}
 
 			{#if colorMode === 'stops'}
-				<StopsView {map} {bounds} {zoom} {theme} />
+				<StopsView {map} {bounds} {zoom} {level} {theme} />
 			{/if}
 			<RailViz
 				{map}

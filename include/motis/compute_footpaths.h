@@ -29,7 +29,6 @@ elevator_footpath_map_t compute_footpaths(
     osr::platforms const&,
     nigiri::timetable&,
     osr::elevation_storage const*,
-    bool update_coordinates,
     std::vector<routed_transfers_settings> const& settings);
 
 }  // namespace motis
