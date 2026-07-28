@@ -391,7 +391,7 @@ int generate(int ac, char** av) {
         thread_local auto ss = std::optional<n::routing::search_state>{};
         thread_local auto rs = std::optional<n::routing::raptor_state>{};
         thread_local auto geo_distance =
-            std::unordered_map<n::location_idx_t, double>{};
+            hash_map<n::location_idx_t, double>{};
 
         if (geo_rank) {
           geo_distance.reserve(master_stops.size());
