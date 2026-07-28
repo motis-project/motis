@@ -12,6 +12,7 @@
 
 	let {
 		label,
+		ariaLabel,
 		disabled,
 		modes = $bindable(),
 		maxTransitTime = $bindable(),
@@ -21,6 +22,7 @@
 		providerGroups = $bindable()
 	}: {
 		label: string;
+		ariaLabel: string,
 		disabled?: boolean;
 		modes: PrePostDirectMode[];
 		maxTransitTime: number;
@@ -143,7 +145,7 @@
 	>
 		<Select.Trigger
 			class="flex items-center w-full overflow-hidden"
-			aria-label={t.routingSegments.maxPreTransitTime}
+			aria-label={ariaLabel}
 		>
 			{formatDurationSec(maxTransitTime)}
 		</Select.Trigger>
