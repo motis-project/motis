@@ -301,7 +301,7 @@ void way_matches_storage::preprocess_osr_matches(
       pt->update_fn());
 }
 
-std::vector<osr::match_t> get_reverse_platform_way_matches(
+osr::match_result get_reverse_platform_way_matches(
     osr::lookup const& lookup,
     way_matches_storage const* way_matches,
     osr::search_profile const p,
@@ -313,8 +313,7 @@ std::vector<osr::match_t> get_reverse_platform_way_matches(
   auto const use_raw_matches =
       way_matches && !way_matches->matches_.empty() &&
       way_matches->max_matching_distance_ >= max_matching_distance;
-  auto result = std::vector<osr::match_t>{};
-  result.reserve(locations.size());
+  auto result = osr::match_result{};
   for (auto const [i, ll] :
        utl::enumerate(utl::zip(locations, osr_locations))) {
     auto const& [l, query] = ll;
@@ -323,10 +322,10 @@ std::vector<osr::match_t> get_reverse_platform_way_matches(
       auto const& m = way_matches->matches_[l];
       raw_matches = {m.begin(), m.end()};
     }
-    result.emplace_back(lookup.match_endpoint(
+    lookup.match_endpoint(
         to_profile_parameters(p, {}), query, true, dir, max_matching_distance,
         nullptr, p, i < exact_return_allowed.size() && exact_return_allowed[i],
-        raw_matches));
+        raw_matches, false, result);
   }
   return result;
 };

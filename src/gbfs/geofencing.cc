@@ -28,9 +28,11 @@ bool multipoly_contains_point(tg_geom const* geom, geo::latlng const& pos) {
 }
 
 geofencing_restrictions get_default_restrictions(
-    gbfs_provider const& provider, provider_products const& product) {
+    gbfs_provider const& provider,
+    provider_products const& product,
+    std::vector<rule> const& global_rules) {
   auto restrictions = provider.default_restrictions_;
-  for (auto const& rule : provider.geofencing_zones_.global_rules_) {
+  for (auto const& rule : global_rules) {
     if (!applies(rule.vehicle_type_idxs_, product.vehicle_types_)) {
       continue;
     }
@@ -51,11 +53,29 @@ geofencing_restrictions get_default_restrictions(
   return restrictions;
 }
 
+geofencing_restrictions get_default_restrictions(
+    gbfs_provider const& provider, provider_products const& product) {
+  auto global_rules = std::vector<rule>{};
+  for (auto const& zone : provider.geofencing_zones_.zones_) {
+    if (zone.is_global() && provider.geofencing_zones_.zones_.size() != 1U) {
+      global_rules.insert(global_rules.begin(), zone.rules_.begin(),
+                          zone.rules_.end());
+    }
+  }
+  global_rules.insert(global_rules.end(),
+                      provider.geofencing_zones_.global_rules_.begin(),
+                      provider.geofencing_zones_.global_rules_.end());
+  return get_default_restrictions(provider, product, global_rules);
+}
+
 geofencing_restrictions get_restrictions(gbfs_provider const& provider,
                                          provider_products const& product,
                                          geo::latlng const& pos) {
   auto restrictions = get_default_restrictions(provider, product);
   for (auto const& zone : provider.geofencing_zones_.zones_) {
+    if (zone.is_global() && provider.geofencing_zones_.zones_.size() != 1U) {
+      continue;
+    }
     auto const box = zone.bounding_box();
     if (pos.lat_ < box.min_.lat_ || pos.lat_ > box.max_.lat_ ||
         pos.lng_ < box.min_.lng_ || pos.lng_ > box.max_.lng_) {

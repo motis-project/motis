@@ -73,7 +73,6 @@ TEST(motis, routing_slow_direct) {
           config::timetable{
               .first_day_ = "2019-05-01",
               .num_days_ = 2,
-              .use_osm_stop_coordinates_ = true,
               .extend_missing_footpaths_ = false,
               .datasets_ = {{"test", {.path_ = std::string{kSlowDirectGTFS}}}}},
       .gbfs_ = {{.feeds_ = {{"CAB", {.url_ = "./test/resources/gbfs"}}}}},

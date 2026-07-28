@@ -6,6 +6,7 @@
 #include <optional>
 #include <string_view>
 #include <variant>
+#include <vector>
 
 #include "boost/thread/tss.hpp"
 
@@ -270,6 +271,13 @@ std::vector<n::routing::offset> get_offsets(
         near_stops,
         [&](n::location_idx_t const l) { return stop_to_osr_location(r, l); });
 
+    struct near_stop_match_cache_entry {
+      osr::search_profile profile_;
+      std::vector<std::uint8_t> exact_return_allowed_;
+      osr::match_result matches_;
+    };
+    auto near_stop_match_cache = std::vector<near_stop_match_cache_entry>{};
+
     auto const route = [&](osr::search_profile const p,
                            osr::sharing_data const* sharing,
                            gbfs::gbfs_provider const* provider = nullptr,
@@ -306,22 +314,35 @@ std::vector<n::routing::offset> get_offsets(
                  UTL_GET_TIMING_MS(endpoint_restrictions_timer));
 
       UTL_START_TIMING(match_position_timer);
-      auto const pos_match =
-          r.l_->match_endpoint(params, pos, false, dir, max_matching_distance,
-                               nullptr, p, exact_at_pos);
+      auto pos_match = osr::match_result{};
+      r.l_->match_endpoint(params, pos, false, dir, max_matching_distance,
+                           nullptr, p, exact_at_pos, std::nullopt, true,
+                           pos_match);
       add_timing("match_position", UTL_GET_TIMING_MS(match_position_timer));
 
       UTL_START_TIMING(match_stops_timer);
-      auto const near_stop_matches = get_reverse_platform_way_matches(
-          *r.l_, r.way_matches_, p, near_stops, near_stop_locations, dir,
-          max_matching_distance, exact_at_stops);
+      auto cached_matches =
+          utl::find_if(near_stop_match_cache, [&](auto const& entry) {
+            return entry.profile_ == p &&
+                   entry.exact_return_allowed_ == exact_at_stops;
+          });
+      if (cached_matches == end(near_stop_match_cache)) {
+        auto matches = get_reverse_platform_way_matches(
+            *r.l_, r.way_matches_, p, near_stops, near_stop_locations, dir,
+            max_matching_distance, exact_at_stops);
+        near_stop_match_cache.emplace_back(p, exact_at_stops,
+                                           std::move(matches));
+        cached_matches = std::prev(end(near_stop_match_cache));
+      }
+      auto const& near_stop_matches = cached_matches->matches_;
       add_timing("match_stops", UTL_GET_TIMING_MS(match_stops_timer));
 
       UTL_START_TIMING(osr_route_timer);
-      auto paths = osr::route(params, *r.w_, *r.l_, p, pos, near_stop_locations,
-                              pos_match, near_stop_matches,
-                              static_cast<osr::cost_t>(max.count()), dir,
-                              nullptr, sharing, elevations);
+      auto paths =
+          osr::route(params, *r.w_, *r.l_, p, pos, near_stop_locations,
+                     pos_match[osr::match_idx_t{0U}], near_stop_matches,
+                     static_cast<osr::cost_t>(max.count()), dir, nullptr,
+                     sharing, elevations);
       add_timing("osr_route", UTL_GET_TIMING_MS(osr_route_timer));
       return paths;
     };
