@@ -273,6 +273,7 @@ std::vector<n::routing::offset> get_offsets(
 
     struct near_stop_match_cache_entry {
       osr::search_profile profile_;
+      osr::direction direction_;
       std::vector<std::uint8_t> exact_return_allowed_;
       osr::match_result matches_;
     };
@@ -300,26 +301,26 @@ std::vector<n::routing::offset> get_offsets(
 
       auto pos_match = osr::match_result{};
       r.l_->match_endpoint(params, pos, false, dir, max_matching_distance,
-                           nullptr, p, exact_at_pos, std::nullopt, true,
+                           nullptr, p, exact_at_pos, std::nullopt, false,
                            pos_match);
 
-      auto cached_matches =
+      auto cached_near_stop_matches =
           utl::find_if(near_stop_match_cache, [&](auto const& entry) {
-            return entry.profile_ == p &&
+            return entry.profile_ == p && entry.direction_ == dir &&
                    entry.exact_return_allowed_ == exact_at_stops;
           });
-      if (cached_matches == end(near_stop_match_cache)) {
+      if (cached_near_stop_matches == end(near_stop_match_cache)) {
         auto matches = get_reverse_platform_way_matches(
             *r.l_, r.way_matches_, p, near_stops, near_stop_locations, dir,
             max_matching_distance, exact_at_stops);
-        near_stop_match_cache.emplace_back(p, exact_at_stops,
+        near_stop_match_cache.emplace_back(p, dir, exact_at_stops,
                                            std::move(matches));
-        cached_matches = std::prev(end(near_stop_match_cache));
+        cached_near_stop_matches = std::prev(end(near_stop_match_cache));
       }
-      auto const& near_stop_matches = cached_matches->matches_;
 
       return osr::route(params, *r.w_, *r.l_, p, pos, near_stop_locations,
-                        pos_match[osr::match_idx_t{0U}], near_stop_matches,
+                        pos_match[osr::match_idx_t{0U}],
+                        cached_near_stop_matches->matches_,
                         static_cast<osr::cost_t>(max.count()), dir, nullptr,
                         sharing, elevations);
     };
