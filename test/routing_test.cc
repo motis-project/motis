@@ -325,6 +325,44 @@ TEST(motis, routing_osm_only_direct_walk) {
   EXPECT_EQ(api::ModeEnum::WALK, res.direct_.front().legs_.front().mode_);
 }
 
+TEST(motis, routing_radius_without_osm) {
+  auto ec = std::error_code{};
+  std::filesystem::remove_all("test/data_radius", ec);
+
+  auto const c =
+      config{.server_ = {{.web_folder_ = "ui/build", .n_threads_ = 1U}},
+             .timetable_ = config::timetable{
+                 .first_day_ = "2019-05-01",
+                 .num_days_ = 2,
+                 .extend_missing_footpaths_ = false,
+                 .datasets_ = {{"test", {.path_ = std::string{kGTFS}}}}}};
+  import(c, "test/data_radius");
+  auto d = data{"test/data_radius", c};
+
+  auto const routing = utl::init_from<ep::routing>(d).value();
+
+  // fromPlace is ~1962m from DA_10, toPlace is ~1994m from FFM_10.
+  // Without street routing data the offsets are rendered as crow-fly legs.
+  auto const res = routing(
+      "?fromPlace=49.89100,8.62900"
+      "&toPlace=50.08800,8.66100"
+      "&time=2019-05-01T01:30Z"
+      "&radius=5000"
+      "&timetableView=false"
+      "&numLegAlternatives=3");
+
+  ASSERT_FALSE(res.itineraries_.empty());
+  auto const& j = res.itineraries_.front();
+  ASSERT_EQ(3U, j.legs_.size());
+  EXPECT_EQ(api::ModeEnum::WALK, j.legs_.front().mode_);
+  EXPECT_EQ(api::ModeEnum::WALK, j.legs_.back().mode_);
+  EXPECT_EQ("ICE", j.legs_[1].routeShortName_.value_or("-"));
+  // dist / kWalkSpeed, truncated to whole minutes: 1962m -> 21min,
+  // 1994m -> 22min.
+  EXPECT_EQ(21 * 60, j.legs_.front().duration_);
+  EXPECT_EQ(22 * 60, j.legs_.back().duration_);
+}
+
 TEST(motis, routing) {
   auto ec = std::error_code{};
   std::filesystem::remove_all("test/data", ec);
@@ -764,9 +802,16 @@ TEST(motis, routing) {
         "&timetableView=false"
         "&numLegAlternatives=3");
     ASSERT_FALSE(res.itineraries_.empty());
-    EXPECT_TRUE(utl::any_of(res.itineraries_.front().legs_, [](auto const& l) {
+    auto const& j = res.itineraries_.front();
+    EXPECT_TRUE(utl::any_of(j.legs_, [](auto const& l) {
       return l.routeShortName_.has_value() && *l.routeShortName_ == "ICE";
     }));
+    // The stops are not free anymore: reaching them costs the crow-fly
+    // distance walked at kWalkSpeed.
+    EXPECT_EQ(api::ModeEnum::WALK, j.legs_.front().mode_);
+    EXPECT_EQ(api::ModeEnum::WALK, j.legs_.back().mode_);
+    EXPECT_GT(j.legs_.front().duration_, 0);
+    EXPECT_GT(j.legs_.back().duration_, 0);
   }
 
   // Route using radius on origin coordinate, station ID as destination.
