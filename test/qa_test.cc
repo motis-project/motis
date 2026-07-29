@@ -180,5 +180,5 @@ TEST(qa, walking_time) {
                 {.mode_ = api::ModeEnum::WALK, .duration_ = 333},
                 {.mode_ = api::ModeEnum::TRANSIT, .duration_ = 444},
                 {.mode_ = api::ModeEnum::WALK, .duration_ = 555}}};
-  EXPECT_EQ(qa::criterion::walkingTime<1.0>(i), 999.0);
+  EXPECT_EQ(qa::criterion::walking_time<1.0>(i), 999.0);
 }

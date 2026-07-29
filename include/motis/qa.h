@@ -44,7 +44,7 @@ double transfers(api::Itinerary const& i) {
 }
 
 template <double Weight>
-double walkingTime(api::Itinerary const& i) {
+double walking_time(api::Itinerary const& i) {
   auto walking_time = std::int64_t{0};
   for (auto const& l : i.legs_) {
     if (l.mode_ == api::ModeEnum::WALK) {
