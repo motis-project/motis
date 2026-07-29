@@ -71,7 +71,7 @@ int compare(int ac, char** av) {
   };
   auto const params = [](api::Itinerary const& x) {
     return std::tuple(x.startTime_, x.endTime_, x.transfers_,
-                      qa::criterion::walkingTime<1.0>(x));
+                      qa::criterion::walking_time<1.0>(x));
   };
   auto const equal = [&](std::vector<api::Itinerary> const& a,
                          std::vector<api::Itinerary> const& b) {
@@ -88,7 +88,7 @@ int compare(int ac, char** av) {
   auto const print_params = [](api::Itinerary const& x) {
     std::cout << x.startTime_ << ", " << x.endTime_
               << ", transfers=" << std::setw(2) << std::left << x.transfers_
-              << ", t_walk=" << qa::criterion::walkingTime<1.0>(x) << "\n";
+              << ", walk=" << qa::criterion::walking_time<1.0>(x);
   };
   auto const print_none = []() { std::cout << "\t\t\t\t\t\t"; };
   auto n_equal = 0U;
@@ -116,12 +116,17 @@ int compare(int ac, char** av) {
         std::cout << " [INCOMPLETE!!]";
       }
       std::cout << "\n";
-      std::cout << "qa::rate: "
-                << qa::rate(uut, ref,
-                            std::vector<qa::criterion_t>{
-                                qa::criterion::start_time<1.0>,
-                                qa::criterion::end_time<1.0>,
-                                qa::criterion::transfers<30.0>})
+      auto const rating = qa::rate(
+          uut, ref,
+          std::vector<qa::criterion_t>{
+              qa::criterion::start_time<1.0>, qa::criterion::end_time<1.0>,
+              qa::criterion::transfers<30.0>,
+              qa::criterion::walking_time<1.0 / 60.0>});
+      std::cout << "qa::rate of response " << i
+                << " compared to ref: " << rating
+                << (rating > 0   ? " ( -> improvement )"
+                    : rating < 0 ? " ( -> decline )"
+                                 : " ( -> no change)")
                 << "\n";
       utl::sorted_diff(
           ref, uut,
