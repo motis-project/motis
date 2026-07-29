@@ -122,8 +122,7 @@ int compare(int ac, char** av) {
               qa::criterion::start_time<1.0>, qa::criterion::end_time<1.0>,
               qa::criterion::transfers<30.0>,
               qa::criterion::walking_time<1.0 / 60.0>});
-      std::cout << "qa::rate of response " << i
-                << " compared to ref: " << rating
+      std::cout << "rating for response " << i << ": " << rating
                 << (rating > 0   ? " ( -> improvement )"
                     : rating < 0 ? " ( -> decline )"
                                  : " ( -> no change)")
