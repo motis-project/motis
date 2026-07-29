@@ -270,7 +270,8 @@
 			pedestrianSpeed: parseIntOr(urlParams?.get('pedestrianSpeed'), undefined),
 			maxMatchingDistance: parseIntOr(urlParams?.get('maxMatchingDistance'), undefined),
 			maxPreTransitTime: parseIntOr(urlParams?.get('maxPreTransitTime'), undefined),
-			maxPostTransitTime: parseIntOr(urlParams?.get('maxPostTransitTime'), undefined)
+			maxPostTransitTime: parseIntOr(urlParams?.get('maxPostTransitTime'), undefined),
+			maxDirectTime: parseIntOr(urlParams?.get('maxDirectTime'), undefined)
 		});
 
 		const { data: itinerary, error } = await refreshItinerary({ query });

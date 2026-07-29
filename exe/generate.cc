@@ -14,9 +14,11 @@
 
 #include "utl/parallel_for.h"
 #include "utl/progress_tracker.h"
+#include "utl/raii.h"
 
 #include "motis-api/motis-api.h"
 #include "motis/config.h"
+#include "motis/constants.h"
 #include "motis/data.h"
 #include "motis/endpoints/routing.h"
 #include "motis/odm/bounds.h"
@@ -91,6 +93,7 @@ int generate(int ac, char** av) {
   auto lb_rank = true;
   auto geo_rank = std::optional<std::uint64_t>{};
   tg_geom* bounds{nullptr};
+  auto const free_bounds = utl::make_finally([&]() { tg_geom_free(bounds); });
   auto master_params = api::plan_params{};
 
   auto const parse_date = [](std::string_view const s) {
@@ -146,7 +149,6 @@ int generate(int ac, char** av) {
     bounds = s == "europe" ? tg_parse_geojson(kEuropeBounds)
                            : tg_parse_geojsonn(s.data(), s.size());
     if (char const* err = tg_geom_error(bounds)) {
-      tg_geom_free(bounds);
       throw utl::fail("unable to parse bounds GeoJSON: {}", err);
     }
   };
@@ -482,7 +484,7 @@ int generate(int ac, char** av) {
     random_time();
 
     auto guard = std::lock_guard{mutex};
-    out << s.p_.to_url("/api/v1/plan") << "\n";
+    out << s.p_.to_url(kPlanPath) << "\n";
     progress_tracker->increment();
   });
 

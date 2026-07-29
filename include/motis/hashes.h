@@ -26,13 +26,13 @@ constexpr auto const tbd_version = []() {
   return meta_entry_t{"tbd_bin_ver", 1U};
 };
 constexpr auto const matches_version = []() {
-  return meta_entry_t{"matches_bin_ver", 5U};
+  return meta_entry_t{"matches_bin_ver", 6U};
 };
 constexpr auto const tiles_version = []() {
   return meta_entry_t{"tiles_bin_ver", 2U};
 };
 constexpr auto const osr_footpath_version = []() {
-  return meta_entry_t{"osr_footpath_bin_ver", 4U};
+  return meta_entry_t{"osr_footpath_bin_ver", 5U};
 };
 constexpr auto const routed_shapes_version = []() {
   return meta_entry_t{"routed_shapes_ver", 11U};

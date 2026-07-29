@@ -458,6 +458,9 @@ void data::load_auser_updater(std::string_view tag,
   };
 
   for (auto const& rt : *d.rt_) {
+    if (rt.protocol_ == config::timetable::dataset::rt::protocol::gtfsrt) {
+      continue;
+    }
     auser_->try_emplace(rt.url_, *tt_, tags_->get_src(tag),
                         convert(rt.protocol_));
   }
