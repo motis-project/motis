@@ -301,8 +301,7 @@ std::vector<n::routing::offset> get_offsets(
 
       auto pos_match = osr::match_result{};
       r.l_->match_endpoint(params, pos, false, dir, max_matching_distance,
-                           nullptr, p, exact_at_pos, std::nullopt, false,
-                           pos_match);
+                           nullptr, p, exact_at_pos, std::nullopt, pos_match);
 
       auto cached_near_stop_matches =
           utl::find_if(near_stop_match_cache, [&](auto const& entry) {

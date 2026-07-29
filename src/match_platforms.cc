@@ -325,7 +325,7 @@ osr::match_result get_reverse_platform_way_matches(
     lookup.match_endpoint(
         to_profile_parameters(p, {}), query, true, dir, max_matching_distance,
         nullptr, p, i < exact_return_allowed.size() && exact_return_allowed[i],
-        raw_matches, false, result);
+        raw_matches, result);
   }
   return result;
 };
