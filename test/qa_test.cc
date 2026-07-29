@@ -4,8 +4,6 @@
 
 #include "motis/qa.h"
 
-#include "motis/timetable/time_conv.h"
-
 using namespace date;
 using namespace motis;
 using namespace nigiri;
