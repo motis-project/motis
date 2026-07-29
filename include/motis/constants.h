@@ -2,6 +2,9 @@
 
 namespace motis {
 
+// Current /plan API version for query generation.
+constexpr auto const kPlanPath = "/api/v6/plan";
+
 // search radius for neighbors to route to [meters]
 constexpr auto const kMaxDistance = 2000;
 

@@ -50,11 +50,13 @@ osr::level_t get_lvl(osr::ways const* w,
                             : osr::kNoLevel;
 }
 
-double get_level(osr::ways const* w,
-                 osr::platforms const* pl,
-                 platform_matches_t const* matches,
-                 n::location_idx_t const l) {
-  return get_lvl(w, pl, matches, l).to_float();
+std::optional<double> get_level(osr::ways const* w,
+                                osr::platforms const* pl,
+                                platform_matches_t const* matches,
+                                n::location_idx_t const l) {
+  auto const lvl = get_lvl(w, pl, matches, l);
+  return lvl.has_level() ? std::optional{static_cast<double>(lvl.to_float())}
+                         : std::nullopt;
 }
 
 osr::location get_location(api::Place const& p) {

@@ -21,8 +21,16 @@ const PRESENTATION_ATTRS = [
 	'style'
 ] as const;
 
-/** maplibre image id for a stop marker of the given mode. */
-export const stopIconId = (mode: Mode | undefined): string => `stop-${mode ?? 'OTHER'}`;
+/** Colors of the "not on the currently selected level" marker variant. */
+const DIMMED_BG = '#9ca3af';
+const DIMMED_FG = '#ffffff';
+
+/**
+ * maplibre image id for a stop marker of the given mode. `dimmed` selects the
+ * grey variant used for stops that are not on the selected level.
+ */
+export const stopIconId = (mode: Mode | undefined, dimmed: boolean = false): string =>
+	`stop-${mode ?? 'OTHER'}${dimmed ? '-dimmed' : ''}`;
 
 /**
  * Builds a standalone, single-color SVG from one of the inline <symbol>
@@ -66,8 +74,10 @@ function renderGlyph(symbolId: string, color: string, size: number): Promise<HTM
 }
 
 /** Renders a colored circle marker with the mode's SVG glyph centered on it. */
-async function createStopMarkerImage(mode: Mode): Promise<ImageData> {
-	const [symbolId, bg, fg] = getModeStyle({ mode } as LegLike);
+async function createStopMarkerImage(mode: Mode, dimmed: boolean): Promise<ImageData> {
+	const [symbolId, modeBg, modeFg] = getModeStyle({ mode } as LegLike);
+	const bg = dimmed ? DIMMED_BG : modeBg;
+	const fg = dimmed ? DIMMED_FG : modeFg;
 
 	const size = MARKER_SIZE * PIXEL_RATIO;
 	const canvas = document.createElement('canvas');
@@ -96,7 +106,8 @@ async function createStopMarkerImage(mode: Mode): Promise<ImageData> {
 
 /**
  * Registers stop marker images for every given mode (plus the OTHER fallback)
- * on the map, skipping any that already exist. Safe to call repeatedly.
+ * on the map, in both the normal and the dimmed variant, skipping any that
+ * already exist. Safe to call repeatedly.
  */
 export async function ensureStopIcons(map: maplibregl.Map, modes: Mode[]): Promise<void> {
 	if (!browser) {
@@ -105,15 +116,17 @@ export async function ensureStopIcons(map: maplibregl.Map, modes: Mode[]): Promi
 	const wanted = new Set<Mode>(modes);
 	wanted.add('OTHER');
 	await Promise.all(
-		[...wanted].map(async (mode) => {
-			const id = stopIconId(mode);
-			if (map.hasImage(id)) {
-				return;
-			}
-			const image = await createStopMarkerImage(mode);
-			if (!map.hasImage(id)) {
-				map.addImage(id, image, { pixelRatio: PIXEL_RATIO });
-			}
-		})
+		[...wanted].flatMap((mode) =>
+			[false, true].map(async (dimmed) => {
+				const id = stopIconId(mode, dimmed);
+				if (map.hasImage(id)) {
+					return;
+				}
+				const image = await createStopMarkerImage(mode, dimmed);
+				if (!map.hasImage(id)) {
+					map.addImage(id, image, { pixelRatio: PIXEL_RATIO });
+				}
+			})
+		)
 	);
 }
