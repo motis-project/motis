@@ -46,9 +46,9 @@ double transfers(api::Itinerary const& i) {
 template <double Weight>
 double walkingTime(api::Itinerary const& i) {
   return static_cast<double>(std::accumulate(
-             begin(i.legs_), end(i.legs_), 0,
+             begin(i.legs_), end(i.legs_), 0L,
              [](auto const& a, auto const& b) {
-               return a + (b.mode_ == api::ModeEnum::WALK ? b.duration_ : 0);
+               return a + (b.mode_ == api::ModeEnum::WALK ? b.duration_ : 0L);
              })) *
          Weight;
 }
