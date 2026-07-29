@@ -310,15 +310,22 @@ vehicle_details resolve_details(
 
   if (auto fr = resolve_run(*tags, *tt, rtt, v); fr.has_value()) {
     apply_trip_run_details(details, *tags, *tt, *fr, shapes, lang);
+    details.match_state_ = api::VehicleMatchStateEnum::MATCHED_TRIP;
   }
   if (!details.route_.has_value()) {
     if (auto fr = resolve_static_trip_run_by_id(*tags, *tt, v);
         fr.has_value()) {
       apply_trip_run_details(details, *tags, *tt, *fr, shapes, lang);
+      details.match_state_ =
+          api::VehicleMatchStateEnum::MATCHED_ROUTE_ONLY;
     }
   }
   if (!details.route_.has_value()) {
     details.route_ = resolve_route_info_by_id(*tags, *tt, v, lang);
+    if (details.route_.has_value()) {
+      details.match_state_ =
+          api::VehicleMatchStateEnum::MATCHED_ROUTE_ONLY;
+    }
   }
   if (!details.mode_.has_value()) {
     details.mode_ = resolve_mode_by_route_id(*tags, *tt, v);
@@ -350,6 +357,7 @@ api::VehiclePosition to_api(
               .headsign_ = std::move(details.headsign_),
               .directionId_ = to_i64(vehicle.trip_.direction_id_),
               .scheduleRelationship_ = vehicle.trip_.schedule_relationship_},
+      .matchState_ = details.match_state_,
       .route_ = std::move(details.route_),
       .reportedPosition_ =
           api::ReportedVehiclePosition{

@@ -53,6 +53,10 @@ api::VehiclePositionsResponse vehicles::operator()(
     }
     auto details = vehicle_matching::resolve_details(
         tags_, tt_, rtt, shapes_, vehicle, query.language_);
+    if (!query.includeUnmatched_ &&
+        details.match_state_ == api::VehicleMatchStateEnum::UNMATCHED) {
+      continue;
+    }
     res.vehicles_.emplace_back(vehicle_matching::to_api(
         vehicle, std::move(details), query.includeShapes_));
   }

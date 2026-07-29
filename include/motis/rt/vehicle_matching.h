@@ -15,6 +15,8 @@ struct frun;
 namespace motis::vehicle_matching {
 
 struct vehicle_details {
+  api::VehicleMatchStateEnum match_state_{
+      api::VehicleMatchStateEnum::UNMATCHED};
   std::optional<std::string> scheduled_trip_id_;
   std::optional<std::string> headsign_;
   std::optional<api::TransitVehicleRouteInfo> route_;

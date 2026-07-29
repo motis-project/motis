@@ -2781,6 +2781,15 @@ paths:
           schema:
             type: integer
             format: int64
+        - name: includeUnmatched
+          in: query
+          required: false
+          description: |
+            Include vehicle positions that could not be matched to a timetable
+            trip or route. Intended for realtime feed-quality inspection.
+          schema:
+            type: boolean
+            default: false
       responses:
         '400':
           description: Bad Request
@@ -4342,6 +4351,13 @@ components:
           description: Speed in meters per second.
           type: number
 
+    VehicleMatchState:
+      type: string
+      enum:
+        - MATCHED_TRIP
+        - MATCHED_ROUTE_ONLY
+        - UNMATCHED
+
     VehiclePosition:
       type: object
       required:
@@ -4349,6 +4365,7 @@ components:
         - entityId
         - vehicle
         - trip
+        - matchState
         - reportedPosition
         - ingestedTime
       properties:
@@ -4362,6 +4379,9 @@ components:
           $ref: '#/components/schemas/TransitVehicleDescriptor'
         trip:
           $ref: '#/components/schemas/TransitVehicleTripDescriptor'
+        matchState:
+          $ref: '#/components/schemas/VehicleMatchState'
+          description: Timetable matching tier reached for this vehicle.
         route:
           $ref: '#/components/schemas/TransitVehicleRouteInfo'
           description: Passenger-facing route metadata for marker labels and colors when resolvable.

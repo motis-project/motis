@@ -264,7 +264,8 @@ TEST(motis_vehicle_positions, endpoint_returns_viewport_payload) {
   auto endpoint = motis::ep::vehicles{.config_ = c, .rt_ = rt};
 
   auto const res =
-      endpoint("/api/v1/map/vehicles?min=50.0,19.8&max=50.2,20.1");
+      endpoint("/api/v1/map/vehicles?min=50.0,19.8&max=50.2,20.1"
+               "&includeUnmatched=true");
 
   ASSERT_THAT(res.vehicles_, SizeIs(1));
   EXPECT_EQ(res.vehicles_.front().feedId_, "feed");
@@ -288,7 +289,8 @@ TEST(motis_vehicle_positions, endpoint_freshness_uses_reported_time) {
   auto endpoint = motis::ep::vehicles{.config_ = c, .rt_ = rt};
 
   auto const res =
-      endpoint("/api/v1/map/vehicles?min=50.0,19.8&max=50.2,20.1");
+      endpoint("/api/v1/map/vehicles?min=50.0,19.8&max=50.2,20.1"
+               "&includeUnmatched=true");
 
   EXPECT_TRUE(res.vehicles_.empty());
 }
@@ -305,7 +307,8 @@ TEST(motis_vehicle_positions,
   auto endpoint = motis::ep::vehicles{.config_ = c, .rt_ = rt};
 
   auto const res =
-      endpoint("/api/v1/map/vehicles?min=50.0,19.8&max=50.2,20.1");
+      endpoint("/api/v1/map/vehicles?min=50.0,19.8&max=50.2,20.1"
+               "&includeUnmatched=true");
 
   ASSERT_THAT(res.vehicles_, SizeIs(1));
   EXPECT_EQ(res.vehicles_.front().entityId_, "fresh");
@@ -323,9 +326,11 @@ TEST(motis_vehicle_positions, endpoint_max_age_overrides_default) {
   auto endpoint = motis::ep::vehicles{.config_ = c, .rt_ = rt};
 
   auto const smaller = endpoint(
-      "/api/v1/map/vehicles?min=50.0,19.8&max=50.2,20.1&maxAge=30");
+      "/api/v1/map/vehicles?min=50.0,19.8&max=50.2,20.1&maxAge=30"
+      "&includeUnmatched=true");
   auto const larger = endpoint(
-      "/api/v1/map/vehicles?min=50.0,19.8&max=50.2,20.1&maxAge=120");
+      "/api/v1/map/vehicles?min=50.0,19.8&max=50.2,20.1&maxAge=120"
+      "&includeUnmatched=true");
 
   EXPECT_TRUE(smaller.vehicles_.empty());
   EXPECT_THAT(
@@ -334,6 +339,31 @@ TEST(motis_vehicle_positions, endpoint_max_age_overrides_default) {
                         Eq("forty-seconds-old")),
                   Field(&motis::api::VehiclePosition::entityId_,
                         Eq("ninety-seconds-old"))));
+}
+
+TEST(motis_vehicle_positions,
+     endpoint_unmatched_and_freshness_filters_compose) {
+  auto const c = motis::config{
+      .timetable_ = {motis::config::timetable{.update_interval_ = 15}}};
+  auto rt = std::make_shared<motis::rt>();
+  rt->vehicle_positions_->replace_feed(
+      "feed",
+      {position("feed", "fresh-unmatched", 50.061, 19.938, unix_now()),
+       position("feed", "stale-unmatched", 50.071, 19.948,
+                unix_now() - 61)});
+  auto endpoint = motis::ep::vehicles{.config_ = c, .rt_ = rt};
+
+  auto const default_res =
+      endpoint("/api/v1/map/vehicles?min=50.0,19.8&max=50.2,20.1");
+  auto const debug_res =
+      endpoint("/api/v1/map/vehicles?min=50.0,19.8&max=50.2,20.1"
+               "&includeUnmatched=true");
+
+  EXPECT_TRUE(default_res.vehicles_.empty());
+  ASSERT_THAT(debug_res.vehicles_, SizeIs(1));
+  EXPECT_EQ(debug_res.vehicles_.front().entityId_, "fresh-unmatched");
+  EXPECT_EQ(debug_res.vehicles_.front().matchState_,
+            motis::api::VehicleMatchStateEnum::UNMATCHED);
 }
 
 TEST(motis_vehicle_positions, rt_update_consumes_vehicle_only_gtfsrt_feed) {
@@ -359,7 +389,9 @@ TEST(motis_vehicle_positions, rt_update_consumes_vehicle_only_gtfsrt_feed) {
   auto d = motis::data{"data", c};
 
   fs::create_directory("dump_rt");
-  auto const feed = feed_with_vehicle(50.061, 19.938, "prefix-route-1");
+  auto feed = feed_with_vehicle(50.061, 19.938, "prefix-route-1");
+  feed.mutable_entity(0)->mutable_vehicle()->mutable_trip()->set_start_time(
+      "01:00:00");
   auto dump = std::ofstream{"dump_rt/test-https___example_test_"
                             "vehicle_positions",
                             std::ios::binary};
@@ -391,6 +423,8 @@ TEST(motis_vehicle_positions, rt_update_consumes_vehicle_only_gtfsrt_feed) {
       endpoint("/api/v1/map/vehicles?min=50.0,19.8&max=50.2,20.1");
 
   ASSERT_THAT(res.vehicles_, SizeIs(1));
+  EXPECT_EQ(res.vehicles_.front().matchState_,
+            motis::api::VehicleMatchStateEnum::MATCHED_TRIP);
   ASSERT_TRUE(res.vehicles_.front().route_.has_value());
   EXPECT_EQ(res.vehicles_.front().route_->shortName_, "1");
   ASSERT_TRUE(res.vehicles_.front().trip_.scheduledTripId_.has_value());
@@ -427,11 +461,32 @@ TEST(motis_vehicle_positions, rt_update_consumes_vehicle_only_gtfsrt_feed) {
   auto const route_only_res = route_only_endpoint(
       "/api/v1/map/vehicles?min=50.0,19.8&max=50.2,20.1");
   ASSERT_THAT(route_only_res.vehicles_, SizeIs(1));
+  EXPECT_EQ(route_only_res.vehicles_.front().matchState_,
+            motis::api::VehicleMatchStateEnum::MATCHED_ROUTE_ONLY);
   EXPECT_TRUE(route_only_res.vehicles_.front().route_.has_value());
   EXPECT_TRUE(route_only_res.vehicles_.front().mode_.has_value());
   EXPECT_FALSE(route_only_res.vehicles_.front().trip_.headsign_.has_value());
   EXPECT_FALSE(route_only_res.vehicles_.front().shape_.has_value());
   EXPECT_FALSE(route_only_res.vehicles_.front().shapeId_.has_value());
+
+  auto unmatched = position("unknown", "unmatched", 50.061, 19.938,
+                            unix_now());
+  auto unmatched_rt = std::make_shared<motis::rt>();
+  unmatched_rt->vehicle_positions_->replace_feed("unknown", {unmatched});
+  auto unmatched_endpoint = motis::ep::vehicles{.tags_ = d.tags_.get(),
+                                                .tt_ = d.tt_.get(),
+                                                .shapes_ = d.shapes_.get(),
+                                                .config_ = c,
+                                                .rt_ = unmatched_rt};
+  auto const unmatched_default = unmatched_endpoint(
+      "/api/v1/map/vehicles?min=50.0,19.8&max=50.2,20.1");
+  auto const unmatched_debug = unmatched_endpoint(
+      "/api/v1/map/vehicles?min=50.0,19.8&max=50.2,20.1"
+      "&includeUnmatched=true");
+  EXPECT_TRUE(unmatched_default.vehicles_.empty());
+  ASSERT_THAT(unmatched_debug.vehicles_, SizeIs(1));
+  EXPECT_EQ(unmatched_debug.vehicles_.front().matchState_,
+            motis::api::VehicleMatchStateEnum::UNMATCHED);
 
   auto differential = feed_with_vehicle(50.071, 19.948);
   differential.mutable_header()->set_incrementality(
