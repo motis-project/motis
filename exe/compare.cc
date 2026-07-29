@@ -23,8 +23,8 @@
 #include "utl/verify.h"
 
 #include "motis-api/motis-api.h"
-#include "motis/qa.h"
 #include "motis/constants.h"
+#include "motis/qa.h"
 #include "motis/types.h"
 
 #include "./flags.h"
@@ -70,7 +70,8 @@ int compare(int ac, char** av) {
     std::vector<std::optional<api::plan_response>> responses_{};
   };
   auto const params = [](api::Itinerary const& x) {
-    return std::tie(x.startTime_, x.endTime_, x.transfers_);
+    return std::tuple(x.startTime_, x.endTime_, x.transfers_,
+                      qa::criterion::walkingTime<1.0>(x));
   };
   auto const equal = [&](std::vector<api::Itinerary> const& a,
                          std::vector<api::Itinerary> const& b) {
@@ -86,7 +87,8 @@ int compare(int ac, char** av) {
   };
   auto const print_params = [](api::Itinerary const& x) {
     std::cout << x.startTime_ << ", " << x.endTime_
-              << ", transfers=" << std::setw(2) << std::left << x.transfers_;
+              << ", transfers=" << std::setw(2) << std::left << x.transfers_
+              << ", t_walk=" << qa::criterion::walkingTime<1.0>(x) << "\n";
   };
   auto const print_none = []() { std::cout << "\t\t\t\t\t\t"; };
   auto n_equal = 0U;
@@ -108,8 +110,8 @@ int compare(int ac, char** av) {
       }
 
       mismatch = true;
-      std::cout << "QUERY=" << x.id_ << " ["
-                << x.params_->to_url(kPlanPath) << "]";
+      std::cout << "QUERY=" << x.id_ << " [" << x.params_->to_url(kPlanPath)
+                << "]";
       if (is_incomplete) {
         std::cout << " [INCOMPLETE!!]";
       }

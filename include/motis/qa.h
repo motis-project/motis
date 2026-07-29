@@ -45,12 +45,13 @@ double transfers(api::Itinerary const& i) {
 
 template <double Weight>
 double walkingTime(api::Itinerary const& i) {
-  return static_cast<double>(std::accumulate(
-             begin(i.legs_), end(i.legs_), 0L,
-             [](auto const& a, auto const& b) {
-               return a + (b.mode_ == api::ModeEnum::WALK ? b.duration_ : 0L);
-             })) *
-         Weight;
+  auto walking_time = std::int64_t{0};
+  for (auto const& l : i.legs_) {
+    if (l.mode_ == api::ModeEnum::WALK) {
+      walking_time += l.duration_;
+    }
+  }
+  return static_cast<double>(walking_time) * Weight;
 }
 
 }  // namespace criterion
