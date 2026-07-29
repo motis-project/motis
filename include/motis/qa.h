@@ -1,6 +1,7 @@
 #pragma once
 
 #include <functional>
+#include <numeric>
 #include <vector>
 
 #include "boost/graph/properties.hpp"
@@ -39,6 +40,11 @@ double end_time(api::Itinerary const& i) {
 template <double Weight>
 double transfers(api::Itinerary const& i) {
   return static_cast<double>(i.transfers_) * Weight;
+}
+
+template <double Weight>
+double walkingTime(api::Itinerary const& i) {
+  return std::accumulate(begin(i.legs_), end(i.legs_), 0,[](auto const& a, auto const& b) { return a + (b.mode_ == api::ModeEnum::WALK ? b.duration_ : 0); }) * Weight;
 }
 
 }  // namespace criterion

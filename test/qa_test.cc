@@ -173,4 +173,12 @@ TEST(qa, test5) {
   EXPECT_DOUBLE_EQ(32.37407751772509, qa::rate(b, a, criteria));
 }
 
-TEST(qa, walking_time) { auto const i }
+TEST(qa, walking_time) {
+  auto const i = api::Itinerary{
+      .legs_ = {{.mode_ = api::ModeEnum::WALK, .duration_ = 111},
+                {.mode_ = api::ModeEnum::TRANSIT, .duration_ = 222},
+                {.mode_ = api::ModeEnum::WALK, .duration_ = 333},
+                {.mode_ = api::ModeEnum::TRANSIT, .duration_ = 444},
+                {.mode_ = api::ModeEnum::WALK, .duration_ = 555}}};
+  EXPECT_EQ(qa::criterion::walkingTime<1.0>(i), 999);
+}
