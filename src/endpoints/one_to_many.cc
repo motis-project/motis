@@ -151,6 +151,7 @@ std::vector<api::ParetoSet> transit_durations(
       .allowed_claszes_ = to_clasz_mask(query.transitModes_),
       .require_bike_transport_ = query.requireBikeTransport_,
       .require_car_transport_ = query.requireCarTransport_,
+      .no_compulsory_reservation_ = query.noCompulsoryReservation_,
       .transfer_time_settings_ =
           n::routing::transfer_time_settings{
               .default_ = (query.minTransferTime_ == 0 &&

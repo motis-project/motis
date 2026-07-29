@@ -90,6 +90,7 @@ const translations: Translations = {
 	bikeRental: 'Povol použití sdílených vozidel',
 	requireBikeTransport: 'Přeprava kola',
 	requireCarTransport: 'Přeprava auta',
+	noCompulsoryReservation: 'No reservation required',
 	considerRentalReturnConstraints: 'Vrať sdílené vozidla během cesty',
 	default: 'default',
 	timetableSources: 'Zdroje dát JŘ',

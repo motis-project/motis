@@ -90,6 +90,7 @@ const translations: Translations = {
 	bikeRental: 'Użyj pojazdów współdzielonych',
 	requireBikeTransport: 'Przewóz roweru',
 	requireCarTransport: 'Przewóz samochodu',
+	noCompulsoryReservation: 'No reservation required',
 	considerRentalReturnConstraints: 'Zwróć pojazd współdzielony podczas podróży',
 	default: 'Domyślne',
 	timetableSources: 'Źródła danych rozkładowych',

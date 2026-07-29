@@ -251,6 +251,7 @@
 			useRoutedTransfers: boolParam('useRoutedTransfers'),
 			requireBikeTransport: boolParam('requireBikeTransport'),
 			requireCarTransport: boolParam('requireCarTransport'),
+			noCompulsoryReservation: boolParam('noCompulsoryReservation'),
 			preTransitModes: arrParam('preTransitModes') as Mode[] | undefined,
 			postTransitModes: arrParam('postTransitModes') as Mode[] | undefined,
 			preTransitRentalFormFactors: arrParam('preTransitRentalFormFactors') as
@@ -436,6 +437,7 @@
 	) as CyclingSpeed;
 	let requireBikeTransport = $state(urlParams?.get('requireBikeTransport') == 'true');
 	let requireCarTransport = $state(urlParams?.get('requireCarTransport') == 'true');
+	let noCompulsoryReservation = $state(urlParams?.get('noCompulsoryReservation') == 'true');
 	let transitModes = $state<Mode[]>(
 		getUrlArray('transitModes', defaultQuery.transitModes) as Mode[]
 	);
@@ -620,6 +622,7 @@
 						directRentalProviderGroups: providerGroupsForQuery(directModes, directProviderGroups),
 						requireBikeTransport,
 						requireCarTransport,
+						noCompulsoryReservation,
 						elevationCosts,
 						useRoutedTransfers,
 						maxTransfers: maxTransfers,
@@ -665,6 +668,7 @@
 		useRoutedTransfers,
 		requireBikeTransport,
 		requireCarTransport,
+		noCompulsoryReservation,
 		preTransitModes: prePostModesToModes(preTransitModes),
 		postTransitModes: prePostModesToModes(postTransitModes),
 		preTransitRentalFormFactors: getFormFactors(preTransitModes),
@@ -705,6 +709,7 @@
 						pedestrianProfile,
 						requireBikeTransport,
 						requireCarTransport,
+						noCompulsoryReservation,
 						preTransitModes: prePostModesToModes(preTransitModes),
 						postTransitModes: prePostModesToModes(postTransitModes),
 						maxPreTransitTime,
@@ -1035,6 +1040,7 @@
 						bind:pedestrianProfile
 						bind:requireCarTransport
 						bind:requireBikeTransport
+						bind:noCompulsoryReservation
 						bind:transitModes
 						bind:preTransitModes
 						bind:postTransitModes
@@ -1091,6 +1097,7 @@
 						bind:pedestrianProfile
 						bind:requireCarTransport
 						bind:requireBikeTransport
+						bind:noCompulsoryReservation
 						bind:transitModes
 						bind:maxTransfers
 						bind:preTransitModes

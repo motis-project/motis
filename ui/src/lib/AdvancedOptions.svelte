@@ -35,6 +35,7 @@
 		wheelchair = $bindable(),
 		requireBikeTransport = $bindable(),
 		requireCarTransport = $bindable(),
+		noCompulsoryReservation = $bindable(),
 		transitModes = $bindable(),
 		maxTransfers = $bindable(),
 		maxTravelTime = $bindable(undefined),
@@ -80,6 +81,7 @@
 		wheelchair: boolean;
 		requireBikeTransport: boolean;
 		requireCarTransport: boolean;
+		noCompulsoryReservation: boolean;
 		transitModes: TransitMode[];
 		maxTransfers: number;
 		maxTravelTime: number | undefined;
@@ -231,6 +233,11 @@
 					}
 					setModes('CAR')(checked);
 				}}
+			/>
+			<Switch
+				bind:checked={noCompulsoryReservation}
+				label={t.noCompulsoryReservation}
+				id="noCompulsoryReservation"
 			/>
 		</div>
 		<ViaStopOptions bind:via bind:viaMinimumStay bind:viaLabels />
