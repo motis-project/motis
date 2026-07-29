@@ -35,16 +35,22 @@ api::VehiclePositionsResponse vehicles::operator()(
       config_.timetable_.has_value()
           ? std::chrono::seconds{config_.timetable_->update_interval_}
           : std::chrono::seconds{60};
-  auto const max_age = std::max(std::chrono::seconds{60}, 3 * update_interval);
-  auto const min_ingested_time =
+  auto const default_max_age =
+      std::max(std::chrono::seconds{60}, 3 * update_interval);
+  auto const max_age =
+      std::chrono::seconds{query.maxAge_.value_or(default_max_age.count())};
+  auto const cutoff =
       std::chrono::duration_cast<std::chrono::seconds>(
           std::chrono::system_clock::now().time_since_epoch() - max_age)
           .count();
   auto const snapshot = rt->vehicle_positions_->snapshot(
       vehicle_positions::vehicle_viewport{.min_ = min->pos_, .max_ = max->pos_},
-      min_ingested_time);
+      std::nullopt);
   res.vehicles_.reserve(snapshot.size());
   for (auto const& vehicle : snapshot) {
+    if (vehicle.reported_time_.value_or(vehicle.ingested_time_) < cutoff) {
+      continue;
+    }
     auto details = vehicle_matching::resolve_details(
         tags_, tt_, rtt, shapes_, vehicle, query.language_);
     res.vehicles_.emplace_back(vehicle_matching::to_api(

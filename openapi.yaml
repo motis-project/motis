@@ -2770,6 +2770,17 @@ paths:
           schema:
             type: boolean
             default: true
+        - name: maxAge
+          in: query
+          required: false
+          description: |
+            Maximum vehicle position age in seconds. Age is based on the
+            realtime feed's reported timestamp when present and otherwise on
+            the server ingest timestamp. When omitted, the server uses the
+            larger of 60 seconds and three timetable update intervals.
+          schema:
+            type: integer
+            format: int64
       responses:
         '400':
           description: Bad Request

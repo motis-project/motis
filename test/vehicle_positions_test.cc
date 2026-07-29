@@ -277,6 +277,65 @@ TEST(motis_vehicle_positions, endpoint_returns_viewport_payload) {
   EXPECT_EQ(res.vehicles_.front().occupancyStatus_, "NO_DATA_AVAILABLE");
 }
 
+TEST(motis_vehicle_positions, endpoint_freshness_uses_reported_time) {
+  auto const c = motis::config{
+      .timetable_ = {motis::config::timetable{.update_interval_ = 15}}};
+  auto rt = std::make_shared<motis::rt>();
+  auto stale_report = position("feed", "stale-report", 50.061, 19.938,
+                               unix_now());
+  stale_report.reported_time_ = unix_now() - 61;
+  rt->vehicle_positions_->replace_feed("feed", {stale_report});
+  auto endpoint = motis::ep::vehicles{.config_ = c, .rt_ = rt};
+
+  auto const res =
+      endpoint("/api/v1/map/vehicles?min=50.0,19.8&max=50.2,20.1");
+
+  EXPECT_TRUE(res.vehicles_.empty());
+}
+
+TEST(motis_vehicle_positions,
+     endpoint_freshness_falls_back_to_ingested_time) {
+  auto const c = motis::config{
+      .timetable_ = {motis::config::timetable{.update_interval_ = 15}}};
+  auto rt = std::make_shared<motis::rt>();
+  rt->vehicle_positions_->replace_feed(
+      "feed",
+      {position("feed", "fresh", 50.061, 19.938, unix_now()),
+       position("feed", "stale", 50.071, 19.948, unix_now() - 61)});
+  auto endpoint = motis::ep::vehicles{.config_ = c, .rt_ = rt};
+
+  auto const res =
+      endpoint("/api/v1/map/vehicles?min=50.0,19.8&max=50.2,20.1");
+
+  ASSERT_THAT(res.vehicles_, SizeIs(1));
+  EXPECT_EQ(res.vehicles_.front().entityId_, "fresh");
+}
+
+TEST(motis_vehicle_positions, endpoint_max_age_overrides_default) {
+  auto const c = motis::config{
+      .timetable_ = {motis::config::timetable{.update_interval_ = 15}}};
+  auto rt = std::make_shared<motis::rt>();
+  rt->vehicle_positions_->replace_feed(
+      "feed", {position("feed", "forty-seconds-old", 50.061, 19.938,
+                        unix_now() - 40),
+               position("feed", "ninety-seconds-old", 50.071, 19.948,
+                        unix_now() - 90)});
+  auto endpoint = motis::ep::vehicles{.config_ = c, .rt_ = rt};
+
+  auto const smaller = endpoint(
+      "/api/v1/map/vehicles?min=50.0,19.8&max=50.2,20.1&maxAge=30");
+  auto const larger = endpoint(
+      "/api/v1/map/vehicles?min=50.0,19.8&max=50.2,20.1&maxAge=120");
+
+  EXPECT_TRUE(smaller.vehicles_.empty());
+  EXPECT_THAT(
+      larger.vehicles_,
+      ElementsAre(Field(&motis::api::VehiclePosition::entityId_,
+                        Eq("forty-seconds-old")),
+                  Field(&motis::api::VehiclePosition::entityId_,
+                        Eq("ninety-seconds-old"))));
+}
+
 TEST(motis_vehicle_positions, rt_update_consumes_vehicle_only_gtfsrt_feed) {
   auto const test_dir = fs::absolute("test/data/vehicle-only-rt-update");
   auto ec = std::error_code{};
