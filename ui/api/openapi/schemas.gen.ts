@@ -454,10 +454,11 @@ export const RealtimeModeSchema = {
 - \`REALTIME\`: use realtime data for routing/sorting.
 - \`REALTIME_ANNOTATION_ONLY\`: route, sort and window on the scheduled
   timetable only, but still annotate the response with realtime data.
+- \`FULL\`: search on both the scheduled and the realtime timetable and merge the results.
 - \`OFF\`: use the scheduled timetable only, with no realtime annotation.
 `,
     type: 'string',
-    enum: ['OFF', 'REALTIME_ANNOTATION_ONLY', 'REALTIME']
+    enum: ['OFF', 'REALTIME_ANNOTATION_ONLY', 'REALTIME', 'FULL']
 } as const;
 
 export const PedestrianProfileSchema = {
