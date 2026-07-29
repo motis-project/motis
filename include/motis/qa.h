@@ -33,8 +33,9 @@ double start_time(api::Itinerary const& i) {
 template <double Weight>
 double end_time(api::Itinerary const& i) {
   return static_cast<double>(std::chrono::round<std::chrono::minutes>(
-                                  i.endTime_.time_.time_since_epoch())
-                                  .count()) * Weight;
+                                 i.endTime_.time_.time_since_epoch())
+                                 .count()) *
+         Weight;
 }
 
 template <double Weight>
@@ -44,7 +45,12 @@ double transfers(api::Itinerary const& i) {
 
 template <double Weight>
 double walkingTime(api::Itinerary const& i) {
-  return std::accumulate(begin(i.legs_), end(i.legs_), 0,[](auto const& a, auto const& b) { return a + (b.mode_ == api::ModeEnum::WALK ? b.duration_ : 0); }) * Weight;
+  return std::accumulate(
+             begin(i.legs_), end(i.legs_), 0,
+             [](auto const& a, auto const& b) {
+               return a + (b.mode_ == api::ModeEnum::WALK ? b.duration_ : 0);
+             }) *
+         Weight;
 }
 
 }  // namespace criterion
