@@ -1,6 +1,7 @@
 #include "motis/qa.h"
 
 #include <cmath>
+#include <numbers>
 
 namespace motis::qa {
 
