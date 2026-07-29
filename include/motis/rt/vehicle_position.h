@@ -77,6 +77,8 @@ struct vehicle_position_store {
       vehicle_viewport const&,
       std::optional<std::int64_t> min_ingested_time = std::nullopt) const;
 
+  [[nodiscard]] std::vector<vehicle_position> const& all() const;
+
   [[nodiscard]] bool empty() const;
 
 private:

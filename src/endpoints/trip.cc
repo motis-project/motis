@@ -14,6 +14,7 @@
 #include "motis/gbfs/routing_data.h"
 #include "motis/journey_to_response.h"
 #include "motis/parse_location.h"
+#include "motis/rt/vehicle_matching.h"
 #include "motis/server.h"
 #include "motis/tag_lookup.h"
 
@@ -44,7 +45,7 @@ api::Itinerary trip::operator()(boost::urls::url_view const& url) const {
   auto blocked = osr::bitvec<osr::node_idx_t>{};
   auto gbfs_rd = gbfs::gbfs_routing_data{};
 
-  return journey_to_response(
+  auto response = journey_to_response(
       w_, l_, pl_, tt_, tags_, nullptr, nullptr, rtt, matches_, nullptr,
       shapes_, gbfs_rd, ae_, tz_,
       {.legs_ = {n::routing::journey::leg{
@@ -66,6 +67,13 @@ api::Itinerary trip::operator()(boost::urls::url_view const& url) const {
       query.detailedLegs_, false, query.withScheduledSkippedStops_,
       config_.timetable_.value().max_matching_distance_, kMaxMatchingDistance,
       api_version, false, false, query.language_, nullptr);
+  if (rt->vehicle_positions_ != nullptr && !response.legs_.empty()) {
+    response.legs_.front().primaryVehicle_ =
+        vehicle_matching::primary_vehicle(
+            tags_, tt_, rtt, shapes_, *rt->vehicle_positions_, fr,
+            query.language_);
+  }
+  return response;
 }
 
 }  // namespace motis::ep

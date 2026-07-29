@@ -4582,6 +4582,11 @@ components:
           type: string
         tripId:
           type: string
+        primaryVehicle:
+          $ref: '#/components/schemas/VehiclePosition'
+          description: |
+            Deterministically selected live vehicle for this transit leg when
+            a current VehiclePosition can be matched to its trip.
         routeShortName:
           type: string
         routeLongName:

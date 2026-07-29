@@ -14,14 +14,17 @@
 #include "gtfsrt/gtfs-realtime.pb.h"
 
 #include "net/bad_request_exception.h"
+#include "nigiri/rt/frun.h"
 #include "openapi/bad_request_exception.h"
 
 #include "motis/config.h"
 #include "motis/data.h"
 #include "motis/endpoints/map/vehicles.h"
 #include "motis/import.h"
+#include "motis/rt/vehicle_matching.h"
 #include "motis/rt/vehicle_position.h"
 #include "motis/rt_update.h"
+#include "motis/tag_lookup.h"
 
 using namespace motis::vehicle_positions;
 using namespace testing;
@@ -487,6 +490,94 @@ TEST(motis_vehicle_positions, rt_update_consumes_vehicle_only_gtfsrt_feed) {
   ASSERT_THAT(unmatched_debug.vehicles_, SizeIs(1));
   EXPECT_EQ(unmatched_debug.vehicles_.front().matchState_,
             motis::api::VehicleMatchStateEnum::UNMATCHED);
+
+  auto const target_id = *res.vehicles_.front().trip_.scheduledTripId_;
+  auto const [target_run, _] =
+      d.tags_->get_trip(*d.tt_, d.rt_->rtt_.get(), target_id);
+  auto const target = nigiri::rt::frun{*d.tt_, d.rt_->rtt_.get(), target_run};
+  auto select = [&](std::vector<vehicle_position> candidates) {
+    auto store = vehicle_position_store{};
+    store.replace_feed("test", std::move(candidates));
+    return motis::vehicle_matching::primary_vehicle(
+        *d.tags_, *d.tt_, d.rt_->rtt_.get(), d.shapes_.get(), store, target,
+        nigiri::lang_t{});
+  };
+  auto candidate = snapshot.front();
+  candidate.feed_id_ = "test";
+  candidate.reported_time_ = 100;
+
+  auto const single = select({candidate});
+  ASSERT_TRUE(single.has_value());
+  EXPECT_EQ(single->entityId_, "entity-1");
+
+  auto unrelated = candidate;
+  unrelated.entity_id_ = "unrelated";
+  unrelated.trip_.trip_id_ = "other-trip";
+  EXPECT_FALSE(select({unrelated}).has_value());
+
+  auto route_only_candidate = candidate;
+  route_only_candidate.entity_id_ = "route-only";
+  route_only_candidate.trip_.start_time_ = "12:34:00";
+  auto const route_only_single = select({route_only_candidate});
+  ASSERT_TRUE(route_only_single.has_value());
+  EXPECT_EQ(route_only_single->entityId_, "route-only");
+  auto exact_candidate = candidate;
+  exact_candidate.entity_id_ = "exact";
+  auto exact_selected = select({route_only_candidate, exact_candidate});
+  ASSERT_TRUE(exact_selected.has_value());
+  EXPECT_EQ(exact_selected->entityId_, "exact");
+
+  auto no_vehicle_id = candidate;
+  no_vehicle_id.entity_id_ = "no-vehicle-id";
+  no_vehicle_id.vehicle_.id_ = std::nullopt;
+  auto with_vehicle_id = candidate;
+  with_vehicle_id.entity_id_ = "with-vehicle-id";
+  auto vehicle_id_selected = select({no_vehicle_id, with_vehicle_id});
+  ASSERT_TRUE(vehicle_id_selected.has_value());
+  EXPECT_EQ(vehicle_id_selected->entityId_, "with-vehicle-id");
+
+  auto conflicting_vehicle_id = candidate;
+  conflicting_vehicle_id.entity_id_ = "conflicting-id";
+  conflicting_vehicle_id.vehicle_.id_ = "other-id";
+  auto consistent_vehicle_id = candidate;
+  consistent_vehicle_id.entity_id_ = "consistent-id";
+  consistent_vehicle_id.vehicle_.id_ = "consistent-id";
+  auto vehicle_id_consistency_selected =
+      select({conflicting_vehicle_id, consistent_vehicle_id});
+  ASSERT_TRUE(vehicle_id_consistency_selected.has_value());
+  EXPECT_EQ(vehicle_id_consistency_selected->entityId_, "consistent-id");
+
+  auto inconsistent = candidate;
+  inconsistent.entity_id_ = "inconsistent";
+  inconsistent.trip_.route_id_ = "wrong-route";
+  inconsistent.trip_.direction_id_ = 0U;
+  inconsistent.stop_id_ = "wrong-stop";
+  auto consistent = candidate;
+  consistent.entity_id_ = "consistent";
+  consistent.trip_.route_id_ = "route-1";
+  consistent.trip_.direction_id_ = 0U;
+  consistent.stop_id_ = "stop-1";
+  auto consistency_selected = select({inconsistent, consistent});
+  ASSERT_TRUE(consistency_selected.has_value());
+  EXPECT_EQ(consistency_selected->entityId_, "consistent");
+
+  auto older = candidate;
+  older.entity_id_ = "older";
+  older.reported_time_ = 100;
+  auto newer = candidate;
+  newer.entity_id_ = "newer";
+  newer.reported_time_ = 200;
+  auto freshness_selected = select({older, newer});
+  ASSERT_TRUE(freshness_selected.has_value());
+  EXPECT_EQ(freshness_selected->entityId_, "newer");
+
+  auto stable_b = candidate;
+  stable_b.entity_id_ = "b";
+  auto stable_a = candidate;
+  stable_a.entity_id_ = "a";
+  auto stable_selected = select({stable_b, stable_a});
+  ASSERT_TRUE(stable_selected.has_value());
+  EXPECT_EQ(stable_selected->entityId_, "a");
 
   auto differential = feed_with_vehicle(50.071, 19.948);
   differential.mutable_header()->set_incrementality(

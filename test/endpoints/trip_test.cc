@@ -12,6 +12,7 @@
 #include "motis/endpoints/trip.h"
 #include "motis/import.h"
 #include "motis/rt/auser.h"
+#include "motis/rt/vehicle_position.h"
 #include "motis/tag_lookup.h"
 
 using namespace std::string_view_literals;
@@ -97,10 +98,39 @@ TEST(motis, trip_stop_naming) {
   auto d = data{"test/data", c};
 
   auto const trip_ep = utl::init_from<ep::trip>(d).value();
+  auto const without_vehicle =
+      trip_ep("?tripId=20190501_10%3A00_test_T1");
+  ASSERT_EQ(1, without_vehicle.legs_.size());
+  EXPECT_FALSE(without_vehicle.legs_.front().primaryVehicle_.has_value());
+
+  d.rt_->vehicle_positions_->replace_feed(
+      "test",
+      {vehicle_positions::vehicle_position{
+          .feed_id_ = "test",
+          .entity_id_ = "vehicle-entity",
+          .vehicle_ = {.id_ = "vehicle-1"},
+          .trip_ =
+              {.trip_id_ = "T1",
+               .start_date_ = "20190501",
+               .start_time_ = "10:00:00",
+               .route_id_ = "R1",
+               .direction_id_ = 0U},
+          .reported_position_ = {
+              .pos_ = geo::latlng{50.001, 8.001},
+              .bearing_ = std::nullopt,
+              .speed_mps_ = std::nullopt},
+          .current_stop_sequence_ = 1U,
+          .stop_id_ = "Child1A",
+          .reported_time_ = 1556704800,
+          .ingested_time_ = 1556704801}});
 
   auto const res = trip_ep("?tripId=20190501_10%3A00_test_T1");
   ASSERT_EQ(1, res.legs_.size());
   auto const& leg = res.legs_[0];
+  ASSERT_TRUE(leg.primaryVehicle_.has_value());
+  EXPECT_EQ(leg.primaryVehicle_->entityId_, "vehicle-entity");
+  EXPECT_EQ(leg.primaryVehicle_->matchState_,
+            api::VehicleMatchStateEnum::MATCHED_TRIP);
   EXPECT_GT(leg.legGeometry_.length_, 0);
   EXPECT_EQ("Child1A", leg.from_.name_);
   ASSERT_TRUE(leg.intermediateStops_.has_value());

@@ -203,6 +203,10 @@ std::vector<vehicle_position> vehicle_position_store::snapshot(
   return result;
 }
 
+std::vector<vehicle_position> const& vehicle_position_store::all() const {
+  return positions_;
+}
+
 bool vehicle_position_store::empty() const {
   return positions_.empty();
 }

@@ -2,8 +2,10 @@
 
 #include <algorithm>
 #include <chrono>
+#include <limits>
 #include <string>
 #include <tuple>
+#include <utility>
 
 #include "date/date.h"
 
@@ -192,6 +194,46 @@ void apply_trip_run_details(vehicle_details& details,
   }
 }
 
+bool stop_matches(n::rt::frun const& target,
+                  std::optional<std::string> const& stop_id) {
+  if (!stop_id.has_value()) {
+    return false;
+  }
+  for (auto i = n::stop_idx_t{0U}; i != target.size(); ++i) {
+    auto const stop = target[i];
+    auto const id = stop.get_location_id();
+    if (id == *stop_id ||
+        (id.size() > stop_id->size() && id.ends_with(*stop_id) &&
+         id[id.size() - stop_id->size() - 1U] == '_')) {
+      return true;
+    }
+  }
+  return false;
+}
+
+struct ranked_vehicle {
+  vehicle_positions::vehicle_position const* vehicle_;
+  vehicle_details details_;
+  bool exact_trip_match_;
+  std::uint8_t vehicle_id_consistency_;
+  std::uint8_t route_direction_stop_consistency_;
+  std::int64_t freshness_;
+};
+
+bool better(ranked_vehicle const& a, ranked_vehicle const& b) {
+  auto const a_rank =
+      std::tuple{a.exact_trip_match_, a.vehicle_id_consistency_,
+                 a.route_direction_stop_consistency_, a.freshness_};
+  auto const b_rank =
+      std::tuple{b.exact_trip_match_, b.vehicle_id_consistency_,
+                 b.route_direction_stop_consistency_, b.freshness_};
+  if (a_rank != b_rank) {
+    return a_rank > b_rank;
+  }
+  return std::tie(a.vehicle_->feed_id_, a.vehicle_->entity_id_) <
+         std::tie(b.vehicle_->feed_id_, b.vehicle_->entity_id_);
+}
+
 }  // namespace
 
 std::optional<n::rt::frun> resolve_run(
@@ -375,6 +417,66 @@ api::VehiclePosition to_api(
       .occupancyStatus_ = vehicle.occupancy_status_,
       .reportedTime_ = vehicle.reported_time_,
       .ingestedTime_ = vehicle.ingested_time_};
+}
+
+std::optional<api::VehiclePosition> primary_vehicle(
+    tag_lookup const& tags,
+    n::timetable const& tt,
+    n::rt_timetable const* rtt,
+    n::shapes_storage const* shapes,
+    vehicle_positions::vehicle_position_store const& store,
+    n::rt::frun const& target,
+    n::lang_t const& lang) {
+  auto best = std::optional<ranked_vehicle>{};
+  auto const first = target[0];
+  auto const target_route = first.get_route_id(n::event_type::kDep);
+  auto const target_direction = first.get_direction_id(n::event_type::kDep);
+
+  for (auto const& vehicle : store.all()) {
+    auto exact_trip_match = false;
+    auto matches_target = false;
+    if (auto fr = resolve_run(tags, tt, rtt, vehicle); fr.has_value()) {
+      exact_trip_match =
+          fr->trip_idx() == target.trip_idx() && fr->t_ == target.t_;
+      matches_target = exact_trip_match;
+    }
+    if (!matches_target) {
+      if (auto fr = resolve_static_trip_run_by_id(tags, tt, vehicle);
+          fr.has_value()) {
+        matches_target = fr->trip_idx() == target.trip_idx();
+      }
+    }
+    if (!matches_target) {
+      continue;
+    }
+
+    auto details = resolve_details(&tags, &tt, rtt, shapes, vehicle, lang);
+    auto consistency = std::uint8_t{0U};
+    consistency += vehicle.trip_.route_id_ == target_route;
+    consistency += vehicle.trip_.direction_id_.has_value() &&
+                   *vehicle.trip_.direction_id_ ==
+                       static_cast<std::uint32_t>(target_direction.v_);
+    consistency += stop_matches(target, vehicle.stop_id_);
+    auto candidate = ranked_vehicle{
+        .vehicle_ = &vehicle,
+        .details_ = std::move(details),
+        .exact_trip_match_ = exact_trip_match,
+        .vehicle_id_consistency_ = static_cast<std::uint8_t>(
+            !vehicle.vehicle_.id_.has_value()
+                ? 0U
+                : (*vehicle.vehicle_.id_ == vehicle.entity_id_ ? 2U : 1U)),
+        .route_direction_stop_consistency_ = consistency,
+        .freshness_ = vehicle.reported_time_.value_or(
+            std::numeric_limits<std::int64_t>::min())};
+    if (!best.has_value() || better(candidate, *best)) {
+      best = std::move(candidate);
+    }
+  }
+
+  if (!best.has_value()) {
+    return std::nullopt;
+  }
+  return to_api(*best->vehicle_, std::move(best->details_), false);
 }
 
 }  // namespace motis::vehicle_matching
