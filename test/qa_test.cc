@@ -19,10 +19,10 @@ TEST(qa, test0) {
   EXPECT_DOUBLE_EQ(0.0, qa::rate(a, b, criteria));
   EXPECT_DOUBLE_EQ(0.0, qa::rate(b, a, criteria));
 
-  a.push_back(api::Itinerary{
-      .startTime_ = unixtime_t{sys_days{2024_y / June / 10} + 10_hours},
-      .endTime_ = unixtime_t{sys_days{2024_y / June / 10} + 12_hours},
-      .transfers_ = 0U});
+  a.push_back(
+      {.startTime_ = unixtime_t{sys_days{2024_y / June / 10} + 10_hours},
+       .endTime_ = unixtime_t{sys_days{2024_y / June / 10} + 12_hours},
+       .transfers_ = 0U});
 
   EXPECT_DOUBLE_EQ(qa::kMaxRating, qa::rate(a, b, criteria));
   EXPECT_DOUBLE_EQ(qa::kMinRating, qa::rate(b, a, criteria));
@@ -172,3 +172,5 @@ TEST(qa, test5) {
   EXPECT_DOUBLE_EQ(-32.37407751772509, qa::rate(a, b, criteria));
   EXPECT_DOUBLE_EQ(32.37407751772509, qa::rate(b, a, criteria));
 }
+
+TEST(qa, walking_time) { auto const i }
