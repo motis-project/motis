@@ -142,6 +142,7 @@ export type Translations = {
 		LOW: string;
 		HIGH: string;
 	};
+	isochronesOpacity: string;
 	isochrones: {
 		title: string;
 		styling: string;

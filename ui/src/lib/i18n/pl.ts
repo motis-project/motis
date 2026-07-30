@@ -72,7 +72,7 @@ const translations: Translations = {
 	selectTransitModes: 'Wybierz środki transportu',
 	defaultSelectedModes: 'Wszystkie środki transportu',
 	defaultSelectedProviders: 'Wszyscy dostawcy',
-	selectElevationCosts: 'Unikaj stromych nachyleń.',
+	selectElevationCosts: 'Unikaj stromych nachyleń',
 	wheelchair: 'Tylko połączenia bez barier',
 	hgvRoutingOptions: 'Opcje dla pojazdu ciężarowego',
 	vehicleHeight: 'Wysokość pojazdu (m)',
@@ -147,6 +147,7 @@ const translations: Translations = {
 		LOW: 'Małe odchylenia od trasy',
 		HIGH: 'Duże odchylenia od trasy'
 	},
+	isochronesOpacity: 'Krycie izochron',
 	isochrones: {
 		title: 'Izochrony',
 		styling: 'Styl izochron',

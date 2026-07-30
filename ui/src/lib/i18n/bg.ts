@@ -70,7 +70,7 @@ const translations: Translations = {
 	selectTransitModes: 'Изберете видове транспорт',
 	defaultSelectedModes: 'Всички видове транспорт',
 	defaultSelectedProviders: 'Всички превозвачи',
-	selectElevationCosts: 'Избягвай стръмни наклони.',
+	selectElevationCosts: 'Избягвай стръмни наклони',
 	wheelchair: 'Само безбариеpни връзки',
 	hgvRoutingOptions: 'Опции за тежкотоварен автомобил',
 	vehicleHeight: 'Височина на превозното средство (m)',
@@ -145,6 +145,7 @@ const translations: Translations = {
 		LOW: 'Лек наклон',
 		HIGH: 'Голям наклон'
 	},
+	isochronesOpacity: 'Непрозрачност на периметъра',
 	isochrones: {
 		title: 'Достъпен периметър',
 		styling: 'Стил',

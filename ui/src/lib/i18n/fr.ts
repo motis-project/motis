@@ -70,7 +70,7 @@ const translations: Translations = {
 	selectTransitModes: 'Sélectionner les modes de transport en commun',
 	defaultSelectedModes: 'Tous les transports en commun',
 	defaultSelectedProviders: 'Tous les opérateurs',
-	selectElevationCosts: 'Éviter les pentes.',
+	selectElevationCosts: 'Éviter les pentes',
 	wheelchair: 'Correspondances accessibles uniquement',
 	hgvRoutingOptions: 'Options poids lourd',
 	vehicleHeight: 'Hauteur du véhicule (m)',
@@ -145,6 +145,7 @@ const translations: Translations = {
 		LOW: 'Petits détours',
 		HIGH: 'Grands détours'
 	},
+	isochronesOpacity: 'Opacité des isochrones',
 	isochrones: {
 		title: 'Isochrones',
 		styling: 'Style de l’isochrone',

@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { t } from '$lib/i18n/translation';
-	import { Slider } from 'bits-ui';
 	import { LocateFixed } from '@lucide/svelte';
 	import maplibregl from 'maplibre-gl';
 	import * as RadioGroup from '$lib/components/ui/radio-group';
@@ -22,6 +21,7 @@
 	import { formatDurationSec } from '$lib/formatDuration';
 	import type { PrePostDirectMode, TransitMode } from '$lib/Modes';
 	import { generateTimes } from './generateTimes';
+	import Slider from './components/ui/slider/Slider.svelte';
 
 	let {
 		advancedOptionsOpen = $bindable(),
@@ -152,22 +152,9 @@
 </script>
 
 {#snippet additionalComponents()}
-	<div class="flex items-center gap-2">
-		<Slider.Root
-			type="single"
-			min={0}
-			max={1000}
-			bind:value={options.opacity}
-			class="relative flex w-full touch-none select-none items-center"
-		>
-			<span class="bg-dark-10 relative h-2 w-full grow cursor-pointer overflow-hidden rounded-full">
-				<Slider.Range class="bg-foreground absolute h-full" />
-			</span>
-			<Slider.Thumb
-				index={0}
-				class="border-border-input bg-background hover:border-dark-40 focus-visible:ring-foreground dark:bg-foreground dark:shadow-card focus-visible:outline-hidden block size-[25px] cursor-pointer rounded-full border shadow-sm transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50"
-			/>
-		</Slider.Root>
+	<div class="grid grid-cols-2 items-center text-sm gap-2">
+		<span>{t.isochronesOpacity}</span>
+		<Slider min={0} max={1000} bind:value={options.opacity} />
 	</div>
 {/snippet}
 

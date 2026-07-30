@@ -72,7 +72,7 @@ const translations: Translations = {
 	selectTransitModes: 'Vyber dopravní prostředky',
 	defaultSelectedModes: 'Všechny dopravní prostředky',
 	defaultSelectedProviders: 'Všichni poskytovatelé',
-	selectElevationCosts: 'Bez prudkého stoupání.',
+	selectElevationCosts: 'Bez prudkého stoupání',
 	wheelchair: 'Pouze bezbariérová spojení',
 	hgvRoutingOptions: 'Možnosti nákladního vozidla',
 	vehicleHeight: 'Výška vozidla (m)',
@@ -147,6 +147,7 @@ const translations: Translations = {
 		LOW: 'Malé odklony',
 		HIGH: 'Velké odklony'
 	},
+	isochronesOpacity: 'Krytí izochron',
 	isochrones: {
 		title: 'Izochrony',
 		styling: 'Styl izochron',

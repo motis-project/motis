@@ -71,7 +71,7 @@ const translations: Translations = {
 	selectTransitModes: 'Öffentliche Verkehrsmittel auswählen',
 	defaultSelectedModes: 'Alle Verkehrsmittel',
 	defaultSelectedProviders: 'Alle Anbieter',
-	selectElevationCosts: 'Steile Steigungen vermeiden.',
+	selectElevationCosts: 'Steile Steigungen vermeiden',
 	hgvRoutingOptions: 'Lkw-Optionen',
 	vehicleHeight: 'Fahrzeughöhe (m)',
 	vehicleWidth: 'Fahrzeugbreite (m)',
@@ -142,6 +142,7 @@ const translations: Translations = {
 		transferTimeFactor: 'Umstiegszeitfaktor'
 	},
 	elevationCosts: { NONE: 'Keine Umwege', LOW: 'Kleine Umwege', HIGH: 'Große Umwege' },
+	isochronesOpacity: 'Deckkraft der Isochronen',
 	isochrones: {
 		title: 'Isochronen',
 		styling: 'Darstellung der Isochronen',
