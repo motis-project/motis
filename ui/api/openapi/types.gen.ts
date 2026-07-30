@@ -2517,7 +2517,9 @@ export type PlanData = {
         /**
          * Experimental. Search radius in meters around the `fromPlace` / `toPlace` coordinates.
          * When set and the place is given as coordinates, all transit stops within
-         * this radius are used as start/end points with zero pre-transit/post-transit time.
+         * this radius are used as start/end points. The pre-transit/post-transit time
+         * for each of them is estimated from the crow-fly distance to the coordinate
+         * at walking speed (1.5 m/s), rounded down to whole minutes.
          * Works without OSM/street routing data loaded.
          *
          */

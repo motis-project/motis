@@ -824,6 +824,14 @@ api::Itinerary journey_to_response(
                                            api_version));
             },
             [&](n::routing::offset const x) {
+              if (w == nullptr || l == nullptr) {
+                // no OSM data loaded (e.g. `radius` offsets) -> crow-fly leg
+                append(dummy_itinerary(from, to, to_mode(x.transport_mode_id_),
+                                       j_leg.dep_time_, j_leg.arr_time_,
+                                       api_version));
+                return;
+              }
+
               auto out = std::unique_ptr<output>{};
               if (flex::mode_id::is_flex(x.transport_mode_id_)) {
                 out = std::make_unique<flex::flex_output>(

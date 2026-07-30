@@ -26,6 +26,7 @@
 #include "osr/types.h"
 
 #include "nigiri/common/interval.h"
+#include "nigiri/constants.h"
 #include "nigiri/location_match_mode.h"
 #include "nigiri/routing/limits.h"
 #include "nigiri/routing/pareto_set.h"
@@ -84,8 +85,17 @@ std::vector<n::routing::offset> radius_offsets(
     geo::latlng const& pos,
     double const radius_meters) {
   auto offsets = std::vector<n::routing::offset>{};
-  loc_tree.in_radius(pos, radius_meters, [&](n::location_idx_t const l) {
-    offsets.push_back({l, n::duration_t{0U}, 0U});
+  loc_tree.find(geo::box{pos, radius_meters}, [&](geo::latlng const& stop_pos,
+                                                  n::location_idx_t const l) {
+    auto const dist = geo::distance(pos, stop_pos);
+    if (dist >= radius_meters) {
+      return;
+    }
+    offsets.push_back(
+        {l,
+         std::chrono::duration_cast<n::duration_t>(
+             std::chrono::seconds{static_cast<int>(dist / n::kWalkSpeed)}),
+         0U});
   });
   return offsets;
 }
