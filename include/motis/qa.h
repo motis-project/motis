@@ -54,6 +54,11 @@ double walking_time(api::Itinerary const& i) {
   return static_cast<double>(walking_time) * Weight;
 }
 
+constexpr auto kDefaultStartTime = start_time<1.0>;
+constexpr auto kDefaultEndTime = end_time<1.0>;
+constexpr auto kDefaultTransfers = transfers<30.0>;
+constexpr auto kDefaultWalkingTime = walking_time<1.0 / 60.0>;
+
 }  // namespace criterion
 
 }  // namespace motis::qa
