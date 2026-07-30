@@ -40,7 +40,7 @@ void for_each_number(std::string_view x, Fn&& fn) {
 bool has_number_match(std::string_view a, std::string_view b) {
   auto match = false;
   for_each_number(a, [&](unsigned const x) {
-    for_each_number(b, [&](unsigned const y) { match = (x == y); });
+    for_each_number(b, [&](unsigned const y) { match = match || (x == y); });
   });
   return match;
 }

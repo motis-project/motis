@@ -466,14 +466,49 @@ void import(config const& c,
                             c.timetable_->max_matching_distance_,
                             c.timetable_->max_footpath_length_);
   }
+  // The platform matches only depend on the locations, not on the footpaths
+  // computed by `osr_footpath` (which only appends footpaths to the timetable),
+  // so they are computed first and reused there.
+  auto matches = task{
+      "matches",
+      {&tt, &osr},
+      c.timetable_ && (c.use_street_routing() || c.osr_footpath_),
+      [&]() {
+        auto d = data{data_path};
+        d.load_tt("tt.bin");
+        d.load_osr();
+
+        auto const progress_tracker = utl::get_active_progress_tracker();
+        progress_tracker->status("Prepare Platform Matches").out_bounds(0, 30);
+        cista::write(data_path / "matches.bin",
+                     get_matches(*d.tt_, *d.pl_, *d.w_));
+
+        d.load_matches();
+        if (c.timetable_.value().preprocess_max_matching_distance_ > 0.0) {
+          progress_tracker->status("Prepare Platform Way Matches")
+              .out_bounds(30, 100);
+          way_matches_storage{
+              data_path, cista::mmap::protection::WRITE,
+              c.timetable_.value().preprocess_max_matching_distance_}
+              .preprocess_osr_matches(*d.tt_, *d.pl_, *d.w_, *d.l_,
+                                      *d.matches_);
+        }
+      },
+      {tt_hash, osm_hash, osr_version(), n_version(), matches_version(),
+       std::pair{"way_matches",
+                 cista::build_hash(c.timetable_.value_or(config::timetable{})
+                                       .preprocess_max_matching_distance_)}}};
+
   auto osr_footpath = task{
       "osr_footpath",
-      {&tt, &osr},
+      {&tt, &osr, &matches},
       c.osr_footpath_ && c.timetable_,
       [&]() {
         auto d = data{data_path};
         d.load_tt("tt.bin");
         d.load_osr();
+        d.load_matches();
+        d.load_way_matches();
 
         auto const profiles = std::vector<routed_transfers_settings>{
             {.profile_ = osr::search_profile::kFoot,
@@ -495,7 +530,8 @@ void import(config const& c,
                });
              }}};
         auto const elevator_footpath_map = compute_footpaths(
-            *d.w_, *d.l_, *d.pl_, *d.tt_, d.elevations_.get(), profiles);
+            *d.w_, *d.l_, *d.pl_, *d.tt_, *d.matches_, d.way_matches_.get(),
+            d.elevations_.get(), profiles);
 
         cista::write(data_path / "elevator_footpath_map.bin",
                      elevator_footpath_map);
@@ -503,35 +539,10 @@ void import(config const& c,
 
         cista::free_self_allocated(d.tt_.get());
       },
+      // task dependencies only order the tasks, they do not invalidate: the
+      // footpaths are built from the (way) matches
       {tt_hash, osm_hash, osr_footpath_settings_hash, osr_version(),
-       osr_footpath_version(), n_version()}};
-
-  auto matches = task{
-      "matches",
-      {&tt, &osr, &osr_footpath},
-      c.timetable_ && c.use_street_routing(),
-      [&]() {
-        auto d = data{data_path};
-        d.load_tt(c.osr_footpath_ ? "tt_ext.bin" : "tt.bin");
-        d.load_osr();
-
-        auto const progress_tracker = utl::get_active_progress_tracker();
-        progress_tracker->status("Prepare Platform Matches").out_bounds(0, 30);
-        cista::write(data_path / "matches.bin",
-                     get_matches(*d.tt_, *d.pl_, *d.w_));
-
-        d.load_matches();
-        if (c.timetable_.value().preprocess_max_matching_distance_ > 0.0) {
-          progress_tracker->status("Prepare Platform Way Matches")
-              .out_bounds(30, 100);
-          way_matches_storage{
-              data_path, cista::mmap::protection::WRITE,
-              c.timetable_.value().preprocess_max_matching_distance_}
-              .preprocess_osr_matches(*d.tt_, *d.pl_, *d.w_, *d.l_,
-                                      *d.matches_);
-        }
-      },
-      {tt_hash, osm_hash, osr_version(), n_version(), matches_version(),
+       osr_footpath_version(), matches_version(), n_version(),
        std::pair{"way_matches",
                  cista::build_hash(c.timetable_.value_or(config::timetable{})
                                        .preprocess_max_matching_distance_)}}};
