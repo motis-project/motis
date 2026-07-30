@@ -54,17 +54,17 @@ double walking_time(api::Itinerary const& i) {
   return static_cast<double>(walking_time) * Weight;
 }
 
-constexpr auto kDefaultStartTime = start_time<1.0>;
-constexpr auto kDefaultEndTime = end_time<1.0>;
-constexpr auto kDefaultTransfers = transfers<30.0>;
-constexpr auto kDefaultWalkingTime = walking_time<1.0 / 60.0>;
+static constexpr auto kDefaultStartTime = start_time<1.0>;
+static constexpr auto kDefaultEndTime = end_time<1.0>;
+static constexpr auto kDefaultTransfers = transfers<30.0>;
+static constexpr auto kDefaultWalkingTime = walking_time<1.0 / 60.0>;
 
 }  // namespace criterion
 
-auto const kStartEndTransfer = std::vector<criterion_t>{
+static auto const kStartEndTransfer = std::vector<criterion_t>{
     criterion::kDefaultStartTime, criterion::kDefaultEndTime,
     criterion::kDefaultTransfers};
-auto const kStartEndTransferWalk = std::vector<criterion_t>{
+static auto const kStartEndTransferWalk = std::vector<criterion_t>{
     criterion::kDefaultStartTime, criterion::kDefaultEndTime,
     criterion::kDefaultTransfers, criterion::kDefaultWalkingTime};
 
