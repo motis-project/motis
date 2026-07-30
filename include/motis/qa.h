@@ -61,4 +61,11 @@ constexpr auto kDefaultWalkingTime = walking_time<1.0 / 60.0>;
 
 }  // namespace criterion
 
+auto const kStartEndTransfer = std::vector<criterion_t>{
+    criterion::kDefaultStartTime, criterion::kDefaultEndTime,
+    criterion::kDefaultTransfers};
+auto const kStartEndTransferWalk = std::vector<criterion_t>{
+    criterion::kDefaultStartTime, criterion::kDefaultEndTime,
+    criterion::kDefaultTransfers, criterion::kDefaultWalkingTime};
+
 }  // namespace motis::qa
