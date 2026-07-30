@@ -60,6 +60,11 @@ api::VehiclePosition to_api(vehicle_positions::vehicle_position const&,
                             vehicle_details,
                             bool include_shapes);
 
+std::int64_t freshness_cutoff(std::int64_t now, std::int64_t max_age);
+
+bool is_fresh(vehicle_positions::vehicle_position const&,
+              std::int64_t cutoff);
+
 std::optional<api::VehiclePosition> primary_vehicle(
     tag_lookup const&,
     nigiri::timetable const&,
@@ -67,6 +72,7 @@ std::optional<api::VehiclePosition> primary_vehicle(
     nigiri::shapes_storage const*,
     vehicle_positions::vehicle_position_store const&,
     nigiri::rt::frun const& target,
+    std::int64_t freshness_cutoff,
     nigiri::lang_t const&);
 
 }  // namespace motis::vehicle_matching

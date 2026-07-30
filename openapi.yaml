@@ -2734,9 +2734,9 @@ paths:
         Returns the latest GTFS Realtime VehiclePosition facts inside the
         requested viewport. The endpoint is intentionally viewport-bounded and
         does not expose unbounded feed-wide vehicle search. Timetable enrichment
-        is optional: unresolved positions are still returned without route,
-        destination, mode, or shape. Positions older than the server's realtime
-        freshness window are omitted.
+        is optional. Unmatched positions are omitted by default and can be
+        included with `includeUnmatched` for feed-quality inspection. Positions
+        older than the server's realtime freshness window are omitted.
       parameters:
         - name: min
           in: query
@@ -2781,6 +2781,7 @@ paths:
           schema:
             type: integer
             format: int64
+            minimum: 0
         - name: includeUnmatched
           in: query
           required: false
@@ -4583,10 +4584,12 @@ components:
         tripId:
           type: string
         primaryVehicle:
-          $ref: '#/components/schemas/VehiclePosition'
           description: |
             Deterministically selected live vehicle for this transit leg when
             a current VehiclePosition can be matched to its trip.
+          anyOf:
+            - $ref: '#/components/schemas/VehiclePosition'
+            - type: 'null'
         routeShortName:
           type: string
         routeLongName:

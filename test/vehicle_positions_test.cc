@@ -3,6 +3,7 @@
 
 #include <filesystem>
 #include <fstream>
+#include <limits>
 #include <optional>
 #include <string>
 
@@ -344,6 +345,45 @@ TEST(motis_vehicle_positions, endpoint_max_age_overrides_default) {
                         Eq("ninety-seconds-old"))));
 }
 
+TEST(motis_vehicle_positions, endpoint_rejects_negative_max_age) {
+  auto const c = motis::config{};
+  auto rt = std::make_shared<motis::rt>();
+  auto endpoint = motis::ep::vehicles{.config_ = c, .rt_ = rt};
+
+  EXPECT_THROW(
+      endpoint("/api/v1/map/vehicles?min=50.0,19.8&max=50.2,20.1"
+               "&maxAge=-1"),
+      net::bad_request_exception);
+}
+
+TEST(motis_vehicle_positions, endpoint_accepts_extreme_max_age) {
+  auto const c = motis::config{};
+  auto rt = std::make_shared<motis::rt>();
+  rt->vehicle_positions_->replace_feed(
+      "feed", {position("feed", "ancient", 50.061, 19.938, 1)});
+  auto endpoint = motis::ep::vehicles{.config_ = c, .rt_ = rt};
+
+  auto const res = endpoint(
+      "/api/v1/map/vehicles?min=50.0,19.8&max=50.2,20.1"
+      "&maxAge=9223372036854775807&includeUnmatched=true");
+
+  ASSERT_THAT(res.vehicles_, SizeIs(1));
+  EXPECT_EQ(res.vehicles_.front().entityId_, "ancient");
+}
+
+TEST(motis_vehicle_positions, freshness_cutoff_is_saturating_and_inclusive) {
+  auto constexpr kMin = std::numeric_limits<std::int64_t>::min();
+  EXPECT_EQ(motis::vehicle_matching::freshness_cutoff(kMin + 5, 10), kMin);
+  EXPECT_EQ(motis::vehicle_matching::freshness_cutoff(
+                100, std::numeric_limits<std::int64_t>::max()),
+            kMin + 101);
+
+  auto at_cutoff = position("feed", "boundary", 50.061, 19.938, 40);
+  EXPECT_TRUE(motis::vehicle_matching::is_fresh(at_cutoff, 40));
+  at_cutoff.ingested_time_ = 39;
+  EXPECT_FALSE(motis::vehicle_matching::is_fresh(at_cutoff, 40));
+}
+
 TEST(motis_vehicle_positions,
      endpoint_unmatched_and_freshness_filters_compose) {
   auto const c = motis::config{
@@ -500,7 +540,7 @@ TEST(motis_vehicle_positions, rt_update_consumes_vehicle_only_gtfsrt_feed) {
     store.replace_feed("test", std::move(candidates));
     return motis::vehicle_matching::primary_vehicle(
         *d.tags_, *d.tt_, d.rt_->rtt_.get(), d.shapes_.get(), store, target,
-        nigiri::lang_t{});
+        0, nigiri::lang_t{});
   };
   auto candidate = snapshot.front();
   candidate.feed_id_ = "test";
@@ -509,6 +549,16 @@ TEST(motis_vehicle_positions, rt_update_consumes_vehicle_only_gtfsrt_feed) {
   auto const single = select({candidate});
   ASSERT_TRUE(single.has_value());
   EXPECT_EQ(single->entityId_, "entity-1");
+
+  auto stale_candidate = candidate;
+  stale_candidate.reported_time_ = -1;
+  stale_candidate.ingested_time_ = 100;
+  EXPECT_FALSE(select({stale_candidate}).has_value());
+
+  auto missing_reported_time = candidate;
+  missing_reported_time.reported_time_ = std::nullopt;
+  missing_reported_time.ingested_time_ = 100;
+  EXPECT_TRUE(select({missing_reported_time}).has_value());
 
   auto unrelated = candidate;
   unrelated.entity_id_ = "unrelated";
@@ -536,17 +586,6 @@ TEST(motis_vehicle_positions, rt_update_consumes_vehicle_only_gtfsrt_feed) {
   ASSERT_TRUE(vehicle_id_selected.has_value());
   EXPECT_EQ(vehicle_id_selected->entityId_, "with-vehicle-id");
 
-  auto conflicting_vehicle_id = candidate;
-  conflicting_vehicle_id.entity_id_ = "conflicting-id";
-  conflicting_vehicle_id.vehicle_.id_ = "other-id";
-  auto consistent_vehicle_id = candidate;
-  consistent_vehicle_id.entity_id_ = "consistent-id";
-  consistent_vehicle_id.vehicle_.id_ = "consistent-id";
-  auto vehicle_id_consistency_selected =
-      select({conflicting_vehicle_id, consistent_vehicle_id});
-  ASSERT_TRUE(vehicle_id_consistency_selected.has_value());
-  EXPECT_EQ(vehicle_id_consistency_selected->entityId_, "consistent-id");
-
   auto inconsistent = candidate;
   inconsistent.entity_id_ = "inconsistent";
   inconsistent.trip_.route_id_ = "wrong-route";
@@ -554,7 +593,7 @@ TEST(motis_vehicle_positions, rt_update_consumes_vehicle_only_gtfsrt_feed) {
   inconsistent.stop_id_ = "wrong-stop";
   auto consistent = candidate;
   consistent.entity_id_ = "consistent";
-  consistent.trip_.route_id_ = "route-1";
+  consistent.trip_.route_id_ = "prefix-route-1";
   consistent.trip_.direction_id_ = 0U;
   consistent.stop_id_ = "stop-1";
   auto consistency_selected = select({inconsistent, consistent});

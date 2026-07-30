@@ -1,5 +1,6 @@
 #include "motis/endpoints/trip.h"
 
+#include <algorithm>
 #include <chrono>
 
 #include "net/not_found_exception.h"
@@ -44,6 +45,16 @@ api::Itinerary trip::operator()(boost::urls::url_view const& url) const {
   auto cache = street_routing_cache_t{};
   auto blocked = osr::bitvec<osr::node_idx_t>{};
   auto gbfs_rd = gbfs::gbfs_routing_data{};
+  auto const update_interval =
+      std::chrono::seconds{config_.timetable_->update_interval_};
+  auto const max_age =
+      std::max(std::chrono::seconds{60}, 3 * update_interval).count();
+  auto const now =
+      std::chrono::duration_cast<std::chrono::seconds>(
+          std::chrono::system_clock::now().time_since_epoch())
+          .count();
+  auto const freshness_cutoff =
+      vehicle_matching::freshness_cutoff(now, max_age);
 
   auto response = journey_to_response(
       w_, l_, pl_, tt_, tags_, nullptr, nullptr, rtt, matches_, nullptr,
@@ -71,7 +82,7 @@ api::Itinerary trip::operator()(boost::urls::url_view const& url) const {
     response.legs_.front().primaryVehicle_ =
         vehicle_matching::primary_vehicle(
             tags_, tt_, rtt, shapes_, *rt->vehicle_positions_, fr,
-            query.language_);
+            freshness_cutoff, query.language_);
   }
   return response;
 }

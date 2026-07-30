@@ -103,26 +103,30 @@ TEST(motis, trip_stop_naming) {
   ASSERT_EQ(1, without_vehicle.legs_.size());
   EXPECT_FALSE(without_vehicle.legs_.front().primaryVehicle_.has_value());
 
+  auto const now =
+      std::chrono::duration_cast<std::chrono::seconds>(
+          std::chrono::system_clock::now().time_since_epoch())
+          .count();
+  auto vehicle = vehicle_positions::vehicle_position{
+      .feed_id_ = "test",
+      .entity_id_ = "vehicle-entity",
+      .vehicle_ = {.id_ = "vehicle-1"},
+      .trip_ =
+          {.trip_id_ = "T1",
+           .start_date_ = "20190501",
+           .start_time_ = "10:00:00",
+           .route_id_ = "R1",
+           .direction_id_ = 0U},
+      .reported_position_ = {
+          .pos_ = geo::latlng{50.001, 8.001},
+          .bearing_ = std::nullopt,
+          .speed_mps_ = std::nullopt},
+      .current_stop_sequence_ = 1U,
+      .stop_id_ = "Child1A",
+      .reported_time_ = now,
+      .ingested_time_ = now};
   d.rt_->vehicle_positions_->replace_feed(
-      "test",
-      {vehicle_positions::vehicle_position{
-          .feed_id_ = "test",
-          .entity_id_ = "vehicle-entity",
-          .vehicle_ = {.id_ = "vehicle-1"},
-          .trip_ =
-              {.trip_id_ = "T1",
-               .start_date_ = "20190501",
-               .start_time_ = "10:00:00",
-               .route_id_ = "R1",
-               .direction_id_ = 0U},
-          .reported_position_ = {
-              .pos_ = geo::latlng{50.001, 8.001},
-              .bearing_ = std::nullopt,
-              .speed_mps_ = std::nullopt},
-          .current_stop_sequence_ = 1U,
-          .stop_id_ = "Child1A",
-          .reported_time_ = 1556704800,
-          .ingested_time_ = 1556704801}});
+      "test", {vehicle});
 
   auto const res = trip_ep("?tripId=20190501_10%3A00_test_T1");
   ASSERT_EQ(1, res.legs_.size());
@@ -140,6 +144,25 @@ TEST(motis, trip_stop_naming) {
   EXPECT_EQ("Parent2 Express", leg.headsign_);
   EXPECT_EQ("EN_SHORT_NAME", leg.routeShortName_);
   EXPECT_EQ("EN-R1", leg.routeLongName_);
+
+  auto stale_vehicle = vehicle;
+  stale_vehicle.reported_time_ = now - 10'000;
+  d.rt_->vehicle_positions_->replace_feed("test", {stale_vehicle});
+  auto const stale_res = trip_ep("?tripId=20190501_10%3A00_test_T1");
+  ASSERT_EQ(1, stale_res.legs_.size());
+  EXPECT_FALSE(stale_res.legs_.front().primaryVehicle_.has_value());
+
+  auto missing_reported_time = vehicle;
+  missing_reported_time.reported_time_ = std::nullopt;
+  missing_reported_time.ingested_time_ = now;
+  d.rt_->vehicle_positions_->replace_feed("test", {missing_reported_time});
+  auto const missing_reported_res =
+      trip_ep("?tripId=20190501_10%3A00_test_T1");
+  ASSERT_EQ(1, missing_reported_res.legs_.size());
+  ASSERT_TRUE(
+      missing_reported_res.legs_.front().primaryVehicle_.has_value());
+  EXPECT_EQ(missing_reported_res.legs_.front().primaryVehicle_->entityId_,
+            "vehicle-entity");
 
   auto const compact_res =
       trip_ep("?tripId=20190501_10%3A00_test_T1&detailedLegs=false");

@@ -215,17 +215,17 @@ struct ranked_vehicle {
   vehicle_positions::vehicle_position const* vehicle_;
   vehicle_details details_;
   bool exact_trip_match_;
-  std::uint8_t vehicle_id_consistency_;
+  bool vehicle_descriptor_id_available_;
   std::uint8_t route_direction_stop_consistency_;
   std::int64_t freshness_;
 };
 
 bool better(ranked_vehicle const& a, ranked_vehicle const& b) {
   auto const a_rank =
-      std::tuple{a.exact_trip_match_, a.vehicle_id_consistency_,
+      std::tuple{a.exact_trip_match_, a.vehicle_descriptor_id_available_,
                  a.route_direction_stop_consistency_, a.freshness_};
   auto const b_rank =
-      std::tuple{b.exact_trip_match_, b.vehicle_id_consistency_,
+      std::tuple{b.exact_trip_match_, b.vehicle_descriptor_id_available_,
                  b.route_direction_stop_consistency_, b.freshness_};
   if (a_rank != b_rank) {
     return a_rank > b_rank;
@@ -419,6 +419,17 @@ api::VehiclePosition to_api(
       .ingestedTime_ = vehicle.ingested_time_};
 }
 
+std::int64_t freshness_cutoff(std::int64_t const now,
+                              std::int64_t const max_age) {
+  auto constexpr kMin = std::numeric_limits<std::int64_t>::min();
+  return now < kMin + max_age ? kMin : now - max_age;
+}
+
+bool is_fresh(vehicle_positions::vehicle_position const& vehicle,
+              std::int64_t const cutoff) {
+  return vehicle.reported_time_.value_or(vehicle.ingested_time_) >= cutoff;
+}
+
 std::optional<api::VehiclePosition> primary_vehicle(
     tag_lookup const& tags,
     n::timetable const& tt,
@@ -426,6 +437,7 @@ std::optional<api::VehiclePosition> primary_vehicle(
     n::shapes_storage const* shapes,
     vehicle_positions::vehicle_position_store const& store,
     n::rt::frun const& target,
+    std::int64_t const freshness_cutoff,
     n::lang_t const& lang) {
   auto best = std::optional<ranked_vehicle>{};
   auto const first = target[0];
@@ -433,6 +445,9 @@ std::optional<api::VehiclePosition> primary_vehicle(
   auto const target_direction = first.get_direction_id(n::event_type::kDep);
 
   for (auto const& vehicle : store.all()) {
+    if (!is_fresh(vehicle, freshness_cutoff)) {
+      continue;
+    }
     auto exact_trip_match = false;
     auto matches_target = false;
     if (auto fr = resolve_run(tags, tt, rtt, vehicle); fr.has_value()) {
@@ -451,8 +466,11 @@ std::optional<api::VehiclePosition> primary_vehicle(
     }
 
     auto details = resolve_details(&tags, &tt, rtt, shapes, vehicle, lang);
+    auto const resolved_route =
+        resolve_route_info_by_id(tags, tt, vehicle, lang);
     auto consistency = std::uint8_t{0U};
-    consistency += vehicle.trip_.route_id_ == target_route;
+    consistency +=
+        resolved_route.has_value() && resolved_route->id_ == target_route;
     consistency += vehicle.trip_.direction_id_.has_value() &&
                    *vehicle.trip_.direction_id_ ==
                        static_cast<std::uint32_t>(target_direction.v_);
@@ -461,13 +479,11 @@ std::optional<api::VehiclePosition> primary_vehicle(
         .vehicle_ = &vehicle,
         .details_ = std::move(details),
         .exact_trip_match_ = exact_trip_match,
-        .vehicle_id_consistency_ = static_cast<std::uint8_t>(
-            !vehicle.vehicle_.id_.has_value()
-                ? 0U
-                : (*vehicle.vehicle_.id_ == vehicle.entity_id_ ? 2U : 1U)),
+        .vehicle_descriptor_id_available_ =
+            vehicle.vehicle_.id_.has_value(),
         .route_direction_stop_consistency_ = consistency,
-        .freshness_ = vehicle.reported_time_.value_or(
-            std::numeric_limits<std::int64_t>::min())};
+        .freshness_ =
+            vehicle.reported_time_.value_or(vehicle.ingested_time_)};
     if (!best.has_value() || better(candidate, *best)) {
       best = std::move(candidate);
     }

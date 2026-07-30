@@ -37,18 +37,20 @@ api::VehiclePositionsResponse vehicles::operator()(
           : std::chrono::seconds{60};
   auto const default_max_age =
       std::max(std::chrono::seconds{60}, 3 * update_interval);
-  auto const max_age =
-      std::chrono::seconds{query.maxAge_.value_or(default_max_age.count())};
-  auto const cutoff =
+  auto const max_age = query.maxAge_.value_or(default_max_age.count());
+  utl::verify<net::bad_request_exception>(
+      max_age >= 0, "maxAge must be greater than or equal to zero");
+  auto const now =
       std::chrono::duration_cast<std::chrono::seconds>(
-          std::chrono::system_clock::now().time_since_epoch() - max_age)
+          std::chrono::system_clock::now().time_since_epoch())
           .count();
+  auto const cutoff = vehicle_matching::freshness_cutoff(now, max_age);
   auto const snapshot = rt->vehicle_positions_->snapshot(
       vehicle_positions::vehicle_viewport{.min_ = min->pos_, .max_ = max->pos_},
       std::nullopt);
   res.vehicles_.reserve(snapshot.size());
   for (auto const& vehicle : snapshot) {
-    if (vehicle.reported_time_.value_or(vehicle.ingested_time_) < cutoff) {
+    if (!vehicle_matching::is_fresh(vehicle, cutoff)) {
       continue;
     }
     auto details = vehicle_matching::resolve_details(
