@@ -63,10 +63,10 @@ timetable:
   datasets:
     de:
       path: delfi.gtfs.zip
+      extend_calendar: false
       default_bikes_allowed: false
       default_cars_allowed: false
       default_reservation_not_required: true
-      extend_calendar: false
       clasz_bikes_allowed:
         LONGDISTANCE: false
         REGIONAL: true
@@ -80,27 +80,16 @@ timetable:
           protocol: gtfsrt
     nl:
       path: nl.gtfs.zip
+      extend_calendar: false
       default_bikes_allowed: false
       default_cars_allowed: false
       default_reservation_not_required: true
-      extend_calendar: false
       clasz_reservation_not_required:
-        AERIALLIFT: true
         AIR: false
-        BUS: true
         COACH: false
-        FUNICULAR: true
-        HIGHSPEED: true
-        LONGDISTANCE: true
         NIGHT: false
         ODM: false
-        OTHER: true
-        REGIONAL: true
         RIDESHARING: false
-        SHIP: true
-        SUBURBAN: true
-        SUBWAY: true
-        TRAM: true
       rt:
         - url: https://gtfs.ovapi.nl/nl/trainUpdates.pb
           protocol: gtfsrt

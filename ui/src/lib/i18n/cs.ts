@@ -178,6 +178,7 @@ const translations: Translations = {
 	toll: 'Pozor! Průjezd tuto trasou je placený.',
 	bikesAllowed: 'Bikes allowed',
 	wheelchairAccessible: 'Wheelchair accessible',
+	compulsoryReservation: 'Reservation necessary',
 	accessRestriction: 'Omezený dostup',
 	continuesAs: 'Pokračuje jako',
 	earlierAlternatives: 'Dřívější alternativy',

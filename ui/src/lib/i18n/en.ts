@@ -176,6 +176,7 @@ const translations: Translations = {
 	toll: 'Warning! A fee must be paid to use this route.',
 	bikesAllowed: 'Bikes allowed',
 	wheelchairAccessible: 'Wheelchair accessible',
+	compulsoryReservation: 'Reservation necessary',
 	accessRestriction: 'No access',
 	continuesAs: 'Continues as',
 	earlierAlternatives: 'Earlier alternatives',
