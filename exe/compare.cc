@@ -92,16 +92,9 @@ int compare(int ac, char** av) {
   };
   auto const get_ratings = [](auto const& ref, auto const& uut) {
     return std::map<std::string, double>{
-        {"start_time", qa::rate(uut, ref, {qa::criterion::kDefaultStartTime})},
-        {"end_time", qa::rate(uut, ref, {qa::criterion::kDefaultEndTime})},
-        {"transfers", qa::rate(uut, ref, {qa::criterion::kDefaultTransfers})},
-        {"walking_time",
-         qa::rate(uut, ref, {qa::criterion::kDefaultWalkingTime})},
-        {"combined", qa::rate(uut, ref,
-                              {qa::criterion::kDefaultStartTime,
-                               qa::criterion::kDefaultEndTime,
-                               qa::criterion::kDefaultTransfers,
-                               qa::criterion::kDefaultWalkingTime})}};
+        {"start_end_transfers", qa::rate(uut, ref, qa::kStartEndTransfer)},
+        {"start_end_transfers_walk",
+         qa::rate(uut, ref, qa::kStartEndTransferWalk)}};
   };
   auto const print_ratings = [](auto const& ratings) {
     for (auto const& [name, rating] : ratings) {
