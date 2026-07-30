@@ -35,12 +35,6 @@ importers:
       '@turf/boolean-point-in-polygon':
         specifier: ^7.3.4
         version: 7.3.4
-      '@turf/circle':
-        specifier: ^7.3.4
-        version: 7.3.4
-      '@turf/destination':
-        specifier: ^7.3.4
-        version: 7.3.4
       '@turf/difference':
         specifier: ^7.3.4
         version: 7.3.4
@@ -51,9 +45,6 @@ importers:
         specifier: ^7.3.4
         version: 7.3.4
       '@turf/rhumb-distance':
-        specifier: ^7.3.4
-        version: 7.3.4
-      '@turf/union':
         specifier: ^7.3.4
         version: 7.3.4
       colord:
@@ -1118,12 +1109,6 @@ packages:
   '@turf/boolean-point-in-polygon@7.3.4':
     resolution: {integrity: sha512-v/4hfyY90Vz9cDgs2GwjQf+Lft8o7mNCLJOTz/iv8SHAIgMMX0czEoIaNVOJr7tBqPqwin1CGwsncrkf5C9n8Q==}
 
-  '@turf/circle@7.3.4':
-    resolution: {integrity: sha512-6ccr5iT51/XONF+pbpkqoRxKX4ZVWLubXb1frGCnClv2suo1UIY9SIlINNctVDupXd2P9PpqZCbrXATrcrokPg==}
-
-  '@turf/destination@7.3.4':
-    resolution: {integrity: sha512-YxoUJwkKmTHiRFQxMQOP0tz8Vy+ga5EXl+C+F/WubjDLwT1AJu5y8CNIjLvWyjPWckj/vZG4u/1js5bx6MLADA==}
-
   '@turf/difference@7.3.4':
     resolution: {integrity: sha512-kIxizNQrYLO2rtqUIeed0tPycicrXoipy/g9d4mjv91kzBEbwpyojz9zi8U9G1ISBfCEgA7wsViQD0r+8qzxXw==}
 
@@ -1141,9 +1126,6 @@ packages:
 
   '@turf/rhumb-distance@7.3.4':
     resolution: {integrity: sha512-phwskeijdgYMsR3qDQmytfsg2iZcp3uWK7UFc76wKTEpxozbDGFI4enX5gXvZPpyI1iD7gsktGqHsO33AjnFDA==}
-
-  '@turf/union@7.3.4':
-    resolution: {integrity: sha512-JJYyPMmGcrTa9sPv2ief2QU9Hb//cEAU1zgKu/OfoCMa9a8Imp5QVm9UTAkhGlc+4qm/N/X16iJ+cvVWaxPjkg==}
 
   '@types/chai@5.2.3':
     resolution: {integrity: sha512-Mw558oeA9fFbv65/y4mHtXDs9bPnFMZAL/jxdPFUpOHHIXX91mcgEHbS5Lahr+pwZFR8A7GQleRWeI6cGFC2UA==}
@@ -3515,20 +3497,6 @@ snapshots:
       point-in-polygon-hao: 1.2.4
       tslib: 2.8.1
 
-  '@turf/circle@7.3.4':
-    dependencies:
-      '@turf/destination': 7.3.4
-      '@turf/helpers': 7.3.4
-      '@types/geojson': 7946.0.16
-      tslib: 2.8.1
-
-  '@turf/destination@7.3.4':
-    dependencies:
-      '@turf/helpers': 7.3.4
-      '@turf/invariant': 7.3.4
-      '@types/geojson': 7946.0.16
-      tslib: 2.8.1
-
   '@turf/difference@7.3.4':
     dependencies:
       '@turf/helpers': 7.3.4
@@ -3566,14 +3534,6 @@ snapshots:
       '@turf/helpers': 7.3.4
       '@turf/invariant': 7.3.4
       '@types/geojson': 7946.0.16
-      tslib: 2.8.1
-
-  '@turf/union@7.3.4':
-    dependencies:
-      '@turf/helpers': 7.3.4
-      '@turf/meta': 7.3.4
-      '@types/geojson': 7946.0.16
-      polyclip-ts: 0.16.8
       tslib: 2.8.1
 
   '@types/chai@5.2.3':

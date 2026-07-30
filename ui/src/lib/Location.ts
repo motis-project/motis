@@ -50,7 +50,8 @@ export function posToLocation(pos: maplibregl.LngLatLike, level?: number): Locat
 
 export const parseLocation = (
 	place?: string | null | undefined,
-	name?: string | null | undefined
+	name?: string | null | undefined,
+	pos?: string | null | undefined
 ): Location => {
 	if (!place || place.trim() === '') {
 		return { label: name ?? '', match: undefined };
@@ -64,16 +65,24 @@ export const parseLocation = (
 		}
 		return coord;
 	}
-	return parseIDToLocation(place, name);
+	return parseIDToLocation(place, name, pos);
 };
 
-export const parseIDToLocation = (place: string, name?: string | undefined | null): Location => {
+// A stop is identified by its ID alone, which says nothing about where it is.
+// The position is carried as a separate parameter so that the map can show a
+// marker for it without having to resolve the ID first.
+export const parseIDToLocation = (
+	place: string,
+	name?: string | undefined | null,
+	pos?: string | undefined | null
+): Location => {
+	const coord = parseCoordinatesToLocation(pos ?? undefined);
 	return {
 		label: name || '',
 		match: {
-			lat: 0.0,
-			lon: 0.0,
-			level: 0.0,
+			lat: coord?.match?.lat ?? 0.0,
+			lon: coord?.match?.lon ?? 0.0,
+			level: coord?.match?.level ?? 0.0,
 			id: place,
 			areas: [],
 			type: 'STOP',

@@ -149,11 +149,6 @@ const translations: Translations = {
 	},
 	isochrones: {
 		title: 'Izochrony',
-		displayLevel: 'Úroveň ukazování',
-		maxComputeLevel: 'Max. úroveň vypočítání',
-		canvasRects: 'Čtverce',
-		canvasCircles: 'Okruhy (zjednodušená projekce)',
-		geojsonCircles: 'Okruhy (pokročilá projekce)',
 		styling: 'Styl izochron',
 		noData: 'Žádné data',
 		requestFailed: 'Chyba žádosti'

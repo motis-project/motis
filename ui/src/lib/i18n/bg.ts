@@ -147,11 +147,6 @@ const translations: Translations = {
 	},
 	isochrones: {
 		title: 'Достъпен периметър',
-		displayLevel: 'Ниво на показване',
-		maxComputeLevel: 'Макс. ниво на изчисление',
-		canvasRects: 'Правоъгълници (слой)',
-		canvasCircles: 'Кръгове (слой)',
-		geojsonCircles: 'Кръгове (геометрия)',
 		styling: 'Стил',
 		noData: 'Няма данни',
 		requestFailed: 'Заявката е неуспешна'

@@ -63,7 +63,7 @@
 	import DeparturesMask from '$lib/DeparturesMask.svelte';
 	import Isochrones from '$lib/map/Isochrones.svelte';
 	import IsochronesInfo from '$lib/IsochronesInfo.svelte';
-	import type { DisplayLevel, IsochronesOptions, IsochronesPos } from '$lib/map/IsochronesShared';
+	import type { IsochronesOptions, IsochronesPos } from '$lib/map/IsochronesShared';
 	import IsochronesMask from '$lib/IsochronesMask.svelte';
 	import Rentals from '$lib/map/rentals/Rentals.svelte';
 	import Routes from '$lib/map/routes/Routes.svelte';
@@ -206,6 +206,8 @@
 						itineraryId: itinerary.id,
 						fromName: from.label || undefined,
 						toName: to.label || undefined,
+						fromPos: toPosString(from),
+						toPos: toPosString(to),
 						joinInterlinedLegs: false,
 						detailedLegs: true,
 						detailedTransfers: true,
@@ -318,7 +320,9 @@
 			definedOnly({
 				...query,
 				fromName: from.label || undefined,
-				toName: to.label || undefined
+				toName: to.label || undefined,
+				fromPos: toPosString(from),
+				toPos: toPosString(to)
 			}),
 			{
 				selectedItinerary: itinerary,
@@ -382,10 +386,18 @@
 	let oneMarker = $state<maplibregl.Marker>();
 	let stopMarker = $state<maplibregl.Marker>();
 	let from = $state<Location>(
-		parseLocation(urlParams?.get('fromPlace'), urlParams?.get('fromName'))
+		parseLocation(
+			urlParams?.get('fromPlace'),
+			urlParams?.get('fromName'),
+			urlParams?.get('fromPos')
+		)
 	);
-	let to = $state<Location>(parseLocation(urlParams?.get('toPlace'), urlParams?.get('toName')));
-	let one = $state<Location>(parseLocation(urlParams?.get('one'), urlParams?.get('oneName')));
+	let to = $state<Location>(
+		parseLocation(urlParams?.get('toPlace'), urlParams?.get('toName'), urlParams?.get('toPos'))
+	);
+	let one = $state<Location>(
+		parseLocation(urlParams?.get('one'), urlParams?.get('oneName'), urlParams?.get('onePos'))
+	);
 	let stop = $state<Location>();
 	let viaParam = getUrlArray('via');
 	let viaLabels = $state(
@@ -554,18 +566,11 @@
 
 	let isochronesData = $state<IsochronesPos[]>([]);
 	let isochronesOptions = $state<IsochronesOptions>({
-		displayLevel:
-			(urlParams?.get('isochronesDisplayLevel') as DisplayLevel) ??
-			defaultQuery.isochronesDisplayLevel,
-		color: urlParams?.get('isochronesColor') ?? defaultQuery.isochronesColor,
 		opacity: parseIntOr(urlParams?.get('isochronesOpacity'), defaultQuery.isochronesOpacity),
 		status: 'DONE',
 		errorMessage: undefined,
 		errorCode: undefined
 	});
-	const isochronesCircleResolution = urlParams?.get('isochronesCircleResolution')
-		? parseIntOr(urlParams.get('isochronesCircleResolution'), defaultQuery.circleResolution)
-		: defaultQuery.circleResolution;
 
 	const toPlaceString = (l: Location) => {
 		if (l.match?.type === 'STOP') {
@@ -576,6 +581,13 @@
 			return `${lngLatToStr(l.match!)}`;
 		}
 	};
+
+	// Stops go into the query as a plain ID, so the URL alone would not say where
+	// they are and the marker could not be restored after a reload.
+	const toPosString = (l: Location | undefined) =>
+		l?.match?.type === 'STOP' && (l.match.lat != 0 || l.match.lon != 0)
+			? lngLatToStr(l.match)
+			: undefined;
 
 	const providerGroupsForQuery = (modes: PrePostDirectMode[], groups: string[]): string[] => {
 		if (!modes.some((mode) => mode.startsWith('RENTAL_'))) {
@@ -814,6 +826,7 @@
 				...q,
 				...(q.fromPlace == from.label ? {} : { fromName: from.label }),
 				...(q.toPlace == to.label ? {} : { toName: to.label }),
+				...definedOnly({ fromPos: toPosString(from), toPos: toPosString(to) }),
 				...viaLabels
 			},
 			{ activeTab: 'connections' },
@@ -836,11 +849,7 @@
 	let isochronesQueryTimeout: number;
 	$effect(() => {
 		if (isochronesQuery && activeTab == 'isochrones') {
-			const [isochronesColor, isochronesOpacity, isochronesDisplayLevel] = [
-				isochronesOptions.color,
-				isochronesOptions.opacity,
-				isochronesOptions.displayLevel
-			];
+			const isochronesOpacity = isochronesOptions.opacity;
 			if (lastOneToAllQuery != isochronesQuery) {
 				lastOneToAllQuery = isochronesQuery;
 				clearTimeout(isochronesQueryTimeout);
@@ -865,7 +874,7 @@
 						});
 
 						isochronesData = [...all];
-						isochronesOptions.status = isochronesData.length == 0 ? 'EMPTY' : 'WORKING';
+						isochronesOptions.status = isochronesData.length == 0 ? 'EMPTY' : 'DONE';
 					} catch (e) {
 						isochronesOptions.status = 'FAILED';
 						isochronesOptions.errorMessage = String(e);
@@ -879,13 +888,9 @@
 					{
 						...q,
 						...(q.one == one.label ? {} : { oneName: one.label }),
+						...definedOnly({ onePos: toPosString(one) }),
 						maxTravelTime: q.maxTravelTime * 60,
-						isochronesColor,
-						isochronesOpacity,
-						isochronesDisplayLevel,
-						...(isochronesCircleResolution && isochronesCircleResolution > 2
-							? { isochronesCircleResolution }
-							: {})
+						isochronesOpacity
 					},
 					{ activeTab: 'isochrones' },
 					true
@@ -932,12 +937,50 @@
 	};
 
 	let lastFlownTo: Match | undefined = undefined;
-	const flyToLocation = (location: Location) => {
+	const flyToLocation = (location: Location, zoom: number = 18) => {
 		if (location.match == lastFlownTo) {
 			return;
 		}
 		lastFlownTo = location.match;
-		map?.flyTo({ center: location.match, zoom: 18 });
+		map?.flyTo({ center: location.match, zoom });
+	};
+
+	// Show the whole reachable area instead of zooming onto the start position.
+	// A few long distance stops can reach much further than everything else, so
+	// the outermost places are trimmed away before fitting.
+	const ISOCHRONES_FIT_TRIM = 0.02;
+	const isochronesBounds = (data: IsochronesPos[]) => {
+		const lngs = data.map((p) => p.lng).sort((a, b) => a - b);
+		const lats = data.map((p) => p.lat).sort((a, b) => a - b);
+		const lo = Math.floor(lngs.length * ISOCHRONES_FIT_TRIM);
+		const hi = lngs.length - 1 - lo;
+		return lo < hi
+			? new maplibregl.LngLatBounds([lngs[lo], lats[lo]], [lngs[hi], lats[hi]])
+			: new maplibregl.LngLatBounds(
+					[lngs[0], lats[0]],
+					[lngs[lngs.length - 1], lats[lats.length - 1]]
+				);
+	};
+
+	let lastFittedIsochrones: IsochronesPos[] | undefined = undefined;
+	const flyToIsochrones = (data: IsochronesPos[], map: maplibregl.Map) => {
+		if (data === lastFittedIsochrones) {
+			return;
+		}
+		lastFittedIsochrones = data;
+		const box = isochronesBounds(data);
+		const camera = map.cameraForBounds(box, {
+			maxZoom: 15, // keeps a single reachable place from zooming to street level
+			padding: {
+				top: 96,
+				right: 96,
+				bottom: isSmallScreen.current ? window.innerHeight * 0.3 : 96,
+				left: isSmallScreen.current ? 96 : 640
+			}
+		});
+		if (camera) {
+			map.flyTo(camera);
+		}
 	};
 
 	const flyToSelectedItinerary = () => {
@@ -959,7 +1002,12 @@
 			} else if (activeTab == 'departures' && stop && stop.match) {
 				flyToLocation(stop);
 			} else if (activeTab == 'isochrones' && one && one.match) {
-				flyToLocation(one);
+				if (isochronesData.length != 0) {
+					flyToIsochrones(isochronesData, map);
+				} else if (isochronesOptions.status == 'EMPTY' || isochronesOptions.status == 'FAILED') {
+					// Nothing to fit: at least show the surroundings of the start.
+					flyToLocation(one, 13);
+				}
 			}
 		}
 	});
@@ -1403,14 +1451,13 @@
 			/>
 			<Isochrones
 				{map}
-				{bounds}
 				{isochronesData}
 				streetModes={arriveBy ? preTransitModes : postTransitModes}
 				wheelchair={pedestrianProfile === 'WHEELCHAIR'}
 				maxAllTime={arriveBy ? maxPreTransitTime : maxPostTransitTime}
-				circleResolution={isochronesCircleResolution}
+				{maxTravelTime}
 				active={activeTab == 'isochrones'}
-				bind:options={isochronesOptions}
+				options={isochronesOptions}
 			/>
 
 			<Popup trigger="contextmenu" children={contextMenu} />

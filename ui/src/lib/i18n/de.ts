@@ -144,11 +144,6 @@ const translations: Translations = {
 	elevationCosts: { NONE: 'Keine Umwege', LOW: 'Kleine Umwege', HIGH: 'Große Umwege' },
 	isochrones: {
 		title: 'Isochronen',
-		displayLevel: 'Darstellungsebene',
-		maxComputeLevel: 'Max. Berechnungsebene',
-		canvasRects: 'Rechtecke (Overlay)',
-		canvasCircles: 'Kreise (Overlay)',
-		geojsonCircles: 'Kreise (Geometrie)',
 		styling: 'Darstellung der Isochronen',
 		noData: 'Keine Daten',
 		requestFailed: 'Anfrage fehlgeschlagen'

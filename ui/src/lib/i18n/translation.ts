@@ -144,11 +144,6 @@ export type Translations = {
 	};
 	isochrones: {
 		title: string;
-		displayLevel: string;
-		maxComputeLevel: string;
-		canvasRects: string;
-		canvasCircles: string;
-		geojsonCircles: string;
 		styling: string;
 		noData: string;
 		requestFailed: string;
