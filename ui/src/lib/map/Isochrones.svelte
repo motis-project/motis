@@ -10,6 +10,7 @@
 		streetModes,
 		wheelchair,
 		maxAllTime,
+		maxTravelTime,
 		active,
 		options
 	}: {
@@ -18,6 +19,7 @@
 		streetModes: PrePostDirectMode[];
 		wheelchair: boolean;
 		maxAllTime: number;
+		maxTravelTime: number;
 		active: boolean;
 		options: IsochronesOptions;
 	} = $props();
@@ -30,13 +32,19 @@
 	);
 
 	const circles = $derived(
-		isochronesData.map(
-			(pos: IsochronesPos): IsochronesCircle => ({
+		isochronesData.map((pos: IsochronesPos): IsochronesCircle => {
+			// Walking outwards spends the remaining budget one second at a time,
+			// but never more than the pre/post transit limit allows.
+			const centerSeconds = Math.max(0, pos.seconds);
+			const walkSeconds = Math.min(centerSeconds, maxAllTime);
+			return {
 				lng: pos.lng,
 				lat: pos.lat,
-				radiusMeters: Math.max(0, Math.min(pos.seconds, maxAllTime)) * metersPerSecond
-			})
-		)
+				radiusMeters: walkSeconds * metersPerSecond,
+				centerSeconds,
+				edgeSeconds: centerSeconds - walkSeconds
+			};
+		})
 	);
 
 	let layer = $state<IsochronesLayer>();
@@ -78,11 +86,7 @@
 	});
 
 	$effect(() => {
-		layer?.setCircles(circles);
-	});
-
-	$effect(() => {
-		layer?.setColor(options.color);
+		layer?.setCircles(circles, maxTravelTime);
 	});
 
 	$effect(() => {

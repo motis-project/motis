@@ -60,7 +60,6 @@ export const defaultQuery = {
 	passengers: 1,
 	luggage: 0,
 	slowDirect: false,
-	isochronesColor: '#aa3cee',
 	isochronesOpacity: 600,
 	algorithm: 'PONG'
 };

@@ -554,7 +554,6 @@
 
 	let isochronesData = $state<IsochronesPos[]>([]);
 	let isochronesOptions = $state<IsochronesOptions>({
-		color: urlParams?.get('isochronesColor') ?? defaultQuery.isochronesColor,
 		opacity: parseIntOr(urlParams?.get('isochronesOpacity'), defaultQuery.isochronesOpacity),
 		status: 'DONE',
 		errorMessage: undefined,
@@ -830,10 +829,7 @@
 	let isochronesQueryTimeout: number;
 	$effect(() => {
 		if (isochronesQuery && activeTab == 'isochrones') {
-			const [isochronesColor, isochronesOpacity] = [
-				isochronesOptions.color,
-				isochronesOptions.opacity
-			];
+			const isochronesOpacity = isochronesOptions.opacity;
 			if (lastOneToAllQuery != isochronesQuery) {
 				lastOneToAllQuery = isochronesQuery;
 				clearTimeout(isochronesQueryTimeout);
@@ -873,7 +869,6 @@
 						...q,
 						...(q.one == one.label ? {} : { oneName: one.label }),
 						maxTravelTime: q.maxTravelTime * 60,
-						isochronesColor,
 						isochronesOpacity
 					},
 					{ activeTab: 'isochrones' },
@@ -1396,6 +1391,7 @@
 				streetModes={arriveBy ? preTransitModes : postTransitModes}
 				wheelchair={pedestrianProfile === 'WHEELCHAIR'}
 				maxAllTime={arriveBy ? maxPreTransitTime : maxPostTransitTime}
+				{maxTravelTime}
 				active={activeTab == 'isochrones'}
 				options={isochronesOptions}
 			/>

@@ -14,6 +14,7 @@
 		type ServerConfig
 	} from '@motis-project/motis-client';
 	import type { IsochronesOptions } from '$lib/map/IsochronesShared';
+	import { PLASMA } from '$lib/map/IsochronesLayer';
 	import AddressTypeahead from '$lib/AddressTypeahead.svelte';
 	import AdvancedOptions from '$lib/AdvancedOptions.svelte';
 	import DateInput from '$lib/DateInput.svelte';
@@ -107,6 +108,8 @@
 		vehicleLezAccess: boolean;
 		hasDebug: boolean;
 	} = $props();
+
+	const plasmaGradient = `linear-gradient(to right, ${PLASMA.join(', ')})`;
 	const minutesToSeconds = (n: number): number => n * 60;
 	const possibleMaxTravelTimes = $derived(
 		generateTimes(
@@ -149,7 +152,7 @@
 </script>
 
 {#snippet additionalComponents()}
-	<div class="grid grid-cols-[1fr_auto] items-center gap-2">
+	<div class="flex items-center gap-2">
 		<Slider.Root
 			type="single"
 			min={0}
@@ -165,7 +168,6 @@
 				class="border-border-input bg-background hover:border-dark-40 focus-visible:ring-foreground dark:bg-foreground dark:shadow-card focus-visible:outline-hidden block size-[25px] cursor-pointer rounded-full border shadow-sm transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50"
 			/>
 		</Slider.Root>
-		<input class="flex right-0 align-right" type="color" bind:value={options.color} />
 	</div>
 {/snippet}
 
@@ -270,5 +272,13 @@
 			viaLabels={{}}
 			{hasDebug}
 		/>
+	</div>
+	<div class="text-muted-foreground flex items-center gap-2 text-xs">
+		<span>{formatDurationSec(0)}</span>
+		<div
+			class="border-border h-2 grow rounded-full border"
+			style="background: {plasmaGradient}"
+		></div>
+		<span>{formatDurationSec(maxTravelTime)}</span>
 	</div>
 </div>

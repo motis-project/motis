@@ -1,7 +1,6 @@
 export type StatusLevel = 'WORKING' | 'DONE' | 'EMPTY' | 'FAILED';
 
 export interface IsochronesOptions {
-	color: string;
 	opacity: number;
 	status: StatusLevel;
 	errorMessage: string | undefined;

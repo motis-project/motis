@@ -3,29 +3,47 @@ import type { CustomRenderMethodInput, Map as MapLibreMap } from 'maplibre-gl';
 
 type GLContext = WebGLRenderingContext | WebGL2RenderingContext;
 
+const parseColor = (color: string): Float32Array => {
+	const value = Number.parseInt(color.replace('#', '').slice(0, 6), 16);
+	return new Float32Array([
+		((value >> 16) & 0xff) / 0xff,
+		((value >> 8) & 0xff) / 0xff,
+		(value & 0xff) / 0xff
+	]);
+};
+
 export type IsochronesCircle = {
 	lng: number;
 	lat: number;
 	radiusMeters: number;
+	// Budget left over at the center of the disc and at its rim. Walking outwards
+	// burns exactly one second per second, so the value in between is linear.
+	centerSeconds: number;
+	edgeSeconds: number;
 };
 
 // Two passes, both on the GPU:
 //
 //  1. prerender(): every reachable place is drawn as an instanced quad into an
-//     offscreen single-channel texture, cut to a disc in the fragment shader.
-//     Blending uses MAX so overlapping discs form their union instead of
-//     accumulating alpha - that replaces the polygon union that used to be
-//     computed on the CPU.
-//  2. render(): the coverage texture is composited over the map with the
-//     configured color and opacity.
+//     offscreen texture, cut to a disc in the fragment shader. Each disc writes
+//     its remaining travel budget, falling off linearly towards the rim.
+//     Blending uses MAX, so every pixel keeps the largest remaining budget any
+//     place could give it - i.e. the shortest travel time. That single blend
+//     mode replaces both the polygon union and the per-stop time lookup that
+//     used to be computed on the CPU.
+//  2. render(): the field is composited over the map, mapping travel time
+//     through the plasma colormap.
 const UNION_VERTEX_SHADER = `#version 300 es
 precision highp float;
 in vec2 a_corner;
-in vec3 a_circle; // xy: center relative to u_origin, z: radius (mercator units)
+in vec3 a_circle; // xy: center relative to the data origin, z: radius (mercator units)
+in vec2 a_time; // normalized remaining budget at the center (x) and at the rim (y)
 uniform mat4 u_matrix;
 out vec2 v_corner;
+out vec2 v_time;
 void main() {
 	v_corner = a_corner;
+	v_time = a_time;
 	gl_Position = u_matrix * vec4(a_circle.xy + a_corner * a_circle.z, 0.0, 1.0);
 }
 `;
@@ -33,6 +51,7 @@ void main() {
 const UNION_FRAGMENT_SHADER = `#version 300 es
 precision mediump float;
 in vec2 v_corner;
+in vec2 v_time;
 out vec4 fragColor;
 void main() {
 	float d = length(v_corner);
@@ -43,7 +62,7 @@ void main() {
 	if (coverage <= 0.0) {
 		discard;
 	}
-	fragColor = vec4(coverage, 0.0, 0.0, 1.0);
+	fragColor = vec4(mix(v_time.x, v_time.y, d), coverage, 0.0, 1.0);
 }
 `;
 
@@ -58,19 +77,47 @@ void main() {
 }
 `;
 
+// The plasma colormap from viridis / matplotlib: perceptually uniform and
+// monotone in lightness, so equal travel time steps look equally far apart.
+export const PLASMA = [
+	'#0d0887',
+	'#46039f',
+	'#7201a8',
+	'#9c179e',
+	'#bd3786',
+	'#d8576b',
+	'#ed7953',
+	'#fb9f3a',
+	'#fdca26',
+	'#f0f921'
+];
+
+const glslVec3 = (hex: string) =>
+	`vec3(${Array.from(parseColor(hex), (v) => v.toFixed(4)).join(',')})`;
+
 const COMPOSITE_FRAGMENT_SHADER = `#version 300 es
 precision mediump float;
 uniform sampler2D u_texture;
-uniform vec3 u_color;
 uniform float u_opacity;
 in vec2 v_uv;
 out vec4 fragColor;
+
+const vec3 PLASMA[${PLASMA.length}] = vec3[${PLASMA.length}](${PLASMA.map(glslVec3).join(',')});
+
+vec3 plasma(float t) {
+	float x = clamp(t, 0.0, 1.0) * ${(PLASMA.length - 1).toFixed(1)};
+	int i = min(int(x), ${PLASMA.length - 2});
+	return mix(PLASMA[i], PLASMA[i + 1], x - float(i));
+}
+
 void main() {
-	float a = texture(u_texture, v_uv).r * u_opacity;
+	vec2 field = texture(u_texture, v_uv).rg;
+	float a = field.g * u_opacity;
 	if (a <= 0.0) {
 		discard;
 	}
-	fragColor = vec4(u_color * a, a); // premultiplied, like MapLibre's own layers
+	vec3 color = plasma(1.0 - field.r); // field.r is the budget left, so 1 - it is the travel time
+	fragColor = vec4(color * a, a); // premultiplied, like MapLibre's own layers
 }
 `;
 
@@ -78,25 +125,9 @@ void main() {
 const QUAD_VERTICES = new Float32Array([-1, -1, 0, 0, 1, -1, 1, 0, -1, 1, 0, 1, 1, 1, 1, 1]);
 const CORNERS = new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]);
 
-const parseColor = (color: string): Float32Array => {
-	const hex = color.replace('#', '');
-	const expanded =
-		hex.length === 3
-			? hex
-					.split('')
-					.map((c) => c + c)
-					.join('')
-			: hex;
-	const value = Number.parseInt(expanded.slice(0, 6), 16);
-	if (Number.isNaN(value)) {
-		return new Float32Array([1, 1, 0]);
-	}
-	return new Float32Array([
-		((value >> 16) & 0xff) / 0xff,
-		((value >> 8) & 0xff) / 0xff,
-		(value & 0xff) / 0xff
-	]);
-};
+// Per instance: center x, center y, radius, center budget, rim budget.
+const CIRCLE_COMPONENTS = 5;
+const CIRCLE_STRIDE_BYTES = CIRCLE_COMPONENTS * Float32Array.BYTES_PER_ELEMENT;
 
 const compileShader = (gl: WebGL2RenderingContext, type: number, source: string) => {
 	const shader = gl.createShader(type);
@@ -158,7 +189,6 @@ export class IsochronesLayer implements maplibregl.CustomLayerInterface {
 
 	private matrixLocation: WebGLUniformLocation | null = null;
 	private textureLocation: WebGLUniformLocation | null = null;
-	private colorLocation: WebGLUniformLocation | null = null;
 	private opacityLocation: WebGLUniformLocation | null = null;
 
 	// Circle centers are stored relative to this origin so that they keep full
@@ -170,7 +200,6 @@ export class IsochronesLayer implements maplibregl.CustomLayerInterface {
 	private circleCount = 0;
 	private circlesDirty = false;
 
-	private color = parseColor('#ffff00');
 	private opacity = 1;
 	private active = true;
 
@@ -178,7 +207,10 @@ export class IsochronesLayer implements maplibregl.CustomLayerInterface {
 		this.id = id;
 	}
 
-	setCircles(circles: IsochronesCircle[]) {
+	// maxSeconds is the full travel time budget of the query: it maps the
+	// remaining budget of every disc onto the 0..1 range the shader works with.
+	setCircles(circles: IsochronesCircle[], maxSeconds: number) {
+		const scale = maxSeconds > 0 ? 1 / maxSeconds : 0;
 		let originX = Number.POSITIVE_INFINITY;
 		let originY = Number.POSITIVE_INFINITY;
 		const merc = circles.map((c) => {
@@ -189,19 +221,17 @@ export class IsochronesLayer implements maplibregl.CustomLayerInterface {
 		});
 
 		this.origin = Number.isFinite(originX) ? [originX, originY] : [0, 0];
-		this.circles = new Float32Array(merc.length * 3);
+		this.circles = new Float32Array(merc.length * CIRCLE_COMPONENTS);
 		for (let i = 0; i < merc.length; ++i) {
-			this.circles[i * 3] = merc[i].x - this.origin[0];
-			this.circles[i * 3 + 1] = merc[i].y - this.origin[1];
-			this.circles[i * 3 + 2] = merc[i].r;
+			const base = i * CIRCLE_COMPONENTS;
+			this.circles[base] = merc[i].x - this.origin[0];
+			this.circles[base + 1] = merc[i].y - this.origin[1];
+			this.circles[base + 2] = merc[i].r;
+			this.circles[base + 3] = Math.min(1, Math.max(0, circles[i].centerSeconds * scale));
+			this.circles[base + 4] = Math.min(1, Math.max(0, circles[i].edgeSeconds * scale));
 		}
 		this.circleCount = merc.length;
 		this.circlesDirty = true;
-		this.map?.triggerRepaint();
-	}
-
-	setColor(color: string) {
-		this.color = parseColor(color);
 		this.map?.triggerRepaint();
 	}
 
@@ -313,7 +343,6 @@ export class IsochronesLayer implements maplibregl.CustomLayerInterface {
 		gl.activeTexture(gl.TEXTURE0);
 		gl.bindTexture(gl.TEXTURE_2D, this.texture);
 		gl.uniform1i(this.textureLocation, 0);
-		gl.uniform3fv(this.colorLocation, this.color);
 		gl.uniform1f(this.opacityLocation, this.opacity);
 
 		gl.bindVertexArray(this.compositeVao);
@@ -335,7 +364,6 @@ export class IsochronesLayer implements maplibregl.CustomLayerInterface {
 
 		this.matrixLocation = gl.getUniformLocation(this.unionProgram, 'u_matrix');
 		this.textureLocation = gl.getUniformLocation(this.compositeProgram, 'u_texture');
-		this.colorLocation = gl.getUniformLocation(this.compositeProgram, 'u_color');
 		this.opacityLocation = gl.getUniformLocation(this.compositeProgram, 'u_opacity');
 
 		this.cornerBuffer = gl.createBuffer();
@@ -361,14 +389,18 @@ export class IsochronesLayer implements maplibregl.CustomLayerInterface {
 
 		const cornerLocation = gl.getAttribLocation(this.unionProgram, 'a_corner');
 		const circleLocation = gl.getAttribLocation(this.unionProgram, 'a_circle');
+		const timeLocation = gl.getAttribLocation(this.unionProgram, 'a_time');
 		gl.bindVertexArray(this.unionVao);
 		gl.bindBuffer(gl.ARRAY_BUFFER, this.cornerBuffer);
 		gl.enableVertexAttribArray(cornerLocation);
 		gl.vertexAttribPointer(cornerLocation, 2, gl.FLOAT, false, 0, 0);
 		gl.bindBuffer(gl.ARRAY_BUFFER, this.circleBuffer);
 		gl.enableVertexAttribArray(circleLocation);
-		gl.vertexAttribPointer(circleLocation, 3, gl.FLOAT, false, 0, 0);
+		gl.vertexAttribPointer(circleLocation, 3, gl.FLOAT, false, CIRCLE_STRIDE_BYTES, 0);
 		gl.vertexAttribDivisor(circleLocation, 1);
+		gl.enableVertexAttribArray(timeLocation);
+		gl.vertexAttribPointer(timeLocation, 2, gl.FLOAT, false, CIRCLE_STRIDE_BYTES, 12);
+		gl.vertexAttribDivisor(timeLocation, 1);
 
 		const posLocation = gl.getAttribLocation(this.compositeProgram, 'a_pos');
 		const uvLocation = gl.getAttribLocation(this.compositeProgram, 'a_uv');
@@ -410,7 +442,8 @@ export class IsochronesLayer implements maplibregl.CustomLayerInterface {
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-		gl.texImage2D(gl.TEXTURE_2D, 0, gl.R8, width, height, 0, gl.RED, gl.UNSIGNED_BYTE, null);
+		// R: remaining travel budget (the isochrone field), G: coverage.
+		gl.texImage2D(gl.TEXTURE_2D, 0, gl.RG8, width, height, 0, gl.RG, gl.UNSIGNED_BYTE, null);
 
 		const previousFramebuffer = gl.getParameter(gl.FRAMEBUFFER_BINDING) as WebGLFramebuffer | null;
 		gl.bindFramebuffer(gl.FRAMEBUFFER, this.framebuffer);
