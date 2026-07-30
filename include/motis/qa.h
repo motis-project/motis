@@ -57,7 +57,7 @@ double walking_time(api::Itinerary const& i) {
 static constexpr auto kDefaultStartTime = start_time<1.0>;
 static constexpr auto kDefaultEndTime = end_time<1.0>;
 static constexpr auto kDefaultTransfers = transfers<30.0>;
-static constexpr auto kDefaultWalkingTime = walking_time<1.0 / 60.0>;
+static constexpr auto kDefaultWalkingTime = walking_time<1.0>;
 
 }  // namespace criterion
 
