@@ -92,8 +92,8 @@ int compare(int ac, char** av) {
   };
   auto const get_ratings = [](auto const& ref, auto const& uut) {
     return std::map<std::string, double>{
-        {"start_end_transfers", qa::rate(uut, ref, qa::kStartEndTransfer)},
-        {"start_end_transfers_walk",
+        {"start_end_transfer", qa::rate(uut, ref, qa::kStartEndTransfer)},
+        {"start_end_transfer_walk",
          qa::rate(uut, ref, qa::kStartEndTransferWalk)}};
   };
   auto const print_ratings = [](auto const& ratings) {
@@ -104,7 +104,6 @@ int compare(int ac, char** av) {
                                  : "→")
                 << " ] ";
     }
-    std::cout << "\n";
   };
   auto const print_none = []() { std::cout << "\t\t\t\t\t\t"; };
   auto n_equal = 0U;
@@ -133,7 +132,9 @@ int compare(int ac, char** av) {
       }
       std::cout << "\n";
       if (x.responses_.size() == 2U) {
+        std::cout << "ratings: ";
         print_ratings(get_ratings(ref, uut));
+        std::cout << "\n";
       }
       utl::sorted_diff(
           ref, uut,
