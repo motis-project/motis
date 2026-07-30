@@ -184,3 +184,24 @@ TEST(qa, walking_time) {
                 {.mode_ = api::ModeEnum::WALK, .duration_ = 555}}};
   EXPECT_EQ(qa::criterion::walking_time<1.0>(i), 999.0);
 }
+
+TEST(qa, different_criteria) {
+  auto const a = std::vector<api::Itinerary>{
+      {.startTime_ = unixtime_t{sys_days{2024_y / June / 10} + 2_hours},
+       .endTime_ = unixtime_t{sys_days{2024_y / June / 10} + 3_hours},
+       .transfers_ = 0U,
+       .legs_ = {{.mode_ = api::ModeEnum::WALK, .duration_ = 300},
+                 {.mode_ = api::ModeEnum::TRANSIT, .duration_ = 3000},
+                 {.mode_ = api::ModeEnum::WALK, .duration_ = 300}}}};
+
+  auto const b = std::vector<api::Itinerary>{
+      {.startTime_ = unixtime_t{sys_days{2024_y / June / 10} + 1_hours},
+       .endTime_ = unixtime_t{sys_days{2024_y / June / 10} + 2_hours},
+       .transfers_ = 0U,
+       .legs_ = {{.mode_ = api::ModeEnum::WALK, .duration_ = 600},
+                 {.mode_ = api::ModeEnum::TRANSIT, .duration_ = 2400},
+                 {.mode_ = api::ModeEnum::WALK, .duration_ = 600}}}};
+
+  EXPECT_EQ(qa::rate(a, b, qa::kStartEndTransfer), 0.0);
+  EXPECT_EQ(qa::rate(a, b, qa::kStartEndTransferWalk), 20.91702196360156);
+}
