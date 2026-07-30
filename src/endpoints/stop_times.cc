@@ -592,16 +592,6 @@ api::stoptimes_response stop_times::operator()(
                                       api_version);
             };
 
-            auto const src = [&]() {
-              if (!fr.is_scheduled()) {
-                return n::source_idx_t::invalid();
-              }
-              auto const trip = s.get_trip_idx(ev_type);
-              auto const id_idx = tt_.trip_ids_[trip].front();
-              return tt_.trip_id_src_[id_idx];
-            }();
-            auto const [service_day, _] = s.get_trip_start(ev_type);
-
             return {
                 .place_ = bwd_compat_lvl_adjust(std::move(place), api_version),
                 .mode_ = to_mode(s.get_clasz(ev_type), api_version),
@@ -644,11 +634,7 @@ api::stoptimes_response stop_times::operator()(
                                    : api::PickupDropoffTypeEnum::NOT_ALLOWED,
                 .cancelled_ = stop_cancelled,
                 .tripCancelled_ = run_cancelled,
-                .loopedCalendarSince_ =
-                    (fr.is_scheduled() && src != n::source_idx_t::invalid() &&
-                     tt_.src_end_date_[src] < service_day)
-                        ? std::optional{tt_.src_end_date_[src]}
-                        : std::nullopt,
+                .loopedCalendarSince_ = s.looped_calendar_since(ev_type),
                 .bikesAllowed_ = s.is_flag_set(nigiri::kBikesAllowed, ev_type),
                 .wheelchairAccessible_ =
                     s.is_flag_set(nigiri::kWheelchairAccessible, ev_type)

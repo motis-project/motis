@@ -379,3 +379,190 @@ TEST(motis, stop_times) {
     EXPECT_EQ(1, ice.place_.alerts_->size());
   }
 }
+
+// T1 and T2 share block_id "block_1" (T2 continues where T1 ends), so they
+// are combined into a single transport/run. T1 requires a compulsory
+// reservation (pickup_type=2 on trips.txt), T2 does not (default clasz BUS
+// is not compulsory by default) -- the reservation flag is per-section, so
+// it must be reported correctly for each leg of the combined run.
+constexpr auto const kGTFS_RESERVATION = R"(
+# agency.txt
+agency_id,agency_name,agency_url,agency_timezone
+DB,Deutsche Bahn,https://deutschebahn.com,Europe/Berlin
+
+# stops.txt
+stop_id,stop_name,stop_lat,stop_lon
+A,A,50.10701,8.66341
+B,B,50.11403,8.67835
+C,C,49.87260,8.63085
+
+# routes.txt
+route_id,agency_id,route_short_name,route_long_name,route_desc,route_type
+R1,DB,1,,,3
+R2,DB,2,,,3
+
+# trips.txt
+route_id,service_id,trip_id,trip_headsign,block_id,pickup_type
+R1,S1,T1,,block_1,2
+R2,S1,T2,,block_1,0
+
+# stop_times.txt
+trip_id,arrival_time,departure_time,stop_id,stop_sequence
+T1,08:00:00,08:00:00,A,0
+T1,08:10:00,08:10:00,B,1
+T2,08:10:00,08:10:00,B,0
+T2,08:20:00,08:20:00,C,1
+
+# calendar_dates.txt
+service_id,date,exception_type
+S1,20190501,1
+)";
+
+TEST(motis, stop_times_reservation) {
+  auto ec = std::error_code{};
+  std::filesystem::remove_all("test/data-reservation", ec);
+
+  auto const c =
+      config{.timetable_ = config::timetable{
+                 .first_day_ = "2019-05-01",
+                 .num_days_ = 2,
+                 .datasets_ = {{"test", {.path_ = kGTFS_RESERVATION}}}}};
+  import(c, "test/data-reservation");
+  auto d = data{"test/data-reservation", c};
+  d.init_rtt(date::sys_days{2019_y / May / 1});
+
+  auto const stop_times = utl::init_from<ep::stop_times>(d).value();
+
+  {
+    // Departure at A: first leg of the combined run (T1), compulsory
+    // reservation. tripFrom_/tripTo_ are T1's own (sub-trip) endpoints,
+    // while nextStops_ spans the whole combined run, i.e. it reaches past
+    // T1's own destination (B) into T2's leg (C).
+    auto const res = stop_times(
+        "/api/v5/stoptimes?stopId=test_A"
+        "&time=2019-05-01T05:55:00.000Z"
+        "&n=1"
+        "&language=de"
+        "&fetchStops=true");
+
+    ASSERT_EQ(1, res.stopTimes_.size());
+    auto const& t1 = res.stopTimes_[0];
+    EXPECT_EQ("20190501_08:00_test_T1", t1.tripId_);
+    EXPECT_EQ(api::ReservationEnum::COMPULSORY, t1.reservation_);
+    EXPECT_EQ("test_A", t1.tripFrom_.stopId_);
+    EXPECT_EQ("test_B", t1.tripTo_.stopId_);  // T1's own destination
+    ASSERT_EQ(2, t1.nextStops_->size());
+    EXPECT_EQ("test_B", (*t1.nextStops_)[0].stopId_);
+    EXPECT_EQ("test_C", (*t1.nextStops_)[1].stopId_);  // reaches into T2's leg
+  }
+
+  {
+    // Arrival at C: second leg of the combined run (T2), no reservation
+    // required. previousStops_ spans the whole combined run, reaching back
+    // past T2's own origin (B) into T1's leg (A), proving both trips were
+    // merged into a single transport via block_id.
+    auto const res = stop_times(
+        "/api/v5/stoptimes?stopId=test_C"
+        "&time=2019-05-01T06:25:00.000Z"
+        "&arriveBy=true"
+        "&n=1"
+        "&language=de"
+        "&fetchStops=true");
+
+    ASSERT_EQ(1, res.stopTimes_.size());
+    auto const& t2 = res.stopTimes_[0];
+    EXPECT_EQ("20190501_08:10_test_T2", t2.tripId_);
+    EXPECT_EQ(api::ReservationEnum::NONE, t2.reservation_);
+    EXPECT_EQ("test_B", t2.tripFrom_.stopId_);  // T2's own origin
+    EXPECT_EQ("test_C", t2.tripTo_.stopId_);
+    ASSERT_EQ(2, t2.previousStops_->size());
+    EXPECT_EQ("test_A",
+              (*t2.previousStops_)[0].stopId_);  // reaches into T1's leg
+    EXPECT_EQ("test_B", (*t2.previousStops_)[1].stopId_);
+  }
+}
+
+// Service S1 runs daily from 2019-05-01 to 2019-05-10 (feed_end_date).
+// With extend_calendar=true, the calendar loops beyond that date, so a
+// trip on 2019-05-20 is a "looped" trip since 2019-05-10.
+constexpr auto const kGTFS_LOOPED_CALENDAR = R"(
+# agency.txt
+agency_id,agency_name,agency_url,agency_timezone
+DB,Deutsche Bahn,https://deutschebahn.com,Europe/Berlin
+
+# stops.txt
+stop_id,stop_name,stop_lat,stop_lon
+A,A,50.10701,8.66341
+B,B,50.11403,8.67835
+
+# routes.txt
+route_id,agency_id,route_short_name,route_long_name,route_desc,route_type
+R1,DB,1,,,3
+
+# trips.txt
+route_id,service_id,trip_id,trip_headsign
+R1,S1,T1,
+
+# stop_times.txt
+trip_id,arrival_time,departure_time,stop_id,stop_sequence
+T1,08:00:00,08:00:00,A,0
+T1,08:10:00,08:10:00,B,1
+
+# calendar.txt
+service_id,monday,tuesday,wednesday,thursday,friday,saturday,sunday,start_date,end_date
+S1,1,1,1,1,1,1,1,20190501,20190510
+
+# feed_info.txt
+feed_publisher_name,feed_publisher_url,feed_lang,feed_end_date
+Test,https://example.com,en,20190510
+)";
+
+TEST(motis, stop_times_looped_calendar_since) {
+  auto ec = std::error_code{};
+  std::filesystem::remove_all("test/data-looped-calendar", ec);
+
+  auto const c = config{.timetable_ = config::timetable{
+                            .first_day_ = "2019-05-01",
+                            .num_days_ = 30,
+                            .datasets_ = {{"test",
+                                           {.path_ = kGTFS_LOOPED_CALENDAR,
+                                            .extend_calendar_ = true}}}}};
+  import(c, "test/data-looped-calendar");
+  auto d = data{"test/data-looped-calendar", c};
+  d.init_rtt(date::sys_days{2019_y / May / 1});
+
+  auto const stop_times = utl::init_from<ep::stop_times>(d).value();
+
+  auto const format_time = [](auto&& t, char const* fmt = "%F %H:%M") {
+    return date::format(fmt, *t);
+  };
+
+  {
+    // Before the feed's end date: no looped calendar.
+    auto const res = stop_times(
+        "/api/v5/stoptimes?stopId=test_A"
+        "&time=2019-05-01T05:55:00.000Z"
+        "&n=1"
+        "&language=de");
+
+    ASSERT_EQ(1, res.stopTimes_.size());
+    EXPECT_EQ("20190501_08:00_test_T1", res.stopTimes_[0].tripId_);
+    EXPECT_FALSE(res.stopTimes_[0].loopedCalendarSince_.has_value());
+  }
+
+  {
+    // After the feed's end date: the calendar has looped since
+    // 2019-05-10 (feed_end_date).
+    auto const res = stop_times(
+        "/api/v5/stoptimes?stopId=test_A"
+        "&time=2019-05-20T05:55:00.000Z"
+        "&n=1"
+        "&language=de");
+
+    ASSERT_EQ(1, res.stopTimes_.size());
+    EXPECT_EQ("20190520_08:00_test_T1", res.stopTimes_[0].tripId_);
+    ASSERT_TRUE(res.stopTimes_[0].loopedCalendarSince_.has_value());
+    EXPECT_EQ("2019-05-10 00:00",
+              format_time(res.stopTimes_[0].loopedCalendarSince_.value()));
+  }
+}
