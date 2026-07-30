@@ -90,6 +90,29 @@ int compare(int ac, char** av) {
               << ", transfers=" << std::setw(2) << std::left << x.transfers_
               << ", walk=" << qa::criterion::walking_time<1.0>(x);
   };
+  auto const get_ratings = [](auto const& ref, auto const& uut) {
+    return std::map<std::string, double>{
+        {"start_time", qa::rate(uut, ref, {qa::criterion::kDefaultStartTime})},
+        {"end_time", qa::rate(uut, ref, {qa::criterion::kDefaultEndTime})},
+        {"transfers", qa::rate(uut, ref, {qa::criterion::kDefaultTransfers})},
+        {"walking_time",
+         qa::rate(uut, ref, {qa::criterion::kDefaultWalkingTime})},
+        {"combined", qa::rate(uut, ref,
+                              {qa::criterion::kDefaultStartTime,
+                               qa::criterion::kDefaultEndTime,
+                               qa::criterion::kDefaultTransfers,
+                               qa::criterion::kDefaultWalkingTime})}};
+  };
+  auto const print_ratings = [](auto const& ratings) {
+    for (auto const& [name, rating] : ratings) {
+      std::cout << "[" << name << ", " << rating << ", "
+                << (rating > 0   ? "↗"
+                    : rating < 0 ? "↘"
+                                 : "→")
+                << " ] ";
+    }
+    std::cout << "\n";
+  };
   auto const print_none = []() { std::cout << "\t\t\t\t\t\t"; };
   auto n_equal = 0U;
   auto const print_differences = [&](info const& x) {
@@ -116,17 +139,9 @@ int compare(int ac, char** av) {
         std::cout << " [INCOMPLETE!!]";
       }
       std::cout << "\n";
-      auto const rating = qa::rate(
-          uut, ref,
-          std::vector<qa::criterion_t>{
-              qa::criterion::start_time<1.0>, qa::criterion::end_time<1.0>,
-              qa::criterion::transfers<30.0>,
-              qa::criterion::walking_time<1.0 / 60.0>});
-      std::cout << "rating for response " << i << ": " << rating
-                << (rating > 0   ? " ( -> improvement )"
-                    : rating < 0 ? " ( -> decline )"
-                                 : " ( -> no change)")
-                << "\n";
+      if (x.responses_.size() == 2U) {
+        print_ratings(get_ratings(ref, uut));
+      }
       utl::sorted_diff(
           ref, uut,
           [&](api::Itinerary const& a, api::Itinerary const& b) {
