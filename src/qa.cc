@@ -93,17 +93,17 @@ double set_improvement(
 }
 
 double rate(
-    std::vector<api::Itinerary> const& cmp,
     std::vector<api::Itinerary> const& ref,
+    std::vector<api::Itinerary> const& cmp,
     std::vector<std::function<double(api::Itinerary const&)>> const& criteria) {
-  if (cmp.empty() && ref.empty()) {
+  if (ref.empty() && cmp.empty()) {
     return 0.0;
-  }
-  if (cmp.empty()) {
-    return kMinRating;
   }
   if (ref.empty()) {
     return kMaxRating;
+  }
+  if (cmp.empty()) {
+    return kMinRating;
   }
 
   return set_improvement(cmp, ref, criteria) -

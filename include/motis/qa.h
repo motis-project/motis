@@ -16,8 +16,8 @@ constexpr auto kMinRating = std::numeric_limits<double>::min();
 using criterion_t = std::function<double(api::Itinerary const&)>;
 
 // rate cmp in comparison to ref: positive value -> improvement
-double rate(std::vector<api::Itinerary> const& cmp,
-            std::vector<api::Itinerary> const& ref,
+double rate(std::vector<api::Itinerary> const& ref,
+            std::vector<api::Itinerary> const& cmp,
             std::vector<criterion_t> const&);
 
 namespace criterion {

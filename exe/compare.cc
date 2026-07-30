@@ -98,9 +98,9 @@ int compare(int ac, char** av) {
   };
   auto const get_ratings = [](auto const& ref, auto const& uut) {
     return std::map<std::string, double>{
-        {"start_end_transfer", qa::rate(uut, ref, qa::kStartEndTransfer)},
+        {"start_end_transfer", qa::rate(ref, uut, qa::kStartEndTransfer)},
         {"start_end_transfer_walk",
-         qa::rate(uut, ref, qa::kStartEndTransferWalk)}};
+         qa::rate(ref, uut, qa::kStartEndTransferWalk)}};
   };
   auto const print_ratings = [](auto const& ratings) {
     for (auto const& [name, rating] : ratings) {
