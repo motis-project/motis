@@ -46,7 +46,7 @@ export const defaultQuery = {
 	joinInterlinedLegs: true,
 	maxMatchingDistance: 25,
 	maxTransfers: 14,
-	maxTravelTime: 120 * 60,
+	maxTravelTime: 300 * 60,
 	maxPreTransitTime: 900,
 	maxPostTransitTime: 900,
 	maxDirectTime: 1800,
