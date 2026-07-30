@@ -24,7 +24,7 @@ info:
   license:
     name: MIT
     url: https://opensource.org/license/mit
-  version: v5
+  version: v6
 externalDocs:
   description: Find out more about MOTIS
   url: https://github.com/motis-project/motis
