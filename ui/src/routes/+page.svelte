@@ -833,8 +833,11 @@
 			true
 		);
 	};
+
 	$effect(() => {
-		if (baseQuery && baseQuery != lastPlanQuery && activeTab == 'connections') {
+		const eq = (a: PlanData | undefined, b: PlanData | undefined) =>
+			JSON.stringify(a?.query) === JSON.stringify(b?.query);
+		if (baseQuery && !eq(baseQuery, lastPlanQuery) && activeTab == 'connections') {
 			const q = baseQuery;
 			const timeChanged = lastPlanQuery != undefined && lastPlanQuery.query.time != q.query.time;
 			lastPlanQuery = q;
