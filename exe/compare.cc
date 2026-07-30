@@ -74,7 +74,7 @@ int compare(int ac, char** av) {
   };
   auto const params = walk ? [](api::Itinerary const& x) {
     return std::tuple(x.startTime_, x.endTime_, x.transfers_,
-                      qa::criterion::walking_time<1.0>(x));
+                      qa::criterion::kDefaultWalkingTime(x));
   } : [](api::Itinerary const& x) {
     return std::tuple(x.startTime_, x.endTime_, x.transfers_, 0.0);
   };
@@ -94,7 +94,7 @@ int compare(int ac, char** av) {
     std::cout << x.startTime_ << ", " << x.endTime_
               << ", transfers=" << std::setw(2) << std::right << x.transfers_
               << ", walk=" << std::setw(4) << std::right
-              << qa::criterion::walking_time<1.0>(x);
+              << qa::criterion::kDefaultWalkingTime(x);
   };
   auto const get_ratings = [](auto const& ref, auto const& uut) {
     return std::map<std::string, double>{
