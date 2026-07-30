@@ -8,10 +8,6 @@ using namespace date;
 using namespace motis;
 using namespace nigiri;
 
-auto const criteria = std::vector<qa::criterion_t>{
-    qa::criterion::kDefaultStartTime, qa::criterion::kDefaultEndTime,
-    qa::criterion::kDefaultTransfers};
-
 TEST(qa, same_journey_later) {
   auto const a = std::vector<api::Itinerary>{
       {.startTime_ = unixtime_t{sys_days{2024_y / June / 10} + 2_hours},
@@ -23,23 +19,23 @@ TEST(qa, same_journey_later) {
        .endTime_ = unixtime_t{sys_days{2024_y / June / 10} + 2_hours},
        .transfers_ = 0U}};
 
-  EXPECT_EQ(qa::rate(a, b, criteria), 0.0);
+  EXPECT_EQ(qa::rate(a, b, qa::kStartEndTransfer), 0.0);
 }
 
 TEST(qa, test0) {
   auto a = std::vector<api::Itinerary>{};
   auto const b = std::vector<api::Itinerary>{};
 
-  EXPECT_DOUBLE_EQ(0.0, qa::rate(a, b, criteria));
-  EXPECT_DOUBLE_EQ(0.0, qa::rate(b, a, criteria));
+  EXPECT_DOUBLE_EQ(0.0, qa::rate(a, b, qa::kStartEndTransfer));
+  EXPECT_DOUBLE_EQ(0.0, qa::rate(b, a, qa::kStartEndTransfer));
 
   a.push_back(
       {.startTime_ = unixtime_t{sys_days{2024_y / June / 10} + 10_hours},
        .endTime_ = unixtime_t{sys_days{2024_y / June / 10} + 12_hours},
        .transfers_ = 0U});
 
-  EXPECT_DOUBLE_EQ(qa::kMaxRating, qa::rate(a, b, criteria));
-  EXPECT_DOUBLE_EQ(qa::kMinRating, qa::rate(b, a, criteria));
+  EXPECT_DOUBLE_EQ(qa::kMaxRating, qa::rate(a, b, qa::kStartEndTransfer));
+  EXPECT_DOUBLE_EQ(qa::kMinRating, qa::rate(b, a, qa::kStartEndTransfer));
 }
 
 TEST(qa, test1) {
@@ -63,8 +59,8 @@ TEST(qa, test1) {
            unixtime_t{sys_days{2024_y / June / 10} + 12_hours + 16_minutes},
        .transfers_ = 1U}};
 
-  EXPECT_DOUBLE_EQ(0.342008418450396, qa::rate(a, b, criteria));
-  EXPECT_DOUBLE_EQ(-0.342008418450396, qa::rate(b, a, criteria));
+  EXPECT_DOUBLE_EQ(0.342008418450396, qa::rate(a, b, qa::kStartEndTransfer));
+  EXPECT_DOUBLE_EQ(-0.342008418450396, qa::rate(b, a, qa::kStartEndTransfer));
 }
 
 TEST(qa, test2) {
@@ -88,8 +84,8 @@ TEST(qa, test2) {
            unixtime_t{sys_days{2024_y / June / 10} + 12_hours + 16_minutes},
        .transfers_ = 1U}};
 
-  EXPECT_DOUBLE_EQ(15.116357209650212, qa::rate(a, b, criteria));
-  EXPECT_DOUBLE_EQ(-15.116357209650212, qa::rate(b, a, criteria));
+  EXPECT_DOUBLE_EQ(15.116357209650212, qa::rate(a, b, qa::kStartEndTransfer));
+  EXPECT_DOUBLE_EQ(-15.116357209650212, qa::rate(b, a, qa::kStartEndTransfer));
 }
 
 TEST(qa, test3) {
@@ -108,8 +104,8 @@ TEST(qa, test3) {
            unixtime_t{sys_days{2024_y / June / 10} + 12_hours + 16_minutes},
        .transfers_ = 1U}};
 
-  EXPECT_DOUBLE_EQ(31.478651986610316, qa::rate(a, b, criteria));
-  EXPECT_DOUBLE_EQ(-31.478651986610316, qa::rate(b, a, criteria));
+  EXPECT_DOUBLE_EQ(31.478651986610316, qa::rate(a, b, qa::kStartEndTransfer));
+  EXPECT_DOUBLE_EQ(-31.478651986610316, qa::rate(b, a, qa::kStartEndTransfer));
 }
 
 TEST(qa, test4) {
@@ -138,8 +134,8 @@ TEST(qa, test4) {
            unixtime_t{sys_days{2024_y / June / 10} + 12_hours + 16_minutes},
        .transfers_ = 1U}};
 
-  EXPECT_DOUBLE_EQ(20.839157331515052, qa::rate(a, b, criteria));
-  EXPECT_DOUBLE_EQ(-20.839157331515052, qa::rate(b, a, criteria));
+  EXPECT_DOUBLE_EQ(20.839157331515052, qa::rate(a, b, qa::kStartEndTransfer));
+  EXPECT_DOUBLE_EQ(-20.839157331515052, qa::rate(b, a, qa::kStartEndTransfer));
 }
 
 TEST(qa, test5) {
@@ -175,8 +171,8 @@ TEST(qa, test5) {
            unixtime_t{sys_days{2024_y / June / 10} + 12_hours + 16_minutes},
        .transfers_ = 1U}};
 
-  EXPECT_DOUBLE_EQ(-32.37407751772509, qa::rate(a, b, criteria));
-  EXPECT_DOUBLE_EQ(32.37407751772509, qa::rate(b, a, criteria));
+  EXPECT_DOUBLE_EQ(-32.37407751772509, qa::rate(a, b, qa::kStartEndTransfer));
+  EXPECT_DOUBLE_EQ(32.37407751772509, qa::rate(b, a, qa::kStartEndTransfer));
 }
 
 TEST(qa, walking_time) {
