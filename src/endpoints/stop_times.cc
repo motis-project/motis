@@ -634,6 +634,16 @@ api::stoptimes_response stop_times::operator()(
                                    : api::PickupDropoffTypeEnum::NOT_ALLOWED,
                 .cancelled_ = stop_cancelled,
                 .tripCancelled_ = run_cancelled,
+                .loopedCalendarSince_ = s.looped_calendar_since(ev_type),
+                .bikesAllowed_ = s.is_flag_set(nigiri::kBikesAllowed, ev_type),
+                .wheelchairAccessible_ =
+                    s.is_flag_set(nigiri::kWheelchairAccessible, ev_type)
+                        ? api::WheelchairAccessibilityEnum::ACCESSIBLE
+                        : api::WheelchairAccessibilityEnum::NOT_ACCESSIBLE,
+                .reservation_ =
+                    s.is_flag_set(nigiri::kReservationNotRequired, ev_type)
+                        ? api::ReservationEnum::NONE
+                        : api::ReservationEnum::COMPULSORY,
                 .source_ = fmt::format("{}", fmt::streamed(fr.dbg()))};
           }),
       .place_ =

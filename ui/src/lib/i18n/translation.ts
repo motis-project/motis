@@ -173,6 +173,7 @@ export type Translations = {
 	toll: string;
 	bikesAllowed: string;
 	wheelchairAccessible: string;
+	compulsoryReservation: string;
 	accessRestriction: string;
 	continuesAs: string;
 	earlierAlternatives: string;

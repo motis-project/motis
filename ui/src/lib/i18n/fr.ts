@@ -176,6 +176,7 @@ const translations: Translations = {
 	toll: 'Attention ! Route à péages.',
 	bikesAllowed: 'Vélos autorisés',
 	wheelchairAccessible: 'Accessible en fauteuil roulant',
+	compulsoryReservation: 'Réservation obligatoire',
 	accessRestriction: 'Accès restreint',
 	continuesAs: 'Continue comme',
 	earlierAlternatives: 'Alternatives plus tôt',

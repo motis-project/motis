@@ -176,6 +176,7 @@ const translations: Translations = {
 	toll: 'Внимание! Платен път.',
 	bikesAllowed: 'Bikes allowed',
 	wheelchairAccessible: 'Wheelchair accessible',
+	compulsoryReservation: 'Reservation necessary',
 	accessRestriction: 'забранен достъп',
 	continuesAs: 'Продължава като',
 	earlierAlternatives: 'По-ранни алтернативи',

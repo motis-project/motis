@@ -72,7 +72,16 @@ timetable:                          # if not set, no timetable will be loaded
   datasets:                         # map of tag -> dataset
     ch:                             # the tag will be used as prefix for stop IDs and trip IDs with `_` as divider, so `_` cannot be part of the dataset tag
       path: ch_opentransportdataswiss.gtfs.zip
+      extend_calendar: false
       default_bikes_allowed: false
+      default_cars_allowed: false
+      default_reservation_not_required: true
+      clasz_reservation_not_required:
+        AIR: false
+        COACH: false
+        NIGHT: false
+        ODM: false
+        RIDESHARING: false
       rt:
         - url: https://api.opentransportdata.swiss/gtfsrt2020
           headers:
@@ -80,7 +89,16 @@ timetable:                          # if not set, no timetable will be loaded
           protocol: gtfsrt          # specify the real time protocol (default: gtfsrt)
     nl:
       path: nl_ovapi.gtfs.zip
+      extend_calendar: false
       default_bikes_allowed: false
+      default_cars_allowed: false
+      default_reservation_not_required: true
+      clasz_reservation_not_required:
+        AIR: false
+        COACH: false
+        NIGHT: false
+        ODM: false
+        RIDESHARING: false
       rt:
         - url: https://gtfs.ovapi.nl/nl/trainUpdates.pb
         - url: https://gtfs.ovapi.nl/nl/tripUpdates.pb

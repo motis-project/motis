@@ -173,6 +173,7 @@ const translations: Translations = {
 	toll: 'Achtung: Mautpflichtige Straße!',
 	bikesAllowed: 'Fahrräder erlaubt',
 	wheelchairAccessible: 'Rollstuhlgerecht',
+	compulsoryReservation: 'Reservierung erforderlich',
 	accessRestriction: 'Kein Zugang',
 	continuesAs: 'Weiter als',
 	earlierAlternatives: 'Frühere Alternativen',

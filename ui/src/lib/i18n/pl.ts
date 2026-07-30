@@ -178,6 +178,7 @@ const translations: Translations = {
 	toll: 'Uwaga! Za przejazd tą trasą pobierana jest opłata.',
 	bikesAllowed: 'Bikes allowed',
 	wheelchairAccessible: 'Wheelchair accessible',
+	compulsoryReservation: 'Reservation necessary',
 	accessRestriction: 'Ograniczony dostęp',
 	continuesAs: 'Kontynuuje jako',
 	earlierAlternatives: 'Wcześniejsze alternatywy',

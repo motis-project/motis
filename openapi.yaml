@@ -4302,6 +4302,18 @@ components:
         - NORMAL
         - NOT_ALLOWED
 
+    WheelchairAccessibility:
+      type: string
+      enum:
+        - ACCESSIBLE
+        - NOT_ACCESSIBLE
+
+    Reservation:
+      type: string
+      enum:
+        - NONE
+        - COMPULSORY
+
     Place:
       type: object
       required:
@@ -4465,6 +4477,9 @@ components:
         - pickupDropoffType
         - cancelled
         - tripCancelled
+        - bikesAllowed
+        - wheelchairAccessible
+        - reservation
         - source
       properties:
         place:
@@ -4540,6 +4555,25 @@ components:
         tripCancelled:
           description: Whether the entire trip is cancelled due to the realtime situation.
           type: boolean
+        loopedCalendarSince:
+          description: |
+            If set, this attribute indicates that this trip has been expanded
+            beyond the feed end date (enabled by config flag `timetable.dataset.extend_calendar`)
+            by looping active weekdays, e.g. from calendar.txt in GTFS.
+          type: string
+          format: date-time
+        bikesAllowed:
+          description: |
+            Whether bikes can be carried on this trip.
+          type: boolean
+        wheelchairAccessible:
+          description: |
+            Whether wheelchairs can be transported on this trip.
+          $ref: '#/components/schemas/WheelchairAccessibility'
+        reservation:
+          description: |
+            Information about compulsory or possible reservation.
+          $ref: '#/components/schemas/Reservation'
         source:
           description: Filename and line number where this trip is from
           type: string
@@ -4721,18 +4755,6 @@ components:
         elevationDown:
           type: integer
           description: decline in meters across this path segment
-
-    WheelchairAccessibility:
-      type: string
-      enum:
-        - ACCESSIBLE
-        - NOT_ACCESSIBLE
-
-    Reservation:
-      type: string
-      enum:
-        - NONE
-        - COMPULSORY
 
     RentalFormFactor:
       type: string
