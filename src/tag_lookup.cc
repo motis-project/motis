@@ -106,8 +106,9 @@ trip_id<std::string> tag_lookup::id_fragments(
         std::string{get_tag(src)}, std::string{id}};
   } else {
     auto const id = s.fr_->id();
-    auto const time = std::chrono::system_clock::to_time_t(
-        (*s.fr_)[0].time(n::event_type::kDep));
+    auto const time = std::chrono::system_clock::to_time_t((*s.fr_)[0].time(
+        s.fr_->stop_range_.from_ == s.fr_->size() - 1U ? n::event_type::kArr
+                                                       : n::event_type::kDep));
     auto const utc = *std::gmtime(&time);
     auto const id_tag = get_tag(id.src_);
     auto const id_id = id.id_;
