@@ -56,12 +56,10 @@ export const defaultQuery = {
 	additionalTransferTime: undefined,
 	transferTimeFactor: 1,
 	numItineraries: 5,
-	circleResolution: undefined,
 	maxItineraries: undefined,
 	passengers: 1,
 	luggage: 0,
 	slowDirect: false,
-	isochronesDisplayLevel: 'GEOMETRY_CIRCLES',
 	isochronesColor: '#aa3cee',
 	isochronesOpacity: 600,
 	algorithm: 'PONG'

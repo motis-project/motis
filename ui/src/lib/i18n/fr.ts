@@ -147,11 +147,6 @@ const translations: Translations = {
 	},
 	isochrones: {
 		title: 'Isochrones',
-		displayLevel: 'Calque d’affichage',
-		maxComputeLevel: 'Niveau de calcul max.',
-		canvasRects: 'Rectangles (Superposer)',
-		canvasCircles: 'Cercles (Superposer)',
-		geojsonCircles: 'Cercles (Géométrie)',
 		styling: 'Style de l’isochrone',
 		noData: 'Pas de données',
 		requestFailed: 'La requête a échoué'

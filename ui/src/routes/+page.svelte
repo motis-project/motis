@@ -63,7 +63,7 @@
 	import DeparturesMask from '$lib/DeparturesMask.svelte';
 	import Isochrones from '$lib/map/Isochrones.svelte';
 	import IsochronesInfo from '$lib/IsochronesInfo.svelte';
-	import type { DisplayLevel, IsochronesOptions, IsochronesPos } from '$lib/map/IsochronesShared';
+	import type { IsochronesOptions, IsochronesPos } from '$lib/map/IsochronesShared';
 	import IsochronesMask from '$lib/IsochronesMask.svelte';
 	import Rentals from '$lib/map/rentals/Rentals.svelte';
 	import Routes from '$lib/map/routes/Routes.svelte';
@@ -554,18 +554,12 @@
 
 	let isochronesData = $state<IsochronesPos[]>([]);
 	let isochronesOptions = $state<IsochronesOptions>({
-		displayLevel:
-			(urlParams?.get('isochronesDisplayLevel') as DisplayLevel) ??
-			defaultQuery.isochronesDisplayLevel,
 		color: urlParams?.get('isochronesColor') ?? defaultQuery.isochronesColor,
 		opacity: parseIntOr(urlParams?.get('isochronesOpacity'), defaultQuery.isochronesOpacity),
 		status: 'DONE',
 		errorMessage: undefined,
 		errorCode: undefined
 	});
-	const isochronesCircleResolution = urlParams?.get('isochronesCircleResolution')
-		? parseIntOr(urlParams.get('isochronesCircleResolution'), defaultQuery.circleResolution)
-		: defaultQuery.circleResolution;
 
 	const toPlaceString = (l: Location) => {
 		if (l.match?.type === 'STOP') {
@@ -836,10 +830,9 @@
 	let isochronesQueryTimeout: number;
 	$effect(() => {
 		if (isochronesQuery && activeTab == 'isochrones') {
-			const [isochronesColor, isochronesOpacity, isochronesDisplayLevel] = [
+			const [isochronesColor, isochronesOpacity] = [
 				isochronesOptions.color,
-				isochronesOptions.opacity,
-				isochronesOptions.displayLevel
+				isochronesOptions.opacity
 			];
 			if (lastOneToAllQuery != isochronesQuery) {
 				lastOneToAllQuery = isochronesQuery;
@@ -865,7 +858,7 @@
 						});
 
 						isochronesData = [...all];
-						isochronesOptions.status = isochronesData.length == 0 ? 'EMPTY' : 'WORKING';
+						isochronesOptions.status = isochronesData.length == 0 ? 'EMPTY' : 'DONE';
 					} catch (e) {
 						isochronesOptions.status = 'FAILED';
 						isochronesOptions.errorMessage = String(e);
@@ -881,11 +874,7 @@
 						...(q.one == one.label ? {} : { oneName: one.label }),
 						maxTravelTime: q.maxTravelTime * 60,
 						isochronesColor,
-						isochronesOpacity,
-						isochronesDisplayLevel,
-						...(isochronesCircleResolution && isochronesCircleResolution > 2
-							? { isochronesCircleResolution }
-							: {})
+						isochronesOpacity
 					},
 					{ activeTab: 'isochrones' },
 					true
@@ -1403,14 +1392,12 @@
 			/>
 			<Isochrones
 				{map}
-				{bounds}
 				{isochronesData}
 				streetModes={arriveBy ? preTransitModes : postTransitModes}
 				wheelchair={pedestrianProfile === 'WHEELCHAIR'}
 				maxAllTime={arriveBy ? maxPreTransitTime : maxPostTransitTime}
-				circleResolution={isochronesCircleResolution}
 				active={activeTab == 'isochrones'}
-				bind:options={isochronesOptions}
+				options={isochronesOptions}
 			/>
 
 			<Popup trigger="contextmenu" children={contextMenu} />

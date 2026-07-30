@@ -157,11 +157,6 @@ const translations: Translations = {
 	},
 	isochrones: {
 		title: 'Isochrones',
-		displayLevel: 'Display level',
-		maxComputeLevel: 'Max. computation level',
-		canvasRects: 'Rects (Overlay)',
-		canvasCircles: 'Circles (Overlay)',
-		geojsonCircles: 'Circles (Geometry)',
 		styling: 'Isochrones styling',
 		noData: 'No data',
 		requestFailed: 'Request failed'

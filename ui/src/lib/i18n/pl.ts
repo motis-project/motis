@@ -149,11 +149,6 @@ const translations: Translations = {
 	},
 	isochrones: {
 		title: 'Izochrony',
-		displayLevel: 'Poziom wyświetlania',
-		maxComputeLevel: 'Maks. poziom wyliczenia',
-		canvasRects: 'Kwadraty (warstwa)',
-		canvasCircles: 'Okręgi (warstwa)',
-		geojsonCircles: 'Okręgi (geometria)',
 		styling: 'Styl izochron',
 		noData: 'Brak danych',
 		requestFailed: 'Błąd zapytania'

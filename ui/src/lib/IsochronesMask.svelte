@@ -13,8 +13,7 @@
 		type PedestrianProfile,
 		type ServerConfig
 	} from '@motis-project/motis-client';
-	import * as Select from '$lib/components/ui/select';
-	import type { DisplayLevel, IsochronesOptions } from '$lib/map/IsochronesShared';
+	import type { IsochronesOptions } from '$lib/map/IsochronesShared';
 	import AddressTypeahead from '$lib/AddressTypeahead.svelte';
 	import AdvancedOptions from '$lib/AdvancedOptions.svelte';
 	import DateInput from '$lib/DateInput.svelte';
@@ -118,15 +117,6 @@
 		}))
 	);
 
-	const displayLevels = new Map<DisplayLevel, string>([
-		['OVERLAY_RECTS', t.isochrones.canvasRects],
-		['OVERLAY_CIRCLES', t.isochrones.canvasCircles],
-		['GEOMETRY_CIRCLES', t.isochrones.geojsonCircles]
-	]);
-	const possibleDisplayLevels = [
-		...[...displayLevels.entries()].map(([id, label]) => ({ value: id, label: label }))
-	];
-
 	let oneItems = $state<Array<Location>>([]);
 
 	let lastSearchDir = arriveBy ? 'arrival' : 'departure';
@@ -159,19 +149,7 @@
 </script>
 
 {#snippet additionalComponents()}
-	<div class="grid grid-cols-[2fr_2fr_1fr] items-center gap-2">
-		<Select.Root type="single" bind:value={options.displayLevel}>
-			<Select.Trigger class="overflow-hidden" aria-label={t.isochrones.displayLevel}>
-				{displayLevels.get(options.displayLevel)}
-			</Select.Trigger>
-			<Select.Content sideOffset={10}>
-				{#each possibleDisplayLevels as level, i (i + level.value)}
-					<Select.Item value={level.value} label={level.label}>
-						{level.label}
-					</Select.Item>
-				{/each}
-			</Select.Content>
-		</Select.Root>
+	<div class="grid grid-cols-[1fr_auto] items-center gap-2">
 		<Slider.Root
 			type="single"
 			min={0}
