@@ -88,6 +88,7 @@ const translations: Translations = {
 	bikeRental: 'наемане на велосипед',
 	requireBikeTransport: 'Превоз на велосипед',
 	requireCarTransport: 'Превоз на автомобил',
+	noCompulsoryReservation: 'No reservation required',
 	considerRentalReturnConstraints: 'Върни наетите превозни средства в рамките на пътуването',
 	default: 'По подразбиране',
 	timetableSources: 'Източници на разписания',

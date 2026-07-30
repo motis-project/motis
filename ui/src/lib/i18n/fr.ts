@@ -88,6 +88,7 @@ const translations: Translations = {
 	bikeRental: 'Utiliser véhicules partagés',
 	requireBikeTransport: 'Emport vélo',
 	requireCarTransport: 'Emport voiture',
+	noCompulsoryReservation: 'Sans réservation obligatoire',
 	considerRentalReturnConstraints: 'Retourner les véhicules partagés pendant le voyage',
 	default: 'Sauvegarder les paramètres',
 	timetableSources: 'Sources des horaires',

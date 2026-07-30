@@ -816,6 +816,17 @@ paths:
             
             If set to `true`, all used transit trips are required to allow car carriage.
 
+        - name: noCompulsoryReservation
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+          description: |
+            Optional. Default is `false`.
+            
+            If set to `true`, all used transit trips are required to be usable without compulsory reservation.
+
         - name: maxPreTransitTime
           in: query
           required: false
@@ -1670,6 +1681,17 @@ paths:
             type: boolean
             default: false
 
+        - name: noCompulsoryReservation
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+          description: |
+            Optional. Default is `false`.
+            
+            If set to `true`, all used transit trips are required to be usable without compulsory reservation.
+
       responses:
         "200":
           description: |
@@ -2055,6 +2077,17 @@ paths:
             Optional. Default is `false`.
 
             If set to `true`, all used transit trips are required to allow car carriage.
+
+        - name: noCompulsoryReservation
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+          description: |
+            Optional. Default is `false`.
+            
+            If set to `true`, all used transit trips are required to be usable without compulsory reservation.
 
         - name: maxPreTransitTime
           in: query
@@ -2483,6 +2516,12 @@ paths:
             type: boolean
             default: false
         - name: requireCarTransport
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+        - name: noCompulsoryReservation
           in: query
           required: false
           schema:
@@ -4687,6 +4726,12 @@ components:
         - ACCESSIBLE
         - NOT_ACCESSIBLE
 
+    Reservation:
+      type: string
+      enum:
+        - NONE
+        - COMPULSORY
+
     RentalFormFactor:
       type: string
       enum:
@@ -5308,6 +5353,10 @@ components:
           description: |
             Whether wheelchairs can be transported on this leg.
           $ref: '#/components/schemas/WheelchairAccessibility'
+        reservation:
+          description: |
+            Information about compulsory or possible reservation.
+          $ref: '#/components/schemas/Reservation'
         ticketUrls:
           $ref: '#/components/schemas/TicketUrls'
           description: |
@@ -5942,7 +5991,13 @@ components:
             If set to `true`, all used transit trips are required to allow car carriage.
           type: boolean
           default: false
-
+        noCompulsoryReservation:
+          description: |
+            Optional. Default is `false`.
+            
+            If set to `true`, all used transit trips are required to be usable without compulsory reservation.
+          type: boolean
+          default: false
     ServerConfig:
       Description: server configuration
       type: object

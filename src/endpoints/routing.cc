@@ -981,6 +981,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
         .allowed_claszes_ = to_clasz_mask(query.transitModes_),
         .require_bike_transport_ = query.requireBikeTransport_,
         .require_car_transport_ = query.requireCarTransport_,
+        .no_compulsory_reservation_ = query.noCompulsoryReservation_,
         .transfer_time_settings_ =
             n::routing::transfer_time_settings{
                 .default_ = (query.minTransferTime_ == 0 &&
@@ -1077,7 +1078,8 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                  q.allowed_claszes_ != n::routing::all_clasz_allowed() ||
                  !q.td_start_.empty() || !q.td_dest_.empty() ||
                  !q.transfer_time_settings_.default_ || !q.via_stops_.empty() ||
-                 q.require_bike_transport_ || q.require_car_transport_) {
+                 q.require_bike_transport_ || q.require_car_transport_ ||
+                 q.no_compulsory_reservation_) {
         auto raptor_state = n::routing::raptor_state{};
         r = n::routing::raptor_search(
             *tt_, rtt, search_state, raptor_state, q,

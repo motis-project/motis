@@ -84,9 +84,27 @@ struct config {
       std::optional<std::string> script_{};
       bool default_bikes_allowed_{false};
       bool default_cars_allowed_{false};
+      bool default_reservation_not_required_{true};
       bool extend_calendar_{false};
       std::optional<std::map<std::string, bool>> clasz_bikes_allowed_{};
       std::optional<std::map<std::string, bool>> clasz_cars_allowed_{};
+      std::optional<std::map<std::string, bool>>
+          clasz_reservation_not_required_{{{"AIR", false},
+                                           {"HIGHSPEED", true},
+                                           {"LONGDISTANCE", true},
+                                           {"COACH", false},
+                                           {"NIGHT", false},
+                                           {"RIDESHARING", false},
+                                           {"REGIONAL", true},
+                                           {"SUBURBAN", true},
+                                           {"SUBWAY", true},
+                                           {"TRAM", true},
+                                           {"BUS", true},
+                                           {"SHIP", true},
+                                           {"ODM", false},
+                                           {"FUNICULAR", true},
+                                           {"AERIALLIFT", true},
+                                           {"OTHER", true}}};
       std::optional<std::vector<rt>> rt_{};
       std::optional<std::string> default_timezone_{};
     };

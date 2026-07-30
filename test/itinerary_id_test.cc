@@ -818,6 +818,7 @@ void run_flex_first_mile_test(std::string_view const sub_dir,
       /*with_scheduled_skipped_stops=*/false, n::lang_t{},
       /*num_leg_alternatives=*/3U, n::routing::all_clasz_allowed(),
       /*require_bike_transport=*/false, /*require_car_transport=*/false,
+      /*no_compulsory_reservation=*/false,
       /*prf_idx=*/n::profile_idx_t{0U},
       make_first_last_mile_options(refresh_q));
   EXPECT_EQ(original, reconstructed);
