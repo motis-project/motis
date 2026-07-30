@@ -32,6 +32,7 @@
 		maxTransfers = $bindable(),
 		requireCarTransport = $bindable(),
 		requireBikeTransport = $bindable(),
+		noCompulsoryReservation = $bindable(),
 		transitModes = $bindable(),
 		preTransitModes = $bindable(),
 		postTransitModes = $bindable(),
@@ -78,6 +79,7 @@
 		maxTransfers: number;
 		requireCarTransport: boolean;
 		requireBikeTransport: boolean;
+		noCompulsoryReservation: boolean;
 		transitModes: Mode[];
 		preTransitModes: PrePostDirectMode[];
 		postTransitModes: PrePostDirectMode[];
@@ -208,10 +210,11 @@
 				() => pedestrianProfile === 'WHEELCHAIR',
 				(v) => (pedestrianProfile = v ? 'WHEELCHAIR' : 'FOOT')
 			}
-			bind:requireCarTransport
 			bind:maxTransfers
 			maxTravelTime={undefined}
 			bind:requireBikeTransport
+			bind:requireCarTransport
+			bind:noCompulsoryReservation
 			bind:transitModes
 			bind:preTransitModes
 			bind:postTransitModes

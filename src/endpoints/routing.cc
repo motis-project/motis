@@ -28,6 +28,7 @@
 #include "osr/types.h"
 
 #include "nigiri/common/interval.h"
+#include "nigiri/constants.h"
 #include "nigiri/location_match_mode.h"
 #include "nigiri/routing/limits.h"
 #include "nigiri/routing/pareto_set.h"
@@ -87,8 +88,17 @@ std::vector<n::routing::offset> radius_offsets(
     geo::latlng const& pos,
     double const radius_meters) {
   auto offsets = std::vector<n::routing::offset>{};
-  loc_tree.in_radius(pos, radius_meters, [&](n::location_idx_t const l) {
-    offsets.push_back({l, n::duration_t{0U}, 0U});
+  loc_tree.find(geo::box{pos, radius_meters}, [&](geo::latlng const& stop_pos,
+                                                  n::location_idx_t const l) {
+    auto const dist = geo::distance(pos, stop_pos);
+    if (dist >= radius_meters) {
+      return;
+    }
+    offsets.push_back(
+        {l,
+         std::chrono::duration_cast<n::duration_t>(
+             std::chrono::seconds{static_cast<int>(dist / n::kWalkSpeed)}),
+         0U});
   });
   return offsets;
 }
@@ -1026,6 +1036,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
         .allowed_claszes_ = to_clasz_mask(query.transitModes_),
         .require_bike_transport_ = query.requireBikeTransport_,
         .require_car_transport_ = query.requireCarTransport_,
+        .no_compulsory_reservation_ = query.noCompulsoryReservation_,
         .transfer_time_settings_ =
             n::routing::transfer_time_settings{
                 .default_ = (query.minTransferTime_ == 0 &&
@@ -1122,7 +1133,8 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                  q.allowed_claszes_ != n::routing::all_clasz_allowed() ||
                  !q.td_start_.empty() || !q.td_dest_.empty() ||
                  !q.transfer_time_settings_.default_ || !q.via_stops_.empty() ||
-                 q.require_bike_transport_ || q.require_car_transport_) {
+                 q.require_bike_transport_ || q.require_car_transport_ ||
+                 q.no_compulsory_reservation_) {
         auto raptor_state = n::routing::raptor_state{};
         r = n::routing::raptor_search(
             *tt_, rtt, search_state, raptor_state, q,

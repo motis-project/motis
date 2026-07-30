@@ -1026,6 +1026,11 @@ export const WheelchairAccessibilitySchema = {
     enum: ['ACCESSIBLE', 'NOT_ACCESSIBLE']
 } as const;
 
+export const ReservationSchema = {
+    type: 'string',
+    enum: ['NONE', 'COMPULSORY']
+} as const;
+
 export const RentalFormFactorSchema = {
     type: 'string',
     enum: ['BICYCLE', 'CARGO_BICYCLE', 'CAR', 'MOPED', 'SCOOTER_STANDING', 'SCOOTER_SEATED', 'OTHER']
@@ -1736,6 +1741,11 @@ by looping active weekdays, e.g. from calendar.txt in GTFS.
             description: `Whether wheelchairs can be transported on this leg.
 `,
             '$ref': '#/components/schemas/WheelchairAccessibility'
+        },
+        reservation: {
+            description: `Information about compulsory or possible reservation.
+`,
+            '$ref': '#/components/schemas/Reservation'
         },
         ticketUrls: {
             '$ref': '#/components/schemas/TicketUrls',
@@ -2454,6 +2464,14 @@ If set to \`true\`, all used transit trips are required to allow bike carriage.
             description: `Optional. Default is \`false\`.
 
 If set to \`true\`, all used transit trips are required to allow car carriage.
+`,
+            type: 'boolean',
+            default: false
+        },
+        noCompulsoryReservation: {
+            description: `Optional. Default is \`false\`.
+
+If set to \`true\`, all used transit trips are required to be usable without compulsory reservation.
 `,
             type: 'boolean',
             default: false

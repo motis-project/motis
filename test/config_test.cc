@@ -15,8 +15,10 @@ TEST(motis, config) {
           .datasets_ =
               {{"de",
                 {.path_ = "delfi.gtfs.zip",
-                 .clasz_bikes_allowed_ = {{{"LONG_DISTANCE", false},
-                                           {"REGIONAL_FAST", true}}},
+                 .clasz_bikes_allowed_ = {{{"LONGDISTANCE", false},
+                                           {"REGIONAL", true}}},
+                 .clasz_reservation_not_required_ = {{{"LONGDISTANCE", true},
+                                                      {"COACH", false}}},
                  .rt_ =
                      {{{.url_ =
                             R"(https://stc.traines.eu/mirror/german-delfi-gtfs-rt/latest.gtfs-rt.pbf)",
@@ -63,10 +65,14 @@ timetable:
       path: delfi.gtfs.zip
       default_bikes_allowed: false
       default_cars_allowed: false
+      default_reservation_not_required: true
       extend_calendar: false
       clasz_bikes_allowed:
-        LONG_DISTANCE: false
-        REGIONAL_FAST: true
+        LONGDISTANCE: false
+        REGIONAL: true
+      clasz_reservation_not_required:
+        COACH: false
+        LONGDISTANCE: true
       rt:
         - url: https://stc.traines.eu/mirror/german-delfi-gtfs-rt/latest.gtfs-rt.pbf
           headers:
@@ -76,7 +82,25 @@ timetable:
       path: nl.gtfs.zip
       default_bikes_allowed: false
       default_cars_allowed: false
+      default_reservation_not_required: true
       extend_calendar: false
+      clasz_reservation_not_required:
+        AERIALLIFT: true
+        AIR: false
+        BUS: true
+        COACH: false
+        FUNICULAR: true
+        HIGHSPEED: true
+        LONGDISTANCE: true
+        NIGHT: false
+        ODM: false
+        OTHER: true
+        REGIONAL: true
+        RIDESHARING: false
+        SHIP: true
+        SUBURBAN: true
+        SUBWAY: true
+        TRAM: true
       rt:
         - url: https://gtfs.ovapi.nl/nl/trainUpdates.pb
           protocol: gtfsrt
@@ -120,8 +144,11 @@ timetable:
     de:
       path: delfi.gtfs.zip
       clasz_bikes_allowed:
-        LONG_DISTANCE: false
-        REGIONAL_FAST: true
+        LONGDISTANCE: false
+        REGIONAL: true
+      clasz_reservation_not_required:
+        COACH: false
+        LONGDISTANCE: true
       rt:
         - url: https://stc.traines.eu/mirror/german-delfi-gtfs-rt/latest.gtfs-rt.pbf
           headers:
@@ -130,6 +157,7 @@ timetable:
       path: nl.gtfs.zip
       default_bikes_allowed: false
       default_cars_allowed: false
+      default_reservation_not_required: true
       extend_calendar: false
       rt:
         - url: https://gtfs.ovapi.nl/nl/trainUpdates.pb

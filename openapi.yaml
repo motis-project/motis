@@ -77,7 +77,9 @@ paths:
           description: |
             Experimental. Search radius in meters around the `fromPlace` / `toPlace` coordinates.
             When set and the place is given as coordinates, all transit stops within
-            this radius are used as start/end points with zero pre-transit/post-transit time.
+            this radius are used as start/end points. The pre-transit/post-transit time
+            for each of them is estimated from the crow-fly distance to the coordinate
+            at walking speed (1.5 m/s), rounded down to whole minutes.
             Works without OSM/street routing data loaded.
           schema:
             type: number
@@ -815,6 +817,17 @@ paths:
             Optional. Default is `false`.
             
             If set to `true`, all used transit trips are required to allow car carriage.
+
+        - name: noCompulsoryReservation
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+          description: |
+            Optional. Default is `false`.
+            
+            If set to `true`, all used transit trips are required to be usable without compulsory reservation.
 
         - name: maxPreTransitTime
           in: query
@@ -1670,6 +1683,17 @@ paths:
             type: boolean
             default: false
 
+        - name: noCompulsoryReservation
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+          description: |
+            Optional. Default is `false`.
+            
+            If set to `true`, all used transit trips are required to be usable without compulsory reservation.
+
       responses:
         "200":
           description: |
@@ -2055,6 +2079,17 @@ paths:
             Optional. Default is `false`.
 
             If set to `true`, all used transit trips are required to allow car carriage.
+
+        - name: noCompulsoryReservation
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+          description: |
+            Optional. Default is `false`.
+            
+            If set to `true`, all used transit trips are required to be usable without compulsory reservation.
 
         - name: maxPreTransitTime
           in: query
@@ -2483,6 +2518,12 @@ paths:
             type: boolean
             default: false
         - name: requireCarTransport
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+        - name: noCompulsoryReservation
           in: query
           required: false
           schema:
@@ -4687,6 +4728,12 @@ components:
         - ACCESSIBLE
         - NOT_ACCESSIBLE
 
+    Reservation:
+      type: string
+      enum:
+        - NONE
+        - COMPULSORY
+
     RentalFormFactor:
       type: string
       enum:
@@ -5308,6 +5355,10 @@ components:
           description: |
             Whether wheelchairs can be transported on this leg.
           $ref: '#/components/schemas/WheelchairAccessibility'
+        reservation:
+          description: |
+            Information about compulsory or possible reservation.
+          $ref: '#/components/schemas/Reservation'
         ticketUrls:
           $ref: '#/components/schemas/TicketUrls'
           description: |
@@ -5942,7 +5993,13 @@ components:
             If set to `true`, all used transit trips are required to allow car carriage.
           type: boolean
           default: false
-
+        noCompulsoryReservation:
+          description: |
+            Optional. Default is `false`.
+            
+            If set to `true`, all used transit trips are required to be usable without compulsory reservation.
+          type: boolean
+          default: false
     ServerConfig:
       Description: server configuration
       type: object
