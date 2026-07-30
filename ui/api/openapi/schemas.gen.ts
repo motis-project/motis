@@ -548,6 +548,16 @@ export const PickupDropoffTypeSchema = {
     enum: ['NORMAL', 'NOT_ALLOWED']
 } as const;
 
+export const WheelchairAccessibilitySchema = {
+    type: 'string',
+    enum: ['ACCESSIBLE', 'NOT_ACCESSIBLE']
+} as const;
+
+export const ReservationSchema = {
+    type: 'string',
+    enum: ['NONE', 'COMPULSORY']
+} as const;
+
 export const PlaceSchema = {
     type: 'object',
     required: ['name', 'lat', 'lon'],
@@ -728,7 +738,7 @@ export const ReachableSchema = {
 export const StopTimeSchema = {
     description: 'departure or arrival event at a stop',
     type: 'object',
-    required: ['place', 'mode', 'realTime', 'headsign', 'tripFrom', 'tripTo', 'agencyId', 'agencyName', 'agencyUrl', 'tripId', 'routeId', 'directionId', 'routeShortName', 'routeLongName', 'tripShortName', 'displayName', 'pickupDropoffType', 'cancelled', 'tripCancelled', 'source'],
+    required: ['place', 'mode', 'realTime', 'headsign', 'tripFrom', 'tripTo', 'agencyId', 'agencyName', 'agencyUrl', 'tripId', 'routeId', 'directionId', 'routeShortName', 'routeLongName', 'tripShortName', 'displayName', 'pickupDropoffType', 'cancelled', 'tripCancelled', 'bikesAllowed', 'wheelchairAccessible', 'reservation', 'source'],
     properties: {
         place: {
             '$ref': '#/components/schemas/Place',
@@ -829,6 +839,29 @@ Stops on the trips after this stop. Returned only if \`fetchStop\` is \`true\` a
         tripCancelled: {
             description: 'Whether the entire trip is cancelled due to the realtime situation.',
             type: 'boolean'
+        },
+        loopedCalendarSince: {
+            description: `If set, this attribute indicates that this trip has been expanded
+beyond the feed end date (enabled by config flag \`timetable.dataset.extend_calendar\`)
+by looping active weekdays, e.g. from calendar.txt in GTFS.
+`,
+            type: 'string',
+            format: 'date-time'
+        },
+        bikesAllowed: {
+            description: `Whether bikes can be carried on this trip.
+`,
+            type: 'boolean'
+        },
+        wheelchairAccessible: {
+            description: `Whether wheelchairs can be transported on this trip.
+`,
+            '$ref': '#/components/schemas/WheelchairAccessibility'
+        },
+        reservation: {
+            description: `Information about compulsory or possible reservation.
+`,
+            '$ref': '#/components/schemas/Reservation'
         },
         source: {
             description: 'Filename and line number where this trip is from',
@@ -1019,16 +1052,6 @@ See: https://wiki.openstreetmap.org/wiki/Conditional_restrictions
             description: 'decline in meters across this path segment'
         }
     }
-} as const;
-
-export const WheelchairAccessibilitySchema = {
-    type: 'string',
-    enum: ['ACCESSIBLE', 'NOT_ACCESSIBLE']
-} as const;
-
-export const ReservationSchema = {
-    type: 'string',
-    enum: ['NONE', 'COMPULSORY']
 } as const;
 
 export const RentalFormFactorSchema = {

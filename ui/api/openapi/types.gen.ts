@@ -466,6 +466,10 @@ export type VertexType = 'NORMAL' | 'BIKESHARE' | 'TRANSIT';
  */
 export type PickupDropoffType = 'NORMAL' | 'NOT_ALLOWED';
 
+export type WheelchairAccessibility = 'ACCESSIBLE' | 'NOT_ACCESSIBLE';
+
+export type Reservation = 'NONE' | 'COMPULSORY';
+
 export type Place = {
     /**
      * name of the transit stop / PoI / address
@@ -691,6 +695,28 @@ export type StopTime = {
      */
     tripCancelled: boolean;
     /**
+     * If set, this attribute indicates that this trip has been expanded
+     * beyond the feed end date (enabled by config flag `timetable.dataset.extend_calendar`)
+     * by looping active weekdays, e.g. from calendar.txt in GTFS.
+     *
+     */
+    loopedCalendarSince?: string;
+    /**
+     * Whether bikes can be carried on this trip.
+     *
+     */
+    bikesAllowed: boolean;
+    /**
+     * Whether wheelchairs can be transported on this trip.
+     *
+     */
+    wheelchairAccessible: WheelchairAccessibility;
+    /**
+     * Information about compulsory or possible reservation.
+     *
+     */
+    reservation: Reservation;
+    /**
      * Filename and line number where this trip is from
      */
     source: string;
@@ -844,10 +870,6 @@ export type StepInstruction = {
      */
     elevationDown?: number;
 };
-
-export type WheelchairAccessibility = 'ACCESSIBLE' | 'NOT_ACCESSIBLE';
-
-export type Reservation = 'NONE' | 'COMPULSORY';
 
 export type RentalFormFactor = 'BICYCLE' | 'CARGO_BICYCLE' | 'CAR' | 'MOPED' | 'SCOOTER_STANDING' | 'SCOOTER_SEATED' | 'OTHER';
 
