@@ -800,26 +800,33 @@
 		}
 	};
 
+	const baseSearch = (baseQuery: PlanData) => {
+		const base = plan(baseQuery).then(preprocessItinerary(from, to));
+		const q = baseQuery.query;
+		baseResponse = base;
+		routingResponses = [base];
+		pushStateWithQueryString(
+			{
+				...q,
+				...(q.fromPlace == from.label ? {} : { fromName: from.label }),
+				...(q.toPlace == to.label ? {} : { toName: to.label }),
+				...viaLabels
+			},
+			{ activeTab: 'connections' },
+			true
+		);
+	};
 	$effect(() => {
 		if (baseQuery && baseQuery != lastPlanQuery && activeTab == 'connections') {
-			lastPlanQuery = baseQuery;
+			const q = baseQuery;
+			const timeChanged = lastPlanQuery != undefined && lastPlanQuery.query.time != q.query.time;
+			lastPlanQuery = q;
 			clearTimeout(searchDebounceTimer);
-			searchDebounceTimer = setTimeout(() => {
-				const base = plan(baseQuery).then(preprocessItinerary(from, to));
-				const q = baseQuery.query;
-				baseResponse = base;
-				routingResponses = [base];
-				pushStateWithQueryString(
-					{
-						...q,
-						...(q.fromPlace == from.label ? {} : { fromName: from.label }),
-						...(q.toPlace == to.label ? {} : { toName: to.label }),
-						...viaLabels
-					},
-					{ activeTab: 'connections' },
-					true
-				);
-			}, 400);
+			if (timeChanged) {
+				searchDebounceTimer = setTimeout(() => baseSearch(q), 400);
+			} else {
+				baseSearch(q);
+			}
 		}
 	});
 	let isochronesQueryTimeout: number;
