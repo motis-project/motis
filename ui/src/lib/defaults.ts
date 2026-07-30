@@ -46,7 +46,7 @@ export const defaultQuery = {
 	joinInterlinedLegs: true,
 	maxMatchingDistance: 25,
 	maxTransfers: 14,
-	maxTravelTime: 30 * 60,
+	maxTravelTime: 120 * 60,
 	maxPreTransitTime: 900,
 	maxPostTransitTime: 900,
 	maxDirectTime: 1800,
@@ -62,8 +62,8 @@ export const defaultQuery = {
 	luggage: 0,
 	slowDirect: false,
 	isochronesDisplayLevel: 'GEOMETRY_CIRCLES',
-	isochronesColor: '#ffff00',
-	isochronesOpacity: 250,
+	isochronesColor: '#aa3cee',
+	isochronesOpacity: 600,
 	algorithm: 'PONG'
 };
 

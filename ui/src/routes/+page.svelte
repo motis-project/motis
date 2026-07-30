@@ -96,6 +96,10 @@
 					? 'departures'
 					: 'connections')
 	);
+	const setActiveTab = (tab: typeof activeTab) => {
+		activeTab = tab;
+		pushState('', { activeTab: tab });
+	};
 	let dataAttributionLink: string | undefined = $state(undefined);
 	type ColorMode = 'none' | 'stops' | 'rt' | 'route' | 'mode';
 	let colorMode = $state<ColorMode>('stops');
@@ -981,28 +985,7 @@
 </svelte:head>
 
 {#snippet contextMenu(e: maplibregl.MapMouseEvent, close: CloseFn)}
-	{#if activeTab == 'connections'}
-		<Button
-			variant="outline"
-			onclick={() => {
-				from = posToLocation(e.lngLat, zoom > LEVEL_MIN_ZOOM ? level : undefined);
-				fromMarker?.setLngLat(from.match!);
-				close();
-			}}
-		>
-			From
-		</Button>
-		<Button
-			variant="outline"
-			onclick={() => {
-				to = posToLocation(e.lngLat, zoom > LEVEL_MIN_ZOOM ? level : undefined);
-				toMarker?.setLngLat(to.match!);
-				close();
-			}}
-		>
-			To
-		</Button>
-	{:else if activeTab == 'isochrones'}
+	{#if activeTab == 'isochrones'}
 		<Button
 			variant="outline"
 			onclick={() => {
@@ -1014,17 +997,33 @@
 			{t.position}
 		</Button>
 	{/if}
+	<Button
+		variant="outline"
+		onclick={() => {
+			from = posToLocation(e.lngLat, zoom > LEVEL_MIN_ZOOM ? level : undefined);
+			fromMarker?.setLngLat(from.match!);
+			setActiveTab('connections');
+			close();
+		}}
+	>
+		From
+	</Button>
+	<Button
+		variant="outline"
+		onclick={() => {
+			to = posToLocation(e.lngLat, zoom > LEVEL_MIN_ZOOM ? level : undefined);
+			toMarker?.setLngLat(to.match!);
+			setActiveTab('connections');
+			close();
+		}}
+	>
+		To
+	</Button>
 {/snippet}
 {#snippet resultContent()}
 	<Control class="min-h-0 shrink-0 overflow-hidden">
 		<Tabs.Root
-			bind:value={
-				() => activeTab,
-				(v) => {
-					activeTab = v;
-					pushState('', { activeTab: v });
-				}
-			}
+			bind:value={() => activeTab, setActiveTab}
 			class="flex h-full min-h-0 max-h-[97dvh] max-w-full w-[520px] flex-col overflow-hidden"
 		>
 			<Tabs.List class="grid shrink-0 grid-cols-3">
