@@ -132,6 +132,23 @@ std::optional<n::route_id_idx_t> find_route_id(
   return best;
 }
 
+bool route_matches(tag_lookup const& tags,
+                   n::timetable const& tt,
+                   vehicle_positions::vehicle_position const& vehicle,
+                   std::string_view const target_route_id) {
+  if (!vehicle.trip_.route_id_.has_value()) {
+    return false;
+  }
+  auto const src = tags.get_src(feed_tag(vehicle.feed_id_));
+  if (src == n::source_idx_t::invalid() || src >= tt.route_ids_.size()) {
+    return false;
+  }
+  auto const& routes = tt.route_ids_[src];
+  auto const route_id = find_route_id(routes, *vehicle.trip_.route_id_);
+  return route_id.has_value() &&
+         routes.ids_.get(*route_id) == target_route_id;
+}
+
 api::VehicleShapeSourceEnum shape_source(n::rt::frun const& fr,
                                          n::shapes_storage const* shapes) {
   if (!fr.is_scheduled() || shapes == nullptr) {
@@ -466,11 +483,8 @@ std::optional<api::VehiclePosition> primary_vehicle(
     }
 
     auto details = resolve_details(&tags, &tt, rtt, shapes, vehicle, lang);
-    auto const resolved_route =
-        resolve_route_info_by_id(tags, tt, vehicle, lang);
     auto consistency = std::uint8_t{0U};
-    consistency +=
-        resolved_route.has_value() && resolved_route->id_ == target_route;
+    consistency += route_matches(tags, tt, vehicle, target_route);
     consistency += vehicle.trip_.direction_id_.has_value() &&
                    *vehicle.trip_.direction_id_ ==
                        static_cast<std::uint32_t>(target_direction.v_);

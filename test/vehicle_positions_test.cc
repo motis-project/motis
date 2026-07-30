@@ -600,6 +600,19 @@ TEST(motis_vehicle_positions, rt_update_consumes_vehicle_only_gtfsrt_feed) {
   ASSERT_TRUE(consistency_selected.has_value());
   EXPECT_EQ(consistency_selected->entityId_, "consistent");
 
+  auto unrelated_route = candidate;
+  unrelated_route.entity_id_ = "a-unrelated-route";
+  unrelated_route.trip_.start_time_ = "12:34:00";
+  unrelated_route.trip_.route_id_ = "wrong-route";
+  auto canonical_prefixed_route = candidate;
+  canonical_prefixed_route.entity_id_ = "z-canonical-prefixed-route";
+  canonical_prefixed_route.trip_.start_time_ = "12:34:00";
+  canonical_prefixed_route.trip_.route_id_ = "prefix-route-1";
+  auto route_only_selected =
+      select({unrelated_route, canonical_prefixed_route});
+  ASSERT_TRUE(route_only_selected.has_value());
+  EXPECT_EQ(route_only_selected->entityId_, "z-canonical-prefixed-route");
+
   auto older = candidate;
   older.entity_id_ = "older";
   older.reported_time_ = 100;
