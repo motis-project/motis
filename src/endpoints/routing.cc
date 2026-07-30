@@ -4,7 +4,9 @@
 #include <cmath>
 #include <mutex>
 #include <optional>
+#include <string_view>
 #include <variant>
+#include <vector>
 
 #include "boost/thread/tss.hpp"
 
@@ -49,6 +51,7 @@
 #include "motis/flex/flex_output.h"
 #include "motis/gbfs/data.h"
 #include "motis/gbfs/gbfs_output.h"
+#include "motis/gbfs/geofencing.h"
 #include "motis/gbfs/mode.h"
 #include "motis/gbfs/osr_profile.h"
 #include "motis/get_stops_with_traffic.h"
@@ -278,17 +281,55 @@ std::vector<n::routing::offset> get_offsets(
         near_stops,
         [&](n::location_idx_t const l) { return stop_to_osr_location(r, l); });
 
+    struct near_stop_match_cache_entry {
+      osr::search_profile profile_;
+      osr::direction direction_;
+      std::vector<std::uint8_t> exact_return_allowed_;
+      osr::match_result matches_;
+    };
+    auto near_stop_match_cache = std::vector<near_stop_match_cache_entry>{};
+
     auto const route = [&](osr::search_profile const p,
-                           osr::sharing_data const* sharing) {
+                           osr::sharing_data const* sharing,
+                           gbfs::gbfs_provider const* provider = nullptr,
+                           gbfs::provider_products const* product = nullptr) {
       auto const params = to_profile_parameters(p, osr_params);
+
+      auto const exact_at_pos =
+          provider != nullptr && product != nullptr &&
+          dir == osr::direction::kBackward &&
+          gbfs::allows_free_floating_return_at(
+              *provider, *product, pos.pos_, ignore_rental_return_constraints);
+      auto exact_at_stops = std::vector<std::uint8_t>(near_stops.size());
+      if (provider != nullptr && product != nullptr &&
+          dir == osr::direction::kForward) {
+        for (auto const [i, stop] : utl::enumerate(near_stop_locations)) {
+          exact_at_stops[i] = gbfs::allows_free_floating_return_at(
+              *provider, *product, stop.pos_, ignore_rental_return_constraints);
+        }
+      }
+
       auto pos_match = osr::match_result{};
-      r.l_->match(params, pos, false, dir, max_matching_distance, nullptr, p,
-                  {}, pos_match);
-      auto const near_stop_matches = get_reverse_platform_way_matches(
-          *r.l_, r.way_matches_, p, near_stops, near_stop_locations, dir,
-          max_matching_distance);
+      r.l_->match_endpoint(params, pos, false, dir, max_matching_distance,
+                           nullptr, p, exact_at_pos, std::nullopt, pos_match);
+
+      auto cached_near_stop_matches =
+          utl::find_if(near_stop_match_cache, [&](auto const& entry) {
+            return entry.profile_ == p && entry.direction_ == dir &&
+                   entry.exact_return_allowed_ == exact_at_stops;
+          });
+      if (cached_near_stop_matches == end(near_stop_match_cache)) {
+        auto matches = get_reverse_platform_way_matches(
+            *r.l_, r.way_matches_, p, near_stops, near_stop_locations, dir,
+            max_matching_distance, exact_at_stops);
+        near_stop_match_cache.emplace_back(p, dir, exact_at_stops,
+                                           std::move(matches));
+        cached_near_stop_matches = std::prev(end(near_stop_match_cache));
+      }
+
       return osr::route(params, *r.w_, *r.l_, p, pos, near_stop_locations,
-                        pos_match[osr::match_idx_t{0U}], near_stop_matches,
+                        pos_match[osr::match_idx_t{0U}],
+                        cached_near_stop_matches->matches_,
                         static_cast<osr::cost_t>(max.count()), dir, nullptr,
                         sharing, elevations);
     };
@@ -346,17 +387,21 @@ std::vector<n::routing::offset> get_offsets(
               !gbfs::products_match(prod, form_factors, propulsion_types)) {
             continue;
           }
+
           if (!provider_rd) {
             provider_rd = gbfs_rd.get_provider_routing_data(*provider);
           }
           auto const prod_ref = gbfs::gbfs_products_ref{pi, prod.idx_};
+
           auto* prod_rd =
               gbfs_rd.get_products_routing_data(*provider, prod.idx_);
+
           auto const sharing = prod_rd->get_sharing_data(
               r.w_->n_nodes(), ignore_rental_return_constraints);
 
-          auto const paths =
-              route(gbfs::get_osr_profile(prod.form_factor_), &sharing);
+          auto const paths = route(gbfs::get_osr_profile(prod.form_factor_),
+                                   &sharing, provider.get(), &prod);
+
           ignore_walk = true;
           for (auto const [p, l] : utl::zip(paths, near_stops)) {
             if (p.has_value()) {

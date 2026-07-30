@@ -6,6 +6,7 @@
 
 #include "boost/json.hpp"
 
+#include "motis/gbfs/geofencing.h"
 #include "motis/gbfs/parser.h"
 
 namespace json = boost::json;
@@ -466,6 +467,73 @@ TEST(motis, gbfs_parser_geofencing_accepts_v3_and_v2_rule_fields) {
       provider.geofencing_zones_.global_rules_.front().ride_end_allowed_);
   EXPECT_TRUE(
       provider.geofencing_zones_.global_rules_.front().ride_through_allowed_);
+}
+
+TEST(motis, gbfs_free_floating_return_uses_effective_product_geofencing) {
+  auto provider = gbfs_provider{.id_ = "provider"};
+  load_vehicle_types(provider, json::parse(R"({
+    "data": {
+      "vehicle_types": [{
+        "vehicle_type_id": "bike",
+        "form_factor": "bicycle",
+        "propulsion_type": "human",
+        "return_constraint": "free_floating"
+      }]
+    }
+  })"));
+  load_geofencing_zones(provider, json::parse(R"({
+    "data": {
+      "geofencing_zones": {
+        "type": "FeatureCollection",
+        "features": [{
+          "type": "Feature",
+          "properties": {
+            "rules": [{
+              "vehicle_type_id": "bike",
+              "ride_allowed": true,
+              "station_parking": false
+            }]
+          },
+          "geometry": {
+            "type": "MultiPolygon",
+            "coordinates": [[[
+              [11.0, 48.0], [11.2, 48.0], [11.2, 48.2],
+              [11.0, 48.2], [11.0, 48.0]
+            ]]]
+          }
+        }]
+      },
+      "global_rules": [{
+        "vehicle_type_id": "bike",
+        "ride_start_allowed": true,
+        "ride_end_allowed": false,
+        "ride_through_allowed": true
+      }]
+    }
+  })"));
+
+  auto const product =
+      provider_products{.vehicle_types_ = {vehicle_type_idx_t{0U}},
+                        .return_constraint_ = return_constraint::kFreeFloating,
+                        .known_return_constraint_ = true};
+  EXPECT_FALSE(allows_free_floating_return_at(provider, product,
+                                              geo::latlng{48.5, 11.5}));
+  EXPECT_TRUE(allows_free_floating_return_at(provider, product,
+                                             geo::latlng{48.1, 11.1}));
+  EXPECT_TRUE(allows_free_floating_return_at(provider, product,
+                                             geo::latlng{48.5, 11.5}, true));
+}
+
+TEST(motis, gbfs_free_floating_return_rejects_station_only_products) {
+  auto provider = gbfs_provider{.id_ = "provider"};
+  auto const product =
+      provider_products{.vehicle_types_ = {},
+                        .form_factor_ = vehicle_form_factor::kBicycle,
+                        .propulsion_type_ = propulsion_type::kHuman,
+                        .return_constraint_ = return_constraint::kAnyStation,
+                        .known_return_constraint_ = true};
+  EXPECT_FALSE(allows_free_floating_return_at(provider, product,
+                                              geo::latlng{48.1, 11.1}));
 }
 
 TEST(motis, gbfs_parser_geofencing_skips_bad_parts_and_unknown_type_rules) {
