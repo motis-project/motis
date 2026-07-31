@@ -241,10 +241,9 @@ TEST(motis, vdv_priority_skip_existing_update) {
   auto const trip_id = "?tripId=20190501_09%3A00_test_T1"sv;
 
   // Regular priority: creates a realtime trip, sets track to "1".
-  auto normal_updater =
-      auser(*d.tt_, d.tags_->get_src("test"),
-            nigiri::rt::vdv_aus::updater::xml_format::kSiri,
-            /* skip_existing_update= */ false);
+  auto normal_updater = auser(*d.tt_, d.tags_->get_src("test"),
+                              nigiri::rt::vdv_aus::updater::xml_format::kSiri,
+                              /* skip_existing_update= */ false);
   auto const stats1 =
       normal_updater.consume_update(std::string{kSiriUpdate1}, *d.rt_->rtt_);
   EXPECT_EQ(1U, stats1.matched_runs_);
@@ -260,8 +259,8 @@ TEST(motis, vdv_priority_skip_existing_update) {
       auser(*d.tt_, d.tags_->get_src("test"),
             nigiri::rt::vdv_aus::updater::xml_format::kSiri,
             /* skip_existing_update= */ true);
-  auto const stats2 = priority0_updater.consume_update(
-      std::string{kSiriUpdate2}, *d.rt_->rtt_);
+  auto const stats2 =
+      priority0_updater.consume_update(std::string{kSiriUpdate2}, *d.rt_->rtt_);
   EXPECT_EQ(1U, stats2.matched_runs_);
   {
     auto const res = trip_ep(std::string{trip_id});
