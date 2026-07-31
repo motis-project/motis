@@ -1,0 +1,253 @@
+#include "motis/rt/vehicle_observation_history.h"
+
+#include <algorithm>
+#include <functional>
+#include <utility>
+
+namespace motis {
+namespace {
+
+auto order_key(vehicle_observation const& observation) {
+  return std::pair{observation_time(observation), observation.ingested_time_};
+}
+
+bool same_observation(vehicle_observation const& a,
+                      vehicle_observation const& b) {
+  // A reported timestamp identifies the provider observation across repeated
+  // feed deliveries. Without one, ingest time is the only safe time identity.
+  auto const same_time =
+      a.reported_time_.has_value() && b.reported_time_.has_value()
+          ? a.reported_time_ == b.reported_time_
+          : a.reported_time_ == b.reported_time_ &&
+                a.ingested_time_ == b.ingested_time_;
+  return same_time && a.feed_id_ == b.feed_id_ &&
+         a.entity_id_ == b.entity_id_ && a.vehicle_id_ == b.vehicle_id_ &&
+         a.trip_ == b.trip_ && a.latitude_ == b.latitude_ &&
+         a.longitude_ == b.longitude_ && a.bearing_ == b.bearing_ &&
+         a.speed_mps_ == b.speed_mps_ &&
+         a.current_stop_sequence_ == b.current_stop_sequence_ &&
+         a.stop_id_ == b.stop_id_;
+}
+
+void hash_combine(std::size_t& seed, std::size_t const value) {
+  seed ^= value + 0x9e3779b9U + (seed << 6U) + (seed >> 2U);
+}
+
+}  // namespace
+
+std::optional<vehicle_key> make_vehicle_key(
+    vehicle_observation const& observation) {
+  if (observation.vehicle_id_.has_value() &&
+      !observation.vehicle_id_->empty()) {
+    return vehicle_key{observation.feed_id_, *observation.vehicle_id_,
+                       vehicle_key_source::kVehicleDescriptor};
+  }
+  if (!observation.entity_id_.empty()) {
+    return vehicle_key{observation.feed_id_, observation.entity_id_,
+                       vehicle_key_source::kEntityId};
+  }
+  return std::nullopt;
+}
+
+std::int64_t observation_time(vehicle_observation const& observation) {
+  return observation.reported_time_.value_or(observation.ingested_time_);
+}
+
+std::size_t vehicle_observation_history::vehicle_key_hash::operator()(
+    vehicle_key const& key) const noexcept {
+  auto seed = std::hash<std::string>{}(key.feed_id_);
+  hash_combine(seed, std::hash<std::string>{}(key.stable_id_));
+  hash_combine(seed, std::hash<unsigned>{}(static_cast<unsigned>(key.source_)));
+  return seed;
+}
+
+std::size_t vehicle_observation_history::entity_key_hash::operator()(
+    entity_key const& key) const noexcept {
+  auto seed = std::hash<std::string>{}(key.feed_id_);
+  hash_combine(seed, std::hash<std::string>{}(key.entity_id_));
+  return seed;
+}
+
+bool vehicle_observation_history::ingest(
+    vehicle_observation observation, observation_history_policy const& policy) {
+  auto const now = observation.ingested_time_;
+  auto const accepted = ingest_unpruned(std::move(observation));
+  prune(now, policy);
+  return accepted;
+}
+
+bool vehicle_observation_history::ingest_unpruned(
+    vehicle_observation observation) {
+  auto const key = make_vehicle_key(observation);
+  if (!key.has_value()) {
+    return false;
+  }
+
+  auto const entity = entity_key{observation.feed_id_, observation.entity_id_};
+  if (!observation.entity_id_.empty()) {
+    if (auto const old = key_by_entity_.find(entity);
+        old != end(key_by_entity_) && old->second != *key) {
+      // The same feed entity changed from descriptor identity to fallback (or
+      // vice versa), or now names a different stable vehicle. Mixing those
+      // histories would make trip continuity unsafe.
+      erase_history(old->second);
+    }
+    key_by_entity_.insert_or_assign(entity, *key);
+  }
+
+  auto [history_it, inserted] =
+      histories_.try_emplace(*key, history_entry{.trip_ = observation.trip_});
+  auto& history = history_it->second;
+  if (!inserted && history.trip_ != observation.trip_) {
+    history.trip_ = observation.trip_;
+    history.observations_.clear();
+    current_.erase(*key);
+  }
+
+  auto duplicate = std::ranges::find_if(
+      history.observations_, [&](vehicle_observation const& existing) {
+        return same_observation(existing, observation);
+      });
+  if (duplicate != end(history.observations_)) {
+    duplicate->ingested_time_ =
+        std::max(duplicate->ingested_time_, observation.ingested_time_);
+  } else {
+    history.observations_.emplace_back(observation);
+  }
+  std::ranges::sort(history.observations_, {}, order_key);
+
+  auto const current = current_.find(*key);
+  if (current == end(current_) ||
+      order_key(current->second) <= order_key(observation)) {
+    current_.insert_or_assign(*key, std::move(observation));
+  }
+  return true;
+}
+
+void vehicle_observation_history::replace_feed(
+    std::string_view const feed_id,
+    std::span<vehicle_observation const> observations,
+    std::int64_t const now,
+    observation_history_policy const& policy) {
+  std::erase_if(current_, [&](auto const& item) {
+    return item.first.feed_id_ == feed_id;
+  });
+  for (auto observation : observations) {
+    observation.feed_id_ = feed_id;
+    ingest_unpruned(std::move(observation));
+  }
+  prune(now, policy);
+}
+
+void vehicle_observation_history::update_feed(
+    std::string_view const feed_id,
+    std::span<vehicle_observation const> observations,
+    std::span<std::string const> deleted_entity_ids,
+    std::int64_t const now,
+    observation_history_policy const& policy) {
+  erase_deleted(feed_id, deleted_entity_ids);
+  for (auto observation : observations) {
+    observation.feed_id_ = feed_id;
+    ingest_unpruned(std::move(observation));
+  }
+  prune(now, policy);
+}
+
+void vehicle_observation_history::erase_deleted(
+    std::string_view const feed_id, std::span<std::string const> entity_ids) {
+  for (auto const& entity_id : entity_ids) {
+    auto const locator = entity_key{std::string{feed_id}, entity_id};
+    auto const key = key_by_entity_.find(locator);
+    if (key == end(key_by_entity_)) {
+      continue;
+    }
+    auto const current = current_.find(key->second);
+    if (current != end(current_) && current->second.entity_id_ == entity_id) {
+      current_.erase(current);
+    }
+  }
+}
+
+void vehicle_observation_history::prune(
+    std::int64_t const now, observation_history_policy const& policy) {
+  auto const cutoff = now - policy.max_age_.count();
+  for (auto& [_, history] : histories_) {
+    std::erase_if(history.observations_, [&](vehicle_observation const& x) {
+      return observation_time(x) < cutoff;
+    });
+    if (history.observations_.size() > policy.max_observations_per_vehicle_) {
+      history.observations_.erase(
+          begin(history.observations_),
+          end(history.observations_) -
+              static_cast<std::ptrdiff_t>(
+                  policy.max_observations_per_vehicle_));
+    }
+  }
+
+  std::erase_if(current_, [&](auto const& item) {
+    return observation_time(item.second) < cutoff;
+  });
+
+  auto removed = std::vector<vehicle_key>{};
+  for (auto const& [key, history] : histories_) {
+    if (history.observations_.empty()) {
+      removed.emplace_back(key);
+    }
+  }
+  for (auto const& key : removed) {
+    erase_history(key);
+  }
+
+  // Entity IDs can rotate while a stable vehicle descriptor remains the same.
+  // Keep locator state only while an observation carrying that entity is still
+  // retained, so the auxiliary identity index is bounded with the histories.
+  std::erase_if(key_by_entity_, [&](auto const& item) {
+    auto const history = histories_.find(item.second);
+    return history == end(histories_) ||
+           std::ranges::none_of(history->second.observations_,
+                                [&](vehicle_observation const& x) {
+                                  return x.entity_id_ == item.first.entity_id_;
+                                });
+  });
+}
+
+std::span<vehicle_observation const> vehicle_observation_history::observations(
+    vehicle_key const& key) const {
+  auto const it = histories_.find(key);
+  return it == end(histories_)
+             ? std::span<vehicle_observation const>{}
+             : std::span<vehicle_observation const>{it->second.observations_};
+}
+
+vehicle_observation const* vehicle_observation_history::effective_observation(
+    vehicle_key const& key) const {
+  auto const history = observations(key);
+  return history.empty() ? nullptr : &history.back();
+}
+
+vehicle_observation const* vehicle_observation_history::current_observation(
+    vehicle_key const& key) const {
+  auto const it = current_.find(key);
+  return it == end(current_) ? nullptr : &it->second;
+}
+
+std::size_t vehicle_observation_history::active_histories() const {
+  return histories_.size();
+}
+
+std::size_t vehicle_observation_history::observation_count() const {
+  auto count = std::size_t{};
+  for (auto const& [_, history] : histories_) {
+    count += history.observations_.size();
+  }
+  return count;
+}
+
+void vehicle_observation_history::erase_history(vehicle_key const& key) {
+  histories_.erase(key);
+  current_.erase(key);
+  std::erase_if(key_by_entity_,
+                [&](auto const& item) { return item.second == key; });
+}
+
+}  // namespace motis
