@@ -141,7 +141,8 @@ void apply_canned(data& d, endpoints_t const& endpoints, n::rt_timetable& rtt) {
             auto const body = utl::read_file(path.c_str());
             if (body.has_value()) {
               return n::rt::gtfsrt_update_buf(*d.tt_, rtt, g.src_, g.tag_,
-                                              *body);
+                                              *body, false,
+                                              g.ep_.priority_ == 0U);
             } else {
               return n::rt::statistics{.parser_error_ = true};
             }
@@ -220,8 +221,9 @@ awaitable<void> update_rt(config const& c,
                               std::ofstream{get_dump_path(g)}.write(
                                   body.c_str(), static_cast<long>(body.size()));
                             }
-                            ret = n::rt::gtfsrt_update_buf(*d.tt_, *rtt, g.src_,
-                                                           g.tag_, body);
+                            ret = n::rt::gtfsrt_update_buf(
+                                *d.tt_, *rtt, g.src_, g.tag_, body, false,
+                                g.ep_.priority_ == 0U);
                           } catch (std::exception const& e) {
                             g.metrics_.updates_error_.Increment();
                             n::log(n::log_lvl::error, "motis.rt",

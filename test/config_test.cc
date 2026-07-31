@@ -78,6 +78,7 @@ timetable:
           headers:
             Authorization: test
           protocol: gtfsrt
+          priority: 1
     nl:
       path: nl.gtfs.zip
       extend_calendar: false
@@ -93,8 +94,10 @@ timetable:
       rt:
         - url: https://gtfs.ovapi.nl/nl/trainUpdates.pb
           protocol: gtfsrt
+          priority: 1
         - url: https://gtfs.ovapi.nl/nl/tripUpdates.pb
           protocol: gtfsrt
+          priority: 1
   assistance_times: assistance.csv
 elevators: false
 street_routing: true

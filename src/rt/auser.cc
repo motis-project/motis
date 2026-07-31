@@ -13,8 +13,9 @@ namespace motis {
 
 auser::auser(nigiri::timetable const& tt,
              n::source_idx_t const s,
-             n::rt::vdv_aus::updater::xml_format const format)
-    : upd_{tt, s, format} {}
+             n::rt::vdv_aus::updater::xml_format const format,
+             bool const skip_existing_update)
+    : upd_{tt, s, format, skip_existing_update} {}
 
 std::string auser::fetch_url(std::string_view base_url) {
   return upd_.get_format() == n::rt::vdv_aus::updater::xml_format::kVdv

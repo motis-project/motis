@@ -69,13 +69,16 @@ struct config {
       struct rt {
         bool operator==(rt const&) const = default;
         cista::hash_t hash() const noexcept {
-          return cista::build_hash(url_, headers_);
+          return cista::build_hash(url_, headers_, priority_);
         }
         std::string url_;
         std::optional<headers_t> headers_{};
 
         enum struct protocol { gtfsrt, auser, siri, siri_json };
         protocol protocol_{protocol::gtfsrt};
+
+        // 0 = never update an existing realtime trip, only create if missing.
+        unsigned priority_{1U};
       };
 
       bool operator==(dataset const&) const = default;
