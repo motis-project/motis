@@ -2,7 +2,9 @@
 
 #include <algorithm>
 #include <cmath>
-#include <cstdint>
+#include <cstddef>
+#include <iterator>
+#include <list>
 #include <map>
 #include <span>
 #include <tuple>
@@ -29,18 +31,26 @@ struct cached_run_shape {
   std::vector<unsigned> static_stop_sequences_;
 };
 
+struct projection_candidate {
+  double lateral_error_;
+  double distance_along_;
+  std::size_t next_stop_idx_;
+};
+
+struct candidate_selection {
+  trip_progress_projection_status status_;
+  std::optional<projection_candidate> candidate_;
+};
+
 struct cache_key {
-  n::shapes_storage const* storage_;
   n::trip_idx_t trip_;
   n::stop_idx_t from_;
   n::stop_idx_t to_;
 
   bool operator<(cache_key const& other) const {
-    return std::tuple{reinterpret_cast<std::uintptr_t>(storage_),
-                      cista::to_idx(trip_), cista::to_idx(from_),
+    return std::tuple{cista::to_idx(trip_), cista::to_idx(from_),
                       cista::to_idx(to_)} <
-           std::tuple{reinterpret_cast<std::uintptr_t>(other.storage_),
-                      cista::to_idx(other.trip_), cista::to_idx(other.from_),
+           std::tuple{cista::to_idx(other.trip_), cista::to_idx(other.from_),
                       cista::to_idx(other.to_)};
   }
 };
@@ -71,9 +81,8 @@ std::optional<cached_run_shape> make_cached_shape(
   if (trip >= shapes.trip_offset_indices_.size()) {
     return std::nullopt;
   }
-  auto const [shape_idx, offset_idx] = shapes.trip_offset_indices_[trip];
-  auto const shape = shapes.get_shape(shape_idx);
-  if (shape.size() < 2U || offset_idx == n::shape_offset_idx_t::invalid() ||
+  auto const [_shape_idx, offset_idx] = shapes.trip_offset_indices_[trip];
+  if (offset_idx == n::shape_offset_idx_t::invalid() ||
       offset_idx >= shapes.offsets_.size()) {
     return std::nullopt;
   }
@@ -90,14 +99,20 @@ std::optional<cached_run_shape> make_cached_shape(
   auto const first_point = static_cast<unsigned>(offsets[local_from]);
   auto const last_point =
       static_cast<unsigned>(offsets[static_cast<n::stop_idx_t>(local_to - 1U)]);
-  if (first_point >= shape.size() || last_point >= shape.size() ||
+  auto const full_shape = shapes.get_shape(trip);
+  if (first_point >= full_shape.size() || last_point >= full_shape.size() ||
       first_point >= last_point) {
     return std::nullopt;
   }
 
+  auto const shape =
+      shapes.get_shape(trip, n::interval<n::stop_idx_t>{local_from, local_to});
+  if (shape.size() < 2U) {
+    return std::nullopt;
+  }
+
   auto cached = cached_run_shape{};
-  cached.points_.assign(std::next(begin(shape), first_point),
-                        std::next(begin(shape), last_point + 1U));
+  cached.points_.assign(begin(shape), end(shape));
   cached.point_distances_.reserve(cached.points_.size());
   cached.point_distances_.push_back(0.0);
   for (auto i = std::size_t{1U}; i != cached.points_.size(); ++i) {
@@ -131,54 +146,43 @@ std::optional<cached_run_shape> make_cached_shape(
   return cached;
 }
 
-}  // namespace
+std::optional<std::size_t> get_constrained_stop_idx(
+    cached_run_shape const& shape,
+    vehicle_position_progress_constraint const& constraint) {
+  auto const seq = std::ranges::find(shape.static_stop_sequences_,
+                                     constraint.current_static_stop_sequence_);
+  if (seq == end(shape.static_stop_sequences_)) {
+    return std::nullopt;
+  }
+  return static_cast<std::size_t>(
+      std::distance(begin(shape.static_stop_sequences_), seq));
+}
 
-struct trip_progress_projector::impl {
-  std::map<cache_key, cached_run_shape> cache_;
-};
-
-trip_progress_projector::trip_progress_projector()
-    : impl_{std::make_unique<impl>()} {}
-
-trip_progress_projector::~trip_progress_projector() = default;
-
-trip_progress_projector::trip_progress_projector(
-    trip_progress_projector&&) noexcept = default;
-
-trip_progress_projector& trip_progress_projector::operator=(
-    trip_progress_projector&&) noexcept = default;
-
-trip_progress_projection trip_progress_projector::project(
-    n::rt::frun const& fr,
-    n::shapes_storage const& shapes,
+std::vector<projection_candidate> make_projection_candidates(
+    cached_run_shape const& shape,
     geo::latlng const& position,
-    std::optional<trip_progress> const& prior) {
-  if (!fr.is_scheduled()) {
-    return {};
-  }
-  auto const key = cache_key{&shapes, fr.trip_idx(), fr.stop_range_.from_,
-                             fr.stop_range_.to_};
-  auto it = impl_->cache_.find(key);
-  if (it == end(impl_->cache_)) {
-    auto shape = make_cached_shape(fr, shapes);
-    if (!shape.has_value()) {
-      return {};
-    }
-    it = impl_->cache_.emplace(key, std::move(*shape)).first;
-  }
-
-  struct projection_candidate {
-    double lateral_error_;
-    double distance_along_;
-    std::size_t next_stop_idx_;
-  };
-
-  auto const& shape = it->second;
+    std::optional<std::size_t> const constrained_stop_idx,
+    bool const stopped_at) {
   auto candidates = std::vector<projection_candidate>{};
+  if (stopped_at) {
+    auto const stop = *constrained_stop_idx;
+    auto const point = shape.stop_point_indices_[stop];
+    candidates.push_back(
+        {.lateral_error_ = geo::distance(position, shape.points_[point]),
+         .distance_along_ = shape.stop_distances_[stop],
+         .next_stop_idx_ = stop});
+    return candidates;
+  }
+
   for (auto section = std::size_t{0U};
        section + 1U < shape.stop_point_indices_.size(); ++section) {
+    auto const next_stop = section + 1U;
+    if (constrained_stop_idx.has_value() &&
+        next_stop != *constrained_stop_idx) {
+      continue;
+    }
     auto const from = shape.stop_point_indices_[section];
-    auto const to = shape.stop_point_indices_[section + 1U];
+    auto const to = shape.stop_point_indices_[next_stop];
     if (from >= to) {
       continue;
     }
@@ -191,12 +195,14 @@ trip_progress_projection trip_progress_projector::project(
          .distance_along_ =
              shape.point_distances_[segment] +
              geo::distance(shape.points_[segment], projected.best_),
-         .next_stop_idx_ = section + 1U});
+         .next_stop_idx_ = next_stop});
   }
-  if (candidates.empty()) {
-    return {};
-  }
+  return candidates;
+}
 
+candidate_selection select_candidate(
+    std::vector<projection_candidate> candidates,
+    std::optional<trip_progress> const& prior) {
   auto const best_lateral =
       std::ranges::min(candidates, {}, &projection_candidate::lateral_error_)
           .lateral_error_;
@@ -210,14 +216,7 @@ trip_progress_projection trip_progress_projector::project(
     return candidate.lateral_error_ >
            best_lateral + kEquivalentLateralErrorMeters;
   });
-  std::ranges::sort(candidates, {}, &projection_candidate::distance_along_);
   constexpr auto kEquivalentProgressMeters = 25.0;
-  if (!prior.has_value() && candidates.size() > 1U &&
-      candidates.back().distance_along_ - candidates.front().distance_along_ >
-          kEquivalentProgressMeters) {
-    return {.status_ = trip_progress_projection_status::kAmbiguous};
-  }
-
   if (prior.has_value()) {
     std::erase_if(candidates, [&](projection_candidate const& candidate) {
       return candidate.distance_along_ + kEquivalentProgressMeters <
@@ -226,18 +225,108 @@ trip_progress_projection trip_progress_projector::project(
     if (candidates.empty()) {
       return {.status_ = trip_progress_projection_status::kImplausible};
     }
-    std::ranges::sort(candidates, [&](projection_candidate const& a,
-                                      projection_candidate const& b) {
-      return std::tuple{
-                 a.lateral_error_,
-                 std::abs(a.distance_along_ - prior->distance_along_shape_m_)} <
-             std::tuple{
-                 b.lateral_error_,
-                 std::abs(b.distance_along_ - prior->distance_along_shape_m_)};
-    });
   }
 
-  auto const& candidate = candidates.front();
+  std::ranges::sort(candidates, {}, &projection_candidate::distance_along_);
+  if (candidates.size() > 1U &&
+      candidates.back().distance_along_ - candidates.front().distance_along_ >
+          kEquivalentProgressMeters) {
+    return {.status_ = trip_progress_projection_status::kAmbiguous};
+  }
+  std::ranges::sort(candidates, {}, &projection_candidate::lateral_error_);
+  return {.status_ = trip_progress_projection_status::kProjected,
+          .candidate_ = candidates.front()};
+}
+
+}  // namespace
+
+struct trip_progress_projector::impl {
+  static constexpr auto kMaxCachedRunShapes = 1024U;
+
+  struct cache_entry {
+    cached_run_shape shape_;
+    std::list<cache_key>::iterator lru_it_;
+  };
+
+  explicit impl(n::shapes_storage const& shapes) : shapes_{shapes} {}
+
+  cached_run_shape const* get_shape(n::rt::frun const& fr) {
+    auto const key =
+        cache_key{fr.trip_idx(), fr.stop_range_.from_, fr.stop_range_.to_};
+    if (auto const it = cache_.find(key); it != end(cache_)) {
+      lru_.splice(end(lru_), lru_, it->second.lru_it_);
+      return &it->second.shape_;
+    }
+
+    auto shape = make_cached_shape(fr, shapes_);
+    if (!shape.has_value()) {
+      return nullptr;
+    }
+    if (cache_.size() == kMaxCachedRunShapes) {
+      cache_.erase(lru_.front());
+      lru_.pop_front();
+    }
+    lru_.push_back(key);
+    auto const it =
+        cache_
+            .emplace(key, cache_entry{std::move(*shape), std::prev(end(lru_))})
+            .first;
+    return &it->second.shape_;
+  }
+
+  n::shapes_storage const& shapes_;
+  std::list<cache_key> lru_;
+  std::map<cache_key, cache_entry> cache_;
+};
+
+trip_progress_projector::trip_progress_projector(
+    n::shapes_storage const& shapes)
+    : impl_{std::make_unique<impl>(shapes)} {}
+
+trip_progress_projector::~trip_progress_projector() = default;
+
+trip_progress_projector::trip_progress_projector(
+    trip_progress_projector&&) noexcept = default;
+
+trip_progress_projector& trip_progress_projector::operator=(
+    trip_progress_projector&&) noexcept = default;
+
+trip_progress_projection trip_progress_projector::project(
+    n::rt::frun const& fr,
+    geo::latlng const& position,
+    std::optional<trip_progress> const& prior,
+    std::optional<vehicle_position_progress_constraint> const& vp_constraint) {
+  if (!fr.is_scheduled()) {
+    return {};
+  }
+  auto const* shape = impl_->get_shape(fr);
+  if (shape == nullptr) {
+    return {};
+  }
+
+  auto constrained_stop_idx = std::optional<std::size_t>{};
+  if (vp_constraint.has_value()) {
+    constrained_stop_idx = get_constrained_stop_idx(*shape, *vp_constraint);
+    if (!constrained_stop_idx.has_value()) {
+      return {.status_ = trip_progress_projection_status::kImplausible};
+    }
+  }
+
+  auto candidates = make_projection_candidates(
+      *shape, position, constrained_stop_idx,
+      vp_constraint.has_value() &&
+          vp_constraint->status_ == vehicle_position_stop_status::kStoppedAt);
+  if (candidates.empty()) {
+    return {.status_ = vp_constraint.has_value()
+                           ? trip_progress_projection_status::kImplausible
+                           : trip_progress_projection_status::kMissingShape};
+  }
+
+  auto const selection = select_candidate(std::move(candidates), prior);
+  if (!selection.candidate_.has_value()) {
+    return {.status_ = selection.status_};
+  }
+  auto const& candidate = *selection.candidate_;
   auto monotonicity = trip_progress_monotonicity::kNoPrior;
   if (prior.has_value()) {
     auto const delta =
@@ -251,9 +340,9 @@ trip_progress_projection trip_progress_projector::project(
               .distance_along_shape_m_ = candidate.distance_along_,
               .lateral_error_m_ = candidate.lateral_error_,
               .next_static_stop_sequence_ =
-                  shape.static_stop_sequences_[candidate.next_stop_idx_],
+                  shape->static_stop_sequences_[candidate.next_stop_idx_],
               .distance_to_next_stop_m_ = std::max(
-                  0.0, shape.stop_distances_[candidate.next_stop_idx_] -
+                  0.0, shape->stop_distances_[candidate.next_stop_idx_] -
                            candidate.distance_along_),
               .monotonicity_ = monotonicity}};
 }

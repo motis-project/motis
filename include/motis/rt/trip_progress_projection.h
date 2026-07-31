@@ -29,6 +29,18 @@ enum class trip_progress_monotonicity {
   kMinorRegression
 };
 
+enum class vehicle_position_stop_status {
+  kIncomingAt,
+  kStoppedAt,
+  kInTransitTo
+};
+
+struct vehicle_position_progress_constraint {
+  unsigned current_static_stop_sequence_{};
+  vehicle_position_stop_status status_{
+      vehicle_position_stop_status::kInTransitTo};
+};
+
 struct trip_progress {
   double distance_along_shape_m_{};
   double lateral_error_m_{};
@@ -44,9 +56,8 @@ struct trip_progress_projection {
   std::optional<trip_progress> progress_;
 };
 
-class trip_progress_projector {
-public:
-  trip_progress_projector();
+struct trip_progress_projector {
+  explicit trip_progress_projector(nigiri::shapes_storage const&);
   ~trip_progress_projector();
 
   trip_progress_projector(trip_progress_projector&&) noexcept;
@@ -57,9 +68,10 @@ public:
 
   trip_progress_projection project(
       nigiri::rt::frun const&,
-      nigiri::shapes_storage const&,
       geo::latlng const&,
-      std::optional<trip_progress> const& prior = std::nullopt);
+      std::optional<trip_progress> const& = std::nullopt,
+      std::optional<vehicle_position_progress_constraint> const& =
+          std::nullopt);
 
 private:
   struct impl;
