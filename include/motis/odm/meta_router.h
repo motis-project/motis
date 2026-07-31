@@ -115,6 +115,7 @@ private:
   std::optional<std::vector<std::string>> const& dest_rental_provider_groups_;
   bool start_ignore_rental_return_constraints_{};
   bool dest_ignore_rental_return_constraints_{};
+  double max_matching_distance_;
 };
 
 }  // namespace motis::odm

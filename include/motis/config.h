@@ -268,6 +268,7 @@ struct config {
     unsigned street_routing_max_direct_seconds_{21600U};
     unsigned geocode_max_suggestions_{512U};
     unsigned reverse_geocode_max_results_{512U};
+    double max_max_matching_distance_{250.0};
   };
   limits get_limits() const { return limits_.value_or(limits{}); }
   std::optional<limits> limits_{};

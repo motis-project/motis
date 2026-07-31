@@ -1,5 +1,6 @@
 #include "motis/endpoints/refresh_itinerary.h"
 
+#include <algorithm>
 #include <atomic>
 #include <exception>
 #include <memory>
@@ -62,6 +63,17 @@ ep::routing make_routing(Endpoint const& ep) {
                      .metrics_ = ep.metrics_};
 }
 
+// Caps the API parameter with the `max_max_matching_distance` config limit.
+template <typename Endpoint>
+first_last_mile_options make_capped_first_last_mile_options(
+    Endpoint const& ep, api::refreshItinerary_params const& query) {
+  auto flm = make_first_last_mile_options(query);
+  flm.max_matching_distance_ =
+      std::min(flm.max_matching_distance_,
+               ep.config_.get_limits().max_max_matching_distance_);
+  return flm;
+}
+
 template <typename Endpoint>
 ep::stop_times make_scheduled_stop_times(Endpoint const& ep) {
   static auto const static_rt = std::make_shared<rt>();
@@ -86,7 +98,7 @@ api::Itinerary refresh_itinerary::operator()(
       leg_alternatives_prf_idx(query.useRoutedTransfers_,
                                query.requireCarTransport_,
                                query.pedestrianProfile_),
-      make_first_last_mile_options(query));
+      make_capped_first_last_mile_options(*this, query));
 }
 
 api::Itinerary refresh_itinerary_post::operator()(
@@ -118,7 +130,7 @@ api::Itinerary refresh_itinerary_post::operator()(
       leg_alternatives_prf_idx(query.useRoutedTransfers_,
                                query.requireCarTransport_,
                                query.pedestrianProfile_),
-      make_first_last_mile_options(query));
+      make_capped_first_last_mile_options(*this, query));
 }
 
 }  // namespace motis::ep

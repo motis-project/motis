@@ -206,8 +206,10 @@ paths:
           required: false
           description: |
             Optional. Default is 250 meters.
-            
+
             Maximum matching distance in meters to match geo coordinates to the street network.
+
+            Is limited by server config variable `max_max_matching_distance`, larger values are capped to this limit.
           schema:
             type: number
             default: 250
@@ -1117,7 +1119,10 @@ paths:
         - name: maxMatchingDistance
           in: query
           required: true
-          description: maximum matching distance in meters to match geo coordinates to the street network
+          description: |
+            maximum matching distance in meters to match geo coordinates to the street network
+
+            Is limited by server config variable `max_max_matching_distance`, larger values are capped to this limit.
           schema:
             type: number
         - name: vehicleHeight
@@ -1346,7 +1351,10 @@ paths:
         - name: maxMatchingDistance
           in: query
           required: false
-          description: maximum matching distance in meters to match geo coordinates to the street network
+          description: |
+            maximum matching distance in meters to match geo coordinates to the street network
+
+            Is limited by server config variable `max_max_matching_distance`, larger values are capped to this limit.
           schema:
             type: number
             default: 250
@@ -1873,6 +1881,8 @@ paths:
             Optional. Default is 250 meters.
 
             Maximum matching distance in meters to match geo coordinates to the street network.
+
+            Is limited by server config variable `max_max_matching_distance`, larger values are capped to this limit.
           schema:
             type: number
             default: 250
@@ -2559,7 +2569,10 @@ paths:
         - name: maxMatchingDistance
           in: query
           required: false
-          description: Maximum matching distance in meters to the street network.
+          description: |
+            Maximum matching distance in meters to the street network.
+
+            Is limited by server config variable `max_max_matching_distance`, larger values are capped to this limit.
           schema:
             type: number
             default: 250
@@ -5721,7 +5734,10 @@ components:
           description: maximum travel time in seconds. Is limited by server config variable `street_routing_max_direct_seconds`.
           type: number
         maxMatchingDistance:
-          description: maximum matching distance in meters to match geo coordinates to the street network
+          description: |
+            maximum matching distance in meters to match geo coordinates to the street network
+
+            Is limited by server config variable `max_max_matching_distance`, larger values are capped to this limit.
           type: number
         elevationCosts:
           description: |
@@ -5805,7 +5821,10 @@ components:
             it can lead to slow routing performance.
           type: integer
         maxMatchingDistance:
-          description: maximum matching distance in meters to match geo coordinates to the street network
+          description: |
+            maximum matching distance in meters to match geo coordinates to the street network
+
+            Is limited by server config variable `max_max_matching_distance`, larger values are capped to this limit.
           type: number
           default: 250
         arriveBy:
