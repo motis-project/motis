@@ -89,22 +89,33 @@ bool vehicle_observation_history::ingest_unpruned(
         old != end(key_by_entity_) && old->second != *key) {
       // The same feed entity changed from descriptor identity to fallback (or
       // vice versa), or now names a different stable vehicle. Mixing those
-      // histories would make trip continuity unsafe.
+      // histories would make trip continuity unsafe. Only a genuinely newer
+      // observation may migrate the identity; a late one must not erase newer
+      // progress.
+      if (!is_strictly_newer_than_history(old->second, observation)) {
+        return true;
+      }
       erase_history(old->second);
     }
     key_by_entity_.insert_or_assign(entity, *key);
   }
 
-  auto [history_it, inserted] =
+  auto const [history_it, inserted] =
       histories_.try_emplace(*key, history_entry{.trip_ = observation.trip_});
   auto& history = history_it->second;
   if (!inserted && history.trip_ != observation.trip_) {
+    // Retaining observations from different trip instances in one history is
+    // unsafe, but an out-of-order observation from a prior trip is not a valid
+    // reason to discard newer progress.
+    if (!is_strictly_newer_than_history(*key, observation)) {
+      return true;
+    }
     history.trip_ = observation.trip_;
     history.observations_.clear();
     current_.erase(*key);
   }
 
-  auto duplicate = std::ranges::find_if(
+  auto const duplicate = std::ranges::find_if(
       history.observations_, [&](vehicle_observation const& existing) {
         return same_observation(existing, observation);
       });
@@ -132,10 +143,7 @@ void vehicle_observation_history::replace_feed(
   std::erase_if(current_, [&](auto const& item) {
     return item.first.feed_id_ == feed_id;
   });
-  for (auto observation : observations) {
-    observation.feed_id_ = feed_id;
-    ingest_unpruned(std::move(observation));
-  }
+  ingest_feed(feed_id, observations);
   prune(now, policy);
 }
 
@@ -146,11 +154,17 @@ void vehicle_observation_history::update_feed(
     std::int64_t const now,
     observation_history_policy const& policy) {
   erase_deleted(feed_id, deleted_entity_ids);
+  ingest_feed(feed_id, observations);
+  prune(now, policy);
+}
+
+void vehicle_observation_history::ingest_feed(
+    std::string_view const feed_id,
+    std::span<vehicle_observation const> observations) {
   for (auto observation : observations) {
     observation.feed_id_ = feed_id;
     ingest_unpruned(std::move(observation));
   }
-  prune(now, policy);
 }
 
 void vehicle_observation_history::erase_deleted(
@@ -241,6 +255,14 @@ std::size_t vehicle_observation_history::observation_count() const {
     count += history.observations_.size();
   }
   return count;
+}
+
+bool vehicle_observation_history::is_strictly_newer_than_history(
+    vehicle_key const& key, vehicle_observation const& observation) const {
+  auto const history = histories_.find(key);
+  return history == end(histories_) || history->second.observations_.empty() ||
+         order_key(history->second.observations_.back()) <
+             order_key(observation);
 }
 
 void vehicle_observation_history::erase_history(vehicle_key const& key) {

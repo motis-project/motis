@@ -55,32 +55,30 @@ struct vehicle_observation {
 
 [[nodiscard]] std::int64_t observation_time(vehicle_observation const&);
 
-class vehicle_observation_history {
-public:
+struct vehicle_observation_history {
   // Ingests one observation and prunes relative to its ingest time. Returns
   // false when the observation has no stable vehicle or entity identity.
   bool ingest(vehicle_observation, observation_history_policy const&);
 
   // A full replacement invalidates absent current observations, but
   // intentionally retains their short histories until they expire by policy.
-  void replace_feed(std::string_view feed_id,
+  void replace_feed(std::string_view,
                     std::span<vehicle_observation const>,
-                    std::int64_t now,
+                    std::int64_t,
                     observation_history_policy const&);
 
   // A differential update changes only named observations. Deleted entities
   // cease to be current immediately while their histories remain available
   // until prune.
-  void update_feed(std::string_view feed_id,
+  void update_feed(std::string_view,
                    std::span<vehicle_observation const>,
-                   std::span<std::string const> deleted_entity_ids,
-                   std::int64_t now,
+                   std::span<std::string const>,
+                   std::int64_t,
                    observation_history_policy const&);
 
-  void erase_deleted(std::string_view feed_id,
-                     std::span<std::string const> entity_ids);
+  void erase_deleted(std::string_view, std::span<std::string const>);
 
-  void prune(std::int64_t now, observation_history_policy const&);
+  void prune(std::int64_t, observation_history_policy const&);
 
   [[nodiscard]] std::span<vehicle_observation const> observations(
       vehicle_key const&) const;
@@ -119,6 +117,9 @@ private:
   };
 
   bool ingest_unpruned(vehicle_observation);
+  void ingest_feed(std::string_view, std::span<vehicle_observation const>);
+  bool is_strictly_newer_than_history(vehicle_key const&,
+                                      vehicle_observation const&) const;
   void erase_history(vehicle_key const&);
 
   std::unordered_map<vehicle_key, history_entry, vehicle_key_hash> histories_;
