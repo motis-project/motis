@@ -93,7 +93,6 @@ struct gtfs_rt_endpoint {
   config::timetable::dataset::rt ep_;
   n::source_idx_t src_;
   std::string tag_;
-  std::string id_;
   gtfsrt_metrics metrics_;
   std::shared_ptr<last_good> last_good_{std::make_shared<last_good>()};
 };
@@ -105,14 +104,9 @@ struct auser_endpoint {
   vdvaus_metrics metrics_;
 };
 
-enum struct gtfsrt_payload_error {
-  empty_body,
-  decode_error,
-  missing_header
-};
+enum struct gtfsrt_payload_error { empty_body, decode_error, missing_header };
 
-class gtfsrt_payload_exception : public std::runtime_error {
-public:
+struct gtfsrt_payload_exception final : std::runtime_error {
   gtfsrt_payload_exception(gtfsrt_payload_error const error,
                            char const* const message)
       : std::runtime_error{message}, error_{error} {}
@@ -188,16 +182,16 @@ std::chrono::seconds gtfsrt_payload_age(
   if (!msg.header().has_timestamp() || msg.header().timestamp() == 0U) {
     return std::chrono::seconds{0};
   }
-  auto const now_seconds = std::chrono::duration_cast<std::chrono::seconds>(
-                               now.time_since_epoch())
-                               .count();
+  auto const now_seconds =
+      std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch())
+          .count();
   auto const timestamp = msg.header().timestamp();
   if (now_seconds <= 0 ||
       timestamp >= static_cast<std::uint64_t>(now_seconds)) {
     return std::chrono::seconds{0};
   }
-  return std::chrono::seconds{
-      now_seconds - static_cast<std::int64_t>(timestamp)};
+  return std::chrono::seconds{now_seconds -
+                              static_cast<std::int64_t>(timestamp)};
 }
 
 void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
@@ -228,7 +222,7 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
                     auto const endpoint_id =
                         std::to_string(gtfsrt_endpoint_idx++);
                     endpoints.push_back(gtfs_rt_endpoint{
-                        ep, src, tag, endpoint_id,
+                        ep, src, tag,
                         gtfsrt_metrics{tag, endpoint_id, metric_families}});
                     break;
                   }
@@ -245,13 +239,17 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
           }
           return endpoints;
         }();
+        auto const has_gtfsrt_endpoint =
+            std::any_of(endpoints.begin(), endpoints.end(), [](auto const& ep) {
+              return std::holds_alternative<gtfs_rt_endpoint>(ep);
+            });
+        auto const has_auser_endpoint =
+            std::any_of(endpoints.begin(), endpoints.end(), [](auto const& ep) {
+              return std::holds_alternative<auser_endpoint>(ep);
+            });
         auto const rebuild_gtfsrt_from_materialized_snapshots =
-            c.timetable_->incremental_rt_update_ &&
-            std::any_of(
-                endpoints.begin(), endpoints.end(),
-                [](auto const& ep) {
-                  return std::holds_alternative<gtfs_rt_endpoint>(ep);
-                });
+            c.timetable_->incremental_rt_update_ && has_gtfsrt_endpoint &&
+            !has_auser_endpoint;
 
         while (true) {
           // Remember when we started, so we can schedule the next update.
@@ -283,8 +281,8 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
             auto const apply_gtfsrt_update =
                 [&](gtfs_rt_endpoint const& g,
                     std::string_view const body) -> update_result {
-              return {n::rt::gtfsrt_update_buf(*d.tt_, *rtt, g.src_, g.tag_,
-                                               body)};
+              return {
+                  n::rt::gtfsrt_update_buf(*d.tt_, *rtt, g.src_, g.tag_, body)};
             };
             auto const cache_age =
                 [](gtfs_rt_endpoint::last_good const& state,
@@ -307,97 +305,111 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
                   state.snapshot_.Clear();
                   state.has_snapshot_ = false;
                   state.expired_ = true;
-                  g.metrics_.set_source_state(
-                      gtfsrt_source_state::expired,
-                      static_cast<double>(age.count()), false);
+                  g.metrics_.set_source_state(gtfsrt_source_state::expired,
+                                              static_cast<double>(age.count()),
+                                              false);
                   return true;
                 };
             auto const commit_last_good =
                 [&](gtfs_rt_endpoint const& g,
-                    transit_realtime::FeedMessage candidate) {
+                    transit_realtime::FeedMessage candidate,
+                    std::chrono::seconds const age_at_receipt) {
                   auto& state = *g.last_good_;
                   auto const received_at = std::chrono::steady_clock::now();
-                  auto const age_at_receipt = gtfsrt_payload_age(
-                      candidate, std::chrono::system_clock::now());
                   auto const ttl = std::chrono::seconds{g.ep_.last_good_ttl_};
-                  auto const fresh = age_at_receipt < ttl;
-                  if (fresh && (state.failed_ || state.expired_)) {
+                  if (state.failed_ || state.expired_) {
                     g.metrics_.recovery_.Increment();
                   }
                   state.snapshot_ = std::move(candidate);
-                  state.has_snapshot_ = fresh;
+                  state.has_snapshot_ = true;
                   state.received_at_ = received_at;
                   state.age_at_receipt_ = age_at_receipt;
-                  state.expires_at_ = received_at +
-                                      std::max(ttl - age_at_receipt,
-                                               std::chrono::seconds{0});
+                  state.expires_at_ = received_at + ttl - age_at_receipt;
                   state.failed_ = false;
-                  state.expired_ = !fresh;
-                  if (!fresh) {
-                    state.snapshot_.Clear();
-                  }
+                  state.expired_ = false;
                   g.metrics_.set_source_state(
                       gtfsrt_source_state::live,
-                      static_cast<double>(age_at_receipt.count()), fresh);
+                      static_cast<double>(age_at_receipt.count()), true);
+                };
+            auto const reuse_last_good =
+                [&](gtfs_rt_endpoint const& g) -> update_result {
+              auto const now = std::chrono::steady_clock::now();
+              expire_cache(g, now);
+              if (g.last_good_->has_snapshot_) {
+                g.last_good_->failed_ = true;
+                g.metrics_.last_good_reuse_.Increment();
+                auto const payload =
+                    g.last_good_->snapshot_.SerializeAsString();
+                auto result = apply_gtfsrt_update(g, payload);
+                g.metrics_.set_source_state(
+                    gtfsrt_source_state::replay,
+                    static_cast<double>(cache_age(*g.last_good_, now).count()),
+                    true);
+                result.source_success_ = false;
+                return result;
+              }
+              g.last_good_->failed_ = true;
+              auto const expired = g.last_good_->expired_;
+              auto const age = expired
+                                   ? static_cast<double>(
+                                         cache_age(*g.last_good_, now).count())
+                                   : 0.0;
+              g.metrics_.set_source_state(expired
+                                              ? gtfsrt_source_state::expired
+                                              : gtfsrt_source_state::no_base,
+                                          age, false);
+              return {n::rt::statistics{.parser_error_ = true}, false};
+            };
+            auto const reject_stale_candidate =
+                [&](gtfs_rt_endpoint const& g,
+                    std::chrono::seconds const age_at_receipt) {
+                  auto& state = *g.last_good_;
+                  state.failed_ = true;
+                  if (state.has_snapshot_) {
+                    return reuse_last_good(g);
+                  }
+                  if (!state.expired_) {
+                    g.metrics_.last_good_expiry_.Increment();
+                  }
+                  state.snapshot_.Clear();
+                  state.has_snapshot_ = false;
+                  state.received_at_ = std::chrono::steady_clock::now();
+                  state.expires_at_ = state.received_at_;
+                  state.age_at_receipt_ = age_at_receipt;
+                  state.expired_ = true;
+                  g.metrics_.set_source_state(
+                      gtfsrt_source_state::expired,
+                      static_cast<double>(age_at_receipt.count()), false);
+                  return update_result{n::rt::statistics{.parser_error_ = true},
+                                       false};
                 };
             auto const apply_valid_update =
                 [&](gtfs_rt_endpoint const& g,
                     std::string_view const body) -> update_result {
-                  auto validation = validate_gtfsrt_payload(body);
-                  auto const differential =
-                      validation.header().incrementality() ==
-                      transit_realtime::FeedHeader_Incrementality_DIFFERENTIAL;
-                  expire_cache(g, std::chrono::steady_clock::now());
-                  if (differential && !g.last_good_->has_snapshot_) {
-                    auto result = apply_gtfsrt_update(g, body);
-                    g.metrics_.set_source_state(
-                        gtfsrt_source_state::no_base, 0.0, false);
-                    return result;
-                  }
-                  auto candidate =
-                      differential
-                          ? materialize_gtfsrt_snapshot(
-                                g.last_good_->snapshot_, validation)
-                          : std::move(validation);
-                  candidate.mutable_header()->set_incrementality(
-                      transit_realtime::FeedHeader_Incrementality_FULL_DATASET);
-                  auto const materialized = candidate.SerializeAsString();
+              auto validation = validate_gtfsrt_payload(body);
+              auto const differential =
+                  validation.header().incrementality() ==
+                  transit_realtime::FeedHeader_Incrementality_DIFFERENTIAL;
+              expire_cache(g, std::chrono::steady_clock::now());
+              auto candidate = differential
+                                   ? materialize_gtfsrt_snapshot(
+                                         g.last_good_->snapshot_, validation)
+                                   : std::move(validation);
+              candidate.mutable_header()->set_incrementality(
+                  transit_realtime::FeedHeader_Incrementality_FULL_DATASET);
+              auto const age_at_receipt = gtfsrt_payload_age(
+                  candidate, std::chrono::system_clock::now());
+              if (age_at_receipt >=
+                  std::chrono::seconds{g.ep_.last_good_ttl_}) {
+                g.metrics_.updates_error_.Increment();
+                return reject_stale_candidate(g, age_at_receipt);
+              }
+              auto const materialized = candidate.SerializeAsString();
 
-                  auto result = apply_gtfsrt_update(g, materialized);
-                  commit_last_good(g, std::move(candidate));
-                  return result;
-                };
-            auto const reuse_last_good =
-                [&](gtfs_rt_endpoint const& g) -> update_result {
-                  auto const now = std::chrono::steady_clock::now();
-                  expire_cache(g, now);
-                  if (g.last_good_->has_snapshot_) {
-                    g.last_good_->failed_ = true;
-                    g.metrics_.last_good_reuse_.Increment();
-                    auto const payload =
-                        g.last_good_->snapshot_.SerializeAsString();
-                    auto result = apply_gtfsrt_update(g, payload);
-                    g.metrics_.set_source_state(
-                        gtfsrt_source_state::replay,
-                        static_cast<double>(
-                            cache_age(*g.last_good_, now).count()),
-                        true);
-                    result.source_success_ = false;
-                    return result;
-                  }
-                  g.last_good_->failed_ = true;
-                  auto const expired = g.last_good_->expired_;
-                  auto const age =
-                      expired
-                          ? static_cast<double>(
-                                cache_age(*g.last_good_, now).count())
-                          : 0.0;
-                  g.metrics_.set_source_state(
-                      expired ? gtfsrt_source_state::expired
-                              : gtfsrt_source_state::no_base,
-                      age, false);
-                  return {n::rt::statistics{.parser_error_ = true}, false};
-                };
+              auto result = apply_gtfsrt_update(g, materialized);
+              commit_last_good(g, std::move(candidate), age_at_receipt);
+              return result;
+            };
             if (c.timetable_->canned_rt_) {
               fmt::println("WARNING: READING CANNED RT");
 
@@ -423,8 +435,8 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
                             if (body.has_value()) {
                               return {auser.consume_update(*body, *rtt)};
                             } else {
-                              return {n::rt::vdv_aus::statistics{
-                                  .error_ = true}};
+                              return {
+                                  n::rt::vdv_aus::statistics{.error_ = true}};
                             }
                           });
                     } catch (gtfsrt_payload_exception const& e) {
@@ -459,19 +471,18 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
                 utl::visit(
                     ep,
                     [&](gtfs_rt_endpoint const& g) {
-                      n::log(n::log_lvl::info, "motis.rt",
-                             "GTFS-RT update stats for tag={}, url={}: {}",
-                             g.tag_, g.ep_.url_,
-                             fmt::streamed(
-                                 std::get<n::rt::statistics>(s.stats_)));
+                      n::log(
+                          n::log_lvl::info, "motis.rt",
+                          "GTFS-RT update stats for tag={}, url={}: {}", g.tag_,
+                          g.ep_.url_,
+                          fmt::streamed(std::get<n::rt::statistics>(s.stats_)));
                     },
                     [&](auser_endpoint const& a) {
                       n::log(n::log_lvl::info, "motis.rt",
                              "VDV AUS update stats for tag={}, url={}:\n{}",
                              a.tag_, a.ep_.url_,
-                             fmt::streamed(
-                                 std::get<n::rt::vdv_aus::statistics>(
-                                     s.stats_)));
+                             fmt::streamed(std::get<n::rt::vdv_aus::statistics>(
+                                 s.stats_)));
                     });
               }
             } else if (!endpoints.empty()) {
@@ -505,11 +516,10 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
                                         count_payload_error(g.metrics_,
                                                             e.error_);
                                         g.metrics_.updates_error_.Increment();
-                                        n::log(
-                                            n::log_lvl::error, "motis.rt",
-                                            "RT PAYLOAD ERROR: tag={}, "
-                                            "error={}",
-                                            g.tag_, e.what());
+                                        n::log(n::log_lvl::error, "motis.rt",
+                                               "RT PAYLOAD ERROR: tag={}, "
+                                               "error={}",
+                                               g.tag_, e.what());
                                         ret = reuse_last_good(g);
                                       } catch (std::exception const& e) {
                                         g.metrics_.updates_error_.Increment();
@@ -614,8 +624,7 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
                             a.metrics_.last_update_timestamp_
                                 .SetToCurrentTime();
                             a.metrics_.update(
-                                std::get<n::rt::vdv_aus::statistics>(
-                                    s.stats_));
+                                std::get<n::rt::vdv_aus::statistics>(s.stats_));
 
                             n::log(
                                 n::log_lvl::info, "motis.rt",
