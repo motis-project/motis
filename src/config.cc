@@ -177,6 +177,32 @@ void config::verify() const {
         }
       }
     }
+
+    if (timetable_->vehicle_eta_) {
+      auto const& eta = *timetable_->vehicle_eta_;
+      utl::verify(eta.history_.max_age_seconds_ > 0,
+                  "vehicle_eta history max_age_seconds must be greater than "
+                  "zero");
+      utl::verify(
+          eta.history_.max_observations_per_vehicle_ > 0U,
+          "vehicle_eta history max_observations_per_vehicle must be greater "
+          "than zero");
+
+      for (auto const& [mode, _] : eta.modes_) {
+        nigiri::to_clasz(mode);
+      }
+      for (auto const& [feed_id, feed] : eta.feeds_) {
+        utl::verify(timetable_->datasets_.contains(feed_id),
+                    "vehicle_eta feed {} is not a configured timetable "
+                    "dataset",
+                    feed_id);
+        if (feed.modes_) {
+          for (auto const& mode : *feed.modes_) {
+            nigiri::to_clasz(mode);
+          }
+        }
+      }
+    }
   }
 }
 
@@ -289,6 +315,42 @@ bool config::use_street_routing() const {
           [](bool const b) { return b; },
       },
       street_routing_);
+}
+
+config::timetable::vehicle_eta::mode config::vehicle_eta_mode(
+    std::string_view const feed, std::string_view const transit_mode) const {
+  if (!timetable_ || !timetable_->vehicle_eta_) {
+    return timetable::vehicle_eta::mode::off;
+  }
+
+  auto const& eta = *timetable_->vehicle_eta_;
+  if (auto const it = eta.feeds_.find(std::string{feed});
+      it != end(eta.feeds_) &&
+      (!it->second.modes_ ||
+       utl::any_of(*it->second.modes_,
+                   [&](auto const& x) { return x == transit_mode; }))) {
+    return it->second.mode_;
+  }
+  if (auto const it = eta.modes_.find(std::string{transit_mode});
+      it != end(eta.modes_)) {
+    return it->second;
+  }
+  return eta.mode_;
+}
+
+bool config::vehicle_eta_enabled() const {
+  if (!timetable_ || !timetable_->vehicle_eta_) {
+    return false;
+  }
+  auto const& eta = *timetable_->vehicle_eta_;
+  return eta.mode_ != timetable::vehicle_eta::mode::off ||
+         utl::any_of(eta.modes_,
+                     [](auto const& x) {
+                       return x.second != timetable::vehicle_eta::mode::off;
+                     }) ||
+         utl::any_of(eta.feeds_, [](auto const& x) {
+           return x.second.mode_ != timetable::vehicle_eta::mode::off;
+         });
 }
 
 }  // namespace motis

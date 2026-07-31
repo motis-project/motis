@@ -69,6 +69,17 @@ timetable:                          # if not set, no timetable will be loaded
   max_footpath_length: 15           # maximum footpath length when transitively connecting stops or for routing footpaths if `osr_footpath` is set to true
   max_matching_distance: 25.0       # maximum distance from geolocation to next OSM ways that will be found
   preprocess_max_matching_distance: 250.0 # max. distance for preprocessing matches from nigiri locations (stops) to OSM ways to speed up querying (set to 0 (default) to disable)
+  vehicle_eta:                      # optional vehicle-derived prediction policy; omitted defaults to off
+    mode: shadow                    # global policy: off, shadow, or effective
+    history:
+      max_age_seconds: 300
+      max_observations_per_vehicle: 20
+    modes:                          # optional transit-mode overrides
+      BUS: shadow
+    feeds:                          # optional dataset-tag overrides; feed wins over transit mode, which wins over global
+      nl:
+        modes: [BUS]                # omit to apply this feed override to every transit mode
+        mode: off
   datasets:                         # map of tag -> dataset
     ch:                             # the tag will be used as prefix for stop IDs and trip IDs with `_` as divider, so `_` cannot be part of the dataset tag
       path: ch_opentransportdataswiss.gtfs.zip

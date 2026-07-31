@@ -5,6 +5,88 @@
 using namespace motis;
 using namespace std::string_literals;
 
+TEST(motis, vehicle_eta_defaults_to_off_without_history_work) {
+  auto const c = config::read(R"(
+timetable:
+  datasets:
+    A:
+      path: a.gtfs.zip
+)"s);
+
+  ASSERT_TRUE(c.timetable_.has_value());
+  EXPECT_FALSE(c.timetable_->vehicle_eta_.has_value());
+  EXPECT_EQ(config::timetable::vehicle_eta::mode::off,
+            c.vehicle_eta_mode("any-feed", "BUS"));
+  EXPECT_FALSE(c.vehicle_eta_enabled());
+}
+
+TEST(motis, vehicle_eta_parses_modes_history_and_overrides) {
+  auto const c = config::read(R"(
+timetable:
+  datasets:
+    A:
+      path: a.gtfs.zip
+    B:
+      path: b.gtfs.zip
+  vehicle_eta:
+    mode: shadow
+    history:
+      max_age_seconds: 300
+      max_observations_per_vehicle: 20
+    modes:
+      BUS: effective
+    feeds:
+      A:
+        modes: [BUS]
+        mode: off
+)"s);
+
+  ASSERT_TRUE(c.timetable_->vehicle_eta_.has_value());
+  EXPECT_EQ(300, c.timetable_->vehicle_eta_->history_.max_age_seconds_);
+  EXPECT_EQ(20U,
+            c.timetable_->vehicle_eta_->history_.max_observations_per_vehicle_);
+  EXPECT_TRUE(c.vehicle_eta_enabled());
+  EXPECT_EQ(config::timetable::vehicle_eta::mode::off,
+            c.vehicle_eta_mode("A", "BUS"));
+  EXPECT_EQ(config::timetable::vehicle_eta::mode::shadow,
+            c.vehicle_eta_mode("A", "TRAM"));
+  EXPECT_EQ(config::timetable::vehicle_eta::mode::effective,
+            c.vehicle_eta_mode("B", "BUS"));
+  EXPECT_EQ(config::timetable::vehicle_eta::mode::shadow,
+            c.vehicle_eta_mode("B", "TRAM"));
+}
+
+TEST(motis, vehicle_eta_rejects_invalid_configuration) {
+  auto const config_with = [](std::string_view const vehicle_eta) {
+    return fmt::format(R"(
+timetable:
+  datasets:
+    A:
+      path: a.gtfs.zip
+  vehicle_eta:
+{}
+)",
+                       vehicle_eta);
+  };
+
+  EXPECT_ANY_THROW(config::read(config_with("    mode: invalid")));
+  EXPECT_ANY_THROW(config::read(config_with(R"(    feeds:
+      missing:
+        mode: shadow)")));
+  EXPECT_ANY_THROW(config::read(config_with(R"(    modes:
+      INVALID: shadow)")));
+  EXPECT_ANY_THROW(config::read(config_with(R"(    feeds:
+      A:
+        modes: [INVALID]
+        mode: shadow)")));
+  EXPECT_ANY_THROW(
+      config::read(config_with("    history:\n      max_age_seconds: -1")));
+  EXPECT_ANY_THROW(
+      config::read(config_with("    history:\n      max_age_seconds: 0")));
+  EXPECT_ANY_THROW(config::read(
+      config_with("    history:\n      max_observations_per_vehicle: 0")));
+}
+
 TEST(motis, config) {
   auto const c = config{
       .osm_ = {"europe-latest.osm.pbf"},

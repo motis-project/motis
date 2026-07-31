@@ -1,11 +1,13 @@
 #pragma once
 
+#include <cstdint>
 #include <filesystem>
 #include <functional>
 #include <iosfwd>
 #include <map>
 #include <optional>
 #include <set>
+#include <string_view>
 #include <thread>
 #include <variant>
 #include <vector>
@@ -34,6 +36,7 @@ struct config {
   bool has_elevators() const;
   bool has_rt_feeds() const;
   bool use_street_routing() const;
+  bool vehicle_eta_enabled() const;
 
   bool operator==(config const&) const = default;
 
@@ -118,6 +121,31 @@ struct config {
       std::optional<shapes_debug> debug_{};
     };
 
+    struct vehicle_eta {
+      enum class mode { off, shadow, effective };
+
+      struct history {
+        bool operator==(history const&) const = default;
+
+        std::int64_t max_age_seconds_{300};
+        std::size_t max_observations_per_vehicle_{20U};
+      };
+
+      struct feed {
+        bool operator==(feed const&) const = default;
+
+        std::optional<std::vector<std::string>> modes_{};
+        mode mode_{mode::off};
+      };
+
+      bool operator==(vehicle_eta const&) const = default;
+
+      mode mode_{mode::off};
+      history history_{};
+      std::map<std::string, mode> modes_{};
+      std::map<std::string, feed> feeds_{};
+    };
+
     bool operator==(timetable const&) const = default;
 
     std::string first_day_{"TODAY"};
@@ -142,8 +170,12 @@ struct config {
     std::map<std::string, dataset> datasets_{};
     std::optional<std::filesystem::path> assistance_times_{};
     std::optional<route_shapes> route_shapes_{};
+    std::optional<vehicle_eta> vehicle_eta_{};
   };
   std::optional<timetable> timetable_{};
+
+  timetable::vehicle_eta::mode vehicle_eta_mode(
+      std::string_view feed, std::string_view transit_mode) const;
 
   struct gbfs {
     bool operator==(gbfs const&) const = default;
