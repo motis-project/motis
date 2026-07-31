@@ -112,6 +112,7 @@ limits:
   street_routing_max_direct_seconds: 21600
   geocode_max_suggestions: 512
   reverse_geocode_max_results: 512
+  max_max_matching_distance: 250.000000
 osr_footpath: true
 geocoding: true
 reverse_geocoding: false

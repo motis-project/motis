@@ -1,5 +1,6 @@
 #include "motis/endpoints/one_to_all.h"
 
+#include <algorithm>
 #include <chrono>
 #include <vector>
 
@@ -34,6 +35,9 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
   auto const max_travel_minutes =
       config_.get_limits().onetoall_max_travel_minutes_;
   auto const query = api::oneToAll_params{url.params()};
+  auto const max_matching_distance =
+      std::min(query.maxMatchingDistance_,
+               config_.get_limits().max_max_matching_distance_);
   utl::verify<net::too_many_exception>(
       query.maxTravelTime_ <= max_travel_minutes,
       "maxTravelTime too large ({} > {}). The server admin can change "
@@ -100,11 +104,11 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
       .start_ = r.get_offsets(
           nullptr, one, one_dir, one_modes, rental_options{}, osr_params,
           query.pedestrianProfile_, query.elevationCosts_, one_max_time,
-          query.maxMatchingDistance_, gbfs_rd, prepare_stats),
+          max_matching_distance, gbfs_rd, prepare_stats),
       .td_start_ = r.get_td_offsets(
           nullptr, nullptr, one, one_dir, one_modes, osr_params,
           query.pedestrianProfile_, query.elevationCosts_,
-          query.maxMatchingDistance_, one_max_time, time, prepare_stats),
+          max_matching_distance, one_max_time, time, prepare_stats),
       .max_transfers_ = static_cast<std::uint8_t>(
           query.maxTransfers_.value_or(n::routing::kMaxTransfers)),
       .max_travel_time_ = max_travel_time,

@@ -1699,6 +1699,9 @@ export type OneToManyParams = {
     max: number;
     /**
      * maximum matching distance in meters to match geo coordinates to the street network
+     *
+     * Is limited by server config variable `max_max_matching_distance`, larger values are capped to this limit.
+     *
      */
     maxMatchingDistance: number;
     /**
@@ -1782,6 +1785,9 @@ export type OneToManyIntermodalParams = {
     maxTravelTime?: number;
     /**
      * maximum matching distance in meters to match geo coordinates to the street network
+     *
+     * Is limited by server config variable `max_max_matching_distance`, larger values are capped to this limit.
+     *
      */
     maxMatchingDistance?: number;
     /**
@@ -2331,6 +2337,8 @@ export type PlanData = {
          *
          * Maximum matching distance in meters to match geo coordinates to the street network.
          *
+         * Is limited by server config variable `max_max_matching_distance`, larger values are capped to this limit.
+         *
          */
         maxMatchingDistance?: number;
         /**
@@ -2805,6 +2813,9 @@ export type OneToManyData = {
         max: number;
         /**
          * maximum matching distance in meters to match geo coordinates to the street network
+         *
+         * Is limited by server config variable `max_max_matching_distance`, larger values are capped to this limit.
+         *
          */
         maxMatchingDistance: number;
         /**
@@ -2922,6 +2933,9 @@ export type OneToManyIntermodalData = {
         maxDirectTime?: number;
         /**
          * maximum matching distance in meters to match geo coordinates to the street network
+         *
+         * Is limited by server config variable `max_max_matching_distance`, larger values are capped to this limit.
+         *
          */
         maxMatchingDistance?: number;
         /**
@@ -3139,6 +3153,8 @@ export type OneToAllData = {
          * Optional. Default is 250 meters.
          *
          * Maximum matching distance in meters to match geo coordinates to the street network.
+         *
+         * Is limited by server config variable `max_max_matching_distance`, larger values are capped to this limit.
          *
          */
         maxMatchingDistance?: number;
@@ -3455,6 +3471,9 @@ export type RefreshItineraryData = {
         language?: Array<(string)>;
         /**
          * Maximum matching distance in meters to the street network.
+         *
+         * Is limited by server config variable `max_max_matching_distance`, larger values are capped to this limit.
+         *
          */
         maxMatchingDistance?: number;
         /**

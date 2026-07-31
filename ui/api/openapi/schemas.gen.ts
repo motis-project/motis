@@ -2155,7 +2155,10 @@ The number of accepted locations is limited by server config variable \`onetoman
             type: 'number'
         },
         maxMatchingDistance: {
-            description: 'maximum matching distance in meters to match geo coordinates to the street network',
+            description: `maximum matching distance in meters to match geo coordinates to the street network
+
+Is limited by server config variable \`max_max_matching_distance\`, larger values are capped to this limit.
+`,
             type: 'number'
         },
         elevationCosts: {
@@ -2249,7 +2252,10 @@ it can lead to slow routing performance.
             type: 'integer'
         },
         maxMatchingDistance: {
-            description: 'maximum matching distance in meters to match geo coordinates to the street network',
+            description: `maximum matching distance in meters to match geo coordinates to the street network
+
+Is limited by server config variable \`max_max_matching_distance\`, larger values are capped to this limit.
+`,
             type: 'number',
             default: 250
         },
