@@ -7,6 +7,7 @@
 #include <map>
 #include <optional>
 #include <set>
+#include <string>
 #include <string_view>
 #include <thread>
 #include <variant>
@@ -15,6 +16,8 @@
 #include "cista/hashing.h"
 
 #include "utl/verify.h"
+
+#include "nigiri/types.h"
 
 namespace motis {
 
@@ -175,7 +178,7 @@ struct config {
   std::optional<timetable> timetable_{};
 
   timetable::vehicle_eta::mode vehicle_eta_mode(
-      std::string_view feed, std::string_view transit_mode) const;
+      std::string_view feed, nigiri::clasz transit_mode) const;
 
   struct gbfs {
     bool operator==(gbfs const&) const = default;

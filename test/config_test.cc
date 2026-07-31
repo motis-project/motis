@@ -1,9 +1,16 @@
+#include <array>
+#include <string_view>
+#include <utility>
+
+#include "fmt/format.h"
+
 #include "gtest/gtest.h"
 
 #include "motis/config.h"
 
 using namespace motis;
 using namespace std::string_literals;
+using namespace std::string_view_literals;
 
 TEST(motis, vehicle_eta_defaults_to_off_without_history_work) {
   auto const c = config::read(R"(
@@ -16,7 +23,7 @@ timetable:
   ASSERT_TRUE(c.timetable_.has_value());
   EXPECT_FALSE(c.timetable_->vehicle_eta_.has_value());
   EXPECT_EQ(config::timetable::vehicle_eta::mode::off,
-            c.vehicle_eta_mode("any-feed", "BUS"));
+            c.vehicle_eta_mode("any-feed", nigiri::clasz::kBus));
   EXPECT_FALSE(c.vehicle_eta_enabled());
 }
 
@@ -47,13 +54,109 @@ timetable:
             c.timetable_->vehicle_eta_->history_.max_observations_per_vehicle_);
   EXPECT_TRUE(c.vehicle_eta_enabled());
   EXPECT_EQ(config::timetable::vehicle_eta::mode::off,
-            c.vehicle_eta_mode("A", "BUS"));
+            c.vehicle_eta_mode("A", nigiri::clasz::kBus));
   EXPECT_EQ(config::timetable::vehicle_eta::mode::shadow,
-            c.vehicle_eta_mode("A", "TRAM"));
+            c.vehicle_eta_mode("A", nigiri::clasz::kTram));
   EXPECT_EQ(config::timetable::vehicle_eta::mode::effective,
-            c.vehicle_eta_mode("B", "BUS"));
+            c.vehicle_eta_mode("B", nigiri::clasz::kBus));
   EXPECT_EQ(config::timetable::vehicle_eta::mode::shadow,
-            c.vehicle_eta_mode("B", "TRAM"));
+            c.vehicle_eta_mode("B", nigiri::clasz::kTram));
+}
+
+TEST(motis, vehicle_eta_accepts_canonical_transit_modes_and_aliases) {
+  using nigiri::clasz;
+
+  constexpr auto modes = std::array{
+      std::pair{"AIRPLANE"sv, clasz::kAir},
+      std::pair{"AIR"sv, clasz::kAir},
+      std::pair{"HIGHSPEED_RAIL"sv, clasz::kHighSpeed},
+      std::pair{"HIGHSPEED"sv, clasz::kHighSpeed},
+      std::pair{"LONG_DISTANCE"sv, clasz::kLongDistance},
+      std::pair{"LONGDISTANCE"sv, clasz::kLongDistance},
+      std::pair{"COACH"sv, clasz::kCoach},
+      std::pair{"NIGHT_RAIL"sv, clasz::kNight},
+      std::pair{"NIGHT"sv, clasz::kNight},
+      std::pair{"RIDE_SHARING"sv, clasz::kRideSharing},
+      std::pair{"REGIONAL_FAST_RAIL"sv, clasz::kRegional},
+      std::pair{"REGIONAL_RAIL"sv, clasz::kRegional},
+      std::pair{"REGIONALFAST"sv, clasz::kRegional},
+      std::pair{"REGIONAL"sv, clasz::kRegional},
+      std::pair{"SUBURBAN"sv, clasz::kSuburban},
+      std::pair{"METRO"sv, clasz::kSuburban},
+      std::pair{"SUBWAY"sv, clasz::kSubway},
+      std::pair{"TRAM"sv, clasz::kTram},
+      std::pair{"BUS"sv, clasz::kBus},
+      std::pair{"FERRY"sv, clasz::kShip},
+      std::pair{"SHIP"sv, clasz::kShip},
+      std::pair{"ODM"sv, clasz::kODM},
+      std::pair{"FUNICULAR"sv, clasz::kFunicular},
+      std::pair{"CABLE_CAR"sv, clasz::kFunicular},
+      std::pair{"AERIAL_LIFT"sv, clasz::kAerialLift},
+      std::pair{"AREAL_LIFT"sv, clasz::kAerialLift},
+      std::pair{"OTHER"sv, clasz::kOther},
+  };
+
+  for (auto const& [configured_mode, query_clasz] : modes) {
+    auto const c = config::read(fmt::format(R"(
+timetable:
+  datasets:
+    A:
+      path: a.gtfs.zip
+  vehicle_eta:
+    modes:
+      {}: effective
+)",
+                                            configured_mode));
+    EXPECT_EQ(config::timetable::vehicle_eta::mode::effective,
+              c.vehicle_eta_mode("A", query_clasz))
+        << configured_mode;
+  }
+}
+
+TEST(motis, vehicle_eta_feed_selectors_normalize_aliases) {
+  auto const c = config::read(R"(
+timetable:
+  datasets:
+    A:
+      path: a.gtfs.zip
+  vehicle_eta:
+    feeds:
+      A:
+        modes: [SHIP]
+        mode: effective
+)"s);
+
+  EXPECT_TRUE(c.vehicle_eta_enabled());
+  EXPECT_EQ(config::timetable::vehicle_eta::mode::effective,
+            c.vehicle_eta_mode("A", nigiri::clasz::kShip));
+  EXPECT_EQ(config::timetable::vehicle_eta::mode::off,
+            c.vehicle_eta_mode("A", nigiri::clasz::kBus));
+}
+
+TEST(motis, vehicle_eta_off_policies_do_not_enable_work) {
+  auto const c = config::read(R"(
+timetable:
+  datasets:
+    A:
+      path: a.gtfs.zip
+    B:
+      path: b.gtfs.zip
+  vehicle_eta:
+    mode: effective
+    modes:
+      BUS: shadow
+    feeds:
+      A:
+        mode: off
+      B:
+        mode: off
+)"s);
+
+  EXPECT_FALSE(c.vehicle_eta_enabled());
+  EXPECT_EQ(config::timetable::vehicle_eta::mode::off,
+            c.vehicle_eta_mode("A", nigiri::clasz::kBus));
+  EXPECT_EQ(config::timetable::vehicle_eta::mode::off,
+            c.vehicle_eta_mode("B", nigiri::clasz::kTram));
 }
 
 TEST(motis, vehicle_eta_rejects_invalid_configuration) {
@@ -78,6 +181,17 @@ timetable:
   EXPECT_ANY_THROW(config::read(config_with(R"(    feeds:
       A:
         modes: [INVALID]
+        mode: shadow)")));
+  EXPECT_ANY_THROW(config::read(config_with(R"(    feeds:
+      A:
+        modes: []
+        mode: shadow)")));
+  EXPECT_ANY_THROW(config::read(config_with(R"(    modes:
+      AIR: shadow
+      AIRPLANE: effective)")));
+  EXPECT_ANY_THROW(config::read(config_with(R"(    feeds:
+      A:
+        modes: [SHIP, FERRY]
         mode: shadow)")));
   EXPECT_ANY_THROW(
       config::read(config_with("    history:\n      max_age_seconds: -1")));

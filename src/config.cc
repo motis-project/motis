@@ -21,6 +21,33 @@ namespace fs = std::filesystem;
 
 namespace motis {
 
+namespace {
+
+nigiri::clasz parse_vehicle_eta_clasz(std::string_view const mode) {
+  if (mode == "AIRPLANE") {
+    return nigiri::clasz::kAir;
+  } else if (mode == "HIGHSPEED_RAIL") {
+    return nigiri::clasz::kHighSpeed;
+  } else if (mode == "LONG_DISTANCE") {
+    return nigiri::clasz::kLongDistance;
+  } else if (mode == "NIGHT_RAIL") {
+    return nigiri::clasz::kNight;
+  } else if (mode == "REGIONAL_FAST_RAIL" || mode == "REGIONAL_RAIL") {
+    return nigiri::clasz::kRegional;
+  } else if (mode == "FERRY") {
+    return nigiri::clasz::kShip;
+  } else if (mode == "ODM") {
+    return nigiri::clasz::kODM;
+  } else if (mode == "CABLE_CAR" || mode == "FUNICULAR") {
+    return nigiri::clasz::kFunicular;
+  } else if (mode == "AREAL_LIFT" || mode == "AERIAL_LIFT") {
+    return nigiri::clasz::kAerialLift;
+  }
+  return nigiri::to_clasz(mode);
+}
+
+}  // namespace
+
 template <rfl::internal::StringLiteral Name>
 consteval auto drop_last() {
   return []<size_t... Is>(std::index_sequence<Is...>) {
@@ -188,8 +215,12 @@ void config::verify() const {
           "vehicle_eta history max_observations_per_vehicle must be greater "
           "than zero");
 
-      for (auto const& [mode, _] : eta.modes_) {
-        nigiri::to_clasz(mode);
+      auto mode_claszes = std::set<nigiri::clasz>{};
+      for (auto const& entry : eta.modes_) {
+        auto const clasz = parse_vehicle_eta_clasz(entry.first);
+        utl::verify(mode_claszes.emplace(clasz).second,
+                    "vehicle_eta modes contain duplicate transit class {}",
+                    nigiri::to_str(clasz));
       }
       for (auto const& [feed_id, feed] : eta.feeds_) {
         utl::verify(timetable_->datasets_.contains(feed_id),
@@ -197,8 +228,15 @@ void config::verify() const {
                     "dataset",
                     feed_id);
         if (feed.modes_) {
+          utl::verify(!feed.modes_->empty(),
+                      "vehicle_eta feed {} modes must not be empty", feed_id);
+          auto feed_claszes = std::set<nigiri::clasz>{};
           for (auto const& mode : *feed.modes_) {
-            nigiri::to_clasz(mode);
+            auto const clasz = parse_vehicle_eta_clasz(mode);
+            utl::verify(
+                feed_claszes.emplace(clasz).second,
+                "vehicle_eta feed {} modes contain duplicate transit class {}",
+                feed_id, nigiri::to_str(clasz));
           }
         }
       }
@@ -318,7 +356,7 @@ bool config::use_street_routing() const {
 }
 
 config::timetable::vehicle_eta::mode config::vehicle_eta_mode(
-    std::string_view const feed, std::string_view const transit_mode) const {
+    std::string_view const feed, nigiri::clasz const transit_mode) const {
   if (!timetable_ || !timetable_->vehicle_eta_) {
     return timetable::vehicle_eta::mode::off;
   }
@@ -327,13 +365,15 @@ config::timetable::vehicle_eta::mode config::vehicle_eta_mode(
   if (auto const it = eta.feeds_.find(std::string{feed});
       it != end(eta.feeds_) &&
       (!it->second.modes_ ||
-       utl::any_of(*it->second.modes_,
-                   [&](auto const& x) { return x == transit_mode; }))) {
+       utl::any_of(*it->second.modes_, [&](auto const& mode) {
+         return parse_vehicle_eta_clasz(mode) == transit_mode;
+       }))) {
     return it->second.mode_;
   }
-  if (auto const it = eta.modes_.find(std::string{transit_mode});
-      it != end(eta.modes_)) {
-    return it->second;
+  for (auto const& [mode, policy] : eta.modes_) {
+    if (parse_vehicle_eta_clasz(mode) == transit_mode) {
+      return policy;
+    }
   }
   return eta.mode_;
 }
@@ -342,15 +382,16 @@ bool config::vehicle_eta_enabled() const {
   if (!timetable_ || !timetable_->vehicle_eta_) {
     return false;
   }
-  auto const& eta = *timetable_->vehicle_eta_;
-  return eta.mode_ != timetable::vehicle_eta::mode::off ||
-         utl::any_of(eta.modes_,
-                     [](auto const& x) {
-                       return x.second != timetable::vehicle_eta::mode::off;
-                     }) ||
-         utl::any_of(eta.feeds_, [](auto const& x) {
-           return x.second.mode_ != timetable::vehicle_eta::mode::off;
-         });
+  for (auto const& dataset : timetable_->datasets_) {
+    auto const& feed = dataset.first;
+    for (auto i = 0U; i != nigiri::kNumClasses; ++i) {
+      if (vehicle_eta_mode(feed, static_cast<nigiri::clasz>(i)) !=
+          timetable::vehicle_eta::mode::off) {
+        return true;
+      }
+    }
+  }
+  return false;
 }
 
 }  // namespace motis
