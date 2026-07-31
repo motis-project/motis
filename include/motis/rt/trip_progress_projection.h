@@ -1,0 +1,69 @@
+#pragma once
+
+#include <memory>
+#include <optional>
+
+#include "geo/latlng.h"
+
+namespace nigiri {
+struct shapes_storage;
+namespace rt {
+struct frun;
+}
+}  // namespace nigiri
+
+namespace motis {
+
+enum class trip_progress_projection_status {
+  kProjected,
+  kMissingShape,
+  kOffShape,
+  kAmbiguous,
+  kImplausible
+};
+
+enum class trip_progress_monotonicity {
+  kNoPrior,
+  kForward,
+  kStationary,
+  kMinorRegression
+};
+
+struct trip_progress {
+  double distance_along_shape_m_{};
+  double lateral_error_m_{};
+  unsigned next_static_stop_sequence_{};
+  double distance_to_next_stop_m_{};
+  trip_progress_monotonicity monotonicity_{
+      trip_progress_monotonicity::kNoPrior};
+};
+
+struct trip_progress_projection {
+  trip_progress_projection_status status_{
+      trip_progress_projection_status::kMissingShape};
+  std::optional<trip_progress> progress_;
+};
+
+class trip_progress_projector {
+public:
+  trip_progress_projector();
+  ~trip_progress_projector();
+
+  trip_progress_projector(trip_progress_projector&&) noexcept;
+  trip_progress_projector& operator=(trip_progress_projector&&) noexcept;
+
+  trip_progress_projector(trip_progress_projector const&) = delete;
+  trip_progress_projector& operator=(trip_progress_projector const&) = delete;
+
+  trip_progress_projection project(
+      nigiri::rt::frun const&,
+      nigiri::shapes_storage const&,
+      geo::latlng const&,
+      std::optional<trip_progress> const& prior = std::nullopt);
+
+private:
+  struct impl;
+  std::unique_ptr<impl> impl_;
+};
+
+}  // namespace motis
