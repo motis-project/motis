@@ -162,6 +162,10 @@ void config::verify() const {
       utl::verify(!id.contains("_"), "dataset identifier may not contain '_'");
       if (d.rt_.has_value()) {
         for (auto const& rt : *d.rt_) {
+          utl::verify(
+              rt.protocol_ != timetable::dataset::rt::protocol::gtfsrt ||
+                  rt.last_good_ttl_ > 0U,
+              "GTFS-RT last_good_ttl must be greater than zero");
           try {
             boost::urls::url{rt.url_};
           } catch (std::exception const& e) {

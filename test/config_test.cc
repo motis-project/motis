@@ -71,6 +71,7 @@ timetable:
         - url: https://stc.traines.eu/mirror/german-delfi-gtfs-rt/latest.gtfs-rt.pbf
           headers:
             Authorization: test
+          last_good_ttl: 180
           protocol: gtfsrt
     nl:
       path: nl.gtfs.zip
@@ -79,8 +80,10 @@ timetable:
       extend_calendar: false
       rt:
         - url: https://gtfs.ovapi.nl/nl/trainUpdates.pb
+          last_good_ttl: 180
           protocol: gtfsrt
         - url: https://gtfs.ovapi.nl/nl/tripUpdates.pb
+          last_good_ttl: 180
           protocol: gtfsrt
   assistance_times: assistance.csv
 elevators: false
@@ -142,6 +145,17 @@ geocoding: true
 )"s));
 
   EXPECT_TRUE(c.use_street_routing());
+
+  EXPECT_ANY_THROW(config::read(R"(
+timetable:
+  datasets:
+    test:
+      path: test.gtfs.zip
+      rt:
+        - url: https://example.test/trip_updates
+          last_good_ttl: 0
+          protocol: gtfsrt
+)"s));
 
   // Using street_routing struct
   {

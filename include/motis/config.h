@@ -72,6 +72,7 @@ struct config {
         }
         std::string url_;
         std::optional<headers_t> headers_{};
+        unsigned last_good_ttl_{180U};
 
         enum struct protocol { gtfsrt, auser, siri, siri_json };
         protocol protocol_{protocol::gtfsrt};

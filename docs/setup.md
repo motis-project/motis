@@ -18,6 +18,7 @@ timetable:
       path: ch_opentransportdataswiss.gtfs.zip
       rt:
         - url: https://api.opentransportdata.swiss/gtfsrt2020
+          last_good_ttl: 180        # max payload age for replay (FeedHeader timestamp, or receipt time if absent/zero)
           headers:
             Authorization: MY_API_KEY
           protocol: gtfsrt
