@@ -462,7 +462,7 @@ void data::load_auser_updater(std::string_view tag,
       continue;
     }
     auser_->try_emplace(rt.url_, *tt_, tags_->get_src(tag),
-                        convert(rt.protocol_));
+                        convert(rt.protocol_), rt.priority_ == 0U);
   }
 }
 

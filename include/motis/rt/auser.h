@@ -9,7 +9,8 @@ namespace motis {
 struct auser {
   auser(nigiri::timetable const&,
         nigiri::source_idx_t,
-        nigiri::rt::vdv_aus::updater::xml_format);
+        nigiri::rt::vdv_aus::updater::xml_format,
+        bool skip_existing_update = false);
   std::string fetch_url(std::string_view base_url);
   nigiri::rt::vdv_aus::statistics consume_update(std::string const&,
                                                  nigiri::rt_timetable&,
