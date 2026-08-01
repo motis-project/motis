@@ -252,7 +252,6 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
         auto const mixed_incremental_sources =
             rebuild_gtfsrt_from_materialized_snapshots && has_auser_endpoint;
         auto auser_rtt = std::unique_ptr<n::rt_timetable>{};
-        auto auser_rtt_day = date::sys_days{};
 
         while (true) {
           // Remember when we started, so we can schedule the next update.
@@ -264,11 +263,9 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
             // Create new real-time timetable.
             auto const today = std::chrono::time_point_cast<date::days>(
                 std::chrono::system_clock::now());
-            if (mixed_incremental_sources &&
-                (!auser_rtt || auser_rtt_day != today)) {
+            if (mixed_incremental_sources && !auser_rtt) {
               auser_rtt = std::make_unique<n::rt_timetable>(
                   n::rt::create_rt_timetable(*d.tt_, today));
-              auser_rtt_day = today;
             }
             auto rtt = std::make_unique<n::rt_timetable>(
                 c.timetable_->incremental_rt_update_ &&
