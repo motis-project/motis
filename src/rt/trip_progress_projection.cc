@@ -203,6 +203,17 @@ std::vector<projection_candidate> make_projection_candidates(
 candidate_selection select_candidate(
     std::vector<projection_candidate> candidates,
     std::optional<trip_progress> const& prior) {
+  constexpr auto kEquivalentProgressMeters = 25.0;
+  if (prior.has_value()) {
+    std::erase_if(candidates, [&](projection_candidate const& candidate) {
+      return candidate.distance_along_ + kEquivalentProgressMeters <
+             prior->distance_along_shape_m_;
+    });
+    if (candidates.empty()) {
+      return {.status_ = trip_progress_projection_status::kImplausible};
+    }
+  }
+
   auto const best_lateral =
       std::ranges::min(candidates, {}, &projection_candidate::lateral_error_)
           .lateral_error_;
@@ -216,22 +227,26 @@ candidate_selection select_candidate(
     return candidate.lateral_error_ >
            best_lateral + kEquivalentLateralErrorMeters;
   });
-  constexpr auto kEquivalentProgressMeters = 25.0;
-  if (prior.has_value()) {
-    std::erase_if(candidates, [&](projection_candidate const& candidate) {
-      return candidate.distance_along_ + kEquivalentProgressMeters <
-             prior->distance_along_shape_m_;
-    });
-    if (candidates.empty()) {
-      return {.status_ = trip_progress_projection_status::kImplausible};
-    }
-  }
 
   std::ranges::sort(candidates, {}, &projection_candidate::distance_along_);
   if (candidates.size() > 1U &&
       candidates.back().distance_along_ - candidates.front().distance_along_ >
           kEquivalentProgressMeters) {
     return {.status_ = trip_progress_projection_status::kAmbiguous};
+  }
+  constexpr auto kEndpointTieToleranceMeters = 1e-3;
+  for (auto i = std::size_t{0U}; i != candidates.size(); ++i) {
+    for (auto j = i + 1U; j != candidates.size(); ++j) {
+      if (candidates[i].next_stop_idx_ != candidates[j].next_stop_idx_ &&
+          std::abs(candidates[i].distance_along_ -
+                   candidates[j].distance_along_) <=
+              kEndpointTieToleranceMeters &&
+          std::abs(candidates[i].lateral_error_ -
+                   candidates[j].lateral_error_) <=
+              kEndpointTieToleranceMeters) {
+        return {.status_ = trip_progress_projection_status::kAmbiguous};
+      }
+    }
   }
   std::ranges::sort(candidates, {}, &projection_candidate::lateral_error_);
   return {.status_ = trip_progress_projection_status::kProjected,

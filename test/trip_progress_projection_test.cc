@@ -99,6 +99,45 @@ repeated-shape,50.0000,7.9950,6
 repeated-shape,50.0000,7.9900,7
 )";
 
+constexpr auto const kParallelShapeGtfs = R"(
+# agency.txt
+agency_id,agency_name,agency_url,agency_timezone
+Test,Test,https://example.com,Europe/Berlin
+
+# stops.txt
+stop_id,stop_name,stop_lat,stop_lon
+A,A,50.0000,8.0000
+B,B,50.0000,8.0100
+C,C,50.0001,8.0000
+D,D,50.0001,8.0100
+
+# routes.txt
+route_id,agency_id,route_short_name,route_type
+route,Test,1,3
+
+# trips.txt
+route_id,service_id,trip_id,shape_id
+route,S1,parallel,parallel-shape
+
+# stop_times.txt
+trip_id,arrival_time,departure_time,stop_id,stop_sequence
+parallel,01:00:00,01:00:00,A,10
+parallel,01:05:00,01:05:00,B,20
+parallel,01:10:00,01:10:00,C,30
+parallel,01:15:00,01:15:00,D,40
+
+# calendar_dates.txt
+service_id,date,exception_type
+S1,20260521,1
+
+# shapes.txt
+shape_id,shape_pt_lat,shape_pt_lon,shape_pt_sequence
+parallel-shape,50.0000,8.0000,1
+parallel-shape,50.0000,8.0100,2
+parallel-shape,50.0001,8.0000,3
+parallel-shape,50.0001,8.0100,4
+)";
+
 constexpr auto const kGeometryGtfs = R"(
 # agency.txt
 agency_id,agency_name,agency_url,agency_timezone
@@ -273,6 +312,35 @@ TEST(trip_progress_projection, prior_progress_disambiguates_a_repeated_shape) {
   EXPECT_EQ(result.progress_->next_static_stop_sequence_, 30U);
   EXPECT_EQ(result.progress_->monotonicity_,
             trip_progress_monotonicity::kForward);
+}
+
+TEST(trip_progress_projection,
+     prior_plausibility_is_applied_before_lateral_error_pruning) {
+  auto fixture = projection_fixture{kParallelShapeGtfs};
+  auto projector = trip_progress_projector{*fixture.data_->shapes_};
+  auto const prior = trip_progress{.distance_along_shape_m_ = 1400.0};
+
+  auto const result = projector.project(fixture.run("parallel"),
+                                        geo::latlng{50.0, 8.005}, prior);
+
+  ASSERT_EQ(result.status_, trip_progress_projection_status::kProjected);
+  ASSERT_TRUE(result.progress_.has_value());
+  EXPECT_EQ(result.progress_->next_static_stop_sequence_, 40U);
+  EXPECT_GT(result.progress_->distance_along_shape_m_, 1700.0);
+  EXPECT_GT(result.progress_->lateral_error_m_, 5.0);
+  EXPECT_LT(result.progress_->lateral_error_m_, 20.0);
+}
+
+TEST(trip_progress_projection,
+     fails_closed_at_a_shared_stop_with_conflicting_next_stop_metadata) {
+  auto fixture = projection_fixture{kStraightGtfs};
+  auto projector = trip_progress_projector{*fixture.data_->shapes_};
+
+  auto const result =
+      projector.project(fixture.run("straight"), geo::latlng{50.0, 8.01});
+
+  EXPECT_EQ(result.status_, trip_progress_projection_status::kAmbiguous);
+  EXPECT_FALSE(result.progress_.has_value());
 }
 
 TEST(trip_progress_projection, rejects_an_ambiguous_loop) {
