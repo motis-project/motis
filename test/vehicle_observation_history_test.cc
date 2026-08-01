@@ -337,6 +337,40 @@ TEST(vehicle_observation_history,
 }
 
 TEST(vehicle_observation_history,
+     differential_reuse_of_current_entity_ignores_stale_locator) {
+  auto history = vehicle_observation_history{};
+  auto const first = std::array{observation(100, 100, "e2", "V")};
+  history.update_feed("feed", first, {}, 100, kPolicy);
+  auto const rotated = std::array{observation(110, 110, "e1", "V")};
+  history.update_feed("feed", rotated, {}, 110, kPolicy);
+
+  auto const reused = std::array{observation(120, 120, "e1", "W")};
+  history.update_feed("feed", reused, {}, 120, kPolicy);
+
+  EXPECT_EQ(history.current_observation(descriptor_key("V")), nullptr);
+  EXPECT_TRUE(history.observations(descriptor_key("V")).empty());
+  ASSERT_NE(history.current_observation(descriptor_key("W")), nullptr);
+  EXPECT_EQ(history.current_observation(descriptor_key("W"))->entity_id_, "e1");
+}
+
+TEST(vehicle_observation_history,
+     full_replacement_only_reused_entity_invalidates_absent_vehicle) {
+  auto history = vehicle_observation_history{};
+  auto const first = std::array{observation(100, 100, "e2", "V")};
+  history.replace_feed("feed", first, 100, kPolicy);
+  auto const rotated = std::array{observation(110, 110, "e1", "V")};
+  history.replace_feed("feed", rotated, 110, kPolicy);
+
+  auto const replacement = std::array{observation(120, 120, "e1", "W")};
+  history.replace_feed("feed", replacement, 120, kPolicy);
+
+  EXPECT_EQ(history.current_observation(descriptor_key("V")), nullptr);
+  EXPECT_TRUE(history.observations(descriptor_key("V")).empty());
+  ASSERT_NE(history.current_observation(descriptor_key("W")), nullptr);
+  EXPECT_EQ(history.current_observation(descriptor_key("W"))->entity_id_, "e1");
+}
+
+TEST(vehicle_observation_history,
      differential_deletion_invalidates_current_but_preserves_short_history) {
   auto history = vehicle_observation_history{};
   auto const initial = std::array{observation(100, 100)};
