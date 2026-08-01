@@ -122,10 +122,20 @@ private:
   };
 
   enum class locator_evidence { kBatchOnly, kBatchOrCurrent };
+  enum class ingest_disposition { kInvalid, kRejected, kAccepted };
 
   bool ingest_unpruned(vehicle_observation,
                        std::span<batch_locator const> batch_locators = {},
                        locator_evidence = locator_evidence::kBatchOrCurrent);
+  ingest_disposition classify_unpruned(
+      vehicle_observation const&,
+      std::span<batch_locator const> batch_locators = {},
+      locator_evidence = locator_evidence::kBatchOrCurrent) const;
+  bool represented_elsewhere(vehicle_key const&,
+                             entity_key const&,
+                             std::string_view,
+                             std::span<batch_locator const>,
+                             locator_evidence) const;
   void ingest_feed(std::string_view, std::span<vehicle_observation const>);
   bool is_strictly_newer_than_history(vehicle_key const&,
                                       vehicle_observation const&) const;

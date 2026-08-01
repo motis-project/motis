@@ -336,6 +336,23 @@ TEST(vehicle_observation_history,
 }
 
 TEST(vehicle_observation_history,
+     stale_prior_trip_is_not_alternate_identity_evidence) {
+  auto history = vehicle_observation_history{};
+  auto const current =
+      std::array{observation(200, 200, "e1", "V", "next-trip")};
+  history.replace_feed("feed", current, 200, kPolicy);
+
+  auto const replacement = std::array{observation(210, 150, "e2", "V", "trip"),
+                                      observation(210, 210, "e1", "W", "trip")};
+  history.replace_feed("feed", replacement, 210, kPolicy);
+
+  EXPECT_EQ(history.current_observation(descriptor_key("V")), nullptr);
+  EXPECT_TRUE(history.observations(descriptor_key("V")).empty());
+  ASSERT_NE(history.current_observation(descriptor_key("W")), nullptr);
+  EXPECT_EQ(history.current_observation(descriptor_key("W"))->entity_id_, "e1");
+}
+
+TEST(vehicle_observation_history,
      differential_reuse_of_old_entity_preserves_rotated_vehicle) {
   auto history = vehicle_observation_history{};
   auto const first = std::array{observation(100, 100, "e1", "V")};

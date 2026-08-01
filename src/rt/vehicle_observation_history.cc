@@ -82,8 +82,13 @@ bool vehicle_observation_history::ingest_unpruned(
     std::span<batch_locator const> batch_locators,
     locator_evidence const evidence) {
   auto const key = make_vehicle_key(observation);
-  if (!key.has_value()) {
+  auto const disposition =
+      classify_unpruned(observation, batch_locators, evidence);
+  if (disposition == ingest_disposition::kInvalid) {
     return false;
+  }
+  if (disposition == ingest_disposition::kRejected) {
+    return true;
   }
 
   auto const entity = entity_key{observation.feed_id_, observation.entity_id_};
@@ -97,27 +102,8 @@ bool vehicle_observation_history::ingest_unpruned(
       // otherwise only a genuinely newer observation may replace a vehicle
       // that is still current. Retained history must not reserve an inactive
       // entity locator.
-      auto const old_current = current_.find(old->second);
-      auto const represented_elsewhere =
-          std::ranges::any_of(batch_locators,
-                              [&](auto const& locator) {
-                                return locator.entity_id_ !=
-                                           observation.entity_id_ &&
-                                       locator.key_ == old->second;
-                              }) ||
-          (evidence == locator_evidence::kBatchOrCurrent &&
-           std::ranges::any_of(key_by_entity_, [&](auto const& item) {
-             if (item.first == entity || item.second != old->second) {
-               return false;
-             }
-             return old_current != end(current_) &&
-                    old_current->second.entity_id_ == item.first.entity_id_;
-           }));
-      if (!represented_elsewhere && old_current != end(current_) &&
-          !is_strictly_newer_than_history(old->second, observation)) {
-        return true;
-      }
-      if (!represented_elsewhere) {
+      if (!represented_elsewhere(old->second, entity, observation.entity_id_,
+                                 batch_locators, evidence)) {
         erase_history(old->second);
       }
     }
@@ -131,9 +117,6 @@ bool vehicle_observation_history::ingest_unpruned(
     // Retaining observations from different trip instances in one history is
     // unsafe, but an out-of-order observation from a prior trip is not a valid
     // reason to discard newer progress.
-    if (!is_strictly_newer_than_history(*key, observation)) {
-      return true;
-    }
     history.trip_ = observation.trip_;
     history.observations_.clear();
     current_.erase(*key);
@@ -159,16 +142,79 @@ bool vehicle_observation_history::ingest_unpruned(
   return true;
 }
 
+vehicle_observation_history::ingest_disposition
+vehicle_observation_history::classify_unpruned(
+    vehicle_observation const& observation,
+    std::span<batch_locator const> batch_locators,
+    locator_evidence const evidence) const {
+  auto const key = make_vehicle_key(observation);
+  if (!key.has_value()) {
+    return ingest_disposition::kInvalid;
+  }
+
+  auto const entity = entity_key{observation.feed_id_, observation.entity_id_};
+  if (!observation.entity_id_.empty()) {
+    if (auto const old = key_by_entity_.find(entity);
+        old != end(key_by_entity_) && old->second != *key) {
+      auto const old_current = current_.find(old->second);
+      if (!represented_elsewhere(old->second, entity, observation.entity_id_,
+                                 batch_locators, evidence) &&
+          old_current != end(current_) &&
+          !is_strictly_newer_than_history(old->second, observation)) {
+        return ingest_disposition::kRejected;
+      }
+    }
+  }
+
+  if (auto const history = histories_.find(*key);
+      history != end(histories_) &&
+      history->second.trip_ != observation.trip_ &&
+      !is_strictly_newer_than_history(*key, observation)) {
+    return ingest_disposition::kRejected;
+  }
+  return ingest_disposition::kAccepted;
+}
+
+bool vehicle_observation_history::represented_elsewhere(
+    vehicle_key const& key,
+    entity_key const& entity,
+    std::string_view const entity_id,
+    std::span<batch_locator const> batch_locators,
+    locator_evidence const evidence) const {
+  if (std::ranges::any_of(batch_locators, [&](auto const& locator) {
+        return locator.entity_id_ != entity_id && locator.key_ == key;
+      })) {
+    return true;
+  }
+  if (evidence != locator_evidence::kBatchOrCurrent) {
+    return false;
+  }
+  auto const old_current = current_.find(key);
+  return std::ranges::any_of(key_by_entity_, [&](auto const& item) {
+    if (item.first == entity || item.second != key) {
+      return false;
+    }
+    return old_current != end(current_) &&
+           old_current->second.entity_id_ == item.first.entity_id_;
+  });
+}
+
 void vehicle_observation_history::replace_feed(
     std::string_view const feed_id,
     std::span<vehicle_observation const> observations,
     std::int64_t const now,
     observation_history_policy const& policy) {
   auto batch_locators = std::vector<batch_locator>{};
+  auto dispositions = std::vector<ingest_disposition>{};
+  dispositions.reserve(observations.size());
   for (auto observation : observations) {
     observation.feed_id_ = feed_id;
+    auto const disposition =
+        classify_unpruned(observation, {}, locator_evidence::kBatchOnly);
+    dispositions.emplace_back(disposition);
     if (auto const key = make_vehicle_key(observation);
-        key.has_value() && !observation.entity_id_.empty()) {
+        disposition == ingest_disposition::kAccepted && key.has_value() &&
+        !observation.entity_id_.empty()) {
       batch_locators.emplace_back(*key, observation.entity_id_);
     }
   }
@@ -180,7 +226,8 @@ void vehicle_observation_history::replace_feed(
     }
   }
 
-  for (auto observation : observations) {
+  for (auto idx = 0U; idx != observations.size(); ++idx) {
+    auto observation = observations[idx];
     observation.feed_id_ = feed_id;
     auto represented = std::vector<vehicle_key>{};
     if (auto const key = make_vehicle_key(observation); key.has_value()) {
@@ -195,8 +242,12 @@ void vehicle_observation_history::replace_feed(
       }
     }
 
-    if (ingest_unpruned(std::move(observation), batch_locators,
-                        locator_evidence::kBatchOnly)) {
+    auto const ingested =
+        dispositions[idx] == ingest_disposition::kRejected ||
+        (dispositions[idx] == ingest_disposition::kAccepted &&
+         ingest_unpruned(std::move(observation), batch_locators,
+                         locator_evidence::kBatchOnly));
+    if (ingested) {
       for (auto const& key : represented) {
         absent.erase(key);
       }
