@@ -116,7 +116,13 @@ private:
     std::vector<vehicle_observation> observations_;
   };
 
-  bool ingest_unpruned(vehicle_observation);
+  struct batch_locator {
+    vehicle_key key_;
+    std::string entity_id_;
+  };
+
+  bool ingest_unpruned(vehicle_observation,
+                       std::span<batch_locator const> batch_locators = {});
   void ingest_feed(std::string_view, std::span<vehicle_observation const>);
   bool is_strictly_newer_than_history(vehicle_key const&,
                                       vehicle_observation const&) const;
