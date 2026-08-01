@@ -21,6 +21,7 @@
 #include "motis/rt/auser.h"
 #include "motis/rt/vehicle_observation_history.h"
 #include "motis/rt/vehicle_position.h"
+#include "motis/rt/vehicle_prediction_store.h"
 #include "motis/types.h"
 
 namespace motis {
@@ -40,13 +41,15 @@ struct rt {
      ptr<elevators>&&,
      ptr<railviz_rt_index>&&,
      ptr<vehicle_positions::vehicle_position_store>&&,
-     ptr<vehicle_observation_history>&& = nullptr);
+     ptr<vehicle_observation_history>&& = nullptr,
+     ptr<vehicle_prediction_diagnostics_store>&& = nullptr);
   ~rt();
   ptr<nigiri::rt_timetable> rtt_;
   ptr<railviz_rt_index> railviz_rt_;
   ptr<elevators> e_;
   ptr<vehicle_positions::vehicle_position_store> vehicle_positions_;
   ptr<vehicle_observation_history> vehicle_observation_history_;
+  ptr<vehicle_prediction_diagnostics_store> vehicle_prediction_diagnostics_;
 };
 
 struct data {

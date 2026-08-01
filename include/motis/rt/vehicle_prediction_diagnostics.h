@@ -27,8 +27,10 @@ struct vehicle_position_store;
 
 struct vehicle_prediction_cycle_result {
   std::string feed_;
+  std::string trip_id_;
   std::optional<nigiri::clasz> mode_;
   vehicle_prediction_batch batch_;
+  std::vector<vehicle_stop_prediction> provider_predictions_;
   std::vector<std::int64_t> provider_raw_error_seconds_;
   std::vector<std::int64_t> provider_minute_error_;
 };

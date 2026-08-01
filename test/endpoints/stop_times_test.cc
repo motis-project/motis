@@ -19,6 +19,7 @@
 #include "utl/init_from.h"
 
 #include "nigiri/rt/gtfsrt_update.h"
+#include "nigiri/rt/frun.h"
 
 #include "motis-api/motis-api.h"
 #include "motis/config.h"
@@ -28,6 +29,8 @@
 #include "motis/endpoints/routing.h"
 #include "motis/gbfs/update.h"
 #include "motis/import.h"
+#include "motis/tag_lookup.h"
+#include "motis/timetable/time_conv.h"
 
 #include "../util.h"
 
@@ -178,6 +181,56 @@ TEST(motis, stop_times) {
               format_time(sbahn.place_.scheduledArrival_.value()));
     EXPECT_EQ(false, sbahn.realTime_);
     EXPECT_EQ(2, sbahn.previousStops_->size());
+    EXPECT_FALSE(res.predictionDebug_.has_value());
+
+    auto const [ice_run, _] =
+        d.tags_->get_trip(*d.tt_, d.rt_->rtt_.get(), ice.tripId_);
+    auto const ice_frun = n::rt::frun{*d.tt_, d.rt_->rtt_.get(), ice_run};
+    auto const scheduled =
+        std::chrono::duration_cast<std::chrono::seconds>(
+            static_cast<std::chrono::sys_seconds>(
+                *ice.place_.scheduledArrival_)
+                .time_since_epoch())
+            .count();
+    d.rt_->vehicle_prediction_diagnostics_ =
+        vehicle_prediction_diagnostics_store::build(
+            true,
+            {{.transport_ = ice_frun.t_,
+              .static_stop_sequence_ = 2U,
+              .trip_id_ = ice.tripId_,
+              .observed_at_seconds_ = scheduled,
+              .provider_ = prediction_candidate_diagnostic{
+                  .source_ = vehicle_prediction_source::kProvider,
+                  .predicted_timestamp_seconds_ = scheduled + 600,
+                  .delay_seconds_ = 600},
+              .gps_ = prediction_candidate_diagnostic{
+                  .source_ = vehicle_prediction_source::kGps,
+                  .predicted_timestamp_seconds_ = scheduled + 420,
+                  .delay_seconds_ = 420,
+                  .confidence_ = 0.8},
+              .effective_ = {.source_ =
+                                 vehicle_prediction_source::kProvider,
+                             .predicted_timestamp_seconds_ = scheduled + 600,
+                             .delay_seconds_ = 600},
+              .selected_source_ = vehicle_prediction_source::kGps,
+              .selection_reason_ = vehicle_prediction_selection_reason::
+                  kProviderProgressInconsistent}},
+            scheduled);
+
+    auto const debug_res = stop_times(
+        "/api/v5/stoptimes?stopId=test_FFM_10"
+        "&time=2019-04-30T23:30:00.000Z"
+        "&arriveBy=true"
+        "&n=3"
+        "&includePredictionComparison=true");
+    ASSERT_TRUE(debug_res.predictionDebug_.has_value());
+    ASSERT_EQ(1U, debug_res.predictionDebug_->size());
+    auto const& debug = debug_res.predictionDebug_->front();
+    EXPECT_EQ(0, debug.stopTimeIndex_);
+    EXPECT_EQ(ice.tripId_, debug.tripId_);
+    EXPECT_EQ(420, debug.gps_->delaySeconds_);
+    EXPECT_EQ(600, debug.effective_.delaySeconds_);
+    EXPECT_EQ(api::PredictionSourceEnum::GPS, debug.selectedSource_);
   }
 
   {

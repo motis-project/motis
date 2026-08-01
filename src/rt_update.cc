@@ -48,6 +48,8 @@
 #include "motis/rt/vehicle_observation_history.h"
 #include "motis/rt/vehicle_position.h"
 #include "motis/rt/vehicle_prediction_diagnostics.h"
+#include "motis/rt/vehicle_prediction_selection.h"
+#include "motis/rt/vehicle_prediction_store.h"
 #include "motis/tag_lookup.h"
 
 namespace n = nigiri;
@@ -227,6 +229,125 @@ std::chrono::seconds gtfsrt_payload_age(
                               static_cast<std::int64_t>(timestamp)};
 }
 
+std::unique_ptr<vehicle_prediction_diagnostics_store>
+build_vehicle_prediction_diagnostics(
+    config const& c,
+    std::span<vehicle_prediction_cycle_result const> const candidates,
+    std::int64_t const now_seconds,
+    vehicle_prediction_selection_state& state) {
+  if (!c.vehicle_eta_enabled()) {
+    return nullptr;
+  }
+  auto requests = std::vector<vehicle_prediction_shadow_request>{};
+  auto eligible = std::vector<vehicle_prediction_cycle_result const*>{};
+  requests.reserve(candidates.size());
+  eligible.reserve(candidates.size());
+  for (auto const& candidate : candidates) {
+    if (!candidate.mode_.has_value() || !candidate.batch_.eligible()) {
+      continue;
+    }
+    auto const& batch = candidate.batch_;
+    auto input = vehicle_prediction_selection_input{
+        .transport_ = batch.transport_, .now_seconds_ = now_seconds};
+    if (!candidate.provider_predictions_.empty()) {
+      input.provider_ = timing_source_candidate{
+          .source_ = vehicle_prediction_source::kProvider,
+          .reference_timestamp_seconds_ = now_seconds,
+          .confidence_ = 1.0,
+          .physically_reachable_ = true,
+          .predictions_ = candidate.provider_predictions_};
+    }
+    input.gps_ = timing_source_candidate{
+        .source_ = vehicle_prediction_source::kGps,
+        .reference_timestamp_seconds_ =
+            batch.candidate_reference_timestamp_seconds_.value_or(now_seconds),
+        .confidence_ = batch.confidence_->score_,
+        .physically_reachable_ = true,
+        .implied_progress_m_ = batch.implied_progress_m_,
+        .predictions_ = batch.predictions_};
+    requests.push_back({.feed_ = candidate.feed_,
+                        .mode_ = *candidate.mode_,
+                        .selection_ = std::move(input)});
+    eligible.push_back(&candidate);
+  }
+
+  // R3.6 owns calibrated feed/mode selector thresholds. Until it publishes a
+  // policy, run the production shadow path with an explicit unavailable policy
+  // rather than inventing thresholds. Both raw candidates remain observable.
+  auto const cycle = evaluate_vehicle_prediction_shadow_cycle(
+      c, requests,
+      [](std::string_view, nigiri::clasz)
+          -> std::optional<vehicle_prediction_selector_policy> {
+        return std::nullopt;
+      },
+      state);
+  log_vehicle_prediction_shadow_cycle(cycle.summaries_);
+
+  auto entries = std::vector<vehicle_prediction_diagnostic_entry>{};
+  for (auto i = std::size_t{0U};
+       i != eligible.size() && i != cycle.selections_.size(); ++i) {
+    auto const& source = *eligible[i];
+    auto const& selection = cycle.selections_[i];
+    auto const& batch = source.batch_;
+    for (auto const& gps : batch.predictions_) {
+      auto const provider = std::ranges::find(
+          source.provider_predictions_, gps.static_stop_sequence_,
+          &vehicle_stop_prediction::static_stop_sequence_);
+      auto effective = prediction_candidate_diagnostic{
+          .source_ = vehicle_prediction_source::kSchedule,
+          .predicted_timestamp_seconds_ = gps.scheduled_timestamp_seconds_};
+      auto provider_diagnostic =
+          std::optional<prediction_candidate_diagnostic>{};
+      if (provider != end(source.provider_predictions_)) {
+        provider_diagnostic = prediction_candidate_diagnostic{
+            .source_ = vehicle_prediction_source::kProvider,
+            .predicted_timestamp_seconds_ = provider->predicted_timestamp_seconds_,
+            .delay_seconds_ = provider->delay_seconds_,
+            .confidence_ = 1.0,
+            .reference_timestamp_seconds_ = now_seconds};
+        effective = *provider_diagnostic;
+      }
+      entries.push_back({
+          .transport_ = batch.transport_,
+          .static_stop_sequence_ = gps.static_stop_sequence_,
+          .trip_id_ = source.trip_id_,
+          .observed_at_seconds_ = now_seconds,
+          .provider_ = provider_diagnostic,
+          .gps_ = prediction_candidate_diagnostic{
+              .source_ = vehicle_prediction_source::kGps,
+              .predicted_timestamp_seconds_ = gps.predicted_timestamp_seconds_,
+              .delay_seconds_ = gps.delay_seconds_,
+              .confidence_ = batch.confidence_->score_,
+              .reference_timestamp_seconds_ =
+                  batch.candidate_reference_timestamp_seconds_},
+          .effective_ = effective,
+          .selected_source_ = selection.source_,
+          .selection_reason_ = selection.reason_,
+          .provider_rejection_ =
+              selection.diagnostics_.provider_rejection_,
+          .gps_rejection_ = selection.diagnostics_.gps_rejection_,
+          .selected_confidence_ =
+              selection.diagnostics_.selected_confidence_,
+          .candidate_timestamp_skew_seconds_ =
+              selection.diagnostics_.candidate_timestamp_skew_seconds_,
+          .projection_error_m_ = batch.confidence_->lateral_error_m_,
+          .progress_difference_m_ =
+              selection.diagnostics_.progress_difference_m_,
+          .source_transition_ =
+              selection.diagnostics_.source_transition_,
+          .provider_recovery_ =
+              selection.diagnostics_.provider_recovery_,
+          .flap_ = selection.diagnostics_.flap_,
+          .provider_consistent_cycles_ =
+              selection.diagnostics_.provider_consistent_cycles_});
+    }
+  }
+  auto const max_age = c.timetable_->vehicle_eta_->history_.max_age_seconds_;
+  return vehicle_prediction_diagnostics_store::build(
+      true, std::move(entries), now_seconds,
+      {.max_age_seconds_ = max_age, .max_entries_ = 100'000U});
+}
+
 void run_rt_update(boost::asio::io_context& ioc,
                    config const& c,
                    data& d,
@@ -272,6 +393,7 @@ void run_rt_update(boost::asio::io_context& ioc,
         auto candidate_error_metrics = std::map<
             std::tuple<std::string, std::string, std::string, std::string>,
             prometheus::Gauge*>{};
+        auto prediction_selection_state = vehicle_prediction_selection_state{};
 
         auto const endpoints = [&]() {
           auto endpoints =
@@ -932,6 +1054,8 @@ void run_rt_update(boost::asio::io_context& ioc,
             // Update lbs.
             rtt->update_lbs(*d.tt_);
 
+            auto pending_prediction_diagnostics =
+                std::unique_ptr<vehicle_prediction_diagnostics_store>{};
             if (vehicle_history != nullptr) {
               auto const history_prune_started =
                   std::chrono::steady_clock::now();
@@ -1142,6 +1266,16 @@ void run_rt_update(boost::asio::io_context& ioc,
               candidate_evaluation_seconds.Set(std::chrono::duration<double>{
                   std::chrono::steady_clock::now() - candidate_started}
                                                    .count());
+              auto prediction_diagnostics = build_vehicle_prediction_diagnostics(
+                  c, candidates,
+                  std::chrono::duration_cast<std::chrono::seconds>(
+                      now.time_since_epoch())
+                      .count(),
+                  prediction_selection_state);
+
+              // Update real-time timetable shared pointer below together with
+              // this immutable diagnostics snapshot.
+              pending_prediction_diagnostics = std::move(prediction_diagnostics);
             } else {
               history_active_vehicles.Set(0.0);
               history_observations.Set(0.0);
@@ -1174,7 +1308,8 @@ void run_rt_update(boost::asio::io_context& ioc,
                                  : std::move(d.rt_->e_);
             auto new_rt = std::make_shared<rt>(
                 std::move(rtt), std::move(elevators), std::move(railviz_rt),
-                std::move(vehicle_position_store), std::move(vehicle_history));
+                std::move(vehicle_position_store), std::move(vehicle_history),
+                std::move(pending_prediction_diagnostics));
             std::atomic_store(&d.rt_, std::move(new_rt));
 
             d.metrics_->last_update_rt_.SetToCurrentTime();

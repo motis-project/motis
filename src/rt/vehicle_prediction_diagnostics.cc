@@ -92,6 +92,9 @@ evaluate_vehicle_prediction_candidates(
       continue;
     }
     auto result = vehicle_prediction_cycle_result{.feed_ = std::move(feed),
+                                                  .trip_id_ = tags.id(
+                                                      tt, (*run)[0],
+                                                      n::event_type::kDep),
                                                   .mode_ = mode};
     result.batch_ =
         engine.evaluate(*run, history.observations(key_for(position)), now);
@@ -106,6 +109,15 @@ evaluate_vehicle_prediction_candidates(
             continue;
           }
           auto const provider = to_seconds((*run)[i].time(event));
+          if (!run->is_rt()) {
+            break;
+          }
+          result.provider_predictions_.push_back(
+              {.static_stop_sequence_ = prediction.static_stop_sequence_,
+               .scheduled_timestamp_seconds_ = scheduled,
+               .predicted_timestamp_seconds_ = provider,
+               .delay_seconds_ = provider - scheduled,
+               .horizon_seconds_ = provider - now});
           auto const raw = prediction.predicted_timestamp_seconds_ - provider;
           result.provider_raw_error_seconds_.push_back(raw);
           result.provider_minute_error_.push_back(

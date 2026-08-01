@@ -33,6 +33,103 @@ namespace n = nigiri;
 
 namespace motis::ep {
 
+namespace {
+
+api::PredictionSourceEnum to_api(vehicle_prediction_source const source) {
+  switch (source) {
+    case vehicle_prediction_source::kProvider:
+      return api::PredictionSourceEnum::PROVIDER;
+    case vehicle_prediction_source::kGps:
+      return api::PredictionSourceEnum::GPS;
+    case vehicle_prediction_source::kSchedule:
+      return api::PredictionSourceEnum::SCHEDULE;
+  }
+}
+
+api::PredictionSelectionReasonEnum to_api(
+    vehicle_prediction_selection_reason const reason) {
+  switch (reason) {
+    case vehicle_prediction_selection_reason::kProviderOnly:
+      return api::PredictionSelectionReasonEnum::PROVIDER_ONLY;
+    case vehicle_prediction_selection_reason::kGpsOnly:
+      return api::PredictionSelectionReasonEnum::GPS_ONLY;
+    case vehicle_prediction_selection_reason::kProviderHigherConfidence:
+      return api::PredictionSelectionReasonEnum::PROVIDER_HIGHER_CONFIDENCE;
+    case vehicle_prediction_selection_reason::kGpsHigherConfidence:
+      return api::PredictionSelectionReasonEnum::GPS_HIGHER_CONFIDENCE;
+    case vehicle_prediction_selection_reason::kProviderProgressInconsistent:
+      return api::PredictionSelectionReasonEnum::PROVIDER_PROGRESS_INCONSISTENT;
+    case vehicle_prediction_selection_reason::kProviderRecoveryPending:
+      return api::PredictionSelectionReasonEnum::PROVIDER_RECOVERY_PENDING;
+    case vehicle_prediction_selection_reason::kProviderRecovered:
+      return api::PredictionSelectionReasonEnum::PROVIDER_RECOVERED;
+    case vehicle_prediction_selection_reason::kSourceHysteresis:
+      return api::PredictionSelectionReasonEnum::SOURCE_HYSTERESIS;
+    case vehicle_prediction_selection_reason::kNoUsableCandidate:
+      return api::PredictionSelectionReasonEnum::NO_USABLE_CANDIDATE;
+    case vehicle_prediction_selection_reason::kPolicyUnavailable:
+      return api::PredictionSelectionReasonEnum::POLICY_UNAVAILABLE;
+  }
+}
+
+api::PredictionRejectionReasonEnum to_api(
+    timing_candidate_rejection_reason const reason) {
+  switch (reason) {
+    case timing_candidate_rejection_reason::kStale:
+      return api::PredictionRejectionReasonEnum::STALE;
+    case timing_candidate_rejection_reason::kLowConfidence:
+      return api::PredictionRejectionReasonEnum::LOW_CONFIDENCE;
+    case timing_candidate_rejection_reason::kPhysicallyUnreachable:
+      return api::PredictionRejectionReasonEnum::PHYSICALLY_UNREACHABLE;
+    case timing_candidate_rejection_reason::kTimestampNotComparable:
+      return api::PredictionRejectionReasonEnum::TIMESTAMP_NOT_COMPARABLE;
+    case timing_candidate_rejection_reason::kProgressNotComparable:
+      return api::PredictionRejectionReasonEnum::PROGRESS_NOT_COMPARABLE;
+    case timing_candidate_rejection_reason::kProgressInconsistent:
+      return api::PredictionRejectionReasonEnum::PROGRESS_INCONSISTENT;
+  }
+}
+
+api::PredictionCandidate to_api(
+    prediction_candidate_diagnostic const& candidate) {
+  return {.source_ = to_api(candidate.source_),
+          .time_ = candidate.predicted_timestamp_seconds_,
+          .delaySeconds_ = candidate.delay_seconds_,
+          .confidence_ = candidate.confidence_,
+          .referenceTime_ = candidate.reference_timestamp_seconds_};
+}
+
+api::PredictionDebug to_api(
+    vehicle_prediction_diagnostic_entry const& entry,
+    std::size_t const stop_time_index) {
+  return {
+      .stopTimeIndex_ = static_cast<std::int64_t>(stop_time_index),
+      .tripId_ = entry.trip_id_,
+      .stopSequence_ = static_cast<std::int64_t>(entry.static_stop_sequence_),
+      .selectedSource_ = to_api(entry.selected_source_),
+      .selectionReason_ = to_api(entry.selection_reason_),
+      .provider_ = entry.provider_.transform(
+          [](auto const& x) { return to_api(x); }),
+      .gps_ = entry.gps_.transform([](auto const& x) { return to_api(x); }),
+      .effective_ = to_api(entry.effective_),
+      .selectedConfidence_ = entry.selected_confidence_,
+      .providerRejection_ = entry.provider_rejection_.transform(
+          [](auto const x) { return to_api(x); }),
+      .gpsRejection_ = entry.gps_rejection_.transform(
+          [](auto const x) { return to_api(x); }),
+      .candidateTimestampSkewSeconds_ =
+          entry.candidate_timestamp_skew_seconds_,
+      .projectionErrorMeters_ = entry.projection_error_m_,
+      .progressDifferenceMeters_ = entry.progress_difference_m_,
+      .sourceTransition_ = entry.source_transition_,
+      .providerRecovery_ = entry.provider_recovery_,
+      .flap_ = entry.flap_,
+      .providerConsistentCycles_ =
+          static_cast<std::int64_t>(entry.provider_consistent_cycles_)};
+}
+
+}  // namespace
+
 struct ev_iterator {
   ev_iterator() = default;
   ev_iterator(ev_iterator const&) = delete;
@@ -472,7 +569,7 @@ api::stoptimes_response stop_times::operator()(
                              return to_tuple(a) == to_tuple(b);
                            }),
                end(events));
-  return {
+  auto response = api::stoptimes_response{
       .stopTimes_ = utl::to_vec(
           events,
           [&](n::rt::run const r) -> api::StopTime {
@@ -589,6 +686,26 @@ api::stoptimes_response stop_times::operator()(
                     to_seconds(
                         n::rt::frun{tt_, rtt, events.back()}[0].time(ev_type) +
                         std::chrono::minutes{1}))};
+  if (query.includePredictionComparison_ &&
+      rt->vehicle_prediction_diagnostics_ != nullptr) {
+    auto debug = std::vector<api::PredictionDebug>{};
+    debug.reserve(events.size());
+    for (auto const [index, run] : utl::enumerate(events)) {
+      auto const fr = n::rt::frun{tt_, rtt, run};
+      auto const s = fr[0];
+      auto const trip_id = tags_.id(tt_, s, ev_type);
+      auto const scheduled = to_seconds(s.scheduled_time(ev_type));
+      if (auto const* entry = rt->vehicle_prediction_diagnostics_->find_event(
+              fr.t_, trip_id, scheduled);
+          entry != nullptr) {
+        debug.emplace_back(to_api(*entry, index));
+      }
+    }
+    if (!debug.empty()) {
+      response.predictionDebug_ = std::move(debug);
+    }
+  }
+  return response;
 }
 
 }  // namespace motis::ep
