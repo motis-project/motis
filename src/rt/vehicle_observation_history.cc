@@ -93,7 +93,9 @@ bool vehicle_observation_history::ingest_unpruned(
       // vice versa), or now names a different stable vehicle. Mixing those
       // histories would make trip continuity unsafe. Reassigning just this
       // locator is safe when the old vehicle is represented elsewhere;
-      // otherwise only a genuinely newer observation may replace it.
+      // otherwise only a genuinely newer observation may replace a vehicle
+      // that is still current. Retained history must not reserve an inactive
+      // entity locator.
       auto const old_current = current_.find(old->second);
       auto const represented_elsewhere =
           std::ranges::any_of(batch_locators,
@@ -109,7 +111,7 @@ bool vehicle_observation_history::ingest_unpruned(
             return old_current != end(current_) &&
                    old_current->second.entity_id_ == item.first.entity_id_;
           });
-      if (!represented_elsewhere &&
+      if (!represented_elsewhere && old_current != end(current_) &&
           !is_strictly_newer_than_history(old->second, observation)) {
         return true;
       }

@@ -236,6 +236,23 @@ TEST(vehicle_observation_history,
 }
 
 TEST(vehicle_observation_history,
+     full_replacement_allows_equal_time_reuse_after_vehicle_is_absent) {
+  auto history = vehicle_observation_history{};
+  auto const initial = std::array{observation(200, 200, "e1", "V")};
+  history.replace_feed("feed", initial, 200, kPolicy);
+  history.replace_feed("feed", {}, 210, kPolicy);
+
+  auto const replacement = std::array{observation(220, 200, "e1", "W")};
+  history.replace_feed("feed", replacement, 220, kPolicy);
+
+  EXPECT_EQ(history.current_observation(descriptor_key("V")), nullptr);
+  EXPECT_TRUE(history.observations(descriptor_key("V")).empty());
+  ASSERT_NE(history.current_observation(descriptor_key("W")), nullptr);
+  EXPECT_EQ(history.current_observation(descriptor_key("W"))->reported_time_,
+            200);
+}
+
+TEST(vehicle_observation_history,
      full_replacement_keeps_newer_current_across_a_late_prior_trip) {
   auto history = vehicle_observation_history{};
   auto const current =
@@ -384,6 +401,24 @@ TEST(vehicle_observation_history,
   EXPECT_EQ(history.observations(descriptor_key()).size(), 1U);
   history.prune(401, kPolicy);
   EXPECT_TRUE(history.observations(descriptor_key()).empty());
+}
+
+TEST(vehicle_observation_history,
+     differential_deletion_allows_older_time_entity_reuse) {
+  auto history = vehicle_observation_history{};
+  auto const initial = std::array{observation(200, 200, "e1", "V")};
+  history.update_feed("feed", initial, {}, 200, kPolicy);
+  auto const deleted = std::array<std::string, 1>{"e1"};
+  history.update_feed("feed", {}, deleted, 210, kPolicy);
+
+  auto const reused = std::array{observation(220, 150, "e1", "W")};
+  history.update_feed("feed", reused, {}, 220, kPolicy);
+
+  EXPECT_EQ(history.current_observation(descriptor_key("V")), nullptr);
+  EXPECT_TRUE(history.observations(descriptor_key("V")).empty());
+  ASSERT_NE(history.current_observation(descriptor_key("W")), nullptr);
+  EXPECT_EQ(history.current_observation(descriptor_key("W"))->reported_time_,
+            150);
 }
 
 TEST(vehicle_observation_history, rejects_observations_without_any_identity) {
