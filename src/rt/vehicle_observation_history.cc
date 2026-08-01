@@ -461,6 +461,9 @@ std::size_t vehicle_observation_history::estimated_memory_bytes() const {
                    ? observation.trip_.start_time_->capacity()
                    : 0U;
       bytes += observation.stop_id_ ? observation.stop_id_->capacity() : 0U;
+      bytes += observation.current_status_
+                   ? observation.current_status_->capacity()
+                   : 0U;
     }
   }
   bytes +=

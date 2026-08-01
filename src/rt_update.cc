@@ -8,6 +8,7 @@
 #include <fstream>
 #include <map>
 #include <memory>
+#include <numeric>
 #include <optional>
 #include <set>
 #include <stdexcept>
@@ -42,6 +43,7 @@
 #include "motis/railviz.h"
 #include "motis/rt/auser.h"
 #include "motis/rt/rt_metrics.h"
+#include "motis/rt/trip_progress_diagnostics.h"
 #include "motis/rt/vehicle_observation_history.h"
 #include "motis/rt/vehicle_position.h"
 #include "motis/tag_lookup.h"
@@ -128,6 +130,7 @@ vehicle_observation to_observation(
       .speed_mps_ = position.reported_position_.speed_mps_,
       .current_stop_sequence_ = position.current_stop_sequence_,
       .stop_id_ = position.stop_id_,
+      .current_status_ = position.current_status_,
       .reported_time_ = position.reported_time_,
       .ingested_time_ = position.ingested_time_};
 }
@@ -246,6 +249,14 @@ void run_rt_update(boost::asio::io_context& ioc,
             metric_families.vehicle_eta_history_memory_bytes_.Add({});
         auto& history_update_seconds =
             metric_families.vehicle_eta_history_update_seconds_.Add({});
+        auto& progress_evaluation_seconds =
+            metric_families.vehicle_eta_progress_evaluation_seconds_.Add({});
+        auto progress_outcome_metrics =
+            std::map<std::tuple<std::string, std::string, std::string>,
+                     prometheus::Gauge*>{};
+        auto progress_lateral_metrics =
+            std::map<std::tuple<std::string, std::string, std::string>,
+                     prometheus::Gauge*>{};
 
         auto const endpoints = [&]() {
           auto endpoints =
@@ -924,11 +935,85 @@ void run_rt_update(boost::asio::io_context& ioc,
                   vehicle_history->estimated_memory_bytes()));
               history_update_seconds.Set(
                   std::chrono::duration<double>{history_update_cpu}.count());
+
+              for (auto const& [_, metric] : progress_outcome_metrics) {
+                metric->Set(0.0);
+              }
+              for (auto const& [_, metric] : progress_lateral_metrics) {
+                metric->Set(0.0);
+              }
+              auto const progress_started = std::chrono::steady_clock::now();
+              auto const diagnostics = evaluate_trip_progress_diagnostics(
+                  c, *d.tags_, *d.tt_, rtt.get(), d.shapes_.get(),
+                  *vehicle_position_store, *vehicle_history,
+                  std::chrono::duration_cast<std::chrono::seconds>(
+                      now.time_since_epoch())
+                      .count());
+              auto lateral = std::map<std::pair<std::string, std::string>,
+                                      std::vector<double>>{};
+              for (auto const& diagnostic : diagnostics) {
+                auto const mode =
+                    diagnostic.mode_.has_value()
+                        ? std::string{n::to_str(*diagnostic.mode_)}
+                        : std::string{"unknown"};
+                auto const outcome_key =
+                    std::tuple{diagnostic.feed_, mode,
+                               std::string{to_str(diagnostic.status_)}};
+                auto [outcome_it, inserted] =
+                    progress_outcome_metrics.try_emplace(outcome_key, nullptr);
+                if (inserted) {
+                  auto const& [feed, metric_mode, outcome] = outcome_key;
+                  outcome_it->second =
+                      &metric_families.vehicle_eta_progress_outcomes_.Add(
+                          {{"feed", feed},
+                           {"mode", metric_mode},
+                           {"outcome", outcome}});
+                }
+                outcome_it->second->Increment();
+                if (diagnostic.lateral_error_m_.has_value()) {
+                  lateral[{diagnostic.feed_, mode}].push_back(
+                      *diagnostic.lateral_error_m_);
+                }
+              }
+              for (auto const& [feed_mode, errors] : lateral) {
+                auto const sum =
+                    std::accumulate(begin(errors), end(errors), 0.0);
+                auto const maximum =
+                    *std::max_element(begin(errors), end(errors));
+                for (auto const& [statistic, value] :
+                     {std::pair{"average", sum / errors.size()},
+                      std::pair{"maximum", maximum}}) {
+                  auto const key = std::tuple{feed_mode.first, feed_mode.second,
+                                              std::string{statistic}};
+                  auto [it, inserted] =
+                      progress_lateral_metrics.try_emplace(key, nullptr);
+                  if (inserted) {
+                    auto const& [feed, mode, stat] = key;
+                    it->second =
+                        &metric_families
+                             .vehicle_eta_progress_lateral_error_meters_.Add(
+                                 {{"feed", feed},
+                                  {"mode", mode},
+                                  {"statistic", stat}});
+                  }
+                  it->second->Set(value);
+                }
+              }
+              progress_evaluation_seconds.Set(std::chrono::duration<double>{
+                  std::chrono::steady_clock::now() - progress_started}
+                                                  .count());
             } else {
               history_active_vehicles.Set(0.0);
               history_observations.Set(0.0);
               history_memory_bytes.Set(0.0);
               history_update_seconds.Set(0.0);
+              progress_evaluation_seconds.Set(0.0);
+              for (auto const& [_, metric] : progress_outcome_metrics) {
+                metric->Set(0.0);
+              }
+              for (auto const& [_, metric] : progress_lateral_metrics) {
+                metric->Set(0.0);
+              }
             }
 
             // Update real-time timetable shared pointer.

@@ -14,7 +14,10 @@
 #include "motis/config.h"
 #include "motis/data.h"
 #include "motis/import.h"
+#include "motis/rt/trip_progress_diagnostics.h"
 #include "motis/rt/trip_progress_projection.h"
+#include "motis/rt/vehicle_observation_history.h"
+#include "motis/rt/vehicle_position.h"
 #include "motis/tag_lookup.h"
 
 namespace fs = std::filesystem;
@@ -809,6 +812,91 @@ TEST(trip_progress_projection, fails_closed_when_the_shape_is_missing) {
 
   EXPECT_EQ(result.status_, trip_progress_projection_status::kMissingShape);
   EXPECT_FALSE(result.progress_.has_value());
+}
+
+TEST(trip_progress_diagnostics, projects_an_exact_scheduled_trip_read_only) {
+  auto fixture = projection_fixture{kStraightGtfs};
+  fixture.config_.timetable_->vehicle_eta_ = config::timetable::vehicle_eta{
+      .mode_ = config::timetable::vehicle_eta::mode::shadow,
+      .history_ = {.max_age_seconds_ = 300,
+                   .max_observations_per_vehicle_ = 4U}};
+  auto const position = vehicle_positions::vehicle_position{
+      .feed_id_ = "progress:vehicle",
+      .entity_id_ = "entity",
+      .vehicle_ = {.id_ = "vehicle"},
+      .trip_ = {.trip_id_ = "straight",
+                .start_date_ = "20260521",
+                .start_time_ = "01:00:00",
+                .route_id_ = "route",
+                .schedule_relationship_ = "SCHEDULED"},
+      .reported_position_ = {.pos_ = geo::latlng{50.0, 8.005}},
+      .current_stop_sequence_ = 20U,
+      .reported_time_ = 100,
+      .ingested_time_ = 100};
+  auto positions = vehicle_positions::vehicle_position_store{};
+  positions.replace_feed(position.feed_id_, {position});
+  auto history = vehicle_observation_history{};
+  EXPECT_TRUE(history.ingest(
+      vehicle_observation{.feed_id_ = position.feed_id_,
+                          .entity_id_ = position.entity_id_,
+                          .vehicle_id_ = position.vehicle_.id_,
+                          .trip_ = {.trip_id_ = position.trip_.trip_id_,
+                                    .start_date_ = position.trip_.start_date_,
+                                    .start_time_ = position.trip_.start_time_},
+                          .latitude_ = 50.0,
+                          .longitude_ = 8.005,
+                          .current_stop_sequence_ = 20U,
+                          .reported_time_ = 100,
+                          .ingested_time_ = 100},
+      observation_history_policy{std::chrono::seconds{300}, 4U}));
+  auto const scheduled_before =
+      fixture.run("straight")[1].scheduled_time(n::event_type::kDep);
+
+  auto const diagnostics = evaluate_trip_progress_diagnostics(
+      fixture.config_, *fixture.data_->tags_, *fixture.data_->tt_, nullptr,
+      fixture.data_->shapes_.get(), positions, history, 100);
+
+  ASSERT_EQ(diagnostics.size(), 1U);
+  EXPECT_EQ(diagnostics.front().status_,
+            trip_progress_diagnostic_status::kProjected);
+  ASSERT_TRUE(diagnostics.front().lateral_error_m_.has_value());
+  EXPECT_LT(*diagnostics.front().lateral_error_m_, 0.1);
+  EXPECT_EQ(scheduled_before,
+            fixture.run("straight")[1].scheduled_time(n::event_type::kDep));
+}
+
+TEST(trip_progress_diagnostics, rejects_ineligible_trips_with_reasons) {
+  auto fixture = projection_fixture{kStraightGtfs};
+  fixture.config_.timetable_->vehicle_eta_ = config::timetable::vehicle_eta{
+      .mode_ = config::timetable::vehicle_eta::mode::shadow};
+  auto positions = vehicle_positions::vehicle_position_store{};
+  positions.replace_feed(
+      "progress:vehicle",
+      {vehicle_positions::vehicle_position{
+           .feed_id_ = "progress:vehicle",
+           .entity_id_ = "missing-trip",
+           .reported_position_ = {.pos_ = geo::latlng{50.0, 8.005}},
+           .reported_time_ = 100,
+           .ingested_time_ = 100},
+       vehicle_positions::vehicle_position{
+           .feed_id_ = "progress:vehicle",
+           .entity_id_ = "replacement",
+           .trip_ = {.trip_id_ = "straight",
+                     .schedule_relationship_ = "REPLACEMENT"},
+           .reported_position_ = {.pos_ = geo::latlng{50.0, 8.005}},
+           .reported_time_ = 100,
+           .ingested_time_ = 100}});
+
+  auto const diagnostics = evaluate_trip_progress_diagnostics(
+      fixture.config_, *fixture.data_->tags_, *fixture.data_->tt_, nullptr,
+      fixture.data_->shapes_.get(), positions, vehicle_observation_history{},
+      100);
+
+  ASSERT_EQ(diagnostics.size(), 2U);
+  EXPECT_EQ(diagnostics[0].status_,
+            trip_progress_diagnostic_status::kMissingTripId);
+  EXPECT_EQ(diagnostics[1].status_,
+            trip_progress_diagnostic_status::kUnsupportedScheduleRelationship);
 }
 
 }  // namespace

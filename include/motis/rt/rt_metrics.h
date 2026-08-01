@@ -141,6 +141,24 @@ struct rt_metric_families {
                 .Name("motis_vehicle_eta_history_update_seconds")
                 .Help("CPU time spent updating prediction history this cycle")
                 .Register(registry)},
+        vehicle_eta_progress_outcomes_{
+            prometheus::BuildGauge()
+                .Name("motis_vehicle_eta_progress_outcomes")
+                .Help(
+                    "Current shadow progress outcomes by feed, mode and result")
+                .Register(registry)},
+        vehicle_eta_progress_lateral_error_meters_{
+            prometheus::BuildGauge()
+                .Name("motis_vehicle_eta_progress_lateral_error_meters")
+                .Help("Current projected lateral error by feed, mode and "
+                      "statistic")
+                .Register(registry)},
+        vehicle_eta_progress_evaluation_seconds_{
+            prometheus::BuildGauge()
+                .Name("motis_vehicle_eta_progress_evaluation_seconds")
+                .Help(
+                    "CPU time spent evaluating shadow trip progress this cycle")
+                .Register(registry)},
         vdvaus_updates_requested_{prometheus::BuildCounter()
                                       .Name("nigiri_vdvaus_updates_requested_"
                                             "total")
@@ -321,6 +339,11 @@ struct rt_metric_families {
   prometheus::Family<prometheus::Gauge>& vehicle_eta_history_observations_;
   prometheus::Family<prometheus::Gauge>& vehicle_eta_history_memory_bytes_;
   prometheus::Family<prometheus::Gauge>& vehicle_eta_history_update_seconds_;
+  prometheus::Family<prometheus::Gauge>& vehicle_eta_progress_outcomes_;
+  prometheus::Family<prometheus::Gauge>&
+      vehicle_eta_progress_lateral_error_meters_;
+  prometheus::Family<prometheus::Gauge>&
+      vehicle_eta_progress_evaluation_seconds_;
 
   prometheus::Family<prometheus::Counter>& vdvaus_updates_requested_;
   prometheus::Family<prometheus::Counter>& vdvaus_updates_successful_;

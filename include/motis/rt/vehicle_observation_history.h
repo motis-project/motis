@@ -46,6 +46,7 @@ struct vehicle_observation {
   std::optional<double> speed_mps_;
   std::optional<std::uint32_t> current_stop_sequence_;
   std::optional<std::string> stop_id_;
+  std::optional<std::string> current_status_;
   std::optional<std::int64_t> reported_time_;
   std::int64_t ingested_time_{};
 };
