@@ -198,10 +198,13 @@ std::chrono::seconds gtfsrt_payload_age(
                               static_cast<std::int64_t>(timestamp)};
 }
 
-void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
+void run_rt_update(boost::asio::io_context& ioc,
+                   config const& c,
+                   data& d,
+                   rt_update_hooks hooks) {
   boost::asio::co_spawn(
       ioc,
-      [&c, &d]() -> awaitable<void> {
+      [&c, &d, hooks = std::move(hooks)]() -> awaitable<void> {
         auto const dump_rt = fs::is_directory("dump_rt");
         if (dump_rt) {
           fmt::println("WARNING: DUMPING TO dump_rt\n");
@@ -253,7 +256,7 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
           // Remember when we started, so we can schedule the next update.
           auto const start = std::chrono::steady_clock::now();
 
-          {
+          try {
             auto t = utl::scoped_timer{"rt update"};
 
             // Create new real-time timetable.
@@ -401,6 +404,26 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
               return prepared_gtfsrt_update{endpoint_idx, std::nullopt, false,
                                             false};
             };
+            auto const apply_gtfsrt =
+                [&](gtfs_rt_endpoint const& g,
+                    prepared_gtfsrt_update const& prepared,
+                    transit_realtime::FeedMessage const& msg,
+                    bool const fallback) {
+                  // GTFS-RT application mutates incrementally and can throw.
+                  // Apply to a private copy so a failed primary or fallback
+                  // cannot leak a partially changed timetable into this cycle.
+                  auto staged = *rtt;
+                  auto stats = n::rt::gtfsrt_update_msg(*d.tt_, staged, g.src_,
+                                                        g.tag_, msg);
+                  if (hooks.after_gtfsrt_apply_) {
+                    hooks.after_gtfsrt_apply_(prepared.endpoint_idx_, fallback);
+                  }
+                  if (prepared.commit_last_good_) {
+                    commit_last_good(g, msg);
+                  }
+                  *rtt = std::move(staged);
+                  return stats;
+                };
 
             // Collect every response before parsing or mutating the timetable.
             auto collected = std::vector<collected_update>{};
@@ -574,11 +597,8 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
                         return;
                       }
                       try {
-                        auto stats = n::rt::gtfsrt_update_msg(
-                            *d.tt_, *rtt, g.src_, g.tag_, *prepared.msg_);
-                        if (prepared.commit_last_good_) {
-                          commit_last_good(g, *prepared.msg_);
-                        }
+                        auto stats =
+                            apply_gtfsrt(g, prepared, *prepared.msg_, false);
                         results[prepared.endpoint_idx_] = {
                             std::move(stats), prepared.source_success_};
                       } catch (std::exception const& e) {
@@ -591,10 +611,32 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
                         auto fallback =
                             prepare_last_good(prepared.endpoint_idx_, g);
                         if (fallback.msg_) {
-                          results[prepared.endpoint_idx_] = {
-                              n::rt::gtfsrt_update_msg(*d.tt_, *rtt, g.src_,
-                                                       g.tag_, *fallback.msg_),
-                              false};
+                          try {
+                            results[prepared.endpoint_idx_] = {
+                                apply_gtfsrt(g, fallback, *fallback.msg_, true),
+                                false};
+                          } catch (std::exception const& fallback_error) {
+                            if (!c.timetable_->canned_rt_) {
+                              g.metrics_.updates_error_.Increment();
+                            }
+                            n::log(n::log_lvl::error, "motis.rt",
+                                   "RT FALLBACK APPLY ERROR: tag={}, error={}",
+                                   g.tag_, fallback_error.what());
+                            results[prepared.endpoint_idx_] = {
+                                n::rt::statistics{.parser_error_ = true},
+                                false};
+                          } catch (...) {
+                            if (!c.timetable_->canned_rt_) {
+                              g.metrics_.updates_error_.Increment();
+                            }
+                            n::log(n::log_lvl::error, "motis.rt",
+                                   "RT FALLBACK APPLY ERROR: tag={}, "
+                                   "error=unknown",
+                                   g.tag_);
+                            results[prepared.endpoint_idx_] = {
+                                n::rt::statistics{.parser_error_ = true},
+                                false};
+                          }
                         } else {
                           results[prepared.endpoint_idx_] = {
                               n::rt::statistics{.parser_error_ = true}, false};
@@ -667,6 +709,12 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
             std::atomic_store(&d.rt_, std::move(new_rt));
 
             d.metrics_->last_update_rt_.SetToCurrentTime();
+          } catch (std::exception const& e) {
+            n::log(n::log_lvl::error, "motis.rt",
+                   "RT UPDATE CYCLE ERROR: error={}", e.what());
+          } catch (...) {
+            n::log(n::log_lvl::error, "motis.rt",
+                   "RT UPDATE CYCLE ERROR: error=unknown");
           }
 
           // Schedule next update.

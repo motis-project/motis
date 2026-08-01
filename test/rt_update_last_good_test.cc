@@ -81,22 +81,34 @@ struct cwd_guard {
 struct response_server {
   response_server(std::string body, std::chrono::milliseconds const delay)
       : acceptor_{ioc_, {boost::asio::ip::tcp::v4(), 0}},
+        socket_{ioc_},
         thread_{[this, body = std::move(body), delay] {
           try {
-            auto socket = boost::asio::ip::tcp::socket{ioc_};
-            acceptor_.accept(socket);
+            acceptor_.accept(socket_);
             auto request = boost::asio::streambuf{};
-            boost::asio::read_until(socket, request, "\r\n\r\n");
+            boost::asio::read_until(socket_, request, "\r\n\r\n");
             std::this_thread::sleep_for(delay);
             auto response = std::format(
                 "HTTP/1.1 200 OK\r\nContent-Type: application/x-protobuf\r\n"
                 "Content-Length: {}\r\nConnection: close\r\n\r\n",
                 body.size());
             response.append(body);
-            boost::asio::write(socket, boost::asio::buffer(response));
+            boost::asio::write(socket_, boost::asio::buffer(response));
           } catch (...) {
           }
         }} {}
+
+  ~response_server() {
+    auto ec = boost::system::error_code{};
+    acceptor_.cancel(ec);
+    acceptor_.close(ec);
+    socket_.cancel(ec);
+    socket_.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
+    socket_.close(ec);
+    if (thread_.joinable()) {
+      thread_.join();
+    }
+  }
 
   response_server(response_server const&) = delete;
   response_server& operator=(response_server const&) = delete;
@@ -108,6 +120,7 @@ struct response_server {
 
   boost::asio::io_context ioc_;
   boost::asio::ip::tcp::acceptor acceptor_;
+  boost::asio::ip::tcp::socket socket_;
   std::jthread thread_;
 };
 
@@ -161,7 +174,7 @@ double metric_total(std::string const& metrics, std::string_view const name) {
   return total;
 }
 
-class realtime_ingestion_test : public TestWithParam<bool> {};
+struct realtime_ingestion_test : TestWithParam<bool> {};
 
 TEST_P(realtime_ingestion_test,
        applies_each_message_once_in_configuration_order) {
@@ -236,6 +249,98 @@ TEST_P(realtime_ingestion_test,
 INSTANTIATE_TEST_SUITE_P(full_and_incremental,
                          realtime_ingestion_test,
                          Values(false, true));
+
+TEST(motis_rt_update,
+     primary_and_fallback_apply_failures_do_not_stop_later_cycles) {
+  auto const test_dir = fs::absolute("test/data/rt-apply-failure");
+  auto ec = std::error_code{};
+  fs::remove_all(test_dir, ec);
+  fs::create_directories(test_dir);
+  auto cwd = cwd_guard{test_dir};
+  auto const today =
+      std::chrono::floor<date::days>(std::chrono::system_clock::now());
+  auto const service_date = date::format("%Y%m%d", today);
+  auto const first_day = date::format("%F", today);
+  auto const gtfs = std::vformat(kGtfs, std::make_format_args(service_date));
+
+  auto const c = config{
+      .timetable_ = {config::timetable{
+          .first_day_ = first_day,
+          .num_days_ = 2,
+          .update_interval_ = 1,
+          .incremental_rt_update_ = true,
+          .canned_rt_ = true,
+          .datasets_ = {{"test",
+                         {.path_ = gtfs,
+                          .rt_ = {{{.url_ = "https://example.test/trip_updates",
+                                    .last_good_ttl_ = 60U}}}}}}}}};
+  import(c, "data");
+  auto d = data{"data", c};
+  fs::create_directory("dump_rt");
+
+  auto feed = to_feed_msg(
+      {trip_update{.trip_ = {.trip_id_ = "trip-1",
+                             .start_time_ = "10:00:00",
+                             .date_ = service_date},
+                   .stop_updates_ = {{.stop_id_ = "stop-1",
+                                      .seq_ = 1U,
+                                      .ev_type_ = nigiri::event_type::kDep,
+                                      .delay_minutes_ = 10}}}},
+      today + 9h);
+  feed.mutable_header()->clear_timestamp();
+  write_dump(feed.SerializeAsString());
+
+  auto fail_applies = false;
+  auto primary_failures = 0U;
+  auto fallback_failures = 0U;
+  auto hooks =
+      rt_update_hooks{.after_gtfsrt_apply_ = [&](std::size_t const endpoint_idx,
+                                                 bool const fallback) {
+        EXPECT_EQ(endpoint_idx, 0U);
+        if (!fail_applies) {
+          return;
+        }
+        ++(fallback ? fallback_failures : primary_failures);
+        throw std::runtime_error{fallback ? "injected fallback failure"
+                                          : "injected primary failure"};
+      }};
+
+  auto ioc = boost::asio::io_context{};
+  run_rt_update(ioc, c, d, std::move(hooks));
+  ioc.run_for(100ms);
+  EXPECT_TRUE(query_stop_times(d).stopTimes_.front().realTime_);
+
+  feed.mutable_entity(0)
+      ->mutable_trip_update()
+      ->mutable_stop_time_update(0)
+      ->mutable_departure()
+      ->set_delay(15 * 60);
+  write_dump(feed.SerializeAsString());
+  fail_applies = true;
+  ioc.restart();
+  ioc.run_for(1100ms);
+  EXPECT_EQ(primary_failures, 1U);
+  EXPECT_EQ(fallback_failures, 1U);
+  EXPECT_FALSE(query_stop_times(d).stopTimes_.front().realTime_);
+
+  feed.mutable_entity(0)
+      ->mutable_trip_update()
+      ->mutable_stop_time_update(0)
+      ->mutable_departure()
+      ->set_delay(20 * 60);
+  write_dump(feed.SerializeAsString());
+  fail_applies = false;
+  ioc.restart();
+  ioc.run_for(1100ms);
+  auto const recovered = query_stop_times(d);
+  ASSERT_EQ(recovered.stopTimes_.size(), 1U);
+  EXPECT_TRUE(recovered.stopTimes_.front().realTime_);
+  ASSERT_TRUE(recovered.stopTimes_.front().place_.departure_.has_value());
+  EXPECT_EQ(static_cast<std::chrono::sys_seconds>(
+                *recovered.stopTimes_.front().place_.departure_),
+            today + 10h + 20min);
+  ioc.stop();
+}
 
 TEST(motis_rt_update, fresh_last_good_survives_bad_cycle_and_expires) {
   auto const test_dir = fs::absolute("test/data/rt-last-good");
