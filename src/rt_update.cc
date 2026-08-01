@@ -246,11 +246,19 @@ void run_rt_update(boost::asio::io_context& ioc,
           }
           return endpoints;
         }();
-        auto const rebuild_gtfsrt_from_materialized_snapshots =
-            c.timetable_->incremental_rt_update_ &&
+        auto const has_gtfsrt_endpoint =
             std::any_of(endpoints.begin(), endpoints.end(), [](auto const& ep) {
               return std::holds_alternative<gtfs_rt_endpoint>(ep);
             });
+        auto const has_auser_endpoint =
+            std::any_of(endpoints.begin(), endpoints.end(), [](auto const& ep) {
+              return std::holds_alternative<auser_endpoint>(ep);
+            });
+        auto const rebuild_gtfsrt_from_materialized_snapshots =
+            c.timetable_->incremental_rt_update_ && has_gtfsrt_endpoint;
+        auto const mixed_incremental_sources =
+            rebuild_gtfsrt_from_materialized_snapshots && has_auser_endpoint;
+        auto auser_rtt = std::unique_ptr<n::rt_timetable>{};
 
         while (true) {
           // Remember when we started, so we can schedule the next update.
@@ -262,6 +270,10 @@ void run_rt_update(boost::asio::io_context& ioc,
             // Create new real-time timetable.
             auto const today = std::chrono::time_point_cast<date::days>(
                 std::chrono::system_clock::now());
+            if (mixed_incremental_sources && !auser_rtt) {
+              auser_rtt = std::make_unique<n::rt_timetable>(
+                  n::rt::create_rt_timetable(*d.tt_, today));
+            }
             auto rtt = std::make_unique<n::rt_timetable>(
                 c.timetable_->incremental_rt_update_ &&
                         !rebuild_gtfsrt_from_materialized_snapshots
@@ -318,7 +330,6 @@ void run_rt_update(boost::asio::io_context& ioc,
                   if (!state.expired_) {
                     g.metrics_.last_good_expiry_.Increment();
                   }
-                  state.snapshot_.Clear();
                   state.has_snapshot_ = false;
                   state.expired_ = true;
                   g.metrics_.set_source_state(gtfsrt_source_state::expired,
@@ -334,48 +345,19 @@ void run_rt_update(boost::asio::io_context& ioc,
                   auto const age_at_receipt = gtfsrt_payload_age(
                       candidate, std::chrono::system_clock::now());
                   auto const ttl = std::chrono::seconds{g.ep_.last_good_ttl_};
-                  auto const fresh = age_at_receipt < ttl;
-                  if (fresh && (state.failed_ || state.expired_)) {
+                  if (state.failed_ || state.expired_) {
                     g.metrics_.recovery_.Increment();
                   }
                   state.snapshot_ = std::move(candidate);
-                  state.has_snapshot_ = fresh;
+                  state.has_snapshot_ = true;
                   state.received_at_ = received_at;
                   state.age_at_receipt_ = age_at_receipt;
-                  state.expires_at_ =
-                      received_at +
-                      std::max(ttl - age_at_receipt, std::chrono::seconds{0});
+                  state.expires_at_ = received_at + ttl - age_at_receipt;
                   state.failed_ = false;
-                  state.expired_ = !fresh;
-                  if (!fresh) {
-                    state.snapshot_.Clear();
-                  }
+                  state.expired_ = false;
                   g.metrics_.set_source_state(
                       gtfsrt_source_state::live,
-                      static_cast<double>(age_at_receipt.count()), fresh);
-                };
-            auto const prepare_valid_gtfsrt =
-                [&](std::size_t const endpoint_idx, gtfs_rt_endpoint const& g,
-                    std::string_view const body) {
-                  auto msg = validate_gtfsrt_payload(body);
-                  auto const differential =
-                      msg.header().incrementality() ==
-                      transit_realtime::FeedHeader_Incrementality_DIFFERENTIAL;
-                  expire_cache(g, std::chrono::steady_clock::now());
-                  if (differential && !g.last_good_->has_snapshot_) {
-                    g.metrics_.set_source_state(gtfsrt_source_state::no_base,
-                                                0.0, false);
-                    return prepared_gtfsrt_update{endpoint_idx, std::move(msg),
-                                                  true, false};
-                  }
-                  auto candidate = differential
-                                       ? materialize_gtfsrt_snapshot(
-                                             g.last_good_->snapshot_, msg)
-                                       : std::move(msg);
-                  candidate.mutable_header()->set_incrementality(
-                      transit_realtime::FeedHeader_Incrementality_FULL_DATASET);
-                  return prepared_gtfsrt_update{
-                      endpoint_idx, std::move(candidate), true, true};
+                      static_cast<double>(age_at_receipt.count()), true);
                 };
             auto const prepare_last_good = [&](std::size_t const endpoint_idx,
                                                gtfs_rt_endpoint const& g) {
@@ -404,6 +386,59 @@ void run_rt_update(boost::asio::io_context& ioc,
               return prepared_gtfsrt_update{endpoint_idx, std::nullopt, false,
                                             false};
             };
+            auto const prepare_valid_gtfsrt =
+                [&](std::size_t const endpoint_idx, gtfs_rt_endpoint const& g,
+                    std::string_view const body) {
+                  auto msg = validate_gtfsrt_payload(body);
+                  auto const differential =
+                      msg.header().incrementality() ==
+                      transit_realtime::FeedHeader_Incrementality_DIFFERENTIAL;
+                  expire_cache(g, std::chrono::steady_clock::now());
+                  auto candidate = differential
+                                       ? materialize_gtfsrt_snapshot(
+                                             g.last_good_->snapshot_, msg)
+                                       : std::move(msg);
+                  candidate.mutable_header()->set_incrementality(
+                      transit_realtime::FeedHeader_Incrementality_FULL_DATASET);
+                  auto const age_at_receipt = gtfsrt_payload_age(
+                      candidate, std::chrono::system_clock::now());
+                  if (age_at_receipt >=
+                      std::chrono::seconds{g.ep_.last_good_ttl_}) {
+                    if (!c.timetable_->canned_rt_) {
+                      g.metrics_.updates_error_.Increment();
+                    }
+                    auto& state = *g.last_good_;
+                    state.failed_ = true;
+                    if (state.has_snapshot_) {
+                      return prepare_last_good(endpoint_idx, g);
+                    }
+                    if (state.expired_) {
+                      g.metrics_.set_source_state(
+                          gtfsrt_source_state::expired,
+                          static_cast<double>(cache_age(
+                                                  state,
+                                                  std::chrono::steady_clock::now())
+                                                  .count()),
+                          false);
+                      return prepared_gtfsrt_update{
+                          endpoint_idx, std::nullopt, false, false};
+                    }
+                    g.metrics_.last_good_expiry_.Increment();
+                    state.snapshot_.Clear();
+                    state.has_snapshot_ = false;
+                    state.received_at_ = std::chrono::steady_clock::now();
+                    state.expires_at_ = state.received_at_;
+                    state.age_at_receipt_ = age_at_receipt;
+                    state.expired_ = true;
+                    g.metrics_.set_source_state(
+                        gtfsrt_source_state::expired,
+                        static_cast<double>(age_at_receipt.count()), false);
+                    return prepared_gtfsrt_update{
+                        endpoint_idx, std::nullopt, false, false};
+                  }
+                  return prepared_gtfsrt_update{
+                      endpoint_idx, std::move(candidate), true, true};
+                };
             auto const apply_gtfsrt =
                 [&](gtfs_rt_endpoint const& g,
                     prepared_gtfsrt_update const& prepared,
@@ -421,7 +456,7 @@ void run_rt_update(boost::asio::io_context& ioc,
                   if (prepared.commit_last_good_) {
                     commit_last_good(g, msg);
                   }
-                  *rtt = std::move(staged);
+                  rtt = std::make_unique<n::rt_timetable>(std::move(staged));
                   return stats;
                 };
 
@@ -582,13 +617,8 @@ void run_rt_update(boost::asio::io_context& ioc,
                   });
             }
 
-            // Apply every prepared provider message once, serially and in
-            // configured order within its dataset/source group.
-            for (auto& group : groups) {
-              for (auto& update : group.updates_) {
-                utl::visit(
-                    update,
-                    [&](prepared_gtfsrt_update& prepared) {
+            auto const apply_prepared_gtfsrt =
+                [&](prepared_gtfsrt_update& prepared) {
                       auto const& g = std::get<gtfs_rt_endpoint>(
                           endpoints[prepared.endpoint_idx_]);
                       if (!prepared.msg_) {
@@ -642,8 +672,9 @@ void run_rt_update(boost::asio::io_context& ioc,
                               n::rt::statistics{.parser_error_ = true}, false};
                         }
                       }
-                    },
-                    [&](prepared_auser_update& prepared) {
+                };
+            auto const apply_prepared_auser =
+                [&](prepared_auser_update& prepared) {
                       if (!prepared.body_) {
                         return;
                       }
@@ -651,8 +682,11 @@ void run_rt_update(boost::asio::io_context& ioc,
                           endpoints[prepared.endpoint_idx_]);
                       try {
                         auto& auser = d.auser_->at(a.ep_.url_);
+                        auto& target = mixed_incremental_sources
+                                           ? *auser_rtt
+                                           : *rtt;
                         results[prepared.endpoint_idx_] = {
-                            auser.consume_update(*prepared.body_, *rtt, true)};
+                            auser.consume_update(*prepared.body_, target, true)};
                       } catch (std::exception const& e) {
                         if (!c.timetable_->canned_rt_) {
                           a.metrics_.updates_error_.Increment();
@@ -663,7 +697,38 @@ void run_rt_update(boost::asio::io_context& ioc,
                         results[prepared.endpoint_idx_] = {
                             n::rt::vdv_aus::statistics{.error_ = true}, false};
                       }
-                    });
+                };
+
+            // Apply every prepared provider message once, serially and in
+            // configured order within its dataset/source group. Mixed
+            // incremental deployments first advance their persistent
+            // AUSER/SIRI baseline, then overlay GTFS snapshots on a copy.
+            if (mixed_incremental_sources) {
+              for (auto& group : groups) {
+                for (auto& update : group.updates_) {
+                  if (auto* prepared =
+                          std::get_if<prepared_auser_update>(&update);
+                      prepared != nullptr) {
+                    apply_prepared_auser(*prepared);
+                  }
+                }
+              }
+              rtt = std::make_unique<n::rt_timetable>(*auser_rtt);
+              for (auto& group : groups) {
+                for (auto& update : group.updates_) {
+                  if (auto* prepared =
+                          std::get_if<prepared_gtfsrt_update>(&update);
+                      prepared != nullptr) {
+                    apply_prepared_gtfsrt(*prepared);
+                  }
+                }
+              }
+            } else {
+              for (auto& group : groups) {
+                for (auto& update : group.updates_) {
+                  utl::visit(update, apply_prepared_gtfsrt,
+                             apply_prepared_auser);
+                }
               }
             }
 
