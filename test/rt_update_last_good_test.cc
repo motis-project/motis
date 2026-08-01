@@ -104,6 +104,25 @@ struct response_server {
         }} {}
 
   ~response_server() {
+    // A synchronous accept is not reliably interrupted by closing the
+    // acceptor from another thread on every supported platform. Connect a
+    // loopback client and send a complete request so the server thread always
+    // has a portable path out of accept/read before joining it.
+    auto wake_ioc = boost::asio::io_context{};
+    auto wake_socket = boost::asio::ip::tcp::socket{wake_ioc};
+    auto wake_ec = boost::system::error_code{};
+    auto const endpoint = acceptor_.local_endpoint(wake_ec);
+    if (!wake_ec) {
+      wake_socket.connect(endpoint, wake_ec);
+      if (!wake_ec) {
+        constexpr auto const wake_request =
+            std::string_view{"GET /shutdown HTTP/1.1\r\n"
+                             "Host: 127.0.0.1\r\nConnection: close\r\n\r\n"};
+        boost::asio::write(wake_socket, boost::asio::buffer(wake_request),
+                           wake_ec);
+      }
+    }
+
     auto ec = boost::system::error_code{};
     acceptor_.cancel(ec);
     acceptor_.close(ec);
@@ -128,6 +147,14 @@ struct response_server {
   boost::asio::ip::tcp::socket socket_;
   std::jthread thread_;
 };
+
+TEST(motis_rt_update, response_server_teardown_wakes_unconnected_accept) {
+  auto const start = std::chrono::steady_clock::now();
+  {
+    auto server = response_server{"", 0ms};
+  }
+  EXPECT_LT(std::chrono::steady_clock::now() - start, 1s);
+}
 
 void write_dump(std::string_view const bytes) {
   auto out = std::ofstream{"dump_rt/test-https___example_test_trip_updates",
