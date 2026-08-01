@@ -121,8 +121,11 @@ private:
     std::string entity_id_;
   };
 
+  enum class locator_evidence { kBatchOnly, kBatchOrCurrent };
+
   bool ingest_unpruned(vehicle_observation,
-                       std::span<batch_locator const> batch_locators = {});
+                       std::span<batch_locator const> batch_locators = {},
+                       locator_evidence = locator_evidence::kBatchOrCurrent);
   void ingest_feed(std::string_view, std::span<vehicle_observation const>);
   bool is_strictly_newer_than_history(vehicle_key const&,
                                       vehicle_observation const&) const;

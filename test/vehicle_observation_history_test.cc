@@ -388,6 +388,23 @@ TEST(vehicle_observation_history,
 }
 
 TEST(vehicle_observation_history,
+     full_replacement_does_not_preserve_omitted_current_vehicle) {
+  auto history = vehicle_observation_history{};
+  auto const first = std::array{observation(100, 100, "e1", "V")};
+  history.replace_feed("feed", first, 100, kPolicy);
+  auto const rotated = std::array{observation(110, 110, "e2", "V")};
+  history.replace_feed("feed", rotated, 110, kPolicy);
+
+  auto const replacement = std::array{observation(120, 120, "e1", "W")};
+  history.replace_feed("feed", replacement, 120, kPolicy);
+
+  EXPECT_EQ(history.current_observation(descriptor_key("V")), nullptr);
+  EXPECT_TRUE(history.observations(descriptor_key("V")).empty());
+  ASSERT_NE(history.current_observation(descriptor_key("W")), nullptr);
+  EXPECT_EQ(history.current_observation(descriptor_key("W"))->entity_id_, "e1");
+}
+
+TEST(vehicle_observation_history,
      differential_deletion_invalidates_current_but_preserves_short_history) {
   auto history = vehicle_observation_history{};
   auto const initial = std::array{observation(100, 100)};

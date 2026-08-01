@@ -79,7 +79,8 @@ bool vehicle_observation_history::ingest(
 
 bool vehicle_observation_history::ingest_unpruned(
     vehicle_observation observation,
-    std::span<batch_locator const> batch_locators) {
+    std::span<batch_locator const> batch_locators,
+    locator_evidence const evidence) {
   auto const key = make_vehicle_key(observation);
   if (!key.has_value()) {
     return false;
@@ -104,13 +105,14 @@ bool vehicle_observation_history::ingest_unpruned(
                                            observation.entity_id_ &&
                                        locator.key_ == old->second;
                               }) ||
-          std::ranges::any_of(key_by_entity_, [&](auto const& item) {
-            if (item.first == entity || item.second != old->second) {
-              return false;
-            }
-            return old_current != end(current_) &&
-                   old_current->second.entity_id_ == item.first.entity_id_;
-          });
+          (evidence == locator_evidence::kBatchOrCurrent &&
+           std::ranges::any_of(key_by_entity_, [&](auto const& item) {
+             if (item.first == entity || item.second != old->second) {
+               return false;
+             }
+             return old_current != end(current_) &&
+                    old_current->second.entity_id_ == item.first.entity_id_;
+           }));
       if (!represented_elsewhere && old_current != end(current_) &&
           !is_strictly_newer_than_history(old->second, observation)) {
         return true;
@@ -193,7 +195,8 @@ void vehicle_observation_history::replace_feed(
       }
     }
 
-    if (ingest_unpruned(std::move(observation), batch_locators)) {
+    if (ingest_unpruned(std::move(observation), batch_locators,
+                        locator_evidence::kBatchOnly)) {
       for (auto const& key : represented) {
         absent.erase(key);
       }
