@@ -248,8 +248,11 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
               return std::holds_alternative<auser_endpoint>(ep);
             });
         auto const rebuild_gtfsrt_from_materialized_snapshots =
-            c.timetable_->incremental_rt_update_ && has_gtfsrt_endpoint &&
-            !has_auser_endpoint;
+            c.timetable_->incremental_rt_update_ && has_gtfsrt_endpoint;
+        auto const mixed_incremental_sources =
+            rebuild_gtfsrt_from_materialized_snapshots && has_auser_endpoint;
+        auto auser_rtt = std::unique_ptr<n::rt_timetable>{};
+        auto auser_rtt_day = date::sys_days{};
 
         while (true) {
           // Remember when we started, so we can schedule the next update.
@@ -261,6 +264,12 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
             // Create new real-time timetable.
             auto const today = std::chrono::time_point_cast<date::days>(
                 std::chrono::system_clock::now());
+            if (mixed_incremental_sources &&
+                (!auser_rtt || auser_rtt_day != today)) {
+              auser_rtt = std::make_unique<n::rt_timetable>(
+                  n::rt::create_rt_timetable(*d.tt_, today));
+              auser_rtt_day = today;
+            }
             auto rtt = std::make_unique<n::rt_timetable>(
                 c.timetable_->incremental_rt_update_ &&
                         !rebuild_gtfsrt_from_materialized_snapshots
@@ -433,7 +442,10 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
                             auto& auser = d.auser_->at(a.ep_.url_);
                             auto const body = utl::read_file(path.c_str());
                             if (body.has_value()) {
-                              return {auser.consume_update(*body, *rtt)};
+                              auto& target = mixed_incremental_sources
+                                                 ? *auser_rtt
+                                                 : *rtt;
+                              return {auser.consume_update(*body, target)};
                             } else {
                               return {
                                   n::rt::vdv_aus::statistics{.error_ = true}};
@@ -557,7 +569,10 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
                                             body.c_str(),
                                             static_cast<long>(body.size()));
                                       }
-                                      ret = {auser.consume_update(body, *rtt,
+                                      auto& target = mixed_incremental_sources
+                                                         ? *auser_rtt
+                                                         : *rtt;
+                                      ret = {auser.consume_update(body, target,
                                                                   true)};
                                     } catch (std::exception const& e) {
                                       a.metrics_.updates_error_.Increment();
@@ -642,6 +657,20 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
                           }
                         }},
                     ep);
+              }
+            }
+
+            if (mixed_incremental_sources) {
+              rtt = std::make_unique<n::rt_timetable>(*auser_rtt);
+              for (auto const& ep : endpoints) {
+                if (auto const* g = std::get_if<gtfs_rt_endpoint>(&ep);
+                    g != nullptr) {
+                  expire_cache(*g, std::chrono::steady_clock::now());
+                  if (g->last_good_->has_snapshot_) {
+                    apply_gtfsrt_update(
+                        *g, g->last_good_->snapshot_.SerializeAsString());
+                  }
+                }
               }
             }
 

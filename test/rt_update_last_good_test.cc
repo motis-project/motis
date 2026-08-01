@@ -521,7 +521,7 @@ TEST(motis_rt_update, gtfsrt_coexistence_preserves_auser_delta_state) {
                           .protocol_ =
                               config::timetable::dataset::rt::protocol::auser},
                          {.url_ = "https://example.test/trip_updates",
-                          .last_good_ttl_ = 30U}}}}}}}}};
+                          .last_good_ttl_ = 2U}}}}}}}}};
   import(c, "data");
   auto d = data{"data", c};
   fs::create_directory("dump_rt");
@@ -543,29 +543,68 @@ TEST(motis_rt_update, gtfsrt_coexistence_preserves_auser_delta_state) {
 </DatenAbrufenAntwort>)",
       service_day, service_day, service_day, service_day, service_day,
       service_day);
-  auto empty_gtfsrt = transit_realtime::FeedMessage{};
-  empty_gtfsrt.mutable_header()->set_gtfs_realtime_version("2.0");
-  empty_gtfsrt.mutable_header()->set_incrementality(
-      transit_realtime::FeedHeader_Incrementality_FULL_DATASET);
+  auto gtfsrt = to_feed_msg(
+      {trip_update{.trip_ = {.trip_id_ = "trip-1",
+                             .start_time_ = "10:00:00",
+                             .date_ = service_date},
+                   .stop_updates_ = {{.stop_id_ = "stop-1",
+                                      .seq_ = 1U,
+                                      .ev_type_ = nigiri::event_type::kDep,
+                                      .delay_minutes_ = 10}}}},
+      today + 9h);
+  gtfsrt.mutable_header()->clear_timestamp();
   write_dump("auser", auser);
-  write_dump("trip_updates", empty_gtfsrt.SerializeAsString());
+  write_dump("trip_updates", gtfsrt.SerializeAsString());
 
   auto ioc = boost::asio::io_context{};
   run_rt_update(ioc, c, d);
   ioc.run_for(100ms);
-  auto const after_auser = query_stop_times(d);
-  ASSERT_EQ(after_auser.stopTimes_.size(), 1U);
-  ASSERT_TRUE(after_auser.stopTimes_.front().realTime_);
-  auto const auser_departure = after_auser.stopTimes_.front().place_.departure_;
+  auto const after_both_sources = query_stop_times(d);
+  ASSERT_EQ(after_both_sources.stopTimes_.size(), 1U);
+  ASSERT_TRUE(after_both_sources.stopTimes_.front().realTime_);
+  EXPECT_EQ(static_cast<std::chrono::sys_seconds>(
+                *after_both_sources.stopTimes_.front().place_.departure_),
+            today + 10h + 10min);
 
   ASSERT_TRUE(fs::remove("dump_rt/test-https___example_test_auser"));
+  auto empty_gtfsrt = transit_realtime::FeedMessage{};
+  empty_gtfsrt.mutable_header()->set_gtfs_realtime_version("2.0");
+  empty_gtfsrt.mutable_header()->set_incrementality(
+      transit_realtime::FeedHeader_Incrementality_FULL_DATASET);
+  write_dump("trip_updates", empty_gtfsrt.SerializeAsString());
   ioc.restart();
   ioc.run_for(1100ms);
-  auto const after_missing_auser = query_stop_times(d);
-  ASSERT_EQ(after_missing_auser.stopTimes_.size(), 1U);
-  EXPECT_TRUE(after_missing_auser.stopTimes_.front().realTime_);
-  EXPECT_EQ(auser_departure,
-            after_missing_auser.stopTimes_.front().place_.departure_);
+  auto const after_authoritative_gtfsrt_deletion = query_stop_times(d);
+  ASSERT_EQ(after_authoritative_gtfsrt_deletion.stopTimes_.size(), 1U);
+  EXPECT_TRUE(after_authoritative_gtfsrt_deletion.stopTimes_.front().realTime_);
+  EXPECT_EQ(
+      static_cast<std::chrono::sys_seconds>(
+          *after_authoritative_gtfsrt_deletion.stopTimes_.front()
+               .place_.departure_),
+      today + 10h + 7min);
+
+  gtfsrt.mutable_entity(0)
+      ->mutable_trip_update()
+      ->mutable_stop_time_update(0)
+      ->mutable_departure()
+      ->set_delay(15 * 60);
+  write_dump("trip_updates", gtfsrt.SerializeAsString());
+  ioc.restart();
+  ioc.run_for(1100ms);
+  auto const after_new_gtfsrt = query_stop_times(d);
+  EXPECT_EQ(static_cast<std::chrono::sys_seconds>(
+                *after_new_gtfsrt.stopTimes_.front().place_.departure_),
+            today + 10h + 15min);
+
+  write_dump("trip_updates", "malformed");
+  ioc.restart();
+  ioc.run_for(3100ms);
+  auto const after_gtfsrt_expiry = query_stop_times(d);
+  ASSERT_EQ(after_gtfsrt_expiry.stopTimes_.size(), 1U);
+  EXPECT_TRUE(after_gtfsrt_expiry.stopTimes_.front().realTime_);
+  EXPECT_EQ(static_cast<std::chrono::sys_seconds>(
+                *after_gtfsrt_expiry.stopTimes_.front().place_.departure_),
+            today + 10h + 7min);
 }
 
 }  // namespace
