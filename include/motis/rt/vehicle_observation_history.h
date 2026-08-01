@@ -124,6 +124,11 @@ private:
   enum class locator_evidence { kBatchOnly, kBatchOrCurrent };
   enum class ingest_disposition { kInvalid, kRejected, kAccepted };
 
+  struct validated_batch {
+    std::vector<ingest_disposition> dispositions_;
+    std::vector<batch_locator> locators_;
+  };
+
   bool ingest_unpruned(vehicle_observation,
                        std::span<batch_locator const> batch_locators = {},
                        locator_evidence = locator_evidence::kBatchOrCurrent);
@@ -136,6 +141,9 @@ private:
                              std::string_view,
                              std::span<batch_locator const>,
                              locator_evidence) const;
+  validated_batch validate_batch(std::string_view,
+                                 std::span<vehicle_observation const>,
+                                 locator_evidence) const;
   void ingest_feed(std::string_view, std::span<vehicle_observation const>);
   bool is_strictly_newer_than_history(vehicle_key const&,
                                       vehicle_observation const&) const;

@@ -353,6 +353,54 @@ TEST(vehicle_observation_history,
 }
 
 TEST(vehicle_observation_history,
+     full_replacement_reconsiders_older_reuse_with_valid_alternate) {
+  for (auto const reverse : {false, true}) {
+    SCOPED_TRACE(reverse);
+    auto history = vehicle_observation_history{};
+    auto const current = std::array{observation(200, 200, "e1", "V")};
+    history.replace_feed("feed", current, 200, kPolicy);
+
+    auto replacement = std::array{observation(210, 210, "e2", "V"),
+                                  observation(210, 150, "e1", "W")};
+    if (reverse) {
+      std::swap(replacement[0], replacement[1]);
+    }
+    history.replace_feed("feed", replacement, 210, kPolicy);
+
+    ASSERT_NE(history.current_observation(descriptor_key("V")), nullptr);
+    EXPECT_EQ(history.current_observation(descriptor_key("V"))->entity_id_,
+              "e2");
+    ASSERT_NE(history.current_observation(descriptor_key("W")), nullptr);
+    EXPECT_EQ(history.current_observation(descriptor_key("W"))->entity_id_,
+              "e1");
+  }
+}
+
+TEST(vehicle_observation_history,
+     differential_rejects_stale_alternate_evidence_in_both_orders) {
+  for (auto const reverse : {false, true}) {
+    SCOPED_TRACE(reverse);
+    auto history = vehicle_observation_history{};
+    auto const current =
+        std::array{observation(200, 200, "e1", "V", "next-trip")};
+    history.update_feed("feed", current, {}, 200, kPolicy);
+
+    auto update = std::array{observation(210, 150, "e2", "V", "trip"),
+                             observation(210, 210, "e1", "W", "trip")};
+    if (reverse) {
+      std::swap(update[0], update[1]);
+    }
+    history.update_feed("feed", update, {}, 210, kPolicy);
+
+    EXPECT_EQ(history.current_observation(descriptor_key("V")), nullptr);
+    EXPECT_TRUE(history.observations(descriptor_key("V")).empty());
+    ASSERT_NE(history.current_observation(descriptor_key("W")), nullptr);
+    EXPECT_EQ(history.current_observation(descriptor_key("W"))->entity_id_,
+              "e1");
+  }
+}
+
+TEST(vehicle_observation_history,
      differential_reuse_of_old_entity_preserves_rotated_vehicle) {
   auto history = vehicle_observation_history{};
   auto const first = std::array{observation(100, 100, "e1", "V")};

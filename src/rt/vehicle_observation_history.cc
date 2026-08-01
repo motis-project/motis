@@ -199,25 +199,60 @@ bool vehicle_observation_history::represented_elsewhere(
   });
 }
 
+vehicle_observation_history::validated_batch
+vehicle_observation_history::validate_batch(
+    std::string_view const feed_id,
+    std::span<vehicle_observation const> observations,
+    locator_evidence const evidence) const {
+  auto batch = validated_batch{};
+  batch.dispositions_.reserve(observations.size());
+  batch.locators_.reserve(observations.size());
+  for (auto observation : observations) {
+    observation.feed_id_ = feed_id;
+    auto const disposition =
+        classify_unpruned(observation, batch.locators_, evidence);
+    batch.dispositions_.emplace_back(disposition);
+    if (auto const key = make_vehicle_key(observation);
+        disposition == ingest_disposition::kAccepted && key.has_value() &&
+        !observation.entity_id_.empty()) {
+      batch.locators_.emplace_back(*key, observation.entity_id_);
+    }
+  }
+
+  // Acceptance is monotonic: an accepted alternate locator can make an
+  // identity reassignment safe, but it cannot validate a stale trip change.
+  // Iterate to a fixed point so feed order does not affect the evidence set.
+  auto changed = true;
+  while (changed) {
+    changed = false;
+    for (auto idx = 0U; idx != observations.size(); ++idx) {
+      if (batch.dispositions_[idx] != ingest_disposition::kRejected) {
+        continue;
+      }
+      auto observation = observations[idx];
+      observation.feed_id_ = feed_id;
+      if (classify_unpruned(observation, batch.locators_, evidence) !=
+          ingest_disposition::kAccepted) {
+        continue;
+      }
+      batch.dispositions_[idx] = ingest_disposition::kAccepted;
+      if (auto const key = make_vehicle_key(observation);
+          key.has_value() && !observation.entity_id_.empty()) {
+        batch.locators_.emplace_back(*key, observation.entity_id_);
+      }
+      changed = true;
+    }
+  }
+  return batch;
+}
+
 void vehicle_observation_history::replace_feed(
     std::string_view const feed_id,
     std::span<vehicle_observation const> observations,
     std::int64_t const now,
     observation_history_policy const& policy) {
-  auto batch_locators = std::vector<batch_locator>{};
-  auto dispositions = std::vector<ingest_disposition>{};
-  dispositions.reserve(observations.size());
-  for (auto observation : observations) {
-    observation.feed_id_ = feed_id;
-    auto const disposition =
-        classify_unpruned(observation, {}, locator_evidence::kBatchOnly);
-    dispositions.emplace_back(disposition);
-    if (auto const key = make_vehicle_key(observation);
-        disposition == ingest_disposition::kAccepted && key.has_value() &&
-        !observation.entity_id_.empty()) {
-      batch_locators.emplace_back(*key, observation.entity_id_);
-    }
-  }
+  auto const batch =
+      validate_batch(feed_id, observations, locator_evidence::kBatchOnly);
 
   auto absent = std::unordered_set<vehicle_key, vehicle_key_hash>{};
   for (auto const& [key, _] : current_) {
@@ -243,9 +278,9 @@ void vehicle_observation_history::replace_feed(
     }
 
     auto const ingested =
-        dispositions[idx] == ingest_disposition::kRejected ||
-        (dispositions[idx] == ingest_disposition::kAccepted &&
-         ingest_unpruned(std::move(observation), batch_locators,
+        batch.dispositions_[idx] == ingest_disposition::kRejected ||
+        (batch.dispositions_[idx] == ingest_disposition::kAccepted &&
+         ingest_unpruned(std::move(observation), batch.locators_,
                          locator_evidence::kBatchOnly));
     if (ingested) {
       for (auto const& key : represented) {
@@ -273,17 +308,15 @@ void vehicle_observation_history::update_feed(
 void vehicle_observation_history::ingest_feed(
     std::string_view const feed_id,
     std::span<vehicle_observation const> observations) {
-  auto batch_locators = std::vector<batch_locator>{};
-  for (auto observation : observations) {
-    observation.feed_id_ = feed_id;
-    if (auto const key = make_vehicle_key(observation);
-        key.has_value() && !observation.entity_id_.empty()) {
-      batch_locators.emplace_back(*key, observation.entity_id_);
+  auto const batch =
+      validate_batch(feed_id, observations, locator_evidence::kBatchOrCurrent);
+  for (auto idx = 0U; idx != observations.size(); ++idx) {
+    if (batch.dispositions_[idx] != ingest_disposition::kAccepted) {
+      continue;
     }
-  }
-  for (auto observation : observations) {
+    auto observation = observations[idx];
     observation.feed_id_ = feed_id;
-    ingest_unpruned(std::move(observation), batch_locators);
+    ingest_unpruned(std::move(observation), batch.locators_);
   }
 }
 
