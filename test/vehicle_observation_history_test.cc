@@ -236,6 +236,55 @@ TEST(vehicle_observation_history,
 }
 
 TEST(vehicle_observation_history,
+     full_replacement_keeps_newer_current_across_a_late_prior_trip) {
+  auto history = vehicle_observation_history{};
+  auto const current =
+      std::array{observation(200, 200, "entity", "vehicle", "next-trip")};
+  history.replace_feed("feed", current, 200, kPolicy);
+
+  auto const late = std::array{observation(210, 150)};
+  history.replace_feed("feed", late, 210, kPolicy);
+
+  ASSERT_NE(history.current_observation(descriptor_key()), nullptr);
+  EXPECT_EQ(history.current_observation(descriptor_key())->reported_time_, 200);
+  EXPECT_EQ(history.current_observation(descriptor_key())->trip_.trip_id_,
+            "next-trip");
+  ASSERT_EQ(history.observations(descriptor_key()).size(), 1U);
+}
+
+TEST(vehicle_observation_history,
+     full_replacement_keeps_newer_current_across_a_late_identity_change) {
+  auto history = vehicle_observation_history{};
+  auto const current = std::array{observation(200, 200)};
+  history.replace_feed("feed", current, 200, kPolicy);
+
+  auto const late = std::array{observation(210, 150, "entity", std::nullopt)};
+  history.replace_feed("feed", late, 210, kPolicy);
+
+  ASSERT_NE(history.current_observation(descriptor_key()), nullptr);
+  EXPECT_EQ(history.current_observation(descriptor_key())->reported_time_, 200);
+  EXPECT_EQ(history.current_observation(entity_key()), nullptr);
+}
+
+TEST(vehicle_observation_history,
+     full_replacement_removes_only_current_vehicles_that_are_absent) {
+  auto history = vehicle_observation_history{};
+  auto const current =
+      std::array{observation(200, 200),
+                 observation(200, 200, "other-entity", "other-vehicle")};
+  history.replace_feed("feed", current, 200, kPolicy);
+
+  auto const late = std::array{observation(210, 150)};
+  history.replace_feed("feed", late, 210, kPolicy);
+
+  ASSERT_NE(history.current_observation(descriptor_key()), nullptr);
+  EXPECT_EQ(history.current_observation(descriptor_key())->reported_time_, 200);
+  EXPECT_EQ(history.current_observation(descriptor_key("other-vehicle")),
+            nullptr);
+  EXPECT_EQ(history.observations(descriptor_key("other-vehicle")).size(), 1U);
+}
+
+TEST(vehicle_observation_history,
      differential_deletion_invalidates_current_but_preserves_short_history) {
   auto history = vehicle_observation_history{};
   auto const initial = std::array{observation(100, 100)};

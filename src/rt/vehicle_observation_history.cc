@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <functional>
+#include <unordered_set>
 #include <utility>
 
 namespace motis {
@@ -140,10 +141,37 @@ void vehicle_observation_history::replace_feed(
     std::span<vehicle_observation const> observations,
     std::int64_t const now,
     observation_history_policy const& policy) {
-  std::erase_if(current_, [&](auto const& item) {
-    return item.first.feed_id_ == feed_id;
-  });
-  ingest_feed(feed_id, observations);
+  auto absent = std::unordered_set<vehicle_key, vehicle_key_hash>{};
+  for (auto const& [key, _] : current_) {
+    if (key.feed_id_ == feed_id) {
+      absent.emplace(key);
+    }
+  }
+
+  for (auto observation : observations) {
+    observation.feed_id_ = feed_id;
+    auto represented = std::vector<vehicle_key>{};
+    if (auto const key = make_vehicle_key(observation); key.has_value()) {
+      represented.emplace_back(*key);
+    }
+    if (!observation.entity_id_.empty()) {
+      auto const locator =
+          entity_key{observation.feed_id_, observation.entity_id_};
+      if (auto const previous = key_by_entity_.find(locator);
+          previous != end(key_by_entity_)) {
+        represented.emplace_back(previous->second);
+      }
+    }
+
+    if (ingest_unpruned(std::move(observation))) {
+      for (auto const& key : represented) {
+        absent.erase(key);
+      }
+    }
+  }
+  for (auto const& key : absent) {
+    current_.erase(key);
+  }
   prune(now, policy);
 }
 
