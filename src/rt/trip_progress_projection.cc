@@ -399,19 +399,25 @@ trip_progress_projector::stop_timeline(n::rt::frun const& fr) {
     return std::nullopt;
   }
   auto const* shape = impl_->get_shape(fr);
-  if (shape == nullptr || shape->stop_distances_.size() != fr.size() ||
-      shape->static_stop_sequences_.size() != fr.size()) {
+  if (shape == nullptr ||
+      shape->stop_distances_.size() != shape->static_stop_sequences_.size()) {
     return std::nullopt;
   }
   auto result = std::vector<trip_progress_stop>{};
-  result.reserve(fr.size());
-  for (auto i = n::stop_idx_t{0U}; i != fr.size(); ++i) {
+  auto const stop_count =
+      static_cast<n::stop_idx_t>(shape->stop_distances_.size());
+  result.reserve(stop_count);
+  for (auto i = n::stop_idx_t{0U}; i != stop_count; ++i) {
+    auto const arrival_event =
+        i == 0U ? n::event_type::kDep : n::event_type::kArr;
+    auto const departure_event =
+        i + 1U == stop_count ? n::event_type::kArr : n::event_type::kDep;
     result.push_back({.static_stop_sequence_ = shape->static_stop_sequences_[i],
                       .distance_along_shape_m_ = shape->stop_distances_[i],
                       .scheduled_arrival_time_ =
-                          to_seconds(fr[i].scheduled_time(n::event_type::kArr)),
-                      .scheduled_departure_time_ = to_seconds(
-                          fr[i].scheduled_time(n::event_type::kDep))});
+                          to_seconds(fr[i].scheduled_time(arrival_event)),
+                      .scheduled_departure_time_ =
+                          to_seconds(fr[i].scheduled_time(departure_event))});
   }
   return result;
 }

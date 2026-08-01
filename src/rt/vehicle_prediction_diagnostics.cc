@@ -97,13 +97,15 @@ evaluate_vehicle_prediction_candidates(
         engine.evaluate(*run, history.observations(key_for(position)), now);
     if (result.batch_.eligible()) {
       for (auto const& prediction : result.batch_.predictions_) {
-        for (auto i = n::stop_idx_t{0U}; i != run->size(); ++i) {
-          auto const scheduled =
-              to_seconds((*run)[i].scheduled_time(n::event_type::kArr));
+        auto const stop_count = run->stop_range_.size();
+        for (auto i = n::stop_idx_t{0U}; i != stop_count; ++i) {
+          auto const event =
+              i == 0U ? n::event_type::kDep : n::event_type::kArr;
+          auto const scheduled = to_seconds((*run)[i].scheduled_time(event));
           if (scheduled != prediction.scheduled_timestamp_seconds_) {
             continue;
           }
-          auto const provider = to_seconds((*run)[i].time(n::event_type::kArr));
+          auto const provider = to_seconds((*run)[i].time(event));
           auto const raw = prediction.predicted_timestamp_seconds_ - provider;
           result.provider_raw_error_seconds_.push_back(raw);
           result.provider_minute_error_.push_back(
