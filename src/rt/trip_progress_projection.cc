@@ -170,6 +170,7 @@ std::vector<projection_candidate> make_projection_candidates(
     std::optional<std::size_t> const constrained_stop_idx,
     bool const stopped_at) {
   auto candidates = std::vector<projection_candidate>{};
+  candidates.reserve(shape.points_.size() + shape.stop_point_indices_.size());
   if (stopped_at) {
     auto const stop = *constrained_stop_idx;
     auto const point = shape.stop_point_indices_[stop];
@@ -199,16 +200,52 @@ std::vector<projection_candidate> make_projection_candidates(
            .next_stop_idx_ = next_stop});
       continue;
     }
-    auto const section_shape =
-        std::span{shape.points_}.subspan(from, to - from + 1U);
-    auto const projected = geo::distance_to_polyline(position, section_shape);
-    auto const segment = from + projected.segment_idx_;
-    candidates.push_back(
-        {.lateral_error_ = projected.distance_to_polyline_,
-         .distance_along_ =
-             shape.point_distances_[segment] +
-             geo::distance(shape.points_[segment], projected.best_),
-         .next_stop_idx_ = next_stop});
+    struct segment_projection {
+      projection_candidate candidate_;
+      geo::latlng best_;
+    };
+    auto segment_candidates = std::vector<segment_projection>{};
+    segment_candidates.reserve(to - from);
+    for (auto segment = from; segment != to; ++segment) {
+      if (shape.points_[segment] == shape.points_[segment + 1U]) {
+        segment_candidates.push_back(
+            {.candidate_ = {.lateral_error_ =
+                                geo::distance(position, shape.points_[segment]),
+                            .distance_along_ = shape.point_distances_[segment],
+                            .next_stop_idx_ = next_stop},
+             .best_ = shape.points_[segment]});
+        continue;
+      }
+      auto const segment_shape = std::span{shape.points_}.subspan(segment, 2U);
+      auto const projected = geo::distance_to_polyline(position, segment_shape);
+      segment_candidates.push_back(
+          {.candidate_ = {.lateral_error_ = projected.distance_to_polyline_,
+                          .distance_along_ =
+                              shape.point_distances_[segment] +
+                              geo::distance(shape.points_[segment],
+                                            projected.best_),
+                          .next_stop_idx_ = next_stop},
+           .best_ = projected.best_});
+    }
+    constexpr auto kDominatedEndpointToleranceMeters = 1e-3;
+    for (auto i = std::size_t{0U}; i != segment_candidates.size(); ++i) {
+      auto const segment = from + i;
+      auto const& current = segment_candidates[i];
+      auto const dominated_at_start =
+          i > 0U && current.best_ == shape.points_[segment] &&
+          segment_candidates[i - 1U].candidate_.lateral_error_ +
+                  kDominatedEndpointToleranceMeters <
+              current.candidate_.lateral_error_;
+      auto const dominated_at_end =
+          i + 1U < segment_candidates.size() &&
+          current.best_ == shape.points_[segment + 1U] &&
+          segment_candidates[i + 1U].candidate_.lateral_error_ +
+                  kDominatedEndpointToleranceMeters <
+              current.candidate_.lateral_error_;
+      if (!dominated_at_start && !dominated_at_end) {
+        candidates.push_back(current.candidate_);
+      }
+    }
   }
   return candidates;
 }
@@ -250,10 +287,16 @@ candidate_selection select_candidate(
   constexpr auto kProjectionTieToleranceMeters = 1e-3;
   for (auto i = std::size_t{0U}; i != candidates.size(); ++i) {
     for (auto j = i + 1U; j != candidates.size(); ++j) {
-      if (candidates[i].next_stop_idx_ != candidates[j].next_stop_idx_ &&
-          std::abs(candidates[i].lateral_error_ -
-                   candidates[j].lateral_error_) <=
-              kProjectionTieToleranceMeters) {
+      auto const equal_quality = std::abs(candidates[i].lateral_error_ -
+                                          candidates[j].lateral_error_) <=
+                                 kProjectionTieToleranceMeters;
+      auto const conflicting_progress =
+          std::abs(candidates[i].distance_along_ -
+                   candidates[j].distance_along_) >
+          kProjectionTieToleranceMeters;
+      if (equal_quality &&
+          (conflicting_progress ||
+           candidates[i].next_stop_idx_ != candidates[j].next_stop_idx_)) {
         return {.status_ = trip_progress_projection_status::kAmbiguous};
       }
     }

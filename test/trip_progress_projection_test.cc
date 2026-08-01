@@ -130,6 +130,41 @@ short-out-back-shape,50.0000,8.0001,2
 short-out-back-shape,50.0000,8.0000,3
 )";
 
+constexpr auto const kSameSectionRetraceGtfs = R"(
+# agency.txt
+agency_id,agency_name,agency_url,agency_timezone
+Test,Test,https://example.com,Europe/Berlin
+
+# stops.txt
+stop_id,stop_name,stop_lat,stop_lon
+A,A,50.0000,8.0000
+B,B,50.0000,8.0200
+
+# routes.txt
+route_id,agency_id,route_short_name,route_type
+route,Test,1,3
+
+# trips.txt
+route_id,service_id,trip_id,shape_id
+route,S1,same-section-retrace,same-section-retrace-shape
+
+# stop_times.txt
+trip_id,arrival_time,departure_time,stop_id,stop_sequence
+same-section-retrace,01:00:00,01:00:00,A,10
+same-section-retrace,01:10:00,01:10:00,B,20
+
+# calendar_dates.txt
+service_id,date,exception_type
+S1,20260521,1
+
+# shapes.txt
+shape_id,shape_pt_lat,shape_pt_lon,shape_pt_sequence
+same-section-retrace-shape,50.0000,8.0000,1
+same-section-retrace-shape,50.0000,8.0100,2
+same-section-retrace-shape,50.0000,8.0000,3
+same-section-retrace-shape,50.0000,8.0200,4
+)";
+
 constexpr auto const kRepeatedShapeGtfs = R"(
 # agency.txt
 agency_id,agency_name,agency_url,agency_timezone
@@ -570,6 +605,35 @@ TEST(trip_progress_projection,
   EXPECT_EQ(result.progress_->next_static_stop_sequence_, 30U);
   EXPECT_GT(result.progress_->distance_along_shape_m_, 10.0);
   EXPECT_LT(result.progress_->lateral_error_m_, 0.1);
+}
+
+TEST(trip_progress_projection,
+     rejects_ambiguous_progress_within_a_retraced_stop_section) {
+  auto fixture = projection_fixture{kSameSectionRetraceGtfs};
+  auto projector = trip_progress_projector{*fixture.data_->shapes_};
+
+  auto const result = projector.project(fixture.run("same-section-retrace"),
+                                        geo::latlng{50.0, 8.0});
+
+  EXPECT_EQ(result.status_, trip_progress_projection_status::kAmbiguous);
+  EXPECT_FALSE(result.progress_.has_value());
+}
+
+TEST(trip_progress_projection,
+     prior_progress_disambiguates_a_retraced_stop_section) {
+  auto fixture = projection_fixture{kSameSectionRetraceGtfs};
+  auto projector = trip_progress_projector{*fixture.data_->shapes_};
+  auto const prior = trip_progress{.distance_along_shape_m_ = 1000.0};
+
+  auto const result = projector.project(fixture.run("same-section-retrace"),
+                                        geo::latlng{50.0, 8.0}, prior);
+
+  ASSERT_EQ(result.status_, trip_progress_projection_status::kProjected);
+  ASSERT_TRUE(result.progress_.has_value());
+  EXPECT_EQ(result.progress_->next_static_stop_sequence_, 20U);
+  EXPECT_GT(result.progress_->distance_along_shape_m_, 1300.0);
+  EXPECT_EQ(result.progress_->monotonicity_,
+            trip_progress_monotonicity::kForward);
 }
 
 TEST(trip_progress_projection, rejects_an_ambiguous_loop) {
