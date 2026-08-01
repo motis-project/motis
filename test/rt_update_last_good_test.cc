@@ -56,11 +56,14 @@ route-1,test,1,3
 # trips.txt
 route_id,service_id,trip_id,trip_headsign
 route-1,service-1,trip-1,Stop 2
+route-1,service-1,trip-2,Stop 2
 
 # stop_times.txt
 trip_id,arrival_time,departure_time,stop_id,stop_sequence
 trip-1,10:00:00,10:00:00,stop-1,1
 trip-1,10:05:00,10:05:00,stop-2,2
+trip-2,11:00:00,11:00:00,stop-1,1
+trip-2,11:05:00,11:05:00,stop-2,2
 
 # calendar_dates.txt
 service_id,date,exception_type
@@ -172,7 +175,14 @@ TEST(motis_rt_update, fresh_last_good_survives_bad_cycle_and_expires) {
                    .stop_updates_ = {{.stop_id_ = "stop-1",
                                       .seq_ = 1U,
                                       .ev_type_ = nigiri::event_type::kDep,
-                                      .delay_minutes_ = 10}}}},
+                                      .delay_minutes_ = 10}}},
+       trip_update{.trip_ = {.trip_id_ = "trip-2",
+                             .start_time_ = "11:00:00",
+                             .date_ = service_date},
+                   .stop_updates_ = {{.stop_id_ = "stop-1",
+                                      .seq_ = 1U,
+                                      .ev_type_ = nigiri::event_type::kDep,
+                                      .delay_minutes_ = 5}}}},
       today + 9h);
   good.mutable_header()->clear_timestamp();
 
@@ -255,11 +265,25 @@ TEST(motis_rt_update, fresh_last_good_survives_bad_cycle_and_expires) {
                               {"endpoint=\"0\"", "state=\"expired\""}));
 
   auto recovered = good;
+  recovered.mutable_header()->set_incrementality(
+      transit_realtime::FeedHeader_Incrementality_DIFFERENTIAL);
+  recovered.mutable_entity()->DeleteSubrange(1, recovered.entity_size() - 1);
   recovered.mutable_entity(0)
       ->mutable_trip_update()
       ->mutable_stop_time_update(0)
       ->mutable_departure()
       ->set_delay(20 * 60);
+  auto stale_after_expiry = recovered;
+  stale_after_expiry.mutable_header()->set_timestamp(
+      static_cast<std::uint64_t>(
+          std::chrono::duration_cast<std::chrono::seconds>(
+              std::chrono::system_clock::now().time_since_epoch() - 1min)
+              .count()));
+  write_dump(stale_after_expiry.SerializeAsString());
+  ioc.restart();
+  ioc.run_for(1100ms);
+  EXPECT_FALSE(query_stop_times(d).stopTimes_.front().realTime_);
+
   write_dump(recovered.SerializeAsString());
   ioc.restart();
   ioc.run_for(1100ms);
@@ -268,6 +292,19 @@ TEST(motis_rt_update, fresh_last_good_survives_bad_cycle_and_expires) {
   EXPECT_TRUE(after_recovery.stopTimes_.front().realTime_);
   EXPECT_NE(good_departure,
             after_recovery.stopTimes_.front().place_.departure_);
+  auto const unchanged_after_expired_differential =
+      utl::init_from<ep::stop_times>(d).value()(
+          std::format("/api/v5/stoptimes?stopId=test_stop-1"
+                      "&time={}T10:30:00Z&n=1",
+                      date::format("%F", today)));
+  ASSERT_EQ(unchanged_after_expired_differential.stopTimes_.size(), 1U);
+  EXPECT_TRUE(
+      unchanged_after_expired_differential.stopTimes_.front().realTime_);
+  EXPECT_EQ(static_cast<std::chrono::sys_seconds>(
+                *unchanged_after_expired_differential.stopTimes_
+                     .front()
+                     .place_.departure_),
+            today + 11h + 5min);
 
   auto authoritative_empty = transit_realtime::FeedMessage{};
   authoritative_empty.mutable_header()->set_gtfs_realtime_version("2.0");

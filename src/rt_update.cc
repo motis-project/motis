@@ -305,10 +305,7 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
                     return false;
                   }
                   auto const age = cache_age(state, now);
-                  if (!state.expired_) {
-                    g.metrics_.last_good_expiry_.Increment();
-                  }
-                  state.snapshot_.Clear();
+                  g.metrics_.last_good_expiry_.Increment();
                   state.has_snapshot_ = false;
                   state.expired_ = true;
                   g.metrics_.set_source_state(gtfsrt_source_state::expired,
@@ -373,6 +370,17 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
                   state.failed_ = true;
                   if (state.has_snapshot_) {
                     return reuse_last_good(g);
+                  }
+                  if (state.expired_) {
+                    g.metrics_.set_source_state(
+                        gtfsrt_source_state::expired,
+                        static_cast<double>(cache_age(
+                                                state,
+                                                std::chrono::steady_clock::now())
+                                                .count()),
+                        false);
+                    return update_result{
+                        n::rt::statistics{.parser_error_ = true}, false};
                   }
                   if (!state.expired_) {
                     g.metrics_.last_good_expiry_.Increment();
