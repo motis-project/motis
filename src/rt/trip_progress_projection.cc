@@ -183,7 +183,14 @@ std::vector<projection_candidate> make_projection_candidates(
     }
     auto const from = shape.stop_point_indices_[section];
     auto const to = shape.stop_point_indices_[next_stop];
-    if (from >= to) {
+    if (from > to) {
+      continue;
+    }
+    if (from == to) {
+      candidates.push_back(
+          {.lateral_error_ = geo::distance(position, shape.points_[from]),
+           .distance_along_ = shape.stop_distances_[next_stop],
+           .next_stop_idx_ = next_stop});
       continue;
     }
     auto const section_shape =
