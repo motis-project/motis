@@ -9,6 +9,7 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <set>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -259,6 +260,7 @@ void run_rt_update(boost::asio::io_context& ioc,
         auto const mixed_incremental_sources =
             rebuild_gtfsrt_from_materialized_snapshots && has_auser_endpoint;
         auto auser_rtt = std::unique_ptr<n::rt_timetable>{};
+        auto auser_rtt_day = std::optional<date::sys_days>{};
 
         while (true) {
           // Remember when we started, so we can schedule the next update.
@@ -268,15 +270,32 @@ void run_rt_update(boost::asio::io_context& ioc,
             auto t = utl::scoped_timer{"rt update"};
 
             // Create new real-time timetable.
-            auto const today = std::chrono::time_point_cast<date::days>(
-                std::chrono::system_clock::now());
-            if (mixed_incremental_sources && !auser_rtt) {
+            auto const now = hooks.now_ ? hooks.now_()
+                                        : std::chrono::system_clock::now();
+            auto const today = std::chrono::time_point_cast<date::days>(now);
+            auto const auser_day_rollover =
+                has_auser_endpoint &&
+                (mixed_incremental_sources
+                     ? auser_rtt_day != today
+                     : d.rt_->rtt_->base_day_ != today);
+            if (auser_day_rollover) {
+              auto reset_urls = std::set<std::string_view>{};
+              for (auto const& endpoint : endpoints) {
+                if (auto const* a = std::get_if<auser_endpoint>(&endpoint);
+                    a != nullptr && reset_urls.emplace(a->ep_.url_).second) {
+                  d.auser_->at(a->ep_.url_).reset_for_resync();
+                }
+              }
+            }
+            if (mixed_incremental_sources && auser_rtt_day != today) {
               auser_rtt = std::make_unique<n::rt_timetable>(
                   n::rt::create_rt_timetable(*d.tt_, today));
+              auser_rtt_day = today;
             }
             auto rtt = std::make_unique<n::rt_timetable>(
                 c.timetable_->incremental_rt_update_ &&
-                        !rebuild_gtfsrt_from_materialized_snapshots
+                        !rebuild_gtfsrt_from_materialized_snapshots &&
+                        !auser_day_rollover
                     ? n::rt_timetable{*d.rt_->rtt_}
                     : n::rt::create_rt_timetable(*d.tt_, today));
 
@@ -619,84 +638,81 @@ void run_rt_update(boost::asio::io_context& ioc,
 
             auto const apply_prepared_gtfsrt =
                 [&](prepared_gtfsrt_update& prepared) {
-                      auto const& g = std::get<gtfs_rt_endpoint>(
-                          endpoints[prepared.endpoint_idx_]);
-                      if (!prepared.msg_) {
-                        results[prepared.endpoint_idx_] = {
-                            n::rt::statistics{.parser_error_ = true}, false};
-                        return;
-                      }
+                  auto const& g = std::get<gtfs_rt_endpoint>(
+                      endpoints[prepared.endpoint_idx_]);
+                  if (!prepared.msg_) {
+                    results[prepared.endpoint_idx_] = {
+                        n::rt::statistics{.parser_error_ = true}, false};
+                    return;
+                  }
+                  try {
+                    auto stats =
+                        apply_gtfsrt(g, prepared, *prepared.msg_, false);
+                    results[prepared.endpoint_idx_] = {
+                        std::move(stats), prepared.source_success_};
+                  } catch (std::exception const& e) {
+                    if (!c.timetable_->canned_rt_) {
+                      g.metrics_.updates_error_.Increment();
+                    }
+                    n::log(n::log_lvl::error, "motis.rt",
+                           "RT APPLY ERROR: tag={}, error={}", g.tag_,
+                           e.what());
+                    auto fallback =
+                        prepare_last_good(prepared.endpoint_idx_, g);
+                    if (fallback.msg_) {
                       try {
-                        auto stats =
-                            apply_gtfsrt(g, prepared, *prepared.msg_, false);
                         results[prepared.endpoint_idx_] = {
-                            std::move(stats), prepared.source_success_};
-                      } catch (std::exception const& e) {
+                            apply_gtfsrt(g, fallback, *fallback.msg_, true),
+                            false};
+                      } catch (std::exception const& fallback_error) {
                         if (!c.timetable_->canned_rt_) {
                           g.metrics_.updates_error_.Increment();
                         }
                         n::log(n::log_lvl::error, "motis.rt",
-                               "RT APPLY ERROR: tag={}, error={}", g.tag_,
-                               e.what());
-                        auto fallback =
-                            prepare_last_good(prepared.endpoint_idx_, g);
-                        if (fallback.msg_) {
-                          try {
-                            results[prepared.endpoint_idx_] = {
-                                apply_gtfsrt(g, fallback, *fallback.msg_, true),
-                                false};
-                          } catch (std::exception const& fallback_error) {
-                            if (!c.timetable_->canned_rt_) {
-                              g.metrics_.updates_error_.Increment();
-                            }
-                            n::log(n::log_lvl::error, "motis.rt",
-                                   "RT FALLBACK APPLY ERROR: tag={}, error={}",
-                                   g.tag_, fallback_error.what());
-                            results[prepared.endpoint_idx_] = {
-                                n::rt::statistics{.parser_error_ = true},
-                                false};
-                          } catch (...) {
-                            if (!c.timetable_->canned_rt_) {
-                              g.metrics_.updates_error_.Increment();
-                            }
-                            n::log(n::log_lvl::error, "motis.rt",
-                                   "RT FALLBACK APPLY ERROR: tag={}, "
-                                   "error=unknown",
-                                   g.tag_);
-                            results[prepared.endpoint_idx_] = {
-                                n::rt::statistics{.parser_error_ = true},
-                                false};
-                          }
-                        } else {
-                          results[prepared.endpoint_idx_] = {
-                              n::rt::statistics{.parser_error_ = true}, false};
+                               "RT FALLBACK APPLY ERROR: tag={}, error={}",
+                               g.tag_, fallback_error.what());
+                        results[prepared.endpoint_idx_] = {
+                            n::rt::statistics{.parser_error_ = true}, false};
+                      } catch (...) {
+                        if (!c.timetable_->canned_rt_) {
+                          g.metrics_.updates_error_.Increment();
                         }
+                        n::log(n::log_lvl::error, "motis.rt",
+                               "RT FALLBACK APPLY ERROR: tag={}, "
+                               "error=unknown",
+                               g.tag_);
+                        results[prepared.endpoint_idx_] = {
+                            n::rt::statistics{.parser_error_ = true}, false};
                       }
+                    } else {
+                      results[prepared.endpoint_idx_] = {
+                          n::rt::statistics{.parser_error_ = true}, false};
+                    }
+                  }
                 };
             auto const apply_prepared_auser =
                 [&](prepared_auser_update& prepared) {
-                      if (!prepared.body_) {
-                        return;
-                      }
-                      auto const& a = std::get<auser_endpoint>(
-                          endpoints[prepared.endpoint_idx_]);
-                      try {
-                        auto& auser = d.auser_->at(a.ep_.url_);
-                        auto& target = mixed_incremental_sources
-                                           ? *auser_rtt
-                                           : *rtt;
-                        results[prepared.endpoint_idx_] = {
-                            auser.consume_update(*prepared.body_, target, true)};
-                      } catch (std::exception const& e) {
-                        if (!c.timetable_->canned_rt_) {
-                          a.metrics_.updates_error_.Increment();
-                        }
-                        n::log(n::log_lvl::error, "motis.rt",
-                               "VDV AUS APPLY ERROR: tag={}, url={}, error={}",
-                               a.tag_, a.ep_.url_, e.what());
-                        results[prepared.endpoint_idx_] = {
-                            n::rt::vdv_aus::statistics{.error_ = true}, false};
-                      }
+                  if (!prepared.body_) {
+                    return;
+                  }
+                  auto const& a = std::get<auser_endpoint>(
+                      endpoints[prepared.endpoint_idx_]);
+                  try {
+                    auto& auser = d.auser_->at(a.ep_.url_);
+                    auto& target =
+                        mixed_incremental_sources ? *auser_rtt : *rtt;
+                    results[prepared.endpoint_idx_] = {
+                        auser.consume_update(*prepared.body_, target, true)};
+                  } catch (std::exception const& e) {
+                    if (!c.timetable_->canned_rt_) {
+                      a.metrics_.updates_error_.Increment();
+                    }
+                    n::log(n::log_lvl::error, "motis.rt",
+                           "VDV AUS APPLY ERROR: tag={}, url={}, error={}",
+                           a.tag_, a.ep_.url_, e.what());
+                    results[prepared.endpoint_idx_] = {
+                        n::rt::vdv_aus::statistics{.error_ = true}, false};
+                  }
                 };
 
             // Apply every prepared provider message once, serially and in
