@@ -496,6 +496,81 @@ TEST(motis_rt_update, trip_update_and_vehicle_position_caches_are_independent) {
                               {"endpoint=\"1\"", "state=\"live\""}));
 }
 
+TEST(motis_rt_update,
+     gtfsrt_endpoints_clear_and_expire_independently_in_stable_order) {
+  auto const test_dir = fs::absolute("test/data/rt-last-good-two-gtfsrt");
+  auto ec = std::error_code{};
+  fs::remove_all(test_dir, ec);
+  fs::create_directories(test_dir);
+  auto cwd = cwd_guard{test_dir};
+  auto const today =
+      std::chrono::floor<date::days>(std::chrono::system_clock::now());
+  auto const service_date = date::format("%Y%m%d", today);
+  auto const first_day = date::format("%F", today);
+  auto const gtfs = std::vformat(kGtfs, std::make_format_args(service_date));
+  auto const c = config{
+      .timetable_ = {config::timetable{
+          .first_day_ = first_day,
+          .num_days_ = 2,
+          .update_interval_ = 1,
+          .incremental_rt_update_ = true,
+          .canned_rt_ = true,
+          .datasets_ = {
+              {"test",
+               {.path_ = gtfs,
+                .rt_ = {{{.url_ = "https://example.test/first",
+                          .last_good_ttl_ = 2U},
+                         {.url_ = "https://example.test/second",
+                          .last_good_ttl_ = 30U}}}}}}}}};
+  import(c, "data");
+  auto d = data{"data", c};
+  fs::create_directory("dump_rt");
+
+  auto first = to_feed_msg(
+      {trip_update{.trip_ = {.trip_id_ = "trip-1",
+                             .start_time_ = "10:00:00",
+                             .date_ = service_date},
+                   .stop_updates_ = {{.stop_id_ = "stop-1",
+                                      .seq_ = 1U,
+                                      .ev_type_ = nigiri::event_type::kDep,
+                                      .delay_minutes_ = 10}}}},
+      today + 9h);
+  first.mutable_header()->clear_timestamp();
+  auto second = first;
+  second.mutable_entity(0)
+      ->mutable_trip_update()
+      ->mutable_stop_time_update(0)
+      ->mutable_departure()
+      ->set_delay(15 * 60);
+  write_dump("first", first.SerializeAsString());
+  write_dump("second", second.SerializeAsString());
+
+  auto ioc = boost::asio::io_context{};
+  run_rt_update(ioc, c, d);
+  ioc.run_for(100ms);
+  auto const after_both = query_stop_times(d);
+  EXPECT_EQ(static_cast<std::chrono::sys_seconds>(
+                *after_both.stopTimes_.front().place_.departure_),
+            today + 10h + 15min);
+
+  auto empty = transit_realtime::FeedMessage{};
+  empty.mutable_header()->set_gtfs_realtime_version("2.0");
+  empty.mutable_header()->set_incrementality(
+      transit_realtime::FeedHeader_Incrementality_FULL_DATASET);
+  write_dump("second", empty.SerializeAsString());
+  ioc.restart();
+  ioc.run_for(1100ms);
+  auto const after_second_clear = query_stop_times(d);
+  EXPECT_EQ(static_cast<std::chrono::sys_seconds>(
+                *after_second_clear.stopTimes_.front().place_.departure_),
+            today + 10h + 10min);
+
+  write_dump("first", "malformed");
+  ioc.restart();
+  ioc.run_for(3100ms);
+  EXPECT_FALSE(query_stop_times(d).stopTimes_.front().realTime_);
+}
+
 TEST(motis_rt_update, gtfsrt_coexistence_preserves_auser_delta_state) {
   auto const test_dir = fs::absolute("test/data/rt-last-good-mixed-auser");
   auto ec = std::error_code{};
@@ -567,6 +642,25 @@ TEST(motis_rt_update, gtfsrt_coexistence_preserves_auser_delta_state) {
             today + 10h + 10min);
 
   ASSERT_TRUE(fs::remove("dump_rt/test-https___example_test_auser"));
+  auto differential_delete = gtfsrt;
+  differential_delete.mutable_header()->set_incrementality(
+      transit_realtime::FeedHeader_Incrementality_DIFFERENTIAL);
+  differential_delete.mutable_entity(0)->clear_trip_update();
+  differential_delete.mutable_entity(0)->set_is_deleted(true);
+  write_dump("trip_updates", differential_delete.SerializeAsString());
+  ioc.restart();
+  ioc.run_for(1100ms);
+  auto const after_gtfsrt_differential_deletion = query_stop_times(d);
+  ASSERT_EQ(after_gtfsrt_differential_deletion.stopTimes_.size(), 1U);
+  EXPECT_EQ(
+      static_cast<std::chrono::sys_seconds>(
+          *after_gtfsrt_differential_deletion.stopTimes_.front()
+               .place_.departure_),
+      today + 10h + 7min);
+
+  write_dump("trip_updates", gtfsrt.SerializeAsString());
+  ioc.restart();
+  ioc.run_for(1100ms);
   auto empty_gtfsrt = transit_realtime::FeedMessage{};
   empty_gtfsrt.mutable_header()->set_gtfs_realtime_version("2.0");
   empty_gtfsrt.mutable_header()->set_incrementality(
