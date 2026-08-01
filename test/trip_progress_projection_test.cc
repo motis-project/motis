@@ -94,6 +94,42 @@ two-stop-shape,50.0000,8.0000,1
 two-stop-shape,50.0000,8.0100,2
 )";
 
+constexpr auto const kShortOutAndBackGtfs = R"(
+# agency.txt
+agency_id,agency_name,agency_url,agency_timezone
+Test,Test,https://example.com,Europe/Berlin
+
+# stops.txt
+stop_id,stop_name,stop_lat,stop_lon
+A,A,50.0000,8.0000
+B,B,50.0000,8.0001
+C,C,50.0000,8.0000
+
+# routes.txt
+route_id,agency_id,route_short_name,route_type
+route,Test,1,3
+
+# trips.txt
+route_id,service_id,trip_id,shape_id
+route,S1,short-out-back,short-out-back-shape
+
+# stop_times.txt
+trip_id,arrival_time,departure_time,stop_id,stop_sequence
+short-out-back,01:00:00,01:00:00,A,10
+short-out-back,01:01:00,01:01:00,B,20
+short-out-back,01:02:00,01:02:00,C,30
+
+# calendar_dates.txt
+service_id,date,exception_type
+S1,20260521,1
+
+# shapes.txt
+shape_id,shape_pt_lat,shape_pt_lon,shape_pt_sequence
+short-out-back-shape,50.0000,8.0000,1
+short-out-back-shape,50.0000,8.0001,2
+short-out-back-shape,50.0000,8.0000,3
+)";
+
 constexpr auto const kRepeatedShapeGtfs = R"(
 # agency.txt
 agency_id,agency_name,agency_url,agency_timezone
@@ -503,6 +539,37 @@ TEST(trip_progress_projection, rejects_decreasing_stop_shape_offsets) {
 
   EXPECT_EQ(result.status_, trip_progress_projection_status::kMissingShape);
   EXPECT_FALSE(result.progress_.has_value());
+}
+
+TEST(trip_progress_projection,
+     rejects_conflicting_equal_quality_candidates_on_a_short_out_and_back) {
+  auto fixture = projection_fixture{kShortOutAndBackGtfs};
+  auto projector = trip_progress_projector{*fixture.data_->shapes_};
+
+  auto const result =
+      projector.project(fixture.run("short-out-back"), geo::latlng{50.0, 8.0});
+
+  EXPECT_EQ(result.status_, trip_progress_projection_status::kAmbiguous);
+  EXPECT_FALSE(result.progress_.has_value());
+}
+
+TEST(trip_progress_projection,
+     stop_sequence_constraint_disambiguates_a_short_out_and_back) {
+  auto fixture = projection_fixture{kShortOutAndBackGtfs};
+  auto projector = trip_progress_projector{*fixture.data_->shapes_};
+  auto const constraint = vehicle_position_progress_constraint{
+      .current_static_stop_sequence_ = 30U,
+      .status_ = vehicle_position_stop_status::kInTransitTo};
+
+  auto const result =
+      projector.project(fixture.run("short-out-back"), geo::latlng{50.0, 8.0},
+                        std::nullopt, constraint);
+
+  ASSERT_EQ(result.status_, trip_progress_projection_status::kProjected);
+  ASSERT_TRUE(result.progress_.has_value());
+  EXPECT_EQ(result.progress_->next_static_stop_sequence_, 30U);
+  EXPECT_GT(result.progress_->distance_along_shape_m_, 10.0);
+  EXPECT_LT(result.progress_->lateral_error_m_, 0.1);
 }
 
 TEST(trip_progress_projection, rejects_an_ambiguous_loop) {

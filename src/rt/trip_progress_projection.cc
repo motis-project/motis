@@ -247,16 +247,13 @@ candidate_selection select_candidate(
           kEquivalentProgressMeters) {
     return {.status_ = trip_progress_projection_status::kAmbiguous};
   }
-  constexpr auto kEndpointTieToleranceMeters = 1e-3;
+  constexpr auto kProjectionTieToleranceMeters = 1e-3;
   for (auto i = std::size_t{0U}; i != candidates.size(); ++i) {
     for (auto j = i + 1U; j != candidates.size(); ++j) {
       if (candidates[i].next_stop_idx_ != candidates[j].next_stop_idx_ &&
-          std::abs(candidates[i].distance_along_ -
-                   candidates[j].distance_along_) <=
-              kEndpointTieToleranceMeters &&
           std::abs(candidates[i].lateral_error_ -
                    candidates[j].lateral_error_) <=
-              kEndpointTieToleranceMeters) {
+              kProjectionTieToleranceMeters) {
         return {.status_ = trip_progress_projection_status::kAmbiguous};
       }
     }
