@@ -59,11 +59,13 @@ rt::rt(ptr<nigiri::rt_timetable>&& rtt,
 rt::rt(ptr<nigiri::rt_timetable>&& rtt,
        ptr<elevators>&& e,
        ptr<railviz_rt_index>&& railviz,
-       ptr<vehicle_positions::vehicle_position_store>&& vehicle_positions)
+       ptr<vehicle_positions::vehicle_position_store>&& vehicle_positions,
+       ptr<vehicle_observation_history>&& vehicle_observation_history)
     : rtt_{std::move(rtt)},
       railviz_rt_{std::move(railviz)},
       e_{std::move(e)},
-      vehicle_positions_{std::move(vehicle_positions)} {}
+      vehicle_positions_{std::move(vehicle_positions)},
+      vehicle_observation_history_{std::move(vehicle_observation_history)} {}
 
 rt::~rt() = default;
 

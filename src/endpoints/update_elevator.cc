@@ -60,7 +60,11 @@ json::value update_elevator::operator()(json::value const& query) const {
       std::make_unique<vehicle_positions::vehicle_position_store>(
           rt_copy->vehicle_positions_ != nullptr
               ? *rt_copy->vehicle_positions_
-              : vehicle_positions::vehicle_position_store{}));
+              : vehicle_positions::vehicle_position_store{}),
+      rt_copy->vehicle_observation_history_ != nullptr
+          ? std::make_unique<vehicle_observation_history>(
+                *rt_copy->vehicle_observation_history_)
+          : nullptr);
   std::atomic_store(&rt_, std::move(new_rt));
 
   return json::string{{"success", true}};

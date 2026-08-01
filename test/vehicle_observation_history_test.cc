@@ -4,6 +4,7 @@
 #include <optional>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "gtest/gtest.h"
 
@@ -520,6 +521,36 @@ TEST(vehicle_observation_history,
   EXPECT_EQ(history.observations(descriptor_key()).size(), 1U);
   history.prune(401, kPolicy);
   EXPECT_TRUE(history.observations(descriptor_key()).empty());
+}
+
+TEST(vehicle_observation_history,
+     representative_fleet_remains_bounded_and_updates_within_budget) {
+  constexpr auto const fleet_size = std::size_t{1'000};
+  constexpr auto const cycles = std::size_t{20};
+  auto const policy = observation_history_policy{
+      .max_age_ = 10min, .max_observations_per_vehicle_ = cycles};
+  auto history = vehicle_observation_history{};
+  auto const started = std::chrono::steady_clock::now();
+
+  for (auto cycle = std::size_t{0}; cycle != cycles; ++cycle) {
+    auto batch = std::vector<vehicle_observation>{};
+    batch.reserve(fleet_size);
+    for (auto vehicle = std::size_t{0}; vehicle != fleet_size; ++vehicle) {
+      auto value = observation(static_cast<std::int64_t>(cycle),
+                               static_cast<std::int64_t>(cycle),
+                               "entity-" + std::to_string(vehicle),
+                               "vehicle-" + std::to_string(vehicle));
+      batch.emplace_back(std::move(value));
+    }
+    history.replace_feed("feed", batch, static_cast<std::int64_t>(cycle),
+                         policy);
+  }
+
+  auto const elapsed = std::chrono::steady_clock::now() - started;
+  EXPECT_EQ(history.active_histories(), fleet_size);
+  EXPECT_EQ(history.observation_count(), fleet_size * cycles);
+  EXPECT_LT(history.estimated_memory_bytes(), 64U * 1024U * 1024U);
+  EXPECT_LT(elapsed, 10s);
 }
 
 TEST(vehicle_observation_history,

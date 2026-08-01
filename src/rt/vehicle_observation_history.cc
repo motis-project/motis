@@ -437,6 +437,38 @@ std::size_t vehicle_observation_history::observation_count() const {
   return count;
 }
 
+std::size_t vehicle_observation_history::estimated_memory_bytes() const {
+  auto bytes = sizeof(*this);
+  bytes += histories_.bucket_count() * sizeof(void*);
+  bytes += current_.bucket_count() * sizeof(void*);
+  bytes += key_by_entity_.bucket_count() * sizeof(void*);
+  for (auto const& [key, history] : histories_) {
+    bytes += sizeof(key) + key.feed_id_.capacity() + key.stable_id_.capacity();
+    bytes += sizeof(history) +
+             history.observations_.capacity() * sizeof(vehicle_observation);
+    for (auto const& observation : history.observations_) {
+      bytes +=
+          observation.feed_id_.capacity() + observation.entity_id_.capacity();
+      bytes +=
+          observation.vehicle_id_ ? observation.vehicle_id_->capacity() : 0U;
+      bytes += observation.trip_.trip_id_
+                   ? observation.trip_.trip_id_->capacity()
+                   : 0U;
+      bytes += observation.trip_.start_date_
+                   ? observation.trip_.start_date_->capacity()
+                   : 0U;
+      bytes += observation.trip_.start_time_
+                   ? observation.trip_.start_time_->capacity()
+                   : 0U;
+      bytes += observation.stop_id_ ? observation.stop_id_->capacity() : 0U;
+    }
+  }
+  bytes +=
+      current_.size() * (sizeof(vehicle_key) + sizeof(vehicle_observation));
+  bytes += key_by_entity_.size() * (sizeof(entity_key) + sizeof(vehicle_key));
+  return bytes;
+}
+
 bool vehicle_observation_history::is_strictly_newer_than_history(
     vehicle_key const& key, vehicle_observation const& observation) const {
   auto const history = histories_.find(key);

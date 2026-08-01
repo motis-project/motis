@@ -94,6 +94,7 @@ struct vehicle_observation_history {
 
   [[nodiscard]] std::size_t active_histories() const;
   [[nodiscard]] std::size_t observation_count() const;
+  [[nodiscard]] std::size_t estimated_memory_bytes() const;
 
 private:
   struct vehicle_key_hash {

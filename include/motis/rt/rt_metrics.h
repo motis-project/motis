@@ -121,6 +121,26 @@ struct rt_metric_families {
                 .Name("nigiri_gtfsrt_source_cache_fresh")
                 .Help("Whether the materialized GTFS-RT snapshot is fresh")
                 .Register(registry)},
+        vehicle_eta_history_active_vehicles_{
+            prometheus::BuildGauge()
+                .Name("motis_vehicle_eta_history_active_vehicles")
+                .Help("Vehicles retained in the published prediction history")
+                .Register(registry)},
+        vehicle_eta_history_observations_{
+            prometheus::BuildGauge()
+                .Name("motis_vehicle_eta_history_observations")
+                .Help("Observations retained in prediction history")
+                .Register(registry)},
+        vehicle_eta_history_memory_bytes_{
+            prometheus::BuildGauge()
+                .Name("motis_vehicle_eta_history_memory_bytes")
+                .Help("Estimated bytes retained by prediction history")
+                .Register(registry)},
+        vehicle_eta_history_update_seconds_{
+            prometheus::BuildGauge()
+                .Name("motis_vehicle_eta_history_update_seconds")
+                .Help("CPU time spent updating prediction history this cycle")
+                .Register(registry)},
         vdvaus_updates_requested_{prometheus::BuildCounter()
                                       .Name("nigiri_vdvaus_updates_requested_"
                                             "total")
@@ -297,6 +317,10 @@ struct rt_metric_families {
   prometheus::Family<prometheus::Gauge>& gtfsrt_source_state_;
   prometheus::Family<prometheus::Gauge>& gtfsrt_source_cache_age_;
   prometheus::Family<prometheus::Gauge>& gtfsrt_source_cache_fresh_;
+  prometheus::Family<prometheus::Gauge>& vehicle_eta_history_active_vehicles_;
+  prometheus::Family<prometheus::Gauge>& vehicle_eta_history_observations_;
+  prometheus::Family<prometheus::Gauge>& vehicle_eta_history_memory_bytes_;
+  prometheus::Family<prometheus::Gauge>& vehicle_eta_history_update_seconds_;
 
   prometheus::Family<prometheus::Counter>& vdvaus_updates_requested_;
   prometheus::Family<prometheus::Counter>& vdvaus_updates_successful_;
@@ -361,18 +385,18 @@ struct gtfsrt_metrics {
             {{"tag", tag}, {"endpoint", endpoint}, {"event", "empty_body"}})},
         decode_error_{m.gtfsrt_source_events_.Add(
             {{"tag", tag}, {"endpoint", endpoint}, {"event", "decode_error"}})},
-        missing_header_{m.gtfsrt_source_events_.Add(
-            {{"tag", tag},
-             {"endpoint", endpoint},
-             {"event", "missing_header"}})},
-        last_good_reuse_{m.gtfsrt_source_events_.Add(
-            {{"tag", tag},
-             {"endpoint", endpoint},
-             {"event", "last_good_reuse"}})},
-        last_good_expiry_{m.gtfsrt_source_events_.Add(
-            {{"tag", tag},
-             {"endpoint", endpoint},
-             {"event", "last_good_expiry"}})},
+        missing_header_{
+            m.gtfsrt_source_events_.Add({{"tag", tag},
+                                         {"endpoint", endpoint},
+                                         {"event", "missing_header"}})},
+        last_good_reuse_{
+            m.gtfsrt_source_events_.Add({{"tag", tag},
+                                         {"endpoint", endpoint},
+                                         {"event", "last_good_reuse"}})},
+        last_good_expiry_{
+            m.gtfsrt_source_events_.Add({{"tag", tag},
+                                         {"endpoint", endpoint},
+                                         {"event", "last_good_expiry"}})},
         recovery_{m.gtfsrt_source_events_.Add(
             {{"tag", tag}, {"endpoint", endpoint}, {"event", "recovery"}})},
         state_no_base_{m.gtfsrt_source_state_.Add(
