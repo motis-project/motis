@@ -2240,6 +2240,16 @@ paths:
             type: boolean
             default: true
 
+        - name: includePredictionComparison
+          in: query
+          required: false
+          description: |
+            Debug only. Include sparse provider/GPS prediction comparison data.
+            The default response is unchanged when this parameter is omitted or false.
+          schema:
+            type: boolean
+            default: false
+
       responses:
         '422':
           description: Unprocessable Entity
@@ -2295,6 +2305,14 @@ paths:
                       Use the cursor to get the next page of results. Insert the cursor into the request and post it to get the next page.
                       The next page is a set of stop times AFTER the last stop time in this result.
                     type: string
+                  predictionDebug:
+                    description: |
+                      Sparse debug data keyed to stopTimes by stopTimeIndex.
+                      Present only when includePredictionComparison=true and matching
+                      diagnostics exist for a returned stop time.
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PredictionDebug'
 
   /api/v5/map/trips:
     get:
@@ -3713,6 +3731,119 @@ components:
         source:
           description: Filename and line number where this trip is from
           type: string
+
+    PredictionSource:
+      type: string
+      enum:
+        - PROVIDER
+        - GPS
+        - SCHEDULE
+
+    PredictionSelectionReason:
+      type: string
+      enum:
+        - PROVIDER_ONLY
+        - GPS_ONLY
+        - PROVIDER_HIGHER_CONFIDENCE
+        - GPS_HIGHER_CONFIDENCE
+        - PROVIDER_PROGRESS_INCONSISTENT
+        - PROVIDER_RECOVERY_PENDING
+        - PROVIDER_RECOVERED
+        - SOURCE_HYSTERESIS
+        - NO_USABLE_CANDIDATE
+        - POLICY_UNAVAILABLE
+
+    PredictionRejectionReason:
+      type: string
+      enum:
+        - STALE
+        - LOW_CONFIDENCE
+        - PHYSICALLY_UNREACHABLE
+        - TIMESTAMP_NOT_COMPARABLE
+        - PROGRESS_NOT_COMPARABLE
+        - PROGRESS_INCONSISTENT
+
+    PredictionCandidate:
+      type: object
+      required:
+        - source
+        - time
+        - delaySeconds
+      properties:
+        source:
+          $ref: '#/components/schemas/PredictionSource'
+        time:
+          description: Predicted Unix timestamp in seconds.
+          type: integer
+          format: int64
+        delaySeconds:
+          type: integer
+          format: int64
+        confidence:
+          type: number
+          format: double
+        referenceTime:
+          description: Candidate reference Unix timestamp in seconds.
+          type: integer
+          format: int64
+
+    PredictionDebug:
+      type: object
+      required:
+        - stopTimeIndex
+        - tripId
+        - stopSequence
+        - selectedSource
+        - selectionReason
+        - effective
+        - sourceTransition
+        - providerRecovery
+        - flap
+        - providerConsistentCycles
+      properties:
+        stopTimeIndex:
+          type: integer
+          minimum: 0
+        tripId:
+          type: string
+        stopSequence:
+          type: integer
+          minimum: 0
+        selectedSource:
+          $ref: '#/components/schemas/PredictionSource'
+        selectionReason:
+          $ref: '#/components/schemas/PredictionSelectionReason'
+        provider:
+          $ref: '#/components/schemas/PredictionCandidate'
+        gps:
+          $ref: '#/components/schemas/PredictionCandidate'
+        effective:
+          $ref: '#/components/schemas/PredictionCandidate'
+        selectedConfidence:
+          type: number
+          format: double
+        providerRejection:
+          $ref: '#/components/schemas/PredictionRejectionReason'
+        gpsRejection:
+          $ref: '#/components/schemas/PredictionRejectionReason'
+        candidateTimestampSkewSeconds:
+          type: integer
+          format: int64
+        projectionErrorMeters:
+          type: number
+          format: double
+        progressDifferenceMeters:
+          type: number
+          format: double
+        sourceTransition:
+          type: boolean
+        providerRecovery:
+          type: boolean
+        flap:
+          type: boolean
+        providerConsistentCycles:
+          type: integer
+          minimum: 0
 
     TripInfo:
       description: trip id and name
