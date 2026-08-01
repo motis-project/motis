@@ -73,6 +73,8 @@ struct vehicle_prediction_batch {
   nigiri::transport transport_{nigiri::transport::invalid()};
   std::optional<unsigned> delay_anchor_static_stop_sequence_;
   std::optional<std::int64_t> delay_anchor_seconds_;
+  std::optional<std::int64_t> candidate_reference_timestamp_seconds_;
+  std::optional<double> implied_progress_m_;
   std::vector<vehicle_stop_prediction> predictions_;
   std::vector<observed_stop_passage> observed_passages_;
   std::optional<vehicle_prediction_confidence> confidence_;
