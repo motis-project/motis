@@ -7,6 +7,7 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <set>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -194,10 +195,13 @@ std::chrono::seconds gtfsrt_payload_age(
                               static_cast<std::int64_t>(timestamp)};
 }
 
-void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
+void run_rt_update(boost::asio::io_context& ioc,
+                   config const& c,
+                   data& d,
+                   rt_update_hooks hooks) {
   boost::asio::co_spawn(
       ioc,
-      [&c, &d]() -> awaitable<void> {
+      [&c, &d, hooks = std::move(hooks)]() -> awaitable<void> {
         auto const dump_rt = fs::is_directory("dump_rt");
         if (dump_rt) {
           fmt::println("WARNING: DUMPING TO dump_rt\n");
@@ -252,6 +256,7 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
         auto const mixed_incremental_sources =
             rebuild_gtfsrt_from_materialized_snapshots && has_auser_endpoint;
         auto auser_rtt = std::unique_ptr<n::rt_timetable>{};
+        auto auser_rtt_day = std::optional<date::sys_days>{};
 
         while (true) {
           // Remember when we started, so we can schedule the next update.
@@ -261,15 +266,32 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
             auto t = utl::scoped_timer{"rt update"};
 
             // Create new real-time timetable.
-            auto const today = std::chrono::time_point_cast<date::days>(
-                std::chrono::system_clock::now());
-            if (mixed_incremental_sources && !auser_rtt) {
+            auto const now = hooks.now_ ? hooks.now_()
+                                        : std::chrono::system_clock::now();
+            auto const today = std::chrono::time_point_cast<date::days>(now);
+            auto const auser_day_rollover =
+                has_auser_endpoint &&
+                (mixed_incremental_sources
+                     ? auser_rtt_day != today
+                     : d.rt_->rtt_->base_day_ != today);
+            if (auser_day_rollover) {
+              auto reset_urls = std::set<std::string_view>{};
+              for (auto const& endpoint : endpoints) {
+                if (auto const* a = std::get_if<auser_endpoint>(&endpoint);
+                    a != nullptr && reset_urls.emplace(a->ep_.url_).second) {
+                  d.auser_->at(a->ep_.url_).reset_for_resync();
+                }
+              }
+            }
+            if (mixed_incremental_sources && auser_rtt_day != today) {
               auser_rtt = std::make_unique<n::rt_timetable>(
                   n::rt::create_rt_timetable(*d.tt_, today));
+              auser_rtt_day = today;
             }
             auto rtt = std::make_unique<n::rt_timetable>(
                 c.timetable_->incremental_rt_update_ &&
-                        !rebuild_gtfsrt_from_materialized_snapshots
+                        !rebuild_gtfsrt_from_materialized_snapshots &&
+                        !auser_day_rollover
                     ? n::rt_timetable{*d.rt_->rtt_}
                     : n::rt::create_rt_timetable(*d.tt_, today));
 

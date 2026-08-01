@@ -11,6 +11,7 @@ struct auser {
         nigiri::source_idx_t,
         nigiri::rt::vdv_aus::updater::xml_format);
   std::string fetch_url(std::string_view base_url);
+  void reset_for_resync();
   nigiri::rt::vdv_aus::statistics consume_update(std::string const&,
                                                  nigiri::rt_timetable&,
                                                  bool inplace = false);

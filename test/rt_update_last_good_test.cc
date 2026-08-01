@@ -21,6 +21,8 @@
 
 #include "utl/init_from.h"
 
+#include "nigiri/rt/rt_timetable.h"
+
 #include "motis/config.h"
 #include "motis/data.h"
 #include "motis/endpoints/stop_times.h"
@@ -736,6 +738,122 @@ TEST(motis_rt_update, gtfsrt_coexistence_preserves_auser_delta_state) {
   EXPECT_EQ(static_cast<std::chrono::sys_seconds>(
                 *after_gtfsrt_expiry.stopTimes_.front().place_.departure_),
             today + 10h + 7min);
+}
+
+void test_auser_resynchronizes_on_service_day_rollover(bool const mixed) {
+  auto const test_dir = fs::absolute(std::format(
+      "test/data/rt-auser-day-rollover-{}", mixed ? "mixed" : "auser-only"));
+  auto ec = std::error_code{};
+  fs::remove_all(test_dir, ec);
+  fs::create_directories(test_dir);
+  auto cwd = cwd_guard{test_dir};
+  auto const today =
+      std::chrono::floor<date::days>(std::chrono::system_clock::now());
+  auto const tomorrow = today + date::days{1};
+  auto const service_date = date::format("%Y%m%d", today);
+  auto const tomorrow_service_date = date::format("%Y%m%d", tomorrow);
+  auto const service_day = date::format("%F", today);
+  auto gtfs = std::vformat(kGtfs, std::make_format_args(service_date));
+  gtfs.erase(gtfs.find("# calendar_dates.txt"));
+  gtfs.append(std::format(
+      R"(# calendar.txt
+service_id,monday,tuesday,wednesday,thursday,friday,saturday,sunday,start_date,end_date
+service-1,1,1,1,1,1,1,1,{},{}
+)",
+      service_date, tomorrow_service_date));
+  auto c = config{
+      .timetable_ = {config::timetable{
+          .first_day_ = service_day,
+          .num_days_ = 3,
+          .update_interval_ = 1,
+          .incremental_rt_update_ = true,
+          .canned_rt_ = true,
+          .datasets_ = {
+              {"test",
+               {.path_ = gtfs,
+                .rt_ = {{{.url_ = "https://example.test/auser",
+                          .protocol_ =
+                              config::timetable::dataset::rt::protocol::auser},
+                         {.url_ = "https://example.test/trip_updates",
+                          .last_good_ttl_ = 30U}}}}}}}}};
+  if (!mixed) {
+    c.timetable_->datasets_.at("test").rt_->pop_back();
+  }
+  import(c, "data");
+  auto d = data{"data", c};
+  fs::create_directory("dump_rt");
+
+  auto const make_auser = [](date::sys_days const day, int const cursor) {
+    auto const service_day = date::format("%F", day);
+    return std::format(
+        R"(<?xml version="1.0" encoding="UTF-8"?>
+<DatenAbrufenAntwort>
+  <AUSNachricht AboID="1" auser_id="{}">
+    <IstFahrt Zst="{}T10:00:00">
+      <LinienID>route-1</LinienID>
+      <FahrtRef><FahrtID><FahrtBezeichner>trip-1</FahrtBezeichner><Betriebstag>{}</Betriebstag></FahrtID></FahrtRef>
+      <Komplettfahrt>true</Komplettfahrt><BetreiberID>test</BetreiberID>
+      <IstHalt><HaltID>stop-1</HaltID><Abfahrtszeit>{}T10:00:00</Abfahrtszeit><IstAbfahrtPrognose>{}T10:07:00</IstAbfahrtPrognose></IstHalt>
+      <IstHalt><HaltID>stop-2</HaltID><Ankunftszeit>{}T10:05:00</Ankunftszeit><IstAnkunftPrognose>{}T10:12:00</IstAnkunftPrognose></IstHalt>
+      <Zusatzfahrt>false</Zusatzfahrt><FaelltAus>false</FaelltAus>
+    </IstFahrt>
+  </AUSNachricht>
+</DatenAbrufenAntwort>)",
+        cursor, service_day, service_day, service_day, service_day, service_day,
+        service_day);
+  };
+  auto empty_gtfsrt = transit_realtime::FeedMessage{};
+  empty_gtfsrt.mutable_header()->set_gtfs_realtime_version("2.0");
+  empty_gtfsrt.mutable_header()->set_incrementality(
+      transit_realtime::FeedHeader_Incrementality_FULL_DATASET);
+  write_dump("auser", make_auser(today, 1));
+  if (mixed) {
+    write_dump("trip_updates", empty_gtfsrt.SerializeAsString());
+  }
+
+  auto current_time = std::chrono::system_clock::time_point{today + 12h};
+  auto ioc = boost::asio::io_context{};
+  run_rt_update(ioc, c, d,
+                {.now_ = [&current_time] { return current_time; }});
+  ioc.run_for(100ms);
+  EXPECT_EQ(d.rt_->rtt_->base_day_, today);
+  EXPECT_EQ(d.auser_->at("https://example.test/auser").update_state_, 1);
+
+  ASSERT_TRUE(fs::remove("dump_rt/test-https___example_test_auser"));
+  current_time = std::chrono::system_clock::time_point{tomorrow + 12h};
+  ioc.restart();
+  ioc.run_for(1100ms);
+  EXPECT_EQ(d.rt_->rtt_->base_day_, tomorrow);
+  EXPECT_EQ(d.auser_->at("https://example.test/auser").update_state_, 0);
+  auto const after_failed_rollover =
+      utl::init_from<ep::stop_times>(d).value()(
+          std::format("/api/v5/stoptimes?stopId=test_stop-1"
+                      "&time={}T09:00:00Z&n=1",
+                      date::format("%F", tomorrow)));
+  EXPECT_TRUE(after_failed_rollover.stopTimes_.empty() ||
+              !after_failed_rollover.stopTimes_.front().realTime_);
+
+  write_dump("auser", make_auser(tomorrow, 2));
+  ioc.restart();
+  ioc.run_for(1100ms);
+  EXPECT_EQ(d.auser_->at("https://example.test/auser").update_state_, 2);
+  auto const after_rollover = utl::init_from<ep::stop_times>(d).value()(
+      std::format("/api/v5/stoptimes?stopId=test_stop-1"
+                  "&time={}T09:00:00Z&n=1",
+                  date::format("%F", tomorrow)));
+  ASSERT_EQ(after_rollover.stopTimes_.size(), 1U);
+  EXPECT_TRUE(after_rollover.stopTimes_.front().realTime_);
+  EXPECT_EQ(static_cast<std::chrono::sys_seconds>(
+                *after_rollover.stopTimes_.front().place_.departure_),
+            tomorrow + 10h + 7min);
+}
+
+TEST(motis_rt_update, mixed_auser_resynchronizes_on_service_day_rollover) {
+  test_auser_resynchronizes_on_service_day_rollover(true);
+}
+
+TEST(motis_rt_update, auser_only_resynchronizes_on_service_day_rollover) {
+  test_auser_resynchronizes_on_service_day_rollover(false);
 }
 
 }  // namespace

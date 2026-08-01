@@ -23,6 +23,11 @@ std::string auser::fetch_url(std::string_view base_url) {
              : std::string{base_url};
 }
 
+void auser::reset_for_resync() {
+  update_state_ = 0;
+  upd_.reset_vdv_run_ids_();
+}
+
 n::rt::vdv_aus::statistics auser::consume_update(
     std::string const& auser_update, n::rt_timetable& rtt, bool const inplace) {
   auto vdvaus = pugi::xml_document{};
