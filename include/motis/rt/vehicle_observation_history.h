@@ -126,6 +126,7 @@ private:
 
   struct validated_batch {
     std::vector<ingest_disposition> dispositions_;
+    std::vector<bool> establishes_current_;
     std::vector<batch_locator> locators_;
   };
 
@@ -144,6 +145,7 @@ private:
   validated_batch validate_batch(std::string_view,
                                  std::span<vehicle_observation const>,
                                  locator_evidence) const;
+  bool establishes_current(vehicle_observation const&) const;
   void ingest_feed(std::string_view, std::span<vehicle_observation const>);
   bool is_strictly_newer_than_history(vehicle_key const&,
                                       vehicle_observation const&) const;

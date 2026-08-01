@@ -377,6 +377,43 @@ TEST(vehicle_observation_history,
 }
 
 TEST(vehicle_observation_history,
+     history_only_alternate_does_not_authorize_entity_reuse) {
+  for (auto const differential : {false, true}) {
+    for (auto const reverse : {false, true}) {
+      SCOPED_TRACE(differential);
+      SCOPED_TRACE(reverse);
+      auto history = vehicle_observation_history{};
+      auto const current = std::array{observation(200, 200, "e1", "V")};
+      history.replace_feed("feed", current, 200, kPolicy);
+
+      auto replacement = std::array{observation(210, 150, "e2", "V"),
+                                    observation(210, 210, "e1", "W")};
+      if (reverse) {
+        std::swap(replacement[0], replacement[1]);
+      }
+      if (differential) {
+        history.update_feed("feed", replacement, {}, 210, kPolicy);
+      } else {
+        history.replace_feed("feed", replacement, 210, kPolicy);
+      }
+
+      EXPECT_EQ(history.current_observation(descriptor_key("V")), nullptr);
+      EXPECT_TRUE(history.observations(descriptor_key("V")).empty());
+      ASSERT_NE(history.current_observation(descriptor_key("W")), nullptr);
+      EXPECT_EQ(history.current_observation(descriptor_key("W"))->entity_id_,
+                "e1");
+
+      auto const stale_entity = std::array<std::string, 1>{"e2"};
+      history.update_feed("feed", {}, stale_entity, 220, kPolicy);
+      ASSERT_NE(history.current_observation(descriptor_key("W")), nullptr);
+      auto const current_entity = std::array<std::string, 1>{"e1"};
+      history.update_feed("feed", {}, current_entity, 230, kPolicy);
+      EXPECT_EQ(history.current_observation(descriptor_key("W")), nullptr);
+    }
+  }
+}
+
+TEST(vehicle_observation_history,
      differential_rejects_stale_alternate_evidence_in_both_orders) {
   for (auto const reverse : {false, true}) {
     SCOPED_TRACE(reverse);
