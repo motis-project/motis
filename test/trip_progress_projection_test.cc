@@ -61,6 +61,39 @@ straight-shape,50.0000,8.0150,4
 straight-shape,50.0000,8.0200,5
 )";
 
+constexpr auto const kTwoStopGtfs = R"(
+# agency.txt
+agency_id,agency_name,agency_url,agency_timezone
+Test,Test,https://example.com,Europe/Berlin
+
+# stops.txt
+stop_id,stop_name,stop_lat,stop_lon
+A,A,50.0000,8.0000
+B,B,50.0000,8.0100
+
+# routes.txt
+route_id,agency_id,route_short_name,route_type
+route,Test,1,3
+
+# trips.txt
+route_id,service_id,trip_id,shape_id
+route,S1,two-stop,two-stop-shape
+
+# stop_times.txt
+trip_id,arrival_time,departure_time,stop_id,stop_sequence
+two-stop,01:00:00,01:00:00,A,10
+two-stop,01:05:00,01:05:00,B,20
+
+# calendar_dates.txt
+service_id,date,exception_type
+S1,20260521,1
+
+# shapes.txt
+shape_id,shape_pt_lat,shape_pt_lon,shape_pt_sequence
+two-stop-shape,50.0000,8.0000,1
+two-stop-shape,50.0000,8.0100,2
+)";
+
 constexpr auto const kRepeatedShapeGtfs = R"(
 # agency.txt
 agency_id,agency_name,agency_url,agency_timezone
@@ -227,17 +260,20 @@ struct projection_fixture {
     return n::rt::frun{*data_->tt_, nullptr, run};
   }
 
-  std::unique_ptr<n::shapes_storage> colocated_shapes(
-      n::rt::frun const& run) const {
+  std::unique_ptr<n::shapes_storage> shapes_with_offsets(
+      n::rt::frun const& run, std::vector<unsigned> const& offsets) const {
     auto shapes = std::make_unique<n::shapes_storage>(
         path_ / "colocated-shapes", cista::mmap::protection::WRITE);
     auto const source = data_->shapes_->get_shape(run.trip_idx());
     EXPECT_GE(source.size(), 2U);
     shapes->data_.emplace_back(
         std::vector<geo::latlng>{begin(source), end(source)});
-    auto const offset_idx = shapes->add_offsets(
-        {n::shape_offset_t{0U}, n::shape_offset_t{0U},
-         n::shape_offset_t{static_cast<unsigned>(source.size() - 1U)}});
+    auto shape_offsets = std::vector<n::shape_offset_t>{};
+    shape_offsets.reserve(offsets.size());
+    for (auto const offset : offsets) {
+      shape_offsets.emplace_back(offset);
+    }
+    auto const offset_idx = shapes->add_offsets(shape_offsets);
     while (shapes->trip_offset_indices_.size() <
            cista::to_idx(run.trip_idx())) {
       shapes->add_trip_shape_offsets(
@@ -374,7 +410,7 @@ TEST(trip_progress_projection,
      fails_closed_instead_of_skipping_an_unconstrained_colocated_stop) {
   auto fixture = projection_fixture{kStraightGtfs};
   auto const run = fixture.run("straight");
-  auto const shapes = fixture.colocated_shapes(run);
+  auto const shapes = fixture.shapes_with_offsets(run, {0U, 0U, 4U});
   auto projector = trip_progress_projector{*shapes};
 
   auto const result = projector.project(run, geo::latlng{50.0, 8.0});
@@ -387,7 +423,7 @@ TEST(trip_progress_projection,
      constraint_preserves_colocated_stop_sequence_metadata) {
   auto fixture = projection_fixture{kStraightGtfs};
   auto const run = fixture.run("straight");
-  auto const shapes = fixture.colocated_shapes(run);
+  auto const shapes = fixture.shapes_with_offsets(run, {0U, 0U, 4U});
   auto projector = trip_progress_projector{*shapes};
   auto const constraint = vehicle_position_progress_constraint{
       .current_static_stop_sequence_ = 20U,
@@ -401,6 +437,72 @@ TEST(trip_progress_projection,
   EXPECT_EQ(result.progress_->next_static_stop_sequence_, 20U);
   EXPECT_DOUBLE_EQ(result.progress_->distance_along_shape_m_, 0.0);
   EXPECT_DOUBLE_EQ(result.progress_->distance_to_next_stop_m_, 0.0);
+}
+
+TEST(trip_progress_projection,
+     constraint_projects_an_all_colocated_two_stop_run) {
+  auto fixture = projection_fixture{kTwoStopGtfs};
+  auto const run = fixture.run("two-stop");
+  auto const shapes = fixture.shapes_with_offsets(run, {0U, 0U});
+  auto projector = trip_progress_projector{*shapes};
+  auto const constraint = vehicle_position_progress_constraint{
+      .current_static_stop_sequence_ = 20U,
+      .status_ = vehicle_position_stop_status::kInTransitTo};
+
+  auto const result =
+      projector.project(run, geo::latlng{50.0, 8.0}, std::nullopt, constraint);
+
+  ASSERT_EQ(result.status_, trip_progress_projection_status::kProjected);
+  ASSERT_TRUE(result.progress_.has_value());
+  EXPECT_EQ(result.progress_->next_static_stop_sequence_, 20U);
+  EXPECT_DOUBLE_EQ(result.progress_->distance_along_shape_m_, 0.0);
+  EXPECT_DOUBLE_EQ(result.progress_->distance_to_next_stop_m_, 0.0);
+}
+
+TEST(trip_progress_projection,
+     unconstrained_all_colocated_two_stop_run_fails_closed) {
+  auto fixture = projection_fixture{kTwoStopGtfs};
+  auto const run = fixture.run("two-stop");
+  auto const shapes = fixture.shapes_with_offsets(run, {0U, 0U});
+  auto projector = trip_progress_projector{*shapes};
+
+  auto const result = projector.project(run, geo::latlng{50.0, 8.0});
+
+  EXPECT_EQ(result.status_, trip_progress_projection_status::kAmbiguous);
+  EXPECT_FALSE(result.progress_.has_value());
+}
+
+TEST(trip_progress_projection,
+     constraint_projects_a_sliced_run_with_equal_endpoint_offsets) {
+  auto fixture = projection_fixture{kStraightGtfs};
+  auto run = fixture.run("straight");
+  auto const shapes = fixture.shapes_with_offsets(run, {0U, 4U, 4U});
+  ++run.stop_range_.from_;
+  auto projector = trip_progress_projector{*shapes};
+  auto const constraint = vehicle_position_progress_constraint{
+      .current_static_stop_sequence_ = 30U,
+      .status_ = vehicle_position_stop_status::kInTransitTo};
+
+  auto const result =
+      projector.project(run, geo::latlng{50.0, 8.02}, std::nullopt, constraint);
+
+  ASSERT_EQ(result.status_, trip_progress_projection_status::kProjected);
+  ASSERT_TRUE(result.progress_.has_value());
+  EXPECT_EQ(result.progress_->next_static_stop_sequence_, 30U);
+  EXPECT_DOUBLE_EQ(result.progress_->distance_along_shape_m_, 0.0);
+  EXPECT_DOUBLE_EQ(result.progress_->distance_to_next_stop_m_, 0.0);
+}
+
+TEST(trip_progress_projection, rejects_decreasing_stop_shape_offsets) {
+  auto fixture = projection_fixture{kStraightGtfs};
+  auto const run = fixture.run("straight");
+  auto const shapes = fixture.shapes_with_offsets(run, {1U, 0U, 4U});
+  auto projector = trip_progress_projector{*shapes};
+
+  auto const result = projector.project(run, geo::latlng{50.0, 8.0});
+
+  EXPECT_EQ(result.status_, trip_progress_projection_status::kMissingShape);
+  EXPECT_FALSE(result.progress_.has_value());
 }
 
 TEST(trip_progress_projection, rejects_an_ambiguous_loop) {

@@ -101,13 +101,13 @@ std::optional<cached_run_shape> make_cached_shape(
       static_cast<unsigned>(offsets[static_cast<n::stop_idx_t>(local_to - 1U)]);
   auto const full_shape = shapes.get_shape(trip);
   if (first_point >= full_shape.size() || last_point >= full_shape.size() ||
-      first_point >= last_point) {
+      first_point > last_point) {
     return std::nullopt;
   }
 
   auto const shape =
       shapes.get_shape(trip, n::interval<n::stop_idx_t>{local_from, local_to});
-  if (shape.size() < 2U) {
+  if (shape.empty()) {
     return std::nullopt;
   }
 
@@ -121,8 +121,14 @@ std::optional<cached_run_shape> make_cached_shape(
         geo::distance(cached.points_[i - 1U], cached.points_[i]));
   }
 
+  auto previous_point = first_point;
   for (auto stop = local_from; stop != local_to; ++stop) {
-    auto const point = static_cast<unsigned>(offsets[stop]) - first_point;
+    auto const absolute_point = static_cast<unsigned>(offsets[stop]);
+    if (absolute_point < previous_point) {
+      return std::nullopt;
+    }
+    previous_point = absolute_point;
+    auto const point = absolute_point - first_point;
     if (point >= cached.point_distances_.size()) {
       return std::nullopt;
     }
@@ -347,6 +353,10 @@ trip_progress_projection trip_progress_projector::project(
   auto const selection = select_candidate(std::move(candidates), prior);
   if (!selection.candidate_.has_value()) {
     return {.status_ = selection.status_};
+  }
+  if (!vp_constraint.has_value() &&
+      shape->stop_point_indices_.front() == shape->stop_point_indices_.back()) {
+    return {.status_ = trip_progress_projection_status::kAmbiguous};
   }
   auto const& candidate = *selection.candidate_;
   auto monotonicity = trip_progress_monotonicity::kNoPrior;
