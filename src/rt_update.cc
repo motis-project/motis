@@ -96,7 +96,6 @@ struct gtfs_rt_endpoint {
   config::timetable::dataset::rt ep_;
   n::source_idx_t src_;
   std::string tag_;
-  std::string id_;
   gtfsrt_metrics metrics_;
   std::shared_ptr<last_good> last_good_{std::make_shared<last_good>()};
 };
@@ -110,8 +109,7 @@ struct auser_endpoint {
 
 enum struct gtfsrt_payload_error { empty_body, decode_error, missing_header };
 
-class gtfsrt_payload_exception : public std::runtime_error {
-public:
+struct gtfsrt_payload_exception final : std::runtime_error {
   gtfsrt_payload_exception(gtfsrt_payload_error const error,
                            char const* const message)
       : std::runtime_error{message}, error_{error} {}
@@ -230,7 +228,7 @@ void run_rt_update(boost::asio::io_context& ioc,
                     auto const endpoint_id =
                         std::to_string(gtfsrt_endpoint_idx++);
                     endpoints.push_back(gtfs_rt_endpoint{
-                        ep, src, tag, endpoint_id,
+                        ep, src, tag,
                         gtfsrt_metrics{tag, endpoint_id, metric_families}});
                     break;
                   }
