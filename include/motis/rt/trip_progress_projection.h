@@ -1,7 +1,9 @@
 #pragma once
 
+#include <cstdint>
 #include <memory>
 #include <optional>
+#include <vector>
 
 #include "geo/latlng.h"
 
@@ -56,6 +58,13 @@ struct trip_progress_projection {
   std::optional<trip_progress> progress_;
 };
 
+struct trip_progress_stop {
+  unsigned static_stop_sequence_{};
+  double distance_along_shape_m_{};
+  std::int64_t scheduled_arrival_time_{};
+  std::int64_t scheduled_departure_time_{};
+};
+
 struct trip_progress_projector {
   explicit trip_progress_projector(nigiri::shapes_storage const&);
   ~trip_progress_projector();
@@ -72,6 +81,11 @@ struct trip_progress_projector {
       std::optional<trip_progress> const& = std::nullopt,
       std::optional<vehicle_position_progress_constraint> const& =
           std::nullopt);
+
+  // Uses the same cached shape and stop-sequence conversion as project().
+  // This keeps ETA consumers independent of shapes_storage internals.
+  std::optional<std::vector<trip_progress_stop>> stop_timeline(
+      nigiri::rt::frun const&);
 
 private:
   struct impl;

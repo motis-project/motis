@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cmath>
 #include <cstdint>
 #include <exception>
 #include <filesystem>
@@ -46,6 +47,7 @@
 #include "motis/rt/trip_progress_diagnostics.h"
 #include "motis/rt/vehicle_observation_history.h"
 #include "motis/rt/vehicle_position.h"
+#include "motis/rt/vehicle_prediction_diagnostics.h"
 #include "motis/tag_lookup.h"
 
 namespace n = nigiri;
@@ -251,12 +253,25 @@ void run_rt_update(boost::asio::io_context& ioc,
             metric_families.vehicle_eta_history_update_seconds_.Add({});
         auto& progress_evaluation_seconds =
             metric_families.vehicle_eta_progress_evaluation_seconds_.Add({});
+        auto& candidate_evaluation_seconds =
+            metric_families.vehicle_eta_candidate_evaluation_seconds_.Add({});
+        auto& candidate_memory_bytes =
+            metric_families.vehicle_eta_candidate_memory_bytes_.Add({});
         auto progress_outcome_metrics =
             std::map<std::tuple<std::string, std::string, std::string>,
                      prometheus::Gauge*>{};
         auto progress_lateral_metrics =
             std::map<std::tuple<std::string, std::string, std::string>,
                      prometheus::Gauge*>{};
+        auto candidate_outcome_metrics =
+            std::map<std::tuple<std::string, std::string, std::string>,
+                     prometheus::Gauge*>{};
+        auto candidate_horizon_metrics =
+            std::map<std::tuple<std::string, std::string, std::string>,
+                     prometheus::Gauge*>{};
+        auto candidate_error_metrics = std::map<
+            std::tuple<std::string, std::string, std::string, std::string>,
+            prometheus::Gauge*>{};
 
         auto const endpoints = [&]() {
           auto endpoints =
@@ -942,6 +957,15 @@ void run_rt_update(boost::asio::io_context& ioc,
               for (auto const& [_, metric] : progress_lateral_metrics) {
                 metric->Set(0.0);
               }
+              for (auto const& [_, metric] : candidate_outcome_metrics) {
+                metric->Set(0.0);
+              }
+              for (auto const& [_, metric] : candidate_horizon_metrics) {
+                metric->Set(0.0);
+              }
+              for (auto const& [_, metric] : candidate_error_metrics) {
+                metric->Set(0.0);
+              }
               auto const progress_started = std::chrono::steady_clock::now();
               auto const diagnostics = evaluate_trip_progress_diagnostics(
                   c, *d.tags_, *d.tt_, rtt.get(), d.shapes_.get(),
@@ -1002,16 +1026,143 @@ void run_rt_update(boost::asio::io_context& ioc,
               progress_evaluation_seconds.Set(std::chrono::duration<double>{
                   std::chrono::steady_clock::now() - progress_started}
                                                   .count());
+
+              auto const candidate_started = std::chrono::steady_clock::now();
+              auto const candidates = evaluate_vehicle_prediction_candidates(
+                  c, *d.tags_, *d.tt_, rtt.get(), d.shapes_.get(),
+                  *vehicle_position_store, *vehicle_history,
+                  std::chrono::duration_cast<std::chrono::seconds>(
+                      now.time_since_epoch())
+                      .count());
+              auto candidate_memory = std::size_t{0U};
+              auto horizons = std::map<std::pair<std::string, std::string>,
+                                       std::vector<std::int64_t>>{};
+              using error_key =
+                  std::tuple<std::string, std::string, std::string>;
+              auto errors = std::map<error_key, std::vector<std::int64_t>>{};
+              for (auto const& candidate : candidates) {
+                auto const mode = candidate.mode_.has_value()
+                                      ? std::string{n::to_str(*candidate.mode_)}
+                                      : std::string{"unknown"};
+                auto const outcome =
+                    candidate.batch_.eligible()
+                        ? std::string{"eligible"}
+                        : std::string{to_str(
+                              *candidate.batch_.diagnostics_.rejection_)};
+                auto const key =
+                    std::tuple{candidate.feed_, mode, std::move(outcome)};
+                auto [it, inserted] =
+                    candidate_outcome_metrics.try_emplace(key, nullptr);
+                if (inserted) {
+                  auto const& [feed, metric_mode, metric_outcome] = key;
+                  it->second =
+                      &metric_families.vehicle_eta_candidate_outcomes_.Add(
+                          {{"feed", feed},
+                           {"mode", metric_mode},
+                           {"outcome", metric_outcome}});
+                }
+                it->second->Increment();
+                candidate_memory += candidate.batch_.estimated_memory_bytes();
+                for (auto const& prediction : candidate.batch_.predictions_) {
+                  horizons[{candidate.feed_, mode}].push_back(
+                      prediction.horizon_seconds_);
+                }
+                auto& raw = errors[{candidate.feed_, mode, "seconds"}];
+                raw.insert(end(raw),
+                           begin(candidate.provider_raw_error_seconds_),
+                           end(candidate.provider_raw_error_seconds_));
+                auto& minutes = errors[{candidate.feed_, mode, "minutes"}];
+                minutes.insert(end(minutes),
+                               begin(candidate.provider_minute_error_),
+                               end(candidate.provider_minute_error_));
+              }
+              for (auto const& [feed_mode, values] : horizons) {
+                if (values.empty()) {
+                  continue;
+                }
+                auto const sum = std::accumulate(begin(values), end(values),
+                                                 std::int64_t{0});
+                auto const maximum = *std::ranges::max_element(values);
+                for (auto const& [statistic, value] :
+                     {std::pair{"average",
+                                static_cast<double>(sum) / values.size()},
+                      std::pair{"maximum", static_cast<double>(maximum)}}) {
+                  auto const key = std::tuple{feed_mode.first, feed_mode.second,
+                                              std::string{statistic}};
+                  auto [it, inserted] =
+                      candidate_horizon_metrics.try_emplace(key, nullptr);
+                  if (inserted) {
+                    auto const& [feed, mode, stat] = key;
+                    it->second =
+                        &metric_families.vehicle_eta_candidate_horizon_seconds_
+                             .Add({{"feed", feed},
+                                   {"mode", mode},
+                                   {"statistic", stat}});
+                  }
+                  it->second->Set(value);
+                }
+              }
+              for (auto const& [base_key, values] : errors) {
+                if (values.empty()) {
+                  continue;
+                }
+                auto const signed_sum = std::accumulate(
+                    begin(values), end(values), std::int64_t{0});
+                auto const absolute_sum =
+                    std::accumulate(begin(values), end(values), std::int64_t{0},
+                                    [](auto const sum, auto const value) {
+                                      return sum + std::abs(value);
+                                    });
+                auto const& [feed, mode, unit] = base_key;
+                for (auto const& [statistic, value] :
+                     {std::pair{
+                          "signed_average",
+                          static_cast<double>(signed_sum) / values.size()},
+                      std::pair{
+                          "absolute_average",
+                          static_cast<double>(absolute_sum) / values.size()}}) {
+                  auto const key =
+                      std::tuple{feed, mode, unit, std::string{statistic}};
+                  auto [it, inserted] =
+                      candidate_error_metrics.try_emplace(key, nullptr);
+                  if (inserted) {
+                    auto const& [metric_feed, metric_mode, metric_unit, stat] =
+                        key;
+                    it->second =
+                        &metric_families.vehicle_eta_candidate_error_.Add(
+                            {{"feed", metric_feed},
+                             {"mode", metric_mode},
+                             {"unit", metric_unit},
+                             {"statistic", stat}});
+                  }
+                  it->second->Set(value);
+                }
+              }
+              candidate_memory_bytes.Set(static_cast<double>(candidate_memory));
+              candidate_evaluation_seconds.Set(std::chrono::duration<double>{
+                  std::chrono::steady_clock::now() - candidate_started}
+                                                   .count());
             } else {
               history_active_vehicles.Set(0.0);
               history_observations.Set(0.0);
               history_memory_bytes.Set(0.0);
               history_update_seconds.Set(0.0);
               progress_evaluation_seconds.Set(0.0);
+              candidate_evaluation_seconds.Set(0.0);
+              candidate_memory_bytes.Set(0.0);
               for (auto const& [_, metric] : progress_outcome_metrics) {
                 metric->Set(0.0);
               }
               for (auto const& [_, metric] : progress_lateral_metrics) {
+                metric->Set(0.0);
+              }
+              for (auto const& [_, metric] : candidate_outcome_metrics) {
+                metric->Set(0.0);
+              }
+              for (auto const& [_, metric] : candidate_horizon_metrics) {
+                metric->Set(0.0);
+              }
+              for (auto const& [_, metric] : candidate_error_metrics) {
                 metric->Set(0.0);
               }
             }

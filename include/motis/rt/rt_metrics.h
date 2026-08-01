@@ -159,6 +159,32 @@ struct rt_metric_families {
                 .Help(
                     "CPU time spent evaluating shadow trip progress this cycle")
                 .Register(registry)},
+        vehicle_eta_candidate_outcomes_{
+            prometheus::BuildGauge()
+                .Name("motis_vehicle_eta_candidate_outcomes")
+                .Help("Current shadow ETA candidate outcomes by feed and mode")
+                .Register(registry)},
+        vehicle_eta_candidate_horizon_seconds_{
+            prometheus::BuildGauge()
+                .Name("motis_vehicle_eta_candidate_horizon_seconds")
+                .Help("Current shadow ETA candidate horizon statistics")
+                .Register(registry)},
+        vehicle_eta_candidate_error_{
+            prometheus::BuildGauge()
+                .Name("motis_vehicle_eta_candidate_error")
+                .Help("Current candidate versus provider raw-second and "
+                      "rendered-minute error statistics")
+                .Register(registry)},
+        vehicle_eta_candidate_evaluation_seconds_{
+            prometheus::BuildGauge()
+                .Name("motis_vehicle_eta_candidate_evaluation_seconds")
+                .Help("CPU time spent evaluating shadow ETA candidates")
+                .Register(registry)},
+        vehicle_eta_candidate_memory_bytes_{
+            prometheus::BuildGauge()
+                .Name("motis_vehicle_eta_candidate_memory_bytes")
+                .Help("Estimated transient bytes used by shadow ETA results")
+                .Register(registry)},
         vdvaus_updates_requested_{prometheus::BuildCounter()
                                       .Name("nigiri_vdvaus_updates_requested_"
                                             "total")
@@ -344,6 +370,12 @@ struct rt_metric_families {
       vehicle_eta_progress_lateral_error_meters_;
   prometheus::Family<prometheus::Gauge>&
       vehicle_eta_progress_evaluation_seconds_;
+  prometheus::Family<prometheus::Gauge>& vehicle_eta_candidate_outcomes_;
+  prometheus::Family<prometheus::Gauge>& vehicle_eta_candidate_horizon_seconds_;
+  prometheus::Family<prometheus::Gauge>& vehicle_eta_candidate_error_;
+  prometheus::Family<prometheus::Gauge>&
+      vehicle_eta_candidate_evaluation_seconds_;
+  prometheus::Family<prometheus::Gauge>& vehicle_eta_candidate_memory_bytes_;
 
   prometheus::Family<prometheus::Counter>& vdvaus_updates_requested_;
   prometheus::Family<prometheus::Counter>& vdvaus_updates_successful_;

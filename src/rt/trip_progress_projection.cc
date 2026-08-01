@@ -18,6 +18,8 @@
 #include "nigiri/shapes_storage.h"
 #include "nigiri/timetable.h"
 
+#include "motis/timetable/time_conv.h"
+
 namespace n = nigiri;
 
 namespace motis {
@@ -389,6 +391,29 @@ trip_progress_projection trip_progress_projector::project(
                   0.0, shape->stop_distances_[candidate.next_stop_idx_] -
                            candidate.distance_along_),
               .monotonicity_ = monotonicity}};
+}
+
+std::optional<std::vector<trip_progress_stop>>
+trip_progress_projector::stop_timeline(n::rt::frun const& fr) {
+  if (!fr.is_scheduled()) {
+    return std::nullopt;
+  }
+  auto const* shape = impl_->get_shape(fr);
+  if (shape == nullptr || shape->stop_distances_.size() != fr.size() ||
+      shape->static_stop_sequences_.size() != fr.size()) {
+    return std::nullopt;
+  }
+  auto result = std::vector<trip_progress_stop>{};
+  result.reserve(fr.size());
+  for (auto i = n::stop_idx_t{0U}; i != fr.size(); ++i) {
+    result.push_back({.static_stop_sequence_ = shape->static_stop_sequences_[i],
+                      .distance_along_shape_m_ = shape->stop_distances_[i],
+                      .scheduled_arrival_time_ =
+                          to_seconds(fr[i].scheduled_time(n::event_type::kArr)),
+                      .scheduled_departure_time_ = to_seconds(
+                          fr[i].scheduled_time(n::event_type::kDep))});
+  }
+  return result;
 }
 
 }  // namespace motis
