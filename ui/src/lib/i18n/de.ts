@@ -5,6 +5,7 @@ const translations: Translations = {
 	ticketOptions: 'Fahrscheinoptionen',
 	includedInTicket: 'Im Fahrschein enthalten',
 	journeyDetails: 'Verbindungsdetails',
+	refreshItinerary: 'Verbindung aktualisieren',
 	transfers: 'Umstiege',
 	walk: 'Fußweg',
 	bike: 'Fahrrad',
@@ -24,6 +25,8 @@ const translations: Translations = {
 	hydrogenFuelCell: 'Wasserstoff-Brennstoffzelle',
 	from: 'Von',
 	to: 'Nach',
+	myLocation: 'Mein Standort',
+	reverseDirections: 'Richtung umdrehen',
 	viaStop: 'Zwischenhalt',
 	viaStops: 'Zwischenhalte',
 	addViaStop: 'Zwischenhalt hinzufügen',
@@ -57,6 +60,7 @@ const translations: Translations = {
 	},
 	sharingProvider: 'Anbieter',
 	sharingProviders: 'Anbieter',
+	none: 'Keine',
 	returnOnlyAtStations: 'Das Fahrzeug muss an einer Station zurückgegeben werden.',
 	roundtripStationReturnConstraint:
 		'Das Fahrzeug muss wieder an der Abfahrtsstation abgestellt werden.',
@@ -67,17 +71,31 @@ const translations: Translations = {
 	selectTransitModes: 'Öffentliche Verkehrsmittel auswählen',
 	defaultSelectedModes: 'Alle Verkehrsmittel',
 	defaultSelectedProviders: 'Alle Anbieter',
-	selectElevationCosts: 'Steile Steigungen vermeiden.',
+	selectElevationCosts: 'Steile Steigungen vermeiden',
+	hgvRoutingOptions: 'Lkw-Optionen',
+	vehicleHeight: 'Fahrzeughöhe (m)',
+	vehicleWidth: 'Fahrzeugbreite (m)',
+	vehicleLength: 'Fahrzeuglänge (m)',
+	vehicleWeight: 'Fahrzeuggewicht (t)',
+	vehicleTopSpeed: 'Höchstgeschwindigkeit (km/h)',
+	vehicleAxleCount: 'Anzahl Achsen',
+	vehicleAxleLoad: 'Achslast (t)',
+	vehicleHazmat: 'Gefahrgut',
+	vehicleHazmatWater: 'Wassergefährdendes Gefahrgut',
+	vehicleTrailer: 'Mit Anhänger',
+	vehicleLezAccess: 'Zufahrt zu Umweltzonen',
 	useRoutedTransfers: 'Geroutete Umstiege verwenden',
-	wheelchair: 'Barrierefreie Umstiege',
+	wheelchair: 'Nur rollstuhlgerechte Verbindungen',
 	bikeRental: 'Sharing-Fahrzeuge berücksichtigen',
 	requireBikeTransport: 'Fahrradmitnahme',
 	requireCarTransport: 'Automitnahme',
+	noCompulsoryReservation: 'Ohne Reservierungspflicht',
 	considerRentalReturnConstraints: 'Leihfahrzeuge innerhalb der Reise zurückgeben',
 	default: 'Vorgabe',
 	timetableSources: 'Fahrplandatenquellen',
 	tripCancelled: 'Fahrt entfällt',
 	stopCancelled: 'Halt entfällt',
+	addStop: 'Haltestelle hinzufügen',
 	inOutDisallowed: 'Ein-/Ausstieg nicht möglich',
 	inDisallowed: 'Einstieg nicht möglich',
 	outDisallowed: 'Ausstieg nicht möglich',
@@ -90,6 +108,7 @@ const translations: Translations = {
 	RENTAL: 'Sharing',
 	RIDE_SHARING: 'Mitfahrgelegenheit',
 	CAR: 'Auto',
+	HGV: 'Lkw',
 	CAR_DROPOFF: 'Absetzen (Auto)',
 	CAR_PARKING: 'P+R Park & Ride',
 	TRANSIT: 'ÖPV',
@@ -116,16 +135,16 @@ const translations: Translations = {
 		direct: 'Direktverbindung',
 		maxPreTransitTime: 'Max. Vorlaufzeit',
 		maxPostTransitTime: 'Max. Nachlaufzeit',
-		maxDirectTime: 'Max. Direktzeit'
+		maxDirectTime: 'Max. Direktzeit',
+		additionalTransferTime: 'Zusätzliche Umstiegszeit',
+		pedestrianSpeed: 'Fußgängergeschwindigkeit',
+		cyclingSpeed: 'Fahrradgeschwindigkeit',
+		transferTimeFactor: 'Umstiegszeitfaktor'
 	},
 	elevationCosts: { NONE: 'Keine Umwege', LOW: 'Kleine Umwege', HIGH: 'Große Umwege' },
+	isochronesOpacity: 'Deckkraft der Isochronen',
 	isochrones: {
 		title: 'Isochronen',
-		displayLevel: 'Darstellungsebene',
-		maxComputeLevel: 'Max. Berechnungsebene',
-		canvasRects: 'Rechtecke (Overlay)',
-		canvasCircles: 'Kreise (Overlay)',
-		geojsonCircles: 'Kreise (Geometrie)',
 		styling: 'Darstellung der Isochronen',
 		noData: 'Keine Daten',
 		requestFailed: 'Anfrage fehlgeschlagen'
@@ -136,7 +155,7 @@ const translations: Translations = {
 		information: 'Informationen',
 		more: 'mehr'
 	},
-	RENTAL_BICYCLE: 'Bikesharing',
+	RENTAL_BICYCLE: 'Fahrrad Sharing',
 	RENTAL_CARGO_BICYCLE: 'Lastenrad Sharing',
 	RENTAL_CAR: 'Car Sharing',
 	RENTAL_MOPED: 'Moped Sharing',
@@ -147,11 +166,15 @@ const translations: Translations = {
 	CABLE_CAR: 'Seilbahn',
 	FUNICULAR: 'Standseilbahn',
 	AERIAL_LIFT: 'Luftseilbahn',
-	toll: 'Achtung! Mautpflichtige Straße.',
+	toll: 'Achtung: Mautpflichtige Straße!',
+	bikesAllowed: 'Fahrräder erlaubt',
+	wheelchairAccessible: 'Rollstuhlgerecht',
+	compulsoryReservation: 'Reservierung erforderlich',
 	accessRestriction: 'Kein Zugang',
 	continuesAs: 'Weiter als',
 	earlierAlternatives: 'Frühere Alternativen',
 	laterAlternatives: 'Spätere Alternativen',
+	differentStops: 'Andere Haltestellen',
 	rent: 'Ausleihen',
 	copyToClipboard: 'In die Zwischenablage kopieren',
 	rideThroughAllowed: 'Durchfahrt erlaubt',
@@ -161,6 +184,16 @@ const translations: Translations = {
 	DEBUG_BUS_ROUTE: 'Busroute (Debug)',
 	DEBUG_RAILWAY_ROUTE: 'Bahnroute (Debug)',
 	DEBUG_FERRY_ROUTE: 'Fährenroute (Debug)',
+	colorMode: {
+		none: 'Keine Kartendarstellung',
+		stops: 'Haltestellen',
+		rt: 'Fahrplan: Verspätung',
+		route: 'Fahrplan: Linienfarben',
+		mode: 'Fahrplan: Verkehrsmittel'
+	},
+	resetToNorth: 'Reset to north',
+	showMyLocation: 'Meinen Standort anzeigen',
+	toggleHillshades: 'Schummerung ein/aus',
 	routes: (n: number) => {
 		switch (n) {
 			case 0:
@@ -170,7 +203,16 @@ const translations: Translations = {
 			default:
 				return `${n} Routen`;
 		}
-	}
+	},
+	pageTitle: {
+		default: 'MOTIS',
+		fromTo: (from, to) => `${from} nach ${to}`,
+		departuresAt: (stop) => `Abfahrten in ${stop}`,
+		arrivalsAt: (stop) => `Ankünfte in ${stop}`,
+		isochronesFrom: (place) => `Isochronen von ${place}`
+	},
+	tickets: 'Tickets',
+	routeInformation: 'Mehr Informationen'
 };
 
 export default translations;

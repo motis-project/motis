@@ -106,8 +106,8 @@ trip_id<std::string> tag_lookup::id_fragments(
         std::string{get_tag(src)}, std::string{id}};
   } else {
     auto const id = s.fr_->id();
-    auto const time = std::chrono::system_clock::to_time_t(
-        (*s.fr_)[0].time(n::event_type::kDep));
+    auto const time =
+        std::chrono::system_clock::to_time_t((*s.fr_)[0].time(ev_type));
     auto const utc = *std::gmtime(&time);
     auto const id_tag = get_tag(id.src_);
     auto const id_id = id.id_;
@@ -131,6 +131,13 @@ std::string tag_lookup::route_id(n::rt::run_stop s,
                                  n::event_type const ev_type) const {
   return fmt::format("{}_{}", get_tag(s.fr_->id().src_),
                      s.get_route_id(ev_type));
+}
+
+std::string tag_lookup::get_trip_id(nigiri::timetable const& tt,
+                                    nigiri::rt::run_stop s,
+                                    nigiri::event_type const ev_type) const {
+  auto const t = id_fragments(tt, s, ev_type);
+  return t.trip_id_;
 }
 
 std::pair<n::rt::run, n::trip_idx_t> tag_lookup::get_trip(

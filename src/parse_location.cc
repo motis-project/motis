@@ -7,6 +7,10 @@
 
 #include "date/date.h"
 
+#include "fmt/format.h"
+
+#include "net/bad_request_exception.h"
+
 #include "utl/parser/arg_parser.h"
 
 namespace n = nigiri;
@@ -52,11 +56,12 @@ date::sys_days parse_iso_date(std::string_view s) {
 
 std::pair<n::direction, n::unixtime_t> parse_cursor(std::string_view s) {
   auto const split_pos = s.find("|");
-  utl::verify(split_pos != std::string_view::npos && split_pos != s.size() - 1U,
-              "invalid page cursor {}, separator '|' not found", s);
+  utl::verify<net::bad_request_exception>(
+      split_pos != std::string_view::npos && split_pos != s.size() - 1U,
+      "invalid page cursor {}, separator '|' not found", s);
 
   auto const time_str = s.substr(split_pos + 1U);
-  utl::verify(
+  utl::verify<net::bad_request_exception>(
       utl::all_of(time_str, [&](auto&& c) { return std::isdigit(c) != 0U; }),
       "invalid page cursor \"{}\", timestamp not a number", s);
 
@@ -67,7 +72,9 @@ std::pair<n::direction, n::unixtime_t> parse_cursor(std::string_view s) {
   switch (cista::hash(direction)) {
     case cista::hash("EARLIER"): return {n::direction::kBackward, t};
     case cista::hash("LATER"): return {n::direction::kForward, t};
-    default: throw utl::fail("invalid cursor: \"{}\"", s);
+    default:
+      throw net::bad_request_exception{
+          fmt::format("invalid cursor: \"{}\"", s)};
   }
 }
 

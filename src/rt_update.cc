@@ -36,6 +36,9 @@
 #include "nigiri/rt/create_rt_timetable.h"
 #include "nigiri/rt/gtfsrt_update.h"
 #include "nigiri/rt/rt_timetable.h"
+#if defined(NIGIRI_CUDA)
+#include "nigiri/routing/gpu/raptor.h"
+#endif
 
 #include "motis/config.h"
 #include "motis/data.h"
@@ -114,6 +117,74 @@ struct auser_endpoint {
   std::string tag_;
   vdvaus_metrics metrics_;
 };
+
+using endpoints_t = std::vector<std::variant<gtfs_rt_endpoint, auser_endpoint>>;
+using stats_t = std::variant<n::rt::statistics, n::rt::vdv_aus::statistics>;
+
+void upload_gpu_rtt([[maybe_unused]] data const& d,
+                    [[maybe_unused]] n::rt_timetable& rtt) {
+#if defined(NIGIRI_CUDA)
+  utl::verify(d.gpu_tt_ != nullptr, "upload_gpu_rtt: gpu timetable missing");
+  try {
+    rtt.gpu_rtt_.ptr_ = n::routing::gpu::make_gpu_rtt(*d.tt_, rtt);
+    d.metrics_->gpu_rt_timetable_.Set(1);
+  } catch (std::exception const& e) {
+    n::log(n::log_lvl::error, "motis.rt", "GPU rt timetable upload failed: {}",
+           e.what());
+    rtt.gpu_rtt_.ptr_.reset();
+    d.metrics_->gpu_rt_timetable_.Set(0);
+  }
+#endif
+}
+
+endpoints_t make_endpoints(config const& c, data& d) {
+  auto endpoints = endpoints_t{};
+  auto const metric_families = rt_metric_families{d.metrics_->registry_};
+  for (auto const& [tag, dataset] : c.timetable_->datasets_) {
+    if (!dataset.rt_) {
+      continue;
+    }
+    auto const src = d.tags_->get_src(tag);
+    auto gtfsrt_endpoint_idx = 0U;
+    for (auto const& ep : *dataset.rt_) {
+      switch (ep.protocol_) {
+        case config::timetable::dataset::rt::protocol::gtfsrt:
+          endpoints.push_back(gtfs_rt_endpoint{
+              ep, src, tag,
+              gtfsrt_metrics{tag, std::to_string(gtfsrt_endpoint_idx++),
+                             metric_families}});
+          break;
+        case config::timetable::dataset::rt::protocol::siri_json:
+        case config::timetable::dataset::rt::protocol::siri: [[fallthrough]];
+        case config::timetable::dataset::rt::protocol::auser:
+          endpoints.push_back(auser_endpoint{
+              ep, src, tag, vdvaus_metrics{tag, metric_families}});
+          break;
+      }
+    }
+  }
+  return endpoints;
+}
+
+void apply_canned(data& d, endpoints_t const& endpoints, n::rt_timetable& rtt) {
+  fmt::println("WARNING: READING CANNED RT");
+  for (auto const& ep : endpoints) {
+    utl::visit(
+        ep,
+        [&](gtfs_rt_endpoint const& g) {
+          auto const body = utl::read_file(get_dump_path(g).c_str());
+          if (body) {
+            n::rt::gtfsrt_update_buf(*d.tt_, rtt, g.src_, g.tag_, *body);
+          }
+        },
+        [&](auser_endpoint const& a) {
+          auto const body = utl::read_file(get_dump_path(a).c_str());
+          if (body) {
+            d.auser_->at(a.ep_.url_).consume_update(*body, rtt);
+          }
+        });
+  }
+}
 
 std::string vehicle_feed_id(gtfs_rt_endpoint const& ep) {
   return fmt::format("{}:{}", ep.tag_, ep.ep_.hash());
@@ -346,6 +417,22 @@ build_vehicle_prediction_diagnostics(
   return vehicle_prediction_diagnostics_store::build(
       true, std::move(entries), now_seconds,
       {.max_age_seconds_ = max_age, .max_entries_ = 100'000U});
+}
+
+void apply_canned_rt_update(config const& c, data& d) {
+  auto const endpoints = make_endpoints(c, d);
+  auto const today = std::chrono::time_point_cast<date::days>(
+      std::chrono::system_clock::now());
+  auto rtt = std::make_unique<n::rt_timetable>(
+      n::rt::create_rt_timetable(*d.tt_, today));
+  apply_canned(d, endpoints, *rtt);
+  rtt->update_lbs(*d.tt_);
+  upload_gpu_rtt(d, *rtt);
+  auto railviz_rt = std::make_unique<railviz_rt_index>(*d.tt_, *rtt);
+  auto new_rt = std::make_shared<rt>(
+      std::move(rtt), std::move(d.rt_->e_), std::move(railviz_rt),
+      std::make_unique<vehicle_positions::vehicle_position_store>());
+  std::atomic_store(&d.rt_, std::move(new_rt));
 }
 
 void run_rt_update(boost::asio::io_context& ioc,
@@ -1053,6 +1140,7 @@ void run_rt_update(boost::asio::io_context& ioc,
 
             // Update lbs.
             rtt->update_lbs(*d.tt_);
+            upload_gpu_rtt(d, *rtt);
 
             auto pending_prediction_diagnostics =
                 std::unique_ptr<vehicle_prediction_diagnostics_store>{};

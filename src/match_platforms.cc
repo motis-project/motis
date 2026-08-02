@@ -40,7 +40,7 @@ void for_each_number(std::string_view x, Fn&& fn) {
 bool has_number_match(std::string_view a, std::string_view b) {
   auto match = false;
   for_each_number(a, [&](unsigned const x) {
-    for_each_number(b, [&](unsigned const y) { match = (x == y); });
+    for_each_number(b, [&](unsigned const y) { match = match || (x == y); });
   });
   return match;
 }
@@ -301,30 +301,33 @@ void way_matches_storage::preprocess_osr_matches(
       pt->update_fn());
 }
 
-std::vector<osr::match_t> get_reverse_platform_way_matches(
+osr::match_result get_reverse_platform_way_matches(
     osr::lookup const& lookup,
     way_matches_storage const* way_matches,
     osr::search_profile const p,
     std::span<nigiri::location_idx_t const> const locations,
     std::span<osr::location const> const osr_locations,
     osr::direction const dir,
-    double const max_matching_distance) {
+    double const max_matching_distance,
+    std::span<std::uint8_t const> const exact_return_allowed) {
   auto const use_raw_matches =
       way_matches && !way_matches->matches_.empty() &&
       way_matches->max_matching_distance_ >= max_matching_distance;
-  return utl::to_vec(
-      utl::zip(locations, osr_locations),
-      [&](std::tuple<n::location_idx_t, osr::location> const ll) {
-        auto const& [l, query] = ll;
-        auto raw_matches =
-            std::optional<std::span<osr::raw_way_candidate const>>{};
-        if (use_raw_matches) {
-          auto const& m = way_matches->matches_[l];
-          raw_matches = {m.begin(), m.end()};
-        }
-        return lookup.match(to_profile_parameters(p, {}), query, true, dir,
-                            max_matching_distance, nullptr, p, raw_matches);
-      });
+  auto result = osr::match_result{};
+  for (auto const [i, ll] :
+       utl::enumerate(utl::zip(locations, osr_locations))) {
+    auto const& [l, query] = ll;
+    auto raw_matches = std::optional<std::span<osr::raw_way_candidate const>>{};
+    if (use_raw_matches) {
+      auto const& m = way_matches->matches_[l];
+      raw_matches = {m.begin(), m.end()};
+    }
+    lookup.match_endpoint(
+        to_profile_parameters(p, {}), query, true, dir, max_matching_distance,
+        nullptr, p, i < exact_return_allowed.size() && exact_return_allowed[i],
+        raw_matches, result);
+  }
+  return result;
 };
 
 }  // namespace motis

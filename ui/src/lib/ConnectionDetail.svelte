@@ -1,5 +1,15 @@
 <script lang="ts">
-	import { ArrowRight, ArrowUp, ArrowDown, DollarSign, CircleX } from '@lucide/svelte';
+	import {
+		ArrowRight,
+		ArrowUp,
+		ArrowDown,
+		DollarSign,
+		CircleX,
+		TriangleAlert,
+		Bike,
+		Accessibility,
+		ExternalLink
+	} from '@lucide/svelte';
 	import type {
 		FareProduct,
 		Itinerary,
@@ -9,6 +19,7 @@
 		StepInstruction
 	} from '@motis-project/motis-client';
 	import Time from '$lib/Time.svelte';
+	import ReservationRequired from '$lib/ReservationRequired.svelte';
 	import { routeBorderColor, routeColor } from '$lib/modeStyle';
 	import { formatDurationSec, formatDistanceMeters } from '$lib/formatDuration';
 	import { Button } from '$lib/components/ui/button';
@@ -17,6 +28,7 @@
 	import { getModeName } from '$lib/getModeName';
 	import { language, t } from '$lib/i18n/translation';
 	import { onClickStop, onClickTrip } from '$lib/utils';
+	import { normalizedContains } from '$lib/normalizedContains';
 	import { formatDate, formatTime } from './toDateTime';
 	import { getModeLabel } from './map/getModeLabel';
 	import { pushState } from '$app/navigation';
@@ -27,7 +39,8 @@
 		itinerary: Itinerary;
 	} = $props();
 
-	const isRelevantLeg = (l: Leg) => l.duration !== 0 || l.displayName;
+	const isTransitLeg = (l: Leg) => !!l.displayName;
+	const isRelevantLeg = (l: Leg) => l.duration !== 0 || isTransitLeg(l);
 
 	let legs = $derived<Leg[]>(itinerary.legs);
 
@@ -53,44 +66,48 @@
 		if (idx < 0) {
 			return;
 		}
-		const altTransitIdx = alt.findIndex((al) => al.displayName);
+		const altTransitIdx = alt.findIndex(isTransitLeg);
 		if (altTransitIdx < 0) {
 			return;
 		}
-		const altIngress = altTransitIdx > 0 ? alt[altTransitIdx - 1] : undefined;
-		const altEgress = altTransitIdx < alt.length - 1 ? alt[altTransitIdx + 1] : undefined;
-		const replaceIngress = altIngress !== undefined && idx > 0 && !legs[idx - 1].displayName;
-		const replaceEgress =
-			altEgress !== undefined && idx < legs.length - 1 && !legs[idx + 1].displayName;
-		const start = replaceIngress ? idx - 1 : idx;
-		const len = (replaceIngress ? 1 : 0) + 1 + (replaceEgress ? 1 : 0);
 
-		// Make currently displyed connection an alternative
+		// At journey boundaries (no prev/next transit), replace all non-transit
+		// legs on that side so sharing/on-demand chains like WALK-RENTAL-WALK
+		// get fully swapped. Elsewhere, replace at most the single walk transfer.
+		const hasPrevTransit = legs.slice(0, idx).some(isTransitLeg);
+		const hasNextTransit = legs.slice(idx + 1).some(isTransitLeg);
+		const ingressStart = hasPrevTransit ? idx - 1 : 0;
+		const egressEnd = hasNextTransit ? idx + 2 : legs.length;
+
+		const currentIngress = legs.slice(ingressStart, idx);
+		const currentEgress = legs.slice(idx + 1, egressEnd);
+		const altIngress = alt.slice(0, altTransitIdx);
+		const altEgress = alt.slice(altTransitIdx + 1);
+
+		// Make currently displayed connection an alternative
 		// so the user can switch back.
 		const oldEntry: Leg[] = [
-			...(replaceIngress ? [legs[idx - 1]] : []),
+			...currentIngress,
 			{ ...target, alternatives: undefined },
-			...(replaceEgress ? [legs[idx + 1]] : [])
+			...currentEgress
 		];
 
 		// Drop picked alternative.
-		const transitStart = (entry: Leg[]) => entry.find((l) => l.displayName)?.startTime ?? '';
+		const transitStart = (entry: Leg[]) => entry.find(isTransitLeg)?.startTime ?? '';
 		const remainingAlts = (target.alternatives ?? []).filter((a) => a !== alt);
 		const newAlternatives = [...remainingAlts, oldEntry].sort((a, b) =>
-			transitStart(a).localeCompare(transitStart(b))
+			!hasPrevTransit && hasNextTransit
+				? transitStart(b).localeCompare(transitStart(a))
+				: transitStart(a).localeCompare(transitStart(b))
 		);
 
 		const newTransit: Leg = {
 			...alt[altTransitIdx],
 			alternatives: newAlternatives
 		};
-		const newLegs: Leg[] = [
-			...(replaceIngress ? [altIngress!] : []),
-			newTransit,
-			...(replaceEgress ? [altEgress!] : [])
-		];
+		const newLegs: Leg[] = [...altIngress, newTransit, ...altEgress];
 		const updated = [...legs];
-		updated.splice(start, len, ...newLegs);
+		updated.splice(ingressStart, egressEnd - ingressStart, ...newLegs);
 		pushState('', {
 			...page.state,
 			selectedItinerary: { ...itinerary, legs: updated }
@@ -150,7 +167,13 @@
 						{/if}
 					</div>
 					{#if p.track && !hidePlatform}
-						<span class="text-nowrap px-2 border rounded-xl ml-1 mr-4">
+						{@const fullName =
+							(getModeLabel(mode) == 'Track' ? t.track : t.platform) + ' ' + p.track}
+						<span
+							class="text-nowrap px-2 border rounded-xl ml-1 mr-4"
+							title={fullName}
+							aria-label={fullName}
+						>
 							{getModeLabel(mode) == 'Track' ? t.trackAbr : t.platformAbr}
 							{p.track}
 						</span>
@@ -322,10 +345,10 @@
 		{@const pred = i == 0 ? undefined : legs[i - 1]}
 		{@const next = isLast ? undefined : legs[i + 1]}
 		{@const prevTransitLeg = legs.slice(0, i).find((l) => l.tripId)}
-		{#if l.displayName}
+		{#if isTransitLeg(l)}
 			<div class="w-full flex justify-between items-center space-x-1">
 				<Route {onClickTrip} {l} />
-				{#if pred && (pred.from.track || isRelevantLeg(pred)) && (i != 1 || pred.displayName)}
+				{#if pred && (pred.from.track || isRelevantLeg(pred)) && (i != 1 || isTransitLeg(pred))}
 					<div class="border-t h-0 grow shrink"></div>
 					<div class="text-sm text-muted-foreground leading-none px-2 text-center">
 						{#if pred.duration}
@@ -379,7 +402,7 @@
 									)}
 							>
 								{l.headsign}
-								{#if !l.headsign || !l.tripTo.name.startsWith(l.headsign)}
+								{#if !l.headsign || !normalizedContains(l.headsign, l.tripTo.name)}
 									<br />({l.tripTo.name})
 								{/if}
 							</Button>
@@ -392,15 +415,17 @@
 				<Alerts alerts={l.alerts} tz={l.from.tz || l.to.tz} variant="full" />
 
 				{#if l.alternatives && l.alternatives.length > 0}
-					{@const hasPrevTransit = legs.slice(0, i).some((x) => x.displayName)}
-					{@const hasNextTransit = legs.slice(i + 1).some((x) => x.displayName)}
+					{@const hasPrevTransit = legs.slice(0, i).some(isTransitLeg)}
+					{@const hasNextTransit = legs.slice(i + 1).some(isTransitLeg)}
 					<div class="mt-3 mb-1 pl-2 text-xs text-muted-foreground">
 						{!hasPrevTransit && hasNextTransit ? t.earlierAlternatives : t.laterAlternatives}
 					</div>
 					<div class="mb-3 flex gap-2 overflow-hidden">
 						{#each l.alternatives.slice(0, 3) as alt, ai (ai)}
-							{@const transit = alt.find((al) => al.displayName)!}
+							{@const transit = alt.find(isTransitLeg)!}
 							{@const startOffset = dayOffset(transit.startTime, l.startTime, transit.from.tz)}
+							{@const fromDiffers = transit.from.name !== l.from.name}
+							{@const toDiffers = transit.to.name !== l.to.name}
 							<button
 								type="button"
 								class="flex-none flex flex-col gap-1 rounded-lg border border-border bg-muted hover:brightness-95 dark:hover:brightness-125 transition p-2 min-w-fit text-left cursor-pointer"
@@ -414,22 +439,76 @@
 									–
 									{formatTime(new Date(transit.endTime!), transit.to.tz)}
 								</div>
+								{#if fromDiffers || toDiffers}
+									<div
+										class="flex items-center justify-center gap-1 text-xs text-orange-500"
+										title="{t.differentStops}: {transit.from.name} → {transit.to.name}"
+									>
+										<TriangleAlert class="size-4" />
+										<span>{t.differentStops}</span>
+									</div>
+								{/if}
 								<Route {onClickTrip} l={transit} compact class="pointer-events-none" />
 							</button>
 						{/each}
 					</div>
 				{/if}
 
-				{#if l.routeUrl}
+				<div class="m-4">
+					{#if l.reservation == 'COMPULSORY'}
+						<div title={t.compulsoryReservation} class="inline">
+							<ReservationRequired aria-label={t.compulsoryReservation} class="inline" />
+						</div>
+					{/if}
+
+					{#if l.bikesAllowed}
+						<div title={t.bikesAllowed} class="inline">
+							<Bike aria-label={t.bikesAllowed} class="inline" />
+						</div>
+					{/if}
+
+					{#if l.wheelchairAccessible == 'ACCESSIBLE'}
+						<div title={t.wheelchairAccessible} class="inline">
+							<Accessibility aria-label={t.wheelchairAccessible} class="inline" />
+						</div>
+					{/if}
+				</div>
+
+				{#if l.routeUrl || (l.ticketUrls && l.ticketUrls.web) || (l.agencyUrl && l.agencyName)}
 					<div class="mt-2 mr-4">
-						<Button
-							variant="secondary"
-							href={l.routeUrl}
-							target="_blank"
-							class="overflow-hidden text-ellipsis whitespace-nowrap w-full px-4 inline-block underline"
-						>
-							{l.routeUrl}
-						</Button>
+						{#if l.routeUrl}
+							<Button
+								variant="secondary"
+								href={l.routeUrl}
+								target="_blank"
+								class="overflow-hidden text-ellipsis whitespace-nowrap px-4 inline-block"
+							>
+								<ExternalLink class="inline" />
+								{t.routeInformation}
+							</Button>
+						{/if}
+						{#if (l.ticketUrls && l.ticketUrls.web) || l.agencyFareUrl}
+							<Button
+								variant="secondary"
+								href={(l.ticketUrls && l.ticketUrls.web) || l.agencyFareUrl}
+								target="_blank"
+								class="overflow-hidden text-ellipsis whitespace-nowrap px-4 inline-block"
+							>
+								<ExternalLink class="inline" />
+								{t.tickets}
+							</Button>
+						{/if}
+						{#if l.agencyUrl && l.agencyName}
+							<Button
+								variant="secondary"
+								href={l.agencyUrl}
+								target="_blank"
+								class="overflow-hidden text-ellipsis whitespace-nowrap px-4 inline-block"
+							>
+								<ExternalLink class="inline" />
+								{l.agencyName}
+							</Button>
+						{/if}
 					</div>
 				{/if}
 
@@ -494,7 +573,7 @@
 					<div class="pb-2"></div>
 				{/if}
 			</div>
-		{:else if !(isLast && !isRelevantLeg(l)) && ((i == 0 && isRelevantLeg(l)) || !next || !next.displayName || l.mode != 'WALK' || (pred && (pred.mode == 'BIKE' || (l.mode == 'WALK' && pred.mode == 'CAR') || pred.mode == 'RENTAL')))}
+		{:else if !(isLast && !isRelevantLeg(l)) && ((i == 0 && isRelevantLeg(l)) || !next || !isTransitLeg(next) || l.mode != 'WALK' || (pred && (pred.mode == 'BIKE' || (l.mode == 'WALK' && pred.mode == 'CAR') || pred.mode == 'RENTAL')))}
 			<Route {onClickTrip} {l} />
 			<div class="pt-2 pb-2 pl-4 sm:pl-6 border-l-4 left-4 relative" style={routeBorderColor(l)}>
 				{@render stopTimes(l.startTime, l.scheduledStartTime, l.realTime, l.from, l.mode, -1, true)}

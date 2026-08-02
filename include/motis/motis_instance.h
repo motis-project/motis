@@ -24,6 +24,7 @@
 #include "motis/endpoints/map/trips.h"
 #include "motis/endpoints/map/vehicles.h"
 #include "motis/endpoints/matches.h"
+#include "motis/endpoints/mcp.h"
 #include "motis/endpoints/metrics.h"
 #include "motis/endpoints/ojp.h"
 #include "motis/endpoints/one_to_all.h"
@@ -31,7 +32,9 @@
 #include "motis/endpoints/one_to_many_post.h"
 #include "motis/endpoints/osr_routing.h"
 #include "motis/endpoints/platforms.h"
+#include "motis/endpoints/refresh_itinerary.h"
 #include "motis/endpoints/routing.h"
+#include "motis/endpoints/stop.h"
 #include "motis/endpoints/stop_times.h"
 #include "motis/endpoints/tiles.h"
 #include "motis/endpoints/transfers.h"
@@ -106,30 +109,39 @@ struct motis_instance {
     GET<ep::routing>("/api/v3/plan", d);
     GET<ep::routing>("/api/v4/plan", d);
     GET<ep::routing>("/api/v5/plan", d);
+    GET<ep::routing>("/api/v6/plan", d);
     GET<ep::stop_times>("/api/v1/stoptimes", d);
     GET<ep::stop_times>("/api/v4/stoptimes", d);
     GET<ep::stop_times>("/api/v5/stoptimes", d);
+    GET<ep::stop_times>("/api/v6/stoptimes", d);
+    GET<ep::stop>("/api/v6/stop", d);
     GET<ep::trip>("/api/v1/trip", d);
     GET<ep::trip>("/api/v2/trip", d);
     GET<ep::trip>("/api/v4/trip", d);
     GET<ep::trip>("/api/v5/trip", d);
+    GET<ep::trip>("/api/v6/trip", d);
     GET<ep::trips>("/api/v1/map/trips", d);
     GET<ep::trips>("/api/v4/map/trips", d);
     GET<ep::trips>("/api/v5/map/trips", d);
     GET<ep::vehicles>("/api/v1/map/vehicles", d);
+    GET<ep::trips>("/api/v6/map/trips", d);
     GET<ep::stops>("/api/v1/map/stops", d);
+    GET<ep::stops>("/api/v6/map/stops", d);
     GET<ep::route_details>("/api/experimental/map/route-details", d);
     GET<ep::routes>("/api/experimental/map/routes", d);
     GET<ep::rental>("/api/v1/map/rentals", d);
     GET<ep::rental>("/api/v1/rentals", d);
     GET<ep::one_to_all>("/api/experimental/one-to-all", d);
     GET<ep::one_to_all>("/api/v1/one-to-all", d);
+    GET<ep::one_to_all>("/api/v6/one-to-all", d);
     GET<ep::one_to_many>("/api/v1/one-to-many", d);
+    GET<ep::refresh_itinerary>("/api/v6/refresh-itinerary", d);
     GET<ep::one_to_many_intermodal>("/api/experimental/one-to-many-intermodal",
                                     d);
     POST<ep::one_to_many_intermodal_post>(
         "/api/experimental/one-to-many-intermodal", d);
     POST<ep::one_to_many_post>("/api/v1/one-to-many", d);
+    POST<ep::refresh_itinerary_post>("/api/v6/refresh-itinerary", d);
 
     if (!c.requires_rt_timetable_updates()) {
       // Elevator updates are not compatible with RT-updates.
@@ -158,6 +170,12 @@ struct motis_instance {
                   .stop_times_ep_ = utl::init_from<ep::stop_times>(d),
                   .trip_ep_ = utl::init_from<ep::trip>(d),
               });
+
+    auto mcp = ep::mcp{.routing_ep_ = utl::init_from<ep::routing>(d),
+                       .geocoding_ep_ = utl::init_from<ep::geocode>(d),
+                       .motis_version_ = std::string{motis_version}};
+    qr_.route("GET", "/api/mcp", mcp);  // answered with 405 (no SSE stream)
+    qr_.route("POST", "/api/mcp", std::move(mcp));
 
     qr_.route("GET", "/metrics",
               ep::metrics{d.tt_.get(), d.tags_.get(), d.rt_, d.metrics_.get()});

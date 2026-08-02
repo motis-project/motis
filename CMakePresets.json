@@ -92,7 +92,8 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
         "CMAKE_EXE_LINKER_FLAGS": "-B/opt/mold",
-        "CTX_VALGRIND": "ON"
+        "CTX_VALGRIND": "ON",
+        "BOOST_VALGRIND": "ON"
       },
       "environment": {
         "PATH": "/opt:/opt/cmake-3.26.3-linux-x86_64/bin:/opt/buildcache/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
@@ -113,6 +114,57 @@
         "PATH": "/opt:/opt/cmake-3.26.3-linux-x86_64/bin:/opt/buildcache/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
         "CXX": "/usr/bin/g++-13",
         "CC": "/usr/bin/gcc-13"
+      }
+    },
+    {
+      "name": "cuda",
+      "displayName": "Linux CUDA RelWithDebInfo",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/cuda",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "NIGIRI_CUDA": "ON",
+        "CMAKE_C_COMPILER": "gcc-15",
+        "CMAKE_CXX_COMPILER": "g++-15",
+        "CMAKE_CUDA_COMPILER": "/usr/local/cuda/bin/nvcc",
+        "CMAKE_CUDA_HOST_COMPILER": "g++-15"
+      }
+    },
+    {
+      "name": "cpu",
+      "displayName": "Linux CPU RelWithDebInfo (NIGIRI_CUDA=Off)",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/cpu",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "NIGIRI_CUDA": "OFF",
+        "CMAKE_C_COMPILER": "gcc-15",
+        "CMAKE_CXX_COMPILER": "g++-15"
+      }
+    },
+    {
+      "name": "cuda-sanitizer",
+      "displayName": "Linux CUDA Host C++-only ASan + UBSan",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/cuda-san",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "NIGIRI_CUDA": "ON",
+        "CMAKE_C_COMPILER": "gcc-15",
+        "CMAKE_CXX_COMPILER": "g++-15",
+        "CMAKE_CUDA_COMPILER": "/usr/local/cuda/bin/nvcc",
+        "CMAKE_CUDA_HOST_COMPILER": "g++-15",
+        "CTX_ASAN": "ON",
+        "CMAKE_C_FLAGS": "-fsanitize=address -fno-omit-frame-pointer",
+        "CMAKE_CXX_FLAGS": "-fsanitize=address,undefined -fno-omit-frame-pointer",
+        "CMAKE_CUDA_FLAGS": "-Xcompiler=-fsanitize=address -Xcompiler=-fsanitize=undefined -Xcompiler=-fno-omit-frame-pointer",
+        "CMAKE_EXE_LINKER_FLAGS": "-fsanitize=address,undefined",
+        "CMAKE_C_FLAGS_RELWITHDEBINFO": "-O1 -g",
+        "CMAKE_CXX_FLAGS_RELWITHDEBINFO": "-O1 -g",
+        "CMAKE_CUDA_FLAGS_RELWITHDEBINFO": "-O2 -g"
+      },
+      "environment": {
+        "ASAN_OPTIONS": "protect_shadow_gap=0"
       }
     },
     {
@@ -150,6 +202,21 @@
     {
       "name": "linux-arm64-release",
       "configurePreset": "linux-arm64-release"
+    },
+    {
+      "name": "cuda",
+      "configurePreset": "cuda"
+    },
+    {
+      "name": "cpu",
+      "configurePreset": "cpu"
+    },
+    {
+      "name": "cuda-sanitizer",
+      "configurePreset": "cuda-sanitizer",
+      "environment": {
+        "ASAN_OPTIONS": "detect_leaks=0:protect_shadow_gap=0"
+      }
     },
     {
       "name": "clang-tidy",

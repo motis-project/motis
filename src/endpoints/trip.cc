@@ -77,7 +77,7 @@ api::Itinerary trip::operator()(boost::urls::url_view const& url) const {
       api::ElevationCostsEnum::NONE, query.joinInterlinedLegs_, true,
       query.detailedLegs_, false, query.withScheduledSkippedStops_,
       config_.timetable_.value().max_matching_distance_, kMaxMatchingDistance,
-      api_version, false, false, query.language_, nullptr);
+      api_version, false, false, query.language_);
   if (rt->vehicle_positions_ != nullptr && !response.legs_.empty()) {
     response.legs_.front().primaryVehicle_ =
         vehicle_matching::primary_vehicle(

@@ -26,28 +26,35 @@ transit_realtime::FeedMessage to_feed_msg(
     auto const e = msg.add_entity();
     e->set_id(fmt::format("{}", ++id));
 
-    auto const set_trip = [](::transit_realtime::TripDescriptor* td,
-                             trip_descriptor const& trip,
-                             bool const canceled = false) {
-      td->set_trip_id(trip.trip_id_);
-      if (canceled) {
-        td->set_schedule_relationship(
-            transit_realtime::TripDescriptor_ScheduleRelationship_CANCELED);
-        return;
-      }
-      if (trip.date_) {
-        td->set_start_date(*trip.date_);
-      }
-      if (trip.start_time_) {
-        td->set_start_time(*trip.start_time_);
-      }
-    };
+    auto const set_trip =
+        [](::transit_realtime::TripDescriptor* td, trip_descriptor const& trip,
+           bool const canceled = false, bool const added = false) {
+          td->set_trip_id(trip.trip_id_);
+          if (canceled) {
+            td->set_schedule_relationship(
+                transit_realtime::TripDescriptor_ScheduleRelationship_CANCELED);
+            return;
+          }
+          if (added) {
+            td->set_schedule_relationship(
+                transit_realtime::TripDescriptor_ScheduleRelationship_ADDED);
+          }
+          if (trip.route_id_) {
+            td->set_route_id(*trip.route_id_);
+          }
+          if (trip.date_) {
+            td->set_start_date(*trip.date_);
+          }
+          if (trip.start_time_) {
+            td->set_start_time(*trip.start_time_);
+          }
+        };
 
     std::visit(
         utl::overloaded{
             [&](trip_update const& u) {
               set_trip(e->mutable_trip_update()->mutable_trip(), u.trip_,
-                       u.cancelled_);
+                       u.cancelled_, u.added_);
 
               for (auto const& stop_upd : u.stop_updates_) {
                 auto* const upd =
@@ -62,10 +69,18 @@ transit_realtime::FeedMessage to_feed_msg(
                   upd->mutable_stop_time_properties()->set_assigned_stop_id(
                       stop_upd.stop_assignment_.value());
                 }
+                if (stop_upd.time_.has_value()) {
+                  auto const t = to_unix(*stop_upd.time_);
+                  upd->mutable_arrival()->set_time(static_cast<signed>(t));
+                  upd->mutable_departure()->set_time(static_cast<signed>(t));
+                }
                 if (stop_upd.skip_) {
                   upd->set_schedule_relationship(
                       transit_realtime::
                           TripUpdate_StopTimeUpdate_ScheduleRelationship_SKIPPED);
+                  continue;
+                }
+                if (stop_upd.time_.has_value()) {
                   continue;
                 }
                 stop_upd.ev_type_ == ::nigiri::event_type::kDep

@@ -1,7 +1,7 @@
 [nigiri]
   url=git@github.com:motis-project/nigiri.git
   branch=master
-  commit=95b228d6b52c6e3d1af20c62ee6acf9e396f2d34
+  commit=aec0a43c1ffa40582aa11c7e28163697669d44bb
 [cista]
   url=git@github.com:felixguendling/cista.git
   branch=master
@@ -9,7 +9,7 @@
 [osr]
   url=git@github.com:motis-project/osr.git
   branch=master
-  commit=c4f1cc8dd5e20eb740db43e7149780e6353651c8
+  commit=dd079c717fc528dddc50e7b5a629087f861cf247
 [utl]
   url=git@github.com:motis-project/utl.git
   branch=master
@@ -17,7 +17,7 @@
 [adr]
   url=git@github.com:triptix-tech/adr.git
   branch=master
-  commit=64ff88efc22622a79d38c7a7e101d4a86e906a1e
+  commit=055bad6b670330e79b8ab4909d5c9399dedb133f
 [googletest]
   url=git@github.com:motis-project/googletest.git
   branch=master
@@ -25,11 +25,11 @@
 [net]
   url=git@github.com:motis-project/net.git
   branch=master
-  commit=f34174004e31f392e7ee787bfeb304adcfd5e8d2
+  commit=d1d445326a5d3ec77e14394fee60962d08894ba0
 [openapi-cpp]
   url=git@github.com:triptix-tech/openapi-cpp.git
   branch=master
-  commit=1e1e5bee6a3a73270595196b2aa7f41cbe7d9214
+  commit=22492d0eb82ea257e666c29e66c402a45d5d7e25
 [unordered_dense]
   url=git@github.com:motis-project/unordered_dense.git
   branch=main
@@ -41,11 +41,11 @@
 [tiles]
   url=git@github.com:motis-project/tiles.git
   branch=master
-  commit=6bd71d984eb699d7160f5c448bc14d5c57ddb4b7
+  commit=0bab73e02d672ca2d4f0c0b1347fb9b49dd5302a
 [boost]
   url=git@github.com:motis-project/boost.git
   branch=boost-1.89.0
-  commit=77467bf580d98ea06716e2931cbe3b1f28e0cd37
+  commit=b050b3988ba25ea7757462d26a38d225bfe20f75
 [tg]
   url=git@github.com:triptix-tech/tg.git
   branch=main
@@ -53,7 +53,7 @@
 [mimalloc]
   url=git@github.com:motis-project/mimalloc.git
   branch=dev3
-  commit=b88ce9c8fd6b7c9208a43bcdb705de9f499dbad4
+  commit=eef5f6cf7251ae2924029bda2eda0c84c542493a
 [lz4]
   url=git@github.com:motis-project/lz4.git
   branch=dev
@@ -65,7 +65,7 @@
 [opentelemetry-cpp]
   url=git@github.com:motis-project/opentelemetry-cpp.git
   branch=main
-  commit=57a4c01aff876e08d9d37a3dec2c9899f0606909
+  commit=f2240dc890f3bf68fe6fa5a80450e93aab09578e
 [ctx]
   url=git@github.com:motis-project/ctx.git
   branch=master
@@ -73,4 +73,4 @@
 [geo]
   url=git@github.com:motis-project/geo.git
   branch=master
-  commit=4a410791d3a2d77eafae917e0607051bbd4fa659
+  commit=31b1ac29d386d7b53d0112dccaad37e84b8ae567

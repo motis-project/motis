@@ -1,6 +1,9 @@
 packages:
   - api
 
+allowBuilds:
+  esbuild: true
+
 includeWorkspaceRoot: true
 
 onlyBuiltDependencies:

@@ -6,9 +6,9 @@
 #include "utl/to_vec.h"
 #include "utl/visit.h"
 
-#include "nigiri/timetable.h"
-
 #include "adr/typeahead.h"
+
+#include "nigiri/timetable.h"
 
 #include "motis/journey_to_response.h"
 #include "motis/tag_lookup.h"
@@ -54,6 +54,7 @@ api::geocode_response suggestions_to_response(
     auto id = std::string{};
     auto level = std::optional<double>{};
     auto category = std::optional<std::string>{};
+    auto stop_pos = std::optional<geo::latlng>{};
     utl::visit(
         s.location_,
         [&](a::place_idx_t const p) {
@@ -62,8 +63,10 @@ api::geocode_response suggestions_to_response(
                      : api::LocationTypeEnum::PLACE;
           if (type == api::LocationTypeEnum::STOP) {
             if (tt != nullptr && tags != nullptr) {
-              auto const l = n::location_idx_t{
-                  static_cast<n::location_idx_t::value_t>(s.get_osm_id(t))};
+              auto const l =
+                  n::location_idx_t{static_cast<n::location_idx_t::value_t>(
+                      t.place_osm_ids_[p][0])};
+              stop_pos = tt->locations_.coordinates_[l];
               level = get_level(w, pl, matches, l);
               id = tags->id(*tt, l);
             } else {
@@ -142,8 +145,10 @@ api::geocode_response suggestions_to_response(
         .tokens_ = std::move(tokens),
         .name_ = s.format(t, f, country_code.value_or("DE")),
         .id_ = std::move(id),
-        .lat_ = s.coordinates_.as_latlng().lat_,
-        .lon_ = s.coordinates_.as_latlng().lng_,
+        .lat_ = stop_pos.transform([](geo::latlng const& p) { return p.lat_; })
+                    .value_or(s.coordinates_.as_latlng().lat_),
+        .lon_ = stop_pos.transform([](geo::latlng const& p) { return p.lng_; })
+                    .value_or(s.coordinates_.as_latlng().lng_),
         .level_ = level,
         .street_ = std::move(street),
         .houseNumber_ = std::move(house_number),

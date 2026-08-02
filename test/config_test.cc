@@ -211,8 +211,10 @@ TEST(motis, config) {
           .datasets_ =
               {{"de",
                 {.path_ = "delfi.gtfs.zip",
-                 .clasz_bikes_allowed_ = {{{"LONG_DISTANCE", false},
-                                           {"REGIONAL_FAST", true}}},
+                 .clasz_bikes_allowed_ = {{{"LONGDISTANCE", false},
+                                           {"REGIONAL", true}}},
+                 .clasz_reservation_not_required_ = {{{"LONGDISTANCE", true},
+                                                      {"COACH", false}}},
                  .rt_ =
                      {{{.url_ =
                             R"(https://stc.traines.eu/mirror/german-delfi-gtfs-rt/latest.gtfs-rt.pbf)",
@@ -249,20 +251,24 @@ timetable:
   http_timeout: 30
   canned_rt: false
   incremental_rt_update: false
-  use_osm_stop_coordinates: false
   extend_missing_footpaths: false
   max_footpath_length: 15
+  default_transfer_time: 2
   max_matching_distance: 25.000000
   preprocess_max_matching_distance: 250.000000
   datasets:
     de:
       path: delfi.gtfs.zip
+      extend_calendar: false
       default_bikes_allowed: false
       default_cars_allowed: false
-      extend_calendar: false
+      default_reservation_not_required: true
       clasz_bikes_allowed:
-        LONG_DISTANCE: false
-        REGIONAL_FAST: true
+        LONGDISTANCE: false
+        REGIONAL: true
+      clasz_reservation_not_required:
+        COACH: false
+        LONGDISTANCE: true
       rt:
         - url: https://stc.traines.eu/mirror/german-delfi-gtfs-rt/latest.gtfs-rt.pbf
           headers:
@@ -271,9 +277,16 @@ timetable:
           protocol: gtfsrt
     nl:
       path: nl.gtfs.zip
+      extend_calendar: false
       default_bikes_allowed: false
       default_cars_allowed: false
-      extend_calendar: false
+      default_reservation_not_required: true
+      clasz_reservation_not_required:
+        AIR: false
+        COACH: false
+        NIGHT: false
+        ODM: false
+        RIDESHARING: false
       rt:
         - url: https://gtfs.ovapi.nl/nl/trainUpdates.pb
           last_good_ttl: 180
@@ -285,10 +298,10 @@ timetable:
 elevators: false
 street_routing: true
 limits:
-  stoptimes_max_results: 256
+  stoptimes_max_results: 1024
   plan_max_results: 256
   plan_max_search_window_minutes: 5760
-  stops_max_results: 2048
+  stops_max_results: 8192
   onetomany_max_many: 128
   onetoall_max_results: 65535
   onetoall_max_travel_minutes: 90
@@ -296,8 +309,9 @@ limits:
   gtfsrt_expose_max_trip_updates: 100
   street_routing_max_prepost_transit_seconds: 3600
   street_routing_max_direct_seconds: 21600
-  geocode_max_suggestions: 10
-  reverse_geocode_max_results: 5
+  geocode_max_suggestions: 512
+  reverse_geocode_max_results: 512
+  max_max_matching_distance: 250.000000
 osr_footpath: true
 geocoding: true
 reverse_geocoding: false
@@ -319,8 +333,11 @@ timetable:
     de:
       path: delfi.gtfs.zip
       clasz_bikes_allowed:
-        LONG_DISTANCE: false
-        REGIONAL_FAST: true
+        LONGDISTANCE: false
+        REGIONAL: true
+      clasz_reservation_not_required:
+        COACH: false
+        LONGDISTANCE: true
       rt:
         - url: https://stc.traines.eu/mirror/german-delfi-gtfs-rt/latest.gtfs-rt.pbf
           headers:
@@ -329,6 +346,7 @@ timetable:
       path: nl.gtfs.zip
       default_bikes_allowed: false
       default_cars_allowed: false
+      default_reservation_not_required: true
       extend_calendar: false
       rt:
         - url: https://gtfs.ovapi.nl/nl/trainUpdates.pb

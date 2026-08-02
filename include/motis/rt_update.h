@@ -22,4 +22,6 @@ void run_rt_update(boost::asio::io_context&,
                    data&,
                    rt_update_hooks = {});
 
+void apply_canned_rt_update(config const&, data&);
+
 }  // namespace motis

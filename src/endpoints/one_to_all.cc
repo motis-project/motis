@@ -1,5 +1,6 @@
 #include "motis/endpoints/one_to_all.h"
 
+#include <algorithm>
 #include <chrono>
 #include <vector>
 
@@ -19,6 +20,7 @@
 #include "motis/gbfs/routing_data.h"
 #include "motis/metrics_registry.h"
 #include "motis/place.h"
+#include "motis/server.h"
 #include "motis/timetable/modes_to_clasz_mask.h"
 
 namespace motis::ep {
@@ -28,9 +30,14 @@ namespace n = nigiri;
 api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
   metrics_->routing_requests_.Increment();
 
+  auto const api_version = get_api_version(url);
+
   auto const max_travel_minutes =
       config_.get_limits().onetoall_max_travel_minutes_;
   auto const query = api::oneToAll_params{url.params()};
+  auto const max_matching_distance =
+      std::min(query.maxMatchingDistance_,
+               config_.get_limits().max_max_matching_distance_);
   utl::verify<net::too_many_exception>(
       query.maxTravelTime_ <= max_travel_minutes,
       "maxTravelTime too large ({} > {}). The server admin can change "
@@ -53,7 +60,9 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
 
   auto const make_place = [&](place_t const& p, n::unixtime_t const t,
                               n::event_type const ev) {
-    auto place = to_place(&tt_, &tags_, w_, pl_, matches_, ae_, tz_, {}, p);
+    auto place = bwd_compat_lvl_adjust(
+        to_place(&tt_, &tags_, w_, pl_, matches_, ae_, tz_, {}, p),
+        api_version);
     if (ev == n::event_type::kArr) {
       place.arrival_ = t;
     } else {
@@ -93,14 +102,13 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
                                ? n::routing::location_match_mode::kIntermodal
                                : n::routing::location_match_mode::kEquivalent,
       .start_ = r.get_offsets(
-          nullptr, one, one_dir, one_modes, std::nullopt, std::nullopt,
-          std::nullopt, std::nullopt, false, osr_params,
+          nullptr, one, one_dir, one_modes, rental_options{}, osr_params,
           query.pedestrianProfile_, query.elevationCosts_, one_max_time,
-          query.maxMatchingDistance_, gbfs_rd, prepare_stats),
+          max_matching_distance, gbfs_rd, prepare_stats),
       .td_start_ = r.get_td_offsets(
           nullptr, nullptr, one, one_dir, one_modes, osr_params,
           query.pedestrianProfile_, query.elevationCosts_,
-          query.maxMatchingDistance_, one_max_time, time, prepare_stats),
+          max_matching_distance, one_max_time, time, prepare_stats),
       .max_transfers_ = static_cast<std::uint8_t>(
           query.maxTransfers_.value_or(n::routing::kMaxTransfers)),
       .max_travel_time_ = max_travel_time,
@@ -114,6 +122,7 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
       .allowed_claszes_ = to_clasz_mask(query.transitModes_),
       .require_bike_transport_ = query.requireBikeTransport_,
       .require_car_transport_ = query.requireCarTransport_,
+      .no_compulsory_reservation_ = query.noCompulsoryReservation_,
       .transfer_time_settings_ =
           n::routing::transfer_time_settings{
               .default_ = (query.minTransferTime_ == 0 &&

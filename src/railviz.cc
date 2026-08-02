@@ -271,10 +271,8 @@ void add_static_transports(n::timetable const& tt,
                            n::shapes_storage const* shapes_data,
                            std::vector<stop_pair>& runs) {
   auto const is_active = [&](n::transport const t) -> bool {
-    return (rtt == nullptr
-                ? tt.bitfields_[tt.transport_traffic_days_[t.t_idx_]]
-                : rtt->bitfields_[rtt->transport_traffic_days_[t.t_idx_]])
-        .test(to_idx(t.day_));
+    return rtt == nullptr ? tt.is_transport_active(t.t_idx_, t.day_)
+                          : rtt->is_transport_active(t.t_idx_, t.day_);
   };
 
   auto const seq = tt.route_location_seq_[r];
@@ -415,10 +413,14 @@ api::trips_response get_trains(tag_lookup const& tags,
                   ? rt_index.rt_distances_[fr.rt_]
                   : static_index
                         .static_distances_[tt.transport_route_[fr.t_.t_idx_]],
-          .from_ = to_place(&tt, &tags, w, pl, matches, ae, tz, query.language_,
-                            tt_location{from}),
-          .to_ = to_place(&tt, &tags, w, pl, matches, ae, tz, query.language_,
-                          tt_location{to}),
+          .from_ = bwd_compat_lvl_adjust(
+              to_place(&tt, &tags, w, pl, matches, ae, tz, query.language_,
+                       tt_location{from}),
+              api_version),
+          .to_ =
+              bwd_compat_lvl_adjust(to_place(&tt, &tags, w, pl, matches, ae, tz,
+                                             query.language_, tt_location{to}),
+                                    api_version),
           .departure_ = from.time(n::event_type::kDep),
           .arrival_ = to.time(n::event_type::kArr),
           .scheduledDeparture_ = from.scheduled_time(n::event_type::kDep),

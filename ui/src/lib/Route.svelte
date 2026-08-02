@@ -35,7 +35,7 @@
 >
 	<svg
 		class={cn(
-			'relative rounded-full',
+			'relative',
 			compact ? 'mr-1 min-w-4 min-h-4 max-w-4 max-h-4' : 'mr-2 min-w-6 min-h-6 max-w-6 max-h-6'
 		)}
 	>

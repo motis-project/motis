@@ -9,6 +9,7 @@
 		zoom = $bindable(),
 		bounds = $bindable(),
 		center = $bindable(),
+		bearing = $bindable(),
 		style,
 		attribution,
 		transformRequest,
@@ -21,6 +22,7 @@
 		transformRequest?: maplibregl.RequestTransformFunction;
 		center: maplibregl.LngLatLike;
 		bounds?: maplibregl.LngLatBoundsLike | undefined;
+		bearing?: number | undefined;
 		zoom: number;
 		children?: Snippet;
 		class: string;
@@ -48,6 +50,7 @@
 		let tmp: maplibregl.Map;
 		try {
 			tmp = new maplibregl.Map({
+				hash: true,
 				container,
 				zoom,
 				bounds,
@@ -92,6 +95,9 @@
 					zoom = tmp.getZoom();
 					center = tmp.getCenter();
 					bounds = tmp.getBounds();
+				});
+				tmp.on('rotate', () => {
+					bearing = tmp.getBearing();
 				});
 			});
 		} catch (e) {

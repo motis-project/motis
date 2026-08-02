@@ -1,7 +1,9 @@
 #pragma once
 
+#include <cstdint>
 #include <map>
 #include <optional>
+#include <span>
 
 #include "osr/lookup.h"
 #include "osr/types.h"
@@ -51,13 +53,14 @@ platform_matches_t get_matches(nigiri::timetable const&,
 
 std::optional<std::string_view> get_track(std::string_view);
 
-std::vector<osr::match_t> get_reverse_platform_way_matches(
+osr::match_result get_reverse_platform_way_matches(
     osr::lookup const&,
     way_matches_storage const*,
     osr::search_profile,
     std::span<nigiri::location_idx_t const>,
     std::span<osr::location const>,
     osr::direction,
-    double max_matching_distance);
+    double max_matching_distance,
+    std::span<std::uint8_t const> exact_return_allowed = {});
 
 }  // namespace motis

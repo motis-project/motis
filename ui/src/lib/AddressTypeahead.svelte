@@ -79,7 +79,7 @@
 				text: inputValue,
 				language: [language],
 				mode: transitModes,
-				type
+				type: type ? [type] : undefined
 			}
 		});
 		if (error) {
@@ -166,7 +166,7 @@
 		<Combobox.Portal>
 			<Combobox.Content
 				align="start"
-				class="absolute top-2 w-[var(--bits-combobox-anchor-width)] z-10 overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md outline-none"
+				class="absolute top-2 w-[var(--bits-combobox-anchor-width)] z-50 overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md outline-none"
 			>
 				{#each items as item (item.match)}
 					<Combobox.Item

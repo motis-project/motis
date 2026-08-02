@@ -1,18 +1,19 @@
 <script lang="ts">
 	import { t } from '$lib/i18n/translation';
-	import { Slider } from 'bits-ui';
 	import { LocateFixed } from '@lucide/svelte';
 	import maplibregl from 'maplibre-gl';
 	import * as RadioGroup from '$lib/components/ui/radio-group';
 	import Button from '$lib/components/ui/button/button.svelte';
 	import { Label } from '$lib/components/ui/label';
 	import {
+		type PedestrianSpeed,
+		type CyclingSpeed,
 		type ElevationCosts,
 		type PedestrianProfile,
 		type ServerConfig
 	} from '@motis-project/motis-client';
-	import * as Select from '$lib/components/ui/select';
-	import type { DisplayLevel, IsochronesOptions } from '$lib/map/IsochronesShared';
+	import type { IsochronesOptions } from '$lib/map/IsochronesShared';
+	import { PLASMA } from '$lib/map/IsochronesLayer';
 	import AddressTypeahead from '$lib/AddressTypeahead.svelte';
 	import AdvancedOptions from '$lib/AdvancedOptions.svelte';
 	import DateInput from '$lib/DateInput.svelte';
@@ -20,8 +21,10 @@
 	import { formatDurationSec } from '$lib/formatDuration';
 	import type { PrePostDirectMode, TransitMode } from '$lib/Modes';
 	import { generateTimes } from './generateTimes';
+	import Slider from './components/ui/slider/Slider.svelte';
 
 	let {
+		advancedOptionsOpen = $bindable(),
 		one = $bindable(),
 		maxTravelTime = $bindable(),
 		serverConfig,
@@ -31,10 +34,15 @@
 		pedestrianProfile = $bindable(),
 		requireBikeTransport = $bindable(),
 		requireCarTransport = $bindable(),
+		noCompulsoryReservation = $bindable(),
 		transitModes = $bindable(),
 		maxTransfers = $bindable(),
 		preTransitModes = $bindable(),
 		postTransitModes = $bindable(),
+		additionalTransferTime = $bindable(),
+		transferTimeFactor = $bindable(),
+		cyclingSpeed = $bindable(),
+		pedestrianSpeed = $bindable(),
 		maxPreTransitTime = $bindable(),
 		maxPostTransitTime = $bindable(),
 		arriveBy = $bindable(),
@@ -45,8 +53,20 @@
 		preTransitProviderGroups = $bindable(),
 		postTransitProviderGroups = $bindable(),
 		directProviderGroups = $bindable(),
+		vehicleHeight = $bindable(),
+		vehicleWidth = $bindable(),
+		vehicleLength = $bindable(),
+		vehicleWeight = $bindable(),
+		vehicleHazmat = $bindable(),
+		vehicleHazmatWater = $bindable(),
+		vehicleAxleCount = $bindable(),
+		vehicleAxleLoad = $bindable(),
+		vehicleTrailer = $bindable(),
+		vehicleTopSpeed = $bindable(),
+		vehicleLezAccess = $bindable(),
 		hasDebug = false
 	}: {
+		advancedOptionsOpen: boolean;
 		one: Location;
 		maxTravelTime: number;
 		serverConfig: ServerConfig | undefined;
@@ -56,10 +76,15 @@
 		pedestrianProfile: PedestrianProfile;
 		requireBikeTransport: boolean;
 		requireCarTransport: boolean;
+		noCompulsoryReservation: boolean;
 		transitModes: TransitMode[];
 		maxTransfers: number;
 		preTransitModes: PrePostDirectMode[];
 		postTransitModes: PrePostDirectMode[];
+		additionalTransferTime: number | undefined;
+		transferTimeFactor: number;
+		cyclingSpeed: CyclingSpeed;
+		pedestrianSpeed: PedestrianSpeed;
 		maxPreTransitTime: number;
 		maxPostTransitTime: number;
 		arriveBy: boolean;
@@ -70,8 +95,21 @@
 		preTransitProviderGroups: string[];
 		postTransitProviderGroups: string[];
 		directProviderGroups: string[];
+		vehicleHeight: number;
+		vehicleWidth: number;
+		vehicleLength: number;
+		vehicleWeight: number;
+		vehicleHazmat: boolean;
+		vehicleHazmatWater: boolean;
+		vehicleAxleCount: number;
+		vehicleAxleLoad: number;
+		vehicleTrailer: boolean;
+		vehicleTopSpeed: number;
+		vehicleLezAccess: boolean;
 		hasDebug: boolean;
 	} = $props();
+
+	const plasmaGradient = `linear-gradient(to right, ${PLASMA.join(', ')})`;
 	const minutesToSeconds = (n: number): number => n * 60;
 	const possibleMaxTravelTimes = $derived(
 		generateTimes(
@@ -81,15 +119,6 @@
 			label: formatDurationSec(s)
 		}))
 	);
-
-	const displayLevels = new Map<DisplayLevel, string>([
-		['OVERLAY_RECTS', t.isochrones.canvasRects],
-		['OVERLAY_CIRCLES', t.isochrones.canvasCircles],
-		['GEOMETRY_CIRCLES', t.isochrones.geojsonCircles]
-	]);
-	const possibleDisplayLevels = [
-		...[...displayLevels.entries()].map(([id, label]) => ({ value: id, label: label }))
-	];
 
 	let oneItems = $state<Array<Location>>([]);
 
@@ -123,39 +152,16 @@
 </script>
 
 {#snippet additionalComponents()}
-	<div class="grid grid-cols-[2fr_2fr_1fr] items-center gap-2">
-		<Select.Root type="single" bind:value={options.displayLevel}>
-			<Select.Trigger class="overflow-hidden" aria-label={t.isochrones.displayLevel}>
-				{displayLevels.get(options.displayLevel)}
-			</Select.Trigger>
-			<Select.Content sideOffset={10}>
-				{#each possibleDisplayLevels as level, i (i + level.value)}
-					<Select.Item value={level.value} label={level.label}>
-						{level.label}
-					</Select.Item>
-				{/each}
-			</Select.Content>
-		</Select.Root>
-		<Slider.Root
-			type="single"
-			min={0}
-			max={1000}
-			bind:value={options.opacity}
-			class="relative flex w-full touch-none select-none items-center"
-		>
-			<span class="bg-dark-10 relative h-2 w-full grow cursor-pointer overflow-hidden rounded-full">
-				<Slider.Range class="bg-foreground absolute h-full" />
-			</span>
-			<Slider.Thumb
-				index={0}
-				class="border-border-input bg-background hover:border-dark-40 focus-visible:ring-foreground dark:bg-foreground dark:shadow-card focus-visible:outline-hidden block size-[25px] cursor-pointer rounded-full border shadow-sm transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50"
-			/>
-		</Slider.Root>
-		<input class="flex right-0 align-right" type="color" bind:value={options.color} />
+	<div class="grid grid-cols-2 items-center text-sm gap-2">
+		<span>{t.isochronesOpacity}</span>
+		<Slider min={0} max={1000} bind:value={options.opacity} />
 	</div>
 {/snippet}
 
-<div id="isochrones-searchmask-container" class="flex flex-col space-y-4 p-4 relative">
+<div
+	id="isochrones-searchmask-container"
+	class="flex max-h-full min-h-0 flex-col space-y-4 overflow-hidden p-4 relative"
+>
 	<AddressTypeahead
 		place={geocodingBiasPlace}
 		name="one"
@@ -171,7 +177,7 @@
 	>
 		<LocateFixed class="w-5 h-5" />
 	</Button>
-	<div class="flex flex-row gap-2 flex-wrap">
+	<div class="flex min-h-0 flex-row gap-2 flex-wrap">
 		<DateInput bind:value={time} />
 		<RadioGroup.Root
 			class="flex"
@@ -204,6 +210,7 @@
 			</Label>
 		</RadioGroup.Root>
 		<AdvancedOptions
+			bind:advancedOptionsOpen
 			bind:useRoutedTransfers
 			{serverConfig}
 			bind:wheelchair={
@@ -212,9 +219,15 @@
 			}
 			bind:requireCarTransport
 			bind:requireBikeTransport
+			bind:noCompulsoryReservation
 			bind:transitModes
 			bind:maxTransfers
 			bind:maxTravelTime
+			bind:additionalTransferTime
+			bind:cyclingSpeed
+			bind:pedestrianProfile
+			bind:pedestrianSpeed
+			bind:transferTimeFactor
 			{possibleMaxTravelTimes}
 			bind:preTransitModes
 			bind:postTransitModes
@@ -230,10 +243,29 @@
 			bind:preTransitProviderGroups
 			bind:postTransitProviderGroups
 			bind:directProviderGroups
+			bind:vehicleHeight
+			bind:vehicleWidth
+			bind:vehicleLength
+			bind:vehicleWeight
+			bind:vehicleHazmat
+			bind:vehicleHazmatWater
+			bind:vehicleAxleCount
+			bind:vehicleAxleLoad
+			bind:vehicleTrailer
+			bind:vehicleTopSpeed
+			bind:vehicleLezAccess
 			via={undefined}
 			viaMinimumStay={undefined}
 			viaLabels={{}}
 			{hasDebug}
 		/>
+	</div>
+	<div class="text-muted-foreground flex items-center gap-2 text-xs">
+		<span>{formatDurationSec(0)}</span>
+		<div
+			class="border-border h-2 grow rounded-full border"
+			style="background: {plasmaGradient}"
+		></div>
+		<span>{formatDurationSec(maxTravelTime)}</span>
 	</div>
 </div>

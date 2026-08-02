@@ -18,8 +18,8 @@
 #include "utl/to_vec.h"
 
 #include "tiles/db/clear_database.h"
-#include "tiles/db/feature_inserter_mt.h"
 #include "tiles/db/feature_pack.h"
+#include "tiles/db/feature_shard.h"
 #include "tiles/db/pack_file.h"
 #include "tiles/db/prepare_tiles.h"
 #include "tiles/db/tile_database.h"
@@ -185,8 +185,10 @@ void import(config const& c,
     for (auto const& [_, d] : t.datasets_) {
       h = cista::build_seeded_hash(
           h, c.osr_footpath_, hash_file(d.path_), d.default_bikes_allowed_,
-          d.default_cars_allowed_, d.clasz_bikes_allowed_,
-          d.clasz_cars_allowed_, d.default_timezone_, d.extend_calendar_);
+          d.default_cars_allowed_, d.default_reservation_not_required_,
+          d.clasz_bikes_allowed_, d.clasz_cars_allowed_,
+          d.clasz_reservation_not_required_, d.default_timezone_,
+          d.extend_calendar_);
       if (d.script_.has_value()) {
         h = cista::build_seeded_hash(h, hash_file(*d.script_));
       }
@@ -196,7 +198,8 @@ void import(config const& c,
         h, t.first_day_, t.num_days_, t.with_shapes_, t.adjust_footpaths_,
         t.merge_dupes_intra_src_, t.merge_dupes_inter_src_,
         t.link_stop_distance_, t.update_interval_, t.incremental_rt_update_,
-        t.max_footpath_length_, t.default_timezone_, t.assistance_times_);
+        t.max_footpath_length_, t.default_transfer_time_, t.default_timezone_,
+        t.assistance_times_);
   }
 
   auto osm_hash = std::pair{"osm"s, cista::BASE_HASH};
@@ -363,12 +366,18 @@ void import(config const& c,
                       tag,
                       dc.path_,
                       {.link_stop_distance_ = t.link_stop_distance_,
+                       .default_transfer_time_ =
+                           n::duration_t{static_cast<std::int16_t>(
+                               t.default_transfer_time_)},
                        .default_tz_ = dc.default_timezone_.value_or(
                            t.default_timezone_.value_or("")),
                        .bikes_allowed_default_ = to_clasz_bool_array(
                            dc.default_bikes_allowed_, dc.clasz_bikes_allowed_),
                        .cars_allowed_default_ = to_clasz_bool_array(
                            dc.default_cars_allowed_, dc.clasz_cars_allowed_),
+                       .reservation_not_required_default_ = to_clasz_bool_array(
+                           dc.default_reservation_not_required_,
+                           dc.clasz_reservation_not_required_),
                        .extend_calendar_ = dc.extend_calendar_,
                        .user_script_ =
                            dc.script_
@@ -458,59 +467,20 @@ void import(config const& c,
       meta_entry_t{"osr_footpath_settings", cista::BASE_HASH};
   if (c.timetable_) {
     auto& h = osr_footpath_settings_hash.second;
-    h = cista::hash_combine(h, c.timetable_->use_osm_stop_coordinates_,
-                            c.timetable_->extend_missing_footpaths_,
+    h = cista::hash_combine(h, c.timetable_->extend_missing_footpaths_,
                             c.timetable_->max_matching_distance_,
                             c.timetable_->max_footpath_length_);
   }
-  auto osr_footpath = task{
-      "osr_footpath",
+  // The platform matches only depend on the locations, not on the footpaths
+  // computed by `osr_footpath` (which only appends footpaths to the timetable),
+  // so they are computed first and reused there.
+  auto matches = task{
+      "matches",
       {&tt, &osr},
-      c.osr_footpath_ && c.timetable_,
+      c.timetable_ && (c.use_street_routing() || c.osr_footpath_),
       [&]() {
         auto d = data{data_path};
         d.load_tt("tt.bin");
-        d.load_osr();
-
-        auto const profiles = std::vector<routed_transfers_settings>{
-            {.profile_ = osr::search_profile::kFoot,
-             .profile_idx_ = n::kFootProfile,
-             .max_matching_distance_ = c.timetable_->max_matching_distance_,
-             .extend_missing_ = c.timetable_->extend_missing_footpaths_,
-             .max_duration_ = c.timetable_->max_footpath_length_ * 1min},
-            {.profile_ = osr::search_profile::kWheelchair,
-             .profile_idx_ = n::kWheelchairProfile,
-             .max_matching_distance_ = 8.0,
-             .max_duration_ = c.timetable_->max_footpath_length_ * 1min},
-            {.profile_ = osr::search_profile::kCar,
-             .profile_idx_ = n::kCarProfile,
-             .max_matching_distance_ = 250.0,
-             .max_duration_ = 8h,
-             .is_candidate_ = [&](n::location_idx_t const l) {
-               return utl::any_of(d.tt_->location_routes_[l], [&](auto r) {
-                 return d.tt_->has_car_transport(r);
-               });
-             }}};
-        auto const elevator_footpath_map = compute_footpaths(
-            *d.w_, *d.l_, *d.pl_, *d.tt_, d.elevations_.get(),
-            c.timetable_->use_osm_stop_coordinates_, profiles);
-
-        cista::write(data_path / "elevator_footpath_map.bin",
-                     elevator_footpath_map);
-        d.tt_->write(data_path / "tt_ext.bin");
-
-        cista::free_self_allocated(d.tt_.get());
-      },
-      {tt_hash, osm_hash, osr_footpath_settings_hash, osr_version(),
-       osr_footpath_version(), n_version()}};
-
-  auto matches = task{
-      "matches",
-      {&tt, &osr, &osr_footpath},
-      c.timetable_ && c.use_street_routing(),
-      [&]() {
-        auto d = data{data_path};
-        d.load_tt(c.osr_footpath_ ? "tt_ext.bin" : "tt.bin");
         d.load_osr();
 
         auto const progress_tracker = utl::get_active_progress_tracker();
@@ -530,6 +500,54 @@ void import(config const& c,
         }
       },
       {tt_hash, osm_hash, osr_version(), n_version(), matches_version(),
+       std::pair{"way_matches",
+                 cista::build_hash(c.timetable_.value_or(config::timetable{})
+                                       .preprocess_max_matching_distance_)}}};
+
+  auto osr_footpath = task{
+      "osr_footpath",
+      {&tt, &osr, &matches},
+      c.osr_footpath_ && c.timetable_,
+      [&]() {
+        auto d = data{data_path};
+        d.load_tt("tt.bin");
+        d.load_osr();
+        d.load_matches();
+        d.load_way_matches();
+
+        auto const profiles = std::vector<routed_transfers_settings>{
+            {.profile_ = osr::search_profile::kFoot,
+             .profile_idx_ = n::kFootProfile,
+             .max_matching_distance_ = c.timetable_->max_matching_distance_,
+             .extend_missing_ = c.timetable_->extend_missing_footpaths_,
+             .max_duration_ = c.timetable_->max_footpath_length_ * 1min},
+            {.profile_ = osr::search_profile::kWheelchair,
+             .profile_idx_ = n::kWheelchairProfile,
+             .max_matching_distance_ = 8.0,
+             .max_duration_ = c.timetable_->max_footpath_length_ * 1min},
+            {.profile_ = osr::search_profile::kCar,
+             .profile_idx_ = n::kCarProfile,
+             .max_matching_distance_ = 250.0,
+             .max_duration_ = 8h,
+             .is_candidate_ = [&](n::location_idx_t const l) {
+               return utl::any_of(d.tt_->location_routes_[l], [&](auto r) {
+                 return d.tt_->is_flag_set(nigiri::kCarsAllowed, r);
+               });
+             }}};
+        auto const elevator_footpath_map = compute_footpaths(
+            *d.w_, *d.l_, *d.pl_, *d.tt_, *d.matches_, d.way_matches_.get(),
+            d.elevations_.get(), profiles);
+
+        cista::write(data_path / "elevator_footpath_map.bin",
+                     elevator_footpath_map);
+        d.tt_->write(data_path / "tt_ext.bin");
+
+        cista::free_self_allocated(d.tt_.get());
+      },
+      // task dependencies only order the tasks, they do not invalidate: the
+      // footpaths are built from the (way) matches
+      {tt_hash, osm_hash, osr_footpath_settings_hash, osr_version(),
+       osr_footpath_version(), matches_version(), n_version(),
        std::pair{"way_matches",
                  cista::build_hash(c.timetable_.value_or(config::timetable{})
                                        .preprocess_max_matching_distance_)}}};
@@ -602,23 +620,24 @@ void import(config const& c,
         ::tiles::pack_handle pack_handle{path.c_str()};
 
         {
-          ::tiles::feature_inserter_mt inserter{
-              ::tiles::dbi_handle{db_handle, db_handle.features_dbi_opener()},
-              pack_handle};
+          auto pool = ::tiles::shard_pool{dir};
 
           if (c.tiles_->coastline_.has_value()) {
             progress_tracker->status("Load Coastlines").out_bounds(0, 20);
-            ::tiles::load_coastlines(db_handle, inserter,
+            ::tiles::load_coastlines(db_handle, pool.acquire(),
                                      c.tiles_->coastline_->generic_string());
           }
 
           progress_tracker->status("Load Features").out_bounds(20, 70);
-          ::tiles::load_osm(db_handle, inserter, c.osm_->generic_string(),
+          ::tiles::load_osm(db_handle, pool, c.osm_->generic_string(),
                             c.tiles_->profile_.generic_string(),
                             dir.generic_string(), c.tiles_->flush_threshold_);
+
+          progress_tracker->status("Merge Shards").out_bounds(70, 80);
+          ::tiles::merge_shards(pool, db_handle, pack_handle);
         }
 
-        progress_tracker->status("Pack Features").out_bounds(70, 90);
+        progress_tracker->status("Pack Features").out_bounds(80, 90);
         ::tiles::pack_features(db_handle, pack_handle);
 
         progress_tracker->status("Prepare Tiles").out_bounds(90, 100);

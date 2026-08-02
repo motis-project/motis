@@ -1,5 +1,6 @@
 #include "motis/odm/prima.h"
 
+#include <algorithm>
 #include <variant>
 
 #include "boost/asio/io_context.hpp"
@@ -56,11 +57,14 @@ n::duration_t init_direct(std::vector<direct_ride>& rides,
                           n::interval<n::unixtime_t> const intvl,
                           api::plan_params const& query,
                           unsigned api_version) {
+  auto const max_matching_distance =
+      std::min(query.maxMatchingDistance_,
+               r.config_.get_limits().max_max_matching_distance_);
   auto [_, direct_duration] = r.route_direct(
       e, gbfs, {}, from_p, to_p, {api::ModeEnum::CAR}, std::nullopt,
       std::nullopt, std::nullopt, std::nullopt, false, intvl.from_, false,
       get_osr_parameters(query), query.pedestrianProfile_,
-      query.elevationCosts_, kODMMaxDuration, query.maxMatchingDistance_,
+      query.elevationCosts_, kODMMaxDuration, max_matching_distance,
       kODMDirectFactor, query.detailedLegs_, api_version);
 
   auto const step =
@@ -111,11 +115,13 @@ void init_pt(std::vector<n::routing::offset>& offsets,
              n::routing::location_match_mode location_match_mode,
              std::chrono::seconds const max) {
   auto stats = std::map<std::string, std::uint64_t>{};
-  offsets = r.get_offsets(rtt, l, dir, {api::ModeEnum::CAR}, std::nullopt,
-                          std::nullopt, std::nullopt, std::nullopt, false,
+  auto const max_matching_distance =
+      std::min(query.maxMatchingDistance_,
+               r.config_.get_limits().max_max_matching_distance_);
+  offsets = r.get_offsets(rtt, l, dir, {api::ModeEnum::CAR}, rental_options{},
                           get_osr_parameters(query), query.pedestrianProfile_,
-                          query.elevationCosts_, max,
-                          query.maxMatchingDistance_, gbfs_rd, stats);
+                          query.elevationCosts_, max, max_matching_distance,
+                          gbfs_rd, stats);
 
   std::erase_if(offsets, [&](n::routing::offset const& o) {
     return r.ride_sharing_bounds_ != nullptr &&

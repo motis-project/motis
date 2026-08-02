@@ -1,7 +1,9 @@
 #pragma once
 
+#include <chrono>
 #include <string_view>
 #include <variant>
+#include <vector>
 
 #include "nigiri/routing/journey.h"
 #include "nigiri/rt/frun.h"
@@ -22,16 +24,32 @@
 
 namespace motis {
 
-double get_level(osr::ways const*,
-                 osr::platforms const*,
-                 platform_matches_t const*,
-                 nigiri::location_idx_t);
+api::ModeEnum to_mode(nigiri::transport_mode_id_t);
+
+api::ModeEnum to_mode(osr::search_profile);
+
+std::optional<double> get_level(osr::ways const*,
+                                osr::platforms const*,
+                                platform_matches_t const*,
+                                nigiri::location_idx_t);
 
 std::optional<std::vector<api::Alert>> get_alerts(
     nigiri::rt::frun const&,
     std::optional<std::pair<nigiri::rt::run_stop, nigiri::event_type>> const&,
     bool fuzzy_stop,
     std::optional<std::vector<std::string>> const& language);
+
+struct query_alternatives {
+  nigiri::routing::query const& query;
+  std::size_t num_alternatives;
+};
+using alternatives_context = std::variant<
+    // no alternatives
+    std::monostate,
+    // compute alternatives from the query+journey context
+    query_alternatives,
+    // precomputed
+    std::vector<nigiri::routing::journey>>;
 
 api::Itinerary journey_to_response(
     osr::ways const*,
@@ -68,7 +86,8 @@ api::Itinerary journey_to_response(
     bool ignore_start_rental_return_constraints,
     bool ignore_dest_rental_return_constraints,
     std::optional<std::vector<std::string>> const& language,
-    nigiri::routing::query const* leg_alternatives_query = nullptr,
-    std::size_t num_leg_alternatives = 0U);
+    bool const set_itinerary_id_field = true,
+    alternatives_context const& alternatives = {},
+    std::chrono::nanoseconds* fares_time = nullptr);
 
 }  // namespace motis

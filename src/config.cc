@@ -179,6 +179,8 @@ void config::verify() const {
               "geocode_max_suggestions must be >= 1");
   utl::verify(limits_.value().reverse_geocode_max_results_ >= 1U,
               "reverse_geocode_max_results must be >= 1");
+  utl::verify(!server_ || server_->gpu_states_ >= 1U,
+              "server.gpu_states must be >= 1");
 
   if (timetable_) {
     utl::verify(!timetable_->route_shapes_.has_value() ||
@@ -272,6 +274,16 @@ void config::verify_input_files_exist() const {
 
       if (d.clasz_bikes_allowed_.has_value()) {
         for (auto const& c : *d.clasz_bikes_allowed_) {
+          nigiri::to_clasz(c.first);
+        }
+      }
+      if (d.clasz_cars_allowed_.has_value()) {
+        for (auto const& c : *d.clasz_cars_allowed_) {
+          nigiri::to_clasz(c.first);
+        }
+      }
+      if (d.clasz_reservation_not_required_.has_value()) {
+        for (auto const& c : *d.clasz_reservation_not_required_) {
           nigiri::to_clasz(c.first);
         }
       }

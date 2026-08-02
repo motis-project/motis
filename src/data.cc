@@ -2,6 +2,7 @@
 
 #include <filesystem>
 #include <future>
+#include <iostream>
 
 #include "cista/io.h"
 
@@ -20,11 +21,16 @@
 #include "osr/platforms.h"
 #include "osr/ways.h"
 
+#include "nigiri/logging.h"
 #include "nigiri/routing/tb/tb_data.h"
 #include "nigiri/rt/create_rt_timetable.h"
 #include "nigiri/rt/rt_timetable.h"
 #include "nigiri/shapes_storage.h"
 #include "nigiri/timetable.h"
+
+#if defined(NIGIRI_CUDA)
+#include "nigiri/routing/gpu/raptor.h"
+#endif
 
 #include "motis/config.h"
 #include "motis/constants.h"
@@ -45,6 +51,51 @@ namespace fs = std::filesystem;
 namespace n = nigiri;
 
 namespace motis {
+
+#if defined(NIGIRI_CUDA)
+gpu_search_pool::lease::lease(gpu_search_pool& p,
+                              n::routing::gpu::gpu_raptor_state& s)
+    : pool_{p}, state_{s} {}
+
+gpu_search_pool::lease::~lease() {
+  {
+    auto const l = std::scoped_lock{pool_.mutex_};
+    pool_.free_.push_back(&state_);
+  }
+  pool_.cv_.notify_one();
+}
+
+gpu_search_pool::gpu_search_pool(n::routing::gpu::gpu_timetable const& gtt,
+                                 unsigned const n) {
+  for (auto i = 0U; i != n; ++i) {
+    try {
+      states_.push_back(
+          std::make_unique<n::routing::gpu::gpu_raptor_state>(gtt));
+    } catch (std::exception const& e) {
+      if (states_.empty()) {
+        throw;
+      }
+      std::cerr << "gpu_search_pool: only " << states_.size() << "/" << n
+                << " states allocated: " << e.what() << "\n";
+      break;
+    }
+  }
+
+  for (auto& s : states_) {
+    free_.push_back(s.get());
+  }
+}
+
+gpu_search_pool::~gpu_search_pool() = default;
+
+gpu_search_pool::lease gpu_search_pool::acquire() {
+  auto l = std::unique_lock{mutex_};
+  cv_.wait(l, [&]() { return !free_.empty(); });
+  auto* s = free_.back();
+  free_.pop_back();
+  return {*this, *s};
+}
+#endif
 
 rt::rt()
     : vehicle_positions_{
@@ -266,6 +317,25 @@ data::data(std::filesystem::path p, config const& c)
                  matches_->size() == tt_->n_locations(),
              "mismatch: n_matches={}, n_locations={}", matches_->size(),
              tt_->n_locations());
+
+#if defined(NIGIRI_CUDA)
+  if (c.timetable_) {
+    gpu_tt_ = std::make_unique<n::routing::gpu::gpu_timetable>(*tt_);
+    gpu_pool_ = std::make_unique<gpu_search_pool>(
+        *gpu_tt_, c.server_ ? c.server_->gpu_states_ : 2U);
+    if (rt_->rtt_ != nullptr) {
+      try {
+        rt_->rtt_->gpu_rtt_.ptr_ =
+            n::routing::gpu::make_gpu_rtt(*tt_, *rt_->rtt_);
+        metrics_->gpu_rt_timetable_.Set(1);
+      } catch (std::exception const& e) {
+        n::log(n::log_lvl::error, "motis.data",
+               "GPU rt timetable upload failed: {}", e.what());
+        metrics_->gpu_rt_timetable_.Set(0);
+      }
+    }
+  }
+#endif
 }
 
 data::~data() = default;
@@ -404,6 +474,9 @@ void data::load_auser_updater(std::string_view tag,
   };
 
   for (auto const& rt : *d.rt_) {
+    if (rt.protocol_ == config::timetable::dataset::rt::protocol::gtfsrt) {
+      continue;
+    }
     auser_->try_emplace(rt.url_, *tt_, tags_->get_src(tag),
                         convert(rt.protocol_));
   }

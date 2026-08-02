@@ -5,6 +5,7 @@ const translations: Translations = {
 	ticketOptions: 'Опции за билет',
 	includedInTicket: 'Включено в билета',
 	journeyDetails: 'Детайли за пътуването',
+	refreshItinerary: 'Обнови пътуването',
 	transfers: 'прекачвания',
 	walk: 'Пеша',
 	bike: 'Велосипед',
@@ -24,6 +25,8 @@ const translations: Translations = {
 	hydrogenFuelCell: 'Водородна горивна клетка',
 	from: 'От',
 	to: 'До',
+	myLocation: 'My location',
+	reverseDirections: 'Reverse directions',
 	viaStop: 'Междинна спирка',
 	viaStops: 'Междинни спирки',
 	addViaStop: 'Добави междинна спирка',
@@ -57,6 +60,7 @@ const translations: Translations = {
 	},
 	sharingProvider: 'Оператор',
 	sharingProviders: 'Оператори',
+	none: 'Няма',
 	returnOnlyAtStations: 'Превозното средство трябва да се върне на станция.',
 	roundtripStationReturnConstraint: 'Превозното средство трябва да се върне на началната станция.',
 	rentalStation: 'Станция',
@@ -66,17 +70,31 @@ const translations: Translations = {
 	selectTransitModes: 'Изберете видове транспорт',
 	defaultSelectedModes: 'Всички видове транспорт',
 	defaultSelectedProviders: 'Всички превозвачи',
-	selectElevationCosts: 'Избягвай стръмни наклони.',
-	wheelchair: 'инвалидна количка',
+	selectElevationCosts: 'Избягвай стръмни наклони',
+	wheelchair: 'Само безбариеpни връзки',
+	hgvRoutingOptions: 'Опции за тежкотоварен автомобил',
+	vehicleHeight: 'Височина на превозното средство (m)',
+	vehicleWidth: 'Ширина на превозното средство (m)',
+	vehicleLength: 'Дължина на превозното средство (m)',
+	vehicleWeight: 'Тегло на превозното средство (t)',
+	vehicleTopSpeed: 'Макс. скорост (km/h)',
+	vehicleAxleCount: 'Брой оси',
+	vehicleAxleLoad: 'Натоварване на ос (t)',
+	vehicleHazmat: 'Опасни товари',
+	vehicleHazmatWater: 'Опасни за водата товари',
+	vehicleTrailer: 'С ремарке',
+	vehicleLezAccess: 'Достъп до нискоемисионни зони',
 	useRoutedTransfers: 'Използвай посочените прекачвания',
 	bikeRental: 'наемане на велосипед',
 	requireBikeTransport: 'Превоз на велосипед',
 	requireCarTransport: 'Превоз на автомобил',
+	noCompulsoryReservation: 'No reservation required',
 	considerRentalReturnConstraints: 'Върни наетите превозни средства в рамките на пътуването',
 	default: 'По подразбиране',
 	timetableSources: 'Източници на разписания',
 	tripCancelled: 'Пътуването е отменено',
 	stopCancelled: 'Спирката е отменена',
+	addStop: 'Добави спирка',
 	inOutDisallowed: 'Качване/слизане не е позволено',
 	inDisallowed: 'Качването не е позволено',
 	outDisallowed: 'Слизането не е позволено',
@@ -89,6 +107,7 @@ const translations: Translations = {
 	RENTAL: 'Нает',
 	RIDE_SHARING: 'Споделено пътуване',
 	CAR: 'Автомобил',
+	HGV: 'Тежкотоварен автомобил',
 	CAR_DROPOFF: 'Слизане от автомобила',
 	CAR_PARKING: 'Паркинг (P+R)',
 	TRANSIT: 'Градски транспорт',
@@ -115,20 +134,20 @@ const translations: Translations = {
 		direct: 'Директна връзка',
 		maxPreTransitTime: 'Максимално време преди транзит',
 		maxPostTransitTime: 'Максимално време след транзит',
-		maxDirectTime: 'Максимално време без транзит'
+		maxDirectTime: 'Максимално време без транзит',
+		additionalTransferTime: 'Допълнително време за прехвърляне',
+		pedestrianSpeed: 'Скорост на пешеходец',
+		cyclingSpeed: 'Скорост на велосипедист',
+		transferTimeFactor: 'Фактор на времето за прехвърляне'
 	},
 	elevationCosts: {
 		NONE: 'Без наклон',
 		LOW: 'Лек наклон',
 		HIGH: 'Голям наклон'
 	},
+	isochronesOpacity: 'Непрозрачност на периметъра',
 	isochrones: {
 		title: 'Достъпен периметър',
-		displayLevel: 'Ниво на показване',
-		maxComputeLevel: 'Макс. ниво на изчисление',
-		canvasRects: 'Правоъгълници (слой)',
-		canvasCircles: 'Кръгове (слой)',
-		geojsonCircles: 'Кръгове (геометрия)',
 		styling: 'Стил',
 		noData: 'Няма данни',
 		requestFailed: 'Заявката е неуспешна'
@@ -151,10 +170,14 @@ const translations: Translations = {
 	FUNICULAR: 'Фуникулер',
 	AERIAL_LIFT: 'Въздушен лифт',
 	toll: 'Внимание! Платен път.',
+	bikesAllowed: 'Bikes allowed',
+	wheelchairAccessible: 'Wheelchair accessible',
+	compulsoryReservation: 'Reservation necessary',
 	accessRestriction: 'забранен достъп',
 	continuesAs: 'Продължава като',
 	earlierAlternatives: 'По-ранни алтернативи',
 	laterAlternatives: 'По-късни алтернативи',
+	differentStops: 'Различни спирки',
 	rent: 'Наем',
 	copyToClipboard: 'Копирай в клипборда',
 	rideThroughAllowed: 'Минаване е позволено',
@@ -164,6 +187,16 @@ const translations: Translations = {
 	DEBUG_BUS_ROUTE: 'Маршрут на автобус (Отстраняване на грешки)',
 	DEBUG_RAILWAY_ROUTE: 'Маршрут на влак (Отстраняване на грешки)',
 	DEBUG_FERRY_ROUTE: 'Маршрут на ферибот (Отстраняване на грешки)',
+	colorMode: {
+		none: 'No Map Visualization',
+		stops: 'Stops',
+		rt: 'Timetable: Delays',
+		route: 'Timetable: Line Colors',
+		mode: 'Timetable: Transport Modes'
+	},
+	resetToNorth: 'Reset to north',
+	showMyLocation: 'Show my location',
+	toggleHillshades: 'Toggle hillshades overlay',
 	routes: (n: number) => {
 		switch (n) {
 			case 0:
@@ -173,7 +206,16 @@ const translations: Translations = {
 			default:
 				return `${n} маршрута`;
 		}
-	}
+	},
+	pageTitle: {
+		default: 'MOTIS',
+		fromTo: (from, to) => `${from} до ${to}`,
+		departuresAt: (stop) => `Заминавания от ${stop}`,
+		arrivalsAt: (stop) => `Пристигания в ${stop}`,
+		isochronesFrom: (place) => `Достъпен периметър от ${place}`
+	},
+	tickets: 'Билети',
+	routeInformation: 'Допълнителна информация'
 };
 
 export default translations;

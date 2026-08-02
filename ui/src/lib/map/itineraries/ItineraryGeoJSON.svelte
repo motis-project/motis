@@ -91,15 +91,22 @@
 		{#if !('line-gradient' in layer.paint) && selected}
 			<Layer
 				id={layer.id}
+				beforeLayerId="itinerary-anchor"
 				type={layer.type}
 				layout={layer.layout}
 				filter={['all', ['has', 'fromLevel'], layer.filter]}
-				paint={layer.paint}
+				paint={{
+					...layer.paint,
+					...(layer.id.includes('current') && {
+						'line-color': ['get', layer.id.includes('outline') ? 'outlineColor' : 'color']
+					})
+				}}
 			></Layer>
 		{/if}
 	{/each}
 	<Layer
 		id="path-{id}"
+		beforeLayerId="itinerary-anchor"
 		type="line"
 		layout={{
 			'line-join': 'round',
@@ -119,6 +126,7 @@
 	/>
 	<Layer
 		id="path-outline-{id}"
+		beforeLayerId="itinerary-anchor"
 		type="line"
 		layout={{
 			'line-join': 'round',
@@ -134,6 +142,7 @@
 	/>
 	<Layer
 		id="path-chevrons-{id}"
+		beforeLayerId="itinerary-anchor"
 		type="symbol"
 		layout={{
 			'symbol-placement': 'line',
@@ -161,6 +170,7 @@
 		{#if 'line-gradient' in layer.paint && selected}
 			<Layer
 				id="{layer.id}-metrics"
+				beforeLayerId="itinerary-anchor"
 				type={layer.type}
 				layout={layer.layout}
 				filter={layer.filter}

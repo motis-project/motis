@@ -5,6 +5,7 @@ const translations: Translations = {
 	ticketOptions: 'Možnosti jízdenky',
 	includedInTicket: 'Zahrnuté v jízdence',
 	journeyDetails: 'Detail cesty',
+	refreshItinerary: 'Obnovit cestu',
 	transfers: 'přestupy',
 	walk: 'Pěšky',
 	bike: 'Kolo',
@@ -24,6 +25,8 @@ const translations: Translations = {
 	hydrogenFuelCell: 'Vodíkový palivový článek',
 	from: 'Z',
 	to: 'Do',
+	myLocation: 'My location',
+	reverseDirections: 'Reverse directions',
 	viaStop: 'Mezizastávka',
 	viaStops: 'Mezizastávky',
 	addViaStop: 'Přidat mezizastávku',
@@ -59,6 +62,7 @@ const translations: Translations = {
 	},
 	sharingProvider: 'Poskytovatel dat',
 	sharingProviders: 'Poskytovatelé dat',
+	none: 'Žádné',
 	returnOnlyAtStations: 'Vozidlo musí být vráceno na stanici.',
 	roundtripStationReturnConstraint: 'Pojezd musí být vrácen k počáteční stanice',
 	rentalStation: 'Stanice',
@@ -68,17 +72,31 @@ const translations: Translations = {
 	selectTransitModes: 'Vyber dopravní prostředky',
 	defaultSelectedModes: 'Všechny dopravní prostředky',
 	defaultSelectedProviders: 'Všichni poskytovatelé',
-	selectElevationCosts: 'Bez prudkého stoupání.',
-	wheelchair: 'Bezbariérové přestupy',
+	selectElevationCosts: 'Bez prudkého stoupání',
+	wheelchair: 'Pouze bezbariérová spojení',
+	hgvRoutingOptions: 'Možnosti nákladního vozidla',
+	vehicleHeight: 'Výška vozidla (m)',
+	vehicleWidth: 'Šířka vozidla (m)',
+	vehicleLength: 'Délka vozidla (m)',
+	vehicleWeight: 'Hmotnost vozidla (t)',
+	vehicleTopSpeed: 'Max. rychlost (km/h)',
+	vehicleAxleCount: 'Počet náprav',
+	vehicleAxleLoad: 'Zatížení nápravy (t)',
+	vehicleHazmat: 'Nebezpečný náklad',
+	vehicleHazmatWater: 'Nebezpečný pro vodu',
+	vehicleTrailer: 'S přívěsem',
+	vehicleLezAccess: 'Vjezd do nízkoemisních zón',
 	useRoutedTransfers: 'Počítej trasu pro přestupy',
 	bikeRental: 'Povol použití sdílených vozidel',
 	requireBikeTransport: 'Přeprava kola',
 	requireCarTransport: 'Přeprava auta',
+	noCompulsoryReservation: 'No reservation required',
 	considerRentalReturnConstraints: 'Vrať sdílené vozidla během cesty',
 	default: 'default',
 	timetableSources: 'Zdroje dát JŘ',
 	tripCancelled: 'Spoj odřeknut',
 	stopCancelled: 'Zastávka bez obsluhy',
+	addStop: 'Přidat zastávku',
 	inOutDisallowed: 'Vstup/výstup není povolen',
 	inDisallowed: 'Vstup není povolen',
 	outDisallowed: 'Výstup není povolen',
@@ -91,6 +109,7 @@ const translations: Translations = {
 	RENTAL: 'Sdílené prostředky',
 	RIDE_SHARING: 'Spolujízda',
 	CAR: 'Auto',
+	HGV: 'Nákladní vozidlo',
 	CAR_PARKING: 'Auto (využití parkovíšť)',
 	CAR_DROPOFF: 'Auto (pouze zastavení)',
 	TRANSIT: 'Hromadná doprava',
@@ -117,20 +136,20 @@ const translations: Translations = {
 		direct: 'Přímé spojení',
 		maxPreTransitTime: 'Max. čas přesunu',
 		maxPostTransitTime: 'Max. čas přesunu',
-		maxDirectTime: 'Max. čas přesunu'
+		maxDirectTime: 'Max. čas přesunu',
+		additionalTransferTime: 'Dodatečný čas přestupu',
+		pedestrianSpeed: 'Rychlost chůze',
+		cyclingSpeed: 'Rychlost cyklisty',
+		transferTimeFactor: 'Faktor času přestupu'
 	},
 	elevationCosts: {
 		NONE: 'Bez odklonů',
 		LOW: 'Malé odklony',
 		HIGH: 'Velké odklony'
 	},
+	isochronesOpacity: 'Krytí izochron',
 	isochrones: {
 		title: 'Izochrony',
-		displayLevel: 'Úroveň ukazování',
-		maxComputeLevel: 'Max. úroveň vypočítání',
-		canvasRects: 'Čtverce',
-		canvasCircles: 'Okruhy (zjednodušená projekce)',
-		geojsonCircles: 'Okruhy (pokročilá projekce)',
 		styling: 'Styl izochron',
 		noData: 'Žádné data',
 		requestFailed: 'Chyba žádosti'
@@ -153,10 +172,14 @@ const translations: Translations = {
 	FUNICULAR: 'Lanová dráha',
 	AERIAL_LIFT: 'Lanová dráha',
 	toll: 'Pozor! Průjezd tuto trasou je placený.',
+	bikesAllowed: 'Bikes allowed',
+	wheelchairAccessible: 'Wheelchair accessible',
+	compulsoryReservation: 'Reservation necessary',
 	accessRestriction: 'Omezený dostup',
 	continuesAs: 'Pokračuje jako',
 	earlierAlternatives: 'Dřívější alternativy',
 	laterAlternatives: 'Pozdější alternativy',
+	differentStops: 'Jiné zastávky',
 	rent: 'Půjčit si',
 	copyToClipboard: 'Kopírovat do schránky',
 	rideThroughAllowed: 'Průjezd povolen',
@@ -166,6 +189,16 @@ const translations: Translations = {
 	DEBUG_BUS_ROUTE: 'Trasa autobusu (Debug)',
 	DEBUG_RAILWAY_ROUTE: 'Trasa vlaku (Debug)',
 	DEBUG_FERRY_ROUTE: 'Trasa trajektu (Debug)',
+	colorMode: {
+		none: 'No Map Visualization',
+		stops: 'Stops',
+		rt: 'Timetable: Delays',
+		route: 'Timetable: Line Colors',
+		mode: 'Timetable: Transport Modes'
+	},
+	resetToNorth: 'Reset to north',
+	showMyLocation: 'Show my location',
+	toggleHillshades: 'Toggle hillshades overlay',
 	routes: (n: number) => {
 		switch (n) {
 			case 0:
@@ -179,7 +212,16 @@ const translations: Translations = {
 			default:
 				return `${n} tras`;
 		}
-	}
+	},
+	pageTitle: {
+		default: 'MOTIS',
+		fromTo: (from, to) => `${from} do ${to}`,
+		departuresAt: (stop) => `Odjezdy ze ${stop}`,
+		arrivalsAt: (stop) => `Příjezdy do ${stop}`,
+		isochronesFrom: (place) => `Izochrony z ${place}`
+	},
+	tickets: 'Vstupenky',
+	routeInformation: 'Další informace'
 };
 
 export default translations;

@@ -29,6 +29,9 @@ struct output {
   virtual bool is_time_dependent() const = 0;
   virtual transport_mode_t get_cache_key() const = 0;
   virtual osr::sharing_data const* get_sharing_data() const = 0;
+  virtual bool allows_free_floating_return_at(osr::location const&) const {
+    return false;
+  }
   virtual void annotate_leg(nigiri::lang_t const&,
                             osr::node_idx_t from_node,
                             osr::node_idx_t to_node,
@@ -61,8 +64,12 @@ struct default_output final : public output {
   nigiri::transport_mode_id_t id_;
 };
 
-using street_routing_cache_key_t = std::
-    tuple<osr::location, osr::location, transport_mode_t, nigiri::unixtime_t>;
+using street_routing_cache_key_t = std::tuple<osr::location,
+                                              osr::location,
+                                              transport_mode_t,
+                                              nigiri::unixtime_t,
+                                              osr::direction,
+                                              bool>;
 
 using street_routing_cache_t =
     hash_map<street_routing_cache_key_t, std::optional<osr::path>>;
@@ -71,7 +78,9 @@ api::Itinerary dummy_itinerary(api::Place const& from,
                                api::Place const& to,
                                api::ModeEnum,
                                nigiri::unixtime_t const start_time,
-                               nigiri::unixtime_t const end_time);
+                               nigiri::unixtime_t const end_time,
+                               unsigned const api_version,
+                               bool cancelled = false);
 
 api::Itinerary street_routing(osr::ways const&,
                               osr::lookup const&,

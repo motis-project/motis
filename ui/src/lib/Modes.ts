@@ -4,6 +4,7 @@ export const prePostDirectModes = [
 	'WALK',
 	'BIKE',
 	'CAR',
+	'HGV',
 	'FLEX',
 	'CAR_DROPOFF',
 	'CAR_PARKING',

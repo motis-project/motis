@@ -13,6 +13,8 @@
 		switch (status) {
 			case 200:
 				return 'OK';
+			case 204:
+				return 'No results';
 			case 400:
 				return 'Bad Request';
 			case 404:
@@ -30,6 +32,8 @@
 		switch (status) {
 			case 200:
 				return CircleCheck;
+			case 204:
+				return SearchX;
 			case 400:
 				return CircleAlert;
 			case 404:
@@ -41,7 +45,7 @@
 				return SearchX;
 		}
 	};
-	let Icon = $state(getErrorIcon(status ?? 404));
+	let Icon = $state(getErrorIcon(status ?? 0));
 </script>
 
 <div
@@ -50,8 +54,7 @@
 	<div class="flex items-center gap-4 mx-auto">
 		<Icon class="h-7 w-7 text-destructive" />
 		<h2 class="text-xl font-semibold text-destructive">
-			{status}
-			{getErrorType(status ?? 404)}
+			{getErrorType(status ?? 0)}
 		</h2>
 	</div>
 	<p class="text-lg text-muted-foreground max-w-[40ch] break-words">

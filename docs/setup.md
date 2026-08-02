@@ -68,6 +68,7 @@ timetable:                          # if not set, no timetable will be loaded
   incremental_rt_update: false      # false = real-time updates are applied to a clean slate, true = no data will be dropped
   max_footpath_length: 15           # maximum footpath length when transitively connecting stops or for routing footpaths if `osr_footpath` is set to true
   max_matching_distance: 25.0       # maximum distance from geolocation to next OSM ways that will be found
+  default_transfer_time: 2          # default transfer time applied when no transfer is found from datasets
   preprocess_max_matching_distance: 250.0 # max. distance for preprocessing matches from nigiri locations (stops) to OSM ways to speed up querying (set to 0 (default) to disable)
   vehicle_eta:                      # optional vehicle-derived prediction policy; omitted defaults to off
     mode: shadow                    # global policy: off, shadow, or effective
@@ -83,7 +84,16 @@ timetable:                          # if not set, no timetable will be loaded
   datasets:                         # map of tag -> dataset
     ch:                             # the tag will be used as prefix for stop IDs and trip IDs with `_` as divider, so `_` cannot be part of the dataset tag
       path: ch_opentransportdataswiss.gtfs.zip
+      extend_calendar: false
       default_bikes_allowed: false
+      default_cars_allowed: false
+      default_reservation_not_required: true
+      clasz_reservation_not_required:
+        AIR: false
+        COACH: false
+        NIGHT: false
+        ODM: false
+        RIDESHARING: false
       rt:
         - url: https://api.opentransportdata.swiss/gtfsrt2020
           headers:
@@ -91,7 +101,16 @@ timetable:                          # if not set, no timetable will be loaded
           protocol: gtfsrt          # specify the real time protocol (default: gtfsrt)
     nl:
       path: nl_ovapi.gtfs.zip
+      extend_calendar: false
       default_bikes_allowed: false
+      default_cars_allowed: false
+      default_reservation_not_required: true
+      clasz_reservation_not_required:
+        AIR: false
+        COACH: false
+        NIGHT: false
+        ODM: false
+        RIDESHARING: false
       rt:
         - url: https://gtfs.ovapi.nl/nl/trainUpdates.pb
         - url: https://gtfs.ovapi.nl/nl/tripUpdates.pb
@@ -108,9 +127,10 @@ gbfs:
 street_routing:                   # enable street routing (default = false; Using boolean values true/false is supported for backward compatibility)
   elevation_data_dir: srtm/       # folder which contains elevation data, e.g. SRTMGL1 data tiles in HGT format
 limits:
-  stoptimes_max_results: 256      # maximum number of stoptimes results that can be requested
+  stoptimes_max_results: 1024     # maximum number of stoptimes results that can be requested
   plan_max_results: 256           # maximum number of plan results that can be requested via numItineraries parameter
   plan_max_search_window_minutes: 5760 # maximum (minutes) for searchWindow parameter (seconds), highest possible value: 21600 (15 days)
+  stops_max_results: 8192         # maximum number of stops returned in /map/stops
   onetomany_max_many: 128         # maximum accepted number of many locations for one-to-many requests
   onetoall_max_results: 65535     # maximum number of one-to-all results that can be requested
   onetoall_max_travel_minutes: 90 # maximum travel duration for one-to-all query that can be requested
@@ -118,6 +138,9 @@ limits:
   gtfsrt_expose_max_trip_updates: 100 # how many trip updates are allowed to be exposed via the gtfsrt endpoint
   street_routing_max_prepost_transit_seconds: 3600 # limit for maxPre/PostTransitTime API params, see below
   street_routing_max_direct_seconds: 21600 # limit for maxDirectTime API param, high values can lead to long-running, RAM-hungry queries 
+  geocode_max_suggestions: 512    # maximum requestable results for /geocode
+  reverse_geocode_max_results: 512 # maximum requestable results for /reverse-geocode
+  max_max_matching_distance: 250  # upper bound (meters) for the maxMatchingDistance API param, larger values are capped to this limit
 logging:
   log_level: debug                # log-level (default = debug; Supported log-levels: error, info, debug)
 osr_footpath: true                # enable routing footpaths instead of using transfers from timetable datasets
@@ -168,8 +191,25 @@ gbfs:
     # GBFS manifest / Lamassu feed:
     mobidata-bw:
       url: https://api.mobidata-bw.de/sharing/gbfs/v3/manifest.json
-  update_interval: 300
-  http_timeout: 10
+  ttl:
+    # static information - always only refresh every 6h
+    overwrite:
+      gbfs: 21600
+      manifest: 21600
+      system_information: 21600
+      vehicle_types: 21600
+      station_information: 21600
+      geofencing_zones: 21600
+
+    # dynamic information - 3min
+    default:
+      station_status: 180
+      vehicle_status: 180
+      free_bike_status: 180
+  update_interval: 60
+  http_timeout: 30
+  cache_size: 50 # cache state of n most recently used providers, speeding up queries, slowing down updates
+  proxy: # HTTP proxy used for all GBFS requests
 ```
 
 ## Provider Names, Groups + Colors
@@ -267,6 +307,7 @@ gbfs:
         token_url: https://example.com/openid-connect/token
         client_id: gbfs
         client_secret: example
+        auth_method: client_secret_basic # default, or client_secret_post
 ```
 
 ## Default Restrictions

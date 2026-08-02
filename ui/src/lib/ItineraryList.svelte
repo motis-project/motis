@@ -187,14 +187,14 @@
 							</div>
 						{/if}
 					{:catch e}
-						<ErrorMessage message={e.error ?? e} status={e.status ?? 404} />
+						<ErrorMessage message={e.error ?? e} status={e.status ?? 0} />
 					{/await}
 				{/each}
 			</div>
 		{:else if r.direct.length === 0}
-			<ErrorMessage message={t.noItinerariesFound} status={200} />
+			<ErrorMessage message={t.noItinerariesFound} status={204} />
 		{/if}
 	{:catch e}
-		<ErrorMessage message={e.error ?? e} status={e.status ?? 404} />
+		<ErrorMessage message={e.error ?? e} status={e.status ?? 0} />
 	{/await}
 {/if}

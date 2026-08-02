@@ -2,10 +2,12 @@
 
 #include "motis/flex/mode_id.h"
 
+namespace n = nigiri;
+
 using namespace motis::flex;
 
 TEST(motis, flex_mode_id_zero) {
-  auto const t = nigiri::flex_transport_idx_t{0U};
+  auto const t = n::flex_transport_idx_t{0U};
   auto const stop = 0U;
   auto const dir = osr::direction::kForward;
   auto const id = mode_id{t, stop, dir}.to_id();
@@ -18,7 +20,7 @@ TEST(motis, flex_mode_id_zero) {
 }
 
 TEST(motis, flex_mode_id) {
-  auto const t = nigiri::flex_transport_idx_t{44444U};
+  auto const t = n::flex_transport_idx_t{44444U};
   auto const stop = 15;
   auto const dir = osr::direction::kBackward;
   auto const id = mode_id{t, stop, dir}.to_id();

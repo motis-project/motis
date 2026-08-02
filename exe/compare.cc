@@ -23,6 +23,7 @@
 #include "utl/verify.h"
 
 #include "motis-api/motis-api.h"
+#include "motis/constants.h"
 #include "motis/types.h"
 
 #include "./flags.h"
@@ -107,7 +108,7 @@ int compare(int ac, char** av) {
 
       mismatch = true;
       std::cout << "QUERY=" << x.id_ << " ["
-                << x.params_->to_url("/api/v1/plan") << "]";
+                << x.params_->to_url(kPlanPath) << "]";
       if (is_incomplete) {
         std::cout << " [INCOMPLETE!!]";
       }
@@ -145,7 +146,7 @@ int compare(int ac, char** av) {
 
     if (mismatch && write_fails) {
       std::ofstream{fails_path / fmt::format("{}_q.txt", x.id_)}
-          << x.params_->to_url("/api/v1/plan") << "\n";
+          << x.params_->to_url(kPlanPath) << "\n";
       for (auto i = 0U; i < x.responses_.size(); ++i) {
         if (!x.responses_[i].has_value()) {
           continue;
@@ -188,6 +189,9 @@ int compare(int ac, char** av) {
             nfo.responses_[i] = std::move(res);
           }
         } catch (...) {
+          fmt::println(
+              "[WARNING] query_id: {}, response: {}, could not parse: {}",
+              query_id, responses_paths[i], *r);
         }
       } else {
         break;

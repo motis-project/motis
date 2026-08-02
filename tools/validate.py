@@ -1,0 +1,502 @@
+#!/usr/bin/env python3
+
+import argparse
+import atexit
+import json
+import os
+import shlex
+import shutil
+import signal
+import subprocess
+import sys
+import time
+
+ALL_MODES = ["AIRPLANE", "HIGHSPEED_RAIL", "LONG_DISTANCE", "COACH",
+             "NIGHT_RAIL", "RIDE_SHARING", "REGIONAL_RAIL", "SUBURBAN",
+             "SUBWAY", "TRAM", "BUS", "FERRY", "ODM", "FUNICULAR",
+             "AERIAL_LIFT", "OTHER"]
+
+# Sanitizer reports use the same non-zero exit codes as a normal failure, so
+# they are recognized by their output.
+SANITIZER_MARKERS = ("AddressSanitizer", "UndefinedBehaviorSanitizer",
+                     "LeakSanitizer", "ThreadSanitizer", "runtime error:",
+                     "COMPUTE-SANITIZER")
+
+def run(cmd, cwd=None):
+    # Both streams are kept and echoed on failure: for a sanitizer build the
+    # report is the whole point, and discarding it would leave only an exit
+    # code. ASan and UBSan write to stderr, compute-sanitizer to stdout.
+    p = subprocess.run(cmd, cwd=cwd, stdout=subprocess.PIPE,
+                       stderr=subprocess.PIPE)
+    if p.returncode != 0:
+        for stream in (p.stdout, p.stderr):
+            sys.stderr.write(stream.decode("utf-8", "replace"))
+        sys.exit("validate: '%s' failed with exit code %d"
+                 % (" ".join(cmd), p.returncode))
+
+
+def generate(motis, data, n, date, work, modes=None, bounds=None):
+    cmd = [motis, "generate", "-d", data, "-n", str(n), "--lb_rank", "0",
+           "--first_day", date, "--last_day", date]
+    if modes:
+        cmd += ["-m", modes]
+    if bounds:
+        cmd += ["-b", bounds]
+    run(cmd, cwd=work)  # deterministic: seeded counter + fixed date
+    with open(os.path.join(work, "queries.txt")) as f:
+        lines = [ln.rstrip("\n") for ln in f if ln.strip()]
+    if not lines:
+        sys.exit("validate: 'generate' produced no queries (data=%s, modes=%s)" % (data, modes))
+    return lines
+
+
+def batch(motis, data, qfile, out, rt_dir, gbfs_dir=None, n_threads=None,
+          launcher=None):
+    cmd = list(launcher or []) + [motis, "batch", "-d", data, "-q", qfile,
+                                  "-r", out]
+    if n_threads:
+        cmd += ["--n_threads", str(n_threads)]
+    if rt_dir:
+        cmd.append("--rt")  # applies dump_rt/ from cwd
+    t0 = time.perf_counter()
+    # Both dump_rt/ and dump_gbfs/ are resolved relative to the working
+    # directory, so a run needing both wants them side by side in one dir.
+    run(cmd, cwd=gbfs_dir or rt_dir)
+    return time.perf_counter() - t0  # wall time (whole batch, all cases)
+
+
+def pct(vals, p):
+    s = sorted(vals)
+    return s[min(len(s) - 1, int(p * len(s)))]
+
+
+def gpu_fallbacks(lines):
+    n = 0
+    for ln in lines:
+        if '"gpu_used"' not in ln:
+            continue
+        try:
+            v = json.loads(ln).get("debugOutput", {}).get("gpu_used")
+        except (ValueError, AttributeError):
+            continue
+        if v is not None and not v:
+            n += 1
+    return n
+
+
+def dummy_legs(lines, routed_q=()):
+    out = []
+    for idx, ln in enumerate(lines):
+        if '"cancelled":true' not in ln.replace(" ", ""):
+            continue
+        try:
+            r = json.loads(ln)
+        except ValueError:
+            continue
+        routed = idx < len(routed_q) and routed_q[idx]
+        for itin in (r.get("itineraries") or []) + (r.get("direct") or []):
+            for leg in itin.get("legs") or []:
+                if not leg.get("cancelled") or "tripId" in leg:
+                    continue
+                # A transfer runs stop to stop; a first/last mile leg has the
+                # query endpoint (vertexType != TRANSIT) on one side.
+                transfer = all((leg.get(end) or {}).get("vertexType") ==
+                               "TRANSIT" for end in ("from", "to"))
+                if routed or not transfer:
+                    out.append((idx, leg.get("mode", "?")))
+    return out
+
+
+def exec_times(lines):
+    # per-query routing time (ms) from debugOutput.execute_time
+    out = []
+    for ln in lines:
+        if '"execute_time"' not in ln:
+            continue
+        try:
+            v = json.loads(ln).get("debugOutput", {}).get("execute_time")
+        except (ValueError, AttributeError):
+            continue
+        if v is not None:
+            out.append(float(v))
+    return out
+
+
+def bin_labels(bins):
+    # parent dir name (build/cpu -> "cpu", build/cuda -> "cuda"); unique-ified
+    labels, seen = [], {}
+    for i, b in enumerate(bins):
+        lbl = os.path.basename(os.path.dirname(b)) or ("bin%d" % i)
+        if lbl in seen:
+            lbl = "%s#%d" % (lbl, i)
+        seen[lbl] = True
+        labels.append(lbl)
+    return labels
+
+
+def compare(motis, qlines, responses, work, label):
+    # Write queries.
+    qf = os.path.join(work, label + ".q")
+    with open(qf, "w") as f:
+        f.write("\n".join(qlines) + "\n")
+
+    # Write responses.
+    files = []
+    for i, resp in enumerate(responses):
+        rf = "%s.%d.json" % (qf, i)
+        with open(rf, "w") as f:
+            f.write("\n".join(resp) + "\n")
+        files.append(rf)
+
+    # Run compare for reference vs all.
+    ok = True
+    for f in files[1:]:
+        p = subprocess.run([motis, "compare", "-q", qf, "-r", files[0], f],
+                           stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+        err = p.stderr.decode("utf-8", "replace")
+        # 'compare' reports differing results with a non-zero exit code, and so
+        # does a sanitizer that fires inside it. Tell the two apart, otherwise a
+        # crash is reported as "results differ" and its report is lost.
+        if p.returncode < 0 or any(m in err for m in SANITIZER_MARKERS):
+            sys.stderr.write(err)
+            sys.exit("validate: 'motis compare' died with exit code %d instead "
+                     "of comparing (see the report above)" % p.returncode)
+        ok = ok and p.returncode == 0
+    return ok
+
+
+def suffix(case):
+    s = "&algorithm=" + case["algorithm"]
+    if case["arrive_by"]:
+        s += "&arriveBy=true"
+    if case["clasz"]:
+        s += "&transitModes=" + case["clasz"]
+    if case["routed"]:
+        s += "&useRoutedTransfers=true"  # prf_idx 1 = osr-routed foot footpaths
+    if case["wheelchair"]:
+        # prf_idx 2 + stop accessibility + td footpaths (elevator status)
+        s += "&useRoutedTransfers=true&pedestrianProfile=WHEELCHAIR"
+    if case["bike"]:
+        s += "&requireBikeTransport=true"  # bike carriage on all transit legs
+    if case["car"]:
+        s += "&requireCarTransport=true"  # car carriage on all transit legs
+    if case["rental"]:
+        # GBFS first/last mile (bike_sharing profile). Needs a gbfs section in
+        # the config; with canned_gbfs the feeds come from dump_gbfs/.
+        s += ("&preTransitModes=WALK,RENTAL&postTransitModes=WALK,RENTAL"
+              "&preTransitRentalFormFactors=BICYCLE,SCOOTER_STANDING"
+              "&postTransitRentalFormFactors=BICYCLE,SCOOTER_STANDING"
+              # direct rental is a separate code path from the pre/post offsets
+              "&directModes=WALK,RENTAL"
+              "&directRentalFormFactors=BICYCLE,SCOOTER_STANDING")
+    if case["tts"]:
+        # non-default transfer time settings: additional + max(min, dur*factor)
+        s += "&minTransferTime=10&transferTimeFactor=1.5&additionalTransferTime=3"
+    return s
+
+
+def build_cases(bases, restricted, rt, routed, wheelchair, bike, car, tts):
+    cases = []
+
+    # With a --rt-dir, every case runs on the realtime timetable: it holds the
+    # same trips as the static one plus the updates, so a second non-rt pass
+    # would just re-run the same queries against a subset of the data. The
+    # Rt=false raptor instantiation stays covered by the runs without --rt-dir.
+    sfx = "-rt" if rt else ""
+
+    def add(label, base, algorithm="PONG", arrive_by=False, clasz=None,
+            routed=False, wheelchair=False, bike=False, car=False,
+            tts=False, rental=False):
+        cases.append(dict(label=label + sfx, base=base, algorithm=algorithm,
+                          arrive_by=arrive_by, clasz=clasz, rt=rt,
+                          routed=routed, wheelchair=wheelchair, bike=bike,
+                          car=car, tts=tts, rental=rental))
+
+    for qt in bases:
+        if qt == "flex":
+            for algo in ("PONG", "RAPTOR"):
+                add("flex-%s-fwd" % algo.lower(), qt, algorithm=algo)
+                add("flex-%s-bwd" % algo.lower(), qt, algorithm=algo,
+                    arrive_by=True)
+            continue
+        if qt == "rental":
+            for algo in ("PONG", "RAPTOR"):
+                add("rental-%s-fwd" % algo.lower(), qt, algorithm=algo,
+                    rental=True)
+                add("rental-%s-bwd" % algo.lower(), qt, algorithm=algo,
+                    arrive_by=True, rental=True)
+            continue
+        for algo in ("PONG", "RAPTOR"):
+            add("%s-%s-fwd" % (qt, algo.lower()), qt, algorithm=algo)
+            add("%s-%s-bwd" % (qt, algo.lower()), qt, algorithm=algo, arrive_by=True)
+        if restricted:
+            add("%s-pong-fwd-clasz" % qt, qt, clasz=restricted)
+            add("%s-pong-bwd-clasz" % qt, qt, arrive_by=True, clasz=restricted)
+        if routed:
+            add("%s-pong-fwd-routed" % qt, qt, routed=True)
+            add("%s-pong-bwd-routed" % qt, qt, arrive_by=True, routed=True)
+            add("%s-raptor-fwd-routed" % qt, qt, algorithm="RAPTOR", routed=True)
+        if wheelchair:
+            add("%s-pong-fwd-wheelchair" % qt, qt, wheelchair=True)
+            add("%s-pong-bwd-wheelchair" % qt, qt, arrive_by=True, wheelchair=True)
+        if bike:
+            add("%s-pong-fwd-bike" % qt, qt, bike=True)
+            add("%s-pong-bwd-bike" % qt, qt, arrive_by=True, bike=True)
+            add("%s-raptor-fwd-bike" % qt, qt, algorithm="RAPTOR", bike=True)
+        if car:
+            add("%s-pong-fwd-car" % qt, qt, car=True)
+            add("%s-pong-bwd-car" % qt, qt, arrive_by=True, car=True)
+        if tts:
+            add("%s-pong-fwd-tts" % qt, qt, tts=True)
+            add("%s-pong-bwd-tts" % qt, qt, arrive_by=True, tts=True)
+            add("%s-raptor-fwd-tts" % qt, qt, algorithm="RAPTOR", tts=True)
+    return cases
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__,
+                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("binaries", nargs="+", help="motis binaries to compare (first = reference)")
+    ap.add_argument("--data", required=True, help="imported data dir (tt + osr)")
+    ap.add_argument("--name", default="dataset")
+    ap.add_argument("--rt-dir", help="dir containing dump_rt/ (enables --rt cases)")
+    ap.add_argument("--bounds",
+                    help="restrict generated query endpoints to a GeoJSON area "
+                         "(passed to 'motis generate -b'); \"europe\" is a "
+                         "built-in shorthand")
+    ap.add_argument("--gbfs-dir",
+                    help="dir containing dump_gbfs/ (required by --rental; the "
+                         "data config must set gbfs.canned_gbfs)")
+    ap.add_argument("--station", action="store_true",
+                    help="test stop-id queries (with street routing these fall "
+                         "back to the stop coordinate + equivalences, so "
+                         "--intermodal usually covers them)")
+    ap.add_argument("--intermodal", action="store_true",
+                    help="test -m WALK queries (coordinate endpoints + street "
+                         "routing offsets)")
+    ap.add_argument("--routed-footpaths", action="store_true",
+                    help="also test useRoutedTransfers=true (osr-routed foot profile); "
+                         "requires osr_footpath: true in the imported data")
+    ap.add_argument("--wheelchair", action="store_true",
+                    help="also test pedestrianProfile=WHEELCHAIR (prf_idx 2, stop "
+                         "accessibility, td footpaths); requires osr_footpath: true")
+    ap.add_argument("--flex", action="store_true",
+                    help="test -m WALK,FLEX queries seeded inside flex areas "
+                         "(td_start_/td_dest_ offsets); requires flex feeds + osr")
+    ap.add_argument("--bike", action="store_true",
+                    help="also test requireBikeTransport=true (bike carriage "
+                         "route/section filters)")
+    ap.add_argument("--car", action="store_true",
+                    help="also test requireCarTransport=true (car carriage "
+                         "route/section filters)")
+    ap.add_argument("--rental", action="store_true",
+                    help="own query base testing RENTAL pre/post transit and "
+                         "direct (GBFS bike_sharing); no plain intermodal cases "
+                         "are added. Requires a gbfs section in the data config, "
+                         "e.g. canned_gbfs with a dump_gbfs/ next to the working "
+                         "directory")
+    ap.add_argument("--tts", action="store_true",
+                    help="also test non-default transfer time settings "
+                         "(minTransferTime/transferTimeFactor/additionalTransferTime)")
+    ap.add_argument("--exclude-transit-modes",
+                    help="API transit modes dropped for the clasz-filter cases, "
+                         "comma-separated (e.g. COACH or HIGHSPEED_RAIL,COACH)")
+    ap.add_argument("--launcher",
+                    help="command prefixing 'motis batch' (e.g. "
+                         "'compute-sanitizer --tool memcheck --error-exitcode 1')")
+    ap.add_argument("--n", type=int, default=100)
+    ap.add_argument("--n_threads", type=int,
+                    help="'motis batch' worker threads (default: hardware "
+                         "concurrency); lower it if the batch runs out of RAM")
+    ap.add_argument("--date", required=True,
+                    help="pinned query day; pick the heaviest day class (e.g. "
+                         "a Friday) and capture the rt dump on that same day")
+    a = ap.parse_args()
+
+    bins = [os.path.abspath(b) for b in a.binaries]
+    launcher = shlex.split(a.launcher) if a.launcher else None
+    data = os.path.abspath(a.data)
+    rt_dir = os.path.abspath(a.rt_dir) if a.rt_dir else None
+    gbfs_dir = os.path.abspath(a.gbfs_dir) if a.gbfs_dir else None
+    if a.rental and gbfs_dir is None:
+        sys.exit("validate: --rental needs --gbfs-dir (dir containing dump_gbfs/)")
+
+    # One folder per PID -> don't interfere with parallel runs.
+    work = os.path.abspath("validate-%d" % os.getpid())
+    shutil.rmtree(work, True)
+    os.makedirs(work)
+    signal.signal(signal.SIGTERM, lambda *_: sys.exit(143))
+    atexit.register(shutil.rmtree, work, True)
+
+    excluded = set(a.exclude_transit_modes.split(",")) if a.exclude_transit_modes else set()
+    restricted = ",".join(m for m in ALL_MODES if m not in excluded) if excluded else None
+
+    # Make progress is visible live.
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(line_buffering=True)
+
+    print("== %s ==" % a.name)
+    labels = bin_labels(bins)
+
+    bases = {}
+    if a.station:
+        print("generating station queries (n=%d)..." % a.n)
+        bases["station"] = generate(bins[0], data, a.n, a.date, work,
+                                    bounds=a.bounds)
+    if a.intermodal:
+        print("generating intermodal queries (n=%d)..." % a.n)
+        bases["intermodal"] = generate(bins[0], data, a.n, a.date, work,
+                                       modes="WALK", bounds=a.bounds)
+    if a.flex:
+        print("generating flex queries (n=%d)..." % a.n)
+        bases["flex"] = generate(bins[0], data, a.n, a.date, work,
+                                       modes="WALK,FLEX", bounds=a.bounds)
+    if a.rental:
+        print("generating rental queries (n=%d)..." % a.n)
+        bases["rental"] = generate(bins[0], data, a.n, a.date, work,
+                                   modes="WALK", bounds=a.bounds)
+    if not bases:
+        sys.exit("validate: no query bases selected (specify at least one of "
+                 "--station / --intermodal / --flex / --rental)")
+    cases = build_cases(bases, restricted, rt_dir is not None, a.routed_footpaths,
+                        a.wheelchair, a.bike, a.car, a.tts)
+
+    results = []
+    lat = []  # (case_label, per-binary [execute_time ms] lists)
+    wall = [0.0] * len(bins)  # total batch wall time per binary
+    n_queries = 0  # total queries run per binary (same file for all)
+    fails = 0
+    for rt, rental in ((False, False), (False, True), (True, False),
+                       (True, True)):
+        # FILTER CASES
+        group = [c for c in cases
+                 if c["rt"] == rt and c["rental"] == rental]
+        if not group:
+            continue
+
+        # WRITE QUERIES BATCH
+        combined = os.path.join(work, "rt%d_rental%d.q" % (rt, rental))
+        spans, offsets = [], 0
+        routed_q = []  # per query: does its case street route transfers?
+        with open(combined, "w") as out:
+            for c in group:
+                qlines = [q + suffix(c) for q in bases[c["base"]]]
+                out.write("\n".join(qlines) + "\n")
+                spans.append((c["label"], qlines, offsets, len(qlines)))
+                offsets += len(qlines)
+                routed_q += [c["routed"] or c["wheelchair"]] * len(qlines)
+        n_queries += offsets
+
+        # RUN BATCH (the long pole: each cold-loads tt+osr, then routes)
+        outs = []
+        for i, b in enumerate(bins):
+            o = "%s.%d" % (combined, i)
+            print("[rt=%d rental=%d] batching %d queries on %s..." %
+                  (rt, rental, offsets, labels[i]))
+            wall[i] += batch(b, data, combined, o, rt_dir if rt else None,
+                             gbfs_dir if rental else None, a.n_threads,
+                             launcher)
+            print("[rt=%d rental=%d]   %s done in %.0fs" %
+                  (rt, rental, labels[i], wall[i]))
+            with open(o) as f:
+                outs.append(f.read().splitlines())
+
+            # Check GPU -> CPU fallbacks
+            # CUDA code throws error, e.g. cudaMalloc failed
+            # -> exception
+            # -> CPU takes over (gpu_used: 0)
+            n_cpu = gpu_fallbacks(outs[-1])
+            if n_cpu:
+                sys.exit("validate: %s routed %d queries on the CPU although it "
+                         "is a CUDA build. With a sanitizer build this usually "
+                         "means ASAN_OPTIONS is missing protect_shadow_gap=0."
+                         % (labels[i], n_cpu))
+
+            # FIXME: re-enable
+            #
+            # dummies = dummy_legs(outs[-1], routed_q)
+            # if dummies:
+            #     modes = sorted({m for _, m in dummies})
+            #     sys.exit("validate: %s returned %d dummy leg(s) (modes: %s) - "
+            #              "street routing found no path for an access or "
+            #              "egress leg (or a routed transfer). First failing "
+            #              "response: query %d."
+            #              % (labels[i], len(dummies), ", ".join(modes),
+            #                 dummies[0][0] + 1))
+
+        # COMPARE REF VS ALL (print each verdict as it completes)
+        for label, qlines, start, count in spans:
+            responses = [o[start:start + count] for o in outs]
+            lat.append((label, [exec_times(r) for r in responses]))
+            gpu = max(sum(1 for ln in r if '"gpu_used":1' in ln) for r in responses)
+            fell_back = next(((i, sum(1 for ln in r if '"gpu_used":0' in ln))
+                              for i, r in enumerate(responses)
+                              if any('"gpu_used":0' in ln for ln in r)), None)
+            if not compare(bins[0], qlines, responses, work, label):
+                ok, detail = False, "mismatch (motis compare)"
+            elif fell_back is not None:
+                ok, detail = False, ("bin%d fell back to CPU on %d/%d queries"
+                                     % (fell_back[0], fell_back[1], count))
+            else:
+                ok, detail = True, "%d ok, gpu_used=%d" % (count, gpu)
+            results.append((label, ok, detail))
+            fails += 0 if ok else 1
+            print("%s %-34s %s" % ("PASS" if ok else "FAIL", label, detail))
+
+    if not results:
+        sys.exit("validate: no cases ran -- nothing validated")
+
+    print("%s: %d passed, %d failed" % (a.name, len(results) - fails, fails))
+
+    print_tables(a.name, labels, lat, wall, n_queries)
+
+    sys.exit(1 if fails else 0)
+
+
+def emit_table(headers, rows, right):
+    # aligned (padded) markdown: readable as plain text in a CI log AND valid
+    # markdown. `right` = set of column indices to right-align (numbers).
+    w = [len(h) for h in headers]
+    for r in rows:
+        for i, c in enumerate(r):
+            w[i] = max(w[i], len(c))
+    def line(cells):
+        return "| " + " | ".join(
+            (c.rjust(w[i]) if i in right else c.ljust(w[i]))
+            for i, c in enumerate(cells)) + " |"
+    sep = [("-" * (w[i] - 1) + ":") if i in right else ("-" * w[i])
+           for i in range(len(headers))]
+    print(line(headers))
+    print("| " + " | ".join(sep) + " |")
+    for r in rows:
+        print(line(r))
+
+
+def print_tables(name, labels, lat, wall, n_queries):
+    # Throughput (aggregate over all cases; motis batch parallelizes queries)
+    print("\n### %s throughput (whole batch)\n" % name)
+    emit_table(
+        ["engine", "queries", "wall_s", "q/s"],
+        [[lbl, str(n_queries), "%.1f" % w,
+          "%.2f" % (n_queries / w if w > 0 else 0.0)]
+         for lbl, w in zip(labels, wall)],
+        right={1, 2, 3})
+
+    # Per-query routing-time latency (execute_time, ms) per case + engine
+    print("\n### %s per-query latency (execute_time, ms)\n" % name)
+    rows = []
+    for label, per_bin in lat:
+        for lbl, vals in zip(labels, per_bin):
+            if not vals:
+                continue
+            avg = sum(vals) / len(vals)
+            rows.append([label, lbl] +
+                        ["%.0f" % v for v in (avg, pct(vals, 0.5),
+                                              pct(vals, 0.75), pct(vals, 0.9),
+                                              pct(vals, 0.99), max(vals))])
+    emit_table(["case", "engine", "avg", "q50", "q75", "q90", "q99", "max"],
+               rows, right={2, 3, 4, 5, 6, 7})
+
+
+if __name__ == "__main__":
+    main()
