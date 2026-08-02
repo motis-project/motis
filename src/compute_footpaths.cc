@@ -219,6 +219,33 @@ elevator_footpath_map_t compute_footpaths(
           pt->update_monotonic(n_done + i);
         });
 
+    // transfer rule edges (HRDF UMSTEIG*, GTFS transfers.txt) are
+    // authoritative: street routing only fills transfers for pairs without a
+    // rule. Rule durations survive the max duration cap; forbidden transfers
+    // (marker duration == footpath::kMaxDuration) are never replaced by a
+    // street route.
+    {
+      auto const& rule_fps = std::as_const(tt.locations_.transfer_rule_fps_);
+      auto const n = std::min(static_cast<std::size_t>(rule_fps.size()),
+                              static_cast<std::size_t>(tt.n_locations()));
+      for (auto i = std::size_t{0U}; i != n; ++i) {
+        auto const l = n::location_idx_t{i};
+        auto const rules = rule_fps[l];
+        if (rules.size() == 0U) {
+          continue;
+        }
+        utl::erase_if(transfers[l], [&](n::footpath const fp) {
+          return utl::any_of(rules, [&](n::footpath const rule) {
+            return rule.target() == fp.target();
+          });
+        });
+        for (auto const rule : rules) {
+          transfers[l].push_back(rule);
+        }
+        utl::sort(transfers[l]);
+      }
+    }
+
     auto transfers_in =
         n::vector_map<n::location_idx_t, std::vector<n::footpath>>{};
     transfers_in.resize(tt.n_locations());

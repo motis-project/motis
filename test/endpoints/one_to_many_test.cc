@@ -857,3 +857,34 @@ TEST(one_to_many, street_routing) {
     }
   }
 }
+
+TEST(one_to_many, max_matching_distance_config_limit) {
+  auto [d, _config] = get_test_case<test_case::FFM_one_to_many>();
+
+  auto const run = [&](std::string const& max_matching_distance) {
+    auto const url =
+        std::string{
+            "/api/v1/one-to-many"
+            "?one=49.87336;8.62926"  // DA_10
+            "&many="
+            "49.87376;8.62926,"
+            "49.87300;8.62800,"
+            "49.87450;8.63100"  // not matched with 1m
+            "&mode=WALK"
+            "&max=1800"
+            "&arriveBy=false"
+            "&maxMatchingDistance="} +
+        max_matching_distance;
+    return one_to_many_v1_get(d)(boost::urls::url_view{url});
+  };
+
+  // Without a config limit, the API parameter is used as-is.
+  auto const close_matching = run("1");
+  ASSERT_EQ(3U, close_matching.size());
+  EXPECT_FALSE(close_matching.at(2).duration_.has_value());
+  EXPECT_NE(close_matching, run("250"));
+
+  // Larger API parameters are capped with the config limit.
+  d.config_.limits_ = config::limits{.max_max_matching_distance_ = 1.0};
+  EXPECT_EQ(close_matching, run("250"));
+}
