@@ -240,6 +240,17 @@ TEST(motis, stop_times) {
   }
 
   {
+    // unknown feed id -> HTTP 404, even with a center fallback available
+    EXPECT_THROW(stop_times("/api/v5/stoptimes?stopId=unknown_SOMETHING_RANDOM"
+                            "&center=50.10593,8.66118"
+                            "&radius=250"
+                            "&time=2019-04-30T23:30:00.000Z"
+                            "&arriveBy=true"
+                            "&n=3"),
+                 net::not_found_exception);
+  }
+
+  {
     // stoptimes in radius = r
     auto const r = 110.0;
     auto const center = geo::latlng{50.10563, 8.66218};

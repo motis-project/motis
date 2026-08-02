@@ -4,6 +4,8 @@
 
 #include "nigiri/types.h"
 
+#include "net/not_found_exception.h"
+
 #include "motis/config.h"
 #include "motis/data.h"
 #include "motis/import.h"
@@ -85,6 +87,14 @@ TEST(motis, tag_lookup) {
             d.tags_->get_location(*d.tt_, "test_+FFM_HÄUPT_&U"));
   EXPECT_NE(nigiri::location_idx_t::invalid(),
             d.tags_->get_location(*d.tt_, "test_DA 10"));
+
+  EXPECT_THROW(d.tags_->get_trip(*d.tt_, rtt, "20190501_01:15_unknown_S3 "),
+               net::not_found_exception);
+  EXPECT_THROW(d.tags_->get_location(*d.tt_, "unknown_DA 10"),
+               net::not_found_exception);
+  EXPECT_THROW(d.tags_->find_location(*d.tt_, "unknown_DA 10"),
+               net::not_found_exception);
+
   auto u = boost::urls::url{
       "/api",
   };
