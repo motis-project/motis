@@ -1553,12 +1553,12 @@ export const getStyle = (
 				'source-layer': 'streets',
 				filter: [
 					'all',
-					['in', 'kind', 'footway', 'path', 'pedestrian', 'cycleway'],
+					['in', 'kind', 'footway', 'path', 'pedestrian'],
 					level === 0 ? ['any', ['!has', 'level'], ['==', 'level', level]] : ['==', 'level', level]
 				],
 				minzoom: 12,
 				paint: {
-					'line-color': ['match', ['get', 'kind'], 'cycleway', c.cycleway, c.footpath],
+					'line-color': c.footpath,
 					'line-dasharray': [2, 1],
 					'line-opacity': [
 						'interpolate',
@@ -1571,6 +1571,24 @@ export const getStyle = (
 						14,
 						1
 					],
+					'line-width': ['interpolate', ['linear'], ['zoom'], 12, 0.3, 14, 0.6, 17, 1.8]
+				}
+			},
+			{
+				id: 'cycleway',
+				type: 'line',
+				source: 'osm',
+				'source-layer': 'streets',
+				filter: [
+					'all',
+					['==', 'kind', 'cycleway'],
+					level === 0 ? ['any', ['!has', 'level'], ['==', 'level', level]] : ['==', 'level', level]
+				],
+				minzoom: 12,
+				paint: {
+					'line-color': c.cycleway,
+					'line-dasharray': [2, 1],
+					'line-opacity': ['interpolate', ['linear'], ['zoom'], 12, 0, 13, 0, 14, 1],
 					'line-width': ['interpolate', ['linear'], ['zoom'], 12, 0.3, 14, 0.6, 17, 1.8]
 				}
 			},
