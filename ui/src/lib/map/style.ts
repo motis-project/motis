@@ -240,7 +240,7 @@ export const getStyle = (
 				paint: { 'fill-color': c.water }
 			},
 			{
-				id: 'landuse_park',
+				id: 'landuse-park',
 				type: 'fill',
 				source: 'osm',
 				'source-layer': 'land',
@@ -263,43 +263,83 @@ export const getStyle = (
 				}
 			},
 			{
-				id: 'landuse',
+				id: 'landuse-commercial',
 				type: 'fill',
 				source: 'osm',
 				'source-layer': 'land',
-				filter: [
-					'!in',
-					'kind',
-					'park',
-					'garden',
-					'playground',
-					'miniature_golf',
-					'golf_course',
-					'village_green',
-					'recreation_ground',
-					'greenhouse_horticulture',
-					'allotments',
-					'public_transport'
-				],
+				filter: ['==', 'kind', 'commercial'],
 				paint: {
-					'fill-color': [
-						'match',
-						['get', 'kind'],
-						'commercial',
-						c.landuseCommercial,
-						['industrial', 'railway', 'quarry', 'farmyard', 'landfill', 'garages'],
-						c.landuseIndustrial,
-						'residential',
-						c.landuseResidential,
-						'retail',
-						c.landuseRetail,
-						// agriculture group in the VersaTiles Shortbread style
-						['brownfield', 'greenfield'],
-						c.landuseAgriculture,
-						['bare_rock', 'scree', 'shingle'],
-						c.landuseConstruction,
-
-						[
+					'fill-color': c.landuseCommercial,
+					// soft fade-in like VersaTiles land layers
+					'fill-opacity': ['interpolate', ['linear'], ['zoom'], 8, 0.6, 10, 1]
+				}
+			},
+			{
+				id: 'landuse-industrial',
+				type: 'fill',
+				source: 'osm',
+				'source-layer': 'land',
+				filter: ['in', 'kind', 'industrial', 'railway', 'quarry', 'farmyard', 'landfill', 'garages'],
+				paint: {
+					'fill-color': c.landuseIndustrial,
+					// soft fade-in like VersaTiles land layers
+					'fill-opacity': ['interpolate', ['linear'], ['zoom'], 8, 0.6, 10, 1]
+				}
+			},
+			{
+				id: 'landuse-residential',
+				type: 'fill',
+				source: 'osm',
+				'source-layer': 'land',
+				filter: ['==', 'kind', 'residential'],
+				paint: {
+					'fill-color': c.landuseResidential,
+					// soft fade-in like VersaTiles land layers
+					'fill-opacity': ['interpolate', ['linear'], ['zoom'], 8, 0.6, 10, 1]
+				}
+			},
+			{
+				id: 'landuse-retail',
+				type: 'fill',
+				source: 'osm',
+				'source-layer': 'land',
+				filter: ['==', 'kind', 'retail'],
+				paint: {
+					'fill-color': c.landuseRetail,
+					// soft fade-in like VersaTiles land layers
+					'fill-opacity': ['interpolate', ['linear'], ['zoom'], 8, 0.6, 10, 1]
+				}
+			},
+			{
+				id: 'landuse-agriculture',
+				type: 'fill',
+				source: 'osm',
+				'source-layer': 'land',
+				filter: ['in', 'kind', 'brownfield', 'greenfield'], // agriculture group in the VersaTiles Shortbread style
+				paint: {
+					'fill-color': c.landuseAgriculture,
+					// soft fade-in like VersaTiles land layers
+					'fill-opacity': ['interpolate', ['linear'], ['zoom'], 8, 0.6, 10, 1]
+				}
+			},
+			{
+				id: 'landuse-construction',
+				type: 'fill',
+				source: 'osm',
+				'source-layer': 'land',
+				filter: ['in', 'kind', 'bare_rock', 'scree', 'shingle'],
+				paint: {
+					'fill-color': c.landuseConstruction,
+					// soft fade-in like VersaTiles land layers
+					'fill-opacity': ['interpolate', ['linear'], ['zoom'], 8, 0.6, 10, 1]
+				}
+			},
+			{
+				id: 'landuse-nature_light',
+				type: 'fill',
+				source: 'osm',
+				'source-layer': 'land',
+				filter: ['in', 'kind',
 							'farmland',
 							'vineyard',
 							'plant_nursery',
@@ -313,47 +353,101 @@ export const getStyle = (
 							'string_bog',
 							'wet_meadow',
 							'marsh'
-						],
-						c.landuseNatureLight,
-						['forest', 'scrub'],
-						c.landuseNatureHeavy,
-						['cemetery', 'grave_yard'],
-						c.landuseCemetery,
-						['beach', 'sand'],
-						c.landuseBeach,
-
-						'magenta'
-					],
+				],
+				paint: {
+					'fill-color': c.landuseNatureLight,
 					// soft fade-in like VersaTiles land layers
 					'fill-opacity': ['interpolate', ['linear'], ['zoom'], 8, 0.6, 10, 1]
 				}
 			},
 			{
-				id: 'sites',
+				id: 'landuse-nature_heavy',
+				type: 'fill',
+				source: 'osm',
+				'source-layer': 'land',
+				filter: ['in', 'kind', 'forest', 'scrub'],
+				paint: {
+					'fill-color': c.landuseNatureHeavy,
+					// soft fade-in like VersaTiles land layers
+					'fill-opacity': ['interpolate', ['linear'], ['zoom'], 8, 0.6, 10, 1]
+				}
+			},
+			{
+				id: 'landuse-cemetery',
+				type: 'fill',
+				source: 'osm',
+				'source-layer': 'land',
+				filter: ['in', 'kind', 'cemetery', 'grave_yard'],
+				paint: {
+					'fill-color': c.landuseCemetery,
+					// soft fade-in like VersaTiles land layers
+					'fill-opacity': ['interpolate', ['linear'], ['zoom'], 8, 0.6, 10, 1]
+				}
+			},
+			{
+				id: 'landuse-beach',
+				type: 'fill',
+				source: 'osm',
+				'source-layer': 'land',
+				filter: ['in', 'kind', 'beach', 'sand'],
+				paint: {
+					'fill-color': c.landuseBeach,
+					// soft fade-in like VersaTiles land layers
+					'fill-opacity': ['interpolate', ['linear'], ['zoom'], 8, 0.6, 10, 1]
+				}
+			},
+			{
+				id: 'sites-complex',
 				type: 'fill',
 				source: 'osm',
 				'source-layer': 'sites',
 				// construction is rendered by its own pattern layer below
-				filter: ['!=', 'kind', 'construction'],
+				filter: ['in', 'kind', 'university', 'school', 'college', 'prison'],
 				paint: {
-					'fill-color': [
-						'match',
-						['get', 'kind'],
-						['university', 'school', 'college', 'prison'],
-						c.landuseComplex,
+					'fill-color': c.landuseComplex
+				}
+			},
+			{
+				id: 'sites-hospital',
+				type: 'fill',
+				source: 'osm',
+				'source-layer': 'sites',
+				filter: ['==', 'kind', 'hospital'],
+				paint: {
 						// like VersaTiles: translucent red
-						'hospital',
+					'fill-color':
 						c.siteHospital,
-						'sports_center',
-						c.sport,
-						'danger_area',
-						c.landuseConstruction,
-						['parking', 'bicycle_parking'],
-						c.pedestrian,
-
-						'magenta'
-					],
-					'fill-opacity': ['match', ['get', 'kind'], 'hospital', 0.1, 1]
+					'fill-opacity': 0.1
+				}
+			},
+			{
+				id: 'sites-sport',
+				type: 'fill',
+				source: 'osm',
+				'source-layer': 'sites',
+				filter: ['==', 'kind', 'sports_center'],
+				paint: {
+					'fill-color': c.sport
+				}
+			},
+			{
+				id: 'sites-pedestrian',
+				type: 'fill',
+				source: 'osm',
+				'source-layer': 'sites',
+				filter: ['in', 'kind', 'parking', 'bicycle_parking'],
+				paint: {
+					'fill-color': c.pedestrian
+				}
+			},
+			{
+				id: 'sites-danger',
+				type: 'fill',
+				source: 'osm',
+				'source-layer': 'sites',
+				filter: ['==', 'kind', 'danger_area'],
+				paint: {
+					'fill-color': c.landuseConstruction
 				}
 			},
 			{
@@ -370,13 +464,24 @@ export const getStyle = (
 				}
 			},
 			{
+				id: 'water-glacier',
+				type: 'fill',
+				source: 'osm',
+				'source-layer': 'water_polygons',
+				filter: ['==', 'kind', 'glacier'],
+				paint: {
+					// glaciers white like in VersaTiles
+					'fill-color': c.glacier
+				}
+			},
+			{
 				id: 'water',
 				type: 'fill',
 				source: 'osm',
 				'source-layer': 'water_polygons',
+				filter: ['!=', 'kind', 'glacier'],
 				paint: {
-					// glaciers white like in VersaTiles
-					'fill-color': ['match', ['get', 'kind'], 'glacier', c.glacier, c.water]
+					'fill-color': c.water
 				}
 			},
 			// dams and piers like in VersaTiles
