@@ -302,31 +302,56 @@ export const getStyle = (
 			landuseLayer('landuse-cemetery', c.landuseCemetery, ['cemetery', 'grave_yard']),
 			landuseLayer('landuse-beach', c.landuseBeach, ['beach', 'sand']),
 			{
-				id: 'sites',
+				id: 'sites-complex',
 				type: 'fill',
 				source: 'osm',
 				'source-layer': 'sites',
 				// construction is rendered by its own pattern layer below
-				filter: ['!=', 'kind', 'construction'],
+				filter: ['in', 'kind', 'university', 'school', 'college', 'prison'],
 				paint: {
-					'fill-color': [
-						'match',
-						['get', 'kind'],
-						['university', 'school', 'college', 'prison'],
-						c.landuseComplex,
-						// like VersaTiles: translucent red
-						'hospital',
-						c.siteHospital,
-						'sports_center',
-						c.sport,
-						'danger_area',
-						c.landuseConstruction,
-						['parking', 'bicycle_parking'],
-						c.pedestrian,
-
-						'magenta'
-					],
-					'fill-opacity': ['match', ['get', 'kind'], 'hospital', 0.1, 1]
+					'fill-color': c.landuseComplex
+				}
+			},
+			{
+				id: 'sites-hospital',
+				type: 'fill',
+				source: 'osm',
+				'source-layer': 'sites',
+				filter: ['==', 'kind', 'hospital'],
+				paint: {
+					// like VersaTiles: translucent red
+					'fill-color': c.siteHospital,
+					'fill-opacity': 0.1
+				}
+			},
+			{
+				id: 'sites-sport',
+				type: 'fill',
+				source: 'osm',
+				'source-layer': 'sites',
+				filter: ['==', 'kind', 'sports_center'],
+				paint: {
+					'fill-color': c.sport
+				}
+			},
+			{
+				id: 'sites-pedestrian',
+				type: 'fill',
+				source: 'osm',
+				'source-layer': 'sites',
+				filter: ['in', 'kind', 'parking', 'bicycle_parking'],
+				paint: {
+					'fill-color': c.pedestrian
+				}
+			},
+			{
+				id: 'sites-danger',
+				type: 'fill',
+				source: 'osm',
+				'source-layer': 'sites',
+				filter: ['==', 'kind', 'danger_area'],
+				paint: {
+					'fill-color': c.landuseConstruction
 				}
 			},
 			{
@@ -343,13 +368,24 @@ export const getStyle = (
 				}
 			},
 			{
+				id: 'water-glacier',
+				type: 'fill',
+				source: 'osm',
+				'source-layer': 'water_polygons',
+				filter: ['==', 'kind', 'glacier'],
+				paint: {
+					// glaciers white like in VersaTiles
+					'fill-color': c.glacier
+				}
+			},
+			{
 				id: 'water',
 				type: 'fill',
 				source: 'osm',
 				'source-layer': 'water_polygons',
+				filter: ['!=', 'kind', 'glacier'],
 				paint: {
-					// glaciers white like in VersaTiles
-					'fill-color': ['match', ['get', 'kind'], 'glacier', c.glacier, c.water]
+					'fill-color': c.water
 				}
 			},
 			// dams and piers like in VersaTiles
