@@ -573,10 +573,12 @@ int generate(int ac, char** av) {
                                           s.stops_, arr_weight, r / 2U, r))
                                     : get_place(s.stops_[r]);
         } else if (geo_rank && rank_stop != n::location_idx_t::invalid()) {
+          auto const& rank_stop_pos = d.tt_->locations_.coordinates_[rank_stop];
+          auto const lng_degrees =
+              geo::approx_distance_lng_degrees(rank_stop_pos);
           for (auto const l : s.stops_) {
-            s.geo_distance_[l] =
-                geo::distance(d.tt_->locations_.coordinates_[rank_stop],
-                              d.tt_->locations_.coordinates_[l]);
+            s.geo_distance_[l] = geo::approx_squared_distance(
+                rank_stop_pos, d.tt_->locations_.coordinates_[l], lng_degrees);
           }
           utl::sort(s.stops_, [&](auto const& a, auto const& b) {
             return s.geo_distance_[a] < s.geo_distance_[b];
