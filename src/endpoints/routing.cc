@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 #include <mutex>
 #include <optional>
 #include <string_view>
@@ -19,6 +20,7 @@
 #include "utl/erase_duplicates.h"
 #include "utl/helpers/algorithm.h"
 #include "utl/timing.h"
+#include "utl/to_vec.h"
 
 #include "osr/lookup.h"
 #include "osr/platforms.h"
@@ -101,6 +103,31 @@ std::vector<n::routing::offset> radius_offsets(
          0U});
   });
   return offsets;
+}
+
+std::vector<n::routing::offset> client_offsets(
+    std::vector<api::PlanOffset> const& offsets,
+    tag_lookup const& tags,
+    n::timetable const& tt,
+    api::PedestrianProfileEnum const pedestrian_profile,
+    api::ElevationCostsEnum const elevation_costs) {
+  return utl::to_vec(offsets, [&](api::PlanOffset const& x) {
+    utl::verify<net::bad_request_exception>(
+        x.mode_ == api::ModeEnum::WALK || x.mode_ == api::ModeEnum::BIKE ||
+            x.mode_ == api::ModeEnum::CAR,
+        "Unsupported offset mode {}, supported: WALK, BIKE, CAR",
+        fmt::streamed(x.mode_));
+    utl::verify<net::bad_request_exception>(
+        x.duration_ >= 0 &&
+            x.duration_ / 60 <= std::numeric_limits<n::duration_t::rep>::max(),
+        "Invalid offset duration {}", x.duration_);
+    return n::routing::offset{
+        tags.get_location(tt, x.stopId_),
+        std::chrono::duration_cast<n::duration_t>(
+            std::chrono::seconds{x.duration_}),
+        static_cast<n::transport_mode_id_t>(
+            to_profile(x.mode_, pedestrian_profile, elevation_costs))};
+  });
 }
 
 osr::location stop_to_osr_location(routing const& r,
@@ -761,9 +788,14 @@ std::vector<api::ModeEnum> deduplicate(std::vector<api::ModeEnum> m) {
 };
 
 api::plan_response routing::operator()(boost::urls::url_view const& url) const {
+  return route(api::plan_params{url.params()}, get_api_version(url), nullptr);
+}
+
+api::plan_response routing::route(api::plan_params const& query,
+                                  unsigned const api_version,
+                                  api::PlanPostBody const* post_body) const {
   metrics_->routing_requests_.Increment();
 
-  auto const query = api::plan_params{url.params()};
   auto const max_matching_distance =
       std::min(query.maxMatchingDistance_,
                config_.get_limits().max_max_matching_distance_);
@@ -790,8 +822,6 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
   if (blocked.get() == nullptr && is_osr_loaded()) {
     blocked.reset(new osr::bitvec<osr::node_idx_t>{w_->n_nodes()});
   }
-
-  auto const api_version = get_api_version(url);
 
   auto const deduplicate = [](auto m) {
     utl::erase_duplicates(m);
@@ -954,6 +984,20 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
     UTL_START_TIMING(query_preparation);
     auto prepare_stats = std::map<std::string, std::uint64_t>{};
 
+    // client-supplied offsets (POST body): a non-empty list replaces the
+    // server-side offset computation for that side
+    auto const get_client_offsets =
+        [&](bool const from_side) -> std::vector<api::PlanOffset> const* {
+      if (post_body == nullptr) {
+        return nullptr;
+      }
+      auto const& o =
+          from_side ? post_body->fromOffsets_ : post_body->toOffsets_;
+      return o.has_value() && !o->empty() ? &*o : nullptr;
+    };
+    auto const* start_client = get_client_offsets(!query.arriveBy_);
+    auto const* dest_client = get_client_offsets(query.arriveBy_);
+
     auto const use_radius_start = query.radius_.has_value() &&
                                   std::holds_alternative<osr::location>(start);
     auto const use_radius_dest = query.radius_.has_value() &&
@@ -961,15 +1005,22 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
 
     auto q = n::routing::query{
         .start_time_ = start_time.start_time_,
-        .start_match_mode_ = (use_radius_start || is_osr_loaded())
-                                 ? n::routing::location_match_mode::kIntermodal
-                                 : n::routing::location_match_mode::kEquivalent,
-        .dest_match_mode_ = (use_radius_dest || is_osr_loaded())
-                                ? n::routing::location_match_mode::kIntermodal
-                                : n::routing::location_match_mode::kEquivalent,
-        .use_start_footpaths_ = !use_radius_start && !is_osr_loaded(),
+        .start_match_mode_ =
+            (start_client != nullptr || use_radius_start || is_osr_loaded())
+                ? n::routing::location_match_mode::kIntermodal
+                : n::routing::location_match_mode::kEquivalent,
+        .dest_match_mode_ =
+            (dest_client != nullptr || use_radius_dest || is_osr_loaded())
+                ? n::routing::location_match_mode::kIntermodal
+                : n::routing::location_match_mode::kEquivalent,
+        .use_start_footpaths_ =
+            start_client == nullptr && !use_radius_start && !is_osr_loaded(),
         .start_ =
-            use_radius_start
+            start_client != nullptr
+                ? client_offsets(*start_client, *tags_, *tt_,
+                                 query.pedestrianProfile_,
+                                 query.elevationCosts_)
+            : use_radius_start
                 ? radius_offsets(*loc_tree_,
                                  std::get<osr::location>(start).pos_,
                                  *query.radius_)
@@ -987,7 +1038,10 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                       query.arriveBy_ ? post_transit_time : pre_transit_time,
                       max_matching_distance, gbfs_rd, prepare_stats),
         .destination_ =
-            use_radius_dest
+            dest_client != nullptr ? client_offsets(*dest_client, *tags_, *tt_,
+                                                    query.pedestrianProfile_,
+                                                    query.elevationCosts_)
+            : use_radius_dest
                 ? radius_offsets(*loc_tree_, std::get<osr::location>(dest).pos_,
                                  *query.radius_)
                 : get_offsets(
@@ -1234,6 +1288,37 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
       .to_ = to_place(tt_, tags_, w_, pl_, matches_, ae_, tz_, lang, to),
       .direct_ = std::move(direct),
       .itineraries_ = {}};
+}
+
+api::plan_response routing_post::operator()(
+    boost::urls::url_view const& url, api::PlanPostBody const& body) const {
+  auto const r = routing{.config_ = config_,
+                         .w_ = w_,
+                         .l_ = l_,
+                         .pl_ = pl_,
+                         .elevations_ = elevations_,
+                         .tt_ = tt_,
+                         .tbd_ = tbd_,
+                         .tags_ = tags_,
+                         .loc_tree_ = loc_tree_,
+                         .fa_ = fa_,
+                         .matches_ = matches_,
+                         .way_matches_ = way_matches_,
+                         .rt_ = rt_,
+                         .shapes_ = shapes_,
+                         .gbfs_ = gbfs_,
+                         .ae_ = ae_,
+                         .tz_ = tz_,
+                         .odm_bounds_ = odm_bounds_,
+                         .ride_sharing_bounds_ = ride_sharing_bounds_,
+                         .metrics_ = metrics_
+#if defined(NIGIRI_CUDA)
+                         ,
+                         .gpu_pool_ = gpu_pool_
+#endif
+  };
+  // Routing params come from the query string; the body carries the offsets.
+  return r.route(api::plan_params{url.params()}, get_api_version(url), &body);
 }
 
 }  // namespace motis::ep

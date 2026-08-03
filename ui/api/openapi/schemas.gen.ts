@@ -2028,6 +2028,64 @@ query parameters (same as the \`refreshItinerary\` GET endpoint).
     }
 } as const;
 
+export const PlanOffsetSchema = {
+    description: `A client-computed first/last mile option: the given transit stop can
+be reached from the query coordinate (or vice versa) with the given
+duration and mode.
+`,
+    type: 'object',
+    required: ['stopId', 'duration'],
+    properties: {
+        stopId: {
+            description: 'stop id of the transit stop',
+            type: 'string'
+        },
+        duration: {
+            description: 'duration in seconds',
+            type: 'integer',
+            minimum: 0
+        },
+        mode: {
+            description: `mode used to reach the stop, used to render the first/last mile
+leg (supported: \`WALK\`, \`BIKE\`, \`CAR\`)
+`,
+            '$ref': '#/components/schemas/Mode',
+            default: 'WALK'
+        }
+    }
+} as const;
+
+export const PlanPostBodySchema = {
+    description: `Body for the \`planPost\` endpoint. Carries only the optional offset
+lists; all routing parameters are passed as query parameters (same as
+the \`plan\` GET endpoint). An absent or empty list keeps the default
+behavior (offsets computed by the server) for that side, so an empty
+body \`{}\` is equivalent to the GET endpoint.
+`,
+    type: 'object',
+    properties: {
+        fromOffsets: {
+            description: `Offsets for the \`fromPlace\` side: transit stops reachable from
+\`fromPlace\`, replacing the server-side first mile computation.
+`,
+            type: 'array',
+            items: {
+                '$ref': '#/components/schemas/PlanOffset'
+            }
+        },
+        toOffsets: {
+            description: `Offsets for the \`toPlace\` side: transit stops from which
+\`toPlace\` can be reached, replacing the server-side last mile
+computation.
+`,
+            type: 'array',
+            items: {
+                '$ref': '#/components/schemas/PlanOffset'
+            }
+        }
+    }
+} as const;
+
 export const ItinerarySchema = {
     type: 'object',
     required: ['duration', 'startTime', 'endTime', 'transfers', 'id', 'legs'],

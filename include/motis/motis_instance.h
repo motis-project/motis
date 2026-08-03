@@ -140,6 +140,7 @@ struct motis_instance {
         "/api/experimental/one-to-many-intermodal", d);
     POST<ep::one_to_many_post>("/api/v1/one-to-many", d);
     POST<ep::refresh_itinerary_post>("/api/v6/refresh-itinerary", d);
+    POST<ep::routing_post>("/api/v6/plan", d);
 
     if (!c.requires_rt_timetable_updates()) {
       // Elevator updates are not compatible with RT-updates.

@@ -389,6 +389,134 @@ TEST(motis, routing_unknown_feed_id) {
                net::not_found_exception);
 }
 
+TEST(motis, routing_post_client_offsets) {
+  auto ec = std::error_code{};
+  std::filesystem::remove_all("test/data_plan_post", ec);
+
+  auto const c =
+      config{.server_ = {{.web_folder_ = "ui/build", .n_threads_ = 1U}},
+             .timetable_ = config::timetable{
+                 .first_day_ = "2019-05-01",
+                 .num_days_ = 2,
+                 .extend_missing_footpaths_ = false,
+                 .datasets_ = {{"test", {.path_ = std::string{kGTFS}}}}}};
+  import(c, "test/data_plan_post");
+  auto d = data{"test/data_plan_post", c};
+
+  auto const get = utl::init_from<ep::routing>(d).value();
+  auto const post = utl::init_from<ep::routing_post>(d).value();
+
+  // exercises the generated JSON parsing the query router uses
+  auto const to_body = [](api::PlanPostBody const& b) {
+    return json::value_to<api::PlanPostBody>(json::value_from(b));
+  };
+
+  constexpr auto const kUrl =
+      "/api/v6/plan"
+      "?fromPlace=49.89100,8.62900"
+      "&toPlace=50.08800,8.66100"
+      "&time=2019-05-01T01:30Z"
+      "&timetableView=false"
+      "&numLegAlternatives=3";
+
+  // client-computed offsets replace the server-side offset computation
+  {
+    auto const body = to_body(api::PlanPostBody{
+        .fromOffsets_ = {{{.stopId_ = "test_DA_10", .duration_ = 21 * 60}}},
+        .toOffsets_ = {{{.stopId_ = "test_FFM_10", .duration_ = 22 * 60}}}});
+
+    auto const res = post(kUrl, body);
+    ASSERT_FALSE(res.itineraries_.empty());
+    auto const& j = res.itineraries_.front();
+    ASSERT_EQ(3U, j.legs_.size());
+    EXPECT_EQ(api::ModeEnum::WALK, j.legs_.front().mode_);
+    EXPECT_EQ(api::ModeEnum::WALK, j.legs_.back().mode_);
+    EXPECT_EQ("ICE", j.legs_[1].routeShortName_.value_or("-"));
+    EXPECT_EQ(21 * 60, j.legs_.front().duration_);
+    EXPECT_EQ(22 * 60, j.legs_.back().duration_);
+  }
+
+  // arriveBy=true: fromOffsets still attach to the fromPlace side (the
+  // first leg), toOffsets to the toPlace side (the last leg)
+  {
+    auto const body = to_body(api::PlanPostBody{
+        .fromOffsets_ = {{{.stopId_ = "test_DA_10", .duration_ = 21 * 60}}},
+        .toOffsets_ = {{{.stopId_ = "test_FFM_10", .duration_ = 22 * 60}}}});
+
+    auto const res = post(
+        "/api/v6/plan"
+        "?fromPlace=49.89100,8.62900"
+        "&toPlace=50.08800,8.66100"
+        "&time=2019-05-01T02:10Z"
+        "&arriveBy=true"
+        "&timetableView=false"
+        "&numLegAlternatives=3",
+        body);
+    ASSERT_FALSE(res.itineraries_.empty());
+    auto const& j = res.itineraries_.front();
+    ASSERT_EQ(3U, j.legs_.size());
+    EXPECT_EQ(api::ModeEnum::WALK, j.legs_.front().mode_);
+    EXPECT_EQ(api::ModeEnum::WALK, j.legs_.back().mode_);
+    EXPECT_EQ("ICE", j.legs_[1].routeShortName_.value_or("-"));
+    EXPECT_EQ(21 * 60, j.legs_.front().duration_);
+    EXPECT_EQ(22 * 60, j.legs_.back().duration_);
+  }
+
+  // empty body / empty lists = same behavior as GET
+  {
+    auto const url_with_radius = std::string{kUrl} + "&radius=5000";
+    auto const get_itineraries = get(url_with_radius).itineraries_;
+    EXPECT_EQ(get_itineraries,
+              post(url_with_radius, to_body(api::PlanPostBody{})).itineraries_);
+    EXPECT_EQ(get_itineraries,
+              post(url_with_radius,
+                   to_body(api::PlanPostBody{
+                       .fromOffsets_ = std::vector<api::PlanOffset>{},
+                       .toOffsets_ = std::vector<api::PlanOffset>{}}))
+                  .itineraries_);
+  }
+
+  // fromOffsets only, station id as destination
+  {
+    constexpr auto const kToStationUrl =
+        "/api/v6/plan"
+        "?fromPlace=49.89100,8.62900"
+        "&toPlace=test_FFM_10"
+        "&time=2019-05-01T01:30Z"
+        "&timetableView=false"
+        "&numLegAlternatives=3";
+    auto const body = to_body(api::PlanPostBody{
+        .fromOffsets_ = {{{.stopId_ = "test_DA_10", .duration_ = 21 * 60}}}});
+    auto const res = post(kToStationUrl, body);
+    ASSERT_FALSE(res.itineraries_.empty());
+    auto const& j = res.itineraries_.front();
+    EXPECT_EQ(api::ModeEnum::WALK, j.legs_.front().mode_);
+    EXPECT_EQ(21 * 60, j.legs_.front().duration_);
+    EXPECT_TRUE(utl::any_of(j.legs_, [](auto const& l) {
+      return l.routeShortName_.value_or("-") == "ICE";
+    }));
+  }
+
+  // errors: unknown stop id, unsupported mode, negative duration
+  EXPECT_ANY_THROW(post(
+      kUrl,
+      to_body(api::PlanPostBody{
+          .fromOffsets_ = {{{.stopId_ = "test_NOPE", .duration_ = 60}}},
+          .toOffsets_ = {{{.stopId_ = "test_FFM_10", .duration_ = 60}}}})));
+  EXPECT_ANY_THROW(post(
+      kUrl,
+      to_body(api::PlanPostBody{
+          .fromOffsets_ = {{{.stopId_ = "test_DA_10",
+                             .duration_ = 60,
+                             .mode_ = api::ModeEnum::FLEX}}},
+          .toOffsets_ = {{{.stopId_ = "test_FFM_10", .duration_ = 60}}}})));
+  EXPECT_ANY_THROW(post(
+      kUrl,
+      to_body(api::PlanPostBody{
+          .fromOffsets_ = {{{.stopId_ = "test_DA_10", .duration_ = -1}}},
+          .toOffsets_ = {{{.stopId_ = "test_FFM_10", .duration_ = 60}}}})));
+}
+
 TEST(motis, routing) {
   auto ec = std::error_code{};
   std::filesystem::remove_all("test/data", ec);
