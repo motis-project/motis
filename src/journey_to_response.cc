@@ -815,13 +815,19 @@ api::Itinerary journey_to_response(
                 return;
               }
 
+              // Offset legs to the journey destination end at the `kEnd`
+              // sentinel. This also holds for single-leg reconstructions
+              // (itinerary id refresh) where the leg position in the journey
+              // is not meaningful.
+              auto const is_pre_transit =
+                  j_leg.to_ !=
+                  n::get_special_station(n::special_station::kEnd);
               auto out = std::unique_ptr<output>{};
               if (flex::mode_id::is_flex(x.transport_mode_id_)) {
                 out = std::make_unique<flex::flex_output>(
                     *w, *l, pl, matches, ae, tz_map, tags, tt, *fl,
                     flex::mode_id{x.transport_mode_id_});
               } else if (x.transport_mode_id_ >= kGbfsTransportModeIdOffset) {
-                auto const is_pre_transit = pred == nullptr;
                 out = std::make_unique<gbfs::gbfs_output>(
                     *w, gbfs_rd, gbfs_rd.get_products_ref(x.transport_mode_id_),
                     is_pre_transit ? ignore_start_rental_return_constraints
@@ -831,13 +837,19 @@ api::Itinerary journey_to_response(
                     std::make_unique<default_output>(*w, x.transport_mode_id_);
               }
 
+              // Offsets on the arrival side were computed with a backward
+              // search - reconstruct the leg in the same direction, otherwise
+              // the leg times (fixed by the offset) may not be achievable on
+              // the reconstructed path.
               append(street_routing(
                   *w, *l, e, elevations, lang, from, to, *out, j_leg.dep_time_,
                   j_leg.arr_time_, max_matching_distance, osr_params, cache,
                   *blocked_mem, api_version, detailed_legs,
                   std::chrono::duration_cast<std::chrono::seconds>(
                       j_leg.arr_time_ - j_leg.dep_time_) +
-                      std::chrono::minutes{5}));
+                      std::chrono::minutes{5},
+                  is_pre_transit ? osr::direction::kForward
+                                 : osr::direction::kBackward));
             }},
         j_leg.uses_);
   }

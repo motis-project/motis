@@ -231,14 +231,18 @@ api::Itinerary street_routing(osr::ways const& w,
                               osr::bitvec<osr::node_idx_t>& blocked_mem,
                               unsigned const api_version,
                               bool const detailed_leg,
-                              std::chrono::seconds const max) {
+                              std::chrono::seconds const max,
+                              osr::direction const search_dir) {
   utl::verify(start_time.has_value() || end_time.has_value(),
               "either start_time or end_time must be set");
   auto const bound_time =
       start_time.or_else([&]() { return end_time; }).value();
-  auto const osr_dir = end_time.has_value() && !start_time.has_value()
-                           ? osr::direction::kBackward
-                           : osr::direction::kForward;
+  auto const is_bwd = search_dir == osr::direction::kBackward &&
+                      start_time.has_value() && end_time.has_value();
+  auto const osr_dir =
+      is_bwd || (end_time.has_value() && !start_time.has_value())
+          ? osr::direction::kBackward
+          : osr::direction::kForward;
   auto const to_osr_time = [](n::unixtime_t const t) {
     return osr::routing_time_t{
         std::chrono::duration_cast<std::chrono::seconds>(t.time_since_epoch())};
@@ -257,19 +261,24 @@ api::Itinerary street_routing(osr::ways const& w,
       to,
       out.get_cache_key(),
       out.is_time_dependent() ? bound_time : n::unixtime_t{n::i32_minutes{0}},
-      out.is_time_dependent() ? osr_dir : osr::direction::kForward,
+      out.is_time_dependent() || is_bwd ? osr_dir : osr::direction::kForward,
       exact_return_allowed};
   auto const path = utl::get_or_create(cache, cache_key, [&]() {
     auto const& [e_nodes, e_states] = *s;
     auto const profile = out.get_profile();
     return osr::route(
-        to_profile_parameters(profile, osr_params), w, l, profile, from, to,
+        to_profile_parameters(profile, osr_params), w, l, profile,
+        is_bwd ? to : from, is_bwd ? from : to,
         static_cast<osr::cost_t>(max.count()), osr_dir, max_matching_distance,
         s ? &set_blocked(e_nodes, e_states, blocked_mem) : nullptr,
-        out.get_sharing_data(), elevations, osr::routing_algorithm::kAStarBi,
+        out.get_sharing_data(), elevations,
+        is_bwd ? osr::routing_algorithm::kDijkstra
+               : osr::routing_algorithm::kAStarBi,
         osr_start_time,
-        osr::route_endpoint_options{
-            .exact_return_at_to_ = {exact_return_allowed}});
+        is_bwd ? osr::route_endpoint_options{.exact_return_at_from_ =
+                                                 exact_return_allowed}
+               : osr::route_endpoint_options{
+                     .exact_return_at_to_ = {exact_return_allowed}});
   });
 
   if (!path.has_value()) {
