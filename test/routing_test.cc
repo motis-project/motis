@@ -462,6 +462,24 @@ TEST(motis, routing_post_client_offsets) {
     EXPECT_EQ(22 * 60, j.legs_.back().duration_);
   }
 
+  // parent stations are expanded to their child stops: DA_10 / FFM_10 are
+  // only reachable through the parents given here
+  {
+    auto const body = to_body(api::PlanPostBody{
+        .fromOffsets_ = {{{.stopId_ = "test_DA", .duration_ = 21 * 60}}},
+        .toOffsets_ = {{{.stopId_ = "test_FFM", .duration_ = 22 * 60}}}});
+
+    auto const res = post(kUrl, body);
+    ASSERT_FALSE(res.itineraries_.empty());
+    auto const& j = res.itineraries_.front();
+    ASSERT_EQ(3U, j.legs_.size());
+    EXPECT_EQ(api::ModeEnum::WALK, j.legs_.front().mode_);
+    EXPECT_EQ(api::ModeEnum::WALK, j.legs_.back().mode_);
+    EXPECT_EQ("ICE", j.legs_[1].routeShortName_.value_or("-"));
+    EXPECT_EQ(21 * 60, j.legs_.front().duration_);
+    EXPECT_EQ(22 * 60, j.legs_.back().duration_);
+  }
+
   // empty body / empty lists = same behavior as GET
   {
     auto const url_with_radius = std::string{kUrl} + "&radius=5000";

@@ -31,6 +31,7 @@
 
 #include "nigiri/common/interval.h"
 #include "nigiri/constants.h"
+#include "nigiri/for_each_meta.h"
 #include "nigiri/location_match_mode.h"
 #include "nigiri/routing/limits.h"
 #include "nigiri/routing/pareto_set.h"
@@ -111,7 +112,8 @@ std::vector<n::routing::offset> client_offsets(
     n::timetable const& tt,
     api::PedestrianProfileEnum const pedestrian_profile,
     api::ElevationCostsEnum const elevation_costs) {
-  return utl::to_vec(offsets, [&](api::PlanOffset const& x) {
+  auto ret = std::vector<n::routing::offset>{};
+  for (auto const& x : offsets) {
     utl::verify<net::bad_request_exception>(
         x.mode_ == api::ModeEnum::WALK || x.mode_ == api::ModeEnum::BIKE ||
             x.mode_ == api::ModeEnum::CAR,
@@ -121,13 +123,19 @@ std::vector<n::routing::offset> client_offsets(
         x.duration_ >= 0 &&
             x.duration_ / 60 <= std::numeric_limits<n::duration_t::rep>::max(),
         "Invalid offset duration {}", x.duration_);
-    return n::routing::offset{
-        tags.get_location(tt, x.stopId_),
-        std::chrono::duration_cast<n::duration_t>(
-            std::chrono::seconds{x.duration_}),
-        static_cast<n::transport_mode_id_t>(
-            to_profile(x.mode_, pedestrian_profile, elevation_costs))};
-  });
+    auto const duration = std::chrono::duration_cast<n::duration_t>(
+        std::chrono::seconds{x.duration_});
+    auto const transport_mode_id = static_cast<n::transport_mode_id_t>(
+        to_profile(x.mode_, pedestrian_profile, elevation_costs));
+    // parent stations have no departures - expand them to their child stops
+    // (a child stop expands to just itself)
+    n::routing::for_each_meta(
+        tt, n::routing::location_match_mode::kOnlyChildren,
+        tags.get_location(tt, x.stopId_), [&](n::location_idx_t const l) {
+          ret.emplace_back(l, duration, transport_mode_id);
+        });
+  }
+  return ret;
 }
 
 osr::location stop_to_osr_location(routing const& r,

@@ -2037,7 +2037,9 @@ duration and mode.
     required: ['stopId', 'duration'],
     properties: {
         stopId: {
-            description: 'stop id of the transit stop',
+            description: `stop id of the transit stop
+(parent stations are expanded to their child stops)
+`,
             type: 'string'
         },
         duration: {

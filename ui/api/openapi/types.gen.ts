@@ -1603,6 +1603,8 @@ export type RefreshItineraryPostBody = {
 export type PlanOffset = {
     /**
      * stop id of the transit stop
+     * (parent stations are expanded to their child stops)
+     *
      */
     stopId: string;
     /**
