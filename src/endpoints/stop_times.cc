@@ -368,9 +368,7 @@ std::vector<api::Place> other_stops_impl(n::rt::frun fr,
         utl::find_if(fr, [orig_location](n::rt::run_stop const& stop) {
           return orig_location == stop.get_location_idx();
         });
-    auto result = utl::to_vec(fr.begin(), it, convert_stop);
-    utl::verify(!result.empty(), "Departure is last stop in trip");
-    return result;
+    return utl::to_vec(fr.begin(), it, convert_stop);
   } else {
     fr.stop_range_.from_ = 0;
     --fr.stop_range_.to_;
@@ -379,9 +377,7 @@ std::vector<api::Place> other_stops_impl(n::rt::frun fr,
         fr.rbegin(), fr.rend(), [orig_location](n::rt::run_stop const& stop) {
           return orig_location == stop.get_location_idx();
         });
-    auto result = utl::to_vec(it.base(), fr.end(), convert_stop);
-    utl::verify(!result.empty(), "Arrival is first stop in trip");
-    return result;
+    return utl::to_vec(it.base(), fr.end(), convert_stop);
   }
 }
 

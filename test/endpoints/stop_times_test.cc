@@ -240,6 +240,17 @@ TEST(motis, stop_times) {
   }
 
   {
+    // unknown feed id -> HTTP 404, even with a center fallback available
+    EXPECT_THROW(stop_times("/api/v5/stoptimes?stopId=unknown_SOMETHING_RANDOM"
+                            "&center=50.10593,8.66118"
+                            "&radius=250"
+                            "&time=2019-04-30T23:30:00.000Z"
+                            "&arriveBy=true"
+                            "&n=3"),
+                 net::not_found_exception);
+  }
+
+  {
     // stoptimes in radius = r
     auto const r = 110.0;
     auto const center = geo::latlng{50.10563, 8.66218};
@@ -480,6 +491,155 @@ TEST(motis, stop_times_reservation) {
               (*t2.previousStops_)[0].stopId_);  // reaches into T1's leg
     EXPECT_EQ("test_B", (*t2.previousStops_)[1].stopId_);
   }
+}
+
+constexpr auto const kGTFS_LOOP_SAME_STOP = R"(
+# agency.txt
+agency_id,agency_name,agency_url,agency_timezone
+DB,Deutsche Bahn,https://deutschebahn.com,Europe/Berlin
+
+# stops.txt
+stop_id,stop_name,stop_lat,stop_lon
+TERM,Terminal,50.10701,8.66341
+
+# routes.txt
+route_id,agency_id,route_short_name,route_long_name,route_desc,route_type
+R1,DB,1,,,3
+
+# trips.txt
+route_id,service_id,trip_id,trip_headsign
+R1,S1,SHUTTLE,
+
+# stop_times.txt
+trip_id,arrival_time,departure_time,stop_id,stop_sequence
+SHUTTLE,08:00:00,08:00:00,TERM,0
+SHUTTLE,08:10:00,08:10:00,TERM,1
+
+# calendar_dates.txt
+service_id,date,exception_type
+S1,20190501,1
+)";
+
+TEST(motis, stop_times_loop_same_stop) {
+  auto ec = std::error_code{};
+  std::filesystem::remove_all("test/data-loop-same-stop", ec);
+
+  auto const c =
+      config{.timetable_ = config::timetable{
+                 .first_day_ = "2019-05-01",
+                 .num_days_ = 2,
+                 .datasets_ = {{"test", {.path_ = kGTFS_LOOP_SAME_STOP}}}}};
+  import(c, "test/data-loop-same-stop");
+  auto d = data{"test/data-loop-same-stop", c};
+  d.init_rtt(date::sys_days{2019_y / May / 1});
+
+  auto const stop_times = utl::init_from<ep::stop_times>(d).value();
+
+  {
+    // Departure at TERM (idx 0): used to crash with
+    // "Departure is last stop in trip".
+    auto const res = stop_times(
+        "/api/v5/stoptimes?stopId=test_TERM"
+        "&time=2019-05-01T05:55:00.000Z"
+        "&n=1"
+        "&language=de"
+        "&fetchStops=true");
+
+    ASSERT_EQ(1, res.stopTimes_.size());
+    auto const& t = res.stopTimes_[0];
+    ASSERT_TRUE(t.nextStops_.has_value());
+    EXPECT_TRUE(t.nextStops_->empty());
+  }
+
+  {
+    // Arrival at TERM (idx 1, the last stop): used to crash with
+    // "Arrival is first stop in trip".
+    auto const res = stop_times(
+        "/api/v5/stoptimes?stopId=test_TERM"
+        "&time=2019-05-01T06:25:00.000Z"
+        "&arriveBy=true"
+        "&n=1"
+        "&language=de"
+        "&fetchStops=true");
+
+    ASSERT_EQ(1, res.stopTimes_.size());
+    auto const& t = res.stopTimes_[0];
+    ASSERT_TRUE(t.previousStops_.has_value());
+    EXPECT_TRUE(t.previousStops_->empty());
+  }
+}
+
+constexpr auto const kGTFS_SKIPPED_STOP = R"(
+# agency.txt
+agency_id,agency_name,agency_url,agency_timezone
+DB,Deutsche Bahn,https://deutschebahn.com,Europe/Berlin
+
+# stops.txt
+stop_id,stop_name,stop_lat,stop_lon
+A,A,50.10701,8.66341
+B,B,50.11403,8.67835
+C,C,49.87260,8.63085
+
+# routes.txt
+route_id,agency_id,route_short_name,route_long_name,route_desc,route_type
+R1,DB,1,,,3
+
+# trips.txt
+route_id,service_id,trip_id,trip_headsign
+R1,S1,T1,
+
+# stop_times.txt
+trip_id,arrival_time,departure_time,stop_id,stop_sequence
+T1,08:00:00,08:00:00,A,0
+T1,08:10:00,08:10:00,B,1
+T1,08:20:00,08:20:00,C,2
+
+# calendar_dates.txt
+service_id,date,exception_type
+S1,20190501,1
+)";
+
+TEST(motis, stop_times_skipped_stop) {
+  auto ec = std::error_code{};
+  std::filesystem::remove_all("test/data-skipped-stop", ec);
+
+  auto const c =
+      config{.timetable_ = config::timetable{
+                 .first_day_ = "2019-05-01",
+                 .num_days_ = 2,
+                 .datasets_ = {{"test", {.path_ = kGTFS_SKIPPED_STOP}}}}};
+  import(c, "test/data-skipped-stop");
+  auto d = data{"test/data-skipped-stop", c};
+  d.init_rtt(date::sys_days{2019_y / May / 1});
+
+  auto const stats = n::rt::gtfsrt_update_msg(
+      *d.tt_, *d.rt_->rtt_, n::source_idx_t{0}, "test",
+      to_feed_msg({trip_update{.trip_ = {.trip_id_ = "T1",
+                                         .start_time_ = {"08:00:00"},
+                                         .date_ = {"20190501"}},
+                               .stop_updates_ = {{.stop_id_ = "B",
+                                                  .seq_ = std::optional{1U},
+                                                  .skip_ = true}}}},
+                  date::sys_days{2019_y / May / 1} + 5h));
+  EXPECT_EQ(1U, stats.total_entities_success_);
+
+  auto const stop_times = utl::init_from<ep::stop_times>(d).value();
+
+  auto const res = stop_times(
+      "/api/v5/stoptimes?stopId=test_A"
+      "&time=2019-05-01T05:55:00.000Z"
+      "&n=1"
+      "&language=de"
+      "&fetchStops=true");
+
+  ASSERT_EQ(1, res.stopTimes_.size());
+  auto const& t = res.stopTimes_[0];
+  ASSERT_TRUE(t.nextStops_.has_value());
+  ASSERT_EQ(2, t.nextStops_->size());
+  EXPECT_EQ("test_B", (*t.nextStops_)[0].stopId_);
+  EXPECT_TRUE((*t.nextStops_)[0].cancelled_.value_or(false));
+  EXPECT_EQ("test_C", (*t.nextStops_)[1].stopId_);
+  EXPECT_FALSE((*t.nextStops_)[1].cancelled_.value_or(false));
 }
 
 // Service S1 runs daily from 2019-05-01 to 2019-05-10 (feed_end_date).

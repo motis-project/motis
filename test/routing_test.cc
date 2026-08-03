@@ -16,6 +16,8 @@
 
 #include "nigiri/rt/gtfsrt_update.h"
 
+#include "net/not_found_exception.h"
+
 #include "motis-api/motis-api.h"
 #include "motis/config.h"
 #include "motis/data.h"
@@ -361,6 +363,30 @@ TEST(motis, routing_radius_without_osm) {
   // 1994m -> 22min.
   EXPECT_EQ(21 * 60, j.legs_.front().duration_);
   EXPECT_EQ(22 * 60, j.legs_.back().duration_);
+}
+
+TEST(motis, routing_unknown_feed_id) {
+  auto ec = std::error_code{};
+  std::filesystem::remove_all("test/data_radius", ec);
+
+  auto const c =
+      config{.server_ = {{.web_folder_ = "ui/build", .n_threads_ = 1U}},
+             .timetable_ = config::timetable{
+                 .first_day_ = "2019-05-01",
+                 .num_days_ = 2,
+                 .extend_missing_footpaths_ = false,
+                 .datasets_ = {{"test", {.path_ = std::string{kGTFS}}}}}};
+  import(c, "test/data_radius");
+  auto d = data{"test/data_radius", c};
+
+  auto const routing = utl::init_from<ep::routing>(d).value();
+
+  // unknown feed id -> HTTP 404 with a clear message, not a crash
+  EXPECT_THROW(routing("?fromPlace=unknown_DA_10"
+                       "&toPlace=50.08800,8.66100"
+                       "&time=2019-05-01T01:30Z"
+                       "&timetableView=false"),
+               net::not_found_exception);
 }
 
 TEST(motis, routing) {
