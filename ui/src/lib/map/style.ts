@@ -163,6 +163,22 @@ export const colors = {
 	}
 };
 
+const roadWidthInterpolation = [
+	'interpolate',
+	['linear'],
+	['zoom'],
+	5,
+	['*', ['var', 'base'], 0.5],
+	9,
+	['*', ['var', 'base'], 1],
+	12,
+	['*', ['var', 'base'], 2],
+	16,
+	['*', ['var', 'base'], 2.5],
+	20,
+	['*', ['var', 'base'], 3]
+];
+
 function getUrlBase(url: string): string {
 	const { origin, pathname } = new URL(url);
 	return origin + pathname.slice(0, pathname.lastIndexOf('/') + 1);
@@ -978,21 +994,7 @@ export const getStyle = (
 							3,
 							3.5,
 						],
-						[
-							'interpolate',
-							['linear'],
-							['zoom'],
-							5,
-							['*', ['var', 'base'], 0.5],
-							9,
-							['*', ['var', 'base'], 1],
-							12,
-							['*', ['var', 'base'], 2],
-							16,
-							['*', ['var', 'base'], 2.5],
-							20,
-							['*', ['var', 'base'], 3]
-						]
+						roadWidthInterpolation
 					]
 				}
 			},
@@ -1036,21 +1038,7 @@ export const getStyle = (
 							2.5,
 							3
 						],
-						[
-							'interpolate',
-							['linear'],
-							['zoom'],
-							5,
-							['*', ['var', 'base'], 0.5],
-							9,
-							['*', ['var', 'base'], 1],
-							12,
-							['*', ['var', 'base'], 2],
-							16,
-							['*', ['var', 'base'], 2.5],
-							20,
-							['*', ['var', 'base'], 3]
-						]
+						roadWidthInterpolation
 					]
 				}
 			},
@@ -1108,21 +1096,7 @@ export const getStyle = (
 								2.5,
 							]
 						],
-						[
-							'interpolate',
-							['linear'],
-							['zoom'],
-							5,
-							['*', ['var', 'base'], 0.5],
-							9,
-							['*', ['var', 'base'], 1],
-							12,
-							['*', ['var', 'base'], 2],
-							16,
-							['*', ['var', 'base'], 2.5],
-							20,
-							['*', ['var', 'base'], 3]
-						]
+						roadWidthInterpolation
 					]
 				}
 			},
@@ -1167,21 +1141,7 @@ export const getStyle = (
 							0.75,
 							1.75
 						],
-						[
-							'interpolate',
-							['linear'],
-							['zoom'],
-							5,
-							['*', ['var', 'base'], 0.5],
-							9,
-							['*', ['var', 'base'], 1],
-							12,
-							['*', ['var', 'base'], 2],
-							16,
-							['*', ['var', 'base'], 2.5],
-							20,
-							['*', ['var', 'base'], 3]
-						]
+						roadWidthInterpolation
 					]
 				}
 			},
@@ -1208,21 +1168,7 @@ export const getStyle = (
 						'let',
 						'base',
 						1.5,
-						[
-							'interpolate',
-							['linear'],
-							['zoom'],
-							5,
-							['*', ['var', 'base'], 0.5],
-							9,
-							['*', ['var', 'base'], 1],
-							12,
-							['*', ['var', 'base'], 2],
-							16,
-							['*', ['var', 'base'], 2.5],
-							20,
-							['*', ['var', 'base'], 3]
-						]
+						roadWidthInterpolation
 					]
 				}
 			},
@@ -1273,21 +1219,7 @@ export const getStyle = (
 						'let',
 						'base',
 						0.75,
-						[
-							'interpolate',
-							['linear'],
-							['zoom'],
-							5,
-							['*', ['var', 'base'], 0.5],
-							9,
-							['*', ['var', 'base'], 1],
-							12,
-							['*', ['var', 'base'], 2],
-							16,
-							['*', ['var', 'base'], 2.5],
-							20,
-							['*', ['var', 'base'], 3]
-						]
+						roadWidthInterpolation
 					]
 				}
 			},
