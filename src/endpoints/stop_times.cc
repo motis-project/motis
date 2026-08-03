@@ -360,27 +360,36 @@ std::vector<api::Place> other_stops_impl(n::rt::frun fr,
   };
 
   auto const orig_location = fr[0].get_location_idx();
+  // Iterate via raw indices (not fr.begin()/end()/rbegin()/rend()), which
+  // skip skipped/cancelled stops via first_valid()
+  // Return next stops until one stop before the loop closes
   if (ev_type == nigiri::event_type::kDep) {
     ++fr.stop_range_.from_;
     fr.stop_range_.to_ = fr.size();
-    // Return next stops until one stop before the loop closes
-    auto const it =
-        utl::find_if(fr, [orig_location](n::rt::run_stop const& stop) {
-          return orig_location == stop.get_location_idx();
-        });
-    auto result = utl::to_vec(fr.begin(), it, convert_stop);
-    utl::verify(!result.empty(), "Departure is last stop in trip");
+    auto result = std::vector<api::Place>{};
+    for (auto i = n::stop_idx_t{0U};
+         static_cast<n::stop_idx_t>(fr.stop_range_.from_ + i) <
+         fr.stop_range_.to_;
+         ++i) {
+      auto const stop = fr[i];
+      if (stop.get_location_idx() == orig_location) {
+        break;
+      }
+      result.emplace_back(convert_stop(stop));
+    }
     return result;
   } else {
     fr.stop_range_.from_ = 0;
     --fr.stop_range_.to_;
-    // Return previous stops beginning one stop before the loop closes
-    auto const it = std::find_if(
-        fr.rbegin(), fr.rend(), [orig_location](n::rt::run_stop const& stop) {
-          return orig_location == stop.get_location_idx();
-        });
-    auto result = utl::to_vec(it.base(), fr.end(), convert_stop);
-    utl::verify(!result.empty(), "Arrival is first stop in trip");
+    auto result = std::vector<api::Place>{};
+    for (auto i = fr.stop_range_.to_; i-- > fr.stop_range_.from_;) {
+      auto const stop = fr[i];
+      if (stop.get_location_idx() == orig_location) {
+        break;
+      }
+      result.emplace_back(convert_stop(stop));
+    }
+    std::reverse(result.begin(), result.end());
     return result;
   }
 }
