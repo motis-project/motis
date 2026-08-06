@@ -64,7 +64,8 @@
 		pedestrianSpeed = $bindable(),
 		cyclingSpeed = $bindable(),
 		additionalTransferTime = $bindable(),
-		hasDebug = false
+		hasDebug = false,
+		onSearch
 	}: {
 		geocodingBiasPlace?: maplibregl.LngLatLike;
 		serverConfig: ServerConfig | undefined;
@@ -111,6 +112,7 @@
 		cyclingSpeed: CyclingSpeed;
 		additionalTransferTime: number | undefined;
 		hasDebug: boolean;
+		onSearch: () => void;
 	} = $props();
 
 	let fromItems = $state<Array<Location>>([]);
@@ -251,7 +253,7 @@
 			class="flex grow bg-blue-600 hover:!bg-blue-700 text-white font-bold"
 			variant="default"
 			title={t.search}
-			onclick={() => {}}
+			onclick={onSearch}
 		>
 			{t.search}
 		</Button>

@@ -304,8 +304,10 @@
 			to = placeToLocation(legs[legs.length - 1].to);
 			time = new Date(arriveBy ? itinerary!.endTime : itinerary!.startTime);
 
-			// Suppress the initial auto-search.
+			// Suppress the initial auto-search, but allow later edits (e.g. changing
+			// the time) to trigger one, just like a regular search would.
 			lastPlanQuery = baseQuery;
+			searchTriggered = true;
 		}
 
 		pushStateWithQueryString(
@@ -362,6 +364,10 @@
 		}
 	}
 
+	// The very first search must be triggered explicitly via the search button.
+	// Deep links that already carry a fromPlace/toPlace (shared/bookmarked search
+	// URLs) are treated as already searched, so they render immediately.
+	let searchTriggered = $state(Boolean(urlParams?.get('fromPlace') && urlParams?.get('toPlace')));
 	let advancedOptionsOpen = $state<boolean>(false);
 	let isochronesAdvancedOptionsOpen = $state<boolean>(false);
 	let fromMarker = $state<maplibregl.Marker>();
@@ -788,7 +794,7 @@
 	};
 
 	$effect(() => {
-		if (baseQuery && baseQuery != lastPlanQuery && activeTab == 'connections') {
+		if (searchTriggered && baseQuery && baseQuery != lastPlanQuery && activeTab == 'connections') {
 			lastPlanQuery = baseQuery;
 			clearTimeout(searchDebounceTimer);
 			searchDebounceTimer = setTimeout(() => {
@@ -1060,6 +1066,7 @@
 						bind:additionalTransferTime
 						bind:transferTimeFactor
 						{hasDebug}
+						onSearch={() => (searchTriggered = true)}
 					/>
 				</Card>
 			</Tabs.Content>
