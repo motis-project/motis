@@ -1,71 +1,15 @@
-[nigiri]
-  url=git@github.com:motis-project/nigiri.git
-  branch=master
-  commit=e2971077ff74a0f9fb1b54de6452cbf4e2a01883
-[cista]
-  url=git@github.com:felixguendling/cista.git
-  branch=master
-  commit=10abc43279bd99586d3433ea3b419727f46b8dd9
-[osr]
-  url=git@github.com:motis-project/osr.git
-  branch=master
-  commit=dd079c717fc528dddc50e7b5a629087f861cf247
-[utl]
-  url=git@github.com:motis-project/utl.git
-  branch=master
-  commit=d9930c90e440df761c8c4916c36072de9dd00f49
 [adr]
   url=git@github.com:triptix-tech/adr.git
   branch=master
   commit=055bad6b670330e79b8ab4909d5c9399dedb133f
-[googletest]
-  url=git@github.com:motis-project/googletest.git
-  branch=master
-  commit=7b64fca6ea0833628d6f86255a81424365f7cc0c
-[net]
-  url=git@github.com:motis-project/net.git
-  branch=master
-  commit=d1d445326a5d3ec77e14394fee60962d08894ba0
-[openapi-cpp]
-  url=git@github.com:triptix-tech/openapi-cpp.git
-  branch=master
-  commit=22492d0eb82ea257e666c29e66c402a45d5d7e25
-[unordered_dense]
-  url=git@github.com:motis-project/unordered_dense.git
-  branch=main
-  commit=2c7230ae7f9c30849a5b089fb4a5d11896b45dcf
-[reflect-cpp]
-  url=git@github.com:motis-project/reflect-cpp.git
-  branch=main
-  commit=86fdcdd09a54b0f55de97110e1911d27f60e498a
-[tiles]
-  url=git@github.com:motis-project/tiles.git
-  branch=master
-  commit=0bab73e02d672ca2d4f0c0b1347fb9b49dd5302a
 [boost]
   url=git@github.com:motis-project/boost.git
   branch=boost-1.89.0
   commit=b050b3988ba25ea7757462d26a38d225bfe20f75
-[tg]
-  url=git@github.com:triptix-tech/tg.git
-  branch=main
-  commit=20c0f298b8ce58de29a790290f44dca7c4ecc364
-[mimalloc]
-  url=git@github.com:motis-project/mimalloc.git
-  branch=dev3
-  commit=eef5f6cf7251ae2924029bda2eda0c84c542493a
-[lz4]
-  url=git@github.com:motis-project/lz4.git
-  branch=dev
-  commit=ff69dbd1ad10852104257d5306874a07b76f0dbd
-[prometheus-cpp]
-  url=git@github.com:motis-project/prometheus-cpp.git
+[cista]
+  url=git@github.com:felixguendling/cista.git
   branch=master
-  commit=e420cd7cf3995a994220b40a36c987ac8e67c0bf
-[opentelemetry-cpp]
-  url=git@github.com:motis-project/opentelemetry-cpp.git
-  branch=main
-  commit=f2240dc890f3bf68fe6fa5a80450e93aab09578e
+  commit=427f0a873be43f1de94289bd53d5678e07cd243f
 [ctx]
   url=git@github.com:motis-project/ctx.git
   branch=master
@@ -74,3 +18,59 @@
   url=git@github.com:motis-project/geo.git
   branch=master
   commit=31b1ac29d386d7b53d0112dccaad37e84b8ae567
+[googletest]
+  url=git@github.com:motis-project/googletest.git
+  branch=master
+  commit=9758d168fd1ccff2d76f3bd6ef802943d0f8f7e5
+[lz4]
+  url=git@github.com:motis-project/lz4.git
+  branch=dev
+  commit=ff69dbd1ad10852104257d5306874a07b76f0dbd
+[mimalloc]
+  url=git@github.com:motis-project/mimalloc.git
+  branch=dev3
+  commit=eef5f6cf7251ae2924029bda2eda0c84c542493a
+[net]
+  url=git@github.com:motis-project/net.git
+  branch=master
+  commit=d1d445326a5d3ec77e14394fee60962d08894ba0
+[nigiri]
+  url=git@github.com:motis-project/nigiri.git
+  branch=master
+  commit=e2971077ff74a0f9fb1b54de6452cbf4e2a01883
+[openapi-cpp]
+  url=git@github.com:triptix-tech/openapi-cpp.git
+  branch=master
+  commit=22492d0eb82ea257e666c29e66c402a45d5d7e25
+[opentelemetry-cpp]
+  url=git@github.com:motis-project/opentelemetry-cpp.git
+  branch=main
+  commit=f2240dc890f3bf68fe6fa5a80450e93aab09578e
+[osr]
+  url=git@github.com:motis-project/osr.git
+  branch=master
+  commit=dd079c717fc528dddc50e7b5a629087f861cf247
+[prometheus-cpp]
+  url=git@github.com:motis-project/prometheus-cpp.git
+  branch=master
+  commit=e420cd7cf3995a994220b40a36c987ac8e67c0bf
+[reflect-cpp]
+  url=git@github.com:motis-project/reflect-cpp.git
+  branch=main
+  commit=86fdcdd09a54b0f55de97110e1911d27f60e498a
+[tg]
+  url=git@github.com:triptix-tech/tg.git
+  branch=main
+  commit=20c0f298b8ce58de29a790290f44dca7c4ecc364
+[tiles]
+  url=git@github.com:motis-project/tiles.git
+  branch=master
+  commit=0bab73e02d672ca2d4f0c0b1347fb9b49dd5302a
+[unordered_dense]
+  url=git@github.com:motis-project/unordered_dense.git
+  branch=main
+  commit=2c7230ae7f9c30849a5b089fb4a5d11896b45dcf
+[utl]
+  url=git@github.com:motis-project/utl.git
+  branch=master
+  commit=d9930c90e440df761c8c4916c36072de9dd00f49
