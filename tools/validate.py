@@ -84,6 +84,23 @@ def gpu_fallbacks(lines):
     return n
 
 
+def invalid_durations(lines):
+    # legs with a missing or negative duration: a leg must carry a duration in
+    # seconds (required in the API schema) and it must not end before it starts
+    out = []
+    for idx, ln in enumerate(lines):
+        try:
+            r = json.loads(ln)
+        except ValueError:
+            continue
+        for itin in (r.get("itineraries") or []) + (r.get("direct") or []):
+            for leg in itin.get("legs") or []:
+                d = leg.get("duration")
+                if d is None or d < 0:
+                    out.append((idx, leg.get("mode", "?"), d))
+    return out
+
+
 def dummy_legs(lines, routed_q=()):
     out = []
     for idx, ln in enumerate(lines):
@@ -411,6 +428,15 @@ def main():
                          "is a CUDA build. With a sanitizer build this usually "
                          "means ASAN_OPTIONS is missing protect_shadow_gap=0."
                          % (labels[i], n_cpu))
+
+            neg = invalid_durations(outs[-1])
+            if neg:
+                modes = sorted({m for _, m, _ in neg})
+                sys.exit("validate: %s returned %d leg(s) with a missing or "
+                         "negative duration (modes: %s). "
+                         "First failing response: query %d."
+                         % (labels[i], len(neg), ", ".join(modes),
+                            neg[0][0] + 1))
 
             # FIXME: re-enable
             #
