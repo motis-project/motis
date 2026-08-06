@@ -308,24 +308,19 @@ osr::match_result get_reverse_platform_way_matches(
     std::span<nigiri::location_idx_t const> const locations,
     std::span<osr::location const> const osr_locations,
     osr::direction const dir,
-    double const max_matching_distance,
-    std::span<std::uint8_t const> const exact_return_allowed) {
+    double const max_matching_distance) {
   auto const use_raw_matches =
       way_matches && !way_matches->matches_.empty() &&
       way_matches->max_matching_distance_ >= max_matching_distance;
   auto result = osr::match_result{};
-  for (auto const [i, ll] :
-       utl::enumerate(utl::zip(locations, osr_locations))) {
-    auto const& [l, query] = ll;
-    auto raw_matches = std::optional<std::span<osr::raw_way_candidate const>>{};
+  for (auto const [l, query] : utl::zip(locations, osr_locations)) {
+    auto raw_matches = std::span<osr::raw_way_candidate const>{};
     if (use_raw_matches) {
       auto const& m = way_matches->matches_[l];
       raw_matches = {m.begin(), m.end()};
     }
-    lookup.match_endpoint(
-        to_profile_parameters(p, {}), query, true, dir, max_matching_distance,
-        nullptr, p, i < exact_return_allowed.size() && exact_return_allowed[i],
-        raw_matches, result);
+    lookup.match(to_profile_parameters(p, {}), query, true, dir,
+                 max_matching_distance, nullptr, p, raw_matches, result);
   }
   return result;
 };
