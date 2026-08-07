@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+#include <utility>
 #include <vector>
 
 #include "nigiri/routing/query.h"
@@ -9,7 +11,7 @@ namespace motis::odm {
 struct query_factory {
   static constexpr auto const kMaxSubQueries = 9U;
 
-  std::vector<nigiri::routing::query> make_queries(
+  std::vector<std::pair<std::string, nigiri::routing::query>> make_queries(
       bool with_taxi, bool with_ride_sharing) const;
 
 private:

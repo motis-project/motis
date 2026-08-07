@@ -6,36 +6,43 @@ namespace motis::odm {
 
 namespace n = nigiri;
 
-std::vector<n::routing::query> query_factory::make_queries(
-    bool const with_taxi, bool const with_ride_sharing) const {
-  auto queries = std::vector<n::routing::query>{};
-  queries.push_back(
-      make(start_walk_, td_start_walk_, dest_walk_, td_dest_walk_));
+std::vector<std::pair<std::string, n::routing::query>>
+query_factory::make_queries(bool const with_taxi,
+                            bool const with_ride_sharing) const {
+  auto queries = std::vector<std::pair<std::string, n::routing::query>>{};
+  queries.emplace_back(
+      "walk", make(start_walk_, td_start_walk_, dest_walk_, td_dest_walk_));
   if (with_taxi) {
     if (!dest_taxi_short_.empty()) {
-      queries.push_back(
+      queries.emplace_back(
+          "dest_taxi_short",
           make(start_walk_, td_start_walk_, dest_walk_, dest_taxi_short_));
     }
     if (!dest_taxi_long_.empty()) {
-      queries.push_back(
+      queries.emplace_back(
+          "dest_taxi_long",
           make(start_walk_, td_start_walk_, dest_walk_, dest_taxi_long_));
     }
     if (!start_taxi_short_.empty()) {
-      queries.push_back(
+      queries.emplace_back(
+          "start_taxi_short",
           make(start_walk_, start_taxi_short_, dest_walk_, td_dest_walk_));
     }
     if (!start_taxi_long_.empty()) {
-      queries.push_back(
+      queries.emplace_back(
+          "start_taxi_long",
           make(start_walk_, start_taxi_long_, dest_walk_, td_dest_walk_));
     }
   }
   if (with_ride_sharing) {
     if (!start_ride_sharing_.empty()) {
-      queries.push_back(
+      queries.emplace_back(
+          "start_ride_sharing",
           make(start_walk_, start_ride_sharing_, dest_walk_, td_dest_walk_));
     }
     if (!dest_ride_sharing_.empty()) {
-      queries.push_back(
+      queries.emplace_back(
+          "dest_ride_sharing",
           make(start_walk_, td_start_walk_, dest_walk_, dest_ride_sharing_));
     }
   }
