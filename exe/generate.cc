@@ -6,6 +6,8 @@
 
 #include "boost/url/url.hpp"
 
+#include "geo/grid.h"
+
 #include "nigiri/common/interval.h"
 #include "nigiri/flex.h"
 #include "nigiri/routing/raptor/debug.h"
@@ -15,6 +17,8 @@
 #include "utl/parallel_for.h"
 #include "utl/progress_tracker.h"
 #include "utl/raii.h"
+#include "utl/read_file.h"
+#include "utl/verify.h"
 
 #include "motis-api/motis-api.h"
 #include "motis/config.h"
@@ -94,6 +98,7 @@ int generate(int ac, char** av) {
   auto geo_rank = std::optional<std::uint64_t>{};
   tg_geom* bounds{nullptr};
   auto const free_bounds = utl::make_finally([&]() { tg_geom_free(bounds); });
+  auto population_grid = geo::grid<std::uint64_t>{};
   auto master_params = api::plan_params{};
 
   auto const parse_date = [](std::string_view const s) {
@@ -153,6 +158,13 @@ int generate(int ac, char** av) {
     }
   };
 
+  auto const parse_population_grid = [&](std::string const& s) {
+    auto const file_content = utl::read_file(s.c_str());
+    utl::verify(file_content.has_value(),
+                "could not read population grid file at {}", s.c_str());
+    population_grid = geo::parse_eurostat_population_grid(*file_content);
+  };
+
   auto desc = po::options_description{"Options"};
   desc.add_options()  //
       ("help", "Prints this help message")  //
@@ -199,7 +211,11 @@ int generate(int ac, char** av) {
        "the source in terms of geographical distance, overrides lb_rank")  //
       ("bounds,b", po::value<std::string>()->notifier(parse_bounds),
        "randomize locations within bounds, format: GeoJSON"
-       "(shorthand for Europe \"-b europe\")");
+       "(shorthand for Europe \"-b europe\")")  //
+      ("population_grid",
+       po::value<std::string>()->notifier(parse_population_grid),
+       "path to a CSV file containing a EUROSTAT population grid; the higher "
+       "the population the more likely it is that a grid cell is selected");
   add_data_path_opt(desc, data_path);
   auto vm = parse_opt(ac, av, desc);
 
