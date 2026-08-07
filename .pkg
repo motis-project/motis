@@ -21,7 +21,7 @@
 [googletest]
   url=git@github.com:motis-project/googletest.git
   branch=master
-  commit=7b64fca6ea0833628d6f86255a81424365f7cc0c
+  commit=9758d168fd1ccff2d76f3bd6ef802943d0f8f7e5
 [lz4]
   url=git@github.com:motis-project/lz4.git
   branch=dev
