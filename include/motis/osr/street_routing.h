@@ -82,23 +82,24 @@ api::Itinerary dummy_itinerary(api::Place const& from,
                                unsigned const api_version,
                                bool cancelled = false);
 
-api::Itinerary street_routing(osr::ways const&,
-                              osr::lookup const&,
-                              elevators const*,
-                              osr::elevation_storage const*,
-                              nigiri::lang_t const& lang,
-                              api::Place const& from,
-                              api::Place const& to,
-                              output const&,
-                              std::optional<nigiri::unixtime_t> start_time,
-                              std::optional<nigiri::unixtime_t> end_time,
-                              double max_matching_distance,
-                              osr_parameters const&,
-                              street_routing_cache_t&,
-                              osr::bitvec<osr::node_idx_t>& blocked_mem,
-                              unsigned api_version,
-                              bool detailed_leg = true,
-                              std::chrono::seconds max = std::chrono::seconds{
-                                  3600});
+api::Itinerary street_routing(
+    osr::ways const&,
+    osr::lookup const&,
+    elevators const*,
+    osr::elevation_storage const*,
+    nigiri::lang_t const& lang,
+    api::Place const& from,
+    api::Place const& to,
+    output const&,
+    std::optional<nigiri::unixtime_t> start_time,
+    std::optional<nigiri::unixtime_t> end_time,
+    double max_matching_distance,
+    osr_parameters const&,
+    street_routing_cache_t&,
+    osr::bitvec<osr::node_idx_t>& blocked_mem,
+    unsigned api_version,
+    bool detailed_leg = true,
+    std::chrono::seconds max = std::chrono::seconds{3600},
+    osr::direction search_dir = osr::direction::kForward);
 
 }  // namespace motis
