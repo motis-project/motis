@@ -14,6 +14,7 @@
 #include "prometheus/histogram.h"
 
 #include "utl/erase_duplicates.h"
+#include "utl/erase_if.h"
 
 #include "ctx/ctx.h"
 
@@ -21,7 +22,7 @@
 #include "nigiri/routing/journey.h"
 #include "nigiri/routing/limits.h"
 #include "nigiri/routing/query.h"
-#include "nigiri/routing/raptor_search.h"
+#include "nigiri/routing/raptor/pong.h"
 #include "nigiri/routing/start_times.h"
 #include "nigiri/types.h"
 
@@ -216,7 +217,7 @@ std::vector<meta_router::routing_result> meta_router::search_interval(
           r_.config_.get_limits().routing_max_timeout_seconds_)};
       auto search_state = n::routing::search_state{};
       auto raptor_state = n::routing::raptor_state{};
-      return routing_result{raptor_search(
+      return routing_result{pong_search(
           *tt_, rtt_, search_state, raptor_state, std::move(q),
           query_.arriveBy_ ? n::direction::kBackward : n::direction::kForward,
           timeout)};
@@ -439,7 +440,13 @@ api::plan_response meta_router::run() {
       qf.make_queries(blacklisted_taxis, whitelisted_ride_sharing);
   n::log(n::log_lvl::debug, "motis.prima",
          "[prepare queries] {} queries prepared", sub_queries.size());
-  auto const results = search_interval(sub_queries);
+  auto results = search_interval(sub_queries);
+  for (auto& r : results) {
+    utl::erase_if(r.journeys_.els_, [&](n::routing::journey const& j) {
+      return !context_intvl.contains(query_.arriveBy_ ? j.arrival_time()
+                                                      : j.departure_time());
+    });
+  }
   utl::verify(!results.empty(), "prima: public transport result expected");
   auto const& pt_result = results.front();
   auto taxi_journeys = collect_odm_journeys(results, kOdmTransportModeId);
@@ -572,8 +579,9 @@ api::plan_response meta_router::run() {
                 if (a.time_at_start_ ==
                         response.legs_.back()
                             .endTime_ &&  // not looking at time_at_stop_
-                                          // because we would again need to take
-                                          // into account the 5 min shift...
+                                          // because we would again need to
+                                          // take into account the 5 min
+                                          // shift...
                     r_.tags_->id(*tt_, a.stop_) ==
                         response.legs_.back().from_.stopId_) {
                   response.legs_.back().tripId_ = std::optional{
