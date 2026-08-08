@@ -19,9 +19,8 @@ query_factory::make_queries(bool const with_taxi,
           make(start_walk_, td_start_walk_, dest_walk_, dest_taxi_short_));
     }
     if (!dest_taxi_long_.empty()) {
-      queries.emplace_back(
-          "dest_taxi_long",
-          make(start_walk_, td_start_walk_, dest_walk_, dest_taxi_long_));
+      queries.emplace_back("dest_taxi_long", make(start_walk_, td_start_walk_,
+                                                  dest_walk_, dest_taxi_long_));
     }
     if (!start_taxi_short_.empty()) {
       queries.emplace_back(
