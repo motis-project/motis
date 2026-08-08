@@ -1,3 +1,8 @@
+#if defined(_MSC_VER)
+// needs to be the first to include WinSock.h
+#include "boost/asio.hpp"
+#endif
+
 #include <fstream>
 #include <iostream>
 
@@ -189,8 +194,7 @@ int batch(int ac, char** av) {
   // handlers synchronously without such a context, so it must not be used
   // here -- mirror server.cc's ctx::scheduler + ctx_exec setup instead.
   auto scheduler = ctx::scheduler<ctx_data>{};
-  auto m = motis_instance{ctx_exec{scheduler.runner_.ios(), scheduler}, d, c,
-                          ""};
+  auto m = motis_instance{ctx_exec{scheduler.runner_.ios(), scheduler}, d, c, ""};
 
   auto responses = std::vector<std::string>(queries.size());
   auto starts =
