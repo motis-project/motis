@@ -4,6 +4,7 @@
 	import * as Dialog from '$lib/components/ui/dialog';
 	import { t } from '$lib/i18n/translation';
 	import * as Select from '$lib/components/ui/select';
+	import { Input } from '$lib/components/ui/input';
 	import { Switch } from './components/ui/switch';
 	import type {
 		CyclingSpeed,
@@ -183,9 +184,6 @@
 	let possibleModes = $derived(
 		hasDebug ? prePostDirectModes : prePostDirectModes.filter((m) => !m.startsWith('DEBUG_'))
 	);
-
-	const inputClass =
-		'flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50';
 </script>
 
 {#snippet optionsContent()}
@@ -261,12 +259,12 @@
 				/>
 			{/if}
 			<div class="text-sm">{t.routingSegments.additionalTransferTime}</div>
-			<input
+			<Input
 				type="number"
 				min="0"
 				bind:value={additionalTransferTime}
 				placeholder={t.duration + ' (min)'}
-				class="text-sm border w-full h-full pl-1 text-center rounded-md"
+				class="px-1 text-center"
 			/>
 		</div>
 		<!-- First mile -->
@@ -315,8 +313,7 @@
 				<div class="text-sm font-medium">{t.hgvRoutingOptions}</div>
 				<div class="grid grid-cols-2 items-center gap-2">
 					<div class="text-sm">{t.vehicleHeight}</div>
-					<input
-						class={inputClass}
+					<Input
 						disabled={!allowStreetRouting}
 						type="number"
 						min="0"
@@ -325,8 +322,7 @@
 					/>
 
 					<div class="text-sm">{t.vehicleWidth}</div>
-					<input
-						class={inputClass}
+					<Input
 						disabled={!allowStreetRouting}
 						type="number"
 						min="0"
@@ -335,8 +331,7 @@
 					/>
 
 					<div class="text-sm">{t.vehicleLength}</div>
-					<input
-						class={inputClass}
+					<Input
 						disabled={!allowStreetRouting}
 						type="number"
 						min="0"
@@ -345,8 +340,7 @@
 					/>
 
 					<div class="text-sm">{t.vehicleWeight}</div>
-					<input
-						class={inputClass}
+					<Input
 						disabled={!allowStreetRouting}
 						type="number"
 						min="0"
@@ -355,8 +349,7 @@
 					/>
 
 					<div class="text-sm">{t.vehicleTopSpeed}</div>
-					<input
-						class={inputClass}
+					<Input
 						disabled={!allowStreetRouting}
 						type="number"
 						min="0"
@@ -365,8 +358,7 @@
 					/>
 
 					<div class="text-sm">{t.vehicleAxleCount}</div>
-					<input
-						class={inputClass}
+					<Input
 						disabled={!allowStreetRouting}
 						type="number"
 						min="1"
@@ -375,8 +367,7 @@
 					/>
 
 					<div class="text-sm">{t.vehicleAxleLoad}</div>
-					<input
-						class={inputClass}
+					<Input
 						disabled={!allowStreetRouting}
 						type="number"
 						min="0"
