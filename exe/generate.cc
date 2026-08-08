@@ -1,6 +1,7 @@
 #include <fstream>
 #include <iostream>
 #include <mutex>
+#include <numeric>
 
 #include "conf/configuration.h"
 
@@ -163,6 +164,12 @@ int generate(int ac, char** av) {
     utl::verify(file_content.has_value(),
                 "could not read population grid file at {}", s.c_str());
     population_grid = geo::parse_eurostat_population_grid(*file_content);
+    utl::erase_if(population_grid, [](auto const c) { return c.data_ == 0UL; });
+    std::partial_sum(
+        population_grid.begin(), population_grid.end(), population_grid.begin(),
+        [](auto const& acc, auto const& c) -> geo::grid_cell<std::uint64_t> {
+          return {c.b_, acc.data_ + c.data_};
+        });
   };
 
   auto desc = po::options_description{"Options"};
