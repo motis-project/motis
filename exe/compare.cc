@@ -24,6 +24,7 @@
 
 #include "motis-api/motis-api.h"
 #include "motis/constants.h"
+#include "motis/qa.h"
 #include "motis/types.h"
 
 #include "./flags.h"
@@ -39,6 +40,7 @@ int compare(int ac, char** av) {
   auto queries_path = fs::path{"queries.txt"};
   auto responses_paths = std::vector<std::string>{};
   auto fails_path = fs::path{"fail"};
+  auto walk = false;
   auto desc = po::options_description{"Options"};
   desc.add_options()  //
       ("help", "Prints this help message")  //
@@ -50,7 +52,9 @@ int compare(int ac, char** av) {
        po::value(&responses_paths)
            ->multitoken()
            ->default_value(responses_paths),
-       "response files");
+       "response files")  //
+      ("walking_time,w", po::bool_switch(&walk)->default_value(walk),
+       "whether walking time should be considered, default: off");
 
   auto vm = parse_opt(ac, av, desc);
   if (vm.count("help")) {
@@ -68,8 +72,11 @@ int compare(int ac, char** av) {
     std::optional<api::plan_params> params_{};
     std::vector<std::optional<api::plan_response>> responses_{};
   };
-  auto const params = [](api::Itinerary const& x) {
-    return std::tie(x.startTime_, x.endTime_, x.transfers_);
+  auto const params = walk ? [](api::Itinerary const& x) {
+    return std::tuple(x.startTime_, x.endTime_, x.transfers_,
+                      qa::criterion::kDefaultWalkingTime(x));
+  } : [](api::Itinerary const& x) {
+    return std::tuple(x.startTime_, x.endTime_, x.transfers_, 0.0);
   };
   auto const equal = [&](std::vector<api::Itinerary> const& a,
                          std::vector<api::Itinerary> const& b) {
@@ -85,7 +92,24 @@ int compare(int ac, char** av) {
   };
   auto const print_params = [](api::Itinerary const& x) {
     std::cout << x.startTime_ << ", " << x.endTime_
-              << ", transfers=" << std::setw(2) << std::left << x.transfers_;
+              << ", transfers=" << std::setw(2) << std::right << x.transfers_
+              << ", walk=" << std::setw(4) << std::right
+              << qa::criterion::kDefaultWalkingTime(x);
+  };
+  auto const get_ratings = [](auto const& ref, auto const& uut) {
+    return std::map<std::string, double>{
+        {"start_end_transfer", qa::rate(ref, uut, qa::kStartEndTransfer)},
+        {"start_end_transfer_walk",
+         qa::rate(ref, uut, qa::kStartEndTransferWalk)}};
+  };
+  auto const print_ratings = [](auto const& ratings) {
+    for (auto const& [name, rating] : ratings) {
+      std::cout << "[" << name << ", " << rating << ", "
+                << (rating > 0   ? "↗"
+                    : rating < 0 ? "↘"
+                                 : "→")
+                << " ] ";
+    }
   };
   auto const print_none = []() { std::cout << "\t\t\t\t\t\t"; };
   auto n_equal = 0U;
@@ -107,12 +131,17 @@ int compare(int ac, char** av) {
       }
 
       mismatch = true;
-      std::cout << "QUERY=" << x.id_ << " ["
-                << x.params_->to_url(kPlanPath) << "]";
+      std::cout << "QUERY=" << x.id_ << " [" << x.params_->to_url(kPlanPath)
+                << "]";
       if (is_incomplete) {
         std::cout << " [INCOMPLETE!!]";
       }
       std::cout << "\n";
+      if (x.responses_.size() == 2U) {
+        std::cout << "ratings: ";
+        print_ratings(get_ratings(ref, uut));
+        std::cout << "\n";
+      }
       utl::sorted_diff(
           ref, uut,
           [&](api::Itinerary const& a, api::Itinerary const& b) {
@@ -125,19 +154,19 @@ int compare(int ac, char** av) {
               [&](utl::op op, api::Itinerary const& j) {
                 if (op == utl::op::kAdd) {
                   print_none();
-                  std::cout << "\t\t\t\t";
+                  std::cout << "\t\t\t";
                   print_params(j);
                   std::cout << "\n";
                 } else {
                   print_params(j);
-                  std::cout << "\t\t\t\t";
+                  std::cout << "\t\t\t";
                   print_none();
                   std::cout << "\n";
                 }
               },
               [&](api::Itinerary const& a, api::Itinerary const& b) {
                 print_params(a);
-                std::cout << "\t\t\t";
+                std::cout << "\t";
                 print_params(b);
                 std::cout << "\n";
               }});
