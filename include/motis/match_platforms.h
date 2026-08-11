@@ -1,9 +1,7 @@
 #pragma once
 
-#include <cstdint>
 #include <map>
 #include <optional>
-#include <span>
 
 #include "osr/lookup.h"
 #include "osr/types.h"
@@ -60,7 +58,6 @@ osr::match_result get_reverse_platform_way_matches(
     std::span<nigiri::location_idx_t const>,
     std::span<osr::location const>,
     osr::direction,
-    double max_matching_distance,
-    std::span<std::uint8_t const> exact_return_allowed = {});
+    double max_matching_distance);
 
 }  // namespace motis

@@ -1,7 +1,7 @@
 [nigiri]
   url=git@github.com:motis-project/nigiri.git
   branch=master
-  commit=e2971077ff74a0f9fb1b54de6452cbf4e2a01883
+  commit=8248961afa06fe6de8e732a8e3276ef5d13f2af0
 [cista]
   url=git@github.com:felixguendling/cista.git
   branch=master
@@ -9,15 +9,15 @@
 [osr]
   url=git@github.com:motis-project/osr.git
   branch=master
-  commit=dd079c717fc528dddc50e7b5a629087f861cf247
+  commit=186636ef304bacf7fc7d08a842220e9ae4265690
 [utl]
   url=git@github.com:motis-project/utl.git
   branch=master
-  commit=d9930c90e440df761c8c4916c36072de9dd00f49
+  commit=df0527f591cd1c80d7ff5442dfdab3eafe51386c
 [adr]
   url=git@github.com:triptix-tech/adr.git
   branch=master
-  commit=055bad6b670330e79b8ab4909d5c9399dedb133f
+  commit=af7aa0a652b0e74b011671ff8a4883bce9ab8380
 [googletest]
   url=git@github.com:motis-project/googletest.git
   branch=master
@@ -41,7 +41,7 @@
 [tiles]
   url=git@github.com:motis-project/tiles.git
   branch=master
-  commit=0bab73e02d672ca2d4f0c0b1347fb9b49dd5302a
+  commit=89184bed3a6940665bd6a87e8f08e07b9b4fe57d
 [boost]
   url=git@github.com:motis-project/boost.git
   branch=boost-1.89.0
