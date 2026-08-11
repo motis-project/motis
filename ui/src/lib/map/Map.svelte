@@ -11,6 +11,8 @@
 		center = $bindable(),
 		bearing = $bindable(),
 		style,
+		shieldFill,
+		shieldStroke,
 		attribution,
 		transformRequest,
 		children,
@@ -18,6 +20,8 @@
 	}: {
 		map?: maplibregl.Map;
 		style: maplibregl.StyleSpecification | undefined;
+		shieldFill: string;
+		shieldStroke: string;
 		attribution: string | undefined | false;
 		transformRequest?: maplibregl.RequestTransformFunction;
 		center: maplibregl.LngLatLike;
@@ -39,6 +43,7 @@
 				createMap(el);
 			} else if (ctx.map) {
 				ctx.map.setStyle(style || null);
+				ctx.map.updateImage('shield', createShield({ fill: shieldFill, stroke: shieldStroke })[0]);
 			}
 			currStyle = style;
 		}
@@ -64,21 +69,7 @@
 						? attribution
 						: { customAttribution: attribution }
 			});
-			tmp.addImage(
-				'shield',
-				...createShield({
-					fill: 'hsl(0, 0%, 98%)',
-					stroke: 'hsl(0, 0%, 75%)'
-				})
-			);
-
-			tmp.addImage(
-				'shield-dark',
-				...createShield({
-					fill: 'hsl(0, 0%, 16%)',
-					stroke: 'hsl(0, 0%, 30%)'
-				})
-			);
+			tmp.addImage('shield', ...createShield({ fill: shieldFill, stroke: shieldStroke }));
 
 			const scale = new maplibregl.ScaleControl({
 				maxWidth: 100,

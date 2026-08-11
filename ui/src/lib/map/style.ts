@@ -81,9 +81,7 @@ export const colors = {
 		text: '#333333',
 		textHalo: 'rgba(255, 255, 255, 0.8)',
 		citiesText: 'hsl(0, 0%, 20%)',
-		citiesTextHalo: 'rgba(255, 255, 255, 0.8)',
-
-		shield: 'shield'
+		citiesTextHalo: 'rgba(255, 255, 255, 0.8)'
 	},
 	dark: {
 		background: '#292929',
@@ -159,9 +157,7 @@ export const colors = {
 		townText: '#bebebe',
 		townTextHalo: 'rgba(0, 0, 0, 0.8)',
 		citiesText: '#bebebe',
-		citiesTextHalo: 'rgba(0, 0, 0, 0.8)',
-
-		shield: 'shield-dark'
+		citiesTextHalo: 'rgba(0, 0, 0, 0.8)'
 	}
 };
 
@@ -1745,7 +1741,7 @@ export const getStyle = (
 					'text-justify': 'center',
 					'text-rotation-alignment': 'viewport',
 					'text-pitch-alignment': 'viewport',
-					'icon-image': c.shield,
+					'icon-image': 'shield',
 					'icon-text-fit': 'both',
 					'icon-text-fit-padding': [0.5, 4, 0.5, 4],
 					'icon-rotation-alignment': 'viewport',
