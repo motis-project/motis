@@ -9,6 +9,8 @@
 
 #include "geo/grid.h"
 
+#include "tg.h"
+
 #include "nigiri/common/interval.h"
 #include "nigiri/flex.h"
 #include "nigiri/routing/raptor/debug.h"
@@ -165,6 +167,13 @@ int generate(int ac, char** av) {
                 "could not read population grid file at {}", s.c_str());
     population_grid = geo::parse_eurostat_population_grid(*file_content);
     utl::erase_if(population_grid, [](auto const c) { return c.data_ == 0UL; });
+  };
+
+  auto const grid_cell_rect = [](geo::box const& b) {
+    return tg_rect{{b.min_.lng_, b.min_.lat_}, {b.max_.lng_, b.max_.lat_}};
+  };
+
+  auto const partial_sum_population_grid = [&] {
     std::partial_sum(
         population_grid.begin(), population_grid.end(), population_grid.begin(),
         [](auto const& acc, auto const& c) -> geo::grid_cell<std::uint64_t> {
@@ -271,6 +280,56 @@ int generate(int ac, char** av) {
   };
 
   auto const use_odm_bounds = modes && use_odm && d.odm_bounds_ != nullptr;
+
+  if (!population_grid.empty()) {
+    auto const drop_grid_cells_out_of_bounds = [&](tg_geom const* geom,
+                                                   char const* label) {
+      auto const n_before = population_grid.size();
+      auto discarded_population = std::uint64_t{0U};
+      utl::erase_if(population_grid, [&](auto const& gc) {
+        if (tg_geom_intersects_rect(geom, grid_cell_rect(gc.b_))) {
+          return false;
+        }
+        discarded_population += gc.data_;
+        return true;
+      });
+      auto const n_discarded = n_before - population_grid.size();
+      fmt::println(
+          "population grid: discarded {}/{} ({:.2f}%) cells outside {}, "
+          "discarded population: {}",
+          n_discarded, n_before,
+          n_before != 0U ? static_cast<double>(n_discarded) /
+                               static_cast<double>(n_before) * 100.0
+                         : std::numeric_limits<double>::quiet_NaN(),
+          label, discarded_population);
+      return !population_grid.empty();
+    };
+
+    if (bounds != nullptr && !drop_grid_cells_out_of_bounds(bounds, "bounds")) {
+      fmt::println(
+          "can not generate queries: population grid and bounds are "
+          "disjoint");
+      return 1;
+    }
+
+    if (use_odm_bounds &&
+        !drop_grid_cells_out_of_bounds(d.odm_bounds_->geom_, "ODM bounds")) {
+      fmt::println(
+          "can not generate queries: population grid and ODM bounds are "
+          "disjoint");
+      return 1;
+    }
+
+    auto const total_population = std::accumulate(
+        population_grid.begin(), population_grid.end(), std::uint64_t{0U},
+        [](auto const acc, auto const& gc) { return acc + gc.data_; });
+    fmt::println(
+        "population grid: {} cells, total population: {} remaining for "
+        "query generation",
+        population_grid.size(), total_population);
+    partial_sum_population_grid();
+  }
+
   auto node_rtree = point_rtree<osr::node_idx_t>{};
   if (modes) {
     if (modes->empty()) {
