@@ -1,5 +1,6 @@
 #include <fstream>
 #include <iostream>
+#include <limits>
 #include <mutex>
 #include <numeric>
 
@@ -60,6 +61,14 @@ std::uint32_t rand_in(std::uint32_t const from, std::uint32_t const to) {
   return from + (a % (to - from));
 }
 
+std::uint64_t rand_in(std::uint64_t const from, std::uint64_t const to) {
+  auto const hi = rand_in(0U, std::numeric_limits<std::uint32_t>::max());
+  auto const lo = rand_in(0U, std::numeric_limits<std::uint32_t>::max());
+  auto const combined =
+      (static_cast<std::uint64_t>(hi) << 32U) | static_cast<std::uint64_t>(lo);
+  return from + (combined % (to - from));
+}
+
 template <typename It>
 It rand_in(It const begin, It const end) {
   return std::next(
@@ -82,6 +91,28 @@ n::location_idx_t random_stop(n::timetable const& tt,
     s = rand_in(stops);
   } while (tt.location_routes_[s].empty());
   return s;
+}
+
+// removes element i from all given (equal-length) collections whenever
+// pred(collections[i]...) is true, keeping the collections index-aligned;
+// returns the number of removed elements
+template <typename Predicate, typename First, typename... Rest>
+std::size_t erase_if_lockstep(Predicate&& pred, First& first, Rest&... rest) {
+  auto const n = first.size();
+  auto j = std::size_t{0U};
+  for (auto i = std::size_t{0U}; i != n; ++i) {
+    if (pred(first[i], rest[i]...)) {
+      continue;
+    }
+    if (j != i) {
+      first[j] = std::move(first[i]);
+      ((rest[j] = std::move(rest[i])), ...);
+    }
+    ++j;
+  }
+  first.resize(j);
+  (rest.resize(j), ...);
+  return n - j;
 }
 
 int generate(int ac, char** av) {
@@ -281,55 +312,6 @@ int generate(int ac, char** av) {
 
   auto const use_odm_bounds = modes && use_odm && d.odm_bounds_ != nullptr;
 
-  if (!population_grid.empty()) {
-    auto const drop_grid_cells_out_of_bounds = [&](tg_geom const* geom,
-                                                   char const* label) {
-      auto const n_before = population_grid.size();
-      auto discarded_population = std::uint64_t{0U};
-      utl::erase_if(population_grid, [&](auto const& gc) {
-        if (tg_geom_intersects_rect(geom, grid_cell_rect(gc.b_))) {
-          return false;
-        }
-        discarded_population += gc.data_;
-        return true;
-      });
-      auto const n_discarded = n_before - population_grid.size();
-      fmt::println(
-          "population grid: discarded {}/{} ({:.2f}%) cells outside {}, "
-          "discarded population: {}",
-          n_discarded, n_before,
-          n_before != 0U ? static_cast<double>(n_discarded) /
-                               static_cast<double>(n_before) * 100.0
-                         : std::numeric_limits<double>::quiet_NaN(),
-          label, discarded_population);
-      return !population_grid.empty();
-    };
-
-    if (bounds != nullptr && !drop_grid_cells_out_of_bounds(bounds, "bounds")) {
-      fmt::println(
-          "can not generate queries: population grid and bounds are "
-          "disjoint");
-      return 1;
-    }
-
-    if (use_odm_bounds &&
-        !drop_grid_cells_out_of_bounds(d.odm_bounds_->geom_, "ODM bounds")) {
-      fmt::println(
-          "can not generate queries: population grid and ODM bounds are "
-          "disjoint");
-      return 1;
-    }
-
-    auto const total_population = std::accumulate(
-        population_grid.begin(), population_grid.end(), std::uint64_t{0U},
-        [](auto const acc, auto const& gc) { return acc + gc.data_; });
-    fmt::println(
-        "population grid: {} cells, total population: {} remaining for "
-        "query generation",
-        population_grid.size(), total_population);
-    partial_sum_population_grid();
-  }
-
   auto node_rtree = point_rtree<osr::node_idx_t>{};
   if (modes) {
     if (modes->empty()) {
@@ -409,6 +391,84 @@ int generate(int ac, char** av) {
                  d.tt_->n_locations());
   }
 
+  // for each population grid cell that intersects both the geo bounds and
+  // the ODM bounds (if given) and that has at least one eligible stop (i.e.
+  // a stop with at least one route): the stops located within the cell,
+  // used to weight random stop selection by population
+  auto cell_stops = std::vector<std::vector<n::location_idx_t>>{};
+  if (!population_grid.empty()) {
+    auto const drop_grid_cells_out_of_bounds = [&](tg_geom const* geom,
+                                                   char const* label) {
+      auto const n_before = population_grid.size();
+      auto discarded_population = std::uint64_t{0U};
+      utl::erase_if(population_grid, [&](auto const& gc) {
+        if (tg_geom_intersects_rect(geom, grid_cell_rect(gc.b_))) {
+          return false;
+        }
+        discarded_population += gc.data_;
+        return true;
+      });
+      auto const n_discarded = n_before - population_grid.size();
+      fmt::println(
+          "population grid: discarded {}/{} ({:.2f}%) cells outside {}, "
+          "discarded population: {}",
+          n_discarded, n_before,
+          n_before != 0U ? static_cast<double>(n_discarded) /
+                               static_cast<double>(n_before) * 100.0
+                         : std::numeric_limits<double>::quiet_NaN(),
+          label, discarded_population);
+      return !population_grid.empty();
+    };
+
+    if (bounds != nullptr && !drop_grid_cells_out_of_bounds(bounds, "bounds")) {
+      fmt::println(
+          "can not generate queries: population grid and bounds are "
+          "disjoint");
+      return 1;
+    }
+
+    if (use_odm_bounds &&
+        !drop_grid_cells_out_of_bounds(d.odm_bounds_->geom_, "ODM bounds")) {
+      fmt::println(
+          "can not generate queries: population grid and ODM bounds are "
+          "disjoint");
+      return 1;
+    }
+
+    auto stop_rtree = point_rtree<n::location_idx_t>{};
+    for (auto const l : master_stops) {
+      if (!d.tt_->location_routes_[l].empty()) {
+        stop_rtree.add(d.tt_->locations_.coordinates_[l], l);
+      }
+    }
+
+    cell_stops.resize(population_grid.size());
+    for (auto i = 0UL; i != population_grid.size(); ++i) {
+      stop_rtree.find(population_grid[i].b_, [&](n::location_idx_t const l) {
+        cell_stops[i].emplace_back(l);
+      });
+    }
+
+    auto const n_before = population_grid.size();
+    auto const n_discarded = erase_if_lockstep(
+        [](auto const& /* cell */, auto const& stops) { return stops.empty(); },
+        population_grid, cell_stops);
+
+    utl::verify(!population_grid.empty(),
+                "can not generate queries: no population grid cells with "
+                "eligible stops remain");
+
+    auto const total_population = std::accumulate(
+        population_grid.begin(), population_grid.end(), std::uint64_t{0U},
+        [](auto const acc, auto const& gc) { return acc + gc.data_; });
+    fmt::println(
+        "population grid: discarded {}/{} cells with no eligible stops, {} "
+        "cells with total population {} remain for query generation",
+        n_discarded, n_before, population_grid.size(), total_population);
+
+    partial_sum_population_grid();
+  }
+
   struct flex_seed {
     geo::latlng from_;
     n::location_idx_t rank_stop_;
@@ -434,6 +494,19 @@ int generate(int ac, char** av) {
     }
     return v;
   }();
+
+  // randomizes a grid cell weighted by its population (random integer in
+  // [0, total_population) followed by a linear search over the partial
+  // sums), then picks uniformly at random among the cell's eligible stops
+  auto const random_population_weighted_stop = [&] {
+    auto const total_population = population_grid.back().data_;
+    auto const r = rand_in(std::uint64_t{0U}, total_population);
+    auto const cell = utl::find_if(
+        population_grid, [&](auto const& gc) { return r < gc.data_; });
+    auto const cell_idx =
+        static_cast<std::size_t>(std::distance(population_grid.begin(), cell));
+    return rand_in(cell_stops[cell_idx]);
+  };
 
   auto const ranks = [&] {
     auto ret = std::vector(n, 0U);
@@ -510,7 +583,9 @@ int generate(int ac, char** av) {
           from_place = fmt::format("{},{}", seed.from_.lat_, seed.from_.lng_);
           rank_stop = seed.rank_stop_;
         } else {
-          rank_stop = random_stop(*d.tt_, s.stops_);
+          rank_stop = (!population_grid.empty() && (lb_rank || geo_rank))
+                          ? random_population_weighted_stop()
+                          : random_stop(*d.tt_, s.stops_);
           from_place = get_place(rank_stop);
           if (!from_place) {
             continue;
