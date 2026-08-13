@@ -110,7 +110,7 @@ struct task {
     run_();
     write_hashes(data_path, name_, hashes_);
     pt->out_ = 100;
-    pt->status("FINISHED");
+    pt->status(utl::progress_tracker::kFinished);
     done_ = true;
   }
 
@@ -471,9 +471,7 @@ void import(config const& c,
                             c.timetable_->max_matching_distance_,
                             c.timetable_->max_footpath_length_);
   }
-  // The platform matches only depend on the locations, not on the footpaths
-  // computed by `osr_footpath` (which only appends footpaths to the timetable),
-  // so they are computed first and reused there.
+
   auto matches = task{
       "matches",
       {&tt, &osr},

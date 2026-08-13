@@ -486,10 +486,10 @@ TEST(motis, routing) {
     EXPECT_EQ(533673, steps[1].toOsmNode_);
 
     EXPECT_EQ(
-        R"(date=2019-05-01, start=01:25, end=01:34, duration=00:09, transfers=0, legs=[
-    (from=- [track=-, scheduled_track=-, level=-], to=- [track=-, scheduled_track=-, level=-], start=2019-05-01 01:25, mode="WALK", trip="-", end=2019-05-01 01:25),
-    (from=- [track=-, scheduled_track=-, level=-], to=- [track=-, scheduled_track=-, level=-], start=2019-05-01 01:25, mode="RENTAL", trip="-", end=2019-05-01 01:26),
-    (from=- [track=-, scheduled_track=-, level=-], to=- [track=-, scheduled_track=-, level=-], start=2019-05-01 01:26, mode="WALK", trip="-", end=2019-05-01 01:34)
+        R"(date=2019-05-01, start=01:25, end=01:36, duration=00:11, transfers=0, legs=[
+    (from=- [track=-, scheduled_track=-, level=-], to=- [track=-, scheduled_track=-, level=-], start=2019-05-01 01:25, mode="WALK", trip="-", end=2019-05-01 01:26),
+    (from=- [track=-, scheduled_track=-, level=-], to=- [track=-, scheduled_track=-, level=-], start=2019-05-01 01:26, mode="RENTAL", trip="-", end=2019-05-01 01:27),
+    (from=- [track=-, scheduled_track=-, level=-], to=- [track=-, scheduled_track=-, level=-], start=2019-05-01 01:27, mode="WALK", trip="-", end=2019-05-01 01:36)
 ]date=2019-05-01, start=01:25, end=01:36, duration=00:11, transfers=0, legs=[
     (from=- [track=-, scheduled_track=-, level=-], to=- [track=-, scheduled_track=-, level=-], start=2019-05-01 01:25, mode="WALK", trip="-", end=2019-05-01 01:36)
 ])",
@@ -525,9 +525,10 @@ TEST(motis, routing) {
         "&numLegAlternatives=3");
 
     EXPECT_EQ(
-        R"(date=2019-05-01, start=01:30, end=02:15, duration=00:45, transfers=1, legs=[
-    (from=- [track=-, scheduled_track=-, level=-], to=- [track=-, scheduled_track=-, level=-], start=2019-05-01 01:30, mode="WALK", trip="-", end=2019-05-01 01:30),
-    (from=- [track=-, scheduled_track=-, level=-], to=test_DA_10 [track=10, scheduled_track=10, level=-1], start=2019-05-01 01:30, mode="RENTAL", trip="-", end=2019-05-01 01:35),
+        R"(date=2019-05-01, start=01:21, end=02:15, duration=00:54, transfers=1, legs=[
+    (from=- [track=-, scheduled_track=-, level=-], to=- [track=-, scheduled_track=-, level=-], start=2019-05-01 01:21, mode="WALK", trip="-", end=2019-05-01 01:23),
+    (from=- [track=-, scheduled_track=-, level=-], to=- [track=-, scheduled_track=-, level=-], start=2019-05-01 01:23, mode="RENTAL", trip="-", end=2019-05-01 01:24),
+    (from=- [track=-, scheduled_track=-, level=-], to=test_DA_10 [track=10, scheduled_track=10, level=-1], start=2019-05-01 01:24, mode="WALK", trip="-", end=2019-05-01 01:35),
     (from=test_DA_10 [track=10, scheduled_track=10, level=-1, alerts=["Yeah"]], to=test_FFM_12 [track=12, scheduled_track=10, level=0], start=2019-05-01 01:35, mode="HIGHSPEED_RAIL", trip="ICE", end=2019-05-01 01:55, alerts=["Hello"]),
     (from=test_FFM_12 [track=12, scheduled_track=10, level=0], to=test_de:6412:10:6:1 [track=U4, scheduled_track=U4, level=-2], start=2019-05-01 01:55, mode="WALK", trip="-", end=2019-05-01 01:59),
     (from=test_de:6412:10:6:1 [track=U4, scheduled_track=U4, level=-2], to=test_FFM_HAUPT_U [track=-, scheduled_track=-, level=-4], start=2019-05-01 02:05, mode="SUBWAY", trip="U4", end=2019-05-01 02:10),
@@ -536,7 +537,7 @@ TEST(motis, routing) {
         to_str(res.itineraries_));
 
     // Verify stop_code propagation from GTFS through API.
-    auto const& ice_leg = res.itineraries_.at(0).legs_.at(2);
+    auto const& ice_leg = res.itineraries_.at(0).legs_.at(3);
     EXPECT_EQ("DA-10-CODE", ice_leg.from_.stopCode_);
     EXPECT_FALSE(ice_leg.to_.stopCode_.has_value());
   }
