@@ -59,7 +59,7 @@ TEST(motis, search_window_arrive_by) {
 TEST(motis, search_window_grows) {
   auto const tt = make_tt();
   for (auto const arrive_by : {false, true}) {
-    auto last = n::interval<n::unixtime_t>{kQueryTime, kQueryTime};
+    auto prev = n::interval<n::unixtime_t>{kQueryTime, kQueryTime};
     for (auto const window : {900, 3600, 6 * 3600, 12 * 3600}) {
       auto const i = start_interval(tt, window, arrive_by);
 
@@ -82,9 +82,9 @@ TEST(motis, search_window_grows) {
           << "arriveBy=" << arrive_by << ", searchWindow=" << window;
 
       // a bigger search window never searches less
-      EXPECT_GT(i.size(), last.size())
+      EXPECT_GT(i.size(), prev.size())
           << "arriveBy=" << arrive_by << ", searchWindow=" << window;
-      last = i;
+      prev = i;
     }
   }
 }
