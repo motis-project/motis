@@ -130,9 +130,11 @@ int generate(int ac, char** av) {
   auto use_flex = false;
   auto lb_rank = true;
   auto geo_rank = std::optional<std::uint64_t>{};
+  auto funnel = false;
   tg_geom* bounds{nullptr};
   auto const free_bounds = utl::make_finally([&]() { tg_geom_free(bounds); });
   auto population_grid = geo::grid<std::uint64_t>{};
+  auto population_grid_low = geo::grid<std::uint64_t>{};
   auto master_params = api::plan_params{};
 
   auto const parse_date = [](std::string_view const s) {
@@ -204,9 +206,9 @@ int generate(int ac, char** av) {
     return tg_rect{{b.min_.lng_, b.min_.lat_}, {b.max_.lng_, b.max_.lat_}};
   };
 
-  auto const partial_sum_population_grid = [&] {
+  auto const partial_sum_grid = [](geo::grid<std::uint64_t>& g) {
     std::partial_sum(
-        population_grid.begin(), population_grid.end(), population_grid.begin(),
+        g.begin(), g.end(), g.begin(),
         [](auto const& acc, auto const& c) -> geo::grid_cell<std::uint64_t> {
           return {c.b_, acc.data_ + c.data_};
         });
@@ -262,7 +264,12 @@ int generate(int ac, char** av) {
       ("population_grid",
        po::value<std::string>()->notifier(parse_population_grid),
        "path to a CSV file containing a EUROSTAT population grid; the higher "
-       "the population the more likely it is that a grid cell is selected");
+       "the population the more likely it is that a grid cell is selected")  //
+      ("funnel", po::bool_switch(&funnel),
+       "emit funnel queries: from a high-population stop to a low-population "
+       "stop (both weighted by the population grid), to stress algorithms "
+       "sensitive to a lopsided branching factor between origin and "
+       "destination; requires --population_grid, overrides lb_rank/geo_rank");
   add_data_path_opt(desc, data_path);
   auto vm = parse_opt(ac, av, desc);
 
@@ -270,6 +277,9 @@ int generate(int ac, char** av) {
     std::cout << desc << "\n";
     return 0;
   }
+
+  utl::verify(!funnel || !population_grid.empty(),
+              "--funnel requires --population_grid");
 
   auto const c = config::read(data_path / "config.yml");
   utl::verify(c.timetable_.has_value(), "timetable required");
@@ -466,7 +476,23 @@ int generate(int ac, char** av) {
         "cells with total population {} remain for query generation",
         n_discarded, n_before, population_grid.size(), total_population);
 
-    partial_sum_population_grid();
+    if (funnel) {
+      // same cells/order as population_grid (and therefore cell_stops), but
+      // weighted inversely by population so low-population cells are more
+      // likely to be picked as the funnel destination
+      population_grid_low = population_grid;
+      auto const max_pop =
+          std::max_element(
+              population_grid_low.begin(), population_grid_low.end(),
+              [](auto const& a, auto const& b) { return a.data_ < b.data_; })
+              ->data_;
+      for (auto& gc : population_grid_low) {
+        gc.data_ = max_pop + 1U - gc.data_;
+      }
+      partial_sum_grid(population_grid_low);
+    }
+
+    partial_sum_grid(population_grid);
   }
 
   struct flex_seed {
@@ -508,6 +534,20 @@ int generate(int ac, char** av) {
     return rand_in(cell_stops[cell_idx]);
   };
 
+  // same as random_population_weighted_stop, but weighted inversely by
+  // population (for --funnel: a low-population destination), using
+  // population_grid_low which shares cell_stops' indexing with
+  // population_grid
+  auto const random_inverse_population_weighted_stop = [&] {
+    auto const total = population_grid_low.back().data_;
+    auto const r = rand_in(std::uint64_t{0U}, total);
+    auto const cell = utl::find_if(
+        population_grid_low, [&](auto const& gc) { return r < gc.data_; });
+    auto const cell_idx = static_cast<std::size_t>(
+        std::distance(population_grid_low.begin(), cell));
+    return rand_in(cell_stops[cell_idx]);
+  };
+
   auto const ranks = [&] {
     auto ret = std::vector(n, 0U);
     for (auto [i, r] = std::tuple{0U, kMinRank}; i != n;
@@ -518,7 +558,13 @@ int generate(int ac, char** av) {
   }();
 
   auto geo_rank_index = 0UL;
-  if (geo_rank) {
+  if (funnel) {
+    fmt::println(
+        "from and to pairings: funnel queries (from: high population, to: "
+        "low population)");
+    lb_rank = false;
+    geo_rank = std::nullopt;
+  } else if (geo_rank) {
     fmt::println("from and to pairings by geo-rank = {}", *geo_rank);
     geo_rank_index = 1UL << *geo_rank;
     if (geo_rank_index > master_stops.size() - 1U) {
@@ -531,8 +577,8 @@ int generate(int ac, char** av) {
     fmt::println("from and to pairings by lower bounds rank");
   } else {
     fmt::println("from and to {}", population_grid.empty()
-                                        ? "uniformly at random"
-                                        : "weighted by population");
+                                       ? "uniformly at random"
+                                       : "weighted by population");
   }
 
   auto t = utl::scoped_timer{"generate queries"};
@@ -619,9 +665,10 @@ int generate(int ac, char** av) {
           });
           to_place = get_place(s.stops_[geo_rank_index]);
         } else {
-          to_place = get_place(!population_grid.empty()
-                                   ? random_population_weighted_stop()
-                                   : random_stop(*d.tt_, s.stops_));
+          to_place = get_place(
+              funnel ? random_inverse_population_weighted_stop()
+              : !population_grid.empty() ? random_population_weighted_stop()
+                                         : random_stop(*d.tt_, s.stops_));
         }
         if (to_place) {
           break;
