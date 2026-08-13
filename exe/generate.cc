@@ -583,7 +583,7 @@ int generate(int ac, char** av) {
           from_place = fmt::format("{},{}", seed.from_.lat_, seed.from_.lng_);
           rank_stop = seed.rank_stop_;
         } else {
-          rank_stop = (!population_grid.empty() && (lb_rank || geo_rank))
+          rank_stop = !population_grid.empty()
                           ? random_population_weighted_stop()
                           : random_stop(*d.tt_, s.stops_);
           from_place = get_place(rank_stop);
@@ -617,7 +617,9 @@ int generate(int ac, char** av) {
           });
           to_place = get_place(s.stops_[geo_rank_index]);
         } else {
-          to_place = get_place(random_stop(*d.tt_, s.stops_));
+          to_place = get_place(!population_grid.empty()
+                                   ? random_population_weighted_stop()
+                                   : random_stop(*d.tt_, s.stops_));
         }
         if (to_place) {
           break;
