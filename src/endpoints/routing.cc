@@ -510,10 +510,8 @@ std::pair<n::routing::query, std::optional<n::unixtime_t>> get_start_time(
         tt == nullptr || tt->external_interval().contains(t),
         "query time {} is outside of loaded timetable window {}", t,
         tt ? tt->external_interval() : n::interval<n::unixtime_t>{});
-    auto const window =
-        std::chrono::duration_cast<n::duration_t>(std::chrono::seconds{
-            query.searchWindow_ *
-            (query.arriveBy_ ? -1 : 1)});  // TODO redundant minus
+    auto const window = std::chrono::duration_cast<n::duration_t>(
+        std::chrono::seconds{query.searchWindow_});
     return {{.start_time_ = query.timetableView_ && tt
                                 ? n::routing::start_time_t{n::interval{
                                       tt->external_interval().clamp(

@@ -37,6 +37,9 @@ nigiri::interval<nigiri::unixtime_t> shrink(
     nigiri::interval<nigiri::unixtime_t> search_interval,
     std::vector<nigiri::routing::journey>& journeys);
 
+std::pair<nigiri::routing::query, std::optional<nigiri::unixtime_t>>
+get_start_time(api::plan_params const&, nigiri::timetable const*);
+
 std::vector<nigiri::routing::offset> station_start(nigiri::location_idx_t);
 
 std::vector<nigiri::routing::via_stop> get_via_stops(
