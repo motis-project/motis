@@ -530,7 +530,9 @@ int generate(int ac, char** av) {
   } else if (lb_rank) {
     fmt::println("from and to pairings by lower bounds rank");
   } else {
-    fmt::println("from and to uniformly at random");
+    fmt::println("from and to {}", population_grid.empty()
+                                        ? "uniformly at random"
+                                        : "weighted by population");
   }
 
   auto t = utl::scoped_timer{"generate queries"};
