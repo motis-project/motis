@@ -1,5 +1,6 @@
 import type {
 	HillshadeLayerSpecification,
+	LayerSpecification,
 	RasterDEMSourceSpecification,
 	StyleSpecification
 } from 'maplibre-gl';
@@ -163,6 +164,21 @@ export const colors = {
 	}
 };
 
+function landuseLayer(id: string, color: string, kind: string[]): LayerSpecification {
+	return {
+		id: id,
+		type: 'fill',
+		source: 'osm',
+		'source-layer': 'land',
+		filter: ['in', 'kind', ...kind],
+		paint: {
+			'fill-color': color,
+			// soft fade-in like VersaTiles land layers
+			'fill-opacity': ['interpolate', ['linear'], ['zoom'], 8, 0.6, 10, 1]
+		}
+	};
+}
+
 function getUrlBase(url: string): string {
 	const { origin, pathname } = new URL(url);
 	return origin + pathname.slice(0, pathname.lastIndexOf('/') + 1);
@@ -239,95 +255,52 @@ export const getStyle = (
 				'source-layer': 'coastline',
 				paint: { 'fill-color': c.water }
 			},
-			{
-				id: 'landuse_park',
-				type: 'fill',
-				source: 'osm',
-				'source-layer': 'land',
-				filter: [
-					'in',
-					'kind',
-					'park',
-					'garden',
-					'playground',
-					'miniature_golf',
-					'golf_course',
-					'village_green',
-					'recreation_ground',
-					'greenhouse_horticulture',
-					'allotments'
-				],
-				paint: {
-					'fill-color': c.landusePark,
-					'fill-opacity': ['interpolate', ['linear'], ['zoom'], 8, 0.6, 10, 1]
-				}
-			},
-			{
-				id: 'landuse',
-				type: 'fill',
-				source: 'osm',
-				'source-layer': 'land',
-				filter: [
-					'!in',
-					'kind',
-					'park',
-					'garden',
-					'playground',
-					'miniature_golf',
-					'golf_course',
-					'village_green',
-					'recreation_ground',
-					'greenhouse_horticulture',
-					'allotments',
-					'public_transport'
-				],
-				paint: {
-					'fill-color': [
-						'match',
-						['get', 'kind'],
-						'commercial',
-						c.landuseCommercial,
-						['industrial', 'railway', 'quarry', 'farmyard', 'landfill', 'garages'],
-						c.landuseIndustrial,
-						'residential',
-						c.landuseResidential,
-						'retail',
-						c.landuseRetail,
-						// agriculture group in the VersaTiles Shortbread style
-						['brownfield', 'greenfield'],
-						c.landuseAgriculture,
-						['bare_rock', 'scree', 'shingle'],
-						c.landuseConstruction,
-
-						[
-							'farmland',
-							'vineyard',
-							'plant_nursery',
-							'orchard',
-							'meadow',
-							'grassland',
-							'grass',
-							'heath',
-							'swamp',
-							'bog',
-							'string_bog',
-							'wet_meadow',
-							'marsh'
-						],
-						c.landuseNatureLight,
-						['forest', 'scrub'],
-						c.landuseNatureHeavy,
-						['cemetery', 'grave_yard'],
-						c.landuseCemetery,
-						['beach', 'sand'],
-						c.landuseBeach,
-
-						'magenta'
-					],
-					// soft fade-in like VersaTiles land layers
-					'fill-opacity': ['interpolate', ['linear'], ['zoom'], 8, 0.6, 10, 1]
-				}
-			},
+			landuseLayer('landuse-park', c.landusePark, [
+				'park',
+				'garden',
+				'playground',
+				'miniature_golf',
+				'golf_course',
+				'village_green',
+				'recreation_ground',
+				'greenhouse_horticulture',
+				'allotments'
+			]),
+			landuseLayer('landuse-commercial', c.landuseCommercial, ['commercial']),
+			landuseLayer('landuse-industrial', c.landuseIndustrial, [
+				'industrial',
+				'railway',
+				'quarry',
+				'farmyard',
+				'landfill',
+				'garages'
+			]),
+			landuseLayer('landuse-residential', c.landuseResidential, ['residential']),
+			landuseLayer('landuse-retail', c.landuseRetail, ['retail']),
+			landuseLayer('landuse-agriculture', c.landuseAgriculture, ['brownfield', 'greenfield']), // agriculture group in the VersaTiles Shortbread style
+			landuseLayer('landuse-construction', c.landuseConstruction, [
+				'bare_rock',
+				'scree',
+				'shingle'
+			]),
+			landuseLayer('landuse-nature_light', c.landuseNatureLight, [
+				'farmland',
+				'vineyard',
+				'plant_nursery',
+				'orchard',
+				'meadow',
+				'grassland',
+				'grass',
+				'heath',
+				'swamp',
+				'bog',
+				'string_bog',
+				'wet_meadow',
+				'marsh'
+			]),
+			landuseLayer('landuse-nature_heavy', c.landuseNatureHeavy, ['forest', 'scrub']),
+			landuseLayer('landuse-cemetery', c.landuseCemetery, ['cemetery', 'grave_yard']),
+			landuseLayer('landuse-beach', c.landuseBeach, ['beach', 'sand']),
 			{
 				id: 'sites',
 				type: 'fill',
