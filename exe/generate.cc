@@ -115,6 +115,9 @@ std::size_t erase_if_lockstep(Predicate&& pred, First& first, Rest&... rest) {
   return n - j;
 }
 
+// which end of the population distribution a stop is drawn from
+enum class pop_weight { kHigh, kLow };
+
 int generate(int ac, char** av) {
   auto data_path = fs::path{"data"};
   auto n = 100U;
@@ -130,7 +133,8 @@ int generate(int ac, char** av) {
   auto use_flex = false;
   auto lb_rank = true;
   auto geo_rank = std::optional<std::uint64_t>{};
-  auto funnel = false;
+  auto population_from = std::optional<pop_weight>{};
+  auto population_to = std::optional<pop_weight>{};
   tg_geom* bounds{nullptr};
   auto const free_bounds = utl::make_finally([&]() { tg_geom_free(bounds); });
   auto population_grid = geo::grid<std::uint64_t>{};
@@ -192,6 +196,19 @@ int generate(int ac, char** av) {
     if (char const* err = tg_geom_error(bounds)) {
       throw utl::fail("unable to parse bounds GeoJSON: {}", err);
     }
+  };
+
+  auto const parse_pop_weight = [](std::string_view const s,
+                                   std::string_view const opt) {
+    utl::verify(s == "high" || s == "low",
+                "--{} must be \"high\" or \"low\", got \"{}\"", opt, s);
+    return s == "high" ? pop_weight::kHigh : pop_weight::kLow;
+  };
+  auto const parse_pop_from = [&](std::string_view const s) {
+    population_from = parse_pop_weight(s, "population_from");
+  };
+  auto const parse_pop_to = [&](std::string_view const s) {
+    population_to = parse_pop_weight(s, "population_to");
   };
 
   auto const parse_population_grid = [&](std::string const& s) {
@@ -265,11 +282,16 @@ int generate(int ac, char** av) {
        po::value<std::string>()->notifier(parse_population_grid),
        "path to a CSV file containing a EUROSTAT population grid; the higher "
        "the population the more likely it is that a grid cell is selected")  //
-      ("funnel", po::bool_switch(&funnel),
-       "emit funnel queries: from a high-population stop to a low-population "
-       "stop (both weighted by the population grid), to stress algorithms "
-       "sensitive to a lopsided branching factor between origin and "
-       "destination; requires --population_grid, overrides lb_rank/geo_rank");
+      ("population_from", po::value<std::string>()->notifier(parse_pop_from),
+       "draw the origin from the \"high\" or the \"low\" end of the "
+       "population distribution; defaults to \"high\" when --population_grid "
+       "is given; requires --population_grid")  //
+      ("population_to", po::value<std::string>()->notifier(parse_pop_to),
+       "draw the destination from the \"high\" or the \"low\" end of the "
+       "population distribution; requires --population_grid, overrides "
+       "lb_rank/geo_rank. Combined with --population_from this spans the four "
+       "pairings: high->low is a funnel, low->high its reverse, high->high and "
+       "low->low keep both ends on the same end of the distribution");
   add_data_path_opt(desc, data_path);
   auto vm = parse_opt(ac, av, desc);
 
@@ -278,8 +300,8 @@ int generate(int ac, char** av) {
     return 0;
   }
 
-  utl::verify(!funnel || !population_grid.empty(),
-              "--funnel requires --population_grid");
+  utl::verify((!population_from && !population_to) || !population_grid.empty(),
+              "--population_from/--population_to require --population_grid");
 
   auto const c = config::read(data_path / "config.yml");
   utl::verify(c.timetable_.has_value(), "timetable required");
@@ -476,10 +498,11 @@ int generate(int ac, char** av) {
         "cells with total population {} remain for query generation",
         n_discarded, n_before, population_grid.size(), total_population);
 
-    if (funnel) {
+    if (population_from == pop_weight::kLow ||
+        population_to == pop_weight::kLow) {
       // same cells/order as population_grid (and therefore cell_stops), but
-      // weighted inversely by population so low-population cells are more
-      // likely to be picked as the funnel destination
+      // weighted inversely by population so low-population cells are the
+      // likely picks
       population_grid_low = population_grid;
       auto const max_pop =
           std::max_element(
@@ -524,27 +547,17 @@ int generate(int ac, char** av) {
   // randomizes a grid cell weighted by its population (random integer in
   // [0, total_population) followed by a linear search over the partial
   // sums), then picks uniformly at random among the cell's eligible stops
-  auto const random_population_weighted_stop = [&] {
-    auto const total_population = population_grid.back().data_;
-    auto const r = rand_in(std::uint64_t{0U}, total_population);
-    auto const cell = utl::find_if(
-        population_grid, [&](auto const& gc) { return r < gc.data_; });
-    auto const cell_idx =
-        static_cast<std::size_t>(std::distance(population_grid.begin(), cell));
-    return rand_in(cell_stops[cell_idx]);
-  };
-
-  // same as random_population_weighted_stop, but weighted inversely by
-  // population (for --funnel: a low-population destination), using
-  // population_grid_low which shares cell_stops' indexing with
-  // population_grid
-  auto const random_inverse_population_weighted_stop = [&] {
-    auto const total = population_grid_low.back().data_;
+  // population_grid_low shares its cells and their order with population_grid
+  // (and therefore with cell_stops), so both are indexed the same way
+  auto const random_population_weighted_stop = [&](pop_weight const w) {
+    auto const& grid =
+        w == pop_weight::kHigh ? population_grid : population_grid_low;
+    auto const total = grid.back().data_;
     auto const r = rand_in(std::uint64_t{0U}, total);
-    auto const cell = utl::find_if(
-        population_grid_low, [&](auto const& gc) { return r < gc.data_; });
-    auto const cell_idx = static_cast<std::size_t>(
-        std::distance(population_grid_low.begin(), cell));
+    auto const cell =
+        utl::find_if(grid, [&](auto const& gc) { return r < gc.data_; });
+    auto const cell_idx =
+        static_cast<std::size_t>(std::distance(grid.begin(), cell));
     return rand_in(cell_stops[cell_idx]);
   };
 
@@ -558,10 +571,13 @@ int generate(int ac, char** av) {
   }();
 
   auto geo_rank_index = 0UL;
-  if (funnel) {
-    fmt::println(
-        "from and to pairings: funnel queries (from: high population, to: "
-        "low population)");
+  auto const weight_name = [](pop_weight const w) {
+    return w == pop_weight::kHigh ? "high" : "low";
+  };
+  if (population_to) {
+    fmt::println("from and to pairings by population: from {}, to {}",
+                 weight_name(population_from.value_or(pop_weight::kHigh)),
+                 weight_name(*population_to));
     lb_rank = false;
     geo_rank = std::nullopt;
   } else if (geo_rank) {
@@ -632,7 +648,8 @@ int generate(int ac, char** av) {
           rank_stop = seed.rank_stop_;
         } else {
           rank_stop = !population_grid.empty()
-                          ? random_population_weighted_stop()
+                          ? random_population_weighted_stop(
+                                population_from.value_or(pop_weight::kHigh))
                           : random_stop(*d.tt_, s.stops_);
           from_place = get_place(rank_stop);
           if (!from_place) {
@@ -666,9 +683,10 @@ int generate(int ac, char** av) {
           to_place = get_place(s.stops_[geo_rank_index]);
         } else {
           to_place = get_place(
-              funnel ? random_inverse_population_weighted_stop()
-              : !population_grid.empty() ? random_population_weighted_stop()
-                                         : random_stop(*d.tt_, s.stops_));
+              population_to ? random_population_weighted_stop(*population_to)
+              : !population_grid.empty()
+                  ? random_population_weighted_stop(pop_weight::kHigh)
+                  : random_stop(*d.tt_, s.stops_));
         }
         if (to_place) {
           break;
