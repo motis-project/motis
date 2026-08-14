@@ -280,18 +280,22 @@ int generate(int ac, char** av) {
        "(shorthand for Europe \"-b europe\")")  //
       ("population_grid",
        po::value<std::string>()->notifier(parse_population_grid),
-       "path to a CSV file containing a EUROSTAT population grid; the higher "
-       "the population the more likely it is that a grid cell is selected")  //
+       "path to a CSV file containing a EUROSTAT population grid; requires "
+       "--population_from and/or --population_to to say which end of a query "
+       "is drawn from it")  //
       ("population_from", po::value<std::string>()->notifier(parse_pop_from),
-       "draw the origin from the \"high\" or the \"low\" end of the "
-       "population distribution; defaults to \"high\" when --population_grid "
-       "is given; requires --population_grid")  //
+       "weight the origin towards \"high\" or \"low\" population: every grid "
+       "cell stays eligible, only its likelihood changes - proportional to a "
+       "cell's population for \"high\", to (max population + 1 - the cell's) "
+       "for \"low\"; requires --population_grid")  //
       ("population_to", po::value<std::string>()->notifier(parse_pop_to),
-       "draw the destination from the \"high\" or the \"low\" end of the "
-       "population distribution; requires --population_grid, overrides "
-       "lb_rank/geo_rank. Combined with --population_from this spans the four "
-       "pairings: high->low is a funnel, low->high its reverse, high->high and "
-       "low->low keep both ends on the same end of the distribution");
+       "weight the destination the same way, overriding the default "
+       "lower-bounds rank without needing --lb_rank 0; requires "
+       "--population_grid and conflicts with an explicit --lb_rank 1/"
+       "--geo_rank, which derive `to` from `from`. Combined with "
+       "--population_from this spans the four pairings: high->low is a funnel, "
+       "low->high its reverse, high->high and low->low weight both ends the "
+       "same way");
   add_data_path_opt(desc, data_path);
   auto vm = parse_opt(ac, av, desc);
 
@@ -302,6 +306,17 @@ int generate(int ac, char** av) {
 
   utl::verify((!population_from && !population_to) || !population_grid.empty(),
               "--population_from/--population_to require --population_grid");
+  utl::verify(population_grid.empty() || population_from || population_to,
+              "--population_grid requires --population_from and/or "
+              "--population_to to say which end is drawn by population");
+  utl::verify(!population_to || !geo_rank,
+              "--population_to cannot be combined with --geo_rank: both "
+              "decide how `to` is picked");
+  utl::verify(!population_to || !(vm.count("lb_rank") != 0U &&
+                                  !vm["lb_rank"].defaulted() && lb_rank),
+              "--population_to cannot be combined with --lb_rank 1: both "
+              "decide how `to` is picked. --population_to already overrides "
+              "the default rank, so just drop --lb_rank");
 
   auto const c = config::read(data_path / "config.yml");
   utl::verify(c.timetable_.has_value(), "timetable required");
@@ -571,31 +586,41 @@ int generate(int ac, char** av) {
   }();
 
   auto geo_rank_index = 0UL;
-  auto const weight_name = [](pop_weight const w) {
-    return w == pop_weight::kHigh ? "high" : "low";
+  auto const weight_desc = [](pop_weight const w) {
+    return w == pop_weight::kHigh
+               ? "weighted towards high population (any cell can be drawn, "
+                 "likelihood proportional to its population)"
+               : "weighted towards low population (any cell can be drawn, "
+                 "likelihood proportional to max population + 1 - its "
+                 "population)";
   };
+  auto const from_desc = population_from
+                             ? std::string{weight_desc(*population_from)}
+                             : std::string{"drawn uniformly at random"};
+  auto to_desc = std::string{};
   if (population_to) {
-    fmt::println("from and to pairings by population: from {}, to {}",
-                 weight_name(population_from.value_or(pop_weight::kHigh)),
-                 weight_name(*population_to));
-    lb_rank = false;
-    geo_rank = std::nullopt;
+    to_desc = weight_desc(*population_to);
+    lb_rank = false;  // only ever the default here: an explicit 1 was rejected
   } else if (geo_rank) {
-    fmt::println("from and to pairings by geo-rank = {}", *geo_rank);
     geo_rank_index = 1UL << *geo_rank;
     if (geo_rank_index > master_stops.size() - 1U) {
       fmt::println("geo-rank index exceeds number of stops: {} > {}",
                    geo_rank_index, master_stops.size() - 1U);
       return -1;
     }
+    to_desc =
+        fmt::format("geo-rank {} of `from`: the {}-th nearest stop by distance",
+                    *geo_rank, geo_rank_index);
     lb_rank = false;
   } else if (lb_rank) {
-    fmt::println("from and to pairings by lower bounds rank");
+    to_desc =
+        "lower-bounds rank of `from`: the 2^n-th stop by travel-time lower "
+        "bound, n varied per query";
   } else {
-    fmt::println("from and to {}", population_grid.empty()
-                                       ? "uniformly at random"
-                                       : "weighted by population");
+    to_desc = "drawn uniformly at random";
   }
+  fmt::println("from: {}", from_desc);
+  fmt::println("to:   {}", to_desc);
 
   auto t = utl::scoped_timer{"generate queries"};
   auto out = std::ofstream{"queries.txt"};
@@ -647,9 +672,8 @@ int generate(int ac, char** av) {
           from_place = fmt::format("{},{}", seed.from_.lat_, seed.from_.lng_);
           rank_stop = seed.rank_stop_;
         } else {
-          rank_stop = !population_grid.empty()
-                          ? random_population_weighted_stop(
-                                population_from.value_or(pop_weight::kHigh))
+          rank_stop = population_from
+                          ? random_population_weighted_stop(*population_from)
                           : random_stop(*d.tt_, s.stops_);
           from_place = get_place(rank_stop);
           if (!from_place) {
@@ -684,9 +708,7 @@ int generate(int ac, char** av) {
         } else {
           to_place = get_place(
               population_to ? random_population_weighted_stop(*population_to)
-              : !population_grid.empty()
-                  ? random_population_weighted_stop(pop_weight::kHigh)
-                  : random_stop(*d.tt_, s.stops_));
+                            : random_stop(*d.tt_, s.stops_));
         }
         if (to_place) {
           break;
