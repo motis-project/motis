@@ -52,6 +52,7 @@ namespace motis {
 struct tiles_data;
 struct rt;
 struct tag_lookup;
+struct feed_labels;
 struct config;
 struct railviz_static_index;
 struct railviz_rt_index;

@@ -18,6 +18,7 @@
 #include "motis/adr_extend_tt.h"
 #include "motis/config.h"
 #include "motis/elevators/parse_elevator_id_osm_mapping.h"
+#include "motis/feed_labels.h"
 #include "motis/fwd.h"
 #include "motis/gbfs/data.h"
 #include "motis/match_platforms.h"
@@ -99,11 +100,11 @@ struct data {
   auto cista_members() {
     // !!! Remember to add all new members !!!
     return std::tie(config_, initial_response_, t_, adr_ext_, f_, tz_, r_, tc_,
-                    w_, pl_, l_, elevations_, tt_, tbd_, tags_, location_rtree_,
-                    elevator_nodes_, elevator_osm_mapping_, shapes_,
-                    railviz_static_, matches_, way_matches_, rt_, gbfs_,
-                    odm_bounds_, ride_sharing_bounds_, flex_areas_, metrics_,
-                    auser_
+                    w_, pl_, l_, elevations_, tt_, tbd_, tags_, labels_,
+                    location_rtree_, elevator_nodes_, elevator_osm_mapping_,
+                    shapes_, railviz_static_, matches_, way_matches_, rt_,
+                    gbfs_, odm_bounds_, ride_sharing_bounds_, flex_areas_,
+                    metrics_, auser_
 #if defined(NIGIRI_CUDA)
                     ,
                     gpu_tt_, gpu_pool_
@@ -128,6 +129,7 @@ struct data {
   cista::wrapped<nigiri::timetable> tt_;
   cista::wrapped<nigiri::routing::tb::tb_data> tbd_;
   cista::wrapped<tag_lookup> tags_;
+  feed_labels labels_;
   ptr<point_rtree<nigiri::location_idx_t>> location_rtree_;
   ptr<hash_set<osr::node_idx_t>> elevator_nodes_;
   ptr<elevator_id_osm_mapping_t> elevator_osm_mapping_;
