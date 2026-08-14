@@ -28,6 +28,10 @@ using namespace std::chrono_literals;
 
 namespace n = nigiri;
 
+// transfers.txt declares the transfers that are too far apart to be derived
+// from the stop positions alone (link_stop_distance / meta distance): the
+// FFM_C/FFM_B cluster hangs off the FFM platforms, DA_Tram_3 off the other DA
+// stops. Transfers are directed, so both directions are listed.
 constexpr auto const kGTFS = R"(
 # agency.txt
 agency_id,agency_name,agency_url,agency_timezone
@@ -100,6 +104,33 @@ B1,00:20:00,00:20:00,DA_Bus_2,2
 T1,00:24:00,00:24:00,DA_Tram_1,1
 T1,00:25:00,00:25:00,DA_Tram_2,2
 T1,00:26:00,00:26:00,DA_Tram_3,3
+
+# transfers.txt
+from_stop_id,to_stop_id,transfer_type,min_transfer_time
+FFM,FFM_B,2,240
+FFM_B,FFM,2,240
+FFM,FFM_C,2,240
+FFM_C,FFM,2,240
+FFM_101,FFM_B,2,240
+FFM_B,FFM_101,2,240
+FFM_101,FFM_C,2,240
+FFM_C,FFM_101,2,240
+FFM_12,FFM_B,2,300
+FFM_B,FFM_12,2,300
+FFM_12,FFM_C,2,300
+FFM_C,FFM_12,2,300
+FFM_10,FFM_B,2,300
+FFM_B,FFM_10,2,300
+FFM_10,FFM_C,2,300
+FFM_C,FFM_10,2,300
+DA,DA_Bus_2,2,420
+DA_Bus_2,DA,2,420
+DA_Bus_2,DA_Tram_2,2,360
+DA_Tram_2,DA_Bus_2,2,360
+DA_Bus_2,DA_Tram_3,2,540
+DA_Tram_3,DA_Bus_2,2,540
+DA_Tram_1,DA_Tram_3,2,360
+DA_Tram_3,DA_Tram_1,2,360
 
 # calendar_dates.txt
 service_id,date,exception_type
