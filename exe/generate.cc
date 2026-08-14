@@ -1,10 +1,16 @@
 #include <fstream>
 #include <iostream>
+#include <limits>
 #include <mutex>
+#include <numeric>
 
 #include "conf/configuration.h"
 
 #include "boost/url/url.hpp"
+
+#include "geo/grid.h"
+
+#include "tg.h"
 
 #include "nigiri/common/interval.h"
 #include "nigiri/flex.h"
@@ -15,6 +21,8 @@
 #include "utl/parallel_for.h"
 #include "utl/progress_tracker.h"
 #include "utl/raii.h"
+#include "utl/read_file.h"
+#include "utl/verify.h"
 
 #include "motis-api/motis-api.h"
 #include "motis/config.h"
@@ -53,6 +61,14 @@ std::uint32_t rand_in(std::uint32_t const from, std::uint32_t const to) {
   return from + (a % (to - from));
 }
 
+std::uint64_t rand_in(std::uint64_t const from, std::uint64_t const to) {
+  auto const hi = rand_in(0U, std::numeric_limits<std::uint32_t>::max());
+  auto const lo = rand_in(0U, std::numeric_limits<std::uint32_t>::max());
+  auto const combined =
+      (static_cast<std::uint64_t>(hi) << 32U) | static_cast<std::uint64_t>(lo);
+  return from + (combined % (to - from));
+}
+
 template <typename It>
 It rand_in(It const begin, It const end) {
   return std::next(
@@ -77,6 +93,31 @@ n::location_idx_t random_stop(n::timetable const& tt,
   return s;
 }
 
+// removes element i from all given (equal-length) collections whenever
+// pred(collections[i]...) is true, keeping the collections index-aligned;
+// returns the number of removed elements
+template <typename Predicate, typename First, typename... Rest>
+std::size_t erase_if_lockstep(Predicate&& pred, First& first, Rest&... rest) {
+  auto const n = first.size();
+  auto j = std::size_t{0U};
+  for (auto i = std::size_t{0U}; i != n; ++i) {
+    if (pred(first[i], rest[i]...)) {
+      continue;
+    }
+    if (j != i) {
+      first[j] = std::move(first[i]);
+      ((rest[j] = std::move(rest[i])), ...);
+    }
+    ++j;
+  }
+  first.resize(j);
+  (rest.resize(j), ...);
+  return n - j;
+}
+
+// which end of the population distribution a stop is drawn from
+enum class pop_weight { kHigh, kLow };
+
 int generate(int ac, char** av) {
   auto data_path = fs::path{"data"};
   auto n = 100U;
@@ -92,8 +133,12 @@ int generate(int ac, char** av) {
   auto use_flex = false;
   auto lb_rank = true;
   auto geo_rank = std::optional<std::uint64_t>{};
+  auto population_from = std::optional<pop_weight>{};
+  auto population_to = std::optional<pop_weight>{};
   tg_geom* bounds{nullptr};
   auto const free_bounds = utl::make_finally([&]() { tg_geom_free(bounds); });
+  auto population_grid = geo::grid<std::uint64_t>{};
+  auto population_grid_low = geo::grid<std::uint64_t>{};
   auto master_params = api::plan_params{};
 
   auto const parse_date = [](std::string_view const s) {
@@ -153,6 +198,39 @@ int generate(int ac, char** av) {
     }
   };
 
+  auto const parse_pop_weight = [](std::string_view const s,
+                                   std::string_view const opt) {
+    utl::verify(s == "high" || s == "low",
+                "--{} must be \"high\" or \"low\", got \"{}\"", opt, s);
+    return s == "high" ? pop_weight::kHigh : pop_weight::kLow;
+  };
+  auto const parse_pop_from = [&](std::string_view const s) {
+    population_from = parse_pop_weight(s, "population_from");
+  };
+  auto const parse_pop_to = [&](std::string_view const s) {
+    population_to = parse_pop_weight(s, "population_to");
+  };
+
+  auto const parse_population_grid = [&](std::string const& s) {
+    auto const file_content = utl::read_file(s.c_str());
+    utl::verify(file_content.has_value(),
+                "could not read population grid file at {}", s.c_str());
+    population_grid = geo::parse_eurostat_population_grid(*file_content);
+    utl::erase_if(population_grid, [](auto const c) { return c.data_ == 0UL; });
+  };
+
+  auto const grid_cell_rect = [](geo::box const& b) {
+    return tg_rect{{b.min_.lng_, b.min_.lat_}, {b.max_.lng_, b.max_.lat_}};
+  };
+
+  auto const partial_sum_grid = [](geo::grid<std::uint64_t>& g) {
+    std::partial_sum(
+        g.begin(), g.end(), g.begin(),
+        [](auto const& acc, auto const& c) -> geo::grid_cell<std::uint64_t> {
+          return {c.b_, acc.data_ + c.data_};
+        });
+  };
+
   auto desc = po::options_description{"Options"};
   desc.add_options()  //
       ("help", "Prints this help message")  //
@@ -199,7 +277,25 @@ int generate(int ac, char** av) {
        "the source in terms of geographical distance, overrides lb_rank")  //
       ("bounds,b", po::value<std::string>()->notifier(parse_bounds),
        "randomize locations within bounds, format: GeoJSON"
-       "(shorthand for Europe \"-b europe\")");
+       "(shorthand for Europe \"-b europe\")")  //
+      ("population_grid",
+       po::value<std::string>()->notifier(parse_population_grid),
+       "path to a CSV file containing a EUROSTAT population grid; requires "
+       "--population_from and/or --population_to to say which end of a query "
+       "is drawn from it")  //
+      ("population_from", po::value<std::string>()->notifier(parse_pop_from),
+       "weight the origin towards \"high\" or \"low\" population: every grid "
+       "cell stays eligible, only its likelihood changes - proportional to a "
+       "cell's population for \"high\", to (max population + 1 - the cell's) "
+       "for \"low\"; requires --population_grid")  //
+      ("population_to", po::value<std::string>()->notifier(parse_pop_to),
+       "weight the destination the same way, overriding the default "
+       "lower-bounds rank without needing --lb_rank 0; requires "
+       "--population_grid and conflicts with an explicit --lb_rank 1/"
+       "--geo_rank, which derive `to` from `from`. Combined with "
+       "--population_from this spans the four pairings: high->low is a funnel, "
+       "low->high its reverse, high->high and low->low weight both ends the "
+       "same way");
   add_data_path_opt(desc, data_path);
   auto vm = parse_opt(ac, av, desc);
 
@@ -207,6 +303,20 @@ int generate(int ac, char** av) {
     std::cout << desc << "\n";
     return 0;
   }
+
+  utl::verify((!population_from && !population_to) || !population_grid.empty(),
+              "--population_from/--population_to require --population_grid");
+  utl::verify(population_grid.empty() || population_from || population_to,
+              "--population_grid requires --population_from and/or "
+              "--population_to to say which end is drawn by population");
+  utl::verify(!population_to || !geo_rank,
+              "--population_to cannot be combined with --geo_rank: both "
+              "decide how `to` is picked");
+  utl::verify(!population_to || !(vm.count("lb_rank") != 0U &&
+                                  !vm["lb_rank"].defaulted() && lb_rank),
+              "--population_to cannot be combined with --lb_rank 1: both "
+              "decide how `to` is picked. --population_to already overrides "
+              "the default rank, so just drop --lb_rank");
 
   auto const c = config::read(data_path / "config.yml");
   utl::verify(c.timetable_.has_value(), "timetable required");
@@ -248,6 +358,7 @@ int generate(int ac, char** av) {
   };
 
   auto const use_odm_bounds = modes && use_odm && d.odm_bounds_ != nullptr;
+
   auto node_rtree = point_rtree<osr::node_idx_t>{};
   if (modes) {
     if (modes->empty()) {
@@ -327,6 +438,101 @@ int generate(int ac, char** av) {
                  d.tt_->n_locations());
   }
 
+  // for each population grid cell that intersects both the geo bounds and
+  // the ODM bounds (if given) and that has at least one eligible stop (i.e.
+  // a stop with at least one route): the stops located within the cell,
+  // used to weight random stop selection by population
+  auto cell_stops = std::vector<std::vector<n::location_idx_t>>{};
+  if (!population_grid.empty()) {
+    auto const drop_grid_cells_out_of_bounds = [&](tg_geom const* geom,
+                                                   char const* label) {
+      auto const n_before = population_grid.size();
+      auto discarded_population = std::uint64_t{0U};
+      utl::erase_if(population_grid, [&](auto const& gc) {
+        if (tg_geom_intersects_rect(geom, grid_cell_rect(gc.b_))) {
+          return false;
+        }
+        discarded_population += gc.data_;
+        return true;
+      });
+      auto const n_discarded = n_before - population_grid.size();
+      fmt::println(
+          "population grid: discarded {}/{} ({:.2f}%) cells outside {}, "
+          "discarded population: {}",
+          n_discarded, n_before,
+          n_before != 0U ? static_cast<double>(n_discarded) /
+                               static_cast<double>(n_before) * 100.0
+                         : std::numeric_limits<double>::quiet_NaN(),
+          label, discarded_population);
+      return !population_grid.empty();
+    };
+
+    if (bounds != nullptr && !drop_grid_cells_out_of_bounds(bounds, "bounds")) {
+      fmt::println(
+          "can not generate queries: population grid and bounds are "
+          "disjoint");
+      return 1;
+    }
+
+    if (use_odm_bounds &&
+        !drop_grid_cells_out_of_bounds(d.odm_bounds_->geom_, "ODM bounds")) {
+      fmt::println(
+          "can not generate queries: population grid and ODM bounds are "
+          "disjoint");
+      return 1;
+    }
+
+    auto stop_rtree = point_rtree<n::location_idx_t>{};
+    for (auto const l : master_stops) {
+      if (!d.tt_->location_routes_[l].empty()) {
+        stop_rtree.add(d.tt_->locations_.coordinates_[l], l);
+      }
+    }
+
+    cell_stops.resize(population_grid.size());
+    for (auto i = 0UL; i != population_grid.size(); ++i) {
+      stop_rtree.find(population_grid[i].b_, [&](n::location_idx_t const l) {
+        cell_stops[i].emplace_back(l);
+      });
+    }
+
+    auto const n_before = population_grid.size();
+    auto const n_discarded = erase_if_lockstep(
+        [](auto const& /* cell */, auto const& stops) { return stops.empty(); },
+        population_grid, cell_stops);
+
+    utl::verify(!population_grid.empty(),
+                "can not generate queries: no population grid cells with "
+                "eligible stops remain");
+
+    auto const total_population = std::accumulate(
+        population_grid.begin(), population_grid.end(), std::uint64_t{0U},
+        [](auto const acc, auto const& gc) { return acc + gc.data_; });
+    fmt::println(
+        "population grid: discarded {}/{} cells with no eligible stops, {} "
+        "cells with total population {} remain for query generation",
+        n_discarded, n_before, population_grid.size(), total_population);
+
+    if (population_from == pop_weight::kLow ||
+        population_to == pop_weight::kLow) {
+      // same cells/order as population_grid (and therefore cell_stops), but
+      // weighted inversely by population so low-population cells are the
+      // likely picks
+      population_grid_low = population_grid;
+      auto const max_pop =
+          std::max_element(
+              population_grid_low.begin(), population_grid_low.end(),
+              [](auto const& a, auto const& b) { return a.data_ < b.data_; })
+              ->data_;
+      for (auto& gc : population_grid_low) {
+        gc.data_ = max_pop + 1U - gc.data_;
+      }
+      partial_sum_grid(population_grid_low);
+    }
+
+    partial_sum_grid(population_grid);
+  }
+
   struct flex_seed {
     geo::latlng from_;
     n::location_idx_t rank_stop_;
@@ -353,6 +559,23 @@ int generate(int ac, char** av) {
     return v;
   }();
 
+  // randomizes a grid cell weighted by its population (random integer in
+  // [0, total_population) followed by a linear search over the partial
+  // sums), then picks uniformly at random among the cell's eligible stops
+  // population_grid_low shares its cells and their order with population_grid
+  // (and therefore with cell_stops), so both are indexed the same way
+  auto const random_population_weighted_stop = [&](pop_weight const w) {
+    auto const& grid =
+        w == pop_weight::kHigh ? population_grid : population_grid_low;
+    auto const total = grid.back().data_;
+    auto const r = rand_in(std::uint64_t{0U}, total);
+    auto const cell =
+        utl::find_if(grid, [&](auto const& gc) { return r < gc.data_; });
+    auto const cell_idx =
+        static_cast<std::size_t>(std::distance(grid.begin(), cell));
+    return rand_in(cell_stops[cell_idx]);
+  };
+
   auto const ranks = [&] {
     auto ret = std::vector(n, 0U);
     for (auto [i, r] = std::tuple{0U, kMinRank}; i != n;
@@ -363,20 +586,41 @@ int generate(int ac, char** av) {
   }();
 
   auto geo_rank_index = 0UL;
-  if (geo_rank) {
-    fmt::println("from and to pairings by geo-rank = {}", *geo_rank);
+  auto const weight_desc = [](pop_weight const w) {
+    return w == pop_weight::kHigh
+               ? "weighted towards high population (any cell can be drawn, "
+                 "likelihood proportional to its population)"
+               : "weighted towards low population (any cell can be drawn, "
+                 "likelihood proportional to max population + 1 - its "
+                 "population)";
+  };
+  auto const from_desc = population_from
+                             ? std::string{weight_desc(*population_from)}
+                             : std::string{"drawn uniformly at random"};
+  auto to_desc = std::string{};
+  if (population_to) {
+    to_desc = weight_desc(*population_to);
+    lb_rank = false;  // only ever the default here: an explicit 1 was rejected
+  } else if (geo_rank) {
     geo_rank_index = 1UL << *geo_rank;
     if (geo_rank_index > master_stops.size() - 1U) {
       fmt::println("geo-rank index exceeds number of stops: {} > {}",
                    geo_rank_index, master_stops.size() - 1U);
       return -1;
     }
+    to_desc =
+        fmt::format("geo-rank {} of `from`: the {}-th nearest stop by distance",
+                    *geo_rank, geo_rank_index);
     lb_rank = false;
   } else if (lb_rank) {
-    fmt::println("from and to pairings by lower bounds rank");
+    to_desc =
+        "lower-bounds rank of `from`: the 2^n-th stop by travel-time lower "
+        "bound, n varied per query";
   } else {
-    fmt::println("from and to uniformly at random");
+    to_desc = "drawn uniformly at random";
   }
+  fmt::println("from: {}", from_desc);
+  fmt::println("to:   {}", to_desc);
 
   auto t = utl::scoped_timer{"generate queries"};
   auto out = std::ofstream{"queries.txt"};
@@ -428,7 +672,9 @@ int generate(int ac, char** av) {
           from_place = fmt::format("{},{}", seed.from_.lat_, seed.from_.lng_);
           rank_stop = seed.rank_stop_;
         } else {
-          rank_stop = random_stop(*d.tt_, s.stops_);
+          rank_stop = population_from
+                          ? random_population_weighted_stop(*population_from)
+                          : random_stop(*d.tt_, s.stops_);
           from_place = get_place(rank_stop);
           if (!from_place) {
             continue;
@@ -460,7 +706,9 @@ int generate(int ac, char** av) {
           });
           to_place = get_place(s.stops_[geo_rank_index]);
         } else {
-          to_place = get_place(random_stop(*d.tt_, s.stops_));
+          to_place = get_place(
+              population_to ? random_population_weighted_stop(*population_to)
+                            : random_stop(*d.tt_, s.stops_));
         }
         if (to_place) {
           break;
