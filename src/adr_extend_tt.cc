@@ -406,7 +406,7 @@ adr_ext adr_extend_tt(nigiri::timetable const& tt,
   }
 
   auto extra_place_idx = adr_extra_place_idx_t{0U};
-  for (auto const [prio, locations, representative] :
+  for (auto [prio, locations, representative] :
        utl::zip(ret.place_importance_, place_location, most_important)) {
     auto const repr_name =
         representative != n::location_idx_t::invalid()
