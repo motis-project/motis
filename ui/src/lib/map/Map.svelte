@@ -1,7 +1,8 @@
 <script lang="ts">
-	import maplibregl from 'maplibre-gl';
-	import { setContext, type Snippet } from 'svelte';
+	import * as maplibregl from 'maplibre-gl';
 	import 'maplibre-gl/dist/maplibre-gl.css';
+	import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
+	import { setContext, type Snippet } from 'svelte';
 	import { createShield } from './shield';
 	import { browser } from '$app/environment';
 	// pinned to 0.2.3 — 0.4.0's `exports` field blocks deep-importing the worker script
@@ -59,6 +60,9 @@
 		}
 		let tmp: maplibregl.Map;
 		try {
+			// Set worker URL to get it bundled by Vite.
+			maplibregl.setWorkerUrl(workerUrl);
+
 			tmp = new maplibregl.Map({
 				hash: true,
 				container,

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import maplibregl from 'maplibre-gl';
+	import type * as maplibregl from 'maplibre-gl';
 	import { onDestroy, getContext, setContext, type Snippet } from 'svelte';
 	import type { MapMouseEvent, MapGeoJSONFeature } from 'maplibre-gl';
 

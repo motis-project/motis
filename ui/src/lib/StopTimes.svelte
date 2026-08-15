@@ -16,7 +16,7 @@
 	import { getModeLabel } from './map/getModeLabel';
 	import { posToLocation } from './Location';
 	import type { Location } from './Location';
-	import maplibregl from 'maplibre-gl';
+	import * as maplibregl from 'maplibre-gl';
 	import Alerts from './Alerts.svelte';
 
 	let {

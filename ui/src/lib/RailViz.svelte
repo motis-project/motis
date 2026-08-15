@@ -3,7 +3,7 @@
 	import { MapLibreOverlay } from '@deck.gl/maplibre';
 	import { IconLayer } from '@deck.gl/layers';
 	import { createTripIcon } from '$lib/map/createTripIcon';
-	import maplibregl from 'maplibre-gl';
+	import * as maplibregl from 'maplibre-gl';
 	import { onDestroy, onMount, untrack } from 'svelte';
 	import { formatTime } from './toDateTime';
 	import { onClickTrip } from './utils';

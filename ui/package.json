@@ -77,7 +77,7 @@
 		"dompurify": "^3.4.12",
 		"earcut": "^3.0.2",
 		"geojson": "^0.5.0",
-		"maplibre-gl": "^5.17.0",
+		"maplibre-gl": "^6.11.1",
 		"rbush": "^4.0.1",
 		"svelte-radix": "^1.1.1"
 	},
