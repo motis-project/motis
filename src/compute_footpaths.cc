@@ -15,6 +15,11 @@
 #include "osr/util/infinite.h"
 #include "osr/util/reverse.h"
 
+#include "geo/latlng.h"
+
+#include "utl/helpers/algorithm.h"
+#include "utl/zip.h"
+
 #include "motis/constants.h"
 #include "motis/get_loc.h"
 #include "motis/match_platforms.h"
@@ -25,6 +30,9 @@
 namespace n = nigiri;
 
 namespace motis {
+
+// below this, a missing routing result is an OSM data error, not a real gap
+constexpr auto const kMaxMissingFootpathDistance = 100.0;
 
 elevator_footpath_map_t compute_footpaths(
     osr::ways const& w,
@@ -182,33 +190,43 @@ elevator_footpath_map_t compute_footpaths(
             }
           }
 
+          // transfers.txt is authoritative: a rule fixes the transfer time,
+          // which may be shorter or longer than the walk, so routing may only
+          // fill the pairs it does not speak about.
+          if (mode.profile_idx_ == n::kFootProfile &&
+              to_idx(l) < tt.locations_.transfer_rule_fps_.size()) {
+            auto const rules = tt.locations_.transfer_rule_fps_[l];
+            if (rules.begin() != rules.end()) {
+              utl::erase_if(transfers[l], [&](n::footpath const fp) {
+                return utl::any_of(rules, [&](n::footpath const r) {
+                  return r.target() == fp.target();
+                });
+              });
+              for (auto const r : rules) {
+                transfers[l].emplace_back(r);
+              }
+            }
+          }
+
+          // A pair the router cannot connect over a few meters is an OSM data
+          // error rather than a real gap: bridge it with the beeline.
           if (mode.extend_missing_) {
-            auto const& tt_fps = tt.locations_.footpaths_out_[0].at(l);
-            s.sorted_tt_fps_.resize(tt_fps.size());
-            std::copy(begin(tt_fps), end(tt_fps), begin(s.sorted_tt_fps_));
-            utl::sort(s.sorted_tt_fps_);
-            utl::sort(transfers[l]);
-
-            utl::sorted_diff(
-                s.sorted_tt_fps_, transfers[l],
-                [](auto&& a, auto&& b) { return a.target() < b.target(); },
-                [](auto&& a, auto&& b) { return a.target() == b.target(); },
-                utl::overloaded{
-                    [](n::footpath, n::footpath) { assert(false); },
-                    [&](utl::op const op, n::footpath const x) {
-                      if (op == utl::op::kDel) {
-                        auto const dist = geo::distance(
-                            tt.locations_.coordinates_[l],
-                            tt.locations_.coordinates_[x.target()]);
-                        if (dist < 100.0) {
-                          auto const duration = n::duration_t{
-                              static_cast<int>(std::ceil((dist / 0.7) / 60.0))};
-                          s.missing_.emplace_back(x.target(), duration);
-                        }
-                      }
-                    }});
-
-            utl::concat(transfers[l], s.missing_);
+            for (auto const [n, r] : utl::zip(s.neighbors_, results)) {
+              if (r.has_value()) {
+                continue;
+              }
+              auto const dist = geo::distance(
+                  tt.locations_.coordinates_[l], tt.locations_.coordinates_[n]);
+              if (dist >= kMaxMissingFootpathDistance ||
+                  utl::any_of(transfers[l], [&, n = n](n::footpath const fp) {
+                    return fp.target() == n;
+                  })) {
+                continue;
+              }
+              transfers[l].emplace_back(
+                  n::footpath{n, n::duration_t{static_cast<int>(
+                                     std::ceil((dist / 0.7) / 60.0))}});
+            }
           }
 
           utl::erase_if(transfers[l], [&](n::footpath fp) {
