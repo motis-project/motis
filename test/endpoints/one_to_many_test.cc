@@ -701,10 +701,12 @@ TEST(one_to_many, pareto_sets_with_routed_transfers_and_distances) {
   EXPECT_DOUBLE_EQ(1320.0, td.at(0).at(0).duration_);
   EXPECT_EQ(0, td.at(0).at(0).transfers_);
   ASSERT_EQ(1U, td.at(1).size());
-  EXPECT_DOUBLE_EQ(1860.0, td.at(1).at(0).duration_);
+  // transfers.txt states 4 min for the FFM/DA station transfers, which is
+  // shorter than the routed walk - and a rule wins over the walking time
+  EXPECT_DOUBLE_EQ(1320.0, td.at(1).at(0).duration_);
   EXPECT_EQ(0, td.at(1).at(0).transfers_);
   ASSERT_EQ(1U, td.at(2).size());
-  EXPECT_DOUBLE_EQ(1800.0, td.at(2).at(0).duration_);
+  EXPECT_DOUBLE_EQ(1500.0, td.at(2).at(0).duration_);
   EXPECT_EQ(0, td.at(2).at(0).transfers_);
   ASSERT_EQ(1U, td.at(3).size());
   EXPECT_DOUBLE_EQ(4440.0, td.at(3).at(0).duration_);
