@@ -1,5 +1,7 @@
 #include "motis/compute_footpaths.h"
 
+#include <cstdlib>
+
 #include "nigiri/loader/build_lb_graph.h"
 
 #include "cista/mmap.h"
@@ -9,6 +11,8 @@
 #include "utl/erase_if.h"
 #include "utl/parallel_for.h"
 #include "utl/sorted_diff.h"
+
+#include "nigiri/loader/build_footpaths.h"
 
 #include "osr/routing/profiles/foot.h"
 #include "osr/routing/route.h"
@@ -87,6 +91,13 @@ elevator_footpath_map_t compute_footpaths(
     }
 
     auto const is_candidate = [&](n::location_idx_t const l) {
+      // Virtual locations sit exactly where their stop sits, and no profile
+      // computed here distinguishes them: matching and routing them again
+      // would repeat the work per member and produce a quadratic matrix
+      // between co-located nodes.
+      if (tt.locations_.types_[l] == n::location_type::kVirt) {
+        return false;
+      }
       return !mode.is_candidate_ || mode.is_candidate_(l);
     };
 
@@ -190,23 +201,11 @@ elevator_footpath_map_t compute_footpaths(
             }
           }
 
-          // transfers.txt is authoritative: a rule fixes the transfer time,
-          // which may be shorter or longer than the walk, so routing may only
-          // fill the pairs it does not speak about.
-          if (mode.profile_idx_ == n::kFootProfile &&
-              to_idx(l) < tt.locations_.transfer_rule_fps_.size()) {
-            auto const rules = tt.locations_.transfer_rule_fps_[l];
-            if (rules.begin() != rules.end()) {
-              utl::erase_if(transfers[l], [&](n::footpath const fp) {
-                return utl::any_of(rules, [&](n::footpath const r) {
-                  return r.target() == fp.target();
-                });
-              });
-              for (auto const r : rules) {
-                transfers[l].emplace_back(r);
-              }
-            }
-          }
+          // transfers.txt belongs to the default profile alone. What is
+          // computed here is physical: a wheelchair may not manage the stated
+          // time or the stairs at all, and a car transfer has nothing to do
+          // with it. The virtual locations the rules created carry nothing
+          // here, and the routing projects them onto their stop.
 
           // A pair the router cannot connect over a few meters is an OSM data
           // error rather than a real gap: bridge it with the beeline.
