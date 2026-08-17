@@ -8,3 +8,5 @@ includeWorkspaceRoot: true
 
 onlyBuiltDependencies:
   - esbuild
+patchedDependencies:
+  bits-ui: patches/bits-ui.patch
