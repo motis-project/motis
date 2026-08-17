@@ -4,6 +4,14 @@
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import { createShield } from './shield';
 	import { browser } from '$app/environment';
+	// pinned to 0.2.3 — 0.4.0's `exports` field blocks deep-importing the worker script
+	import rtlTextUrl from '@mapbox/mapbox-gl-rtl-text/mapbox-gl-rtl-text.min.js?url';
+
+	// required for correct rendering of RTL scripts (Arabic, Hebrew, ...);
+	// lazy: only loaded once RTL text is actually encountered
+	if (browser && maplibregl.getRTLTextPluginStatus() === 'unavailable') {
+		maplibregl.setRTLTextPlugin(rtlTextUrl, true);
+	}
 	let {
 		map = $bindable(),
 		zoom = $bindable(),
