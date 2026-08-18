@@ -49,7 +49,10 @@ double walking_time(api::Itinerary const& i) {
       walking_time += l.duration_;
     }
   }
-  return static_cast<double>(walking_time) * Weight;
+  return static_cast<double>(std::chrono::round<std::chrono::minutes>(
+                                 std::chrono::seconds(walking_time))
+                                 .count()) *
+         Weight;
 }
 
 static constexpr auto kDefaultStartTime = start_time<1.0>;

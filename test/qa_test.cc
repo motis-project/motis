@@ -182,7 +182,7 @@ TEST(qa, walking_time) {
                 {.mode_ = api::ModeEnum::WALK, .duration_ = 333},
                 {.mode_ = api::ModeEnum::TRANSIT, .duration_ = 444},
                 {.mode_ = api::ModeEnum::WALK, .duration_ = 555}}};
-  EXPECT_EQ(qa::criterion::kDefaultWalkingTime(i), 999.0);
+  EXPECT_EQ(qa::criterion::kDefaultWalkingTime(i), 17.0);  // 999s -> ~17min
 }
 
 TEST(qa, different_criteria) {
@@ -203,7 +203,7 @@ TEST(qa, different_criteria) {
                  {.mode_ = api::ModeEnum::WALK, .duration_ = 600}}}};
 
   EXPECT_EQ(qa::rate(a, b, qa::kStartEndTransfer), 0.0);
-  EXPECT_EQ(qa::rate(a, b, qa::kStartEndTransferWalk), -20.91702196360156);
+  EXPECT_EQ(qa::rate(a, b, qa::kStartEndTransferWalk), -0.12416657898367944);
 }
 
 TEST(qa, minor_improvement) {
