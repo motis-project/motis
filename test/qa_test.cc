@@ -203,7 +203,8 @@ TEST(qa, different_criteria) {
                  {.mode_ = api::ModeEnum::WALK, .duration_ = 600}}}};
 
   EXPECT_EQ(qa::rate(a, b, qa::kStartEndTransfer), 0.0);
-  EXPECT_EQ(qa::rate(a, b, qa::kStartEndTransferWalk), -0.12416657898367944);
+  EXPECT_DOUBLE_EQ(-0.12416657898367944,
+                   qa::rate(a, b, qa::kStartEndTransferWalk));
 }
 
 TEST(qa, minor_improvement) {
