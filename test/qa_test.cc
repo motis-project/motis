@@ -205,3 +205,19 @@ TEST(qa, different_criteria) {
   EXPECT_EQ(qa::rate(a, b, qa::kStartEndTransfer), 0.0);
   EXPECT_EQ(qa::rate(a, b, qa::kStartEndTransferWalk), -20.91702196360156);
 }
+
+TEST(qa, minor_improvement) {
+  auto const a = std::vector<api::Itinerary>{
+      {.startTime_ = unixtime_t{sys_days{2024_y / June / 10} + 10_hours},
+       .endTime_ = unixtime_t{sys_days{2024_y / June / 10} + 12_hours},
+       .transfers_ = 0U}};
+
+  auto const b = std::vector<api::Itinerary>{
+      {.startTime_ =
+           unixtime_t{sys_days{2024_y / June / 10} + 10_hours + 1_minutes},
+       .endTime_ = unixtime_t{sys_days{2024_y / June / 10} + 15_hours},
+       .transfers_ = 5U}};
+
+  EXPECT_DOUBLE_EQ(-49.460622942808466, qa::rate(a, b, qa::kStartEndTransfer));
+  EXPECT_DOUBLE_EQ(49.460622942808466, qa::rate(b, a, qa::kStartEndTransfer));
+}
