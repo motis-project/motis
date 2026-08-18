@@ -4,14 +4,12 @@
 #include <numeric>
 #include <vector>
 
-#include "boost/graph/properties.hpp"
-
 #include "motis-api/motis-api.h"
 
 namespace motis::qa {
 
 constexpr auto kMaxRating = std::numeric_limits<double>::max();
-constexpr auto kMinRating = std::numeric_limits<double>::min();
+constexpr auto kMinRating = std::numeric_limits<double>::lowest();
 
 using criterion_t = std::function<double(api::Itinerary const&)>;
 
