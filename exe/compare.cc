@@ -93,7 +93,7 @@ int compare(int ac, char** av) {
   auto const print_params = [](api::Itinerary const& x) {
     std::cout << x.startTime_ << ", " << x.endTime_
               << ", transfers=" << std::setw(2) << std::right << x.transfers_
-              << ", walk=" << std::setw(4) << std::right
+              << ", walk=" << std::setw(3) << std::right
               << qa::criterion::kDefaultWalkingTime(x);
   };
   auto const get_ratings = [](auto const& ref, auto const& uut) {
