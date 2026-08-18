@@ -62,6 +62,11 @@ int compare(int ac, char** av) {
     return 0;
   }
 
+  if (responses_paths.size() < 2U) {
+    std::cout << "at least two response files required\n" << desc << "\n";
+    return 1;
+  }
+
   auto const write_fails = fs::is_directory(fails_path);
   if (!write_fails) {
     fmt::println("{} is not a directory, not writing fails", fails_path);
@@ -120,24 +125,36 @@ int compare(int ac, char** av) {
     auto const ref =
         x.responses_[0].value_or(api::plan_response{}).itineraries_;
     auto mismatch = false;
+    auto all_equal = true;
+    auto header_printed = false;
     for (auto i = 1U; i < x.responses_.size(); ++i) {
       mismatch |= !x.responses_[i].has_value();
 
       auto const uut =
           x.responses_[i].value_or(api::plan_response{}).itineraries_;
       if (equal(ref, uut)) {
-        ++n_equal;
         continue;
       }
 
       mismatch = true;
-      std::cout << "QUERY=" << x.id_ << " [" << x.params_->to_url(kPlanPath)
-                << "]";
-      if (is_incomplete) {
-        std::cout << " [INCOMPLETE!!]";
+      all_equal = false;
+      if (!header_printed) {
+        header_printed = true;
+        std::cout << "QUERY=" << x.id_ << " [" << x.params_->to_url(kPlanPath)
+                  << "]";
+        if (is_incomplete) {
+          std::cout << " [INCOMPLETE!!]";
+        }
+        if (!x.responses_[0].has_value()) {
+          std::cout << " [NO REFERENCE RESPONSE]";
+        }
+        std::cout << "\n";
       }
-      std::cout << "\n";
-      if (x.responses_.size() == 2U) {
+      std::cout << responses_paths[0] << " (ref) vs " << responses_paths[i]
+                << "\n";
+      if (!x.responses_[i].has_value()) {
+        std::cout << "[NO RESPONSE]\n";
+      } else {
         std::cout << "ratings: ";
         print_ratings(get_ratings(ref, uut));
         std::cout << "\n";
@@ -171,6 +188,10 @@ int compare(int ac, char** av) {
                 std::cout << "\n";
               }});
       std::cout << "\n\n";
+    }
+
+    if (all_equal) {
+      ++n_equal;
     }
 
     if (mismatch && write_fails) {
@@ -222,8 +243,6 @@ int compare(int ac, char** av) {
               "[WARNING] query_id: {}, response: {}, could not parse: {}",
               query_id, responses_paths[i], *r);
         }
-      } else {
-        break;
       }
     }
 
