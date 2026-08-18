@@ -24,7 +24,7 @@ info:
   license:
     name: MIT
     url: https://opensource.org/license/mit
-  version: v5
+  version: v6
 externalDocs:
   description: Find out more about MOTIS
   url: https://github.com/motis-project/motis
@@ -77,7 +77,9 @@ paths:
           description: |
             Experimental. Search radius in meters around the `fromPlace` / `toPlace` coordinates.
             When set and the place is given as coordinates, all transit stops within
-            this radius are used as start/end points with zero pre-transit/post-transit time.
+            this radius are used as start/end points. The pre-transit/post-transit time
+            for each of them is estimated from the crow-fly distance to the coordinate
+            at walking speed (1.5 m/s), rounded down to whole minutes.
             Works without OSM/street routing data loaded.
           schema:
             type: number
@@ -204,8 +206,10 @@ paths:
           required: false
           description: |
             Optional. Default is 250 meters.
-            
+
             Maximum matching distance in meters to match geo coordinates to the street network.
+
+            Is limited by server config variable `max_max_matching_distance`, larger values are capped to this limit.
           schema:
             type: number
             default: 250
@@ -816,6 +820,17 @@ paths:
             
             If set to `true`, all used transit trips are required to allow car carriage.
 
+        - name: noCompulsoryReservation
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+          description: |
+            Optional. Default is `false`.
+            
+            If set to `true`, all used transit trips are required to be usable without compulsory reservation.
+
         - name: maxPreTransitTime
           in: query
           required: false
@@ -1104,7 +1119,10 @@ paths:
         - name: maxMatchingDistance
           in: query
           required: true
-          description: maximum matching distance in meters to match geo coordinates to the street network
+          description: |
+            maximum matching distance in meters to match geo coordinates to the street network
+
+            Is limited by server config variable `max_max_matching_distance`, larger values are capped to this limit.
           schema:
             type: number
         - name: vehicleHeight
@@ -1333,7 +1351,10 @@ paths:
         - name: maxMatchingDistance
           in: query
           required: false
-          description: maximum matching distance in meters to match geo coordinates to the street network
+          description: |
+            maximum matching distance in meters to match geo coordinates to the street network
+
+            Is limited by server config variable `max_max_matching_distance`, larger values are capped to this limit.
           schema:
             type: number
             default: 250
@@ -1670,6 +1691,17 @@ paths:
             type: boolean
             default: false
 
+        - name: noCompulsoryReservation
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+          description: |
+            Optional. Default is `false`.
+            
+            If set to `true`, all used transit trips are required to be usable without compulsory reservation.
+
       responses:
         "200":
           description: |
@@ -1849,6 +1881,8 @@ paths:
             Optional. Default is 250 meters.
 
             Maximum matching distance in meters to match geo coordinates to the street network.
+
+            Is limited by server config variable `max_max_matching_distance`, larger values are capped to this limit.
           schema:
             type: number
             default: 250
@@ -2055,6 +2089,17 @@ paths:
             Optional. Default is `false`.
 
             If set to `true`, all used transit trips are required to allow car carriage.
+
+        - name: noCompulsoryReservation
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+          description: |
+            Optional. Default is `false`.
+            
+            If set to `true`, all used transit trips are required to be usable without compulsory reservation.
 
         - name: maxPreTransitTime
           in: query
@@ -2488,6 +2533,12 @@ paths:
           schema:
             type: boolean
             default: false
+        - name: noCompulsoryReservation
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
         - name: language
           in: query
           required: false
@@ -2518,7 +2569,10 @@ paths:
         - name: maxMatchingDistance
           in: query
           required: false
-          description: Maximum matching distance in meters to the street network.
+          description: |
+            Maximum matching distance in meters to the street network.
+
+            Is limited by server config variable `max_max_matching_distance`, larger values are capped to this limit.
           schema:
             type: number
             default: 250
@@ -4261,6 +4315,18 @@ components:
         - NORMAL
         - NOT_ALLOWED
 
+    WheelchairAccessibility:
+      type: string
+      enum:
+        - ACCESSIBLE
+        - NOT_ACCESSIBLE
+
+    Reservation:
+      type: string
+      enum:
+        - NONE
+        - COMPULSORY
+
     Place:
       type: object
       required:
@@ -4424,6 +4490,9 @@ components:
         - pickupDropoffType
         - cancelled
         - tripCancelled
+        - bikesAllowed
+        - wheelchairAccessible
+        - reservation
         - source
       properties:
         place:
@@ -4499,6 +4568,25 @@ components:
         tripCancelled:
           description: Whether the entire trip is cancelled due to the realtime situation.
           type: boolean
+        loopedCalendarSince:
+          description: |
+            If set, this attribute indicates that this trip has been expanded
+            beyond the feed end date (enabled by config flag `timetable.dataset.extend_calendar`)
+            by looping active weekdays, e.g. from calendar.txt in GTFS.
+          type: string
+          format: date-time
+        bikesAllowed:
+          description: |
+            Whether bikes can be carried on this trip.
+          type: boolean
+        wheelchairAccessible:
+          description: |
+            Whether wheelchairs can be transported on this trip.
+          $ref: '#/components/schemas/WheelchairAccessibility'
+        reservation:
+          description: |
+            Information about compulsory or possible reservation.
+          $ref: '#/components/schemas/Reservation'
         source:
           description: Filename and line number where this trip is from
           type: string
@@ -4680,12 +4768,6 @@ components:
         elevationDown:
           type: integer
           description: decline in meters across this path segment
-
-    WheelchairAccessibility:
-      type: string
-      enum:
-        - ACCESSIBLE
-        - NOT_ACCESSIBLE
 
     RentalFormFactor:
       type: string
@@ -5308,6 +5390,10 @@ components:
           description: |
             Whether wheelchairs can be transported on this leg.
           $ref: '#/components/schemas/WheelchairAccessibility'
+        reservation:
+          description: |
+            Information about compulsory or possible reservation.
+          $ref: '#/components/schemas/Reservation'
         ticketUrls:
           $ref: '#/components/schemas/TicketUrls'
           description: |
@@ -5648,7 +5734,10 @@ components:
           description: maximum travel time in seconds. Is limited by server config variable `street_routing_max_direct_seconds`.
           type: number
         maxMatchingDistance:
-          description: maximum matching distance in meters to match geo coordinates to the street network
+          description: |
+            maximum matching distance in meters to match geo coordinates to the street network
+
+            Is limited by server config variable `max_max_matching_distance`, larger values are capped to this limit.
           type: number
         elevationCosts:
           description: |
@@ -5732,7 +5821,10 @@ components:
             it can lead to slow routing performance.
           type: integer
         maxMatchingDistance:
-          description: maximum matching distance in meters to match geo coordinates to the street network
+          description: |
+            maximum matching distance in meters to match geo coordinates to the street network
+
+            Is limited by server config variable `max_max_matching_distance`, larger values are capped to this limit.
           type: number
           default: 250
         arriveBy:
@@ -5942,7 +6034,13 @@ components:
             If set to `true`, all used transit trips are required to allow car carriage.
           type: boolean
           default: false
-
+        noCompulsoryReservation:
+          description: |
+            Optional. Default is `false`.
+            
+            If set to `true`, all used transit trips are required to be usable without compulsory reservation.
+          type: boolean
+          default: false
     ServerConfig:
       Description: server configuration
       type: object

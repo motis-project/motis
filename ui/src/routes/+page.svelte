@@ -63,7 +63,7 @@
 	import DeparturesMask from '$lib/DeparturesMask.svelte';
 	import Isochrones from '$lib/map/Isochrones.svelte';
 	import IsochronesInfo from '$lib/IsochronesInfo.svelte';
-	import type { DisplayLevel, IsochronesOptions, IsochronesPos } from '$lib/map/IsochronesShared';
+	import type { IsochronesOptions, IsochronesPos } from '$lib/map/IsochronesShared';
 	import IsochronesMask from '$lib/IsochronesMask.svelte';
 	import Rentals from '$lib/map/rentals/Rentals.svelte';
 	import Routes from '$lib/map/routes/Routes.svelte';
@@ -96,6 +96,10 @@
 					? 'departures'
 					: 'connections')
 	);
+	const setActiveTab = (tab: typeof activeTab) => {
+		activeTab = tab;
+		pushState('', { activeTab: tab });
+	};
 	let dataAttributionLink: string | undefined = $state(undefined);
 	type ColorMode = 'none' | 'stops' | 'rt' | 'route' | 'mode';
 	let colorMode = $state<ColorMode>('stops');
@@ -202,6 +206,8 @@
 						itineraryId: itinerary.id,
 						fromName: from.label || undefined,
 						toName: to.label || undefined,
+						fromPos: toPosString(from),
+						toPos: toPosString(to),
 						joinInterlinedLegs: false,
 						detailedLegs: true,
 						detailedTransfers: true,
@@ -251,6 +257,7 @@
 			useRoutedTransfers: boolParam('useRoutedTransfers'),
 			requireBikeTransport: boolParam('requireBikeTransport'),
 			requireCarTransport: boolParam('requireCarTransport'),
+			noCompulsoryReservation: boolParam('noCompulsoryReservation'),
 			preTransitModes: arrParam('preTransitModes') as Mode[] | undefined,
 			postTransitModes: arrParam('postTransitModes') as Mode[] | undefined,
 			preTransitRentalFormFactors: arrParam('preTransitRentalFormFactors') as
@@ -313,7 +320,9 @@
 			definedOnly({
 				...query,
 				fromName: from.label || undefined,
-				toName: to.label || undefined
+				toName: to.label || undefined,
+				fromPos: toPosString(from),
+				toPos: toPosString(to)
 			}),
 			{
 				selectedItinerary: itinerary,
@@ -377,10 +386,18 @@
 	let oneMarker = $state<maplibregl.Marker>();
 	let stopMarker = $state<maplibregl.Marker>();
 	let from = $state<Location>(
-		parseLocation(urlParams?.get('fromPlace'), urlParams?.get('fromName'))
+		parseLocation(
+			urlParams?.get('fromPlace'),
+			urlParams?.get('fromName'),
+			urlParams?.get('fromPos')
+		)
 	);
-	let to = $state<Location>(parseLocation(urlParams?.get('toPlace'), urlParams?.get('toName')));
-	let one = $state<Location>(parseLocation(urlParams?.get('one'), urlParams?.get('oneName')));
+	let to = $state<Location>(
+		parseLocation(urlParams?.get('toPlace'), urlParams?.get('toName'), urlParams?.get('toPos'))
+	);
+	let one = $state<Location>(
+		parseLocation(urlParams?.get('one'), urlParams?.get('oneName'), urlParams?.get('onePos'))
+	);
 	let stop = $state<Location>();
 	let viaParam = getUrlArray('via');
 	let viaLabels = $state(
@@ -436,6 +453,7 @@
 	) as CyclingSpeed;
 	let requireBikeTransport = $state(urlParams?.get('requireBikeTransport') == 'true');
 	let requireCarTransport = $state(urlParams?.get('requireCarTransport') == 'true');
+	let noCompulsoryReservation = $state(urlParams?.get('noCompulsoryReservation') == 'true');
 	let transitModes = $state<Mode[]>(
 		getUrlArray('transitModes', defaultQuery.transitModes) as Mode[]
 	);
@@ -548,18 +566,11 @@
 
 	let isochronesData = $state<IsochronesPos[]>([]);
 	let isochronesOptions = $state<IsochronesOptions>({
-		displayLevel:
-			(urlParams?.get('isochronesDisplayLevel') as DisplayLevel) ??
-			defaultQuery.isochronesDisplayLevel,
-		color: urlParams?.get('isochronesColor') ?? defaultQuery.isochronesColor,
 		opacity: parseIntOr(urlParams?.get('isochronesOpacity'), defaultQuery.isochronesOpacity),
 		status: 'DONE',
 		errorMessage: undefined,
 		errorCode: undefined
 	});
-	const isochronesCircleResolution = urlParams?.get('isochronesCircleResolution')
-		? parseIntOr(urlParams.get('isochronesCircleResolution'), defaultQuery.circleResolution)
-		: defaultQuery.circleResolution;
 
 	const toPlaceString = (l: Location) => {
 		if (l.match?.type === 'STOP') {
@@ -570,6 +581,13 @@
 			return `${lngLatToStr(l.match!)}`;
 		}
 	};
+
+	// Stops go into the query as a plain ID, so the URL alone would not say where
+	// they are and the marker could not be restored after a reload.
+	const toPosString = (l: Location | undefined) =>
+		l?.match?.type === 'STOP' && (l.match.lat != 0 || l.match.lon != 0)
+			? lngLatToStr(l.match)
+			: undefined;
 
 	const providerGroupsForQuery = (modes: PrePostDirectMode[], groups: string[]): string[] => {
 		if (!modes.some((mode) => mode.startsWith('RENTAL_'))) {
@@ -620,6 +638,7 @@
 						directRentalProviderGroups: providerGroupsForQuery(directModes, directProviderGroups),
 						requireBikeTransport,
 						requireCarTransport,
+						noCompulsoryReservation,
 						elevationCosts,
 						useRoutedTransfers,
 						maxTransfers: maxTransfers,
@@ -665,6 +684,7 @@
 		useRoutedTransfers,
 		requireBikeTransport,
 		requireCarTransport,
+		noCompulsoryReservation,
 		preTransitModes: prePostModesToModes(preTransitModes),
 		postTransitModes: prePostModesToModes(postTransitModes),
 		preTransitRentalFormFactors: getFormFactors(preTransitModes),
@@ -705,6 +725,7 @@
 						pedestrianProfile,
 						requireBikeTransport,
 						requireCarTransport,
+						noCompulsoryReservation,
 						preTransitModes: prePostModesToModes(preTransitModes),
 						postTransitModes: prePostModesToModes(postTransitModes),
 						maxPreTransitTime,
@@ -795,36 +816,43 @@
 		}
 	};
 
+	const baseSearch = (baseQuery: PlanData) => {
+		const base = plan(baseQuery).then(preprocessItinerary(from, to));
+		const q = baseQuery.query;
+		baseResponse = base;
+		routingResponses = [base];
+		pushStateWithQueryString(
+			{
+				...q,
+				...(q.fromPlace == from.label ? {} : { fromName: from.label }),
+				...(q.toPlace == to.label ? {} : { toName: to.label }),
+				...definedOnly({ fromPos: toPosString(from), toPos: toPosString(to) }),
+				...viaLabels
+			},
+			{ activeTab: 'connections' },
+			true
+		);
+	};
+
 	$effect(() => {
-		if (baseQuery && baseQuery != lastPlanQuery && activeTab == 'connections') {
-			lastPlanQuery = baseQuery;
+		const eq = (a: PlanData | undefined, b: PlanData | undefined) =>
+			JSON.stringify(a?.query) === JSON.stringify(b?.query);
+		if (baseQuery && !eq(baseQuery, lastPlanQuery) && activeTab == 'connections') {
+			const q = baseQuery;
+			const timeChanged = lastPlanQuery != undefined && lastPlanQuery.query.time != q.query.time;
+			lastPlanQuery = q;
 			clearTimeout(searchDebounceTimer);
-			searchDebounceTimer = setTimeout(() => {
-				const base = plan(baseQuery).then(preprocessItinerary(from, to));
-				const q = baseQuery.query;
-				baseResponse = base;
-				routingResponses = [base];
-				pushStateWithQueryString(
-					{
-						...q,
-						...(q.fromPlace == from.label ? {} : { fromName: from.label }),
-						...(q.toPlace == to.label ? {} : { toName: to.label }),
-						...viaLabels
-					},
-					{ activeTab: 'connections' },
-					true
-				);
-			}, 400);
+			if (timeChanged) {
+				searchDebounceTimer = setTimeout(() => baseSearch(q), 400);
+			} else {
+				baseSearch(q);
+			}
 		}
 	});
 	let isochronesQueryTimeout: number;
 	$effect(() => {
 		if (isochronesQuery && activeTab == 'isochrones') {
-			const [isochronesColor, isochronesOpacity, isochronesDisplayLevel] = [
-				isochronesOptions.color,
-				isochronesOptions.opacity,
-				isochronesOptions.displayLevel
-			];
+			const isochronesOpacity = isochronesOptions.opacity;
 			if (lastOneToAllQuery != isochronesQuery) {
 				lastOneToAllQuery = isochronesQuery;
 				clearTimeout(isochronesQueryTimeout);
@@ -849,7 +877,7 @@
 						});
 
 						isochronesData = [...all];
-						isochronesOptions.status = isochronesData.length == 0 ? 'EMPTY' : 'WORKING';
+						isochronesOptions.status = isochronesData.length == 0 ? 'EMPTY' : 'DONE';
 					} catch (e) {
 						isochronesOptions.status = 'FAILED';
 						isochronesOptions.errorMessage = String(e);
@@ -863,13 +891,9 @@
 					{
 						...q,
 						...(q.one == one.label ? {} : { oneName: one.label }),
+						...definedOnly({ onePos: toPosString(one) }),
 						maxTravelTime: q.maxTravelTime * 60,
-						isochronesColor,
-						isochronesOpacity,
-						isochronesDisplayLevel,
-						...(isochronesCircleResolution && isochronesCircleResolution > 2
-							? { isochronesCircleResolution }
-							: {})
+						isochronesOpacity
 					},
 					{ activeTab: 'isochrones' },
 					true
@@ -916,12 +940,50 @@
 	};
 
 	let lastFlownTo: Match | undefined = undefined;
-	const flyToLocation = (location: Location) => {
+	const flyToLocation = (location: Location, zoom: number = 18) => {
 		if (location.match == lastFlownTo) {
 			return;
 		}
 		lastFlownTo = location.match;
-		map?.flyTo({ center: location.match, zoom: 18 });
+		map?.flyTo({ center: location.match, zoom });
+	};
+
+	// Show the whole reachable area instead of zooming onto the start position.
+	// A few long distance stops can reach much further than everything else, so
+	// the outermost places are trimmed away before fitting.
+	const ISOCHRONES_FIT_TRIM = 0.02;
+	const isochronesBounds = (data: IsochronesPos[]) => {
+		const lngs = data.map((p) => p.lng).sort((a, b) => a - b);
+		const lats = data.map((p) => p.lat).sort((a, b) => a - b);
+		const lo = Math.floor(lngs.length * ISOCHRONES_FIT_TRIM);
+		const hi = lngs.length - 1 - lo;
+		return lo < hi
+			? new maplibregl.LngLatBounds([lngs[lo], lats[lo]], [lngs[hi], lats[hi]])
+			: new maplibregl.LngLatBounds(
+					[lngs[0], lats[0]],
+					[lngs[lngs.length - 1], lats[lats.length - 1]]
+				);
+	};
+
+	let lastFittedIsochrones: IsochronesPos[] | undefined = undefined;
+	const flyToIsochrones = (data: IsochronesPos[], map: maplibregl.Map) => {
+		if (data === lastFittedIsochrones) {
+			return;
+		}
+		lastFittedIsochrones = data;
+		const box = isochronesBounds(data);
+		const camera = map.cameraForBounds(box, {
+			maxZoom: 15, // keeps a single reachable place from zooming to street level
+			padding: {
+				top: 96,
+				right: 96,
+				bottom: isSmallScreen.current ? window.innerHeight * 0.3 : 96,
+				left: isSmallScreen.current ? 96 : 640
+			}
+		});
+		if (camera) {
+			map.flyTo(camera);
+		}
 	};
 
 	const flyToSelectedItinerary = () => {
@@ -943,7 +1005,12 @@
 			} else if (activeTab == 'departures' && stop && stop.match) {
 				flyToLocation(stop);
 			} else if (activeTab == 'isochrones' && one && one.match) {
-				flyToLocation(one);
+				if (isochronesData.length != 0) {
+					flyToIsochrones(isochronesData, map);
+				} else if (isochronesOptions.status == 'EMPTY' || isochronesOptions.status == 'FAILED') {
+					// Nothing to fit: at least show the surroundings of the start.
+					flyToLocation(one, 13);
+				}
 			}
 		}
 	});
@@ -969,28 +1036,7 @@
 </svelte:head>
 
 {#snippet contextMenu(e: maplibregl.MapMouseEvent, close: CloseFn)}
-	{#if activeTab == 'connections'}
-		<Button
-			variant="outline"
-			onclick={() => {
-				from = posToLocation(e.lngLat, zoom > LEVEL_MIN_ZOOM ? level : undefined);
-				fromMarker?.setLngLat(from.match!);
-				close();
-			}}
-		>
-			From
-		</Button>
-		<Button
-			variant="outline"
-			onclick={() => {
-				to = posToLocation(e.lngLat, zoom > LEVEL_MIN_ZOOM ? level : undefined);
-				toMarker?.setLngLat(to.match!);
-				close();
-			}}
-		>
-			To
-		</Button>
-	{:else if activeTab == 'isochrones'}
+	{#if activeTab == 'isochrones'}
 		<Button
 			variant="outline"
 			onclick={() => {
@@ -1002,17 +1048,33 @@
 			{t.position}
 		</Button>
 	{/if}
+	<Button
+		variant="outline"
+		onclick={() => {
+			from = posToLocation(e.lngLat, zoom > LEVEL_MIN_ZOOM ? level : undefined);
+			fromMarker?.setLngLat(from.match!);
+			setActiveTab('connections');
+			close();
+		}}
+	>
+		From
+	</Button>
+	<Button
+		variant="outline"
+		onclick={() => {
+			to = posToLocation(e.lngLat, zoom > LEVEL_MIN_ZOOM ? level : undefined);
+			toMarker?.setLngLat(to.match!);
+			setActiveTab('connections');
+			close();
+		}}
+	>
+		To
+	</Button>
 {/snippet}
 {#snippet resultContent()}
 	<Control class="min-h-0 shrink-0 overflow-hidden">
 		<Tabs.Root
-			bind:value={
-				() => activeTab,
-				(v) => {
-					activeTab = v;
-					pushState('', { activeTab: v });
-				}
-			}
+			bind:value={() => activeTab, setActiveTab}
 			class="flex h-full min-h-0 max-h-[97dvh] max-w-full w-[520px] flex-col overflow-hidden"
 		>
 			<Tabs.List class="grid shrink-0 grid-cols-3">
@@ -1035,6 +1097,7 @@
 						bind:pedestrianProfile
 						bind:requireCarTransport
 						bind:requireBikeTransport
+						bind:noCompulsoryReservation
 						bind:transitModes
 						bind:preTransitModes
 						bind:postTransitModes
@@ -1091,6 +1154,7 @@
 						bind:pedestrianProfile
 						bind:requireCarTransport
 						bind:requireBikeTransport
+						bind:noCompulsoryReservation
 						bind:transitModes
 						bind:maxTransfers
 						bind:preTransitModes
@@ -1390,14 +1454,13 @@
 			/>
 			<Isochrones
 				{map}
-				{bounds}
 				{isochronesData}
 				streetModes={arriveBy ? preTransitModes : postTransitModes}
 				wheelchair={pedestrianProfile === 'WHEELCHAIR'}
 				maxAllTime={arriveBy ? maxPreTransitTime : maxPostTransitTime}
-				circleResolution={isochronesCircleResolution}
+				{maxTravelTime}
 				active={activeTab == 'isochrones'}
-				bind:options={isochronesOptions}
+				options={isochronesOptions}
 			/>
 
 			<Popup trigger="contextmenu" children={contextMenu} />

@@ -110,7 +110,7 @@ struct task {
     run_();
     write_hashes(data_path, name_, hashes_);
     pt->out_ = 100;
-    pt->status("FINISHED");
+    pt->status(utl::progress_tracker::kFinished);
     done_ = true;
   }
 
@@ -185,8 +185,10 @@ void import(config const& c,
     for (auto const& [_, d] : t.datasets_) {
       h = cista::build_seeded_hash(
           h, c.osr_footpath_, hash_file(d.path_), d.default_bikes_allowed_,
-          d.default_cars_allowed_, d.clasz_bikes_allowed_,
-          d.clasz_cars_allowed_, d.default_timezone_, d.extend_calendar_);
+          d.default_cars_allowed_, d.default_reservation_not_required_,
+          d.clasz_bikes_allowed_, d.clasz_cars_allowed_,
+          d.clasz_reservation_not_required_, d.default_timezone_,
+          d.extend_calendar_);
       if (d.script_.has_value()) {
         h = cista::build_seeded_hash(h, hash_file(*d.script_));
       }
@@ -373,6 +375,9 @@ void import(config const& c,
                            dc.default_bikes_allowed_, dc.clasz_bikes_allowed_),
                        .cars_allowed_default_ = to_clasz_bool_array(
                            dc.default_cars_allowed_, dc.clasz_cars_allowed_),
+                       .reservation_not_required_default_ = to_clasz_bool_array(
+                           dc.default_reservation_not_required_,
+                           dc.clasz_reservation_not_required_),
                        .extend_calendar_ = dc.extend_calendar_,
                        .user_script_ =
                            dc.script_
@@ -466,9 +471,7 @@ void import(config const& c,
                             c.timetable_->max_matching_distance_,
                             c.timetable_->max_footpath_length_);
   }
-  // The platform matches only depend on the locations, not on the footpaths
-  // computed by `osr_footpath` (which only appends footpaths to the timetable),
-  // so they are computed first and reused there.
+
   auto matches = task{
       "matches",
       {&tt, &osr},
@@ -526,7 +529,7 @@ void import(config const& c,
              .max_duration_ = 8h,
              .is_candidate_ = [&](n::location_idx_t const l) {
                return utl::any_of(d.tt_->location_routes_[l], [&](auto r) {
-                 return d.tt_->has_car_transport(r);
+                 return d.tt_->is_flag_set(nigiri::kCarsAllowed, r);
                });
              }}};
         auto const elevator_footpath_map = compute_footpaths(

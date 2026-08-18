@@ -35,12 +35,6 @@ importers:
       '@turf/boolean-point-in-polygon':
         specifier: ^7.3.4
         version: 7.3.4
-      '@turf/circle':
-        specifier: ^7.3.4
-        version: 7.3.4
-      '@turf/destination':
-        specifier: ^7.3.4
-        version: 7.3.4
       '@turf/difference':
         specifier: ^7.3.4
         version: 7.3.4
@@ -53,12 +47,12 @@ importers:
       '@turf/rhumb-distance':
         specifier: ^7.3.4
         version: 7.3.4
-      '@turf/union':
-        specifier: ^7.3.4
-        version: 7.3.4
       colord:
         specifier: ^2.9.3
         version: 2.9.3
+      dompurify:
+        specifier: ^3.4.12
+        version: 3.4.12
       earcut:
         specifier: ^3.0.2
         version: 3.0.2
@@ -1118,12 +1112,6 @@ packages:
   '@turf/boolean-point-in-polygon@7.3.4':
     resolution: {integrity: sha512-v/4hfyY90Vz9cDgs2GwjQf+Lft8o7mNCLJOTz/iv8SHAIgMMX0czEoIaNVOJr7tBqPqwin1CGwsncrkf5C9n8Q==}
 
-  '@turf/circle@7.3.4':
-    resolution: {integrity: sha512-6ccr5iT51/XONF+pbpkqoRxKX4ZVWLubXb1frGCnClv2suo1UIY9SIlINNctVDupXd2P9PpqZCbrXATrcrokPg==}
-
-  '@turf/destination@7.3.4':
-    resolution: {integrity: sha512-YxoUJwkKmTHiRFQxMQOP0tz8Vy+ga5EXl+C+F/WubjDLwT1AJu5y8CNIjLvWyjPWckj/vZG4u/1js5bx6MLADA==}
-
   '@turf/difference@7.3.4':
     resolution: {integrity: sha512-kIxizNQrYLO2rtqUIeed0tPycicrXoipy/g9d4mjv91kzBEbwpyojz9zi8U9G1ISBfCEgA7wsViQD0r+8qzxXw==}
 
@@ -1141,9 +1129,6 @@ packages:
 
   '@turf/rhumb-distance@7.3.4':
     resolution: {integrity: sha512-phwskeijdgYMsR3qDQmytfsg2iZcp3uWK7UFc76wKTEpxozbDGFI4enX5gXvZPpyI1iD7gsktGqHsO33AjnFDA==}
-
-  '@turf/union@7.3.4':
-    resolution: {integrity: sha512-JJYyPMmGcrTa9sPv2ief2QU9Hb//cEAU1zgKu/OfoCMa9a8Imp5QVm9UTAkhGlc+4qm/N/X16iJ+cvVWaxPjkg==}
 
   '@types/chai@5.2.3':
     resolution: {integrity: sha512-Mw558oeA9fFbv65/y4mHtXDs9bPnFMZAL/jxdPFUpOHHIXX91mcgEHbS5Lahr+pwZFR8A7GQleRWeI6cGFC2UA==}
@@ -1189,6 +1174,9 @@ packages:
 
   '@types/supercluster@7.1.3':
     resolution: {integrity: sha512-Z0pOY34GDFl3Q6hUFYf3HkTwKEE02e7QgtJppBt+beEAxnyOpJua+voGFvxINBHa06GwLFFym7gRPY2SiKIfIA==}
+
+  '@types/trusted-types@2.0.7':
+    resolution: {integrity: sha512-ScaPdn1dQczgbl0QFTeTOmVHFULt394XJgOQNoyVhZ6r2vLnMLJfBPd53SB52T/3G36VI1/g2MZaX0cwDuXsfw==}
 
   '@typescript-eslint/eslint-plugin@8.55.0':
     resolution: {integrity: sha512-1y/MVSz0NglV1ijHC8OT49mPJ4qhPYjiK08YUQVbIOyu+5k862LKUHFkpKHWu//zmr7hDR2rhwUm6gnCGNmGBQ==}
@@ -1524,6 +1512,9 @@ packages:
 
   dlv@1.1.3:
     resolution: {integrity: sha512-+HlytyjlPKnIG8XuRG8WvmBP8xs8P71y+SKKS6ZXWoEgLuePxtDoUEiH7WkdePWrQ5JBpE6aoVqfZfJUQkjXwA==}
+
+  dompurify@3.4.12:
+    resolution: {integrity: sha512-zQvGet8Z2sWbQhCmfFz/T5QWH2oBmjnqK3qvOjaqaNLrLEF912WamU+ohnTp0TCep/MFVHpdJuCZEdFOdTnEFg==}
 
   dotenv@16.6.1:
     resolution: {integrity: sha512-uBq4egWHTcTt33a72vpSG0z3HnPuIl6NqYcTrKEg2azoEyl2hpW0zqlxysq2pK9HlDIHyHyakeYaYnSAwd8bow==}
@@ -3515,20 +3506,6 @@ snapshots:
       point-in-polygon-hao: 1.2.4
       tslib: 2.8.1
 
-  '@turf/circle@7.3.4':
-    dependencies:
-      '@turf/destination': 7.3.4
-      '@turf/helpers': 7.3.4
-      '@types/geojson': 7946.0.16
-      tslib: 2.8.1
-
-  '@turf/destination@7.3.4':
-    dependencies:
-      '@turf/helpers': 7.3.4
-      '@turf/invariant': 7.3.4
-      '@types/geojson': 7946.0.16
-      tslib: 2.8.1
-
   '@turf/difference@7.3.4':
     dependencies:
       '@turf/helpers': 7.3.4
@@ -3566,14 +3543,6 @@ snapshots:
       '@turf/helpers': 7.3.4
       '@turf/invariant': 7.3.4
       '@types/geojson': 7946.0.16
-      tslib: 2.8.1
-
-  '@turf/union@7.3.4':
-    dependencies:
-      '@turf/helpers': 7.3.4
-      '@turf/meta': 7.3.4
-      '@types/geojson': 7946.0.16
-      polyclip-ts: 0.16.8
       tslib: 2.8.1
 
   '@types/chai@5.2.3':
@@ -3615,6 +3584,9 @@ snapshots:
   '@types/supercluster@7.1.3':
     dependencies:
       '@types/geojson': 7946.0.16
+
+  '@types/trusted-types@2.0.7':
+    optional: true
 
   '@typescript-eslint/eslint-plugin@8.55.0(@typescript-eslint/parser@8.55.0(eslint@9.39.2(jiti@1.21.7))(typescript@5.9.3))(eslint@9.39.2(jiti@1.21.7))(typescript@5.9.3)':
     dependencies:
@@ -3959,6 +3931,10 @@ snapshots:
   didyoumean@1.2.2: {}
 
   dlv@1.1.3: {}
+
+  dompurify@3.4.12:
+    optionalDependencies:
+      '@types/trusted-types': 2.0.7
 
   dotenv@16.6.1: {}
 

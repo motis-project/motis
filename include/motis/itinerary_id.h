@@ -75,6 +75,7 @@ api::Itinerary reconstruct_itinerary(
         nigiri::routing::all_clasz_allowed(),
     bool require_bike_transport = false,
     bool require_car_transport = false,
+    bool no_compulsory_reservation = false,
     nigiri::profile_idx_t prf_idx = 0U,
     first_last_mile_options const& flm =
         make_first_last_mile_options(api::refreshItinerary_params{}));

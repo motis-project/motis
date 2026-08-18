@@ -7,6 +7,8 @@
 #include "nigiri/rt/frun.h"
 #include "nigiri/rt/rt_timetable.h"
 
+#include "net/not_found_exception.h"
+
 #include "motis/config.h"
 #include "motis/data.h"
 #include "motis/endpoints/trip.h"
@@ -154,6 +156,10 @@ TEST(motis, trip_stop_naming) {
   EXPECT_EQ("Vers Parent Deux", leg_fr.headsign_);
   EXPECT_EQ("FR_SHORT_NAME", leg_fr.routeShortName_);
   EXPECT_EQ("FR-R1", leg_fr.routeLongName_);
+
+  // unknown feed id -> HTTP 404, not a crash
+  EXPECT_THROW(trip_ep("?tripId=20190501_10%3A00_unknown_T1"),
+               net::not_found_exception);
 }
 
 TEST(motis, trip_ticketing) {

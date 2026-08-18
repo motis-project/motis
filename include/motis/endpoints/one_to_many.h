@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <memory>
 
 #include "boost/url/url_view.hpp"
@@ -66,9 +67,12 @@ api::oneToMany_response one_to_many_handle_request(
     return *y;
   });
 
+  auto const max_matching_distance =
+      std::min(query.maxMatchingDistance_,
+               config.get_limits().max_max_matching_distance_);
+
   return one_to_many_direct(
-      config, w, l, query.mode_, *one, many, query.max_,
-      query.maxMatchingDistance_,
+      config, w, l, query.mode_, *one, many, query.max_, max_matching_distance,
       query.arriveBy_ ? osr::direction::kBackward : osr::direction::kForward,
       get_osr_parameters(query), api::PedestrianProfileEnum::FOOT,
       query.elevationCosts_, elevations, query.withDistance_);

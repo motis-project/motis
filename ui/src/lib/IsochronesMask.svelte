@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { t } from '$lib/i18n/translation';
-	import { Slider } from 'bits-ui';
 	import { LocateFixed } from '@lucide/svelte';
 	import maplibregl from 'maplibre-gl';
 	import * as RadioGroup from '$lib/components/ui/radio-group';
@@ -13,8 +12,8 @@
 		type PedestrianProfile,
 		type ServerConfig
 	} from '@motis-project/motis-client';
-	import * as Select from '$lib/components/ui/select';
-	import type { DisplayLevel, IsochronesOptions } from '$lib/map/IsochronesShared';
+	import type { IsochronesOptions } from '$lib/map/IsochronesShared';
+	import { PLASMA } from '$lib/map/IsochronesLayer';
 	import AddressTypeahead from '$lib/AddressTypeahead.svelte';
 	import AdvancedOptions from '$lib/AdvancedOptions.svelte';
 	import DateInput from '$lib/DateInput.svelte';
@@ -22,6 +21,7 @@
 	import { formatDurationSec } from '$lib/formatDuration';
 	import type { PrePostDirectMode, TransitMode } from '$lib/Modes';
 	import { generateTimes } from './generateTimes';
+	import Slider from './components/ui/slider/Slider.svelte';
 
 	let {
 		advancedOptionsOpen = $bindable(),
@@ -34,6 +34,7 @@
 		pedestrianProfile = $bindable(),
 		requireBikeTransport = $bindable(),
 		requireCarTransport = $bindable(),
+		noCompulsoryReservation = $bindable(),
 		transitModes = $bindable(),
 		maxTransfers = $bindable(),
 		preTransitModes = $bindable(),
@@ -75,6 +76,7 @@
 		pedestrianProfile: PedestrianProfile;
 		requireBikeTransport: boolean;
 		requireCarTransport: boolean;
+		noCompulsoryReservation: boolean;
 		transitModes: TransitMode[];
 		maxTransfers: number;
 		preTransitModes: PrePostDirectMode[];
@@ -106,6 +108,8 @@
 		vehicleLezAccess: boolean;
 		hasDebug: boolean;
 	} = $props();
+
+	const plasmaGradient = `linear-gradient(to right, ${PLASMA.join(', ')})`;
 	const minutesToSeconds = (n: number): number => n * 60;
 	const possibleMaxTravelTimes = $derived(
 		generateTimes(
@@ -115,15 +119,6 @@
 			label: formatDurationSec(s)
 		}))
 	);
-
-	const displayLevels = new Map<DisplayLevel, string>([
-		['OVERLAY_RECTS', t.isochrones.canvasRects],
-		['OVERLAY_CIRCLES', t.isochrones.canvasCircles],
-		['GEOMETRY_CIRCLES', t.isochrones.geojsonCircles]
-	]);
-	const possibleDisplayLevels = [
-		...[...displayLevels.entries()].map(([id, label]) => ({ value: id, label: label }))
-	];
 
 	let oneItems = $state<Array<Location>>([]);
 
@@ -157,35 +152,9 @@
 </script>
 
 {#snippet additionalComponents()}
-	<div class="grid grid-cols-[2fr_2fr_1fr] items-center gap-2">
-		<Select.Root type="single" bind:value={options.displayLevel}>
-			<Select.Trigger class="overflow-hidden" aria-label={t.isochrones.displayLevel}>
-				{displayLevels.get(options.displayLevel)}
-			</Select.Trigger>
-			<Select.Content sideOffset={10}>
-				{#each possibleDisplayLevels as level, i (i + level.value)}
-					<Select.Item value={level.value} label={level.label}>
-						{level.label}
-					</Select.Item>
-				{/each}
-			</Select.Content>
-		</Select.Root>
-		<Slider.Root
-			type="single"
-			min={0}
-			max={1000}
-			bind:value={options.opacity}
-			class="relative flex w-full touch-none select-none items-center"
-		>
-			<span class="bg-dark-10 relative h-2 w-full grow cursor-pointer overflow-hidden rounded-full">
-				<Slider.Range class="bg-foreground absolute h-full" />
-			</span>
-			<Slider.Thumb
-				index={0}
-				class="border-border-input bg-background hover:border-dark-40 focus-visible:ring-foreground dark:bg-foreground dark:shadow-card focus-visible:outline-hidden block size-[25px] cursor-pointer rounded-full border shadow-sm transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50"
-			/>
-		</Slider.Root>
-		<input class="flex right-0 align-right" type="color" bind:value={options.color} />
+	<div class="grid grid-cols-2 items-center text-sm gap-2">
+		<span>{t.isochronesOpacity}</span>
+		<Slider min={0} max={1000} bind:value={options.opacity} />
 	</div>
 {/snippet}
 
@@ -250,6 +219,7 @@
 			}
 			bind:requireCarTransport
 			bind:requireBikeTransport
+			bind:noCompulsoryReservation
 			bind:transitModes
 			bind:maxTransfers
 			bind:maxTravelTime
@@ -289,5 +259,13 @@
 			viaLabels={{}}
 			{hasDebug}
 		/>
+	</div>
+	<div class="text-muted-foreground flex items-center gap-2 text-xs">
+		<span>{formatDurationSec(0)}</span>
+		<div
+			class="border-border h-2 grow rounded-full border"
+			style="background: {plasmaGradient}"
+		></div>
+		<span>{formatDurationSec(maxTravelTime)}</span>
 	</div>
 </div>

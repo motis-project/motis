@@ -596,18 +596,10 @@ api::Itinerary journey_to_response(
                     enter_stop.get_provider(n::event_type::kDep);
                 auto const fare_indices = get_fare_indices(fares, j_leg);
 
-                auto const src = [&]() {
-                  if (!fr.is_scheduled()) {
-                    return n::source_idx_t::invalid();
-                  }
-                  auto const trip =
-                      enter_stop.get_trip_idx(n::event_type::kDep);
-                  auto const id_idx = tt.trip_ids_[trip].front();
-                  return tt.trip_id_src_[id_idx];
-                }();
-
-                auto const [service_day, _] =
-                    enter_stop.get_trip_start(n::event_type::kDep);
+                auto const check_flag_enter_exit = [&](n::route_flag const f) {
+                  return enter_stop.is_flag_set(f, nigiri::event_type::kDep) &&
+                         exit_stop.is_flag_set(f, nigiri::event_type::kArr);
+                };
 
                 auto& leg = itinerary.legs_.emplace_back(api::Leg{
                     .mode_ = to_mode(enter_stop.get_clasz(n::event_type::kDep),
@@ -707,20 +699,20 @@ api::Itinerary journey_to_response(
                         [](auto&& x) { return x.effective_fare_leg_idx_; }),
                     .alerts_ = get_alerts(fr, std::nullopt, false, lang),
                     .loopedCalendarSince_ =
-                        (fr.is_scheduled() &&
-                         src != n::source_idx_t::invalid() &&
-                         tt.src_end_date_[src] < service_day)
-                            ? std::optional{tt.src_end_date_[src]}
-                            : std::nullopt,
+                        enter_stop.looped_calendar_since(n::event_type::kDep),
                     .bikesAllowed_ =
-                        enter_stop.bikes_allowed(nigiri::event_type::kDep),
+                        check_flag_enter_exit(nigiri::kBikesAllowed),
                     .wheelchairAccessible_ =
-                        enter_stop.wheelchair_accessible(
-                            nigiri::event_type::kDep)
+                        check_flag_enter_exit(nigiri::kWheelchairAccessible)
                             ? api::WheelchairAccessibilityEnum::ACCESSIBLE
                             : api::WheelchairAccessibilityEnum::NOT_ACCESSIBLE,
-                    .ticketUrls_ = get_ticketing_urls(tt, src, tags, enter_stop,
-                                                      exit_stop)});
+                    .reservation_ =
+                        check_flag_enter_exit(nigiri::kReservationNotRequired)
+                            ? api::ReservationEnum::NONE
+                            : api::ReservationEnum::COMPULSORY,
+
+                    .ticketUrls_ = get_ticketing_urls(tt, fr.id().src_, tags,
+                                                      enter_stop, exit_stop)});
 
                 auto const attributes =
                     tt.attribute_combinations_[enter_stop
@@ -815,6 +807,14 @@ api::Itinerary journey_to_response(
                                            api_version));
             },
             [&](n::routing::offset const x) {
+              if (w == nullptr || l == nullptr) {
+                // no OSM data loaded (e.g. `radius` offsets) -> crow-fly leg
+                append(dummy_itinerary(from, to, to_mode(x.transport_mode_id_),
+                                       j_leg.dep_time_, j_leg.arr_time_,
+                                       api_version));
+                return;
+              }
+
               auto out = std::unique_ptr<output>{};
               if (flex::mode_id::is_flex(x.transport_mode_id_)) {
                 out = std::make_unique<flex::flex_output>(

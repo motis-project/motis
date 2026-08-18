@@ -50,6 +50,7 @@
 		let tmp: maplibregl.Map;
 		try {
 			tmp = new maplibregl.Map({
+				hash: true,
 				container,
 				zoom,
 				bounds,

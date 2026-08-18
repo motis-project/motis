@@ -466,6 +466,10 @@ export type VertexType = 'NORMAL' | 'BIKESHARE' | 'TRANSIT';
  */
 export type PickupDropoffType = 'NORMAL' | 'NOT_ALLOWED';
 
+export type WheelchairAccessibility = 'ACCESSIBLE' | 'NOT_ACCESSIBLE';
+
+export type Reservation = 'NONE' | 'COMPULSORY';
+
 export type Place = {
     /**
      * name of the transit stop / PoI / address
@@ -691,6 +695,28 @@ export type StopTime = {
      */
     tripCancelled: boolean;
     /**
+     * If set, this attribute indicates that this trip has been expanded
+     * beyond the feed end date (enabled by config flag `timetable.dataset.extend_calendar`)
+     * by looping active weekdays, e.g. from calendar.txt in GTFS.
+     *
+     */
+    loopedCalendarSince?: string;
+    /**
+     * Whether bikes can be carried on this trip.
+     *
+     */
+    bikesAllowed: boolean;
+    /**
+     * Whether wheelchairs can be transported on this trip.
+     *
+     */
+    wheelchairAccessible: WheelchairAccessibility;
+    /**
+     * Information about compulsory or possible reservation.
+     *
+     */
+    reservation: Reservation;
+    /**
      * Filename and line number where this trip is from
      */
     source: string;
@@ -844,8 +870,6 @@ export type StepInstruction = {
      */
     elevationDown?: number;
 };
-
-export type WheelchairAccessibility = 'ACCESSIBLE' | 'NOT_ACCESSIBLE';
 
 export type RentalFormFactor = 'BICYCLE' | 'CARGO_BICYCLE' | 'CAR' | 'MOPED' | 'SCOOTER_STANDING' | 'SCOOTER_SEATED' | 'OTHER';
 
@@ -1386,6 +1410,11 @@ export type Leg = {
      */
     wheelchairAccessible?: WheelchairAccessibility;
     /**
+     * Information about compulsory or possible reservation.
+     *
+     */
+    reservation?: Reservation;
+    /**
      * Ticket booking links for different platforms
      *
      */
@@ -1670,6 +1699,9 @@ export type OneToManyParams = {
     max: number;
     /**
      * maximum matching distance in meters to match geo coordinates to the street network
+     *
+     * Is limited by server config variable `max_max_matching_distance`, larger values are capped to this limit.
+     *
      */
     maxMatchingDistance: number;
     /**
@@ -1753,6 +1785,9 @@ export type OneToManyIntermodalParams = {
     maxTravelTime?: number;
     /**
      * maximum matching distance in meters to match geo coordinates to the street network
+     *
+     * Is limited by server config variable `max_max_matching_distance`, larger values are capped to this limit.
+     *
      */
     maxMatchingDistance?: number;
     /**
@@ -1939,6 +1974,13 @@ export type OneToManyIntermodalParams = {
      *
      */
     requireCarTransport?: boolean;
+    /**
+     * Optional. Default is `false`.
+     *
+     * If set to `true`, all used transit trips are required to be usable without compulsory reservation.
+     *
+     */
+    noCompulsoryReservation?: boolean;
 };
 
 export type ServerConfig = {
@@ -2295,6 +2337,8 @@ export type PlanData = {
          *
          * Maximum matching distance in meters to match geo coordinates to the street network.
          *
+         * Is limited by server config variable `max_max_matching_distance`, larger values are capped to this limit.
+         *
          */
         maxMatchingDistance?: number;
         /**
@@ -2350,6 +2394,13 @@ export type PlanData = {
          *
          */
         minTransferTime?: number;
+        /**
+         * Optional. Default is `false`.
+         *
+         * If set to `true`, all used transit trips are required to be usable without compulsory reservation.
+         *
+         */
+        noCompulsoryReservation?: boolean;
         /**
          * The minimum number of itineraries to compute.
          * This is only relevant if `timetableView=true`.
@@ -2496,7 +2547,9 @@ export type PlanData = {
         /**
          * Experimental. Search radius in meters around the `fromPlace` / `toPlace` coordinates.
          * When set and the place is given as coordinates, all transit stops within
-         * this radius are used as start/end points with zero pre-transit/post-transit time.
+         * this radius are used as start/end points. The pre-transit/post-transit time
+         * for each of them is estimated from the crow-fly distance to the coordinate
+         * at walking speed (1.5 m/s), rounded down to whole minutes.
          * Works without OSM/street routing data loaded.
          *
          */
@@ -2760,6 +2813,9 @@ export type OneToManyData = {
         max: number;
         /**
          * maximum matching distance in meters to match geo coordinates to the street network
+         *
+         * Is limited by server config variable `max_max_matching_distance`, larger values are capped to this limit.
+         *
          */
         maxMatchingDistance: number;
         /**
@@ -2877,6 +2933,9 @@ export type OneToManyIntermodalData = {
         maxDirectTime?: number;
         /**
          * maximum matching distance in meters to match geo coordinates to the street network
+         *
+         * Is limited by server config variable `max_max_matching_distance`, larger values are capped to this limit.
+         *
          */
         maxMatchingDistance?: number;
         /**
@@ -2929,6 +2988,13 @@ export type OneToManyIntermodalData = {
          *
          */
         minTransferTime?: number;
+        /**
+         * Optional. Default is `false`.
+         *
+         * If set to `true`, all used transit trips are required to be usable without compulsory reservation.
+         *
+         */
+        noCompulsoryReservation?: boolean;
         /**
          * geo location as latitude;longitude
          */
@@ -3088,6 +3154,8 @@ export type OneToAllData = {
          *
          * Maximum matching distance in meters to match geo coordinates to the street network.
          *
+         * Is limited by server config variable `max_max_matching_distance`, larger values are capped to this limit.
+         *
          */
         maxMatchingDistance?: number;
         /**
@@ -3137,6 +3205,13 @@ export type OneToAllData = {
          *
          */
         minTransferTime?: number;
+        /**
+         * Optional. Default is `false`.
+         *
+         * If set to `true`, all used transit trips are required to be usable without compulsory reservation.
+         *
+         */
+        noCompulsoryReservation?: boolean;
         /**
          * \`latitude,longitude[,level]\` tuple with
          * - latitude and longitude in degrees
@@ -3396,6 +3471,9 @@ export type RefreshItineraryData = {
         language?: Array<(string)>;
         /**
          * Maximum matching distance in meters to the street network.
+         *
+         * Is limited by server config variable `max_max_matching_distance`, larger values are capped to this limit.
+         *
          */
         maxMatchingDistance?: number;
         /**
@@ -3406,6 +3484,7 @@ export type RefreshItineraryData = {
          * Maximum time in seconds for the first (access) street leg.
          */
         maxPreTransitTime?: number;
+        noCompulsoryReservation?: boolean;
         numLegAlternatives?: number;
         pedestrianProfile?: PedestrianProfile;
         /**

@@ -82,11 +82,18 @@ struct config {
 
       std::string path_;
       std::optional<std::string> script_{};
+      bool extend_calendar_{false};
       bool default_bikes_allowed_{false};
       bool default_cars_allowed_{false};
-      bool extend_calendar_{false};
+      bool default_reservation_not_required_{true};
       std::optional<std::map<std::string, bool>> clasz_bikes_allowed_{};
       std::optional<std::map<std::string, bool>> clasz_cars_allowed_{};
+      std::optional<std::map<std::string, bool>>
+          clasz_reservation_not_required_{{{"AIR", false},
+                                           {"COACH", false},
+                                           {"NIGHT", false},
+                                           {"RIDESHARING", false},
+                                           {"ODM", false}}};
       std::optional<std::vector<rt>> rt_{};
       std::optional<std::string> default_timezone_{};
     };
@@ -261,6 +268,7 @@ struct config {
     unsigned street_routing_max_direct_seconds_{21600U};
     unsigned geocode_max_suggestions_{512U};
     unsigned reverse_geocode_max_results_{512U};
+    double max_max_matching_distance_{250.0};
   };
   limits get_limits() const { return limits_.value_or(limits{}); }
   std::optional<limits> limits_{};

@@ -85,6 +85,7 @@ export type Translations = {
 	bikeRental: string;
 	requireBikeTransport: string;
 	requireCarTransport: string;
+	noCompulsoryReservation: string;
 	considerRentalReturnConstraints: string;
 	default: string;
 	timetableSources: string;
@@ -141,13 +142,9 @@ export type Translations = {
 		LOW: string;
 		HIGH: string;
 	};
+	isochronesOpacity: string;
 	isochrones: {
 		title: string;
-		displayLevel: string;
-		maxComputeLevel: string;
-		canvasRects: string;
-		canvasCircles: string;
-		geojsonCircles: string;
 		styling: string;
 		noData: string;
 		requestFailed: string;
@@ -172,6 +169,7 @@ export type Translations = {
 	toll: string;
 	bikesAllowed: string;
 	wheelchairAccessible: string;
+	compulsoryReservation: string;
 	accessRestriction: string;
 	continuesAs: string;
 	earlierAlternatives: string;

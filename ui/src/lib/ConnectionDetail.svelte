@@ -19,6 +19,7 @@
 		StepInstruction
 	} from '@motis-project/motis-client';
 	import Time from '$lib/Time.svelte';
+	import ReservationRequired from '$lib/ReservationRequired.svelte';
 	import { routeBorderColor, routeColor } from '$lib/modeStyle';
 	import { formatDurationSec, formatDistanceMeters } from '$lib/formatDuration';
 	import { Button } from '$lib/components/ui/button';
@@ -454,6 +455,12 @@
 				{/if}
 
 				<div class="m-4">
+					{#if l.reservation == 'COMPULSORY'}
+						<div title={t.compulsoryReservation} class="inline">
+							<ReservationRequired aria-label={t.compulsoryReservation} class="inline" />
+						</div>
+					{/if}
+
 					{#if l.bikesAllowed}
 						<div title={t.bikesAllowed} class="inline">
 							<Bike aria-label={t.bikesAllowed} class="inline" />

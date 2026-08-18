@@ -72,7 +72,16 @@ timetable:                          # if not set, no timetable will be loaded
   datasets:                         # map of tag -> dataset
     ch:                             # the tag will be used as prefix for stop IDs and trip IDs with `_` as divider, so `_` cannot be part of the dataset tag
       path: ch_opentransportdataswiss.gtfs.zip
+      extend_calendar: false
       default_bikes_allowed: false
+      default_cars_allowed: false
+      default_reservation_not_required: true
+      clasz_reservation_not_required:
+        AIR: false
+        COACH: false
+        NIGHT: false
+        ODM: false
+        RIDESHARING: false
       rt:
         - url: https://api.opentransportdata.swiss/gtfsrt2020
           headers:
@@ -80,7 +89,16 @@ timetable:                          # if not set, no timetable will be loaded
           protocol: gtfsrt          # specify the real time protocol (default: gtfsrt)
     nl:
       path: nl_ovapi.gtfs.zip
+      extend_calendar: false
       default_bikes_allowed: false
+      default_cars_allowed: false
+      default_reservation_not_required: true
+      clasz_reservation_not_required:
+        AIR: false
+        COACH: false
+        NIGHT: false
+        ODM: false
+        RIDESHARING: false
       rt:
         - url: https://gtfs.ovapi.nl/nl/trainUpdates.pb
         - url: https://gtfs.ovapi.nl/nl/tripUpdates.pb
@@ -110,6 +128,7 @@ limits:
   street_routing_max_direct_seconds: 21600 # limit for maxDirectTime API param, high values can lead to long-running, RAM-hungry queries 
   geocode_max_suggestions: 512    # maximum requestable results for /geocode
   reverse_geocode_max_results: 512 # maximum requestable results for /reverse-geocode
+  max_max_matching_distance: 250  # upper bound (meters) for the maxMatchingDistance API param, larger values are capped to this limit
 logging:
   log_level: debug                # log-level (default = debug; Supported log-levels: error, info, debug)
 osr_footpath: true                # enable routing footpaths instead of using transfers from timetable datasets

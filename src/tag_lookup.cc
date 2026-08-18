@@ -106,8 +106,8 @@ trip_id<std::string> tag_lookup::id_fragments(
         std::string{get_tag(src)}, std::string{id}};
   } else {
     auto const id = s.fr_->id();
-    auto const time = std::chrono::system_clock::to_time_t(
-        (*s.fr_)[0].time(n::event_type::kDep));
+    auto const time =
+        std::chrono::system_clock::to_time_t((*s.fr_)[0].time(ev_type));
     auto const utc = *std::gmtime(&time);
     auto const id_tag = get_tag(id.src_);
     auto const id_id = id.id_;
@@ -145,11 +145,14 @@ std::pair<n::rt::run, n::trip_idx_t> tag_lookup::get_trip(
     n::rt_timetable const* rtt,
     std::string_view id) const {
   auto const split = split_trip_id(id);
+  auto const src = get_src(split.tag_);
+  utl::verify<net::not_found_exception>(src != n::source_idx_t::invalid(),
+                                        "unknown feed id {:?}", split.tag_);
   auto td = transit_realtime::TripDescriptor{};
   td.set_start_date(split.start_date_);
   td.set_start_time(split.start_time_);
   td.set_trip_id(split.trip_id_);
-  return n::rt::gtfsrt_resolve_run({}, tt, rtt, get_src(split.tag_), td);
+  return n::rt::gtfsrt_resolve_run({}, tt, rtt, src, td);
 }
 
 n::location_idx_t tag_lookup::get_location(n::timetable const& tt,
@@ -166,9 +169,8 @@ std::optional<n::location_idx_t> tag_lookup::find_location(
   auto const [tag, id] = split_tag_id(s);
 
   auto const src = get_src(tag);
-  if (src == n::source_idx_t::invalid()) {
-    return std::nullopt;
-  }
+  utl::verify<net::not_found_exception>(src != n::source_idx_t::invalid(),
+                                        "unknown feed id {:?}", tag);
 
   auto const it = tt.locations_.location_id_to_idx_.find({id, src});
   if (it == end(tt.locations_.location_id_to_idx_)) {
