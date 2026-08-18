@@ -110,6 +110,10 @@ int compare(int ac, char** av) {
   };
   auto const print_ratings = [](auto const& ratings) {
     for (auto const& [name, rating] : ratings) {
+      if (rating == qa::kMaxRating || rating == qa::kMinRating) {
+        std::cout << "[" << name << ", n/a ] ";
+        continue;
+      }
       std::cout << "[" << name << ", " << rating << ", "
                 << (rating > 0   ? "↗"
                     : rating < 0 ? "↘"
