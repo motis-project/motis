@@ -53,10 +53,9 @@ double min_improvement(
 double set_improvement(
     std::vector<api::Itinerary> const& a,
     std::vector<api::Itinerary> const& b,
-    std::vector<std::function<double(api::Itinerary const&)>> const& criteria) {
-  static std::vector<api::Itinerary const*> ap;
-  static std::vector<api::Itinerary const*> bp;
-
+    std::vector<std::function<double(api::Itinerary const&)>> const& criteria,
+    std::vector<api::Itinerary const*>& ap,
+    std::vector<api::Itinerary const*>& bp) {
   auto const reset = [](std::vector<api::Itinerary> const& v,
                         std::vector<api::Itinerary const*>& p) {
     p.clear();
@@ -106,8 +105,14 @@ double rate(
     return kMinRating;
   }
 
-  return set_improvement(cmp, ref, criteria) -
-         set_improvement(ref, cmp, criteria);
+  auto ap = std::vector<api::Itinerary const*>{};
+  auto bp = std::vector<api::Itinerary const*>{};
+  ap.reserve(ref.size() + cmp.size());
+  bp.reserve(ref.size() + cmp.size());
+
+  auto const cmp_impr = set_improvement(cmp, ref, criteria, ap, bp);
+  auto const ref_impr = set_improvement(ref, cmp, criteria, ap, bp);
+  return cmp_impr - ref_impr;
 }
 
 }  // namespace motis::qa
