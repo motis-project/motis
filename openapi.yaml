@@ -43,6 +43,34 @@ paths:
       summary: Computes optimal connections from one place to another.
       operationId: plan
       parameters:
+        - name: includeLabels
+          in: query
+          required: false
+          description: |
+            Optional. Limits the request to the specified datasets. Only trips and stops from these datasets are used for routing and included in lookup results.
+            Each name can be either a dataset tag or a label configured for a dataset in MOTIS.
+            If this is empty (the default), MOTIS uses all available datasets.
+          schema:
+            default: []
+            type: array
+            items:
+              type: string
+          explode: false
+
+        - name: excludeLabels
+          in: query
+          required: false
+          description: |
+            Optional. Excludes the specified datasets from the request. Trips and stops from these datasets are not used for routing and are not included in lookup results.
+            Each name can be either a dataset tag or a label configured for a dataset in MOTIS.
+            This is applied after includeLabels. If a dataset appears in both lists, it is excluded.
+          schema:
+            default: []
+            type: array
+            items:
+              type: string
+          explode: false
+
         - name: fromPlace
           in: query
           required: true
@@ -1284,6 +1312,34 @@ paths:
         The order in the response array corresponds to the order of coordinates of the \`many\` parameter in the query.
       operationId: oneToManyIntermodal
       parameters:
+        - name: includeLabels
+          in: query
+          required: false
+          description: |
+            Optional. Limits the request to the specified datasets. Only trips and stops from these datasets are used for routing and included in lookup results.
+            Each name can be either a dataset tag or a label configured for a dataset in MOTIS.
+            If this is empty (the default), MOTIS uses all available datasets.
+          schema:
+            default: []
+            type: array
+            items:
+              type: string
+          explode: false
+
+        - name: excludeLabels
+          in: query
+          required: false
+          description: |
+            Optional. Excludes the specified datasets from the request. Trips and stops from these datasets are not used for routing and are not included in lookup results.
+            Each name can be either a dataset tag or a label configured for a dataset in MOTIS.
+            This is applied after includeLabels. If a dataset appears in both lists, it is excluded.
+          schema:
+            default: []
+            type: array
+            items:
+              type: string
+          explode: false
+
         - name: one
           in: query
           required: true
@@ -1748,6 +1804,34 @@ paths:
         Each result entry will contain the fastest travel duration and the number of connections used.
       operationId: oneToAll
       parameters:
+        - name: includeLabels
+          in: query
+          required: false
+          description: |
+            Optional. Limits the request to the specified datasets. Only trips and stops from these datasets are used for routing and included in lookup results.
+            Each name can be either a dataset tag or a label configured for a dataset in MOTIS.
+            If this is empty (the default), MOTIS uses all available datasets.
+          schema:
+            default: []
+            type: array
+            items:
+              type: string
+          explode: false
+
+        - name: excludeLabels
+          in: query
+          required: false
+          description: |
+            Optional. Excludes the specified datasets from the request. Trips and stops from these datasets are not used for routing and are not included in lookup results.
+            Each name can be either a dataset tag or a label configured for a dataset in MOTIS.
+            This is applied after includeLabels. If a dataset appears in both lists, it is excluded.
+          schema:
+            default: []
+            type: array
+            items:
+              type: string
+          explode: false
+
         - name: one
           in: query
           required: true
@@ -2288,6 +2372,34 @@ paths:
       summary: Get a trip as itinerary
       operationId: trip
       parameters:
+        - name: includeLabels
+          in: query
+          required: false
+          description: |
+            Optional. Limits the request to the specified datasets. Only trips and stops from these datasets are used for routing and included in lookup results.
+            Each name can be either a dataset tag or a label configured for a dataset in MOTIS.
+            If this is empty (the default), MOTIS uses all available datasets.
+          schema:
+            default: []
+            type: array
+            items:
+              type: string
+          explode: false
+
+        - name: excludeLabels
+          in: query
+          required: false
+          description: |
+            Optional. Excludes the specified datasets from the request. Trips and stops from these datasets are not used for routing and are not included in lookup results.
+            Each name can be either a dataset tag or a label configured for a dataset in MOTIS.
+            This is applied after includeLabels. If a dataset appears in both lists, it is excluded.
+          schema:
+            default: []
+            type: array
+            items:
+              type: string
+          explode: false
+
         - name: tripId
           in: query
           schema:
@@ -2379,6 +2491,34 @@ paths:
         endpoint for their descriptions.
       operationId: refreshItinerary
       parameters:
+        - name: includeLabels
+          in: query
+          required: false
+          description: |
+            Optional. Limits the request to the specified datasets. Only trips and stops from these datasets are used for routing and included in lookup results.
+            Each name can be either a dataset tag or a label configured for a dataset in MOTIS.
+            If this is empty (the default), MOTIS uses all available datasets.
+          schema:
+            default: []
+            type: array
+            items:
+              type: string
+          explode: false
+
+        - name: excludeLabels
+          in: query
+          required: false
+          description: |
+            Optional. Excludes the specified datasets from the request. Trips and stops from these datasets are not used for routing and are not included in lookup results.
+            Each name can be either a dataset tag or a label configured for a dataset in MOTIS.
+            This is applied after includeLabels. If a dataset appears in both lists, it is excluded.
+          schema:
+            default: []
+            type: array
+            items:
+              type: string
+          explode: false
+
         - name: itineraryId
           in: query
           required: true
@@ -2687,6 +2827,34 @@ paths:
       summary: Get the next N departures or arrivals of a stop sorted by time
       operationId: stoptimes
       parameters:
+        - name: includeLabels
+          in: query
+          required: false
+          description: |
+            Optional. Limits the request to the specified datasets. Only trips and stops from these datasets are used for routing and included in lookup results.
+            Each name can be either a dataset tag or a label configured for a dataset in MOTIS.
+            If this is empty (the default), MOTIS uses all available datasets.
+          schema:
+            default: []
+            type: array
+            items:
+              type: string
+          explode: false
+
+        - name: excludeLabels
+          in: query
+          required: false
+          description: |
+            Optional. Excludes the specified datasets from the request. Trips and stops from these datasets are not used for routing and are not included in lookup results.
+            Each name can be either a dataset tag or a label configured for a dataset in MOTIS.
+            This is applied after includeLabels. If a dataset appears in both lists, it is excluded.
+          schema:
+            default: []
+            type: array
+            items:
+              type: string
+          explode: false
+
         - name: stopId
           in: query
           schema:
@@ -2950,6 +3118,34 @@ paths:
         Trips are filtered by zoom level. On low zoom levels, only long distance trains will be shown
         while on high zoom levels, also metros, buses and trams will be returned.
       parameters:
+        - name: includeLabels
+          in: query
+          required: false
+          description: |
+            Optional. Limits the request to the specified datasets. Only trips and stops from these datasets are used for routing and included in lookup results.
+            Each name can be either a dataset tag or a label configured for a dataset in MOTIS.
+            If this is empty (the default), MOTIS uses all available datasets.
+          schema:
+            default: []
+            type: array
+            items:
+              type: string
+          explode: false
+
+        - name: excludeLabels
+          in: query
+          required: false
+          description: |
+            Optional. Excludes the specified datasets from the request. Trips and stops from these datasets are not used for routing and are not included in lookup results.
+            Each name can be either a dataset tag or a label configured for a dataset in MOTIS.
+            This is applied after includeLabels. If a dataset appears in both lists, it is excluded.
+          schema:
+            default: []
+            type: array
+            items:
+              type: string
+          explode: false
+
         - name: zoom
           in: query
           required: true
@@ -3080,6 +3276,34 @@ paths:
       summary: Get all stops for a map section
       operationId: stops
       parameters:
+        - name: includeLabels
+          in: query
+          required: false
+          description: |
+            Optional. Limits the request to the specified datasets. Only trips and stops from these datasets are used for routing and included in lookup results.
+            Each name can be either a dataset tag or a label configured for a dataset in MOTIS.
+            If this is empty (the default), MOTIS uses all available datasets.
+          schema:
+            default: []
+            type: array
+            items:
+              type: string
+          explode: false
+
+        - name: excludeLabels
+          in: query
+          required: false
+          description: |
+            Optional. Excludes the specified datasets from the request. Trips and stops from these datasets are not used for routing and are not included in lookup results.
+            Each name can be either a dataset tag or a label configured for a dataset in MOTIS.
+            This is applied after includeLabels. If a dataset appears in both lists, it is excluded.
+          schema:
+            default: []
+            type: array
+            items:
+              type: string
+          explode: false
+
         - name: min
           in: query
           required: true
@@ -3163,6 +3387,34 @@ paths:
       summary: Get all routes/lines serving a stop (without time-based queries)
       operationId: stopInfo
       parameters:
+        - name: includeLabels
+          in: query
+          required: false
+          description: |
+            Optional. Limits the request to the specified datasets. Only trips and stops from these datasets are used for routing and included in lookup results.
+            Each name can be either a dataset tag or a label configured for a dataset in MOTIS.
+            If this is empty (the default), MOTIS uses all available datasets.
+          schema:
+            default: []
+            type: array
+            items:
+              type: string
+          explode: false
+
+        - name: excludeLabels
+          in: query
+          required: false
+          description: |
+            Optional. Excludes the specified datasets from the request. Trips and stops from these datasets are not used for routing and are not included in lookup results.
+            Each name can be either a dataset tag or a label configured for a dataset in MOTIS.
+            This is applied after includeLabels. If a dataset appears in both lists, it is excluded.
+          schema:
+            default: []
+            type: array
+            items:
+              type: string
+          explode: false
+
         - name: stopId
           in: query
           required: false
@@ -5860,6 +6112,26 @@ components:
             $ref: "#/components/schemas/Mode"
           default:
             - TRANSIT
+          explode: false
+        includeLabels:
+          description: |
+            Optional. Limits the request to the specified datasets. Only trips and stops from these datasets are used for routing and included in lookup results.
+            Each name can be either a dataset tag or a label configured for a dataset in MOTIS.
+            If this is empty (the default), MOTIS uses all available datasets.
+          type: array
+          items:
+            type: string
+          default: []
+          explode: false
+        excludeLabels:
+          description: |
+            Optional. Excludes the specified datasets from the request. Trips and stops from these datasets are not used for routing and are not included in lookup results.
+            Each name can be either a dataset tag or a label configured for a dataset in MOTIS.
+            This is applied after includeLabels. If a dataset appears in both lists, it is excluded.
+          type: array
+          items:
+            type: string
+          default: []
           explode: false
         preTransitModes:
           description: |
