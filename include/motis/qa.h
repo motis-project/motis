@@ -2,7 +2,6 @@
 
 #include <array>
 #include <chrono>
-#include <cstdint>
 #include <limits>
 #include <span>
 #include <vector>
@@ -46,15 +45,14 @@ double transfers(api::Itinerary const& i) {
 
 template <double Weight>
 double walking_time(api::Itinerary const& i) {
-  auto walking_time = std::int64_t{0};
+  auto wt = std::chrono::seconds{0};
   for (auto const& l : i.legs_) {
     if (l.mode_ == api::ModeEnum::WALK) {
-      walking_time += l.duration_;
+      wt += std::chrono::seconds{l.duration_};
     }
   }
-  return static_cast<double>(std::chrono::round<std::chrono::minutes>(
-                                 std::chrono::seconds(walking_time))
-                                 .count()) *
+  return static_cast<double>(
+             std::chrono::round<std::chrono::minutes>(wt).count()) *
          Weight;
 }
 
