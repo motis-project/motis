@@ -16,6 +16,7 @@
 
 #include "motis-api/motis-api.h"
 #include "motis/endpoints/routing.h"
+#include "motis/feed_labels.h"
 #include "motis/gbfs/routing_data.h"
 #include "motis/metrics_registry.h"
 #include "motis/place.h"
@@ -84,10 +85,11 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
   auto const one_dir =
       query.arriveBy_ ? osr::direction::kBackward : osr::direction::kForward;
 
-  auto const r = routing{
-      config_, w_,        l_,      pl_,      elevations_,  &tt_,    nullptr,
-      &tags_,  loc_tree_, fa_,     matches_, way_matches_, rt_,     nullptr,
-      gbfs_,   nullptr,   nullptr, nullptr,  nullptr,      metrics_};
+  auto const r =
+      routing{config_,      w_,      l_,      pl_,       elevations_, &tt_,
+              nullptr,      &tags_,  labels_, loc_tree_, fa_,         matches_,
+              way_matches_, rt_,     nullptr, gbfs_,     nullptr,     nullptr,
+              nullptr,      nullptr, metrics_};
   auto gbfs_rd = gbfs::gbfs_routing_data{w_, l_, gbfs_};
 
   auto const osr_params = get_osr_parameters(query);
@@ -116,6 +118,8 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
                      : 1U)
               : 0U),
       .allowed_claszes_ = to_clasz_mask(query.transitModes_),
+      .blocked_srcs_ =
+          labels_.blocked(query.includeLabels_, query.excludeLabels_),
       .require_bike_transport_ = query.requireBikeTransport_,
       .require_car_transport_ = query.requireCarTransport_,
       .transfer_time_settings_ =

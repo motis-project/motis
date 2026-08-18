@@ -14,6 +14,7 @@
 #include "motis/config.h"
 #include "motis/endpoints/one_to_many_post.h"
 #include "motis/endpoints/routing.h"
+#include "motis/feed_labels.h"
 #include "motis/gbfs/routing_data.h"
 #include "motis/osr/mode_to_profile.h"
 #include "motis/timetable/modes_to_clasz_mask.h"
@@ -116,11 +117,12 @@ std::vector<api::ParetoSet> transit_durations(
   auto const unreachable = arrive_by ? n::kInvalidDelta<n::direction::kBackward>
                                      : n::kInvalidDelta<n::direction::kForward>;
 
-  auto const r = routing{ep.config_,     ep.w_,   ep.l_,       ep.pl_,
-                         ep.elevations_, &ep.tt_, nullptr,     &ep.tags_,
-                         ep.loc_tree_,   ep.fa_,  ep.matches_, ep.way_matches_,
-                         ep.rt_,         nullptr, ep.gbfs_,    nullptr,
-                         nullptr,        nullptr, nullptr,     ep.metrics_};
+  auto const r = routing{ep.config_,      ep.w_,        ep.l_,   ep.pl_,
+                         ep.elevations_,  &ep.tt_,      nullptr, &ep.tags_,
+                         ep.labels_,      ep.loc_tree_, ep.fa_,  ep.matches_,
+                         ep.way_matches_, ep.rt_,       nullptr, ep.gbfs_,
+                         nullptr,         nullptr,      nullptr, nullptr,
+                         ep.metrics_};
   auto gbfs_rd = gbfs::gbfs_routing_data{ep.w_, ep.l_, ep.gbfs_};
 
   auto prepare_stats = std::map<std::string, std::uint64_t>{};
@@ -149,6 +151,8 @@ std::vector<api::ParetoSet> transit_durations(
                              : n::kFootProfile)
                       : n::kDefaultProfile,
       .allowed_claszes_ = to_clasz_mask(query.transitModes_),
+      .blocked_srcs_ =
+          ep.labels_.blocked(query.includeLabels_, query.excludeLabels_),
       .require_bike_transport_ = query.requireBikeTransport_,
       .require_car_transport_ = query.requireCarTransport_,
       .transfer_time_settings_ =

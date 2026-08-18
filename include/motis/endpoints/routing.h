@@ -117,6 +117,7 @@ struct routing {
   nigiri::timetable const* tt_;
   nigiri::routing::tb::tb_data const* tbd_;
   tag_lookup const* tags_;
+  feed_labels const& labels_;
   point_rtree<nigiri::location_idx_t> const* loc_tree_;
   flex::flex_areas const* fa_;
   platform_matches_t const* matches_;

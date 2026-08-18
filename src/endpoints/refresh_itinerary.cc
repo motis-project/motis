@@ -15,6 +15,7 @@
 
 #include "motis/endpoints/routing.h"
 #include "motis/endpoints/stop_times.h"
+#include "motis/feed_labels.h"
 #include "motis/itinerary_id.h"
 #include "motis/timetable/modes_to_clasz_mask.h"
 
@@ -48,6 +49,7 @@ ep::routing make_routing(Endpoint const& ep) {
                      .tt_ = &ep.tt_,
                      .tbd_ = ep.tbd_,
                      .tags_ = &ep.tags_,
+                     .labels_ = ep.labels_,
                      .loc_tree_ = &ep.loc_tree_,
                      .fa_ = ep.fa_,
                      .matches_ = ep.matches_,
@@ -65,9 +67,9 @@ ep::routing make_routing(Endpoint const& ep) {
 template <typename Endpoint>
 ep::stop_times make_scheduled_stop_times(Endpoint const& ep) {
   static auto const static_rt = std::make_shared<rt>();
-  return ep::stop_times{ep.config_, ep.w_,    ep.pl_,   ep.matches_,
-                        ep.t_,      ep.ae_,   ep.tz_,   ep.loc_tree_,
-                        ep.tt_,     ep.tags_, static_rt};
+  return ep::stop_times{ep.config_, ep.w_,    ep.pl_,     ep.matches_,
+                        ep.t_,      ep.ae_,   ep.tz_,     ep.loc_tree_,
+                        ep.tt_,     ep.tags_, ep.labels_, static_rt};
 }
 
 api::Itinerary refresh_itinerary::operator()(
@@ -81,8 +83,9 @@ api::Itinerary refresh_itinerary::operator()(
       query.detailedTransfers_.value_or(query.detailedLegs_),
       query.detailedLegs_, query.withScheduledSkippedStops_, query.language_,
       static_cast<std::size_t>(query.numLegAlternatives_),
-      to_clasz_mask(query.transitModes_), query.requireBikeTransport_,
-      query.requireCarTransport_,
+      to_clasz_mask(query.transitModes_),
+      labels_.blocked(query.includeLabels_, query.excludeLabels_),
+      query.requireBikeTransport_, query.requireCarTransport_,
       leg_alternatives_prf_idx(query.useRoutedTransfers_,
                                query.requireCarTransport_,
                                query.pedestrianProfile_),
@@ -113,8 +116,9 @@ api::Itinerary refresh_itinerary_post::operator()(
       query.detailedTransfers_.value_or(query.detailedLegs_),
       query.detailedLegs_, query.withScheduledSkippedStops_, query.language_,
       static_cast<std::size_t>(query.numLegAlternatives_),
-      to_clasz_mask(query.transitModes_), query.requireBikeTransport_,
-      query.requireCarTransport_,
+      to_clasz_mask(query.transitModes_),
+      labels_.blocked(query.includeLabels_, query.excludeLabels_),
+      query.requireBikeTransport_, query.requireCarTransport_,
       leg_alternatives_prf_idx(query.useRoutedTransfers_,
                                query.requireCarTransport_,
                                query.pedestrianProfile_),
