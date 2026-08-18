@@ -378,6 +378,9 @@ void load_station_information(gbfs_provider& provider,
                   .address_ = optional_str(station_obj, "address"),
                   .cross_street_ = optional_str(station_obj, "cross_street"),
                   .rental_uris_ = parse_rental_uris(station_obj),
+                  .capacity_ = station_obj.contains("capacity")
+                                   ? as_count(station_obj.at("capacity"))
+                                   : std::nullopt,
                   .station_area_ =
                       std::shared_ptr<tg_geom>(area, tg_geom_deleter{})}};
   }
@@ -498,6 +501,13 @@ void load_station_status(gbfs_provider& provider, json::value const& root) {
           }
         }
       }
+    }
+
+    // Feeds that do not break down free docks by vehicle type may still
+    // publish the total (GBFS 2.x and 3.x).
+    if (auto const it = station_obj.find("num_docks_available");
+        it != station_obj.end()) {
+      station.status_.num_docks_available_ = as_count(it->value());
     }
   }
 }
