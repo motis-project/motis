@@ -8,6 +8,8 @@ namespace motis::qa {
 constexpr auto kP = double{30.0};
 constexpr auto kQ = double{0.1};
 
+namespace {
+
 double improvement(
     api::Itinerary const& a,
     api::Itinerary const& b,
@@ -90,6 +92,8 @@ double set_improvement(
 
   return impr;
 }
+
+}  // namespace
 
 double rate(
     std::vector<api::Itinerary> const& ref,
