@@ -11,7 +11,7 @@ constexpr auto kQ = double{0.1};
 double improvement(
     api::Itinerary const& a,
     api::Itinerary const& b,
-    std::vector<std::function<double(api::Itinerary const&)>> const& criteria) {
+    std::span<criterion_t const> const criteria) {
   auto dist = double{0.0};
   auto impr = double{0.0};
 
@@ -37,7 +37,7 @@ double improvement(
 double min_improvement(
     api::Itinerary const* i,
     std::vector<api::Itinerary const*> const& js,
-    std::vector<std::function<double(api::Itinerary const&)>> const& criteria) {
+    std::span<criterion_t const> const criteria) {
   auto min_impr = kMaxRating;
 
   for (auto const j : js) {
@@ -53,7 +53,7 @@ double min_improvement(
 double set_improvement(
     std::vector<api::Itinerary> const& a,
     std::vector<api::Itinerary> const& b,
-    std::vector<std::function<double(api::Itinerary const&)>> const& criteria,
+    std::span<criterion_t const> const criteria,
     std::vector<api::Itinerary const*>& ap,
     std::vector<api::Itinerary const*>& bp) {
   auto const reset = [](std::vector<api::Itinerary> const& v,
@@ -94,7 +94,7 @@ double set_improvement(
 double rate(
     std::vector<api::Itinerary> const& ref,
     std::vector<api::Itinerary> const& cmp,
-    std::vector<std::function<double(api::Itinerary const&)>> const& criteria) {
+    std::span<criterion_t const> const criteria) {
   if (ref.empty() && cmp.empty()) {
     return 0.0;
   }

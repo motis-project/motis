@@ -1,7 +1,10 @@
 #pragma once
 
-#include <functional>
-#include <numeric>
+#include <array>
+#include <chrono>
+#include <cstdint>
+#include <limits>
+#include <span>
 #include <vector>
 
 #include "motis-api/motis-api.h"
@@ -11,12 +14,12 @@ namespace motis::qa {
 constexpr auto kMaxRating = std::numeric_limits<double>::max();
 constexpr auto kMinRating = std::numeric_limits<double>::lowest();
 
-using criterion_t = std::function<double(api::Itinerary const&)>;
+using criterion_t = double (*)(api::Itinerary const&);
 
 // rate cmp in comparison to ref: positive value -> improvement
 double rate(std::vector<api::Itinerary> const& ref,
             std::vector<api::Itinerary> const& cmp,
-            std::vector<criterion_t> const&);
+            std::span<criterion_t const>);
 
 namespace criterion {
 
@@ -55,17 +58,17 @@ double walking_time(api::Itinerary const& i) {
          Weight;
 }
 
-static constexpr auto kDefaultStartTime = start_time<1.0>;
-static constexpr auto kDefaultEndTime = end_time<1.0>;
-static constexpr auto kDefaultTransfers = transfers<30.0>;
-static constexpr auto kDefaultWalkingTime = walking_time<1.0>;
+inline constexpr auto kDefaultStartTime = start_time<1.0>;
+inline constexpr auto kDefaultEndTime = end_time<1.0>;
+inline constexpr auto kDefaultTransfers = transfers<30.0>;
+inline constexpr auto kDefaultWalkingTime = walking_time<1.0>;
 
 }  // namespace criterion
 
-static auto const kStartEndTransfer = std::vector<criterion_t>{
+inline constexpr auto kStartEndTransfer = std::array<criterion_t, 3>{
     criterion::kDefaultStartTime, criterion::kDefaultEndTime,
     criterion::kDefaultTransfers};
-static auto const kStartEndTransferWalk = std::vector<criterion_t>{
+inline constexpr auto kStartEndTransferWalk = std::array<criterion_t, 4>{
     criterion::kDefaultStartTime, criterion::kDefaultEndTime,
     criterion::kDefaultTransfers, criterion::kDefaultWalkingTime};
 
