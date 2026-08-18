@@ -53,8 +53,9 @@ int compare(int ac, char** av) {
            ->multitoken()
            ->default_value(responses_paths),
        "response files")  //
-      ("walking_time,w", po::bool_switch(&walk)->default_value(walk),
-       "whether walking time should be considered, default: off");
+      ("walking_time,w", po::bool_switch(&walk),
+       "whether walking time is part of the itinerary matching key; ratings "
+       "always contain both variants, default: off");
 
   auto vm = parse_opt(ac, av, desc);
   if (vm.count("help")) {
