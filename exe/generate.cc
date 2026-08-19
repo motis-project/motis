@@ -15,6 +15,7 @@
 #include "utl/parallel_for.h"
 #include "utl/progress_tracker.h"
 #include "utl/raii.h"
+#include "osr/routing/route.h"
 
 #include "motis-api/motis-api.h"
 #include "motis/config.h"
@@ -23,6 +24,7 @@
 #include "motis/endpoints/routing.h"
 #include "motis/odm/bounds.h"
 #include "motis/point_rtree.h"
+#include "motis/osr/parameters.h"
 #include "motis/tag_lookup.h"
 
 #include "./flags.h"
@@ -85,6 +87,7 @@ int generate(int ac, char** av) {
   auto time_of_day = std::optional<std::uint32_t>{};
   auto modes = std::optional<std::vector<api::ModeEnum>>{};
   auto max_dist = 800.0;  // m
+  auto max_direct = 0U;  // minutes, 0 = disabled
   auto use_walk = false;
   auto use_bike = false;
   auto use_car = false;
@@ -175,6 +178,12 @@ int generate(int ac, char** av) {
       ("max_dist", po::value(&max_dist)->default_value(max_dist),
        "maximum distance from a public transit stop in meters, only used for "
        "intermodal queries")  //
+      ("max_direct", po::value(&max_direct)->default_value(max_direct),
+       "discard queries that have a direct (walking) connection within this "
+       "many minutes; 0 = keep all. Mirrors nigiri's query generator, which "
+       "rejects queries with a direct connection under 45 minutes: for those "
+       "the direct alternative dominates and the transit result depends on "
+       "which equally-optimal access/egress the router happens to pick")  //
       ("max_travel_time",
        po::value<std::int64_t>()->notifier(
            [&](auto const v) { master_params.maxTravelTime_ = v; }),
@@ -399,9 +408,11 @@ int generate(int ac, char** av) {
     s.stops_ = master_stops;
     s.geo_distance_.reserve(master_stops.size());
 
-    auto const get_place =
-        [&](n::location_idx_t const l) -> std::optional<std::string> {
+    auto const get_place = [&](n::location_idx_t const l,
+                               geo::latlng& pos_out)
+        -> std::optional<std::string> {
       if (!modes) {
+        pos_out = d.tt_->locations_.coordinates_[l];
         return d.tags_->id(*d.tt_, l);
       }
 
@@ -412,12 +423,35 @@ int generate(int ac, char** av) {
       }
 
       auto const pos = d.w_->get_node_pos(rand_in(nodes));
+      pos_out = geo::latlng{pos.lat(), pos.lng()};
       return fmt::format("{},{}", pos.lat(), pos.lng());
+    };
+
+    // A direct walk that is short enough dominates every transit journey, and
+    // which transit journey survives then depends on the access/egress the
+    // router picked among equally optimal ones - so those queries are not
+    // reproducible between routing backends. nigiri's own query generator
+    // discards them (kMaxDirect); this mirrors it, opt-in.
+    auto const has_short_direct = [&](geo::latlng const& from,
+                                      geo::latlng const& to) {
+      if (max_direct == 0U || d.w_ == nullptr || d.l_ == nullptr) {
+        return false;
+      }
+      auto const max_cost = static_cast<osr::cost_t>(max_direct * 60U);
+      auto const p = osr::route(
+          to_profile_parameters(osr::search_profile::kFoot, {}), *d.w_, *d.l_,
+          osr::search_profile::kFoot, osr::location{from, osr::level_t{}},
+          osr::location{to, osr::level_t{}}, max_cost,
+          osr::direction::kForward, kMaxMatchingDistance);
+      return p.has_value() && p->cost_ <= max_cost;
     };
 
     auto const random_from_to = [&] {
       auto from_place = std::optional<std::string>{};
       auto to_place = std::optional<std::string>{};
+
+      auto from_pos = geo::latlng{};
+      auto to_pos = geo::latlng{};
 
       for (auto x = 0U; x != 1000U; ++x) {
         // stop used to lb-rank the destination (invalid -> random
@@ -429,7 +463,7 @@ int generate(int ac, char** av) {
           rank_stop = seed.rank_stop_;
         } else {
           rank_stop = random_stop(*d.tt_, s.stops_);
-          from_place = get_place(rank_stop);
+          from_place = get_place(rank_stop, from_pos);
           if (!from_place) {
             continue;
           }
@@ -448,7 +482,7 @@ int generate(int ac, char** av) {
             return s.ss_.travel_time_lower_bound_[to_idx(a)] <
                    s.ss_.travel_time_lower_bound_[to_idx(b)];
           });
-          to_place = get_place(s.stops_[r]);
+          to_place = get_place(s.stops_[r], to_pos);
         } else if (geo_rank && rank_stop != n::location_idx_t::invalid()) {
           for (auto const l : s.stops_) {
             s.geo_distance_[l] =
@@ -458,13 +492,14 @@ int generate(int ac, char** av) {
           utl::sort(s.stops_, [&](auto const& a, auto const& b) {
             return s.geo_distance_[a] < s.geo_distance_[b];
           });
-          to_place = get_place(s.stops_[geo_rank_index]);
+          to_place = get_place(s.stops_[geo_rank_index], to_pos);
         } else {
-          to_place = get_place(random_stop(*d.tt_, s.stops_));
+          to_place = get_place(random_stop(*d.tt_, s.stops_), to_pos);
         }
-        if (to_place) {
+        if (to_place && !has_short_direct(from_pos, to_pos)) {
           break;
         }
+        to_place.reset();
       }
 
       s.p_.fromPlace_ = *from_place;
