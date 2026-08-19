@@ -223,6 +223,7 @@ std::vector<n::rt::run> get_events(
     std::size_t const min_count,
     std::size_t const max_count,
     n::routing::clasz_mask_t const allowed_clasz,
+    n::bitvec_map<n::source_idx_t> const& blocked,
     bool const with_scheduled_skipped_stops,
     std::optional<n::duration_t> const max_time_diff) {
   auto iterators = std::vector<std::unique_ptr<ev_iterator>>{};
@@ -230,6 +231,9 @@ std::vector<n::rt::run> get_events(
   if (rtt != nullptr) {
     for (auto const x : locations) {
       for (auto const rt_t : rtt->location_rt_transports_[x]) {
+        if (blocked.test(rtt->rt_transport_src_[rt_t])) {
+          continue;
+        }
         auto const location_seq = rtt->rt_transport_location_seq_[rt_t];
         for (auto const [stop_idx, s] : utl::enumerate(location_seq)) {
           if (n::stop{s}.location_idx() == x &&
@@ -274,7 +278,8 @@ std::vector<n::rt::run> get_events(
   auto seen = n::hash_set<std::pair<n::route_idx_t, n::stop_idx_t>>{};
   for (auto const x : locations) {
     for (auto const r : tt.location_routes_[x]) {
-      if (!n::routing::is_allowed(allowed_clasz, tt.route_clasz_[r])) {
+      if (blocked.test(tt.route_src_[r]) ||
+          !n::routing::is_allowed(allowed_clasz, tt.route_clasz_[r])) {
         continue;
       }
       auto const location_seq = tt.route_location_seq_[r];
@@ -429,6 +434,8 @@ std::vector<n::rt::run> stop_times::get_runs(
       query_stop.has_value(), query_center.has_value());
 
   auto const allowed_clasz = to_clasz_mask(query.mode_);
+  auto const blocked =
+      labels_.blocked(query.includeLabels_, query.excludeLabels_);
   auto const [dir, time] = parse_cursor(query.pageCursor_.value_or(fmt::format(
       "{}|{}",
       query.direction_
@@ -464,7 +471,7 @@ std::vector<n::rt::run> stop_times::get_runs(
   auto events = get_events(locations, tt_, rtt, time, ev_type, dir,
                            static_cast<std::size_t>(query.n_.value_or(0)),
                            static_cast<std::size_t>(max_results), allowed_clasz,
-                           query.withScheduledSkippedStops_, window);
+                           blocked, query.withScheduledSkippedStops_, window);
 
   auto const to_tuple = [&](n::rt::run const& x) {
     auto const fr_a = n::rt::frun{tt_, rtt, x};

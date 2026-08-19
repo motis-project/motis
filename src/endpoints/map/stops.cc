@@ -24,6 +24,8 @@ api::stops_response stops::operator()(boost::urls::url_view const& url) const {
   auto const mask = query.modes_.transform(to_clasz_mask)
                         .value_or(n::routing::all_clasz_allowed());
   auto const grouped = query.grouped_.value_or(false);
+  auto const blocked =
+      labels_.blocked(query.includeLabels_, query.excludeLabels_);
   auto const api_version = get_api_version(url);
 
   utl::verify<net::bad_request_exception>(
@@ -39,7 +41,9 @@ api::stops_response stops::operator()(boost::urls::url_view const& url) const {
     loc_rtree_.find({min->pos_, max->pos_}, [&](n::location_idx_t const l) {
       auto location_clasz_mask = n::routing::clasz_mask_t{0};
       for (auto const r : tt_.location_routes_[l]) {
-        location_clasz_mask |= n::routing::to_mask(tt_.route_clasz_[r]);
+        if (!blocked.test(tt_.route_src_[r])) {
+          location_clasz_mask |= n::routing::to_mask(tt_.route_clasz_[r]);
+        }
       }
       if (location_clasz_mask == 0) {
         return;
