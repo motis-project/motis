@@ -219,12 +219,16 @@ std::optional<api::TicketUrls> get_ticketing_urls(
   auto const provider_idx = enter_stop.get_provider_idx(n::event_type::kDep);
   auto const route_id_idx = enter_stop.get_route_id_idx(n::event_type::kDep);
 
+  // HRD trips carry neither a route id nor, through it, a provider, so both
+  // indices can be invalid here - they must not be used as subscripts.
   auto ticketing_idx = n::ticketing_link_idx_t::invalid();
   auto const route_ticket_link =
-      tt.route_ids_[src].route_id_ticketing_link_[route_id_idx];
+      route_id_idx == n::route_id_idx_t::invalid()
+          ? n::ticketing_link_idx_t::invalid()
+          : tt.route_ids_[src].route_id_ticketing_link_[route_id_idx];
   if (route_ticket_link != n::ticketing_link_idx_t::invalid()) {
     ticketing_idx = route_ticket_link;
-  } else {
+  } else if (provider_idx != n::provider_idx_t::invalid()) {
     auto provider = tt.providers_[provider_idx];
     if (provider.ticketing_link_ != n::ticketing_link_idx_t::invalid()) {
       ticketing_idx = provider.ticketing_link_;
