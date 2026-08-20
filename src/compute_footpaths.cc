@@ -1,6 +1,7 @@
 #include "motis/compute_footpaths.h"
 
 #include <cstdlib>
+#include <tuple>
 
 #include "nigiri/loader/build_lb_graph.h"
 
@@ -8,6 +9,7 @@
 #include "cista/serialization.h"
 
 #include "utl/concat.h"
+#include "utl/erase_duplicates.h"
 #include "utl/erase_if.h"
 #include "utl/parallel_for.h"
 #include "utl/sorted_diff.h"
@@ -37,6 +39,65 @@ namespace motis {
 
 // below this, a missing routing result is an OSM data error, not a real gap
 constexpr auto const kMaxMissingFootpathDistance = 100.0;
+
+// The beeline fill-in the loader wrote exists only because nigiri cannot
+// route: replace the default profile's walking layer with what the street
+// router found. The transfers.txt rules stay authoritative - a rule fixes the
+// transfer time, which may be shorter or longer than the walk - and the hubs
+// are rebuilt around the new walks, keeping the rule hubs untouched.
+void rebuild_default_profile(
+    n::timetable& tt,
+    n::vector_map<n::location_idx_t, std::vector<n::footpath>> const& routed) {
+  auto fps = routed;
+
+  auto const n_rules = std::min(
+      static_cast<std::size_t>(tt.locations_.transfer_rule_fps_.size()),
+      static_cast<std::size_t>(cista::to_idx(tt.n_locations())));
+  for (auto l = n::location_idx_t{0U}; l != n::location_idx_t{n_rules}; ++l) {
+    for (auto const r : tt.locations_.transfer_rule_fps_[l]) {
+      utl::erase_if(fps[l], [&](n::footpath const fp) {
+        return fp.target() == r.target();
+      });
+      fps[l].push_back(r);
+    }
+  }
+
+  // adds the pairs no hub is worth, so it has to run before the write-out
+  n::loader::build_profile_hubs(tt, n::kDefaultProfile, fps);
+
+  auto in = n::vector_map<n::location_idx_t, std::vector<n::footpath>>{};
+  in.resize(tt.n_locations());
+  tt.locations_.footpaths_out_[n::kDefaultProfile].clear();
+  for (auto l = n::location_idx_t{0U}; l != tt.n_locations(); ++l) {
+    auto& out = fps[l];
+    utl::erase_duplicates(
+        out,
+        [](n::footpath const a, n::footpath const b) {
+          return std::tie(a.target_, a.duration_) <
+                 std::tie(b.target_, b.duration_);
+        },
+        [](n::footpath const a, n::footpath const b) {
+          return a.target_ == b.target_;
+        });  // also sorts; keeps the shortest duration per target
+    tt.locations_.footpaths_out_[n::kDefaultProfile].emplace_back(out);
+    for (auto const fp : out) {
+      in[fp.target()].push_back(n::footpath{l, fp.duration()});
+    }
+  }
+  tt.locations_.footpaths_in_[n::kDefaultProfile].clear();
+  for (auto const& x : in) {
+    tt.locations_.footpaths_in_[n::kDefaultProfile].emplace_back(x);
+  }
+
+  if (std::getenv("NIGIRI_MATERIALIZE") != nullptr) {
+    n::loader::expand_hubs_into_footpaths(tt);
+  } else if (std::getenv("NIGIRI_NO_PRUNE_HUB_FP") == nullptr) {
+    n::loader::prune_hub_covered_footpaths(tt);
+  }
+
+  n::loader::build_lb_graph<n::direction::kForward>(tt, n::kDefaultProfile);
+  n::loader::build_lb_graph<n::direction::kBackward>(tt, n::kDefaultProfile);
+}
 
 elevator_footpath_map_t compute_footpaths(
     osr::ways const& w,
@@ -255,6 +316,10 @@ elevator_footpath_map_t compute_footpaths(
 
     n::loader::build_lb_graph<n::direction::kForward>(tt, mode.profile_idx_);
     n::loader::build_lb_graph<n::direction::kBackward>(tt, mode.profile_idx_);
+
+    if (mode.rebuild_default_profile_) {
+      rebuild_default_profile(tt, transfers);
+    }
 
     n_done += tt.n_locations();
   }
