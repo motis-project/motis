@@ -128,6 +128,7 @@ limits:
   street_routing_max_direct_seconds: 21600 # limit for maxDirectTime API param, high values can lead to long-running, RAM-hungry queries 
   geocode_max_suggestions: 512    # maximum requestable results for /geocode
   reverse_geocode_max_results: 512 # maximum requestable results for /reverse-geocode
+  route_search_max_results: 512   # maximum requestable results for /map/route-search
   max_max_matching_distance: 250  # upper bound (meters) for the maxMatchingDistance API param, larger values are capped to this limit
 logging:
   log_level: debug                # log-level (default = debug; Supported log-levels: error, info, debug)
