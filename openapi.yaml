@@ -5131,6 +5131,17 @@ components:
           description: List of vehicle docks currently available at this station (vehicle type ID -> count)
           additionalProperties:
             type: integer
+        capacity:
+          type: integer
+          description: |
+            Number of physical docks at this station. Absent for virtual or
+            free-floating stations that do not have docks.
+        numDocksAvailable:
+          type: integer
+          description: |
+            Total number of free docks at this station, for feeds that publish
+            the total instead of per vehicle type counts. Absent if the feed
+            publishes neither.
         stationArea:
           $ref: '#/components/schemas/MultiPolygon'
         bbox:
