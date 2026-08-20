@@ -22,6 +22,13 @@ struct routed_transfers_settings {
   bool extend_missing_{false};
   std::chrono::seconds max_duration_;
   std::function<bool(nigiri::location_idx_t)> is_candidate_{};
+
+  // Additionally rebuild the default profile from this profile's routed
+  // layer: the beeline fill-in the loader wrote is only there because nigiri
+  // has no street routing. The transfers.txt rules stay authoritative over
+  // the routed durations, and the default profile's hubs are rebuilt around
+  // the new walks.
+  bool rebuild_default_profile_{false};
 };
 
 elevator_footpath_map_t compute_footpaths(
