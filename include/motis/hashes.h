@@ -32,7 +32,7 @@ constexpr auto const tiles_version = []() {
   return meta_entry_t{"tiles_bin_ver", 2U};
 };
 constexpr auto const osr_footpath_version = []() {
-  return meta_entry_t{"osr_footpath_bin_ver", 6U};
+  return meta_entry_t{"osr_footpath_bin_ver", 7U};
 };
 constexpr auto const routed_shapes_version = []() {
   return meta_entry_t{"routed_shapes_ver", 11U};
