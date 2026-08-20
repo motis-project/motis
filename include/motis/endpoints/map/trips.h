@@ -15,6 +15,7 @@ struct trips {
   adr_ext const* ae_;
   tz_map_t const* tz_;
   tag_lookup const& tags_;
+  feed_labels const& labels_;
   nigiri::timetable const& tt_;
   std::shared_ptr<rt> const& rt_;
   nigiri::shapes_storage const* shapes_;

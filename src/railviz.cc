@@ -327,6 +327,7 @@ void add_static_transports(n::timetable const& tt,
 }
 
 api::trips_response get_trains(tag_lookup const& tags,
+                               feed_labels const& labels,
                                n::timetable const& tt,
                                n::rt_timetable const* rtt,
                                n::shapes_storage const* shapes,
@@ -351,6 +352,8 @@ api::trips_response get_trains(tag_lookup const& tags,
       std::chrono::time_point_cast<n::unixtime_t::duration>(*query.endTime_);
   auto const time_interval = n::interval{start_time, end_time};
   auto const area = geo::make_box({min->pos_, max->pos_});
+  auto const blocked =
+      labels.blocked(query.includeLabels_, query.excludeLabels_);
 
   // Collect runs within time+location window.
   auto runs = std::vector<stop_pair>{};
@@ -364,14 +367,16 @@ api::trips_response get_trains(tag_lookup const& tags,
     if (rtt != nullptr) {
       for (auto const& rt_t :
            rt_index.rt_geo_indices_[c].get_rt_transports(*rtt, area)) {
-        if (should_display(cl, zoom_level, rt_index.rt_distances_[rt_t])) {
+        if (should_display(cl, zoom_level, rt_index.rt_distances_[rt_t]) &&
+            !blocked.test(rtt->rt_transport_src_[rt_t])) {
           add_rt_transports(tt, *rtt, rt_t, time_interval, area, runs);
         }
       }
     }
 
     for (auto const& r : static_index.static_geo_indices_[c].get_routes(area)) {
-      if (should_display(cl, zoom_level, static_index.static_distances_[r])) {
+      if (should_display(cl, zoom_level, static_index.static_distances_[r]) &&
+          !blocked.test(tt.route_src_[r])) {
         add_static_transports(tt, rtt, r, time_interval, area, shapes, runs);
       }
     }
