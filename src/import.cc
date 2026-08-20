@@ -518,7 +518,11 @@ void import(config const& c,
              .profile_idx_ = n::kFootProfile,
              .max_matching_distance_ = c.timetable_->max_matching_distance_,
              .extend_missing_ = c.timetable_->extend_missing_footpaths_,
-             .max_duration_ = c.timetable_->max_footpath_length_ * 1min},
+             .max_duration_ = c.timetable_->max_footpath_length_ * 1min,
+             // the same routed layer also replaces the loader's beeline
+             // fill-in in the default profile, where the transfers.txt rules
+             // stay authoritative over it
+             .rebuild_default_profile_ = true},
             {.profile_ = osr::search_profile::kWheelchair,
              .profile_idx_ = n::kWheelchairProfile,
              .max_matching_distance_ = 8.0,
