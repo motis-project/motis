@@ -15,6 +15,7 @@
 #include "utl/sorted_diff.h"
 
 #include "nigiri/loader/build_footpaths.h"
+#include "nigiri/logging.h"
 
 #include "osr/routing/profiles/foot.h"
 #include "osr/routing/route.h"
@@ -58,6 +59,12 @@ void rebuild_default_profile(
       utl::erase_if(fps[l], [&](n::footpath const fp) {
         return fp.target() == r.target();
       });
+      if (r.duration() == n::footpath::kMaxDuration) {
+        // transfers.txt type 3: the pair is not a transfer, so the routed walk
+        // between the two goes with it. Kept as a footpath of any duration the
+        // routing could still take it, which is what the ban forbids.
+        continue;
+      }
       fps[l].push_back(r);
     }
   }
@@ -97,6 +104,19 @@ void rebuild_default_profile(
 
   n::loader::build_lb_graph<n::direction::kForward>(tt, n::kDefaultProfile);
   n::loader::build_lb_graph<n::direction::kBackward>(tt, n::kDefaultProfile);
+
+  auto pairs = std::uint64_t{0U};
+  auto const& hi = tt.locations_.hub_in_[n::kDefaultProfile];
+  auto const& ho = tt.locations_.hub_out_[n::kDefaultProfile];
+  for (auto h = n::hub_idx_t{0U}; h != n::hub_idx_t{hi.size()}; ++h) {
+    pairs += static_cast<std::uint64_t>(hi[h].size()) * ho[h].size();
+  }
+  n::log(n::log_lvl::info, "motis.footpath",
+         "default profile on routed walks: {} hubs ({} rule-derived), in={} "
+         "out={}, standing for {} pairs, {} footpaths kept",
+         hi.size(), tt.locations_.n_rule_hubs_, hi.data_.size(),
+         ho.data_.size(), pairs,
+         tt.locations_.footpaths_out_[n::kDefaultProfile].data_.size());
 }
 
 elevator_footpath_map_t compute_footpaths(
