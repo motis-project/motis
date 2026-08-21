@@ -1,6 +1,8 @@
 #include "motis/compute_footpaths.h"
 
 #include <cstdlib>
+
+#include <algorithm>
 #include <tuple>
 
 #include "nigiri/loader/build_lb_graph.h"
@@ -67,6 +69,31 @@ void rebuild_default_profile(
       }
       fps[l].push_back(r);
     }
+  }
+
+  // The loop above can only make a rule authoritative where the loader wrote
+  // the pair as a cell. A pair it elided into a rule hub is stated nowhere in
+  // transfer_rule_fps_, and a hub never overrides - the routing takes the
+  // minimum of hub and footpath - so a rule mandating MORE time than the
+  // street router found would silently lose to the walk. Drop those walks and
+  // let the hub be the only statement for the pair. Rule hubs are the prefix
+  // [0, n_rule_hubs_) and their egress lists are built sorted (the writer
+  // sorts them, the per-stop ones are members in ascending order).
+  auto const& hub_out = tt.locations_.hub_out_[n::kDefaultProfile];
+  auto const& hub_in_by_loc = tt.locations_.hub_in_by_loc_[n::kDefaultProfile];
+  for (auto l = n::location_idx_t{0U}; l != tt.n_locations(); ++l) {
+    if (fps[l].empty() || hub_in_by_loc[l].empty()) {
+      continue;
+    }
+    utl::erase_if(fps[l], [&](n::footpath const fp) {
+      return utl::any_of(hub_in_by_loc[l], [&](n::hub_idx_t const h) {
+        if (cista::to_idx(h) >= tt.locations_.n_rule_hubs_) {
+          return false;  // a walk hub carries no rule, so it may not override
+        }
+        auto const o = hub_out[h];
+        return std::binary_search(begin(o), end(o), fp.target());
+      });
+    });
   }
 
   // adds the pairs no hub is worth, so it has to run before the write-out
