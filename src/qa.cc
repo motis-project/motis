@@ -10,10 +10,9 @@ constexpr auto kQ = double{0.1};
 
 namespace {
 
-double improvement(
-    api::Itinerary const& a,
-    api::Itinerary const& b,
-    std::span<criterion_t const> const criteria) {
+double improvement(api::Itinerary const& a,
+                   api::Itinerary const& b,
+                   std::span<criterion_t const> const criteria) {
   auto dist = double{0.0};
   auto impr = double{0.0};
 
@@ -36,10 +35,9 @@ double improvement(
          (std::atan(kP * (dist - kQ)) + std::numbers::pi / 2.0);
 }
 
-double min_improvement(
-    api::Itinerary const* i,
-    std::vector<api::Itinerary const*> const& js,
-    std::span<criterion_t const> const criteria) {
+double min_improvement(api::Itinerary const* i,
+                       std::vector<api::Itinerary const*> const& js,
+                       std::span<criterion_t const> const criteria) {
   auto min_impr = kMaxRating;
 
   for (auto const j : js) {
@@ -52,12 +50,11 @@ double min_improvement(
   return min_impr;
 }
 
-double set_improvement(
-    std::vector<api::Itinerary> const& a,
-    std::vector<api::Itinerary> const& b,
-    std::span<criterion_t const> const criteria,
-    std::vector<api::Itinerary const*>& ap,
-    std::vector<api::Itinerary const*>& bp) {
+double set_improvement(std::vector<api::Itinerary> const& a,
+                       std::vector<api::Itinerary> const& b,
+                       std::span<criterion_t const> const criteria,
+                       std::vector<api::Itinerary const*>& ap,
+                       std::vector<api::Itinerary const*>& bp) {
   auto const reset = [](std::vector<api::Itinerary> const& v,
                         std::vector<api::Itinerary const*>& p) {
     p.clear();
@@ -95,10 +92,9 @@ double set_improvement(
 
 }  // namespace
 
-double rate(
-    std::vector<api::Itinerary> const& ref,
-    std::vector<api::Itinerary> const& cmp,
-    std::span<criterion_t const> const criteria) {
+double rate(std::vector<api::Itinerary> const& ref,
+            std::vector<api::Itinerary> const& cmp,
+            std::span<criterion_t const> const criteria) {
   if (ref.empty() && cmp.empty()) {
     return 0.0;
   }
