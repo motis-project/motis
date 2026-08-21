@@ -326,6 +326,11 @@ int generate(int ac, char** av) {
            !d.odm_bounds_->contains(d.tt_->locations_.coordinates_[l]))) {
         continue;
       }
+      if (d.tt_->locations_.types_[l] == n::location_type::kVirt) {
+        continue;  // no id of its own: a query naming one cannot be resolved,
+                   // and its trips are reachable through the stop it was
+                   // split off
+      }
       v.emplace_back(l);
     }
     return v;
