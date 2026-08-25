@@ -1155,8 +1155,7 @@ api::plan_response routing::route(api::plan_params const& query,
         if (algorithm == api::algorithmEnum::PONG && pong_applicable) {
           try {
             r = n::routing::pong_search_srt(*tt_, rtt, search_state,
-                                            raptor_state, q, dir, timeout,
-                                            /*copy_on_diverge=*/true);
+                                            raptor_state, q, dir, timeout);
             break;
           } catch (std::exception const& e) {
             std::cout << "SCHEDRT PONG EXCEPTION: " << e.what() << "\n";
@@ -1165,8 +1164,7 @@ api::plan_response routing::route(api::plan_params const& query,
           }
         }
         r = n::routing::raptor_search_schedrt(*tt_, rtt, search_state,
-                                              raptor_state, q, dir, timeout,
-                                              /*copy_on_diverge=*/true);
+                                              raptor_state, q, dir, timeout);
         break;
       }
 #if defined(NIGIRI_CUDA)
