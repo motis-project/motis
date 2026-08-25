@@ -4278,11 +4278,19 @@ components:
         - `REALTIME_ANNOTATION_ONLY`: route, sort and window on the scheduled
           timetable only, but still annotate the response with realtime data.
         - `OFF`: use the scheduled timetable only, with no realtime annotation.
+        - `SCHEDULED_AND_REALTIME`: routing only. One combined search computes
+          both the scheduled-timetable optima (which may be infeasible under
+          current realtime conditions, e.g. use cancelled trips) and the
+          realtime optima. Each itinerary is tagged with the `world` it is
+          valid in; itineraries valid in both worlds are returned once with
+          `world: BOTH`. Falls back to `REALTIME` when no realtime data is
+          loaded or `via` stops are given.
       type: string
       enum:
         - OFF
         - REALTIME_ANNOTATION_ONLY
         - REALTIME
+        - SCHEDULED_AND_REALTIME
 
     PedestrianProfile:
       description: Different accessibility profiles for pedestrians.
@@ -5720,6 +5728,21 @@ components:
           items:
             $ref: '#/components/schemas/PlanOffset'
 
+    ItineraryWorld:
+      description: |
+        `SCHEDULED_AND_REALTIME` realtimeMode only: the timetable world an
+        itinerary is valid in.
+
+        - `SCHEDULED`: valid in the scheduled timetable only (may be broken
+          under current realtime conditions, e.g. contain cancelled trips)
+        - `REALTIME`: valid under current realtime conditions only
+        - `BOTH`: valid in both worlds
+      type: string
+      enum:
+        - SCHEDULED
+        - REALTIME
+        - BOTH
+
     Itinerary:
       type: object
       required:
@@ -5730,6 +5753,8 @@ components:
         - id
         - legs
       properties:
+        world:
+          $ref: '#/components/schemas/ItineraryWorld'
         duration:
           description: journey duration in seconds
           type: integer

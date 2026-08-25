@@ -1139,7 +1139,36 @@ api::plan_response routing::route(api::plan_params const& query,
     auto const pong_applicable =
         query.timetableView_ &&
         query.arriveBy_ != start_time.extend_interval_later_;
+    // combined scheduled+rt search: falls back to plain REALTIME routing
+    // when there is no rt data or vias are requested
+    auto const use_schedrt =
+        query.realtimeMode_ == api::RealtimeModeEnum::SCHEDULED_AND_REALTIME &&
+        rtt != nullptr && q.via_stops_.empty();
     while (true) {
+      if (use_schedrt && algorithm != api::algorithmEnum::TB) {
+        auto const dir = query.arriveBy_ ? n::direction::kBackward
+                                         : n::direction::kForward;
+        auto const timeout = query.timeout_.has_value()
+                                 ? std::chrono::seconds{*query.timeout_}
+                                 : max_timeout;
+        auto raptor_state = n::routing::raptor_state{};
+        if (algorithm == api::algorithmEnum::PONG && pong_applicable) {
+          try {
+            r = n::routing::pong_search_srt(*tt_, rtt, search_state,
+                                            raptor_state, q, dir, timeout,
+                                            /*copy_on_diverge=*/true);
+            break;
+          } catch (std::exception const& e) {
+            std::cout << "SCHEDRT PONG EXCEPTION: " << e.what() << "\n";
+            algorithm = api::algorithmEnum::RAPTOR;
+            continue;
+          }
+        }
+        r = n::routing::raptor_search_schedrt(*tt_, rtt, search_state,
+                                              raptor_state, q, dir, timeout,
+                                              /*copy_on_diverge=*/true);
+        break;
+      }
 #if defined(NIGIRI_CUDA)
       if (algorithm != api::algorithmEnum::TB && gpu_supported &&
           run_on_gpu(/*use_pong=*/pong_applicable &&
@@ -1214,6 +1243,39 @@ api::plan_response routing::route(api::plan_params const& query,
 
     direct_filter(direct, journeys);
 
+    // combined scheduled+rt search: journeys carry their world in slot_;
+    // journeys with identical legs in both worlds collapse to one BOTH entry
+    auto worlds = std::vector<api::ItineraryWorldEnum>{};
+    if (use_schedrt) {
+      auto out = decltype(journeys){};
+      auto used = std::vector<bool>(journeys.size(), false);
+      out.reserve(journeys.size());
+      worlds.reserve(journeys.size());
+      for (auto i = std::size_t{0U}; i != journeys.size(); ++i) {
+        if (journeys[i].slot_ != 0U) {
+          continue;
+        }
+        auto world = api::ItineraryWorldEnum::SCHEDULED;
+        for (auto k = std::size_t{0U}; k != journeys.size(); ++k) {
+          if (!used[k] && journeys[k].slot_ == 1U &&
+              journeys[k].legs_ == journeys[i].legs_) {
+            used[k] = true;
+            world = api::ItineraryWorldEnum::BOTH;
+            break;
+          }
+        }
+        out.emplace_back(std::move(journeys[i]));
+        worlds.emplace_back(world);
+      }
+      for (auto k = std::size_t{0U}; k != journeys.size(); ++k) {
+        if (journeys[k].slot_ == 1U && !used[k]) {
+          out.emplace_back(std::move(journeys[k]));
+          worlds.emplace_back(api::ItineraryWorldEnum::REALTIME);
+        }
+      }
+      journeys = std::move(out);
+    }
+
     auto q_for_alts = q;
     if (query.arriveBy_) {
       // Leg alternatives query should always be forward.
@@ -1244,6 +1306,12 @@ api::plan_response routing::route(api::plan_params const& query,
                   : alternatives_context{},
               &fares_time);
         });
+
+    if (use_schedrt) {
+      for (auto i = std::size_t{0U}; i != itineraries.size(); ++i) {
+        itineraries[i].world_ = worlds[i];
+      }
+    }
 
     return {
         .debugOutput_ =
