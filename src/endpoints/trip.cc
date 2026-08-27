@@ -29,13 +29,12 @@ api::Itinerary trip::operator()(boost::urls::url_view const& url) const {
   auto const api_version = get_api_version(url);
 
   auto const [r, _] = tags_.get_trip(tt_, rtt, query.tripId_);
-  auto const blocked_srcs =
-      labels_.blocked(query.includeLabels_, query.excludeLabels_);
+  auto const blocked_labels =
+      labels_.blocked(tt_, rtt, query.includeLabels_, query.excludeLabels_);
   utl::verify<net::not_found_exception>(
-      r.valid() &&
-          !blocked_srcs.test(
-              r.is_rt() ? rtt->rt_transport_src_[r.rt_]
-                        : tt_.route_src_[tt_.transport_route_[r.t_.t_idx_]]),
+      r.valid() && !(r.is_rt() ? blocked_labels.rt_transports_.test(r.rt_)
+                               : blocked_labels.routes_.test(
+                                     tt_.transport_route_[r.t_.t_idx_])),
       "trip not found: tripId={}, tt={}", query.tripId_,
       tt_.external_interval());
 

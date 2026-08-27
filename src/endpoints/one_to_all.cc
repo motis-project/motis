@@ -118,8 +118,8 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
                      : 1U)
               : 0U),
       .allowed_claszes_ = to_clasz_mask(query.transitModes_),
-      .blocked_srcs_ =
-          labels_.blocked(query.includeLabels_, query.excludeLabels_),
+      .blocked_ = labels_.blocked(tt_, nullptr, query.includeLabels_,
+                                  query.excludeLabels_),
       .require_bike_transport_ = query.requireBikeTransport_,
       .require_car_transport_ = query.requireCarTransport_,
       .transfer_time_settings_ =

@@ -185,8 +185,8 @@ n::routing::query meta_router::get_base_query(
                      : 1U)
               : 0U),
       .allowed_claszes_ = to_clasz_mask(query_.transitModes_),
-      .blocked_srcs_ =
-          r_.labels_.blocked(query_.includeLabels_, query_.excludeLabels_),
+      .blocked_ = r_.labels_.blocked(*r_.tt_, rtt_, query_.includeLabels_,
+                                     query_.excludeLabels_),
       .require_bike_transport_ = query_.requireBikeTransport_,
       .require_car_transport_ = query_.requireCarTransport_,
       .transfer_time_settings_ =

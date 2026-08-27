@@ -4,6 +4,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "nigiri/routing/query.h"
 #include "nigiri/types.h"
 
 #include "motis/config.h"
@@ -17,8 +18,11 @@ struct feed_labels {
   feed_labels() = default;
   feed_labels(config::timetable const&, tag_lookup const&);
 
-  src_set blocked(std::vector<std::string> const& include,
-                  std::vector<std::string> const& exclude) const;
+  nigiri::routing::blocked_feeds blocked(
+      nigiri::timetable const&,
+      nigiri::rt_timetable const*,
+      std::vector<std::string> const& include,
+      std::vector<std::string> const& exclude) const;
 
   src_set resolve(std::vector<std::string> const&) const;
 

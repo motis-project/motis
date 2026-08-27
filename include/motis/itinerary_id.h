@@ -73,7 +73,7 @@ api::Itinerary reconstruct_itinerary(
     std::size_t num_leg_alternatives = 0U,
     nigiri::routing::clasz_mask_t allowed_claszes =
         nigiri::routing::all_clasz_allowed(),
-    nigiri::bitvec_map<nigiri::source_idx_t> const& blocked_srcs = {},
+    nigiri::routing::blocked_feeds const& blocked_labels = {},
     bool require_bike_transport = false,
     bool require_car_transport = false,
     nigiri::profile_idx_t prf_idx = 0U,

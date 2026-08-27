@@ -151,8 +151,8 @@ std::vector<api::ParetoSet> transit_durations(
                              : n::kFootProfile)
                       : n::kDefaultProfile,
       .allowed_claszes_ = to_clasz_mask(query.transitModes_),
-      .blocked_srcs_ =
-          ep.labels_.blocked(query.includeLabels_, query.excludeLabels_),
+      .blocked_ = ep.labels_.blocked(ep.tt_, nullptr, query.includeLabels_,
+                                     query.excludeLabels_),
       .require_bike_transport_ = query.requireBikeTransport_,
       .require_car_transport_ = query.requireCarTransport_,
       .transfer_time_settings_ =

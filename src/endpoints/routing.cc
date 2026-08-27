@@ -979,8 +979,8 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                       : n::kFootProfile
                 : 0U),
         .allowed_claszes_ = to_clasz_mask(query.transitModes_),
-        .blocked_srcs_ =
-            labels_.blocked(query.includeLabels_, query.excludeLabels_),
+        .blocked_ = labels_.blocked(*tt_, rtt, query.includeLabels_,
+                                    query.excludeLabels_),
         .require_bike_transport_ = query.requireBikeTransport_,
         .require_car_transport_ = query.requireCarTransport_,
         .transfer_time_settings_ =
@@ -1077,7 +1077,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                  (rtt != nullptr && rtt->n_rt_transports() != 0U) ||
                  query.arriveBy_ || q.prf_idx_ != tbd_->prf_idx_ ||
                  q.allowed_claszes_ != n::routing::all_clasz_allowed() ||
-                 q.blocked_srcs_.any() || !q.td_start_.empty() ||
+                 q.blocked_.any() || !q.td_start_.empty() ||
                  !q.td_dest_.empty() || !q.transfer_time_settings_.default_ ||
                  !q.via_stops_.empty() || q.require_bike_transport_ ||
                  q.require_car_transport_) {

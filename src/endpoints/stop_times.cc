@@ -223,7 +223,7 @@ std::vector<n::rt::run> get_events(
     std::size_t const min_count,
     std::size_t const max_count,
     n::routing::clasz_mask_t const allowed_clasz,
-    n::bitvec_map<n::source_idx_t> const& blocked,
+    n::routing::blocked_feeds const& blocked,
     bool const with_scheduled_skipped_stops,
     std::optional<n::duration_t> const max_time_diff) {
   auto iterators = std::vector<std::unique_ptr<ev_iterator>>{};
@@ -231,7 +231,7 @@ std::vector<n::rt::run> get_events(
   if (rtt != nullptr) {
     for (auto const x : locations) {
       for (auto const rt_t : rtt->location_rt_transports_[x]) {
-        if (blocked.test(rtt->rt_transport_src_[rt_t])) {
+        if (blocked.rt_transports_.test(rt_t)) {
           continue;
         }
         auto const location_seq = rtt->rt_transport_location_seq_[rt_t];
@@ -278,7 +278,7 @@ std::vector<n::rt::run> get_events(
   auto seen = n::hash_set<std::pair<n::route_idx_t, n::stop_idx_t>>{};
   for (auto const x : locations) {
     for (auto const r : tt.location_routes_[x]) {
-      if (blocked.test(tt.route_src_[r]) ||
+      if (blocked.routes_.test(r) ||
           !n::routing::is_allowed(allowed_clasz, tt.route_clasz_[r])) {
         continue;
       }
@@ -435,7 +435,7 @@ std::vector<n::rt::run> stop_times::get_runs(
 
   auto const allowed_clasz = to_clasz_mask(query.mode_);
   auto const blocked =
-      labels_.blocked(query.includeLabels_, query.excludeLabels_);
+      labels_.blocked(tt_, rtt, query.includeLabels_, query.excludeLabels_);
   auto const [dir, time] = parse_cursor(query.pageCursor_.value_or(fmt::format(
       "{}|{}",
       query.direction_

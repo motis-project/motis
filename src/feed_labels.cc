@@ -4,6 +4,8 @@
 
 #include "net/bad_request_exception.h"
 
+#include "nigiri/timetable.h"
+
 #include "motis/tag_lookup.h"
 
 namespace n = nigiri;
@@ -55,7 +57,9 @@ feed_labels::src_set feed_labels::resolve(
   return b;
 }
 
-feed_labels::src_set feed_labels::blocked(
+n::routing::blocked_feeds feed_labels::blocked(
+    n::timetable const& tt,
+    n::rt_timetable const* rtt,
     std::vector<std::string> const& include,
     std::vector<std::string> const& exclude) const {
   if (include.empty() && exclude.empty()) {
@@ -71,7 +75,7 @@ feed_labels::src_set feed_labels::blocked(
   }
   included &= ~resolve(exclude);
 
-  return ~included;
+  return n::routing::make_blocked_feeds(tt, rtt, ~included);
 }
 
 }  // namespace motis

@@ -62,11 +62,11 @@ api::stopInfo_response stop::operator()(
   auto const first_day = tt_.day_idx(tt_.date_range_.from_);
 
   auto const blocked =
-      labels_.blocked(query.includeLabels_, query.excludeLabels_);
+      labels_.blocked(tt_, nullptr, query.includeLabels_, query.excludeLabels_);
   for (auto const loc_idx : locations) {
     for (auto const r : tt_.location_routes_[loc_idx]) {
       auto const& range = tt_.route_transport_ranges_[r];
-      if (range.empty() || blocked.test(tt_.route_src_[r])) {
+      if (range.empty() || blocked.routes_.test(r)) {
         continue;
       }
 
