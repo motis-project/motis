@@ -138,20 +138,23 @@ api::Place to_place(n::timetable const* tt,
             }
             auto const get_track = [&](n::location_idx_t const x) {
               auto const p =
-                  tt->translate(lang, tt->locations_.platform_codes_.at(x));
+                  tt->translate(lang, tt->locations_.platform_codes_.at(
+                                          tt->locations_.get_attribute_idx(x)));
               return p.empty() ? std::nullopt : std::optional{std::string{p}};
             };
 
             auto const get_stop_code = [&](n::location_idx_t const x) {
               auto const p =
-                  tt->translate(lang, tt->locations_.stop_codes_.at(x));
+                  tt->translate(lang, tt->locations_.stop_codes_.at(
+                                          tt->locations_.get_attribute_idx(x)));
               return p.empty() ? std::nullopt : std::optional{std::string{p}};
             };
 
             // check if description is available, if not, return nullopt
             auto const get_description = [&](n::location_idx_t const x) {
               auto const p =
-                  tt->translate(lang, tt->locations_.descriptions_.at(x));
+                  tt->translate(lang, tt->locations_.descriptions_.at(
+                                          tt->locations_.get_attribute_idx(x)));
               return p.empty() ? std::nullopt : std::optional{std::string{p}};
             };
 
