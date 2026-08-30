@@ -571,8 +571,10 @@ api::Itinerary journey_to_response(
       p.alerts_ = get_alerts(*s.fr_, std::pair{s, ev_type}, false, lang);
       if (auto const it = is_unique.find(s.get_location_idx());
           it != end(is_unique) && !it->second) {
-        p.name_ =
-            tt.translate(lang, tt.locations_.names_[s.get_location_idx()]);
+        p.name_ = tt.translate(
+            lang,
+            tt.locations_
+                .names_[tt.locations_.get_attribute_idx(s.get_location_idx())]);
       }
       return p;
     };
