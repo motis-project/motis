@@ -41,7 +41,7 @@
 [openapi-cpp]
   url=git@github.com:triptix-tech/openapi-cpp.git
   branch=master
-  commit=22492d0eb82ea257e666c29e66c402a45d5d7e25
+  commit=3c162a21ccb37f167574750a6be7d7c339c93afe
 [opentelemetry-cpp]
   url=git@github.com:motis-project/opentelemetry-cpp.git
   branch=main
