@@ -11,7 +11,6 @@
 #include <vector>
 
 #include "cista/hashing.h"
-
 #include "utl/verify.h"
 
 namespace motis {
@@ -279,7 +278,7 @@ struct config {
   };
   std::optional<logging> logging_{};
 
-  bool osr_footpath_{false};
+  bool osr_footpath_{true};
   bool geocoding_{false};
   bool reverse_geocoding_{false};
 };
