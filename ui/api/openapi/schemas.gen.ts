@@ -1399,6 +1399,18 @@ export const RentalStationSchema = {
                 type: 'integer'
             }
         },
+        capacity: {
+            type: 'integer',
+            description: `Number of docks or parking spots at this station.
+`
+        },
+        numDocksAvailable: {
+            type: 'integer',
+            description: `Total number of free docks at this station, for feeds that publish
+the total instead of per vehicle type counts. Absent if the feed
+does not publish num_docks_available.
+`
+        },
         stationArea: {
             '$ref': '#/components/schemas/MultiPolygon'
         },

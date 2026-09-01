@@ -772,6 +772,90 @@ TEST(motis, gbfs_parser_station_status_count_only_creates_default_type) {
             provider.vehicle_types_.front().form_factor_);
 }
 
+TEST(motis, gbfs_parser_station_status_total_docks_fallback) {
+  auto provider = gbfs_provider{.id_ = "provider"};
+
+  load_station_information(provider, json::parse(R"({
+    "last_updated": 1,
+    "ttl": 60,
+    "version": "2.3",
+    "data": {
+      "stations": [
+        {"station_id": "station-1", "name": "A", "lat": 48.1, "lon": 11.5,
+         "capacity": 20},
+        {"station_id": "station-2", "name": "B", "lat": 48.2, "lon": 11.6,
+         "capacity": 25},
+        {"station_id": "station-3", "name": "C", "lat": 48.3, "lon": 11.7,
+         "capacity": 10},
+        {"station_id": "station-4", "name": "D", "lat": 48.4, "lon": 11.8}
+      ]
+    }
+  })"));
+
+  // station-1: docked feed publishing only the total (e.g. Velib Paris),
+  // full station. station-2: same layout with free docks. station-3: no dock
+  // information at all.
+  load_station_status(provider, json::parse(R"({
+    "last_updated": 1,
+    "ttl": 60,
+    "version": "2.3",
+    "data": {
+      "stations": [
+        {
+          "station_id": "station-1",
+          "num_bikes_available": 30,
+          "num_docks_available": 0,
+          "is_renting": true,
+          "is_returning": true
+        },
+        {
+          "station_id": "station-2",
+          "num_bikes_available": 3,
+          "num_docks_available": 22,
+          "is_renting": true,
+          "is_returning": true
+        },
+        {
+          "station_id": "station-3",
+          "num_bikes_available": 5,
+          "is_renting": true,
+          "is_returning": true
+        },
+        {
+          "station_id": "station-4",
+          "num_bikes_available": 6,
+          "num_docks_available": 0,
+          "is_renting": true,
+          "is_returning": true
+        }
+      ]
+    }
+  })"));
+
+  auto const& full = provider.stations_.at("station-1").status_;
+  ASSERT_TRUE(full.num_docks_available_.has_value());
+  EXPECT_EQ(0U, *full.num_docks_available_);
+  EXPECT_TRUE(full.vehicle_docks_available_.empty());
+
+  auto const& free = provider.stations_.at("station-2").status_;
+  ASSERT_TRUE(free.num_docks_available_.has_value());
+  EXPECT_EQ(22U, *free.num_docks_available_);
+
+  auto const& unknown = provider.stations_.at("station-3").status_;
+  EXPECT_FALSE(unknown.num_docks_available_.has_value());
+
+  // capacity is parsed and distinguishes docked stations from virtual ones
+  EXPECT_EQ(20U,
+            provider.stations_.at("station-1").info_.capacity_.value_or(0U));
+  EXPECT_FALSE(provider.stations_.at("station-4").info_.capacity_.has_value());
+
+  // station-4 reports 0 free docks but declares no capacity: it is a virtual
+  // station, so the total must not be treated as "full"
+  auto const& virt = provider.stations_.at("station-4").status_;
+  ASSERT_TRUE(virt.num_docks_available_.has_value());
+  EXPECT_EQ(0U, *virt.num_docks_available_);
+}
+
 TEST(motis, gbfs_parser_system_information_localized_name_and_defaults) {
   auto provider = gbfs_provider{.id_ = "fallback-id"};
 
