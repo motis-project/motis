@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
+#include <memory>
 #include <set>
 #include <sstream>
 #include <string_view>
@@ -1572,7 +1573,7 @@ awaitable<void> update(config const& c,
       std::cerr << trace << std::endl;
     }
   }
-  data_ptr = d;
+  std::atomic_store(&data_ptr, d);
   metrics->last_update_gbfs_.SetToCurrentTime();
 }
 

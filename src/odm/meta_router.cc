@@ -6,6 +6,7 @@
 #include "motis/odm/meta_router.h"
 
 #include <algorithm>
+#include <memory>
 #include <vector>
 
 #include "boost/asio/io_context.hpp"
@@ -118,7 +119,7 @@ meta_router::meta_router(ep::routing const& r,
                           ? nullptr
                           : rt_->rtt_.get()},
       e_{rt_->e_.get()},
-      gbfs_rd_{r.w_, r.l_, r.gbfs_},
+      gbfs_rd_{r.w_, r.l_, std::atomic_load(&r.gbfs_)},
       start_{query_.arriveBy_ ? to_ : from_},
       dest_{query_.arriveBy_ ? from_ : to_},
       start_modes_{query_.arriveBy_ ? post_transit_modes_ : pre_transit_modes_},
