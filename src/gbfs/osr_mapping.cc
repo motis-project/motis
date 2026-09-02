@@ -216,6 +216,13 @@ struct osr_mapping {
       }
     }
 
+    // during routing, the position of an edge in an additional node's edge
+    // list serves as its way position, so it can have at most kMaxWaysPerNode
+    // of them - the matches are sorted by distance, so this keeps the nearest
+    if (node_matches.size() > osr::kMaxWaysPerNode) {
+      node_matches.resize(osr::kMaxWaysPerNode);
+    }
+
     return node_matches;
   }
 
@@ -369,6 +376,7 @@ void map_data(osr::ways const& w,
   mapping.map_vehicles();
 
   prd.products_ = utl::to_vec(mapping.products_data_, [&](routing_data& rd) {
+    osr::verify_additional_edge_count(rd.additional_edges_, w.n_nodes());
     return compressed_routing_data{
         .additional_nodes_ = std::move(rd.additional_nodes_),
         .additional_node_coordinates_ =
