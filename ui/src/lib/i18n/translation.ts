@@ -204,6 +204,8 @@ export type Translations = {
 	};
 	tickets: string;
 	routeInformation: string;
+	history: string;
+	clearHistory: string;
 };
 
 const translations: Map<string, Translations> = new Map(
