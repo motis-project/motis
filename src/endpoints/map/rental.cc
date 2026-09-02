@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <memory>
 #include <set>
 #include <utility>
 #include <vector>
@@ -55,7 +56,7 @@ api::rentals_response rental::operator()(
   auto const filter_groups =
       query.providerGroups_.has_value() && !query.providerGroups_->empty();
 
-  auto gbfs = gbfs_;
+  auto gbfs = std::atomic_load(&gbfs_);
   auto res = api::rentals_response{};
 
   if (gbfs == nullptr) {
