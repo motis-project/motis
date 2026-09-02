@@ -1577,9 +1577,8 @@ awaitable<void> update(config const& c,
   metrics->last_update_gbfs_.SetToCurrentTime();
 }
 
-void apply_canned_gbfs_update(config const& c, data& d) {
-  if (!c.gbfs_.has_value() || !c.gbfs_->canned_gbfs_ || d.w_ == nullptr ||
-      d.l_ == nullptr) {
+void apply_gbfs_update(config const& c, data& d) {
+  if (!c.gbfs_.has_value() || d.w_ == nullptr || d.l_ == nullptr) {
     return;
   }
   auto ioc = boost::asio::io_context{};
@@ -1590,6 +1589,13 @@ void apply_canned_gbfs_update(config const& c, data& d) {
       },
       boost::asio::detached);
   ioc.run();
+}
+
+void apply_canned_gbfs_update(config const& c, data& d) {
+  if (!c.gbfs_.has_value() || !c.gbfs_->canned_gbfs_) {
+    return;
+  }
+  apply_gbfs_update(c, d);
 }
 
 void run_gbfs_update(boost::asio::io_context& ioc,
