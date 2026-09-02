@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <expected>
 #include <limits>
+#include <memory>
 #include <optional>
 #include <ranges>
 #include <string_view>
@@ -713,7 +714,8 @@ api::Itinerary reconstruct_itinerary(
           : prf_idx;
 
   auto stats = ep::stats_map_t{};
-  auto gbfs_rd = gbfs::gbfs_routing_data{routing.w_, routing.l_, routing.gbfs_};
+  auto gbfs_rd = gbfs::gbfs_routing_data{routing.w_, routing.l_,
+                                         std::atomic_load(&routing.gbfs_)};
   auto cache = street_routing_cache_t{};
 
   // needed to mark blocked elevator nodes in street routing

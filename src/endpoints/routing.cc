@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include <memory>
 #include <mutex>
 #include <optional>
 #include <variant>
@@ -827,7 +828,7 @@ api::plan_response routing::route(api::plan_params const& query,
                                   ? nullptr
                                   : rt->rtt_.get();
   auto const e = rt->e_.get();
-  auto gbfs_rd = gbfs::gbfs_routing_data{w_, l_, gbfs_};
+  auto gbfs_rd = gbfs::gbfs_routing_data{w_, l_, std::atomic_load(&gbfs_)};
   auto otm_searches = one_to_many_searches{};
   auto* const otm_start = &otm_searches[n::special_station::kStart];
   auto* const otm_dest = &otm_searches[n::special_station::kEnd];
