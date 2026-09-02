@@ -18,6 +18,7 @@
 
 #include "utl/erase_duplicates.h"
 #include "utl/helpers/algorithm.h"
+#include "utl/logging.h"
 #include "utl/timing.h"
 #include "utl/to_vec.h"
 
@@ -409,38 +410,45 @@ std::vector<n::routing::offset> get_offsets(
           continue;
         }
         auto provider_rd = std::shared_ptr<gbfs::provider_routing_data>{};
-        for (auto const& prod : provider->products_) {
-          if (!candidate_products.contains(
-                  gbfs::gbfs_products_ref{pi, prod.idx_})) {
-            continue;
-          }
-          if ((prod.return_constraint_ ==
-                   gbfs::return_constraint::kRoundtripStation &&
-               !ignore_rental_return_constraints) ||
-              !gbfs::products_match(prod, form_factors, propulsion_types)) {
-            continue;
-          }
-          if (!provider_rd) {
-            provider_rd = gbfs_rd.get_provider_routing_data(*provider);
-          }
-          auto const prod_ref = gbfs::gbfs_products_ref{pi, prod.idx_};
-          auto* prod_rd =
-              gbfs_rd.get_products_routing_data(*provider, prod.idx_);
-          auto const sharing = prod_rd->get_sharing_data(
-              r.w_->n_nodes(), ignore_rental_return_constraints);
+        try {
+          for (auto const& prod : provider->products_) {
+            if (!candidate_products.contains(
+                    gbfs::gbfs_products_ref{pi, prod.idx_})) {
+              continue;
+            }
+            if ((prod.return_constraint_ ==
+                     gbfs::return_constraint::kRoundtripStation &&
+                 !ignore_rental_return_constraints) ||
+                !gbfs::products_match(prod, form_factors, propulsion_types)) {
+              continue;
+            }
+            if (!provider_rd) {
+              provider_rd = gbfs_rd.get_provider_routing_data(*provider);
+            }
+            auto const prod_ref = gbfs::gbfs_products_ref{pi, prod.idx_};
+            auto* prod_rd =
+                gbfs_rd.get_products_routing_data(*provider, prod.idx_);
+            auto const sharing = prod_rd->get_sharing_data(
+                r.w_->n_nodes(), ignore_rental_return_constraints);
 
-          auto const mode = gbfs_rd.get_transport_mode(prod_ref);
-          auto const paths =
-              route(gbfs::get_osr_profile(prod.form_factor_), &sharing, mode);
-          ignore_walk = true;
-          for (auto const [p, l] : utl::zip(paths, near_stops)) {
-            if (p.has_value()) {
-              offsets.emplace_back(l,
-                                   n::duration_t{static_cast<unsigned>(
-                                       std::ceil(p->cost_ / 60.0))},
-                                   mode);
+            auto const mode = gbfs_rd.get_transport_mode(prod_ref);
+            auto const paths =
+                route(gbfs::get_osr_profile(prod.form_factor_), &sharing, mode);
+            ignore_walk = true;
+            for (auto const [p, l] : utl::zip(paths, near_stops)) {
+              if (p.has_value()) {
+                offsets.emplace_back(l,
+                                     n::duration_t{static_cast<unsigned>(
+                                         std::ceil(p->cost_ / 60.0))},
+                                     mode);
+              }
             }
           }
+        } catch (std::exception const& e) {
+          // one unusable provider (broken feed, routing data that cannot be
+          // built) must not fail the whole request - skip it and keep going
+          utl::log_error("motis.routing", "rental provider {}: {}",
+                         provider->id_, e.what());
         }
 
         stats.emplace(fmt::format("prepare_{}_{}_{}", to_str(dir),
