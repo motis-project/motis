@@ -387,6 +387,21 @@ TEST(motis, routing_unknown_feed_id) {
                        "&time=2019-05-01T01:30Z"
                        "&timetableView=false"),
                net::not_found_exception);
+
+  // all unknown location codes are collected and reported at once
+  try {
+    routing(
+        "?fromPlace=unknown_DA_10"
+        "&toPlace=test_UNKNOWN"
+        "&via=test_ALSO_UNKNOWN"
+        "&time=2019-05-01T01:30Z"
+        "&timetableView=false");
+    FAIL() << "expected net::not_found_exception";
+  } catch (net::not_found_exception const& e) {
+    EXPECT_EQ(
+        (json::array{"unknown_DA_10", "test_UNKNOWN", "test_ALSO_UNKNOWN"}),
+        e.payload_.at("unknownCodes").as_array());
+  }
 }
 
 TEST(motis, routing_post_client_offsets) {
@@ -434,6 +449,20 @@ TEST(motis, routing_post_client_offsets) {
     EXPECT_EQ("ICE", j.legs_[1].routeShortName_.value_or("-"));
     EXPECT_EQ(21 * 60, j.legs_.front().duration_);
     EXPECT_EQ(22 * 60, j.legs_.back().duration_);
+  }
+
+  // unknown offset stop ids are collected and reported at once
+  {
+    auto const body = to_body(api::PlanPostBody{
+        .fromOffsets_ = {{{.stopId_ = "test_UNKNOWN", .duration_ = 60}}},
+        .toOffsets_ = {{{.stopId_ = "test_ALSO_UNKNOWN", .duration_ = 60}}}});
+    try {
+      post(kUrl, body);
+      FAIL() << "expected net::not_found_exception";
+    } catch (net::not_found_exception const& e) {
+      EXPECT_EQ((json::array{"test_UNKNOWN", "test_ALSO_UNKNOWN"}),
+                e.payload_.at("unknownCodes").as_array());
+    }
   }
 
   // arriveBy=true: fromOffsets still attach to the fromPlace side (the
