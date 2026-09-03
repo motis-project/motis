@@ -2,6 +2,13 @@
 
 #include <variant>
 
+#include "boost/json/value_from.hpp"
+
+#include "fmt/format.h"
+#include "fmt/ranges.h"
+
+#include "net/not_found_exception.h"
+
 #include "utl/verify.h"
 
 #include "osr/location.h"
@@ -231,6 +238,41 @@ place_t get_place(n::timetable const* tt,
   utl::verify(tt != nullptr && tags != nullptr,
               R"(could not parse location (no timetable loaded): "{}")", input);
   return tt_location{tags->get_location(*tt, input)};
+}
+
+void verify_locations_exist(n::timetable const* tt,
+                            tag_lookup const* tags,
+                            std::vector<std::string_view> const& may_be_coords,
+                            std::vector<std::string_view> const& codes) {
+  if (tt == nullptr || tags == nullptr) {
+    return;  // get_place reports the missing timetable with a precise message
+  }
+
+  auto unknown = std::vector<std::string>{};
+  auto const check = [&](std::string_view const code) {
+    try {
+      if (!tags->find_location(*tt, code).has_value()) {
+        unknown.emplace_back(code);
+      }
+    } catch (net::not_found_exception const&) {  // unknown feed id
+      unknown.emplace_back(code);
+    }
+  };
+  for (auto const code : may_be_coords) {
+    if (!parse_location(code).has_value()) {
+      check(code);
+    }
+  }
+  for (auto const code : codes) {
+    check(code);
+  }
+
+  if (!unknown.empty()) {
+    throw net::not_found_exception{
+        fmt::format("Could not find timetable locations: {:?}",
+                    fmt::join(unknown, ", ")),
+        {{"unknownCodes", boost::json::value_from(unknown)}}};
+  }
 }
 
 api::Place bwd_compat_lvl_adjust(api::Place&& pl, unsigned const api_version) {

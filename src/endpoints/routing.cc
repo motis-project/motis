@@ -810,6 +810,22 @@ api::plan_response routing::route(api::plan_params const& query,
   auto const pre_transit_modes = deduplicate(query.preTransitModes_);
   auto const post_transit_modes = deduplicate(query.postTransitModes_);
   auto const direct_modes = deduplicate(query.directModes_);
+  auto codes = std::vector<std::string_view>{};
+  if (query.via_.has_value()) {
+    codes.assign(begin(*query.via_), end(*query.via_));
+  }
+  if (post_body != nullptr) {
+    for (auto const* offsets :
+         {&post_body->fromOffsets_, &post_body->toOffsets_}) {
+      if (offsets->has_value()) {
+        for (auto const& o : **offsets) {
+          codes.push_back(o.stopId_);
+        }
+      }
+    }
+  }
+  verify_locations_exist(tt_, tags_, {query.fromPlace_, query.toPlace_}, codes);
+
   auto const from = get_place(tt_, tags_, query.fromPlace_);
   auto const to = get_place(tt_, tags_, query.toPlace_);
   auto from_p = to_place(tt_, tags_, w_, pl_, matches_, ae_, tz_, lang, from);
