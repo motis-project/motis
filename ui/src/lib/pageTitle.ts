@@ -1,5 +1,7 @@
 import type { Location } from '$lib/Location';
 import type { Translations } from '$lib/i18n/translation';
+import type { Itinerary } from '@motis-project/motis-client';
+import { formatDateTimeWithTimeZone } from '$lib/toDateTime';
 
 export type PageTitleState = {
 	activeTab: 'connections' | 'departures' | 'isochrones';
@@ -9,9 +11,10 @@ export type PageTitleState = {
 	selectedStop?: { name: string };
 	stopArriveBy?: boolean;
 	stopName?: string;
+	selectedItinerary?: Itinerary;
 };
 
-const locationLabel = (location: Location): string => location.label || location.match?.name || '';
+const locationLabel = (location: Location): string => location.match?.name || location.label || '';
 
 export const getPageTitle = (state: PageTitleState, translations: Translations): string => {
 	const { pageTitle } = translations;
@@ -33,6 +36,13 @@ export const getPageTitle = (state: PageTitleState, translations: Translations):
 	if (state.activeTab === 'connections') {
 		const fromLabel = locationLabel(state.from);
 		const toLabel = locationLabel(state.to);
+		if (state.selectedItinerary) {
+			const it = state.selectedItinerary;
+			return pageTitle.fromTo(
+				`${fromLabel} (${formatDateTimeWithTimeZone(new Date(it.legs[0].startTime), it.legs[0].from.tz)})`,
+				`${toLabel} (${formatDateTimeWithTimeZone(new Date(it.legs[it.legs.length - 1].endTime), it.legs[it.legs.length - 1].to.tz)})`
+			);
+		}
 		if (fromLabel && toLabel) {
 			return pageTitle.fromTo(fromLabel, toLabel);
 		}

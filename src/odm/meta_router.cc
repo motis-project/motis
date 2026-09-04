@@ -5,6 +5,7 @@
 
 #include "motis/odm/meta_router.h"
 
+#include <algorithm>
 #include <vector>
 
 #include "boost/asio/io_context.hpp"
@@ -73,7 +74,6 @@ meta_router::meta_router(ep::routing const& r,
                          api::plan_params const& query,
                          std::vector<api::ModeEnum> const& pre_transit_modes,
                          std::vector<api::ModeEnum> const& post_transit_modes,
-                         std::vector<api::ModeEnum> const& direct_modes,
                          std::variant<osr::location, tt_location> const& from,
                          std::variant<osr::location, tt_location> const& to,
                          api::Place const& from_p,
@@ -92,7 +92,6 @@ meta_router::meta_router(ep::routing const& r,
       query_{query},
       pre_transit_modes_{pre_transit_modes},
       post_transit_modes_{post_transit_modes},
-      direct_modes_{direct_modes},
       from_{from},
       to_{to},
       from_place_{from_p},
@@ -152,7 +151,10 @@ meta_router::meta_router(ep::routing const& r,
                           : query_.ignorePostTransitRentalReturnConstraints_},
       dest_ignore_rental_return_constraints_{
           query.arriveBy_ ? query_.ignorePostTransitRentalReturnConstraints_
-                          : query_.ignorePreTransitRentalReturnConstraints_} {}
+                          : query_.ignorePreTransitRentalReturnConstraints_},
+      max_matching_distance_{
+          std::min(query_.maxMatchingDistance_,
+                   r_.config_.get_limits().max_max_matching_distance_)} {}
 
 meta_router::~meta_router() = default;
 
@@ -189,6 +191,7 @@ n::routing::query meta_router::get_base_query(
       .allowed_claszes_ = to_clasz_mask(query_.transitModes_),
       .require_bike_transport_ = query_.requireBikeTransport_,
       .require_car_transport_ = query_.requireCarTransport_,
+      .no_compulsory_reservation_ = query_.noCompulsoryReservation_,
       .transfer_time_settings_ =
           n::routing::transfer_time_settings{
               .default_ = (query_.minTransferTime_ == 0 &&
@@ -382,7 +385,7 @@ api::plan_response meta_router::run() {
                          start_ignore_rental_return_constraints_},
           params, query_.pedestrianProfile_, query_.elevationCosts_,
           query_.arriveBy_ ? post_transit_time : pre_transit_time,
-          query_.maxMatchingDistance_, gbfs_rd_, prepare_stats),
+          max_matching_distance_, gbfs_rd_, prepare_stats),
       .dest_walk_ = r_.get_offsets(
           rtt_, dest_,
           query_.arriveBy_ ? osr::direction::kForward
@@ -393,13 +396,13 @@ api::plan_response meta_router::run() {
                          dest_ignore_rental_return_constraints_},
           params, query_.pedestrianProfile_, query_.elevationCosts_,
           query_.arriveBy_ ? pre_transit_time : post_transit_time,
-          query_.maxMatchingDistance_, gbfs_rd_, prepare_stats),
+          max_matching_distance_, gbfs_rd_, prepare_stats),
       .td_start_walk_ = r_.get_td_offsets(
           rtt_, e_, start_,
           query_.arriveBy_ ? osr::direction::kBackward
                            : osr::direction::kForward,
           start_modes_, params, query_.pedestrianProfile_,
-          query_.elevationCosts_, query_.maxMatchingDistance_,
+          query_.elevationCosts_, max_matching_distance_,
           query_.arriveBy_ ? post_transit_time : pre_transit_time,
           context_intvl, prepare_stats),
       .td_dest_walk_ = r_.get_td_offsets(
@@ -407,7 +410,7 @@ api::plan_response meta_router::run() {
           query_.arriveBy_ ? osr::direction::kForward
                            : osr::direction::kBackward,
           dest_modes_, params, query_.pedestrianProfile_,
-          query_.elevationCosts_, query_.maxMatchingDistance_,
+          query_.elevationCosts_, max_matching_distance_,
           query_.arriveBy_ ? pre_transit_time : post_transit_time,
           context_intvl, prepare_stats),
       .start_taxi_short_ =
@@ -529,7 +532,7 @@ api::plan_response meta_router::run() {
                 query_.detailedLegs_, query_.withFares_,
                 query_.withScheduledSkippedStops_,
                 r_.config_.timetable_.value().max_matching_distance_,
-                query_.maxMatchingDistance_, api_version_,
+                max_matching_distance_, api_version_,
                 query_.ignorePreTransitRentalReturnConstraints_,
                 query_.ignorePostTransitRentalReturnConstraints_,
                 query_.language_);

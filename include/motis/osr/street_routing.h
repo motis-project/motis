@@ -61,8 +61,11 @@ struct default_output final : public output {
   nigiri::transport_mode_id_t id_;
 };
 
-using street_routing_cache_key_t = std::
-    tuple<osr::location, osr::location, transport_mode_t, nigiri::unixtime_t>;
+using street_routing_cache_key_t = std::tuple<osr::location,
+                                              osr::location,
+                                              transport_mode_t,
+                                              nigiri::unixtime_t,
+                                              osr::direction>;
 
 using street_routing_cache_t =
     hash_map<street_routing_cache_key_t, std::optional<osr::path>>;

@@ -7,6 +7,7 @@ export const ModeSchema = {
   - \`BIKE\`
   - \`RENTAL\` Experimental. Expect unannounced breaking changes (without version bumps) for all parameters and returned structs.
   - \`CAR\`
+  - \`HGV\` Heavy goods vehicles (only supported for direct connections)
   - \`CAR_PARKING\` Experimental. Expect unannounced breaking changes (without version bumps) for all parameters and returned structs.
   - \`CAR_DROPOFF\` Experimental. Expect unannounced breaking changes (without version bumps) for all perameters and returned structs.
   - \`ODM\` on-demand taxis from the Prima+ÖV Project
@@ -15,7 +16,7 @@ export const ModeSchema = {
 
 # Transit modes
 
-  - \`TRANSIT\`: translates to \`TRAM,FERRY,AIRPLANE,BUS,COACH,RAIL,ODM,FUNICULAR,AERIAL_LIFT,OTHER\`
+  - \`TRANSIT\`: translates to \`TRAM,FERRY,AIRPLANE,BUS,COACH,RAIL,ODM,RIDE_SHARING,FUNICULAR,AERIAL_LIFT,OTHER\`
   - \`TRAM\`: trams
   - \`SUBWAY\`: subway trains (Paris Metro, London Underground, but also NYC Subway, Hamburger Hochbahn, and other non-underground services)
   - \`FERRY\`: ferries
@@ -30,6 +31,7 @@ export const ModeSchema = {
   - \`REGIONAL_RAIL\`: regional train
   - \`SUBURBAN\`: suburban trains (e.g. S-Bahn, RER, Elizabeth Line, ...)
   - \`ODM\`: demand responsive transport
+  - \`RIDE_SHARING\`: ride sharing
   - \`FUNICULAR\`: Funicular. Any rail system designed for steep inclines.
   - \`AERIAL_LIFT\`: Aerial lift, suspended cable car (e.g., gondola lift, aerial tramway). Cable transport where cabins, cars, gondolas or open chairs are suspended by means of one or more cables.
   - \`AREAL_LIFT\`: deprecated
@@ -37,7 +39,7 @@ export const ModeSchema = {
   - \`CABLE_CAR\`: deprecated
 `,
     type: 'string',
-    enum: ['WALK', 'BIKE', 'RENTAL', 'CAR', 'CAR_PARKING', 'CAR_DROPOFF', 'ODM', 'RIDE_SHARING', 'FLEX', 'DEBUG_BUS_ROUTE', 'DEBUG_RAILWAY_ROUTE', 'DEBUG_FERRY_ROUTE', 'TRANSIT', 'TRAM', 'SUBWAY', 'FERRY', 'AIRPLANE', 'BUS', 'COACH', 'RAIL', 'HIGHSPEED_RAIL', 'LONG_DISTANCE', 'NIGHT_RAIL', 'REGIONAL_FAST_RAIL', 'REGIONAL_RAIL', 'SUBURBAN', 'FUNICULAR', 'AERIAL_LIFT', 'OTHER', 'AREAL_LIFT', 'METRO', 'CABLE_CAR']
+    enum: ['WALK', 'BIKE', 'RENTAL', 'CAR', 'HGV', 'CAR_PARKING', 'CAR_DROPOFF', 'ODM', 'RIDE_SHARING', 'FLEX', 'DEBUG_BUS_ROUTE', 'DEBUG_RAILWAY_ROUTE', 'DEBUG_FERRY_ROUTE', 'TRANSIT', 'TRAM', 'SUBWAY', 'FERRY', 'AIRPLANE', 'BUS', 'COACH', 'RAIL', 'HIGHSPEED_RAIL', 'LONG_DISTANCE', 'NIGHT_RAIL', 'REGIONAL_FAST_RAIL', 'REGIONAL_RAIL', 'SUBURBAN', 'FUNICULAR', 'AERIAL_LIFT', 'OTHER', 'AREAL_LIFT', 'METRO', 'CABLE_CAR']
 } as const;
 
 export const RouteSchema = {
@@ -449,11 +451,13 @@ Using a elevation cost profile will prefer routes with a smaller incline and sma
 export const RealtimeModeSchema = {
     description: `Controls whether realtime data (delays, cancellations, added/changed trips) is used.
 
-- \`REALTIME\`: use realtime data.
-- \`OFF\`: use the scheduled timetable only.
+- \`REALTIME\`: use realtime data for routing/sorting.
+- \`REALTIME_ANNOTATION_ONLY\`: route, sort and window on the scheduled
+  timetable only, but still annotate the response with realtime data.
+- \`OFF\`: use the scheduled timetable only, with no realtime annotation.
 `,
     type: 'string',
-    enum: ['OFF', 'REALTIME']
+    enum: ['OFF', 'REALTIME_ANNOTATION_ONLY', 'REALTIME']
 } as const;
 
 export const PedestrianProfileSchema = {
@@ -472,6 +476,61 @@ export const CyclingSpeedSchema = {
     type: 'number'
 } as const;
 
+export const VehicleHeightSchema = {
+    description: 'Vehicle height for HGV routing in meters',
+    type: 'number'
+} as const;
+
+export const VehicleWidthSchema = {
+    description: 'Vehicle width for HGV routing in meters',
+    type: 'number'
+} as const;
+
+export const VehicleLengthSchema = {
+    description: 'Vehicle length for HGV routing in meters',
+    type: 'number'
+} as const;
+
+export const VehicleWeightSchema = {
+    description: 'Vehicle gross weight for HGV routing in tons',
+    type: 'number'
+} as const;
+
+export const VehicleHazmatSchema = {
+    description: 'Whether the vehicle carries hazardous materials for HGV routing',
+    type: 'boolean'
+} as const;
+
+export const VehicleHazmatWaterSchema = {
+    description: 'Whether the vehicle carries hazardous materials dangerous to water for HGV routing',
+    type: 'boolean'
+} as const;
+
+export const VehicleAxleCountSchema = {
+    description: 'Axle count for HGV routing',
+    type: 'integer'
+} as const;
+
+export const VehicleAxleLoadSchema = {
+    description: 'Maximum axle load for HGV routing in tons',
+    type: 'number'
+} as const;
+
+export const VehicleTrailerSchema = {
+    description: 'Whether the vehicle has a trailer for HGV routing',
+    type: 'boolean'
+} as const;
+
+export const VehicleTopSpeedSchema = {
+    description: 'Vehicle top speed for HGV routing in km/h',
+    type: 'integer'
+} as const;
+
+export const VehicleLezAccessSchema = {
+    description: 'Whether the vehicle is allowed to use low-emission zones for HGV routing',
+    type: 'boolean'
+} as const;
+
 export const VertexTypeSchema = {
     type: 'string',
     description: `- \`NORMAL\` - latitude / longitude coordinate or address
@@ -487,6 +546,16 @@ export const PickupDropoffTypeSchema = {
 - \`NOT_ALLOWED\` - entry/exit is not allowed
 `,
     enum: ['NORMAL', 'NOT_ALLOWED']
+} as const;
+
+export const WheelchairAccessibilitySchema = {
+    type: 'string',
+    enum: ['ACCESSIBLE', 'NOT_ACCESSIBLE']
+} as const;
+
+export const ReservationSchema = {
+    type: 'string',
+    enum: ['NONE', 'COMPULSORY']
 } as const;
 
 export const PlaceSchema = {
@@ -669,7 +738,7 @@ export const ReachableSchema = {
 export const StopTimeSchema = {
     description: 'departure or arrival event at a stop',
     type: 'object',
-    required: ['place', 'mode', 'realTime', 'headsign', 'tripFrom', 'tripTo', 'agencyId', 'agencyName', 'agencyUrl', 'tripId', 'routeId', 'directionId', 'routeShortName', 'routeLongName', 'tripShortName', 'displayName', 'pickupDropoffType', 'cancelled', 'tripCancelled', 'source'],
+    required: ['place', 'mode', 'realTime', 'headsign', 'tripFrom', 'tripTo', 'agencyId', 'agencyName', 'agencyUrl', 'tripId', 'routeId', 'directionId', 'routeShortName', 'routeLongName', 'tripShortName', 'displayName', 'pickupDropoffType', 'cancelled', 'tripCancelled', 'bikesAllowed', 'wheelchairAccessible', 'reservation', 'source'],
     properties: {
         place: {
             '$ref': '#/components/schemas/Place',
@@ -770,6 +839,29 @@ Stops on the trips after this stop. Returned only if \`fetchStop\` is \`true\` a
         tripCancelled: {
             description: 'Whether the entire trip is cancelled due to the realtime situation.',
             type: 'boolean'
+        },
+        loopedCalendarSince: {
+            description: `If set, this attribute indicates that this trip has been expanded
+beyond the feed end date (enabled by config flag \`timetable.dataset.extend_calendar\`)
+by looping active weekdays, e.g. from calendar.txt in GTFS.
+`,
+            type: 'string',
+            format: 'date-time'
+        },
+        bikesAllowed: {
+            description: `Whether bikes can be carried on this trip.
+`,
+            type: 'boolean'
+        },
+        wheelchairAccessible: {
+            description: `Whether wheelchairs can be transported on this trip.
+`,
+            '$ref': '#/components/schemas/WheelchairAccessibility'
+        },
+        reservation: {
+            description: `Information about compulsory or possible reservation.
+`,
+            '$ref': '#/components/schemas/Reservation'
         },
         source: {
             description: 'Filename and line number where this trip is from',
@@ -904,7 +996,15 @@ export const StepInstructionSchema = {
             type: 'number'
         },
         osmWay: {
-            description: 'OpenStreetMap way index',
+            description: 'OpenStreetMap way ID',
+            type: 'integer'
+        },
+        fromOsmNode: {
+            description: 'OpenStreetMap node ID where this segment starts',
+            type: 'integer'
+        },
+        toOsmNode: {
+            description: 'OpenStreetMap node ID where this segment ends',
             type: 'integer'
         },
         polyline: {
@@ -952,11 +1052,6 @@ See: https://wiki.openstreetmap.org/wiki/Conditional_restrictions
             description: 'decline in meters across this path segment'
         }
     }
-} as const;
-
-export const WheelchairAccessibilitySchema = {
-    type: 'string',
-    enum: ['ACCESSIBLE', 'NOT_ACCESSIBLE']
 } as const;
 
 export const RentalFormFactorSchema = {
@@ -1451,6 +1546,21 @@ For NeTEx it contains information about the vehicle category, e.g. IC/InterCity
     }
 } as const;
 
+export const TicketUrlsSchema = {
+    type: 'object',
+    properties: {
+        web: {
+            type: 'string'
+        },
+        android: {
+            type: 'string'
+        },
+        ios: {
+            type: 'string'
+        }
+    }
+} as const;
+
 export const LegSchema = {
     type: 'object',
     required: ['mode', 'startTime', 'endTime', 'scheduledStartTime', 'scheduledEndTime', 'realTime', 'scheduled', 'duration', 'from', 'to', 'legGeometry'],
@@ -1560,6 +1670,9 @@ For non-transit legs, null
         agencyUrl: {
             type: 'string'
         },
+        agencyFareUrl: {
+            type: 'string'
+        },
         agencyId: {
             type: 'string'
         },
@@ -1651,6 +1764,16 @@ by looping active weekdays, e.g. from calendar.txt in GTFS.
             description: `Whether wheelchairs can be transported on this leg.
 `,
             '$ref': '#/components/schemas/WheelchairAccessibility'
+        },
+        reservation: {
+            description: `Information about compulsory or possible reservation.
+`,
+            '$ref': '#/components/schemas/Reservation'
+        },
+        ticketUrls: {
+            '$ref': '#/components/schemas/TicketUrls',
+            description: `Ticket booking links for different platforms
+`
         },
         alternatives: {
             description: `Alternative connections that can replace this transit leg.
@@ -1905,6 +2028,66 @@ query parameters (same as the \`refreshItinerary\` GET endpoint).
     }
 } as const;
 
+export const PlanOffsetSchema = {
+    description: `A client-computed first/last mile option: the given transit stop can
+be reached from the query coordinate (or vice versa) with the given
+duration and mode.
+`,
+    type: 'object',
+    required: ['stopId', 'duration'],
+    properties: {
+        stopId: {
+            description: `stop id of the transit stop
+(parent stations are expanded to their child stops)
+`,
+            type: 'string'
+        },
+        duration: {
+            description: 'duration in seconds',
+            type: 'integer',
+            minimum: 0
+        },
+        mode: {
+            description: `mode used to reach the stop, used to render the first/last mile
+leg (supported: \`WALK\`, \`BIKE\`, \`CAR\`)
+`,
+            '$ref': '#/components/schemas/Mode',
+            default: 'WALK'
+        }
+    }
+} as const;
+
+export const PlanPostBodySchema = {
+    description: `Body for the \`planPost\` endpoint. Carries only the optional offset
+lists; all routing parameters are passed as query parameters (same as
+the \`plan\` GET endpoint). An absent or empty list keeps the default
+behavior (offsets computed by the server) for that side, so an empty
+body \`{}\` is equivalent to the GET endpoint.
+`,
+    type: 'object',
+    properties: {
+        fromOffsets: {
+            description: `Offsets for the \`fromPlace\` side: transit stops reachable from
+\`fromPlace\`, replacing the server-side first mile computation.
+`,
+            type: 'array',
+            items: {
+                '$ref': '#/components/schemas/PlanOffset'
+            }
+        },
+        toOffsets: {
+            description: `Offsets for the \`toPlace\` side: transit stops from which
+\`toPlace\` can be reached, replacing the server-side last mile
+computation.
+`,
+            type: 'array',
+            items: {
+                '$ref': '#/components/schemas/PlanOffset'
+            }
+        }
+    }
+} as const;
+
 export const ItinerarySchema = {
     type: 'object',
     required: ['duration', 'startTime', 'endTime', 'transfers', 'id', 'legs'],
@@ -2032,7 +2215,10 @@ The number of accepted locations is limited by server config variable \`onetoman
             type: 'number'
         },
         maxMatchingDistance: {
-            description: 'maximum matching distance in meters to match geo coordinates to the street network',
+            description: `maximum matching distance in meters to match geo coordinates to the street network
+
+Is limited by server config variable \`max_max_matching_distance\`, larger values are capped to this limit.
+`,
             type: 'number'
         },
         elevationCosts: {
@@ -2126,9 +2312,12 @@ it can lead to slow routing performance.
             type: 'integer'
         },
         maxMatchingDistance: {
-            description: 'maximum matching distance in meters to match geo coordinates to the street network',
+            description: `maximum matching distance in meters to match geo coordinates to the street network
+
+Is limited by server config variable \`max_max_matching_distance\`, larger values are capped to this limit.
+`,
             type: 'number',
-            default: 25
+            default: 250
         },
         arriveBy: {
             description: `Optional. Defaults to false, i.e. one to many search
@@ -2211,6 +2400,39 @@ Average speed for pedestrian routing.
 Average speed for bike routing.
 `,
             '$ref': '#/components/schemas/CyclingSpeed'
+        },
+        vehicleHeight: {
+            '$ref': '#/components/schemas/VehicleHeight'
+        },
+        vehicleWidth: {
+            '$ref': '#/components/schemas/VehicleWidth'
+        },
+        vehicleLength: {
+            '$ref': '#/components/schemas/VehicleLength'
+        },
+        vehicleWeight: {
+            '$ref': '#/components/schemas/VehicleWeight'
+        },
+        vehicleHazmat: {
+            '$ref': '#/components/schemas/VehicleHazmat'
+        },
+        vehicleHazmatWater: {
+            '$ref': '#/components/schemas/VehicleHazmatWater'
+        },
+        vehicleAxleCount: {
+            '$ref': '#/components/schemas/VehicleAxleCount'
+        },
+        vehicleAxleLoad: {
+            '$ref': '#/components/schemas/VehicleAxleLoad'
+        },
+        vehicleTrailer: {
+            '$ref': '#/components/schemas/VehicleTrailer'
+        },
+        vehicleTopSpeed: {
+            '$ref': '#/components/schemas/VehicleTopSpeed'
+        },
+        vehicleLezAccess: {
+            '$ref': '#/components/schemas/VehicleLezAccess'
         },
         elevationCosts: {
             description: `Optional. Default is \`NONE\`.
@@ -2331,6 +2553,14 @@ If set to \`true\`, all used transit trips are required to allow bike carriage.
             description: `Optional. Default is \`false\`.
 
 If set to \`true\`, all used transit trips are required to allow car carriage.
+`,
+            type: 'boolean',
+            default: false
+        },
+        noCompulsoryReservation: {
+            description: `Optional. Default is \`false\`.
+
+If set to \`true\`, all used transit trips are required to be usable without compulsory reservation.
 `,
             type: 'boolean',
             default: false

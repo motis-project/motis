@@ -70,12 +70,25 @@ const translations: Translations = {
 	selectTransitModes: 'Select transit modes',
 	defaultSelectedModes: 'All transit modes',
 	defaultSelectedProviders: 'All providers',
-	selectElevationCosts: 'Avoid steep incline.',
+	selectElevationCosts: 'Avoid steep incline',
+	hgvRoutingOptions: 'HGV options',
+	vehicleHeight: 'Vehicle height (m)',
+	vehicleWidth: 'Vehicle width (m)',
+	vehicleLength: 'Vehicle length (m)',
+	vehicleWeight: 'Vehicle weight (t)',
+	vehicleTopSpeed: 'Top speed (km/h)',
+	vehicleAxleCount: 'Axle count',
+	vehicleAxleLoad: 'Axle load (t)',
+	vehicleHazmat: 'Hazardous materials',
+	vehicleHazmatWater: 'Hazardous to water',
+	vehicleTrailer: 'Has trailer',
+	vehicleLezAccess: 'Low-emission zone access',
 	useRoutedTransfers: 'Use routed transfers',
 	wheelchair: 'Only wheelchair accessible connections',
 	bikeRental: 'Allow usage of sharing vehicles',
 	requireBikeTransport: 'Bike carriage',
 	requireCarTransport: 'Car carriage',
+	noCompulsoryReservation: 'No reservation required',
 	considerRentalReturnConstraints: 'Return rental vehicles within journey',
 	default: 'Default',
 	timetableSources: 'Timetable sources',
@@ -94,6 +107,7 @@ const translations: Translations = {
 	RENTAL: 'Sharing',
 	RIDE_SHARING: 'Ride sharing',
 	CAR: 'Car',
+	HGV: 'HGV',
 	CAR_PARKING: 'Car Parking',
 	CAR_DROPOFF: 'Drop-off (car)',
 	TRANSIT: 'Transit',
@@ -141,13 +155,9 @@ const translations: Translations = {
 		LOW: 'Small detours',
 		HIGH: 'Large detours'
 	},
+	isochronesOpacity: 'Isochrones Opacity',
 	isochrones: {
 		title: 'Isochrones',
-		displayLevel: 'Display level',
-		maxComputeLevel: 'Max. computation level',
-		canvasRects: 'Rects (Overlay)',
-		canvasCircles: 'Circles (Overlay)',
-		geojsonCircles: 'Circles (Geometry)',
 		styling: 'Isochrones styling',
 		noData: 'No data',
 		requestFailed: 'Request failed'
@@ -162,6 +172,7 @@ const translations: Translations = {
 	toll: 'Warning! A fee must be paid to use this route.',
 	bikesAllowed: 'Bikes allowed',
 	wheelchairAccessible: 'Wheelchair accessible',
+	compulsoryReservation: 'Reservation necessary',
 	accessRestriction: 'No access',
 	continuesAs: 'Continues as',
 	earlierAlternatives: 'Earlier alternatives',
@@ -183,6 +194,7 @@ const translations: Translations = {
 		route: 'Timetable: Line Colors',
 		mode: 'Timetable: Transport Modes'
 	},
+	resetToNorth: 'Reset to north',
 	showMyLocation: 'Show my location',
 	toggleHillshades: 'Toggle hillshades overlay',
 	routes: (n: number) => {
@@ -201,7 +213,9 @@ const translations: Translations = {
 		departuresAt: (stop) => `Departures in ${stop}`,
 		arrivalsAt: (stop) => `Arrivals in ${stop}`,
 		isochronesFrom: (place) => `Isochrones from ${place}`
-	}
+	},
+	tickets: 'Tickets',
+	routeInformation: 'More Information'
 };
 
 export default translations;

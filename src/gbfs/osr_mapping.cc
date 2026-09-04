@@ -29,13 +29,8 @@
 namespace motis::gbfs {
 
 struct node_match {
-  osr::way_candidate const& way() const { return wc_; }
-  osr::node_candidate const& node() const {
-    return left_ ? wc_.left_ : wc_.right_;
-  }
-
-  osr::way_candidate wc_;
-  bool left_{};
+  osr::way_idx_t way_{osr::way_idx_t::invalid()};
+  osr::candidate_node node_{};
 };
 
 struct osr_mapping {
@@ -55,37 +50,26 @@ struct osr_mapping {
       return bv;
     };
 
+    auto global_rules = std::vector<rule>{};
     auto zone_rtree = box_rtree<std::size_t>{};
     for (auto const [i, z] :
          utl::enumerate(provider_.geofencing_zones_.zones_)) {
       zone_rtree.add(z.bounding_box(), i);
+      if (z.is_global() && provider_.geofencing_zones_.zones_.size() != 1) {
+        global_rules.insert(global_rules.begin(), z.rules_.begin(),
+                            z.rules_.end());
+      }
     }
+    global_rules.insert(global_rules.end(),
+                        provider_.geofencing_zones_.global_rules_.begin(),
+                        provider_.geofencing_zones_.global_rules_.end());
 
     for (auto [prod, rd] : utl::zip(provider_.products_, products_data_)) {
-      auto default_restrictions = provider_.default_restrictions_;
+      auto default_restrictions =
+          get_default_restrictions(provider_, prod, global_rules);
       rd.start_allowed_ = make_loc_bitvec();
       rd.end_allowed_ = make_loc_bitvec();
       rd.through_allowed_ = make_loc_bitvec();
-
-      // global rules
-      for (auto const& r : provider_.geofencing_zones_.global_rules_) {
-        if (!applies(r.vehicle_type_idxs_, prod.vehicle_types_)) {
-          continue;
-        }
-        default_restrictions.ride_start_allowed_ = r.ride_start_allowed_;
-        default_restrictions.ride_end_allowed_ = r.ride_end_allowed_;
-        default_restrictions.ride_through_allowed_ = r.ride_through_allowed_;
-        default_restrictions.station_parking_ = r.station_parking_;
-        break;
-      }
-
-      if ((prod.return_constraint_ == return_constraint::kAnyStation ||
-           prod.return_constraint_ == return_constraint::kRoundtripStation) &&
-          (prod.known_return_constraint_ ||
-           provider_.geofencing_zones_.zones_.empty()) &&
-          !default_restrictions.station_parking_.has_value()) {
-        default_restrictions.station_parking_ = true;
-      }
 
       if (default_restrictions.ride_end_allowed_ &&
           !default_restrictions.station_parking_.value_or(false)) {
@@ -105,38 +89,40 @@ struct osr_mapping {
     zone_indices.reserve(provider_.geofencing_zones_.zones_.size());
     auto const handle_point = [&](osr::node_idx_t const n,
                                   geo::latlng const& pos) {
+      // zones have to be checked in the order they are defined
+      zone_indices.clear();
+      zone_rtree.find(pos, [&](std::size_t const zone_idx) {
+        auto const& z = provider_.geofencing_zones_.zones_[zone_idx];
+        if (multipoly_contains_point(z.geom_.get(), pos)) {
+          zone_indices.push_back(zone_idx);
+        }
+      });
+      if (zone_indices.empty()) {
+        return;
+      }
+      utl::sort(zone_indices);
+
       for (auto [prod, rd] : utl::zip(provider_.products_, products_data_)) {
         auto start_allowed = std::optional<bool>{};
         auto end_allowed = std::optional<bool>{};
         auto through_allowed = std::optional<bool>{};
         auto station_parking = rd.station_parking_;
-
-        // zones have to be checked in the order they are defined
-        zone_indices.clear();
-        zone_rtree.find(pos, [&](std::size_t const zone_idx) {
-          zone_indices.push_back(zone_idx);
-        });
-        utl::sort(zone_indices);
-
         for (auto const zone_idx : zone_indices) {
           auto const& z = provider_.geofencing_zones_.zones_[zone_idx];
-          // check if pos is inside the zone multipolygon
-          if (multipoly_contains_point(z.geom_.get(), pos)) {
-            for (auto const& r : z.rules_) {
-              if (!applies(r.vehicle_type_idxs_, prod.vehicle_types_)) {
-                continue;
-              }
-              if (r.station_parking_.has_value()) {
-                station_parking = r.station_parking_.value();
-              }
-              start_allowed = r.ride_start_allowed_;
-              end_allowed = r.ride_end_allowed_ && !station_parking;
-              through_allowed = r.ride_through_allowed_;
-              break;
+          for (auto const& r : z.rules_) {
+            if (!applies(r.vehicle_type_idxs_, prod.vehicle_types_)) {
+              continue;
             }
-            if (start_allowed.has_value()) {
-              break;  // for now
+            if (r.station_parking_.has_value()) {
+              station_parking = r.station_parking_.value();
             }
+            start_allowed = r.ride_start_allowed_;
+            end_allowed = r.ride_end_allowed_ && !station_parking;
+            through_allowed = r.ride_through_allowed_;
+            break;
+          }
+          if (start_allowed.has_value()) {
+            break;  // for now
           }
         }
         if (end_allowed.has_value()) {
@@ -150,14 +136,19 @@ struct osr_mapping {
 
     auto const* osr_r = w_.r_.get();
     for (auto const& z : provider_.geofencing_zones_.zones_) {
-      l_.find(z.bounding_box(), [&](osr::way_idx_t const way) {
-        for (auto const n : osr_r->way_nodes_[way]) {
-          if (done.test(n)) {
-            continue;
+      if (z.is_global() && provider_.geofencing_zones_.zones_.size() != 1) {
+        continue;
+      }
+      multipoly_split_bboxes(z.geom_.get(), [&](geo::box const& bb) {
+        l_.find(bb, [&](osr::way_idx_t const way) {
+          for (auto const n : osr_r->way_nodes_[way]) {
+            if (done.test(n)) {
+              continue;
+            }
+            done.set(n, true);
+            handle_point(n, w_.get_node_pos(n).as_latlng());
           }
-          done.set(n, true);
-          handle_point(n, w_.get_node_pos(n).as_latlng());
-        }
+        });
       });
     }
   }
@@ -168,50 +159,56 @@ struct osr_mapping {
     static constexpr auto foot_params = osr::bike_sharing::footp::parameters{};
     static constexpr auto bike_params = osr::bike_sharing::bikep::parameters{};
 
-    auto is_acceptable_node = [&](osr::node_candidate const& n) {
+    auto is_acceptable_node = [&](osr::candidate_node const& n) {
       if (!n.valid() || n.dist_to_node_ > kMaxGbfsMatchingDistance) {
         return false;
       }
       auto const& node_props = w_.r_->node_properties_[n.node_];
-      if (footp::node_cost(foot_params, node_props) == osr::kInfeasible ||
-          bikep::node_cost(bike_params, node_props) == osr::kInfeasible) {
+      if (footp::node_cost(foot_params, node_props).cost_ == osr::kInfeasible ||
+          bikep::node_cost(bike_params, node_props).cost_ == osr::kInfeasible) {
         return false;
       }
       // node needs to have at least one way accessible by foot and one by bike
       return utl::any_of(w_.r_->node_ways_[n.node_],
                          [&](auto const way_idx) {
                            return footp::way_cost(
-                                      footp::parameters{},
-                                      w_.r_->way_properties_[way_idx],
-                                      osr::direction::kForward,
-                                      0U) != osr::kInfeasible;
+                                      foot_params, *w_.r_, w_.timezones_,
+                                      way_idx, w_.r_->way_properties_[way_idx],
+                                      osr::direction::kForward, 0U,
+                                      std::nullopt, osr::duration_t{0},
+                                      osr::direction::kForward)
+                                      .cost_ != osr::kInfeasible;
                          }) &&
              utl::any_of(w_.r_->node_ways_[n.node_], [&](auto const way_idx) {
-               return bikep::way_cost(
-                          bikep::parameters{}, w_.r_->way_properties_[way_idx],
-                          osr::direction::kForward, 0U) != osr::kInfeasible;
+               return bikep::way_cost(bike_params, *w_.r_, w_.timezones_,
+                                      way_idx, w_.r_->way_properties_[way_idx],
+                                      osr::direction::kForward, 0U,
+                                      std::nullopt, osr::duration_t{0},
+                                      osr::direction::kForward)
+                          .cost_ != osr::kInfeasible;
              });
     };
 
-    auto const matches = l_.match<footp>(footp::parameters{}, loc, false,
-                                         osr::direction::kForward,
-                                         kMaxGbfsMatchingDistance, nullptr);
+    auto matches = osr::match_result{};
+    l_.complete_match<footp>(footp::parameters{}, loc, false,
+                             osr::direction::kForward, kMaxGbfsMatchingDistance,
+                             nullptr, std::nullopt, {}, matches);
+    auto const m = matches[osr::match_idx_t{0U}];
     auto node_matches = std::vector<node_match>{};
-    for (auto const& m : matches) {
-      if (is_acceptable_node(m.left_)) {
-        node_matches.emplace_back(node_match{m, true});
-      }
-      if (is_acceptable_node(m.right_)) {
-        node_matches.emplace_back(node_match{m, false});
+    for (auto j = std::size_t{0U}; j != m.size(); ++j) {
+      for (auto const& nc : {m.left(j), m.right(j)}) {
+        if (is_acceptable_node(nc)) {
+          node_matches.emplace_back(node_match{m.way_[j], nc});
+        }
       }
     }
     utl::sort(node_matches, [](auto const& a, auto const& b) {
-      return a.node().dist_to_node_ < b.node().dist_to_node_;
+      return a.node_.dist_to_node_ < b.node_.dist_to_node_;
     });
 
     auto connected_components = hash_set<osr::component_idx_t>{};
     for (auto it = node_matches.begin(); it != node_matches.end();) {
-      auto const component = w_.r_->way_component_[it->way().way_];
+      auto const component = w_.r_->way_component_[it->way_];
       if (!connected_components.insert(component).second) {
         it = node_matches.erase(it);
       } else {
@@ -282,7 +279,7 @@ struct osr_mapping {
           }
         }
         for (auto const& m : matches) {
-          auto const& node = m.node();
+          auto const& node = m.node_;
           auto const edge_to_an = osr::additional_edge{
               additional_node_id,
               static_cast<osr::distance_t>(node.dist_to_node_)};
@@ -306,14 +303,7 @@ struct osr_mapping {
     for (auto [prod, rd] : utl::zip(provider_.products_, products_data_)) {
       for (auto const [vehicle_idx, vs] :
            utl::enumerate(provider_.vehicle_status_)) {
-        if (vs.is_disabled_ || vs.is_reserved_ ||
-            !prod.includes_vehicle_type(vs.vehicle_type_idx_)) {
-          continue;
-        }
-
-        auto const restrictions = provider_.geofencing_zones_.get_restrictions(
-            vs.pos_, vs.vehicle_type_idx_, geofencing_restrictions{});
-        if (!restrictions.ride_start_allowed_) {
+        if (!vehicle_is_rentable(provider_, prod, vs)) {
           continue;
         }
 
@@ -329,7 +319,7 @@ struct osr_mapping {
         rd.start_allowed_.set(additional_node_id, true);
 
         for (auto const& m : matches) {
-          auto const& nc = m.node();
+          auto const& nc = m.node_;
           auto const edge_to_an = osr::additional_edge{
               additional_node_id,
               static_cast<osr::distance_t>(nc.dist_to_node_)};

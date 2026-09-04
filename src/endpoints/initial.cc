@@ -7,6 +7,8 @@
 #include "tiles/fixed/convert.h"
 #include "tiles/fixed/fixed_geometry.h"
 
+#include "geo/box.h"
+
 #include "nigiri/timetable.h"
 
 #include "motis/data.h"
@@ -14,6 +16,51 @@
 namespace n = nigiri;
 
 namespace motis::ep {
+
+std::pair<geo::latlng, unsigned> get_center_and_zoom(geo::latlng const& min,
+                                                     geo::latlng const& max) {
+  auto const fixed0 = tiles::latlng_to_fixed(min);
+  auto const fixed1 = tiles::latlng_to_fixed(max);
+
+  auto const center = tiles::fixed_to_latlng(
+      {(fixed0.x() + fixed1.x()) / 2, (fixed0.y() + fixed1.y()) / 2});
+
+  auto zoom = 0U;
+  auto const span = static_cast<unsigned>(std::max(
+      std::abs(fixed0.x() - fixed1.x()), std::abs(fixed0.y() - fixed1.y())));
+
+  for (; zoom < (tiles::kMaxZoomLevel - 1); ++zoom) {
+    if (((tiles::kTileSize * 2ULL) *
+         (1ULL << (tiles::kMaxZoomLevel - (zoom + 1)))) < span) {
+      break;
+    }
+  }
+
+  return {center, zoom};
+}
+
+std::optional<std::pair<geo::latlng, unsigned>> get_osr_center_and_zoom(
+    data const& d) {
+  if (d.w_ == nullptr) {
+    return std::nullopt;
+  }
+
+  auto bbox = geo::box{};
+
+  for (auto node = osr::node_idx_t{0U}; node != d.w_->n_nodes(); ++node) {
+    if (d.w_->r_->node_ways_[node].empty()) {
+      continue;
+    }
+
+    bbox.extend(d.w_->get_node_pos(node).as_latlng());
+  }
+
+  if (bbox.empty()) {
+    return std::nullopt;
+  }
+
+  return {get_center_and_zoom(bbox.min_, bbox.max_)};
+}
 
 api::initial_response get_initial_response(data const& d,
                                            std::string_view motis_version) {
@@ -43,21 +90,11 @@ api::initial_response get_initial_response(data const& d,
     auto const [lng_min, lng_max] = get_quantiles(utl::to_vec(
         tt->locations_.coordinates_, [](auto const& s) { return s.lng_; }));
 
-    auto const fixed0 = tiles::latlng_to_fixed({lat_min, lng_min});
-    auto const fixed1 = tiles::latlng_to_fixed({lat_max, lng_max});
-
-    center = tiles::fixed_to_latlng(
-        {(fixed0.x() + fixed1.x()) / 2, (fixed0.y() + fixed1.y()) / 2});
-
-    auto const span = static_cast<unsigned>(std::max(
-        std::abs(fixed0.x() - fixed1.x()), std::abs(fixed0.y() - fixed1.y())));
-
-    for (; zoom < (tiles::kMaxZoomLevel - 1); ++zoom) {
-      if (((tiles::kTileSize * 2ULL) *
-           (1ULL << (tiles::kMaxZoomLevel - (zoom + 1)))) < span) {
-        break;
-      }
-    }
+    std::tie(center, zoom) =
+        get_center_and_zoom({lat_min, lng_min}, {lat_max, lng_max});
+  } else if (auto const osr_center_zoom = get_osr_center_and_zoom(d);
+             osr_center_zoom.has_value()) {
+    std::tie(center, zoom) = *osr_center_zoom;
   }
 
   auto const limits = d.config_.get_limits();

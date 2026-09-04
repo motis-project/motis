@@ -42,3 +42,12 @@ export const getTz = (d: Date, timeZone: string | undefined): string | undefined
 			.find((part) => part.type === 'timeZoneName')!.value == timeZoneOffset;
 	return isSameAsBrowserTimezone ? undefined : timeZoneOffset;
 };
+
+export const formatDateTimeWithTimeZone = (d: Date, timeZone: string | undefined): string => {
+	let output = formatDateTime(d, timeZone);
+	const timeZoneOffset = getTz(d, timeZone);
+	if (timeZoneOffset) {
+		output += ' ' + timeZoneOffset;
+	}
+	return output;
+};

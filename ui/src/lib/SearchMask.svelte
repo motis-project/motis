@@ -22,6 +22,7 @@
 	let {
 		geocodingBiasPlace,
 		serverConfig,
+		advancedOptionsOpen = $bindable(),
 		from = $bindable(),
 		to = $bindable(),
 		time = $bindable(),
@@ -31,6 +32,7 @@
 		maxTransfers = $bindable(),
 		requireCarTransport = $bindable(),
 		requireBikeTransport = $bindable(),
+		noCompulsoryReservation = $bindable(),
 		transitModes = $bindable(),
 		preTransitModes = $bindable(),
 		postTransitModes = $bindable(),
@@ -46,6 +48,17 @@
 		preTransitProviderGroups = $bindable(),
 		postTransitProviderGroups = $bindable(),
 		directProviderGroups = $bindable(),
+		vehicleHeight = $bindable(),
+		vehicleWidth = $bindable(),
+		vehicleLength = $bindable(),
+		vehicleWeight = $bindable(),
+		vehicleHazmat = $bindable(),
+		vehicleHazmatWater = $bindable(),
+		vehicleAxleCount = $bindable(),
+		vehicleAxleLoad = $bindable(),
+		vehicleTrailer = $bindable(),
+		vehicleTopSpeed = $bindable(),
+		vehicleLezAccess = $bindable(),
 		via = $bindable(),
 		viaMinimumStay = $bindable(),
 		viaLabels = $bindable(),
@@ -56,6 +69,7 @@
 	}: {
 		geocodingBiasPlace?: maplibregl.LngLatLike;
 		serverConfig: ServerConfig | undefined;
+		advancedOptionsOpen: boolean;
 		from: Location;
 		to: Location;
 		time: Date;
@@ -65,6 +79,7 @@
 		maxTransfers: number;
 		requireCarTransport: boolean;
 		requireBikeTransport: boolean;
+		noCompulsoryReservation: boolean;
 		transitModes: Mode[];
 		preTransitModes: PrePostDirectMode[];
 		postTransitModes: PrePostDirectMode[];
@@ -80,6 +95,17 @@
 		preTransitProviderGroups: string[];
 		postTransitProviderGroups: string[];
 		directProviderGroups: string[];
+		vehicleHeight: number;
+		vehicleWidth: number;
+		vehicleLength: number;
+		vehicleWeight: number;
+		vehicleHazmat: boolean;
+		vehicleHazmatWater: boolean;
+		vehicleAxleCount: number;
+		vehicleAxleLoad: number;
+		vehicleTrailer: boolean;
+		vehicleTopSpeed: number;
+		vehicleLezAccess: boolean;
 		via: undefined | Location[];
 		viaMinimumStay: undefined | number[];
 		viaLabels: Record<string, string>;
@@ -104,7 +130,10 @@
 	};
 </script>
 
-<div id="searchmask-container" class="flex flex-col space-y-4 p-4 relative">
+<div
+	id="searchmask-container"
+	class="flex max-h-full min-h-0 flex-col space-y-4 overflow-hidden p-4 relative"
+>
 	<AddressTypeahead
 		place={geocodingBiasPlace}
 		name="from"
@@ -147,7 +176,7 @@
 	>
 		<ArrowUpDown class="w-5 h-5" />
 	</Button>
-	<div class="flex flex-row gap-2 flex-wrap">
+	<div class="flex min-h-0 flex-row gap-2 flex-wrap">
 		<DateInput bind:value={time} />
 		<RadioGroup.Root
 			class="flex"
@@ -175,15 +204,17 @@
 		</RadioGroup.Root>
 		<AdvancedOptions
 			{serverConfig}
+			bind:advancedOptionsOpen
 			bind:useRoutedTransfers
 			bind:wheelchair={
 				() => pedestrianProfile === 'WHEELCHAIR',
 				(v) => (pedestrianProfile = v ? 'WHEELCHAIR' : 'FOOT')
 			}
-			bind:requireCarTransport
 			bind:maxTransfers
 			maxTravelTime={undefined}
 			bind:requireBikeTransport
+			bind:requireCarTransport
+			bind:noCompulsoryReservation
 			bind:transitModes
 			bind:preTransitModes
 			bind:postTransitModes
@@ -199,6 +230,17 @@
 			bind:preTransitProviderGroups
 			bind:postTransitProviderGroups
 			bind:directProviderGroups
+			bind:vehicleHeight
+			bind:vehicleWidth
+			bind:vehicleLength
+			bind:vehicleWeight
+			bind:vehicleHazmat
+			bind:vehicleHazmatWater
+			bind:vehicleAxleCount
+			bind:vehicleAxleLoad
+			bind:vehicleTrailer
+			bind:vehicleTopSpeed
+			bind:vehicleLezAccess
 			bind:via
 			bind:viaMinimumStay
 			bind:viaLabels

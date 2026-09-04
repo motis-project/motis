@@ -24,7 +24,7 @@ info:
   license:
     name: MIT
     url: https://opensource.org/license/mit
-  version: v5
+  version: v6
 externalDocs:
   description: Find out more about MOTIS
   url: https://github.com/motis-project/motis
@@ -77,7 +77,9 @@ paths:
           description: |
             Experimental. Search radius in meters around the `fromPlace` / `toPlace` coordinates.
             When set and the place is given as coordinates, all transit stops within
-            this radius are used as start/end points with zero pre-transit/post-transit time.
+            this radius are used as start/end points. The pre-transit/post-transit time
+            for each of them is estimated from the crow-fly distance to the coordinate
+            at walking speed (1.5 m/s), rounded down to whole minutes.
             Works without OSM/street routing data loaded.
           schema:
             type: number
@@ -101,7 +103,7 @@ paths:
           required: false
           description: |
             Optional. If not set, the default is `0,0` - no stay required.
-            
+
             For each `via` stop a minimum stay duration in minutes.
             
             The value `0` signals that it's allowed to stay in the same trip.
@@ -203,12 +205,14 @@ paths:
           in: query
           required: false
           description: |
-            Optional. Default is 25 meters.
-            
+            Optional. Default is 250 meters.
+
             Maximum matching distance in meters to match geo coordinates to the street network.
+
+            Is limited by server config variable `max_max_matching_distance`, larger values are capped to this limit.
           schema:
             type: number
-            default: 25
+            default: 250
 
         - name: pedestrianProfile
           in: query
@@ -241,6 +245,83 @@ paths:
             Average speed for bike routing.
           schema:
             $ref: '#/components/schemas/CyclingSpeed'
+
+        - name: vehicleHeight
+          in: query
+          required: false
+          description: Vehicle height in meters used for `HGV` street routing.
+          schema:
+            $ref: "#/components/schemas/VehicleHeight"
+
+        - name: vehicleWidth
+          in: query
+          required: false
+          description: Vehicle width in meters used for `HGV` street routing.
+          schema:
+            $ref: "#/components/schemas/VehicleWidth"
+
+        - name: vehicleLength
+          in: query
+          required: false
+          description: Vehicle length in meters used for `HGV` street routing.
+          schema:
+            $ref: "#/components/schemas/VehicleLength"
+
+        - name: vehicleWeight
+          in: query
+          required: false
+          description: Vehicle gross weight in tons used for `HGV` street routing.
+          schema:
+            $ref: "#/components/schemas/VehicleWeight"
+
+        - name: vehicleHazmat
+          in: query
+          required: false
+          description: Whether the vehicle carries hazardous materials for `HGV` street routing.
+          schema:
+            $ref: "#/components/schemas/VehicleHazmat"
+
+        - name: vehicleHazmatWater
+          in: query
+          required: false
+          description: Whether the vehicle carries hazardous materials dangerous to water for `HGV` street routing.
+          schema:
+            $ref: "#/components/schemas/VehicleHazmatWater"
+
+        - name: vehicleAxleCount
+          in: query
+          required: false
+          description: Axle count used for `HGV` street routing.
+          schema:
+            $ref: "#/components/schemas/VehicleAxleCount"
+
+        - name: vehicleAxleLoad
+          in: query
+          required: false
+          description: Maximum axle load in tons used for `HGV` street routing.
+          schema:
+            $ref: "#/components/schemas/VehicleAxleLoad"
+
+        - name: vehicleTrailer
+          in: query
+          required: false
+          description: Whether the vehicle has a trailer for `HGV` street routing.
+          schema:
+            $ref: "#/components/schemas/VehicleTrailer"
+
+        - name: vehicleTopSpeed
+          in: query
+          required: false
+          description: Vehicle top speed in km/h used for `HGV` street routing.
+          schema:
+            $ref: "#/components/schemas/VehicleTopSpeed"
+
+        - name: vehicleLezAccess
+          in: query
+          required: false
+          description: Whether the vehicle is allowed to use low-emission zones for `HGV` street routing.
+          schema:
+            $ref: "#/components/schemas/VehicleLezAccess"
 
         - name: elevationCosts
           in: query
@@ -344,8 +425,8 @@ paths:
             To prevent this, it's possible to send two separate requests (one with only `transitModes` and one with only `directModes`).
 
             Note: the output `direct` array will stay empty if the input param `maxDirectTime` makes any direct trip impossible.
-            
-            Only non-transit modes such as `WALK`, `BIKE`, `CAR`, `BIKE_SHARING`, etc. can be used.
+
+            Only non-transit modes such as `WALK`, `BIKE`, `CAR`, `HGV`, `BIKE_SHARING`, etc. can be used.
           schema:
             default:
               - WALK
@@ -698,7 +779,7 @@ paths:
             default: false
           description: |
             Optional. Default is `false`.
-            
+
               - `arriveBy=true`: the parameters `date` and `time` refer to the arrival time
               - `arriveBy=false`: the parameters `date` and `time` refer to the departure time
 
@@ -738,6 +819,17 @@ paths:
             Optional. Default is `false`.
             
             If set to `true`, all used transit trips are required to allow car carriage.
+
+        - name: noCompulsoryReservation
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+          description: |
+            Optional. Default is `false`.
+            
+            If set to `true`, all used transit trips are required to be usable without compulsory reservation.
 
         - name: maxPreTransitTime
           in: query
@@ -779,12 +871,12 @@ paths:
           in: query
           required: false
           description: |
-            Optional. Experimental. Default is `1.0`.
+            Optional. Experimental. Default is `10`.
             Factor with which the duration of the fastest direct non-public-transit connection is multiplied.
             Values > 1.0 allow transit connections that are slower than the fastest direct non-public-transit connection to be found.
           schema:
             type: number
-            default: 1.0
+            default: 10
             minimum: 0
 
         - name: timeout
@@ -934,7 +1026,7 @@ paths:
           description: routing result
           content:
             application/json:
-              schema:
+              schema: &plan-response-schema
                 type: object
                 required:
                   - requestParameters
@@ -983,6 +1075,54 @@ paths:
                       Use the cursor to get the next page of results. Insert the cursor into the request and post it to get the next page.
                       The next page is a set of itineraries departing AFTER the last itinerary in this result.
                     type: string
+    post:
+      tags:
+        - routing
+      summary: |
+        Computes optimal connections from one place to another,
+        with the option to provide client-computed offsets
+        for the first and/or last mile.
+      operationId: planPost
+      description: |
+        All routing parameters are passed as query parameters
+        (same as the `plan` GET endpoint - see there for their descriptions).
+        The request body carries only the offset lists.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlanPostBody'
+      responses:
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '200':
+          description: routing result
+          content:
+            application/json:
+              schema: *plan-response-schema
 
   /api/v1/one-to-many:
     get:
@@ -1027,9 +1167,67 @@ paths:
         - name: maxMatchingDistance
           in: query
           required: true
-          description: maximum matching distance in meters to match geo coordinates to the street network
+          description: |
+            maximum matching distance in meters to match geo coordinates to the street network
+
+            Is limited by server config variable `max_max_matching_distance`, larger values are capped to this limit.
           schema:
             type: number
+        - name: vehicleHeight
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/VehicleHeight"
+        - name: vehicleWidth
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/VehicleWidth"
+        - name: vehicleLength
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/VehicleLength"
+        - name: vehicleWeight
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/VehicleWeight"
+        - name: vehicleHazmat
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/VehicleHazmat"
+        - name: vehicleHazmatWater
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/VehicleHazmatWater"
+        - name: vehicleAxleCount
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/VehicleAxleCount"
+        - name: vehicleAxleLoad
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/VehicleAxleLoad"
+        - name: vehicleTrailer
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/VehicleTrailer"
+        - name: vehicleTopSpeed
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/VehicleTopSpeed"
+        - name: vehicleLezAccess
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/VehicleLezAccess"
         - name: elevationCosts
           in: query
           required: false
@@ -1201,10 +1399,13 @@ paths:
         - name: maxMatchingDistance
           in: query
           required: false
-          description: maximum matching distance in meters to match geo coordinates to the street network
+          description: |
+            maximum matching distance in meters to match geo coordinates to the street network
+
+            Is limited by server config variable `max_max_matching_distance`, larger values are capped to this limit.
           schema:
             type: number
-            default: 25
+            default: 250
 
         - name: arriveBy
           in: query
@@ -1314,6 +1515,72 @@ paths:
             Average speed for bike routing.
           schema:
             $ref: "#/components/schemas/CyclingSpeed"
+
+        - name: vehicleHeight
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/VehicleHeight"
+
+        - name: vehicleWidth
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/VehicleWidth"
+
+        - name: vehicleLength
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/VehicleLength"
+
+        - name: vehicleWeight
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/VehicleWeight"
+
+        - name: vehicleHazmat
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/VehicleHazmat"
+
+        - name: vehicleHazmatWater
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/VehicleHazmatWater"
+
+        - name: vehicleAxleCount
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/VehicleAxleCount"
+
+        - name: vehicleAxleLoad
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/VehicleAxleLoad"
+
+        - name: vehicleTrailer
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/VehicleTrailer"
+
+        - name: vehicleTopSpeed
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/VehicleTopSpeed"
+
+        - name: vehicleLezAccess
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/VehicleLezAccess"
 
         - name: elevationCosts
           in: query
@@ -1471,6 +1738,17 @@ paths:
           schema:
             type: boolean
             default: false
+
+        - name: noCompulsoryReservation
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+          description: |
+            Optional. Default is `false`.
+            
+            If set to `true`, all used transit trips are required to be usable without compulsory reservation.
 
       responses:
         "200":
@@ -1648,12 +1926,14 @@ paths:
           in: query
           required: false
           description: |
-            Optional. Default is 25 meters.
+            Optional. Default is 250 meters.
 
             Maximum matching distance in meters to match geo coordinates to the street network.
+
+            Is limited by server config variable `max_max_matching_distance`, larger values are capped to this limit.
           schema:
             type: number
-            default: 25
+            default: 250
 
         - name: useRoutedTransfers
           in: query
@@ -1696,6 +1976,72 @@ paths:
             Average speed for bike routing.
           schema:
             $ref: '#/components/schemas/CyclingSpeed'
+
+        - name: vehicleHeight
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/VehicleHeight"
+
+        - name: vehicleWidth
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/VehicleWidth"
+
+        - name: vehicleLength
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/VehicleLength"
+
+        - name: vehicleWeight
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/VehicleWeight"
+
+        - name: vehicleHazmat
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/VehicleHazmat"
+
+        - name: vehicleHazmatWater
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/VehicleHazmatWater"
+
+        - name: vehicleAxleCount
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/VehicleAxleCount"
+
+        - name: vehicleAxleLoad
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/VehicleAxleLoad"
+
+        - name: vehicleTrailer
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/VehicleTrailer"
+
+        - name: vehicleTopSpeed
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/VehicleTopSpeed"
+
+        - name: vehicleLezAccess
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/VehicleLezAccess"
 
         - name: elevationCosts
           in: query
@@ -1791,6 +2137,17 @@ paths:
             Optional. Default is `false`.
 
             If set to `true`, all used transit trips are required to allow car carriage.
+
+        - name: noCompulsoryReservation
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+          description: |
+            Optional. Default is `false`.
+            
+            If set to `true`, all used transit trips are required to be usable without compulsory reservation.
 
         - name: maxPreTransitTime
           in: query
@@ -2224,6 +2581,12 @@ paths:
           schema:
             type: boolean
             default: false
+        - name: noCompulsoryReservation
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
         - name: language
           in: query
           required: false
@@ -2254,10 +2617,13 @@ paths:
         - name: maxMatchingDistance
           in: query
           required: false
-          description: Maximum matching distance in meters to the street network.
+          description: |
+            Maximum matching distance in meters to the street network.
+
+            Is limited by server config variable `max_max_matching_distance`, larger values are capped to this limit.
           schema:
             type: number
-            default: 25
+            default: 250
         - name: maxPreTransitTime
           in: query
           required: false
@@ -2460,7 +2826,7 @@ paths:
             default: false
           description: |
             Optional. Default is `false`.
-            
+
               - `arriveBy=true`: the parameters `date` and `time` refer to the arrival time
               - `arriveBy=false`: the parameters `date` and `time` refer to the departure time
 
@@ -3460,6 +3826,7 @@ components:
           - `BIKE`
           - `RENTAL` Experimental. Expect unannounced breaking changes (without version bumps) for all parameters and returned structs.
           - `CAR`
+          - `HGV` Heavy goods vehicles (only supported for direct connections)
           - `CAR_PARKING` Experimental. Expect unannounced breaking changes (without version bumps) for all parameters and returned structs.
           - `CAR_DROPOFF` Experimental. Expect unannounced breaking changes (without version bumps) for all perameters and returned structs.
           - `ODM` on-demand taxis from the Prima+ÖV Project
@@ -3496,6 +3863,7 @@ components:
         - BIKE
         - RENTAL
         - CAR
+        - HGV
         - CAR_PARKING
         - CAR_DROPOFF
         - ODM  # Transit | Street
@@ -3931,6 +4299,50 @@ components:
       description: Average speed for bike routing in meters per second
       type: number
 
+    VehicleHeight:
+      description: Vehicle height for HGV routing in meters
+      type: number
+
+    VehicleWidth:
+      description: Vehicle width for HGV routing in meters
+      type: number
+
+    VehicleLength:
+      description: Vehicle length for HGV routing in meters
+      type: number
+
+    VehicleWeight:
+      description: Vehicle gross weight for HGV routing in tons
+      type: number
+
+    VehicleHazmat:
+      description: Whether the vehicle carries hazardous materials for HGV routing
+      type: boolean
+
+    VehicleHazmatWater:
+      description: Whether the vehicle carries hazardous materials dangerous to water for HGV routing
+      type: boolean
+
+    VehicleAxleCount:
+      description: Axle count for HGV routing
+      type: integer
+
+    VehicleAxleLoad:
+      description: Maximum axle load for HGV routing in tons
+      type: number
+
+    VehicleTrailer:
+      description: Whether the vehicle has a trailer for HGV routing
+      type: boolean
+
+    VehicleTopSpeed:
+      description: Vehicle top speed for HGV routing in km/h
+      type: integer
+
+    VehicleLezAccess:
+      description: Whether the vehicle is allowed to use low-emission zones for HGV routing
+      type: boolean
+
     VertexType:
       type: string
       description: |
@@ -3950,6 +4362,18 @@ components:
       enum:
         - NORMAL
         - NOT_ALLOWED
+
+    WheelchairAccessibility:
+      type: string
+      enum:
+        - ACCESSIBLE
+        - NOT_ACCESSIBLE
+
+    Reservation:
+      type: string
+      enum:
+        - NONE
+        - COMPULSORY
 
     Place:
       type: object
@@ -4114,6 +4538,9 @@ components:
         - pickupDropoffType
         - cancelled
         - tripCancelled
+        - bikesAllowed
+        - wheelchairAccessible
+        - reservation
         - source
       properties:
         place:
@@ -4189,6 +4616,25 @@ components:
         tripCancelled:
           description: Whether the entire trip is cancelled due to the realtime situation.
           type: boolean
+        loopedCalendarSince:
+          description: |
+            If set, this attribute indicates that this trip has been expanded
+            beyond the feed end date (enabled by config flag `timetable.dataset.extend_calendar`)
+            by looping active weekdays, e.g. from calendar.txt in GTFS.
+          type: string
+          format: date-time
+        bikesAllowed:
+          description: |
+            Whether bikes can be carried on this trip.
+          type: boolean
+        wheelchairAccessible:
+          description: |
+            Whether wheelchairs can be transported on this trip.
+          $ref: '#/components/schemas/WheelchairAccessibility'
+        reservation:
+          description: |
+            Information about compulsory or possible reservation.
+          $ref: '#/components/schemas/Reservation'
         source:
           description: Filename and line number where this trip is from
           type: string
@@ -4327,7 +4773,13 @@ components:
           description: level where this segment starts, based on OpenStreetMap data
           type: number
         osmWay:
-          description: OpenStreetMap way index
+          description: OpenStreetMap way ID
+          type: integer
+        fromOsmNode:
+          description: OpenStreetMap node ID where this segment starts
+          type: integer
+        toOsmNode:
+          description: OpenStreetMap node ID where this segment ends
           type: integer
         polyline:
           $ref: '#/components/schemas/EncodedPolyline'
@@ -4842,6 +5294,16 @@ components:
         shortName:
           type: string
 
+    TicketUrls:
+      type: object
+      properties:
+        web:
+          type: string
+        android:
+          type: string
+        ios:
+          type: string
+
     Leg:
       type: object
       required:
@@ -4938,6 +5400,8 @@ components:
           type: string
         agencyUrl:
           type: string
+        agencyFareUrl:
+          type: string
         agencyId:
           type: string
         tripId:
@@ -5012,6 +5476,14 @@ components:
           description: |
             Whether wheelchairs can be transported on this leg.
           $ref: '#/components/schemas/WheelchairAccessibility'
+        reservation:
+          description: |
+            Information about compulsory or possible reservation.
+          $ref: '#/components/schemas/Reservation'
+        ticketUrls:
+          $ref: '#/components/schemas/TicketUrls'
+          description: |
+            Ticket booking links for different platforms
         alternatives:
           description: |
             Alternative connections that can replace this transit leg.
@@ -5235,6 +5707,57 @@ components:
         id:
           $ref: '#/components/schemas/ItineraryId'
 
+    PlanOffset:
+      description: |
+        A client-computed first/last mile option: the given transit stop can
+        be reached from the query coordinate (or vice versa) with the given
+        duration and mode.
+      type: object
+      required:
+        - stopId
+        - duration
+      properties:
+        stopId:
+          description: |
+            stop id of the transit stop
+            (parent stations are expanded to their child stops)
+          type: string
+        duration:
+          description: duration in seconds
+          type: integer
+          minimum: 0
+        mode:
+          description: |
+            mode used to reach the stop, used to render the first/last mile
+            leg (supported: \`WALK\`, \`BIKE\`, \`CAR\`)
+          $ref: '#/components/schemas/Mode'
+          default: WALK
+
+    PlanPostBody:
+      description: |
+        Body for the `planPost` endpoint. Carries only the optional offset
+        lists; all routing parameters are passed as query parameters (same as
+        the `plan` GET endpoint). An absent or empty list keeps the default
+        behavior (offsets computed by the server) for that side, so an empty
+        body `{}` is equivalent to the GET endpoint.
+      type: object
+      properties:
+        fromOffsets:
+          description: |
+            Offsets for the `fromPlace` side: transit stops reachable from
+            `fromPlace`, replacing the server-side first mile computation.
+          type: array
+          items:
+            $ref: '#/components/schemas/PlanOffset'
+        toOffsets:
+          description: |
+            Offsets for the `toPlace` side: transit stops from which
+            `toPlace` can be reached, replacing the server-side last mile
+            computation.
+          type: array
+          items:
+            $ref: '#/components/schemas/PlanOffset'
+
     Itinerary:
       type: object
       required:
@@ -5348,7 +5871,10 @@ components:
           description: maximum travel time in seconds. Is limited by server config variable `street_routing_max_direct_seconds`.
           type: number
         maxMatchingDistance:
-          description: maximum matching distance in meters to match geo coordinates to the street network
+          description: |
+            maximum matching distance in meters to match geo coordinates to the street network
+
+            Is limited by server config variable `max_max_matching_distance`, larger values are capped to this limit.
           type: number
         elevationCosts:
           description: |
@@ -5432,9 +5958,12 @@ components:
             it can lead to slow routing performance.
           type: integer
         maxMatchingDistance:
-          description: maximum matching distance in meters to match geo coordinates to the street network
+          description: |
+            maximum matching distance in meters to match geo coordinates to the street network
+
+            Is limited by server config variable `max_max_matching_distance`, larger values are capped to this limit.
           type: number
-          default: 25
+          default: 250
         arriveBy:
           description: |
             Optional. Defaults to false, i.e. one to many search
@@ -5508,6 +6037,28 @@ components:
 
             Average speed for bike routing.
           $ref: "#/components/schemas/CyclingSpeed"
+        vehicleHeight:
+          $ref: "#/components/schemas/VehicleHeight"
+        vehicleWidth:
+          $ref: "#/components/schemas/VehicleWidth"
+        vehicleLength:
+          $ref: "#/components/schemas/VehicleLength"
+        vehicleWeight:
+          $ref: "#/components/schemas/VehicleWeight"
+        vehicleHazmat:
+          $ref: "#/components/schemas/VehicleHazmat"
+        vehicleHazmatWater:
+          $ref: "#/components/schemas/VehicleHazmatWater"
+        vehicleAxleCount:
+          $ref: "#/components/schemas/VehicleAxleCount"
+        vehicleAxleLoad:
+          $ref: "#/components/schemas/VehicleAxleLoad"
+        vehicleTrailer:
+          $ref: "#/components/schemas/VehicleTrailer"
+        vehicleTopSpeed:
+          $ref: "#/components/schemas/VehicleTopSpeed"
+        vehicleLezAccess:
+          $ref: "#/components/schemas/VehicleLezAccess"
         elevationCosts:
           description: |
             Optional. Default is `NONE`.
@@ -5620,7 +6171,13 @@ components:
             If set to `true`, all used transit trips are required to allow car carriage.
           type: boolean
           default: false
-
+        noCompulsoryReservation:
+          description: |
+            Optional. Default is `false`.
+            
+            If set to `true`, all used transit trips are required to be usable without compulsory reservation.
+          type: boolean
+          default: false
     ServerConfig:
       Description: server configuration
       type: object

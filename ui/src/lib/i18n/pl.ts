@@ -72,12 +72,25 @@ const translations: Translations = {
 	selectTransitModes: 'Wybierz środki transportu',
 	defaultSelectedModes: 'Wszystkie środki transportu',
 	defaultSelectedProviders: 'Wszyscy dostawcy',
-	selectElevationCosts: 'Unikaj stromych nachyleń.',
+	selectElevationCosts: 'Unikaj stromych nachyleń',
 	wheelchair: 'Tylko połączenia bez barier',
+	hgvRoutingOptions: 'Opcje dla pojazdu ciężarowego',
+	vehicleHeight: 'Wysokość pojazdu (m)',
+	vehicleWidth: 'Szerokość pojazdu (m)',
+	vehicleLength: 'Długość pojazdu (m)',
+	vehicleWeight: 'Masa pojazdu (t)',
+	vehicleTopSpeed: 'Prędkość maks. (km/h)',
+	vehicleAxleCount: 'Liczba osi',
+	vehicleAxleLoad: 'Nacisk na oś (t)',
+	vehicleHazmat: 'Materiały niebezpieczne',
+	vehicleHazmatWater: 'Niebezpieczne dla wody',
+	vehicleTrailer: 'Z przyczepą',
+	vehicleLezAccess: 'Dostęp do stref niskiej emisji',
 	useRoutedTransfers: 'Wyznacz trasy dla przesiadek',
 	bikeRental: 'Użyj pojazdów współdzielonych',
 	requireBikeTransport: 'Przewóz roweru',
 	requireCarTransport: 'Przewóz samochodu',
+	noCompulsoryReservation: 'No reservation required',
 	considerRentalReturnConstraints: 'Zwróć pojazd współdzielony podczas podróży',
 	default: 'Domyślne',
 	timetableSources: 'Źródła danych rozkładowych',
@@ -96,6 +109,7 @@ const translations: Translations = {
 	RENTAL: 'Współdzielenie pojazdów',
 	RIDE_SHARING: 'Wspólne przejazdy',
 	CAR: 'Samochód',
+	HGV: 'Ciężarówka',
 	CAR_PARKING: 'Samochód (użyj parkingów)',
 	CAR_DROPOFF: 'Samochód (tylko zatrzymanie)',
 	TRANSIT: 'Transport publiczny',
@@ -133,13 +147,9 @@ const translations: Translations = {
 		LOW: 'Małe odchylenia od trasy',
 		HIGH: 'Duże odchylenia od trasy'
 	},
+	isochronesOpacity: 'Krycie izochron',
 	isochrones: {
 		title: 'Izochrony',
-		displayLevel: 'Poziom wyświetlania',
-		maxComputeLevel: 'Maks. poziom wyliczenia',
-		canvasRects: 'Kwadraty (warstwa)',
-		canvasCircles: 'Okręgi (warstwa)',
-		geojsonCircles: 'Okręgi (geometria)',
 		styling: 'Styl izochron',
 		noData: 'Brak danych',
 		requestFailed: 'Błąd zapytania'
@@ -164,6 +174,7 @@ const translations: Translations = {
 	toll: 'Uwaga! Za przejazd tą trasą pobierana jest opłata.',
 	bikesAllowed: 'Bikes allowed',
 	wheelchairAccessible: 'Wheelchair accessible',
+	compulsoryReservation: 'Reservation necessary',
 	accessRestriction: 'Ograniczony dostęp',
 	continuesAs: 'Kontynuuje jako',
 	earlierAlternatives: 'Wcześniejsze alternatywy',
@@ -185,6 +196,7 @@ const translations: Translations = {
 		route: 'Timetable: Line Colors',
 		mode: 'Timetable: Transport Modes'
 	},
+	resetToNorth: 'Reset to north',
 	showMyLocation: 'Show my location',
 	toggleHillshades: 'Toggle hillshades overlay',
 	routes: (n: number) => {
@@ -203,7 +215,9 @@ const translations: Translations = {
 		departuresAt: (stop) => `Odjazdy z ${stop}`,
 		arrivalsAt: (stop) => `Przyjazdy do ${stop}`,
 		isochronesFrom: (place) => `Izochrony z ${place}`
-	}
+	},
+	tickets: 'Bilety',
+	routeInformation: 'Więcej informacji'
 };
 
 export default translations;

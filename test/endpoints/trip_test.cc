@@ -1,11 +1,15 @@
 #include "gtest/gtest.h"
 
+#include "fmt/format.h"
+
 #include "utl/init_from.h"
 
 #include "nigiri/common/parse_time.h"
 #include "nigiri/rt/create_rt_timetable.h"
 #include "nigiri/rt/frun.h"
 #include "nigiri/rt/rt_timetable.h"
+
+#include "net/not_found_exception.h"
 
 #include "motis/config.h"
 #include "motis/data.h"
@@ -20,8 +24,8 @@ using namespace date;
 
 constexpr auto const kGTFS = R"(
 # agency.txt
-agency_id,agency_name,agency_url,agency_timezone
-DB,Deutsche Bahn,https://deutschebahn.com,Europe/Berlin
+agency_id,agency_name,agency_url,agency_timezone,ticketing_deep_link_id
+DB,Deutsche Bahn,https://deutschebahn.com,Europe/Berlin,link-1
 
 # stops.txt
 stop_id,stop_name,stop_lat,stop_lon,location_type,parent_station,platform_code
@@ -32,19 +36,23 @@ Parent2,Parent2,51.0,9.0,1,,
 Child2,Child2,51.001,9.001,0,Parent2,1
 
 # routes.txt
-route_id,agency_id,route_short_name,route_long_name,route_desc,route_type
-R1,DB,R1,R1,,109
+route_id,agency_id,route_short_name,route_long_name,route_desc,route_type,ticketing_deep_link_id
+R1,DB,R1,R1,,109,link-2
 R2,DB,R2,R2,,109
 
 # trips.txt
 route_id,service_id,trip_id,trip_headsign,block_id
 R1,S1,T1,Parent2 Express,
+R2,S1,T2,Parent2 Local,
 
 # stop_times.txt
 trip_id,arrival_time,departure_time,stop_id,stop_sequence,pickup_type,drop_off_type,stop_headsign
 T1,10:00:00,10:00:00,Child1A,1,0,0,Origin
 T1,10:10:00,10:10:00,Child1B,2,0,0,Midway
 T1,11:00:00,11:00:00,Child2,3,0,0,Destination
+T2,12:00:00,12:00:00,Child1A,1,0,0,Origin
+T2,12:10:00,12:10:00,Child1B,2,0,0,Midway
+T2,13:00:00,13:00:00,Child2,3,0,0,Destination
 
 # calendar_dates.txt
 service_id,date,exception_type
@@ -67,6 +75,16 @@ stops,stop_name,fr,Enfant 1B,,,Child1B
 stop_times,stop_headsign,en,Parent2 Express,T1,1,
 stop_times,stop_headsign,de,Richtung Eltern Zwei,T1,1,
 stop_times,stop_headsign,fr,Vers Parent Deux,T1,1,
+
+# ticketing_deep_links.txt
+ticketing_deep_link_id,web_url,android_intent_uri,ios_universal_link_url
+link-1,https://example.com,https://example.com,https://example.com
+link-2,https://motis-project.de/ticket,https://motis-project.de/ticket,https://motis-project.de/ticket
+
+# ticketing_identifiers.txt
+ticketing_stop_id,stop_id,agency_id
+ticket-stop-2,Child1B,DB
+ticket-stop-3,Child2,DB
 )";
 
 constexpr auto kScript = R"(
@@ -140,6 +158,145 @@ TEST(motis, trip_stop_naming) {
   EXPECT_EQ("Vers Parent Deux", leg_fr.headsign_);
   EXPECT_EQ("FR_SHORT_NAME", leg_fr.routeShortName_);
   EXPECT_EQ("FR-R1", leg_fr.routeLongName_);
+
+  // unknown feed id -> HTTP 404, not a crash
+  EXPECT_THROW(trip_ep("?tripId=20190501_10%3A00_unknown_T1"),
+               net::not_found_exception);
+}
+
+TEST(motis, trip_ticketing) {
+  auto ec = std::error_code{};
+  std::filesystem::remove_all("test/data", ec);
+
+  auto const c =
+      config{.timetable_ =
+                 config::timetable{.first_day_ = "2019-05-01",
+                                   .num_days_ = 2,
+                                   .datasets_ = {{"test", {.path_ = kGTFS}}}},
+             .street_routing_ = false};
+  import(c, "test/data");
+  auto d = data{"test/data", c};
+
+  auto const trip_ep = utl::init_from<ep::trip>(d).value();
+
+  // Route booking link
+  auto const res = trip_ep("?tripId=20190501_10%3A00_test_T1");
+  ASSERT_EQ(1, res.legs_.size());
+  auto const& leg = res.legs_[0];
+  ASSERT_TRUE(leg.ticketUrls_.has_value());
+  EXPECT_EQ(
+      "https://motis-project.de/"
+      "ticket?service_date=%5B%2220190501%22%5D&ticketing_trip_id=%5B%22T1%22%"
+      "5D&from_ticketing_stop_time_id=%5B%221%22%5D&to_ticketing_stop_time_id=%"
+      "5B%22ticket-stop-3%22%5D&boarding_time=%5B%222019-05-01T08:00:00%2B00:"
+      "00%"
+      "22%5D&arrival_time=%5B%222019-05-01T09:00:00%2B00:00%22%5D",
+      leg.ticketUrls_->web_);
+
+  // Agency booking link
+  auto const res2 = trip_ep("?tripId=20190501_12%3A00_test_T2");
+  ASSERT_EQ(1, res2.legs_.size());
+  auto const& leg2 = res2.legs_[0];
+  ASSERT_TRUE(leg2.ticketUrls_.has_value());
+  EXPECT_EQ(
+      "https://"
+      "example.com?service_date=%5B%2220190501%22%5D&ticketing_trip_id=%5B%"
+      "22T2%22%5D&from_ticketing_stop_time_id=%5B%221%22%5D&to_ticketing_stop_"
+      "time_id=%5B%22ticket-stop-3%22%5D&boarding_time=%5B%222019-05-01T10:00:"
+      "00%2B00:00%22%5D&arrival_time=%5B%222019-05-01T11:00:00%2B00:00%22%5D",
+      leg2.ticketUrls_->web_);
+}
+
+// Two trips joined into one transport via `block_id`. The second trip's
+// stop_sequence numbers are indexed relative to the trip, not the transport.
+constexpr auto const kGTFSInterlined = R"(
+# agency.txt
+agency_id,agency_name,agency_url,agency_timezone,ticketing_deep_link_id
+DB,Deutsche Bahn,https://deutschebahn.com,Europe/Berlin,link-1
+
+# stops.txt
+stop_id,stop_name,stop_lat,stop_lon,location_type,parent_station,platform_code
+S1,S1,50.0,8.0,0,,
+S2,S2,50.1,8.1,0,,
+S3,S3,50.2,8.2,0,,
+S4,S4,50.3,8.3,0,,
+S5,S5,50.4,8.4,0,,
+S6,S6,50.5,8.5,0,,
+S7,S7,50.6,8.6,0,,
+
+# routes.txt
+route_id,agency_id,route_short_name,route_long_name,route_desc,route_type
+R1,DB,R1,R1,,109
+R2,DB,R2,R2,,109
+
+# trips.txt
+route_id,service_id,trip_id,trip_headsign,block_id
+R1,S1,T1,S5,BLOCK1
+R2,S1,T2,S7,BLOCK1
+
+# stop_times.txt
+trip_id,arrival_time,departure_time,stop_id,stop_sequence,pickup_type,drop_off_type
+T1,10:00:00,10:00:00,S1,1,0,0
+T1,10:10:00,10:10:00,S2,2,0,0
+T1,10:20:00,10:20:00,S3,3,0,0
+T1,10:30:00,10:30:00,S4,4,0,0
+T1,10:40:00,10:40:00,S5,5,0,0
+T2,10:40:00,10:45:00,S5,1,0,0
+T2,10:50:00,10:50:00,S6,2,0,0
+T2,11:00:00,11:00:00,S7,3,0,0
+
+# calendar_dates.txt
+service_id,date,exception_type
+S1,20190501,1
+
+# ticketing_deep_links.txt
+ticketing_deep_link_id,web_url,android_intent_uri,ios_universal_link_url
+link-1,https://example.com,https://example.com,https://example.com
+)";
+
+TEST(motis, trip_ticketing_interlined) {
+  auto ec = std::error_code{};
+  std::filesystem::remove_all("test/data", ec);
+
+  auto const c =
+      config{.timetable_ =
+                 config::timetable{
+                     .first_day_ = "2019-05-01",
+                     .num_days_ = 2,
+                     .datasets_ = {{"test", {.path_ = kGTFSInterlined}}}},
+             .street_routing_ = false};
+  import(c, "test/data");
+  auto d = data{"test/data", c};
+
+  auto const trip_ep = utl::init_from<ep::trip>(d).value();
+
+  // Both trips of the block render both legs. Without ticketing identifiers,
+  // the stop_time id falls back to the GTFS stop_sequence number, which used
+  // to be looked up with a transport-relative index (throwing for T2).
+  for (auto const* const trip_id :
+       {"20190501_10%3A00_test_T1", "20190501_10%3A45_test_T2"}) {
+    auto const res =
+        trip_ep(fmt::format("?tripId={}&joinInterlinedLegs=false", trip_id));
+    ASSERT_EQ(2, res.legs_.size());
+
+    auto const& t1 = res.legs_[0];
+    ASSERT_TRUE(t1.ticketUrls_.has_value());
+    EXPECT_NE(std::string::npos,
+              t1.ticketUrls_->web_->find(
+                  "from_ticketing_stop_time_id=%5B%221%22%5D"));
+    EXPECT_NE(
+        std::string::npos,
+        t1.ticketUrls_->web_->find("to_ticketing_stop_time_id=%5B%225%22%5D"));
+
+    auto const& t2 = res.legs_[1];
+    ASSERT_TRUE(t2.ticketUrls_.has_value());
+    EXPECT_NE(std::string::npos,
+              t2.ticketUrls_->web_->find(
+                  "from_ticketing_stop_time_id=%5B%221%22%5D"));
+    EXPECT_NE(
+        std::string::npos,
+        t2.ticketUrls_->web_->find("to_ticketing_stop_time_id=%5B%223%22%5D"));
+  }
 }
 
 constexpr auto kNetex = R"(

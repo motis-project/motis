@@ -70,12 +70,25 @@ const translations: Translations = {
 	selectTransitModes: 'Изберете видове транспорт',
 	defaultSelectedModes: 'Всички видове транспорт',
 	defaultSelectedProviders: 'Всички превозвачи',
-	selectElevationCosts: 'Избягвай стръмни наклони.',
+	selectElevationCosts: 'Избягвай стръмни наклони',
 	wheelchair: 'Само безбариеpни връзки',
+	hgvRoutingOptions: 'Опции за тежкотоварен автомобил',
+	vehicleHeight: 'Височина на превозното средство (m)',
+	vehicleWidth: 'Ширина на превозното средство (m)',
+	vehicleLength: 'Дължина на превозното средство (m)',
+	vehicleWeight: 'Тегло на превозното средство (t)',
+	vehicleTopSpeed: 'Макс. скорост (km/h)',
+	vehicleAxleCount: 'Брой оси',
+	vehicleAxleLoad: 'Натоварване на ос (t)',
+	vehicleHazmat: 'Опасни товари',
+	vehicleHazmatWater: 'Опасни за водата товари',
+	vehicleTrailer: 'С ремарке',
+	vehicleLezAccess: 'Достъп до нискоемисионни зони',
 	useRoutedTransfers: 'Използвай посочените прекачвания',
 	bikeRental: 'наемане на велосипед',
 	requireBikeTransport: 'Превоз на велосипед',
 	requireCarTransport: 'Превоз на автомобил',
+	noCompulsoryReservation: 'No reservation required',
 	considerRentalReturnConstraints: 'Върни наетите превозни средства в рамките на пътуването',
 	default: 'По подразбиране',
 	timetableSources: 'Източници на разписания',
@@ -94,6 +107,7 @@ const translations: Translations = {
 	RENTAL: 'Нает',
 	RIDE_SHARING: 'Споделено пътуване',
 	CAR: 'Автомобил',
+	HGV: 'Тежкотоварен автомобил',
 	CAR_DROPOFF: 'Слизане от автомобила',
 	CAR_PARKING: 'Паркинг (P+R)',
 	TRANSIT: 'Градски транспорт',
@@ -131,13 +145,9 @@ const translations: Translations = {
 		LOW: 'Лек наклон',
 		HIGH: 'Голям наклон'
 	},
+	isochronesOpacity: 'Непрозрачност на периметъра',
 	isochrones: {
 		title: 'Достъпен периметър',
-		displayLevel: 'Ниво на показване',
-		maxComputeLevel: 'Макс. ниво на изчисление',
-		canvasRects: 'Правоъгълници (слой)',
-		canvasCircles: 'Кръгове (слой)',
-		geojsonCircles: 'Кръгове (геометрия)',
 		styling: 'Стил',
 		noData: 'Няма данни',
 		requestFailed: 'Заявката е неуспешна'
@@ -162,6 +172,7 @@ const translations: Translations = {
 	toll: 'Внимание! Платен път.',
 	bikesAllowed: 'Bikes allowed',
 	wheelchairAccessible: 'Wheelchair accessible',
+	compulsoryReservation: 'Reservation necessary',
 	accessRestriction: 'забранен достъп',
 	continuesAs: 'Продължава като',
 	earlierAlternatives: 'По-ранни алтернативи',
@@ -183,6 +194,7 @@ const translations: Translations = {
 		route: 'Timetable: Line Colors',
 		mode: 'Timetable: Transport Modes'
 	},
+	resetToNorth: 'Reset to north',
 	showMyLocation: 'Show my location',
 	toggleHillshades: 'Toggle hillshades overlay',
 	routes: (n: number) => {
@@ -201,7 +213,9 @@ const translations: Translations = {
 		departuresAt: (stop) => `Заминавания от ${stop}`,
 		arrivalsAt: (stop) => `Пристигания в ${stop}`,
 		isochronesFrom: (place) => `Достъпен периметър от ${place}`
-	}
+	},
+	tickets: 'Билети',
+	routeInformation: 'Допълнителна информация'
 };
 
 export default translations;

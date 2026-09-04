@@ -15,34 +15,24 @@
     motis/ui$ pnpm -r build
     ```
 
-3. Move the UI build into the build folder of `motis`:
-    ```shell
-    motis$ mv ui/build build/ui
-    ```
-
-4. Copy the tiles profiles to the `motis` build folder:
-    ```shell
-    motis$ cp -r deps/tiles/profile build/tiles-profiles
-    ```
-
-5. Download OpenStreetMap and timetable datasets and place them in the build folder of `motis`:
+3. Download OpenStreetMap and timetable datasets and place them in the build folder of `motis`:
     ```shell
     motis/build$ wget https://github.com/motis-project/test-data/raw/aachen/aachen.osm.pbf
     motis/build$ wget https://opendata.avv.de/current_GTFS/AVV_GTFS_Masten_mit_SPNV.zip
     ```
 
-6. Run `motis config` on the downloaded datasets to create a config file:
+4. Run `motis config` on the downloaded datasets to create a config file:
     ```shell
     motis/build$ ./motis config aachen.osm.pbf AVV_GTFS_Masten_mit_SPNV.zip
     ```
 
-7. Run `motis import` and then start the server using `motis server`:
+5. Run `motis import` and then start the server using `motis server`:
     ```shell
     motis/build$ ./motis import
     motis/build$ ./motis server
     ```
 
-8. Open `localhost:8080` in a browser to see if everything is working.
+6. Open `localhost:8080` in a browser to see if everything is working.
 
 ## Run backend and UI dev server together
 

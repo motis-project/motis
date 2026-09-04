@@ -603,7 +603,7 @@ TEST(one_to_many, bug_additional_footpath_for_first_last_mile) {
                   .street_durations_ = std::vector<api::Duration>(5),
                   .transit_durations_ = {{
                       {{.duration_ = 1260.0, .transfers_ = 0}},
-                      {{.duration_ = 1620.0, .transfers_ = 0}},
+                      {{.duration_ = 1560.0, .transfers_ = 0}},
                       {{.duration_ = 1260.0, .transfers_ = 0}},
                       {{.duration_ = 1380.0, .transfers_ = 0}},
                       {{.duration_ = 1740.0, .transfers_ = 0}},
@@ -649,6 +649,7 @@ TEST(one_to_many, pareto_sets_with_routed_transfers_and_distances) {
                 "49.871561,8.6320181",  // near Tram_3
                 "50.111900,8.675208"},  // near FFM_HAUPT
       .time_ = parse_time("2019-05-01T00:05:00.000+02:00"),
+      .maxMatchingDistance_ = 25,
       .useRoutedTransfers_ = true,
       .withDistance_ = true});
 
@@ -669,10 +670,10 @@ TEST(one_to_many, pareto_sets_with_routed_transfers_and_distances) {
   EXPECT_DOUBLE_EQ(1320.0, td.at(0).at(0).duration_);
   EXPECT_EQ(0, td.at(0).at(0).transfers_);
   ASSERT_EQ(1U, td.at(1).size());
-  EXPECT_DOUBLE_EQ(1680.0, td.at(1).at(0).duration_);
+  EXPECT_DOUBLE_EQ(1860.0, td.at(1).at(0).duration_);
   EXPECT_EQ(0, td.at(1).at(0).transfers_);
   ASSERT_EQ(1U, td.at(2).size());
-  EXPECT_DOUBLE_EQ(1740.0, td.at(2).at(0).duration_);
+  EXPECT_DOUBLE_EQ(1800.0, td.at(2).at(0).duration_);
   EXPECT_EQ(0, td.at(2).at(0).transfers_);
   ASSERT_EQ(1U, td.at(3).size());
   EXPECT_DOUBLE_EQ(4440.0, td.at(3).at(0).duration_);
@@ -693,6 +694,7 @@ TEST(one_to_many, pareto_sets_with_multiple_entries) {
                 "49.8752926,8.6277460",  // DA_Tram_1
                 "49.871561,8.6320181"},  // DA_Tram_3
       .time_ = parse_time("2019-05-01T00:05:00.000+02:00"),
+      .maxMatchingDistance_ = 25,
       .maxPreTransitTime_ = 300});  // Prevent any pre transit to Tram_x
 
   // We only care about duration to DA_Tram_3, everything else is for debugging

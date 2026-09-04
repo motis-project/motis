@@ -50,11 +50,13 @@ osr::level_t get_lvl(osr::ways const* w,
                             : osr::kNoLevel;
 }
 
-double get_level(osr::ways const* w,
-                 osr::platforms const* pl,
-                 platform_matches_t const* matches,
-                 n::location_idx_t const l) {
-  return get_lvl(w, pl, matches, l).to_float();
+std::optional<double> get_level(osr::ways const* w,
+                                osr::platforms const* pl,
+                                platform_matches_t const* matches,
+                                n::location_idx_t const l) {
+  auto const lvl = get_lvl(w, pl, matches, l);
+  return lvl.has_level() ? std::optional{static_cast<double>(lvl.to_float())}
+                         : std::nullopt;
 }
 
 osr::location get_location(api::Place const& p) {
@@ -198,12 +200,16 @@ api::Place to_place(n::timetable const* tt,
                     n::lang_t const& lang,
                     n::rt::run_stop const& s,
                     place_t const start,
-                    place_t const dest) {
+                    place_t const dest,
+                    n::event_type const ev_type) {
   auto const run_cancelled = s.fr_->is_cancelled();
   auto const fallback_tz = s.get_tz_name(
       s.stop_idx_ == 0 ? n::event_type::kDep : n::event_type::kArr);
   auto p = to_place(tt, tags, w, pl, matches, ae, tz_map, lang, tt_location{s},
                     start, dest, "", fallback_tz);
+  p.track_ = s.get_track_override(ev_type)
+                 .transform([](std::string_view t) { return std::string{t}; })
+                 .or_else([&]() { return p.track_; });
   p.pickupType_ = !run_cancelled && s.in_allowed()
                       ? api::PickupDropoffTypeEnum::NORMAL
                       : api::PickupDropoffTypeEnum::NOT_ALLOWED;

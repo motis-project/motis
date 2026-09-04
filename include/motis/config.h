@@ -43,6 +43,7 @@ struct config {
     std::string port_{"8080"};
     std::string web_folder_{"ui"};
     unsigned n_threads_{0U};
+    unsigned gpu_states_{2U};
     std::optional<std::string> data_attribution_link_{};
     std::optional<std::vector<std::string>> lbs_{};
   };
@@ -81,11 +82,18 @@ struct config {
 
       std::string path_;
       std::optional<std::string> script_{};
+      bool extend_calendar_{false};
       bool default_bikes_allowed_{false};
       bool default_cars_allowed_{false};
-      bool extend_calendar_{false};
+      bool default_reservation_not_required_{true};
       std::optional<std::map<std::string, bool>> clasz_bikes_allowed_{};
       std::optional<std::map<std::string, bool>> clasz_cars_allowed_{};
+      std::optional<std::map<std::string, bool>>
+          clasz_reservation_not_required_{{{"AIR", false},
+                                           {"COACH", false},
+                                           {"NIGHT", false},
+                                           {"RIDESHARING", false},
+                                           {"ODM", false}}};
       std::optional<std::vector<rt>> rt_{};
       std::optional<std::string> default_timezone_{};
     };
@@ -132,7 +140,6 @@ struct config {
     unsigned http_timeout_{30};
     bool canned_rt_{false};
     bool incremental_rt_update_{false};
-    bool use_osm_stop_coordinates_{false};
     bool extend_missing_footpaths_{false};
     std::uint16_t max_footpath_length_{15};
     std::uint16_t default_transfer_time_{2};
@@ -205,6 +212,7 @@ struct config {
     std::map<std::string, feed> feeds_{};
     std::map<std::string, group> groups_{};
     std::map<std::string, restrictions> default_restrictions_{};
+    bool canned_gbfs_{false};
     unsigned update_interval_{60};
     unsigned http_timeout_{30};
     unsigned cache_size_{50};
@@ -260,6 +268,7 @@ struct config {
     unsigned street_routing_max_direct_seconds_{21600U};
     unsigned geocode_max_suggestions_{512U};
     unsigned reverse_geocode_max_results_{512U};
+    double max_max_matching_distance_{250.0};
   };
   limits get_limits() const { return limits_.value_or(limits{}); }
   std::optional<limits> limits_{};

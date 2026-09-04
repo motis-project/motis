@@ -359,7 +359,7 @@ std::vector<api::Place> other_stops_impl(n::rt::frun fr,
     return result;
   };
 
-  auto const orig_location = fr[fr.first_valid()].get_location_idx();
+  auto const orig_location = fr[0].get_location_idx();
   if (ev_type == nigiri::event_type::kDep) {
     ++fr.stop_range_.from_;
     fr.stop_range_.to_ = fr.size();
@@ -368,10 +368,7 @@ std::vector<api::Place> other_stops_impl(n::rt::frun fr,
         utl::find_if(fr, [orig_location](n::rt::run_stop const& stop) {
           return orig_location == stop.get_location_idx();
         });
-    auto result = utl::to_vec(fr.begin(), it, convert_stop);
-    utl::verify<net::bad_request_exception>(!result.empty(),
-                                            "Departure is last stop in trip");
-    return result;
+    return utl::to_vec(fr.begin(), it, convert_stop);
   } else {
     fr.stop_range_.from_ = 0;
     --fr.stop_range_.to_;
@@ -380,10 +377,7 @@ std::vector<api::Place> other_stops_impl(n::rt::frun fr,
         fr.rbegin(), fr.rend(), [orig_location](n::rt::run_stop const& stop) {
           return orig_location == stop.get_location_idx();
         });
-    auto result = utl::to_vec(it.base(), fr.end(), convert_stop);
-    utl::verify<net::bad_request_exception>(!result.empty(),
-                                            "Arrival is first stop in trip");
-    return result;
+    return utl::to_vec(it.base(), fr.end(), convert_stop);
   }
 }
 
@@ -636,6 +630,16 @@ api::stoptimes_response stop_times::operator()(
                                    : api::PickupDropoffTypeEnum::NOT_ALLOWED,
                 .cancelled_ = stop_cancelled,
                 .tripCancelled_ = run_cancelled,
+                .loopedCalendarSince_ = s.looped_calendar_since(ev_type),
+                .bikesAllowed_ = s.is_flag_set(nigiri::kBikesAllowed, ev_type),
+                .wheelchairAccessible_ =
+                    s.is_flag_set(nigiri::kWheelchairAccessible, ev_type)
+                        ? api::WheelchairAccessibilityEnum::ACCESSIBLE
+                        : api::WheelchairAccessibilityEnum::NOT_ACCESSIBLE,
+                .reservation_ =
+                    s.is_flag_set(nigiri::kReservationNotRequired, ev_type)
+                        ? api::ReservationEnum::NONE
+                        : api::ReservationEnum::COMPULSORY,
                 .source_ = fmt::format("{}", fmt::streamed(fr.dbg()))};
           }),
       .place_ =

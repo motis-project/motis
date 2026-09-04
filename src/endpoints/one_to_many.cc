@@ -1,5 +1,6 @@
 #include "motis/endpoints/one_to_many.h"
 
+#include <algorithm>
 #include <chrono>
 #include <limits>
 #include <optional>
@@ -58,7 +59,7 @@ api::oneToMany_response one_to_many_direct(
       max_direct_time, max_direct_time_limit);
   utl::verify<net::bad_request_exception>(
       mode == api::ModeEnum::BIKE || mode == api::ModeEnum::CAR ||
-          mode == api::ModeEnum::WALK,
+          mode == api::ModeEnum::HGV || mode == api::ModeEnum::WALK,
       "mode {} not supported for one-to-many", fmt::streamed(mode));
 
   auto const profile = to_profile(mode, pedestrian_profile, elevation_costs);
@@ -151,6 +152,7 @@ std::vector<api::ParetoSet> transit_durations(
       .allowed_claszes_ = to_clasz_mask(query.transitModes_),
       .require_bike_transport_ = query.requireBikeTransport_,
       .require_car_transport_ = query.requireCarTransport_,
+      .no_compulsory_reservation_ = query.noCompulsoryReservation_,
       .transfer_time_settings_ =
           n::routing::transfer_time_settings{
               .default_ = (query.minTransferTime_ == 0 &&
@@ -188,7 +190,7 @@ std::vector<api::ParetoSet> transit_durations(
   auto totals = n::vector<double>{};
   for (auto const [i, l] : utl::enumerate(many)) {
     totals.clear();
-    totals.resize(q.max_transfers_, kInfinity);
+    totals.resize(q.max_transfers_ + 1U, kInfinity);
     auto const offsets = r.get_offsets(
         nullptr, l,
         arrive_by ? osr::direction::kForward : osr::direction::kBackward,
@@ -250,6 +252,9 @@ api::OneToManyIntermodalResponse run_one_to_many_intermodal(
           .value_or(n::routing::kMaxTravelTime);
 
   auto const osr_params = get_osr_parameters(query);
+  auto const max_matching_distance =
+      std::min(query.maxMatchingDistance_,
+               ep.config_.get_limits().max_max_matching_distance_);
 
   // Get street routing durations
   auto const to_location = [&](place_t const& p) {
@@ -265,14 +270,14 @@ api::OneToManyIntermodalResponse run_one_to_many_intermodal(
                    static_cast<std::int64_t>(
                        ep.config_.get_limits()
                            .street_routing_max_direct_seconds_)})),
-              query.maxMatchingDistance_,
+              max_matching_distance,
               query.arriveBy_ ? osr::direction::kBackward
                               : osr::direction::kForward,
               osr_params, query.pedestrianProfile_, query.elevationCosts_,
               ep.elevations_, query.withDistance_),
           .transit_durations_ = transit_durations(
               ep, query, one, many, time, query.arriveBy_, max_travel_time,
-              query.maxMatchingDistance_, query.pedestrianProfile_,
+              max_matching_distance, query.pedestrianProfile_,
               query.elevationCosts_, osr_params)};
 }
 

@@ -8,16 +8,19 @@
 	import Layer from '$lib/map/Layer.svelte';
 	import { ensureStopIcons, stopIconId } from './stopIcons';
 	import { colors } from '$lib/map/style';
+	import { LEVEL_MIN_ZOOM } from '$lib/constants';
 
 	let {
 		map,
 		zoom,
 		bounds,
+		level,
 		theme
 	}: {
 		map: maplibregl.Map | undefined;
 		zoom: number;
 		bounds: maplibregl.LngLatBoundsLike | undefined;
+		level: number;
 		theme: 'light' | 'dark';
 	} = $props();
 
@@ -27,6 +30,26 @@
 	});
 
 	const GROUPING_MAX_ZOOM = 16;
+
+	// Once the level selector is active (zoom > LEVEL_MIN_ZOOM), stops that are
+	// not on the selected level stay visible but are drawn grey and slightly
+	// smaller. Stops without level information count as level 0. Fractional
+	// levels (e.g. 0.5) belong to both adjacent levels.
+	const stopLevel: maplibregl.ExpressionSpecification = [
+		'coalesce',
+		['to-number', ['get', 'level']],
+		0
+	];
+	const onLevel = $derived<maplibregl.ExpressionSpecification | boolean>(
+		zoom > LEVEL_MIN_ZOOM
+			? ['any', ['==', ['ceil', stopLevel], level], ['==', ['floor', stopLevel], level]]
+			: true
+	);
+	type ExprValue = maplibregl.ExpressionSpecification | string | number | boolean | null;
+	// Picks between the "on the selected level" and the "somewhere else" variant
+	// of a layout / paint value (or just the former while there is no selector).
+	const byLevel = (here: ExprValue, elsewhere: ExprValue): ExprValue =>
+		onLevel === true ? here : ['case', onLevel, here, elsewhere];
 
 	const modeIconScale = (mode: Mode | undefined): number => {
 		switch (mode) {
@@ -87,7 +110,14 @@
 		if (!props?.stopId) {
 			return;
 		}
-		onClickStop(props.name, props.stopId, new Date(Date.now()));
+		onClickStop(
+			props.name,
+			props.stopId,
+			new Date(Date.now()),
+			false,
+			false,
+			props.exactRadius === true
+		);
 	};
 
 	// UPDATE
@@ -118,9 +148,14 @@
 						stopId: s.stopId,
 						name: s.name,
 						track: s.track,
+						level: s.level ?? 0,
+						// Ungrouped stops represent one specific platform / bay / bus stop:
+						// clicking them shows the departures of exactly this stop.
+						exactRadius: !grouped,
 						label: !grouped && s.track ? s.track : s.name,
 						modes: modes?.length ? JSON.stringify(modes) : undefined,
 						icon: stopIconId(mode),
+						iconDimmed: stopIconId(mode, true),
 						iconSize: modeIconScale(mode) * (grouped ? 1 : 0.85) * (zoom < 9 ? 0.6 : 1)
 					}
 				};
@@ -143,9 +178,11 @@
 			beforeLayerId="stops-anchor"
 			filter={['all']}
 			layout={{
-				'icon-image': ['get', 'icon'],
-				'icon-size': ['get', 'iconSize'],
-				'symbol-sort-key': ['get', 'iconSize'],
+				'icon-image': byLevel(['get', 'icon'], ['get', 'iconDimmed']),
+				'icon-size': byLevel(['get', 'iconSize'], ['*', ['get', 'iconSize'], 0.8]),
+				// Off-level stops sort last so their labels give way to the ones
+				// on the selected level (labels are optional, icons never collide).
+				'symbol-sort-key': byLevel(['get', 'iconSize'], ['+', ['get', 'iconSize'], 10]),
 				'icon-allow-overlap': true,
 				'icon-ignore-placement': true,
 				'text-field': ['step', ['zoom'], '', 9, ['get', 'label']],
@@ -156,9 +193,11 @@
 				'text-optional': true
 			}}
 			paint={{
+				'icon-opacity': byLevel(1, 0.9),
 				'text-color': labelColors.text,
 				'text-halo-color': labelColors.halo,
-				'text-halo-width': 1.5
+				'text-halo-width': 1.5,
+				'text-opacity': byLevel(1, 0.65)
 			}}
 			onclick={onLayerClick}
 		/>

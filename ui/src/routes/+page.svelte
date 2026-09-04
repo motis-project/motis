@@ -9,6 +9,7 @@
 		TrainFront,
 		Waypoints,
 		MountainSnow,
+		Compass,
 		RefreshCw
 	} from '@lucide/svelte';
 	import { MediaQuery } from 'svelte/reactivity';
@@ -34,7 +35,8 @@
 		type ServerConfig,
 		type CyclingSpeed,
 		type PedestrianSpeed,
-		refreshItinerary
+		refreshItinerary,
+		type Match
 	} from '@motis-project/motis-client';
 	import ItineraryList from '$lib/ItineraryList.svelte';
 	import ConnectionDetail from '$lib/ConnectionDetail.svelte';
@@ -42,7 +44,7 @@
 	import ItineraryGeoJson from '$lib/map/itineraries/ItineraryGeoJSON.svelte';
 	import maplibregl from 'maplibre-gl';
 	import { browser } from '$app/environment';
-	import { cn, getUrlArray, onClickStop, onClickTrip, pushStateWithQueryString } from '$lib/utils';
+	import { getUrlArray, onClickStop, onClickTrip, pushStateWithQueryString } from '$lib/utils';
 	import Debug from '$lib/Debug.svelte';
 	import Marker from '$lib/map/Marker.svelte';
 	import Popup from '$lib/map/Popup.svelte';
@@ -61,7 +63,7 @@
 	import DeparturesMask from '$lib/DeparturesMask.svelte';
 	import Isochrones from '$lib/map/Isochrones.svelte';
 	import IsochronesInfo from '$lib/IsochronesInfo.svelte';
-	import type { DisplayLevel, IsochronesOptions, IsochronesPos } from '$lib/map/IsochronesShared';
+	import type { IsochronesOptions, IsochronesPos } from '$lib/map/IsochronesShared';
 	import IsochronesMask from '$lib/IsochronesMask.svelte';
 	import Rentals from '$lib/map/rentals/Rentals.svelte';
 	import Routes from '$lib/map/routes/Routes.svelte';
@@ -94,6 +96,10 @@
 					? 'departures'
 					: 'connections')
 	);
+	const setActiveTab = (tab: typeof activeTab) => {
+		activeTab = tab;
+		pushState('', { activeTab: tab });
+	};
 	let dataAttributionLink: string | undefined = $state(undefined);
 	type ColorMode = 'none' | 'stops' | 'rt' | 'route' | 'mode';
 	let colorMode = $state<ColorMode>('stops');
@@ -121,20 +127,25 @@
 		}
 	});
 
-	let theme: 'light' | 'dark' =
-		(hasDark ? 'dark' : hasLight ? 'light' : undefined) ??
-		(browser && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
-			? 'dark'
-			: 'light');
-	if (theme === 'dark') {
-		document.documentElement.classList.add('dark');
-	}
+	let theme: 'light' | 'dark' = $derived.by(() => {
+		if (hasDark) return 'dark';
+		if (hasLight) return 'light';
+		return new MediaQuery('(prefers-color-scheme: dark)').current ? 'dark' : 'light';
+	});
+	$effect(() => {
+		if (theme === 'dark') {
+			document.documentElement.classList.add('dark');
+		} else {
+			document.documentElement.classList.remove('dark');
+		}
+	});
 
 	let withHillshades = $state(false);
 	let center = $state.raw<[number, number]>([2.258882912876089, 48.72559118651327]);
 	let level = $state(0);
 	let zoom = $state(15);
 	let bounds = $state<maplibregl.LngLatBoundsLike>();
+	let bearing = $state(0);
 	let map = $state<maplibregl.Map>();
 	let style = $derived(
 		browser
@@ -195,6 +206,8 @@
 						itineraryId: itinerary.id,
 						fromName: from.label || undefined,
 						toName: to.label || undefined,
+						fromPos: toPosString(from),
+						toPos: toPosString(to),
 						joinInterlinedLegs: false,
 						detailedLegs: true,
 						detailedTransfers: true,
@@ -244,6 +257,7 @@
 			useRoutedTransfers: boolParam('useRoutedTransfers'),
 			requireBikeTransport: boolParam('requireBikeTransport'),
 			requireCarTransport: boolParam('requireCarTransport'),
+			noCompulsoryReservation: boolParam('noCompulsoryReservation'),
 			preTransitModes: arrParam('preTransitModes') as Mode[] | undefined,
 			postTransitModes: arrParam('postTransitModes') as Mode[] | undefined,
 			preTransitRentalFormFactors: arrParam('preTransitRentalFormFactors') as
@@ -263,7 +277,8 @@
 			pedestrianSpeed: parseIntOr(urlParams?.get('pedestrianSpeed'), undefined),
 			maxMatchingDistance: parseIntOr(urlParams?.get('maxMatchingDistance'), undefined),
 			maxPreTransitTime: parseIntOr(urlParams?.get('maxPreTransitTime'), undefined),
-			maxPostTransitTime: parseIntOr(urlParams?.get('maxPostTransitTime'), undefined)
+			maxPostTransitTime: parseIntOr(urlParams?.get('maxPostTransitTime'), undefined),
+			maxDirectTime: parseIntOr(urlParams?.get('maxDirectTime'), undefined)
 		});
 
 		const { data: itinerary, error } = await refreshItinerary({ query });
@@ -305,7 +320,9 @@
 			definedOnly({
 				...query,
 				fromName: from.label || undefined,
-				toName: to.label || undefined
+				toName: to.label || undefined,
+				fromPos: toPosString(from),
+				toPos: toPosString(to)
 			}),
 			{
 				selectedItinerary: itinerary,
@@ -327,7 +344,14 @@
 			const stopId = urlParams.get('stopId');
 			if (stopId !== null) {
 				const time = urlParams.has('time') ? new Date(urlParams.get('time')!) : new Date();
-				onClickStop('', stopId, time, urlParams.get('stopArriveBy') == 'true', true);
+				onClickStop(
+					'',
+					stopId,
+					time,
+					urlParams.get('stopArriveBy') == 'true',
+					true,
+					urlParams.get('exactRadius') == 'true'
+				);
 			}
 
 			const itineraryId = urlParams.get('itineraryId');
@@ -346,15 +370,34 @@
 		}
 	}
 
+	function parseFloatOr<T>(s: string | null | undefined, d: T): T | number {
+		if (s) {
+			const v = parseFloat(s);
+			return isNaN(v) ? d : v;
+		} else {
+			return d;
+		}
+	}
+
+	let advancedOptionsOpen = $state<boolean>(false);
+	let isochronesAdvancedOptionsOpen = $state<boolean>(false);
 	let fromMarker = $state<maplibregl.Marker>();
 	let toMarker = $state<maplibregl.Marker>();
 	let oneMarker = $state<maplibregl.Marker>();
 	let stopMarker = $state<maplibregl.Marker>();
 	let from = $state<Location>(
-		parseLocation(urlParams?.get('fromPlace'), urlParams?.get('fromName'))
+		parseLocation(
+			urlParams?.get('fromPlace'),
+			urlParams?.get('fromName'),
+			urlParams?.get('fromPos')
+		)
 	);
-	let to = $state<Location>(parseLocation(urlParams?.get('toPlace'), urlParams?.get('toName')));
-	let one = $state<Location>(parseLocation(urlParams?.get('one'), urlParams?.get('oneName')));
+	let to = $state<Location>(
+		parseLocation(urlParams?.get('toPlace'), urlParams?.get('toName'), urlParams?.get('toPos'))
+	);
+	let one = $state<Location>(
+		parseLocation(urlParams?.get('one'), urlParams?.get('oneName'), urlParams?.get('onePos'))
+	);
 	let stop = $state<Location>();
 	let viaParam = getUrlArray('via');
 	let viaLabels = $state(
@@ -392,7 +435,7 @@
 	);
 	let arriveBy = $state<boolean>(urlParams?.get('arriveBy') == 'true');
 	let algorithm = $state<PlanData['query']['algorithm']>(
-		(urlParams?.get('algorithm') ?? defaultQuery.algorithm) as PlanData['query']['algorithm']
+		(urlParams?.get('algorithm') ?? 'PONG') as PlanData['query']['algorithm']
 	);
 	let useRoutedTransfers = $state(
 		urlParams?.get('useRoutedTransfers') == 'true' || defaultQuery.useRoutedTransfers
@@ -410,6 +453,7 @@
 	) as CyclingSpeed;
 	let requireBikeTransport = $state(urlParams?.get('requireBikeTransport') == 'true');
 	let requireCarTransport = $state(urlParams?.get('requireCarTransport') == 'true');
+	let noCompulsoryReservation = $state(urlParams?.get('noCompulsoryReservation') == 'true');
 	let transitModes = $state<Mode[]>(
 		getUrlArray('transitModes', defaultQuery.transitModes) as Mode[]
 	);
@@ -485,22 +529,48 @@
 	let ignoreDirectRentalReturnConstraints = $state(
 		urlParams?.get('ignoreDirectRentalReturnConstraints') == 'true'
 	);
+	let vehicleHeight = $state<number>(
+		parseFloatOr(urlParams?.get('vehicleHeight'), defaultQuery.vehicleHeight)
+	);
+	let vehicleWidth = $state<number>(
+		parseFloatOr(urlParams?.get('vehicleWidth'), defaultQuery.vehicleWidth)
+	);
+	let vehicleLength = $state<number>(
+		parseFloatOr(urlParams?.get('vehicleLength'), defaultQuery.vehicleLength)
+	);
+	let vehicleWeight = $state<number>(
+		parseFloatOr(urlParams?.get('vehicleWeight'), defaultQuery.vehicleWeight)
+	);
+	let vehicleHazmat = $state(urlParams?.get('vehicleHazmat') == 'true');
+	let vehicleHazmatWater = $state(urlParams?.get('vehicleHazmatWater') == 'true');
+	let vehicleAxleCount = $state<number>(
+		parseIntOr(urlParams?.get('vehicleAxleCount'), defaultQuery.vehicleAxleCount)
+	);
+	let vehicleAxleLoad = $state<number>(
+		parseFloatOr(urlParams?.get('vehicleAxleLoad'), defaultQuery.vehicleAxleLoad)
+	);
+	let vehicleTrailer = $state(
+		urlParams?.get('vehicleTrailer') === null
+			? defaultQuery.vehicleTrailer
+			: urlParams?.get('vehicleTrailer') == 'true'
+	);
+	let vehicleTopSpeed = $state<number>(
+		parseIntOr(urlParams?.get('vehicleTopSpeed'), defaultQuery.vehicleTopSpeed)
+	);
+	let vehicleLezAccess = $state(
+		urlParams?.get('vehicleLezAccess') === null
+			? defaultQuery.vehicleLezAccess
+			: urlParams?.get('vehicleLezAccess') == 'true'
+	);
 	let slowDirect = $state(urlParams?.get('slowDirect') == 'true');
 
 	let isochronesData = $state<IsochronesPos[]>([]);
 	let isochronesOptions = $state<IsochronesOptions>({
-		displayLevel:
-			(urlParams?.get('isochronesDisplayLevel') as DisplayLevel) ??
-			defaultQuery.isochronesDisplayLevel,
-		color: urlParams?.get('isochronesColor') ?? defaultQuery.isochronesColor,
 		opacity: parseIntOr(urlParams?.get('isochronesOpacity'), defaultQuery.isochronesOpacity),
 		status: 'DONE',
 		errorMessage: undefined,
 		errorCode: undefined
 	});
-	const isochronesCircleResolution = urlParams?.get('isochronesCircleResolution')
-		? parseIntOr(urlParams.get('isochronesCircleResolution'), defaultQuery.circleResolution)
-		: defaultQuery.circleResolution;
 
 	const toPlaceString = (l: Location) => {
 		if (l.match?.type === 'STOP') {
@@ -512,6 +582,13 @@
 		}
 	};
 
+	// Stops go into the query as a plain ID, so the URL alone would not say where
+	// they are and the marker could not be restored after a reload.
+	const toPosString = (l: Location | undefined) =>
+		l?.match?.type === 'STOP' && (l.match.lat != 0 || l.match.lon != 0)
+			? lngLatToStr(l.match)
+			: undefined;
+
 	const providerGroupsForQuery = (modes: PrePostDirectMode[], groups: string[]): string[] => {
 		if (!modes.some((mode) => mode.startsWith('RENTAL_'))) {
 			return [];
@@ -519,8 +596,11 @@
 		return Array.from(new Set(groups));
 	};
 
+	const includeHgvOptions = (...modeGroups: Array<PrePostDirectMode[] | undefined>) =>
+		modeGroups.some((modes) => modes?.includes('HGV'));
+
 	let baseQuery = $derived(
-		from.match && to.match
+		from.match && to.match && !advancedOptionsOpen
 			? ({
 					query: omitDefaults({
 						time: time.toISOString(),
@@ -534,7 +614,7 @@
 						withFares: true,
 						numLegAlternatives: 3,
 						slowDirect,
-						fastestDirectFactor: 1.5,
+						fastestDirectFactor: 10,
 						pedestrianProfile,
 						joinInterlinedLegs: false,
 						transitModes:
@@ -558,6 +638,7 @@
 						directRentalProviderGroups: providerGroupsForQuery(directModes, directProviderGroups),
 						requireBikeTransport,
 						requireCarTransport,
+						noCompulsoryReservation,
 						elevationCosts,
 						useRoutedTransfers,
 						maxTransfers: maxTransfers,
@@ -572,6 +653,21 @@
 						ignorePreTransitRentalReturnConstraints,
 						ignorePostTransitRentalReturnConstraints,
 						ignoreDirectRentalReturnConstraints,
+						...(includeHgvOptions(preTransitModes, postTransitModes, directModes)
+							? {
+									vehicleHeight,
+									vehicleWidth,
+									vehicleLength,
+									vehicleWeight,
+									vehicleHazmat,
+									vehicleHazmatWater,
+									vehicleAxleCount,
+									vehicleAxleLoad,
+									vehicleTrailer,
+									vehicleTopSpeed,
+									vehicleLezAccess
+								}
+							: {}),
 						algorithm,
 						via: via ? via.map((v) => v.match?.id) : undefined,
 						viaMinimumStay
@@ -588,6 +684,7 @@
 		useRoutedTransfers,
 		requireBikeTransport,
 		requireCarTransport,
+		noCompulsoryReservation,
 		preTransitModes: prePostModesToModes(preTransitModes),
 		postTransitModes: prePostModesToModes(postTransitModes),
 		preTransitRentalFormFactors: getFormFactors(preTransitModes),
@@ -611,7 +708,7 @@
 	});
 
 	let isochronesQuery = $derived(
-		one?.match
+		one?.match && !isochronesAdvancedOptionsOpen
 			? ({
 					query: {
 						one: toPlaceString(one),
@@ -628,12 +725,30 @@
 						pedestrianProfile,
 						requireBikeTransport,
 						requireCarTransport,
+						noCompulsoryReservation,
 						preTransitModes: prePostModesToModes(preTransitModes),
 						postTransitModes: prePostModesToModes(postTransitModes),
 						maxPreTransitTime,
 						maxPostTransitTime,
 						elevationCosts,
-						maxMatchingDistance: pedestrianProfile == 'WHEELCHAIR' ? 8 : 250
+						maxMatchingDistance: pedestrianProfile == 'WHEELCHAIR' ? 8 : 250,
+						ignorePreTransitRentalReturnConstraints,
+						ignorePostTransitRentalReturnConstraints,
+						...(includeHgvOptions(preTransitModes, postTransitModes)
+							? {
+									vehicleHeight,
+									vehicleWidth,
+									vehicleLength,
+									vehicleWeight,
+									vehicleHazmat,
+									vehicleHazmatWater,
+									vehicleAxleCount,
+									vehicleAxleLoad,
+									vehicleTrailer,
+									vehicleTopSpeed,
+									vehicleLezAccess
+								}
+							: {})
 					}
 				} satisfies Parameters<typeof oneToAll>[0])
 			: undefined
@@ -653,7 +768,8 @@
 				one,
 				selectedStop: page.state.selectedStop,
 				stopArriveBy: page.state.stopArriveBy,
-				stopName: stopNameFromResponse || page.state.selectedStop?.name
+				stopName: stopNameFromResponse || page.state.selectedStop?.name,
+				selectedItinerary: page.state.selectedItinerary
 			},
 			t
 		)
@@ -700,36 +816,43 @@
 		}
 	};
 
+	const baseSearch = (baseQuery: PlanData) => {
+		const base = plan(baseQuery).then(preprocessItinerary(from, to));
+		const q = baseQuery.query;
+		baseResponse = base;
+		routingResponses = [base];
+		pushStateWithQueryString(
+			{
+				...q,
+				...(q.fromPlace == from.label ? {} : { fromName: from.label }),
+				...(q.toPlace == to.label ? {} : { toName: to.label }),
+				...definedOnly({ fromPos: toPosString(from), toPos: toPosString(to) }),
+				...viaLabels
+			},
+			{ activeTab: 'connections' },
+			true
+		);
+	};
+
 	$effect(() => {
-		if (baseQuery && baseQuery != lastPlanQuery && activeTab == 'connections') {
-			lastPlanQuery = baseQuery;
+		const eq = (a: PlanData | undefined, b: PlanData | undefined) =>
+			JSON.stringify(a?.query) === JSON.stringify(b?.query);
+		if (baseQuery && !eq(baseQuery, lastPlanQuery) && activeTab == 'connections') {
+			const q = baseQuery;
+			const timeChanged = lastPlanQuery != undefined && lastPlanQuery.query.time != q.query.time;
+			lastPlanQuery = q;
 			clearTimeout(searchDebounceTimer);
-			searchDebounceTimer = setTimeout(() => {
-				const base = plan(baseQuery).then(preprocessItinerary(from, to));
-				const q = baseQuery.query;
-				baseResponse = base;
-				routingResponses = [base];
-				pushStateWithQueryString(
-					{
-						...q,
-						...(q.fromPlace == from.label ? {} : { fromName: from.label }),
-						...(q.toPlace == to.label ? {} : { toName: to.label }),
-						...viaLabels
-					},
-					{ activeTab: 'connections' },
-					true
-				);
-			}, 400);
+			if (timeChanged) {
+				searchDebounceTimer = setTimeout(() => baseSearch(q), 400);
+			} else {
+				baseSearch(q);
+			}
 		}
 	});
 	let isochronesQueryTimeout: number;
 	$effect(() => {
 		if (isochronesQuery && activeTab == 'isochrones') {
-			const [isochronesColor, isochronesOpacity, isochronesDisplayLevel] = [
-				isochronesOptions.color,
-				isochronesOptions.opacity,
-				isochronesOptions.displayLevel
-			];
+			const isochronesOpacity = isochronesOptions.opacity;
 			if (lastOneToAllQuery != isochronesQuery) {
 				lastOneToAllQuery = isochronesQuery;
 				clearTimeout(isochronesQueryTimeout);
@@ -754,7 +877,7 @@
 						});
 
 						isochronesData = [...all];
-						isochronesOptions.status = isochronesData.length == 0 ? 'EMPTY' : 'WORKING';
+						isochronesOptions.status = isochronesData.length == 0 ? 'EMPTY' : 'DONE';
 					} catch (e) {
 						isochronesOptions.status = 'FAILED';
 						isochronesOptions.errorMessage = String(e);
@@ -768,13 +891,9 @@
 					{
 						...q,
 						...(q.one == one.label ? {} : { oneName: one.label }),
+						...definedOnly({ onePos: toPosString(one) }),
 						maxTravelTime: q.maxTravelTime * 60,
-						isochronesColor,
-						isochronesOpacity,
-						isochronesDisplayLevel,
-						...(isochronesCircleResolution && isochronesCircleResolution > 2
-							? { isochronesCircleResolution }
-							: {})
+						isochronesOpacity
 					},
 					{ activeTab: 'isochrones' },
 					true
@@ -820,8 +939,51 @@
 		});
 	};
 
-	const flyToLocation = (location: Location) => {
-		map?.flyTo({ center: location.match, zoom: 18 });
+	let lastFlownTo: Match | undefined = undefined;
+	const flyToLocation = (location: Location, zoom: number = 18) => {
+		if (location.match == lastFlownTo) {
+			return;
+		}
+		lastFlownTo = location.match;
+		map?.flyTo({ center: location.match, zoom });
+	};
+
+	// Show the whole reachable area instead of zooming onto the start position.
+	// A few long distance stops can reach much further than everything else, so
+	// the outermost places are trimmed away before fitting.
+	const ISOCHRONES_FIT_TRIM = 0.02;
+	const isochronesBounds = (data: IsochronesPos[]) => {
+		const lngs = data.map((p) => p.lng).sort((a, b) => a - b);
+		const lats = data.map((p) => p.lat).sort((a, b) => a - b);
+		const lo = Math.floor(lngs.length * ISOCHRONES_FIT_TRIM);
+		const hi = lngs.length - 1 - lo;
+		return lo < hi
+			? new maplibregl.LngLatBounds([lngs[lo], lats[lo]], [lngs[hi], lats[hi]])
+			: new maplibregl.LngLatBounds(
+					[lngs[0], lats[0]],
+					[lngs[lngs.length - 1], lats[lats.length - 1]]
+				);
+	};
+
+	let lastFittedIsochrones: IsochronesPos[] | undefined = undefined;
+	const flyToIsochrones = (data: IsochronesPos[], map: maplibregl.Map) => {
+		if (data === lastFittedIsochrones) {
+			return;
+		}
+		lastFittedIsochrones = data;
+		const box = isochronesBounds(data);
+		const camera = map.cameraForBounds(box, {
+			maxZoom: 15, // keeps a single reachable place from zooming to street level
+			padding: {
+				top: 96,
+				right: 96,
+				bottom: isSmallScreen.current ? window.innerHeight * 0.3 : 96,
+				left: isSmallScreen.current ? 96 : 640
+			}
+		});
+		if (camera) {
+			map.flyTo(camera);
+		}
 	};
 
 	const flyToSelectedItinerary = () => {
@@ -843,7 +1005,12 @@
 			} else if (activeTab == 'departures' && stop && stop.match) {
 				flyToLocation(stop);
 			} else if (activeTab == 'isochrones' && one && one.match) {
-				flyToLocation(one);
+				if (isochronesData.length != 0) {
+					flyToIsochrones(isochronesData, map);
+				} else if (isochronesOptions.status == 'EMPTY' || isochronesOptions.status == 'FAILED') {
+					// Nothing to fit: at least show the surroundings of the start.
+					flyToLocation(one, 13);
+				}
 			}
 		}
 	});
@@ -869,28 +1036,7 @@
 </svelte:head>
 
 {#snippet contextMenu(e: maplibregl.MapMouseEvent, close: CloseFn)}
-	{#if activeTab == 'connections'}
-		<Button
-			variant="outline"
-			onclick={() => {
-				from = posToLocation(e.lngLat, zoom > LEVEL_MIN_ZOOM ? level : undefined);
-				fromMarker?.setLngLat(from.match!);
-				close();
-			}}
-		>
-			From
-		</Button>
-		<Button
-			variant="outline"
-			onclick={() => {
-				to = posToLocation(e.lngLat, zoom > LEVEL_MIN_ZOOM ? level : undefined);
-				toMarker?.setLngLat(to.match!);
-				close();
-			}}
-		>
-			To
-		</Button>
-	{:else if activeTab == 'isochrones'}
+	{#if activeTab == 'isochrones'}
 		<Button
 			variant="outline"
 			onclick={() => {
@@ -902,30 +1048,46 @@
 			{t.position}
 		</Button>
 	{/if}
+	<Button
+		variant="outline"
+		onclick={() => {
+			from = posToLocation(e.lngLat, zoom > LEVEL_MIN_ZOOM ? level : undefined);
+			fromMarker?.setLngLat(from.match!);
+			setActiveTab('connections');
+			close();
+		}}
+	>
+		From
+	</Button>
+	<Button
+		variant="outline"
+		onclick={() => {
+			to = posToLocation(e.lngLat, zoom > LEVEL_MIN_ZOOM ? level : undefined);
+			toMarker?.setLngLat(to.match!);
+			setActiveTab('connections');
+			close();
+		}}
+	>
+		To
+	</Button>
 {/snippet}
-
 {#snippet resultContent()}
-	<Control>
+	<Control class="min-h-0 shrink-0 overflow-hidden">
 		<Tabs.Root
-			bind:value={
-				() => activeTab,
-				(v) => {
-					activeTab = v;
-					pushState('', { activeTab: v });
-				}
-			}
-			class="max-w-full w-[520px] overflow-y-auto"
+			bind:value={() => activeTab, setActiveTab}
+			class="flex h-full min-h-0 max-h-[97dvh] max-w-full w-[520px] flex-col overflow-hidden"
 		>
-			<Tabs.List class="grid grid-cols-3">
+			<Tabs.List class="grid shrink-0 grid-cols-3">
 				<Tabs.Trigger value="connections">{t.connections}</Tabs.Trigger>
 				<Tabs.Trigger value="departures">{t.departures}</Tabs.Trigger>
 				<Tabs.Trigger value="isochrones">{t.isochrones.title}</Tabs.Trigger>
 			</Tabs.List>
-			<Tabs.Content value="connections">
-				<Card class="overflow-y-auto overflow-x-hidden bg-background rounded-lg">
+			<Tabs.Content value="connections" class="min-h-0 overflow-hidden">
+				<Card class="max-h-[calc(97dvh-2.5rem)] overflow-hidden bg-background rounded-lg">
 					<SearchMask
 						geocodingBiasPlace={center}
 						{serverConfig}
+						bind:advancedOptionsOpen
 						bind:from
 						bind:to
 						bind:time
@@ -935,6 +1097,7 @@
 						bind:pedestrianProfile
 						bind:requireCarTransport
 						bind:requireBikeTransport
+						bind:noCompulsoryReservation
 						bind:transitModes
 						bind:preTransitModes
 						bind:postTransitModes
@@ -949,6 +1112,17 @@
 						bind:preTransitProviderGroups
 						bind:postTransitProviderGroups
 						bind:directProviderGroups
+						bind:vehicleHeight
+						bind:vehicleWidth
+						bind:vehicleLength
+						bind:vehicleWeight
+						bind:vehicleHazmat
+						bind:vehicleHazmatWater
+						bind:vehicleAxleCount
+						bind:vehicleAxleLoad
+						bind:vehicleTrailer
+						bind:vehicleTopSpeed
+						bind:vehicleLezAccess
 						bind:via
 						bind:viaMinimumStay
 						bind:viaLabels
@@ -960,14 +1134,17 @@
 					/>
 				</Card>
 			</Tabs.Content>
-			<Tabs.Content value="departures">
-				<Card class="overflow-y-auto overflow-x-hidden bg-background rounded-lg">
+			<Tabs.Content value="departures" class="min-h-0 overflow-hidden">
+				<Card
+					class="max-h-[calc(97dvh-2.5rem)] overflow-y-auto overflow-x-hidden bg-background rounded-lg"
+				>
 					<DeparturesMask bind:time />
 				</Card>
 			</Tabs.Content>
-			<Tabs.Content value="isochrones">
-				<Card class="overflow-y-auto overflow-x-hidden bg-background rounded-lg">
+			<Tabs.Content value="isochrones" class="min-h-0 overflow-hidden">
+				<Card class="max-h-[calc(97dvh-2.5rem)] overflow-hidden bg-background rounded-lg">
 					<IsochronesMask
+						bind:advancedOptionsOpen={isochronesAdvancedOptionsOpen}
 						bind:one
 						{serverConfig}
 						bind:maxTravelTime
@@ -977,6 +1154,7 @@
 						bind:pedestrianProfile
 						bind:requireCarTransport
 						bind:requireBikeTransport
+						bind:noCompulsoryReservation
 						bind:transitModes
 						bind:maxTransfers
 						bind:preTransitModes
@@ -995,6 +1173,17 @@
 						bind:preTransitProviderGroups
 						bind:postTransitProviderGroups
 						bind:directProviderGroups
+						bind:vehicleHeight
+						bind:vehicleWidth
+						bind:vehicleLength
+						bind:vehicleWeight
+						bind:vehicleHazmat
+						bind:vehicleHazmatWater
+						bind:vehicleAxleCount
+						bind:vehicleAxleLoad
+						bind:vehicleTrailer
+						bind:vehicleTopSpeed
+						bind:vehicleLezAccess
 						{hasDebug}
 					/>
 				</Card>
@@ -1120,6 +1309,7 @@
 						bind:stopMarker
 						bind:stopNameFromResponse
 						arriveBy={page.state.stopArriveBy}
+						exactRadius={page.state.exactRadius}
 					/>
 				</div>
 			</Card>
@@ -1140,7 +1330,8 @@
 		bind:bounds
 		bind:zoom
 		bind:center
-		class={cn('h-dvh pt-2 overflow-clip', theme)}
+		bind:bearing
+		class="h-dvh pt-2 overflow-clip"
 		style={showMap ? style : undefined}
 		attribution={false}
 	>
@@ -1178,6 +1369,9 @@
 			<div class="maplibregl-ctrl maplibregl-ctrl-attrib">
 				<div class="maplibregl-ctrl-attrib-inner">
 					&copy; <a href="http://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>
+					{#if withHillshades}
+						| <a href="https://mapterhorn.com/attribution" target="_blank">Mapterhorn</a>
+					{/if}
 					{#if dataAttributionLink}
 						| <a href={dataAttributionLink} target="_blank">{t.timetableSources}</a>
 					{/if}
@@ -1209,6 +1403,14 @@
 					</Select.Root>
 				</Control>
 				<Control position="top-right" class="w-fit float-right pb-4">
+					<Button
+						class={bearing === 0 ? 'hidden' : null}
+						size="icon"
+						title={t.resetToNorth}
+						onclick={() => map!.resetNorth()}
+					>
+						<Compass class="w-5 h-5" />
+					</Button>
 					<Button size="icon" title={t.showMyLocation} onclick={() => getLocation()}>
 						<LocateFixed class="w-5 h-5" />
 					</Button>
@@ -1240,7 +1442,7 @@
 			{/if}
 
 			{#if colorMode === 'stops'}
-				<StopsView {map} {bounds} {zoom} {theme} />
+				<StopsView {map} {bounds} {zoom} {level} {theme} />
 			{/if}
 			<RailViz
 				{map}
@@ -1252,14 +1454,13 @@
 			/>
 			<Isochrones
 				{map}
-				{bounds}
 				{isochronesData}
 				streetModes={arriveBy ? preTransitModes : postTransitModes}
 				wheelchair={pedestrianProfile === 'WHEELCHAIR'}
 				maxAllTime={arriveBy ? maxPreTransitTime : maxPostTransitTime}
-				circleResolution={isochronesCircleResolution}
+				{maxTravelTime}
 				active={activeTab == 'isochrones'}
-				bind:options={isochronesOptions}
+				options={isochronesOptions}
 			/>
 
 			<Popup trigger="contextmenu" children={contextMenu} />
