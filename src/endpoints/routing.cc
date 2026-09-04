@@ -30,6 +30,8 @@
 #include "nigiri/routing/limits.h"
 #include "nigiri/routing/pareto_set.h"
 #include "nigiri/routing/query.h"
+#include "nigiri/routing/raptor/bmraptor.h"
+#include "nigiri/routing/raptor/mcraptor.h"
 #include "nigiri/routing/raptor/pong.h"
 #include "nigiri/routing/raptor/raptor_state.h"
 #include "nigiri/routing/raptor_search.h"
@@ -1022,9 +1024,31 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
     auto const pong_applicable =
         query.timetableView_ &&
         query.arriveBy_ != start_time.extend_interval_later_;
+    // BM-RAPTOR (restricted pareto sets) and the plain multicriteria range
+    // McRAPTOR it bounds both run on the mcraptor engine, which does not
+    // cover realtime / via / bike/car / time-dependent offsets. The guards
+    // are reported individually: a server with an RT feed configured fails
+    // mc_g_rt for EVERY query, which otherwise looks like "the algorithm
+    // parameter is ignored".
+    auto const mc_requested = algorithm == api::algorithmEnum::BMRAP ||
+                              algorithm == api::algorithmEnum::BMRAPP ||
+                              algorithm == api::algorithmEnum::MCRAPTOR;
+    auto const mc_g_rt = rtt == nullptr || rtt->n_rt_transports() == 0U;
+    auto const mc_g_td = q.td_start_.empty() && q.td_dest_.empty();
+    auto const mc_g_nobikecar =
+        !q.require_bike_transport_ && !q.require_car_transport_;
+    auto const mc_g_novia = q.via_stops_.empty();
+    auto const mc_supported = n::routing::mcraptor_supported(q, rtt);
+    auto mc_applicable = mc_requested && mc_supported;
+    if (mc_requested && !mc_applicable) {
+      // fall back to rRAPTOR - and say so, instead of reporting the
+      // requested algorithm for a search it never ran
+      algorithm = api::algorithmEnum::RAPTOR;
+    }
     while (true) {
 #if defined(NIGIRI_CUDA)
-      if (algorithm != api::algorithmEnum::TB && gpu_supported &&
+      if (algorithm != api::algorithmEnum::TB && !mc_applicable &&
+          gpu_supported &&
           run_on_gpu(/*use_pong=*/pong_applicable &&
                      algorithm == api::algorithmEnum::PONG)) {
         gpu_used = true;
@@ -1032,7 +1056,71 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
       }
 #endif
 
-      if (algorithm == api::algorithmEnum::PONG && pong_applicable) {
+      if (mc_applicable) {
+        auto const dir = query.arriveBy_ ? n::direction::kBackward
+                                         : n::direction::kForward;
+        auto const to = query.timeout_.has_value()
+                            ? std::chrono::seconds{*query.timeout_}
+                            : max_timeout;
+        // Extra pareto criteria of the multicriteria engines, selected by
+        // NIGIRI_MC_CRITERIA:
+        //   walk      (default) walking minutes: offsets + footpaths
+        //   air                 binary "uses a flight" - keeps both the
+        //                       fast flying option and the best ground one
+        //                       instead of filtering flights out entirely
+        //   walk+air            both, as independent pareto dimensions
+        //   clasz               number of vehicle-class switches between
+        //                       consecutive trips (bus -> subway counts,
+        //                       subway -> subway does not)
+        //   walk+clasz          walking minutes + vehicle-class switches
+        //   cost                OTP-style generalized cost; its dominance
+        //                       is nearly collinear with (arrival,
+        //                       transfers) and yields almost no extras
+        static auto const* const mc_criteria = [] {
+          auto const* const v = std::getenv("NIGIRI_MC_CRITERIA");
+          return v == nullptr ? "walk" : v;
+        }();
+        auto const run = [&](auto& mc_state) {
+          switch (algorithm) {
+            case api::algorithmEnum::BMRAP:
+              return n::routing::bmrap_search(*tt_, rtt, search_state, mc_state,
+                                              q, dir, to);
+            case api::algorithmEnum::BMRAPP:
+              return n::routing::bmrap_profile_search(
+                  *tt_, rtt, search_state, mc_state, q, dir, to);
+            default:
+              return n::routing::raptor_search(*tt_, rtt, search_state,
+                                               mc_state, q, dir, to);
+          }
+        };
+        try {
+          auto const c = std::string_view{mc_criteria};
+          if (c == "cost") {
+            auto mc_state = n::routing::mcraptor_cost_state{};
+            r = run(mc_state);
+          } else if (c == "air") {
+            auto mc_state = n::routing::mcraptor_air_state{};
+            r = run(mc_state);
+          } else if (c == "walk+air" || c == "air+walk") {
+            auto mc_state = n::routing::mcraptor_walk_air_state{};
+            r = run(mc_state);
+          } else if (c == "clasz") {
+            auto mc_state = n::routing::mcraptor_clasz_state{};
+            r = run(mc_state);
+          } else if (c == "walk+clasz" || c == "clasz+walk") {
+            auto mc_state = n::routing::mcraptor_walk_clasz_state{};
+            r = run(mc_state);
+          } else {
+            auto mc_state = n::routing::mcraptor_walk_state{};
+            r = run(mc_state);
+          }
+        } catch (std::exception const& e) {
+          std::cout << "MCRAPTOR EXCEPTION: " << e.what() << "\n";
+          mc_applicable = false;
+          algorithm = api::algorithmEnum::RAPTOR;
+          continue;
+        }
+      } else if (algorithm == api::algorithmEnum::PONG && pong_applicable) {
         try {
           auto raptor_state = n::routing::raptor_state{};
           r = n::routing::pong_search(
@@ -1046,7 +1134,10 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
           algorithm = api::algorithmEnum::RAPTOR;
           continue;
         }
-      } else if (algorithm == api::algorithmEnum::RAPTOR || tbd_ == nullptr ||
+      } else if (algorithm == api::algorithmEnum::RAPTOR ||
+                 algorithm == api::algorithmEnum::MCRAPTOR ||
+                 algorithm == api::algorithmEnum::BMRAP ||
+                 algorithm == api::algorithmEnum::BMRAPP || tbd_ == nullptr ||
                  (rtt != nullptr && rtt->n_rt_transports() != 0U) ||
                  query.arriveBy_ || q.prf_idx_ != tbd_->prf_idx_ ||
                  q.allowed_claszes_ != n::routing::all_clasz_allowed() ||
@@ -1069,6 +1160,12 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
     // record the algorithm that actually ran (after any fallbacks)
     auto const algo_stats = stats_map_t{
         {"algorithm", static_cast<std::uint64_t>(algorithm)},
+        {"mc_requested", mc_requested},
+        {"mc_supported", mc_supported},
+        {"mc_g_rt", mc_g_rt},
+        {"mc_g_td", mc_g_td},
+        {"mc_g_nobikecar", mc_g_nobikecar},
+        {"mc_g_novia", mc_g_novia},
 #if defined(NIGIRI_CUDA)
         {"gpu_used", gpu_used},
         {"gpu_supported", gpu_supported},
