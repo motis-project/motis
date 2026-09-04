@@ -349,6 +349,8 @@ struct gbfs_update {
 
       co_await init_missing_config_feeds();
     }
+
+    apply_pending_routing_updates();
   }
 
   void ensure_gbfs_metrics(std::string const& id) {
@@ -830,28 +832,40 @@ struct gbfs_update {
     add_skipped_entries(pf.id_, provider);
 
     if (data_changed) {
+      pending_routing_updates_.push_back(
+          {&provider, prev_provider, stations_updated, station_status_updated,
+           vehicle_status_updated, geofencing_updated});
+    } else if (prev_provider != nullptr) {
+      // data not changed, copy previously computed products
+      provider.products_ = prev_provider->products_;
+      provider.has_vehicles_to_rent_ = prev_provider->has_vehicles_to_rent_;
+    }
+  }
+
+  // Deferred so this CPU-bound work doesn't block the single-threaded
+  // io_context while other providers' feed requests are still in flight.
+  void apply_pending_routing_updates() {
+    for (auto const& u : pending_routing_updates_) {
+      auto& provider = *u.provider_;
       try {
         partition_provider(provider);
         provider.has_vehicles_to_rent_ = utl::any_of(
             provider.products_,
             [](auto const& prod) { return prod.has_vehicles_to_rent_; });
 
-        update_rtree(provider, prev_provider, stations_updated,
-                     station_status_updated, vehicle_status_updated,
-                     geofencing_updated);
+        update_rtree(provider, u.prev_provider_, u.stations_updated_,
+                     u.station_status_updated_, u.vehicle_status_updated_,
+                     u.geofencing_updated_);
 
         d_->cache_.try_add_or_update(provider.idx_, [&]() {
           return compute_provider_routing_data(w_, l_, provider);
         });
       } catch (std::exception const& ex) {
-        std::cerr << "[GBFS] error updating provider " << pf.id_ << ": "
+        std::cerr << "[GBFS] error updating provider " << provider.id_ << ": "
                   << ex.what() << "\n";
       }
-    } else if (prev_provider != nullptr) {
-      // data not changed, copy previously computed products
-      provider.products_ = prev_provider->products_;
-      provider.has_vehicles_to_rent_ = prev_provider->has_vehicles_to_rent_;
     }
+    pending_routing_updates_.clear();
   }
 
   void partition_provider(gbfs_provider& provider) {
@@ -1511,6 +1525,15 @@ struct gbfs_update {
         .value_or(false);
   }
 
+  struct pending_routing_update {
+    gbfs_provider* provider_;
+    gbfs_provider const* prev_provider_;
+    bool stations_updated_;
+    bool station_status_updated_;
+    bool vehicle_status_updated_;
+    bool geofencing_updated_;
+  };
+
   metrics_registry const* metrics_{};
 
   config::gbfs const& c_;
@@ -1522,6 +1545,8 @@ struct gbfs_update {
 
   std::chrono::seconds timeout_;
   std::optional<proxy> proxy_;
+
+  std::vector<pending_routing_update> pending_routing_updates_;
 };
 
 awaitable<void> update(config const& c,

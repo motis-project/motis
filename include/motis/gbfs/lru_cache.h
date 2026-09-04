@@ -121,7 +121,10 @@ public:
     auto write_lock = std::unique_lock{mutex_};
 
     if (auto it = cache_map_.find(key); it != cache_map_.end()) {
-      it->second->value_ = compute_fn();
+      // replace, don't mutate: a copy of this cache (gbfs_update::run())
+      // may share this entry with a differently-locked reader
+      it->second =
+          std::make_shared<cache_entry>(cache_entry{key, compute_fn()});
       move_to_front(key);
       return true;
     }
