@@ -30,6 +30,7 @@ export const defaultQuery = {
 	ignoreDirectRentalReturnConstraints: false,
 	requireBikeTransport: false,
 	requireCarTransport: false,
+	noCompulsoryReservation: false,
 	elevationCosts: 'NONE',
 	vehicleHeight: 4.0,
 	vehicleWidth: 2.55,
