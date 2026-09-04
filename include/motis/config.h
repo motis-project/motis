@@ -46,6 +46,7 @@ struct config {
     unsigned gpu_states_{2U};
     std::optional<std::string> data_attribution_link_{};
     std::optional<std::vector<std::string>> lbs_{};
+    bool when_unhealthy_return_503_{false};
   };
   std::optional<server> server_{};
 
