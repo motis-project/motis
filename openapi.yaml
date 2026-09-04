@@ -4846,12 +4846,6 @@ components:
         down:
           type: number
 
-    WheelchairAccessibility:
-      type: string
-      enum:
-        - ACCESSIBLE
-        - NOT_ACCESSIBLE
-
     RentalFormFactor:
       type: string
       enum:
