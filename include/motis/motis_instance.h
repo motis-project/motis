@@ -3,8 +3,11 @@
 
 #include "boost/asio/io_context.hpp"
 
+#include "net/web_server/enable_cors.h"
 #include "net/web_server/query_router.h"
+#include "net/web_server/responses.h"
 
+#include "utl/helpers/algorithm.h"
 #include "utl/set_thread_name.h"
 
 #include "motis/endpoints/adr/geocode.h"
@@ -40,10 +43,19 @@
 #include "motis/endpoints/trip.h"
 #include "motis/endpoints/update_elevator.h"
 #include "motis/gbfs/update.h"
+#include "motis/health.h"
 #include "motis/metrics_registry.h"
 #include "motis/rt_update.h"
 
 namespace motis {
+
+// Matches endpoint structs with an `rt_`/`gbfs_` member, i.e. ones that
+// consume real-time / GBFS data.
+template <typename T>
+concept uses_rt = requires(T const& t) { t.rt_; };
+
+template <typename T>
+concept uses_gbfs = requires(T const& t) { t.gbfs_; };
 
 struct io_thread {
   template <typename Fn>
@@ -83,7 +95,9 @@ struct motis_instance {
                  data& d,
                  config const& c,
                  std::string_view motis_version)
-      : qr_{std::forward<Executor>(exec)} {
+      : qr_{std::forward<Executor>(exec)},
+        config_{&c},
+        metrics_{d.metrics_.get()} {
     qr_.add_header("Server", fmt::format("MOTIS {}", motis_version));
     d.init_initial(motis_version);
     if (c.server_.value_or(config::server{}).data_attribution_link_) {
@@ -186,6 +200,7 @@ struct motis_instance {
   template <typename T, typename From>
   void GET(std::string target, From& from) {
     if (auto x = utl::init_from<T>(from); x.has_value()) {
+      register_health_gate<T>(target);
       qr_.get(std::move(target), std::move(*x));
     }
   }
@@ -193,8 +208,51 @@ struct motis_instance {
   template <typename T, typename From>
   void POST(std::string target, From& from) {
     if (auto x = utl::init_from<T>(from); x.has_value()) {
+      register_health_gate<T>(target);
       qr_.post(std::move(target), std::move(*x));
     }
+  }
+
+  // Gates `target` on rt/gbfs readiness if T needs data the config requires.
+  template <typename T>
+  void register_health_gate(std::string const& target) {
+    auto needs_rt = false;
+    auto needs_gbfs = false;
+    if constexpr (uses_rt<T>) {
+      needs_rt = config_->requires_rt_timetable_updates();
+    }
+    if constexpr (uses_gbfs<T>) {
+      needs_gbfs = config_->has_gbfs_feeds();
+    }
+    if (needs_rt || needs_gbfs) {
+      health_gated_prefixes_.push_back(target);
+    }
+  }
+
+  // Web server entry point: 503s gated endpoints while never-healthy (see
+  // server.when_unhealthy_return_503), else forwards to the query router.
+  void dispatch(net::web_server::http_req_t req,
+                net::web_server::http_res_cb_t cb,
+                bool is_ssl) {
+    if (!health_gated_prefixes_.empty() &&
+        config_->server_.value_or(config::server{})
+            .when_unhealthy_return_503_ &&
+        req.method() != boost::beast::http::verb::options) {
+      auto const path = boost::urls::url_view{req.target()}.path();
+      auto const gated = utl::any_of(
+          health_gated_prefixes_,
+          [&](std::string const& p) { return path.starts_with(p); });
+      if (gated && !is_healthy(*config_, *metrics_)) {
+        auto rep = net::reply{net::string_response(
+            req,
+            R"({"error":"motis is starting up: waiting for the initial )"
+            R"(realtime/GBFS update"})",
+            boost::beast::http::status::service_unavailable)};
+        net::enable_cors(rep);
+        return cb(std::move(rep));
+      }
+    }
+    qr_(std::move(req), std::move(cb), is_ssl);
   }
 
   void run(data& d, config const& c) {
@@ -223,6 +281,9 @@ struct motis_instance {
   }
 
   net::query_router<Executor> qr_{};
+  config const* config_{};
+  metrics_registry const* metrics_{};
+  std::vector<std::string> health_gated_prefixes_{};
   io_thread rt_, gbfs_;
 };
 
