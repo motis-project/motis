@@ -4365,6 +4365,35 @@ components:
           type: integer
           description: decline in meters across this path segment
 
+    HeightProfile:
+      type: object
+      required:
+        - points
+        - size
+      properties:
+        points:
+          description: |
+            Flattend array of coordinates and elevation, [latitude, longitude, z, latitude, ...].
+          type: array
+          items:
+            type: number
+        size:
+          description: Number of sample points.
+          type: integer
+        resolution:
+          description: Resolution of each point.
+          type: number
+        median:
+          type: number
+        min:
+          type: number
+        max:
+          type: number
+        up:
+          type: number
+        down:
+          type: number
+
     WheelchairAccessibility:
       type: string
       enum:
@@ -4940,6 +4969,9 @@ components:
             If detailed leg output is disabled, this is returned as an empty
             polyline.
           $ref: '#/components/schemas/EncodedPolyline'
+        heightProfile:
+          description: Elevation profile for leg.
+          $ref: '#/components/schemas/HeightProfile'
         steps:
           description: |
             A series of turn by turn instructions
