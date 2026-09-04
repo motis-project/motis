@@ -46,7 +46,6 @@ struct config {
     unsigned gpu_states_{2U};
     std::optional<std::string> data_attribution_link_{};
     std::optional<std::vector<std::string>> lbs_{};
-    // 503 rt/gbfs-dependent endpoints until their feed(s) first update
     bool when_unhealthy_return_503_{false};
   };
   std::optional<server> server_{};

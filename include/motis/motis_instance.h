@@ -49,8 +49,6 @@
 
 namespace motis {
 
-// Matches endpoint structs with an `rt_`/`gbfs_` member, i.e. ones that
-// consume real-time / GBFS data.
 template <typename T>
 concept uses_rt = requires(T const& t) { t.rt_; };
 
@@ -213,7 +211,6 @@ struct motis_instance {
     }
   }
 
-  // Gates `target` on rt/gbfs readiness if T needs data the config requires.
   template <typename T>
   void register_health_gate(std::string const& target) {
     auto needs_rt = false;
@@ -229,8 +226,8 @@ struct motis_instance {
     }
   }
 
-  // Web server entry point: 503s gated endpoints while never-healthy (see
-  // server.when_unhealthy_return_503), else forwards to the query router.
+  // 503s gated endpoints while never-healthy
+  // (server.when_unhealthy_return_503).
   void dispatch(net::web_server::http_req_t req,
                 net::web_server::http_res_cb_t cb,
                 bool is_ssl) {
