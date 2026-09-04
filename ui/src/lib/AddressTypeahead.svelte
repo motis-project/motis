@@ -189,9 +189,9 @@
 		autocomplete="off"
 		oninput={(e: Event) => (inputValue = (e.currentTarget as HTMLInputElement).value)}
 		onfocus={() => {
-			open = true;
 			if (!inputValue) {
 				items = historyForType();
+				open = true;
 			}
 		}}
 		aria-label={placeholder}
