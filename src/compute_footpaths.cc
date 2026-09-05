@@ -325,7 +325,7 @@ elevator_footpath_map_t compute_footpaths(
               auto const dist = geo::distance(
                   tt.locations_.coordinates_[l], tt.locations_.coordinates_[n]);
               if (dist >= kMaxMissingFootpathDistance ||
-                  utl::any_of(transfers[l], [&, n = n](n::footpath const fp) {
+                  utl::any_of(transfers[l], [&](n::footpath const fp) {
                     return fp.target() == n;
                   })) {
                 continue;
