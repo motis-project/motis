@@ -7,7 +7,6 @@
 #include "net/web_server/query_router.h"
 #include "net/web_server/responses.h"
 
-#include "utl/helpers/algorithm.h"
 #include "utl/set_thread_name.h"
 
 #include "motis/endpoints/adr/geocode.h"
@@ -48,12 +47,6 @@
 #include "motis/rt_update.h"
 
 namespace motis {
-
-template <typename T>
-concept uses_rt = requires(T const& t) { t.rt_; };
-
-template <typename T>
-concept uses_gbfs = requires(T const& t) { t.gbfs_; };
 
 struct io_thread {
   template <typename Fn>
@@ -198,7 +191,6 @@ struct motis_instance {
   template <typename T, typename From>
   void GET(std::string target, From& from) {
     if (auto x = utl::init_from<T>(from); x.has_value()) {
-      register_health_gate<T>(target);
       qr_.get(std::move(target), std::move(*x));
     }
   }
@@ -206,40 +198,21 @@ struct motis_instance {
   template <typename T, typename From>
   void POST(std::string target, From& from) {
     if (auto x = utl::init_from<T>(from); x.has_value()) {
-      register_health_gate<T>(target);
       qr_.post(std::move(target), std::move(*x));
     }
   }
 
-  template <typename T>
-  void register_health_gate(std::string const& target) {
-    auto needs_rt = false;
-    auto needs_gbfs = false;
-    if constexpr (uses_rt<T>) {
-      needs_rt = config_->requires_rt_timetable_updates();
-    }
-    if constexpr (uses_gbfs<T>) {
-      needs_gbfs = config_->has_gbfs_feeds();
-    }
-    if (needs_rt || needs_gbfs) {
-      health_gated_prefixes_.push_back(target);
-    }
-  }
-
-  // 503s gated endpoints while never-healthy
-  // (server.when_unhealthy_return_503).
-  void dispatch(net::web_server::http_req_t req,
-                net::web_server::http_res_cb_t cb,
-                bool is_ssl) {
-    if (!health_gated_prefixes_.empty() &&
-        config_->server_.value_or(config::server{})
-            .when_unhealthy_return_503_ &&
-        req.method() != boost::beast::http::verb::options) {
+  // While never-healthy (server.when_unhealthy_return_error), 503 everything
+  // except /api/v1/health and /metrics so monitoring still works.
+  void operator()(net::web_server::http_req_t req,
+                  net::web_server::http_res_cb_t cb,
+                  bool is_ssl) {
+    if (config_->server_ && config_->server_->when_unhealthy_return_error_ &&
+        req.method() != boost::beast::http::verb::options &&
+        !is_healthy(*config_, *metrics_)) {
       auto const path = boost::urls::url_view{req.target()}.path();
-      auto const gated = utl::any_of(
-          health_gated_prefixes_,
-          [&](std::string const& p) { return path.starts_with(p); });
-      if (gated && !is_healthy(*config_, *metrics_)) {
+      if (!path.starts_with("/api/v1/health") &&
+          !path.starts_with("/metrics")) {
         auto rep = net::reply{net::string_response(
             req,
             R"({"error":"motis is starting up: waiting for the initial )"
@@ -280,7 +253,6 @@ struct motis_instance {
   net::query_router<Executor> qr_{};
   config const* config_{};
   metrics_registry const* metrics_{};
-  std::vector<std::string> health_gated_prefixes_{};
   io_thread rt_, gbfs_;
 };
 

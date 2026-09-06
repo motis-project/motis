@@ -48,7 +48,7 @@ server:
   web_folder: ui                    # folder with static files to serve
   n_threads: 24                     # default (if not set): number of hardware threads
   data_attribution_link: https://creativecommons.org/licenses/by/4.0/ # link to data sources or license exposed in HTTP headers and UI
-  when_unhealthy_return_503: false  # return HTTP 503 from endpoints that use real-time/GBFS data until the corresponding feed(s) have completed their first update since startup (see /api/v1/health)
+  when_unhealthy_return_error: false # return HTTP 503 from all endpoints except /api/v1/health and /metrics until rt/gbfs feed(s) have completed their first update since startup
 osm: netherlands-latest.osm.pbf     # required by tiles, street routing, geocoding and reverse-geocoding
 tiles:                              # tiles won't be available if this key is missing
   profile: tiles-profiles/full.lua  # currently `background.lua` (less details) and `full.lua` (more details) are available
@@ -88,6 +88,7 @@ timetable:                          # if not set, no timetable will be loaded
           headers:
             Authorization: MY_API_KEY
           protocol: gtfsrt          # specify the real time protocol (default: gtfsrt)
+          priority: 1               # 0 = never update an already existing realtime trip, only create it if missing (default: 1)
     nl:
       path: nl_ovapi.gtfs.zip
       extend_calendar: false

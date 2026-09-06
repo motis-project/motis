@@ -842,8 +842,6 @@ struct gbfs_update {
     }
   }
 
-  // Deferred so this CPU-bound work doesn't block the single-threaded
-  // io_context while other providers' feed requests are still in flight.
   void apply_pending_routing_updates() {
     for (auto const& u : pending_routing_updates_) {
       auto& provider = *u.provider_;
