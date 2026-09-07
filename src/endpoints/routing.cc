@@ -1236,7 +1236,7 @@ api::plan_response routing::route(api::plan_params const& query,
               max_matching_distance, api_version,
               query.ignorePreTransitRentalReturnConstraints_,
               query.ignorePostTransitRentalReturnConstraints_, query.language_,
-              true,
+              static_cast<unsigned>(query.elevationProfileSamples_), true,
               query.numLegAlternatives_ > 0
                   ? alternatives_context{query_alternatives{
                         q_for_alts,

@@ -381,6 +381,17 @@ paths:
             type: boolean
             default: true
 
+        - name: elevationProfileSamples
+          in: query
+          required: false
+          description: |
+            Optional. Determines the granularity of elevation profiles,
+            i.e. the number of evenly spaced sample points at which
+            elevation data is measured. Pass 0 to disable elevation profiles.
+          schema:
+            type: integer
+            default: 0
+
         - name: joinInterlinedLegs
           in: query
           description: |
@@ -5428,7 +5439,7 @@ components:
             polyline.
           $ref: '#/components/schemas/EncodedPolyline'
         heightProfile:
-          description: Elevation profile for leg.
+          description: Elevation profile for leg. Only for footpath legs.
           $ref: '#/components/schemas/HeightProfile'
         steps:
           description: |

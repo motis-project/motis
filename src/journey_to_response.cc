@@ -357,6 +357,7 @@ api::Itinerary journey_to_response(
     bool const ignore_start_rental_return_constraints,
     bool const ignore_dest_rental_return_constraints,
     n::lang_t const& lang,
+    unsigned elevation_profile_samples,
     bool const set_itinerary_id_field,
     alternatives_context const& alternatives,
     std::chrono::nanoseconds* fares_time) {
@@ -802,7 +803,8 @@ api::Itinerary journey_to_response(
                                true,
                                std::chrono::duration_cast<std::chrono::seconds>(
                                    j_leg.arr_time_ - j_leg.dep_time_) +
-                                   std::chrono::minutes{10})
+                                   std::chrono::minutes{10},
+                               elevation_profile_samples)
                          : dummy_itinerary(from, to, api::ModeEnum::WALK,
                                            j_leg.dep_time_, j_leg.arr_time_,
                                            api_version));
@@ -838,7 +840,8 @@ api::Itinerary journey_to_response(
                   *blocked_mem, api_version, detailed_legs,
                   std::chrono::duration_cast<std::chrono::seconds>(
                       j_leg.arr_time_ - j_leg.dep_time_) +
-                      std::chrono::minutes{5}));
+                      std::chrono::minutes{5},
+                  elevation_profile_samples));
             }},
         j_leg.uses_);
   }

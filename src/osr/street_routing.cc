@@ -1,16 +1,17 @@
 #include "motis/osr/street_routing.h"
+#include <boost/filesystem/path.hpp>
+#include <cstddef>
+#include <optional>
 
-#include "geo/polyline_format.h"
-
+#include "osr/routing/path.h"
 #include "utl/concat.h"
 #include "utl/get_or_create.h"
 
 #include "osr/routing/algorithms.h"
-#include "osr/routing/parameters.h"
+#include "osr/routing/elevation_profile.h"
 #include "osr/routing/route.h"
 #include "osr/routing/sharing_data.h"
 
-#include "motis/constants.h"
 #include "motis/osr/mode_to_profile.h"
 #include "motis/place.h"
 #include "motis/polyline.h"
@@ -176,6 +177,28 @@ std::vector<api::StepInstruction> get_step_instructions(
   return steps;
 }
 
+api::HeightProfile get_height_profile(osr::ways const& w,
+                                      osr::path const& p,
+                                      unsigned n) {
+  auto const profile = osr::elevation_profile{w, p, n};
+  auto points = std::vector<double>{};
+  auto acc = static_cast<double>(to_idx(profile.baseline_));
+  for (auto i = std::size_t{0}; i < profile.elevation_.size(); ++i) {
+    acc += to_idx(profile.elevation_[i]);
+    points.push_back(profile.points_[i * 2].lat());
+    points.push_back(profile.points_[i * 2 + 1].lng());
+    points.push_back(acc);
+  }
+  return {.points_ = points,
+          .size_ = static_cast<int64_t>(points.size()),
+          .resolution_ = 0.0,
+          .median_ = to_idx(profile.median()),
+          .min_ = to_idx(profile.min_),
+          .max_ = to_idx(profile.max_),
+          .up_ = to_idx(p.elevation_.up_),
+          .down_ = to_idx(p.elevation_.down_)};
+}
+
 api::Itinerary dummy_itinerary(api::Place const& from,
                                api::Place const& to,
                                api::ModeEnum const mode,
@@ -231,7 +254,8 @@ api::Itinerary street_routing(osr::ways const& w,
                               osr::bitvec<osr::node_idx_t>& blocked_mem,
                               unsigned const api_version,
                               bool const detailed_leg,
-                              std::chrono::seconds const max) {
+                              std::chrono::seconds const max,
+                              unsigned elevation_samples) {
   utl::verify(start_time.has_value() || end_time.has_value(),
               "either start_time or end_time must be set");
   auto const bound_time =
@@ -350,6 +374,11 @@ api::Itinerary street_routing(osr::ways const& w,
         if (detailed_leg) {
           leg.steps_ = get_step_instructions(w, elevations, from, to, range,
                                              api_version);
+
+          if (elevation_samples != 0) {
+            leg.heightProfile_ =
+                get_height_profile(w, path.value(), elevation_samples);
+          }
         }
 
         out.annotate_leg(lang, from_node, to_node, leg);
