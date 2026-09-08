@@ -35,4 +35,27 @@ struct flex_routing_data {
   std::vector<nigiri::location_idx_t> additional_nodes_;
 };
 
+// Additional node data of one flex routing without the allowed bitvecs (3 x
+// n_nodes bits, ~40 ms to build on the planet): all that reconstructing paths
+// from a retained search and annotating the resulting legs need.
+struct retained_flex_data {
+  explicit retained_flex_data(flex_routing_data const& frd)
+      : sharing_{.start_allowed_ = nullptr,
+                 .end_allowed_ = nullptr,
+                 .through_allowed_ = nullptr,
+                 .additional_node_offset_ = frd.additional_node_offset_,
+                 .additional_node_coordinates_ = frd_.additional_node_coordinates_,
+                 .additional_edges_ = frd_.additional_edges_} {
+    frd_.additional_node_offset_ = frd.additional_node_offset_;
+    frd_.additional_node_coordinates_ = frd.additional_node_coordinates_;
+    frd_.additional_edges_ = frd.additional_edges_;
+    frd_.additional_nodes_ = frd.additional_nodes_;
+  }
+  retained_flex_data(retained_flex_data const&) = delete;
+  retained_flex_data& operator=(retained_flex_data const&) = delete;
+
+  flex_routing_data frd_;  // bitvecs stay empty
+  osr::sharing_data sharing_;  // references frd_
+};
+
 }  // namespace motis::flex

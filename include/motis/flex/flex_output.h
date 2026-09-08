@@ -1,5 +1,8 @@
 #pragma once
 
+#include <memory>
+#include <optional>
+
 #include "motis/flex/flex_routing_data.h"
 #include "motis/flex/mode_id.h"
 #include "motis/osr/street_routing.h"
@@ -24,6 +27,17 @@ struct flex_output : public output {
               nigiri::timetable const&,
               flex_areas const&,
               mode_id);
+  // For legs reconstructed from a retained search: no routing data is built.
+  flex_output(osr::ways const&,
+              osr::platforms const*,
+              platform_matches_t const*,
+              adr_ext const*,
+              tz_map_t const*,
+              tag_lookup const&,
+              nigiri::timetable const&,
+              flex_areas const&,
+              mode_id,
+              std::shared_ptr<retained_flex_data const>);
   ~flex_output() override;
 
   api::ModeEnum get_mode() const override;
@@ -51,8 +65,11 @@ private:
   nigiri::timetable const& tt_;
   tag_lookup const& tags_;
   flex_areas const& fa_;
-  flex::flex_routing_data flex_routing_data_;
-  osr::sharing_data sharing_data_;
+  std::shared_ptr<retained_flex_data const> retained_;
+  std::optional<flex_routing_data> own_frd_;
+  std::optional<osr::sharing_data> own_sharing_;
+  flex_routing_data const* frd_;
+  osr::sharing_data const* sharing_;
   mode_id mode_id_;
 };
 

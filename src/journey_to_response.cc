@@ -832,25 +832,10 @@ api::Itinerary journey_to_response(
                 return;
               }
 
-              auto out = std::unique_ptr<output>{};
-              if (flex::mode_id::is_flex(x.transport_mode_id_)) {
-                out = std::make_unique<flex::flex_output>(
-                    *w, *l, pl, matches, ae, tz_map, tags, tt, *fl,
-                    flex::mode_id{x.transport_mode_id_});
-              } else if (x.transport_mode_id_ >= kGbfsTransportModeIdOffset) {
-                auto const is_pre_transit = pred == nullptr;
-                out = std::make_unique<gbfs::gbfs_output>(
-                    *w, gbfs_rd, gbfs_rd.get_products_ref(x.transport_mode_id_),
-                    is_pre_transit ? ignore_start_rental_return_constraints
-                                   : ignore_dest_rental_return_constraints);
-              } else {
-                out =
-                    std::make_unique<default_output>(*w, x.transport_mode_id_);
-              }
-
               // Offsets came from a one-to-many search from the start/dest
               // place -> reconstruct from it instead of routing again.
               auto precomputed = precomputed_route{};
+              auto const* entry = static_cast<one_to_many_entry const*>(nullptr);
               if (states != nullptr) {
                 auto const is_side = [&](n::special_station const s) {
                   auto const l = n::get_special_station(s);
@@ -866,9 +851,33 @@ api::Itinerary journey_to_response(
                     if (auto const d = it->second.dest_idx_.find(x.target());
                         d != end(it->second.dest_idx_)) {
                       precomputed = {it->second.state_.get(), d->second};
+                      entry = &it->second;
                     }
                   }
                 }
+              }
+
+              auto out = std::unique_ptr<output>{};
+              if (flex::mode_id::is_flex(x.transport_mode_id_)) {
+                auto const id = flex::mode_id{x.transport_mode_id_};
+                if (entry != nullptr && entry->owner_ != nullptr) {
+                  out = std::make_unique<flex::flex_output>(
+                      *w, pl, matches, ae, tz_map, tags, tt, *fl, id,
+                      std::static_pointer_cast<flex::retained_flex_data const>(
+                          entry->owner_));
+                } else {
+                  out = std::make_unique<flex::flex_output>(
+                      *w, *l, pl, matches, ae, tz_map, tags, tt, *fl, id);
+                }
+              } else if (x.transport_mode_id_ >= kGbfsTransportModeIdOffset) {
+                auto const is_pre_transit = pred == nullptr;
+                out = std::make_unique<gbfs::gbfs_output>(
+                    *w, gbfs_rd, gbfs_rd.get_products_ref(x.transport_mode_id_),
+                    is_pre_transit ? ignore_start_rental_return_constraints
+                                   : ignore_dest_rental_return_constraints);
+              } else {
+                out =
+                    std::make_unique<default_output>(*w, x.transport_mode_id_);
               }
 
               append(street_routing(

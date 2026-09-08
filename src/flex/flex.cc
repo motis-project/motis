@@ -25,24 +25,6 @@ namespace n = nigiri;
 
 namespace motis::flex {
 
-// Additional node data of one flex routing, owned by the retained search.
-struct retained_flex_data {
-  explicit retained_flex_data(flex_routing_data const& frd)
-      : additional_node_coordinates_{frd.additional_node_coordinates_},
-        additional_edges_{frd.additional_edges_},
-        sharing_{.start_allowed_ = nullptr,
-                 .end_allowed_ = nullptr,
-                 .through_allowed_ = nullptr,
-                 .additional_node_offset_ = frd.additional_node_offset_,
-                 .additional_node_coordinates_ = additional_node_coordinates_,
-                 .additional_edges_ = additional_edges_} {}
-
-  std::vector<geo::latlng> additional_node_coordinates_;
-  osr::hash_map<osr::node_idx_t, std::vector<osr::additional_edge>>
-      additional_edges_;
-  osr::sharing_data sharing_;
-};
-
 osr::sharing_data prepare_sharing_data(n::timetable const& tt,
                                        osr::ways const& w,
                                        osr::lookup const& lookup,
