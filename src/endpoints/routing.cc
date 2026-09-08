@@ -1024,14 +1024,12 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
     auto const pong_applicable =
         query.timetableView_ &&
         query.arriveBy_ != start_time.extend_interval_later_;
-    // BM-RAPTOR (restricted pareto sets) and the plain multicriteria range
-    // McRAPTOR it bounds both run on the mcraptor engine, which does not
-    // cover realtime / via / bike/car / time-dependent offsets. The guards
-    // are reported individually: a server with an RT feed configured fails
-    // mc_g_rt for EVERY query, which otherwise looks like "the algorithm
-    // parameter is ignored".
-    auto const mc_requested = algorithm == api::algorithmEnum::BMRAP ||
-                              algorithm == api::algorithmEnum::BMRAPP ||
+    // BM-RAPTOR and the plain range McRAPTOR it is compared against both run
+    // on the mcraptor engine, which covers neither realtime nor via, bike/car
+    // or time-dependent offsets. The guards are reported individually: a
+    // server with an RT feed fails mc_g_rt for EVERY query, which otherwise
+    // just looks like "the algorithm parameter is ignored".
+    auto const mc_requested = algorithm == api::algorithmEnum::BMRAPP ||
                               algorithm == api::algorithmEnum::MCRAPTOR;
     auto const mc_g_rt = rtt == nullptr || rtt->n_rt_transports() == 0U;
     auto const mc_g_td = q.td_start_.empty() && q.td_dest_.empty();
@@ -1073,46 +1071,64 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
         //                       consecutive trips (bus -> subway counts,
         //                       subway -> subway does not)
         //   walk+clasz          walking minutes + vehicle-class switches
-        //   cost                OTP-style generalized cost; its dominance
-        //                       is nearly collinear with (arrival,
-        //                       transfers) and yields almost no extras
+        //   air+clasz           both, as independent pareto dimensions
+        //   walk+air+clasz      all three
+        // The dimensions compose freely (see arr_with in mcraptor.h); the
+        // list above is just which combinations are dispatched.
         static auto const* const mc_criteria = [] {
           auto const* const v = std::getenv("NIGIRI_MC_CRITERIA");
           return v == nullptr ? "walk" : v;
         }();
-        auto const run = [&](auto& mc_state) {
-          switch (algorithm) {
-            case api::algorithmEnum::BMRAP:
-              return n::routing::bmrap_search(*tt_, rtt, search_state, mc_state,
-                                              q, dir, to);
-            case api::algorithmEnum::BMRAPP:
-              return n::routing::bmrap_profile_search(
-                  *tt_, rtt, search_state, mc_state, q, dir, to);
-            default:
-              return n::routing::raptor_search(*tt_, rtt, search_state,
-                                               mc_state, q, dir, to);
+        // BMRAPP takes the SCALAR state (its ping/pong/pruning searches),
+        // like pong_search does, so it can run those on the GPU; its
+        // multicriteria phases allocate their own CPU state internally.
+        // MCRAPTOR still takes the multicriteria state.
+        auto const run = [&]<typename Criteria>(std::type_identity<Criteria>) {
+          if (algorithm == api::algorithmEnum::BMRAPP) {
+#if defined(NIGIRI_CUDA)
+            if (gpu_supported) {
+              try {
+                auto const lease = gpu_pool_->acquire();
+                gpu_used = true;
+                return n::routing::bmrap_profile_search<Criteria>(
+                    *tt_, rtt, search_state, lease.state_, q, dir, to);
+              } catch (std::exception const& e) {
+                std::cout << "GPU BMRAPP EXCEPTION: " << e.what() << "\n";
+                gpu_used = false;
+              }
+            }
+#endif
+            auto scalar_state = n::routing::raptor_state{};
+            return n::routing::bmrap_profile_search<Criteria>(
+                *tt_, rtt, search_state, scalar_state, q, dir, to);
           }
+          auto mc_state = n::routing::basic_mcraptor_state<Criteria>{};
+          return n::routing::raptor_search(*tt_, rtt, search_state, mc_state, q,
+                                           dir, to);
+        };
+        auto const run_with = [&]<typename Criteria>() {
+          return run(std::type_identity<Criteria>{});
         };
         try {
           auto const c = std::string_view{mc_criteria};
-          if (c == "cost") {
-            auto mc_state = n::routing::mcraptor_cost_state{};
-            r = run(mc_state);
-          } else if (c == "air") {
-            auto mc_state = n::routing::mcraptor_air_state{};
-            r = run(mc_state);
+          if (c == "air") {
+            r = run_with.template operator()<n::routing::arr_air_criteria>();
           } else if (c == "walk+air" || c == "air+walk") {
-            auto mc_state = n::routing::mcraptor_walk_air_state{};
-            r = run(mc_state);
+            r = run_with
+                    .template operator()<n::routing::arr_walk_air_criteria>();
           } else if (c == "clasz") {
-            auto mc_state = n::routing::mcraptor_clasz_state{};
-            r = run(mc_state);
+            r = run_with.template operator()<n::routing::arr_clasz_criteria>();
           } else if (c == "walk+clasz" || c == "clasz+walk") {
-            auto mc_state = n::routing::mcraptor_walk_clasz_state{};
-            r = run(mc_state);
+            r = run_with
+                    .template operator()<n::routing::arr_walk_clasz_criteria>();
+          } else if (c == "air+clasz" || c == "clasz+air") {
+            r = run_with
+                    .template operator()<n::routing::arr_air_clasz_criteria>();
+          } else if (c == "walk+air+clasz") {
+            r = run_with.template
+                operator()<n::routing::arr_walk_air_clasz_criteria>();
           } else {
-            auto mc_state = n::routing::mcraptor_walk_state{};
-            r = run(mc_state);
+            r = run_with.template operator()<n::routing::arr_walk_criteria>();
           }
         } catch (std::exception const& e) {
           std::cout << "MCRAPTOR EXCEPTION: " << e.what() << "\n";
@@ -1136,7 +1152,6 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
         }
       } else if (algorithm == api::algorithmEnum::RAPTOR ||
                  algorithm == api::algorithmEnum::MCRAPTOR ||
-                 algorithm == api::algorithmEnum::BMRAP ||
                  algorithm == api::algorithmEnum::BMRAPP || tbd_ == nullptr ||
                  (rtt != nullptr && rtt->n_rt_transports() != 0U) ||
                  query.arriveBy_ || q.prf_idx_ != tbd_->prf_idx_ ||
