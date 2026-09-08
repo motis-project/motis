@@ -37,7 +37,7 @@
 [nigiri]
   url=git@github.com:motis-project/nigiri.git
   branch=transport-mode-kind
-  commit=a55111eece972701de3cef589e63f177bfb3b835
+  commit=43d3ce38680c284f83d63c41129a350481a53d84
 [openapi-cpp]
   url=git@github.com:triptix-tech/openapi-cpp.git
   branch=master
@@ -49,7 +49,7 @@
 [osr]
   url=git@github.com:motis-project/osr.git
   branch=memfix
-  commit=6e74141ecfa8afdf8d407d38a574b114df039e5d
+  commit=4875668cbd3311261a58ab45bbdd2d98084c5abc
 [prometheus-cpp]
   url=git@github.com:motis-project/prometheus-cpp.git
   branch=master
