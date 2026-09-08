@@ -3,7 +3,9 @@
 
 #include "boost/asio/io_context.hpp"
 
+#include "net/web_server/enable_cors.h"
 #include "net/web_server/query_router.h"
+#include "net/web_server/responses.h"
 
 #include "utl/set_thread_name.h"
 
@@ -40,6 +42,7 @@
 #include "motis/endpoints/trip.h"
 #include "motis/endpoints/update_elevator.h"
 #include "motis/gbfs/update.h"
+#include "motis/health.h"
 #include "motis/metrics_registry.h"
 #include "motis/rt_update.h"
 
@@ -83,7 +86,9 @@ struct motis_instance {
                  data& d,
                  config const& c,
                  std::string_view motis_version)
-      : qr_{std::forward<Executor>(exec)} {
+      : qr_{std::forward<Executor>(exec)},
+        config_{&c},
+        metrics_{d.metrics_.get()} {
     qr_.add_header("Server", fmt::format("MOTIS {}", motis_version));
     d.init_initial(motis_version);
     if (c.server_.value_or(config::server{}).data_attribution_link_) {
@@ -198,6 +203,29 @@ struct motis_instance {
     }
   }
 
+  // While never-healthy (server.when_unhealthy_return_error), 503 everything
+  // except /api/v1/health and /metrics so monitoring still works.
+  void operator()(net::web_server::http_req_t req,
+                  net::web_server::http_res_cb_t cb,
+                  bool is_ssl) {
+    if (config_->server_ && config_->server_->when_unhealthy_return_error_ &&
+        req.method() != boost::beast::http::verb::options &&
+        !is_healthy(*config_, *metrics_)) {
+      auto const path = boost::urls::url_view{req.target()}.path();
+      if (!path.starts_with("/api/v1/health") &&
+          !path.starts_with("/metrics")) {
+        auto rep = net::reply{net::string_response(
+            req,
+            R"({"error":"motis is starting up: waiting for the initial )"
+            R"(realtime/GBFS update"})",
+            boost::beast::http::status::service_unavailable)};
+        net::enable_cors(rep);
+        return cb(std::move(rep));
+      }
+    }
+    qr_(std::move(req), std::move(cb), is_ssl);
+  }
+
   void run(data& d, config const& c) {
     if (d.w_ && d.l_ && c.has_gbfs_feeds()) {
       gbfs_ = io_thread{"motis gbfs update", [&](boost::asio::io_context& ioc) {
@@ -224,6 +252,8 @@ struct motis_instance {
   }
 
   net::query_router<Executor> qr_{};
+  config const* config_{};
+  metrics_registry const* metrics_{};
   io_thread rt_, gbfs_;
 };
 
