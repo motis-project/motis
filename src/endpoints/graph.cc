@@ -3,6 +3,7 @@
 #include "net/too_many_exception.h"
 
 #include "osr/geojson.h"
+#include "osr/routing/dijkstra.h"
 #include "osr/routing/profiles/car_sharing.h"
 #include "osr/routing/route.h"
 
@@ -60,7 +61,9 @@ json::value graph::operator()(json::value const& query) const {
     }
   });
 
-  gj.finish(&osr::get_dijkstra<osr::car_sharing<osr::track_node_tracking>>());
+  // Searches are no longer retained per thread -> nothing to annotate.
+  auto const d = osr::dijkstra<osr::car_sharing<osr::track_node_tracking>>{};
+  gj.finish(&d);
 
   return gj.json();
 }

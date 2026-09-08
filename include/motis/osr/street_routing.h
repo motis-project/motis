@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory>
 #include <optional>
 
 #include "osr/location.h"
@@ -70,6 +71,25 @@ using street_routing_cache_key_t = std::tuple<osr::location,
 using street_routing_cache_t =
     hash_map<street_routing_cache_key_t, std::optional<osr::path>>;
 
+// One-to-many street searches of a request, kept per place side (kStart /
+// kEnd) and transport mode: the offset legs of journeys and their alternatives
+// are then reconstructed from the finished search instead of routed again.
+struct one_to_many_entry {
+  std::shared_ptr<osr::one_to_many_state> state_;  // shared by flex mode ids
+  hash_map<nigiri::location_idx_t, std::size_t> dest_idx_;  // stop -> dest
+  std::shared_ptr<void> owner_;  // data referenced by the state (flex)
+};
+using one_to_many_entries = hash_map<transport_mode_t, one_to_many_entry>;
+struct one_to_many_states {
+  one_to_many_entries start_, dest_;
+};
+
+// Reconstruct destination `dest_idx_` of `state_` instead of routing.
+struct precomputed_route {
+  osr::one_to_many_state* state_{nullptr};
+  std::size_t dest_idx_{0U};
+};
+
 api::Itinerary dummy_itinerary(api::Place const& from,
                                api::Place const& to,
                                api::ModeEnum,
@@ -94,7 +114,8 @@ api::Itinerary street_routing(osr::ways const&,
                               osr::bitvec<osr::node_idx_t>& blocked_mem,
                               unsigned api_version,
                               bool detailed_leg = true,
-                              std::chrono::seconds max = std::chrono::seconds{
-                                  3600});
+                              std::chrono::seconds max =
+                                  std::chrono::seconds{3600},
+                              precomputed_route const& precomputed = {});
 
 }  // namespace motis

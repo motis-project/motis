@@ -719,6 +719,7 @@ api::Itinerary reconstruct_itinerary(
 
   // needed to mark blocked elevator nodes in street routing
   auto blocked = osr::bitvec<osr::node_idx_t>{};
+  auto otm_states = one_to_many_states{};
   if (routing.is_osr_loaded()) {
     blocked.resize(stop_times_ep.w_->n_nodes());
   }
@@ -742,7 +743,8 @@ api::Itinerary reconstruct_itinerary(
         is_start ? flm.pre_transit_ : flm.post_transit_, flm.osr_params_,
         flm.pedestrian_profile_, flm.elevation_costs_,
         is_start ? flm.max_pre_transit_ : flm.max_post_transit_,
-        flm.max_matching_distance_, gbfs_rd, stats);
+        flm.max_matching_distance_, gbfs_rd,
+        is_start ? &otm_states.start_ : &otm_states.dest_, stats);
   };
 
   auto const get_td_offsets = [&](leg_hint const& h, bool const is_start,
@@ -759,7 +761,7 @@ api::Itinerary reconstruct_itinerary(
         flm.pedestrian_profile_, flm.elevation_costs_,
         flm.max_matching_distance_,
         is_start ? flm.max_pre_transit_ : flm.max_post_transit_, anchor_time,
-        stats);
+        is_start ? &otm_states.start_ : &otm_states.dest_, stats);
   };
 
   auto const reconstruct = [&](n::routing::journey::leg const& l,
@@ -782,7 +784,8 @@ api::Itinerary reconstruct_itinerary(
                /*with_fares=*/false, with_scheduled_skipped_stops,
                stop_times_ep.config_.timetable_.value().max_matching_distance_,
                flm.max_matching_distance_, 6U, false, false, lang,
-               /*set_itinerary_id_field=*/false, alternatives)
+               /*set_itinerary_id_field=*/false, alternatives, nullptr,
+               &otm_states)
         .legs_;
   };
 

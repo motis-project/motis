@@ -359,7 +359,8 @@ api::Itinerary journey_to_response(
     n::lang_t const& lang,
     bool const set_itinerary_id_field,
     alternatives_context const& alternatives,
-    std::chrono::nanoseconds* fares_time) {
+    std::chrono::nanoseconds* fares_time,
+    one_to_many_states const* states) {
   auto const itinerary_start_time = j_in.legs_.front().dep_time_;
   auto const itinerary_end_time = j_in.legs_.back().arr_time_;
   auto j = j_in;
@@ -511,7 +512,19 @@ api::Itinerary journey_to_response(
   };
 
   auto const render_alternatives =
-      [&](std::vector<n::routing::journey> const& alt_journeys) {
+      [&](std::vector<n::routing::journey> const& alt_journeys,
+          bool const flipped = false) {
+        // Alternatives of a flipped (arriveBy) query: kStart/kEnd and the
+        // retained searches refer to the opposite places.
+        auto const& alt_start = flipped ? dest : start;
+        auto const& alt_dest = flipped ? start : dest;
+        auto const swapped_states =
+            flipped && states != nullptr
+                ? std::optional{one_to_many_states{states->dest_,
+                                                   states->start_}}
+                : std::nullopt;
+        auto const* alt_states =
+            swapped_states.has_value() ? &*swapped_states : states;
         return utl::to_vec(alt_journeys, [&](n::routing::journey const& alt) {
           auto const& alt_from_loc = alt.legs_.front().from_;
           auto const& alt_to_loc = alt.legs_.back().to_;
@@ -519,10 +532,10 @@ api::Itinerary journey_to_response(
                      w, l, pl, tt, tags, fl, e, rtt, matches, elevations,
                      shapes, gbfs_rd, ae, tz_map, alt,
                      n::is_special(alt_from_loc)
-                         ? start
+                         ? alt_start
                          : place_t{tt_location{alt_from_loc}},
                      n::is_special(alt_to_loc)
-                         ? dest
+                         ? alt_dest
                          : place_t{tt_location{alt_to_loc}},
                      cache, blocked_mem, car_transfers, osr_params,
                      pedestrian_profile, elevation_costs, join_interlined_legs,
@@ -530,7 +543,8 @@ api::Itinerary journey_to_response(
                      with_scheduled_skipped_stops,
                      timetable_max_matching_distance, max_matching_distance,
                      api_version, ignore_start_rental_return_constraints,
-                     ignore_dest_rental_return_constraints, lang, false)
+                     ignore_dest_rental_return_constraints, lang, false, {},
+                     nullptr, alt_states)
               .legs_;
         });
       };
@@ -539,8 +553,10 @@ api::Itinerary journey_to_response(
                                        std::size_t const j_leg_idx) {
     leg.alternatives_ = utl::visit(
         alternatives, render_alternatives, [&](query_alternatives const& a) {
-          return render_alternatives(n::routing::get_leg_alternatives(
-              tt, rtt, a.query, j, j_leg_idx, a.num_alternatives));
+          return render_alternatives(
+              n::routing::get_leg_alternatives(tt, rtt, a.query, j, j_leg_idx,
+                                               a.num_alternatives),
+              a.flipped);
         });
   };
 
@@ -832,13 +848,37 @@ api::Itinerary journey_to_response(
                     std::make_unique<default_output>(*w, x.transport_mode_id_);
               }
 
+              // Offsets came from a one-to-many search from the start/dest
+              // place -> reconstruct from it instead of routing again.
+              auto precomputed = precomputed_route{};
+              if (states != nullptr) {
+                auto const is_side = [&](n::special_station const s) {
+                  auto const l = n::get_special_station(s);
+                  return j_leg.from_ == l || j_leg.to_ == l;
+                };
+                auto const* entries =
+                    is_side(n::special_station::kStart) ? &states->start_
+                    : is_side(n::special_station::kEnd) ? &states->dest_
+                                                        : nullptr;
+                if (entries != nullptr) {
+                  if (auto const it = entries->find(x.transport_mode_id_);
+                      it != end(*entries)) {
+                    if (auto const d = it->second.dest_idx_.find(x.target());
+                        d != end(it->second.dest_idx_)) {
+                      precomputed = {it->second.state_.get(), d->second};
+                    }
+                  }
+                }
+              }
+
               append(street_routing(
                   *w, *l, e, elevations, lang, from, to, *out, j_leg.dep_time_,
                   j_leg.arr_time_, max_matching_distance, osr_params, cache,
                   *blocked_mem, api_version, detailed_legs,
                   std::chrono::duration_cast<std::chrono::seconds>(
                       j_leg.arr_time_ - j_leg.dep_time_) +
-                      std::chrono::minutes{5}));
+                      std::chrono::minutes{5},
+                  precomputed));
             }},
         j_leg.uses_);
   }

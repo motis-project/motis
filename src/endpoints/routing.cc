@@ -1,6 +1,7 @@
 #include "motis/endpoints/routing.h"
 
 #include <algorithm>
+#include <cstdlib>
 #include <cmath>
 #include <limits>
 #include <mutex>
@@ -154,6 +155,7 @@ n::routing::td_offsets_t get_td_offsets(
     double const max_matching_distance,
     std::chrono::seconds const max,
     nigiri::routing::start_time_t const& start_time,
+    one_to_many_entries* const states,
     stats_map_t& stats) {
   if (!r.is_osr_loaded()) {
     return {};
@@ -170,7 +172,7 @@ n::routing::td_offsets_t get_td_offsets(
       flex::add_flex_td_offsets(*r.w_, *r.l_, r.pl_, r.matches_, r.way_matches_,
                                 *r.tt_, *r.fa_, *r.loc_tree_, start_time, pos,
                                 dir, max, max_matching_distance, osr_params,
-                                frd, ret, stats);
+                                frd, ret, states, stats);
       stats.emplace(fmt::format("prepare_{}_FLEX", to_str(dir)),
                     UTL_GET_TIMING_MS(flex_timer));
       continue;
@@ -221,6 +223,7 @@ n::routing::td_offsets_t routing::get_td_offsets(
     double const max_matching_distance,
     std::chrono::seconds const max,
     nigiri::routing::start_time_t const& start_time,
+    one_to_many_entries* const states,
     stats_map_t& stats) const {
   return std::visit(
       utl::overloaded{
@@ -231,12 +234,13 @@ n::routing::td_offsets_t routing::get_td_offsets(
             return ::motis::ep::get_td_offsets(
                 *this, rtt, e, stop_to_osr_location(*this, l.l_), dir, modes,
                 osr_params, pedestrian_profile, elevation_costs,
-                max_matching_distance, max, start_time, stats);
+                max_matching_distance, max, start_time, states, stats);
           },
           [&](osr::location const& pos) {
             return ::motis::ep::get_td_offsets(
                 *this, rtt, e, pos, dir, modes, osr_params, pedestrian_profile,
-                elevation_costs, max_matching_distance, max, start_time, stats);
+                elevation_costs, max_matching_distance, max, start_time,
+                states, stats);
           }},
       p);
 }
@@ -273,6 +277,7 @@ std::vector<n::routing::offset> get_offsets(
     std::chrono::seconds const max,
     double const max_matching_distance,
     gbfs::gbfs_routing_data& gbfs_rd,
+    one_to_many_entries* const states,
     stats_map_t& stats) {
   if (!r.is_osr_loaded()) {
     return {};
@@ -321,7 +326,8 @@ std::vector<n::routing::offset> get_offsets(
     auto near_stop_match_cache = std::vector<near_stop_match_cache_entry>{};
 
     auto const route = [&](osr::search_profile const p,
-                           osr::sharing_data const* sharing) {
+                           osr::sharing_data const* sharing,
+                           n::transport_mode_id_t const mode) {
       auto const params = to_profile_parameters(p, osr_params);
       auto pos_match = osr::match_result{};
       r.l_->match(params, pos, false, dir, max_matching_distance, nullptr, p,
@@ -339,11 +345,34 @@ std::vector<n::routing::offset> get_offsets(
         cached_near_stop_matches = std::prev(end(near_stop_match_cache));
       }
 
-      return osr::route(params, *r.w_, *r.l_, p, pos, near_stop_locations,
-                        pos_match[osr::match_idx_t{0U}],
-                        cached_near_stop_matches->matches_,
-                        static_cast<osr::cost_t>(max.count()), dir, nullptr,
-                        sharing, elevations);
+      if (states == nullptr) {
+        return osr::route(params, *r.w_, *r.l_, p, pos, near_stop_locations,
+                          pos_match[osr::match_idx_t{0U}],
+                          cached_near_stop_matches->matches_,
+                          static_cast<osr::cost_t>(max.count()), dir, nullptr,
+                          sharing, elevations);
+      }
+
+      // Keep the search: offset legs are reconstructed from it later.
+      auto state = osr::route_one_to_many(
+          params, *r.w_, *r.l_, p, pos, near_stop_locations,
+          pos_match[osr::match_idx_t{0U}], cached_near_stop_matches->matches_,
+          static_cast<osr::cost_t>(max.count()), dir, nullptr, sharing,
+          elevations);
+      auto paths = state->results();
+      auto dest_idx = hash_map<n::location_idx_t, std::size_t>{};
+      for (auto const [i, l] : utl::enumerate(near_stops)) {
+        if (paths[i].has_value()) {
+          dest_idx.emplace(l, i);
+        }
+      }
+      if (dest_idx.empty()) {
+        states->erase(mode);
+      } else {
+        (*states)[mode] =
+            one_to_many_entry{std::move(state), std::move(dest_idx), nullptr};
+      }
+      return paths;
     };
 
     if (osr::is_rental_profile(profile)) {
@@ -408,15 +437,16 @@ std::vector<n::routing::offset> get_offsets(
           auto const sharing = prod_rd->get_sharing_data(
               r.w_->n_nodes(), ignore_rental_return_constraints);
 
+          auto const mode = gbfs_rd.get_transport_mode(prod_ref);
           auto const paths =
-              route(gbfs::get_osr_profile(prod.form_factor_), &sharing);
+              route(gbfs::get_osr_profile(prod.form_factor_), &sharing, mode);
           ignore_walk = true;
           for (auto const [p, l] : utl::zip(paths, near_stops)) {
             if (p.has_value()) {
               offsets.emplace_back(l,
                                    n::duration_t{static_cast<unsigned>(
                                        std::ceil(p->cost_ / 60.0))},
-                                   gbfs_rd.get_transport_mode(prod_ref));
+                                   mode);
             }
           }
         }
@@ -427,13 +457,14 @@ std::vector<n::routing::offset> get_offsets(
       }
 
     } else {
-      auto const paths = route(profile, nullptr);
+      auto const mode = static_cast<n::transport_mode_id_t>(profile);
+      auto const paths = route(profile, nullptr, mode);
       for (auto const [p, l] : utl::zip(paths, near_stops)) {
         if (p.has_value()) {
           offsets.emplace_back(
               l,
               n::duration_t{static_cast<unsigned>(std::ceil(p->cost_ / 60.0))},
-              static_cast<n::transport_mode_id_t>(profile));
+              mode);
         }
       }
     }
@@ -508,12 +539,13 @@ std::vector<n::routing::offset> routing::get_offsets(
     std::chrono::seconds const max,
     double const max_matching_distance,
     gbfs::gbfs_routing_data& gbfs_rd,
+    one_to_many_entries* const states,
     stats_map_t& stats) const {
   auto const do_get_offsets = [&](osr::location const pos) {
     return ::motis::ep::get_offsets(*this, rtt, pos, dir, elevations_, modes,
                                     ro, osr_params, pedestrian_profile,
                                     elevation_costs, max, max_matching_distance,
-                                    gbfs_rd, stats);
+                                    gbfs_rd, states, stats);
   };
   return std::visit(
       utl::overloaded{
@@ -798,6 +830,12 @@ api::plan_response routing::route(api::plan_params const& query,
                                   : rt->rtt_.get();
   auto const e = rt->e_.get();
   auto gbfs_rd = gbfs::gbfs_routing_data{w_, l_, gbfs_};
+  auto otm_states = one_to_many_states{};
+  // Benchmark switch: MOTIS_NO_OTM_STATE=1 routes offset legs again instead
+  // of reconstructing them from the retained one-to-many searches.
+  static auto const no_otm_state = std::getenv("MOTIS_NO_OTM_STATE") != nullptr;
+  auto* const otm_start = no_otm_state ? nullptr : &otm_states.start_;
+  auto* const otm_dest = no_otm_state ? nullptr : &otm_states.dest_;
   if (blocked.get() == nullptr && is_osr_loaded()) {
     blocked.reset(new osr::bitvec<osr::node_idx_t>{w_->n_nodes()});
   }
@@ -1015,7 +1053,8 @@ api::plan_response routing::route(api::plan_params const& query,
                       osr_params, query.pedestrianProfile_,
                       query.elevationCosts_,
                       query.arriveBy_ ? post_transit_time : pre_transit_time,
-                      max_matching_distance, gbfs_rd, prepare_stats),
+                      max_matching_distance, gbfs_rd, otm_start,
+                      prepare_stats),
         .destination_ =
             dest_client != nullptr ? client_offsets(*dest_client, *tags_, *tt_,
                                                     query.pedestrianProfile_,
@@ -1035,7 +1074,8 @@ api::plan_response routing::route(api::plan_params const& query,
                       osr_params, query.pedestrianProfile_,
                       query.elevationCosts_,
                       query.arriveBy_ ? pre_transit_time : post_transit_time,
-                      max_matching_distance, gbfs_rd, prepare_stats),
+                      max_matching_distance, gbfs_rd, otm_dest,
+                      prepare_stats),
         .td_start_ = get_td_offsets(
             rtt, e, start,
             query.arriveBy_ ? osr::direction::kBackward
@@ -1043,7 +1083,7 @@ api::plan_response routing::route(api::plan_params const& query,
             start_modes, osr_params, query.pedestrianProfile_,
             query.elevationCosts_, max_matching_distance,
             query.arriveBy_ ? post_transit_time : pre_transit_time,
-            start_time.start_time_, prepare_stats),
+            start_time.start_time_, otm_start, prepare_stats),
         .td_dest_ = get_td_offsets(
             rtt, e, dest,
             query.arriveBy_ ? osr::direction::kForward
@@ -1051,7 +1091,7 @@ api::plan_response routing::route(api::plan_params const& query,
             dest_modes, osr_params, query.pedestrianProfile_,
             query.elevationCosts_, max_matching_distance,
             query.arriveBy_ ? pre_transit_time : post_transit_time,
-            start_time.start_time_, prepare_stats),
+            start_time.start_time_, otm_dest, prepare_stats),
         .max_transfers_ = static_cast<std::uint8_t>(max_transfers),
         .max_travel_time_ = query.maxTravelTime_
                                 .and_then([](std::int64_t const dur) {
@@ -1240,9 +1280,10 @@ api::plan_response routing::route(api::plan_params const& query,
               query.numLegAlternatives_ > 0
                   ? alternatives_context{query_alternatives{
                         q_for_alts,
-                        static_cast<std::size_t>(query.numLegAlternatives_)}}
+                        static_cast<std::size_t>(query.numLegAlternatives_),
+                        query.arriveBy_}}
                   : alternatives_context{},
-              &fares_time);
+              &fares_time, &otm_states);
         });
 
     return {

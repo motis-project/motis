@@ -1,9 +1,11 @@
 #include "motis/flex/flex.h"
 
+#include <memory>
 #include <optional>
 #include <ranges>
 
 #include "utl/concat.h"
+#include "utl/enumerate.h"
 
 #include "osr/lookup.h"
 #include "osr/routing/parameters.h"
@@ -22,6 +24,24 @@
 namespace n = nigiri;
 
 namespace motis::flex {
+
+// Additional node data of one flex routing, owned by the retained search.
+struct retained_flex_data {
+  explicit retained_flex_data(flex_routing_data const& frd)
+      : additional_node_coordinates_{frd.additional_node_coordinates_},
+        additional_edges_{frd.additional_edges_},
+        sharing_{.start_allowed_ = nullptr,
+                 .end_allowed_ = nullptr,
+                 .through_allowed_ = nullptr,
+                 .additional_node_offset_ = frd.additional_node_offset_,
+                 .additional_node_coordinates_ = additional_node_coordinates_,
+                 .additional_edges_ = additional_edges_} {}
+
+  std::vector<geo::latlng> additional_node_coordinates_;
+  osr::hash_map<osr::node_idx_t, std::vector<osr::additional_edge>>
+      additional_edges_;
+  osr::sharing_data sharing_;
+};
 
 osr::sharing_data prepare_sharing_data(n::timetable const& tt,
                                        osr::ways const& w,
@@ -280,6 +300,7 @@ void add_flex_td_offsets(osr::ways const& w,
                          osr_parameters const& osr_params,
                          flex_routing_data& frd,
                          n::routing::td_offsets_t& ret,
+                         one_to_many_entries* const states,
                          std::map<std::string, std::uint64_t>& stats) {
   UTL_START_TIMING(flex_lookup_timer);
 
@@ -312,11 +333,39 @@ void add_flex_td_offsets(osr::ways const& w,
     auto const sharing_data = prepare_sharing_data(
         tt, w, lookup, pl, fa, matches, transports.front(), dir, frd);
 
-    auto const paths =
-        osr::route(params, w, lookup, osr::search_profile::kCarSharing, pos,
-                   near_stop_locations, pos_match[osr::match_idx_t{0U}],
-                   near_stop_matches, static_cast<osr::cost_t>(max.count()),
-                   dir, nullptr, &sharing_data, nullptr);
+    auto const paths = [&]() {
+      if (states == nullptr) {
+        return osr::route(
+            params, w, lookup, osr::search_profile::kCarSharing, pos,
+            near_stop_locations, pos_match[osr::match_idx_t{0U}],
+            near_stop_matches, static_cast<osr::cost_t>(max.count()), dir,
+            nullptr, &sharing_data, nullptr);
+      }
+
+      // Keep the search for reconstructing the flex legs later. `frd` is
+      // reused by the next routing, so the state gets its own copy of the
+      // additional node data (reconstruct does not need the allowed bitvecs).
+      auto state = std::shared_ptr<osr::one_to_many_state>{
+          osr::route_one_to_many(
+              params, w, lookup, osr::search_profile::kCarSharing, pos,
+              near_stop_locations, pos_match[osr::match_idx_t{0U}],
+              near_stop_matches, static_cast<osr::cost_t>(max.count()), dir,
+              nullptr, &sharing_data, nullptr)};
+      auto owner = std::make_shared<retained_flex_data>(frd);
+      state->set_sharing_data(&owner->sharing_);
+      auto dest_idx = hash_map<n::location_idx_t, std::size_t>{};
+      for (auto const [i, l] : utl::enumerate(near_stops)) {
+        if (state->results()[i].has_value()) {
+          dest_idx.emplace(l, i);
+        }
+      }
+      if (!dest_idx.empty()) {
+        for (auto const id : transports) {
+          (*states)[id.to_id()] = one_to_many_entry{state, dest_idx, owner};
+        }
+      }
+      return state->results();
+    }();
     auto const day_idx_iv = get_relevant_days(tt, start_time);
     for (auto const id : transports) {
       auto const t = id.get_flex_transport();

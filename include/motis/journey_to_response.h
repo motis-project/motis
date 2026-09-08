@@ -42,6 +42,9 @@ std::optional<std::vector<api::Alert>> get_alerts(
 struct query_alternatives {
   nigiri::routing::query const& query;
   std::size_t num_alternatives;
+  // The query is direction-flipped w.r.t. the journey (arriveBy): the special
+  // stations of the alternatives refer to the opposite places.
+  bool flipped{false};
 };
 using alternatives_context = std::variant<
     // no alternatives
@@ -88,6 +91,7 @@ api::Itinerary journey_to_response(
     std::optional<std::vector<std::string>> const& language,
     bool const set_itinerary_id_field = true,
     alternatives_context const& alternatives = {},
-    std::chrono::nanoseconds* fares_time = nullptr);
+    std::chrono::nanoseconds* fares_time = nullptr,
+    one_to_many_states const* states = nullptr);
 
 }  // namespace motis

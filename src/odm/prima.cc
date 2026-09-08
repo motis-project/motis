@@ -121,7 +121,7 @@ void init_pt(std::vector<n::routing::offset>& offsets,
   offsets = r.get_offsets(rtt, l, dir, {api::ModeEnum::CAR}, rental_options{},
                           get_osr_parameters(query), query.pedestrianProfile_,
                           query.elevationCosts_, max, max_matching_distance,
-                          gbfs_rd, stats);
+                          gbfs_rd, nullptr, stats);
 
   std::erase_if(offsets, [&](n::routing::offset const& o) {
     return r.ride_sharing_bounds_ != nullptr &&

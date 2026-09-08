@@ -385,7 +385,7 @@ api::plan_response meta_router::run() {
                          start_ignore_rental_return_constraints_},
           params, query_.pedestrianProfile_, query_.elevationCosts_,
           query_.arriveBy_ ? post_transit_time : pre_transit_time,
-          max_matching_distance_, gbfs_rd_, prepare_stats),
+          max_matching_distance_, gbfs_rd_, nullptr, prepare_stats),
       .dest_walk_ = r_.get_offsets(
           rtt_, dest_,
           query_.arriveBy_ ? osr::direction::kForward
@@ -396,7 +396,7 @@ api::plan_response meta_router::run() {
                          dest_ignore_rental_return_constraints_},
           params, query_.pedestrianProfile_, query_.elevationCosts_,
           query_.arriveBy_ ? pre_transit_time : post_transit_time,
-          max_matching_distance_, gbfs_rd_, prepare_stats),
+          max_matching_distance_, gbfs_rd_, nullptr, prepare_stats),
       .td_start_walk_ = r_.get_td_offsets(
           rtt_, e_, start_,
           query_.arriveBy_ ? osr::direction::kBackward
@@ -404,7 +404,7 @@ api::plan_response meta_router::run() {
           start_modes_, params, query_.pedestrianProfile_,
           query_.elevationCosts_, max_matching_distance_,
           query_.arriveBy_ ? post_transit_time : pre_transit_time,
-          context_intvl, prepare_stats),
+          context_intvl, nullptr, prepare_stats),
       .td_dest_walk_ = r_.get_td_offsets(
           rtt_, e_, dest_,
           query_.arriveBy_ ? osr::direction::kForward
@@ -412,7 +412,7 @@ api::plan_response meta_router::run() {
           dest_modes_, params, query_.pedestrianProfile_,
           query_.elevationCosts_, max_matching_distance_,
           query_.arriveBy_ ? pre_transit_time : post_transit_time,
-          context_intvl, prepare_stats),
+          context_intvl, nullptr, prepare_stats),
       .start_taxi_short_ =
           query_.arriveBy_ ? last_mile_taxi_short : first_mile_taxi_short,
       .start_taxi_long_ =

@@ -231,7 +231,8 @@ api::Itinerary street_routing(osr::ways const& w,
                               osr::bitvec<osr::node_idx_t>& blocked_mem,
                               unsigned const api_version,
                               bool const detailed_leg,
-                              std::chrono::seconds const max) {
+                              std::chrono::seconds const max,
+                              precomputed_route const& precomputed) {
   utl::verify(start_time.has_value() || end_time.has_value(),
               "either start_time or end_time must be set");
   auto const bound_time =
@@ -256,6 +257,9 @@ api::Itinerary street_routing(osr::ways const& w,
       out.is_time_dependent() ? bound_time : n::unixtime_t{n::i32_minutes{0}},
       out.is_time_dependent() ? osr_dir : osr::direction::kForward};
   auto const path = utl::get_or_create(cache, cache_key, [&]() {
+    if (precomputed.state_ != nullptr) {
+      return precomputed.state_->reconstruct(w, l, precomputed.dest_idx_);
+    }
     auto const& [e_nodes, e_states] = *s;
     auto const profile = out.get_profile();
     return osr::route(

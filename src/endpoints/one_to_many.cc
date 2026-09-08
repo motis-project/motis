@@ -134,11 +134,13 @@ std::vector<api::ParetoSet> transit_durations(
       .start_ = r.get_offsets(nullptr, one, one_dir, one_modes,
                               rental_options{}, osr_params, pedestrian_profile,
                               elevation_costs, one_max_seconds,
-                              max_matching_distance, gbfs_rd, prepare_stats),
+                              max_matching_distance, gbfs_rd, nullptr,
+                              prepare_stats),
       .td_start_ = r.get_td_offsets(nullptr, nullptr, one, one_dir, one_modes,
                                     osr_params, pedestrian_profile,
                                     elevation_costs, max_matching_distance,
-                                    one_max_seconds, time, prepare_stats),
+                                    one_max_seconds, time, nullptr,
+                                    prepare_stats),
       .max_transfers_ = static_cast<std::uint8_t>(
           query.maxTransfers_.value_or(n::routing::kMaxTransfers)),
       .max_travel_time_ =
@@ -196,7 +198,7 @@ std::vector<api::ParetoSet> transit_durations(
         arrive_by ? osr::direction::kForward : osr::direction::kBackward,
         many_modes, rental_options{}, osr_params, pedestrian_profile,
         elevation_costs, many_max_seconds, max_matching_distance, gbfs_rd,
-        prepare_stats);
+        nullptr, prepare_stats);
 
     for (auto const offset : offsets) {
       auto const loc = offset.target();

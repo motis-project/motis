@@ -18,6 +18,7 @@
 #include "motis/fwd.h"
 #include "motis/match_platforms.h"
 #include "motis/osr/parameters.h"
+#include "motis/osr/street_routing.h"
 #include "motis/place.h"
 #include "motis/rental_options.h"
 
@@ -76,6 +77,7 @@ struct routing {
       std::chrono::seconds max,
       double max_matching_distance,
       gbfs::gbfs_routing_data&,
+      one_to_many_entries*,
       stats_map_t& stats) const;
 
   nigiri::hash_map<nigiri::location_idx_t,
@@ -91,6 +93,7 @@ struct routing {
                  double max_matching_distance,
                  std::chrono::seconds max,
                  nigiri::routing::start_time_t const&,
+                 one_to_many_entries*,
                  stats_map_t& stats) const;
 
   std::pair<std::vector<api::Itinerary>, nigiri::duration_t> route_direct(

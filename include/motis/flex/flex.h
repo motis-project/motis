@@ -4,6 +4,8 @@
 #include "osr/routing/profile.h"
 #include "osr/types.h"
 
+#include "motis/osr/street_routing.h"
+
 #include "nigiri/routing/query.h"
 
 #include "motis/flex/mode_id.h"
@@ -58,6 +60,7 @@ void add_flex_td_offsets(osr::ways const&,
                          osr_parameters const&,
                          flex_routing_data&,
                          nigiri::routing::td_offsets_t&,
+                         one_to_many_entries* states,
                          std::map<std::string, std::uint64_t>& stats);
 
 }  // namespace motis::flex

@@ -104,11 +104,11 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
       .start_ = r.get_offsets(
           nullptr, one, one_dir, one_modes, rental_options{}, osr_params,
           query.pedestrianProfile_, query.elevationCosts_, one_max_time,
-          max_matching_distance, gbfs_rd, prepare_stats),
+          max_matching_distance, gbfs_rd, nullptr, prepare_stats),
       .td_start_ = r.get_td_offsets(
           nullptr, nullptr, one, one_dir, one_modes, osr_params,
           query.pedestrianProfile_, query.elevationCosts_,
-          max_matching_distance, one_max_time, time, prepare_stats),
+          max_matching_distance, one_max_time, time, nullptr, prepare_stats),
       .max_transfers_ = static_cast<std::uint8_t>(
           query.maxTransfers_.value_or(n::routing::kMaxTransfers)),
       .max_travel_time_ = max_travel_time,
@@ -144,7 +144,7 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
 
   auto reachable = nigiri::bitvec{tt_.n_locations()};
   for (auto i = 0U; i != tt_.n_locations(); ++i) {
-    if (state.get_best<0>()[i][0] != unreachable) {
+    if (state.template get_best<0>()[i][0] != unreachable) {
       reachable.set(i);
     }
   }
