@@ -88,7 +88,6 @@ timetable:                          # if not set, no timetable will be loaded
           headers:
             Authorization: MY_API_KEY
           protocol: gtfsrt          # specify the real time protocol (default: gtfsrt)
-          priority: 1               # 0 = never update an already existing realtime trip, only create it if missing (default: 1)
     nl:
       path: nl_ovapi.gtfs.zip
       extend_calendar: false
