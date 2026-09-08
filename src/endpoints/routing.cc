@@ -1205,9 +1205,9 @@ api::plan_response routing::route(api::plan_params const& query,
       if (mc_applicable) {
         auto const dir = query.arriveBy_ ? n::direction::kBackward
                                          : n::direction::kForward;
-        auto const to = query.timeout_.has_value()
-                            ? std::chrono::seconds{*query.timeout_}
-                            : max_timeout;
+        auto const mc_timeout = query.timeout_.has_value()
+                                    ? std::chrono::seconds{*query.timeout_}
+                                    : max_timeout;
         // Extra pareto criteria of the multicriteria engines, selected by
         // NIGIRI_MC_CRITERIA:
         //   walk      (default) walking minutes: offsets + footpaths
@@ -1239,7 +1239,7 @@ api::plan_response routing::route(api::plan_params const& query,
                 auto const lease = gpu_pool_->acquire();
                 gpu_used = true;
                 return n::routing::bmrap_profile_search<Criteria>(
-                    *tt_, rtt, search_state, lease.state_, q, dir, to);
+                    *tt_, rtt, search_state, lease.state_, q, dir, mc_timeout);
               } catch (std::exception const& e) {
                 std::cout << "GPU BMRAPP EXCEPTION: " << e.what() << "\n";
                 gpu_used = false;
@@ -1248,11 +1248,11 @@ api::plan_response routing::route(api::plan_params const& query,
 #endif
             auto scalar_state = n::routing::raptor_state{};
             return n::routing::bmrap_profile_search<Criteria>(
-                *tt_, rtt, search_state, scalar_state, q, dir, to);
+                *tt_, rtt, search_state, scalar_state, q, dir, mc_timeout);
           }
           auto mc_state = n::routing::basic_mcraptor_state<Criteria>{};
           return n::routing::raptor_search(*tt_, rtt, search_state, mc_state, q,
-                                           dir, to);
+                                           dir, mc_timeout);
         };
         auto const run_with = [&]<typename Criteria>() {
           return run(std::type_identity<Criteria>{});

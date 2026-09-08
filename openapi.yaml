@@ -996,6 +996,8 @@ paths:
               - RAPTOR
               - PONG
               - TB
+              - MCRAPTOR
+              - BMRAPP
             default: PONG
       responses:
         '422':
