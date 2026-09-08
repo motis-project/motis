@@ -20,9 +20,10 @@ n::unixtime_t t(int const minutes) {
   return n::unixtime_t{n::i32_minutes{minutes}};
 }
 
-n::transport_mode_id_t flex_id(n::flex_transport_idx_t::value_t const transport,
-                               n::stop_idx_t const stop,
-                               osr::direction const dir) {
+n::routing::transport_mode_t::payload_t flex_id(
+    n::flex_transport_idx_t::value_t const transport,
+    n::stop_idx_t const stop,
+    osr::direction const dir) {
   return motis::flex::mode_id{n::flex_transport_idx_t{transport}, stop, dir}
       .to_id();
 }
@@ -30,7 +31,7 @@ n::transport_mode_id_t flex_id(n::flex_transport_idx_t::value_t const transport,
 struct offer {
   int from_, to_;
   n::duration_t duration_;
-  n::transport_mode_id_t mode_;
+  n::routing::transport_mode_t::payload_t mode_;
 };
 
 // Builds the raw input as the producers do: every offer contributes a start
@@ -40,26 +41,27 @@ std::vector<n::routing::td_offset> raw(std::initializer_list<offer> offers) {
   for (auto const& o : offers) {
     v.push_back({.valid_from_ = t(o.from_),
                  .duration_ = o.duration_,
-                 .transport_mode_id_ = o.mode_});
+                 .transport_mode_payload_ = o.mode_});
     v.push_back({.valid_from_ = t(o.to_),
                  .duration_ = n::footpath::kMaxDuration,
-                 .transport_mode_id_ = o.mode_});
+                 .transport_mode_payload_ = o.mode_});
   }
   return v;
 }
 
-n::routing::td_offset active(int const from,
-                             int const duration,
-                             n::transport_mode_id_t const mode) {
+n::routing::td_offset active(
+    int const from,
+    int const duration,
+    n::routing::transport_mode_t::payload_t const mode) {
   return {.valid_from_ = t(from),
           .duration_ = n::duration_t{duration},
-          .transport_mode_id_ = mode};
+          .transport_mode_payload_ = mode};
 }
 
 n::routing::td_offset inactive(int const from) {
   return {.valid_from_ = t(from),
           .duration_ = n::footpath::kMaxDuration,
-          .transport_mode_id_ = 0U};
+          .transport_mode_payload_ = 0U};
 }
 
 // Arrival time the routing core (nigiri's get_td_duration) yields for a
@@ -249,7 +251,8 @@ TEST(motis, td_offsets_preserve_mode_id) {
   motis::normalize_td_offsets(offsets);
 
   ASSERT_EQ(3U, offsets.size());
-  auto const restored = motis::flex::mode_id{offsets[1].transport_mode_id_};
+  auto const restored =
+      motis::flex::mode_id{offsets[1].transport_mode_payload_};
   EXPECT_EQ(osr::direction::kBackward, restored.get_dir());
   EXPECT_EQ(n::flex_transport_idx_t{42U}, restored.get_flex_transport());
   EXPECT_EQ(static_cast<n::stop_idx_t>(3U), restored.get_stop());

@@ -10,11 +10,15 @@
 #include "osr/routing/route.h"
 #include "osr/routing/sharing_data.h"
 
+#include "nigiri/special_stations.h"
+#include "nigiri/timetable.h"
+
 #include "motis/constants.h"
+#include "motis/flex/mode_id.h"
 #include "motis/osr/mode_to_profile.h"
 #include "motis/place.h"
 #include "motis/polyline.h"
-#include "motis/transport_mode_ids.h"
+#include "motis/transport_mode.h"
 #include "motis/update_rtt_td_footpaths.h"
 #include "utl/verify.h"
 
@@ -24,56 +28,14 @@ namespace motis {
 
 default_output::default_output(osr::ways const& w,
                                osr::search_profile const profile)
-    : w_{w},
-      profile_{profile},
-      id_{static_cast<std::underlying_type_t<osr::search_profile>>(profile)} {}
+    : default_output{w, transport_mode(profile)} {}
 
-default_output::default_output(osr::ways const& w,
-                               nigiri::transport_mode_id_t const id)
-    : w_{w},
-      profile_{id == kOdmTransportModeId || id == kRideSharingTransportModeId
-                   ? osr::search_profile::kCar
-                   : osr::search_profile{static_cast<
-                         std::underlying_type_t<osr::search_profile>>(id)}},
-      id_{id} {
-  utl::verify(id <= kRideSharingTransportModeId, "invalid mode id={}", id);
-}
+default_output::default_output(osr::ways const& w, transport_mode_t const id)
+    : w_{w}, profile_{profile_of(id)}, id_{id} {}
 
 default_output::~default_output() = default;
 
-api::ModeEnum default_output::get_mode() const {
-  if (id_ == kOdmTransportModeId) {
-    return api::ModeEnum::ODM;
-  }
-  if (id_ == kRideSharingTransportModeId) {
-    return api::ModeEnum::RIDE_SHARING;
-  }
-
-  switch (profile_) {
-    case osr::search_profile::kFoot: [[fallthrough]];
-    case osr::search_profile::kWheelchair: return api::ModeEnum::WALK;
-    case osr::search_profile::kBike: [[fallthrough]];
-    case osr::search_profile::kBikeFast: [[fallthrough]];
-    case osr::search_profile::kBikeElevationLow: [[fallthrough]];
-    case osr::search_profile::kBikeElevationHigh: return api::ModeEnum::BIKE;
-    case osr::search_profile::kCar: return api::ModeEnum::CAR;
-    case osr::search_profile::kHgv: return api::ModeEnum::HGV;
-    case osr::search_profile::kCarParking: [[fallthrough]];
-    case osr::search_profile::kCarParkingWheelchair:
-      return api::ModeEnum::CAR_PARKING;
-    case osr::search_profile::kCarDropOff: [[fallthrough]];
-    case osr::search_profile::kCarDropOffWheelchair:
-      return api::ModeEnum::CAR_DROPOFF;
-    case osr::search_profile::kBikeSharing: [[fallthrough]];
-    case osr::search_profile::kCarSharing: return api::ModeEnum::RENTAL;
-    case osr::search_profile::kBus: return api::ModeEnum::DEBUG_BUS_ROUTE;
-    case osr::search_profile::kRailway:
-      return api::ModeEnum::DEBUG_RAILWAY_ROUTE;
-    case osr::search_profile::kFerry: return api::ModeEnum::DEBUG_FERRY_ROUTE;
-  }
-
-  return api::ModeEnum::OTHER;
-}
+api::ModeEnum default_output::get_mode() const { return to_mode(id_); }
 
 osr::search_profile default_output::get_profile() const { return profile_; }
 
@@ -95,9 +57,7 @@ bool default_output::is_time_dependent() const {
          profile_ == osr::search_profile::kCarDropOffWheelchair;
 }
 
-transport_mode_t default_output::get_cache_key() const {
-  return static_cast<transport_mode_t>(profile_);
-}
+transport_mode_t default_output::get_cache_key() const { return id_; }
 
 osr::sharing_data const* default_output::get_sharing_data() const {
   return nullptr;
@@ -215,6 +175,56 @@ api::Itinerary dummy_itinerary(api::Place const& from,
   return itinerary;
 }
 
+search_key flex_key(n::flex_stop_seq_idx_t const seq,
+                    n::stop_idx_t const stop) {
+  return {api::ModeEnum::FLEX, to_idx(seq), stop};
+}
+
+search_key key_of(n::timetable const& tt, transport_mode_t const m) {
+  if (to_mode(m) == api::ModeEnum::FLEX) {
+    auto const id = flex::mode_id{m.payload_};
+    return flex_key(tt.flex_transport_stop_seq_[id.get_flex_transport()],
+                    id.get_stop());
+  }
+  return {to_mode(m), m.payload_, 0U};
+}
+
+precomputed_route one_to_many_view::find(n::timetable const& tt,
+                                         n::location_idx_t const leg_from,
+                                         n::location_idx_t const leg_to,
+                                         transport_mode_t const mode,
+                                         n::location_idx_t const target) const {
+  if (searches_ == nullptr) {
+    return {};
+  }
+
+  auto const* const entries =
+      [&]() -> hash_map<search_key, one_to_many_search> const* {
+    for (auto const side :
+         {n::special_station::kStart, n::special_station::kEnd}) {
+      auto const l = n::get_special_station(side);
+      if (leg_from == l || leg_to == l) {
+        return &(*searches_)[flipped_ ? flip(side) : side];
+      }
+    }
+    return nullptr;  // not an access/egress leg
+  }();
+  if (entries == nullptr) {
+    return {};
+  }
+
+  auto const it = entries->find(key_of(tt, mode));
+  if (it == end(*entries)) {
+    return {};
+  }
+  auto const* const s = &it->second;
+  auto const d = s->dest_idx_.find(target);
+  if (d == end(s->dest_idx_)) {
+    return {};
+  }
+  return {s->state_.get(), d->second, &s->flex_additional_nodes_};
+}
+
 api::Itinerary street_routing(osr::ways const& w,
                               osr::lookup const& l,
                               elevators const* e,
@@ -231,7 +241,8 @@ api::Itinerary street_routing(osr::ways const& w,
                               osr::bitvec<osr::node_idx_t>& blocked_mem,
                               unsigned const api_version,
                               bool const detailed_leg,
-                              std::chrono::seconds const max) {
+                              std::chrono::seconds const max,
+                              precomputed_route const& precomputed) {
   utl::verify(start_time.has_value() || end_time.has_value(),
               "either start_time or end_time must be set");
   auto const bound_time =
@@ -256,6 +267,10 @@ api::Itinerary street_routing(osr::ways const& w,
       out.is_time_dependent() ? bound_time : n::unixtime_t{n::i32_minutes{0}},
       out.is_time_dependent() ? osr_dir : osr::direction::kForward};
   auto const path = utl::get_or_create(cache, cache_key, [&]() {
+    if (precomputed.state_ != nullptr) {
+      return precomputed.state_->reconstruct(w, l, precomputed.dest_idx_,
+                                             out.get_sharing_data());
+    }
     auto const& [e_nodes, e_states] = *s;
     auto const profile = out.get_profile();
     return osr::route(

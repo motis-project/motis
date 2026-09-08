@@ -11,7 +11,6 @@ TEST(motis, flex_mode_id_zero) {
   auto const stop = 0U;
   auto const dir = osr::direction::kForward;
   auto const id = mode_id{t, stop, dir}.to_id();
-  EXPECT_TRUE(mode_id::is_flex(id));
 
   auto const id1 = mode_id{id};
   EXPECT_EQ(stop, id1.get_stop());
@@ -24,7 +23,6 @@ TEST(motis, flex_mode_id) {
   auto const stop = 15;
   auto const dir = osr::direction::kBackward;
   auto const id = mode_id{t, stop, dir}.to_id();
-  EXPECT_TRUE(mode_id::is_flex(id));
 
   auto const id1 = mode_id{id};
   EXPECT_EQ(stop, id1.get_stop());

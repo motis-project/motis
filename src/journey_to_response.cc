@@ -45,51 +45,11 @@
 #include "motis/timetable/clasz_to_mode.h"
 #include "motis/timetable/time_conv.h"
 #include "motis/to_alert.h"
-#include "motis/transport_mode_ids.h"
+#include "motis/transport_mode.h"
 
 namespace n = nigiri;
 
 namespace motis {
-
-api::ModeEnum to_mode(osr::search_profile const m) {
-  switch (m) {
-    case osr::search_profile::kCarParkingWheelchair: [[fallthrough]];
-    case osr::search_profile::kCarParking: return api::ModeEnum::CAR_PARKING;
-    case osr::search_profile::kCarDropOffWheelchair: [[fallthrough]];
-    case osr::search_profile::kCarDropOff: return api::ModeEnum::CAR_DROPOFF;
-    case osr::search_profile::kFoot: [[fallthrough]];
-    case osr::search_profile::kWheelchair: return api::ModeEnum::WALK;
-    case osr::search_profile::kCar: return api::ModeEnum::CAR;
-    case osr::search_profile::kHgv: return api::ModeEnum::HGV;
-    case osr::search_profile::kBikeElevationLow: [[fallthrough]];
-    case osr::search_profile::kBikeElevationHigh: [[fallthrough]];
-    case osr::search_profile::kBikeFast: [[fallthrough]];
-    case osr::search_profile::kBike: return api::ModeEnum::BIKE;
-    case osr::search_profile::kBikeSharing: [[fallthrough]];
-    case osr::search_profile::kCarSharing: return api::ModeEnum::RENTAL;
-    case osr::search_profile::kBus: return api::ModeEnum::DEBUG_BUS_ROUTE;
-    case osr::search_profile::kRailway:
-      return api::ModeEnum::DEBUG_RAILWAY_ROUTE;
-    case osr::search_profile::kFerry: return api::ModeEnum::DEBUG_FERRY_ROUTE;
-  }
-  std::unreachable();
-}
-
-api::ModeEnum to_mode(n::transport_mode_id_t const id) {
-  if (id == kOdmTransportModeId) {
-    return api::ModeEnum::ODM;
-  }
-  if (id == kRideSharingTransportModeId) {
-    return api::ModeEnum::RIDE_SHARING;
-  }
-  if (flex::mode_id::is_flex(id)) {
-    return api::ModeEnum::FLEX;
-  }
-  if (id >= kGbfsTransportModeIdOffset) {
-    return api::ModeEnum::RENTAL;
-  }
-  return to_mode(static_cast<osr::search_profile>(id));
-}
 
 void cleanup_intermodal(api::Itinerary& i) {
   if (i.legs_.front().from_.name_ == "END") {
@@ -359,7 +319,8 @@ api::Itinerary journey_to_response(
     n::lang_t const& lang,
     bool const set_itinerary_id_field,
     alternatives_context const& alternatives,
-    std::chrono::nanoseconds* fares_time) {
+    std::chrono::nanoseconds* fares_time,
+    one_to_many_view const states) {
   auto const itinerary_start_time = j_in.legs_.front().dep_time_;
   auto const itinerary_end_time = j_in.legs_.back().arr_time_;
   auto j = j_in;
@@ -462,8 +423,8 @@ api::Itinerary journey_to_response(
               [](n::routing::journey::leg const& leg) {
                 return holds_alternative<n::routing::journey::run_enter_exit>(
                            leg.uses_) ||
-                       odm::is_odm_leg(leg, kOdmTransportModeId) ||
-                       odm::is_odm_leg(leg, kRideSharingTransportModeId);
+                       odm::is_odm_leg(leg, kOdmTransportMode) ||
+                       odm::is_odm_leg(leg, kRideSharingTransportMode);
               }) -
               1),
       .fareTransfers_ =
@@ -511,7 +472,13 @@ api::Itinerary journey_to_response(
   };
 
   auto const render_alternatives =
-      [&](std::vector<n::routing::journey> const& alt_journeys) {
+      [&](std::vector<n::routing::journey> const& alt_journeys,
+          bool const flipped = false) {
+        // Alternatives of a flipped (arriveBy) query: kStart/kEnd and the
+        // retained searches refer to the opposite places.
+        auto const& alt_start = flipped ? dest : start;
+        auto const& alt_dest = flipped ? start : dest;
+        auto const alt_states = one_to_many_view{states.searches_, flipped};
         return utl::to_vec(alt_journeys, [&](n::routing::journey const& alt) {
           auto const& alt_from_loc = alt.legs_.front().from_;
           auto const& alt_to_loc = alt.legs_.back().to_;
@@ -519,10 +486,10 @@ api::Itinerary journey_to_response(
                      w, l, pl, tt, tags, fl, e, rtt, matches, elevations,
                      shapes, gbfs_rd, ae, tz_map, alt,
                      n::is_special(alt_from_loc)
-                         ? start
+                         ? alt_start
                          : place_t{tt_location{alt_from_loc}},
                      n::is_special(alt_to_loc)
-                         ? dest
+                         ? alt_dest
                          : place_t{tt_location{alt_to_loc}},
                      cache, blocked_mem, car_transfers, osr_params,
                      pedestrian_profile, elevation_costs, join_interlined_legs,
@@ -530,7 +497,8 @@ api::Itinerary journey_to_response(
                      with_scheduled_skipped_stops,
                      timetable_max_matching_distance, max_matching_distance,
                      api_version, ignore_start_rental_return_constraints,
-                     ignore_dest_rental_return_constraints, lang, false)
+                     ignore_dest_rental_return_constraints, lang, false, {},
+                     nullptr, alt_states)
               .legs_;
         });
       };
@@ -539,8 +507,10 @@ api::Itinerary journey_to_response(
                                        std::size_t const j_leg_idx) {
     leg.alternatives_ = utl::visit(
         alternatives, render_alternatives, [&](query_alternatives const& a) {
-          return render_alternatives(n::routing::get_leg_alternatives(
-              tt, rtt, a.query, j, j_leg_idx, a.num_alternatives));
+          return render_alternatives(
+              n::routing::get_leg_alternatives(tt, rtt, a.query_, j, j_leg_idx,
+                                               a.num_alternatives_),
+              a.flipped_);
         });
   };
 
@@ -810,26 +780,32 @@ api::Itinerary journey_to_response(
             [&](n::routing::offset const x) {
               if (w == nullptr || l == nullptr) {
                 // no OSM data loaded (e.g. `radius` offsets) -> crow-fly leg
-                append(dummy_itinerary(from, to, to_mode(x.transport_mode_id_),
+                append(dummy_itinerary(from, to, to_mode(x.mode()),
                                        j_leg.dep_time_, j_leg.arr_time_,
                                        api_version));
                 return;
               }
 
+              // Offsets came from a one-to-many search from the start/dest
+              // place -> reconstruct from it instead of routing again.
+              auto const mode = x.mode();
+              auto const precomputed =
+                  states.find(tt, j_leg.from_, j_leg.to_, mode, x.target());
+
               auto out = std::unique_ptr<output>{};
-              if (flex::mode_id::is_flex(x.transport_mode_id_)) {
+              if (to_mode(mode) == api::ModeEnum::FLEX) {
                 out = std::make_unique<flex::flex_output>(
                     *w, *l, pl, matches, ae, tz_map, tags, tt, *fl,
-                    flex::mode_id{x.transport_mode_id_});
-              } else if (x.transport_mode_id_ >= kGbfsTransportModeIdOffset) {
+                    flex::mode_id{mode.payload_},
+                    precomputed.flex_additional_nodes_);
+              } else if (to_mode(mode) == api::ModeEnum::RENTAL) {
                 auto const is_pre_transit = pred == nullptr;
                 out = std::make_unique<gbfs::gbfs_output>(
-                    *w, gbfs_rd, gbfs_rd.get_products_ref(x.transport_mode_id_),
+                    *w, gbfs_rd, gbfs_rd.get_products_ref(mode.payload_),
                     is_pre_transit ? ignore_start_rental_return_constraints
                                    : ignore_dest_rental_return_constraints);
               } else {
-                out =
-                    std::make_unique<default_output>(*w, x.transport_mode_id_);
+                out = std::make_unique<default_output>(*w, mode);
               }
 
               append(street_routing(
@@ -838,7 +814,8 @@ api::Itinerary journey_to_response(
                   *blocked_mem, api_version, detailed_legs,
                   std::chrono::duration_cast<std::chrono::seconds>(
                       j_leg.arr_time_ - j_leg.dep_time_) +
-                      std::chrono::minutes{5}));
+                      std::chrono::minutes{5},
+                  precomputed));
             }},
         j_leg.uses_);
   }

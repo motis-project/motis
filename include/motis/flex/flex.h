@@ -4,6 +4,8 @@
 #include "osr/routing/profile.h"
 #include "osr/types.h"
 
+#include "motis/osr/street_routing.h"
+
 #include "nigiri/routing/query.h"
 
 #include "motis/flex/mode_id.h"
@@ -30,7 +32,7 @@ osr::sharing_data prepare_sharing_data(nigiri::timetable const&,
 bool is_in_flex_stop(nigiri::timetable const&,
                      osr::ways const&,
                      flex_areas const&,
-                     flex_routing_data const&,
+                     flex_additional_nodes const&,
                      nigiri::flex_stop_t const&,
                      osr::node_idx_t);
 
@@ -42,22 +44,24 @@ flex_routings_t get_flex_routings(nigiri::timetable const&,
                                   std::chrono::seconds max,
                                   osr_parameters const&);
 
-void add_flex_td_offsets(osr::ways const&,
-                         osr::lookup const&,
-                         osr::platforms const*,
-                         platform_matches_t const*,
-                         way_matches_storage const*,
-                         nigiri::timetable const&,
-                         flex_areas const&,
-                         point_rtree<nigiri::location_idx_t> const&,
-                         nigiri::routing::start_time_t,
-                         osr::location const&,
-                         osr::direction,
-                         std::chrono::seconds max,
-                         double const max_matching_distance,
-                         osr_parameters const&,
-                         flex_routing_data&,
-                         nigiri::routing::td_offsets_t&,
-                         std::map<std::string, std::uint64_t>& stats);
+void add_flex_td_offsets(
+    osr::ways const&,
+    osr::lookup const&,
+    osr::platforms const*,
+    platform_matches_t const*,
+    way_matches_storage const*,
+    nigiri::timetable const&,
+    flex_areas const&,
+    point_rtree<nigiri::location_idx_t> const&,
+    nigiri::routing::start_time_t,
+    osr::location const&,
+    osr::direction,
+    std::chrono::seconds max,
+    double const max_matching_distance,
+    osr_parameters const&,
+    flex_routing_data&,
+    nigiri::routing::td_offsets_t&,
+    std::map<std::string, std::uint64_t>& stats,
+    hash_map<search_key, one_to_many_search>* states = nullptr);
 
 }  // namespace motis::flex

@@ -36,7 +36,9 @@ api::ModeEnum gbfs_output::get_mode() const { return api::ModeEnum::RENTAL; }
 bool gbfs_output::is_time_dependent() const { return false; }
 
 transport_mode_t gbfs_output::get_cache_key() const {
-  return gbfs_rd_.get_transport_mode({provider_.idx_, products_.idx_});
+  return transport_mode(
+      api::ModeEnum::RENTAL,
+      gbfs_rd_.get_transport_mode({provider_.idx_, products_.idx_}));
 }
 
 osr::search_profile gbfs_output::get_profile() const {
