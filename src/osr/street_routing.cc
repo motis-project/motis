@@ -177,10 +177,14 @@ std::vector<api::StepInstruction> get_step_instructions(
   return steps;
 }
 
-api::HeightProfile get_height_profile(osr::ways const& w,
-                                      osr::path const& p,
-                                      unsigned n) {
-  auto const profile = osr::elevation_profile{w, p, n};
+api::HeightProfile get_height_profile(
+    osr::ways const& w,
+    std::span<osr::path::segment const> segments,
+    double distance,
+    unsigned steps) {
+  auto const profile = osr::elevation_profile{
+      w, segments,
+      distance / (steps < segments.size() ? steps : segments.size())};
   auto points = std::vector<double>{};
   auto acc = static_cast<double>(to_idx(profile.baseline_));
   for (auto i = std::size_t{0}; i < profile.elevation_.size(); ++i) {
@@ -195,8 +199,8 @@ api::HeightProfile get_height_profile(osr::ways const& w,
           .median_ = to_idx(profile.median()),
           .min_ = to_idx(profile.min_),
           .max_ = to_idx(profile.max_),
-          .up_ = to_idx(p.elevation_.up_),
-          .down_ = to_idx(p.elevation_.down_)};
+          .up_ = 0,
+          .down_ = 0};
 }
 
 api::Itinerary dummy_itinerary(api::Place const& from,
@@ -377,7 +381,7 @@ api::Itinerary street_routing(osr::ways const& w,
 
           if (elevation_samples != 0) {
             leg.heightProfile_ =
-                get_height_profile(w, path.value(), elevation_samples);
+                get_height_profile(w, range, dist, elevation_samples);
           }
         }
 

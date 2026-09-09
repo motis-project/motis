@@ -583,6 +583,7 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
     double const max_matching_distance,
     double const fastest_direct_factor,
     bool const detailed_legs,
+    unsigned elevation_profile_samples,
     unsigned const api_version) const {
   if (!w_ || !l_) {
     return {};
@@ -600,7 +601,8 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
         *w_, *l_, e, elevations_, lang, from, to, out,
         arrive_by ? std::nullopt : std::optional{time},
         arrive_by ? std::optional{time} : std::nullopt, max_matching_distance,
-        osr_params, cache, *blocked, api_version, detailed_legs, max);
+        osr_params, cache, *blocked, api_version, detailed_legs, max,
+        elevation_profile_samples);
     if (itinerary.legs_.empty()) {
       return false;
     }
@@ -888,7 +890,9 @@ api::plan_response routing::route(api::plan_params const& query,
                              config_.get_limits()
                                  .street_routing_max_direct_seconds_}),
                 max_matching_distance, query.fastestDirectFactor_,
-                query.detailedLegs_, api_version)
+                query.detailedLegs_,
+                static_cast<unsigned>(query.elevationProfileSamples_),
+                api_version)
           : std::pair{std::vector<api::Itinerary>{}, kInfinityDuration};
   UTL_STOP_TIMING(direct);
 
