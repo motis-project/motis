@@ -95,6 +95,6 @@ api::Itinerary street_routing(
     unsigned api_version,
     bool detailed_leg = true,
     std::chrono::seconds max = std::chrono::seconds{3600},
-    std::optional<unsigned> elevation_samples = std::optional<unsigned>{});
+    unsigned elevation_samples = 0);
 
 }  // namespace motis

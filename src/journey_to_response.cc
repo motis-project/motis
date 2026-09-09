@@ -531,7 +531,9 @@ api::Itinerary journey_to_response(
                      with_scheduled_skipped_stops,
                      timetable_max_matching_distance, max_matching_distance,
                      api_version, ignore_start_rental_return_constraints,
-                     ignore_dest_rental_return_constraints, lang, false)
+                     ignore_dest_rental_return_constraints, lang,
+                     /*elevation_profile_samples=*/0,
+                     /*set_itinerary_id_field=*/false)
               .legs_;
         });
       };

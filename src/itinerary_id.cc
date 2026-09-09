@@ -782,6 +782,7 @@ api::Itinerary reconstruct_itinerary(
                /*with_fares=*/false, with_scheduled_skipped_stops,
                stop_times_ep.config_.timetable_.value().max_matching_distance_,
                flm.max_matching_distance_, 6U, false, false, lang,
+               /*elevation_profile_samples=*/0,
                /*set_itinerary_id_field=*/false, alternatives)
         .legs_;
   };
