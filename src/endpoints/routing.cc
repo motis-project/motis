@@ -1178,7 +1178,7 @@ api::plan_response routing::route(api::plan_params const& query,
     while (true) {
 #if defined(NIGIRI_CUDA)
       if (algorithm != api::algorithmEnum::TB && !mc_applicable &&
-          gpu_supported &&
+          gpu_supported && gpu_pool_ != nullptr &&
           run_on_gpu(/*use_pong=*/pong_applicable &&
                      algorithm == api::algorithmEnum::PONG)) {
         gpu_used = true;
@@ -1192,14 +1192,14 @@ api::plan_response routing::route(api::plan_params const& query,
         auto const mc_timeout = query.timeout_.has_value()
                                     ? std::chrono::seconds{*query.timeout_}
                                     : max_timeout;
-        // server.gpu_mc_states: 0 -> mc ping on the device, > 0 -> mc pong
-        // too (see bmrap_profile_search); only takes effect for the criteria
-        // the device mcraptor implements.
+        // server.gpu_mc_states: 0 (default) keeps the multicriteria phases on
+        // the CPU (only the bicriteria ping/pong run on the GPU); >= 1 runs
+        // every phase on the GPU (gpu_mc_mode 2 - see bmrap_profile_search).
+        // Only takes effect for the criteria the device mcraptor implements.
         [[maybe_unused]] auto const gpu_mc_mode =
-            config_.server_.has_value() &&
-                    config_.server_->gpu_mc_states_ > 0U
+            config_.server_.has_value() && config_.server_->gpu_mc_states_ >= 1U
                 ? 2
-                : 1;
+                : 0;
         // Extra pareto dimensions of the multicriteria engines, each toggled
         // by its own request parameter (minimizeNonTransit / minimizeWithout /
         // minimizeModeSwitches). They compose freely (see arr_with in
@@ -1219,7 +1219,7 @@ api::plan_response routing::route(api::plan_params const& query,
         auto const run = [&]<typename Criteria>(std::type_identity<Criteria>) {
           if (algorithm == api::algorithmEnum::BMRAPP) {
 #if defined(NIGIRI_CUDA)
-            if (gpu_supported) {
+            if (gpu_supported && gpu_pool_ != nullptr) {
               try {
                 auto const lease = gpu_pool_->acquire();
                 gpu_used = true;
