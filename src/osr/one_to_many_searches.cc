@@ -36,11 +36,13 @@ precomputed_route one_to_many_view::find(n::location_idx_t const leg_from,
   if (it == end(side->by_mode_)) {
     return {};
   }
+
   auto const& s = side->searches_[it->second];
   auto const d = s.dest_idx_.find(target);
   if (d == end(s.dest_idx_)) {
     return {};
   }
+
   return {s.state_.get(), d->second, &s.flex_additional_nodes_};
 }
 
