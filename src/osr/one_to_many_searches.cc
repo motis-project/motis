@@ -22,7 +22,7 @@ precomputed_route one_to_many_view::find(n::location_idx_t const leg_from,
          {n::special_station::kStart, n::special_station::kEnd}) {
       auto const l = n::get_special_station(x);
       if (leg_from == l || leg_to == l) {
-        return &(*searches_)[flipped_ ? flip(x) : x];
+        return &(*searches_)[arrive_by_ ? flip(x) : x];
       }
     }
     return nullptr;  // not an access/egress leg

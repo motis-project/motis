@@ -476,12 +476,12 @@ api::Itinerary journey_to_response(
 
   auto const render_alternatives =
       [&](std::vector<n::routing::journey> const& alt_journeys,
-          bool const flipped = false) {
-        // Alternatives of a flipped (arriveBy) query: kStart/kEnd and the
+          bool const arrive_by = false) {
+        // Alternatives of an arriveBy query: kStart/kEnd and the
         // retained searches refer to the opposite places.
-        auto const& alt_start = flipped ? dest : start;
-        auto const& alt_dest = flipped ? start : dest;
-        auto const alt_states = one_to_many_view{states.searches_, flipped};
+        auto const& alt_start = arrive_by ? dest : start;
+        auto const& alt_dest = arrive_by ? start : dest;
+        auto const alt_states = one_to_many_view{states.searches_, arrive_by};
         return utl::to_vec(alt_journeys, [&](n::routing::journey const& alt) {
           auto const& alt_from_loc = alt.legs_.front().from_;
           auto const& alt_to_loc = alt.legs_.back().to_;
@@ -513,7 +513,7 @@ api::Itinerary journey_to_response(
           return render_alternatives(
               n::routing::get_leg_alternatives(tt, rtt, a.query_, j, j_leg_idx,
                                                a.num_alternatives_),
-              a.flipped_);
+              a.arrive_by_);
         });
   };
 

@@ -39,9 +39,7 @@ std::optional<std::vector<api::Alert>> get_alerts(
 struct query_alternatives {
   nigiri::routing::query const& query_;
   std::size_t num_alternatives_;
-  // The query is direction-flipped w.r.t. the journey (arriveBy): the special
-  // stations of the alternatives refer to the opposite places.
-  bool flipped_{false};
+  bool arrive_by_{false};
 };
 using alternatives_context = std::variant<
     // no alternatives
