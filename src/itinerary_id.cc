@@ -48,6 +48,7 @@
 #include "motis/gbfs/routing_data.h"
 #include "motis/journey_to_response.h"
 #include "motis/osr/mode_to_profile.h"
+#include "motis/osr/one_to_many_searches.h"
 #include "motis/osr/parameters.h"
 #include "motis/parse_location.h"
 #include "motis/place.h"

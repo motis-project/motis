@@ -21,6 +21,7 @@
 #include "motis/flex/flex_routing_data.h"
 #include "motis/match_platforms.h"
 #include "motis/osr/max_distance.h"
+#include "motis/osr/one_to_many_searches.h"
 
 namespace n = nigiri;
 

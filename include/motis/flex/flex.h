@@ -4,6 +4,7 @@
 #include "osr/routing/profile.h"
 #include "osr/types.h"
 
+#include "motis/osr/one_to_many_searches.h"
 #include "motis/osr/street_routing.h"
 
 #include "nigiri/routing/query.h"
