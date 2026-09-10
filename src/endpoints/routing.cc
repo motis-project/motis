@@ -155,7 +155,7 @@ n::routing::td_offsets_t get_td_offsets(
     std::chrono::seconds const max,
     nigiri::routing::start_time_t const& start_time,
     stats_map_t& stats,
-    hash_map<search_key, one_to_many_search>* const states) {
+    one_to_many_side* const states) {
   if (!r.is_osr_loaded()) {
     return {};
   }
@@ -221,7 +221,7 @@ n::routing::td_offsets_t routing::get_td_offsets(
     std::chrono::seconds const max,
     nigiri::routing::start_time_t const& start_time,
     stats_map_t& stats,
-    hash_map<search_key, one_to_many_search>* const states) const {
+    one_to_many_side* const states) const {
   return std::visit(
       utl::overloaded{
           [&](tt_location l) {
@@ -275,7 +275,7 @@ std::vector<n::routing::offset> get_offsets(
     double const max_matching_distance,
     gbfs::gbfs_routing_data& gbfs_rd,
     stats_map_t& stats,
-    hash_map<search_key, one_to_many_search>* const states) {
+    one_to_many_side* const states) {
   if (!r.is_osr_loaded()) {
     return {};
   }
@@ -360,8 +360,9 @@ std::vector<n::routing::offset> get_offsets(
         }
       }
       if (!dest_idx.empty()) {
-        (*states)[key_of(*r.tt_, mode)] =
-            one_to_many_search{std::move(state), std::move(dest_idx), {}};
+        states->by_mode_[mode] = states->searches_.size();
+        states->searches_.emplace_back(
+            one_to_many_search{std::move(state), std::move(dest_idx), {}});
       }
       return paths;
     };
@@ -531,7 +532,7 @@ std::vector<n::routing::offset> routing::get_offsets(
     double const max_matching_distance,
     gbfs::gbfs_routing_data& gbfs_rd,
     stats_map_t& stats,
-    hash_map<search_key, one_to_many_search>* const states) const {
+    one_to_many_side* const states) const {
   auto const do_get_offsets = [&](osr::location const pos) {
     return ::motis::ep::get_offsets(*this, rtt, pos, dir, elevations_, modes,
                                     ro, osr_params, pedestrian_profile,

@@ -4,6 +4,7 @@
 #include <cassert>
 #include <memory>
 #include <optional>
+#include <vector>
 
 #include "osr/location.h"
 #include "osr/routing/profile.h"
@@ -94,24 +95,13 @@ struct one_to_many_search {
   flex::flex_additional_nodes flex_additional_nodes_;
 };
 
-// What identifies one retained search. Several transport modes can resolve to
-// the same key: a flex routing group runs one search for every transport of a
-// stop sequence that boards at the same stop.
-struct search_key {
-  friend bool operator==(search_key, search_key) = default;
-
-  api::ModeEnum mode_{};
-  // Profile, gbfs product, or - for flex - the stop sequence.
-  std::uint32_t payload_{};
-  nigiri::stop_idx_t stop_{};  // flex only
+// The retained searches of one place. Several transport modes can share a
+// search: a flex routing group runs one search for every transport of a stop
+// sequence that boards at the same stop.
+struct one_to_many_side {
+  std::vector<one_to_many_search> searches_;
+  hash_map<transport_mode_t, std::size_t> by_mode_;
 };
-
-// All transports of a flex stop sequence that board at the same stop share
-// one search, so they share one key.
-search_key flex_key(nigiri::flex_stop_seq_idx_t, nigiri::stop_idx_t);
-
-// The key of the search a transport mode resolves to.
-search_key key_of(nigiri::timetable const&, transport_mode_t);
 
 struct one_to_many_searches {
   // Only `kStart` and `kEnd` address a side; no offsets are computed from a
@@ -122,16 +112,14 @@ struct one_to_many_searches {
     return static_cast<std::size_t>(s);
   }
 
-  hash_map<search_key, one_to_many_search> const& operator[](
-      nigiri::special_station const s) const {
+  one_to_many_side const& operator[](nigiri::special_station const s) const {
     return sides_[idx(s)];
   }
-  hash_map<search_key, one_to_many_search>& operator[](
-      nigiri::special_station const s) {
+  one_to_many_side& operator[](nigiri::special_station const s) {
     return sides_[idx(s)];
   }
 
-  std::array<hash_map<search_key, one_to_many_search>, 2> sides_;
+  std::array<one_to_many_side, 2> sides_;
 };
 
 // Reconstruct destination `dest_idx_` of `state_` instead of routing.
@@ -149,8 +137,7 @@ struct precomputed_route {
 struct one_to_many_view {
   // Returns an empty route unless the leg touches the journey's start or end
   // place and that side has a search covering `target`.
-  precomputed_route find(nigiri::timetable const&,
-                         nigiri::location_idx_t leg_from,
+  precomputed_route find(nigiri::location_idx_t leg_from,
                          nigiri::location_idx_t leg_to,
                          transport_mode_t,
                          nigiri::location_idx_t target) const;

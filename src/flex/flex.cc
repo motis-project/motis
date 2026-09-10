@@ -6,6 +6,7 @@
 
 #include "utl/concat.h"
 #include "utl/enumerate.h"
+#include "utl/to_vec.h"
 
 #include "osr/lookup.h"
 #include "osr/routing/parameters.h"
@@ -265,25 +266,24 @@ bool is_in_flex_stop(n::timetable const& tt,
       }});
 }
 
-void add_flex_td_offsets(
-    osr::ways const& w,
-    osr::lookup const& lookup,
-    osr::platforms const* pl,
-    platform_matches_t const* matches,
-    way_matches_storage const* way_matches,
-    n::timetable const& tt,
-    flex_areas const& fa,
-    point_rtree<n::location_idx_t> const& loc_rtree,
-    n::routing::start_time_t const start_time,
-    osr::location const& pos,
-    osr::direction const dir,
-    std::chrono::seconds const max,
-    double const max_matching_distance,
-    osr_parameters const& osr_params,
-    flex_routing_data& frd,
-    n::routing::td_offsets_t& ret,
-    std::map<std::string, std::uint64_t>& stats,
-    hash_map<search_key, one_to_many_search>* const states) {
+void add_flex_td_offsets(osr::ways const& w,
+                         osr::lookup const& lookup,
+                         osr::platforms const* pl,
+                         platform_matches_t const* matches,
+                         way_matches_storage const* way_matches,
+                         n::timetable const& tt,
+                         flex_areas const& fa,
+                         point_rtree<n::location_idx_t> const& loc_rtree,
+                         n::routing::start_time_t const start_time,
+                         osr::location const& pos,
+                         osr::direction const dir,
+                         std::chrono::seconds const max,
+                         double const max_matching_distance,
+                         osr_parameters const& osr_params,
+                         flex_routing_data& frd,
+                         n::routing::td_offsets_t& ret,
+                         std::map<std::string, std::uint64_t>& stats,
+                         one_to_many_side* const states) {
   UTL_START_TIMING(flex_lookup_timer);
 
   auto const max_dist =
@@ -337,9 +337,14 @@ void add_flex_td_offsets(
         }
       }
       if (!dest_idx.empty()) {
-        (*states)[flex_key(stop_seq.first, stop_seq.second)] =
+        auto const idx = states->searches_.size();
+        for (auto const id : transports) {
+          states->by_mode_[transport_mode(api::ModeEnum::FLEX, id.to_id())] =
+              idx;
+        }
+        states->searches_.emplace_back(
             one_to_many_search{std::move(state), std::move(dest_idx),
-                               std::move(frd.additional_nodes_)};
+                               std::move(frd.additional_nodes_)});
       }
       return paths;
     }();

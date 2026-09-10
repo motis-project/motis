@@ -790,7 +790,7 @@ api::Itinerary journey_to_response(
               // place -> reconstruct from it instead of routing again.
               auto const mode = x.mode();
               auto const precomputed =
-                  states.find(tt, j_leg.from_, j_leg.to_, mode, x.target());
+                  states.find(j_leg.from_, j_leg.to_, mode, x.target());
 
               auto out = std::unique_ptr<output>{};
               if (to_mode(mode) == api::ModeEnum::FLEX) {

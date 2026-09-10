@@ -78,7 +78,7 @@ struct routing {
       double max_matching_distance,
       gbfs::gbfs_routing_data&,
       stats_map_t& stats,
-      hash_map<search_key, one_to_many_search>* = nullptr) const;
+      one_to_many_side* = nullptr) const;
 
   nigiri::hash_map<nigiri::location_idx_t,
                    std::vector<nigiri::routing::td_offset>>
@@ -94,7 +94,7 @@ struct routing {
                  std::chrono::seconds max,
                  nigiri::routing::start_time_t const&,
                  stats_map_t& stats,
-                 hash_map<search_key, one_to_many_search>* = nullptr) const;
+                 one_to_many_side* = nullptr) const;
 
   std::pair<std::vector<api::Itinerary>, nigiri::duration_t> route_direct(
       elevators const*,
