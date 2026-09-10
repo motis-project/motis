@@ -349,23 +349,23 @@ std::vector<n::routing::offset> get_offsets(
           pos_match[osr::match_idx_t{0U}], cached_near_stop_matches->matches_,
           static_cast<osr::cost_t>(max.count()), dir, nullptr, sharing,
           elevations);
-      auto paths = state->results();
-      if (states == nullptr) {
-        return paths;
-      }
+      auto const& paths = state->results();
 
-      // Keep the search: offset legs are reconstructed from it later.
-      auto dest_idx = hash_map<n::location_idx_t, std::size_t>{};
-      for (auto const [i, l] : utl::enumerate(near_stops)) {
-        if (paths[i].has_value()) {
-          dest_idx.emplace(l, i);
+      if (states != nullptr) {
+        // Keep the search: offset legs are reconstructed from it later.
+        auto dest_idx = hash_map<n::location_idx_t, std::size_t>{};
+        for (auto const [i, l] : utl::enumerate(near_stops)) {
+          if (paths[i].has_value()) {
+            dest_idx.emplace(l, i);
+          }
+        }
+        if (!dest_idx.empty()) {
+          states->by_mode_[mode] = states->searches_.size();
+          states->searches_.emplace_back(
+              one_to_many_search{std::move(state), std::move(dest_idx), {}});
         }
       }
-      if (!dest_idx.empty()) {
-        states->by_mode_[mode] = states->searches_.size();
-        states->searches_.emplace_back(
-            one_to_many_search{std::move(state), std::move(dest_idx), {}});
-      }
+
       return paths;
     };
 
