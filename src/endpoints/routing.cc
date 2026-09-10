@@ -1142,10 +1142,10 @@ api::plan_response routing::route(api::plan_params const& query,
         query.timetableView_ &&
         query.arriveBy_ != start_time.extend_interval_later_;
     // BM-RAPTOR and the plain range McRAPTOR it is compared against both run
-    // on the mcraptor engine, which covers neither realtime nor via, bike/car
-    // or time-dependent offsets. The guards are reported individually: a
-    // server with an RT feed fails mc_g_rt for EVERY query, which otherwise
-    // just looks like "the algorithm parameter is ignored".
+    // on the mcraptor engine, which covers neither via nor bike/car transport
+    // requirements. Realtime and time-dependent offsets ARE covered; the two
+    // guards stay in the response so a client can still see what the query
+    // carried, but they no longer gate anything.
     auto const mc_requested = algorithm == api::algorithmEnum::BMRAPP ||
                               algorithm == api::algorithmEnum::MCRAPTOR;
     auto const mc_g_rt = rtt == nullptr || rtt->n_rt_transports() == 0U;
@@ -1179,22 +1179,28 @@ api::plan_response routing::route(api::plan_params const& query,
                                     : max_timeout;
         // Extra pareto criteria of the multicriteria engines, selected by
         // NIGIRI_MC_CRITERIA:
-        //   walk      (default) walking minutes: offsets + footpaths
-        //   air                 binary "uses a flight" - keeps both the
-        //                       fast flying option and the best ground one
-        //                       instead of filtering flights out entirely
-        //   walk+air            both, as independent pareto dimensions
-        //   clasz               number of vehicle-class switches between
-        //                       consecutive trips (bus -> subway counts,
-        //                       subway -> subway does not)
-        //   walk+clasz          walking minutes + vehicle-class switches
-        //   air+clasz           both, as independent pareto dimensions
-        //   walk+air+clasz      all three
+        //   arr                 arrival only, no extra dimension - the one
+        //                       configuration BMRAPP can run its
+        //                       multicriteria phases on the GPU for
+        //                       (NIGIRI_BMRAPP_GPU_MC)
+        //   non_transit (default) minutes not on transit: offsets + footpaths
+        //   mode_filter          binary "uses an avoided vehicle class" (a
+        //                        flight by default) - keeps both the fast
+        //                        option that uses it and the best one that
+        //                        does not, instead of filtering it out
+        //   non_transit+mode_filter          both, independent pareto dims
+        //   mode_switches        number of vehicle-class switches between
+        //                        consecutive trips (bus -> subway counts,
+        //                        subway -> subway does not)
+        //   non_transit+mode_switches        minutes off transit + switches
+        //   mode_filter+mode_switches        both, independent pareto dims
+        //   non_transit+mode_filter+mode_switches   all three
         // The dimensions compose freely (see arr_with in mcraptor.h); the
-        // list above is just which combinations are dispatched.
+        // list above is just which combinations are dispatched. For the
+        // two-token combinations either order is accepted.
         static auto const* const mc_criteria = [] {
           auto const* const v = std::getenv("NIGIRI_MC_CRITERIA");
-          return v == nullptr ? "walk" : v;
+          return v == nullptr ? "non_transit" : v;
         }();
         // BMRAPP takes the SCALAR state (its ping/pong/pruning searches),
         // like pong_search does, so it can run those on the GPU; its
@@ -1228,24 +1234,33 @@ api::plan_response routing::route(api::plan_params const& query,
         };
         try {
           auto const c = std::string_view{mc_criteria};
-          if (c == "air") {
-            r = run_with.template operator()<n::routing::arr_air_criteria>();
-          } else if (c == "walk+air" || c == "air+walk") {
-            r = run_with
-                    .template operator()<n::routing::arr_walk_air_criteria>();
-          } else if (c == "clasz") {
-            r = run_with.template operator()<n::routing::arr_clasz_criteria>();
-          } else if (c == "walk+clasz" || c == "clasz+walk") {
-            r = run_with
-                    .template operator()<n::routing::arr_walk_clasz_criteria>();
-          } else if (c == "air+clasz" || c == "clasz+air") {
-            r = run_with
-                    .template operator()<n::routing::arr_air_clasz_criteria>();
-          } else if (c == "walk+air+clasz") {
+          if (c == "arr" || c == "none") {
+            r = run_with.template operator()<n::routing::arr_criteria>();
+          } else if (c == "mode_filter") {
             r = run_with.template
-                operator()<n::routing::arr_walk_air_clasz_criteria>();
+                operator()<n::routing::arr_mode_filter_criteria>();
+          } else if (c == "non_transit+mode_filter" ||
+                     c == "mode_filter+non_transit") {
+            r = run_with.template operator()<
+                n::routing::arr_non_transit_mode_filter_criteria>();
+          } else if (c == "mode_switches") {
+            r = run_with.template
+                operator()<n::routing::arr_mode_switches_criteria>();
+          } else if (c == "non_transit+mode_switches" ||
+                     c == "mode_switches+non_transit") {
+            r = run_with.template operator()<
+                n::routing::arr_non_transit_mode_switches_criteria>();
+          } else if (c == "mode_filter+mode_switches" ||
+                     c == "mode_switches+mode_filter") {
+            r = run_with.template operator()<
+                n::routing::arr_mode_filter_mode_switches_criteria>();
+          } else if (c == "non_transit+mode_filter+mode_switches") {
+            r = run_with.template operator()<
+                n::routing::
+                    arr_non_transit_mode_filter_mode_switches_criteria>();
           } else {
-            r = run_with.template operator()<n::routing::arr_walk_criteria>();
+            r = run_with.template
+                operator()<n::routing::arr_non_transit_criteria>();
           }
         } catch (std::exception const& e) {
           std::cout << "MCRAPTOR EXCEPTION: " << e.what() << "\n";
