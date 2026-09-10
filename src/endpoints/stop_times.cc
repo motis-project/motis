@@ -515,8 +515,8 @@ api::stoptimes_response stop_times::operator()(
   auto const base_ev_type = is_arr ? n::event_type::kArr : n::event_type::kDep;
   auto const api_version = get_api_version(url);
   auto const& lang = query.language_;
-  auto const query_stop = query.stopId_.and_then(
-      [&](std::string const& x) { return tags_.find_location(tt_, x); });
+  auto const query_stop = query.stopId_.transform(
+      [&](std::string const& x) { return tags_.get_location(tt_, x); });
   auto const query_center = query.center_.and_then(
       [&](std::string const& x) { return parse_location(x); });
 
