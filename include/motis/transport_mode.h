@@ -22,7 +22,6 @@ constexpr transport_mode_t transport_mode(api::ModeEnum const m,
   return transport_mode(m, static_cast<transport_mode_t::payload_t>(p));
 }
 
-// A street mode renders as whatever its profile maps to.
 inline transport_mode_t transport_mode(osr::search_profile const p) {
   return transport_mode(to_mode(p), p);
 }
@@ -35,7 +34,7 @@ constexpr osr::search_profile profile_of(transport_mode_t const m) {
   return static_cast<osr::search_profile>(m.payload_);
 }
 
-// The exceptions: routed as car, but rendered as themselves.
+// Routed as car, but rendered as themselves.
 constexpr auto const kOdmTransportMode =
     transport_mode(api::ModeEnum::ODM, osr::search_profile::kCar);
 constexpr auto const kRideSharingTransportMode =
