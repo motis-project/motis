@@ -316,40 +316,36 @@ void add_flex_td_offsets(osr::ways const& w,
     auto const sharing_data = prepare_sharing_data(
         tt, w, lookup, pl, fa, matches, transports.front(), dir, frd);
 
-    auto const paths = [&]() {
-      auto state = osr::route_one_to_many(
-          params, w, lookup, osr::search_profile::kCarSharing, pos,
-          near_stop_locations, pos_match[osr::match_idx_t{0U}],
-          near_stop_matches, static_cast<osr::cost_t>(max.count()), dir,
-          nullptr, &sharing_data, nullptr);
-      auto const paths = state->results();
-      if (states == nullptr) {
-        return paths;
-      }
+    auto state = osr::route_one_to_many(
+        params, w, lookup, osr::search_profile::kCarSharing, pos,
+        near_stop_locations, pos_match[osr::match_idx_t{0U}], near_stop_matches,
+        static_cast<osr::cost_t>(max.count()), dir, nullptr, &sharing_data,
+        nullptr);
+    auto const& paths = state->results();
 
-      // Keep the search for reconstructing the flex legs later, together with
-      // the additional nodes it ran with: the next routing group refills
-      // `frd.additional_nodes_`. All mode ids of this group share the one
-      // search.
+    // Store osr routing state for later path reconstruction.
+    if (states != nullptr) {
       auto dest_idx = hash_map<n::location_idx_t, std::size_t>{};
       for (auto const [i, l] : utl::enumerate(near_stops)) {
         if (paths[i].has_value()) {
           dest_idx.emplace(l, i);
         }
       }
+
       if (!dest_idx.empty()) {
-        auto const idx = states->searches_.size();
-        for (auto const id : transports) {
-          states
-              ->by_mode_[transport_mode(api::ModeEnum::FLEX, id.to_payload())] =
-              idx;
-        }
+        auto const search_idx = states->searches_.size();
         states->searches_.emplace_back(
             one_to_many_search{std::move(state), std::move(dest_idx),
                                std::move(frd.additional_nodes_)});
+
+        for (auto const id : transports) {
+          states
+              ->by_mode_[transport_mode(api::ModeEnum::FLEX, id.to_payload())] =
+              search_idx;
+        }
       }
-      return paths;
-    }();
+    }
+
     auto const day_idx_iv = get_relevant_days(tt, start_time);
     for (auto const id : transports) {
       auto const t = id.get_flex_transport();
