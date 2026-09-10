@@ -39,7 +39,7 @@ std::optional<std::vector<api::Alert>> get_alerts(
 struct query_alternatives {
   nigiri::routing::query const& query_;
   std::size_t num_alternatives_;
-  bool arrive_by_{false};
+  bool arrive_by_;
 };
 using alternatives_context = std::variant<
     // no alternatives
